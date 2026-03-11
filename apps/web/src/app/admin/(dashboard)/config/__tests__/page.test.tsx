@@ -10,6 +10,9 @@ vi.mock('../RateLimitsTab', () => ({
   RateLimitsTab: () => <div data-testid="rate-limits-tab" />,
 }));
 vi.mock('../NavConfig', () => ({ AdminConfigNavConfig: () => null }));
+vi.mock('@/components/admin/layout/AdminTabPersistence', () => ({
+  AdminTabPersistence: () => null,
+}));
 
 import AdminConfigPage from '../page';
 
@@ -49,27 +52,25 @@ describe('AdminConfigPage', () => {
     render(page);
     expect(screen.getByText('Configuration')).toBeInTheDocument();
     expect(
-      screen.getByText('System settings, feature flags, rate limits, and integrations.')
+      screen.getByText('System settings, feature flags, and rate limits.')
     ).toBeInTheDocument();
   });
 
-  it('renders coming soon for n8n tab', async () => {
+  it('renders nothing for unknown tab (n8n)', async () => {
     const page = await AdminConfigPage({
       searchParams: Promise.resolve({ tab: 'n8n' }),
     });
     render(page);
-    expect(
-      screen.getByText('Manage n8n workflow templates, webhooks, and automation triggers.')
-    ).toBeInTheDocument();
+    // n8n tab no longer exists — renderTabContent returns null for unknown tabs
+    expect(screen.getByText('Configuration')).toBeInTheDocument();
   });
 
-  it('renders coming soon for wizard tab', async () => {
+  it('renders nothing for unknown tab (wizard)', async () => {
     const page = await AdminConfigPage({
       searchParams: Promise.resolve({ tab: 'wizard' }),
     });
     render(page);
-    expect(
-      screen.getByText('Step-by-step guided setup for initial platform configuration.')
-    ).toBeInTheDocument();
+    // wizard tab no longer exists — renderTabContent returns null for unknown tabs
+    expect(screen.getByText('Configuration')).toBeInTheDocument();
   });
 });

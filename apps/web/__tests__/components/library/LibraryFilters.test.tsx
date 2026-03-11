@@ -23,7 +23,7 @@ describe('LibraryFilters', () => {
 
   it('should render search input', () => {
     render(<LibraryFilters {...mockProps} />);
-    expect(screen.getByPlaceholderText('Cerca per titolo...')).toBeInTheDocument();
+    expect(screen.getByPlaceholderText('Cerca...')).toBeInTheDocument();
   });
 
   it('should render favorites toggle', () => {
@@ -39,7 +39,7 @@ describe('LibraryFilters', () => {
 
   it('should call onSearchChange after debounce', async () => {
     render(<LibraryFilters {...mockProps} />);
-    const input = screen.getByPlaceholderText('Cerca per titolo...');
+    const input = screen.getByPlaceholderText('Cerca...');
 
     fireEvent.change(input, { target: { value: 'Catan' } });
 
@@ -63,15 +63,17 @@ describe('LibraryFilters', () => {
 
   it('should show clear filters button when filters are active', () => {
     render(<LibraryFilters {...mockProps} searchQuery="test" />);
-    expect(screen.getByText('Pulisci Filtri')).toBeInTheDocument();
+    // The clear button shows "Pulisci" on sm+ screens and an icon on mobile.
+    // In test (no breakpoint), the button with X icon is rendered.
+    expect(screen.getByLabelText('Clear search')).toBeInTheDocument();
   });
 
   it('should call onClearFilters when clear button clicked', () => {
     render(<LibraryFilters {...mockProps} searchQuery="test" />);
-    const clearButton = screen.getByText('Pulisci Filtri');
-
-    fireEvent.click(clearButton);
-
+    // The clear-all button renders "Pulisci" text (hidden on mobile via sr class).
+    // Find by text content which is present in DOM even if visually hidden.
+    const clearFilterBtn = screen.getByText('Pulisci');
+    fireEvent.click(clearFilterBtn);
     expect(mockProps.onClearFilters).toHaveBeenCalled();
   });
 

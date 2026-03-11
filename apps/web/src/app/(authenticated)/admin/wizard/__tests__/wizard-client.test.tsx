@@ -102,13 +102,14 @@ describe('AdminWizardClient', () => {
     expect(backLink).toHaveAttribute('href', '/admin');
   });
 
-  it('renders step indicator with 4 steps', () => {
+  it('renders step indicator with 5 steps', () => {
     render(<AdminWizardClient />);
 
     expect(screen.getByText('1. Upload PDF')).toBeInTheDocument();
     expect(screen.getByText('2. Crea Gioco')).toBeInTheDocument();
     expect(screen.getByText('3. Setup Chat')).toBeInTheDocument();
     expect(screen.getByText('4. Q&A')).toBeInTheDocument();
+    expect(screen.getByText('5. Pubblica')).toBeInTheDocument();
   });
 
   it('starts on upload step', () => {
@@ -118,7 +119,7 @@ describe('AdminWizardClient', () => {
     expect(screen.getByText('Carica il Regolamento PDF')).toBeInTheDocument();
     expect(
       screen.getByText(
-        "Carica il file PDF del regolamento del gioco. Verra' processato per estrarre le regole."
+        'Carica il file PDF del regolamento del gioco. Verrà processato per estrarre le regole.'
       )
     ).toBeInTheDocument();
   });
@@ -129,7 +130,7 @@ describe('AdminWizardClient', () => {
     expect(screen.getByText('Aggiungi alla Libreria Pubblica')).toBeInTheDocument();
     expect(
       screen.getByText(
-        "Il PDF sara' visibile a tutti gli utenti registrati nella libreria pubblica."
+        'Il PDF sarà visibile a tutti gli utenti registrati nella libreria pubblica.'
       )
     ).toBeInTheDocument();
   });
@@ -154,8 +155,8 @@ describe('AdminWizardClient', () => {
       render(<AdminWizardClient />);
 
       // Find the step indicator container and verify first step is active (blue background)
-      const stepLabels = screen.getAllByText(/Upload PDF|Crea Gioco|Setup Chat|Q&A/);
-      expect(stepLabels.length).toBeGreaterThanOrEqual(4);
+      const stepLabels = screen.getAllByText(/Upload PDF|Crea Gioco|Setup Chat|Q&A|Pubblica/);
+      expect(stepLabels.length).toBeGreaterThanOrEqual(5);
     });
   });
 });
@@ -192,6 +193,7 @@ describe('Wizard Step Navigation', () => {
     expect(screen.getByTestId('step-game-description')).toHaveTextContent('Nome e immagini');
     expect(screen.getByTestId('step-chat-description')).toHaveTextContent('Prepara agente RAG');
     expect(screen.getByTestId('step-qa-description')).toHaveTextContent('Testa le regole');
+    expect(screen.getByTestId('step-publish-description')).toHaveTextContent('Libreria condivisa');
   });
 });
 
@@ -225,7 +227,7 @@ describe('Accessibility', () => {
     render(<AdminWizardClient />);
 
     // Step labels are visible
-    const steps = ['1. Upload PDF', '2. Crea Gioco', '3. Setup Chat', '4. Q&A'];
+    const steps = ['1. Upload PDF', '2. Crea Gioco', '3. Setup Chat', '4. Q&A', '5. Pubblica'];
     steps.forEach(step => {
       expect(screen.getByText(step)).toBeInTheDocument();
     });

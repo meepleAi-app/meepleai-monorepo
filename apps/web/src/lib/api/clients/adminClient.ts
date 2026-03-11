@@ -3079,6 +3079,14 @@ export function createAdminClient({ httpClient }: CreateAdminClientParams) {
       );
     },
 
+    /**
+     * Rebuild vector store indices
+     * POST /api/v1/resources/vectors/rebuild?confirmed=true
+     */
+    async rebuildVectors(): Promise<void> {
+      await httpClient.post('/api/v1/resources/vectors/rebuild?confirmed=true');
+    },
+
     // ========== Processing Queue (Issue #125) ==========
 
     /**
@@ -3097,10 +3105,7 @@ export function createAdminClient({ httpClient }: CreateAdminClientParams) {
       if (params?.page) qs.set('page', String(params.page));
       if (params?.pageSize) qs.set('pageSize', String(params.pageSize));
       const query = qs.toString();
-      return httpClient.get(
-        `/api/v1/admin/queue/${query ? `?${query}` : ''}`,
-        PaginatedQueueSchema
-      );
+      return httpClient.get(`/api/v1/admin/queue${query ? `?${query}` : ''}`, PaginatedQueueSchema);
     },
 
     /**
@@ -3109,6 +3114,18 @@ export function createAdminClient({ httpClient }: CreateAdminClientParams) {
      */
     async getQueueStatus(): Promise<QueueStatus | null> {
       return httpClient.get('/api/v1/admin/queue/status', QueueStatusSchema);
+    },
+
+    /**
+     * Enqueue a new processing job
+     * POST /api/v1/admin/queue/enqueue
+     */
+    async enqueueJob(params: {
+      jobType: string;
+      parameters?: Record<string, unknown>;
+      priority?: number;
+    }): Promise<void> {
+      await httpClient.post('/api/v1/admin/queue/enqueue', params);
     },
 
     /**

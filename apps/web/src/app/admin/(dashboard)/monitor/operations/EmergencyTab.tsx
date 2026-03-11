@@ -2,7 +2,12 @@
 
 /**
  * EmergencyTab — LLM emergency override controls
- * Issue #129 — Emergency Controls Tab (stub for #126 page setup)
+ * Issue #129 — Enhanced Emergency Controls Tab
+ *
+ * Enhancements over stub (#126):
+ * - Toast feedback on activate/deactivate
+ * - Loading reset on refetch
+ * - Level 2 confirmation for activate
  */
 
 import { useCallback, useEffect, useState } from 'react';
@@ -10,18 +15,12 @@ import { useCallback, useEffect, useState } from 'react';
 import { AlertTriangle, CheckCircle2, Clock, Loader2, ShieldAlert, ShieldOff } from 'lucide-react';
 
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from '@/components/ui/overlays/alert-dialog-primitives';
+  AdminConfirmationDialog,
+  AdminConfirmationLevel,
+} from '@/components/ui/admin/admin-confirmation-dialog';
 import { Button } from '@/components/ui/primitives/button';
 import { Input } from '@/components/ui/primitives/input';
+import { useToast } from '@/hooks/use-toast';
 import { api } from '@/lib/api';
 import type { ActiveOverride } from '@/lib/api/schemas';
 import { cn } from '@/lib/utils';
@@ -55,16 +54,23 @@ export function EmergencyTab() {
   const [duration, setDuration] = useState(30);
   const [targetProvider, setTargetProvider] = useState('');
 
+  // Confirmation dialogs
+  const [deactivateTarget, setDeactivateTarget] = useState<string | null>(null);
+  const [activateConfirmOpen, setActivateConfirmOpen] = useState(false);
+
+  const { toast } = useToast();
+
   const fetchOverrides = useCallback(async () => {
+    setLoading(true);
     try {
       const result = await api.admin.getActiveEmergencyOverrides();
       setOverrides(result);
     } catch {
-      // silent
+      toast({ title: 'Failed to load emergency overrides', variant: 'destructive' });
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [toast]);
 
   useEffect(() => {
     fetchOverrides();
@@ -82,17 +88,28 @@ export function EmergencyTab() {
         durationMinutes: duration,
         targetProvider: targetProvider.trim() || undefined,
       });
+      toast({ title: `Emergency override activated: ${action}` });
       setReason('');
       setTargetProvider('');
       fetchOverrides();
+    } catch {
+      toast({ title: 'Failed to activate override', variant: 'destructive' });
     } finally {
       setActivating(false);
     }
   };
 
-  const handleDeactivate = async (overrideAction: string) => {
-    await api.admin.deactivateEmergencyOverride(overrideAction);
-    fetchOverrides();
+  const handleDeactivate = async () => {
+    if (!deactivateTarget) return;
+    try {
+      await api.admin.deactivateEmergencyOverride(deactivateTarget);
+      toast({ title: `Override deactivated: ${deactivateTarget}` });
+      fetchOverrides();
+    } catch {
+      toast({ title: 'Failed to deactivate override', variant: 'destructive' });
+    } finally {
+      setDeactivateTarget(null);
+    }
   };
 
   return (
@@ -139,29 +156,14 @@ export function EmergencyTab() {
                         <p className="text-xs text-muted-foreground">{override.reason}</p>
                       </div>
                     </div>
-                    <AlertDialog>
-                      <AlertDialogTrigger asChild>
-                        <Button variant="outline" size="sm">
-                          <ShieldOff className="h-4 w-4 mr-1" />
-                          Deactivate
-                        </Button>
-                      </AlertDialogTrigger>
-                      <AlertDialogContent>
-                        <AlertDialogHeader>
-                          <AlertDialogTitle>Deactivate Override</AlertDialogTitle>
-                          <AlertDialogDescription>
-                            This will remove the &quot;{override.action}&quot; emergency override.
-                            LLM requests will resume normal routing.
-                          </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                          <AlertDialogCancel>Cancel</AlertDialogCancel>
-                          <AlertDialogAction onClick={() => handleDeactivate(override.action)}>
-                            Deactivate
-                          </AlertDialogAction>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setDeactivateTarget(override.action)}
+                    >
+                      <ShieldOff className="h-4 w-4 mr-1" />
+                      Deactivate
+                    </Button>
                   </div>
                   <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
                     <span className="flex items-center gap-1">
@@ -247,7 +249,7 @@ export function EmergencyTab() {
 
             <div className="mt-4">
               <Button
-                onClick={handleActivate}
+                onClick={() => setActivateConfirmOpen(true)}
                 disabled={!reason.trim() || activating}
                 className="bg-red-600 hover:bg-red-700 text-white"
                 data-testid="activate-override-button"
@@ -259,6 +261,28 @@ export function EmergencyTab() {
           </div>
         </>
       )}
+
+      {/* Activate Confirmation — Level 2 (critical action) */}
+      <AdminConfirmationDialog
+        isOpen={activateConfirmOpen}
+        onClose={() => setActivateConfirmOpen(false)}
+        onConfirm={handleActivate}
+        level={AdminConfirmationLevel.Level2}
+        title="Activate Emergency Override"
+        message={`This will activate "${action}" override for ${duration} minutes. LLM routing will be immediately affected.`}
+        warningMessage="This is a critical action that affects production LLM traffic."
+        isLoading={activating}
+      />
+
+      {/* Deactivate Confirmation — Level 1 */}
+      <AdminConfirmationDialog
+        isOpen={!!deactivateTarget}
+        onClose={() => setDeactivateTarget(null)}
+        onConfirm={handleDeactivate}
+        level={AdminConfirmationLevel.Level1}
+        title="Deactivate Override"
+        message={`This will remove the "${deactivateTarget}" emergency override. LLM requests will resume normal routing.`}
+      />
     </div>
   );
 }

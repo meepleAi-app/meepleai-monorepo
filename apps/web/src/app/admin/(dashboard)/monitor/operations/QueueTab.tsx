@@ -2,7 +2,13 @@
 
 /**
  * QueueTab — PDF processing queue management
- * Issue #128 — Queue Manager Tab (stub for #126 page setup)
+ * Issue #128 — Enhanced Queue Manager Tab
+ *
+ * Enhancements over stub (#126):
+ * - EnqueueJobDialog for creating new jobs
+ * - Confirmation dialogs for Cancel/Retry/Remove
+ * - Toast feedback on all actions
+ * - Loading reset on refetch
  */
 
 import { useCallback, useEffect, useState } from 'react';
@@ -13,14 +19,29 @@ import {
   Clock,
   Loader2,
   PauseCircle,
+  Plus,
   RotateCcw,
   Trash2,
   XCircle,
 } from 'lucide-react';
 
+import {
+  AdminConfirmationDialog,
+  AdminConfirmationLevel,
+} from '@/components/ui/admin/admin-confirmation-dialog';
 import { Badge } from '@/components/ui/data-display/badge';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/overlays/dialog';
 import { Button } from '@/components/ui/primitives/button';
 import { Input } from '@/components/ui/primitives/input';
+import { Label } from '@/components/ui/primitives/label';
+import { useToast } from '@/hooks/use-toast';
 import { api } from '@/lib/api';
 import type { PaginatedQueue, QueueStatus } from '@/lib/api/schemas';
 import { cn } from '@/lib/utils';
@@ -45,8 +66,18 @@ const STATUS_CONFIG: Record<
     icon: <CheckCircle2 className="h-3 w-3" />,
   },
   Failed: { label: 'Failed', variant: 'destructive', icon: <XCircle className="h-3 w-3" /> },
-  Cancelled: { label: 'Cancelled', variant: 'outline', icon: <PauseCircle className="h-3 w-3" /> },
+  Cancelled: {
+    label: 'Cancelled',
+    variant: 'outline',
+    icon: <PauseCircle className="h-3 w-3" />,
+  },
 };
+
+const JOB_TYPES = [
+  { value: 'pdf-processing', label: 'PDF Processing' },
+  { value: 'embedding-generation', label: 'Embedding Generation' },
+  { value: 'reindex', label: 'Reindex Documents' },
+];
 
 export function QueueTab() {
   const [queue, setQueue] = useState<PaginatedQueue | null>(null);
@@ -56,7 +87,23 @@ export function QueueTab() {
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
 
+  // Dialog state
+  const [enqueueOpen, setEnqueueOpen] = useState(false);
+  const [confirmAction, setConfirmAction] = useState<{
+    type: 'cancel' | 'retry' | 'remove';
+    jobId: string;
+    fileName: string;
+  } | null>(null);
+
+  // Enqueue form
+  const [jobType, setJobType] = useState(JOB_TYPES[0].value);
+  const [priority, setPriority] = useState(5);
+  const [enqueuing, setEnqueuing] = useState(false);
+
+  const { toast } = useToast();
+
   const fetchData = useCallback(async () => {
+    setLoading(true);
     try {
       const [queueRes, statusRes] = await Promise.all([
         api.admin.getProcessingQueue({
@@ -70,11 +117,11 @@ export function QueueTab() {
       setQueue(queueRes);
       setStatus(statusRes);
     } catch {
-      // silent
+      toast({ title: 'Failed to load queue data', variant: 'destructive' });
     } finally {
       setLoading(false);
     }
-  }, [statusFilter, search, page]);
+  }, [statusFilter, search, page, toast]);
 
   useEffect(() => {
     fetchData();
@@ -82,19 +129,43 @@ export function QueueTab() {
     return () => clearInterval(interval);
   }, [fetchData]);
 
-  const handleCancel = async (jobId: string) => {
-    await api.admin.cancelJob(jobId);
-    fetchData();
+  const handleAction = async () => {
+    if (!confirmAction) return;
+    try {
+      switch (confirmAction.type) {
+        case 'cancel':
+          await api.admin.cancelJob(confirmAction.jobId);
+          toast({ title: `Job cancelled: ${confirmAction.fileName}` });
+          break;
+        case 'retry':
+          await api.admin.retryJob(confirmAction.jobId);
+          toast({ title: `Job retried: ${confirmAction.fileName}` });
+          break;
+        case 'remove':
+          await api.admin.removeJob(confirmAction.jobId);
+          toast({ title: `Job removed: ${confirmAction.fileName}` });
+          break;
+      }
+      fetchData();
+    } catch {
+      toast({ title: `Failed to ${confirmAction.type} job`, variant: 'destructive' });
+    } finally {
+      setConfirmAction(null);
+    }
   };
 
-  const handleRetry = async (jobId: string) => {
-    await api.admin.retryJob(jobId);
-    fetchData();
-  };
-
-  const handleRemove = async (jobId: string) => {
-    await api.admin.removeJob(jobId);
-    fetchData();
+  const handleEnqueue = async () => {
+    setEnqueuing(true);
+    try {
+      await api.admin.enqueueJob({ jobType, priority });
+      toast({ title: 'Job enqueued successfully' });
+      setEnqueueOpen(false);
+      fetchData();
+    } catch {
+      toast({ title: 'Failed to enqueue job', variant: 'destructive' });
+    } finally {
+      setEnqueuing(false);
+    }
   };
 
   return (
@@ -142,7 +213,7 @@ export function QueueTab() {
         </div>
       )}
 
-      {/* Filters */}
+      {/* Filters + Enqueue */}
       <div className="flex flex-wrap gap-3">
         <Input
           placeholder="Search by file name..."
@@ -170,6 +241,15 @@ export function QueueTab() {
           <option value="Failed">Failed</option>
           <option value="Cancelled">Cancelled</option>
         </select>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setEnqueueOpen(true)}
+          data-testid="enqueue-job-button"
+        >
+          <Plus className="h-4 w-4 mr-1" />
+          Enqueue Job
+        </Button>
       </div>
 
       {/* Jobs Table */}
@@ -209,7 +289,7 @@ export function QueueTab() {
                       {new Date(job.createdAt).toLocaleString()}
                     </td>
                     <td className="py-3 px-3 text-xs text-muted-foreground">
-                      {job.currentStep ?? '—'}
+                      {job.currentStep ?? '\u2014'}
                     </td>
                     <td className="py-3 px-4 text-right">
                       <div className="flex items-center justify-end gap-1">
@@ -217,7 +297,13 @@ export function QueueTab() {
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() => handleCancel(job.id)}
+                            onClick={() =>
+                              setConfirmAction({
+                                type: 'cancel',
+                                jobId: job.id,
+                                fileName: job.pdfFileName,
+                              })
+                            }
                             aria-label="Cancel job"
                           >
                             <XCircle className="h-4 w-4" />
@@ -227,7 +313,13 @@ export function QueueTab() {
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() => handleRetry(job.id)}
+                            onClick={() =>
+                              setConfirmAction({
+                                type: 'retry',
+                                jobId: job.id,
+                                fileName: job.pdfFileName,
+                              })
+                            }
                             aria-label="Retry job"
                           >
                             <RotateCcw className="h-4 w-4" />
@@ -237,7 +329,13 @@ export function QueueTab() {
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() => handleRemove(job.id)}
+                            onClick={() =>
+                              setConfirmAction({
+                                type: 'remove',
+                                jobId: job.id,
+                                fileName: job.pdfFileName,
+                              })
+                            }
                             aria-label="Remove job"
                           >
                             <Trash2 className="h-4 w-4" />
@@ -286,6 +384,76 @@ export function QueueTab() {
           </div>
         </div>
       )}
+
+      {/* Confirmation Dialog for Cancel/Retry/Remove */}
+      <AdminConfirmationDialog
+        isOpen={!!confirmAction}
+        onClose={() => setConfirmAction(null)}
+        onConfirm={handleAction}
+        level={AdminConfirmationLevel.Level1}
+        title={
+          confirmAction?.type === 'cancel'
+            ? 'Cancel Job'
+            : confirmAction?.type === 'retry'
+              ? 'Retry Job'
+              : 'Remove Job'
+        }
+        message={`Are you sure you want to ${confirmAction?.type} "${confirmAction?.fileName}"?`}
+      />
+
+      {/* Enqueue Job Dialog */}
+      <Dialog open={enqueueOpen} onOpenChange={setEnqueueOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Enqueue New Job</DialogTitle>
+            <DialogDescription>Create a new processing job in the queue.</DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div>
+              <Label htmlFor="job-type" className="text-sm font-medium">
+                Job Type
+              </Label>
+              <select
+                id="job-type"
+                value={jobType}
+                onChange={e => setJobType(e.target.value)}
+                className="mt-1 w-full rounded-md border bg-background px-3 py-2 text-sm"
+                data-testid="enqueue-job-type"
+              >
+                {JOB_TYPES.map(jt => (
+                  <option key={jt.value} value={jt.value}>
+                    {jt.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <Label htmlFor="job-priority" className="text-sm font-medium">
+                Priority (1=highest, 10=lowest)
+              </Label>
+              <Input
+                id="job-priority"
+                type="number"
+                min={1}
+                max={10}
+                value={priority}
+                onChange={e => setPriority(Number(e.target.value))}
+                className="mt-1"
+                data-testid="enqueue-job-priority"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEnqueueOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleEnqueue} disabled={enqueuing}>
+              {enqueuing && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              Enqueue
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -21,7 +21,7 @@ const CATEGORIES = ['All', 'Strategy', 'Party', 'CardGames', 'Cooperative'];
 
 function TemplateCard({
   template,
-  onClone,
+  onClone: _onClone,
 }: {
   template: GameToolkitTemplateDto;
   onClone: (templateId: string) => void;

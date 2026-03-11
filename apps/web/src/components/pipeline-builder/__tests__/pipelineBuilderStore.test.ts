@@ -7,7 +7,7 @@
  * @see Issue #3712 - Visual Pipeline Builder
  */
 
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { act } from '@testing-library/react';
 import { usePipelineBuilderStore } from '@/stores/pipelineBuilderStore';
 import { BUILT_IN_PLUGINS } from '../types';
@@ -85,6 +85,11 @@ describe('Pipeline Builder Store', () => {
     });
 
     it('should mark dirty after save completes', async () => {
+      // Mock fetch for savePipeline which POSTs to /api/v1/rag/pipelines
+      const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
+        new Response(JSON.stringify({ id: 'saved-1' }), { status: 200 })
+      );
+
       act(() => {
         usePipelineBuilderStore.getState().createPipeline('Test');
       });
@@ -94,6 +99,7 @@ describe('Pipeline Builder Store', () => {
       });
 
       expect(usePipelineBuilderStore.getState().isDirty).toBe(false);
+      fetchSpy.mockRestore();
     });
   });
 

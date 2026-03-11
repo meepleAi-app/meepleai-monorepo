@@ -209,36 +209,36 @@ public class RedisOAuthStateStoreTests
     }
 
     [Fact]
-    public async Task ValidateAndRemoveStateAsync_RedisException_ReturnsFalse()
+    public async Task ValidateAndRemoveStateAsync_RedisConnectionException_ReturnsFalse()
     {
         // Arrange
         var state = "test-state";
         var expectedKey = $"meepleai:oauth:state:{state}";
 
         _mockDatabase.Setup(db => db.KeyDeleteAsync(expectedKey, It.IsAny<CommandFlags>()))
-            .ThrowsAsync(new RedisException("Connection failed"));
+            .ThrowsAsync(new RedisConnectionException(ConnectionFailureType.UnableToConnect, "Connection failed"));
 
         // Act
         var result = await _stateStore.ValidateAndRemoveStateAsync(state);
 
-        // Assert
+        // Assert - QUAL-02: transient Redis errors return false
         Assert.False(result);
     }
 
     [Fact]
-    public async Task ExistsAsync_RedisException_ReturnsFalse()
+    public async Task ExistsAsync_RedisConnectionException_ReturnsFalse()
     {
         // Arrange
         var state = "test-state";
         var expectedKey = $"meepleai:oauth:state:{state}";
 
         _mockDatabase.Setup(db => db.KeyExistsAsync(expectedKey, It.IsAny<CommandFlags>()))
-            .ThrowsAsync(new RedisException("Connection failed"));
+            .ThrowsAsync(new RedisConnectionException(ConnectionFailureType.UnableToConnect, "Connection failed"));
 
         // Act
         var result = await _stateStore.ExistsAsync(state);
 
-        // Assert
+        // Assert - QUAL-02: transient Redis errors return false
         Assert.False(result);
     }
 
@@ -310,7 +310,7 @@ public class RedisOAuthStateStoreTests
     }
 
     [Fact]
-    public async Task ValidateAndRemoveStateAsync_RedisAuthenticationError_ReturnsFalse()
+    public async Task ValidateAndRemoveStateAsync_RedisAuthenticationError_Throws()
     {
         // Arrange
         var state = "test-state";
@@ -319,11 +319,10 @@ public class RedisOAuthStateStoreTests
         _mockDatabase.Setup(db => db.KeyDeleteAsync(expectedKey, It.IsAny<CommandFlags>()))
             .ThrowsAsync(new RedisException("NOAUTH Authentication required"));
 
-        // Act
-        var result = await _stateStore.ValidateAndRemoveStateAsync(state);
-
-        // Assert - Should return false (not throw) for auth errors during validation
-        Assert.False(result);
+        // Act & Assert - QUAL-02: Non-transient errors (auth failures) are now re-thrown
+        // Only RedisConnectionException and RedisTimeoutException are treated as transient
+        await Assert.ThrowsAsync<RedisException>(() =>
+            _stateStore.ValidateAndRemoveStateAsync(state));
     }
 
     #endregion

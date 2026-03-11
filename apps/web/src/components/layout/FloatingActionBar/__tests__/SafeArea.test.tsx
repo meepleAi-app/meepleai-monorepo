@@ -2,8 +2,8 @@
  * FloatingActionBar Safe Area Tests
  * Mobile UX Epic — Issue 9
  *
- * Verifies that FloatingActionBar respects env(safe-area-inset-bottom)
- * for proper positioning on iOS devices with notch/home indicator.
+ * Verifies that FloatingActionBar is properly positioned
+ * for devices with various safe areas and viewport configurations.
  */
 
 import { render, screen } from '@testing-library/react';
@@ -14,8 +14,17 @@ import { Plus, Settings } from 'lucide-react';
 
 vi.mock('@/hooks/useResponsive', () => ({
   usePrefersReducedMotion: () => false,
+  useResponsive: () => ({ isMobile: false, isTablet: false, isDesktop: true, deviceType: 'desktop' }),
   useIsMobile: () => false,
   useMediaQuery: () => false,
+}));
+
+vi.mock('@/hooks/useScrollDirection', () => ({
+  useScrollDirection: () => 'up',
+}));
+
+vi.mock('@/hooks/useVirtualKeyboard', () => ({
+  useVirtualKeyboard: () => ({ isKeyboardOpen: false }),
 }));
 
 const mockActions = vi.fn(() => [
@@ -54,10 +63,12 @@ describe('FloatingActionBar safe area', () => {
     vi.clearAllMocks();
   });
 
-  it('renders with safe area bottom positioning', () => {
+  it('renders with bottom positioning that accounts for mobile tab bar', () => {
     render(<FloatingActionBar />);
     const bar = screen.getByRole('toolbar');
-    expect(bar.className).toContain('bottom-[calc(1.5rem+env(safe-area-inset-bottom))]');
+    // Mobile: bottom-[calc(72px+1.5rem)] — accounts for MobileTabBar height
+    // Desktop: md:bottom-6
+    expect(bar.className).toContain('bottom-[calc(72px+1.5rem)]');
   });
 
   it('is fixed positioned and centered horizontally', () => {
@@ -74,12 +85,10 @@ describe('FloatingActionBar safe area', () => {
     expect(bar.className).toContain('z-50');
   });
 
-  it('does not use static bottom-6 without safe area', () => {
+  it('uses desktop bottom-6 via md: breakpoint', () => {
     render(<FloatingActionBar />);
     const bar = screen.getByRole('toolbar');
-    // Should NOT have the old static `bottom-6` class
-    // Instead uses calc with safe-area-inset-bottom
-    expect(bar.className).not.toMatch(/\bbottom-6\b/);
+    expect(bar.className).toContain('md:bottom-6');
   });
 
   it('renders all actions regardless of safe area', () => {

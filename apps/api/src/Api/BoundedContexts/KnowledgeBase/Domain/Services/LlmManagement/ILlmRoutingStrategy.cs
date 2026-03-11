@@ -30,6 +30,14 @@ internal record LlmRoutingDecision(
     string Reason)
 {
     /// <summary>
+    /// Geographic region hint for future multi-region routing.
+    /// Currently always null — populated when region detection is implemented.
+    /// Candidates: GeoIP middleware, user profile, CDN edge header (CF-IPCountry).
+    /// Issue #107: Epic G1 — Multi-Region Preparation.
+    /// </summary>
+    public string? UserRegion { get; init; }
+
+    /// <summary>
     /// Create decision for OpenRouter provider
     /// </summary>
     public static LlmRoutingDecision OpenRouter(string modelId, string reason) =>

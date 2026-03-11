@@ -42,13 +42,66 @@ internal class UnsubscribeEmailCommandHandler : ICommandHandler<UnsubscribeEmail
             return false;
         }
 
-        // Disable email for the specific notification type
-        // Currently preferences are grouped by PDF processing events
-        // For now, disable all email preferences as a simple implementation
-        preferences.UpdateEmailPreferences(
-            onReady: false,
-            onFailed: false,
-            onRetry: false);
+        // Disable email for the specific notification type (GDPR: granular opt-out)
+        switch (command.NotificationType)
+        {
+            case "pdf_upload_completed":
+            case "document_ready":
+                preferences.UpdateEmailPreferences(
+                    onReady: false,
+                    onFailed: preferences.EmailOnDocumentFailed,
+                    onRetry: preferences.EmailOnRetryAvailable);
+                break;
+
+            case "processing_failed":
+            case "document_failed":
+                preferences.UpdateEmailPreferences(
+                    onReady: preferences.EmailOnDocumentReady,
+                    onFailed: false,
+                    onRetry: preferences.EmailOnRetryAvailable);
+                break;
+
+            case "retry_available":
+                preferences.UpdateEmailPreferences(
+                    onReady: preferences.EmailOnDocumentReady,
+                    onFailed: preferences.EmailOnDocumentFailed,
+                    onRetry: false);
+                break;
+
+            case "game_night_invitation":
+                preferences.UpdateGameNightPreferences(
+                    inAppOnInvitation: preferences.InAppOnGameNightInvitation,
+                    emailOnInvitation: false,
+                    pushOnInvitation: preferences.PushOnGameNightInvitation,
+                    emailOnReminder: preferences.EmailOnGameNightReminder,
+                    pushOnReminder: preferences.PushOnGameNightReminder);
+                break;
+
+            case "game_night_reminder_24h":
+            case "game_night_reminder_1h":
+            case "game_night_reminder":
+                preferences.UpdateGameNightPreferences(
+                    inAppOnInvitation: preferences.InAppOnGameNightInvitation,
+                    emailOnInvitation: preferences.EmailOnGameNightInvitation,
+                    pushOnInvitation: preferences.PushOnGameNightInvitation,
+                    emailOnReminder: false,
+                    pushOnReminder: preferences.PushOnGameNightReminder);
+                break;
+
+            default:
+                // "all" or unknown type: disable all email preferences
+                preferences.UpdateEmailPreferences(
+                    onReady: false,
+                    onFailed: false,
+                    onRetry: false);
+                preferences.UpdateGameNightPreferences(
+                    inAppOnInvitation: preferences.InAppOnGameNightInvitation,
+                    emailOnInvitation: false,
+                    pushOnInvitation: preferences.PushOnGameNightInvitation,
+                    emailOnReminder: false,
+                    pushOnReminder: preferences.PushOnGameNightReminder);
+                break;
+        }
 
         await _preferencesRepository.UpdateAsync(preferences, cancellationToken).ConfigureAwait(false);
         await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);

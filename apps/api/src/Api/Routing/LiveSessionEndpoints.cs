@@ -1,4 +1,5 @@
 using Api.BoundedContexts.GameManagement.Application.Commands.LiveSessions;
+using Api.BoundedContexts.GameManagement.Application.DTOs;
 using Api.BoundedContexts.GameManagement.Application.DTOs.GameSessionContext;
 using Api.BoundedContexts.GameManagement.Application.DTOs.LiveSessions;
 using Api.BoundedContexts.GameManagement.Application.DTOs.SessionSnapshot;
@@ -193,6 +194,15 @@ internal static class LiveSessionEndpoints
             .WithTags("LiveSessions")
             .WithSummary("Confirm and record a previously parsed score");
 
+        group.MapPost("/live-sessions/{sessionId}/save-complete", HandleSaveComplete)
+            .RequireAuthenticatedUser()
+            .Produces<SessionSaveResultDto>(200)
+            .Produces(404)
+            .Produces(409)
+            .WithTags("LiveSessions")
+            .WithSummary("Save complete session state")
+            .WithDescription("Save complete session state with pause + snapshot + agent persist. Issue #122.");
+
         // === Queries ===
         // NOTE: Literal-segment routes MUST be registered before parameterized {sessionId} route
         // to prevent ASP.NET Core from trying to parse "active"/"code" as a Guid.
@@ -264,6 +274,14 @@ internal static class LiveSessionEndpoints
             .WithTags("LiveSessions")
             .WithSummary("Refresh game session context")
             .WithDescription("Rebuilds the session context, useful after indexing new PDFs or linking expansions. Issue #5579.");
+
+        group.MapGet("/live-sessions/{sessionId}/resume-context", HandleGetResumeContext)
+            .RequireAuthenticatedUser()
+            .Produces<SessionResumeContextDto>(200)
+            .Produces(404)
+            .WithTags("LiveSessions")
+            .WithSummary("Get session resume context")
+            .WithDescription("Get session resume context with recap, scores, and photos. Issue #122.");
 
         return group;
     }
@@ -510,6 +528,16 @@ internal static class LiveSessionEndpoints
         return Results.NoContent();
     }
 
+    private static async Task<IResult> HandleSaveComplete(
+        Guid sessionId,
+        [FromServices] IMediator mediator,
+        CancellationToken cancellationToken)
+    {
+        var result = await mediator.Send(
+            new SaveCompleteSessionStateCommand(sessionId), cancellationToken).ConfigureAwait(false);
+        return Results.Ok(result);
+    }
+
     #endregion
 
     #region Query Handlers
@@ -593,6 +621,16 @@ internal static class LiveSessionEndpoints
         CancellationToken cancellationToken)
     {
         var result = await mediator.Send(new RefreshGameSessionContextQuery(sessionId), cancellationToken).ConfigureAwait(false);
+        return Results.Ok(result);
+    }
+
+    private static async Task<IResult> HandleGetResumeContext(
+        Guid sessionId,
+        [FromServices] IMediator mediator,
+        CancellationToken cancellationToken)
+    {
+        var result = await mediator.Send(
+            new GetSessionResumeContextQuery(sessionId), cancellationToken).ConfigureAwait(false);
         return Results.Ok(result);
     }
 

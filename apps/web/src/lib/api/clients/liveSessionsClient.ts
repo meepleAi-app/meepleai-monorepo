@@ -34,6 +34,12 @@ import {
   type UpdateNotesRequest,
 } from '../schemas/live-sessions.schemas';
 import {
+  SessionSaveResultSchema,
+  SessionResumeContextSchema,
+  type SessionSaveResult,
+  type SessionResumeContext,
+} from '../schemas/save-resume.schemas';
+import {
   ScoreParseResultSchema,
   type ScoreParseResult,
   type ParseScoreRequest,
@@ -146,6 +152,14 @@ export interface LiveSessionsClient {
 
   /** Confirm and record a previously parsed score */
   confirmScore(sessionId: string, request: ConfirmScoreRequest): Promise<void>;
+
+  // ========== Enhanced Save/Resume (Issue #122) ==========
+
+  /** Save complete session state: pause + snapshot + agent persist + recap */
+  saveComplete(sessionId: string): Promise<SessionSaveResult>;
+
+  /** Get session resume context with recap, scores, and photos */
+  getResumeContext(sessionId: string): Promise<SessionResumeContext>;
 }
 
 export function createLiveSessionsClient({
@@ -325,6 +339,24 @@ export function createLiveSessionsClient({
 
     async confirmScore(sessionId, request) {
       await httpClient.post(`${BASE}/${encodeURIComponent(sessionId)}/scores/confirm`, request);
+    },
+
+    // ========== Enhanced Save/Resume (Issue #122) ==========
+
+    async saveComplete(sessionId) {
+      const response = await httpClient.post<SessionSaveResult>(
+        `${BASE}/${encodeURIComponent(sessionId)}/save-complete`
+      );
+      if (!response) throw new Error('Save complete failed');
+      return SessionSaveResultSchema.parse(response);
+    },
+
+    async getResumeContext(sessionId) {
+      const response = await httpClient.get<SessionResumeContext>(
+        `${BASE}/${encodeURIComponent(sessionId)}/resume-context`
+      );
+      if (!response) throw new Error('Resume context not found');
+      return SessionResumeContextSchema.parse(response);
     },
   };
 }

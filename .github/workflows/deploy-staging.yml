@@ -180,9 +180,9 @@ jobs:
           labels: ${{ steps.meta-api.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
-          build-args: |
-            ASPNETCORE_ENVIRONMENT=Staging
-            VERSION=${{ steps.version.outputs.version }}
+          # Note: No environment build-args. ASPNETCORE_ENVIRONMENT is injected
+          # at runtime via compose.staging.yml. Images are environment-agnostic
+          # to support build-once-promote pattern (Issue #179).
 
       - name: Build and Push Web Image
         if: needs.detect-changes.outputs.deploy_web == 'true'
@@ -195,10 +195,9 @@ jobs:
           labels: ${{ steps.meta-web.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
-          build-args: |
-            NODE_ENV=production
-            NEXT_PUBLIC_ENV=staging
-            VERSION=${{ steps.version.outputs.version }}
+          # Note: No environment build-args. NODE_ENV is set in Dockerfile,
+          # NEXT_PUBLIC_ENV has no ARG in Dockerfile (was silently ignored).
+          # Environment config is injected at runtime via compose files.
 
       - name: Build Summary
         run: |

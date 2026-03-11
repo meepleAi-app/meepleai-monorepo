@@ -2,25 +2,28 @@
 
 /**
  * ResourcesTab — Database, Cache, and Vector store metrics
- * Issue #127 — Resources Dashboard Tab (stub for #126 page setup)
+ * Issue #127 — Enhanced Resources Dashboard Tab
+ *
+ * Enhancements over stub (#126):
+ * - Sortable DataTable for top tables
+ * - Level 2 confirmation for destructive ops (vacuum, rebuild)
+ * - Toast feedback on actions
+ * - Trend indicators on KPI cards
+ * - Loading reset on refetch
  */
 
 import { useCallback, useEffect, useState } from 'react';
 
-import { Database, HardDrive, Layers, Loader2, Trash2, Wrench } from 'lucide-react';
+import { type ColumnDef } from '@tanstack/react-table';
+import { Database, HardDrive, Layers, Loader2, TrendingDown, TrendingUp } from 'lucide-react';
 
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from '@/components/ui/overlays/alert-dialog-primitives';
+  AdminConfirmationDialog,
+  AdminConfirmationLevel,
+} from '@/components/ui/admin/admin-confirmation-dialog';
+import { DataTable, SortableHeader } from '@/components/ui/data-display/data-table';
 import { Button } from '@/components/ui/primitives/button';
+import { useToast } from '@/hooks/use-toast';
 import { api } from '@/lib/api';
 import type {
   CacheMetrics,
@@ -60,14 +63,53 @@ function MetricCard({ title, icon, children, loading }: MetricCardProps) {
   );
 }
 
-function StatRow({ label, value }: { label: string; value: string | number }) {
+function StatRow({
+  label,
+  value,
+  trend,
+}: {
+  label: string;
+  value: string | number;
+  trend?: 'up' | 'down' | null;
+}) {
   return (
     <div className="flex items-center justify-between py-1">
       <span className="text-xs text-muted-foreground">{label}</span>
-      <span className="text-sm font-medium">{value}</span>
+      <span className="flex items-center gap-1 text-sm font-medium">
+        {value}
+        {trend === 'up' && <TrendingUp className="h-3 w-3 text-green-600" />}
+        {trend === 'down' && <TrendingDown className="h-3 w-3 text-red-600" />}
+      </span>
     </div>
   );
 }
+
+const tableColumns: ColumnDef<TableSize>[] = [
+  {
+    accessorKey: 'tableName',
+    header: ({ column }) => <SortableHeader column={column}>Table</SortableHeader>,
+    cell: ({ row }) => <span className="font-mono text-xs">{row.getValue('tableName')}</span>,
+  },
+  {
+    accessorKey: 'rowCount',
+    header: ({ column }) => <SortableHeader column={column}>Rows</SortableHeader>,
+    cell: ({ row }) => (
+      <span className="text-right block">
+        {(row.getValue('rowCount') as number).toLocaleString()}
+      </span>
+    ),
+  },
+  {
+    accessorKey: 'totalSizeBytes',
+    header: ({ column }) => <SortableHeader column={column}>Size</SortableHeader>,
+    cell: ({ row }) => <span className="text-right block">{row.original.sizeFormatted}</span>,
+  },
+  {
+    accessorKey: 'indexSizeBytes',
+    header: ({ column }) => <SortableHeader column={column}>Index</SortableHeader>,
+    cell: ({ row }) => <span className="text-right block">{row.original.indexSizeFormatted}</span>,
+  },
+];
 
 export function ResourcesTab() {
   const [db, setDb] = useState<DatabaseMetrics | null>(null);
@@ -75,8 +117,18 @@ export function ResourcesTab() {
   const [vectors, setVectors] = useState<VectorStoreMetrics | null>(null);
   const [tables, setTables] = useState<TableSize[]>([]);
   const [loading, setLoading] = useState(true);
+  const [actionLoading, setActionLoading] = useState(false);
+
+  // Confirmation dialogs
+  const [vacuumOpen, setVacuumOpen] = useState(false);
+  const [vacuumFull, setVacuumFull] = useState(false);
+  const [rebuildOpen, setRebuildOpen] = useState(false);
+  const [clearCacheOpen, setClearCacheOpen] = useState(false);
+
+  const { toast } = useToast();
 
   const fetchAll = useCallback(async () => {
+    setLoading(true);
     try {
       const [dbRes, cacheRes, vecRes, tablesRes] = await Promise.all([
         api.admin.getResourceDatabaseMetrics(),
@@ -89,11 +141,11 @@ export function ResourcesTab() {
       setVectors(vecRes);
       setTables(tablesRes);
     } catch {
-      // silently fail — individual cards show empty state
+      toast({ title: 'Failed to load resource metrics', variant: 'destructive' });
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [toast]);
 
   useEffect(() => {
     fetchAll();
@@ -102,13 +154,42 @@ export function ResourcesTab() {
   }, [fetchAll]);
 
   const handleClearCache = async () => {
-    await api.admin.clearCache();
-    fetchAll();
+    setActionLoading(true);
+    try {
+      await api.admin.clearCache();
+      toast({ title: 'Cache cleared successfully' });
+      fetchAll();
+    } catch {
+      toast({ title: 'Failed to clear cache', variant: 'destructive' });
+    } finally {
+      setActionLoading(false);
+    }
   };
 
-  const handleVacuum = async (full: boolean) => {
-    await api.admin.vacuumDatabase(full);
-    fetchAll();
+  const handleVacuum = async () => {
+    setActionLoading(true);
+    try {
+      await api.admin.vacuumDatabase(vacuumFull);
+      toast({ title: `${vacuumFull ? 'Full' : 'Standard'} vacuum completed` });
+      fetchAll();
+    } catch {
+      toast({ title: 'Vacuum failed', variant: 'destructive' });
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleRebuildVectors = async () => {
+    setActionLoading(true);
+    try {
+      await api.admin.rebuildVectors();
+      toast({ title: 'Vector rebuild started' });
+      fetchAll();
+    } catch {
+      toast({ title: 'Vector rebuild failed', variant: 'destructive' });
+    } finally {
+      setActionLoading(false);
+    }
   };
 
   return (
@@ -136,6 +217,7 @@ export function ResourcesTab() {
               <StatRow
                 label="Growth (7d)"
                 value={`${db.growthLast7Days > 0 ? '+' : ''}${db.growthLast7Days}%`}
+                trend={db.growthLast7Days > 0 ? 'up' : db.growthLast7Days < 0 ? 'down' : null}
               />
             </div>
           )}
@@ -152,7 +234,11 @@ export function ResourcesTab() {
                 label="Memory"
                 value={`${cache.usedMemoryFormatted} / ${cache.maxMemoryFormatted}`}
               />
-              <StatRow label="Usage" value={`${cache.memoryUsagePercent.toFixed(1)}%`} />
+              <StatRow
+                label="Usage"
+                value={`${cache.memoryUsagePercent.toFixed(1)}%`}
+                trend={cache.memoryUsagePercent > 80 ? 'up' : null}
+              />
               <StatRow label="Keys" value={cache.totalKeys.toLocaleString()} />
               <StatRow label="Hit Rate" value={`${(cache.hitRate * 100).toFixed(1)}%`} />
               <StatRow label="Evicted" value={cache.evictedKeys.toLocaleString()} />
@@ -176,89 +262,103 @@ export function ResourcesTab() {
         </MetricCard>
       </div>
 
-      {/* Top Tables */}
+      {/* Top Tables (Sortable DataTable) */}
       {tables.length > 0 && (
         <div className="rounded-xl border bg-white/70 dark:bg-zinc-900/70 backdrop-blur-md p-4">
           <h3 className="font-quicksand font-semibold text-sm mb-3">Top Tables by Size</h3>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b text-xs text-muted-foreground">
-                  <th className="text-left py-2 pr-4">Table</th>
-                  <th className="text-right py-2 px-4">Rows</th>
-                  <th className="text-right py-2 px-4">Size</th>
-                  <th className="text-right py-2 pl-4">Index</th>
-                </tr>
-              </thead>
-              <tbody>
-                {tables.map(t => (
-                  <tr key={t.tableName} className="border-b last:border-0">
-                    <td className="py-2 pr-4 font-mono text-xs">{t.tableName}</td>
-                    <td className="py-2 px-4 text-right">{t.rowCount.toLocaleString()}</td>
-                    <td className="py-2 px-4 text-right">{t.sizeFormatted}</td>
-                    <td className="py-2 pl-4 text-right">{t.indexSizeFormatted}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <DataTable
+            columns={tableColumns}
+            data={tables}
+            isLoading={loading}
+            emptyMessage="No table data available."
+          />
         </div>
       )}
 
-      {/* Actions */}
+      {/* Actions with Level 2 Confirmation */}
       <div className="flex flex-wrap gap-3">
-        <AlertDialog>
-          <AlertDialogTrigger asChild>
-            <Button variant="outline" size="sm" data-testid="clear-cache-button">
-              <Trash2 className="h-4 w-4 mr-2" />
-              Clear Cache
-            </Button>
-          </AlertDialogTrigger>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Clear Cache</AlertDialogTitle>
-              <AlertDialogDescription>
-                This will clear all cached data from Redis. Active sessions may experience slower
-                responses until the cache is rebuilt.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>Cancel</AlertDialogCancel>
-              <AlertDialogAction onClick={handleClearCache}>Clear Cache</AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
-
-        <AlertDialog>
-          <AlertDialogTrigger asChild>
-            <Button variant="outline" size="sm" data-testid="vacuum-db-button">
-              <Wrench className="h-4 w-4 mr-2" />
-              Vacuum Database
-            </Button>
-          </AlertDialogTrigger>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Vacuum Database</AlertDialogTitle>
-              <AlertDialogDescription>
-                VACUUM will reclaim storage and update statistics. A full vacuum locks the database
-                briefly but reclaims more space.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>Cancel</AlertDialogCancel>
-              <AlertDialogAction onClick={() => handleVacuum(false)}>
-                Standard Vacuum
-              </AlertDialogAction>
-              <AlertDialogAction
-                onClick={() => handleVacuum(true)}
-                className="bg-amber-600 hover:bg-amber-700"
-              >
-                Full Vacuum
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setClearCacheOpen(true)}
+          disabled={actionLoading}
+          data-testid="clear-cache-button"
+        >
+          Clear Cache
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => {
+            setVacuumFull(false);
+            setVacuumOpen(true);
+          }}
+          disabled={actionLoading}
+          data-testid="vacuum-db-button"
+        >
+          Standard Vacuum
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => {
+            setVacuumFull(true);
+            setVacuumOpen(true);
+          }}
+          disabled={actionLoading}
+          data-testid="full-vacuum-db-button"
+        >
+          Full Vacuum
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setRebuildOpen(true)}
+          disabled={actionLoading}
+          data-testid="rebuild-vectors-button"
+        >
+          Rebuild Vectors
+        </Button>
       </div>
+
+      {/* Clear Cache — Level 1 */}
+      <AdminConfirmationDialog
+        isOpen={clearCacheOpen}
+        onClose={() => setClearCacheOpen(false)}
+        onConfirm={handleClearCache}
+        level={AdminConfirmationLevel.Level1}
+        title="Clear Cache"
+        message="This will clear all cached data from Redis. Active sessions may experience slower responses until the cache is rebuilt."
+        isLoading={actionLoading}
+      />
+
+      {/* Vacuum — Level 2 */}
+      <AdminConfirmationDialog
+        isOpen={vacuumOpen}
+        onClose={() => setVacuumOpen(false)}
+        onConfirm={handleVacuum}
+        level={AdminConfirmationLevel.Level2}
+        title={vacuumFull ? 'Full Vacuum Database' : 'Standard Vacuum Database'}
+        message={
+          vacuumFull
+            ? 'A full VACUUM locks the database and reclaims maximum space. This may cause brief downtime.'
+            : 'Standard VACUUM reclaims storage and updates statistics without locking.'
+        }
+        warningMessage={vacuumFull ? 'This will briefly lock the database.' : undefined}
+        isLoading={actionLoading}
+      />
+
+      {/* Rebuild Vectors — Level 2 */}
+      <AdminConfirmationDialog
+        isOpen={rebuildOpen}
+        onClose={() => setRebuildOpen(false)}
+        onConfirm={handleRebuildVectors}
+        level={AdminConfirmationLevel.Level2}
+        title="Rebuild Vector Indices"
+        message="This will rebuild all vector store indices. Search may be degraded during the rebuild process."
+        warningMessage="Existing indices will be temporarily unavailable."
+        isLoading={actionLoading}
+      />
     </div>
   );
 }

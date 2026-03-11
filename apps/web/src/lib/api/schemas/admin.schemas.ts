@@ -910,6 +910,8 @@ export const VectorCollectionMetricsSchema = z.object({
   memoryFormatted: z.string(),
 });
 
+export type VectorCollectionMetrics = z.infer<typeof VectorCollectionMetricsSchema>;
+
 export const VectorStoreMetricsSchema = z.object({
   totalCollections: z.number(),
   totalVectors: z.number(),

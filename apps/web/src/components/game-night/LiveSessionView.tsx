@@ -104,7 +104,7 @@ export function LiveSessionView({ sessionId }: LiveSessionViewProps) {
   const isLoading = useSessionStore(s => s.isLoading);
   const error = useSessionStore(s => s.error);
   const loadScores = useSessionStore(s => s.loadScores);
-  const pauseSession = useSessionStore(s => s.pauseSession);
+  const _pauseSession = useSessionStore(s => s.pauseSession);
   const resumeSession = useSessionStore(s => s.resumeSession);
   const handleSessionUpdate = useSessionStore(s => s.handleSessionUpdate);
 

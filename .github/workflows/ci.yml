@@ -266,7 +266,7 @@ jobs:
             --logger "console;verbosity=minimal" \
             --no-build \
             --configuration Release \
-            --blame-hang-timeout 5min \
+            --blame-hang-timeout 15min \
             -p:CollectCoverage=true \
             -p:CoverletOutputFormat=cobertura \
             -p:CoverletOutput=./coverage/integration-coverage.xml

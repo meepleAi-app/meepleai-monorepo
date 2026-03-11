@@ -113,7 +113,7 @@ export function PdfVersionManager({ gameId, gameName }: PdfVersionManagerProps) 
   const [showUploadForm, setShowUploadForm] = useState(false);
   const [versionLabel, setVersionLabel] = useState('');
   const [category, setCategory] = useState<DocumentCategory>('Rulebook');
-  const [newDocumentId, setNewDocumentId] = useState<string | null>(null);
+  const [_newDocumentId, setNewDocumentId] = useState<string | null>(null);
   const [showReplaceDialog, setShowReplaceDialog] = useState(false);
 
   // ─── Queries ──────────────────────────────────────────────────────────────

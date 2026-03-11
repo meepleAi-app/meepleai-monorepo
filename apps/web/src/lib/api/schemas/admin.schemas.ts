@@ -624,6 +624,8 @@ export const AuditLogEntrySchema = z.object({
   details: z.string().nullable().optional(),
   ipAddress: z.string().nullable().optional(),
   createdAt: z.string().datetime(),
+  userName: z.string().nullable().optional(),
+  userEmail: z.string().nullable().optional(),
 });
 export type AuditLogEntry = z.infer<typeof AuditLogEntrySchema>;
 
@@ -853,5 +855,124 @@ export const BulkImportFromJsonResultSchema = z.object({
   errors: z.array(BulkImportErrorSchema),
 });
 export type BulkImportFromJsonResult = z.infer<typeof BulkImportFromJsonResultSchema>;
+
+// ========== Infrastructure Resources (Issue #125) ==========
+
+export const DatabaseMetricsSchema = z.object({
+  sizeBytes: z.number(),
+  sizeFormatted: z.string(),
+  growthLast7Days: z.number(),
+  growthLast30Days: z.number(),
+  growthLast90Days: z.number(),
+  activeConnections: z.number(),
+  maxConnections: z.number(),
+  transactionsCommitted: z.number(),
+  transactionsRolledBack: z.number(),
+  measuredAt: z.string().datetime(),
+});
+export type DatabaseMetrics = z.infer<typeof DatabaseMetricsSchema>;
+
+export const CacheMetricsSchema = z.object({
+  usedMemoryBytes: z.number(),
+  usedMemoryFormatted: z.string(),
+  maxMemoryBytes: z.number(),
+  maxMemoryFormatted: z.string(),
+  memoryUsagePercent: z.number(),
+  totalKeys: z.number(),
+  keyspaceHits: z.number(),
+  keyspaceMisses: z.number(),
+  hitRate: z.number(),
+  evictedKeys: z.number(),
+  expiredKeys: z.number(),
+  measuredAt: z.string().datetime(),
+});
+export type CacheMetrics = z.infer<typeof CacheMetricsSchema>;
+
+export const TableSizeSchema = z.object({
+  tableName: z.string(),
+  sizeBytes: z.number(),
+  sizeFormatted: z.string(),
+  rowCount: z.number(),
+  indexSizeBytes: z.number(),
+  indexSizeFormatted: z.string(),
+  totalSizeBytes: z.number(),
+  totalSizeFormatted: z.string(),
+});
+export type TableSize = z.infer<typeof TableSizeSchema>;
+
+export const VectorCollectionMetricsSchema = z.object({
+  collectionName: z.string(),
+  vectorCount: z.number(),
+  indexedCount: z.number(),
+  vectorDimensions: z.number(),
+  distanceMetric: z.string(),
+  memoryBytes: z.number(),
+  memoryFormatted: z.string(),
+});
+
+export const VectorStoreMetricsSchema = z.object({
+  totalCollections: z.number(),
+  totalVectors: z.number(),
+  indexedVectors: z.number(),
+  memoryBytes: z.number(),
+  memoryFormatted: z.string(),
+  collections: z.array(VectorCollectionMetricsSchema),
+  measuredAt: z.string().datetime(),
+});
+export type VectorStoreMetrics = z.infer<typeof VectorStoreMetricsSchema>;
+
+// ========== Processing Queue (Issue #125) ==========
+
+export const ProcessingJobSchema = z.object({
+  id: z.string().uuid(),
+  pdfDocumentId: z.string().uuid(),
+  pdfFileName: z.string(),
+  userId: z.string().uuid(),
+  status: z.string(),
+  priority: z.number(),
+  currentStep: z.string().nullable(),
+  createdAt: z.string().datetime(),
+  startedAt: z.string().datetime().nullable(),
+  completedAt: z.string().datetime().nullable(),
+  errorMessage: z.string().nullable(),
+  retryCount: z.number(),
+  maxRetries: z.number(),
+  canRetry: z.boolean(),
+});
+export type ProcessingJob = z.infer<typeof ProcessingJobSchema>;
+
+export const PaginatedQueueSchema = z.object({
+  jobs: z.array(ProcessingJobSchema),
+  total: z.number(),
+  page: z.number(),
+  pageSize: z.number(),
+  totalPages: z.number(),
+});
+export type PaginatedQueue = z.infer<typeof PaginatedQueueSchema>;
+
+export const QueueStatusSchema = z.object({
+  queueDepth: z.number(),
+  backpressureThreshold: z.number(),
+  isUnderPressure: z.boolean(),
+  isPaused: z.boolean(),
+  maxConcurrentWorkers: z.number(),
+  estimatedWaitMinutes: z.number(),
+});
+export type QueueStatus = z.infer<typeof QueueStatusSchema>;
+
+// ========== Emergency Controls (Issue #125) ==========
+
+export const ActiveOverrideSchema = z.object({
+  action: z.string(),
+  reason: z.string(),
+  adminUserId: z.string().uuid(),
+  targetProvider: z.string().nullable(),
+  activatedAt: z.string().datetime(),
+  expiresAt: z.string().datetime(),
+  remainingMinutes: z.number(),
+});
+export type ActiveOverride = z.infer<typeof ActiveOverrideSchema>;
+
+// Note: Audit Log schemas (AuditLogEntrySchema, AuditLogListResultSchema) defined above in Issue #3691 section
 
 // Note: PagedResult is defined in config.schemas.ts and re-exported via index.ts

@@ -1,17 +1,8 @@
 /**
  * Landing Page (Marketing) - App Router Server Component
  *
- * Public-facing marketing page with hero, features, and how-it-works sections.
+ * Public-facing marketing page with hero, how-it-works, social proof, and CTA.
  * Fully server-rendered for optimal SEO and performance.
- *
- * Issue #1835: PAGE-001 - Landing Page (Marketing)
- * Design: Playful Boardroom (wireframes-playful-boardroom.md)
- *
- * Performance Targets:
- * - Lighthouse Performance: ≥90
- * - Lighthouse Accessibility: ≥95
- * - First Contentful Paint: <1.5s
- * - Time to Interactive: <2.5s
  *
  * SEO Features:
  * - Server-side rendering (SSR)
@@ -19,37 +10,31 @@
  * - Open Graph metadata
  * - Twitter Card metadata
  * - Semantic HTML5
- *
- * @see docs/04-frontend/wireframes-playful-boardroom.md
  */
 
 import { redirect } from 'next/navigation';
 
-import { CallToActionSection } from '@/components/landing/CallToActionSection';
-import { FeaturesSection } from '@/components/landing/FeaturesSection';
-import { GamesCarouselSection } from '@/components/landing/GamesCarouselSection';
-import { HeroSection } from '@/components/landing/HeroSection';
-import { HowItWorksSection } from '@/components/landing/HowItWorksSection';
+import { HowItWorksSteps, SocialProofBar, WelcomeCTA, WelcomeHero } from '@/components/landing';
 import { getServerUser } from '@/lib/auth/server';
 
 import type { Metadata } from 'next';
 
 // Metadata for SEO
 export const metadata: Metadata = {
-  title: 'MeepleAI - Il tuo assistente AI per giochi da tavolo',
+  title: 'MeepleAI — Il tuo arbitro AI per le serate giochi da tavolo',
   description:
-    'Risposte immediate alle regole dei giochi da tavolo, in italiano. AI intelligente con citazioni dal manuale ufficiale. Sempre con te, mobile-first.',
+    'Un agente AI che conosce le regole del tuo gioco. Setup, punteggi, dispute — ti assiste al tavolo. Gratis per iniziare.',
   keywords: [
     'giochi da tavolo',
     'regole',
     'AI',
-    'assistente',
+    'arbitro',
+    'agente AI',
     'italiano',
     'board games',
     'meeple',
     'intelligenza artificiale',
-    'citazioni',
-    'manuale',
+    'serata giochi',
   ],
   authors: [{ name: 'MeepleAI Team' }],
   creator: 'MeepleAI',
@@ -70,15 +55,15 @@ export const metadata: Metadata = {
     locale: 'it_IT',
     url: 'https://meepleai.dev',
     siteName: 'MeepleAI',
-    title: 'MeepleAI - Il tuo assistente AI per giochi da tavolo',
+    title: 'MeepleAI — Il tuo arbitro AI per le serate giochi da tavolo',
     description:
-      'Risposte immediate alle regole dei giochi da tavolo con AI. Niente più discussioni, sempre citazioni dal manuale.',
+      'Un agente AI che conosce le regole del tuo gioco. Setup, punteggi, dispute — ti assiste al tavolo.',
     images: [
       {
         url: '/og-image.png',
         width: 1200,
         height: 630,
-        alt: 'MeepleAI - Assistente AI per giochi da tavolo',
+        alt: 'MeepleAI — Arbitro AI per giochi da tavolo',
       },
     ],
   },
@@ -86,16 +71,15 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     site: '@MeepleAI',
     creator: '@MeepleAI',
-    title: 'MeepleAI - Il tuo assistente AI per giochi da tavolo',
+    title: 'MeepleAI — Il tuo arbitro AI per le serate giochi da tavolo',
     description:
-      'Risposte immediate alle regole dei giochi da tavolo, in italiano. Niente più discussioni!',
+      'Un agente AI che conosce le regole del tuo gioco. Setup, punteggi, dispute — ti assiste al tavolo.',
     images: ['/twitter-card.png'],
   },
   alternates: {
     canonical: 'https://meepleai.dev',
     languages: {
       'it-IT': 'https://meepleai.dev',
-      'en-US': 'https://meepleai.dev/en',
     },
   },
   category: 'technology',
@@ -114,30 +98,22 @@ const structuredData = {
     price: '0',
     priceCurrency: 'EUR',
   },
-  aggregateRating: {
-    '@type': 'AggregateRating',
-    ratingValue: '4.8',
-    ratingCount: '1250',
-  },
   description:
-    'AI-powered board game rules assistant providing instant, accurate answers with official rulebook citations in Italian.',
+    'AI-powered board game companion that assists at the table with setup, rules, scoring, and disputes.',
   inLanguage: 'it-IT',
   featureList: [
-    'Risposte immediate con AI',
-    'Citazioni dal manuale ufficiale',
-    'Migliaia di giochi disponibili',
-    'Mobile-first design',
-    'Supporto in italiano',
+    'Arbitro AI al tavolo',
+    'Setup e regole automatiche',
+    'Punteggi e dispute',
+    'Salvataggio partita',
   ],
 };
 
 /**
  * Landing Page - Server Component
  *
- * Renders marketing landing page with hero, features, how-it-works, and footer.
+ * Renders marketing landing page with hero, how-it-works, social proof, and CTA.
  * All sections are server-rendered for optimal performance and SEO.
- *
- * Updated: Issue #2230 - Integrated PublicHeader for navigation
  */
 export default async function LandingPage() {
   // Server-side redirect: authenticated users go straight to dashboard (no flash)
@@ -148,7 +124,6 @@ export default async function LandingPage() {
 
   return (
     <>
-
       {/* Structured Data for SEO - Static content only, no user input */}
       <script
         type="application/ld+json"
@@ -159,26 +134,11 @@ export default async function LandingPage() {
 
       {/* Header provided by (public)/layout.tsx → PublicLayout → PublicHeader */}
 
-      {/* Main Landing Content */}
-      {/* Note: <main> wrapper provided by PublicLayout - avoid nested landmarks (Issue #2234) */}
-      <>
-        {/* Hero Section */}
-        <HeroSection />
-
-        {/* Game Carousels Section (Issue #3588 - GC-003) */}
-        <GamesCarouselSection />
-
-        {/* Features Section */}
-        <FeaturesSection />
-
-        {/* How It Works Section */}
-        <HowItWorksSection />
-
-        {/* CTA Section (extracted from LandingFooter) */}
-        <CallToActionSection />
-      </>
-
-      {/* Footer provided by (public)/layout.tsx → PublicLayout → PublicFooter */}
+      {/* Main Landing Content — <main> wrapper provided by PublicLayout */}
+      <WelcomeHero />
+      <HowItWorksSteps />
+      <SocialProofBar />
+      <WelcomeCTA />
     </>
   );
 }

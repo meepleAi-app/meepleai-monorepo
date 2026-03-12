@@ -350,9 +350,7 @@ function RecentRequestsTable({
     <Card>
       <CardHeader>
         <CardTitle className="text-base">Richieste recenti</CardTitle>
-        <CardDescription>
-          Ultimi 7 giorni — {data.total} richieste totali
-        </CardDescription>
+        <CardDescription>Ultimi 7 giorni — {data.total} richieste totali</CardDescription>
       </CardHeader>
       <CardContent>
         <div className="overflow-x-auto">
@@ -387,9 +385,7 @@ function RecentRequestsTable({
                   <td className="py-2 pr-4 tabular-nums text-right">
                     {(item.promptTokens + item.completionTokens).toLocaleString()}
                   </td>
-                  <td className="py-2 pr-4 tabular-nums text-right">
-                    ${item.costUsd.toFixed(4)}
-                  </td>
+                  <td className="py-2 pr-4 tabular-nums text-right">${item.costUsd.toFixed(4)}</td>
                   <td className="py-2 tabular-nums text-right">{item.latencyMs}ms</td>
                 </tr>
               ))}

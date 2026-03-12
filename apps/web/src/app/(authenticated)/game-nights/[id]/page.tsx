@@ -3,15 +3,17 @@
  * Issue #33 — P3 Game Night Frontend
  *
  * Shows game night info, RSVP buttons, and participant list.
+ * For Draft events, renders the full GameNightPlanningLayout.
  */
 
 'use client';
 
-import { use } from 'react';
+import { use, useEffect } from 'react';
 
 import { Calendar, Check, Edit, HelpCircle, MapPin, Send, Users, X, XCircle } from 'lucide-react';
 import Link from 'next/link';
 
+import { GameNightPlanningLayout } from '@/components/game-nights/GameNightPlanningLayout';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -23,8 +25,10 @@ import {
   useCancelGameNight,
   useRsvpGameNight,
 } from '@/hooks/queries/useGameNights';
+import { useSharedGames } from '@/hooks/queries/useSharedGames';
 import { useToast } from '@/hooks/use-toast';
 import type { RsvpStatus } from '@/lib/api/schemas/game-nights.schemas';
+import { useGameNightStore } from '@/store/game-night';
 
 export default function GameNightDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -35,6 +39,42 @@ export default function GameNightDetailPage({ params }: { params: Promise<{ id: 
   const publishMutation = usePublishGameNight();
   const cancelMutation = useCancelGameNight();
   const rsvpMutation = useRsvpGameNight();
+
+  // Load catalog games for the planning picker (only needed for Draft events)
+  const isDraft = event?.status === 'Draft';
+  const { data: catalogData } = useSharedGames(undefined, isDraft);
+
+  const { addPlayer, addGame, reset } = useGameNightStore();
+
+  // Sync accepted RSVPs and game IDs from the event into the planning store
+  useEffect(() => {
+    if (!isDraft || !event) return;
+    // Wait for catalog before resetting to avoid flicker on async arrival
+    if (event.gameIds.length > 0 && !catalogData) return;
+    reset();
+    // Populate players from accepted RSVPs
+    if (rsvps) {
+      rsvps
+        .filter(r => r.status === 'Accepted')
+        .forEach(r => addPlayer({ id: r.userId, name: r.userName }));
+    }
+    // Populate selected games from event.gameIds matched against catalog
+    if (catalogData?.items && event.gameIds.length > 0) {
+      const catalogMap = new Map(catalogData.items.map(g => [g.id, g]));
+      event.gameIds.forEach(gid => {
+        const g = catalogMap.get(gid);
+        if (g) {
+          addGame({
+            id: g.id,
+            title: g.title,
+            thumbnailUrl: g.thumbnailUrl ?? undefined,
+            minPlayers: g.minPlayers,
+            maxPlayers: g.maxPlayers,
+          });
+        }
+      });
+    }
+  }, [isDraft, event, rsvps, catalogData, reset, addPlayer, addGame]);
 
   function handleRsvp(response: RsvpStatus) {
     rsvpMutation.mutate(
@@ -98,8 +138,16 @@ export default function GameNightDetailPage({ params }: { params: Promise<{ id: 
   }
 
   const scheduledDate = new Date(event.scheduledAt);
-  const isDraft = event.status === 'Draft';
   const isCancelled = event.status === 'Cancelled';
+
+  // Build availableGames list from catalog for the planning picker
+  const availableGames = (catalogData?.items ?? []).map(g => ({
+    id: g.id,
+    title: g.title,
+    thumbnailUrl: g.thumbnailUrl ?? undefined,
+    minPlayers: g.minPlayers,
+    maxPlayers: g.maxPlayers,
+  }));
 
   return (
     <div className="p-4 max-w-2xl mx-auto space-y-6">
@@ -173,6 +221,9 @@ export default function GameNightDetailPage({ params }: { params: Promise<{ id: 
           )}
         </CardContent>
       </Card>
+
+      {/* Planning Layout — shown for Draft events */}
+      {isDraft && <GameNightPlanningLayout title={event.title} availableGames={availableGames} />}
 
       {/* RSVP Buttons */}
       {!isDraft && !isCancelled && (

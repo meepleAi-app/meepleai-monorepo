@@ -79,10 +79,13 @@ export async function addRagToSharedGame(
         }
       } else {
         try {
-          const errorResponse = JSON.parse(xhr.responseText) as { error?: string; details?: Record<string, string> };
+          const errorResponse = JSON.parse(xhr.responseText) as {
+            error?: string;
+            details?: Record<string, string>;
+          };
           const message = errorResponse.details
             ? Object.values(errorResponse.details).join(', ')
-            : errorResponse.error ?? 'Upload fallito';
+            : (errorResponse.error ?? 'Upload fallito');
           reject(new Error(message));
         } catch {
           reject(new Error(`Upload fallito: ${xhr.statusText}`));
@@ -143,7 +146,7 @@ export async function batchAddRag(
   });
 
   if (!response.ok) {
-    const errorBody = await response.json().catch(() => null) as { error?: string } | null;
+    const errorBody = (await response.json().catch(() => null)) as { error?: string } | null;
     throw new Error(errorBody?.error ?? `Batch upload fallito: ${response.statusText}`);
   }
 

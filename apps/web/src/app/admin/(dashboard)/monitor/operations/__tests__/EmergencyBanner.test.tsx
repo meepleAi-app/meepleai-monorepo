@@ -79,7 +79,10 @@ describe('EmergencyBanner', () => {
   });
 
   it('shows plural text when multiple overrides exist', async () => {
-    mockGetActiveEmergencyOverrides.mockResolvedValue([MOCK_OVERRIDE, { ...MOCK_OVERRIDE, action: 'flush-quota-cache' }]);
+    mockGetActiveEmergencyOverrides.mockResolvedValue([
+      MOCK_OVERRIDE,
+      { ...MOCK_OVERRIDE, action: 'flush-quota-cache' },
+    ]);
     render(<EmergencyBanner />);
 
     await waitFor(() => {

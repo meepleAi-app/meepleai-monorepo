@@ -2479,6 +2479,53 @@ internal class EmailService : IEmailService
 ";
     }
 
+    // ISSUE-124: Invitation system emails
+    public async Task SendInvitationEmailAsync(
+        string toEmail,
+        string role,
+        string token,
+        string invitedByName,
+        CancellationToken ct = default)
+    {
+        try
+        {
+            var inviteLink = $"{_frontendBaseUrl}/accept-invite?token={Uri.EscapeDataString(token)}";
+            var subject = "You've been invited to MeepleAI";
+            var body = BuildInvitationEmailBody(role, inviteLink, invitedByName);
+
+            using var message = new MailMessage();
+            message.From = new MailAddress(_fromAddress, _fromName);
+            message.To.Add(new MailAddress(toEmail));
+            message.Subject = subject;
+            message.Body = body;
+            message.IsBodyHtml = true;
+
+            using var smtpClient = new SmtpClient(_smtpHost, _smtpPort);
+            smtpClient.EnableSsl = _enableSsl;
+
+            if (!string.IsNullOrEmpty(_smtpUsername) && !string.IsNullOrEmpty(_smtpPassword))
+            {
+                smtpClient.Credentials = new NetworkCredential(_smtpUsername, _smtpPassword);
+            }
+
+            await smtpClient.SendMailAsync(message, ct).ConfigureAwait(false);
+
+            _logger.LogInformation(
+                "Invitation email sent successfully to {Email} for role {Role}",
+                DataMasking.MaskEmail(toEmail), role);
+        }
+#pragma warning disable CA1031 // Do not catch general exception types
+        catch (Exception ex)
+        {
+            _logger.LogError(
+                ex,
+                "Failed to send invitation email to {Email}",
+                DataMasking.MaskEmail(toEmail));
+            throw new InvalidOperationException("Failed to send invitation email", ex);
+        }
+#pragma warning restore CA1031
+    }
+
     // ISSUE-4417: Raw email sending for queue processor
     public async Task SendRawEmailAsync(
         string toEmail,
@@ -2519,5 +2566,56 @@ internal class EmailService : IEmailService
                 DataMasking.MaskEmail(toEmail));
             throw new InvalidOperationException("Failed to send raw email", ex);
         }
+    }
+
+    private static string BuildInvitationEmailBody(string role, string inviteLink, string invitedByName)
+    {
+        var roleDisplay = string.IsNullOrWhiteSpace(role) ? "user" : role;
+
+        return $@"
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset=""utf-8"">
+    <meta name=""viewport"" content=""width=device-width, initial-scale=1.0"">
+    <title>You've been invited to MeepleAI</title>
+</head>
+<body style=""font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;"">
+    <div style=""background-color: #f8f9fa; padding: 20px; border-radius: 5px; margin-bottom: 20px;"">
+        <h1 style=""color: #2c3e50; margin: 0;"">MeepleAI</h1>
+    </div>
+
+    <div style=""background-color: #ffffff; padding: 30px; border-radius: 5px; border: 1px solid #e0e0e0;"">
+        <h2 style=""color: #2c3e50; margin-top: 0;"">You've Been Invited!</h2>
+
+        <p><strong>{invitedByName}</strong> has invited you to join MeepleAI as a <strong>{roleDisplay}</strong>.</p>
+
+        <p>MeepleAI is an AI-powered board game assistant that helps you manage your collection, learn rules, and enhance your gaming sessions.</p>
+
+        <p>Click the button below to accept your invitation and create your account:</p>
+
+        <div style=""text-align: center; margin: 30px 0;"">
+            <a href=""{inviteLink}"" style=""background-color: #3498db; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold;"">Accept Invitation</a>
+        </div>
+
+        <p>Or copy and paste this link into your browser:</p>
+        <p style=""word-break: break-all; color: #3498db;"">{inviteLink}</p>
+
+        <p style=""margin-top: 30px; padding-top: 20px; border-top: 1px solid #e0e0e0; font-size: 14px; color: #666;"">
+            This invitation link will expire in 7 days for security reasons. If it expires, ask your administrator to resend the invitation.
+        </p>
+
+        <p style=""font-size: 14px; color: #666;"">
+            If you did not expect this invitation, you can safely ignore this email.
+        </p>
+    </div>
+
+    <div style=""margin-top: 20px; text-align: center; font-size: 12px; color: #999;"">
+        <p>This is an automated message, please do not reply to this email.</p>
+        <p>&copy; 2025 MeepleAI. All rights reserved.</p>
+    </div>
+</body>
+</html>
+";
     }
 }

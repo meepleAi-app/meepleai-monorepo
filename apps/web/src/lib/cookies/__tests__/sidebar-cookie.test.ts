@@ -1,10 +1,6 @@
 import { describe, it, expect } from 'vitest';
 
-import {
-  SIDEBAR_COOKIE_NAME,
-  SIDEBAR_COOKIE_MAX_AGE,
-  parseSidebarCookie,
-} from '../sidebar-cookie';
+import { SIDEBAR_COOKIE_NAME, SIDEBAR_COOKIE_MAX_AGE, parseSidebarCookie } from '../sidebar-cookie';
 
 describe('sidebar-cookie', () => {
   it('returns false for undefined', () => {

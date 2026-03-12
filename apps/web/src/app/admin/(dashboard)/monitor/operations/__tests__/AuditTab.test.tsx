@@ -27,7 +27,11 @@ vi.mock('@/components/ui/inputs/date-range-picker', () => ({
     onChange: unknown;
     label: string;
     className?: string;
-  }) => <div data-testid="date-range-picker" className={className}>{label}</div>,
+  }) => (
+    <div data-testid="date-range-picker" className={className}>
+      {label}
+    </div>
+  ),
 }));
 
 import { render, screen, waitFor } from '@testing-library/react';

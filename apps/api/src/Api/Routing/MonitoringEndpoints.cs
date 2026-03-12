@@ -1,4 +1,6 @@
+using Api.BoundedContexts.Administration.Application.DTOs;
 using Api.BoundedContexts.Administration.Application.Queries;
+using Api.BoundedContexts.Administration.Application.Queries.Operations;
 using Api.Extensions;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
@@ -15,6 +17,8 @@ internal static class MonitoringEndpoints
     {
         // Issue #891, #894: Infrastructure health checks & details
         MapInfrastructureHealthEndpoints(group);
+        // Issue #132: Enhanced service dashboard
+        MapServiceDashboardEndpoint(group);
         // Issue #892: Individual service health endpoints
         MapServiceHealthEndpoints(group);
         // Issue #901: Metrics time-series endpoint
@@ -118,6 +122,29 @@ internal static class MonitoringEndpoints
         .WithSummary("Get comprehensive infrastructure details including health checks and Prometheus metrics")
         .WithDescription("Issue #894: Returns aggregated infrastructure status combining service health and operational metrics from Prometheus")
         .Produces<object>(200)
+        .Produces(401);
+    }
+
+    private static void MapServiceDashboardEndpoint(RouteGroupBuilder group)
+    {
+        // Issue #132: Enhanced service dashboard with categories, uptime, and trends
+        group.MapGet("/admin/infrastructure/services/dashboard", async (
+            HttpContext context,
+            IMediator mediator,
+            CancellationToken ct = default) =>
+        {
+            var (authorized, _, error) = context.RequireAdminSession();
+            if (!authorized) return error!;
+
+            var query = new GetServiceDashboardQuery();
+            var result = await mediator.Send(query, ct).ConfigureAwait(false);
+            return Results.Ok(result);
+        })
+        .WithName("GetServiceDashboard")
+        .WithTags("Monitoring")
+        .WithSummary("Get enhanced service health dashboard")
+        .WithDescription("Issue #132: Returns service health with categories, uptime estimates, response time trends, and Prometheus metrics")
+        .Produces<EnhancedServiceDashboardDto>(200)
         .Produces(401);
     }
 

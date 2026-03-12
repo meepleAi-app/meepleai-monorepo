@@ -16,12 +16,12 @@ import { CheckCircle2 } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
 
-import type { AddRagResult, DocumentType } from '../lib/rag-api';
-
 import { StepComplete } from './step-complete';
 import { StepConfigure } from './step-configure';
 import { StepProgress } from './step-progress';
 import { StepUpload } from './step-upload';
+
+import type { AddRagResult, DocumentType } from '../lib/rag-api';
 
 // ── Types ───────────────────────────────────────────────────────────────
 
@@ -67,11 +67,7 @@ function StepIndicator({ currentStep }: { currentStep: number }) {
                     : 'bg-muted text-muted-foreground'
               )}
             >
-              {currentStep > step ? (
-                <CheckCircle2 className="h-4 w-4" />
-              ) : (
-                step + 1
-              )}
+              {currentStep > step ? <CheckCircle2 className="h-4 w-4" /> : step + 1}
             </div>
             <span
               className={cn(
@@ -84,10 +80,7 @@ function StepIndicator({ currentStep }: { currentStep: number }) {
           </div>
           {i < STEPS.length - 1 && (
             <div
-              className={cn(
-                'h-px flex-1 mx-3',
-                currentStep > step ? 'bg-green-600' : 'bg-muted'
-              )}
+              className={cn('h-px flex-1 mx-3', currentStep > step ? 'bg-green-600' : 'bg-muted')}
             />
           )}
         </div>
@@ -158,12 +151,7 @@ export function RagWizard({ sharedGameId, onClose }: RagWizardProps) {
         />
       )}
 
-      {currentStep === 3 && (
-        <StepComplete
-          results={results}
-          onClose={onClose}
-        />
-      )}
+      {currentStep === 3 && <StepComplete results={results} onClose={onClose} />}
     </div>
   );
 }

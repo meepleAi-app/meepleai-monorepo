@@ -364,6 +364,22 @@ describe('ServicesDashboard', () => {
     });
   });
 
+  // ==================== Prometheus Metrics KPIs ====================
+
+  it('renders Prometheus metrics KPI row', async () => {
+    mockGetServiceDashboard.mockResolvedValue(createMockDashboard());
+    render(<ServicesDashboard />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('metrics-kpi-row')).toBeInTheDocument();
+    });
+
+    expect(screen.getByTestId('kpi-api-requests')).toHaveTextContent(/15[.,]000/);
+    expect(screen.getByTestId('kpi-avg-latency')).toHaveTextContent('45.0ms');
+    expect(screen.getByTestId('kpi-error-rate')).toHaveTextContent('0.20%');
+    expect(screen.getByTestId('kpi-llm-cost')).toHaveTextContent('$12.50');
+  });
+
   // ==================== Interval Change ====================
 
   it('changes refresh interval via select', async () => {

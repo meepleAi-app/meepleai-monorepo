@@ -46,7 +46,7 @@ internal static class GameSeeder
                     .AsTracking()
                     .FirstOrDefaultAsync(g =>
                         (EF.Functions.ILike(g.Title, entry.Title) ||
-                         (entry.BggId > 0 && g.BggId == entry.BggId))
+                         (entry.BggId.HasValue && entry.BggId > 0 && g.BggId == entry.BggId.Value))
                         && !g.IsDeleted, ct)
                     .ConfigureAwait(false);
 
@@ -68,8 +68,8 @@ internal static class GameSeeder
                     // Ensure GameEntity bridge exists and record in map
                     var existingBridge = await EnsureGameEntityBridgeAsync(db, existing, entry, systemUserId, ct)
                         .ConfigureAwait(false);
-                    if (entry.BggId > 0)
-                        gameMap[entry.BggId] = existingBridge.Id;
+                    if (entry.BggId is > 0)
+                        gameMap[entry.BggId.Value] = existingBridge.Id;
 
                     skippedCount++;
                     continue;
@@ -78,9 +78,9 @@ internal static class GameSeeder
                 // Fetch metadata from BGG if BGG ID provided
                 SharedGameEntity? sharedGame = null;
 
-                if (entry.BggId > 0)
+                if (entry.BggId is > 0)
                 {
-                    var bggDetails = await bggService.GetGameDetailsAsync(entry.BggId, ct)
+                    var bggDetails = await bggService.GetGameDetailsAsync(entry.BggId.Value, ct)
                         .ConfigureAwait(false);
 
                     if (bggDetails != null)
@@ -100,8 +100,8 @@ internal static class GameSeeder
                 // Create GameEntity bridge
                 var bridge = await EnsureGameEntityBridgeAsync(db, sharedGame, entry, systemUserId, ct)
                     .ConfigureAwait(false);
-                if (entry.BggId > 0)
-                    gameMap[entry.BggId] = bridge.Id;
+                if (entry.BggId is > 0)
+                    gameMap[entry.BggId.Value] = bridge.Id;
 
                 seededCount++;
                 logger.LogInformation("Seeded SharedGame: {GameName} ({Language})", entry.Title, entry.Language);
@@ -195,7 +195,7 @@ internal static class GameSeeder
         return new SharedGameEntity
         {
             Id = Guid.NewGuid(),
-            BggId = entry.BggId > 0 ? entry.BggId : null,
+            BggId = entry.BggId is > 0 ? entry.BggId.Value : null,
             Title = entry.Title,
             YearPublished = 2020,
             Description = $"Classic board game: {entry.Title}. Rulebook available in {entry.Language.ToUpperInvariant()} language.",

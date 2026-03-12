@@ -3,6 +3,7 @@ using Api.BoundedContexts.SharedGameCatalog.Domain.Aggregates;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Entities;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
 using Api.BoundedContexts.SharedGameCatalog.Domain.ValueObjects;
+using Api.Middleware.Exceptions;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Api.Tests.Constants;
 using FluentAssertions;
@@ -57,7 +58,7 @@ public class QuickPublishSharedGameCommandHandlerTests
     }
 
     [Fact]
-    public async Task Handle_WithGameNotFound_ThrowsInvalidOperationException()
+    public async Task Handle_WithGameNotFound_ThrowsNotFoundException()
     {
         // Arrange
         var gameId = Guid.NewGuid();
@@ -68,10 +69,11 @@ public class QuickPublishSharedGameCommandHandlerTests
             .ReturnsAsync((SharedGame?)null);
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
+        var exception = await Assert.ThrowsAsync<NotFoundException>(
             () => _handler.Handle(command, CancellationToken.None));
 
-        exception.Message.Should().Contain(gameId.ToString());
+        exception.ResourceType.Should().Be("SharedGame");
+        exception.ResourceId.Should().Be(gameId.ToString());
         _repositoryMock.Verify(r => r.Update(It.IsAny<SharedGame>()), Times.Never);
         _unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
     }

@@ -78,6 +78,7 @@ internal static class BadgeSeeder
             catch (Exception ex)
             {
                 logger.LogWarning(ex, "⚠️  Failed to seed Badge '{BadgeCode}', continuing with others", badge.Code);
+                db.ChangeTracker.Clear();
                 skippedCount++;
             }
         }

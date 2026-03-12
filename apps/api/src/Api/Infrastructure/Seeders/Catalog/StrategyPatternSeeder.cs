@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Pgvector;
 
-namespace Api.Infrastructure.Seeders;
+namespace Api.Infrastructure.Seeders.Catalog;
 
 /// <summary>
 /// Seeds common game strategy patterns for AI agent decision-making.

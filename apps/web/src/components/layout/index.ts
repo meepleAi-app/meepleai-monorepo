@@ -11,32 +11,7 @@ export {
   useLayoutMultiSelect,
   useLayoutContext,
 } from './LayoutProvider';
-export {
-  Layout,
-  PageHeader,
-  PageContent,
-  EmptyState,
-  LoadingState,
-} from './Layout';
-
-// Phase 2: Navbar Components (#3288)
-export {
-  Navbar,
-  HamburgerButton,
-  HamburgerMenu,
-  NavItems,
-  NavItemButton,
-  ProfileBar,
-} from './Navbar';
-export type {
-  NavbarProps,
-  HamburgerButtonProps,
-  HamburgerMenuProps,
-  NavItem,
-  NavItemsProps,
-  NavItemButtonProps,
-  ProfileBarProps,
-} from './Navbar';
+export { Layout, PageHeader, PageContent, EmptyState, LoadingState } from './Layout';
 
 // Logo relocated to TopNavbar (#5033)
 export { Logo } from './TopNavbar';
@@ -76,10 +51,7 @@ export type {
 } from './ActionBar';
 
 // Layout System v2 - UnifiedActionBar (#3479)
-export {
-  UnifiedActionBar,
-  UnifiedActionBarSpacer,
-} from './ActionBar';
+export { UnifiedActionBar, UnifiedActionBarSpacer } from './ActionBar';
 export type { UnifiedActionBarProps } from './ActionBar';
 
 // Phase 5: Smart FAB (#3291) - REMOVED: FAB functionality integrated into UnifiedActionBar

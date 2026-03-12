@@ -394,9 +394,22 @@ using (var scope = app.Services.CreateScope())
         app.Logger.LogInformation("✓ Embedding configuration validated: Provider={Provider}, Model={Model}, Dimensions={Dimensions}",
             provider, model, embeddingDimensions);
 
-        // Layered seeding via SeedOrchestrator (creates its own scopes internally)
-        var seedOrchestrator = app.Services.GetRequiredService<Api.Infrastructure.Seeders.SeedOrchestrator>();
-        await seedOrchestrator.ExecuteAsync(CancellationToken.None).ConfigureAwait(false);
+        // PERF: Skip seeding in Staging/Production — seeding is for dev/test environments only
+        // Use SKIP_SEEDING=true or Staging/Production environment to disable
+        var skipSeeding = app.Configuration.GetValue<bool?>("SkipSeeding").GetValueOrDefault(false)
+            || app.Environment.IsEnvironment("Staging")
+            || app.Environment.IsProduction();
+
+        if (!skipSeeding)
+        {
+            // Layered seeding via SeedOrchestrator (creates its own scopes internally)
+            var seedOrchestrator = app.Services.GetRequiredService<Api.Infrastructure.Seeders.SeedOrchestrator>();
+            await seedOrchestrator.ExecuteAsync(CancellationToken.None).ConfigureAwait(false);
+        }
+        else
+        {
+            app.Logger.LogInformation("Skipping database seeding in {Environment}", app.Environment.EnvironmentName);
+        }
     }
 }
 
@@ -680,6 +693,13 @@ static bool ShouldSkipMigrations(WebApplication app, MeepleAiDbContext db)
     // Skip migrations in Testing and CI environments (E2E tests use Testcontainers)
     if (app.Environment.IsEnvironment("Testing") || app.Environment.IsEnvironment("CI"))
     {
+        return true;
+    }
+
+    // PERF: Skip auto-migration in Staging/Production — handled by deploy pipeline (migrate-db job)
+    if (app.Environment.IsEnvironment("Staging") || app.Environment.IsProduction())
+    {
+        app.Logger.LogInformation("Skipping auto-migration in {Environment} — migrations handled by deploy pipeline", app.Environment.EnvironmentName);
         return true;
     }
 

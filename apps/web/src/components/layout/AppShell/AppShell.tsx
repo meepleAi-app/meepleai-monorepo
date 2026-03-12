@@ -9,8 +9,9 @@
  * with a single auth-aware component.
  */
 
-import { cookies } from 'next/headers';
 import { type ReactNode } from 'react';
+
+import { cookies } from 'next/headers';
 
 import { parseSidebarCookie, SIDEBAR_COOKIE_NAME } from '@/lib/cookies/sidebar-cookie';
 
@@ -26,9 +27,7 @@ export interface AppShellProps {
 
 export async function AppShell({ children, fullWidth, className }: AppShellProps) {
   const cookieStore = await cookies();
-  const initialSidebarCollapsed = parseSidebarCookie(
-    cookieStore.get(SIDEBAR_COOKIE_NAME)?.value
-  );
+  const initialSidebarCollapsed = parseSidebarCookie(cookieStore.get(SIDEBAR_COOKIE_NAME)?.value);
 
   return (
     <AppShellClient

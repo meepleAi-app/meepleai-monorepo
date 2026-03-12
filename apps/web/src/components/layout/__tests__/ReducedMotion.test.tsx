@@ -18,7 +18,12 @@ const mockPrefersReducedMotion = vi.fn(() => false);
 
 vi.mock('@/hooks/useResponsive', () => ({
   usePrefersReducedMotion: () => mockPrefersReducedMotion(),
-  useResponsive: () => ({ isMobile: false, isTablet: false, isDesktop: true, deviceType: 'desktop' }),
+  useResponsive: () => ({
+    isMobile: false,
+    isTablet: false,
+    isDesktop: true,
+    deviceType: 'desktop',
+  }),
   useIsMobile: () => false,
   useMediaQuery: () => false,
 }));

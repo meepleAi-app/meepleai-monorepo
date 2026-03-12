@@ -77,7 +77,10 @@ export function PublicLayout({
           // Bottom padding for mobile MobileTabBar (72px + gap)
           'pb-24 md:pb-0',
           // Desktop sidebar offset for authenticated users
-          isAuthenticated && (isCollapsed ? 'md:ml-[var(--sidebar-width-collapsed)]' : 'md:ml-[var(--sidebar-width-expanded)]'),
+          isAuthenticated &&
+            (isCollapsed
+              ? 'md:ml-[var(--sidebar-width-collapsed)]'
+              : 'md:ml-[var(--sidebar-width-expanded)]'),
           isAuthenticated &&
             'transition-[margin-left] duration-200 ease-in-out motion-reduce:transition-none',
           className
@@ -90,7 +93,10 @@ export function PublicLayout({
       <div
         className={cn(
           'hidden md:block',
-          isAuthenticated && (isCollapsed ? 'md:ml-[var(--sidebar-width-collapsed)]' : 'md:ml-[var(--sidebar-width-expanded)]'),
+          isAuthenticated &&
+            (isCollapsed
+              ? 'md:ml-[var(--sidebar-width-collapsed)]'
+              : 'md:ml-[var(--sidebar-width-expanded)]'),
           isAuthenticated &&
             'transition-[margin-left] duration-200 ease-in-out motion-reduce:transition-none'
         )}

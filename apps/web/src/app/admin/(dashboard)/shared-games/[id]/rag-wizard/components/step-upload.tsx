@@ -143,16 +143,15 @@ export function StepUpload({ files, onFilesChange, onNext }: StepUploadProps) {
         />
         <FileUp className="h-12 w-12 mx-auto text-muted-foreground mb-3" />
         <p className="font-medium">Trascina i PDF qui o clicca per selezionare</p>
-        <p className="text-sm text-muted-foreground mt-1">
-          Solo file PDF, massimo 50MB ciascuno
-        </p>
+        <p className="text-sm text-muted-foreground mt-1">Solo file PDF, massimo 50MB ciascuno</p>
       </div>
 
       {/* File list */}
       {files.length > 0 && (
         <div className="space-y-2">
           <p className="text-sm font-medium text-muted-foreground">
-            {files.length} file{files.length !== 1 ? '' : ''} selezionat{files.length !== 1 ? 'i' : 'o'}
+            {files.length} file{files.length !== 1 ? '' : ''} selezionat
+            {files.length !== 1 ? 'i' : 'o'}
           </p>
           {files.map((file, index) => (
             <div

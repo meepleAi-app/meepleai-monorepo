@@ -98,6 +98,7 @@ internal static class RateLimitConfigSeeder
             catch (Exception ex)
             {
                 logger.LogWarning(ex, "⚠️  Failed to seed RateLimitConfig for tier '{Tier}', continuing with others", config.Tier);
+                db.ChangeTracker.Clear();
                 skippedCount++;
             }
         }

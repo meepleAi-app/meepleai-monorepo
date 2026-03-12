@@ -1,7 +1,7 @@
 'use client';
 
 import type { ReactNode } from 'react';
-import { useCallback } from 'react';
+import { useCallback, useEffect } from 'react';
 
 import { CollapsiblePanel } from '@/components/layout/CollapsiblePanel';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
@@ -21,6 +21,30 @@ export function LiveSessionLayout({
   const [rightCollapsed, setRightCollapsed] = useLocalStorage('session-right-collapsed', false);
   const toggleLeft = useCallback(() => setLeftCollapsed((v: boolean) => !v), [setLeftCollapsed]);
   const toggleRight = useCallback(() => setRightCollapsed((v: boolean) => !v), [setRightCollapsed]);
+
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      // Skip if user is typing in an input/textarea
+      const tag = (e.target as HTMLElement)?.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || (e.target as HTMLElement)?.isContentEditable) {
+        return;
+      }
+
+      // Ctrl+[ → toggle left panel
+      if (e.ctrlKey && e.key === '[') {
+        e.preventDefault();
+        toggleLeft();
+      }
+      // Ctrl+] → toggle right panel
+      if (e.ctrlKey && e.key === ']') {
+        e.preventDefault();
+        toggleRight();
+      }
+    }
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [toggleLeft, toggleRight]);
 
   return (
     <div

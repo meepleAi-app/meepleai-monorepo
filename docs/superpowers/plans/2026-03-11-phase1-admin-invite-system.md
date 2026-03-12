@@ -21,7 +21,7 @@
 | `Authentication/Domain/Enums/InvitationStatus.cs` | Enum: Pending, Accepted, Expired, Revoked |
 | `Authentication/Domain/Events/UserInvitedEvent.cs` | Domain event when invitation is created |
 | `Authentication/Domain/Events/InvitationAcceptedEvent.cs` | Domain event when invitation is accepted |
-| `Authentication/Domain/Repositories/IUserInvitationRepository.cs` | Repository interface |
+| `Authentication/Infrastructure/Persistence/IUserInvitationRepository.cs` | Repository interface |
 | `Authentication/Infrastructure/Repositories/UserInvitationRepository.cs` | EF Core implementation |
 | `Authentication/Infrastructure/Configuration/UserInvitationConfiguration.cs` | EF entity config |
 | `Authentication/Application/Commands/Invitation/InviteUserCommand.cs` | Command + response records |
@@ -242,7 +242,7 @@ Expected: FAIL — `UserInvitation` class does not exist
 using System.Security.Cryptography;
 using Api.BoundedContexts.Authentication.Domain.Enums;
 using Api.BoundedContexts.Authentication.Domain.Events;
-using Api.SharedKernel.Domain;
+using Api.SharedKernel.Infrastructure.Persistence;
 
 namespace Api.BoundedContexts.Authentication.Domain.Entities;
 
@@ -388,7 +388,7 @@ git commit -m "feat(auth): add UserInvitation entity with token hashing and stat
 - [ ] **Step 1: Write UserInvitedEvent**
 
 ```csharp
-using Api.SharedKernel.Domain;
+using Api.SharedKernel.Infrastructure.Persistence;
 
 namespace Api.BoundedContexts.Authentication.Domain.Events;
 
@@ -412,7 +412,7 @@ internal sealed class UserInvitedEvent : DomainEventBase
 - [ ] **Step 2: Write InvitationAcceptedEvent**
 
 ```csharp
-using Api.SharedKernel.Domain;
+using Api.SharedKernel.Infrastructure.Persistence;
 
 namespace Api.BoundedContexts.Authentication.Domain.Events;
 
@@ -484,7 +484,7 @@ git commit -m "feat(auth): add MustChangePassword and InvitedBy properties to Us
 ### Task 5: Create repository interface
 
 **Files:**
-- Create: `apps/api/src/Api/BoundedContexts/Authentication/Domain/Repositories/IUserInvitationRepository.cs`
+- Create: `apps/api/src/Api/BoundedContexts/Authentication/Infrastructure/Persistence/IUserInvitationRepository.cs`
 
 - [ ] **Step 1: Write the interface**
 
@@ -492,7 +492,7 @@ git commit -m "feat(auth): add MustChangePassword and InvitedBy properties to Us
 using Api.BoundedContexts.Authentication.Domain.Entities;
 using Api.BoundedContexts.Authentication.Domain.Enums;
 
-namespace Api.BoundedContexts.Authentication.Domain.Repositories;
+namespace Api.BoundedContexts.Authentication.Infrastructure.Persistence;
 
 public interface IUserInvitationRepository
 {
@@ -510,7 +510,7 @@ public interface IUserInvitationRepository
 - [ ] **Step 2: Commit**
 
 ```bash
-git add apps/api/src/Api/BoundedContexts/Authentication/Domain/Repositories/IUserInvitationRepository.cs
+git add apps/api/src/Api/BoundedContexts/Authentication/Infrastructure/Persistence/IUserInvitationRepository.cs
 git commit -m "feat(auth): add IUserInvitationRepository interface"
 ```
 
@@ -577,7 +577,7 @@ internal sealed class UserInvitationConfiguration : IEntityTypeConfiguration<Use
 ```csharp
 using Api.BoundedContexts.Authentication.Domain.Entities;
 using Api.BoundedContexts.Authentication.Domain.Enums;
-using Api.BoundedContexts.Authentication.Domain.Repositories;
+using Api.BoundedContexts.Authentication.Infrastructure.Persistence;
 using Api.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 
@@ -745,7 +745,7 @@ internal record SendInvitationEmailCommand(
 using Api.BoundedContexts.UserNotifications.Domain.Entities;
 using Api.BoundedContexts.UserNotifications.Domain.Repositories;
 using Api.SharedKernel.Application.Interfaces;
-using Api.SharedKernel.Domain;
+using Api.SharedKernel.Infrastructure.Persistence;
 using Microsoft.Extensions.Logging;
 
 namespace Api.BoundedContexts.UserNotifications.Application.Handlers;
@@ -830,8 +830,8 @@ git commit -m "feat(notifications): add SendInvitationEmailCommand with HTML tem
 ```csharp
 using Api.BoundedContexts.Authentication.Application.Commands.Invitation;
 using Api.BoundedContexts.Authentication.Domain.Entities;
-using Api.BoundedContexts.Authentication.Domain.Repositories;
-using Api.SharedKernel.Domain;
+using Api.BoundedContexts.Authentication.Infrastructure.Persistence;
+using Api.SharedKernel.Infrastructure.Persistence;
 using FluentAssertions;
 using MediatR;
 using Microsoft.Extensions.Logging;
@@ -858,7 +858,7 @@ public class InviteUserCommandTests
     {
         // Arrange
         var command = new InviteUserCommand("test@example.com", "user", "Test User", Guid.NewGuid(), "Admin Name");
-        _userRepository.GetByEmailAsync(command.Email, Arg.Any<CancellationToken>())
+        _userRepository.GetByEmailAsync(Email.Create(command.Email), Arg.Any<CancellationToken>())
             .Returns((User?)null);
         _invitationRepository.ExistsPendingForEmailAsync(command.Email, Arg.Any<CancellationToken>())
             .Returns(false);
@@ -881,7 +881,7 @@ public class InviteUserCommandTests
     {
         var existingUser = Substitute.For<User>();
         var command = new InviteUserCommand("existing@example.com", "user", "Test", Guid.NewGuid(), "Admin");
-        _userRepository.GetByEmailAsync(command.Email, Arg.Any<CancellationToken>())
+        _userRepository.GetByEmailAsync(Email.Create(command.Email), Arg.Any<CancellationToken>())
             .Returns(existingUser);
 
         var handler = CreateHandler();
@@ -895,7 +895,7 @@ public class InviteUserCommandTests
     public async Task Handle_WhenPendingInvitationExists_ShouldThrowConflict()
     {
         var command = new InviteUserCommand("pending@example.com", "user", "Test", Guid.NewGuid(), "Admin");
-        _userRepository.GetByEmailAsync(command.Email, Arg.Any<CancellationToken>())
+        _userRepository.GetByEmailAsync(Email.Create(command.Email), Arg.Any<CancellationToken>())
             .Returns((User?)null);
         _invitationRepository.ExistsPendingForEmailAsync(command.Email, Arg.Any<CancellationToken>())
             .Returns(true);
@@ -978,11 +978,11 @@ internal sealed class InviteUserCommandValidator : AbstractValidator<InviteUserC
 
 ```csharp
 using Api.BoundedContexts.Authentication.Domain.Entities;
-using Api.BoundedContexts.Authentication.Domain.Repositories;
+using Api.BoundedContexts.Authentication.Infrastructure.Persistence;
 using Api.BoundedContexts.UserNotifications.Application.Commands;
 using Api.SharedKernel.Application.Interfaces;
-using Api.SharedKernel.Domain;
-using Api.SharedKernel.Domain.Exceptions;
+using Api.SharedKernel.Infrastructure.Persistence;
+using Api.Middleware.Exceptions;
 using MediatR;
 using Microsoft.Extensions.Logging;
 
@@ -1015,7 +1015,7 @@ internal class InviteUserCommandHandler : ICommandHandler<InviteUserCommand, Inv
         ArgumentNullException.ThrowIfNull(command);
 
         // Check if email already registered
-        var existingUser = await _userRepository.GetByEmailAsync(command.Email, cancellationToken)
+        var existingUser = await _userRepository.GetByEmailAsync(Email.Create(command.Email), cancellationToken)
             .ConfigureAwait(false);
         if (existingUser != null)
             throw new ConflictException($"Email {command.Email} is already registered");
@@ -1079,8 +1079,8 @@ git commit -m "feat(auth): add InviteUserCommand with validation, conflict check
 using Api.BoundedContexts.Authentication.Application.Commands.Invitation;
 using Api.BoundedContexts.Authentication.Domain.Entities;
 using Api.BoundedContexts.Authentication.Domain.Enums;
-using Api.BoundedContexts.Authentication.Domain.Repositories;
-using Api.SharedKernel.Domain;
+using Api.BoundedContexts.Authentication.Infrastructure.Persistence;
+using Api.SharedKernel.Infrastructure.Persistence;
 using Api.SharedKernel.Domain.ValueObjects;
 using FluentAssertions;
 using Microsoft.Extensions.Logging;
@@ -1191,10 +1191,10 @@ internal sealed class AcceptInvitationCommandValidator : AbstractValidator<Accep
 using System.Security.Cryptography;
 using System.Text;
 using Api.BoundedContexts.Authentication.Domain.Entities;
-using Api.BoundedContexts.Authentication.Domain.Repositories;
+using Api.BoundedContexts.Authentication.Infrastructure.Persistence;
 using Api.SharedKernel.Application.Interfaces;
-using Api.SharedKernel.Domain;
-using Api.SharedKernel.Domain.Exceptions;
+using Api.SharedKernel.Infrastructure.Persistence;
+using Api.Middleware.Exceptions;
 using Api.SharedKernel.Domain.ValueObjects;
 using Microsoft.Extensions.Logging;
 
@@ -1257,9 +1257,11 @@ internal class AcceptInvitationCommandHandler : ICommandHandler<AcceptInvitation
 
         // Create session
         var sessionToken = SessionToken.Generate();
-        var session = Session.Create(
+        var session = new Session(
+            Guid.NewGuid(),
             user.Id,
             sessionToken,
+            null,
             command.IpAddress,
             command.UserAgent);
 
@@ -1323,10 +1325,10 @@ internal record RevokeInvitationCommand(Guid InvitationId) : ICommand<bool>;
 
 ```csharp
 // RevokeInvitationCommandHandler.cs
-using Api.BoundedContexts.Authentication.Domain.Repositories;
+using Api.BoundedContexts.Authentication.Infrastructure.Persistence;
 using Api.SharedKernel.Application.Interfaces;
-using Api.SharedKernel.Domain;
-using Api.SharedKernel.Domain.Exceptions;
+using Api.SharedKernel.Infrastructure.Persistence;
+using Api.Middleware.Exceptions;
 using Microsoft.Extensions.Logging;
 
 namespace Api.BoundedContexts.Authentication.Application.Commands.Invitation;
@@ -1410,7 +1412,7 @@ git commit -m "feat(auth): add RevokeInvitationCommand"
 
 ```csharp
 using Api.BoundedContexts.Authentication.Domain.Enums;
-using Api.BoundedContexts.Authentication.Domain.Repositories;
+using Api.BoundedContexts.Authentication.Infrastructure.Persistence;
 using Api.SharedKernel.Application.Interfaces;
 
 namespace Api.BoundedContexts.Authentication.Application.Queries;

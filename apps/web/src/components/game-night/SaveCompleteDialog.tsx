@@ -9,12 +9,13 @@
  * Issue #122 — Enhanced Save/Resume
  */
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 
-import { Camera, Check, Loader2, Save } from 'lucide-react';
+import { Bot, Camera, Check, ImagePlus, Loader2, Save } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/overlays/dialog';
+import { Textarea } from '@/components/ui/primitives/textarea';
 import { api } from '@/lib/api';
 import type { SessionSaveResult } from '@/lib/api/schemas/save-resume.schemas';
 import { cn } from '@/lib/utils';
@@ -46,6 +47,11 @@ export function SaveCompleteDialog({
   const [phase, setPhase] = useState<SavePhase>('confirm');
   const [result, setResult] = useState<SessionSaveResult | null>(null);
   const [errorMsg, setErrorMsg] = useState('');
+  const [notes, setNotes] = useState('');
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [aiSummary, setAiSummary] = useState('');
+  const [isSummarizing, setIsSummarizing] = useState(false);
+  const photoInputRef = useRef<HTMLInputElement>(null);
 
   const handleSave = useCallback(async () => {
     setPhase('saving');
@@ -61,6 +67,21 @@ export function SaveCompleteDialog({
     }
   }, [sessionId]);
 
+  const handlePhotoSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) setPhotoFile(file);
+  }, []);
+
+  const handleGenerateSummary = useCallback(async () => {
+    setIsSummarizing(true);
+    try {
+      // Placeholder — will be wired to real AI summary endpoint later
+      setAiSummary('Riepilogo in arrivo nella prossima iterazione.');
+    } finally {
+      setIsSummarizing(false);
+    }
+  }, []);
+
   const handleClose = useCallback(() => {
     const wasDone = phase === 'done';
     onOpenChange(false);
@@ -69,6 +90,9 @@ export function SaveCompleteDialog({
     setPhase('confirm');
     setResult(null);
     setErrorMsg('');
+    setNotes('');
+    setPhotoFile(null);
+    setAiSummary('');
   }, [onOpenChange, onSaveComplete, phase]);
 
   return (
@@ -95,6 +119,69 @@ export function SaveCompleteDialog({
                 <li>Snapshot della partita</li>
               </ul>
             </div>
+            {/* Notes textarea — collected locally, will be sent when API supports it */}
+            <Textarea
+              value={notes}
+              onChange={e => setNotes(e.target.value)}
+              placeholder="Note sulla partita (opzionale)..."
+              rows={3}
+              className="text-sm"
+            />
+            <p className="text-xs text-muted-foreground -mt-2">
+              Le note verranno salvate localmente. Invio al server in arrivo.
+            </p>
+
+            {/* Photo upload + AI summary row */}
+            <div className="flex items-center gap-2">
+              <input
+                ref={photoInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={handlePhotoSelect}
+                data-testid="photo-file-input"
+              />
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => photoInputRef.current?.click()}
+              >
+                <ImagePlus className="h-4 w-4 mr-1" aria-hidden="true" />
+                {photoFile ? photoFile.name : 'Aggiungi foto'}
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={handleGenerateSummary}
+                disabled={isSummarizing}
+                aria-label="Genera riepilogo AI"
+              >
+                {isSummarizing ? (
+                  <Loader2 className="h-4 w-4 mr-1 animate-spin" aria-hidden="true" />
+                ) : (
+                  <Bot className="h-4 w-4 mr-1" aria-hidden="true" />
+                )}
+                Genera riepilogo AI
+              </Button>
+            </div>
+
+            {/* AI summary display */}
+            {aiSummary && (
+              <div
+                className={cn(
+                  'rounded-lg border p-3 text-xs',
+                  'border-blue-500/30 bg-blue-50 dark:bg-blue-900/20',
+                  'text-blue-800 dark:text-blue-300'
+                )}
+                data-testid="ai-summary"
+              >
+                <p className="font-medium mb-1">Riepilogo AI</p>
+                <p>{aiSummary}</p>
+              </div>
+            )}
+
             <div className="flex justify-end gap-2 pt-2">
               <Button variant="outline" size="sm" onClick={handleClose}>
                 Annulla

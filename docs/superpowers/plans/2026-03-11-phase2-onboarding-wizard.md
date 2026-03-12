@@ -10,7 +10,7 @@
 
 **Spec:** `docs/superpowers/specs/2026-03-11-admin-invite-onboarding-design.md` — Phase 2
 
-**Depends on:** Phase 1 (MustChangePassword flag, invited user flow)
+**Depends on:** Phase 1 (MustChangePassword flag, invited user flow, `/change-password` page)
 
 ---
 
@@ -19,7 +19,7 @@
 ### Backend — Modified Files
 | File | Change |
 |------|--------|
-| `Authentication/Domain/Entities/User.cs` | Add `OnboardingCompleted`, `OnboardingSkipped`, `OnboardingCompletedAt` |
+| `Authentication/Domain/Entities/User.cs` | Add `OnboardingCompleted`, `OnboardingSkipped`, `OnboardingCompletedAt`, `SkippedSteps` |
 
 ### Backend — New Files
 | File | Responsibility |
@@ -40,20 +40,23 @@
 | `components/onboarding/steps/TryAgentStep.tsx` | Step 3: mini-chat with agent |
 | `components/onboarding/OnboardingProgress.tsx` | Progress dots (3 steps) |
 | `components/onboarding/SkipWizardDialog.tsx` | Confirmation dialog for skipping all |
+| `components/onboarding/OnboardingReminderBanner.tsx` | Dismissible banner for skipped wizard |
 | `hooks/useOnboardingGuard.ts` | Client-side redirect logic |
+| `apps/web/src/middleware.ts` | Redirect to /onboarding if not completed |
 
 ### Frontend — Modified Files
 | File | Change |
 |------|--------|
-| `middleware.ts` | Create new file: redirect to /onboarding if not completed |
 | `app/(auth)/reset-password/_content.tsx` | Redirect to /onboarding after forced password change |
 
 ### Tests
 | File | Scope |
 |------|-------|
-| `Api.Tests/Authentication/Commands/CompleteOnboardingCommandTests.cs` | Unit: handler |
-| `apps/web/__tests__/onboarding/OnboardingWizard.test.tsx` | Frontend: wizard flow |
-| `apps/web/__tests__/onboarding/AddGameStep.test.tsx` | Frontend: step 1 |
+| `apps/api/tests/Api.Tests/BoundedContexts/Authentication/Application/Commands/Onboarding/CompleteOnboardingCommandHandlerTests.cs` | Unit: handler |
+| `apps/web/src/__tests__/onboarding/OnboardingWizard.test.tsx` | Frontend: wizard flow |
+| `apps/web/src/__tests__/onboarding/AddGameStep.test.tsx` | Frontend: step 1 |
+| `apps/web/src/__tests__/onboarding/CreateAgentStep.test.tsx` | Frontend: step 2 |
+| `apps/web/src/__tests__/onboarding/TryAgentStep.test.tsx` | Frontend: step 3 |
 
 ### Migration
 | File | Description |
@@ -76,12 +79,14 @@
 public bool OnboardingCompleted { get; private set; } = true; // true for existing users
 public bool OnboardingSkipped { get; private set; }
 public DateTime? OnboardingCompletedAt { get; private set; }
+public string[]? SkippedSteps { get; private set; }
 
 public void CompleteOnboarding(bool skipped, string[]? skippedSteps = null)
 {
     OnboardingCompleted = true;
     OnboardingSkipped = skipped;
     OnboardingCompletedAt = DateTime.UtcNow;
+    SkippedSteps = skippedSteps;
 }
 ```
 
@@ -182,8 +187,32 @@ internal record CompleteOnboardingRequest(bool Skipped = false, string[]? Skippe
 ```
 
 - [ ] **Step 2: Generate migration**: `dotnet ef migrations add AddOnboardingFieldsToUser`
-- [ ] **Step 3: Register endpoint in Program.cs**
+- [ ] **Step 3: Register endpoint**: add `v1Api.MapOnboardingEndpoints()` in `Program.cs`
 - [ ] **Step 4: Commit**
+
+### Task 3b: Create CompleteOnboardingCommandValidator
+
+**Files:**
+- Create: `apps/api/src/Api/BoundedContexts/Authentication/Application/Validators/CompleteOnboardingCommandValidator.cs`
+
+- [ ] **Step 1: Write validator**
+
+```csharp
+using FluentValidation;
+
+internal class CompleteOnboardingCommandValidator : AbstractValidator<CompleteOnboardingCommand>
+{
+    public CompleteOnboardingCommandValidator()
+    {
+        RuleFor(x => x.UserId)
+            .NotEmpty()
+            .WithMessage("UserId is required");
+    }
+}
+```
+
+- [ ] **Step 2: Run tests**: `cd apps/api && dotnet test --filter "BoundedContext=Authentication"`
+- [ ] **Step 3: Commit**
 
 ---
 
@@ -390,10 +419,26 @@ export function OnboardingWizard() {
 
 - [ ] **Step 3: Write TryAgentStep** — Mini-chat inline. Pre-filled suggestions. Uses existing chat SSE endpoint.
 
-- [ ] **Step 4: Write SkipWizardDialog** — Confirmation: "Puoi trovare queste funzionalità nella dashboard quando vuoi"
+- [ ] **Step 4: Write SkipWizardDialog** — Confirmation: "Puoi trovare queste funzionalita nella dashboard quando vuoi"
 
 - [ ] **Step 5: Write tests**
 - [ ] **Step 6: Commit**
+
+### Task 6b: Add completeOnboarding to frontend auth API client
+
+**Files:**
+- Modify: `apps/web/src/lib/api/auth.ts` (or wherever the auth client is defined)
+
+- [ ] **Step 1: Add `completeOnboarding` method**
+
+```typescript
+async completeOnboarding(data: { skipped: boolean; skippedSteps: string[] }): Promise<void> {
+  await this.httpClient.post('/api/v1/auth/complete-onboarding', data);
+}
+```
+
+- [ ] **Step 2: Verify types and build**: `cd apps/web && pnpm typecheck`
+- [ ] **Step 3: Commit**
 
 ### Task 7: Create onboarding page + layout
 
@@ -402,6 +447,60 @@ export function OnboardingWizard() {
 - [ ] **Step 3: Update reset-password redirect** to go to `/onboarding` when `mode=forced`
 - [ ] **Step 4: Run full build**: `pnpm build`
 - [ ] **Step 5: Commit**
+
+### Task 7b: Create OnboardingReminderBanner component
+
+**Files:**
+- Create: `apps/web/src/components/onboarding/OnboardingReminderBanner.tsx`
+
+- [ ] **Step 1: Write component** — Dismissible banner shown on dashboard if wizard was skipped. Dismiss state stored in localStorage (`onboarding_banner_dismissed`).
+
+```tsx
+'use client';
+
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { Button } from '@/components/ui/primitives/button';
+import { X } from 'lucide-react';
+
+const STORAGE_KEY = 'onboarding_banner_dismissed';
+
+export function OnboardingReminderBanner() {
+  const router = useRouter();
+  const [visible, setVisible] = useState(false);
+
+  useEffect(() => {
+    const dismissed = localStorage.getItem(STORAGE_KEY);
+    if (!dismissed) setVisible(true);
+  }, []);
+
+  const dismiss = () => {
+    localStorage.setItem(STORAGE_KEY, 'true');
+    setVisible(false);
+  };
+
+  if (!visible) return null;
+
+  return (
+    <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 flex items-center justify-between">
+      <p className="font-nunito text-sm text-amber-900">
+        Non hai completato il setup — riprendi da dove eri rimasto
+      </p>
+      <div className="flex items-center gap-2">
+        <Button variant="outline" size="sm" onClick={() => router.push('/onboarding')}>
+          Riprendi
+        </Button>
+        <Button variant="ghost" size="icon" onClick={dismiss}>
+          <X className="h-4 w-4" />
+        </Button>
+      </div>
+    </div>
+  );
+}
+```
+
+- [ ] **Step 2: Add banner to dashboard page** — Conditionally render when `onboardingSkipped` is true in user session.
+- [ ] **Step 3: Commit**
 
 ### Task 8: Run full test suite
 

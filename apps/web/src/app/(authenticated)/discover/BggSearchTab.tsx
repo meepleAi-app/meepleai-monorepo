@@ -10,11 +10,19 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-import { Loader2, Search, X } from 'lucide-react';
+import { ChevronDown, Loader2, Lock, Search, X } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 
 import { useAddGameWizard } from '@/components/library/add-game-sheet/AddGameWizardProvider';
 import { Button } from '@/components/ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/navigation/dropdown-menu';
 import { Input } from '@/components/ui/primitives/input';
+import { useAddPrivateGameFromBgg } from '@/hooks/queries/useLibrary';
 import { api } from '@/lib/api';
 import type { BggSearchResult } from '@/lib/api/schemas';
 
@@ -26,6 +34,8 @@ const DEBOUNCE_MS = 400;
 
 export function BggSearchTab() {
   const { openWizard } = useAddGameWizard();
+  const router = useRouter();
+  const addPrivateGameMutation = useAddPrivateGameFromBgg();
 
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -80,6 +90,28 @@ export function BggSearchTab() {
       openWizard({ type: 'fromSearch', bggId: game.bggId });
     },
     [openWizard]
+  );
+
+  const handleAddAsPrivate = useCallback(
+    (game: BggSearchResult) => {
+      addPrivateGameMutation.mutate(
+        {
+          source: 'BoardGameGeek',
+          bggId: game.bggId,
+          title: game.name,
+          minPlayers: 1,
+          maxPlayers: 4,
+          yearPublished: game.yearPublished ?? undefined,
+          thumbnailUrl: game.thumbnailUrl ?? undefined,
+        },
+        {
+          onSuccess: data => {
+            router.push(`/library/private/${data.id}`);
+          },
+        }
+      );
+    },
+    [addPrivateGameMutation, router]
   );
 
   const handleClear = useCallback(() => {
@@ -149,39 +181,75 @@ export function BggSearchTab() {
           <ul className="space-y-2">
             {results.map(game => (
               <li key={game.bggId}>
-                <button
-                  type="button"
-                  onClick={() => handleSelect(game)}
-                  className="w-full flex items-center gap-4 rounded-lg border border-border bg-card p-3 text-left hover:border-amber-500/50 hover:bg-amber-500/5 transition-colors"
-                >
+                <div className="w-full flex items-center gap-4 rounded-lg border border-border bg-card p-3 text-left hover:border-amber-500/50 hover:bg-amber-500/5 transition-colors">
                   {/* Thumbnail */}
-                  <div className="h-12 w-12 flex-shrink-0 rounded bg-muted overflow-hidden">
-                    {game.thumbnailUrl ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={game.thumbnailUrl}
-                        alt={game.name}
-                        className="h-full w-full object-cover"
-                      />
-                    ) : (
-                      <div className="h-full w-full flex items-center justify-center text-muted-foreground text-xs">
-                        BGG
-                      </div>
-                    )}
-                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handleSelect(game)}
+                    className="flex items-center gap-4 flex-1 min-w-0"
+                  >
+                    <div className="h-12 w-12 flex-shrink-0 rounded bg-muted overflow-hidden">
+                      {game.thumbnailUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={game.thumbnailUrl}
+                          alt={game.name}
+                          className="h-full w-full object-cover"
+                        />
+                      ) : (
+                        <div className="h-full w-full flex items-center justify-center text-muted-foreground text-xs">
+                          BGG
+                        </div>
+                      )}
+                    </div>
 
-                  {/* Info */}
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-foreground truncate">{game.name}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {game.yearPublished ? `${game.yearPublished} · ` : ''}
-                      BGG #{game.bggId}
-                    </p>
-                  </div>
+                    {/* Info */}
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-foreground truncate">{game.name}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {game.yearPublished ? `${game.yearPublished} · ` : ''}
+                        BGG #{game.bggId}
+                      </p>
+                    </div>
+                  </button>
 
-                  {/* CTA */}
-                  <span className="flex-shrink-0 text-xs text-amber-500 font-medium">Aggiungi</span>
-                </button>
+                  {/* CTA with dropdown */}
+                  <div className="flex-shrink-0 flex items-center gap-1">
+                    <button
+                      type="button"
+                      onClick={() => handleSelect(game)}
+                      className="text-xs text-amber-500 font-medium hover:text-amber-400 transition-colors"
+                    >
+                      Aggiungi
+                    </button>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-6 w-6 p-0 text-muted-foreground hover:text-amber-500"
+                          aria-label={`Opzioni per ${game.name}`}
+                        >
+                          <ChevronDown className="h-3.5 w-3.5" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-48">
+                        <DropdownMenuItem onClick={() => handleSelect(game)}>
+                          Aggiungi al catalogo
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => handleAddAsPrivate(game)}
+                          disabled={addPrivateGameMutation.isPending}
+                        >
+                          <Lock className="mr-2 h-3.5 w-3.5" />
+                          {addPrivateGameMutation.isPending
+                            ? 'Aggiunta in corso...'
+                            : 'Aggiungi come privato'}
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                </div>
               </li>
             ))}
           </ul>

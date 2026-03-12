@@ -142,10 +142,20 @@ describe('Sidebar', () => {
       expect(fixedNavLink).toHaveClass('font-semibold');
     });
 
-    it('hides text labels when collapsed', () => {
+    it('hides text labels when collapsed (tooltips remain in DOM)', () => {
       render(<Sidebar {...defaultProps} isCollapsed={true} />);
-      expect(screen.queryByText('Dashboard')).not.toBeInTheDocument();
-      expect(screen.queryByText('Libreria')).not.toBeInTheDocument();
+      // Inline text labels (span.truncate) should not be rendered
+      const dashboardEls = screen.queryAllByText('Dashboard');
+      dashboardEls.forEach(el => {
+        // Only tooltip spans should remain — they have opacity-0 and pointer-events-none
+        expect(el).toHaveClass('opacity-0');
+        expect(el).toHaveClass('pointer-events-none');
+      });
+      const libreriaEls = screen.queryAllByText('Libreria');
+      libreriaEls.forEach(el => {
+        expect(el).toHaveClass('opacity-0');
+        expect(el).toHaveClass('pointer-events-none');
+      });
     });
   });
 

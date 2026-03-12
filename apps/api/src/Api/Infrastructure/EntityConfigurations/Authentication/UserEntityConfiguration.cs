@@ -46,6 +46,11 @@ internal class UserEntityConfiguration : IEntityTypeConfiguration<UserEntity>
         builder.Property(e => e.FailedLoginAttempts).IsRequired().HasDefaultValue(0);
         builder.Property(e => e.LockedUntil);
 
+        // Issue #124: Onboarding interests (JSONB array)
+        builder.Property(e => e.Interests)
+            .HasColumnType("jsonb")
+            .IsRequired(false);
+
         // Relationships
         builder.HasMany(e => e.Sessions)
             .WithOne(s => s.User)

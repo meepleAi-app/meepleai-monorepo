@@ -513,6 +513,181 @@ Scenario: QuickView in session-context mode
 - Malformed event: Send invalid JSON → verify client doesn't crash, logs warning
 - Timer accuracy: Pause → wait 5s → resume → verify elapsed time ± 100ms
 
+## Non-Functional Requirements (NFRs)
+
+### Performance Budgets
+
+| Metric | Target | Measurement |
+|--------|--------|-------------|
+| Layout LCP (Largest Contentful Paint) | < 1.5s | Lighthouse on 4G throttle |
+| CardRack hover→expand animation | < 200ms | CSS transition timing |
+| QuickView tab switch | < 100ms | React profiler |
+| Activity feed render (100 events) | < 16ms | React profiler, 60fps |
+| SSE reconnect (first attempt) | < 2s | Network timing |
+| BottomSheet open animation | < 300ms | CSS transition timing |
+
+### Memory Ceiling
+
+| Component | Max Memory | Condition |
+|-----------|-----------|-----------|
+| ActivityFeed events store | 500 events | Oldest pruned on overflow |
+| SSE dedup Set | 1000 IDs | Cleared on session change |
+| Score history | 200 entries per player | Per session lifetime |
+| Image thumbnails (lazy) | 50 loaded at once | Intersection Observer |
+
+### Bundle Size
+
+| Chunk | Max Size (gzipped) | Includes |
+|-------|-------------------|----------|
+| Layout shell | 25KB | CardRack, TopBar, MiniNav |
+| Session view | 40KB | LiveSessionView, ActivityFeed, Scoreboard |
+| QuickView | 15KB | Rules, FAQ, AI tabs |
+| Mobile session | 20KB | MobileSessionLayout, BottomSheet, MobileScorebar |
+
+## Live Session Gherkin Scenarios
+
+### Score Recording
+
+```gherkin
+Scenario: Player records a score during live session
+  Given a live session is active with players "Alice" and "Bob"
+  When Alice opens the score input sheet
+  And selects player "Bob"
+  And enters score value "15" for round 2
+  And taps "Conferma"
+  Then the score is saved via API
+  And the scoreboard updates Bob's total
+  And an activity feed event "score_update" appears
+  And SSE broadcasts the score to all connected clients
+
+Scenario: Score input validates before submission
+  Given the score input sheet is open
+  When the user submits without selecting a player
+  Then an inline error "Seleziona un giocatore" appears
+  And the form is not submitted
+```
+
+### Dice Rolling
+
+```gherkin
+Scenario: Player rolls dice during session
+  Given a live session is active
+  When the user taps the dice button in ActivityFeedInputBar
+  Then a BottomSheet opens with the dice roller
+  When the user rolls 2d6
+  Then the result appears in the activity feed as "dice_roll" event
+  And the event shows individual values and total
+```
+
+### SSE Reconnection
+
+```gherkin
+Scenario: SSE reconnects after network interruption
+  Given a live session is connected via SSE
+  When the network connection drops
+  Then the connection indicator shows "Disconnesso" (red)
+  And useSessionSSE begins exponential backoff (1s, 2s, 4s, 8s, 16s)
+  When the network returns within 5 minutes
+  Then the EventSource reconnects
+  And the connection indicator returns to "Live" (green)
+  And missed events are replayed (dedup by event ID)
+
+Scenario: SSE gives up after 5-minute offline threshold
+  Given a live session lost SSE connection
+  When 5 minutes pass without successful reconnection
+  Then useSessionSSE stops reconnection attempts
+  And the UI shows a "session expired" indicator
+
+Scenario: SSE deduplicates replayed events
+  Given a live session reconnects after brief disconnection
+  When the server replays events that were already received
+  Then events with previously seen IDs are silently dropped
+  And the activity feed shows no duplicates
+```
+
+### Pause/Resume Flow
+
+```gherkin
+Scenario: Host pauses the session
+  Given a live session is active
+  When the host taps the pause button
+  Then the SaveCompleteDialog opens
+  When the host confirms save
+  Then the session status changes to "Paused"
+  And the connection indicator shows "PAUSA"
+  And SSE broadcasts SessionPausedEvent
+
+Scenario: Host resumes a paused session
+  Given a live session is paused
+  When the host taps the resume button
+  Then the session status changes to "InProgress"
+  And the connection indicator returns to "Live"
+  And SSE broadcasts SessionResumedEvent
+```
+
+## SSE Event Envelope Contract (Sprint 3)
+
+### Endpoint
+
+```
+GET /api/v1/sessions/{sessionId}/events/stream
+Content-Type: text/event-stream
+```
+
+### Event Envelope
+
+```typescript
+interface SSEActivityEvent {
+  id: string;           // UUID — unique per event, used for dedup
+  type: ActivityEventType;
+  playerId: string;     // UUID of the acting player
+  data: Record<string, unknown>;
+  timestamp: string;    // ISO 8601
+}
+
+type ActivityEventType =
+  | 'dice_roll'       // data: { values: number[], total: number, playerName: string }
+  | 'ai_tip'          // data: { text: string }
+  | 'score_update'    // data: { action: string, newScore: number, playerName: string }
+  | 'photo'           // data: { url: string, playerName: string }
+  | 'note'            // data: { text: string, playerName: string }
+  | 'audio_note'      // data: { url: string, duration: number, playerName: string }
+  | 'turn_change'     // data: { from: string, to: string }
+  | 'pause_resume'    // data: { paused: boolean }
+  | 'session_start';  // data: {}
+```
+
+### POST Endpoint (Client → Server)
+
+```
+POST /api/v1/sessions/{sessionId}/events
+Content-Type: application/json
+
+{
+  "type": "note",
+  "data": { "playerName": "Alice", "text": "Great round!" }
+}
+
+Response: 201 Created
+{
+  "id": "uuid-assigned-by-server",
+  "type": "note",
+  ...
+}
+```
+
+**Important**: The server SHOULD echo the client-provided event ID (if supplied) in its SSE broadcast to enable client-side deduplication of optimistic updates.
+
+## Sprint-to-Item Mapping
+
+| Sprint | Items | Status |
+|--------|-------|--------|
+| **S1** (Layout Foundation) | CardRack, TopBar, MiniNav, FloatingActionBar, LayoutShell, design tokens | ✅ Complete |
+| **S2** (Game Night Pages) | GameNightPlanningLayout, inline picker, timeline, RSVP wiring | ✅ Complete |
+| **S3** (QuickView + Desktop Session) | QuickView modes (game/session), LiveSessionLayout, CollapsiblePanel, responsive LiveSessionView | ✅ Complete |
+| **S4** (Activity Feed + SSE) | useSessionSSE hook (dedup, backoff, 5min threshold), ActivityFeed wiring, ActivityFeedInputBar API POST | ✅ Complete |
+| **S5** (Mobile Session) | BottomSheet wrapper, MobileSessionLayout, MobileStatusBar, MobileScorebar integration | ✅ Complete |
+
 ## References
 
 - Brainstorm prototypes: `.superpowers/brainstorm/785115-1773216855/`

@@ -647,6 +647,7 @@ export const MeepleCard = React.memo(function MeepleCard({
           outlineColor: `hsla(${color}, 0.4)`,
           willChange: 'transform, box-shadow, outline',
           // v2: Transform handled via CSS (globals.css [data-variant]:hover selectors)
+          viewTransitionName: entityId ? `meeple-card-${entityId}` : undefined,
         } as React.CSSProperties
       }
       onClick={handleCardClick}

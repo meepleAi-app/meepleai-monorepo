@@ -13,7 +13,7 @@ import { ChevronRight, Home } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
-import { buildBreadcrumbs, type BreadcrumbItem } from '@/lib/breadcrumb-utils';
+import { buildBreadcrumbs } from '@/lib/breadcrumb-utils';
 import { cn } from '@/lib/utils';
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -45,10 +45,7 @@ export function DesktopBreadcrumb({ className }: DesktopBreadcrumbProps) {
   return (
     <nav
       aria-label="Percorso di navigazione"
-      className={cn(
-        'flex items-center gap-1 text-sm text-muted-foreground',
-        className
-      )}
+      className={cn('flex items-center gap-1 text-sm text-muted-foreground', className)}
     >
       {crumbs.map((crumb, index) => (
         <span key={`${crumb.href ?? crumb.label}-${index}`} className="flex items-center gap-1">
@@ -71,9 +68,7 @@ export function DesktopBreadcrumb({ className }: DesktopBreadcrumbProps) {
               href={crumb.href}
               className="flex items-center gap-1 hover:text-foreground transition-colors duration-150"
             >
-              {index === 0 && (
-                <Home className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-              )}
+              {index === 0 && <Home className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />}
               {crumb.label}
             </Link>
           )}

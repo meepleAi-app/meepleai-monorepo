@@ -6,7 +6,9 @@ import { cn } from '@/lib/utils';
 import { useQuickViewStore, type QuickViewTab as TabType } from '@/store/quick-view';
 
 import { AIQuickViewContent } from './AIQuickViewContent';
+import { FaqContent } from './FaqContent';
 import { QuickViewTab } from './QuickViewTab';
+import { RulesContent } from './RulesContent';
 
 const TABS: { tab: TabType; label: string; icon: typeof BookOpen }[] = [
   { tab: 'rules', label: 'Regole', icon: BookOpen },
@@ -15,8 +17,16 @@ const TABS: { tab: TabType; label: string; icon: typeof BookOpen }[] = [
 ];
 
 export function QuickView() {
-  const { isOpen, isCollapsed, activeTab, setActiveTab, close, toggleCollapsed } =
-    useQuickViewStore();
+  const {
+    isOpen,
+    isCollapsed,
+    activeTab,
+    selectedGameId,
+    mode,
+    setActiveTab,
+    close,
+    toggleCollapsed,
+  } = useQuickViewStore();
 
   if (!isOpen) return null;
 
@@ -26,7 +36,7 @@ export function QuickView() {
         data-testid="quick-view"
         className="hidden xl:flex flex-col items-center w-[44px] border-l border-border bg-card"
       >
-        {TABS.map(({ tab, icon: Icon }) => (
+        {TABS.map(({ tab, label, icon: Icon }) => (
           <button
             key={tab}
             onClick={() => {
@@ -34,7 +44,7 @@ export function QuickView() {
               toggleCollapsed();
             }}
             className="p-2.5 text-muted-foreground hover:text-foreground transition-colors"
-            aria-label={tab}
+            aria-label={label}
           >
             <Icon className="h-4 w-4" />
           </button>
@@ -46,6 +56,7 @@ export function QuickView() {
   return (
     <aside
       data-testid="quick-view"
+      data-mode={mode}
       className={cn(
         'hidden xl:flex flex-col',
         'w-[300px] border-l border-border bg-card',
@@ -85,13 +96,11 @@ export function QuickView() {
 
       {/* Tab content */}
       <div className="flex-1 overflow-y-auto p-4">
-        {activeTab === 'rules' && (
-          <p className="text-sm text-muted-foreground">Seleziona un gioco per vederne le regole</p>
+        {activeTab === 'rules' && <RulesContent gameId={selectedGameId} />}
+        {activeTab === 'faq' && <FaqContent gameId={selectedGameId} />}
+        {activeTab === 'ai' && (
+          <AIQuickViewContent gameId={selectedGameId ?? ''} gameName="Gioco" />
         )}
-        {activeTab === 'faq' && (
-          <p className="text-sm text-muted-foreground">Domande frequenti sul gioco</p>
-        )}
-        {activeTab === 'ai' && <AIQuickViewContent gameId="" gameName="Gioco" />}
       </div>
     </aside>
   );

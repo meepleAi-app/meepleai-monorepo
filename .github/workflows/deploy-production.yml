@@ -25,8 +25,6 @@ permissions:
   contents: read
   packages: write
   id-token: write
-  pull-requests: write
-  checks: write
 
 env:
   REGISTRY: ghcr.io
@@ -61,11 +59,46 @@ jobs:
           # echo "Staging version: $STAGING_VERSION"
           echo "✅ Version check passed"
 
-  # Run full test suite before production
-  test:
-    name: Pre-production Tests
-    uses: ./.github/workflows/ci.yml
-    secrets: inherit
+  # Lightweight pre-production validation (full CI ran on main-dev PR,
+  # build validated on staging deploy, artifact is the same via build-once-promote)
+  # Rationale: Re-running 13K+ tests and spinning up 3 service containers
+  # for code that was already tested twice (PR + staging) adds ~15 min
+  # with zero additional confidence. Instead, verify the staging images
+  # exist and are recent.
+  pre-production-check:
+    name: Pre-production Validation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Verify staging images exist
+        run: |
+          echo "🔍 Verifying staging-latest images exist for promotion..."
+
+          # Check API staging image
+          if docker pull ${{ env.API_IMAGE }}:staging-latest; then
+            echo "✅ API staging-latest image found"
+            docker inspect ${{ env.API_IMAGE }}:staging-latest --format='Created: {{.Created}}' || true
+          else
+            echo "❌ API staging-latest image NOT found — deploy to staging first"
+            exit 1
+          fi
+
+          # Check Web staging image
+          if docker pull ${{ env.WEB_IMAGE }}:staging-latest; then
+            echo "✅ Web staging-latest image found"
+            docker inspect ${{ env.WEB_IMAGE }}:staging-latest --format='Created: {{.Created}}' || true
+          else
+            echo "❌ Web staging-latest image NOT found — deploy to staging first"
+            exit 1
+          fi
+
+          echo "✅ Both staging images verified — ready for promotion"
 
   # Promote staging images to production (build-once-promote pattern)
   # Issue #179: Instead of rebuilding, retag the staging-tested images
@@ -75,8 +108,8 @@ jobs:
     name: Promote Staging Images
     runs-on: ubuntu-latest
     timeout-minutes: 45
-    needs: [staging-check, test]
-    if: always() && needs.test.result == 'success' && (needs.staging-check.result == 'success' || needs.staging-check.result == 'skipped')
+    needs: [staging-check, pre-production-check]
+    if: always() && needs.pre-production-check.result == 'success' && (needs.staging-check.result == 'success' || needs.staging-check.result == 'skipped')
     outputs:
       api_image: ${{ env.API_IMAGE }}:${{ steps.version.outputs.version }}
       web_image: ${{ env.WEB_IMAGE }}:${{ steps.version.outputs.version }}

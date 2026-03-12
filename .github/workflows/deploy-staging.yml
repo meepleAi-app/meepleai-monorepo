@@ -155,7 +155,7 @@ jobs:
   build:
     name: Build Images
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 90
     needs: [pre-deploy-check, detect-changes]
     if: always() && (needs.pre-deploy-check.result == 'success' || (github.event_name == 'workflow_dispatch' && inputs.skip_tests == true)) && (needs.detect-changes.outputs.deploy_api == 'true' || needs.detect-changes.outputs.deploy_web == 'true')
     outputs:

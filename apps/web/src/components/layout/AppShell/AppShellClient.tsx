@@ -25,7 +25,6 @@ import { useImpersonationStore } from '@/store/impersonation';
 
 import { AdaptiveBottomBar } from '../AdaptiveBottomBar';
 import { FloatingActionBar } from '../FloatingActionBar';
-import { MiniNav } from '../MiniNav';
 import { MobileBreadcrumb } from '../MobileBreadcrumb';
 import { Sidebar } from '../Sidebar/Sidebar';
 import { TopNavbar } from '../TopNavbar';
@@ -86,14 +85,7 @@ export function AppShellClient({
           )}
           data-testid="app-shell-content"
         >
-          {/* L2: MiniNav (auto-hides when no tabs) */}
-          <ErrorBoundary fallback={null} componentName="MiniNav">
-            <Suspense>
-              <MiniNav />
-            </Suspense>
-          </ErrorBoundary>
-
-          {/* Mobile Breadcrumb (below MiniNav, mobile only) */}
+          {/* Mobile Breadcrumb (mobile only) */}
           <MobileBreadcrumb />
 
           {/* Main content */}

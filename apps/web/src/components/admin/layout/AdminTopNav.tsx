@@ -2,12 +2,12 @@
 
 import { useCallback, useEffect, useState } from 'react';
 
-import { Moon, Sun, UserIcon, LogOut, ChevronDown } from 'lucide-react';
+import { Moon, Sun, UserIcon, LogOut, ChevronDown, Search } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useTheme } from 'next-themes';
 
-import { GlobalSearch } from '@/components/layout/GlobalSearch/GlobalSearch';
+import { CommandPalette } from '@/components/layout/CommandPalette';
 import { Badge } from '@/components/ui/data-display/badge';
 import {
   DropdownMenu,
@@ -23,6 +23,7 @@ import {
   isSectionActive,
   type DashboardSection,
 } from '@/config/admin-dashboard-navigation';
+import { useCommandPalette } from '@/hooks/useCommandPalette';
 import { cn } from '@/lib/utils';
 
 export interface AdminTopNavProps {
@@ -38,6 +39,7 @@ export function AdminTopNav({ badges = {}, userName, userEmail }: AdminTopNavPro
   const pathname = usePathname() ?? '/admin/overview';
   const { theme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
+  const commandPalette = useCommandPalette();
 
   useEffect(() => {
     setMounted(true);
@@ -118,8 +120,20 @@ export function AdminTopNav({ badges = {}, userName, userEmail }: AdminTopNavPro
 
         {/* Right side actions */}
         <div className="flex items-center gap-2 ml-auto">
-          {/* Global Search */}
-          <GlobalSearch />
+          {/* Search trigger → opens CommandPalette */}
+          <button
+            onClick={commandPalette.toggle}
+            className="hidden md:flex items-center gap-2 rounded-md border border-border/40 bg-muted/50 px-3 py-1.5 text-sm text-muted-foreground hover:bg-accent transition-colors"
+          >
+            <Search className="h-4 w-4" />
+            <span>Search...</span>
+            <kbd className="ml-4 text-xs border border-border rounded px-1.5 py-0.5">⌘K</kbd>
+          </button>
+          <CommandPalette
+            isOpen={commandPalette.isOpen}
+            onClose={commandPalette.close}
+            dataSources={{}}
+          />
 
           {/* Theme toggle */}
           {mounted && (

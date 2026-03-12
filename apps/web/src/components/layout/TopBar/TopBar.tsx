@@ -17,7 +17,7 @@ import Link from 'next/link';
 import { logoutAction } from '@/actions/auth';
 import { DesktopBreadcrumb } from '@/components/layout/Breadcrumb/DesktopBreadcrumb';
 import { MobileNavDrawer } from '@/components/layout/MobileNavDrawer';
-import { Logo } from '@/components/layout/Navbar/Logo';
+import { Logo } from '@/components/layout/TopNavbar/Logo';
 import { NotificationBell } from '@/components/notifications';
 import {
   DropdownMenu,

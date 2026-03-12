@@ -3,15 +3,14 @@
  * Issue #5057 — Accessibility + Keyboard Navigation (WCAG 2.1 AA)
  *
  * Validates ARIA roles, landmarks, and keyboard accessibility on the 3-tier
- * navigation system: TopNavbar, MiniNav, FloatingActionBar, LayoutShell.
+ * navigation system: TopNavbar, FloatingActionBar, LayoutShell.
+ * (MiniNav removed — tabs now rendered in SidebarContextNav)
  */
 
 import { render, screen } from '@testing-library/react';
-import { usePathname } from 'next/navigation';
 import { BookOpen } from 'lucide-react';
-import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-import { MiniNav } from '../MiniNav';
 import { FloatingActionBar } from '../FloatingActionBar';
 
 // ─── Mocks ───────────────────────────────────────────────────────────────────
@@ -20,8 +19,6 @@ vi.mock('next/navigation', () => ({
   usePathname: vi.fn(),
   useSearchParams: vi.fn(() => new URLSearchParams()),
 }));
-
-const mockUsePathname = usePathname as Mock;
 
 // Mock NavigationContext to inject controlled nav config
 const mockNavigationState = {
@@ -49,81 +46,8 @@ vi.mock('@/context/NavigationContext', () => ({
 
 beforeEach(() => {
   vi.clearAllMocks();
-  mockUsePathname.mockReturnValue('/library');
   mockNavigationState.miniNavTabs = [];
   mockNavigationState.actionBarActions = [];
-});
-
-// ─── MiniNav Accessibility ────────────────────────────────────────────────────
-
-describe('MiniNav — ARIA landmarks and roles', () => {
-  it('renders as <nav> landmark with aria-label when tabs are present', () => {
-    mockNavigationState.miniNavTabs = [
-      { id: 'lib', label: 'Libreria', href: '/library', icon: BookOpen },
-    ];
-
-    render(<MiniNav />);
-
-    // MiniNav renders a tablist (not a nav landmark) with an English aria-label
-    const tablist = screen.getByRole('tablist', { name: 'Section navigation' });
-    expect(tablist).toBeDefined();
-  });
-
-  it('renders tablist inside nav landmark', () => {
-    mockNavigationState.miniNavTabs = [
-      { id: 'lib', label: 'Libreria', href: '/library', icon: BookOpen },
-    ];
-
-    render(<MiniNav />);
-
-    const tablist = screen.getByRole('tablist');
-    expect(tablist).toBeDefined();
-  });
-
-  it('renders each tab with role="tab"', () => {
-    mockNavigationState.miniNavTabs = [
-      { id: 'lib', label: 'Libreria', href: '/library' },
-      { id: 'wish', label: 'Wishlist', href: '/library?tab=wishlist' },
-    ];
-
-    render(<MiniNav />);
-
-    const tabs = screen.getAllByRole('tab');
-    expect(tabs).toHaveLength(2);
-  });
-
-  it('marks the active tab with aria-selected="true"', () => {
-    mockUsePathname.mockReturnValue('/library');
-    mockNavigationState.miniNavTabs = [
-      { id: 'lib', label: 'Libreria', href: '/library' },
-      { id: 'wish', label: 'Wishlist', href: '/library?tab=wishlist' },
-    ];
-
-    render(<MiniNav />);
-
-    const libraryTab = screen.getByRole('tab', { name: 'Libreria' });
-    expect(libraryTab.getAttribute('aria-selected')).toBe('true');
-  });
-
-  it('marks non-active tabs with aria-selected="false"', () => {
-    mockUsePathname.mockReturnValue('/library');
-    mockNavigationState.miniNavTabs = [
-      { id: 'lib', label: 'Libreria', href: '/library' },
-      { id: 'wish', label: 'Wishlist', href: '/library?tab=wishlist' },
-    ];
-
-    render(<MiniNav />);
-
-    const wishlistTab = screen.getByRole('tab', { name: 'Wishlist' });
-    expect(wishlistTab.getAttribute('aria-selected')).toBe('false');
-  });
-
-  it('does not render when no tabs configured', () => {
-    mockNavigationState.miniNavTabs = [];
-
-    const { container } = render(<MiniNav />);
-    expect(container.firstChild).toBeNull();
-  });
 });
 
 // ─── FloatingActionBar Accessibility ─────────────────────────────────────────

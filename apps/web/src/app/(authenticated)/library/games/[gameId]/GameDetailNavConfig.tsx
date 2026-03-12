@@ -3,7 +3,7 @@
 /**
  * GameDetailNavConfig — NavConfig for game detail page
  *
- * MiniNav tabs: Overview · Agent · KB · Sessions
+ * MiniNav tabs: Overview · Agent · KB · Sessions · Links
  * ActionBar actions: Chat Agent · Upload PDF · Favorite · Notes · Remove
  *
  * Renders null — purely a side-effect component that sets navigation config.
@@ -17,6 +17,7 @@ import {
   FileText,
   Gamepad2,
   Heart,
+  Link,
   MessageCircle,
   Pencil,
   Trash2,
@@ -63,6 +64,12 @@ export function GameDetailNavConfig({ gameId, isFavorite = false }: GameDetailNa
           label: 'Sessions',
           href: `/library/games/${gameId}?tab=sessions`,
           icon: Gamepad2,
+        },
+        {
+          id: 'links',
+          label: 'Links',
+          href: `/library/games/${gameId}?tab=links`,
+          icon: Link,
         },
       ],
       actionBar: [

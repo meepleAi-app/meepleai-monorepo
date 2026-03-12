@@ -1,399 +1,364 @@
-# Admin Invite, Onboarding, Voice Chat & User Management
+# User Invitation System & Onboarding Wizard — Design Spec
 
-**Date**: 2026-03-11
-**Status**: In Progress (Phases 1-2 completed, Phase 4 in progress, Phase 3 pending)
-**Approach**: Incremental (4 independent phases)
-**PR History**: Phase 1+2 merged via PR #225 → `main-dev` (2026-03-12)
+> **Date:** 2026-03-11
+> **Status:** Approved (spec review v2)
+> **Scope:** Admin user invitation flow (single + bulk), accept-invite with onboarding wizard
 
-## Overview
+---
 
-End-to-end flow: admin invites users via email → forced password change → guided onboarding wizard → voice-enabled agent chat → admin role management with full audit logging.
+## Problem Statement
 
-### Decisions Summary
+Administrators need to invite users to MeepleAI by email. Currently, user creation (`CreateUserCommand`) requires setting a password at creation time with no invitation workflow. There is no mechanism for:
+
+- Sending invitation emails with a secure token link
+- Allowing invited users to set their own password
+- Guided onboarding for new users
+
+## Design Decisions
 
 | Decision | Choice | Rationale |
 |----------|--------|-----------|
-| Invite mechanism | Token-based link (no password in email) | Security — reuses password-reset pattern |
-| Onboarding | Step-by-step wizard (skippable) | Guided but not blocking |
-| Voice STT | Whisper API + Web Speech API fallback | Quality + resilience |
-| Voice TTS | Browser-native SpeechSynthesis | Free, sufficient quality |
-| Paid features | Whisper (cloud STT) gated by UserTier | Free users get browser-native STT |
-| Admin UX | Inline role change + dedicated audit page | Quick ops + deep analysis |
-| Audit scope | Everything (auth, activity, API, errors) | Full visibility, integrates with Epic #124 |
-| Architecture | 4 independent phases | Low risk, incremental value |
+| Password handling | No default password — token-based invite | More secure; no password in transit; reuses existing token patterns |
+| Token storage | SHA256 hash only | Same pattern as PasswordReset; plaintext only in email |
+| Token expiry | 7 days | Longer than password reset (24h) since invites need more time |
+| Resend behavior | New token, old marked Expired | One active invite per email at a time |
+| Revoke | No explicit revoke | Token expires naturally in 7 days; admin can resend (which expires old token) to effectively cancel+renew |
+| Admin UI | B+C: inline in user list + dedicated page | Quick visibility + full management power |
+| Onboarding | 5-step wizard, only password mandatory | Low friction; user can skip and explore later |
+| Bounded context | Authentication (token + accept) + Administration (admin endpoints) | Follows existing separation |
+| Bulk invite | CSV upload (email,role per row), max 100 per batch | Matches existing BulkImportUsersCommand pattern |
+| MustChangePassword | NOT used for invitation flow | User sets their own password in Step 1 — no "default password" to change. Flag reserved for future admin-forced password resets. |
+| Role storage | `string` (not enum) | Matches existing `UserEntity.Role` convention; `UserRole` enum is domain logic only |
 
-### Open Issues Check
+---
 
-No duplicate issues found among 70+ open issues. Related:
-- **#33** "Epic: Email, Notifiche & Calendario" — email infra exists, no invite flow
-- **#130** "Audit Trail Viewer tab" — will be covered by Phase 4
-- **#124** "Epic: Admin Infrastructure Panel" — audit log integrates with this
+## 1. Domain Model
 
-## Existing Infrastructure
+### New Entity: `InvitationToken` (Authentication BC)
 
-| Component | Status | Location |
-|-----------|--------|----------|
-| `CreateUserCommand` | Exists | `Administration/Application/Commands/` |
-| Email template system | Exists | `UserNotifications/` (queue + templates + event handlers) |
-| Password reset flow | Exists | `Authentication/Application/Commands/` + `/reset-password` page |
-| 5-tier role hierarchy | Exists | `SharedKernel/Domain/ValueObjects/Role.cs` (user/editor/creator/admin/superadmin) |
-| `UserTier` on User | Exists | `Authentication/Domain/Entities/User.cs` |
-| Agent builder modal | Exists | `components/admin/shared-games/AgentBuilderModal.tsx` |
-| Chat with agent (SSE) | Exists | KnowledgeBase endpoints |
-| `PUT /admin/users/{id}` (general update) | Exists | `Routing/AdminUserEndpoints.cs` |
-| `POST /admin/users/bulk/role-change` | Exists | `Routing/AdminUserEndpoints.cs` |
-| `GET /admin/users/{id}/role-history` | Exists | `Routing/AdminUserEndpoints.cs` |
-| `PUT /admin/users/{id}/role` (dedicated) | **Needed** | Must be created in Phase 4 |
-| Voice/speech features | None | Zero speech-to-text in codebase |
-| Invite system | None | No invitation entity or flow |
-| Forced password change | None | No `MustChangePassword` flag |
-| Onboarding wizard | None | Welcome page auto-redirects to dashboard |
+| Field | Type | Constraints |
+|-------|------|-------------|
+| `Id` | `Guid` | PK |
+| `Email` | `string` | Required, max 256, normalized lowercase |
+| `Role` | `string` | Required, stored as string (matches `UserEntity.Role` convention) |
+| `TokenHash` | `string` | Required, unique index, SHA256 of plaintext token |
+| `InvitedByUserId` | `Guid` | FK → Users, required |
+| `Status` | `InvitationStatus` | Required, default `Pending` |
+| `ExpiresAt` | `DateTime` | Required, CreatedAt + 7 days |
+| `AcceptedAt` | `DateTime?` | Set when user completes password step |
+| `AcceptedByUserId` | `Guid?` | FK → Users, set on accept |
+| `CreatedAt` | `DateTime` | Audit |
 
-## Phase 1: Admin Invite System ✅ COMPLETED (PR #225)
+**`InvitationStatus` enum:** `Pending`, `Accepted`, `Expired`
 
-### Backend
+**Domain rules:**
+- Max 1 `Pending` invitation per email at any time
+- Resend = mark old as `Expired`, create new with fresh token
+- Token validated by: hash match + status == `Pending` + `ExpiresAt > now`
+- SuperAdmin role cannot be assigned via invitation (admin-only escalation)
+- Allowed roles for invitation: `"User"`, `"Editor"`, `"Admin"` (validated as strings matching `AllowedRoles` array)
 
-#### New Entity: `UserInvitation` (Authentication bounded context)
+### UserEntity — No Modifications
+
+The invitation flow does **not** add `MustChangePassword` to `UserEntity`. The user sets their own password during the wizard's Step 1 (`AcceptInvitationCommand`). There is no "default password" to force-change. A `MustChangePassword` feature for admin-forced resets is out of scope and can be added independently in the future.
+
+---
+
+## 2. Backend: Commands & Handlers
+
+### New Commands (Authentication BC)
+
+#### `SendInvitationCommand`
+- **Input:** `Email`, `Role`
+- **Auth:** Admin+ role required. `InvitedByUserId` extracted from authenticated session in the handler (not part of command record).
+- **Validation:** Valid email format, role in `["User", "Editor", "Admin"]` (string match), no existing Pending invite for email, no existing active user with email
+- **Handler:**
+  1. Generate cryptographically random token (32 bytes, base64url)
+  2. Create `InvitationToken` entity with `SHA256(token)` as `TokenHash`
+  3. Call `IEmailService.SendInvitationEmailAsync(email, adminName, role, inviteUrl, expiresAt)`
+  4. Return `InvitationDto` (id, email, role, status, expiresAt)
+- **Audit:** `[AuditableAction]`
+
+#### `BulkSendInvitationsCommand`
+- **Input:** `CsvContent` (string only — endpoint layer converts `IFormFile` to string before dispatching)
+- **Auth:** Admin+ role required
+- **CSV format:** `email,role` per row (header optional)
+- **Validation:** Each row validated individually; max 100 invites per batch
+- **Handler:**
+  1. Parse CSV, validate each row
+  2. For each valid row: execute `SendInvitationCommand` logic
+  3. Collect results: `{ successful: InvitationDto[], failed: { email, error }[] }`
+- **Audit:** `[AuditableAction]` with batch metadata
+
+#### `AcceptInvitationCommand`
+- **Input:** `Token` (plaintext from request body), `Password`, `ConfirmPassword`
+- **Auth:** Unauthenticated (public endpoint)
+- **Validation:** Password min 8 chars, upper + lower + digit, passwords match, token not empty
+- **Handler:**
+  1. Hash token with SHA256, find `InvitationToken` by hash
+  2. Validate: status == `Pending`, `ExpiresAt > now`
+  3. Create `UserEntity` with email from invitation, hashed password, assigned role, `EmailVerified = true` (admin-supplied email is trusted)
+  4. Mark invitation as `Accepted`, set `AcceptedAt` and `AcceptedByUserId`
+  5. Create session (auto-login) — return auth cookie + user data
+- **Audit:** `[AuditableAction]` — note: audit record will have `adminUserId = null` since this is an unauthenticated endpoint. The `InvitedByUserId` on the `InvitationToken` entity provides the audit trail to the inviting admin. This is expected and acceptable.
+
+#### `ResendInvitationCommand`
+- **Input:** `InvitationId` (Guid)
+- **Auth:** Admin+ role required
+- **Validation:** Invitation must exist. Status must be `Pending` or `Expired` (not `Accepted`). No active user must exist for the invitation's email.
+- **Handler:**
+  1. Find existing invitation by Id
+  2. Validate status and email (see above)
+  3. Mark as `Expired`
+  4. Generate new token, create new `InvitationToken` for same email + role
+  5. Send email
+  6. Return new `InvitationDto`
+- **Audit:** `[AuditableAction]`
+
+### New Queries
+
+#### `GetInvitationsQuery`
+- **Input:** `Status?` (filter), `Page`, `PageSize`, `SortBy` (default: `CreatedAt DESC`)
+- **Auth:** Admin+
+- **Returns:** `PaginatedResult<InvitationDto>`
+
+#### `GetInvitationStatsQuery`
+- **Auth:** Admin+
+- **Returns:** `{ pending: int, accepted: int, expired: int, total: int }`
+
+#### `ValidateInvitationTokenQuery`
+- **Input:** `Token` (plaintext, sent in POST body — not GET query param, to avoid server log exposure)
+- **Auth:** Unauthenticated
+- **Returns:** `{ valid: bool, role: string?, expiresAt: DateTime? }` — **email is NOT returned** to prevent user-enumeration via forwarded invite links. The email is shown to the user only after they complete `AcceptInvitationCommand`.
+
+---
+
+## 3. Backend: Endpoints
+
+### Admin Endpoints (AdminUserEndpoints.cs)
 
 ```
-UserInvitation
-├── Id: Guid
-├── Email: string
-├── Role: string
-├── DisplayName: string
-├── InvitationToken: string (hashed)
-├── ExpiresAt: DateTime (48h from creation)
-├── Status: InvitationStatus (Pending | Accepted | Expired | Revoked)
-├── CreatedBy: Guid (admin userId)
-├── AcceptedAt: DateTime?
-├── CreatedAt: DateTime
-└── UpdatedAt: DateTime
+POST   /api/v1/admin/users/invite                    → SendInvitationCommand
+POST   /api/v1/admin/users/bulk/invite                → BulkSendInvitationsCommand (endpoint reads IFormFile, converts to string CsvContent)
+POST   /api/v1/admin/users/invitations/{id}/resend    → ResendInvitationCommand
+GET    /api/v1/admin/users/invitations                → GetInvitationsQuery
+GET    /api/v1/admin/users/invitations/stats           → GetInvitationStatsQuery
 ```
 
-#### Modifications to `User` entity
-
-- `MustChangePassword: bool` (default: false)
-- `InvitedBy: Guid?` (nullable — tracks who invited)
-
-#### Flow
-
-1. Admin calls `POST /admin/users/invite` with `{email, role, displayName}`
-2. Handler validates: reject if email already registered (409 Conflict). Reject if pending invitation exists for same email (409 Conflict with "invitation already pending" message). Creates `UserInvitation` only — **no User record yet**.
-3. Email sent via new `SendInvitationEmailCommand` (MediatR, not direct service injection — `IEmailTemplateService` is `internal` to UserNotifications). Template data: `{inviteLink, adminName, expiresAt, displayName}`.
-4. Email contains link: `/accept-invite?token=xxx`
-5. User clicks → `POST /auth/accept-invite` validates token (checks: not expired, not already accepted, not revoked — single-use enforcement). Creates `User` record at this point (with random password, `MustChangePassword = true`, `OnboardingCompleted = false`, `EmailVerified = true` — admin-supplied email is trusted). Marks invitation as `Accepted`. Creates temporary session → redirect to `/change-password`.
-6. User changes password via `UpdatePassword` (admin-path, no current password required — NOT `ChangePassword` which requires current password verification) → `MustChangePassword = false` → redirect to onboarding wizard.
-
-#### Invitation cleanup
-
-- Expired invitations: background job marks `Pending` → `Expired` after 48h. No ghost User records exist (User created only at acceptance).
-- Revoked invitations: admin action, only affects `UserInvitation` status. No User cleanup needed.
-- Re-invite: admin can create new invitation for same email after previous one is Expired or Revoked.
-
-#### Login guard
-
-On every login, if `MustChangePassword == true`, redirect to `/change-password`. No access to other pages. Enforced server-side: all authenticated endpoints (except `/change-password` and `/logout`) return 403 with `must_change_password` error code.
-
-#### New Commands
-
-- `InviteUserCommand(Email, Role, DisplayName)` → validates uniqueness, creates invitation only (no User yet), sends email via `SendInvitationEmailCommand`
-- `AcceptInvitationCommand(Token)` → validates token (not expired, not used, not revoked), creates User, marks invitation accepted, creates session
-- `RevokeInvitationCommand(InvitationId)` → marks as revoked (admin action)
-- `SendInvitationEmailCommand(Email, TemplateData)` → new command in UserNotifications for invitation-specific emails (avoids abusing `EnqueueEmailCommand` which has document-processing schema: `FileName`, `DocumentUrl`, `ErrorMessage`)
-
-#### New Queries
-
-- `GetPendingInvitationsQuery` → list for admin UI
-- `GetInvitationByTokenQuery(Token)` → for accept-invite page
-
-#### New Endpoints
-
-- `POST /admin/users/invite` → InviteUserCommand
-- `POST /auth/accept-invite` → AcceptInvitationCommand
-- `DELETE /admin/users/invitations/{id}` → RevokeInvitationCommand
-- `GET /admin/users/invitations` → GetPendingInvitationsQuery
-
-### Frontend
-
-#### Admin UI
-
-- Button "Invita Utente" in the user list page → opens modal
-- Modal fields: Email, DisplayName, Role (dropdown: user/editor/creator/admin)
-- Pending invitations table (with revoke action)
-
-#### Auth Pages
-
-- New page `/accept-invite` — validates token, shows welcome message, redirects to `/change-password`
-- Modified `/change-password` — handles invite flow (post-change redirects to `/onboarding` instead of dashboard)
-
-#### Email Template
-
-- Template "invitation" — contains: admin name who invited, link to accept, expiration notice
-- Sent via new `SendInvitationEmailCommand` (not `EnqueueEmailCommand` which has incompatible schema)
-- Template rendered by a new `RenderInvitationEmail` method on a new or extended template service
-
-## Phase 2: Onboarding Wizard ✅ COMPLETED (PR #225)
-
-### Backend
-
-#### Modifications to `User` entity
-
-- `OnboardingCompleted: bool` (default: true for existing users, false for invited)
-- `OnboardingCompletedAt: DateTime?`
-- `OnboardingSkipped: bool` (default: false — for analytics)
-
-#### New Command
-
-- `CompleteOnboardingCommand(SkippedSteps: string[]?)` → sets `OnboardingCompleted = true`, records skipped steps in `AuditLogEntry.Details` (JSONB) when Phase 4 is active. Also stored in User entity for analytics queries.
-
-#### Existing endpoints used (no changes needed)
-
-- `POST /api/v1/user-library/games` — add game to collection
-- `POST /api/v1/agent-definitions` — create agent
-- Chat SSE endpoint — talk to agent
-
-### Frontend
-
-#### Wizard (`/onboarding`) — 3 steps
-
-**Step 1: "Aggiungi il tuo primo gioco"**
-- Search SharedGame catalog
-- Click to add to collection
-- Shows preview of selected game
-- "Salta questo step →" link bottom-right
-
-**Step 2: "Crea il tuo primo agente"**
-- Simplified form (name auto-generated from game, KB cards pre-selected)
-- Streamlined version of AgentBuilderModal
-- "Salta questo step →" link bottom-right
-
-**Step 3: "Prova a chiedergli qualcosa"**
-- Inline mini-chat with the agent just created
-- Pre-filled suggestions: "Qual è lo scopo del gioco?" / "Descrivi un turno di gioco"
-- "Completa" button to finish
-- "Salta questo step →" link bottom-right
-
-#### Skip controls
-
-- **Per-step skip**: "Salta questo step →" link on each step. Step marked as "skipped" (not "completed").
-- **Skip all**: "Salta il wizard" link in header top-right. Confirmation: "Puoi trovare queste funzionalità nella dashboard quando vuoi". Sets `OnboardingCompleted = true`, `OnboardingSkipped = true`.
-
-#### Navigation guard
-
-- Next.js middleware: if `onboardingCompleted === false`, redirect to `/onboarding`
-- Exceptions: `/change-password`, `/logout`, `/accept-invite`, `/api/*`
-- **Interaction with email verification**: invited users have `EmailVerified = true` set at acceptance time (admin-supplied email is trusted), so the email verification guard does not interfere with onboarding
-
-#### Dashboard reminder
-
-- If user skipped onboarding, show dismissible banner: "Non hai completato il setup — riprendi da dove eri rimasto"
-- Dismiss stored in localStorage, does not reappear
-
-#### Visual design
-
-- Progress bar at top: 3 dots with current step highlighted
-- Glassmorphic style consistent with design system (bg-white/70, backdrop-blur-md, amber accents)
-- Font: Quicksand headings, Nunito body
-
-## Phase 3: Voice in Chat
-
-### Backend
-
-#### New endpoint (proxy for Whisper)
-
-- `POST /api/v1/speech/transcribe`
-  - Receives: audio blob (webm/ogg)
-  - Sends to: OpenAI Whisper API
-  - Returns: `{ text: string, language: string, duration: number }`
-  - Auth: requires valid session
-  - **Tier gating**: free users → `403 Forbidden` with message
-  - Rate limit: max 60 requests/hour per user (paid tier)
-
-#### Configuration
-
-- New secret file: `infra/secrets/speech.secret`
-  ```
-  WHISPER_API_KEY=sk-...
-  WHISPER_MODEL=whisper-1
-  ```
-- Priority: optional (speech features degrade gracefully)
-
-### Frontend
-
-#### Mic button in chat input
-
-- `Mic` icon (Lucide) next to Send button
-- Click → starts recording (`MediaRecorder API`)
-- Icon turns red + pulses + shows duration
-- Click again (or auto-stop after 30s) → sends audio
-
-#### STT flow
-
-1. Check user tier
-2. If paid → try `POST /api/v1/speech/transcribe` (Whisper)
-3. If free OR Whisper fails (503, timeout, no API key) → fallback to `webkitSpeechRecognition` / `SpeechRecognition`
-4. Transcribed text appears in input field → user can edit before sending
-5. Visual indicator: "🎙️ HD" (Whisper, paid) or "🎙️" (browser, free)
-
-#### TTS for responses
-
-- When user sent last message via mic, agent response is read aloud via `SpeechSynthesis API` (browser-native, free for all tiers)
-- Speaker 🔊 button on each agent message for manual replay
-- Global toggle "Auto-lettura" in chat header (default: on when using mic)
-- Language auto-detect from response (Italian/English)
-
-#### Tier gating rule
-
-- Cloud APIs (Whisper STT, future cloud TTS) → paid tier only (tier `Normal` or `Premium` — NOT `Free`)
-- Browser-native features (Web Speech API, SpeechSynthesis) → all tiers including `Free`
-- Tier check: backend `tier != "free"`, frontend reads `user.tier` from session
-- Tooltip for free users on mic: "Trascrizione base — Upgrade per qualità HD"
-
-#### Browser permissions
-
-- First mic click → requests microphone permission
-- If denied → toast: "Permesso microfono necessario" with link to settings
-
-#### New components
-
-- `VoiceChatButton` — toggle recording, shows state (idle/recording/transcribing)
-- `useAudioRecorder()` hook — manages MediaRecorder + audio blob
-- `SpeechService` class — abstracts Whisper vs Web Speech API with automatic fallback
-- `TextToSpeechButton` — speaker button on single message
-- `useTextToSpeech()` hook — manages SpeechSynthesis lifecycle
-
-## Phase 4: Admin User Management + Audit
-
-### Backend
-
-#### New Entity: `AuditLogEntry` (Administration bounded context)
+### Public Auth Endpoints (AuthenticationEndpoints.cs)
 
 ```
-AuditLogEntry
-├── Id: Guid
-├── UserId: Guid (subject — who was affected)
-├── ActorId: Guid (who performed the action)
-├── Action: AuditAction (enum)
-├── Details: string (JSONB — flexible payload per event type)
-├── IpAddress: string?
-├── UserAgent: string?
-├── CreatedAt: DateTime
+POST   /api/v1/auth/accept-invitation                 → AcceptInvitationCommand (token in body)
+POST   /api/v1/auth/validate-invitation               → ValidateInvitationTokenQuery (token in body, POST to avoid server log exposure)
 ```
 
-#### `AuditAction` enum
+---
 
+## 4. Email Template
+
+**Method:** `IEmailService.SendInvitationEmailAsync(email, inviterName, role, inviteUrl, expiresAt)`
+
+**Email content:**
+- **Subject:** "You're invited to MeepleAI"
+- **Body:** HTML branded template following existing email style
+  - Logo header
+  - "{InviterName} has invited you to join MeepleAI as {Role}"
+  - CTA button: "Accept Invitation" → `{Frontend:BaseUrl}/accept-invite?token={token}`
+  - Expiry notice: "This invitation expires on {expiresAt:format}"
+  - Fallback: plaintext link below button
+  - Footer: "If you didn't expect this invitation, you can safely ignore this email."
+
+---
+
+## 5. Frontend: Accept Invitation & Onboarding
+
+### Route: `/accept-invite` — new `(onboarding)` route group
+
+The accept-invite page and onboarding wizard live in a **new `(onboarding)` route group** with its own full-width layout. The `(auth)` group layout (max-width ~450px centered card) is too narrow for game search and agent creation steps.
+
+**`(onboarding)/layout.tsx`:** Minimal header (logo only), full-width content area (max-width 768px centered), no sidebar, no navigation.
+
+**Entry flow:**
+1. URL: `/accept-invite?token=xxx`
+2. Extract token from URL, call `ValidateInvitationTokenQuery` (POST with token in body)
+3. If invalid/expired → error page with "This invitation has expired or is invalid. Contact your administrator." message
+4. If valid → show `OnboardingWizard`
+
+### OnboardingWizard (5 steps)
+
+| Step | Required | Component | API Call | Notes |
+|------|----------|-----------|----------|-------|
+| 1. Set Password | Yes | `PasswordStep` | `AcceptInvitationCommand` (creates user + auto-login) | After this step, user is authenticated |
+| 2. Profile | Skippable | `ProfileStep` | `UpdateUserProfileCommand` | Display name + avatar |
+| 3. Interests | Skippable | `InterestsStep` | `SaveUserInterestsCommand` (new) | See Section 5A |
+| 4. First Game | Skippable | `FirstGameStep` | `AddGameToLibraryCommand` | Search catalog |
+| 5. First Agent | Skippable/Auto-skip | `FirstAgentStep` | `CreateAgentDefinitionCommand` | Only shown if game added in step 4 |
+
+**Step 1 (Password)** is the critical step — it calls `AcceptInvitationCommand` which creates the user and returns an auth session. Steps 2-5 execute as authenticated API calls.
+
+**Progress bar behavior:** Shows total step count dynamically. If step 5 is auto-skipped (no game added in step 4), the progress bar shows 4 steps total, not 5 with one greyed out. Implementation: `totalSteps` is computed from wizard state — `hasGame ? 5 : 4`.
+
+**Components:**
+- `OnboardingWizard` — stepper with dynamic progress bar, skip/next/back navigation. "Skip wizard" link in header (skips remaining steps, redirects to home).
+- `PasswordStep` — password + confirm fields, strength meter, validation rules display (reuse pattern from `/reset-password`)
+- `ProfileStep` — display name input + avatar upload
+- `InterestsStep` — checkbox grid with game category icons (Strategy, Party, Cooperative, Family, Thematic, Abstract, Card, Dice, Miniatures)
+- `FirstGameStep` — search bar with debounce → catalog results as cards → click to add
+- `FirstAgentStep` — conditional render: shown only if game was added in step 4. Toggle "Create an AI assistant for {GameName}?" + agent name input.
+
+**Post-completion:** redirect to `/` (home dashboard)
+
+### Section 5A: User Interests (New Backend)
+
+**New command: `SaveUserInterestsCommand`**
+- **Input:** `Interests` (string array — category names)
+- **Auth:** Authenticated user
+- **Handler:** Saves interests as JSONB on UserEntity
+- **Migration:** Add `Interests` column (`jsonb`, nullable, default `null`) to `Users` table — included in the same migration as `InvitationTokens` table.
+
+**UserEntity change:** Add `Interests` property (`List<string>?`) with JSONB backing field (same pattern as `AgentDefinition.KbCardIds`).
+
+---
+
+## 6. Frontend: Admin Invitation UI
+
+### C) Inline in User List (`/admin/users`)
+
+- Pending invitations appear as rows in the existing users table
+- Visual differentiation:
+  - Row background: `bg-amber-50`
+  - Avatar: mail icon with dashed amber border (instead of initials circle)
+  - Status badge: "Invited" in amber
+  - Subtitle: "Invited X ago · expires in Xd Xh"
+- Actions: "Resend" button inline
+- Data source: pending invitations fetched via separate `getInvitations({ status: 'Pending' })` call, merged client-side into user list
+
+### B) Dedicated Page (`/admin/users/invitations`)
+
+- **Sidebar entry:** "Invitations" under Users section with pending count badge
+- **Header:** title + "Invite User" button + "Bulk Invite (CSV)" button
+- **Filter tabs:** All / Pending / Accepted / Expired (with counts from `getInvitationStats()`)
+- **Table columns:** Email, Role (badge), Status (badge), Sent date, Expires/Accepted date, Actions
+- **Actions per row:** Resend (for Pending and Expired rows)
+- **Bulk invite dialog:** CSV file upload (drag & drop), preview table with per-row validation, confirm send, results summary (success/failure counts)
+
+### Shared Components
+
+- `InviteUserDialog` — modal form: email input + role select dropdown → shared between user list and invitations page
+- `BulkInviteDialog` — CSV upload with drag & drop, preview table, validation feedback, send confirmation
+- `InvitationStatusBadge` — Pending (amber), Accepted (green), Expired (red)
+- `InvitationRow` — reusable table row component for both views
+
+### Admin API Client
+
+New sub-client `createInvitationsClient()` registered in `createApiClient()`:
+
+```typescript
+sendInvitation(email: string, role: string): Promise<InvitationDto>
+bulkSendInvitations(csvContent: string): Promise<BulkInviteResult>
+resendInvitation(id: string): Promise<InvitationDto>
+getInvitations(filters: InvitationFilters): Promise<PaginatedResult<InvitationDto>>
+getInvitationStats(): Promise<InvitationStats>
+validateInvitationToken(token: string): Promise<TokenValidation>
 ```
-RoleChanged, UserInvited, InviteAccepted, InviteRevoked,
-PasswordChanged, Login, LoginFailed, Logout,
-AccountSuspended, AccountUnlocked, AccountBanned,
-TierChanged, OnboardingCompleted, OnboardingSkipped,
-GameAdded, GameRemoved, AgentCreated, AgentDeleted,
-ChatMessage, PdfUploaded, PdfDeleted,
-VoiceTranscription, SettingsChanged,
-ApiError, RateLimitExceeded
-```
 
-#### Event-driven architecture
+Note: `bulkSendInvitations` receives `string` (the endpoint component reads the file and sends content). The `BulkInviteDialog` component reads the `File` to string client-side before calling the API.
 
-Each bounded context publishes domain events → a centralized handler in Administration writes `AuditLogEntry`. **Exception**: `RoleChangedEvent` in Authentication bounded context must be modified to include `ChangedById: Guid` (currently only has `UserId`, `OldRole`, `NewRole`). The `User.AssignRole`/`User.UpdateRole` methods must accept and forward the actor ID.
+---
 
-#### New Endpoints
+## 7. Database Migration
 
-- `PUT /admin/users/{id}/role` → `ChangeUserRoleCommand(UserId, NewRole)` — dedicated role change endpoint (currently only bulk `POST /admin/users/bulk/role-change` exists)
-- `GET /admin/audit-log` — paginated list, filters: userId, action, dateFrom, dateTo, actorId, search
-- `GET /admin/audit-log/export` — CSV export
-- `GET /admin/users/{id}/audit-log` — filtered log for single user
+**Migration name:** `AddInvitationTokensAndUserInterests`
 
-#### Domain event: `RoleChangedEvent` (modification)
+**Changes:**
+1. New table `InvitationTokens`:
+   - All fields from domain model (Section 1)
+   - FK `InvitedByUserId` → `Users(Id)` (ON DELETE RESTRICT)
+   - FK `AcceptedByUserId` → `Users(Id)` (ON DELETE SET NULL)
+   - Unique index on `TokenHash`
+   - Composite index on `(Email, Status)` for fast lookup
+   - Index on `ExpiresAt` for cleanup queries
+2. Alter table `Users`:
+   - Add column `Interests` (`jsonb`, nullable, default `null`)
 
-- **Existing** in Authentication bounded context — must add `ChangedById: Guid` property
-- Updated payload: userId, oldRole, newRole, changedById
+---
 
-#### Retention
+## 8. Testing Strategy
 
-- 90 days default, configurable via SystemConfiguration
-- Background job for cleanup: `AuditLogCleanupJob` (Quartz)
+| Layer | Test Scope | Tool | Count (est.) |
+|-------|-----------|------|--------------|
+| Unit | `SendInvitationCommandHandler` — creates token, hashes, calls email, extracts admin from session | xUnit | 5-6 |
+| Unit | `AcceptInvitationCommandHandler` — validates token, creates user, sets EmailVerified=true, null audit context | xUnit | 6-8 |
+| Unit | `ResendInvitationCommandHandler` — expires old, creates new, rejects if Accepted, rejects if user exists | xUnit | 5-6 |
+| Unit | `BulkSendInvitationsCommandHandler` — CSV parsing, validation, batch results, max 100 limit | xUnit | 5-6 |
+| Unit | `ValidateInvitationTokenQueryHandler` — valid/expired/invalid cases, no email in response | xUnit | 3-4 |
+| Unit | `SaveUserInterestsCommandHandler` — saves JSONB, validates categories | xUnit | 2-3 |
+| Unit | `InvitationStatusBadge`, `InviteUserDialog`, `BulkInviteDialog` rendering | Vitest | 8-10 |
+| Unit | `invitationsClient` — all API methods, error handling | Vitest | 6-8 |
+| Unit | `OnboardingWizard` — step navigation, skip, back, completion, auto-skip step 5, dynamic progress bar | Vitest | 10-12 |
+| Unit | `PasswordStep`, `ProfileStep`, `InterestsStep`, `FirstGameStep`, `FirstAgentStep` | Vitest | 10-12 |
+| Integration | Token expiry enforcement, resend invalidation, unique constraint, resend-already-expired idempotency | xUnit + Testcontainers | 5-6 |
+| E2E | Admin: invite single user, verify in user list (amber row) + dedicated page | Playwright | 2-3 |
+| E2E | Admin: bulk CSV invite, verify results summary | Playwright | 1-2 |
+| E2E | Admin: resend expired invitation | Playwright | 1 |
+| E2E | User: accept invite → password → skip onboarding → lands on home | Playwright | 1-2 |
+| E2E | User: accept invite → full onboarding (all 5 steps) | Playwright | 1-2 |
+| E2E | User: expired token → error page | Playwright | 1 |
 
-### Frontend
+**Estimated total:** 65-85 tests
+**Coverage target:** 90%+ backend, 85%+ frontend
 
-#### Inline role change (existing user list)
+---
 
-- Role dropdown directly in user table row
-- Change → confirmation modal: "Cambiare il ruolo di {nome} da {old} a {new}?"
-- Success/error toast
+## 9. Security Considerations
 
-#### "Activity" tab in user detail
+- **Token:** 32 bytes cryptographically random, base64url encoded, stored as SHA256 hash only
+- **Token transmission:** Always in POST body, never in GET query params (prevents server log/referrer/browser history exposure). Note: the initial email link uses `?token=xxx` in the URL for UX — the frontend extracts it and sends via POST to the API.
+- **Rate limit:** Max 10 invitations per minute per admin session (prevent spam)
+- **Validate endpoint rate limit:** Max 5 attempts per minute per IP (prevent brute force)
+- **Email validation:** Normalize to lowercase, validate format before sending
+- **Role escalation:** Cannot invite as SuperAdmin (validator rejects; string match against allowlist)
+- **Token reuse:** One-time use; marked Accepted after first use
+- **User enumeration:** `ValidateInvitationTokenQuery` does NOT return email — prevents enumeration via forwarded links
+- **Audit trail:** `AcceptInvitationCommand` audit records have `adminUserId = null` (unauthenticated context); the inviting admin is traceable via `InvitationToken.InvitedByUserId`
 
-- New tab in admin user detail page
-- Chronological timeline of user events (login, actions, role changes)
-- Filter by event type
-- Infinite scroll or pagination
+---
 
-#### Dedicated Audit Log page (`/admin/monitor/audit`)
+## 10. Out of Scope
 
-- Full-width table with all cross-user events
-- Filters: user, event type, date range, actor
-- Full-text search in details
-- CSV export button
-- Integrates with Epic #124 (#130 Audit Trail Viewer) — replaces that issue's scope
+- Email template editor/customizer (use hardcoded HTML template)
+- Invitation revoke/cancel button (expires naturally in 7 days; resend effectively cancels+renews)
+- Custom expiry per invitation (always 7 days)
+- Invitation analytics/reporting beyond basic stats
+- SSO/SAML invitation integration
+- `MustChangePassword` / forced password change feature (separate future feature — not needed for invitation flow since user sets own password)
+- `/change-password` standalone page (not needed without `MustChangePassword`)
+- Voice features (already implemented: `useVoiceInput`, `useVoiceOutput`, Web Speech API)
+- Audit log system (already implemented: `AuditLoggingBehavior` pipeline)
+- Role management UI (already implemented: `ChangeUserRoleCommand`)
 
-### Integration with existing issues
+---
 
-- **#130** "Audit Trail Viewer" → covered by this implementation, can be closed
-- **#140** "Log Viewer" → remains separate (application logs, not audit)
-- **#124** "Epic: Admin Infrastructure Panel" → audit becomes part of this epic
+## Appendix: Spec Review Fixes Applied (v2)
 
-## Cross-Phase Concerns
+Issues found during automated spec review and their resolutions:
 
-### Database Migrations
-
-Each phase adds its own migration:
-- Phase 1: `AddUserInvitations` + `AddMustChangePasswordToUser`
-- Phase 2: `AddOnboardingFieldsToUser`
-- Phase 3: No migration (only new secret file)
-- Phase 4: `AddAuditLogEntries` — **must include indexes**: `IX_AuditLogEntry_CreatedAt` (for retention cleanup job), `IX_AuditLogEntry_UserId_CreatedAt` (for per-user queries), `IX_AuditLogEntry_Action` (for event type filtering)
-
-### Testing Strategy
-
-| Phase | Unit Tests | Integration Tests | E2E Tests |
-|-------|-----------|-------------------|-----------|
-| 1 | Invitation commands, validators, handlers | DB: create/accept/revoke invitation | Full invite → accept → change password flow |
-| 2 | Wizard step logic, skip handling | Onboarding completion command | Wizard 3-step walkthrough + skip |
-| 3 | SpeechService fallback logic, tier gating | Whisper proxy endpoint | Mic → transcribe → send → TTS response |
-| 4 | Audit event handlers, role change | Audit query filters, pagination | Role change → verify audit log entry |
-
-### Security Considerations
-
-- Invitation tokens: cryptographically random, hashed in DB, single-use, 48h expiry
-- `MustChangePassword` enforced server-side (not just frontend redirect)
-- Whisper proxy validates session + tier before forwarding audio
-- Audit log entries are immutable (no update/delete endpoints)
-- Audio blobs not stored — transcribed and discarded
-- Rate limiting on voice endpoint (60/hour)
-
-### Git Workflow
-
-Each phase = separate feature branch → PR to `main-dev`:
-- `feature/issue-XXX-admin-invite-system`
-- `feature/issue-XXX-onboarding-wizard`
-- `feature/issue-XXX-voice-chat`
-- `feature/issue-XXX-admin-audit-management`
-
-After creating each branch: `git config branch.<feature>.parent main-dev` to ensure PRs target correct base.
-
-## Spec Review Fixes Applied
-
-Issues found during automated spec review (10 total, all resolved):
-
-| # | Issue | Fix |
-|---|-------|-----|
-| 1 | `EnqueueEmailCommand` incompatible schema | New `SendInvitationEmailCommand` introduced |
-| 2 | `RoleChangedEvent` missing `ActorId` | Spec now requires modification to add `ChangedById` |
-| 3 | `POST /admin/users/{id}/role` doesn't exist | Corrected infra table; new `PUT` endpoint in Phase 4 |
-| 4 | `ChangePassword` requires current password | Flow now uses `UpdatePassword` (admin-path) |
-| 5 | Onboarding guard conflicts with email verification | Invited users get `EmailVerified = true`; `/accept-invite` added to exceptions |
-| 6 | Missing edge cases (duplicate email, token reuse) | Full validation rules + single-use enforcement documented |
-| 7 | `IEmailTemplateService` is `internal` | Uses MediatR command (not direct service injection) |
-| 8 | "Paid tier" not mapped to enum values | Explicitly: `Normal` or `Premium` = paid, `Free` = gated |
-| 9 | No DB indexes on AuditLogEntry | 3 indexes specified in migration |
-| 10 | Ghost user accounts at invite-send | User created at acceptance time only, not at invite-send |
+| # | Severity | Issue | Resolution |
+|---|----------|-------|------------|
+| 1 | CRITICAL | `MustChangePassword` deadlock — user sets password in Step 1 but flag forces redirect to nonexistent `/change-password` | Removed `MustChangePassword` from invitation flow entirely. User sets own password — no forced change needed. |
+| 2 | CRITICAL | `AcceptInvitationCommand` sets `MustChangePassword = true` immediately after user chose password | Same as above — flag removed from this flow |
+| 3 | HIGH | `UpdateUserPreferencesCommand` does not exist | Specified new `SaveUserInterestsCommand` with JSONB `Interests` field on UserEntity (Section 5A) |
+| 4 | HIGH | `/change-password` page does not exist | Removed from scope — not needed without `MustChangePassword` |
+| 5 | HIGH | `AcceptInvitationCommand` audit has null adminUserId | Documented as expected; `InvitedByUserId` provides admin audit trail |
+| 6 | HIGH | `ValidateInvitationTokenQuery` returns email (user enumeration risk) | Removed `email` from response — only `valid`, `role`, `expiresAt` returned |
+| 7 | HIGH | `IFormFile` in MediatR command violates CQRS | Endpoint converts `IFormFile` → `string`; command receives only `CsvContent: string` |
+| 8 | MEDIUM | `ResendInvitationCommand` doesn't check if invitation was Accepted | Added validation: status must be `Pending` or `Expired`, and no active user for email |
+| 9 | MEDIUM | Resend-already-expired case not explicitly tested | Added to integration test scope |
+| 10 | MEDIUM | Auto-skip step 5 creates hidden navigation branch | Documented: `totalSteps` computed dynamically; progress bar shows 4 or 5 steps |
+| 11 | MEDIUM | `UserRole` enum vs string mismatch | Changed `InvitationToken.Role` to `string`; documented enum is domain logic only |
+| 12 | MEDIUM | `(auth)` route group too narrow for wizard | Created new `(onboarding)` route group with full-width layout |
+| 13 | MEDIUM | GET validate endpoint logs token in server logs | Changed to POST with token in body (consistent with accept endpoint) |
+| 14 | LOW | `InvitedByUserId` not in command inputs | Documented: extracted from authenticated session in handler |
+| 15 | LOW | `GetInvitationsQuery` missing sort order | Added `SortBy` param with default `CreatedAt DESC` |
+| 16 | LOW | No documentation on how to cancel a pending invite | Added note: resend effectively cancels (expires old token) + renews |
+| 17 | LOW | `[AuditableAction]` on unauthenticated command | Documented: null adminUserId is expected and acceptable |

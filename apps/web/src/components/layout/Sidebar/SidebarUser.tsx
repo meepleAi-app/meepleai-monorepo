@@ -7,13 +7,7 @@
 
 import { useTransition } from 'react';
 
-import {
-  Settings,
-  Shield,
-  LogOut,
-  User,
-  FileEdit,
-} from 'lucide-react';
+import { Settings, Shield, LogOut, User, FileEdit } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
@@ -47,7 +41,8 @@ export function SidebarUser({ isCollapsed }: SidebarUserProps) {
   const { data: user } = useCurrentUser();
   const [isLoggingOut, startTransition] = useTransition();
 
-  const isAdmin = user?.role?.toLowerCase() === 'admin' || user?.role?.toLowerCase() === 'superadmin';
+  const isAdmin =
+    user?.role?.toLowerCase() === 'admin' || user?.role?.toLowerCase() === 'superadmin';
   const isEditor = user?.role?.toLowerCase() === 'editor' || isAdmin;
 
   const userInitial =
@@ -66,28 +61,28 @@ export function SidebarUser({ isCollapsed }: SidebarUserProps) {
 
   return (
     <div
-      className={cn(
-        'border-t border-sidebar-border p-3',
-        'flex flex-col gap-2'
-      )}
+      className={cn('border-t border-sidebar-border p-3', 'flex flex-col gap-2')}
       data-testid="sidebar-user"
     >
       {/* Utilities row */}
-      <div className={cn('flex items-center', isCollapsed ? 'justify-center' : 'justify-between px-1')}>
+      <div
+        className={cn('flex items-center', isCollapsed ? 'justify-center' : 'justify-between px-1')}
+      >
         {isCollapsed ? (
           <TooltipProvider delayDuration={0}>
             <Tooltip>
               <TooltipTrigger asChild>
-                <div><NotificationBell /></div>
+                <div>
+                  <NotificationBell />
+                </div>
               </TooltipTrigger>
               <TooltipContent side="right">Notifiche</TooltipContent>
             </Tooltip>
           </TooltipProvider>
         ) : (
-          <>
-            <NotificationBell />
-            <ThemeToggle size="sm" />
-          </>
+          <div className="flex items-center gap-2">
+            <ThemeToggle />
+          </div>
         )}
       </div>
 
@@ -114,16 +109,10 @@ export function SidebarUser({ isCollapsed }: SidebarUserProps) {
             )}
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent
-          align={isCollapsed ? 'center' : 'end'}
-          side="right"
-          className="w-56"
-        >
+        <DropdownMenuContent align={isCollapsed ? 'center' : 'end'} side="right" className="w-56">
           <DropdownMenuLabel>
             <div className="flex flex-col space-y-1">
-              <p className="text-sm font-medium leading-none">
-                {user.displayName || 'Utente'}
-              </p>
+              <p className="text-sm font-medium leading-none">{user.displayName || 'Utente'}</p>
               <p className="text-xs leading-none text-muted-foreground">{user.email}</p>
             </div>
           </DropdownMenuLabel>

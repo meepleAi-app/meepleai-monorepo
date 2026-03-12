@@ -12,7 +12,7 @@
 
 import { Suspense } from 'react';
 
-import { ChevronDown, LogOut, Settings, User } from 'lucide-react';
+import { ChevronDown, LogOut, Search, Settings, User } from 'lucide-react';
 import Link from 'next/link';
 
 import { logoutAction } from '@/actions/auth';
@@ -27,11 +27,14 @@ import {
 } from '@/components/ui/navigation/dropdown-menu';
 import { ThemeToggle } from '@/components/ui/navigation/ThemeToggle';
 import { useAuthUser } from '@/hooks/useAuthUser';
+import { useCommandPalette } from '@/hooks/useCommandPalette';
 import { useScrollState } from '@/hooks/useScrollState';
 import { cn } from '@/lib/utils';
 
+import { DesktopBreadcrumb } from '../Breadcrumb/DesktopBreadcrumb';
+import { CommandPalette } from '../CommandPalette';
 import { MobileNavDrawer } from '../MobileNavDrawer';
-import { Logo } from '../Navbar/Logo';
+import { Logo } from './Logo';
 
 // ─── User Menu ────────────────────────────────────────────────────────────────
 
@@ -114,6 +117,7 @@ export interface TopNavbarProps {
 export function TopNavbar({ className }: TopNavbarProps) {
   const { user } = useAuthUser();
   const { isScrolled: scrolled } = useScrollState({ scrolledThreshold: 4 });
+  const commandPalette = useCommandPalette();
 
   return (
     <>
@@ -146,21 +150,53 @@ export function TopNavbar({ className }: TopNavbarProps) {
         )}
       >
         <div className="flex h-full items-center justify-between px-4 md:px-6 gap-2">
-          {/* ── LEFT: MobileNavDrawer (hamburger on mobile) + Logo ── */}
-          <div className="flex items-center gap-2 shrink-0">
-            <Suspense>
-              <MobileNavDrawer />
-            </Suspense>
-            <Logo variant="auto" size="sm" />
+          {/* ── LEFT: MobileNavDrawer (hamburger on mobile) + Logo + Breadcrumb ── */}
+          <div className="flex items-center gap-2 min-w-0">
+            <div className="flex items-center gap-2 shrink-0">
+              <Suspense>
+                <MobileNavDrawer />
+              </Suspense>
+              <Logo variant="auto" size="sm" />
+            </div>
+            <DesktopBreadcrumb className="hidden md:flex ml-2" />
           </div>
 
-          {/* ── RIGHT: Notifications + Avatar ── */}
+          {/* ── RIGHT: Search + Notifications + Avatar ── */}
           <div className="flex items-center gap-1 shrink-0">
+            <button
+              onClick={commandPalette.toggle}
+              aria-label="Apri ricerca"
+              className={cn(
+                'hidden md:flex items-center gap-2',
+                'rounded-lg border border-border/60 bg-muted/40',
+                'px-3 py-1.5 text-sm text-muted-foreground',
+                'hover:bg-muted hover:border-border transition-colors duration-200',
+                'min-w-[200px] max-w-[280px]'
+              )}
+            >
+              <Search className="h-3.5 w-3.5 shrink-0" />
+              <span className="truncate">Cerca...</span>
+              <kbd
+                className={cn(
+                  'ml-auto hidden lg:inline-flex',
+                  'h-5 items-center gap-0.5 rounded border border-border/80',
+                  'bg-background px-1.5 text-[10px] font-medium text-muted-foreground'
+                )}
+              >
+                <span className="text-xs">&#x2318;</span>K
+              </kbd>
+            </button>
             <NotificationBell />
             <UserMenu userName={user?.displayName ?? user?.email} userRole={user?.role} />
           </div>
         </div>
       </header>
+
+      <CommandPalette
+        isOpen={commandPalette.isOpen}
+        onClose={commandPalette.close}
+        dataSources={{}}
+      />
     </>
   );
 }

@@ -8,6 +8,7 @@ import { cn } from '@/lib/utils';
 import { useSessionStore } from '@/store/session';
 
 interface ActivityFeedInputBarProps {
+  sessionId: string;
   playerId: string;
   playerName: string;
   onDiceClick?: () => void;
@@ -16,6 +17,7 @@ interface ActivityFeedInputBarProps {
 }
 
 export function ActivityFeedInputBar({
+  sessionId,
   playerId,
   playerName,
   onDiceClick,
@@ -34,6 +36,18 @@ export function ActivityFeedInputBar({
       data: { playerName, text: text.trim() },
       timestamp: new Date().toISOString(),
     });
+
+    // Fire-and-forget POST — optimistic update already applied above.
+    // NOTE: When the real backend echoes this event via SSE, the server should
+    // use the client-provided UUID to avoid duplicates in the dedup set.
+    fetch(`/api/v1/sessions/${sessionId}/events`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ type: 'note', data: { playerName, text: text.trim() } }),
+    }).catch(() => {
+      // Silently ignore — optimistic update already applied
+    });
+
     setText('');
   };
 
@@ -42,7 +56,12 @@ export function ActivityFeedInputBar({
       <input
         value={text}
         onChange={e => setText(e.target.value)}
-        onKeyDown={e => e.key === 'Enter' && handleSend()}
+        onKeyDown={e => {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            handleSend();
+          }
+        }}
         placeholder="Scrivi una nota..."
         className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
       />

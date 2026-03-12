@@ -7,6 +7,7 @@ import { Plus, Users } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useGameNightStore } from '@/store/game-night';
 
+import { AISuggestionCard } from './AISuggestionCard';
 import { DealtGameCard } from './DealtGameCard';
 import { GameNightTimeline } from './GameNightTimeline';
 import { InlineGamePicker } from './InlineGamePicker';
@@ -59,6 +60,9 @@ export function GameNightPlanningLayout({
             </div>
           )}
         </div>
+
+        {/* AI suggestions — contextual based on player count */}
+        <AISuggestionCard suggestions={[]} />
       </div>
 
       {/* Right column — table, picker, timeline */}

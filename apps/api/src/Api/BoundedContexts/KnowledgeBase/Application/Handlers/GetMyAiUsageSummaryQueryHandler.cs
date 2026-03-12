@@ -71,7 +71,7 @@ internal class GetMyAiUsageSummaryQueryHandler : IQueryHandler<GetMyAiUsageSumma
         );
     }
 
-    private record CostLogProjection(
+    private sealed record CostLogProjection(
         DateOnly RequestDate, int PromptTokens, int CompletionTokens,
         int TotalTokens, decimal TotalCost, int LatencyMs);
 }

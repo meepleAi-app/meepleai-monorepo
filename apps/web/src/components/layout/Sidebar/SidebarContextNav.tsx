@@ -35,6 +35,7 @@ import { usePathname, useSearchParams } from 'next/navigation';
 
 import { GamesFilterPanel } from '@/components/catalog/GamesFilterPanel';
 import { useNavigation } from '@/context/NavigationContext';
+import { useViewTransition } from '@/lib/hooks/useViewTransition';
 import { cn } from '@/lib/utils';
 
 import type { Variants } from 'framer-motion';
@@ -62,22 +63,50 @@ function SidebarLink({
   isActive?: boolean;
   isCollapsed: boolean;
 }) {
+  const { navigateWithTransition } = useViewTransition();
+
   return (
     <Link
       href={href}
+      onClick={e => {
+        if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
+        e.preventDefault();
+        navigateWithTransition(href);
+      }}
       className={cn(
-        'flex items-center gap-3 rounded-lg text-sm font-medium',
+        'group relative flex items-center gap-3 rounded-lg text-sm font-medium',
         'min-h-[44px] px-3 py-2',
         'transition-colors duration-150',
         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring focus-visible:ring-offset-1',
+        'border-l-[3px]',
         isActive
-          ? 'bg-[hsl(25_95%_45%/0.12)] text-[hsl(25_95%_42%)] font-semibold'
-          : 'text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground',
+          ? 'bg-[hsl(25_95%_45%/0.08)] text-[hsl(25_95%_42%)] font-semibold border-[hsl(25_95%_45%)]'
+          : 'text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground border-transparent',
         isCollapsed && 'justify-center px-2'
       )}
     >
-      <Icon className="h-4 w-4 shrink-0" aria-hidden="true" />
+      <Icon
+        className="h-4 w-4 shrink-0 group-hover:scale-105 transition-transform duration-150"
+        aria-hidden="true"
+      />
       {!isCollapsed && <span className="truncate">{label}</span>}
+
+      {/* Tooltip — collapsed only */}
+      {isCollapsed && (
+        <span
+          className={cn(
+            'absolute left-full ml-2 top-1/2 -translate-y-1/2',
+            'px-2 py-1 rounded-md',
+            'bg-popover text-popover-foreground text-xs font-medium',
+            'shadow-md border border-border/50',
+            'opacity-0 group-hover:opacity-100 pointer-events-none',
+            'transition-opacity duration-150',
+            'whitespace-nowrap z-50'
+          )}
+        >
+          {label}
+        </span>
+      )}
     </Link>
   );
 }

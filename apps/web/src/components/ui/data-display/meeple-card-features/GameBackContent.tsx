@@ -2,30 +2,17 @@
  * GameBackContent - Game Card Back Side
  *
  * Renders game-specific back content for FlipCard:
- * - Entity-colored header with game title
- * - Stats grid (Peso, Durata, Giocatori, Voto, Partite)
- * - KB document preview (up to 3 docs with status)
- * - Quick action buttons (Chat, KB, Note, Preferito)
- * - Detail page link
+ * - Entity-colored header with title, last-played, win rate
+ * - InfoChip row (players, time, complexity dots, rating)
+ * - ContextualAction list (session, AI, game night, expansions)
+ * - Compact footer (favorite, noteCount, detail link)
  */
 
 'use client';
 
-import React from 'react';
+import React, { useId } from 'react';
 
-import {
-  BookOpen,
-  Clock,
-  ExternalLink,
-  FileText,
-  Heart,
-  MessageCircle,
-  StickyNote,
-  Users,
-  Weight,
-  Star,
-  Gamepad2,
-} from 'lucide-react';
+import { Bot, Calendar, Clock, Heart, Link2, Play, StickyNote, Star, Users } from 'lucide-react';
 import Link from 'next/link';
 
 import { cn } from '@/lib/utils';
@@ -53,14 +40,25 @@ export interface GameBackData {
   hasKb?: boolean;
   /** Number of KB cards */
   kbCardCount?: number;
+  /** Pre-formatted "last played" label (consumer handles locale) */
+  lastPlayedLabel?: string;
+  /** Win rate percentage (0-100) */
+  winRate?: number;
+  /** ISO date string of next game night */
+  nextGameNight?: string;
+  /** Number of entity links (expansions, etc.) */
+  entityLinkCount?: number;
+  /** Number of user notes */
+  noteCount?: number;
 }
 
 export interface GameBackActions {
   onChatAgent?: () => void;
-  onViewKb?: () => void;
-  onEditNotes?: () => void;
   onToggleFavorite?: () => void;
   isFavorite?: boolean;
+  onNewSession?: () => void;
+  onAddToGameNight?: () => void;
+  onViewLinks?: () => void;
 }
 
 export interface GameBackContentProps {
@@ -79,59 +77,56 @@ export interface GameBackContentProps {
 // Sub-components
 // ============================================================================
 
-function StatChip({
-  icon: Icon,
-  label,
-  value,
-  entityColor,
-}: {
-  icon: typeof Clock;
-  label: string;
-  value: string | number;
-  entityColor: string;
-}) {
+function InfoChip({ children }: { children: React.ReactNode }) {
   return (
-    <div
-      className="flex flex-col items-center gap-0.5 rounded-lg px-2 py-1.5 bg-muted/40"
-      data-testid={`game-stat-${label.toLowerCase().replace(/\s/g, '-')}`}
-    >
-      <Icon className="w-3.5 h-3.5" style={{ color: `hsl(${entityColor})` }} />
-      <span className="text-xs font-bold tabular-nums text-card-foreground">{value}</span>
-      <span className="text-[9px] text-muted-foreground leading-tight">{label}</span>
-    </div>
+    <span className="inline-flex items-center gap-1 bg-muted/40 px-2 py-0.5 rounded-md text-xs text-card-foreground">
+      {children}
+    </span>
   );
 }
 
-function ActionButton({
+function ContextualAction({
   icon: Icon,
   label,
+  context,
+  colorHsl,
   onClick,
-  active,
-  entityColor,
 }: {
-  icon: typeof MessageCircle;
+  icon: typeof Play;
   label: string;
+  context?: string | null;
+  colorHsl: string;
   onClick?: () => void;
-  active?: boolean;
-  entityColor: string;
 }) {
+  const id = useId();
+  const contextId = context ? `${id}-ctx` : undefined;
+
   return (
     <button
       type="button"
       className={cn(
-        'flex flex-col items-center gap-1 rounded-lg px-2 py-2 text-xs font-medium',
-        'transition-all duration-200',
-        'hover:bg-muted/60',
-        active ? 'bg-muted/50 text-card-foreground' : 'text-muted-foreground'
+        'flex items-center gap-2 w-full rounded-lg px-3 py-2 text-xs font-medium transition-colors',
+        !onClick && 'opacity-50 cursor-not-allowed'
       )}
+      style={{
+        backgroundColor: `hsla(${colorHsl}, 0.08)`,
+        borderColor: `hsla(${colorHsl}, 0.15)`,
+        color: `hsl(${colorHsl})`,
+      }}
+      disabled={!onClick}
+      aria-describedby={contextId}
       onClick={e => {
         e.stopPropagation();
         onClick?.();
       }}
-      title={label}
     >
-      <Icon className="w-4 h-4" style={active ? { color: `hsl(${entityColor})` } : undefined} />
-      <span className="leading-tight">{label}</span>
+      <Icon className="w-4 h-4 shrink-0" />
+      <span>{label}</span>
+      {context && (
+        <span id={contextId} className="ml-auto text-[10px] text-muted-foreground">
+          {context}
+        </span>
+      )}
     </button>
   );
 }
@@ -158,17 +153,31 @@ export const GameBackContent = React.memo(function GameBackContent({
     maxPlayers,
     averageRating,
     timesPlayed = 0,
-    kbDocuments,
     hasKb,
     kbCardCount = 0,
+    lastPlayedLabel = 'Mai giocato',
+    winRate,
+    entityLinkCount = 0,
+    noteCount = 0,
   } = data;
 
+  // Computed values
   const playerRange =
     minPlayers && maxPlayers
       ? minPlayers === maxPlayers
         ? `${minPlayers}`
         : `${minPlayers}-${maxPlayers}`
       : '—';
+
+  const complexityDots = complexityRating != null ? Math.round(complexityRating) : null;
+
+  const kbContextLabel = hasKb
+    ? `KB pronta · ${kbCardCount} doc`
+    : data.kbDocuments?.some(d => d.status !== 'Ready')
+      ? 'KB in elaborazione'
+      : 'Nessuna KB';
+
+  const timesPlayedContext = timesPlayed > 0 ? `${timesPlayed} partite giocate` : 'Nessuna partita';
 
   return (
     <div
@@ -191,132 +200,139 @@ export const GameBackContent = React.memo(function GameBackContent({
         <h2 className="relative z-[1] font-quicksand text-lg font-bold text-white line-clamp-1">
           {title || 'Statistiche'}
         </h2>
+        <p className="relative z-[1] text-xs text-white/80 mt-0.5">
+          {lastPlayedLabel}
+          {winRate != null && ` · Win rate ${winRate}%`}
+        </p>
       </div>
 
       {/* Content area */}
       <div className="flex flex-1 flex-col overflow-y-auto px-4 py-3 gap-3">
-        {/* Stats grid */}
-        <div className="grid grid-cols-3 gap-1.5" data-testid="game-stats-grid">
-          {complexityRating != null && (
-            <StatChip
-              icon={Weight}
-              label="Peso"
-              value={complexityRating.toFixed(1)}
-              entityColor={entityColor}
-            />
-          )}
+        {/* InfoChip row */}
+        <div className="flex gap-1.5 flex-wrap" data-testid="info-chips">
+          <InfoChip>
+            <Users className="w-3 h-3" />
+            {playerRange}
+          </InfoChip>
           {playingTimeMinutes != null && (
-            <StatChip
-              icon={Clock}
-              label="Durata"
-              value={`${playingTimeMinutes}m`}
-              entityColor={entityColor}
-            />
+            <InfoChip>
+              <Clock className="w-3 h-3" />
+              {playingTimeMinutes}m
+            </InfoChip>
           )}
-          <StatChip icon={Users} label="Giocatori" value={playerRange} entityColor={entityColor} />
+          {complexityDots != null && (
+            <InfoChip>
+              <span
+                className="inline-flex gap-0.5"
+                data-testid="complexity-dots"
+                aria-label={`Complessità: ${complexityDots} su 5`}
+              >
+                {Array.from({ length: 5 }, (_, i) => (
+                  <span
+                    key={i}
+                    aria-hidden="true"
+                    className={cn(
+                      'rounded-full w-2 h-2',
+                      i < complexityDots ? 'bg-current' : 'bg-current/20'
+                    )}
+                  />
+                ))}
+              </span>
+            </InfoChip>
+          )}
           {averageRating != null && (
-            <StatChip
-              icon={Star}
-              label="Voto"
-              value={averageRating.toFixed(1)}
-              entityColor={entityColor}
-            />
+            <InfoChip>
+              <Star className="w-3 h-3" />
+              {averageRating.toFixed(1)}
+            </InfoChip>
           )}
-          <StatChip icon={Gamepad2} label="Partite" value={timesPlayed} entityColor={entityColor} />
         </div>
 
-        {/* KB preview */}
-        {(hasKb || (kbDocuments && kbDocuments.length > 0)) && (
-          <div data-testid="kb-preview-section">
-            <h3 className="mb-1.5 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              <BookOpen className="w-3 h-3" />
-              Knowledge Base
-              {kbCardCount > 0 && (
-                <span className="ml-auto text-[10px] font-normal">{kbCardCount} doc</span>
-              )}
-            </h3>
-            <div className="space-y-1">
-              {kbDocuments &&
-                kbDocuments.slice(0, 3).map(doc => {
-                  const isReady = doc.status === 'Ready' || doc.status === 'completed';
-                  return (
-                    <div key={doc.id} className="flex items-center gap-2 text-xs">
-                      <span
-                        className={cn(
-                          'w-1.5 h-1.5 rounded-full flex-shrink-0',
-                          isReady ? 'bg-green-500' : 'bg-amber-500 animate-pulse'
-                        )}
-                      />
-                      <FileText className="w-3 h-3 text-muted-foreground flex-shrink-0" />
-                      <span className="text-card-foreground truncate flex-1">{doc.fileName}</span>
-                    </div>
-                  );
-                })}
-              {kbDocuments && kbDocuments.length > 3 && (
-                <p className="text-[10px] text-muted-foreground ml-5">
-                  +{kbDocuments.length - 3} altri documenti
-                </p>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* Quick actions */}
+        {/* Contextual actions */}
         {actions && (
-          <div className="grid grid-cols-4 gap-1" data-testid="game-back-actions">
+          <div className="flex flex-col gap-0.5" data-testid="game-back-actions">
+            {actions.onNewSession && (
+              <ContextualAction
+                icon={Play}
+                label="Nuova Sessione"
+                context={timesPlayedContext}
+                colorHsl="25 95% 45%"
+                onClick={actions.onNewSession}
+              />
+            )}
             {actions.onChatAgent && (
-              <ActionButton
-                icon={MessageCircle}
-                label="Chat"
+              <ContextualAction
+                icon={Bot}
+                label="Chiedi all'AI"
+                context={kbContextLabel}
+                colorHsl="262 83% 58%"
                 onClick={actions.onChatAgent}
-                active={hasKb}
-                entityColor={entityColor}
               />
             )}
-            {actions.onViewKb && (
-              <ActionButton
-                icon={BookOpen}
-                label="KB"
-                onClick={actions.onViewKb}
-                active={hasKb}
-                entityColor={entityColor}
+            {actions.onAddToGameNight && (
+              <ContextualAction
+                icon={Calendar}
+                label="Aggiungi a serata"
+                context={data.nextGameNight ?? undefined}
+                colorHsl="217 91% 60%"
+                onClick={actions.onAddToGameNight}
               />
             )}
-            {actions.onEditNotes && (
-              <ActionButton
-                icon={StickyNote}
-                label="Note"
-                onClick={actions.onEditNotes}
-                entityColor={entityColor}
-              />
-            )}
-            {actions.onToggleFavorite && (
-              <ActionButton
-                icon={Heart}
-                label={actions.isFavorite ? 'Preferito' : 'Preferisci'}
-                onClick={actions.onToggleFavorite}
-                active={actions.isFavorite}
-                entityColor={entityColor}
+            {entityLinkCount > 0 && actions.onViewLinks && (
+              <ContextualAction
+                icon={Link2}
+                label="Espansioni"
+                context={`${entityLinkCount} collegate`}
+                colorHsl="142 70% 45%"
+                onClick={actions.onViewLinks}
               />
             )}
           </div>
         )}
 
-        {/* Detail link */}
-        {detailHref && isSafeHref(detailHref) && (
-          <div className="mt-auto pt-2">
+        {/* Compact footer */}
+        <div className="mt-auto border-t border-border/10 pt-2 flex items-center justify-between text-xs">
+          <div className="flex items-center gap-2">
+            {actions?.onToggleFavorite && (
+              <button
+                type="button"
+                className="inline-flex items-center gap-1 text-muted-foreground hover:text-card-foreground transition-colors"
+                onClick={e => {
+                  e.stopPropagation();
+                  actions.onToggleFavorite?.();
+                }}
+                data-testid="favorite-toggle"
+              >
+                <Heart
+                  className={cn('w-3 h-3', actions.isFavorite && 'fill-current')}
+                  style={actions.isFavorite ? { color: `hsl(${entityColor})` } : undefined}
+                  data-filled={actions.isFavorite ? 'true' : 'false'}
+                />
+                <span>Pref</span>
+              </button>
+            )}
+            {noteCount > 0 && (
+              <span
+                className="inline-flex items-center gap-0.5 text-muted-foreground"
+                data-testid="note-count-indicator"
+              >
+                <StickyNote className="w-3 h-3" />
+                <span>{noteCount}</span>
+              </span>
+            )}
+          </div>
+          {detailHref && isSafeHref(detailHref) && (
             <Link
               href={detailHref}
-              className="inline-flex items-center gap-1.5 text-sm font-medium transition-colors font-nunito"
+              className="text-xs font-medium transition-colors font-nunito"
               style={{ color: `hsl(${entityColor})` }}
               onClick={e => e.stopPropagation()}
               data-testid="game-detail-link"
             >
-              <ExternalLink className="h-3.5 w-3.5" />
-              Vai alla pagina gioco
+              Dettaglio →
             </Link>
-          </div>
-        )}
+          )}
+        </div>
       </div>
     </div>
   );

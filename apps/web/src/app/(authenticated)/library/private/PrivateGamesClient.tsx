@@ -80,7 +80,7 @@ type SortByOption = 'title' | 'createdAt' | 'updatedAt';
 type SortDirection = 'asc' | 'desc';
 
 export default function PrivateGamesClient() {
-  const _router = useRouter();
+  const router = useRouter();
   const { t } = useTranslation();
 
   // Data state
@@ -361,6 +361,7 @@ export default function PrivateGamesClient() {
                   onEdit={openEdit}
                   onDelete={openDelete}
                   onPropose={openPropose}
+                  onClick={() => router.push(`/library/private/${game.id}`)}
                 />
                 {/* KB indexing badge — overlays bottom of card (Issue #4946) */}
                 <KbStatusBadge gameId={game.id} />

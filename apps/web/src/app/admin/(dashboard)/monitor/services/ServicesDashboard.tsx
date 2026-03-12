@@ -30,6 +30,7 @@ import type {
   EnhancedServiceDashboard,
   EnhancedServiceHealth,
   OverallHealthStatus,
+  PrometheusMetricsSummary,
   ServiceCategory,
 } from '@/lib/api/schemas';
 import { cn } from '@/lib/utils';
@@ -135,7 +136,10 @@ function ServiceRow({ service, compact }: { service: EnhancedServiceHealth; comp
       <td className="py-3 px-4">
         <div className="flex items-center gap-2">
           <span
-            className={cn('h-2 w-2 rounded-full flex-shrink-0 transition-colors duration-500', stateColor)}
+            className={cn(
+              'h-2 w-2 rounded-full flex-shrink-0 transition-colors duration-500',
+              stateColor
+            )}
             data-testid="status-dot"
           />
           <span className="font-medium text-sm">{service.serviceName}</span>
@@ -162,13 +166,9 @@ function ServiceRow({ service, compact }: { service: EnhancedServiceHealth; comp
       {!compact && (
         <>
           <td className="py-3 px-3 text-xs text-muted-foreground">
-            {service.lastIncidentAt
-              ? new Date(service.lastIncidentAt).toLocaleString()
-              : 'None'}
+            {service.lastIncidentAt ? new Date(service.lastIncidentAt).toLocaleString() : 'None'}
           </td>
-          <td className="py-3 px-3 text-xs text-muted-foreground">
-            {service.errorMessage ?? '—'}
-          </td>
+          <td className="py-3 px-3 text-xs text-muted-foreground">{service.errorMessage ?? '—'}</td>
         </>
       )}
     </tr>
@@ -275,6 +275,46 @@ function CategoryGroup({
           </table>
         </div>
       )}
+    </div>
+  );
+}
+
+function MetricsKpiRow({ metrics }: { metrics: PrometheusMetricsSummary }) {
+  const kpis = [
+    {
+      label: 'API Requests (24h)',
+      value: metrics.apiRequestsLast24h.toLocaleString(),
+      testId: 'kpi-api-requests',
+    },
+    {
+      label: 'Avg Latency',
+      value: `${metrics.avgLatencyMs.toFixed(1)}ms`,
+      testId: 'kpi-avg-latency',
+    },
+    {
+      label: 'Error Rate',
+      value: `${(metrics.errorRate * 100).toFixed(2)}%`,
+      testId: 'kpi-error-rate',
+    },
+    {
+      label: 'LLM Cost (24h)',
+      value: `$${metrics.llmCostLast24h.toFixed(2)}`,
+      testId: 'kpi-llm-cost',
+    },
+  ];
+
+  return (
+    <div className="grid grid-cols-2 md:grid-cols-4 gap-3" data-testid="metrics-kpi-row">
+      {kpis.map(kpi => (
+        <div
+          key={kpi.testId}
+          className="rounded-xl border bg-white/70 dark:bg-zinc-900/70 backdrop-blur-md p-3"
+          data-testid={kpi.testId}
+        >
+          <p className="text-xs text-muted-foreground">{kpi.label}</p>
+          <p className="text-lg font-semibold font-mono mt-0.5">{kpi.value}</p>
+        </div>
+      ))}
     </div>
   );
 }
@@ -415,6 +455,9 @@ export function ServicesDashboard() {
         <>
           {/* Overall Health Banner */}
           {data && <OverallHealthBanner overall={data.overall} />}
+
+          {/* Prometheus Metrics KPIs */}
+          {data && <MetricsKpiRow metrics={data.prometheusMetrics} />}
 
           {/* Category Groups */}
           {grouped.length === 0 ? (

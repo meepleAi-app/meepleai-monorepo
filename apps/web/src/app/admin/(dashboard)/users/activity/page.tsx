@@ -16,16 +16,11 @@ export default function UserActivityPage() {
         <h1 className="font-quicksand text-2xl font-bold tracking-tight text-foreground">
           User Activity Log
         </h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          Monitor user actions and system events
-        </p>
+        <p className="text-sm text-muted-foreground mt-1">Monitor user actions and system events</p>
       </div>
 
       {/* Filters */}
-      <ActivityFilters
-        onActionTypeChange={setActionFilter}
-        onDateRangeChange={setDateRange}
-      />
+      <ActivityFilters onActionTypeChange={setActionFilter} onDateRangeChange={setDateRange} />
 
       {/* Activity Table */}
       <ActivityTable actionFilter={actionFilter} dateRange={dateRange} />

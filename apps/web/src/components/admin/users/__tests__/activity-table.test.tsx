@@ -49,9 +49,7 @@ function renderWithQuery(ui: React.ReactElement) {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
-  return render(
-    <QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>
-  );
+  return render(<QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>);
 }
 
 describe('ActivityTable', () => {
@@ -61,7 +59,7 @@ describe('ActivityTable', () => {
     expect(await screen.findByText('Timestamp')).toBeInTheDocument();
     // "User" appears in both header and data cells, so use role selector
     const headers = screen.getAllByRole('columnheader');
-    const headerTexts = headers.map((h) => h.textContent);
+    const headerTexts = headers.map(h => h.textContent);
     expect(headerTexts).toContain('User');
     expect(headerTexts).toContain('Action');
     expect(headerTexts).toContain('Resource');

@@ -452,6 +452,28 @@ public sealed class SharedGame : AggregateRoot<Guid>
     }
 
     /// <summary>
+    /// Quick-publishes the game, transitioning directly from Draft to Published.
+    /// Only available for admin users who have both submit and approve permissions.
+    /// Issue #250: Quick-publish endpoint for admin shared games
+    /// </summary>
+    /// <param name="publishedBy">The ID of the admin quick-publishing the game</param>
+    /// <exception cref="InvalidOperationException">Thrown when game is not in Draft status</exception>
+    public void QuickPublish(Guid publishedBy)
+    {
+        if (_status != GameStatus.Draft)
+            throw new InvalidOperationException($"Cannot quick-publish game in {_status} status. Only Draft games can be quick-published.");
+
+        if (publishedBy == Guid.Empty)
+            throw new ArgumentException("PublishedBy cannot be empty", nameof(publishedBy));
+
+        _status = GameStatus.Published;
+        _modifiedBy = publishedBy;
+        _modifiedAt = DateTime.UtcNow;
+
+        AddDomainEvent(new SharedGameQuickPublishedEvent(_id, publishedBy));
+    }
+
+    /// <summary>
     /// Rejects the publication, transitioning from PendingApproval back to Draft.
     /// Issue #2514: Approval workflow implementation
     /// </summary>

@@ -170,6 +170,16 @@ internal static class SharedGameCatalogEndpoints
             .Produces(StatusCodes.Status204NoContent)
             .Produces(StatusCodes.Status404NotFound);
 
+        // Quick-publish (Draft → Published directly) - Issue #250
+        group.MapPost("/admin/shared-games/{id:guid}/quick-publish", HandleQuickPublish)
+            .RequireAuthorization("AdminOnlyPolicy")
+            .WithName("QuickPublishSharedGame")
+            .WithSummary("Quick-publish game directly from Draft to Published (Admin only)")
+            .WithDescription("Combines submit and approve into a single operation. Only works for Draft games.")
+            .Produces(StatusCodes.Status204NoContent)
+            .Produces(StatusCodes.Status404NotFound)
+            .Produces(StatusCodes.Status400BadRequest);
+
         // Reject publication (PendingApproval → Draft) - Issue #2514
         group.MapPost("/admin/shared-games/{id:guid}/reject-publication", HandleRejectPublication)
             .RequireAuthorization("AdminOnlyPolicy")
@@ -868,6 +878,32 @@ internal static class SharedGameCatalogEndpoints
         catch (InvalidOperationException)
         {
             return Results.NotFound();
+        }
+    }
+
+    private static async Task<IResult> HandleQuickPublish(
+        Guid id,
+        IMediator mediator,
+        HttpContext context,
+        CancellationToken ct)
+    {
+        var (authorized, session, error) = context.RequireAdminSession();
+        if (!authorized) return error!;
+
+        var command = new QuickPublishSharedGameCommand(id, session!.User!.Id);
+
+        try
+        {
+            await mediator.Send(command, ct).ConfigureAwait(false);
+            return Results.NoContent();
+        }
+        catch (NotFoundException)
+        {
+            return Results.NotFound();
+        }
+        catch (InvalidOperationException ex)
+        {
+            return Results.BadRequest(new { error = ex.Message });
         }
     }
 

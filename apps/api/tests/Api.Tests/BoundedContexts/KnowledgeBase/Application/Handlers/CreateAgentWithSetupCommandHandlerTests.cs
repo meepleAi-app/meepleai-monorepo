@@ -309,7 +309,7 @@ public class CreateAgentWithSetupCommandHandlerTests
         var sharedGameId = Guid.NewGuid();
         _mockMediator
             .Setup(m => m.Send(It.IsAny<LinkAgentToSharedGameCommand>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Unit.Value);
+            .ReturnsAsync(MediatR.Unit.Value);
 
         var command = CreateCommand(sharedGameId: sharedGameId);
 
@@ -391,7 +391,7 @@ public class CreateAgentWithSetupCommandHandlerTests
 
         _mockMediator
             .Setup(m => m.Send(It.IsAny<LinkAgentToSharedGameCommand>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Unit.Value);
+            .ReturnsAsync(MediatR.Unit.Value);
         _mockMediator
             .Setup(m => m.Send(It.IsAny<UpdateAgentDocumentsCommand>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new UpdateAgentDocumentsResult(true, "ok", Guid.NewGuid(), 1));

@@ -20,7 +20,7 @@
  * Issue #5587 — Live Game Session UI
  */
 
-import { useState, useCallback, useEffect, useRef } from 'react';
+import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 
 import { Loader2 } from 'lucide-react';
 
@@ -35,6 +35,8 @@ import {
   SheetDescription,
 } from '@/components/ui/navigation/sheet';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/overlays/dialog';
+import { useGameAgents } from '@/hooks/queries/useGameAgents';
+import { useAgentChatStream } from '@/hooks/useAgentChatStream';
 import { useResponsive } from '@/hooks/useResponsive';
 import type { LiveSessionDto } from '@/lib/api/schemas/live-sessions.schemas';
 import { useSessionSync } from '@/lib/hooks/useSessionSync';
@@ -126,23 +128,45 @@ export function LiveSessionView({ sessionId }: LiveSessionViewProps) {
     };
   }, [sessionId, activeSession?.gameId]);
 
-  // ----- Refs -----
-  const chatTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // ----- Agent chat (SSE streaming) -----
+  const gameId = activeSession?.gameId ?? null;
+  const { data: agents } = useGameAgents({ gameId, enabled: !!gameId });
+  const agentId = agents?.[0]?.id ?? null;
 
-  // Clean up chat timer on unmount
-  useEffect(() => {
-    return () => {
-      if (chatTimerRef.current) clearTimeout(chatTimerRef.current);
-    };
-  }, []);
+  const chatThreadIdRef = useRef<string | null>(null);
+  const [sentMessages, setSentMessages] = useState<ChatMessage[]>([]);
+
+  const { state: agentState, sendMessage: sendAgentMessage } = useAgentChatStream({
+    onComplete: (_answer, metadata) => {
+      // Persist the chatThreadId for follow-up messages in the same thread
+      if (metadata.chatThreadId) {
+        chatThreadIdRef.current = metadata.chatThreadId;
+      }
+    },
+  });
+
+  // Build the full message list: sent user messages + current streaming response
+  const chatMessages = useMemo<ChatMessage[]>(() => {
+    const msgs = [...sentMessages];
+    // Add the current (or completed) assistant response if present
+    if (agentState.currentAnswer) {
+      msgs.push({
+        id: `assistant-${msgs.length}`,
+        role: 'assistant',
+        content: agentState.currentAnswer,
+        timestamp: new Date(),
+      });
+    }
+    return msgs;
+  }, [sentMessages, agentState.currentAnswer]);
+
+  const isChatStreaming = agentState.isStreaming;
 
   // ----- Local UI state -----
   const [rulesOpen, setRulesOpen] = useState(false);
   const [arbiterOpen, setArbiterOpen] = useState(false);
   const [scoresOpen, setScoresOpen] = useState(false);
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
-  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
-  const [isChatStreaming, setIsChatStreaming] = useState(false);
 
   // ----- SSE connection -----
   const onScoreUpdate = useCallback(() => {
@@ -189,31 +213,37 @@ export function LiveSessionView({ sessionId }: LiveSessionViewProps) {
     setSaveDialogOpen(false);
   }, [handleSessionUpdate]);
 
-  const handleChatSend = useCallback((message: string) => {
-    const userMsg: ChatMessage = {
-      id: `user-${Date.now()}`,
-      role: 'user',
-      content: message,
-      timestamp: new Date(),
-    };
-    setChatMessages(prev => [...prev, userMsg]);
+  const handleChatSend = useCallback(
+    (message: string) => {
+      if (!agentId) return;
 
-    // Simulate a placeholder response (actual integration with agent API
-    // will be wired in a follow-up issue)
-    setIsChatStreaming(true);
-    chatTimerRef.current = setTimeout(() => {
-      const assistantMsg: ChatMessage = {
-        id: `assistant-${Date.now()}`,
-        role: 'assistant',
-        content:
-          "Funzione in arrivo — verrà collegata all'agente regole nella prossima iterazione.",
+      // Snapshot the previous assistant answer (if any) before the hook resets
+      if (agentState.currentAnswer) {
+        setSentMessages(prev => [
+          ...prev,
+          {
+            id: `assistant-${Date.now() - 1}`,
+            role: 'assistant' as const,
+            content: agentState.currentAnswer,
+            timestamp: new Date(),
+          },
+        ]);
+      }
+
+      // Add the user message to history
+      const userMsg: ChatMessage = {
+        id: `user-${Date.now()}`,
+        role: 'user',
+        content: message,
         timestamp: new Date(),
       };
-      setChatMessages(prev => [...prev, assistantMsg]);
-      setIsChatStreaming(false);
-      chatTimerRef.current = null;
-    }, 1200);
-  }, []);
+      setSentMessages(prev => [...prev, userMsg]);
+
+      // Send via SSE stream
+      sendAgentMessage(agentId, message, chatThreadIdRef.current ?? undefined);
+    },
+    [agentId, agentState.currentAnswer, sendAgentMessage]
+  );
 
   const handleScoreSubmit = useCallback(
     async (data: {

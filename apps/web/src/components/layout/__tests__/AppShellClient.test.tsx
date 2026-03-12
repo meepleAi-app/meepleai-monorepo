@@ -5,13 +5,14 @@
  * - Renders app-shell container
  * - Auth-aware: sidebar visible for authenticated users, hidden for anonymous
  * - Passes initialSidebarCollapsed to useSidebarState
- * - Renders TopNavbar, MiniNav, MobileBreadcrumb, FloatingActionBar, AdaptiveBottomBar
+ * - Renders TopNavbar, MobileBreadcrumb, FloatingActionBar, AdaptiveBottomBar
  * - ErrorBoundary wrappers present
  * - CardStackPanel rendered
  * - fullWidth prop removes padding
  *
  * Note: The RSC wrapper (AppShell.tsx) cannot be tested in vitest;
  * only the client component is tested here.
+ * (MiniNav removed — tabs now rendered in SidebarContextNav)
  */
 
 import { render, screen } from '@testing-library/react';
@@ -71,10 +72,6 @@ vi.mock('@/components/layout/TopNavbar', () => ({
       TopNavbar
     </header>
   ),
-}));
-
-vi.mock('@/components/layout/MiniNav', () => ({
-  MiniNav: () => <div data-testid="mini-nav" />,
 }));
 
 vi.mock('@/components/layout/FloatingActionBar', () => ({
@@ -140,11 +137,6 @@ describe('AppShellClient', () => {
   it('renders TopNavbar', () => {
     render(<AppShellClient>Content</AppShellClient>);
     expect(screen.getByTestId('top-navbar')).toBeInTheDocument();
-  });
-
-  it('renders MiniNav', () => {
-    render(<AppShellClient>Content</AppShellClient>);
-    expect(screen.getByTestId('mini-nav')).toBeInTheDocument();
   });
 
   it('renders MobileBreadcrumb', () => {

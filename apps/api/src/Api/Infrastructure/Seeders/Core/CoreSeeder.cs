@@ -20,8 +20,6 @@ internal static class CoreSeeder
         await AdminUserSeeder.SeedAsync(mediator, logger, ct).ConfigureAwait(false);
 
         // Non-fatal: log + continue on failure
-        await SafeExecute("test users",
-            () => TestUserSeeder.SeedAsync(mediator, logger, ct), logger).ConfigureAwait(false);
         await SafeExecute("AI models",
             () => AiModelSeeder.SeedAsync(mediator, logger, ct), logger).ConfigureAwait(false);
 

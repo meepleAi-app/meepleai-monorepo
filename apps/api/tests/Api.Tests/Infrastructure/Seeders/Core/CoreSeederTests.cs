@@ -28,25 +28,6 @@ public sealed class CoreSeederTests
     }
 
     [Fact]
-    public async Task TestUserSeeder_SeedAsync_SendsBothTestUserCommands()
-    {
-        // Arrange
-        var mediator = new Mock<IMediator>();
-        var logger = new Mock<ILogger>();
-
-        // Act
-        await TestUserSeeder.SeedAsync(mediator.Object, logger.Object, CancellationToken.None);
-
-        // Assert
-        mediator.Verify(m => m.Send(
-            It.IsAny<Api.BoundedContexts.Administration.Application.Commands.SeedTestUserCommand>(),
-            It.IsAny<CancellationToken>()), Times.Once);
-        mediator.Verify(m => m.Send(
-            It.IsAny<Api.BoundedContexts.Administration.Application.Commands.SeedE2ETestUsersCommand>(),
-            It.IsAny<CancellationToken>()), Times.Once);
-    }
-
-    [Fact]
     public async Task AiModelSeeder_SeedAsync_SendsSeedAiModelsCommand()
     {
         // Arrange

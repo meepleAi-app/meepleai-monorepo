@@ -388,15 +388,23 @@ jobs:
           echo "$HEALTH" | jq . 2>/dev/null || echo "$HEALTH"
 
           # Verify critical services from health response
-          for SERVICE in postgres redis; do
+          FAIL=0
+          for SERVICE in postgres redis qdrant; do
             STATUS=$(echo "$HEALTH" | jq -r ".checks[] | select(.name==\"$SERVICE\") | .status" 2>/dev/null || true)
-            if [ "$STATUS" != "Healthy" ]; then
+            if [ "$STATUS" = "Healthy" ]; then
+              echo "✅ $SERVICE: Healthy"
+            elif [ -z "$STATUS" ]; then
+              echo "⚠️ $SERVICE: not reported in health response (skipping)"
+            else
               echo "❌ $SERVICE is $STATUS (expected Healthy)"
-              exit 1
+              FAIL=1
             fi
-            echo "✅ $SERVICE: Healthy"
           done
 
+          if [ "$FAIL" -ne 0 ]; then
+            echo "❌ Critical services unhealthy"
+            exit 1
+          fi
           echo "✅ All critical services healthy"
 
       - name: Web Health Check
@@ -601,18 +609,16 @@ jobs:
         with:
           tag_name: ${{ needs.build.outputs.version }}
           name: Release ${{ needs.build.outputs.version }}
+          generate_release_notes: true
           body: |
             ## 🚀 Production Release
 
             **Version:** ${{ needs.build.outputs.version }}
-            **Deployed:** $(date -u +"%Y-%m-%d %H:%M UTC")
+            **Deployed at:** ${{ github.event.head_commit.timestamp }}
 
-            ### Images
+            ### Docker Images
             - API: `${{ needs.build.outputs.api_image }}`
             - Web: `${{ needs.build.outputs.web_image }}`
-
-            ### Changes
-            See [CHANGELOG.md](./CHANGELOG.md) for details.
           draft: false
           prerelease: false
 

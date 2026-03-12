@@ -48,6 +48,7 @@ internal static class AdminUserEndpoints
         MapUserDetailEndpoint(group);
         MapUserRoleHistoryEndpoint(group);
         MapUserQuickActionsEndpoints(group);
+        MapUserRoleChangeEndpoint(group);
         MapUserImpersonateEndpoint(group);
         MapEndImpersonationEndpoint(group);
         // ISSUE-124: Invitation endpoints
@@ -920,6 +921,57 @@ internal static class AdminUserEndpoints
             .Produces(StatusCodes.Status404NotFound);
     }
 
+    private static void MapUserRoleChangeEndpoint(RouteGroupBuilder group)
+    {
+        group.MapPut("/admin/users/{userId:guid}/role", HandleChangeUserRole)
+            .RequireAdminSession()
+            .WithName("ChangeUserRole")
+            .WithTags("Admin", "Users")
+            .WithSummary("Change a single user's role")
+            .WithDescription(@"Change a user's role. Automatically audited via [AuditableAction].
+
+**Authorization**: Admin session required
+
+**Valid Roles**: Admin, Editor, User
+
+**Issue**: #124 - Admin Infrastructure Panel")
+            .Produces<Api.Models.UserDto>(StatusCodes.Status200OK)
+            .Produces(StatusCodes.Status400BadRequest)
+            .Produces(StatusCodes.Status403Forbidden)
+            .Produces(StatusCodes.Status404NotFound);
+    }
+
+    private static async Task<IResult> HandleChangeUserRole(
+        Guid userId,
+        ChangeUserRoleRequest request,
+        HttpContext context,
+        IMediator mediator,
+        ILogger<Program> logger,
+        CancellationToken ct)
+    {
+        var (authorized, session, error) = context.RequireAdminSession();
+        if (!authorized) return error!;
+
+        logger.LogInformation("Admin {AdminId} changing role for user {UserId} to {NewRole}",
+            session!.User!.Id, userId, request.NewRole);
+
+        try
+        {
+            var command = new ChangeUserRoleCommand(userId.ToString(), request.NewRole);
+            var result = await mediator.Send(command, ct).ConfigureAwait(false);
+
+            logger.LogInformation("Role changed for user {UserId} to {NewRole} by admin {AdminId}",
+                userId, request.NewRole, session.User.Id);
+
+            return Results.Ok(result);
+        }
+        catch (DomainException ex)
+        {
+            logger.LogWarning(ex, "Failed to change role for user {UserId}", userId);
+            return Results.BadRequest(new { error = ex.Message });
+        }
+    }
+
     private static async Task<IResult> HandleResetUserPassword(
         Guid userId,
         ResetUserPasswordRequest request,
@@ -1307,3 +1359,8 @@ internal record SendUserEmailRequest(string Subject, string Body);
 /// Request payload for sending an invitation (Issue #124).
 /// </summary>
 internal record SendInvitationRequest(string Email, string Role);
+
+/// <summary>
+/// Request payload for changing a user's role (Issue #124).
+/// </summary>
+internal record ChangeUserRoleRequest(string NewRole);

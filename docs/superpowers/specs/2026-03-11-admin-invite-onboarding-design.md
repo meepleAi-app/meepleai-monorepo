@@ -1,8 +1,9 @@
 # Admin Invite, Onboarding, Voice Chat & User Management
 
 **Date**: 2026-03-11
-**Status**: Draft
+**Status**: In Progress (Phases 1-2 completed, Phase 4 in progress, Phase 3 pending)
 **Approach**: Incremental (4 independent phases)
+**PR History**: Phase 1+2 merged via PR #225 → `main-dev` (2026-03-12)
 
 ## Overview
 
@@ -48,7 +49,7 @@ No duplicate issues found among 70+ open issues. Related:
 | Forced password change | None | No `MustChangePassword` flag |
 | Onboarding wizard | None | Welcome page auto-redirects to dashboard |
 
-## Phase 1: Admin Invite System
+## Phase 1: Admin Invite System ✅ COMPLETED (PR #225)
 
 ### Backend
 
@@ -131,7 +132,7 @@ On every login, if `MustChangePassword == true`, redirect to `/change-password`.
 - Sent via new `SendInvitationEmailCommand` (not `EnqueueEmailCommand` which has incompatible schema)
 - Template rendered by a new `RenderInvitationEmail` method on a new or extended template service
 
-## Phase 2: Onboarding Wizard
+## Phase 2: Onboarding Wizard ✅ COMPLETED (PR #225)
 
 ### Backend
 

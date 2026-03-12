@@ -2,7 +2,7 @@
  * Library Game Detail Page
  *
  * Integrated into LayoutShell's 3-tier navigation system:
- * - MiniNav tabs: Overview · Agent · KB · Sessions
+ * - MiniNav tabs: Overview · Agent · KB · Sessions · Links
  * - ActionBar actions: Chat Agent · Upload PDF · Favorite · Notes · Remove
  * - Compact hero card + tabbed content
  */
@@ -23,6 +23,7 @@ import {
   GameDetailSessionsTab,
 } from '@/components/library/game-detail';
 import { RemoveGameDialog } from '@/components/library/RemoveGameDialog';
+import { RelatedEntitiesSection } from '@/components/ui/data-display/entity-link/related-entities-section';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/feedback/alert';
 import { Button } from '@/components/ui/primitives/button';
 import { useLibraryGameDetail } from '@/hooks/queries/useLibrary';
@@ -113,6 +114,8 @@ export default function LibraryGameDetailPage() {
           />
         ) : tab === 'sessions' ? (
           <GameDetailSessionsTab gameId={gameId} />
+        ) : tab === 'links' ? (
+          <RelatedEntitiesSection entityType="Game" entityId={gameId} />
         ) : (
           <GameDetailOverviewTab gameDetail={gameDetail} />
         )}

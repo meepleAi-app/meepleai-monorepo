@@ -481,12 +481,11 @@ Remove the existing "Performance Baseline" step (lines 502-531). Replace with th
           fi
 
       - name: Run K6 Deploy Smoke Test
-        working-directory: tests/k6
         run: |
-          mkdir -p reports/deploy
+          mkdir -p tests/k6/reports/deploy
           k6 run --env BASE_URL=https://meepleai.app \
-                 --summary-export=reports/deploy/deploy-smoke-summary.json \
-                 scenarios/deploy-smoke.js
+                 --summary-export=tests/k6/reports/deploy/deploy-smoke-summary.json \
+                 tests/k6/scenarios/deploy-smoke.js
           echo "✅ K6 deploy smoke test completed"
 
       - name: Write Previous Baseline
@@ -645,13 +644,12 @@ Remove lines 468-505. Replace with same K6 steps as staging but with production 
           ...
 
       - name: Run K6 Deploy Smoke Test
-        working-directory: tests/k6
         run: |
-          mkdir -p reports/deploy
+          mkdir -p tests/k6/reports/deploy
           k6 run --env BASE_URL=https://meepleai.com \
                  --env API_BASE_URL=https://api.meepleai.com \
-                 --summary-export=reports/deploy/deploy-smoke-summary.json \
-                 scenarios/deploy-smoke.js
+                 --summary-export=tests/k6/reports/deploy/deploy-smoke-summary.json \
+                 tests/k6/scenarios/deploy-smoke.js
           echo "✅ K6 deploy smoke test completed"
 
       - name: Write Previous Baseline

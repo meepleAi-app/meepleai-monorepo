@@ -31,7 +31,7 @@ import {
   Play,
 } from 'lucide-react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useSearchParams } from 'next/navigation';
 
 import { GamesFilterPanel } from '@/components/catalog/GamesFilterPanel';
 import { useNavigation } from '@/context/NavigationContext';
@@ -205,6 +205,39 @@ function LibraryContextPanel({ isCollapsed }: { isCollapsed: boolean }) {
   );
 }
 
+// ─── Tab active-state detection ──────────────────────────────────────────────
+
+/**
+ * Determines if a miniNav tab is active by comparing both pathname and query params.
+ * Handles tabs like `/library/games/123?tab=sessions` correctly.
+ */
+function isTabActive(
+  href: string,
+  pathname: string | null,
+  searchParams: ReturnType<typeof useSearchParams>
+): boolean {
+  if (!pathname) return false;
+
+  // Split href into path and query parts
+  const [tabPath, tabQuery] = href.split('?');
+
+  // Check pathname: exact match or prefix match
+  const pathMatch = pathname === tabPath || pathname.startsWith(tabPath + '/');
+  if (!pathMatch) return false;
+
+  // If tab has no query params, it's the "default" tab — active when no tab param is set
+  if (!tabQuery) {
+    return !searchParams?.get('tab');
+  }
+
+  // Compare query params
+  const tabParams = new URLSearchParams(tabQuery);
+  for (const [key, value] of tabParams.entries()) {
+    if (searchParams?.get(key) !== value) return false;
+  }
+  return true;
+}
+
 // ─── Main component ──────────────────────────────────────────────────────────
 
 export interface SidebarContextNavProps {
@@ -224,6 +257,7 @@ function getContextKey(pathname: string | null): string | null {
 
 export function SidebarContextNav({ isCollapsed }: SidebarContextNavProps) {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const contextKey = getContextKey(pathname);
   const { miniNavTabs } = useNavigation();
 
@@ -267,6 +301,8 @@ export function SidebarContextNav({ isCollapsed }: SidebarContextNavProps) {
               animate="animate"
               exit="exit"
               className="mt-2 space-y-0.5 px-2"
+              role="tablist"
+              aria-label={sectionLabel || 'Context tabs'}
             >
               {sectionLabel && <SectionLabel label={sectionLabel} isCollapsed={isCollapsed} />}
               {miniNavTabs.map(tab => {
@@ -274,17 +310,20 @@ export function SidebarContextNav({ isCollapsed }: SidebarContextNavProps) {
                 if (isCollapsed && !tab.icon) return null;
 
                 const TabIcon = tab.icon;
+                const isActive = isTabActive(tab.href, pathname, searchParams);
                 return (
                   <Link
                     key={tab.id}
                     href={tab.href}
+                    role="tab"
+                    aria-selected={isActive}
                     className={cn(
                       'flex items-center gap-3 rounded-lg text-sm font-medium',
                       'min-h-[44px] px-3 py-2',
                       'transition-colors duration-150',
                       'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring focus-visible:ring-offset-1',
                       isCollapsed && 'justify-center px-2',
-                      pathname === tab.href
+                      isActive
                         ? 'bg-[hsl(25_95%_45%/0.12)] text-[hsl(25_95%_42%)] font-semibold'
                         : 'text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
                     )}

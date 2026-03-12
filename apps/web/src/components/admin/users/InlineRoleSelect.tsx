@@ -49,10 +49,8 @@ export function InlineRoleSelect({
       queryClient.invalidateQueries({ queryKey: ['admin', 'users'] });
       onRoleChanged?.();
     },
-    onError: (err) => {
-      toast.error(
-        err instanceof Error ? err.message : 'Failed to change role'
-      );
+    onError: err => {
+      toast.error(err instanceof Error ? err.message : 'Failed to change role');
     },
   });
 
@@ -71,16 +69,12 @@ export function InlineRoleSelect({
 
   return (
     <>
-      <Select
-        value={currentRole}
-        onValueChange={handleSelect}
-        disabled={mutation.isPending}
-      >
+      <Select value={currentRole} onValueChange={handleSelect} disabled={mutation.isPending}>
         <SelectTrigger className="h-7 w-[100px] text-xs">
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
-          {AVAILABLE_ROLES.map((role) => (
+          {AVAILABLE_ROLES.map(role => (
             <SelectItem key={role} value={role}>
               {role}
             </SelectItem>
@@ -88,24 +82,18 @@ export function InlineRoleSelect({
         </SelectContent>
       </Select>
 
-      <AlertDialog
-        open={pendingRole !== null}
-        onOpenChange={(open) => !open && setPendingRole(null)}
-      >
+      <AlertDialog open={pendingRole !== null} onOpenChange={open => !open && setPendingRole(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Change Role</AlertDialogTitle>
             <AlertDialogDescription>
-              Change the role of <strong>{userName}</strong> from{' '}
-              <strong>{currentRole}</strong> to{' '}
+              Change the role of <strong>{userName}</strong> from <strong>{currentRole}</strong> to{' '}
               <strong>{pendingRole}</strong>?
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleConfirm}>
-              Confirm
-            </AlertDialogAction>
+            <AlertDialogAction onClick={handleConfirm}>Confirm</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

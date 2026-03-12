@@ -75,7 +75,7 @@ function UptimeBadge({ percent }: { percent: number }) {
 
 function TrendIndicator({
   trend,
-  currentMs,
+  currentMs: _currentMs,
   previousMs,
 }: {
   trend: 'up' | 'down' | 'stable';
@@ -86,7 +86,9 @@ function TrendIndicator({
     return (
       <span
         className="inline-flex items-center gap-0.5 text-red-600"
-        title={previousMs != null ? `Previous: ${previousMs}ms` : undefined}
+        title={
+          previousMs !== null && previousMs !== undefined ? `Previous: ${previousMs}ms` : undefined
+        }
         data-testid="trend-up"
       >
         <TrendingUp className="h-3 w-3" />
@@ -97,7 +99,9 @@ function TrendIndicator({
     return (
       <span
         className="inline-flex items-center gap-0.5 text-green-600"
-        title={previousMs != null ? `Previous: ${previousMs}ms` : undefined}
+        title={
+          previousMs !== null && previousMs !== undefined ? `Previous: ${previousMs}ms` : undefined
+        }
         data-testid="trend-down"
       >
         <TrendingDown className="h-3 w-3" />

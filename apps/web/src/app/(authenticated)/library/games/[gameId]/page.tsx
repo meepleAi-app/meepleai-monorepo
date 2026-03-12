@@ -100,7 +100,9 @@ export default function LibraryGameDetailPage() {
     <>
       <GameDetailNavConfig gameId={gameId} isFavorite={gameDetail.isFavorite} />
 
-      <GameDetailHeroCard gameDetail={gameDetail} />
+      <div style={{ viewTransitionName: `meeple-card-${gameId}` }}>
+        <GameDetailHeroCard gameDetail={gameDetail} />
+      </div>
 
       <div className="mx-auto max-w-6xl px-4 py-4">
         {tab === 'agent' ? (

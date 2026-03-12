@@ -10,7 +10,7 @@ namespace Api.Infrastructure.Seeders.Catalog;
 
 /// <summary>
 /// Seeds SharedGameEntity and GameEntity bridge records from the YAML manifest.
-/// Ported from <see cref="SharedGameSeeder"/> with manifest-driven game list.
+/// Manifest-driven replacement for legacy SharedGameSeeder.
 /// </summary>
 internal static class GameSeeder
 {

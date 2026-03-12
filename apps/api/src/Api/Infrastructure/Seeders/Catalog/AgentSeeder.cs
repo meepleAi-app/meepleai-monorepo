@@ -7,7 +7,7 @@ namespace Api.Infrastructure.Seeders.Catalog;
 
 /// <summary>
 /// Seeds agent infrastructure for games with seedAgent=true in the manifest.
-/// Merges DefaultAgentSeeder + CatanPocAgentSeeder patterns into a single manifest-driven seeder.
+/// Merges legacy DefaultAgentSeeder + CatanPocAgentSeeder patterns into a single manifest-driven seeder.
 /// Creates: AgentTypology + PromptTemplate, Agent (linked to game), AgentConfiguration,
 /// GameSession, AgentSession — the full entity chain for a working agent.
 /// Idempotent: skips if Agent with matching name already exists for the game.

@@ -120,4 +120,7 @@
   <ItemGroup>
     <None Include="tessdata\**\*" CopyToOutputDirectory="Always" />
   </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Infrastructure\Seeders\Catalog\Manifests\*.yml" />
+  </ItemGroup>
 </Project>

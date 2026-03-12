@@ -34,6 +34,13 @@ vi.mock('@/hooks/queries', () => ({
   }),
 }));
 
+// Mock next/navigation — useViewTransition calls useRouter internally
+vi.mock('next/navigation', () => ({
+  useRouter: vi.fn(() => ({ push: vi.fn(), replace: vi.fn(), back: vi.fn() })),
+  usePathname: vi.fn(() => '/library'),
+  useSearchParams: vi.fn(() => new URLSearchParams()),
+}));
+
 // Mock AgentCreationSheet to avoid deep QueryClient usage in tests
 vi.mock('@/components/agent/config', () => ({
   AgentCreationSheet: () => null,

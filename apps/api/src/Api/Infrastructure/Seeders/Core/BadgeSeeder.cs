@@ -5,7 +5,7 @@ using Api.Infrastructure.Entities.SharedGameCatalog;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
-namespace Api.Infrastructure.Seeders;
+namespace Api.Infrastructure.Seeders.Core;
 
 /// <summary>
 /// Seeds predefined badges into the database.

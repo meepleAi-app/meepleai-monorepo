@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -86,14 +87,14 @@ internal sealed class SeedOrchestrator
     private async Task SeedCoreAsync(CancellationToken ct)
     {
         _logger.LogInformation("Layer 1: Core seeding...");
-        // Phase 1: Delegate to existing AutoConfigurationService (backward compat)
-        // Phase 2+: Will call CoreSeeder.SeedAsync() directly
         var scope = _scopeFactory.CreateAsyncScope();
         try
         {
-            var autoConfig = scope.ServiceProvider
-                .GetRequiredService<Api.BoundedContexts.Administration.Application.Services.IAutoConfigurationService>();
-            await autoConfig.InitializeAsync(ct).ConfigureAwait(false);
+            var sp = scope.ServiceProvider;
+            await Core.CoreSeeder.SeedAsync(
+                sp.GetRequiredService<IMediator>(),
+                sp.GetRequiredService<MeepleAiDbContext>(),
+                _logger, ct).ConfigureAwait(false);
         }
         finally
         {

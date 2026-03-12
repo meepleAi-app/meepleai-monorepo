@@ -3,7 +3,7 @@ using Api.Infrastructure.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
-namespace Api.Infrastructure.Seeders;
+namespace Api.Infrastructure.Seeders.Core;
 
 /// <summary>
 /// Seeds default feature flag configurations with tier-based access.

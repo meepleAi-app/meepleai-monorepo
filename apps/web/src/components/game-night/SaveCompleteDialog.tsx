@@ -119,7 +119,7 @@ export function SaveCompleteDialog({
                 <li>Snapshot della partita</li>
               </ul>
             </div>
-            {/* Notes textarea */}
+            {/* Notes textarea — collected locally, will be sent when API supports it */}
             <Textarea
               value={notes}
               onChange={e => setNotes(e.target.value)}
@@ -127,6 +127,9 @@ export function SaveCompleteDialog({
               rows={3}
               className="text-sm"
             />
+            <p className="text-xs text-muted-foreground -mt-2">
+              Le note verranno salvate localmente. Invio al server in arrivo.
+            </p>
 
             {/* Photo upload + AI summary row */}
             <div className="flex items-center gap-2">

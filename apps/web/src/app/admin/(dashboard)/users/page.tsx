@@ -15,6 +15,7 @@ import { toast } from 'sonner';
 
 import { InvitationStatusBadge } from '@/components/admin/invitations/InvitationStatusBadge';
 import { InviteUserDialog } from '@/components/admin/invitations/InviteUserDialog';
+import { InlineRoleSelect } from '@/components/admin/users/InlineRoleSelect';
 import { Badge } from '@/components/ui/data-display/badge';
 import { Button } from '@/components/ui/primitives/button';
 import { useSetNavConfig } from '@/hooks/useSetNavConfig';
@@ -168,7 +169,11 @@ export default function AdminUsersPage() {
                     </div>
                   </td>
                   <td className="px-3 py-2">
-                    <Badge variant="secondary">{u.role}</Badge>
+                    <InlineRoleSelect
+                      userId={u.id}
+                      currentRole={u.role}
+                      userName={u.displayName || u.email}
+                    />
                   </td>
                   <td className="px-3 py-2">
                     <Badge

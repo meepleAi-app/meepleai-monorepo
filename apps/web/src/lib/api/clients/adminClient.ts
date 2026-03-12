@@ -317,6 +317,20 @@ export function createAdminClient({ httpClient }: CreateAdminClientParams) {
     },
 
     /**
+     * Change user role (admin only) - Issue #124
+     * PUT /api/v1/admin/users/{userId}/role
+     */
+    async changeUserRole(userId: string, newRole: string): Promise<AdminUser> {
+      const result = await httpClient.put<AdminUser>(
+        `/api/v1/admin/users/${encodeURIComponent(userId)}/role`,
+        { newRole },
+        AdminUserSchema
+      );
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+      return result!;
+    },
+
+    /**
      * Get all users (admin only) - Issue #903
      * GET /api/v1/admin/users
      */

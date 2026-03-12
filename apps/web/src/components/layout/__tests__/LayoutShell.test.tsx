@@ -2,7 +2,7 @@
  * LayoutShell Tests
  * Issue #5035 — LayoutShell Component
  *
- * Tests: rendering, composition (TopBar/CardRack/MiniNav/FloatingActionBar),
+ * Tests: rendering, composition (TopBar/CardRack/FloatingActionBar),
  * impersonation banner, CardStackPanel, NavigationProvider wrapping,
  * fullWidth prop, accessibility.
  *
@@ -10,6 +10,7 @@
  * - TopNavbar → TopBar
  * - Sidebar → CardRack
  * - useSidebarState removed (CardRack self-manages hover state)
+ * - MiniNav removed (tabs now rendered in SidebarContextNav)
  */
 
 import { render, screen } from '@testing-library/react';
@@ -55,10 +56,6 @@ vi.mock('@/components/layout/TopBar', () => ({
       TopBar
     </header>
   ),
-}));
-
-vi.mock('@/components/layout/MiniNav', () => ({
-  MiniNav: () => <div data-testid="mini-nav" />,
 }));
 
 vi.mock('@/components/layout/FloatingActionBar', () => ({
@@ -127,11 +124,6 @@ describe('LayoutShell', () => {
   it('renders TopBar', () => {
     renderShell();
     expect(screen.getByTestId('top-bar')).toBeInTheDocument();
-  });
-
-  it('renders MiniNav', () => {
-    renderShell();
-    expect(screen.getByTestId('mini-nav')).toBeInTheDocument();
   });
 
   it('renders FloatingActionBar', () => {

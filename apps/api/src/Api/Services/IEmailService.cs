@@ -169,6 +169,14 @@ internal interface IEmailService
         int retryCount,
         CancellationToken ct = default);
 
+    // ISSUE-124: Invitation system emails
+    Task SendInvitationEmailAsync(
+        string toEmail,
+        string role,
+        string token,
+        string invitedByName,
+        CancellationToken ct = default);
+
     // ISSUE-4417: Raw email sending for queue processor
     /// <summary>
     /// Sends a pre-rendered HTML email via SMTP.

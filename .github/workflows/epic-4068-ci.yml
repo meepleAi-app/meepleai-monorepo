@@ -42,10 +42,10 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Setup .NET
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v5
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
@@ -84,7 +84,7 @@ jobs:
             apps/api/src/Api/TestResults/*/coverage.cobertura.xml
 
       - name: Code Coverage Report
-        uses: codecov/codecov-action@v4
+        uses: codecov/codecov-action@v5
         with:
           files: ./apps/api/src/Api/TestResults/*/coverage.cobertura.xml
           flags: backend,permission-system
@@ -122,10 +122,10 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Setup .NET
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v5
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
@@ -158,10 +158,10 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: ${{ env.NODE_VERSION }}
 
@@ -191,7 +191,7 @@ jobs:
           pnpm test -- Permission --verbose
 
       - name: Upload Coverage
-        uses: codecov/codecov-action@v4
+        uses: codecov/codecov-action@v5
         with:
           files: ./apps/web/coverage/lcov.info
           flags: frontend,epic-4068
@@ -203,10 +203,10 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Setup Node & pnpm
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: ${{ env.NODE_VERSION }}
 
@@ -235,8 +235,8 @@ jobs:
     runs-on: ${{ vars.RUNNER || 'ubuntu-latest' }}
 
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
         with:
           node-version: ${{ env.NODE_VERSION }}
       - uses: pnpm/action-setup@v4
@@ -253,8 +253,8 @@ jobs:
     needs: [frontend-unit-tests, frontend-typecheck]
 
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
         with:
           node-version: ${{ env.NODE_VERSION }}
       - uses: pnpm/action-setup@v4
@@ -287,8 +287,8 @@ jobs:
     needs: frontend-unit-tests
 
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
         with:
           node-version: ${{ env.NODE_VERSION }}
       - uses: pnpm/action-setup@v4
@@ -332,8 +332,8 @@ jobs:
     needs: [frontend-unit-tests, backend-unit-tests]
 
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
         with:
           node-version: ${{ env.NODE_VERSION }}
       - uses: pnpm/action-setup@v4
@@ -377,8 +377,8 @@ jobs:
     needs: frontend-unit-tests
 
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
         with:
           node-version: ${{ env.NODE_VERSION }}
       - uses: pnpm/action-setup@v4
@@ -413,7 +413,7 @@ jobs:
     runs-on: ${{ vars.RUNNER || 'ubuntu-latest' }}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Run Trivy (Backend)
         uses: aquasecurity/trivy-action@master
@@ -444,7 +444,7 @@ jobs:
     if: github.event_name == 'pull_request'
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Deploy to Vercel
         uses: amondnet/vercel-action@v25
@@ -457,7 +457,7 @@ jobs:
             epic-4068-pr-${{ github.event.pull_request.number }}.vercel.app
 
       - name: Comment Preview URL
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           script: |
             github.rest.issues.createComment({

@@ -176,11 +176,24 @@ public sealed class GetApprovalQueueQueryHandlerTests : IAsyncLifetime
         await _dbContext.SaveChangesAsync();
 
         // Add PDF document to game1
+        var pdfDocId = Guid.NewGuid();
+        var pdfDocument = new PdfDocumentEntity
+        {
+            Id = pdfDocId,
+            FileName = "urgent-game-rulebook.pdf",
+            FilePath = "/uploads/urgent-game-rulebook.pdf",
+            FileSizeBytes = 1024000,
+            UploadedByUserId = EditorUserId,
+            UploadedAt = DateTime.UtcNow.AddDays(-9)
+        };
+        _dbContext.Set<PdfDocumentEntity>().Add(pdfDocument);
+        await _dbContext.SaveChangesAsync();
+
         var document = new SharedGameDocumentEntity
         {
             Id = Guid.NewGuid(),
             SharedGameId = gameId1,
-            PdfDocumentId = Guid.NewGuid(),
+            PdfDocumentId = pdfDocId,
             DocumentType = 0, // Rulebook
             Version = "1.0",
             IsActive = true,

@@ -2,6 +2,7 @@
  * Scoreboard Tab — /sessions/[id] (default route)
  *
  * Renders SessionHeader + LiveIndicator + Scoreboard with real-time SSE updates.
+ * Also renders RelatedEntitiesSection for entity link connections on this session.
  *
  * Issue #5041 — Sessions Redesign Phase 2
  */
@@ -14,6 +15,7 @@ import { Loader2 } from 'lucide-react';
 
 import { LiveIndicator, Scoreboard, SessionHeader } from '@/components/session';
 import { toScoreboardData, toSession } from '@/components/session/adapters';
+import { RelatedEntitiesSection } from '@/components/ui/data-display/entity-link/related-entities-section';
 import type { LiveSessionStatus } from '@/lib/api/schemas/live-sessions.schemas';
 import { useSessionSync } from '@/lib/hooks/useSessionSync';
 import { useSessionStore } from '@/lib/stores/sessionStore';
@@ -116,6 +118,8 @@ export default function SessionScoreboardPage({ params }: SessionPageProps) {
       />
 
       <Scoreboard data={scoreboardData} variant="full" isRealTime />
+
+      <RelatedEntitiesSection entityType="Session" entityId={id} />
     </div>
   );
 }

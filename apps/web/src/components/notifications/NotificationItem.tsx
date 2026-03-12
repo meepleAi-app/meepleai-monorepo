@@ -46,9 +46,10 @@ export function NotificationItem({ notification }: NotificationItemProps) {
       void markAsRead(notification.id);
     }
 
-    // Navigate to link if exists
-    if (notification.link) {
-      router.push(notification.link);
+    // Navigate to link if exists, otherwise resolve deep link from metadata
+    const target = notification.link ?? getNotificationDeepLink(notification);
+    if (target) {
+      router.push(target);
     }
   };
 
@@ -173,6 +174,32 @@ function getTypeIcon(type: string): React.ComponentType<{ className?: string }> 
       return Calendar;
     default:
       return Info;
+  }
+}
+
+/**
+ * Resolves a deep link from notification metadata when no explicit link is set.
+ * Supports pdf_upload_completed → private game Smart Hub page.
+ */
+export function getNotificationDeepLink(notification: NotificationDto): string | null {
+  if (!notification.metadata) return null;
+
+  try {
+    const meta = JSON.parse(notification.metadata) as Record<string, unknown>;
+
+    switch (notification.type) {
+      case 'pdf_upload_completed': {
+        const privateGameId = meta.privateGameId as string | undefined;
+        if (privateGameId) {
+          return `/library/private/${privateGameId}`;
+        }
+        return null;
+      }
+      default:
+        return null;
+    }
+  } catch {
+    return null;
   }
 }
 

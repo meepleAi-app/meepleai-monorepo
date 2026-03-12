@@ -531,6 +531,40 @@ export const InfrastructureDetailsSchema = z.object({
 
 export type InfrastructureDetails = z.infer<typeof InfrastructureDetailsSchema>;
 
+// ========== Enhanced Service Health (Issue #132) ==========
+
+export const ServiceCategorySchema = z.enum([
+  'Core Infrastructure',
+  'AI Services',
+  'External APIs',
+  'Monitoring',
+]);
+export type ServiceCategory = z.infer<typeof ServiceCategorySchema>;
+
+export const ResponseTimeTrendSchema = z.enum(['up', 'down', 'stable']);
+export type ResponseTimeTrend = z.infer<typeof ResponseTimeTrendSchema>;
+
+export const EnhancedServiceHealthSchema = z.object({
+  serviceName: z.string(),
+  state: HealthStateSchema,
+  errorMessage: z.string().nullable().optional(),
+  checkedAt: z.string().datetime(),
+  responseTimeMs: z.number().nonnegative(),
+  category: ServiceCategorySchema,
+  uptimePercent24h: z.number().min(0).max(100),
+  responseTimeTrend: ResponseTimeTrendSchema,
+  previousResponseTimeMs: z.number().nonnegative().optional(),
+  lastIncidentAt: z.string().datetime().nullable().optional(),
+});
+export type EnhancedServiceHealth = z.infer<typeof EnhancedServiceHealthSchema>;
+
+export const EnhancedServiceDashboardSchema = z.object({
+  overall: OverallHealthStatusSchema,
+  services: z.array(EnhancedServiceHealthSchema),
+  prometheusMetrics: PrometheusMetricsSummarySchema,
+});
+export type EnhancedServiceDashboard = z.infer<typeof EnhancedServiceDashboardSchema>;
+
 // ========== Metrics Time Series (Issue #901) ==========
 
 /**

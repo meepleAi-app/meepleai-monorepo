@@ -176,7 +176,7 @@ public class DeleteOwnAccountCommandHandlerTests
             It.Is<DeleteUserLlmDataCommand>(c =>
                 c.UserId == userId &&
                 c.RequestedByUserId == userId &&
-                c.IsAdminRequest == false),
+!c.IsAdminRequest),
             It.IsAny<CancellationToken>()), Times.Once);
     }
 

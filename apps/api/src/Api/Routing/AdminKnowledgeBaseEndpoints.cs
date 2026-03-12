@@ -1,8 +1,11 @@
 using Api.BoundedContexts.DocumentProcessing.Application.Queries.Queue;
+using Api.BoundedContexts.KnowledgeBase.Application.DTOs;
+using Api.BoundedContexts.KnowledgeBase.Application.Queries.EstimateAgentCost;
 using Api.BoundedContexts.SharedGameCatalog.Application.Queries;
 using Api.Filters;
 using Api.Services;
 using MediatR;
+using Microsoft.AspNetCore.Mvc;
 
 namespace Api.Routing;
 
@@ -101,6 +104,25 @@ internal static class AdminKnowledgeBaseEndpoints
             return Results.Ok(result);
         });
 
+        // POST /api/v1/admin/kb/agents/estimate-cost - Pre-chat cost estimation
+        kbGroup.MapPost("/agents/estimate-cost", async (
+            [FromBody] EstimateAgentCostByDocumentsRequest request,
+            IMediator mediator,
+            CancellationToken cancellationToken) =>
+        {
+            var query = new EstimateAgentCostQuery(
+                request.GameId,
+                request.DocumentIds,
+                request.StrategyName ?? "HybridSearch");
+
+            var result = await mediator.Send(query, cancellationToken).ConfigureAwait(false);
+            return Results.Ok(result);
+        })
+        .WithName("EstimateAgentCost")
+        .WithSummary("Estimate token cost before starting a RAG chat session")
+        .WithDescription("Calculates estimated cost per query based on document chunks, model pricing, and retrieval strategy.")
+        .Produces<AgentCostEstimateDto>();
+
         // GET /api/v1/admin/shared-games (extended for admin - #4654, #4785)
         var gamesGroup = group.MapGroup("/admin/shared-games")
             .WithTags("Admin", "SharedGames")
@@ -132,3 +154,12 @@ internal static class AdminKnowledgeBaseEndpoints
         return $"{len:0.##} {sizes[order]}";
     }
 }
+
+/// <summary>
+/// Request model for pre-chat agent cost estimation by document selection.
+/// </summary>
+internal record EstimateAgentCostByDocumentsRequest(
+    Guid GameId,
+    List<Guid> DocumentIds,
+    string? StrategyName
+);

@@ -2,8 +2,8 @@ name: Self-Hosted Runner Health Check
 
 on:
   schedule:
-    # Every 15 minutes
-    - cron: '*/15 * * * *'
+    # Every 30 minutes
+    - cron: '*/30 * * * *'
   workflow_dispatch:
 
 # Only one health check at a time
@@ -11,61 +11,160 @@ concurrency:
   group: runner-health-check
   cancel-in-progress: true
 
+permissions:
+  contents: read
+  issues: write
+
 jobs:
-  health-check:
-    name: Runner Health Check
-    # Only run when self-hosted runner is configured
+  # Job 1: Runs ON the self-hosted runner to verify it's alive
+  runner-health:
+    name: Self-Hosted Runner Health
     runs-on: ${{ vars.RUNNER || 'ubuntu-latest' }}
-    if: ${{ vars.RUNNER != '' }}
+    if: vars.RUNNER != ''
     timeout-minutes: 5
+    outputs:
+      status: ${{ steps.health.outputs.status }}
+      disk_usage: ${{ steps.health.outputs.disk_usage }}
+      memory_mb: ${{ steps.health.outputs.memory_mb }}
+      docker_ok: ${{ steps.health.outputs.docker_ok }}
 
     steps:
-      - name: Verify runner is alive
+      - name: Health Check
+        id: health
         run: |
+          echo "status=ok" >> $GITHUB_OUTPUT
+
           echo "Runner: $(hostname)"
           echo "Architecture: $(uname -m)"
           echo "OS: $(uname -s -r)"
           echo "Uptime: $(uptime)"
-          echo "Date: $(date -u)"
 
-      - name: Check Docker daemon
-        run: |
-          if ! docker info > /dev/null 2>&1; then
-            echo "::error::Docker daemon is not running"
-            exit 1
-          fi
-          echo "Docker: $(docker --version)"
-
-      - name: Check disk space
-        run: |
-          # Requires GNU df (--output flag)
-          USAGE=$(df / --output=pcent | tail -1 | tr -d ' %')
+          # Disk
+          USAGE=$(df / --output=pcent 2>/dev/null | tail -1 | tr -d ' %' || echo "0")
+          echo "disk_usage=$USAGE" >> $GITHUB_OUTPUT
           echo "Disk usage: ${USAGE}%"
-          if [ "$USAGE" -gt 90 ]; then
-            echo "::error::Disk usage critically high (${USAGE}%) — runner needs immediate attention"
-            exit 1
-          elif [ "$USAGE" -gt 80 ]; then
-            echo "::warning::Disk usage elevated (${USAGE}%) — cleanup may be needed before next maintenance window"
+
+          # Memory
+          FREE_MB=$(free -m 2>/dev/null | awk '/^Mem:/ {print ($7 != "" ? $7 : $4)}' || echo "0")
+          echo "memory_mb=$FREE_MB" >> $GITHUB_OUTPUT
+          echo "Available memory: ${FREE_MB}MB"
+
+          # Docker
+          if docker info > /dev/null 2>&1; then
+            echo "docker_ok=true" >> $GITHUB_OUTPUT
+            echo "Docker: $(docker --version)"
           else
-            echo "Disk usage healthy (${USAGE}%)"
+            echo "docker_ok=false" >> $GITHUB_OUTPUT
+            echo "::error::Docker daemon is not running"
           fi
 
-      - name: Check available memory
+      - name: Evaluate Health
         run: |
-          FREE_MB=$(free -m | awk '/^Mem:/ {print ($7 != "" ? $7 : $4)}')
-          echo "Available memory: ${FREE_MB}MB"
-          if [ "$FREE_MB" -lt 512 ]; then
-            echo "::warning::Low available memory (${FREE_MB}MB)"
+          DISK="${{ steps.health.outputs.disk_usage }}"
+          MEM="${{ steps.health.outputs.memory_mb }}"
+          DOCKER="${{ steps.health.outputs.docker_ok }}"
+          FAIL=0
+
+          if [ "$DOCKER" != "true" ]; then
+            echo "::error::Docker daemon not running"
+            FAIL=1
           fi
+
+          if [ "$DISK" -gt 90 ]; then
+            echo "::error::Disk usage critically high (${DISK}%)"
+            FAIL=1
+          elif [ "$DISK" -gt 80 ]; then
+            echo "::warning::Disk usage elevated (${DISK}%)"
+          fi
+
+          if [ "$MEM" -lt 256 ]; then
+            echo "::error::Available memory critically low (${MEM}MB)"
+            FAIL=1
+          elif [ "$MEM" -lt 512 ]; then
+            echo "::warning::Low available memory (${MEM}MB)"
+          fi
+
+          if [ "$FAIL" -ne 0 ]; then
+            exit 1
+          fi
+          echo "✅ Runner healthy"
 
       - name: Summary
+        if: always()
         run: |
           echo "## Runner Health Check" >> $GITHUB_STEP_SUMMARY
           echo "| Metric | Value |" >> $GITHUB_STEP_SUMMARY
           echo "|--------|-------|" >> $GITHUB_STEP_SUMMARY
           echo "| Host | $(hostname) |" >> $GITHUB_STEP_SUMMARY
           echo "| Architecture | $(uname -m) |" >> $GITHUB_STEP_SUMMARY
-          echo "| Disk Usage | $(df / --output=pcent | tail -1 | tr -d ' ') |" >> $GITHUB_STEP_SUMMARY
-          echo "| Memory Available | $(free -m | awk '/^Mem:/ {print ($7 != "" ? $7 : $4)}')MB |" >> $GITHUB_STEP_SUMMARY
-          echo "| Docker | $(docker --version 2>/dev/null | cut -d' ' -f3 || echo 'N/A') |" >> $GITHUB_STEP_SUMMARY
+          echo "| Disk Usage | ${{ steps.health.outputs.disk_usage }}% |" >> $GITHUB_STEP_SUMMARY
+          echo "| Memory Available | ${{ steps.health.outputs.memory_mb }}MB |" >> $GITHUB_STEP_SUMMARY
+          echo "| Docker | ${{ steps.health.outputs.docker_ok }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Checked | $(date -u +"%Y-%m-%d %H:%M UTC") |" >> $GITHUB_STEP_SUMMARY
+
+  # Job 2: Alert when runner is unhealthy or unreachable
+  alert-on-failure:
+    name: Alert on Runner Failure
+    runs-on: ubuntu-latest
+    needs: [runner-health]
+    if: always() && (needs.runner-health.result == 'failure' || needs.runner-health.result == 'cancelled')
+    steps:
+      - name: Create GitHub Issue Alert
+        env:
+          GH_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
+          RUNNER_RESULT: "${{ needs.runner-health.result }}"
+          RUNNER_DISK: "${{ needs.runner-health.outputs.disk_usage }}"
+          RUNNER_MEM: "${{ needs.runner-health.outputs.memory_mb }}"
+          RUNNER_DOCKER: "${{ needs.runner-health.outputs.docker_ok }}"
+          RUN_URL: "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          REPO: "${{ github.repository }}"
+        run: |
+          if [ "$RUNNER_RESULT" = "cancelled" ]; then
+            TITLE="Self-hosted runner unreachable"
+            cat > /tmp/alert-body.md << 'BODYEOF'
+          The self-hosted runner did not pick up the health check job.
+          It may be offline or unresponsive.
+
+          Action Required - Check the runner host and restart the GitHub Actions runner service.
+          BODYEOF
+            echo "Workflow Run - $RUN_URL" >> /tmp/alert-body.md
+          else
+            TITLE="Self-hosted runner health check failed"
+            cat > /tmp/alert-body.md << BODYEOF
+          Runner health check reported issues:
+          - Disk Usage: ${RUNNER_DISK:-unknown}%
+          - Memory Available: ${RUNNER_MEM:-unknown}MB
+          - Docker Running: ${RUNNER_DOCKER:-unknown}
+
+          Workflow Run - $RUN_URL
+          BODYEOF
+          fi
+
+          # Check for existing open alert to avoid duplicates
+          EXISTING=$(gh issue list \
+            --repo "$REPO" \
+            --label "runner-alert" \
+            --state open \
+            --json number \
+            --jq 'length' 2>/dev/null || echo "0")
+
+          if [ "$EXISTING" -gt 0 ]; then
+            echo "Open runner alert already exists - skipping duplicate"
+          else
+            gh issue create \
+              --repo "$REPO" \
+              --title "$TITLE" \
+              --body-file /tmp/alert-body.md \
+              --label "runner-alert,area/infra" || echo "Failed to create issue (label may not exist)"
+          fi
+
+      - name: Slack Notification (if configured)
+        if: vars.SLACK_WEBHOOK_URL != ''
+        env:
+          SLACK_URL: "${{ secrets.SLACK_WEBHOOK_URL }}"
+          RUN_URL: "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+        run: |
+          curl -sf -X POST "$SLACK_URL" \
+            -H 'Content-Type: application/json' \
+            -d "{\"text\": \"Self-hosted runner health check failed! Check: $RUN_URL\"}" \
+            || echo "Slack notification failed"

@@ -19,11 +19,12 @@ import { useEffect, useState } from 'react';
 
 import { Bell } from 'lucide-react';
 
-import { NotificationCenter } from '@/components/layout/Navbar/NotificationCenter';
 import { Badge } from '@/components/ui/data-display/badge';
 import { Button } from '@/components/ui/primitives/button';
 import { useNotificationSSE } from '@/hooks/useNotificationSSE';
 import { useNotificationStore, selectUnreadCount } from '@/store/notification/store';
+
+import { NotificationCenter } from './NotificationCenter';
 
 export function NotificationBell() {
   const unreadCount = useNotificationStore(selectUnreadCount);

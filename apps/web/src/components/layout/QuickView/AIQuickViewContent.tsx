@@ -18,7 +18,7 @@ interface AIQuickViewContentProps {
   gameName: string;
 }
 
-export function AIQuickViewContent({ gameId, gameName }: AIQuickViewContentProps) {
+export function AIQuickViewContent({ gameId: _gameId, gameName }: AIQuickViewContentProps) {
   const [input, setInput] = useState('');
   const [messages, setMessages] = useState<Array<{ role: 'user' | 'ai'; text: string }>>([]);
 

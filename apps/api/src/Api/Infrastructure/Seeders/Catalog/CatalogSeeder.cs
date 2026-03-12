@@ -64,7 +64,14 @@ internal static class CatalogSeeder
         var gameMap = await GameSeeder.SeedAsync(db, bggService, systemUserId, manifest, logger, ct)
             .ConfigureAwait(false);
 
-        // Steps 2-4 (PdfSeeder, AgentSeeder, StrategyPatternSeeder) will be added in Tasks 6-7
+        // Step 2: Seed PDFs in Pending state (deferred RAG processing via PdfProcessingQuartzJob)
+        await PdfSeeder.SeedAsync(db, manifest, gameMap, systemUserId, logger, ct)
+            .ConfigureAwait(false);
+
+        // Step 3: Seed agents for games with seedAgent=true
+        await AgentSeeder.SeedAsync(db, manifest, gameMap, logger, ct)
+            .ConfigureAwait(false);
+
         logger.LogInformation("Catalog seeding complete: {GameCount} games mapped", gameMap.Count);
     }
 }

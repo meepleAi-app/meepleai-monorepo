@@ -1,6 +1,6 @@
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
-using Api.Infrastructure.Seeders;
+using Api.Infrastructure.Seeders.Core;
 using Api.Tests.Constants;
 using Api.Tests.Infrastructure;
 using Api.Tests.TestHelpers;

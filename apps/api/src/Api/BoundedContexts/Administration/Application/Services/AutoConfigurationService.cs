@@ -4,6 +4,7 @@ using Api.BoundedContexts.KnowledgeBase.Application.Commands;
 using Api.BoundedContexts.SystemConfiguration.Application.Commands;
 using Api.Infrastructure;
 using Api.Infrastructure.Seeders;
+using Api.Infrastructure.Seeders.Core;
 using Api.Services;
 using MediatR;
 using Microsoft.EntityFrameworkCore;

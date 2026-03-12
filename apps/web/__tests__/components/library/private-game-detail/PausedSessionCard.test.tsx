@@ -65,6 +65,34 @@ describe('PausedSessionCard', () => {
     expect(screen.queryByText('Vecchia')).not.toBeInTheDocument();
   });
 
+  it('prompts for confirmation on old session resume', () => {
+    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(false);
+    const onResume = vi.fn();
+    const oldSession = {
+      ...baseSession,
+      sessionDate: new Date(Date.now() - 31 * 86400_000).toISOString(),
+    };
+    render(<PausedSessionCard session={oldSession} onResume={onResume} onAbandon={vi.fn()} />);
+    fireEvent.click(screen.getByRole('button', { name: /riprendi/i }));
+    expect(confirmSpy).toHaveBeenCalled();
+    expect(onResume).not.toHaveBeenCalled();
+    confirmSpy.mockRestore();
+  });
+
+  it('resumes old session when confirmation is accepted', () => {
+    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true);
+    const onResume = vi.fn();
+    const oldSession = {
+      ...baseSession,
+      sessionDate: new Date(Date.now() - 31 * 86400_000).toISOString(),
+    };
+    render(<PausedSessionCard session={oldSession} onResume={onResume} onAbandon={vi.fn()} />);
+    fireEvent.click(screen.getByRole('button', { name: /riprendi/i }));
+    expect(confirmSpy).toHaveBeenCalled();
+    expect(onResume).toHaveBeenCalledWith('sess-1');
+    confirmSpy.mockRestore();
+  });
+
   it('shows turn info when currentTurn and totalTurns are provided', () => {
     const sessionWithTurns = {
       ...baseSession,

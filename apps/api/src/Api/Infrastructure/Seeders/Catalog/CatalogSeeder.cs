@@ -1,4 +1,5 @@
 using System.Reflection;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using YamlDotNet.Serialization;
 using YamlDotNet.Serialization.NamingConventions;
@@ -54,7 +55,9 @@ internal static class CatalogSeeder
         IBggApiService bggService,
         Guid systemUserId,
         ILogger logger,
-        CancellationToken ct)
+        CancellationToken ct,
+        IEmbeddingService? embeddingService = null,
+        IConfiguration? configuration = null)
     {
         var manifest = LoadManifest(profile);
         logger.LogInformation("Catalog: {Count} games from {Profile}.yml",
@@ -71,6 +74,15 @@ internal static class CatalogSeeder
         // Step 3: Seed agents for games with seedAgent=true
         await AgentSeeder.SeedAsync(db, manifest, gameMap, logger, ct)
             .ConfigureAwait(false);
+
+        // Step 4: Seed strategy patterns for AI agent decision-making
+        var seedingEnabled = configuration?.GetValue("Seeding:EnableStrategyPatterns", true) ?? true;
+        if (seedingEnabled)
+        {
+            logger.LogInformation("Seeding strategy patterns for common game openings...");
+            await StrategyPatternSeeder.SeedAsync(db, logger, embeddingService, ct)
+                .ConfigureAwait(false);
+        }
 
         logger.LogInformation("Catalog seeding complete: {GameCount} games mapped", gameMap.Count);
     }

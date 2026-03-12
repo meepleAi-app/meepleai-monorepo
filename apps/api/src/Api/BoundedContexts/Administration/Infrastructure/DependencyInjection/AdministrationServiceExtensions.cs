@@ -89,10 +89,7 @@ internal static class AdministrationServiceExtensions
         services.AddScoped<ILighthouseReportParserService, LighthouseReportParserService>();
         services.AddScoped<IPlaywrightReportParserService, PlaywrightReportParserService>();
 
-        // ISSUE-2512: Auto-configuration service for first run setup
-        services.AddScoped<IAutoConfigurationService, AutoConfigurationService>();
-
-        // Seeding orchestrator - replaces AutoConfigurationService at startup
+        // Seeding orchestrator (replaces legacy AutoConfigurationService)
         var seedProfile = Enum.TryParse<SeedProfile>(
             configuration["SEED_PROFILE"] ?? "dev",
             ignoreCase: true,

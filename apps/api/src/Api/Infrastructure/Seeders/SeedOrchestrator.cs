@@ -1,6 +1,8 @@
 using System.Diagnostics;
+using Api.Services;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
@@ -118,9 +120,11 @@ internal sealed class SeedOrchestrator
             await Catalog.CatalogSeeder.SeedAsync(
                 _profile,
                 db,
-                sp.GetRequiredService<Api.Services.IBggApiService>(),
+                sp.GetRequiredService<IBggApiService>(),
                 systemUserId,
-                _logger, ct).ConfigureAwait(false);
+                _logger, ct,
+                sp.GetService<IEmbeddingService>(),
+                sp.GetService<IConfiguration>()).ConfigureAwait(false);
         }
         finally
         {

@@ -86,7 +86,7 @@ public sealed class SeedAdminUserCommandHandlerTests
             x => x.AddAsync(It.Is<User>(u =>
                 u.Email.Value == "admin@test.com" &&
                 u.DisplayName == "Test Admin" &&
-                u.Role == Role.Admin
+                u.Role == Role.SuperAdmin
             ), It.IsAny<CancellationToken>()),
             Times.Once
         );

@@ -198,6 +198,15 @@ public class MeepleAiDbContext : DbContext
     // Issue #52: Email template admin management
     public DbSet<Api.Infrastructure.Entities.UserNotifications.EmailTemplateEntity> EmailTemplates => Set<Api.Infrastructure.Entities.UserNotifications.EmailTemplateEntity>();
 
+    // Issue #276/#278: Session diary events and checkpoints
+    public DbSet<Api.Infrastructure.Entities.SessionTracking.SessionEventEntity> SessionEvents => Set<Api.Infrastructure.Entities.SessionTracking.SessionEventEntity>();
+    public DbSet<Api.Infrastructure.Entities.SessionTracking.SessionCheckpointEntity> SessionCheckpoints => Set<Api.Infrastructure.Entities.SessionTracking.SessionCheckpointEntity>();
+
+    // Issue #82/#83/#77: Knowledge base - extracted facts, similarity audit, analysis feedback
+    public DbSet<Api.Infrastructure.Entities.KnowledgeBase.ExtractedFactEntity> ExtractedFacts => Set<Api.Infrastructure.Entities.KnowledgeBase.ExtractedFactEntity>();
+    public DbSet<Api.Infrastructure.Entities.KnowledgeBase.SimilarityAuditResultEntity> SimilarityAuditResults => Set<Api.Infrastructure.Entities.KnowledgeBase.SimilarityAuditResultEntity>();
+    public DbSet<Api.Infrastructure.Entities.KnowledgeBase.AnalysisFeedbackEntity> AnalysisFeedback => Set<Api.Infrastructure.Entities.KnowledgeBase.AnalysisFeedbackEntity>();
+
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
         ArgumentNullException.ThrowIfNull(optionsBuilder);

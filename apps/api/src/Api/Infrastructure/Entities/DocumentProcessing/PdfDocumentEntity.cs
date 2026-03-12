@@ -94,6 +94,9 @@ public class PdfDocumentEntity
     // Admin Wizard: Processing priority (Normal=0, Admin=10)
     public string ProcessingPriority { get; set; } = "Normal";
 
+    // Issue #117: Batch upload grouping
+    public Guid? BatchId { get; set; }
+
     // Issue #4219: Per-state timing tracking for metrics and ETA
     public DateTime? UploadingStartedAt { get; set; }
     public DateTime? ExtractingStartedAt { get; set; }

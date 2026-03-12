@@ -83,7 +83,7 @@ internal sealed class SeedAdminUserCommandHandler : ICommandHandler<SeedAdminUse
         // Create domain objects
         var email = new Email(adminEmail);
         var passwordHash = PasswordHash.Create(adminPassword);
-        var role = Role.Admin;
+        var role = Role.SuperAdmin;
 
         // Create admin user
         var adminUser = new User(

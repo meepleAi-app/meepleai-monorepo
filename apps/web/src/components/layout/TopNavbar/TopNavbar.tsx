@@ -30,6 +30,7 @@ import { useAuthUser } from '@/hooks/useAuthUser';
 import { useScrollState } from '@/hooks/useScrollState';
 import { cn } from '@/lib/utils';
 
+import { DesktopBreadcrumb } from '../Breadcrumb/DesktopBreadcrumb';
 import { MobileNavDrawer } from '../MobileNavDrawer';
 import { Logo } from './Logo';
 
@@ -146,12 +147,15 @@ export function TopNavbar({ className }: TopNavbarProps) {
         )}
       >
         <div className="flex h-full items-center justify-between px-4 md:px-6 gap-2">
-          {/* ── LEFT: MobileNavDrawer (hamburger on mobile) + Logo ── */}
-          <div className="flex items-center gap-2 shrink-0">
-            <Suspense>
-              <MobileNavDrawer />
-            </Suspense>
-            <Logo variant="auto" size="sm" />
+          {/* ── LEFT: MobileNavDrawer (hamburger on mobile) + Logo + Breadcrumb ── */}
+          <div className="flex items-center gap-2 min-w-0">
+            <div className="flex items-center gap-2 shrink-0">
+              <Suspense>
+                <MobileNavDrawer />
+              </Suspense>
+              <Logo variant="auto" size="sm" />
+            </div>
+            <DesktopBreadcrumb className="hidden md:flex ml-2" />
           </div>
 
           {/* ── RIGHT: Notifications + Avatar ── */}

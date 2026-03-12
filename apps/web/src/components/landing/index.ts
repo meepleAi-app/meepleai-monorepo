@@ -1,7 +1,7 @@
 // Landing page components barrel export
 export { AuthRedirect } from './AuthRedirect';
-export { CallToActionSection } from './CallToActionSection';
-export { FeaturesSection } from './FeaturesSection';
-export { HeroSection } from './HeroSection';
-export { HowItWorksSection } from './HowItWorksSection';
+export { HowItWorksSteps } from './HowItWorksSteps';
 export { LandingFooter } from './LandingFooter';
+export { SocialProofBar } from './SocialProofBar';
+export { WelcomeCTA } from './WelcomeCTA';
+export { WelcomeHero } from './WelcomeHero';

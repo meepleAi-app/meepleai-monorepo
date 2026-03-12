@@ -1,0 +1,143 @@
+profile: prod
+catalog:
+  games:
+    # --- Core games with AI agents ---
+    - title: "Catan"
+      bggId: 13
+      language: en
+      pdf: "catan_rulebook.pdf"
+      seedAgent: true
+      fallbackImageUrl: "https://cf.geekdo-images.com/W3Bsga_uLP9kO91gZ7H8yw__original/img/IwRwEpu1I6YfkyYjFIekCh80ntc=/0x0/filters:format(jpeg)/pic2419375.jpg"
+      fallbackThumbnailUrl: "https://cf.geekdo-images.com/W3Bsga_uLP9kO91gZ7H8yw__small/img/7a0LOL48K-2lC3IG0HyYT3XxJBs=/fit-in/200x150/filters:strip_icc()/pic2419375.jpg"
+    - title: "Carcassonne"
+      bggId: 822
+      language: en
+      pdf: "carcassone_rulebook.pdf"
+      seedAgent: true
+      fallbackImageUrl: "https://cf.geekdo-images.com/peUgu3A20LRmAXAMyDQfpQ__original/img/bP18m_PYjyFOv1IBGgMOteQUneA=/0x0/filters:format(jpeg)/pic8621446.jpg"
+      fallbackThumbnailUrl: "https://cf.geekdo-images.com/peUgu3A20LRmAXAMyDQfpQ__small/img/oEEslN-EGqh82sNI6Aj4_MFXYg0=/fit-in/200x150/filters:strip_icc()/pic8621446.jpg"
+    - title: "Pandemic"
+      bggId: 30549
+      language: en
+      pdf: "pandemic_rulebook.pdf"
+      seedAgent: true
+      fallbackImageUrl: "https://cf.geekdo-images.com/S3ybV1LAp-8SnHIXLLjVqA__original/img/IsrvRLpUV1TEyZsO5rC-btXaPz0=/0x0/filters:format(jpeg)/pic1534148.jpg"
+      fallbackThumbnailUrl: "https://cf.geekdo-images.com/S3ybV1LAp-8SnHIXLLjVqA__small/img/oqViRj6nVxK3m36NluTxU1PZkrk=/fit-in/200x150/filters:strip_icc()/pic1534148.jpg"
+    - title: "Ticket to Ride"
+      bggId: 9209
+      language: en
+      pdf: "ticket-to-ride_rulebook.pdf"
+      seedAgent: true
+      fallbackImageUrl: "https://cf.geekdo-images.com/kdWYkW-7AqG63HhqPL6ekA__original/img/rWF8r4JXXCQQ7QhiWHhmT-rQ3Pc=/0x0/filters:format(jpeg)/pic8937637.jpg"
+      fallbackThumbnailUrl: "https://cf.geekdo-images.com/kdWYkW-7AqG63HhqPL6ekA__small/img/5G46jv8MFh_BfX67iMSouTMhKxc=/fit-in/200x150/filters:strip_icc()/pic8937637.jpg"
+    - title: "Splendor"
+      bggId: 148228
+      language: en
+      pdf: "splendor_rulebook.pdf"
+      seedAgent: true
+      fallbackImageUrl: "https://cf.geekdo-images.com/vNFe4JkhKAERzi4T0Ntwpw__original/img/rqcUdtu_N4v-SpI96XVmpYHnJww=/0x0/filters:format(png)/pic8234167.png"
+      fallbackThumbnailUrl: "https://cf.geekdo-images.com/vNFe4JkhKAERzi4T0Ntwpw__small/img/KKU_42Uswt4tKCpf1zY5kTzgr-g=/fit-in/200x150/filters:strip_icc()/pic8234167.png"
+
+    # --- Games with PDF rulebooks ---
+    - title: "Wingspan"
+      bggId: 266192
+      language: en
+      pdf: "wingspan_en_rulebook.pdf"
+      seedAgent: false
+      fallbackImageUrl: "https://cf.geekdo-images.com/yLZJCVLlIx4c7eJEWUNJ7w__original/img/cI782Zis9cT66j2MjSHKJGnFPNw=/0x0/filters:format(jpeg)/pic4458123.jpg"
+      fallbackThumbnailUrl: "https://cf.geekdo-images.com/yLZJCVLlIx4c7eJEWUNJ7w__small/img/VNToqgS2-pOGU6MuvIkMPKn_y-s=/fit-in/200x150/filters:strip_icc()/pic4458123.jpg"
+    - title: "Azul"
+      bggId: 230802
+      language: en
+      pdf: "azul_rulebook.pdf"
+      seedAgent: false
+      fallbackImageUrl: "https://cf.geekdo-images.com/aPSHJO0d0XOpQR5X-wJonw__original/img/AkbtYVc6xXJF3c9EUrakklcclKw=/0x0/filters:format(png)/pic6973671.png"
+      fallbackThumbnailUrl: "https://cf.geekdo-images.com/aPSHJO0d0XOpQR5X-wJonw__small/img/ccsXKrdGJw-YSClWwzVUwk5Nh9Y=/fit-in/200x150/filters:strip_icc()/pic6973671.png"
+    - title: "7 Wonders"
+      bggId: 68448
+      language: en
+      pdf: "7-wonders_rulebook.pdf"
+      seedAgent: false
+      fallbackImageUrl: "https://cf.geekdo-images.com/35h9Za_JvMMMtx_92kT0Jg__original/img/jt70jJDZ1y1FWJs4ZQf5FI8APVY=/0x0/filters:format(jpeg)/pic7149798.jpg"
+      fallbackThumbnailUrl: "https://cf.geekdo-images.com/35h9Za_JvMMMtx_92kT0Jg__small/img/BUOso8b0M1aUOkU80FWlhE8uuxc=/fit-in/200x150/filters:strip_icc()/pic7149798.jpg"
+    - title: "Agricola"
+      bggId: 31260
+      language: en
+      pdf: "agricola_rulebook.pdf"
+      seedAgent: false
+      fallbackImageUrl: "https://cf.geekdo-images.com/3L6ZtOll9W5O6-3-EwSMyw__original/img/V37KuMJlCzpxAilzN39BzeLvc9Q=/0x0/filters:format(jpeg)/pic1899157.jpg"
+      fallbackThumbnailUrl: "https://cf.geekdo-images.com/3L6ZtOll9W5O6-3-EwSMyw__small/img/TpNF65wCIb1n3EGW18eJJ3MlRMo=/fit-in/200x150/filters:strip_icc()/pic1899157.jpg"
+
+    # --- Additional popular games ---
+    - title: "Terraforming Mars"
+      bggId: 167791
+      language: en
+      seedAgent: false
+      fallbackImageUrl: "https://cf.geekdo-images.com/wg9oOLcsKvDesSUdZQ4rxw__original/img/thIqWDnH9utKuYlp1gq2Fz-_30I=/0x0/filters:format(jpeg)/pic3536616.jpg"
+      fallbackThumbnailUrl: "https://cf.geekdo-images.com/wg9oOLcsKvDesSUdZQ4rxw__small/img/FS1RE4Sml9yrflVEMsyXWDFmCSY=/fit-in/200x150/filters:strip_icc()/pic3536616.jpg"
+    - title: "Gloomhaven"
+      bggId: 174430
+      language: en
+      seedAgent: false
+      fallbackImageUrl: "https://cf.geekdo-images.com/sZYp_3BTDGjh2unaZfZmuA__original/img/7d-lj5Gd1e8PFnD97LYFah2EPe0=/0x0/filters:format(jpeg)/pic2437871.jpg"
+      fallbackThumbnailUrl: "https://cf.geekdo-images.com/sZYp_3BTDGjh2unaZfZmuA__small/img/jHtLBLiDhtdIHxmmZQ_B0KBIWEI=/fit-in/200x150/filters:strip_icc()/pic2437871.jpg"
+    - title: "Spirit Island"
+      bggId: 162886
+      language: en
+      seedAgent: false
+      fallbackImageUrl: "https://cf.geekdo-images.com/kjCm4ZvPjIZxS-mYgSPMmg__original/img/vRG5wN1uUKWRJRhSO9pl1JXp6OY=/0x0/filters:format(jpeg)/pic7013651.jpg"
+      fallbackThumbnailUrl: "https://cf.geekdo-images.com/kjCm4ZvPjIZxS-mYgSPMmg__small/img/it5rGXR-Y5T12PUcbrPncVAiLOQ=/fit-in/200x150/filters:strip_icc()/pic7013651.jpg"
+    - title: "Scythe"
+      bggId: 169786
+      language: en
+      seedAgent: false
+      fallbackImageUrl: "https://cf.geekdo-images.com/7k_nOxpO9OGIjhLq2BUZdA__original/img/HlDb5T7dYjEqKRPpMESpSIBhE1c=/0x0/filters:format(jpeg)/pic3163924.jpg"
+      fallbackThumbnailUrl: "https://cf.geekdo-images.com/7k_nOxpO9OGIjhLq2BUZdA__small/img/1RPGq_aMm40Jf0gpe4yEbOFhZ5U=/fit-in/200x150/filters:strip_icc()/pic3163924.jpg"
+    - title: "Everdell"
+      bggId: 199792
+      language: en
+      seedAgent: false
+      fallbackImageUrl: "https://cf.geekdo-images.com/fjE7V5LNq31yVEW_yuqI-Q__original/img/IKeSgQgCnpYpeSNeSPGOTMhLuxw=/0x0/filters:format(jpeg)/pic3918905.jpg"
+      fallbackThumbnailUrl: "https://cf.geekdo-images.com/fjE7V5LNq31yVEW_yuqI-Q__small/img/s70ZH0lKRj0JwMMoSnZ7yvFijeA=/fit-in/200x150/filters:strip_icc()/pic3918905.jpg"
+    - title: "Root"
+      bggId: 237182
+      language: en
+      seedAgent: false
+      fallbackImageUrl: "https://cf.geekdo-images.com/JUAUWaVUzeBgzirhZNmHHw__original/img/ZF-dta5ffawuKczTBVdliFxiLIo=/0x0/filters:format(jpeg)/pic4254509.jpg"
+      fallbackThumbnailUrl: "https://cf.geekdo-images.com/JUAUWaVUzeBgzirhZNmHHw__small/img/7TnOfWj4xpOBUW1ZjBkn7-8cnaQ=/fit-in/200x150/filters:strip_icc()/pic4254509.jpg"
+    - title: "Brass: Birmingham"
+      bggId: 224517
+      language: en
+      seedAgent: false
+      fallbackImageUrl: "https://cf.geekdo-images.com/x3zxjr-Vw5iU4yDPg70Jgw__original/img/FpyxH41Y6_ROoePLilPNGrKBij0=/0x0/filters:format(jpeg)/pic3490053.jpg"
+      fallbackThumbnailUrl: "https://cf.geekdo-images.com/x3zxjr-Vw5iU4yDPg70Jgw__small/img/s7hAWotQA5yUXcQCroIBqWE3sO0=/fit-in/200x150/filters:strip_icc()/pic3490053.jpg"
+    - title: "Codenames"
+      bggId: 178900
+      language: en
+      seedAgent: false
+      fallbackImageUrl: "https://cf.geekdo-images.com/F_KDEu0GjdClml8N7c8Imw__original/img/nf3Ou3_G6B4F0mJpUxYnFhCdFPo=/0x0/filters:format(jpeg)/pic2582929.jpg"
+      fallbackThumbnailUrl: "https://cf.geekdo-images.com/F_KDEu0GjdClml8N7c8Imw__small/img/pxpnp7TvV-1siD7BELVQFET72so=/fit-in/200x150/filters:strip_icc()/pic2582929.jpg"
+    - title: "Dominion"
+      bggId: 36218
+      language: en
+      seedAgent: false
+      fallbackImageUrl: "https://cf.geekdo-images.com/j6iQpZ4HkVOHRCTbMdLCGg__original/img/FS3JOyNb8v7OJSoelwGJRFhZGZo=/0x0/filters:format(jpeg)/pic394356.jpg"
+      fallbackThumbnailUrl: "https://cf.geekdo-images.com/j6iQpZ4HkVOHRCTbMdLCGg__small/img/_5kmleGLOJdFHrvfLIBcbfED7_0=/fit-in/200x150/filters:strip_icc()/pic394356.jpg"
+    - title: "Viticulture"
+      bggId: 183394
+      language: en
+      seedAgent: false
+      fallbackImageUrl: "https://cf.geekdo-images.com/l_PRU2lVlX9seScRFcvFlA__original/img/K8CAyJ-30yDRfhaC7eFBF-hMjCU=/0x0/filters:format(jpeg)/pic2649952.jpg"
+      fallbackThumbnailUrl: "https://cf.geekdo-images.com/l_PRU2lVlX9seScRFcvFlA__small/img/rZzIHWRYnCl42zx5ZZPZHR8rccA=/fit-in/200x150/filters:strip_icc()/pic2649952.jpg"
+    - title: "Ark Nova"
+      bggId: 342942
+      language: en
+      seedAgent: false
+      fallbackImageUrl: "https://cf.geekdo-images.com/SoU8p28Sk1s8MSvoM4N8pQ__original/img/g4S18szTdrXCdIwVKzMKrZrYAcE=/0x0/filters:format(jpeg)/pic6293412.jpg"
+      fallbackThumbnailUrl: "https://cf.geekdo-images.com/SoU8p28Sk1s8MSvoM4N8pQ__small/img/ZHksKPEJkm0pWLCjWFHG7ygRgeQ=/fit-in/200x150/filters:strip_icc()/pic6293412.jpg"
+
+  defaultAgent:
+    name: "MeepleAssistant"
+    model: "anthropic/claude-3-haiku"
+    temperature: 0.3
+    maxTokens: 2048

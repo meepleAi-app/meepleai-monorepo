@@ -394,10 +394,9 @@ using (var scope = app.Services.CreateScope())
         app.Logger.LogInformation("✓ Embedding configuration validated: Provider={Provider}, Model={Model}, Dimensions={Dimensions}",
             provider, model, embeddingDimensions);
 
-        // ISSUE-2512: Auto-configuration pipeline - Seed admin user, test user, AI models,
-        // shared games, badges, and rate limits (environment-independent, runs on first startup only)
-        var autoConfigService = scope.ServiceProvider.GetRequiredService<Api.BoundedContexts.Administration.Application.Services.IAutoConfigurationService>();
-        await autoConfigService.InitializeAsync().ConfigureAwait(false);
+        // Layered seeding via SeedOrchestrator (creates its own scopes internally)
+        var seedOrchestrator = app.Services.GetRequiredService<Api.Infrastructure.Seeders.SeedOrchestrator>();
+        await seedOrchestrator.ExecuteAsync(CancellationToken.None).ConfigureAwait(false);
     }
 }
 

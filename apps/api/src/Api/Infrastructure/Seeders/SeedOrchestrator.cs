@@ -49,7 +49,7 @@ internal sealed class SeedOrchestrator
             var lockDb = lockScope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
 
             var lockAcquired = await lockDb.Database
-                .SqlQueryRaw<bool>("SELECT pg_try_advisory_lock({0})", SeedingAdvisoryLockId)
+                .SqlQueryRaw<bool>("SELECT pg_try_advisory_lock({0}) AS \"Value\"", SeedingAdvisoryLockId)
                 .FirstOrDefaultAsync(ct)
                 .ConfigureAwait(false);
 

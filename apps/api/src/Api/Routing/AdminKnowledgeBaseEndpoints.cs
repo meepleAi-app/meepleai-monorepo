@@ -118,7 +118,7 @@ internal static class AdminKnowledgeBaseEndpoints
             var result = await mediator.Send(query, cancellationToken).ConfigureAwait(false);
             return Results.Ok(result);
         })
-        .WithName("EstimateAgentCost")
+        .WithName("EstimateAgentCostByDocuments")
         .WithSummary("Estimate token cost before starting a RAG chat session")
         .WithDescription("Calculates estimated cost per query based on document chunks, model pricing, and retrieval strategy.")
         .Produces<AgentCostEstimateDto>();

@@ -29,6 +29,10 @@ import type {
   UpdateLibraryShareLinkRequest,
   SharedLibrary,
 } from '@/lib/api/schemas/library.schemas';
+import type {
+  PrivateGameDto,
+  AddPrivateGameRequest,
+} from '@/lib/api/schemas/private-games.schemas';
 
 import { sharedGamesKeys } from './useSharedGames';
 
@@ -47,6 +51,10 @@ export const libraryKeys = {
   // Share link keys (Issue #2614)
   shareLink: () => [...libraryKeys.all, 'shareLink'] as const,
   sharedLibrary: (shareToken: string) => [...libraryKeys.all, 'shared', shareToken] as const,
+  // Private game keys (Game Night Flow)
+  privateGame: (id: string) => [...libraryKeys.all, 'privateGame', id] as const,
+  privateGames: (params?: Record<string, unknown>) =>
+    [...libraryKeys.all, 'privateGames', { params }] as const,
 };
 
 /**
@@ -185,19 +193,22 @@ export function useAddGameToLibrary(): UseMutationResult<
       const previousCollectionStatus = queryClient.getQueryData(['library-status', gameId]);
 
       // Optimistically update game status to 'InLibrary'
-      queryClient.setQueryData<GameInLibraryStatus>(
-        libraryKeys.gameStatus(gameId),
-        (old) => (old ? { ...old, inLibrary: true } : { inLibrary: true, isFavorite: false })
+      queryClient.setQueryData<GameInLibraryStatus>(libraryKeys.gameStatus(gameId), old =>
+        old ? { ...old, inLibrary: true } : { inLibrary: true, isFavorite: false }
       );
 
       // Cross-cache: also update useCollectionActions cache for immediate MeepleCard sync
-      queryClient.setQueryData(['library-status', gameId], (old: Record<string, unknown> | undefined) => (
-        old ? { ...old, inLibrary: true } : { inLibrary: true, isFavorite: false, associatedData: null }
-      ));
+      queryClient.setQueryData(
+        ['library-status', gameId],
+        (old: Record<string, unknown> | undefined) =>
+          old
+            ? { ...old, inLibrary: true }
+            : { inLibrary: true, isFavorite: false, associatedData: null }
+      );
 
       // Optimistically update quota
       if (previousQuota) {
-        queryClient.setQueryData<LibraryQuotaResponse>(libraryKeys.quota(), (old) => {
+        queryClient.setQueryData<LibraryQuotaResponse>(libraryKeys.quota(), old => {
           if (!old) return old;
           const newCount = old.currentCount + 1;
           const newRemaining = Math.max(0, old.remainingSlots - 1);
@@ -264,7 +275,7 @@ export function useRemoveGameFromLibrary(): UseMutationResult<void, Error, strin
     mutationFn: async (gameId: string) => {
       return api.library.removeGame(gameId);
     },
-    onMutate: async (gameId) => {
+    onMutate: async gameId => {
       // Cancel any outgoing refetches to avoid overwriting optimistic update
       await queryClient.cancelQueries({ queryKey: libraryKeys.lists() });
       await queryClient.cancelQueries({ queryKey: libraryKeys.gameStatus(gameId) });
@@ -286,30 +297,35 @@ export function useRemoveGameFromLibrary(): UseMutationResult<void, Error, strin
       // Optimistically remove game from library lists
       queryClient.setQueriesData<PaginatedLibraryResponse>(
         { queryKey: libraryKeys.lists() },
-        (old) => {
+        old => {
           if (!old) return old;
           return {
             ...old,
-            items: old.items.filter((entry) => entry.gameId !== gameId),
+            items: old.items.filter(entry => entry.gameId !== gameId),
             totalCount: Math.max(0, old.totalCount - 1),
           };
         }
       );
 
       // Optimistically update game status to not in library
-      queryClient.setQueryData<GameInLibraryStatus>(
-        libraryKeys.gameStatus(gameId),
-        (old) => (old ? { ...old, inLibrary: false, isFavorite: false } : { inLibrary: false, isFavorite: false })
+      queryClient.setQueryData<GameInLibraryStatus>(libraryKeys.gameStatus(gameId), old =>
+        old
+          ? { ...old, inLibrary: false, isFavorite: false }
+          : { inLibrary: false, isFavorite: false }
       );
 
       // Cross-cache: also update useCollectionActions cache for immediate MeepleCard sync
-      queryClient.setQueryData(['library-status', gameId], (old: Record<string, unknown> | undefined) => (
-        old ? { ...old, inLibrary: false, isFavorite: false } : { inLibrary: false, isFavorite: false, associatedData: null }
-      ));
+      queryClient.setQueryData(
+        ['library-status', gameId],
+        (old: Record<string, unknown> | undefined) =>
+          old
+            ? { ...old, inLibrary: false, isFavorite: false }
+            : { inLibrary: false, isFavorite: false, associatedData: null }
+      );
 
       // Optimistically update quota
       if (previousQuota) {
-        queryClient.setQueryData<LibraryQuotaResponse>(libraryKeys.quota(), (old) => {
+        queryClient.setQueryData<LibraryQuotaResponse>(libraryKeys.quota(), old => {
           if (!old) return old;
           const newCount = Math.max(0, old.currentCount - 1);
           const newRemaining = old.remainingSlots + 1;
@@ -324,7 +340,7 @@ export function useRemoveGameFromLibrary(): UseMutationResult<void, Error, strin
 
       // Optimistically update stats
       if (previousStats) {
-        queryClient.setQueryData<UserLibraryStats>(libraryKeys.stats(), (old) => {
+        queryClient.setQueryData<UserLibraryStats>(libraryKeys.stats(), old => {
           if (!old) return old;
           return {
             ...old,
@@ -333,7 +349,13 @@ export function useRemoveGameFromLibrary(): UseMutationResult<void, Error, strin
         });
       }
 
-      return { previousLibrary, previousGameStatus, previousQuota, previousStats, previousCollectionStatus };
+      return {
+        previousLibrary,
+        previousGameStatus,
+        previousQuota,
+        previousStats,
+        previousCollectionStatus,
+      };
     },
     onError: (_err, gameId, context) => {
       // Rollback to previous data on error
@@ -446,11 +468,11 @@ export function useToggleLibraryFavorite(): UseMutationResult<
       // Optimistically update library lists
       queryClient.setQueriesData<PaginatedLibraryResponse>(
         { queryKey: libraryKeys.lists() },
-        (old) => {
+        old => {
           if (!old) return old;
           return {
             ...old,
-            items: old.items.map((entry) =>
+            items: old.items.map(entry =>
               entry.gameId === gameId ? { ...entry, isFavorite } : entry
             ),
           };
@@ -459,22 +481,19 @@ export function useToggleLibraryFavorite(): UseMutationResult<
 
       // Optimistically update stats (favoriteGames)
       if (previousStats) {
-        queryClient.setQueryData<UserLibraryStats>(libraryKeys.stats(), (old) => {
+        queryClient.setQueryData<UserLibraryStats>(libraryKeys.stats(), old => {
           if (!old) return old;
           return {
             ...old,
-            favoriteGames: isFavorite
-              ? old.favoriteGames + 1
-              : Math.max(0, old.favoriteGames - 1),
+            favoriteGames: isFavorite ? old.favoriteGames + 1 : Math.max(0, old.favoriteGames - 1),
           };
         });
       }
 
       // Optimistically update game status if cached
       if (previousGameStatus) {
-        queryClient.setQueryData<GameInLibraryStatus>(
-          libraryKeys.gameStatus(gameId),
-          (old) => (old ? { ...old, isFavorite } : old)
+        queryClient.setQueryData<GameInLibraryStatus>(libraryKeys.gameStatus(gameId), old =>
+          old ? { ...old, isFavorite } : old
         );
       }
 
@@ -832,5 +851,57 @@ export function useLibraryGameDetail(
     },
     enabled: enabled && !!gameId,
     staleTime: 2 * 60 * 1000, // Library details can change (2min)
+  });
+}
+
+// ========================================
+// Private Game Hooks (Game Night Flow)
+// ========================================
+
+/**
+ * Hook to fetch a single private game by ID
+ *
+ * @param privateGameId - Private game UUID
+ * @param enabled - Whether to run the query (default: true)
+ * @returns UseQueryResult with private game data
+ */
+export function usePrivateGame(
+  privateGameId: string | undefined,
+  enabled = true
+): UseQueryResult<PrivateGameDto, Error> {
+  return useQuery({
+    queryKey: libraryKeys.privateGame(privateGameId ?? ''),
+    queryFn: async (): Promise<PrivateGameDto> => {
+      return api.library.getPrivateGame(privateGameId!);
+    },
+    enabled: enabled && !!privateGameId,
+    staleTime: 2 * 60 * 1000,
+  });
+}
+
+/**
+ * Hook to add a private game from BGG and automatically add it to the library
+ *
+ * Creates the private game entry, then adds it to the user's library as Owned.
+ * Invalidates all library caches on success.
+ *
+ * @returns UseMutationResult for adding private game from BGG
+ */
+export function useAddPrivateGameFromBgg(): UseMutationResult<
+  PrivateGameDto,
+  Error,
+  AddPrivateGameRequest
+> {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (request: AddPrivateGameRequest): Promise<PrivateGameDto> => {
+      const privateGame = await api.library.addPrivateGame(request);
+      await api.library.addGame(privateGame.id, { isFavorite: false });
+      return privateGame;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: libraryKeys.all });
+    },
   });
 }

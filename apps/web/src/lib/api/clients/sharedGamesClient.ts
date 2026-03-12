@@ -15,6 +15,10 @@ import {
   type KbCardDto,
 } from '../schemas/agent-definitions.schemas';
 import {
+  GameRagReadinessSchema,
+  type GameRagReadiness,
+} from '../schemas/rag-setup.schemas';
+import {
   SharedGameDetailSchema,
   PagedSharedGamesSchema,
   GameCategorySchema,
@@ -831,6 +835,16 @@ export function createSharedGamesClient({ httpClient }: CreateSharedGamesClientP
         xhr.open('POST', `/api/v1/admin/shared-games/${gameId}/documents/upload`);
         xhr.send(formData);
       });
+    },
+
+    // ========== RAG Readiness ==========
+
+    /** Get cross-BC RAG readiness status for a shared game (Admin only) */
+    async getGameRagReadiness(gameId: string): Promise<GameRagReadiness | null> {
+      return httpClient.get(
+        `/api/v1/admin/shared-games/${gameId}/rag-readiness`,
+        GameRagReadinessSchema
+      );
     },
   };
 }

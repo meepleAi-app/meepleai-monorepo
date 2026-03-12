@@ -16,6 +16,7 @@ using Api.BoundedContexts.SharedGameCatalog.Application.Queries.GetUserBadges;
 using Api.BoundedContexts.SharedGameCatalog.Application.Queries.GetBadgeLeaderboard;
 using Api.BoundedContexts.SharedGameCatalog.Application.Queries.GetMyActiveReviews;
 using Api.BoundedContexts.SharedGameCatalog.Application.Queries.CheckPrivateGameDuplicates;
+using Api.BoundedContexts.SharedGameCatalog.Application.Queries.GetGameRagReadiness;
 using Api.BoundedContexts.SharedGameCatalog.Application.Commands.ToggleBadgeDisplay;
 using Api.BoundedContexts.SharedGameCatalog.Application.Commands.ApproveGameProposal;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Entities;
@@ -456,6 +457,15 @@ internal static class SharedGameCatalogEndpoints
             .WithSummary("Activate game state template version (Admin/Editor)")
             .WithDescription("Sets the specified template version as active. Deactivates all other versions for this game.")
             .Produces(StatusCodes.Status204NoContent)
+            .Produces(StatusCodes.Status404NotFound);
+
+        // RAG Readiness aggregation (cross-BC: SharedGameCatalog + DocumentProcessing + KnowledgeBase)
+        group.MapGet("/admin/shared-games/{id:guid}/rag-readiness", HandleGetGameRagReadiness)
+            .RequireAuthorization("AdminOrEditorPolicy")
+            .WithName("GetGameRagReadiness")
+            .WithSummary("Get RAG readiness status for a shared game (Admin/Editor)")
+            .WithDescription("Aggregates document processing status and agent linkage across bounded contexts to determine if a game is RAG-ready.")
+            .Produces<GameRagReadinessDto>()
             .Produces(StatusCodes.Status404NotFound);
     }
 
@@ -1399,6 +1409,16 @@ internal static class SharedGameCatalogEndpoints
         CancellationToken ct)
     {
         var query = new GetActiveDocumentsQuery(id);
+        var result = await mediator.Send(query, ct).ConfigureAwait(false);
+        return Results.Ok(result);
+    }
+
+    private static async Task<IResult> HandleGetGameRagReadiness(
+        Guid id,
+        IMediator mediator,
+        CancellationToken ct)
+    {
+        var query = new GetGameRagReadinessQuery(id);
         var result = await mediator.Send(query, ct).ConfigureAwait(false);
         return Results.Ok(result);
     }

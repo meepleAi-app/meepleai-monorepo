@@ -34,6 +34,23 @@ changelog:
         - chore
         - maintenance
         - dependencies
+    - title: "🎮 Game Features"
+      labels:
+        - area/games
+        - area/game-management
+    - title: "👤 User & Admin"
+      labels:
+        - area/admin
+        - area/auth
+        - area/user
+    - title: "🤖 AI & Knowledge Base"
+      labels:
+        - area/ai
+        - area/knowledge-base
+        - area/rag
+    - title: "⚡ Performance"
+      labels:
+        - performance
     - title: "Other Changes"
       labels:
         - "*"

@@ -5,12 +5,18 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { ReactNode } from 'react';
 
 // Mock the api module
 vi.mock('@/lib/api', () => ({
   api: {
     bgg: {
       search: vi.fn(),
+    },
+    library: {
+      addPrivateGame: vi.fn(),
+      addGame: vi.fn(),
     },
   },
 }));
@@ -28,6 +34,15 @@ vi.mock('next/navigation', () => ({
 // Import after mocks
 import { api } from '@/lib/api';
 import { BggSearchTab } from '../BggSearchTab';
+
+function createWrapper() {
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+  });
+  return ({ children }: { children: ReactNode }) => (
+    <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+  );
+}
 
 const mockBggSearch = vi.mocked(api.bgg.search);
 
@@ -65,14 +80,14 @@ describe('BggSearchTab', () => {
   });
 
   it('renders search input', () => {
-    render(<BggSearchTab />);
+    render(<BggSearchTab />, { wrapper: createWrapper() });
     expect(screen.getByPlaceholderText('Cerca su BoardGameGeek...')).toBeInTheDocument();
   });
 
   it('searches BGG on input after debounce', async () => {
     mockBggSearch.mockResolvedValue(mockBggResults);
 
-    render(<BggSearchTab />);
+    render(<BggSearchTab />, { wrapper: createWrapper() });
 
     const input = screen.getByPlaceholderText('Cerca su BoardGameGeek...');
     fireEvent.change(input, { target: { value: 'Catan' } });
@@ -93,7 +108,7 @@ describe('BggSearchTab', () => {
   it('shows results after search', async () => {
     mockBggSearch.mockResolvedValue(mockBggResults);
 
-    render(<BggSearchTab />);
+    render(<BggSearchTab />, { wrapper: createWrapper() });
 
     const input = screen.getByPlaceholderText('Cerca su BoardGameGeek...');
     fireEvent.change(input, { target: { value: 'Catan' } });
@@ -111,7 +126,7 @@ describe('BggSearchTab', () => {
   it('calls openWizard with correct WizardEntryPoint on selection', async () => {
     mockBggSearch.mockResolvedValue(mockBggResults);
 
-    render(<BggSearchTab />);
+    render(<BggSearchTab />, { wrapper: createWrapper() });
 
     const input = screen.getByPlaceholderText('Cerca su BoardGameGeek...');
     fireEvent.change(input, { target: { value: 'Catan' } });
@@ -132,7 +147,7 @@ describe('BggSearchTab', () => {
   it('shows "no results" message (not error) when search returns empty', async () => {
     mockBggSearch.mockResolvedValue({ ...mockBggResults, results: [], total: 0 });
 
-    render(<BggSearchTab />);
+    render(<BggSearchTab />, { wrapper: createWrapper() });
 
     const input = screen.getByPlaceholderText('Cerca su BoardGameGeek...');
     fireEvent.change(input, { target: { value: 'xyznotexist' } });
@@ -152,7 +167,7 @@ describe('BggSearchTab', () => {
   it('shows error message on API failure, not a "no results" message', async () => {
     mockBggSearch.mockRejectedValue(new Error('Network error'));
 
-    render(<BggSearchTab />);
+    render(<BggSearchTab />, { wrapper: createWrapper() });
 
     const input = screen.getByPlaceholderText('Cerca su BoardGameGeek...');
     fireEvent.change(input, { target: { value: 'Catan' } });
@@ -170,7 +185,7 @@ describe('BggSearchTab', () => {
   });
 
   it('shows clear button when input has text and clears on click', async () => {
-    render(<BggSearchTab />);
+    render(<BggSearchTab />, { wrapper: createWrapper() });
 
     const input = screen.getByPlaceholderText('Cerca su BoardGameGeek...');
     fireEvent.change(input, { target: { value: 'Catan' } });
@@ -184,7 +199,7 @@ describe('BggSearchTab', () => {
   });
 
   it('does not search when input is empty', async () => {
-    render(<BggSearchTab />);
+    render(<BggSearchTab />, { wrapper: createWrapper() });
 
     const input = screen.getByPlaceholderText('Cerca su BoardGameGeek...');
     fireEvent.change(input, { target: { value: '' } });

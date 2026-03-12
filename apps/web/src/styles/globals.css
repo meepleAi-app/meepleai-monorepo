@@ -120,6 +120,10 @@
 }
 
 @layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+
   * {
     @apply border-border outline-ring/50;
   }
@@ -583,4 +587,51 @@
   --font-weight-medium: var(--font-medium);
   --font-weight-semibold: var(--font-semibold);
   --font-weight-bold: var(--font-bold);
+}
+
+/* ─── SPA View Transitions (triggered by useViewTransition hook) ─── */
+
+::view-transition-old(root) {
+  animation: vt-fade-out 150ms ease-out;
+}
+
+::view-transition-new(root) {
+  animation: vt-fade-in 150ms ease-in;
+}
+
+@keyframes vt-fade-out {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+@keyframes vt-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+::view-transition-old(page-content) {
+  animation: vt-slide-out 200ms ease-out;
+}
+
+::view-transition-new(page-content) {
+  animation: vt-slide-in 200ms ease-in;
+}
+
+@keyframes vt-slide-out {
+  from { transform: translateX(0); opacity: 1; }
+  to { transform: translateX(-20px); opacity: 0; }
+}
+
+@keyframes vt-slide-in {
+  from { transform: translateX(20px); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-old(root),
+  ::view-transition-new(root),
+  ::view-transition-old(page-content),
+  ::view-transition-new(page-content) {
+    animation: none;
+  }
 }

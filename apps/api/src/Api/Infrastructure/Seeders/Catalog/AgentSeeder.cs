@@ -79,7 +79,7 @@ internal static class AgentSeeder
         }
 
         var agentGames = manifest.Catalog.Games
-            .Where(g => g.SeedAgent && gameMap.ContainsKey(g.BggId))
+            .Where(g => g.SeedAgent && g.BggId.HasValue && gameMap.ContainsKey(g.BggId.Value))
             .ToList();
 
         if (agentGames.Count == 0)
@@ -110,7 +110,7 @@ internal static class AgentSeeder
 
         foreach (var game in agentGames)
         {
-            var gameEntityId = gameMap[game.BggId];
+            var gameEntityId = gameMap[game.BggId!.Value];
             var agentName = $"{agentConfig.Name} - {game.Title}";
 
             // Idempotency: skip if agent with this name already exists

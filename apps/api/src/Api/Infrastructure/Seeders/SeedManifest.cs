@@ -32,10 +32,10 @@ internal sealed class SeedManifest
             if (string.IsNullOrWhiteSpace(game.Title))
                 errors.Add($"Game with bggId={game.BggId} has empty title");
 
-            if (game.BggId <= 0)
+            if (game.BggId.HasValue && game.BggId.Value <= 0)
                 errors.Add($"Game '{game.Title}' has invalid bggId={game.BggId}");
 
-            if (!seenBggIds.Add(game.BggId) && game.BggId > 0)
+            if (game.BggId.HasValue && !seenBggIds.Add(game.BggId.Value))
                 errors.Add($"Duplicate bggId={game.BggId} ('{game.Title}')");
 
             if (string.IsNullOrWhiteSpace(game.Language))
@@ -66,7 +66,7 @@ internal sealed class SeedManifestCatalog
 internal sealed class SeedManifestGame
 {
     public string Title { get; set; } = string.Empty;
-    public int BggId { get; set; }
+    public int? BggId { get; set; }
     public string Language { get; set; } = "en";
     public string? Pdf { get; set; }
     public bool SeedAgent { get; set; }

@@ -41,7 +41,7 @@ internal static class PdfSeeder
 
         // Build list of games that have a PDF entry in the manifest
         var pdfEntries = manifest.Catalog.Games
-            .Where(g => !string.IsNullOrWhiteSpace(g.Pdf) && g.BggId > 0)
+            .Where(g => !string.IsNullOrWhiteSpace(g.Pdf) && g.BggId is > 0)
             .ToList();
 
         if (pdfEntries.Count == 0)
@@ -73,7 +73,7 @@ internal static class PdfSeeder
             try
             {
                 // Resolve GameEntity.Id from the gameMap built by GameSeeder
-                if (!gameMap.TryGetValue(entry.BggId, out var gameId))
+                if (!gameMap.TryGetValue(entry.BggId!.Value, out var gameId))
                 {
                     logger.LogWarning(
                         "PdfSeeder: no GameEntity found for BggId={BggId} ('{Title}'). Skipping PDF '{FileName}'.",

@@ -34,7 +34,7 @@ import {
   SheetTitle,
   SheetDescription,
 } from '@/components/ui/navigation/sheet';
-import { Dialog, DialogContent, DialogTitle } from '@/components/ui/overlays/dialog';
+// Dialog import removed — arbiter now uses Rules Sheet
 import { useGameAgents } from '@/hooks/queries/useGameAgents';
 import { useAgentChatStream } from '@/hooks/useAgentChatStream';
 import { useResponsive } from '@/hooks/useResponsive';
@@ -145,6 +145,18 @@ export function LiveSessionView({ sessionId }: LiveSessionViewProps) {
     },
   });
 
+  // ----- Rules Sheet agent chat (separate thread) -----
+  const rulesThreadIdRef = useRef<string | null>(null);
+  const [rulesSentMessages, setRulesSentMessages] = useState<ChatMessage[]>([]);
+
+  const { state: rulesAgentState, sendMessage: sendRulesMessage } = useAgentChatStream({
+    onComplete: (_answer, metadata) => {
+      if (metadata.chatThreadId) {
+        rulesThreadIdRef.current = metadata.chatThreadId;
+      }
+    },
+  });
+
   // Build the full message list: sent user messages + current streaming response
   const chatMessages = useMemo<ChatMessage[]>(() => {
     const msgs = [...sentMessages];
@@ -162,9 +174,24 @@ export function LiveSessionView({ sessionId }: LiveSessionViewProps) {
 
   const isChatStreaming = agentState.isStreaming;
 
+  // Build rules chat message list
+  const rulesChatMessages = useMemo<ChatMessage[]>(() => {
+    const msgs = [...rulesSentMessages];
+    if (rulesAgentState.currentAnswer) {
+      msgs.push({
+        id: `rules-assistant-${msgs.length}`,
+        role: 'assistant',
+        content: rulesAgentState.currentAnswer,
+        timestamp: new Date(),
+      });
+    }
+    return msgs;
+  }, [rulesSentMessages, rulesAgentState.currentAnswer]);
+
+  const isRulesStreaming = rulesAgentState.isStreaming;
+
   // ----- Local UI state -----
   const [rulesOpen, setRulesOpen] = useState(false);
-  const [arbiterOpen, setArbiterOpen] = useState(false);
   const [scoresOpen, setScoresOpen] = useState(false);
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
 
@@ -243,6 +270,36 @@ export function LiveSessionView({ sessionId }: LiveSessionViewProps) {
       sendAgentMessage(agentId, message, chatThreadIdRef.current ?? undefined);
     },
     [agentId, agentState.currentAnswer, sendAgentMessage]
+  );
+
+  const handleRulesChatSend = useCallback(
+    (message: string) => {
+      if (!agentId) return;
+
+      // Snapshot previous assistant answer before hook resets
+      if (rulesAgentState.currentAnswer) {
+        setRulesSentMessages(prev => [
+          ...prev,
+          {
+            id: `rules-assistant-${Date.now() - 1}`,
+            role: 'assistant' as const,
+            content: rulesAgentState.currentAnswer,
+            timestamp: new Date(),
+          },
+        ]);
+      }
+
+      const userMsg: ChatMessage = {
+        id: `rules-user-${Date.now()}`,
+        role: 'user',
+        content: message,
+        timestamp: new Date(),
+      };
+      setRulesSentMessages(prev => [...prev, userMsg]);
+
+      sendRulesMessage(agentId, message, rulesThreadIdRef.current ?? undefined);
+    },
+    [agentId, rulesAgentState.currentAnswer, sendRulesMessage]
   );
 
   const handleScoreSubmit = useCallback(
@@ -326,7 +383,7 @@ export function LiveSessionView({ sessionId }: LiveSessionViewProps) {
         isPaused={isPaused}
         isLoading={isLoading}
         onOpenRules={() => setRulesOpen(true)}
-        onAskArbiter={() => setArbiterOpen(true)}
+        onAskArbiter={() => setRulesOpen(true)}
         onTogglePause={handleTogglePause}
         onOpenScores={() => setScoresOpen(true)}
       />
@@ -346,36 +403,43 @@ export function LiveSessionView({ sessionId }: LiveSessionViewProps) {
 
   const overlays = (
     <>
-      {/* Rules slide-over (Sheet) */}
+      {/* Rules slide-over (Sheet) — arbiter chat */}
       <Sheet open={rulesOpen} onOpenChange={setRulesOpen}>
-        <SheetContent side="right" className="w-full sm:max-w-md overflow-y-auto">
+        <SheetContent side="right" className="w-full sm:max-w-md flex flex-col overflow-hidden">
           <SheetHeader>
             <SheetTitle>Regole del gioco</SheetTitle>
             <SheetDescription>
-              Consulta le regole di {activeSession.gameName || 'questo gioco'}.
+              Chiedi all&apos;arbitro AI per risolvere dispute sulle regole.
             </SheetDescription>
           </SheetHeader>
-          <div className="mt-6 text-sm text-slate-600 dark:text-slate-400">
-            <p>
-              Il modulo regole verrà collegato alla Knowledge Base nella prossima iterazione. Per
-              ora puoi usare la chat per porre domande.
-            </p>
+
+          {/* Suggestion chips */}
+          <div className="flex flex-wrap gap-2 mt-4 px-1">
+            {['Chi ha ragione?', 'Si può fare X?', 'Cosa succede quando...'].map(chip => (
+              <button
+                key={chip}
+                type="button"
+                className="text-xs px-3 py-1.5 rounded-full border border-amber-300 dark:border-amber-600 text-amber-700 dark:text-amber-300 hover:bg-amber-50 dark:hover:bg-amber-900/30 transition-colors"
+                onClick={() => handleRulesChatSend(chip)}
+                disabled={isRulesStreaming}
+              >
+                {chip}
+              </button>
+            ))}
+          </div>
+
+          {/* Embedded chat widget for rules */}
+          <div className="flex-1 mt-4 min-h-0">
+            <SessionChatWidget
+              messages={rulesChatMessages}
+              isStreaming={isRulesStreaming}
+              onSend={handleRulesChatSend}
+              defaultExpanded
+              className="h-full flex flex-col"
+            />
           </div>
         </SheetContent>
       </Sheet>
-
-      {/* Arbiter modal */}
-      <Dialog open={arbiterOpen} onOpenChange={setArbiterOpen}>
-        <DialogContent className="max-w-sm" data-testid="arbiter-dialog">
-          <DialogTitle>Chiedi all&apos;arbitro</DialogTitle>
-          <div className="space-y-3 pt-2">
-            <p className="text-sm text-muted-foreground">
-              Descrivi la situazione e l&apos;arbitro AI analizzerà le regole per dare un verdetto.
-            </p>
-            <p className="text-xs text-slate-400">Funzione in arrivo nella prossima iterazione.</p>
-          </div>
-        </DialogContent>
-      </Dialog>
 
       {/* Score input sheet */}
       <Sheet open={scoresOpen} onOpenChange={setScoresOpen}>
@@ -462,7 +526,7 @@ export function LiveSessionView({ sessionId }: LiveSessionViewProps) {
           isPaused={isPaused}
           isLoading={isLoading}
           onOpenRules={() => setRulesOpen(true)}
-          onAskArbiter={() => setArbiterOpen(true)}
+          onAskArbiter={() => setRulesOpen(true)}
           onTogglePause={handleTogglePause}
           onOpenScores={() => setScoresOpen(true)}
         />

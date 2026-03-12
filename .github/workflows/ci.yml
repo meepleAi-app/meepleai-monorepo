@@ -28,7 +28,7 @@ jobs:
       python: ${{ steps.filter.outputs.python }}
       infra: ${{ steps.filter.outputs.infra }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: dorny/paths-filter@v3
         id: filter
         with:
@@ -58,7 +58,7 @@ jobs:
         working-directory: apps/web
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Setup Frontend
         uses: ./.github/actions/setup-frontend
@@ -92,7 +92,7 @@ jobs:
 
       - name: Upload Coverage
         if: always()
-        uses: codecov/codecov-action@v4
+        uses: codecov/codecov-action@v5
         with:
           files: apps/web/coverage/lcov.info
           flags: frontend
@@ -153,7 +153,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Install PDF Dependencies
         run: sudo apt-get update && sudo apt-get install -y libgdiplus
@@ -165,7 +165,7 @@ jobs:
           working-directory: apps/api
 
       - name: Cache Docker Images
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: /tmp/.buildx-cache
           key: ${{ runner.os }}-${{ runner.arch }}-docker-${{ hashFiles('**/Dockerfile', 'docker-compose*.yml') }}
@@ -274,7 +274,7 @@ jobs:
 
       - name: Upload Coverage
         if: always()
-        uses: codecov/codecov-action@v4
+        uses: codecov/codecov-action@v5
         with:
           files: |
             apps/api/coverage/unit-coverage.xml
@@ -294,7 +294,7 @@ jobs:
         working-directory: apps/orchestration-service
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Setup Python
         uses: actions/setup-python@v5
@@ -323,7 +323,7 @@ jobs:
 
       - name: Upload Python Coverage
         if: always()
-        uses: codecov/codecov-action@v4
+        uses: codecov/codecov-action@v5
         with:
           files: apps/orchestration-service/coverage.xml
           flags: python,arbitro
@@ -381,7 +381,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       # ===== Backend Setup =====
       - name: Wait for Services

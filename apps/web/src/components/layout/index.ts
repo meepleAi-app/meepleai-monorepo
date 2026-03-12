@@ -24,7 +24,6 @@ export {
   Navbar,
   HamburgerButton,
   HamburgerMenu,
-  Logo,
   NavItems,
   NavItemButton,
   ProfileBar,
@@ -33,12 +32,15 @@ export type {
   NavbarProps,
   HamburgerButtonProps,
   HamburgerMenuProps,
-  LogoProps,
   NavItem,
   NavItemsProps,
   NavItemButtonProps,
   ProfileBarProps,
 } from './Navbar';
+
+// Logo relocated to TopNavbar (#5033)
+export { Logo } from './TopNavbar';
+export type { LogoProps } from './TopNavbar';
 
 // Phase 3: GlobalSearch Component (#3289)
 export {

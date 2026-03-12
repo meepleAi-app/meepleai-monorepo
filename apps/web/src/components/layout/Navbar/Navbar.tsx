@@ -43,7 +43,7 @@ import { Button } from '@/components/ui/primitives/button';
 import { useCurrentUser } from '@/hooks/queries/useCurrentUser';
 import { cn } from '@/lib/utils';
 
-import { Logo } from './Logo';
+import { Logo } from '@/components/layout/TopNavbar/Logo';
 import { NavbarDropdown, type NavbarDropdownItem } from './NavbarDropdown';
 import { NavbarMobileDrawer } from './NavbarMobileDrawer';
 import { NavbarUserMenu } from './NavbarUserMenu';

@@ -45,7 +45,7 @@ import { Button } from '@/components/ui/primitives/button';
 import { useCurrentUser } from '@/hooks/queries/useCurrentUser';
 import { cn } from '@/lib/utils';
 
-import { Logo } from './Logo';
+import { Logo } from '@/components/layout/TopNavbar/Logo';
 import { NavItems, type NavItem } from './NavItems';
 
 /**

@@ -46,6 +46,7 @@ import {
   KeyIcon,
   MailIcon,
   ScrollTextIcon,
+  HeartPulseIcon,
 } from 'lucide-react';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -347,6 +348,13 @@ export const DASHBOARD_SECTIONS: DashboardSection[] = [
         label: 'Operations',
         icon: ScrollTextIcon,
         activePattern: /^\/admin\/monitor\/operations/,
+      },
+      // Service Dashboard (Issue #132)
+      {
+        href: '/admin/monitor/services',
+        label: 'Services',
+        icon: HeartPulseIcon,
+        activePattern: /^\/admin\/monitor\/services/,
       },
       // Config items
       {

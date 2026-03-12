@@ -4,13 +4,20 @@
 
 **Goal:** Users can speak to AI agents via a microphone button in the chat input. Speech-to-text via Whisper API (paid users) with Web Speech API fallback (free users). Agent responses read aloud via browser TTS.
 
-**Architecture:** Single new backend endpoint (`POST /api/v1/speech/transcribe`) proxying to OpenAI Whisper. Frontend: mic button in existing chat input, `SpeechService` abstraction with fallback, TTS via browser `SpeechSynthesis API`. Tier-gated: Whisper for `Normal`/`Premium`, Web Speech API for `Free`.
+**Architecture:** Single new backend endpoint (`POST /api/v1/speech/transcribe`) proxying to OpenAI Whisper. Frontend: mic button in existing chat input, extends existing `ISpeechRecognitionProvider` abstraction in `lib/voice/` with a new `WhisperProvider`, TTS via existing `useVoiceOutput.ts` extended with language auto-detect. Tier-gated: Whisper for `Normal`/`Premium`, Web Speech API for `Free`.
 
 **Tech Stack:** .NET 9 (multipart form), OpenAI Whisper API, Next.js 16, MediaRecorder API, Web Speech API, SpeechSynthesis API
 
 **Spec:** `docs/superpowers/specs/2026-03-11-admin-invite-onboarding-design.md` — Phase 3
 
 **Independent of:** Phases 1 and 2 (voice works for any authenticated user)
+
+**Existing voice infrastructure (DO NOT duplicate):**
+- `apps/web/src/hooks/useVoiceInput.ts` — hook with `ISpeechRecognitionProvider` abstraction
+- `apps/web/src/hooks/useVoiceOutput.ts` — SpeechSynthesis management
+- `apps/web/src/lib/voice/types.ts` — provider types
+- `apps/web/src/lib/voice/providers/provider-factory.ts` — provider creation
+- `apps/web/src/lib/voice/providers/web-speech-provider.ts` — Web Speech API provider
 
 ---
 
@@ -34,15 +41,16 @@
 ### Frontend — New Files
 | File | Responsibility |
 |------|---------------|
-| `components/chat/VoiceChatButton.tsx` | Mic toggle button with recording state |
-| `hooks/useAudioRecorder.ts` | MediaRecorder hook |
-| `lib/services/SpeechService.ts` | Whisper + Web Speech API abstraction |
+| `components/chat/VoiceChatButton.tsx` | Mic toggle button with recording state + quality indicator badge |
+| `lib/voice/providers/whisper-provider.ts` | Implements existing `ISpeechRecognitionProvider` using MediaRecorder + backend Whisper proxy |
 | `components/chat/TextToSpeechButton.tsx` | Speaker button per message |
-| `hooks/useTextToSpeech.ts` | SpeechSynthesis hook |
 
 ### Frontend — Modified Files
 | File | Change |
 |------|--------|
+| `lib/voice/providers/provider-factory.ts` | Add tier-based provider selection (`createProvider(userTier)`) |
+| `hooks/useVoiceOutput.ts` | Extend with language auto-detection from response content |
+| `lib/voice/types.ts` | Add `WhisperProvider` type to provider union |
 | `components/ui/meeple/chat-message.tsx` | Add TTS speaker button |
 | Chat input component (find exact path) | Add mic button next to send |
 
@@ -54,9 +62,10 @@
 ### Tests
 | File | Scope |
 |------|-------|
-| `Api.Tests/KnowledgeBase/Commands/TranscribeAudioCommandTests.cs` | Unit: tier gating, handler |
-| `apps/web/__tests__/chat/VoiceChatButton.test.tsx` | Frontend: mic states |
-| `apps/web/__tests__/chat/SpeechService.test.ts` | Frontend: fallback logic |
+| `apps/api/tests/Api.Tests/BoundedContexts/KnowledgeBase/Application/Commands/Speech/TranscribeAudioCommandHandlerTests.cs` | Unit: tier gating, handler |
+| `apps/web/src/__tests__/components/chat-unified/VoiceChatButton.test.tsx` | Frontend: mic states, quality badge |
+| `apps/web/src/__tests__/components/chat-unified/WhisperProvider.test.ts` | Frontend: provider + fallback logic |
+| `apps/web/src/__tests__/components/chat-unified/VoiceOutput.test.ts` | Frontend: TTS + language auto-detect |
 
 ---
 
@@ -149,9 +158,9 @@ internal record TranscribeAudioCommand(
     string FileName,
     Guid UserId,
     string UserTier
-) : ICommand<TranscriptionResult>;
+) : IRequest<TranscriptionResult>;
 
-internal class TranscribeAudioCommandHandler : ICommandHandler<TranscribeAudioCommand, TranscriptionResult>
+internal class TranscribeAudioCommandHandler : IRequestHandler<TranscribeAudioCommand, TranscriptionResult>
 {
     private readonly ITranscriptionService _transcriptionService;
 
@@ -189,87 +198,97 @@ internal class TranscribeAudioCommandHandler : ICommandHandler<TranscribeAudioCo
 
 ## Chunk 2: Frontend (Mic button + STT + TTS)
 
-### Task 5: Create useAudioRecorder hook
+### Task 5: Create WhisperProvider
 
-- [ ] **Step 1: Write hook**
+> **IMPORTANT:** The codebase already has voice infrastructure at `hooks/useVoiceInput.ts` (with `ISpeechRecognitionProvider` abstraction), `hooks/useVoiceOutput.ts`, and `lib/voice/` (types, provider-factory, web-speech-provider). This task extends it — do NOT duplicate.
+
+- [ ] **Step 1: Write WhisperProvider** at `lib/voice/providers/whisper-provider.ts`
 
 ```typescript
-import { useState, useRef, useCallback } from 'react';
+import type { ISpeechRecognitionProvider, RecognitionResult } from '../types';
 
-interface AudioRecorderState {
-  isRecording: boolean;
-  duration: number;
-  audioBlob: Blob | null;
-  error: string | null;
-}
+/**
+ * Implements ISpeechRecognitionProvider using MediaRecorder to capture audio
+ * and the backend Whisper proxy endpoint (POST /api/v1/speech/transcribe)
+ * for cloud-based transcription. Used for Normal/Premium tier users.
+ */
+export class WhisperProvider implements ISpeechRecognitionProvider {
+  private mediaRecorder: MediaRecorder | null = null;
+  private chunks: Blob[] = [];
+  private stream: MediaStream | null = null;
 
-export function useAudioRecorder(maxDurationMs = 30000) {
-  const [state, setState] = useState<AudioRecorderState>({
-    isRecording: false, duration: 0, audioBlob: null, error: null,
-  });
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const chunksRef = useRef<Blob[]>([]);
-  const timerRef = useRef<NodeJS.Timeout | null>(null);
-  const startTimeRef = useRef<number>(0);
+  readonly id = 'whisper' as const;
 
-  const startRecording = useCallback(async () => {
+  async start(onResult: (result: RecognitionResult) => void, onError: (error: Error) => void): Promise<void> {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
-      mediaRecorderRef.current = mediaRecorder;
-      chunksRef.current = [];
-      startTimeRef.current = Date.now();
+      this.stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      this.mediaRecorder = new MediaRecorder(this.stream, { mimeType: 'audio/webm' });
+      this.chunks = [];
 
-      mediaRecorder.ondataavailable = (e) => { if (e.data.size > 0) chunksRef.current.push(e.data); };
-      mediaRecorder.onstop = () => {
-        const blob = new Blob(chunksRef.current, { type: 'audio/webm' });
-        setState(prev => ({ ...prev, isRecording: false, audioBlob: blob }));
-        stream.getTracks().forEach(t => t.stop());
+      this.mediaRecorder.ondataavailable = (e) => {
+        if (e.data.size > 0) this.chunks.push(e.data);
       };
 
-      mediaRecorder.start();
-      setState(prev => ({ ...prev, isRecording: true, error: null, audioBlob: null }));
+      this.mediaRecorder.onstop = async () => {
+        const blob = new Blob(this.chunks, { type: 'audio/webm' });
+        this.stream?.getTracks().forEach(t => t.stop());
+        try {
+          const formData = new FormData();
+          formData.append('audio', blob, 'recording.webm');
+          const res = await fetch('/api/v1/speech/transcribe', { method: 'POST', body: formData });
+          if (!res.ok) throw new Error(`Transcription failed: ${res.status}`);
+          const data = await res.json();
+          onResult({ text: data.text, language: data.language, isFinal: true });
+        } catch (err) {
+          onError(err instanceof Error ? err : new Error('Transcription failed'));
+        }
+      };
 
-      // Auto-stop after max duration
-      timerRef.current = setInterval(() => {
-        const elapsed = Date.now() - startTimeRef.current;
-        setState(prev => ({ ...prev, duration: Math.floor(elapsed / 1000) }));
-        if (elapsed >= maxDurationMs) stopRecording();
-      }, 1000);
+      this.mediaRecorder.start();
     } catch (err) {
-      setState(prev => ({ ...prev, error: 'Permesso microfono necessario' }));
+      onError(err instanceof Error ? err : new Error('Permesso microfono necessario'));
     }
-  }, [maxDurationMs]);
+  }
 
-  const stopRecording = useCallback(() => {
-    if (mediaRecorderRef.current?.state === 'recording') {
-      mediaRecorderRef.current.stop();
+  stop(): void {
+    if (this.mediaRecorder?.state === 'recording') {
+      this.mediaRecorder.stop();
     }
-    if (timerRef.current) clearInterval(timerRef.current);
-  }, []);
+  }
 
-  return { ...state, startRecording, stopRecording };
+  isSupported(): boolean {
+    return typeof navigator !== 'undefined'
+      && !!navigator.mediaDevices?.getUserMedia
+      && typeof MediaRecorder !== 'undefined';
+  }
 }
 ```
 
-- [ ] **Step 2: Test + commit**
+- [ ] **Step 2: Add `'whisper'` to provider type union in `lib/voice/types.ts`**
+- [ ] **Step 3: Test + commit**
 
-### Task 6: Create SpeechService
+### Task 6: Update provider-factory.ts with tier-based selection
 
-- [ ] **Step 1: Write service class** with Whisper → Web Speech API fallback
-- [ ] **Step 2: Test fallback logic + commit**
+> **Extends existing** `lib/voice/providers/provider-factory.ts` — do NOT create a new `SpeechService`.
+
+- [ ] **Step 1: Add `createProvider(userTier)` function** — returns `WhisperProvider` for `Normal`/`Premium` tiers, `WebSpeechProvider` for `Free` tier
+- [ ] **Step 2: Test tier-based selection logic + commit**
 
 ### Task 7: Create VoiceChatButton component
 
 - [ ] **Step 1: Write component** — idle (mic icon) → recording (red pulse + timer) → transcribing (spinner)
-- [ ] **Step 2: Write test + commit**
+- [ ] **Step 2: Add quality indicator badge** — display "HD" badge when using WhisperProvider, or browser icon when using WebSpeechProvider (free tier)
+- [ ] **Step 3: Add tooltip for free users** — "Trascrizione base — Upgrade per qualita HD"
+- [ ] **Step 4: Write test + commit**
 
-### Task 8: Create TTS components
+### Task 8: Extend useVoiceOutput.ts with language auto-detection
 
-- [ ] **Step 1: Write useTextToSpeech hook** — wraps SpeechSynthesis API
-- [ ] **Step 2: Write TextToSpeechButton** — speaker icon on agent messages
+> **Extends existing** `hooks/useVoiceOutput.ts` — do NOT create a new `useTextToSpeech.ts` hook.
+
+- [ ] **Step 1: Add language auto-detection** — detect language from agent response content and set appropriate `SpeechSynthesisUtterance.lang`
+- [ ] **Step 2: Write TextToSpeechButton** — speaker icon on agent messages, uses extended `useVoiceOutput`
 - [ ] **Step 3: Add auto-read toggle in chat header**
-- [ ] **Step 4: Test + commit**
+- [ ] **Step 4: Test TTS + language detection + commit**
 
 ### Task 9: Integrate into existing chat
 

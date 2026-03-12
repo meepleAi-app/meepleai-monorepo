@@ -5,6 +5,7 @@ using Api.BoundedContexts.KnowledgeBase.Domain;
 using Api.BoundedContexts.KnowledgeBase.Domain.Entities;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
+using Api.BoundedContexts.SharedGameCatalog.Application.Commands;
 using Api.BoundedContexts.UserLibrary.Domain.Entities;
 using Api.BoundedContexts.UserLibrary.Domain.Repositories;
 using Api.Infrastructure;
@@ -32,6 +33,7 @@ internal sealed class CreateAgentWithSetupCommandHandler
     private readonly IUserLibraryRepository _libraryRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly MeepleAiDbContext _db;
+    private readonly IMediator _mediator;
     private readonly ILogger<CreateAgentWithSetupCommandHandler> _logger;
 
     public CreateAgentWithSetupCommandHandler(
@@ -40,6 +42,7 @@ internal sealed class CreateAgentWithSetupCommandHandler
         IUserLibraryRepository libraryRepository,
         IUnitOfWork unitOfWork,
         MeepleAiDbContext db,
+        IMediator mediator,
         ILogger<CreateAgentWithSetupCommandHandler> logger)
     {
         _agentRepository = agentRepository ?? throw new ArgumentNullException(nameof(agentRepository));
@@ -47,6 +50,7 @@ internal sealed class CreateAgentWithSetupCommandHandler
         _libraryRepository = libraryRepository ?? throw new ArgumentNullException(nameof(libraryRepository));
         _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
         _db = db ?? throw new ArgumentNullException(nameof(db));
+        _mediator = mediator ?? throw new ArgumentNullException(nameof(mediator));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -163,6 +167,31 @@ internal sealed class CreateAgentWithSetupCommandHandler
             _logger.LogInformation(
                 "Orchestrated agent creation: Agent {AgentId} ({AgentType}) + Thread {ThreadId} for user {UserId}, game {GameId}",
                 agent.Id, agentType.Value, chatThread.Id, request.UserId, request.GameId);
+
+            // Step 6: Post-creation orchestration (outside main transaction)
+            // Link to SharedGame if provided
+            if (request.SharedGameId.HasValue)
+            {
+                await _mediator.Send(
+                    new LinkAgentToSharedGameCommand(request.SharedGameId.Value, agent.Id),
+                    cancellationToken).ConfigureAwait(false);
+
+                _logger.LogInformation(
+                    "Linked agent {AgentId} to shared game {SharedGameId}",
+                    agent.Id, request.SharedGameId.Value);
+            }
+
+            // Attach selected documents if provided
+            if (request.DocumentIds is { Count: > 0 })
+            {
+                await _mediator.Send(
+                    new UpdateAgentDocumentsCommand(agent.Id, request.DocumentIds),
+                    cancellationToken).ConfigureAwait(false);
+
+                _logger.LogInformation(
+                    "Attached {DocumentCount} documents to agent {AgentId}",
+                    request.DocumentIds.Count, agent.Id);
+            }
 
             return new AgentCreationResultDto(
                 AgentId: agent.Id,

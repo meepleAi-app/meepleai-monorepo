@@ -12,24 +12,20 @@ interface ActivityTableProps {
 }
 
 const actionTypeColors: Record<string, string> = {
-  UserRoleChange:
-    'bg-purple-100 text-purple-900 dark:bg-purple-900/30 dark:text-purple-300',
+  UserRoleChange: 'bg-purple-100 text-purple-900 dark:bg-purple-900/30 dark:text-purple-300',
   'DomainEvent.RoleChangedEvent':
     'bg-purple-100 text-purple-900 dark:bg-purple-900/30 dark:text-purple-300',
   'DomainEvent.UserInvitedEvent':
     'bg-blue-100 text-blue-900 dark:bg-blue-900/30 dark:text-blue-300',
   'DomainEvent.InvitationAcceptedEvent':
     'bg-green-100 text-green-900 dark:bg-green-900/30 dark:text-green-300',
-  email_sent:
-    'bg-amber-100 text-amber-900 dark:bg-amber-900/30 dark:text-amber-300',
+  email_sent: 'bg-amber-100 text-amber-900 dark:bg-amber-900/30 dark:text-amber-300',
 };
 
 const resultColors: Record<string, string> = {
-  Success:
-    'bg-green-100 text-green-900 dark:bg-green-900/30 dark:text-green-300',
+  Success: 'bg-green-100 text-green-900 dark:bg-green-900/30 dark:text-green-300',
   Error: 'bg-red-100 text-red-900 dark:bg-red-900/30 dark:text-red-300',
-  Denied:
-    'bg-amber-100 text-amber-900 dark:bg-amber-900/30 dark:text-amber-300',
+  Denied: 'bg-amber-100 text-amber-900 dark:bg-amber-900/30 dark:text-amber-300',
 };
 
 function getDateRange(range?: string): { startDate?: string; endDate?: string } {
@@ -71,7 +67,7 @@ function formatTimestamp(iso: string): string {
 function getUserInitials(name: string): string {
   return name
     .split(' ')
-    .map((n) => n[0])
+    .map(n => n[0])
     .join('')
     .toUpperCase()
     .slice(0, 2);
@@ -146,15 +142,12 @@ export function ActivityTable({ actionFilter, dateRange }: ActivityTableProps) {
           <tbody className="divide-y divide-slate-200 dark:divide-zinc-700">
             {entries.length === 0 ? (
               <tr>
-                <td
-                  colSpan={6}
-                  className="py-12 text-center text-muted-foreground"
-                >
+                <td colSpan={6} className="py-12 text-center text-muted-foreground">
                   No activity found.
                 </td>
               </tr>
             ) : (
-              entries.map((entry) => (
+              entries.map(entry => (
                 <tr
                   key={entry.id}
                   className="hover:bg-slate-50/50 dark:hover:bg-zinc-900/50 transition-colors"
@@ -197,9 +190,7 @@ export function ActivityTable({ actionFilter, dateRange }: ActivityTableProps) {
                   <td className="py-3 px-4 text-slate-700 dark:text-zinc-300">
                     {entry.resource}
                     {entry.resourceId && (
-                      <span className="text-xs text-slate-400 ml-1">
-                        ({entry.resourceId})
-                      </span>
+                      <span className="text-xs text-slate-400 ml-1">({entry.resourceId})</span>
                     )}
                   </td>
                   <td className="py-3 px-4 font-mono text-sm text-slate-600 dark:text-zinc-400">
@@ -208,10 +199,7 @@ export function ActivityTable({ actionFilter, dateRange }: ActivityTableProps) {
                   <td className="py-3 px-4 text-right">
                     <Badge
                       variant="outline"
-                      className={
-                        resultColors[entry.result] ??
-                        'bg-slate-100 text-slate-900'
-                      }
+                      className={resultColors[entry.result] ?? 'bg-slate-100 text-slate-900'}
                     >
                       {entry.result}
                     </Badge>

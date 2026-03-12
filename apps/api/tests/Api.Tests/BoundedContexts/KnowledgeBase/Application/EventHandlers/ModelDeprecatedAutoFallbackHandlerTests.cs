@@ -95,7 +95,7 @@ public class ModelDeprecatedAutoFallbackHandlerTests : IDisposable
 
     private static ModelDeprecatedEvent CreateEvent(
         string modelId = "deprecated-model",
-        string[] ? affectedStrategies = null)
+        string[]? affectedStrategies = null)
     {
         return new ModelDeprecatedEvent(
             modelId,

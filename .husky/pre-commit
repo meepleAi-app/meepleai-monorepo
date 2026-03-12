@@ -76,7 +76,7 @@ if [[ "$CURRENT_BRANCH" == "main-dev" || "$CURRENT_BRANCH" == "main" ]]; then
     # Validate that apps/api directory exists
     if [ -d "apps/api" ]; then
       # Run dotnet format to verify formatting (verify-only mode)
-      (cd apps/api && dotnet format --verify-no-changes --verbosity quiet) || {
+      (cd apps/api && dotnet format --verify-no-changes --verbosity quiet --severity error) || {
         echo ""
         echo "❌ Backend code formatting issues found."
         echo ""

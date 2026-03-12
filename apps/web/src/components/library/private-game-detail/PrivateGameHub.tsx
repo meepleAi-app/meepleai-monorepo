@@ -100,8 +100,10 @@ export function PrivateGameHub({ privateGameId }: PrivateGameHubProps) {
   }, [privateGameId]);
 
   // Auto-create agent when PDF becomes ready (per spec)
+  const autoCreateAttempted = useRef(false);
   useEffect(() => {
-    if (pdfStatus === 'ready' && agentStatus === 'none') {
+    if (pdfStatus === 'ready' && agentStatus === 'none' && !autoCreateAttempted.current) {
+      autoCreateAttempted.current = true;
       setAgentStatus('creating');
       api.agents
         .createUserAgent({ gameId: privateGameId, agentType: 'TutorAgent' })

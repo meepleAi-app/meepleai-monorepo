@@ -17,24 +17,6 @@ export { Layout, PageHeader, PageContent, EmptyState, LoadingState } from './Lay
 export { Logo } from './TopNavbar';
 export type { LogoProps } from './TopNavbar';
 
-// Phase 3: GlobalSearch Component (#3289)
-export {
-  GlobalSearch,
-  SearchTrigger,
-  SearchInput,
-  SearchResults,
-  RecentSearches,
-} from './GlobalSearch';
-export type {
-  GlobalSearchProps,
-  SearchTriggerProps,
-  SearchInputProps,
-  SearchResultsProps,
-  SearchResult,
-  SearchResultType,
-  RecentSearchesProps,
-} from './GlobalSearch';
-
 // Phase 4: ActionBar System (#3290)
 export {
   ActionBar,

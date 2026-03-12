@@ -5,7 +5,7 @@ using Api.Infrastructure.Entities.SystemConfiguration;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
-namespace Api.Infrastructure.Seeders;
+namespace Api.Infrastructure.Seeders.Core;
 
 /// <summary>
 /// Seeds default rate limit configurations for different user tiers.
@@ -98,6 +98,7 @@ internal static class RateLimitConfigSeeder
             catch (Exception ex)
             {
                 logger.LogWarning(ex, "⚠️  Failed to seed RateLimitConfig for tier '{Tier}', continuing with others", config.Tier);
+                db.ChangeTracker.Clear();
                 skippedCount++;
             }
         }

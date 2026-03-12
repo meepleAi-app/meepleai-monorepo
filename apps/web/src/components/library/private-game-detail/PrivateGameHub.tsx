@@ -1,11 +1,12 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 
 import { CopyrightDisclaimerModal } from '@/components/pdf/CopyrightDisclaimerModal';
+import { PdfProcessingProgressBar } from '@/components/pdf/PdfProcessingProgressBar';
 import { Skeleton } from '@/components/ui/feedback/skeleton';
 import { usePrivateGame } from '@/hooks/queries/useLibrary';
 import { api } from '@/lib/api';
@@ -20,8 +21,11 @@ interface PrivateGameHubProps {
 export function PrivateGameHub({ privateGameId }: PrivateGameHubProps) {
   const router = useRouter();
   const { data: game, isLoading } = usePrivateGame(privateGameId);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [showDisclaimer, setShowDisclaimer] = useState(false);
   const [pdfStatus, setPdfStatus] = useState<PdfStatus>('none');
+  const [activePdfId, setActivePdfId] = useState<string | null>(null);
+  const [uploadProgress, setUploadProgress] = useState(0);
   const [agentStatus, setAgentStatus] = useState<AgentStatus>('none');
   const [pausedSessions, setPausedSessions] = useState<PausedSession[]>([]);
 
@@ -112,9 +116,34 @@ export function PrivateGameHub({ privateGameId }: PrivateGameHubProps) {
 
   const handleDisclaimerAccept = useCallback(() => {
     setShowDisclaimer(false);
-    // Actual file picker + upload wiring is done in Task 4
-    setPdfStatus('uploading');
+    // Trigger the hidden file picker after disclaimer acceptance
+    fileInputRef.current?.click();
   }, []);
+
+  const handleFileSelected = useCallback(
+    async (event: React.ChangeEvent<HTMLInputElement>) => {
+      const file = event.target.files?.[0];
+      if (!file) return;
+
+      // Reset the input so re-selecting the same file triggers onChange
+      event.target.value = '';
+
+      setPdfStatus('uploading');
+      setUploadProgress(0);
+
+      try {
+        const result = await api.pdf.uploadPdf(privateGameId, file, percent => {
+          setUploadProgress(percent);
+        });
+
+        setActivePdfId(result.documentId);
+        setPdfStatus('processing');
+      } catch {
+        setPdfStatus('failed');
+      }
+    },
+    [privateGameId]
+  );
 
   const handleCreateAgent = useCallback(async () => {
     setAgentStatus('creating');
@@ -224,6 +253,37 @@ export function PrivateGameHub({ privateGameId }: PrivateGameHubProps) {
         onUploadPdf={handleUploadPdf}
         onCreateAgent={handleCreateAgent}
         onStartGame={handleStartGame}
+      >
+        {pdfStatus === 'uploading' && (
+          <div className="space-y-2">
+            <p className="text-sm text-muted-foreground">
+              Caricamento in corso... {uploadProgress}%
+            </p>
+            <div className="h-2 w-full rounded-full bg-muted">
+              <div
+                className="h-2 rounded-full bg-primary transition-all duration-300"
+                style={{ width: `${uploadProgress}%` }}
+              />
+            </div>
+          </div>
+        )}
+        {pdfStatus === 'processing' && activePdfId && (
+          <PdfProcessingProgressBar
+            pdfId={activePdfId}
+            onComplete={() => setPdfStatus('ready')}
+            onError={() => setPdfStatus('failed')}
+            onCancel={() => setPdfStatus('none')}
+          />
+        )}
+      </ActivationChecklist>
+
+      {/* Hidden file input for PDF upload */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept=".pdf"
+        className="hidden"
+        onChange={handleFileSelected}
       />
 
       {/* Copyright Disclaimer Modal */}

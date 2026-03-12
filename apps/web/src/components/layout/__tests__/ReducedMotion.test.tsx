@@ -4,8 +4,8 @@
  *
  * Verifies that components respect prefers-reduced-motion:
  * - FloatingActionBar: no transition classes when reduced motion
- * - MiniNav: instant scroll (no smooth behavior)
  * - Global CSS: animations disabled
+ * (MiniNav removed — tabs now rendered in SidebarContextNav)
  */
 
 import { render, screen } from '@testing-library/react';
@@ -58,14 +58,9 @@ const mockActions = vi.fn(() => [
   },
 ]);
 
-const mockTabs = vi.fn(() => [
-  { id: 'games', label: 'Games', href: '/library' },
-  { id: 'wishlist', label: 'Wishlist', href: '/library/wishlist' },
-]);
-
 vi.mock('@/context/NavigationContext', () => ({
   useNavigation: () => ({
-    miniNavTabs: mockTabs(),
+    miniNavTabs: [],
     actionBarActions: mockActions(),
     activeZone: null,
     setNavConfig: vi.fn(),
@@ -75,7 +70,6 @@ vi.mock('@/context/NavigationContext', () => ({
 
 // Import after mocks
 import { FloatingActionBar } from '../FloatingActionBar/FloatingActionBar';
-import { MiniNav } from '../MiniNav/MiniNav';
 
 // ─── FloatingActionBar Reduced Motion Tests ───────────────────────────────────
 
@@ -125,61 +119,6 @@ describe('FloatingActionBar reduced motion', () => {
 
     const bar = screen.getByRole('toolbar');
     expect(bar).toBeInTheDocument();
-  });
-});
-
-// ─── MiniNav Reduced Motion Tests ─────────────────────────────────────────────
-
-describe('MiniNav reduced motion', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it('renders tabs normally when reduced motion is NOT preferred', () => {
-    mockPrefersReducedMotion.mockReturnValue(false);
-    render(<MiniNav />);
-
-    expect(screen.getByRole('tablist')).toBeInTheDocument();
-    expect(screen.getAllByRole('tab')).toHaveLength(2);
-  });
-
-  it('renders tabs normally when reduced motion IS preferred', () => {
-    mockPrefersReducedMotion.mockReturnValue(true);
-    render(<MiniNav />);
-
-    expect(screen.getByRole('tablist')).toBeInTheDocument();
-    expect(screen.getAllByRole('tab')).toHaveLength(2);
-  });
-
-  it('uses auto scroll behavior when reduced motion is preferred', () => {
-    mockPrefersReducedMotion.mockReturnValue(true);
-
-    // Mock scrollIntoView to capture arguments
-    const scrollIntoViewMock = vi.fn();
-    Element.prototype.scrollIntoView = scrollIntoViewMock;
-
-    render(<MiniNav />);
-
-    // The scrollIntoView should be called with behavior: 'auto'
-    if (scrollIntoViewMock.mock.calls.length > 0) {
-      const callArgs = scrollIntoViewMock.mock.calls[0][0];
-      expect(callArgs.behavior).toBe('auto');
-    }
-  });
-
-  it('uses smooth scroll behavior when reduced motion is NOT preferred', () => {
-    mockPrefersReducedMotion.mockReturnValue(false);
-
-    const scrollIntoViewMock = vi.fn();
-    Element.prototype.scrollIntoView = scrollIntoViewMock;
-
-    render(<MiniNav />);
-
-    // The scrollIntoView should be called with behavior: 'smooth'
-    if (scrollIntoViewMock.mock.calls.length > 0) {
-      const callArgs = scrollIntoViewMock.mock.calls[0][0];
-      expect(callArgs.behavior).toBe('smooth');
-    }
   });
 });
 

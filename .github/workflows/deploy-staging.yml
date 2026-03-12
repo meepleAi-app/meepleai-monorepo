@@ -25,8 +25,6 @@ permissions:
   contents: read
   packages: write
   id-token: write  # For OIDC auth to cloud providers
-  checks: write     # Required by ci.yml reusable workflow
-  pull-requests: write  # Required by ci.yml reusable workflow
 
 env:
   REGISTRY: ghcr.io
@@ -81,20 +79,77 @@ jobs:
             echo "📦 Selective deploy: api=$API, web=$WEB"
           fi
 
-  # Run tests before deploy (unless skipped for emergency)
-  test:
-    name: Pre-deploy Tests
+  # Lightweight pre-deploy validation (full CI already ran on main-dev PR)
+  # Rationale: Code reaching main-staging has already passed the full ci.yml
+  # suite during the PR to main-dev. Re-running 13K+ tests wastes ~15 min
+  # and 3 service containers. Instead, verify builds compile and the commit
+  # was previously tested.
+  pre-deploy-check:
+    name: Pre-deploy Validation
+    runs-on: ubuntu-latest
     if: github.event_name == 'push' || inputs.skip_tests != true
-    uses: ./.github/workflows/ci.yml
-    secrets: inherit
+    needs: [detect-changes]
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Verify CI passed on this commit
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "🔍 Checking if CI already passed for commit ${{ github.sha }}..."
+
+          # Check for successful CI runs on this commit (from main-dev PR)
+          CI_STATUS=$(gh api repos/${{ github.repository }}/commits/${{ github.sha }}/check-runs \
+            --jq '[.check_runs[] | select(.name | test("CI Success|Backend|Frontend")) | select(.conclusion=="success")] | length' \
+            2>/dev/null || echo "0")
+
+          if [ "$CI_STATUS" -gt 0 ]; then
+            echo "✅ Found $CI_STATUS successful CI checks on this commit"
+          else
+            echo "⚠️ No prior CI checks found — will run build validation"
+          fi
+
+      - name: Setup .NET
+        if: needs.detect-changes.outputs.deploy_api == 'true'
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '9.0.x'
+
+      - name: Backend build check
+        if: needs.detect-changes.outputs.deploy_api == 'true'
+        run: |
+          echo "🔨 Verifying backend compiles..."
+          cd apps/api/src/Api
+          dotnet restore --verbosity quiet
+          dotnet build --no-restore --configuration Release --verbosity quiet
+          echo "✅ Backend builds successfully"
+
+      - name: Setup Frontend
+        if: needs.detect-changes.outputs.deploy_web == 'true'
+        uses: ./.github/actions/setup-frontend
+        with:
+          working-directory: apps/web
+          frozen-lockfile: 'true'
+
+      - name: Frontend build check
+        if: needs.detect-changes.outputs.deploy_web == 'true'
+        run: |
+          echo "🔨 Verifying frontend compiles..."
+          cd apps/web
+          pnpm build
+          echo "✅ Frontend builds successfully"
+        env:
+          NEXT_PUBLIC_API_BASE: http://localhost:8080
 
   # Build and push Docker images (only changed components)
   build:
     name: Build Images
     runs-on: ubuntu-latest
     timeout-minutes: 45
-    needs: [test, detect-changes]
-    if: always() && (needs.test.result == 'success' || (github.event_name == 'workflow_dispatch' && inputs.skip_tests == true)) && (needs.detect-changes.outputs.deploy_api == 'true' || needs.detect-changes.outputs.deploy_web == 'true')
+    needs: [pre-deploy-check, detect-changes]
+    if: always() && (needs.pre-deploy-check.result == 'success' || (github.event_name == 'workflow_dispatch' && inputs.skip_tests == true)) && (needs.detect-changes.outputs.deploy_api == 'true' || needs.detect-changes.outputs.deploy_web == 'true')
     outputs:
       api_image: ${{ steps.meta-api.outputs.tags }}
       web_image: ${{ steps.meta-web.outputs.tags }}

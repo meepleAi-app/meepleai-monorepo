@@ -100,6 +100,7 @@ export function AppShellClient({
           <main
             id="main-content"
             tabIndex={-1}
+            style={{ viewTransitionName: 'page-content' }}
             className={cn(
               'flex-1',
               !fullWidth && 'px-4 sm:px-6 lg:px-8',

@@ -38,7 +38,7 @@ interface WizardState {
 
 const STEP_LABELS = ['Password', 'Profile', 'Interests', 'First Game', 'First Agent'];
 
-export function OnboardingWizard({ token, role }: OnboardingWizardProps) {
+export function OnboardingWizard({ token, role: _role }: OnboardingWizardProps) {
   const router = useRouter();
   const [state, setState] = useState<WizardState>({
     currentStep: 1,
@@ -157,8 +157,8 @@ export function OnboardingWizard({ token, role }: OnboardingWizardProps) {
         )}
         {state.currentStep === 5 && hasGame && (
           <FirstAgentStep
-            gameId={state.addedGameId!}
-            gameName={state.addedGameName!}
+            gameId={state.addedGameId as string}
+            gameName={state.addedGameName as string}
             onComplete={handleFinish}
             onSkip={handleFinish}
           />

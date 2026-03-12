@@ -136,6 +136,7 @@ test-results/
 .claude/settings.local.json
 .claude/.mcp.local.json
 .claude/worktrees/
+.worktrees/
 
 # Playwright MCP temp files
 tmpclaude-*-cwd
@@ -205,3 +206,4 @@ apps/docs/screenshots/.test-output/chromatic-archives/archive/_next/static/chunk
 apps/docs/screenshots/.test-output/chromatic-archives/archive/_next/static/media/4a7551bcc3548e67-s.p.717db902.woff2
 apps/web/next-env.d.ts
 .worktrees/
+.superpowers/

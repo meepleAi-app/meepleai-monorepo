@@ -49,6 +49,9 @@ public class UserEntity
     public int FailedLoginAttempts { get; set; }
     public DateTime? LockedUntil { get; set; }
 
+    // Issue #124: Onboarding interests
+    public List<string>? Interests { get; set; }
+
     // Navigation properties
     public ICollection<UserSessionEntity> Sessions { get; set; } = new List<UserSessionEntity>();
     public ICollection<UserBackupCodeEntity> BackupCodes { get; set; } = new List<UserBackupCodeEntity>();

@@ -45,7 +45,8 @@ public sealed class ManifestValidationTests
         manifest.Catalog.Games[0].BggId.Should().Be(13);
         manifest.Catalog.Games[0].SeedAgent.Should().BeTrue();
         manifest.Catalog.Games[1].Pdf.Should().BeNull();
-        manifest.Catalog.DefaultAgent.Name.Should().Be("MeepleAssistant POC");
+        manifest.Catalog.DefaultAgent.Should().NotBeNull();
+        manifest.Catalog.DefaultAgent!.Name.Should().Be("MeepleAssistant POC");
         manifest.Catalog.DefaultAgent.Temperature.Should().Be(0.3);
     }
 

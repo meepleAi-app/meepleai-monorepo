@@ -15,6 +15,14 @@ on:
         required: false
         default: 'false'
         type: boolean
+      perf_regression_mode:
+        description: 'Performance regression behavior (warn|fail)'
+        required: false
+        default: 'warn'
+        type: choice
+        options:
+          - warn
+          - fail
 
 # Only one staging deployment at a time
 concurrency:
@@ -296,13 +304,55 @@ jobs:
               echo "ℹ️ EF CLI not in image — migrations will apply on API startup"
             fi
 
+  # Snapshot previous performance baseline before deploy overwrites DEPLOYMENT.json
+  snapshot-baseline:
+    name: Snapshot Performance Baseline
+    runs-on: ubuntu-latest
+    needs: [build]
+    outputs:
+      previous_baseline: ${{ steps.read-baseline.outputs.baseline }}
+    steps:
+      - name: Read previous DEPLOYMENT.json performance metrics
+        id: read-baseline
+        env:
+          SSH_HOST: ${{ secrets.STAGING_HOST }}
+          SSH_USER: ${{ secrets.STAGING_USER }}
+          SSH_KEY: ${{ secrets.STAGING_SSH_KEY }}
+        run: |
+          # Setup SSH key
+          mkdir -p ~/.ssh
+          echo "$SSH_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H "$SSH_HOST" >> ~/.ssh/known_hosts 2>/dev/null
+
+          # Read performance field from DEPLOYMENT.json on server
+          BASELINE=$(ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no \
+            "$SSH_USER@$SSH_HOST" \
+            'DEPLOY_FILE="/opt/meepleai/repo/infra/DEPLOYMENT.json";
+             if [ -f "$DEPLOY_FILE" ]; then
+               jq -c ".performance // empty" "$DEPLOY_FILE" 2>/dev/null || echo ""
+             else
+               echo ""
+             fi') || true
+
+          # Clean up SSH key
+          rm -f ~/.ssh/deploy_key
+
+          if [ -n "$BASELINE" ] && [ "$BASELINE" != "null" ] && [ "$BASELINE" != '""' ]; then
+            echo "📊 Previous baseline found: $BASELINE"
+            echo "baseline=$BASELINE" >> $GITHUB_OUTPUT
+          else
+            echo "ℹ️ No previous performance baseline (first deploy or missing)"
+            echo "baseline=" >> $GITHUB_OUTPUT
+          fi
+
   # Deploy to staging server (only changed services)
   deploy:
     name: Deploy to Staging
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    needs: [build, migrate-db]
-    if: always() && needs.build.result == 'success' && (needs.migrate-db.result == 'success' || needs.migrate-db.result == 'skipped')
+    needs: [build, migrate-db, snapshot-baseline]
+    if: always() && needs.build.result == 'success' && (needs.migrate-db.result == 'success' || needs.migrate-db.result == 'skipped') && (needs.snapshot-baseline.result == 'success' || needs.snapshot-baseline.result == 'skipped')
     environment:
       name: staging
       url: https://meepleai.app
@@ -387,8 +437,11 @@ jobs:
   validate:
     name: Post-deploy Validation
     runs-on: ubuntu-latest
-    needs: [deploy]
+    needs: [deploy, snapshot-baseline]
     steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
       - name: Deep Health Check
         run: |
           echo "🔍 Running deep health checks..."
@@ -499,36 +552,82 @@ jobs:
           echo ""
           echo "✅ All smoke tests passed"
 
-      - name: Performance Baseline
+      - name: Install K6
         run: |
-          echo "⚡ Running performance baseline..."
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "## ⚡ Performance Baseline" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "| Endpoint | Avg (s) | P95 (s) | Status |" >> $GITHUB_STEP_SUMMARY
-          echo "|----------|---------|---------|--------|" >> $GITHUB_STEP_SUMMARY
+          # Install K6 (supports ARM64 and x86_64)
+          ARCH=$(dpkg --print-architecture 2>/dev/null || echo "amd64")
+          curl -fsSL "https://github.com/grafana/k6/releases/download/v0.54.0/k6-v0.54.0-linux-${ARCH}.tar.gz" \
+            | tar xzf - --strip-components=1 -C /usr/local/bin k6-v0.54.0-linux-${ARCH}/k6
+          k6 version
 
-          THRESHOLD=3.0
+      - name: Run K6 Deploy Smoke
+        run: |
+          mkdir -p reports/deploy
+          k6 run \
+            --env BASE_URL=https://meepleai.app \
+            --summary-export=reports/deploy/deploy-smoke-summary.json \
+            tests/k6/scenarios/deploy-smoke.js
+        continue-on-error: true
 
-          for ENDPOINT in "/health" "/"; do
-            TIMES=""
-            for i in {1..5}; do
-              T=$(curl -sf -o /dev/null -w "%{time_total}" "https://meepleai.app$ENDPOINT" 2>/dev/null || echo "9.999")
-              TIMES="$TIMES $T"
-            done
+      - name: Compare Performance Baseline
+        env:
+          PERF_REGRESSION_MODE: ${{ inputs.perf_regression_mode || 'warn' }}
+          REGRESSION_THRESHOLD_PCT: '20'
+        run: |
+          # Write previous baseline to temp file if available
+          PREV_BASELINE=""
+          BASELINE_JSON='${{ needs.snapshot-baseline.outputs.previous_baseline }}'
+          if [ -n "$BASELINE_JSON" ]; then
+            echo "$BASELINE_JSON" > /tmp/previous-baseline.json
+            PREV_BASELINE="/tmp/previous-baseline.json"
+          fi
 
-            AVG=$(echo $TIMES | tr ' ' '\n' | awk '{sum+=$1} END {printf "%.3f", sum/NR}')
-            P95=$(echo $TIMES | tr ' ' '\n' | sort -n | tail -1)
+          chmod +x tests/k6/utils/deploy-baseline-compare.sh
+          tests/k6/utils/deploy-baseline-compare.sh \
+            reports/deploy/deploy-smoke-summary.json \
+            "$PREV_BASELINE"
 
-            if (( $(echo "$P95 > $THRESHOLD" | bc -l 2>/dev/null || echo 0) )); then
-              STATUS="⚠️ Slow"
-            else
-              STATUS="✅ OK"
+      - name: Read metrics for server update
+        id: metrics
+        if: always()
+        run: |
+          METRICS_FILE="reports/deploy/deploy-smoke-summary-metrics.json"
+          if [ -f "$METRICS_FILE" ]; then
+            # Compact JSON to single line for env var transport
+            METRICS=$(jq -c '.' "$METRICS_FILE" 2>/dev/null || echo "")
+            echo "json=$METRICS" >> $GITHUB_OUTPUT
+            echo "📊 Metrics ready for server update"
+          else
+            echo "⚠️ No metrics file found, skipping server update"
+            echo "json=" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Update Server Baseline
+        if: always() && steps.metrics.outputs.json != ''
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.STAGING_HOST }}
+          username: ${{ secrets.STAGING_USER }}
+          key: ${{ secrets.STAGING_SSH_KEY }}
+          envs: PERF_METRICS
+          script: |
+            DEPLOY_FILE="/opt/meepleai/repo/infra/DEPLOYMENT.json"
+            if [ ! -f "$DEPLOY_FILE" ]; then
+              echo "⚠️ DEPLOYMENT.json not found, skipping baseline update"
+              exit 0
             fi
 
-            echo "$ENDPOINT: avg=${AVG}s p95=${P95}s $STATUS"
-            echo "| \`$ENDPOINT\` | $AVG | $P95 | $STATUS |" >> $GITHUB_STEP_SUMMARY
-          done
+            if command -v jq &> /dev/null; then
+              jq --argjson perf "$PERF_METRICS" \
+                '.performance = $perf' "$DEPLOY_FILE" > "${DEPLOY_FILE}.tmp" \
+                && mv "${DEPLOY_FILE}.tmp" "$DEPLOY_FILE" \
+                && echo "✅ Performance baseline updated in DEPLOYMENT.json" \
+                || echo "⚠️ jq merge failed, skipping"
+            else
+              echo "⚠️ jq not available, skipping baseline update"
+            fi
+        env:
+          PERF_METRICS: ${{ steps.metrics.outputs.json }}
 
   # Post-deploy E2E smoke tests against live staging
   e2e-staging:

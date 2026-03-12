@@ -55,6 +55,9 @@ public sealed class User : AggregateRoot<Guid>
     private readonly List<BackupCode> _backupCodes = new();
     public IReadOnlyCollection<BackupCode> BackupCodes => _backupCodes.AsReadOnly();
 
+    // Onboarding preferences (Issue #124: Invitation system)
+    public List<string>? Interests { get; private set; }
+
     // Navigation properties (not part of domain model, for EF Core only)
     private readonly List<Session> _sessions = new();
     private readonly List<ApiKey> _apiKeys = new();
@@ -650,6 +653,16 @@ public sealed class User : AggregateRoot<Guid>
         Theme = theme;
         EmailNotifications = emailNotifications;
         DataRetentionDays = dataRetentionDays;
+    }
+
+    /// <summary>
+    /// Updates the user's onboarding interest selections.
+    /// Issue #124: Invitation system onboarding wizard.
+    /// </summary>
+    /// <param name="interests">List of interest tags selected by the user</param>
+    public void UpdateInterests(List<string>? interests)
+    {
+        Interests = interests;
     }
 
     #region Persistence Hydration Methods (internal - S3011 fix)

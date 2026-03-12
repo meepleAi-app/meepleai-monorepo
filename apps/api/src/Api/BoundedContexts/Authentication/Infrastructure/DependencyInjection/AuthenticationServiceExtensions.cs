@@ -23,6 +23,7 @@ internal static class AuthenticationServiceExtensions
         services.AddScoped<IApiKeyUsageLogRepository, ApiKeyUsageLogRepository>();
         services.AddScoped<IOAuthAccountRepository, OAuthAccountRepository>();
         services.AddScoped<IShareLinkRepository, ShareLinkRepository>(); // ISSUE-2052
+        services.AddScoped<IInvitationTokenRepository, InvitationTokenRepository>(); // ISSUE-124
 
         // Register Unit of Work
         services.AddScoped<IUnitOfWork, EfCoreUnitOfWork>();

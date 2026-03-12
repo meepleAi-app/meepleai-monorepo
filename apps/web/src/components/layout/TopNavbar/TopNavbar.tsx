@@ -31,7 +31,7 @@ import { useScrollState } from '@/hooks/useScrollState';
 import { cn } from '@/lib/utils';
 
 import { MobileNavDrawer } from '../MobileNavDrawer';
-import { Logo } from '../Navbar/Logo';
+import { Logo } from './Logo';
 
 // ─── User Menu ────────────────────────────────────────────────────────────────
 

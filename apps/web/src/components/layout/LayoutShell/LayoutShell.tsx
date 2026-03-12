@@ -48,7 +48,6 @@ import { useImpersonationStore } from '@/store/impersonation';
 
 import { CardRack } from '../CardRack';
 import { FloatingActionBar } from '../FloatingActionBar';
-import { MiniNav } from '../MiniNav';
 import { MobileBreadcrumb } from '../MobileBreadcrumb';
 import { MobileTabBar } from '../MobileTabBar';
 import { QuickView } from '../QuickView';
@@ -114,14 +113,7 @@ function LayoutShellInner({ children, fullWidth, className }: LayoutShellProps) 
         )}
       >
         <div className="flex flex-col flex-1" data-testid="layout-content-area">
-          {/* ── Level 2: MiniNav (auto-hides when no tabs) ─────────────────── */}
-          <ErrorBoundary fallback={null} componentName="MiniNav">
-            <Suspense>
-              <MiniNav />
-            </Suspense>
-          </ErrorBoundary>
-
-          {/* ── Mobile Breadcrumb (below MiniNav, mobile only) ───────────── */}
+          {/* ── Mobile Breadcrumb (mobile only) ───────────── */}
           <MobileBreadcrumb />
 
           {/* ── Main content ─────────────────────────────────────────────────── */}

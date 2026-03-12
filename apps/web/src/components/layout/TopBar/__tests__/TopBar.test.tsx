@@ -41,7 +41,7 @@ vi.mock('@/components/layout/MobileNavDrawer', () => ({
   MobileNavDrawer: () => null,
 }));
 
-vi.mock('@/components/layout/Navbar/Logo', () => ({
+vi.mock('@/components/layout/TopNavbar/Logo', () => ({
   Logo: () => <span>Logo</span>,
 }));
 

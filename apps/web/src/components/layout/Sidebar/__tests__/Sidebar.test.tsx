@@ -245,8 +245,8 @@ describe('Sidebar', () => {
   });
 
   describe('User Section', () => {
-    it('shows notification bell', () => {
-      render(<Sidebar {...defaultProps} />);
+    it('shows notification bell in collapsed state', () => {
+      render(<Sidebar {...defaultProps} isCollapsed={true} />);
       expect(screen.getByTestId('notification-bell')).toBeInTheDocument();
     });
 

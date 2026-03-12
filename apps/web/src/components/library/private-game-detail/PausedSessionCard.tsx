@@ -70,7 +70,18 @@ export function PausedSessionCard({ session, onResume, onAbandon }: PausedSessio
         </div>
 
         <div className="flex gap-2">
-          <Button size="sm" onClick={() => onResume(session.id)}>
+          <Button
+            size="sm"
+            onClick={() => {
+              if (isOld) {
+                const confirmed = window.confirm(
+                  'Questa partita è stata messa in pausa più di 30 giorni fa. Vuoi ancora riprenderla?'
+                );
+                if (!confirmed) return;
+              }
+              onResume(session.id);
+            }}
+          >
             <Play className="mr-1 h-3 w-3" /> Riprendi
           </Button>
           <Button

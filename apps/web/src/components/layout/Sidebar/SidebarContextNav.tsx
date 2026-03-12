@@ -34,6 +34,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
 import { GamesFilterPanel } from '@/components/catalog/GamesFilterPanel';
+import { useNavigation } from '@/context/NavigationContext';
 import { cn } from '@/lib/utils';
 
 import type { Variants } from 'framer-motion';
@@ -224,6 +225,11 @@ function getContextKey(pathname: string | null): string | null {
 export function SidebarContextNav({ isCollapsed }: SidebarContextNavProps) {
   const pathname = usePathname();
   const contextKey = getContextKey(pathname);
+  const { miniNavTabs } = useNavigation();
+
+  const sectionLabel = contextKey
+    ? contextKey.charAt(0).toUpperCase() + contextKey.slice(1).replace(/-/g, ' ')
+    : '';
 
   return (
     <div className="flex-1 overflow-y-auto overflow-x-hidden flex flex-col">
@@ -231,7 +237,7 @@ export function SidebarContextNav({ isCollapsed }: SidebarContextNavProps) {
       <FixedNavZone isCollapsed={isCollapsed} />
 
       {/* Divider between zones (only if contextual zone is active) */}
-      {contextKey && <hr className="mx-3 border-sidebar-border" />}
+      {(contextKey || miniNavTabs.length > 0) && <hr className="mx-3 border-sidebar-border" />}
 
       {/* Zone 2: Contextual — changes based on route */}
       <div className="flex-1 overflow-y-auto">
@@ -247,6 +253,47 @@ export function SidebarContextNav({ isCollapsed }: SidebarContextNavProps) {
               {contextKey === 'dashboard' && <DashboardContextPanel isCollapsed={isCollapsed} />}
               {contextKey === 'library' && <LibraryContextPanel isCollapsed={isCollapsed} />}
               {contextKey === 'games' && <GamesFilterPanel isCollapsed={isCollapsed} />}
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Zone 3: MiniNav tabs — declared by pages via NavigationContext */}
+        <AnimatePresence mode="wait" initial={false}>
+          {miniNavTabs.length > 0 && (
+            <motion.div
+              key="context-tabs"
+              variants={PANEL_VARIANTS}
+              initial="initial"
+              animate="animate"
+              exit="exit"
+              className="mt-2 space-y-0.5 px-2"
+            >
+              {sectionLabel && <SectionLabel label={sectionLabel} isCollapsed={isCollapsed} />}
+              {miniNavTabs.map(tab => {
+                // In collapsed mode, hide tabs without icons (they'd show nothing)
+                if (isCollapsed && !tab.icon) return null;
+
+                const TabIcon = tab.icon;
+                return (
+                  <Link
+                    key={tab.id}
+                    href={tab.href}
+                    className={cn(
+                      'flex items-center gap-3 rounded-lg text-sm font-medium',
+                      'min-h-[44px] px-3 py-2',
+                      'transition-colors duration-150',
+                      'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring focus-visible:ring-offset-1',
+                      isCollapsed && 'justify-center px-2',
+                      pathname === tab.href
+                        ? 'bg-[hsl(25_95%_45%/0.12)] text-[hsl(25_95%_42%)] font-semibold'
+                        : 'text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
+                    )}
+                  >
+                    {TabIcon && <TabIcon className="h-4 w-4 shrink-0" aria-hidden="true" />}
+                    {!isCollapsed && <span className="truncate">{tab.label}</span>}
+                  </Link>
+                );
+              })}
             </motion.div>
           )}
         </AnimatePresence>

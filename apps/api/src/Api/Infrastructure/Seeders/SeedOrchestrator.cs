@@ -67,10 +67,6 @@ internal sealed class SeedOrchestrator
                 // Layer 2: Catalog (manifest-driven) - isolated scope
                 await SeedCatalogAsync(ct).ConfigureAwait(false);
 
-                // Layer 3: LivedIn (staging only) - isolated scope
-                if (_profile == SeedProfile.Staging)
-                    await SeedLivedInAsync(ct).ConfigureAwait(false);
-
                 _logger.LogInformation("Seeding completed in {Elapsed}ms", sw.ElapsedMilliseconds);
             }
             finally
@@ -132,18 +128,4 @@ internal sealed class SeedOrchestrator
         }
     }
 
-    private async Task SeedLivedInAsync(CancellationToken ct)
-    {
-        _logger.LogInformation("Layer 3: LivedIn seeding (staging only)...");
-        var scope = _scopeFactory.CreateAsyncScope();
-        try
-        {
-            var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
-            await LivedIn.LivedInSeeder.SeedAsync(db, _logger, ct).ConfigureAwait(false);
-        }
-        finally
-        {
-            await scope.DisposeAsync().ConfigureAwait(false);
-        }
-    }
 }

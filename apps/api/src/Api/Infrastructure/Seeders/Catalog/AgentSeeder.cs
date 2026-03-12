@@ -8,8 +8,7 @@ namespace Api.Infrastructure.Seeders.Catalog;
 /// <summary>
 /// Seeds agent infrastructure for games with seedAgent=true in the manifest.
 /// Merges legacy DefaultAgentSeeder + CatanPocAgentSeeder patterns into a single manifest-driven seeder.
-/// Creates: AgentTypology + PromptTemplate, Agent (linked to game), AgentConfiguration,
-/// GameSession, AgentSession — the full entity chain for a working agent.
+/// Creates: AgentTypology + PromptTemplate, Agent (linked to game), AgentConfiguration.
 /// Idempotent: skips if Agent with matching name already exists for the game.
 /// </summary>
 internal static class AgentSeeder
@@ -103,7 +102,7 @@ internal static class AgentSeeder
         var adminUserId = adminUser.Id;
 
         // Ensure AgentTypology exists (shared across all seeded agents)
-        var typology = await EnsureAgentTypologyAsync(db, adminUserId, now, logger, cancellationToken)
+        await EnsureAgentTypologyAsync(db, adminUserId, now, logger, cancellationToken)
             .ConfigureAwait(false);
 
         var seededCount = 0;
@@ -162,38 +161,6 @@ internal static class AgentSeeder
             };
 
             db.Set<AgentConfigurationEntity>().Add(configuration);
-
-            // Create GameSession (FK requirement for AgentSession)
-            var gameSession = new GameSessionEntity
-            {
-                Id = Guid.NewGuid(),
-                GameId = gameEntityId,
-                CreatedByUserId = adminUserId,
-                Status = "Setup",
-                StartedAt = now,
-                PlayersJson = """[{"PlayerName":"POC Test Player","PlayerOrder":1,"Color":"Red"}]"""
-            };
-
-            db.GameSessions.Add(gameSession);
-
-            await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
-
-            // Create AgentSession linking everything together
-            var agentSession = new AgentSessionEntity
-            {
-                Id = Guid.NewGuid(),
-                AgentId = agentId,
-                GameSessionId = gameSession.Id,
-                UserId = adminUserId,
-                GameId = gameEntityId,
-                TypologyId = typology.Id,
-                CurrentGameStateJson = """{"phase":"setup","turn":0,"players":[],"board":{}}""",
-                StartedAt = now,
-                EndedAt = null,
-                IsActive = true
-            };
-
-            db.AgentSessions.Add(agentSession);
 
             await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 

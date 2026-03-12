@@ -102,18 +102,44 @@ internal sealed class SeedOrchestrator
         }
     }
 
-    private Task SeedCatalogAsync(CancellationToken ct)
+    private async Task SeedCatalogAsync(CancellationToken ct)
     {
         _logger.LogInformation("Layer 2: Catalog seeding (profile: {Profile})...", _profile);
-        // Phase 1: No-op - existing seeders in AutoConfigurationService handle this
-        // Phase 2+: Will call CatalogSeeder.SeedAsync() with YAML manifest
-        return Task.CompletedTask;
+        var scope = _scopeFactory.CreateAsyncScope();
+        try
+        {
+            var sp = scope.ServiceProvider;
+            var db = sp.GetRequiredService<MeepleAiDbContext>();
+            var adminUser = await db.Users
+                .FirstOrDefaultAsync(u => u.Role == "admin", ct)
+                .ConfigureAwait(false);
+            var systemUserId = adminUser?.Id ?? Guid.Empty;
+
+            await Catalog.CatalogSeeder.SeedAsync(
+                _profile,
+                db,
+                sp.GetRequiredService<Api.Services.IBggApiService>(),
+                systemUserId,
+                _logger, ct).ConfigureAwait(false);
+        }
+        finally
+        {
+            await scope.DisposeAsync().ConfigureAwait(false);
+        }
     }
 
-    private Task SeedLivedInAsync(CancellationToken ct)
+    private async Task SeedLivedInAsync(CancellationToken ct)
     {
         _logger.LogInformation("Layer 3: LivedIn seeding (staging only)...");
-        // Phase 4: Will call LivedInSeeder.SeedAsync()
-        return Task.CompletedTask;
+        var scope = _scopeFactory.CreateAsyncScope();
+        try
+        {
+            var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+            await LivedIn.LivedInSeeder.SeedAsync(db, _logger, ct).ConfigureAwait(false);
+        }
+        finally
+        {
+            await scope.DisposeAsync().ConfigureAwait(false);
+        }
     }
 }

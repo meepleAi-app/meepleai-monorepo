@@ -2,25 +2,43 @@
 
 import { useState } from 'react';
 
-import { Bot, Send } from 'lucide-react';
+import { Bot, Gamepad2, Send } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
+import type { QuickViewMode } from '@/store/quick-view';
 
-const QUICK_PROMPTS = [
+const GAME_PROMPTS = [
   'Spiega le regole base',
   'Suggerisci una strategia',
   'Regole per principianti',
   'Domande frequenti',
 ];
 
+const SESSION_PROMPTS = [
+  'Cosa posso fare ora?',
+  'Riassumi il turno',
+  'Suggerisci la prossima mossa',
+  'Chi sta vincendo?',
+];
+
 interface AIQuickViewContentProps {
   gameId: string;
   gameName: string;
+  mode?: QuickViewMode;
+  sessionId?: string | null;
 }
 
-export function AIQuickViewContent({ gameId: _gameId, gameName }: AIQuickViewContentProps) {
+export function AIQuickViewContent({
+  gameId: _gameId,
+  gameName,
+  mode = 'game',
+  sessionId: _sessionId,
+}: AIQuickViewContentProps) {
   const [input, setInput] = useState('');
   const [messages, setMessages] = useState<Array<{ role: 'user' | 'ai'; text: string }>>([]);
+
+  const isSessionMode = mode === 'session';
+  const quickPrompts = isSessionMode ? SESSION_PROMPTS : GAME_PROMPTS;
 
   const handleSend = (text: string) => {
     if (!text.trim()) return;
@@ -32,9 +50,13 @@ export function AIQuickViewContent({ gameId: _gameId, gameName }: AIQuickViewCon
     <div className="flex flex-col h-full">
       {/* Context label */}
       <div className="flex items-center gap-2 px-3 py-2 border-b border-border">
-        <Bot className="h-4 w-4 text-purple-500" />
+        {isSessionMode ? (
+          <Gamepad2 className="h-4 w-4 text-green-500" />
+        ) : (
+          <Bot className="h-4 w-4 text-purple-500" />
+        )}
         <span className="text-xs font-medium text-muted-foreground">
-          AI assistente — {gameName}
+          {isSessionMode ? `Sessione live — ${gameName}` : `AI assistente — ${gameName}`}
         </span>
       </div>
 
@@ -61,7 +83,7 @@ export function AIQuickViewContent({ gameId: _gameId, gameName }: AIQuickViewCon
 
       {/* Quick prompts */}
       <div className="flex flex-wrap gap-1.5 px-3 py-2 border-t border-border">
-        {QUICK_PROMPTS.map(prompt => (
+        {quickPrompts.map(prompt => (
           <button
             key={prompt}
             onClick={() => handleSend(prompt)}

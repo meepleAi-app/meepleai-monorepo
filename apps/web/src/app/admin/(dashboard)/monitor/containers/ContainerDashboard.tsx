@@ -46,8 +46,9 @@ function ContainerStatusBadge({ state }: { state: string }) {
   );
 }
 
-function formatUptime(created: string): string {
-  const diff = Date.now() - new Date(created).getTime();
+function formatUptime(container: ContainerInfo): string {
+  if (container.state !== 'running') return '—';
+  const diff = Date.now() - new Date(container.created).getTime();
   const hours = Math.floor(diff / (1000 * 60 * 60));
   const days = Math.floor(hours / 24);
 
@@ -87,7 +88,7 @@ function ContainerCard({ container }: ContainerCardProps) {
         <div className="rounded-lg bg-muted/50 px-2.5 py-1.5">
           <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Uptime</p>
           <p className="text-xs font-medium" data-testid="container-uptime">
-            {formatUptime(container.created)}
+            {formatUptime(container)}
           </p>
         </div>
       </div>

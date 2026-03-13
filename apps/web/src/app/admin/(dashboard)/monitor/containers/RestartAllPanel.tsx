@@ -227,6 +227,7 @@ export function RestartAllPanel() {
           </p>
 
           <input
+            autoFocus
             data-testid="restart-all-confirm-input"
             type="text"
             value={confirmText}

@@ -499,6 +499,17 @@ internal sealed class RagPromptAssemblyService : IRagPromptAssemblyService
             sb.AppendLine();
         }
 
+        // Issue #376: Rule dispute resolution instructions
+        sb.AppendLine("## Rule Dispute Resolution");
+        sb.AppendLine("When players disagree about a rule or ask you to settle a dispute:");
+        sb.AppendLine("1. Search the provided documentation for the exact rule that applies.");
+        sb.AppendLine("2. Quote the relevant rule text directly, including page/section if available.");
+        sb.AppendLine("3. Give a clear verdict: state who is correct and why.");
+        sb.AppendLine("4. If the rule is ambiguous or not explicitly covered, say so and suggest the most reasonable interpretation.");
+        sb.AppendLine("5. Rate your confidence: HIGH (exact rule found), MEDIUM (inferred from related rules), LOW (no direct rule).");
+        sb.AppendLine("Be fair and impartial — base your ruling only on the documented rules.");
+        sb.AppendLine();
+
         // Chain-of-thought reasoning instructions
         sb.AppendLine("## Reasoning Approach");
         sb.AppendLine("Think step-by-step when answering:");

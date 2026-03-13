@@ -9,6 +9,7 @@ import { toast } from 'sonner';
 import { PlayerSetupDialog, type PlayerSetup } from '@/components/game-night/PlayerSetupDialog';
 import { CopyrightDisclaimerModal } from '@/components/pdf/CopyrightDisclaimerModal';
 import { PdfProcessingProgressBar } from '@/components/pdf/PdfProcessingProgressBar';
+import { ProgressCard } from '@/components/pdf/progress-card';
 import { Skeleton } from '@/components/ui/feedback/skeleton';
 import { usePrivateGame } from '@/hooks/queries/useLibrary';
 import { api } from '@/lib/api';
@@ -27,6 +28,7 @@ export function PrivateGameHub({ privateGameId }: PrivateGameHubProps) {
   const [showDisclaimer, setShowDisclaimer] = useState(false);
   const [pdfStatus, setPdfStatus] = useState<PdfStatus>('none');
   const [activePdfId, setActivePdfId] = useState<string | null>(null);
+  const [activePdfName, setActivePdfName] = useState<string>('');
   const [uploadProgress, setUploadProgress] = useState(0);
   const [agentStatus, setAgentStatus] = useState<AgentStatus>('none');
   const [pausedSessions, setPausedSessions] = useState<PausedSession[]>([]);
@@ -143,6 +145,7 @@ export function PrivateGameHub({ privateGameId }: PrivateGameHubProps) {
         });
 
         setActivePdfId(result.documentId);
+        setActivePdfName(file.name);
         setPdfStatus('processing');
       } catch {
         setPdfStatus('failed');
@@ -300,12 +303,20 @@ export function PrivateGameHub({ privateGameId }: PrivateGameHubProps) {
           </div>
         )}
         {pdfStatus === 'processing' && activePdfId && (
-          <PdfProcessingProgressBar
-            pdfId={activePdfId}
-            onComplete={() => setPdfStatus('ready')}
-            onError={() => setPdfStatus('failed')}
-            onCancel={() => setPdfStatus('none')}
-          />
+          <>
+            <ProgressCard
+              documentId={activePdfId}
+              title={activePdfName || 'PDF'}
+              subtitle="Elaborazione in corso..."
+              defaultExpanded
+            />
+            <PdfProcessingProgressBar
+              pdfId={activePdfId}
+              onComplete={() => setPdfStatus('ready')}
+              onError={() => setPdfStatus('failed')}
+              onCancel={() => setPdfStatus('none')}
+            />
+          </>
         )}
       </ActivationChecklist>
 

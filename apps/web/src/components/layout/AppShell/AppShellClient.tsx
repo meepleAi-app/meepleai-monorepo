@@ -23,6 +23,8 @@ import { useSidebarState } from '@/hooks/useSidebarState';
 import { cn } from '@/lib/utils';
 import { useImpersonationStore } from '@/store/impersonation';
 
+import { OnboardingReminderBanner } from '@/components/onboarding';
+
 import { AdaptiveBottomBar } from '../AdaptiveBottomBar';
 import { FloatingActionBar } from '../FloatingActionBar';
 import { MobileBreadcrumb } from '../MobileBreadcrumb';
@@ -69,6 +71,9 @@ export function AppShellClient({
 
         {/* L1: TopNavbar (always visible) */}
         <TopNavbar />
+
+        {/* Issue #326: Reminder banner for users who skipped onboarding */}
+        {isAuthenticated && user?.onboardingSkipped && <OnboardingReminderBanner />}
 
         {/* Desktop Sidebar (authenticated only) */}
         {isAuthenticated && <Sidebar isCollapsed={isCollapsed} onToggle={toggle} />}

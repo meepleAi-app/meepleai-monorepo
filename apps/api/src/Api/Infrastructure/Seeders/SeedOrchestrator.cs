@@ -1,131 +1,115 @@
 using System.Diagnostics;
-using Api.Services;
-using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 namespace Api.Infrastructure.Seeders;
 
 /// <summary>
 /// Entry point for all seeding operations. Replaces AutoConfigurationService.
-/// Creates isolated DI scopes per layer to prevent ChangeTracker leaks.
-/// Uses PostgreSQL advisory lock for multi-replica safety.
+/// Resolves profile, acquires non-blocking advisory lock, runs ISeedLayer implementations in order.
+/// Clears ChangeTracker between layers to prevent entity leaks.
 /// </summary>
 internal sealed class SeedOrchestrator
 {
-    private const long SeedingAdvisoryLockId = 0x4D65_6570_6C65_4149; // "MeepleAI" as long
-
-    private readonly SeedProfile _profile;
-    private readonly IServiceScopeFactory _scopeFactory;
+    private readonly IEnumerable<ISeedLayer> _layers;
+    private readonly IConfiguration _configuration;
     private readonly ILogger<SeedOrchestrator> _logger;
 
     public SeedOrchestrator(
-        SeedProfile profile,
-        IServiceScopeFactory scopeFactory,
+        IEnumerable<ISeedLayer> layers,
+        IConfiguration configuration,
         ILogger<SeedOrchestrator> logger)
     {
-        _profile = profile;
-        _scopeFactory = scopeFactory;
+        _layers = layers;
+        _configuration = configuration;
         _logger = logger;
     }
 
-    public async Task ExecuteAsync(CancellationToken ct)
+    /// <summary>
+    /// Run all applicable seed layers inside an advisory lock.
+    /// Called from Program.cs startup and the admin endpoint.
+    /// </summary>
+    public async Task RunAsync(MeepleAiDbContext db, IServiceProvider services, CancellationToken ct = default)
     {
-        if (_profile == SeedProfile.None)
+        var profile = ResolveProfile(_configuration);
+
+        if (profile == SeedProfile.None)
         {
-            _logger.LogInformation("Seed profile is None - skipping all seeding");
+            _logger.LogInformation("Seed profile is None — skipping all seeding");
             return;
         }
 
-        _logger.LogInformation("Seeding with profile: {Profile}", _profile);
+        _logger.LogInformation("Seeding with profile: {Profile}", profile);
         var sw = Stopwatch.StartNew();
 
-        // Acquire PostgreSQL advisory lock - only one replica seeds at a time
-        var lockScope = _scopeFactory.CreateAsyncScope();
+        var lockAcquired = await AdvisoryLockHelper.TryAcquireAsync(db, _logger, ct).ConfigureAwait(false);
+        if (!lockAcquired)
+            return;
+
         try
         {
-            var lockDb = lockScope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+            var layers = FilterLayers(_layers, profile);
+            _logger.LogInformation("Running {Count} seed layer(s)", layers.Count);
 
-            var lockAcquired = await lockDb.Database
-                .SqlQueryRaw<bool>("SELECT pg_try_advisory_lock({0}) AS \"Value\"", SeedingAdvisoryLockId)
-                .FirstOrDefaultAsync(ct)
-                .ConfigureAwait(false);
+            // Resolve systemUserId — may be Guid.Empty on fresh DB before Core seeds admin
+            var systemUserId = await ResolveSystemUserIdAsync(db, ct).ConfigureAwait(false);
 
-            if (!lockAcquired)
+            foreach (var layer in layers)
             {
-                _logger.LogInformation("Another replica is seeding. Skipping.");
-                return;
+                _logger.LogInformation("Running seed layer: {Layer} (min profile: {MinProfile})",
+                    layer.Name, layer.MinimumProfile);
+
+                var context = new SeedContext(profile, db, services, _logger, systemUserId);
+                await layer.SeedAsync(context, ct).ConfigureAwait(false);
+
+                // Clear ChangeTracker between layers to prevent entity leaks
+                db.ChangeTracker.Clear();
+
+                // Re-resolve systemUserId after Core layer creates admin user
+                if (layer.MinimumProfile == SeedProfile.Prod)
+                    systemUserId = await ResolveSystemUserIdAsync(db, ct).ConfigureAwait(false);
             }
 
-            try
-            {
-                // Layer 1: Core (always) - isolated scope
-                await SeedCoreAsync(ct).ConfigureAwait(false);
-
-                // Layer 2: Catalog (manifest-driven) - isolated scope
-                await SeedCatalogAsync(ct).ConfigureAwait(false);
-
-                _logger.LogInformation("Seeding completed in {Elapsed}ms", sw.ElapsedMilliseconds);
-            }
-            finally
-            {
-                await lockDb.Database
-                    .ExecuteSqlRawAsync("SELECT pg_advisory_unlock({0})", SeedingAdvisoryLockId)
-                    .ConfigureAwait(false);
-            }
+            _logger.LogInformation("Seeding completed in {Elapsed}ms", sw.ElapsedMilliseconds);
         }
         finally
         {
-            await lockScope.DisposeAsync().ConfigureAwait(false);
+            await AdvisoryLockHelper.ReleaseAsync(db, _logger, ct).ConfigureAwait(false);
         }
     }
 
-    private async Task SeedCoreAsync(CancellationToken ct)
+    /// <summary>
+    /// Resolve seed profile from SEED_PROFILE env var → Seeding:Profile config → default Dev.
+    /// </summary>
+    internal static SeedProfile ResolveProfile(IConfiguration? configuration)
     {
-        _logger.LogInformation("Layer 1: Core seeding...");
-        var scope = _scopeFactory.CreateAsyncScope();
-        try
-        {
-            var sp = scope.ServiceProvider;
-            await Core.CoreSeeder.SeedAsync(
-                sp.GetRequiredService<IMediator>(),
-                sp.GetRequiredService<MeepleAiDbContext>(),
-                _logger, ct).ConfigureAwait(false);
-        }
-        finally
-        {
-            await scope.DisposeAsync().ConfigureAwait(false);
-        }
+        // 1. Environment variable takes priority
+        var envVar = Environment.GetEnvironmentVariable("SEED_PROFILE");
+        if (!string.IsNullOrWhiteSpace(envVar) && Enum.TryParse<SeedProfile>(envVar, ignoreCase: true, out var envProfile))
+            return envProfile;
+
+        // 2. Configuration section
+        var configValue = configuration?["Seeding:Profile"];
+        if (!string.IsNullOrWhiteSpace(configValue) && Enum.TryParse<SeedProfile>(configValue, ignoreCase: true, out var cfgProfile))
+            return cfgProfile;
+
+        // 3. Default to Dev for local development
+        return SeedProfile.Dev;
     }
 
-    private async Task SeedCatalogAsync(CancellationToken ct)
+    /// <summary>
+    /// Filter layers by profile ordinal and materialize to list.
+    /// A layer runs if MinimumProfile &lt;= active profile.
+    /// </summary>
+    internal static IReadOnlyList<ISeedLayer> FilterLayers(IEnumerable<ISeedLayer> layers, SeedProfile profile)
+        => layers.Where(l => l.MinimumProfile <= profile).OrderBy(l => l.MinimumProfile).ToList();
+
+    private static async Task<Guid> ResolveSystemUserIdAsync(MeepleAiDbContext db, CancellationToken ct)
     {
-        _logger.LogInformation("Layer 2: Catalog seeding (profile: {Profile})...", _profile);
-        var scope = _scopeFactory.CreateAsyncScope();
-        try
-        {
-            var sp = scope.ServiceProvider;
-            var db = sp.GetRequiredService<MeepleAiDbContext>();
-            var adminUser = await db.Users
-                .FirstOrDefaultAsync(u => u.Role == "admin", ct)
-                .ConfigureAwait(false);
-            var systemUserId = adminUser?.Id ?? Guid.Empty;
-
-            await Catalog.CatalogSeeder.SeedAsync(
-                _profile,
-                db,
-                sp.GetRequiredService<IBggApiService>(),
-                systemUserId,
-                _logger, ct,
-                sp.GetService<IEmbeddingService>(),
-                sp.GetService<IConfiguration>()).ConfigureAwait(false);
-        }
-        finally
-        {
-            await scope.DisposeAsync().ConfigureAwait(false);
-        }
+        var adminUser = await db.Users
+            .FirstOrDefaultAsync(u => u.Role == "admin", ct)
+            .ConfigureAwait(false);
+        return adminUser?.Id ?? Guid.Empty;
     }
-
 }

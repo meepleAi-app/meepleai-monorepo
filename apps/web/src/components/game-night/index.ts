@@ -21,3 +21,5 @@ export { ScoreAssistant } from './ScoreAssistant';
 export { SaveCompleteDialog } from './SaveCompleteDialog';
 export { ResumeSessionPanel } from './ResumeSessionPanel';
 export { GameNightWizard } from './GameNightWizard';
+export { PlayerSetupDialog } from './PlayerSetupDialog';
+export type { PlayerSetup as PlayerSetupEntry } from './PlayerSetupDialog';

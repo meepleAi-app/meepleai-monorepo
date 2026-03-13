@@ -16,6 +16,7 @@ import { useCallback, useState } from 'react';
 
 import { useRouter } from 'next/navigation';
 
+import { api } from '@/lib/api';
 import { cn } from '@/lib/utils';
 
 import { FirstAgentStep } from './FirstAgentStep';
@@ -84,13 +85,23 @@ export function OnboardingWizard({ token, role: _role }: OnboardingWizardProps) 
     }));
   }, []);
 
-  const handleFinish = useCallback(() => {
-    router.push('/chat');
+  const handleFinish = useCallback(async () => {
+    try {
+      await api.auth.completeOnboarding(false);
+    } catch {
+      // Non-critical — proceed even if tracking fails
+    }
+    router.push('/dashboard');
   }, [router]);
 
-  const handleSkipWizard = useCallback(() => {
+  const handleSkipWizard = useCallback(async () => {
     if (state.passwordCompleted) {
-      router.push('/chat');
+      try {
+        await api.auth.completeOnboarding(true);
+      } catch {
+        // Non-critical — proceed even if tracking fails
+      }
+      router.push('/dashboard');
     }
   }, [router, state.passwordCompleted]);
 

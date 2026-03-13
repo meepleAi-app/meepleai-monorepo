@@ -13,7 +13,8 @@ import { useState } from 'react';
 
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useQuery } from '@tanstack/react-query';
-import { ArrowLeft, Loader2, Plus } from 'lucide-react';
+import { ArrowLeft, FileUp, Loader2, Plus } from 'lucide-react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useForm, type Resolver } from 'react-hook-form';
 import { z } from 'zod';
@@ -191,6 +192,21 @@ export function NewGameClient() {
             </p>
           </div>
         </div>
+      </div>
+
+      {/* Cross-link to Import flow (#255) */}
+      <div className="rounded-lg border border-dashed border-slate-300 dark:border-zinc-600 bg-slate-50/50 dark:bg-zinc-800/30 px-4 py-3 flex items-center gap-3">
+        <FileUp className="h-4 w-4 text-muted-foreground shrink-0" />
+        <p className="text-sm text-muted-foreground">
+          Have a PDF rulebook?{' '}
+          <Link
+            href="/admin/shared-games/import"
+            className="text-primary font-medium underline underline-offset-2 hover:text-primary/80"
+          >
+            Import from PDF
+          </Link>{' '}
+          to auto-extract game metadata.
+        </p>
       </div>
 
       {/* BGG Search Section */}

@@ -585,6 +585,38 @@ services:
   #   networks:
   #     - meepleai
 
+  # Issue #137: Docker Socket Proxy (read-only)
+  # Security layer between API and Docker daemon
+  docker-socket-proxy:
+    image: tecnativa/docker-socket-proxy:0.2
+    container_name: meepleai-docker-proxy
+    restart: unless-stopped
+    profiles: [dev, observability, full]
+    environment:
+      # Read-only access for Phase 3
+      CONTAINERS: 1    # List/inspect containers
+      SERVICES: 0      # No swarm services
+      TASKS: 0         # No swarm tasks
+      NETWORKS: 0      # No network management
+      VOLUMES: 0       # No volume management
+      IMAGES: 0        # No image management
+      INFO: 1          # System info
+      VERSION: 1       # Docker version
+      EVENTS: 0        # No event stream (Phase 4)
+      PING: 1          # Health check
+      # Write operations disabled (Phase 4)
+      POST: 0          # No container create/start/stop/restart
+      DELETE: 0        # No container delete
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - meepleai
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 128M
+
   # P3-705: cAdvisor for container metrics
   cadvisor:
     image: gcr.io/cadvisor/cadvisor:v0.49.1

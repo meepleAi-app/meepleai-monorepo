@@ -48,6 +48,7 @@ import {
   ScrollTextIcon,
   HeartPulseIcon,
   BarChart3Icon,
+  BoxIcon,
 } from 'lucide-react';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -363,6 +364,20 @@ export const DASHBOARD_SECTIONS: DashboardSection[] = [
         label: 'Grafana',
         icon: BarChart3Icon,
         activePattern: /^\/admin\/monitor\/grafana/,
+      },
+      // Log Viewer (Issue #140)
+      {
+        href: '/admin/monitor/logs',
+        label: 'Logs',
+        icon: ScrollTextIcon,
+        activePattern: /^\/admin\/monitor\/logs/,
+      },
+      // Container Dashboard (Issue #143)
+      {
+        href: '/admin/monitor/containers',
+        label: 'Containers',
+        icon: BoxIcon,
+        activePattern: /^\/admin\/monitor\/containers/,
       },
       // Config items
       {

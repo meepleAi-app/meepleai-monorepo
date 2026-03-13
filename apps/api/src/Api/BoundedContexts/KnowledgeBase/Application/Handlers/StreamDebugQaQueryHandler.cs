@@ -176,25 +176,40 @@ internal class StreamDebugQaQueryHandler : IStreamingQueryHandler<StreamDebugQaQ
             if (routingEvent != null) yield return routingEvent;
         }
 
-        // ── Step 4: Strategy selection ───────────────────────────────────
+        // ── Step 4: Strategy selection (with sandbox config override) ────
         var strategyName = query.StrategyOverride ?? "HybridSearch";
+        var topK = query.ConfigOverride?.TopK ?? 5;
+        var minScore = 0.55;
+        var denseWeight = query.ConfigOverride?.DenseWeight;
+        var overrideSource = query.StrategyOverride != null ? "user"
+            : query.ConfigOverride != null ? "sandbox"
+            : (string?)null;
+
+        var strategyParams = new Dictionary<string, object>(StringComparer.Ordinal)
+        {
+            ["topK"] = topK,
+            ["minScore"] = minScore,
+            ["searchMode"] = "hybrid"
+        };
+        if (denseWeight.HasValue)
+            strategyParams["denseWeight"] = denseWeight.Value;
+        if (query.ConfigOverride?.RerankingEnabled.HasValue == true)
+            strategyParams["rerankingEnabled"] = query.ConfigOverride.RerankingEnabled.Value;
+        if (query.ConfigOverride?.Temperature.HasValue == true)
+            strategyParams["temperature"] = query.ConfigOverride.Temperature.Value;
+
         yield return CreateEvent(StreamingEventType.DebugStrategySelected,
             new DebugStrategySelectedData(
                 StrategyName: strategyName,
-                Parameters: new Dictionary<string, object>(StringComparer.Ordinal)
-                {
-                    ["topK"] = 5,
-                    ["minScore"] = 0.55,
-                    ["searchMode"] = "hybrid"
-                },
-                OverrideSource: query.StrategyOverride != null ? "user" : null));
+                Parameters: strategyParams,
+                OverrideSource: overrideSource));
 
         // ── Step 5: Retrieval ────────────────────────────────────────────
         yield return CreateEvent(StreamingEventType.DebugRetrievalStart,
             new DebugRetrievalStartData(
                 SearchMode: "hybrid",
-                TopK: 5,
-                MinScore: 0.55));
+                TopK: topK,
+                MinScore: minScore));
 
         yield return CreateEvent(StreamingEventType.StateUpdate,
             new StreamingStateUpdate("Searching knowledge base..."));

@@ -197,7 +197,20 @@ internal record DebugChatRequest(
     Guid? chatId = null,
     IReadOnlyList<Guid>? documentIds = null,
     string? strategyOverride = null,
-    bool includePrompts = false);
+    bool includePrompts = false,
+    DebugChatConfigOverride? configOverride = null);
+
+/// <summary>
+/// Inline config override for sandbox debug chat sessions.
+/// Allows admin to test different RAG parameters without Redis session.
+/// </summary>
+internal record DebugChatConfigOverride(
+    double? DenseWeight = null,
+    int? TopK = null,
+    bool? RerankingEnabled = null,
+    double? Temperature = null,
+    int? MaxTokens = null,
+    string? Model = null);
 
 // CHAT-02: Follow-Up Questions models
 internal record StreamingFollowUpQuestions(

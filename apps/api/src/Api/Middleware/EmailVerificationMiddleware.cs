@@ -73,8 +73,9 @@ internal class EmailVerificationMiddleware
 
             var user = session.User;
 
-            // Admin and Editor roles are always exempt from email verification
-            if (user.Role.Equals("admin", StringComparison.OrdinalIgnoreCase) ||
+            // Admin, SuperAdmin, and Editor roles are always exempt from email verification
+            if (user.Role.Equals("superadmin", StringComparison.OrdinalIgnoreCase) ||
+                user.Role.Equals("admin", StringComparison.OrdinalIgnoreCase) ||
                 user.Role.Equals("editor", StringComparison.OrdinalIgnoreCase))
             {
                 await _next(context).ConfigureAwait(false);

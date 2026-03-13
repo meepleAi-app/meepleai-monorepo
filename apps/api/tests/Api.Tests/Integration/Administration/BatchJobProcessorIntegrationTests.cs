@@ -20,7 +20,7 @@ namespace Api.Tests.Integration.Administration;
 /// Tests job creation, execution, completion, retry, and cancellation flows.
 /// Issue #3697: Epic 1 - Testing & Integration (Phase 2)
 /// </summary>
-[Collection("SharedTestcontainers")]
+[Collection("Integration-GroupD")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("Dependency", "PostgreSQL")]
 [Trait("BoundedContext", "Administration")]

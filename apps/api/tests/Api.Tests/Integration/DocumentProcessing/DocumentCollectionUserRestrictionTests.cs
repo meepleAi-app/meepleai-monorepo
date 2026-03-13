@@ -14,7 +14,7 @@ namespace Api.Tests.Integration.DocumentProcessing;
 /// Tests DeleteBehavior.Restrict for CreatedBy user reference.
 /// </summary>
 [Trait("Category", TestCategories.Integration)]
-[Collection("SharedTestcontainers")]
+[Collection("Integration-GroupA")]
 public class DocumentCollectionUserRestrictionTests : IAsyncLifetime
 {
     private readonly SharedTestcontainersFixture _fixture;

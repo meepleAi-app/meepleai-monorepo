@@ -251,6 +251,35 @@ jobs:
             sleep 2
           done
 
+      - name: Create CI Secret Files
+        working-directory: .
+        run: |
+          echo "🔧 Creating CI secret files for integration tests..."
+          mkdir -p infra/secrets
+          printf 'POSTGRES_USER=postgres\nPOSTGRES_PASSWORD=testpass\nPOSTGRES_DB=meepleai_test\n' > infra/secrets/database.secret
+          printf 'REDIS_PASSWORD=\n' > infra/secrets/redis.secret
+          printf 'JWT_SECRET_KEY=ci-test-jwt-secret-key-minimum-32-chars-long\nJWT_ISSUER=meepleai-ci-test\nJWT_AUDIENCE=meepleai-ci-test\n' > infra/secrets/jwt.secret
+          printf 'ADMIN_EMAIL=admin@test.local\nADMIN_PASSWORD=CiTestPassword123!\nADMIN_DISPLAY_NAME=CI Admin\n' > infra/secrets/admin.secret
+          printf 'QDRANT_URL=http://localhost:6333\n' > infra/secrets/qdrant.secret
+          printf 'EMBEDDING_SERVICE_URL=http://localhost:8000\n' > infra/secrets/embedding-service.secret
+          echo "✅ CI secret files created"
+
+      - name: Configure PostgreSQL for Parallel Tests
+        env:
+          PGPASSWORD: testpass
+        run: |
+          echo "🔧 Increasing max_connections for parallel test execution..."
+          psql -h localhost -U postgres -d meepleai_test -c "ALTER SYSTEM SET max_connections = 500;"
+          psql -h localhost -U postgres -d meepleai_test -c "ALTER SYSTEM SET shared_buffers = '256MB';"
+          # Restart postgres container to apply changes
+          docker restart $(docker ps -q --filter "ancestor=pgvector/pgvector:pg16") || true
+          echo "⏳ Waiting for PostgreSQL to restart..."
+          sleep 3
+          until pg_isready -h localhost -p 5432 -U postgres; do sleep 1; done
+          # Verify new settings
+          psql -h localhost -U postgres -d meepleai_test -c "SHOW max_connections;"
+          echo "✅ PostgreSQL configured with increased max_connections"
+
       - name: Build
         run: dotnet build --no-restore --configuration Release
 
@@ -260,7 +289,7 @@ jobs:
       # - ArbitroAgentIntegrationTests: Uses SharedTestcontainersFixture with orchestration-service (Issue #3871)
       # These tests run in the dedicated backend-e2e-tests.yml workflow instead.
       - name: Run Integration Tests
-        timeout-minutes: 90
+        timeout-minutes: 45
         env:
           POSTGRES_HOST: localhost
           POSTGRES_PORT: 5432
@@ -269,19 +298,25 @@ jobs:
           POSTGRES_PASSWORD: testpass
           ConnectionStrings__Postgres: Host=localhost;Port=5432;Database=meepleai_test;Username=postgres;Password=testpass
           QDRANT_URL: http://localhost:6333
-          REDIS_URL: localhost:6379
+          REDIS_URL: localhost:6379,allowAdmin=true
           OPENROUTER_API_KEY: test-key
           CI: true
           # Issue #3102: Disable rate limiting middleware for integration tests to prevent 429 errors
           DISABLE_RATE_LIMITING: "true"
+          # Issue #CI-Optimization: Pass external service URLs so SharedTestcontainersFixture
+          # skips container startup and uses CI service containers directly
+          TEST_POSTGRES_CONNSTRING: Host=localhost;Port=5432;Database=meepleai_test;Username=postgres;Password=testpass
+          TEST_REDIS_CONNSTRING: localhost:6379,allowAdmin=true
         run: |
-          echo "🧪 Running integration tests..."
+          echo "🧪 Running integration tests (4 parallel collection groups)..."
           dotnet test \
             --filter "Category=Integration&FullyQualifiedName!~UploadPdfMidPhaseCancellationTests&FullyQualifiedName!~FrontendSdk&FullyQualifiedName!~ArbitroAgent" \
+            --settings tests/Api.Tests/integration.runsettings \
             --logger "console;verbosity=minimal" \
             --no-build \
             --configuration Release \
-            --blame-hang-timeout 15min \
+            --blame-hang-timeout 5min \
+            --blame-hang-dump-type mini \
             -p:CollectCoverage=true \
             -p:CoverletOutputFormat=cobertura \
             -p:CoverletOutput=./coverage/integration-coverage.xml
@@ -423,6 +458,17 @@ jobs:
             sleep 1
           done
 
+      - name: Create CI Secret Files
+        working-directory: .
+        run: |
+          mkdir -p infra/secrets
+          printf 'POSTGRES_USER=postgres\nPOSTGRES_PASSWORD=postgres_test_password\nPOSTGRES_DB=meepleai_test\n' > infra/secrets/database.secret
+          printf 'REDIS_PASSWORD=\n' > infra/secrets/redis.secret
+          printf 'JWT_SECRET_KEY=ci-test-jwt-secret-key-minimum-32-chars-long\nJWT_ISSUER=meepleai-ci-test\nJWT_AUDIENCE=meepleai-ci-test\n' > infra/secrets/jwt.secret
+          printf 'ADMIN_EMAIL=admin@test.local\nADMIN_PASSWORD=CiTestPassword123!\nADMIN_DISPLAY_NAME=CI Admin\n' > infra/secrets/admin.secret
+          printf 'QDRANT_URL=http://localhost:6333\n' > infra/secrets/qdrant.secret
+          printf 'EMBEDDING_SERVICE_URL=http://localhost:8000\n' > infra/secrets/embedding-service.secret
+
       - name: Fix dotnet directory permissions
         run: |
           if [ -d "/usr/share/dotnet" ]; then
@@ -479,9 +525,13 @@ jobs:
         timeout-minutes: 2
         run: |
           echo "⏳ Waiting for API to be healthy..."
+          # Use /health/live (liveness check) instead of /health (full check)
+          # /health includes embedding service which isn't available in CI
           for i in {1..40}; do
-            if curl -sf http://localhost:8080/health > /dev/null 2>&1; then
-              echo "✅ API healthy after ~$((i*3))s"
+            if curl -sf http://localhost:8080/health/live > /dev/null 2>&1; then
+              echo "✅ API live after ~$((i*3))s"
+              # Also verify core services are ready
+              curl -sf http://localhost:8080/health/ready > /dev/null 2>&1 && echo "✅ Core services ready" || echo "⚠️ Some core services degraded (non-blocking)"
               exit 0
             fi
             sleep 3

@@ -22,7 +22,7 @@ namespace Api.Tests.Integration.Authentication;
 /// Tests PostgreSQL persistence, session lifecycle, token validation, and revocation.
 /// Issue #2307: Week 3 - Repository integration testing
 /// </summary>
-[Collection("SharedTestcontainers")]
+[Collection("Integration-GroupB")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("Dependency", "PostgreSQL")]
 [Trait("BoundedContext", "Authentication")]

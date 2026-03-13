@@ -37,7 +37,7 @@ namespace Api.Tests.BoundedContexts.Authentication.Application.Commands;
 /// Pattern: AAA (Arrange-Act-Assert), SharedTestcontainersFixture (Issue #2031), FluentAssertions
 /// Execution Time Target: <30s for full suite (integration tests)
 /// </remarks>
-[Collection("SharedTestcontainers")]
+[Collection("Integration-GroupB")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("Type", "Handler")]
 [Trait("Dependency", "PostgreSQL")]

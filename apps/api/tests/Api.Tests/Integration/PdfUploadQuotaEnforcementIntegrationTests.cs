@@ -39,7 +39,7 @@ namespace Api.Tests.Integration;
 /// conflicts between tests. Redis state persists within a single container lifecycle,
 /// so parallel execution could cause unpredictable quota counts.
 /// </summary>
-[Collection("SharedTestcontainers")]
+[Collection("Integration-GroupB")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("Issue", "2031")]
 public sealed class PdfUploadQuotaEnforcementIntegrationTests : IAsyncLifetime

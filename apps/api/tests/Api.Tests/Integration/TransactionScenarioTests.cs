@@ -20,7 +20,7 @@ namespace Api.Tests.Integration;
 /// Tests commit, rollback, optimistic locking, deadlock handling, and transaction scope.
 /// Issue #2307: Week 3 - Transaction integrity integration testing (5 tests)
 /// </summary>
-[Collection("SharedTestcontainers")]
+[Collection("Integration-GroupB")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("Dependency", "PostgreSQL")]
 [Trait("Issue", "2307")]

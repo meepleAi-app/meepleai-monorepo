@@ -15,7 +15,7 @@ namespace Api.Tests.Infrastructure.Seeders;
 /// Tests for FeatureFlagSeeder default configuration seeding.
 /// Issue #3674: Feature Flag Tier-Based Access Verification
 /// </summary>
-[Collection("SharedTestcontainers")]
+[Collection("Integration-GroupD")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("Dependency", "PostgreSQL")]
 [Trait("BoundedContext", "SystemConfiguration")]

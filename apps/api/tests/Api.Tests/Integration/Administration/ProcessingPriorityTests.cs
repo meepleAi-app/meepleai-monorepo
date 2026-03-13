@@ -23,7 +23,7 @@ namespace Api.Tests.Integration.Administration;
 /// in real PostgreSQL and the change is durable across DB reads.
 /// Issue #4673: Validate that priority assignment works with real schema + constraints.
 /// </summary>
-[Collection("SharedTestcontainers")]
+[Collection("Integration-GroupD")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("Dependency", "PostgreSQL")]
 [Trait("BoundedContext", "Administration")]

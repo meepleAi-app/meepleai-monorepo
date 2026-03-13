@@ -20,7 +20,7 @@ namespace Api.Tests.Integration.UserLibrary;
 /// Integration tests for linking/unlinking agents to private games.
 /// Issue #4228: SharedGame and PrivateGame → AgentDefinition relationship
 /// </summary>
-[Collection("SharedTestcontainers")]
+[Collection("Integration-GroupC")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("Dependency", "PostgreSQL")]
 [Trait("BoundedContext", "UserLibrary")]

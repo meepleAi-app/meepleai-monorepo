@@ -13,7 +13,7 @@ namespace Api.Tests.BoundedContexts.KnowledgeBase.Infrastructure.Persistence;
 /// Issue #866: AI Agents Entity & Configuration
 /// Issue #2577: Migrated to SharedDatabaseTestBase for connection pool stability.
 /// </summary>
-[Collection("SharedTestcontainers")]
+[Collection("Integration-GroupA")]
 [Trait("Category", TestCategories.Integration)]
 internal class AgentRepositoryTests : SharedDatabaseTestBase<AgentRepository>
 {

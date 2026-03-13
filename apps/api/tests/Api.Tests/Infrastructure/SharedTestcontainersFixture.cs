@@ -911,7 +911,8 @@ public sealed class SharedTestcontainersFixture : IAsyncLifetime
 
 /// <summary>
 /// Collection definition for shared Testcontainers.
-/// All integration tests should use this collection to share container instances.
+/// Legacy collection - kept for backward compatibility.
+/// New tests should use one of the parallel group collections below.
 /// </summary>
 [CollectionDefinition("SharedTestcontainers")]
 public class SharedTestcontainersCollectionDefinition : ICollectionFixture<SharedTestcontainersFixture>
@@ -920,3 +921,29 @@ public class SharedTestcontainersCollectionDefinition : ICollectionFixture<Share
     // to be the place to apply [CollectionFixture<>] and all the
     // ICollectionFixture<> interfaces.
 }
+
+/// <summary>
+/// Parallel collection groups for integration tests.
+/// Issue #CI-Optimization: Split SharedTestcontainers into 4 parallel groups
+/// to enable concurrent execution while maintaining per-group sequential safety.
+///
+/// In CI, the fixture uses external services (env vars) so multiple fixture instances
+/// share the same PostgreSQL/Redis. Each test class creates an isolated database
+/// (unique name per class), making parallel execution safe.
+///
+/// Group A: KnowledgeBase + DocumentProcessing (~41 classes)
+/// Group B: Authentication + Integration root tests (~42 classes)
+/// Group C: SharedGameCatalog + GameManagement + UserLibrary + SessionTracking (~39 classes)
+/// Group D: Administration + WorkflowIntegration + SystemConfiguration + misc (~42 classes)
+/// </summary>
+[CollectionDefinition("Integration-GroupA")]
+public class IntegrationGroupACollection : ICollectionFixture<SharedTestcontainersFixture> { }
+
+[CollectionDefinition("Integration-GroupB")]
+public class IntegrationGroupBCollection : ICollectionFixture<SharedTestcontainersFixture> { }
+
+[CollectionDefinition("Integration-GroupC")]
+public class IntegrationGroupCCollection : ICollectionFixture<SharedTestcontainersFixture> { }
+
+[CollectionDefinition("Integration-GroupD")]
+public class IntegrationGroupDCollection : ICollectionFixture<SharedTestcontainersFixture> { }

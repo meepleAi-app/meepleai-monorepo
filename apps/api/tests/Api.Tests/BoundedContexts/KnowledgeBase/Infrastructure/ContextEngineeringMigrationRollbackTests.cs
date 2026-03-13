@@ -28,7 +28,7 @@ namespace Api.Tests.BoundedContexts.KnowledgeBase.Infrastructure;
 /// 3. Partial Rollback - Rolling back to intermediate migration points
 /// 4. Foreign Key Constraints - CASCADE behavior during rollback
 /// </summary>
-[Collection("SharedTestcontainers")]
+[Collection("Integration-GroupA")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "KnowledgeBase")]
 [Trait("Dependency", "PostgreSQL")]

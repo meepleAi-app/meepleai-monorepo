@@ -27,7 +27,7 @@ namespace Api.Tests.Integration;
 /// Tests complete end-to-end workflows across all bounded contexts.
 /// Uses SharedTestcontainersFixture for optimized performance and Docker hijack prevention (Issue #2031).
 /// </summary>
-[Collection("SharedTestcontainers")]
+[Collection("Integration-GroupD")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("Category", "CrossContext")]
 [Trait("Issue", "2031")]

@@ -28,7 +28,7 @@ namespace Api.Tests.Integration.DocumentProcessing;
 /// Issue #2051: Multi-document collection creation with validation
 /// Uses SharedTestcontainersFixture for optimized performance and Docker hijack prevention (Issue #2031).
 /// </summary>
-[Collection("SharedTestcontainers")]
+[Collection("Integration-GroupA")]
 [Trait("Issue", "2031")]
 [Trait("Category", TestCategories.Integration)]
 public sealed class CreateDocumentCollectionHandlerIntegrationTests : IAsyncLifetime

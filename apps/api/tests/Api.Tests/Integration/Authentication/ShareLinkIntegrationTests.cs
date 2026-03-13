@@ -22,7 +22,7 @@ namespace Api.Tests.Integration.Authentication;
 /// Integration tests for ShareLink feature using Testcontainers (PostgreSQL + Redis).
 /// Tests the complete lifecycle: creation, validation, revocation, and blacklist enforcement.
 /// </summary>
-[Collection("SharedTestcontainers")]
+[Collection("Integration-GroupB")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("Dependency", "PostgreSQL")]
 [Trait("Dependency", "Redis")]

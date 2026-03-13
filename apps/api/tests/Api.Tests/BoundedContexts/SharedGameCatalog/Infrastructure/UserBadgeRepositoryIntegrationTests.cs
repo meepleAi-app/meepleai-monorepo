@@ -21,7 +21,7 @@ namespace Api.Tests.BoundedContexts.SharedGameCatalog.Infrastructure;
 /// Tests: UserBadge CRUD operations and queries with actual database.
 /// ISSUE-2731: Infrastructure - EF Core Migrations e Repository
 /// </summary>
-[Collection("SharedTestcontainers")]
+[Collection("Integration-GroupC")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "SharedGameCatalog")]
 public sealed class UserBadgeRepositoryIntegrationTests : IAsyncLifetime

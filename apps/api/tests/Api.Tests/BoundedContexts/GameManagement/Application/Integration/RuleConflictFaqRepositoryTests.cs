@@ -23,7 +23,7 @@ namespace Api.Tests.BoundedContexts.GameManagement.Application.Integration;
 /// </summary>
 [Trait("Category", TestCategories.Integration)]
 [Trait("Dependency", "PostgreSQL")]
-[Collection("SharedTestcontainers")]
+[Collection("Integration-GroupC")]
 public sealed class RuleConflictFaqRepositoryTests : IAsyncLifetime
 {
     private readonly SharedTestcontainersFixture _fixture;

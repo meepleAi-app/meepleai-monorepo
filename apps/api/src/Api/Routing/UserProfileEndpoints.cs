@@ -38,6 +38,10 @@ internal static class UserProfileEndpoints
         MapAiUsageEndpoints(group);
         // Issue #3674: User available features
         MapFeatureAccessEndpoints(group);
+        // Issue #323: Onboarding completion
+        MapCompleteOnboardingEndpoint(group);
+        // Issue #124: Save user interests from onboarding wizard
+        MapSaveUserInterestsEndpoint(group);
 
         return group;
     }
@@ -524,7 +528,95 @@ internal static class UserProfileEndpoints
         .Produces<IReadOnlyList<UserFeatureDto>>(200)
         .Produces(401);
     }
+
+    private static void MapCompleteOnboardingEndpoint(RouteGroupBuilder group)
+    {
+        group.MapPost("/users/onboarding/complete", async (
+            [FromBody] CompleteOnboardingPayload payload,
+            HttpContext context,
+            IMediator mediator,
+            ILogger<Program> logger,
+            CancellationToken ct) =>
+        {
+            var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
+
+            var command = new Api.BoundedContexts.Authentication.Application.Commands.Onboarding.CompleteOnboardingCommand(
+                UserId: session!.User!.Id,
+                Skipped: payload.Skipped
+            );
+
+            await mediator.Send(command, ct).ConfigureAwait(false);
+            logger.LogInformation("Onboarding {Status} for user {UserId}",
+                payload.Skipped ? "skipped" : "completed", session.User.Id);
+
+            return Results.Json(new { ok = true, message = payload.Skipped ? "Onboarding skipped" : "Onboarding completed" });
+        })
+        .RequireSession()
+        .RequireAuthorization()
+        .WithName("CompleteOnboarding")
+        .WithTags("User Profile", "Onboarding")
+        .WithSummary("Mark onboarding as completed or skipped")
+        .WithDescription(@"Marks the authenticated user's onboarding wizard as completed or skipped.
+
+**Issue**: #323 - Onboarding completion tracking.
+
+**Authorization**: Requires active session (cookie-based authentication).
+
+**Request Body**: CompleteOnboardingPayload with skipped flag.")
+        .Produces(200)
+        .Produces(401);
+    }
+
+    private static void MapSaveUserInterestsEndpoint(RouteGroupBuilder group)
+    {
+        group.MapPost("/users/interests", async (
+            [FromBody] SaveUserInterestsPayload payload,
+            HttpContext context,
+            IMediator mediator,
+            ILogger<Program> logger,
+            CancellationToken ct) =>
+        {
+            var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
+
+            var command = new Api.BoundedContexts.Authentication.Application.Commands.UserProfile.SaveUserInterestsCommand(
+                UserId: session!.User!.Id,
+                Interests: payload.Interests
+            );
+
+            await mediator.Send(command, ct).ConfigureAwait(false);
+            logger.LogInformation("Saved {Count} interests for user {UserId}",
+                payload.Interests?.Count ?? 0, session.User.Id);
+
+            return Results.Json(new { ok = true, message = "Interests saved successfully" });
+        })
+        .RequireSession()
+        .RequireAuthorization()
+        .WithName("SaveUserInterests")
+        .WithTags("User Profile", "Onboarding")
+        .WithSummary("Save user's board game interests")
+        .WithDescription(@"Saves the user's board game category interests from the onboarding wizard.
+
+**Issue**: #124 - Invitation system onboarding wizard.
+
+**Authorization**: Requires active session (cookie-based authentication).
+
+**Request Body**: SaveUserInterestsPayload with list of interest category IDs.
+Valid categories: Strategy, Party, Cooperative, Family, Thematic, Abstract, Card, Dice, Miniatures.")
+        .Produces(200)
+        .Produces(400)
+        .Produces(401);
+    }
 }
+
+/// <summary>
+/// Payload for completing onboarding. Issue #323.
+/// </summary>
+internal record CompleteOnboardingPayload(bool Skipped = false);
+
+/// <summary>
+/// Payload for saving user interests. Issue #124.
+/// </summary>
+internal record SaveUserInterestsPayload(List<string> Interests);
 
 /// <summary>
 /// Payload for updating user profile.

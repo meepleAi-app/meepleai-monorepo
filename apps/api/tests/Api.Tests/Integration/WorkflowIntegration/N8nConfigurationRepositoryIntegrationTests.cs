@@ -25,7 +25,7 @@ namespace Api.Tests.Integration.WorkflowIntegration;
 /// Tests PostgreSQL persistence, CRUD operations, and domain constraints.
 /// Issue #2307: Week 3 - WorkflowIntegration repository integration testing
 /// </summary>
-[Collection("SharedTestcontainers")]
+[Collection("Integration-GroupD")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("Dependency", "PostgreSQL")]
 [Trait("BoundedContext", "WorkflowIntegration")]

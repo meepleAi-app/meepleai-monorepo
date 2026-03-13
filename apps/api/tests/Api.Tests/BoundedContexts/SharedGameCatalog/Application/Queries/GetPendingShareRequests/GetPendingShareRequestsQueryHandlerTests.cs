@@ -22,7 +22,7 @@ namespace Api.Tests.BoundedContexts.SharedGameCatalog.Application.Queries.GetPen
 /// Integration tests for GetPendingShareRequestsQueryHandler.
 /// Issue #2727: Application - Query per Admin Dashboard
 /// </summary>
-[Collection("SharedTestcontainers")]
+[Collection("Integration-GroupC")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "SharedGameCatalog")]
 public sealed class GetPendingShareRequestsQueryHandlerTests : IAsyncLifetime

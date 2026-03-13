@@ -22,7 +22,7 @@ namespace Api.Tests.BoundedContexts.SharedGameCatalog.Application.Queries.GetSha
 /// Integration tests for GetShareRequestHistoryQueryHandler.
 /// Issue #2727: Application - Query per Admin Dashboard
 /// </summary>
-[Collection("SharedTestcontainers")]
+[Collection("Integration-GroupC")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "SharedGameCatalog")]
 public sealed class GetShareRequestHistoryQueryHandlerTests : IAsyncLifetime

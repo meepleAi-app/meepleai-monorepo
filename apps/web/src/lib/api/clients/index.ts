@@ -38,3 +38,6 @@ export * from './gameToolkitClient'; // AI Toolkit Generation
 export * from './sessionStatisticsClient'; // P4: Session Analytics
 export * from './gameNightsClient'; // Issue #33 — Game Nights
 export * from './invitationsClient'; // Issue #132 — User Invitations
+export * from './gameNightBggClient'; // Game Night Improvvisata
+export * from './tierClient'; // Game Night Improvvisata — Tier & Usage
+export * from './sessionInviteClient'; // Game Night Improvvisata — Session Invites

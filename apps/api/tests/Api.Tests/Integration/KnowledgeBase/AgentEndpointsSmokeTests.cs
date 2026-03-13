@@ -21,7 +21,7 @@ namespace Api.Tests.Integration.KnowledgeBase;
 /// Issue #3173: [RAG-002] Agent Endpoints Smoke Test.
 /// Validates all 8 agent endpoints return 2xx responses for happy paths.
 /// </summary>
-[Collection("SharedTestcontainers")]
+[Collection("Integration-GroupA")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "KnowledgeBase")]
 [Trait("Epic", "RAG-Prerequisites")]

@@ -35,3 +35,10 @@ export type { PdfStatusTimelineProps } from './PdfStatusTimeline';
 
 export { PdfMetricsDisplay } from './PdfMetricsDisplay';
 export type { PdfMetricsDisplayProps } from './PdfMetricsDisplay';
+
+// ============================================================================
+// E5-2 - Language Override Selector
+// ============================================================================
+
+export { LanguageOverrideSelector } from './LanguageOverrideSelector';
+export type { LanguageOverrideSelectorProps } from './LanguageOverrideSelector';

@@ -39,6 +39,11 @@ internal sealed class PdfDocument : AggregateRoot<Guid>
     // Issue #2029: Language detection for PDF filtering
     public LanguageCode Language { get; private set; }
 
+    // E5-1: Language confidence from detection and manual override
+    public double? LanguageConfidence { get; private set; }
+    public string? LanguageOverride { get; private set; }
+    public string? EffectiveLanguage => LanguageOverride ?? Language?.Value;
+
     // Issue #2051: Multi-document collection support
     public Guid? CollectionId { get; private set; }
     public DocumentType DocumentType { get; private set; }
@@ -176,7 +181,9 @@ internal sealed class PdfDocument : AggregateRoot<Guid>
         DateTime? copyrightDisclaimerAcceptedAt = null,
         Guid? copyrightDisclaimerAcceptedBy = null,
         bool isActiveForRag = true,
-        string? versionLabel = null)
+        string? versionLabel = null,
+        double? languageConfidence = null,
+        string? languageOverride = null)
     {
         var document = new PdfDocument
         {
@@ -237,7 +244,11 @@ internal sealed class PdfDocument : AggregateRoot<Guid>
             IsActiveForRag = isActiveForRag,
 
             // Issue #5447: Version label
-            VersionLabel = versionLabel
+            VersionLabel = versionLabel,
+
+            // E5-1: Language confidence and override
+            LanguageConfidence = languageConfidence,
+            LanguageOverride = languageOverride
         };
 
         // Issue #4219: Calculate ETA after reconstitution
@@ -548,10 +559,14 @@ internal sealed class PdfDocument : AggregateRoot<Guid>
     /// Accepts the copyright disclaimer for this document.
     /// Issue #5446: Required before processing starts.
     /// </summary>
+    /// <exception cref="InvalidOperationException">Thrown when the disclaimer has already been accepted.</exception>
     public void AcceptCopyrightDisclaimer(Guid userId)
     {
         if (userId == Guid.Empty)
             throw new ArgumentException("User ID cannot be empty", nameof(userId));
+
+        if (CopyrightDisclaimerAcceptedAt.HasValue)
+            throw new InvalidOperationException("Copyright disclaimer has already been accepted");
 
         CopyrightDisclaimerAcceptedAt = DateTime.UtcNow;
         CopyrightDisclaimerAcceptedBy = userId;
@@ -605,6 +620,31 @@ internal sealed class PdfDocument : AggregateRoot<Guid>
     {
         ArgumentNullException.ThrowIfNull(languageCode);
         Language = languageCode;
+    }
+
+    /// <summary>
+    /// Sets the detected language with confidence score from automatic detection.
+    /// E5-1: Language Intelligence for Game Night Improvvisata.
+    /// </summary>
+    /// <param name="languageCode">ISO 639-1 language code (e.g., "de", "it")</param>
+    /// <param name="confidence">Detection confidence between 0.0 and 1.0</param>
+    public void SetDetectedLanguage(string languageCode, double confidence)
+    {
+        if (confidence < 0.0 || confidence > 1.0)
+            throw new ArgumentOutOfRangeException(nameof(confidence), "Confidence must be between 0.0 and 1.0");
+
+        Language = new LanguageCode(languageCode);
+        LanguageConfidence = confidence;
+    }
+
+    /// <summary>
+    /// Manually overrides the detected language. Pass null or empty to clear the override.
+    /// E5-1: Language Intelligence for Game Night Improvvisata.
+    /// </summary>
+    /// <param name="languageCode">ISO 639-1 language code, or null/empty to clear</param>
+    public void OverrideLanguage(string? languageCode)
+    {
+        LanguageOverride = string.IsNullOrWhiteSpace(languageCode) ? null : languageCode;
     }
 
     // Issue #2051: Assign document to collection
@@ -727,7 +767,11 @@ internal sealed class PdfDocument : AggregateRoot<Guid>
             ExtractingStartedAt = source.ExtractingStartedAt,
             ChunkingStartedAt = source.ChunkingStartedAt,
             EmbeddingStartedAt = source.EmbeddingStartedAt,
-            IndexingStartedAt = source.IndexingStartedAt
+            IndexingStartedAt = source.IndexingStartedAt,
+
+            // E5-1: Copy language confidence and override
+            LanguageConfidence = source.LanguageConfidence,
+            LanguageOverride = source.LanguageOverride
         };
 
         // Issue #4219: Calculate ETA for copied document

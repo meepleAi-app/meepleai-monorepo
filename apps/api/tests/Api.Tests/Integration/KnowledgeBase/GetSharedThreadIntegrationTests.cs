@@ -32,7 +32,7 @@ namespace Api.Tests.Integration.KnowledgeBase;
 /// Issue #2150: Verifies synchronous analytics recording works correctly
 /// (removed fire-and-forget Task.Run pattern to avoid DI scope violation).
 /// </summary>
-[Collection("SharedTestcontainers")]
+[Collection("Integration-GroupA")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("Dependency", "PostgreSQL")]
 [Trait("Dependency", "Redis")]

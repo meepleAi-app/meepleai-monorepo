@@ -34,19 +34,12 @@ export interface LogoProps {
  * Displays the MeepleAI brand logo with responsive behavior.
  * Shows icon-only on mobile, full logo on desktop.
  */
-export function Logo({
-  variant = 'auto',
-  size = 'sm',
-  asLink = true,
-  className,
-}: LogoProps) {
+export function Logo({ variant = 'auto', size = 'sm', asLink = true, className }: LogoProps) {
   const { responsive } = useLayout();
   const { isMobile } = responsive;
 
   // Determine actual variant based on viewport
-  const actualVariant = variant === 'auto'
-    ? isMobile ? 'icon' : 'full'
-    : variant;
+  const actualVariant = variant === 'auto' ? (isMobile ? 'icon' : 'full') : variant;
 
   const logoContent = (
     <div
@@ -56,10 +49,7 @@ export function Logo({
         className
       )}
     >
-      <MeepleLogo
-        variant={actualVariant}
-        size={size}
-      />
+      <MeepleLogo variant={actualVariant} size={size} />
       {/* Show text on non-mobile or when forced to full */}
       {actualVariant === 'full' && (
         <span className="font-quicksand font-bold text-xl text-foreground hidden sm:inline">

@@ -1,6 +1,7 @@
 using Api.BoundedContexts.SharedGameCatalog.Application;
 using Api.BoundedContexts.SharedGameCatalog.Application.Commands;
 using Api.BoundedContexts.SharedGameCatalog.Application.Commands.AddRagToSharedGame;
+using Api.BoundedContexts.SharedGameCatalog.Application.Commands.RemoveRagFromSharedGame;
 using Api.BoundedContexts.SharedGameCatalog.Application.Commands.RecordGameEvent;
 using Api.BoundedContexts.SharedGameCatalog.Application.DTOs;
 using Api.BoundedContexts.SharedGameCatalog.Application.Queries.GetCatalogTrending;
@@ -170,6 +171,16 @@ internal static class SharedGameCatalogEndpoints
             .Produces(StatusCodes.Status204NoContent)
             .Produces(StatusCodes.Status404NotFound);
 
+        // Quick-publish (Draft → Published directly) - Issue #250
+        group.MapPost("/admin/shared-games/{id:guid}/quick-publish", HandleQuickPublish)
+            .RequireAuthorization("AdminOnlyPolicy")
+            .WithName("QuickPublishSharedGame")
+            .WithSummary("Quick-publish game directly from Draft to Published (Admin only)")
+            .WithDescription("Combines submit and approve into a single operation. Only works for Draft games.")
+            .Produces(StatusCodes.Status204NoContent)
+            .Produces(StatusCodes.Status404NotFound)
+            .Produces(StatusCodes.Status400BadRequest);
+
         // Reject publication (PendingApproval → Draft) - Issue #2514
         group.MapPost("/admin/shared-games/{id:guid}/reject-publication", HandleRejectPublication)
             .RequireAuthorization("AdminOnlyPolicy")
@@ -253,6 +264,13 @@ internal static class SharedGameCatalogEndpoints
             .WithSummary("Check if BGG game already exists (Admin/Editor)")
             .WithDescription("Checks if a game with given BGG ID exists. Returns both existing game data and fresh BGG data for diff comparison.")
             .Produces<BggDuplicateCheckResult>();
+
+        // Distinct metadata for autocomplete (categories, mechanics, designers, publishers)
+        group.MapGet("/admin/shared-games/metadata/distinct", HandleGetDistinctMetadata)
+            .RequireAuthorization("AdminOrEditorPolicy")
+            .WithName("GetDistinctMetadata")
+            .WithSummary("Get distinct categories, mechanics, designers, publishers (Admin/Editor)")
+            .Produces<DistinctMetadataDto>();
 
         // Update existing game from BGG with selective field updates
         group.MapPut("/admin/shared-games/{id:guid}/update-from-bgg", HandleUpdateFromBgg)
@@ -398,6 +416,13 @@ internal static class SharedGameCatalogEndpoints
             .RequireAuthorization("AdminOrEditorPolicy")
             .WithName("RemoveGameDocument")
             .WithSummary("Remove document from game (Admin/Editor)")
+            .Produces(StatusCodes.Status204NoContent);
+
+        group.MapDelete("/admin/shared-games/{id:guid}/documents/{documentId:guid}/full", HandleRemoveRagFromSharedGame)
+            .RequireAuthorization("AdminPolicy")
+            .WithName("RemoveRagFromSharedGame")
+            .WithSummary("Remove document with full PDF cleanup (Admin only)")
+            .WithDescription("Removes SharedGameDocument link and deletes PDF with cascade cleanup (VectorDoc, TextChunks, Qdrant, blob).")
             .Produces(StatusCodes.Status204NoContent);
 
         // Agent Linking (Issue #4228)
@@ -780,7 +805,11 @@ internal static class SharedGameCatalogEndpoints
             request.ThumbnailUrl,
             request.Rules,
             userId,
-            request.BggId);
+            request.BggId,
+            request.Categories,
+            request.Mechanics,
+            request.Designers,
+            request.Publishers);
 
         var gameId = await mediator.Send(command, ct).ConfigureAwait(false);
         return Results.Created($"/api/v1/shared-games/{gameId}", gameId);
@@ -868,6 +897,32 @@ internal static class SharedGameCatalogEndpoints
         catch (InvalidOperationException)
         {
             return Results.NotFound();
+        }
+    }
+
+    private static async Task<IResult> HandleQuickPublish(
+        Guid id,
+        IMediator mediator,
+        HttpContext context,
+        CancellationToken ct)
+    {
+        var (authorized, session, error) = context.RequireAdminSession();
+        if (!authorized) return error!;
+
+        var command = new QuickPublishSharedGameCommand(id, session!.User!.Id);
+
+        try
+        {
+            await mediator.Send(command, ct).ConfigureAwait(false);
+            return Results.NoContent();
+        }
+        catch (NotFoundException)
+        {
+            return Results.NotFound();
+        }
+        catch (InvalidOperationException ex)
+        {
+            return Results.BadRequest(new { error = ex.Message });
         }
     }
 
@@ -1060,6 +1115,14 @@ internal static class SharedGameCatalogEndpoints
     {
         var query = new CheckBggDuplicateQuery(bggId);
         var result = await mediator.Send(query, ct).ConfigureAwait(false);
+        return Results.Ok(result);
+    }
+
+    private static async Task<IResult> HandleGetDistinctMetadata(
+        IMediator mediator,
+        CancellationToken ct)
+    {
+        var result = await mediator.Send(new GetDistinctMetadataQuery(), ct).ConfigureAwait(false);
         return Results.Ok(result);
     }
 
@@ -1490,6 +1553,21 @@ internal static class SharedGameCatalogEndpoints
         {
             return Results.BadRequest(new { error = ex.Message });
         }
+    }
+
+    private static async Task<IResult> HandleRemoveRagFromSharedGame(
+        Guid id,
+        Guid documentId,
+        HttpContext context,
+        IMediator mediator,
+        CancellationToken ct)
+    {
+        var (authorized, session, error) = context.RequireAdminSession();
+        if (!authorized) return error!;
+
+        var command = new RemoveRagFromSharedGameCommand(id, documentId, session!.User!.Id);
+        await mediator.Send(command, ct).ConfigureAwait(false);
+        return Results.NoContent();
     }
 
     // ========================================
@@ -2967,7 +3045,11 @@ internal record CreateSharedGameRequest(
     string ImageUrl,
     string ThumbnailUrl,
     GameRulesDto? Rules,
-    int? BggId);
+    int? BggId,
+    List<string>? Categories = null,
+    List<string>? Mechanics = null,
+    List<string>? Designers = null,
+    List<string>? Publishers = null);
 
 /// <summary>
 /// Request DTO for updating a shared game.

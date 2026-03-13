@@ -18,7 +18,7 @@ namespace Api.Tests.Integration.Administration;
 /// Tests PostgreSQL, Redis, and Qdrant health validation.
 /// Issue #3697: Epic 1 - Testing & Integration (Phase 2)
 /// </summary>
-[Collection("SharedTestcontainers")]
+[Collection("Integration-GroupD")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("Dependency", "PostgreSQL")]
 [Trait("Dependency", "Redis")]

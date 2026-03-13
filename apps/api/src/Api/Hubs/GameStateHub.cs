@@ -10,8 +10,10 @@ namespace Api.Hubs;
 
 /// <summary>
 /// SignalR hub for real-time game state synchronization across clients.
+/// Supports both JWT-authenticated users and guest participants (via session token).
+/// AllowAnonymous permits guest WebSocket connections; hub methods validate identity as needed.
 /// </summary>
-[Authorize]
+[AllowAnonymous]
 public class GameStateHub : Hub
 {
     private readonly ILogger<GameStateHub> _logger;
@@ -121,6 +123,82 @@ public class GameStateHub : Hub
 
         _logger.LogInformation(
             "Snapshot created in session {SessionId} by user {UserId}",
+            sessionId,
+            Context.UserIdentifier
+        );
+    }
+
+    /// <summary>
+    /// Join a game session with a specific role.
+    /// Host users are added to both the session group and a host-only sub-group.
+    /// </summary>
+    public async Task JoinSessionWithRole(string sessionId, string role)
+    {
+        var group = GetSessionGroup(sessionId);
+        await Groups.AddToGroupAsync(Context.ConnectionId, group).ConfigureAwait(false);
+
+        if (string.Equals(role, "host", StringComparison.OrdinalIgnoreCase))
+        {
+            await Groups.AddToGroupAsync(Context.ConnectionId, $"{group}:host").ConfigureAwait(false);
+        }
+
+        _logger.LogInformation(
+            "User {UserId} joined session {SessionId} with role {Role} (Connection: {ConnectionId})",
+            Context.UserIdentifier,
+            sessionId,
+            role,
+            Context.ConnectionId
+        );
+    }
+
+    /// <summary>
+    /// Player proposes a score — only the host group receives the proposal.
+    /// </summary>
+    public async Task ProposeScore(string sessionId, object proposal)
+    {
+        await Clients.Group($"{GetSessionGroup(sessionId)}:host")
+            .SendAsync("ScoreProposed", proposal).ConfigureAwait(false);
+
+        _logger.LogDebug(
+            "Score proposed in session {SessionId} by user {UserId}",
+            sessionId,
+            Context.UserIdentifier
+        );
+    }
+
+    /// <summary>
+    /// Host confirms a score — broadcast to all participants in the session.
+    /// </summary>
+    public async Task ConfirmScore(string sessionId, object confirmation)
+    {
+        await Clients.Group(GetSessionGroup(sessionId))
+            .SendAsync("ScoreConfirmed", confirmation).ConfigureAwait(false);
+
+        _logger.LogInformation(
+            "Score confirmed in session {SessionId} by user {UserId}",
+            sessionId,
+            Context.UserIdentifier
+        );
+    }
+
+    /// <summary>
+    /// Host toggles AI agent access for a specific participant.
+    /// Broadcasts to session group because SignalR identity is JWT userId or "guest:{token}",
+    /// not the participant DB GUID. Clients filter by participantId.
+    /// </summary>
+    public async Task UpdateAgentAccess(string sessionId, string participantId, bool enabled)
+    {
+        await Clients.Group(GetSessionGroup(sessionId))
+            .SendAsync("AgentAccessChanged", new
+            {
+                participantId,
+                enabled
+            }).ConfigureAwait(false);
+
+        _logger.LogInformation(
+            "Agent access {Status} for participant {ParticipantId} in session {SessionId} by user {UserId}",
+            enabled ? "enabled" : "disabled",
+            participantId,
             sessionId,
             Context.UserIdentifier
         );

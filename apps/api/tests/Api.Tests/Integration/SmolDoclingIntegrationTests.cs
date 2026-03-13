@@ -23,7 +23,7 @@ namespace Api.Tests.Integration;
 /// Dependencies: #946 (Docker), #947 (C# client)
 /// Migrated to SharedTestcontainersFixture for optimized performance (reuses container across tests)
 /// </remarks>
-[Collection("SharedTestcontainers")]
+[Collection("Integration-GroupB")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("Category", "PDF")]
 public class SmolDoclingIntegrationTests : IAsyncLifetime

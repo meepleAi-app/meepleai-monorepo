@@ -2,6 +2,7 @@ using System;
 using Api.Middleware.Exceptions;
 using Api.Observability;
 using Api.SharedKernel.Domain.Exceptions;
+using Api.SharedKernel.Exceptions;
 using FluentValidation;
 using Microsoft.AspNetCore.Http;
 
@@ -71,6 +72,13 @@ internal class ApiExceptionHandlerMiddleware
             return;
         }
 
+        // E2-3: Tier limit enforcement — returns 403 with upgrade info
+        if (ex is TierLimitExceededException tierLimitEx)
+        {
+            await HandleTierLimitExceptionAsync(context, tierLimitEx).ConfigureAwait(false);
+            return;
+        }
+
         // Determine status code and error type based on exception type
         var (statusCode, errorType, message) = MapExceptionToResponse(ex);
 
@@ -132,6 +140,40 @@ internal class ApiExceptionHandlerMiddleware
             error = "validation_error",
             message = "One or more validation errors occurred",
             errors = errors,
+            correlationId = context.TraceIdentifier,
+            timestamp = DateTime.UtcNow
+        };
+
+        await context.Response.WriteAsJsonAsync(errorResponse).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Handles TierLimitExceededException with HTTP 403 and structured upgrade info.
+    /// E2-3: Game Night Improvvisata — Enforce Tier Limits on Existing Endpoints.
+    /// </summary>
+    private async Task HandleTierLimitExceptionAsync(
+        HttpContext context,
+        TierLimitExceededException tierLimitException)
+    {
+        var endpoint = GetRoutePattern(context) ?? context.Request.Path.ToString();
+
+        MeepleAiMetrics.RecordApiError(
+            exception: tierLimitException,
+            httpStatusCode: StatusCodes.Status403Forbidden,
+            endpoint: endpoint,
+            isUnhandled: true);
+
+        context.Response.StatusCode = StatusCodes.Status403Forbidden;
+        context.Response.ContentType = "application/json";
+
+        var errorResponse = new
+        {
+            error = "tier_limit_exceeded",
+            message = tierLimitException.Message,
+            limitType = tierLimitException.LimitType,
+            current = tierLimitException.Current,
+            max = tierLimitException.Max,
+            upgradeUrl = tierLimitException.UpgradeUrl,
             correlationId = context.TraceIdentifier,
             timestamp = DateTime.UtcNow
         };

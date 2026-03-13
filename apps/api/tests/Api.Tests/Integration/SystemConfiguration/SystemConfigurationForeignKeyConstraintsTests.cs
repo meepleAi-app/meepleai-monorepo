@@ -14,7 +14,7 @@ namespace Api.Tests.Integration.SystemConfiguration;
 /// Tests DeleteBehavior.Restrict for CreatedBy and UpdatedBy user references.
 /// </summary>
 [Trait("Category", TestCategories.Integration)]
-[Collection("SharedTestcontainers")]
+[Collection("Integration-GroupD")]
 public class SystemConfigurationForeignKeyConstraintsTests : IAsyncLifetime
 {
     private readonly SharedTestcontainersFixture _fixture;

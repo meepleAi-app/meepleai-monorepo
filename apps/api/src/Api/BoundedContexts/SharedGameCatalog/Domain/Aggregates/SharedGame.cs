@@ -452,6 +452,28 @@ public sealed class SharedGame : AggregateRoot<Guid>
     }
 
     /// <summary>
+    /// Quick-publishes the game, transitioning directly from Draft to Published.
+    /// Only available for admin users who have both submit and approve permissions.
+    /// Issue #250: Quick-publish endpoint for admin shared games
+    /// </summary>
+    /// <param name="publishedBy">The ID of the admin quick-publishing the game</param>
+    /// <exception cref="InvalidOperationException">Thrown when game is not in Draft status</exception>
+    public void QuickPublish(Guid publishedBy)
+    {
+        if (_status != GameStatus.Draft)
+            throw new InvalidOperationException($"Cannot quick-publish game in {_status} status. Only Draft games can be quick-published.");
+
+        if (publishedBy == Guid.Empty)
+            throw new ArgumentException("PublishedBy cannot be empty", nameof(publishedBy));
+
+        _status = GameStatus.Published;
+        _modifiedBy = publishedBy;
+        _modifiedAt = DateTime.UtcNow;
+
+        AddDomainEvent(new SharedGameQuickPublishedEvent(_id, publishedBy));
+    }
+
+    /// <summary>
     /// Rejects the publication, transitioning from PendingApproval back to Draft.
     /// Issue #2514: Approval workflow implementation
     /// </summary>
@@ -515,6 +537,60 @@ public sealed class SharedGame : AggregateRoot<Guid>
         _modifiedAt = DateTime.UtcNow;
 
         AddDomainEvent(new SharedGameDeletedEvent(_id, deletedBy));
+    }
+
+    /// <summary>
+    /// Adds a category to this game.
+    /// </summary>
+    /// <param name="name">The category name</param>
+    /// <exception cref="ArgumentException">Thrown when name is null or whitespace</exception>
+    public void AddCategory(string name)
+    {
+        if (string.IsNullOrWhiteSpace(name))
+            throw new ArgumentException("Category name is required", nameof(name));
+
+        var slug = name.ToLowerInvariant().Replace(" ", "-");
+        _categories.Add(GameCategory.Create(name, slug));
+    }
+
+    /// <summary>
+    /// Adds a mechanic to this game.
+    /// </summary>
+    /// <param name="name">The mechanic name</param>
+    /// <exception cref="ArgumentException">Thrown when name is null or whitespace</exception>
+    public void AddMechanic(string name)
+    {
+        if (string.IsNullOrWhiteSpace(name))
+            throw new ArgumentException("Mechanic name is required", nameof(name));
+
+        var slug = name.ToLowerInvariant().Replace(" ", "-");
+        _mechanics.Add(GameMechanic.Create(name, slug));
+    }
+
+    /// <summary>
+    /// Adds a designer to this game.
+    /// </summary>
+    /// <param name="name">The designer name</param>
+    /// <exception cref="ArgumentException">Thrown when name is null or whitespace</exception>
+    public void AddDesigner(string name)
+    {
+        if (string.IsNullOrWhiteSpace(name))
+            throw new ArgumentException("Designer name is required", nameof(name));
+
+        _designers.Add(GameDesigner.Create(name));
+    }
+
+    /// <summary>
+    /// Adds a publisher to this game.
+    /// </summary>
+    /// <param name="name">The publisher name</param>
+    /// <exception cref="ArgumentException">Thrown when name is null or whitespace</exception>
+    public void AddPublisher(string name)
+    {
+        if (string.IsNullOrWhiteSpace(name))
+            throw new ArgumentException("Publisher name is required", nameof(name));
+
+        _publishers.Add(GamePublisher.Create(name));
     }
 
     /// <summary>

@@ -17,7 +17,7 @@ namespace Api.Tests.BoundedContexts.Authentication.Infrastructure.Persistence;
 /// Tests session lifecycle, expiration queries, and token-based lookups.
 /// Issue #2541: Migrated to SharedDatabaseTestBase for improved performance.
 /// </summary>
-[Collection("SharedTestcontainers")]
+[Collection("Integration-GroupB")]
 [Trait("Category", TestCategories.Integration)]
 public class SessionRepositoryTests : SharedDatabaseTestBase<SessionRepository>
 {

@@ -23,7 +23,7 @@ namespace Api.Tests.Integration.Authentication;
 /// Tests PostgreSQL persistence, complex queries, 2FA state, and OAuth account relations.
 /// Issue #2307: Week 3 - Repository integration testing
 /// </summary>
-[Collection("SharedTestcontainers")]
+[Collection("Integration-GroupB")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("Dependency", "PostgreSQL")]
 [Trait("BoundedContext", "Authentication")]

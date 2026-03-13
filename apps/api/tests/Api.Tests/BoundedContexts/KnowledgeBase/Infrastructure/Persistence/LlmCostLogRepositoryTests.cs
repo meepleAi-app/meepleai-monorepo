@@ -16,7 +16,7 @@ namespace Api.Tests.BoundedContexts.KnowledgeBase.Infrastructure.Persistence;
 /// ISSUE-960: BGAI-018 - Cost tracking persistence tests
 /// Issue #2541: Migrated to SharedDatabaseTestBase for improved performance.
 /// </summary>
-[Collection("SharedTestcontainers")]
+[Collection("Integration-GroupA")]
 [Trait("Category", TestCategories.Integration)]
 public class LlmCostLogRepositoryTests : SharedDatabaseTestBase<LlmCostLogRepository>
 {

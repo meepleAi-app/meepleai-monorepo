@@ -49,6 +49,9 @@ public class UserEntity
     public int FailedLoginAttempts { get; set; }
     public DateTime? LockedUntil { get; set; }
 
+    // D3: Contributor flag — contributors get premium tier access
+    public bool IsContributor { get; set; }
+
     // Issue #124: Onboarding interests
     public List<string>? Interests { get; set; }
 

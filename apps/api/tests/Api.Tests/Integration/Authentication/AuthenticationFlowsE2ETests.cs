@@ -33,7 +33,7 @@ namespace Api.Tests.Integration.Authentication;
 ///
 /// Pattern: SharedTestcontainersFixture for PostgreSQL, complete user journeys
 /// </remarks>
-[Collection("SharedTestcontainers")]
+[Collection("Integration-GroupB")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("Category", TestCategories.E2E)]
 [Trait("Dependency", "PostgreSQL")]

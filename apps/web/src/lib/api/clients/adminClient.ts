@@ -861,6 +861,26 @@ export function createAdminClient({ httpClient }: CreateAdminClientParams) {
       );
     },
 
+    /**
+     * Restart a service (SuperAdmin only, Level 2 confirmation).
+     * POST /api/v1/admin/operations/restart-service
+     *
+     * Issue #133: Service Restart UI.
+     */
+    async restartService(
+      serviceName: string
+    ): Promise<{ message: string; estimatedDowntime: string }> {
+      const result = await httpClient.post(
+        '/api/v1/admin/operations/restart-service',
+        { serviceName },
+        z.object({ message: z.string(), estimatedDowntime: z.string() })
+      );
+      if (!result) {
+        throw new Error('Failed to restart service');
+      }
+      return result;
+    },
+
     // ========== API Key Management (Issue #908) ==========
 
     /**
@@ -2567,11 +2587,13 @@ export function createAdminClient({ httpClient }: CreateAdminClientParams) {
       successOnly?: boolean;
     }): Promise<RecentLlmRequestsDto | null> {
       const qs = new URLSearchParams();
-      if (params.page != null) qs.set('page', String(params.page));
-      if (params.pageSize != null) qs.set('pageSize', String(params.pageSize));
+      if (params.page !== null && params.page !== undefined) qs.set('page', String(params.page));
+      if (params.pageSize !== null && params.pageSize !== undefined)
+        qs.set('pageSize', String(params.pageSize));
       if (params.source) qs.set('source', params.source);
       if (params.model) qs.set('model', params.model);
-      if (params.successOnly != null) qs.set('successOnly', String(params.successOnly));
+      if (params.successOnly !== null && params.successOnly !== undefined)
+        qs.set('successOnly', String(params.successOnly));
       const query = qs.toString();
       return httpClient.get(
         `/api/v1/admin/openrouter/usage/requests${query ? `?${query}` : ''}`,

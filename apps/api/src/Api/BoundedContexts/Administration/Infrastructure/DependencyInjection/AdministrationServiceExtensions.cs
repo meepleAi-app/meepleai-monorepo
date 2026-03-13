@@ -9,6 +9,9 @@ using Api.BoundedContexts.Administration.Infrastructure.Repositories;
 using Api.BoundedContexts.Administration.Infrastructure.Scheduling;
 using Api.BoundedContexts.Administration.Infrastructure.Services;
 using Api.Infrastructure.Seeders;
+using Api.Infrastructure.Seeders.Catalog;
+using Api.Infrastructure.Seeders.Core;
+using Api.Infrastructure.Seeders.LivedIn;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -98,13 +101,13 @@ internal static class AdministrationServiceExtensions
         services.AddScoped<ILighthouseReportParserService, LighthouseReportParserService>();
         services.AddScoped<IPlaywrightReportParserService, PlaywrightReportParserService>();
 
-        // Seeding orchestrator (replaces legacy AutoConfigurationService)
-        var seedProfile = Enum.TryParse<SeedProfile>(
-            configuration["SEED_PROFILE"] ?? "dev",
-            ignoreCase: true,
-            out var parsed) ? parsed : SeedProfile.Dev;
-        services.AddSingleton(typeof(SeedProfile), seedProfile);
-        services.AddSingleton<SeedOrchestrator>();
+        // ISSUE-2512: AutoConfigurationService removed — replaced by SeedOrchestrator (Epic #318)
+
+        // Epic #318: Layered seeding system
+        services.AddScoped<ISeedLayer, CoreSeedLayer>();
+        services.AddScoped<ISeedLayer, CatalogSeedLayer>();
+        services.AddScoped<ISeedLayer, LivedInSeedLayer>();
+        services.AddScoped<SeedOrchestrator>();
 
         // Issue #3916: AI insights service for personalized dashboard recommendations
         services.AddScoped<IAiInsightsService, AiInsightsService>();

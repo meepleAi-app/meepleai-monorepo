@@ -395,22 +395,19 @@ using (var scope = app.Services.CreateScope())
 
         app.Logger.LogInformation("✓ Embedding configuration validated: Provider={Provider}, Model={Model}, Dimensions={Dimensions}",
             provider, model, embeddingDimensions);
+    }
 
-        // PERF: Skip seeding in Staging/Production — seeding is for dev/test environments only
-        // Use SKIP_SEEDING=true or Staging/Production environment to disable
-        var skipSeeding = app.Configuration.GetValue<bool?>("SkipSeeding").GetValueOrDefault(false)
-            || app.Environment.IsEnvironment("Staging")
-            || app.Environment.IsProduction();
-
-        if (!skipSeeding)
+    // Epic #318: Layered seeding pipeline with advisory lock (runs independently of migrations)
+    if (db != null)
+    {
+        try
         {
-            // Layered seeding via SeedOrchestrator (creates its own scopes internally)
-            var seedOrchestrator = app.Services.GetRequiredService<Api.Infrastructure.Seeders.SeedOrchestrator>();
-            await seedOrchestrator.ExecuteAsync(CancellationToken.None).ConfigureAwait(false);
+            var seedOrchestrator = scope.ServiceProvider.GetRequiredService<Api.Infrastructure.Seeders.SeedOrchestrator>();
+            await seedOrchestrator.RunAsync(db, scope.ServiceProvider).ConfigureAwait(false);
         }
-        else
+        catch (Exception ex)
         {
-            app.Logger.LogInformation("Skipping database seeding in {Environment}", app.Environment.EnvironmentName);
+            app.Logger.LogError(ex, "Seeding failed — API will continue startup");
         }
     }
 }
@@ -513,6 +510,7 @@ v1Api.MapSessionStatisticsEndpoints(); // P4: Session analytics dashboard
 v1Api.MapSharedGameCatalogEndpoints(); // ISSUE-2371: Shared game catalog Phase 2
 app.MapAdminGameImportWizardEndpoints(); // Issue #4157: Admin game import wizard
 v1Api.MapAdminGameWizardEndpoints();    // Admin Game+PDF+Agent Wizard
+v1Api.MapAdminSharedGameContentEndpoints(); // Issue #236: Admin shared game content + MAU monitoring
 v1Api.MapAdminAgentTestEndpoints();     // Admin Agent Auto-Test Suite
 v1Api.MapAdminOpenRouterEndpoints();    // Issue #5077: OpenRouter usage monitoring dashboard
 v1Api.MapAdminEmergencyControlsEndpoints(); // Issue #5476: LLM emergency controls
@@ -609,6 +607,7 @@ v1Api.MapRagPipelineAdminEndpoints();  // RAG Pipeline builder (Issue #3463)
 v1Api.MapRagExecutionAdminEndpoints(); // RAG Execution replay & compare (Issue #4459)
 v1Api.MapAdminMechanicExtractorEndpoints(); // Mechanic Extractor: Variant C copyright-compliant analysis
 v1Api.MapAdminMiscEndpoints();         // Miscellaneous admin operations
+v1Api.MapAdminSeedingEndpoints();      // Epic #318: Admin seeding re-trigger
 v1Api.MapReportingEndpoints();         // ISSUE-916: Report generation & scheduling
 v1Api.MapTestingMetricsEndpoints();    // Issue #2139: Testing metrics API
 

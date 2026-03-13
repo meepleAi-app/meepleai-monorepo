@@ -162,7 +162,7 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
     {
         // E2E fix: Use blob storage service instead of direct filesystem access (supports S3/R2)
         var fileId = pdfDoc.Id.ToString();
-        var gameId = (pdfDoc.PrivateGameId ?? pdfDoc.GameId)?.ToString();
+        var gameId = (pdfDoc.PrivateGameId ?? pdfDoc.GameId)?.ToString() ?? string.Empty;
         var fileStream = await _blobStorageService.RetrieveAsync(fileId, gameId, cancellationToken).ConfigureAwait(false);
 
         if (fileStream == null)

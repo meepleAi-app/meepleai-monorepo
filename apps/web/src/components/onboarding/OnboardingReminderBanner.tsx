@@ -8,22 +8,25 @@
  * encouraging users to complete their profile setup.
  */
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import { X } from 'lucide-react';
+import Link from 'next/link';
 
 interface OnboardingReminderBannerProps {
   onDismiss?: () => void;
 }
 
 export function OnboardingReminderBanner({ onDismiss }: OnboardingReminderBannerProps) {
-  const [dismissed, setDismissed] = useState(() => {
+  const [dismissed, setDismissed] = useState(true); // Start hidden to avoid SSR mismatch
+
+  useEffect(() => {
     try {
-      return localStorage.getItem('onboarding_banner_dismissed') === 'true';
+      setDismissed(localStorage.getItem('onboarding_banner_dismissed') === 'true');
     } catch {
-      return false;
+      setDismissed(false);
     }
-  });
+  }, []);
 
   if (dismissed) return null;
 
@@ -47,12 +50,12 @@ export function OnboardingReminderBanner({ onDismiss }: OnboardingReminderBanner
       <p>
         <span className="font-medium">Complete your profile setup</span>
         {' — '}
-        <a
+        <Link
           href="/accept-invite"
           className="underline hover:text-amber-700 dark:hover:text-amber-100"
         >
           Finish the onboarding wizard
-        </a>
+        </Link>
         {' '}
         to get personalized game recommendations.
       </p>

@@ -32,6 +32,10 @@ internal sealed class SessionParticipantEntityConfiguration : IEntityTypeConfigu
             .HasColumnName("guest_name")
             .HasMaxLength(100);
 
+        builder.Property(e => e.RegisteredDisplayName)
+            .HasColumnName("registered_display_name")
+            .HasMaxLength(200);
+
         builder.Property(e => e.Role)
             .HasColumnName("role")
             .HasMaxLength(20)

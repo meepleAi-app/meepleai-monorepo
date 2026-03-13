@@ -55,7 +55,8 @@ internal sealed class ConfirmScoreProposalCommandHandler : IRequestHandler<Confi
         // Record score through domain method (validates status, player, dimension)
         session.RecordScore(request.TargetPlayerId, request.Round, request.Dimension, request.Value);
 
-        // Persist changes
+        // Persist changes in-memory (LiveSessionRepository uses ConcurrentDictionary).
+        // Scores are batch-persisted to DB when session completes via LiveSessionCompletedEventHandler.
         await _sessionRepository.UpdateAsync(session, cancellationToken).ConfigureAwait(false);
 
         // Broadcast confirmation to all session participants

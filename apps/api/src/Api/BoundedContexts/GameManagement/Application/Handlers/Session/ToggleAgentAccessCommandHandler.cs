@@ -47,10 +47,16 @@ internal sealed class ToggleAgentAccessCommandHandler : IRequestHandler<ToggleAg
         participant.AgentAccessEnabled = request.Enabled;
         await _dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
-        // Notify the participant via SignalR
+        // Notify all session participants via SignalR group
+        // (Cannot use Clients.User() because SignalR identity is JWT userId or "guest:{token}",
+        //  not the participant DB GUID. Clients filter by participantId.)
         await _hubContext.Clients
-            .User(request.ParticipantId.ToString())
-            .SendAsync("AgentAccessChanged", request.Enabled, cancellationToken)
+            .Group($"session:{request.SessionId}")
+            .SendAsync("AgentAccessChanged", new
+            {
+                participantId = request.ParticipantId,
+                enabled = request.Enabled
+            }, cancellationToken)
             .ConfigureAwait(false);
 
         _logger.LogInformation(

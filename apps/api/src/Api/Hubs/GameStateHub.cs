@@ -10,8 +10,10 @@ namespace Api.Hubs;
 
 /// <summary>
 /// SignalR hub for real-time game state synchronization across clients.
+/// Supports both JWT-authenticated users and guest participants (via session token).
+/// AllowAnonymous permits guest WebSocket connections; hub methods validate identity as needed.
 /// </summary>
-[Authorize]
+[AllowAnonymous]
 public class GameStateHub : Hub
 {
     private readonly ILogger<GameStateHub> _logger;
@@ -181,11 +183,17 @@ public class GameStateHub : Hub
 
     /// <summary>
     /// Host toggles AI agent access for a specific participant.
+    /// Broadcasts to session group because SignalR identity is JWT userId or "guest:{token}",
+    /// not the participant DB GUID. Clients filter by participantId.
     /// </summary>
     public async Task UpdateAgentAccess(string sessionId, string participantId, bool enabled)
     {
-        await Clients.User(participantId)
-            .SendAsync("AgentAccessChanged", enabled).ConfigureAwait(false);
+        await Clients.Group(GetSessionGroup(sessionId))
+            .SendAsync("AgentAccessChanged", new
+            {
+                participantId,
+                enabled
+            }).ConfigureAwait(false);
 
         _logger.LogInformation(
             "Agent access {Status} for participant {ParticipantId} in session {SessionId} by user {UserId}",

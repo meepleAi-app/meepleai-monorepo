@@ -56,7 +56,8 @@ internal sealed class SessionQueryBudgetService : ISessionQueryBudgetService
         var limits = await _tierService.GetLimitsAsync(userId, ct).ConfigureAwait(false);
         var db = _redis.GetDatabase();
         var key = $"{KeyPrefix}{sessionId}";
-        var current = (int)await db.StringGetAsync(key).ConfigureAwait(false);
+        var raw = await db.StringGetAsync(key).ConfigureAwait(false);
+        var current = raw.HasValue && int.TryParse(raw.ToString(), System.Globalization.CultureInfo.InvariantCulture, out var val) ? val : 0;
 
         return current < limits.MaxSessionQueries;
     }
@@ -81,7 +82,8 @@ internal sealed class SessionQueryBudgetService : ISessionQueryBudgetService
         var limits = await _tierService.GetLimitsAsync(userId, ct).ConfigureAwait(false);
         var db = _redis.GetDatabase();
         var key = $"{KeyPrefix}{sessionId}";
-        var current = (int)await db.StringGetAsync(key).ConfigureAwait(false);
+        var raw = await db.StringGetAsync(key).ConfigureAwait(false);
+        var current = raw.HasValue && int.TryParse(raw.ToString(), System.Globalization.CultureInfo.InvariantCulture, out var val) ? val : 0;
 
         return new SessionQueryUsage(
             QueriesUsed: current,

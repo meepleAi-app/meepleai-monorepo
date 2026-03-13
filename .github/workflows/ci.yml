@@ -178,14 +178,14 @@ jobs:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: testpass
           POSTGRES_DB: meepleai_test
-        # Issue #2693: Increase max_connections from 100 (default) to 500 for parallel tests
-        # --shm-size=512mb provides shared memory for the increased connection pool
+        # Pool fix: MaxPoolSize=5 per test DB → ~100 connections with 4 threads
+        # --shm-size=256mb for shared memory
         options: >-
           --health-cmd "pg_isready -U postgres"
           --health-interval 5s
           --health-timeout 5s
           --health-retries 10
-          --shm-size=512mb
+          --shm-size=256mb
         ports:
           - 5432:5432
 
@@ -278,21 +278,13 @@ jobs:
           printf 'EMBEDDING_SERVICE_URL=http://localhost:8000\n' > infra/secrets/embedding-service.secret
           echo "✅ CI secret files created"
 
-      - name: Configure PostgreSQL for Parallel Tests
+      - name: Verify PostgreSQL Connection Limits
         env:
           PGPASSWORD: testpass
         run: |
-          echo "🔧 Increasing max_connections for parallel test execution..."
-          psql -h localhost -U postgres -d meepleai_test -c "ALTER SYSTEM SET max_connections = 500;"
-          psql -h localhost -U postgres -d meepleai_test -c "ALTER SYSTEM SET shared_buffers = '256MB';"
-          # Restart postgres container to apply changes
-          docker restart $(docker ps -q --filter "ancestor=pgvector/pgvector:pg16") || true
-          echo "⏳ Waiting for PostgreSQL to restart..."
-          sleep 3
-          until pg_isready -h localhost -p 5432 -U postgres; do sleep 1; done
-          # Verify new settings
+          echo "🔧 Verifying PostgreSQL max_connections..."
           psql -h localhost -U postgres -d meepleai_test -c "SHOW max_connections;"
-          echo "✅ PostgreSQL configured with increased max_connections"
+          echo "✅ Pool fix: MaxPoolSize=5 per test DB, 4 threads → fits within default 100 connections"
 
       - name: Build
         run: dotnet build --no-restore --configuration Release
@@ -509,7 +501,7 @@ jobs:
 
       - name: Run Database Migrations
         working-directory: apps/api/src/Api
-        run: dotnet ef database update
+        run: dotnet ef database update --no-build --configuration Release
         env:
           POSTGRES_HOST: localhost
           POSTGRES_PORT: "5432"

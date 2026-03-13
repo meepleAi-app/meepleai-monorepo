@@ -741,8 +741,8 @@ public sealed class SharedTestcontainersFixture : IAsyncLifetime
                 builder.Database = databaseName;
                 builder.Timeout = 60; // Increase timeout to 60s for long-running integration tests
                 builder.CommandTimeout = 60;
-                builder.MaxPoolSize = 50; // Increase pool size to handle concurrent test execution
-                builder.MinPoolSize = 5;
+                builder.MaxPoolSize = 5; // CI: Keep pool small — 4 threads × N test classes × 5 pool ≤ 500 max_connections
+                builder.MinPoolSize = 1;
 
                 // Issue #2577: Log successful database creation with timing
                 var duration = (DateTime.UtcNow - startTime).TotalSeconds;

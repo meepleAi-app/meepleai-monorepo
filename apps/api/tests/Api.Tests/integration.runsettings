@@ -53,8 +53,8 @@
 
   <!-- xUnit specific settings -->
   <xUnit>
-    <!-- Issue #CI-Optimization: 2 threads to balance speed vs DB connection pressure -->
-    <MaxParallelThreads>2</MaxParallelThreads>
+    <!-- Phase 1: 4 parallel threads, budget: 4×5 pool = 20 connections (of 500 available) -->
+    <MaxParallelThreads>4</MaxParallelThreads>
     <DiagnosticMessages>true</DiagnosticMessages>
     <AppDomain>denied</AppDomain>
   </xUnit>

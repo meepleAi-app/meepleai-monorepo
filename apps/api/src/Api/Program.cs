@@ -362,6 +362,8 @@ builder.Services.AddCors(options =>
 });
 
 // Issue #2406: SignalR for real-time game state updates
+// E3-4: Custom user ID provider for guest SignalR auth
+builder.Services.AddSingleton<Microsoft.AspNetCore.SignalR.IUserIdProvider, Api.Hubs.SessionParticipantIdProvider>();
 builder.Services.AddSignalR();
 
 var app = builder.Build();
@@ -491,6 +493,7 @@ v1Api.MapUserProfileEndpoints();
 v1Api.MapUserAiConsentEndpoints(); // Issue #5512: GDPR AI consent
 v1Api.MapUserLlmDataEndpoints(); // Issue #5509: GDPR right to erasure for LLM data
 v1Api.MapUserAccountEndpoints(); // GDPR Art. 17: Self-service account deletion
+v1Api.MapUserUsageEndpoints(); // E2-2: User tier usage endpoint
 v1Api.MapGameEndpoints();
 v1Api.MapPlayRecordEndpoints(); // ISSUE-3889/3890: Play record tracking
 v1Api.MapLiveSessionEndpoints(); // Issue #4749: Live session CQRS endpoints
@@ -503,6 +506,7 @@ v1Api.MapSessionSnapshotEndpoints(); // Issue #4755: Session snapshot endpoints
 v1Api.MapGameManagementEndpoints(); // Issue #4273: Game search autocomplete
 v1Api.MapPlaylistEndpoints(); // Issue #5582: Game Night Playlist endpoints
 v1Api.MapGameNightEndpoints(); // Issue #46: Game Night Event endpoints
+v1Api.MapGameNightImprovvisataEndpoints(); // Game Night Improvvisata: E1-2 BGG import
 v1Api.MapRuleConflictFaqEndpoints(); // ISSUE-3966: Rule conflict FAQ management
 v1Api.MapSessionTrackingEndpoints(); // GST-003: Session tracking real-time collaboration
 v1Api.MapSessionStatisticsEndpoints(); // P4: Session analytics dashboard
@@ -534,6 +538,8 @@ v1Api.MapSessionLimitsConfigEndpoints(); // Issue #3070: Session limits config
 v1Api.MapPdfUploadLimitsConfigEndpoints(); // Issue #3072: PDF upload limits config
 v1Api.MapPdfTierUploadLimitsConfigEndpoints(); // Issue #3333: PDF tier upload limits config (bulk)
 v1Api.MapAdminConfigEndpoints();       // Issue #3673: PDF limits admin UI (per-tier)
+v1Api.MapAdminTierEndpoints();         // E2-1: Admin tier CRUD
+v1Api.MapSessionInviteEndpoints();     // E3-1: Session invite flow
 v1Api.MapAnalyticsEndpoints();         // Dashboard statistics & metrics
 v1Api.MapDashboardEndpoints();         // Issue #3314: User dashboard aggregated API
 v1Api.MapActivityTimelineEndpoints();  // Issue #4315: Activity timeline with page-based pagination

@@ -29,6 +29,7 @@ public sealed class AgentDefinition : AggregateRoot<Guid>
     private DateTime _createdAt;
     private DateTime? _updatedAt;
     private string _kbCardIdsJson = "[]";
+    private string _chatLanguage = "auto";
 
     /// <summary>
     /// Gets the agent name.
@@ -115,6 +116,29 @@ public sealed class AgentDefinition : AggregateRoot<Guid>
 
             return JsonSerializer.Deserialize<List<Guid>>(_kbCardIdsJson) ?? [];
         }
+    }
+
+    /// <summary>
+    /// Gets the chat language preference for this agent.
+    /// "auto" means detect from user input; otherwise an ISO 639-1 code (e.g. "it", "en").
+    /// </summary>
+    public string ChatLanguage => _chatLanguage;
+
+    /// <summary>
+    /// Sets the chat language for this agent.
+    /// </summary>
+    /// <param name="languageCode">"auto" or a valid ISO 639-1 code (2 lowercase letters).</param>
+    public void SetChatLanguage(string languageCode)
+    {
+        ArgumentNullException.ThrowIfNull(languageCode);
+
+        if (!string.Equals(languageCode, "auto", StringComparison.Ordinal) && (languageCode.Length != 2 || !languageCode.All(char.IsLower)))
+            throw new ArgumentException("ChatLanguage must be 'auto' or a valid ISO 639-1 code (2 lowercase letters)", nameof(languageCode));
+
+        _chatLanguage = languageCode;
+        _updatedAt = DateTime.UtcNow;
+
+        AddDomainEvent(new AgentDefinitionUpdatedEvent(Id, $"ChatLanguage updated to '{languageCode}'"));
     }
 
     /// <summary>

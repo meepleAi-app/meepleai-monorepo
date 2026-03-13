@@ -92,8 +92,10 @@ Rate limited to 10 requests per minute per IP address.
         // OAuth Callback - Full CQRS implementation via HandleOAuthCallbackCommand
         group.MapGet("/auth/oauth/{provider}/callback", async (
             string provider,
-            string code,
-            string state,
+            string? code,
+            string? state,
+            string? error,
+            string? error_description,
             IMediator mediator,
             HttpContext context,
             IConfigurationService configService,
@@ -101,6 +103,18 @@ Rate limited to 10 requests per minute per IP address.
             IRateLimitService rateLimiter,
             CancellationToken ct) =>
         {
+            // Handle OAuth provider error responses (e.g., user denied consent)
+            if (!string.IsNullOrEmpty(error) || string.IsNullOrEmpty(code) || string.IsNullOrEmpty(state))
+            {
+                var logger = context.RequestServices.GetRequiredService<ILogger<Program>>();
+                logger.LogWarning("OAuth callback error from {Provider}: {Error} - {Description}",
+                    provider, error ?? "missing_code", error_description ?? "No authorization code received");
+
+                var frontendUrl = config["FrontendUrl"] ?? "http://localhost:3000";
+                var errorParam = Uri.EscapeDataString(error ?? "missing_code");
+                return Results.Redirect($"{frontendUrl}/auth/callback?error={errorParam}");
+            }
+
             // AUTH-06-P4: Rate limiting on callback to prevent abuse (configurable via admin UI)
             var callbackIp = context.Connection.RemoteIpAddress?.ToString() ?? "unknown";
             var maxTokens = (await configService.GetValueAsync<int?>("RateLimit:OAuth:MaxTokens", 10).ConfigureAwait(false)) ?? 10;

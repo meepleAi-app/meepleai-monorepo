@@ -113,7 +113,8 @@ public void StartSession()
 public void PauseSession()
 {
     Guard.Against.Null(SessionStartedAt);
-    Guard.Against.NotNull(PausedAt, "Already paused");
+    if (PausedAt is not null)
+        throw new InvalidOperationException("Session is already paused.");
     PausedAt = DateTime.UtcNow;
     Status = GameNightStatus.Paused;
 }

@@ -73,6 +73,7 @@ Create a new game night.
 | `scheduledAt` | Required, must be in the future |
 | `maxPlayers` | Required, 2-20 |
 | `sharedGameIds` | Required, 1-10 valid game IDs |
+| `notes` | Optional, max 2000 chars |
 
 **Response** `201 Created`:
 ```json

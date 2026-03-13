@@ -47,6 +47,7 @@ import {
   MailIcon,
   ScrollTextIcon,
   HeartPulseIcon,
+  BarChart3Icon,
 } from 'lucide-react';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -355,6 +356,13 @@ export const DASHBOARD_SECTIONS: DashboardSection[] = [
         label: 'Services',
         icon: HeartPulseIcon,
         activePattern: /^\/admin\/monitor\/services/,
+      },
+      // Grafana Dashboards (Issue #134)
+      {
+        href: '/admin/monitor/grafana',
+        label: 'Grafana',
+        icon: BarChart3Icon,
+        activePattern: /^\/admin\/monitor\/grafana/,
       },
       // Config items
       {

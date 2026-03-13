@@ -103,12 +103,10 @@ http:
 
     # Circuit Breaker
     # Prevents cascading failures
+    # Note: checkPeriod/fallbackDuration/recoveryDuration removed in Traefik v3.6
     circuit-breaker:
       circuitBreaker:
-        expression: "NetworkErrorRatio() > 0.3"  # Trip if 30% requests fail
-        checkPeriod: 10s
-        fallbackDuration: 30s
-        recoveryDuration: 10s
+        expression: "NetworkErrorRatio() > 0.3"
 
     # IP Whitelist (for admin endpoints)
     # PRODUCTION: Uncomment and configure for sensitive endpoints

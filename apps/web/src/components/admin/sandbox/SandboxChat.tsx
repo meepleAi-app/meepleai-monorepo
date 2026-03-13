@@ -60,18 +60,17 @@ function extractChunksFromDebug(debugEvents: DebugEvent[]): RetrievedChunk[] {
  * Build PipelineTrace from debug events timing data.
  */
 function buildTraceFromDebug(debugEvents: DebugEvent[]): PipelineTrace {
-  const steps: PipelineTraceStep[] = debugEvents
-    .filter(e => e.type >= 10)
-    .map(e => ({
-      name: e.typeName,
-      durationMs: e.elapsedMs,
-      details:
-        typeof e.data === 'object' && e.data !== null
-          ? (e.data as Record<string, string | number>)
-          : {},
-    }));
+  const filtered = debugEvents.filter(e => e.type >= 10);
+  const steps: PipelineTraceStep[] = filtered.map((e, i) => ({
+    name: e.typeName,
+    durationMs: i === 0 ? e.elapsedMs : e.elapsedMs - filtered[i - 1].elapsedMs,
+    details:
+      typeof e.data === 'object' && e.data !== null
+        ? (e.data as Record<string, string | number>)
+        : {},
+  }));
 
-  const totalDurationMs = steps.length > 0 ? steps[steps.length - 1].durationMs : 0;
+  const totalDurationMs = filtered.length > 0 ? filtered[filtered.length - 1].elapsedMs : 0;
 
   return { steps, totalDurationMs };
 }

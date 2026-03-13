@@ -13,6 +13,7 @@ import { FormEvent, useState } from 'react';
 import { toast } from 'sonner';
 
 import { AccessibleButton } from '@/components/accessible';
+import { api } from '@/lib/api';
 import { cn } from '@/lib/utils';
 
 export interface InterestsStepProps {
@@ -58,8 +59,8 @@ export function InterestsStep({ onComplete, onSkip }: InterestsStepProps) {
 
     setIsLoading(true);
     try {
-      // Store interests locally for now — no dedicated backend endpoint yet
-      // Future: await api.profile.saveInterests(Array.from(selected));
+      // Issue #323: Save interests to backend
+      await api.auth.saveInterests(Array.from(selected));
       toast.success(`${selected.size} interests saved!`);
       onComplete();
     } catch {

@@ -172,6 +172,11 @@ public class UserRepository : RepositoryBase, IUserRepository
         existingUser.EmailVerifiedAt = entity.EmailVerifiedAt;
         existingUser.VerificationGracePeriodEndsAt = entity.VerificationGracePeriodEndsAt;
 
+        // Issue #323: Update onboarding state
+        existingUser.OnboardingCompleted = entity.OnboardingCompleted;
+        existingUser.OnboardingSkipped = entity.OnboardingSkipped;
+        existingUser.OnboardingCompletedAt = entity.OnboardingCompletedAt;
+
         // Synchronize backup codes collection (delete old, add new)
         // This ensures we don't duplicate codes on every update
         existingUser.BackupCodes.Clear();
@@ -310,6 +315,12 @@ public class UserRepository : RepositoryBase, IUserRepository
             entity.EmailVerified,
             entity.EmailVerifiedAt,
             entity.VerificationGracePeriodEndsAt);
+
+        // Issue #323: Restore onboarding state
+        user.RestoreOnboardingState(
+            entity.OnboardingCompleted,
+            entity.OnboardingSkipped,
+            entity.OnboardingCompletedAt);
 
         return user;
     }

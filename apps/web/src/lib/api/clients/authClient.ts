@@ -418,6 +418,24 @@ export function createAuthClient({ httpClient }: CreateAuthClientParams) {
       return httpClient.put('/api/v1/users/preferences', payload, UserProfileSchema);
     },
 
+    // ========== Onboarding (Issue #323) ==========
+
+    /**
+     * Mark onboarding as completed or skipped
+     * POST /api/v1/users/onboarding/complete
+     */
+    async completeOnboarding(skipped: boolean = false): Promise<{ ok: boolean; message: string }> {
+      return httpClient.post('/api/v1/users/onboarding/complete', { skipped });
+    },
+
+    /**
+     * Save user interests from onboarding wizard
+     * POST /api/v1/users/interests
+     */
+    async saveInterests(interests: string[]): Promise<{ ok: boolean; message: string }> {
+      return httpClient.post('/api/v1/users/interests', { interests });
+    },
+
     // ========== API Key Management (Issue #909) ==========
 
     /**

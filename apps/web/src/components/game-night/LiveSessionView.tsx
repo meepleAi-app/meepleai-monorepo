@@ -22,6 +22,7 @@
 
 import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 
+import { useQuery } from '@tanstack/react-query';
 import { Loader2 } from 'lucide-react';
 
 import { toScoreboardData } from '@/components/session/adapters';
@@ -38,11 +39,13 @@ import {
 import { useGameAgents } from '@/hooks/queries/useGameAgents';
 import { useAgentChatStream } from '@/hooks/useAgentChatStream';
 import { useResponsive } from '@/hooks/useResponsive';
+import { api } from '@/lib/api';
 import type { LiveSessionDto } from '@/lib/api/schemas/live-sessions.schemas';
 import { useSessionSync } from '@/lib/hooks/useSessionSync';
 import { useSessionStore } from '@/lib/stores/sessionStore';
 import { useQuickViewStore } from '@/store/quick-view';
 
+import { ActivityFeed, type ActivityEvent } from './ActivityFeed';
 import { LiveScoreboard, type LiveScoreboardPlayer } from './LiveScoreboard';
 import { QuickActions } from './QuickActions';
 import { SaveCompleteDialog } from './SaveCompleteDialog';
@@ -95,6 +98,8 @@ function mapToScoreboardPlayers(session: LiveSessionDto): LiveScoreboardPlayer[]
     isCurrentUser: false,
   }));
 }
+
+const SETUP_CHIPS = ['Preparazione iniziale', 'Distribuzione componenti', 'Prima mossa'];
 
 // ============================================================================
 // Component
@@ -190,6 +195,34 @@ export function LiveSessionView({ sessionId }: LiveSessionViewProps) {
 
   const isRulesStreaming = rulesAgentState.isStreaming;
 
+  // ----- Resume context (inject recap as first chat message) -----
+  const { data: resumeContext } = useQuery({
+    queryKey: ['session-resume-context', sessionId],
+    queryFn: () => api.liveSessions.getResumeContext(sessionId),
+    enabled: !!sessionId,
+    retry: false,
+    staleTime: Infinity, // Only fetch once
+  });
+
+  const resumeInjectedRef = useRef(false);
+  useEffect(() => {
+    if (resumeContext?.recap && !resumeInjectedRef.current) {
+      resumeInjectedRef.current = true;
+      setSentMessages(prev =>
+        prev.length === 0
+          ? [
+              {
+                id: 'resume-recap',
+                role: 'assistant',
+                content: `\u{1F4CB} **Riepilogo partita precedente:**\n\n${resumeContext.recap}`,
+                timestamp: new Date(resumeContext.pausedAt),
+              },
+            ]
+          : prev
+      );
+    }
+  }, [resumeContext]);
+
   // ----- Local UI state -----
   const [rulesOpen, setRulesOpen] = useState(false);
   const [scoresOpen, setScoresOpen] = useState(false);
@@ -266,10 +299,16 @@ export function LiveSessionView({ sessionId }: LiveSessionViewProps) {
       };
       setSentMessages(prev => [...prev, userMsg]);
 
-      // Send via SSE stream
-      sendAgentMessage(agentId, message, chatThreadIdRef.current ?? undefined);
+      // Send via SSE stream (pass sessionId as gameSessionId for session-aware RAG)
+      sendAgentMessage(
+        agentId,
+        message,
+        chatThreadIdRef.current ?? undefined,
+        undefined,
+        sessionId
+      );
     },
-    [agentId, agentState.currentAnswer, sendAgentMessage]
+    [agentId, agentState.currentAnswer, sendAgentMessage, sessionId]
   );
 
   const handleRulesChatSend = useCallback(
@@ -297,9 +336,15 @@ export function LiveSessionView({ sessionId }: LiveSessionViewProps) {
       };
       setRulesSentMessages(prev => [...prev, userMsg]);
 
-      sendRulesMessage(agentId, message, rulesThreadIdRef.current ?? undefined);
+      sendRulesMessage(
+        agentId,
+        message,
+        rulesThreadIdRef.current ?? undefined,
+        undefined,
+        sessionId
+      );
     },
-    [agentId, rulesAgentState.currentAnswer, sendRulesMessage]
+    [agentId, rulesAgentState.currentAnswer, sendRulesMessage, sessionId]
   );
 
   const handleScoreSubmit = useCallback(
@@ -321,6 +366,22 @@ export function LiveSessionView({ sessionId }: LiveSessionViewProps) {
     },
     [activeSession]
   );
+
+  // ----- Activity events (scores → feed items, newest first) -----
+  // Must be above early returns to satisfy rules-of-hooks
+  const activityEvents = useMemo<ActivityEvent[]>(() => {
+    if (!activeSession) return [];
+    return scores
+      .map(s => ({
+        id: `score-${s.playerId}-${s.round}-${s.dimension}`,
+        type: 'score' as const,
+        playerName: activeSession.players.find(p => p.id === s.playerId)?.displayName ?? '?',
+        value: s.value,
+        dimension: s.dimension,
+        timestamp: s.recordedAt ?? new Date().toISOString(),
+      }))
+      .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+  }, [scores, activeSession]);
 
   // ----- Loading / Error states -----
   if (isLoading && !activeSession) {
@@ -391,13 +452,31 @@ export function LiveSessionView({ sessionId }: LiveSessionViewProps) {
   );
 
   const chatSection = (
-    <div className="p-4 h-full">
-      <SessionChatWidget
-        messages={chatMessages}
-        isStreaming={isChatStreaming}
-        onSend={handleChatSend}
-        defaultExpanded={isDesktop}
-      />
+    <div className="p-4 h-full flex flex-col">
+      {/* Setup suggestion chips - show only when chat is empty */}
+      {chatMessages.length === 0 && agentId && (
+        <div className="flex flex-wrap gap-2 mb-3">
+          {SETUP_CHIPS.map(chip => (
+            <button
+              key={chip}
+              type="button"
+              className="text-xs px-3 py-1.5 rounded-full border border-amber-300 dark:border-amber-600 text-amber-700 dark:text-amber-300 hover:bg-amber-50 dark:hover:bg-amber-900/30 transition-colors"
+              onClick={() => handleChatSend(chip)}
+              disabled={isChatStreaming}
+            >
+              {chip}
+            </button>
+          ))}
+        </div>
+      )}
+      <div className="flex-1 min-h-0">
+        <SessionChatWidget
+          messages={chatMessages}
+          isStreaming={isChatStreaming}
+          onSend={handleChatSend}
+          defaultExpanded={isDesktop}
+        />
+      </div>
     </div>
   );
 
@@ -488,12 +567,8 @@ export function LiveSessionView({ sessionId }: LiveSessionViewProps) {
           centerContent={
             <div className="flex flex-col h-full overflow-auto">
               {connectionIndicator}
-              {/* Activity feed placeholder — will be wired in a follow-up issue */}
-              <div
-                className="flex-1 flex items-center justify-center text-sm text-muted-foreground"
-                data-testid="activity-feed-placeholder"
-              >
-                Feed attività in arrivo
+              <div className="flex-1 min-h-0">
+                <ActivityFeed events={activityEvents} />
               </div>
             </div>
           }
@@ -530,6 +605,22 @@ export function LiveSessionView({ sessionId }: LiveSessionViewProps) {
           onTogglePause={handleTogglePause}
           onOpenScores={() => setScoresOpen(true)}
         />
+        {/* Setup suggestion chips - show only when chat is empty (mobile) */}
+        {chatMessages.length === 0 && agentId && (
+          <div className="flex flex-wrap gap-2">
+            {SETUP_CHIPS.map(chip => (
+              <button
+                key={chip}
+                type="button"
+                className="text-xs px-3 py-1.5 rounded-full border border-amber-300 dark:border-amber-600 text-amber-700 dark:text-amber-300 hover:bg-amber-50 dark:hover:bg-amber-900/30 transition-colors"
+                onClick={() => handleChatSend(chip)}
+                disabled={isChatStreaming}
+              >
+                {chip}
+              </button>
+            ))}
+          </div>
+        )}
         <SessionChatWidget
           messages={chatMessages}
           isStreaming={isChatStreaming}

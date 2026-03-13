@@ -151,11 +151,25 @@ jobs:
         continue-on-error: true
 
   # Backend Integration Tests (requires service containers, runs in parallel with unit tests)
+  # Phase 3: 3-shard matrix for ~3x wall-clock speedup
   backend-integration:
-    name: Backend - Integration Tests
+    name: Backend - Integration (${{ matrix.shard.name }})
     runs-on: ubuntu-latest
     needs: changes
     if: needs.changes.outputs.backend == 'true' || github.event_name == 'workflow_dispatch'
+    strategy:
+      fail-fast: false
+      matrix:
+        shard:
+          - name: "KnowledgeBase"
+            filter_extra: "&(FullyQualifiedName~KnowledgeBase|FullyQualifiedName~DocumentProcessing)"
+            coverage_file: "integration-coverage-shard1.xml"
+          - name: "Games"
+            filter_extra: "&(FullyQualifiedName~SharedGameCatalog|FullyQualifiedName~GameManagement)"
+            coverage_file: "integration-coverage-shard2.xml"
+          - name: "Core"
+            filter_extra: "&FullyQualifiedName!~KnowledgeBase&FullyQualifiedName!~DocumentProcessing&FullyQualifiedName!~SharedGameCatalog&FullyQualifiedName!~GameManagement"
+            coverage_file: "integration-coverage-shard3.xml"
 
     services:
       postgres:
@@ -289,7 +303,7 @@ jobs:
       # - ArbitroAgentIntegrationTests: Uses SharedTestcontainersFixture with orchestration-service (Issue #3871)
       # These tests run in the dedicated backend-e2e-tests.yml workflow instead.
       - name: Run Integration Tests
-        timeout-minutes: 45
+        timeout-minutes: 20
         env:
           POSTGRES_HOST: localhost
           POSTGRES_PORT: 5432
@@ -308,9 +322,9 @@ jobs:
           TEST_POSTGRES_CONNSTRING: Host=localhost;Port=5432;Database=meepleai_test;Username=postgres;Password=testpass
           TEST_REDIS_CONNSTRING: localhost:6379,allowAdmin=true
         run: |
-          echo "🧪 Running integration tests (4 parallel collection groups)..."
+          echo "🧪 Running integration tests - shard: ${{ matrix.shard.name }} (8 parallel threads)..."
           dotnet test \
-            --filter "Category=Integration&FullyQualifiedName!~UploadPdfMidPhaseCancellationTests&FullyQualifiedName!~FrontendSdk&FullyQualifiedName!~ArbitroAgent" \
+            --filter "Category=Integration&FullyQualifiedName!~UploadPdfMidPhaseCancellationTests&FullyQualifiedName!~FrontendSdk&FullyQualifiedName!~ArbitroAgent${{ matrix.shard.filter_extra }}" \
             --settings tests/Api.Tests/integration.runsettings \
             --logger "console;verbosity=minimal" \
             --no-build \
@@ -319,15 +333,15 @@ jobs:
             --blame-hang-dump-type mini \
             -p:CollectCoverage=true \
             -p:CoverletOutputFormat=cobertura \
-            -p:CoverletOutput=./coverage/integration-coverage.xml
-          echo "✅ Integration tests passed"
+            -p:CoverletOutput=./coverage/${{ matrix.shard.coverage_file }}
+          echo "✅ Integration tests passed - shard: ${{ matrix.shard.name }}"
 
       - name: Upload Coverage
         if: always()
         uses: codecov/codecov-action@v5
         with:
-          files: apps/api/coverage/integration-coverage.xml
-          flags: backend-integration
+          files: apps/api/coverage/${{ matrix.shard.coverage_file }}
+          flags: backend-integration-${{ matrix.shard.name }}
           token: ${{ secrets.CODECOV_TOKEN }}
         continue-on-error: true
 

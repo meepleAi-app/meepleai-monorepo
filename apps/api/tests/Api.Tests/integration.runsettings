@@ -53,8 +53,8 @@
 
   <!-- xUnit specific settings -->
   <xUnit>
-    <!-- Phase 1: 4 parallel threads, budget: 4×5 pool = 20 connections (of 500 available) -->
-    <MaxParallelThreads>4</MaxParallelThreads>
+    <!-- Phase 2: 8 parallel threads, budget: 8×5 pool = 40 connections (of 500 available) -->
+    <MaxParallelThreads>8</MaxParallelThreads>
     <DiagnosticMessages>true</DiagnosticMessages>
     <AppDomain>denied</AppDomain>
   </xUnit>

@@ -22,7 +22,7 @@ public class SmolDoclingHealthCheck : IHealthCheck
         HealthCheckContext context,
         CancellationToken cancellationToken = default)
     {
-        var smoldoclingUrl = _configuration["PdfProcessing:SmolDoclingApiUrl"];
+        var smoldoclingUrl = _configuration["PdfProcessing:Extractor:SmolDocling:ApiUrl"];
         if (string.IsNullOrWhiteSpace(smoldoclingUrl))
         {
             return HealthCheckResult.Degraded("SmolDocling API not configured");

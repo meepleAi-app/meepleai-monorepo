@@ -151,7 +151,7 @@ jobs:
         continue-on-error: true
 
   # Backend Integration Tests (requires service containers, runs in parallel with unit tests)
-  # Phase 2+3: 8 parallel threads per shard, 3-shard matrix for ~8-24x total speedup
+  # Phase 2+3: 4 parallel threads per shard, 3-shard matrix for ~4-12x total speedup
   backend-integration:
     name: Backend - Integration (${{ matrix.shard.name }})
     runs-on: ubuntu-latest
@@ -322,7 +322,7 @@ jobs:
           TEST_POSTGRES_CONNSTRING: Host=localhost;Port=5432;Database=meepleai_test;Username=postgres;Password=testpass
           TEST_REDIS_CONNSTRING: localhost:6379,allowAdmin=true
         run: |
-          echo "🧪 Running integration tests - shard: ${{ matrix.shard.name }} (8 parallel threads)..."
+          echo "🧪 Running integration tests - shard: ${{ matrix.shard.name }} (4 parallel threads)..."
           dotnet test \
             --filter "Category=Integration&FullyQualifiedName!~UploadPdfMidPhaseCancellationTests&FullyQualifiedName!~FrontendSdk&FullyQualifiedName!~ArbitroAgent${{ matrix.shard.filter_extra }}" \
             --settings tests/Api.Tests/integration.runsettings \

@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using Api.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using Pgvector;
@@ -13,9 +14,11 @@ using Pgvector;
 namespace Api.Infrastructure.Migrations
 {
     [DbContext(typeof(MeepleAiDbContext))]
-    partial class MeepleAiDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260313102856_AddSessionParticipantRegisteredDisplayName")]
+    partial class AddSessionParticipantRegisteredDisplayName
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -6294,7 +6297,8 @@ namespace Api.Infrastructure.Migrations
                         .HasColumnType("integer");
 
                     b.Property<string>("AtomicRules")
-                        .HasColumnType("text");
+                        .HasMaxLength(8192)
+                        .HasColumnType("character varying(8192)");
 
                     b.Property<Guid?>("BaseDocumentId")
                         .HasColumnType("uuid")
@@ -6363,10 +6367,12 @@ namespace Api.Infrastructure.Migrations
                         .HasColumnName("error_category");
 
                     b.Property<string>("ExtractedDiagrams")
-                        .HasColumnType("text");
+                        .HasMaxLength(8192)
+                        .HasColumnType("character varying(8192)");
 
                     b.Property<string>("ExtractedTables")
-                        .HasColumnType("text");
+                        .HasMaxLength(8192)
+                        .HasColumnType("character varying(8192)");
 
                     b.Property<string>("ExtractedText")
                         .HasColumnType("text");

@@ -21,6 +21,7 @@ internal sealed class GetSessionParticipantsQueryHandler : IRequestHandler<GetSe
     public async Task<IReadOnlyList<SessionParticipantDto>> Handle(GetSessionParticipantsQuery request, CancellationToken cancellationToken)
     {
         return await _dbContext.SessionParticipants
+            .Include(p => p.User)
             .Where(p => p.SessionId == request.SessionId)
             .OrderBy(p => p.JoinedAt)
             .Select(p => new SessionParticipantDto(
@@ -28,7 +29,7 @@ internal sealed class GetSessionParticipantsQueryHandler : IRequestHandler<GetSe
                 p.SessionId,
                 p.UserId,
                 p.GuestName,
-                p.GuestName ?? "User",
+                p.GuestName ?? p.User!.DisplayName ?? p.User!.Email ?? "User",
                 p.Role,
                 p.AgentAccessEnabled,
                 p.JoinedAt,

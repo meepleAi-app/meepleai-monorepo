@@ -18,7 +18,8 @@ public class SessionParticipant
     public DateTime JoinedAt { get; private set; }
     public DateTime? LeftAt { get; private set; }
 
-    public string DisplayName => GuestName ?? "User";
+    public string? RegisteredDisplayName { get; private set; }
+    public string DisplayName => GuestName ?? RegisteredDisplayName ?? "User";
     public bool IsRegisteredUser => UserId.HasValue;
     public bool IsActive => LeftAt == null;
 
@@ -48,13 +49,14 @@ public class SessionParticipant
     /// Creates a registered user participant.
     /// Hosts automatically get agent access enabled.
     /// </summary>
-    public static SessionParticipant CreateRegistered(Guid sessionId, Guid userId, ParticipantRole role)
+    public static SessionParticipant CreateRegistered(Guid sessionId, Guid userId, ParticipantRole role, string? displayName = null)
     {
         return new SessionParticipant
         {
             Id = Guid.NewGuid(),
             SessionId = sessionId,
             UserId = userId,
+            RegisteredDisplayName = displayName,
             Role = role,
             AgentAccessEnabled = role == ParticipantRole.Host,
             ConnectionToken = GeneratePin(),

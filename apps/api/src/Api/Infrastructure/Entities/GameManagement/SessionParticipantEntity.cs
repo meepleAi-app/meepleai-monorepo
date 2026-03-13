@@ -14,6 +14,7 @@ public class SessionParticipantEntity
     // Identity - one of UserId or GuestName will be set
     public Guid? UserId { get; set; }
     public string? GuestName { get; set; }
+    public string? RegisteredDisplayName { get; set; }
 
     // Role & Access
     public string Role { get; set; } = default!; // ParticipantRole enum stored as string

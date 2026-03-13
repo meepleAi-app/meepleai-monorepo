@@ -1,3 +1,4 @@
+using Api.Infrastructure.Seeders;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -34,6 +35,9 @@ internal static class CoreSeeder
             .ConfigureAwait(false);
         await SafeExecute("badges",
             () => BadgeSeeder.SeedBadgesAsync(db, logger, ct), logger)
+            .ConfigureAwait(false);
+        await SafeExecute("tier definitions",
+            () => TierDefinitionSeeder.SeedTierDefinitionsAsync(db, logger, ct), logger)
             .ConfigureAwait(false);
     }
 

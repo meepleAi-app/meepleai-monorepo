@@ -19,7 +19,7 @@ services:
       - ./secrets/database.secret
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-meepleai_staging}
-      POSTGRES_USER: ${POSTGRES_USER:-meeple}
+      POSTGRES_USER: ${POSTGRES_USER:-meepleai}
     volumes:
       - pgdata-staging:/var/lib/postgresql/data
       - ./init/postgres-init.sql:/docker-entrypoint-initdb.d/init.sql:ro
@@ -61,7 +61,7 @@ services:
       - ./secrets/oauth.secret
     environment:
       ASPNETCORE_ENVIRONMENT: Staging
-      POSTGRES_USER: ${POSTGRES_USER:-meeple}
+      POSTGRES_USER: ${POSTGRES_USER:-meepleai}
       POSTGRES_DB: ${POSTGRES_DB:-meepleai_staging}
       # OAuth: callback URL must match the public domain (not localhost)
       Authentication__OAuth__CallbackBaseUrl: "https://meepleai.app"

@@ -152,7 +152,7 @@ export function MauDashboard() {
                           day: 'numeric',
                         })}
                       </td>
-                      <td className="p-2 text-right font-medium">{day.totalUsers}</td>
+                      <td className="p-2 text-right font-medium">{day.activeUsers}</td>
                       <td className="p-2 text-right text-blue-600">{day.aiChatUsers}</td>
                       <td className="p-2 text-right text-green-600">{day.pdfUploadUsers}</td>
                     </tr>

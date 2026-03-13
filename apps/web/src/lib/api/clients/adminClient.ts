@@ -3623,8 +3623,8 @@ export type SharedGameDocumentsResult = z.infer<typeof SharedGameDocumentsResult
 export const BulkUploadItemResultSchema = z.object({
   fileName: z.string(),
   success: z.boolean(),
-  pdfDocumentId: z.string().nullable(),
-  errorMessage: z.string().nullable(),
+  documentId: z.string().nullable(),
+  error: z.string().nullable(),
 });
 
 export type BulkUploadItemResult = z.infer<typeof BulkUploadItemResultSchema>;
@@ -3632,8 +3632,8 @@ export type BulkUploadItemResult = z.infer<typeof BulkUploadItemResultSchema>;
 export const BulkUploadPdfsResultSchema = z.object({
   totalRequested: z.number(),
   successCount: z.number(),
-  failureCount: z.number(),
-  results: z.array(BulkUploadItemResultSchema),
+  failedCount: z.number(),
+  items: z.array(BulkUploadItemResultSchema),
 });
 
 export type BulkUploadPdfsResult = z.infer<typeof BulkUploadPdfsResultSchema>;
@@ -3642,7 +3642,7 @@ export type BulkUploadPdfsResult = z.infer<typeof BulkUploadPdfsResultSchema>;
 
 export const DailyActiveUsersSchema = z.object({
   date: z.string(),
-  totalUsers: z.number(),
+  activeUsers: z.number(),
   aiChatUsers: z.number(),
   pdfUploadUsers: z.number(),
 });

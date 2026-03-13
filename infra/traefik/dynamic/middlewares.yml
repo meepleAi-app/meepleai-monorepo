@@ -97,16 +97,18 @@ http:
     # Retry
     # Retries failed requests
     retry:
-      attempts: 3
-      initialInterval: 100ms
+      retry:
+        attempts: 3
+        initialInterval: 100ms
 
     # Circuit Breaker
     # Prevents cascading failures
     circuit-breaker:
-      expression: "NetworkErrorRatio() > 0.3"  # Trip if 30% requests fail
-      checkPeriod: 10s
-      fallbackDuration: 30s
-      recoveryDuration: 10s
+      circuitBreaker:
+        expression: "NetworkErrorRatio() > 0.3"  # Trip if 30% requests fail
+        checkPeriod: 10s
+        fallbackDuration: 30s
+        recoveryDuration: 10s
 
     # IP Whitelist (for admin endpoints)
     # PRODUCTION: Uncomment and configure for sensitive endpoints

@@ -166,6 +166,19 @@ describe('ContainerDashboard', () => {
     expect(screen.getByText('Resume')).toBeInTheDocument();
   });
 
+  it('shows dash for uptime of stopped containers', async () => {
+    mockGetDockerContainers.mockResolvedValue(mockContainers);
+    render(<ContainerDashboard />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('container-card-ghi789')).toBeInTheDocument();
+    });
+
+    const stoppedCard = screen.getByTestId('container-card-ghi789');
+    const uptimeEl = stoppedCard.querySelector('[data-testid="container-uptime"]');
+    expect(uptimeEl).toHaveTextContent('—');
+  });
+
   it('manual refresh button fetches containers', async () => {
     const user = userEvent.setup();
     mockGetDockerContainers.mockResolvedValue(mockContainers);

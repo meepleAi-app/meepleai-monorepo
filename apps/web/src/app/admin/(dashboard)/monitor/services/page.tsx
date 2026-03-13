@@ -1,13 +1,15 @@
 /**
  * Admin Service Dashboard
- * Issue #132 — Phase 2A: Enhanced ServiceHealthMatrix
+ * Issue #132 — Phase 2: Service Dashboard with health, DB stats, restart controls
  *
  * Route: /admin/monitor/services
  * Enhanced service health view with auto-refresh, uptime badges,
- * response time trends, and service category grouping.
+ * response time trends, database stats, and service restart controls.
  */
 
+import { DbStatsPanel } from './DbStatsPanel';
 import { ServicesNavConfig } from './NavConfig';
+import { RestartServicePanel } from './RestartServicePanel';
 import { ServicesDashboard } from './ServicesDashboard';
 
 export default function ServiceDashboardPage() {
@@ -24,6 +26,12 @@ export default function ServiceDashboardPage() {
       </div>
 
       <ServicesDashboard />
+
+      {/* Issue #135: Database Stats Overview */}
+      <DbStatsPanel />
+
+      {/* Issue #133: Service Restart Controls (SuperAdmin only) */}
+      <RestartServicePanel />
     </div>
   );
 }

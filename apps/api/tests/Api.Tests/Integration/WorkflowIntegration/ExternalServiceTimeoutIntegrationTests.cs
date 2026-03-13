@@ -19,7 +19,7 @@ namespace Api.Tests.Integration.WorkflowIntegration;
 /// Week 9: WorkflowIntegration timeout and resilience layer (5 tests)
 /// Tests: Timeout detection, failed connection logging, resilience patterns, error categorization
 /// </summary>
-[Collection("SharedTestcontainers")]
+[Collection("Integration-GroupD")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("Dependency", "PostgreSQL")]
 [Trait("BoundedContext", "WorkflowIntegration")]

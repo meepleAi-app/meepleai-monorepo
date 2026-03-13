@@ -21,7 +21,7 @@ namespace Api.Tests.Integration.KnowledgeBase;
 /// Integration tests for Arbitro Validation Feedback system.
 /// Issue #4328: Arbitro Agent Beta Testing and User Feedback Iteration.
 /// </summary>
-[Collection("SharedTestcontainers")]
+[Collection("Integration-GroupA")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("Dependency", "PostgreSQL")]
 [Trait("BoundedContext", "KnowledgeBase")]

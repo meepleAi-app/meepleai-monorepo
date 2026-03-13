@@ -43,7 +43,7 @@ namespace Api.Tests.Integration.DocumentProcessing;
 /// Coverage Target: ≥90% for DeletePdfCommandHandler
 /// Execution Time Target: <20s
 /// </summary>
-[Collection("SharedTestcontainers")]
+[Collection("Integration-GroupA")]
 [Trait("Issue", "2031")]
 [Trait("Category", TestCategories.Integration)]
 public sealed class DeletePdfIntegrationTests : IAsyncLifetime

@@ -31,7 +31,7 @@ namespace Api.Tests.Integration.GameManagement;
 /// Execution Time Target: <60s
 /// Uses SharedTestcontainersFixture for optimized performance and Docker hijack prevention (Issue #2031).
 /// </summary>
-[Collection("SharedTestcontainers")]
+[Collection("Integration-GroupC")]
 [Trait("Issue", "2031")]
 [Trait("Category", TestCategories.Integration)]
 public sealed class UpdateRuleCommentIntegrationTests : IAsyncLifetime

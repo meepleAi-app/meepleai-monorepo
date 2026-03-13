@@ -8,6 +8,9 @@
     <ResultsDirectory>./TestResults</ResultsDirectory>
 
     <!-- Parallel execution settings -->
+    <!-- Issue #CI-Optimization: Enable parallel execution with controlled concurrency -->
+    <!-- MaxCpuCount=1: Single test host process to limit DB connection usage -->
+    <!-- xUnit handles parallelism within the process via MaxParallelThreads -->
     <MaxCpuCount>1</MaxCpuCount>
     <DisableParallelization>false</DisableParallelization>
   </RunConfiguration>
@@ -50,8 +53,8 @@
 
   <!-- xUnit specific settings -->
   <xUnit>
-    <!-- Maximum time per test: 60 seconds (for health checks with 10s+ warmup) -->
-    <MaxParallelThreads>1</MaxParallelThreads>
+    <!-- Issue #CI-Optimization: 2 threads to balance speed vs DB connection pressure -->
+    <MaxParallelThreads>2</MaxParallelThreads>
     <DiagnosticMessages>true</DiagnosticMessages>
     <AppDomain>denied</AppDomain>
   </xUnit>

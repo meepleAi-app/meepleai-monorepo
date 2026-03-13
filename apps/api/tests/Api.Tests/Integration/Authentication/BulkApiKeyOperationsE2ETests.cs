@@ -38,7 +38,7 @@ namespace Api.Tests.Integration.Authentication;
 /// Pattern: AAA (Arrange-Act-Assert), Testcontainers for PostgreSQL
 /// Execution Time Target: <20s for full suite
 /// </remarks>
-[Collection("SharedTestcontainers")]
+[Collection("Integration-GroupB")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("Type", "E2E")]
 [Trait("Dependency", "PostgreSQL")]

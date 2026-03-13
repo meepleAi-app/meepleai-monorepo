@@ -26,7 +26,7 @@ namespace Api.Tests.BoundedContexts.KnowledgeBase.Infrastructure;
 ///
 /// Target: Vector similarity queries &lt;100ms P95 latency
 /// </summary>
-[Collection("SharedTestcontainers")]
+[Collection("Integration-GroupA")]
 [Trait("Category", TestCategories.Performance)]
 [Trait("BoundedContext", "KnowledgeBase")]
 [Trait("Issue", "3493")]

@@ -23,7 +23,7 @@ namespace Api.Tests.BoundedContexts.KnowledgeBase.Infrastructure;
 /// Issue #3493: PostgreSQL Schema Extensions - Deferred integration tests.
 /// Issue #3985: Integration Tests for Context Engineering Repositories.
 /// </summary>
-[Collection("SharedTestcontainers")]
+[Collection("Integration-GroupA")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "KnowledgeBase")]
 [Trait("Dependency", "PostgreSQL")]

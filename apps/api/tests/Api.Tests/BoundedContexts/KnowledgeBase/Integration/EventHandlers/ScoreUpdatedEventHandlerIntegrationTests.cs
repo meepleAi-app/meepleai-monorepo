@@ -30,7 +30,7 @@ namespace Api.Tests.Integration.KnowledgeBase.EventHandlers;
 /// Validates event flow: SessionTracking.ScoreUpdatedEvent → AgentSession state sync.
 /// Issue #3189 (AGT-015): GST Integration - Agent State Sync with Game Events.
 /// </summary>
-[Collection("SharedTestcontainers")]
+[Collection("Integration-GroupA")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "KnowledgeBase")]
 public sealed class ScoreUpdatedEventHandlerIntegrationTests : IAsyncLifetime

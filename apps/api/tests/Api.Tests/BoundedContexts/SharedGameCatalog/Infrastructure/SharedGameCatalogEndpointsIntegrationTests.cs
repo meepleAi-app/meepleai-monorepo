@@ -38,7 +38,7 @@ namespace Api.Tests.BoundedContexts.SharedGameCatalog.Infrastructure;
 /// Tests: Public access, Authorization, Cache scenarios
 /// Issue #2371 Phase 2
 /// </summary>
-[Collection("SharedTestcontainers")]
+[Collection("Integration-GroupC")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "SharedGameCatalog")]
 public sealed class SharedGameCatalogEndpointsIntegrationTests : IAsyncLifetime

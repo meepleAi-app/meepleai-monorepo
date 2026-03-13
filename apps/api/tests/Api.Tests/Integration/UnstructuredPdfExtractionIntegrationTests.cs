@@ -20,7 +20,7 @@ namespace Api.Tests.Integration;
 /// Requirements: 12 test cases, Testcontainers, real Italian PDFs, ≥90% coverage
 /// Migrated to SharedTestcontainersFixture for optimized performance (reuses container across tests)
 /// </remarks>
-[Collection("SharedTestcontainers")]
+[Collection("Integration-GroupB")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("Category", "PDF")]
 public class UnstructuredPdfExtractionIntegrationTests : IAsyncLifetime

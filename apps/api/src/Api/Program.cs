@@ -395,8 +395,11 @@ using (var scope = app.Services.CreateScope())
 
         app.Logger.LogInformation("✓ Embedding configuration validated: Provider={Provider}, Model={Model}, Dimensions={Dimensions}",
             provider, model, embeddingDimensions);
+    }
 
-        // Epic #318: Layered seeding pipeline with advisory lock
+    // Epic #318: Layered seeding pipeline with advisory lock (runs independently of migrations)
+    if (db != null)
+    {
         var seedOrchestrator = scope.ServiceProvider.GetRequiredService<Api.Infrastructure.Seeders.SeedOrchestrator>();
         await seedOrchestrator.RunAsync(db, scope.ServiceProvider).ConfigureAwait(false);
     }

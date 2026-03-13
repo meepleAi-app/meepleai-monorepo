@@ -72,6 +72,15 @@ internal static class AdministrationServiceExtensions
             configuration.GetSection(OrphanedTaskCleanupOptions.SectionKey));
         services.AddScoped<IOrphanedTaskCleanupService, OrphanedTaskCleanupService>();
 
+        // Issue #138: Docker Socket Proxy service for admin container management
+        services.AddHttpClient<IDockerProxyService, DockerProxyService>(client =>
+        {
+            var host = Environment.GetEnvironmentVariable("DOCKER_PROXY_HOST") ?? "docker-socket-proxy";
+            var port = Environment.GetEnvironmentVariable("DOCKER_PROXY_PORT") ?? "2375";
+            client.BaseAddress = new Uri($"http://{host}:{port}");
+            client.Timeout = TimeSpan.FromSeconds(10);
+        });
+
         // Issue #891: Infrastructure health monitoring service
         services.AddScoped<IInfrastructureHealthService, InfrastructureHealthService>();
 

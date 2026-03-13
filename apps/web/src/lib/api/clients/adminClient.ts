@@ -151,6 +151,10 @@ import {
   type QueueStatus,
   ActiveOverrideSchema,
   type ActiveOverride,
+  ContainerInfoSchema,
+  type ContainerInfo,
+  ContainerLogsSchema,
+  type ContainerLogs,
 } from '../schemas';
 import {
   BulkDeleteResultSchema,
@@ -3245,6 +3249,31 @@ export function createAdminClient({ httpClient }: CreateAdminClientParams) {
      */
     async deactivateEmergencyOverride(action: string): Promise<void> {
       await httpClient.post('/api/v1/admin/llm/emergency/deactivate', { action });
+    },
+
+    // ========== Docker Container Management (Issue #139) ==========
+
+    /**
+     * Get all Docker containers
+     * GET /api/v1/admin/docker/containers
+     */
+    async getDockerContainers(): Promise<ContainerInfo[]> {
+      const res = await httpClient.get('/api/v1/admin/docker/containers');
+      return z.array(ContainerInfoSchema).parse(res);
+    },
+
+    /**
+     * Get container logs
+     * GET /api/v1/admin/docker/containers/:containerId/logs
+     */
+    async getContainerLogs(
+      containerId: string,
+      tail: number = 100
+    ): Promise<ContainerLogs> {
+      const res = await httpClient.get(
+        `/api/v1/admin/docker/containers/${containerId}/logs?tail=${tail}`
+      );
+      return ContainerLogsSchema.parse(res);
     },
   };
 }

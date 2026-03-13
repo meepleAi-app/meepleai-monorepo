@@ -1250,6 +1250,7 @@ export const MeepleCard = React.memo(function MeepleCard({
           actions={gameBackActions}
           entityColor={color}
           title={title}
+          subtitle={subtitle}
           detailHref={detailHref}
         />
       ) : undefined;

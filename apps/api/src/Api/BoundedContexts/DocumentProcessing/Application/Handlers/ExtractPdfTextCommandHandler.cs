@@ -67,8 +67,10 @@ internal class ExtractPdfTextCommandHandler : ICommandHandler<ExtractPdfTextComm
 
         try
         {
-            // 3. Update status to processing
+            // 3. Update status to processing (both deprecated + 7-state)
             pdf.ProcessingStatus = "processing";
+            pdf.ProcessingState = "Extracting";
+            pdf.ExtractingStartedAt = _timeProvider.GetUtcNow().UtcDateTime;
             await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
             // 4. Extract text from PDF
@@ -83,6 +85,7 @@ internal class ExtractPdfTextCommandHandler : ICommandHandler<ExtractPdfTextComm
                 _logger.LogError("Text extraction failed for PDF {PdfId}: {Error}",
                     pdfId, extractResult.ErrorMessage);
                 pdf.ProcessingStatus = "failed";
+                pdf.ProcessingState = "Failed";
                 pdf.ProcessingError = extractResult.ErrorMessage;
                 pdf.ProcessedAt = _timeProvider.GetUtcNow().UtcDateTime;
                 await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
@@ -102,6 +105,7 @@ internal class ExtractPdfTextCommandHandler : ICommandHandler<ExtractPdfTextComm
             pdf.PageCount = extractResult.TotalPages;
             pdf.CharacterCount = extractResult.TotalCharacters;
             pdf.ProcessingStatus = "completed";
+            pdf.ProcessingState = "Ready";
             pdf.ProcessingError = null;
             pdf.ProcessedAt = _timeProvider.GetUtcNow().UtcDateTime;
 

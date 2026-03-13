@@ -285,6 +285,10 @@ export const CreateSharedGameRequestSchema = z.object({
     })
     .nullable()
     .optional(),
+  categories: z.array(z.string()).optional().default([]),
+  mechanics: z.array(z.string()).optional().default([]),
+  designers: z.array(z.string()).optional().default([]),
+  publishers: z.array(z.string()).optional().default([]),
   bggId: z.number().int().positive().nullable().optional(),
 });
 

@@ -46,10 +46,11 @@ internal sealed class AddRagToSharedGameCommandHandler : ICommandHandler<AddRagT
             throw new NotFoundException("SharedGame", command.SharedGameId.ToString());
         }
 
-        // Step 2: Upload PDF
+        // Step 2: Upload PDF (pass SharedGameId as GameId so the upload handler
+        // can resolve or auto-create the games entry via FindOrCreateGameAsync)
         var uploadResult = await _mediator.Send(
             new UploadPdfCommand(
-                GameId: null,
+                GameId: command.SharedGameId.ToString(),
                 Metadata: null,
                 PrivateGameId: null,
                 UserId: command.UserId,

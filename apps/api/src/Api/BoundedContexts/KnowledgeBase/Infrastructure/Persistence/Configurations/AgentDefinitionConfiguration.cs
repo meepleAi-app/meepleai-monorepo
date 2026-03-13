@@ -78,6 +78,13 @@ public sealed class AgentDefinitionConfiguration : IEntityTypeConfiguration<Agen
             .HasDefaultValue("[]")
             .IsRequired();
 
+        // ChatLanguage (E5-3) - ISO 639-1 code or "auto"
+        builder.Property(a => a.ChatLanguage)
+            .HasColumnName("chat_language")
+            .HasMaxLength(10)
+            .HasDefaultValue("auto")
+            .IsRequired();
+
         builder.Property(a => a.IsActive).HasColumnName("is_active").IsRequired();
         builder.Property(a => a.CreatedAt).HasColumnName("created_at").IsRequired();
         builder.Property(a => a.UpdatedAt).HasColumnName("updated_at");

@@ -46,10 +46,8 @@ internal class HybridAdaptiveRoutingStrategy : ILlmRoutingStrategy
     /// <inheritdoc/>
     public LlmRoutingDecision SelectProvider(User? user, RagStrategy strategy, string? context = null)
     {
-        var isAnonymous = user == null;
-        var userRole = user?.Role ?? Role.User;
         var userId = user?.Id.ToString() ?? "anonymous";
-        var tier = MapRoleToTier(userRole, isAnonymous);
+        var tier = MapUserToLlmTier(user);
 
         var settings = _aiSettings.Value;
 
@@ -245,26 +243,42 @@ internal class HybridAdaptiveRoutingStrategy : ILlmRoutingStrategy
     }
 
     /// <summary>
-    /// Map authentication Role to LlmUserTier.
+    /// Map user to LlmUserTier based on role AND subscription tier.
+    /// E4-2: Tier-aware LLM routing — premium subscribers get Premium tier
+    /// regardless of their role. Admin role always wins.
     /// When user is null (internal pipeline calls like ConversationQueryRewriter),
     /// default to User tier so internal services aren't blocked by Anonymous tier
     /// which has zero strategy access.
     /// </summary>
-    private static LlmUserTier MapRoleToTier(Role userRole, bool isAnonymous)
+    internal static LlmUserTier MapUserToLlmTier(User? user)
     {
-        if (isAnonymous)
+        if (user is null)
         {
             // Internal pipeline calls (e.g., query rewriting) pass user=null.
             // Use User tier as default so they can access basic strategies.
             return LlmUserTier.User;
         }
 
-        return userRole.Value switch
+        // Admin role always gets Admin tier (highest access)
+        if (string.Equals(user.Role.Value, "admin", StringComparison.OrdinalIgnoreCase))
         {
-            "admin" => LlmUserTier.Admin,
-            "editor" => LlmUserTier.Editor,
-            _ => LlmUserTier.User
-        };
+            return LlmUserTier.Admin;
+        }
+
+        // Editor role gets Editor tier
+        if (string.Equals(user.Role.Value, "editor", StringComparison.OrdinalIgnoreCase))
+        {
+            return LlmUserTier.Editor;
+        }
+
+        // E4-2: Check subscription tier for premium/enterprise users
+        if (user.Tier.IsPremium() || user.Tier.IsEnterprise())
+        {
+            return LlmUserTier.Premium;
+        }
+
+        // Free/normal subscription tier → User LLM tier
+        return LlmUserTier.User;
     }
 
     /// <summary>

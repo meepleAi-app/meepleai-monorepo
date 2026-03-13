@@ -133,6 +133,16 @@ internal static class PdfEndpoints
     {
         MapPdfDeletionEndpoints(group);
         MapPdfVisibilityEndpoints(group);
+        MapPdfLanguageEndpoints(group);
+    }
+
+    private static void MapPdfLanguageEndpoints(RouteGroupBuilder group)
+    {
+        // E5-2: Override detected language of a PDF document
+        group.MapPut("/pdfs/{pdfId:guid}/language", HandleOverridePdfLanguage)
+        .RequireSession()
+        .RequireAuthorization()
+        .WithName("OverridePdfLanguage");
     }
 
     private static void MapPdfDeletionEndpoints(RouteGroupBuilder group)
@@ -795,14 +805,9 @@ internal static class PdfEndpoints
         var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
         var userId = session!.User!.Id;
 
-        var result = await mediator.Send(new AcceptCopyrightDisclaimerCommand(pdfId, userId), ct).ConfigureAwait(false);
+        var result = await mediator.Send(new AcceptCopyrightDisclaimerCommand(userId, pdfId), ct).ConfigureAwait(false);
 
-        if (!result.Success)
-        {
-            return Results.NotFound(new { error = result.Message });
-        }
-
-        return Results.Ok(new { success = true, message = result.Message });
+        return Results.Ok(new { success = result.Success, message = result.Message });
     }
 
     /// <summary>
@@ -1306,6 +1311,23 @@ internal static class PdfEndpoints
         var result = await mediator.Send(query, ct).ConfigureAwait(false);
         return Results.Ok(result);
     }
+
+    /// <summary>
+    /// E5-2: Override detected language of a PDF document.
+    /// </summary>
+    private static async Task<IResult> HandleOverridePdfLanguage(
+        Guid pdfId,
+        [FromBody] OverridePdfLanguageRequest request,
+        IMediator mediator,
+        ILogger<Program> logger,
+        CancellationToken ct)
+    {
+        await mediator.Send(new OverridePdfLanguageCommand(pdfId, request.LanguageCode), ct).ConfigureAwait(false);
+
+        logger.LogInformation("PDF {PdfId} language override set to {LanguageCode}", pdfId, request.LanguageCode ?? "(cleared)");
+
+        return Results.Ok(new { success = true, languageCode = request.LanguageCode });
+    }
 }
 
 internal record InitChunkedUploadRequest(Guid? GameId, string FileName, long TotalFileSize, Guid? PrivateGameId = null);
@@ -1314,3 +1336,4 @@ internal record SetPdfVisibilityRequest(bool IsPublic);
 internal record SetActiveForRagRequest(bool IsActive); // Issue #5446
 internal record ReclassifyDocumentRequest(string Category, Guid? BaseDocumentId, string? VersionLabel); // Issue #5447
 internal record ExtractBggGamesRequest(string PdfFilePath); // ISSUE-2513
+internal record OverridePdfLanguageRequest(string? LanguageCode); // E5-2

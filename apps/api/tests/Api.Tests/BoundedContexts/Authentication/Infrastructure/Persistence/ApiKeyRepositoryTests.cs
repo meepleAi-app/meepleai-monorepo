@@ -14,7 +14,7 @@ namespace Api.Tests.BoundedContexts.Authentication.Infrastructure.Persistence;
 /// Tests API key management, scoping, expiration, and revocation logic.
 /// Issue #2541: Migrated to SharedDatabaseTestBase for improved performance.
 /// </summary>
-[Collection("SharedTestcontainers")]
+[Collection("Integration-GroupB")]
 [Trait("Category", TestCategories.Integration)]
 public class ApiKeyRepositoryTests : SharedDatabaseTestBase<ApiKeyRepository>
 {

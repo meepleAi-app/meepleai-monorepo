@@ -18,6 +18,7 @@ import { SidebarContextNav } from '../SidebarContextNav';
 // ─── Mocks ───────────────────────────────────────────────────────────────────
 
 vi.mock('next/navigation', () => ({
+  useRouter: vi.fn(() => ({ push: vi.fn(), replace: vi.fn(), back: vi.fn() })),
   usePathname: vi.fn(),
   useSearchParams: vi.fn(() => new URLSearchParams()),
 }));

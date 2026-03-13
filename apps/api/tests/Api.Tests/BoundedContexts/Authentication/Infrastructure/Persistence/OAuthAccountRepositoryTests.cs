@@ -18,7 +18,7 @@ namespace Api.Tests.BoundedContexts.Authentication.Infrastructure.Persistence;
 /// Tests OAuth provider linking, token management, and multi-provider scenarios.
 /// Issue #2541: Migrated to SharedDatabaseTestBase for improved performance.
 /// </summary>
-[Collection("SharedTestcontainers")]
+[Collection("Integration-GroupB")]
 [Trait("Category", TestCategories.Integration)]
 public class OAuthAccountRepositoryTests : SharedDatabaseTestBase<OAuthAccountRepository>
 {

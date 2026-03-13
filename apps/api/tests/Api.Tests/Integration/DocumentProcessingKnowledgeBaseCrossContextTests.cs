@@ -31,7 +31,7 @@ namespace Api.Tests.Integration;
 /// Tests PDF upload, processing, vector embedding, and RAG search integration.
 /// Uses SharedTestcontainersFixture for optimized performance and Docker hijack prevention (Issue #2031).
 /// </summary>
-[Collection("SharedTestcontainers")]
+[Collection("Integration-GroupB")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("Issue", "2031")]
 public sealed class DocumentProcessingKnowledgeBaseCrossContextTests : IAsyncLifetime

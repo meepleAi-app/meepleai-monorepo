@@ -1042,6 +1042,14 @@ namespace Api.Infrastructure.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("id");
 
+                    b.Property<string>("ChatLanguage")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)")
+                        .HasDefaultValue("auto")
+                        .HasColumnName("chat_language");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
@@ -1344,6 +1352,50 @@ namespace Api.Infrastructure.Migrations
                         .HasDatabaseName("uq_toolkit_session_states_session_toolkit");
 
                     b.ToTable("toolkit_session_states", "session_tracking");
+                });
+
+            modelBuilder.Entity("Api.BoundedContexts.SystemConfiguration.Domain.Entities.TierDefinition", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("DisplayName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("display_name");
+
+                    b.Property<bool>("IsDefault")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_default");
+
+                    b.Property<string>("LlmModelTier")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("llm_model_tier");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("name");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Name")
+                        .IsUnique();
+
+                    b.ToTable("tier_definitions", (string)null);
                 });
 
             modelBuilder.Entity("Api.Infrastructure.Entities.AdminReportEntity", b =>
@@ -1655,6 +1707,9 @@ namespace Api.Infrastructure.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
 
+                    b.Property<Guid?>("SharedGameId")
+                        .HasColumnType("uuid");
+
                     b.Property<string>("StrategyName")
                         .IsRequired()
                         .HasMaxLength(100)
@@ -1678,6 +1733,8 @@ namespace Api.Infrastructure.Migrations
                     b.HasIndex("LastInvokedAt");
 
                     b.HasIndex("Name");
+
+                    b.HasIndex("SharedGameId");
 
                     b.HasIndex("Type");
 
@@ -3552,6 +3609,9 @@ namespace Api.Infrastructure.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("toolkit_id");
 
+                    b.Property<long>("TotalPausedDurationMs")
+                        .HasColumnType("bigint");
+
                     b.Property<string>("TurnOrderJson")
                         .HasColumnType("jsonb")
                         .HasColumnName("turn_order_json");
@@ -3909,6 +3969,139 @@ namespace Api.Infrastructure.Migrations
                         .HasFilter("is_deleted = false AND snapshot_index IS NOT NULL");
 
                     b.ToTable("session_attachments", (string)null);
+                });
+
+            modelBuilder.Entity("Api.Infrastructure.Entities.GameManagement.SessionInviteEntity", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid>("CreatedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("created_by_user_id");
+
+                    b.Property<int>("CurrentUses")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0)
+                        .HasColumnName("current_uses");
+
+                    b.Property<DateTime>("ExpiresAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("expires_at");
+
+                    b.Property<bool>("IsRevoked")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false)
+                        .HasColumnName("is_revoked");
+
+                    b.Property<string>("LinkToken")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("link_token");
+
+                    b.Property<int>("MaxUses")
+                        .HasColumnType("integer")
+                        .HasColumnName("max_uses");
+
+                    b.Property<string>("Pin")
+                        .IsRequired()
+                        .HasMaxLength(6)
+                        .HasColumnType("character varying(6)")
+                        .HasColumnName("pin");
+
+                    b.Property<Guid>("SessionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("session_id");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("LinkToken")
+                        .IsUnique()
+                        .HasDatabaseName("ix_session_invites_link_token");
+
+                    b.HasIndex("Pin")
+                        .HasDatabaseName("ix_session_invites_pin");
+
+                    b.HasIndex("SessionId")
+                        .HasDatabaseName("ix_session_invites_session_id");
+
+                    b.ToTable("session_invites", (string)null);
+                });
+
+            modelBuilder.Entity("Api.Infrastructure.Entities.GameManagement.SessionParticipantEntity", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<bool>("AgentAccessEnabled")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false)
+                        .HasColumnName("agent_access_enabled");
+
+                    b.Property<string>("ConnectionToken")
+                        .IsRequired()
+                        .HasMaxLength(6)
+                        .HasColumnType("character varying(6)")
+                        .HasColumnName("connection_token");
+
+                    b.Property<string>("GuestName")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("guest_name");
+
+                    b.Property<DateTime>("JoinedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("joined_at");
+
+                    b.Property<DateTime?>("LeftAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("left_at");
+
+                    b.Property<string>("RegisteredDisplayName")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("registered_display_name");
+
+                    b.Property<string>("Role")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("role");
+
+                    b.Property<Guid>("SessionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("session_id");
+
+                    b.Property<Guid?>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ConnectionToken")
+                        .IsUnique()
+                        .HasDatabaseName("ix_session_participants_connection_token");
+
+                    b.HasIndex("SessionId")
+                        .HasDatabaseName("ix_session_participants_session_id");
+
+                    b.HasIndex("UserId")
+                        .HasDatabaseName("ix_session_participants_user_id")
+                        .HasFilter("user_id IS NOT NULL");
+
+                    b.ToTable("session_participants", (string)null);
                 });
 
             modelBuilder.Entity("Api.Infrastructure.Entities.GameManagement.SessionPlayerEntity", b =>
@@ -4818,6 +5011,52 @@ namespace Api.Infrastructure.Migrations
                     b.ToTable("agent_typologies", (string)null);
                 });
 
+            modelBuilder.Entity("Api.Infrastructure.Entities.KnowledgeBase.AnalysisFeedbackEntity", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("AnalysisId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Comment")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("IsExported")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false);
+
+                    b.Property<bool>("IsReviewed")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false);
+
+                    b.Property<int>("Rating")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AnalysisId");
+
+                    b.HasIndex("IsExported");
+
+                    b.HasIndex("IsReviewed");
+
+                    b.HasIndex("UserId", "AnalysisId")
+                        .IsUnique();
+
+                    b.ToTable("analysis_feedback", (string)null);
+                });
+
             modelBuilder.Entity("Api.Infrastructure.Entities.KnowledgeBase.ArbitroValidationFeedbackEntity", b =>
                 {
                     b.Property<Guid>("Id")
@@ -5206,6 +5445,60 @@ namespace Api.Infrastructure.Migrations
                     b.ToTable("decisore_move_feedback", "knowledge_base");
                 });
 
+            modelBuilder.Entity("Api.Infrastructure.Entities.KnowledgeBase.ExtractedFactEntity", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("ExtractionDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("FactData")
+                        .IsRequired()
+                        .HasColumnType("jsonb");
+
+                    b.Property<string>("FactType")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<Guid>("GameId")
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("IsReviewed")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("ModelUsed")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("Reviewer")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<Guid?>("SourceDocumentId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("GameId");
+
+                    b.HasIndex("IsReviewed");
+
+                    b.HasIndex("SourceDocumentId");
+
+                    b.HasIndex("GameId", "FactType");
+
+                    b.ToTable("extracted_facts", (string)null);
+                });
+
             modelBuilder.Entity("Api.Infrastructure.Entities.KnowledgeBase.ModelChangeLogEntity", b =>
                 {
                     b.Property<Guid>("Id")
@@ -5353,6 +5646,52 @@ namespace Api.Infrastructure.Migrations
                         .IsUnique();
 
                     b.ToTable("rag_user_configs", (string)null);
+                });
+
+            modelBuilder.Entity("Api.Infrastructure.Entities.KnowledgeBase.SimilarityAuditResultEntity", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("CheckName")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<Guid>("PairId")
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("Passed")
+                        .HasColumnType("boolean");
+
+                    b.Property<decimal>("Score")
+                        .HasPrecision(5, 4)
+                        .HasColumnType("numeric(5,4)");
+
+                    b.Property<string>("SourceGame")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<decimal>("Threshold")
+                        .HasPrecision(5, 4)
+                        .HasColumnType("numeric(5,4)");
+
+                    b.Property<DateTime>("Timestamp")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PairId");
+
+                    b.HasIndex("Passed");
+
+                    b.HasIndex("SourceGame");
+
+                    b.HasIndex("PairId", "CheckName");
+
+                    b.ToTable("similarity_audit_results", (string)null);
                 });
 
             modelBuilder.Entity("Api.Infrastructure.Entities.KnowledgeBase.StrategyModelMappingEntity", b =>
@@ -5955,12 +6294,14 @@ namespace Api.Infrastructure.Migrations
                         .HasColumnType("integer");
 
                     b.Property<string>("AtomicRules")
-                        .HasMaxLength(8192)
-                        .HasColumnType("character varying(8192)");
+                        .HasColumnType("text");
 
                     b.Property<Guid?>("BaseDocumentId")
                         .HasColumnType("uuid")
                         .HasColumnName("base_document_id");
+
+                    b.Property<Guid?>("BatchId")
+                        .HasColumnType("uuid");
 
                     b.Property<int?>("CharacterCount")
                         .HasColumnType("integer");
@@ -6022,12 +6363,10 @@ namespace Api.Infrastructure.Migrations
                         .HasColumnName("error_category");
 
                     b.Property<string>("ExtractedDiagrams")
-                        .HasMaxLength(8192)
-                        .HasColumnType("character varying(8192)");
+                        .HasColumnType("text");
 
                     b.Property<string>("ExtractedTables")
-                        .HasMaxLength(8192)
-                        .HasColumnType("character varying(8192)");
+                        .HasColumnType("text");
 
                     b.Property<string>("ExtractedText")
                         .HasColumnType("text");
@@ -6074,6 +6413,15 @@ namespace Api.Infrastructure.Migrations
                     b.Property<string>("Language")
                         .IsRequired()
                         .HasColumnType("text");
+
+                    b.Property<double?>("LanguageConfidence")
+                        .HasColumnType("double precision")
+                        .HasColumnName("language_confidence");
+
+                    b.Property<string>("LanguageOverride")
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)")
+                        .HasColumnName("language_override");
 
                     b.Property<string>("Metadata")
                         .HasMaxLength(2048)
@@ -7087,6 +7435,42 @@ namespace Api.Infrastructure.Migrations
                     b.ToTable("session_tracking_chat_messages", (string)null);
                 });
 
+            modelBuilder.Entity("Api.Infrastructure.Entities.SessionTracking.SessionCheckpointEntity", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("CreatedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("DiaryEventCount")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<Guid>("SessionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("SnapshotData")
+                        .IsRequired()
+                        .HasColumnType("jsonb");
+
+                    b.Property<DateTime>("Timestamp")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedBy");
+
+                    b.HasIndex("SessionId", "Timestamp");
+
+                    b.ToTable("session_checkpoints", (string)null);
+                });
+
             modelBuilder.Entity("Api.Infrastructure.Entities.SessionTracking.SessionDeckEntity", b =>
                 {
                     b.Property<Guid>("Id")
@@ -7244,6 +7628,50 @@ namespace Api.Infrastructure.Migrations
                         .HasFilter("is_deleted = false");
 
                     b.ToTable("session_tracking_sessions", (string)null);
+                });
+
+            modelBuilder.Entity("Api.Infrastructure.Entities.SessionTracking.SessionEventEntity", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("CreatedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("EventType")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Payload")
+                        .HasColumnType("jsonb");
+
+                    b.Property<Guid>("SessionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Source")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<DateTime>("Timestamp")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedBy");
+
+                    b.HasIndex("SessionId", "EventType");
+
+                    b.HasIndex("SessionId", "Timestamp");
+
+                    b.ToTable("session_events", (string)null);
                 });
 
             modelBuilder.Entity("Api.Infrastructure.Entities.SessionTracking.SessionMediaEntity", b =>
@@ -9283,6 +9711,9 @@ namespace Api.Infrastructure.Migrations
                     b.PrimitiveCollection<List<string>>("Interests")
                         .HasColumnType("jsonb");
 
+                    b.Property<bool>("IsContributor")
+                        .HasColumnType("boolean");
+
                     b.Property<bool>("IsDemoAccount")
                         .HasColumnType("boolean");
 
@@ -10903,6 +11334,65 @@ namespace Api.Infrastructure.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("Api.BoundedContexts.SystemConfiguration.Domain.Entities.TierDefinition", b =>
+                {
+                    b.OwnsOne("Api.BoundedContexts.SystemConfiguration.Domain.ValueObjects.TierLimits", "Limits", b1 =>
+                        {
+                            b1.Property<Guid>("TierDefinitionId")
+                                .HasColumnType("uuid");
+
+                            b1.Property<int>("MaxAgentQueriesPerDay")
+                                .HasColumnType("integer")
+                                .HasColumnName("max_agent_queries_per_day");
+
+                            b1.Property<int>("MaxAgents")
+                                .HasColumnType("integer")
+                                .HasColumnName("max_agents");
+
+                            b1.Property<int>("MaxCatalogProposalsPerWeek")
+                                .HasColumnType("integer")
+                                .HasColumnName("max_catalog_proposals_per_week");
+
+                            b1.Property<long>("MaxPdfSizeBytes")
+                                .HasColumnType("bigint")
+                                .HasColumnName("max_pdf_size_bytes");
+
+                            b1.Property<int>("MaxPdfUploadsPerMonth")
+                                .HasColumnType("integer")
+                                .HasColumnName("max_pdf_uploads_per_month");
+
+                            b1.Property<int>("MaxPhotosPerSession")
+                                .HasColumnType("integer")
+                                .HasColumnName("max_photos_per_session");
+
+                            b1.Property<int>("MaxPrivateGames")
+                                .HasColumnType("integer")
+                                .HasColumnName("max_private_games");
+
+                            b1.Property<int>("MaxSessionPlayers")
+                                .HasColumnType("integer")
+                                .HasColumnName("max_session_players");
+
+                            b1.Property<int>("MaxSessionQueries")
+                                .HasColumnType("integer")
+                                .HasColumnName("max_session_queries");
+
+                            b1.Property<bool>("SessionSaveEnabled")
+                                .HasColumnType("boolean")
+                                .HasColumnName("session_save_enabled");
+
+                            b1.HasKey("TierDefinitionId");
+
+                            b1.ToTable("tier_definitions");
+
+                            b1.WithOwner()
+                                .HasForeignKey("TierDefinitionId");
+                        });
+
+                    b.Navigation("Limits")
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("Api.Infrastructure.Entities.AgentEntity", b =>
                 {
                     b.HasOne("Api.Infrastructure.Entities.UserEntity", "CreatedByUser")
@@ -11372,6 +11862,35 @@ namespace Api.Infrastructure.Migrations
                         .IsRequired();
 
                     b.Navigation("RecordPlayer");
+                });
+
+            modelBuilder.Entity("Api.Infrastructure.Entities.GameManagement.SessionInviteEntity", b =>
+                {
+                    b.HasOne("Api.Infrastructure.Entities.GameManagement.LiveGameSessionEntity", "LiveGameSession")
+                        .WithMany()
+                        .HasForeignKey("SessionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("LiveGameSession");
+                });
+
+            modelBuilder.Entity("Api.Infrastructure.Entities.GameManagement.SessionParticipantEntity", b =>
+                {
+                    b.HasOne("Api.Infrastructure.Entities.GameManagement.LiveGameSessionEntity", "LiveGameSession")
+                        .WithMany()
+                        .HasForeignKey("SessionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Api.Infrastructure.Entities.UserEntity", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("LiveGameSession");
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("Api.Infrastructure.Entities.GameManagement.SessionPlayerEntity", b =>
@@ -11942,6 +12461,17 @@ namespace Api.Infrastructure.Migrations
                     b.Navigation("Session");
                 });
 
+            modelBuilder.Entity("Api.Infrastructure.Entities.SessionTracking.SessionCheckpointEntity", b =>
+                {
+                    b.HasOne("Api.Infrastructure.Entities.SessionTracking.SessionEntity", "Session")
+                        .WithMany()
+                        .HasForeignKey("SessionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Session");
+                });
+
             modelBuilder.Entity("Api.Infrastructure.Entities.SessionTracking.SessionDeckEntity", b =>
                 {
                     b.HasOne("Api.Infrastructure.Entities.SessionTracking.SessionEntity", "Session")
@@ -11966,6 +12496,17 @@ namespace Api.Infrastructure.Migrations
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+                });
+
+            modelBuilder.Entity("Api.Infrastructure.Entities.SessionTracking.SessionEventEntity", b =>
+                {
+                    b.HasOne("Api.Infrastructure.Entities.SessionTracking.SessionEntity", "Session")
+                        .WithMany()
+                        .HasForeignKey("SessionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Session");
                 });
 
             modelBuilder.Entity("Api.Infrastructure.Entities.SessionTracking.SessionMediaEntity", b =>

@@ -14,7 +14,7 @@ namespace Api.Tests.Integration.DocumentProcessing;
 /// Tests DeleteBehavior.Cascade for Game FK and junction table cleanup.
 /// </summary>
 [Trait("Category", TestCategories.Integration)]
-[Collection("SharedTestcontainers")]
+[Collection("Integration-GroupA")]
 public class DocumentCollectionCascadeDeleteTests : IAsyncLifetime
 {
     private readonly SharedTestcontainersFixture _fixture;

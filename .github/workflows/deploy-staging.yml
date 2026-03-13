@@ -52,7 +52,7 @@ jobs:
       deploy_api: ${{ steps.decision.outputs.deploy_api }}
       deploy_web: ${{ steps.decision.outputs.deploy_web }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 2
 
@@ -100,7 +100,7 @@ jobs:
     timeout-minutes: 15
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Verify CI passed on this commit
         env:
@@ -155,7 +155,7 @@ jobs:
   build:
     name: Build Images
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 90
     needs: [pre-deploy-check, detect-changes]
     if: always() && (needs.pre-deploy-check.result == 'success' || (github.event_name == 'workflow_dispatch' && inputs.skip_tests == true)) && (needs.detect-changes.outputs.deploy_api == 'true' || needs.detect-changes.outputs.deploy_web == 'true')
     outputs:
@@ -166,7 +166,7 @@ jobs:
       web_built: ${{ needs.detect-changes.outputs.deploy_web }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Generate Version
         id: version
@@ -358,7 +358,7 @@ jobs:
       url: https://meepleai.app
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       # Option 1: SSH Deploy (VPS/Dedicated Server)
       - name: Deploy via SSH
@@ -405,7 +405,14 @@ jobs:
               --profile minimal up -d --no-deps $SERVICES
 
             # Health check (internal - avoids SSL issues)
-            sleep 15
+            echo "⏳ Waiting for API health..."
+            for attempt in $(seq 1 20); do
+              if curl -sf http://localhost:8080/health > /dev/null 2>&1; then
+                echo "✅ API healthy after ~$((attempt*3))s"
+                break
+              fi
+              sleep 3
+            done
             curl -sf http://localhost:8080/health | python3 -c "
             import sys,json
             d=json.load(sys.stdin)
@@ -440,7 +447,7 @@ jobs:
     needs: [deploy, snapshot-baseline]
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Deep Health Check
         run: |
@@ -638,7 +645,7 @@ jobs:
     timeout-minutes: 10
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Setup Frontend
         uses: ./.github/actions/setup-frontend
@@ -659,7 +666,7 @@ jobs:
 
       - name: Upload Test Report
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: staging-e2e-report
           path: apps/web/playwright-report/

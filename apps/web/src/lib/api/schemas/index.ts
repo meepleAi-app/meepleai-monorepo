@@ -131,3 +131,9 @@ export * from './invitation.schemas';
 
 // Docker Container Management schemas (Issue #139)
 export * from './docker.schemas';
+
+// Tier & Usage schemas (Game Night Improvvisata — E2-4/E2-5)
+export * from './tier.schemas';
+
+// Session Invite schemas (Game Night Improvvisata)
+export * from './session-invite.schemas';

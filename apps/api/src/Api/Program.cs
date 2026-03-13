@@ -362,6 +362,8 @@ builder.Services.AddCors(options =>
 });
 
 // Issue #2406: SignalR for real-time game state updates
+// E3-4: Custom user ID provider for guest SignalR auth
+builder.Services.AddSingleton<Microsoft.AspNetCore.SignalR.IUserIdProvider, Api.Hubs.SessionParticipantIdProvider>();
 builder.Services.AddSignalR();
 
 var app = builder.Build();
@@ -394,10 +396,22 @@ using (var scope = app.Services.CreateScope())
         app.Logger.LogInformation("✓ Embedding configuration validated: Provider={Provider}, Model={Model}, Dimensions={Dimensions}",
             provider, model, embeddingDimensions);
 
-        // ISSUE-2512: Auto-configuration pipeline - Seed admin user, test user, AI models,
-        // shared games, badges, and rate limits (environment-independent, runs on first startup only)
-        var autoConfigService = scope.ServiceProvider.GetRequiredService<Api.BoundedContexts.Administration.Application.Services.IAutoConfigurationService>();
-        await autoConfigService.InitializeAsync().ConfigureAwait(false);
+        // PERF: Skip seeding in Staging/Production — seeding is for dev/test environments only
+        // Use SKIP_SEEDING=true or Staging/Production environment to disable
+        var skipSeeding = app.Configuration.GetValue<bool?>("SkipSeeding").GetValueOrDefault(false)
+            || app.Environment.IsEnvironment("Staging")
+            || app.Environment.IsProduction();
+
+        if (!skipSeeding)
+        {
+            // Layered seeding via SeedOrchestrator (creates its own scopes internally)
+            var seedOrchestrator = app.Services.GetRequiredService<Api.Infrastructure.Seeders.SeedOrchestrator>();
+            await seedOrchestrator.ExecuteAsync(CancellationToken.None).ConfigureAwait(false);
+        }
+        else
+        {
+            app.Logger.LogInformation("Skipping database seeding in {Environment}", app.Environment.EnvironmentName);
+        }
     }
 }
 
@@ -479,6 +493,7 @@ v1Api.MapUserProfileEndpoints();
 v1Api.MapUserAiConsentEndpoints(); // Issue #5512: GDPR AI consent
 v1Api.MapUserLlmDataEndpoints(); // Issue #5509: GDPR right to erasure for LLM data
 v1Api.MapUserAccountEndpoints(); // GDPR Art. 17: Self-service account deletion
+v1Api.MapUserUsageEndpoints(); // E2-2: User tier usage endpoint
 v1Api.MapGameEndpoints();
 v1Api.MapPlayRecordEndpoints(); // ISSUE-3889/3890: Play record tracking
 v1Api.MapLiveSessionEndpoints(); // Issue #4749: Live session CQRS endpoints
@@ -491,6 +506,7 @@ v1Api.MapSessionSnapshotEndpoints(); // Issue #4755: Session snapshot endpoints
 v1Api.MapGameManagementEndpoints(); // Issue #4273: Game search autocomplete
 v1Api.MapPlaylistEndpoints(); // Issue #5582: Game Night Playlist endpoints
 v1Api.MapGameNightEndpoints(); // Issue #46: Game Night Event endpoints
+v1Api.MapGameNightImprovvisataEndpoints(); // Game Night Improvvisata: E1-2 BGG import
 v1Api.MapRuleConflictFaqEndpoints(); // ISSUE-3966: Rule conflict FAQ management
 v1Api.MapSessionTrackingEndpoints(); // GST-003: Session tracking real-time collaboration
 v1Api.MapSessionStatisticsEndpoints(); // P4: Session analytics dashboard
@@ -522,6 +538,8 @@ v1Api.MapSessionLimitsConfigEndpoints(); // Issue #3070: Session limits config
 v1Api.MapPdfUploadLimitsConfigEndpoints(); // Issue #3072: PDF upload limits config
 v1Api.MapPdfTierUploadLimitsConfigEndpoints(); // Issue #3333: PDF tier upload limits config (bulk)
 v1Api.MapAdminConfigEndpoints();       // Issue #3673: PDF limits admin UI (per-tier)
+v1Api.MapAdminTierEndpoints();         // E2-1: Admin tier CRUD
+v1Api.MapSessionInviteEndpoints();     // E3-1: Session invite flow
 v1Api.MapAnalyticsEndpoints();         // Dashboard statistics & metrics
 v1Api.MapDashboardEndpoints();         // Issue #3314: User dashboard aggregated API
 v1Api.MapActivityTimelineEndpoints();  // Issue #4315: Activity timeline with page-based pagination
@@ -682,6 +700,13 @@ static bool ShouldSkipMigrations(WebApplication app, MeepleAiDbContext db)
     // Skip migrations in Testing and CI environments (E2E tests use Testcontainers)
     if (app.Environment.IsEnvironment("Testing") || app.Environment.IsEnvironment("CI"))
     {
+        return true;
+    }
+
+    // PERF: Skip auto-migration in Staging/Production — handled by deploy pipeline (migrate-db job)
+    if (app.Environment.IsEnvironment("Staging") || app.Environment.IsProduction())
+    {
+        app.Logger.LogInformation("Skipping auto-migration in {Environment} — migrations handled by deploy pipeline", app.Environment.EnvironmentName);
         return true;
     }
 

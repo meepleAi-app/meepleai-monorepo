@@ -21,7 +21,7 @@ namespace Api.Tests.BoundedContexts.SharedGameCatalog.Infrastructure;
 /// Tests: SearchByTagsAsync using optimized JSONB ?| operator with GIN index.
 /// Issue #2409 - Optimize tag search with JSONB operators.
 /// </summary>
-[Collection("SharedTestcontainers")]
+[Collection("Integration-GroupC")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "SharedGameCatalog")]
 public sealed class SharedGameDocumentRepositoryIntegrationTests : IAsyncLifetime

@@ -209,4 +209,6 @@ apps/docs/screenshots/.test-output/chromatic-archives/archive/_next/static/media
 apps/web/next-env.d.ts
 .worktrees/
 .superpowers/
-.worktrees/
+
+# Seed dumps (binary files, not tracked in source control)
+infra/seed-dumps/

@@ -28,7 +28,7 @@ namespace Api.Tests.Integration.Infrastructure;
 /// Coverage Target: ≥90% for RagService core logic
 /// Execution Time Target: <15s
 /// </summary>
-[Collection("SharedTestcontainers")]
+[Collection("Integration-GroupD")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("Issue", "2307")]
 public sealed class RagServiceIntegrationTests : IAsyncLifetime

@@ -111,7 +111,7 @@ public sealed class SecretLoaderTests : IDisposable
         CreateSecretFile("redis.secret", "REDIS_PASSWORD=redispass");
         CreateSecretFile("qdrant.secret", "QDRANT_API_KEY=qdrantkey");
         CreateSecretFile("jwt.secret", "JWT_SECRET_KEY=jwtsecret", "JWT_ISSUER=issuer", "JWT_AUDIENCE=audience");
-        CreateSecretFile("admin.secret", "ADMIN_EMAIL=admin@test.com", "ADMIN_PASSWORD=AdminPass123", "ADMIN_DISPLAY_NAME=Admin");
+        CreateSecretFile("admin.secret", "ADMIN_EMAIL=admin@test.com", "ADMIN_PASSWORD=AdminPass123", "ADMIN_DISPLAY_NAME=Admin", "INITIAL_ADMIN_EMAIL=admin@test.com", "INITIAL_ADMIN_DISPLAY_NAME=Admin");
         CreateSecretFile("embedding-service.secret", "EMBEDDING_SERVICE_API_KEY=embedkey");
 
         // Act
@@ -137,7 +137,7 @@ public sealed class SecretLoaderTests : IDisposable
         CreateSecretFile("redis.secret", "REDIS_PASSWORD=redispass");
         CreateSecretFile("qdrant.secret", "QDRANT_API_KEY=qdrantkey");
         CreateSecretFile("jwt.secret", "JWT_SECRET_KEY=jwtsecret", "JWT_ISSUER=issuer", "JWT_AUDIENCE=audience");
-        CreateSecretFile("admin.secret", "ADMIN_EMAIL=admin@test.com", "ADMIN_PASSWORD=AdminPass123", "ADMIN_DISPLAY_NAME=Admin");
+        CreateSecretFile("admin.secret", "ADMIN_EMAIL=admin@test.com", "ADMIN_PASSWORD=AdminPass123", "ADMIN_DISPLAY_NAME=Admin", "INITIAL_ADMIN_EMAIL=admin@test.com", "INITIAL_ADMIN_DISPLAY_NAME=Admin");
         CreateSecretFile("embedding-service.secret", "EMBEDDING_SERVICE_API_KEY=embedkey");
 
         // Don't create openrouter.secret (Important level)
@@ -171,7 +171,7 @@ public sealed class SecretLoaderTests : IDisposable
         CreateSecretFile("redis.secret", "REDIS_PASSWORD=redispass");
         CreateSecretFile("qdrant.secret", "QDRANT_API_KEY=qdrantkey");
         CreateSecretFile("jwt.secret", "JWT_SECRET_KEY=jwtsecret", "JWT_ISSUER=issuer", "JWT_AUDIENCE=audience");
-        CreateSecretFile("admin.secret", "ADMIN_EMAIL=admin@test.com", "ADMIN_PASSWORD=AdminPass123", "ADMIN_DISPLAY_NAME=Admin");
+        CreateSecretFile("admin.secret", "ADMIN_EMAIL=admin@test.com", "ADMIN_PASSWORD=AdminPass123", "ADMIN_DISPLAY_NAME=Admin", "INITIAL_ADMIN_EMAIL=admin@test.com", "INITIAL_ADMIN_DISPLAY_NAME=Admin");
         CreateSecretFile("embedding-service.secret", "EMBEDDING_SERVICE_API_KEY=embedkey");
 
         // Act
@@ -200,7 +200,7 @@ public sealed class SecretLoaderTests : IDisposable
         CreateSecretFile("redis.secret", "REDIS_PASSWORD=redispass");
         CreateSecretFile("qdrant.secret", "QDRANT_API_KEY=qdrantkey");
         CreateSecretFile("jwt.secret", "JWT_SECRET_KEY=jwtsecret", "JWT_ISSUER=issuer", "JWT_AUDIENCE=audience");
-        CreateSecretFile("admin.secret", "ADMIN_EMAIL=admin@test.com", "ADMIN_PASSWORD=AdminPass123", "ADMIN_DISPLAY_NAME=Admin");
+        CreateSecretFile("admin.secret", "ADMIN_EMAIL=admin@test.com", "ADMIN_PASSWORD=AdminPass123", "ADMIN_DISPLAY_NAME=Admin", "INITIAL_ADMIN_EMAIL=admin@test.com", "INITIAL_ADMIN_DISPLAY_NAME=Admin");
         CreateSecretFile("embedding-service.secret", "EMBEDDING_SERVICE_API_KEY=embedkey");
 
         // Act
@@ -227,7 +227,7 @@ public sealed class SecretLoaderTests : IDisposable
         CreateSecretFile("redis.secret", "REDIS_PASSWORD=redispass");
         CreateSecretFile("qdrant.secret", "QDRANT_API_KEY=qdrantkey");
         CreateSecretFile("jwt.secret", "JWT_SECRET_KEY=jwtsecret", "JWT_ISSUER=issuer", "JWT_AUDIENCE=audience");
-        CreateSecretFile("admin.secret", "ADMIN_EMAIL=admin@test.com", "ADMIN_PASSWORD=AdminPass123", "ADMIN_DISPLAY_NAME=Admin");
+        CreateSecretFile("admin.secret", "ADMIN_EMAIL=admin@test.com", "ADMIN_PASSWORD=AdminPass123", "ADMIN_DISPLAY_NAME=Admin", "INITIAL_ADMIN_EMAIL=admin@test.com", "INITIAL_ADMIN_DISPLAY_NAME=Admin");
         CreateSecretFile("embedding-service.secret", "EMBEDDING_SERVICE_API_KEY=embedkey");
 
         // Act
@@ -254,7 +254,7 @@ public sealed class SecretLoaderTests : IDisposable
         CreateSecretFile("redis.secret", "REDIS_PASSWORD=redispass");
         CreateSecretFile("qdrant.secret", "QDRANT_API_KEY=qdrantkey");
         CreateSecretFile("jwt.secret", "JWT_SECRET_KEY=jwtsecret", "JWT_ISSUER=issuer", "JWT_AUDIENCE=audience");
-        CreateSecretFile("admin.secret", "ADMIN_EMAIL=admin@test.com", "ADMIN_PASSWORD=AdminPass123", "ADMIN_DISPLAY_NAME=Admin");
+        CreateSecretFile("admin.secret", "ADMIN_EMAIL=admin@test.com", "ADMIN_PASSWORD=AdminPass123", "ADMIN_DISPLAY_NAME=Admin", "INITIAL_ADMIN_EMAIL=admin@test.com", "INITIAL_ADMIN_DISPLAY_NAME=Admin");
         CreateSecretFile("embedding-service.secret", "EMBEDDING_SERVICE_API_KEY=embedkey");
 
         // Act
@@ -277,7 +277,7 @@ public sealed class SecretLoaderTests : IDisposable
         CreateSecretFile("redis.secret", "REDIS_PASSWORD=redispass");
         CreateSecretFile("qdrant.secret", "QDRANT_API_KEY=qdrantkey");
         CreateSecretFile("jwt.secret", "JWT_SECRET_KEY=jwtsecret", "JWT_ISSUER=issuer", "JWT_AUDIENCE=audience");
-        CreateSecretFile("admin.secret", "ADMIN_EMAIL=admin@test.com", "ADMIN_PASSWORD=AdminPass123", "ADMIN_DISPLAY_NAME=Admin");
+        CreateSecretFile("admin.secret", "ADMIN_EMAIL=admin@test.com", "ADMIN_PASSWORD=AdminPass123", "ADMIN_DISPLAY_NAME=Admin", "INITIAL_ADMIN_EMAIL=admin@test.com", "INITIAL_ADMIN_DISPLAY_NAME=Admin");
         CreateSecretFile("embedding-service.secret", "EMBEDDING_SERVICE_API_KEY=embedkey");
         // openrouter.secret missing (Important)
 

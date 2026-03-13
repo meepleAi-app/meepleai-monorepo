@@ -34,7 +34,7 @@ namespace Api.Tests.Integration.DocumentProcessing;
 /// - PrivatePdfAssociatedEventHandler processing
 /// - End-to-end event flow with mocked infrastructure
 /// </summary>
-[Collection("SharedTestcontainers")]
+[Collection("Integration-GroupA")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("Dependency", "PostgreSQL")]
 [Trait("BoundedContext", "DocumentProcessing")]

@@ -24,7 +24,7 @@ namespace Api.Tests.Integration.GameManagement;
 /// Tests CQRS command handlers with database persistence.
 /// Issue #3889: CQRS commands for play records.
 /// </summary>
-[Collection("SharedTestcontainers")]
+[Collection("Integration-GroupC")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("Issue", "3889")]
 public sealed class PlayRecordCommandTests : IAsyncLifetime

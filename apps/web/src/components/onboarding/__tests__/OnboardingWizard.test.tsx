@@ -169,11 +169,17 @@ describe('OnboardingWizard', () => {
   it('back button goes to previous step', async () => {
     renderWithQuery(<OnboardingWizard token="test-token" role="Player" />);
 
+    // Complete password → advance to profile (step 2)
     await user.click(screen.getByText('Complete Password'));
     expect(screen.getByTestId('profile-step')).toBeInTheDocument();
 
+    // Advance to interests (step 3)
+    await user.click(screen.getByText('Complete Profile'));
+    expect(screen.getByTestId('interests-step')).toBeInTheDocument();
+
+    // Back → returns to profile (step 2), not password (wizard prevents going back to password)
     await user.click(screen.getByTestId('wizard-back'));
-    expect(screen.getByTestId('password-step')).toBeInTheDocument();
+    expect(screen.getByTestId('profile-step')).toBeInTheDocument();
   });
 
   it('does not show back button on step 1', () => {

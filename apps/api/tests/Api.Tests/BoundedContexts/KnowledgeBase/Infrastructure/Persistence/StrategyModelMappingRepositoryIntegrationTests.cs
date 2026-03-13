@@ -16,7 +16,7 @@ using Xunit;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Infrastructure.Persistence;
 
-[Collection("SharedTestcontainers")]
+[Collection("Integration-GroupA")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "KnowledgeBase")]
 public class StrategyModelMappingRepositoryIntegrationTests : IAsyncLifetime

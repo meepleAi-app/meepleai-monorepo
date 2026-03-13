@@ -18,7 +18,7 @@ namespace Api.Tests.BoundedContexts.SharedGameCatalog.Integration;
 /// Issue #3541: BGG Import Queue Service
 /// Tests: Enqueue single/batch, duplicate detection, cancel, retry, position recalculation, cleanup
 /// </summary>
-[Collection("SharedTestcontainers")]
+[Collection("Integration-GroupC")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "SharedGameCatalog")]
 public sealed class BggImportQueueServiceIntegrationTests : IAsyncLifetime

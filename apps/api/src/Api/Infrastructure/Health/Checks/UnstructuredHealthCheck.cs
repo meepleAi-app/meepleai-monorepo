@@ -22,7 +22,7 @@ public class UnstructuredHealthCheck : IHealthCheck
         HealthCheckContext context,
         CancellationToken cancellationToken = default)
     {
-        var unstructuredUrl = _configuration["PdfProcessing:UnstructuredApiUrl"];
+        var unstructuredUrl = _configuration["PdfProcessing:Extractor:Unstructured:ApiUrl"];
         if (string.IsNullOrWhiteSpace(unstructuredUrl))
         {
             return HealthCheckResult.Degraded("Unstructured API not configured");
@@ -34,8 +34,8 @@ public class UnstructuredHealthCheck : IHealthCheck
             using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
             cts.CancelAfter(TimeSpan.FromSeconds(5));
 
-            // Unstructured API health endpoint
-            var response = await client.GetAsync("/general/v0/general", cts.Token).ConfigureAwait(false);
+            // Unstructured service health endpoint
+            var response = await client.GetAsync("/health", cts.Token).ConfigureAwait(false);
 
             return response.IsSuccessStatusCode
                 ? HealthCheckResult.Healthy("Unstructured API is accessible")

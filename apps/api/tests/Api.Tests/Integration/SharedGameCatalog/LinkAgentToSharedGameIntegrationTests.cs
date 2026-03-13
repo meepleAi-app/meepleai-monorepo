@@ -21,7 +21,7 @@ namespace Api.Tests.Integration.SharedGameCatalog;
 /// Integration tests for linking/unlinking agents to shared games.
 /// Issue #4228: SharedGame and PrivateGame → AgentDefinition relationship
 /// </summary>
-[Collection("SharedTestcontainers")]
+[Collection("Integration-GroupC")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("Dependency", "PostgreSQL")]
 [Trait("BoundedContext", "SharedGameCatalog")]

@@ -22,7 +22,7 @@ namespace Api.Tests.BoundedContexts.SharedGameCatalog.Application.Queries;
 /// Tests approval queue with urgency, submitter, and PDF filters.
 /// Issue #3533: Admin API Endpoints - Approval Queue Management
 /// </summary>
-[Collection("SharedTestcontainers")]
+[Collection("Integration-GroupC")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "SharedGameCatalog")]
 public sealed class GetApprovalQueueQueryHandlerTests : IAsyncLifetime

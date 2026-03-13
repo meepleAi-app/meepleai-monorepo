@@ -43,6 +43,14 @@ COPY . .
 # Set environment to production
 ENV NODE_ENV=production
 
+# Build-time args for NEXT_PUBLIC_* variables (baked into JS at build time)
+ARG NEXT_PUBLIC_API_BASE=http://localhost:8080
+ARG NEXT_PUBLIC_APP_URL=http://localhost:3000
+ARG NEXT_PUBLIC_SITE_URL=http://localhost:3000
+ENV NEXT_PUBLIC_API_BASE=$NEXT_PUBLIC_API_BASE
+ENV NEXT_PUBLIC_APP_URL=$NEXT_PUBLIC_APP_URL
+ENV NEXT_PUBLIC_SITE_URL=$NEXT_PUBLIC_SITE_URL
+
 # Ensure public directory exists (Next.js may need it)
 RUN mkdir -p public
 

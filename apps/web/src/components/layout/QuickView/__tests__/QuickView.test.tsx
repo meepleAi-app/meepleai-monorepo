@@ -54,4 +54,16 @@ describe('QuickView', () => {
     await user.click(screen.getByRole('button', { name: /comprimi/i }));
     expect(useQuickViewStore.getState().isCollapsed).toBe(true);
   });
+
+  it('sets data-mode attribute to session when opened for session', () => {
+    useQuickViewStore.getState().openForSession('session-1', 'game-1');
+    render(<QuickView />);
+    expect(screen.getByTestId('quick-view')).toHaveAttribute('data-mode', 'session');
+  });
+
+  it('sets data-mode attribute to game when opened for game', () => {
+    useQuickViewStore.getState().openForGame('game-1');
+    render(<QuickView />);
+    expect(screen.getByTestId('quick-view')).toHaveAttribute('data-mode', 'game');
+  });
 });

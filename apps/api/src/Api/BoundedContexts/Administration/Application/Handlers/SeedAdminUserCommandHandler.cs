@@ -99,6 +99,9 @@ internal sealed class SeedAdminUserCommandHandler : ICommandHandler<SeedAdminUse
             role: role
         );
 
+        // Issue #372: Seeded admin must have verified email to avoid 403 on /auth/me
+        adminUser.VerifyEmail();
+
         // Persist
         await _userRepository.AddAsync(adminUser, cancellationToken).ConfigureAwait(false);
 

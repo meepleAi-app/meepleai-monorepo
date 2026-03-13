@@ -40,6 +40,7 @@ import {
 } from '@/components/library/kb-utils';
 import { PdfUploadModal } from '@/components/library/PdfUploadModal';
 import { PdfViewerModal } from '@/components/pdf/PdfViewerModal';
+import { ProgressBadge } from '@/components/pdf/progress-badge';
 import { Button } from '@/components/ui/primitives/button';
 import { api } from '@/lib/api';
 import type { PdfDocumentDto } from '@/lib/api';
@@ -317,9 +318,10 @@ export function MeepleInfoCard({
                               {formatFileSize(doc.fileSizeBytes)}
                             </span>
                             {!ready && (
-                              <span className={cn('text-xs font-medium', status.color)}>
-                                {status.label}
-                              </span>
+                              <ProgressBadge
+                                documentId={doc.id}
+                                state={doc.processingState || doc.processingStatus || 'pending'}
+                              />
                             )}
                           </div>
                         </div>

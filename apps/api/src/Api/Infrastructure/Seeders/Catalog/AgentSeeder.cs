@@ -89,7 +89,7 @@ internal static class AgentSeeder
 
         // Find admin user for CreatedBy FKs
         var adminUser = await db.Users
-            .FirstOrDefaultAsync(u => u.Role == "admin", cancellationToken)
+            .FirstOrDefaultAsync(u => u.Role == "admin" || u.Role == "superadmin", cancellationToken)
             .ConfigureAwait(false);
 
         if (adminUser is null)

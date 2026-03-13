@@ -107,8 +107,9 @@ internal sealed class SeedOrchestrator
 
     private static async Task<Guid> ResolveSystemUserIdAsync(MeepleAiDbContext db, CancellationToken ct)
     {
+        // Issue #372: Query must match both admin and superadmin roles
         var adminUser = await db.Users
-            .FirstOrDefaultAsync(u => u.Role == "admin", ct)
+            .FirstOrDefaultAsync(u => u.Role == "admin" || u.Role == "superadmin", ct)
             .ConfigureAwait(false);
         return adminUser?.Id ?? Guid.Empty;
     }

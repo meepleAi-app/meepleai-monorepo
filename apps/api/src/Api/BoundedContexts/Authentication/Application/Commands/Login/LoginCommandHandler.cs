@@ -185,8 +185,11 @@ internal class LoginCommandHandler : ICommandHandler<LoginCommand, LoginResponse
             TwoFactorEnabledAt: user.TwoFactorEnabledAt,
             Level: user.Level,
             ExperiencePoints: user.ExperiencePoints,
-            OnboardingCompleted: user.OnboardingCompleted,              // Issue #323
-            OnboardingSkipped: user.OnboardingSkipped                   // Issue #323
+            EmailVerified: user.EmailVerified,
+            EmailVerifiedAt: user.EmailVerifiedAt,
+            VerificationGracePeriodEndsAt: user.VerificationGracePeriodEndsAt,
+            OnboardingCompleted: user.OnboardingCompleted,
+            OnboardingSkipped: user.OnboardingSkipped
         );
     }
 }

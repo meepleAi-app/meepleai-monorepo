@@ -400,8 +400,15 @@ using (var scope = app.Services.CreateScope())
     // Epic #318: Layered seeding pipeline with advisory lock (runs independently of migrations)
     if (db != null)
     {
-        var seedOrchestrator = scope.ServiceProvider.GetRequiredService<Api.Infrastructure.Seeders.SeedOrchestrator>();
-        await seedOrchestrator.RunAsync(db, scope.ServiceProvider).ConfigureAwait(false);
+        try
+        {
+            var seedOrchestrator = scope.ServiceProvider.GetRequiredService<Api.Infrastructure.Seeders.SeedOrchestrator>();
+            await seedOrchestrator.RunAsync(db, scope.ServiceProvider).ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            app.Logger.LogError(ex, "Seeding failed — API will continue startup");
+        }
     }
 }
 

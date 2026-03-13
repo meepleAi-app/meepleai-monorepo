@@ -994,7 +994,7 @@ export const MeepleCard = React.memo(function MeepleCard({
           )}
 
         {/* Document-specific info (Issue #5001) */}
-        {entity === 'document' && documentStatus && variant !== 'compact' && (
+        {entity === 'kb' && documentStatus && variant !== 'compact' && (
           <div className="flex items-center gap-1.5 mb-2">
             <DocumentStatusBadge status={documentStatus} size="sm" />
           </div>

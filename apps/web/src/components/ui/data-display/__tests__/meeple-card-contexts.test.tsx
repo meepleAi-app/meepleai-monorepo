@@ -4,7 +4,7 @@
  * Comprehensive tests for all entity types, variants, and states
  *
  * Coverage:
- * - 7 entity types: game, player, session, agent, document, chatSession, event
+ * - 7 entity types: game, player, session, agent, kb, chatSession, event
  * - 5 variants: grid, list, compact, featured, hero
  * - All ownership states: owned, wishlist, not-owned
  * - Context-specific features per entity type
@@ -30,7 +30,7 @@ describe('MeepleCard - Context-Aware Tests (Issue #4080)', () => {
       'player',
       'session',
       'agent',
-      'document',
+      'kb',
       'chatSession',
       'event',
     ];
@@ -47,7 +47,7 @@ describe('MeepleCard - Context-Aware Tests (Issue #4080)', () => {
     // entityColors maps entity keys to display names (e.g., chatSession → "Chat")
     const entityNameMap: Record<string, string> = {
       game: 'Game', player: 'Player', session: 'Session', agent: 'Agent',
-      document: 'Document', chatSession: 'Chat', event: 'Event',
+      kb: 'KB', chatSession: 'Chat', event: 'Event',
     };
 
     it.each(entityTypes)('should have correct aria-label for %s', entity => {

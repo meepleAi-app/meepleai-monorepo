@@ -160,9 +160,9 @@ describe('useEntityActions', () => {
   });
 
   describe('Document entity', () => {
-    it('returns 3 quick actions for document (including collection action)', () => {
+    it('returns 3 quick actions for kb (including collection action)', () => {
       const { result } = renderHook(() =>
-        useEntityActions({ entity: 'document', id: 'doc-111' }),
+        useEntityActions({ entity: 'kb', id: 'doc-111' }),
         { wrapper: QueryClientWrapper }
       );
 

@@ -30,8 +30,8 @@ describe('MeepleCards compound component', () => {
     expect(screen.getByTestId('card')).toBeInTheDocument();
   });
 
-  it('renders MeepleCards.Document with entity="document"', () => {
-    render(<MeepleCards.Document title="Rulebook.pdf" variant="compact" data-testid="card" />);
+  it('renders MeepleCards.Kb with entity="kb"', () => {
+    render(<MeepleCards.Kb title="Rulebook.pdf" variant="compact" data-testid="card" />);
     expect(screen.getByTestId('card')).toBeInTheDocument();
   });
 
@@ -74,11 +74,10 @@ describe('MeepleCards compound component', () => {
     expect(keys).toContain('Player');
     expect(keys).toContain('Session');
     expect(keys).toContain('Agent');
-    expect(keys).toContain('Document');
+    expect(keys).toContain('Kb');
     expect(keys).toContain('ChatSession');
     expect(keys).toContain('Event');
     expect(keys).toContain('Toolkit');
-    expect(keys).toContain('KbCard');
     expect(keys).toContain('Base');
   });
 });

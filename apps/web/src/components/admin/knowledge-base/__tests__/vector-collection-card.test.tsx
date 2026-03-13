@@ -38,12 +38,12 @@ describe('VectorCollectionCard', () => {
     mockMeepleCard.mockClear();
   });
 
-  it('renders with entity="document" and variant="grid"', () => {
+  it('renders with entity="kb" and variant="grid"', () => {
     render(<VectorCollectionCard {...baseProps} />);
 
     expect(mockMeepleCard).toHaveBeenCalledWith(
       expect.objectContaining({
-        entity: 'document',
+        entity: 'kb',
         variant: 'grid',
       })
     );

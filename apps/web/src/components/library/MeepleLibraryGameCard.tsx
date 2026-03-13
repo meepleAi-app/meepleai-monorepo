@@ -436,7 +436,7 @@ export function MeepleLibraryGameCard({
         kbCards={kbDocuments?.map(d => ({ status: mapToIndexingStatus(d) }))}
         // Navigation footer: open drawers instead of navigating
         navigateTo={[
-          { entity: 'document' as const, label: 'KB', onClick: () => setKbDrawerOpen(true) },
+          { entity: 'kb' as const, label: 'KB', onClick: () => setKbDrawerOpen(true) },
           { entity: 'agent' as const, label: 'Agents', onClick: () => setAgentDrawerOpen(true) },
           {
             entity: 'chatSession' as const,

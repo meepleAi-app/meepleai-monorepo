@@ -60,6 +60,8 @@ infra/secrets/prod/*.pfx
 
 # Logs
 logs/
+# Exception: Allow admin monitor logs page
+!apps/web/src/app/admin/*/monitor/logs/
 *.log
 npm-debug.log*
 yarn-debug.log*

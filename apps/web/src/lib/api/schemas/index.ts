@@ -128,3 +128,6 @@ export * from './save-resume.schemas';
 
 // Invitation schemas (Issue #132)
 export * from './invitation.schemas';
+
+// Docker Container Management schemas (Issue #139)
+export * from './docker.schemas';

@@ -1,5 +1,6 @@
 using Api.BoundedContexts.Administration.Application.Commands;
 using Api.BoundedContexts.Administration.Application.Handlers;
+using Api.BoundedContexts.Administration.Domain.Repositories;
 using Api.BoundedContexts.Authentication.Domain.Entities;
 using Api.SharedKernel.Domain.ValueObjects;
 using Api.BoundedContexts.Authentication.Infrastructure.Persistence;
@@ -19,6 +20,7 @@ namespace Api.Tests.Administration.AutoConfiguration;
 public sealed class SeedAdminUserCommandHandlerTests
 {
     private readonly Mock<IUserRepository> _userRepositoryMock;
+    private readonly Mock<IUserAiConsentRepository> _consentRepositoryMock;
     private readonly Mock<IUnitOfWork> _unitOfWorkMock;
     private readonly Mock<IConfiguration> _configurationMock;
     private readonly Mock<ILogger<SeedAdminUserCommandHandler>> _loggerMock;
@@ -27,12 +29,14 @@ public sealed class SeedAdminUserCommandHandlerTests
     public SeedAdminUserCommandHandlerTests()
     {
         _userRepositoryMock = new Mock<IUserRepository>();
+        _consentRepositoryMock = new Mock<IUserAiConsentRepository>();
         _unitOfWorkMock = new Mock<IUnitOfWork>();
         _configurationMock = new Mock<IConfiguration>();
         _loggerMock = new Mock<ILogger<SeedAdminUserCommandHandler>>();
 
         _handler = new SeedAdminUserCommandHandler(
             _userRepositoryMock.Object,
+            _consentRepositoryMock.Object,
             _unitOfWorkMock.Object,
             _configurationMock.Object,
             _loggerMock.Object

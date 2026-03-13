@@ -864,7 +864,15 @@ internal class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUp
         await UpdateProgressAsync(db, pdfId, ProcessingStep.Extracting, 0, 0, startTime, null, cancellationToken).ConfigureAwait(false);
 
         var extractionStopwatch = Stopwatch.StartNew();
-        var fileStream = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read);
+        // E2E fix: Use blob storage service instead of direct filesystem access (supports S3/R2)
+        var gameIdForStorage = (pdfDoc.PrivateGameId ?? pdfDoc.GameId)?.ToString() ?? string.Empty;
+        var fileStream = await _blobStorageService.RetrieveAsync(pdfId, gameIdForStorage, cancellationToken).ConfigureAwait(false);
+        if (fileStream == null)
+        {
+            // Fallback to local filesystem for backward compatibility
+            _logger.LogWarning("[PDF-DEBUG] Blob storage returned null for {PdfId}, falling back to filesystem: {FilePath}", pdfId, filePath);
+            fileStream = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read);
+        }
         await using (fileStream.ConfigureAwait(false))
         {
             var extractResult = await _pdfTextExtractor.ExtractPagedTextAsync(fileStream, enableOcrFallback: true, cancellationToken).ConfigureAwait(false);
@@ -1149,6 +1157,9 @@ internal class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUp
 
         var indexingStopwatch = Stopwatch.StartNew();
         var qdrantService = scope.ServiceProvider.GetRequiredService<IQdrantService>();
+
+        // E2E fix: Ensure Qdrant collection exists before indexing
+        await qdrantService.EnsureCollectionExistsAsync(cancellationToken).ConfigureAwait(false);
 
         var documentChunks = allDocumentChunks
             .Select((chunk, index) => new DocumentChunk

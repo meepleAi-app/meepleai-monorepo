@@ -396,22 +396,9 @@ using (var scope = app.Services.CreateScope())
         app.Logger.LogInformation("✓ Embedding configuration validated: Provider={Provider}, Model={Model}, Dimensions={Dimensions}",
             provider, model, embeddingDimensions);
 
-        // PERF: Skip seeding in Staging/Production — seeding is for dev/test environments only
-        // Use SKIP_SEEDING=true or Staging/Production environment to disable
-        var skipSeeding = app.Configuration.GetValue<bool?>("SkipSeeding").GetValueOrDefault(false)
-            || app.Environment.IsEnvironment("Staging")
-            || app.Environment.IsProduction();
-
-        if (!skipSeeding)
-        {
-            // Layered seeding via SeedOrchestrator (creates its own scopes internally)
-            var seedOrchestrator = app.Services.GetRequiredService<Api.Infrastructure.Seeders.SeedOrchestrator>();
-            await seedOrchestrator.ExecuteAsync(CancellationToken.None).ConfigureAwait(false);
-        }
-        else
-        {
-            app.Logger.LogInformation("Skipping database seeding in {Environment}", app.Environment.EnvironmentName);
-        }
+        // Epic #318: Layered seeding pipeline with advisory lock
+        var seedOrchestrator = scope.ServiceProvider.GetRequiredService<Api.Infrastructure.Seeders.SeedOrchestrator>();
+        await seedOrchestrator.RunAsync(db, scope.ServiceProvider).ConfigureAwait(false);
     }
 }
 
@@ -608,6 +595,7 @@ v1Api.MapRagPipelineAdminEndpoints();  // RAG Pipeline builder (Issue #3463)
 v1Api.MapRagExecutionAdminEndpoints(); // RAG Execution replay & compare (Issue #4459)
 v1Api.MapAdminMechanicExtractorEndpoints(); // Mechanic Extractor: Variant C copyright-compliant analysis
 v1Api.MapAdminMiscEndpoints();         // Miscellaneous admin operations
+v1Api.MapAdminSeedingEndpoints();      // Epic #318: Admin seeding re-trigger
 v1Api.MapReportingEndpoints();         // ISSUE-916: Report generation & scheduling
 v1Api.MapTestingMetricsEndpoints();    // Issue #2139: Testing metrics API
 

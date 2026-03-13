@@ -151,7 +151,7 @@ jobs:
         continue-on-error: true
 
   # Backend Integration Tests (requires service containers, runs in parallel with unit tests)
-  # Phase 3: 3-shard matrix for ~3x wall-clock speedup
+  # Phase 2+3: 8 parallel threads per shard, 3-shard matrix for ~8-24x total speedup
   backend-integration:
     name: Backend - Integration (${{ matrix.shard.name }})
     runs-on: ubuntu-latest

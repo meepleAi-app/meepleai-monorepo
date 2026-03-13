@@ -3,6 +3,7 @@ using Api.BoundedContexts.DocumentProcessing.Infrastructure.External;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Api.Services;
+using Api.Services.Pdf;
 using Microsoft.EntityFrameworkCore;
 using System.Text.Json;
 
@@ -24,6 +25,7 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
     private readonly ITextChunkingService _chunkingService;
     private readonly IEmbeddingService _embeddingService;
     private readonly IQdrantService _qdrantService;
+    private readonly IBlobStorageService _blobStorageService;
     private readonly TimeProvider _timeProvider;
     private readonly ILogger<PdfProcessingPipelineService> _logger;
 
@@ -34,6 +36,7 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
         ITextChunkingService chunkingService,
         IEmbeddingService embeddingService,
         IQdrantService qdrantService,
+        IBlobStorageService blobStorageService,
         TimeProvider timeProvider,
         ILogger<PdfProcessingPipelineService> logger)
     {
@@ -43,6 +46,7 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
         _chunkingService = chunkingService ?? throw new ArgumentNullException(nameof(chunkingService));
         _embeddingService = embeddingService ?? throw new ArgumentNullException(nameof(embeddingService));
         _qdrantService = qdrantService ?? throw new ArgumentNullException(nameof(qdrantService));
+        _blobStorageService = blobStorageService ?? throw new ArgumentNullException(nameof(blobStorageService));
         _timeProvider = timeProvider ?? throw new ArgumentNullException(nameof(timeProvider));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
@@ -156,7 +160,18 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
         string filePath,
         CancellationToken cancellationToken)
     {
-        var fileStream = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read);
+        // E2E fix: Use blob storage service instead of direct filesystem access (supports S3/R2)
+        var fileId = pdfDoc.Id.ToString();
+        var gameId = (pdfDoc.PrivateGameId ?? pdfDoc.GameId)?.ToString() ?? string.Empty;
+        var fileStream = await _blobStorageService.RetrieveAsync(fileId, gameId, cancellationToken).ConfigureAwait(false);
+
+        if (fileStream == null)
+        {
+            // Fallback to local filesystem for backward compatibility
+            _logger.LogWarning("[PdfPipeline] Blob storage returned null for {PdfId}, falling back to filesystem path: {FilePath}", fileId, filePath);
+            fileStream = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read);
+        }
+
         await using (fileStream.ConfigureAwait(false))
         {
             var extractResult = await _pdfTextExtractor
@@ -315,6 +330,9 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
         CancellationToken cancellationToken)
     {
         var pdfId = pdfDoc.Id.ToString();
+
+        // E2E fix: Ensure Qdrant collection exists before indexing
+        await _qdrantService.EnsureCollectionExistsAsync(cancellationToken).ConfigureAwait(false);
 
         // Issue #5254: Delete old vectors before re-indexing to prevent duplicates
         var deleted = await _qdrantService.DeleteDocumentAsync(pdfId, cancellationToken).ConfigureAwait(false);

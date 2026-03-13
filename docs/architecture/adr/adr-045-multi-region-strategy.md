@@ -58,7 +58,63 @@ These implicit locality assumptions **will break** under multi-region deployment
 
 **Cost estimate basis**: Hetzner (EU), Cloudflare (CDN), managed PostgreSQL pricing from major cloud providers as of 2026-03. Order-of-magnitude accuracy only.
 
-## 4. Prerequisites per Phase
+### Per-Service Cost Breakdown
+
+| Service | Current | Phase 1 (+CDN) | Phase 2 (K8s EU) | Phase 3 (Multi-Region) | Phase 4 (Edge) |
+|---------|---------|----------------|------------------|------------------------|----------------|
+| **VPS / K8s nodes** | $15-30 | $15-30 | $150-300 (2-5 nodes) | $400-800 (2-5 nodes × 2 regions) | $800-1,500 |
+| **Cloudflare (CDN + DNS)** | $1 (DNS only) | $20-50 (Pro plan) | $20-50 | $20-50 | $50-200 (Workers) |
+| **PostgreSQL** | included in VPS | included | $30-80 (managed) | $80-200 (primary + replica/region) | $150-400 |
+| **Redis** | included in VPS | included | $15-30 (managed) | $30-60 (per region) | $60-120 |
+| **Qdrant** | included in VPS | included | $0 (self-hosted on K8s) | $50-150 (Qdrant Cloud multi-region) | $100-300 |
+| **GPU (Ollama)** | $0 (CPU-only) | $0 | $0-100 (optional) | $100-400 (per region) | $200-600 |
+| **Embedding/Reranker** | included in VPS | included | included in K8s nodes | +$50-100 (regional instances) | +$100-200 |
+| **Cross-region bandwidth** | $0 | $0 | $0 | $20-100 (DB replication + vector sync) | $50-200 |
+| **Observability** | included in VPS | included | $20-50 (managed metrics) | $50-100 (per region) | $100-200 |
+| **TOTAL** | **~$20-50** | **~$40-100** | **~$250-650** | **~$850-2,050** | **~$1,650-3,700** |
+
+> **Note**: Estimates are based on 2026-03 pricing from Hetzner, Cloudflare, and Qdrant Cloud. GPU costs vary significantly by provider and availability. Actual costs will depend on provider selection (evaluated at Phase 2 trigger) and real traffic patterns.
+
+## 4. AI Service Placement Strategy
+
+Each AI/ML service has different resource requirements and latency sensitivities that drive placement decisions across scaling phases.
+
+### Service Placement Matrix
+
+| Service | Current | Phase 1 (CDN) | Phase 2 (K8s EU) | Phase 3 (Multi-Region) | Phase 4 (Edge) |
+|---------|---------|---------------|------------------|------------------------|----------------|
+| **Ollama** (LLM) | Co-located, CPU-only | Unchanged | K8s pod, optional GPU node pool | Regional GPU pools, model pre-loading | Edge GPU per region |
+| **Embedding** (sentence-transformers) | Co-located (port 8000) | Unchanged | K8s pod, GPU optional | Regional instances (same model version) | Regional, pinned version |
+| **Reranker** (cross-encoder) | Co-located (port 8003) | Unchanged | K8s pod, CPU sufficient | Regional instances | Regional |
+| **Orchestration** (LangGraph) | Co-located (port 8004) | Unchanged | K8s pod | Primary region only (stateful workflows) | Primary region |
+| **Unstructured PDF** | Co-located (port 8001) | Unchanged | K8s pod | Primary region only (async processing) | Primary region |
+| **SmolDocling** (VLM) | Co-located (port 8002) | Unchanged | K8s pod, GPU beneficial | Primary region only (fallback processor) | Primary region |
+
+### Placement Rationale
+
+**Regional services** (Ollama, Embedding, Reranker): These are on the critical path for user-facing RAG queries. Cross-region latency (100-200ms) is unacceptable for interactive chat. Each region must have local instances.
+
+**Primary-region-only services** (Orchestration, Unstructured, SmolDocling): These handle async or batch workloads (PDF processing, multi-agent workflows). Users upload PDFs infrequently and processing is not latency-sensitive. Running these in a single region simplifies state management and reduces GPU costs.
+
+### Critical Constraint: Embedding Model Consistency
+
+All regions **MUST** run the same embedding model version (`intfloat/multilingual-e5-large`, 1024 dimensions). A version mismatch would produce incompatible vectors, breaking cross-region RAG queries. Mitigation:
+- Pin model version in container image (not downloaded at runtime)
+- Include model hash in health check response
+- Block deployment if model hash differs from primary region
+
+### GPU Resource Strategy
+
+| Phase | GPU Usage | Cost Impact |
+|-------|-----------|-------------|
+| **Current** | None (CPU-only Ollama) | $0 |
+| **Phase 2** | Optional GPU node pool for Ollama | +$0-100/mo (enable when Ollama P95 >3s on CPU) |
+| **Phase 3** | GPU per region for Ollama + Embedding | +$100-400/mo per region |
+| **Phase 4** | GPU per edge location | +$200-600/mo per location |
+
+**GPU activation trigger**: Enable GPU node pool when Ollama P95 latency exceeds 3,000ms on CPU-only nodes under sustained load (>50 concurrent requests).
+
+## 5. Prerequisites per Phase
 
 ### Phase 0 -> Phase 1 (CDN)
 
@@ -88,7 +144,7 @@ Significant infrastructure migration:
 
 Major architectural changes:
 
-- [ ] **Region detection** strategy implemented (see Section 5)
+- [ ] **Region detection** strategy implemented (see Section 6)
 - [ ] **G1**: `UserRegion` field in `LlmRoutingDecision` (already implemented — Issue #107)
 - [ ] **Region-aware routing** in `HybridLlmService` / `ILlmRoutingStrategy`
 - [ ] Cross-region PostgreSQL replication (or managed DB with read replicas per region)
@@ -100,15 +156,25 @@ Major architectural changes:
 
 ### Phase 3 -> Phase 4 (Edge)
 
+> **Note**: Phase 4 is speculative. The architecture below will be designed as a separate ADR when Phase 3 is mature and the >100K MAU trigger is approached. The items below capture directional thinking, not commitments.
+
 Advanced distributed systems:
 
-- [ ] Edge computing for latency-sensitive operations
-- [ ] Distributed Qdrant with eventual consistency model
-- [ ] Regional Ollama with model version pinning
-- [ ] Global load balancer with health-based geo-routing
-- [ ] Cross-region event bus for eventual consistency
+- [ ] Edge computing for latency-sensitive operations (Cloudflare Workers or Deno Deploy for API gateway)
+- [ ] Distributed Qdrant with eventual consistency model (shard-per-region, async replication, staleness budget <5s)
+- [ ] Regional Ollama with model version pinning (container image includes model weights, no runtime download)
+- [ ] Global load balancer with health-based geo-routing (Cloudflare Load Balancing with active health checks)
+- [ ] Cross-region event bus for eventual consistency (NATS JetStream or Kafka with geo-aware partitioning)
+- [ ] Edge-local embedding + reranker instances (reduce round-trip for RAG queries to <50ms)
+- [ ] Write-local-read-global pattern for user data (CRDTs or last-write-wins for non-critical data)
 
-## 5. Region Detection Strategy Candidates
+**Key architectural decisions deferred to Phase 4 ADR**:
+- Multi-master PostgreSQL vs. write-forwarding to primary
+- Edge cache invalidation strategy (event-driven vs TTL)
+- Model update coordination across edge locations (blue-green per region)
+- Cost optimization: spot/preemptible GPU instances for Ollama
+
+## 6. Region Detection Strategy Candidates
 
 | Strategy | Accuracy | Privacy | Latency | Recommendation |
 |----------|----------|---------|---------|----------------|
@@ -125,7 +191,7 @@ Advanced distributed systems:
 - User profile setting provides lawful basis via explicit consent (Art. 6(1)(a))
 - Country-level geolocation (not city/coordinates) has lower privacy impact
 
-## 6. Terraform/Pulumi Infrastructure Sketches
+## 7. Terraform/Pulumi Infrastructure Sketches
 
 > **Note**: These are directional sketches — not production-ready IaC. They illustrate the infrastructure shape for each phase.
 
@@ -415,7 +481,7 @@ clusters.forEach(({ region, cluster }) => {
 });
 ```
 
-## 7. Operational Complexity Assessment
+## 8. Operational Complexity Assessment
 
 | Phase | Team Skill Required | Ops Burden | Risk | Rollback Difficulty |
 |-------|-------------------|------------|------|---------------------|
@@ -433,7 +499,134 @@ clusters.forEach(({ region, cluster }) => {
 - Can stay at any phase indefinitely if growth plateaus
 - OpenRouter as primary LLM provider reduces GPU management complexity
 
-## 8. Decision
+## 9. SLO Targets per Phase
+
+Each phase must meet minimum service-level objectives before the next phase trigger is acted on. These targets validate that the current infrastructure is performing as expected and justify the investment in scaling.
+
+| Metric | Current | Phase 1 | Phase 2 | Phase 3 | Phase 4 |
+|--------|---------|---------|---------|---------|---------|
+| **API P95 latency** | <500ms | <500ms | <200ms | <200ms (regional) | <100ms (edge) |
+| **RAG query P95** | <3s | <3s | <2s | <2s (regional) | <1s |
+| **Ollama P95** | <5s (CPU) | <5s | <3s (GPU optional) | <2s (GPU) | <1s |
+| **Availability** | 95% (single node) | 97% (+CDN failover) | 99.5% (K8s self-healing) | 99.9% (multi-region) | 99.95% |
+| **RPO** (data loss tolerance) | 24h (daily backup) | 24h | 1h (managed DB WAL) | <5min (streaming replication) | <1min |
+| **RTO** (recovery time) | 4h (manual restore) | 4h | 30min (K8s restart) | 5min (failover to other region) | <1min |
+| **CDN cache hit ratio** | N/A | >80% static | >80% | >85% | >90% |
+| **Cross-region latency** | N/A | N/A | N/A | <150ms (EU↔US) | <50ms (edge, reads only) |
+
+**Measurement**: All latency SLOs measured at application layer (not network). Availability measured as successful API responses / total requests (excluding planned maintenance). Phase 4 latency targets apply to read-only, edge-cached responses — write paths still route to EU primary and are bounded by Phase 3 targets.
+
+**Escalation**: If a phase fails to meet its SLO targets for >7 consecutive days under normal load, trigger investigation before considering next phase transition.
+
+## 10. Data Consistency Model
+
+As the system scales beyond a single node, explicit consistency guarantees must be defined per data store to prevent developers from making conflicting assumptions.
+
+### CAP Positioning per Service
+
+| Service | CAP Position | Consistency Model | Acceptable Staleness | Write Strategy |
+|---------|-------------|-------------------|---------------------|----------------|
+| **PostgreSQL** | CP (consistency + partition tolerance) | Strong consistency via primary writes | Read replicas: <1s lag target, <5s hard limit | All writes to primary region; reads from nearest replica |
+| **Qdrant** | CP within single cluster (Raft consensus); AP when configured for cross-region replication | Eventual consistency across regions only | <10s for new vectors; stale search results acceptable for up to 30s | Writes to nearest region, async replication to others |
+| **Redis** | AP (availability preferred) | Eventual consistency acceptable | Rate limits: region-local (no cross-region sync needed) | Region-local writes; no cross-region replication |
+| **Ollama** | N/A (stateless inference) | N/A | N/A | Region-local; model version must match globally |
+| **Embedding service** | N/A (stateless inference) | N/A | N/A | Region-local; model version must match globally |
+
+### Write Routing Rules (Phase 3+)
+
+| Operation | Write Target | Read Target | Rationale |
+|-----------|-------------|-------------|-----------|
+| User registration/login | EU primary | Nearest replica | GDPR: user PII stored in EU |
+| Game CRUD | EU primary | Nearest replica | Low write frequency, strong consistency needed |
+| Chat messages | EU primary | Nearest replica | Audit trail requires consistency |
+| PDF upload & processing | EU primary | EU primary | Async processing, single-region service |
+| Vector indexing (Qdrant) | Nearest region | Nearest region | Eventual consistency acceptable for search |
+| Rate limit counters (Redis) | Region-local | Region-local | Per-region enforcement, no global sync |
+| Circuit breaker state (Redis) | Region-local | Region-local | Regional health independent per provider endpoint |
+
+### GDPR Data Residency Constraint
+
+User PII (email, name, auth tokens) **MUST** remain in EU primary. Non-EU read replicas may cache non-PII data (game catalog, public knowledge base content). This constraint shapes the write routing: all user-facing writes go to EU primary regardless of user location.
+
+## 11. Failure Category Matrix
+
+Failure categories per phase with mitigation direction. Detailed runbooks will be created at each phase transition, not in advance.
+
+### Phase 1 (CDN) Failures
+
+| Failure | Impact | Probability | Mitigation |
+|---------|--------|-------------|------------|
+| CDN cache poisoning | Stale/wrong static assets served | Low | Cache purge via Cloudflare API; short browser TTL (1h) |
+| CDN outage | Frontend degraded (no caching) | Very Low | Cloudflare SLA 100% uptime; origin still serves directly |
+| Origin unreachable from CDN | Full outage | Low | Health checks + alerting; same as current (single VPS) |
+
+### Phase 2 (K8s) Failures
+
+| Failure | Impact | Probability | Mitigation |
+|---------|--------|-------------|------------|
+| Pod crash loop | Service degradation | Medium | K8s restart policy + HPA; PodDisruptionBudget (min 1 ready) |
+| Managed DB failover | ~30s downtime | Low | Managed DB handles automatically; connection retry in app |
+| Qdrant volume corruption | Vector search unavailable | Low | Persistent volume snapshots; re-index from PostgreSQL source |
+| GPU node unavailable | Ollama fallback to CPU (slower) | Medium | Tolerate CPU fallback; OpenRouter as alternative |
+| K8s node exhaustion | New pods cannot schedule | Medium | Cluster autoscaler + resource quotas + alerts at 80% |
+| Secret rotation failure | Service auth breaks | Low | Gradual rotation (old + new valid simultaneously) |
+
+### Phase 3 (Multi-Region) Failures
+
+| Failure | Impact | Probability | Mitigation |
+|---------|--------|-------------|------------|
+| Cross-region DB replication lag >5s | Stale reads for non-EU users | Medium | Monitor lag; circuit break to primary-only reads if >5s |
+| Regional Qdrant outage | RAG unavailable in one region | Low | Route to other region (higher latency) until recovery |
+| Regional Ollama GPU exhaustion | LLM unavailable in one region | Medium | OpenRouter fallback (cloud LLM); cross-region Ollama as last resort |
+| Split-brain (network partition) | Inconsistent state across regions | Very Low | PostgreSQL primary arbitrates; Qdrant eventual consistency by design |
+| Embedding model version mismatch | Incompatible vectors across regions | Low | Block deployment if model hash differs; health check validation |
+| Global load balancer misconfiguration | Traffic routed to wrong region | Low | Health-based routing; automated failover; manual override capability |
+
+### Rollback Procedures
+
+| Phase Transition | Rollback Approach | Data Handling | Estimated Time |
+|-----------------|-------------------|---------------|----------------|
+| Phase 1 → Current | Remove Cloudflare proxy, revert DNS | No data impact | <1h |
+| Phase 2 → Phase 1 | Export managed DB → restore to Docker PostgreSQL | pg_dump/pg_restore; Qdrant snapshot restore | 2-4h |
+| Phase 3 → Phase 2 | Drain non-EU region, consolidate to EU cluster | Stop replication; merge any region-local data | 4-8h (planned) |
+
+## 12. Phase 2 Provider Evaluation Criteria
+
+When the Phase 2 trigger (>5K MAU) is approaching, evaluate cloud providers using these criteria. Document the evaluation as a separate ADR.
+
+### Evaluation Dimensions
+
+| Dimension | Weight | Criteria | Notes |
+|-----------|--------|----------|-------|
+| **Managed K8s quality** | 25% | Control plane SLA, upgrade process, node pool flexibility, autoscaling | Hetzner K8s vs GKE Autopilot vs EKS |
+| **Managed PostgreSQL** | 20% | Built-in PgBouncer, automated backups, read replica support, pgvector extension | Must support pgvector for future hybrid search |
+| **GPU availability** | 15% | GPU node types, spot/preemptible pricing, availability in EU | For Ollama; optional if OpenRouter-primary strategy |
+| **Cost efficiency** | 15% | Total cost at 5K MAU projected workload, egress pricing, storage pricing | Compare against per-service cost table (§3) |
+| **Data residency** | 10% | EU datacenter availability, GDPR DPA, data sovereignty guarantees | Must have EU region; GDPR compliance mandatory |
+| **Vendor lock-in risk** | 10% | Proprietary services used, migration difficulty, standard K8s compatibility | Prefer standard K8s APIs; avoid provider-specific CRDs |
+| **Observability integration** | 5% | Prometheus/Grafana compatibility, managed monitoring options, log aggregation | Must support existing Prometheus recording rules |
+
+### Provider Shortlist (Evaluate at Trigger)
+
+| Provider | Strengths | Risks |
+|----------|-----------|-------|
+| **Hetzner Cloud** | Lowest cost, EU-native, current relationship | Limited managed services, no GPU (as of 2026-03) |
+| **Google Cloud (GKE)** | Best managed K8s, GPU availability, Autopilot | Higher cost, vendor lock-in (GKE-specific features) |
+| **AWS (EKS)** | Broadest service catalog, global presence | Complex pricing, steeper learning curve |
+| **DigitalOcean (DOKS)** | Simple K8s, developer-friendly | Limited GPU, smaller EU presence |
+
+### Vendor Lock-in Assessment
+
+| Decision Point | Lock-in Risk | Mitigation |
+|---------------|-------------|------------|
+| Managed PostgreSQL | Low — standard PostgreSQL, pg_dump portable | Use standard extensions only (pgvector is open-source) |
+| Managed Redis | Low — standard Redis protocol | No provider-specific commands |
+| Qdrant Cloud | Medium — proprietary managed service | Self-hosted Qdrant Helm chart as fallback |
+| K8s provider | Low — standard K8s APIs | Avoid provider-specific CRDs; use Helm charts |
+| Cloudflare CDN | Low — standard DNS + HTTP caching | Can switch to Fastly/CloudFront with DNS change |
+| GPU instances | Medium — availability varies by provider | OpenRouter as GPU-free fallback for LLM |
+
+## 13. Decision
 
 **Adopt phased scaling approach with explicit triggers.** No infrastructure action until Phase 1 trigger (>1K MAU).
 
@@ -449,7 +642,7 @@ Preparation work completed now:
 
 **Scaling decision authority**: Phase 1-2 can be initiated by engineering lead. Phase 3+ requires business stakeholder approval (cost + complexity increase).
 
-## 9. References
+## 14. References
 
 | Reference | Description |
 |-----------|-------------|

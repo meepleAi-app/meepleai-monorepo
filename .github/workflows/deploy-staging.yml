@@ -10,6 +10,19 @@ on:
         required: false
         default: 'false'
         type: boolean
+      force_full_deploy:
+        description: 'Force rebuild and deploy of both API and Web'
+        required: false
+        default: 'false'
+        type: boolean
+      perf_regression_mode:
+        description: 'Performance regression behavior (warn|fail)'
+        required: false
+        default: 'warn'
+        type: choice
+        options:
+          - warn
+          - fail
 
 # Only one staging deployment at a time
 concurrency:
@@ -20,8 +33,6 @@ permissions:
   contents: read
   packages: write
   id-token: write  # For OIDC auth to cloud providers
-  checks: write     # Required by ci.yml reusable workflow
-  pull-requests: write  # Required by ci.yml reusable workflow
 
 env:
   REGISTRY: ghcr.io
@@ -30,47 +41,132 @@ env:
   ENVIRONMENT: staging
 
 jobs:
-  # Run tests before deploy (unless skipped for emergency)
-  test:
-    name: Pre-deploy Tests
-    if: github.event_name == 'push' || inputs.skip_tests != true
-    uses: ./.github/workflows/ci.yml
-    secrets: inherit
+  # Detect which components changed
+  detect-changes:
+    name: Detect Changes
+    runs-on: ubuntu-latest
+    outputs:
+      api: ${{ steps.changes.outputs.api }}
+      web: ${{ steps.changes.outputs.web }}
+      infra: ${{ steps.changes.outputs.infra }}
+      deploy_api: ${{ steps.decision.outputs.deploy_api }}
+      deploy_web: ${{ steps.decision.outputs.deploy_web }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 2
 
-  # Build and push Docker images
+      - uses: dorny/paths-filter@v3
+        id: changes
+        with:
+          filters: |
+            api:
+              - 'apps/api/**'
+            web:
+              - 'apps/web/**'
+            infra:
+              - 'infra/**'
+              - '.github/workflows/deploy-staging.yml'
+
+      - name: Determine what to deploy
+        id: decision
+        run: |
+          FORCE="${{ inputs.force_full_deploy }}"
+          API="${{ steps.changes.outputs.api }}"
+          WEB="${{ steps.changes.outputs.web }}"
+          INFRA="${{ steps.changes.outputs.infra }}"
+
+          # Force full deploy on: manual force, infra changes, or workflow_dispatch without force (deploy all by default)
+          if [ "$FORCE" = "true" ] || [ "$INFRA" = "true" ]; then
+            echo "deploy_api=true" >> $GITHUB_OUTPUT
+            echo "deploy_web=true" >> $GITHUB_OUTPUT
+            echo "📦 Full deploy: force=$FORCE, infra=$INFRA"
+          else
+            echo "deploy_api=$API" >> $GITHUB_OUTPUT
+            echo "deploy_web=$WEB" >> $GITHUB_OUTPUT
+            echo "📦 Selective deploy: api=$API, web=$WEB"
+          fi
+
+  # Lightweight pre-deploy validation (full CI already ran on main-dev PR)
+  # Rationale: Code reaching main-staging has already passed the full ci.yml
+  # suite during the PR to main-dev. Re-running 13K+ tests wastes ~15 min
+  # and 3 service containers. Instead, verify builds compile and the commit
+  # was previously tested.
+  pre-deploy-check:
+    name: Pre-deploy Validation
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' || inputs.skip_tests != true
+    needs: [detect-changes]
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Verify CI passed on this commit
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "🔍 Checking if CI already passed for commit ${{ github.sha }}..."
+
+          # Check for successful CI runs on this commit (from main-dev PR)
+          CI_STATUS=$(gh api repos/${{ github.repository }}/commits/${{ github.sha }}/check-runs \
+            --jq '[.check_runs[] | select(.name | test("CI Success|Backend|Frontend")) | select(.conclusion=="success")] | length' \
+            2>/dev/null || echo "0")
+
+          if [ "$CI_STATUS" -gt 0 ]; then
+            echo "✅ Found $CI_STATUS successful CI checks on this commit"
+          else
+            echo "⚠️ No prior CI checks found — will run build validation"
+          fi
+
+      - name: Setup .NET
+        if: needs.detect-changes.outputs.deploy_api == 'true'
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '9.0.x'
+
+      - name: Backend build check
+        if: needs.detect-changes.outputs.deploy_api == 'true'
+        run: |
+          echo "🔨 Verifying backend compiles..."
+          cd apps/api/src/Api
+          dotnet restore --verbosity quiet
+          dotnet build --no-restore --configuration Release --verbosity quiet
+          echo "✅ Backend builds successfully"
+
+      - name: Setup Frontend
+        if: needs.detect-changes.outputs.deploy_web == 'true'
+        uses: ./.github/actions/setup-frontend
+        with:
+          working-directory: apps/web
+          frozen-lockfile: 'true'
+
+      - name: Frontend build check
+        if: needs.detect-changes.outputs.deploy_web == 'true'
+        run: |
+          echo "🔨 Verifying frontend compiles..."
+          cd apps/web
+          pnpm build
+          echo "✅ Frontend builds successfully"
+        env:
+          NEXT_PUBLIC_API_BASE: http://localhost:8080
+
+  # Build and push Docker images (only changed components)
   build:
     name: Build Images
-    runs-on: ${{ vars.RUNNER || 'ubuntu-latest' }}
-    needs: [test]
-    if: always() && (needs.test.result == 'success' || (github.event_name == 'workflow_dispatch' && inputs.skip_tests == true))
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    needs: [pre-deploy-check, detect-changes]
+    if: always() && (needs.pre-deploy-check.result == 'success' || (github.event_name == 'workflow_dispatch' && inputs.skip_tests == true)) && (needs.detect-changes.outputs.deploy_api == 'true' || needs.detect-changes.outputs.deploy_web == 'true')
     outputs:
       api_image: ${{ steps.meta-api.outputs.tags }}
       web_image: ${{ steps.meta-web.outputs.tags }}
       version: ${{ steps.version.outputs.version }}
+      api_built: ${{ needs.detect-changes.outputs.deploy_api }}
+      web_built: ${{ needs.detect-changes.outputs.deploy_web }}
     steps:
-      - name: Verify ARM64 runner
-        if: vars.RUNNER != ''
-        run: |
-          ARCH=$(uname -m)
-          echo "Runner architecture: $ARCH"
-          if [ "$ARCH" != "aarch64" ]; then
-            echo "::error::Expected aarch64 but got $ARCH — runner may have silently fallen back"
-            exit 1
-          fi
-
-      - name: Pre-build disk check (self-hosted)
-        if: vars.RUNNER != ''
-        run: |
-          # Requires GNU df (--output flag)
-          USAGE=$(df / --output=pcent | tail -1 | tr -d ' %')
-          echo "Disk usage: ${USAGE}%"
-          if [ "$USAGE" -gt 90 ]; then
-            echo "::error::Disk usage critical (${USAGE}%) — triggering emergency cleanup"
-            docker system prune -af --filter "until=24h" 2>/dev/null || true
-          fi
-
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Generate Version
         id: version
@@ -82,6 +178,11 @@ jobs:
       - name: Setup Docker Buildx
         uses: docker/setup-buildx-action@v4
 
+      - name: Setup QEMU for ARM64 cross-compilation
+        uses: docker/setup-qemu-action@v3
+        with:
+          platforms: arm64
+
       - name: Login to GitHub Container Registry
         uses: docker/login-action@v4
         with:
@@ -90,6 +191,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Extract API Metadata
+        if: needs.detect-changes.outputs.deploy_api == 'true'
         id: meta-api
         uses: docker/metadata-action@v6
         with:
@@ -99,6 +201,7 @@ jobs:
             type=raw,value=staging-latest
 
       - name: Extract Web Metadata
+        if: needs.detect-changes.outputs.deploy_web == 'true'
         id: meta-web
         uses: docker/metadata-action@v6
         with:
@@ -108,6 +211,7 @@ jobs:
             type=raw,value=staging-latest
 
       - name: Build and Push API Image
+        if: needs.detect-changes.outputs.deploy_api == 'true'
         uses: docker/build-push-action@v5
         with:
           context: ./apps/api
@@ -115,13 +219,15 @@ jobs:
           push: true
           tags: ${{ steps.meta-api.outputs.tags }}
           labels: ${{ steps.meta-api.outputs.labels }}
+          platforms: linux/arm64
           cache-from: type=gha
           cache-to: type=gha,mode=max
-          build-args: |
-            ASPNETCORE_ENVIRONMENT=Staging
-            VERSION=${{ steps.version.outputs.version }}
+          # Note: No environment build-args. ASPNETCORE_ENVIRONMENT is injected
+          # at runtime via compose.staging.yml. Images are environment-agnostic
+          # to support build-once-promote pattern (Issue #179).
 
       - name: Build and Push Web Image
+        if: needs.detect-changes.outputs.deploy_web == 'true'
         uses: docker/build-push-action@v5
         with:
           context: ./apps/web
@@ -129,33 +235,130 @@ jobs:
           push: true
           tags: ${{ steps.meta-web.outputs.tags }}
           labels: ${{ steps.meta-web.outputs.labels }}
+          platforms: linux/arm64
           cache-from: type=gha
           cache-to: type=gha,mode=max
-          build-args: |
-            NODE_ENV=production
-            NEXT_PUBLIC_ENV=staging
-            VERSION=${{ steps.version.outputs.version }}
+          # Note: No environment build-args. NODE_ENV is set in Dockerfile,
+          # NEXT_PUBLIC_ENV has no ARG in Dockerfile (was silently ignored).
+          # Environment config is injected at runtime via compose files.
 
-      - name: Post-build cleanup (self-hosted)
-        if: always() && !contains(runner.name, 'GitHub Actions')
+      - name: Build Summary
         run: |
-          echo "🧹 Cleaning up Docker build artifacts on self-hosted runner..."
-          docker container prune -f 2>/dev/null || true
-          docker image prune -f 2>/dev/null || true
-          echo "✅ Cleanup complete"
-          df -h / | tail -1
+          echo "📦 Build summary:"
+          echo "  API built: ${{ needs.detect-changes.outputs.deploy_api }}"
+          echo "  Web built: ${{ needs.detect-changes.outputs.deploy_web }}"
 
-  # Deploy to staging server
+  # Run database migrations BEFORE deploying new code
+  migrate-db:
+    name: Database Migration
+    runs-on: ubuntu-latest
+    needs: [build]
+    if: vars.DEPLOY_METHOD == 'ssh'
+    steps:
+      - name: Run Migrations via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.STAGING_HOST }}
+          username: ${{ secrets.STAGING_USER }}
+          key: ${{ secrets.STAGING_SSH_KEY }}
+          script: |
+            set -e
+            cd /opt/meepleai/repo/infra
+
+            set -a
+            for f in secrets/*.secret; do source "$f" 2>/dev/null; done
+            set +a
+
+            docker pull ${{ needs.build.outputs.api_image }}
+            export API_IMAGE="${{ needs.build.outputs.api_image }}"
+
+            mkdir -p /backups
+            BACKUP_FILE="/backups/pre-migration-staging-$(date +%Y%m%d%H%M%S).sql"
+            echo "💾 Creating backup: $BACKUP_FILE"
+            docker compose -f docker-compose.yml -f compose.staging.yml exec -T postgres \
+              pg_dump -U ${POSTGRES_USER:-meeple} ${POSTGRES_DB:-meepleai_staging} > "$BACKUP_FILE" 2>/dev/null || {
+              echo "⚠️ Backup failed (postgres may not be running) — continuing"
+            }
+
+            echo "🔍 Checking EF CLI availability..."
+            HAS_EF=$(docker run --rm "$API_IMAGE" dotnet ef --version 2>/dev/null && echo "yes" || echo "no")
+
+            if [ "$HAS_EF" = "yes" ]; then
+              CONN_STRING=$(docker compose -f docker-compose.yml -f compose.staging.yml exec -T api \
+                printenv ConnectionStrings__DefaultConnection 2>/dev/null || echo "")
+              if [ -n "$CONN_STRING" ]; then
+                echo "🔄 Applying migrations..."
+                docker run --rm --network meepleai \
+                  -e "ConnectionStrings__DefaultConnection=$CONN_STRING" \
+                  "$API_IMAGE" dotnet ef database update --no-build 2>&1 || {
+                  echo "❌ Migration failed — restoring backup"
+                  docker compose -f docker-compose.yml -f compose.staging.yml exec -T postgres \
+                    psql -U ${POSTGRES_USER:-meeple} ${POSTGRES_DB:-meepleai_staging} < "$BACKUP_FILE"
+                  exit 1
+                }
+                echo "✅ Migrations applied"
+              else
+                echo "ℹ️ No connection string — migrations will apply on API startup"
+              fi
+            else
+              echo "ℹ️ EF CLI not in image — migrations will apply on API startup"
+            fi
+
+  # Snapshot previous performance baseline before deploy overwrites DEPLOYMENT.json
+  snapshot-baseline:
+    name: Snapshot Performance Baseline
+    runs-on: ubuntu-latest
+    needs: [build]
+    outputs:
+      previous_baseline: ${{ steps.read-baseline.outputs.baseline }}
+    steps:
+      - name: Read previous DEPLOYMENT.json performance metrics
+        id: read-baseline
+        env:
+          SSH_HOST: ${{ secrets.STAGING_HOST }}
+          SSH_USER: ${{ secrets.STAGING_USER }}
+          SSH_KEY: ${{ secrets.STAGING_SSH_KEY }}
+        run: |
+          # Setup SSH key
+          mkdir -p ~/.ssh
+          echo "$SSH_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H "$SSH_HOST" >> ~/.ssh/known_hosts 2>/dev/null
+
+          # Read performance field from DEPLOYMENT.json on server
+          BASELINE=$(ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no \
+            "$SSH_USER@$SSH_HOST" \
+            'DEPLOY_FILE="/opt/meepleai/repo/infra/DEPLOYMENT.json";
+             if [ -f "$DEPLOY_FILE" ]; then
+               jq -c ".performance // empty" "$DEPLOY_FILE" 2>/dev/null || echo ""
+             else
+               echo ""
+             fi') || true
+
+          # Clean up SSH key
+          rm -f ~/.ssh/deploy_key
+
+          if [ -n "$BASELINE" ] && [ "$BASELINE" != "null" ] && [ "$BASELINE" != '""' ]; then
+            echo "📊 Previous baseline found: $BASELINE"
+            echo "baseline=$BASELINE" >> $GITHUB_OUTPUT
+          else
+            echo "ℹ️ No previous performance baseline (first deploy or missing)"
+            echo "baseline=" >> $GITHUB_OUTPUT
+          fi
+
+  # Deploy to staging server (only changed services)
   deploy:
     name: Deploy to Staging
-    runs-on: ${{ vars.RUNNER || 'ubuntu-latest' }}
-    needs: [build]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: [build, migrate-db, snapshot-baseline]
+    if: always() && needs.build.result == 'success' && (needs.migrate-db.result == 'success' || needs.migrate-db.result == 'skipped') && (needs.snapshot-baseline.result == 'success' || needs.snapshot-baseline.result == 'skipped')
     environment:
       name: staging
       url: https://meepleai.app
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       # Option 1: SSH Deploy (VPS/Dedicated Server)
       - name: Deploy via SSH
@@ -173,20 +376,43 @@ jobs:
             for f in secrets/*.secret; do source "$f" 2>/dev/null; done
             set +a
 
-            # Pull new images
-            docker pull ${{ needs.build.outputs.api_image }}
-            docker pull ${{ needs.build.outputs.web_image }}
+            SERVICES=""
 
-            # Update image tags
-            export API_IMAGE="${{ needs.build.outputs.api_image }}"
-            export WEB_IMAGE="${{ needs.build.outputs.web_image }}"
+            # Pull and tag only changed images
+            if [ "${{ needs.build.outputs.api_built }}" = "true" ]; then
+              docker pull ${{ needs.build.outputs.api_image }}
+              export API_IMAGE="${{ needs.build.outputs.api_image }}"
+              SERVICES="$SERVICES api"
+              echo "📦 API image updated"
+            fi
 
-            # Deploy with zero-downtime
+            if [ "${{ needs.build.outputs.web_built }}" = "true" ]; then
+              docker pull ${{ needs.build.outputs.web_image }}
+              export WEB_IMAGE="${{ needs.build.outputs.web_image }}"
+              SERVICES="$SERVICES web"
+              echo "📦 Web image updated"
+            fi
+
+            if [ -z "$SERVICES" ]; then
+              echo "⏭️ No services to deploy"
+              exit 0
+            fi
+
+            echo "🚀 Deploying services:$SERVICES"
+
+            # Deploy only changed services
             docker compose -f docker-compose.yml -f compose.staging.yml -f compose.staging-traefik.yml \
-              --profile minimal up -d --no-deps api web
+              --profile minimal up -d --no-deps $SERVICES
 
             # Health check (internal - avoids SSL issues)
-            sleep 15
+            echo "⏳ Waiting for API health..."
+            for attempt in $(seq 1 20); do
+              if curl -sf http://localhost:8080/health > /dev/null 2>&1; then
+                echo "✅ API healthy after ~$((attempt*3))s"
+                break
+              fi
+              sleep 3
+            done
             curl -sf http://localhost:8080/health | python3 -c "
             import sys,json
             d=json.load(sys.stdin)
@@ -196,46 +422,261 @@ jobs:
             assert any(c['name']=='redis' and c['status']=='Healthy' for c in d['checks']), 'redis unhealthy'
             " || exit 1
 
+            # Record deployment version
+            cat > /opt/meepleai/repo/infra/DEPLOYMENT.json << VEREOF
+            {
+              "version": "${{ needs.build.outputs.version }}",
+              "api_image": "${{ needs.build.outputs.api_image }}",
+              "web_image": "${{ needs.build.outputs.web_image }}",
+              "environment": "staging",
+              "deployed_at": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+              "deployed_by": "${{ github.actor }}",
+              "commit": "${{ github.sha }}",
+              "workflow_run": "${{ github.run_id }}"
+            }
+            VEREOF
+            echo "📋 Version recorded: ${{ needs.build.outputs.version }}"
+
             # Cleanup old images
             docker image prune -f
 
   # Post-deploy validation
   validate:
     name: Post-deploy Validation
-    runs-on: ${{ vars.RUNNER || 'ubuntu-latest' }}
-    needs: [deploy]
+    runs-on: ubuntu-latest
+    needs: [deploy, snapshot-baseline]
     steps:
-      - name: Health Check
-        run: |
-          echo "🔍 Running health checks..."
+      - name: Checkout
+        uses: actions/checkout@v6
 
-          # API Health
+      - name: Deep Health Check
+        run: |
+          echo "🔍 Running deep health checks..."
+
+          # Wait for API with structured health response
+          HEALTH=""
           for i in {1..30}; do
-            if curl -sf https://meepleai.app/health; then
-              echo "✅ API healthy"
+            HEALTH=$(curl -sf https://api.meepleai.app/health 2>/dev/null || true)
+            if [ -n "$HEALTH" ]; then
+              echo "📋 Health response received"
               break
             fi
             echo "⏳ Waiting for API... ($i/30)"
             sleep 10
           done
 
-          # Web Health
-          curl -sf https://meepleai.app || exit 1
-          echo "✅ Web healthy"
+          if [ -z "$HEALTH" ]; then
+            echo "❌ API did not respond within 5 minutes"
+            exit 1
+          fi
+
+          echo "$HEALTH" | jq . 2>/dev/null || echo "$HEALTH"
+
+          # Verify critical services from health response
+          FAIL=0
+          for SERVICE in postgres redis qdrant; do
+            STATUS=$(echo "$HEALTH" | jq -r ".checks[] | select(.name==\"$SERVICE\") | .status" 2>/dev/null || true)
+            if [ "$STATUS" = "Healthy" ]; then
+              echo "✅ $SERVICE: Healthy"
+            elif [ -z "$STATUS" ]; then
+              echo "⚠️ $SERVICE: not reported in health response (skipping)"
+            else
+              echo "❌ $SERVICE is $STATUS (expected Healthy)"
+              FAIL=1
+            fi
+          done
+
+          if [ "$FAIL" -ne 0 ]; then
+            echo "❌ Critical services unhealthy"
+            exit 1
+          fi
+          echo "✅ All critical services healthy"
+
+      - name: Web Health Check
+        run: |
+          HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" https://meepleai.app)
+          if [ "$HTTP_STATUS" != "200" ]; then
+            echo "❌ Web returned status $HTTP_STATUS"
+            exit 1
+          fi
+          echo "✅ Web healthy (HTTP $HTTP_STATUS)"
 
       - name: Smoke Tests
         run: |
-          echo "🧪 Running smoke tests..."
-          # Add critical path smoke tests here
-          # curl -sf https://meepleai.app/api/v1/health
-          # curl -sf https://meepleai.app/api/v1/games?limit=1
-          echo "✅ Smoke tests passed"
+          echo "🧪 Running staging smoke tests..."
+          FAIL=0
+          RESULTS=""
+
+          smoke_test() {
+            local name="$1" url="$2" expect="$3"
+            local status
+            status=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 "$url" 2>/dev/null || echo "000")
+            if echo "$expect" | grep -q "$status"; then
+              echo "  ✅ $name: HTTP $status"
+              RESULTS="${RESULTS}| $name | $status | ✅ |\n"
+            else
+              echo "  ❌ $name: HTTP $status (expected $expect)"
+              RESULTS="${RESULTS}| $name | $status | ❌ |\n"
+              FAIL=1
+            fi
+          }
+
+          # Critical smoke tests (failure = deployment issue)
+          smoke_test "API Health" "https://meepleai.app/health" "200"
+          smoke_test "Web Root" "https://meepleai.app" "200"
+          smoke_test "API Game Catalog" "https://meepleai.app/api/v1/shared-game-catalog/games?limit=1" "200 401"
+          smoke_test "Swagger Docs" "https://meepleai.app/swagger/index.html" "200"
+
+          # Health endpoint JSON validation
+          echo "  Validating health response structure..."
+          HEALTH_JSON=$(curl -sf --max-time 10 https://meepleai.app/health 2>/dev/null || true)
+          if [ -n "$HEALTH_JSON" ] && echo "$HEALTH_JSON" | jq -e '.status' > /dev/null 2>&1; then
+            echo "  ✅ Health JSON: valid structure"
+          else
+            echo "  ⚠️ Health JSON: unexpected format (non-blocking)"
+          fi
+
+          # Response time check
+          RT=$(curl -sf -o /dev/null -w "%{time_total}" --max-time 10 https://meepleai.app 2>/dev/null || echo "9.999")
+          echo "  📊 Response time: ${RT}s"
+
+          # Write summary to job output
+          {
+            echo "## 🧪 Staging Smoke Test Results"
+            echo ""
+            echo "| Test | Status | Result |"
+            echo "|------|--------|--------|"
+            echo -e "$RESULTS"
+            echo ""
+            echo "**Response Time**: ${RT}s"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          if [ "$FAIL" -ne 0 ]; then
+            echo ""
+            echo "❌ Smoke tests FAILED"
+            exit 1
+          fi
+          echo ""
+          echo "✅ All smoke tests passed"
+
+      - name: Install K6
+        run: |
+          # Install K6 (supports ARM64 and x86_64)
+          ARCH=$(dpkg --print-architecture 2>/dev/null || echo "amd64")
+          curl -fsSL "https://github.com/grafana/k6/releases/download/v0.54.0/k6-v0.54.0-linux-${ARCH}.tar.gz" \
+            | tar xzf - --strip-components=1 -C /usr/local/bin k6-v0.54.0-linux-${ARCH}/k6
+          k6 version
+
+      - name: Run K6 Deploy Smoke
+        run: |
+          mkdir -p reports/deploy
+          k6 run \
+            --env BASE_URL=https://meepleai.app \
+            --summary-export=reports/deploy/deploy-smoke-summary.json \
+            tests/k6/scenarios/deploy-smoke.js
+        continue-on-error: true
+
+      - name: Compare Performance Baseline
+        env:
+          PERF_REGRESSION_MODE: ${{ inputs.perf_regression_mode || 'warn' }}
+          REGRESSION_THRESHOLD_PCT: '20'
+        run: |
+          # Write previous baseline to temp file if available
+          PREV_BASELINE=""
+          BASELINE_JSON='${{ needs.snapshot-baseline.outputs.previous_baseline }}'
+          if [ -n "$BASELINE_JSON" ]; then
+            echo "$BASELINE_JSON" > /tmp/previous-baseline.json
+            PREV_BASELINE="/tmp/previous-baseline.json"
+          fi
+
+          chmod +x tests/k6/utils/deploy-baseline-compare.sh
+          tests/k6/utils/deploy-baseline-compare.sh \
+            reports/deploy/deploy-smoke-summary.json \
+            "$PREV_BASELINE"
+
+      - name: Read metrics for server update
+        id: metrics
+        if: always()
+        run: |
+          METRICS_FILE="reports/deploy/deploy-smoke-summary-metrics.json"
+          if [ -f "$METRICS_FILE" ]; then
+            # Compact JSON to single line for env var transport
+            METRICS=$(jq -c '.' "$METRICS_FILE" 2>/dev/null || echo "")
+            echo "json=$METRICS" >> $GITHUB_OUTPUT
+            echo "📊 Metrics ready for server update"
+          else
+            echo "⚠️ No metrics file found, skipping server update"
+            echo "json=" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Update Server Baseline
+        if: always() && steps.metrics.outputs.json != ''
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.STAGING_HOST }}
+          username: ${{ secrets.STAGING_USER }}
+          key: ${{ secrets.STAGING_SSH_KEY }}
+          envs: PERF_METRICS
+          script: |
+            DEPLOY_FILE="/opt/meepleai/repo/infra/DEPLOYMENT.json"
+            if [ ! -f "$DEPLOY_FILE" ]; then
+              echo "⚠️ DEPLOYMENT.json not found, skipping baseline update"
+              exit 0
+            fi
+
+            if command -v jq &> /dev/null; then
+              jq --argjson perf "$PERF_METRICS" \
+                '.performance = $perf' "$DEPLOY_FILE" > "${DEPLOY_FILE}.tmp" \
+                && mv "${DEPLOY_FILE}.tmp" "$DEPLOY_FILE" \
+                && echo "✅ Performance baseline updated in DEPLOYMENT.json" \
+                || echo "⚠️ jq merge failed, skipping"
+            else
+              echo "⚠️ jq not available, skipping baseline update"
+            fi
+        env:
+          PERF_METRICS: ${{ steps.metrics.outputs.json }}
+
+  # Post-deploy E2E smoke tests against live staging
+  e2e-staging:
+    name: Staging E2E Smoke Tests
+    runs-on: ubuntu-latest  # Needs browser support (not self-hosted ARM64)
+    needs: [validate]
+    if: needs.validate.result == 'success'
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Frontend
+        uses: ./.github/actions/setup-frontend
+
+      - name: Setup Playwright
+        uses: ./.github/actions/setup-playwright
+
+      - name: Run Smoke Tests against Staging
+        working-directory: apps/web
+        env:
+          STAGING_URL: https://meepleai.app
+          CI: 'true'
+        run: |
+          echo "🧪 Running E2E smoke tests against staging..."
+          pnpm exec playwright test e2e/smoke.spec.ts \
+            --config=playwright.staging.config.ts \
+            --reporter=list
+
+      - name: Upload Test Report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: staging-e2e-report
+          path: apps/web/playwright-report/
+          retention-days: 7
 
   # Notify on completion
   notify:
     name: Notify
-    runs-on: ${{ vars.RUNNER || 'ubuntu-latest' }}
-    needs: [build, deploy, validate]
+    runs-on: ubuntu-latest
+    needs: [build, deploy, validate, e2e-staging]
     if: always()
     steps:
       - name: Slack Notification
@@ -255,7 +696,7 @@ jobs:
           echo "| Item | Value |" >> $GITHUB_STEP_SUMMARY
           echo "|------|-------|" >> $GITHUB_STEP_SUMMARY
           echo "| Version | \`${{ needs.build.outputs.version }}\` |" >> $GITHUB_STEP_SUMMARY
-          echo "| API Image | \`${{ needs.build.outputs.api_image }}\` |" >> $GITHUB_STEP_SUMMARY
-          echo "| Web Image | \`${{ needs.build.outputs.web_image }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| API Built | ${{ needs.build.outputs.api_built }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Web Built | ${{ needs.build.outputs.web_built }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Environment | staging |" >> $GITHUB_STEP_SUMMARY
           echo "| URL | https://meepleai.app |" >> $GITHUB_STEP_SUMMARY

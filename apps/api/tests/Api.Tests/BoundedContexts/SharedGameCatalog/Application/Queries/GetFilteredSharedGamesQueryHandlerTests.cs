@@ -22,7 +22,7 @@ namespace Api.Tests.BoundedContexts.SharedGameCatalog.Application.Queries;
 /// Tests filtered listing with status, search, pagination, and sorting.
 /// Issue #3533: Admin API Endpoints - Filtered Games List
 /// </summary>
-[Collection("SharedTestcontainers")]
+[Collection("Integration-GroupC")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "SharedGameCatalog")]
 public sealed class GetFilteredSharedGamesQueryHandlerTests : IAsyncLifetime

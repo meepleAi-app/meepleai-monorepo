@@ -16,7 +16,7 @@ import type { PluginDefinition } from '../types';
 // Helper to get a test plugin
 function getTestPlugin(id?: string): PluginDefinition {
   return id
-    ? BUILT_IN_PLUGINS.find((p) => p.id === id) ?? BUILT_IN_PLUGINS[0]
+    ? (BUILT_IN_PLUGINS.find(p => p.id === id) ?? BUILT_IN_PLUGINS[0])
     : BUILT_IN_PLUGINS[0];
 }
 
@@ -86,9 +86,9 @@ describe('Pipeline Builder Store', () => {
 
     it('should mark dirty after save completes', async () => {
       // Mock fetch for savePipeline which POSTs to /api/v1/rag/pipelines
-      const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
-        new Response(JSON.stringify({ id: 'saved-1' }), { status: 200 })
-      );
+      const fetchSpy = vi
+        .spyOn(globalThis, 'fetch')
+        .mockResolvedValueOnce(new Response(JSON.stringify({ id: 'saved-1' }), { status: 200 }));
 
       act(() => {
         usePipelineBuilderStore.getState().createPipeline('Test');
@@ -161,8 +161,12 @@ describe('Pipeline Builder Store', () => {
       let nodeId2 = '';
 
       act(() => {
-        nodeId1 = usePipelineBuilderStore.getState().addNode(getTestPlugin('retrieval-hybrid'), { x: 0, y: 0 });
-        nodeId2 = usePipelineBuilderStore.getState().addNode(getTestPlugin('evaluation-reranker'), { x: 200, y: 0 });
+        nodeId1 = usePipelineBuilderStore
+          .getState()
+          .addNode(getTestPlugin('retrieval-hybrid'), { x: 0, y: 0 });
+        nodeId2 = usePipelineBuilderStore
+          .getState()
+          .addNode(getTestPlugin('evaluation-reranker'), { x: 200, y: 0 });
         usePipelineBuilderStore.getState().addEdge(nodeId1, nodeId2);
       });
 
@@ -192,7 +196,9 @@ describe('Pipeline Builder Store', () => {
     it('should update node config', () => {
       let nodeId = '';
       act(() => {
-        nodeId = usePipelineBuilderStore.getState().addNode(getTestPlugin('retrieval-hybrid'), { x: 0, y: 0 });
+        nodeId = usePipelineBuilderStore
+          .getState()
+          .addNode(getTestPlugin('retrieval-hybrid'), { x: 0, y: 0 });
       });
 
       act(() => {
@@ -224,8 +230,12 @@ describe('Pipeline Builder Store', () => {
     beforeEach(() => {
       act(() => {
         usePipelineBuilderStore.getState().createPipeline('Test Pipeline');
-        nodeId1 = usePipelineBuilderStore.getState().addNode(getTestPlugin('retrieval-hybrid'), { x: 0, y: 0 });
-        nodeId2 = usePipelineBuilderStore.getState().addNode(getTestPlugin('evaluation-reranker'), { x: 200, y: 0 });
+        nodeId1 = usePipelineBuilderStore
+          .getState()
+          .addNode(getTestPlugin('retrieval-hybrid'), { x: 0, y: 0 });
+        nodeId2 = usePipelineBuilderStore
+          .getState()
+          .addNode(getTestPlugin('evaluation-reranker'), { x: 200, y: 0 });
       });
     });
 
@@ -458,7 +468,9 @@ describe('Pipeline Builder Store', () => {
       let nodeId = '';
       act(() => {
         usePipelineBuilderStore.getState().createPipeline('Test');
-        nodeId = usePipelineBuilderStore.getState().addNode(getTestPlugin('retrieval-hybrid'), { x: 0, y: 0 });
+        nodeId = usePipelineBuilderStore
+          .getState()
+          .addNode(getTestPlugin('retrieval-hybrid'), { x: 0, y: 0 });
         // Clear the collection field (required)
         usePipelineBuilderStore.getState().updateNodeConfig(nodeId, { collection: '' });
       });
@@ -475,7 +487,9 @@ describe('Pipeline Builder Store', () => {
       act(() => {
         usePipelineBuilderStore.getState().createPipeline('Test');
         const n1 = usePipelineBuilderStore.getState().addNode(getTestPlugin(), { x: 0, y: 0 });
-        const n2 = usePipelineBuilderStore.getState().addNode(getTestPlugin('generation-llm'), { x: 200, y: 0 });
+        const n2 = usePipelineBuilderStore
+          .getState()
+          .addNode(getTestPlugin('generation-llm'), { x: 200, y: 0 });
         const edgeId = usePipelineBuilderStore.getState().addEdge(n1, n2);
         if (edgeId) {
           usePipelineBuilderStore.getState().updateEdge(edgeId, {
@@ -543,7 +557,9 @@ describe('Pipeline Builder Store', () => {
       act(() => {
         usePipelineBuilderStore.getState().createPipeline('Test');
         usePipelineBuilderStore.getState().addNode(getTestPlugin(), { x: 500, y: 500 });
-        usePipelineBuilderStore.getState().addNode(getTestPlugin('generation-llm'), { x: 500, y: 500 });
+        usePipelineBuilderStore
+          .getState()
+          .addNode(getTestPlugin('generation-llm'), { x: 500, y: 500 });
       });
 
       act(() => {

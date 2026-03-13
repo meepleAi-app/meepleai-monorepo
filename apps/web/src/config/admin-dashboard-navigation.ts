@@ -45,6 +45,10 @@ import {
   ClipboardListIcon,
   KeyIcon,
   MailIcon,
+  ScrollTextIcon,
+  HeartPulseIcon,
+  BarChart3Icon,
+  BoxIcon,
 } from 'lucide-react';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -276,6 +280,11 @@ export const DASHBOARD_SECTIONS: DashboardSection[] = [
         activePattern: /^\/admin\/users$/,
       },
       {
+        href: '/admin/users/invitations',
+        label: 'Invitations',
+        icon: MailIcon,
+      },
+      {
         href: '/admin/users/roles',
         label: 'Roles & Permissions',
         icon: ShieldIcon,
@@ -334,6 +343,41 @@ export const DASHBOARD_SECTIONS: DashboardSection[] = [
         href: '/admin/monitor?tab=email',
         label: 'Email',
         icon: MailIcon,
+      },
+      // Operations Console (Issue #126)
+      {
+        href: '/admin/monitor/operations',
+        label: 'Operations',
+        icon: ScrollTextIcon,
+        activePattern: /^\/admin\/monitor\/operations/,
+      },
+      // Service Dashboard (Issue #132)
+      {
+        href: '/admin/monitor/services',
+        label: 'Services',
+        icon: HeartPulseIcon,
+        activePattern: /^\/admin\/monitor\/services/,
+      },
+      // Grafana Dashboards (Issue #134)
+      {
+        href: '/admin/monitor/grafana',
+        label: 'Grafana',
+        icon: BarChart3Icon,
+        activePattern: /^\/admin\/monitor\/grafana/,
+      },
+      // Log Viewer (Issue #140)
+      {
+        href: '/admin/monitor/logs',
+        label: 'Logs',
+        icon: ScrollTextIcon,
+        activePattern: /^\/admin\/monitor\/logs/,
+      },
+      // Container Dashboard (Issue #143)
+      {
+        href: '/admin/monitor/containers',
+        label: 'Containers',
+        icon: BoxIcon,
+        activePattern: /^\/admin\/monitor\/containers/,
       },
       // Config items
       {

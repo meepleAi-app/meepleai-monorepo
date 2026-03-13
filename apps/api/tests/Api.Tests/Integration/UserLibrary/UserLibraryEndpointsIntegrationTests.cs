@@ -23,7 +23,7 @@ namespace Api.Tests.Integration.UserLibrary;
 /// Tests: GetLibrary, AddGame, RemoveGame, UpdateEntry, GetStats, ShareLinks
 /// Issue #3010: Backend coverage improvement.
 /// </summary>
-[Collection("SharedTestcontainers")]
+[Collection("Integration-GroupC")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "UserLibrary")]
 public sealed class UserLibraryEndpointsIntegrationTests : IAsyncLifetime

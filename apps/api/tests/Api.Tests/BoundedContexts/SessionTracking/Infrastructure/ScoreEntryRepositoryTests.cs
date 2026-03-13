@@ -10,7 +10,7 @@ using Xunit;
 
 namespace Api.Tests.BoundedContexts.SessionTracking.Infrastructure;
 
-[Collection("SharedTestcontainers")]
+[Collection("Integration-GroupC")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "SessionTracking")]
 public class ScoreEntryRepositoryTests : SharedDatabaseTestBase<ScoreEntryRepository>

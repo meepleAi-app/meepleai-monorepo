@@ -24,7 +24,7 @@ namespace Api.Tests.Integration.Administration;
 /// Tests permission requirements, audit log integrity, and role-based access.
 /// Issue #3697: Epic 1 - Testing & Integration (Phase 4)
 /// </summary>
-[Collection("SharedTestcontainers")]
+[Collection("Integration-GroupD")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("Dependency", "PostgreSQL")]
 [Trait("BoundedContext", "Administration")]

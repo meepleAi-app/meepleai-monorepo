@@ -868,14 +868,52 @@ internal sealed class PlaygroundChatCommandHandler : IStreamingQueryHandler<Play
         var systemPromptTemplate = agentDefinition.Prompts
             .FirstOrDefault(p => string.Equals(p.Role, "system", StringComparison.OrdinalIgnoreCase));
 
-        if (systemPromptTemplate != null && !string.IsNullOrWhiteSpace(systemPromptTemplate.Content))
+        var basePrompt = systemPromptTemplate != null && !string.IsNullOrWhiteSpace(systemPromptTemplate.Content)
+            ? systemPromptTemplate.Content
+            : $"You are {agentDefinition.Name}. {agentDefinition.Description} " +
+              "Answer questions about board games clearly and helpfully.";
+
+        // E5-3: Inject ChatLanguage instruction when not "auto"
+        var languageInstruction = GetChatLanguageInstruction(agentDefinition.ChatLanguage);
+        if (languageInstruction != null)
         {
-            return systemPromptTemplate.Content;
+            return languageInstruction + "\n\n" + basePrompt;
         }
 
-        // Fallback: Build a reasonable system prompt from the definition metadata
-        return $"You are {agentDefinition.Name}. {agentDefinition.Description} " +
-               "Answer questions about board games clearly and helpfully.";
+        return basePrompt;
+    }
+
+    /// <summary>
+    /// Language names mapping for ChatLanguage system prompt injection (E5-3).
+    /// </summary>
+    private static readonly Dictionary<string, string> LanguageNames = new(StringComparer.Ordinal)
+    {
+        ["it"] = "Italian",
+        ["en"] = "English",
+        ["de"] = "German",
+        ["fr"] = "French",
+        ["es"] = "Spanish",
+        ["pt"] = "Portuguese",
+        ["ja"] = "Japanese",
+        ["zh"] = "Chinese",
+        ["ko"] = "Korean",
+        ["ru"] = "Russian",
+        ["pl"] = "Polish",
+        ["nl"] = "Dutch"
+    };
+
+    /// <summary>
+    /// Returns a language instruction for the system prompt, or null if ChatLanguage is "auto".
+    /// </summary>
+    internal static string? GetChatLanguageInstruction(string chatLanguage)
+    {
+        if (string.IsNullOrEmpty(chatLanguage) || string.Equals(chatLanguage, "auto", StringComparison.Ordinal))
+            return null;
+
+        var languageName = LanguageNames.TryGetValue(chatLanguage, out var name) ? name : chatLanguage.ToUpperInvariant();
+
+        return $"Always respond in {languageName}. " +
+               "When citing the rulebook, translate the relevant section and include the original text in parentheses.";
     }
 
     private static IReadOnlyList<string> GenerateFollowUpQuestions(string agentName)

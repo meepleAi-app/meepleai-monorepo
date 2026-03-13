@@ -18,4 +18,7 @@ public class AgentEntity
 
     public Guid? CreatedByUserId { get; set; }
     public UserEntity? CreatedByUser { get; set; }
+
+    // Issue #262: Direct link to SharedGame for admin RAG dashboard
+    public Guid? SharedGameId { get; set; }
 }

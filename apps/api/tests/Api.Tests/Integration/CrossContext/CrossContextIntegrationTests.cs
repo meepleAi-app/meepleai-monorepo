@@ -24,7 +24,7 @@ namespace Api.Tests.Integration.CrossContext;
 /// Tests GameManagement → WorkflowIntegration integration event flow.
 /// Issue #2307: Week 3 - Cross-context integration testing
 /// </summary>
-[Collection("SharedTestcontainers")]
+[Collection("Integration-GroupD")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("Issue", "2307")]
 [Trait("CrossContext", "GameManagement-WorkflowIntegration")]

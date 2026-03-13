@@ -38,7 +38,7 @@ namespace Api.Tests.Integration.Authentication;
 ///
 /// Pattern: SharedTestcontainersFixture, AAA Testing, Security-First Design (Issue #2031)
 /// </remarks>
-[Collection("SharedTestcontainers")]
+[Collection("Integration-GroupB")]
 [Trait("Category", TestCategories.Security)]
 [Trait("Category", TestCategories.Integration)]
 [Trait("Dependency", "PostgreSQL")]

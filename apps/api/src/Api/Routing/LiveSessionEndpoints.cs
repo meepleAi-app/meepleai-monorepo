@@ -1,4 +1,5 @@
 using Api.BoundedContexts.GameManagement.Application.Commands.LiveSessions;
+using Api.BoundedContexts.GameManagement.Application.DTOs;
 using Api.BoundedContexts.GameManagement.Application.DTOs.GameSessionContext;
 using Api.BoundedContexts.GameManagement.Application.DTOs.LiveSessions;
 using Api.BoundedContexts.GameManagement.Application.DTOs.SessionSnapshot;
@@ -8,6 +9,8 @@ using Api.BoundedContexts.GameManagement.Application.Queries.LiveSessions;
 using Api.BoundedContexts.GameManagement.Application.Queries.ToolState;
 using Api.BoundedContexts.GameManagement.Domain.Entities.SessionSnapshot;
 using Api.BoundedContexts.GameManagement.Domain.Enums;
+using Api.BoundedContexts.KnowledgeBase.Application.Commands;
+using Api.BoundedContexts.KnowledgeBase.Application.DTOs;
 using Api.Extensions;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
@@ -174,6 +177,32 @@ internal static class LiveSessionEndpoints
             .WithTags("LiveSessions")
             .WithSummary("Update session notes");
 
+        group.MapPost("/live-sessions/{sessionId}/scores/parse", HandleParseScore)
+            .RequireAuthenticatedUser()
+            .Produces<ScoreParseResultDto>(200)
+            .Produces(400)
+            .Produces(404)
+            .WithTags("LiveSessions")
+            .WithSummary("Parse a natural language message for score data")
+            .WithDescription("Parses a message and optionally auto-records the score if confidence is high enough.");
+
+        group.MapPost("/live-sessions/{sessionId}/scores/confirm", HandleConfirmScore)
+            .RequireAuthenticatedUser()
+            .Produces(204)
+            .Produces(400)
+            .Produces(404)
+            .WithTags("LiveSessions")
+            .WithSummary("Confirm and record a previously parsed score");
+
+        group.MapPost("/live-sessions/{sessionId}/save-complete", HandleSaveComplete)
+            .RequireAuthenticatedUser()
+            .Produces<SessionSaveResultDto>(200)
+            .Produces(404)
+            .Produces(409)
+            .WithTags("LiveSessions")
+            .WithSummary("Save complete session state")
+            .WithDescription("Save complete session state with pause + snapshot + agent persist. Issue #122.");
+
         // === Queries ===
         // NOTE: Literal-segment routes MUST be registered before parameterized {sessionId} route
         // to prevent ASP.NET Core from trying to parse "active"/"code" as a Guid.
@@ -245,6 +274,14 @@ internal static class LiveSessionEndpoints
             .WithTags("LiveSessions")
             .WithSummary("Refresh game session context")
             .WithDescription("Rebuilds the session context, useful after indexing new PDFs or linking expansions. Issue #5579.");
+
+        group.MapGet("/live-sessions/{sessionId}/resume-context", HandleGetResumeContext)
+            .RequireAuthenticatedUser()
+            .Produces<SessionResumeContextDto>(200)
+            .Produces(404)
+            .WithTags("LiveSessions")
+            .WithSummary("Get session resume context")
+            .WithDescription("Get session resume context with recap, scores, and photos. Issue #122.");
 
         return group;
     }
@@ -455,6 +492,52 @@ internal static class LiveSessionEndpoints
         return Results.NoContent();
     }
 
+    private static async Task<IResult> HandleParseScore(
+        Guid sessionId,
+        [FromBody] ParseScoreRequest request,
+        [FromServices] IMediator mediator,
+        CancellationToken cancellationToken)
+    {
+        var command = new ParseAndRecordScoreCommand
+        {
+            SessionId = sessionId,
+            Message = request.Message,
+            AutoRecord = request.AutoRecord
+        };
+
+        var result = await mediator.Send(command, cancellationToken).ConfigureAwait(false);
+        return Results.Ok(result);
+    }
+
+    private static async Task<IResult> HandleConfirmScore(
+        Guid sessionId,
+        [FromBody] ConfirmScoreRequest request,
+        [FromServices] IMediator mediator,
+        CancellationToken cancellationToken)
+    {
+        var command = new ConfirmScoreCommand
+        {
+            SessionId = sessionId,
+            PlayerId = request.PlayerId,
+            Dimension = request.Dimension,
+            Value = request.Value,
+            Round = request.Round
+        };
+
+        await mediator.Send(command, cancellationToken).ConfigureAwait(false);
+        return Results.NoContent();
+    }
+
+    private static async Task<IResult> HandleSaveComplete(
+        Guid sessionId,
+        [FromServices] IMediator mediator,
+        CancellationToken cancellationToken)
+    {
+        var result = await mediator.Send(
+            new SaveCompleteSessionStateCommand(sessionId), cancellationToken).ConfigureAwait(false);
+        return Results.Ok(result);
+    }
+
     #endregion
 
     #region Query Handlers
@@ -541,6 +624,16 @@ internal static class LiveSessionEndpoints
         return Results.Ok(result);
     }
 
+    private static async Task<IResult> HandleGetResumeContext(
+        Guid sessionId,
+        [FromServices] IMediator mediator,
+        CancellationToken cancellationToken)
+    {
+        var result = await mediator.Send(
+            new GetSessionResumeContextQuery(sessionId), cancellationToken).ConfigureAwait(false);
+        return Results.Ok(result);
+    }
+
     #endregion
 
     #region Request Models
@@ -580,6 +673,10 @@ internal static class LiveSessionEndpoints
         SnapshotTrigger TriggerType,
         string? Description = null,
         Guid? CreatedByPlayerId = null);
+
+    private sealed record ParseScoreRequest(string Message, bool AutoRecord = true);
+
+    private sealed record ConfirmScoreRequest(Guid PlayerId, string Dimension, int Value, int Round);
 
     #endregion
 }

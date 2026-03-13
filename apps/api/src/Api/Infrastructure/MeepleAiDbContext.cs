@@ -55,6 +55,8 @@ public class MeepleAiDbContext : DbContext
     public DbSet<GameToolkitEntity> GameToolkits => Set<GameToolkitEntity>(); // ISSUE-4753: Game toolkit configs
     public DbSet<BoundedContexts.GameToolkit.Domain.Entities.Toolkit> Toolkits => Set<BoundedContexts.GameToolkit.Domain.Entities.Toolkit>(); // ISSUE-5144: Epic B — user toolkit dashboard
     public DbSet<BoundedContexts.SessionTracking.Domain.Entities.ToolkitSessionState> ToolkitSessionStates => Set<BoundedContexts.SessionTracking.Domain.Entities.ToolkitSessionState>(); // ISSUE-5148: Epic B5 — toolkit session state
+    public DbSet<SessionParticipantEntity> SessionParticipants => Set<SessionParticipantEntity>(); // Game Night: Multi-device session participants
+    public DbSet<SessionInviteEntity> SessionInvites => Set<SessionInviteEntity>(); // E3-1: Session invite links/PINs
     public DbSet<SessionPlayerEntity> SessionPlayers => Set<SessionPlayerEntity>(); // ISSUE-4750: Live session players
     public DbSet<SessionTeamEntity> SessionTeams => Set<SessionTeamEntity>(); // ISSUE-4750: Live session teams
     public DbSet<LiveRoundScoreEntity> LiveRoundScores => Set<LiveRoundScoreEntity>(); // ISSUE-4750: Live session round scores
@@ -109,6 +111,7 @@ public class MeepleAiDbContext : DbContext
     public DbSet<DocumentCollectionEntity> DocumentCollections => Set<DocumentCollectionEntity>(); // ISSUE-2051: Multi-document collections
     public DbSet<ChatThreadCollectionEntity> ChatThreadCollections => Set<ChatThreadCollectionEntity>(); // ISSUE-2051: Chat-collection junction
     public DbSet<ShareLinkEntity> ShareLinks => Set<ShareLinkEntity>(); // ISSUE-2052: Shareable chat links
+    public DbSet<InvitationTokenEntity> InvitationTokens => Set<InvitationTokenEntity>(); // ISSUE-124: Admin invitation tokens
     public DbSet<NotificationEntity> Notifications => Set<NotificationEntity>(); // ISSUE-2053: User notifications
     public DbSet<SharedGameEntity> SharedGames => Set<SharedGameEntity>(); // ISSUE-2370: Shared game catalog
     public DbSet<GameDesignerEntity> GameDesigners => Set<GameDesignerEntity>(); // ISSUE-2370: Game designers
@@ -164,6 +167,7 @@ public class MeepleAiDbContext : DbContext
     public DbSet<BoundedContexts.BusinessSimulations.Domain.Entities.ResourceForecast> ResourceForecasts => Set<BoundedContexts.BusinessSimulations.Domain.Entities.ResourceForecast>(); // ISSUE-3726: Resource Forecasting Simulator
     public DbSet<BoundedContexts.KnowledgeBase.Domain.Entities.PlaygroundTestScenario> PlaygroundTestScenarios => Set<BoundedContexts.KnowledgeBase.Domain.Entities.PlaygroundTestScenario>(); // ISSUE-4396: Playground Test Scenarios
     public DbSet<BoundedContexts.EntityRelationships.Domain.Aggregates.EntityLink> EntityLinks => Set<BoundedContexts.EntityRelationships.Domain.Aggregates.EntityLink>(); // ISSUE-5132: Entity relationships
+    public DbSet<BoundedContexts.SystemConfiguration.Domain.Entities.TierDefinition> TierDefinitions => Set<BoundedContexts.SystemConfiguration.Domain.Entities.TierDefinition>(); // D3: Tier system definitions
 
     // GST-001: SessionTracking bounded context (persistence entities)
     public DbSet<Api.Infrastructure.Entities.SessionTracking.SessionEntity> SessionTrackingSessions => Set<Api.Infrastructure.Entities.SessionTracking.SessionEntity>();
@@ -196,6 +200,15 @@ public class MeepleAiDbContext : DbContext
 
     // Issue #52: Email template admin management
     public DbSet<Api.Infrastructure.Entities.UserNotifications.EmailTemplateEntity> EmailTemplates => Set<Api.Infrastructure.Entities.UserNotifications.EmailTemplateEntity>();
+
+    // Issue #276/#278: Session diary events and checkpoints
+    public DbSet<Api.Infrastructure.Entities.SessionTracking.SessionEventEntity> SessionEvents => Set<Api.Infrastructure.Entities.SessionTracking.SessionEventEntity>();
+    public DbSet<Api.Infrastructure.Entities.SessionTracking.SessionCheckpointEntity> SessionCheckpoints => Set<Api.Infrastructure.Entities.SessionTracking.SessionCheckpointEntity>();
+
+    // Issue #82/#83/#77: Knowledge base - extracted facts, similarity audit, analysis feedback
+    public DbSet<Api.Infrastructure.Entities.KnowledgeBase.ExtractedFactEntity> ExtractedFacts => Set<Api.Infrastructure.Entities.KnowledgeBase.ExtractedFactEntity>();
+    public DbSet<Api.Infrastructure.Entities.KnowledgeBase.SimilarityAuditResultEntity> SimilarityAuditResults => Set<Api.Infrastructure.Entities.KnowledgeBase.SimilarityAuditResultEntity>();
+    public DbSet<Api.Infrastructure.Entities.KnowledgeBase.AnalysisFeedbackEntity> AnalysisFeedback => Set<Api.Infrastructure.Entities.KnowledgeBase.AnalysisFeedbackEntity>();
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {

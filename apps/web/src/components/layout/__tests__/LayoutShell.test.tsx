@@ -2,12 +2,15 @@
  * LayoutShell Tests
  * Issue #5035 — LayoutShell Component
  *
- * Tests: rendering, composition (TopNavbar/MiniNav/FloatingActionBar),
+ * Tests: rendering, composition (TopBar/CardRack/FloatingActionBar),
  * impersonation banner, CardStackPanel, NavigationProvider wrapping,
  * fullWidth prop, accessibility.
  *
- * Updated: slot-based API replaced with self-contained composition
- * (TopNavbar/MiniNav/FloatingActionBar are rendered internally, not via props).
+ * Updated for Game Table UX redesign:
+ * - TopNavbar → TopBar
+ * - Sidebar → CardRack
+ * - useSidebarState removed (CardRack self-manages hover state)
+ * - MiniNav removed (tabs now rendered in SidebarContextNav)
  */
 
 import { render, screen } from '@testing-library/react';
@@ -38,29 +41,21 @@ vi.mock('@/components/ui/navigation/card-stack-panel', () => ({
   CardStackPanel: () => <div data-testid="card-stack-panel" />,
 }));
 
-vi.mock('@/components/layout/Sidebar/Sidebar', () => ({
-  Sidebar: ({ isCollapsed }: { isCollapsed: boolean }) => (
-    <div data-testid="sidebar" data-collapsed={isCollapsed}>
-      Sidebar
-    </div>
+vi.mock('@/components/layout/CardRack', () => ({
+  CardRack: () => (
+    <nav data-testid="card-rack" aria-label="Card Rack">
+      CardRack
+    </nav>
   ),
-}));
-
-vi.mock('@/hooks/useSidebarState', () => ({
-  useSidebarState: () => ({ isCollapsed: false, toggle: vi.fn(), setCollapsed: vi.fn() }),
 }));
 
 // Mock internal nav layers to avoid QueryClient / NavigationContext dependencies
-vi.mock('@/components/layout/TopNavbar', () => ({
-  TopNavbar: () => (
-    <header role="banner" data-testid="top-navbar">
-      TopNavbar
+vi.mock('@/components/layout/TopBar', () => ({
+  TopBar: () => (
+    <header role="banner" data-testid="top-bar">
+      TopBar
     </header>
   ),
-}));
-
-vi.mock('@/components/layout/MiniNav', () => ({
-  MiniNav: () => <div data-testid="mini-nav" />,
 }));
 
 vi.mock('@/components/layout/FloatingActionBar', () => ({
@@ -77,6 +72,10 @@ vi.mock('@/components/layout/MobileBreadcrumb', () => ({
 
 vi.mock('@/components/layout/MobileTabBar', () => ({
   MobileTabBar: () => <div data-testid="mobile-tab-bar" />,
+}));
+
+vi.mock('@/components/layout/QuickView', () => ({
+  QuickView: () => <aside data-testid="quick-view" />,
 }));
 
 vi.mock('@/hooks/useBottomPadding', () => ({
@@ -122,14 +121,9 @@ describe('LayoutShell', () => {
     expect(main.id).toBe('main-content');
   });
 
-  it('renders TopNavbar', () => {
+  it('renders TopBar', () => {
     renderShell();
-    expect(screen.getByTestId('top-navbar')).toBeInTheDocument();
-  });
-
-  it('renders MiniNav', () => {
-    renderShell();
-    expect(screen.getByTestId('mini-nav')).toBeInTheDocument();
+    expect(screen.getByTestId('top-bar')).toBeInTheDocument();
   });
 
   it('renders FloatingActionBar', () => {
@@ -137,14 +131,23 @@ describe('LayoutShell', () => {
     expect(screen.getByTestId('floating-action-bar')).toBeInTheDocument();
   });
 
-  it('renders Sidebar', () => {
+  it('renders CardRack', () => {
     renderShell();
-    expect(screen.getByTestId('sidebar')).toBeInTheDocument();
+    expect(screen.getByTestId('card-rack')).toBeInTheDocument();
   });
 
-  it('renders content area wrapper with sidebar offset', () => {
+  it('renders content area wrapper with CardRack offset', () => {
     renderShell();
-    expect(screen.getByTestId('layout-content-area')).toBeInTheDocument();
+    // The outer flex wrapper carries the CardRack offset margin
+    const shell = screen.getByTestId('layout-shell');
+    const outerWrapper = shell.querySelector('.md\\:ml-\\[var\\(--card-rack-width\\,64px\\)\\]');
+    expect(outerWrapper).toBeInTheDocument();
+  });
+
+  it('renders QuickView panel inside content area', () => {
+    render(<LayoutShell>Content</LayoutShell>);
+    const contentArea = screen.getByTestId('layout-content-area');
+    expect(contentArea).toBeInTheDocument();
   });
 
   it('does NOT render ImpersonationBanner when not impersonating', () => {

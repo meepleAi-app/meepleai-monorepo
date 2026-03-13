@@ -41,7 +41,7 @@ namespace Api.Tests.BoundedContexts.SharedGameCatalog.Integration;
 /// See Issue #3490 - needs complete refactoring.
 /// </summary>
 /*
-[Collection("SharedTestcontainers")]
+[Collection("Integration-GroupC")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "SharedGameCatalog")]
 public sealed class CompleteWorkflowIntegrationTests : IAsyncLifetime

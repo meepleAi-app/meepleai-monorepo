@@ -45,27 +45,28 @@ vi.mock('@/lib/api', () => ({
   },
 }));
 
-const makeMockSession = (overrides: Partial<LiveSessionDto> = {}): LiveSessionDto => ({
-  id: 'session-1',
-  code: 'ABC123',
-  gameId: null,
-  gameName: null,
-  gameImageUrl: null,
-  hostUserId: 'user-1',
-  hostDisplayName: 'Host',
-  status: 'InProgress',
-  maxPlayers: 10,
-  isPublic: false,
-  location: null,
-  notes: null,
-  players: [],
-  roundScores: [],
-  createdAt: new Date().toISOString(),
-  startedAt: null,
-  completedAt: null,
-  agentMode: 'None',
-  ...overrides,
-} as LiveSessionDto);
+const makeMockSession = (overrides: Partial<LiveSessionDto> = {}): LiveSessionDto =>
+  ({
+    id: 'session-1',
+    code: 'ABC123',
+    gameId: null,
+    gameName: null,
+    gameImageUrl: null,
+    hostUserId: 'user-1',
+    hostDisplayName: 'Host',
+    status: 'InProgress',
+    maxPlayers: 10,
+    isPublic: false,
+    location: null,
+    notes: null,
+    players: [],
+    roundScores: [],
+    createdAt: new Date().toISOString(),
+    startedAt: null,
+    completedAt: null,
+    agentMode: 'None',
+    ...overrides,
+  }) as LiveSessionDto;
 
 describe('sessionStore', () => {
   beforeEach(() => {
@@ -306,7 +307,9 @@ describe('sessionStore', () => {
       const { result } = renderHook(() => useSessionStore());
       const tools = ['scoreboard', 'turn-order', 'dice', 'whiteboard'] as const;
       for (const tool of tools) {
-        act(() => { result.current.setActiveTool(tool); });
+        act(() => {
+          result.current.setActiveTool(tool);
+        });
         expect(result.current.activeTool).toBe(tool);
       }
     });
@@ -321,10 +324,14 @@ describe('sessionStore', () => {
 
     it('resets activeTool to scoreboard on reset()', () => {
       const { result } = renderHook(() => useSessionStore());
-      act(() => { result.current.setActiveTool('whiteboard'); });
+      act(() => {
+        result.current.setActiveTool('whiteboard');
+      });
       expect(result.current.activeTool).toBe('whiteboard');
 
-      act(() => { result.current.reset(); });
+      act(() => {
+        result.current.reset();
+      });
       expect(result.current.activeTool).toBe('scoreboard');
     });
   });

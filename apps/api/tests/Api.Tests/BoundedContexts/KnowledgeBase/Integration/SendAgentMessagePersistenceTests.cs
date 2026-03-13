@@ -35,7 +35,7 @@ namespace Api.Tests.BoundedContexts.KnowledgeBase.Integration;
 /// Mocks only ILlmService to control streaming output.
 /// </summary>
 [Trait("Category", TestCategories.Integration)]
-[Collection("SharedTestcontainers")]
+[Collection("Integration-GroupA")]
 public sealed class SendAgentMessagePersistenceTests : IAsyncLifetime
 {
     private readonly SharedTestcontainersFixture _fixture;

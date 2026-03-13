@@ -186,14 +186,18 @@ internal static class AdminGameWizardEndpoints
                 var isComplete = string.Equals(pdfState, "Ready", StringComparison.Ordinal);
                 var isFailed = string.Equals(pdfState, "Failed", StringComparison.Ordinal);
 
+                var agentExists = await dbContext.Agents
+                    .AnyAsync(a => a.GameId == resolvedGameId, cancellationToken)
+                    .ConfigureAwait(false);
+
                 var progressEvent = new WizardProgressEvent
                 {
                     CurrentStep = pdfState,
                     PdfState = pdfState,
-                    AgentExists = false, // Will be populated by Phase 4 auto-agent creation
-                    OverallPercent = MapStateToPercent(pdfState, false),
-                    Message = BuildProgressMessage(pdfState, false, pdfInfo?.FileName),
-                    IsComplete = isComplete,
+                    AgentExists = agentExists,
+                    OverallPercent = MapStateToPercent(pdfState, agentExists),
+                    Message = BuildProgressMessage(pdfState, agentExists, pdfInfo?.FileName),
+                    IsComplete = isComplete && agentExists,
                     ErrorMessage = isFailed ? pdfInfo?.ProcessingError : null,
                     Priority = pdfInfo?.ProcessingPriority ?? "Normal",
                     Timestamp = DateTime.UtcNow

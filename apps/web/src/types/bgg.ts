@@ -24,4 +24,29 @@ export interface BggGameDetailsDto {
   description?: string;
   categories?: string[];
   mechanics?: string[];
+  designers?: string[];
+  publishers?: string[];
+  complexityRating?: number;
+  averageRating?: number;
+  imageUrl?: string;
+}
+
+/** Extended BGG data used by BggSearchPanel onSelect callback */
+export interface BggFullGameData {
+  id: number;
+  name: string;
+  yearPublished?: number;
+  minPlayers?: number;
+  maxPlayers?: number;
+  playingTime?: number;
+  minAge?: number;
+  description?: string;
+  imageUrl?: string;
+  thumbnailUrl?: string;
+  categories: string[];
+  mechanics: string[];
+  designers: string[];
+  publishers: string[];
+  complexityRating?: number;
+  averageRating?: number;
 }

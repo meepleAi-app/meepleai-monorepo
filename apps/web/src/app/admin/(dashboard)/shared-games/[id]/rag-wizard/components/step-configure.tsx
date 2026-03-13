@@ -12,9 +12,9 @@ import { useCallback, useState } from 'react';
 
 import { FileText } from 'lucide-react';
 
+import { Button } from '@/components/ui/primitives/button';
 import { Input } from '@/components/ui/primitives/input';
 import { Label } from '@/components/ui/primitives/label';
-import { Button } from '@/components/ui/primitives/button';
 import {
   Select,
   SelectContent,
@@ -46,13 +46,15 @@ interface StepConfigureProps {
 
 // ── Component ───────────────────────────────────────────────────────────
 
-export function StepConfigure({ configs: initialConfigs, onBack, onStartProcessing }: StepConfigureProps) {
+export function StepConfigure({
+  configs: initialConfigs,
+  onBack,
+  onStartProcessing,
+}: StepConfigureProps) {
   const [configs, setConfigs] = useState<FileConfig[]>(initialConfigs);
 
   const updateConfig = useCallback((index: number, updates: Partial<FileConfig>) => {
-    setConfigs(prev =>
-      prev.map((c, i) => (i === index ? { ...c, ...updates } : c))
-    );
+    setConfigs(prev => prev.map((c, i) => (i === index ? { ...c, ...updates } : c)));
   }, []);
 
   const allValid = configs.every(c => VERSION_REGEX.test(c.version));
@@ -117,9 +119,7 @@ export function StepConfigure({ configs: initialConfigs, onBack, onStartProcessi
                     className={`h-9 text-sm ${!versionValid && config.version ? 'border-destructive' : ''}`}
                   />
                   {!versionValid && config.version && (
-                    <p className="text-xs text-destructive">
-                      Formato: X.Y (es. 1.0, 2.1)
-                    </p>
+                    <p className="text-xs text-destructive">Formato: X.Y (es. 1.0, 2.1)</p>
                   )}
                 </div>
               </div>

@@ -14,7 +14,7 @@ using Xunit;
 
 namespace Api.Tests.BoundedContexts.Administration.Application.Handlers.Integration;
 
-[Collection("SharedTestcontainers")]
+[Collection("Integration-GroupD")]
 [Trait("Category", TestCategories.Integration)]
 public sealed class GetInfrastructureHealthQueryHandlerIntegrationTests : IAsyncLifetime
 {

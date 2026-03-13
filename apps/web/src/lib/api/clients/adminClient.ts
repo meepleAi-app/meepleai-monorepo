@@ -20,6 +20,7 @@ import {
   PromptResponseSchema,
   ActivateVersionResponseSchema,
   AdminStatsSchema,
+  AdminOverviewStatsSchema,
   AiRequestsResponseSchema,
   PromptVersionsResponseSchema,
   PromptAuditLogsResponseSchema,
@@ -35,6 +36,7 @@ import {
   DashboardStatsSchema,
   RecentActivityDtoSchema,
   InfrastructureDetailsSchema,
+  EnhancedServiceDashboardSchema,
   MetricsTimeSeriesResponseSchema,
   GetUserActivityResultSchema,
   type CreateUserRequest,
@@ -45,6 +47,7 @@ import {
   type PromptTemplate,
   type ActivateVersionResponse,
   type AdminStats,
+  type AdminOverviewStats,
   type AiRequest,
   type PromptVersion,
   type PromptAuditLog,
@@ -134,6 +137,24 @@ import {
   type EmailTemplateDto,
   type CreateEmailTemplateInput,
   type UpdateEmailTemplateInput,
+  DatabaseMetricsSchema,
+  type DatabaseMetrics,
+  CacheMetricsSchema,
+  type CacheMetrics,
+  TableSizeSchema,
+  type TableSize,
+  VectorStoreMetricsSchema,
+  type VectorStoreMetrics,
+  PaginatedQueueSchema,
+  type PaginatedQueue,
+  QueueStatusSchema,
+  type QueueStatus,
+  ActiveOverrideSchema,
+  type ActiveOverride,
+  ContainerInfoSchema,
+  type ContainerInfo,
+  ContainerLogsSchema,
+  type ContainerLogs,
 } from '../schemas';
 import {
   BulkDeleteResultSchema,
@@ -293,6 +314,20 @@ export function createAdminClient({ httpClient }: CreateAdminClientParams) {
       const result = await httpClient.put<AdminUser>(
         `/api/v1/admin/users/${userId}/tier`,
         { tier },
+        AdminUserSchema
+      );
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+      return result!;
+    },
+
+    /**
+     * Change user role (admin only) - Issue #124
+     * PUT /api/v1/admin/users/{userId}/role
+     */
+    async changeUserRole(userId: string, newRole: string): Promise<AdminUser> {
+      const result = await httpClient.put<AdminUser>(
+        `/api/v1/admin/users/${encodeURIComponent(userId)}/role`,
+        { newRole },
         AdminUserSchema
       );
       // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
@@ -538,6 +573,22 @@ export function createAdminClient({ httpClient }: CreateAdminClientParams) {
       const result = await httpClient.get<AdminStats>('/api/v1/admin/stats', AdminStatsSchema);
       if (!result) {
         throw new Error('Failed to fetch admin stats');
+      }
+      return result;
+    },
+
+    /**
+     * Get admin overview statistics (admin only)
+     * Issue #113: Includes ActiveAiUsers for MAU-AI monitoring.
+     * GET /api/v1/admin/overview-stats
+     */
+    async getOverviewStats(): Promise<AdminOverviewStats> {
+      const result = await httpClient.get<AdminOverviewStats>(
+        '/api/v1/admin/overview-stats',
+        AdminOverviewStatsSchema
+      );
+      if (!result) {
+        throw new Error('Failed to fetch admin overview stats');
       }
       return result;
     },
@@ -797,6 +848,41 @@ export function createAdminClient({ httpClient }: CreateAdminClientParams) {
         `/api/v1/admin/infrastructure/metrics/timeseries?range=${range}`,
         MetricsTimeSeriesResponseSchema
       );
+    },
+
+    // ========== Enhanced Service Dashboard (Issue #132) ==========
+
+    /**
+     * Get enhanced service health dashboard with uptime, trends, and categories.
+     * GET /api/v1/admin/infrastructure/services/dashboard
+     *
+     * Issue #132: Enhanced ServiceHealthMatrix data.
+     */
+    async getServiceDashboard() {
+      return httpClient.get(
+        '/api/v1/admin/infrastructure/services/dashboard',
+        EnhancedServiceDashboardSchema
+      );
+    },
+
+    /**
+     * Restart a service (SuperAdmin only, Level 2 confirmation).
+     * POST /api/v1/admin/operations/restart-service
+     *
+     * Issue #133: Service Restart UI.
+     */
+    async restartService(
+      serviceName: string
+    ): Promise<{ message: string; estimatedDowntime: string }> {
+      const result = await httpClient.post(
+        '/api/v1/admin/operations/restart-service',
+        { serviceName },
+        z.object({ message: z.string(), estimatedDowntime: z.string() })
+      );
+      if (!result) {
+        throw new Error('Failed to restart service');
+      }
+      return result;
     },
 
     // ========== API Key Management (Issue #908) ==========
@@ -2505,11 +2591,13 @@ export function createAdminClient({ httpClient }: CreateAdminClientParams) {
       successOnly?: boolean;
     }): Promise<RecentLlmRequestsDto | null> {
       const qs = new URLSearchParams();
-      if (params.page != null) qs.set('page', String(params.page));
-      if (params.pageSize != null) qs.set('pageSize', String(params.pageSize));
+      if (params.page !== null && params.page !== undefined) qs.set('page', String(params.page));
+      if (params.pageSize !== null && params.pageSize !== undefined)
+        qs.set('pageSize', String(params.pageSize));
       if (params.source) qs.set('source', params.source);
       if (params.model) qs.set('model', params.model);
-      if (params.successOnly != null) qs.set('successOnly', String(params.successOnly));
+      if (params.successOnly !== null && params.successOnly !== undefined)
+        qs.set('successOnly', String(params.successOnly));
       const query = qs.toString();
       return httpClient.get(
         `/api/v1/admin/openrouter/usage/requests${query ? `?${query}` : ''}`,
@@ -2990,6 +3078,240 @@ export function createAdminClient({ httpClient }: CreateAdminClientParams) {
       );
       return result ?? [];
     },
+
+    // ========== Resources Monitoring (Issue #125) ==========
+
+    /**
+     * Get database metrics (size, connections, transactions)
+     * GET /api/v1/resources/database/metrics
+     */
+    async getResourceDatabaseMetrics(): Promise<DatabaseMetrics | null> {
+      return httpClient.get('/api/v1/resources/database/metrics', DatabaseMetricsSchema);
+    },
+
+    /**
+     * Get top database tables by size
+     * GET /api/v1/resources/database/tables/top
+     */
+    async getResourceDatabaseTopTables(limit = 10): Promise<TableSize[]> {
+      const result = await httpClient.get(
+        `/api/v1/resources/database/tables/top?limit=${limit}`,
+        z.array(TableSizeSchema)
+      );
+      return result ?? [];
+    },
+
+    /**
+     * Get cache (Redis) metrics
+     * GET /api/v1/resources/cache/metrics
+     */
+    async getResourceCacheMetrics(): Promise<CacheMetrics | null> {
+      return httpClient.get('/api/v1/resources/cache/metrics', CacheMetricsSchema);
+    },
+
+    /**
+     * Get vector store (Qdrant) metrics
+     * GET /api/v1/resources/vectors/metrics
+     */
+    async getResourceVectorMetrics(): Promise<VectorStoreMetrics | null> {
+      return httpClient.get('/api/v1/resources/vectors/metrics', VectorStoreMetricsSchema);
+    },
+
+    /**
+     * Clear all cache keys
+     * POST /api/v1/resources/cache/clear?confirmed=true
+     */
+    async clearCache(): Promise<void> {
+      await httpClient.post('/api/v1/resources/cache/clear?confirmed=true');
+    },
+
+    /**
+     * Run database VACUUM
+     * POST /api/v1/resources/database/vacuum?confirmed=true
+     */
+    async vacuumDatabase(fullVacuum = false): Promise<void> {
+      await httpClient.post(
+        `/api/v1/resources/database/vacuum?confirmed=true&fullVacuum=${fullVacuum}`
+      );
+    },
+
+    /**
+     * Rebuild vector store indices
+     * POST /api/v1/resources/vectors/rebuild?confirmed=true
+     */
+    async rebuildVectors(): Promise<void> {
+      await httpClient.post('/api/v1/resources/vectors/rebuild?confirmed=true');
+    },
+
+    // ========== Processing Queue (Issue #125) ==========
+
+    /**
+     * Get paginated processing queue
+     * GET /api/v1/admin/queue/
+     */
+    async getProcessingQueue(params?: {
+      status?: string;
+      search?: string;
+      page?: number;
+      pageSize?: number;
+    }): Promise<PaginatedQueue | null> {
+      const qs = new URLSearchParams();
+      if (params?.status) qs.set('status', params.status);
+      if (params?.search) qs.set('search', params.search);
+      if (params?.page) qs.set('page', String(params.page));
+      if (params?.pageSize) qs.set('pageSize', String(params.pageSize));
+      const query = qs.toString();
+      return httpClient.get(`/api/v1/admin/queue${query ? `?${query}` : ''}`, PaginatedQueueSchema);
+    },
+
+    /**
+     * Get queue status (depth, pressure, workers)
+     * GET /api/v1/admin/queue/status
+     */
+    async getQueueStatus(): Promise<QueueStatus | null> {
+      return httpClient.get('/api/v1/admin/queue/status', QueueStatusSchema);
+    },
+
+    /**
+     * Enqueue a new processing job
+     * POST /api/v1/admin/queue/enqueue
+     */
+    async enqueueJob(params: {
+      jobType: string;
+      parameters?: Record<string, unknown>;
+      priority?: number;
+    }): Promise<void> {
+      await httpClient.post('/api/v1/admin/queue/enqueue', params);
+    },
+
+    /**
+     * Cancel a processing job
+     * POST /api/v1/admin/queue/{jobId}/cancel
+     */
+    async cancelJob(jobId: string): Promise<void> {
+      await httpClient.post(`/api/v1/admin/queue/${jobId}/cancel`);
+    },
+
+    /**
+     * Retry a failed processing job
+     * POST /api/v1/admin/queue/{jobId}/retry
+     */
+    async retryJob(jobId: string): Promise<void> {
+      await httpClient.post(`/api/v1/admin/queue/${jobId}/retry`);
+    },
+
+    /**
+     * Remove a completed/cancelled job
+     * DELETE /api/v1/admin/queue/{jobId}
+     */
+    async removeJob(jobId: string): Promise<void> {
+      await httpClient.delete(`/api/v1/admin/queue/${jobId}`);
+    },
+
+    /**
+     * Reorder queue jobs
+     * PUT /api/v1/admin/queue/reorder
+     */
+    async reorderQueue(orderedJobIds: string[]): Promise<void> {
+      await httpClient.put('/api/v1/admin/queue/reorder', { orderedJobIds });
+    },
+
+    // ========== Emergency Controls (Issue #125) ==========
+
+    /**
+     * Get active LLM emergency overrides
+     * GET /api/v1/admin/llm/emergency/active
+     */
+    async getActiveEmergencyOverrides(): Promise<ActiveOverride[]> {
+      const result = await httpClient.get(
+        '/api/v1/admin/llm/emergency/active',
+        z.array(ActiveOverrideSchema)
+      );
+      return result ?? [];
+    },
+
+    /**
+     * Activate a new emergency override
+     * POST /api/v1/admin/llm/emergency/activate
+     */
+    async activateEmergencyOverride(params: {
+      action: string;
+      reason: string;
+      durationMinutes?: number;
+      targetProvider?: string;
+    }): Promise<void> {
+      await httpClient.post('/api/v1/admin/llm/emergency/activate', params);
+    },
+
+    /**
+     * Deactivate an emergency override
+     * POST /api/v1/admin/llm/emergency/deactivate
+     */
+    async deactivateEmergencyOverride(action: string): Promise<void> {
+      await httpClient.post('/api/v1/admin/llm/emergency/deactivate', { action });
+    },
+
+    // ========== Docker Container Management (Issue #139) ==========
+
+    /**
+     * Get all Docker containers
+     * GET /api/v1/admin/docker/containers
+     */
+    async getDockerContainers(): Promise<ContainerInfo[]> {
+      const res = await httpClient.get('/api/v1/admin/docker/containers');
+      return z.array(ContainerInfoSchema).parse(res);
+    },
+
+    /**
+     * Get container logs
+     * GET /api/v1/admin/docker/containers/:containerId/logs
+     */
+    async getContainerLogs(containerId: string, tail: number = 100): Promise<ContainerLogs> {
+      const res = await httpClient.get(
+        `/api/v1/admin/docker/containers/${containerId}/logs?tail=${tail}`
+      );
+      return ContainerLogsSchema.parse(res);
+    },
+
+    // ========== Issue #119: Shared Game Documents ==========
+
+    /**
+     * Get all documents for a shared game with PDF processing status.
+     * GET /api/v1/admin/shared-games/:gameId/documents
+     */
+    async getSharedGameDocuments(gameId: string): Promise<SharedGameDocumentsResult> {
+      const response = await httpClient.get(
+        `/api/v1/admin/shared-games/${gameId}/documents/overview`
+      );
+      return response as SharedGameDocumentsResult;
+    },
+
+    // ========== Issue #117: Bulk PDF Upload ==========
+
+    /**
+     * Bulk upload PDFs for a shared game.
+     * POST /api/v1/admin/shared-games/:gameId/documents/bulk-upload
+     */
+    async bulkUploadPdfs(gameId: string, files: File[]): Promise<BulkUploadPdfsResult> {
+      const formData = new FormData();
+      files.forEach(file => formData.append('files', file));
+      const response = await httpClient.post(
+        `/api/v1/admin/shared-games/${gameId}/documents/bulk-upload`,
+        formData
+      );
+      return response as BulkUploadPdfsResult;
+    },
+
+    // ========== Issue #113: MAU Monitoring ==========
+
+    /**
+     * Get Monthly Active AI Users data.
+     * GET /api/v1/admin/monitoring/mau?period={7|30|90}
+     */
+    async getActiveAiUsers(period: number = 30): Promise<ActiveAiUsersResult> {
+      const response = await httpClient.get(`/api/v1/admin/monitoring/mau?period=${period}`);
+      return response as ActiveAiUsersResult;
+    },
   };
 }
 
@@ -3318,3 +3640,72 @@ export type KBClearCacheResponse = {
   message: string;
   clearedAt: string | null;
 };
+
+// ========== Issue #119: Shared Game Documents Schemas ==========
+
+export const SharedGameDocumentDetailSchema = z.object({
+  id: z.string(),
+  sharedGameId: z.string(),
+  fileName: z.string(),
+  documentType: z.string(),
+  approvalStatus: z.string(),
+  description: z.string().nullable(),
+  tags: z.array(z.string()),
+  processingState: z.string().nullable(),
+  fileSizeBytes: z.number().nullable(),
+  uploadedAt: z.string().nullable(),
+});
+
+export type SharedGameDocumentDetail = z.infer<typeof SharedGameDocumentDetailSchema>;
+
+export const SharedGameDocumentsResultSchema = z.object({
+  sharedGameId: z.string(),
+  documents: z.array(SharedGameDocumentDetailSchema),
+  totalCount: z.number(),
+});
+
+export type SharedGameDocumentsResult = z.infer<typeof SharedGameDocumentsResultSchema>;
+
+// ========== Issue #117: Bulk Upload Schemas ==========
+
+export const BulkUploadItemResultSchema = z.object({
+  fileName: z.string(),
+  success: z.boolean(),
+  documentId: z.string().nullable(),
+  error: z.string().nullable(),
+});
+
+export type BulkUploadItemResult = z.infer<typeof BulkUploadItemResultSchema>;
+
+export const BulkUploadPdfsResultSchema = z.object({
+  totalRequested: z.number(),
+  successCount: z.number(),
+  failedCount: z.number(),
+  items: z.array(BulkUploadItemResultSchema),
+});
+
+export type BulkUploadPdfsResult = z.infer<typeof BulkUploadPdfsResultSchema>;
+
+// ========== Issue #113: MAU Monitoring Schemas ==========
+
+export const DailyActiveUsersSchema = z.object({
+  date: z.string(),
+  activeUsers: z.number(),
+  aiChatUsers: z.number(),
+  pdfUploadUsers: z.number(),
+});
+
+export type DailyActiveUsers = z.infer<typeof DailyActiveUsersSchema>;
+
+export const ActiveAiUsersResultSchema = z.object({
+  totalActiveUsers: z.number(),
+  aiChatUsers: z.number(),
+  pdfUploadUsers: z.number(),
+  agentUsers: z.number(),
+  periodDays: z.number(),
+  periodStart: z.string(),
+  periodEnd: z.string(),
+  dailyBreakdown: z.array(DailyActiveUsersSchema),
+});
+
+export type ActiveAiUsersResult = z.infer<typeof ActiveAiUsersResultSchema>;

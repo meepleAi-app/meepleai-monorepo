@@ -193,6 +193,15 @@ internal class NoOpEmailService : IEmailService
         CancellationToken ct = default)
         => Task.CompletedTask;
 
+    // ISSUE-124: Invitation system emails
+    public Task SendInvitationEmailAsync(
+        string toEmail,
+        string role,
+        string token,
+        string invitedByName,
+        CancellationToken ct = default)
+        => Task.CompletedTask;
+
     // ISSUE-4417: Raw email sending for queue processor
     public Task SendRawEmailAsync(
         string toEmail,

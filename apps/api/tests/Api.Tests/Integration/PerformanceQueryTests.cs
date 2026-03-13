@@ -20,7 +20,7 @@ namespace Api.Tests.Integration;
 /// Tests pagination, N+1 query prevention, AsNoTracking, indexing, and bulk operations.
 /// Issue #2307: Week 3 - Performance query integration testing (5 tests)
 /// </summary>
-[Collection("SharedTestcontainers")]
+[Collection("Integration-GroupB")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("Dependency", "PostgreSQL")]
 [Trait("Issue", "2307")]

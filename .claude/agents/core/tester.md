@@ -14,7 +14,7 @@ hooks:
   pre: |
     echo "🧪 Tester agent validating: $TASK"
     # Check test environment
-    if [ -f "jest.config.js" ] || [ -f "vitest.config.ts" ]; then
+    if [ -f "vitest.config.ts" ]; then
       echo "✓ Test framework detected"
     fi
   post: |

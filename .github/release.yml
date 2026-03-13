@@ -1,0 +1,56 @@
+changelog:
+  exclude:
+    labels:
+      - skip-changelog
+    authors:
+      - dependabot
+      - github-actions
+  categories:
+    - title: "🚀 Features"
+      labels:
+        - enhancement
+        - feature
+    - title: "🐛 Bug Fixes"
+      labels:
+        - bug
+        - fix
+    - title: "🏗️ Infrastructure & CI/CD"
+      labels:
+        - area/infra
+        - area/cicd
+    - title: "📚 Documentation"
+      labels:
+        - documentation
+        - docs
+    - title: "🧪 Testing"
+      labels:
+        - test
+        - testing
+    - title: "🔒 Security"
+      labels:
+        - security
+    - title: "🧹 Maintenance"
+      labels:
+        - chore
+        - maintenance
+        - dependencies
+    - title: "🎮 Game Features"
+      labels:
+        - area/games
+        - area/game-management
+    - title: "👤 User & Admin"
+      labels:
+        - area/admin
+        - area/auth
+        - area/user
+    - title: "🤖 AI & Knowledge Base"
+      labels:
+        - area/ai
+        - area/knowledge-base
+        - area/rag
+    - title: "⚡ Performance"
+      labels:
+        - performance
+    - title: "Other Changes"
+      labels:
+        - "*"

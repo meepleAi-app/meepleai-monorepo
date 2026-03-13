@@ -37,6 +37,9 @@ public class LiveGameSessionEntity
     public DateTime UpdatedAt { get; set; }
     public DateTime? LastSavedAt { get; set; }
 
+    // Issue #216: Server-side timer for live session reliability
+    public long TotalPausedDurationMs { get; set; }
+
     // Configuration (stored as JSON)
     public string ScoringConfigJson { get; set; } = default!;
     public string? GameStateJson { get; set; } // Free-form game state

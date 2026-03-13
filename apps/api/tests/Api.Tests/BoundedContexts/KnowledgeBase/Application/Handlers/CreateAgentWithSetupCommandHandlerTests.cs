@@ -3,6 +3,7 @@ using Api.BoundedContexts.KnowledgeBase.Application.Handlers;
 using Api.BoundedContexts.KnowledgeBase.Domain.Entities;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
+using Api.BoundedContexts.SharedGameCatalog.Application.Commands;
 using Api.BoundedContexts.UserLibrary.Domain.Entities;
 using Api.BoundedContexts.UserLibrary.Domain.Repositories;
 using Api.Infrastructure;
@@ -31,6 +32,7 @@ public class CreateAgentWithSetupCommandHandlerTests
     private readonly Mock<IUserLibraryRepository> _mockLibraryRepo;
     private readonly Mock<IUnitOfWork> _mockUnitOfWork;
     private readonly MeepleAiDbContext _db;
+    private readonly Mock<IMediator> _mockMediator;
     private readonly Mock<ILogger<CreateAgentWithSetupCommandHandler>> _mockLogger;
     private readonly CreateAgentWithSetupCommandHandler _handler;
 
@@ -43,6 +45,7 @@ public class CreateAgentWithSetupCommandHandlerTests
         _mockChatRepo = new Mock<IChatThreadRepository>();
         _mockLibraryRepo = new Mock<IUserLibraryRepository>();
         _mockUnitOfWork = new Mock<IUnitOfWork>();
+        _mockMediator = new Mock<IMediator>();
         _mockLogger = new Mock<ILogger<CreateAgentWithSetupCommandHandler>>();
 
         var options = new DbContextOptionsBuilder<MeepleAiDbContext>()
@@ -56,6 +59,7 @@ public class CreateAgentWithSetupCommandHandlerTests
             _mockLibraryRepo.Object,
             _mockUnitOfWork.Object,
             _db,
+            _mockMediator.Object,
             _mockLogger.Object);
 
         // Default: no existing agents, name doesn't exist
@@ -298,12 +302,126 @@ public class CreateAgentWithSetupCommandHandlerTests
         Assert.Equal(201, result.SlotUsed);
     }
 
+    [Fact]
+    public async Task Handle_WithSharedGameId_SendsLinkCommand()
+    {
+        // Arrange
+        var sharedGameId = Guid.NewGuid();
+        _mockMediator
+            .Setup(m => m.Send(It.IsAny<LinkAgentToSharedGameCommand>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(MediatR.Unit.Value);
+
+        var command = CreateCommand(sharedGameId: sharedGameId);
+
+        // Act
+        var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
+
+        // Assert
+        _mockMediator.Verify(
+            m => m.Send(
+                It.Is<LinkAgentToSharedGameCommand>(cmd =>
+                    cmd.GameId == sharedGameId && cmd.AgentId == result.AgentId),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task Handle_WithDocumentIds_SendsUpdateDocumentsCommand()
+    {
+        // Arrange
+        var documentIds = new List<Guid> { Guid.NewGuid(), Guid.NewGuid() };
+        _mockMediator
+            .Setup(m => m.Send(It.IsAny<UpdateAgentDocumentsCommand>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new UpdateAgentDocumentsResult(true, "ok", Guid.NewGuid(), 2));
+
+        var command = CreateCommand(documentIds: documentIds);
+
+        // Act
+        var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
+
+        // Assert
+        _mockMediator.Verify(
+            m => m.Send(
+                It.Is<UpdateAgentDocumentsCommand>(cmd =>
+                    cmd.AgentId == result.AgentId &&
+                    cmd.DocumentIds.Count == 2),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task Handle_WithoutOptionalFields_DoesNotSendExtraCommands()
+    {
+        // Arrange
+        var command = CreateCommand();
+
+        // Act
+        await _handler.Handle(command, TestContext.Current.CancellationToken);
+
+        // Assert
+        _mockMediator.Verify(
+            m => m.Send(It.IsAny<LinkAgentToSharedGameCommand>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+        _mockMediator.Verify(
+            m => m.Send(It.IsAny<UpdateAgentDocumentsCommand>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task Handle_WithEmptyDocumentIds_DoesNotSendUpdateCommand()
+    {
+        // Arrange
+        var command = CreateCommand(documentIds: new List<Guid>());
+
+        // Act
+        await _handler.Handle(command, TestContext.Current.CancellationToken);
+
+        // Assert
+        _mockMediator.Verify(
+            m => m.Send(It.IsAny<UpdateAgentDocumentsCommand>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task Handle_WithBothOptionalFields_SendsBothCommands()
+    {
+        // Arrange
+        var sharedGameId = Guid.NewGuid();
+        var documentIds = new List<Guid> { Guid.NewGuid() };
+
+        _mockMediator
+            .Setup(m => m.Send(It.IsAny<LinkAgentToSharedGameCommand>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(MediatR.Unit.Value);
+        _mockMediator
+            .Setup(m => m.Send(It.IsAny<UpdateAgentDocumentsCommand>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new UpdateAgentDocumentsResult(true, "ok", Guid.NewGuid(), 1));
+
+        var command = CreateCommand(sharedGameId: sharedGameId, documentIds: documentIds);
+
+        // Act
+        var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
+
+        // Assert
+        _mockMediator.Verify(
+            m => m.Send(
+                It.Is<LinkAgentToSharedGameCommand>(cmd => cmd.GameId == sharedGameId),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+        _mockMediator.Verify(
+            m => m.Send(
+                It.Is<UpdateAgentDocumentsCommand>(cmd => cmd.AgentId == result.AgentId),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
     private CreateAgentWithSetupCommand CreateCommand(
         string tier = "free",
         string role = "user",
         bool addToCollection = false,
         string agentName = null!,
-        string? strategyName = null)
+        string? strategyName = null,
+        Guid? sharedGameId = null,
+        List<Guid>? documentIds = null)
     {
         return new CreateAgentWithSetupCommand(
             UserId: _userId,
@@ -314,7 +432,11 @@ public class CreateAgentWithSetupCommandHandlerTests
             AgentType: "RAG",
             AgentName: agentName,
             StrategyName: strategyName,
-            StrategyParameters: null);
+            StrategyParameters: null)
+        {
+            SharedGameId = sharedGameId,
+            DocumentIds = documentIds
+        };
     }
 
     private static Agent CreateAgent(string name, bool isActive = true)

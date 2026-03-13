@@ -362,6 +362,8 @@ builder.Services.AddCors(options =>
 });
 
 // Issue #2406: SignalR for real-time game state updates
+// E3-4: Custom user ID provider for guest SignalR auth
+builder.Services.AddSingleton<Microsoft.AspNetCore.SignalR.IUserIdProvider, Api.Hubs.SessionParticipantIdProvider>();
 builder.Services.AddSignalR();
 
 var app = builder.Build();
@@ -393,11 +395,20 @@ using (var scope = app.Services.CreateScope())
 
         app.Logger.LogInformation("✓ Embedding configuration validated: Provider={Provider}, Model={Model}, Dimensions={Dimensions}",
             provider, model, embeddingDimensions);
+    }
 
-        // ISSUE-2512: Auto-configuration pipeline - Seed admin user, test user, AI models,
-        // shared games, badges, and rate limits (environment-independent, runs on first startup only)
-        var autoConfigService = scope.ServiceProvider.GetRequiredService<Api.BoundedContexts.Administration.Application.Services.IAutoConfigurationService>();
-        await autoConfigService.InitializeAsync().ConfigureAwait(false);
+    // Epic #318: Layered seeding pipeline with advisory lock (runs independently of migrations)
+    if (db != null)
+    {
+        try
+        {
+            var seedOrchestrator = scope.ServiceProvider.GetRequiredService<Api.Infrastructure.Seeders.SeedOrchestrator>();
+            await seedOrchestrator.RunAsync(db, scope.ServiceProvider).ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            app.Logger.LogError(ex, "Seeding failed — API will continue startup");
+        }
     }
 }
 
@@ -479,6 +490,7 @@ v1Api.MapUserProfileEndpoints();
 v1Api.MapUserAiConsentEndpoints(); // Issue #5512: GDPR AI consent
 v1Api.MapUserLlmDataEndpoints(); // Issue #5509: GDPR right to erasure for LLM data
 v1Api.MapUserAccountEndpoints(); // GDPR Art. 17: Self-service account deletion
+v1Api.MapUserUsageEndpoints(); // E2-2: User tier usage endpoint
 v1Api.MapGameEndpoints();
 v1Api.MapPlayRecordEndpoints(); // ISSUE-3889/3890: Play record tracking
 v1Api.MapLiveSessionEndpoints(); // Issue #4749: Live session CQRS endpoints
@@ -491,12 +503,14 @@ v1Api.MapSessionSnapshotEndpoints(); // Issue #4755: Session snapshot endpoints
 v1Api.MapGameManagementEndpoints(); // Issue #4273: Game search autocomplete
 v1Api.MapPlaylistEndpoints(); // Issue #5582: Game Night Playlist endpoints
 v1Api.MapGameNightEndpoints(); // Issue #46: Game Night Event endpoints
+v1Api.MapGameNightImprovvisataEndpoints(); // Game Night Improvvisata: E1-2 BGG import
 v1Api.MapRuleConflictFaqEndpoints(); // ISSUE-3966: Rule conflict FAQ management
 v1Api.MapSessionTrackingEndpoints(); // GST-003: Session tracking real-time collaboration
 v1Api.MapSessionStatisticsEndpoints(); // P4: Session analytics dashboard
 v1Api.MapSharedGameCatalogEndpoints(); // ISSUE-2371: Shared game catalog Phase 2
 app.MapAdminGameImportWizardEndpoints(); // Issue #4157: Admin game import wizard
 v1Api.MapAdminGameWizardEndpoints();    // Admin Game+PDF+Agent Wizard
+v1Api.MapAdminSharedGameContentEndpoints(); // Issue #236: Admin shared game content + MAU monitoring
 v1Api.MapAdminAgentTestEndpoints();     // Admin Agent Auto-Test Suite
 v1Api.MapAdminOpenRouterEndpoints();    // Issue #5077: OpenRouter usage monitoring dashboard
 v1Api.MapAdminEmergencyControlsEndpoints(); // Issue #5476: LLM emergency controls
@@ -522,6 +536,8 @@ v1Api.MapSessionLimitsConfigEndpoints(); // Issue #3070: Session limits config
 v1Api.MapPdfUploadLimitsConfigEndpoints(); // Issue #3072: PDF upload limits config
 v1Api.MapPdfTierUploadLimitsConfigEndpoints(); // Issue #3333: PDF tier upload limits config (bulk)
 v1Api.MapAdminConfigEndpoints();       // Issue #3673: PDF limits admin UI (per-tier)
+v1Api.MapAdminTierEndpoints();         // E2-1: Admin tier CRUD
+v1Api.MapSessionInviteEndpoints();     // E3-1: Session invite flow
 v1Api.MapAnalyticsEndpoints();         // Dashboard statistics & metrics
 v1Api.MapDashboardEndpoints();         // Issue #3314: User dashboard aggregated API
 v1Api.MapActivityTimelineEndpoints();  // Issue #4315: Activity timeline with page-based pagination
@@ -563,6 +579,7 @@ v1Api.MapUserActivityEndpoints();      // Issue #4652: User activity log for Adm
 v1Api.MapAdminAgentAnalyticsEndpoints(); // Issue #4653: Agents analytics for Admin Dashboard
 v1Api.MapAdminKnowledgeBaseEndpoints();  // Issues #4654, #4655: KB and SharedGames for Admin Dashboard
 v1Api.MapAdminOperationsEndpoints();   // Issue #3696: Operations - Service Control Panel
+v1Api.MapAdminDockerEndpoints();       // Issue #139: Docker container management (Phase 3)
 v1Api.MapFeatureFlagEndpoints();       // Feature flag management
 v1Api.MapPromptManagementEndpoints();  // Prompt templates & evaluation
 v1Api.MapWorkflowEndpoints();          // n8n workflow integration
@@ -590,6 +607,7 @@ v1Api.MapRagPipelineAdminEndpoints();  // RAG Pipeline builder (Issue #3463)
 v1Api.MapRagExecutionAdminEndpoints(); // RAG Execution replay & compare (Issue #4459)
 v1Api.MapAdminMechanicExtractorEndpoints(); // Mechanic Extractor: Variant C copyright-compliant analysis
 v1Api.MapAdminMiscEndpoints();         // Miscellaneous admin operations
+v1Api.MapAdminSeedingEndpoints();      // Epic #318: Admin seeding re-trigger
 v1Api.MapReportingEndpoints();         // ISSUE-916: Report generation & scheduling
 v1Api.MapTestingMetricsEndpoints();    // Issue #2139: Testing metrics API
 
@@ -681,6 +699,13 @@ static bool ShouldSkipMigrations(WebApplication app, MeepleAiDbContext db)
     // Skip migrations in Testing and CI environments (E2E tests use Testcontainers)
     if (app.Environment.IsEnvironment("Testing") || app.Environment.IsEnvironment("CI"))
     {
+        return true;
+    }
+
+    // PERF: Skip auto-migration in Staging/Production — handled by deploy pipeline (migrate-db job)
+    if (app.Environment.IsEnvironment("Staging") || app.Environment.IsProduction())
+    {
+        app.Logger.LogInformation("Skipping auto-migration in {Environment} — migrations handled by deploy pipeline", app.Environment.EnvironmentName);
         return true;
     }
 

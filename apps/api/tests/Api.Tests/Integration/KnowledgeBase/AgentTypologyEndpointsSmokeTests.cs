@@ -23,7 +23,7 @@ namespace Api.Tests.Integration.KnowledgeBase;
 /// Integration smoke tests for Agent Typology Editor endpoints.
 /// Issue #3177: AGT-003 Editor Proposal Commands.
 /// </summary>
-[Collection("SharedTestcontainers")]
+[Collection("Integration-GroupA")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "KnowledgeBase")]
 public sealed class AgentTypologyEndpointsSmokeTests : IAsyncLifetime

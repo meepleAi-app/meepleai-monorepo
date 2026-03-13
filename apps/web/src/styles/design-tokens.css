@@ -73,6 +73,17 @@
     --size-mobile-sheet-width: 20rem;      /* 320px - mobile drawer */
     --size-mobile-header-height: 3.5rem;   /* 56px - mobile header */
 
+    /* Card Rack (Game Table UX redesign) */
+    --card-rack-width: 64px;
+    --card-rack-hover-width: 240px;
+    --top-bar-height: 48px;
+    --quick-view-width: 300px;
+    --quick-view-compact-width: 280px;
+    --quick-view-collapsed-width: 44px;
+    --collapsed-panel-width: 44px;
+    --mobile-status-bar-height: 36px;
+    --mobile-scorebar-height: 52px;
+
     /* ============================================================================
      * TYPOGRAPHY SYSTEM
      * System font stack for optimal performance

@@ -23,7 +23,7 @@ namespace Api.Tests.Integration.Administration;
 /// Integration tests for Batch Job System with real database (Issue #3693)
 /// Tests job execution, cancellation, retry workflows with PostgreSQL
 /// </summary>
-[Collection("SharedTestcontainers")]
+[Collection("Integration-GroupD")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("Dependency", "PostgreSQL")]
 [Trait("BoundedContext", "Administration")]

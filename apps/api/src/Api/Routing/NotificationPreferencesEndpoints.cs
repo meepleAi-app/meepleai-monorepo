@@ -118,7 +118,7 @@ internal static class NotificationPreferencesEndpoints
             return Results.Ok(result);
         })
         .RequireSession()
-        .WithName("GetEmailHistory");
+        .WithName("GetUserEmailHistory");
 
         // Issue #4417: Resend failed email
         group.MapPost("/emails/{emailId}/resend", async (

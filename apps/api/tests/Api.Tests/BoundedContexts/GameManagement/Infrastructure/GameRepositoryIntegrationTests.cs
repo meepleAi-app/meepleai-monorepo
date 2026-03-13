@@ -18,7 +18,7 @@ namespace Api.Tests.BoundedContexts.GameManagement.Infrastructure;
 /// Tests CRUD operations, search/filter queries, and pagination.
 /// Uses SharedTestcontainersFixture for efficient container sharing.
 /// </summary>
-[Collection("SharedTestcontainers")]
+[Collection("Integration-GroupC")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "GameManagement")]
 public sealed class GameRepositoryIntegrationTests : IAsyncLifetime

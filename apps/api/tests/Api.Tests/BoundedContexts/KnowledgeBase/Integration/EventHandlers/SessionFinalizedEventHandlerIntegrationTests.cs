@@ -27,7 +27,7 @@ namespace Api.Tests.Integration.KnowledgeBase.EventHandlers;
 /// Validates cascade cleanup: SessionTracking.SessionFinalizedEvent → End all AgentSessions.
 /// Issue #3189 (AGT-015): GST Integration - Agent State Sync with Game Events.
 /// </summary>
-[Collection("SharedTestcontainers")]
+[Collection("Integration-GroupA")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "KnowledgeBase")]
 public sealed class SessionFinalizedEventHandlerIntegrationTests : IAsyncLifetime

@@ -8,6 +8,10 @@ using Api.BoundedContexts.Administration.Infrastructure.Persistence;
 using Api.BoundedContexts.Administration.Infrastructure.Repositories;
 using Api.BoundedContexts.Administration.Infrastructure.Scheduling;
 using Api.BoundedContexts.Administration.Infrastructure.Services;
+using Api.Infrastructure.Seeders;
+using Api.Infrastructure.Seeders.Catalog;
+using Api.Infrastructure.Seeders.Core;
+using Api.Infrastructure.Seeders.LivedIn;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -72,6 +76,15 @@ internal static class AdministrationServiceExtensions
             configuration.GetSection(OrphanedTaskCleanupOptions.SectionKey));
         services.AddScoped<IOrphanedTaskCleanupService, OrphanedTaskCleanupService>();
 
+        // Issue #138: Docker Socket Proxy service for admin container management
+        services.AddHttpClient<IDockerProxyService, DockerProxyService>(client =>
+        {
+            var host = Environment.GetEnvironmentVariable("DOCKER_PROXY_HOST") ?? "docker-socket-proxy";
+            var port = Environment.GetEnvironmentVariable("DOCKER_PROXY_PORT") ?? "2375";
+            client.BaseAddress = new Uri($"http://{host}:{port}");
+            client.Timeout = TimeSpan.FromSeconds(10);
+        });
+
         // Issue #891: Infrastructure health monitoring service
         services.AddScoped<IInfrastructureHealthService, InfrastructureHealthService>();
 
@@ -88,8 +101,13 @@ internal static class AdministrationServiceExtensions
         services.AddScoped<ILighthouseReportParserService, LighthouseReportParserService>();
         services.AddScoped<IPlaywrightReportParserService, PlaywrightReportParserService>();
 
-        // ISSUE-2512: Auto-configuration service for first run setup
-        services.AddScoped<IAutoConfigurationService, AutoConfigurationService>();
+        // ISSUE-2512: AutoConfigurationService removed — replaced by SeedOrchestrator (Epic #318)
+
+        // Epic #318: Layered seeding system
+        services.AddScoped<ISeedLayer, CoreSeedLayer>();
+        services.AddScoped<ISeedLayer, CatalogSeedLayer>();
+        services.AddScoped<ISeedLayer, LivedInSeedLayer>();
+        services.AddScoped<SeedOrchestrator>();
 
         // Issue #3916: AI insights service for personalized dashboard recommendations
         services.AddScoped<IAiInsightsService, AiInsightsService>();

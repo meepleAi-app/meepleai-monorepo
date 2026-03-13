@@ -25,7 +25,7 @@ namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.EventHandlers;
 /// </summary>
 [Trait("Category", TestCategories.Unit)]
 [Trait("BoundedContext", "KnowledgeBase")]
-public class ModelDeprecatedAutoFallbackHandlerTests : IDisposable
+public sealed class ModelDeprecatedAutoFallbackHandlerTests : IDisposable
 {
     private readonly MeepleAiDbContext _dbContext;
     private readonly Mock<IModelCompatibilityRepository> _compatibilityRepoMock;
@@ -95,7 +95,7 @@ public class ModelDeprecatedAutoFallbackHandlerTests : IDisposable
 
     private static ModelDeprecatedEvent CreateEvent(
         string modelId = "deprecated-model",
-        string[] ? affectedStrategies = null)
+        string[]? affectedStrategies = null)
     {
         return new ModelDeprecatedEvent(
             modelId,

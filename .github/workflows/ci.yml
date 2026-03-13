@@ -162,13 +162,13 @@ jobs:
       matrix:
         shard:
           - name: "KnowledgeBase"
-            filter_extra: "&(FullyQualifiedName~KnowledgeBase|FullyQualifiedName~DocumentProcessing)"
+            filter_extra: "&(FullyQualifiedName~KnowledgeBase|FullyQualifiedName~DocumentProcessing|FullyQualifiedName~Authentication)"
             coverage_file: "integration-coverage-shard1.xml"
           - name: "Games"
-            filter_extra: "&(FullyQualifiedName~SharedGameCatalog|FullyQualifiedName~GameManagement)"
+            filter_extra: "&(FullyQualifiedName~SharedGameCatalog|FullyQualifiedName~GameManagement|FullyQualifiedName~Administration)"
             coverage_file: "integration-coverage-shard2.xml"
           - name: "Core"
-            filter_extra: "&FullyQualifiedName!~KnowledgeBase&FullyQualifiedName!~DocumentProcessing&FullyQualifiedName!~SharedGameCatalog&FullyQualifiedName!~GameManagement"
+            filter_extra: "&FullyQualifiedName!~KnowledgeBase&FullyQualifiedName!~DocumentProcessing&FullyQualifiedName!~Authentication&FullyQualifiedName!~SharedGameCatalog&FullyQualifiedName!~GameManagement&FullyQualifiedName!~Administration"
             coverage_file: "integration-coverage-shard3.xml"
 
     services:

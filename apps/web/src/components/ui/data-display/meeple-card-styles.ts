@@ -6,19 +6,18 @@ import { cva } from 'class-variance-authority';
 
 /**
  * Supported entity types with semantic colors
- * Issue #4030: Extended from 5 to 7 types (removed collection, added session/agent/document/chatSession)
+ * Issue #4030: Extended from 5 to 9 types (game, player, session, agent, kb, chatSession, event, toolkit, custom)
  */
 export type MeepleEntityType =
   | 'game'
   | 'player'
   | 'session'
   | 'agent'
-  | 'document'
+  | 'kb'
   | 'chatSession'
   | 'event'
   | 'toolkit'
-  | 'custom'
-  | 'kb_card';
+  | 'custom';
 
 /**
  * Layout variant options
@@ -34,12 +33,11 @@ export const entityColors: Record<MeepleEntityType, { hsl: string; name: string 
   player: { hsl: '262 83% 58%', name: 'Player' }, // Purple
   session: { hsl: '240 60% 55%', name: 'Session' }, // Indigo
   agent: { hsl: '38 92% 50%', name: 'Agent' }, // Amber
-  document: { hsl: '210 40% 55%', name: 'Document' }, // Slate
+  kb: { hsl: '174 60% 40%', name: 'KB' }, // Teal
   chatSession: { hsl: '220 80% 55%', name: 'Chat' }, // Blue
   event: { hsl: '350 89% 60%', name: 'Event' }, // Rose
   toolkit: { hsl: '142 70% 45%', name: 'Toolkit' }, // Green
   custom: { hsl: '220 70% 50%', name: 'Custom' }, // Blue (default)
-  kb_card: { hsl: '174 60% 40%', name: 'KB Card' }, // Teal (Issue #5191)
 };
 
 // Map MeepleEntityType → DrawerEntityType for ExtraMeepleCardDrawer (Issue #5025)
@@ -50,8 +48,7 @@ export const DRAWER_ENTITY_TYPE_MAP: Partial<
   game: 'game',
   agent: 'agent',
   chatSession: 'chat',
-  document: 'kb',
-  kb_card: 'kb',
+  kb: 'kb',
 };
 
 // ============================================================================

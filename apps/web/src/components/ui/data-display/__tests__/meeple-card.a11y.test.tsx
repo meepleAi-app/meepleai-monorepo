@@ -37,7 +37,7 @@ const defaultProps = {
 
 describe('MeepleCard - Accessibility', () => {
   describe('Entity Types - No Violations', () => {
-    const entityTypes: MeepleEntityType[] = ['game', 'player', 'session', 'agent', 'document', 'chatSession', 'event', 'custom'];
+    const entityTypes: MeepleEntityType[] = ['game', 'player', 'session', 'agent', 'kb', 'chatSession', 'event', 'custom'];
 
     it.each(entityTypes)('should have no accessibility violations for %s entity', async entity => {
       const { container } = render(

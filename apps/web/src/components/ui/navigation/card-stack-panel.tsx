@@ -36,12 +36,11 @@ const ENTITY_HSL: Record<MeepleEntityType, string> = {
   player: '262 83% 58%',
   session: '240 60% 55%',
   agent: '38 92% 50%',
-  document: '210 40% 55%',
+  kb: '174 60% 40%',
   chatSession: '220 80% 55%',
   event: '350 89% 60%',
   toolkit: '142 70% 45%',
   custom: '220 70% 50%',
-  kb_card: '174 60% 40%',
 };
 
 const ENTITY_LABELS: Record<MeepleEntityType, string> = {
@@ -49,12 +48,11 @@ const ENTITY_LABELS: Record<MeepleEntityType, string> = {
   player: 'Player',
   session: 'Session',
   agent: 'Agent',
-  document: 'Document',
+  kb: 'KB',
   chatSession: 'Chat',
   event: 'Event',
   toolkit: 'Toolkit',
   custom: 'Item',
-  kb_card: 'KB Card',
 };
 
 // ---------------------------------------------------------------------------

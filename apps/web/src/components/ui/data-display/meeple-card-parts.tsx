@@ -216,9 +216,8 @@ export function CoverImage({
     session: 'linear-gradient(135deg, hsl(240,30%,85%), hsl(240,40%,70%))',
     event: 'linear-gradient(135deg, hsl(350,40%,85%), hsl(350,60%,70%))',
     toolkit: 'linear-gradient(135deg, hsl(142,30%,85%), hsl(142,50%,75%))',
-    document: 'linear-gradient(135deg, hsl(210,30%,85%), hsl(210,40%,70%))',
+    kb: 'linear-gradient(135deg, hsl(174,30%,85%), hsl(174,50%,70%))',
     custom: 'linear-gradient(135deg, hsl(220,30%,85%), hsl(220,40%,70%))',
-    kb_card: 'linear-gradient(135deg, hsl(174,30%,85%), hsl(174,50%,70%))',
   };
 
   // Entity emoji fallbacks (when no image)
@@ -230,9 +229,8 @@ export function CoverImage({
     session: '\uD83C\uDFB2',
     event: '\uD83C\uDFC6',
     toolkit: '\uD83D\uDEE0\uFE0F',
-    document: '\uD83D\uDCC4',
+    kb: '\uD83D\uDCC4',
     custom: '\uD83C\uDFB2',
-    kb_card: '\uD83D\uDCCB',
   };
 
   return (

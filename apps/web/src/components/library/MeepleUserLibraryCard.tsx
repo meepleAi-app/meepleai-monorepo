@@ -151,7 +151,7 @@ export function MeepleUserLibraryCard({
   const badge = game.isOwned ? 'Owned' : game.inWishlist ? 'Wishlist' : undefined;
 
   const drawerNavLinks = [
-    { entity: 'document' as MeepleEntityType, label: 'KB', onClick: () => setKbDrawerOpen(true) },
+    { entity: 'kb' as MeepleEntityType, label: 'KB', onClick: () => setKbDrawerOpen(true) },
     {
       entity: 'agent' as MeepleEntityType,
       label: 'Agents',

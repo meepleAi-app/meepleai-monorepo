@@ -155,7 +155,8 @@ export function useAgentChatStream(callbacks?: AgentChatStreamCallbacks) {
       agentId: string,
       message: string,
       chatThreadId?: string,
-      proxyGameContext?: ProxyGameContext
+      proxyGameContext?: ProxyGameContext,
+      gameSessionId?: string
     ) => {
       stopStreaming();
 
@@ -193,6 +194,9 @@ export function useAgentChatStream(callbacks?: AgentChatStreamCallbacks) {
         body = { message };
         if (chatThreadId) {
           body.chatThreadId = chatThreadId;
+        }
+        if (gameSessionId) {
+          body.gameSessionId = gameSessionId;
         }
       }
 

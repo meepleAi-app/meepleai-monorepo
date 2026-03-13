@@ -1042,6 +1042,14 @@ namespace Api.Infrastructure.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("id");
 
+                    b.Property<string>("ChatLanguage")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)")
+                        .HasDefaultValue("auto")
+                        .HasColumnName("chat_language");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
@@ -1344,6 +1352,50 @@ namespace Api.Infrastructure.Migrations
                         .HasDatabaseName("uq_toolkit_session_states_session_toolkit");
 
                     b.ToTable("toolkit_session_states", "session_tracking");
+                });
+
+            modelBuilder.Entity("Api.BoundedContexts.SystemConfiguration.Domain.Entities.TierDefinition", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("DisplayName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("display_name");
+
+                    b.Property<bool>("IsDefault")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_default");
+
+                    b.Property<string>("LlmModelTier")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("llm_model_tier");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("name");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Name")
+                        .IsUnique();
+
+                    b.ToTable("tier_definitions", (string)null);
                 });
 
             modelBuilder.Entity("Api.Infrastructure.Entities.AdminReportEntity", b =>
@@ -3919,6 +3971,68 @@ namespace Api.Infrastructure.Migrations
                     b.ToTable("session_attachments", (string)null);
                 });
 
+            modelBuilder.Entity("Api.Infrastructure.Entities.GameManagement.SessionParticipantEntity", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<bool>("AgentAccessEnabled")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false)
+                        .HasColumnName("agent_access_enabled");
+
+                    b.Property<string>("ConnectionToken")
+                        .IsRequired()
+                        .HasMaxLength(6)
+                        .HasColumnType("character varying(6)")
+                        .HasColumnName("connection_token");
+
+                    b.Property<string>("GuestName")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("guest_name");
+
+                    b.Property<DateTime>("JoinedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("joined_at");
+
+                    b.Property<DateTime?>("LeftAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("left_at");
+
+                    b.Property<string>("Role")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("role");
+
+                    b.Property<Guid>("SessionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("session_id");
+
+                    b.Property<Guid?>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ConnectionToken")
+                        .IsUnique()
+                        .HasDatabaseName("ix_session_participants_connection_token");
+
+                    b.HasIndex("SessionId")
+                        .HasDatabaseName("ix_session_participants_session_id");
+
+                    b.HasIndex("UserId")
+                        .HasDatabaseName("ix_session_participants_user_id")
+                        .HasFilter("user_id IS NOT NULL");
+
+                    b.ToTable("session_participants", (string)null);
+                });
+
             modelBuilder.Entity("Api.Infrastructure.Entities.GameManagement.SessionPlayerEntity", b =>
                 {
                     b.Property<Guid>("Id")
@@ -6231,6 +6345,15 @@ namespace Api.Infrastructure.Migrations
                     b.Property<string>("Language")
                         .IsRequired()
                         .HasColumnType("text");
+
+                    b.Property<double?>("LanguageConfidence")
+                        .HasColumnType("double precision")
+                        .HasColumnName("language_confidence");
+
+                    b.Property<string>("LanguageOverride")
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)")
+                        .HasColumnName("language_override");
 
                     b.Property<string>("Metadata")
                         .HasMaxLength(2048)
@@ -9520,6 +9643,9 @@ namespace Api.Infrastructure.Migrations
                     b.PrimitiveCollection<List<string>>("Interests")
                         .HasColumnType("jsonb");
 
+                    b.Property<bool>("IsContributor")
+                        .HasColumnType("boolean");
+
                     b.Property<bool>("IsDemoAccount")
                         .HasColumnType("boolean");
 
@@ -11140,6 +11266,65 @@ namespace Api.Infrastructure.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("Api.BoundedContexts.SystemConfiguration.Domain.Entities.TierDefinition", b =>
+                {
+                    b.OwnsOne("Api.BoundedContexts.SystemConfiguration.Domain.ValueObjects.TierLimits", "Limits", b1 =>
+                        {
+                            b1.Property<Guid>("TierDefinitionId")
+                                .HasColumnType("uuid");
+
+                            b1.Property<int>("MaxAgentQueriesPerDay")
+                                .HasColumnType("integer")
+                                .HasColumnName("max_agent_queries_per_day");
+
+                            b1.Property<int>("MaxAgents")
+                                .HasColumnType("integer")
+                                .HasColumnName("max_agents");
+
+                            b1.Property<int>("MaxCatalogProposalsPerWeek")
+                                .HasColumnType("integer")
+                                .HasColumnName("max_catalog_proposals_per_week");
+
+                            b1.Property<long>("MaxPdfSizeBytes")
+                                .HasColumnType("bigint")
+                                .HasColumnName("max_pdf_size_bytes");
+
+                            b1.Property<int>("MaxPdfUploadsPerMonth")
+                                .HasColumnType("integer")
+                                .HasColumnName("max_pdf_uploads_per_month");
+
+                            b1.Property<int>("MaxPhotosPerSession")
+                                .HasColumnType("integer")
+                                .HasColumnName("max_photos_per_session");
+
+                            b1.Property<int>("MaxPrivateGames")
+                                .HasColumnType("integer")
+                                .HasColumnName("max_private_games");
+
+                            b1.Property<int>("MaxSessionPlayers")
+                                .HasColumnType("integer")
+                                .HasColumnName("max_session_players");
+
+                            b1.Property<int>("MaxSessionQueries")
+                                .HasColumnType("integer")
+                                .HasColumnName("max_session_queries");
+
+                            b1.Property<bool>("SessionSaveEnabled")
+                                .HasColumnType("boolean")
+                                .HasColumnName("session_save_enabled");
+
+                            b1.HasKey("TierDefinitionId");
+
+                            b1.ToTable("tier_definitions");
+
+                            b1.WithOwner()
+                                .HasForeignKey("TierDefinitionId");
+                        });
+
+                    b.Navigation("Limits")
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("Api.Infrastructure.Entities.AgentEntity", b =>
                 {
                     b.HasOne("Api.Infrastructure.Entities.UserEntity", "CreatedByUser")
@@ -11609,6 +11794,24 @@ namespace Api.Infrastructure.Migrations
                         .IsRequired();
 
                     b.Navigation("RecordPlayer");
+                });
+
+            modelBuilder.Entity("Api.Infrastructure.Entities.GameManagement.SessionParticipantEntity", b =>
+                {
+                    b.HasOne("Api.Infrastructure.Entities.GameManagement.LiveGameSessionEntity", "LiveGameSession")
+                        .WithMany()
+                        .HasForeignKey("SessionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Api.Infrastructure.Entities.UserEntity", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("LiveGameSession");
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("Api.Infrastructure.Entities.GameManagement.SessionPlayerEntity", b =>

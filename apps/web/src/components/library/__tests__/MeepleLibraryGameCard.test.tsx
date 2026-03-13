@@ -122,14 +122,18 @@ describe('MeepleLibraryGameCard', () => {
   });
 
   it('renders in grid variant by default', () => {
-    const { container } = render(<MeepleLibraryGameCard {...defaultProps} />, { wrapper: createWrapper() });
+    const { container } = render(<MeepleLibraryGameCard {...defaultProps} />, {
+      wrapper: createWrapper(),
+    });
 
     const card = container.querySelector('[data-testid^="library-game-card"]');
     expect(card).toBeInTheDocument();
   });
 
   it('renders in list variant when specified', () => {
-    render(<MeepleLibraryGameCard {...defaultProps} variant="list" />, { wrapper: createWrapper() });
+    render(<MeepleLibraryGameCard {...defaultProps} variant="list" />, {
+      wrapper: createWrapper(),
+    });
 
     const card = screen.getByTestId('library-game-card-game-123');
     expect(card).toBeInTheDocument();
@@ -137,7 +141,9 @@ describe('MeepleLibraryGameCard', () => {
 
   it('shows favorite badge when game is favorite', () => {
     const favoriteGame = { ...mockGame, isFavorite: true };
-    render(<MeepleLibraryGameCard {...defaultProps} game={favoriteGame} />, { wrapper: createWrapper() });
+    render(<MeepleLibraryGameCard {...defaultProps} game={favoriteGame} />, {
+      wrapper: createWrapper(),
+    });
 
     expect(screen.getByText(/❤️ Preferito/i)).toBeInTheDocument();
   });
@@ -149,15 +155,25 @@ describe('MeepleLibraryGameCard', () => {
   });
 
   it('does not show KB metadata when no documents', () => {
-    const gameNoPdf = { ...mockGame, hasKb: false, kbCardCount: 0, kbIndexedCount: 0, kbProcessingCount: 0 };
-    render(<MeepleLibraryGameCard {...defaultProps} game={gameNoPdf} />, { wrapper: createWrapper() });
+    const gameNoPdf = {
+      ...mockGame,
+      hasKb: false,
+      kbCardCount: 0,
+      kbIndexedCount: 0,
+      kbProcessingCount: 0,
+    };
+    render(<MeepleLibraryGameCard {...defaultProps} game={gameNoPdf} />, {
+      wrapper: createWrapper(),
+    });
 
     expect(screen.queryByText(/📄 PDF/i)).not.toBeInTheDocument();
   });
 
   it('maps game state to status correctly', () => {
     const ownedGame = { ...mockGame, currentState: 'Owned' as const };
-    const { rerender } = render(<MeepleLibraryGameCard {...defaultProps} game={ownedGame} />, { wrapper: createWrapper() });
+    const { rerender } = render(<MeepleLibraryGameCard {...defaultProps} game={ownedGame} />, {
+      wrapper: createWrapper(),
+    });
 
     // Status badge should show "owned"
     const card = screen.getByTestId('library-game-card-game-123');

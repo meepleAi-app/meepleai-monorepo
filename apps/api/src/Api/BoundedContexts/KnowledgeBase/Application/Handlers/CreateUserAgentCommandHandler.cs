@@ -8,6 +8,8 @@ using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities.KnowledgeBase;
 using Api.Middleware.Exceptions;
+using Api.SharedKernel.Exceptions;
+using Api.SharedKernel.Services;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -25,15 +27,18 @@ internal sealed class CreateUserAgentCommandHandler : IRequestHandler<CreateUser
 
     private readonly IAgentRepository _agentRepository;
     private readonly MeepleAiDbContext _db;
+    private readonly ITierEnforcementService _tierEnforcementService;
     private readonly ILogger<CreateUserAgentCommandHandler> _logger;
 
     public CreateUserAgentCommandHandler(
         IAgentRepository agentRepository,
         MeepleAiDbContext db,
+        ITierEnforcementService tierEnforcementService,
         ILogger<CreateUserAgentCommandHandler> logger)
     {
         _agentRepository = agentRepository ?? throw new ArgumentNullException(nameof(agentRepository));
         _db = db ?? throw new ArgumentNullException(nameof(db));
+        _tierEnforcementService = tierEnforcementService ?? throw new ArgumentNullException(nameof(tierEnforcementService));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -43,13 +48,21 @@ internal sealed class CreateUserAgentCommandHandler : IRequestHandler<CreateUser
     {
         ArgumentNullException.ThrowIfNull(request);
 
-        // Check agent quota per user
-        var userAgents = await _agentRepository.GetByUserIdAsync(request.UserId, cancellationToken).ConfigureAwait(false);
-        var maxAgents = GetMaxAgents(request.UserTier, request.UserRole);
-        if (userAgents.Count >= maxAgents)
+        // E2-3: Tier enforcement — check agent creation quota via centralized service
+        var canCreate = await _tierEnforcementService
+            .CanPerformAsync(request.UserId, TierAction.CreateAgent, cancellationToken)
+            .ConfigureAwait(false);
+
+        if (!canCreate)
         {
-            throw new ConflictException(
-                $"Agent limit reached ({maxAgents}). Upgrade your tier for more agents.");
+            var usage = await _tierEnforcementService
+                .GetUsageAsync(request.UserId, cancellationToken)
+                .ConfigureAwait(false);
+
+            throw new TierLimitExceededException(
+                nameof(TierAction.CreateAgent),
+                usage.Agents,
+                usage.AgentsMax);
         }
 
         // Resolve game ID: input may be shared_games.Id from user library
@@ -192,6 +205,4 @@ internal sealed class CreateUserAgentCommandHandler : IRequestHandler<CreateUser
         };
     }
 
-    private static int GetMaxAgents(string tier, string role)
-        => AgentTierLimits.GetMaxAgents(tier, role);
 }

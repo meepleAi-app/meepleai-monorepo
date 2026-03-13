@@ -246,7 +246,9 @@ internal class PdfDocumentRepository : RepositoryBase, IPdfDocumentRepository
             copyrightDisclaimerAcceptedAt: entity.CopyrightDisclaimerAcceptedAt, // Issue #5446
             copyrightDisclaimerAcceptedBy: entity.CopyrightDisclaimerAcceptedBy, // Issue #5446
             isActiveForRag: entity.IsActiveForRag, // Issue #5446
-            versionLabel: entity.VersionLabel // Issue #5447
+            versionLabel: entity.VersionLabel, // Issue #5447
+            languageConfidence: entity.LanguageConfidence, // E5-1
+            languageOverride: entity.LanguageOverride // E5-1
         );
     }
 
@@ -290,7 +292,9 @@ internal class PdfDocumentRepository : RepositoryBase, IPdfDocumentRepository
             CopyrightDisclaimerAcceptedAt = domain.CopyrightDisclaimerAcceptedAt, // Issue #5446
             CopyrightDisclaimerAcceptedBy = domain.CopyrightDisclaimerAcceptedBy, // Issue #5446
             IsActiveForRag = domain.IsActiveForRag, // Issue #5446
-            VersionLabel = domain.VersionLabel // Issue #5447
+            VersionLabel = domain.VersionLabel, // Issue #5447
+            LanguageConfidence = domain.LanguageConfidence, // E5-1
+            LanguageOverride = domain.LanguageOverride // E5-1
         };
     }
 }

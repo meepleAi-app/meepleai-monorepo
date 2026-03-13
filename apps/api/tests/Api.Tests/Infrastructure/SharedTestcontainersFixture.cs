@@ -861,11 +861,22 @@ public sealed class SharedTestcontainersFixture : IAsyncLifetime
         var db = redis.GetDatabase();
 
         var server = redis.GetServer(redis.GetEndPoints()[0]);
-        var keys = server.Keys(pattern: keyPrefix).ToArray();
 
-        if (keys.Length > 0)
+        // Use async SCAN to avoid synchronous timeout (RedisTimeoutException on SCAN)
+        var batch = new List<RedisKey>();
+        await foreach (var key in server.KeysAsync(pattern: keyPrefix))
         {
-            await db.KeyDeleteAsync(keys);
+            batch.Add(key);
+            if (batch.Count >= 100)
+            {
+                await db.KeyDeleteAsync(batch.ToArray()).ConfigureAwait(false);
+                batch.Clear();
+            }
+        }
+
+        if (batch.Count > 0)
+        {
+            await db.KeyDeleteAsync(batch.ToArray()).ConfigureAwait(false);
         }
 
         await redis.CloseAsync();

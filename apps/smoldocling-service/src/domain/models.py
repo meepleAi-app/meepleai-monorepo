@@ -95,6 +95,8 @@ class ExtractionResult:
     page_count: int
     extraction_duration_ms: int
     quality_score: QualityScore
+    detected_language: Optional[str] = None  # ISO 639-1 code
+    language_confidence: Optional[float] = None  # 0.0 - 1.0
 
     @property
     def chunk_count(self) -> int:

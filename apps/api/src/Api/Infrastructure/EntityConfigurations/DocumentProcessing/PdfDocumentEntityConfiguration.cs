@@ -156,6 +156,16 @@ internal class PdfDocumentEntityConfiguration : IEntityTypeConfiguration<PdfDocu
             .HasColumnName("version_label")
             .IsRequired(false);
 
+        // E5-1: Language confidence and override
+        builder.Property(e => e.LanguageConfidence)
+            .HasColumnName("language_confidence")
+            .IsRequired(false);
+
+        builder.Property(e => e.LanguageOverride)
+            .HasMaxLength(10)
+            .HasColumnName("language_override")
+            .IsRequired(false);
+
         // PDF deduplication: SHA-256 content hash
         builder.Property(e => e.ContentHash)
             .HasMaxLength(64)

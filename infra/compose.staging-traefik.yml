@@ -15,6 +15,9 @@ services:
   # Enable socket proxy for staging (secure Docker API access)
   docker-socket-proxy:
     profiles: [minimal, dev, observability, ai, automation, full]
+    tmpfs:
+      - /run
+      - /usr/local/etc/haproxy
 
   traefik:
     command:

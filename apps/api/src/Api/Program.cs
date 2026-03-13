@@ -558,6 +558,7 @@ v1Api.MapPlaygroundTestScenarioEndpoints(); // Issue #4396: Playground Test Scen
 v1Api.MapAdminStrategyEndpoints();      // Issue #3811: Strategy Editor for RAG pipelines
 v1Api.MapAdminRagExecutionEndpoints();  // Issue #4458: RAG Execution History
 v1Api.MapAdminDebugChatEndpoints();    // Admin Debug Chat with real-time pipeline tracing
+v1Api.MapAdminSandboxEndpoints();     // RAG Sandbox Dashboard: documents, chunks, metrics
 v1Api.MapMonitoringEndpoints();        // Issues #891 + #893: Infrastructure health & Prometheus metrics
 v1Api.MapAlertEndpoints();             // Alert management
 v1Api.MapAlertConfigEndpoints();       // Alert rules (Issue #921)

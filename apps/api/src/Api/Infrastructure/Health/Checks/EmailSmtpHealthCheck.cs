@@ -23,8 +23,11 @@ public class EmailSmtpHealthCheck : IHealthCheck
         HealthCheckContext context,
         CancellationToken cancellationToken = default)
     {
-        var smtpServer = _configuration["Email:SmtpServer"];
-        var smtpPortStr = _configuration["Email:Port"];
+        // Read from environment variables (loaded by SecretLoader from email.secret)
+        var smtpServer = Environment.GetEnvironmentVariable("SMTP_HOST")
+                         ?? _configuration["Email:SmtpServer"];
+        var smtpPortStr = Environment.GetEnvironmentVariable("SMTP_PORT")
+                          ?? _configuration["Email:Port"];
 
         if (string.IsNullOrWhiteSpace(smtpServer) || !int.TryParse(smtpPortStr, System.Globalization.CultureInfo.InvariantCulture, out var smtpPort))
         {

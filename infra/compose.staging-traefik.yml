@@ -70,8 +70,8 @@ services:
     volumes:
       # Docker socket (direct access - TODO: upgrade socket-proxy to v0.6+ for API 1.40+)
       - /var/run/docker.sock:/var/run/docker.sock:ro
-      # Static configuration (staging uses prod config)
-      - ./traefik/traefik.prod.yml:/etc/traefik/traefik.yml:ro
+      # Static configuration (staging-specific: direct Docker socket)
+      - ./traefik/traefik.staging.yml:/etc/traefik/traefik.yml:ro
       # Dynamic configuration
       - ./traefik/dynamic:/etc/traefik/dynamic:ro
       # Logs

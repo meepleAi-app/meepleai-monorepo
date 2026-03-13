@@ -1,20 +1,18 @@
 namespace Api.Infrastructure.Seeders;
 
 /// <summary>
-/// Controls which seeding layers execute at startup.
-/// Set via SEED_PROFILE environment variable (default: Dev).
+/// Determines which seed layers run and with what data.
+/// Set via SEED_PROFILE env var or Seeding:Profile in appsettings.
+/// Ordinal values control layer filtering: a layer runs if MinimumProfile &lt;= active profile.
 /// </summary>
-internal enum SeedProfile
+public enum SeedProfile
 {
-    /// <summary>Core + Catalog(dev.yml). Auto-runs on startup.</summary>
-    Dev,
-
-    /// <summary>Core + Catalog(staging.yml) + LivedIn. Script-driven via dump/restore.</summary>
-    Staging,
-
-    /// <summary>Core + Catalog(prod.yml). Script-driven via dump/restore.</summary>
-    Prod,
-
-    /// <summary>Skip all seeding (used when restoring from dump).</summary>
-    None
+    /// <summary>No seeding (CI/testing environments).</summary>
+    None = 0,
+    /// <summary>Production: Core layer only (admin + AI models).</summary>
+    Prod = 1,
+    /// <summary>Staging: Core + Catalog (shared games, badges, flags).</summary>
+    Staging = 2,
+    /// <summary>Development: Core + Catalog + LivedIn (synthetic data).</summary>
+    Dev = 3
 }

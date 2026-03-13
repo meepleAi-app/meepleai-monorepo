@@ -23,7 +23,7 @@ namespace Api.Tests.BoundedContexts.SharedGameCatalog.Integration;
 /// Issue #3541: BGG Import Queue Service
 /// Tests: Background worker processing, rate limiting, retry logic, failure handling, CQRS integration
 /// </summary>
-[Collection("SharedTestcontainers")]
+[Collection("Integration-GroupC")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "SharedGameCatalog")]
 public sealed class BggImportQueueBackgroundServiceIntegrationTests : IAsyncLifetime

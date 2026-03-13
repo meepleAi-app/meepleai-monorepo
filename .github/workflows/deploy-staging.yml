@@ -405,7 +405,14 @@ jobs:
               --profile minimal up -d --no-deps $SERVICES
 
             # Health check (internal - avoids SSL issues)
-            sleep 15
+            echo "⏳ Waiting for API health..."
+            for attempt in $(seq 1 20); do
+              if curl -sf http://localhost:8080/health > /dev/null 2>&1; then
+                echo "✅ API healthy after ~$((attempt*3))s"
+                break
+              fi
+              sleep 3
+            done
             curl -sf http://localhost:8080/health | python3 -c "
             import sys,json
             d=json.load(sys.stdin)

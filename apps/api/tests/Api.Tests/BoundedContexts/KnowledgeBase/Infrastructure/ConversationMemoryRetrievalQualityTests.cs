@@ -29,7 +29,7 @@ namespace Api.Tests.BoundedContexts.KnowledgeBase.Infrastructure;
 /// - Retrieval nDCG &gt; 0.8
 /// - Latency &lt; 200ms P95
 /// </summary>
-[Collection("SharedTestcontainers")]
+[Collection("Integration-GroupA")]
 [Trait("Category", TestCategories.Performance)]
 [Trait("BoundedContext", "KnowledgeBase")]
 [Trait("Dependency", "PostgreSQL")]

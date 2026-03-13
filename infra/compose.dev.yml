@@ -40,6 +40,7 @@ services:
       EMBEDDING_MODEL: nomic-embed-text
       LOCAL_EMBEDDING_URL: http://embedding-service:8000
       EMBEDDING_FALLBACK_ENABLED: "true"
+      SEED_PROFILE: ${SEED_PROFILE:-dev}
       # OpenRouter key from env (not secret file)
       OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
       # Bootstrap admin (plain password for dev)

@@ -19,7 +19,7 @@ namespace Api.Tests.Integration;
 /// ISSUE-3071: Email verification backend implementation.
 /// Uses SharedTestcontainersFixture for optimized performance.
 /// </summary>
-[Collection("SharedTestcontainers")]
+[Collection("Integration-GroupB")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "Authentication")]
 [Trait("Dependency", "PostgreSQL")]

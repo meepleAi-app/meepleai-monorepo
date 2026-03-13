@@ -25,7 +25,7 @@ namespace Api.Tests.Integration.Administration;
 /// Tests 80% warning threshold, 100% blocking behavior, and token reset logic.
 /// Issue #3697: Epic 1 - Testing & Integration (Phase 2b)
 /// </summary>
-[Collection("SharedTestcontainers")]
+[Collection("Integration-GroupD")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("Dependency", "PostgreSQL")]
 [Trait("BoundedContext", "Administration")]

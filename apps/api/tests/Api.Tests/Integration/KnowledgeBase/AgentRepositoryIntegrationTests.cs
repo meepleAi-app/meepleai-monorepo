@@ -21,7 +21,7 @@ namespace Api.Tests.Integration.KnowledgeBase;
 /// Tests PostgreSQL persistence, agent lifecycle, activation/deactivation, and query methods.
 /// Issue #2307: Week 3 - Repository integration testing
 /// </summary>
-[Collection("SharedTestcontainers")]
+[Collection("Integration-GroupA")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("Dependency", "PostgreSQL")]
 [Trait("BoundedContext", "KnowledgeBase")]

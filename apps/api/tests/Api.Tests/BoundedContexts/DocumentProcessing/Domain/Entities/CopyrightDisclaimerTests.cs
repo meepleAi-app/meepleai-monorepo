@@ -45,18 +45,15 @@ public class CopyrightDisclaimerTests
     }
 
     [Fact]
-    public void AcceptCopyrightDisclaimer_CalledTwice_UpdatesTimestamp()
+    public void AcceptCopyrightDisclaimer_CalledTwice_ThrowsInvalidOperationException()
     {
+        // Issue #5446: Accepting the disclaimer twice must be rejected (use ConflictException at app layer).
         var document = CreateDocument();
         var userId = Guid.NewGuid();
 
         document.AcceptCopyrightDisclaimer(userId);
-        var firstAcceptedAt = document.CopyrightDisclaimerAcceptedAt;
 
-        document.AcceptCopyrightDisclaimer(userId);
-
-        Assert.True(document.HasAcceptedDisclaimer);
-        Assert.True(document.CopyrightDisclaimerAcceptedAt >= firstAcceptedAt);
+        Assert.Throws<InvalidOperationException>(() => document.AcceptCopyrightDisclaimer(userId));
     }
 
     #endregion

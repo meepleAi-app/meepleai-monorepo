@@ -19,7 +19,7 @@ namespace Api.Tests.Integration.Administration;
 /// Integration tests for GET /admin/users/{userId}/badges endpoint (Issue #3140).
 /// Verifies admin can view all user badges including hidden ones.
 /// </summary>
-[Collection("SharedTestcontainers")]
+[Collection("Integration-GroupD")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("Dependency", "PostgreSQL")]
 [Trait("BoundedContext", "Administration")]

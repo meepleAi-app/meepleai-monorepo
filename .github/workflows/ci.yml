@@ -99,12 +99,77 @@ jobs:
           token: ${{ secrets.CODECOV_TOKEN }}
         continue-on-error: true
 
-  # Backend: Build, Unit Tests, Integration Tests
-  backend:
-    name: Backend - Build & Test
+  # Backend Unit Tests (fast, no service containers needed)
+  backend-unit:
+    name: Backend - Unit Tests
     runs-on: ubuntu-latest
     needs: changes
     if: needs.changes.outputs.backend == 'true' || github.event_name == 'workflow_dispatch'
+    defaults:
+      run:
+        working-directory: apps/api
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Install PDF Dependencies
+        run: sudo apt-get update && sudo apt-get install -y libgdiplus
+
+      - name: Setup Backend
+        uses: ./.github/actions/setup-backend
+        with:
+          dotnet-version: '9.0.x'
+          working-directory: apps/api
+
+      - name: Build
+        run: dotnet build --no-restore --configuration Release
+
+      - name: Run Unit Tests
+        timeout-minutes: 20
+        env:
+          CI: true
+        run: |
+          echo "🧪 Running unit tests..."
+          dotnet test \
+            --filter "Category=Unit" \
+            --logger "console;verbosity=minimal" \
+            --no-build \
+            --configuration Release \
+            --blame-hang-timeout 5min \
+            -p:CollectCoverage=true \
+            -p:CoverletOutputFormat=cobertura \
+            -p:CoverletOutput=./coverage/unit-coverage.xml
+          echo "✅ Unit tests passed"
+
+      - name: Upload Coverage
+        if: always()
+        uses: codecov/codecov-action@v5
+        with:
+          files: apps/api/coverage/unit-coverage.xml
+          flags: backend-unit
+          token: ${{ secrets.CODECOV_TOKEN }}
+        continue-on-error: true
+
+  # Backend Integration Tests (requires service containers, runs in parallel with unit tests)
+  # Phase 3: 3-shard matrix for ~3x wall-clock speedup
+  backend-integration:
+    name: Backend - Integration (${{ matrix.shard.name }})
+    runs-on: ubuntu-latest
+    needs: changes
+    if: needs.changes.outputs.backend == 'true' || github.event_name == 'workflow_dispatch'
+    strategy:
+      fail-fast: false
+      matrix:
+        shard:
+          - name: "KnowledgeBase"
+            filter_extra: "&(FullyQualifiedName~KnowledgeBase|FullyQualifiedName~DocumentProcessing|FullyQualifiedName~Authentication)"
+            coverage_file: "integration-coverage-shard1.xml"
+          - name: "Games"
+            filter_extra: "&(FullyQualifiedName~SharedGameCatalog|FullyQualifiedName~GameManagement|FullyQualifiedName~Administration)"
+            coverage_file: "integration-coverage-shard2.xml"
+          - name: "Core"
+            filter_extra: "&FullyQualifiedName!~KnowledgeBase&FullyQualifiedName!~DocumentProcessing&FullyQualifiedName!~Authentication&FullyQualifiedName!~SharedGameCatalog&FullyQualifiedName!~GameManagement&FullyQualifiedName!~Administration"
+            coverage_file: "integration-coverage-shard3.xml"
 
     services:
       postgres:
@@ -164,21 +229,6 @@ jobs:
           dotnet-version: '9.0.x'
           working-directory: apps/api
 
-      - name: Cache Docker Images
-        uses: actions/cache@v5
-        with:
-          path: /tmp/.buildx-cache
-          key: ${{ runner.os }}-${{ runner.arch }}-docker-${{ hashFiles('**/Dockerfile', 'docker-compose*.yml') }}
-          restore-keys: |
-            ${{ runner.os }}-${{ runner.arch }}-docker-
-
-      - name: Pull Test Container Images
-        run: |
-          echo "📦 Pulling test container images for cache..."
-          docker pull pgvector/pgvector:pg16 || true  # Issue #3547: Use pgvector image
-          docker pull redis:7-alpine || true
-          echo "✅ Test images pulled and cached"
-
       - name: Pre-Test Cleanup
         shell: bash
         run: |
@@ -206,46 +256,54 @@ jobs:
           echo "✅ Redis ready"
 
           echo "⏳ Waiting for Qdrant..."
-          # Health check configured with 150s retries (30×5s)
-          # Manual wait as backup with extended timeout (120s)
-          for i in {1..60}; do
+          # Services block has 30 retries × 5s health check — just verify it's reachable
+          for i in {1..15}; do
             if curl -sf http://localhost:6333/healthz > /dev/null 2>&1; then
               echo "✅ Qdrant ready"
-              exit 0
+              break
             fi
             sleep 2
           done
-          echo "⚠️ Qdrant health check timeout - relying on container health check"
+
+      - name: Create CI Secret Files
+        working-directory: .
+        run: |
+          echo "🔧 Creating CI secret files for integration tests..."
+          mkdir -p infra/secrets
+          printf 'POSTGRES_USER=postgres\nPOSTGRES_PASSWORD=testpass\nPOSTGRES_DB=meepleai_test\n' > infra/secrets/database.secret
+          printf 'REDIS_PASSWORD=\n' > infra/secrets/redis.secret
+          printf 'JWT_SECRET_KEY=ci-test-jwt-secret-key-minimum-32-chars-long\nJWT_ISSUER=meepleai-ci-test\nJWT_AUDIENCE=meepleai-ci-test\n' > infra/secrets/jwt.secret
+          printf 'ADMIN_EMAIL=admin@test.local\nADMIN_PASSWORD=CiTestPassword123!\nADMIN_DISPLAY_NAME=CI Admin\n' > infra/secrets/admin.secret
+          printf 'QDRANT_URL=http://localhost:6333\n' > infra/secrets/qdrant.secret
+          printf 'EMBEDDING_SERVICE_URL=http://localhost:8000\n' > infra/secrets/embedding-service.secret
+          echo "✅ CI secret files created"
+
+      - name: Configure PostgreSQL for Parallel Tests
+        env:
+          PGPASSWORD: testpass
+        run: |
+          echo "🔧 Increasing max_connections for parallel test execution..."
+          psql -h localhost -U postgres -d meepleai_test -c "ALTER SYSTEM SET max_connections = 500;"
+          psql -h localhost -U postgres -d meepleai_test -c "ALTER SYSTEM SET shared_buffers = '256MB';"
+          # Restart postgres container to apply changes
+          docker restart $(docker ps -q --filter "ancestor=pgvector/pgvector:pg16") || true
+          echo "⏳ Waiting for PostgreSQL to restart..."
+          sleep 3
+          until pg_isready -h localhost -p 5432 -U postgres; do sleep 1; done
+          # Verify new settings
+          psql -h localhost -U postgres -d meepleai_test -c "SHOW max_connections;"
+          echo "✅ PostgreSQL configured with increased max_connections"
 
       - name: Build
         run: dotnet build --no-restore --configuration Release
 
-      # Stage 2: Backend Unit Tests (fast, no DB dependency)
-      - name: Run Unit Tests
-        timeout-minutes: 20
-        env:
-          CI: true
-        run: |
-          echo "🧪 Running unit tests..."
-          dotnet test \
-            --filter "Category=Unit" \
-            --logger "console;verbosity=minimal" \
-            --no-build \
-            --configuration Release \
-            --blame-hang-timeout 5min \
-            -p:CollectCoverage=true \
-            -p:CoverletOutputFormat=cobertura \
-            -p:CoverletOutput=./coverage/unit-coverage.xml
-          echo "✅ Unit tests passed"
-
-      # Stage 3: Backend Integration Tests (requires service containers)
       # Issue #3102: Exclude tests that use their own Testcontainers - they conflict with CI service containers.
       # - UploadPdfMidPhaseCancellationTests: Uses SharedTestcontainersFixture
       # - FrontendSdk tests: Use FrontendSdkTestFactory with own containers
       # - ArbitroAgentIntegrationTests: Uses SharedTestcontainersFixture with orchestration-service (Issue #3871)
       # These tests run in the dedicated backend-e2e-tests.yml workflow instead.
       - name: Run Integration Tests
-        timeout-minutes: 90
+        timeout-minutes: 20
         env:
           POSTGRES_HOST: localhost
           POSTGRES_PORT: 5432
@@ -254,32 +312,36 @@ jobs:
           POSTGRES_PASSWORD: testpass
           ConnectionStrings__Postgres: Host=localhost;Port=5432;Database=meepleai_test;Username=postgres;Password=testpass
           QDRANT_URL: http://localhost:6333
-          REDIS_URL: localhost:6379
+          REDIS_URL: localhost:6379,allowAdmin=true
           OPENROUTER_API_KEY: test-key
           CI: true
           # Issue #3102: Disable rate limiting middleware for integration tests to prevent 429 errors
           DISABLE_RATE_LIMITING: "true"
+          # Issue #CI-Optimization: Pass external service URLs so SharedTestcontainersFixture
+          # skips container startup and uses CI service containers directly
+          TEST_POSTGRES_CONNSTRING: Host=localhost;Port=5432;Database=meepleai_test;Username=postgres;Password=testpass
+          TEST_REDIS_CONNSTRING: localhost:6379,allowAdmin=true
         run: |
-          echo "🧪 Running integration tests..."
+          echo "🧪 Running integration tests - shard: ${{ matrix.shard.name }} (8 parallel threads)..."
           dotnet test \
-            --filter "Category=Integration&FullyQualifiedName!~UploadPdfMidPhaseCancellationTests&FullyQualifiedName!~FrontendSdk&FullyQualifiedName!~ArbitroAgent" \
+            --filter "Category=Integration&FullyQualifiedName!~UploadPdfMidPhaseCancellationTests&FullyQualifiedName!~FrontendSdk&FullyQualifiedName!~ArbitroAgent${{ matrix.shard.filter_extra }}" \
+            --settings tests/Api.Tests/integration.runsettings \
             --logger "console;verbosity=minimal" \
             --no-build \
             --configuration Release \
-            --blame-hang-timeout 15min \
+            --blame-hang-timeout 5min \
+            --blame-hang-dump-type mini \
             -p:CollectCoverage=true \
             -p:CoverletOutputFormat=cobertura \
-            -p:CoverletOutput=./coverage/integration-coverage.xml
-          echo "✅ Integration tests passed"
+            -p:CoverletOutput=./coverage/${{ matrix.shard.coverage_file }}
+          echo "✅ Integration tests passed - shard: ${{ matrix.shard.name }}"
 
       - name: Upload Coverage
         if: always()
         uses: codecov/codecov-action@v5
         with:
-          files: |
-            apps/api/coverage/unit-coverage.xml
-            apps/api/coverage/integration-coverage.xml
-          flags: backend
+          files: apps/api/coverage/${{ matrix.shard.coverage_file }}
+          flags: backend-integration-${{ matrix.shard.name }}
           token: ${{ secrets.CODECOV_TOKEN }}
         continue-on-error: true
 
@@ -410,6 +472,17 @@ jobs:
             sleep 1
           done
 
+      - name: Create CI Secret Files
+        working-directory: .
+        run: |
+          mkdir -p infra/secrets
+          printf 'POSTGRES_USER=postgres\nPOSTGRES_PASSWORD=postgres_test_password\nPOSTGRES_DB=meepleai_test\n' > infra/secrets/database.secret
+          printf 'REDIS_PASSWORD=\n' > infra/secrets/redis.secret
+          printf 'JWT_SECRET_KEY=ci-test-jwt-secret-key-minimum-32-chars-long\nJWT_ISSUER=meepleai-ci-test\nJWT_AUDIENCE=meepleai-ci-test\n' > infra/secrets/jwt.secret
+          printf 'ADMIN_EMAIL=admin@test.local\nADMIN_PASSWORD=CiTestPassword123!\nADMIN_DISPLAY_NAME=CI Admin\n' > infra/secrets/admin.secret
+          printf 'QDRANT_URL=http://localhost:6333\n' > infra/secrets/qdrant.secret
+          printf 'EMBEDDING_SERVICE_URL=http://localhost:8000\n' > infra/secrets/embedding-service.secret
+
       - name: Fix dotnet directory permissions
         run: |
           if [ -d "/usr/share/dotnet" ]; then
@@ -449,7 +522,6 @@ jobs:
         run: |
           dotnet run --no-build --configuration Release --no-launch-profile &
           echo $! > api.pid
-          sleep 15
         env:
           ASPNETCORE_ENVIRONMENT: Testing
           ASPNETCORE_URLS: "http://localhost:8080"
@@ -462,9 +534,24 @@ jobs:
           QDRANT_URL: "http://localhost:6333"
           OPENROUTER_API_KEY: "test-key-for-ci-placeholder"
 
-      - name: Backend Health Check
+      - name: Wait for API Health
         working-directory: .
-        run: curl --retry 10 --retry-delay 3 --retry-max-time 60 http://localhost:8080/health
+        timeout-minutes: 2
+        run: |
+          echo "⏳ Waiting for API to be healthy..."
+          # Use /health/live (liveness check) instead of /health (full check)
+          # /health includes embedding service which isn't available in CI
+          for i in {1..40}; do
+            if curl -sf http://localhost:8080/health/live > /dev/null 2>&1; then
+              echo "✅ API live after ~$((i*3))s"
+              # Also verify core services are ready
+              curl -sf http://localhost:8080/health/ready > /dev/null 2>&1 && echo "✅ Core services ready" || echo "⚠️ Some core services degraded (non-blocking)"
+              exit 0
+            fi
+            sleep 3
+          done
+          echo "❌ API failed to start within 2 minutes"
+          exit 1
 
       # ===== Frontend Setup =====
       - name: Setup Frontend
@@ -502,16 +589,22 @@ jobs:
   ci-success:
     name: CI Success
     runs-on: ubuntu-latest
-    needs: [frontend, backend, python-tests, e2e]
+    needs: [frontend, backend-unit, backend-integration, python-tests, e2e]
     if: always()
     steps:
       - name: Check Status
         run: |
-          if [ "${{ needs.frontend.result }}" == "failure" ] || \
-             [ "${{ needs.backend.result }}" == "failure" ] || \
-             [ "${{ needs.python-tests.result }}" == "failure" ] || \
-             [ "${{ needs.e2e.result }}" == "failure" ]; then
-            echo "❌ CI Failed"
-            exit 1
-          fi
+          for job in frontend backend-unit backend-integration python-tests e2e; do
+            result="${{ needs.frontend.result }}"
+            case "$job" in
+              backend-unit) result="${{ needs.backend-unit.result }}" ;;
+              backend-integration) result="${{ needs.backend-integration.result }}" ;;
+              python-tests) result="${{ needs.python-tests.result }}" ;;
+              e2e) result="${{ needs.e2e.result }}" ;;
+            esac
+            if [ "$result" == "failure" ] || [ "$result" == "cancelled" ]; then
+              echo "❌ CI Failed: $job=$result"
+              exit 1
+            fi
+          done
           echo "✅ CI Passed"

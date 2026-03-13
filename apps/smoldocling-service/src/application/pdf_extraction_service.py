@@ -17,6 +17,7 @@ from ..infrastructure import (
     FileStorageService,
 )
 from ..application.quality_calculator import QualityScoreCalculator
+from ..application.language_detector import detect_document_language
 from ..config import settings
 
 logger = logging.getLogger(__name__)
@@ -119,6 +120,9 @@ class PdfExtractionService:
                     page_coverage_score=1.0,
                 )
 
+                # Detect language from synthetic text
+                lang_result = detect_document_language([synthetic_text])
+
                 synthetic_result = ExtractionResult(
                     full_text=synthetic_text,
                     markdown_text=synthetic_text,
@@ -127,6 +131,8 @@ class PdfExtractionService:
                     page_count=1,
                     extraction_duration_ms=1,
                     quality_score=quality_score,
+                    detected_language=lang_result.language,
+                    language_confidence=lang_result.confidence,
                 )
 
                 logger.info("SmolDocling extraction test mode activated, returning synthetic result")
@@ -204,10 +210,17 @@ class PdfExtractionService:
                     f"Quality score below threshold: {quality_score.total_score:.2f} < {self.settings.quality_threshold}"
                 )
 
-            # Step 9: Calculate duration
+            # Step 9: Detect document language
+            lang_chunks = [c.text for c in text_chunks if c.text.strip()]
+            lang_result = detect_document_language(lang_chunks)
+            logger.info(
+                f"Language detected: {lang_result.language} (confidence={lang_result.confidence:.2f})"
+            )
+
+            # Step 10: Calculate duration
             duration_ms = int((time.time() - start_time) * 1000)
 
-            # Step 10: Create result
+            # Step 11: Create result
             result = ExtractionResult(
                 full_text=full_text,
                 markdown_text=markdown_text,
@@ -216,6 +229,8 @@ class PdfExtractionService:
                 page_count=page_count,
                 extraction_duration_ms=duration_ms,
                 quality_score=quality_score,
+                detected_language=lang_result.language,
+                language_confidence=lang_result.confidence,
             )
 
             logger.info(

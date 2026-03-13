@@ -29,7 +29,7 @@ namespace Api.Tests.BoundedContexts.SystemConfiguration.Integration;
 /// Uses SharedTestcontainersFixture for Docker hijack prevention (Issue #2031).
 /// Issue: #2188
 /// </summary>
-[Collection("SharedTestcontainers")]
+[Collection("Integration-GroupD")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("Dependency", "Testcontainers")]
 [Trait("BoundedContext", "SystemConfiguration")]

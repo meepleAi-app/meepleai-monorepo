@@ -21,7 +21,7 @@ namespace Api.Tests.BoundedContexts.SharedGameCatalog.Application.Queries.GetUse
 /// Integration tests for GetUserShareRequestsQueryHandler.
 /// Issue #2726: Application - Query per Dashboard Utente
 /// </summary>
-[Collection("SharedTestcontainers")]
+[Collection("Integration-GroupC")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "SharedGameCatalog")]
 public sealed class GetUserShareRequestsQueryHandlerTests : IAsyncLifetime

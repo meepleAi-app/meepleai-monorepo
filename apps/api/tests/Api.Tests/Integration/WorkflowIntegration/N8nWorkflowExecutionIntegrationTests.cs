@@ -19,7 +19,7 @@ namespace Api.Tests.Integration.WorkflowIntegration;
 /// Week 9: WorkflowIntegration n8n execution layer (5 tests)
 /// Tests: Workflow configuration, activation/deactivation, connection testing, webhook validation
 /// </summary>
-[Collection("SharedTestcontainers")]
+[Collection("Integration-GroupD")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("Dependency", "PostgreSQL")]
 [Trait("BoundedContext", "WorkflowIntegration")]

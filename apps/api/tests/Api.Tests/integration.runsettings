@@ -51,10 +51,10 @@
     </Loggers>
   </LoggerRunSettings>
 
-  <!-- xUnit specific settings -->
+  <!-- xUnit specific settings (note: xUnit reads from xunit.runner.json, not from .runsettings) -->
+  <!-- Kept here for documentation; actual parallelism set in xunit.runner.json -->
   <xUnit>
-    <!-- Phase 2: 8 parallel threads, budget: 8×5 pool = 40 connections (of 500 available) -->
-    <MaxParallelThreads>8</MaxParallelThreads>
+    <MaxParallelThreads>4</MaxParallelThreads>
     <DiagnosticMessages>true</DiagnosticMessages>
     <AppDomain>denied</AppDomain>
   </xUnit>

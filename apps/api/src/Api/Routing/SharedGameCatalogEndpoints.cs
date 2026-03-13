@@ -18,6 +18,7 @@ using Api.BoundedContexts.SharedGameCatalog.Application.Queries.GetBadgeLeaderbo
 using Api.BoundedContexts.SharedGameCatalog.Application.Queries.GetMyActiveReviews;
 using Api.BoundedContexts.SharedGameCatalog.Application.Queries.CheckPrivateGameDuplicates;
 using Api.BoundedContexts.SharedGameCatalog.Application.Queries.GetGameRagReadiness;
+using Api.BoundedContexts.SharedGameCatalog.Application.Queries.GetSharedGameDocuments;
 using Api.BoundedContexts.SharedGameCatalog.Application.Commands.ToggleBadgeDisplay;
 using Api.BoundedContexts.SharedGameCatalog.Application.Commands.ApproveGameProposal;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Entities;
@@ -492,6 +493,14 @@ internal static class SharedGameCatalogEndpoints
             .WithDescription("Aggregates document processing status and agent linkage across bounded contexts to determine if a game is RAG-ready.")
             .Produces<GameRagReadinessDto>()
             .Produces(StatusCodes.Status404NotFound);
+
+        // Issue #119: Per-SharedGame Document Overview (enriched with PDF processing status)
+        group.MapGet("/admin/shared-games/{gameId:guid}/documents/overview", HandleGetSharedGameDocuments)
+            .RequireAuthorization("AdminOrEditorPolicy")
+            .WithName("GetSharedGameDocumentsOverview")
+            .WithSummary("Get document overview for a shared game with PDF status (Admin/Editor)")
+            .WithDescription("Returns all documents associated with a shared game, enriched with PDF processing status from the document processing context.")
+            .Produces<GetSharedGameDocumentsResult>(StatusCodes.Status200OK);
     }
 
     // ========================================
@@ -1482,6 +1491,19 @@ internal static class SharedGameCatalogEndpoints
         CancellationToken ct)
     {
         var query = new GetGameRagReadinessQuery(id);
+        var result = await mediator.Send(query, ct).ConfigureAwait(false);
+        return Results.Ok(result);
+    }
+
+    /// <summary>
+    /// Issue #119: Get all documents for a shared game with PDF processing status.
+    /// </summary>
+    private static async Task<IResult> HandleGetSharedGameDocuments(
+        Guid gameId,
+        IMediator mediator,
+        CancellationToken ct)
+    {
+        var query = new GetSharedGameDocumentsQuery(gameId);
         var result = await mediator.Send(query, ct).ConfigureAwait(false);
         return Results.Ok(result);
     }

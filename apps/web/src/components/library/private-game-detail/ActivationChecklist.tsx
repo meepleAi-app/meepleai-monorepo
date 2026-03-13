@@ -16,6 +16,7 @@ interface ActivationChecklistProps {
   onUploadPdf: () => void;
   onCreateAgent: () => void;
   onStartGame: () => void;
+  onTryQuestion?: () => void;
   children?: React.ReactNode;
 }
 
@@ -26,6 +27,7 @@ export function ActivationChecklist({
   onUploadPdf,
   onCreateAgent,
   onStartGame,
+  onTryQuestion,
   children,
 }: ActivationChecklistProps) {
   const pdfReady = pdfStatus === 'ready';
@@ -87,6 +89,15 @@ export function ActivationChecklist({
         )}
         {agentStatus === 'creating' && (
           <p className="text-sm text-muted-foreground">Creazione in corso...</p>
+        )}
+        {agentReady && onTryQuestion && (
+          <button
+            type="button"
+            className="text-sm text-primary hover:underline"
+            onClick={onTryQuestion}
+          >
+            Prova una domanda &rarr;
+          </button>
         )}
       </ActivationStep>
 

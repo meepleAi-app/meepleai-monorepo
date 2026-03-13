@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 
 import { Gamepad2, FileText, Box, Upload, X } from 'lucide-react';
 
@@ -9,20 +9,45 @@ import type { SharedGameSummary } from '@/components/admin/sandbox/contexts/Sour
 import { DocumentList } from '@/components/admin/sandbox/DocumentList';
 import { GameSearchCombobox } from '@/components/admin/sandbox/GameSearchCombobox';
 import { Button } from '@/components/ui/button';
+import { api } from '@/lib/api';
 
 export function SourcePanel() {
-  const { selectedGame, setSelectedGame, documents } = useSource();
+  const { selectedGame, setSelectedGame, documents, deletePdf } = useSource();
 
-  // Local search state (will be wired to API later)
+  // Local search state — calls shared games search API
   const [searchResults, setSearchResults] = useState<SharedGameSummary[]>([]);
   const [isSearching, setIsSearching] = useState(false);
+  const searchTimeoutRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
-  const handleSearch = useCallback((_term: string) => {
-    // Placeholder: will be replaced with actual API call
-    setIsSearching(true);
-    setTimeout(() => {
+  const handleSearch = useCallback((term: string) => {
+    // Debounce search
+    if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
+
+    if (!term.trim()) {
       setSearchResults([]);
-      setIsSearching(false);
+      return;
+    }
+
+    setIsSearching(true);
+    searchTimeoutRef.current = setTimeout(async () => {
+      try {
+        const result = await api.sharedGames.search({ searchTerm: term, pageSize: 10, page: 1 });
+        setSearchResults(
+          (result?.items || []).map(g => ({
+            id: g.id,
+            title: g.title,
+            publisher: undefined,
+            thumbnailUrl: g.thumbnailUrl || undefined,
+            pdfCount: 0,
+            chunkCount: 0,
+            vectorCount: 0,
+          }))
+        );
+      } catch {
+        setSearchResults([]);
+      } finally {
+        setIsSearching(false);
+      }
     }, 300);
   }, []);
 
@@ -39,12 +64,15 @@ export function SourcePanel() {
   }, [setSelectedGame]);
 
   const handleReindex = useCallback((_id: string) => {
-    // Will be wired to API later
+    // Reindex triggers re-processing on backend — future enhancement
   }, []);
 
-  const handleDelete = useCallback((_id: string) => {
-    // Will be wired to API later
-  }, []);
+  const handleDelete = useCallback(
+    async (id: string) => {
+      await deletePdf(id);
+    },
+    [deletePdf]
+  );
 
   return (
     <div className="flex h-full flex-col gap-4 rounded-xl border bg-white/70 backdrop-blur-md p-4">

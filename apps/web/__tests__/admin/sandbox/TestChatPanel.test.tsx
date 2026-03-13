@@ -17,6 +17,21 @@ import type {
   AutoTestResult,
 } from '@/components/admin/sandbox/types';
 
+vi.mock('@/lib/api', () => ({
+  api: {
+    sandbox: {
+      getDocumentsByGame: vi.fn().mockResolvedValue([]),
+      deletePdf: vi.fn().mockResolvedValue(undefined),
+      applyConfig: vi
+        .fn()
+        .mockResolvedValue({ sessionKey: 'test-key', expiresAt: '2026-01-02T00:00:00Z' }),
+    },
+    sharedGames: {
+      search: vi.fn().mockResolvedValue({ items: [], total: 0, page: 1, pageSize: 10 }),
+    },
+  },
+}));
+
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
@@ -32,11 +47,17 @@ function AllProviders({ children }: { children: ReactNode }) {
 }
 
 /**
- * Wraps children in PipelineProvider with a helper to set isAllReady.
+ * Wraps children in all required providers for SandboxChat.
  * By default pipeline is NOT ready (empty map → isAllReady = false).
  */
 function PipelineWrapper({ children }: { children: ReactNode }) {
-  return <PipelineProvider>{children}</PipelineProvider>;
+  return (
+    <SourceProvider>
+      <PipelineProvider>
+        <SandboxSessionProvider>{children}</SandboxSessionProvider>
+      </PipelineProvider>
+    </SourceProvider>
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -245,9 +266,11 @@ describe('RetrievedChunkCard', () => {
 describe('DebugSidePanel', () => {
   it('shows empty state when no message selected', () => {
     render(
-      <SandboxSessionProvider>
-        <DebugSidePanel />
-      </SandboxSessionProvider>
+      <SourceProvider>
+        <SandboxSessionProvider>
+          <DebugSidePanel />
+        </SandboxSessionProvider>
+      </SourceProvider>
     );
 
     expect(screen.getByTestId('debug-panel-empty')).toBeInTheDocument();
@@ -256,9 +279,11 @@ describe('DebugSidePanel', () => {
 
   it('renders 3 accordion sections when message data is provided', () => {
     render(
-      <SandboxSessionProvider>
-        <DebugSidePanel messageData={mockMessageData} />
-      </SandboxSessionProvider>
+      <SourceProvider>
+        <SandboxSessionProvider>
+          <DebugSidePanel messageData={mockMessageData} />
+        </SandboxSessionProvider>
+      </SourceProvider>
     );
 
     expect(screen.getByTestId('accordion-chunks')).toBeInTheDocument();
@@ -268,9 +293,11 @@ describe('DebugSidePanel', () => {
 
   it('renders chunk cards in chunks section', () => {
     render(
-      <SandboxSessionProvider>
-        <DebugSidePanel messageData={mockMessageData} />
-      </SandboxSessionProvider>
+      <SourceProvider>
+        <SandboxSessionProvider>
+          <DebugSidePanel messageData={mockMessageData} />
+        </SandboxSessionProvider>
+      </SourceProvider>
     );
 
     // Chunks section is default open
@@ -280,9 +307,11 @@ describe('DebugSidePanel', () => {
 
   it('renders footer summary with strategy and latency', () => {
     render(
-      <SandboxSessionProvider>
-        <DebugSidePanel messageData={mockMessageData} />
-      </SandboxSessionProvider>
+      <SourceProvider>
+        <SandboxSessionProvider>
+          <DebugSidePanel messageData={mockMessageData} />
+        </SandboxSessionProvider>
+      </SourceProvider>
     );
 
     const footer = screen.getByTestId('debug-footer');

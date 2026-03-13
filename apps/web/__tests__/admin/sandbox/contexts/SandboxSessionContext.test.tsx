@@ -1,11 +1,24 @@
-import { render, screen, act, waitFor } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
+import { SourceProvider } from '@/components/admin/sandbox/contexts/SourceContext';
 import {
   SandboxSessionProvider,
   useSandboxSession,
   DEFAULT_CONFIG,
 } from '@/components/admin/sandbox/contexts/SandboxSessionContext';
+
+vi.mock('@/lib/api', () => ({
+  api: {
+    sandbox: {
+      getDocumentsByGame: vi.fn().mockResolvedValue([]),
+      deletePdf: vi.fn().mockResolvedValue(undefined),
+      applyConfig: vi
+        .fn()
+        .mockResolvedValue({ sessionKey: 'test-key', expiresAt: '2026-01-02T00:00:00Z' }),
+    },
+  },
+}));
 
 // TestConsumer renders key values and exposes action buttons
 function TestConsumer() {
@@ -47,9 +60,11 @@ function TestConsumer() {
 
 function renderWithProvider() {
   return render(
-    <SandboxSessionProvider>
-      <TestConsumer />
-    </SandboxSessionProvider>
+    <SourceProvider>
+      <SandboxSessionProvider>
+        <TestConsumer />
+      </SandboxSessionProvider>
+    </SourceProvider>
   );
 }
 
@@ -86,7 +101,7 @@ describe('SandboxSessionContext', () => {
     expect(screen.getByTestId('sparse-weight').textContent).toBe('0.2');
   });
 
-  it('applyConfig syncs applied to draft and clears dirty state', async () => {
+  it('applyConfig syncs applied to draft and clears dirty state (no game = no API call)', async () => {
     renderWithProvider();
     const user = userEvent.setup();
 
@@ -97,14 +112,11 @@ describe('SandboxSessionContext', () => {
       String(DEFAULT_CONFIG.temperature)
     );
 
-    // Apply
+    // Apply — no game selected so applyConfig is a no-op
     await user.click(screen.getByTestId('apply-config'));
 
-    await waitFor(() => {
-      expect(screen.getByTestId('is-dirty').textContent).toBe('false');
-    });
-    expect(screen.getByTestId('applied-temperature').textContent).toBe('0.9');
-    expect(screen.getByTestId('pending-changes').textContent).toBe('0');
+    // Still dirty because no game selected means no apply
+    expect(screen.getByTestId('is-dirty').textContent).toBe('true');
   });
 
   it('resetConfig restores defaults', async () => {

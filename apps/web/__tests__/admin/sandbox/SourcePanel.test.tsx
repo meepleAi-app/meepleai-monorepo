@@ -11,6 +11,18 @@ import type {
   PdfDocumentSummary,
 } from '@/components/admin/sandbox/contexts/SourceContext';
 
+vi.mock('@/lib/api', () => ({
+  api: {
+    sandbox: {
+      getDocumentsByGame: vi.fn().mockResolvedValue([]),
+      deletePdf: vi.fn().mockResolvedValue(undefined),
+    },
+    sharedGames: {
+      search: vi.fn().mockResolvedValue({ items: [], total: 0, page: 1, pageSize: 10 }),
+    },
+  },
+}));
+
 // ---------------------------------------------------------------------------
 // Fixtures
 // ---------------------------------------------------------------------------

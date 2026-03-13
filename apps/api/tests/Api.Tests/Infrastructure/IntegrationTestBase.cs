@@ -52,8 +52,14 @@ public abstract class IntegrationTestBase<TRepository> : IAsyncLifetime
             {
                 Database = DatabaseName,
                 SslMode = SslMode.Disable,
-                KeepAlive = 30,
-                Pooling = false
+                KeepAlive = 10,
+                Pooling = true,
+                MinPoolSize = 1,
+                MaxPoolSize = 5,
+                ConnectionIdleLifetime = 30,
+                ConnectionPruningInterval = 5,
+                Timeout = 30,
+                CommandTimeout = 60
             };
             _connectionString = builder.ConnectionString;
         }

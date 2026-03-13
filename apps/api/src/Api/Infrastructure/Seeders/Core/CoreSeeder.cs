@@ -44,7 +44,7 @@ internal static class CoreSeeder
     private static async Task<Guid> GetAdminUserIdAsync(MeepleAiDbContext db, CancellationToken ct)
     {
         var adminUser = await db.Users
-            .FirstOrDefaultAsync(u => u.Role == "admin", ct)
+            .FirstOrDefaultAsync(u => u.Role == "admin" || u.Role == "superadmin", ct)
             .ConfigureAwait(false);
 
         return adminUser?.Id ?? Guid.Empty;

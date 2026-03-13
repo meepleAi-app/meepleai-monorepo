@@ -303,7 +303,7 @@ export function CatalogWizard() {
                 <div className="text-xs text-green-700 dark:text-green-400">Succeeded</div>
               </div>
               <div className="rounded-lg bg-red-50 p-3 text-center dark:bg-red-900/20">
-                <div className="text-2xl font-bold text-red-600">{uploadResult.failureCount}</div>
+                <div className="text-2xl font-bold text-red-600">{uploadResult.failedCount}</div>
                 <div className="text-xs text-red-700 dark:text-red-400">Failed</div>
               </div>
               <div className="rounded-lg bg-zinc-50 p-3 text-center dark:bg-zinc-800">
@@ -313,10 +313,10 @@ export function CatalogWizard() {
                 <div className="text-xs text-zinc-500">Total</div>
               </div>
             </div>
-            {uploadResult.results.length > 0 && (
+            {uploadResult.items.length > 0 && (
               <div className="space-y-2">
                 <h4 className="text-sm font-medium">File Results</h4>
-                {uploadResult.results.map((item, index) => (
+                {uploadResult.items.map((item, index) => (
                   <div
                     key={`${item.fileName}-${index}`}
                     className="flex items-center justify-between rounded-lg border p-2"
@@ -325,7 +325,7 @@ export function CatalogWizard() {
                     {item.success ? (
                       <CheckCircle2 className="h-4 w-4 text-green-500" />
                     ) : (
-                      <span className="text-xs text-red-500">{item.errorMessage}</span>
+                      <span className="text-xs text-red-500">{item.error}</span>
                     )}
                   </div>
                 ))}

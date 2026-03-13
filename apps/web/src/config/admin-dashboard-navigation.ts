@@ -49,6 +49,7 @@ import {
   HeartPulseIcon,
   BarChart3Icon,
   BoxIcon,
+  FlaskConicalIcon,
 } from 'lucide-react';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -240,6 +241,11 @@ export const DASHBOARD_SECTIONS: DashboardSection[] = [
         href: '/admin/agents/debug-chat',
         label: 'Debug Chat',
         icon: MessageSquareCodeIcon,
+      },
+      {
+        href: '/admin/agents/sandbox',
+        label: 'RAG Sandbox',
+        icon: FlaskConicalIcon,
       },
       {
         href: '/admin/agents/strategy',

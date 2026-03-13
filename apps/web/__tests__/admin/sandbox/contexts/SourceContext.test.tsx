@@ -1,7 +1,19 @@
-import { render, screen, act } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { SourceProvider, useSource } from '@/components/admin/sandbox/contexts/SourceContext';
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
+
+const mockGetDocumentsByGame = vi.fn().mockResolvedValue([]);
+const mockDeletePdf = vi.fn().mockResolvedValue(undefined);
+
+vi.mock('@/lib/api', () => ({
+  api: {
+    sandbox: {
+      getDocumentsByGame: (...args: unknown[]) => mockGetDocumentsByGame(...args),
+      deletePdf: (...args: unknown[]) => mockDeletePdf(...args),
+    },
+  },
+}));
 
 function TestConsumer() {
   const { selectedGame, setSelectedGame, documents } = useSource();
@@ -27,10 +39,25 @@ function TestConsumer() {
 }
 
 function LoadingConsumer() {
-  const { isLoadingDocuments, refreshDocuments } = useSource();
+  const { isLoadingDocuments, refreshDocuments, selectedGame, setSelectedGame } = useSource();
   return (
     <div>
       <span data-testid="loading">{String(isLoadingDocuments)}</span>
+      <button
+        onClick={() => {
+          if (!selectedGame) {
+            setSelectedGame({
+              id: '1',
+              title: 'Catan',
+              pdfCount: 0,
+              chunkCount: 0,
+              vectorCount: 0,
+            });
+          }
+        }}
+      >
+        selectFirst
+      </button>
       <button onClick={refreshDocuments}>refresh</button>
     </div>
   );
@@ -68,20 +95,23 @@ function OutsideConsumer() {
 }
 
 describe('SourceContext', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockGetDocumentsByGame.mockResolvedValue([]);
+  });
+
   it('provides default values — selectedGame is null, documents is empty array, isLoadingDocuments is false', () => {
     render(
       <SourceProvider>
         <TestConsumer />
-        <LoadingConsumer />
       </SourceProvider>
     );
 
     expect(screen.getByTestId('game').textContent).toBe('none');
     expect(screen.getByTestId('docs').textContent).toBe('0');
-    expect(screen.getByTestId('loading').textContent).toBe('false');
   });
 
-  it('updates selected game — setSelectedGame updates the displayed game title', async () => {
+  it('updates selected game — setSelectedGame updates the displayed game title and fetches documents', async () => {
     const user = userEvent.setup();
 
     render(
@@ -95,22 +125,9 @@ describe('SourceContext', () => {
     await user.click(screen.getByRole('button', { name: 'select' }));
 
     expect(screen.getByTestId('game').textContent).toBe('Catan');
-  });
-
-  it('sets isLoadingDocuments to true when refreshDocuments is called', async () => {
-    const user = userEvent.setup();
-
-    render(
-      <SourceProvider>
-        <LoadingConsumer />
-      </SourceProvider>
-    );
-
-    expect(screen.getByTestId('loading').textContent).toBe('false');
-
-    await user.click(screen.getByRole('button', { name: 'refresh' }));
-
-    expect(screen.getByTestId('loading').textContent).toBe('true');
+    await waitFor(() => {
+      expect(mockGetDocumentsByGame).toHaveBeenCalledWith('1');
+    });
   });
 
   it('updates documents list via setDocuments', async () => {

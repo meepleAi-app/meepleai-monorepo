@@ -2,6 +2,10 @@
 
 import { createContext, useContext, useState, useMemo, useCallback, type ReactNode } from 'react';
 
+import { api } from '@/lib/api';
+
+import { useSource } from './SourceContext';
+
 export interface AgentConfigDraft {
   // RAG Strategy
   strategy: string;
@@ -51,6 +55,7 @@ interface SandboxSessionContextValue {
   isDirty: boolean;
   pendingChanges: number;
   isApplying: boolean;
+  applyError: string | null;
 }
 
 const SandboxSessionContext = createContext<SandboxSessionContextValue | null>(null);
@@ -60,6 +65,8 @@ export function SandboxSessionProvider({ children }: { children: ReactNode }) {
   const [agentConfig, setAgentConfig] = useState<AgentConfigDraft>({ ...DEFAULT_CONFIG });
   const [appliedConfig, setAppliedConfig] = useState<AgentConfigDraft>({ ...DEFAULT_CONFIG });
   const [isApplying, setIsApplying] = useState(false);
+  const [applyError, setApplyError] = useState<string | null>(null);
+  const { selectedGame } = useSource();
 
   const updateConfig = useCallback((partial: Partial<AgentConfigDraft>) => {
     setAgentConfig(prev => {
@@ -72,17 +79,36 @@ export function SandboxSessionProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const applyConfig = useCallback(async () => {
+    if (!selectedGame) return;
+
     setIsApplying(true);
+    setApplyError(null);
     try {
-      // Will call POST /admin/sandbox/apply-config when wired
+      await api.sandbox.applyConfig({
+        gameId: selectedGame.id,
+        strategy: agentConfig.strategy || undefined,
+        denseWeight: agentConfig.denseWeight,
+        topK: agentConfig.topK,
+        rerankingEnabled: agentConfig.reranking,
+        temperature: agentConfig.temperature,
+        maxTokens: agentConfig.maxTokens,
+        model: agentConfig.model || undefined,
+        systemPromptOverride: agentConfig.systemPromptOverride || undefined,
+        chunkingStrategy: agentConfig.chunkStrategy || undefined,
+        chunkSize: agentConfig.chunkSize,
+        chunkOverlap: agentConfig.overlap,
+      });
       setAppliedConfig({ ...agentConfig });
+    } catch (err) {
+      setApplyError(err instanceof Error ? err.message : 'Failed to apply config');
     } finally {
       setIsApplying(false);
     }
-  }, [agentConfig]);
+  }, [agentConfig, selectedGame]);
 
   const resetConfig = useCallback(() => {
     setAgentConfig({ ...DEFAULT_CONFIG });
+    setApplyError(null);
   }, []);
 
   const pendingChanges = useMemo(() => {
@@ -104,6 +130,7 @@ export function SandboxSessionProvider({ children }: { children: ReactNode }) {
         isDirty,
         pendingChanges,
         isApplying,
+        applyError,
       }}
     >
       {children}

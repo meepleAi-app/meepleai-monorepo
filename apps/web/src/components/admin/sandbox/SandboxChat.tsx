@@ -5,6 +5,8 @@ import { useState, useRef, useEffect, useCallback, type KeyboardEvent } from 're
 import { Send, MessageSquare, Clock, Layers, BarChart3 } from 'lucide-react';
 
 import { usePipeline } from '@/components/admin/sandbox/contexts/PipelineContext';
+import { useSandboxSession } from '@/components/admin/sandbox/contexts/SandboxSessionContext';
+import { useSource } from '@/components/admin/sandbox/contexts/SourceContext';
 import { Button } from '@/components/ui/button';
 import {
   Tooltip,
@@ -12,135 +14,92 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/data-display/tooltip';
+import { useDebugChatStream, type DebugEvent } from '@/hooks/useDebugChatStream';
 
-import type { ChatMessage, RetrievedChunk, PipelineTrace } from './types';
+import type { ChatMessage, RetrievedChunk, PipelineTrace, PipelineTraceStep } from './types';
 
 interface SandboxChatProps {
   selectedMessageId: string | null;
   onSelectMessage: (id: string) => void;
 }
 
-function generateMockChunks(): RetrievedChunk[] {
-  return [
-    {
-      id: crypto.randomUUID(),
-      score: 0.85,
-      text: 'Il gioco si prepara distribuendo le carte iniziali a ciascun giocatore e posizionando il tabellone al centro del tavolo.',
-      page: 3,
-      chunkIndex: 0,
-      pdfName: 'regolamento.pdf',
-      used: true,
-    },
-    {
-      id: crypto.randomUUID(),
-      score: 0.72,
-      text: 'Ogni giocatore riceve 5 risorse iniziali e un segnalino del colore scelto.',
-      page: 4,
-      chunkIndex: 1,
-      pdfName: 'regolamento.pdf',
-      used: true,
-    },
-    {
-      id: crypto.randomUUID(),
-      score: 0.45,
-      text: 'Le carte bonus vengono mescolate e poste coperte accanto al tabellone principale.',
-      page: 5,
-      chunkIndex: 2,
-      pdfName: 'regolamento.pdf',
-      used: false,
-    },
-  ];
+/**
+ * Build RetrievedChunk[] from debug events.
+ * The DebugRetrievalResults event contains chunk data.
+ */
+function extractChunksFromDebug(debugEvents: DebugEvent[]): RetrievedChunk[] {
+  const retrievalEvent = debugEvents.find(
+    e => e.type === 13 // DebugRetrievalResults
+  );
+  if (!retrievalEvent?.data) return [];
+
+  const data = retrievalEvent.data as {
+    results?: Array<{
+      id?: string;
+      score?: number;
+      text?: string;
+      page?: number;
+      chunkIndex?: number;
+      pdfName?: string;
+      used?: boolean;
+    }>;
+  };
+
+  return (data.results || []).map((r, i) => ({
+    id: r.id || crypto.randomUUID(),
+    score: r.score ?? 0,
+    text: r.text || '',
+    page: r.page ?? 0,
+    chunkIndex: r.chunkIndex ?? i,
+    pdfName: r.pdfName || 'unknown',
+    used: r.used ?? true,
+  }));
 }
 
-function generateMockTrace(): PipelineTrace {
-  return {
-    steps: [
-      {
-        name: 'Query Analysis',
-        durationMs: 12,
-        details: { language: 'it', intent: 'setup_rules', entities: 2 },
-      },
-      {
-        name: 'Dense Search',
-        durationMs: 45,
-        details: { collection: 'game_docs', candidates: 50, topScore: 0.85 },
-      },
-      { name: 'Sparse Search', durationMs: 28, details: { bm25Matches: 12, topScore: 0.72 } },
-      {
-        name: 'Hybrid Merge',
-        durationMs: 5,
-        details: { denseWeight: 0.7, sparseWeight: 0.3, uniqueResults: 15 },
-      },
-      {
-        name: 'Reranking',
-        durationMs: 120,
-        details: { model: 'cross-encoder/ms-marco', inputCount: 15, outputCount: 5 },
-      },
-      {
-        name: 'LLM Generation',
-        durationMs: 890,
-        details: {
-          model: 'openrouter/gpt-4',
-          tokensIn: 1200,
-          tokensOut: 350,
-          temperature: 0.3,
-          cost: 0.004,
-        },
-      },
-    ],
-    totalDurationMs: 1100,
-  };
+/**
+ * Build PipelineTrace from debug events timing data.
+ */
+function buildTraceFromDebug(debugEvents: DebugEvent[]): PipelineTrace {
+  const steps: PipelineTraceStep[] = debugEvents
+    .filter(e => e.type >= 10)
+    .map(e => ({
+      name: e.typeName,
+      durationMs: e.elapsedMs,
+      details:
+        typeof e.data === 'object' && e.data !== null
+          ? (e.data as Record<string, string | number>)
+          : {},
+    }));
+
+  const totalDurationMs = steps.length > 0 ? steps[steps.length - 1].durationMs : 0;
+
+  return { steps, totalDurationMs };
 }
 
 export function SandboxChat({ selectedMessageId, onSelectMessage }: SandboxChatProps) {
   const { isAllReady } = usePipeline();
+  const { selectedGame } = useSource();
+  const { appliedConfig } = useSandboxSession();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
-  const [isSending, setIsSending] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  const scrollToBottom = useCallback(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, []);
-
-  useEffect(() => {
-    scrollToBottom();
-  }, [messages, scrollToBottom]);
-
-  // Auto-resize textarea
-  useEffect(() => {
-    const textarea = textareaRef.current;
-    if (textarea) {
-      textarea.style.height = 'auto';
-      textarea.style.height = `${Math.min(textarea.scrollHeight, 120)}px`;
-    }
-  }, [input]);
-
-  const handleSend = useCallback(async () => {
-    const trimmed = input.trim();
-    if (!trimmed || isSending || !isAllReady) return;
-
-    const userMessage: ChatMessage = {
-      id: crypto.randomUUID(),
-      role: 'user',
-      content: trimmed,
-    };
-
-    setMessages(prev => [...prev, userMessage]);
-    setInput('');
-    setIsSending(true);
-
-    // Mock assistant response after delay
-    setTimeout(() => {
-      const chunks = generateMockChunks();
-      const trace = generateMockTrace();
-      const avgConfidence = chunks.reduce((sum, c) => sum + c.score, 0) / chunks.length;
+  const {
+    state: streamState,
+    sendMessage: sendStreamMessage,
+    stopStreaming,
+  } = useDebugChatStream({
+    onComplete: (answer, metadata) => {
+      const chunks = extractChunksFromDebug(metadata.debugEvents);
+      const trace = buildTraceFromDebug(metadata.debugEvents);
+      const avgConfidence =
+        chunks.length > 0 ? chunks.reduce((sum, c) => sum + c.score, 0) / chunks.length : 0;
 
       const assistantMessage: ChatMessage = {
         id: crypto.randomUUID(),
         role: 'assistant',
-        content: `Basandomi sul regolamento, ecco la risposta alla tua domanda: "${trimmed}". Il gioco prevede una fase di preparazione in cui ogni giocatore riceve le carte iniziali e le risorse di partenza.`,
+        content: answer,
         metadata: {
           latencyMs: trace.totalDurationMs,
           chunkCount: chunks.length,
@@ -151,9 +110,75 @@ export function SandboxChat({ selectedMessageId, onSelectMessage }: SandboxChatP
       };
 
       setMessages(prev => [...prev, assistantMessage]);
-      setIsSending(false);
-    }, 500);
-  }, [input, isSending, isAllReady]);
+    },
+    onError: errorMsg => {
+      const errorMessage: ChatMessage = {
+        id: crypto.randomUUID(),
+        role: 'assistant',
+        content: `Errore: ${errorMsg}`,
+      };
+      setMessages(prev => [...prev, errorMessage]);
+    },
+  });
+
+  const scrollToBottom = useCallback(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, []);
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages, streamState.currentAnswer, scrollToBottom]);
+
+  // Auto-resize textarea
+  useEffect(() => {
+    const textarea = textareaRef.current;
+    if (textarea) {
+      textarea.style.height = 'auto';
+      textarea.style.height = `${Math.min(textarea.scrollHeight, 120)}px`;
+    }
+  }, [input]);
+
+  const handleSend = useCallback(() => {
+    const trimmed = input.trim();
+    if (!trimmed || streamState.isStreaming || !isAllReady || !selectedGame) return;
+
+    const userMessage: ChatMessage = {
+      id: crypto.randomUUID(),
+      role: 'user',
+      content: trimmed,
+    };
+
+    setMessages(prev => [...prev, userMessage]);
+    setInput('');
+
+    // Build configOverride from applied config
+    const configOverride = {
+      denseWeight: appliedConfig.denseWeight,
+      topK: appliedConfig.topK,
+      rerankingEnabled: appliedConfig.reranking,
+      temperature: appliedConfig.temperature,
+      maxTokens: appliedConfig.maxTokens,
+      model: appliedConfig.model || undefined,
+    };
+
+    sendStreamMessage(
+      selectedGame.id,
+      trimmed,
+      appliedConfig.strategy || undefined,
+      streamState.chatThreadId || undefined,
+      configOverride,
+      undefined, // documentIds
+      true // includePrompts for debug
+    );
+  }, [
+    input,
+    streamState.isStreaming,
+    streamState.chatThreadId,
+    isAllReady,
+    selectedGame,
+    appliedConfig,
+    sendStreamMessage,
+  ]);
 
   const handleKeyDown = useCallback(
     (e: KeyboardEvent<HTMLTextAreaElement>) => {
@@ -165,13 +190,13 @@ export function SandboxChat({ selectedMessageId, onSelectMessage }: SandboxChatP
     [handleSend]
   );
 
-  const isDisabled = !isAllReady;
+  const isDisabled = !isAllReady || !selectedGame;
 
   return (
     <div className="flex h-full flex-col" data-testid="sandbox-chat">
       {/* Messages area */}
       <div className="flex-1 overflow-y-auto p-4 space-y-3" data-testid="messages-area">
-        {messages.length === 0 && (
+        {messages.length === 0 && !streamState.currentAnswer && (
           <div className="flex flex-col items-center justify-center h-full gap-3 text-muted-foreground">
             <MessageSquare className="h-10 w-10 opacity-30" />
             <p className="font-nunito text-sm" data-testid="welcome-message">
@@ -221,7 +246,20 @@ export function SandboxChat({ selectedMessageId, onSelectMessage }: SandboxChatP
           </div>
         ))}
 
-        {isSending && (
+        {/* Streaming response in-progress */}
+        {streamState.isStreaming && streamState.currentAnswer && (
+          <div className="flex justify-start">
+            <div className="max-w-[85%] rounded-lg px-3 py-2 bg-white border border-gray-200 font-nunito text-sm">
+              <p className="whitespace-pre-wrap">{streamState.currentAnswer}</p>
+              <div className="mt-1 text-xs text-muted-foreground animate-pulse">
+                {streamState.statusMessage || 'Generazione in corso...'}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Typing indicator */}
+        {streamState.isStreaming && !streamState.currentAnswer && (
           <div className="flex justify-start">
             <div className="rounded-lg border border-gray-200 bg-white px-3 py-2">
               <div className="flex items-center gap-1">
@@ -268,7 +306,7 @@ export function SandboxChat({ selectedMessageId, onSelectMessage }: SandboxChatP
             size="icon"
             className="shrink-0 bg-amber-500 hover:bg-amber-600 text-white"
             onClick={handleSend}
-            disabled={isDisabled || !input.trim() || isSending}
+            disabled={isDisabled || !input.trim() || streamState.isStreaming}
           >
             <Send className="h-4 w-4" />
           </Button>

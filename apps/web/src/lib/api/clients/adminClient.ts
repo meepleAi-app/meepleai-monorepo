@@ -3246,6 +3246,46 @@ export function createAdminClient({ httpClient }: CreateAdminClientParams) {
     async deactivateEmergencyOverride(action: string): Promise<void> {
       await httpClient.post('/api/v1/admin/llm/emergency/deactivate', { action });
     },
+
+    // ========== Issue #119: Shared Game Documents ==========
+
+    /**
+     * Get all documents for a shared game with PDF processing status.
+     * GET /api/v1/admin/shared-games/:gameId/documents
+     */
+    async getSharedGameDocuments(gameId: string): Promise<SharedGameDocumentsResult> {
+      const response = await httpClient.get(
+        `/api/v1/admin/shared-games/${gameId}/documents/overview`
+      );
+      return response as SharedGameDocumentsResult;
+    },
+
+    // ========== Issue #117: Bulk PDF Upload ==========
+
+    /**
+     * Bulk upload PDFs for a shared game.
+     * POST /api/v1/admin/shared-games/:gameId/documents/bulk-upload
+     */
+    async bulkUploadPdfs(gameId: string, files: File[]): Promise<BulkUploadPdfsResult> {
+      const formData = new FormData();
+      files.forEach(file => formData.append('files', file));
+      const response = await httpClient.post(
+        `/api/v1/admin/shared-games/${gameId}/documents/bulk-upload`,
+        formData
+      );
+      return response as BulkUploadPdfsResult;
+    },
+
+    // ========== Issue #113: MAU Monitoring ==========
+
+    /**
+     * Get Monthly Active AI Users data.
+     * GET /api/v1/admin/monitoring/mau?period={7|30|90}
+     */
+    async getActiveAiUsers(period: number = 30): Promise<ActiveAiUsersResult> {
+      const response = await httpClient.get(`/api/v1/admin/monitoring/mau?period=${period}`);
+      return response as ActiveAiUsersResult;
+    },
   };
 }
 
@@ -3574,3 +3614,72 @@ export type KBClearCacheResponse = {
   message: string;
   clearedAt: string | null;
 };
+
+// ========== Issue #119: Shared Game Documents Schemas ==========
+
+export const SharedGameDocumentDetailSchema = z.object({
+  id: z.string(),
+  sharedGameId: z.string(),
+  fileName: z.string(),
+  documentType: z.string(),
+  approvalStatus: z.string(),
+  description: z.string().nullable(),
+  tags: z.array(z.string()),
+  processingState: z.string().nullable(),
+  fileSizeBytes: z.number().nullable(),
+  uploadedAt: z.string().nullable(),
+});
+
+export type SharedGameDocumentDetail = z.infer<typeof SharedGameDocumentDetailSchema>;
+
+export const SharedGameDocumentsResultSchema = z.object({
+  sharedGameId: z.string(),
+  documents: z.array(SharedGameDocumentDetailSchema),
+  totalCount: z.number(),
+});
+
+export type SharedGameDocumentsResult = z.infer<typeof SharedGameDocumentsResultSchema>;
+
+// ========== Issue #117: Bulk Upload Schemas ==========
+
+export const BulkUploadItemResultSchema = z.object({
+  fileName: z.string(),
+  success: z.boolean(),
+  documentId: z.string().nullable(),
+  error: z.string().nullable(),
+});
+
+export type BulkUploadItemResult = z.infer<typeof BulkUploadItemResultSchema>;
+
+export const BulkUploadPdfsResultSchema = z.object({
+  totalRequested: z.number(),
+  successCount: z.number(),
+  failedCount: z.number(),
+  items: z.array(BulkUploadItemResultSchema),
+});
+
+export type BulkUploadPdfsResult = z.infer<typeof BulkUploadPdfsResultSchema>;
+
+// ========== Issue #113: MAU Monitoring Schemas ==========
+
+export const DailyActiveUsersSchema = z.object({
+  date: z.string(),
+  activeUsers: z.number(),
+  aiChatUsers: z.number(),
+  pdfUploadUsers: z.number(),
+});
+
+export type DailyActiveUsers = z.infer<typeof DailyActiveUsersSchema>;
+
+export const ActiveAiUsersResultSchema = z.object({
+  totalActiveUsers: z.number(),
+  aiChatUsers: z.number(),
+  pdfUploadUsers: z.number(),
+  agentUsers: z.number(),
+  periodDays: z.number(),
+  periodStart: z.string(),
+  periodEnd: z.string(),
+  dailyBreakdown: z.array(DailyActiveUsersSchema),
+});
+
+export type ActiveAiUsersResult = z.infer<typeof ActiveAiUsersResultSchema>;

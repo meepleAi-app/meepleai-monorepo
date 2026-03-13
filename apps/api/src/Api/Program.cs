@@ -510,6 +510,7 @@ v1Api.MapSessionStatisticsEndpoints(); // P4: Session analytics dashboard
 v1Api.MapSharedGameCatalogEndpoints(); // ISSUE-2371: Shared game catalog Phase 2
 app.MapAdminGameImportWizardEndpoints(); // Issue #4157: Admin game import wizard
 v1Api.MapAdminGameWizardEndpoints();    // Admin Game+PDF+Agent Wizard
+v1Api.MapAdminSharedGameContentEndpoints(); // Issue #236: Admin shared game content + MAU monitoring
 v1Api.MapAdminAgentTestEndpoints();     // Admin Agent Auto-Test Suite
 v1Api.MapAdminOpenRouterEndpoints();    // Issue #5077: OpenRouter usage monitoring dashboard
 v1Api.MapAdminEmergencyControlsEndpoints(); // Issue #5476: LLM emergency controls

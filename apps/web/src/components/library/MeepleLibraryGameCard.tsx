@@ -356,7 +356,7 @@ export function MeepleLibraryGameCard({
       minPlayers: game.minPlayers,
       maxPlayers: game.maxPlayers,
       averageRating: game.averageRating,
-      timesPlayed: 0,
+      // timesPlayed, winRate, totalPlayTimeMinutes: populated when session aggregate API is available
       hasKb: game.hasKb,
       kbCardCount: game.kbCardCount,
       kbDocuments: kbDocuments?.map(d => ({
@@ -387,9 +387,6 @@ export function MeepleLibraryGameCard({
         : undefined,
       onToggleFavorite: handleToggleFavorite,
       isFavorite: game.isFavorite,
-      onNewSession: () => {
-        navigateWithTransition(`/library/games/${game.gameId}/sessions/new`);
-      },
     };
   }, [
     flippable,

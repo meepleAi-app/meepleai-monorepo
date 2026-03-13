@@ -1,25 +1,39 @@
 /**
  * New Game Client Component - New Admin Dashboard
  *
- * Minimal form: Title, Description, Year, Min/Max Players, Playing Time, Min Age.
- * Optional: Image URL. Submits via api.sharedGames.create() then redirects to detail page.
+ * Form with BGG search integration for auto-filling game data.
+ * Fields: Title, Description, Year, Min/Max Players, Playing Time, Min Age,
+ * Image URL, Categories, Mechanics, Designers, Publishers, Ratings.
+ * Submits via api.sharedGames.create() then redirects to detail page.
  */
 
 'use client';
 
+import { useState } from 'react';
+
 import { zodResolver } from '@hookform/resolvers/zod';
+import { useQuery } from '@tanstack/react-query';
 import { ArrowLeft, Loader2, Plus } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useForm, type Resolver } from 'react-hook-form';
 import { z } from 'zod';
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/data-display/card';
+import { BggSearchPanel } from '@/components/admin/shared-games/BggSearchPanel';
+import { MetadataTagInput } from '@/components/admin/shared-games/MetadataTagInput';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/data-display/card';
 import { Alert, AlertDescription } from '@/components/ui/feedback/alert';
 import { Button } from '@/components/ui/primitives/button';
 import { Input } from '@/components/ui/primitives/input';
 import { Label } from '@/components/ui/primitives/label';
 import { Textarea } from '@/components/ui/primitives/textarea';
 import { api } from '@/lib/api';
+import type { BggFullGameData } from '@/types/bgg';
 
 // ─── Form schema ──────────────────────────────────────────────────────────────
 
@@ -27,15 +41,27 @@ const NewGameSchema = z
   .object({
     title: z.string().min(1, 'Title is required').max(255),
     description: z.string().min(1, 'Description is required'),
-    yearPublished: z.coerce.number().int().min(1900, 'Year must be ≥ 1900').max(2100, 'Year must be ≤ 2100'),
+    yearPublished: z.coerce
+      .number()
+      .int()
+      .min(1900, 'Year must be >= 1900')
+      .max(2100, 'Year must be <= 2100'),
     minPlayers: z.coerce.number().int().min(1, 'Min 1 player').max(100),
     maxPlayers: z.coerce.number().int().min(1, 'Min 1 player').max(100),
     playingTimeMinutes: z.coerce.number().int().min(1, 'Min 1 minute').max(10000),
     minAge: z.coerce.number().int().min(0).max(100).default(0),
     imageUrl: z.union([z.string().url('Enter a valid URL'), z.literal('')]).optional(),
+    thumbnailUrl: z.union([z.string().url(), z.literal('')]).optional(),
+    bggId: z.coerce.number().int().positive().optional(),
+    complexityRating: z.coerce.number().min(0).max(5).optional(),
+    averageRating: z.coerce.number().min(0).max(10).optional(),
+    categories: z.array(z.string()).default([]),
+    mechanics: z.array(z.string()).default([]),
+    designers: z.array(z.string()).default([]),
+    publishers: z.array(z.string()).default([]),
   })
-  .refine((data) => data.maxPlayers >= data.minPlayers, {
-    message: 'Max players must be ≥ min players',
+  .refine(data => data.maxPlayers >= data.minPlayers, {
+    message: 'Max players must be >= min players',
     path: ['maxPlayers'],
   });
 
@@ -45,12 +71,16 @@ type NewGameFormData = z.infer<typeof NewGameSchema>;
 
 export function NewGameClient() {
   const router = useRouter();
+  const [selectedBggId, setSelectedBggId] = useState<number | null>(null);
+  const [bggFilledFields, setBggFilledFields] = useState<Set<string>>(new Set());
 
   const {
     register,
     handleSubmit,
     formState: { errors, isSubmitting },
     setError,
+    setValue,
+    watch,
   } = useForm<NewGameFormData>({
     // Type assertion needed because z.coerce.number() creates unknown input type in Zod v4
     resolver: zodResolver(NewGameSchema) as Resolver<NewGameFormData>,
@@ -60,8 +90,52 @@ export function NewGameClient() {
       maxPlayers: 4,
       playingTimeMinutes: 60,
       minAge: 10,
+      categories: [],
+      mechanics: [],
+      designers: [],
+      publishers: [],
     },
   });
+
+  // Fetch autocomplete suggestions for metadata tag inputs
+  const { data: distinctMetadata } = useQuery({
+    queryKey: ['shared-games', 'metadata', 'distinct'],
+    queryFn: () => api.sharedGames.getDistinctMetadata(),
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const onBggSelect = (data: BggFullGameData) => {
+    const fieldsToFill: Record<string, unknown> = {
+      title: data.name,
+      description: data.description ?? '',
+      yearPublished: data.yearPublished,
+      minPlayers: data.minPlayers,
+      maxPlayers: data.maxPlayers,
+      playingTimeMinutes: data.playingTime,
+      minAge: data.minAge ?? 0,
+      imageUrl: data.imageUrl ?? '',
+      thumbnailUrl: data.thumbnailUrl ?? '',
+      bggId: data.id,
+      complexityRating: data.complexityRating,
+      averageRating: data.averageRating,
+      categories: data.categories,
+      mechanics: data.mechanics,
+      designers: data.designers,
+      publishers: data.publishers,
+    };
+
+    const filled = new Set<string>();
+    for (const [key, value] of Object.entries(fieldsToFill)) {
+      if (value !== undefined && value !== null) {
+        setValue(key as keyof NewGameFormData, value as never, { shouldValidate: true });
+        filled.add(key);
+      }
+    }
+    setBggFilledFields(filled);
+    setSelectedBggId(data.id);
+  };
+
+  const bggFieldClass = (field: string) => (bggFilledFields.has(field) ? 'bg-orange-50/50' : '');
 
   const onSubmit = async (data: NewGameFormData) => {
     try {
@@ -74,7 +148,15 @@ export function NewGameClient() {
         playingTimeMinutes: data.playingTimeMinutes,
         minAge: data.minAge,
         imageUrl: data.imageUrl || 'https://placehold.co/300x300?text=No+Image',
-        thumbnailUrl: data.imageUrl || 'https://placehold.co/150x150?text=No+Image',
+        thumbnailUrl:
+          data.thumbnailUrl || data.imageUrl || 'https://placehold.co/150x150?text=No+Image',
+        bggId: data.bggId,
+        complexityRating: data.complexityRating,
+        averageRating: data.averageRating,
+        categories: data.categories,
+        mechanics: data.mechanics,
+        designers: data.designers,
+        publishers: data.publishers,
       });
       router.push(`/admin/shared-games/${gameId}`);
     } catch (err) {
@@ -111,6 +193,18 @@ export function NewGameClient() {
         </div>
       </div>
 
+      {/* BGG Search Section */}
+      <div className="mb-6">
+        <BggSearchPanel onSelect={onBggSelect} />
+        {selectedBggId && (
+          <div className="mt-2 flex items-center gap-2">
+            <span className="inline-flex items-center rounded-full bg-blue-100 px-3 py-1 text-sm font-medium text-blue-800">
+              Linked to BGG #{selectedBggId}
+            </span>
+          </div>
+        )}
+      </div>
+
       {/* Form card */}
       <Card className="bg-white/70 dark:bg-zinc-800/70 backdrop-blur-md border-slate-200/50 dark:border-zinc-700/50">
         <CardHeader>
@@ -138,11 +232,9 @@ export function NewGameClient() {
                 id="title"
                 placeholder="e.g. Catan"
                 {...register('title')}
-                className={errors.title ? 'border-destructive' : ''}
+                className={`${errors.title ? 'border-destructive' : ''} ${bggFieldClass('title')}`}
               />
-              {errors.title && (
-                <p className="text-xs text-destructive">{errors.title.message}</p>
-              )}
+              {errors.title && <p className="text-xs text-destructive">{errors.title.message}</p>}
             </div>
 
             {/* Description */}
@@ -155,7 +247,7 @@ export function NewGameClient() {
                 rows={4}
                 placeholder="Brief description of the game..."
                 {...register('description')}
-                className={errors.description ? 'border-destructive' : ''}
+                className={`${errors.description ? 'border-destructive' : ''} ${bggFieldClass('description')}`}
               />
               {errors.description && (
                 <p className="text-xs text-destructive">{errors.description.message}</p>
@@ -172,7 +264,7 @@ export function NewGameClient() {
                   id="yearPublished"
                   type="number"
                   {...register('yearPublished')}
-                  className={errors.yearPublished ? 'border-destructive' : ''}
+                  className={`${errors.yearPublished ? 'border-destructive' : ''} ${bggFieldClass('yearPublished')}`}
                 />
                 {errors.yearPublished && (
                   <p className="text-xs text-destructive">{errors.yearPublished.message}</p>
@@ -187,7 +279,7 @@ export function NewGameClient() {
                   id="playingTimeMinutes"
                   type="number"
                   {...register('playingTimeMinutes')}
-                  className={errors.playingTimeMinutes ? 'border-destructive' : ''}
+                  className={`${errors.playingTimeMinutes ? 'border-destructive' : ''} ${bggFieldClass('playingTimeMinutes')}`}
                 />
                 {errors.playingTimeMinutes && (
                   <p className="text-xs text-destructive">{errors.playingTimeMinutes.message}</p>
@@ -205,7 +297,7 @@ export function NewGameClient() {
                   id="minPlayers"
                   type="number"
                   {...register('minPlayers')}
-                  className={errors.minPlayers ? 'border-destructive' : ''}
+                  className={`${errors.minPlayers ? 'border-destructive' : ''} ${bggFieldClass('minPlayers')}`}
                 />
                 {errors.minPlayers && (
                   <p className="text-xs text-destructive">{errors.minPlayers.message}</p>
@@ -220,7 +312,7 @@ export function NewGameClient() {
                   id="maxPlayers"
                   type="number"
                   {...register('maxPlayers')}
-                  className={errors.maxPlayers ? 'border-destructive' : ''}
+                  className={`${errors.maxPlayers ? 'border-destructive' : ''} ${bggFieldClass('maxPlayers')}`}
                 />
                 {errors.maxPlayers && (
                   <p className="text-xs text-destructive">{errors.maxPlayers.message}</p>
@@ -233,6 +325,7 @@ export function NewGameClient() {
                   id="minAge"
                   type="number"
                   {...register('minAge')}
+                  className={bggFieldClass('minAge')}
                 />
               </div>
             </div>
@@ -247,7 +340,7 @@ export function NewGameClient() {
                 type="url"
                 placeholder="https://example.com/image.jpg"
                 {...register('imageUrl')}
-                className={errors.imageUrl ? 'border-destructive' : ''}
+                className={`${errors.imageUrl ? 'border-destructive' : ''} ${bggFieldClass('imageUrl')}`}
               />
               {errors.imageUrl && (
                 <p className="text-xs text-destructive">{errors.imageUrl.message}</p>
@@ -256,6 +349,70 @@ export function NewGameClient() {
                 Leave empty to use a placeholder. You can update it later.
               </p>
             </div>
+
+            {/* BGG Metadata */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <MetadataTagInput
+                label="Categories"
+                tags={watch('categories') ?? []}
+                onChange={tags => setValue('categories', tags)}
+                maxTags={50}
+                colorClass="bg-purple-100 text-purple-800"
+                suggestions={distinctMetadata?.categories ?? []}
+              />
+              <MetadataTagInput
+                label="Mechanics"
+                tags={watch('mechanics') ?? []}
+                onChange={tags => setValue('mechanics', tags)}
+                maxTags={50}
+                colorClass="bg-rose-100 text-rose-800"
+                suggestions={distinctMetadata?.mechanics ?? []}
+              />
+              <MetadataTagInput
+                label="Designers"
+                tags={watch('designers') ?? []}
+                onChange={tags => setValue('designers', tags)}
+                maxTags={20}
+                colorClass="bg-green-100 text-green-800"
+                suggestions={distinctMetadata?.designers ?? []}
+              />
+              <MetadataTagInput
+                label="Publishers"
+                tags={watch('publishers') ?? []}
+                onChange={tags => setValue('publishers', tags)}
+                maxTags={20}
+                colorClass="bg-amber-100 text-amber-800"
+                suggestions={distinctMetadata?.publishers ?? []}
+              />
+            </div>
+
+            {/* Ratings (only show when BGG data is loaded) */}
+            {selectedBggId && (
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <Label>Complexity Rating (0-5)</Label>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    max="5"
+                    {...register('complexityRating', { valueAsNumber: true })}
+                    className={bggFieldClass('complexityRating')}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Average Rating (0-10)</Label>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    max="10"
+                    {...register('averageRating', { valueAsNumber: true })}
+                    className={bggFieldClass('averageRating')}
+                  />
+                </div>
+              </div>
+            )}
 
             {/* Actions */}
             <div className="flex gap-3 pt-2">

@@ -108,6 +108,9 @@ export * from './live-sessions.schemas';
 // Session Tracking schemas (Issue #5041 — Sessions Redesign)
 export * from './session-tracking.schemas';
 
+// AI Score Tracking schemas (Issue #121)
+export * from './score-tracking.schemas';
+
 // LLM System Configuration schemas (Issue #5495)
 export * from './llm-system-config.schemas';
 
@@ -119,3 +122,18 @@ export * from './game-nights.schemas';
 
 // Email Templates schemas (Issue #52-#56)
 export * from './email-templates.schemas';
+
+// Enhanced Save/Resume schemas (Issue #122)
+export * from './save-resume.schemas';
+
+// Invitation schemas (Issue #132)
+export * from './invitation.schemas';
+
+// Docker Container Management schemas (Issue #139)
+export * from './docker.schemas';
+
+// Tier & Usage schemas (Game Night Improvvisata — E2-4/E2-5)
+export * from './tier.schemas';
+
+// Session Invite schemas (Game Night Improvvisata)
+export * from './session-invite.schemas';

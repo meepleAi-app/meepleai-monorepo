@@ -27,7 +27,7 @@ namespace Api.Tests.BoundedContexts.SharedGameCatalog.Application.Queries;
 /// Tests full-text search, filtering, pagination, and HybridCache integration.
 /// Issue #2371 Phase 2 - Coverage gap resolution
 /// </summary>
-[Collection("SharedTestcontainers")]
+[Collection("Integration-GroupC")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "SharedGameCatalog")]
 public sealed class SearchSharedGamesQueryHandlerTests : IAsyncLifetime

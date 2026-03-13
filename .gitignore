@@ -60,6 +60,8 @@ infra/secrets/prod/*.pfx
 
 # Logs
 logs/
+# Exception: Allow admin monitor logs page
+!apps/web/src/app/admin/*/monitor/logs/
 *.log
 npm-debug.log*
 yarn-debug.log*
@@ -136,6 +138,7 @@ test-results/
 .claude/settings.local.json
 .claude/.mcp.local.json
 .claude/worktrees/
+.worktrees/
 
 # Playwright MCP temp files
 tmpclaude-*-cwd
@@ -204,3 +207,8 @@ apps/docs/screenshots/.test-output/chromatic-archives/archive/_next/static/chunk
 apps/docs/screenshots/.test-output/chromatic-archives/archive/_next/static/chunks/turbopack-_3fc314c9._.js
 apps/docs/screenshots/.test-output/chromatic-archives/archive/_next/static/media/4a7551bcc3548e67-s.p.717db902.woff2
 apps/web/next-env.d.ts
+.worktrees/
+.superpowers/
+
+# Seed dumps (binary files, not tracked in source control)
+infra/seed-dumps/

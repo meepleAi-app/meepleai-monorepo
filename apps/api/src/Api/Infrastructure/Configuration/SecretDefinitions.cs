@@ -80,7 +80,9 @@ internal static class SecretDefinitions
             SecretLevel.Critical,
             "ADMIN_EMAIL",
             "ADMIN_PASSWORD",
-            "ADMIN_DISPLAY_NAME"
+            "ADMIN_DISPLAY_NAME",
+            "INITIAL_ADMIN_EMAIL",
+            "INITIAL_ADMIN_DISPLAY_NAME"
         ),
 
         ["embedding-service"] = new(

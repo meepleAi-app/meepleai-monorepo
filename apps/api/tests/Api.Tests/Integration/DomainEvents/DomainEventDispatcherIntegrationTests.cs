@@ -28,7 +28,7 @@ namespace Api.Tests.Integration.DomainEvents;
 /// Uses Testcontainers for real database event dispatching.
 /// Issue #2307: Week 3 Integration Tests + Visual Snapshots
 /// </summary>
-[Collection("SharedTestcontainers")]
+[Collection("Integration-GroupD")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("Issue", "2307")]
 public sealed class DomainEventDispatcherIntegrationTests : IAsyncLifetime

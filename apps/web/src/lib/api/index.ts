@@ -53,6 +53,10 @@ import {
   createGameToolkitClient,
   createSessionStatisticsClient,
   createGameNightsClient,
+  createInvitationsClient,
+  createGameNightBggClient,
+  createTierClient,
+  createSessionInviteClient,
   type AuthClient,
   type GamesClient,
   type SessionsClient,
@@ -86,6 +90,10 @@ import {
   type GameToolkitClient,
   type SessionStatisticsClient,
   type GameNightsClient,
+  type InvitationsClient,
+  type GameNightBggClient,
+  type TierClient,
+  type SessionInviteClient,
 } from './clients';
 import { HttpClient, type HttpClientConfig } from './core/httpClient';
 
@@ -272,6 +280,18 @@ export interface ApiClient {
   /** Game Nights (Issue #33) */
   gameNights: GameNightsClient;
 
+  /** User Invitations (Issue #132) */
+  invitations: InvitationsClient;
+
+  /** Game Night BGG Search & Import (Game Night Improvvisata) */
+  gameNightBgg: GameNightBggClient;
+
+  /** Tier & Usage (Game Night Improvvisata) */
+  tiers: TierClient;
+
+  /** Session Invites (Game Night Improvvisata) */
+  sessionInvites: SessionInviteClient;
+
   /** Generic DELETE helper (used in some legacy tests) */
   delete: (path: string) => Promise<void>;
 }
@@ -355,6 +375,10 @@ export function createApiClient(config?: ApiClientConfig): ApiClient {
     gameToolkit: createGameToolkitClient({ httpClient }), // AI Toolkit Generation
     sessionStatistics: createSessionStatisticsClient({ httpClient }), // P4: Session Analytics
     gameNights: createGameNightsClient({ httpClient }), // Issue #33
+    invitations: createInvitationsClient({ httpClient }), // Issue #132
+    gameNightBgg: createGameNightBggClient({ httpClient }), // Game Night Improvvisata
+    tiers: createTierClient({ httpClient }), // Game Night Improvvisata — Tier & Usage
+    sessionInvites: createSessionInviteClient({ httpClient }), // Game Night Improvvisata — Session Invites
     delete: (path: string) => httpClient.delete(path),
   };
 

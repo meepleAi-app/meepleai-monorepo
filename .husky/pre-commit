@@ -21,19 +21,18 @@ if [[ "$OSTYPE" == "msys" || "$OSTYPE" == "win32" || -n "$WINDIR" ]]; then
 
   # Check if cleanup script exists
   if [ -f "tools/cleanup/cleanup-dev-ports.ps1" ]; then
-    # Run cleanup script in dry-run mode to check for conflicts
-    pwsh -ExecutionPolicy Bypass -File tools/cleanup/cleanup-dev-ports.ps1 -DryRun 2>&1 | grep -q "would be killed: 0" || {
+    # Run cleanup script in dry-run mode with 10s timeout to avoid hanging pre-commit
+    PORT_CHECK_OUTPUT=$(timeout 10 pwsh -NoProfile -ExecutionPolicy Bypass -File tools/cleanup/cleanup-dev-ports.ps1 -DryRun 2>&1) || true
+
+    if echo "$PORT_CHECK_OUTPUT" | grep -q "would be killed: [1-9]"; then
       echo ""
       echo "⚠️  Port conflicts detected! Zombie dev processes found."
       echo ""
       echo "Run this to cleanup before committing:"
       echo "  pwsh tools/cleanup/cleanup-dev-ports.ps1"
       echo ""
-      echo "Or use the enhanced startup script:"
-      echo "  pwsh infra/scripts/start-dev.ps1"
-      echo ""
       # Warning only - don't block commit
-    }
+    fi
   fi
 else
   echo "ℹ️  Skipping port check (not Windows)"
@@ -77,7 +76,7 @@ if [[ "$CURRENT_BRANCH" == "main-dev" || "$CURRENT_BRANCH" == "main" ]]; then
     # Validate that apps/api directory exists
     if [ -d "apps/api" ]; then
       # Run dotnet format to verify formatting (verify-only mode)
-      (cd apps/api && dotnet format --verify-no-changes --verbosity quiet) || {
+      (cd apps/api && dotnet format --verify-no-changes --verbosity quiet --severity error) || {
         echo ""
         echo "❌ Backend code formatting issues found."
         echo ""

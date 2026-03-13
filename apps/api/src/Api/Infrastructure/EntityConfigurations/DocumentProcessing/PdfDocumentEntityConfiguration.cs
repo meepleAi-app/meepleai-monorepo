@@ -47,9 +47,10 @@ internal class PdfDocumentEntityConfiguration : IEntityTypeConfiguration<PdfDocu
             .HasMaxLength(32)
             .HasColumnName("failed_at_state")
             .IsRequired(false);
-        builder.Property(e => e.ExtractedTables).HasMaxLength(8192);
-        builder.Property(e => e.ExtractedDiagrams).HasMaxLength(8192);
-        builder.Property(e => e.AtomicRules).HasMaxLength(8192);
+        // E2E fix: structured content can be very large (1000+ rules), use TEXT instead of varchar(8192)
+        builder.Property(e => e.ExtractedTables).HasColumnType("text");
+        builder.Property(e => e.ExtractedDiagrams).HasColumnType("text");
+        builder.Property(e => e.AtomicRules).HasColumnType("text");
         builder.HasOne(e => e.Game)
             .WithMany()
             .HasForeignKey(e => e.GameId)
@@ -154,6 +155,16 @@ internal class PdfDocumentEntityConfiguration : IEntityTypeConfiguration<PdfDocu
         builder.Property(e => e.VersionLabel)
             .HasMaxLength(100)
             .HasColumnName("version_label")
+            .IsRequired(false);
+
+        // E5-1: Language confidence and override
+        builder.Property(e => e.LanguageConfidence)
+            .HasColumnName("language_confidence")
+            .IsRequired(false);
+
+        builder.Property(e => e.LanguageOverride)
+            .HasMaxLength(10)
+            .HasColumnName("language_override")
             .IsRequired(false);
 
         // PDF deduplication: SHA-256 content hash

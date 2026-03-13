@@ -27,7 +27,7 @@ namespace Api.Tests.Integration;
 /// Tests game-specific chat threads and contextual Q&A during gameplay.
 /// Uses SharedTestcontainersFixture for optimized performance and Docker hijack prevention (Issue #2031).
 /// </summary>
-[Collection("SharedTestcontainers")]
+[Collection("Integration-GroupD")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("Issue", "2031")]
 public sealed class KnowledgeBaseGameManagementCrossContextTests : IAsyncLifetime

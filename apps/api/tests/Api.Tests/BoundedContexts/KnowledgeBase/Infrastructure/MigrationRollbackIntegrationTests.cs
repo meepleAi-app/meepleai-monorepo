@@ -20,7 +20,7 @@ namespace Api.Tests.BoundedContexts.KnowledgeBase.Infrastructure;
 /// Verifies that EF Core migrations can be applied and rolled back cleanly
 /// without data corruption or schema inconsistencies.
 /// </summary>
-[Collection("SharedTestcontainers")]
+[Collection("Integration-GroupA")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "KnowledgeBase")]
 [Trait("Dependency", "PostgreSQL")]

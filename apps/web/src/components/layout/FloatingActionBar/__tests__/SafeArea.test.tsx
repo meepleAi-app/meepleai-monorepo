@@ -14,7 +14,12 @@ import { Plus, Settings } from 'lucide-react';
 
 vi.mock('@/hooks/useResponsive', () => ({
   usePrefersReducedMotion: () => false,
-  useResponsive: () => ({ isMobile: false, isTablet: false, isDesktop: true, deviceType: 'desktop' }),
+  useResponsive: () => ({
+    isMobile: false,
+    isTablet: false,
+    isDesktop: true,
+    deviceType: 'desktop',
+  }),
   useIsMobile: () => false,
   useMediaQuery: () => false,
 }));

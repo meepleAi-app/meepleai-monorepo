@@ -22,7 +22,7 @@ namespace Api.Tests.BoundedContexts.SharedGameCatalog.Application.Queries;
 /// Tests approval queue with urgency, submitter, and PDF filters.
 /// Issue #3533: Admin API Endpoints - Approval Queue Management
 /// </summary>
-[Collection("SharedTestcontainers")]
+[Collection("Integration-GroupC")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "SharedGameCatalog")]
 public sealed class GetApprovalQueueQueryHandlerTests : IAsyncLifetime
@@ -176,11 +176,24 @@ public sealed class GetApprovalQueueQueryHandlerTests : IAsyncLifetime
         await _dbContext.SaveChangesAsync();
 
         // Add PDF document to game1
+        var pdfDocId = Guid.NewGuid();
+        var pdfDocument = new PdfDocumentEntity
+        {
+            Id = pdfDocId,
+            FileName = "urgent-game-rulebook.pdf",
+            FilePath = "/uploads/urgent-game-rulebook.pdf",
+            FileSizeBytes = 1024000,
+            UploadedByUserId = EditorUserId,
+            UploadedAt = DateTime.UtcNow.AddDays(-9)
+        };
+        _dbContext.Set<PdfDocumentEntity>().Add(pdfDocument);
+        await _dbContext.SaveChangesAsync();
+
         var document = new SharedGameDocumentEntity
         {
             Id = Guid.NewGuid(),
             SharedGameId = gameId1,
-            PdfDocumentId = Guid.NewGuid(),
+            PdfDocumentId = pdfDocId,
             DocumentType = 0, // Rulebook
             Version = "1.0",
             IsActive = true,

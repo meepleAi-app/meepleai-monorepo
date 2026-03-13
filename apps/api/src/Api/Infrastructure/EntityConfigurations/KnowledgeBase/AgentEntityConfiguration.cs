@@ -68,6 +68,12 @@ internal class AgentEntityConfiguration : IEntityTypeConfiguration<AgentEntity>
         builder.HasIndex(e => new { e.GameId, e.CreatedByUserId });
         builder.HasIndex(e => new { e.GameId, e.Type });
 
+        // Issue #262: Direct link to SharedGame for admin RAG dashboard
+        builder.Property(e => e.SharedGameId)
+            .IsRequired(false);
+
+        builder.HasIndex(e => e.SharedGameId);
+
         // Issue #4683: Per-user name uniqueness (only for user-created agents)
         builder.HasIndex(e => new { e.CreatedByUserId, e.Name })
             .IsUnique()

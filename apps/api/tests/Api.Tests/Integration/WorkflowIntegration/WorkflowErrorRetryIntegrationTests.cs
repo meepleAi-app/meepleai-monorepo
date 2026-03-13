@@ -18,7 +18,7 @@ namespace Api.Tests.Integration.WorkflowIntegration;
 /// Week 9: WorkflowIntegration error handling layer (5 tests)
 /// Tests: Error logging, retry count tracking, retry limit enforcement, stack trace persistence
 /// </summary>
-[Collection("SharedTestcontainers")]
+[Collection("Integration-GroupD")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("Dependency", "PostgreSQL")]
 [Trait("BoundedContext", "WorkflowIntegration")]

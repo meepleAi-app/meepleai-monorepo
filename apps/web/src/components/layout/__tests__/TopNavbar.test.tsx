@@ -59,7 +59,7 @@ vi.mock('../MobileNavDrawer', () => ({
 }));
 
 // Mock Logo
-vi.mock('../Navbar/Logo', () => ({
+vi.mock('../TopNavbar/Logo', () => ({
   Logo: () => <div data-testid="logo">Logo</div>,
 }));
 

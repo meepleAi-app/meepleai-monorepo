@@ -183,7 +183,13 @@ export function PdfUploadSection({
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             credentials: 'include',
-            body: JSON.stringify({ documentId: pdfId, setAsActive: true }),
+            body: JSON.stringify({
+              pdfDocumentId: pdfId,
+              documentType: 0, // Rulebook
+              version: '1.0',
+              tags: null,
+              setAsActive: true,
+            }),
           }
         );
 

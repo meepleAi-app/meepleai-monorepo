@@ -26,7 +26,7 @@ namespace Api.Tests.Integration.UserLibrary;
 /// Issue #3670: Phase 9 - Testing &amp; Polish.
 /// Tests: CRUD operations, authentication, authorization, validation.
 /// </summary>
-[Collection("SharedTestcontainers")]
+[Collection("Integration-GroupC")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "UserLibrary")]
 public sealed class PrivateGameEndpointsIntegrationTests : IAsyncLifetime

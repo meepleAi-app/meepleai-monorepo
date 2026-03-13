@@ -12,22 +12,24 @@
  *   Step 2  (Catalog PDF): UserWizardClient starting at PDF upload (gameId pre-set)
  *
  * URL integration:
- *   ?action=add     → drawer opens
- *   close / ESC     → removes ?action=add from URL
+ *   ?action=add         → drawer opens (choice step)
+ *   ?action=import-bgg  → drawer opens (BGG search step) — Issue #373
+ *   close / ESC         → removes ?action from URL
  */
 
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
-import { BookOpen, PenLine } from 'lucide-react';
+import { BookOpen, Globe, PenLine } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 
 import { CatalogSearchStep } from '@/app/(authenticated)/library/CatalogSearchStep';
 import { UserWizardClient } from '@/app/(authenticated)/library/private/add/client';
+import { BggSearchPanel } from '@/components/games/BggSearchPanel';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/navigation/sheet';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type DrawerStep = 'choice' | 'manual' | 'catalog' | 'catalog-pdf';
+type DrawerStep = 'choice' | 'manual' | 'catalog' | 'catalog-pdf' | 'bgg';
 
 interface CatalogSelection {
   gameId: string;
@@ -73,12 +75,21 @@ function ChoiceCard({ icon, title, description, onClick, 'data-testid': testId }
 interface AddGameDrawerProps {
   open: boolean;
   onClose: () => void;
+  /** Issue #373: Allow opening directly to a specific step (e.g., 'bgg' from URL) */
+  initialStep?: DrawerStep;
 }
 
-export function AddGameDrawer({ open, onClose }: AddGameDrawerProps) {
+export function AddGameDrawer({ open, onClose, initialStep }: AddGameDrawerProps) {
   const router = useRouter();
-  const [step, setStep] = useState<DrawerStep>('choice');
+  const [step, setStep] = useState<DrawerStep>(initialStep ?? 'choice');
   const [catalogSelection, setCatalogSelection] = useState<CatalogSelection | null>(null);
+
+  // Sync step when initialStep prop changes (e.g., URL switches from ?action=add to ?action=import-bgg)
+  useEffect(() => {
+    if (open && initialStep) {
+      setStep(initialStep);
+    }
+  }, [open, initialStep]);
 
   // Reset to choice step after close animation finishes
   const handleOpenChange = useCallback(
@@ -105,7 +116,9 @@ export function AddGameDrawer({ open, onClose }: AddGameDrawerProps) {
       ? 'Add game manually'
       : step === 'catalog' || step === 'catalog-pdf'
         ? 'Add from catalog'
-        : 'Add a game';
+        : step === 'bgg'
+          ? 'Import from BoardGameGeek'
+          : 'Add a game';
 
   return (
     <Sheet open={open} onOpenChange={handleOpenChange}>
@@ -139,6 +152,14 @@ export function AddGameDrawer({ open, onClose }: AddGameDrawerProps) {
                 description="Search the community catalog and add a game to your personal library."
                 onClick={() => setStep('catalog')}
               />
+
+              <ChoiceCard
+                data-testid="add-game-choice-bgg"
+                icon={<Globe className="h-6 w-6" />}
+                title="Import from BoardGameGeek"
+                description="Search BGG and import a game as a private game in your library."
+                onClick={() => setStep('bgg')}
+              />
             </div>
           )}
 
@@ -153,6 +174,19 @@ export function AddGameDrawer({ open, onClose }: AddGameDrawerProps) {
           {step === 'catalog' && (
             <div data-testid="add-game-step-catalog">
               <CatalogSearchStep onSelect={handleCatalogSelect} onBack={() => setStep('choice')} />
+            </div>
+          )}
+
+          {/* Step: BGG search & import (Issue #373) */}
+          {step === 'bgg' && (
+            <div className="px-6 py-6" data-testid="add-game-step-bgg">
+              <BggSearchPanel
+                onImportSuccess={result => {
+                  // After import, navigate to the new private game
+                  onClose();
+                  router.push(`/library/private/${result.privateGameId}`);
+                }}
+              />
             </div>
           )}
 
@@ -180,13 +214,16 @@ export function AddGameDrawer({ open, onClose }: AddGameDrawerProps) {
 // ─── URL-aware wrapper ────────────────────────────────────────────────────────
 
 /**
- * AddGameDrawerController — reads ?action=add from URL and drives open state.
+ * AddGameDrawerController — reads ?action=add|import-bgg from URL and drives open state.
  * Mount once in _content.tsx; it manages its own open/close via router.
+ * Issue #373: Also handles ?action=import-bgg to open directly to BGG search step.
  */
 export function AddGameDrawerController() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const isOpen = searchParams.get('action') === 'add';
+  const action = searchParams.get('action');
+  const isOpen = action === 'add' || action === 'import-bgg';
+  const initialStep: DrawerStep | undefined = action === 'import-bgg' ? 'bgg' : undefined;
 
   const handleClose = useCallback(() => {
     const params = new URLSearchParams(searchParams.toString());
@@ -195,5 +232,5 @@ export function AddGameDrawerController() {
     router.replace(newUrl);
   }, [router, searchParams]);
 
-  return <AddGameDrawer open={isOpen} onClose={handleClose} />;
+  return <AddGameDrawer open={isOpen} onClose={handleClose} initialStep={initialStep} />;
 }

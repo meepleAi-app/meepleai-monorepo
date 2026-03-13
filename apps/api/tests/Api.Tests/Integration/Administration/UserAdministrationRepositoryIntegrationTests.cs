@@ -22,7 +22,7 @@ namespace Api.Tests.Integration.Administration;
 /// Tests administrative queries, bulk operations, user statistics, and tier management.
 /// Issue #2307: Week 3 - Administration repository integration testing
 /// </summary>
-[Collection("SharedTestcontainers")]
+[Collection("Integration-GroupD")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("Dependency", "PostgreSQL")]
 [Trait("BoundedContext", "Administration")]

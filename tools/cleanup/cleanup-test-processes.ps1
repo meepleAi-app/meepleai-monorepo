@@ -3,7 +3,7 @@
     Cleanup stale test processes that lock DLL files during dotnet test
 
 .DESCRIPTION
-    Automatically kills hanging test processes (testhost, VBCSCompiler, node, dotnet, jest)
+    Automatically kills hanging test processes (testhost, VBCSCompiler, node, dotnet)
     to prevent MSB3027 errors (DLL file locking) during dotnet build/test.
 
     Includes safety protections for IDEs and development tools.
@@ -52,7 +52,7 @@ $processesToCheck = if ($TestHostOnly) {
     @('testhost')
     Write-Host "Mode: TestHost Only (DLL locking fix)" -ForegroundColor Yellow
 } else {
-    @('node', 'dotnet', 'jest', 'testhost', 'VBCSCompiler')
+    @('node', 'dotnet', 'testhost', 'VBCSCompiler')
     Write-Host "Mode: Full Cleanup" -ForegroundColor Gray
 }
 

@@ -1,6 +1,8 @@
 using Api.BoundedContexts.DocumentProcessing.Domain.Repositories;
+using Api.Middleware.Exceptions;
 using Api.SharedKernel.Application.Interfaces;
 using Api.SharedKernel.Infrastructure.Persistence;
+using Microsoft.Extensions.Logging;
 
 namespace Api.BoundedContexts.DocumentProcessing.Application.Commands;
 
@@ -8,7 +10,7 @@ namespace Api.BoundedContexts.DocumentProcessing.Application.Commands;
 /// Handler for accepting the copyright disclaimer on a PDF document.
 /// Issue #5446: Records disclaimer acceptance timestamp and user.
 /// </summary>
-internal class AcceptCopyrightDisclaimerCommandHandler : ICommandHandler<AcceptCopyrightDisclaimerCommand, AcceptCopyrightDisclaimerResult>
+internal sealed class AcceptCopyrightDisclaimerCommandHandler : ICommandHandler<AcceptCopyrightDisclaimerCommand, AcceptCopyrightDisclaimerResult>
 {
     private readonly IPdfDocumentRepository _pdfRepository;
     private readonly IUnitOfWork _unitOfWork;
@@ -28,26 +30,34 @@ internal class AcceptCopyrightDisclaimerCommandHandler : ICommandHandler<AcceptC
     {
         ArgumentNullException.ThrowIfNull(command);
 
-        var pdf = await _pdfRepository.GetByIdAsync(command.PdfId, cancellationToken).ConfigureAwait(false);
+        var pdf = await _pdfRepository.GetByIdAsync(command.PdfDocumentId, cancellationToken).ConfigureAwait(false);
 
         if (pdf is null)
+            throw new NotFoundException("PdfDocument", command.PdfDocumentId.ToString());
+
+        if (pdf.UploadedByUserId != command.UserId)
         {
-            _logger.LogWarning("PDF {PdfId} not found when accepting disclaimer", command.PdfId);
-            return new AcceptCopyrightDisclaimerResult(false, "PDF not found", null);
+            _logger.LogWarning(
+                "User {UserId} attempted to accept disclaimer for PDF {PdfId} owned by {OwnerId}",
+                command.UserId, command.PdfDocumentId, pdf.UploadedByUserId);
+            throw new ForbiddenException("You do not have permission to accept the disclaimer for this PDF document");
         }
 
         if (pdf.HasAcceptedDisclaimer)
-        {
-            return new AcceptCopyrightDisclaimerResult(true, "Copyright disclaimer already accepted", command.PdfId);
-        }
+            throw new ConflictException("Copyright disclaimer has already been accepted for this PDF document");
 
         pdf.AcceptCopyrightDisclaimer(command.UserId);
 
         await _pdfRepository.UpdateAsync(pdf, cancellationToken).ConfigureAwait(false);
         await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
-        _logger.LogInformation("Copyright disclaimer accepted for PDF {PdfId} by user {UserId}", command.PdfId, command.UserId);
+        _logger.LogInformation(
+            "Copyright disclaimer accepted for PDF {PdfId} by user {UserId}",
+            command.PdfDocumentId, command.UserId);
 
-        return new AcceptCopyrightDisclaimerResult(true, "Copyright disclaimer accepted", command.PdfId);
+        return new AcceptCopyrightDisclaimerResult(
+            Success: true,
+            Message: "Copyright disclaimer accepted",
+            PdfDocumentId: command.PdfDocumentId);
     }
 }

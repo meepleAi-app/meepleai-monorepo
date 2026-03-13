@@ -1,4 +1,6 @@
 using Api.BoundedContexts.Administration.Application.Commands;
+using Api.BoundedContexts.Administration.Domain.Entities;
+using Api.BoundedContexts.Administration.Domain.Repositories;
 using Api.BoundedContexts.Authentication.Domain.Entities;
 using Api.SharedKernel.Domain.ValueObjects;
 using Api.BoundedContexts.Authentication.Domain.ValueObjects;
@@ -20,17 +22,20 @@ namespace Api.BoundedContexts.Administration.Application.Handlers;
 internal sealed class SeedAdminUserCommandHandler : ICommandHandler<SeedAdminUserCommand>
 {
     private readonly IUserRepository _userRepository;
+    private readonly IUserAiConsentRepository _consentRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IConfiguration _configuration;
     private readonly ILogger<SeedAdminUserCommandHandler> _logger;
 
     public SeedAdminUserCommandHandler(
         IUserRepository userRepository,
+        IUserAiConsentRepository consentRepository,
         IUnitOfWork unitOfWork,
         IConfiguration configuration,
         ILogger<SeedAdminUserCommandHandler> logger)
     {
         _userRepository = userRepository ?? throw new ArgumentNullException(nameof(userRepository));
+        _consentRepository = consentRepository ?? throw new ArgumentNullException(nameof(consentRepository));
         _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
         _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
@@ -83,7 +88,7 @@ internal sealed class SeedAdminUserCommandHandler : ICommandHandler<SeedAdminUse
         // Create domain objects
         var email = new Email(adminEmail);
         var passwordHash = PasswordHash.Create(adminPassword);
-        var role = Role.Admin;
+        var role = Role.SuperAdmin;
 
         // Create admin user
         var adminUser = new User(
@@ -94,10 +99,22 @@ internal sealed class SeedAdminUserCommandHandler : ICommandHandler<SeedAdminUse
             role: role
         );
 
+        // Issue #372: Seeded admin must have verified email to avoid 403 on /auth/me
+        adminUser.VerifyEmail();
+
         // Persist
         await _userRepository.AddAsync(adminUser, cancellationToken).ConfigureAwait(false);
+
+        // E2E fix: Auto-create AI consent for admin user so AI features work out of the box
+        var aiConsent = UserAiConsent.Create(
+            adminUser.Id,
+            consentedToAiProcessing: true,
+            consentedToExternalProviders: true,
+            consentVersion: "1.0-admin-seed");
+        await _consentRepository.AddAsync(aiConsent, cancellationToken).ConfigureAwait(false);
+
         await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
-        _logger.LogInformation("Admin user seeded successfully: {Email}", adminEmail);
+        _logger.LogInformation("Admin user seeded successfully with AI consent: {Email}", adminEmail);
     }
 }

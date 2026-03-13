@@ -6,24 +6,27 @@
  * Mobile-first layout:
  *   Header → Scoreboard → Quick Actions → Chat Widget
  *
- * Desktop (lg+): 2-column — scoreboard+actions left, chat right.
+ * Desktop (lg+): 3-column via LiveSessionLayout —
+ *   Left panel (scoreboard + actions) | Center (activity feed) | Right panel (chat)
  *
  * Integrates with:
  * - useSessionStore (Zustand) for session state
  * - useSessionSync (SSE) for real-time updates
- * - PauseSessionDialog for pause flow
+ * - LiveSessionLayout for desktop 3-column layout
+ * - useQuickViewStore for session-contextual quick view
  * - Sheet (slide-over) for rules explainer
  * - ScoreInput for quick score entry
  *
  * Issue #5587 — Live Game Session UI
  */
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 
+import { useQuery } from '@tanstack/react-query';
 import { Loader2 } from 'lucide-react';
 
 import { toScoreboardData } from '@/components/session/adapters';
-import { PauseSessionDialog } from '@/components/session/PauseSessionDialog';
+import { LiveSessionLayout } from '@/components/session/LiveSessionLayout';
 import { ScoreInput } from '@/components/session/ScoreInput';
 import {
   Sheet,
@@ -32,13 +35,21 @@ import {
   SheetTitle,
   SheetDescription,
 } from '@/components/ui/navigation/sheet';
-import { Dialog, DialogContent, DialogTitle } from '@/components/ui/overlays/dialog';
+// Dialog import removed — arbiter now uses Rules Sheet
+import { useGameAgents } from '@/hooks/queries/useGameAgents';
+import { useAgentChatStream } from '@/hooks/useAgentChatStream';
+import { useResponsive } from '@/hooks/useResponsive';
+import { api } from '@/lib/api';
 import type { LiveSessionDto } from '@/lib/api/schemas/live-sessions.schemas';
 import { useSessionSync } from '@/lib/hooks/useSessionSync';
 import { useSessionStore } from '@/lib/stores/sessionStore';
+import { useQuickViewStore } from '@/store/quick-view';
 
+import { ActivityFeed, type ActivityEvent } from './ActivityFeed';
 import { LiveScoreboard, type LiveScoreboardPlayer } from './LiveScoreboard';
 import { QuickActions } from './QuickActions';
+import { SaveCompleteDialog } from './SaveCompleteDialog';
+import { ScoreAssistant } from './ScoreAssistant';
 import { SessionChatWidget, type ChatMessage } from './SessionChatWidget';
 import { SessionHeader } from './SessionHeader';
 
@@ -88,6 +99,8 @@ function mapToScoreboardPlayers(session: LiveSessionDto): LiveScoreboardPlayer[]
   }));
 }
 
+const SETUP_CHIPS = ['Preparazione iniziale', 'Distribuzione componenti', 'Prima mossa'];
+
 // ============================================================================
 // Component
 // ============================================================================
@@ -103,17 +116,117 @@ export function LiveSessionView({ sessionId }: LiveSessionViewProps) {
   const isLoading = useSessionStore(s => s.isLoading);
   const error = useSessionStore(s => s.error);
   const loadScores = useSessionStore(s => s.loadScores);
-  const pauseSession = useSessionStore(s => s.pauseSession);
+  const _pauseSession = useSessionStore(s => s.pauseSession);
   const resumeSession = useSessionStore(s => s.resumeSession);
   const handleSessionUpdate = useSessionStore(s => s.handleSessionUpdate);
 
+  // ----- Responsive -----
+  const { isDesktop } = useResponsive();
+
+  // ----- QuickView session context -----
+  useEffect(() => {
+    if (activeSession?.gameId) {
+      useQuickViewStore.getState().openForSession(sessionId, activeSession.gameId);
+    }
+    return () => {
+      useQuickViewStore.getState().close();
+    };
+  }, [sessionId, activeSession?.gameId]);
+
+  // ----- Agent chat (SSE streaming) -----
+  const gameId = activeSession?.gameId ?? null;
+  const { data: agents } = useGameAgents({ gameId, enabled: !!gameId });
+  const agentId = agents?.[0]?.id ?? null;
+
+  const chatThreadIdRef = useRef<string | null>(null);
+  const [sentMessages, setSentMessages] = useState<ChatMessage[]>([]);
+
+  const { state: agentState, sendMessage: sendAgentMessage } = useAgentChatStream({
+    onComplete: (_answer, metadata) => {
+      // Persist the chatThreadId for follow-up messages in the same thread
+      if (metadata.chatThreadId) {
+        chatThreadIdRef.current = metadata.chatThreadId;
+      }
+    },
+  });
+
+  // ----- Rules Sheet agent chat (separate thread) -----
+  const rulesThreadIdRef = useRef<string | null>(null);
+  const [rulesSentMessages, setRulesSentMessages] = useState<ChatMessage[]>([]);
+
+  const { state: rulesAgentState, sendMessage: sendRulesMessage } = useAgentChatStream({
+    onComplete: (_answer, metadata) => {
+      if (metadata.chatThreadId) {
+        rulesThreadIdRef.current = metadata.chatThreadId;
+      }
+    },
+  });
+
+  // Build the full message list: sent user messages + current streaming response
+  const chatMessages = useMemo<ChatMessage[]>(() => {
+    const msgs = [...sentMessages];
+    // Add the current (or completed) assistant response if present
+    if (agentState.currentAnswer) {
+      msgs.push({
+        id: `assistant-${msgs.length}`,
+        role: 'assistant',
+        content: agentState.currentAnswer,
+        timestamp: new Date(),
+      });
+    }
+    return msgs;
+  }, [sentMessages, agentState.currentAnswer]);
+
+  const isChatStreaming = agentState.isStreaming;
+
+  // Build rules chat message list
+  const rulesChatMessages = useMemo<ChatMessage[]>(() => {
+    const msgs = [...rulesSentMessages];
+    if (rulesAgentState.currentAnswer) {
+      msgs.push({
+        id: `rules-assistant-${msgs.length}`,
+        role: 'assistant',
+        content: rulesAgentState.currentAnswer,
+        timestamp: new Date(),
+      });
+    }
+    return msgs;
+  }, [rulesSentMessages, rulesAgentState.currentAnswer]);
+
+  const isRulesStreaming = rulesAgentState.isStreaming;
+
+  // ----- Resume context (inject recap as first chat message) -----
+  const { data: resumeContext } = useQuery({
+    queryKey: ['session-resume-context', sessionId],
+    queryFn: () => api.liveSessions.getResumeContext(sessionId),
+    enabled: !!sessionId,
+    retry: false,
+    staleTime: Infinity, // Only fetch once
+  });
+
+  const resumeInjectedRef = useRef(false);
+  useEffect(() => {
+    if (resumeContext?.recap && !resumeInjectedRef.current) {
+      resumeInjectedRef.current = true;
+      setSentMessages(prev =>
+        prev.length === 0
+          ? [
+              {
+                id: 'resume-recap',
+                role: 'assistant',
+                content: `\u{1F4CB} **Riepilogo partita precedente:**\n\n${resumeContext.recap}`,
+                timestamp: new Date(resumeContext.pausedAt),
+              },
+            ]
+          : prev
+      );
+    }
+  }, [resumeContext]);
+
   // ----- Local UI state -----
   const [rulesOpen, setRulesOpen] = useState(false);
-  const [arbiterOpen, setArbiterOpen] = useState(false);
   const [scoresOpen, setScoresOpen] = useState(false);
-  const [pauseDialogOpen, setPauseDialogOpen] = useState(false);
-  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
-  const [isChatStreaming, setIsChatStreaming] = useState(false);
+  const [saveDialogOpen, setSaveDialogOpen] = useState(false);
 
   // ----- SSE connection -----
   const onScoreUpdate = useCallback(() => {
@@ -147,39 +260,92 @@ export function LiveSessionView({ sessionId }: LiveSessionViewProps) {
     if (activeSession.status === 'Paused') {
       resumeSession();
     } else {
-      setPauseDialogOpen(true);
+      setSaveDialogOpen(true);
     }
   }, [activeSession, resumeSession]);
 
-  const handlePauseConfirm = useCallback(() => {
-    pauseSession();
-    setPauseDialogOpen(false);
-  }, [pauseSession]);
+  const handleSaveComplete = useCallback(() => {
+    // Session is already paused by the save-complete endpoint
+    const session = useSessionStore.getState().activeSession;
+    if (session) {
+      handleSessionUpdate({ ...session, status: 'Paused' });
+    }
+    setSaveDialogOpen(false);
+  }, [handleSessionUpdate]);
 
-  const handleChatSend = useCallback((message: string) => {
-    const userMsg: ChatMessage = {
-      id: `user-${Date.now()}`,
-      role: 'user',
-      content: message,
-      timestamp: new Date(),
-    };
-    setChatMessages(prev => [...prev, userMsg]);
+  const handleChatSend = useCallback(
+    (message: string) => {
+      if (!agentId) return;
 
-    // Simulate a placeholder response (actual integration with agent API
-    // will be wired in a follow-up issue)
-    setIsChatStreaming(true);
-    setTimeout(() => {
-      const assistantMsg: ChatMessage = {
-        id: `assistant-${Date.now()}`,
-        role: 'assistant',
-        content:
-          "Funzione in arrivo — verrà collegata all'agente regole nella prossima iterazione.",
+      // Snapshot the previous assistant answer (if any) before the hook resets
+      if (agentState.currentAnswer) {
+        setSentMessages(prev => [
+          ...prev,
+          {
+            id: `assistant-${Date.now() - 1}`,
+            role: 'assistant' as const,
+            content: agentState.currentAnswer,
+            timestamp: new Date(),
+          },
+        ]);
+      }
+
+      // Add the user message to history
+      const userMsg: ChatMessage = {
+        id: `user-${Date.now()}`,
+        role: 'user',
+        content: message,
         timestamp: new Date(),
       };
-      setChatMessages(prev => [...prev, assistantMsg]);
-      setIsChatStreaming(false);
-    }, 1200);
-  }, []);
+      setSentMessages(prev => [...prev, userMsg]);
+
+      // Send via SSE stream (pass sessionId as gameSessionId for session-aware RAG)
+      sendAgentMessage(
+        agentId,
+        message,
+        chatThreadIdRef.current ?? undefined,
+        undefined,
+        sessionId
+      );
+    },
+    [agentId, agentState.currentAnswer, sendAgentMessage, sessionId]
+  );
+
+  const handleRulesChatSend = useCallback(
+    (message: string) => {
+      if (!agentId) return;
+
+      // Snapshot previous assistant answer before hook resets
+      if (rulesAgentState.currentAnswer) {
+        setRulesSentMessages(prev => [
+          ...prev,
+          {
+            id: `rules-assistant-${Date.now() - 1}`,
+            role: 'assistant' as const,
+            content: rulesAgentState.currentAnswer,
+            timestamp: new Date(),
+          },
+        ]);
+      }
+
+      const userMsg: ChatMessage = {
+        id: `rules-user-${Date.now()}`,
+        role: 'user',
+        content: message,
+        timestamp: new Date(),
+      };
+      setRulesSentMessages(prev => [...prev, userMsg]);
+
+      sendRulesMessage(
+        agentId,
+        message,
+        rulesThreadIdRef.current ?? undefined,
+        undefined,
+        sessionId
+      );
+    },
+    [agentId, rulesAgentState.currentAnswer, sendRulesMessage, sessionId]
+  );
 
   const handleScoreSubmit = useCallback(
     async (data: {
@@ -200,6 +366,22 @@ export function LiveSessionView({ sessionId }: LiveSessionViewProps) {
     },
     [activeSession]
   );
+
+  // ----- Activity events (scores → feed items, newest first) -----
+  // Must be above early returns to satisfy rules-of-hooks
+  const activityEvents = useMemo<ActivityEvent[]>(() => {
+    if (!activeSession) return [];
+    return scores
+      .map(s => ({
+        id: `score-${s.playerId}-${s.round}-${s.dimension}`,
+        type: 'score' as const,
+        playerName: activeSession.players.find(p => p.id === s.playerId)?.displayName ?? '?',
+        value: s.value,
+        dimension: s.dimension,
+        timestamp: s.recordedAt ?? new Date().toISOString(),
+      }))
+      .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+  }, [scores, activeSession]);
 
   // ----- Loading / Error states -----
   if (isLoading && !activeSession) {
@@ -233,95 +415,110 @@ export function LiveSessionView({ sessionId }: LiveSessionViewProps) {
   const roundNumbers = scores.map(s => s.round);
   const currentRound = roundNumbers.length > 0 ? Math.max(1, ...roundNumbers) : 1;
 
-  return (
-    <div className="min-h-screen bg-gradient-to-b from-amber-50/30 to-white dark:from-slate-950 dark:to-slate-900">
-      {/* Header */}
-      <SessionHeader
-        gameName={activeSession.gameName || 'Sessione di gioco'}
-        turnNumber={turnNumber}
-        currentPhase={null}
-        status={sessionStatus}
+  // ----- Shared sub-sections (used in both layouts) -----
+
+  const connectionIndicator = (
+    <div className="flex items-center justify-center py-2">
+      {isConnected ? (
+        <span className="inline-flex items-center gap-1.5 text-xs font-medium text-emerald-600 dark:text-emerald-400">
+          <span className="relative flex h-2 w-2">
+            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+            <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
+          </span>
+          Live
+        </span>
+      ) : (
+        <span className="inline-flex items-center gap-1.5 text-xs font-medium text-red-600 dark:text-red-400">
+          <span className="h-2 w-2 rounded-full bg-red-500" />
+          Disconnesso
+        </span>
+      )}
+    </div>
+  );
+
+  const scoreboardSection = (
+    <div className="space-y-4 p-4">
+      <LiveScoreboard players={scoreboardPlayers} isRealTime={isConnected} />
+      <ScoreAssistant sessionId={sessionId} onScoreRecorded={loadScores} />
+      <QuickActions
+        isPaused={isPaused}
+        isLoading={isLoading}
+        onOpenRules={() => setRulesOpen(true)}
+        onAskArbiter={() => setRulesOpen(true)}
+        onTogglePause={handleTogglePause}
+        onOpenScores={() => setScoresOpen(true)}
       />
+    </div>
+  );
 
-      {/* Connection indicator */}
-      <div className="flex items-center justify-center py-2">
-        {isConnected ? (
-          <span className="inline-flex items-center gap-1.5 text-xs font-medium text-emerald-600 dark:text-emerald-400">
-            <span className="relative flex h-2 w-2">
-              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
-              <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
-            </span>
-            Live
-          </span>
-        ) : (
-          <span className="inline-flex items-center gap-1.5 text-xs font-medium text-red-600 dark:text-red-400">
-            <span className="h-2 w-2 rounded-full bg-red-500" />
-            Disconnesso
-          </span>
-        )}
-      </div>
-
-      {/* Main content: responsive 2-column on desktop */}
-      <div className="px-4 pb-8 lg:flex lg:gap-6 lg:px-6 max-w-5xl mx-auto">
-        {/* Left column (mobile: full width) */}
-        <div className="flex-1 space-y-4 lg:max-w-[60%]">
-          {/* Scoreboard */}
-          <LiveScoreboard players={scoreboardPlayers} isRealTime={isConnected} />
-
-          {/* Quick Actions */}
-          <QuickActions
-            isPaused={isPaused}
-            isLoading={isLoading}
-            onOpenRules={() => setRulesOpen(true)}
-            onAskArbiter={() => setArbiterOpen(true)}
-            onTogglePause={handleTogglePause}
-            onOpenScores={() => setScoresOpen(true)}
-          />
+  const chatSection = (
+    <div className="p-4 h-full flex flex-col">
+      {/* Setup suggestion chips - show only when chat is empty */}
+      {chatMessages.length === 0 && agentId && (
+        <div className="flex flex-wrap gap-2 mb-3">
+          {SETUP_CHIPS.map(chip => (
+            <button
+              key={chip}
+              type="button"
+              className="text-xs px-3 py-1.5 rounded-full border border-amber-300 dark:border-amber-600 text-amber-700 dark:text-amber-300 hover:bg-amber-50 dark:hover:bg-amber-900/30 transition-colors"
+              onClick={() => handleChatSend(chip)}
+              disabled={isChatStreaming}
+            >
+              {chip}
+            </button>
+          ))}
         </div>
-
-        {/* Right column (mobile: below actions) */}
-        <div className="mt-4 lg:mt-0 lg:w-[40%]">
-          <SessionChatWidget
-            messages={chatMessages}
-            isStreaming={isChatStreaming}
-            onSend={handleChatSend}
-            defaultExpanded={false}
-          />
-        </div>
+      )}
+      <div className="flex-1 min-h-0">
+        <SessionChatWidget
+          messages={chatMessages}
+          isStreaming={isChatStreaming}
+          onSend={handleChatSend}
+          defaultExpanded={isDesktop}
+        />
       </div>
+    </div>
+  );
 
-      {/* ===== Overlays ===== */}
-
-      {/* Rules slide-over (Sheet) */}
+  const overlays = (
+    <>
+      {/* Rules slide-over (Sheet) — arbiter chat */}
       <Sheet open={rulesOpen} onOpenChange={setRulesOpen}>
-        <SheetContent side="right" className="w-full sm:max-w-md overflow-y-auto">
+        <SheetContent side="right" className="w-full sm:max-w-md flex flex-col overflow-hidden">
           <SheetHeader>
             <SheetTitle>Regole del gioco</SheetTitle>
             <SheetDescription>
-              Consulta le regole di {activeSession.gameName || 'questo gioco'}.
+              Chiedi all&apos;arbitro AI per risolvere dispute sulle regole.
             </SheetDescription>
           </SheetHeader>
-          <div className="mt-6 text-sm text-slate-600 dark:text-slate-400">
-            <p>
-              Il modulo regole verrà collegato alla Knowledge Base nella prossima iterazione. Per
-              ora puoi usare la chat per porre domande.
-            </p>
+
+          {/* Suggestion chips */}
+          <div className="flex flex-wrap gap-2 mt-4 px-1">
+            {['Chi ha ragione?', 'Si può fare X?', 'Cosa succede quando...'].map(chip => (
+              <button
+                key={chip}
+                type="button"
+                className="text-xs px-3 py-1.5 rounded-full border border-amber-300 dark:border-amber-600 text-amber-700 dark:text-amber-300 hover:bg-amber-50 dark:hover:bg-amber-900/30 transition-colors"
+                onClick={() => handleRulesChatSend(chip)}
+                disabled={isRulesStreaming}
+              >
+                {chip}
+              </button>
+            ))}
+          </div>
+
+          {/* Embedded chat widget for rules */}
+          <div className="flex-1 mt-4 min-h-0">
+            <SessionChatWidget
+              messages={rulesChatMessages}
+              isStreaming={isRulesStreaming}
+              onSend={handleRulesChatSend}
+              defaultExpanded
+              className="h-full flex flex-col"
+            />
           </div>
         </SheetContent>
       </Sheet>
-
-      {/* Arbiter modal */}
-      <Dialog open={arbiterOpen} onOpenChange={setArbiterOpen}>
-        <DialogContent className="max-w-sm" data-testid="arbiter-dialog">
-          <DialogTitle>Chiedi all&apos;arbitro</DialogTitle>
-          <div className="space-y-3 pt-2">
-            <p className="text-sm text-muted-foreground">
-              Descrivi la situazione e l&apos;arbitro AI analizzerà le regole per dare un verdetto.
-            </p>
-            <p className="text-xs text-slate-400">Funzione in arrivo nella prossima iterazione.</p>
-          </div>
-        </DialogContent>
-      </Dialog>
 
       {/* Score input sheet */}
       <Sheet open={scoresOpen} onOpenChange={setScoresOpen}>
@@ -342,14 +539,97 @@ export function LiveSessionView({ sessionId }: LiveSessionViewProps) {
         </SheetContent>
       </Sheet>
 
-      {/* Pause dialog with photo prompt */}
-      <PauseSessionDialog
-        open={pauseDialogOpen}
-        onOpenChange={setPauseDialogOpen}
+      {/* Save complete dialog (replaces PauseSessionDialog) */}
+      <SaveCompleteDialog
+        open={saveDialogOpen}
+        onOpenChange={setSaveDialogOpen}
         sessionId={sessionId}
-        playerId=""
-        onPause={handlePauseConfirm}
+        onSaveComplete={handleSaveComplete}
       />
+    </>
+  );
+
+  // ----- Desktop layout (lg+): 3-column via LiveSessionLayout -----
+  if (isDesktop) {
+    return (
+      <div className="flex flex-col bg-gradient-to-b from-amber-50/30 to-white dark:from-slate-950 dark:to-slate-900">
+        {/* Header */}
+        <SessionHeader
+          gameName={activeSession.gameName || 'Sessione di gioco'}
+          turnNumber={turnNumber}
+          currentPhase={null}
+          status={sessionStatus}
+        />
+
+        {/* 3-column layout */}
+        <LiveSessionLayout
+          leftPanel={scoreboardSection}
+          centerContent={
+            <div className="flex flex-col h-full overflow-auto">
+              {connectionIndicator}
+              <div className="flex-1 min-h-0">
+                <ActivityFeed events={activityEvents} />
+              </div>
+            </div>
+          }
+          rightPanel={chatSection}
+        />
+
+        {overlays}
+      </div>
+    );
+  }
+
+  // ----- Mobile layout: stacked -----
+  return (
+    <div className="min-h-screen bg-gradient-to-b from-amber-50/30 to-white dark:from-slate-950 dark:to-slate-900">
+      {/* Header */}
+      <SessionHeader
+        gameName={activeSession.gameName || 'Sessione di gioco'}
+        turnNumber={turnNumber}
+        currentPhase={null}
+        status={sessionStatus}
+      />
+
+      {connectionIndicator}
+
+      {/* Main content: stacked on mobile */}
+      <div className="px-4 pb-8 space-y-4">
+        <LiveScoreboard players={scoreboardPlayers} isRealTime={isConnected} />
+        <ScoreAssistant sessionId={sessionId} onScoreRecorded={loadScores} />
+        <QuickActions
+          isPaused={isPaused}
+          isLoading={isLoading}
+          onOpenRules={() => setRulesOpen(true)}
+          onAskArbiter={() => setRulesOpen(true)}
+          onTogglePause={handleTogglePause}
+          onOpenScores={() => setScoresOpen(true)}
+        />
+        {/* Setup suggestion chips - show only when chat is empty (mobile) */}
+        {chatMessages.length === 0 && agentId && (
+          <div className="flex flex-wrap gap-2">
+            {SETUP_CHIPS.map(chip => (
+              <button
+                key={chip}
+                type="button"
+                className="text-xs px-3 py-1.5 rounded-full border border-amber-300 dark:border-amber-600 text-amber-700 dark:text-amber-300 hover:bg-amber-50 dark:hover:bg-amber-900/30 transition-colors"
+                onClick={() => handleChatSend(chip)}
+                disabled={isChatStreaming}
+              >
+                {chip}
+              </button>
+            ))}
+          </div>
+        )}
+        <SessionChatWidget
+          messages={chatMessages}
+          isStreaming={isChatStreaming}
+          onSend={handleChatSend}
+          defaultExpanded={false}
+        />
+      </div>
+
+      {overlays}
     </div>
   );
 }

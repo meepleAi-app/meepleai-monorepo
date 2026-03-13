@@ -1,0 +1,111 @@
+# Docker Compose - Staging Traefik Override
+# Issue #176: Server-only config committed to repository (GitOps)
+#
+# Extends compose.traefik.yml with staging-specific overrides:
+# - Linux socket proxy (not Windows named pipe)
+# - Let's Encrypt for meepleai.app domain
+# - Production-level security headers
+# - INFO-level logging (not DEBUG)
+#
+# Usage:
+#   docker compose -f docker-compose.yml -f compose.staging.yml \
+#     -f compose.staging-traefik.yml --profile minimal up -d
+
+services:
+  # Socket proxy disabled - v0.3.0 too old for Docker API 1.40+
+  # TODO: Upgrade to ghcr.io/tecnativa/docker-socket-proxy:0.6+ and re-enable
+  # docker-socket-proxy:
+  #   profiles: [minimal, dev, observability, ai, automation, full]
+
+  traefik:
+    command:
+      # API & Dashboard - secured via middleware
+      - "--api.dashboard=true"
+      # Health check endpoint
+      - "--ping=true"
+
+      # Logging - INFO for staging (not DEBUG)
+      - "--log.level=INFO"
+      - "--log.format=json"
+      - "--accesslog=true"
+      - "--accesslog.filepath=/var/log/traefik/access.log"
+      - "--accesslog.format=json"
+      - "--log.filepath=/var/log/traefik/traefik.log"
+
+      # Entry Points
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.web.http.redirections.entrypoint.to=websecure"
+      - "--entrypoints.web.http.redirections.entrypoint.scheme=https"
+      - "--entrypoints.web.http.redirections.entrypoint.permanent=true"
+      - "--entrypoints.websecure.address=:443"
+      - "--entrypoints.websecure.http.tls.certResolver=letsencrypt"
+
+      # Docker Provider - direct socket access (socket-proxy v0.3.0 too old for Docker API 1.40+)
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--providers.docker.network=meepleai"
+      - "--providers.docker.endpoint=unix:///var/run/docker.sock"
+
+      # Dynamic Configuration
+      - "--providers.file.directory=/etc/traefik/dynamic"
+      - "--providers.file.watch=true"
+
+      # Metrics
+      - "--metrics.prometheus=true"
+      - "--metrics.prometheus.addEntryPointsLabels=true"
+      - "--metrics.prometheus.addServicesLabels=true"
+
+      # Let's Encrypt (HTTP Challenge)
+      - "--certificatesresolvers.letsencrypt.acme.httpchallenge=true"
+      - "--certificatesresolvers.letsencrypt.acme.httpchallenge.entrypoint=web"
+      - "--certificatesresolvers.letsencrypt.acme.email=admin@meepleai.io"
+      - "--certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json"
+
+    ports:
+      - "80:80"
+      - "443:443"
+      # Dashboard on internal port only (not exposed externally)
+      - "127.0.0.1:8888:8080"
+
+    volumes:
+      # Docker socket (direct access - TODO: upgrade socket-proxy to v0.6+ for API 1.40+)
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      # Static configuration (staging-specific: direct Docker socket)
+      - ./traefik/traefik.staging.yml:/etc/traefik/traefik.yml:ro
+      # Dynamic configuration
+      - ./traefik/dynamic:/etc/traefik/dynamic:ro
+      # Logs
+      - ./traefik/logs:/var/log/traefik
+      # Let's Encrypt certificates (persistent)
+      - traefik-certs-staging:/letsencrypt
+
+    labels:
+      - "traefik.enable=true"
+      # Dashboard - internal access only
+      - "traefik.http.routers.traefik-dashboard.rule=Host(`traefik.meepleai.app`)"
+      - "traefik.http.routers.traefik-dashboard.entrypoints=websecure"
+      - "traefik.http.routers.traefik-dashboard.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.traefik-dashboard.service=api@internal"
+
+  # API routing for staging
+  api:
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.api.rule=Host(`meepleai.app`) && (PathPrefix(`/api`) || PathPrefix(`/health`) || PathPrefix(`/swagger`))"
+      - "traefik.http.routers.api.entrypoints=websecure"
+      - "traefik.http.routers.api.tls.certresolver=letsencrypt"
+      - "traefik.http.services.api.loadbalancer.server.port=8080"
+
+  # Web routing for staging
+  web:
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.web.rule=Host(`meepleai.app`)"
+      - "traefik.http.routers.web.entrypoints=websecure"
+      - "traefik.http.routers.web.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.web.priority=1"
+      - "traefik.http.services.web.loadbalancer.server.port=3000"
+
+volumes:
+  traefik-certs-staging:
+    name: meepleai-traefik-certs-staging

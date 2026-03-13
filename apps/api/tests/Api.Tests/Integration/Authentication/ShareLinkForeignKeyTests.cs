@@ -14,7 +14,7 @@ namespace Api.Tests.Integration.Authentication;
 /// Tests DeleteBehavior.Cascade for ChatThread, DeleteBehavior.Restrict for Creator.
 /// </summary>
 [Trait("Category", TestCategories.Integration)]
-[Collection("SharedTestcontainers")]
+[Collection("Integration-GroupB")]
 public class ShareLinkForeignKeyTests : IAsyncLifetime
 {
     private readonly SharedTestcontainersFixture _fixture;

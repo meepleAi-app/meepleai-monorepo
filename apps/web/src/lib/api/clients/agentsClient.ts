@@ -33,6 +33,7 @@ import {
   type PlayerModeSuggestionResponse,
   type Typology, // Added for AGT-012
 } from '../schemas';
+import { AgentCostEstimateSchema, type AgentCostEstimate } from '../schemas/rag-setup.schemas';
 
 import type { HttpClient } from '../core/httpClient';
 import type {
@@ -677,6 +678,43 @@ export function createAgentsClient({ httpClient }: CreateAgentsClientParams) {
         throw new Error('Failed to update agent configuration: no response from server');
       }
       return response;
+    },
+
+    // ========== RAG Setup (Admin) ==========
+
+    /** Estimate cost for agent with selected documents */
+    async estimateAgentCost(request: {
+      gameId: string;
+      documentIds: string[];
+      strategyName?: string;
+    }): Promise<AgentCostEstimate | null> {
+      return httpClient.post(
+        '/api/v1/admin/agents/estimate-cost',
+        request,
+        AgentCostEstimateSchema
+      );
+    },
+
+    /** Create agent with auto-link to SharedGame and document attachment */
+    async createAgentWithSetup(request: {
+      userId: string;
+      userTier: string;
+      userRole: string;
+      gameId: string;
+      addToCollection: boolean;
+      agentType: string;
+      agentName?: string;
+      strategyName?: string;
+      sharedGameId: string;
+      documentIds: string[];
+    }): Promise<{
+      agentId: string;
+      agentName: string;
+      threadId: string;
+      slotUsed: number;
+      gameAddedToCollection: boolean;
+    } | null> {
+      return httpClient.post('/api/v1/agents/setup', request);
     },
   };
 }

@@ -132,7 +132,7 @@ describe('TechnicalDetailsPanel', () => {
   it('shows debug console deep link when executionId and showDebugLink are provided', async () => {
     const user = userEvent.setup();
     render(
-      <TechnicalDetailsPanel debugSteps={mockDebugSteps} executionId="abc-123-def" showDebugLink />,
+      <TechnicalDetailsPanel debugSteps={mockDebugSteps} executionId="abc-123-def" showDebugLink />
     );
 
     await user.click(screen.getByTestId('technical-details-toggle'));

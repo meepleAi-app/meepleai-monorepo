@@ -24,8 +24,12 @@ interface StepCompleteProps {
 export function StepComplete({ results, onClose }: StepCompleteProps) {
   const succeeded = results.filter(r => r.result && !r.error);
   const failed = results.filter(r => r.error);
-  const autoApprovedWithJob = succeeded.filter(r => r.result?.autoApproved && r.result?.processingJobId);
-  const autoApprovedNoJob = succeeded.filter(r => r.result?.autoApproved && !r.result?.processingJobId);
+  const autoApprovedWithJob = succeeded.filter(
+    r => r.result?.autoApproved && r.result?.processingJobId
+  );
+  const autoApprovedNoJob = succeeded.filter(
+    r => r.result?.autoApproved && !r.result?.processingJobId
+  );
   const pendingApproval = succeeded.filter(r => r.result && !r.result.autoApproved);
 
   return (
@@ -46,9 +50,7 @@ export function StepComplete({ results, onClose }: StepCompleteProps) {
         <h3 className="text-lg font-semibold">
           {failed.length === 0 ? 'Elaborazione completata!' : 'Elaborazione completata con errori'}
         </h3>
-        <p className="text-sm text-muted-foreground mt-1">
-          {results.length} file processati
-        </p>
+        <p className="text-sm text-muted-foreground mt-1">{results.length} file processati</p>
       </div>
 
       {/* Stats */}
@@ -67,7 +69,9 @@ export function StepComplete({ results, onClose }: StepCompleteProps) {
             <p className="text-2xl font-bold text-amber-700 dark:text-amber-300">
               {autoApprovedNoJob.length}
             </p>
-            <p className="text-xs text-amber-600 dark:text-amber-400">Approvato (coda non disponibile)</p>
+            <p className="text-xs text-amber-600 dark:text-amber-400">
+              Approvato (coda non disponibile)
+            </p>
           </div>
         )}
 
@@ -82,9 +86,7 @@ export function StepComplete({ results, onClose }: StepCompleteProps) {
 
         {failed.length > 0 && (
           <div className="rounded-lg border bg-red-50 dark:bg-red-900/20 p-3">
-            <p className="text-2xl font-bold text-red-700 dark:text-red-300">
-              {failed.length}
-            </p>
+            <p className="text-2xl font-bold text-red-700 dark:text-red-300">{failed.length}</p>
             <p className="text-xs text-red-600 dark:text-red-400">Errori</p>
           </div>
         )}

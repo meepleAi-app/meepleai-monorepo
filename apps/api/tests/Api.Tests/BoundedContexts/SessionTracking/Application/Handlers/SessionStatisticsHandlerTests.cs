@@ -13,7 +13,7 @@ namespace Api.Tests.BoundedContexts.SessionTracking.Application.Handlers;
 
 [Trait("Category", "Unit")]
 [Trait("BoundedContext", "SessionTracking")]
-public class GetSessionStatisticsHandlerTests : IDisposable
+public sealed class GetSessionStatisticsHandlerTests : IDisposable
 {
     private readonly MeepleAiDbContext _context;
     private readonly GetSessionStatisticsHandler _handler;
@@ -176,7 +176,7 @@ public class GetSessionStatisticsHandlerTests : IDisposable
 
 [Trait("Category", "Unit")]
 [Trait("BoundedContext", "SessionTracking")]
-public class GetGameStatisticsHandlerTests : IDisposable
+public sealed class GetGameStatisticsHandlerTests : IDisposable
 {
     private readonly MeepleAiDbContext _context;
     private readonly GetGameStatisticsHandler _handler;

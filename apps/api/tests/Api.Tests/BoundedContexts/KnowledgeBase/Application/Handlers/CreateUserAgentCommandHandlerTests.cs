@@ -3,10 +3,14 @@ using Api.BoundedContexts.KnowledgeBase.Application.Handlers;
 using Api.BoundedContexts.KnowledgeBase.Domain.Entities;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
+using Api.BoundedContexts.SystemConfiguration.Domain.ValueObjects;
 using Api.Infrastructure;
 using Api.Middleware.Exceptions;
 using Api.SharedKernel.Application.Services;
 using Api.SharedKernel.Domain.Interfaces;
+using Api.SharedKernel.Domain.ValueObjects;
+using Api.SharedKernel.Exceptions;
+using Api.SharedKernel.Services;
 using Api.Tests.Constants;
 using Api.Tests.TestHelpers;
 using MediatR;
@@ -25,6 +29,7 @@ namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Handlers;
 public class CreateUserAgentCommandHandlerTests
 {
     private readonly Mock<IAgentRepository> _repository = new();
+    private readonly Mock<ITierEnforcementService> _tierService = new();
     private readonly Mock<ILogger<CreateUserAgentCommandHandler>> _logger = new();
     private readonly MeepleAiDbContext _db;
     private readonly CreateUserAgentCommandHandler _handler;
@@ -37,7 +42,11 @@ public class CreateUserAgentCommandHandlerTests
         _repository.Setup(r => r.ResolveGameIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((Guid id, CancellationToken _) => id);
 
-        _handler = new CreateUserAgentCommandHandler(_repository.Object, _db, _logger.Object);
+        // E2-3: Default tier enforcement — allows all operations
+        _tierService.Setup(t => t.CanPerformAsync(It.IsAny<Guid>(), It.IsAny<TierAction>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+
+        _handler = new CreateUserAgentCommandHandler(_repository.Object, _db, _tierService.Object, _logger.Object);
     }
 
     [Fact]
@@ -137,15 +146,24 @@ public class CreateUserAgentCommandHandlerTests
     }
 
     [Fact]
-    public async Task Handle_QuotaExceeded_ThrowsConflictException()
+    public async Task Handle_QuotaExceeded_ThrowsTierLimitExceededException()
     {
         // Arrange
         var userId = Guid.NewGuid();
-        var existingAgents = Enumerable.Range(0, 3)
-            .Select(_ => CreateTestAgent(userId))
-            .ToList();
-        _repository.Setup(r => r.GetByUserIdAsync(userId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(existingAgents);
+
+        // E2-3: Tier enforcement denies agent creation
+        _tierService.Setup(t => t.CanPerformAsync(userId, TierAction.CreateAgent, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(false);
+        _tierService.Setup(t => t.GetUsageAsync(userId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new UsageSnapshot(
+                PrivateGames: 0, PrivateGamesMax: 5,
+                PdfThisMonth: 0, PdfThisMonthMax: 3,
+                AgentQueriesToday: 0, AgentQueriesTodayMax: 10,
+                SessionQueries: 0, SessionQueriesMax: 10,
+                Agents: 1, AgentsMax: 1,
+                PhotosThisSession: 0, PhotosThisSessionMax: 5,
+                SessionSaveEnabled: false,
+                CatalogProposalsThisWeek: 0, CatalogProposalsThisWeekMax: 3));
 
         var command = new CreateUserAgentCommand(
             UserId: userId,
@@ -159,9 +177,11 @@ public class CreateUserAgentCommandHandlerTests
         );
 
         // Act & Assert
-        var ex = await Assert.ThrowsAsync<ConflictException>(
+        var ex = await Assert.ThrowsAsync<TierLimitExceededException>(
             () => _handler.Handle(command, CancellationToken.None));
-        Assert.Contains("Agent limit reached", ex.Message);
+        Assert.Equal("CreateAgent", ex.LimitType);
+        Assert.Equal(1, ex.Current);
+        Assert.Equal(1, ex.Max);
     }
 
     [Fact]

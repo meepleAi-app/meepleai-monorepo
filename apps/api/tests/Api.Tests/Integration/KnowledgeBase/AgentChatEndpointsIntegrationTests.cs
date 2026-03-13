@@ -26,7 +26,7 @@ namespace Api.Tests.Integration.KnowledgeBase;
 /// Integration tests for Agent Chat SSE streaming endpoints.
 /// Issue #4126: API Integration for Agent Chat
 /// </summary>
-[Collection("SharedTestcontainers")]
+[Collection("Integration-GroupA")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "KnowledgeBase")]
 public sealed class AgentChatEndpointsIntegrationTests : IAsyncLifetime

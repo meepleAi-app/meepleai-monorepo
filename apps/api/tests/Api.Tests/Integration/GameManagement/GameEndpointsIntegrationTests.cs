@@ -23,7 +23,7 @@ namespace Api.Tests.Integration.GameManagement;
 /// Tests: GetAllGames, GetGameById, CreateGame, UpdateGame, GameSessions, GameState
 /// Issue #3010: Backend coverage improvement.
 /// </summary>
-[Collection("SharedTestcontainers")]
+[Collection("Integration-GroupC")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "GameManagement")]
 public sealed class GameEndpointsIntegrationTests : IAsyncLifetime

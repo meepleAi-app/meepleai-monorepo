@@ -25,7 +25,7 @@ namespace Api.Tests.BoundedContexts.KnowledgeBase.Infrastructure.Scheduling;
 /// Issue #3985: Integration Tests for Context Engineering Repositories.
 /// Validates cleanup job behavior against a real database instead of mocks.
 /// </summary>
-[Collection("SharedTestcontainers")]
+[Collection("Integration-GroupA")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "KnowledgeBase")]
 [Trait("Dependency", "PostgreSQL")]

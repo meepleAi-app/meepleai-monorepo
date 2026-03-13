@@ -14,10 +14,11 @@
 
 'use client';
 
-import { use, useState } from 'react';
+import { use, useEffect, useRef, useState } from 'react';
 
 import { ArrowLeft, FileText } from 'lucide-react';
 import Link from 'next/link';
+import { toast } from 'sonner';
 
 import { PdfIndexingStatus } from '@/components/admin/shared-games/PdfIndexingStatus';
 import { PdfUploadSection } from '@/components/admin/shared-games/PdfUploadSection';
@@ -33,6 +34,7 @@ import {
 import { Skeleton } from '@/components/ui/feedback/skeleton';
 import { Button } from '@/components/ui/primitives/button';
 import { useGameRagReadiness } from '@/hooks/queries/useGameRagReadiness';
+import { useNotificationStore } from '@/store/notification/store';
 
 interface RagSetupClientProps {
   params: Promise<{ id: string }>;
@@ -41,10 +43,31 @@ interface RagSetupClientProps {
 export function RagSetupClient({ params }: RagSetupClientProps) {
   const { id: gameId } = use(params);
   const { data: readiness, isLoading } = useGameRagReadiness(gameId);
+  const notifications = useNotificationStore((s) => s.notifications);
+  const seenNotificationIds = useRef<Set<string>>(new Set());
   const [agentInfo, setAgentInfo] = useState<{
     agentId: string;
     chatThreadId: string;
   } | null>(null);
+
+  // Toast when a document processing completes for this game
+  useEffect(() => {
+    for (const n of notifications) {
+      if (seenNotificationIds.current.has(n.id)) continue;
+      seenNotificationIds.current.add(n.id);
+
+      if (n.type !== 'processing_job_completed') continue;
+
+      try {
+        const meta = n.metadata ? JSON.parse(n.metadata) : null;
+        if (meta?.gameId === gameId || meta?.sharedGameId === gameId) {
+          toast.success(n.title ?? 'Documento pronto per RAG!');
+        }
+      } catch {
+        // metadata not valid JSON — skip
+      }
+    }
+  }, [notifications, gameId]);
 
   // Derive active agent/thread from either new creation or existing linked agent
   const activeAgentId =

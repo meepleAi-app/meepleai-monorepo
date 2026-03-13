@@ -21,7 +21,7 @@ namespace Api.Tests.BoundedContexts.SharedGameCatalog.Application.Queries;
 /// Integration tests for GetGameFaqsQueryHandler.
 /// Issue #2681: Public FAQs endpoints
 /// </summary>
-[Collection("SharedTestcontainers")]
+[Collection("Integration-GroupC")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "SharedGameCatalog")]
 public sealed class GetGameFaqsQueryHandlerTests : IAsyncLifetime

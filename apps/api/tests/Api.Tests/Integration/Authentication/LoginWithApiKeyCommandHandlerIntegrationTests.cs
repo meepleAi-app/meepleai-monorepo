@@ -21,7 +21,7 @@ namespace Api.Tests.Integration.Authentication;
 /// Integration tests for LoginWithApiKeyCommandHandler (Issue #2643).
 /// Tests API key authentication with real database and services.
 /// </summary>
-[Collection("SharedTestcontainers")]
+[Collection("Integration-GroupB")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("Dependency", "PostgreSQL")]
 [Trait("BoundedContext", "Authentication")]

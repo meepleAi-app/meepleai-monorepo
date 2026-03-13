@@ -31,6 +31,14 @@ vi.mock('@/lib/api', () => ({
     bgg: {
       getGameDetails: vi.fn(),
     },
+    sharedGames: {
+      checkBggDuplicate: vi.fn().mockResolvedValue({
+        isDuplicate: false,
+        existingGameId: null,
+        existingGame: null,
+        bggData: null,
+      }),
+    },
   },
 }));
 
@@ -84,6 +92,33 @@ beforeEach(() => {
     },
     isLoading: false,
     error: null,
+  });
+
+  // Default: getGameDetails returns full data (BggSearchPanel fetches details on click)
+  (api.bgg.getGameDetails as ReturnType<typeof vi.fn>).mockImplementation((bggId: number) => {
+    const result = mockSearchResults.find(r => r.bggId === bggId);
+    return Promise.resolve({
+      bggId: result?.bggId ?? bggId,
+      name: result?.name ?? 'Unknown',
+      description: null,
+      yearPublished: result?.yearPublished ?? null,
+      minPlayers: null,
+      maxPlayers: null,
+      playingTime: null,
+      minPlayTime: null,
+      maxPlayTime: null,
+      minAge: null,
+      averageRating: null,
+      bayesAverageRating: null,
+      usersRated: null,
+      averageWeight: null,
+      thumbnailUrl: result?.thumbnailUrl ?? null,
+      imageUrl: null,
+      categories: [],
+      mechanics: [],
+      designers: [],
+      publishers: [],
+    });
   });
 });
 

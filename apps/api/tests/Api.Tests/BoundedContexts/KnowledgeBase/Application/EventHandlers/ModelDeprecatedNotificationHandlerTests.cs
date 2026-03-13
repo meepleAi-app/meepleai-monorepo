@@ -23,7 +23,7 @@ namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.EventHandlers;
 /// </summary>
 [Trait("Category", TestCategories.Unit)]
 [Trait("BoundedContext", "KnowledgeBase")]
-public class ModelDeprecatedNotificationHandlerTests : IDisposable
+public sealed class ModelDeprecatedNotificationHandlerTests : IDisposable
 {
     private readonly Mock<INotificationRepository> _notificationRepoMock;
     private readonly MeepleAiDbContext _dbContext;

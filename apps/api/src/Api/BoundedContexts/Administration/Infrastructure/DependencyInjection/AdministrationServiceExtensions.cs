@@ -8,6 +8,7 @@ using Api.BoundedContexts.Administration.Infrastructure.Persistence;
 using Api.BoundedContexts.Administration.Infrastructure.Repositories;
 using Api.BoundedContexts.Administration.Infrastructure.Scheduling;
 using Api.BoundedContexts.Administration.Infrastructure.Services;
+using Api.Infrastructure.Seeders;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -97,8 +98,13 @@ internal static class AdministrationServiceExtensions
         services.AddScoped<ILighthouseReportParserService, LighthouseReportParserService>();
         services.AddScoped<IPlaywrightReportParserService, PlaywrightReportParserService>();
 
-        // ISSUE-2512: Auto-configuration service for first run setup
-        services.AddScoped<IAutoConfigurationService, AutoConfigurationService>();
+        // Seeding orchestrator (replaces legacy AutoConfigurationService)
+        var seedProfile = Enum.TryParse<SeedProfile>(
+            configuration["SEED_PROFILE"] ?? "dev",
+            ignoreCase: true,
+            out var parsed) ? parsed : SeedProfile.Dev;
+        services.AddSingleton(typeof(SeedProfile), seedProfile);
+        services.AddSingleton<SeedOrchestrator>();
 
         // Issue #3916: AI insights service for personalized dashboard recommendations
         services.AddScoped<IAiInsightsService, AiInsightsService>();

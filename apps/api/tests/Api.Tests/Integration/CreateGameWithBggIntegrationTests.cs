@@ -24,7 +24,7 @@ namespace Api.Tests.Integration;
 /// <summary>
 /// Integration tests for creating games with BGG integration.
 /// </summary>
-[Collection("SharedTestcontainers")]
+[Collection("Integration-GroupB")]
 [Trait("Category", TestCategories.Integration)]
 public sealed class CreateGameWithBggIntegrationTests : IAsyncLifetime
 {

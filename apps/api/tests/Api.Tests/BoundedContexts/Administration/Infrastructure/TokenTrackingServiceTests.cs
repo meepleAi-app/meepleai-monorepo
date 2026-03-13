@@ -20,7 +20,7 @@ namespace Api.Tests.BoundedContexts.Administration.Infrastructure;
 /// <summary>
 /// Integration tests for TokenTrackingService (Issue #3786)
 /// </summary>
-[Collection("SharedTestcontainers")]
+[Collection("Integration-GroupD")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("Dependency", "PostgreSQL")]
 [Trait("BoundedContext", "Administration")]

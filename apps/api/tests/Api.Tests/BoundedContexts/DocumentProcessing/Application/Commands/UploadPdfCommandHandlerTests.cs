@@ -1,4 +1,6 @@
 using Api.SharedKernel.Domain.ValueObjects;
+using Api.SharedKernel.Services;
+using TierLimits = Api.BoundedContexts.SystemConfiguration.Domain.ValueObjects.TierLimits;
 using Api.BoundedContexts.DocumentProcessing.Application.Commands;
 using Api.BoundedContexts.DocumentProcessing.Domain.Services;
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.Configuration;
@@ -34,6 +36,20 @@ public class UploadPdfCommandHandlerTests
     private static MeepleAiDbContext CreateFreshDbContext()
     {
         return TestDbContextFactory.CreateInMemoryDbContext();
+    }
+
+    /// <summary>
+    /// Creates a default ITierEnforcementService mock that allows all operations.
+    /// E2-3: Tier enforcement integration.
+    /// </summary>
+    private static Mock<ITierEnforcementService> CreateDefaultTierMock()
+    {
+        var mock = new Mock<ITierEnforcementService>();
+        mock.Setup(t => t.CanPerformAsync(It.IsAny<Guid>(), It.IsAny<TierAction>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+        mock.Setup(t => t.GetLimitsAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(TierLimits.Unlimited);
+        return mock;
     }
 
     /// <summary>
@@ -76,6 +92,7 @@ public class UploadPdfCommandHandlerTests
             cacheServiceMock.Object,
             blobStorageServiceMock.Object,
             quotaServiceMock.Object,
+            CreateDefaultTierMock().Object,
             pdfOptions,
             mediatorMock.Object);
 
@@ -100,6 +117,7 @@ public class UploadPdfCommandHandlerTests
                 cacheServiceMock.Object,
                 blobStorageServiceMock.Object,
                 quotaServiceMock.Object,
+                CreateDefaultTierMock().Object,
                 pdfOptions,
                 mediatorMock.Object);
 
@@ -126,6 +144,7 @@ public class UploadPdfCommandHandlerTests
                 cacheServiceMock.Object,
                 blobStorageServiceMock.Object,
                 quotaServiceMock.Object,
+                CreateDefaultTierMock().Object,
                 pdfOptions,
                 mediatorMock.Object);
 
@@ -152,6 +171,7 @@ public class UploadPdfCommandHandlerTests
                 cacheServiceMock.Object,
                 blobStorageServiceMock.Object,
                 quotaServiceMock.Object,
+                CreateDefaultTierMock().Object,
                 pdfOptions,
                 mediatorMock.Object);
 
@@ -178,6 +198,7 @@ public class UploadPdfCommandHandlerTests
                 cacheServiceMock.Object,
                 blobStorageServiceMock.Object,
                 quotaServiceMock.Object,
+                CreateDefaultTierMock().Object,
                 pdfOptions,
                 mediatorMock.Object);
 
@@ -204,6 +225,7 @@ public class UploadPdfCommandHandlerTests
                 cacheServiceMock.Object,
                 blobStorageServiceMock.Object,
                 quotaServiceMock.Object,
+                CreateDefaultTierMock().Object,
                 pdfOptions,
                 mediatorMock.Object);
 
@@ -230,6 +252,7 @@ public class UploadPdfCommandHandlerTests
                 cacheServiceMock.Object,
                 blobStorageServiceMock.Object,
                 quotaServiceMock.Object,
+                CreateDefaultTierMock().Object,
                 pdfOptions,
                 mediatorMock.Object);
 
@@ -256,6 +279,7 @@ public class UploadPdfCommandHandlerTests
                 null!,
                 blobStorageServiceMock.Object,
                 quotaServiceMock.Object,
+                CreateDefaultTierMock().Object,
                 pdfOptions,
                 mediatorMock.Object);
 
@@ -282,6 +306,7 @@ public class UploadPdfCommandHandlerTests
                 cacheServiceMock.Object,
                 null!,
                 quotaServiceMock.Object,
+                CreateDefaultTierMock().Object,
                 pdfOptions,
                 mediatorMock.Object);
 
@@ -308,6 +333,7 @@ public class UploadPdfCommandHandlerTests
                 cacheServiceMock.Object,
                 blobStorageServiceMock.Object,
                 null!,
+                CreateDefaultTierMock().Object,
                 pdfOptions,
                 mediatorMock.Object);
 
@@ -334,6 +360,7 @@ public class UploadPdfCommandHandlerTests
                 cacheServiceMock.Object,
                 blobStorageServiceMock.Object,
                 quotaServiceMock.Object,
+                CreateDefaultTierMock().Object,
                 null!,
                 mediatorMock.Object);
 

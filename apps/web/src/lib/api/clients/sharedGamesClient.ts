@@ -14,10 +14,7 @@ import {
   type AgentDefinitionDto,
   type KbCardDto,
 } from '../schemas/agent-definitions.schemas';
-import {
-  GameRagReadinessSchema,
-  type GameRagReadiness,
-} from '../schemas/rag-setup.schemas';
+import { GameRagReadinessSchema, type GameRagReadiness } from '../schemas/rag-setup.schemas';
 import {
   SharedGameDetailSchema,
   PagedSharedGamesSchema,
@@ -835,6 +832,34 @@ export function createSharedGamesClient({ httpClient }: CreateSharedGamesClientP
         xhr.open('POST', `/api/v1/admin/shared-games/${gameId}/documents/upload`);
         xhr.send(formData);
       });
+    },
+
+    // ========== Distinct Metadata (for autocomplete) ==========
+
+    /**
+     * Get distinct categories, mechanics, designers, and publishers (ADMIN/EDITOR)
+     *
+     * Used to populate autocomplete inputs when creating or editing shared games.
+     *
+     * @returns Object with sorted distinct name arrays for each metadata type
+     */
+    async getDistinctMetadata(): Promise<{
+      categories: string[];
+      mechanics: string[];
+      designers: string[];
+      publishers: string[];
+    }> {
+      const DistinctMetadataSchema = z.object({
+        categories: z.array(z.string()),
+        mechanics: z.array(z.string()),
+        designers: z.array(z.string()),
+        publishers: z.array(z.string()),
+      });
+      const result = await httpClient.get(
+        '/api/v1/admin/shared-games/metadata/distinct',
+        DistinctMetadataSchema
+      );
+      return result ?? { categories: [], mechanics: [], designers: [], publishers: [] };
     },
 
     // ========== RAG Readiness ==========

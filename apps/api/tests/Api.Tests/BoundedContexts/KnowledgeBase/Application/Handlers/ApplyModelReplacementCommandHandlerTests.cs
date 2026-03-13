@@ -21,7 +21,7 @@ namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Handlers;
 /// </summary>
 [Trait("Category", TestCategories.Unit)]
 [Trait("BoundedContext", "KnowledgeBase")]
-public class ApplyModelReplacementCommandHandlerTests : IDisposable
+public sealed class ApplyModelReplacementCommandHandlerTests : IDisposable
 {
     private readonly MeepleAiDbContext _dbContext;
     private readonly Mock<IModelCompatibilityRepository> _compatibilityRepoMock;

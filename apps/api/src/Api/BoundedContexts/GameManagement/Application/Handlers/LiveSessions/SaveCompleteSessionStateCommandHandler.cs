@@ -6,6 +6,8 @@ using Api.BoundedContexts.GameManagement.Domain.Enums;
 using Api.BoundedContexts.GameManagement.Domain.Repositories;
 using Api.Middleware.Exceptions;
 using Api.SharedKernel.Application.Interfaces;
+using Api.SharedKernel.Exceptions;
+using Api.SharedKernel.Services;
 using MediatR;
 using Microsoft.Extensions.Logging;
 
@@ -20,15 +22,18 @@ internal sealed class SaveCompleteSessionStateCommandHandler
 {
     private readonly ILiveSessionRepository _sessionRepository;
     private readonly IMediator _mediator;
+    private readonly ITierEnforcementService _tierEnforcementService;
     private readonly ILogger<SaveCompleteSessionStateCommandHandler> _logger;
 
     public SaveCompleteSessionStateCommandHandler(
         ILiveSessionRepository sessionRepository,
         IMediator mediator,
+        ITierEnforcementService tierEnforcementService,
         ILogger<SaveCompleteSessionStateCommandHandler> logger)
     {
         _sessionRepository = sessionRepository ?? throw new ArgumentNullException(nameof(sessionRepository));
         _mediator = mediator ?? throw new ArgumentNullException(nameof(mediator));
+        _tierEnforcementService = tierEnforcementService ?? throw new ArgumentNullException(nameof(tierEnforcementService));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -41,6 +46,18 @@ internal sealed class SaveCompleteSessionStateCommandHandler
         var session = await _sessionRepository.GetByIdAsync(command.SessionId, cancellationToken)
             .ConfigureAwait(false)
             ?? throw new NotFoundException("LiveGameSession", command.SessionId.ToString());
+
+        // E2-3: Tier enforcement — check if session save is enabled for this user's tier
+        var canSave = await _tierEnforcementService
+            .CanPerformAsync(session.CreatedByUserId, TierAction.SaveSession, cancellationToken)
+            .ConfigureAwait(false);
+
+        if (!canSave)
+        {
+            throw new TierLimitExceededException(
+                nameof(TierAction.SaveSession),
+                "Session save is not available on your current plan. Upgrade to Premium to save sessions.");
+        }
 
         // 2. If status is InProgress, pause first
         if (session.Status == LiveSessionStatus.InProgress)

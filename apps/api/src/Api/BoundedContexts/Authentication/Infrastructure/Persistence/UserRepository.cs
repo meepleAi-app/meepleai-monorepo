@@ -317,9 +317,10 @@ public class UserRepository : RepositoryBase, IUserRepository
     public async Task<int> CountAdminsAsync(CancellationToken cancellationToken = default)
     {
         var adminRole = Role.Admin.Value;
+        var superAdminRole = Role.SuperAdmin.Value;
         return await DbContext.Users
             .AsNoTracking()
-            .CountAsync(u => u.Role == adminRole, cancellationToken).ConfigureAwait(false);
+            .CountAsync(u => u.Role == adminRole || u.Role == superAdminRole, cancellationToken).ConfigureAwait(false);
     }
 
     public async Task<IReadOnlyList<User>> SearchAsync(string query, int maxResults, CancellationToken cancellationToken = default)

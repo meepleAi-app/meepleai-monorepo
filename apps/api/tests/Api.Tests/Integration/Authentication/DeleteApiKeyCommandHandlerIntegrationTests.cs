@@ -20,7 +20,7 @@ namespace Api.Tests.Integration.Authentication;
 /// Tests API key deletion with real PostgreSQL database.
 /// Uses SharedTestcontainersFixture for Docker hijack prevention (Issue #2031).
 /// </summary>
-[Collection("SharedTestcontainers")]
+[Collection("Integration-GroupB")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("Dependency", "PostgreSQL")]
 [Trait("BoundedContext", "Authentication")]

@@ -18,7 +18,7 @@ namespace Api.Tests.BoundedContexts.KnowledgeBase.Infrastructure.Persistence;
 /// Integration tests for ModelCompatibilityRepository.
 /// Issue #5496: Part of Epic #5490 - Model Versioning &amp; Availability Monitoring.
 /// </summary>
-[Collection("SharedTestcontainers")]
+[Collection("Integration-GroupA")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "KnowledgeBase")]
 public class ModelCompatibilityRepositoryTests : IAsyncLifetime

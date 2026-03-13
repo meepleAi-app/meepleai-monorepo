@@ -467,6 +467,128 @@ public class IndexPdfCommandHandlerTests
         );
     }
 
+    [Fact]
+    public async Task Handle_WithExtractedText_SetsProcessingStateToReady()
+    {
+        // Arrange: PDF has extracted text but ProcessingState is Extracting (not Ready)
+        using var context = CreateFreshDbContext();
+        var (chunkingServiceMock, embeddingServiceMock, qdrantServiceMock, loggerMock, indexingSettingsMock) = CreateMocks();
+
+        var gameId = Guid.NewGuid();
+        var pdfId = Guid.NewGuid();
+        var pdf = CreatePdfDocument(pdfId, gameId, "completed", GenerateExtractedText(10));
+        pdf.ProcessingState = "Extracting"; // Simulate extract handler completed but state not yet Ready
+        await context.PdfDocuments.AddAsync(pdf);
+        await context.SaveChangesAsync();
+
+        var textChunks = GenerateTextChunks(10);
+        chunkingServiceMock
+            .Setup(x => x.ChunkText(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>()))
+            .Returns(textChunks);
+
+        embeddingServiceMock
+            .Setup(x => x.GenerateEmbeddingsAsync(It.IsAny<List<string>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((List<string> texts, CancellationToken ct) =>
+            {
+                var embeddings = texts.Select(_ => GenerateRandomEmbedding(3072)).ToList();
+                return new EmbeddingResult { Success = true, Embeddings = embeddings };
+            });
+
+        embeddingServiceMock.Setup(x => x.GetEmbeddingDimensions()).Returns(3072);
+        embeddingServiceMock.Setup(x => x.GetModelName()).Returns("text-embedding-3-large");
+
+        qdrantServiceMock
+            .Setup(x => x.IndexDocumentChunksAsync(
+                It.IsAny<string>(), It.IsAny<string>(),
+                It.IsAny<List<DocumentChunk>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new IndexResult { Success = true });
+
+        var handler = new IndexPdfCommandHandler(
+            context, chunkingServiceMock.Object, embeddingServiceMock.Object,
+            qdrantServiceMock.Object, loggerMock.Object, indexingSettingsMock.Object);
+
+        // Act
+        var result = await handler.Handle(new IndexPdfCommand(pdfId.ToString()), CancellationToken.None);
+
+        // Assert: indexing succeeds and state is Ready
+        result.Success.Should().BeTrue();
+        var updatedPdf = await context.PdfDocuments.FindAsync(pdfId);
+        updatedPdf!.ProcessingState.Should().Be("Ready");
+        updatedPdf.ProcessingStatus.Should().Be("completed");
+    }
+
+    [Fact]
+    public async Task Handle_WhenChunkingFails_SetsProcessingStateToFailed()
+    {
+        // Arrange
+        using var context = CreateFreshDbContext();
+        var (chunkingServiceMock, embeddingServiceMock, qdrantServiceMock, loggerMock, indexingSettingsMock) = CreateMocks();
+
+        var gameId = Guid.NewGuid();
+        var pdfId = Guid.NewGuid();
+        var pdf = CreatePdfDocument(pdfId, gameId, "completed", GenerateExtractedText(10));
+        await context.PdfDocuments.AddAsync(pdf);
+        await context.SaveChangesAsync();
+
+        // Chunking returns empty list → triggers embedding failure path
+        chunkingServiceMock
+            .Setup(x => x.ChunkText(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>()))
+            .Returns(new List<TextChunk>());
+
+        embeddingServiceMock.Setup(x => x.GetEmbeddingDimensions()).Returns(3072);
+        embeddingServiceMock.Setup(x => x.GetModelName()).Returns("text-embedding-3-large");
+
+        var handler = new IndexPdfCommandHandler(
+            context, chunkingServiceMock.Object, embeddingServiceMock.Object,
+            qdrantServiceMock.Object, loggerMock.Object, indexingSettingsMock.Object);
+
+        // Act
+        var result = await handler.Handle(new IndexPdfCommand(pdfId.ToString()), CancellationToken.None);
+
+        // Assert
+        result.Success.Should().BeFalse();
+        var updatedPdf = await context.PdfDocuments.FindAsync(pdfId);
+        updatedPdf!.ProcessingState.Should().Be("Failed");
+    }
+
+    [Fact]
+    public async Task Handle_WhenUnexpectedExceptionOccurs_PersistsFailedState()
+    {
+        // Arrange
+        using var context = CreateFreshDbContext();
+        var (chunkingServiceMock, embeddingServiceMock, qdrantServiceMock, loggerMock, indexingSettingsMock) = CreateMocks();
+
+        var gameId = Guid.NewGuid();
+        var pdfId = Guid.NewGuid();
+        var pdf = CreatePdfDocument(pdfId, gameId, "completed", GenerateExtractedText(10));
+        pdf.ProcessingState = "Extracting"; // simulate mid-pipeline state
+        await context.PdfDocuments.AddAsync(pdf);
+        await context.SaveChangesAsync();
+
+        // Chunking throws an unexpected exception (not a handled failure result)
+        chunkingServiceMock
+            .Setup(x => x.ChunkText(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>()))
+            .Throws(new InvalidOperationException("Unexpected chunking crash"));
+
+        embeddingServiceMock.Setup(x => x.GetEmbeddingDimensions()).Returns(3072);
+        embeddingServiceMock.Setup(x => x.GetModelName()).Returns("text-embedding-3-large");
+
+        var handler = new IndexPdfCommandHandler(
+            context, chunkingServiceMock.Object, embeddingServiceMock.Object,
+            qdrantServiceMock.Object, loggerMock.Object, indexingSettingsMock.Object);
+
+        // Act
+        var result = await handler.Handle(new IndexPdfCommand(pdfId.ToString()), CancellationToken.None);
+
+        // Assert - failure DTO returned AND state persisted in DB
+        result.Success.Should().BeFalse();
+        result.ErrorCode.Should().Be(PdfIndexingErrorCode.UnexpectedError);
+        var updatedPdf = await context.PdfDocuments.FindAsync(pdfId);
+        updatedPdf!.ProcessingState.Should().Be("Failed");
+        updatedPdf.ProcessingStatus.Should().Be("failed");
+        updatedPdf.ProcessingError.Should().Contain("Unexpected chunking crash");
+    }
+
     // Helper methods
     private static PdfDocumentEntity CreatePdfDocument(Guid id, Guid gameId, string status, string extractedText)
     {
@@ -480,7 +602,6 @@ public class IndexPdfCommandHandlerTests
             UploadedByUserId = Guid.NewGuid(),
             UploadedAt = DateTime.UtcNow,
             ProcessingStatus = status,
-            // Handler validates ProcessingState == "Ready" before indexing
             ProcessingState = status == "completed" ? "Ready" : "Pending",
             ExtractedText = extractedText,
             Game = new GameEntity

@@ -18,6 +18,8 @@ using Api.Services;
 using Api.Services.Exceptions;
 using Api.Services.Pdf;
 using Api.SharedKernel.Application.Interfaces;
+using Api.SharedKernel.Exceptions;
+using Api.SharedKernel.Services;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -42,6 +44,7 @@ internal class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUp
     private readonly IAiResponseCacheService _cacheService;
     private readonly IBlobStorageService _blobStorageService;
     private readonly IPdfUploadQuotaService _quotaService;
+    private readonly ITierEnforcementService _tierEnforcementService;
     private readonly TimeProvider _timeProvider;
     private readonly long _maxFileSizeBytes;
     private readonly IMediator _mediator;
@@ -58,6 +61,7 @@ internal class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUp
         IAiResponseCacheService cacheService,
         IBlobStorageService blobStorageService,
         IPdfUploadQuotaService quotaService,
+        ITierEnforcementService tierEnforcementService,
         IOptions<PdfProcessingOptions> pdfOptions,
         IMediator mediator,
         Api.BoundedContexts.UserLibrary.Domain.Repositories.IPrivateGameRepository? privateGameRepository = null,
@@ -72,6 +76,7 @@ internal class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUp
         _cacheService = cacheService ?? throw new ArgumentNullException(nameof(cacheService));
         _blobStorageService = blobStorageService ?? throw new ArgumentNullException(nameof(blobStorageService));
         _quotaService = quotaService ?? throw new ArgumentNullException(nameof(quotaService));
+        _tierEnforcementService = tierEnforcementService ?? throw new ArgumentNullException(nameof(tierEnforcementService));
         ArgumentNullException.ThrowIfNull(pdfOptions);
         _maxFileSizeBytes = pdfOptions.Value.MaxFileSizeBytes;
         _mediator = mediator ?? throw new ArgumentNullException(nameof(mediator));
@@ -84,6 +89,36 @@ internal class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUp
 
         var file = command.File;
         var userId = command.UserId;
+
+        // E2-3: Tier enforcement — check upload quota before proceeding
+        var canUpload = await _tierEnforcementService
+            .CanPerformAsync(userId, TierAction.UploadPdf, cancellationToken)
+            .ConfigureAwait(false);
+
+        if (!canUpload)
+        {
+            var usage = await _tierEnforcementService
+                .GetUsageAsync(userId, cancellationToken)
+                .ConfigureAwait(false);
+
+            throw new TierLimitExceededException(
+                nameof(TierAction.UploadPdf),
+                usage.PdfThisMonth,
+                usage.PdfThisMonthMax);
+        }
+
+        // E2-3: Tier enforcement — check file size against tier limit
+        var tierLimits = await _tierEnforcementService
+            .GetLimitsAsync(userId, cancellationToken)
+            .ConfigureAwait(false);
+
+        if (file.Length > tierLimits.MaxPdfSizeBytes)
+        {
+            var maxMb = tierLimits.MaxPdfSizeBytes / (1024 * 1024);
+            throw new TierLimitExceededException(
+                "PdfFileSize",
+                $"File size ({file.Length / (1024 * 1024)} MB) exceeds your tier limit ({maxMb} MB). Upgrade to upload larger files.");
+        }
 
         // Validate file input
         var validationResult = await ValidateFileInputAsync(file, cancellationToken).ConfigureAwait(false);
@@ -829,7 +864,15 @@ internal class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUp
         await UpdateProgressAsync(db, pdfId, ProcessingStep.Extracting, 0, 0, startTime, null, cancellationToken).ConfigureAwait(false);
 
         var extractionStopwatch = Stopwatch.StartNew();
-        var fileStream = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read);
+        // E2E fix: Use blob storage service instead of direct filesystem access (supports S3/R2)
+        var gameIdForStorage = (pdfDoc.PrivateGameId ?? pdfDoc.GameId)?.ToString() ?? string.Empty;
+        var fileStream = await _blobStorageService.RetrieveAsync(pdfId, gameIdForStorage, cancellationToken).ConfigureAwait(false);
+        if (fileStream == null)
+        {
+            // Fallback to local filesystem for backward compatibility
+            _logger.LogWarning("[PDF-DEBUG] Blob storage returned null for {PdfId}, falling back to filesystem: {FilePath}", pdfId, filePath);
+            fileStream = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read);
+        }
         await using (fileStream.ConfigureAwait(false))
         {
             var extractResult = await _pdfTextExtractor.ExtractPagedTextAsync(fileStream, enableOcrFallback: true, cancellationToken).ConfigureAwait(false);
@@ -1114,6 +1157,9 @@ internal class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUp
 
         var indexingStopwatch = Stopwatch.StartNew();
         var qdrantService = scope.ServiceProvider.GetRequiredService<IQdrantService>();
+
+        // E2E fix: Ensure Qdrant collection exists before indexing
+        await qdrantService.EnsureCollectionExistsAsync(cancellationToken).ConfigureAwait(false);
 
         var documentChunks = allDocumentChunks
             .Select((chunk, index) => new DocumentChunk

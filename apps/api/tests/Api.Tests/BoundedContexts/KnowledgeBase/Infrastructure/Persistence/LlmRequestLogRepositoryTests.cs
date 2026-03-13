@@ -14,7 +14,7 @@ namespace Api.Tests.BoundedContexts.KnowledgeBase.Infrastructure.Persistence;
 /// Integration tests for LlmRequestLogRepository using shared PostgreSQL Testcontainer.
 /// Issue #5076: Phase 1 test suite — verifies persistence, 30-day retention, and cleanup.
 /// </summary>
-[Collection("SharedTestcontainers")]
+[Collection("Integration-GroupA")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "KnowledgeBase")]
 [Trait("Issue", "5076")]

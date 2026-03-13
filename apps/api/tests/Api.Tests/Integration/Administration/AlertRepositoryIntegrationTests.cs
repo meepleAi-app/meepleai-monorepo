@@ -21,7 +21,7 @@ namespace Api.Tests.Integration.Administration;
 /// Tests PostgreSQL persistence, filtered queries, and alert lifecycle management.
 /// Issue #2307: Week 3 - Administration repository integration testing
 /// </summary>
-[Collection("SharedTestcontainers")]
+[Collection("Integration-GroupD")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("Dependency", "PostgreSQL")]
 [Trait("BoundedContext", "Administration")]

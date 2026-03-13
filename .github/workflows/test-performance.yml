@@ -81,7 +81,7 @@ jobs:
       api: ${{ steps.filter.outputs.api || 'true' }}
       k6: ${{ steps.filter.outputs.k6 || 'true' }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: dorny/paths-filter@v3
         id: filter
         if: github.event_name == 'pull_request'
@@ -147,7 +147,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Setup backend environment
         uses: ./.github/actions/setup-backend
@@ -394,7 +394,7 @@ jobs:
         working-directory: apps/web
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Setup frontend environment
         uses: ./.github/actions/setup-frontend
@@ -408,7 +408,7 @@ jobs:
         run: cp .env.test.example .env.test
 
       - name: Cache Next.js build
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: apps/web/.next/cache
           key: ${{ runner.os }}-${{ runner.arch }}-nextjs-${{ hashFiles('apps/web/pnpm-lock.yaml') }}-${{ hashFiles('apps/web/src/**') }}
@@ -440,7 +440,7 @@ jobs:
         working-directory: apps/web
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
@@ -602,7 +602,7 @@ jobs:
       issues: write
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Create GitHub issue on failure
         uses: actions/github-script@v8

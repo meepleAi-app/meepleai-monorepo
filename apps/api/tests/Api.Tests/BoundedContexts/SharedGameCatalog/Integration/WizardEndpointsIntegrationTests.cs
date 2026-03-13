@@ -27,7 +27,7 @@ namespace Api.Tests.BoundedContexts.SharedGameCatalog.Integration;
 /// Issue #4139: Backend - API Endpoints PDF Wizard
 /// Tests: 4/5 endpoints (POST /create pending #4138)
 /// </summary>
-[Collection("SharedTestcontainers")]
+[Collection("Integration-GroupC")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "SharedGameCatalog")]
 public sealed class WizardEndpointsIntegrationTests : IAsyncLifetime

@@ -540,6 +540,60 @@ public sealed class SharedGame : AggregateRoot<Guid>
     }
 
     /// <summary>
+    /// Adds a category to this game.
+    /// </summary>
+    /// <param name="name">The category name</param>
+    /// <exception cref="ArgumentException">Thrown when name is null or whitespace</exception>
+    public void AddCategory(string name)
+    {
+        if (string.IsNullOrWhiteSpace(name))
+            throw new ArgumentException("Category name is required", nameof(name));
+
+        var slug = name.ToLowerInvariant().Replace(" ", "-");
+        _categories.Add(GameCategory.Create(name, slug));
+    }
+
+    /// <summary>
+    /// Adds a mechanic to this game.
+    /// </summary>
+    /// <param name="name">The mechanic name</param>
+    /// <exception cref="ArgumentException">Thrown when name is null or whitespace</exception>
+    public void AddMechanic(string name)
+    {
+        if (string.IsNullOrWhiteSpace(name))
+            throw new ArgumentException("Mechanic name is required", nameof(name));
+
+        var slug = name.ToLowerInvariant().Replace(" ", "-");
+        _mechanics.Add(GameMechanic.Create(name, slug));
+    }
+
+    /// <summary>
+    /// Adds a designer to this game.
+    /// </summary>
+    /// <param name="name">The designer name</param>
+    /// <exception cref="ArgumentException">Thrown when name is null or whitespace</exception>
+    public void AddDesigner(string name)
+    {
+        if (string.IsNullOrWhiteSpace(name))
+            throw new ArgumentException("Designer name is required", nameof(name));
+
+        _designers.Add(GameDesigner.Create(name));
+    }
+
+    /// <summary>
+    /// Adds a publisher to this game.
+    /// </summary>
+    /// <param name="name">The publisher name</param>
+    /// <exception cref="ArgumentException">Thrown when name is null or whitespace</exception>
+    public void AddPublisher(string name)
+    {
+        if (string.IsNullOrWhiteSpace(name))
+            throw new ArgumentException("Publisher name is required", nameof(name));
+
+        _publishers.Add(GamePublisher.Create(name));
+    }
+
+    /// <summary>
     /// Adds a FAQ to this game.
     /// </summary>
     /// <param name="faq">The FAQ to add</param>

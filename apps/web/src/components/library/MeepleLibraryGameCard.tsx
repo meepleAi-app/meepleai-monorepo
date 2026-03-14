@@ -356,7 +356,7 @@ export function MeepleLibraryGameCard({
       minPlayers: game.minPlayers,
       maxPlayers: game.maxPlayers,
       averageRating: game.averageRating,
-      timesPlayed: 0,
+      // timesPlayed, winRate, totalPlayTimeMinutes: populated when session aggregate API is available
       hasKb: game.hasKb,
       kbCardCount: game.kbCardCount,
       kbDocuments: kbDocuments?.map(d => ({
@@ -387,9 +387,6 @@ export function MeepleLibraryGameCard({
         : undefined,
       onToggleFavorite: handleToggleFavorite,
       isFavorite: game.isFavorite,
-      onNewSession: () => {
-        navigateWithTransition(`/library/games/${game.gameId}/sessions/new`);
-      },
     };
   }, [
     flippable,
@@ -436,7 +433,7 @@ export function MeepleLibraryGameCard({
         kbCards={kbDocuments?.map(d => ({ status: mapToIndexingStatus(d) }))}
         // Navigation footer: open drawers instead of navigating
         navigateTo={[
-          { entity: 'document' as const, label: 'KB', onClick: () => setKbDrawerOpen(true) },
+          { entity: 'kb' as const, label: 'KB', onClick: () => setKbDrawerOpen(true) },
           { entity: 'agent' as const, label: 'Agents', onClick: () => setAgentDrawerOpen(true) },
           {
             entity: 'chatSession' as const,

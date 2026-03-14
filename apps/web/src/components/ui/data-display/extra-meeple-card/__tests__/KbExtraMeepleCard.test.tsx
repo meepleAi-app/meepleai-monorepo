@@ -117,22 +117,22 @@ describe('KbExtraMeepleCard', () => {
 
     it('renders DocumentStatusBadge for indexed status', () => {
       render(<KbExtraMeepleCard data={makeData({ status: 'indexed' })} />);
-      expect(screen.getByTestId('document-status-indexed')).toBeInTheDocument();
+      expect(screen.getByTestId('kb-status-indexed')).toBeInTheDocument();
     });
 
     it('renders DocumentStatusBadge for processing status', () => {
       render(<KbExtraMeepleCard data={makeData({ status: 'processing' })} />);
-      expect(screen.getByTestId('document-status-processing')).toBeInTheDocument();
+      expect(screen.getByTestId('kb-status-processing')).toBeInTheDocument();
     });
 
     it('renders DocumentStatusBadge for failed status', () => {
       render(<KbExtraMeepleCard data={makeData({ status: 'failed' })} />);
-      expect(screen.getByTestId('document-status-failed')).toBeInTheDocument();
+      expect(screen.getByTestId('kb-status-failed')).toBeInTheDocument();
     });
 
     it('renders DocumentStatusBadge for none status', () => {
       render(<KbExtraMeepleCard data={makeData({ status: 'none' })} />);
-      expect(screen.getByTestId('document-status-none')).toBeInTheDocument();
+      expect(screen.getByTestId('kb-status-none')).toBeInTheDocument();
     });
 
     it('renders the fileName chip', () => {
@@ -445,10 +445,10 @@ describe('KbExtraMeepleCard', () => {
 
   describe('DocumentStatusBadge status variants', () => {
     it.each([
-      ['processing', 'document-status-processing'],
-      ['indexed',    'document-status-indexed'],
-      ['failed',     'document-status-failed'],
-      ['none',       'document-status-none'],
+      ['processing', 'kb-status-processing'],
+      ['indexed',    'kb-status-indexed'],
+      ['failed',     'kb-status-failed'],
+      ['none',       'kb-status-none'],
     ] as const)('renders %s status badge', (status, testId) => {
       render(<KbExtraMeepleCard data={makeData({ status })} />);
       expect(screen.getByTestId(testId)).toBeInTheDocument();

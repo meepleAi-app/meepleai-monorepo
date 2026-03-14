@@ -509,7 +509,6 @@ public class CreateGameCommandHandlerTests
             fileSize: new Api.BoundedContexts.DocumentProcessing.Domain.ValueObjects.FileSize(1024),
             uploadedByUserId: Guid.NewGuid(),
             uploadedAt: DateTime.UtcNow,
-            processingStatus: "completed",
             processedAt: DateTime.UtcNow,
             pageCount: 10,
             processingError: null,

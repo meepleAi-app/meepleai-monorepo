@@ -888,10 +888,18 @@ internal sealed class PlaygroundChatCommandHandler : IStreamingQueryHandler<Play
     /// </summary>
     private static readonly Dictionary<string, string> LanguageNames = new(StringComparer.Ordinal)
     {
-        ["it"] = "Italian", ["en"] = "English", ["de"] = "German",
-        ["fr"] = "French", ["es"] = "Spanish", ["pt"] = "Portuguese",
-        ["ja"] = "Japanese", ["zh"] = "Chinese", ["ko"] = "Korean",
-        ["ru"] = "Russian", ["pl"] = "Polish", ["nl"] = "Dutch"
+        ["it"] = "Italian",
+        ["en"] = "English",
+        ["de"] = "German",
+        ["fr"] = "French",
+        ["es"] = "Spanish",
+        ["pt"] = "Portuguese",
+        ["ja"] = "Japanese",
+        ["zh"] = "Chinese",
+        ["ko"] = "Korean",
+        ["ru"] = "Russian",
+        ["pl"] = "Polish",
+        ["nl"] = "Dutch"
     };
 
     /// <summary>

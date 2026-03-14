@@ -39,7 +39,7 @@ export const meepleCardStory: ShowcaseStory<MeepleCardShowcaseProps> = {
     return (
       <div className="w-72">
         <MeepleCard
-          entity={entity as 'game' | 'player' | 'agent' | 'session' | 'document' | 'event'}
+          entity={entity as 'game' | 'player' | 'agent' | 'session' | 'kb' | 'event'}
           variant={variant as 'grid' | 'list' | 'compact' | 'featured' | 'hero'}
           title={title}
           subtitle={subtitle}
@@ -71,7 +71,7 @@ export const meepleCardStory: ShowcaseStory<MeepleCardShowcaseProps> = {
     entity: {
       type: 'select',
       label: 'entity',
-      options: ['game', 'player', 'agent', 'session', 'document', 'event'],
+      options: ['game', 'player', 'agent', 'session', 'kb', 'event'],
       default: 'game',
     },
     variant: {

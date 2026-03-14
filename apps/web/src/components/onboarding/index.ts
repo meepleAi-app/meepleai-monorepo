@@ -21,3 +21,5 @@ export type { FirstGameStepProps } from './FirstGameStep';
 
 export { FirstAgentStep } from './FirstAgentStep';
 export type { FirstAgentStepProps } from './FirstAgentStep';
+
+export { OnboardingReminderBanner } from './OnboardingReminderBanner';

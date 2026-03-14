@@ -1142,7 +1142,7 @@ internal static class PdfEndpoints
             success = true,
             characterCount = result.CharacterCount,
             pageCount = result.PageCount,
-            processingStatus = result.ProcessingStatus
+            processingState = result.ProcessingState
         });
     }
 

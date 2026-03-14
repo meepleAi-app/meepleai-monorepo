@@ -6,7 +6,7 @@
  * rate limit gauge, free quota indicator, and recent requests table.
  */
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 
 import { useQuery } from '@tanstack/react-query';
 import { AlertTriangle, RefreshCw } from 'lucide-react';
@@ -21,7 +21,6 @@ import {
 } from '@/components/admin/usage/RecentRequestsTable';
 import { RequestTimelineChart } from '@/components/admin/usage/RequestTimelineChart';
 import { Button } from '@/components/ui/primitives/button';
-import { useSetNavConfig } from '@/hooks/useSetNavConfig';
 import { createAdminClient } from '@/lib/api/clients/adminClient';
 import { HttpClient } from '@/lib/api/core/httpClient';
 
@@ -33,15 +32,6 @@ const adminClient = createAdminClient({ httpClient });
 // ─── Page ────────────────────────────────────────────────────────────────────
 
 export default function UsagePage() {
-  const setNavConfig = useSetNavConfig();
-
-  useEffect(() => {
-    setNavConfig({
-      miniNav: [{ id: 'overview', label: 'Overview', href: '/admin/agents/usage' }],
-      actionBar: [],
-    });
-  }, [setNavConfig]);
-
   // ── Period state ──
   const [timelinePeriod, setTimelinePeriod] = useState<'24h' | '7d' | '30d'>('24h');
   const [costPeriod, setCostPeriod] = useState<'1d' | '7d' | '30d'>('7d');

@@ -1,4 +1,4 @@
-import { screen, within } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
@@ -76,6 +76,15 @@ vi.mock('next/navigation', () => ({
   }),
 }));
 
+// Mock API client for onboarding completion
+vi.mock('@/lib/api', () => ({
+  api: {
+    auth: {
+      completeOnboarding: vi.fn().mockResolvedValue({ ok: true, message: 'done' }),
+    },
+  },
+}));
+
 describe('OnboardingWizard', () => {
   const user = userEvent.setup();
 
@@ -124,13 +133,15 @@ describe('OnboardingWizard', () => {
     expect(screen.getByTestId('skip-wizard')).toBeInTheDocument();
   });
 
-  it('skip wizard navigates to /chat', async () => {
+  it('skip wizard navigates to /dashboard', async () => {
     renderWithQuery(<OnboardingWizard token="test-token" role="Player" />);
 
     await user.click(screen.getByText('Complete Password'));
     await user.click(screen.getByTestId('skip-wizard'));
 
-    expect(mockPush).toHaveBeenCalledWith('/chat');
+    await waitFor(() => {
+      expect(mockPush).toHaveBeenCalledWith('/dashboard');
+    });
   });
 
   it('navigates through all steps without game', async () => {
@@ -188,7 +199,7 @@ describe('OnboardingWizard', () => {
     expect(screen.queryByTestId('wizard-back')).not.toBeInTheDocument();
   });
 
-  it('finish button navigates to /chat', async () => {
+  it('finish button navigates to /dashboard', async () => {
     renderWithQuery(<OnboardingWizard token="test-token" role="Player" />);
 
     // Go through all 4 steps
@@ -200,6 +211,9 @@ describe('OnboardingWizard', () => {
     expect(screen.getByTestId('wizard-finish')).toBeInTheDocument();
 
     await user.click(screen.getByTestId('wizard-finish'));
-    expect(mockPush).toHaveBeenCalledWith('/chat');
+
+    await waitFor(() => {
+      expect(mockPush).toHaveBeenCalledWith('/dashboard');
+    });
   });
 });

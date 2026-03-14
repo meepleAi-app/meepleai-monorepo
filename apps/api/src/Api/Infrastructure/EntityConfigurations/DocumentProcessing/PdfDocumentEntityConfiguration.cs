@@ -27,9 +27,6 @@ internal class PdfDocumentEntityConfiguration : IEntityTypeConfiguration<PdfDocu
             .HasDefaultValue("Pending")
             .HasConversion<string>(); // EF Core converts enum to string automatically
 
-        // Deprecated: Keep for backward compatibility
-        builder.Property(e => e.ProcessingStatus).IsRequired().HasMaxLength(32);
-
         builder.Property(e => e.ProcessingError).HasMaxLength(1024);
 
         // Issue #4216: Retry tracking configuration

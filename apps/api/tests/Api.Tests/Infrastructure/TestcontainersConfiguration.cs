@@ -98,15 +98,15 @@ public static class TestcontainersConfiguration
 
     /// <summary>
     /// Minimum pool size per test database.
-    /// Issue #2902: Conservative setting (1) for 94+ test classes.
-    /// Baseline connections: 94 classes × 1 = 94 connections.
+    /// Issue #2902: Conservative setting (1) for ~193 integration test classes.
+    /// Baseline connections: ~64 classes/shard × 1 = 64 connections.
     /// </summary>
     public const int ConnectionPoolMinSize = 1;
 
     /// <summary>
     /// Maximum pool size per test database.
     /// Issue #2902: Reduced from 50 to 5 to prevent connection exhaustion.
-    /// Maximum connections: 94 classes × 5 = 470 &lt; 500 server limit.
+    /// With 3 CI shards: ~64 classes/shard × 5 = 320 &lt; 500 server limit.
     /// </summary>
     public const int ConnectionPoolMaxSize = 5;
 

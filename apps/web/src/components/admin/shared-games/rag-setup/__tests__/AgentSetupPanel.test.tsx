@@ -159,31 +159,23 @@ describe('AgentSetupPanel', () => {
     });
 
     it('shows agent name input with default value "{gameTitle} Assistant"', () => {
-      render(
-        <AgentSetupPanel {...defaultProps} gameTitle="Catan" existingAgent={null} />
-      );
+      render(<AgentSetupPanel {...defaultProps} gameTitle="Catan" existingAgent={null} />);
 
       const input = screen.getByRole('textbox', { name: /nome agente/i });
       expect(input).toHaveValue('Catan Assistant');
     });
 
     it('uses the provided gameTitle in the default agent name', () => {
-      render(
-        <AgentSetupPanel {...defaultProps} gameTitle="Pandemic" existingAgent={null} />
-      );
+      render(<AgentSetupPanel {...defaultProps} gameTitle="Pandemic" existingAgent={null} />);
 
       const input = screen.getByRole('textbox', { name: /nome agente/i });
       expect(input).toHaveValue('Pandemic Assistant');
     });
 
     it('shows "Nessun documento caricato" when documents array is empty', () => {
-      render(
-        <AgentSetupPanel {...defaultProps} documents={[]} existingAgent={null} />
-      );
+      render(<AgentSetupPanel {...defaultProps} documents={[]} existingAgent={null} />);
 
-      expect(
-        screen.getByText(/Nessun documento caricato/i)
-      ).toBeInTheDocument();
+      expect(screen.getByText(/Nessun documento caricato/i)).toBeInTheDocument();
     });
 
     it('renders document list when documents are provided', () => {
@@ -192,9 +184,7 @@ describe('AgentSetupPanel', () => {
         createMockDocument({ documentId: 'doc-2', fileName: 'faq.pdf' }),
       ];
 
-      render(
-        <AgentSetupPanel {...defaultProps} documents={documents} existingAgent={null} />
-      );
+      render(<AgentSetupPanel {...defaultProps} documents={documents} existingAgent={null} />);
 
       expect(screen.getByText('rules.pdf')).toBeInTheDocument();
       expect(screen.getByText('faq.pdf')).toBeInTheDocument();
@@ -206,9 +196,7 @@ describe('AgentSetupPanel', () => {
         createMockDocument({ documentId: 'doc-2', fileName: 'faq.pdf' }),
       ];
 
-      render(
-        <AgentSetupPanel {...defaultProps} documents={documents} existingAgent={null} />
-      );
+      render(<AgentSetupPanel {...defaultProps} documents={documents} existingAgent={null} />);
 
       const checkboxes = screen.getAllByRole('checkbox');
       expect(checkboxes).toHaveLength(2);
@@ -223,9 +211,7 @@ describe('AgentSetupPanel', () => {
         }),
       ];
 
-      render(
-        <AgentSetupPanel {...defaultProps} documents={documents} existingAgent={null} />
-      );
+      render(<AgentSetupPanel {...defaultProps} documents={documents} existingAgent={null} />);
 
       const checkbox = screen.getByRole('checkbox');
       expect(checkbox).toBeDisabled();
@@ -240,9 +226,7 @@ describe('AgentSetupPanel', () => {
         }),
       ];
 
-      render(
-        <AgentSetupPanel {...defaultProps} documents={documents} existingAgent={null} />
-      );
+      render(<AgentSetupPanel {...defaultProps} documents={documents} existingAgent={null} />);
 
       const checkbox = screen.getByRole('checkbox');
       expect(checkbox).not.toBeDisabled();
@@ -257,9 +241,7 @@ describe('AgentSetupPanel', () => {
         }),
       ];
 
-      render(
-        <AgentSetupPanel {...defaultProps} documents={documents} existingAgent={null} />
-      );
+      render(<AgentSetupPanel {...defaultProps} documents={documents} existingAgent={null} />);
 
       expect(screen.getByText('Pronto')).toBeInTheDocument();
     });
@@ -273,9 +255,7 @@ describe('AgentSetupPanel', () => {
         }),
       ];
 
-      render(
-        <AgentSetupPanel {...defaultProps} documents={documents} existingAgent={null} />
-      );
+      render(<AgentSetupPanel {...defaultProps} documents={documents} existingAgent={null} />);
 
       expect(screen.getByText('Processing')).toBeInTheDocument();
     });
@@ -288,9 +268,7 @@ describe('AgentSetupPanel', () => {
     });
 
     it('disables create button when no documents are selected', () => {
-      render(
-        <AgentSetupPanel {...defaultProps} documents={[]} existingAgent={null} />
-      );
+      render(<AgentSetupPanel {...defaultProps} documents={[]} existingAgent={null} />);
 
       const createButton = screen.getByRole('button', { name: /crea agente/i });
       expect(createButton).toBeDisabled();

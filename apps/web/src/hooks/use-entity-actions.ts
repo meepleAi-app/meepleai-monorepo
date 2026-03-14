@@ -279,7 +279,7 @@ export function useEntityActions({
         };
       }
 
-      case 'document': {
+      case 'kb': {
         // Issue #4263: Collection action for document (Save/Remove)
         const saveAction: QuickAction =
           genericStatus?.inCollection ?? false

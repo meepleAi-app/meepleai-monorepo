@@ -125,7 +125,7 @@ public sealed class LlmResilienceCombinedFailureTests
     {
         // Routing strategy nominates OpenRouter
         _routingStrategyMock
-            .Setup(s => s.SelectProvider(It.IsAny<User?>(), It.IsAny<RagStrategy>(), It.IsAny<string?>()))
+            .Setup(s => s.SelectProvider(It.IsAny<User?>(), It.IsAny<RagStrategy>(), It.IsAny<string?>(), It.IsAny<string?>()))
             .Returns(LlmRoutingDecision.OpenRouter(OpenRouterModel, "default routing"));
 
         // RPD quota is exhausted for the OpenRouter model
@@ -174,7 +174,7 @@ public sealed class LlmResilienceCombinedFailureTests
     {
         // Routing strategy selects OpenRouter
         _routingStrategyMock
-            .Setup(s => s.SelectProvider(It.IsAny<User?>(), It.IsAny<RagStrategy>(), It.IsAny<string?>()))
+            .Setup(s => s.SelectProvider(It.IsAny<User?>(), It.IsAny<RagStrategy>(), It.IsAny<string?>(), It.IsAny<string?>()))
             .Returns(LlmRoutingDecision.OpenRouter(OpenRouterModel, "default routing"));
 
         // OpenRouter throws 429
@@ -251,7 +251,7 @@ public sealed class LlmResilienceCombinedFailureTests
     {
         // Routing strategy nominates OpenRouter
         _routingStrategyMock
-            .Setup(s => s.SelectProvider(It.IsAny<User?>(), It.IsAny<RagStrategy>(), It.IsAny<string?>()))
+            .Setup(s => s.SelectProvider(It.IsAny<User?>(), It.IsAny<RagStrategy>(), It.IsAny<string?>(), It.IsAny<string?>()))
             .Returns(LlmRoutingDecision.OpenRouter(OpenRouterModel, "default routing"));
 
         // Circuit breaker is open for OpenRouter — requests not allowed

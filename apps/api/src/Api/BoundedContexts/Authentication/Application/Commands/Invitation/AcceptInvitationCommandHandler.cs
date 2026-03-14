@@ -119,6 +119,8 @@ internal sealed class AcceptInvitationCommandHandler : ICommandHandler<AcceptInv
             ExperiencePoints: user.ExperiencePoints,
             EmailVerified: user.EmailVerified,
             EmailVerifiedAt: user.EmailVerifiedAt,
-            VerificationGracePeriodEndsAt: user.VerificationGracePeriodEndsAt);
+            VerificationGracePeriodEndsAt: user.VerificationGracePeriodEndsAt,
+            OnboardingCompleted: user.OnboardingCompleted,
+            OnboardingSkipped: user.OnboardingSkipped);
     }
 }

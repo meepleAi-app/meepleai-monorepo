@@ -315,7 +315,7 @@ describe('Vertical Tag Stack (Issue #4062)', () => {
   });
 
   describe('All entity types render correctly in tag stack', () => {
-    const entityTypes: MeepleEntityType[] = ['game', 'player', 'session', 'agent', 'document', 'chatSession', 'event'];
+    const entityTypes: MeepleEntityType[] = ['game', 'player', 'session', 'agent', 'kb', 'chatSession', 'event'];
 
     it.each(entityTypes)('renders %s entity badge in tag stack', (entity) => {
       render(<MeepleCard {...defaultProps} entity={entity} variant="grid" />);
@@ -378,7 +378,7 @@ describe('Accessibility (Issue #4062)', () => {
     });
 
     it('has no axe violations across all entity types', async () => {
-      const entities: MeepleEntityType[] = ['game', 'player', 'session', 'agent', 'document', 'chatSession', 'event'];
+      const entities: MeepleEntityType[] = ['game', 'player', 'session', 'agent', 'kb', 'chatSession', 'event'];
 
       for (const entity of entities) {
         const { container } = render(

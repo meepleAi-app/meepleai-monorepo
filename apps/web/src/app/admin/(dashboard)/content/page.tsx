@@ -15,7 +15,6 @@ import { AdminHubTabBar, type HubTab } from '@/components/admin/layout/AdminHubT
 import { AdminTabPersistence } from '@/components/admin/layout/AdminTabPersistence';
 
 import { KnowledgeBaseTab } from './KnowledgeBaseTab';
-import { AdminContentNavConfig } from './NavConfig';
 import { SharedGamesTab } from './SharedGamesTab';
 
 interface AdminContentPageProps {
@@ -74,7 +73,6 @@ export default async function AdminContentPage({ searchParams }: AdminContentPag
 
   return (
     <div className="space-y-5">
-      <AdminContentNavConfig />
       <div>
         <h1 className="font-quicksand text-xl sm:text-2xl font-bold tracking-tight text-foreground">
           Content Management

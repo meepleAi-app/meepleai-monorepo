@@ -1,5 +1,4 @@
 using Api.Infrastructure;
-using Api.Services;
 using Api.SharedKernel.Application.Interfaces;
 using Microsoft.EntityFrameworkCore;
 
@@ -7,22 +6,20 @@ namespace Api.BoundedContexts.DocumentProcessing.Application.Queries;
 
 /// <summary>
 /// Handler for GetPdfStorageHealthQuery.
-/// PDF Storage Management Hub: Composes PG + Qdrant + file storage metrics.
+/// PDF Storage Management Hub: Composes PG + file storage metrics.
+/// Vector store (Qdrant) has been removed — returns zeroed Qdrant metrics.
 /// </summary>
 internal sealed class GetPdfStorageHealthQueryHandler
     : IQueryHandler<GetPdfStorageHealthQuery, PdfStorageHealthDto>
 {
     private readonly MeepleAiDbContext _dbContext;
-    private readonly IQdrantClientAdapter _qdrantClient;
     private readonly TimeProvider _timeProvider;
 
     public GetPdfStorageHealthQueryHandler(
         MeepleAiDbContext dbContext,
-        IQdrantClientAdapter qdrantClient,
         TimeProvider timeProvider)
     {
         _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
-        _qdrantClient = qdrantClient ?? throw new ArgumentNullException(nameof(qdrantClient));
         _timeProvider = timeProvider ?? throw new ArgumentNullException(nameof(timeProvider));
     }
 
@@ -44,30 +41,8 @@ internal sealed class GetPdfStorageHealthQueryHandler
 
         var postgres = new PostgresInfoDto(totalDocuments, totalChunks, Math.Round(estimatedChunksSizeMB, 1));
 
-        // Qdrant metrics (best-effort)
-        QdrantInfoDto qdrant;
-        var qdrantAvailable = true;
-        try
-        {
-            var info = await _qdrantClient
-                .GetCollectionInfoAsync("meepleai_documents", cancellationToken)
-                .ConfigureAwait(false);
-
-            var vectorCount = (long)info.PointsCount;
-            var memoryBytes = vectorCount * 384 * 4L; // 384 dimensions * 4 bytes per float
-
-            qdrant = new QdrantInfoDto(
-                VectorCount: vectorCount,
-                MemoryBytes: memoryBytes,
-                MemoryFormatted: FormatBytes(memoryBytes),
-                IsAvailable: true
-            );
-        }
-        catch
-        {
-            qdrantAvailable = false;
-            qdrant = new QdrantInfoDto(0, 0, "0 B", false);
-        }
+        // Vector store (Qdrant) has been removed — return zeroed metrics
+        var qdrant = new QdrantInfoDto(0, 0, "0 B", false);
 
         // File storage metrics
         var totalSizeBytes = await _dbContext.PdfDocuments
@@ -86,13 +61,9 @@ internal sealed class GetPdfStorageHealthQueryHandler
             SizeByState: sizeByState
         );
 
-        // Overall health determination
+        // Overall health determination (Qdrant unavailable is no longer critical)
         var overallHealth = "healthy";
-        if (!qdrantAvailable)
-        {
-            overallHealth = "critical";
-        }
-        else if (totalDocuments > 0)
+        if (totalDocuments > 0)
         {
             // Warning if >10% of docs are in failed state
             sizeByState.TryGetValue("Failed", out var failedCount);

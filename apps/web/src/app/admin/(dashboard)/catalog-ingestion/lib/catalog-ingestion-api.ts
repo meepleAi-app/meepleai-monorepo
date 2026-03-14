@@ -37,7 +37,7 @@ async function importExcel(file: File): Promise<ExcelImportResult> {
     body: formData,
     credentials: 'include',
   });
-  if (!res.ok) throw new Error(`Import failed: ${res.statusText}`);
+  if (!res.ok) throw new Error(`Import failed: ${res.status}`);
   return res.json();
 }
 
@@ -48,7 +48,7 @@ async function enqueueEnrichment(gameIds: string[]): Promise<EnqueueResult> {
     body: JSON.stringify({ sharedGameIds: gameIds }),
     credentials: 'include',
   });
-  if (!res.ok) throw new Error(`Enqueue failed: ${res.statusText}`);
+  if (!res.ok) throw new Error(`Enqueue failed: ${res.status}`);
   return res.json();
 }
 
@@ -57,7 +57,7 @@ async function enqueueAllSkeletons(): Promise<EnqueueResult> {
     method: 'POST',
     credentials: 'include',
   });
-  if (!res.ok) throw new Error(`Enqueue all failed: ${res.statusText}`);
+  if (!res.ok) throw new Error(`Enqueue all failed: ${res.status}`);
   return res.json();
 }
 
@@ -68,7 +68,7 @@ async function markComplete(gameIds: string[]): Promise<{ completed: number }> {
     body: JSON.stringify({ sharedGameIds: gameIds }),
     credentials: 'include',
   });
-  if (!res.ok) throw new Error(`Mark complete failed: ${res.statusText}`);
+  if (!res.ok) throw new Error(`Mark complete failed: ${res.status}`);
   return res.json();
 }
 
@@ -79,7 +79,7 @@ async function exportExcel(status?: string, hasPdf?: boolean): Promise<void> {
   const res = await fetch(`${BASE}/excel-export?${params}`, {
     credentials: 'include',
   });
-  if (!res.ok) throw new Error(`Export failed: ${res.statusText}`);
+  if (!res.ok) throw new Error(`Export failed: ${res.status}`);
   const blob = await res.blob();
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');

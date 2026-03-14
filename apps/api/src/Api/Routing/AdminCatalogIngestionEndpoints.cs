@@ -38,6 +38,77 @@ internal static class AdminCatalogIngestionEndpoints
             return operation;
         });
 
+        // POST /api/v1/admin/catalog-ingestion/enqueue-enrichment
+        // Enqueue selected games for BGG enrichment
+        group.MapPost("/enqueue-enrichment", async (
+            EnqueueEnrichmentRequest request,
+            HttpContext context,
+            IMediator mediator,
+            CancellationToken ct) =>
+        {
+            var (authorized, session, error) = context.RequireAdminSession();
+            if (!authorized) return error!;
+
+            var result = await mediator.Send(
+                new EnqueueEnrichmentCommand(request.SharedGameIds, session!.User!.Id), ct).ConfigureAwait(false);
+
+            return Results.Ok(result);
+        })
+        .WithName("EnqueueEnrichment")
+        .WithOpenApi(operation =>
+        {
+            operation.Summary = "Enqueue games for BGG enrichment";
+            operation.Description = "Enqueues selected skeleton/failed games for BGG data enrichment.";
+            return operation;
+        });
+
+        // POST /api/v1/admin/catalog-ingestion/enqueue-all-skeletons
+        // Enqueue all skeleton and failed games for enrichment
+        group.MapPost("/enqueue-all-skeletons", async (
+            HttpContext context,
+            IMediator mediator,
+            CancellationToken ct) =>
+        {
+            var (authorized, session, error) = context.RequireAdminSession();
+            if (!authorized) return error!;
+
+            var result = await mediator.Send(
+                new EnqueueAllSkeletonsCommand(session!.User!.Id), ct).ConfigureAwait(false);
+
+            return Results.Ok(result);
+        })
+        .WithName("EnqueueAllSkeletons")
+        .WithOpenApi(operation =>
+        {
+            operation.Summary = "Enqueue all skeleton games for enrichment";
+            operation.Description = "Finds all games with Skeleton or Failed status and enqueues them for BGG enrichment.";
+            return operation;
+        });
+
+        // POST /api/v1/admin/catalog-ingestion/mark-complete
+        // Mark enriched games as complete
+        group.MapPost("/mark-complete", async (
+            MarkCompleteRequest request,
+            HttpContext context,
+            IMediator mediator,
+            CancellationToken ct) =>
+        {
+            var (authorized, _, error) = context.RequireAdminSession();
+            if (!authorized) return error!;
+
+            var result = await mediator.Send(
+                new MarkGamesCompleteCommand(request.SharedGameIds), ct).ConfigureAwait(false);
+
+            return Results.Ok(new { Completed = result });
+        })
+        .WithName("MarkGamesComplete")
+        .WithOpenApi(operation =>
+        {
+            operation.Summary = "Mark games as complete";
+            operation.Description = "Transitions enriched games to Complete status (no PDF download needed).";
+            return operation;
+        });
+
         return group;
     }
 }

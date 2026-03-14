@@ -1,6 +1,6 @@
 import React from 'react';
 
-import type { ToolboxToolDto, ToolType } from '@/lib/stores/toolboxStore';
+import type { ToolboxToolDto } from '@/lib/api/schemas/toolbox.schemas';
 
 interface ToolPreviewChipsProps {
   tools: ToolboxToolDto[];
@@ -9,7 +9,7 @@ interface ToolPreviewChipsProps {
   'data-testid'?: string;
 }
 
-const TOOL_TYPE_ICONS: Record<ToolType, string> = {
+const TOOL_TYPE_ICONS: Record<string, string> = {
   DiceRoller: '\uD83C\uDFB2',
   ScoreTracker: '\uD83D\uDCCA',
   TurnManager: '\uD83D\uDD04',
@@ -41,12 +41,12 @@ export function ToolPreviewChips({
       {visible.map(tool => {
         const icon = TOOL_TYPE_ICONS[tool.type] ?? '\uD83D\uDD27';
         // Abbreviate name: take first 8 chars
-        const shortName = tool.name.length > 8 ? `${tool.name.slice(0, 8)}...` : tool.name;
+        const shortName = tool.type.length > 8 ? `${tool.type.slice(0, 8)}...` : tool.type;
         return (
           <span
             key={tool.id}
             className="inline-flex items-center gap-1 rounded-full border bg-muted/50 px-2 py-0.5 text-xs"
-            title={tool.name}
+            title={tool.type}
           >
             <span aria-hidden="true">{icon}</span>
             <span>{shortName}</span>

@@ -5,7 +5,7 @@ import React from 'react';
 import { Users, Wrench } from 'lucide-react';
 
 import { MeepleCard } from '@/components/ui/data-display/meeple-card';
-import type { ToolboxDto } from '@/lib/stores/toolboxStore';
+import type { ToolboxDto } from '@/lib/api/schemas/toolbox.schemas';
 
 import { ToolPreviewChips } from './ToolPreviewChips';
 
@@ -29,7 +29,7 @@ export function ToolboxKitCard({
 }: ToolboxKitCardProps) {
   const toolNames = toolbox.tools
     .slice(0, 3)
-    .map(t => t.name)
+    .map((t: { type: string }) => t.type)
     .join(', ');
   const toolSummary =
     toolbox.tools.length > 3 ? `${toolNames} +${toolbox.tools.length - 3}` : toolNames;

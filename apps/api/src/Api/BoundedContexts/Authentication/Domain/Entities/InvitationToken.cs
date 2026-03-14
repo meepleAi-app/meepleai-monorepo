@@ -18,6 +18,7 @@ internal sealed class InvitationToken : AggregateRoot<Guid>
     public DateTime? AcceptedAt { get; private set; }
     public Guid? AcceptedByUserId { get; private set; }
     public DateTime CreatedAt { get; private set; }
+    public DateTime? RevokedAt { get; private set; }
 
     private static readonly string[] AllowedRoles = { "User", "Editor", "Admin" };
 
@@ -93,6 +94,18 @@ internal sealed class InvitationToken : AggregateRoot<Guid>
     }
 
     /// <summary>
+    /// Revokes a pending invitation, making it immediately invalid.
+    /// </summary>
+    public void Revoke()
+    {
+        if (Status != InvitationStatus.Pending)
+            throw new InvalidOperationException("Only pending invitations can be revoked");
+
+        Status = InvitationStatus.Revoked;
+        RevokedAt = DateTime.UtcNow;
+    }
+
+    /// <summary>
     /// Checks if the invitation is still valid (pending and not expired).
     /// </summary>
     public bool IsValid => Status == InvitationStatus.Pending && DateTime.UtcNow <= ExpiresAt;
@@ -113,7 +126,8 @@ internal sealed class InvitationToken : AggregateRoot<Guid>
         DateTime expiresAt,
         DateTime? acceptedAt,
         Guid? acceptedByUserId,
-        DateTime createdAt)
+        DateTime createdAt,
+        DateTime? revokedAt = null)
     {
         Email = email;
         Role = role;
@@ -124,6 +138,7 @@ internal sealed class InvitationToken : AggregateRoot<Guid>
         AcceptedAt = acceptedAt;
         AcceptedByUserId = acceptedByUserId;
         CreatedAt = createdAt;
+        RevokedAt = revokedAt;
     }
 
     #endregion

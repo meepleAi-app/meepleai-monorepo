@@ -3,6 +3,7 @@ using Api.BoundedContexts.Administration.Application.DTOs;
 using Api.BoundedContexts.Administration.Application.Queries;
 using Api.BoundedContexts.Authentication.Application.Commands.AccountLockout;
 using Api.BoundedContexts.Authentication.Application.Commands.Invitation;
+using Api.BoundedContexts.Authentication.Application.Commands.RevokeInvitation;
 using Api.BoundedContexts.Authentication.Application.DTOs;
 using Api.BoundedContexts.Authentication.Application.Queries;
 using Api.BoundedContexts.Authentication.Application.Queries.Invitation;
@@ -1202,6 +1203,12 @@ internal static class AdminUserEndpoints
             .WithName("GetInvitationStats")
             .WithTags("Admin")
             .Produces<InvitationStatsResponse>(StatusCodes.Status200OK);
+
+        group.MapDelete("/admin/users/invitations/{id:guid}", HandleRevokeInvitation)
+            .WithName("RevokeInvitation")
+            .WithTags("Admin")
+            .Produces(StatusCodes.Status200OK)
+            .Produces(StatusCodes.Status404NotFound);
     }
 
     private static async Task<IResult> HandleSendInvitation(
@@ -1307,6 +1314,35 @@ internal static class AdminUserEndpoints
         var query = new GetInvitationStatsQuery();
         var result = await mediator.Send(query, ct).ConfigureAwait(false);
         return Results.Ok(result);
+    }
+
+    private static async Task<IResult> HandleRevokeInvitation(
+        Guid id,
+        HttpContext context,
+        IMediator mediator,
+        ILogger<Program> logger,
+        CancellationToken ct)
+    {
+        var (authorized, session, error) = context.RequireAdminSession();
+        if (!authorized) return error!;
+
+        logger.LogInformation("Admin {AdminId} revoking invitation {InvitationId}",
+            session!.User!.Id, id);
+
+        var command = new RevokeInvitationCommand(
+            InvitationId: id,
+            AdminUserId: session.User.Id
+        );
+
+        var success = await mediator.Send(command, ct).ConfigureAwait(false);
+
+        if (!success)
+        {
+            return Results.NotFound(new { error = "Invitation not found or not pending" });
+        }
+
+        logger.LogInformation("Invitation {InvitationId} revoked successfully", id);
+        return Results.Ok(new { success = true });
     }
 }
 

@@ -1,5 +1,5 @@
 /**
- * Onboarding Layout
+ * Accept Invite Layout
  * Issue #132 - Invitation Acceptance & Onboarding Wizard
  *
  * Minimal layout for invitation acceptance flow.
@@ -8,7 +8,7 @@
 
 import { ReactNode } from 'react';
 
-export default function OnboardingLayout({ children }: { children: ReactNode }) {
+export default function AcceptInviteLayout({ children }: { children: ReactNode }) {
   return (
     <div className="min-h-screen bg-gradient-to-b from-amber-50/50 to-white">
       <header className="border-b bg-white/70 backdrop-blur-md px-6 py-4">

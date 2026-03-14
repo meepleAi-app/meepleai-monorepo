@@ -93,7 +93,7 @@ export function GameGrid({ games, variant, loading = false }: GameGridProps) {
       <div
         className={
           variant === 'grid'
-            ? 'grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6'
+            ? 'grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-6'
             : 'flex flex-col gap-4'
         }
       >
@@ -134,7 +134,7 @@ export function GameGrid({ games, variant, loading = false }: GameGridProps) {
   // Grid view
   if (variant === 'grid') {
     return (
-      <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-6">
         {games.map(game => (
           <MeepleGameCatalogCard
             key={game.id}

@@ -2,10 +2,10 @@
 
 import React from 'react';
 
-import type { SharedContextDto } from '@/lib/stores/toolboxStore';
+import type { SharedContext } from '@/lib/api/schemas/toolbox.schemas';
 
 interface SharedContextBarProps {
-  sharedContext: SharedContextDto;
+  sharedContext: SharedContext;
   className?: string;
   'data-testid'?: string;
 }
@@ -19,7 +19,7 @@ export function SharedContextBar({
   className = '',
   'data-testid': testId,
 }: SharedContextBarProps) {
-  const { players, currentPlayerId, round, maxRounds } = sharedContext;
+  const { players, currentPlayerIndex, currentRound } = sharedContext;
 
   return (
     <div
@@ -28,17 +28,17 @@ export function SharedContextBar({
     >
       {/* Player list */}
       <div className="flex items-center gap-2">
-        {players.map(player => {
-          const isCurrent = player.id === currentPlayerId;
+        {players.map((player, index) => {
+          const isCurrent = index === currentPlayerIndex;
           return (
             <div
-              key={player.id}
+              key={player.name}
               className={`flex items-center gap-1.5 rounded-full px-2 py-1 text-xs font-medium transition-colors ${
                 isCurrent
                   ? 'bg-primary/10 text-primary ring-1 ring-primary/30'
                   : 'text-muted-foreground'
               }`}
-              data-testid={`player-chip-${player.id}`}
+              data-testid={`player-chip-${player.name}`}
             >
               <span
                 className="inline-block h-2.5 w-2.5 rounded-full"
@@ -53,8 +53,7 @@ export function SharedContextBar({
 
       {/* Round indicator */}
       <div className="ml-auto flex items-center gap-1.5 text-xs text-muted-foreground">
-        <span className="font-medium">Round {round}</span>
-        {maxRounds !== null && <span>/ {maxRounds}</span>}
+        <span className="font-medium">Round {currentRound}</span>
       </div>
     </div>
   );

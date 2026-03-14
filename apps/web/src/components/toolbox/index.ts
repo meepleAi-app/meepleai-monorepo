@@ -10,4 +10,7 @@ export { ToolCard } from './ToolCard';
 export { ToolCardDeck } from './ToolCardDeck';
 export { ToolPreviewChips } from './ToolPreviewChips';
 export { FreeformToolbox } from './FreeformToolbox';
+export { PhasedToolbox } from './PhasedToolbox';
+export { PhaseTimeline } from './PhaseTimeline';
+export { OfflineBanner } from './OfflineBanner';
 export { ToolboxKitCard } from './ToolboxKitCard';

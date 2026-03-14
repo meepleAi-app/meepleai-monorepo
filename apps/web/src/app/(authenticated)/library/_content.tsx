@@ -20,10 +20,13 @@
  * See: apps/web/src/app/(chat)/chat/new/page.tsx for same pattern.
  */
 
+import { useEffect } from 'react';
+
 import dynamicImport from 'next/dynamic';
 import { useSearchParams } from 'next/navigation';
 
 import { Skeleton } from '@/components/ui/feedback/skeleton';
+import { useCardHand } from '@/stores/use-card-hand';
 
 import { AddGameDrawerController } from './AddGameDrawer';
 
@@ -74,6 +77,16 @@ const ProposalsPageClient = dynamicImport(() => import('./proposals/MyProposalsC
 export function LibraryContent() {
   const searchParams = useSearchParams();
   const tab = searchParams.get('tab');
+  const { drawCard } = useCardHand();
+
+  useEffect(() => {
+    drawCard({
+      id: 'section-library',
+      entity: 'game',
+      title: 'Library',
+      href: '/library',
+    });
+  }, [drawCard]);
 
   return (
     <>

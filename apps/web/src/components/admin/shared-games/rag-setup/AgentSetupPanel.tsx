@@ -45,14 +45,12 @@ export function AgentSetupPanel({
 }: AgentSetupPanelProps) {
   const [agentName, setAgentName] = useState(`${gameTitle} Assistant`);
   const [selectedDocIds, setSelectedDocIds] = useState<string[]>(() =>
-    documents
-      .filter((d) => d.processingState === 'Ready' && d.isActiveForRag)
-      .map((d) => d.documentId)
+    documents.filter(d => d.processingState === 'Ready' && d.isActiveForRag).map(d => d.documentId)
   );
   const [creating, setCreating] = useState(false);
 
   const readyDocs = useMemo(
-    () => documents.filter((d) => d.processingState === 'Ready'),
+    () => documents.filter(d => d.processingState === 'Ready'),
     [documents]
   );
 
@@ -63,8 +61,8 @@ export function AgentSetupPanel({
   );
 
   const toggleDoc = (docId: string) => {
-    setSelectedDocIds((prev) =>
-      prev.includes(docId) ? prev.filter((id) => id !== docId) : [...prev, docId]
+    setSelectedDocIds(prev =>
+      prev.includes(docId) ? prev.filter(id => id !== docId) : [...prev, docId]
     );
   };
 
@@ -120,8 +118,7 @@ export function AgentSetupPanel({
                   {existingAgent.name}
                 </p>
                 <p className="text-sm text-green-700 dark:text-green-300">
-                  {existingAgent.type} •{' '}
-                  {existingAgent.isActive ? 'Attivo' : 'Inattivo'}
+                  {existingAgent.type} • {existingAgent.isActive ? 'Attivo' : 'Inattivo'}
                 </p>
               </div>
             </div>
@@ -159,7 +156,7 @@ export function AgentSetupPanel({
           <Input
             id="agent-name"
             value={agentName}
-            onChange={(e) => setAgentName(e.target.value)}
+            onChange={e => setAgentName(e.target.value)}
             placeholder="es. Catan Assistant"
           />
         </div>
@@ -173,7 +170,7 @@ export function AgentSetupPanel({
             </p>
           ) : (
             <div className="space-y-2">
-              {documents.map((doc) => {
+              {documents.map(doc => {
                 const isReady = doc.processingState === 'Ready';
                 const isSelected = selectedDocIds.includes(doc.documentId);
 
@@ -196,11 +193,7 @@ export function AgentSetupPanel({
                     </span>
                     <Badge
                       variant={isReady ? 'default' : 'secondary'}
-                      className={
-                        isReady
-                          ? 'bg-green-600 text-xs hover:bg-green-700'
-                          : 'text-xs'
-                      }
+                      className={isReady ? 'bg-green-600 text-xs hover:bg-green-700' : 'text-xs'}
                     >
                       {isReady ? 'Pronto' : doc.processingState}
                     </Badge>
@@ -231,8 +224,7 @@ export function AgentSetupPanel({
                 <p>
                   Costo per query:{' '}
                   <strong>
-                    ${costEstimate.estimatedCostPerQuery.toFixed(6)}{' '}
-                    {costEstimate.currency}
+                    ${costEstimate.estimatedCostPerQuery.toFixed(6)} {costEstimate.currency}
                   </strong>
                 </p>
                 <p>Modello: {costEstimate.model}</p>
@@ -245,9 +237,7 @@ export function AgentSetupPanel({
         {/* Create Button */}
         <Button
           onClick={handleCreate}
-          disabled={
-            creating || selectedDocIds.length === 0 || readyDocs.length === 0
-          }
+          disabled={creating || selectedDocIds.length === 0 || readyDocs.length === 0}
           className="w-full"
         >
           {creating ? (

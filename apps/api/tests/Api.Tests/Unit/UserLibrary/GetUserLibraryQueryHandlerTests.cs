@@ -93,7 +93,6 @@ public sealed class GetUserLibraryQueryHandlerTests : IDisposable
             FilePath = "/pdfs/rules.pdf",
             FileSizeBytes = 1024,
             UploadedByUserId = userId,
-            ProcessingStatus = "completed",
             ProcessingState = "Ready" // Issue #4998: fully indexed in RAG
         });
         await _dbContext.SaveChangesAsync();
@@ -236,7 +235,6 @@ public sealed class GetUserLibraryQueryHandlerTests : IDisposable
             FilePath = "/pdfs/private-rules.pdf",
             FileSizeBytes = 2048,
             UploadedByUserId = userId,
-            ProcessingStatus = "completed",
             ProcessingState = "Ready"    // Fully indexed in RAG
         });
         await _dbContext.SaveChangesAsync();

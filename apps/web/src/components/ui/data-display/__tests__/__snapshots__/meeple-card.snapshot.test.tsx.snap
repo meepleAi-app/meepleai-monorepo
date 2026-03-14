@@ -59,7 +59,7 @@ exports[`MeepleCard - Snapshots > Complete Examples > should match snapshot for 
     class="flex-1 flex flex-col px-2.5 py-2 sm:px-3.5 sm:py-3"
   >
     <h3
-      class="font-quicksand font-bold text-[0.8rem] sm:text-[0.95rem] mb-0.5 text-card-foreground truncate"
+      class="font-quicksand font-bold leading-tight text-[0.8rem] sm:text-[0.95rem] mb-0.5 text-card-foreground truncate"
     >
       Twilight Imperium
     </h3>
@@ -183,7 +183,7 @@ exports[`MeepleCard - Snapshots > Complete Examples > should match snapshot for 
 exports[`MeepleCard - Snapshots > Complete Examples > should match snapshot for tournament hero 1`] = `
 <article
   aria-label="Event: MeepleAI Tournament"
-  class="group cursor-pointer transition-all duration-[350ms] ease-[cubic-bezier(0.4,0,0.2,1)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 relative flex flex-col rounded-3xl overflow-hidden min-h-[320px] [box-shadow:var(--shadow-warm-xl)] hover:[box-shadow:var(--shadow-warm-2xl)] hover:scale-[1.01] hover:outline-2 hover:outline-offset-2"
+  class="group cursor-pointer transition-all duration-[350ms] ease-[cubic-bezier(0.4,0,0.2,1)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 relative flex flex-col rounded-3xl overflow-hidden min-h-[320px] [box-shadow:var(--shadow-warm-xl)] hover:[box-shadow:var(--shadow-warm-2xl)] hover:scale-[1.01]"
   data-entity="event"
   data-testid="meeple-card"
   data-variant="hero"
@@ -219,8 +219,25 @@ exports[`MeepleCard - Snapshots > Complete Examples > should match snapshot for 
   <div
     class="relative z-10 mt-auto flex flex-col justify-end p-6"
   >
+    <div
+      class="flex gap-2 mt-3 min-w-0"
+    >
+      <button
+        class="flex-1 min-w-0 py-2 px-3 md:px-4 rounded-lg font-quicksand font-semibold text-xs md:text-sm truncate transition-all duration-200 hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 text-white shadow-md hover:shadow-lg"
+        style="background-color: rgb(244, 62, 92);"
+        title="Register Now"
+      >
+        Register Now
+      </button>
+      <button
+        class="flex-1 min-w-0 py-2 px-3 md:px-4 rounded-lg font-quicksand font-semibold text-xs md:text-sm truncate transition-all duration-200 hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 bg-muted text-foreground hover:bg-muted/80"
+        title="Learn More"
+      >
+        Learn More
+      </button>
+    </div>
     <h3
-      class="font-quicksand font-bold text-2xl text-white mb-1 [text-shadow:0_2px_8px_rgba(0,0,0,0.3)]"
+      class="font-quicksand font-bold leading-tight text-2xl text-white mb-1 [text-shadow:0_2px_8px_rgba(0,0,0,0.3)]"
     >
       MeepleAI Tournament
     </h3>
@@ -336,23 +353,6 @@ exports[`MeepleCard - Snapshots > Complete Examples > should match snapshot for 
         </span>
       </span>
     </div>
-    <div
-      class="flex gap-2 mt-3 min-w-0"
-    >
-      <button
-        class="flex-1 min-w-0 py-2 px-3 md:px-4 rounded-lg font-quicksand font-semibold text-xs md:text-sm truncate transition-all duration-200 hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 text-white shadow-md hover:shadow-lg"
-        style="background-color: rgb(244, 62, 92);"
-        title="Register Now"
-      >
-        Register Now
-      </button>
-      <button
-        class="flex-1 min-w-0 py-2 px-3 md:px-4 rounded-lg font-quicksand font-semibold text-xs md:text-sm truncate transition-all duration-200 hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 bg-muted text-foreground hover:bg-muted/80"
-        title="Learn More"
-      >
-        Learn More
-      </button>
-    </div>
   </div>
 </article>
 `;
@@ -408,7 +408,7 @@ exports[`MeepleCard - Snapshots > Entity Types > should match snapshot for colle
     class="flex-1 flex flex-col px-2.5 py-2 sm:px-3.5 sm:py-3"
   >
     <h3
-      class="font-quicksand font-bold text-[0.8rem] sm:text-[0.95rem] mb-0.5 text-card-foreground truncate"
+      class="font-quicksand font-bold leading-tight text-[0.8rem] sm:text-[0.95rem] mb-0.5 text-card-foreground truncate"
     >
       Euro Games Essentials
     </h3>
@@ -495,7 +495,7 @@ exports[`MeepleCard - Snapshots > Entity Types > should match snapshot for custo
     class="flex-1 flex flex-col px-2.5 py-2 sm:px-3.5 sm:py-3"
   >
     <h3
-      class="font-quicksand font-bold text-[0.8rem] sm:text-[0.95rem] mb-0.5 text-card-foreground truncate"
+      class="font-quicksand font-bold leading-tight text-[0.8rem] sm:text-[0.95rem] mb-0.5 text-card-foreground truncate"
     >
       Custom Entity
     </h3>
@@ -573,7 +573,7 @@ exports[`MeepleCard - Snapshots > Entity Types > should match snapshot for event
     class="flex-1 flex flex-col px-2.5 py-2 sm:px-3.5 sm:py-3"
   >
     <h3
-      class="font-quicksand font-bold text-[0.8rem] sm:text-[0.95rem] mb-0.5 text-card-foreground truncate"
+      class="font-quicksand font-bold leading-tight text-[0.8rem] sm:text-[0.95rem] mb-0.5 text-card-foreground truncate"
     >
       Saturday Game Night
     </h3>
@@ -710,7 +710,7 @@ exports[`MeepleCard - Snapshots > Entity Types > should match snapshot for game 
     class="flex-1 flex flex-col px-2.5 py-2 sm:px-3.5 sm:py-3"
   >
     <h3
-      class="font-quicksand font-bold text-[0.8rem] sm:text-[0.95rem] mb-0.5 text-card-foreground truncate"
+      class="font-quicksand font-bold leading-tight text-[0.8rem] sm:text-[0.95rem] mb-0.5 text-card-foreground truncate"
     >
       Azul
     </h3>
@@ -851,7 +851,7 @@ exports[`MeepleCard - Snapshots > Entity Types > should match snapshot for playe
     class="flex-1 flex flex-col px-2.5 py-2 sm:px-3.5 sm:py-3"
   >
     <h3
-      class="font-quicksand font-bold text-[0.8rem] sm:text-[0.95rem] mb-0.5 text-card-foreground truncate"
+      class="font-quicksand font-bold leading-tight text-[0.8rem] sm:text-[0.95rem] mb-0.5 text-card-foreground truncate"
     >
       Marco Rossi
     </h3>
@@ -926,7 +926,7 @@ exports[`MeepleCard - Snapshots > Layout Variants > should match snapshot for co
   data-entity="game"
   data-testid="meeple-card"
   data-variant="compact"
-  style="--mc-entity-color: hsl(25 95% 45%); will-change: transform, box-shadow, outline;"
+  style="--mc-entity-color: hsl(25 95% 45%);"
 >
   <span
     aria-hidden="true"
@@ -937,7 +937,7 @@ exports[`MeepleCard - Snapshots > Layout Variants > should match snapshot for co
     class="flex-1 min-w-0"
   >
     <h3
-      class="font-quicksand font-bold text-sm text-card-foreground"
+      class="font-quicksand font-bold leading-tight text-sm text-card-foreground"
     >
       Twilight Imperium
     </h3>
@@ -1000,8 +1000,25 @@ exports[`MeepleCard - Snapshots > Layout Variants > should match snapshot for fe
   <div
     class="flex-1 flex flex-col px-5 py-4"
   >
+    <div
+      class="flex gap-2 mt-3 min-w-0"
+    >
+      <button
+        class="flex-1 min-w-0 py-2 px-3 md:px-4 rounded-lg font-quicksand font-semibold text-xs md:text-sm truncate transition-all duration-200 hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 text-white shadow-md hover:shadow-lg"
+        style="background-color: rgb(224, 97, 6);"
+        title="Browse"
+      >
+        Browse
+      </button>
+      <button
+        class="flex-1 min-w-0 py-2 px-3 md:px-4 rounded-lg font-quicksand font-semibold text-xs md:text-sm truncate transition-all duration-200 hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 bg-muted text-foreground hover:bg-muted/80"
+        title="Clone"
+      >
+        Clone
+      </button>
+    </div>
     <h3
-      class="font-quicksand font-bold text-xl mb-1 text-card-foreground"
+      class="font-quicksand font-bold leading-tight text-xl mb-1 text-card-foreground"
     >
       Twilight Imperium
     </h3>
@@ -1113,23 +1130,6 @@ exports[`MeepleCard - Snapshots > Layout Variants > should match snapshot for fe
         </span>
       </span>
     </div>
-    <div
-      class="flex gap-2 mt-3 min-w-0"
-    >
-      <button
-        class="flex-1 min-w-0 py-2 px-3 md:px-4 rounded-lg font-quicksand font-semibold text-xs md:text-sm truncate transition-all duration-200 hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 text-white shadow-md hover:shadow-lg"
-        style="background-color: rgb(224, 97, 6);"
-        title="Browse"
-      >
-        Browse
-      </button>
-      <button
-        class="flex-1 min-w-0 py-2 px-3 md:px-4 rounded-lg font-quicksand font-semibold text-xs md:text-sm truncate transition-all duration-200 hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 bg-muted text-foreground hover:bg-muted/80"
-        title="Clone"
-      >
-        Clone
-      </button>
-    </div>
   </div>
 </article>
 `;
@@ -1185,7 +1185,7 @@ exports[`MeepleCard - Snapshots > Layout Variants > should match snapshot for gr
     class="flex-1 flex flex-col px-2.5 py-2 sm:px-3.5 sm:py-3"
   >
     <h3
-      class="font-quicksand font-bold text-[0.8rem] sm:text-[0.95rem] mb-0.5 text-card-foreground truncate"
+      class="font-quicksand font-bold leading-tight text-[0.8rem] sm:text-[0.95rem] mb-0.5 text-card-foreground truncate"
     >
       Twilight Imperium
     </h3>
@@ -1309,7 +1309,7 @@ exports[`MeepleCard - Snapshots > Layout Variants > should match snapshot for gr
 exports[`MeepleCard - Snapshots > Layout Variants > should match snapshot for hero variant 1`] = `
 <article
   aria-label="Game: Twilight Imperium"
-  class="group cursor-pointer transition-all duration-[350ms] ease-[cubic-bezier(0.4,0,0.2,1)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 relative flex flex-col rounded-3xl overflow-hidden min-h-[320px] [box-shadow:var(--shadow-warm-xl)] hover:[box-shadow:var(--shadow-warm-2xl)] hover:scale-[1.01] hover:outline-2 hover:outline-offset-2"
+  class="group cursor-pointer transition-all duration-[350ms] ease-[cubic-bezier(0.4,0,0.2,1)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 relative flex flex-col rounded-3xl overflow-hidden min-h-[320px] [box-shadow:var(--shadow-warm-xl)] hover:[box-shadow:var(--shadow-warm-2xl)] hover:scale-[1.01]"
   data-entity="game"
   data-testid="meeple-card"
   data-variant="hero"
@@ -1345,8 +1345,25 @@ exports[`MeepleCard - Snapshots > Layout Variants > should match snapshot for he
   <div
     class="relative z-10 mt-auto flex flex-col justify-end p-6"
   >
+    <div
+      class="flex gap-2 mt-3 min-w-0"
+    >
+      <button
+        class="flex-1 min-w-0 py-2 px-3 md:px-4 rounded-lg font-quicksand font-semibold text-xs md:text-sm truncate transition-all duration-200 hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 text-white shadow-md hover:shadow-lg"
+        style="background-color: rgb(224, 97, 6);"
+        title="Register Now"
+      >
+        Register Now
+      </button>
+      <button
+        class="flex-1 min-w-0 py-2 px-3 md:px-4 rounded-lg font-quicksand font-semibold text-xs md:text-sm truncate transition-all duration-200 hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 bg-muted text-foreground hover:bg-muted/80"
+        title="Learn More"
+      >
+        Learn More
+      </button>
+    </div>
     <h3
-      class="font-quicksand font-bold text-2xl text-white mb-1 [text-shadow:0_2px_8px_rgba(0,0,0,0.3)]"
+      class="font-quicksand font-bold leading-tight text-2xl text-white mb-1 [text-shadow:0_2px_8px_rgba(0,0,0,0.3)]"
     >
       Twilight Imperium
     </h3>
@@ -1458,23 +1475,6 @@ exports[`MeepleCard - Snapshots > Layout Variants > should match snapshot for he
         </span>
       </span>
     </div>
-    <div
-      class="flex gap-2 mt-3 min-w-0"
-    >
-      <button
-        class="flex-1 min-w-0 py-2 px-3 md:px-4 rounded-lg font-quicksand font-semibold text-xs md:text-sm truncate transition-all duration-200 hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 text-white shadow-md hover:shadow-lg"
-        style="background-color: rgb(224, 97, 6);"
-        title="Register Now"
-      >
-        Register Now
-      </button>
-      <button
-        class="flex-1 min-w-0 py-2 px-3 md:px-4 rounded-lg font-quicksand font-semibold text-xs md:text-sm truncate transition-all duration-200 hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 bg-muted text-foreground hover:bg-muted/80"
-        title="Learn More"
-      >
-        Learn More
-      </button>
-    </div>
   </div>
 </article>
 `;
@@ -1482,7 +1482,7 @@ exports[`MeepleCard - Snapshots > Layout Variants > should match snapshot for he
 exports[`MeepleCard - Snapshots > Layout Variants > should match snapshot for list variant 1`] = `
 <article
   aria-label="Game: Twilight Imperium"
-  class="group relative overflow-hidden cursor-pointer transition-all duration-[350ms] ease-[cubic-bezier(0.4,0,0.2,1)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 flex flex-row items-center gap-4 p-3 rounded-xl bg-card border border-border/50 [box-shadow:var(--shadow-warm-sm)] hover:[box-shadow:var(--shadow-warm-md)] hover:translate-x-1 hover:outline-2 hover:outline-offset-2"
+  class="group relative overflow-hidden cursor-pointer transition-all duration-[350ms] ease-[cubic-bezier(0.4,0,0.2,1)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 flex flex-row items-center gap-4 p-3 rounded-xl bg-card border border-border/50 [box-shadow:var(--shadow-warm-sm)] hover:[box-shadow:var(--shadow-warm-md)] hover:translate-x-1"
   data-entity="game"
   data-testid="meeple-card"
   data-variant="list"
@@ -1509,7 +1509,7 @@ exports[`MeepleCard - Snapshots > Layout Variants > should match snapshot for li
     class="flex-1 min-w-0 py-1"
   >
     <h3
-      class="font-quicksand font-bold text-base text-card-foreground line-clamp-2"
+      class="font-quicksand font-bold leading-tight text-base text-card-foreground line-clamp-2"
     >
       Twilight Imperium
     </h3>
@@ -1868,7 +1868,7 @@ exports[`MeepleCard - Snapshots > Special States > should match snapshot with ba
     class="flex-1 flex flex-col px-2.5 py-2 sm:px-3.5 sm:py-3"
   >
     <h3
-      class="font-quicksand font-bold text-[0.8rem] sm:text-[0.95rem] mb-0.5 text-card-foreground truncate"
+      class="font-quicksand font-bold leading-tight text-[0.8rem] sm:text-[0.95rem] mb-0.5 text-card-foreground truncate"
     >
       New Release
     </h3>
@@ -2117,16 +2117,6 @@ exports[`MeepleCard - Snapshots > Special States > should match snapshot with di
   <div
     class="flex-1 flex flex-col px-5 py-4"
   >
-    <h3
-      class="font-quicksand font-bold text-xl mb-1 text-card-foreground"
-    >
-      Featured Game
-    </h3>
-    <p
-      class="text-muted-foreground text-sm mb-2"
-    >
-      Publisher
-    </p>
     <div
       class="flex gap-2 mt-3 min-w-0"
     >
@@ -2145,6 +2135,16 @@ exports[`MeepleCard - Snapshots > Special States > should match snapshot with di
         Sold Out
       </button>
     </div>
+    <h3
+      class="font-quicksand font-bold leading-tight text-xl mb-1 text-card-foreground"
+    >
+      Featured Game
+    </h3>
+    <p
+      class="text-muted-foreground text-sm mb-2"
+    >
+      Publisher
+    </p>
   </div>
 </article>
 `;
@@ -2386,7 +2386,7 @@ exports[`MeepleCard - Snapshots > Special States > should match snapshot with mi
     class="flex-1 flex flex-col px-2.5 py-2 sm:px-3.5 sm:py-3"
   >
     <h3
-      class="font-quicksand font-bold text-[0.8rem] sm:text-[0.95rem] mb-0.5 text-card-foreground truncate"
+      class="font-quicksand font-bold leading-tight text-[0.8rem] sm:text-[0.95rem] mb-0.5 text-card-foreground truncate"
     >
       Minimal Card
     </h3>
@@ -2633,7 +2633,7 @@ exports[`MeepleCard - Snapshots > Special States > should match snapshot with on
     class="flex-1 flex flex-col px-2.5 py-2 sm:px-3.5 sm:py-3"
   >
     <h3
-      class="font-quicksand font-bold text-[0.8rem] sm:text-[0.95rem] mb-0.5 text-card-foreground truncate"
+      class="font-quicksand font-bold leading-tight text-[0.8rem] sm:text-[0.95rem] mb-0.5 text-card-foreground truncate"
     >
       Clickable Card
     </h3>
@@ -2883,7 +2883,7 @@ exports[`MeepleCard - Snapshots > Special States > should match snapshot without
     class="flex-1 flex flex-col px-2.5 py-2 sm:px-3.5 sm:py-3"
   >
     <h3
-      class="font-quicksand font-bold text-[0.8rem] sm:text-[0.95rem] mb-0.5 text-card-foreground truncate"
+      class="font-quicksand font-bold leading-tight text-[0.8rem] sm:text-[0.95rem] mb-0.5 text-card-foreground truncate"
     >
       No Image Game
     </h3>

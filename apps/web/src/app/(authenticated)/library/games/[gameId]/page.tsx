@@ -1,10 +1,8 @@
 /**
  * Library Game Detail Page
  *
- * Integrated into LayoutShell's 3-tier navigation system:
- * - MiniNav tabs: Overview · Agent · KB · Sessions · Links
- * - ActionBar actions: Chat Agent · Upload PDF · Favorite · Notes · Remove
- * - Compact hero card + tabbed content
+ * Displays game detail with hero card + tabbed content.
+ * Draws a card into the hand via UnifiedShell's useCardHand store.
  */
 
 'use client';
@@ -28,7 +26,6 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/feedback/al
 import { Button } from '@/components/ui/primitives/button';
 import { useLibraryGameDetail } from '@/hooks/queries/useLibrary';
 
-import { GameDetailNavConfig } from './GameDetailNavConfig';
 import LibraryGameDetailLoading from './loading';
 
 export default function LibraryGameDetailPage() {
@@ -99,8 +96,6 @@ export default function LibraryGameDetailPage() {
 
   return (
     <>
-      <GameDetailNavConfig gameId={gameId} isFavorite={gameDetail.isFavorite} />
-
       <div style={{ viewTransitionName: `meeple-card-${gameId}` }}>
         <GameDetailHeroCard gameDetail={gameDetail} />
       </div>
@@ -123,7 +118,7 @@ export default function LibraryGameDetailPage() {
         )}
       </div>
 
-      {/* Event-driven modals from ActionBar */}
+      {/* Event-driven modals */}
       <EditNotesModal
         isOpen={isNotesModalOpen}
         onClose={() => setIsNotesModalOpen(false)}

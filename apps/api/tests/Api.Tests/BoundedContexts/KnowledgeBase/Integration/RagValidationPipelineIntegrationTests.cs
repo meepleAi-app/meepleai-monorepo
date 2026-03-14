@@ -425,7 +425,6 @@ public class RagValidationPipelineIntegrationTests : IAsyncLifetime
             FilePath = "/tmp/test.pdf",
             FileSizeBytes = 1000,
             UploadedByUserId = user.Id,  // Use existing User
-            ProcessingStatus = "completed"
         };
         _dbContext.PdfDocuments.Add(pdfDoc);
 

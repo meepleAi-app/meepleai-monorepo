@@ -29,7 +29,6 @@ const defaultData: GameBackData = {
   kbCardCount: 5,
   lastPlayedLabel: '3 giorni fa',
   winRate: 65,
-  nextGameNight: 'Sab 21:00',
   entityLinkCount: 3,
   noteCount: 2,
 };
@@ -38,15 +37,13 @@ const defaultActions: GameBackActions = {
   onChatAgent: vi.fn(),
   onToggleFavorite: vi.fn(),
   isFavorite: false,
-  onNewSession: vi.fn(),
-  onAddToGameNight: vi.fn(),
   onViewLinks: vi.fn(),
 };
 
 function renderComponent(
   dataOverrides?: Partial<GameBackData>,
   actionsOverrides?: Partial<GameBackActions> | null,
-  props?: { title?: string; detailHref?: string; entityColor?: string }
+  props?: { title?: string; subtitle?: string; detailHref?: string; entityColor?: string }
 ) {
   const data = { ...defaultData, ...dataOverrides };
   const actions =
@@ -56,9 +53,9 @@ function renderComponent(
       data={data}
       actions={actions}
       title={props?.title ?? 'Catan'}
+      subtitle={props?.subtitle}
       detailHref={props?.detailHref ?? '/games/catan'}
       entityColor={props?.entityColor}
-      {...props}
     />
   );
 }
@@ -79,13 +76,13 @@ describe('GameBackContent', () => {
   });
 
   it('falls back to "Statistiche" when no title', () => {
-    renderComponent({}, {}, { title: undefined });
+    renderComponent({}, {}, { title: '' });
     expect(screen.getByText('Statistiche')).toBeInTheDocument();
   });
 });
 
 // ============================================================================
-// Enriched Header
+// Enriched Header (Issue #336)
 // ============================================================================
 
 describe('Enriched Header', () => {
@@ -93,24 +90,18 @@ describe('Enriched Header', () => {
     vi.clearAllMocks();
   });
 
-  it('shows "Mai giocato" when lastPlayedLabel is undefined', () => {
-    renderComponent({ lastPlayedLabel: undefined });
-    expect(screen.getByText(/Mai giocato/)).toBeInTheDocument();
+  it('shows subtitle when provided', () => {
+    renderComponent({}, {}, { title: 'Agricola', subtitle: 'Lookout Games' });
+    expect(screen.getByText('Lookout Games')).toBeInTheDocument();
   });
 
-  it('shows lastPlayedLabel when provided', () => {
-    renderComponent({ lastPlayedLabel: '3 giorni fa' });
-    expect(screen.getByText(/3 giorni fa/)).toBeInTheDocument();
-  });
-
-  it('shows win rate when provided', () => {
-    renderComponent({ winRate: 65 });
-    expect(screen.getByText(/Win rate 65%/)).toBeInTheDocument();
-  });
-
-  it('omits win rate when not provided', () => {
-    renderComponent({ winRate: undefined });
-    expect(screen.queryByText(/Win rate/)).not.toBeInTheDocument();
+  it('omits subtitle when not provided', () => {
+    renderComponent({}, {}, { title: 'Agricola' });
+    const title = screen.getByText('Agricola');
+    const header = title.closest('div');
+    // Only title h2 should be present, no subtitle <p>
+    const paragraphs = header?.querySelectorAll('p');
+    expect(paragraphs?.length ?? 0).toBe(0);
   });
 });
 
@@ -161,89 +152,295 @@ describe('InfoChips', () => {
 });
 
 // ============================================================================
-// ContextualActions
+// Stats Row (Issue #336)
 // ============================================================================
 
-describe('ContextualActions', () => {
+describe('Stats Row', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it('fires onNewSession with stopPropagation', () => {
-    const onNewSession = vi.fn();
-    renderComponent({}, { onNewSession });
-    const btn = screen.getByText('Nuova Sessione').closest('button')!;
+  it('renders stats row when timesPlayed is provided', () => {
+    renderComponent({ timesPlayed: 12 });
+    expect(screen.getByTestId('stats-row')).toBeInTheDocument();
+    expect(screen.getByText('12')).toBeInTheDocument();
+    expect(screen.getByText('Partite')).toBeInTheDocument();
+  });
+
+  it('renders stats row with timesPlayed=0 (falsy but not null)', () => {
+    renderComponent({ timesPlayed: 0 });
+    expect(screen.getByTestId('stats-row')).toBeInTheDocument();
+    expect(screen.getByText('0')).toBeInTheDocument();
+  });
+
+  it('renders win rate formatted as percentage', () => {
+    renderComponent({ winRate: 67 });
+    expect(screen.getByText('67%')).toBeInTheDocument();
+    expect(screen.getByText('Vittorie')).toBeInTheDocument();
+  });
+
+  it('renders winRate 0 as "0%"', () => {
+    renderComponent({ winRate: 0 });
+    expect(screen.getByTestId('stats-row')).toBeInTheDocument();
+    expect(screen.getByText('0%')).toBeInTheDocument();
+  });
+
+  it('renders total play time as hours when >= 60 minutes', () => {
+    renderComponent({ totalPlayTimeMinutes: 180 });
+    expect(screen.getByText('3h')).toBeInTheDocument();
+    expect(screen.getByText('Tempo')).toBeInTheDocument();
+  });
+
+  it('renders total play time as minutes when < 60', () => {
+    renderComponent({ totalPlayTimeMinutes: 45 });
+    expect(screen.getByText('45m')).toBeInTheDocument();
+  });
+
+  it('renders totalPlayTimeMinutes=0 as "0m"', () => {
+    renderComponent({
+      totalPlayTimeMinutes: 0,
+      timesPlayed: undefined,
+      winRate: undefined,
+      lastPlayedLabel: undefined,
+    });
+    expect(screen.getByTestId('stats-row')).toBeInTheDocument();
+    expect(screen.getByText('0m')).toBeInTheDocument();
+  });
+
+  it('renders lastPlayedLabel in stats row', () => {
+    renderComponent({ lastPlayedLabel: '2 giorni fa', timesPlayed: 5 });
+    expect(screen.getByText('2 giorni fa')).toBeInTheDocument();
+  });
+
+  it('renders stats row with only lastPlayedLabel (no numeric stats)', () => {
+    renderComponent({
+      timesPlayed: undefined,
+      winRate: undefined,
+      totalPlayTimeMinutes: undefined,
+      lastPlayedLabel: 'Ieri',
+    });
+    expect(screen.getByTestId('stats-row')).toBeInTheDocument();
+    expect(screen.getByText('Ieri')).toBeInTheDocument();
+  });
+
+  it('hides stats row when all stats are undefined/null', () => {
+    renderComponent({
+      timesPlayed: undefined,
+      winRate: undefined,
+      totalPlayTimeMinutes: undefined,
+      lastPlayedLabel: undefined,
+    });
+    expect(screen.queryByTestId('stats-row')).not.toBeInTheDocument();
+  });
+
+  it('shows separators between multiple stats', () => {
+    renderComponent({
+      timesPlayed: 5,
+      winRate: 60,
+      totalPlayTimeMinutes: undefined,
+      lastPlayedLabel: undefined,
+    });
+    const statsRow = screen.getByTestId('stats-row');
+    expect(statsRow.querySelectorAll('[data-separator]')).toHaveLength(1);
+  });
+});
+
+// ============================================================================
+// KB Summary (Issue #336)
+// ============================================================================
+
+describe('KB Summary', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('renders condensed KB summary when hasKb is true', () => {
+    renderComponent({
+      hasKb: true,
+      kbCardCount: 5,
+      kbDocuments: [
+        { id: '1', fileName: 'rules.pdf', status: 'Ready' },
+        { id: '2', fileName: 'faq.pdf', status: 'Ready' },
+        { id: '3', fileName: 'errata.pdf', status: 'Ready' },
+      ],
+    });
+    expect(screen.getByTestId('kb-summary')).toBeInTheDocument();
+    expect(screen.getByText(/3 documenti/)).toBeInTheDocument();
+  });
+
+  it('shows green status when all KB docs are ready', () => {
+    renderComponent({
+      hasKb: true,
+      kbDocuments: [{ id: '1', fileName: 'rules.pdf', status: 'Ready' }],
+    });
+    const badge = screen.getByTestId('kb-status-badge');
+    expect(badge).toHaveTextContent('Pronta');
+  });
+
+  it('shows amber status when some KB docs are processing', () => {
+    renderComponent({
+      hasKb: true,
+      kbDocuments: [
+        { id: '1', fileName: 'rules.pdf', status: 'Ready' },
+        { id: '2', fileName: 'faq.pdf', status: 'Processing' },
+      ],
+    });
+    const badge = screen.getByTestId('kb-status-badge');
+    expect(badge).toHaveTextContent('In elaborazione');
+  });
+
+  it('hides KB summary when hasKb is false', () => {
+    renderComponent({ hasKb: false, kbDocuments: [] });
+    expect(screen.queryByTestId('kb-summary')).not.toBeInTheDocument();
+  });
+
+  it('hides KB summary when kbDocuments is empty', () => {
+    renderComponent({ hasKb: true, kbDocuments: [] });
+    expect(screen.queryByTestId('kb-summary')).not.toBeInTheDocument();
+  });
+});
+
+// ============================================================================
+// Tag Pills (Issue #336)
+// ============================================================================
+
+describe('Tag Pills', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('renders category and mechanic tags as pills', () => {
+    renderComponent({
+      categories: ['Strategia', 'Famiglia'],
+      mechanics: ['Worker Placement'],
+    });
+    expect(screen.getByTestId('tag-pills')).toBeInTheDocument();
+    expect(screen.getByText('Strategia')).toBeInTheDocument();
+    expect(screen.getByText('Famiglia')).toBeInTheDocument();
+    expect(screen.getByText('Worker Placement')).toBeInTheDocument();
+  });
+
+  it('shows max 6 tags with +N overflow pill', () => {
+    renderComponent({
+      categories: ['Cat1', 'Cat2', 'Cat3', 'Cat4'],
+      mechanics: ['Mech1', 'Mech2', 'Mech3'],
+    });
+    // 7 total, should show 6 + "+1"
+    expect(screen.getByText('+1')).toBeInTheDocument();
+  });
+
+  it('shows all tags when 6 or fewer', () => {
+    renderComponent({
+      categories: ['Cat1', 'Cat2'],
+      mechanics: ['Mech1'],
+    });
+    expect(screen.queryByText(/^\+\d+$/)).not.toBeInTheDocument();
+  });
+
+  it('renders with only categories (no mechanics)', () => {
+    renderComponent({ categories: ['Strategia'], mechanics: undefined });
+    expect(screen.getByTestId('tag-pills')).toBeInTheDocument();
+    expect(screen.getByText('Strategia')).toBeInTheDocument();
+  });
+
+  it('hides when both categories and mechanics are empty', () => {
+    renderComponent({ categories: [], mechanics: [] });
+    expect(screen.queryByTestId('tag-pills')).not.toBeInTheDocument();
+  });
+
+  it('hides when both categories and mechanics are undefined', () => {
+    renderComponent({ categories: undefined, mechanics: undefined });
+    expect(screen.queryByTestId('tag-pills')).not.toBeInTheDocument();
+  });
+
+  it('overflow pill has singular aria-label for +1', () => {
+    renderComponent({
+      categories: ['C1', 'C2', 'C3', 'C4', 'C5', 'C6', 'C7'],
+    });
+    const overflow = screen.getByText('+1');
+    expect(overflow).toHaveAttribute('aria-label', '1 altro tag');
+  });
+
+  it('overflow pill has plural aria-label for +2 or more', () => {
+    renderComponent({
+      categories: ['C1', 'C2', 'C3', 'C4', 'C5', 'C6', 'C7', 'C8'],
+    });
+    const overflow = screen.getByText('+2');
+    expect(overflow).toHaveAttribute('aria-label', '2 altri tag');
+  });
+});
+
+// ============================================================================
+// Navigation Links (Issue #336)
+// ============================================================================
+
+describe('Navigation Links', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('renders session link when handler and count provided', () => {
+    const onViewSessions = vi.fn();
+    renderComponent(
+      { sessionCount: 7, entityLinkCount: 0 },
+      { onViewSessions, onViewLinks: undefined }
+    );
+    expect(screen.getByText('Sessioni')).toBeInTheDocument();
+    expect(screen.getByText('7')).toBeInTheDocument();
+  });
+
+  it('renders note link when handler and count provided', () => {
+    const onViewNotes = vi.fn();
+    renderComponent({ noteCount: 2 }, { onViewNotes });
+    expect(screen.getByText('Note')).toBeInTheDocument();
+    expect(screen.getByText('2')).toBeInTheDocument();
+  });
+
+  it('renders entity link when handler and count provided', () => {
+    const onViewLinks = vi.fn();
+    renderComponent({ entityLinkCount: 5 }, { onViewLinks });
+    expect(screen.getByText('Collegamenti')).toBeInTheDocument();
+    expect(screen.getByText('5')).toBeInTheDocument();
+  });
+
+  it('calls handler on click with stopPropagation', () => {
+    const onViewSessions = vi.fn();
+    renderComponent({ sessionCount: 3 }, { onViewSessions });
+    const btn = screen.getByText('Sessioni').closest('button')!;
     const event = new MouseEvent('click', { bubbles: true });
     const stopProp = vi.spyOn(event, 'stopPropagation');
     fireEvent(btn, event);
-    expect(onNewSession).toHaveBeenCalledTimes(1);
+    expect(onViewSessions).toHaveBeenCalledTimes(1);
     expect(stopProp).toHaveBeenCalled();
   });
 
-  it('shows "Nessuna partita" for timesPlayed=0', () => {
-    renderComponent({ timesPlayed: 0 });
-    expect(screen.getByText('Nessuna partita')).toBeInTheDocument();
+  it('hides nav links when no handler has a count > 0', () => {
+    renderComponent(
+      { sessionCount: 0, noteCount: 0, entityLinkCount: 0 },
+      { onViewSessions: vi.fn(), onViewNotes: vi.fn(), onViewLinks: vi.fn() }
+    );
+    expect(screen.queryByTestId('nav-links')).not.toBeInTheDocument();
   });
 
-  it('shows play count context', () => {
-    renderComponent({ timesPlayed: 12 });
-    expect(screen.getByText('12 partite giocate')).toBeInTheDocument();
+  it('hides nav links when no handlers provided', () => {
+    renderComponent(
+      { sessionCount: 5, noteCount: 2 },
+      { onViewSessions: undefined, onViewNotes: undefined, onViewLinks: undefined }
+    );
+    expect(screen.queryByTestId('nav-links')).not.toBeInTheDocument();
   });
 
-  it('shows Espansioni with "N collegate" context when entityLinkCount > 0', () => {
-    renderComponent({ entityLinkCount: 3 });
-    expect(screen.getByText('Espansioni')).toBeInTheDocument();
-    expect(screen.getByText('3 collegate')).toBeInTheDocument();
-  });
-
-  it('hides Espansioni when entityLinkCount is 0', () => {
-    renderComponent({ entityLinkCount: 0 });
-    expect(screen.queryByText('Espansioni')).not.toBeInTheDocument();
-  });
-
-  it('shows Aggiungi a serata with nextGameNight context', () => {
-    renderComponent({ nextGameNight: 'Ven 20:30' }, { onAddToGameNight: vi.fn() });
-    expect(screen.getByText('Aggiungi a serata')).toBeInTheDocument();
-    expect(screen.getByText('Ven 20:30')).toBeInTheDocument();
-  });
-
-  it('hides Aggiungi a serata when onAddToGameNight is undefined', () => {
-    renderComponent({}, { onAddToGameNight: undefined });
-    expect(screen.queryByText('Aggiungi a serata')).not.toBeInTheDocument();
+  it('nav link buttons are keyboard accessible', () => {
+    const onViewSessions = vi.fn();
+    renderComponent({ sessionCount: 1 }, { onViewSessions });
+    const btn = screen.getByText('Sessioni').closest('button')!;
+    expect(btn.tagName).toBe('BUTTON');
+    expect(btn).not.toBeDisabled();
   });
 });
 
 // ============================================================================
-// KB Context in Chiedi all'AI action
-// ============================================================================
-
-describe('KB Context in ContextualAction', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it('shows "KB pronta · N doc" as context when hasKb is true', () => {
-    renderComponent({ hasKb: true, kbCardCount: 5 });
-    expect(screen.getByText('KB pronta · 5 doc')).toBeInTheDocument();
-  });
-
-  it('shows "KB in elaborazione" when hasKb is false and docs are processing', () => {
-    renderComponent({
-      hasKb: false,
-      kbCardCount: 0,
-      kbDocuments: [{ id: '1', fileName: 'rules.pdf', status: 'Processing' }],
-    });
-    expect(screen.getByText('KB in elaborazione')).toBeInTheDocument();
-  });
-
-  it('shows "Nessuna KB" when hasKb is false and no processing docs', () => {
-    renderComponent({ hasKb: false, kbCardCount: 0, kbDocuments: [] });
-    expect(screen.getByText('Nessuna KB')).toBeInTheDocument();
-  });
-});
-
-// ============================================================================
-// Compact Footer
+// Compact Footer (Issue #336)
 // ============================================================================
 
 describe('Compact Footer', () => {
@@ -263,19 +460,36 @@ describe('Compact Footer', () => {
     expect(favBtn.querySelector('[data-filled="false"]')).toBeInTheDocument();
   });
 
-  it('shows noteCount when > 0', () => {
-    renderComponent({ noteCount: 2 });
-    const noteIndicator = screen.getByTestId('note-count-indicator');
-    expect(noteIndicator).toHaveTextContent('2');
+  it('heart toggle has aria-pressed attribute', () => {
+    renderComponent({}, { isFavorite: true });
+    const favBtn = screen.getByTestId('favorite-toggle');
+    expect(favBtn).toHaveAttribute('aria-pressed', 'true');
   });
 
-  it('hides noteCount indicator when 0', () => {
-    renderComponent({ noteCount: 0 });
-    // StickyNote icon should not appear in footer when noteCount is 0
-    expect(screen.queryByTestId('note-count-indicator')).not.toBeInTheDocument();
+  it('heart toggle responds to click', () => {
+    const onToggleFavorite = vi.fn();
+    renderComponent({}, { onToggleFavorite, isFavorite: false });
+    fireEvent.click(screen.getByTestId('favorite-toggle'));
+    expect(onToggleFavorite).toHaveBeenCalledTimes(1);
   });
 
-  it('renders detail link', () => {
+  it('shows BGG weight when provided', () => {
+    renderComponent({ bggWeight: 3.2 });
+    expect(screen.getByText('BGG 3.2')).toBeInTheDocument();
+  });
+
+  it('shows best player count when provided', () => {
+    renderComponent({ bestPlayerCount: 4 });
+    expect(screen.getByText('Best 4p')).toBeInTheDocument();
+  });
+
+  it('hides meta pills when not provided', () => {
+    renderComponent({ bggWeight: undefined, bestPlayerCount: undefined });
+    expect(screen.queryByText(/BGG/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Best/)).not.toBeInTheDocument();
+  });
+
+  it('"Dettaglio →" link is always present', () => {
     renderComponent({}, {}, { detailHref: '/games/catan' });
     const link = screen.getByTestId('game-detail-link');
     expect(link).toHaveAttribute('href', '/games/catan');
@@ -290,5 +504,75 @@ describe('Compact Footer', () => {
   it('rejects javascript href', () => {
     renderComponent({}, {}, { detailHref: 'javascript:alert(1)' });
     expect(screen.queryByTestId('game-detail-link')).not.toBeInTheDocument();
+  });
+});
+
+// ============================================================================
+// Graceful Degradation (Issue #336)
+// ============================================================================
+
+describe('Graceful Degradation', () => {
+  it('renders only header + footer when no optional data', () => {
+    renderComponent(
+      {
+        complexityRating: null,
+        playingTimeMinutes: null,
+        minPlayers: null,
+        maxPlayers: null,
+        averageRating: null,
+        timesPlayed: undefined,
+        winRate: undefined,
+        totalPlayTimeMinutes: undefined,
+        lastPlayedLabel: undefined,
+        categories: undefined,
+        mechanics: undefined,
+        bggWeight: undefined,
+        bestPlayerCount: undefined,
+        hasKb: false,
+        kbDocuments: [],
+        sessionCount: undefined,
+        noteCount: 0,
+        entityLinkCount: 0,
+      },
+      null,
+      { title: 'Bare Game', detailHref: '/games/bare' }
+    );
+
+    // Header always present
+    expect(screen.getByText('Bare Game')).toBeInTheDocument();
+    // Footer always present
+    expect(screen.getByTestId('game-detail-link')).toBeInTheDocument();
+    // All optional sections hidden
+    expect(screen.queryByTestId('stats-row')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('kb-summary')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('tag-pills')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('nav-links')).not.toBeInTheDocument();
+  });
+
+  it('renders all sections when all data provided', () => {
+    renderComponent(
+      {
+        timesPlayed: 10,
+        winRate: 55,
+        totalPlayTimeMinutes: 600,
+        categories: ['Strategia'],
+        mechanics: ['Worker Placement'],
+        hasKb: true,
+        kbDocuments: [{ id: '1', fileName: 'rules.pdf', status: 'Ready' }],
+        sessionCount: 3,
+        bggWeight: 3.5,
+        bestPlayerCount: 4,
+        noteCount: 2,
+      },
+      {
+        onViewSessions: vi.fn(),
+        onViewNotes: vi.fn(),
+      }
+    );
+
+    expect(screen.getByTestId('stats-row')).toBeInTheDocument();
+    expect(screen.getByTestId('kb-summary')).toBeInTheDocument();
+    expect(screen.getByTestId('tag-pills')).toBeInTheDocument();
+    expect(screen.getByTestId('nav-links')).toBeInTheDocument();
   });
 });

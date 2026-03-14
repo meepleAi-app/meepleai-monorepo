@@ -51,12 +51,19 @@ import {
   createLiveSessionsClient,
   createSessionTrackingClient,
   createGameToolkitClient,
+  createToolboxClient,
   createSessionStatisticsClient,
   createGameNightsClient,
   createInvitationsClient,
   createGameNightBggClient,
   createTierClient,
   createSessionInviteClient,
+  createPlaylistsClient,
+  createWishlistClient,
+  createPlayRecordsClient,
+  createFeatureFlagsClient,
+  createSandboxClient,
+  createOnboardingClient,
   type AuthClient,
   type GamesClient,
   type SessionsClient,
@@ -88,12 +95,19 @@ import {
   type LiveSessionsClient,
   type SessionTrackingClient,
   type GameToolkitClient,
+  type ToolboxClient,
   type SessionStatisticsClient,
   type GameNightsClient,
   type InvitationsClient,
   type GameNightBggClient,
   type TierClient,
   type SessionInviteClient,
+  type PlaylistsClient,
+  type WishlistClient,
+  type PlayRecordsClient,
+  type FeatureFlagsClient,
+  type SandboxClient,
+  type OnboardingClient,
 } from './clients';
 import { HttpClient, type HttpClientConfig } from './core/httpClient';
 
@@ -274,6 +288,9 @@ export interface ApiClient {
   /** Game Toolkit AI Generation */
   gameToolkit: GameToolkitClient;
 
+  /** Game Toolbox — per-game configurable containers (Epic #412) */
+  toolbox: ToolboxClient;
+
   /** Session Analytics Dashboard (P4) */
   sessionStatistics: SessionStatisticsClient;
 
@@ -291,6 +308,24 @@ export interface ApiClient {
 
   /** Session Invites (Game Night Improvvisata) */
   sessionInvites: SessionInviteClient;
+
+  /** Game Night Playlists — Gap Closure */
+  playlists: PlaylistsClient;
+
+  /** Wishlist */
+  wishlist: WishlistClient;
+
+  /** Play Records — session tracking and statistics (Issue #3892) */
+  playRecords: PlayRecordsClient;
+
+  /** User Feature Flags — server-driven feature access */
+  featureFlags: FeatureFlagsClient;
+
+  /** RAG Sandbox Dashboard (Admin) */
+  sandbox: SandboxClient;
+
+  /** First-time user onboarding */
+  onboarding: OnboardingClient;
 
   /** Generic DELETE helper (used in some legacy tests) */
   delete: (path: string) => Promise<void>;
@@ -373,12 +408,19 @@ export function createApiClient(config?: ApiClientConfig): ApiClient {
     liveSessions: createLiveSessionsClient({ httpClient }), // ISSUE-5041
     sessionTracking: createSessionTrackingClient({ httpClient }), // ISSUE-5041
     gameToolkit: createGameToolkitClient({ httpClient }), // AI Toolkit Generation
+    toolbox: createToolboxClient({ httpClient }), // Epic #412: Game Toolbox
     sessionStatistics: createSessionStatisticsClient({ httpClient }), // P4: Session Analytics
     gameNights: createGameNightsClient({ httpClient }), // Issue #33
     invitations: createInvitationsClient({ httpClient }), // Issue #132
     gameNightBgg: createGameNightBggClient({ httpClient }), // Game Night Improvvisata
     tiers: createTierClient({ httpClient }), // Game Night Improvvisata — Tier & Usage
     sessionInvites: createSessionInviteClient({ httpClient }), // Game Night Improvvisata — Session Invites
+    playlists: createPlaylistsClient({ httpClient }), // Gap Closure — Playlists
+    wishlist: createWishlistClient({ httpClient }), // Wishlist
+    playRecords: createPlayRecordsClient({ httpClient }), // Play Records
+    featureFlags: createFeatureFlagsClient({ httpClient }), // User Feature Flags
+    sandbox: createSandboxClient({ httpClient }), // RAG Sandbox Dashboard
+    onboarding: createOnboardingClient({ httpClient }), // First-time user onboarding
     delete: (path: string) => httpClient.delete(path),
   };
 

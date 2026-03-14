@@ -25,8 +25,12 @@ import {
   RecentGamesSection,
 } from '@/components/dashboard-v2';
 import { useAddGameWizard } from '@/components/library/add-game-sheet/AddGameWizardProvider';
+import { useOnboardingStatus } from '@/components/onboarding/use-onboarding-status';
+import { WelcomeChecklist } from '@/components/onboarding/WelcomeChecklist';
+import { WelcomeWizard } from '@/components/onboarding/WelcomeWizard';
 import { useAuthUser } from '@/hooks/useAuthUser';
 import { useDashboardStore } from '@/lib/stores/dashboard-store';
+import { useCardHand } from '@/stores/use-card-hand';
 
 // ─── Animation factory ───────────────────────────────────────────────────────
 
@@ -43,7 +47,9 @@ function fadeUp(delay: number) {
 export function GamingHubClient() {
   const { user } = useAuthUser();
   const { openWizard: _openWizard } = useAddGameWizard();
+  const { showChecklist, isLoading: isLoadingOnboarding } = useOnboardingStatus();
 
+  const { drawCard } = useCardHand();
   const {
     stats,
     recentSessions,
@@ -61,12 +67,25 @@ export function GamingHubClient() {
     fetchGames();
   }, [fetchStats, fetchRecentSessions, fetchGames]);
 
+  useEffect(() => {
+    drawCard({
+      id: 'section-dashboard',
+      entity: 'custom',
+      title: 'Dashboard',
+      href: '/dashboard',
+    });
+  }, [drawCard]);
+
   const displayName = user?.displayName ?? user?.email?.split('@')[0] ?? 'Giocatore';
 
   const greeting = getGreeting();
 
   return (
     <div className="py-6 space-y-6 w-full max-w-screen-xl mx-auto">
+      {/* ── 0. Onboarding (first-time users) ─────────────────────── */}
+      <WelcomeWizard />
+      {!isLoadingOnboarding && showChecklist && <WelcomeChecklist />}
+
       {/* ── 1. Greeting + QuickStats ────────────────────────────── */}
       <motion.section {...fadeUp(0)}>
         <div className="mb-4">

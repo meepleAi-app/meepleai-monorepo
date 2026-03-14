@@ -177,6 +177,17 @@ export function AdminGameImportWizardClient() {
             Import a game from PDF by uploading, reviewing metadata, matching with BGG, and
             finalizing.
           </p>
+          {/* Cross-link to manual creation (#255) */}
+          <p className="text-sm text-muted-foreground mt-2">
+            Or{' '}
+            <Link
+              href="/admin/shared-games/new"
+              className="text-primary font-medium underline underline-offset-2 hover:text-primary/80"
+            >
+              create a game manually
+            </Link>{' '}
+            without a PDF.
+          </p>
         </div>
 
         {/* Progress Bar */}

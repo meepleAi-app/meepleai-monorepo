@@ -62,7 +62,7 @@ export function CardRack({ className }: CardRackProps) {
       )}
     >
       <div className="flex-1 flex flex-col gap-0.5 px-2 py-3 overflow-y-auto">
-        {NAV_ITEMS.map((item) => (
+        {NAV_ITEMS.map(item => (
           <CardRackItem
             key={item.href}
             href={item.href}
@@ -77,7 +77,7 @@ export function CardRack({ className }: CardRackProps) {
       <hr className="mx-3 border-sidebar-border" />
 
       <div className="flex flex-col gap-0.5 px-2 py-3">
-        {BOTTOM_ITEMS.map((item) => (
+        {BOTTOM_ITEMS.map(item => (
           <CardRackItem
             key={item.href}
             href={item.href}

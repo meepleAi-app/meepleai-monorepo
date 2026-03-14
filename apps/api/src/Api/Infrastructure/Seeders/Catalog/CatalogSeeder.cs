@@ -71,9 +71,16 @@ internal static class CatalogSeeder
         await PdfSeeder.SeedAsync(db, manifest, gameMap, systemUserId, logger, ct)
             .ConfigureAwait(false);
 
-        // Step 3: Seed agents for games with seedAgent=true
-        await AgentSeeder.SeedAsync(db, manifest, gameMap, logger, ct)
-            .ConfigureAwait(false);
+        // Step 3: Seed agents for games with seedAgent=true (Dev only)
+        if (profile >= SeedProfile.Dev)
+        {
+            await AgentSeeder.SeedAsync(db, manifest, gameMap, logger, ct)
+                .ConfigureAwait(false);
+        }
+        else
+        {
+            logger.LogInformation("Catalog: skipping agent seeding (profile: {Profile})", profile);
+        }
 
         // Step 4: Seed strategy patterns for AI agent decision-making
         var seedingEnabled = configuration?.GetValue("Seeding:EnableStrategyPatterns", true) ?? true;

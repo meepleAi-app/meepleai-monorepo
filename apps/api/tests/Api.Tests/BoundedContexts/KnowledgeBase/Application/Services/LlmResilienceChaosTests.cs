@@ -173,7 +173,7 @@ public sealed class LlmResilienceChaosTests
     public async Task OpenRouter429Burst_FallsBackToOllama()
     {
         _routingStrategyMock
-            .Setup(s => s.SelectProvider(It.IsAny<User?>(), It.IsAny<RagStrategy>(), It.IsAny<string?>()))
+            .Setup(s => s.SelectProvider(It.IsAny<User?>(), It.IsAny<RagStrategy>(), It.IsAny<string?>(), It.IsAny<string?>()))
             .Returns(LlmRoutingDecision.OpenRouter(OpenRouterModel, "default routing"));
 
         // OpenRouter throws (simulating 429)
@@ -207,7 +207,7 @@ public sealed class LlmResilienceChaosTests
     public async Task AllProvidersDown_ReturnsMeaningfulError()
     {
         _routingStrategyMock
-            .Setup(s => s.SelectProvider(It.IsAny<User?>(), It.IsAny<RagStrategy>(), It.IsAny<string?>()))
+            .Setup(s => s.SelectProvider(It.IsAny<User?>(), It.IsAny<RagStrategy>(), It.IsAny<string?>(), It.IsAny<string?>()))
             .Returns(LlmRoutingDecision.OpenRouter(OpenRouterModel, "default routing"));
 
         // Both providers throw
@@ -380,7 +380,7 @@ public sealed class LlmResilienceChaosTests
     {
         // Routing strategy selects OpenRouter by default
         _routingStrategyMock
-            .Setup(s => s.SelectProvider(It.IsAny<User?>(), It.IsAny<RagStrategy>(), It.IsAny<string?>()))
+            .Setup(s => s.SelectProvider(It.IsAny<User?>(), It.IsAny<RagStrategy>(), It.IsAny<string?>(), It.IsAny<string?>()))
             .Returns(LlmRoutingDecision.OpenRouter(OpenRouterModel, "default routing"));
 
         var emergencyMock = new Mock<IEmergencyOverrideService>();
@@ -416,7 +416,7 @@ public sealed class LlmResilienceChaosTests
     public async Task RpdExhausted_OpenRouter_ProactivelyFallsBackToOllama()
     {
         _routingStrategyMock
-            .Setup(s => s.SelectProvider(It.IsAny<User?>(), It.IsAny<RagStrategy>(), It.IsAny<string?>()))
+            .Setup(s => s.SelectProvider(It.IsAny<User?>(), It.IsAny<RagStrategy>(), It.IsAny<string?>(), It.IsAny<string?>()))
             .Returns(LlmRoutingDecision.OpenRouter(OpenRouterModel, "free tier"));
 
         _quotaTrackerMock

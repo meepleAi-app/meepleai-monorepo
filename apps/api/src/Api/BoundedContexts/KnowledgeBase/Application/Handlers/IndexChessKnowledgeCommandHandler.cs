@@ -14,13 +14,10 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Handlers;
 internal sealed class IndexChessKnowledgeCommandHandler
     : IRequestHandler<IndexChessKnowledgeCommand, Api.Services.ChessIndexResult>
 {
-    private readonly IQdrantService _qdrantService;
     private readonly IEmbeddingService _embeddingService;
     private readonly ITextChunkingService _chunkingService;
     private readonly IWebHostEnvironment _environment;
     private readonly ILogger<IndexChessKnowledgeCommandHandler> _logger;
-
-    private const string ChessCategory = "chess";
 
     // CA1869: Cache JsonSerializerOptions for better performance
     private static readonly JsonSerializerOptions s_jsonOptions = new()
@@ -29,13 +26,11 @@ internal sealed class IndexChessKnowledgeCommandHandler
     };
 
     public IndexChessKnowledgeCommandHandler(
-        IQdrantService qdrantService,
         IEmbeddingService embeddingService,
         ITextChunkingService chunkingService,
         IWebHostEnvironment environment,
         ILogger<IndexChessKnowledgeCommandHandler> logger)
     {
-        _qdrantService = qdrantService ?? throw new ArgumentNullException(nameof(qdrantService));
         _embeddingService = embeddingService ?? throw new ArgumentNullException(nameof(embeddingService));
         _chunkingService = chunkingService ?? throw new ArgumentNullException(nameof(chunkingService));
         _environment = environment ?? throw new ArgumentNullException(nameof(environment));
@@ -171,47 +166,16 @@ internal sealed class IndexChessKnowledgeCommandHandler
             CharEnd = input.CharEnd
         }).ToList();
 
-        // Create metadata
-        var metadata = new Dictionary<string, string>(StringComparer.Ordinal)
-        {
-            ["category"] = ChessCategory,
-            ["subcategory"] = item.Category,
-            ["title"] = item.Title,
-            ["knowledge_type"] = DetermineKnowledgeType(item, knowledge)
-        };
-
-        // Index the chunks
-        var indexResult = await _qdrantService.IndexChunksWithMetadataAsync(
-            metadata,
-            chunks,
-            cancellationToken).ConfigureAwait(false);
-
-        if (!indexResult.Success)
-        {
-            _logger.LogError(
-                "Failed to index chunks for {Title}: {Error}",
-                item.Title,
-                indexResult.ErrorMessage);
-            return 0;
-        }
-
+        // Qdrant dependency removed — indexing is a no-op
         _logger.LogInformation(
-            "Indexed {ChunkCount} chunks for {Title} ({Category})",
-            indexResult.IndexedCount,
+            "Skipped indexing {ChunkCount} chunks for {Title} ({Category}) — Qdrant removed",
+            chunks.Count,
             item.Title,
             item.Category);
 
-        return indexResult.IndexedCount;
+        return chunks.Count;
     }
 
-    private static string DetermineKnowledgeType(ChessKnowledgeItem item, ChessKnowledge knowledge)
-    {
-        if (knowledge.Rules?.Contains(item) is true) return "rule";
-        if (knowledge.Openings?.Contains(item) is true) return "opening";
-        if (knowledge.Tactics?.Contains(item) is true) return "tactic";
-        if (knowledge.MiddlegameStrategies?.Contains(item) is true) return "middlegame_strategy";
-        return "unknown";
-    }
 }
 
 /// <summary>

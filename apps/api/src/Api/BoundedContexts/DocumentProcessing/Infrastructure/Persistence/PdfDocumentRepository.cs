@@ -77,20 +77,6 @@ internal class PdfDocumentRepository : RepositoryBase, IPdfDocumentRepository
         return entities.Select(MapToDomain).ToList();
     }
 
-#pragma warning disable S1133 // Deprecated code kept for backward compatibility during migration (Issue #96)
-    [Obsolete("Use FindByStateAsync(PdfProcessingState) instead. This method queries the deprecated ProcessingStatus column.")]
-#pragma warning restore S1133
-    public async Task<IReadOnlyList<PdfDocument>> FindByStatusAsync(string status, CancellationToken cancellationToken = default)
-    {
-        var entities = await DbContext.PdfDocuments
-            .AsNoTracking()
-            .Where(p => p.ProcessingStatus == status)
-            .OrderByDescending(p => p.UploadedAt)
-            .ToListAsync(cancellationToken).ConfigureAwait(false);
-
-        return entities.Select(MapToDomain).ToList();
-    }
-
     public async Task<IReadOnlyList<PdfDocument>> FindByStateAsync(PdfProcessingState state, CancellationToken cancellationToken = default)
     {
         var stateString = state.ToString();
@@ -215,7 +201,6 @@ internal class PdfDocumentRepository : RepositoryBase, IPdfDocumentRepository
             fileSize: fileSize,
             uploadedByUserId: entity.UploadedByUserId,
             uploadedAt: entity.UploadedAt,
-            processingStatus: entity.ProcessingStatus,
             processedAt: entity.ProcessedAt,
             pageCount: entity.PageCount,
             processingError: entity.ProcessingError,
@@ -264,7 +249,6 @@ internal class PdfDocumentRepository : RepositoryBase, IPdfDocumentRepository
             ContentType = domain.ContentType,
             UploadedByUserId = domain.UploadedByUserId,
             UploadedAt = domain.UploadedAt,
-            ProcessingStatus = domain.ProcessingStatus,
             ProcessingState = domain.ProcessingState.ToString(), // Issue #4215
             ProcessedAt = domain.ProcessedAt,
             PageCount = domain.PageCount,

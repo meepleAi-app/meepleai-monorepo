@@ -62,13 +62,6 @@ public sealed class LlmFallbackTests : IDisposable
             .Setup(s => s.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(EmbeddingResult.CreateSuccess(new List<float[]> { new float[384] }));
 
-        var mockQdrant = new Mock<IQdrantService>();
-        mockQdrant
-            .Setup(s => s.SearchAsync(
-                It.IsAny<string>(), It.IsAny<float[]>(), It.IsAny<int>(),
-                It.IsAny<IReadOnlyList<string>?>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Api.Services.SearchResult.CreateSuccess(new List<SearchResultItem>()));
-
         var mockBudget = new Mock<IUserBudgetService>();
         mockBudget
             .Setup(s => s.HasBudgetForQueryAsync(It.IsAny<Guid>(), It.IsAny<decimal>(), It.IsAny<CancellationToken>()))
@@ -76,12 +69,10 @@ public sealed class LlmFallbackTests : IDisposable
 
         // Store mocks for handler construction helper
         _embeddingMock = mockEmbedding;
-        _qdrantMock = mockQdrant;
         _budgetMock = mockBudget;
     }
 
     private readonly Mock<IEmbeddingService> _embeddingMock;
-    private readonly Mock<IQdrantService> _qdrantMock;
     private readonly Mock<IUserBudgetService> _budgetMock;
 
     public void Dispose()
@@ -544,7 +535,6 @@ public sealed class LlmFallbackTests : IDisposable
             _mockThreadRepo.Object,
             _mockUnitOfWork.Object,
             _mockLlmService.Object,
-            _qdrantMock.Object,
             _embeddingMock.Object,
             _dbContext,
             _budgetMock.Object,

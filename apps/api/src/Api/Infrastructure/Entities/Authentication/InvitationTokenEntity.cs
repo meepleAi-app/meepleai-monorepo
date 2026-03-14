@@ -52,6 +52,9 @@ public sealed class InvitationTokenEntity
     [Column("created_at")]
     public DateTime CreatedAt { get; set; }
 
+    [Column("revoked_at")]
+    public DateTime? RevokedAt { get; set; }
+
     // Navigation properties
     [ForeignKey(nameof(InvitedByUserId))]
     public UserEntity? InvitedByUser { get; set; }

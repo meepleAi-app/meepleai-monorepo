@@ -88,7 +88,7 @@ describe('MeepleCard', () => {
   });
 
   describe('Entity Types', () => {
-    const entityTypes: MeepleEntityType[] = ['game', 'player', 'session', 'agent', 'document', 'chatSession', 'event', 'custom'];
+    const entityTypes: MeepleEntityType[] = ['game', 'player', 'session', 'agent', 'kb', 'chatSession', 'event', 'custom'];
 
     it.each(entityTypes)('should render %s entity type correctly', entity => {
       render(<MeepleCard {...defaultProps} entity={entity} />);

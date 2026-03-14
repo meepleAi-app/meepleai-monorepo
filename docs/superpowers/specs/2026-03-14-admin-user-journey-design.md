@@ -1,7 +1,7 @@
 # Admin User Journey — Design Spec
 
 **Date**: 2026-03-14
-**Status**: Draft
+**Status**: Approved
 **Approach**: Vertical Slice (4 phases)
 **Validation**: Browser E2E tests only
 
@@ -137,7 +137,6 @@ The following backend modifications are needed (not just frontend work):
 
 | Change | Context | Details |
 |--------|---------|---------|
-| Extend `AcceptInvitationCommand` | Authentication | Add optional `DisplayName` field (or remove name from frontend form — see Phase 1 notes) |
 | Extend `ChangeUserRoleCommand` | Administration | Add `Reason` string field for audit trail |
 | Add `RevokeInvitationCommand` | Authentication | New command + handler + endpoint `DELETE /admin/users/invitations/{id}` |
 | Content-gating in chat handler | KnowledgeBase | Query `GetCollectionStatusQuery`, filter chunk content |

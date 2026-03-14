@@ -123,6 +123,16 @@ export function createInvitationsClient({ httpClient }: CreateInvitationsClientP
     },
 
     /**
+     * Revoke an existing invitation
+     * DELETE /api/v1/admin/users/invitations/{id}
+     *
+     * @param id - Invitation UUID
+     */
+    async revokeInvitation(id: string): Promise<void> {
+      await httpClient.delete(`/api/v1/admin/users/invitations/${encodeURIComponent(id)}`);
+    },
+
+    /**
      * Get paginated list of invitations
      * GET /api/v1/admin/users/invitations
      *
@@ -157,7 +167,7 @@ export function createInvitationsClient({ httpClient }: CreateInvitationsClientP
         '/api/v1/admin/users/invitations/stats',
         InvitationStatsSchema
       );
-      return response ?? { pending: 0, accepted: 0, expired: 0, total: 0 };
+      return response ?? { pending: 0, accepted: 0, expired: 0, revoked: 0, total: 0 };
     },
 
     // ──────────────────────────────────────────────

@@ -91,6 +91,10 @@ internal sealed class SsrfSafeHttpClient
     {
         if (IPAddress.IsLoopback(ip)) return true;
 
+        // IPv4-mapped IPv6 addresses (e.g. ::ffff:10.0.0.1) must be checked as IPv4
+        if (ip.IsIPv4MappedToIPv6)
+            return IsPrivateOrReserved(ip.MapToIPv4());
+
         var bytes = ip.GetAddressBytes();
 
         return ip.AddressFamily switch

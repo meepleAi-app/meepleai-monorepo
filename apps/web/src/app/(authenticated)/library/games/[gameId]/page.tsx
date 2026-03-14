@@ -1,10 +1,8 @@
 /**
  * Library Game Detail Page
  *
- * Integrated into LayoutShell's 3-tier navigation system:
- * - MiniNav tabs: Overview · Agent · KB · Sessions · Links
- * - ActionBar actions: Chat Agent · Upload PDF · Favorite · Notes · Remove
- * - Compact hero card + tabbed content
+ * Displays game detail with hero card + tabbed content.
+ * Draws a card into the hand via UnifiedShell's useCardHand store.
  */
 
 'use client';
@@ -120,7 +118,7 @@ export default function LibraryGameDetailPage() {
         )}
       </div>
 
-      {/* Event-driven modals from ActionBar */}
+      {/* Event-driven modals */}
       <EditNotesModal
         isOpen={isNotesModalOpen}
         onClose={() => setIsNotesModalOpen(false)}

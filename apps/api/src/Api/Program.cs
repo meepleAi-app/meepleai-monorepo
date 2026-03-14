@@ -497,6 +497,7 @@ v1Api.MapPlayRecordEndpoints(); // ISSUE-3889/3890: Play record tracking
 v1Api.MapLiveSessionEndpoints(); // Issue #4749: Live session CQRS endpoints
 v1Api.MapSessionAttachmentEndpoints(); // Issue #5365: Session photo attachment endpoints
 v1Api.MapGameToolkitEndpoints(); // Issue #4753: Game toolkit CQRS endpoints
+v1Api.MapGameToolboxEndpoints(); // Epic #412: Game toolbox per-game containers
 v1Api.MapToolStateEndpoints(); // Issue #4754: Tool state CQRS endpoints
 v1Api.MapTurnOrderEndpoints(); // Issue #4970: TurnOrder base toolkit endpoints
 v1Api.MapWhiteboardEndpoints(); // Issue #4971: Whiteboard base toolkit endpoints

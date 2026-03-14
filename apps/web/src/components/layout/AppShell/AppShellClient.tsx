@@ -15,6 +15,10 @@ import { type ReactNode, Suspense } from 'react';
 
 import { ErrorBoundary } from '@/components/errors/ErrorBoundary';
 import { OnboardingReminderBanner } from '@/components/onboarding';
+import {
+  CardBrowserProvider,
+  MeepleCardBrowser,
+} from '@/components/ui/data-display/meeple-card-browser';
 import { ImpersonationBanner } from '@/components/ui/feedback/impersonation-banner';
 import { CardStackPanel } from '@/components/ui/navigation/card-stack-panel';
 import { NavigationProvider } from '@/context/NavigationContext';
@@ -59,75 +63,81 @@ export function AppShellClient({
 
   return (
     <NavigationProvider>
-      <div className="min-h-screen flex flex-col bg-background" data-testid="app-shell">
-        {/* Impersonation Banner (fixed at top when active) */}
-        <ImpersonationBanner
-          isImpersonating={isImpersonating}
-          impersonatedUser={impersonatedUser}
-          onEndImpersonation={endImpersonation}
-          isLoading={isLoading}
-        />
+      <CardBrowserProvider>
+        <div className="min-h-screen flex flex-col bg-background" data-testid="app-shell">
+          {/* Impersonation Banner (fixed at top when active) */}
+          <ImpersonationBanner
+            isImpersonating={isImpersonating}
+            impersonatedUser={impersonatedUser}
+            onEndImpersonation={endImpersonation}
+            isLoading={isLoading}
+          />
 
-        {/* L1: TopNavbar (always visible) */}
-        <TopNavbar />
+          {/* L1: TopNavbar (always visible) */}
+          <TopNavbar />
 
-        {/* Issue #326: Reminder banner for users who skipped onboarding */}
-        {isAuthenticated && user?.onboardingSkipped && <OnboardingReminderBanner />}
+          {/* Issue #326: Reminder banner for users who skipped onboarding */}
+          {isAuthenticated && user?.onboardingSkipped && <OnboardingReminderBanner />}
 
-        {/* Desktop Sidebar (authenticated only) */}
-        {isAuthenticated && <Sidebar isCollapsed={isCollapsed} onToggle={toggle} />}
+          {/* Desktop Sidebar (authenticated only) */}
+          {isAuthenticated && <Sidebar isCollapsed={isCollapsed} onToggle={toggle} />}
 
-        {/* Content area (offset by sidebar width when authenticated) */}
-        <div
-          className={cn(
-            'flex flex-col flex-1',
-            'transition-[margin] duration-200 ease-in-out',
-            isAuthenticated &&
-              (isCollapsed
-                ? 'md:ml-[var(--sidebar-width-collapsed)]'
-                : 'md:ml-[var(--sidebar-width-expanded)]')
-          )}
-          data-testid="app-shell-content"
-        >
-          {/* Mobile Breadcrumb (mobile only) */}
-          <MobileBreadcrumb />
-
-          {/* Main content */}
-          <main
-            id="main-content"
-            tabIndex={-1}
-            style={{ viewTransitionName: 'page-content' }}
+          {/* Content area (offset by sidebar width when authenticated) */}
+          <div
             className={cn(
-              'flex-1',
-              !fullWidth && 'px-4 sm:px-6 lg:px-8',
-              bottomPadding,
-              'pt-4',
-              className
+              'flex flex-col flex-1',
+              'transition-[margin] duration-200 ease-in-out',
+              isAuthenticated &&
+                (isCollapsed
+                  ? 'md:ml-[var(--sidebar-width-collapsed)]'
+                  : 'md:ml-[var(--sidebar-width-expanded)]')
             )}
+            data-testid="app-shell-content"
           >
-            {children}
-          </main>
+            {/* Mobile Breadcrumb (mobile only) */}
+            <MobileBreadcrumb />
 
-          {/* L3: Desktop FloatingActionBar (hidden on mobile) */}
-          <ErrorBoundary fallback={null} componentName="FloatingActionBar">
-            <Suspense>
-              <div className="hidden md:block">
-                <FloatingActionBar />
-              </div>
-            </Suspense>
+            {/* Main content */}
+            <main
+              id="main-content"
+              tabIndex={-1}
+              style={{ viewTransitionName: 'page-content' }}
+              className={cn(
+                'flex-1',
+                !fullWidth && 'px-4 sm:px-6 lg:px-8',
+                bottomPadding,
+                'pt-4',
+                className
+              )}
+            >
+              {children}
+            </main>
+
+            {/* L3: Desktop FloatingActionBar (hidden on mobile) */}
+            <ErrorBoundary fallback={null} componentName="FloatingActionBar">
+              <Suspense>
+                <div className="hidden md:block">
+                  <FloatingActionBar />
+                </div>
+              </Suspense>
+            </ErrorBoundary>
+          </div>
+
+          {/* Mobile: AdaptiveBottomBar (replaces MobileTabBar + SmartFAB) */}
+          <ErrorBoundary fallback={null} componentName="AdaptiveBottomBar">
+            <AdaptiveBottomBar />
+          </ErrorBoundary>
+
+          {/* Card Stack Panel */}
+          <ErrorBoundary fallback={null} componentName="CardStackPanel">
+            <CardStackPanel />
+          </ErrorBoundary>
+          {/* Card Browser Overlay */}
+          <ErrorBoundary fallback={null} componentName="MeepleCardBrowser">
+            <MeepleCardBrowser />
           </ErrorBoundary>
         </div>
-
-        {/* Mobile: AdaptiveBottomBar (replaces MobileTabBar + SmartFAB) */}
-        <ErrorBoundary fallback={null} componentName="AdaptiveBottomBar">
-          <AdaptiveBottomBar />
-        </ErrorBoundary>
-
-        {/* Card Stack Panel */}
-        <ErrorBoundary fallback={null} componentName="CardStackPanel">
-          <CardStackPanel />
-        </ErrorBoundary>
-      </div>
+      </CardBrowserProvider>
     </NavigationProvider>
   );
 }

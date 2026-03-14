@@ -33,11 +33,7 @@ import {
   type PlayerModeSuggestionResponse,
   type Typology, // Added for AGT-012
 } from '../schemas';
-
-import {
-  AgentCostEstimateSchema,
-  type AgentCostEstimate,
-} from '../schemas/rag-setup.schemas';
+import { AgentCostEstimateSchema, type AgentCostEstimate } from '../schemas/rag-setup.schemas';
 
 import type { HttpClient } from '../core/httpClient';
 import type {
@@ -711,11 +707,14 @@ export function createAgentsClient({ httpClient }: CreateAgentsClientParams) {
       strategyName?: string;
       sharedGameId: string;
       documentIds: string[];
-    }): Promise<{ agentId: string; agentName: string; threadId: string; slotUsed: number; gameAddedToCollection: boolean } | null> {
-      return httpClient.post(
-        '/api/v1/agents/setup',
-        request
-      );
+    }): Promise<{
+      agentId: string;
+      agentName: string;
+      threadId: string;
+      slotUsed: number;
+      gameAddedToCollection: boolean;
+    } | null> {
+      return httpClient.post('/api/v1/agents/setup', request);
     },
   };
 }

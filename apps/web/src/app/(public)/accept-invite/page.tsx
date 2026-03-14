@@ -137,7 +137,7 @@ function AcceptInviteContent() {
         }
 
         setState('success');
-        setTimeout(() => router.push('/dashboard'), 1500);
+        setTimeout(() => router.push('/onboarding'), 1500);
       } catch {
         setSubmitError('A network error occurred. Please check your connection and try again.');
         setState('valid');
@@ -209,7 +209,7 @@ function SuccessCard() {
         </div>
         <CardTitle>Account Created!</CardTitle>
         <CardDescription>
-          Your password has been set successfully. Redirecting to your dashboard...
+          Your password has been set successfully. Setting up your account...
         </CardDescription>
       </CardHeader>
     </Card>

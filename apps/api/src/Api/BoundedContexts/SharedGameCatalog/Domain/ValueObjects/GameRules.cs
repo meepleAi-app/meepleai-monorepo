@@ -5,6 +5,7 @@ namespace Api.BoundedContexts.SharedGameCatalog.Domain.ValueObjects;
 /// <summary>
 /// Value object representing game rules content with language specification.
 /// Rules are stored as rich text (HTML/Markdown) for proper formatting.
+/// Optionally includes an external URL to a rulebook PDF.
 /// </summary>
 public sealed class GameRules : ValueObject
 {
@@ -19,14 +20,16 @@ public sealed class GameRules : ValueObject
     public string Language { get; private set; }
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="GameRules"/> class.
+    /// External URL to a rulebook PDF (e.g., from BGG).
+    /// Must use HTTPS when set.
     /// </summary>
-    /// <param name="content">The rules content</param>
-    /// <param name="language">The language code</param>
-    private GameRules(string content, string language)
+    public string? ExternalUrl { get; private set; }
+
+    private GameRules(string content, string language, string? externalUrl = null)
     {
         Content = content;
         Language = language;
+        ExternalUrl = externalUrl;
     }
 
     /// <summary>
@@ -39,13 +42,9 @@ public sealed class GameRules : ValueObject
     }
 
     /// <summary>
-    /// Creates a new GameRules value object with validation.
+    /// Creates a new GameRules value object with full content and optional external URL.
     /// </summary>
-    /// <param name="content">The rules content</param>
-    /// <param name="language">The language code</param>
-    /// <returns>A new GameRules instance</returns>
-    /// <exception cref="ArgumentException">Thrown when validation fails</exception>
-    public static GameRules Create(string content, string language)
+    public static GameRules Create(string content, string language, string? externalUrl = null)
     {
         if (string.IsNullOrWhiteSpace(content))
             throw new ArgumentException("Rules content cannot be empty", nameof(content));
@@ -56,7 +55,33 @@ public sealed class GameRules : ValueObject
         if (language.Length != 2)
             throw new ArgumentException("Language must be a valid ISO 639-1 code (2 characters)", nameof(language));
 
-        return new GameRules(content, language);
+        if (externalUrl is not null)
+            ValidateExternalUrl(externalUrl);
+
+        return new GameRules(content, language, externalUrl);
+    }
+
+    /// <summary>
+    /// Creates a GameRules with only an external URL (no inline content).
+    /// Used during BGG enrichment when only a rulebook link is available.
+    /// </summary>
+    public static GameRules CreateFromUrl(string externalUrl)
+    {
+        if (string.IsNullOrWhiteSpace(externalUrl))
+            throw new ArgumentException("External URL cannot be empty", nameof(externalUrl));
+
+        ValidateExternalUrl(externalUrl);
+
+        return new GameRules(string.Empty, string.Empty, externalUrl);
+    }
+
+    private static void ValidateExternalUrl(string externalUrl)
+    {
+        if (!Uri.TryCreate(externalUrl, UriKind.Absolute, out var uri))
+            throw new ArgumentException("External URL must be a valid absolute URL", nameof(externalUrl));
+
+        if (!string.Equals(uri.Scheme, Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase))
+            throw new ArgumentException("External URL must use HTTPS", nameof(externalUrl));
     }
 
     /// <summary>
@@ -66,5 +91,6 @@ public sealed class GameRules : ValueObject
     {
         yield return Content;
         yield return Language;
+        yield return ExternalUrl ?? string.Empty;
     }
 }

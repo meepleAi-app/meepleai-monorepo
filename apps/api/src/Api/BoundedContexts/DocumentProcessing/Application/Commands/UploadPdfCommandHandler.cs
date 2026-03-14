@@ -509,7 +509,7 @@ internal class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUp
                 ContentType = file.ContentType,
                 UploadedByUserId = userId,
                 UploadedAt = _timeProvider.GetUtcNow().UtcDateTime,
-                ProcessingStatus = "pending",
+
                 PrivateGameId = privateGameId, // Issue #3664
                 ContentHash = contentHash
             };
@@ -614,7 +614,7 @@ internal class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUp
             FileName: pdfDoc.FileName,
             FilePath: pdfDoc.FilePath,
             FileSizeBytes: pdfDoc.FileSizeBytes,
-            ProcessingStatus: pdfDoc.ProcessingStatus,
+
             UploadedAt: pdfDoc.UploadedAt,
             ProcessedAt: pdfDoc.ProcessedAt,
             PageCount: pdfDoc.PageCount,
@@ -723,7 +723,7 @@ internal class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUp
                 _logger.LogWarning("⚠️ [PDF-DEBUG] ValidateAndPrepareProcessingAsync returned null for {PdfId} - EARLY EXIT", pdfId);
                 return; // Validation failed
             }
-            _logger.LogInformation("✅ [PDF-DEBUG] Validation passed for {PdfId}, Status: {Status}", pdfId, pdfDoc.ProcessingStatus);
+            _logger.LogInformation("✅ [PDF-DEBUG] Validation passed for {PdfId}, State: {State}", pdfId, pdfDoc.ProcessingState);
 
             // Step 1: Extract text with page tracking (20-40%)
             _logger.LogInformation("📄 [PDF-DEBUG] Step 1: Starting ExtractPdfContentAsync for {PdfId}", pdfId);
@@ -820,7 +820,7 @@ internal class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUp
             return null;
         }
 
-        _logger.LogInformation("✅ [PDF-DEBUG-VALIDATE] PDF found, current status: {Status}", pdfDoc.ProcessingStatus);
+        _logger.LogInformation("✅ [PDF-DEBUG-VALIDATE] PDF found, current state: {State}", pdfDoc.ProcessingState);
 
         // IDEMPOTENCY CHECK (#1742): Skip if already processing/processed
         var pendingState = nameof(PdfProcessingState.Pending);
@@ -841,7 +841,7 @@ internal class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUp
 
         // Mark as processing (optimistic locking)
         _logger.LogInformation("🔄 [PDF-DEBUG-VALIDATE] Updating status from 'pending' to 'processing'");
-        pdfDoc.ProcessingStatus = "processing";
+        pdfDoc.ProcessingState = "Uploading";
         await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
         _logger.LogInformation("✅ [PDF-DEBUG-VALIDATE] Status updated, proceeding with processing");
 
@@ -884,7 +884,7 @@ internal class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUp
             {
                 RecordPipelineMetricSafely("extraction_error", 0);
                 await UpdateProgressAsync(db, pdfId, ProcessingStep.Failed, 0, 0, startTime, extractResult.ErrorMessage, cancellationToken).ConfigureAwait(false);
-                pdfDoc.ProcessingStatus = "failed";
+                pdfDoc.ProcessingState = "Failed";
                 pdfDoc.ProcessingError = extractResult.ErrorMessage;
                 pdfDoc.ProcessedAt = _timeProvider.GetUtcNow().UtcDateTime;
                 await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
@@ -1131,7 +1131,7 @@ internal class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUp
     {
         await UpdateProgressAsync(db, pdfId, ProcessingStep.Failed, 0, 0, startTime, errorMessage, cancellationToken).ConfigureAwait(false);
         await quotaService.ReleaseQuotaAsync(userId, pdfId, CancellationToken.None).ConfigureAwait(false);
-        pdfDoc.ProcessingStatus = "failed";
+        pdfDoc.ProcessingState = "Failed";
         pdfDoc.ProcessingError = errorMessage;
         pdfDoc.ProcessedAt = _timeProvider.GetUtcNow().UtcDateTime;
         await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
@@ -1266,8 +1266,7 @@ internal class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUp
         var totalPages = pdfDoc.PageCount ?? 0;
         await UpdateProgressAsync(db, pdfId, ProcessingStep.Completed, totalPages, totalPages, startTime, null, cancellationToken).ConfigureAwait(false);
 
-        pdfDoc.ProcessingStatus = "completed";
-        pdfDoc.ProcessingState = "Ready"; // Sync 7-state field with completion
+        pdfDoc.ProcessingState = "Ready";
         pdfDoc.ProcessedAt = _timeProvider.GetUtcNow().UtcDateTime;
         await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
@@ -1310,7 +1309,7 @@ internal class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUp
             var pdfDoc = await db.PdfDocuments.FindAsync(new object[] { cancelledPdfGuid }, CancellationToken.None).ConfigureAwait(false);
             if (pdfDoc != null)
             {
-                pdfDoc.ProcessingStatus = "failed";
+                pdfDoc.ProcessingState = "Failed";
                 pdfDoc.ProcessingError = "Processing cancelled by user";
                 pdfDoc.ProcessedAt = _timeProvider.GetUtcNow().UtcDateTime;
                 await db.SaveChangesAsync(CancellationToken.None).ConfigureAwait(false);
@@ -1341,7 +1340,7 @@ internal class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUp
             var pdfDoc = await db.PdfDocuments.FindAsync(new object[] { errorPdfGuid }, cancellationToken).ConfigureAwait(false);
             if (pdfDoc != null)
             {
-                pdfDoc.ProcessingStatus = "failed";
+                pdfDoc.ProcessingState = "Failed";
                 pdfDoc.ProcessingError = errorMessage;
                 pdfDoc.ProcessedAt = _timeProvider.GetUtcNow().UtcDateTime;
                 await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
@@ -1502,7 +1501,7 @@ internal class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUp
             FileName: pdfDoc.FileName,
             FilePath: pdfDoc.FilePath,
             FileSizeBytes: pdfDoc.FileSizeBytes,
-            ProcessingStatus: pdfDoc.ProcessingStatus,
+
             UploadedAt: pdfDoc.UploadedAt,
             ProcessedAt: pdfDoc.ProcessedAt,
             PageCount: pdfDoc.PageCount,

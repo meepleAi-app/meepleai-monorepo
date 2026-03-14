@@ -86,7 +86,7 @@ public class GetPdfTextQueryHandlerTests
         var id = Guid.NewGuid();
         var fileName = "rulebook.pdf";
         var extractedText = "Game rules: Setup\n1. Place the board...";
-        var processingStatus = "completed";
+        var processingState = "Ready";
         var processedAt = DateTime.UtcNow;
         var pageCount = 24;
         var characterCount = 15000;
@@ -96,7 +96,7 @@ public class GetPdfTextQueryHandlerTests
             id,
             fileName,
             extractedText,
-            processingStatus,
+            processingState,
             processedAt,
             pageCount,
             characterCount,
@@ -106,7 +106,7 @@ public class GetPdfTextQueryHandlerTests
         result.Id.Should().Be(id);
         result.FileName.Should().Be(fileName);
         result.ExtractedText.Should().Be(extractedText);
-        result.ProcessingStatus.Should().Be(processingStatus);
+        result.ProcessingState.Should().Be(processingState);
         result.ProcessedAt.Should().Be(processedAt);
         result.PageCount.Should().Be(pageCount);
         result.CharacterCount.Should().Be(characterCount);
@@ -126,14 +126,14 @@ public class GetPdfTextQueryHandlerTests
             id,
             fileName,
             null,
-            "failed",
+            "Failed",
             null,
             null,
             null,
             errorMessage);
 
         // Assert
-        result.ProcessingStatus.Should().Be("failed");
+        result.ProcessingState.Should().Be("Failed");
         result.ProcessingError.Should().Be(errorMessage);
         result.ExtractedText.Should().BeNull();
         result.PageCount.Should().BeNull();

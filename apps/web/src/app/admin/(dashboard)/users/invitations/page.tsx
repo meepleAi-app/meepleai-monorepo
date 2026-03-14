@@ -8,7 +8,7 @@
 
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
@@ -38,7 +38,6 @@ import {
   SelectValue,
 } from '@/components/ui/overlays/select';
 import { Button } from '@/components/ui/primitives/button';
-import { useSetNavConfig } from '@/hooks/useSetNavConfig';
 import { api } from '@/lib/api';
 import type { InvitationStatus } from '@/lib/api/schemas/invitation.schemas';
 
@@ -47,24 +46,11 @@ type StatusFilter = 'all' | InvitationStatus;
 const PAGE_SIZE = 20;
 
 export default function InvitationsPage() {
-  const setNavConfig = useSetNavConfig();
   const queryClient = useQueryClient();
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   const [page, setPage] = useState(1);
   const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
   const [bulkDialogOpen, setBulkDialogOpen] = useState(false);
-
-  useEffect(() => {
-    setNavConfig({
-      miniNav: [
-        { id: 'users', label: 'All Users', href: '/admin/users' },
-        { id: 'invitations', label: 'Invitations', href: '/admin/users/invitations' },
-        { id: 'roles', label: 'Roles & Permissions', href: '/admin/users/roles' },
-        { id: 'activity', label: 'Activity Log', href: '/admin/users/activity' },
-      ],
-      actionBar: [],
-    });
-  }, [setNavConfig]);
 
   // Fetch stats
   const statsQuery = useQuery({

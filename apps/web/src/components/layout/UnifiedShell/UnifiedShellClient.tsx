@@ -2,6 +2,8 @@
 
 import { type ReactNode, useEffect } from 'react';
 
+import { usePathname } from 'next/navigation';
+
 import { ErrorBoundary } from '@/components/errors/ErrorBoundary';
 import { DEFAULT_PINNED_CARDS } from '@/config/entity-actions';
 import { cn } from '@/lib/utils';
@@ -36,8 +38,17 @@ export function UnifiedShellClient({
   notificationBell,
   searchTrigger,
 }: UnifiedShellClientProps) {
-  const { context, drawCard, pinCard, cards } = useCardHand();
+  const pathname = usePathname();
+  const { context, toggleContext, drawCard, pinCard, cards } = useCardHand();
   const isAdminContext = context === 'admin';
+
+  // Auto-set admin context when mounted from an admin route
+  useEffect(() => {
+    if (isAdmin && context !== 'admin') {
+      toggleContext();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAdmin]); // Only on mount
 
   // Seed default pinned section cards on first load
   useEffect(() => {

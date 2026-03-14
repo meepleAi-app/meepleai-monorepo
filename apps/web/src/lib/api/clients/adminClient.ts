@@ -324,10 +324,10 @@ export function createAdminClient({ httpClient }: CreateAdminClientParams) {
      * Change user role (admin only) - Issue #124
      * PUT /api/v1/admin/users/{userId}/role
      */
-    async changeUserRole(userId: string, newRole: string): Promise<AdminUser> {
+    async changeUserRole(userId: string, newRole: string, reason?: string): Promise<AdminUser> {
       const result = await httpClient.put<AdminUser>(
         `/api/v1/admin/users/${encodeURIComponent(userId)}/role`,
-        { newRole },
+        { newRole, reason },
         AdminUserSchema
       );
       // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
@@ -1610,6 +1610,34 @@ export function createAdminClient({ httpClient }: CreateAdminClientParams) {
       if (params?.endDate) searchParams.set('endDate', params.endDate);
       const qs = searchParams.toString();
       const url = `/api/v1/admin/audit-log${qs ? `?${qs}` : ''}`;
+      const result = await httpClient.get<AuditLogListResult>(url, AuditLogListResultSchema);
+      if (!result) {
+        return {
+          entries: [],
+          totalCount: 0,
+          limit: params?.limit ?? 50,
+          offset: params?.offset ?? 0,
+        };
+      }
+      return result;
+    },
+
+    /**
+     * Get audit log entries filtered by target user
+     * GET /api/v1/admin/users/{userId}/audit-log
+     */
+    async getUserAuditLog(
+      userId: string,
+      params?: {
+        limit?: number;
+        offset?: number;
+      }
+    ): Promise<AuditLogListResult> {
+      const searchParams = new URLSearchParams();
+      if (params?.limit) searchParams.set('limit', String(params.limit));
+      if (params?.offset) searchParams.set('offset', String(params.offset));
+      const qs = searchParams.toString();
+      const url = `/api/v1/admin/users/${encodeURIComponent(userId)}/audit-log${qs ? `?${qs}` : ''}`;
       const result = await httpClient.get<AuditLogListResult>(url, AuditLogListResultSchema);
       if (!result) {
         return {

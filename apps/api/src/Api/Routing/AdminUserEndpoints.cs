@@ -935,6 +935,8 @@ internal static class AdminUserEndpoints
 
 **Valid Roles**: Admin, Editor, User
 
+**Optional**: Reason field (max 500 chars) for audit trail
+
 **Issue**: #124 - Admin Infrastructure Panel")
             .Produces<Api.Models.UserDto>(StatusCodes.Status200OK)
             .Produces(StatusCodes.Status400BadRequest)
@@ -953,12 +955,12 @@ internal static class AdminUserEndpoints
         var (authorized, session, error) = context.RequireAdminSession();
         if (!authorized) return error!;
 
-        logger.LogInformation("Admin {AdminId} changing role for user {UserId} to {NewRole}",
-            session!.User!.Id, userId, request.NewRole);
+        logger.LogInformation("Admin {AdminId} changing role for user {UserId} to {NewRole}, reason: {Reason}",
+            session!.User!.Id, userId, request.NewRole, request.Reason ?? "(none)");
 
         try
         {
-            var command = new ChangeUserRoleCommand(userId.ToString(), request.NewRole);
+            var command = new ChangeUserRoleCommand(userId.ToString(), request.NewRole, request.Reason);
             var result = await mediator.Send(command, ct).ConfigureAwait(false);
 
             logger.LogInformation("Role changed for user {UserId} to {NewRole} by admin {AdminId}",
@@ -1399,4 +1401,4 @@ internal record SendInvitationRequest(string Email, string Role);
 /// <summary>
 /// Request payload for changing a user's role (Issue #124).
 /// </summary>
-internal record ChangeUserRoleRequest(string NewRole);
+internal record ChangeUserRoleRequest(string NewRole, string? Reason = null);

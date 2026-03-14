@@ -28,7 +28,6 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/feedback/al
 import { Button } from '@/components/ui/primitives/button';
 import { useLibraryGameDetail } from '@/hooks/queries/useLibrary';
 
-import { GameDetailNavConfig } from './GameDetailNavConfig';
 import LibraryGameDetailLoading from './loading';
 
 export default function LibraryGameDetailPage() {
@@ -99,8 +98,6 @@ export default function LibraryGameDetailPage() {
 
   return (
     <>
-      <GameDetailNavConfig gameId={gameId} isFavorite={gameDetail.isFavorite} />
-
       <div style={{ viewTransitionName: `meeple-card-${gameId}` }}>
         <GameDetailHeroCard gameDetail={gameDetail} />
       </div>

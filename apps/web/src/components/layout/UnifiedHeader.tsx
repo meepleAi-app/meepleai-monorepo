@@ -1,13 +1,13 @@
 /**
- * UnifiedHeader - Mobile-only compact header
+ * UnifiedHeader - Compact header for public/unauthenticated pages
  * Issue #3104 - Unify header navigation
  *
- * Desktop navigation is now handled by the Sidebar component.
- * This header renders only on mobile (< md breakpoint).
+ * Used by PublicLayout for guest pages (home, about, pricing, etc.).
+ * Authenticated users use UnifiedShell instead.
  *
  * Features:
  * - Compact 48px height
- * - Left: Hamburger drawer + Logo (icon only)
+ * - Left: Logo (icon only)
  * - Right: Notifications + User avatar dropdown
  * - Glass morphism design
  * - WCAG 2.1 AA compliance

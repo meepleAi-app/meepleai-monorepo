@@ -29,6 +29,8 @@ export { createSpeechRecognitionProvider } from './providers/provider-factory';
 export { WebSpeechProvider } from './providers/web-speech-provider';
 
 // Utilities
+export { detectLanguage } from './utils/language-detection';
+export type { DetectedLanguage } from './utils/language-detection';
 export { sanitizeForTts } from './utils/text-sanitizer';
 export {
   findBestVoice,

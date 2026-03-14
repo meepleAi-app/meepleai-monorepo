@@ -12,14 +12,17 @@
 #     -f compose.staging-traefik.yml --profile minimal up -d
 
 services:
-  # Enable socket proxy for staging (secure Docker API access)
-  docker-socket-proxy:
-    profiles: [minimal, dev, observability, ai, automation, full]
+  # Socket proxy disabled - v0.3.0 too old for Docker API 1.40+
+  # TODO: Upgrade to ghcr.io/tecnativa/docker-socket-proxy:0.6+ and re-enable
+  # docker-socket-proxy:
+  #   profiles: [minimal, dev, observability, ai, automation, full]
 
   traefik:
     command:
       # API & Dashboard - secured via middleware
       - "--api.dashboard=true"
+      # Health check endpoint
+      - "--ping=true"
 
       # Logging - INFO for staging (not DEBUG)
       - "--log.level=INFO"
@@ -37,11 +40,11 @@ services:
       - "--entrypoints.websecure.address=:443"
       - "--entrypoints.websecure.http.tls.certResolver=letsencrypt"
 
-      # Docker Provider via Socket Proxy (Linux)
+      # Docker Provider - direct socket access (socket-proxy v0.3.0 too old for Docker API 1.40+)
       - "--providers.docker=true"
       - "--providers.docker.exposedbydefault=false"
       - "--providers.docker.network=meepleai"
-      - "--providers.docker.endpoint=tcp://docker-socket-proxy:2375"
+      - "--providers.docker.endpoint=unix:///var/run/docker.sock"
 
       # Dynamic Configuration
       - "--providers.file.directory=/etc/traefik/dynamic"
@@ -65,18 +68,16 @@ services:
       - "127.0.0.1:8888:8080"
 
     volumes:
-      # Static configuration (staging uses prod config)
-      - ./traefik/traefik.prod.yml:/etc/traefik/traefik.yml:ro
+      # Docker socket (direct access - TODO: upgrade socket-proxy to v0.6+ for API 1.40+)
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      # Static configuration (staging-specific: direct Docker socket)
+      - ./traefik/traefik.staging.yml:/etc/traefik/traefik.yml:ro
       # Dynamic configuration
       - ./traefik/dynamic:/etc/traefik/dynamic:ro
       # Logs
       - ./traefik/logs:/var/log/traefik
       # Let's Encrypt certificates (persistent)
       - traefik-certs-staging:/letsencrypt
-
-    depends_on:
-      docker-socket-proxy:
-        condition: service_healthy
 
     labels:
       - "traefik.enable=true"

@@ -15,7 +15,10 @@ const STATUS_CONFIG: Record<GameNightStatus, { label: string; className: string 
   },
 };
 
-const DEFAULT_STATUS = { label: 'Sconosciuto', className: 'bg-muted text-muted-foreground border-border' };
+const DEFAULT_STATUS = {
+  label: 'Sconosciuto',
+  className: 'bg-muted text-muted-foreground border-border',
+};
 
 interface GameNightCardProps {
   night: GameNightSummary;

@@ -26,15 +26,19 @@ public class SessionCheckpointHandlerTests
             handler.Handle(new ListSessionCheckpointsQuery(Guid.NewGuid(), Guid.NewGuid()), CancellationToken.None));
     }
 
-    [Fact] public void ListHandler_NullSessionRepo_Throws() =>
+    [Fact]
+    public void ListHandler_NullSessionRepo_Throws() =>
         Assert.Throws<ArgumentNullException>(() => new ListSessionCheckpointsQueryHandler(null!, new Mock<ISessionCheckpointRepository>().Object));
 
-    [Fact] public void ListHandler_NullCheckpointRepo_Throws() =>
+    [Fact]
+    public void ListHandler_NullCheckpointRepo_Throws() =>
         Assert.Throws<ArgumentNullException>(() => new ListSessionCheckpointsQueryHandler(new Mock<ISessionRepository>().Object, null!));
 
-    [Fact] public void CreateHandler_NullSessionRepo_Throws() =>
+    [Fact]
+    public void CreateHandler_NullSessionRepo_Throws() =>
         Assert.Throws<ArgumentNullException>(() => new CreateSessionCheckpointCommandHandler(null!, null!, null!, null!, null!));
 
-    [Fact] public void RestoreHandler_NullSessionRepo_Throws() =>
+    [Fact]
+    public void RestoreHandler_NullSessionRepo_Throws() =>
         Assert.Throws<ArgumentNullException>(() => new RestoreSessionCheckpointCommandHandler(null!, null!, null!, null!));
 }

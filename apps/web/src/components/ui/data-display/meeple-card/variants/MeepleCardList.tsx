@@ -19,6 +19,7 @@ import { AgentModelInfo } from '../../meeple-card-features/AgentModelInfo';
 import { AgentStatsDisplay } from '../../meeple-card-features/AgentStatsDisplay';
 import { AgentStatusBadge } from '../../meeple-card-features/AgentStatusBadge';
 import { BulkSelectCheckbox } from '../../meeple-card-features/BulkSelectCheckbox';
+import { CardAgentAction } from '../../meeple-card-features/CardAgentAction';
 import { CardNavigationFooter } from '../../meeple-card-features/CardNavigationFooter';
 import { ChatAgentInfo } from '../../meeple-card-features/ChatAgentInfo';
 import { ChatGameContext } from '../../meeple-card-features/ChatGameContext';
@@ -420,6 +421,18 @@ export const MeepleCardList = React.memo(function MeepleCardList(props: MeepleCa
         {/* Metadata (inline for list) */}
         {metadata.length > 0 && <MetadataChips metadata={metadata} variant={variant} />}
       </div>
+
+      {/* Agent action footer */}
+      {entity === 'game' && hasAgent !== undefined && id && (
+        <CardAgentAction
+          hasAgent={hasAgent}
+          agentId={agentId}
+          gameId={id}
+          onCreateAgent={onCreateAgent}
+          variant={variant}
+          hasNavFooter={!!(navigateTo && navigateTo.length > 0)}
+        />
+      )}
 
       {/* Navigation footer */}
       {navigateTo && navigateTo.length > 0 && <CardNavigationFooter links={navigateTo} />}

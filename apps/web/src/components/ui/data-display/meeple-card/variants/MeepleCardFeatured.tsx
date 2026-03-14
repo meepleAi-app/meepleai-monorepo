@@ -36,7 +36,6 @@ import { TimeTravelOverlay } from '../../meeple-card-features/TimeTravelOverlay'
 import {
   EntityIndicator,
   MetadataChips,
-  ActionButtons,
   RatingDisplay,
   MeepleCardSkeleton,
 } from '../../meeple-card-parts';
@@ -435,10 +434,7 @@ export const MeepleCardFeatured = React.memo(function MeepleCardFeatured(
         {/* Metadata (inline for featured) */}
         {metadata.length > 0 && <MetadataChips metadata={metadata} variant={variant} />}
 
-        {/* Action buttons (featured) */}
-        {showActionBtns && (
-          <ActionButtons actions={actions} entity={entity} customColor={customColor} />
-        )}
+        {/* Action buttons are rendered by CardActions above (featured variant) */}
       </div>
 
       {/* Agent action footer */}

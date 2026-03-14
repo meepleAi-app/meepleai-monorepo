@@ -583,6 +583,7 @@ v1Api.MapAdminOpenRouterEndpoints();    // Issue #5077: OpenRouter usage monitor
 v1Api.MapAdminEmergencyControlsEndpoints(); // Issue #5476: LLM emergency controls
 v1Api.MapAdminLlmConfigEndpoints();        // Issue #5495: LLM system configuration CRUD
 app.MapAdminBulkImportEndpoints();       // Issue #4354: Bulk import endpoint routing
+v1Api.MapGroup("/admin/catalog-ingestion").MapAdminCatalogIngestionEndpoints(); // Admin bulk Excel import + enrichment
 app.MapPdfAnalyticsEndpoints();          // Issue #3715: PDF analytics dashboard
 app.MapChatAnalyticsEndpoints();         // Issue #3714: Chat analytics dashboard
 app.MapModelPerformanceEndpoints();      // Issue #3716: Model performance dashboard

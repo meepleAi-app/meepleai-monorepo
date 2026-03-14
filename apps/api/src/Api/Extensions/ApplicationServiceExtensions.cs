@@ -5,6 +5,7 @@ using Api.BoundedContexts.Authentication.Infrastructure.DependencyInjection;
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.DependencyInjection;
 using Api.BoundedContexts.EntityRelationships.Infrastructure.DependencyInjection;
 using Api.BoundedContexts.GameManagement.Infrastructure.DependencyInjection;
+using Api.BoundedContexts.GameToolbox.Infrastructure.DependencyInjection;
 using Api.BoundedContexts.GameToolkit.Infrastructure.DependencyInjection;
 using Api.BoundedContexts.KnowledgeBase.Infrastructure.DependencyInjection;
 using Api.BoundedContexts.KnowledgeBase.Infrastructure.EmbeddingProviders;
@@ -51,6 +52,9 @@ internal static class ApplicationServiceExtensions
 
         // Issue #4753: GameToolkit bounded context (toolkit configs, tools, templates)
         services.AddGameToolkitContext();
+
+        // Epic #412: GameToolbox bounded context (per-game configurable tool containers)
+        services.AddGameToolboxContext();
 
         // Issue #5130: EntityRelationships bounded context (entity links, relationships)
         services.AddEntityRelationshipsContext();

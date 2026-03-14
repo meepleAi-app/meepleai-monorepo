@@ -17,12 +17,13 @@ export type MeepleEntityType =
   | 'chatSession'
   | 'event'
   | 'toolkit'
+  | 'tool'
   | 'custom';
 
 /**
  * Layout variant options
  */
-export type MeepleCardVariant = 'grid' | 'list' | 'compact' | 'featured' | 'hero';
+export type MeepleCardVariant = 'grid' | 'list' | 'compact' | 'featured' | 'hero' | 'expanded';
 
 // ============================================================================
 // Entity Color Configuration
@@ -37,6 +38,7 @@ export const entityColors: Record<MeepleEntityType, { hsl: string; name: string 
   chatSession: { hsl: '220 80% 55%', name: 'Chat' }, // Blue
   event: { hsl: '350 89% 60%', name: 'Event' }, // Rose
   toolkit: { hsl: '142 70% 45%', name: 'Toolkit' }, // Green
+  tool: { hsl: '195 80% 50%', name: 'Tool' }, // Sky Blue (Epic #412)
   custom: { hsl: '220 70% 50%', name: 'Custom' }, // Blue (default)
 };
 
@@ -92,6 +94,11 @@ export const meepleCardVariants = cva(
           '[box-shadow:var(--shadow-warm-xl)] hover:[box-shadow:var(--shadow-warm-2xl)]',
           'hover:scale-[1.01]',
         ],
+        expanded: [
+          'flex flex-col rounded-2xl overflow-hidden',
+          'bg-card border border-border/50',
+          '[box-shadow:var(--shadow-warm-md)]',
+        ],
       },
     },
     defaultVariants: {
@@ -108,6 +115,7 @@ export const coverVariants = cva('relative overflow-hidden', {
       compact: 'w-10 h-10 rounded-md flex-shrink-0',
       featured: '',
       hero: 'absolute inset-0',
+      expanded: 'w-full rounded-t-2xl',
     },
   },
   defaultVariants: { variant: 'grid' },
@@ -121,6 +129,7 @@ export const contentVariants = cva('', {
       compact: 'flex-1 min-w-0',
       featured: 'flex-1 flex flex-col px-5 py-4',
       hero: 'relative z-10 mt-auto flex flex-col justify-end p-6',
+      expanded: 'flex-1 flex flex-col px-4 py-3 gap-2',
     },
   },
   defaultVariants: { variant: 'grid' },

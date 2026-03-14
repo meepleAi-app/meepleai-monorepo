@@ -30,7 +30,7 @@ internal static class ToolboxMapper
         Id: phase.Id,
         Name: phase.Name,
         Order: phase.Order,
-        ActiveToolIds: phase.ActiveToolIds);
+        ActiveToolIds: phase.ActiveToolIds.ToList());
 
     public static SharedContextDto ToDto(SharedContext ctx) => new(
         Players: ctx.Players.Select(p => new PlayerInfoDto(p.Name, p.Color, p.AvatarUrl)).ToList(),

@@ -1,4 +1,5 @@
 using Api.BoundedContexts.SharedGameCatalog.Domain.Entities;
+using Api.BoundedContexts.SharedGameCatalog.Domain.Enums;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Events;
 using Api.BoundedContexts.SharedGameCatalog.Domain.ValueObjects;
 using Api.SharedKernel.Domain.Entities;
@@ -40,10 +41,12 @@ public sealed class SharedGame : AggregateRoot<Guid>
 
     // Status & Metadata
     private GameStatus _status;
+    private GameDataStatus _gameDataStatus = GameDataStatus.Complete;
+    private bool _hasUploadedPdf;
     private bool _isDeleted;
     private Guid _createdBy;
     private Guid? _modifiedBy;
-    private readonly DateTime _createdAt;
+    private DateTime _createdAt;
     private DateTime? _modifiedAt;
 
     // Collections (navigation properties)
@@ -136,6 +139,18 @@ public sealed class SharedGame : AggregateRoot<Guid>
     /// Gets the publication status of this game.
     /// </summary>
     public GameStatus Status => _status;
+
+    /// <summary>
+    /// Gets the data completeness status.
+    /// Separate from GameStatus (publication lifecycle).
+    /// </summary>
+    public GameDataStatus GameDataStatus => _gameDataStatus;
+
+    /// <summary>
+    /// Gets whether this game has an uploaded PDF document.
+    /// Cached flag updated via domain events.
+    /// </summary>
+    public bool HasUploadedPdf => _hasUploadedPdf;
 
     /// <summary>
     /// Gets whether this game has been soft-deleted.
@@ -274,7 +289,9 @@ public sealed class SharedGame : AggregateRoot<Guid>
         DateTime? modifiedAt,
         bool isDeleted,
         int? bggId = null,
-        Guid? agentDefinitionId = null) : base(id)
+        Guid? agentDefinitionId = null,
+        GameDataStatus gameDataStatus = GameDataStatus.Complete,
+        bool hasUploadedPdf = false) : base(id)
     {
         _id = id;
         _title = title;
@@ -290,6 +307,8 @@ public sealed class SharedGame : AggregateRoot<Guid>
         _thumbnailUrl = thumbnailUrl;
         _rules = rules;
         _status = status;
+        _gameDataStatus = gameDataStatus;
+        _hasUploadedPdf = hasUploadedPdf;
         _isDeleted = isDeleted;
         _createdBy = createdBy;
         _modifiedBy = modifiedBy;
@@ -358,6 +377,154 @@ public sealed class SharedGame : AggregateRoot<Guid>
         return game;
     }
 
+    #region Skeleton & Enrichment
+
+    /// <summary>
+    /// Valid state transitions for GameDataStatus.
+    /// </summary>
+    private static readonly Dictionary<GameDataStatus, HashSet<GameDataStatus>> ValidDataStatusTransitions = new()
+    {
+        [GameDataStatus.Skeleton] = [GameDataStatus.EnrichmentQueued],
+        [GameDataStatus.EnrichmentQueued] = [GameDataStatus.Enriching],
+        [GameDataStatus.Enriching] = [GameDataStatus.Enriched, GameDataStatus.Failed],
+        [GameDataStatus.Enriched] = [GameDataStatus.PdfDownloading, GameDataStatus.Complete],
+        [GameDataStatus.PdfDownloading] = [GameDataStatus.Complete, GameDataStatus.Enriched],
+        [GameDataStatus.Failed] = [GameDataStatus.EnrichmentQueued],
+        [GameDataStatus.Complete] = []
+    };
+
+    /// <summary>
+    /// Creates a skeleton SharedGame with minimal data (title + optional BggId).
+    /// Uses the private constructor directly, bypassing full validation.
+    /// Only validates title. All other fields get zero/empty defaults.
+    /// </summary>
+    public static SharedGame CreateSkeleton(string title, Guid createdBy, TimeProvider timeProvider, int? bggId = null)
+    {
+        if (string.IsNullOrWhiteSpace(title))
+            throw new ArgumentException("Title cannot be empty.", nameof(title));
+
+        if (title.Length > 500)
+            throw new ArgumentException("Title cannot exceed 500 characters.", nameof(title));
+
+        if (createdBy == Guid.Empty)
+            throw new ArgumentException("CreatedBy cannot be empty.", nameof(createdBy));
+
+        var now = timeProvider.GetUtcNow().UtcDateTime;
+        var game = new SharedGame
+        {
+            _id = Guid.NewGuid(),
+            _title = title.Trim(),
+            _yearPublished = 0,
+            _description = string.Empty,
+            _minPlayers = 0,
+            _maxPlayers = 0,
+            _playingTimeMinutes = 0,
+            _minAge = 0,
+            _complexityRating = null,
+            _averageRating = null,
+            _imageUrl = string.Empty,
+            _thumbnailUrl = string.Empty,
+            _rules = null,
+            _status = GameStatus.Draft,
+            _gameDataStatus = GameDataStatus.Skeleton,
+            _isDeleted = false,
+            _createdBy = createdBy,
+            _bggId = bggId,
+            _createdAt = now,
+            _modifiedAt = now
+        };
+
+        return game;
+    }
+
+    /// <summary>
+    /// Transitions the GameDataStatus to a new state, enforcing valid transitions.
+    /// </summary>
+    public void TransitionDataStatusTo(GameDataStatus newStatus)
+    {
+        if (!ValidDataStatusTransitions.TryGetValue(_gameDataStatus, out var validTargets) ||
+            !validTargets.Contains(newStatus))
+        {
+            throw new InvalidOperationException(
+                $"Cannot transition GameDataStatus from {_gameDataStatus} to {newStatus}.");
+        }
+
+        _gameDataStatus = newStatus;
+    }
+
+    /// <summary>
+    /// Enriches this game with BGG data. Runs full domain validation.
+    /// Must be in Enriching state.
+    /// </summary>
+    public void EnrichFromBgg(
+        string description,
+        int yearPublished,
+        int minPlayers,
+        int maxPlayers,
+        int playingTimeMinutes,
+        int minAge,
+        decimal? complexityRating,
+        decimal? averageRating,
+        string imageUrl,
+        string thumbnailUrl,
+        string? rulebookUrl,
+        int? bggId = null)
+    {
+        if (_gameDataStatus != GameDataStatus.Enriching)
+            throw new InvalidOperationException(
+                $"Cannot enrich game in {_gameDataStatus} state. Must be in Enriching state.");
+
+        // Run full domain validation on enriched data
+        ValidateDescription(description);
+        ValidateYear(yearPublished);
+        ValidatePlayers(minPlayers, maxPlayers);
+        ValidatePlayingTime(playingTimeMinutes);
+        ValidateMinAge(minAge);
+        ValidateComplexityRating(complexityRating);
+        ValidateAverageRating(averageRating);
+        ValidateImageUrl(imageUrl);
+        ValidateThumbnailUrl(thumbnailUrl);
+
+        _description = description;
+        _yearPublished = yearPublished;
+        _minPlayers = minPlayers;
+        _maxPlayers = maxPlayers;
+        _playingTimeMinutes = playingTimeMinutes;
+        _minAge = minAge;
+        _complexityRating = complexityRating;
+        _averageRating = averageRating;
+        _imageUrl = imageUrl;
+        _thumbnailUrl = thumbnailUrl;
+
+        if (bggId.HasValue)
+            _bggId = bggId.Value;
+
+        if (!string.IsNullOrWhiteSpace(rulebookUrl))
+            _rules = GameRules.CreateFromUrl(rulebookUrl);
+
+        _gameDataStatus = GameDataStatus.Enriched;
+        _modifiedAt = DateTime.UtcNow;
+    }
+
+    /// <summary>
+    /// Marks this game as complete (no PDF needed or PDF already handled).
+    /// Must be in Enriched state.
+    /// </summary>
+    public void MarkDataComplete()
+    {
+        TransitionDataStatusTo(GameDataStatus.Complete);
+    }
+
+    /// <summary>
+    /// Sets the HasUploadedPdf flag. Called by event handler when PDF upload completes.
+    /// </summary>
+    public void SetHasUploadedPdf()
+    {
+        _hasUploadedPdf = true;
+    }
+
+    #endregion
+
     /// <summary>
     /// Updates the game information.
     /// </summary>
@@ -419,6 +586,9 @@ public sealed class SharedGame : AggregateRoot<Guid>
     {
         if (_status != GameStatus.Draft)
             throw new InvalidOperationException($"Cannot submit game for approval in {_status} status. Only Draft games can be submitted.");
+
+        if (_gameDataStatus < GameDataStatus.Enriched)
+            throw new InvalidOperationException($"Cannot submit game for approval with GameDataStatus {_gameDataStatus}. Game must be at least Enriched.");
 
         if (submittedBy == Guid.Empty)
             throw new ArgumentException("SubmittedBy cannot be empty", nameof(submittedBy));

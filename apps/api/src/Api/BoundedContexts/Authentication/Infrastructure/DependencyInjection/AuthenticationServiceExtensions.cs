@@ -24,6 +24,7 @@ internal static class AuthenticationServiceExtensions
         services.AddScoped<IOAuthAccountRepository, OAuthAccountRepository>();
         services.AddScoped<IShareLinkRepository, ShareLinkRepository>(); // ISSUE-2052
         services.AddScoped<IInvitationTokenRepository, InvitationTokenRepository>(); // ISSUE-124
+        services.AddScoped<IAccessRequestRepository, AccessRequestRepository>(); // ISSUE-124: Access request management
 
         // Register Unit of Work
         services.AddScoped<IUnitOfWork, EfCoreUnitOfWork>();

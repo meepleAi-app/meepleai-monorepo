@@ -20,6 +20,12 @@ internal sealed class AccessRequest : AggregateRoot<Guid>
 
     // EF Core constructor
     private AccessRequest() { }
+    private AccessRequest(Guid id) : base(id) { }
+
+    /// <summary>
+    /// Internal constructor for repository materialization (avoids reflection).
+    /// </summary>
+    internal static AccessRequest CreateForHydration(Guid id) => new(id);
 
     /// <summary>
     /// Factory method to create a new access request.
@@ -86,8 +92,30 @@ internal sealed class AccessRequest : AggregateRoot<Guid>
         InvitationId = invitationId;
     }
 
+    #region Persistence Hydration Methods (internal - S3011 fix)
+
     /// <summary>
-    /// Internal constructor for repository materialization (avoids reflection).
+    /// Restores access request state from persistence layer.
+    /// Internal method to avoid reflection in repository (S3011 compliance).
+    /// Should only be called by AccessRequestRepository during entity materialization.
     /// </summary>
-    internal static AccessRequest CreateForHydration() => new();
+    internal void RestoreState(
+        string email,
+        AccessRequestStatus status,
+        DateTime requestedAt,
+        DateTime? reviewedAt,
+        Guid? reviewedBy,
+        string? rejectionReason,
+        Guid? invitationId)
+    {
+        Email = email;
+        Status = status;
+        RequestedAt = requestedAt;
+        ReviewedAt = reviewedAt;
+        ReviewedBy = reviewedBy;
+        RejectionReason = rejectionReason;
+        InvitationId = invitationId;
+    }
+
+    #endregion
 }

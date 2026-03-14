@@ -5,6 +5,7 @@ import React from 'react';
 import { Loader2 } from 'lucide-react';
 
 import { Button } from '@/components/ui/primitives/button';
+import type { DrawnCardDto } from '@/lib/api/schemas/toolbox.schemas';
 import { useToolboxStore } from '@/lib/stores/toolboxStore';
 
 interface ToolCardDeckProps {
@@ -25,9 +26,9 @@ export function ToolCardDeck({
   className = '',
   'data-testid': testId,
 }: ToolCardDeckProps) {
-  const deckState = useToolboxStore(s => s.deckStates[deckId]);
-  const drawCard = useToolboxStore(s => s.drawCard);
-  const shuffleDeck = useToolboxStore(s => s.shuffleDeck);
+  const deckState = useToolboxStore(s => s.cardDecks[deckId]);
+  const draw = useToolboxStore(s => s.draw);
+  const shuffle = useToolboxStore(s => s.shuffle);
   const resetDeck = useToolboxStore(s => s.resetDeck);
 
   if (!deckState) {
@@ -41,28 +42,28 @@ export function ToolCardDeck({
     );
   }
 
-  const { deckName, totalCards, remainingCards, drawnCards } = deckState;
-  const canDraw = remainingCards > 0;
+  const { name, totalCards, remainingInDeck, drawnCards } = deckState;
+  const canDraw = remainingInDeck > 0;
 
   return (
     <div className={`space-y-3 ${className}`} data-testid={testId ?? `tool-card-deck-${deckId}`}>
       {/* Deck info */}
       <div className="flex items-center justify-between text-sm">
-        <span className="font-medium">{deckName}</span>
+        <span className="font-medium">{name}</span>
         <span className="text-muted-foreground">
-          {remainingCards} / {totalCards} remaining
+          {remainingInDeck} / {totalCards} remaining
         </span>
       </div>
 
       {/* Actions */}
       <div className="flex gap-2">
-        <Button size="sm" onClick={() => drawCard(toolboxId, deckId)} disabled={!canDraw}>
+        <Button size="sm" onClick={() => draw(deckId, 1)} disabled={!canDraw}>
           Draw
         </Button>
-        <Button size="sm" variant="outline" onClick={() => shuffleDeck(toolboxId, deckId)}>
+        <Button size="sm" variant="outline" onClick={() => shuffle(deckId)}>
           Shuffle
         </Button>
-        <Button size="sm" variant="outline" onClick={() => resetDeck(toolboxId, deckId)}>
+        <Button size="sm" variant="outline" onClick={() => resetDeck(deckId)}>
           Reset
         </Button>
       </div>
@@ -74,7 +75,7 @@ export function ToolCardDeck({
             Drawn ({drawnCards.length})
           </span>
           <div className="flex flex-wrap gap-1.5">
-            {drawnCards.map(card => (
+            {drawnCards.map((card: DrawnCardDto) => (
               <div
                 key={card.id}
                 className="flex items-center gap-1 rounded-md border bg-muted/50 px-2 py-1 text-xs"

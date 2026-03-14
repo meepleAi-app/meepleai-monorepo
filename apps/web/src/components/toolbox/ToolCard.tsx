@@ -5,7 +5,7 @@ import React from 'react';
 import { ChevronDown, Lock } from 'lucide-react';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/data-display/card';
-import type { ToolboxToolDto, ToolType } from '@/lib/stores/toolboxStore';
+import type { ToolboxToolDto } from '@/lib/api/schemas/toolbox.schemas';
 import { cn } from '@/lib/utils';
 
 interface ToolCardProps {
@@ -18,7 +18,7 @@ interface ToolCardProps {
   'data-testid'?: string;
 }
 
-const TOOL_TYPE_ICONS: Record<ToolType, string> = {
+const TOOL_TYPE_ICONS: Record<string, string> = {
   DiceRoller: '\uD83C\uDFB2',
   ScoreTracker: '\uD83D\uDCCA',
   TurnManager: '\uD83D\uDD04',
@@ -54,7 +54,7 @@ export function ToolCard({
         role="button"
         tabIndex={isLocked ? -1 : 0}
         aria-expanded={isExpanded}
-        aria-label={`${isLocked ? 'Locked: ' : ''}${tool.name}`}
+        aria-label={`${isLocked ? 'Locked: ' : ''}${tool.type}`}
         onKeyDown={e => {
           if (!isLocked && (e.key === 'Enter' || e.key === ' ')) {
             e.preventDefault();
@@ -64,10 +64,7 @@ export function ToolCard({
       >
         <CardTitle className="flex items-center gap-2 text-sm font-medium">
           <span aria-hidden="true">{icon}</span>
-          <span>{tool.name}</span>
-          {tool.summary && (
-            <span className="text-xs font-normal text-muted-foreground">— {tool.summary}</span>
-          )}
+          <span>{tool.type}</span>
         </CardTitle>
         <div className="flex items-center gap-1">
           {isLocked ? (

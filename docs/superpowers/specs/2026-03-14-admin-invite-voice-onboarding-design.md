@@ -207,7 +207,7 @@ No duplicate issues found in the 26 open GitHub issues. Related but different:
 | **Admin invitation UI** | ✅ Complete | `InviteUserDialog`, `BulkInviteDialog`, invitations page exist. **Verify/complete** role dropdown + pending list |
 | **Accept invite page** | ✅ Complete | `(public)/accept-invite/page.tsx` exists. **Modify**: redirect to wizard instead of `/dashboard` |
 | **Onboarding wizard** | ✅ Complete (5 steps) | `OnboardingWizard.tsx` + all step components exist. **Integrate**: connect to accept-invite flow, skip password step |
-| **Voice UI in chat card** | ❌ Missing | **New frontend component** |
-| **Premium voice toggle** | ❌ Missing | **New frontend component** |
+| **Voice UI in chat card** | ✅ Complete | `VoiceMicButton`, `TtsSpeakerButton`, `VoiceSettingsPopover` in `ChatThreadView`. Also `/ask` voice-first page. **No new work needed** |
+| **Premium voice toggle** | ⚠️ Architecture ready | Provider factory exists (`provider-factory.ts`), Zustand store persists prefs. **Deepgram/ElevenLabs providers not yet implemented** (deferred with #312) |
 | **Admin UI completion** | ⚠️ Partial | **Verify/complete role + audit UI** |
 | **E2E Playwright test** | ❌ Missing | **New test file** |

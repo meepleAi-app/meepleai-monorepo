@@ -31,7 +31,7 @@ interface SessionCheckpointProps {
   sessionId: string;
 }
 
-export function SessionCheckpoint({ sessionId }: SessionCheckpointProps): JSX.Element {
+export function SessionCheckpoint({ sessionId }: SessionCheckpointProps) {
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
   const [listDialogOpen, setListDialogOpen] = useState(false);
   const [restoreConfirmOpen, setRestoreConfirmOpen] = useState(false);

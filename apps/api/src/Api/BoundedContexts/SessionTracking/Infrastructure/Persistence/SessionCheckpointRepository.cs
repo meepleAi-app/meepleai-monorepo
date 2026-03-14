@@ -42,6 +42,6 @@ internal class SessionCheckpointRepository : ISessionCheckpointRepository
     {
         var entity = SessionCheckpointMapper.ToEntity(checkpoint);
         _db.SessionCheckpoints.Update(entity);
-        await Task.CompletedTask;
+        await Task.CompletedTask.ConfigureAwait(false);
     }
 }

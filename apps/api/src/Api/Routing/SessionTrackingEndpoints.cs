@@ -113,6 +113,11 @@ internal static class SessionTrackingEndpoints
         // AI-powered turn summary (Issue #277)
         MapGetTurnSummaryEndpoint(group);
 
+        // Session checkpoint / deep save endpoints (Issue #278)
+        MapCreateCheckpointEndpoint(group);
+        MapListCheckpointsEndpoint(group);
+        MapRestoreCheckpointEndpoint(group);
+
         return group;
     }
 

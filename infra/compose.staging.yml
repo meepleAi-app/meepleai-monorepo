@@ -33,7 +33,7 @@ services:
     restart: unless-stopped
     env_file:
       - ./secrets/redis.secret
-    command: ["sh", "-c", "redis-server /etc/redis/redis.conf --requirepass $REDIS_PASSWORD"]
+    command: ["sh", "-c", "redis-server /etc/redis/redis.conf --requirepass $$REDIS_PASSWORD"]
     volumes:
       - redisdata-staging:/data
       - ./redis/redis.conf:/etc/redis/redis.conf:ro

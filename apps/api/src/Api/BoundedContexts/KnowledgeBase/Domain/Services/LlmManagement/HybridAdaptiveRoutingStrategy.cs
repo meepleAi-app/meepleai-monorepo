@@ -44,7 +44,7 @@ internal class HybridAdaptiveRoutingStrategy : ILlmRoutingStrategy
     }
 
     /// <inheritdoc/>
-    public LlmRoutingDecision SelectProvider(User? user, RagStrategy strategy, string? context = null)
+    public LlmRoutingDecision SelectProvider(User? user, RagStrategy strategy, string? context = null, string? region = null)
     {
         var userId = user?.Id.ToString() ?? "anonymous";
         var tier = MapUserToLlmTier(user);
@@ -58,7 +58,7 @@ internal class HybridAdaptiveRoutingStrategy : ILlmRoutingStrategy
         // Step 1: Check PreferredProvider override (still honored if explicitly set)
         if (TryGetPreferredDecision(settings, userId, out var preferredDecision))
         {
-            return preferredDecision!;
+            return preferredDecision! with { UserRegion = region };
         }
 
         // Step 2: Validate tier has access to the requested strategy
@@ -77,7 +77,10 @@ internal class HybridAdaptiveRoutingStrategy : ILlmRoutingStrategy
         var decision = CreateValidatedDecision(provider, modelId, strategy, tier, userId, settings);
 
         // Step 5: Apply budget mode override if active
-        return ApplyBudgetModeOverride(decision, userId);
+        var finalDecision = ApplyBudgetModeOverride(decision, userId);
+
+        // Step 6: Attach region hint (Issue #28: no-op for now, future multi-region routing)
+        return region is not null ? finalDecision with { UserRegion = region } : finalDecision;
     }
 
     /// <summary>

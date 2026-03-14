@@ -235,17 +235,22 @@ export default function AgentsPage() {
         data-testid="card-grid"
       >
         {filteredAgents.map((agent, index) => (
-          <AgentCard
+          <div
             key={agent.id}
-            agent={agent}
-            onClick={() => {
+            onClick={(e) => {
               if (window.innerWidth < 768) {
-                openBrowser(cardRefs, index);
+                const rect = e.currentTarget.getBoundingClientRect();
+                openBrowser(cardRefs, index, {
+                  x: rect.left + rect.width / 2,
+                  y: rect.top + rect.height / 2,
+                });
               } else {
                 router.push(`/agents/${agent.id}`);
               }
             }}
-          />
+          >
+            <AgentCard agent={agent} onClick={() => {}} />
+          </div>
         ))}
       </div>
 

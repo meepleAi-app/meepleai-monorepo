@@ -1,7 +1,11 @@
 using Api.BoundedContexts.KnowledgeBase.Domain.Entities;
+using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
+using Api.BoundedContexts.KnowledgeBase.Infrastructure.Persistence;
 using Api.BoundedContexts.UserLibrary.Application.Commands;
 using Api.BoundedContexts.UserLibrary.Domain.Entities;
+using Api.BoundedContexts.UserLibrary.Domain.Repositories;
+using Api.BoundedContexts.UserLibrary.Infrastructure.Persistence;
 using Api.Infrastructure;
 using Api.SharedKernel.Application.Services;
 using Api.SharedKernel.Infrastructure.Persistence;
@@ -59,6 +63,10 @@ public sealed class LinkAgentToPrivateGameIntegrationTests : IAsyncLifetime
         services.AddScoped<IUnitOfWork, EfCoreUnitOfWork>();
         services.AddScoped<IDomainEventCollector, DomainEventCollector>();
 
+        // Repositories required by LinkAgent/UnlinkAgent command handlers and validators
+        services.AddScoped<IPrivateGameRepository, PrivateGameRepository>();
+        services.AddScoped<IAgentDefinitionRepository, AgentDefinitionRepository>();
+
         // MediatR (required by MeepleAiDbContext and for command handling)
         services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(Program).Assembly));
 
@@ -85,7 +93,7 @@ public sealed class LinkAgentToPrivateGameIntegrationTests : IAsyncLifetime
         }
     }
 
-    [Fact(Skip = "Integration test requires database setup investigation")]
+    [Fact]
     public async Task LinkAgent_WithValidGameAndAgent_LinksSuccessfully()
     {
         // Arrange
@@ -130,7 +138,7 @@ public sealed class LinkAgentToPrivateGameIntegrationTests : IAsyncLifetime
         updatedGame!.AgentDefinitionId.Should().Be(agent.Id);
     }
 
-    [Fact(Skip = "Integration test requires database setup investigation")]
+    [Fact]
     public async Task UnlinkAgent_WithLinkedAgent_UnlinksSuccessfully()
     {
         // Arrange

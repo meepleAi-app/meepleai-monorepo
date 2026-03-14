@@ -1,6 +1,8 @@
 using Api.BoundedContexts.SharedGameCatalog.Application.Commands;
+using Api.BoundedContexts.SharedGameCatalog.Domain.Enums;
 using Api.Extensions;
 using MediatR;
+using Microsoft.AspNetCore.Mvc;
 
 namespace Api.Routing;
 
@@ -106,6 +108,37 @@ internal static class AdminCatalogIngestionEndpoints
         {
             operation.Summary = "Mark games as complete";
             operation.Description = "Transitions enriched games to Complete status (no PDF download needed).";
+            return operation;
+        });
+
+        // GET /api/v1/admin/catalog-ingestion/excel-export
+        // Export catalog as Excel file with optional filters
+        group.MapGet("/excel-export", async (
+            [FromQuery] string? status,
+            [FromQuery] bool? hasPdf,
+            HttpContext context,
+            IMediator mediator,
+            CancellationToken ct) =>
+        {
+            var (authorized, _, error) = context.RequireAdminSession();
+            if (!authorized) return error!;
+
+            var statusFilter = !string.IsNullOrEmpty(status)
+                ? status.Split(',').Select(s => Enum.Parse<GameDataStatus>(s, true)).ToList()
+                : null;
+
+            var bytes = await mediator.Send(
+                new ExportGamesToExcelCommand(statusFilter, hasPdf), ct).ConfigureAwait(false);
+
+            return Results.File(bytes,
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                "catalog-export.xlsx");
+        })
+        .WithName("ExcelExport")
+        .WithOpenApi(operation =>
+        {
+            operation.Summary = "Export catalog to Excel";
+            operation.Description = "Exports shared games catalog as .xlsx with optional filters by status and PDF availability. Max 10,000 rows.";
             return operation;
         });
 

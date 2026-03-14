@@ -71,8 +71,8 @@ export function FloatingActionBar({ className }: FloatingActionBarProps) {
         'bg-card/85 backdrop-blur-md backdrop-saturate-150',
         'border border-border/60',
         'shadow-lg shadow-black/10',
-        // Layout
-        'flex items-center gap-1 p-1.5',
+        // Layout — hidden on mobile (MobileBottomBar handles navigation)
+        'hidden md:flex items-center gap-1 p-1.5',
         // Fade-in animation
         'animate-in fade-in-0 slide-in-from-bottom-4 duration-300',
         // Auto-hide on scroll (mobile only)

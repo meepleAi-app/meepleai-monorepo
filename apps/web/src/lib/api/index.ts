@@ -51,6 +51,7 @@ import {
   createLiveSessionsClient,
   createSessionTrackingClient,
   createGameToolkitClient,
+  createToolboxClient,
   createSessionStatisticsClient,
   createGameNightsClient,
   createInvitationsClient,
@@ -94,6 +95,7 @@ import {
   type LiveSessionsClient,
   type SessionTrackingClient,
   type GameToolkitClient,
+  type ToolboxClient,
   type SessionStatisticsClient,
   type GameNightsClient,
   type InvitationsClient,
@@ -286,6 +288,9 @@ export interface ApiClient {
   /** Game Toolkit AI Generation */
   gameToolkit: GameToolkitClient;
 
+  /** Game Toolbox — per-game configurable containers (Epic #412) */
+  toolbox: ToolboxClient;
+
   /** Session Analytics Dashboard (P4) */
   sessionStatistics: SessionStatisticsClient;
 
@@ -403,6 +408,7 @@ export function createApiClient(config?: ApiClientConfig): ApiClient {
     liveSessions: createLiveSessionsClient({ httpClient }), // ISSUE-5041
     sessionTracking: createSessionTrackingClient({ httpClient }), // ISSUE-5041
     gameToolkit: createGameToolkitClient({ httpClient }), // AI Toolkit Generation
+    toolbox: createToolboxClient({ httpClient }), // Epic #412: Game Toolbox
     sessionStatistics: createSessionStatisticsClient({ httpClient }), // P4: Session Analytics
     gameNights: createGameNightsClient({ httpClient }), // Issue #33
     invitations: createInvitationsClient({ httpClient }), // Issue #132

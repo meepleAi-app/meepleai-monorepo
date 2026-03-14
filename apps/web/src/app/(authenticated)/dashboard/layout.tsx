@@ -1,9 +1,6 @@
 /**
  * Dashboard Layout
- * Issue #5041 — Dashboard / Home
- *
- * NavConfig is registered by DashboardNavConfig in page.tsx.
- * No MiniNav (dashboard is the global entry point).
+ * Carte in Mano — NavConfig removed, navigation handled by UnifiedShell card system.
  */
 
 import { type ReactNode } from 'react';

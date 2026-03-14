@@ -137,7 +137,7 @@ public class PdfDocumentTests
 
         // Assert
         Assert.Equal("it", document.Language.Value);
-        Assert.Equal("completed", document.ProcessingStatus);
+        Assert.Equal(PdfProcessingState.Ready, document.ProcessingState);
     }
 
     // ===== LinkToGame Tests (Issue #3372) =====
@@ -495,7 +495,6 @@ public class PdfDocumentTests
             fileSize: new FileSize(1024),
             uploadedByUserId: Guid.NewGuid(),
             uploadedAt: DateTime.UtcNow,
-            processingStatus: "pending",
             processedAt: null,
             pageCount: null,
             processingError: null,
@@ -516,7 +515,6 @@ public class PdfDocumentTests
             fileSize: new FileSize(1024),
             uploadedByUserId: Guid.NewGuid(),
             uploadedAt: DateTime.UtcNow,
-            processingStatus: "pending",
             processedAt: null,
             pageCount: null,
             processingError: null,

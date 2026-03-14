@@ -20,7 +20,6 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Services;
 internal sealed class RagPromptAssemblyService : IRagPromptAssemblyService
 {
     private readonly IEmbeddingService _embeddingService;
-    private readonly IQdrantService _qdrantService;
     private readonly ICrossEncoderReranker _reranker;
     private readonly ILlmService _llmService;
     private readonly ITextChunkSearchService _textSearch;
@@ -28,7 +27,6 @@ internal sealed class RagPromptAssemblyService : IRagPromptAssemblyService
     private readonly ILogger<RagPromptAssemblyService> _logger;
 
     // RAG search parameters
-    private const int DefaultTopK = 15; // Increased from 10 to feed reranker more candidates
     private const int RerankedTopK = 5;  // Final chunk count after reranking
     private const float DefaultMinScore = 0.55f;
 
@@ -63,7 +61,6 @@ internal sealed class RagPromptAssemblyService : IRagPromptAssemblyService
 
     public RagPromptAssemblyService(
         IEmbeddingService embeddingService,
-        IQdrantService qdrantService,
         ICrossEncoderReranker reranker,
         ILlmService llmService,
         ITextChunkSearchService textSearch,
@@ -71,7 +68,6 @@ internal sealed class RagPromptAssemblyService : IRagPromptAssemblyService
         ILogger<RagPromptAssemblyService> logger)
     {
         _embeddingService = embeddingService ?? throw new ArgumentNullException(nameof(embeddingService));
-        _qdrantService = qdrantService ?? throw new ArgumentNullException(nameof(qdrantService));
         _reranker = reranker ?? throw new ArgumentNullException(nameof(reranker));
         _llmService = llmService ?? throw new ArgumentNullException(nameof(llmService));
         _textSearch = textSearch ?? throw new ArgumentNullException(nameof(textSearch));
@@ -125,21 +121,14 @@ internal sealed class RagPromptAssemblyService : IRagPromptAssemblyService
 
         try
         {
-            // Issue #5588: Use pre-resolved expansion game IDs for score boosting
-            var expansionGameIdStrings = new HashSet<string>(
-                expansionGameIds.Select(id => id.ToString()),
-                StringComparer.OrdinalIgnoreCase);
-
             // Step 1: Query expansion (optional, graceful degradation)
             var queries = await ExpandQueryAsync(userQuestion, ct).ConfigureAwait(false);
 
             // Step 2: Generate embeddings for all queries
             var allChunks = new List<SearchResultItem>();
 
-            // Collect all game IDs to search: base game + expansions
-            var gameIdsToSearch = new List<string> { gameId.ToString() };
-            gameIdsToSearch.AddRange(expansionGameIdStrings);
-
+            // Vector search removed (Qdrant dependency removed).
+            // Embeddings are still generated for potential future use.
             foreach (var query in queries)
             {
                 var embeddingResult = await _embeddingService.GenerateEmbeddingAsync(query, ct).ConfigureAwait(false);
@@ -149,34 +138,6 @@ internal sealed class RagPromptAssemblyService : IRagPromptAssemblyService
                     {
                         _logger.LogWarning("Embedding generation failed for primary query: {Error}", embeddingResult.ErrorMessage);
                         return (string.Empty, citations);
-                    }
-                    continue; // Skip failed expansion queries
-                }
-
-                // Search across base game and all expansion game collections
-                foreach (var searchGameId in gameIdsToSearch)
-                {
-                    var isExpansionGame = expansionGameIdStrings.Contains(searchGameId);
-
-                    var searchResult = await _qdrantService.SearchAsync(
-                        searchGameId,
-                        embeddingResult.Embeddings[0],
-                        DefaultTopK,
-                        documentIds: null,
-                        ct).ConfigureAwait(false);
-
-                    if (searchResult.Success)
-                    {
-                        if (isExpansionGame)
-                        {
-                            // Issue #5588: Boost expansion document scores by 1.3x
-                            allChunks.AddRange(searchResult.Results.Select(r =>
-                                r with { Score = r.Score * ExpansionBoostFactor }));
-                        }
-                        else
-                        {
-                            allChunks.AddRange(searchResult.Results);
-                        }
                     }
                 }
             }

@@ -32,6 +32,7 @@ import { Button } from '@/components/ui/primitives/button';
 import { useAuth } from '@/hooks/useAuth';
 import { api } from '@/lib/api';
 import type { UserLibraryStats } from '@/lib/api/schemas/library.schemas';
+import { useCardHand } from '@/stores/use-card-hand';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -247,7 +248,17 @@ function ActivityTab() {
 
 export default function ProfilePage() {
   const { user } = useAuth();
+  const { drawCard } = useCardHand();
   const [activeTab, setActiveTab] = useState<Tab>('overview');
+
+  useEffect(() => {
+    drawCard({
+      id: 'section-profile',
+      entity: 'custom',
+      title: 'Profile',
+      href: '/profile',
+    });
+  }, [drawCard]);
 
   const displayName = user?.displayName ?? user?.email ?? 'Player';
   const initials = displayName

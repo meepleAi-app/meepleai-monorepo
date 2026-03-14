@@ -14,18 +14,14 @@ import type { SnapshotInfo } from '../extra-meeple-card/types';
 import type { ModelParameters } from '../meeple-card-features/AgentModelInfo';
 import type { AgentStats } from '../meeple-card-features/AgentStatsDisplay';
 import type { AgentStatus } from '../meeple-card-features/AgentStatusBadge';
-import type { VariantProps } from 'class-variance-authority';
-import type { LucideIcon } from 'lucide-react';
-
-import type { meepleCardVariants } from '../meeple-card-styles';
-import type { MeepleCardFlipData } from '../meeple-card-features/FlipCard';
-import type { ChatStatus } from '../meeple-card-features/ChatStatusBadge';
 import type { ChatAgent } from '../meeple-card-features/ChatAgentInfo';
-import type { ChatStats } from '../meeple-card-features/ChatStatsDisplay';
 import type { ChatGame } from '../meeple-card-features/ChatGameContext';
-import type { TagConfig, TagPresetKey } from '../meeple-card-features/tag-presets';
+import type { ChatStats } from '../meeple-card-features/ChatStatsDisplay';
+import type { ChatStatus } from '../meeple-card-features/ChatStatusBadge';
 import type { DocumentIndexingStatus } from '../meeple-card-features/DocumentStatusBadge';
 import type { DragData } from '../meeple-card-features/DragHandle';
+import type { MeepleCardFlipData } from '../meeple-card-features/FlipCard';
+import type { GameBackData, GameBackActions } from '../meeple-card-features/GameBackContent';
 import type {
   SessionStatus,
   SessionPlayerInfo,
@@ -35,9 +31,12 @@ import type {
   SessionActionHandlers,
   SessionBackData,
 } from '../meeple-card-features/session-types';
-import type { GameBackData, GameBackActions } from '../meeple-card-features/GameBackContent';
+import type { TagConfig, TagPresetKey } from '../meeple-card-features/tag-presets';
 import type { QuickAction } from '../meeple-card-quick-actions';
+import type { meepleCardVariants } from '../meeple-card-styles';
 import type { MeepleEntityType, MeepleCardVariant } from '../meeple-card-styles';
+import type { VariantProps } from 'class-variance-authority';
+import type { LucideIcon } from 'lucide-react';
 
 // ============================================================================
 // Core Interfaces (defined in meeple-card.tsx)

@@ -91,7 +91,6 @@ public class AddRagToSharedGameCommandHandlerTests
                     FileName: "rulebook.pdf",
                     FilePath: "/uploads/rulebook.pdf",
                     FileSizeBytes: 1024,
-                    ProcessingStatus: "Uploaded",
                     UploadedAt: DateTime.UtcNow,
                     ProcessedAt: null,
                     PageCount: null)));

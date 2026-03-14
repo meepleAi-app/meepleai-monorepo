@@ -5,11 +5,7 @@
  * @see Issue #4704
  */
 
-export { BreadcrumbTrail } from './breadcrumb-trail';
-export {
-  NavigationTrailProvider,
-  useNavigationTrailContext,
-} from './navigation-trail-provider';
+// BreadcrumbTrail + NavigationTrailProvider removed — replaced by useCardHand store
 export { Tabs, TabsList, TabsTrigger, TabsContent } from './tabs';
 export {
   DropdownMenu,

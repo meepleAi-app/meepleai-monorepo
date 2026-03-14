@@ -1,18 +1,12 @@
 /**
  * Authenticated Route Group Layout
- * Issue #5035 - Layout System v3: AppShell (Unified RSC)
- *
- * Uses AppShell (RSC) which reads sidebar cookie on the server
- * to prevent sidebar flash. Delegates to AppShellClient for
- * the full 3-tier navigation system.
- *
- * Pages register their nav config via useSetNavConfig() in layout.tsx or page.tsx.
+ * Carte in Mano — Uses UnifiedShell (card-hand navigation)
  */
 
 import { type ReactNode } from 'react';
 
-import { AppShell } from '@/components/layout/AppShell';
+import { UnifiedShell } from '@/components/layout/UnifiedShell';
 
 export default function AuthenticatedRouteLayout({ children }: { children: ReactNode }) {
-  return <AppShell>{children}</AppShell>;
+  return <UnifiedShell>{children}</UnifiedShell>;
 }

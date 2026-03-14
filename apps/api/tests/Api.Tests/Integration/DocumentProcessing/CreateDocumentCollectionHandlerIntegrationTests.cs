@@ -177,7 +177,6 @@ public sealed class CreateDocumentCollectionHandlerIntegrationTests : IAsyncLife
                 FilePath = $"/test/doc{i}.pdf",
                 FileSizeBytes = 5000,
                 PageCount = 10,
-                ProcessingStatus = "completed",
                 UploadedAt = DateTime.UtcNow,
                 UploadedByUserId = TestUserId
             };
@@ -245,7 +244,6 @@ public sealed class CreateDocumentCollectionHandlerIntegrationTests : IAsyncLife
                     FilePath = $"/d{i}.pdf",
                     FileSizeBytes = 5000,
                     PageCount = 10,
-                    ProcessingStatus = "completed",
                     UploadedAt = DateTime.UtcNow,
                     UploadedByUserId = TestUserId
                 };
@@ -310,7 +308,6 @@ public sealed class CreateDocumentCollectionHandlerIntegrationTests : IAsyncLife
             FilePath = "/other.pdf",
             FileSizeBytes = 5000,
             PageCount = 10,
-            ProcessingStatus = "completed",
             UploadedAt = DateTime.UtcNow,
             UploadedByUserId = TestUserId
         };
@@ -378,7 +375,6 @@ public sealed class CreateDocumentCollectionHandlerIntegrationTests : IAsyncLife
                 FilePath = $"/test/{pdfId}.pdf",
                 FileSizeBytes = 5000,
                 PageCount = 10,
-                ProcessingStatus = "completed",
                 UploadedAt = DateTime.UtcNow,
                 UploadedByUserId = TestUserId
             };

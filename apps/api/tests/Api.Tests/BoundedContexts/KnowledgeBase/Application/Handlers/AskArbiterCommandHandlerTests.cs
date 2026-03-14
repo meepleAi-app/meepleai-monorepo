@@ -14,7 +14,6 @@ using Microsoft.Extensions.Logging;
 using Moq;
 using System.Text.Json;
 using Xunit;
-using VectorSearchResult = Api.Services.SearchResult;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Handlers;
 
@@ -29,7 +28,6 @@ public sealed class AskArbiterCommandHandlerTests : IDisposable
 {
     private readonly Mock<IAgentRepository> _mockAgentRepository;
     private readonly Mock<ILlmService> _mockLlmService;
-    private readonly Mock<IQdrantService> _mockQdrantService;
     private readonly Mock<IEmbeddingService> _mockEmbeddingService;
     private readonly Mock<ILogger<AskArbiterCommandHandler>> _mockLogger;
     private readonly MeepleAiDbContext _dbContext;
@@ -43,7 +41,6 @@ public sealed class AskArbiterCommandHandlerTests : IDisposable
     {
         _mockAgentRepository = new Mock<IAgentRepository>();
         _mockLlmService = new Mock<ILlmService>();
-        _mockQdrantService = new Mock<IQdrantService>();
         _mockEmbeddingService = new Mock<IEmbeddingService>();
         _mockLogger = new Mock<ILogger<AskArbiterCommandHandler>>();
 
@@ -60,15 +57,6 @@ public sealed class AskArbiterCommandHandlerTests : IDisposable
             .Setup(s => s.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(EmbeddingResult.CreateSuccess(new List<float[]> { new float[384] }));
 
-        _mockQdrantService
-            .Setup(s => s.SearchAsync(
-                It.IsAny<string>(),
-                It.IsAny<float[]>(),
-                It.IsAny<int>(),
-                It.IsAny<IReadOnlyList<string>?>(),
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync(VectorSearchResult.CreateSuccess(new List<SearchResultItem>()));
-
         _mockLlmService
             .Setup(s => s.GenerateCompletionAsync(
                 It.IsAny<string>(),
@@ -80,7 +68,6 @@ public sealed class AskArbiterCommandHandlerTests : IDisposable
         _handler = new AskArbiterCommandHandler(
             _mockAgentRepository.Object,
             _mockLlmService.Object,
-            _mockQdrantService.Object,
             _mockEmbeddingService.Object,
             _dbContext,
             _mockLogger.Object);
@@ -380,25 +367,10 @@ public sealed class AskArbiterCommandHandlerTests : IDisposable
     }
 
     [Fact]
-    public async Task Handle_WithRelevantChunks_ReturnsVerdictWithCitations()
+    public async Task Handle_WithNoVectorSearch_ReturnsVerdictWithNoCitations()
     {
-        // Arrange
+        // Arrange — Qdrant removed; handler always returns empty search results
         SetupAgentWithConfig();
-
-        var chunks = new List<SearchResultItem>
-        {
-            new() { Score = 0.9f, Text = "Resources must be placed adjacent to existing pieces (Rule 4.2)", PdfId = "abc123", Page = 12, ChunkIndex = 0 },
-            new() { Score = 0.85f, Text = "Placement follows adjacency requirement", PdfId = "abc123", Page = 13, ChunkIndex = 1 }
-        };
-
-        _mockQdrantService
-            .Setup(s => s.SearchAsync(
-                It.IsAny<string>(),
-                It.IsAny<float[]>(),
-                It.IsAny<int>(),
-                It.IsAny<IReadOnlyList<string>?>(),
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync(VectorSearchResult.CreateSuccess(chunks));
 
         var command = CreateCommand();
 
@@ -408,10 +380,8 @@ public sealed class AskArbiterCommandHandlerTests : IDisposable
         // Assert
         result.Should().NotBeNull();
         result.Verdict.Should().NotBeNullOrEmpty();
-        result.Citations.Should().HaveCount(2);
-        result.Citations[0].Section.Should().Be("Pagina 12");
-        result.Citations[0].RelevanceScore.Should().BeApproximately(0.9, 0.01);
-        result.ExpansionWarning.Should().BeNull();
+        result.Citations.Should().BeEmpty();
+        result.ExpansionWarning.Should().NotBeNullOrEmpty();
     }
 
     [Fact]
@@ -419,20 +389,6 @@ public sealed class AskArbiterCommandHandlerTests : IDisposable
     {
         // Arrange
         SetupAgentWithConfig();
-
-        var chunks = new List<SearchResultItem>
-        {
-            new() { Score = 0.9f, Text = "Rule text", PdfId = "abc", Page = 1, ChunkIndex = 0 }
-        };
-
-        _mockQdrantService
-            .Setup(s => s.SearchAsync(
-                It.IsAny<string>(),
-                It.IsAny<float[]>(),
-                It.IsAny<int>(),
-                It.IsAny<IReadOnlyList<string>?>(),
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync(VectorSearchResult.CreateSuccess(chunks));
 
         _mockLlmService
             .Setup(s => s.GenerateCompletionAsync(
@@ -454,59 +410,19 @@ public sealed class AskArbiterCommandHandlerTests : IDisposable
     }
 
     [Fact]
-    public async Task Handle_HighConfidenceChunks_MarksConclusive()
+    public async Task Handle_NoVectorResults_MarksNotConclusive()
     {
-        // Arrange
+        // Arrange — Qdrant removed; handler always returns empty search results
         SetupAgentWithConfig();
-
-        var chunks = new List<SearchResultItem>
-        {
-            new() { Score = 0.95f, Text = "Rule text 1", PdfId = "abc", Page = 1, ChunkIndex = 0 },
-            new() { Score = 0.90f, Text = "Rule text 2", PdfId = "abc", Page = 2, ChunkIndex = 1 }
-        };
-
-        _mockQdrantService
-            .Setup(s => s.SearchAsync(
-                It.IsAny<string>(),
-                It.IsAny<float[]>(),
-                It.IsAny<int>(),
-                It.IsAny<IReadOnlyList<string>?>(),
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync(VectorSearchResult.CreateSuccess(chunks));
 
         var command = CreateCommand();
 
         // Act
         var result = await _handler.Handle(command, CancellationToken.None);
 
-        // Assert — avg(0.95, 0.90) * 1.0 = 0.925 >= 0.85
-        result.IsConclusive.Should().BeTrue();
-        result.Confidence.Should().BeGreaterThanOrEqualTo(0.85);
-    }
-
-    [Fact]
-    public async Task Handle_VectorSearchFails_ReturnsNoContextVerdict()
-    {
-        // Arrange
-        SetupAgentWithConfig();
-
-        _mockQdrantService
-            .Setup(s => s.SearchAsync(
-                It.IsAny<string>(),
-                It.IsAny<float[]>(),
-                It.IsAny<int>(),
-                It.IsAny<IReadOnlyList<string>?>(),
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync(VectorSearchResult.CreateFailure("Qdrant down"));
-
-        var command = CreateCommand();
-
-        // Act
-        var result = await _handler.Handle(command, CancellationToken.None);
-
-        // Assert
-        result.Confidence.Should().Be(0);
+        // Assert — no chunks → confidence 0, not conclusive
         result.IsConclusive.Should().BeFalse();
+        result.Confidence.Should().Be(0);
         result.ExpansionWarning.Should().NotBeNullOrEmpty();
     }
 

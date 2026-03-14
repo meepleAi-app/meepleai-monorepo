@@ -32,6 +32,7 @@ interface AgentBuilderFormProps {
   defaultValues?: Partial<CreateAgentDefinition>;
   onSubmit: (data: z.output<typeof createAgentDefinitionSchema>) => void;
   isLoading?: boolean;
+  disabled?: boolean;
 }
 
 const CHAT_LANGUAGES = [
@@ -58,7 +59,12 @@ const MODELS = [
   { value: 'deepseek-chat', label: 'DeepSeek Chat' },
 ];
 
-export function AgentBuilderForm({ defaultValues, onSubmit, isLoading }: AgentBuilderFormProps) {
+export function AgentBuilderForm({
+  defaultValues,
+  onSubmit,
+  isLoading,
+  disabled,
+}: AgentBuilderFormProps) {
   const form = useForm<z.input<typeof createAgentDefinitionSchema>>({
     resolver: zodResolver(createAgentDefinitionSchema),
     defaultValues: defaultValues || {
@@ -361,7 +367,7 @@ export function AgentBuilderForm({ defaultValues, onSubmit, isLoading }: AgentBu
 
         {/* Submit */}
         <div className="flex justify-end gap-4">
-          <Button type="submit" disabled={isLoading}>
+          <Button type="submit" disabled={isLoading || disabled}>
             {isLoading ? 'Saving...' : 'Save Agent'}
           </Button>
         </div>

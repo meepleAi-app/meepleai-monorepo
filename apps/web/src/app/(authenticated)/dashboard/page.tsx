@@ -8,7 +8,6 @@
 import { RequireRole } from '@/components/auth/RequireRole';
 
 import { GamingHubClient } from '../gaming-hub-client';
-import { DashboardNavConfig } from './NavConfig';
 
 import type { Metadata } from 'next';
 
@@ -28,7 +27,6 @@ export const dynamic = 'force-dynamic';
 export default function GamingHubDashboardPage() {
   return (
     <RequireRole allowedRoles={['User', 'Editor', 'Admin']}>
-      <DashboardNavConfig />
       <GamingHubClient />
     </RequireRole>
   );

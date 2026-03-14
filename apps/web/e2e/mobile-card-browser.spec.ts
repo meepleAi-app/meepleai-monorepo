@@ -69,7 +69,8 @@ test.describe('Mobile Card Browser - MobileBottomBar', () => {
     await page.waitForLoadState('networkidle');
 
     const bottomBar = page.locator('[data-testid="mobile-bottom-bar"]');
-    if (!(await bottomBar.isVisible().catch(() => false))) return;
+    const isVisible = await bottomBar.isVisible().catch(() => false);
+    if (!isVisible) test.skip(true, 'Bottom bar not visible in this environment');
 
     await bottomBar.getByText('Home', { exact: true }).click();
     await page.waitForURL(/\/hub/, { timeout: 5000 });
@@ -78,7 +79,8 @@ test.describe('Mobile Card Browser - MobileBottomBar', () => {
 
   test('Games tab navigates to /discover', async ({ page }) => {
     const bottomBar = page.locator('[data-testid="mobile-bottom-bar"]');
-    if (!(await bottomBar.isVisible().catch(() => false))) return;
+    const isVisible = await bottomBar.isVisible().catch(() => false);
+    if (!isVisible) test.skip(true, 'Bottom bar not visible in this environment');
 
     await bottomBar.getByText('Games', { exact: true }).click();
     await page.waitForURL(/\/discover/, { timeout: 5000 });
@@ -87,7 +89,8 @@ test.describe('Mobile Card Browser - MobileBottomBar', () => {
 
   test('AI tab navigates to /agents', async ({ page }) => {
     const bottomBar = page.locator('[data-testid="mobile-bottom-bar"]');
-    if (!(await bottomBar.isVisible().catch(() => false))) return;
+    const isVisible = await bottomBar.isVisible().catch(() => false);
+    if (!isVisible) test.skip(true, 'Bottom bar not visible in this environment');
 
     await bottomBar.getByText('AI', { exact: true }).click();
     await page.waitForURL(/\/agents/, { timeout: 5000 });
@@ -96,7 +99,8 @@ test.describe('Mobile Card Browser - MobileBottomBar', () => {
 
   test('Library tab navigates to /library', async ({ page }) => {
     const bottomBar = page.locator('[data-testid="mobile-bottom-bar"]');
-    if (!(await bottomBar.isVisible().catch(() => false))) return;
+    const isVisible = await bottomBar.isVisible().catch(() => false);
+    if (!isVisible) test.skip(true, 'Bottom bar not visible in this environment');
 
     await bottomBar.getByText('Library', { exact: true }).click();
     await page.waitForURL(/\/library/, { timeout: 5000 });
@@ -105,7 +109,8 @@ test.describe('Mobile Card Browser - MobileBottomBar', () => {
 
   test('Settings tab navigates to /profile', async ({ page }) => {
     const bottomBar = page.locator('[data-testid="mobile-bottom-bar"]');
-    if (!(await bottomBar.isVisible().catch(() => false))) return;
+    const isVisible = await bottomBar.isVisible().catch(() => false);
+    if (!isVisible) test.skip(true, 'Bottom bar not visible in this environment');
 
     await bottomBar.getByText('Settings', { exact: true }).click();
     await page.waitForURL(/\/profile|\/settings/, { timeout: 5000 });
@@ -143,20 +148,22 @@ test.describe('Mobile Card Browser - DomainHub', () => {
 
   test('Games tile links to /discover', async ({ page }) => {
     const gamesLink = page.locator('a[href="/discover"]').first();
-    if (await gamesLink.isVisible().catch(() => false)) {
-      await gamesLink.click();
-      await page.waitForURL(/\/discover/, { timeout: 5000 });
-      expect(page.url()).toContain('/discover');
-    }
+    const gamesVisible = await gamesLink.isVisible().catch(() => false);
+    if (!gamesVisible) test.skip(true, 'Games tile not visible in this environment');
+
+    await gamesLink.click();
+    await page.waitForURL(/\/discover/, { timeout: 5000 });
+    expect(page.url()).toContain('/discover');
   });
 
   test('Agents tile links to /agents', async ({ page }) => {
     const agentsLink = page.locator('a[href="/agents"]').first();
-    if (await agentsLink.isVisible().catch(() => false)) {
-      await agentsLink.click();
-      await page.waitForURL(/\/agents/, { timeout: 5000 });
-      expect(page.url()).toContain('/agents');
-    }
+    const agentsVisible = await agentsLink.isVisible().catch(() => false);
+    if (!agentsVisible) test.skip(true, 'Agents tile not visible in this environment');
+
+    await agentsLink.click();
+    await page.waitForURL(/\/agents/, { timeout: 5000 });
+    expect(page.url()).toContain('/agents');
   });
 });
 
@@ -171,10 +178,7 @@ test.describe('Mobile Card Browser - Card Grid', () => {
       .then(() => true)
       .catch(() => false);
 
-    if (!hasCards) {
-      // Skip silently if no cards loaded (CI without data)
-      return;
-    }
+    if (!hasCards) test.skip(true, 'No agent cards available');
 
     // Grid container should use 2-column layout on mobile
     const grid = page.locator('.grid-cols-2, .grid.grid-cols-2').first();
@@ -190,7 +194,7 @@ test.describe('Mobile Card Browser - Card Grid', () => {
       .then(() => true)
       .catch(() => false);
 
-    if (!hasCards) return;
+    if (!hasCards) test.skip(true, 'No agent cards available');
 
     const cards = page.locator('[data-testid="meeple-card"]');
     const count = await cards.count();
@@ -208,7 +212,7 @@ test.describe('Mobile Card Browser - Overlay', () => {
       .then(() => true)
       .catch(() => false);
 
-    if (!hasCards) return;
+    if (!hasCards) test.skip(true, 'No agent cards available');
 
     // Tap the first card
     const firstCard = page.locator('[data-testid="meeple-card"]').first();
@@ -238,7 +242,7 @@ test.describe('Mobile Card Browser - Overlay', () => {
       .then(() => true)
       .catch(() => false);
 
-    if (!hasCards) return;
+    if (!hasCards) test.skip(true, 'No agent cards available');
 
     const firstCard = page.locator('[data-testid="meeple-card"]').first();
     await firstCard.click();
@@ -260,7 +264,7 @@ test.describe('Mobile Card Browser - Overlay', () => {
       .then(() => true)
       .catch(() => false);
 
-    if (!hasCards) return;
+    if (!hasCards) test.skip(true, 'No agent cards available');
 
     const firstCard = page.locator('[data-testid="meeple-card"]').first();
     await firstCard.click();
@@ -283,7 +287,7 @@ test.describe('Mobile Card Browser - Overlay', () => {
       .then(() => true)
       .catch(() => false);
 
-    if (!hasCards) return;
+    if (!hasCards) test.skip(true, 'No agent cards available');
 
     const firstCard = page.locator('[data-testid="meeple-card"]').first();
     await firstCard.click();

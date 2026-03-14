@@ -11,8 +11,8 @@ export interface AuthUser {
   email: string;
   displayName?: string | null;
   role: string;
-  onboardingCompleted?: boolean;   // Issue #323
-  onboardingSkipped?: boolean;     // Issue #323
+  onboardingCompleted?: boolean; // Issue #323
+  onboardingSkipped?: boolean; // Issue #323
 }
 
 /**

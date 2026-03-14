@@ -197,7 +197,12 @@ describe('Stats Row', () => {
   });
 
   it('renders totalPlayTimeMinutes=0 as "0m"', () => {
-    renderComponent({ totalPlayTimeMinutes: 0, timesPlayed: undefined, winRate: undefined, lastPlayedLabel: undefined });
+    renderComponent({
+      totalPlayTimeMinutes: 0,
+      timesPlayed: undefined,
+      winRate: undefined,
+      lastPlayedLabel: undefined,
+    });
     expect(screen.getByTestId('stats-row')).toBeInTheDocument();
     expect(screen.getByText('0m')).toBeInTheDocument();
   });
@@ -208,7 +213,12 @@ describe('Stats Row', () => {
   });
 
   it('renders stats row with only lastPlayedLabel (no numeric stats)', () => {
-    renderComponent({ timesPlayed: undefined, winRate: undefined, totalPlayTimeMinutes: undefined, lastPlayedLabel: 'Ieri' });
+    renderComponent({
+      timesPlayed: undefined,
+      winRate: undefined,
+      totalPlayTimeMinutes: undefined,
+      lastPlayedLabel: 'Ieri',
+    });
     expect(screen.getByTestId('stats-row')).toBeInTheDocument();
     expect(screen.getByText('Ieri')).toBeInTheDocument();
   });
@@ -224,7 +234,12 @@ describe('Stats Row', () => {
   });
 
   it('shows separators between multiple stats', () => {
-    renderComponent({ timesPlayed: 5, winRate: 60, totalPlayTimeMinutes: undefined, lastPlayedLabel: undefined });
+    renderComponent({
+      timesPlayed: 5,
+      winRate: 60,
+      totalPlayTimeMinutes: undefined,
+      lastPlayedLabel: undefined,
+    });
     const statsRow = screen.getByTestId('stats-row');
     expect(statsRow.querySelectorAll('[data-separator]')).toHaveLength(1);
   });
@@ -240,28 +255,36 @@ describe('KB Summary', () => {
   });
 
   it('renders condensed KB summary when hasKb is true', () => {
-    renderComponent({ hasKb: true, kbCardCount: 5, kbDocuments: [
-      { id: '1', fileName: 'rules.pdf', status: 'Ready' },
-      { id: '2', fileName: 'faq.pdf', status: 'Ready' },
-      { id: '3', fileName: 'errata.pdf', status: 'Ready' },
-    ]});
+    renderComponent({
+      hasKb: true,
+      kbCardCount: 5,
+      kbDocuments: [
+        { id: '1', fileName: 'rules.pdf', status: 'Ready' },
+        { id: '2', fileName: 'faq.pdf', status: 'Ready' },
+        { id: '3', fileName: 'errata.pdf', status: 'Ready' },
+      ],
+    });
     expect(screen.getByTestId('kb-summary')).toBeInTheDocument();
     expect(screen.getByText(/3 documenti/)).toBeInTheDocument();
   });
 
   it('shows green status when all KB docs are ready', () => {
-    renderComponent({ hasKb: true, kbDocuments: [
-      { id: '1', fileName: 'rules.pdf', status: 'Ready' },
-    ]});
+    renderComponent({
+      hasKb: true,
+      kbDocuments: [{ id: '1', fileName: 'rules.pdf', status: 'Ready' }],
+    });
     const badge = screen.getByTestId('kb-status-badge');
     expect(badge).toHaveTextContent('Pronta');
   });
 
   it('shows amber status when some KB docs are processing', () => {
-    renderComponent({ hasKb: true, kbDocuments: [
-      { id: '1', fileName: 'rules.pdf', status: 'Ready' },
-      { id: '2', fileName: 'faq.pdf', status: 'Processing' },
-    ]});
+    renderComponent({
+      hasKb: true,
+      kbDocuments: [
+        { id: '1', fileName: 'rules.pdf', status: 'Ready' },
+        { id: '2', fileName: 'faq.pdf', status: 'Processing' },
+      ],
+    });
     const badge = screen.getByTestId('kb-status-badge');
     expect(badge).toHaveTextContent('In elaborazione');
   });
@@ -358,7 +381,10 @@ describe('Navigation Links', () => {
 
   it('renders session link when handler and count provided', () => {
     const onViewSessions = vi.fn();
-    renderComponent({ sessionCount: 7, entityLinkCount: 0 }, { onViewSessions, onViewLinks: undefined });
+    renderComponent(
+      { sessionCount: 7, entityLinkCount: 0 },
+      { onViewSessions, onViewLinks: undefined }
+    );
     expect(screen.getByText('Sessioni')).toBeInTheDocument();
     expect(screen.getByText('7')).toBeInTheDocument();
   });

@@ -135,23 +135,23 @@ function StatsRow({
     items.push({ value: `${winRate}%`, label: 'Vittorie' });
   }
   if (totalPlayTimeMinutes != null) {
-    const formatted = totalPlayTimeMinutes < 60
-      ? `${totalPlayTimeMinutes}m`
-      : `${Math.round(totalPlayTimeMinutes / 60)}h`;
+    const formatted =
+      totalPlayTimeMinutes < 60
+        ? `${totalPlayTimeMinutes}m`
+        : `${Math.round(totalPlayTimeMinutes / 60)}h`;
     items.push({ value: formatted, label: 'Tempo' });
   }
 
   if (items.length === 0 && !lastPlayedLabel) return null;
 
   return (
-    <div
-      className="flex items-center justify-center gap-3 py-1.5"
-      data-testid="stats-row"
-    >
+    <div className="flex items-center justify-center gap-3 py-1.5" data-testid="stats-row">
       {items.map((item, i) => (
         <React.Fragment key={item.label}>
           {i > 0 && (
-            <span className="text-muted-foreground/50 text-xs" data-separator aria-hidden="true">|</span>
+            <span className="text-muted-foreground/50 text-xs" data-separator aria-hidden="true">
+              |
+            </span>
           )}
           <StatItem value={item.value} label={item.label} />
         </React.Fragment>
@@ -159,7 +159,9 @@ function StatsRow({
       {lastPlayedLabel && (
         <>
           {items.length > 0 && (
-            <span className="text-muted-foreground/50 text-xs" data-separator aria-hidden="true">|</span>
+            <span className="text-muted-foreground/50 text-xs" data-separator aria-hidden="true">
+              |
+            </span>
           )}
           <span className="text-xs text-muted-foreground italic">{lastPlayedLabel}</span>
         </>
@@ -168,10 +170,7 @@ function StatsRow({
   );
 }
 
-function KbSummary({
-  hasKb,
-  kbDocuments,
-}: Pick<GameBackData, 'hasKb' | 'kbDocuments'>) {
+function KbSummary({ hasKb, kbDocuments }: Pick<GameBackData, 'hasKb' | 'kbDocuments'>) {
   if (!hasKb || !kbDocuments?.length) return null;
 
   const allReady = kbDocuments.every(d => d.status === 'Ready');
@@ -188,9 +187,7 @@ function KbSummary({
       <span
         className={cn(
           'text-[10px] font-semibold px-1.5 py-0.5 rounded',
-          allReady
-            ? 'bg-emerald-500/10 text-emerald-600'
-            : 'bg-amber-500/10 text-amber-600'
+          allReady ? 'bg-emerald-500/10 text-emerald-600' : 'bg-amber-500/10 text-amber-600'
         )}
         data-testid="kb-status-badge"
       >
@@ -200,10 +197,7 @@ function KbSummary({
   );
 }
 
-function TagPills({
-  categories,
-  mechanics,
-}: Pick<GameBackData, 'categories' | 'mechanics'>) {
+function TagPills({ categories, mechanics }: Pick<GameBackData, 'categories' | 'mechanics'>) {
   const allTags = [...(categories ?? []), ...(mechanics ?? [])];
   if (allTags.length === 0) return null;
 
@@ -337,9 +331,7 @@ export const GameBackContent = React.memo(function GameBackContent({
           {title || 'Statistiche'}
         </h2>
         {subtitle && (
-          <p className="relative z-[1] text-sm text-white/70 mt-0.5 line-clamp-1">
-            {subtitle}
-          </p>
+          <p className="relative z-[1] text-sm text-white/70 mt-0.5 line-clamp-1">{subtitle}</p>
         )}
       </div>
 

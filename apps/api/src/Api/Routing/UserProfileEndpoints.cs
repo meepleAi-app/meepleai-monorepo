@@ -108,7 +108,9 @@ internal static class UserProfileEndpoints
             {
                 UserId = session!.User!.Id,
                 DisplayName = payload.DisplayName,
-                Email = payload.Email
+                Email = payload.Email,
+                AvatarUrl = payload.AvatarUrl,
+                Bio = payload.Bio,
             };
 
             await mediator.Send(command, ct).ConfigureAwait(false);
@@ -621,7 +623,7 @@ internal record SaveUserInterestsPayload(List<string> Interests);
 /// <summary>
 /// Payload for updating user profile.
 /// </summary>
-internal record UpdateProfilePayload(string? DisplayName, string? Email);
+internal record UpdateProfilePayload(string? DisplayName, string? Email, string? AvatarUrl, string? Bio);
 
 /// <summary>
 /// Payload for changing password.

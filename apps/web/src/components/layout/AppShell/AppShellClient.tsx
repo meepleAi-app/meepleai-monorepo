@@ -14,6 +14,7 @@
 import { type ReactNode, Suspense } from 'react';
 
 import { ErrorBoundary } from '@/components/errors/ErrorBoundary';
+import { OnboardingReminderBanner } from '@/components/onboarding';
 import { ImpersonationBanner } from '@/components/ui/feedback/impersonation-banner';
 import { CardStackPanel } from '@/components/ui/navigation/card-stack-panel';
 import { NavigationProvider } from '@/context/NavigationContext';
@@ -22,8 +23,6 @@ import { useBottomPadding } from '@/hooks/useBottomPadding';
 import { useSidebarState } from '@/hooks/useSidebarState';
 import { cn } from '@/lib/utils';
 import { useImpersonationStore } from '@/store/impersonation';
-
-import { OnboardingReminderBanner } from '@/components/onboarding';
 
 import { AdaptiveBottomBar } from '../AdaptiveBottomBar';
 import { FloatingActionBar } from '../FloatingActionBar';

@@ -101,7 +101,12 @@ public class UserRepository : RepositoryBase, IUserRepository
             // ISSUE-3672: Email Verification
             EmailVerified = entity.EmailVerified,
             EmailVerifiedAt = entity.EmailVerifiedAt,
-            VerificationGracePeriodEndsAt = entity.VerificationGracePeriodEndsAt
+            VerificationGracePeriodEndsAt = entity.VerificationGracePeriodEndsAt,
+            // Profile & Onboarding
+            AvatarUrl = entity.AvatarUrl,
+            Bio = entity.Bio,
+            OnboardingWizardSeenAt = entity.OnboardingWizardSeenAt,
+            OnboardingDismissedAt = entity.OnboardingDismissedAt
         };
 
         // Map backup codes
@@ -171,6 +176,12 @@ public class UserRepository : RepositoryBase, IUserRepository
         existingUser.EmailVerified = entity.EmailVerified;
         existingUser.EmailVerifiedAt = entity.EmailVerifiedAt;
         existingUser.VerificationGracePeriodEndsAt = entity.VerificationGracePeriodEndsAt;
+
+        // Profile & Onboarding
+        existingUser.AvatarUrl = entity.AvatarUrl;
+        existingUser.Bio = entity.Bio;
+        existingUser.OnboardingWizardSeenAt = entity.OnboardingWizardSeenAt;
+        existingUser.OnboardingDismissedAt = entity.OnboardingDismissedAt;
 
         // Issue #323: Update onboarding state
         existingUser.OnboardingCompleted = entity.OnboardingCompleted;
@@ -315,6 +326,13 @@ public class UserRepository : RepositoryBase, IUserRepository
             entity.EmailVerified,
             entity.EmailVerifiedAt,
             entity.VerificationGracePeriodEndsAt);
+
+        // Profile & Onboarding: Restore state
+        user.RestoreOnboardingState(
+            entity.AvatarUrl,
+            entity.Bio,
+            entity.OnboardingWizardSeenAt,
+            entity.OnboardingDismissedAt);
 
         // Issue #323: Restore onboarding state
         user.RestoreOnboardingState(

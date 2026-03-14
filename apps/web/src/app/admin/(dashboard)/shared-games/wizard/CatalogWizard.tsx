@@ -439,7 +439,8 @@ export function CatalogWizard() {
                 Test RAG Agent
               </CardTitle>
               <CardDescription>
-                Ask questions about the uploaded documents to verify the RAG pipeline works correctly.
+                Ask questions about the uploaded documents to verify the RAG pipeline works
+                correctly.
               </CardDescription>
             </CardHeader>
             <CardContent>

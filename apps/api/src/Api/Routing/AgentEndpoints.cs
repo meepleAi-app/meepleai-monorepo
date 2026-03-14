@@ -808,7 +808,11 @@ internal static class AgentEndpoints
                 AgentName: req.AgentName,
                 StrategyName: req.StrategyName,
                 StrategyParameters: req.StrategyParameters
-            );
+            )
+            {
+                SharedGameId = req.SharedGameId,
+                DocumentIds = req.DocumentIds
+            };
 
             var result = await mediator.Send(command, ct).ConfigureAwait(false);
 
@@ -1087,7 +1091,9 @@ internal record CreateAgentWithSetupRequest(
     string AgentType,
     string? AgentName = null,
     string? StrategyName = null,
-    IDictionary<string, object>? StrategyParameters = null
+    IDictionary<string, object>? StrategyParameters = null,
+    Guid? SharedGameId = null,
+    List<Guid>? DocumentIds = null
 );
 
 /// <summary>

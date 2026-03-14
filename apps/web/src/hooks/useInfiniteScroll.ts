@@ -23,18 +23,23 @@ export function useInfiniteScroll({
   rootMargin = '200px',
 }: UseInfiniteScrollOptions) {
   const sentinelRef = useRef<HTMLDivElement>(null);
+  const onLoadMoreRef = useRef(onLoadMore);
+
+  useEffect(() => {
+    onLoadMoreRef.current = onLoadMore;
+  });
 
   useEffect(() => {
     if (!hasMore || isLoading) return;
     const el = sentinelRef.current;
     if (!el) return;
     const observer = new IntersectionObserver(
-      ([entry]) => { if (entry.isIntersecting) onLoadMore(); },
+      ([entry]) => { if (entry.isIntersecting) onLoadMoreRef.current(); },
       { rootMargin }
     );
     observer.observe(el);
     return () => observer.disconnect();
-  }, [hasMore, isLoading, onLoadMore, rootMargin]);
+  }, [hasMore, isLoading, rootMargin]);
 
   return sentinelRef;
 }

@@ -48,7 +48,7 @@ export function MeepleCardBrowser() {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && isOpen) {
         close();
-        history.back();
+        if (history.state?.cardBrowser) history.back();
       }
     };
     window.addEventListener('keydown', handleKeyDown);
@@ -101,26 +101,27 @@ export function MeepleCardBrowser() {
     <AnimatePresence>
       {isOpen && (
         <motion.div
-          key="card-browser-overlay"
-          className="fixed inset-0 z-50 flex flex-col bg-background/95 backdrop-blur-sm"
-          initial={{
-            opacity: 0,
-            scale: 0.85,
-            ...(origin ? { transformOrigin: `${origin.x}px ${origin.y}px` } : {}),
-          }}
-          animate={{ opacity: 1, scale: 1 }}
-          exit={{ opacity: 0, y: '100%' }}
-          transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
+          key="card-browser-drag"
+          className="fixed inset-0 z-50"
           style={{ opacity: overlayOpacity, scale: overlayScale }}
           drag="y"
           dragConstraints={{ top: 0, bottom: 0 }}
           dragElastic={0.4}
           onDrag={(_, info) => dragY.set(Math.max(0, info.offset.y))}
           onDragEnd={handleDragEnd}
-          role="dialog"
-          aria-modal="true"
-          aria-label="Card browser"
         >
+          <motion.div
+            key="card-browser-overlay"
+            className="flex flex-col h-full bg-background/95 backdrop-blur-sm"
+            initial={{ opacity: 0, scale: 0.85 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, y: '100%' }}
+            transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
+            style={origin ? { transformOrigin: `${origin.x}px ${origin.y}px` } : undefined}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Card browser"
+          >
           {/* Header bar */}
           <div className="flex items-center justify-between px-4 py-2 border-b border-border/30">
             <button
@@ -173,6 +174,7 @@ export function MeepleCardBrowser() {
             currentCardId={currentCard?.id ?? ''}
             onClose={() => setShowDeckStack(false)}
           />
+          </motion.div>
         </motion.div>
       )}
     </AnimatePresence>

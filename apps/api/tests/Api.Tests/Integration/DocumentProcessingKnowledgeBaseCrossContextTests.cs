@@ -223,7 +223,7 @@ public sealed class DocumentProcessingKnowledgeBaseCrossContextTests : IAsyncLif
         loadedDocument.Should().NotBeNull();
         loadedDocument!.GameId.Should().Be(game.Id);
         loadedDocument.UploadedByUserId.Should().Be(user.Id);
-        loadedDocument.ProcessingStatus.Should().Be("pending");
+        loadedDocument.ProcessingState.ToString().Should().Be("Pending");
         loadedDocument.FileName.Value.Should().Be("gloomhaven-rules.pdf");
     }
 
@@ -287,7 +287,7 @@ public sealed class DocumentProcessingKnowledgeBaseCrossContextTests : IAsyncLif
         // Assert
         var loadedDocument = await pdfRepository.GetByIdAsync(pdfDocument.Id, TestCancellationToken);
         loadedDocument.Should().NotBeNull();
-        loadedDocument!.ProcessingStatus.Should().Be("completed");
+        loadedDocument!.ProcessingState.ToString().Should().Be("Ready");
         loadedDocument.PageCount.Should().Be(32);
         loadedDocument.ProcessedAt.Should().NotBeNull();
 

@@ -28,7 +28,7 @@ public class PdfDocumentStateTransitionTests
 
         // Assert
         Assert.Equal(PdfProcessingState.Uploading, document.ProcessingState);
-        Assert.Equal("processing", document.ProcessingStatus);
+
     }
 
     [Fact]
@@ -42,7 +42,7 @@ public class PdfDocumentStateTransitionTests
 
         // Assert
         Assert.Equal(PdfProcessingState.Failed, document.ProcessingState);
-        Assert.Equal("failed", document.ProcessingStatus);
+
     }
 
     [Fact]
@@ -57,7 +57,7 @@ public class PdfDocumentStateTransitionTests
 
         // Assert
         Assert.Equal(PdfProcessingState.Extracting, document.ProcessingState);
-        Assert.Equal("processing", document.ProcessingStatus);
+
     }
 
     [Fact]
@@ -172,7 +172,7 @@ public class PdfDocumentStateTransitionTests
 
         // Assert
         Assert.Equal(PdfProcessingState.Ready, document.ProcessingState);
-        Assert.Equal("completed", document.ProcessingStatus);
+
     }
 
     [Fact]
@@ -390,7 +390,7 @@ public class PdfDocumentStateTransitionTests
 
         // Assert
         Assert.Equal(PdfProcessingState.Ready, document.ProcessingState);
-        Assert.Equal("completed", document.ProcessingStatus);
+
     }
 
     [Fact]

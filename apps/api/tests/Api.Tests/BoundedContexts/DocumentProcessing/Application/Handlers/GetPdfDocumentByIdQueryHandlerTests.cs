@@ -57,7 +57,7 @@ public class GetPdfDocumentByIdQueryHandlerTests
         result.FileName.Should().Be("catan-rules.pdf");
         result.FilePath.Should().Be("/uploads/catan-rules.pdf");
         result.FileSizeBytes.Should().Be(2 * 1024 * 1024);
-        result.ProcessingStatus.Should().Be("completed");
+        result.ProcessingState.Should().Be("Ready");
         result.PageCount.Should().Be(24);
         result.ProcessedAt.Should().NotBeNull();
 
@@ -88,13 +88,13 @@ public class GetPdfDocumentByIdQueryHandlerTests
         // Assert
         result.Should().NotBeNull();
         result.Id.Should().Be(documentId);
-        result.ProcessingStatus.Should().Be("pending");
+        result.ProcessingState.Should().Be("Pending");
         result.PageCount.Should().BeNull();
         result.ProcessedAt.Should().BeNull();
     }
 
     [Fact]
-    public async Task Handle_ProcessingDocument_ReturnsDtoWithProcessingStatus()
+    public async Task Handle_ProcessingDocument_ReturnsDtoWithProcessingState()
     {
         // Arrange
         var documentId = Guid.NewGuid();
@@ -115,7 +115,7 @@ public class GetPdfDocumentByIdQueryHandlerTests
 
         // Assert
         result.Should().NotBeNull();
-        result.ProcessingStatus.Should().Be("processing");
+        result.ProcessingState.Should().Be("Uploading");
         result.PageCount.Should().BeNull();
         result.ProcessedAt.Should().BeNull();
     }
@@ -142,7 +142,7 @@ public class GetPdfDocumentByIdQueryHandlerTests
 
         // Assert
         result.Should().NotBeNull();
-        result.ProcessingStatus.Should().Be("failed");
+        result.ProcessingState.Should().Be("Failed");
         result.PageCount.Should().BeNull();
     }
 

@@ -30,7 +30,6 @@ internal class GetPdfDocumentsByGameQueryHandler : IQueryHandler<GetPdfDocuments
             FileName: doc.FileName.Value,
             FilePath: doc.FilePath,
             FileSizeBytes: doc.FileSize.Bytes,
-            ProcessingStatus: doc.ProcessingStatus,
             UploadedAt: doc.UploadedAt,
             ProcessedAt: doc.ProcessedAt,
             PageCount: doc.PageCount,

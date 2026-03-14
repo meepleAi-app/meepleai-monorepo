@@ -484,7 +484,7 @@ public class IndexPdfCommandHandlerTests
         result.Success.Should().BeTrue();
         var updatedPdf = await context.PdfDocuments.FindAsync(pdfId);
         updatedPdf!.ProcessingState.Should().Be("Ready");
-        updatedPdf.ProcessingStatus.Should().Be("completed");
+        updatedPdf.ProcessingState.Should().Be("Ready");
     }
 
     [Fact]
@@ -555,7 +555,7 @@ public class IndexPdfCommandHandlerTests
         result.ErrorCode.Should().Be(PdfIndexingErrorCode.UnexpectedError);
         var updatedPdf = await context.PdfDocuments.FindAsync(pdfId);
         updatedPdf!.ProcessingState.Should().Be("Failed");
-        updatedPdf.ProcessingStatus.Should().Be("failed");
+        updatedPdf.ProcessingState.Should().Be("Failed");
         updatedPdf.ProcessingError.Should().Contain("Unexpected chunking crash");
     }
 
@@ -571,7 +571,6 @@ public class IndexPdfCommandHandlerTests
             FileSizeBytes = 1024,
             UploadedByUserId = Guid.NewGuid(),
             UploadedAt = DateTime.UtcNow,
-            ProcessingStatus = status,
             ProcessingState = status == "completed" ? "Ready" : "Pending",
             ExtractedText = extractedText,
             Game = new GameEntity

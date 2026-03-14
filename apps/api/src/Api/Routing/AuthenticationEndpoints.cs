@@ -109,7 +109,8 @@ internal static class AuthenticationEndpoints
             logger.LogInformation("User {UserId} registered successfully with role {Role}", result.User.Id, result.User.Role);
 
             return Results.Json(new { user = result.User, expiresAt = result.ExpiresAt });
-        }).RequireRateLimiting("AuthRegister");
+        }).RequireRateLimiting("AuthRegister")
+          .RequirePublicRegistration();
     }
 
     private static void MapLoginEndpoint(RouteGroupBuilder group)

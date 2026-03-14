@@ -59,6 +59,7 @@ internal sealed class InvitationTokenRepository : IInvitationTokenRepository
         existingEntity.Status = entity.Status.ToString();
         existingEntity.AcceptedAt = entity.AcceptedAt;
         existingEntity.AcceptedByUserId = entity.AcceptedByUserId;
+        existingEntity.RevokedAt = entity.RevokedAt;
     }
 
     public async Task DeleteAsync(InvitationToken entity, CancellationToken cancellationToken = default)
@@ -152,7 +153,8 @@ internal sealed class InvitationTokenRepository : IInvitationTokenRepository
             expiresAt: entity.ExpiresAt,
             acceptedAt: entity.AcceptedAt,
             acceptedByUserId: entity.AcceptedByUserId,
-            createdAt: entity.CreatedAt);
+            createdAt: entity.CreatedAt,
+            revokedAt: entity.RevokedAt);
 
         return token;
     }
@@ -173,7 +175,8 @@ internal sealed class InvitationTokenRepository : IInvitationTokenRepository
             ExpiresAt = domain.ExpiresAt,
             AcceptedAt = domain.AcceptedAt,
             AcceptedByUserId = domain.AcceptedByUserId,
-            CreatedAt = domain.CreatedAt
+            CreatedAt = domain.CreatedAt,
+            RevokedAt = domain.RevokedAt
         };
     }
 }

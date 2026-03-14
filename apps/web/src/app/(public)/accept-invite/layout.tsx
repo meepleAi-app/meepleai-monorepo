@@ -1,22 +1,14 @@
-/**
- * Accept Invite Layout
- * Issue #132 - Invitation Acceptance & Onboarding Wizard
- *
- * Minimal layout for invitation acceptance flow.
- * Glassmorphic design with amber accent per project design tokens.
- */
+import type { Metadata } from 'next';
 
-import { ReactNode } from 'react';
+export const metadata: Metadata = {
+  title: 'Accept Invitation — MeepleAI',
+  description: 'Set your password and join MeepleAI',
+};
 
-export default function AcceptInviteLayout({ children }: { children: ReactNode }) {
+export default function AcceptInviteLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="min-h-screen bg-gradient-to-b from-amber-50/50 to-white">
-      <header className="border-b bg-white/70 backdrop-blur-md px-6 py-4">
-        <div className="mx-auto max-w-3xl">
-          <span className="font-quicksand text-xl font-bold text-amber-900">MeepleAI</span>
-        </div>
-      </header>
-      <main className="mx-auto max-w-3xl px-6 py-8">{children}</main>
+    <div className="min-h-screen bg-gradient-to-b from-amber-50/50 to-white dark:from-slate-950 dark:to-slate-900">
+      <main className="container mx-auto px-4 py-8">{children}</main>
     </div>
   );
 }

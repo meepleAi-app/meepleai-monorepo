@@ -20,6 +20,7 @@ internal class InvitationTokenEntityConfiguration : IEntityTypeConfiguration<Inv
         builder.Property(e => e.CreatedAt).IsRequired();
         builder.Property(e => e.AcceptedAt);
         builder.Property(e => e.AcceptedByUserId);
+        builder.Property(e => e.RevokedAt);
 
         // Indexes
         builder.HasIndex(e => e.TokenHash).IsUnique();

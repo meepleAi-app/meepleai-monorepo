@@ -23,6 +23,7 @@ import {
   MeepleCardCompact,
   MeepleCardFeatured,
   MeepleCardHero,
+  MeepleCardExpanded,
 } from './variants';
 
 import type { MeepleCardProps } from './types';
@@ -82,6 +83,9 @@ export const MeepleCard = React.memo(function MeepleCard(props: MeepleCardProps)
       break;
     case 'hero':
       cardContent = <MeepleCardHero {...props} />;
+      break;
+    case 'expanded':
+      cardContent = <MeepleCardExpanded {...props} />;
       break;
     case 'grid':
     default:

@@ -14,8 +14,8 @@ using Pgvector;
 namespace Api.Infrastructure.Migrations
 {
     [DbContext(typeof(MeepleAiDbContext))]
-    [Migration("20260313102856_AddSessionParticipantRegisteredDisplayName")]
-    partial class AddSessionParticipantRegisteredDisplayName
+    [Migration("20260314065353_BetaV0InitialCreate")]
+    partial class BetaV0InitialCreate
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -6297,8 +6297,7 @@ namespace Api.Infrastructure.Migrations
                         .HasColumnType("integer");
 
                     b.Property<string>("AtomicRules")
-                        .HasMaxLength(8192)
-                        .HasColumnType("character varying(8192)");
+                        .HasColumnType("text");
 
                     b.Property<Guid?>("BaseDocumentId")
                         .HasColumnType("uuid")
@@ -6367,12 +6366,10 @@ namespace Api.Infrastructure.Migrations
                         .HasColumnName("error_category");
 
                     b.Property<string>("ExtractedDiagrams")
-                        .HasMaxLength(8192)
-                        .HasColumnType("character varying(8192)");
+                        .HasColumnType("text");
 
                     b.Property<string>("ExtractedTables")
-                        .HasMaxLength(8192)
-                        .HasColumnType("character varying(8192)");
+                        .HasColumnType("text");
 
                     b.Property<string>("ExtractedText")
                         .HasColumnType("text");
@@ -9674,6 +9671,14 @@ namespace Api.Infrastructure.Migrations
                         .HasMaxLength(64)
                         .HasColumnType("uuid");
 
+                    b.Property<string>("AvatarUrl")
+                        .HasMaxLength(2048)
+                        .HasColumnType("character varying(2048)");
+
+                    b.Property<string>("Bio")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -9744,6 +9749,21 @@ namespace Api.Infrastructure.Migrations
                         .HasDefaultValue(1);
 
                     b.Property<DateTime?>("LockedUntil")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("OnboardingCompleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTime?>("OnboardingCompletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("OnboardingDismissedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("OnboardingSkipped")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTime?>("OnboardingWizardSeenAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("PasswordHash")
@@ -10131,7 +10151,7 @@ namespace Api.Infrastructure.Migrations
 
                     b.HasIndex("UserId")
                         .HasDatabaseName("IX_UserCollectionEntries_UserId_Favorites")
-                        .HasFilter("[IsFavorite] = 1");
+                        .HasFilter("\"IsFavorite\" = true");
 
                     b.HasIndex("EntityType", "EntityId")
                         .HasDatabaseName("IX_UserCollectionEntries_EntityType_EntityId");
@@ -10142,7 +10162,7 @@ namespace Api.Infrastructure.Migrations
 
                     b.ToTable("user_collection_entries", null, t =>
                         {
-                            t.HasCheckConstraint("CK_UserCollectionEntries_EntityType", "[EntityType] IN ('Player', 'Event', 'Session', 'Agent', 'Document', 'ChatSession')");
+                            t.HasCheckConstraint("CK_UserCollectionEntries_EntityType", "\"EntityType\" IN ('Player', 'Event', 'Session', 'Agent', 'Document', 'ChatSession')");
                         });
                 });
 

@@ -407,6 +407,7 @@ export default function QuickAskPage() {
     language: voiceLang,
     preferredVoiceURI: voiceURI ?? undefined,
     rate: rate,
+    autoDetectLanguage: true,
   });
 
   // ------------------------------------------------------------------

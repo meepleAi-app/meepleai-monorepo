@@ -549,6 +549,7 @@ app.MapHealthChecks("/health/config", new Microsoft.AspNetCore.Diagnostics.Healt
 var v1Api = app.MapGroup("/api/v1");
 
 v1Api.MapAuthEndpoints();
+v1Api.MapAccessRequestEndpoints(); // Invite-only registration: access requests + registration mode
 v1Api.MapPermissionEndpoints(); // Epic #4068: Permission system endpoints
 v1Api.MapShareLinkEndpoints(); // ISSUE-2052: Shareable chat thread links
 v1Api.MapUserProfileEndpoints();

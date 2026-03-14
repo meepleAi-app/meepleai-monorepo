@@ -1,3 +1,4 @@
+using Api.BoundedContexts.SharedGameCatalog.Domain.Enums;
 using Api.Infrastructure.Entities;
 using Microsoft.EntityFrameworkCore;
 
@@ -86,8 +87,8 @@ internal sealed class BggImportQueueService : IBggImportQueueService
 
         // Find already queued/imported IDs
         var existingBggIds = await _dbContext.BggImportQueue
-            .Where(q => bggIdList.Contains(q.BggId) && q.Status != BggImportStatus.Failed)
-            .Select(q => q.BggId)
+            .Where(q => q.BggId.HasValue && bggIdList.Contains(q.BggId.Value) && q.Status != BggImportStatus.Failed)
+            .Select(q => q.BggId!.Value)
             .ToListAsync(cancellationToken)
             .ConfigureAwait(false);
 
@@ -389,5 +390,123 @@ internal sealed class BggImportQueueService : IBggImportQueueService
         _logger.LogDebug(
             "Recalculated queue positions: {Count} items",
             queuedItems.Count);
+    }
+
+    public async Task<BggImportQueueEntity> EnqueueEnrichmentAsync(
+        Guid sharedGameId,
+        int? bggId,
+        string gameName,
+        Guid requestedByUserId,
+        Guid batchId,
+        CancellationToken cancellationToken = default)
+    {
+        var maxPosition = await _dbContext.BggImportQueue
+            .Where(q => q.Status == BggImportStatus.Queued)
+            .MaxAsync(q => (int?)q.Position, cancellationToken)
+            .ConfigureAwait(false);
+
+        var entity = new BggImportQueueEntity
+        {
+            Id = Guid.NewGuid(),
+            JobType = BggQueueJobType.Enrichment,
+            BggId = bggId,
+            GameName = gameName,
+            SharedGameId = sharedGameId,
+            BatchId = batchId,
+            Status = BggImportStatus.Queued,
+            Position = (maxPosition ?? 0) + 1,
+            RetryCount = 0,
+            RequestedByUserId = requestedByUserId,
+            CreatedAt = _timeProvider.GetUtcNow().UtcDateTime
+        };
+
+        _dbContext.BggImportQueue.Add(entity);
+        await _dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+        _logger.LogInformation(
+            "Enqueued BGG enrichment: SharedGameId={SharedGameId}, BggId={BggId}, BatchId={BatchId}",
+            sharedGameId, bggId, batchId);
+
+        return entity;
+    }
+
+    public async Task<(Guid BatchId, int Enqueued)> EnqueueEnrichmentBatchAsync(
+        IEnumerable<(Guid SharedGameId, int? BggId, string GameName)> items,
+        Guid requestedByUserId,
+        CancellationToken cancellationToken = default)
+    {
+        var batchId = Guid.NewGuid();
+        var itemList = items.ToList();
+        if (itemList.Count == 0)
+            return (batchId, 0);
+
+        var maxPosition = await _dbContext.BggImportQueue
+            .Where(q => q.Status == BggImportStatus.Queued)
+            .MaxAsync(q => (int?)q.Position, cancellationToken)
+            .ConfigureAwait(false);
+
+        var nextPosition = (maxPosition ?? 0) + 1;
+        var now = _timeProvider.GetUtcNow().UtcDateTime;
+
+        foreach (var item in itemList)
+        {
+            var entity = new BggImportQueueEntity
+            {
+                Id = Guid.NewGuid(),
+                JobType = BggQueueJobType.Enrichment,
+                BggId = item.BggId,
+                GameName = item.GameName,
+                SharedGameId = item.SharedGameId,
+                BatchId = batchId,
+                Status = BggImportStatus.Queued,
+                Position = nextPosition++,
+                RetryCount = 0,
+                RequestedByUserId = requestedByUserId,
+                CreatedAt = now
+            };
+            _dbContext.BggImportQueue.Add(entity);
+        }
+
+        await _dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+        _logger.LogInformation(
+            "Enqueued BGG enrichment batch: BatchId={BatchId}, Count={Count}",
+            batchId, itemList.Count);
+
+        return (batchId, itemList.Count);
+    }
+
+    public async Task<bool> TryClaimItemAsync(
+        Guid itemId,
+        CancellationToken cancellationToken = default)
+    {
+        var now = _timeProvider.GetUtcNow().UtcDateTime;
+        var affected = await _dbContext.Database.ExecuteSqlRawAsync(
+            """
+            UPDATE "BggImportQueue"
+            SET "Status" = 1, "UpdatedAt" = {0}
+            WHERE "Id" = {1} AND "Status" = 0
+            """,
+            [now, itemId],
+            cancellationToken).ConfigureAwait(false);
+
+        return affected > 0;
+    }
+
+    public async Task<int> RecoverStaleItemsAsync(
+        TimeSpan staleThreshold,
+        CancellationToken cancellationToken = default)
+    {
+        var threshold = _timeProvider.GetUtcNow().UtcDateTime - staleThreshold;
+        var affected = await _dbContext.Database.ExecuteSqlRawAsync(
+            """
+            UPDATE "BggImportQueue"
+            SET "Status" = 0, "RetryCount" = "RetryCount" + 1, "UpdatedAt" = {0}
+            WHERE "Status" = 1 AND "UpdatedAt" < {1}
+            """,
+            [_timeProvider.GetUtcNow().UtcDateTime, threshold],
+            cancellationToken).ConfigureAwait(false);
+
+        return affected;
     }
 }

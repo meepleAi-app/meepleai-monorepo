@@ -54,6 +54,16 @@ import {
   type SendChatMessageCommand,
   type AskAgentCommand,
   type FinalizeSessionCommand,
+  TurnSummaryResultSchema,
+  type TurnSummaryResult,
+  type TurnSummaryRequest,
+  CreateCheckpointResultSchema,
+  ListCheckpointsResultSchema,
+  RestoreCheckpointResultSchema,
+  type CreateCheckpointRequest,
+  type CreateCheckpointResult,
+  type ListCheckpointsResult,
+  type RestoreCheckpointResult,
 } from '../schemas/session-tracking.schemas';
 
 import type { HttpClient } from '../core/httpClient';
@@ -83,6 +93,11 @@ export interface SessionTrackingClient {
 
   /** Finalize a session */
   finalizeSession(sessionId: string, request?: FinalizeSessionCommand): Promise<void>;
+
+  // ========== Turn Summary AI (Issue #277) ==========
+
+  /** Generate an AI-powered turn summary */
+  getTurnSummary(sessionId: string, request: TurnSummaryRequest): Promise<TurnSummaryResult>;
 
   // ========== Participants ==========
 
@@ -225,6 +240,20 @@ export interface SessionTrackingClient {
   /** Export session as PDF */
   exportPdf(sessionId: string): Promise<Blob>;
 
+  // ========== Session Checkpoints (Issue #278) ==========
+
+  /** Create a session checkpoint (deep save) */
+  createCheckpoint(
+    sessionId: string,
+    request: CreateCheckpointRequest
+  ): Promise<CreateCheckpointResult>;
+
+  /** List all checkpoints for a session */
+  listCheckpoints(sessionId: string): Promise<ListCheckpointsResult>;
+
+  /** Restore session state from a checkpoint */
+  restoreCheckpoint(sessionId: string, checkpointId: string): Promise<RestoreCheckpointResult>;
+
   // ========== SSE Streams ==========
 
   /** Get SSE stream URL for a session */
@@ -281,6 +310,16 @@ export function createSessionTrackingClient({
 
     async finalizeSession(sessionId, request) {
       await httpClient.post(`${BASE}/${encodeURIComponent(sessionId)}/finalize`, request ?? {});
+    },
+
+    // ========== Turn Summary AI (Issue #277) ==========
+
+    async getTurnSummary(sessionId, request) {
+      const response = await httpClient.post<TurnSummaryResult>(
+        `${BASE}/${encodeURIComponent(sessionId)}/turn-summary`,
+        request
+      );
+      return TurnSummaryResultSchema.parse(response);
     },
 
     // ========== Participants ==========
@@ -560,6 +599,31 @@ export function createSessionTrackingClient({
       });
       if (!response.ok) throw new Error(`PDF export failed: ${response.status}`);
       return response.blob();
+    },
+
+    // ========== Session Checkpoints (Issue #278) ==========
+
+    async createCheckpoint(sessionId, request) {
+      const response = await httpClient.post<CreateCheckpointResult>(
+        `${BASE}/${encodeURIComponent(sessionId)}/checkpoints`,
+        request
+      );
+      return CreateCheckpointResultSchema.parse(response);
+    },
+
+    async listCheckpoints(sessionId) {
+      const response = await httpClient.get<ListCheckpointsResult>(
+        `${BASE}/${encodeURIComponent(sessionId)}/checkpoints`
+      );
+      return ListCheckpointsResultSchema.parse(response);
+    },
+
+    async restoreCheckpoint(sessionId, checkpointId) {
+      const response = await httpClient.post<RestoreCheckpointResult>(
+        `${BASE}/${encodeURIComponent(sessionId)}/checkpoints/${encodeURIComponent(checkpointId)}/restore`,
+        {}
+      );
+      return RestoreCheckpointResultSchema.parse(response);
     },
 
     // ========== SSE Streams ==========

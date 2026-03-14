@@ -3,7 +3,7 @@
 **Status**: Approved (Revised after spec-panel review)
 **Date**: 2026-03-14
 **Scope**: Authentication, Administration, SystemConfiguration bounded contexts + Frontend
-**Revision**: 2 — addresses 8 critical and 10 major issues from expert review
+**Revision**: 3 — addresses spec review loop issues (config key convention, command signatures, idempotency semantics, registration guard architecture)
 
 ## Problem
 
@@ -11,7 +11,7 @@ In the beta0 staging environment, public self-registration must be disabled. Use
 
 ### Success Criteria
 
-- 100% of `POST /auth/register` attempts return 403 when `registration.public_enabled` is `false`
+- 100% of `POST /auth/register` attempts return 403 when `Registration:PublicEnabled` is `false`
 - Admin approval-to-invitation delivery completes within 10 seconds
 - Zero access requests are lost during config toggle transitions
 - Email enumeration: response body and timing are identical for all request-access outcomes
@@ -19,9 +19,9 @@ In the beta0 staging environment, public self-registration must be disabled. Use
 
 ## Solution
 
-A runtime configuration flag `registration.public_enabled` (default: `false`) gates self-registration. When disabled, the `/register` page shows a "Request Access" form instead. Admins review requests and approve (auto-sending invitations) or reject them. Admins can toggle public registration on from the admin panel at any time.
+A runtime configuration flag `Registration:PublicEnabled` (default: `false`) gates self-registration. When disabled, the `/register` page shows a "Request Access" form instead. Admins review requests and approve (auto-sending invitations) or reject them. Admins can toggle public registration on from the admin panel at any time.
 
-**Fail-closed default**: If SystemConfiguration is unreachable when checking `registration.public_enabled`, registration is blocked (403). Security-gating features always fail closed.
+**Fail-closed default**: If SystemConfiguration is unreachable when checking `Registration:PublicEnabled`, registration is blocked (403). Security-gating features always fail closed.
 
 ## Data Model
 
@@ -76,10 +76,11 @@ Aggregate root following existing DDD patterns (same as `InvitationToken`). Fact
 
 ### New Config Key
 
-- Key: `registration.public_enabled`
+- Key: `Registration:PublicEnabled` (follows existing colon-separated hierarchy convention, e.g., `RateLimit:Admin:MaxTokens`)
 - Type: `bool`
 - Default: `false`
 - Managed via: SystemConfiguration bounded context (runtime, no restart)
+- **Seeding**: Migration seeds this key with value `false`. If key does not exist at runtime, treated as `false` (fail-closed).
 
 ## API Endpoints
 
@@ -96,9 +97,11 @@ Rate limits are **per IP address**. Exceeded → 429 with `Retry-After` header.
 
 | Method | Path | Change |
 |--------|------|--------|
-| `POST` | `/api/v1/auth/register` | Check `registration.public_enabled` at command execution time. If `false` → 403 "Registration is currently unavailable" (generic message, does not reveal invite-only mode exists) |
+| `POST` | `/api/v1/auth/register` | Check `Registration:PublicEnabled` at command execution time. If `false` → 403 "Registration is currently unavailable" (generic message, does not reveal invite-only mode exists) |
 
 **Note**: Invited users registering via `POST /auth/accept-invitation` are NOT affected by this flag. Invitation-based registration always works regardless of the toggle.
+
+**Registration Guard Architecture**: Implemented as an endpoint filter (following `RequireAdminSessionFilter` pattern), NOT inside the `RegisterCommandHandler`. This avoids a cross-BC dependency (Authentication handler depending on SystemConfiguration repository). The filter reads the config value via `IConfigurationQueryService` (read-only, query-side) and short-circuits with 403 before the command reaches the handler.
 
 ### Admin Endpoints
 
@@ -109,7 +112,7 @@ Rate limits are **per IP address**. Exceeded → 429 with `Retry-After` header.
 | `POST` | `/api/v1/admin/access-requests/{id}/approve` | Approve → publishes domain event → invitation created async |
 | `POST` | `/api/v1/admin/access-requests/{id}/reject` | Reject with optional reason |
 | `POST` | `/api/v1/admin/access-requests/bulk-approve` | Approve up to 25 requests, returns per-item results |
-| `PUT` | `/api/v1/admin/settings/registration-mode` | Toggle `registration.public_enabled` (lives in SystemConfiguration surface area) |
+| `PUT` | `/api/v1/admin/settings/registration-mode` | Toggle `Registration:PublicEnabled` (lives in SystemConfiguration surface area) |
 
 ### Response Examples
 
@@ -144,8 +147,8 @@ HTTP 202 Accepted — same body, same timing for: new request, existing account,
 | Command | Handler Logic | Idempotency |
 |---------|---------------|-------------|
 | `RequestAccessCommand(email)` | Validate email, check duplicate Pending (skip silently), check existing account (skip silently), create AccessRequest. Publishes `AccessRequestCreatedEvent`. | Natural: duplicate email check. Always returns 202. |
-| `ApproveAccessRequestCommand(id, adminId)` | Guard: status must be Pending. Set Approved. Publish `AccessRequestApprovedEvent`. **Does NOT create invitation directly.** | Status guard: approving non-Pending is a no-op with success response. |
-| `RejectAccessRequestCommand(id, adminId, reason?)` | Guard: status must be Pending. Set Rejected. | Status guard: rejecting non-Pending is a no-op. |
+| `ApproveAccessRequestCommand(id, adminId)` | Guard: status must be Pending. Set Approved. Publish `AccessRequestApprovedEvent`. **Does NOT create invitation directly.** | Already Approved → 200 no-op. Rejected → 409. See Idempotency Semantics section. |
+| `RejectAccessRequestCommand(id, adminId, reason?)` | Guard: status must be Pending. Set Rejected. | Already Rejected → 200 no-op. Approved → 409. See Idempotency Semantics section. |
 | `BulkApproveAccessRequestsCommand(ids[], adminId)` | Max 25 IDs. Dispatches individual `ApproveAccessRequestCommand` per item. Each is its own unit of work. Returns per-item results. | Per-item idempotency via status guard. |
 | `SetRegistrationModeCommand(enabled, adminId)` | Routes to SystemConfiguration BC endpoint. Admin audit logged. | Setting same value is a no-op. |
 
@@ -154,19 +157,39 @@ HTTP 202 Accepted — same body, same timing for: new request, existing account,
 ```
 ApproveAccessRequestCommand
   → Handler sets status = Approved, publishes AccessRequestApprovedEvent
-    → Event handler subscribes, fires SendInvitationCommand(email, role: User)
+    → Event handler subscribes, fires SendInvitationCommand:
+        - email: from AccessRequest.Email
+        - role: Role.User (hardcoded, not configurable per approval)
+        - invitedBy: the approving admin's userId (from command's adminId)
       → On success: updates AccessRequest.InvitationId (eventual consistency)
-      → On failure: logs error, admin can see "Approved (invitation pending)" status
-                    and manually trigger resend via existing invitation UI
+      → On failure: logs error, retries 3x with exponential backoff
+                    On final failure: admin sees "Approved (invitation pending)"
+                    and can manually trigger resend via existing invitation UI
 ```
 
+The existing `SendInvitationCommand(email, role, adminUserId)` is reused as-is — no modifications needed. The event handler constructs it from the event payload + approving admin context.
+
 This decouples the approval operation from invitation creation. Approval is atomic. Invitation is eventual.
+
+### Idempotency Semantics (Domain vs Handler)
+
+The **domain entity** enforces strict state transitions:
+- `AccessRequest.Approve()` on non-Pending → throws `InvalidOperationException`
+- `AccessRequest.Reject()` on non-Pending → throws `InvalidOperationException`
+
+The **command handler** wraps domain exceptions for idempotent API behavior:
+- `ApproveAccessRequestCommand` on Already Approved → catches exception, returns 200 (no-op, idempotent)
+- `ApproveAccessRequestCommand` on Rejected → returns 409 Conflict (illegal transition, not idempotent)
+- `RejectAccessRequestCommand` on Already Rejected → catches exception, returns 200 (no-op, idempotent)
+- `RejectAccessRequestCommand` on Approved → returns 409 Conflict (illegal transition, not idempotent)
+
+This separation keeps the domain model strict while the API layer provides graceful handling for concurrent operations.
 
 ### Queries
 
 | Query | Returns |
 |-------|---------|
-| `GetAccessRequestsQuery(page, pageSize, statusFilter?)` | Paginated `AccessRequestDto` list |
+| `GetAccessRequestsQuery(page, pageSize, statusFilter?, sortBy?)` | Paginated `AccessRequestDto` list. Defaults: page=1, pageSize=20 (max 100), sortBy=RequestedAt desc. Follows existing pagination conventions. |
 | `GetAccessRequestByIdQuery(id)` | Single `AccessRequestDto` |
 | `GetAccessRequestStatsQuery` | `{ pending, approved, rejected, total }` |
 | `GetRegistrationModeQuery` | `{ publicRegistrationEnabled: bool }` |
@@ -181,7 +204,10 @@ GET /api/v1/auth/registration-mode
 └── false → New RequestAccessForm
 ```
 
-Registration mode check happens on page mount. If mode changes after page load and user submits the register form, backend returns 403 and frontend shows an inline error: "Registration is currently unavailable. You can request access instead." with a link/button to switch to the RequestAccessForm.
+Registration mode check happens on page mount. If mode changes after page load and user submits the register form, backend returns 403 and frontend:
+1. Re-fetches `GET /registration-mode` to confirm mode actually changed (vs transient config failure)
+2. If mode is now invite-only → shows inline error "Registration is currently unavailable" + switches to RequestAccessForm
+3. If mode is still public (transient 403) → shows generic "Something went wrong. Please try again."
 
 ### New Component: `RequestAccessForm`
 
@@ -226,7 +252,7 @@ On new access request:
 | Concern | Mitigation |
 |---------|------------|
 | Request spam | Rate limit: 3 req/min per IP on `request-access`. 429 + `Retry-After` header. |
-| Email enumeration | All outcomes return identical 202 response (body + timing). No AccessRequest created for existing accounts. |
+| Email enumeration | All outcomes return identical 202 response (body + timing). No AccessRequest created for existing accounts. **Timing equalization**: handler always performs the same DB lookups (email exists? pending exists?) regardless of outcome, ensuring consistent response time. No artificial delay needed — the code path is naturally similar. |
 | Config endpoint abuse | Rate limit: 30/min per IP on `registration-mode` |
 | Unauthorized toggle | `RequireAdminSession()` on all admin endpoints |
 | Email normalization | Lowercase normalization (same as invite system) |
@@ -389,10 +415,10 @@ And the user's password input is cleared (security)
 - Config unreachable → `POST /register` returns 403 (fail closed)
 - `POST /accept-invitation` unaffected by config
 
-**ApproveAccessRequestCommand:**
-- Pending → Approved, event published
-- Already Approved → no-op, success
-- Rejected → error (illegal transition)
+**ApproveAccessRequestCommand (handler level):**
+- Pending → Approved, event published, 200
+- Already Approved → no-op (catches domain exception), 200 (idempotent)
+- Rejected → 409 Conflict (illegal transition)
 - Non-existent ID → 404
 
 ### Integration Tests

@@ -38,7 +38,7 @@ export const entityColors: Record<MeepleEntityType, { hsl: string; name: string 
   chatSession: { hsl: '220 80% 55%', name: 'Chat' }, // Blue
   event: { hsl: '350 89% 60%', name: 'Event' }, // Rose
   toolkit: { hsl: '142 70% 45%', name: 'Toolkit' }, // Green
-  tool: { hsl: '195 80% 50%', name: 'Tool' }, // Sky Blue
+  tool: { hsl: '195 80% 50%', name: 'Tool' }, // Sky Blue (Epic #412)
   custom: { hsl: '220 70% 50%', name: 'Custom' }, // Blue (default)
 };
 

@@ -112,6 +112,7 @@ public class MeepleAiDbContext : DbContext
     public DbSet<ChatThreadCollectionEntity> ChatThreadCollections => Set<ChatThreadCollectionEntity>(); // ISSUE-2051: Chat-collection junction
     public DbSet<ShareLinkEntity> ShareLinks => Set<ShareLinkEntity>(); // ISSUE-2052: Shareable chat links
     public DbSet<InvitationTokenEntity> InvitationTokens => Set<InvitationTokenEntity>(); // ISSUE-124: Admin invitation tokens
+    public DbSet<AccessRequestEntity> AccessRequests => Set<AccessRequestEntity>(); // ISSUE-124: Access request management
     public DbSet<NotificationEntity> Notifications => Set<NotificationEntity>(); // ISSUE-2053: User notifications
     public DbSet<SharedGameEntity> SharedGames => Set<SharedGameEntity>(); // ISSUE-2370: Shared game catalog
     public DbSet<GameDesignerEntity> GameDesigners => Set<GameDesignerEntity>(); // ISSUE-2370: Game designers
@@ -263,6 +264,7 @@ public class MeepleAiDbContext : DbContext
         modelBuilder.Ignore<BoundedContexts.Authentication.Domain.Entities.Session>();
         modelBuilder.Ignore<BoundedContexts.Authentication.Domain.Entities.ApiKey>();
         modelBuilder.Ignore<BoundedContexts.Authentication.Domain.Entities.ShareLink>(); // ISSUE-2052
+        modelBuilder.Ignore<BoundedContexts.Authentication.Domain.Entities.AccessRequest>(); // ISSUE-124: Access request domain entity
         modelBuilder.Ignore<BoundedContexts.GameManagement.Domain.Entities.GameSession>();
         modelBuilder.Ignore<BoundedContexts.GameManagement.Domain.Entities.GameSessionState>(); // ISSUE-2403
         modelBuilder.Ignore<BoundedContexts.GameManagement.Domain.Entities.GameStateSnapshot>(); // ISSUE-2403

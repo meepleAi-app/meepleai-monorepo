@@ -106,6 +106,10 @@ internal static class SessionTrackingEndpoints
         MapGetToolkitSessionStateEndpoint(group);
         MapUpdateToolkitWidgetStateEndpoint(group);
 
+        // Session diary / timeline endpoints (Issue #276)
+        MapAddSessionEventEndpoint(group);
+        MapGetSessionEventsEndpoint(group);
+
         return group;
     }
 
@@ -1877,6 +1881,69 @@ internal static class SessionTrackingEndpoints
         .WithOpenApi();
     }
 
+    // ============================================================================
+    // Session diary / timeline endpoints (Issue #276)
+    // ============================================================================
+
+    private static void MapAddSessionEventEndpoint(RouteGroupBuilder group)
+    {
+        group.MapPost("/game-sessions/{sessionId:guid}/events", async (
+            Guid sessionId,
+            AddSessionEventRequest request,
+            HttpContext httpContext,
+            IMediator mediator,
+            CancellationToken ct) =>
+        {
+            var userId = httpContext.User.GetUserId();
+            if (userId == Guid.Empty)
+                return Results.Unauthorized();
+
+            var command = new AddSessionEventCommand(
+                sessionId,
+                userId,
+                request.EventType,
+                request.Payload,
+                request.Source);
+            var result = await mediator.Send(command, ct).ConfigureAwait(false);
+            return Results.Created($"/api/v1/game-sessions/{sessionId}/events/{result.EventId}", result);
+        })
+        .RequireAuthenticatedUser()
+        .WithName("AddSessionEvent")
+        .WithTags("SessionTracking", "SessionDiary")
+        .WithSummary("Add an event to the session timeline")
+        .WithDescription("Records a new event in the session diary. Requires Player role. Issue #276.")
+        .Produces(201)
+        .Produces(400)
+        .Produces(401)
+        .Produces(403)
+        .Produces(404)
+        .Produces(409);
+    }
+
+    private static void MapGetSessionEventsEndpoint(RouteGroupBuilder group)
+    {
+        group.MapGet("/game-sessions/{sessionId:guid}/events", async (
+            Guid sessionId,
+            IMediator mediator,
+            [FromQuery] string? eventType = null,
+            [FromQuery] int limit = 50,
+            [FromQuery] int offset = 0,
+            CancellationToken ct = default) =>
+        {
+            var query = new GetSessionEventsQuery(sessionId, eventType, limit, offset);
+            var result = await mediator.Send(query, ct).ConfigureAwait(false);
+            return Results.Ok(result);
+        })
+        .RequireAuthenticatedUser()
+        .WithName("GetSessionEvents")
+        .WithTags("SessionTracking", "SessionDiary")
+        .WithSummary("Get session timeline events")
+        .WithDescription("Returns paginated session events, optionally filtered by event type. Issue #276.")
+        .Produces<GetSessionEventsResult>(200)
+        .Produces(401)
+        .Produces(404);
+    }
+
     internal static RouteGroupBuilder MapSessionStatisticsEndpoints(this RouteGroupBuilder group)
     {
         group.MapGet("/game-sessions/session-statistics", async (
@@ -1956,3 +2023,6 @@ public sealed record SessionTimerActionRequest(
 
 /// <summary>Request body for sending a chat action. SenderId is derived from the authenticated user.</summary>
 public sealed record SendChatActionRequest(string Content, int? TurnNumber = null, string? MentionsJson = null);
+
+/// <summary>Request body for adding a session event (Issue #276).</summary>
+public sealed record AddSessionEventRequest(string EventType, string? Payload = null, string? Source = null);

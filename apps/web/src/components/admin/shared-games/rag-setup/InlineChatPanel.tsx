@@ -11,12 +11,7 @@ import { useState, useRef, useEffect } from 'react';
 
 import { Bot, MessageSquare, Send, Loader2, User } from 'lucide-react';
 
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/data-display/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/data-display/card';
 import { Button } from '@/components/ui/primitives/button';
 import { Textarea } from '@/components/ui/primitives/textarea';
 import { useAgentChatStream } from '@/hooks/useAgentChatStream';
@@ -42,7 +37,7 @@ export function InlineChatPanel({ agentId, chatThreadId }: InlineChatPanelProps)
 
   const { state, sendMessage, stopStreaming } = useAgentChatStream({
     onComplete: (answer, metadata) => {
-      setMessages((prev) => [
+      setMessages(prev => [
         ...prev,
         {
           id: `assistant-${Date.now()}`,
@@ -72,7 +67,7 @@ export function InlineChatPanel({ agentId, chatThreadId }: InlineChatPanelProps)
       timestamp: new Date(),
     };
 
-    setMessages((prev) => [...prev, userMessage]);
+    setMessages(prev => [...prev, userMessage]);
     sendMessage(agentId, input.trim(), threadId ?? undefined);
     setInput('');
   };
@@ -98,9 +93,7 @@ export function InlineChatPanel({ agentId, chatThreadId }: InlineChatPanelProps)
           <div className="flex flex-col items-center justify-center py-12 text-center text-muted-foreground">
             <Bot className="mb-3 h-10 w-10 opacity-30" />
             <p className="font-medium">Crea un agente per avviare la chat</p>
-            <p className="mt-1 text-sm">
-              Prima carica documenti e crea un agente RAG
-            </p>
+            <p className="mt-1 text-sm">Prima carica documenti e crea un agente RAG</p>
           </div>
         </CardContent>
       </Card>
@@ -124,13 +117,10 @@ export function InlineChatPanel({ agentId, chatThreadId }: InlineChatPanelProps)
             </div>
           )}
 
-          {messages.map((msg) => (
+          {messages.map(msg => (
             <div
               key={msg.id}
-              className={cn(
-                'flex gap-2',
-                msg.role === 'user' ? 'justify-end' : 'justify-start'
-              )}
+              className={cn('flex gap-2', msg.role === 'user' ? 'justify-end' : 'justify-start')}
             >
               {msg.role === 'assistant' && (
                 <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/10">
@@ -140,9 +130,7 @@ export function InlineChatPanel({ agentId, chatThreadId }: InlineChatPanelProps)
               <div
                 className={cn(
                   'max-w-[80%] rounded-lg px-3 py-2 text-sm',
-                  msg.role === 'user'
-                    ? 'bg-primary text-primary-foreground'
-                    : 'bg-muted'
+                  msg.role === 'user' ? 'bg-primary text-primary-foreground' : 'bg-muted'
                 )}
               >
                 <p className="whitespace-pre-wrap">{msg.content}</p>
@@ -190,7 +178,7 @@ export function InlineChatPanel({ agentId, chatThreadId }: InlineChatPanelProps)
         <div className="flex gap-2">
           <Textarea
             value={input}
-            onChange={(e) => setInput(e.target.value)}
+            onChange={e => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder="Scrivi un messaggio per testare il RAG..."
             className="min-h-[44px] resize-none"
@@ -198,22 +186,12 @@ export function InlineChatPanel({ agentId, chatThreadId }: InlineChatPanelProps)
             disabled={state.isStreaming}
           />
           {state.isStreaming ? (
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={stopStreaming}
-              className="shrink-0"
-            >
+            <Button variant="outline" size="icon" onClick={stopStreaming} className="shrink-0">
               <span className="sr-only">Stop</span>
               <div className="h-3 w-3 rounded-sm bg-foreground" />
             </Button>
           ) : (
-            <Button
-              size="icon"
-              onClick={handleSend}
-              disabled={!input.trim()}
-              className="shrink-0"
-            >
+            <Button size="icon" onClick={handleSend} disabled={!input.trim()} className="shrink-0">
               <Send className="h-4 w-4" />
               <span className="sr-only">Invia</span>
             </Button>

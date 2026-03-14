@@ -249,8 +249,9 @@ internal static class RateLimitingServiceExtensions
                     });
             });
 
-            // Policy 9: BggSearch - 20 req/hour for BGG search operations (Issue #3120)
-            // Low limit to respect BoardGameGeek's external API quota and avoid being blocked.
+            // Policy 9: BggSearch - 60 req/hour for BGG search operations (Issue #3120)
+            // BggApiService has internal 2 req/sec throttle + 7-day HybridCache,
+            // so user-facing limit can be higher than the original 20/hr.
             options.AddPolicy("BggSearch", httpContext =>
             {
                 var userId = GetUserId(httpContext);
@@ -260,7 +261,7 @@ internal static class RateLimitingServiceExtensions
                     factory: _ => new SlidingWindowRateLimiterOptions
                     {
                         Window = TimeSpan.FromHours(1),
-                        PermitLimit = 20,
+                        PermitLimit = 60,
                         SegmentsPerWindow = 6,
                         QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
                         QueueLimit = 0,

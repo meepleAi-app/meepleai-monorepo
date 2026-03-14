@@ -76,6 +76,10 @@ export const ENTITY_ACTIONS: Record<MeepleEntityType, BottomNavActionDef[]> = {
     { id: 'view-tools', label: 'Strumenti', icon: Wrench, variant: 'primary' },
     { id: 'link-games', label: 'Collega Giochi', icon: Link2 },
   ],
+  tool: [
+    { id: 'view-tool', label: 'Dettagli', icon: Eye, variant: 'primary' },
+    { id: 'edit', label: 'Modifica', icon: Pencil },
+  ],
   event: [
     { id: 'details', label: 'Dettagli', icon: Eye, variant: 'primary' },
     { id: 'rsvp', label: 'RSVP', icon: UserCheck },

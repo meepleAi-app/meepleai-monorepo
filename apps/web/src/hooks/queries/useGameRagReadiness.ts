@@ -21,7 +21,7 @@ export function useGameRagReadiness(gameId: string, enabled = true) {
     queryFn: () => api.sharedGames.getGameRagReadiness(gameId),
     enabled: enabled && !!gameId,
     staleTime: 10_000, // 10s
-    refetchInterval: (query) => {
+    refetchInterval: query => {
       const data = query.state.data;
       // Auto-refresh while documents are processing
       if (data?.processingDocuments && data.processingDocuments > 0) {

@@ -1,21 +1,6 @@
 using Api.BoundedContexts.Administration.Application.Services;
 using Api.BoundedContexts.Administration.Domain.Services;
-using Api.BoundedContexts.Administration.Infrastructure.DependencyInjection;
-using Api.BoundedContexts.Authentication.Infrastructure.DependencyInjection;
-using Api.BoundedContexts.DocumentProcessing.Infrastructure.DependencyInjection;
-using Api.BoundedContexts.EntityRelationships.Infrastructure.DependencyInjection;
-using Api.BoundedContexts.GameManagement.Infrastructure.DependencyInjection;
-using Api.BoundedContexts.GameToolkit.Infrastructure.DependencyInjection;
-using Api.BoundedContexts.KnowledgeBase.Infrastructure.DependencyInjection;
 using Api.BoundedContexts.KnowledgeBase.Infrastructure.EmbeddingProviders;
-using Api.BoundedContexts.SessionTracking.Infrastructure.DependencyInjection;
-using Api.BoundedContexts.SharedGameCatalog.Infrastructure.DependencyInjection;
-using Api.BoundedContexts.SystemConfiguration.Infrastructure.DependencyInjection;
-using Api.BoundedContexts.UserLibrary.Infrastructure.DependencyInjection;
-using Api.BoundedContexts.UserNotifications.Infrastructure.DependencyInjection;
-using Api.BoundedContexts.BusinessSimulations.Infrastructure.DependencyInjection;
-using Api.BoundedContexts.Gamification.Infrastructure.DependencyInjection;
-using Api.BoundedContexts.WorkflowIntegration.Infrastructure.DependencyInjection;
 using Api.Helpers;
 using Api.Services;
 using Api.Services.Pdf;
@@ -27,77 +12,7 @@ namespace Api.Extensions;
 
 internal static class ApplicationServiceExtensions
 {
-#pragma warning disable S1133 // Method marked obsolete but kept for backward compatibility during migration
-    [Obsolete("Use modular service registration methods instead (AddVectorSearchServices, AddDomainServices, etc.)")]
-    public static IServiceCollection AddApplicationServices(
-        this IServiceCollection services,
-        IConfiguration configuration)
-#pragma warning restore S1133
-    {
-        services.AddVectorSearchServices(configuration);
-        services.AddDomainServices();
-        services.AddAiServices();
-        services.AddPdfServices();
-        services.AddChatServices();
-        services.AddAdminServices();
-        services.AddBggServices();
-        services.AddQualityServices();
-
-        // DDD-PHASE2: Authentication bounded context (repositories for CQRS handlers)
-        services.AddAuthenticationContext();
-
-        // DDD-PHASE2: GameManagement bounded context (repositories for CQRS handlers)
-        services.AddGameManagementContext();
-
-        // Issue #4753: GameToolkit bounded context (toolkit configs, tools, templates)
-        services.AddGameToolkitContext();
-
-        // Issue #5130: EntityRelationships bounded context (entity links, relationships)
-        services.AddEntityRelationshipsContext();
-
-        // DDD-PHASE3: KnowledgeBase bounded context
-        services.AddKnowledgeBaseServices();
-
-        // DDD-PHASE3: WorkflowIntegration bounded context
-        services.AddWorkflowIntegrationContext(configuration);
-
-        // DDD-PHASE3: SystemConfiguration bounded context
-        services.AddSystemConfigurationContext();
-
-        // DDD-PHASE3: Administration bounded context
-        // ISSUE-2528: Pass configuration for orphaned task cleanup options
-        services.AddAdministrationContext(configuration);
-
-        // DDD-PHASE4: DocumentProcessing bounded context
-        // BGAI-001-v2: Pass configuration for PDF extractor provider selection
-        services.AddDocumentProcessingContext(configuration);
-
-        // ISSUE-2053: UserNotifications bounded context
-        services.AddUserNotificationsContext();
-
-        // UserLibrary bounded context
-        services.AddUserLibraryContext();
-
-        // GST-003: SessionTracking bounded context
-        services.AddSessionTrackingContext();
-
-        // Issue #3922: Gamification bounded context (achievements, badges)
-        services.AddGamificationContext();
-
-        // Issue #3720: BusinessSimulations bounded context (financial ledger, simulations)
-        services.AddBusinessSimulationsContext();
-
-        // ISSUE-2370: SharedGameCatalog bounded context
-        // ISSUE-2454: Background processing configuration
-        services.AddSharedGameCatalogContext(configuration);
-
-        // ISSUE-2371: SharedGameCatalog authorization policies
-        services.AddSharedGameCatalogPolicies();
-
-        return services;
-    }
-
-    private static IServiceCollection AddVectorSearchServices(
+    internal static IServiceCollection AddVectorSearchServices(
         this IServiceCollection services,
         IConfiguration configuration)
     {
@@ -113,7 +28,7 @@ internal static class ApplicationServiceExtensions
         return services;
     }
 
-    private static IServiceCollection AddDomainServices(this IServiceCollection services)
+    internal static IServiceCollection AddDomainServices(this IServiceCollection services)
     {
         // Game and RuleSpec services
         // Issue #1185: RuleSpecService migrated to CQRS pattern in GameManagement bounded context
@@ -143,7 +58,7 @@ internal static class ApplicationServiceExtensions
         return services;
     }
 
-    private static IServiceCollection AddAiServices(this IServiceCollection services)
+    internal static IServiceCollection AddAiServices(this IServiceCollection services)
     {
         // ISSUE-958: ILlmService now registered in KnowledgeBaseServiceExtensions as HybridLlmService
         // (Removed old LlmService registration to prevent duplicate)
@@ -185,7 +100,7 @@ internal static class ApplicationServiceExtensions
         return services;
     }
 
-    private static IServiceCollection AddPdfServices(this IServiceCollection services)
+    internal static IServiceCollection AddPdfServices(this IServiceCollection services)
     {
         // PDF sub-services (SOLID refactoring - Phase 3)
         services.AddScoped<ITableDetectionService, TableDetectionService>();
@@ -211,7 +126,7 @@ internal static class ApplicationServiceExtensions
         return services;
     }
 
-    private static IServiceCollection AddChatServices(this IServiceCollection services)
+    internal static IServiceCollection AddChatServices(this IServiceCollection services)
     {
         // CHAT-05: Chat export services
         services.AddScoped<IChatExportService, ChatExportService>();
@@ -222,7 +137,7 @@ internal static class ApplicationServiceExtensions
         return services;
     }
 
-    private static IServiceCollection AddAdminServices(this IServiceCollection services)
+    internal static IServiceCollection AddAdminServices(this IServiceCollection services)
     {
         // ADMIN-01: User management - MIGRATED TO DDD/CQRS (handlers in Administration bounded context)
         // UserManagementService REMOVED (243 lines eliminated)
@@ -242,7 +157,7 @@ internal static class ApplicationServiceExtensions
         return services;
     }
 
-    private static IServiceCollection AddBggServices(this IServiceCollection services)
+    internal static IServiceCollection AddBggServices(this IServiceCollection services)
     {
         // AI-13: BoardGameGeek API integration
         services.AddScoped<IBggApiService, BggApiService>();
@@ -250,7 +165,7 @@ internal static class ApplicationServiceExtensions
         return services;
     }
 
-    private static IServiceCollection AddQualityServices(this IServiceCollection services)
+    internal static IServiceCollection AddQualityServices(this IServiceCollection services)
     {
         // AI-11: Quality tracking services
         // DDD Migration Phase 3.1: ResponseQualityService removed - quality logic now in QualityTrackingDomainService

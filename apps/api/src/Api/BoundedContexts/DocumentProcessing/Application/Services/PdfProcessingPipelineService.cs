@@ -79,13 +79,12 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
             {
                 _logger.LogInformation(
                     "[PdfPipeline] PDF {PdfId} already in terminal state ({Status}), skipping",
-                    pdfId, pdfDoc.ProcessingStatus);
+                    pdfId, pdfDoc.ProcessingState);
                 return;
             }
 
             // Issue #4215: Transition to Extracting state
             pdfDoc.ProcessingState = "Extracting";
-            pdfDoc.ProcessingStatus = "processing";
             pdfDoc.ProcessingError = null;
             await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
@@ -131,7 +130,6 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
 
             // Issue #4215: Mark as Ready (final state)
             pdfDoc.ProcessingState = "Ready";
-            pdfDoc.ProcessingStatus = "completed";
             pdfDoc.ProcessedAt = _timeProvider.GetUtcNow().UtcDateTime;
             await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
@@ -404,9 +402,6 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
     {
         // Issue #4215: Use Failed state
         pdfDoc.ProcessingState = "Failed";
-#pragma warning disable CS0618
-        pdfDoc.ProcessingStatus = "failed";
-#pragma warning restore CS0618
         pdfDoc.ProcessingError = errorMessage;
         pdfDoc.ProcessedAt = _timeProvider.GetUtcNow().UtcDateTime;
         await _db.SaveChangesAsync(CancellationToken.None).ConfigureAwait(false);
@@ -429,7 +424,6 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
             {
                 // Issue #4215: Use Failed state
                 pdfDoc.ProcessingState = "Failed";
-                pdfDoc.ProcessingStatus = "failed";
                 pdfDoc.ProcessingError = errorMessage.Length > 500
                     ? errorMessage[..500]
                     : errorMessage;

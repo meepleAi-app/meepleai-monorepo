@@ -173,7 +173,6 @@ internal sealed class StalePdfRecoveryService : BackgroundService
         if (pdfDoc != null && !string.Equals(pdfDoc.ProcessingState, readyState, StringComparison.Ordinal))
         {
             pdfDoc.ProcessingState = nameof(PdfProcessingState.Pending);
-            pdfDoc.ProcessingStatus = "pending"; // Keep deprecated field in sync
             pdfDoc.ProcessingError = null;
             await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
         }

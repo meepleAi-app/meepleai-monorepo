@@ -71,7 +71,6 @@ public sealed class GetActiveAlertsQueryHandlerTests
             FileSizeBytes = 2048,
             UploadedByUserId = userId,
             UploadedAt = DateTime.UtcNow.AddHours(-1),
-            ProcessingStatus = "processing",
         });
 
         // Add a job stuck for 15 minutes (exceeds 10-minute default)
@@ -117,7 +116,6 @@ public sealed class GetActiveAlertsQueryHandlerTests
             FileSizeBytes = 1024,
             UploadedByUserId = userId,
             UploadedAt = DateTime.UtcNow,
-            ProcessingStatus = "processing",
         });
 
         // Job has been processing for only 5 minutes (under 10-minute threshold)
@@ -162,7 +160,6 @@ public sealed class GetActiveAlertsQueryHandlerTests
                 FileSizeBytes = 1024,
                 UploadedByUserId = userId,
                 UploadedAt = DateTime.UtcNow,
-                ProcessingStatus = "pending",
             });
 
             db.Set<ProcessingJobEntity>().Add(new ProcessingJobEntity
@@ -214,7 +211,6 @@ public sealed class GetActiveAlertsQueryHandlerTests
                 FileSizeBytes = 1024,
                 UploadedByUserId = userId,
                 UploadedAt = DateTime.UtcNow,
-                ProcessingStatus = "pending",
             });
 
             db.Set<ProcessingJobEntity>().Add(new ProcessingJobEntity
@@ -363,7 +359,6 @@ public sealed class GetActiveAlertsQueryHandlerTests
             FileSizeBytes = 1024,
             UploadedByUserId = userId,
             UploadedAt = DateTime.UtcNow.AddHours(-1),
-            ProcessingStatus = "processing",
         });
         db.Set<ProcessingJobEntity>().Add(new ProcessingJobEntity
         {
@@ -433,7 +428,6 @@ public sealed class GetActiveAlertsQueryHandlerTests
             FileSizeBytes = 1024,
             UploadedByUserId = userId,
             UploadedAt = DateTime.UtcNow,
-            ProcessingStatus = "pending",
         };
     }
 

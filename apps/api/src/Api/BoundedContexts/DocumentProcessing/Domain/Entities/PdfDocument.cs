@@ -23,9 +23,6 @@ internal sealed class PdfDocument : AggregateRoot<Guid>
     // Issue #4215: New granular state tracking (7 states)
     public PdfProcessingState ProcessingState { get; private set; }
 
-    // Deprecated: Keep for backward compatibility (migrate all usages in Issue #4216)
-    public string ProcessingStatus { get; private set; }
-
     public DateTime? ProcessedAt { get; private set; }
     public int? PageCount { get; private set; }
     public string? ProcessingError { get; private set; }
@@ -122,8 +119,6 @@ internal sealed class PdfDocument : AggregateRoot<Guid>
 
         // Issue #4215: Initialize with new granular state
         ProcessingState = PdfProcessingState.Pending;
-        ProcessingStatus = "pending"; // Backward compat
-
         // Issue #4216: Initialize retry tracking
         RetryCount = 0;
 
@@ -153,7 +148,6 @@ internal sealed class PdfDocument : AggregateRoot<Guid>
         FileSize fileSize,
         Guid uploadedByUserId,
         DateTime uploadedAt,
-        string processingStatus,
         DateTime? processedAt,
         int? pageCount,
         string? processingError,
@@ -196,12 +190,8 @@ internal sealed class PdfDocument : AggregateRoot<Guid>
             UploadedByUserId = uploadedByUserId,
             UploadedAt = uploadedAt,
 
-            // Issue #4215: Prefer enum state, fallback to string parsing
-            ProcessingState = processingState ?? ParseProcessingState(processingStatus),
-
-#pragma warning disable CS0618 // Type or member is obsolete
-            ProcessingStatus = processingStatus,
-#pragma warning restore CS0618
+            // Issue #4215: Use enum state, default to Pending
+            ProcessingState = processingState ?? PdfProcessingState.Pending,
 
             ProcessedAt = processedAt,
             PageCount = pageCount,
@@ -378,18 +368,6 @@ internal sealed class PdfDocument : AggregateRoot<Guid>
         // Issue #4219: Record timing when entering a new state
         RecordStateStartTime(newState);
 
-        // Sync deprecated property for backward compatibility
-        ProcessingStatus = newState switch
-        {
-            PdfProcessingState.Pending => "pending",
-            PdfProcessingState.Uploading or PdfProcessingState.Extracting or
-            PdfProcessingState.Chunking or PdfProcessingState.Embedding or
-            PdfProcessingState.Indexing => "processing",
-            PdfProcessingState.Ready => "completed",
-            PdfProcessingState.Failed => "failed",
-            _ => "pending"
-        };
-
         // Emit domain event for real-time updates (Issue #4218)
         AddDomainEvent(new PdfStateChangedEvent(Id, previousState, newState, UploadedByUserId));
     }
@@ -504,22 +482,6 @@ internal sealed class PdfDocument : AggregateRoot<Guid>
 
         // Update ETA after state change
         UpdateETA();
-    }
-
-    /// <summary>
-    /// Parses legacy string status to enum state.
-    /// Issue #4215: Backward compatibility helper.
-    /// </summary>
-    private static PdfProcessingState ParseProcessingState(string status)
-    {
-        return status switch
-        {
-            "pending" => PdfProcessingState.Pending,
-            "processing" => PdfProcessingState.Extracting, // Default to mid-pipeline
-            "completed" => PdfProcessingState.Ready,
-            "failed" => PdfProcessingState.Failed,
-            _ => PdfProcessingState.Pending
-        };
     }
 
     /// <summary>
@@ -733,8 +695,6 @@ internal sealed class PdfDocument : AggregateRoot<Guid>
 
             // Issue #4215: Copy processing state
             ProcessingState = source.ProcessingState,
-
-            ProcessingStatus = source.ProcessingStatus,
 
             ProcessedAt = source.ProcessedAt,
             PageCount = source.PageCount,

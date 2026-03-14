@@ -25,6 +25,7 @@ import { Input } from '@/components/ui/input';
 import { api } from '@/lib/api';
 import type { LiveSessionSummaryDto } from '@/lib/api/schemas/live-sessions.schemas';
 import type { SessionSummaryDto } from '@/lib/api/schemas/session-tracking.schemas';
+import { useCardHand } from '@/stores/use-card-hand';
 
 // ========== Status Helpers ==========
 
@@ -168,6 +169,16 @@ function NewSessionCta() {
 export function SessionsContent() {
   const searchParams = useSearchParams();
   const tab = searchParams.get('tab') ?? 'active';
+  const { drawCard } = useCardHand();
+
+  useEffect(() => {
+    drawCard({
+      id: 'section-sessions',
+      entity: 'session',
+      title: 'Sessions',
+      href: '/sessions',
+    });
+  }, [drawCard]);
 
   const [activeSessions, setActiveSessions] = useState<LiveSessionSummaryDto[]>([]);
   const [historySessions, setHistorySessions] = useState<SessionSummaryDto[]>([]);

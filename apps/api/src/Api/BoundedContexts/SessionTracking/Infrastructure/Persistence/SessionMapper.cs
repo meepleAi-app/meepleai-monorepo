@@ -345,6 +345,47 @@ internal static class SessionNoteMapper
     }
 }
 
+
+/// <summary>
+/// Maps between SessionCheckpoint domain entity and SessionCheckpointEntity persistence entity.
+/// Issue #278 - Session Checkpoint / Deep Save
+/// </summary>
+internal static class SessionCheckpointMapper
+{
+    public static SessionCheckpointEntity ToEntity(SessionCheckpoint domain)
+    {
+        ArgumentNullException.ThrowIfNull(domain);
+        return new SessionCheckpointEntity
+        {
+            Id = domain.Id,
+            SessionId = domain.SessionId,
+            Name = domain.Name,
+            Timestamp = domain.CreatedAt,
+            SnapshotData = domain.SnapshotData,
+            DiaryEventCount = domain.DiaryEventCount,
+            CreatedBy = domain.CreatedBy,
+            IsDeleted = domain.IsDeleted,
+            DeletedAt = domain.DeletedAt
+        };
+    }
+
+    public static SessionCheckpoint ToDomain(SessionCheckpointEntity entity)
+    {
+        ArgumentNullException.ThrowIfNull(entity);
+        var checkpoint = (SessionCheckpoint)Activator.CreateInstance(typeof(SessionCheckpoint), true)!;
+        typeof(SessionCheckpoint).GetProperty(nameof(SessionCheckpoint.Id))!.SetValue(checkpoint, entity.Id);
+        typeof(SessionCheckpoint).GetProperty(nameof(SessionCheckpoint.SessionId))!.SetValue(checkpoint, entity.SessionId);
+        typeof(SessionCheckpoint).GetProperty(nameof(SessionCheckpoint.Name))!.SetValue(checkpoint, entity.Name);
+        typeof(SessionCheckpoint).GetProperty(nameof(SessionCheckpoint.CreatedAt))!.SetValue(checkpoint, entity.Timestamp);
+        typeof(SessionCheckpoint).GetProperty(nameof(SessionCheckpoint.SnapshotData))!.SetValue(checkpoint, entity.SnapshotData);
+        typeof(SessionCheckpoint).GetProperty(nameof(SessionCheckpoint.DiaryEventCount))!.SetValue(checkpoint, entity.DiaryEventCount);
+        typeof(SessionCheckpoint).GetProperty(nameof(SessionCheckpoint.CreatedBy))!.SetValue(checkpoint, entity.CreatedBy.GetValueOrDefault());
+        typeof(SessionCheckpoint).GetProperty(nameof(SessionCheckpoint.IsDeleted))!.SetValue(checkpoint, entity.IsDeleted);
+        typeof(SessionCheckpoint).GetProperty(nameof(SessionCheckpoint.DeletedAt))!.SetValue(checkpoint, entity.DeletedAt);
+        return checkpoint;
+    }
+}
+
 /// <summary>
 /// Maps between SessionEvent domain entity and SessionEventEntity persistence entity.
 /// Issue #276 - Session Diary / Timeline

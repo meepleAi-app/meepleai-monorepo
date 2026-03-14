@@ -10,6 +10,7 @@ using Api.BoundedContexts.UserLibrary.Domain.ValueObjects;
 using Api.Middleware.Exceptions;
 using Api.SharedKernel.Infrastructure.Persistence;
 using MediatR;
+using Microsoft.Extensions.Logging;
 
 namespace Api.BoundedContexts.KnowledgeBase.Application.Handlers;
 
@@ -27,6 +28,7 @@ internal class CreateGameAgentCommandHandler : IRequestHandler<CreateGameAgentCo
     private readonly ISharedGameRepository _gameRepository;
     private readonly IAgentTypologyRepository _typologyRepository;
     private readonly IUserLibraryRepository _libraryRepository;
+    private readonly IVectorDocumentRepository _vectorDocumentRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ILogger<CreateGameAgentCommandHandler> _logger;
 
@@ -34,12 +36,14 @@ internal class CreateGameAgentCommandHandler : IRequestHandler<CreateGameAgentCo
         ISharedGameRepository gameRepository,
         IAgentTypologyRepository typologyRepository,
         IUserLibraryRepository libraryRepository,
+        IVectorDocumentRepository vectorDocumentRepository,
         IUnitOfWork unitOfWork,
         ILogger<CreateGameAgentCommandHandler> logger)
     {
         _gameRepository = gameRepository;
         _typologyRepository = typologyRepository;
         _libraryRepository = libraryRepository;
+        _vectorDocumentRepository = vectorDocumentRepository;
         _unitOfWork = unitOfWork;
         _logger = logger;
     }
@@ -51,6 +55,20 @@ internal class CreateGameAgentCommandHandler : IRequestHandler<CreateGameAgentCo
         // 1. Verify game exists in shared catalog
         var game = await _gameRepository.GetByIdAsync(request.GameId, cancellationToken).ConfigureAwait(false)
                    ?? throw new NotFoundException($"Game with ID {request.GameId} not found");
+
+        // 1.5. KB gate: Verify indexed knowledge base exists for this game
+        var indexingInfo = await _vectorDocumentRepository
+            .GetIndexingInfoByGameIdAsync(request.GameId, cancellationToken)
+            .ConfigureAwait(false);
+
+        if (indexingInfo == null || indexingInfo.Status != VectorDocumentIndexingStatus.Completed)
+        {
+            var statusMessage = indexingInfo == null
+                ? "no knowledge base found"
+                : $"knowledge base status is '{indexingInfo.Status}'";
+            throw new ConflictException(
+                $"Cannot create agent for game '{game.Title}': {statusMessage}. Upload and process a PDF first.");
+        }
 
         // 2. Verify typology exists and is approved
         var typology = await _typologyRepository.GetByIdAsync(request.TypologyId, cancellationToken).ConfigureAwait(false)

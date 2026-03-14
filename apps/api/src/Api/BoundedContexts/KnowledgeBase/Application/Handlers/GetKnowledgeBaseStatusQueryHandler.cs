@@ -148,10 +148,6 @@ internal class GetKnowledgeBaseStatusQueryHandler : IQueryHandler<GetKnowledgeBa
                 null),
             "Ready" => ("Completed", 100, 0, 0, null),
             "Failed" => ("Failed", 0, 0, 0, processingError ?? prog?.ErrorMessage ?? "PDF processing failed"),
-            // Legacy ProcessingStatus values (deprecated field, kept for safety)
-            "completed" => ("Completed", 100, 0, 0, null),
-            "processing" => ("Extracting", 30, 0, 0, null),
-            "failed" => ("Failed", 0, 0, 0, processingError ?? "PDF processing failed"),
             _ => ("Pending", 0, 0, 0, null),
         };
     }

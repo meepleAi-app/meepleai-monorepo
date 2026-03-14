@@ -90,9 +90,7 @@ public sealed class SharedGameCatalogEndpointsIntegrationTests : IAsyncLifetime
                     services.AddSingleton(mockRedis.Object);
 
                     // Mock vector/embedding services
-                    services.RemoveAll(typeof(Api.Services.IQdrantService));
                     services.RemoveAll(typeof(Api.Services.IEmbeddingService));
-                    services.AddScoped<Api.Services.IQdrantService>(_ => Mock.Of<Api.Services.IQdrantService>());
                     services.AddScoped<Api.Services.IEmbeddingService>(_ => Mock.Of<Api.Services.IEmbeddingService>());
 
                     // Ensure domain event collector is registered

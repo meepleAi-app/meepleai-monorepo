@@ -18,27 +18,6 @@
     <!-- Required for Moq to create proxies of internal types in generic contexts (e.g., ILogger<InternalService>) -->
     <InternalsVisibleTo Include="DynamicProxyGenAssembly2" />
   </ItemGroup>
-  <!-- Qdrant SDK files excluded from compilation — pgvector is the sole vector store.
-       Files kept on disk for reference but do not compile without Qdrant.Client NuGet. -->
-  <ItemGroup>
-    <Compile Remove="Services\QdrantClientAdapter.cs" />
-    <Compile Remove="Services\QdrantService.cs" />
-    <Compile Remove="Services\PrivateQdrantService.cs" />
-    <Compile Remove="Services\Qdrant\IQdrantCollectionManager.cs" />
-    <Compile Remove="Services\Qdrant\IQdrantVectorIndexer.cs" />
-    <Compile Remove="Services\Qdrant\IQdrantVectorSearcher.cs" />
-    <Compile Remove="Services\Qdrant\QdrantCollectionManager.cs" />
-    <Compile Remove="Services\Qdrant\QdrantVectorIndexer.cs" />
-    <Compile Remove="Services\Qdrant\QdrantVectorSearcher.cs" />
-    <Compile Remove="Routing\AdminQdrantEndpoints.cs" />
-    <Compile Remove="Infrastructure\QdrantHealthCheck.cs" />
-    <Compile Remove="BoundedContexts\KnowledgeBase\Infrastructure\Indexing\OptimizedVectorIndexService.cs" />
-    <Compile Remove="BoundedContexts\KnowledgeBase\Infrastructure\Indexing\IOptimizedVectorIndexService.cs" />
-    <Compile Remove="BoundedContexts\Administration\Application\Commands\Resources\RebuildVectorIndexCommandHandler.cs" />
-    <Compile Remove="BoundedContexts\Administration\Application\Commands\Resources\RebuildVectorIndexCommand.cs" />
-    <Compile Remove="BoundedContexts\Administration\Application\Commands\Resources\RebuildVectorIndexCommandValidator.cs" />
-    <Compile Remove="BoundedContexts\DocumentProcessing\Application\EventHandlers\PrivatePdfAssociatedEventHandler.cs" />
-  </ItemGroup>
   <ItemGroup>
     <PackageReference Include="AWSSDK.S3" Version="3.7.413" />
     <PackageReference Include="AspNetCore.HealthChecks.NpgSql" Version="9.0.0" />

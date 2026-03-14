@@ -13,15 +13,21 @@ export interface CardRef {
   color: string; // HSL entity color
 }
 
+export interface TapOrigin {
+  x: number;
+  y: number;
+}
+
 interface CardBrowserState {
   isOpen: boolean;
   cards: CardRef[];
   currentIndex: number;
   history: CardRef[];
+  origin?: TapOrigin;
 }
 
 interface CardBrowserActions {
-  open: (cards: CardRef[], index: number) => void;
+  open: (cards: CardRef[], index: number, origin?: TapOrigin) => void;
   close: () => void;
   setIndex: (index: number) => void;
   navigateTo: (card: CardRef) => void;
@@ -81,9 +87,9 @@ export function CardBrowserProvider({ children }: { children: React.ReactNode })
   }, []);
 
   const open = useCallback(
-    (cards: CardRef[], index: number) => {
+    (cards: CardRef[], index: number, origin?: TapOrigin) => {
       const card = cards[index];
-      setState(prev => ({ ...prev, isOpen: true, cards, currentIndex: index }));
+      setState(prev => ({ ...prev, isOpen: true, cards, currentIndex: index, origin }));
       if (card) pushHistory(card);
     },
     [pushHistory]

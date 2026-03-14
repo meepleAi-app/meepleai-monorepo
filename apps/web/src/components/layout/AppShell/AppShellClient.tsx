@@ -14,6 +14,10 @@
 import { type ReactNode, Suspense } from 'react';
 
 import { ErrorBoundary } from '@/components/errors/ErrorBoundary';
+import {
+  CardBrowserProvider,
+  MeepleCardBrowser,
+} from '@/components/ui/data-display/meeple-card-browser';
 import { OnboardingReminderBanner } from '@/components/onboarding';
 import { ImpersonationBanner } from '@/components/ui/feedback/impersonation-banner';
 import { CardStackPanel } from '@/components/ui/navigation/card-stack-panel';
@@ -59,6 +63,7 @@ export function AppShellClient({
 
   return (
     <NavigationProvider>
+      <CardBrowserProvider>
       <div className="min-h-screen flex flex-col bg-background" data-testid="app-shell">
         {/* Impersonation Banner (fixed at top when active) */}
         <ImpersonationBanner
@@ -127,7 +132,12 @@ export function AppShellClient({
         <ErrorBoundary fallback={null} componentName="CardStackPanel">
           <CardStackPanel />
         </ErrorBoundary>
+        {/* Card Browser Overlay */}
+        <ErrorBoundary fallback={null} componentName="MeepleCardBrowser">
+          <MeepleCardBrowser />
+        </ErrorBoundary>
       </div>
+      </CardBrowserProvider>
     </NavigationProvider>
   );
 }

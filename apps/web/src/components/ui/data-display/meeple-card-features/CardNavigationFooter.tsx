@@ -25,7 +25,7 @@ const NAV_ENTITY_HSL: Record<string, string> = {
   player: '262 83% 58%',
   session: '240 60% 55%',
   agent: '38 92% 50%',
-  document: '210 40% 55%',
+  kb: '174 60% 40%',
   chatSession: '220 80% 55%',
   event: '350 89% 60%',
   toolkit: '142 70% 45%',

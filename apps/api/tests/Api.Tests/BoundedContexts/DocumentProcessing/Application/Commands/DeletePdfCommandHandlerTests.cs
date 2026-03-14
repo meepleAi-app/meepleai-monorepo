@@ -33,26 +33,24 @@ public class DeletePdfCommandHandlerTests
     /// <summary>
     /// Creates a fresh set of mocks for each test
     /// </summary>
-    private static (Mock<IServiceScopeFactory>, Mock<IBlobStorageService>, Mock<IAiResponseCacheService>, Mock<ILogger<DeletePdfCommandHandler>>) CreateMocks()
+    private static (Mock<IBlobStorageService>, Mock<IAiResponseCacheService>, Mock<ILogger<DeletePdfCommandHandler>>) CreateMocks()
     {
-        var scopeFactoryMock = new Mock<IServiceScopeFactory>();
         var blobStorageServiceMock = new Mock<IBlobStorageService>();
         var cacheServiceMock = new Mock<IAiResponseCacheService>();
         var loggerMock = new Mock<ILogger<DeletePdfCommandHandler>>();
 
-        return (scopeFactoryMock, blobStorageServiceMock, cacheServiceMock, loggerMock);
+        return (blobStorageServiceMock, cacheServiceMock, loggerMock);
     }
     [Fact]
     public void Constructor_WithValidDependencies_CreatesInstance()
     {
         // Arrange - fresh context per test
         using var context = CreateFreshDbContext();
-        var (scopeFactoryMock, blobStorageServiceMock, cacheServiceMock, loggerMock) = CreateMocks();
+        var (blobStorageServiceMock, cacheServiceMock, loggerMock) = CreateMocks();
 
         // Act
         var handler = new DeletePdfCommandHandler(
             context,
-            scopeFactoryMock.Object,
             blobStorageServiceMock.Object,
             cacheServiceMock.Object,
             loggerMock.Object);
@@ -65,12 +63,11 @@ public class DeletePdfCommandHandlerTests
     public void Constructor_WithNullDbContext_ThrowsArgumentNullException()
     {
         // Arrange - fresh mocks per test
-        var (scopeFactoryMock, blobStorageServiceMock, cacheServiceMock, loggerMock) = CreateMocks();
+        var (blobStorageServiceMock, cacheServiceMock, loggerMock) = CreateMocks();
 
         // Act
         Action act = () => new DeletePdfCommandHandler(
                 null!,
-                scopeFactoryMock.Object,
                 blobStorageServiceMock.Object,
                 cacheServiceMock.Object,
                 loggerMock.Object);
@@ -81,36 +78,15 @@ public class DeletePdfCommandHandlerTests
     }
 
     [Fact]
-    public void Constructor_WithNullScopeFactory_ThrowsArgumentNullException()
-    {
-        // Arrange - fresh resources per test
-        using var context = CreateFreshDbContext();
-        var (_, blobStorageServiceMock, cacheServiceMock, loggerMock) = CreateMocks();
-
-        // Act
-        Action act = () => new DeletePdfCommandHandler(
-                context,
-                null!,
-                blobStorageServiceMock.Object,
-                cacheServiceMock.Object,
-                loggerMock.Object);
-
-        // Assert
-        act.Should().Throw<ArgumentNullException>()
-            .WithParameterName("scopeFactory");
-    }
-
-    [Fact]
     public void Constructor_WithNullBlobStorageService_ThrowsArgumentNullException()
     {
         // Arrange - fresh resources per test
         using var context = CreateFreshDbContext();
-        var (scopeFactoryMock, _, cacheServiceMock, loggerMock) = CreateMocks();
+        var (_, cacheServiceMock, loggerMock) = CreateMocks();
 
         // Act
         Action act = () => new DeletePdfCommandHandler(
                 context,
-                scopeFactoryMock.Object,
                 null!,
                 cacheServiceMock.Object,
                 loggerMock.Object);
@@ -125,12 +101,11 @@ public class DeletePdfCommandHandlerTests
     {
         // Arrange - fresh resources per test
         using var context = CreateFreshDbContext();
-        var (scopeFactoryMock, blobStorageServiceMock, _, loggerMock) = CreateMocks();
+        var (blobStorageServiceMock, _, loggerMock) = CreateMocks();
 
         // Act
         Action act = () => new DeletePdfCommandHandler(
                 context,
-                scopeFactoryMock.Object,
                 blobStorageServiceMock.Object,
                 null!,
                 loggerMock.Object);
@@ -145,12 +120,11 @@ public class DeletePdfCommandHandlerTests
     {
         // Arrange - fresh resources per test
         using var context = CreateFreshDbContext();
-        var (scopeFactoryMock, blobStorageServiceMock, cacheServiceMock, _) = CreateMocks();
+        var (blobStorageServiceMock, cacheServiceMock, _) = CreateMocks();
 
         // Act
         Action act = () => new DeletePdfCommandHandler(
                 context,
-                scopeFactoryMock.Object,
                 blobStorageServiceMock.Object,
                 cacheServiceMock.Object,
                 null!);

@@ -190,7 +190,7 @@ public class GameStateHubTests
         // Assert
         _mockClients.Verify(c => c.User(TestParticipantId), Times.Once);
         _mockClientProxy.Verify(
-            p => p.SendCoreAsync("AgentAccessChanged", It.Is<object?[]>(args => (bool)args[0]! == true), default),
+            p => p.SendCoreAsync("AgentAccessChanged", It.Is<object?[]>(args => (bool)args[0]!), default),
             Times.Once);
     }
 
@@ -210,7 +210,7 @@ public class GameStateHubTests
 
         // Assert
         _mockClientProxy.Verify(
-            p => p.SendCoreAsync("AgentAccessChanged", It.Is<object?[]>(args => (bool)args[0]! == false), default),
+            p => p.SendCoreAsync("AgentAccessChanged", It.Is<object?[]>(args => !(bool)args[0]!), default),
             Times.Once);
     }
 

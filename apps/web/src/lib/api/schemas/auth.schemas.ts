@@ -17,6 +17,8 @@ export const AuthUserSchema = z.object({
   email: z.string().email(),
   displayName: z.string().nullable().optional(),
   role: z.string().min(1),
+  onboardingCompleted: z.boolean().default(false), // Issue #323
+  onboardingSkipped: z.boolean().default(false), // Issue #323
 });
 
 export type AuthUser = z.infer<typeof AuthUserSchema>;

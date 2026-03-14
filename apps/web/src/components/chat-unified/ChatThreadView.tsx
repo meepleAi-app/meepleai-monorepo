@@ -131,6 +131,7 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
     language: voicePrefs.language,
     preferredVoiceURI: voicePrefs.voiceURI ?? undefined,
     rate: voicePrefs.rate,
+    autoDetectLanguage: true,
   });
 
   const handleVoiceTap = useCallback(() => {

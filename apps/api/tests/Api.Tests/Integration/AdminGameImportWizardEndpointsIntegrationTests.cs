@@ -72,9 +72,7 @@ public sealed class AdminGameImportWizardEndpointsIntegrationTests : IAsyncLifet
                     services.AddSingleton(mockRedis.Object);
 
                     // Mock vector/embedding services
-                    services.RemoveAll(typeof(Api.Services.IQdrantService));
                     services.RemoveAll(typeof(Api.Services.IEmbeddingService));
-                    services.AddScoped<Api.Services.IQdrantService>(_ => Mock.Of<Api.Services.IQdrantService>());
                     services.AddScoped<Api.Services.IEmbeddingService>(_ => Mock.Of<Api.Services.IEmbeddingService>());
 
                     // Issue #2688: Mock IHybridCacheService (required for session validation in middleware)

@@ -38,7 +38,6 @@ internal sealed class SendAgentMessageCommandHandler : IStreamingQueryHandler<Se
     private readonly IChatThreadRepository _chatThreadRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ILlmService _llmService;
-    private readonly IQdrantService _qdrantService;
     private readonly IEmbeddingService _embeddingService;
     private readonly MeepleAiDbContext _dbContext;
     private readonly IUserBudgetService _userBudgetService;
@@ -60,7 +59,6 @@ internal sealed class SendAgentMessageCommandHandler : IStreamingQueryHandler<Se
         IChatThreadRepository chatThreadRepository,
         IUnitOfWork unitOfWork,
         ILlmService llmService,
-        IQdrantService qdrantService,
         IEmbeddingService embeddingService,
         MeepleAiDbContext dbContext,
         IUserBudgetService userBudgetService,
@@ -78,7 +76,6 @@ internal sealed class SendAgentMessageCommandHandler : IStreamingQueryHandler<Se
         _chatThreadRepository = chatThreadRepository ?? throw new ArgumentNullException(nameof(chatThreadRepository));
         _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
         _llmService = llmService ?? throw new ArgumentNullException(nameof(llmService));
-        _qdrantService = qdrantService ?? throw new ArgumentNullException(nameof(qdrantService));
         _embeddingService = embeddingService ?? throw new ArgumentNullException(nameof(embeddingService));
         _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
         _userBudgetService = userBudgetService ?? throw new ArgumentNullException(nameof(userBudgetService));
@@ -476,53 +473,8 @@ internal sealed class SendAgentMessageCommandHandler : IStreamingQueryHandler<Se
                 typology = profile.Name
             });
 
-        Api.Services.SearchResult searchResult;
-        if (sessionGameIds is { Count: > 1 })
-        {
-            // Issue #5580: Multi-game search — search each game ID and merge results
-            var allResults = new List<SearchResultItem>();
-            foreach (var gid in sessionGameIds)
-            {
-                var partialResult = await _qdrantService.SearchAsync(
-                    gid.ToString(),
-                    embeddingResult.Embeddings[0],
-                    limit: profile.TopK,
-                    documentIds: pdfDocumentIds.Count > 0 ? pdfDocumentIds : null,
-                    cancellationToken).ConfigureAwait(false);
-
-                if (partialResult.Success)
-                {
-                    allResults.AddRange(partialResult.Results);
-                }
-            }
-
-            // Merge: sort by score and take top K
-            var topResults = allResults
-                .OrderByDescending(r => r.Score)
-                .Take(profile.TopK)
-                .ToList();
-
-            searchResult = Api.Services.SearchResult.CreateSuccess(topResults);
-        }
-        else
-        {
-            searchResult = await _qdrantService.SearchAsync(
-                gameId,
-                embeddingResult.Embeddings[0],
-                limit: profile.TopK,
-                documentIds: pdfDocumentIds.Count > 0 ? pdfDocumentIds : null,
-                cancellationToken).ConfigureAwait(false);
-        }
-
-        if (!searchResult.Success)
-        {
-            _logger.LogError("Vector search failed for agent {AgentId}: {Error}",
-                command.AgentId, searchResult.ErrorMessage);
-            yield return CreateEvent(
-                StreamingEventType.Error,
-                new StreamingError($"Vector search failed: {searchResult.ErrorMessage}", "SEARCH_FAILED"));
-            yield break;
-        }
+        // Vector search (Qdrant dependency removed — returns empty results)
+        var searchResult = Api.Services.SearchResult.CreateSuccess(new List<SearchResultItem>());
 
         // Step 3: Filter results by minimum score, deduplicate, and build context
         // Issue #5254: Duplicate Qdrant points cause identical chunks in results.

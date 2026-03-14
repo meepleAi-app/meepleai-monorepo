@@ -208,7 +208,7 @@ export function MeepleGameCatalogCard({
       inLibrary
         ? [
             {
-              entity: 'document' as MeepleEntityType,
+              entity: 'kb' as MeepleEntityType,
               label: 'KB',
               onClick: () => setKbDrawerOpen(true),
             },
@@ -230,7 +230,7 @@ export function MeepleGameCatalogCard({
           ]
         : [
             {
-              entity: 'document' as MeepleEntityType,
+              entity: 'kb' as MeepleEntityType,
               label: 'Regolamento',
               href: `/games/${game.id}`,
             },

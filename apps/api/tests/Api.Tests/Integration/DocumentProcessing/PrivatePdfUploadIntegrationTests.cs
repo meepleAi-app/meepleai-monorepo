@@ -309,7 +309,6 @@ public sealed class PrivatePdfUploadIntegrationTests : IAsyncLifetime
             FileSizeBytes = 1024,
             UploadedByUserId = TestUserId,
             Language = "en",
-            ProcessingStatus = "uploaded",
             ExtractedText = "This is a test rulebook for the game. The game has multiple phases: setup, main game, and scoring."
         };
 
@@ -394,7 +393,7 @@ public sealed class PrivatePdfUploadIntegrationTests : IAsyncLifetime
         var updatedPdf = await _dbContext.Set<PdfDocumentEntity>()
             .FirstAsync(p => p.Id == TestPdfId, TestCancellationToken);
 
-        updatedPdf.ProcessingStatus.Should().Be("indexed");
+        updatedPdf.ProcessingState.ToString().Should().Be("Ready");
         updatedPdf.ProcessedAt.Should().NotBeNull();
 
         // Verify services were called
@@ -420,7 +419,6 @@ public sealed class PrivatePdfUploadIntegrationTests : IAsyncLifetime
             FileSizeBytes = 512,
             UploadedByUserId = TestUserId,
             Language = "en",
-            ProcessingStatus = "uploaded",
             ExtractedText = null // No text extracted
         };
 

@@ -125,8 +125,7 @@ export function RagReadinessIndicator({ readiness }: RagReadinessIndicatorProps)
                     isCurrent &&
                       !isFailedStep &&
                       'border-amber-500 bg-amber-50 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400',
-                    isFailedStep &&
-                      'border-destructive bg-destructive/10 text-destructive',
+                    isFailedStep && 'border-destructive bg-destructive/10 text-destructive',
                     !isComplete &&
                       !isCurrent &&
                       !isFailedStep &&
@@ -155,12 +154,7 @@ export function RagReadinessIndicator({ readiness }: RagReadinessIndicatorProps)
                   {step.label}
                 </span>
                 {index < STEPS.length - 1 && (
-                  <div
-                    className={cn(
-                      'h-0.5 flex-1',
-                      isComplete ? 'bg-green-500' : 'bg-muted'
-                    )}
-                  />
+                  <div className={cn('h-0.5 flex-1', isComplete ? 'bg-green-500' : 'bg-muted')} />
                 )}
               </div>
             );
@@ -171,18 +165,13 @@ export function RagReadinessIndicator({ readiness }: RagReadinessIndicatorProps)
         {readiness.processingDocuments > 0 && (
           <div className="mt-4 space-y-2">
             {readiness.documents
-              .filter(
-                (d) => d.processingState !== 'Ready' && d.processingState !== 'Failed'
-              )
-              .map((doc) => (
+              .filter(d => d.processingState !== 'Ready' && d.processingState !== 'Failed')
+              .map(doc => (
                 <div key={doc.documentId} className="flex items-center gap-3">
                   <span className="min-w-0 flex-1 truncate text-xs text-muted-foreground">
                     {doc.fileName}
                   </span>
-                  <Progress
-                    value={doc.progressPercentage}
-                    className="h-1.5 w-24"
-                  />
+                  <Progress value={doc.progressPercentage} className="h-1.5 w-24" />
                   <span className="text-xs font-medium tabular-nums">
                     {doc.progressPercentage}%
                   </span>
@@ -198,13 +187,12 @@ export function RagReadinessIndicator({ readiness }: RagReadinessIndicatorProps)
             <span>
               {readiness.failedDocuments} documento/i fallito/i
               {readiness.documents
-                .filter((d) => d.processingState === 'Failed')
-                .map((d) => d.errorMessage)
-                .filter(Boolean)
-                .length > 0 &&
+                .filter(d => d.processingState === 'Failed')
+                .map(d => d.errorMessage)
+                .filter(Boolean).length > 0 &&
                 `: ${readiness.documents
-                  .filter((d) => d.processingState === 'Failed')
-                  .map((d) => d.errorMessage)
+                  .filter(d => d.processingState === 'Failed')
+                  .map(d => d.errorMessage)
                   .filter(Boolean)
                   .join(', ')}`}
             </span>

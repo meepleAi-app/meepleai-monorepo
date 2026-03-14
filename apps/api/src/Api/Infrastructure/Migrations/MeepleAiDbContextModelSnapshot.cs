@@ -2247,6 +2247,10 @@ namespace Api.Infrastructure.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("invited_by_user_id");
 
+                    b.Property<DateTime?>("RevokedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("revoked_at");
+
                     b.Property<string>("Role")
                         .IsRequired()
                         .HasMaxLength(32)
@@ -4821,7 +4825,7 @@ namespace Api.Infrastructure.Migrations
                         .HasColumnName("created_at");
 
                     b.Property<Vector>("Embedding")
-                        .HasColumnType("vector(1536)")
+                        .HasColumnType("vector(1024)")
                         .HasColumnName("embedding");
 
                     b.Property<Guid>("GameId")
@@ -5243,7 +5247,7 @@ namespace Api.Infrastructure.Migrations
                         .HasColumnName("content");
 
                     b.Property<Vector>("Embedding")
-                        .HasColumnType("vector(1536)")
+                        .HasColumnType("vector(1024)")
                         .HasColumnName("embedding");
 
                     b.Property<Guid?>("GameId")
@@ -5768,7 +5772,7 @@ namespace Api.Infrastructure.Migrations
                         .HasColumnName("description");
 
                     b.Property<Vector>("Embedding")
-                        .HasColumnType("vector(1536)")
+                        .HasColumnType("vector(1024)")
                         .HasColumnName("embedding");
 
                     b.Property<double?>("EvaluationScore")
@@ -6459,11 +6463,6 @@ namespace Api.Infrastructure.Migrations
                         .HasColumnType("character varying(32)")
                         .HasDefaultValue("Pending")
                         .HasColumnName("processing_state");
-
-                    b.Property<string>("ProcessingStatus")
-                        .IsRequired()
-                        .HasMaxLength(32)
-                        .HasColumnType("character varying(32)");
 
                     b.Property<int>("RetryCount")
                         .ValueGeneratedOnAdd()
@@ -7444,8 +7443,16 @@ namespace Api.Infrastructure.Migrations
                     b.Property<Guid?>("CreatedBy")
                         .HasColumnType("uuid");
 
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<int>("DiaryEventCount")
                         .HasColumnType("integer");
+
+                    b.Property<bool>("IsDeleted")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false);
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -7465,6 +7472,8 @@ namespace Api.Infrastructure.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("CreatedBy");
+
+                    b.HasIndex("IsDeleted");
 
                     b.HasIndex("SessionId", "Timestamp");
 
@@ -9668,6 +9677,14 @@ namespace Api.Infrastructure.Migrations
                         .HasMaxLength(64)
                         .HasColumnType("uuid");
 
+                    b.Property<string>("AvatarUrl")
+                        .HasMaxLength(2048)
+                        .HasColumnType("character varying(2048)");
+
+                    b.Property<string>("Bio")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -9738,6 +9755,21 @@ namespace Api.Infrastructure.Migrations
                         .HasDefaultValue(1);
 
                     b.Property<DateTime?>("LockedUntil")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("OnboardingCompleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTime?>("OnboardingCompletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("OnboardingDismissedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("OnboardingSkipped")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTime?>("OnboardingWizardSeenAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("PasswordHash")
@@ -10125,7 +10157,7 @@ namespace Api.Infrastructure.Migrations
 
                     b.HasIndex("UserId")
                         .HasDatabaseName("IX_UserCollectionEntries_UserId_Favorites")
-                        .HasFilter("[IsFavorite] = 1");
+                        .HasFilter("\"IsFavorite\" = true");
 
                     b.HasIndex("EntityType", "EntityId")
                         .HasDatabaseName("IX_UserCollectionEntries_EntityType_EntityId");
@@ -10136,7 +10168,7 @@ namespace Api.Infrastructure.Migrations
 
                     b.ToTable("user_collection_entries", null, t =>
                         {
-                            t.HasCheckConstraint("CK_UserCollectionEntries_EntityType", "[EntityType] IN ('Player', 'Event', 'Session', 'Agent', 'Document', 'ChatSession')");
+                            t.HasCheckConstraint("CK_UserCollectionEntries_EntityType", "\"EntityType\" IN ('Player', 'Event', 'Session', 'Agent', 'Document', 'ChatSession')");
                         });
                 });
 

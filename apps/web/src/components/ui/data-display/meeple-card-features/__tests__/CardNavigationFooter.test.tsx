@@ -18,7 +18,7 @@ vi.mock('next/link', () => ({
 }));
 
 const MOCK_LINKS: ResolvedNavigationLink[] = [
-  { entity: 'document', label: 'KB', href: '/games/1/knowledge-base' },
+  { entity: 'kb', label: 'KB', href: '/games/1/knowledge-base' },
   { entity: 'agent', label: 'Agents', href: '/games/1/agents' },
   { entity: 'chatSession', label: 'Chats', href: '/games/1/chats' },
   { entity: 'session', label: 'Sessions', href: '/games/1/sessions' },

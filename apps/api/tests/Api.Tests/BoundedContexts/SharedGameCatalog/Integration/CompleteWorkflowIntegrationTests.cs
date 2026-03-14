@@ -91,10 +91,8 @@ public sealed class CompleteWorkflowIntegrationTests : IAsyncLifetime
                     services.AddSingleton(mockRedis.Object);
 
                     // Mock vector/embedding services
-                    services.RemoveAll(typeof(Api.Services.IQdrantService));
                     services.RemoveAll(typeof(Api.Services.IEmbeddingService));
                     services.RemoveAll(typeof(Api.Services.IHybridCacheService));
-                    services.AddScoped<Api.Services.IQdrantService>(_ => Mock.Of<Api.Services.IQdrantService>());
                     services.AddScoped<Api.Services.IEmbeddingService>(_ => Mock.Of<Api.Services.IEmbeddingService>());
                     services.AddScoped<Api.Services.IHybridCacheService>(_ => Mock.Of<Api.Services.IHybridCacheService>());
 

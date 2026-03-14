@@ -58,6 +58,17 @@ public sealed class User : AggregateRoot<Guid>
     // Onboarding preferences (Issue #124: Invitation system)
     public List<string>? Interests { get; private set; }
 
+    // Profile & Onboarding
+    public string? AvatarUrl { get; private set; }
+    public string? Bio { get; private set; }
+    public DateTime? OnboardingWizardSeenAt { get; private set; }
+    public DateTime? OnboardingDismissedAt { get; private set; }
+
+    // Issue #323: Onboarding completion tracking
+    public bool OnboardingCompleted { get; private set; }
+    public bool OnboardingSkipped { get; private set; }
+    public DateTime? OnboardingCompletedAt { get; private set; }
+
     // Navigation properties (not part of domain model, for EF Core only)
     private readonly List<Session> _sessions = new();
     private readonly List<ApiKey> _apiKeys = new();
@@ -665,6 +676,66 @@ public sealed class User : AggregateRoot<Guid>
         Interests = interests;
     }
 
+    #region Onboarding
+
+    /// <summary>
+    /// Marks the onboarding wizard as seen. Idempotent — early return if already set.
+    /// </summary>
+    public void MarkOnboardingWizardSeen()
+    {
+        if (OnboardingWizardSeenAt.HasValue) return;
+        OnboardingWizardSeenAt = DateTime.UtcNow;
+    }
+
+    /// <summary>
+    /// Dismisses the onboarding checklist. Idempotent — early return if already dismissed.
+    /// </summary>
+    public void DismissOnboarding()
+    {
+        if (OnboardingDismissedAt.HasValue) return;
+        OnboardingDismissedAt = DateTime.UtcNow;
+    }
+
+    /// <summary>
+    /// Updates the user's avatar URL.
+    /// </summary>
+    public void UpdateAvatarUrl(string avatarUrl)
+    {
+        AvatarUrl = avatarUrl;
+    }
+
+    /// <summary>
+    /// Updates the user's bio.
+    /// </summary>
+    public void UpdateBio(string bio)
+    {
+        Bio = bio;
+    }
+
+    /// <summary>
+    /// Marks the user's onboarding as completed.
+    /// Issue #323: Onboarding completion tracking.
+    /// </summary>
+    public void CompleteOnboarding()
+    {
+        OnboardingCompleted = true;
+        OnboardingSkipped = false;
+        OnboardingCompletedAt = DateTime.UtcNow;
+    }
+
+    /// <summary>
+    /// Marks the user's onboarding as skipped.
+    /// Issue #323: Onboarding completion tracking.
+    /// </summary>
+    public void SkipOnboarding()
+    {
+        OnboardingCompleted = true;
+        OnboardingSkipped = true;
+        OnboardingCompletedAt = DateTime.UtcNow;
+    }
+
+    #endregion
+
     #region Persistence Hydration Methods (internal - S3011 fix)
 
     /// <summary>
@@ -780,6 +851,18 @@ public sealed class User : AggregateRoot<Guid>
     }
 
     /// <summary>
+    /// Restores profile and onboarding state from persistence layer.
+    /// Should only be called by UserRepository during entity materialization.
+    /// </summary>
+    internal void RestoreOnboardingState(string? avatarUrl, string? bio, DateTime? wizardSeenAt, DateTime? dismissedAt)
+    {
+        AvatarUrl = avatarUrl;
+        Bio = bio;
+        OnboardingWizardSeenAt = wizardSeenAt;
+        OnboardingDismissedAt = dismissedAt;
+    }
+
+    /// <summary>
     /// Restores email verification state from persistence layer.
     /// Issue #3672: Internal method to avoid reflection in repository (S3011 compliance).
     /// Should only be called by UserRepository during entity materialization.
@@ -789,6 +872,17 @@ public sealed class User : AggregateRoot<Guid>
         EmailVerified = emailVerified;
         EmailVerifiedAt = emailVerifiedAt;
         VerificationGracePeriodEndsAt = verificationGracePeriodEndsAt;
+    }
+
+    /// <summary>
+    /// Restores onboarding state from persistence layer.
+    /// Issue #323: Onboarding completion tracking.
+    /// </summary>
+    internal void RestoreOnboardingState(bool onboardingCompleted, bool onboardingSkipped, DateTime? onboardingCompletedAt)
+    {
+        OnboardingCompleted = onboardingCompleted;
+        OnboardingSkipped = onboardingSkipped;
+        OnboardingCompletedAt = onboardingCompletedAt;
     }
 
     #endregion

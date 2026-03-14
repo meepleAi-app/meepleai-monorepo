@@ -5,7 +5,6 @@ using Api.BoundedContexts.DocumentProcessing.Application.Queries.Queue;
 using Api.BoundedContexts.DocumentProcessing.Application.Services;
 using Api.BoundedContexts.DocumentProcessing.Domain.ValueObjects;
 using Api.Filters;
-using Api.Services;
 using MediatR;
 
 namespace Api.Routing;
@@ -39,7 +38,6 @@ internal static class AdminPipelineEndpoints
     private static async Task<IResult> GetPipelineHealth(
         IInfrastructureHealthService healthService,
         IProcessingMetricsService metricsService,
-        IQdrantClientAdapter qdrantClient,
         IHttpClientFactory httpClientFactory,
         IMediator mediator,
         ILogger<Program> logger,

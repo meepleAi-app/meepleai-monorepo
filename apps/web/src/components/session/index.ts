@@ -57,6 +57,8 @@ export { LiveSessionLayout } from './LiveSessionLayout';
 export { MobileStatusBar } from './MobileStatusBar';
 export { ActivityFeedInputBar } from './ActivityFeedInputBar';
 export { MobileScorebar } from './MobileScorebar';
+export { TurnSummaryButton } from './TurnSummaryButton';
+export type { TurnSummaryButtonProps } from './TurnSummaryButton';
 
 export type {
   Participant,

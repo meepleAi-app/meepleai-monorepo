@@ -17,6 +17,7 @@ import {
   FileText,
   Filter,
   Gamepad2,
+  ListOrdered,
   Plus,
   SendHorizontal,
   Star,
@@ -59,6 +60,12 @@ export function LibraryNavConfig() {
           label: 'Wishlist',
           href: '/library?tab=wishlist',
           icon: Star,
+        },
+        {
+          id: 'playlists',
+          label: 'Playlists',
+          href: '/library/playlists',
+          icon: ListOrdered,
         },
         {
           id: 'proposals',

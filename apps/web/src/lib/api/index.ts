@@ -57,6 +57,10 @@ import {
   createGameNightBggClient,
   createTierClient,
   createSessionInviteClient,
+  createPlaylistsClient,
+  createWishlistClient,
+  createPlayRecordsClient,
+  createFeatureFlagsClient,
   createSandboxClient,
   type AuthClient,
   type GamesClient,
@@ -95,6 +99,10 @@ import {
   type GameNightBggClient,
   type TierClient,
   type SessionInviteClient,
+  type PlaylistsClient,
+  type WishlistClient,
+  type PlayRecordsClient,
+  type FeatureFlagsClient,
   type SandboxClient,
 } from './clients';
 import { HttpClient, type HttpClientConfig } from './core/httpClient';
@@ -294,6 +302,18 @@ export interface ApiClient {
   /** Session Invites (Game Night Improvvisata) */
   sessionInvites: SessionInviteClient;
 
+  /** Game Night Playlists — Gap Closure */
+  playlists: PlaylistsClient;
+
+  /** Wishlist */
+  wishlist: WishlistClient;
+
+  /** Play Records — session tracking and statistics (Issue #3892) */
+  playRecords: PlayRecordsClient;
+
+  /** User Feature Flags — server-driven feature access */
+  featureFlags: FeatureFlagsClient;
+
   /** RAG Sandbox Dashboard (Admin) */
   sandbox: SandboxClient;
 
@@ -384,6 +404,10 @@ export function createApiClient(config?: ApiClientConfig): ApiClient {
     gameNightBgg: createGameNightBggClient({ httpClient }), // Game Night Improvvisata
     tiers: createTierClient({ httpClient }), // Game Night Improvvisata — Tier & Usage
     sessionInvites: createSessionInviteClient({ httpClient }), // Game Night Improvvisata — Session Invites
+    playlists: createPlaylistsClient({ httpClient }), // Gap Closure — Playlists
+    wishlist: createWishlistClient({ httpClient }), // Wishlist
+    playRecords: createPlayRecordsClient({ httpClient }), // Play Records
+    featureFlags: createFeatureFlagsClient({ httpClient }), // User Feature Flags
     sandbox: createSandboxClient({ httpClient }), // RAG Sandbox Dashboard
     delete: (path: string) => httpClient.delete(path),
   };

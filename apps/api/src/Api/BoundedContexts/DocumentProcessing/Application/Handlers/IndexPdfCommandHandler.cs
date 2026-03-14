@@ -93,7 +93,6 @@ internal class IndexPdfCommandHandler : ICommandHandler<IndexPdfCommand, Indexin
 
             // Mark processing complete
             pdf.ProcessingState = "Ready";
-            pdf.ProcessingStatus = "completed";
             pdf.ProcessedAt = _timeProvider.GetUtcNow().UtcDateTime;
 
             await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
@@ -130,7 +129,6 @@ internal class IndexPdfCommandHandler : ICommandHandler<IndexPdfCommand, Indexin
                 if (failedPdf != null)
                 {
                     failedPdf.ProcessingState = "Failed";
-                    failedPdf.ProcessingStatus = "failed";
                     failedPdf.ProcessingError = $"Unexpected error: {ex.Message}";
                     await _db.SaveChangesAsync(CancellationToken.None).ConfigureAwait(false);
                 }

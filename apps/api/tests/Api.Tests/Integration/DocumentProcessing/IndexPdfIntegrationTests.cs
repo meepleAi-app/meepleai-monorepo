@@ -304,7 +304,6 @@ public sealed class IndexPdfIntegrationTests : IAsyncLifetime
             FilePath = $"/test/{name}",
             FileSizeBytes = 1024,
             UploadedAt = DateTime.UtcNow,
-            ProcessingStatus = status,
             PageCount = 10,
             ExtractedText = extractedText ?? "This is test extracted text.\n\nIt has multiple paragraphs.\n\nEach paragraph will become a chunk during indexing."
         };

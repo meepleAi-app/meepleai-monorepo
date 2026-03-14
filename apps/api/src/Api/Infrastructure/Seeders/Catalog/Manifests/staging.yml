@@ -38,6 +38,14 @@ catalog:
       fallbackImageUrl: "https://cf.geekdo-images.com/vNFe4JkhKAERzi4T0Ntwpw__original/img/rqcUdtu_N4v-SpI96XVmpYHnJww=/0x0/filters:format(png)/pic8234167.png"
       fallbackThumbnailUrl: "https://cf.geekdo-images.com/vNFe4JkhKAERzi4T0Ntwpw__small/img/KKU_42Uswt4tKCpf1zY5kTzgr-g=/fit-in/200x150/filters:strip_icc()/pic8234167.png"
 
+    - title: "Descent: Journeys in the Dark (Second Edition)"
+      bggId: 104162
+      language: en
+      pdf: "descent_rulebook.pdf"
+      seedAgent: true
+      fallbackImageUrl: "https://cf.geekdo-images.com/ZTkiJEPvz2O3vmMJWfjrbw__original/img/GZJIjJPJKk1a4Bx-rM-3KL6O4hk=/0x0/filters:format(jpeg)/pic1180640.jpg"
+      fallbackThumbnailUrl: "https://cf.geekdo-images.com/ZTkiJEPvz2O3vmMJWfjrbw__small/img/cO_2QvC_2BCb-Smd0xp4a5G2n-s=/fit-in/200x150/filters:strip_icc()/pic1180640.jpg"
+
     # --- Games with PDF rulebooks but no AI agent ---
     - title: "Wingspan"
       bggId: 266192

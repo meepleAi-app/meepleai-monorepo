@@ -74,7 +74,7 @@ internal class CancelPdfProcessingCommandHandler : ICommandHandler<CancelPdfProc
         {
             _logger.LogInformation(
                 "PDF {PdfId} processing already completed/failed (status: {Status})",
-                command.PdfId, pdf.ProcessingStatus);
+                command.PdfId, pdf.ProcessingState);
             return new CancelProcessingResult(
                 Success: false,
                 Message: "Processing already completed or failed",

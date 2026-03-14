@@ -191,7 +191,6 @@ public sealed class DeletePdfIntegrationTests : IAsyncLifetime
             FilePath = $"/test/{name}",
             FileSizeBytes = 1024,
             UploadedAt = DateTime.UtcNow,
-            ProcessingStatus = "completed",
             PageCount = 10,
             ExtractedText = "Test extracted text"
         };

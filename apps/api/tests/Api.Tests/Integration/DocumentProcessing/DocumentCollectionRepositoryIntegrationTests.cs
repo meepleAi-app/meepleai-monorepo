@@ -589,7 +589,6 @@ public sealed class DocumentCollectionRepositoryIntegrationTests : IAsyncLifetim
             FilePath = "/test/path/test1.pdf",
             FileSizeBytes = 5000,
             PageCount = 10,
-            ProcessingStatus = "completed",
             UploadedAt = DateTime.UtcNow,
             UploadedByUserId = TestUserId
         };
@@ -601,7 +600,6 @@ public sealed class DocumentCollectionRepositoryIntegrationTests : IAsyncLifetim
             FilePath = "/test/path/test2.pdf",
             FileSizeBytes = 5000,
             PageCount = 10,
-            ProcessingStatus = "completed",
             UploadedAt = DateTime.UtcNow,
             UploadedByUserId = TestUserId
         };

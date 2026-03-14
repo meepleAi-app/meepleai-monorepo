@@ -1,7 +1,7 @@
 # Admin Invite + Voice Onboarding — Design Spec
 
 **Date**: 2026-03-14
-**Status**: Revised (post spec-review)
+**Status**: Implemented
 
 ## Summary
 
@@ -210,4 +210,4 @@ No duplicate issues found in the 26 open GitHub issues. Related but different:
 | **Voice UI in chat card** | ✅ Complete | `VoiceMicButton`, `TtsSpeakerButton`, `VoiceSettingsPopover` in `ChatThreadView`. Also `/ask` voice-first page. **No new work needed** |
 | **Premium voice toggle** | ⚠️ Architecture ready | Provider factory exists (`provider-factory.ts`), Zustand store persists prefs. **Deepgram/ElevenLabs providers not yet implemented** (deferred with #312) |
 | **Admin UI completion** | ⚠️ Partial | **Verify/complete role + audit UI** |
-| **E2E Playwright test** | ❌ Missing | **New test file** |
+| **E2E Playwright test** | ✅ Complete | `e2e/onboarding/accept-invite-to-onboarding.spec.ts` |

@@ -40,6 +40,7 @@ const ENTITY_HSL: Record<MeepleEntityType, string> = {
   chatSession: '220 80% 55%',
   event: '350 89% 60%',
   toolkit: '142 70% 45%',
+  tool: '190 65% 45%',
   custom: '220 70% 50%',
 };
 
@@ -52,6 +53,7 @@ const ENTITY_LABELS: Record<MeepleEntityType, string> = {
   chatSession: 'Chat',
   event: 'Event',
   toolkit: 'Toolkit',
+  tool: 'Tool',
   custom: 'Item',
 };
 

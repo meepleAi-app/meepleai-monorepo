@@ -1634,8 +1634,8 @@ export function createAdminClient({ httpClient }: CreateAdminClientParams) {
       }
     ): Promise<AuditLogListResult> {
       const searchParams = new URLSearchParams();
-      if (params?.limit) searchParams.set('limit', String(params.limit));
-      if (params?.offset) searchParams.set('offset', String(params.offset));
+      if (params?.limit != null) searchParams.set('limit', String(params.limit));
+      if (params?.offset != null) searchParams.set('offset', String(params.offset));
       const qs = searchParams.toString();
       const url = `/api/v1/admin/users/${encodeURIComponent(userId)}/audit-log${qs ? `?${qs}` : ''}`;
       const result = await httpClient.get<AuditLogListResult>(url, AuditLogListResultSchema);

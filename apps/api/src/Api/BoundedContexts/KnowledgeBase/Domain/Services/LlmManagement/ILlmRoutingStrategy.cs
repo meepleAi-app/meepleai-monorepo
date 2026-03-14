@@ -13,12 +13,14 @@ internal interface ILlmRoutingStrategy
     /// <summary>
     /// Select the appropriate LLM provider and model based on routing logic.
     /// Issue #3435: Strategy-based routing (strategy determines model, tier validates access).
+    /// Issue #28: Region-aware routing — region parameter accepted but currently ignored (no-op).
     /// </summary>
     /// <param name="user">User making the request (null for anonymous)</param>
     /// <param name="strategy">RAG strategy that determines model selection</param>
     /// <param name="context">Additional context for routing decision</param>
+    /// <param name="region">Geographic region hint for future multi-region routing (currently ignored)</param>
     /// <returns>Routing decision with provider name and model ID</returns>
-    LlmRoutingDecision SelectProvider(User? user, RagStrategy strategy, string? context = null);
+    LlmRoutingDecision SelectProvider(User? user, RagStrategy strategy, string? context = null, string? region = null);
 }
 
 /// <summary>

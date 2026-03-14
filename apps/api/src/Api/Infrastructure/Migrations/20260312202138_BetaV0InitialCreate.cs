@@ -2223,7 +2223,7 @@ namespace Api.Infrastructure.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_user_collection_entries", x => x.Id);
-                    table.CheckConstraint("CK_UserCollectionEntries_EntityType", "[EntityType] IN ('Player', 'Event', 'Session', 'Agent', 'Document', 'ChatSession')");
+                    table.CheckConstraint("CK_UserCollectionEntries_EntityType", "\"EntityType\" IN ('Player', 'Event', 'Session', 'Agent', 'Document', 'ChatSession')");
                     table.ForeignKey(
                         name: "FK_user_collection_entries_users_UserId",
                         column: x => x.UserId,
@@ -7449,7 +7449,7 @@ namespace Api.Infrastructure.Migrations
                 name: "IX_UserCollectionEntries_UserId_Favorites",
                 table: "user_collection_entries",
                 column: "UserId",
-                filter: "[IsFavorite] = 1");
+                filter: "\"IsFavorite\" = true");
 
             migrationBuilder.CreateIndex(
                 name: "IX_UserGameLabels_EntryId_LabelId",

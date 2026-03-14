@@ -10134,7 +10134,7 @@ namespace Api.Infrastructure.Migrations
 
                     b.HasIndex("UserId")
                         .HasDatabaseName("IX_UserCollectionEntries_UserId_Favorites")
-                        .HasFilter("[IsFavorite] = 1");
+                        .HasFilter("\"IsFavorite\" = true");
 
                     b.HasIndex("EntityType", "EntityId")
                         .HasDatabaseName("IX_UserCollectionEntries_EntityType_EntityId");
@@ -10145,7 +10145,7 @@ namespace Api.Infrastructure.Migrations
 
                     b.ToTable("user_collection_entries", null, t =>
                         {
-                            t.HasCheckConstraint("CK_UserCollectionEntries_EntityType", "[EntityType] IN ('Player', 'Event', 'Session', 'Agent', 'Document', 'ChatSession')");
+                            t.HasCheckConstraint("CK_UserCollectionEntries_EntityType", "\"EntityType\" IN ('Player', 'Event', 'Session', 'Agent', 'Document', 'ChatSession')");
                         });
                 });
 

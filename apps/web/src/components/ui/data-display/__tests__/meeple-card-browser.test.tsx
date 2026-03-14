@@ -35,6 +35,8 @@ vi.mock('framer-motion', () => ({
     ),
   },
   AnimatePresence: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  useMotionValue: (initial: number) => ({ get: () => initial, set: () => {} }),
+  useTransform: (_mv: unknown, _input: number[], output: number[]) => output[0],
 }));
 
 // Mock next/image

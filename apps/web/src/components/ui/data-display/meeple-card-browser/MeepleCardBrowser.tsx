@@ -15,7 +15,7 @@
 
 import React, { useEffect, useCallback, useRef } from 'react';
 
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useMotionValue, useTransform } from 'framer-motion';
 import { X, Layers } from 'lucide-react';
 
 import { useCardBrowser } from './CardBrowserContext';
@@ -23,7 +23,7 @@ import { DeckStackDrawer } from './DeckStackDrawer';
 import { MeepleCard } from '../meeple-card';
 
 export function MeepleCardBrowser() {
-  const { isOpen, cards, currentIndex, close, setIndex } = useCardBrowser();
+  const { isOpen, cards, currentIndex, close, setIndex, origin } = useCardBrowser();
   const [showDeckStack, setShowDeckStack] = React.useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -81,6 +81,18 @@ export function MeepleCardBrowser() {
     if (history.state?.cardBrowser) history.back();
   }, [close]);
 
+  // Swipe-down close gesture
+  const dragY = useMotionValue(0);
+  const overlayOpacity = useTransform(dragY, [0, 200], [1, 0.3]);
+  const overlayScale = useTransform(dragY, [0, 200], [1, 0.92]);
+
+  const handleDragEnd = useCallback(
+    (_: unknown, info: { offset: { y: number }; velocity: { y: number } }) => {
+      if (info.offset.y > 100 || info.velocity.y > 300) handleClose();
+    },
+    [handleClose]
+  );
+
   if (!isOpen || cards.length === 0) return null;
 
   const currentCard = cards[currentIndex];
@@ -91,10 +103,20 @@ export function MeepleCardBrowser() {
         <motion.div
           key="card-browser-overlay"
           className="fixed inset-0 z-50 flex flex-col bg-background/95 backdrop-blur-sm"
-          initial={{ opacity: 0, scale: 0.95 }}
+          initial={{
+            opacity: 0,
+            scale: 0.85,
+            ...(origin ? { transformOrigin: `${origin.x}px ${origin.y}px` } : {}),
+          }}
           animate={{ opacity: 1, scale: 1 }}
           exit={{ opacity: 0, y: '100%' }}
           transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
+          style={{ opacity: overlayOpacity, scale: overlayScale }}
+          drag="y"
+          dragConstraints={{ top: 0, bottom: 0 }}
+          dragElastic={0.4}
+          onDrag={(_, info) => dragY.set(Math.max(0, info.offset.y))}
+          onDragEnd={handleDragEnd}
           role="dialog"
           aria-modal="true"
           aria-label="Card browser"

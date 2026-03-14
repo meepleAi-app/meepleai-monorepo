@@ -16,11 +16,7 @@ export const agentCostKeys = {
     [...agentCostKeys.all, gameId, ...documentIds.sort()] as const,
 };
 
-export function useEstimateAgentCost(
-  gameId: string,
-  documentIds: string[],
-  enabled = true
-) {
+export function useEstimateAgentCost(gameId: string, documentIds: string[], enabled = true) {
   return useQuery<AgentCostEstimate | null, Error>({
     queryKey: agentCostKeys.estimate(gameId, documentIds),
     queryFn: () =>

@@ -83,9 +83,7 @@ export function buildBreadcrumbs(pathname: string): BreadcrumbItem[] {
     return [{ label: 'Dashboard', href: '/dashboard', isCurrent: true }];
   }
 
-  const crumbs: BreadcrumbItem[] = [
-    { label: 'Dashboard', href: '/dashboard', isCurrent: false },
-  ];
+  const crumbs: BreadcrumbItem[] = [{ label: 'Dashboard', href: '/dashboard', isCurrent: false }];
 
   const segments = pathname.split('/').filter(Boolean);
   let currentPath = '';

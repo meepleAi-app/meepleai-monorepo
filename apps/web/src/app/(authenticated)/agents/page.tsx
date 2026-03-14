@@ -18,7 +18,12 @@ import { Bot, Plus, Search } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 import { AgentCreationSheet } from '@/components/agent/config';
-import { MeepleCard } from '@/components/ui/data-display/meeple-card';
+import {
+  ListPageHeader,
+  useViewPreference,
+} from '@/components/ui/data-display/ListPageHeader';
+import { MeepleCard, entityColors } from '@/components/ui/data-display/meeple-card';
+import { useCardBrowser, type CardRef } from '@/components/ui/data-display/meeple-card-browser';
 import { Button } from '@/components/ui/primitives/button';
 import { Input } from '@/components/ui/primitives/input';
 import {
@@ -71,6 +76,8 @@ export default function AgentsPage() {
   const [typeFilter, setTypeFilter] = useState<string>('all');
   const [sortBy, setSortBy] = useState<'name' | 'usage' | 'rating'>('usage');
   const [creationSheetOpen, setCreationSheetOpen] = useState(false);
+  const { open: openBrowser } = useCardBrowser();
+  const [viewMode, setViewMode] = useViewPreference('agents');
 
   // Use real API (Issue #4126)
   const { data: agents = [], isLoading: _isLoading } = useAgents({
@@ -109,6 +116,18 @@ export default function AgentsPage() {
 
     return result;
   }, [agents, searchQuery, typeFilter, sortBy]);
+
+  const cardRefs: CardRef[] = useMemo(
+    () =>
+      filteredAgents.map(agent => ({
+        id: agent.id,
+        entity: 'agent' as const,
+        title: agent.name,
+        subtitle: `${agent.type} agent`,
+        color: entityColors.agent.hsl,
+      })),
+    [filteredAgents]
+  );
 
   return (
     <div className="container mx-auto py-8 px-4">
@@ -189,19 +208,49 @@ export default function AgentsPage() {
         </Select>
       </div>
 
-      {/* Results count */}
-      <div className="mb-4 text-sm text-muted-foreground">
-        {filteredAgents.length} {filteredAgents.length === 1 ? 'agent' : 'agents'} found
-      </div>
+      {/* View toggle + count */}
+      <ListPageHeader
+        title="AI Agents"
+        count={filteredAgents.length}
+        viewMode={viewMode}
+        onViewModeChange={setViewMode}
+        filters={[
+          { key: 'all', label: 'All' },
+          { key: 'Tutor', label: 'Tutor' },
+          { key: 'Arbitro', label: 'Arbitro' },
+          { key: 'Stratega', label: 'Stratega' },
+          { key: 'Narratore', label: 'Narratore' },
+        ]}
+        activeFilter={typeFilter}
+        onFilterChange={setTypeFilter}
+      />
 
-      {/* Agent Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-        {filteredAgents.map(agent => (
-          <AgentCard
+      {/* Agent Grid / List */}
+      <div
+        className={
+          viewMode === 'grid'
+            ? 'grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-6 mt-4'
+            : 'flex flex-col gap-3 mt-4'
+        }
+        data-testid="card-grid"
+      >
+        {filteredAgents.map((agent, index) => (
+          <div
             key={agent.id}
-            agent={agent}
-            onClick={() => router.push(`/agents/${agent.id}`)}
-          />
+            onClick={(e) => {
+              if (window.innerWidth < 768) {
+                const rect = e.currentTarget.getBoundingClientRect();
+                openBrowser(cardRefs, index, {
+                  x: rect.left + rect.width / 2,
+                  y: rect.top + rect.height / 2,
+                });
+              } else {
+                router.push(`/agents/${agent.id}`);
+              }
+            }}
+          >
+            <AgentCard agent={agent} onClick={() => {}} />
+          </div>
         ))}
       </div>
 

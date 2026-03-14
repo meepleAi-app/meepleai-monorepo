@@ -102,7 +102,6 @@ public sealed class CreateSharedGameFromPdfCommandHandlerTests : IDisposable
             fileSize: new PdfFileSize(1024),
             uploadedByUserId: Guid.NewGuid(),
             uploadedAt: DateTime.UtcNow.AddMinutes(-10),
-            processingStatus: "completed",
             processedAt: DateTime.UtcNow.AddMinutes(-5),
             pageCount: 10,
             processingError: null,

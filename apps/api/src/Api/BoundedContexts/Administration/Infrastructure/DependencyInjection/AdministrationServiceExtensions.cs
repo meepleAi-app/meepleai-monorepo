@@ -25,12 +25,9 @@ namespace Api.BoundedContexts.Administration.Infrastructure.DependencyInjection;
 
 internal static class AdministrationServiceExtensions
 {
-#pragma warning disable S1133 // Method marked obsolete but kept for backward compatibility during migration
-    [Obsolete("Use AddAdministrationInfrastructure instead for modular registration")]
     public static IServiceCollection AddAdministrationContext(
         this IServiceCollection services,
         IConfiguration configuration)
-#pragma warning restore S1133
     {
         // Repositories
         services.AddScoped<IAlertRepository, AlertRepository>();
@@ -135,7 +132,9 @@ internal static class AdministrationServiceExtensions
         // ISSUE-916: Quartz.NET configuration for report scheduling
         services.AddQuartz(q =>
         {
+#pragma warning disable CS0618 // UseMicrosoftDependencyInjectionJobFactory is obsolete but still functional
             q.UseMicrosoftDependencyInjectionJobFactory();
+#pragma warning restore CS0618
             q.UseInMemoryStore(); // Use in-memory for alpha; can switch to DB persistence later
 
             // Register report generation job

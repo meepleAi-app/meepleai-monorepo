@@ -22,6 +22,14 @@ internal class SessionCheckpointEntityConfiguration : IEntityTypeConfiguration<S
             .IsRequired()
             .HasColumnType("jsonb");
 
+        builder.Property(e => e.IsDeleted)
+            .IsRequired()
+            .HasDefaultValue(false);
+
+        builder.HasQueryFilter(e => !e.IsDeleted);
+
+        builder.HasIndex(e => e.IsDeleted);
+
         builder.HasOne(e => e.Session)
             .WithMany()
             .HasForeignKey(e => e.SessionId)

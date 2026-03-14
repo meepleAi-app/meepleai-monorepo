@@ -123,7 +123,7 @@ public sealed class PdfPipelineIntegrationTests : IAsyncLifetime
         // Assert
         var retrieved = await _pdfRepository.GetByIdAsync(pdf.Id, TestCancellationToken);
         retrieved.Should().NotBeNull();
-        retrieved!.ProcessingStatus.Should().Be("pending");
+        retrieved!.ProcessingState.ToString().Should().Be("Pending");
         retrieved.UploadedAt.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromSeconds(5));
     }
 
@@ -153,7 +153,7 @@ public sealed class PdfPipelineIntegrationTests : IAsyncLifetime
         // Assert
         var updated = await _pdfRepository.GetByIdAsync(pdf.Id, TestCancellationToken);
         updated.Should().NotBeNull();
-        updated!.ProcessingStatus.Should().Be("processing");
+        updated!.ProcessingState.ToString().Should().Be("Uploading");
     }
 
     [Fact]
@@ -188,7 +188,7 @@ public sealed class PdfPipelineIntegrationTests : IAsyncLifetime
         // Assert
         var completed = await _pdfRepository.GetByIdAsync(pdf.Id, TestCancellationToken);
         completed.Should().NotBeNull();
-        completed!.ProcessingStatus.Should().Be("completed");
+        completed!.ProcessingState.ToString().Should().Be("Ready");
         completed.PageCount.Should().Be(24);
         completed.ProcessedAt.Should().NotBeNull();
     }
@@ -230,7 +230,7 @@ public sealed class PdfPipelineIntegrationTests : IAsyncLifetime
         // Assert
         var processed = await _pdfRepository.GetByIdAsync(pdf.Id, TestCancellationToken);
         processed.Should().NotBeNull();
-        processed!.ProcessingStatus.Should().Be("completed");
+        processed!.ProcessingState.ToString().Should().Be("Ready");
     }
 
     [Fact]
@@ -265,7 +265,7 @@ public sealed class PdfPipelineIntegrationTests : IAsyncLifetime
         // Assert
         var processed = await _pdfRepository.GetByIdAsync(pdf.Id, TestCancellationToken);
         processed.Should().NotBeNull();
-        processed!.ProcessingStatus.Should().Be("completed");
+        processed!.ProcessingState.ToString().Should().Be("Ready");
         processed.PageCount.Should().Be(12);
     }
 
@@ -301,7 +301,7 @@ public sealed class PdfPipelineIntegrationTests : IAsyncLifetime
         // Assert
         var failed = await _pdfRepository.GetByIdAsync(pdf.Id, TestCancellationToken);
         failed.Should().NotBeNull();
-        failed!.ProcessingStatus.Should().Be("failed");
+        failed!.ProcessingState.ToString().Should().Be("Failed");
         failed.ProcessingError.Should().Contain("Corrupted PDF");
     }
 
@@ -341,7 +341,7 @@ public sealed class PdfPipelineIntegrationTests : IAsyncLifetime
         // Assert
         var processed = await _pdfRepository.GetByIdAsync(pdf.Id, TestCancellationToken);
         processed.Should().NotBeNull();
-        processed!.ProcessingStatus.Should().Be("completed");
+        processed!.ProcessingState.ToString().Should().Be("Ready");
         processed.PageCount.Should().Be(32);
     }
 
@@ -460,7 +460,7 @@ public sealed class PdfPipelineIntegrationTests : IAsyncLifetime
         // Assert
         var processed = await _pdfRepository.GetByIdAsync(pdf.Id, TestCancellationToken);
         processed.Should().NotBeNull();
-        processed!.ProcessingStatus.Should().Be("completed");
+        processed!.ProcessingState.ToString().Should().Be("Ready");
     }
 
     [Fact]
@@ -490,7 +490,7 @@ public sealed class PdfPipelineIntegrationTests : IAsyncLifetime
         // Assert
         var processed = await _pdfRepository.GetByIdAsync(pdf.Id, TestCancellationToken);
         processed.Should().NotBeNull();
-        processed!.ProcessingStatus.Should().Be("completed");
+        processed!.ProcessingState.ToString().Should().Be("Ready");
         processed.PageCount.Should().Be(22);
     }
 

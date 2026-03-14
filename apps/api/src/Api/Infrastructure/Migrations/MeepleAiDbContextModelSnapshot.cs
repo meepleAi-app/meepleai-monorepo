@@ -2247,6 +2247,10 @@ namespace Api.Infrastructure.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("invited_by_user_id");
 
+                    b.Property<DateTime?>("RevokedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("revoked_at");
+
                     b.Property<string>("Role")
                         .IsRequired()
                         .HasMaxLength(32)
@@ -4821,7 +4825,7 @@ namespace Api.Infrastructure.Migrations
                         .HasColumnName("created_at");
 
                     b.Property<Vector>("Embedding")
-                        .HasColumnType("vector(1536)")
+                        .HasColumnType("vector(1024)")
                         .HasColumnName("embedding");
 
                     b.Property<Guid>("GameId")
@@ -5243,7 +5247,7 @@ namespace Api.Infrastructure.Migrations
                         .HasColumnName("content");
 
                     b.Property<Vector>("Embedding")
-                        .HasColumnType("vector(1536)")
+                        .HasColumnType("vector(1024)")
                         .HasColumnName("embedding");
 
                     b.Property<Guid?>("GameId")
@@ -5768,7 +5772,7 @@ namespace Api.Infrastructure.Migrations
                         .HasColumnName("description");
 
                     b.Property<Vector>("Embedding")
-                        .HasColumnType("vector(1536)")
+                        .HasColumnType("vector(1024)")
                         .HasColumnName("embedding");
 
                     b.Property<double?>("EvaluationScore")
@@ -6459,11 +6463,6 @@ namespace Api.Infrastructure.Migrations
                         .HasColumnType("character varying(32)")
                         .HasDefaultValue("Pending")
                         .HasColumnName("processing_state");
-
-                    b.Property<string>("ProcessingStatus")
-                        .IsRequired()
-                        .HasMaxLength(32)
-                        .HasColumnType("character varying(32)");
 
                     b.Property<int>("RetryCount")
                         .ValueGeneratedOnAdd()
@@ -7444,8 +7443,16 @@ namespace Api.Infrastructure.Migrations
                     b.Property<Guid?>("CreatedBy")
                         .HasColumnType("uuid");
 
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<int>("DiaryEventCount")
                         .HasColumnType("integer");
+
+                    b.Property<bool>("IsDeleted")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false);
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -7465,6 +7472,8 @@ namespace Api.Infrastructure.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("CreatedBy");
+
+                    b.HasIndex("IsDeleted");
 
                     b.HasIndex("SessionId", "Timestamp");
 

@@ -12,7 +12,7 @@
 
 'use client';
 
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useEffect, useState, useMemo, useCallback } from 'react';
 
 import { Bot, Plus, Search } from 'lucide-react';
 import { useRouter } from 'next/navigation';
@@ -37,8 +37,7 @@ import { useAgentSlots } from '@/hooks/queries/useAgentSlots';
 import { useEntityActions } from '@/hooks/use-entity-actions';
 import { useInfiniteScroll } from '@/hooks/useInfiniteScroll';
 import { useResponsive } from '@/hooks/useResponsive';
-
-import { AgentsNavConfig } from './NavConfig';
+import { useCardHand } from '@/stores/use-card-hand';
 
 /** Agent card wrapper to use entity actions hook per-card */
 function AgentCard({
@@ -72,6 +71,7 @@ function AgentCard({
 
 export default function AgentsPage() {
   const router = useRouter();
+  const { drawCard } = useCardHand();
   const [searchQuery, setSearchQuery] = useState('');
   const [typeFilter, setTypeFilter] = useState<string>('all');
   const [sortBy, setSortBy] = useState<'name' | 'usage' | 'rating'>('usage');
@@ -79,6 +79,15 @@ export default function AgentsPage() {
   const { open: openBrowser } = useCardBrowser();
   const { isMobile } = useResponsive();
   const [viewMode, setViewMode] = useViewPreference('agents');
+
+  useEffect(() => {
+    drawCard({
+      id: 'section-agents',
+      entity: 'agent',
+      title: 'Agents',
+      href: '/agents',
+    });
+  }, [drawCard]);
 
   // Use real API (Issue #4126)
   const { data: agents = [], isLoading: _isLoading } = useAgents({
@@ -162,7 +171,6 @@ export default function AgentsPage() {
 
   return (
     <div className="container mx-auto py-8 px-4">
-      <AgentsNavConfig />
       {/* Header */}
       <div className="mb-8 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
         <div>

@@ -34,7 +34,6 @@ public sealed class SendAgentMessageCommandHandlerTests
     private readonly Mock<IUnitOfWork> _mockUnitOfWork;
     private readonly Mock<ILlmService> _mockLlmService;
     private readonly Mock<IEmbeddingService> _mockEmbeddingService;
-    private readonly Mock<IQdrantService> _mockQdrantService;
     private readonly Mock<IUserBudgetService> _mockBudgetService;
     private readonly Mock<ILogger<SendAgentMessageCommandHandler>> _mockLogger;
     private readonly MeepleAiDbContext _dbContext;
@@ -48,7 +47,6 @@ public sealed class SendAgentMessageCommandHandlerTests
         _mockUnitOfWork = new Mock<IUnitOfWork>();
         _mockLlmService = new Mock<ILlmService>();
         _mockEmbeddingService = new Mock<IEmbeddingService>();
-        _mockQdrantService = new Mock<IQdrantService>();
         _mockBudgetService = new Mock<IUserBudgetService>();
         _mockLogger = new Mock<ILogger<SendAgentMessageCommandHandler>>();
         var dbOptions = new DbContextOptionsBuilder<MeepleAiDbContext>()
@@ -60,15 +58,6 @@ public sealed class SendAgentMessageCommandHandlerTests
         _mockEmbeddingService
             .Setup(s => s.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(EmbeddingResult.CreateSuccess(new List<float[]> { new float[384] }));
-
-        _mockQdrantService
-            .Setup(s => s.SearchAsync(
-                It.IsAny<string>(),
-                It.IsAny<float[]>(),
-                It.IsAny<int>(),
-                It.IsAny<IReadOnlyList<string>?>(),
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Api.Services.SearchResult.CreateSuccess(new List<SearchResultItem>()));
 
         _mockBudgetService
             .Setup(s => s.HasBudgetForQueryAsync(It.IsAny<Guid>(), It.IsAny<decimal>(), It.IsAny<CancellationToken>()))
@@ -91,7 +80,6 @@ public sealed class SendAgentMessageCommandHandlerTests
             _mockChatThreadRepository.Object,
             _mockUnitOfWork.Object,
             _mockLlmService.Object,
-            _mockQdrantService.Object,
             _mockEmbeddingService.Object,
             _dbContext,
             _mockBudgetService.Object,

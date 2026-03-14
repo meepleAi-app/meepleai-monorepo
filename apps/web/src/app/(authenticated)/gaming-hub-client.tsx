@@ -30,6 +30,7 @@ import { WelcomeChecklist } from '@/components/onboarding/WelcomeChecklist';
 import { WelcomeWizard } from '@/components/onboarding/WelcomeWizard';
 import { useAuthUser } from '@/hooks/useAuthUser';
 import { useDashboardStore } from '@/lib/stores/dashboard-store';
+import { useCardHand } from '@/stores/use-card-hand';
 
 // ─── Animation factory ───────────────────────────────────────────────────────
 
@@ -48,6 +49,7 @@ export function GamingHubClient() {
   const { openWizard: _openWizard } = useAddGameWizard();
   const { showChecklist, isLoading: isLoadingOnboarding } = useOnboardingStatus();
 
+  const { drawCard } = useCardHand();
   const {
     stats,
     recentSessions,
@@ -64,6 +66,15 @@ export function GamingHubClient() {
     fetchRecentSessions(1); // used as "last session" fallback in hero
     fetchGames();
   }, [fetchStats, fetchRecentSessions, fetchGames]);
+
+  useEffect(() => {
+    drawCard({
+      id: 'section-dashboard',
+      entity: 'custom',
+      title: 'Dashboard',
+      href: '/dashboard',
+    });
+  }, [drawCard]);
 
   const displayName = user?.displayName ?? user?.email?.split('@')[0] ?? 'Giocatore';
 

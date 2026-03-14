@@ -344,3 +344,47 @@ internal static class SessionNoteMapper
             entity.DeletedAt);
     }
 }
+
+/// <summary>
+/// Maps between SessionEvent domain entity and SessionEventEntity persistence entity.
+/// Issue #276 - Session Diary / Timeline
+/// </summary>
+internal static class SessionEventMapper
+{
+    public static SessionEventEntity ToEntity(SessionEvent domain)
+    {
+        ArgumentNullException.ThrowIfNull(domain);
+
+        return new SessionEventEntity
+        {
+            Id = domain.Id,
+            SessionId = domain.SessionId,
+            EventType = domain.EventType,
+            Timestamp = domain.Timestamp,
+            Payload = domain.Payload,
+            CreatedBy = domain.CreatedBy,
+            Source = domain.Source,
+            IsDeleted = domain.IsDeleted,
+            DeletedAt = domain.DeletedAt
+        };
+    }
+
+    public static SessionEvent ToDomain(SessionEventEntity entity)
+    {
+        ArgumentNullException.ThrowIfNull(entity);
+
+        var sessionEvent = (SessionEvent)Activator.CreateInstance(typeof(SessionEvent), true)!;
+
+        typeof(SessionEvent).GetProperty(nameof(SessionEvent.Id))!.SetValue(sessionEvent, entity.Id);
+        typeof(SessionEvent).GetProperty(nameof(SessionEvent.SessionId))!.SetValue(sessionEvent, entity.SessionId);
+        typeof(SessionEvent).GetProperty(nameof(SessionEvent.EventType))!.SetValue(sessionEvent, entity.EventType);
+        typeof(SessionEvent).GetProperty(nameof(SessionEvent.Timestamp))!.SetValue(sessionEvent, entity.Timestamp);
+        typeof(SessionEvent).GetProperty(nameof(SessionEvent.Payload))!.SetValue(sessionEvent, entity.Payload);
+        typeof(SessionEvent).GetProperty(nameof(SessionEvent.CreatedBy))!.SetValue(sessionEvent, entity.CreatedBy);
+        typeof(SessionEvent).GetProperty(nameof(SessionEvent.Source))!.SetValue(sessionEvent, entity.Source);
+        typeof(SessionEvent).GetProperty(nameof(SessionEvent.IsDeleted))!.SetValue(sessionEvent, entity.IsDeleted);
+        typeof(SessionEvent).GetProperty(nameof(SessionEvent.DeletedAt))!.SetValue(sessionEvent, entity.DeletedAt);
+
+        return sessionEvent;
+    }
+}

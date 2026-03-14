@@ -8,6 +8,9 @@ using Api.BoundedContexts.KnowledgeBase.Application.Services;
 using Api.BoundedContexts.KnowledgeBase.Domain.Enums;
 using Api.BoundedContexts.KnowledgeBase.Domain.Models;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
+using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
+using Api.BoundedContexts.UserLibrary.Application.Queries;
+using Api.BoundedContexts.UserLibrary.Domain.Enums;
 using Api.Services;
 using MediatR;
 using Microsoft.Extensions.Logging;
@@ -29,6 +32,7 @@ internal class AskAgentQuestionCommandHandler : IRequestHandler<AskAgentQuestion
     private readonly IPdfDocumentRepository _pdfDocumentRepository;
     private readonly IGameSessionOrchestratorService _sessionOrchestrator;
     private readonly IHybridCacheService _hybridCache;
+    private readonly IMediator _mediator;
     private readonly ILogger<AskAgentQuestionCommandHandler> _logger;
 
     /// <summary>Cache TTL for GameSessionContext.</summary>
@@ -42,6 +46,7 @@ internal class AskAgentQuestionCommandHandler : IRequestHandler<AskAgentQuestion
         IPdfDocumentRepository pdfDocumentRepository,
         IGameSessionOrchestratorService sessionOrchestrator,
         IHybridCacheService hybridCache,
+        IMediator mediator,
         ILogger<AskAgentQuestionCommandHandler> logger)
     {
         _qdrantService = qdrantService ?? throw new ArgumentNullException(nameof(qdrantService));
@@ -51,6 +56,7 @@ internal class AskAgentQuestionCommandHandler : IRequestHandler<AskAgentQuestion
         _pdfDocumentRepository = pdfDocumentRepository ?? throw new ArgumentNullException(nameof(pdfDocumentRepository));
         _sessionOrchestrator = sessionOrchestrator ?? throw new ArgumentNullException(nameof(sessionOrchestrator));
         _hybridCache = hybridCache ?? throw new ArgumentNullException(nameof(hybridCache));
+        _mediator = mediator ?? throw new ArgumentNullException(nameof(mediator));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -228,13 +234,32 @@ internal class AskAgentQuestionCommandHandler : IRequestHandler<AskAgentQuestion
             "Retrieved {Count} chunks with score >= {MinScore}",
             filteredChunks.Count, request.MinScore);
 
-        // Convert to DTOs
+        // Step 2.5: Content-gating — check game ownership for source filtering
+        var accessLevel = ContentAccessLevel.FullAccess;
+        if (request.UserId.HasValue && request.GameId.HasValue)
+        {
+            var collectionStatus = await _mediator.Send(
+                new GetCollectionStatusQuery(request.UserId.Value, EntityType.Game, request.GameId.Value),
+                cancellationToken).ConfigureAwait(false);
+
+            accessLevel = collectionStatus.InCollection
+                ? ContentAccessLevel.FullAccess
+                : ContentAccessLevel.ReferenceOnly;
+
+            _logger.LogInformation(
+                "Content-gating: User {UserId} has {AccessLevel} for game {GameId} (inCollection={InCollection})",
+                request.UserId.Value, accessLevel, request.GameId.Value, collectionStatus.InCollection);
+        }
+
+        // Convert to DTOs — apply content-gating to source previews
         var chunkDtos = filteredChunks.Select(chunk => new CodeChunkDto
         {
             FilePath = chunk.PdfId,
             StartLine = chunk.Page,
             EndLine = chunk.Page,
-            CodePreview = TruncateText(chunk.Text, 500),
+            CodePreview = accessLevel == ContentAccessLevel.FullAccess
+                ? TruncateText(chunk.Text, 500)
+                : "[Content restricted — add this game to your library for full access]",
             RelevanceScore = chunk.Score,
             BoundedContext = gameId,
             ChunkIndex = chunk.ChunkIndex
@@ -335,7 +360,8 @@ internal class AskAgentQuestionCommandHandler : IRequestHandler<AskAgentQuestion
             CostBreakdown = costBreakdown,
             LatencyMs = (int)stopwatch.ElapsedMilliseconds,
             SessionId = sessionId,
-            Timestamp = DateTime.UtcNow
+            Timestamp = DateTime.UtcNow,
+            ContentAccessLevel = accessLevel
         };
     }
 

@@ -10,19 +10,17 @@
 
 import React, { useState } from 'react';
 
-import Image from 'next/image';
-
 import { cn } from '@/lib/utils';
 
 import { ExtraMeepleCardDrawer } from '../../extra-meeple-card/ExtraMeepleCardDrawer';
 import { BulkSelectCheckbox } from '../../meeple-card-features/BulkSelectCheckbox';
+import { CardAgentAction } from '../../meeple-card-features/CardAgentAction';
 import { EntityIndicator, MeepleCardSkeleton } from '../../meeple-card-parts';
 import {
   entityColors,
   DRAWER_ENTITY_TYPE_MAP,
   meepleCardVariants,
   contentVariants,
-  coverVariants,
 } from '../../meeple-card-styles';
 import { useMobileInteraction } from '../hooks/useMobileInteraction';
 import { CardActions } from '../parts/CardActions';
@@ -66,6 +64,10 @@ export const MeepleCardCompact = React.memo(function MeepleCardCompact(
     infoHref,
     infoTooltip,
     unreadCount,
+    hasAgent,
+    agentId,
+    onCreateAgent,
+    navigateTo,
   } = props;
 
   const variant = 'compact' as const;
@@ -157,19 +159,7 @@ export const MeepleCardCompact = React.memo(function MeepleCardCompact(
 
       <EntityIndicator entity={entity} variant={variant} customColor={customColor} />
 
-      {/* 40x40 avatar/thumbnail */}
-      {coverSrc && (
-        <div className={coverVariants({ variant })}>
-          <Image
-            src={coverSrc}
-            alt={title}
-            fill
-            sizes="40px"
-            className="object-cover"
-            loading="lazy"
-          />
-        </div>
-      )}
+      {/* Compact variant: no cover image (matching original monolith behavior) */}
 
       {/* Content area */}
       <div className={contentVariants({ variant })}>
@@ -201,6 +191,18 @@ export const MeepleCardCompact = React.memo(function MeepleCardCompact(
 
         {subtitle && <p className="text-muted-foreground text-xs mb-0">{subtitle}</p>}
       </div>
+
+      {/* Agent action footer */}
+      {entity === 'game' && hasAgent !== undefined && id && (
+        <CardAgentAction
+          hasAgent={hasAgent}
+          agentId={agentId}
+          gameId={id}
+          onCreateAgent={onCreateAgent}
+          variant={variant}
+          hasNavFooter={!!(navigateTo && navigateTo.length > 0)}
+        />
+      )}
 
       {entityId && drawerEntityType && (
         <ExtraMeepleCardDrawer

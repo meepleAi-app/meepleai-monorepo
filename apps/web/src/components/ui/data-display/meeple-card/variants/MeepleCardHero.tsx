@@ -37,7 +37,6 @@ import { TimeTravelOverlay } from '../../meeple-card-features/TimeTravelOverlay'
 import {
   EntityIndicator,
   MetadataChips,
-  ActionButtons,
   RatingDisplay,
   MeepleCardSkeleton,
 } from '../../meeple-card-parts';
@@ -441,16 +440,9 @@ export const MeepleCardHero = React.memo(function MeepleCardHero(props: MeepleCa
         )}
 
         {/* Action buttons (hero) */}
-        {showActionBtns && (
-          <ActionButtons actions={actions} entity={entity} customColor={customColor} />
-        )}
+        {/* Action buttons are rendered by CardActions above (hero variant) */}
 
-        {/* Badge overlay */}
-        {badge && (
-          <span className="absolute top-3 right-3 bg-card/90 backdrop-blur-sm px-2 py-0.5 rounded-md text-xs font-semibold text-muted-foreground border border-border/50">
-            {badge}
-          </span>
-        )}
+        {/* Badge overlay: not rendered for hero (handled by VerticalTagStack / CardBadges) */}
       </div>
 
       {/* Agent action footer */}

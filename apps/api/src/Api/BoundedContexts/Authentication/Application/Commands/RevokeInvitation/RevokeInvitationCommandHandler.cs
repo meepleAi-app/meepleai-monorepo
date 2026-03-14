@@ -1,5 +1,6 @@
 using Api.BoundedContexts.Authentication.Domain.Enums;
 using Api.BoundedContexts.Authentication.Domain.Repositories;
+using Api.SharedKernel.Infrastructure.Persistence;
 using MediatR;
 
 namespace Api.BoundedContexts.Authentication.Application.Commands.RevokeInvitation;
@@ -11,10 +12,14 @@ namespace Api.BoundedContexts.Authentication.Application.Commands.RevokeInvitati
 internal sealed class RevokeInvitationCommandHandler : IRequestHandler<RevokeInvitationCommand, bool>
 {
     private readonly IInvitationTokenRepository _invitationTokenRepository;
+    private readonly IUnitOfWork _unitOfWork;
 
-    public RevokeInvitationCommandHandler(IInvitationTokenRepository invitationTokenRepository)
+    public RevokeInvitationCommandHandler(
+        IInvitationTokenRepository invitationTokenRepository,
+        IUnitOfWork unitOfWork)
     {
         _invitationTokenRepository = invitationTokenRepository ?? throw new ArgumentNullException(nameof(invitationTokenRepository));
+        _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
     }
 
     public async Task<bool> Handle(
@@ -40,6 +45,7 @@ internal sealed class RevokeInvitationCommandHandler : IRequestHandler<RevokeInv
 
         // Save changes via repository
         await _invitationTokenRepository.UpdateAsync(invitation, cancellationToken).ConfigureAwait(false);
+        await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
         return true;
     }

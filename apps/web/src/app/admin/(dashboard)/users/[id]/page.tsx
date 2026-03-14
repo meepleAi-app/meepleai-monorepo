@@ -51,7 +51,7 @@ import { HttpClient } from '@/lib/api/core/httpClient';
 const httpClient = new HttpClient();
 const adminClient = createAdminClient({ httpClient });
 
-const AVAILABLE_ROLES = ['User', 'Contributor', 'Admin'];
+const AVAILABLE_ROLES = ['User', 'Editor', 'Admin'];
 
 function getRoleBadgeClass(role: string) {
   switch (role) {

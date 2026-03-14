@@ -88,8 +88,8 @@ internal sealed class InvitationToken : AggregateRoot<Guid>
     /// </summary>
     public void MarkExpired()
     {
-        if (Status == InvitationStatus.Accepted)
-            throw new InvalidOperationException("Cannot expire an accepted invitation");
+        if (Status == InvitationStatus.Accepted || Status == InvitationStatus.Revoked)
+            throw new InvalidOperationException("Cannot expire an accepted or revoked invitation");
         Status = InvitationStatus.Expired;
     }
 

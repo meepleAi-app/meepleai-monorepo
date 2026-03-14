@@ -1,11 +1,11 @@
 # Admin Invite + Voice Onboarding — Design Spec
 
 **Date**: 2026-03-14
-**Status**: Approved
+**Status**: Implemented
 
 ## Summary
 
-Admin invites users via email. Invited users accept, set password, go through a skippable onboarding wizard (profile → add game → create agent), then interact with the agent via voice. Admin can change user roles and view audit logs. A single E2E Playwright test validates the entire user story.
+Admin invites users via email. Invited users accept, set password, go through a skippable onboarding wizard (profile → interests → add game → create agent), then interact with the agent via voice. Admin can change user roles and view audit logs. A single E2E Playwright test validates the entire user story.
 
 ## User Story
 
@@ -27,7 +27,7 @@ Admin invites users via email. Invited users accept, set password, go through a 
 
 ### Email
 
-Contains link: `/auth/accept-invite?token=<token>` (7-day expiry)
+Contains link: `/accept-invite?token=<token>` (7-day expiry, route under `(public)` group)
 
 ### Backend: Already Implemented
 
@@ -39,26 +39,36 @@ Contains link: `/auth/accept-invite?token=<token>` (7-day expiry)
 
 ## 2. Invitation Acceptance + Onboarding
 
-### Step 1: Password Setup — `/auth/accept-invite?token=<token>`
+### Password Setup — `/accept-invite?token=<token>` (EXISTS)
 
-1. Page validates token via `GET /api/v1/auth/invitations/validate`
-2. If valid, shows form:
-   - Email (pre-filled, readonly)
-   - Password + confirm password
-3. Submit calls `POST /api/v1/auth/invitations/accept`
-4. User auto-authenticated (session cookie) → redirect to onboarding wizard
+Page already exists at `apps/web/src/app/(public)/accept-invite/page.tsx`:
 
-### Step 2: Onboarding Wizard (skippable, one-shot)
+1. Page validates token via `POST /api/v1/auth/validate-invitation`
+2. If valid, shows form: email (pre-filled, readonly) + password + confirm password + strength meter
+3. Submit calls `POST /api/v1/auth/accept-invitation`
+4. User auto-authenticated → **currently redirects to `/dashboard`**
 
-Each step has a "Salta" (Skip) button. Wizard is not recoverable after skip.
+**Work needed**: Change redirect from `/dashboard` to onboarding wizard route (e.g. `/onboarding?token=<token>`)
 
-1. **Profile**: Avatar upload + display name
-2. **Add first game**: Search catalog (autocomplete) → add to collection
-   - If skipped → step 3 is auto-skipped
-3. **Create first agent**: For the game added in step 2. Agent name + select typology
-   - Only available if step 2 was completed
+### Onboarding Wizard (EXISTS — needs integration)
 
+The `OnboardingWizard` component already exists at `apps/web/src/components/onboarding/OnboardingWizard.tsx` with **5 steps** (not 3):
+
+1. **Password** (required) — handled by `PasswordStep` component
+2. **Profile** (skippable) — display name via `ProfileStep`
+3. **Interests** (skippable) — interests selection via `InterestsStep`
+4. **First Game** (skippable) — search catalog, add to collection via `FirstGameStep`
+   - If skipped → step 5 is auto-skipped
+5. **First Agent** (only if step 4 completed) — agent name + typology via `FirstAgentStep`
+
+Each step after Password has a "Skip" button. Wizard can be skipped entirely after password.
 After completion or skip → redirect to dashboard.
+
+**Work needed**: Since the accept-invite page already handles password setup, the wizard integration should either:
+- (A) Route to wizard starting at step 2 (skip password step, already done), OR
+- (B) Create a dedicated `/onboarding` page that renders the wizard from step 2
+
+The wizard component, all 5 step components, and the API client (`api.auth.completeOnboarding`) already exist.
 
 ---
 
@@ -137,7 +147,7 @@ Both features have existing APIs. Only frontend UI verification/completion neede
 #### Step 2: User accepts invitation
 
 - Intercept email or construct URL with token from API
-- Navigate to `/auth/accept-invite?token=...`
+- Navigate to `/accept-invite?token=...`
 - Fill password + confirm
 - Submit → verify redirect to onboarding
 - Save user `storageState`
@@ -194,10 +204,10 @@ No duplicate issues found in the 26 open GitHub issues. Related but different:
 | Audit log API | ✅ Complete | None |
 | Email queue | ✅ Complete | None |
 | Role management API | ✅ Complete | None |
-| **Admin invitation UI** | ❌ Missing | **New frontend page/modal** |
-| **Accept invite page** | ❌ Missing | **New frontend page** |
-| **Onboarding wizard** | ❌ Missing | **New frontend flow** |
-| **Voice UI in chat card** | ❌ Missing | **New frontend component** |
-| **Premium voice toggle** | ❌ Missing | **New frontend component** |
+| **Admin invitation UI** | ✅ Complete | `InviteUserDialog`, `BulkInviteDialog`, invitations page exist. **Verify/complete** role dropdown + pending list |
+| **Accept invite page** | ✅ Complete | `(public)/accept-invite/page.tsx` exists. **Modify**: redirect to wizard instead of `/dashboard` |
+| **Onboarding wizard** | ✅ Complete (5 steps) | `OnboardingWizard.tsx` + all step components exist. **Integrate**: connect to accept-invite flow, skip password step |
+| **Voice UI in chat card** | ✅ Complete | `VoiceMicButton`, `TtsSpeakerButton`, `VoiceSettingsPopover` in `ChatThreadView`. Also `/ask` voice-first page. **No new work needed** |
+| **Premium voice toggle** | ⚠️ Architecture ready | Provider factory exists (`provider-factory.ts`), Zustand store persists prefs. **Deepgram/ElevenLabs providers not yet implemented** (deferred with #312) |
 | **Admin UI completion** | ⚠️ Partial | **Verify/complete role + audit UI** |
-| **E2E Playwright test** | ❌ Missing | **New test file** |
+| **E2E Playwright test** | ✅ Complete | `e2e/onboarding/accept-invite-to-onboarding.spec.ts` |

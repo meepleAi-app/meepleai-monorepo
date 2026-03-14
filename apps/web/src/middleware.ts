@@ -23,6 +23,7 @@ const PUBLIC_PATHS = new Set([
   '/games',
   '/accept-invite',
   '/verify-email',
+  '/onboarding',
 ]);
 
 const EXCLUDED_PREFIXES = [
@@ -52,7 +53,7 @@ export function middleware(request: NextRequest) {
   const onboardingComplete = request.cookies.get('onboarding_completed')?.value;
 
   if (onboardingComplete === 'false') {
-    const onboardingUrl = new URL('/accept-invite', request.url);
+    const onboardingUrl = new URL('/onboarding', request.url);
     onboardingUrl.searchParams.set('redirect', pathname);
     return NextResponse.redirect(onboardingUrl);
   }

@@ -39,7 +39,7 @@ export function DomainHub({ userName }: DomainHubProps) {
             className="aspect-square rounded-2xl flex flex-col items-center justify-center gap-2 transition-transform active:scale-95"
             style={{ backgroundColor: `hsl(${color} / 0.1)` }}
           >
-            <Icon size={32} style={{ color: `hsl(${color})` }} />
+            <Icon size={32} style={{ color: `hsl(${color})` }} aria-hidden="true" />
             <span className="text-sm font-medium">{label}</span>
           </Link>
         ))}

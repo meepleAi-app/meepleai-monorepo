@@ -36,6 +36,7 @@ import { useAgents } from '@/hooks/queries/useAgents';
 import { useAgentSlots } from '@/hooks/queries/useAgentSlots';
 import { useEntityActions } from '@/hooks/use-entity-actions';
 import { useInfiniteScroll } from '@/hooks/useInfiniteScroll';
+import { useResponsive } from '@/hooks/useResponsive';
 
 import { AgentsNavConfig } from './NavConfig';
 
@@ -76,6 +77,7 @@ export default function AgentsPage() {
   const [sortBy, setSortBy] = useState<'name' | 'usage' | 'rating'>('usage');
   const [creationSheetOpen, setCreationSheetOpen] = useState(false);
   const { open: openBrowser } = useCardBrowser();
+  const { isMobile } = useResponsive();
   const [viewMode, setViewMode] = useViewPreference('agents');
 
   // Use real API (Issue #4126)
@@ -267,7 +269,7 @@ export default function AgentsPage() {
           <div
             key={agent.id}
             onClick={e => {
-              if (window.innerWidth < 768) {
+              if (isMobile) {
                 const rect = e.currentTarget.getBoundingClientRect();
                 openBrowser(cardRefs, index, {
                   x: rect.left + rect.width / 2,

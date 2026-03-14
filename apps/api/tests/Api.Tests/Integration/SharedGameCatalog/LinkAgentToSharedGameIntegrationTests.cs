@@ -1,8 +1,12 @@
 using Api.BoundedContexts.KnowledgeBase.Domain.Entities;
+using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
+using Api.BoundedContexts.KnowledgeBase.Infrastructure.Persistence;
 using Api.BoundedContexts.SharedGameCatalog.Application.Commands;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Aggregates;
+using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
 using Api.BoundedContexts.SharedGameCatalog.Domain.ValueObjects;
+using Api.BoundedContexts.SharedGameCatalog.Infrastructure.Repositories;
 using Api.Infrastructure;
 using Api.SharedKernel.Application.Services;
 using Api.SharedKernel.Infrastructure.Persistence;
@@ -60,6 +64,11 @@ public sealed class LinkAgentToSharedGameIntegrationTests : IAsyncLifetime
         services.AddScoped<IUnitOfWork, EfCoreUnitOfWork>();
         services.AddScoped<IDomainEventCollector, DomainEventCollector>();
 
+        // Repositories required by LinkAgent/UnlinkAgent command handlers and validators
+        services.AddScoped<ISharedGameRepository, SharedGameRepository>();
+        services.AddScoped<IAgentRepository, AgentRepository>();
+        services.AddScoped<IAgentDefinitionRepository, AgentDefinitionRepository>();
+
         // MediatR (required by MeepleAiDbContext and for command handling)
         services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(Program).Assembly));
 
@@ -86,7 +95,7 @@ public sealed class LinkAgentToSharedGameIntegrationTests : IAsyncLifetime
         }
     }
 
-    [Fact(Skip = "Integration test requires database setup investigation")]
+    [Fact]
     public async Task LinkAgent_WithValidGameAndAgent_LinksSuccessfully()
     {
         // Arrange
@@ -134,7 +143,7 @@ public sealed class LinkAgentToSharedGameIntegrationTests : IAsyncLifetime
         updatedGame!.AgentDefinitionId.Should().Be(agent.Id);
     }
 
-    [Fact(Skip = "Integration test requires database setup investigation")]
+    [Fact]
     public async Task UnlinkAgent_WithLinkedAgent_UnlinksSuccessfully()
     {
         // Arrange

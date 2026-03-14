@@ -178,6 +178,7 @@ public class Toolbox
     {
         IsDeleted = true;
         DeletedAt = DateTime.UtcNow;
+        UpdatedAt = DateTime.UtcNow;
     }
 
     // EF Core hydration

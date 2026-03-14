@@ -64,9 +64,7 @@ describe('InlineChatPanel', () => {
     it('shows instructional sub-text', () => {
       render(<InlineChatPanel agentId={null} chatThreadId={null} />);
 
-      expect(
-        screen.getByText('Prima carica documenti e crea un agente RAG')
-      ).toBeInTheDocument();
+      expect(screen.getByText('Prima carica documenti e crea un agente RAG')).toBeInTheDocument();
     });
 
     it('does NOT render the textarea input', () => {
@@ -115,9 +113,7 @@ describe('InlineChatPanel', () => {
     it('shows empty messages hint when no messages exist', () => {
       render(<InlineChatPanel agentId="agent-123" chatThreadId={null} />);
 
-      expect(
-        screen.getByText("Scrivi un messaggio per testare l'agente RAG")
-      ).toBeInTheDocument();
+      expect(screen.getByText("Scrivi un messaggio per testare l'agente RAG")).toBeInTheDocument();
     });
 
     it('accepts a chatThreadId without errors', () => {

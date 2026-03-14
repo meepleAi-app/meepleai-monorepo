@@ -122,6 +122,14 @@ const variantConfigs: Record<MeepleCardVariant, VariantConfig> = {
     showPublishers: true,
     showMinAge: true,
   },
+  expanded: {
+    descriptionLines: 'line-clamp-4',
+    maxCategories: 4,
+    maxMechanics: 4,
+    showDesigners: true,
+    showPublishers: true,
+    showMinAge: false,
+  },
 };
 
 // ============================================================================

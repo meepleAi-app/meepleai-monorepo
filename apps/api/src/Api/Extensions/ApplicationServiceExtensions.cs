@@ -1,5 +1,13 @@
 using Api.BoundedContexts.Administration.Application.Services;
 using Api.BoundedContexts.Administration.Domain.Services;
+using Api.BoundedContexts.Administration.Infrastructure.DependencyInjection;
+using Api.BoundedContexts.Authentication.Infrastructure.DependencyInjection;
+using Api.BoundedContexts.DocumentProcessing.Infrastructure.DependencyInjection;
+using Api.BoundedContexts.EntityRelationships.Infrastructure.DependencyInjection;
+using Api.BoundedContexts.GameManagement.Infrastructure.DependencyInjection;
+using Api.BoundedContexts.GameToolbox.Infrastructure.DependencyInjection;
+using Api.BoundedContexts.GameToolkit.Infrastructure.DependencyInjection;
+using Api.BoundedContexts.KnowledgeBase.Infrastructure.DependencyInjection;
 using Api.BoundedContexts.KnowledgeBase.Infrastructure.EmbeddingProviders;
 using Api.Helpers;
 using Api.Services;

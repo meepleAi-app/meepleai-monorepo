@@ -130,12 +130,6 @@ public sealed class DeletePdfIntegrationTests : IAsyncLifetime
 
     private void RegisterMockServices(IServiceCollection services)
     {
-        // Mock Qdrant service (default: success)
-        var qdrantMock = new Mock<IQdrantService>();
-        qdrantMock.Setup(q => q.DeleteDocumentAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(true);
-        services.AddSingleton<IQdrantService>(qdrantMock.Object);
-
         // Mock BlobStorage service (default: success)
         var blobStorageMock = new Mock<IBlobStorageService>();
         blobStorageMock.Setup(b => b.DeleteAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
@@ -318,40 +312,14 @@ public sealed class DeletePdfIntegrationTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task DeletePdfWithVectorEmbeddings_CallsQdrantDelete()
+    public async Task DeletePdfWithVectorEmbeddings_RemovesVectorDocument()
     {
         // Arrange
         await ResetDatabaseAsync();
-        var pdfId = await CreateTestPdfAsync("WithVectorsQdrant.pdf", withVectorDoc: true);
+        var pdfId = await CreateTestPdfAsync("WithVectorsNoQdrant.pdf", withVectorDoc: true);
 
-        // Create fresh service provider with instrumented mock
-        var qdrantMock = new Mock<IQdrantService>();
-        var deleteCallCount = 0;
-        qdrantMock.Setup(q => q.DeleteDocumentAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .Callback(() => deleteCallCount++)
-            .ReturnsAsync(true);
-
-        var scopeFactory = _serviceProvider!.GetRequiredService<IServiceScopeFactory>();
         var handler = new DeletePdfCommandHandler(
             _dbContext!,
-            scopeFactory,
-            _serviceProvider!.GetRequiredService<IBlobStorageService>(),
-            _serviceProvider!.GetRequiredService<IAiResponseCacheService>(),
-            _serviceProvider!.GetRequiredService<ILogger<DeletePdfCommandHandler>>()
-        );
-
-        // Inject Qdrant mock into scope factory
-        var services = new ServiceCollection();
-        services.AddScoped<IQdrantService>(_ => qdrantMock.Object);
-        var mockScopeFactory = new Mock<IServiceScopeFactory>();
-        var mockScope = new Mock<IServiceScope>();
-        var mockServiceProvider = services.BuildServiceProvider();
-        mockScope.Setup(s => s.ServiceProvider).Returns(mockServiceProvider);
-        mockScopeFactory.Setup(f => f.CreateScope()).Returns(mockScope.Object);
-
-        handler = new DeletePdfCommandHandler(
-            _dbContext!,
-            mockScopeFactory.Object,
             _serviceProvider!.GetRequiredService<IBlobStorageService>(),
             _serviceProvider!.GetRequiredService<IAiResponseCacheService>(),
             _serviceProvider!.GetRequiredService<ILogger<DeletePdfCommandHandler>>()
@@ -362,9 +330,10 @@ public sealed class DeletePdfIntegrationTests : IAsyncLifetime
         // Act
         var result = await handler.Handle(command, TestCancellationToken);
 
-        // Assert
+        // Assert - deletion succeeds and vector document is removed from DB
         result.Success.Should().BeTrue();
-        deleteCallCount.Should().BeGreaterThan(0, "Qdrant delete should be called for vector documents");
+        var vectorExists = await _dbContext!.VectorDocuments.AnyAsync(v => v.PdfDocumentId == pdfId, TestCancellationToken);
+        vectorExists.Should().BeFalse();
     }
     [Fact]
     public async Task ConcurrentDeletion_HandlesRaceConditionGracefully()
@@ -407,7 +376,7 @@ public sealed class DeletePdfIntegrationTests : IAsyncLifetime
         var cache = scope.ServiceProvider.GetRequiredService<IAiResponseCacheService>();
         var logger = scope.ServiceProvider.GetRequiredService<ILogger<DeletePdfCommandHandler>>();
 
-        return new DeletePdfCommandHandler(dbContext, scopeFactory, blobStorage, cache, logger);
+        return new DeletePdfCommandHandler(dbContext, blobStorage, cache, logger);
     }
     [Fact]
     public async Task DeleteWithDbUpdateException_ThrowsPdfStorageException()
@@ -426,7 +395,6 @@ public sealed class DeletePdfIntegrationTests : IAsyncLifetime
 
         var faultyHandler = new DeletePdfCommandHandler(
             disposedContext,
-            _serviceProvider!.GetRequiredService<IServiceScopeFactory>(),
             _serviceProvider!.GetRequiredService<IBlobStorageService>(),
             _serviceProvider!.GetRequiredService<IAiResponseCacheService>(),
             _serviceProvider!.GetRequiredService<ILogger<DeletePdfCommandHandler>>()
@@ -440,28 +408,14 @@ public sealed class DeletePdfIntegrationTests : IAsyncLifetime
             .WithMessage("*disposed*", "disposed context should cause exception");
     }
     [Fact]
-    public async Task DeleteWithQdrantFailure_StillSucceedsWithWarningLogged()
+    public async Task DeleteWithVectorDocument_SuccessfullyRemovesBothRecords()
     {
         // Arrange
         await ResetDatabaseAsync();
-        var pdfId = await CreateTestPdfAsync("QdrantFailure.pdf", withVectorDoc: true);
-
-        // Create mock Qdrant that fails
-        var qdrantMock = new Mock<IQdrantService>();
-        qdrantMock.Setup(q => q.DeleteDocumentAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ThrowsAsync(new InvalidOperationException("Qdrant service unavailable"));
-
-        var services = new ServiceCollection();
-        services.AddScoped<IQdrantService>(_ => qdrantMock.Object);
-        var mockScopeFactory = new Mock<IServiceScopeFactory>();
-        var mockScope = new Mock<IServiceScope>();
-        var mockServiceProvider = services.BuildServiceProvider();
-        mockScope.Setup(s => s.ServiceProvider).Returns(mockServiceProvider);
-        mockScopeFactory.Setup(f => f.CreateScope()).Returns(mockScope.Object);
+        var pdfId = await CreateTestPdfAsync("VectorCleanup.pdf", withVectorDoc: true);
 
         var handler = new DeletePdfCommandHandler(
             _dbContext!,
-            mockScopeFactory.Object,
             _serviceProvider!.GetRequiredService<IBlobStorageService>(),
             _serviceProvider!.GetRequiredService<IAiResponseCacheService>(),
             _serviceProvider!.GetRequiredService<ILogger<DeletePdfCommandHandler>>()
@@ -474,7 +428,7 @@ public sealed class DeletePdfIntegrationTests : IAsyncLifetime
 
         // Assert
         result.Should().NotBeNull();
-        result.Success.Should().BeTrue("deletion should succeed despite Qdrant failure");
+        result.Success.Should().BeTrue();
 
         // Verify database cleanup happened
         var pdfExists = await _dbContext!.PdfDocuments.AnyAsync(p => p.Id == pdfId, TestCancellationToken);
@@ -498,7 +452,6 @@ public sealed class DeletePdfIntegrationTests : IAsyncLifetime
 
         var handler = new DeletePdfCommandHandler(
             _dbContext!,
-            _serviceProvider!.GetRequiredService<IServiceScopeFactory>(),
             blobStorageMock.Object,
             _serviceProvider!.GetRequiredService<IAiResponseCacheService>(),
             _serviceProvider!.GetRequiredService<ILogger<DeletePdfCommandHandler>>()

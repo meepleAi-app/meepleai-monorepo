@@ -24,7 +24,6 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
     private readonly IPdfTableExtractor _tableExtractor;
     private readonly ITextChunkingService _chunkingService;
     private readonly IEmbeddingService _embeddingService;
-    private readonly IQdrantService _qdrantService;
     private readonly IBlobStorageService _blobStorageService;
     private readonly TimeProvider _timeProvider;
     private readonly ILogger<PdfProcessingPipelineService> _logger;
@@ -35,7 +34,6 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
         IPdfTableExtractor tableExtractor,
         ITextChunkingService chunkingService,
         IEmbeddingService embeddingService,
-        IQdrantService qdrantService,
         IBlobStorageService blobStorageService,
         TimeProvider timeProvider,
         ILogger<PdfProcessingPipelineService> logger)
@@ -45,7 +43,6 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
         _tableExtractor = tableExtractor ?? throw new ArgumentNullException(nameof(tableExtractor));
         _chunkingService = chunkingService ?? throw new ArgumentNullException(nameof(chunkingService));
         _embeddingService = embeddingService ?? throw new ArgumentNullException(nameof(embeddingService));
-        _qdrantService = qdrantService ?? throw new ArgumentNullException(nameof(qdrantService));
         _blobStorageService = blobStorageService ?? throw new ArgumentNullException(nameof(blobStorageService));
         _timeProvider = timeProvider ?? throw new ArgumentNullException(nameof(timeProvider));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
@@ -329,37 +326,9 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
         List<float[]> embeddings,
         CancellationToken cancellationToken)
     {
-        var pdfId = pdfDoc.Id.ToString();
-
-        // E2E fix: Ensure Qdrant collection exists before indexing
-        await _qdrantService.EnsureCollectionExistsAsync(cancellationToken).ConfigureAwait(false);
-
-        // Issue #5254: Delete old vectors before re-indexing to prevent duplicates
-        var deleted = await _qdrantService.DeleteDocumentAsync(pdfId, cancellationToken).ConfigureAwait(false);
-        if (deleted)
-        {
-            _logger.LogInformation("Deleted old vectors for PDF {PdfId} before re-indexing", pdfId);
-        }
-
-        var documentChunks = chunks
-            .Select((chunk, index) => new DocumentChunk
-            {
-                Text = chunk.Text,
-                Embedding = embeddings[index],
-                Page = chunk.Page,
-                CharStart = chunk.CharStart,
-                CharEnd = chunk.CharEnd
-            })
-            .ToList();
-
-        var indexResult = await _qdrantService
-            .IndexDocumentChunksAsync((pdfDoc.PrivateGameId ?? pdfDoc.GameId)?.ToString() ?? string.Empty, pdfId, documentChunks, cancellationToken)
-            .ConfigureAwait(false);
-
-        if (!indexResult.Success)
-        {
-            throw new InvalidOperationException($"Qdrant indexing failed: {indexResult.ErrorMessage}");
-        }
+        // Vector store (Qdrant) has been removed — skip vector indexing.
+        // Still update the VectorDocument record for tracking purposes.
+        var chunkCount = chunks.Count;
 
         // Update or create VectorDocument record
         var vectorDoc = await _db.VectorDocuments
@@ -375,7 +344,7 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
                 SharedGameId = pdfDoc.SharedGameId, // Issue #5185: propagate SharedGameId from PDF
                 PdfDocumentId = pdfDoc.Id,
                 IndexingStatus = "completed",
-                ChunkCount = indexResult.IndexedCount,
+                ChunkCount = chunkCount,
                 TotalCharacters = pdfDoc.ExtractedText?.Length ?? 0,
                 IndexedAt = _timeProvider.GetUtcNow().UtcDateTime
             };
@@ -384,7 +353,7 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
         else
         {
             vectorDoc.IndexingStatus = "completed";
-            vectorDoc.ChunkCount = indexResult.IndexedCount;
+            vectorDoc.ChunkCount = chunkCount;
             vectorDoc.TotalCharacters = pdfDoc.ExtractedText?.Length ?? 0;
             vectorDoc.IndexedAt = _timeProvider.GetUtcNow().UtcDateTime;
         }

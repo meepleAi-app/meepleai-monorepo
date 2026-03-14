@@ -86,7 +86,6 @@ public sealed class SendAgentMessagePersistenceTests : IAsyncLifetime
             _chatThreadRepository,
             _unitOfWork,
             _mockLlmService.Object,
-            Mock.Of<IQdrantService>(),
             Mock.Of<IEmbeddingService>(),
             _dbContext,
             Mock.Of<IUserBudgetService>(),

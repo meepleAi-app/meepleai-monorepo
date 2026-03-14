@@ -83,9 +83,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\Api\Api.csproj" />
   </ItemGroup>
-  <!-- Qdrant-dependent test files excluded — pgvector is the sole vector store -->
   <ItemGroup>
-    <Compile Remove="BoundedContexts\KnowledgeBase\Infrastructure\Indexing\OptimizedVectorIndexServiceTests.cs" />
     <Compile Remove="Integration\DocumentProcessing\IndexPdfIntegrationTests.cs" />
     <Compile Remove="Integration\DocumentProcessing\PrivatePdfUploadIntegrationTests.cs" />
   </ItemGroup>

@@ -1156,43 +1156,14 @@ internal class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUp
         await UpdateProgressAsync(db, pdfId, ProcessingStep.Indexing, 0, totalPages, startTime, null, cancellationToken).ConfigureAwait(false);
 
         var indexingStopwatch = Stopwatch.StartNew();
-        var qdrantService = scope.ServiceProvider.GetRequiredService<IQdrantService>();
 
-        // E2E fix: Ensure Qdrant collection exists before indexing
-        await qdrantService.EnsureCollectionExistsAsync(cancellationToken).ConfigureAwait(false);
-
-        var documentChunks = allDocumentChunks
-            .Select((chunk, index) => new DocumentChunk
-            {
-                Text = chunk.Text,
-                Embedding = embeddings[index],
-                Page = chunk.Page,
-                CharStart = chunk.CharStart,
-                CharEnd = chunk.CharEnd
-            })
-            .ToList();
-
-        // For private games GameId is null; use PrivateGameId as the Qdrant collection key
-        var qdrantGameId = (pdfDoc.PrivateGameId ?? pdfDoc.GameId)?.ToString()
-            ?? throw new InvalidOperationException($"PDF {pdfId} has neither GameId nor PrivateGameId");
-        var indexResult = await qdrantService.IndexDocumentChunksAsync(qdrantGameId, pdfId, documentChunks).ConfigureAwait(false);
+        // Vector store (Qdrant) has been removed — skip vector indexing.
         indexingStopwatch.Stop();
 
         RecordPipelineMetricSafely("indexing", indexingStopwatch.Elapsed.TotalMilliseconds);
 
-        if (!indexResult.Success)
-        {
-            await UpdateProgressAsync(db, pdfId, ProcessingStep.Failed, 0, 0, startTime, $"Qdrant indexing failed: {indexResult.ErrorMessage}", cancellationToken).ConfigureAwait(false);
-            await scope.ServiceProvider.GetRequiredService<IPdfUploadQuotaService>().ReleaseQuotaAsync(userId, pdfId, CancellationToken.None).ConfigureAwait(false);
-            pdfDoc.ProcessingStatus = "failed";
-            pdfDoc.ProcessingError = indexResult.ErrorMessage;
-            pdfDoc.ProcessedAt = _timeProvider.GetUtcNow().UtcDateTime;
-            await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
-            return;
-        }
-
-        // Update vector document
-        await UpdateVectorDocumentAsync(pdfId, pdfDoc, indexResult.IndexedCount, db, cancellationToken).ConfigureAwait(false);
+        // Update vector document with chunk count (no Qdrant indexing)
+        await UpdateVectorDocumentAsync(pdfId, pdfDoc, allDocumentChunks.Count, db, cancellationToken).ConfigureAwait(false);
 
         // Save text chunks to PostgreSQL for hybrid search (FTS)
         await SaveTextChunksForHybridSearchAsync(pdfId, pdfDoc, allDocumentChunks, db, cancellationToken).ConfigureAwait(false);

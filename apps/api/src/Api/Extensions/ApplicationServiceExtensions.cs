@@ -101,15 +101,6 @@ internal static class ApplicationServiceExtensions
         this IServiceCollection services,
         IConfiguration configuration)
     {
-        // Qdrant services DISABLED — replaced by PgVectorStoreAdapter (registered in KnowledgeBaseServiceExtensions)
-        // IQdrantCollectionManager, IQdrantVectorIndexer, IQdrantVectorSearcher,
-        // IQdrantService, IPrivateQdrantService registrations removed.
-        // No-op stubs retained for handlers that depend on Qdrant interfaces at DI resolution time.
-        // These return empty results — actual vector operations go through PgVectorStoreAdapter.
-        services.AddSingleton<IQdrantClientAdapter, NoOpQdrantClientAdapter>();
-        services.AddSingleton<IQdrantService, NoOpQdrantService>();
-        services.AddSingleton<IPrivateQdrantService, NoOpPrivateQdrantService>();
-
         // ADR-016 Phase 2: Multi-provider embedding configuration
         services.Configure<EmbeddingConfiguration>(configuration.GetSection("Embedding"));
 

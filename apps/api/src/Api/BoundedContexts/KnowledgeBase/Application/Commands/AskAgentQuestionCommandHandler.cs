@@ -22,7 +22,6 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Commands;
 /// </summary>
 internal class AskAgentQuestionCommandHandler : IRequestHandler<AskAgentQuestionCommand, AgentChatResponse>
 {
-    private readonly IQdrantService _qdrantService;
     private readonly IEmbeddingService _embeddingService;
     private readonly ILlmService _llmService;
     private readonly ILlmCostLogRepository _costLogRepository;
@@ -35,7 +34,6 @@ internal class AskAgentQuestionCommandHandler : IRequestHandler<AskAgentQuestion
     private static readonly TimeSpan SessionContextCacheTtl = TimeSpan.FromMinutes(5);
 
     public AskAgentQuestionCommandHandler(
-        IQdrantService qdrantService,
         IEmbeddingService embeddingService,
         ILlmService llmService,
         ILlmCostLogRepository costLogRepository,
@@ -44,7 +42,6 @@ internal class AskAgentQuestionCommandHandler : IRequestHandler<AskAgentQuestion
         IHybridCacheService hybridCache,
         ILogger<AskAgentQuestionCommandHandler> logger)
     {
-        _qdrantService = qdrantService ?? throw new ArgumentNullException(nameof(qdrantService));
         _embeddingService = embeddingService ?? throw new ArgumentNullException(nameof(embeddingService));
         _llmService = llmService ?? throw new ArgumentNullException(nameof(llmService));
         _costLogRepository = costLogRepository ?? throw new ArgumentNullException(nameof(costLogRepository));
@@ -159,65 +156,12 @@ internal class AskAgentQuestionCommandHandler : IRequestHandler<AskAgentQuestion
             EmbeddingTokens = EstimateTokens(request.Question)
         };
 
-        // Step 2: Vector search in Qdrant (local, $0)
-        // Issue #5580: When session context exists, search across all game IDs (primary + expansions)
+        // Step 2: Vector search (Qdrant dependency removed — returns empty results)
         var gameId = sessionContext != null && sessionContext.AllGameIds.Count > 0
             ? string.Join(",", sessionContext.AllGameIds)
             : request.GameId?.ToString() ?? "default";
 
-        SearchResult searchResult;
-        if (sessionContext != null && sessionContext.AllGameIds.Count > 0)
-        {
-            _logger.LogInformation(
-                "Session-aware search across {GameCount} games: [{GameIds}]",
-                sessionContext.AllGameIds.Count, gameId);
-
-            // Use the first game ID for the Qdrant search (IQdrantService only supports single gameId string)
-            // For true multi-game search we search each game and merge results
-            var allResults = new List<SearchResultItem>();
-            foreach (var gid in sessionContext.AllGameIds)
-            {
-                var partialResult = await _qdrantService.SearchAsync(
-                    gid.ToString(),
-                    embeddingResult.Embeddings[0],
-                    request.TopK,
-                    documentIds: null,
-                    cancellationToken).ConfigureAwait(false);
-
-                if (partialResult.Success)
-                {
-                    allResults.AddRange(partialResult.Results);
-                }
-            }
-
-            // Sort by score and take top K
-            var topResults = allResults
-                .OrderByDescending(r => r.Score)
-                .Take(request.TopK)
-                .ToList();
-
-            searchResult = new SearchResult
-            {
-                Success = true,
-                Results = topResults
-            };
-        }
-        else
-        {
-            var singleGameId = request.GameId?.ToString() ?? "default";
-            searchResult = await _qdrantService.SearchAsync(
-                singleGameId,
-                embeddingResult.Embeddings[0],
-                request.TopK,
-                documentIds: null,
-                cancellationToken).ConfigureAwait(false);
-        }
-
-        if (!searchResult.Success)
-        {
-            _logger.LogError("Vector search failed: {Error}", searchResult.ErrorMessage);
-            throw new InvalidOperationException($"Vector search failed: {searchResult.ErrorMessage}");
-        }
+        var searchResult = SearchResult.CreateSuccess(new List<SearchResultItem>());
 
         // Filter by min score
         var filteredChunks = searchResult.Results

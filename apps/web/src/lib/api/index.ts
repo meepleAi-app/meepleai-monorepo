@@ -62,6 +62,7 @@ import {
   createPlayRecordsClient,
   createFeatureFlagsClient,
   createSandboxClient,
+  createOnboardingClient,
   type AuthClient,
   type GamesClient,
   type SessionsClient,
@@ -104,6 +105,7 @@ import {
   type PlayRecordsClient,
   type FeatureFlagsClient,
   type SandboxClient,
+  type OnboardingClient,
 } from './clients';
 import { HttpClient, type HttpClientConfig } from './core/httpClient';
 
@@ -317,6 +319,9 @@ export interface ApiClient {
   /** RAG Sandbox Dashboard (Admin) */
   sandbox: SandboxClient;
 
+  /** First-time user onboarding */
+  onboarding: OnboardingClient;
+
   /** Generic DELETE helper (used in some legacy tests) */
   delete: (path: string) => Promise<void>;
 }
@@ -409,6 +414,7 @@ export function createApiClient(config?: ApiClientConfig): ApiClient {
     playRecords: createPlayRecordsClient({ httpClient }), // Play Records
     featureFlags: createFeatureFlagsClient({ httpClient }), // User Feature Flags
     sandbox: createSandboxClient({ httpClient }), // RAG Sandbox Dashboard
+    onboarding: createOnboardingClient({ httpClient }), // First-time user onboarding
     delete: (path: string) => httpClient.delete(path),
   };
 

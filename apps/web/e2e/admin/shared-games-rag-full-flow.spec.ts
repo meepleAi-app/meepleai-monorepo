@@ -14,8 +14,9 @@
  * Run: pnpm test:e2e apps/web/e2e/admin/shared-games-rag-full-flow.spec.ts
  */
 
-import { test, expect, type Page } from '@playwright/test';
 import path from 'path';
+
+import { test, expect, type Page } from '@playwright/test';
 
 const API_BASE =
   process.env.PLAYWRIGHT_API_BASE || process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080';
@@ -48,7 +49,9 @@ test.describe('Admin Shared Game + RAG Full Flow (#253)', () => {
     await page.goto('/admin/shared-games');
 
     // Click create button
-    const createButton = page.locator('button:has-text("Nuovo Gioco"), button:has-text("New Game")');
+    const createButton = page.locator(
+      'button:has-text("Nuovo Gioco"), button:has-text("New Game")'
+    );
     await expect(createButton).toBeVisible({ timeout: 10000 });
     await createButton.click();
 
@@ -63,7 +66,9 @@ test.describe('Admin Shared Game + RAG Full Flow (#253)', () => {
     await page.fill('input[name="minAge"]', '8');
 
     // Submit
-    const submitButton = page.locator('button[type="submit"]:has-text("Crea"), button[type="submit"]:has-text("Create")');
+    const submitButton = page.locator(
+      'button[type="submit"]:has-text("Crea"), button[type="submit"]:has-text("Create")'
+    );
     await submitButton.click();
 
     // Verify creation
@@ -82,9 +87,7 @@ test.describe('Admin Shared Game + RAG Full Flow (#253)', () => {
     }
 
     // Verify Draft status
-    await expect(
-      gameRow.locator('text=Draft, text=Bozza')
-    ).toBeVisible();
+    await expect(gameRow.locator('text=Draft, text=Bozza')).toBeVisible();
   });
 
   test('Step 2: Upload PDF rulebook for the game', async ({ page }) => {
@@ -157,13 +160,17 @@ test.describe('Admin Shared Game + RAG Full Flow (#253)', () => {
     // Wait for processing to complete (up to 2 minutes for small PDF)
     // Poll for completion status
     await expect(async () => {
-      const statusText = await page.locator(
-        'text=Ready, text=Completed, text=Pronto, text=Completato, text=Indexed'
-      ).first().isVisible().catch(() => false);
+      const statusText = await page
+        .locator('text=Ready, text=Completed, text=Pronto, text=Completato, text=Indexed')
+        .first()
+        .isVisible()
+        .catch(() => false);
 
-      const errorText = await page.locator(
-        'text=Failed, text=Error, text=Errore'
-      ).first().isVisible().catch(() => false);
+      const errorText = await page
+        .locator('text=Failed, text=Error, text=Errore')
+        .first()
+        .isVisible()
+        .catch(() => false);
 
       // If processing not done, reload and check again
       if (!statusText && !errorText) {
@@ -214,15 +221,13 @@ test.describe('Admin Shared Game + RAG Full Flow (#253)', () => {
       }
 
       // Submit agent creation
-      const submitAgent = page.locator(
-        'button:has-text("Create"), button:has-text("Crea"), button[type="submit"]'
-      ).last();
+      const submitAgent = page
+        .locator('button:has-text("Create"), button:has-text("Crea"), button[type="submit"]')
+        .last();
       await submitAgent.click();
 
       // Verify agent created
-      await expect(
-        page.locator('text=Agent, text=Agente').first()
-      ).toBeVisible({ timeout: 15000 });
+      await expect(page.locator('text=Agent, text=Agente').first()).toBeVisible({ timeout: 15000 });
     }
 
     // Verify agent is linked (check for linked indicator)
@@ -265,9 +270,11 @@ test.describe('Admin Shared Game + RAG Full Flow (#253)', () => {
       await chatInput.fill('What are the basic rules for scoring?');
 
       // Submit message
-      const sendButton = page.locator(
-        'button[aria-label="Send"], button:has-text("Send"), button:has-text("Invia"), button[type="submit"]'
-      ).last();
+      const sendButton = page
+        .locator(
+          'button[aria-label="Send"], button:has-text("Send"), button:has-text("Invia"), button[type="submit"]'
+        )
+        .last();
       await sendButton.click();
 
       // Wait for response (SSE streaming, may take time)
@@ -277,9 +284,11 @@ test.describe('Admin Shared Game + RAG Full Flow (#253)', () => {
       await expect(responseArea).toBeVisible({ timeout: 30000 });
 
       // Verify we got a response (even if LLM is not configured, endpoint should respond)
-      const hasResponse = await page.locator(
-        '.chat-message, [data-testid="assistant-message"], [role="assistant"]'
-      ).first().isVisible().catch(() => false);
+      const hasResponse = await page
+        .locator('.chat-message, [data-testid="assistant-message"], [role="assistant"]')
+        .first()
+        .isVisible()
+        .catch(() => false);
 
       // In test environment, LLM may not be available
       // Just verify the chat UI is functional and accepts input
@@ -295,7 +304,7 @@ test.describe('Admin RAG Full Flow — Mocked (#253)', () => {
 
   async function setupMocks(page: Page) {
     // Mock auth
-    await page.context().route(`${API_BASE}/api/v1/auth/me`, (route) =>
+    await page.context().route(`${API_BASE}/api/v1/auth/me`, route =>
       route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -307,7 +316,7 @@ test.describe('Admin RAG Full Flow — Mocked (#253)', () => {
     );
 
     // Mock shared game detail
-    await page.context().route(`${API_BASE}/api/v1/admin/shared-games/${MOCK_GAME_ID}**`, (route) =>
+    await page.context().route(`${API_BASE}/api/v1/admin/shared-games/${MOCK_GAME_ID}**`, route =>
       route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -334,9 +343,9 @@ test.describe('Admin RAG Full Flow — Mocked (#253)', () => {
     );
 
     // Mock documents overview (Issue #119)
-    await page.context().route(
-      `${API_BASE}/api/v1/admin/shared-games/${MOCK_GAME_ID}/documents/overview`,
-      (route) =>
+    await page
+      .context()
+      .route(`${API_BASE}/api/v1/admin/shared-games/${MOCK_GAME_ID}/documents/overview`, route =>
         route.fulfill({
           status: 200,
           contentType: 'application/json',
@@ -358,12 +367,12 @@ test.describe('Admin RAG Full Flow — Mocked (#253)', () => {
             ragReadiness: { isReady: true, blockers: [] },
           }),
         })
-    );
+      );
 
     // Mock RAG readiness
-    await page.context().route(
-      `${API_BASE}/api/v1/admin/shared-games/${MOCK_GAME_ID}/rag-readiness`,
-      (route) =>
+    await page
+      .context()
+      .route(`${API_BASE}/api/v1/admin/shared-games/${MOCK_GAME_ID}/rag-readiness`, route =>
         route.fulfill({
           status: 200,
           contentType: 'application/json',
@@ -375,10 +384,10 @@ test.describe('Admin RAG Full Flow — Mocked (#253)', () => {
             blockers: [],
           }),
         })
-    );
+      );
 
     // Mock PDF upload
-    await page.context().route(`${API_BASE}/api/v1/ingest/pdf`, (route) =>
+    await page.context().route(`${API_BASE}/api/v1/ingest/pdf`, route =>
       route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -390,19 +399,20 @@ test.describe('Admin RAG Full Flow — Mocked (#253)', () => {
     );
 
     // Mock agent chat
-    await page.context().route(`${API_BASE}/api/v1/agents/agent-1/chat`, (route) =>
+    await page.context().route(`${API_BASE}/api/v1/agents/agent-1/chat`, route =>
       route.fulfill({
         status: 200,
         contentType: 'application/json',
         body: JSON.stringify({
-          message: 'Based on the Carcassonne rulebook, players score points by completing cities, roads, and monasteries.',
+          message:
+            'Based on the Carcassonne rulebook, players score points by completing cities, roads, and monasteries.',
           citations: [{ page: 3, text: 'Scoring rules for completed features' }],
         }),
       })
     );
 
     // Catch-all for other admin API calls
-    await page.context().route(`${API_BASE}/api/v1/admin/**`, (route) =>
+    await page.context().route(`${API_BASE}/api/v1/admin/**`, route =>
       route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -420,13 +430,17 @@ test.describe('Admin RAG Full Flow — Mocked (#253)', () => {
 
     // Verify document info is displayed
     const docInfo = page.locator('text=carcassone_rulebook.pdf, text=Rulebook, text=Ready');
-    const hasDocInfo = await docInfo.first().isVisible().catch(() => false);
+    const hasDocInfo = await docInfo
+      .first()
+      .isVisible()
+      .catch(() => false);
 
     // Verify RAG readiness indicator
-    const ragReady = page.locator(
-      '[data-testid="rag-readiness"], text=RAG Ready, text=Pronto'
-    );
-    const hasRagReady = await ragReady.first().isVisible().catch(() => false);
+    const ragReady = page.locator('[data-testid="rag-readiness"], text=RAG Ready, text=Pronto');
+    const hasRagReady = await ragReady
+      .first()
+      .isVisible()
+      .catch(() => false);
 
     // At least game detail should be visible
     expect(true).toBeTruthy();
@@ -436,9 +450,9 @@ test.describe('Admin RAG Full Flow — Mocked (#253)', () => {
     await setupMocks(page);
 
     // Mock bulk upload endpoint (Issue #117)
-    await page.context().route(
-      `${API_BASE}/api/v1/admin/shared-games/${MOCK_GAME_ID}/documents/bulk-upload`,
-      (route) =>
+    await page
+      .context()
+      .route(`${API_BASE}/api/v1/admin/shared-games/${MOCK_GAME_ID}/documents/bulk-upload`, route =>
         route.fulfill({
           status: 200,
           contentType: 'application/json',
@@ -452,7 +466,7 @@ test.describe('Admin RAG Full Flow — Mocked (#253)', () => {
             ],
           }),
         })
-    );
+      );
 
     await page.goto(`/admin/shared-games/${MOCK_GAME_ID}`);
     await expect(page.locator('text=Carcassonne')).toBeVisible({ timeout: 10000 });

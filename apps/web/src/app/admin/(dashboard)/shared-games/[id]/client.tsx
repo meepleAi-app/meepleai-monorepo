@@ -695,7 +695,6 @@ export function GameDetailClient({ params }: GameDetailClientProps) {
           </Card>
         </TabsContent>
       </Tabs>
-
     </div>
   );
 }

@@ -5,8 +5,18 @@ import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { OnboardingReminderBanner } from '../OnboardingReminderBanner';
 
 vi.mock('next/link', () => ({
-  default: ({ children, href, ...props }: { children: React.ReactNode; href: string; [key: string]: unknown }) => (
-    <a href={href} {...props}>{children}</a>
+  default: ({
+    children,
+    href,
+    ...props
+  }: {
+    children: React.ReactNode;
+    href: string;
+    [key: string]: unknown;
+  }) => (
+    <a href={href} {...props}>
+      {children}
+    </a>
   ),
 }));
 
@@ -14,8 +24,12 @@ const localStorageMock = (() => {
   let store: Record<string, string> = {};
   return {
     getItem: vi.fn((key: string) => store[key] ?? null),
-    setItem: vi.fn((key: string, value: string) => { store[key] = value; }),
-    clear: () => { store = {}; },
+    setItem: vi.fn((key: string, value: string) => {
+      store[key] = value;
+    }),
+    clear: () => {
+      store = {};
+    },
   };
 })();
 

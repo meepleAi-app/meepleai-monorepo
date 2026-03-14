@@ -14,6 +14,7 @@ import { Suspense } from 'react';
 import MyProposalsClient from '@/app/(authenticated)/library/proposals/MyProposalsClient';
 import { CatalogContent } from '@/app/(public)/games/catalog/_content';
 import { MeepleGameCatalogCardSkeleton } from '@/components/catalog/MeepleGameCatalogCard';
+import { DiscoverVisitTracker } from '@/components/onboarding/DiscoverVisitTracker';
 
 import { BggSearchTab } from './BggSearchTab';
 
@@ -39,28 +40,47 @@ export default async function DiscoverPage({ searchParams }: DiscoverPageProps) 
   const params = await searchParams;
   const tab = params.tab ?? 'catalog';
 
+  // Track discover visit for onboarding checklist (all tabs count)
+  const tracker = <DiscoverVisitTracker />;
+
   if (tab === 'proposals') {
-    return <MyProposalsClient catalogBasePath="/discover" />;
+    return (
+      <>
+        {tracker}
+        <MyProposalsClient catalogBasePath="/discover" />
+      </>
+    );
   }
 
   if (tab === 'community') {
     return (
-      <div className="min-h-screen bg-background">
-        <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-          <h1 className="text-2xl font-bold tracking-tight text-foreground">Community</h1>
-          <p className="mt-2 text-muted-foreground">Funzionalità community in arrivo.</p>
+      <>
+        {tracker}
+        <div className="min-h-screen bg-background">
+          <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+            <h1 className="text-2xl font-bold tracking-tight text-foreground">Community</h1>
+            <p className="mt-2 text-muted-foreground">Funzionalità community in arrivo.</p>
+          </div>
         </div>
-      </div>
+      </>
     );
   }
 
   if (tab === 'bgg') {
-    return <BggSearchTab />;
+    return (
+      <>
+        {tracker}
+        <BggSearchTab />
+      </>
+    );
   }
 
   return (
-    <Suspense fallback={<CatalogSkeleton />}>
-      <CatalogContent gameDetailBasePath="/discover" />
-    </Suspense>
+    <>
+      {tracker}
+      <Suspense fallback={<CatalogSkeleton />}>
+        <CatalogContent gameDetailBasePath="/discover" />
+      </Suspense>
+    </>
   );
 }

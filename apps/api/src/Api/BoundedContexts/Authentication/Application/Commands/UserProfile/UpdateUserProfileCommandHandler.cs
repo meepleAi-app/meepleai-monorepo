@@ -61,6 +61,18 @@ internal class UpdateUserProfileCommandHandler : ICommandHandler<UpdateUserProfi
             user.UpdateEmail(newEmail);
         }
 
+        // Update avatar URL if provided
+        if (!string.IsNullOrWhiteSpace(command.AvatarUrl))
+        {
+            user.UpdateAvatarUrl(command.AvatarUrl!.Trim());
+        }
+
+        // Update bio if provided
+        if (!string.IsNullOrWhiteSpace(command.Bio))
+        {
+            user.UpdateBio(command.Bio!.Trim());
+        }
+
         // Persist updates
         await _userRepository.UpdateAsync(user, cancellationToken).ConfigureAwait(false);
         await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);

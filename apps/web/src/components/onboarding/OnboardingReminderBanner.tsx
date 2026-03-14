@@ -55,8 +55,7 @@ export function OnboardingReminderBanner({ onDismiss }: OnboardingReminderBanner
           className="underline hover:text-amber-700 dark:hover:text-amber-100"
         >
           Finish the onboarding wizard
-        </Link>
-        {' '}
+        </Link>{' '}
         to get personalized game recommendations.
       </p>
       <button

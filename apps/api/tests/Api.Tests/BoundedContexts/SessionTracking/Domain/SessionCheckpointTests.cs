@@ -35,25 +35,32 @@ public class SessionCheckpointTests
         Assert.Equal(200, cp.Name.Length);
     }
 
-    [Fact] public void Create_EmptySessionId_Throws() =>
+    [Fact]
+    public void Create_EmptySessionId_Throws() =>
         Assert.Throws<ArgumentException>(() => SessionCheckpoint.Create(Guid.Empty, "T", ValidCreatedBy, "{}", 0));
 
-    [Fact] public void Create_EmptyName_Throws() =>
+    [Fact]
+    public void Create_EmptyName_Throws() =>
         Assert.Throws<ArgumentException>(() => SessionCheckpoint.Create(ValidSessionId, "", ValidCreatedBy, "{}", 0));
 
-    [Fact] public void Create_WhitespaceName_Throws() =>
+    [Fact]
+    public void Create_WhitespaceName_Throws() =>
         Assert.Throws<ArgumentException>(() => SessionCheckpoint.Create(ValidSessionId, "  ", ValidCreatedBy, "{}", 0));
 
-    [Fact] public void Create_LongName_Throws() =>
+    [Fact]
+    public void Create_LongName_Throws() =>
         Assert.Throws<ArgumentException>(() => SessionCheckpoint.Create(ValidSessionId, new string('A', 201), ValidCreatedBy, "{}", 0));
 
-    [Fact] public void Create_EmptyCreatedBy_Throws() =>
+    [Fact]
+    public void Create_EmptyCreatedBy_Throws() =>
         Assert.Throws<ArgumentException>(() => SessionCheckpoint.Create(ValidSessionId, "T", Guid.Empty, "{}", 0));
 
-    [Fact] public void Create_EmptySnapshot_Throws() =>
+    [Fact]
+    public void Create_EmptySnapshot_Throws() =>
         Assert.Throws<ArgumentException>(() => SessionCheckpoint.Create(ValidSessionId, "T", ValidCreatedBy, "", 0));
 
-    [Fact] public void Create_NegativeEvents_Throws() =>
+    [Fact]
+    public void Create_NegativeEvents_Throws() =>
         Assert.Throws<ArgumentException>(() => SessionCheckpoint.Create(ValidSessionId, "T", ValidCreatedBy, "{}", -1));
 
     [Fact]

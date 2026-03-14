@@ -48,10 +48,9 @@ services:
       - meepleai
     security_opt:
       - no-new-privileges=true
-    read_only: true
+    read_only: false
     tmpfs:
       - /run
-      - /usr/local/etc/haproxy
     healthcheck:
       test: ["CMD", "wget", "--spider", "-q", "http://localhost:2375/version"]
       interval: 10s

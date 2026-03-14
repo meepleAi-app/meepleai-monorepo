@@ -28,6 +28,7 @@ public sealed class CreateGameAgentCommandHandlerTests
     private readonly Mock<ISharedGameRepository> _gameRepoMock;
     private readonly Mock<IAgentTypologyRepository> _typologyRepoMock;
     private readonly Mock<IUserLibraryRepository> _libraryRepoMock;
+    private readonly Mock<IVectorDocumentRepository> _vectorDocRepoMock;
     private readonly Mock<IUnitOfWork> _unitOfWorkMock;
     private readonly Mock<ILogger<CreateGameAgentCommandHandler>> _loggerMock;
     private readonly CreateGameAgentCommandHandler _handler;
@@ -41,6 +42,7 @@ public sealed class CreateGameAgentCommandHandlerTests
         _gameRepoMock = new Mock<ISharedGameRepository>();
         _typologyRepoMock = new Mock<IAgentTypologyRepository>();
         _libraryRepoMock = new Mock<IUserLibraryRepository>();
+        _vectorDocRepoMock = new Mock<IVectorDocumentRepository>();
         _unitOfWorkMock = new Mock<IUnitOfWork>();
         _loggerMock = new Mock<ILogger<CreateGameAgentCommandHandler>>();
 
@@ -48,6 +50,7 @@ public sealed class CreateGameAgentCommandHandlerTests
             _gameRepoMock.Object,
             _typologyRepoMock.Object,
             _libraryRepoMock.Object,
+            _vectorDocRepoMock.Object,
             _unitOfWorkMock.Object,
             _loggerMock.Object);
 

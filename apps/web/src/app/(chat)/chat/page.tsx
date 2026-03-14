@@ -9,7 +9,7 @@
 
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 import { AlertTriangle, ChevronDown, ChevronRight, MessageCircle, Plus, Bot } from 'lucide-react';
 import Link from 'next/link';
@@ -23,8 +23,7 @@ import { Button } from '@/components/ui/primitives/button';
 import { getNavigationLinks } from '@/config/entity-navigation';
 import { useChatSessionLimit, useRecentChatSessions } from '@/hooks/queries/useChatSessions';
 import type { ChatSessionSummaryDto } from '@/lib/api/schemas/chat-sessions.schemas';
-
-import { ChatNavConfig } from './NavConfig';
+import { useCardHand } from '@/stores/use-card-hand';
 
 // ─── Agent Group ─────────────────────────────────────────────────────────────
 
@@ -178,8 +177,18 @@ function AgentGroupSection({
 
 export default function ChatListPage() {
   const router = useRouter();
+  const { drawCard } = useCardHand();
   const { data, isLoading, error } = useRecentChatSessions(500);
   const { data: limitData } = useChatSessionLimit();
+
+  useEffect(() => {
+    drawCard({
+      id: 'section-chat',
+      entity: 'chatSession',
+      title: 'Chat',
+      href: '/chat',
+    });
+  }, [drawCard]);
 
   const groups = useMemo(() => {
     const sessions = data?.sessions ?? [];
@@ -212,7 +221,6 @@ export default function ChatListPage() {
 
   return (
     <div className="min-h-screen bg-background py-8 px-4">
-      <ChatNavConfig />
       <div className="container mx-auto max-w-7xl">
         {/* Header */}
         <div className="flex items-center justify-between mb-6">

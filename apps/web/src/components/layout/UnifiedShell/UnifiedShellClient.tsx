@@ -1,8 +1,9 @@
 'use client';
 
-import { type ReactNode } from 'react';
+import { type ReactNode, useEffect } from 'react';
 
 import { ErrorBoundary } from '@/components/errors/ErrorBoundary';
+import { DEFAULT_PINNED_CARDS } from '@/config/entity-actions';
 import { cn } from '@/lib/utils';
 import { useCardHand } from '@/stores/use-card-hand';
 
@@ -35,8 +36,19 @@ export function UnifiedShellClient({
   notificationBell,
   searchTrigger,
 }: UnifiedShellClientProps) {
-  const { context } = useCardHand();
+  const { context, drawCard, pinCard, cards } = useCardHand();
   const isAdminContext = context === 'admin';
+
+  // Seed default pinned section cards on first load
+  useEffect(() => {
+    if (cards.length === 0) {
+      DEFAULT_PINNED_CARDS.forEach(card => {
+        drawCard(card);
+        pinCard(card.id);
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <div className="flex flex-col h-screen">

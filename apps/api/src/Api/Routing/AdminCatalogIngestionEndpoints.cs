@@ -123,9 +123,17 @@ internal static class AdminCatalogIngestionEndpoints
             var (authorized, _, error) = context.RequireAdminSession();
             if (!authorized) return error!;
 
-            var statusFilter = !string.IsNullOrEmpty(status)
-                ? status.Split(',').Select(s => Enum.Parse<GameDataStatus>(s, true)).ToList()
-                : null;
+            List<GameDataStatus>? statusFilter = null;
+            if (!string.IsNullOrEmpty(status))
+            {
+                statusFilter = new List<GameDataStatus>();
+                foreach (var s in status.Split(','))
+                {
+                    if (!Enum.TryParse<GameDataStatus>(s.Trim(), true, out var parsed))
+                        return Results.BadRequest(new { error = $"Invalid status value: '{s.Trim()}'" });
+                    statusFilter.Add(parsed);
+                }
+            }
 
             var bytes = await mediator.Send(
                 new ExportGamesToExcelCommand(statusFilter, hasPdf), ct).ConfigureAwait(false);

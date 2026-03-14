@@ -672,36 +672,10 @@ internal class CompleteChunkedUploadCommandHandler : ICommandHandler<CompleteChu
         IServiceScope scope,
         CancellationToken cancellationToken)
     {
-        // Index in Qdrant
-        var indexingStopwatch = Stopwatch.StartNew();
-        var qdrantService = scope.ServiceProvider.GetRequiredService<IQdrantService>();
+        // Vector store (Qdrant) has been removed — skip vector indexing.
 
-        var documentChunks = allDocumentChunks
-            .Select((chunk, index) => new DocumentChunk
-            {
-                Text = chunk.Text,
-                Embedding = embeddings[index],
-                Page = chunk.Page,
-                CharStart = chunk.CharStart,
-                CharEnd = chunk.CharEnd
-            })
-            .ToList();
-
-        var indexResult = await qdrantService.IndexDocumentChunksAsync((pdfDoc.PrivateGameId ?? pdfDoc.GameId)?.ToString() ?? string.Empty, pdfId, documentChunks).ConfigureAwait(false);
-        indexingStopwatch.Stop();
-
-        if (!indexResult.Success)
-        {
-            pdfDoc.ProcessingStatus = "failed";
-            pdfDoc.ProcessingError = indexResult.ErrorMessage;
-            pdfDoc.ProcessedAt = _timeProvider.GetUtcNow().UtcDateTime;
-            await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
-            _logger.LogError("Qdrant indexing failed for {PdfId}: {Error}", pdfId, indexResult.ErrorMessage);
-            return;
-        }
-
-        // Update vector document
-        await UpdateOrCreateVectorDocumentAsync(pdfGuid, pdfDoc, fullText, indexResult.IndexedCount, db, cancellationToken).ConfigureAwait(false);
+        // Update vector document with chunk count (no Qdrant indexing)
+        await UpdateOrCreateVectorDocumentAsync(pdfGuid, pdfDoc, fullText, allDocumentChunks.Count, db, cancellationToken).ConfigureAwait(false);
 
         // Save text chunks to PostgreSQL for hybrid search (FTS)
         await SaveTextChunksForHybridSearchAsync(pdfGuid, pdfDoc, allDocumentChunks, db, cancellationToken).ConfigureAwait(false);

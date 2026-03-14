@@ -38,11 +38,10 @@ public class IndexPdfCommandHandlerTests
     /// <summary>
     /// Creates a fresh set of mocks for each test
     /// </summary>
-    private static (Mock<ITextChunkingService>, Mock<IEmbeddingService>, Mock<IQdrantService>, Mock<ILogger<IndexPdfCommandHandler>>, Mock<IOptions<IndexingSettings>>) CreateMocks()
+    private static (Mock<ITextChunkingService>, Mock<IEmbeddingService>, Mock<ILogger<IndexPdfCommandHandler>>, Mock<IOptions<IndexingSettings>>) CreateMocks()
     {
         var chunkingServiceMock = new Mock<ITextChunkingService>();
         var embeddingServiceMock = new Mock<IEmbeddingService>();
-        var qdrantServiceMock = new Mock<IQdrantService>();
         var loggerMock = new Mock<ILogger<IndexPdfCommandHandler>>();
         var indexingSettingsMock = new Mock<IOptions<IndexingSettings>>();
 
@@ -50,21 +49,20 @@ public class IndexPdfCommandHandlerTests
         var settings = new IndexingSettings { EmbeddingBatchSize = 100 };
         indexingSettingsMock.Setup(x => x.Value).Returns(settings);
 
-        return (chunkingServiceMock, embeddingServiceMock, qdrantServiceMock, loggerMock, indexingSettingsMock);
+        return (chunkingServiceMock, embeddingServiceMock, loggerMock, indexingSettingsMock);
     }
     [Fact]
     public void Constructor_WithValidDependencies_CreatesInstance()
     {
         // Arrange - fresh resources per test
         using var context = CreateFreshDbContext();
-        var (chunkingServiceMock, embeddingServiceMock, qdrantServiceMock, loggerMock, indexingSettingsMock) = CreateMocks();
+        var (chunkingServiceMock, embeddingServiceMock, loggerMock, indexingSettingsMock) = CreateMocks();
 
         // Act
         var handler = new IndexPdfCommandHandler(
             context,
             chunkingServiceMock.Object,
             embeddingServiceMock.Object,
-            qdrantServiceMock.Object,
             loggerMock.Object,
             indexingSettingsMock.Object);
 
@@ -77,7 +75,7 @@ public class IndexPdfCommandHandlerTests
     {
         // Arrange - fresh resources per test
         using var context = CreateFreshDbContext();
-        var (chunkingServiceMock, embeddingServiceMock, qdrantServiceMock, loggerMock, indexingSettingsMock) = CreateMocks();
+        var (chunkingServiceMock, embeddingServiceMock, loggerMock, indexingSettingsMock) = CreateMocks();
         var timeProvider = TimeProvider.System;
 
         // Act
@@ -85,7 +83,6 @@ public class IndexPdfCommandHandlerTests
             context,
             chunkingServiceMock.Object,
             embeddingServiceMock.Object,
-            qdrantServiceMock.Object,
             loggerMock.Object,
             indexingSettingsMock.Object,
             timeProvider);
@@ -99,14 +96,13 @@ public class IndexPdfCommandHandlerTests
     {
         // Arrange - fresh resources per test
         using var context = CreateFreshDbContext();
-        var (chunkingServiceMock, embeddingServiceMock, qdrantServiceMock, loggerMock, indexingSettingsMock) = CreateMocks();
+        var (chunkingServiceMock, embeddingServiceMock, loggerMock, indexingSettingsMock) = CreateMocks();
 
         // Act
         var handler = new IndexPdfCommandHandler(
             context,
             chunkingServiceMock.Object,
             embeddingServiceMock.Object,
-            qdrantServiceMock.Object,
             loggerMock.Object,
             indexingSettingsMock.Object,
             null);
@@ -230,7 +226,7 @@ public class IndexPdfCommandHandlerTests
     {
         // Arrange: Create 250 chunks (should trigger 3 batches with size 100)
         using var context = CreateFreshDbContext();
-        var (chunkingServiceMock, embeddingServiceMock, qdrantServiceMock, loggerMock, indexingSettingsMock) = CreateMocks();
+        var (chunkingServiceMock, embeddingServiceMock, loggerMock, indexingSettingsMock) = CreateMocks();
 
         var gameId = Guid.NewGuid();
         var pdfId = Guid.NewGuid();
@@ -256,19 +252,10 @@ public class IndexPdfCommandHandlerTests
         embeddingServiceMock.Setup(x => x.GetEmbeddingDimensions()).Returns(3072);
         embeddingServiceMock.Setup(x => x.GetModelName()).Returns("text-embedding-3-large");
 
-        qdrantServiceMock
-            .Setup(x => x.IndexDocumentChunksAsync(
-                It.IsAny<string>(),
-                It.IsAny<string>(),
-                It.IsAny<List<DocumentChunk>>(),
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new IndexResult { Success = true });
-
         var handler = new IndexPdfCommandHandler(
             context,
             chunkingServiceMock.Object,
             embeddingServiceMock.Object,
-            qdrantServiceMock.Object,
             loggerMock.Object,
             indexingSettingsMock.Object);
 
@@ -303,7 +290,7 @@ public class IndexPdfCommandHandlerTests
     {
         // Arrange
         using var context = CreateFreshDbContext();
-        var (chunkingServiceMock, embeddingServiceMock, qdrantServiceMock, loggerMock, indexingSettingsMock) = CreateMocks();
+        var (chunkingServiceMock, embeddingServiceMock, loggerMock, indexingSettingsMock) = CreateMocks();
 
         var gameId = Guid.NewGuid();
         var pdfId = Guid.NewGuid();
@@ -327,19 +314,10 @@ public class IndexPdfCommandHandlerTests
         embeddingServiceMock.Setup(x => x.GetEmbeddingDimensions()).Returns(3072);
         embeddingServiceMock.Setup(x => x.GetModelName()).Returns("text-embedding-3-large");
 
-        qdrantServiceMock
-            .Setup(x => x.IndexDocumentChunksAsync(
-                It.IsAny<string>(),
-                It.IsAny<string>(),
-                It.IsAny<List<DocumentChunk>>(),
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new IndexResult { Success = true });
-
         var handler = new IndexPdfCommandHandler(
             context,
             chunkingServiceMock.Object,
             embeddingServiceMock.Object,
-            qdrantServiceMock.Object,
             loggerMock.Object,
             indexingSettingsMock.Object);
 
@@ -364,7 +342,7 @@ public class IndexPdfCommandHandlerTests
     {
         // Arrange
         using var context = CreateFreshDbContext();
-        var (chunkingServiceMock, embeddingServiceMock, qdrantServiceMock, loggerMock, indexingSettingsMock) = CreateMocks();
+        var (chunkingServiceMock, embeddingServiceMock, loggerMock, indexingSettingsMock) = CreateMocks();
 
         var gameId = Guid.NewGuid();
         var pdfId = Guid.NewGuid();
@@ -399,7 +377,6 @@ public class IndexPdfCommandHandlerTests
             context,
             chunkingServiceMock.Object,
             embeddingServiceMock.Object,
-            qdrantServiceMock.Object,
             loggerMock.Object,
             indexingSettingsMock.Object);
 
@@ -426,7 +403,7 @@ public class IndexPdfCommandHandlerTests
     {
         // Arrange
         using var context = CreateFreshDbContext();
-        var (chunkingServiceMock, embeddingServiceMock, qdrantServiceMock, loggerMock, indexingSettingsMock) = CreateMocks();
+        var (chunkingServiceMock, embeddingServiceMock, loggerMock, indexingSettingsMock) = CreateMocks();
 
         var gameId = Guid.NewGuid();
         var pdfId = Guid.NewGuid();
@@ -441,7 +418,6 @@ public class IndexPdfCommandHandlerTests
             context,
             chunkingServiceMock.Object,
             embeddingServiceMock.Object,
-            qdrantServiceMock.Object,
             loggerMock.Object,
             indexingSettingsMock.Object);
 
@@ -472,7 +448,7 @@ public class IndexPdfCommandHandlerTests
     {
         // Arrange: PDF has extracted text but ProcessingState is Extracting (not Ready)
         using var context = CreateFreshDbContext();
-        var (chunkingServiceMock, embeddingServiceMock, qdrantServiceMock, loggerMock, indexingSettingsMock) = CreateMocks();
+        var (chunkingServiceMock, embeddingServiceMock, loggerMock, indexingSettingsMock) = CreateMocks();
 
         var gameId = Guid.NewGuid();
         var pdfId = Guid.NewGuid();
@@ -497,15 +473,9 @@ public class IndexPdfCommandHandlerTests
         embeddingServiceMock.Setup(x => x.GetEmbeddingDimensions()).Returns(3072);
         embeddingServiceMock.Setup(x => x.GetModelName()).Returns("text-embedding-3-large");
 
-        qdrantServiceMock
-            .Setup(x => x.IndexDocumentChunksAsync(
-                It.IsAny<string>(), It.IsAny<string>(),
-                It.IsAny<List<DocumentChunk>>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new IndexResult { Success = true });
-
         var handler = new IndexPdfCommandHandler(
             context, chunkingServiceMock.Object, embeddingServiceMock.Object,
-            qdrantServiceMock.Object, loggerMock.Object, indexingSettingsMock.Object);
+            loggerMock.Object, indexingSettingsMock.Object);
 
         // Act
         var result = await handler.Handle(new IndexPdfCommand(pdfId.ToString()), CancellationToken.None);
@@ -522,7 +492,7 @@ public class IndexPdfCommandHandlerTests
     {
         // Arrange
         using var context = CreateFreshDbContext();
-        var (chunkingServiceMock, embeddingServiceMock, qdrantServiceMock, loggerMock, indexingSettingsMock) = CreateMocks();
+        var (chunkingServiceMock, embeddingServiceMock, loggerMock, indexingSettingsMock) = CreateMocks();
 
         var gameId = Guid.NewGuid();
         var pdfId = Guid.NewGuid();
@@ -540,7 +510,7 @@ public class IndexPdfCommandHandlerTests
 
         var handler = new IndexPdfCommandHandler(
             context, chunkingServiceMock.Object, embeddingServiceMock.Object,
-            qdrantServiceMock.Object, loggerMock.Object, indexingSettingsMock.Object);
+            loggerMock.Object, indexingSettingsMock.Object);
 
         // Act
         var result = await handler.Handle(new IndexPdfCommand(pdfId.ToString()), CancellationToken.None);
@@ -556,7 +526,7 @@ public class IndexPdfCommandHandlerTests
     {
         // Arrange
         using var context = CreateFreshDbContext();
-        var (chunkingServiceMock, embeddingServiceMock, qdrantServiceMock, loggerMock, indexingSettingsMock) = CreateMocks();
+        var (chunkingServiceMock, embeddingServiceMock, loggerMock, indexingSettingsMock) = CreateMocks();
 
         var gameId = Guid.NewGuid();
         var pdfId = Guid.NewGuid();
@@ -575,7 +545,7 @@ public class IndexPdfCommandHandlerTests
 
         var handler = new IndexPdfCommandHandler(
             context, chunkingServiceMock.Object, embeddingServiceMock.Object,
-            qdrantServiceMock.Object, loggerMock.Object, indexingSettingsMock.Object);
+            loggerMock.Object, indexingSettingsMock.Object);
 
         // Act
         var result = await handler.Handle(new IndexPdfCommand(pdfId.ToString()), CancellationToken.None);

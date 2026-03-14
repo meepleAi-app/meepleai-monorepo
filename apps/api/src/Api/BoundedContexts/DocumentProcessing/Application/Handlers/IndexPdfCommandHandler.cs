@@ -27,7 +27,6 @@ internal class IndexPdfCommandHandler : ICommandHandler<IndexPdfCommand, Indexin
     private readonly ITextChunkingService _chunkingService;
     private readonly IEmbeddingService _embeddingService;
     private readonly IndexingSettings _indexingSettings;
-    private readonly IQdrantService _qdrantService;
     private readonly ILogger<IndexPdfCommandHandler> _logger;
     private readonly TimeProvider _timeProvider;
 
@@ -35,7 +34,6 @@ internal class IndexPdfCommandHandler : ICommandHandler<IndexPdfCommand, Indexin
         MeepleAiDbContext db,
         ITextChunkingService chunkingService,
         IEmbeddingService embeddingService,
-        IQdrantService qdrantService,
         ILogger<IndexPdfCommandHandler> logger,
         IOptions<IndexingSettings> indexingSettings,
         TimeProvider? timeProvider = null)
@@ -43,7 +41,6 @@ internal class IndexPdfCommandHandler : ICommandHandler<IndexPdfCommand, Indexin
         _db = db ?? throw new ArgumentNullException(nameof(db));
         _chunkingService = chunkingService ?? throw new ArgumentNullException(nameof(chunkingService));
         _embeddingService = embeddingService ?? throw new ArgumentNullException(nameof(embeddingService));
-        _qdrantService = qdrantService ?? throw new ArgumentNullException(nameof(qdrantService));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _indexingSettings = indexingSettings?.Value ?? throw new ArgumentNullException(nameof(indexingSettings));
         _timeProvider = timeProvider ?? TimeProvider.System;
@@ -182,14 +179,7 @@ internal class IndexPdfCommandHandler : ICommandHandler<IndexPdfCommand, Indexin
 
         if (existingVectorDoc != null)
         {
-            _logger.LogInformation("PDF {PdfId} already indexed, deleting old vectors before re-indexing", pdfId);
-
-            // Delete old vectors from Qdrant
-            var deleteResult = await _qdrantService.DeleteDocumentAsync(pdfId, cancellationToken).ConfigureAwait(false);
-            if (!deleteResult)
-            {
-                _logger.LogWarning("Failed to delete old vectors for PDF {PdfId}, continuing anyway", pdfId);
-            }
+            _logger.LogInformation("PDF {PdfId} already indexed, re-indexing", pdfId);
 
             // Update existing entity status to "processing"
             existingVectorDoc.IndexingStatus = "processing";
@@ -298,7 +288,7 @@ internal class IndexPdfCommandHandler : ICommandHandler<IndexPdfCommand, Indexin
     /// <summary>
     /// Indexes document chunks in Qdrant and updates VectorDocument.
     /// </summary>
-    private async Task<bool> IndexChunksInVectorStoreAsync(
+    private Task<bool> IndexChunksInVectorStoreAsync(
         string pdfId,
         string gameId,
         string extractedText,
@@ -306,31 +296,18 @@ internal class IndexPdfCommandHandler : ICommandHandler<IndexPdfCommand, Indexin
         VectorDocumentEntity vectorDoc,
         CancellationToken cancellationToken)
     {
-        // Index in Qdrant
-        _logger.LogInformation("Indexing {ChunkCount} chunks in Qdrant for PDF {PdfId}",
-            documentChunks.Count, pdfId);
+        // Vector store (Qdrant) has been removed — skip vector indexing.
+        // Update VectorDocumentEntity to "completed" for tracking.
+        _logger.LogInformation("Skipping Qdrant indexing (removed) for PDF {PdfId}, {ChunkCount} chunks",
+            pdfId, documentChunks.Count);
 
-        var indexResult = await _qdrantService.IndexDocumentChunksAsync(
-            gameId,
-            pdfId,
-            documentChunks,
-            cancellationToken).ConfigureAwait(false);
-
-        if (!indexResult.Success)
-        {
-            _logger.LogError("Failed to index chunks in Qdrant for PDF {PdfId}: {Error}",
-                pdfId, indexResult.ErrorMessage);
-            return false;
-        }
-
-        // Update VectorDocumentEntity to "completed"
         vectorDoc.IndexingStatus = "completed";
         vectorDoc.ChunkCount = documentChunks.Count;
         vectorDoc.TotalCharacters = extractedText.Length;
         vectorDoc.IndexedAt = _timeProvider.GetUtcNow().UtcDateTime;
         vectorDoc.IndexingError = null;
 
-        return true;
+        return Task.FromResult(true);
     }
 
     /// <summary>

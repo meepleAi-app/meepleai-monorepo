@@ -8,6 +8,7 @@ using Api.Infrastructure;
 using Api.Infrastructure.Entities.GameManagement;
 using Api.Middleware.Exceptions;
 using Api.Services;
+using Api.SharedKernel.Services;
 using Api.Tests.Constants;
 using Api.Tests.TestHelpers;
 using FluentValidation.TestHelper;
@@ -39,6 +40,7 @@ public sealed class SubmitRuleDisputeCommandHandlerTests
     private readonly MeepleAiDbContext _dbContext;
     private readonly Mock<ILiveSessionRepository> _sessionRepoMock;
     private readonly Mock<ILlmService> _llmServiceMock;
+    private readonly Mock<ITierEnforcementService> _tierEnforcementMock;
     private readonly Mock<IPublisher> _publisherMock;
     private readonly SubmitRuleDisputeCommandHandler _sut;
 
@@ -47,6 +49,7 @@ public sealed class SubmitRuleDisputeCommandHandlerTests
         _dbContext = TestDbContextFactory.CreateInMemoryDbContext();
         _sessionRepoMock = new Mock<ILiveSessionRepository>();
         _llmServiceMock = new Mock<ILlmService>();
+        _tierEnforcementMock = new Mock<ITierEnforcementService>();
         _publisherMock = new Mock<IPublisher>();
 
         // Default: LLM always succeeds with structured response
@@ -56,10 +59,19 @@ public sealed class SubmitRuleDisputeCommandHandlerTests
                 It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(LlmCompletionResult.CreateSuccess(DefaultLlmResponse));
 
+        // Default: user is within quota
+        _tierEnforcementMock
+            .Setup(t => t.CanPerformAsync(It.IsAny<Guid>(), TierAction.SessionAgentQuery, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+        _tierEnforcementMock
+            .Setup(t => t.RecordUsageAsync(It.IsAny<Guid>(), It.IsAny<TierAction>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+
         _sut = new SubmitRuleDisputeCommandHandler(
             _sessionRepoMock.Object,
             _dbContext,
             _llmServiceMock.Object,
+            _tierEnforcementMock.Object,
             _publisherMock.Object,
             TimeProvider.System,
             NullLogger<SubmitRuleDisputeCommandHandler>.Instance);
@@ -387,6 +399,64 @@ public sealed class SubmitRuleDisputeCommandHandlerTests
         // Act & Assert
         await Assert.ThrowsAsync<InvalidOperationException>(() =>
             _sut.Handle(command, CancellationToken.None));
+    }
+
+    // ─── Tier enforcement ─────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task Handle_WhenSessionQueryQuotaExceeded_ThrowsConflictException()
+    {
+        // Arrange
+        CreateInProgressSession(withDbEntity: true);
+
+        _tierEnforcementMock
+            .Setup(t => t.CanPerformAsync(TestUserId, TierAction.SessionAgentQuery, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(false);
+
+        _tierEnforcementMock
+            .Setup(t => t.GetUsageAsync(TestUserId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new UsageSnapshot(
+                PrivateGames: 0, PrivateGamesMax: 3,
+                PdfThisMonth: 0, PdfThisMonthMax: 3,
+                AgentQueriesToday: 0, AgentQueriesTodayMax: 20,
+                SessionQueries: 30, SessionQueriesMax: 30,
+                Agents: 0, AgentsMax: 1,
+                PhotosThisSession: 0, PhotosThisSessionMax: 5,
+                SessionSaveEnabled: false,
+                CatalogProposalsThisWeek: 0, CatalogProposalsThisWeekMax: 1));
+
+        var command = BuildCommand();
+
+        // Act & Assert
+        var ex = await Assert.ThrowsAsync<ConflictException>(() =>
+            _sut.Handle(command, CancellationToken.None));
+
+        Assert.Contains("limite di domande", ex.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("30/30", ex.Message, StringComparison.Ordinal);
+
+        // LLM must not be called when quota is exceeded
+        _llmServiceMock.Verify(
+            s => s.GenerateCompletionAsync(
+                It.IsAny<string>(), It.IsAny<string>(),
+                It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task Handle_WhenWithinSessionQueryQuota_SucceedsAndRecordsUsage()
+    {
+        // Arrange — default mock allows the action
+        CreateInProgressSession(withDbEntity: true);
+        var command = BuildCommand();
+
+        // Act
+        var result = await _sut.Handle(command, CancellationToken.None);
+
+        // Assert — verdict returned and usage recorded
+        Assert.NotEqual(Guid.Empty, result.Id);
+        _tierEnforcementMock.Verify(
+            t => t.RecordUsageAsync(TestUserId, TierAction.SessionAgentQuery, It.IsAny<CancellationToken>()),
+            Times.Once);
     }
 
     // ─── Parsing edge cases ───────────────────────────────────────────────────

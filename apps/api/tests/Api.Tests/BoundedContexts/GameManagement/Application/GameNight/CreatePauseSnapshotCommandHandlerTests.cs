@@ -4,9 +4,11 @@ using Api.BoundedContexts.GameManagement.Domain.Entities.PauseSnapshot;
 using Api.BoundedContexts.GameManagement.Domain.Enums;
 using Api.BoundedContexts.GameManagement.Domain.Events;
 using Api.BoundedContexts.GameManagement.Domain.Repositories;
+using Api.BoundedContexts.SystemConfiguration.Domain.ValueObjects;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities.GameManagement;
 using Api.Middleware.Exceptions;
+using Api.SharedKernel.Services;
 using Api.Tests.Constants;
 using Api.Tests.TestHelpers;
 using FluentValidation.TestHelper;
@@ -33,6 +35,7 @@ public sealed class CreatePauseSnapshotCommandHandlerTests
     private readonly MeepleAiDbContext _dbContext;
     private readonly Mock<ILiveSessionRepository> _sessionRepoMock;
     private readonly Mock<IPauseSnapshotRepository> _snapshotRepoMock;
+    private readonly Mock<ITierEnforcementService> _tierEnforcementMock;
     private readonly Mock<IPublisher> _publisherMock;
     private readonly CreatePauseSnapshotCommandHandler _sut;
 
@@ -41,6 +44,7 @@ public sealed class CreatePauseSnapshotCommandHandlerTests
         _dbContext = TestDbContextFactory.CreateInMemoryDbContext();
         _sessionRepoMock = new Mock<ILiveSessionRepository>();
         _snapshotRepoMock = new Mock<IPauseSnapshotRepository>();
+        _tierEnforcementMock = new Mock<ITierEnforcementService>();
         _publisherMock = new Mock<IPublisher>();
 
         _snapshotRepoMock
@@ -51,10 +55,16 @@ public sealed class CreatePauseSnapshotCommandHandlerTests
             .Setup(p => p.Publish(It.IsAny<INotification>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
 
+        // Default: session save is enabled (Premium plan)
+        _tierEnforcementMock
+            .Setup(t => t.GetLimitsAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(TierLimits.PremiumTier);
+
         _sut = new CreatePauseSnapshotCommandHandler(
             _sessionRepoMock.Object,
             _snapshotRepoMock.Object,
             _dbContext,
+            _tierEnforcementMock.Object,
             _publisherMock.Object,
             NullLogger<CreatePauseSnapshotCommandHandler>.Instance);
     }
@@ -385,6 +395,49 @@ public sealed class CreatePauseSnapshotCommandHandlerTests
                 It.IsAny<SessionSaveRequestedEvent>(),
                 It.IsAny<CancellationToken>()),
             Times.Never);
+    }
+
+    // ─── Tier enforcement ─────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task Handle_WhenSessionSaveNotEnabledForTier_ThrowsConflictException()
+    {
+        // Arrange — Free tier does not include session save
+        _tierEnforcementMock
+            .Setup(t => t.GetLimitsAsync(TestUserId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(TierLimits.FreeTier);
+
+        CreateInProgressSession(withDbEntity: true);
+        var command = BuildCommand();
+
+        // Act & Assert
+        var ex = await Assert.ThrowsAsync<ConflictException>(() =>
+            _sut.Handle(command, CancellationToken.None));
+
+        Assert.Contains("salvataggio della sessione", ex.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Premium", ex.Message, StringComparison.OrdinalIgnoreCase);
+
+        // Snapshot repository must not be called when tier blocks the save
+        _snapshotRepoMock.Verify(
+            r => r.AddAsync(It.IsAny<PauseSnapshot>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task Handle_WhenSessionSaveEnabledForTier_Succeeds()
+    {
+        // Arrange — default mock uses PremiumTier (SessionSaveEnabled = true)
+        CreateInProgressSession(withDbEntity: true);
+        var command = BuildCommand();
+
+        // Act
+        var snapshotId = await _sut.Handle(command, CancellationToken.None);
+
+        // Assert — snapshot was created successfully
+        Assert.NotEqual(Guid.Empty, snapshotId);
+        _snapshotRepoMock.Verify(
+            r => r.AddAsync(It.IsAny<PauseSnapshot>(), It.IsAny<CancellationToken>()),
+            Times.Once);
     }
 }
 

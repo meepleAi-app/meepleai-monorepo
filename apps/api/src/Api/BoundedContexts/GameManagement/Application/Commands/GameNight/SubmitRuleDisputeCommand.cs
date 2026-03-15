@@ -8,6 +8,7 @@ using Api.BoundedContexts.GameManagement.Domain.ValueObjects;
 using Api.Infrastructure;
 using Api.Middleware.Exceptions;
 using Api.Services;
+using Api.SharedKernel.Services;
 using FluentValidation;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -90,6 +91,7 @@ internal sealed class SubmitRuleDisputeCommandHandler
     private readonly ILiveSessionRepository _sessionRepository;
     private readonly MeepleAiDbContext _dbContext;
     private readonly ILlmService _llmService;
+    private readonly ITierEnforcementService _tierEnforcementService;
     private readonly IPublisher _publisher;
     private readonly TimeProvider _timeProvider;
     private readonly ILogger<SubmitRuleDisputeCommandHandler> _logger;
@@ -98,6 +100,7 @@ internal sealed class SubmitRuleDisputeCommandHandler
         ILiveSessionRepository sessionRepository,
         MeepleAiDbContext dbContext,
         ILlmService llmService,
+        ITierEnforcementService tierEnforcementService,
         IPublisher publisher,
         TimeProvider timeProvider,
         ILogger<SubmitRuleDisputeCommandHandler> logger)
@@ -105,6 +108,7 @@ internal sealed class SubmitRuleDisputeCommandHandler
         _sessionRepository = sessionRepository ?? throw new ArgumentNullException(nameof(sessionRepository));
         _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
         _llmService = llmService ?? throw new ArgumentNullException(nameof(llmService));
+        _tierEnforcementService = tierEnforcementService ?? throw new ArgumentNullException(nameof(tierEnforcementService));
         _publisher = publisher ?? throw new ArgumentNullException(nameof(publisher));
         _timeProvider = timeProvider ?? throw new ArgumentNullException(nameof(timeProvider));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
@@ -143,10 +147,25 @@ internal sealed class SubmitRuleDisputeCommandHandler
             "SubmitRuleDisputeCommand: SessionId={SessionId}, Player={Player}, Description={Description}",
             request.SessionId, request.RaisedByPlayerName, request.Description);
 
-        // 3. Build the arbitration prompt
+        // 4. Check session agent query quota before calling LLM
+        var canQuery = await _tierEnforcementService
+            .CanPerformAsync(request.CallerUserId, TierAction.SessionAgentQuery, cancellationToken)
+            .ConfigureAwait(false);
+
+        if (!canQuery)
+        {
+            var usage = await _tierEnforcementService
+                .GetUsageAsync(request.CallerUserId, cancellationToken)
+                .ConfigureAwait(false);
+
+            throw new ConflictException(
+                $"Hai raggiunto il limite di domande alla sessione ({usage.SessionQueries}/{usage.SessionQueriesMax}). Riprova domani.");
+        }
+
+        // 5. Build the arbitration prompt
         var (systemPrompt, userPrompt) = BuildArbitrationPrompt(session, request);
 
-        // 4. Query the LLM
+        // 6. Query the LLM
         var llmResult = await _llmService
             .GenerateCompletionAsync(systemPrompt, userPrompt, RequestSource.Manual, cancellationToken)
             .ConfigureAwait(false);
@@ -165,10 +184,10 @@ internal sealed class SubmitRuleDisputeCommandHandler
             "Arbitro LLM response for SessionId={SessionId}: {Response}",
             request.SessionId, llmResult.Response);
 
-        // 5. Parse the structured response
+        // 7. Parse the structured response
         var (verdict, ruleReferences, note) = ParseArbitrationResponse(llmResult.Response);
 
-        // 6. Create and attach the RuleDisputeEntry
+        // 8. Create and attach the RuleDisputeEntry
         var now = _timeProvider.GetUtcNow().UtcDateTime;
         var entry = new RuleDisputeEntry(
             id: Guid.NewGuid(),
@@ -180,14 +199,19 @@ internal sealed class SubmitRuleDisputeCommandHandler
 
         session.AddDispute(entry);
 
-        // 7. Persist disputes JSONB on the DB entity (in-memory repo holds the live state;
+        // 9. Persist disputes JSONB on the DB entity (in-memory repo holds the live state;
         //    the DB row is updated so sessions can be restored after restart).
         await PersistDisputesToDbAsync(session, cancellationToken).ConfigureAwait(false);
 
-        // 8. Update the in-memory repository
+        // 10. Update the in-memory repository
         await _sessionRepository.UpdateAsync(session, cancellationToken).ConfigureAwait(false);
 
-        // 9. Publish DisputeResolvedEvent for SignalR broadcast
+        // 11. Record tier usage after successful verdict
+        await _tierEnforcementService
+            .RecordUsageAsync(request.CallerUserId, TierAction.SessionAgentQuery, cancellationToken)
+            .ConfigureAwait(false);
+
+        // 12. Publish DisputeResolvedEvent for SignalR broadcast
         await _publisher
             .Publish(new DisputeResolvedEvent(session.Id, entry), cancellationToken)
             .ConfigureAwait(false);

@@ -6,6 +6,7 @@ using Api.BoundedContexts.GameManagement.Domain.Events;
 using Api.BoundedContexts.GameManagement.Domain.Repositories;
 using Api.Infrastructure;
 using Api.Middleware.Exceptions;
+using Api.SharedKernel.Services;
 using FluentValidation;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -57,6 +58,7 @@ internal sealed class CreatePauseSnapshotCommandHandler
     private readonly ILiveSessionRepository _sessionRepository;
     private readonly IPauseSnapshotRepository _snapshotRepository;
     private readonly MeepleAiDbContext _dbContext;
+    private readonly ITierEnforcementService _tierEnforcementService;
     private readonly IPublisher _publisher;
     private readonly ILogger<CreatePauseSnapshotCommandHandler> _logger;
 
@@ -64,12 +66,14 @@ internal sealed class CreatePauseSnapshotCommandHandler
         ILiveSessionRepository sessionRepository,
         IPauseSnapshotRepository snapshotRepository,
         MeepleAiDbContext dbContext,
+        ITierEnforcementService tierEnforcementService,
         IPublisher publisher,
         ILogger<CreatePauseSnapshotCommandHandler> logger)
     {
         _sessionRepository = sessionRepository ?? throw new ArgumentNullException(nameof(sessionRepository));
         _snapshotRepository = snapshotRepository ?? throw new ArgumentNullException(nameof(snapshotRepository));
         _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
+        _tierEnforcementService = tierEnforcementService ?? throw new ArgumentNullException(nameof(tierEnforcementService));
         _publisher = publisher ?? throw new ArgumentNullException(nameof(publisher));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
@@ -101,11 +105,22 @@ internal sealed class CreatePauseSnapshotCommandHandler
                 "Session must be InProgress.");
         }
 
+        // 4. Check tier: session save must be enabled for the user's plan
+        var limits = await _tierEnforcementService
+            .GetLimitsAsync(request.SavedByUserId, cancellationToken)
+            .ConfigureAwait(false);
+
+        if (!limits.SessionSaveEnabled)
+        {
+            throw new ConflictException(
+                "Il salvataggio della sessione non è disponibile nel piano gratuito. Passa a Premium per salvare le partite.");
+        }
+
         _logger.LogInformation(
             "CreatePauseSnapshotCommand: SessionId={SessionId}, SavedByUserId={UserId}",
             request.SessionId, request.SavedByUserId);
 
-        // 3. Capture player scores from the live session
+        // 5. Capture player scores from the live session
         var playerScores = session.Players
             .Where(p => p.IsActive)
             .Select(p => new PlayerScoreSnapshot(
@@ -113,10 +128,10 @@ internal sealed class CreatePauseSnapshotCommandHandler
                 Score: p.TotalScore))
             .ToList();
 
-        // 4. Capture current phase name
+        // 6. Capture current phase name
         var currentPhase = session.GetCurrentPhaseName();
 
-        // 5. Create PauseSnapshot via factory (IsAutoSave = false)
+        // 7. Create PauseSnapshot via factory (IsAutoSave = false)
         var snapshot = PauseSnapshot.Create(
             liveGameSessionId: session.Id,
             currentTurn: session.CurrentTurnIndex,

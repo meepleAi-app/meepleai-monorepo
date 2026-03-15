@@ -98,7 +98,8 @@ internal sealed class RagPromptAssemblyService : IRagPromptAssemblyService
         Guid gameId,
         ChatThread? chatThread,
         UserTier? userTier,
-        CancellationToken ct)
+        CancellationToken ct,
+        IRagDebugEventCollector? debugCollector = null)
     {
         ArgumentNullException.ThrowIfNull(agentTypology);
         ArgumentNullException.ThrowIfNull(gameTitle);
@@ -110,7 +111,7 @@ internal sealed class RagPromptAssemblyService : IRagPromptAssemblyService
         var hasExpansions = expansionGameIds.Count > 0;
 
         // Step 1: Retrieve RAG context (includes expansion boost), passing pre-resolved expansion IDs
-        var (ragContext, citations) = await RetrieveRagContextAsync(userQuestion, gameId, expansionGameIds, userTier, ct).ConfigureAwait(false);
+        var (ragContext, citations) = await RetrieveRagContextAsync(userQuestion, gameId, expansionGameIds, userTier, ct, debugCollector).ConfigureAwait(false);
 
         // Step 2: Build system prompt (persona + RAG chunks + expansion priority)
         var systemPrompt = BuildSystemPrompt(agentTypology, gameTitle, gameState, ragContext, hasExpansions);
@@ -121,17 +122,39 @@ internal sealed class RagPromptAssemblyService : IRagPromptAssemblyService
         // Step 4: Estimate tokens
         var estimatedTokens = EstimateTokens(systemPrompt) + EstimateTokens(userPrompt);
 
+        // Context window usage debug event
+        var modelContextLimit = 4096; // Default, could be made configurable
+        var activeMessageCount = chatThread?.Messages.Count(m => !m.IsDeleted && !m.IsInvalidated);
+        var historyCompressed = activeMessageCount > HistoryThreshold;
+        debugCollector?.Add(StreamingEventType.DebugContextWindow,
+            new DebugContextWindowData(
+                SystemPromptTokens: EstimateTokens(systemPrompt),
+                UserPromptTokens: EstimateTokens(userPrompt),
+                TotalEstimatedTokens: estimatedTokens,
+                ModelContextLimit: modelContextLimit,
+                UsagePercentage: Math.Round((double)estimatedTokens / modelContextLimit * 100, 1),
+                HistoryCompressed: historyCompressed,
+                OriginalMessageCount: activeMessageCount,
+                IncludedMessageCount: activeMessageCount != null
+                    ? Math.Min(activeMessageCount.Value, HistoryThreshold) +
+                      (historyCompressed ? RecentMessageCount : 0)
+                    : null,
+                CompressionReason: historyCompressed
+                    ? $"History compressed: {activeMessageCount} messages → summary + last {RecentMessageCount}"
+                    : null));
+
         _logger.LogInformation(
             "Assembled prompt: {AgentType} for {Game}, {ChunkCount} RAG chunks, {HistoryCount} history messages, ~{Tokens} tokens",
             agentTypology, gameTitle, citations.Count,
-            chatThread?.Messages.Count(m => !m.IsDeleted && !m.IsInvalidated) ?? 0,
+            activeMessageCount ?? 0,
             estimatedTokens);
 
         return new AssembledPrompt(systemPrompt, userPrompt, citations, estimatedTokens);
     }
 
     private async Task<(string ragContext, List<ChunkCitation> citations)> RetrieveRagContextAsync(
-        string userQuestion, Guid gameId, IReadOnlyList<Guid> expansionGameIds, UserTier? userTier, CancellationToken ct)
+        string userQuestion, Guid gameId, IReadOnlyList<Guid> expansionGameIds, UserTier? userTier, CancellationToken ct,
+        IRagDebugEventCollector? debugCollector = null)
     {
         var citations = new List<ChunkCitation>();
 
@@ -151,6 +174,13 @@ internal sealed class RagPromptAssemblyService : IRagPromptAssemblyService
                 _logger.LogInformation("Adaptive RAG: {Level} (confidence: {Confidence:F2})",
                     complexity.Level, complexity.Confidence);
 
+                debugCollector?.Add(StreamingEventType.DebugAdaptiveRouting,
+                    new DebugAdaptiveRoutingData(
+                        ComplexityLevel: complexity.Level.ToString(),
+                        Confidence: complexity.Confidence,
+                        Reason: complexity.Reason,
+                        SkippedRetrieval: !complexity.RequiresRetrieval));
+
                 if (!complexity.RequiresRetrieval)
                 {
                     _logger.LogInformation("Adaptive RAG: skipping retrieval for simple query");
@@ -162,8 +192,19 @@ internal sealed class RagPromptAssemblyService : IRagPromptAssemblyService
             List<string> queries;
             if (activeEnhancements.HasFlag(RagEnhancement.RagFusionQueries))
             {
+                var fusionStopwatch = System.Diagnostics.Stopwatch.StartNew();
                 queries = await _queryExpander.ExpandAsync(userQuestion, ct).ConfigureAwait(false);
+                fusionStopwatch.Stop();
                 _logger.LogInformation("RAG-Fusion: expanded to {Count} query variants", queries.Count);
+
+                if (queries.Count > 1)
+                {
+                    debugCollector?.Add(StreamingEventType.DebugRagFusion,
+                        new DebugRagFusionData(
+                            QueryVariantCount: queries.Count,
+                            Queries: queries,
+                            DurationMs: fusionStopwatch.Elapsed.TotalMilliseconds));
+                }
             }
             else
             {
@@ -216,6 +257,7 @@ internal sealed class RagPromptAssemblyService : IRagPromptAssemblyService
             // === CRAG: Evaluate retrieval relevance ===
             if (activeEnhancements.HasFlag(RagEnhancement.CragEvaluation) && filteredChunks.Count > 0)
             {
+                var originalChunkCount = filteredChunks.Count;
                 var scoredChunks = filteredChunks
                     .Select(c => new ScoredChunk(
                         $"{c.PdfId}:{c.ChunkIndex}", c.Text, c.Score))
@@ -258,6 +300,15 @@ internal sealed class RagPromptAssemblyService : IRagPromptAssemblyService
                     filteredChunks = await TryRerankAsync(userQuestion, filteredChunks, ct)
                         .ConfigureAwait(false);
                 }
+
+                debugCollector?.Add(StreamingEventType.DebugCragEvaluation,
+                    new DebugCragEvaluationData(
+                        Verdict: evaluation.Verdict.ToString(),
+                        Confidence: evaluation.Confidence,
+                        Reason: evaluation.Reason,
+                        Requeried: evaluation.ShouldRequery,
+                        OriginalChunkCount: originalChunkCount,
+                        FinalChunkCount: filteredChunks.Count));
             }
 
             // Step 4: Sentence window expansion — include adjacent chunks for more context

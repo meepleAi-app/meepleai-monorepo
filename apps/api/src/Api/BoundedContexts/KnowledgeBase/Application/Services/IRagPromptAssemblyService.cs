@@ -24,6 +24,7 @@ internal interface IRagPromptAssemblyService
     /// <param name="chatThread">Chat thread for history inclusion (nullable for first message)</param>
     /// <param name="userTier">User subscription tier for RAG enhancement routing (nullable for backward compatibility)</param>
     /// <param name="ct">Cancellation token</param>
+    /// <param name="debugCollector">Optional collector for RAG debug events (null = no debug emission)</param>
     /// <returns>Assembled prompt ready for LLM consumption</returns>
     Task<AssembledPrompt> AssemblePromptAsync(
         string agentTypology,
@@ -33,5 +34,6 @@ internal interface IRagPromptAssemblyService
         Guid gameId,
         ChatThread? chatThread,
         UserTier? userTier,
-        CancellationToken ct);
+        CancellationToken ct,
+        IRagDebugEventCollector? debugCollector = null);
 }

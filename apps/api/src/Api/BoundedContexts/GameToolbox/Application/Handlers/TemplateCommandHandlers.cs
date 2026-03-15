@@ -105,8 +105,6 @@ internal class ApplyToolboxTemplateCommandHandler : ICommandHandler<ApplyToolbox
         var phaseEntries = JsonSerializer.Deserialize<List<PhaseSnapshotEntry>>(template.PhasesJson) ?? [];
         foreach (var entry in phaseEntries.OrderBy(e => e.Order))
         {
-            // Tool IDs from the template are passed through as-is.
-            // Callers can remap after creation if full fidelity is needed.
             toolbox.AddPhase(entry.Name, entry.ActiveToolIds);
         }
 

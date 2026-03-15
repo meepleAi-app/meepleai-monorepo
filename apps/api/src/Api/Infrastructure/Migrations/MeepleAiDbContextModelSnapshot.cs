@@ -776,6 +776,222 @@ namespace Api.Infrastructure.Migrations
                     b.ToTable("entity_links", "entity_relationships");
                 });
 
+            modelBuilder.Entity("Api.BoundedContexts.GameToolbox.Domain.Entities.Phase", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("ActiveToolIds")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("active_tool_ids");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("name");
+
+                    b.Property<int>("Order")
+                        .HasColumnType("integer")
+                        .HasColumnName("sort_order");
+
+                    b.Property<Guid>("ToolboxId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("toolbox_id");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ToolboxId")
+                        .HasDatabaseName("ix_toolbox_phases_toolbox_id");
+
+                    b.ToTable("toolbox_phases", "game_toolbox");
+                });
+
+            modelBuilder.Entity("Api.BoundedContexts.GameToolbox.Domain.Entities.Toolbox", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid?>("CurrentPhaseId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("current_phase_id");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("deleted_at");
+
+                    b.Property<Guid?>("GameId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("game_id");
+
+                    b.Property<bool>("IsDeleted")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false)
+                        .HasColumnName("is_deleted");
+
+                    b.Property<string>("Mode")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("mode");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("name");
+
+                    b.Property<string>("SharedContext")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("shared_context");
+
+                    b.Property<Guid?>("TemplateId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("template_id");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("GameId")
+                        .HasDatabaseName("ix_toolboxes_game_id");
+
+                    b.HasIndex("IsDeleted")
+                        .HasDatabaseName("ix_toolboxes_is_deleted");
+
+                    b.ToTable("toolboxes", "game_toolbox");
+                });
+
+            modelBuilder.Entity("Api.BoundedContexts.GameToolbox.Domain.Entities.ToolboxTemplate", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("deleted_at");
+
+                    b.Property<Guid?>("GameId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("game_id");
+
+                    b.Property<bool>("IsDeleted")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false)
+                        .HasColumnName("is_deleted");
+
+                    b.Property<string>("Mode")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("mode");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("name");
+
+                    b.Property<string>("PhasesJson")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("jsonb")
+                        .HasDefaultValue("[]")
+                        .HasColumnName("phases_json");
+
+                    b.Property<string>("SharedContextDefaultsJson")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("jsonb")
+                        .HasDefaultValue("{}")
+                        .HasColumnName("shared_context_defaults_json");
+
+                    b.Property<string>("Source")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("source");
+
+                    b.Property<string>("ToolsJson")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("jsonb")
+                        .HasDefaultValue("[]")
+                        .HasColumnName("tools_json");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("GameId")
+                        .HasDatabaseName("ix_toolbox_templates_game_id");
+
+                    b.ToTable("toolbox_templates", "game_toolbox");
+                });
+
+            modelBuilder.Entity("Api.BoundedContexts.GameToolbox.Domain.Entities.ToolboxTool", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Config")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("jsonb")
+                        .HasDefaultValue("{}")
+                        .HasColumnName("config");
+
+                    b.Property<bool>("IsEnabled")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true)
+                        .HasColumnName("is_enabled");
+
+                    b.Property<int>("Order")
+                        .HasColumnType("integer")
+                        .HasColumnName("sort_order");
+
+                    b.Property<string>("State")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("jsonb")
+                        .HasDefaultValue("{}")
+                        .HasColumnName("state");
+
+                    b.Property<Guid>("ToolboxId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("toolbox_id");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("type");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ToolboxId")
+                        .HasDatabaseName("ix_toolbox_tools_toolbox_id");
+
+                    b.ToTable("toolbox_tools", "game_toolbox");
+                });
+
             modelBuilder.Entity("Api.BoundedContexts.GameToolkit.Domain.Entities.Toolkit", b =>
                 {
                     b.Property<Guid>("Id")
@@ -2212,6 +2428,61 @@ namespace Api.Infrastructure.Migrations
                     b.HasIndex("UserId");
 
                     b.ToTable("audit_logs", (string)null);
+                });
+
+            modelBuilder.Entity("Api.Infrastructure.Entities.Authentication.AccessRequestEntity", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Email")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)")
+                        .HasColumnName("email");
+
+                    b.Property<Guid?>("InvitationId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("invitation_id");
+
+                    b.Property<string>("RejectionReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("rejection_reason");
+
+                    b.Property<DateTime>("RequestedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("requested_at");
+
+                    b.Property<DateTime?>("ReviewedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("reviewed_at");
+
+                    b.Property<Guid?>("ReviewedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("reviewed_by");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("status");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("InvitationId");
+
+                    b.HasIndex("RequestedAt");
+
+                    b.HasIndex("ReviewedBy");
+
+                    b.HasIndex("Email", "Status")
+                        .IsUnique()
+                        .HasFilter("\"status\" = 'Pending'");
+
+                    b.ToTable("access_requests", (string)null);
                 });
 
             modelBuilder.Entity("Api.Infrastructure.Entities.Authentication.InvitationTokenEntity", b =>
@@ -11301,6 +11572,24 @@ namespace Api.Infrastructure.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("Api.BoundedContexts.GameToolbox.Domain.Entities.Phase", b =>
+                {
+                    b.HasOne("Api.BoundedContexts.GameToolbox.Domain.Entities.Toolbox", null)
+                        .WithMany("Phases")
+                        .HasForeignKey("ToolboxId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Api.BoundedContexts.GameToolbox.Domain.Entities.ToolboxTool", b =>
+                {
+                    b.HasOne("Api.BoundedContexts.GameToolbox.Domain.Entities.Toolbox", null)
+                        .WithMany("Tools")
+                        .HasForeignKey("ToolboxId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("Api.BoundedContexts.GameToolkit.Domain.Entities.ToolkitWidget", b =>
                 {
                     b.HasOne("Api.BoundedContexts.GameToolkit.Domain.Entities.Toolkit", null)
@@ -11542,6 +11831,23 @@ namespace Api.Infrastructure.Migrations
                         .IsRequired();
 
                     b.Navigation("ApiKey");
+                });
+
+            modelBuilder.Entity("Api.Infrastructure.Entities.Authentication.AccessRequestEntity", b =>
+                {
+                    b.HasOne("Api.Infrastructure.Entities.Authentication.InvitationTokenEntity", "Invitation")
+                        .WithMany()
+                        .HasForeignKey("InvitationId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("Api.Infrastructure.Entities.UserEntity", "ReviewedByUser")
+                        .WithMany()
+                        .HasForeignKey("ReviewedBy")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("Invitation");
+
+                    b.Navigation("ReviewedByUser");
                 });
 
             modelBuilder.Entity("Api.Infrastructure.Entities.Authentication.InvitationTokenEntity", b =>
@@ -13085,6 +13391,13 @@ namespace Api.Infrastructure.Migrations
                         .HasForeignKey("shared_game_id")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+                });
+
+            modelBuilder.Entity("Api.BoundedContexts.GameToolbox.Domain.Entities.Toolbox", b =>
+                {
+                    b.Navigation("Phases");
+
+                    b.Navigation("Tools");
                 });
 
             modelBuilder.Entity("Api.BoundedContexts.GameToolkit.Domain.Entities.Toolkit", b =>

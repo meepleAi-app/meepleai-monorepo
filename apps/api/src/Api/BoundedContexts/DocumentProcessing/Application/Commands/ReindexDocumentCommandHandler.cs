@@ -44,7 +44,6 @@ internal sealed class ReindexDocumentCommandHandler : ICommandHandler<ReindexDoc
 
         // Reset processing state to Pending for re-processing
         pdf.ProcessingState = "Pending";
-        pdf.ProcessingStatus = "pending";
         pdf.ProcessedAt = null;
         pdf.ProcessingError = null;
         pdf.RetryCount = 0;

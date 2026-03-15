@@ -1,10 +1,12 @@
 using Api.BoundedContexts.KnowledgeBase.Application.Commands;
 using Api.BoundedContexts.KnowledgeBase.Application.Handlers;
+using Api.BoundedContexts.KnowledgeBase.Application.Services;
 using Api.BoundedContexts.KnowledgeBase.Domain.Entities;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 using Api.BoundedContexts.SystemConfiguration.Domain.ValueObjects;
 using Api.Infrastructure;
+using Api.Infrastructure.Entities;
 using Api.Middleware.Exceptions;
 using Api.SharedKernel.Application.Services;
 using Api.SharedKernel.Domain.Interfaces;
@@ -30,6 +32,7 @@ public class CreateUserAgentCommandHandlerTests
 {
     private readonly Mock<IAgentRepository> _repository = new();
     private readonly Mock<ITierEnforcementService> _tierService = new();
+    private readonly Mock<IRagAccessService> _ragAccessService = new();
     private readonly Mock<ILogger<CreateUserAgentCommandHandler>> _logger = new();
     private readonly MeepleAiDbContext _db;
     private readonly CreateUserAgentCommandHandler _handler;
@@ -46,7 +49,11 @@ public class CreateUserAgentCommandHandlerTests
         _tierService.Setup(t => t.CanPerformAsync(It.IsAny<Guid>(), It.IsAny<TierAction>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(true);
 
-        _handler = new CreateUserAgentCommandHandler(_repository.Object, _db, _tierService.Object, _logger.Object);
+        // Default: RAG access allowed
+        _ragAccessService.Setup(r => r.CanAccessRagAsync(It.IsAny<Guid>(), It.IsAny<Guid>(), It.IsAny<UserRole>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+
+        _handler = new CreateUserAgentCommandHandler(_repository.Object, _db, _tierService.Object, _ragAccessService.Object, _logger.Object);
     }
 
     [Fact]

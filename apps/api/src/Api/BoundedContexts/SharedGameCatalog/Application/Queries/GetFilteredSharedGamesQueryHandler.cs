@@ -89,7 +89,8 @@ internal sealed class GetFilteredSharedGamesQueryHandler : IRequestHandler<GetFi
                 g.ThumbnailUrl,
                 (GameStatus)g.Status,
                 g.CreatedAt,
-                g.ModifiedAt))
+                g.ModifiedAt,
+                g.IsRagPublic))
             .ToListAsync(cancellationToken)
             .ConfigureAwait(false);
 

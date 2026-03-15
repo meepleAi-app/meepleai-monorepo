@@ -1,9 +1,12 @@
 using Api.BoundedContexts.KnowledgeBase.Application.Commands;
 using Api.BoundedContexts.KnowledgeBase.Application.DTOs;
+using Api.BoundedContexts.KnowledgeBase.Application.Services;
 using Api.BoundedContexts.KnowledgeBase.Domain.Entities;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services;
 using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
+using Api.Infrastructure.Entities;
+using Api.Middleware.Exceptions;
 using Api.Services;
 using MediatR;
 using Microsoft.Extensions.Logging;
@@ -25,6 +28,7 @@ internal sealed class InvokeAgentCommandHandler
     private readonly IEmbeddingRepository _embeddingRepository;
     private readonly IEmbeddingService _embeddingService;
     private readonly QualityTrackingDomainService _qualityTrackingService;
+    private readonly IRagAccessService _ragAccessService;
     private readonly ILogger<InvokeAgentCommandHandler> _logger;
 
     public InvokeAgentCommandHandler(
@@ -32,12 +36,14 @@ internal sealed class InvokeAgentCommandHandler
         IEmbeddingRepository embeddingRepository,
         IEmbeddingService embeddingService,
         QualityTrackingDomainService qualityTrackingService,
+        IRagAccessService ragAccessService,
         ILogger<InvokeAgentCommandHandler> logger)
     {
         _agentRepository = agentRepository ?? throw new ArgumentNullException(nameof(agentRepository));
         _embeddingRepository = embeddingRepository ?? throw new ArgumentNullException(nameof(embeddingRepository));
         _embeddingService = embeddingService ?? throw new ArgumentNullException(nameof(embeddingService));
         _qualityTrackingService = qualityTrackingService ?? throw new ArgumentNullException(nameof(qualityTrackingService));
+        _ragAccessService = ragAccessService ?? throw new ArgumentNullException(nameof(ragAccessService));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -46,6 +52,18 @@ internal sealed class InvokeAgentCommandHandler
         CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(request);
+
+        // RAG access enforcement
+        if (request.GameId.HasValue && request.UserId.HasValue)
+        {
+            var userRole = Enum.TryParse<UserRole>(request.UserRole, ignoreCase: true, out var parsedRole)
+                ? parsedRole : UserRole.User;
+            var canAccess = await _ragAccessService.CanAccessRagAsync(
+                request.UserId.Value, request.GameId.Value, userRole, cancellationToken).ConfigureAwait(false);
+            if (!canAccess)
+                throw new ForbiddenException("Accesso RAG non autorizzato");
+        }
+
         _logger.LogInformation(
             "Invoking agent {AgentId} with query: {Query}",
             request.AgentId,

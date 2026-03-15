@@ -139,6 +139,7 @@ function mapApiItemToGame(item: SharedGamesApiItem): SharedGame {
     imageUrl: item.imageUrl ?? '',
     thumbnailUrl: item.thumbnailUrl ?? '',
     status: (item.status as GameStatus) ?? 'Published',
+    isRagPublic: false,
     createdAt: item.createdAt,
     modifiedAt: null,
   };

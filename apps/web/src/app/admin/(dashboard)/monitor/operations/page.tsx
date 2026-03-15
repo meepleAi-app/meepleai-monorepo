@@ -15,7 +15,6 @@ import { AdminTabPersistence } from '@/components/admin/layout/AdminTabPersisten
 
 import { AuditTab } from './AuditTab';
 import { EmergencyTab } from './EmergencyTab';
-import { OperationsNavConfig } from './NavConfig';
 import { QueueTab } from './QueueTab';
 import { ResourcesTab } from './ResourcesTab';
 
@@ -102,7 +101,6 @@ export default async function OperationsPage({ searchParams }: OperationsPagePro
 
   return (
     <div className="space-y-5" data-testid="operations-page">
-      <OperationsNavConfig />
       <div>
         <h1 className="font-quicksand text-xl sm:text-2xl font-bold tracking-tight text-foreground">
           Operations Console

@@ -178,6 +178,7 @@ export const SharedGameSchema = z.object({
   imageUrl: z.string(),
   thumbnailUrl: z.string(),
   status: GameStatusSchema, // Now string enum with JsonStringEnumConverter
+  isRagPublic: z.boolean().default(false), // whether RAG access is public for all owners
   createdAt: z.string().datetime(),
   modifiedAt: z.string().datetime().nullable(),
 });

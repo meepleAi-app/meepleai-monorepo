@@ -32,7 +32,8 @@ public sealed record SharedGameDto(
     string ThumbnailUrl,
     GameStatus Status,
     DateTime CreatedAt,
-    DateTime? ModifiedAt);
+    DateTime? ModifiedAt,
+    bool IsRagPublic = false);
 
 /// <summary>
 /// Data transfer object for game rules.

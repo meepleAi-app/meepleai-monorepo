@@ -1,26 +1,25 @@
 using Api.BoundedContexts.SharedGameCatalog.Domain.Events;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
+using Api.BoundedContexts.UserNotifications.Application.Services;
+using Api.BoundedContexts.UserNotifications.Domain.ValueObjects;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
-using Api.Services;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 
 namespace Api.BoundedContexts.UserNotifications.Application.EventHandlers;
 
 /// <summary>
 /// Event handler that creates special notifications for milestone badge achievements.
+/// Dispatches via NotificationDispatcher for multi-channel delivery.
 /// ISSUE-2741: Extra celebration for milestone badges (50, 100 contributions, etc.)
 /// </summary>
 internal sealed class MilestoneBadgeNotificationHandler : INotificationHandler<BadgeEarnedEvent>
 {
+    private readonly INotificationDispatcher _dispatcher;
     private readonly IBadgeRepository _badgeRepository;
-    private readonly IContributorRepository _contributorRepository;
     private readonly MeepleAiDbContext _dbContext;
-    private readonly IEmailService _emailService;
-    private readonly IConfiguration _configuration;
     private readonly ILogger<MilestoneBadgeNotificationHandler> _logger;
 
     // Milestone badge codes that trigger extra celebration
@@ -33,18 +32,14 @@ internal sealed class MilestoneBadgeNotificationHandler : INotificationHandler<B
     };
 
     public MilestoneBadgeNotificationHandler(
+        INotificationDispatcher dispatcher,
         IBadgeRepository badgeRepository,
-        IContributorRepository contributorRepository,
         MeepleAiDbContext dbContext,
-        IEmailService emailService,
-        IConfiguration configuration,
         ILogger<MilestoneBadgeNotificationHandler> logger)
     {
+        _dispatcher = dispatcher ?? throw new ArgumentNullException(nameof(dispatcher));
         _badgeRepository = badgeRepository ?? throw new ArgumentNullException(nameof(badgeRepository));
-        _contributorRepository = contributorRepository ?? throw new ArgumentNullException(nameof(contributorRepository));
         _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
-        _emailService = emailService ?? throw new ArgumentNullException(nameof(emailService));
-        _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -61,7 +56,7 @@ internal sealed class MilestoneBadgeNotificationHandler : INotificationHandler<B
                 return;
             }
 
-            // Get badge and user details
+            // Get badge details
             var badge = await _badgeRepository.GetByIdAsync(notification.BadgeId, cancellationToken)
                 .ConfigureAwait(false);
 
@@ -86,39 +81,24 @@ internal sealed class MilestoneBadgeNotificationHandler : INotificationHandler<B
                 return;
             }
 
-            // Get total contribution count for user
-            var (_, totalCount) = await _contributorRepository.GetByUserIdAsync(
-                notification.UserId,
-                pageNumber: 1,
-                pageSize: 1,  // We only need the count
-                cancellationToken)
-                .ConfigureAwait(false);
+            var milestoneMessage = GetMilestoneMessage(notification.BadgeCode);
 
-#pragma warning disable S1075 // URIs should not be hardcoded - Default/Fallback value
-            var baseUrl = _configuration["App:BaseUrl"] ?? "https://meepleai.com";
-#pragma warning restore S1075
-
-            // Send special milestone email
-            await _emailService.SendMilestoneBadgeEarnedEmailAsync(
-                toEmail: user.Email,
-                userName: user.DisplayName ?? user.Email,
-                badgeName: badge.Name,
-                badgeDescription: badge.Description,
-                badgeIconUrl: badge.IconUrl,
-                badgeTier: badge.Tier.ToString(),
-                milestoneMessage: GetMilestoneMessage(notification.BadgeCode),
-                totalContributions: totalCount,
-                profileUrl: $"{baseUrl}/users/{user.Id}/badges",
-                leaderboardUrl: $"{baseUrl}/leaderboard",
-                cancellationToken)
-                .ConfigureAwait(false);
+            await _dispatcher.DispatchAsync(new NotificationMessage
+            {
+                Type = NotificationType.BadgeEarned,
+                RecipientUserId = notification.UserId,
+                Payload = new BadgePayload(
+                    notification.BadgeId,
+                    badge.Name,
+                    $"{badge.Description} {milestoneMessage}"),
+                DeepLinkPath = "/users/me/badges"
+            }, cancellationToken).ConfigureAwait(false);
 
             _logger.LogInformation(
-                "Sent milestone badge email for user {UserId} - Badge: {BadgeName} ({BadgeCode}), Total Contributions: {TotalContributions}",
+                "Dispatched milestone badge notification for user {UserId} - Badge: {BadgeName} ({BadgeCode})",
                 notification.UserId,
                 badge.Name,
-                notification.BadgeCode,
-                totalCount);
+                notification.BadgeCode);
         }
 #pragma warning disable CA1031
         catch (Exception ex)

@@ -193,6 +193,34 @@ describe('OnboardingWizard', () => {
     expect(screen.getByTestId('profile-step')).toBeInTheDocument();
   });
 
+  describe('startStep prop', () => {
+    it('starts at step 2 when startStep=2 is provided', () => {
+      renderWithQuery(<OnboardingWizard token="" role="User" startStep={2} />);
+
+      expect(screen.getByTestId('profile-step')).toBeInTheDocument();
+      expect(screen.getByText(/Step 2 of 4/)).toBeInTheDocument();
+      expect(screen.queryByTestId('password-step')).not.toBeInTheDocument();
+    });
+
+    it('shows skip wizard link immediately when startStep > 1', () => {
+      renderWithQuery(<OnboardingWizard token="" role="User" startStep={2} />);
+
+      expect(screen.getByTestId('skip-wizard')).toBeInTheDocument();
+    });
+
+    it('back button on step 2 does not go to step 1 when startStep=2', async () => {
+      renderWithQuery(<OnboardingWizard token="" role="User" startStep={2} />);
+
+      // Advance to step 3
+      await user.click(screen.getByText('Complete Profile'));
+      expect(screen.getByTestId('interests-step')).toBeInTheDocument();
+
+      // Back → should stay at step 2 (not go to password)
+      await user.click(screen.getByTestId('wizard-back'));
+      expect(screen.getByTestId('profile-step')).toBeInTheDocument();
+    });
+  });
+
   it('does not show back button on step 1', () => {
     renderWithQuery(<OnboardingWizard token="test-token" role="Player" />);
 

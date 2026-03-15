@@ -196,6 +196,32 @@ export default defineConfig({
       // globalSetup: require.resolve('./e2e/admin-first-time-setup/setup.ts'),
       // globalTeardown: require.resolve('./e2e/admin-first-time-setup/teardown.ts'),
     },
+
+    // Admin User Onboarding - Serial execution targeting local or staging environments
+    {
+      name: 'onboarding-local',
+      testDir: './e2e/flows',
+      testMatch: /admin-user-onboarding\.spec\.ts/,
+      use: {
+        ...devices['Desktop Chrome'],
+        baseURL: 'http://localhost:3000',
+      },
+      fullyParallel: false,
+      workers: 1,
+      timeout: 180_000,
+    },
+    {
+      name: 'onboarding-staging',
+      testDir: './e2e/flows',
+      testMatch: /admin-user-onboarding\.spec\.ts/,
+      use: {
+        ...devices['Desktop Chrome'],
+        baseURL: 'https://meepleai.app',
+      },
+      fullyParallel: false,
+      workers: 1,
+      timeout: 180_000,
+    },
   ],
 
   // Issue #2008: Disable webServer in parallel mode to prevent port conflicts

@@ -13,6 +13,7 @@ using Api.BoundedContexts.KnowledgeBase.Domain.Services.AgentModes;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services.Analytics;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services.Caching;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services.ContextEngineering;
+using Api.BoundedContexts.KnowledgeBase.Domain.Services.Enhancements;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services.LlmManagement;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services.QualityTracking;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services.Reranking;
@@ -117,6 +118,21 @@ internal static class KnowledgeBaseServiceExtensions
 
         // ISSUE-3760: Arbitro Agent Service (AI-powered move validation)
         services.AddScoped<IArbitroAgentService, ArbitroAgentService>();
+
+        // RAG Enhancements: Adaptive query complexity classifier (heuristic + LLM fallback)
+        services.AddScoped<IQueryComplexityClassifier, QueryComplexityClassifier>();
+
+        // RAG Enhancements: CRAG retrieval relevance evaluator (heuristic + LLM fallback)
+        services.AddScoped<IRetrievalRelevanceEvaluator, RetrievalRelevanceEvaluator>();
+
+        // RAG Enhancements: FAST-model query expander for cost-optimized RAG-Fusion
+        services.AddScoped<IQueryExpander, QueryExpander>();
+
+        // RAG Enhancements: RAPTOR hierarchical indexer for multi-level document summaries
+        services.AddScoped<IRaptorIndexer, RaptorIndexer>();
+
+        // RAG Enhancements: Graph RAG entity extractor for knowledge graph construction
+        services.AddScoped<IEntityExtractor, EntityExtractor>();
 
         // ISSUE-4336: Multi-Agent Router (intelligent routing between Tutor/Arbitro/Decisore)
         services.AddSingleton<Domain.Services.MultiAgentRouter.IntentClassifier>();
@@ -325,6 +341,9 @@ internal static class KnowledgeBaseServiceExtensions
 
         // Ownership/RAG access: cascading access check (admin → public → ownership)
         services.AddScoped<IRagAccessService, RagAccessService>();
+
+        // RAG enhancements orchestrator — feature flag integration for advanced RAG features
+        services.AddScoped<IRagEnhancementService, RagEnhancementService>();
 
         // E4-3: Session query budget — Redis-backed per-session AI query tracking
         services.AddScoped<ISessionQueryBudgetService, SessionQueryBudgetService>();

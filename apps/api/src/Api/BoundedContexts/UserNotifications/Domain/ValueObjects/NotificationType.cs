@@ -76,6 +76,15 @@ internal sealed class NotificationType : ValueObject
     // ISSUE-5501: Auto-fallback activated when model deprecated (admin)
     public static readonly NotificationType AdminModelAutoFallback = new("admin_model_auto_fallback");
 
+    // Admin notification for new access request (invite-only registration)
+    public static readonly NotificationType AdminAccessRequestCreated = new("admin_access_request_created");
+
+    // Admin manual notification sent from compose UI
+    public static readonly NotificationType AdminManualNotification = new("admin_manual_notification");
+
+    // Admin notification when PDF processing starts (enriched with uploader details)
+    public static readonly NotificationType AdminPdfProcessingStarted = new("admin_pdf_processing_started");
+
     // ISSUE-44/47: Game night notification types
     public static readonly NotificationType GameNightInvitation = new("game_night_invitation");
     public static readonly NotificationType GameNightRsvpReceived = new("game_night_rsvp_received");
@@ -161,6 +170,9 @@ internal sealed class NotificationType : ValueObject
             "game_night_reminder_24h" => GameNightReminder24h,
             "game_night_reminder_1h" => GameNightReminder1h,
             "game_night_cancelled" => GameNightCancelled,
+            "admin_access_request_created" => AdminAccessRequestCreated,
+            "admin_manual_notification" => AdminManualNotification,
+            "admin_pdf_processing_started" => AdminPdfProcessingStarted,
             _ => throw new ArgumentException($"Unknown notification type: {value}", nameof(value))
         };
     }

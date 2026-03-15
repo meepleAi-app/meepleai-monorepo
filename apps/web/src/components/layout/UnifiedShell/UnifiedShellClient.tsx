@@ -55,13 +55,15 @@ export function UnifiedShellClient({
   const isAdminContext = context === 'admin';
   const { isDesktop } = useResponsive();
 
-  // Auto-set admin context when mounted from an admin route
+  // Sync context with current route: admin routes → admin context, user routes → user context
   useEffect(() => {
     if (isAdmin && context !== 'admin') {
       toggleContext();
+    } else if (!isAdmin && context === 'admin' && !pathname.startsWith('/admin')) {
+      toggleContext();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isAdmin]); // Only on mount
+  }, [isAdmin, pathname]);
 
   // Seed default pinned section cards on first load
   useEffect(() => {

@@ -36,16 +36,20 @@ export class AcceptInvitePage extends BasePage {
   }
 
   async waitForRedirectAfterAccept(): Promise<void> {
-    // Wait for either:
-    // 1. URL changes away from /accept-invite (SPA navigation)
-    // 2. Success message appears (may stay on same URL briefly)
-    const successOrRedirect = Promise.race([
-      this.page.waitForURL(url => !url.pathname.includes('/accept-invite'), {
-        timeout: 15_000,
-        waitUntil: 'commit',
-      }),
-      this.page.getByText(/success|account created|welcome/i).waitFor({ timeout: 15_000 }),
-    ]);
-    await successOrRedirect;
+    // Accept-invite may auto-login and redirect immediately, or show success then redirect.
+    // Just wait until we're no longer on the accept-invite page.
+    const maxWait = Date.now() + 15_000;
+    while (Date.now() < maxWait) {
+      const url = this.page.url();
+      if (!url.includes('/accept-invite')) return;
+      await this.page.waitForTimeout(500);
+    }
+    // If still on accept-invite after 15s, check for success message
+    const hasSuccess = await this.page
+      .getByText(/success|account created|welcome/i)
+      .isVisible()
+      .catch(() => false);
+    if (hasSuccess) return;
+    throw new Error(`Still on accept-invite page after 15s: ${this.page.url()}`);
   }
 }

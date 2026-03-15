@@ -7,6 +7,9 @@ namespace Api.BoundedContexts.Authentication.Application.Commands.Onboarding;
 
 /// <summary>
 /// Handles dismissing the onboarding checklist for a user.
+/// Note: Currently unused — the endpoint uses ExecuteUpdateAsync directly
+/// to avoid IUnitOfWork/DbContext scope mismatch (SaveChanges returned 0).
+/// Retained for potential future use via MediatR pipelines.
 /// </summary>
 internal sealed class DismissOnboardingCommandHandler : ICommandHandler<DismissOnboardingCommand>
 {

@@ -2,6 +2,7 @@
 
 import { ChevronRight, ChevronLeft } from 'lucide-react';
 
+import { useSwipeGesture } from '@/hooks/useSwipeGesture';
 import { cn } from '@/lib/utils';
 import { useCardHand } from '@/stores/use-card-hand';
 
@@ -15,6 +16,16 @@ export function CardStack() {
   const pinnedCards = cards.filter(c => pinnedIds.has(c.id));
   const dynamicCards = cards.filter(c => !pinnedIds.has(c.id));
 
+  const { handlers: swipeHandlers } = useSwipeGesture({
+    onSwipeUp: () => {
+      if (focusedIdx < cards.length - 1) focusCard(focusedIdx + 1);
+    },
+    onSwipeDown: () => {
+      if (focusedIdx > 0) focusCard(focusedIdx - 1);
+    },
+    threshold: 40,
+  });
+
   return (
     <div
       className={cn(
@@ -23,6 +34,7 @@ export function CardStack() {
         expandedStack ? 'w-[180px]' : 'w-14'
       )}
       data-testid="card-stack"
+      {...swipeHandlers}
     >
       {/* Expand/collapse toggle */}
       <button

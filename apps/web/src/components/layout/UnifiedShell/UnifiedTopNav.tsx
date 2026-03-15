@@ -18,6 +18,8 @@ interface UnifiedTopNavProps {
   notificationBell?: React.ReactNode;
   /** Slot for command palette trigger */
   searchTrigger?: React.ReactNode;
+  /** Slot for mini card icons when hand is collapsed (mobile) */
+  miniCards?: React.ReactNode;
 }
 
 export function UnifiedTopNav({
@@ -25,6 +27,7 @@ export function UnifiedTopNav({
   userMenu,
   notificationBell,
   searchTrigger,
+  miniCards,
 }: UnifiedTopNavProps) {
   const { cards, focusedIdx } = useCardHand();
   const focusedCard = focusedIdx >= 0 && focusedIdx < cards.length ? cards[focusedIdx] : null;
@@ -63,6 +66,11 @@ export function UnifiedTopNav({
           <span className="text-sm font-medium text-muted-foreground font-quicksand">MeepleAI</span>
         )}
       </div>
+
+      {/* Mini cards (collapsed hand, mobile) */}
+      {miniCards && (
+        <div className="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto">{miniCards}</div>
+      )}
 
       {/* Right: Admin toggle + utilities */}
       <div className="flex items-center gap-2 shrink-0">

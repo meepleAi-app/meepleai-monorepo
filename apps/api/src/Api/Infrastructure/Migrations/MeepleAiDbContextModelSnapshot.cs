@@ -9064,6 +9064,12 @@ namespace Api.Infrastructure.Migrations
                         .HasDefaultValue(false)
                         .HasColumnName("is_deleted");
 
+                    b.Property<bool>("IsRagPublic")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false)
+                        .HasColumnName("is_rag_public");
+
                     b.Property<int>("MaxPlayers")
                         .HasColumnType("integer")
                         .HasColumnName("max_players");
@@ -10373,6 +10379,9 @@ namespace Api.Infrastructure.Migrations
                     b.Property<string>("Notes")
                         .HasMaxLength(500)
                         .HasColumnType("character varying(500)");
+
+                    b.Property<DateTime?>("OwnershipDeclaredAt")
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<Guid?>("PrivateGameId")
                         .HasColumnType("uuid")

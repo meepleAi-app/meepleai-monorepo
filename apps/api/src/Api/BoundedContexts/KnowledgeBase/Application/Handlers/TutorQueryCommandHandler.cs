@@ -1,6 +1,9 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Api.BoundedContexts.KnowledgeBase.Application.Commands;
+using Api.BoundedContexts.KnowledgeBase.Application.Services;
+using Api.Infrastructure.Entities;
+using Api.Middleware.Exceptions;
 using MediatR;
 
 namespace Api.BoundedContexts.KnowledgeBase.Application.Handlers;
@@ -12,18 +15,32 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Handlers;
 internal class TutorQueryCommandHandler : IRequestHandler<TutorQueryCommand, TutorQueryResponse>
 {
     private readonly HttpClient _httpClient;
+    private readonly IRagAccessService _ragAccessService;
     private readonly ILogger<TutorQueryCommandHandler> _logger;
 
     public TutorQueryCommandHandler(
         IHttpClientFactory httpClientFactory,
+        IRagAccessService ragAccessService,
         ILogger<TutorQueryCommandHandler> logger)
     {
         _httpClient = httpClientFactory.CreateClient("OrchestrationService");
+        _ragAccessService = ragAccessService ?? throw new ArgumentNullException(nameof(ragAccessService));
         _logger = logger;
     }
 
     public async Task<TutorQueryResponse> Handle(TutorQueryCommand request, CancellationToken cancellationToken)
     {
+        // RAG access enforcement
+        if (request.UserId.HasValue)
+        {
+            var userRole = Enum.TryParse<UserRole>(request.UserRole, ignoreCase: true, out var parsedRole)
+                ? parsedRole : UserRole.User;
+            var canAccess = await _ragAccessService.CanAccessRagAsync(
+                request.UserId.Value, request.GameId, userRole, cancellationToken).ConfigureAwait(false);
+            if (!canAccess)
+                throw new ForbiddenException("Accesso RAG non autorizzato");
+        }
+
         try
         {
             _logger.LogInformation(

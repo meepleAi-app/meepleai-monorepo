@@ -1,7 +1,9 @@
+using Api.Infrastructure.Entities;
 using System.Net;
 using System.Text.Json;
 using Api.BoundedContexts.KnowledgeBase.Application.Commands;
 using Api.BoundedContexts.KnowledgeBase.Application.Handlers;
+using Api.BoundedContexts.KnowledgeBase.Application.Services;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Moq.Protected;
@@ -36,7 +38,7 @@ public class TutorQueryCommandHandlerTests
             .Setup(f => f.CreateClient("OrchestrationService"))
             .Returns(httpClient);
 
-        _handler = new TutorQueryCommandHandler(_httpClientFactoryMock.Object, _loggerMock.Object);
+        _handler = new TutorQueryCommandHandler(_httpClientFactoryMock.Object, CreatePermissiveRagAccessServiceMock(), _loggerMock.Object);
     }
 
     [Fact]
@@ -369,5 +371,11 @@ public class TutorQueryCommandHandlerTests
                 null,
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
             Times.Once);
+    }
+    private static IRagAccessService CreatePermissiveRagAccessServiceMock()
+    {
+        var mock = new Mock<IRagAccessService>();
+        mock.Setup(s => s.CanAccessRagAsync(It.IsAny<Guid>(), It.IsAny<Guid>(), It.IsAny<UserRole>(), It.IsAny<CancellationToken>())).ReturnsAsync(true);
+        return mock.Object;
     }
 }

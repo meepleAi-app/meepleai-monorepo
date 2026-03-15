@@ -1,20 +1,13 @@
-using Api.BoundedContexts.Authentication.Domain.Entities;
-using Api.BoundedContexts.Authentication.Infrastructure.Persistence;
 using Api.BoundedContexts.DocumentProcessing.Domain.Entities;
 using Api.BoundedContexts.DocumentProcessing.Domain.Enums;
 using Api.BoundedContexts.DocumentProcessing.Domain.Events;
 using Api.BoundedContexts.DocumentProcessing.Domain.Repositories;
-using Api.BoundedContexts.UserNotifications.Application.Commands;
 using Api.BoundedContexts.UserNotifications.Application.EventHandlers;
-using Api.BoundedContexts.UserNotifications.Domain.Aggregates;
-using Api.BoundedContexts.UserNotifications.Domain.Repositories;
+using Api.BoundedContexts.UserNotifications.Application.Services;
 using Api.BoundedContexts.UserNotifications.Domain.ValueObjects;
-using Api.Services;
-using Api.Tests.BoundedContexts.Authentication.TestHelpers;
 using Api.Tests.BoundedContexts.DocumentProcessing.TestHelpers;
 using Api.Tests.Constants;
 using FluentAssertions;
-using MediatR;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
@@ -24,12 +17,8 @@ namespace Api.Tests.BoundedContexts.UserNotifications.Application.EventHandlers;
 [Trait("Category", TestCategories.Unit)]
 public sealed class PdfNotificationEventHandlerTests
 {
-    private readonly Mock<INotificationPreferencesRepository> _preferencesRepo;
-    private readonly Mock<INotificationRepository> _notificationRepo;
+    private readonly Mock<INotificationDispatcher> _dispatcher;
     private readonly Mock<IPdfDocumentRepository> _pdfRepo;
-    private readonly Mock<IUserRepository> _userRepo;
-    private readonly Mock<IMediator> _mediator;
-    private readonly Mock<IPushNotificationService> _pushService;
     private readonly Mock<ILogger<PdfNotificationEventHandler>> _logger;
     private readonly PdfNotificationEventHandler _sut;
 
@@ -40,451 +29,80 @@ public sealed class PdfNotificationEventHandlerTests
 
     public PdfNotificationEventHandlerTests()
     {
-        _preferencesRepo = new Mock<INotificationPreferencesRepository>();
-        _notificationRepo = new Mock<INotificationRepository>();
+        _dispatcher = new Mock<INotificationDispatcher>();
         _pdfRepo = new Mock<IPdfDocumentRepository>();
-        _userRepo = new Mock<IUserRepository>();
-        _mediator = new Mock<IMediator>();
-        _pushService = new Mock<IPushNotificationService>();
         _logger = new Mock<ILogger<PdfNotificationEventHandler>>();
 
-        _sut = new PdfNotificationEventHandler(
-            _preferencesRepo.Object,
-            _notificationRepo.Object,
-            _pdfRepo.Object,
-            _userRepo.Object,
-            _mediator.Object,
-            _pushService.Object,
-            _logger.Object);
+        _sut = new PdfNotificationEventHandler(_dispatcher.Object, _pdfRepo.Object, _logger.Object);
     }
 
-    #region PdfStateChangedEvent Tests
-
     [Fact]
-    public async Task Handle_PdfStateChangedToReady_AllChannelsEnabled_SendsAllNotifications()
+    public async Task Handle_PdfStateChangedToReady_DispatchesNotification()
     {
-        // Arrange
-        var prefs = new NotificationPreferences(_userId);
-        prefs.UpdateAllPreferences(
-            emailReady: true, emailFailed: false, emailRetry: false,
-            pushReady: true, pushFailed: false, pushRetry: false,
-            inAppReady: true, inAppFailed: false, inAppRetry: false);
+        var pdfDoc = new PdfDocumentBuilder().WithId(_pdfDocumentId).WithGameId(_gameId).WithFileName(TestFileName).WithUploadedBy(_userId).Build();
+        _pdfRepo.Setup(r => r.GetByIdAsync(_pdfDocumentId, It.IsAny<CancellationToken>())).ReturnsAsync(pdfDoc);
 
-        var user = new UserBuilder()
-            .WithEmail("test@example.com")
-            .WithDisplayName("Test User")
-            .Build();
+        var evt = new PdfStateChangedEvent(_pdfDocumentId, PdfProcessingState.Indexing, PdfProcessingState.Ready, _userId);
 
-        var pdfDoc = new PdfDocumentBuilder()
-            .WithId(_pdfDocumentId)
-            .WithGameId(_gameId)
-            .WithFileName(TestFileName)
-            .WithUploadedBy(_userId)
-            .Build();
-
-        _preferencesRepo.Setup(r => r.GetByUserIdAsync(_userId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(prefs);
-        _pdfRepo.Setup(r => r.GetByIdAsync(_pdfDocumentId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(pdfDoc);
-        _userRepo.Setup(r => r.GetByIdAsync(_userId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(user);
-
-        var evt = new PdfStateChangedEvent(
-            _pdfDocumentId,
-            PdfProcessingState.Indexing,
-            PdfProcessingState.Ready,
-            _userId);
-
-        // Act
         await _sut.Handle(evt, CancellationToken.None);
 
-        // Assert
-        _notificationRepo.Verify(r => r.AddAsync(
-            It.Is<Notification>(n =>
-                n.UserId == _userId &&
-                n.Type == NotificationType.PdfUploadCompleted &&
-                n.Severity == NotificationSeverity.Success &&
-                n.Title == "PDF Ready"),
-            It.IsAny<CancellationToken>()), Times.Once);
-
-        _mediator.Verify(m => m.Send(
-            It.Is<EnqueueEmailCommand>(c =>
-                c.To == "test@example.com" &&
-                c.UserName == "Test User" &&
-                c.FileName == TestFileName &&
-                c.TemplateName == "document_ready"),
+        _dispatcher.Verify(d => d.DispatchAsync(
+            It.Is<NotificationMessage>(m =>
+                m.Type == NotificationType.PdfUploadCompleted &&
+                m.RecipientUserId == _userId &&
+                m.Payload is PdfProcessingPayload),
             It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
-    public async Task Handle_PdfStateChangedToReady_OnlyEmailEnabled_SendsOnlyEmail()
+    public async Task Handle_PdfStateChangedToNonReady_DoesNotDispatch()
     {
-        // Arrange
-        var prefs = new NotificationPreferences(_userId);
-        prefs.UpdateAllPreferences(
-            emailReady: true, emailFailed: false, emailRetry: false,
-            pushReady: false, pushFailed: false, pushRetry: false,
-            inAppReady: false, inAppFailed: false, inAppRetry: false);
+        var evt = new PdfStateChangedEvent(_pdfDocumentId, PdfProcessingState.Pending, PdfProcessingState.Uploading, _userId);
 
-        var user = new UserBuilder()
-            .WithEmail("test@example.com")
-            .WithDisplayName("Test User")
-            .Build();
-
-        var pdfDoc = new PdfDocumentBuilder()
-            .WithId(_pdfDocumentId)
-            .WithGameId(_gameId)
-            .WithFileName(TestFileName)
-            .WithUploadedBy(_userId)
-            .Build();
-
-        _preferencesRepo.Setup(r => r.GetByUserIdAsync(_userId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(prefs);
-        _pdfRepo.Setup(r => r.GetByIdAsync(_pdfDocumentId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(pdfDoc);
-        _userRepo.Setup(r => r.GetByIdAsync(_userId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(user);
-
-        var evt = new PdfStateChangedEvent(
-            _pdfDocumentId,
-            PdfProcessingState.Indexing,
-            PdfProcessingState.Ready,
-            _userId);
-
-        // Act
         await _sut.Handle(evt, CancellationToken.None);
 
-        // Assert
-        _notificationRepo.Verify(r => r.AddAsync(
-            It.IsAny<Notification>(),
-            It.IsAny<CancellationToken>()), Times.Never);
+        _dispatcher.Verify(d => d.DispatchAsync(It.IsAny<NotificationMessage>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
 
-        _mediator.Verify(m => m.Send(
-            It.Is<EnqueueEmailCommand>(c => c.TemplateName == "document_ready"),
+    [Fact]
+    public async Task Handle_PdfFailed_DispatchesFailedNotification()
+    {
+        var pdfDoc = new PdfDocumentBuilder().WithId(_pdfDocumentId).WithGameId(_gameId).WithFileName(TestFileName).WithUploadedBy(_userId).Build();
+        _pdfRepo.Setup(r => r.GetByIdAsync(_pdfDocumentId, It.IsAny<CancellationToken>())).ReturnsAsync(pdfDoc);
+
+        var evt = new PdfFailedEvent(_pdfDocumentId, ErrorCategory.Network, PdfProcessingState.Extracting, "Network timeout", _userId);
+
+        await _sut.Handle(evt, CancellationToken.None);
+
+        _dispatcher.Verify(d => d.DispatchAsync(
+            It.Is<NotificationMessage>(m => m.Type == NotificationType.ProcessingFailed && m.RecipientUserId == _userId),
             It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
-    public async Task Handle_PdfStateChangedToNonReady_DoesNotSendNotifications()
+    public async Task Handle_PdfRetry_DispatchesRetryNotification()
     {
-        // Arrange
-        var evt = new PdfStateChangedEvent(
-            _pdfDocumentId,
-            PdfProcessingState.Pending,
-            PdfProcessingState.Uploading,
-            _userId);
+        var pdfDoc = new PdfDocumentBuilder().WithId(_pdfDocumentId).WithGameId(_gameId).WithFileName(TestFileName).WithUploadedBy(_userId).Build();
+        _pdfRepo.Setup(r => r.GetByIdAsync(_pdfDocumentId, It.IsAny<CancellationToken>())).ReturnsAsync(pdfDoc);
 
-        // Act
+        var evt = new PdfRetryInitiatedEvent(_pdfDocumentId, 2, _userId);
+
         await _sut.Handle(evt, CancellationToken.None);
 
-        // Assert
-        _notificationRepo.Verify(r => r.AddAsync(
-            It.IsAny<Notification>(),
-            It.IsAny<CancellationToken>()), Times.Never);
-
-        _mediator.Verify(m => m.Send(
-            It.IsAny<EnqueueEmailCommand>(),
-            It.IsAny<CancellationToken>()), Times.Never);
-    }
-
-    [Fact]
-    public async Task Handle_PdfStateChangedToReady_NoPreferences_DoesNotSendNotifications()
-    {
-        // Arrange
-        _preferencesRepo.Setup(r => r.GetByUserIdAsync(_userId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync((NotificationPreferences?)null);
-
-        var evt = new PdfStateChangedEvent(
-            _pdfDocumentId,
-            PdfProcessingState.Indexing,
-            PdfProcessingState.Ready,
-            _userId);
-
-        // Act
-        await _sut.Handle(evt, CancellationToken.None);
-
-        // Assert
-        _notificationRepo.Verify(r => r.AddAsync(
-            It.IsAny<Notification>(),
-            It.IsAny<CancellationToken>()), Times.Never);
-
-        _mediator.Verify(m => m.Send(
-            It.IsAny<EnqueueEmailCommand>(),
-            It.IsAny<CancellationToken>()), Times.Never);
-    }
-
-    #endregion
-
-    #region PdfFailedEvent Tests
-
-    [Fact]
-    public async Task Handle_PdfFailed_AllChannelsEnabled_SendsAllNotifications()
-    {
-        // Arrange
-        var prefs = new NotificationPreferences(_userId);
-        prefs.UpdateAllPreferences(
-            emailReady: false, emailFailed: true, emailRetry: false,
-            pushReady: false, pushFailed: true, pushRetry: false,
-            inAppReady: false, inAppFailed: true, inAppRetry: false);
-
-        var user = new UserBuilder()
-            .WithEmail("test@example.com")
-            .WithDisplayName("Test User")
-            .Build();
-
-        var pdfDoc = new PdfDocumentBuilder()
-            .WithId(_pdfDocumentId)
-            .WithGameId(_gameId)
-            .WithFileName(TestFileName)
-            .WithUploadedBy(_userId)
-            .Build();
-
-        _preferencesRepo.Setup(r => r.GetByUserIdAsync(_userId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(prefs);
-        _pdfRepo.Setup(r => r.GetByIdAsync(_pdfDocumentId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(pdfDoc);
-        _userRepo.Setup(r => r.GetByIdAsync(_userId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(user);
-
-        var evt = new PdfFailedEvent(
-            _pdfDocumentId,
-            ErrorCategory.Network,
-            PdfProcessingState.Extracting,
-            "Network timeout",
-            _userId);
-
-        // Act
-        await _sut.Handle(evt, CancellationToken.None);
-
-        // Assert
-        _notificationRepo.Verify(r => r.AddAsync(
-            It.Is<Notification>(n =>
-                n.UserId == _userId &&
-                n.Type == NotificationType.ProcessingFailed &&
-                n.Severity == NotificationSeverity.Error &&
-                n.Title == "PDF Processing Failed"),
-            It.IsAny<CancellationToken>()), Times.Once);
-
-        _mediator.Verify(m => m.Send(
-            It.Is<EnqueueEmailCommand>(c =>
-                c.To == "test@example.com" &&
-                c.UserName == "Test User" &&
-                c.FileName == TestFileName &&
-                c.TemplateName == "document_failed" &&
-                c.ErrorMessage == "Network timeout"),
+        _dispatcher.Verify(d => d.DispatchAsync(
+            It.Is<NotificationMessage>(m => m.Type == NotificationType.PdfUploadCompleted && m.RecipientUserId == _userId),
             It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
-    public async Task Handle_PdfFailed_MediatorThrows_ContinuesWithoutError()
+    public async Task Handle_PdfNotFound_DoesNotDispatch()
     {
-        // Arrange
-        var prefs = new NotificationPreferences(_userId);
-        prefs.UpdateEmailPreferences(onReady: false, onFailed: true, onRetry: false);
+        _pdfRepo.Setup(r => r.GetByIdAsync(_pdfDocumentId, It.IsAny<CancellationToken>())).ReturnsAsync((PdfDocument?)null);
 
-        var user = new UserBuilder()
-            .WithEmail("test@example.com")
-            .WithDisplayName("Test User")
-            .Build();
+        var evt = new PdfStateChangedEvent(_pdfDocumentId, PdfProcessingState.Indexing, PdfProcessingState.Ready, _userId);
 
-        var pdfDoc = new PdfDocumentBuilder()
-            .WithId(_pdfDocumentId)
-            .WithGameId(_gameId)
-            .WithFileName(TestFileName)
-            .WithUploadedBy(_userId)
-            .Build();
-
-        _preferencesRepo.Setup(r => r.GetByUserIdAsync(_userId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(prefs);
-        _pdfRepo.Setup(r => r.GetByIdAsync(_pdfDocumentId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(pdfDoc);
-        _userRepo.Setup(r => r.GetByIdAsync(_userId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(user);
-
-        _mediator.Setup(m => m.Send(
-                It.IsAny<EnqueueEmailCommand>(),
-                It.IsAny<CancellationToken>()))
-            .ThrowsAsync(new InvalidOperationException("Email queue unavailable"));
-
-        var evt = new PdfFailedEvent(
-            _pdfDocumentId,
-            ErrorCategory.Network,
-            PdfProcessingState.Extracting,
-            "Network timeout",
-            _userId);
-
-        // Act
-        var act = async () => await _sut.Handle(evt, CancellationToken.None);
-
-        // Assert
-        await act.Should().NotThrowAsync();
-    }
-
-    #endregion
-
-    #region PdfRetryInitiatedEvent Tests
-
-    [Fact]
-    public async Task Handle_PdfRetry_AllChannelsEnabled_SendsAllNotifications()
-    {
-        // Arrange
-        var prefs = new NotificationPreferences(_userId);
-        prefs.UpdateAllPreferences(
-            emailReady: false, emailFailed: false, emailRetry: true,
-            pushReady: false, pushFailed: false, pushRetry: true,
-            inAppReady: false, inAppFailed: false, inAppRetry: true);
-
-        var user = new UserBuilder()
-            .WithEmail("test@example.com")
-            .WithDisplayName("Test User")
-            .Build();
-
-        var pdfDoc = new PdfDocumentBuilder()
-            .WithId(_pdfDocumentId)
-            .WithGameId(_gameId)
-            .WithFileName(TestFileName)
-            .WithUploadedBy(_userId)
-            .Build();
-
-        _preferencesRepo.Setup(r => r.GetByUserIdAsync(_userId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(prefs);
-        _pdfRepo.Setup(r => r.GetByIdAsync(_pdfDocumentId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(pdfDoc);
-        _userRepo.Setup(r => r.GetByIdAsync(_userId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(user);
-
-        var evt = new PdfRetryInitiatedEvent(
-            _pdfDocumentId,
-            2,
-            _userId);
-
-        // Act
         await _sut.Handle(evt, CancellationToken.None);
 
-        // Assert
-        _notificationRepo.Verify(r => r.AddAsync(
-            It.Is<Notification>(n =>
-                n.UserId == _userId &&
-                n.Type == NotificationType.PdfUploadCompleted &&
-                n.Severity == NotificationSeverity.Info &&
-                n.Title == "PDF Retry Started"),
-            It.IsAny<CancellationToken>()), Times.Once);
-
-        _mediator.Verify(m => m.Send(
-            It.Is<EnqueueEmailCommand>(c =>
-                c.To == "test@example.com" &&
-                c.UserName == "Test User" &&
-                c.FileName == TestFileName &&
-                c.TemplateName == "retry_available" &&
-                c.RetryCount == 2),
-            It.IsAny<CancellationToken>()), Times.Once);
+        _dispatcher.Verify(d => d.DispatchAsync(It.IsAny<NotificationMessage>(), It.IsAny<CancellationToken>()), Times.Never);
     }
-
-    [Fact]
-    public async Task Handle_PdfRetry_AllChannelsDisabled_DoesNotSendNotifications()
-    {
-        // Arrange
-        var prefs = new NotificationPreferences(_userId);
-        prefs.UpdateAllPreferences(
-            emailReady: false, emailFailed: false, emailRetry: false,
-            pushReady: false, pushFailed: false, pushRetry: false,
-            inAppReady: false, inAppFailed: false, inAppRetry: false);
-
-        _preferencesRepo.Setup(r => r.GetByUserIdAsync(_userId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(prefs);
-
-        var evt = new PdfRetryInitiatedEvent(
-            _pdfDocumentId,
-            1,
-            _userId);
-
-        // Act
-        await _sut.Handle(evt, CancellationToken.None);
-
-        // Assert
-        _notificationRepo.Verify(r => r.AddAsync(
-            It.IsAny<Notification>(),
-            It.IsAny<CancellationToken>()), Times.Never);
-
-        _mediator.Verify(m => m.Send(
-            It.IsAny<EnqueueEmailCommand>(),
-            It.IsAny<CancellationToken>()), Times.Never);
-    }
-
-    #endregion
-
-    #region Edge Cases
-
-    [Fact]
-    public async Task Handle_PdfDocumentNotFound_DoesNotSendNotifications()
-    {
-        // Arrange
-        var prefs = new NotificationPreferences(_userId);
-        prefs.UpdateEmailPreferences(onReady: true, onFailed: false, onRetry: false);
-
-        _preferencesRepo.Setup(r => r.GetByUserIdAsync(_userId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(prefs);
-        _pdfRepo.Setup(r => r.GetByIdAsync(_pdfDocumentId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync((PdfDocument?)null);
-
-        var evt = new PdfStateChangedEvent(
-            _pdfDocumentId,
-            PdfProcessingState.Indexing,
-            PdfProcessingState.Ready,
-            _userId);
-
-        // Act
-        await _sut.Handle(evt, CancellationToken.None);
-
-        // Assert
-        _notificationRepo.Verify(r => r.AddAsync(
-            It.IsAny<Notification>(),
-            It.IsAny<CancellationToken>()), Times.Never);
-
-        _mediator.Verify(m => m.Send(
-            It.IsAny<EnqueueEmailCommand>(),
-            It.IsAny<CancellationToken>()), Times.Never);
-    }
-
-    [Fact]
-    public async Task Handle_UserNotFound_DoesNotSendNotifications()
-    {
-        // Arrange
-        var prefs = new NotificationPreferences(_userId);
-        prefs.UpdateEmailPreferences(onReady: true, onFailed: false, onRetry: false);
-
-        var pdfDoc = new PdfDocumentBuilder()
-            .WithId(_pdfDocumentId)
-            .WithGameId(_gameId)
-            .WithFileName(TestFileName)
-            .WithUploadedBy(_userId)
-            .Build();
-
-        _preferencesRepo.Setup(r => r.GetByUserIdAsync(_userId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(prefs);
-        _pdfRepo.Setup(r => r.GetByIdAsync(_pdfDocumentId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(pdfDoc);
-        _userRepo.Setup(r => r.GetByIdAsync(_userId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync((User?)null);
-
-        var evt = new PdfStateChangedEvent(
-            _pdfDocumentId,
-            PdfProcessingState.Indexing,
-            PdfProcessingState.Ready,
-            _userId);
-
-        // Act
-        await _sut.Handle(evt, CancellationToken.None);
-
-        // Assert
-        _notificationRepo.Verify(r => r.AddAsync(
-            It.IsAny<Notification>(),
-            It.IsAny<CancellationToken>()), Times.Never);
-
-        _mediator.Verify(m => m.Send(
-            It.IsAny<EnqueueEmailCommand>(),
-            It.IsAny<CancellationToken>()), Times.Never);
-    }
-
-    #endregion
 }

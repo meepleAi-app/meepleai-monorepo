@@ -1,49 +1,32 @@
-using Api.BoundedContexts.Authentication.Infrastructure.Persistence;
 using Api.BoundedContexts.DocumentProcessing.Domain.Events;
 using Api.BoundedContexts.DocumentProcessing.Domain.Enums;
 using Api.BoundedContexts.DocumentProcessing.Domain.Repositories;
-using Api.BoundedContexts.UserNotifications.Application.Commands;
-using Api.BoundedContexts.UserNotifications.Domain.Aggregates;
-using Api.BoundedContexts.UserNotifications.Domain.Repositories;
+using Api.BoundedContexts.UserNotifications.Application.Services;
 using Api.BoundedContexts.UserNotifications.Domain.ValueObjects;
-using Api.Services;
 using MediatR;
 
 namespace Api.BoundedContexts.UserNotifications.Application.EventHandlers;
 
 /// <summary>
-/// Handles PDF document events to send multi-channel notifications (in-app, email via queue, push).
+/// Handles PDF document events to send multi-channel notifications via NotificationDispatcher.
 /// Issue #4220: Multi-channel notification system for PDF pipeline.
-/// Issue #4417: Refactored to use email queue for async delivery.
 /// </summary>
 internal class PdfNotificationEventHandler :
     INotificationHandler<PdfStateChangedEvent>,
     INotificationHandler<PdfFailedEvent>,
     INotificationHandler<PdfRetryInitiatedEvent>
 {
-    private readonly INotificationPreferencesRepository _preferencesRepo;
-    private readonly INotificationRepository _notificationRepo;
+    private readonly INotificationDispatcher _dispatcher;
     private readonly IPdfDocumentRepository _pdfRepo;
-    private readonly IUserRepository _userRepo;
-    private readonly IMediator _mediator;
-    private readonly IPushNotificationService _pushService;
     private readonly ILogger<PdfNotificationEventHandler> _logger;
 
     public PdfNotificationEventHandler(
-        INotificationPreferencesRepository preferencesRepo,
-        INotificationRepository notificationRepo,
+        INotificationDispatcher dispatcher,
         IPdfDocumentRepository pdfRepo,
-        IUserRepository userRepo,
-        IMediator mediator,
-        IPushNotificationService pushService,
         ILogger<PdfNotificationEventHandler> logger)
     {
-        _preferencesRepo = preferencesRepo;
-        _notificationRepo = notificationRepo;
+        _dispatcher = dispatcher;
         _pdfRepo = pdfRepo;
-        _userRepo = userRepo;
-        _mediator = mediator;
-        _pushService = pushService;
         _logger = logger;
     }
 
@@ -51,247 +34,70 @@ internal class PdfNotificationEventHandler :
     {
         if (evt.NewState != PdfProcessingState.Ready) return;
 
-        var prefs = await _preferencesRepo.GetByUserIdAsync(evt.UploadedByUserId, cancellationToken).ConfigureAwait(false);
-        if (prefs == null) return;
-
-        // Get PDF and user details for notifications
         var pdfDoc = await _pdfRepo.GetByIdAsync(evt.PdfDocumentId, cancellationToken).ConfigureAwait(false);
-        var user = await _userRepo.GetByIdAsync(evt.UploadedByUserId, cancellationToken).ConfigureAwait(false);
-
-        if (pdfDoc == null || user == null)
+        if (pdfDoc == null)
         {
-            _logger.LogWarning(
-                "Cannot send PDF ready notifications: PDF {PdfId} or User {UserId} not found",
-                evt.PdfDocumentId,
-                evt.UploadedByUserId);
+            _logger.LogWarning("PDF {PdfId} not found for ready notification", evt.PdfDocumentId);
             return;
         }
 
-        // In-App Notification
-        if (prefs.InAppOnDocumentReady)
+        await _dispatcher.DispatchAsync(new NotificationMessage
         {
-            var notification = new Notification(
-                id: Guid.NewGuid(),
-                userId: evt.UploadedByUserId,
-                type: NotificationType.PdfUploadCompleted,
-                severity: NotificationSeverity.Success,
-                title: "PDF Ready",
-                message: $"Your PDF '{pdfDoc.FileName.Value}' is ready for AI queries",
-                link: $"/documents/{evt.PdfDocumentId}"
-            );
-            await _notificationRepo.AddAsync(notification, cancellationToken).ConfigureAwait(false);
-            _logger.LogInformation("PDF ready in-app notification created for user {UserId}", evt.UploadedByUserId);
-        }
+            Type = NotificationType.PdfUploadCompleted,
+            RecipientUserId = evt.UploadedByUserId,
+            Payload = new PdfProcessingPayload(
+                evt.PdfDocumentId,
+                pdfDoc.FileName.Value,
+                "Ready"),
+            DeepLinkPath = $"/documents/{evt.PdfDocumentId}"
+        }, cancellationToken).ConfigureAwait(false);
 
-        // Email Notification via Queue (Issue #4417)
-        if (prefs.EmailOnDocumentReady)
-        {
-            try
-            {
-                await _mediator.Send(new EnqueueEmailCommand(
-                    UserId: evt.UploadedByUserId,
-                    To: user.Email,
-                    Subject: $"Your PDF is Ready: {pdfDoc.FileName.Value} - MeepleAI",
-                    TemplateName: "document_ready",
-                    UserName: user.DisplayName,
-                    FileName: pdfDoc.FileName.Value,
-                    DocumentUrl: $"/documents/{evt.PdfDocumentId}"
-                ), cancellationToken).ConfigureAwait(false);
-
-                _logger.LogInformation("PDF ready email enqueued for user {UserId}", evt.UploadedByUserId);
-            }
-#pragma warning disable CA1031 // Do not catch general exception types
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Failed to enqueue PDF ready email for user {UserId}", evt.UploadedByUserId);
-            }
-#pragma warning restore CA1031
-        }
-
-        // Push Notification (Issue #4416)
-        if (prefs.PushOnDocumentReady && prefs.HasPushSubscription)
-        {
-            try
-            {
-                await _pushService.SendPushNotificationAsync(
-                    prefs.PushEndpoint!,
-                    prefs.PushP256dhKey!,
-                    prefs.PushAuthKey!,
-                    "PDF Ready",
-                    $"Your PDF '{pdfDoc.FileName.Value}' is ready for AI queries",
-                    $"/documents/{evt.PdfDocumentId}",
-                    cancellationToken).ConfigureAwait(false);
-            }
-#pragma warning disable CA1031
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Failed to send push notification for PDF ready to user {UserId}", evt.UploadedByUserId);
-            }
-#pragma warning restore CA1031
-        }
+        _logger.LogInformation("Dispatched PDF ready notification for user {UserId}", evt.UploadedByUserId);
     }
 
     public async Task Handle(PdfFailedEvent evt, CancellationToken cancellationToken)
     {
-        var prefs = await _preferencesRepo.GetByUserIdAsync(evt.UploadedByUserId, cancellationToken).ConfigureAwait(false);
-        if (prefs == null) return;
-
-        // Get PDF and user details for notifications
         var pdfDoc = await _pdfRepo.GetByIdAsync(evt.PdfDocumentId, cancellationToken).ConfigureAwait(false);
-        var user = await _userRepo.GetByIdAsync(evt.UploadedByUserId, cancellationToken).ConfigureAwait(false);
-
-        if (pdfDoc == null || user == null)
+        if (pdfDoc == null)
         {
-            _logger.LogWarning(
-                "Cannot send PDF failed notifications: PDF {PdfId} or User {UserId} not found",
-                evt.PdfDocumentId,
-                evt.UploadedByUserId);
+            _logger.LogWarning("PDF {PdfId} not found for failure notification", evt.PdfDocumentId);
             return;
         }
 
-        // In-App Notification
-        if (prefs.InAppOnDocumentFailed)
+        await _dispatcher.DispatchAsync(new NotificationMessage
         {
-            var notification = new Notification(
-                id: Guid.NewGuid(),
-                userId: evt.UploadedByUserId,
-                type: NotificationType.ProcessingFailed,
-                severity: NotificationSeverity.Error,
-                title: "PDF Processing Failed",
-                message: $"Failed to process '{pdfDoc.FileName.Value}': {evt.ErrorMessage}",
-                link: $"/documents/{evt.PdfDocumentId}"
-            );
-            await _notificationRepo.AddAsync(notification, cancellationToken).ConfigureAwait(false);
-            _logger.LogWarning("PDF failure in-app notification created for user {UserId}", evt.UploadedByUserId);
-        }
+            Type = NotificationType.ProcessingFailed,
+            RecipientUserId = evt.UploadedByUserId,
+            Payload = new PdfProcessingPayload(
+                evt.PdfDocumentId,
+                pdfDoc.FileName.Value,
+                $"Failed: {evt.ErrorMessage}"),
+            DeepLinkPath = $"/documents/{evt.PdfDocumentId}"
+        }, cancellationToken).ConfigureAwait(false);
 
-        // Email Notification via Queue (Issue #4417)
-        if (prefs.EmailOnDocumentFailed)
-        {
-            try
-            {
-                await _mediator.Send(new EnqueueEmailCommand(
-                    UserId: evt.UploadedByUserId,
-                    To: user.Email,
-                    Subject: $"PDF Processing Failed: {pdfDoc.FileName.Value} - MeepleAI",
-                    TemplateName: "document_failed",
-                    UserName: user.DisplayName,
-                    FileName: pdfDoc.FileName.Value,
-                    ErrorMessage: evt.ErrorMessage
-                ), cancellationToken).ConfigureAwait(false);
-
-                _logger.LogInformation("PDF failed email enqueued for user {UserId}", evt.UploadedByUserId);
-            }
-#pragma warning disable CA1031 // Do not catch general exception types
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Failed to enqueue PDF failed email for user {UserId}", evt.UploadedByUserId);
-            }
-#pragma warning restore CA1031
-        }
-
-        // Push Notification (Issue #4416)
-        if (prefs.PushOnDocumentFailed && prefs.HasPushSubscription)
-        {
-            try
-            {
-                await _pushService.SendPushNotificationAsync(
-                    prefs.PushEndpoint!,
-                    prefs.PushP256dhKey!,
-                    prefs.PushAuthKey!,
-                    "PDF Processing Failed",
-                    $"Failed to process '{pdfDoc.FileName.Value}': {evt.ErrorMessage}",
-                    $"/documents/{evt.PdfDocumentId}",
-                    cancellationToken).ConfigureAwait(false);
-            }
-#pragma warning disable CA1031
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Failed to send push notification for PDF failure to user {UserId}", evt.UploadedByUserId);
-            }
-#pragma warning restore CA1031
-        }
+        _logger.LogWarning("Dispatched PDF failure notification for user {UserId}", evt.UploadedByUserId);
     }
 
     public async Task Handle(PdfRetryInitiatedEvent evt, CancellationToken cancellationToken)
     {
-        var prefs = await _preferencesRepo.GetByUserIdAsync(evt.UploadedByUserId, cancellationToken).ConfigureAwait(false);
-        if (prefs == null) return;
-
-        // Get PDF and user details for notifications
         var pdfDoc = await _pdfRepo.GetByIdAsync(evt.PdfDocumentId, cancellationToken).ConfigureAwait(false);
-        var user = await _userRepo.GetByIdAsync(evt.UploadedByUserId, cancellationToken).ConfigureAwait(false);
-
-        if (pdfDoc == null || user == null)
+        if (pdfDoc == null)
         {
-            _logger.LogWarning(
-                "Cannot send PDF retry notifications: PDF {PdfId} or User {UserId} not found",
-                evt.PdfDocumentId,
-                evt.UploadedByUserId);
+            _logger.LogWarning("PDF {PdfId} not found for retry notification", evt.PdfDocumentId);
             return;
         }
 
-        // In-App Notification
-        if (prefs.InAppOnRetryAvailable)
+        await _dispatcher.DispatchAsync(new NotificationMessage
         {
-            var notification = new Notification(
-                id: Guid.NewGuid(),
-                userId: evt.UploadedByUserId,
-                type: NotificationType.PdfUploadCompleted,
-                severity: NotificationSeverity.Info,
-                title: "PDF Retry Started",
-                message: $"Retrying '{pdfDoc.FileName.Value}' (Attempt #{evt.RetryCount})",
-                link: $"/documents/{evt.PdfDocumentId}"
-            );
-            await _notificationRepo.AddAsync(notification, cancellationToken).ConfigureAwait(false);
-            _logger.LogInformation("PDF retry in-app notification created for user {UserId}", evt.UploadedByUserId);
-        }
+            Type = NotificationType.PdfUploadCompleted,
+            RecipientUserId = evt.UploadedByUserId,
+            Payload = new PdfProcessingPayload(
+                evt.PdfDocumentId,
+                pdfDoc.FileName.Value,
+                $"Retry #{evt.RetryCount}"),
+            DeepLinkPath = $"/documents/{evt.PdfDocumentId}"
+        }, cancellationToken).ConfigureAwait(false);
 
-        // Email Notification via Queue (Issue #4417)
-        if (prefs.EmailOnRetryAvailable)
-        {
-            try
-            {
-                await _mediator.Send(new EnqueueEmailCommand(
-                    UserId: evt.UploadedByUserId,
-                    To: user.Email,
-                    Subject: $"PDF Retry: {pdfDoc.FileName.Value} - MeepleAI",
-                    TemplateName: "retry_available",
-                    UserName: user.DisplayName,
-                    FileName: pdfDoc.FileName.Value,
-                    RetryCount: evt.RetryCount
-                ), cancellationToken).ConfigureAwait(false);
-
-                _logger.LogInformation("PDF retry email enqueued for user {UserId}", evt.UploadedByUserId);
-            }
-#pragma warning disable CA1031 // Do not catch general exception types
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Failed to enqueue PDF retry email for user {UserId}", evt.UploadedByUserId);
-            }
-#pragma warning restore CA1031
-        }
-
-        // Push Notification (Issue #4416)
-        if (prefs.PushOnRetryAvailable && prefs.HasPushSubscription)
-        {
-            try
-            {
-                await _pushService.SendPushNotificationAsync(
-                    prefs.PushEndpoint!,
-                    prefs.PushP256dhKey!,
-                    prefs.PushAuthKey!,
-                    "PDF Retry Started",
-                    $"Retrying '{pdfDoc.FileName.Value}' (Attempt #{evt.RetryCount})",
-                    $"/documents/{evt.PdfDocumentId}",
-                    cancellationToken).ConfigureAwait(false);
-            }
-#pragma warning disable CA1031
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Failed to send push notification for PDF retry to user {UserId}", evt.UploadedByUserId);
-            }
-#pragma warning restore CA1031
-        }
+        _logger.LogInformation("Dispatched PDF retry notification for user {UserId}", evt.UploadedByUserId);
     }
 }

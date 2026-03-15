@@ -1,9 +1,12 @@
 using Api.BoundedContexts.UserNotifications.Application.Services;
 using Api.BoundedContexts.UserNotifications.Domain.Repositories;
+using Api.BoundedContexts.UserNotifications.Infrastructure.Configuration;
 using Api.BoundedContexts.UserNotifications.Infrastructure.Persistence;
 using Api.BoundedContexts.UserNotifications.Infrastructure.Scheduling;
 using Api.BoundedContexts.UserNotifications.Infrastructure.Services;
+using Api.BoundedContexts.UserNotifications.Infrastructure.Slack;
 using Api.SharedKernel.Infrastructure.Persistence;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Quartz;
 
@@ -20,15 +23,34 @@ internal static class UserNotificationsServiceExtensions
     /// <summary>
     /// Registers all UserNotifications bounded context services.
     /// </summary>
-    public static IServiceCollection AddUserNotificationsContext(this IServiceCollection services)
+    public static IServiceCollection AddUserNotificationsContext(this IServiceCollection services, IConfiguration configuration)
     {
+        // Slack notification configuration binding
+        services.Configure<SlackNotificationConfiguration>(
+            configuration.GetSection(SlackNotificationConfiguration.SectionName));
+
         // Register repositories
         services.AddScoped<INotificationRepository, NotificationRepository>();
         services.AddScoped<INotificationPreferencesRepository, NotificationPreferencesRepository>();
         services.AddScoped<IEmailQueueRepository, EmailQueueRepository>(); // Issue #4417
         services.AddScoped<IEmailTemplateRepository, EmailTemplateRepository>(); // Issue #52: Email template admin management
+        services.AddScoped<INotificationQueueRepository, NotificationQueueRepository>(); // Slack notification queue
+        services.AddScoped<ISlackConnectionRepository, SlackConnectionRepository>(); // Slack connections
+
+        // Slack signature validation
+        services.AddSingleton<SlackSignatureValidator>();
+
+        // Slack Block Kit message builders
+        services.AddSingleton<GenericSlackBuilder>();
+        services.AddSingleton<ISlackMessageBuilder, ShareRequestSlackBuilder>();
+        services.AddSingleton<ISlackMessageBuilder, GameNightSlackBuilder>();
+        services.AddSingleton<ISlackMessageBuilder, PdfProcessingSlackBuilder>();
+        services.AddSingleton<ISlackMessageBuilder, BadgeSlackBuilder>();
+        services.AddSingleton<ISlackMessageBuilder, AdminAlertSlackBuilder>();
+        services.AddSingleton<SlackMessageBuilderFactory>();
 
         // Register services
+        services.AddScoped<INotificationDispatcher, NotificationDispatcher>(); // Multi-channel dispatch
         services.AddSingleton<IEmailTemplateService, EmailTemplateService>(); // Issue #4417
         services.AddSingleton<IUserNotificationBroadcaster, InMemoryUserNotificationBroadcaster>(); // Issue #5005
         services.AddSingleton<IUnsubscribeTokenService, UnsubscribeTokenService>(); // Issue #38
@@ -93,6 +115,20 @@ internal static class UserNotificationsServiceExtensions
                 .WithIdentity("email-processor-trigger", "notifications")
                 .WithCronSchedule("0/30 * * * * ?")  // Every 30 seconds
                 .WithDescription("Processes queued emails with retry and dead letter handling"));
+        });
+
+        // Slack notification processor job - every 10 seconds
+        services.AddQuartz(q =>
+        {
+            q.AddJob<SlackNotificationProcessorJob>(opts => opts
+                .WithIdentity("slack-notification-processor-job", "notifications")
+                .StoreDurably(true));
+
+            q.AddTrigger(opts => opts
+                .ForJob("slack-notification-processor-job", "notifications")
+                .WithIdentity("slack-notification-processor-trigger", "notifications")
+                .WithCronSchedule("0/10 * * * * ?")
+                .WithDescription("Processes queued Slack notifications with rate limiting"));
         });
 
         // ISSUE-40: Dead letter monitor job - hourly

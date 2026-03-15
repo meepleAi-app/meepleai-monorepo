@@ -220,15 +220,25 @@ test.describe('Admin-User Onboarding Flow', () => {
     const page = state.userPage!;
     const libraryPage = new LibraryPage(page);
 
-    await test.step('Navigate to library', async () => {
-      // Try /library/private which is the actual private games page
-      await page.goto('/library/private', { waitUntil: 'networkidle' });
-      // If redirected, take note of where we are
-      const url = page.url();
-      if (!url.includes('/library')) {
-        // Fallback: try /library
-        await page.goto('/library', { waitUntil: 'networkidle' });
-      }
+    await test.step('Force user mode and navigate to library', async () => {
+      // Force user context in localStorage THEN reload to apply
+      await page.evaluate(() => {
+        const key = 'meeple-card-stack-expanded';
+        const stored = localStorage.getItem(key);
+        if (stored) {
+          try {
+            const data = JSON.parse(stored);
+            if (data.state) data.state.context = 'user';
+            localStorage.setItem(key, JSON.stringify(data));
+          } catch {
+            /* ignore */
+          }
+        }
+      });
+
+      // Navigate to /library with a fresh load (applies localStorage change)
+      await page.goto('/library', { waitUntil: 'networkidle' });
+      await page.waitForTimeout(2000);
     });
 
     await test.step('Search and add game', async () => {

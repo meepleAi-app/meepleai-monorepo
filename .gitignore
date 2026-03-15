@@ -212,3 +212,4 @@ apps/web/next-env.d.ts
 
 # Seed dumps (binary files, not tracked in source control)
 infra/seed-dumps/
+.worktrees/

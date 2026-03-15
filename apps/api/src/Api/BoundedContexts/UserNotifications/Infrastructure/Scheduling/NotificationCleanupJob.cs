@@ -8,7 +8,7 @@ using Quartz;
 namespace Api.BoundedContexts.UserNotifications.Infrastructure.Scheduling;
 
 /// <summary>
-/// Quartz.NET job that cleans up old read notifications and processed emails.
+/// Quartz.NET job that cleans up old read notifications, processed emails, and sent notification queue items.
 /// Only deletes READ notifications older than retention period.
 /// Unread notifications are NEVER deleted.
 /// Issue #41: Notification cleanup with configurable TTL.
@@ -85,15 +85,37 @@ internal sealed class NotificationCleanupJob : IJob
             }
             while (batchDeleted == BatchSize && !context.CancellationToken.IsCancellationRequested);
 
+            // 3. Clean up sent/dead_letter notification queue items older than retention period
+            var totalQueueItemsDeleted = 0;
+
+            do
+            {
+                batchDeleted = await _dbContext.Set<NotificationQueueEntity>()
+                    .Where(q => (q.Status == "sent" || q.Status == "dead_letter") && q.CreatedAt < cutoffDate)
+                    .OrderBy(q => q.CreatedAt)
+                    .Take(BatchSize)
+                    .ExecuteDeleteAsync(context.CancellationToken)
+                    .ConfigureAwait(false);
+
+                totalQueueItemsDeleted += batchDeleted;
+
+                if (batchDeleted > 0)
+                {
+                    _logger.LogDebug("Deleted {Count} old notification queue items in batch", batchDeleted);
+                }
+            }
+            while (batchDeleted == BatchSize && !context.CancellationToken.IsCancellationRequested);
+
             _logger.LogInformation(
-                "Notification cleanup completed: {NotificationsDeleted} read notifications, {EmailsDeleted} email queue items deleted (retention: {Days} days)",
-                totalNotificationsDeleted, totalEmailsDeleted, retentionDays);
+                "Notification cleanup completed: {NotificationsDeleted} read notifications, {EmailsDeleted} email queue items, {QueueItemsDeleted} notification queue items deleted (retention: {Days} days)",
+                totalNotificationsDeleted, totalEmailsDeleted, totalQueueItemsDeleted, retentionDays);
 
             context.Result = new
             {
                 Success = true,
                 NotificationsDeleted = totalNotificationsDeleted,
                 EmailsDeleted = totalEmailsDeleted,
+                QueueItemsDeleted = totalQueueItemsDeleted,
                 RetentionDays = retentionDays
             };
         }

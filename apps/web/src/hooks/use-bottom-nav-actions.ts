@@ -5,7 +5,8 @@ import { useMemo } from 'react';
 
 import { useRouter } from 'next/navigation';
 
-import { ENTITY_ACTIONS, DEFAULT_ACTIONS } from '@/config/entity-actions';
+import { SESSION_QUICK_ACTIONS } from '@/config/entity-actions';
+import type { BottomNavActionDef } from '@/config/entity-actions';
 import { useCardHand } from '@/stores/use-card-hand';
 
 import type { LucideIcon } from 'lucide-react';
@@ -22,47 +23,33 @@ export interface BottomNavAction {
 }
 
 export function useBottomNavActions(): BottomNavAction[] {
-  const { cards, focusedIdx, drawCard } = useCardHand();
+  const { cards, focusedIdx } = useCardHand();
   const router = useRouter();
+
+  // Detect if user is in a session — used for notification muting
+  const isInSession = useCardHand(s => {
+    const focused = s.focusedIdx >= 0 ? s.cards[s.focusedIdx] : null;
+    return focused?.entity === 'session';
+  });
 
   const focusedCard = focusedIdx >= 0 && focusedIdx < cards.length ? cards[focusedIdx] : null;
 
   return useMemo(() => {
-    if (!focusedCard) {
-      // No card focused — show default "draw card" actions
-      return DEFAULT_ACTIONS.map(def => ({
-        id: def.id,
-        label: def.label,
-        icon: def.icon,
-        variant: def.variant,
-        onClick: () => {
-          if (def.drawCard) {
-            drawCard({
-              id: `section-${def.id}`,
-              entity: def.drawCard.entity,
-              title: def.label,
-              href: def.drawCard.href,
-            });
-            router.push(def.drawCard.href);
-          }
-        },
-      }));
+    if (!focusedCard || !isInSession) {
+      return [];
     }
 
-    // Card focused — show entity-specific actions
-    const entityActions = ENTITY_ACTIONS[focusedCard.entity] ?? ENTITY_ACTIONS.custom;
-    return entityActions.map(def => ({
+    // Session card focused — show session-specific quick actions
+    return SESSION_QUICK_ACTIONS.map((def: BottomNavActionDef) => ({
       id: def.id,
       label: def.label,
       icon: def.icon,
-      variant: def.variant,
+      variant: (def.variant === 'primary' ? 'primary' : 'ghost') as BottomNavAction['variant'],
       onClick: () => {
         if (def.route) {
           router.push(`${focusedCard.href}${def.route}`);
         }
-        // Action-specific handlers will be provided by page components
-        // via a registry pattern in Phase 2
       },
     }));
-  }, [focusedCard, drawCard, router]);
+  }, [focusedCard, isInSession, router]);
 }

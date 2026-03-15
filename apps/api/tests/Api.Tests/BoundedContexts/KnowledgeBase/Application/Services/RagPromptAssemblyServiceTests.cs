@@ -1,10 +1,13 @@
 using Api.BoundedContexts.KnowledgeBase.Application.Models;
 using Api.BoundedContexts.KnowledgeBase.Application.Services;
 using Api.BoundedContexts.KnowledgeBase.Domain.Entities;
+using Api.BoundedContexts.KnowledgeBase.Domain.Enums;
+using Api.BoundedContexts.KnowledgeBase.Domain.Services.Enhancements;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services.Reranking;
 using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 using Api.Models;
 using Api.Services;
+using Api.SharedKernel.Domain.ValueObjects;
 using Api.Tests.Constants;
 using FluentAssertions;
 using Microsoft.Extensions.Logging;
@@ -24,6 +27,10 @@ public class RagPromptAssemblyServiceTests
     private readonly Mock<ILlmService> _llmMock;
     private readonly Mock<ITextChunkSearchService> _textSearchMock;
     private readonly Mock<IExpansionGameResolver> _expansionResolverMock;
+    private readonly Mock<IRagEnhancementService> _ragEnhancementMock;
+    private readonly Mock<IQueryComplexityClassifier> _complexityClassifierMock;
+    private readonly Mock<IRetrievalRelevanceEvaluator> _relevanceEvaluatorMock;
+    private readonly Mock<IQueryExpander> _queryExpanderMock;
     private readonly Mock<ILogger<RagPromptAssemblyService>> _loggerMock;
 
     private static readonly Guid TestGameId = Guid.NewGuid();
@@ -36,6 +43,10 @@ public class RagPromptAssemblyServiceTests
         _llmMock = new Mock<ILlmService>();
         _textSearchMock = new Mock<ITextChunkSearchService>();
         _expansionResolverMock = new Mock<IExpansionGameResolver>();
+        _ragEnhancementMock = new Mock<IRagEnhancementService>();
+        _complexityClassifierMock = new Mock<IQueryComplexityClassifier>();
+        _relevanceEvaluatorMock = new Mock<IRetrievalRelevanceEvaluator>();
+        _queryExpanderMock = new Mock<IQueryExpander>();
         _loggerMock = new Mock<ILogger<RagPromptAssemblyService>>();
 
         // Default: query expansion returns empty (no expansions)
@@ -48,6 +59,11 @@ public class RagPromptAssemblyServiceTests
         _expansionResolverMock
             .Setup(r => r.GetExpansionGameIdsAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(Array.Empty<Guid>());
+
+        // Default: no RAG enhancements active
+        _ragEnhancementMock
+            .Setup(r => r.GetActiveEnhancementsAsync(It.IsAny<UserTier>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(RagEnhancement.None);
     }
 
     private RagPromptAssemblyService CreateService()
@@ -58,6 +74,10 @@ public class RagPromptAssemblyServiceTests
             _llmMock.Object,
             _textSearchMock.Object,
             _expansionResolverMock.Object,
+            _ragEnhancementMock.Object,
+            _complexityClassifierMock.Object,
+            _relevanceEvaluatorMock.Object,
+            _queryExpanderMock.Object,
             _loggerMock.Object);
     }
 
@@ -132,7 +152,7 @@ public class RagPromptAssemblyServiceTests
         // Act
         var result = await service.AssemblePromptAsync(
             "tutor", "Chess", null, "How do pawns move?",
-            TestGameId, null, CancellationToken.None);
+            TestGameId, null, null, CancellationToken.None);
 
         // Assert — No chunks pass the 0.55 threshold with FTS-only RRF scores
         result.Should().NotBeNull();
@@ -156,7 +176,7 @@ public class RagPromptAssemblyServiceTests
         // Act
         var result = await service.AssemblePromptAsync(
             "tutor", "Chess", null, "How do pieces move?",
-            TestGameId, null, CancellationToken.None);
+            TestGameId, null, null, CancellationToken.None);
 
         // Assert — No citations because FTS-only RRF scores are below 0.55
         result.Citations.Should().BeEmpty();
@@ -177,7 +197,7 @@ public class RagPromptAssemblyServiceTests
         // Act
         var result = await service.AssemblePromptAsync(
             "arbitro", "Chess", null, "What is en passant?",
-            TestGameId, null, CancellationToken.None);
+            TestGameId, null, null, CancellationToken.None);
 
         // Assert
         result.SystemPrompt.Should().Contain("No game documentation is currently available");
@@ -198,7 +218,7 @@ public class RagPromptAssemblyServiceTests
         // Act
         var result = await service.AssemblePromptAsync(
             "tutor", "Chess", null, "How do pawns move?",
-            TestGameId, null, CancellationToken.None);
+            TestGameId, null, null, CancellationToken.None);
 
         // Assert
         result.SystemPrompt.Should().Contain("No game documentation is currently available");
@@ -227,7 +247,7 @@ public class RagPromptAssemblyServiceTests
         // Act
         var result = await service.AssemblePromptAsync(
             "tutor", "Chess", null, "Can they capture?",
-            TestGameId, thread, CancellationToken.None);
+            TestGameId, thread, null, CancellationToken.None);
 
         // Assert
         result.UserPrompt.Should().Contain("Conversation History");
@@ -261,7 +281,7 @@ public class RagPromptAssemblyServiceTests
         // Act
         var result = await service.AssemblePromptAsync(
             "tutor", "Chess", null, "Final question",
-            TestGameId, thread, CancellationToken.None);
+            TestGameId, thread, null, CancellationToken.None);
 
         // Assert
         result.UserPrompt.Should().Contain("[Previous conversation summary]");
@@ -283,7 +303,7 @@ public class RagPromptAssemblyServiceTests
         // Act
         var result = await service.AssemblePromptAsync(
             "tutor", "Chess", null, "How do pawns move?",
-            TestGameId, null, CancellationToken.None);
+            TestGameId, null, null, CancellationToken.None);
 
         // Assert
         result.UserPrompt.Should().NotContain("Conversation History");
@@ -307,7 +327,7 @@ public class RagPromptAssemblyServiceTests
         // Act
         var result = await service.AssemblePromptAsync(
             "tutor", "Chess", null, "How do pawns move?",
-            TestGameId, null, CancellationToken.None);
+            TestGameId, null, null, CancellationToken.None);
 
         // Assert
         result.SystemPrompt.Should().Contain("No game documentation is currently available");
@@ -333,7 +353,7 @@ public class RagPromptAssemblyServiceTests
         // Act
         var result = await service.AssemblePromptAsync(
             "tutor", "Chess", null, "How do pawns move?",
-            TestGameId, null, CancellationToken.None);
+            TestGameId, null, null, CancellationToken.None);
 
         // Assert
         result.SystemPrompt.Should().Contain("No game documentation is currently available");
@@ -355,7 +375,7 @@ public class RagPromptAssemblyServiceTests
         // Act
         var result = await service.AssemblePromptAsync(
             "tutor", "Chess", null, "How do pawns move?",
-            TestGameId, null, CancellationToken.None);
+            TestGameId, null, null, CancellationToken.None);
 
         // Assert - graceful degradation, no exception thrown
         result.SystemPrompt.Should().Contain("No game documentation is currently available");
@@ -391,7 +411,7 @@ public class RagPromptAssemblyServiceTests
         // Act
         var result = await service.AssemblePromptAsync(
             "tutor", "Chess", null, "How do pieces move?",
-            TestGameId, null, CancellationToken.None);
+            TestGameId, null, null, CancellationToken.None);
 
         // Assert — FTS-only RRF scores are below threshold, so no results regardless of reranker
         result.Citations.Should().BeEmpty();
@@ -422,7 +442,7 @@ public class RagPromptAssemblyServiceTests
         // Act
         var result = await service.AssemblePromptAsync(
             "stratega", "Chess", gameState, "What should I do?",
-            TestGameId, null, CancellationToken.None);
+            TestGameId, null, null, CancellationToken.None);
 
         // Assert
         result.SystemPrompt.Should().Contain("Current Game State");
@@ -447,7 +467,7 @@ public class RagPromptAssemblyServiceTests
         // Act
         var result = await service.AssemblePromptAsync(
             "arbitro", "Catan", null, "Is this legal?",
-            TestGameId, null, CancellationToken.None);
+            TestGameId, null, null, CancellationToken.None);
 
         // Assert
         result.SystemPrompt.Should().Contain("arbitro");
@@ -566,7 +586,7 @@ public class RagPromptAssemblyServiceTests
         // Act
         var result = await service.AssemblePromptAsync(
             "tutor", "Chess", null, "How do pawns move?",
-            TestGameId, null, CancellationToken.None);
+            TestGameId, null, null, CancellationToken.None);
 
         // Assert - embedding called for original + 2 expansions = 3 times
         _embeddingMock.Verify(e => e.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Exactly(3));
@@ -592,7 +612,7 @@ public class RagPromptAssemblyServiceTests
         // Act
         var result = await service.AssemblePromptAsync(
             "tutor", "Chess", null, "How do pawns move?",
-            TestGameId, null, CancellationToken.None);
+            TestGameId, null, null, CancellationToken.None);
 
         // Assert - should still work with original query only
         _embeddingMock.Verify(e => e.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Once);
@@ -640,7 +660,7 @@ public class RagPromptAssemblyServiceTests
         // Act
         var result = await service.AssemblePromptAsync(
             "tutor", "Chess", null, "Question",
-            TestGameId, null, CancellationToken.None);
+            TestGameId, null, null, CancellationToken.None);
 
         // Assert — Duplicate RRF entries boost doc1:0 score above threshold (~0.97),
         // while doc1:1 with single entry stays below threshold (~0.48).
@@ -659,7 +679,7 @@ public class RagPromptAssemblyServiceTests
         var service = CreateService();
 
         var act = () => service.AssemblePromptAsync(
-            null!, "Chess", null, "Question", TestGameId, null, CancellationToken.None);
+            null!, "Chess", null, "Question", TestGameId, null, null, CancellationToken.None);
 
         await act.Should().ThrowAsync<ArgumentNullException>().WithParameterName("agentTypology");
     }
@@ -670,7 +690,7 @@ public class RagPromptAssemblyServiceTests
         var service = CreateService();
 
         var act = () => service.AssemblePromptAsync(
-            "tutor", null!, null, "Question", TestGameId, null, CancellationToken.None);
+            "tutor", null!, null, "Question", TestGameId, null, null, CancellationToken.None);
 
         await act.Should().ThrowAsync<ArgumentNullException>().WithParameterName("gameTitle");
     }
@@ -681,7 +701,7 @@ public class RagPromptAssemblyServiceTests
         var service = CreateService();
 
         var act = () => service.AssemblePromptAsync(
-            "tutor", "Chess", null, null!, TestGameId, null, CancellationToken.None);
+            "tutor", "Chess", null, null!, TestGameId, null, null, CancellationToken.None);
 
         await act.Should().ThrowAsync<ArgumentNullException>().WithParameterName("userQuestion");
     }
@@ -694,7 +714,8 @@ public class RagPromptAssemblyServiceTests
     public void Constructor_NullEmbeddingService_ThrowsArgumentNullException()
     {
         var act = () => new RagPromptAssemblyService(
-            null!, _rerankerMock.Object, _llmMock.Object, _textSearchMock.Object, _expansionResolverMock.Object, _loggerMock.Object);
+            null!, _rerankerMock.Object, _llmMock.Object, _textSearchMock.Object, _expansionResolverMock.Object,
+            _ragEnhancementMock.Object, _complexityClassifierMock.Object, _relevanceEvaluatorMock.Object, _queryExpanderMock.Object, _loggerMock.Object);
 
         act.Should().Throw<ArgumentNullException>().WithParameterName("embeddingService");
     }
@@ -703,7 +724,8 @@ public class RagPromptAssemblyServiceTests
     public void Constructor_NullReranker_ThrowsArgumentNullException()
     {
         var act = () => new RagPromptAssemblyService(
-            _embeddingMock.Object, null!, _llmMock.Object, _textSearchMock.Object, _expansionResolverMock.Object, _loggerMock.Object);
+            _embeddingMock.Object, null!, _llmMock.Object, _textSearchMock.Object, _expansionResolverMock.Object,
+            _ragEnhancementMock.Object, _complexityClassifierMock.Object, _relevanceEvaluatorMock.Object, _queryExpanderMock.Object, _loggerMock.Object);
 
         act.Should().Throw<ArgumentNullException>().WithParameterName("reranker");
     }
@@ -712,7 +734,8 @@ public class RagPromptAssemblyServiceTests
     public void Constructor_NullLlmService_ThrowsArgumentNullException()
     {
         var act = () => new RagPromptAssemblyService(
-            _embeddingMock.Object, _rerankerMock.Object, null!, _textSearchMock.Object, _expansionResolverMock.Object, _loggerMock.Object);
+            _embeddingMock.Object, _rerankerMock.Object, null!, _textSearchMock.Object, _expansionResolverMock.Object,
+            _ragEnhancementMock.Object, _complexityClassifierMock.Object, _relevanceEvaluatorMock.Object, _queryExpanderMock.Object, _loggerMock.Object);
 
         act.Should().Throw<ArgumentNullException>().WithParameterName("llmService");
     }
@@ -721,7 +744,8 @@ public class RagPromptAssemblyServiceTests
     public void Constructor_NullTextSearchService_ThrowsArgumentNullException()
     {
         var act = () => new RagPromptAssemblyService(
-            _embeddingMock.Object, _rerankerMock.Object, _llmMock.Object, null!, _expansionResolverMock.Object, _loggerMock.Object);
+            _embeddingMock.Object, _rerankerMock.Object, _llmMock.Object, null!, _expansionResolverMock.Object,
+            _ragEnhancementMock.Object, _complexityClassifierMock.Object, _relevanceEvaluatorMock.Object, _queryExpanderMock.Object, _loggerMock.Object);
 
         act.Should().Throw<ArgumentNullException>().WithParameterName("textSearch");
     }
@@ -730,16 +754,58 @@ public class RagPromptAssemblyServiceTests
     public void Constructor_NullExpansionResolver_ThrowsArgumentNullException()
     {
         var act = () => new RagPromptAssemblyService(
-            _embeddingMock.Object, _rerankerMock.Object, _llmMock.Object, _textSearchMock.Object, null!, _loggerMock.Object);
+            _embeddingMock.Object, _rerankerMock.Object, _llmMock.Object, _textSearchMock.Object, null!,
+            _ragEnhancementMock.Object, _complexityClassifierMock.Object, _relevanceEvaluatorMock.Object, _queryExpanderMock.Object, _loggerMock.Object);
 
         act.Should().Throw<ArgumentNullException>().WithParameterName("expansionResolver");
+    }
+
+    [Fact]
+    public void Constructor_NullRagEnhancementService_ThrowsArgumentNullException()
+    {
+        var act = () => new RagPromptAssemblyService(
+            _embeddingMock.Object, _rerankerMock.Object, _llmMock.Object, _textSearchMock.Object, _expansionResolverMock.Object,
+            null!, _complexityClassifierMock.Object, _relevanceEvaluatorMock.Object, _queryExpanderMock.Object, _loggerMock.Object);
+
+        act.Should().Throw<ArgumentNullException>().WithParameterName("ragEnhancementService");
+    }
+
+    [Fact]
+    public void Constructor_NullComplexityClassifier_ThrowsArgumentNullException()
+    {
+        var act = () => new RagPromptAssemblyService(
+            _embeddingMock.Object, _rerankerMock.Object, _llmMock.Object, _textSearchMock.Object, _expansionResolverMock.Object,
+            _ragEnhancementMock.Object, null!, _relevanceEvaluatorMock.Object, _queryExpanderMock.Object, _loggerMock.Object);
+
+        act.Should().Throw<ArgumentNullException>().WithParameterName("complexityClassifier");
+    }
+
+    [Fact]
+    public void Constructor_NullRelevanceEvaluator_ThrowsArgumentNullException()
+    {
+        var act = () => new RagPromptAssemblyService(
+            _embeddingMock.Object, _rerankerMock.Object, _llmMock.Object, _textSearchMock.Object, _expansionResolverMock.Object,
+            _ragEnhancementMock.Object, _complexityClassifierMock.Object, null!, _queryExpanderMock.Object, _loggerMock.Object);
+
+        act.Should().Throw<ArgumentNullException>().WithParameterName("relevanceEvaluator");
+    }
+
+    [Fact]
+    public void Constructor_NullQueryExpander_ThrowsArgumentNullException()
+    {
+        var act = () => new RagPromptAssemblyService(
+            _embeddingMock.Object, _rerankerMock.Object, _llmMock.Object, _textSearchMock.Object, _expansionResolverMock.Object,
+            _ragEnhancementMock.Object, _complexityClassifierMock.Object, _relevanceEvaluatorMock.Object, null!, _loggerMock.Object);
+
+        act.Should().Throw<ArgumentNullException>().WithParameterName("queryExpander");
     }
 
     [Fact]
     public void Constructor_NullLogger_ThrowsArgumentNullException()
     {
         var act = () => new RagPromptAssemblyService(
-            _embeddingMock.Object, _rerankerMock.Object, _llmMock.Object, _textSearchMock.Object, _expansionResolverMock.Object, null!);
+            _embeddingMock.Object, _rerankerMock.Object, _llmMock.Object, _textSearchMock.Object, _expansionResolverMock.Object,
+            _ragEnhancementMock.Object, _complexityClassifierMock.Object, _relevanceEvaluatorMock.Object, _queryExpanderMock.Object, null!);
 
         act.Should().Throw<ArgumentNullException>().WithParameterName("logger");
     }
@@ -760,7 +826,7 @@ public class RagPromptAssemblyServiceTests
         // Act
         var result = await service.AssemblePromptAsync(
             "tutor", "Chess", null, "A question about rules",
-            TestGameId, null, CancellationToken.None);
+            TestGameId, null, null, CancellationToken.None);
 
         // Assert - should have a reasonable token estimate (roughly length/4)
         result.EstimatedTokens.Should().BeGreaterThan(0);
@@ -852,7 +918,7 @@ public class RagPromptAssemblyServiceTests
         // Act
         var result = await service.AssemblePromptAsync(
             "tutor", "Catan", null, "How do cities work?",
-            TestGameId, null, CancellationToken.None);
+            TestGameId, null, null, CancellationToken.None);
 
         // Assert — FTS is called for the base game ID
         _textSearchMock.Verify(t => t.FullTextSearchAsync(
@@ -877,7 +943,7 @@ public class RagPromptAssemblyServiceTests
         // Act
         var result = await service.AssemblePromptAsync(
             "arbitro", "Catan", null, "Is this legal?",
-            TestGameId, null, CancellationToken.None);
+            TestGameId, null, null, CancellationToken.None);
 
         // Assert
         result.SystemPrompt.Should().Contain("Expansion Priority");
@@ -897,7 +963,7 @@ public class RagPromptAssemblyServiceTests
         // Act
         var result = await service.AssemblePromptAsync(
             "arbitro", "Catan", null, "Is this legal?",
-            TestGameId, null, CancellationToken.None);
+            TestGameId, null, null, CancellationToken.None);
 
         // Assert
         result.SystemPrompt.Should().NotContain("Expansion Priority");
@@ -920,7 +986,7 @@ public class RagPromptAssemblyServiceTests
         // Act
         var result = await service.AssemblePromptAsync(
             "tutor", "Catan", null, "Question?",
-            TestGameId, null, CancellationToken.None);
+            TestGameId, null, null, CancellationToken.None);
 
         // Assert — After Qdrant removal, FTS-only RRF scores are below threshold
         result.Citations.Should().BeEmpty();

@@ -13,7 +13,6 @@ import React, { useState } from 'react';
 
 import { cn } from '@/lib/utils';
 
-import { EntityLinkPreviewRow } from '../../entity-link/entity-link-preview-row';
 import { ExtraMeepleCardDrawer } from '../../extra-meeple-card/ExtraMeepleCardDrawer';
 import { AgentModelInfo } from '../../meeple-card-features/AgentModelInfo';
 import { AgentStatsDisplay } from '../../meeple-card-features/AgentStatsDisplay';
@@ -116,7 +115,7 @@ export const MeepleCardGrid = React.memo(function MeepleCardGrid(props: MeepleCa
     onTimeTravelToggle,
     documentStatus,
     linkCount,
-    firstLinkPreview,
+    firstLinkPreview: _firstLinkPreview,
     onLinksClick,
     kbCards,
   } = props;
@@ -485,16 +484,6 @@ export const MeepleCardGrid = React.memo(function MeepleCardGrid(props: MeepleCa
 
       {/* Navigation footer */}
       {navigateTo && navigateTo.length > 0 && <CardNavigationFooter links={navigateTo} />}
-
-      {/* EntityLink preview row */}
-      {firstLinkPreview && linkCount !== undefined && linkCount > 0 && (
-        <EntityLinkPreviewRow
-          linkType={firstLinkPreview.linkType}
-          targetName={firstLinkPreview.targetName}
-          totalCount={linkCount}
-          onClick={onLinksClick}
-        />
-      )}
 
       {/* Drawer */}
       {entityId && drawerEntityType && (

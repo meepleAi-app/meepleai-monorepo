@@ -1,7 +1,9 @@
 using Api.BoundedContexts.DocumentProcessing.Domain.Enums;
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.External;
+using Api.BoundedContexts.KnowledgeBase.Domain.Services.Enhancements;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
+using Api.Infrastructure.Entities.KnowledgeBase;
 using Api.Services;
 using Api.Services.Pdf;
 using Microsoft.EntityFrameworkCore;
@@ -27,6 +29,7 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
     private readonly IBlobStorageService _blobStorageService;
     private readonly TimeProvider _timeProvider;
     private readonly ILogger<PdfProcessingPipelineService> _logger;
+    private readonly IRaptorIndexer? _raptorIndexer;
 
     public PdfProcessingPipelineService(
         MeepleAiDbContext db,
@@ -36,7 +39,8 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
         IEmbeddingService embeddingService,
         IBlobStorageService blobStorageService,
         TimeProvider timeProvider,
-        ILogger<PdfProcessingPipelineService> logger)
+        ILogger<PdfProcessingPipelineService> logger,
+        IRaptorIndexer? raptorIndexer = null)
     {
         _db = db ?? throw new ArgumentNullException(nameof(db));
         _pdfTextExtractor = pdfTextExtractor ?? throw new ArgumentNullException(nameof(pdfTextExtractor));
@@ -46,6 +50,7 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
         _blobStorageService = blobStorageService ?? throw new ArgumentNullException(nameof(blobStorageService));
         _timeProvider = timeProvider ?? throw new ArgumentNullException(nameof(timeProvider));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _raptorIndexer = raptorIndexer;
     }
 
     public async Task ProcessAsync(
@@ -109,6 +114,39 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
                 _logger.LogWarning("[PdfPipeline] No chunks produced for {PdfId}, marking as failed", pdfId);
                 await MarkFailedAsync(pdfDoc, "Text extraction produced no usable chunks").ConfigureAwait(false);
                 return;
+            }
+
+            // === RAPTOR: Build hierarchical summary tree (optional, non-blocking) ===
+            if (_raptorIndexer != null && chunks.Count > 3)
+            {
+                try
+                {
+                    var chunkTexts = chunks.Select(c => c.Text).ToList();
+                    var gameId = pdfDoc.GameId ?? Guid.Empty;
+                    var raptorResult = await _raptorIndexer.BuildTreeAsync(
+                        pdfDoc.Id, gameId,
+                        chunkTexts, maxLevels: 3, cancellationToken).ConfigureAwait(false);
+
+                    if (raptorResult.TotalNodes > 0)
+                    {
+                        await SaveRaptorSummariesAsync(
+                            pdfDoc.Id, gameId,
+                            raptorResult.Summaries, cancellationToken).ConfigureAwait(false);
+
+                        _logger.LogInformation(
+                            "[PdfPipeline] RAPTOR: built {Levels}-level tree with {Nodes} summary nodes for PDF {PdfId}",
+                            raptorResult.Levels, raptorResult.TotalNodes, pdfDoc.Id);
+                    }
+                }
+#pragma warning disable CA1031 // RAPTOR is optional enhancement, must not block pipeline
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex,
+                        "[PdfPipeline] RAPTOR indexing failed for PDF {PdfId}, continuing without hierarchical summaries",
+                        pdfDoc.Id);
+                    // Non-blocking: document processing continues even if RAPTOR fails
+                }
+#pragma warning restore CA1031
             }
 
             // Issue #4215: Transition to Embedding state
@@ -396,6 +434,29 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
 
         _logger.LogInformation("[PdfPipeline] Saved {Count} text chunks for hybrid search (PDF {PdfId})",
             textChunkEntities.Count, pdfDoc.Id);
+    }
+
+    private async Task SaveRaptorSummariesAsync(
+        Guid pdfDocumentId, Guid gameId,
+        List<RaptorSummaryNode> summaries,
+        CancellationToken ct)
+    {
+        foreach (var summary in summaries)
+        {
+            var entity = new RaptorSummaryEntity
+            {
+                Id = Guid.NewGuid(),
+                PdfDocumentId = pdfDocumentId,
+                GameId = gameId,
+                TreeLevel = summary.TreeLevel,
+                ClusterIndex = summary.ClusterIndex,
+                SummaryText = summary.SummaryText,
+                SourceChunkCount = summary.SourceChunkCount,
+                CreatedAt = DateTime.UtcNow
+            };
+            _db.RaptorSummaries.Add(entity);
+        }
+        await _db.SaveChangesAsync(ct).ConfigureAwait(false);
     }
 
     private async Task MarkFailedAsync(PdfDocumentEntity pdfDoc, string errorMessage)

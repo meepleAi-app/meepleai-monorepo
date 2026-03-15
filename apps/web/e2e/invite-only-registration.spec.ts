@@ -33,7 +33,7 @@ test.describe('Invite-Only Registration', () => {
       route.fulfill({
         status: 200,
         contentType: 'application/json',
-        body: JSON.stringify({ publicEnabled: false }),
+        body: JSON.stringify({ publicRegistrationEnabled: false }),
       })
     );
 
@@ -56,7 +56,7 @@ test.describe('Invite-Only Registration', () => {
       route.fulfill({
         status: 200,
         contentType: 'application/json',
-        body: JSON.stringify({ publicEnabled: false }),
+        body: JSON.stringify({ publicRegistrationEnabled: false }),
       })
     );
 
@@ -90,7 +90,7 @@ test.describe('Invite-Only Registration', () => {
       route.fulfill({
         status: 200,
         contentType: 'application/json',
-        body: JSON.stringify({ publicEnabled: false }),
+        body: JSON.stringify({ publicRegistrationEnabled: false }),
       })
     );
 
@@ -114,7 +114,7 @@ test.describe('Invite-Only Registration', () => {
       route.fulfill({
         status: 200,
         contentType: 'application/json',
-        body: JSON.stringify({ publicEnabled: false }),
+        body: JSON.stringify({ publicRegistrationEnabled: false }),
       })
     );
 
@@ -139,7 +139,7 @@ test.describe('Invite-Only Registration', () => {
       route.fulfill({
         status: 200,
         contentType: 'application/json',
-        body: JSON.stringify({ publicEnabled: true }),
+        body: JSON.stringify({ publicRegistrationEnabled: true }),
       })
     );
 

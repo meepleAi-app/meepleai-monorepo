@@ -9,6 +9,20 @@ using Microsoft.Extensions.Logging;
 
 namespace Api.Services;
 
+public static class FeatureFlagConstants
+{
+    public const string RagAuxModelKey = "rag.enhancement.aux-model";
+
+    public static readonly string[] RagEnhancements =
+    [
+        "rag.enhancement.adaptive-routing",
+        "rag.enhancement.crag-evaluation",
+        "rag.enhancement.raptor-retrieval",
+        "rag.enhancement.rag-fusion-queries",
+        "rag.enhancement.graph-traversal"
+    ];
+}
+
 /// <summary>
 /// CONFIG-05: Feature flags service implementation.
 /// Provides runtime feature toggling with role-based and tier-based access control.

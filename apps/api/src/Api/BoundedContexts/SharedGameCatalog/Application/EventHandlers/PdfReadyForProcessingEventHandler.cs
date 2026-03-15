@@ -31,6 +31,7 @@ internal sealed class PdfReadyForProcessingEventHandler : INotificationHandler<P
             notification.UserId);
 
         _ = _sender;
+
         return Task.CompletedTask;
     }
 }

@@ -94,7 +94,7 @@ internal static class GameToolboxRoutes
         {
             var result = await m.Send(new DrawCardsCommand(id, deckId, count)).ConfigureAwait(false);
             return Results.Ok(result);
-        }).WithName("ToolboxDrawCards").Produces<CardDrawResultDto>(200);
+        }).WithName("DrawToolboxCards").Produces<CardDrawResultDto>(200);
 
         toolboxes.MapPost("/{id:guid}/card-decks/{deckId:guid}/reset", async (Guid id, Guid deckId, IMediator m) =>
         {

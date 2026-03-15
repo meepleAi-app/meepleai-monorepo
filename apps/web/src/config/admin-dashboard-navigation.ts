@@ -381,7 +381,7 @@ export const DASHBOARD_SECTIONS: DashboardSection[] = [
     label: 'System',
     icon: MonitorIcon,
     baseRoute: '/admin/monitor',
-    additionalRoutes: ['/admin/config'],
+    additionalRoutes: ['/admin/config', '/admin/notifications'],
     actions: [
       {
         id: 'refresh',
@@ -489,6 +489,13 @@ export const DASHBOARD_SECTIONS: DashboardSection[] = [
         label: 'Containers',
         icon: BoxIcon,
         activePattern: /^\/admin\/monitor\/containers/,
+      },
+      // Admin Notifications
+      {
+        href: '/admin/notifications/compose',
+        label: 'Send Notification',
+        icon: BellIcon,
+        activePattern: /^\/admin\/notifications\/compose/,
       },
       // Config items
       {

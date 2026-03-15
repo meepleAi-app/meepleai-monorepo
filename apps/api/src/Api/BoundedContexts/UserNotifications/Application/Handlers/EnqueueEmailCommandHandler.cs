@@ -79,6 +79,8 @@ internal class EnqueueEmailCommandHandler : ICommandHandler<EnqueueEmailCommand,
                 command.UserName, command.FileName, command.ErrorMessage ?? "Unknown error"),
             "retry_available" => _emailTemplateService.RenderRetryAvailable(
                 command.UserName, command.FileName, command.RetryCount ?? 1),
+            "admin_manual_notification" => _emailTemplateService.RenderAdminNotification(
+                command.UserName, command.FileName, command.ErrorMessage ?? string.Empty),
             _ => throw new ArgumentException($"Unknown email template: {command.TemplateName}", nameof(command))
         };
 

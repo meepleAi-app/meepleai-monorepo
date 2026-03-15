@@ -1,8 +1,11 @@
 // GameStateHub - SignalR Hub for real-time game state updates
 // Issue #2406: Game State Editor UI - Backend Integration
+// Game Night Improvvisata: Added Improvvisata-specific hub methods (Task 10).
 //
 // Provides real-time bidirectional communication for game state changes.
 
+using Api.BoundedContexts.GameManagement.Domain.Events;
+using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
 
@@ -17,10 +20,12 @@ namespace Api.Hubs;
 public class GameStateHub : Hub
 {
     private readonly ILogger<GameStateHub> _logger;
+    private readonly IPublisher _publisher;
 
-    public GameStateHub(ILogger<GameStateHub> logger)
+    public GameStateHub(ILogger<GameStateHub> logger, IPublisher publisher)
     {
         _logger = logger;
+        _publisher = publisher;
     }
 
     /// <summary>
@@ -202,6 +207,78 @@ public class GameStateHub : Hub
             sessionId,
             Context.UserIdentifier
         );
+    }
+
+    // ── Game Night Improvvisata methods (Task 10) ────────────────────────────
+
+    /// <summary>
+    /// Broadcast a dispute verdict to all clients in the session.
+    /// Called by server-side event handlers after AI arbitration.
+    /// </summary>
+    public async Task NotifyDisputeResolved(string sessionId, object verdict)
+    {
+        await Clients.Group(GetSessionGroup(sessionId))
+            .SendAsync("DisputeResolved", verdict).ConfigureAwait(false);
+
+        _logger.LogInformation(
+            "DisputeResolved broadcast for session {SessionId}",
+            sessionId);
+    }
+
+    /// <summary>
+    /// Broadcast session-paused notification to all clients in the session.
+    /// Called by server-side event handlers after pause snapshot creation.
+    /// </summary>
+    public async Task NotifySessionPaused(string sessionId)
+    {
+        await Clients.Group(GetSessionGroup(sessionId))
+            .SendAsync("SessionPaused", new { sessionId, timestamp = DateTime.UtcNow }).ConfigureAwait(false);
+
+        _logger.LogInformation(
+            "SessionPaused broadcast for session {SessionId}",
+            sessionId);
+    }
+
+    /// <summary>
+    /// Broadcast a score update to all clients in the session.
+    /// Used when the host confirms or modifies a score.
+    /// </summary>
+    public async Task NotifyScoreUpdated(string sessionId, object scoreUpdate)
+    {
+        await Clients.Group(GetSessionGroup(sessionId))
+            .SendAsync("ScoreUpdated", scoreUpdate).ConfigureAwait(false);
+
+        _logger.LogDebug(
+            "ScoreUpdated broadcast for session {SessionId}",
+            sessionId);
+    }
+
+    /// <summary>
+    /// Client signals that the app was backgrounded on a mobile device.
+    /// Publishes an <see cref="AppBackgroundedEvent"/> for the auto-save pipeline.
+    /// Silently ignores invalid session IDs.
+    /// </summary>
+    public async Task AppBackgrounded(string sessionId)
+    {
+        if (!Guid.TryParse(sessionId, out var sessionGuid))
+        {
+            _logger.LogDebug("AppBackgrounded: invalid sessionId '{SessionId}' — ignoring", sessionId);
+            return;
+        }
+
+        try
+        {
+            await _publisher.Publish(new AppBackgroundedEvent(sessionGuid)).ConfigureAwait(false);
+            _logger.LogInformation(
+                "AppBackgroundedEvent published for session {SessionId}",
+                sessionGuid);
+        }
+#pragma warning disable CA1031 // Do not catch general exception types
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to publish AppBackgroundedEvent for session {SessionId}", sessionGuid);
+        }
+#pragma warning restore CA1031
     }
 
     /// <summary>

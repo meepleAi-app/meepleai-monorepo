@@ -3832,6 +3832,10 @@ namespace Api.Infrastructure.Migrations
                         .HasDefaultValue(0)
                         .HasColumnName("current_turn_index");
 
+                    b.Property<string>("DisputesJson")
+                        .HasColumnType("jsonb")
+                        .HasColumnName("disputes_json");
+
                     b.Property<Guid?>("GameId")
                         .HasColumnType("uuid")
                         .HasColumnName("game_id");
@@ -4033,6 +4037,76 @@ namespace Api.Infrastructure.Migrations
                         .HasDatabaseName("ix_live_turn_records_session_turn");
 
                     b.ToTable("live_session_turn_records", (string)null);
+                });
+
+            modelBuilder.Entity("Api.Infrastructure.Entities.GameManagement.PauseSnapshotEntity", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("AgentConversationSummary")
+                        .HasMaxLength(5000)
+                        .HasColumnType("character varying(5000)")
+                        .HasColumnName("agent_conversation_summary");
+
+                    b.Property<string>("AttachmentIdsJson")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("attachment_ids_json");
+
+                    b.Property<string>("CurrentPhase")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("current_phase");
+
+                    b.Property<int>("CurrentTurn")
+                        .HasColumnType("integer")
+                        .HasColumnName("current_turn");
+
+                    b.Property<string>("DisputesJson")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("disputes_json");
+
+                    b.Property<string>("GameStateJson")
+                        .HasColumnType("jsonb")
+                        .HasColumnName("game_state_json");
+
+                    b.Property<bool>("IsAutoSave")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_auto_save");
+
+                    b.Property<Guid>("LiveGameSessionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("live_game_session_id");
+
+                    b.Property<string>("PlayerScoresJson")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("player_scores_json");
+
+                    b.Property<DateTime>("SavedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("saved_at");
+
+                    b.Property<Guid>("SavedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("saved_by_user_id");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("LiveGameSessionId")
+                        .HasDatabaseName("ix_pause_snapshots_live_game_session_id");
+
+                    b.HasIndex("LiveGameSessionId", "IsAutoSave")
+                        .HasDatabaseName("ix_pause_snapshots_session_is_auto_save");
+
+                    b.HasIndex("LiveGameSessionId", "SavedAt")
+                        .HasDatabaseName("ix_pause_snapshots_session_saved_at");
+
+                    b.ToTable("pause_snapshots", (string)null);
                 });
 
             modelBuilder.Entity("Api.Infrastructure.Entities.GameManagement.PlayRecordEntity", b =>
@@ -6003,6 +6077,8 @@ namespace Api.Infrastructure.Migrations
                         .HasColumnType("integer");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("GameId");
 
                     b.HasIndex("PdfDocumentId");
 
@@ -12811,11 +12887,19 @@ namespace Api.Infrastructure.Migrations
 
             modelBuilder.Entity("Api.Infrastructure.Entities.KnowledgeBase.RaptorSummaryEntity", b =>
                 {
+                    b.HasOne("Api.Infrastructure.Entities.GameEntity", "Game")
+                        .WithMany()
+                        .HasForeignKey("GameId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
                     b.HasOne("Api.Infrastructure.Entities.PdfDocumentEntity", "PdfDocument")
                         .WithMany()
                         .HasForeignKey("PdfDocumentId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.Navigation("Game");
 
                     b.Navigation("PdfDocument");
                 });

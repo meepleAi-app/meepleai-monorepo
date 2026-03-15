@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using Api.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using Pgvector;
@@ -13,9 +14,11 @@ using Pgvector;
 namespace Api.Infrastructure.Migrations
 {
     [DbContext(typeof(MeepleAiDbContext))]
-    partial class MeepleAiDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260315094117_AddRaptorSummaries")]
+    partial class AddRaptorSummaries
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -5781,48 +5784,6 @@ namespace Api.Infrastructure.Migrations
                     b.HasIndex("GameId", "FactType");
 
                     b.ToTable("extracted_facts", (string)null);
-                });
-
-            modelBuilder.Entity("Api.Infrastructure.Entities.KnowledgeBase.GameEntityRelationEntity", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<float>("Confidence")
-                        .HasColumnType("real");
-
-                    b.Property<DateTime>("ExtractedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<Guid>("GameId")
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("Relation")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("SourceEntity")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("SourceType")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("TargetEntity")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("TargetType")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("GameId");
-
-                    b.ToTable("GameEntityRelations");
                 });
 
             modelBuilder.Entity("Api.Infrastructure.Entities.KnowledgeBase.ModelChangeLogEntity", b =>
@@ -12785,17 +12746,6 @@ namespace Api.Infrastructure.Migrations
                     b.Navigation("GameSession");
 
                     b.Navigation("User");
-                });
-
-            modelBuilder.Entity("Api.Infrastructure.Entities.KnowledgeBase.GameEntityRelationEntity", b =>
-                {
-                    b.HasOne("Api.Infrastructure.Entities.GameEntity", "Game")
-                        .WithMany()
-                        .HasForeignKey("GameId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Game");
                 });
 
             modelBuilder.Entity("Api.Infrastructure.Entities.KnowledgeBase.RagUserConfigEntity", b =>

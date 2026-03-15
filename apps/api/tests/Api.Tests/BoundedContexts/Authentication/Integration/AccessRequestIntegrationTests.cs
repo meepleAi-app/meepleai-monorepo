@@ -7,6 +7,7 @@ using Api.BoundedContexts.Authentication.Domain.ValueObjects;
 using Api.BoundedContexts.Authentication.Infrastructure.Persistence;
 using Api.BoundedContexts.Authentication.Infrastructure.Repositories;
 using Api.Infrastructure;
+using Api.SharedKernel.Infrastructure.Persistence;
 using Api.Tests.Constants;
 using Api.Tests.TestHelpers;
 using FluentAssertions;
@@ -28,11 +29,13 @@ public sealed class AccessRequestIntegrationTests : IDisposable
 {
     private readonly MeepleAiDbContext _dbContext;
     private readonly IAccessRequestRepository _repository;
+    private readonly IUnitOfWork _unitOfWork;
 
     public AccessRequestIntegrationTests()
     {
         _dbContext = TestDbContextFactory.CreateInMemoryDbContext();
         _repository = new AccessRequestRepository(_dbContext);
+        _unitOfWork = new EfCoreUnitOfWork(_dbContext);
     }
 
     public void Dispose() => _dbContext.Dispose();
@@ -50,7 +53,7 @@ public sealed class AccessRequestIntegrationTests : IDisposable
             .Setup(r => r.GetByEmailAsync(It.IsAny<Email>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((User?)null);
 
-        var handler = new RequestAccessCommandHandler(_repository, userRepoMock.Object);
+        var handler = new RequestAccessCommandHandler(_repository, userRepoMock.Object, _unitOfWork);
         var command = new RequestAccessCommand("newuser@example.com");
 
         // Act
@@ -74,7 +77,7 @@ public sealed class AccessRequestIntegrationTests : IDisposable
             .Setup(r => r.GetByEmailAsync(It.IsAny<Email>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((User?)null);
 
-        var handler = new RequestAccessCommandHandler(_repository, userRepoMock.Object);
+        var handler = new RequestAccessCommandHandler(_repository, userRepoMock.Object, _unitOfWork);
         var command = new RequestAccessCommand("VISITOR@EXAMPLE.COM");
 
         // Act
@@ -100,7 +103,7 @@ public sealed class AccessRequestIntegrationTests : IDisposable
             .Setup(r => r.GetByEmailAsync(It.IsAny<Email>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((User?)null);
 
-        var handler = new RequestAccessCommandHandler(_repository, userRepoMock.Object);
+        var handler = new RequestAccessCommandHandler(_repository, userRepoMock.Object, _unitOfWork);
         var command = new RequestAccessCommand("duplicate@example.com");
 
         // Act — email enumeration prevention: should not throw even for existing
@@ -125,7 +128,7 @@ public sealed class AccessRequestIntegrationTests : IDisposable
         await _repository.AddAsync(request);
         await _dbContext.SaveChangesAsync();
 
-        var handler = new ApproveAccessRequestCommandHandler(_repository);
+        var handler = new ApproveAccessRequestCommandHandler(_repository, _unitOfWork);
         var adminId = Guid.NewGuid();
         var command = new ApproveAccessRequestCommand(request.Id, adminId);
 
@@ -145,7 +148,7 @@ public sealed class AccessRequestIntegrationTests : IDisposable
     public async Task ApproveAccessRequest_WithNonExistentId_ThrowsNotFoundException()
     {
         // Arrange
-        var handler = new ApproveAccessRequestCommandHandler(_repository);
+        var handler = new ApproveAccessRequestCommandHandler(_repository, _unitOfWork);
         var command = new ApproveAccessRequestCommand(Guid.NewGuid(), Guid.NewGuid());
 
         // Act & Assert
@@ -162,7 +165,7 @@ public sealed class AccessRequestIntegrationTests : IDisposable
         await _repository.AddAsync(request);
         await _dbContext.SaveChangesAsync();
 
-        var handler = new ApproveAccessRequestCommandHandler(_repository);
+        var handler = new ApproveAccessRequestCommandHandler(_repository, _unitOfWork);
         var command = new ApproveAccessRequestCommand(request.Id, Guid.NewGuid());
 
         // Act — approving again should not throw
@@ -182,7 +185,7 @@ public sealed class AccessRequestIntegrationTests : IDisposable
         await _repository.AddAsync(request);
         await _dbContext.SaveChangesAsync();
 
-        var handler = new RejectAccessRequestCommandHandler(_repository);
+        var handler = new RejectAccessRequestCommandHandler(_repository, _unitOfWork);
         var adminId = Guid.NewGuid();
         var command = new RejectAccessRequestCommand(request.Id, adminId, "Not eligible at this time.");
 
@@ -202,7 +205,7 @@ public sealed class AccessRequestIntegrationTests : IDisposable
     public async Task RejectAccessRequest_WithNonExistentId_ThrowsNotFoundException()
     {
         // Arrange
-        var handler = new RejectAccessRequestCommandHandler(_repository);
+        var handler = new RejectAccessRequestCommandHandler(_repository, _unitOfWork);
         var command = new RejectAccessRequestCommand(Guid.NewGuid(), Guid.NewGuid(), null);
 
         // Act & Assert
@@ -226,7 +229,7 @@ public sealed class AccessRequestIntegrationTests : IDisposable
         await _repository.AddAsync(req3);
         await _dbContext.SaveChangesAsync();
 
-        var handler = new BulkApproveAccessRequestsCommandHandler(_repository);
+        var handler = new BulkApproveAccessRequestsCommandHandler(_repository, _unitOfWork);
         var adminId = Guid.NewGuid();
         var command = new BulkApproveAccessRequestsCommand(
             new List<Guid> { req1.Id, req2.Id, req3.Id },
@@ -258,7 +261,7 @@ public sealed class AccessRequestIntegrationTests : IDisposable
         await _dbContext.SaveChangesAsync();
 
         var phantomId = Guid.NewGuid();
-        var handler = new BulkApproveAccessRequestsCommandHandler(_repository);
+        var handler = new BulkApproveAccessRequestsCommandHandler(_repository, _unitOfWork);
         var command = new BulkApproveAccessRequestsCommand(
             new List<Guid> { realRequest.Id, phantomId },
             Guid.NewGuid());
@@ -278,7 +281,7 @@ public sealed class AccessRequestIntegrationTests : IDisposable
     {
         // Arrange
         var ids = Enumerable.Range(0, 26).Select(_ => Guid.NewGuid()).ToList();
-        var handler = new BulkApproveAccessRequestsCommandHandler(_repository);
+        var handler = new BulkApproveAccessRequestsCommandHandler(_repository, _unitOfWork);
         var command = new BulkApproveAccessRequestsCommand(ids, Guid.NewGuid());
 
         // Act & Assert

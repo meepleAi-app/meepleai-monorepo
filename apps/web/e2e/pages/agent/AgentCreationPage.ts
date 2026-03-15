@@ -21,18 +21,25 @@ export class AgentCreationPage extends BasePage {
     await this.click(
       this.page
         .locator('[data-testid="create-agent-button"]')
-        .or(this.page.getByRole('button', { name: /create agent|new agent/i }))
+        .or(this.page.getByRole('button', { name: /crea agente|create agent|new agent|\+/i }))
     );
-    await expect(
-      this.page.locator('[data-testid="agent-creation-sheet"]').or(this.page.getByRole('dialog'))
-    ).toBeVisible();
+    // Wait for sheet/dialog to appear
+    await expect(this.page.locator('[role="dialog"]').first()).toBeVisible({ timeout: 5_000 });
   }
 
   async selectGame(gameTitle: string): Promise<void> {
+    // Click the game selector trigger
     const gameSelector = this.page
-      .locator('[data-testid="game-selector"]')
-      .or(this.page.getByLabel(/game/i));
+      .locator('[aria-label="Select game"]')
+      .or(this.page.getByRole('combobox').first());
     await gameSelector.click();
+    // Search for the game
+    const searchInput = this.page.getByPlaceholder(/search games|cerca/i);
+    if (await searchInput.isVisible({ timeout: 2_000 }).catch(() => false)) {
+      await this.fill(searchInput, gameTitle);
+      await this.page.waitForTimeout(1000);
+    }
+    // Click the matching option
     await this.page.getByText(gameTitle, { exact: false }).first().click();
   }
 
@@ -40,66 +47,49 @@ export class AgentCreationPage extends BasePage {
     const strategyOption = this.page
       .locator(`[data-testid="strategy-${strategy.toLowerCase()}"]`)
       .or(this.page.getByText(strategy, { exact: false }));
-    await strategyOption.click();
+    if (await strategyOption.isVisible({ timeout: 2_000 }).catch(() => false)) {
+      await strategyOption.click();
+    }
   }
 
   async selectFreeTier(): Promise<void> {
     const freeTier = this.page
       .locator('[data-testid="tier-free"]')
-      .or(this.page.getByText(/free/i).first());
-    if (await freeTier.isVisible()) {
+      .or(this.page.getByText(/free|gratuito/i).first());
+    if (await freeTier.isVisible({ timeout: 2_000 }).catch(() => false)) {
       await freeTier.click();
     }
   }
 
   async submitCreation(): Promise<AgentCreationResult> {
-    // Register BOTH response interceptors BEFORE clicking
+    // Register response interceptors BEFORE clicking
     const agentResponsePromise = this.page.waitForResponse(
       resp =>
-        resp.url().includes('/agents') &&
+        (resp.url().includes('/agents') || resp.url().includes('/game-sessions')) &&
         resp.request().method() === 'POST' &&
         resp.status() >= 200 &&
         resp.status() < 300
     );
 
-    const sessionResponsePromise = this.page
-      .waitForResponse(
-        resp => resp.url().includes('/game-sessions') && resp.status() >= 200 && resp.status() < 300
-      )
-      .catch(() => null); // Optional - may not fire
+    // Submit button: "Crea e Inizia Chat" or "Creazione..."
+    await this.click(this.page.getByRole('button', { name: /crea e inizia chat|crea|create/i }));
 
-    await this.click(
-      this.page
-        .locator('[data-testid="create-agent-submit"]')
-        .or(this.page.getByRole('button', { name: /create|submit/i }))
-    );
-
-    const agentResponse = await agentResponsePromise;
-    const agentData = await agentResponse.json();
-
-    let gameSessionId = agentData.gameSessionId ?? '';
-    if (!gameSessionId) {
-      const sessionResponse = await Promise.race([
-        sessionResponsePromise,
-        new Promise<null>(resolve => setTimeout(() => resolve(null), 10_000)),
-      ]);
-      if (sessionResponse) {
-        const sessionData = await sessionResponse.json();
-        gameSessionId = sessionData.id ?? sessionData.gameSessionId ?? '';
-      }
-    }
+    const response = await agentResponsePromise;
+    const data = await response.json();
 
     return {
-      agentId: agentData.id ?? agentData.agentId ?? '',
-      gameSessionId,
+      agentId: data.id ?? data.agentId ?? '',
+      gameSessionId: data.gameSessionId ?? '',
     };
   }
 
   async waitForAgentReady(timeout: number = 30_000): Promise<void> {
+    // Wait for chat to become available or agent status
     await expect(
       this.page
-        .locator('[data-testid="agent-status-ready"]')
-        .or(this.page.getByText(/ready|online|active/i))
+        .locator('[data-testid="message-input"]')
+        .or(this.page.locator('[data-testid="chat-thread-view"]'))
+        .or(this.page.getByText(/pronto|ready|inizia conversazione/i))
     ).toBeVisible({ timeout });
   }
 }

@@ -2,6 +2,7 @@ using Api.BoundedContexts.Authentication.Application.Commands.AccessRequest;
 using Api.BoundedContexts.Authentication.Domain.Enums;
 using Api.BoundedContexts.Authentication.Domain.Repositories;
 using Api.Middleware.Exceptions;
+using Api.SharedKernel.Infrastructure.Persistence;
 using Api.Tests.Constants;
 using MediatR;
 using Moq;
@@ -15,12 +16,14 @@ namespace Api.Tests.BoundedContexts.Authentication.Application.Commands;
 public class RejectAccessRequestCommandHandlerTests
 {
     private readonly Mock<IAccessRequestRepository> _repoMock;
+    private readonly Mock<IUnitOfWork> _unitOfWorkMock;
     private readonly RejectAccessRequestCommandHandler _handler;
 
     public RejectAccessRequestCommandHandlerTests()
     {
         _repoMock = new Mock<IAccessRequestRepository>();
-        _handler = new RejectAccessRequestCommandHandler(_repoMock.Object);
+        _unitOfWorkMock = new Mock<IUnitOfWork>();
+        _handler = new RejectAccessRequestCommandHandler(_repoMock.Object, _unitOfWorkMock.Object);
     }
 
     [Fact]

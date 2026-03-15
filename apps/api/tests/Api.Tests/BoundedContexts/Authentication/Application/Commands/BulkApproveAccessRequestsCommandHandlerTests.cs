@@ -1,5 +1,6 @@
 using Api.BoundedContexts.Authentication.Application.Commands.AccessRequest;
 using Api.BoundedContexts.Authentication.Domain.Repositories;
+using Api.SharedKernel.Infrastructure.Persistence;
 using Api.Tests.Constants;
 using Moq;
 using Xunit;
@@ -12,12 +13,14 @@ namespace Api.Tests.BoundedContexts.Authentication.Application.Commands;
 public class BulkApproveAccessRequestsCommandHandlerTests
 {
     private readonly Mock<IAccessRequestRepository> _repoMock;
+    private readonly Mock<IUnitOfWork> _unitOfWorkMock;
     private readonly BulkApproveAccessRequestsCommandHandler _handler;
 
     public BulkApproveAccessRequestsCommandHandlerTests()
     {
         _repoMock = new Mock<IAccessRequestRepository>();
-        _handler = new BulkApproveAccessRequestsCommandHandler(_repoMock.Object);
+        _unitOfWorkMock = new Mock<IUnitOfWork>();
+        _handler = new BulkApproveAccessRequestsCommandHandler(_repoMock.Object, _unitOfWorkMock.Object);
     }
 
     [Fact]

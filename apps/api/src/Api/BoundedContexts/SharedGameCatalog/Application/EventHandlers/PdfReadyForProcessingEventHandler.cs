@@ -30,8 +30,7 @@ internal sealed class PdfReadyForProcessingEventHandler : INotificationHandler<P
             notification.SharedGameId,
             notification.UserId);
 
-        // Will dispatch indexing command to DocumentProcessing BC when pipeline is ready.
-        _ = _sender; // Suppress unused field warning until integration is complete
+        _ = _sender;
 
         return Task.CompletedTask;
     }

@@ -17,6 +17,7 @@ const MAX_HAND_SIZE = 10;
 const STORAGE_KEY = 'meeple-card-hand';
 const PINS_KEY = 'meeple-card-pins';
 const EXPANDED_KEY = 'meeple-card-stack-expanded';
+const HAND_COLLAPSED_KEY = 'meeple-hand-collapsed';
 
 // ---------------------------------------------------------------------------
 // sessionStorage helpers
@@ -71,6 +72,16 @@ function writeExpanded(expanded: boolean): void {
   localStorage.setItem(EXPANDED_KEY, String(expanded));
 }
 
+function readHandCollapsed(): boolean {
+  if (typeof window === 'undefined') return false;
+  return localStorage.getItem(HAND_COLLAPSED_KEY) === 'true';
+}
+
+function writeHandCollapsed(collapsed: boolean): void {
+  if (typeof window === 'undefined') return;
+  localStorage.setItem(HAND_COLLAPSED_KEY, String(collapsed));
+}
+
 // ---------------------------------------------------------------------------
 // Store
 // ---------------------------------------------------------------------------
@@ -82,6 +93,7 @@ interface CardHandState {
   maxHandSize: number;
   context: 'user' | 'admin';
   expandedStack: boolean;
+  isHandCollapsed: boolean;
   highlightEntity: MeepleEntityType | null;
 
   drawCard: (card: HandCard) => void;
@@ -94,6 +106,8 @@ interface CardHandState {
   swipePrev: () => void;
   toggleContext: () => void;
   toggleExpandStack: () => void;
+  collapseHand: () => void;
+  expandHand: () => void;
   setHighlightEntity: (entity: MeepleEntityType | null) => void;
   clear: () => void;
 }
@@ -105,6 +119,7 @@ export const useCardHand = create<CardHandState>((set, get) => ({
   maxHandSize: MAX_HAND_SIZE,
   context: 'user',
   expandedStack: readExpanded(),
+  isHandCollapsed: readHandCollapsed(),
   highlightEntity: null,
 
   drawCard: card => {
@@ -216,6 +231,16 @@ export const useCardHand = create<CardHandState>((set, get) => ({
     const { expandedStack } = get();
     writeExpanded(!expandedStack);
     set({ expandedStack: !expandedStack });
+  },
+
+  collapseHand: () => {
+    writeHandCollapsed(true);
+    set({ isHandCollapsed: true });
+  },
+
+  expandHand: () => {
+    writeHandCollapsed(false);
+    set({ isHandCollapsed: false });
   },
 
   setHighlightEntity: entity => set({ highlightEntity: entity }),

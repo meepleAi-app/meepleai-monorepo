@@ -1,37 +1,26 @@
-/**
- * Gaming Hub Client — Issue #5098, Epic #5094
- *
- * Dashboard redesign: Hero + 2-column content layout.
- *
- * Sections:
- *   1. Greeting + QuickStats (full width)
- *   2. DashboardSessionHero (full width)
- *   3. 2-column grid:
- *      - Left: RecentGamesSection (3 list-cards)
- *      - Right: AgentsDashboardSection + RecentChatsDashboardSection
- */
-
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 
 import { motion } from 'framer-motion';
 
 import {
   AgentsDashboardSection,
-  DashboardSessionHero,
+  HeroZone,
+  QuickCardsCarousel,
   QuickStats,
   RecentChatsDashboardSection,
   RecentGamesSection,
+  SessionModeDashboard,
 } from '@/components/dashboard-v2';
 import { useAddGameWizard } from '@/components/library/add-game-sheet/AddGameWizardProvider';
 import { useOnboardingStatus } from '@/components/onboarding/use-onboarding-status';
 import { WelcomeChecklist } from '@/components/onboarding/WelcomeChecklist';
 import { WelcomeWizard } from '@/components/onboarding/WelcomeWizard';
 import { useAuthUser } from '@/hooks/useAuthUser';
+import { useDashboardContext } from '@/hooks/useDashboardContext';
 import { useDashboardStore } from '@/lib/stores/dashboard-store';
-
-// ─── Animation factory ───────────────────────────────────────────────────────
+import { useCardHand } from '@/stores/use-card-hand';
 
 function fadeUp(delay: number) {
   return {
@@ -41,13 +30,12 @@ function fadeUp(delay: number) {
   } as const;
 }
 
-// ─── Main component ───────────────────────────────────────────────────────────
-
 export function GamingHubClient() {
   const { user } = useAuthUser();
   const { openWizard: _openWizard } = useAddGameWizard();
   const { showChecklist, isLoading: isLoadingOnboarding } = useOnboardingStatus();
 
+  const { drawCard, protectCard } = useCardHand();
   const {
     stats,
     recentSessions,
@@ -61,21 +49,59 @@ export function GamingHubClient() {
 
   useEffect(() => {
     fetchStats();
-    fetchRecentSessions(1); // used as "last session" fallback in hero
+    fetchRecentSessions(1);
     fetchGames();
   }, [fetchStats, fetchRecentSessions, fetchGames]);
 
-  const displayName = user?.displayName ?? user?.email?.split('@')[0] ?? 'Giocatore';
+  useEffect(() => {
+    drawCard({ id: 'section-dashboard', entity: 'custom', title: 'Dashboard', href: '/dashboard' });
+  }, [drawCard]);
 
+  // Context detection
+  const dashCtx = useDashboardContext({
+    recentSessions,
+    games,
+    upcomingGameNight: null, // TODO: wire to real API
+    incompleteSessions: [],
+  });
+
+  // Protect session card from eviction when in session mode
+  useEffect(() => {
+    if (dashCtx.isSessionMode && dashCtx.hero.data) {
+      const sessionData = dashCtx.hero.data as { id: string };
+      protectCard(sessionData.id);
+    }
+  }, [dashCtx.isSessionMode, dashCtx.hero.data, protectCard]);
+
+  // Quick cards: recent games
+  const quickCards = useMemo(() => {
+    return games.slice(0, 3).map(g => ({
+      id: g.id,
+      title: g.title,
+      imageUrl: g.imageUrl ?? g.thumbnailUrl,
+      entity: 'game' as const,
+    }));
+  }, [games]);
+
+  const displayName = user?.displayName ?? user?.email?.split('@')[0] ?? 'Giocatore';
   const greeting = getGreeting();
 
+  // ── Session Mode: simplified layout ───────────────────────────────────────
+  if (dashCtx.isSessionMode && dashCtx.hero.data) {
+    return (
+      <div className="py-6 space-y-4 w-full max-w-screen-xl mx-auto">
+        <SessionModeDashboard session={dashCtx.hero.data as any} />
+      </div>
+    );
+  }
+
+  // ── Normal Mode: full contextual dashboard ────────────────────────────────
   return (
     <div className="py-6 space-y-6 w-full max-w-screen-xl mx-auto">
-      {/* ── 0. Onboarding (first-time users) ─────────────────────── */}
       <WelcomeWizard />
       {!isLoadingOnboarding && showChecklist && <WelcomeChecklist />}
 
-      {/* ── 1. Greeting + QuickStats ────────────────────────────── */}
+      {/* 1. Greeting + Stats */}
       <motion.section {...fadeUp(0)}>
         <div className="mb-4">
           <p className="text-sm font-nunito font-medium text-muted-foreground mb-0.5">{greeting}</p>
@@ -84,25 +110,33 @@ export function GamingHubClient() {
         <QuickStats stats={stats} isLoading={isLoadingStats} />
       </motion.section>
 
-      {/* ── 2. Session Hero ─────────────────────────────────────── */}
+      {/* 2. Contextual Hero Zone */}
       <motion.section {...fadeUp(1)}>
-        <DashboardSessionHero lastSession={recentSessions[0]} />
+        <HeroZone hero={dashCtx.hero} lastSession={recentSessions[0]} />
       </motion.section>
 
-      {/* ── 3. Content grid: 2-col on desktop ──────────────────── */}
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] xl:grid-cols-[1fr_340px] gap-6">
-        {/* Left column: Recent games */}
+      {/* 3. Quick Cards Carousel */}
+      {quickCards.length > 0 && (
         <motion.section {...fadeUp(2)}>
-          <RecentGamesSection games={games} isLoading={isLoadingGames} />
+          <h2 className="font-quicksand text-base font-bold text-foreground mb-2">
+            Accesso rapido
+          </h2>
+          <QuickCardsCarousel items={quickCards} />
         </motion.section>
+      )}
 
-        {/* Right column: Agents + Chats stacked */}
+      {/* 4. Content grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] xl:grid-cols-[1fr_340px] gap-6">
         <div className="space-y-6">
           <motion.section {...fadeUp(3)}>
+            <RecentGamesSection games={games} isLoading={isLoadingGames} />
+          </motion.section>
+        </div>
+        <div className="space-y-6">
+          <motion.section {...fadeUp(4)}>
             <AgentsDashboardSection />
           </motion.section>
-
-          <motion.section {...fadeUp(4)}>
+          <motion.section {...fadeUp(5)}>
             <RecentChatsDashboardSection />
           </motion.section>
         </div>
@@ -110,8 +144,6 @@ export function GamingHubClient() {
     </div>
   );
 }
-
-// ─── Time-based greeting ─────────────────────────────────────────────────────
 
 function getGreeting(): string {
   const hour = new Date().getHours();

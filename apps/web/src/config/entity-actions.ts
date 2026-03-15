@@ -1,122 +1,124 @@
-// apps/web/src/config/entity-actions.ts
+/**
+ * Entity Actions Configuration
+ *
+ * Defines reusable action card definitions for entity-specific UI,
+ * such as the session mode dashboard quick actions and the bottom nav.
+ */
+
 import {
   BookOpen,
-  Compass,
-  MessageSquare,
-  ClipboardList,
-  Gamepad2,
-  Star,
   Bot,
-  FileText,
-  StickyNote,
+  Gamepad2,
+  HelpCircle,
+  Home,
+  Library,
+  MessageSquare,
   Trophy,
-  StopCircle,
-  Pencil,
-  Database,
-  RefreshCw,
-  Mail,
-  BarChart3,
-  ArrowRight,
-  Share2,
-  Wrench,
-  Link2,
-  UserCheck,
-  Eye,
+  User,
 } from 'lucide-react';
 
-import type { MeepleEntityType } from '@/components/ui/data-display/meeple-card';
+import type { MeepleEntityType } from '@/components/ui/data-display/meeple-card-styles';
 
 import type { LucideIcon } from 'lucide-react';
 
+/**
+ * A single action card shown in bottom-nav / quick-actions grids.
+ */
 export interface BottomNavActionDef {
+  /** Unique identifier for the action */
   id: string;
+  /** Display label */
   label: string;
+  /** Lucide icon component */
   icon: LucideIcon;
-  variant?: 'primary' | 'secondary' | 'ghost' | 'destructive';
-  /** If set, this action draws a card instead of triggering onClick */
-  drawCard?: { entity: MeepleEntityType; href: string };
-  /** Route to navigate to (relative to current card's href) */
+  /** Optional visual variant */
+  variant?: 'primary' | 'secondary' | 'ghost' | 'destructive' | 'default';
+  /** Optional relative route suffix (e.g. '/rules' → /games/:id/rules) */
   route?: string;
+  /**
+   * If set, clicking this default action draws a card and navigates.
+   * Used only for DEFAULT_ACTIONS.
+   */
+  drawCard?: {
+    entity: MeepleEntityType;
+    href: string;
+  };
 }
 
-/** Actions shown when a card of this entity type is focused */
-export const ENTITY_ACTIONS: Record<MeepleEntityType, BottomNavActionDef[]> = {
-  game: [
-    { id: 'new-session', label: 'Nuova Sessione', icon: Gamepad2, variant: 'primary' },
-    { id: 'wishlist', label: 'Wishlist', icon: Star },
-    { id: 'chat-ai', label: 'Chat AI', icon: Bot },
-    { id: 'upload-pdf', label: 'Carica PDF', icon: FileText },
-  ],
-  session: [
-    { id: 'add-notes', label: 'Note', icon: StickyNote, variant: 'primary' },
-    { id: 'score', label: 'Punteggi', icon: Trophy },
-    { id: 'end-session', label: 'Termina', icon: StopCircle, variant: 'destructive' },
-  ],
-  agent: [
-    { id: 'chat', label: 'Chat', icon: MessageSquare, variant: 'primary' },
-    { id: 'edit', label: 'Modifica', icon: Pencil },
-    { id: 'view-kb', label: 'KB Cards', icon: Database },
-  ],
-  kb: [
-    { id: 'documents', label: 'Documenti', icon: FileText, variant: 'primary' },
-    { id: 'reindex', label: 'Reindicizza', icon: RefreshCw },
-    { id: 'edit', label: 'Modifica', icon: Pencil },
-  ],
-  player: [
-    { id: 'sessions', label: 'Sessioni', icon: ClipboardList, variant: 'primary' },
-    { id: 'invite', label: 'Invita', icon: Mail },
-    { id: 'stats', label: 'Statistiche', icon: BarChart3 },
-  ],
-  chatSession: [
-    { id: 'continue', label: 'Continua', icon: ArrowRight, variant: 'primary' },
-    { id: 'export', label: 'Esporta', icon: FileText },
-    { id: 'share', label: 'Condividi', icon: Share2 },
-  ],
-  toolkit: [
-    { id: 'view-tools', label: 'Strumenti', icon: Wrench, variant: 'primary' },
-    { id: 'link-games', label: 'Collega Giochi', icon: Link2 },
-  ],
-  tool: [
-    { id: 'view-tool', label: 'Dettagli', icon: Eye, variant: 'primary' },
-    { id: 'edit', label: 'Modifica', icon: Pencil },
-  ],
-  event: [
-    { id: 'details', label: 'Dettagli', icon: Eye, variant: 'primary' },
-    { id: 'rsvp', label: 'RSVP', icon: UserCheck },
-    { id: 'share', label: 'Condividi', icon: Share2 },
-  ],
-  custom: [{ id: 'details', label: 'Dettagli', icon: Eye }],
-};
+/** Quick-action card definitions for session mode dashboard */
+export const SESSION_QUICK_ACTIONS: BottomNavActionDef[] = [
+  { id: 'rules', label: 'Regole', icon: BookOpen, variant: 'primary', route: '/rules' },
+  { id: 'faqs', label: 'FAQ', icon: HelpCircle, route: '/faqs' },
+  { id: 'ask-ai', label: 'Chiedi AI', icon: Bot, variant: 'primary' },
+  { id: 'scores', label: 'Punteggi', icon: Trophy, route: '/scoreboard' },
+];
 
-/** Actions shown when no card is focused — "draw card" actions */
+/**
+ * Default nav actions shown when no card is focused in the hand.
+ */
 export const DEFAULT_ACTIONS: BottomNavActionDef[] = [
   {
+    id: 'home',
+    label: 'Home',
+    icon: Home,
+    variant: 'ghost',
+    drawCard: { entity: 'custom', href: '/dashboard' },
+  },
+  {
     id: 'library',
-    label: 'Library',
-    icon: BookOpen,
+    label: 'Libreria',
+    icon: Library,
+    variant: 'ghost',
     drawCard: { entity: 'game', href: '/library' },
   },
   {
-    id: 'discover',
-    label: 'Discover',
-    icon: Compass,
-    drawCard: { entity: 'game', href: '/discover' },
+    id: 'sessions',
+    label: 'Sessioni',
+    icon: Gamepad2,
+    variant: 'ghost',
+    drawCard: { entity: 'session', href: '/sessions' },
   },
   {
     id: 'chat',
     label: 'Chat',
     icon: MessageSquare,
+    variant: 'ghost',
     drawCard: { entity: 'chatSession', href: '/chat' },
   },
   {
-    id: 'sessions',
-    label: 'Sessions',
-    icon: ClipboardList,
-    drawCard: { entity: 'session', href: '/sessions' },
+    id: 'profile',
+    label: 'Profilo',
+    icon: User,
+    variant: 'ghost',
+    drawCard: { entity: 'player', href: '/profile' },
   },
 ];
 
-/** Default pinned card definitions */
+/**
+ * Entity-specific actions shown when a card of that type is focused.
+ * Each array is rendered as the bottom nav action set.
+ */
+export const ENTITY_ACTIONS: Partial<Record<MeepleEntityType, BottomNavActionDef[]>> & {
+  custom: BottomNavActionDef[];
+} = {
+  game: [
+    { id: 'rules', label: 'Regole', icon: BookOpen, variant: 'primary', route: '/rules' },
+    { id: 'faqs', label: 'FAQ', icon: HelpCircle, route: '/faqs' },
+    { id: 'ask-ai', label: 'Chiedi AI', icon: Bot, variant: 'primary' },
+  ],
+  session: [
+    { id: 'rules', label: 'Regole', icon: BookOpen, variant: 'primary', route: '/rules' },
+    { id: 'scores', label: 'Punteggi', icon: Trophy, route: '/scoreboard' },
+    { id: 'ask-ai', label: 'Chiedi AI', icon: Bot, variant: 'primary' },
+  ],
+  chatSession: [
+    { id: 'chat', label: 'Chat', icon: MessageSquare, variant: 'primary' },
+    { id: 'ask-ai', label: 'Chiedi AI', icon: Bot },
+  ],
+  custom: [{ id: 'home', label: 'Home', icon: Home, variant: 'ghost' }],
+};
+
+/** Default pinned card definitions — auto-seeded on first load */
 export const DEFAULT_PINNED_CARDS = DEFAULT_ACTIONS.filter(a => a.drawCard).map(a => ({
   id: `section-${a.id}`,
   entity: a.drawCard!.entity,

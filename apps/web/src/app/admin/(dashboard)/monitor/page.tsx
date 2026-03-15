@@ -20,7 +20,6 @@ import { CacheTab } from './CacheTab';
 import { CommandCenterTab } from './CommandCenterTab';
 import { EmailManagementTab } from './EmailManagementTab';
 import { InfrastructureTab } from './InfrastructureTab';
-import { AdminMonitorNavConfig } from './NavConfig';
 import { TestingTab } from './TestingTab';
 
 interface AdminMonitorPageProps {
@@ -112,7 +111,6 @@ export default async function AdminMonitorPage({ searchParams }: AdminMonitorPag
 
   return (
     <div className="space-y-5">
-      <AdminMonitorNavConfig />
       <div>
         <h1 className="font-quicksand text-xl sm:text-2xl font-bold tracking-tight text-foreground">
           Monitor

@@ -7,7 +7,7 @@
 
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { MailIcon, PlusIcon, RefreshCwIcon, UsersIcon } from 'lucide-react';
@@ -18,25 +18,11 @@ import { InviteUserDialog } from '@/components/admin/invitations/InviteUserDialo
 import { InlineRoleSelect } from '@/components/admin/users/InlineRoleSelect';
 import { Badge } from '@/components/ui/data-display/badge';
 import { Button } from '@/components/ui/primitives/button';
-import { useSetNavConfig } from '@/hooks/useSetNavConfig';
 import { api } from '@/lib/api';
 
 export default function AdminUsersPage() {
-  const setNavConfig = useSetNavConfig();
   const queryClient = useQueryClient();
   const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
-
-  useEffect(() => {
-    setNavConfig({
-      miniNav: [
-        { id: 'users', label: 'All Users', href: '/admin/users' },
-        { id: 'invitations', label: 'Invitations', href: '/admin/users/invitations' },
-        { id: 'roles', label: 'Roles & Permissions', href: '/admin/users/roles' },
-        { id: 'activity', label: 'Activity Log', href: '/admin/users/activity' },
-      ],
-      actionBar: [],
-    });
-  }, [setNavConfig]);
 
   const usersQuery = useQuery({
     queryKey: ['admin', 'users'],

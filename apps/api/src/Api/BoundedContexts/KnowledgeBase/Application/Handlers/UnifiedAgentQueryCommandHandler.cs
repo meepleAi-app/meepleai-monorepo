@@ -5,6 +5,8 @@ using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services.MultiAgentRouter;
 using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
+using Api.Infrastructure.Entities;
+using Api.Middleware.Exceptions;
 using Api.Models;
 using Api.Services;
 using Api.SharedKernel.Application.Interfaces;
@@ -31,6 +33,7 @@ internal sealed class UnifiedAgentQueryCommandHandler
     private readonly AgentOrchestrationService _orchestrationService;
     private readonly AgentRouterService _routerService;
     private readonly IUserAiConsentCheckService _consentCheckService;
+    private readonly IRagAccessService _ragAccessService;
     private readonly ILogger<UnifiedAgentQueryCommandHandler> _logger;
 
     public UnifiedAgentQueryCommandHandler(
@@ -41,6 +44,7 @@ internal sealed class UnifiedAgentQueryCommandHandler
         AgentOrchestrationService orchestrationService,
         AgentRouterService routerService,
         IUserAiConsentCheckService consentCheckService,
+        IRagAccessService ragAccessService,
         ILogger<UnifiedAgentQueryCommandHandler> logger)
     {
         _agentRepository = agentRepository ?? throw new ArgumentNullException(nameof(agentRepository));
@@ -50,6 +54,7 @@ internal sealed class UnifiedAgentQueryCommandHandler
         _orchestrationService = orchestrationService ?? throw new ArgumentNullException(nameof(orchestrationService));
         _routerService = routerService ?? throw new ArgumentNullException(nameof(routerService));
         _consentCheckService = consentCheckService ?? throw new ArgumentNullException(nameof(consentCheckService));
+        _ragAccessService = ragAccessService ?? throw new ArgumentNullException(nameof(ragAccessService));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -92,6 +97,17 @@ internal sealed class UnifiedAgentQueryCommandHandler
                     "AI features are disabled. Enable AI processing in Settings > AI & Privacy to use this feature.",
                     "AI_CONSENT_REQUIRED"));
             yield break;
+        }
+
+        // RAG access enforcement
+        if (command.GameId.HasValue)
+        {
+            var userRole = Enum.TryParse<UserRole>(command.UserRole, ignoreCase: true, out var parsedRole)
+                ? parsedRole : UserRole.User;
+            var canAccess = await _ragAccessService.CanAccessRagAsync(
+                command.UserId, command.GameId.Value, userRole, cancellationToken).ConfigureAwait(false);
+            if (!canAccess)
+                throw new ForbiddenException("Accesso RAG non autorizzato");
         }
 
         // Phase 1: Agent Selection (via Router or explicit preference)

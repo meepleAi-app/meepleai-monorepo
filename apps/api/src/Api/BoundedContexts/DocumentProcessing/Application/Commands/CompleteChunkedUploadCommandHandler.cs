@@ -315,7 +315,6 @@ internal class CompleteChunkedUploadCommandHandler : ICommandHandler<CompleteChu
             ContentType = "application/pdf",
             UploadedByUserId = session.UserId,
             UploadedAt = _timeProvider.GetUtcNow().UtcDateTime,
-            ProcessingStatus = "pending",
             ContentHash = contentHash
         };
 
@@ -475,7 +474,7 @@ internal class CompleteChunkedUploadCommandHandler : ICommandHandler<CompleteChu
                 pdfId, pdfGuid, allDocumentChunks, embeddings!, pdfDoc, fullText!, db, scope, cancellationToken).ConfigureAwait(false);
 
             // Mark as completed
-            pdfDoc.ProcessingStatus = "completed";
+            pdfDoc.ProcessingState = "Ready";
             pdfDoc.ProcessedAt = _timeProvider.GetUtcNow().UtcDateTime;
             await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
@@ -520,7 +519,7 @@ internal class CompleteChunkedUploadCommandHandler : ICommandHandler<CompleteChu
 
             if (!extractResult.Success)
             {
-                pdfDoc.ProcessingStatus = "failed";
+                pdfDoc.ProcessingState = "Failed";
                 pdfDoc.ProcessingError = extractResult.ErrorMessage;
                 pdfDoc.ProcessedAt = _timeProvider.GetUtcNow().UtcDateTime;
                 await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
@@ -634,7 +633,7 @@ internal class CompleteChunkedUploadCommandHandler : ICommandHandler<CompleteChu
 
         if (!embeddingResult.Success)
         {
-            pdfDoc.ProcessingStatus = "failed";
+            pdfDoc.ProcessingState = "Failed";
             pdfDoc.ProcessingError = embeddingResult.ErrorMessage;
             pdfDoc.ProcessedAt = _timeProvider.GetUtcNow().UtcDateTime;
             await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
@@ -648,7 +647,7 @@ internal class CompleteChunkedUploadCommandHandler : ICommandHandler<CompleteChu
         {
             var mismatchMessage = $"Embedding service returned {embeddings.Count} vectors for {allDocumentChunks.Count} chunks";
             _logger.LogWarning("Embedding count mismatch for PDF {PdfId}: {Message}", pdfId, mismatchMessage);
-            pdfDoc.ProcessingStatus = "failed";
+            pdfDoc.ProcessingState = "Failed";
             pdfDoc.ProcessingError = mismatchMessage;
             pdfDoc.ProcessedAt = _timeProvider.GetUtcNow().UtcDateTime;
             await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
@@ -672,36 +671,10 @@ internal class CompleteChunkedUploadCommandHandler : ICommandHandler<CompleteChu
         IServiceScope scope,
         CancellationToken cancellationToken)
     {
-        // Index in Qdrant
-        var indexingStopwatch = Stopwatch.StartNew();
-        var qdrantService = scope.ServiceProvider.GetRequiredService<IQdrantService>();
+        // Vector store (Qdrant) has been removed — skip vector indexing.
 
-        var documentChunks = allDocumentChunks
-            .Select((chunk, index) => new DocumentChunk
-            {
-                Text = chunk.Text,
-                Embedding = embeddings[index],
-                Page = chunk.Page,
-                CharStart = chunk.CharStart,
-                CharEnd = chunk.CharEnd
-            })
-            .ToList();
-
-        var indexResult = await qdrantService.IndexDocumentChunksAsync((pdfDoc.PrivateGameId ?? pdfDoc.GameId)?.ToString() ?? string.Empty, pdfId, documentChunks).ConfigureAwait(false);
-        indexingStopwatch.Stop();
-
-        if (!indexResult.Success)
-        {
-            pdfDoc.ProcessingStatus = "failed";
-            pdfDoc.ProcessingError = indexResult.ErrorMessage;
-            pdfDoc.ProcessedAt = _timeProvider.GetUtcNow().UtcDateTime;
-            await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
-            _logger.LogError("Qdrant indexing failed for {PdfId}: {Error}", pdfId, indexResult.ErrorMessage);
-            return;
-        }
-
-        // Update vector document
-        await UpdateOrCreateVectorDocumentAsync(pdfGuid, pdfDoc, fullText, indexResult.IndexedCount, db, cancellationToken).ConfigureAwait(false);
+        // Update vector document with chunk count (no Qdrant indexing)
+        await UpdateOrCreateVectorDocumentAsync(pdfGuid, pdfDoc, fullText, allDocumentChunks.Count, db, cancellationToken).ConfigureAwait(false);
 
         // Save text chunks to PostgreSQL for hybrid search (FTS)
         await SaveTextChunksForHybridSearchAsync(pdfGuid, pdfDoc, allDocumentChunks, db, cancellationToken).ConfigureAwait(false);
@@ -801,7 +774,7 @@ internal class CompleteChunkedUploadCommandHandler : ICommandHandler<CompleteChu
                 var pdfDoc = await db.PdfDocuments.FindAsync(new object[] { pdfGuid }, cancellationToken).ConfigureAwait(false);
                 if (pdfDoc != null)
                 {
-                    pdfDoc.ProcessingStatus = "failed";
+                    pdfDoc.ProcessingState = "Failed";
                     pdfDoc.ProcessingError = ex.Message;
                     pdfDoc.ProcessedAt = _timeProvider.GetUtcNow().UtcDateTime;
                     await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);

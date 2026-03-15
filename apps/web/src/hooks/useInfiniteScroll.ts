@@ -34,7 +34,9 @@ export function useInfiniteScroll({
     const el = sentinelRef.current;
     if (!el) return;
     const observer = new IntersectionObserver(
-      ([entry]) => { if (entry.isIntersecting) onLoadMoreRef.current(); },
+      ([entry]) => {
+        if (entry.isIntersecting) onLoadMoreRef.current();
+      },
       { rootMargin }
     );
     observer.observe(el);

@@ -9,10 +9,11 @@
  * @module components/ui/data-display/meeple-card/variants/MeepleCardGrid
  */
 
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 
 import { cn } from '@/lib/utils';
 
+import { DeckStack } from '../../deck-stack/DeckStack';
 import { ExtraMeepleCardDrawer } from '../../extra-meeple-card/ExtraMeepleCardDrawer';
 import { HoloOverlay } from '../../holo';
 import { AgentModelInfo } from '../../meeple-card-features/AgentModelInfo';
@@ -48,7 +49,8 @@ import { CardBadges } from '../parts/CardBadges';
 import { CardCover } from '../parts/CardCover';
 import { CardTagStrip } from '../parts/CardTagStrip';
 
-import type { MeepleCardProps } from '../types';
+import type { DeckStackItem } from '../../deck-stack/deck-stack-types';
+import type { MeepleCardProps, MeepleEntityType } from '../types';
 
 export type MeepleCardGridProps = MeepleCardProps;
 
@@ -139,6 +141,23 @@ export const MeepleCardGrid = React.memo(function MeepleCardGrid(props: MeepleCa
   const drawerEntityType = DRAWER_ENTITY_TYPE_MAP[entity];
 
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [deckStackOpen, setDeckStackOpen] = useState(false);
+  const [deckStackItems, setDeckStackItems] = useState<DeckStackItem[]>([]);
+  const [deckStackAnchor, setDeckStackAnchor] = useState<DOMRect | null>(null);
+
+  const handleManaPipClick = useCallback(
+    (entityType: MeepleEntityType) => {
+      if (onManaPipClick) {
+        onManaPipClick(entityType);
+        return;
+      }
+      // No consumer handler — open deck stack with empty items (no-op visually)
+      setDeckStackItems([]);
+      setDeckStackAnchor(null);
+      setDeckStackOpen(true);
+    },
+    [onManaPipClick]
+  );
 
   const hasMobileActions =
     hasQuickActions ||
@@ -508,7 +527,7 @@ export const MeepleCardGrid = React.memo(function MeepleCardGrid(props: MeepleCa
 
       {/* Navigation footer */}
       {linkedEntities && linkedEntities.length > 0 ? (
-        <ManaLinkFooter linkedEntities={linkedEntities} onPipClick={onManaPipClick ?? (() => {})} />
+        <ManaLinkFooter linkedEntities={linkedEntities} onPipClick={handleManaPipClick} />
       ) : navigateTo && navigateTo.length > 0 ? (
         <CardNavigationFooter links={navigateTo} />
       ) : null}
@@ -522,6 +541,17 @@ export const MeepleCardGrid = React.memo(function MeepleCardGrid(props: MeepleCa
           onClose={() => setDrawerOpen(false)}
         />
       )}
+
+      {/* DeckStack for mana pip navigation */}
+      <DeckStack
+        isOpen={deckStackOpen}
+        items={deckStackItems}
+        onItemClick={(_id, _entityType) => {
+          setDeckStackOpen(false);
+        }}
+        onClose={() => setDeckStackOpen(false)}
+        anchorRect={deckStackAnchor}
+      />
     </Component>
   );
 });

@@ -330,7 +330,7 @@ builder.Services.AddAdministrationContext(builder.Configuration);
 builder.Services.AddDocumentProcessingContext(builder.Configuration);
 
 // ISSUE-2053: UserNotifications bounded context
-builder.Services.AddUserNotificationsContext();
+builder.Services.AddUserNotificationsContext(builder.Configuration);
 
 // UserLibrary bounded context
 builder.Services.AddUserLibraryContext();
@@ -624,6 +624,8 @@ v1Api.MapAdminQueueEndpoints();         // Issue #4731: Processing queue managem
 v1Api.MapAdminStorageMigrationEndpoints(); // S3 storage migration (local → S3)
 v1Api.MapAdminEmailEndpoints();        // Issue #4430: Email queue dashboard monitoring
 v1Api.MapAdminEmailTemplateEndpoints(); // Issue #52: Admin email template management
+v1Api.MapAdminNotificationQueueEndpoints(); // Admin notification queue monitoring
+v1Api.MapAdminSlackEndpoints();        // Admin Slack connection & team channel management
 v1Api.MapAdminBusinessStatsEndpoints(); // Issue #4562: App Usage Stats (Epic #3688)
 v1Api.MapAdminAgentDefinitionEndpoints(); // Issue #3809: Agent Definition management (AI Lab)
 v1Api.MapAgentPlaygroundEndpoints();    // Issue #3810: Agent Playground with SSE streaming
@@ -638,6 +640,7 @@ v1Api.MapAlertConfigEndpoints();       // Alert rules (Issue #921)
 v1Api.MapAlertConfigurationEndpoints(); // Alert configuration (Issue #915)
 v1Api.MapNotificationEndpoints();      // User notifications (Issue #2053)
 v1Api.MapNotificationPreferencesEndpoints(); // Notification preferences (Issue #4220)
+v1Api.MapSlackIntegrationEndpoints();        // Slack OAuth connect/disconnect/status
 v1Api.MapUnsubscribeEndpoints();       // Issue #38: GDPR-compliant email unsubscribe
 v1Api.MapCollectionWizardEndpoints();  // Issue #4823: Collection wizard game preview
 v1Api.MapUserLibraryEndpoints();       // User game library

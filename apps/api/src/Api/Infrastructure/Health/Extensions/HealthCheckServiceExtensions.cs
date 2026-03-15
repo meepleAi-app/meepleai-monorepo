@@ -1,3 +1,4 @@
+using Api.BoundedContexts.UserNotifications.Infrastructure.HealthChecks;
 using Api.Infrastructure.Health.Checks;
 using Api.Infrastructure.Health.Models;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
@@ -102,6 +103,19 @@ public static class HealthCheckServiceExtensions
             "s3storage",
             HealthStatus.Degraded,
             tags: new[] { HealthCheckTags.Storage, HealthCheckTags.NonCritical },
+            timeout: TimeSpan.FromSeconds(5));
+
+        // Slack Notification Services
+        builder.AddCheck<SlackApiHealthCheck>(
+            "slack_api",
+            HealthStatus.Degraded,
+            tags: new[] { HealthCheckTags.External, HealthCheckTags.NonCritical },
+            timeout: TimeSpan.FromSeconds(5));
+
+        builder.AddCheck<SlackQueueHealthCheck>(
+            "slack_queue",
+            HealthStatus.Degraded,
+            tags: new[] { HealthCheckTags.External, HealthCheckTags.NonCritical },
             timeout: TimeSpan.FromSeconds(5));
 
         return builder;

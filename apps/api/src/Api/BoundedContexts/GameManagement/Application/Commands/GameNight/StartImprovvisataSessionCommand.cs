@@ -5,6 +5,7 @@ using Api.BoundedContexts.UserLibrary.Domain.Repositories;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities.GameManagement;
 using Api.Middleware.Exceptions;
+using Api.SharedKernel.Services;
 using FluentValidation;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -57,17 +58,20 @@ internal sealed class StartImprovvisataSessionCommandHandler
 
     private readonly MeepleAiDbContext _dbContext;
     private readonly ILiveSessionRepository _sessionRepository;
+    private readonly ITierEnforcementService _tierEnforcementService;
     private readonly TimeProvider _timeProvider;
     private readonly ILogger<StartImprovvisataSessionCommandHandler> _logger;
 
     public StartImprovvisataSessionCommandHandler(
         MeepleAiDbContext dbContext,
         ILiveSessionRepository sessionRepository,
+        ITierEnforcementService tierEnforcementService,
         TimeProvider timeProvider,
         ILogger<StartImprovvisataSessionCommandHandler> logger)
     {
         _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
         _sessionRepository = sessionRepository ?? throw new ArgumentNullException(nameof(sessionRepository));
+        _tierEnforcementService = tierEnforcementService ?? throw new ArgumentNullException(nameof(tierEnforcementService));
         _timeProvider = timeProvider ?? throw new ArgumentNullException(nameof(timeProvider));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
@@ -78,13 +82,28 @@ internal sealed class StartImprovvisataSessionCommandHandler
     {
         ArgumentNullException.ThrowIfNull(request);
 
-        // 1. Load PrivateGame — throws NotFoundException if missing
+        // 1. Check tier quota before doing any work
+        var canStart = await _tierEnforcementService
+            .CanPerformAsync(request.UserId, TierAction.CreatePrivateGame, cancellationToken)
+            .ConfigureAwait(false);
+
+        if (!canStart)
+        {
+            var usage = await _tierEnforcementService
+                .GetUsageAsync(request.UserId, cancellationToken)
+                .ConfigureAwait(false);
+
+            throw new ConflictException(
+                $"Hai raggiunto il limite di giochi privati ({usage.PrivateGames}/{usage.PrivateGamesMax}). Passa a Premium per aumentare il limite.");
+        }
+
+        // 2. Load PrivateGame — throws NotFoundException if missing
         var privateGame = await _dbContext.PrivateGames
             .FirstOrDefaultAsync(g => g.Id == request.PrivateGameId && !g.IsDeleted, cancellationToken)
             .ConfigureAwait(false)
             ?? throw new NotFoundException("PrivateGame", request.PrivateGameId.ToString());
 
-        // 2. Verify current user owns the game
+        // 3. Verify current user owns the game
         if (privateGame.OwnerId != request.UserId)
         {
             throw new ForbiddenException(
@@ -156,7 +175,12 @@ internal sealed class StartImprovvisataSessionCommandHandler
         // 9. Save atomically
         await _dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
-        // 10. Build share link
+        // 10. Record tier usage after successful creation
+        await _tierEnforcementService
+            .RecordUsageAsync(request.UserId, TierAction.CreatePrivateGame, cancellationToken)
+            .ConfigureAwait(false);
+
+        // 11. Build share link
         var shareLink = $"/join/{invite.LinkToken}";
 
         _logger.LogInformation(

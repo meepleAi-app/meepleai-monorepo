@@ -4,6 +4,7 @@ using Api.BoundedContexts.GameManagement.Domain.Repositories;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities.UserLibrary;
 using Api.Middleware.Exceptions;
+using Api.SharedKernel.Services;
 using Api.Tests.Constants;
 using Api.Tests.TestHelpers;
 using FluentValidation.TestHelper;
@@ -23,6 +24,7 @@ public sealed class StartImprovvisataSessionCommandHandlerTests
 {
     private readonly MeepleAiDbContext _dbContext;
     private readonly Mock<ILiveSessionRepository> _sessionRepoMock;
+    private readonly Mock<ITierEnforcementService> _tierEnforcementMock;
     private readonly StartImprovvisataSessionCommandHandler _sut;
 
     private static readonly Guid TestUserId = Guid.NewGuid();
@@ -33,10 +35,20 @@ public sealed class StartImprovvisataSessionCommandHandlerTests
     {
         _dbContext = TestDbContextFactory.CreateInMemoryDbContext();
         _sessionRepoMock = new Mock<ILiveSessionRepository>();
+        _tierEnforcementMock = new Mock<ITierEnforcementService>();
+
+        // Default: user is within quota
+        _tierEnforcementMock
+            .Setup(t => t.CanPerformAsync(It.IsAny<Guid>(), TierAction.CreatePrivateGame, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+        _tierEnforcementMock
+            .Setup(t => t.RecordUsageAsync(It.IsAny<Guid>(), It.IsAny<TierAction>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
 
         _sut = new StartImprovvisataSessionCommandHandler(
             _dbContext,
             _sessionRepoMock.Object,
+            _tierEnforcementMock.Object,
             TimeProvider.System,
             NullLogger<StartImprovvisataSessionCommandHandler>.Instance);
     }
@@ -231,6 +243,56 @@ public sealed class StartImprovvisataSessionCommandHandlerTests
         // Act & Assert
         await Assert.ThrowsAsync<ForbiddenException>(() =>
             _sut.Handle(command, CancellationToken.None));
+    }
+
+    // ─── Tier enforcement ────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task Handle_WhenTierQuotaExceeded_ThrowsConflictException()
+    {
+        // Arrange — tier returns false for CanPerform
+        _tierEnforcementMock
+            .Setup(t => t.CanPerformAsync(TestUserId, TierAction.CreatePrivateGame, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(false);
+
+        _tierEnforcementMock
+            .Setup(t => t.GetUsageAsync(TestUserId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new UsageSnapshot(
+                PrivateGames: 3, PrivateGamesMax: 3,
+                PdfThisMonth: 0, PdfThisMonthMax: 3,
+                AgentQueriesToday: 0, AgentQueriesTodayMax: 20,
+                SessionQueries: 0, SessionQueriesMax: 30,
+                Agents: 0, AgentsMax: 1,
+                PhotosThisSession: 0, PhotosThisSessionMax: 5,
+                SessionSaveEnabled: false,
+                CatalogProposalsThisWeek: 0, CatalogProposalsThisWeekMax: 1));
+
+        await SeedPrivateGame(TestPrivateGameId, TestUserId, "Wingspan");
+        var command = new StartImprovvisataSessionCommand(TestUserId, TestPrivateGameId);
+
+        // Act & Assert
+        var ex = await Assert.ThrowsAsync<ConflictException>(() =>
+            _sut.Handle(command, CancellationToken.None));
+
+        Assert.Contains("limite di giochi privati", ex.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("3/3", ex.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Handle_WhenWithinTierQuota_SucceedsAndRecordsUsage()
+    {
+        // Arrange — default mock allows the action
+        await SeedPrivateGame(TestPrivateGameId, TestUserId, "Wingspan");
+        var command = new StartImprovvisataSessionCommand(TestUserId, TestPrivateGameId);
+
+        // Act
+        var result = await _sut.Handle(command, CancellationToken.None);
+
+        // Assert — session created and usage recorded
+        Assert.NotEqual(Guid.Empty, result.SessionId);
+        _tierEnforcementMock.Verify(
+            t => t.RecordUsageAsync(TestUserId, TierAction.CreatePrivateGame, It.IsAny<CancellationToken>()),
+            Times.Once);
     }
 }
 

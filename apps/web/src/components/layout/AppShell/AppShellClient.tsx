@@ -13,26 +13,32 @@
 
 import { type ReactNode, Suspense } from 'react';
 
+import { usePathname } from 'next/navigation';
+
 import { ErrorBoundary } from '@/components/errors/ErrorBoundary';
+import { OnboardingReminderBanner } from '@/components/onboarding';
 import {
   CardBrowserProvider,
   MeepleCardBrowser,
 } from '@/components/ui/data-display/meeple-card-browser';
-import { OnboardingReminderBanner } from '@/components/onboarding';
 import { ImpersonationBanner } from '@/components/ui/feedback/impersonation-banner';
 import { CardStackPanel } from '@/components/ui/navigation/card-stack-panel';
 import { NavigationProvider } from '@/context/NavigationContext';
 import { useCurrentUser } from '@/hooks/queries/useCurrentUser';
 import { useBottomPadding } from '@/hooks/useBottomPadding';
+import { useResponsive } from '@/hooks/useResponsive';
 import { useSidebarState } from '@/hooks/useSidebarState';
 import { cn } from '@/lib/utils';
 import { useImpersonationStore } from '@/store/impersonation';
+import { useCardHand } from '@/stores/use-card-hand';
 
 import { AdaptiveBottomBar } from '../AdaptiveBottomBar';
 import { FloatingActionBar } from '../FloatingActionBar';
 import { MobileBreadcrumb } from '../MobileBreadcrumb';
 import { Sidebar } from '../Sidebar/Sidebar';
 import { TopNavbar } from '../TopNavbar';
+import { HandDrawer } from '../UnifiedShell/HandDrawer';
+import { NavbarMiniCards } from '../UnifiedShell/NavbarMiniCards';
 
 // ─── Props ──────────────────────────────────────────────────────────────────────
 
@@ -60,83 +66,103 @@ export function AppShellClient({
     useImpersonationStore();
   const { isCollapsed, toggle } = useSidebarState(initialSidebarCollapsed);
   const bottomPadding = useBottomPadding();
+  const { isDesktop } = useResponsive();
+  const pathname = usePathname();
+  const isAdminContext = pathname?.startsWith('/admin') ?? false;
+  const { cards, isHandCollapsed, expandHand, focusCard } = useCardHand();
 
   return (
     <NavigationProvider>
       <CardBrowserProvider>
-      <div className="min-h-screen flex flex-col bg-background" data-testid="app-shell">
-        {/* Impersonation Banner (fixed at top when active) */}
-        <ImpersonationBanner
-          isImpersonating={isImpersonating}
-          impersonatedUser={impersonatedUser}
-          onEndImpersonation={endImpersonation}
-          isLoading={isLoading}
-        />
+        <div className="min-h-screen flex flex-col bg-background" data-testid="app-shell">
+          {/* Impersonation Banner (fixed at top when active) */}
+          <ImpersonationBanner
+            isImpersonating={isImpersonating}
+            impersonatedUser={impersonatedUser}
+            onEndImpersonation={endImpersonation}
+            isLoading={isLoading}
+          />
 
-        {/* L1: TopNavbar (always visible) */}
-        <TopNavbar />
+          {/* L1: TopNavbar (always visible) */}
+          <TopNavbar
+            miniCards={
+              !isDesktop && isHandCollapsed && cards.length > 0 ? (
+                <NavbarMiniCards
+                  cards={cards}
+                  onExpand={id => {
+                    expandHand();
+                    const idx = cards.findIndex(c => c.id === id);
+                    if (idx >= 0) focusCard(idx);
+                  }}
+                />
+              ) : undefined
+            }
+          />
 
-        {/* Issue #326: Reminder banner for users who skipped onboarding */}
-        {isAuthenticated && user?.onboardingSkipped && <OnboardingReminderBanner />}
+          {/* HandDrawer for mobile (non-admin routes) */}
+          {!isDesktop && !isAdminContext && <HandDrawer />}
 
-        {/* Desktop Sidebar (authenticated only) */}
-        {isAuthenticated && <Sidebar isCollapsed={isCollapsed} onToggle={toggle} />}
+          {/* Issue #326: Reminder banner for users who skipped onboarding */}
+          {isAuthenticated && user?.onboardingSkipped && <OnboardingReminderBanner />}
 
-        {/* Content area (offset by sidebar width when authenticated) */}
-        <div
-          className={cn(
-            'flex flex-col flex-1',
-            'transition-[margin] duration-200 ease-in-out',
-            isAuthenticated &&
-              (isCollapsed
-                ? 'md:ml-[var(--sidebar-width-collapsed)]'
-                : 'md:ml-[var(--sidebar-width-expanded)]')
-          )}
-          data-testid="app-shell-content"
-        >
-          {/* Mobile Breadcrumb (mobile only) */}
-          <MobileBreadcrumb />
+          {/* Desktop Sidebar (authenticated only) */}
+          {isAuthenticated && <Sidebar isCollapsed={isCollapsed} onToggle={toggle} />}
 
-          {/* Main content */}
-          <main
-            id="main-content"
-            tabIndex={-1}
-            style={{ viewTransitionName: 'page-content' }}
+          {/* Content area (offset by sidebar width when authenticated) */}
+          <div
             className={cn(
-              'flex-1',
-              !fullWidth && 'px-4 sm:px-6 lg:px-8',
-              bottomPadding,
-              'pt-4',
-              className
+              'flex flex-col flex-1',
+              'transition-[margin] duration-200 ease-in-out',
+              isAuthenticated &&
+                (isCollapsed
+                  ? 'md:ml-[var(--sidebar-width-collapsed)]'
+                  : 'md:ml-[var(--sidebar-width-expanded)]')
             )}
+            data-testid="app-shell-content"
           >
-            {children}
-          </main>
+            {/* Mobile Breadcrumb (mobile only) */}
+            <MobileBreadcrumb />
 
-          {/* L3: Desktop FloatingActionBar (hidden on mobile) */}
-          <ErrorBoundary fallback={null} componentName="FloatingActionBar">
-            <Suspense>
-              <div className="hidden md:block">
-                <FloatingActionBar />
-              </div>
-            </Suspense>
+            {/* Main content */}
+            <main
+              id="main-content"
+              tabIndex={-1}
+              style={{ viewTransitionName: 'page-content' }}
+              className={cn(
+                'flex-1',
+                !fullWidth && 'px-4 sm:px-6 lg:px-8',
+                bottomPadding,
+                'pt-4',
+                className
+              )}
+            >
+              {children}
+            </main>
+
+            {/* L3: Desktop FloatingActionBar (hidden on mobile) */}
+            <ErrorBoundary fallback={null} componentName="FloatingActionBar">
+              <Suspense>
+                <div className="hidden md:block">
+                  <FloatingActionBar />
+                </div>
+              </Suspense>
+            </ErrorBoundary>
+          </div>
+
+          {/* Mobile: AdaptiveBottomBar (replaces MobileTabBar + SmartFAB) */}
+          <ErrorBoundary fallback={null} componentName="AdaptiveBottomBar">
+            <AdaptiveBottomBar />
+          </ErrorBoundary>
+
+          {/* Card Stack Panel */}
+          <ErrorBoundary fallback={null} componentName="CardStackPanel">
+            <CardStackPanel />
+          </ErrorBoundary>
+          {/* Card Browser Overlay */}
+          <ErrorBoundary fallback={null} componentName="MeepleCardBrowser">
+            <MeepleCardBrowser />
           </ErrorBoundary>
         </div>
-
-        {/* Mobile: AdaptiveBottomBar (replaces MobileTabBar + SmartFAB) */}
-        <ErrorBoundary fallback={null} componentName="AdaptiveBottomBar">
-          <AdaptiveBottomBar />
-        </ErrorBoundary>
-
-        {/* Card Stack Panel */}
-        <ErrorBoundary fallback={null} componentName="CardStackPanel">
-          <CardStackPanel />
-        </ErrorBoundary>
-        {/* Card Browser Overlay */}
-        <ErrorBoundary fallback={null} componentName="MeepleCardBrowser">
-          <MeepleCardBrowser />
-        </ErrorBoundary>
-      </div>
       </CardBrowserProvider>
     </NavigationProvider>
   );

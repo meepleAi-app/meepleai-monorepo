@@ -90,6 +90,37 @@ vi.mock('@/hooks/useBottomPadding', () => ({
   useBottomPadding: () => 'pb-6',
 }));
 
+vi.mock('@/hooks/useResponsive', () => ({
+  useResponsive: () => ({
+    isDesktop: true,
+    isMobile: false,
+    isTablet: false,
+    deviceType: 'desktop',
+    viewportWidth: 1280,
+  }),
+}));
+
+vi.mock('next/navigation', () => ({
+  usePathname: () => '/library',
+}));
+
+vi.mock('@/stores/use-card-hand', () => ({
+  useCardHand: () => ({
+    cards: [],
+    isHandCollapsed: false,
+    expandHand: vi.fn(),
+    focusCard: vi.fn(),
+  }),
+}));
+
+vi.mock('@/components/layout/UnifiedShell/HandDrawer', () => ({
+  HandDrawer: () => <div data-testid="hand-drawer" />,
+}));
+
+vi.mock('@/components/layout/UnifiedShell/NavbarMiniCards', () => ({
+  NavbarMiniCards: () => <div data-testid="navbar-mini-cards" />,
+}));
+
 // ─── Import after mocks ──────────────────────────────────────────────────────
 
 import { AppShellClient } from '../AppShell/AppShellClient';

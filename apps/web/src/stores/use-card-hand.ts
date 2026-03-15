@@ -90,6 +90,7 @@ interface CardHandState {
   cards: HandCard[];
   focusedIdx: number;
   pinnedIds: Set<string>;
+  protectedIds: Set<string>;
   maxHandSize: number;
   context: 'user' | 'admin';
   expandedStack: boolean;
@@ -102,6 +103,8 @@ interface CardHandState {
   focusByHref: (href: string) => void;
   pinCard: (id: string) => void;
   unpinCard: (id: string) => void;
+  protectCard: (id: string) => void;
+  unprotectCard: (id: string) => void;
   swipeNext: () => void;
   swipePrev: () => void;
   toggleContext: () => void;
@@ -116,6 +119,7 @@ export const useCardHand = create<CardHandState>((set, get) => ({
   cards: readCards(),
   focusedIdx: -1,
   pinnedIds: readPins(),
+  protectedIds: new Set(),
   maxHandSize: MAX_HAND_SIZE,
   context: 'user',
   expandedStack: readExpanded(),
@@ -123,7 +127,7 @@ export const useCardHand = create<CardHandState>((set, get) => ({
   highlightEntity: null,
 
   drawCard: card => {
-    const { cards, pinnedIds, maxHandSize } = get();
+    const { cards, pinnedIds, protectedIds, maxHandSize } = get();
 
     // Duplicate check — focus existing card
     const existingIdx = cards.findIndex(c => c.id === card.id);
@@ -134,13 +138,13 @@ export const useCardHand = create<CardHandState>((set, get) => ({
 
     let next = [...cards, card];
 
-    // FIFO eviction if over limit
+    // FIFO eviction if over limit — skip pinned AND protected cards
     if (next.length > maxHandSize) {
-      const evictIdx = next.findIndex(c => !pinnedIds.has(c.id));
+      const evictIdx = next.findIndex(c => !pinnedIds.has(c.id) && !protectedIds.has(c.id));
       if (evictIdx >= 0) {
         next = [...next.slice(0, evictIdx), ...next.slice(evictIdx + 1)];
       } else {
-        // All cards pinned — drop the oldest pinned (edge case)
+        // All cards pinned or protected — drop the oldest (edge case)
         next = next.slice(1);
       }
     }
@@ -206,6 +210,18 @@ export const useCardHand = create<CardHandState>((set, get) => ({
     next.delete(id);
     writePins(next);
     set({ pinnedIds: next });
+  },
+
+  protectCard: id => {
+    set(state => ({ protectedIds: new Set([...state.protectedIds, id]) }));
+  },
+
+  unprotectCard: id => {
+    set(state => {
+      const next = new Set(state.protectedIds);
+      next.delete(id);
+      return { protectedIds: next };
+    });
   },
 
   swipeNext: () => {

@@ -94,6 +94,12 @@ public class UserLibraryEntryEntity
     public PdfDocumentEntity? PdfDocument { get; set; }
 
     /// <summary>
+    /// When the user explicitly declared ownership of this game.
+    /// Null means ownership has not been declared.
+    /// </summary>
+    public DateTime? OwnershipDeclaredAt { get; set; }
+
+    /// <summary>
     /// Current state of the game (stored as integer enum).
     /// </summary>
     public int CurrentState { get; set; }

@@ -15,10 +15,12 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Commands;
 /// <param name="GameId">Optional game context for filtering results</param>
 /// <param name="ChatThreadId">Optional chat thread for conversation continuity</param>
 /// <param name="UserId">Optional user ID for personalization</param>
+/// <param name="UserRole">Optional user role for RAG access enforcement</param>
 internal sealed record InvokeAgentCommand(
     Guid AgentId,
     string Query,
     Guid? GameId = null,
     Guid? ChatThreadId = null,
-    Guid? UserId = null
+    Guid? UserId = null,
+    string? UserRole = null
 ) : IRequest<AgentResponseDto>;

@@ -11,7 +11,9 @@ using Api.BoundedContexts.KnowledgeBase.Domain.Services;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services.LlmManagement;
 using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 using Api.Infrastructure;
+using Api.Infrastructure.Entities;
 using Api.Infrastructure.Entities.KnowledgeBase;
+using Api.Middleware.Exceptions;
 using Api.Models;
 using Api.Observability;
 using Api.Services;
@@ -49,6 +51,7 @@ internal sealed class SendAgentMessageCommandHandler : IStreamingQueryHandler<Se
     private readonly IUserAiConsentCheckService _consentCheckService;
     private readonly IGameSessionOrchestratorService _sessionOrchestrator;
     private readonly IHybridCacheService _hybridCache;
+    private readonly IRagAccessService _ragAccessService;
     private readonly ILogger<SendAgentMessageCommandHandler> _logger;
 
     /// <summary>Cache TTL for GameSessionContext.</summary>
@@ -70,6 +73,7 @@ internal sealed class SendAgentMessageCommandHandler : IStreamingQueryHandler<Se
         IUserAiConsentCheckService consentCheckService,
         IGameSessionOrchestratorService sessionOrchestrator,
         IHybridCacheService hybridCache,
+        IRagAccessService ragAccessService,
         ILogger<SendAgentMessageCommandHandler> logger)
     {
         _agentRepository = agentRepository ?? throw new ArgumentNullException(nameof(agentRepository));
@@ -87,6 +91,7 @@ internal sealed class SendAgentMessageCommandHandler : IStreamingQueryHandler<Se
         _consentCheckService = consentCheckService ?? throw new ArgumentNullException(nameof(consentCheckService));
         _sessionOrchestrator = sessionOrchestrator ?? throw new ArgumentNullException(nameof(sessionOrchestrator));
         _hybridCache = hybridCache ?? throw new ArgumentNullException(nameof(hybridCache));
+        _ragAccessService = ragAccessService ?? throw new ArgumentNullException(nameof(ragAccessService));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -188,6 +193,22 @@ internal sealed class SendAgentMessageCommandHandler : IStreamingQueryHandler<Se
                 StreamingEventType.Error,
                 new StreamingError($"Agent {command.AgentId} not found", "AGENT_NOT_FOUND"));
             yield break;
+        }
+
+        // RAG access enforcement: check game access based on agent's game
+        if (agent.GameId is not null && agent.GameId != Guid.Empty)
+        {
+            var userRole = Enum.TryParse<UserRole>(command.UserRole, ignoreCase: true, out var parsedRole)
+                ? parsedRole : UserRole.User;
+            var canAccess = await _ragAccessService.CanAccessRagAsync(
+                command.UserId, agent.GameId.Value, userRole, cancellationToken).ConfigureAwait(false);
+            if (!canAccess)
+            {
+                yield return CreateEvent(
+                    StreamingEventType.Error,
+                    new StreamingError("Accesso RAG non autorizzato", "RAG_ACCESS_DENIED"));
+                yield break;
+            }
         }
 
         // Load agent configuration and validate KB readiness

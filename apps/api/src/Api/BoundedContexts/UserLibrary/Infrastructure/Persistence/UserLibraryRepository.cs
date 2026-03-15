@@ -441,6 +441,13 @@ internal class UserLibraryRepository : RepositoryBase, IUserLibraryRepository
             privatePdfIdProp?.SetValue(entry, entity.PrivatePdfId.Value);
         }
 
+        // Hydrate OwnershipDeclaredAt from DB using reflection (private setter)
+        if (entity.OwnershipDeclaredAt.HasValue)
+        {
+            var ownershipDeclaredAtProp = typeof(UserLibraryEntry).GetProperty("OwnershipDeclaredAt");
+            ownershipDeclaredAtProp?.SetValue(entry, entity.OwnershipDeclaredAt.Value);
+        }
+
         // Clear domain events that were raised during construction
         // (we don't want to re-raise events for existing entities)
         entry.ClearDomainEvents();
@@ -572,6 +579,7 @@ internal class UserLibraryRepository : RepositoryBase, IUserLibraryRepository
             CustomPdfFileSizeBytes = domainEntity.CustomPdfMetadata?.FileSizeBytes,
             CustomPdfOriginalFileName = domainEntity.CustomPdfMetadata?.OriginalFileName,
             PrivatePdfId = domainEntity.PrivatePdfId,
+            OwnershipDeclaredAt = domainEntity.OwnershipDeclaredAt,
 
             // Game state
             CurrentState = (int)domainEntity.CurrentState.Value,

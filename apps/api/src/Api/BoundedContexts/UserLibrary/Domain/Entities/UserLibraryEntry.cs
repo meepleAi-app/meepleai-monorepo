@@ -2,6 +2,7 @@ using Api.BoundedContexts.UserLibrary.Domain.Events;
 using Api.BoundedContexts.UserLibrary.Domain.ValueObjects;
 using Api.Middleware.Exceptions;
 using Api.SharedKernel.Domain.Entities;
+using Api.SharedKernel.Domain.Exceptions;
 
 namespace Api.BoundedContexts.UserLibrary.Domain.Entities;
 
@@ -59,6 +60,17 @@ internal sealed class UserLibraryEntry : AggregateRoot<Guid>
     /// Returns whether this entry has an associated private PDF.
     /// </summary>
     public bool HasPrivatePdf => PrivatePdfId.HasValue;
+
+    /// <summary>
+    /// When the user explicitly declared ownership of this game.
+    /// Null means ownership has not been declared (pre-feature entries or new entries).
+    /// </summary>
+    public DateTime? OwnershipDeclaredAt { get; private set; }
+
+    /// <summary>
+    /// Returns whether the user has declared ownership of this game.
+    /// </summary>
+    public bool HasDeclaredOwnership => OwnershipDeclaredAt != null;
 
     /// <summary>
     /// Current state of the game in the library.
@@ -328,6 +340,36 @@ internal sealed class UserLibraryEntry : AggregateRoot<Guid>
     /// Returns whether the game is currently available for play.
     /// </summary>
     public bool IsAvailableForPlay() => CurrentState.IsAvailable();
+
+    // ========== OWNERSHIP DECLARATION ==========
+
+    /// <summary>
+    /// Declares explicit ownership of this game, granting RAG access to the game's knowledge base.
+    /// Idempotent: calling again after already declared is a no-op.
+    /// </summary>
+    /// <exception cref="DomainException">Thrown when the game is on the wishlist (not owned).</exception>
+    public void DeclareOwnership()
+    {
+        // Cannot declare ownership of a wishlist item
+        if (CurrentState.Value == GameStateType.Wishlist)
+            throw new DomainException("Cannot declare ownership of a wishlist item");
+
+        // Idempotent: if already declared, no-op
+        if (HasDeclaredOwnership)
+            return;
+
+        OwnershipDeclaredAt = DateTime.UtcNow;
+
+        // If the game is in Nuovo state, auto-transition to Owned
+        if (CurrentState.Value == GameStateType.Nuovo)
+            MarkAsOwned();
+
+        AddDomainEvent(new OwnershipDeclaredEvent(
+            entryId: Id,
+            userId: UserId,
+            gameId: GameId,
+            declaredAt: OwnershipDeclaredAt.Value));
+    }
 
     // ========== GAME SESSION MANAGEMENT ==========
 

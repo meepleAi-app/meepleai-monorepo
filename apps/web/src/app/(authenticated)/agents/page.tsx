@@ -12,12 +12,13 @@
 
 'use client';
 
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useCallback } from 'react';
 
 import { Bot, Plus, Search } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 import { AgentCreationSheet } from '@/components/agent/config';
+import { CardGridSkeletons } from '@/components/ui/data-display/CardGridSkeletons';
 import { ListPageHeader, useViewPreference } from '@/components/ui/data-display/ListPageHeader';
 import { MeepleCard, entityColors } from '@/components/ui/data-display/meeple-card';
 import { useCardBrowser, type CardRef } from '@/components/ui/data-display/meeple-card-browser';
@@ -34,6 +35,8 @@ import { getNavigationLinks } from '@/config/entity-navigation';
 import { useAgents } from '@/hooks/queries/useAgents';
 import { useAgentSlots } from '@/hooks/queries/useAgentSlots';
 import { useEntityActions } from '@/hooks/use-entity-actions';
+import { useInfiniteScroll } from '@/hooks/useInfiniteScroll';
+import { useResponsive } from '@/hooks/useResponsive';
 import { useCardHand } from '@/stores/use-card-hand';
 
 /** Agent card wrapper to use entity actions hook per-card */
@@ -74,6 +77,7 @@ export default function AgentsPage() {
   const [sortBy, setSortBy] = useState<'name' | 'usage' | 'rating'>('usage');
   const [creationSheetOpen, setCreationSheetOpen] = useState(false);
   const { open: openBrowser } = useCardBrowser();
+  const { isMobile } = useResponsive();
   const [viewMode, setViewMode] = useViewPreference('agents');
 
   useEffect(() => {
@@ -122,6 +126,36 @@ export default function AgentsPage() {
 
     return result;
   }, [agents, searchQuery, typeFilter, sortBy]);
+
+  // Progressive reveal: show items in batches as the user scrolls
+  const PAGE_SIZE = 12;
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
+  const visibleAgents = useMemo(
+    () => filteredAgents.slice(0, visibleCount),
+    [filteredAgents, visibleCount]
+  );
+  const hasMore = visibleCount < filteredAgents.length;
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+
+  const handleLoadMore = useCallback(() => {
+    setIsLoadingMore(true);
+    // Small delay to show skeleton feedback
+    setTimeout(() => {
+      setVisibleCount(prev => Math.min(prev + PAGE_SIZE, filteredAgents.length));
+      setIsLoadingMore(false);
+    }, 300);
+  }, [filteredAgents.length]);
+
+  const sentinelRef = useInfiniteScroll({
+    hasMore,
+    isLoading: isLoadingMore,
+    onLoadMore: handleLoadMore,
+  });
+
+  // Reset visible count when filters change
+  React.useEffect(() => {
+    setVisibleCount(PAGE_SIZE);
+  }, [searchQuery, typeFilter, sortBy]);
 
   const cardRefs: CardRef[] = useMemo(
     () =>
@@ -239,11 +273,11 @@ export default function AgentsPage() {
         }
         data-testid="card-grid"
       >
-        {filteredAgents.map((agent, index) => (
+        {visibleAgents.map((agent, index) => (
           <div
             key={agent.id}
             onClick={e => {
-              if (window.innerWidth < 768) {
+              if (isMobile) {
                 const rect = e.currentTarget.getBoundingClientRect();
                 openBrowser(cardRefs, index, {
                   x: rect.left + rect.width / 2,
@@ -257,7 +291,11 @@ export default function AgentsPage() {
             <AgentCard agent={agent} onClick={() => {}} />
           </div>
         ))}
+        {isLoadingMore && <CardGridSkeletons count={4} />}
       </div>
+
+      {/* Infinite scroll sentinel */}
+      {hasMore && <div ref={sentinelRef} className="h-1" aria-hidden="true" />}
 
       {/* Empty state */}
       {filteredAgents.length === 0 && (

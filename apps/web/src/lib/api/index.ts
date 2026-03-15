@@ -65,6 +65,7 @@ import {
   createSandboxClient,
   createOnboardingClient,
   createAccessRequestsClient,
+  createAdminNotificationsClient,
   type AuthClient,
   type GamesClient,
   type SessionsClient,
@@ -110,6 +111,7 @@ import {
   type SandboxClient,
   type OnboardingClient,
   type AccessRequestsClient,
+  type AdminNotificationsClient,
 } from './clients';
 import { HttpClient, type HttpClientConfig } from './core/httpClient';
 
@@ -332,6 +334,9 @@ export interface ApiClient {
   /** Access Requests — invite-only registration */
   accessRequests: AccessRequestsClient;
 
+  /** Admin manual notification dispatch */
+  adminNotifications: AdminNotificationsClient;
+
   /** Generic DELETE helper (used in some legacy tests) */
   delete: (path: string) => Promise<void>;
 }
@@ -427,6 +432,7 @@ export function createApiClient(config?: ApiClientConfig): ApiClient {
     sandbox: createSandboxClient({ httpClient }), // RAG Sandbox Dashboard
     onboarding: createOnboardingClient({ httpClient }), // First-time user onboarding
     accessRequests: createAccessRequestsClient({ httpClient }), // Invite-only registration
+    adminNotifications: createAdminNotificationsClient({ httpClient }), // Admin manual notifications
     delete: (path: string) => httpClient.delete(path),
   };
 

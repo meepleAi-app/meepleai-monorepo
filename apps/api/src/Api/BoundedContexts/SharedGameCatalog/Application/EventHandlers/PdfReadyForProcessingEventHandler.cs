@@ -31,7 +31,6 @@ internal sealed class PdfReadyForProcessingEventHandler : INotificationHandler<P
             notification.UserId);
 
         // Will dispatch indexing command to DocumentProcessing BC when pipeline is ready.
-        // Example: await _sender.Send(new StartPdfProcessingCommand(notification.PdfDocumentId), cancellationToken).ConfigureAwait(false);
         _ = _sender; // Suppress unused field warning until integration is complete
 
         return Task.CompletedTask;

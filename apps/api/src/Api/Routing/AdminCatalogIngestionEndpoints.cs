@@ -1,4 +1,5 @@
 using Api.BoundedContexts.SharedGameCatalog.Application.Commands;
+using Api.BoundedContexts.SharedGameCatalog.Application.Queries;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Enums;
 using Api.Extensions;
 using MediatR;
@@ -147,6 +148,83 @@ internal static class AdminCatalogIngestionEndpoints
         {
             operation.Summary = "Export catalog to Excel";
             operation.Description = "Exports shared games catalog as .xlsx with optional filters by status and PDF availability. Max 10,000 rows.";
+            return operation;
+        });
+
+        // POST /api/v1/admin/catalog-ingestion/excel-preview
+        // Upload Excel and get a diff preview (new/modified/removed games)
+        group.MapPost("/excel-preview", async (
+            IFormFile file,
+            HttpContext context,
+            IMediator mediator,
+            CancellationToken ct) =>
+        {
+            var (authorized, _, error) = context.RequireAdminSession();
+            if (!authorized) return error!;
+
+            var result = await mediator.Send(
+                new PreviewExcelImportQuery(file), ct).ConfigureAwait(false);
+
+            return Results.Ok(result);
+        })
+        .DisableAntiforgery()
+        .RequireRateLimiting("BulkImportAdmin")
+        .WithName("ExcelPreview")
+        .WithOpenApi(operation =>
+        {
+            operation.Summary = "Preview Excel import diff";
+            operation.Description = "Parses .xlsx file, compares with existing catalog, returns categorized diff (new/modified/removed/unchanged). Does not modify data.";
+            return operation;
+        });
+
+        // POST /api/v1/admin/catalog-ingestion/excel-confirm
+        // Apply confirmed Excel import changes (create/update/delete)
+        group.MapPost("/excel-confirm", async (
+            ConfirmExcelImportRequest request,
+            HttpContext context,
+            IMediator mediator,
+            CancellationToken ct) =>
+        {
+            var (authorized, session, error) = context.RequireAdminSession();
+            if (!authorized) return error!;
+
+            var result = await mediator.Send(
+                new ConfirmExcelImportCommand(request, session!.User!.Id), ct).ConfigureAwait(false);
+
+            return Results.Ok(result);
+        })
+        .WithName("ExcelConfirm")
+        .WithOpenApi(operation =>
+        {
+            operation.Summary = "Confirm Excel import changes";
+            operation.Description = "Applies previewed changes: creates new games, updates Draft games, soft-deletes removed Draft games. Published games are protected.";
+            return operation;
+        });
+
+        // POST /api/v1/admin/catalog-ingestion/assign-bgg-id
+        // Assign a BGG ID to a skeleton game
+        group.MapPost("/assign-bgg-id", async (
+            AssignBggIdRequest request,
+            HttpContext context,
+            IMediator mediator,
+            CancellationToken ct) =>
+        {
+            var (authorized, session, error) = context.RequireAdminSession();
+            if (!authorized) return error!;
+
+            var success = await mediator.Send(
+                new AssignBggIdCommand(request.SharedGameId, request.BggId, session!.User!.Id), ct)
+                .ConfigureAwait(false);
+
+            return success
+                ? Results.Ok(new { assigned = true })
+                : Results.BadRequest(new { assigned = false, error = "BGG ID already in use or game not found/eligible" });
+        })
+        .WithName("AssignBggId")
+        .WithOpenApi(operation =>
+        {
+            operation.Summary = "Assign BGG ID to skeleton game";
+            operation.Description = "Sets BGG ID on a Skeleton/Failed game, enabling BGG enrichment. Rejects if BGG ID is already assigned to another game.";
             return operation;
         });
 

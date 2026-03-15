@@ -1,3 +1,5 @@
+using System.Globalization;
+using Api.BoundedContexts.SharedGameCatalog.Domain.Entities;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Enums;
 using Api.Infrastructure;
 using Api.SharedKernel.Application.Interfaces;
@@ -60,13 +62,19 @@ internal sealed class ExportGamesToExcelCommandHandler
             .Take(MaxExportRows)
             .Select(g => new
             {
+                g.Id,
                 g.Title,
                 g.BggId,
+                g.Status,
                 g.GameDataStatus,
                 g.YearPublished,
                 g.MinPlayers,
                 g.MaxPlayers,
                 g.PlayingTimeMinutes,
+                g.MinAge,
+                g.ComplexityRating,
+                g.AverageRating,
+                g.Description,
                 g.HasUploadedPdf,
                 g.CreatedAt
             })
@@ -87,9 +95,10 @@ internal sealed class ExportGamesToExcelCommandHandler
         // Header row
         var headers = new[]
         {
-            "Name", "BggId", "Status", "YearPublished",
-            "MinPlayers", "MaxPlayers", "PlayingTime",
-            "HasPdf", "CreatedAt"
+            "Id", "Name", "BggId", "Status", "GameDataStatus",
+            "YearPublished", "MinPlayers", "MaxPlayers", "PlayingTime",
+            "MinAge", "ComplexityRating", "AverageRating",
+            "Description", "HasPdf", "CreatedAt"
         };
 
         for (var col = 1; col <= headers.Length; col++)
@@ -105,15 +114,21 @@ internal sealed class ExportGamesToExcelCommandHandler
             var game = games[i];
             var row = i + 2;
 
-            worksheet.Cell(row, 1).Value = game.Title;
-            worksheet.Cell(row, 2).Value = game.BggId?.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? string.Empty;
-            worksheet.Cell(row, 3).Value = ((GameDataStatus)game.GameDataStatus).ToString();
-            worksheet.Cell(row, 4).Value = game.YearPublished;
-            worksheet.Cell(row, 5).Value = game.MinPlayers;
-            worksheet.Cell(row, 6).Value = game.MaxPlayers;
-            worksheet.Cell(row, 7).Value = game.PlayingTimeMinutes;
-            worksheet.Cell(row, 8).Value = game.HasUploadedPdf ? "Yes" : "No";
-            worksheet.Cell(row, 9).Value = game.CreatedAt.ToString("yyyy-MM-dd HH:mm:ss", System.Globalization.CultureInfo.InvariantCulture);
+            worksheet.Cell(row, 1).Value = game.Id.ToString();
+            worksheet.Cell(row, 2).Value = game.Title;
+            worksheet.Cell(row, 3).Value = game.BggId?.ToString(CultureInfo.InvariantCulture) ?? string.Empty;
+            worksheet.Cell(row, 4).Value = ((GameStatus)game.Status).ToString();
+            worksheet.Cell(row, 5).Value = ((GameDataStatus)game.GameDataStatus).ToString();
+            worksheet.Cell(row, 6).Value = game.YearPublished;
+            worksheet.Cell(row, 7).Value = game.MinPlayers;
+            worksheet.Cell(row, 8).Value = game.MaxPlayers;
+            worksheet.Cell(row, 9).Value = game.PlayingTimeMinutes;
+            worksheet.Cell(row, 10).Value = game.MinAge;
+            worksheet.Cell(row, 11).Value = game.ComplexityRating?.ToString(CultureInfo.InvariantCulture) ?? string.Empty;
+            worksheet.Cell(row, 12).Value = game.AverageRating?.ToString(CultureInfo.InvariantCulture) ?? string.Empty;
+            worksheet.Cell(row, 13).Value = game.Description;
+            worksheet.Cell(row, 14).Value = game.HasUploadedPdf ? "Yes" : "No";
+            worksheet.Cell(row, 15).Value = game.CreatedAt.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture);
         }
 
         // Auto-fit columns

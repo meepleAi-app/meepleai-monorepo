@@ -532,6 +532,27 @@ public sealed class SharedGame : AggregateRoot<Guid>
         _hasUploadedPdf = true;
     }
 
+    /// <summary>
+    /// Assigns a BGG ID to this game. Only allowed for Skeleton or Failed games.
+    /// Enables subsequent BGG enrichment.
+    /// </summary>
+    public void AssignBggId(int bggId, Guid modifiedBy)
+    {
+        if (bggId <= 0)
+            throw new ArgumentException("BggId must be a positive integer.", nameof(bggId));
+
+        if (modifiedBy == Guid.Empty)
+            throw new ArgumentException("ModifiedBy cannot be empty.", nameof(modifiedBy));
+
+        if (_gameDataStatus != GameDataStatus.Skeleton && _gameDataStatus != GameDataStatus.Failed)
+            throw new InvalidOperationException(
+                $"Cannot assign BggId in {_gameDataStatus} state. Must be Skeleton or Failed.");
+
+        _bggId = bggId;
+        _modifiedBy = modifiedBy;
+        _modifiedAt = DateTime.UtcNow;
+    }
+
     #endregion
 
     /// <summary>

@@ -25,7 +25,11 @@ import Link from 'next/link';
 import { useMediaQuery } from '@/lib/hooks/useMediaQuery';
 import { cn } from '@/lib/utils';
 
+import { CardBackComposer } from '../card-back-blocks/CardBackComposer';
+
+import type { CardBackComposerProps } from '../card-back-blocks/CardBackComposer';
 import type { MeepleCardVariant } from '../meeple-card';
+import type { MeepleEntityType } from '../meeple-card-styles';
 
 // ============================================================================
 // Types
@@ -66,6 +70,10 @@ export interface FlipCardProps {
   title?: string;
   /** Additional CSS classes */
   className?: string;
+  /** Block data for modular card back (Mana System). When provided, CardBackComposer renders the back. */
+  backBlockData?: CardBackComposerProps['blockData'];
+  /** Entity type for CardBackComposer (required when backBlockData is provided) */
+  entity?: MeepleEntityType;
 }
 
 // ============================================================================
@@ -370,6 +378,8 @@ export function FlipCard({
   entityName: _entityName,
   title,
   className,
+  backBlockData,
+  entity,
 }: FlipCardProps) {
   // Internal state for uncontrolled mode
   const [internalFlipped, setInternalFlipped] = useState(false);
@@ -511,7 +521,14 @@ export function FlipCard({
           data-testid="meeple-card-back"
           {...(isCardMode ? { onClick: handleFlip } : {})}
         >
-          {customBackContent ??
+          {backBlockData && entity ? (
+            <CardBackComposer
+              entity={entity}
+              blockData={backBlockData}
+              className="py-2 overflow-y-auto max-h-full"
+            />
+          ) : (
+            (customBackContent ??
             (flipData ? (
               <BackContent
                 flipData={flipData}
@@ -520,7 +537,8 @@ export function FlipCard({
                 entityColor={entityColor}
                 title={title}
               />
-            ) : null)}
+            ) : null))
+          )}
           {/* Flip-back button on back face (touch/button mode only) */}
           {!isCardMode && (
             <button

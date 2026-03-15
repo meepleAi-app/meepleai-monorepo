@@ -4,6 +4,7 @@ using Api.BoundedContexts.Authentication.Domain.Repositories;
 using Api.BoundedContexts.Authentication.Domain.ValueObjects;
 using Api.BoundedContexts.Authentication.Infrastructure.Persistence;
 using Api.SharedKernel.Domain.ValueObjects;
+using Api.SharedKernel.Infrastructure.Persistence;
 using Api.Tests.Constants;
 using Moq;
 using Xunit;
@@ -17,15 +18,18 @@ public class RequestAccessCommandHandlerTests
 {
     private readonly Mock<IAccessRequestRepository> _accessRequestRepoMock;
     private readonly Mock<IUserRepository> _userRepoMock;
+    private readonly Mock<IUnitOfWork> _unitOfWorkMock;
     private readonly RequestAccessCommandHandler _handler;
 
     public RequestAccessCommandHandlerTests()
     {
         _accessRequestRepoMock = new Mock<IAccessRequestRepository>();
         _userRepoMock = new Mock<IUserRepository>();
+        _unitOfWorkMock = new Mock<IUnitOfWork>();
         _handler = new RequestAccessCommandHandler(
             _accessRequestRepoMock.Object,
-            _userRepoMock.Object);
+            _userRepoMock.Object,
+            _unitOfWorkMock.Object);
     }
 
     [Fact]

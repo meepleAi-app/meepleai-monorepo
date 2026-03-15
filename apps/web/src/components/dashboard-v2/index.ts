@@ -15,3 +15,12 @@ export { DashboardSessionHero } from './session-hero';
 export { RecentGamesSection } from './recent-games-section';
 export { AgentsDashboardSection } from './agents-section';
 export { RecentChatsDashboardSection } from './recent-chats-section';
+// Issue #448 — Contextual Dashboard
+export { HeroZone } from './hero-zone';
+export { GameNightHero } from './game-night-hero';
+export { IncompleteSessionHero } from './incomplete-session-hero';
+export { QuickCardsCarousel } from './quick-cards-carousel';
+export { ActivityFeed } from './activity-feed';
+export type { ActivityItem } from './activity-feed';
+export { SessionModeDashboard } from './session-mode-dashboard';
+export { SessionQuickActions } from './session-quick-actions';

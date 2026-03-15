@@ -6,12 +6,15 @@ import { usePathname } from 'next/navigation';
 
 import { ErrorBoundary } from '@/components/errors/ErrorBoundary';
 import { DEFAULT_PINNED_CARDS } from '@/config/entity-actions';
+import { useResponsive } from '@/hooks/useResponsive';
 import { cn } from '@/lib/utils';
 import { useCardHand } from '@/stores/use-card-hand';
 
 import { AdminTabSidebar } from './AdminTabSidebar';
 import { CardStack } from './CardStack';
 import { ContextualBottomNav } from './ContextualBottomNav';
+import { HandDrawer } from './HandDrawer';
+import { NavbarMiniCards } from './NavbarMiniCards';
 import { UnifiedTopNav } from './UnifiedTopNav';
 
 interface UnifiedShellClientProps {
@@ -39,8 +42,18 @@ export function UnifiedShellClient({
   searchTrigger,
 }: UnifiedShellClientProps) {
   const pathname = usePathname();
-  const { context, toggleContext, drawCard, pinCard, cards } = useCardHand();
+  const {
+    context,
+    toggleContext,
+    drawCard,
+    pinCard,
+    cards,
+    isHandCollapsed,
+    expandHand,
+    focusCard,
+  } = useCardHand();
   const isAdminContext = context === 'admin';
+  const { isDesktop } = useResponsive();
 
   // Auto-set admin context when mounted from an admin route
   useEffect(() => {
@@ -73,17 +86,38 @@ export function UnifiedShellClient({
           userMenu={userMenu}
           notificationBell={notificationBell}
           searchTrigger={searchTrigger}
+          miniCards={
+            !isDesktop && isHandCollapsed && cards.length > 0 ? (
+              <NavbarMiniCards
+                cards={cards}
+                onExpand={id => {
+                  expandHand();
+                  const idx = cards.findIndex(c => c.id === id);
+                  if (idx >= 0) focusCard(idx);
+                }}
+              />
+            ) : undefined
+          }
         />
       </ErrorBoundary>
+
+      {/* Hand Drawer (mobile only, non-admin) */}
+      {!isDesktop && !isAdminContext && <HandDrawer />}
 
       {/* Onboarding banner */}
       {onboardingBanner}
 
       {/* Main body: left panel + content */}
       <div className="flex flex-1 overflow-hidden">
-        {/* Left panel: CardStack (user) or AdminTabSidebar (admin) */}
+        {/* Left panel: CardStack (desktop user) or AdminTabSidebar (admin) */}
         <ErrorBoundary fallback={null} componentName="LeftPanel">
-          {isAdminContext ? <AdminTabSidebar /> : <CardStack />}
+          {isAdminContext ? (
+            <AdminTabSidebar />
+          ) : (
+            <div className="hidden lg:flex">
+              <CardStack />
+            </div>
+          )}
         </ErrorBoundary>
 
         {/* Main content area */}

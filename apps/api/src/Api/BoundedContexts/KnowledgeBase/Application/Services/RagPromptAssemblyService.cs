@@ -3,10 +3,13 @@ using System.Text;
 using System.Text.Json;
 using Api.BoundedContexts.KnowledgeBase.Application.Models;
 using Api.BoundedContexts.KnowledgeBase.Domain.Entities;
+using Api.BoundedContexts.KnowledgeBase.Domain.Enums;
+using Api.BoundedContexts.KnowledgeBase.Domain.Services.Enhancements;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services.Reranking;
 using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 using Api.Models;
 using Api.Services;
+using Api.SharedKernel.Domain.ValueObjects;
 using Microsoft.Extensions.Logging;
 
 namespace Api.BoundedContexts.KnowledgeBase.Application.Services;
@@ -24,6 +27,10 @@ internal sealed class RagPromptAssemblyService : IRagPromptAssemblyService
     private readonly ILlmService _llmService;
     private readonly ITextChunkSearchService _textSearch;
     private readonly IExpansionGameResolver _expansionResolver;
+    private readonly IRagEnhancementService _ragEnhancementService;
+    private readonly IQueryComplexityClassifier _complexityClassifier;
+    private readonly IRetrievalRelevanceEvaluator _relevanceEvaluator;
+    private readonly IQueryExpander _queryExpander;
     private readonly ILogger<RagPromptAssemblyService> _logger;
 
     // RAG search parameters
@@ -65,6 +72,10 @@ internal sealed class RagPromptAssemblyService : IRagPromptAssemblyService
         ILlmService llmService,
         ITextChunkSearchService textSearch,
         IExpansionGameResolver expansionResolver,
+        IRagEnhancementService ragEnhancementService,
+        IQueryComplexityClassifier complexityClassifier,
+        IRetrievalRelevanceEvaluator relevanceEvaluator,
+        IQueryExpander queryExpander,
         ILogger<RagPromptAssemblyService> logger)
     {
         _embeddingService = embeddingService ?? throw new ArgumentNullException(nameof(embeddingService));
@@ -72,6 +83,10 @@ internal sealed class RagPromptAssemblyService : IRagPromptAssemblyService
         _llmService = llmService ?? throw new ArgumentNullException(nameof(llmService));
         _textSearch = textSearch ?? throw new ArgumentNullException(nameof(textSearch));
         _expansionResolver = expansionResolver ?? throw new ArgumentNullException(nameof(expansionResolver));
+        _ragEnhancementService = ragEnhancementService ?? throw new ArgumentNullException(nameof(ragEnhancementService));
+        _complexityClassifier = complexityClassifier ?? throw new ArgumentNullException(nameof(complexityClassifier));
+        _relevanceEvaluator = relevanceEvaluator ?? throw new ArgumentNullException(nameof(relevanceEvaluator));
+        _queryExpander = queryExpander ?? throw new ArgumentNullException(nameof(queryExpander));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -82,6 +97,7 @@ internal sealed class RagPromptAssemblyService : IRagPromptAssemblyService
         string userQuestion,
         Guid gameId,
         ChatThread? chatThread,
+        UserTier? userTier,
         CancellationToken ct)
     {
         ArgumentNullException.ThrowIfNull(agentTypology);
@@ -94,7 +110,7 @@ internal sealed class RagPromptAssemblyService : IRagPromptAssemblyService
         var hasExpansions = expansionGameIds.Count > 0;
 
         // Step 1: Retrieve RAG context (includes expansion boost), passing pre-resolved expansion IDs
-        var (ragContext, citations) = await RetrieveRagContextAsync(userQuestion, gameId, expansionGameIds, ct).ConfigureAwait(false);
+        var (ragContext, citations) = await RetrieveRagContextAsync(userQuestion, gameId, expansionGameIds, userTier, ct).ConfigureAwait(false);
 
         // Step 2: Build system prompt (persona + RAG chunks + expansion priority)
         var systemPrompt = BuildSystemPrompt(agentTypology, gameTitle, gameState, ragContext, hasExpansions);
@@ -115,14 +131,44 @@ internal sealed class RagPromptAssemblyService : IRagPromptAssemblyService
     }
 
     private async Task<(string ragContext, List<ChunkCitation> citations)> RetrieveRagContextAsync(
-        string userQuestion, Guid gameId, IReadOnlyList<Guid> expansionGameIds, CancellationToken ct)
+        string userQuestion, Guid gameId, IReadOnlyList<Guid> expansionGameIds, UserTier? userTier, CancellationToken ct)
     {
         var citations = new List<ChunkCitation>();
 
         try
         {
-            // Step 1: Query expansion (optional, graceful degradation)
-            var queries = await ExpandQueryAsync(userQuestion, ct).ConfigureAwait(false);
+            // === ADAPTIVE RAG ===
+            var activeEnhancements = RagEnhancement.None;
+            if (userTier != null)
+            {
+                activeEnhancements = await _ragEnhancementService
+                    .GetActiveEnhancementsAsync(userTier, ct).ConfigureAwait(false);
+            }
+
+            if (activeEnhancements.HasFlag(RagEnhancement.AdaptiveRouting))
+            {
+                var complexity = await _complexityClassifier.ClassifyAsync(userQuestion, ct).ConfigureAwait(false);
+                _logger.LogInformation("Adaptive RAG: {Level} (confidence: {Confidence:F2})",
+                    complexity.Level, complexity.Confidence);
+
+                if (!complexity.RequiresRetrieval)
+                {
+                    _logger.LogInformation("Adaptive RAG: skipping retrieval for simple query");
+                    return (string.Empty, citations);
+                }
+            }
+
+            // === RAG-FUSION or standard query expansion ===
+            List<string> queries;
+            if (activeEnhancements.HasFlag(RagEnhancement.RagFusionQueries))
+            {
+                queries = await _queryExpander.ExpandAsync(userQuestion, ct).ConfigureAwait(false);
+                _logger.LogInformation("RAG-Fusion: expanded to {Count} query variants", queries.Count);
+            }
+            else
+            {
+                queries = await ExpandQueryAsync(userQuestion, ct).ConfigureAwait(false);
+            }
 
             // Step 2: Generate embeddings for all queries
             var allChunks = new List<SearchResultItem>();
@@ -166,6 +212,53 @@ internal sealed class RagPromptAssemblyService : IRagPromptAssemblyService
 
             // Step 3: Rerank if available (graceful degradation)
             filteredChunks = await TryRerankAsync(userQuestion, filteredChunks, ct).ConfigureAwait(false);
+
+            // === CRAG: Evaluate retrieval relevance ===
+            if (activeEnhancements.HasFlag(RagEnhancement.CragEvaluation) && filteredChunks.Count > 0)
+            {
+                var scoredChunks = filteredChunks
+                    .Select(c => new ScoredChunk(
+                        $"{c.PdfId}:{c.ChunkIndex}", c.Text, c.Score))
+                    .ToList();
+
+                var evaluation = await _relevanceEvaluator
+                    .EvaluateAsync(userQuestion, scoredChunks, ct).ConfigureAwait(false);
+
+                if (evaluation.ShouldRequery)
+                {
+                    _logger.LogInformation("CRAG: {Verdict} — expanding retrieval",
+                        evaluation.Verdict);
+                    var expandedQuery = await ExpandQueryAsync(userQuestion, ct).ConfigureAwait(false);
+                    var expandedChunks = await TryHybridSearchAsync(
+                        expandedQuery.FirstOrDefault() ?? userQuestion,
+                        gameId, new List<SearchResultItem>(), ct).ConfigureAwait(false);
+
+                    if (evaluation.UseRetrievedDocuments)
+                    {
+                        // Ambiguous: merge original + expanded, deduplicate
+                        filteredChunks = filteredChunks
+                            .Concat(expandedChunks)
+                            .GroupBy(c => $"{c.PdfId}:{c.ChunkIndex}", StringComparer.Ordinal)
+                            .Select(g => g.OrderByDescending(c => c.Score).First())
+                            .OrderByDescending(c => c.Score)
+                            .Take(RerankedTopK * 2)
+                            .ToList();
+                    }
+                    else
+                    {
+                        // Incorrect: replace with expanded results
+                        filteredChunks = expandedChunks
+                            .Where(c => c.Score >= DefaultMinScore)
+                            .OrderByDescending(c => c.Score)
+                            .Take(RerankedTopK)
+                            .ToList();
+                    }
+
+                    // Re-rerank the merged results
+                    filteredChunks = await TryRerankAsync(userQuestion, filteredChunks, ct)
+                        .ConfigureAwait(false);
+                }
+            }
 
             // Step 4: Sentence window expansion — include adjacent chunks for more context
             filteredChunks = await TrySentenceWindowExpansionAsync(filteredChunks, ct).ConfigureAwait(false);

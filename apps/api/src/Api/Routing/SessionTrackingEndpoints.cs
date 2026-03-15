@@ -702,7 +702,7 @@ internal static class SessionTrackingEndpoints
             return Results.Ok(result);
         })
         .RequireAuthenticatedUser()
-        .WithName("DrawCards")
+        .WithName("DrawSessionCards")
         .WithTags("SessionTracking", "CardDeck")
         .WithSummary("Draw cards from the deck")
         .Produces(200)

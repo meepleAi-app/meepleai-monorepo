@@ -14,8 +14,8 @@ using Pgvector;
 namespace Api.Infrastructure.Migrations
 {
     [DbContext(typeof(MeepleAiDbContext))]
-    [Migration("20260315140733_AddPauseSnapshotAndDisputesJsonb")]
-    partial class AddPauseSnapshotAndDisputesJsonb
+    [Migration("20260315184747_AddPauseSnapshotDisputesJsonbAndFk")]
+    partial class AddPauseSnapshotDisputesJsonbAndFk
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -12589,6 +12589,15 @@ namespace Api.Infrastructure.Migrations
                     b.Navigation("LiveGameSession");
 
                     b.Navigation("Player");
+                });
+
+            modelBuilder.Entity("Api.Infrastructure.Entities.GameManagement.PauseSnapshotEntity", b =>
+                {
+                    b.HasOne("Api.Infrastructure.Entities.GameManagement.LiveGameSessionEntity", null)
+                        .WithMany()
+                        .HasForeignKey("LiveGameSessionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("Api.Infrastructure.Entities.GameManagement.PlayRecordEntity", b =>

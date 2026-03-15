@@ -77,5 +77,11 @@ internal sealed class PauseSnapshotEntityConfiguration : IEntityTypeConfiguratio
 
         builder.HasIndex(e => new { e.LiveGameSessionId, e.IsAutoSave })
             .HasDatabaseName("ix_pause_snapshots_session_is_auto_save");
+
+        // FK: orphaned snapshots are deleted when the parent session is removed
+        builder.HasOne<LiveGameSessionEntity>()
+            .WithMany()
+            .HasForeignKey(e => e.LiveGameSessionId)
+            .OnDelete(DeleteBehavior.Cascade);
     }
 }

@@ -101,25 +101,19 @@ internal sealed class PauseSnapshotRepository : IPauseSnapshotRepository
             .Deserialize<List<RuleDisputeEntry>>(entity.DisputesJson, JsonOptions)
             ?? new List<RuleDisputeEntry>();
 
-        var snapshot = PauseSnapshot.Create(
-            entity.LiveGameSessionId,
-            entity.CurrentTurn,
-            entity.CurrentPhase,
-            playerScores,
-            entity.SavedByUserId,
-            entity.IsAutoSave,
-            attachmentIds,
-            disputes,
-            entity.GameStateJson);
-
-        // Restore identity & timing that EF persisted
-        SetId(snapshot, entity.Id);
-        SetSavedAt(snapshot, entity.SavedAt);
-
-        if (!string.IsNullOrWhiteSpace(entity.AgentConversationSummary))
-            snapshot.UpdateSummary(entity.AgentConversationSummary);
-
-        return snapshot;
+        return PauseSnapshot.Restore(
+            id: entity.Id,
+            liveGameSessionId: entity.LiveGameSessionId,
+            currentTurn: entity.CurrentTurn,
+            currentPhase: entity.CurrentPhase,
+            playerScores: playerScores,
+            savedByUserId: entity.SavedByUserId,
+            isAutoSave: entity.IsAutoSave,
+            savedAt: entity.SavedAt,
+            attachmentIds: attachmentIds,
+            disputes: disputes,
+            gameStateJson: entity.GameStateJson,
+            agentConversationSummary: entity.AgentConversationSummary);
     }
 
     private PauseSnapshotEntity MapToPersistence(PauseSnapshot snapshot)
@@ -141,24 +135,4 @@ internal sealed class PauseSnapshotRepository : IPauseSnapshotRepository
         };
     }
 
-    /// <summary>
-    /// Restores the persisted ID without going through the factory method (which always generates a new Guid).
-    /// Uses reflection to set the protected <c>Entity&lt;Guid&gt;.Id</c> property.
-    /// </summary>
-    private static void SetId(PauseSnapshot snapshot, Guid id)
-    {
-        var prop = typeof(PauseSnapshot).BaseType?.GetProperty("Id",
-            System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance);
-        prop?.SetValue(snapshot, id);
-    }
-
-    /// <summary>
-    /// Restores the persisted SavedAt timestamp.
-    /// </summary>
-    private static void SetSavedAt(PauseSnapshot snapshot, DateTime savedAt)
-    {
-        var field = typeof(PauseSnapshot).GetProperty("SavedAt",
-            System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance);
-        field?.SetValue(snapshot, savedAt);
-    }
 }

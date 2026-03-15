@@ -18,4 +18,5 @@ public class RaptorSummaryEntity
 
     // Navigation
     public PdfDocumentEntity? PdfDocument { get; set; }
+    public GameEntity? Game { get; set; }
 }

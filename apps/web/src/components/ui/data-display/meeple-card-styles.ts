@@ -7,6 +7,7 @@ import { cva } from 'class-variance-authority';
 /**
  * Supported entity types with semantic colors
  * Issue #4030: Extended from 5 to 9 types (game, player, session, agent, kb, chatSession, event, toolkit, custom)
+ * Mana system: Extended to 16 types (added collection, group, location, expansion, achievement, note)
  */
 export type MeepleEntityType =
   | 'game'
@@ -18,6 +19,12 @@ export type MeepleEntityType =
   | 'event'
   | 'toolkit'
   | 'tool'
+  | 'collection'
+  | 'group'
+  | 'location'
+  | 'expansion'
+  | 'achievement'
+  | 'note'
   | 'custom';
 
 /**
@@ -39,7 +46,13 @@ export const entityColors: Record<MeepleEntityType, { hsl: string; name: string 
   event: { hsl: '350 89% 60%', name: 'Event' }, // Rose
   toolkit: { hsl: '142 70% 45%', name: 'Toolkit' }, // Green
   tool: { hsl: '195 80% 50%', name: 'Tool' }, // Sky Blue (Epic #412)
-  custom: { hsl: '220 70% 50%', name: 'Custom' }, // Blue (default)
+  collection: { hsl: '20 70% 42%', name: 'Copper' },
+  group: { hsl: '280 50% 48%', name: 'Warm Violet' },
+  location: { hsl: '200 55% 45%', name: 'Slate Cyan' },
+  expansion: { hsl: '290 65% 50%', name: 'Magenta' },
+  achievement: { hsl: '45 90% 48%', name: 'Gold' },
+  note: { hsl: '40 30% 42%', name: 'Warm Gray' },
+  custom: { hsl: '220 15% 45%', name: 'Custom' }, // Silver (Mana spec)
 };
 
 // Map MeepleEntityType → DrawerEntityType for ExtraMeepleCardDrawer (Issue #5025)

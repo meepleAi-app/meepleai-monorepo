@@ -28,6 +28,12 @@
   --animate-mc-unread-bounce: mc-unread-bounce 0.5s ease-out;
   --animate-mc-live-pulse: mc-live-pulse 2s ease-in-out infinite;
   --animate-mc-spin-slow: mc-spin-slow 8s linear infinite;
+
+  /* Neon Holo animations (spec: 2026-03-15) */
+  --animate-holo-slide: holo-slide 4s ease-in-out infinite;
+  --animate-holo-rotate: holo-rotate 6s linear infinite;
+  --animate-entity-pulse: entity-pulse 3s ease-in-out infinite;
+  --animate-status-blink: status-blink 2s ease-in-out infinite;
 }
 
 @keyframes fadeIn {
@@ -117,6 +123,28 @@
 @keyframes mc-spin-slow {
   0% { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }
+}
+
+/* Neon Holo keyframes (spec: 2026-03-15) */
+@keyframes holo-slide {
+  0% { background-position: -200% 0; }
+  50% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+@keyframes holo-rotate {
+  from { filter: hue-rotate(0deg); }
+  to { filter: hue-rotate(360deg); }
+}
+
+@keyframes entity-pulse {
+  0%, 100% { box-shadow: 0 4px 20px rgba(0,0,0,0.4), 0 0 15px var(--entity-glow-color, transparent); }
+  50% { box-shadow: 0 4px 20px rgba(0,0,0,0.4), 0 0 25px var(--entity-glow-color, transparent); }
+}
+
+@keyframes status-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
 }
 
 @layer base {
@@ -227,6 +255,43 @@
 
   .nav-item-hover:hover {
     color: hsl(var(--primary));
+  }
+
+  /* Neon Holo — holographic hover animations (spec: 2026-03-15) */
+  .holo-rainbow.animate {
+    animation: holo-slide 4s ease-in-out infinite;
+  }
+  .holo-border.animate {
+    animation: holo-rotate 6s linear infinite;
+  }
+
+  /* Reduced motion: disable all holo animations */
+  @media (prefers-reduced-motion: reduce) {
+    .holo-rainbow,
+    .holo-sparkle,
+    .holo-border {
+      animation: none !important;
+      transition: none !important;
+    }
+  }
+
+  /* Light mode: disable rainbow and sparkle, soften border */
+  :root:not(.dark) .holo-rainbow,
+  :root:not(.dark) .holo-sparkle {
+    display: none;
+  }
+  :root:not(.dark) .holo-border {
+    opacity: 0 !important;
+  }
+  :root:not(.dark) .group:hover .holo-border {
+    opacity: 0.4 !important;
+  }
+
+  /* Keyboard focus activates holo effects (accessibility) */
+  .group:focus-visible .holo-rainbow,
+  .group:focus-visible .holo-sparkle,
+  .group:focus-visible .holo-border {
+    opacity: 1;
   }
 }
 

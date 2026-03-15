@@ -124,6 +124,14 @@ internal class FeatureFlagService : IFeatureFlagService
         if (string.IsNullOrWhiteSpace(featureName))
             throw new ArgumentException("Feature name cannot be empty", nameof(featureName));
 
+        // Admin users bypass all tier-based restrictions
+        if (user.Role.IsAdmin())
+        {
+            _logger.LogDebug("Feature {FeatureName} granted for admin user {UserId} (tier bypass)",
+                featureName, user.Id);
+            return true;
+        }
+
         // Map User.Role (ValueObject) to UserRole enum
         var userRole = MapRoleToUserRole(user.Role);
 

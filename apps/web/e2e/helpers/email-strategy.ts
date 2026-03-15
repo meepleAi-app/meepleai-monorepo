@@ -30,33 +30,68 @@ async function extractInvitationLocal(page: Page, apiURL: string): Promise<Invit
   };
 }
 
+/**
+ * Delete all previous messages for this email to avoid stale token matches.
+ * Then wait for the fresh invitation email.
+ */
 async function extractInvitationMailosaur(testUserEmail: string): Promise<InvitationResult> {
   const Mailosaur = (await import('mailosaur')).default;
   const client = new Mailosaur(env.email.mailosaurApiKey!);
+  const serverId = env.email.mailosaurServerId!;
 
+  // Delete any previous messages for this address (avoid stale tokens)
+  try {
+    const existing = await client.messages.list(serverId, { sentTo: testUserEmail } as any);
+    for (const msg of existing.items ?? []) {
+      await client.messages.del(msg.id!);
+    }
+  } catch {
+    // Ignore cleanup errors
+  }
+
+  // Wait for the fresh email (sent AFTER cleanup)
   const message = await client.messages.get(
-    env.email.mailosaurServerId!,
+    serverId,
     { sentTo: testUserEmail },
-    { timeout: env.timeouts.email }
+    { timeout: env.timeouts.email, receivedAfter: new Date(Date.now() - 60_000) }
   );
 
   const html = message.html?.body ?? '';
-  const linkMatch = html.match(/href="([^"]*accept-invite[^"]*)"/);
+  console.log(
+    `[Mailosaur] Subject: ${message.subject}, From: ${message.from?.[0]?.email}, Received: ${message.received}`
+  );
+
+  // Try multiple link patterns (href with quotes, or plain text URLs)
+  const linkMatch =
+    html.match(/href="([^"]*accept-invite[^"]*)"/) ??
+    html.match(/href='([^']*accept-invite[^']*)'/) ??
+    html.match(/(https?:\/\/[^\s<"]*accept-invite[^\s<"]*)/);
 
   if (!linkMatch) {
-    throw new Error('No accept-invite link found in invitation email');
+    // Log first 500 chars of HTML for debugging
+    console.log(`[Mailosaur] No accept-invite link. HTML preview: ${html.slice(0, 500)}`);
+    throw new Error(`No accept-invite link found in invitation email. Subject: ${message.subject}`);
   }
 
   const invitationUrl = linkMatch[1];
-  const tokenMatch = invitationUrl.match(/token=([^&"]+)/);
+  console.log(`[Mailosaur] Invitation URL: ${invitationUrl}`);
+
+  const tokenMatch = invitationUrl.match(/token=([^&"'\s]+)/);
 
   if (!tokenMatch) {
-    throw new Error('No token found in invitation URL');
+    throw new Error(`No token found in invitation URL: ${invitationUrl}`);
   }
 
+  const token = tokenMatch[1];
+
+  // The backend may generate URLs with internal hostname (e.g., localhost:3000).
+  // Replace with the actual staging baseURL.
+  const correctedUrl = `${env.baseURL}/accept-invite?token=${token}`;
+  console.log(`[Mailosaur] Token: ${token.slice(0, 20)}... → ${correctedUrl}`);
+
   return {
-    invitationToken: tokenMatch[1],
-    invitationUrl,
+    invitationToken: token,
+    invitationUrl: correctedUrl,
   };
 }
 

@@ -63,6 +63,14 @@ public class FeatureFlagTierAccessIntegrationTests
         var premiumUser = CreateUser(UserTier.Premium, Role.User);
         var premiumFeature = "Features.MultiAgent";
 
+        // Mock: Role-based access granted (global feature enabled)
+        _mockConfigService
+            .Setup(s => s.GetValueAsync<bool?>(
+                premiumFeature,
+                It.IsAny<bool?>(),
+                null))
+            .ReturnsAsync(true);
+
         // Mock: Feature enabled for premium tier
         _mockConfigService
             .Setup(s => s.GetValueAsync<bool?>(

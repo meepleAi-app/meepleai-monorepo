@@ -65,6 +65,41 @@ public sealed class PauseSnapshot : Entity<Guid>
     }
 
     /// <summary>
+    /// Restores a PauseSnapshot from persisted storage, preserving the original Id and SavedAt.
+    /// Use this in repository mapping instead of reflection-based property injection.
+    /// </summary>
+    internal static PauseSnapshot Restore(
+        Guid id,
+        Guid liveGameSessionId,
+        int currentTurn,
+        string? currentPhase,
+        List<PlayerScoreSnapshot> playerScores,
+        Guid savedByUserId,
+        bool isAutoSave,
+        DateTime savedAt,
+        List<Guid>? attachmentIds = null,
+        List<RuleDisputeEntry>? disputes = null,
+        string? gameStateJson = null,
+        string? agentConversationSummary = null)
+    {
+        return new PauseSnapshot
+        {
+            Id = id,
+            LiveGameSessionId = liveGameSessionId,
+            CurrentTurn = currentTurn,
+            CurrentPhase = currentPhase,
+            PlayerScores = playerScores ?? new(),
+            AttachmentIds = attachmentIds ?? new(),
+            Disputes = disputes ?? new(),
+            GameStateJson = gameStateJson,
+            SavedAt = savedAt,
+            SavedByUserId = savedByUserId,
+            IsAutoSave = isAutoSave,
+            AgentConversationSummary = agentConversationSummary
+        };
+    }
+
+    /// <summary>
     /// Sets the agent conversation summary after the AI summarises the session context.
     /// Called asynchronously once the agent produces a summary post-pause.
     /// </summary>

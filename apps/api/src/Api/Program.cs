@@ -18,6 +18,7 @@ using Api.BoundedContexts.DocumentProcessing.Infrastructure.DependencyInjection;
 using Api.BoundedContexts.EntityRelationships.Infrastructure.DependencyInjection;
 using Api.BoundedContexts.Gamification.Infrastructure.DependencyInjection;
 using Api.BoundedContexts.GameManagement.Infrastructure.DependencyInjection;
+using Api.BoundedContexts.GameToolbox.Infrastructure.DependencyInjection;
 using Api.BoundedContexts.GameToolkit.Infrastructure.DependencyInjection;
 using Api.BoundedContexts.KnowledgeBase.Infrastructure.DependencyInjection;
 using Api.BoundedContexts.SessionTracking.Infrastructure.DependencyInjection;
@@ -304,6 +305,9 @@ builder.Services.AddGameManagementContext();
 
 // Issue #4753: GameToolkit bounded context (toolkit configs, tools, templates)
 builder.Services.AddGameToolkitContext();
+
+// Epic #412: GameToolbox bounded context (toolbox containers, card decks, phases)
+builder.Services.AddGameToolboxContext();
 
 // Issue #5130: EntityRelationships bounded context (entity links, relationships)
 builder.Services.AddEntityRelationshipsContext();

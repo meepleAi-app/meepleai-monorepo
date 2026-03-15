@@ -1,5 +1,6 @@
 using Api.BoundedContexts.KnowledgeBase.Application.Commands;
 using Api.BoundedContexts.KnowledgeBase.Application.Handlers;
+using Api.BoundedContexts.KnowledgeBase.Application.Services;
 using Api.BoundedContexts.KnowledgeBase.Domain.Entities;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
@@ -7,6 +8,7 @@ using Api.BoundedContexts.SharedGameCatalog.Application.Commands;
 using Api.BoundedContexts.UserLibrary.Domain.Entities;
 using Api.BoundedContexts.UserLibrary.Domain.Repositories;
 using Api.Infrastructure;
+using Api.Infrastructure.Entities;
 using Api.Middleware.Exceptions;
 using Api.SharedKernel.Application.Services;
 using Api.SharedKernel.Infrastructure.Persistence;
@@ -30,6 +32,7 @@ public class CreateAgentWithSetupCommandHandlerTests
     private readonly Mock<IAgentRepository> _mockAgentRepo;
     private readonly Mock<IChatThreadRepository> _mockChatRepo;
     private readonly Mock<IUserLibraryRepository> _mockLibraryRepo;
+    private readonly Mock<IRagAccessService> _mockRagAccessService;
     private readonly Mock<IUnitOfWork> _mockUnitOfWork;
     private readonly MeepleAiDbContext _db;
     private readonly Mock<IMediator> _mockMediator;
@@ -44,6 +47,7 @@ public class CreateAgentWithSetupCommandHandlerTests
         _mockAgentRepo = new Mock<IAgentRepository>();
         _mockChatRepo = new Mock<IChatThreadRepository>();
         _mockLibraryRepo = new Mock<IUserLibraryRepository>();
+        _mockRagAccessService = new Mock<IRagAccessService>();
         _mockUnitOfWork = new Mock<IUnitOfWork>();
         _mockMediator = new Mock<IMediator>();
         _mockLogger = new Mock<ILogger<CreateAgentWithSetupCommandHandler>>();
@@ -57,6 +61,7 @@ public class CreateAgentWithSetupCommandHandlerTests
             _mockAgentRepo.Object,
             _mockChatRepo.Object,
             _mockLibraryRepo.Object,
+            _mockRagAccessService.Object,
             _mockUnitOfWork.Object,
             _db,
             _mockMediator.Object,
@@ -69,6 +74,11 @@ public class CreateAgentWithSetupCommandHandlerTests
         _mockAgentRepo
             .Setup(r => r.ExistsByNameForUserAsync(It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(false);
+
+        // Default: RAG access allowed
+        _mockRagAccessService
+            .Setup(r => r.CanAccessRagAsync(It.IsAny<Guid>(), It.IsAny<Guid>(), It.IsAny<UserRole>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
     }
 
     [Fact]

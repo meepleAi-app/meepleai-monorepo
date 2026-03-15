@@ -1,6 +1,5 @@
 using Api.BoundedContexts.SharedGameCatalog.Domain.Events;
-using Api.BoundedContexts.UserNotifications.Domain.Aggregates;
-using Api.BoundedContexts.UserNotifications.Domain.Repositories;
+using Api.BoundedContexts.UserNotifications.Application.Services;
 using Api.BoundedContexts.UserNotifications.Domain.ValueObjects;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
@@ -13,22 +12,21 @@ namespace Api.BoundedContexts.UserNotifications.Application.EventHandlers;
 
 /// <summary>
 /// Event handler that creates admin notifications when an AI agent is linked to a shared game.
-/// Fires after <see cref="AgentLinkedToSharedGameEvent"/> is dispatched by the SharedGameCatalog BC.
-/// Notifies all admins so they can open the game and start the debug chat session.
+/// Dispatches via NotificationDispatcher for multi-channel delivery (in-app, email, Slack).
 /// Issue #5009: Notification triggers for admin workflow (PDF ready + agent linked).
 /// </summary>
 internal sealed class AgentLinkedNotificationEventHandler : INotificationHandler<AgentLinkedToSharedGameEvent>
 {
-    private readonly INotificationRepository _notificationRepository;
+    private readonly INotificationDispatcher _dispatcher;
     private readonly MeepleAiDbContext _dbContext;
     private readonly ILogger<AgentLinkedNotificationEventHandler> _logger;
 
     public AgentLinkedNotificationEventHandler(
-        INotificationRepository notificationRepository,
+        INotificationDispatcher dispatcher,
         MeepleAiDbContext dbContext,
         ILogger<AgentLinkedNotificationEventHandler> logger)
     {
-        _notificationRepository = notificationRepository ?? throw new ArgumentNullException(nameof(notificationRepository));
+        _dispatcher = dispatcher ?? throw new ArgumentNullException(nameof(dispatcher));
         _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
@@ -45,7 +43,7 @@ internal sealed class AgentLinkedNotificationEventHandler : INotificationHandler
                 .FirstOrDefaultAsync(cancellationToken)
                 .ConfigureAwait(false) ?? notification.GameId.ToString();
 
-            // Notify all admin users so they can open the game and start a debug chat
+            // Notify all admin users
             var adminIds = await _dbContext.Set<UserEntity>()
                 .AsNoTracking()
                 .Where(u => u.Role == "admin")
@@ -63,27 +61,19 @@ internal sealed class AgentLinkedNotificationEventHandler : INotificationHandler
 
             foreach (var adminId in adminIds)
             {
-                var adminNotification = new Notification(
-                    id: Guid.NewGuid(),
-                    userId: adminId,
-                    type: NotificationType.AgentLinked,
-                    severity: NotificationSeverity.Success,
-                    title: "Agent Linked",
-                    message: $"Agent linked to '{gameTitle}'. Game is ready for AI chat.",
-                    link: $"/admin/shared-games/{notification.GameId}",
-                    metadata: System.Text.Json.JsonSerializer.Serialize(new
-                    {
-                        gameId = notification.GameId,
-                        agentDefinitionId = notification.AgentDefinitionId
-                    }));
-
-                await _notificationRepository.AddAsync(adminNotification, cancellationToken).ConfigureAwait(false);
+                await _dispatcher.DispatchAsync(new NotificationMessage
+                {
+                    Type = NotificationType.AgentLinked,
+                    RecipientUserId = adminId,
+                    Payload = new GenericPayload(
+                        "Agent Linked",
+                        $"Agent linked to '{gameTitle}'. Game is ready for AI chat."),
+                    DeepLinkPath = $"/admin/shared-games/{notification.GameId}"
+                }, cancellationToken).ConfigureAwait(false);
             }
 
-            await _dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
-
             _logger.LogInformation(
-                "Created {Count} admin notifications for agent {AgentId} linked to game {GameId}",
+                "Dispatched {Count} admin notifications for agent {AgentId} linked to game {GameId}",
                 adminIds.Count, notification.AgentDefinitionId, notification.GameId);
         }
 #pragma warning disable CA1031
@@ -92,7 +82,7 @@ internal sealed class AgentLinkedNotificationEventHandler : INotificationHandler
             _logger.LogError(ex,
                 "Failed to create admin notifications for agent {AgentId} linked to game {GameId}",
                 notification.AgentDefinitionId, notification.GameId);
-            // Don't rethrow — event handler failures must not block the main operation
+            // Don't rethrow - event handler failures must not block the main operation
         }
 #pragma warning restore CA1031
     }

@@ -9,9 +9,11 @@ using Api.Infrastructure.Entities.SharedGameCatalog;
 using Api.Infrastructure.Entities.SystemConfiguration;
 using Api.Infrastructure.Entities.UserLibrary;
 using Api.Infrastructure.Entities.UserNotifications;
+using Api.Infrastructure.EntityConfigurations.UserNotifications;
 using Api.SharedKernel.Application.Services;
 using Api.SharedKernel.Domain.Interfaces;
 using MediatR;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.EntityFrameworkCore;
 using Pgvector; // Issue #3547: Value converter for float[] → Vector mapping
 
@@ -21,16 +23,19 @@ public class MeepleAiDbContext : DbContext
 {
     private readonly IMediator _mediator;
     private readonly IDomainEventCollector _eventCollector;
+    private readonly IDataProtectionProvider? _dataProtectionProvider;
     private readonly bool _isInMemoryDatabase;
 
     public MeepleAiDbContext(
         DbContextOptions<MeepleAiDbContext> options,
         IMediator mediator,
-        IDomainEventCollector eventCollector)
+        IDomainEventCollector eventCollector,
+        IDataProtectionProvider? dataProtectionProvider = null)
         : base(options)
     {
         _mediator = mediator;
         _eventCollector = eventCollector;
+        _dataProtectionProvider = dataProtectionProvider;
 
         // Issue #3578: Detect InMemory provider for unit tests
         // Check extensions to see if InMemory provider is being used
@@ -112,6 +117,7 @@ public class MeepleAiDbContext : DbContext
     public DbSet<ChatThreadCollectionEntity> ChatThreadCollections => Set<ChatThreadCollectionEntity>(); // ISSUE-2051: Chat-collection junction
     public DbSet<ShareLinkEntity> ShareLinks => Set<ShareLinkEntity>(); // ISSUE-2052: Shareable chat links
     public DbSet<InvitationTokenEntity> InvitationTokens => Set<InvitationTokenEntity>(); // ISSUE-124: Admin invitation tokens
+    public DbSet<AccessRequestEntity> AccessRequests => Set<AccessRequestEntity>(); // ISSUE-124: Access request management
     public DbSet<NotificationEntity> Notifications => Set<NotificationEntity>(); // ISSUE-2053: User notifications
     public DbSet<SharedGameEntity> SharedGames => Set<SharedGameEntity>(); // ISSUE-2370: Shared game catalog
     public DbSet<GameDesignerEntity> GameDesigners => Set<GameDesignerEntity>(); // ISSUE-2370: Game designers
@@ -168,6 +174,8 @@ public class MeepleAiDbContext : DbContext
     public DbSet<BoundedContexts.KnowledgeBase.Domain.Entities.PlaygroundTestScenario> PlaygroundTestScenarios => Set<BoundedContexts.KnowledgeBase.Domain.Entities.PlaygroundTestScenario>(); // ISSUE-4396: Playground Test Scenarios
     public DbSet<BoundedContexts.EntityRelationships.Domain.Aggregates.EntityLink> EntityLinks => Set<BoundedContexts.EntityRelationships.Domain.Aggregates.EntityLink>(); // ISSUE-5132: Entity relationships
     public DbSet<BoundedContexts.SystemConfiguration.Domain.Entities.TierDefinition> TierDefinitions => Set<BoundedContexts.SystemConfiguration.Domain.Entities.TierDefinition>(); // D3: Tier system definitions
+    public DbSet<RaptorSummaryEntity> RaptorSummaries => Set<RaptorSummaryEntity>(); // RAG Enhancement: RAPTOR hierarchical summaries
+    public DbSet<GameEntityRelationEntity> GameEntityRelations => Set<GameEntityRelationEntity>(); // RAG Enhancement: Graph RAG entity relations
 
     // GST-001: SessionTracking bounded context (persistence entities)
     public DbSet<Api.Infrastructure.Entities.SessionTracking.SessionEntity> SessionTrackingSessions => Set<Api.Infrastructure.Entities.SessionTracking.SessionEntity>();
@@ -200,6 +208,11 @@ public class MeepleAiDbContext : DbContext
 
     // Issue #52: Email template admin management
     public DbSet<Api.Infrastructure.Entities.UserNotifications.EmailTemplateEntity> EmailTemplates => Set<Api.Infrastructure.Entities.UserNotifications.EmailTemplateEntity>();
+
+    // Slack notification system: multi-channel queue, Slack connections, team channel configs
+    public DbSet<Api.Infrastructure.Entities.UserNotifications.NotificationQueueEntity> NotificationQueueItems => Set<Api.Infrastructure.Entities.UserNotifications.NotificationQueueEntity>();
+    public DbSet<Api.Infrastructure.Entities.UserNotifications.SlackConnectionEntity> SlackConnections => Set<Api.Infrastructure.Entities.UserNotifications.SlackConnectionEntity>();
+    public DbSet<Api.Infrastructure.Entities.UserNotifications.SlackTeamChannelConfigEntity> SlackTeamChannelConfigs => Set<Api.Infrastructure.Entities.UserNotifications.SlackTeamChannelConfigEntity>();
 
     // Issue #276/#278: Session diary events and checkpoints
     public DbSet<Api.Infrastructure.Entities.SessionTracking.SessionEventEntity> SessionEvents => Set<Api.Infrastructure.Entities.SessionTracking.SessionEventEntity>();
@@ -248,6 +261,16 @@ public class MeepleAiDbContext : DbContext
         // Apply all entity configurations from assembly
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(MeepleAiDbContext).Assembly);
 
+        // Apply encrypted entity configurations for Slack secrets (BotAccessToken, WebhookUrl)
+        // These override the parameterless configurations applied by assembly scanning
+        if (_dataProtectionProvider != null)
+        {
+            new SlackConnectionEntityConfiguration(_dataProtectionProvider)
+                .Configure(modelBuilder.Entity<SlackConnectionEntity>());
+            new SlackTeamChannelConfigEntityConfiguration(_dataProtectionProvider)
+                .Configure(modelBuilder.Entity<SlackTeamChannelConfigEntity>());
+        }
+
         // Issue #3578: Explicitly ignore Vector properties for InMemory database (unit tests)
         // Must be done AFTER ApplyConfigurationsFromAssembly to override the property configs
         if (_isInMemoryDatabase)
@@ -263,11 +286,14 @@ public class MeepleAiDbContext : DbContext
         modelBuilder.Ignore<BoundedContexts.Authentication.Domain.Entities.Session>();
         modelBuilder.Ignore<BoundedContexts.Authentication.Domain.Entities.ApiKey>();
         modelBuilder.Ignore<BoundedContexts.Authentication.Domain.Entities.ShareLink>(); // ISSUE-2052
+        modelBuilder.Ignore<BoundedContexts.Authentication.Domain.Entities.AccessRequest>(); // ISSUE-124: Access request domain entity
         modelBuilder.Ignore<BoundedContexts.GameManagement.Domain.Entities.GameSession>();
         modelBuilder.Ignore<BoundedContexts.GameManagement.Domain.Entities.GameSessionState>(); // ISSUE-2403
         modelBuilder.Ignore<BoundedContexts.GameManagement.Domain.Entities.GameStateSnapshot>(); // ISSUE-2403
         modelBuilder.Ignore<BoundedContexts.GameManagement.Domain.Entities.RuleConflictFAQ>(); // ISSUE-3761
         modelBuilder.Ignore<BoundedContexts.UserNotifications.Domain.Aggregates.Notification>(); // ISSUE-2053
+        modelBuilder.Ignore<BoundedContexts.UserNotifications.Domain.Aggregates.NotificationQueueItem>(); // Slack notification queue
+        modelBuilder.Ignore<BoundedContexts.UserNotifications.Domain.Aggregates.SlackConnection>(); // Slack connection aggregate
         modelBuilder.Ignore<BoundedContexts.GameManagement.Domain.Entities.Game>();
         modelBuilder.Ignore<BoundedContexts.GameManagement.Domain.Entities.PlayRecord>(); // ISSUE-3888
         modelBuilder.Ignore<BoundedContexts.GameManagement.Domain.Entities.RecordPlayer>(); // ISSUE-3888

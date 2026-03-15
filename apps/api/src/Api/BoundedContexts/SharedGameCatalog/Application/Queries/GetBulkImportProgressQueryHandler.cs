@@ -37,7 +37,7 @@ internal class GetBulkImportProgressQueryHandler
             .Where(q => q.Status == BggImportStatus.Processing)
             .Select(q => new BulkImportCurrentItemDto
             {
-                BggId = q.BggId,
+                BggId = q.BggId ?? 0,
                 GameName = q.GameName,
                 RetryCount = q.RetryCount
             })

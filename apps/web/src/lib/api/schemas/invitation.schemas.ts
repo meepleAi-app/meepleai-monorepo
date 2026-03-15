@@ -11,7 +11,7 @@ import { z } from 'zod';
 // Enums
 // ──────────────────────────────────────────────
 
-export const InvitationStatusSchema = z.enum(['Pending', 'Accepted', 'Expired']);
+export const InvitationStatusSchema = z.enum(['Pending', 'Accepted', 'Expired', 'Revoked']);
 
 // ──────────────────────────────────────────────
 // Core DTOs
@@ -32,6 +32,7 @@ export const InvitationStatsSchema = z.object({
   pending: z.number().int(),
   accepted: z.number().int(),
   expired: z.number().int(),
+  revoked: z.number().int().optional().default(0),
   total: z.number().int(),
 });
 

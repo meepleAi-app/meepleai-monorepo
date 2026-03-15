@@ -1,4 +1,6 @@
+using Api.Infrastructure.Entities;
 using Api.BoundedContexts.DocumentProcessing.Domain.Repositories;
+using Api.BoundedContexts.KnowledgeBase.Application.Services;
 using Api.BoundedContexts.KnowledgeBase.Application.DTOs;
 using Api.BoundedContexts.KnowledgeBase.Application.Handlers;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries;
@@ -104,6 +106,7 @@ public class AskQuestionQueryHandlerSecurityTests
             mockRrfService.Object,
             mockEmbeddingService.Object,
             mockHybridSearchService.Object,
+            CreatePermissiveRagAccessServiceMock(),
             mockSearchLogger.Object);
 
         _mockQualityService = new Mock<QualityTrackingDomainService>();
@@ -195,6 +198,7 @@ public class AskQuestionQueryHandlerSecurityTests
             _mockLlmService.Object,
             _mockPromptTemplateService.Object,
             _mockValidationPipeline.Object,
+            CreatePermissiveRagAccessServiceMock(),
             _mockLogger.Object);
     }
 
@@ -474,5 +478,11 @@ public class AskQuestionQueryHandlerSecurityTests
             .Setup(s => s.GetActivePromptAsync("rag-system-prompt", It.IsAny<CancellationToken>()))
             .ReturnsAsync("Test system prompt");
     }
-}
 
+    private static IRagAccessService CreatePermissiveRagAccessServiceMock()
+    {
+        var mock = new Mock<IRagAccessService>();
+        mock.Setup(s => s.CanAccessRagAsync(It.IsAny<Guid>(), It.IsAny<Guid>(), It.IsAny<UserRole>(), It.IsAny<CancellationToken>())).ReturnsAsync(true);
+        return mock.Object;
+    }
+}

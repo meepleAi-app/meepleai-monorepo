@@ -14,6 +14,7 @@ import React, { useState } from 'react';
 import { cn } from '@/lib/utils';
 
 import { ExtraMeepleCardDrawer } from '../../extra-meeple-card/ExtraMeepleCardDrawer';
+import { HoloOverlay } from '../../holo';
 import { AgentModelInfo } from '../../meeple-card-features/AgentModelInfo';
 import { AgentStatsDisplay } from '../../meeple-card-features/AgentStatsDisplay';
 import { AgentStatusBadge } from '../../meeple-card-features/AgentStatusBadge';
@@ -222,6 +223,8 @@ export const MeepleCardGrid = React.memo(function MeepleCardGrid(props: MeepleCa
       data-entity={entity}
       data-variant={variant}
     >
+      <HoloOverlay />
+
       {glowState && <StatusGlow state={glowState} entityColor={entityColors[entity].hsl} />}
 
       {selectable && (

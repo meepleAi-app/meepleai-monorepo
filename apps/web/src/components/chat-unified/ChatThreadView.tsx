@@ -34,6 +34,7 @@ import { ChatThreadHeader } from './ChatThreadHeader';
 import { CitationBadge } from './CitationBadge';
 import { DebugStepCard } from './DebugStepCard';
 import { DebugSummaryBar } from './DebugSummaryBar';
+import { RagEnhancementsBadge } from './RagEnhancementsBadge';
 import { ResponseMetaBadge } from './ResponseMetaBadge';
 import { RuleSourceCard } from './RuleSourceCard';
 import { TechnicalDetailsPanel } from './TechnicalDetailsPanel';
@@ -723,6 +724,11 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
             className="border-t border-border/50 dark:border-border/30 p-4 bg-background/95 backdrop-blur-[12px] dark:bg-card dark:backdrop-blur-none"
             data-testid="chat-input-area"
           >
+            {/* RAG Enhancement Cost Indicator */}
+            <div className="max-w-3xl mx-auto mb-2">
+              <RagEnhancementsBadge />
+            </div>
+
             <div className="flex items-end gap-2 max-w-3xl mx-auto">
               <textarea
                 value={inputValue}

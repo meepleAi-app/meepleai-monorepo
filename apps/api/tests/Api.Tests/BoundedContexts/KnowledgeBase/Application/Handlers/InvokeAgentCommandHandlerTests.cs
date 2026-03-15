@@ -1,9 +1,11 @@
+using Api.Infrastructure.Entities;
 using Api.BoundedContexts.KnowledgeBase.Application.Commands;
 using Api.BoundedContexts.KnowledgeBase.Application.Handlers;
 using Api.BoundedContexts.KnowledgeBase.Domain.Entities;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services;
 using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
+using Api.BoundedContexts.KnowledgeBase.Application.Services;
 using Api.Services;
 using Microsoft.Extensions.Logging;
 using Moq;
@@ -39,6 +41,7 @@ public class InvokeAgentCommandHandlerTests
             _mockEmbeddingRepo.Object,
             _mockEmbeddingService.Object,
             _qualityTrackingService,
+            CreatePermissiveRagAccessServiceMock(),
             _mockLogger.Object
         );
     }
@@ -341,5 +344,11 @@ public class InvokeAgentCommandHandlerTests
             )
         };
     }
-}
 
+    private static IRagAccessService CreatePermissiveRagAccessServiceMock()
+    {
+        var mock = new Mock<IRagAccessService>();
+        mock.Setup(s => s.CanAccessRagAsync(It.IsAny<Guid>(), It.IsAny<Guid>(), It.IsAny<UserRole>(), It.IsAny<CancellationToken>())).ReturnsAsync(true);
+        return mock.Object;
+    }
+}

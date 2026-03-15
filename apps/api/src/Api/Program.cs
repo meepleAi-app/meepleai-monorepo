@@ -549,6 +549,7 @@ app.MapHealthChecks("/health/config", new Microsoft.AspNetCore.Diagnostics.Healt
 var v1Api = app.MapGroup("/api/v1");
 
 v1Api.MapAuthEndpoints();
+v1Api.MapAccessRequestEndpoints(); // Invite-only registration: access requests + registration mode
 v1Api.MapPermissionEndpoints(); // Epic #4068: Permission system endpoints
 v1Api.MapShareLinkEndpoints(); // ISSUE-2052: Shareable chat thread links
 v1Api.MapUserProfileEndpoints();
@@ -583,6 +584,7 @@ v1Api.MapAdminOpenRouterEndpoints();    // Issue #5077: OpenRouter usage monitor
 v1Api.MapAdminEmergencyControlsEndpoints(); // Issue #5476: LLM emergency controls
 v1Api.MapAdminLlmConfigEndpoints();        // Issue #5495: LLM system configuration CRUD
 app.MapAdminBulkImportEndpoints();       // Issue #4354: Bulk import endpoint routing
+v1Api.MapGroup("/admin/catalog-ingestion").MapAdminCatalogIngestionEndpoints(); // Admin bulk Excel import + enrichment
 app.MapPdfAnalyticsEndpoints();          // Issue #3715: PDF analytics dashboard
 app.MapChatAnalyticsEndpoints();         // Issue #3714: Chat analytics dashboard
 app.MapModelPerformanceEndpoints();      // Issue #3716: Model performance dashboard

@@ -2390,7 +2390,10 @@ namespace Api.Infrastructure.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
-                    b.Property<int>("BggId")
+                    b.Property<Guid?>("BatchId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int?>("BggId")
                         .HasColumnType("integer");
 
                     b.Property<DateTime>("CreatedAt")
@@ -2405,6 +2408,9 @@ namespace Api.Infrastructure.Migrations
                     b.Property<string>("GameName")
                         .HasColumnType("text");
 
+                    b.Property<int>("JobType")
+                        .HasColumnType("integer");
+
                     b.Property<int>("Position")
                         .HasColumnType("integer");
 
@@ -2416,6 +2422,9 @@ namespace Api.Infrastructure.Migrations
 
                     b.Property<int>("RetryCount")
                         .HasColumnType("integer");
+
+                    b.Property<Guid?>("SharedGameId")
+                        .HasColumnType("uuid");
 
                     b.Property<int>("Status")
                         .HasColumnType("integer");
@@ -9015,6 +9024,9 @@ namespace Api.Infrastructure.Migrations
                         .HasColumnType("integer")
                         .HasColumnName("bgg_id");
 
+                    b.Property<string>("BggRawData")
+                        .HasColumnType("text");
+
                     b.Property<decimal?>("ComplexityRating")
                         .HasColumnType("decimal(3,2)")
                         .HasColumnName("complexity_rating");
@@ -9034,6 +9046,12 @@ namespace Api.Infrastructure.Migrations
                         .HasColumnType("text")
                         .HasColumnName("description");
 
+                    b.Property<int>("GameDataStatus")
+                        .HasColumnType("integer");
+
+                    b.Property<bool>("HasUploadedPdf")
+                        .HasColumnType("boolean");
+
                     b.Property<string>("ImageUrl")
                         .IsRequired()
                         .HasMaxLength(1000)
@@ -9045,6 +9063,12 @@ namespace Api.Infrastructure.Migrations
                         .HasColumnType("boolean")
                         .HasDefaultValue(false)
                         .HasColumnName("is_deleted");
+
+                    b.Property<bool>("IsRagPublic")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false)
+                        .HasColumnName("is_rag_public");
 
                     b.Property<int>("MaxPlayers")
                         .HasColumnType("integer")
@@ -9073,6 +9097,9 @@ namespace Api.Infrastructure.Migrations
                     b.Property<string>("RulesContent")
                         .HasColumnType("text")
                         .HasColumnName("rules_content");
+
+                    b.Property<string>("RulesExternalUrl")
+                        .HasColumnType("text");
 
                     b.Property<string>("RulesLanguage")
                         .HasMaxLength(10)
@@ -10352,6 +10379,9 @@ namespace Api.Infrastructure.Migrations
                     b.Property<string>("Notes")
                         .HasMaxLength(500)
                         .HasColumnType("character varying(500)");
+
+                    b.Property<DateTime?>("OwnershipDeclaredAt")
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<Guid?>("PrivateGameId")
                         .HasColumnType("uuid")

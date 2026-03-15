@@ -2,9 +2,12 @@ using Api.BoundedContexts.DocumentProcessing.Domain.Enums;
 using Api.BoundedContexts.DocumentProcessing.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Application.DTOs;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries;
+using Api.BoundedContexts.KnowledgeBase.Application.Services;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services;
 using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
+using Api.Infrastructure.Entities;
+using Api.Middleware.Exceptions;
 using Api.Services;
 using Api.SharedKernel.Application.Interfaces;
 
@@ -31,6 +34,7 @@ internal class AskQuestionQueryHandler : IQueryHandler<AskQuestionQuery, QaRespo
     private readonly ILlmService _llmService;
     private readonly IPromptTemplateService _promptTemplateService;
     private readonly IRagValidationPipelineService _validationPipeline;
+    private readonly IRagAccessService _ragAccessService;
     private readonly ILogger<AskQuestionQueryHandler> _logger;
 
     public AskQuestionQueryHandler(
@@ -42,6 +46,7 @@ internal class AskQuestionQueryHandler : IQueryHandler<AskQuestionQuery, QaRespo
         ILlmService llmService,
         IPromptTemplateService promptTemplateService,
         IRagValidationPipelineService validationPipeline,
+        IRagAccessService ragAccessService,
         ILogger<AskQuestionQueryHandler> logger)
     {
         _searchQueryHandler = searchQueryHandler ?? throw new ArgumentNullException(nameof(searchQueryHandler));
@@ -52,6 +57,7 @@ internal class AskQuestionQueryHandler : IQueryHandler<AskQuestionQuery, QaRespo
         _llmService = llmService ?? throw new ArgumentNullException(nameof(llmService));
         _promptTemplateService = promptTemplateService ?? throw new ArgumentNullException(nameof(promptTemplateService));
         _validationPipeline = validationPipeline ?? throw new ArgumentNullException(nameof(validationPipeline));
+        _ragAccessService = ragAccessService ?? throw new ArgumentNullException(nameof(ragAccessService));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -60,6 +66,18 @@ internal class AskQuestionQueryHandler : IQueryHandler<AskQuestionQuery, QaRespo
         CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(query);
+
+        // RAG access enforcement
+        if (query.UserId.HasValue)
+        {
+            var userRole = Enum.TryParse<UserRole>(query.UserRole, ignoreCase: true, out var parsedRole)
+                ? parsedRole : UserRole.User;
+            var canAccess = await _ragAccessService.CanAccessRagAsync(
+                query.UserId.Value, query.GameId, userRole, cancellationToken).ConfigureAwait(false);
+            if (!canAccess)
+                throw new ForbiddenException("Accesso RAG non autorizzato");
+        }
+
         _logger.LogInformation(
             "[AskQuestionHandler] ENTRY - Processing AskQuestionQuery: GameId={GameId}, Question={Question}",
             query.GameId, query.Question);

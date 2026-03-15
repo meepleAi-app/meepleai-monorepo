@@ -97,6 +97,7 @@ public sealed class SendAgentMessagePersistenceTests : IAsyncLifetime
             consentCheckMock.Object,
             Mock.Of<IGameSessionOrchestratorService>(),
             Mock.Of<IHybridCacheService>(),
+            CreatePermissiveRagAccessServiceMock(),
             Mock.Of<ILogger<SendAgentMessageCommandHandler>>());
 
         // Seed a test user (FK requirement)
@@ -458,4 +459,10 @@ public sealed class SendAgentMessagePersistenceTests : IAsyncLifetime
         string? CitationsJson = null,
         int? TokenCount = null,
         Guid Id = default);
+    private static IRagAccessService CreatePermissiveRagAccessServiceMock()
+    {
+        var mock = new Mock<IRagAccessService>();
+        mock.Setup(s => s.CanAccessRagAsync(It.IsAny<Guid>(), It.IsAny<Guid>(), It.IsAny<UserRole>(), It.IsAny<CancellationToken>())).ReturnsAsync(true);
+        return mock.Object;
+    }
 }

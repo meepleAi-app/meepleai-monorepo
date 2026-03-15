@@ -356,6 +356,13 @@ export const DASHBOARD_SECTIONS: DashboardSection[] = [
         icon: MailIcon,
       },
       {
+        href: '/admin/users/access-requests',
+        label: 'Access Requests',
+        icon: ClipboardListIcon,
+        badgeKey: 'accessRequestsPending',
+        activePattern: /^\/admin\/users\/access-requests/,
+      },
+      {
         href: '/admin/users/roles',
         label: 'Roles & Permissions',
         icon: ShieldIcon,

@@ -9,7 +9,9 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Commands;
 internal record TutorQueryCommand(
     Guid GameId,
     Guid SessionId,
-    string Query
+    string Query,
+    Guid? UserId = null,
+    string? UserRole = null
 ) : IRequest<TutorQueryResponse>;
 
 /// <summary>

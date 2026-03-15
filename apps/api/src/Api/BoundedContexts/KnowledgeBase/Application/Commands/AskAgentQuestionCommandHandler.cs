@@ -11,6 +11,8 @@ using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 using Api.BoundedContexts.UserLibrary.Application.Queries;
 using Api.BoundedContexts.UserLibrary.Domain.Enums;
+using Api.Infrastructure.Entities;
+using Api.Middleware.Exceptions;
 using Api.Services;
 using MediatR;
 using Microsoft.Extensions.Logging;
@@ -31,6 +33,7 @@ internal class AskAgentQuestionCommandHandler : IRequestHandler<AskAgentQuestion
     private readonly IPdfDocumentRepository _pdfDocumentRepository;
     private readonly IGameSessionOrchestratorService _sessionOrchestrator;
     private readonly IHybridCacheService _hybridCache;
+    private readonly IRagAccessService _ragAccessService;
     private readonly IMediator _mediator;
     private readonly ILogger<AskAgentQuestionCommandHandler> _logger;
 
@@ -44,6 +47,7 @@ internal class AskAgentQuestionCommandHandler : IRequestHandler<AskAgentQuestion
         IPdfDocumentRepository pdfDocumentRepository,
         IGameSessionOrchestratorService sessionOrchestrator,
         IHybridCacheService hybridCache,
+        IRagAccessService ragAccessService,
         IMediator mediator,
         ILogger<AskAgentQuestionCommandHandler> logger)
     {
@@ -53,12 +57,24 @@ internal class AskAgentQuestionCommandHandler : IRequestHandler<AskAgentQuestion
         _pdfDocumentRepository = pdfDocumentRepository ?? throw new ArgumentNullException(nameof(pdfDocumentRepository));
         _sessionOrchestrator = sessionOrchestrator ?? throw new ArgumentNullException(nameof(sessionOrchestrator));
         _hybridCache = hybridCache ?? throw new ArgumentNullException(nameof(hybridCache));
+        _ragAccessService = ragAccessService ?? throw new ArgumentNullException(nameof(ragAccessService));
         _mediator = mediator ?? throw new ArgumentNullException(nameof(mediator));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
     public async Task<AgentChatResponse> Handle(AskAgentQuestionCommand request, CancellationToken cancellationToken)
     {
+        // RAG access enforcement
+        if (request.GameId.HasValue && request.UserId.HasValue)
+        {
+            var userRole = Enum.TryParse<UserRole>(request.UserRole, ignoreCase: true, out var parsedRole)
+                ? parsedRole : UserRole.User;
+            var canAccess = await _ragAccessService.CanAccessRagAsync(
+                request.UserId.Value, request.GameId.Value, userRole, cancellationToken).ConfigureAwait(false);
+            if (!canAccess)
+                throw new ForbiddenException("Accesso RAG non autorizzato");
+        }
+
         var stopwatch = Stopwatch.StartNew();
         var sessionId = request.SessionId ?? Guid.NewGuid().ToString();
 

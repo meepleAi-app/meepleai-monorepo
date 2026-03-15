@@ -553,6 +553,7 @@ v1Api.MapAdminQueueEndpoints();         // Issue #4731: Processing queue managem
 v1Api.MapAdminStorageMigrationEndpoints(); // S3 storage migration (local → S3)
 v1Api.MapAdminEmailEndpoints();        // Issue #4430: Email queue dashboard monitoring
 v1Api.MapAdminEmailTemplateEndpoints(); // Issue #52: Admin email template management
+v1Api.MapAdminManualNotificationEndpoints(); // Admin manual notification send
 v1Api.MapAdminBusinessStatsEndpoints(); // Issue #4562: App Usage Stats (Epic #3688)
 v1Api.MapAdminAgentDefinitionEndpoints(); // Issue #3809: Agent Definition management (AI Lab)
 v1Api.MapAgentPlaygroundEndpoints();    // Issue #3810: Agent Playground with SSE streaming

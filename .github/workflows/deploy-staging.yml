@@ -44,7 +44,7 @@ jobs:
   # Detect which components changed
   detect-changes:
     name: Detect Changes
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.RUNNER || 'ubuntu-latest' }}
     outputs:
       api: ${{ steps.changes.outputs.api }}
       web: ${{ steps.changes.outputs.web }}
@@ -94,7 +94,7 @@ jobs:
   # was previously tested.
   pre-deploy-check:
     name: Pre-deploy Validation
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.RUNNER || 'ubuntu-latest' }}
     if: github.event_name == 'push' || inputs.skip_tests != true
     needs: [detect-changes]
     timeout-minutes: 15
@@ -154,7 +154,7 @@ jobs:
   # Build and push Docker images (only changed components)
   build:
     name: Build Images
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.RUNNER || 'ubuntu-latest' }}
     timeout-minutes: 90
     needs: [pre-deploy-check, detect-changes]
     if: always() && (needs.pre-deploy-check.result == 'success' || (github.event_name == 'workflow_dispatch' && inputs.skip_tests == true)) && (needs.detect-changes.outputs.deploy_api == 'true' || needs.detect-changes.outputs.deploy_web == 'true')
@@ -251,7 +251,7 @@ jobs:
   # Run database migrations BEFORE deploying new code
   migrate-db:
     name: Database Migration
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.RUNNER || 'ubuntu-latest' }}
     needs: [build]
     if: vars.DEPLOY_METHOD == 'ssh'
     steps:
@@ -307,7 +307,7 @@ jobs:
   # Snapshot previous performance baseline before deploy overwrites DEPLOYMENT.json
   snapshot-baseline:
     name: Snapshot Performance Baseline
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.RUNNER || 'ubuntu-latest' }}
     needs: [build]
     outputs:
       previous_baseline: ${{ steps.read-baseline.outputs.baseline }}
@@ -349,7 +349,7 @@ jobs:
   # Deploy to staging server (only changed services)
   deploy:
     name: Deploy to Staging
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.RUNNER || 'ubuntu-latest' }}
     timeout-minutes: 15
     needs: [build, migrate-db, snapshot-baseline]
     if: always() && needs.build.result == 'success' && (needs.migrate-db.result == 'success' || needs.migrate-db.result == 'skipped') && (needs.snapshot-baseline.result == 'success' || needs.snapshot-baseline.result == 'skipped')
@@ -443,7 +443,7 @@ jobs:
   # Post-deploy validation
   validate:
     name: Post-deploy Validation
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.RUNNER || 'ubuntu-latest' }}
     needs: [deploy, snapshot-baseline]
     steps:
       - name: Checkout
@@ -639,7 +639,7 @@ jobs:
   # Post-deploy E2E smoke tests against live staging
   e2e-staging:
     name: Staging E2E Smoke Tests
-    runs-on: ubuntu-latest  # Needs browser support (not self-hosted ARM64)
+    runs-on: ${{ vars.RUNNER || 'ubuntu-latest' }}  # Needs browser support (not self-hosted ARM64)
     needs: [validate]
     if: needs.validate.result == 'success'
     timeout-minutes: 10
@@ -675,7 +675,7 @@ jobs:
   # Notify on completion
   notify:
     name: Notify
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.RUNNER || 'ubuntu-latest' }}
     needs: [build, deploy, validate, e2e-staging]
     if: always()
     steps:

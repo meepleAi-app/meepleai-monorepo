@@ -10,6 +10,12 @@
 import { z } from 'zod';
 
 import {
+  RuleDisputeResponseSchema,
+  CreatePauseSnapshotResponseSchema,
+  type RuleDisputeResponse,
+  type CreatePauseSnapshotResponse,
+} from '../schemas/improvvisata.schemas';
+import {
   LiveSessionDtoSchema,
   LiveSessionSummaryDtoSchema,
   LiveSessionPlayerDtoSchema,
@@ -49,6 +55,7 @@ import {
 import type { HttpClient } from '../core/httpClient';
 
 const BASE = '/api/v1/live-sessions';
+const GAME_NIGHT_BASE = '/api/v1/game-night';
 
 export interface LiveSessionsClient {
   // ========== Queries ==========
@@ -160,6 +167,24 @@ export interface LiveSessionsClient {
 
   /** Get session resume context with recap, scores, and photos */
   getResumeContext(sessionId: string): Promise<SessionResumeContext>;
+
+  // ========== Game Night Improvvisata ==========
+
+  /**
+   * Submit a rule dispute and get an AI verdict.
+   * POST /api/v1/game-night/sessions/{sessionId}/disputes
+   */
+  submitDispute(
+    sessionId: string,
+    description: string,
+    raisedByPlayerName: string
+  ): Promise<RuleDisputeResponse>;
+
+  /**
+   * Create a pause snapshot for the session.
+   * POST /api/v1/game-night/sessions/{sessionId}/pause-snapshot
+   */
+  createPauseSnapshot(sessionId: string): Promise<CreatePauseSnapshotResponse>;
 }
 
 export function createLiveSessionsClient({
@@ -357,6 +382,26 @@ export function createLiveSessionsClient({
       );
       if (!response) throw new Error('Resume context not found');
       return SessionResumeContextSchema.parse(response);
+    },
+
+    // ========== Game Night Improvvisata ==========
+
+    async submitDispute(sessionId, description, raisedByPlayerName) {
+      const response = await httpClient.post<RuleDisputeResponse>(
+        `${GAME_NIGHT_BASE}/sessions/${encodeURIComponent(sessionId)}/disputes`,
+        { description, raisedByPlayerName }
+      );
+      if (!response) throw new Error('Dispute submission failed');
+      return RuleDisputeResponseSchema.parse(response);
+    },
+
+    async createPauseSnapshot(sessionId) {
+      const response = await httpClient.post<CreatePauseSnapshotResponse>(
+        `${GAME_NIGHT_BASE}/sessions/${encodeURIComponent(sessionId)}/save`,
+        {}
+      );
+      if (!response) throw new Error('Pause snapshot creation failed');
+      return CreatePauseSnapshotResponseSchema.parse(response);
     },
   };
 }

@@ -1,4 +1,5 @@
 using Api.BoundedContexts.KnowledgeBase.Domain.Entities;
+using Api.BoundedContexts.KnowledgeBase.Domain.Events;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 using Api.BoundedContexts.UserLibrary.Domain.Repositories;
@@ -32,6 +33,7 @@ internal sealed class AutoCreateAgentOnPdfReadyHandler
     private readonly IAgentDefinitionRepository _agentDefinitionRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ITierEnforcementService _tierEnforcementService;
+    private readonly IPublisher _publisher;
     private readonly ILogger<AutoCreateAgentOnPdfReadyHandler> _logger;
 
     public AutoCreateAgentOnPdfReadyHandler(
@@ -39,12 +41,14 @@ internal sealed class AutoCreateAgentOnPdfReadyHandler
         IAgentDefinitionRepository agentDefinitionRepository,
         IUnitOfWork unitOfWork,
         ITierEnforcementService tierEnforcementService,
+        IPublisher publisher,
         ILogger<AutoCreateAgentOnPdfReadyHandler> logger)
     {
         _privateGameRepository = privateGameRepository ?? throw new ArgumentNullException(nameof(privateGameRepository));
         _agentDefinitionRepository = agentDefinitionRepository ?? throw new ArgumentNullException(nameof(agentDefinitionRepository));
         _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
         _tierEnforcementService = tierEnforcementService ?? throw new ArgumentNullException(nameof(tierEnforcementService));
+        _publisher = publisher ?? throw new ArgumentNullException(nameof(publisher));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -161,6 +165,15 @@ internal sealed class AutoCreateAgentOnPdfReadyHandler
         // Step 9: Record tier usage.
         await _tierEnforcementService
             .RecordUsageAsync(userId, TierAction.CreateAgent, ct)
+            .ConfigureAwait(false);
+
+        // Step 10: Publish AgentAutoCreatedEvent so NotifyAgentReadyHandler can send in-app notifications.
+        await _publisher
+            .Publish(new AgentAutoCreatedEvent(
+                agentDefinitionId: agent.Id,
+                privateGameId: privateGame.Id,
+                userId: privateGame.OwnerId,
+                gameName: privateGame.Title), ct)
             .ConfigureAwait(false);
 
         _logger.LogInformation(

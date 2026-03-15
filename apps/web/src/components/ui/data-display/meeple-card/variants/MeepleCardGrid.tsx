@@ -24,13 +24,17 @@ import { ChatStatsDisplay } from '../../meeple-card-features/ChatStatsDisplay';
 import { ChatStatusBadge } from '../../meeple-card-features/ChatStatusBadge';
 import { ChatUnreadBadge } from '../../meeple-card-features/ChatUnreadBadge';
 import { DocumentStatusBadge } from '../../meeple-card-features/DocumentStatusBadge';
+import { ManaBadge } from '../../meeple-card-features/ManaBadge';
+import { ManaLinkFooter } from '../../meeple-card-features/ManaLinkFooter';
+import { PrimaryActions } from '../../meeple-card-features/PrimaryActions';
 import { SessionActionButtons } from '../../meeple-card-features/SessionActionButtons';
 import { SessionScoreTable } from '../../meeple-card-features/SessionScoreTable';
 import { SessionStatusBadge } from '../../meeple-card-features/SessionStatusBadge';
 import { SessionTurnSequence } from '../../meeple-card-features/SessionTurnSequence';
 import { SnapshotHistorySlider } from '../../meeple-card-features/SnapshotHistorySlider';
+import { StatusGlow } from '../../meeple-card-features/StatusGlow';
 import { TimeTravelOverlay } from '../../meeple-card-features/TimeTravelOverlay';
-import { EntityIndicator, RatingDisplay, MeepleCardSkeleton } from '../../meeple-card-parts';
+import { RatingDisplay, MeepleCardSkeleton } from '../../meeple-card-parts';
 import {
   entityColors,
   DRAWER_ENTITY_TYPE_MAP,
@@ -118,6 +122,10 @@ export const MeepleCardGrid = React.memo(function MeepleCardGrid(props: MeepleCa
     firstLinkPreview: _firstLinkPreview,
     onLinksClick,
     kbCards,
+    linkedEntities,
+    onManaPipClick,
+    primaryActions,
+    glowState,
   } = props;
 
   const variant = 'grid' as const;
@@ -214,6 +222,8 @@ export const MeepleCardGrid = React.memo(function MeepleCardGrid(props: MeepleCa
       data-entity={entity}
       data-variant={variant}
     >
+      {glowState && <StatusGlow state={glowState} entityColor={entityColors[entity].hsl} />}
+
       {selectable && (
         <BulkSelectCheckbox
           selectable={selectable}
@@ -237,7 +247,7 @@ export const MeepleCardGrid = React.memo(function MeepleCardGrid(props: MeepleCa
           />
         )}
 
-      <EntityIndicator entity={entity} variant={variant} customColor={customColor} />
+      <ManaBadge entity={entity} className="absolute top-2 left-2.5 z-[2]" />
 
       <CardTagStrip
         variant={variant}
@@ -284,6 +294,13 @@ export const MeepleCardGrid = React.memo(function MeepleCardGrid(props: MeepleCa
           unreadCount={unreadCount}
           hasQuickActions={hasQuickActions}
         />
+
+        {primaryActions && primaryActions.length > 0 && (
+          <PrimaryActions
+            actions={primaryActions}
+            className="absolute top-10 right-2.5 z-[3] opacity-0 group-hover:opacity-100 transition-opacity"
+          />
+        )}
 
         {/* Title */}
         <h3 className="font-quicksand font-bold leading-tight text-[0.8rem] sm:text-[0.95rem] mb-0.5 text-card-foreground truncate">
@@ -430,7 +447,8 @@ export const MeepleCardGrid = React.memo(function MeepleCardGrid(props: MeepleCa
             'px-3 py-2',
             'border-t border-border',
             'bg-muted/60 dark:bg-muted/40',
-            !(navigateTo && navigateTo.length > 0) &&
+            !(linkedEntities && linkedEntities.length > 0) &&
+              !(navigateTo && navigateTo.length > 0) &&
               !(entity === 'game' && hasAgent !== undefined) &&
               'rounded-b-2xl'
           )}
@@ -478,12 +496,19 @@ export const MeepleCardGrid = React.memo(function MeepleCardGrid(props: MeepleCa
           gameId={id}
           onCreateAgent={onCreateAgent}
           variant={variant}
-          hasNavFooter={!!(navigateTo && navigateTo.length > 0)}
+          hasNavFooter={
+            !!(linkedEntities && linkedEntities.length > 0) ||
+            !!(navigateTo && navigateTo.length > 0)
+          }
         />
       )}
 
       {/* Navigation footer */}
-      {navigateTo && navigateTo.length > 0 && <CardNavigationFooter links={navigateTo} />}
+      {linkedEntities && linkedEntities.length > 0 ? (
+        <ManaLinkFooter linkedEntities={linkedEntities} onPipClick={onManaPipClick ?? (() => {})} />
+      ) : navigateTo && navigateTo.length > 0 ? (
+        <CardNavigationFooter links={navigateTo} />
+      ) : null}
 
       {/* Drawer */}
       {entityId && drawerEntityType && (

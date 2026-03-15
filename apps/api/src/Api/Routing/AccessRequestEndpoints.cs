@@ -40,7 +40,7 @@ internal static class AccessRequestEndpoints
             var result = await mediator.Send(new GetRegistrationModeQuery(), ct).ConfigureAwait(false);
             return Results.Ok(result);
         }).WithName("GetRegistrationMode")
-          .RequireRateLimiting("AuthGeneral");
+          .RequireRateLimiting("AuthLogin");
     }
 
     private static void MapRequestAccessEndpoint(RouteGroupBuilder group)

@@ -13,47 +13,77 @@ export class LibraryPage extends BasePage {
   }
 
   async clickAddGame(): Promise<void> {
-    await this.click(
-      this.page
-        .locator('[data-testid="add-game-button"]')
-        .or(this.page.getByRole('button', { name: /add game/i }))
-    );
+    // Try: header button, empty state CTA, or URL-based trigger
+    const addBtn = this.page
+      .locator('[data-testid="add-private-game-btn"]')
+      .or(this.page.locator('[data-testid="empty-state-primary-cta"]'))
+      .or(this.page.getByRole('button', { name: /aggiungi|add game/i }));
+    await addBtn.first().click();
+  }
+
+  async selectFromCatalog(): Promise<void> {
+    // In the choice step, select "From shared catalog"
+    const catalogChoice = this.page.locator('[data-testid="add-game-choice-catalog"]');
+    if (await catalogChoice.isVisible({ timeout: 3_000 }).catch(() => false)) {
+      await catalogChoice.click();
+    }
   }
 
   async searchGame(gameName: string): Promise<void> {
+    // Search input has Italian placeholder "Cerca un gioco..."
     const searchInput = this.page
       .locator('[data-testid="game-search-input"]')
-      .or(this.page.getByPlaceholder(/search/i));
+      .or(this.page.getByPlaceholder(/cerca un gioco|search/i));
     await this.fill(searchInput, gameName);
     await this.waitForNetworkIdle();
   }
 
   async selectFirstSearchResult(): Promise<{ gameId: string; gameTitle: string }> {
-    const result = this.page
-      .locator('[data-testid="game-search-result"]')
-      .or(this.page.locator('[data-testid^="game-result-"]'))
-      .first();
+    // Search results are buttons with game title text
+    const results = this.page
+      .locator('[data-testid="add-game-drawer"] button, [role="dialog"] button')
+      .filter({ hasNotText: /annulla|indietro|avanti|cerca|chiudi/i });
 
-    await expect(result).toBeVisible();
+    // Wait for results to appear
+    await this.page.waitForTimeout(1000);
 
-    const gameTitle =
-      (await result.locator('h3, [data-testid="game-title"]').first().textContent()) ?? 'Unknown';
-    const gameId = (await result.getAttribute('data-game-id')) ?? '';
+    // Find a result that looks like a game (has game-like content)
+    const gameResult = this.page
+      .locator('[data-testid^="game-result-"]')
+      .or(this.page.locator('[data-testid="add-game-drawer"] [role="option"]'))
+      .or(results.first());
 
-    await result.click();
-    return { gameId, gameTitle: gameTitle.trim() };
+    await expect(gameResult.first()).toBeVisible({ timeout: 10_000 });
+
+    const gameTitle = (await gameResult.first().textContent()) ?? 'Unknown Game';
+    const gameId = (await gameResult.first().getAttribute('data-game-id')) ?? '';
+
+    await gameResult.first().click();
+    return { gameId, gameTitle: gameTitle.trim().split('\n')[0].trim() };
+  }
+
+  async clickNext(): Promise<void> {
+    // "Avanti" button to go to next step
+    await this.click(this.page.getByRole('button', { name: /avanti|next/i }));
   }
 
   async confirmAddToCollection(): Promise<void> {
-    await this.click(
-      this.page
-        .locator('[data-testid="confirm-add-game"]')
-        .or(this.page.getByRole('button', { name: /add to collection|confirm|save/i }))
-    );
+    // Final save button: "Salva in Collezione"
+    const saveBtn = this.page
+      .locator('[data-testid="save-button"]')
+      .or(this.page.getByRole('button', { name: /salva in collezione|save|confirm/i }));
+    await saveBtn.click();
     await this.waitForNetworkIdle();
   }
 
   async verifyGameInCollection(gameTitle: string): Promise<void> {
-    await expect(this.page.getByText(gameTitle)).toBeVisible({ timeout: 10_000 });
+    // After save, verify game appears somewhere on the page
+    await this.page.waitForTimeout(2000);
+    // Navigate to library to verify
+    await this.page.goto('/library');
+    await this.waitForLoad();
+    await expect(this.page.getByText(gameTitle, { exact: false }).first()).toBeVisible({
+      timeout: 10_000,
+    });
   }
 }

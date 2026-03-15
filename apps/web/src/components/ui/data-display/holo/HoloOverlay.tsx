@@ -11,7 +11,7 @@ export function HoloOverlay({ disabled = false }: HoloOverlayProps) {
     <>
       {/* Layer 1: Rainbow gradient — mix-blend-mode: screen */}
       <div
-        className="holo-rainbow pointer-events-none absolute inset-0 z-[7] rounded-[inherit] opacity-0 transition-opacity duration-500 group-hover:opacity-100"
+        className="holo-rainbow animate pointer-events-none absolute inset-0 z-[7] rounded-[inherit] opacity-0 transition-opacity duration-500 group-hover:opacity-100"
         style={{
           background: `linear-gradient(115deg, transparent 20%, rgba(236,110,173,0.12) 32%, rgba(52,148,230,0.12) 40%, rgba(103,232,138,0.10) 48%, rgba(233,211,98,0.12) 56%, rgba(236,110,173,0.10) 64%, transparent 80%)`,
           backgroundSize: '200% 100%',
@@ -29,10 +29,10 @@ export function HoloOverlay({ disabled = false }: HoloOverlayProps) {
       />
       {/* Layer 3: Rotating rainbow border via mask-composite */}
       <div
-        className="holo-border pointer-events-none absolute z-[9] opacity-0 transition-opacity duration-500 group-hover:opacity-100"
+        className="holo-border animate pointer-events-none absolute z-[9] opacity-0 transition-opacity duration-500 group-hover:opacity-100"
         style={{
           inset: '-2px',
-          borderRadius: '20px',
+          borderRadius: 'calc(var(--radius-card, 16px) + 2px)',
           background: `conic-gradient(from 0deg, rgba(167,139,250,0.25), rgba(96,165,250,0.2), rgba(52,211,153,0.18), rgba(251,191,36,0.22), rgba(255,107,107,0.18), rgba(236,72,153,0.2), rgba(167,139,250,0.25))`,
           WebkitMask: 'linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)',
           WebkitMaskComposite: 'xor',

@@ -3301,6 +3301,20 @@ export function createAdminClient({ httpClient }: CreateAdminClientParams) {
       return ContainerLogsSchema.parse(res);
     },
 
+    // ========== RAG Public Access ==========
+
+    /**
+     * Set whether RAG access is public for all owners of a shared game.
+     * PUT /api/v1/admin/shared-games/{sharedGameId}/rag-access
+     * @param sharedGameId - Shared game UUID
+     * @param isPublic - Whether RAG access should be public
+     */
+    async setRagPublicAccess(sharedGameId: string, isPublic: boolean): Promise<void> {
+      await httpClient.put(`/api/v1/admin/shared-games/${sharedGameId}/rag-access`, {
+        isRagPublic: isPublic,
+      });
+    },
+
     // ========== Issue #119: Shared Game Documents ==========
 
     /**

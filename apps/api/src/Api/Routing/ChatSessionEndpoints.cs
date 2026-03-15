@@ -3,6 +3,7 @@ using Api.BoundedContexts.KnowledgeBase.Application.DTOs;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries;
 using Api.BoundedContexts.KnowledgeBase.Domain;
 using Api.Extensions;
+using Api.Infrastructure.Entities;
 using Api.Middleware;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
@@ -115,7 +116,8 @@ internal static class ChatSessionEndpoints
             AgentId: request.AgentId,
             AgentType: request.AgentType,
             AgentName: request.AgentName,
-            TierLimit: tierLimit
+            TierLimit: tierLimit,
+            UserRole: session?.User?.Role
         );
 
         var sessionId = await mediator.Send(command, cancellationToken).ConfigureAwait(false);

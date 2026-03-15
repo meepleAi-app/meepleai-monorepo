@@ -137,3 +137,6 @@ export * from './tier.schemas';
 
 // Session Invite schemas (Game Night Improvvisata)
 export * from './session-invite.schemas';
+
+// Ownership & RAG Access schemas
+export * from './ownership.schemas';

@@ -238,7 +238,20 @@ test.describe('Admin-User Onboarding Flow', () => {
 
       // Navigate to /library with a fresh load (applies localStorage change)
       await page.goto('/library', { waitUntil: 'networkidle' });
-      await page.waitForTimeout(2000);
+
+      // Cookie consent blocks interactions — dismiss then reload
+      const cookieBtn5 = page.getByRole('button', { name: /essential only|accept all/i });
+      if (
+        await cookieBtn5
+          .first()
+          .isVisible({ timeout: 2_000 })
+          .catch(() => false)
+      ) {
+        await cookieBtn5.first().click();
+        await page.waitForTimeout(500);
+        await page.reload({ waitUntil: 'networkidle' });
+      }
+      await page.waitForTimeout(1000);
     });
 
     await test.step('Search and add game', async () => {

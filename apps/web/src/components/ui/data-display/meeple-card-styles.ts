@@ -57,13 +57,30 @@ export const entityColors: Record<MeepleEntityType, { hsl: string; name: string 
 
 // Map MeepleEntityType → DrawerEntityType for ExtraMeepleCardDrawer (Issue #5025)
 // Entities absent from this map do not render an info button.
+// Extended to all 16 entity types (Mana system); new types map to themselves
+// and will render DrawerComingSoon until dedicated content is implemented.
+// Note: DrawerEntityType = MeepleEntityType | 'chat' | 'links'
+// 'chat' is the legacy alias for 'chatSession' kept for backward compat.
 export const DRAWER_ENTITY_TYPE_MAP: Partial<
-  Record<MeepleEntityType, 'game' | 'agent' | 'chat' | 'kb' | 'links'>
+  Record<MeepleEntityType, MeepleEntityType | 'chat' | 'links'>
 > = {
   game: 'game',
   agent: 'agent',
-  chatSession: 'chat',
+  chatSession: 'chat', // keep 'chat' as value for backward compat
   kb: 'kb',
+  // New types — map to themselves (drawer will show Coming Soon)
+  collection: 'collection',
+  group: 'group',
+  location: 'location',
+  expansion: 'expansion',
+  achievement: 'achievement',
+  note: 'note',
+  session: 'session',
+  player: 'player',
+  event: 'event',
+  toolkit: 'toolkit',
+  tool: 'tool',
+  custom: 'custom',
 };
 
 // ============================================================================

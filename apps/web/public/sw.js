@@ -7,10 +7,11 @@
  * - Session data: StaleWhileRevalidate
  */
 
-const CACHE_VERSION = 'meepleai-v3';  // Bumped: Fix menu flickering (removed aggressive default caching)
+const CACHE_VERSION = 'meepleai-v3'; // Bumped: Fix menu flickering (removed aggressive default caching)
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const DYNAMIC_CACHE = `${CACHE_VERSION}-dynamic`;
 const API_CACHE = `${CACHE_VERSION}-api`;
+const RULES_CACHE = `${CACHE_VERSION}-rules`;
 
 // Assets to cache on install
 const STATIC_ASSETS = [
@@ -23,10 +24,16 @@ const STATIC_ASSETS = [
 
 // API routes that should be cached
 const API_CACHE_PATTERNS = [
-  /\/api\/v1\/games\/\d+$/,           // Individual game details
-  /\/api\/v1\/games\/search/,          // Game search results
-  /\/api\/v1\/library/,                // User library
-  /\/api\/v1\/sessions\/[a-f0-9-]+$/,  // Individual session details
+  /\/api\/v1\/games\/\d+$/, // Individual game details
+  /\/api\/v1\/games\/search/, // Game search results
+  /\/api\/v1\/library/, // User library
+  /\/api\/v1\/sessions\/[a-f0-9-]+$/, // Individual session details
+];
+
+// Rules/FAQ routes — CacheFirst (rarely change, must work offline)
+const RULES_FAQ_PATTERNS = [
+  /\/api\/v1\/games\/[a-f0-9-]+\/rules$/,
+  /\/api\/v1\/games\/[a-f0-9-]+\/faqs$/,
 ];
 
 // Routes that should never be cached
@@ -42,12 +49,13 @@ const NO_CACHE_PATTERNS = [
 // Install Event
 // ============================================================================
 
-self.addEventListener('install', (event) => {
+self.addEventListener('install', event => {
   console.log('[SW] Installing service worker...');
 
   event.waitUntil(
-    caches.open(STATIC_CACHE)
-      .then((cache) => {
+    caches
+      .open(STATIC_CACHE)
+      .then(cache => {
         console.log('[SW] Caching static assets');
         return cache.addAll(STATIC_ASSETS);
       })
@@ -59,16 +67,24 @@ self.addEventListener('install', (event) => {
 // Activate Event
 // ============================================================================
 
-self.addEventListener('activate', (event) => {
+self.addEventListener('activate', event => {
   console.log('[SW] Activating service worker...');
 
   event.waitUntil(
-    caches.keys()
-      .then((cacheNames) => {
+    caches
+      .keys()
+      .then(cacheNames => {
         return Promise.all(
           cacheNames
-            .filter((cacheName) => cacheName.startsWith('meepleai-') && cacheName !== STATIC_CACHE && cacheName !== DYNAMIC_CACHE && cacheName !== API_CACHE)
-            .map((cacheName) => {
+            .filter(
+              cacheName =>
+                cacheName.startsWith('meepleai-') &&
+                cacheName !== STATIC_CACHE &&
+                cacheName !== DYNAMIC_CACHE &&
+                cacheName !== API_CACHE &&
+                cacheName !== RULES_CACHE
+            )
+            .map(cacheName => {
               console.log('[SW] Deleting old cache:', cacheName);
               return caches.delete(cacheName);
             })
@@ -82,7 +98,7 @@ self.addEventListener('activate', (event) => {
 // Fetch Event - Caching Strategies
 // ============================================================================
 
-self.addEventListener('fetch', (event) => {
+self.addEventListener('fetch', event => {
   const { request } = event;
   const url = new URL(request.url);
 
@@ -98,6 +114,22 @@ self.addEventListener('fetch', (event) => {
 
   // Skip requests that should never be cached
   if (shouldNotCache(url)) {
+    return;
+  }
+
+  // Rules/FAQ — CacheFirst (rarely change, must work offline)
+  if (RULES_FAQ_PATTERNS.some(p => p.test(url.pathname))) {
+    event.respondWith(
+      caches.open(RULES_CACHE).then(cache =>
+        cache.match(event.request).then(cached => {
+          if (cached) return cached;
+          return fetch(event.request).then(response => {
+            if (response.ok) cache.put(event.request, response.clone());
+            return response;
+          });
+        })
+      )
+    );
     return;
   }
 
@@ -183,7 +215,7 @@ async function networkFirstStrategy(request) {
       JSON.stringify({ error: 'Offline', message: 'You are currently offline' }),
       {
         status: 503,
-        headers: { 'Content-Type': 'application/json' }
+        headers: { 'Content-Type': 'application/json' },
       }
     );
   }
@@ -197,7 +229,7 @@ async function staleWhileRevalidateStrategy(request) {
   const cached = await cache.match(request);
 
   const networkPromise = fetch(request)
-    .then((response) => {
+    .then(response => {
       if (response.ok) {
         cache.put(request, response.clone());
       }
@@ -241,23 +273,38 @@ async function navigationStrategy(request) {
 // ============================================================================
 
 function shouldNotCache(url) {
-  return NO_CACHE_PATTERNS.some((pattern) => pattern.test(url.pathname));
+  return NO_CACHE_PATTERNS.some(pattern => pattern.test(url.pathname));
 }
 
 function shouldCacheApi(url) {
-  return API_CACHE_PATTERNS.some((pattern) => pattern.test(url.pathname));
+  return API_CACHE_PATTERNS.some(pattern => pattern.test(url.pathname));
 }
 
 function isStaticAsset(url) {
-  const staticExtensions = ['.css', '.js', '.png', '.jpg', '.jpeg', '.gif', '.svg', '.woff', '.woff2', '.ttf', '.ico'];
-  return staticExtensions.some((ext) => url.pathname.endsWith(ext)) || url.pathname.startsWith('/_next/static/');
+  const staticExtensions = [
+    '.css',
+    '.js',
+    '.png',
+    '.jpg',
+    '.jpeg',
+    '.gif',
+    '.svg',
+    '.woff',
+    '.woff2',
+    '.ttf',
+    '.ico',
+  ];
+  return (
+    staticExtensions.some(ext => url.pathname.endsWith(ext)) ||
+    url.pathname.startsWith('/_next/static/')
+  );
 }
 
 // ============================================================================
 // Background Sync
 // ============================================================================
 
-self.addEventListener('sync', (event) => {
+self.addEventListener('sync', event => {
   console.log('[SW] Sync event:', event.tag);
 
   if (event.tag === 'session-sync') {
@@ -270,7 +317,7 @@ async function syncOfflineActions() {
 
   // Broadcast to client to trigger sync
   const clients = await self.clients.matchAll();
-  clients.forEach((client) => {
+  clients.forEach(client => {
     client.postMessage({
       type: 'SYNC_OFFLINE_ACTIONS',
     });
@@ -281,7 +328,7 @@ async function syncOfflineActions() {
 // Push Notifications (Future)
 // ============================================================================
 
-self.addEventListener('push', (event) => {
+self.addEventListener('push', event => {
   if (!event.data) return;
 
   const data = event.data.json();
@@ -289,8 +336,8 @@ self.addEventListener('push', (event) => {
   // Silent push: badge updates and background data sync
   if (data.silent === true || data.type === 'badge-update') {
     event.waitUntil(
-      self.clients.matchAll({ type: 'window' }).then((clients) => {
-        clients.forEach((client) => {
+      self.clients.matchAll({ type: 'window' }).then(clients => {
+        clients.forEach(client => {
           client.postMessage({
             type: 'BADGE_UPDATE',
             count: data.count || 0,
@@ -319,28 +366,25 @@ self.addEventListener('push', (event) => {
     },
   };
 
-  event.waitUntil(
-    self.registration.showNotification(data.title, options)
-  );
+  event.waitUntil(self.registration.showNotification(data.title, options));
 });
 
-self.addEventListener('notificationclick', (event) => {
+self.addEventListener('notificationclick', event => {
   event.notification.close();
 
   const url = event.notification.data?.url || '/';
 
   event.waitUntil(
-    self.clients.matchAll({ type: 'window' })
-      .then((clients) => {
-        // Focus existing window if available
-        for (const client of clients) {
-          if (client.url === url && 'focus' in client) {
-            return client.focus();
-          }
+    self.clients.matchAll({ type: 'window' }).then(clients => {
+      // Focus existing window if available
+      for (const client of clients) {
+        if (client.url === url && 'focus' in client) {
+          return client.focus();
         }
-        // Open new window
-        return self.clients.openWindow(url);
-      })
+      }
+      // Open new window
+      return self.clients.openWindow(url);
+    })
   );
 });
 
@@ -348,7 +392,7 @@ self.addEventListener('notificationclick', (event) => {
 // Message Handling
 // ============================================================================
 
-self.addEventListener('message', (event) => {
+self.addEventListener('message', event => {
   console.log('[SW] Message received:', event.data);
 
   if (event.data?.type === 'SKIP_WAITING') {
@@ -357,9 +401,7 @@ self.addEventListener('message', (event) => {
 
   if (event.data?.type === 'CLEAR_CACHE') {
     event.waitUntil(
-      caches.keys().then((names) =>
-        Promise.all(names.map((name) => caches.delete(name)))
-      )
+      caches.keys().then(names => Promise.all(names.map(name => caches.delete(name))))
     );
   }
 });

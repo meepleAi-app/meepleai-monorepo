@@ -118,6 +118,24 @@ internal sealed class EmailTemplateService : IEmailTemplateService
         return WrapInBaseTemplate("PDF Retry - MeepleAI", content);
     }
 
+    public string RenderAdminNotification(string userName, string title, string message)
+    {
+        var content = $@"
+        <div style=""background-color: #cce5ff; padding: 20px; border-radius: 8px; border: 2px solid #004085; margin-bottom: 20px;"">
+            <h2 style=""color: #004085; margin-top: 0;"">{Escape(title)}</h2>
+        </div>
+
+        <p>Hello {Escape(userName)},</p>
+
+        <p>{Escape(message)}</p>
+
+        <p style=""margin-top: 30px; padding-top: 20px; border-top: 1px solid #e0e0e0; font-size: 14px; color: #666;"">
+            This message was sent by a MeepleAI administrator.
+        </p>";
+
+        return WrapInBaseTemplate($"{Escape(title)} - MeepleAI", content);
+    }
+
     private string WrapInBaseTemplate(string title, string content)
     {
         var preferencesUrl = $"{_frontendBaseUrl}/settings/notifications";

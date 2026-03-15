@@ -2,6 +2,7 @@ using Api.BoundedContexts.Authentication.Application.DTOs;
 using Api.BoundedContexts.Authentication.Domain.Enums;
 using Api.BoundedContexts.Authentication.Domain.Repositories;
 using Api.SharedKernel.Application.Interfaces;
+using Api.SharedKernel.Infrastructure.Persistence;
 
 namespace Api.BoundedContexts.Authentication.Application.Commands.AccessRequest;
 
@@ -9,10 +10,12 @@ internal class BulkApproveAccessRequestsCommandHandler
     : ICommandHandler<BulkApproveAccessRequestsCommand, BulkApproveResultDto>
 {
     private readonly IAccessRequestRepository _repository;
+    private readonly IUnitOfWork _unitOfWork;
 
-    public BulkApproveAccessRequestsCommandHandler(IAccessRequestRepository repository)
+    public BulkApproveAccessRequestsCommandHandler(IAccessRequestRepository repository, IUnitOfWork unitOfWork)
     {
         _repository = repository;
+        _unitOfWork = unitOfWork;
     }
 
     public async Task<BulkApproveResultDto> Handle(
@@ -57,6 +60,7 @@ internal class BulkApproveAccessRequestsCommandHandler
             }
         }
 
+        await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
         return new BulkApproveResultDto(request.Ids.Count, succeeded, failed, results);
     }
 }

@@ -2,6 +2,7 @@ using Api.BoundedContexts.Authentication.Domain.Enums;
 using Api.BoundedContexts.Authentication.Domain.Repositories;
 using Api.Middleware.Exceptions;
 using Api.SharedKernel.Application.Interfaces;
+using Api.SharedKernel.Infrastructure.Persistence;
 using MediatR;
 
 namespace Api.BoundedContexts.Authentication.Application.Commands.AccessRequest;
@@ -9,10 +10,12 @@ namespace Api.BoundedContexts.Authentication.Application.Commands.AccessRequest;
 internal class ApproveAccessRequestCommandHandler : ICommandHandler<ApproveAccessRequestCommand, Unit>
 {
     private readonly IAccessRequestRepository _repository;
+    private readonly IUnitOfWork _unitOfWork;
 
-    public ApproveAccessRequestCommandHandler(IAccessRequestRepository repository)
+    public ApproveAccessRequestCommandHandler(IAccessRequestRepository repository, IUnitOfWork unitOfWork)
     {
         _repository = repository;
+        _unitOfWork = unitOfWork;
     }
 
     public async Task<Unit> Handle(ApproveAccessRequestCommand request, CancellationToken cancellationToken)
@@ -34,6 +37,7 @@ internal class ApproveAccessRequestCommandHandler : ICommandHandler<ApproveAcces
         }
 
         await _repository.UpdateAsync(accessRequest, cancellationToken).ConfigureAwait(false);
+        await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
         return Unit.Value;
     }
 }

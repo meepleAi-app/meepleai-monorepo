@@ -12,5 +12,6 @@ internal record CreateChatThreadCommand(
     string? Title = null,
     string? InitialMessage = null,
     Guid? AgentId = null,
-    string? AgentType = null // Issue #4362
+    string? AgentType = null, // Issue #4362
+    string? UserRole = null
 ) : ICommand<ChatThreadDto>;

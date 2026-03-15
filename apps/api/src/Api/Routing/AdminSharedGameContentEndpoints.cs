@@ -1,8 +1,10 @@
 using Api.BoundedContexts.Administration.Application.Queries;
 using Api.BoundedContexts.DocumentProcessing.Application.Commands.BulkUploadPdfs;
+using Api.BoundedContexts.SharedGameCatalog.Application.Commands;
 using Api.BoundedContexts.SharedGameCatalog.Application.Queries.GetDocumentOverview;
 using Api.Extensions;
 using Api.Filters;
+using Api.Middleware.Exceptions;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 
@@ -62,6 +64,19 @@ internal static class AdminSharedGameContentEndpoints
             .WithDescription("Returns MAU data with feature breakdown (AI chat, PDF uploads, agent interactions) and daily trend.")
             .Produces<ActiveAiUsersResult>(StatusCodes.Status200OK);
 
+        // PUT /api/v1/admin/shared-games/{id}/rag-access
+        // Ownership/RAG access: Toggle IsRagPublic on a SharedGame
+        contentGroup.MapPut("/{id:guid}/rag-access", HandleSetRagPublicAccess)
+            .WithName("SetRagPublicAccess")
+            .WithSummary("Toggle RAG public access for a shared game (Admin)")
+            .WithDescription(
+                "Sets whether RAG access to this game's knowledge base is public. " +
+                "When true, any user can access the game's RAG content without declaring ownership.")
+            .Produces(StatusCodes.Status204NoContent)
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status401Unauthorized)
+            .ProducesProblem(StatusCodes.Status403Forbidden);
+
         return group;
     }
 
@@ -78,6 +93,30 @@ internal static class AdminSharedGameContentEndpoints
         var query = new GetActiveAiUsersQuery(period);
         var result = await mediator.Send(query, ct).ConfigureAwait(false);
         return Results.Ok(result);
+    }
+
+    private static async Task<IResult> HandleSetRagPublicAccess(
+        Guid id,
+        [FromBody] SetRagPublicAccessRequest request,
+        IMediator mediator,
+        ILogger<Program> logger,
+        CancellationToken ct)
+    {
+        try
+        {
+            var command = new SetRagPublicAccessCommand(id, request.IsRagPublic);
+            await mediator.Send(command, ct).ConfigureAwait(false);
+
+            logger.LogInformation(
+                "Admin set RAG public access for SharedGame {SharedGameId} to {IsRagPublic}",
+                id, request.IsRagPublic);
+
+            return Results.NoContent();
+        }
+        catch (NotFoundException ex)
+        {
+            return Results.NotFound(new { error = ex.Message });
+        }
     }
 
     private static async Task<IResult> HandleBulkUploadPdfs(
@@ -139,3 +178,8 @@ internal static class AdminSharedGameContentEndpoints
         return Results.Ok(result);
     }
 }
+
+/// <summary>
+/// Request body for setting RAG public access.
+/// </summary>
+internal record SetRagPublicAccessRequest(bool IsRagPublic);

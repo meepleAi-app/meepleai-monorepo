@@ -1,3 +1,4 @@
+using Api.Infrastructure.Entities;
 using Api.BoundedContexts.Administration.Application.Services;
 using Api.BoundedContexts.GameManagement.Application.Services;
 using Api.BoundedContexts.KnowledgeBase.Application.Commands;
@@ -546,6 +547,7 @@ public sealed class LlmFallbackTests : IDisposable
             consentCheckMock.Object,
             Mock.Of<IGameSessionOrchestratorService>(),
             Mock.Of<IHybridCacheService>(),
+            CreatePermissiveRagAccessServiceMock(),
             _mockLogger.Object);
     }
 
@@ -598,5 +600,11 @@ public sealed class LlmFallbackTests : IDisposable
             events.Add(@event);
         }
         return events;
+    }
+    private static IRagAccessService CreatePermissiveRagAccessServiceMock()
+    {
+        var mock = new Mock<IRagAccessService>();
+        mock.Setup(s => s.CanAccessRagAsync(It.IsAny<Guid>(), It.IsAny<Guid>(), It.IsAny<UserRole>(), It.IsAny<CancellationToken>())).ReturnsAsync(true);
+        return mock.Object;
     }
 }

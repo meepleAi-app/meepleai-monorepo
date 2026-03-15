@@ -58,4 +58,9 @@ public record AskAgentQuestionCommand : IRequest<AgentChatResponse>
     /// Minimum relevance score threshold (0-1)
     /// </summary>
     public double MinScore { get; init; } = 0.6;
+
+    /// <summary>
+    /// Authenticated user role string (for RAG access enforcement).
+    /// </summary>
+    public string? UserRole { get; init; }
 }

@@ -23,4 +23,15 @@ public class NotificationPreferencesEntity
     public bool PushOnGameNightInvitation { get; set; } = true;
     public bool EmailOnGameNightReminder { get; set; } = true;
     public bool PushOnGameNightReminder { get; set; } = true;
+
+    // Slack - Issue #slack-notification-system
+    public bool SlackEnabled { get; set; } = true;
+    public bool SlackOnDocumentReady { get; set; } = true;
+    public bool SlackOnDocumentFailed { get; set; } = true;
+    public bool SlackOnRetryAvailable { get; set; }
+    public bool SlackOnGameNightInvitation { get; set; } = true;
+    public bool SlackOnGameNightReminder { get; set; } = true;
+    public bool SlackOnShareRequestCreated { get; set; } = true;
+    public bool SlackOnShareRequestApproved { get; set; } = true;
+    public bool SlackOnBadgeEarned { get; set; } = true;
 }

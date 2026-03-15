@@ -475,6 +475,9 @@ importers:
       lint-staged:
         specifier: ^16.3.2
         version: 16.3.2
+      mailosaur:
+        specifier: ^11.1.0
+        version: 11.1.0(@types/node@25.3.5)
       msw:
         specifier: ^2.12.10
         version: 2.12.10(@types/node@25.3.5)(typescript@5.9.3)
@@ -7648,6 +7651,15 @@ packages:
 
   magicast@0.3.5:
     resolution: {integrity: sha512-L0WhttDl+2BOsybvEOLK7fW3UA0OQ0IQ2d6Zl2x/a6vVRs3bAY0ECOSHHeL5jD+SbOpOCUEi0y1DgHEn9Qn1AQ==}
+
+  mailosaur@11.1.0:
+    resolution: {integrity: sha512-6Yf9dohDbXddOBDLm5x1vcCjaUWMYQbqe0CSgWj2I2mhQppAqhbGxJ0v06QVCpP6oqh4hXSZCSWilY/bvsb8VA==}
+    engines: {node: '>=16'}
+    peerDependencies:
+      '@types/node': '>=16'
+    peerDependenciesMeta:
+      '@types/node':
+        optional: true
 
   make-cancellable-promise@2.0.0:
     resolution: {integrity: sha512-3SEQqTpV9oqVsIWqAcmDuaNeo7yBO3tqPtqGRcKkEo0lrzD3wqbKG9mkxO65KoOgXqj+zH2phJ2LiAsdzlogSw==}
@@ -18267,6 +18279,14 @@ snapshots:
       '@babel/parser': 7.28.5
       '@babel/types': 7.28.5
       source-map-js: 1.2.1
+
+  mailosaur@11.1.0(@types/node@25.3.5):
+    dependencies:
+      https-proxy-agent: 7.0.6
+    optionalDependencies:
+      '@types/node': 25.3.5
+    transitivePeerDependencies:
+      - supports-color
 
   make-cancellable-promise@2.0.0: {}
 

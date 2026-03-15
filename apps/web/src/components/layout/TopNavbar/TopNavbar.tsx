@@ -10,7 +10,7 @@
 
 'use client';
 
-import { Suspense } from 'react';
+import { type ReactNode, Suspense } from 'react';
 
 import { ChevronDown, LogOut, Search, Settings, User } from 'lucide-react';
 import Link from 'next/link';
@@ -112,9 +112,11 @@ function UserMenu({ userName, userRole }: UserMenuProps) {
 
 export interface TopNavbarProps {
   className?: string;
+  /** Optional mini-cards slot rendered between center and right sections */
+  miniCards?: ReactNode;
 }
 
-export function TopNavbar({ className }: TopNavbarProps) {
+export function TopNavbar({ className, miniCards }: TopNavbarProps) {
   const { user } = useAuthUser();
   const { isScrolled: scrolled } = useScrollState({ scrolledThreshold: 4 });
   const commandPalette = useCommandPalette();
@@ -160,6 +162,9 @@ export function TopNavbar({ className }: TopNavbarProps) {
             </div>
             <DesktopBreadcrumb className="hidden md:flex ml-2" />
           </div>
+
+          {/* ── CENTER: Mini cards (mobile, collapsed hand) ── */}
+          {miniCards && <div className="flex items-center gap-1 overflow-x-auto">{miniCards}</div>}
 
           {/* ── RIGHT: Search + Notifications + Avatar ── */}
           <div className="flex items-center gap-1 shrink-0">

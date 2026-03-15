@@ -235,7 +235,9 @@ internal static class KnowledgeBaseEndpoints
             TopK: req.topK ?? 5,
             MinScore: req.minScore ?? 0.55,
             SearchMode: req.searchMode ?? "hybrid",
-            Language: req.language ?? "en"
+            Language: req.language ?? "en",
+            UserId: session!.User!.Id,
+            UserRole: session.User!.Role
         );
 
         var results = await mediator.Send(query, ct).ConfigureAwait(false);
@@ -287,7 +289,9 @@ internal static class KnowledgeBaseEndpoints
             GameId: gameId,
             Question: req.query!,  // Already validated by QueryValidator above
             Language: req.language ?? "en",
-            BypassCache: req.bypassCache ?? false
+            BypassCache: req.bypassCache ?? false,
+            UserId: session!.User!.Id,
+            UserRole: session.User!.Role
         );
 
         logger.LogDebug("[KnowledgeBase.Ask] Sending AskQuestionQuery to mediator...");
@@ -470,7 +474,8 @@ internal static class KnowledgeBaseEndpoints
             Title: req.Title,
             InitialMessage: req.InitialMessage,
             AgentId: req.AgentId,
-            AgentType: req.AgentType // Issue #4362
+            AgentType: req.AgentType, // Issue #4362
+            UserRole: session.User!.Role
         );
 
         var result = await mediator.Send(command, ct).ConfigureAwait(false);

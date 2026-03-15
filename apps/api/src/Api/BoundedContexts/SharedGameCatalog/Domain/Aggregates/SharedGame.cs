@@ -39,6 +39,9 @@ public sealed class SharedGame : AggregateRoot<Guid>
     // Rules
     private GameRules? _rules;
 
+    // RAG Access
+    private bool _isRagPublic;
+
     // Status & Metadata
     private GameStatus _status;
     private GameDataStatus _gameDataStatus = GameDataStatus.Complete;
@@ -156,6 +159,12 @@ public sealed class SharedGame : AggregateRoot<Guid>
     /// Gets whether this game has been soft-deleted.
     /// </summary>
     public bool IsDeleted => _isDeleted;
+
+    /// <summary>
+    /// Gets whether RAG access to this game's knowledge base is public (no ownership required).
+    /// When false, users must declare ownership to access the game's RAG content.
+    /// </summary>
+    public bool IsRagPublic => _isRagPublic;
 
     /// <summary>
     /// Gets the ID of the user who created this game entry.
@@ -1124,6 +1133,20 @@ public sealed class SharedGame : AggregateRoot<Guid>
         _modifiedAt = DateTime.UtcNow;
 
         AddDomainEvent(new AgentUnlinkedFromSharedGameEvent(_id, oldAgentId));
+    }
+
+    // RAG Access Methods
+
+    /// <summary>
+    /// Sets whether RAG access to this game's knowledge base is public.
+    /// When true, any user can access the game's RAG content without declaring ownership.
+    /// When false, users must declare ownership to access RAG content.
+    /// </summary>
+    /// <param name="isPublic">True to make RAG access public, false to require ownership.</param>
+    public void SetRagPublicAccess(bool isPublic)
+    {
+        _isRagPublic = isPublic;
+        _modifiedAt = DateTime.UtcNow;
     }
 
     // Validation Methods

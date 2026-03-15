@@ -1,6 +1,7 @@
 using System.Text.Json;
 using Api.BoundedContexts.KnowledgeBase.Application.Commands;
 using Api.BoundedContexts.KnowledgeBase.Application.DTOs;
+using Api.BoundedContexts.KnowledgeBase.Application.Services;
 using Api.BoundedContexts.KnowledgeBase.Domain;
 using Api.BoundedContexts.KnowledgeBase.Domain.Entities;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
@@ -9,6 +10,7 @@ using Api.BoundedContexts.SharedGameCatalog.Application.Commands;
 using Api.BoundedContexts.UserLibrary.Domain.Entities;
 using Api.BoundedContexts.UserLibrary.Domain.Repositories;
 using Api.Infrastructure;
+using Api.Infrastructure.Entities;
 using Api.Infrastructure.Entities.KnowledgeBase;
 using Api.Middleware.Exceptions;
 using Api.SharedKernel.Infrastructure.Persistence;
@@ -31,6 +33,7 @@ internal sealed class CreateAgentWithSetupCommandHandler
     private readonly IAgentRepository _agentRepository;
     private readonly IChatThreadRepository _chatThreadRepository;
     private readonly IUserLibraryRepository _libraryRepository;
+    private readonly IRagAccessService _ragAccessService;
     private readonly IUnitOfWork _unitOfWork;
     private readonly MeepleAiDbContext _db;
     private readonly IMediator _mediator;
@@ -40,6 +43,7 @@ internal sealed class CreateAgentWithSetupCommandHandler
         IAgentRepository agentRepository,
         IChatThreadRepository chatThreadRepository,
         IUserLibraryRepository libraryRepository,
+        IRagAccessService ragAccessService,
         IUnitOfWork unitOfWork,
         MeepleAiDbContext db,
         IMediator mediator,
@@ -48,6 +52,7 @@ internal sealed class CreateAgentWithSetupCommandHandler
         _agentRepository = agentRepository ?? throw new ArgumentNullException(nameof(agentRepository));
         _chatThreadRepository = chatThreadRepository ?? throw new ArgumentNullException(nameof(chatThreadRepository));
         _libraryRepository = libraryRepository ?? throw new ArgumentNullException(nameof(libraryRepository));
+        _ragAccessService = ragAccessService ?? throw new ArgumentNullException(nameof(ragAccessService));
         _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
         _db = db ?? throw new ArgumentNullException(nameof(db));
         _mediator = mediator ?? throw new ArgumentNullException(nameof(mediator));
@@ -59,6 +64,19 @@ internal sealed class CreateAgentWithSetupCommandHandler
         CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(request);
+
+        // Step 0: Ownership/RAG access check — user must own the game or game must be RAG-public
+        var role = Enum.TryParse<UserRole>(request.UserRole, ignoreCase: true, out var parsedRole)
+            ? parsedRole
+            : UserRole.User;
+
+        var canAccess = await _ragAccessService.CanAccessRagAsync(
+            request.UserId, request.GameId, role, cancellationToken).ConfigureAwait(false);
+
+        if (!canAccess)
+        {
+            throw new ForbiddenException("Devi possedere il gioco per creare un agente");
+        }
 
         // Step 1: Validate agent slot availability
         var userAgents = await _agentRepository.GetByUserIdAsync(request.UserId, cancellationToken)

@@ -68,6 +68,10 @@ internal class UserLibraryEntryEntityConfiguration : IEntityTypeConfiguration<Us
         builder.Property(e => e.IsFavorite)
             .HasDefaultValue(false);
 
+        // Ownership declaration
+        builder.Property(e => e.OwnershipDeclaredAt)
+            .IsRequired(false);
+
         // Game state properties
         builder.Property(e => e.CurrentState)
             .IsRequired()

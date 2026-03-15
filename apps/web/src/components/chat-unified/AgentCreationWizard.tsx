@@ -530,6 +530,7 @@ export function AgentCreationWizard() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const preselectedGameId = searchParams?.get('gameId');
+  const initialStep = parseInt(searchParams?.get('step') || '0', 10);
   const didPreselect = useRef(false);
 
   const [step, setStep] = useState(1);
@@ -541,6 +542,7 @@ export function AgentCreationWizard() {
   });
 
   // Auto-preselect game if gameId is passed in query params
+  // If step param is also provided and >= 2, skip to that step instead of default step 2
   useEffect(() => {
     if (!preselectedGameId || didPreselect.current) return;
     didPreselect.current = true;
@@ -551,13 +553,14 @@ export function AgentCreationWizard() {
         const match = res.items?.find(e => e.gameId === preselectedGameId);
         if (match) {
           setState(s => ({ ...s, selectedGame: match }));
-          setStep(2); // skip to type selection
+          const targetStep = initialStep >= 2 ? Math.min(initialStep, 4) : 2;
+          setStep(targetStep);
         }
       })
       .catch(() => {
         /* silent */
       });
-  }, [preselectedGameId]);
+  }, [preselectedGameId, initialStep]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
 

@@ -773,7 +773,8 @@ static bool ShouldSkipMigrations(WebApplication app, MeepleAiDbContext db)
     }
 
     // PERF: Skip auto-migration in Staging/Production — handled by deploy pipeline (migrate-db job)
-    if (app.Environment.IsEnvironment("Staging") || app.Environment.IsProduction())
+    var forceMigrations = app.Configuration.GetValue<bool?>("FORCE_MIGRATIONS").GetValueOrDefault(false);
+    if (!forceMigrations && (app.Environment.IsEnvironment("Staging") || app.Environment.IsProduction()))
     {
         app.Logger.LogInformation("Skipping auto-migration in {Environment} — migrations handled by deploy pipeline", app.Environment.EnvironmentName);
         return true;

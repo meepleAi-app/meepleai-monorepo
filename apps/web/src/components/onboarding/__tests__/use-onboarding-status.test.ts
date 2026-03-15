@@ -122,4 +122,62 @@ describe('useOnboardingStatus', () => {
     expect(result.current.showWizard).toBe(true);
     expect(result.current.showChecklist).toBe(false);
   });
+
+  it('showWizard is false during loading', () => {
+    (api.onboarding.getStatus as ReturnType<typeof vi.fn>).mockReturnValue(new Promise(() => {}));
+    const { result } = renderHook(() => useOnboardingStatus(), { wrapper: createWrapper() });
+    expect(result.current.isLoading).toBe(true);
+    expect(result.current.showWizard).toBe(false);
+    expect(result.current.showChecklist).toBe(false);
+  });
+
+  it('markWizardSeen closes dialog immediately via local state', async () => {
+    (api.onboarding.getStatus as ReturnType<typeof vi.fn>).mockResolvedValue({
+      wizardSeenAt: null,
+      dismissedAt: null,
+      steps: { hasGames: false, hasSessions: false, hasCompletedProfile: false },
+    });
+    (api.onboarding.markWizardSeen as ReturnType<typeof vi.fn>).mockResolvedValue(undefined);
+
+    const { result } = renderHook(() => useOnboardingStatus(), { wrapper: createWrapper() });
+    await waitFor(() => expect(result.current.showWizard).toBe(true));
+
+    result.current.markWizardSeen();
+    await waitFor(() => expect(result.current.showWizard).toBe(false));
+    expect(api.onboarding.markWizardSeen).toHaveBeenCalledOnce();
+  });
+
+  it('dismiss closes checklist immediately via local state', async () => {
+    (api.onboarding.getStatus as ReturnType<typeof vi.fn>).mockResolvedValue({
+      wizardSeenAt: '2026-03-13T10:00:00Z',
+      dismissedAt: null,
+      steps: { hasGames: false, hasSessions: false, hasCompletedProfile: false },
+    });
+    (api.onboarding.dismiss as ReturnType<typeof vi.fn>).mockResolvedValue(undefined);
+
+    const { result } = renderHook(() => useOnboardingStatus(), { wrapper: createWrapper() });
+    await waitFor(() => expect(result.current.showChecklist).toBe(true));
+
+    result.current.dismiss();
+    await waitFor(() => expect(result.current.showChecklist).toBe(false));
+    expect(api.onboarding.dismiss).toHaveBeenCalledOnce();
+  });
+
+  it('markWizardSeen closes dialog even if API fails', async () => {
+    (api.onboarding.getStatus as ReturnType<typeof vi.fn>).mockResolvedValue({
+      wizardSeenAt: null,
+      dismissedAt: null,
+      steps: { hasGames: false, hasSessions: false, hasCompletedProfile: false },
+    });
+    (api.onboarding.markWizardSeen as ReturnType<typeof vi.fn>).mockRejectedValue(
+      new Error('Network error')
+    );
+
+    const { result } = renderHook(() => useOnboardingStatus(), { wrapper: createWrapper() });
+    await waitFor(() => expect(result.current.showWizard).toBe(true));
+
+    result.current.markWizardSeen();
+    // Dialog should close immediately via local state, even though API will fail
+    await waitFor(() => expect(result.current.showWizard).toBe(false));
+  });
 });

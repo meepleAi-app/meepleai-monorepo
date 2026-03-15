@@ -21,6 +21,9 @@ services:
       - ./env/api.env.release
     environment:
       ASPNETCORE_ENVIRONMENT: Production
+      # Docker networking: service names as hostnames
+      POSTGRES_HOST: postgres
+      REDIS_HOST: redis
       # appsettings.Production.json uses ${OAUTH_CALLBACK_BASE_URL} placeholder (not auto-resolved by ASP.NET Core)
       # Override directly via ASP.NET Core nested env var convention (__ = config section separator)
       Authentication__OAuth__CallbackBaseUrl: "http://localhost:8080"

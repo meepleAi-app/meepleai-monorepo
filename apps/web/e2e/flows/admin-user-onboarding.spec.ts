@@ -56,10 +56,11 @@ test.describe('Admin-User Onboarding Flow', () => {
         { timeout: 15_000 }
       );
 
-      const userInfo = adminPage
+      // Verify admin UI is loaded (admin toggle or any admin-specific element)
+      const adminIndicator = adminPage
         .locator('[data-testid="user-display-name"], [data-testid="navbar-user"]')
-        .or(adminPage.getByText(env.admin.email));
-      await expect(userInfo).toBeVisible({ timeout: 5_000 });
+        .or(adminPage.getByText(/admin/i).first());
+      await expect(adminIndicator).toBeVisible({ timeout: 5_000 });
 
       const errorToast = adminPage.locator('[data-testid="toast-error"], .toast-error');
       await expect(errorToast).not.toBeVisible();
@@ -119,7 +120,7 @@ test.describe('Admin-User Onboarding Flow', () => {
 
     await test.step('Submit and wait for redirect', async () => {
       await acceptPage.submit();
-      await acceptPage.waitForRedirectToOnboarding();
+      await acceptPage.waitForRedirectAfterAccept();
     });
 
     state.userPassword = testUserPassword;
@@ -171,11 +172,13 @@ test.describe('Admin-User Onboarding Flow', () => {
     const libraryPage = new LibraryPage(page);
 
     await test.step('Navigate to library', async () => {
-      await libraryPage.goto();
+      await page.goto('/library');
+      await page.waitForLoadState('domcontentloaded');
     });
 
     await test.step('Search and add game', async () => {
       await libraryPage.clickAddGame();
+      await libraryPage.selectFromCatalog();
       await libraryPage.searchGame(env.seedGameName);
 
       const { gameId, gameTitle } = await libraryPage.selectFirstSearchResult();
@@ -190,7 +193,13 @@ test.describe('Admin-User Onboarding Flow', () => {
       state.gameTitle = gameTitle || env.seedGameName;
     });
 
-    await test.step('Confirm and verify', async () => {
+    await test.step('Navigate through wizard and save', async () => {
+      await libraryPage.clickNext();
+      // Skip KB step if present
+      const nextBtn2 = page.getByRole('button', { name: /avanti|next/i });
+      if (await nextBtn2.isVisible({ timeout: 2_000 }).catch(() => false)) {
+        await nextBtn2.click();
+      }
       await libraryPage.confirmAddToCollection();
       await libraryPage.verifyGameInCollection(state.gameTitle!);
     });

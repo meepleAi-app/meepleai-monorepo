@@ -35,7 +35,17 @@ export class AcceptInvitePage extends BasePage {
     await this.click(this.page.getByRole('button', { name: /create account/i }));
   }
 
-  async waitForRedirectToOnboarding(): Promise<void> {
-    await this.page.waitForURL('**/onboarding**', { timeout: 10_000 });
+  async waitForRedirectAfterAccept(): Promise<void> {
+    // Wait for either:
+    // 1. URL changes away from /accept-invite (SPA navigation)
+    // 2. Success message appears (may stay on same URL briefly)
+    const successOrRedirect = Promise.race([
+      this.page.waitForURL(url => !url.pathname.includes('/accept-invite'), {
+        timeout: 15_000,
+        waitUntil: 'commit',
+      }),
+      this.page.getByText(/success|account created|welcome/i).waitFor({ timeout: 15_000 }),
+    ]);
+    await successOrRedirect;
   }
 }

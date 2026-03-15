@@ -16,47 +16,44 @@ export class AgentChatPage extends BasePage {
     await this.page.goto(`/agents/${agentId}`);
     await this.waitForLoad();
 
-    const chatButton = this.page
-      .locator('[data-testid="start-chat-button"]')
-      .or(this.page.getByRole('button', { name: /chat|ask|start/i }));
-    if (await chatButton.isVisible()) {
-      await chatButton.click();
+    // If we see "Inizia Conversazione" button, click it
+    const startChat = this.page.getByRole('button', { name: /inizia conversazione|start chat/i });
+    if (await startChat.isVisible({ timeout: 5_000 }).catch(() => false)) {
+      await startChat.click();
       await this.waitForLoad();
     }
   }
 
   async sendMessage(message: string): Promise<void> {
     const chatInput = this.page
-      .locator('[data-testid="chat-input"]')
-      .or(this.page.getByPlaceholder(/ask|message|type/i));
+      .locator('[data-testid="message-input"]')
+      .or(this.page.getByPlaceholder(/scrivi un messaggio|write a message/i));
 
     await this.fill(chatInput, message);
 
     await this.click(
       this.page
-        .locator('[data-testid="chat-send-button"]')
-        .or(this.page.getByRole('button', { name: /send/i }))
+        .locator('[data-testid="send-btn"]')
+        .or(this.page.locator('[aria-label="Invia messaggio"]'))
     );
   }
 
   async waitForAgentResponse(timeout: number = 60_000): Promise<string> {
-    const responseLocator = this.page
-      .locator('[data-testid="agent-message"], [data-testid="assistant-message"]')
-      .last();
+    // Wait for assistant message to appear
+    const responseLocator = this.page.locator('[data-testid="message-assistant"]').last();
 
     await expect(responseLocator).toBeVisible({ timeout });
 
-    const streamingIndicator = this.page.locator(
-      '[data-testid="streaming-indicator"], .animate-pulse'
-    );
-
+    // Wait for streaming to finish
+    const streamingMsg = this.page.locator('[data-testid="message-streaming"]');
     try {
-      await streamingIndicator.waitFor({ state: 'detached', timeout });
+      // Wait for streaming indicator to disappear
+      await streamingMsg.waitFor({ state: 'detached', timeout });
     } catch {
-      // Indicator may never appear if response is fast
+      // May already be gone
     }
 
-    // Wait for response text to be non-empty (deterministic)
+    // Wait for response text to be non-empty
     await expect(responseLocator).not.toBeEmpty({ timeout: 5_000 });
 
     const responseText = (await responseLocator.textContent()) ?? '';
@@ -65,6 +62,6 @@ export class AgentChatPage extends BasePage {
 
   async verifyResponseIsValid(responseText: string): Promise<void> {
     expect(responseText.length).toBeGreaterThan(10);
-    expect(responseText).not.toMatch(/error|failed|something went wrong/i);
+    expect(responseText).not.toMatch(/error|errore|failed|something went wrong/i);
   }
 }

@@ -1,8 +1,9 @@
-using Api.BoundedContexts.Authentication.Application.Commands.Onboarding;
 using Api.BoundedContexts.Authentication.Application.DTOs;
 using Api.BoundedContexts.Authentication.Application.Queries.Onboarding;
 using Api.Extensions;
+using Api.Infrastructure;
 using MediatR;
+using Microsoft.EntityFrameworkCore;
 
 namespace Api.Routing;
 
@@ -37,14 +38,18 @@ and checklist step completion derived from real data (games, sessions, profile).
         // POST /api/v1/users/me/onboarding-wizard-seen
         group.MapPost("/users/me/onboarding-wizard-seen", async (
             HttpContext context,
-            IMediator mediator,
+            MeepleAiDbContext dbContext,
             ILogger<Program> logger,
             CancellationToken ct) =>
         {
             var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
-            var command = new MarkOnboardingWizardSeenCommand(session!.User!.Id);
-            await mediator.Send(command, ct).ConfigureAwait(false);
-            logger.LogInformation("Onboarding wizard marked as seen for user {UserId}", session.User.Id);
+            var userId = session!.User!.Id;
+            // Direct update to avoid IUnitOfWork scope mismatch (SaveChanges returned 0 via MediatR handlers)
+            var rows = await dbContext.Users
+                .Where(u => u.Id == userId && u.OnboardingWizardSeenAt == null)
+                .ExecuteUpdateAsync(s => s.SetProperty(u => u.OnboardingWizardSeenAt, DateTime.UtcNow), ct)
+                .ConfigureAwait(false);
+            logger.LogInformation("Onboarding wizard marked as seen for user {UserId}, rows={Rows}", userId, rows);
             return Results.Json(new { ok = true });
         })
         .RequireSession()
@@ -58,14 +63,18 @@ and checklist step completion derived from real data (games, sessions, profile).
         // POST /api/v1/users/me/onboarding-dismiss
         group.MapPost("/users/me/onboarding-dismiss", async (
             HttpContext context,
-            IMediator mediator,
+            MeepleAiDbContext dbContext,
             ILogger<Program> logger,
             CancellationToken ct) =>
         {
             var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
-            var command = new DismissOnboardingCommand(session!.User!.Id);
-            await mediator.Send(command, ct).ConfigureAwait(false);
-            logger.LogInformation("Onboarding dismissed for user {UserId}", session.User.Id);
+            var userId = session!.User!.Id;
+            // Direct update to avoid IUnitOfWork scope mismatch (SaveChanges returned 0 via MediatR handlers)
+            var rows = await dbContext.Users
+                .Where(u => u.Id == userId && u.OnboardingDismissedAt == null)
+                .ExecuteUpdateAsync(s => s.SetProperty(u => u.OnboardingDismissedAt, DateTime.UtcNow), ct)
+                .ConfigureAwait(false);
+            logger.LogInformation("Onboarding dismissed for user {UserId}, rows={Rows}", userId, rows);
             return Results.Json(new { ok = true });
         })
         .RequireSession()

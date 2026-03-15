@@ -32,6 +32,11 @@ const StreamingEventType = {
   DebugSearchDetails: 18,
   DebugCacheCheck: 19,
   DebugDocumentCheck: 20,
+  // RAG Enhancement debug events
+  DebugAdaptiveRouting: 23,
+  DebugCragEvaluation: 24,
+  DebugRagFusion: 25,
+  DebugContextWindow: 26,
 } as const;
 
 /** Human-readable labels for debug event types */
@@ -47,6 +52,10 @@ const DEBUG_EVENT_LABELS: Record<number, string> = {
   [StreamingEventType.DebugSearchDetails]: 'Search Details',
   [StreamingEventType.DebugCacheCheck]: 'Cache Check',
   [StreamingEventType.DebugDocumentCheck]: 'Document Check',
+  [StreamingEventType.DebugAdaptiveRouting]: 'Adaptive Routing',
+  [StreamingEventType.DebugCragEvaluation]: 'CRAG Evaluation',
+  [StreamingEventType.DebugRagFusion]: 'RAG-Fusion',
+  [StreamingEventType.DebugContextWindow]: 'Context Window',
 };
 
 export interface DebugEvent {

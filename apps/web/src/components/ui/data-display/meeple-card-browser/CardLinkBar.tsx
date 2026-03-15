@@ -57,6 +57,12 @@ const TAB_CONFIG: Record<MeepleEntityType, TabDefinition[]> = {
   ],
   toolkit: [{ key: 'agents', label: 'Agents' }],
   tool: [{ key: 'toolbox', label: 'Toolbox' }],
+  collection: [{ key: 'games', label: 'Games' }],
+  group: [{ key: 'members', label: 'Members' }],
+  location: [{ key: 'events', label: 'Events' }],
+  expansion: [{ key: 'base', label: 'Base Game' }],
+  achievement: [{ key: 'related', label: 'Related' }],
+  note: [{ key: 'links', label: 'Links' }],
   custom: [{ key: 'links', label: 'Links' }],
 };
 

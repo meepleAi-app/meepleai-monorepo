@@ -29,10 +29,12 @@ public static class HealthCheckServiceExtensions
             tags: new[] { HealthCheckTags.Ai, HealthCheckTags.NonCritical },
             timeout: TimeSpan.FromSeconds(5));
 
+        // Embedding is essential for RAG but not for app startup — treat as Degraded
+        // to avoid blocking CI health checks and startup without embedding service
         builder.AddCheck<EmbeddingServiceHealthCheck>(
             "embedding",
-            HealthStatus.Unhealthy,
-            tags: new[] { HealthCheckTags.Ai, HealthCheckTags.Critical },
+            HealthStatus.Degraded,
+            tags: new[] { HealthCheckTags.Ai, HealthCheckTags.NonCritical },
             timeout: TimeSpan.FromSeconds(5));
 
         builder.AddCheck<RerankerHealthCheck>(

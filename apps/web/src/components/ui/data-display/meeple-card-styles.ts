@@ -84,6 +84,9 @@ export const meepleCardVariants = cva(
           'flex flex-col rounded-2xl overflow-hidden',
           'bg-card border border-border/50',
           '[box-shadow:var(--shadow-warm-sm)] hover:[box-shadow:var(--shadow-warm-xl)]',
+          // Neon Holo: 3D tilt + performance containment
+          'hover:-translate-y-2',
+          '[contain:layout_paint]',
         ],
         list: [
           'flex flex-row items-center gap-4 p-3 rounded-xl',
@@ -100,6 +103,9 @@ export const meepleCardVariants = cva(
           'flex flex-col rounded-2xl overflow-hidden',
           'bg-card border border-border/50',
           '[box-shadow:var(--shadow-warm-md)] hover:[box-shadow:var(--shadow-warm-xl)]',
+          // Neon Holo: hover lift + performance containment
+          'hover:-translate-y-2',
+          '[contain:layout_paint]',
         ],
         hero: [
           'relative flex flex-col rounded-3xl overflow-hidden',

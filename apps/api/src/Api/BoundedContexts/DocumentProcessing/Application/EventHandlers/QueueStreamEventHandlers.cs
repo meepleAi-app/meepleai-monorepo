@@ -1,7 +1,9 @@
 using Api.BoundedContexts.DocumentProcessing.Application.DTOs;
 using Api.BoundedContexts.DocumentProcessing.Domain.Events;
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.Services;
+using Api.Infrastructure;
 using MediatR;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
 namespace Api.BoundedContexts.DocumentProcessing.Application.EventHandlers;
@@ -87,20 +89,38 @@ internal sealed class JobStepCompletedStreamHandler : INotificationHandler<JobSt
 internal sealed class JobCompletedStreamHandler : INotificationHandler<JobCompletedEvent>
 {
     private readonly IQueueStreamService _streamService;
+    private readonly MeepleAiDbContext _db;
     private readonly ILogger<JobCompletedStreamHandler> _logger;
 
-    public JobCompletedStreamHandler(IQueueStreamService streamService, ILogger<JobCompletedStreamHandler> logger)
+    public JobCompletedStreamHandler(IQueueStreamService streamService, MeepleAiDbContext db, ILogger<JobCompletedStreamHandler> logger)
     {
         _streamService = streamService;
+        _db = db;
         _logger = logger;
     }
 
     public async Task Handle(JobCompletedEvent notification, CancellationToken cancellationToken)
     {
+        var pdfDoc = await _db.PdfDocuments
+            .Where(p => p.Id == notification.PdfDocumentId)
+            .Select(p => new { p.FileName })
+            .FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
+
+        var gameInfo = await _db.SharedGameDocuments
+            .Where(sgd => sgd.PdfDocumentId == notification.PdfDocumentId)
+            .Select(sgd => new { sgd.SharedGameId, GameName = sgd.SharedGame.Title })
+            .FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
+
+        var data = new JobCompletedData(
+            notification.TotalDuration.TotalSeconds,
+            pdfDoc?.FileName,
+            gameInfo?.SharedGameId,
+            gameInfo?.GameName);
+
         var evt = new QueueStreamEvent(
             QueueStreamEventType.JobCompleted,
             notification.JobId,
-            new JobCompletedData(notification.TotalDuration.TotalSeconds),
+            data,
             DateTimeOffset.UtcNow);
 
         await _streamService.PublishJobEventAsync(evt, cancellationToken).ConfigureAwait(false);
@@ -111,20 +131,40 @@ internal sealed class JobCompletedStreamHandler : INotificationHandler<JobComple
 internal sealed class JobFailedStreamHandler : INotificationHandler<JobFailedEvent>
 {
     private readonly IQueueStreamService _streamService;
+    private readonly MeepleAiDbContext _db;
     private readonly ILogger<JobFailedStreamHandler> _logger;
 
-    public JobFailedStreamHandler(IQueueStreamService streamService, ILogger<JobFailedStreamHandler> logger)
+    public JobFailedStreamHandler(IQueueStreamService streamService, MeepleAiDbContext db, ILogger<JobFailedStreamHandler> logger)
     {
         _streamService = streamService;
+        _db = db;
         _logger = logger;
     }
 
     public async Task Handle(JobFailedEvent notification, CancellationToken cancellationToken)
     {
+        var pdfDoc = await _db.PdfDocuments
+            .Where(p => p.Id == notification.PdfDocumentId)
+            .Select(p => new { p.FileName })
+            .FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
+
+        var gameInfo = await _db.SharedGameDocuments
+            .Where(sgd => sgd.PdfDocumentId == notification.PdfDocumentId)
+            .Select(sgd => new { sgd.SharedGameId, GameName = sgd.SharedGame.Title })
+            .FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
+
+        var data = new JobFailedData(
+            notification.ErrorMessage,
+            notification.FailedAtStep?.ToString(),
+            notification.RetryCount,
+            pdfDoc?.FileName,
+            gameInfo?.SharedGameId,
+            gameInfo?.GameName);
+
         var evt = new QueueStreamEvent(
             QueueStreamEventType.JobFailed,
             notification.JobId,
-            new JobFailedData(notification.ErrorMessage, notification.FailedAtStep?.ToString(), notification.RetryCount),
+            data,
             DateTimeOffset.UtcNow);
 
         await _streamService.PublishJobEventAsync(evt, cancellationToken).ConfigureAwait(false);

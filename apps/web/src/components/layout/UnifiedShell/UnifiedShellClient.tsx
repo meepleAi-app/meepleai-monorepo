@@ -4,6 +4,7 @@ import { type ReactNode, useEffect } from 'react';
 
 import { usePathname } from 'next/navigation';
 
+import { DashboardEngineProvider } from '@/components/dashboard';
 import { ErrorBoundary } from '@/components/errors/ErrorBoundary';
 import { DEFAULT_PINNED_CARDS } from '@/config/entity-actions';
 import { useResponsive } from '@/hooks/useResponsive';
@@ -110,27 +111,29 @@ export function UnifiedShellClient({
       {onboardingBanner}
 
       {/* Main body: left panel + content */}
-      <div className="flex flex-1 overflow-hidden">
-        {/* Left panel: CardStack (desktop user) or AdminTabSidebar (admin) */}
-        <ErrorBoundary fallback={null} componentName="LeftPanel">
-          {isAdminContext ? (
-            <AdminTabSidebar />
-          ) : (
-            <div className="hidden lg:flex">
-              <CardStack />
-            </div>
-          )}
-        </ErrorBoundary>
+      <DashboardEngineProvider>
+        <div className="flex flex-1 overflow-hidden">
+          {/* Left panel: CardStack (desktop user) or AdminTabSidebar (admin) */}
+          <ErrorBoundary fallback={null} componentName="LeftPanel">
+            {isAdminContext ? (
+              <AdminTabSidebar />
+            ) : (
+              <div className="hidden lg:flex">
+                <CardStack />
+              </div>
+            )}
+          </ErrorBoundary>
 
-        {/* Main content area */}
-        <main
-          id="main-content"
-          className={cn('flex-1 overflow-y-auto', 'focus:outline-none')}
-          tabIndex={-1}
-        >
-          <ErrorBoundary componentName="PageContent">{children}</ErrorBoundary>
-        </main>
-      </div>
+          {/* Main content area */}
+          <main
+            id="main-content"
+            className={cn('flex-1 overflow-y-auto', 'focus:outline-none')}
+            tabIndex={-1}
+          >
+            <ErrorBoundary componentName="PageContent">{children}</ErrorBoundary>
+          </main>
+        </div>
+      </DashboardEngineProvider>
 
       {/* Bottom Nav */}
       <ErrorBoundary fallback={null} componentName="ContextualBottomNav">

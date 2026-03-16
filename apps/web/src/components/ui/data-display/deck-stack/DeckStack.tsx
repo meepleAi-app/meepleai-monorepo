@@ -3,11 +3,12 @@ import { memo, useEffect, useCallback } from 'react';
 
 import { createPortal } from 'react-dom';
 
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/navigation/sheet';
 import { cn } from '@/lib/utils';
 
 import { DeckStackCard } from './DeckStackCard';
 
-import type { DeckStackItem } from './deck-stack-types';
+import type { DeckStackItem, DeckStackPresentation } from './deck-stack-types';
 
 const MAX_VISIBLE = 5;
 
@@ -18,6 +19,7 @@ interface DeckStackProps {
   onClose: () => void;
   anchorRect?: DOMRect | null;
   className?: string;
+  presentation?: DeckStackPresentation;
 }
 
 export const DeckStack = memo(function DeckStack({
@@ -27,6 +29,7 @@ export const DeckStack = memo(function DeckStack({
   onClose,
   anchorRect,
   className,
+  presentation = 'popover',
 }: DeckStackProps) {
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
@@ -36,16 +39,51 @@ export const DeckStack = memo(function DeckStack({
   );
 
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen || presentation === 'bottomSheet') return;
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, handleKeyDown]);
+  }, [isOpen, handleKeyDown, presentation]);
 
   if (!isOpen || items.length === 0) return null;
 
   const visibleItems = items.slice(0, MAX_VISIBLE);
   const overflow = items.length - MAX_VISIBLE;
 
+  /* ── Bottom Sheet presentation ── */
+  if (presentation === 'bottomSheet') {
+    return (
+      <Sheet
+        open={isOpen}
+        onOpenChange={open => {
+          if (!open) onClose();
+        }}
+      >
+        <SheetContent side="bottom" className={cn('rounded-t-2xl', className)}>
+          <SheetHeader>
+            <SheetTitle className="text-sm font-medium">
+              {items.length} related {items.length === 1 ? 'item' : 'items'}
+            </SheetTitle>
+          </SheetHeader>
+          <div className="flex flex-wrap gap-2 py-4">
+            {visibleItems.map((item, index) => (
+              <DeckStackCard key={item.id} item={item} index={index} onClick={onItemClick} />
+            ))}
+          </div>
+          {overflow > 0 && (
+            <button
+              type="button"
+              onClick={onClose}
+              className="text-xs text-muted-foreground hover:text-foreground"
+            >
+              View all {items.length}
+            </button>
+          )}
+        </SheetContent>
+      </Sheet>
+    );
+  }
+
+  /* ── Popover presentation (default) ── */
   const content = (
     <>
       {/* Backdrop */}

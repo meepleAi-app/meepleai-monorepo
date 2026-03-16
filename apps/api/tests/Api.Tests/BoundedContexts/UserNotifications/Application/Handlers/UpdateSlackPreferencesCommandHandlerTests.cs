@@ -96,8 +96,8 @@ public class UpdateSlackPreferencesCommandHandlerTests
         // Assert
         _repositoryMock.Verify(
             r => r.AddAsync(It.Is<NotificationPreferences>(p =>
-                p.SlackEnabled == true &&
-                p.SlackOnDocumentReady == true),
+                p.SlackEnabled &&
+                p.SlackOnDocumentReady),
             It.IsAny<CancellationToken>()), Times.Once);
         _unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }

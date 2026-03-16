@@ -263,7 +263,7 @@ test.describe('Admin-User Onboarding Flow', () => {
       // Debug: check cookies and admin toggle
       const cookies = await page.context().cookies();
       const sessionCookies = cookies.filter(
-        c => c.name.includes('session') || c.name.includes('auth') || c.name.includes('token'),
+        c => c.name.includes('session') || c.name.includes('auth') || c.name.includes('token')
       );
       console.log(`[DEBUG T5] Session cookies: ${JSON.stringify(sessionCookies.map(c => c.name))}`);
       const toggleVisible = await page
@@ -273,37 +273,43 @@ test.describe('Admin-User Onboarding Flow', () => {
       console.log(`[DEBUG T5] Admin toggle visible: ${toggleVisible}, URL: ${page.url()}`);
     });
 
-    await test.step('Add custom game', async () => {
-      const gameName = `E2E Test Game ${timestamp}`;
-      const { gameTitle } = await libraryPage.addCustomGame(gameName);
-      state.gameId = '';
+    await test.step('Create Azul game', async () => {
+      const { gameId, gameTitle } = await libraryPage.addCustomGame('Azul');
+      state.gameId = gameId;
       state.gameTitle = gameTitle;
+      console.log(`[DEBUG T5] Game created: "${gameTitle}", id: ${gameId}`);
     });
 
-    await test.step('Verify game created', async () => {
-      // Verification: if we're not on /library anymore, creation redirected us (success)
-      // Or verify on library page
-      try {
-        await libraryPage.verifyGameInCollection(state.gameTitle!);
-      } catch {
-        // Game may not show immediately — accept creation as success if no API error occurred
-        console.log('[DEBUG T5] Game verification failed but creation submitted without error');
+    await test.step('Upload Azul rulebook PDF', async () => {
+      if (state.gameId) {
+        const pdfPath = require('path').resolve(
+          __dirname,
+          '../../../../data/rulebook/azul_rulebook.pdf'
+        );
+        await libraryPage.uploadPdfToGame(state.gameId, pdfPath);
+        console.log('[DEBUG T5] PDF upload initiated');
+        // Wait for processing to start (the agent auto-creation needs KB)
+        await page.waitForTimeout(5000);
+      } else {
+        console.log('[DEBUG T5] No gameId — skipping PDF upload');
       }
     });
   });
 
   // ── Test 6: User Creates Agent ───────────────────────────────
   test('6. User creates agent for the game', async () => {
-    // Known issue: /agents page errors on staging for user role
-    test.fixme(true, 'Staging /agents page returns error for user role — needs backend investigation');
+    if (!state.userPage || !state.gameTitle) test.skip(true, 'Requires test 5 to pass');
     const page = state.userPage!;
     const agentPage = new AgentCreationPage(page);
 
     await test.step('Open agent creation', async () => {
       await agentPage.goto();
       // Dismiss cookie consent
-      await page.getByRole('button', { name: /essential only|accept all/i })
-        .first().click({ timeout: 2_000 }).catch(() => {});
+      await page
+        .getByRole('button', { name: /essential only|accept all/i })
+        .first()
+        .click({ timeout: 2_000 })
+        .catch(() => {});
       await page.waitForTimeout(500);
       // Screenshot to debug
       await page.screenshot({ path: 'test-results/debug-t6-agents-page.png', fullPage: true });
@@ -364,12 +370,16 @@ test.describe('Admin-User Onboarding Flow', () => {
     await test.step('Re-authenticate admin and change role', async () => {
       // Re-login admin to refresh session (may have expired)
       await page.goto('/login', { waitUntil: 'domcontentloaded' });
-      await page.getByRole('button', { name: /essential only|accept all/i })
-        .first().click({ timeout: 2_000 }).catch(() => {});
+      await page
+        .getByRole('button', { name: /essential only|accept all/i })
+        .first()
+        .click({ timeout: 2_000 })
+        .catch(() => {});
       const loginPage = new LoginPage(page);
       await loginPage.login(env.admin.email, env.admin.password);
       await page.waitForURL(url => !url.pathname.includes('/login'), {
-        timeout: 10_000, waitUntil: 'domcontentloaded',
+        timeout: 10_000,
+        waitUntil: 'domcontentloaded',
       });
     });
 
@@ -391,7 +401,7 @@ test.describe('Admin-User Onboarding Flow', () => {
           });
           return { ok: resp.ok, status: resp.status };
         },
-        { userId: state.testUserId },
+        { userId: state.testUserId }
       );
       expect(roleResponse.ok, `Role change failed: ${roleResponse.status}`).toBeTruthy();
     });
@@ -399,8 +409,11 @@ test.describe('Admin-User Onboarding Flow', () => {
     await test.step('Verify audit log entry', async () => {
       await auditLogPage.goto();
       // Dismiss cookie consent
-      await page.getByRole('button', { name: /essential only|accept all/i })
-        .first().click({ timeout: 2_000 }).catch(() => {});
+      await page
+        .getByRole('button', { name: /essential only|accept all/i })
+        .first()
+        .click({ timeout: 2_000 })
+        .catch(() => {});
       await page.waitForTimeout(500);
       try {
         await auditLogPage.verifyRoleChangeEntry(testUserEmail, {
@@ -408,7 +421,9 @@ test.describe('Admin-User Onboarding Flow', () => {
         });
       } catch {
         // Audit log may not show role change immediately or may use userId instead of email
-        console.log('[DEBUG T8] Audit log verification failed — role change was successful via API');
+        console.log(
+          '[DEBUG T8] Audit log verification failed — role change was successful via API'
+        );
       }
     });
   });

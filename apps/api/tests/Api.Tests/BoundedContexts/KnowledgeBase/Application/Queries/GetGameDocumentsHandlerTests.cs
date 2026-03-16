@@ -234,31 +234,31 @@ public class GetGameDocumentsHandlerTests : IDisposable
 
     private static PdfDocumentEntity CreatePdf(
         Guid pdfId, Guid gameId, Guid userId, string fileName, int? pageCount = null) => new()
-    {
-        Id = pdfId,
-        GameId = gameId,
-        FileName = fileName,
-        FilePath = $"/uploads/{fileName}",
-        FileSizeBytes = 1024,
-        UploadedByUserId = userId,
-        UploadedAt = DateTime.UtcNow,
-        PageCount = pageCount,
-        ProcessingState = "Ready"
-    };
+        {
+            Id = pdfId,
+            GameId = gameId,
+            FileName = fileName,
+            FilePath = $"/uploads/{fileName}",
+            FileSizeBytes = 1024,
+            UploadedByUserId = userId,
+            UploadedAt = DateTime.UtcNow,
+            PageCount = pageCount,
+            ProcessingState = "Ready"
+        };
 
     private static VectorDocumentEntity CreateVectorDocument(
         Guid id, Guid gameId, Guid pdfDocumentId, string indexingStatus) => new()
-    {
-        Id = id,
-        GameId = gameId,
-        PdfDocumentId = pdfDocumentId,
-        ChunkCount = 10,
-        TotalCharacters = 5000,
-        IndexingStatus = indexingStatus,
-        IndexedAt = DateTime.UtcNow,
-        EmbeddingModel = "nomic-embed-text",
-        EmbeddingDimensions = 768
-    };
+        {
+            Id = id,
+            GameId = gameId,
+            PdfDocumentId = pdfDocumentId,
+            ChunkCount = 10,
+            TotalCharacters = 5000,
+            IndexingStatus = indexingStatus,
+            IndexedAt = DateTime.UtcNow,
+            EmbeddingModel = "nomic-embed-text",
+            EmbeddingDimensions = 768
+        };
 
     #endregion
 }

@@ -13,5 +13,6 @@ internal record GetProcessingQueueQuery(
     DateTimeOffset? FromDate = null,
     DateTimeOffset? ToDate = null,
     int Page = 1,
-    int PageSize = 20
+    int PageSize = 20,
+    Guid? GameId = null
 ) : IQuery<PaginatedQueueResponse>;

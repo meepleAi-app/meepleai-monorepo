@@ -174,6 +174,26 @@ internal class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUp
             return new PdfUploadResult(false, storageResult.ErrorMessage ?? "Failed to store file", null);
         }
 
+        // Apply priority from command (admin upload with priority override)
+        if (!string.IsNullOrWhiteSpace(command.Priority))
+        {
+            var priorityEnum = string.Equals(command.Priority, "urgent", StringComparison.OrdinalIgnoreCase)
+                ? ProcessingPriority.Urgent
+                : ProcessingPriority.High;
+
+            pdfDoc!.ProcessingPriority = priorityEnum.ToString();
+
+            // Also update the ProcessingJob priority int for Quartz queue ordering
+            var job = await _db.ProcessingJobs
+                .FirstOrDefaultAsync(j => j.PdfDocumentId == pdfDoc.Id, cancellationToken).ConfigureAwait(false);
+            if (job != null)
+            {
+                job.Priority = (int)priorityEnum;
+            }
+
+            await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        }
+
         // Reserve quota and start background processing
         return await ReserveQuotaAndStartProcessingAsync(
             userId, gameId, file, storageResult, pdfDoc!, cancellationToken).ConfigureAwait(false);

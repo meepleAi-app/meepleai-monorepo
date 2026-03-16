@@ -1,7 +1,9 @@
 using Api.BoundedContexts.Administration.Application.Queries;
 using Api.BoundedContexts.DocumentProcessing.Application.Commands.BulkUploadPdfs;
 using Api.BoundedContexts.SharedGameCatalog.Application.Commands;
+using Api.BoundedContexts.SharedGameCatalog.Application.DTOs;
 using Api.BoundedContexts.SharedGameCatalog.Application.Queries.GetDocumentOverview;
+using Api.BoundedContexts.SharedGameCatalog.Application.Queries.GetRecentlyProcessedDocuments;
 using Api.Extensions;
 using Api.Filters;
 using Api.Middleware.Exceptions;
@@ -51,6 +53,22 @@ internal static class AdminSharedGameContentEndpoints
             .WithDescription("Returns processing status breakdown, per-document details, agent linkage, and RAG readiness assessment.")
             .Produces<DocumentOverviewResult>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status404NotFound);
+
+        // GET /api/v1/admin/shared-games/recently-processed
+        // Recently processed PDF documents widget
+        contentGroup.MapGet("/recently-processed", async (
+                [FromQuery] int? limit,
+                IMediator mediator,
+                CancellationToken ct) =>
+            {
+                var result = await mediator.Send(
+                    new GetRecentlyProcessedDocumentsQuery(limit ?? 10), ct).ConfigureAwait(false);
+                return Results.Ok(result);
+            })
+            .WithName("GetRecentlyProcessedDocuments")
+            .WithSummary("Get recently processed PDF documents for SharedGames (Admin)")
+            .WithDescription("Returns recently processed documents with processing status, error info, and linked game details.")
+            .Produces<List<RecentlyProcessedDocumentDto>>(StatusCodes.Status200OK);
 
         // GET /api/v1/admin/shared-games/mau
         // Issue #113: MAU Monitoring Dashboard

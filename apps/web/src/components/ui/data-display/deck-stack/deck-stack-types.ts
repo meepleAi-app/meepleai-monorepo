@@ -1,5 +1,7 @@
 import type { MeepleEntityType } from '../meeple-card-styles';
 
+export type DeckStackPresentation = 'popover' | 'bottomSheet';
+
 export interface DeckStackItem {
   id: string;
   entityType: MeepleEntityType;

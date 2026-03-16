@@ -28,6 +28,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
+import { GameProcessingQueue } from '@/components/admin/shared-games/GameProcessingQueue';
 import { PdfIndexingStatus } from '@/components/admin/shared-games/PdfIndexingStatus';
 import { PdfUploadSection } from '@/components/admin/shared-games/PdfUploadSection';
 import { Badge } from '@/components/ui/data-display/badge';
@@ -652,6 +653,9 @@ export function GameDetailClient({ params }: GameDetailClientProps) {
               <PdfUploadSection gameId={gameId} onPdfUploaded={() => refetchDocuments()} />
             </CardContent>
           </Card>
+
+          {/* Processing queue mini-widget */}
+          <GameProcessingQueue gameId={gameId} />
 
           {/* Document list */}
           <Card className="bg-white/70 dark:bg-zinc-800/70 backdrop-blur-md border-slate-200/50 dark:border-zinc-700/50">

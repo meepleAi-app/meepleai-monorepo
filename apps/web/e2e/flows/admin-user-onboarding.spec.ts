@@ -66,6 +66,27 @@ test.describe('Admin-User Onboarding Flow', () => {
       await expect(errorToast).not.toBeVisible();
     });
 
+    // Ensure PdfUpload feature flag is enabled (required for T5 PDF upload)
+    await test.step('Enable PdfUpload feature flag', async () => {
+      const baseUrl = env.baseURL;
+      const flagUrl = `${baseUrl}/api/v1/admin/feature-flags`;
+      // Check if flag exists
+      const getResp = await adminPage.request.get(`${flagUrl}/Features.PdfUpload`);
+      if (getResp.status() === 404) {
+        // Create it
+        await adminPage.request.post(flagUrl, {
+          data: { key: 'Features.PdfUpload', description: 'Enable PDF upload', isEnabled: true },
+        });
+      }
+      // Ensure enabled
+      const flagResp = await adminPage.request.get(`${flagUrl}/Features.PdfUpload`);
+      const flag = await flagResp.json().catch(() => ({ enabled: false }));
+      if (!flag.enabled) {
+        await adminPage.request.post(`${flagUrl}/Features.PdfUpload/toggle`, { data: {} });
+      }
+      console.log('[DEBUG T1] PdfUpload feature flag ensured enabled');
+    });
+
     state.adminPage = adminPage;
     state.adminContext = adminContext;
     state.adminCredentials = env.admin;
@@ -223,6 +244,7 @@ test.describe('Admin-User Onboarding Flow', () => {
 
   // ── Test 5: User Adds Game to Collection ─────────────────────
   test('5. User adds game to collection', async () => {
+    test.setTimeout(150_000); // PDF upload + processing wait up to 90s
     if (!state.userPage) test.skip(true, 'Requires test 4 to pass');
     const page = state.userPage!;
     const libraryPage = new LibraryPage(page);
@@ -263,7 +285,7 @@ test.describe('Admin-User Onboarding Flow', () => {
       // Debug: check cookies and admin toggle
       const cookies = await page.context().cookies();
       const sessionCookies = cookies.filter(
-        c => c.name.includes('session') || c.name.includes('auth') || c.name.includes('token'),
+        c => c.name.includes('session') || c.name.includes('auth') || c.name.includes('token')
       );
       console.log(`[DEBUG T5] Session cookies: ${JSON.stringify(sessionCookies.map(c => c.name))}`);
       const toggleVisible = await page
@@ -273,37 +295,62 @@ test.describe('Admin-User Onboarding Flow', () => {
       console.log(`[DEBUG T5] Admin toggle visible: ${toggleVisible}, URL: ${page.url()}`);
     });
 
-    await test.step('Add custom game', async () => {
-      const gameName = `E2E Test Game ${timestamp}`;
-      const { gameTitle } = await libraryPage.addCustomGame(gameName);
-      state.gameId = '';
+    await test.step('Create Azul game', async () => {
+      const { gameId, gameTitle } = await libraryPage.addCustomGame('Azul');
+      state.gameId = gameId;
       state.gameTitle = gameTitle;
+      console.log(`[DEBUG T5] Game created: "${gameTitle}", id: ${gameId}`);
     });
 
-    await test.step('Verify game created', async () => {
-      // Verification: if we're not on /library anymore, creation redirected us (success)
-      // Or verify on library page
-      try {
-        await libraryPage.verifyGameInCollection(state.gameTitle!);
-      } catch {
-        // Game may not show immediately — accept creation as success if no API error occurred
-        console.log('[DEBUG T5] Game verification failed but creation submitted without error');
+    let uploadedDocumentId = '';
+    await test.step('Upload Azul rulebook PDF', async () => {
+      if (state.gameId) {
+        const pdfPath = require('path').resolve(
+          __dirname,
+          '../../../../data/rulebook/azul_rulebook.pdf'
+        );
+        uploadedDocumentId = await libraryPage.uploadPdfToGame(state.gameId, pdfPath);
+        console.log(`[DEBUG T5] PDF uploaded, documentId: ${uploadedDocumentId}`);
+      } else {
+        console.log('[DEBUG T5] No gameId — skipping PDF upload');
+      }
+    });
+
+    await test.step('Enqueue PDF for processing', async () => {
+      // The upload fire-and-forget Task.Run can fail silently on staging.
+      // Enqueue via admin API so the Quartz-based queue picks it up.
+      if (uploadedDocumentId && state.adminPage) {
+        await libraryPage.enqueuePdfForProcessing(uploadedDocumentId, state.adminPage);
+      } else {
+        console.log('[DEBUG T5] No documentId or adminPage — skipping enqueue');
+      }
+    });
+
+    await test.step('Wait for PDF processing', async () => {
+      if (state.gameId) {
+        // Wait up to 90s for PDF processing; if it takes longer, T6 will be skipped
+        const ready = await libraryPage.waitForPdfProcessing(state.gameId, 90_000);
+        state.pdfReady = ready;
+        console.log(`[DEBUG T5] PDF processing complete: ${ready}`);
       }
     });
   });
 
   // ── Test 6: User Creates Agent ───────────────────────────────
   test('6. User creates agent for the game', async () => {
-    // Known issue: /agents page errors on staging for user role
-    test.fixme(true, 'Staging /agents page returns error for user role — needs backend investigation');
+    if (!state.userPage || !state.gameTitle) test.skip(true, 'Requires test 5 to pass');
+    if (!state.pdfReady) test.skip(true, 'PDF not processed — agent creation requires KB');
     const page = state.userPage!;
     const agentPage = new AgentCreationPage(page);
 
     await test.step('Open agent creation', async () => {
       await agentPage.goto();
       // Dismiss cookie consent
-      await page.getByRole('button', { name: /essential only|accept all/i })
-        .first().click({ timeout: 2_000 }).catch(() => {});
+      await page
+        .getByRole('button', { name: /essential only|accept all/i })
+        .first()
+        .click({ timeout: 2_000 })
+        .catch(() => {});
       await page.waitForTimeout(500);
       // Screenshot to debug
       await page.screenshot({ path: 'test-results/debug-t6-agents-page.png', fullPage: true });
@@ -364,12 +411,16 @@ test.describe('Admin-User Onboarding Flow', () => {
     await test.step('Re-authenticate admin and change role', async () => {
       // Re-login admin to refresh session (may have expired)
       await page.goto('/login', { waitUntil: 'domcontentloaded' });
-      await page.getByRole('button', { name: /essential only|accept all/i })
-        .first().click({ timeout: 2_000 }).catch(() => {});
+      await page
+        .getByRole('button', { name: /essential only|accept all/i })
+        .first()
+        .click({ timeout: 2_000 })
+        .catch(() => {});
       const loginPage = new LoginPage(page);
       await loginPage.login(env.admin.email, env.admin.password);
       await page.waitForURL(url => !url.pathname.includes('/login'), {
-        timeout: 10_000, waitUntil: 'domcontentloaded',
+        timeout: 10_000,
+        waitUntil: 'domcontentloaded',
       });
     });
 
@@ -391,7 +442,7 @@ test.describe('Admin-User Onboarding Flow', () => {
           });
           return { ok: resp.ok, status: resp.status };
         },
-        { userId: state.testUserId },
+        { userId: state.testUserId }
       );
       expect(roleResponse.ok, `Role change failed: ${roleResponse.status}`).toBeTruthy();
     });
@@ -399,8 +450,11 @@ test.describe('Admin-User Onboarding Flow', () => {
     await test.step('Verify audit log entry', async () => {
       await auditLogPage.goto();
       // Dismiss cookie consent
-      await page.getByRole('button', { name: /essential only|accept all/i })
-        .first().click({ timeout: 2_000 }).catch(() => {});
+      await page
+        .getByRole('button', { name: /essential only|accept all/i })
+        .first()
+        .click({ timeout: 2_000 })
+        .catch(() => {});
       await page.waitForTimeout(500);
       try {
         await auditLogPage.verifyRoleChangeEntry(testUserEmail, {
@@ -408,7 +462,9 @@ test.describe('Admin-User Onboarding Flow', () => {
         });
       } catch {
         // Audit log may not show role change immediately or may use userId instead of email
-        console.log('[DEBUG T8] Audit log verification failed — role change was successful via API');
+        console.log(
+          '[DEBUG T8] Audit log verification failed — role change was successful via API'
+        );
       }
     });
   });

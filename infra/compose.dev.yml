@@ -1,96 +1,164 @@
-# MeepleAI Development Stack
-# Extends docker-compose.yml with development-specific overrides
+# Local development environment
+# All ports bound to 127.0.0.1, secrets from ./secrets/dev/
 #
 # Usage:
-#   docker compose -f docker-compose.yml -f compose.dev.yml up -d
-#   docker compose -f docker-compose.yml -f compose.dev.yml down
-#
-# Note: This file uses plain environment variables instead of secrets for easier local development
+#   docker compose -f docker-compose.yml -f compose.dev.yml up -d                    # core only
+#   docker compose -f docker-compose.yml -f compose.dev.yml --profile ai up -d        # + AI services
+#   docker compose -f docker-compose.yml -f compose.dev.yml --profile monitoring up -d # + monitoring
 
 services:
-  # ============================================================================
-  # Development Overrides (simpler auth, no secrets)
-  # ============================================================================
+  # ===========================================================================
+  # Core Infrastructure
+  # ===========================================================================
 
   postgres:
-    env_file:
-      - ../.env.development
+    env_file: [./secrets/dev/database.secret]
+    ports: ["127.0.0.1:5432:5432"]
     environment:
-      # Issue #2152: Changed default from 'meeple' to 'postgres' for standard PostgreSQL compatibility
-      # Passwords loaded from .env.development to ensure consistency with API
-      POSTGRES_PASSWORD_FILE: ""
-    secrets: []  # Disable secrets in dev
+      POSTGRES_SHARED_BUFFERS: 512MB
+      POSTGRES_EFFECTIVE_CACHE_SIZE: 1536MB
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - postgres_dev_data:/var/lib/postgresql/data
       - ./init/postgres-init.sql:/docker-entrypoint-initdb.d/init.sql:ro
 
+  redis:
+    env_file: [./secrets/dev/redis.secret]
+    ports: ["127.0.0.1:6379:6379"]
+    command: ["sh", "-c", "redis-server /etc/redis/redis.conf --requirepass $$REDIS_PASSWORD"]
+
+  qdrant:
+    env_file: [./secrets/dev/qdrant.secret]
+    ports: ["127.0.0.1:6333:6333", "127.0.0.1:6334:6334"]
+    environment:
+      QDRANT__SERVICE__API_KEY: ${QDRANT_API_KEY:?QDRANT_API_KEY is required - see secrets/qdrant.secret.example}
+
+  # ===========================================================================
+  # Application Services
+  # ===========================================================================
+
   api:
+    env_file:
+      - ./secrets/dev/database.secret
+      - ./secrets/dev/redis.secret
+      - ./secrets/dev/qdrant.secret
+      - ./secrets/dev/jwt.secret
+      - ./secrets/dev/openrouter.secret
+      - ./secrets/dev/admin.secret
+      - ./secrets/dev/embedding-service.secret
+      - ./secrets/dev/storage.secret
+      - ./env/api.env.dev
+    ports: ["127.0.0.1:8080:8080"]
     environment:
       ASPNETCORE_ENVIRONMENT: Development
       ASPNETCORE_URLS: http://+:8080
-      # Connection string built by SecretsHelper from POSTGRES_* env vars
-      # Override POSTGRES_HOST for Docker networking (service name, not localhost)
       POSTGRES_HOST: postgres
-      POSTGRES_PASSWORD_FILE: ""
+      REDIS_HOST: redis
       QDRANT_URL: http://qdrant:6333
-      # REDIS_URL built by load-secrets-env.sh from REDIS_PASSWORD (redis.secret)
-      # Removed hardcoded password to avoid mismatch with redis.secret
       OLLAMA_URL: http://ollama:11434
-      EMBEDDING_PROVIDER: ollama
-      EMBEDDING_MODEL: nomic-embed-text
+      EMBEDDING_PROVIDER: external
+      Embedding__Provider: External
+      EMBEDDING_MODEL: intfloat/multilingual-e5-large
+      EMBEDDING_DIMENSIONS: 1024
+      Embedding__Dimensions: 1024
       LOCAL_EMBEDDING_URL: http://embedding-service:8000
-      EMBEDDING_FALLBACK_ENABLED: "true"
-      SEED_PROFILE: ${SEED_PROFILE:-dev}
-      # OpenRouter key from env (not secret file)
-      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
-      # Bootstrap admin (plain password for dev)
-      INITIAL_ADMIN_EMAIL: ${INITIAL_ADMIN_EMAIL:-admin@example.com}
-      INITIAL_ADMIN_PASSWORD: ${INITIAL_ADMIN_PASSWORD:-ChangeThisPassword123!}
-      INITIAL_ADMIN_DISPLAY_NAME: ${INITIAL_ADMIN_DISPLAY_NAME:-Dev Admin}
-      # OAuth provider credentials (plain env vars for dev)
-      GOOGLE_OAUTH_CLIENT_ID: ${GOOGLE_OAUTH_CLIENT_ID:-}
-      GOOGLE_OAUTH_CLIENT_SECRET: ${GOOGLE_OAUTH_CLIENT_SECRET:-}
-      DISCORD_OAUTH_CLIENT_ID: ${DISCORD_OAUTH_CLIENT_ID:-}
-      DISCORD_OAUTH_CLIENT_SECRET: ${DISCORD_OAUTH_CLIENT_SECRET:-}
-      GITHUB_OAUTH_CLIENT_ID: ${GITHUB_OAUTH_CLIENT_ID:-}
-      GITHUB_OAUTH_CLIENT_SECRET: ${GITHUB_OAUTH_CLIENT_SECRET:-}
-    env_file:
-      - ../.env.development
-      - ./secrets/redis.secret  # Required for REDIS_PASSWORD (used by load-secrets-env.sh)
-    secrets: []  # Disable secrets in dev
-
-  n8n:
-    environment:
-      # Override to use plain env vars instead of secrets
-      DB_POSTGRESDB_PASSWORD: ${POSTGRES_PASSWORD:-meeplepass}
-    env_file:
-      - ../.env.development
-    secrets: []  # Disable secrets in dev
-    entrypoint: []  # Use default n8n entrypoint
-    command: ["n8n"]
-
-  alertmanager:
-    environment:
-      # Override for dev - use plain env vars
-      GMAIL_APP_PASSWORD: ${GMAIL_APP_PASSWORD:-}
-    env_file:
-      - ../.env.development
-    secrets: []  # Disable secrets in dev
-    entrypoint: []  # Use default entrypoint
-    command:
-      - '/bin/alertmanager'
-      - '--config.file=/etc/alertmanager/alertmanager.yml'
-      - '--storage.path=/alertmanager'
-      - '--web.external-url=http://localhost:9093'
+      Embedding__LocalServiceUrl: http://embedding-service:8000
+      EMBEDDING_FALLBACK_ENABLED: "false"
+      Embedding__FallbackEnabled: "false"
+      RERANKER_URL: http://reranker-service:8003
     volumes:
-      - ./alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
-      - alertmanager_data:/alertmanager
+      - ./secrets/dev:/app/infra/secrets:ro
+
+  web:
+    env_file: [./env/web.env.dev]
+    ports: ["127.0.0.1:3000:3000"]
+
+  # ===========================================================================
+  # AI Services (profile: ai) — ports only
+  # ===========================================================================
+
+  ollama:
+    ports: ["127.0.0.1:11434:11434"]
+
+  embedding-service:
+    ports: ["127.0.0.1:8000:8000"]
+
+  unstructured-service:
+    ports: ["127.0.0.1:8001:8001"]
+
+  smoldocling-service:
+    ports: ["127.0.0.1:8002:8002"]
+
+  reranker-service:
+    ports: ["127.0.0.1:8003:8003"]
+
+  orchestration-service:
+    env_file: [./secrets/dev/database.secret, ./secrets/dev/redis.secret]
+    ports: ["127.0.0.1:8004:8004"]
+    environment:
+      EMBEDDING_SERVICE_URL: http://embedding-service:8000
+      RERANKER_SERVICE_URL: http://reranker-service:8003
+      UNSTRUCTURED_SERVICE_URL: http://unstructured-service:8001
+      SMOLDOCLING_SERVICE_URL: http://smoldocling-service:8002
+      QDRANT_URL: http://qdrant:6333
+
+  # ===========================================================================
+  # Monitoring (profile: monitoring)
+  # ===========================================================================
+
+  prometheus:
+    ports: ["127.0.0.1:9090:9090"]
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=30d'
+      - '--web.enable-lifecycle'
 
   grafana:
+    env_file: [./secrets/dev/monitoring.secret]
+    ports: ["127.0.0.1:3001:3000"]
     environment:
-      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
-      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}  # Plain password for dev
-      GF_SECURITY_ADMIN_PASSWORD__FILE: ""
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
       GF_USERS_ALLOW_SIGN_UP: "false"
       GF_SERVER_ROOT_URL: "http://localhost:3001"
-    secrets: []  # Disable secrets in dev
+      GF_SECURITY_ALLOW_EMBEDDING: "true"
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: "Viewer"
+
+  alertmanager:
+    env_file: [./secrets/dev/monitoring.secret]
+    ports: ["127.0.0.1:9093:9093"]
+
+  cadvisor:
+    ports: ["127.0.0.1:8082:8080"]
+
+  node-exporter:
+    ports: ["127.0.0.1:9100:9100"]
+
+  # ===========================================================================
+  # Automation (profile: automation)
+  # ===========================================================================
+
+  n8n:
+    env_file: [./secrets/dev/database.secret, ./secrets/dev/n8n.secret, ./env/n8n.env.dev]
+    ports: ["127.0.0.1:5678:5678"]
+
+  mailpit:
+    ports: ["127.0.0.1:1025:1025", "127.0.0.1:8025:8025"]
+
+  # ===========================================================================
+  # Storage (profile: storage)
+  # ===========================================================================
+
+  minio:
+    env_file: [./secrets/dev/storage.secret]
+    ports: ["127.0.0.1:9000:9000", "127.0.0.1:9001:9001"]
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin123}
+
+# =============================================================================
+# Dev-specific volumes (separate from base to avoid conflicts)
+# =============================================================================
+volumes:
+  postgres_dev_data:

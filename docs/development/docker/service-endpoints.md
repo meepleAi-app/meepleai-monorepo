@@ -363,56 +363,6 @@ curl http://localhost:9100/metrics
 curl http://localhost:9100/metrics | grep node_cpu
 ```
 
-### HyperDX (Unified Observability)
-
-**URL**: http://localhost:8180
-**OTLP gRPC**: `localhost:14317`
-**OTLP HTTP**: `localhost:14318`
-
-**Features**:
-- Unified logs, traces, session replay
-- Replaces Seq + Jaeger (Issue #1564)
-- ClickHouse-based storage
-- 30-day retention (configurable)
-
-**Startup**:
-```bash
-cd infra
-docker compose -f docker-compose.yml -f compose.hyperdx.yml --profile observability up -d
-```
-
-**Test Command**:
-```bash
-# Health
-curl http://localhost:8180/health
-
-# Send test OTLP trace (HTTP)
-curl -X POST http://localhost:14318/v1/traces \
-  -H "Content-Type: application/json" \
-  -d '{
-    "resourceSpans": [{
-      "resource": {
-        "attributes": [{"key": "service.name", "value": {"stringValue": "test-service"}}]
-      },
-      "scopeSpans": [{
-        "spans": [{
-          "traceId": "00000000000000000000000000000001",
-          "spanId": "0000000000000001",
-          "name": "test-span",
-          "kind": 1,
-          "startTimeUnixNano": "1609459200000000000",
-          "endTimeUnixNano": "1609459201000000000"
-        }]
-      }]
-    }]
-  }'
-```
-
-**Configuration**:
-- Data retention: 30 days (env: `HYPERDX_RETENTION_DAYS`)
-- Max storage: 50 GB (env: `HYPERDX_MAX_STORAGE_GB`)
-- Alert channels: Configure in UI (email, Slack)
-
 ---
 
 ## Development Tools
@@ -697,9 +647,6 @@ pwsh scripts/check-services.ps1
 | **Alertmanager** | 9093 | HTTP | Browser |
 | **cAdvisor** | 8082 | HTTP | Browser |
 | **Node Exporter** | 9100 | HTTP | Metrics |
-| **HyperDX UI** | 8180 | HTTP | Browser |
-| **HyperDX OTLP gRPC** | 14317 | gRPC | App |
-| **HyperDX OTLP HTTP** | 14318 | HTTP | App |
 | **Mailpit SMTP** | 1025 | SMTP | App |
 | **Mailpit UI** | 8025 | HTTP | Browser |
 | **n8n** | 5678 | HTTP | Browser |

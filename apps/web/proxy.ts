@@ -107,7 +107,9 @@ async function isSessionCookieValid(request: NextRequest, cookieValue: string): 
 
     // Debug logging for session validation (use warn which is allowed by ESLint)
     // eslint-disable-next-line no-console
-    console.log(`[proxy] Session validation CACHE HIT for ${cookieValue.substring(0, 10)}... valid=${cached.valid}`);
+    console.log(
+      `[proxy] Session validation CACHE HIT for ${cookieValue.substring(0, 10)}... valid=${cached.valid}`
+    );
     return cached.valid;
   }
 
@@ -132,7 +134,9 @@ async function isSessionCookieValid(request: NextRequest, cookieValue: string): 
     const timeoutId = setTimeout(() => controller.abort(), 5000);
 
     // eslint-disable-next-line no-console
-    console.log(`[proxy] Validating session at ${apiUrl} with cookie: ${cookieHeader.substring(0, 50)}...`);
+    console.log(
+      `[proxy] Validating session at ${apiUrl} with cookie: ${cookieHeader.substring(0, 50)}...`
+    );
 
     try {
       const response = await fetch(apiUrl, {
@@ -245,9 +249,6 @@ function getSecurityHeaders(requestOrigin?: string) {
       connectSrcParts.push(apiOrigin);
     }
   }
-  // Allow HyperDX observability telemetry
-  connectSrcParts.push('https://in-otel.hyperdx.io');
-
   return {
     // Content Security Policy - XSS protection
     'Content-Security-Policy': [
@@ -275,7 +276,7 @@ function getSecurityHeaders(requestOrigin?: string) {
     // Referrer policy
     'Referrer-Policy': 'strict-origin-when-cross-origin',
 
-    // Permissions policy - allow unload for observability (HyperDX session recording)
+    // Permissions policy
     'Permissions-Policy': 'camera=(), microphone=(), geolocation=(), payment=(), usb=()',
   };
 }

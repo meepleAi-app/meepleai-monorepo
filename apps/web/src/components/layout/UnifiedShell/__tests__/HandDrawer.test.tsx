@@ -1,8 +1,15 @@
 import { render, screen } from '@testing-library/react';
 import { HandDrawer } from '../HandDrawer';
 import { useCardHand } from '@/stores/use-card-hand';
+import { useDashboardMode } from '@/components/dashboard';
 
 vi.mock('@/stores/use-card-hand');
+vi.mock('@/components/dashboard', () => ({
+  useDashboardMode: vi.fn(() => ({ isGameMode: false })),
+}));
+vi.mock('@/components/dashboard/SessionPanel', () => ({
+  SessionPanel: () => <div data-testid="session-panel" />,
+}));
 
 describe('HandDrawer', () => {
   beforeEach(() => {

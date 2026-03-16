@@ -16,6 +16,7 @@ export interface OnboardingFlowState {
   testUserId: string;
   gameId: string;
   gameTitle: string;
+  pdfReady: boolean;
   agentId: string;
   gameSessionId: string;
 }

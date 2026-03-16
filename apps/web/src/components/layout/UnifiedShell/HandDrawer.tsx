@@ -1,5 +1,7 @@
 'use client';
 
+import { useDashboardMode } from '@/components/dashboard';
+import { SessionPanel } from '@/components/dashboard/SessionPanel';
 import { useCardHand } from '@/stores/use-card-hand';
 
 import { HandDrawerCard } from './HandDrawerCard';
@@ -7,6 +9,7 @@ import { HandDrawerCard } from './HandDrawerCard';
 export function HandDrawer() {
   const { cards, focusedIdx, isHandCollapsed, focusCard, maxHandSize, collapseHand } =
     useCardHand();
+  const { isGameMode } = useDashboardMode();
 
   if (cards.length === 0 || isHandCollapsed) {
     return null;
@@ -35,6 +38,13 @@ export function HandDrawer() {
           msOverflowStyle: 'none',
         }}
       >
+        {/* Session panel as first item in game mode */}
+        {isGameMode && (
+          <div className="shrink-0 w-[200px] border-r border-[rgba(180,130,80,0.15)] pr-1.5">
+            <SessionPanel />
+          </div>
+        )}
+
         {cards.map((card, idx) => (
           <HandDrawerCard
             key={card.id}

@@ -3201,6 +3201,23 @@ export function createAdminClient({ httpClient }: CreateAdminClientParams) {
     },
 
     /**
+     * Get queue jobs filtered by gameId (for mini-widget)
+     * GET /api/v1/admin/queue?gameId=...&pageSize=...&statusFilter=...
+     */
+    async getQueueJobs(params: {
+      gameId?: string;
+      limit?: number;
+      status?: string[];
+    }): Promise<PaginatedQueue | null> {
+      const qs = new URLSearchParams();
+      if (params.gameId) qs.set('gameId', params.gameId);
+      if (params.limit) qs.set('pageSize', String(params.limit));
+      if (params.status) qs.set('status', params.status.join(','));
+      const query = qs.toString();
+      return httpClient.get(`/api/v1/admin/queue${query ? `?${query}` : ''}`, PaginatedQueueSchema);
+    },
+
+    /**
      * Enqueue a new processing job
      * POST /api/v1/admin/queue/enqueue
      */

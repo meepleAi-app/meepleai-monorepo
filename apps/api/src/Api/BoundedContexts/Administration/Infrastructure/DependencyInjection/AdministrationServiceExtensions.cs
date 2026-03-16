@@ -8,6 +8,8 @@ using Api.BoundedContexts.Administration.Infrastructure.Persistence;
 using Api.BoundedContexts.Administration.Infrastructure.Repositories;
 using Api.BoundedContexts.Administration.Infrastructure.Scheduling;
 using Api.BoundedContexts.Administration.Infrastructure.Services;
+using Api.Infrastructure.BackgroundServices;
+using Api.Infrastructure.Configuration;
 using Api.Infrastructure.Seeders;
 using Api.Infrastructure.Seeders.Catalog;
 using Api.Infrastructure.Seeders.Core;
@@ -84,6 +86,10 @@ internal static class AdministrationServiceExtensions
 
         // Issue #891: Infrastructure health monitoring service
         services.AddScoped<IInfrastructureHealthService, InfrastructureHealthService>();
+
+        // Issue #448: Service health monitoring background service with hysteresis
+        services.Configure<HealthMonitorOptions>(configuration.GetSection(HealthMonitorOptions.SectionName));
+        services.AddHostedService<InfrastructureHealthMonitorService>();
 
         // Issue #893: Prometheus HTTP client with Polly retry policy
         services.AddHttpClient<IPrometheusQueryService, PrometheusHttpClient>()

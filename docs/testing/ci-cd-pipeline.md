@@ -144,7 +144,7 @@ strategy:
 
 ### Execution Flow
 
-1. Start services (postgres, redis, qdrant, n8n, hyperdx)
+1. Start services (postgres, redis, qdrant, n8n)
 2. Build backend: `dotnet build`
 3. Start API: `dotnet run` (:8080)
 4. Build frontend: `pnpm build`

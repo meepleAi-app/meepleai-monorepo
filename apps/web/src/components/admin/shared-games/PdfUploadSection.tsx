@@ -14,7 +14,7 @@
 
 import { useState, useCallback, useEffect, useRef } from 'react';
 
-import { FileUp, X, FileText, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
+import { FileUp, X, FileText, CheckCircle2, AlertCircle, Loader2, Zap } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { KbCardStatusRow } from '@/components/documents/KbCardStatusRow';
@@ -26,6 +26,13 @@ import {
   CardTitle,
 } from '@/components/ui/data-display/card';
 import { Progress } from '@/components/ui/feedback/progress';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/overlays/select';
 import { Button } from '@/components/ui/primitives/button';
 import type { PdfDocumentDto } from '@/lib/api/schemas/pdf.schemas';
 
@@ -48,6 +55,8 @@ export interface PdfUploadSectionProps {
   disabled?: boolean;
   /** Initially uploaded PDF (for edit mode) */
   existingPdf?: UploadedPdf | null;
+  /** Show priority selector for upload queue ordering (default: true) */
+  showPrioritySelector?: boolean;
 }
 
 // ========== Component ==========
@@ -58,8 +67,10 @@ export function PdfUploadSection({
   onPdfRemoved,
   disabled = false,
   existingPdf = null,
+  showPrioritySelector,
 }: PdfUploadSectionProps) {
   const [file, setFile] = useState<File | null>(null);
+  const [priority, setPriority] = useState<'normal' | 'urgent'>('normal');
   const [uploadedPdf, setUploadedPdf] = useState<UploadedPdf | null>(existingPdf);
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
@@ -258,7 +269,9 @@ export function PdfUploadSection({
             reject(new Error("Errore di rete durante l'upload"));
           });
 
-          xhr.open('POST', '/api/v1/ingest/pdf');
+          const uploadUrl =
+            priority === 'urgent' ? '/api/v1/ingest/pdf?priority=urgent' : '/api/v1/ingest/pdf';
+          xhr.open('POST', uploadUrl);
           xhr.withCredentials = true;
           xhr.send(formData);
         }
@@ -274,6 +287,7 @@ export function PdfUploadSection({
 
       setUploadedPdf(uploaded);
       setFile(null);
+      setPriority('normal');
       toast.success('PDF caricato con successo!');
       onPdfUploaded?.(uploaded);
 
@@ -314,7 +328,7 @@ export function PdfUploadSection({
     } finally {
       setUploading(false);
     }
-  }, [file, gameId, onPdfUploaded, linkPdfToGame]);
+  }, [file, gameId, onPdfUploaded, linkPdfToGame, priority]);
 
   // Remove uploaded PDF
   const handleRemove = useCallback(() => {
@@ -455,6 +469,27 @@ export function PdfUploadSection({
               <div className="flex items-center gap-2 p-3 bg-destructive/10 border border-destructive/20 rounded-lg text-destructive text-sm">
                 <AlertCircle className="h-4 w-4 flex-shrink-0" />
                 <span>{error}</span>
+              </div>
+            )}
+
+            {/* Priority Selector */}
+            {showPrioritySelector !== false && file && !uploading && (
+              <div className="flex items-center gap-2 mt-3" data-testid="priority-selector">
+                <span className="text-sm text-muted-foreground">Priorita:</span>
+                <Select value={priority} onValueChange={v => setPriority(v as 'normal' | 'urgent')}>
+                  <SelectTrigger className="w-[280px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="normal">Normale — Elaborazione standard</SelectItem>
+                    <SelectItem value="urgent">
+                      <span className="flex items-center gap-1 text-amber-600">
+                        <Zap className="h-3 w-3" />
+                        Urgente — in testa alla coda
+                      </span>
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             )}
 

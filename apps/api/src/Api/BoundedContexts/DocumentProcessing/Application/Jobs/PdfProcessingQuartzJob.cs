@@ -206,7 +206,7 @@ public sealed class PdfProcessingQuartzJob : IJob
             var totalDurationSec = totalMs / 1000.0;
             await PublishEventSafeAsync(new QueueStreamEvent(
                 QueueStreamEventType.JobCompleted, jobEntity.Id,
-                new JobCompletedData(totalDurationSec),
+                new JobCompletedData(totalDurationSec, null, null, null),
                 completedAt), ct).ConfigureAwait(false);
 
             _logger.LogInformation(
@@ -293,7 +293,7 @@ public sealed class PdfProcessingQuartzJob : IJob
 
         await PublishEventSafeAsync(new QueueStreamEvent(
             QueueStreamEventType.JobFailed, jobEntity.Id,
-            new JobFailedData(error, jobEntity.CurrentStep, jobEntity.RetryCount),
+            new JobFailedData(error, jobEntity.CurrentStep, jobEntity.RetryCount, null, null, null),
             now), ct).ConfigureAwait(false);
     }
 

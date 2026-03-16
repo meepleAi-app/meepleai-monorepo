@@ -11,7 +11,7 @@
 ## Test Infrastructure
 
 ### Services Required
-- ✅ **Backend API**: http://localhost:8080 (Serilog → HyperDX)
+- ✅ **Backend API**: http://localhost:8080 (Serilog → Loki)
 - ✅ **Frontend Web**: http://localhost:3000 (Next.js logging)
 - ✅ **PostgreSQL**: localhost:5432 (query logs)
 - ✅ **Redis**: localhost:6379 (operation logs)
@@ -22,7 +22,7 @@
 
 ### Observability Stack
 ```yaml
-Logs:      Serilog → Console/File → HyperDX (optional)
+Logs:      Serilog → Console/File → Loki (via Fluent Bit)
 Metrics:   OpenTelemetry → Prometheus → Grafana
 Traces:    OpenTelemetry → Distributed tracing
 Health:    /health endpoint with component checks

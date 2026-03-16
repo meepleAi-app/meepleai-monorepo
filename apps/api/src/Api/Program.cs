@@ -52,11 +52,6 @@ using System.Net;
 using System.Security.Claims;
 using AspNetIpNetwork = Microsoft.AspNetCore.HttpOverrides.IPNetwork;
 
-// Issue #1567: Enable HTTP/2 for gRPC without TLS (required for OpenTelemetry OTLP exporter)
-// This allows gRPC connections over http:// (insecure) instead of requiring https://
-// Required for local development with HyperDX
-AppContext.SetSwitch("System.Net.Http.SocketsHttpHandler.Http2UnencryptedSupport", true);
-
 // Load environment variables from .env.development file (single source of truth for secrets)
 // SECURITY: Only load .env files in Development environment - NEVER in Production/CI
 // Uses clobberExistingVars: false so launchSettings.json values (localhost) take priority
@@ -490,6 +485,9 @@ app.MapGet("/", () => Results.Json(new { ok = true, name = "MeepleAgentAI" }));
 // ISSUE-2511: Comprehensive health check endpoint
 app.MapHealthCheckEndpoints();
 
+// ISSUE-448: Independent status page (works even when frontend is down)
+app.MapStatusPageEndpoints();
+
 // OPS-01: Health check endpoints (backwards compatibility)
 app.MapHealthChecks("/health", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
 {
@@ -725,13 +723,9 @@ v1Api.MapGroup("/admin/test-results").MapAdminTestResultEndpoints();
 // Issue #3541: BGG import queue management (admin-only)
 v1Api.MapBggImportQueueEndpoints();
 
-// Issue #1565: Telemetry test endpoints for HyperDX integration testing
 // SEC-01: Only register test endpoints in Development to prevent exposure in staging/QA
 if (app.Environment.IsDevelopment())
 {
-    v1Api.MapTelemetryTestEndpoints();
-    v1Api.MapTestTelemetryEndpoints(); // Issue #1567: Manual span test endpoint
-
     // Issue #2004: Runbook validation test endpoints
     v1Api.MapTestEndpoints();
 }

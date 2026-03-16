@@ -1890,6 +1890,72 @@ namespace Api.Infrastructure.Migrations
                     b.ToTable("insight_feedback", "administration");
                 });
 
+            modelBuilder.Entity("Api.Infrastructure.Entities.Administration.ServiceHealthStateEntity", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<int>("ConsecutiveFailures")
+                        .HasColumnType("integer")
+                        .HasColumnName("consecutive_failures");
+
+                    b.Property<int>("ConsecutiveSuccesses")
+                        .HasColumnType("integer")
+                        .HasColumnName("consecutive_successes");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("CurrentStatus")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("current_status");
+
+                    b.Property<string>("LastDescription")
+                        .HasColumnType("text")
+                        .HasColumnName("last_description");
+
+                    b.Property<DateTime?>("LastNotifiedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("last_notified_at");
+
+                    b.Property<DateTime>("LastTransitionAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("last_transition_at");
+
+                    b.Property<string>("PreviousStatus")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("previous_status");
+
+                    b.Property<string>("ServiceName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("service_name");
+
+                    b.Property<string>("Tags")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("tags");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ServiceName")
+                        .IsUnique();
+
+                    b.ToTable("service_health_states");
+                });
+
             modelBuilder.Entity("Api.Infrastructure.Entities.AgentEntity", b =>
                 {
                     b.Property<Guid>("Id")
@@ -2200,8 +2266,8 @@ namespace Api.Infrastructure.Migrations
 
                     b.Property<string>("AlertType")
                         .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
                         .HasColumnName("alert_type");
 
                     b.Property<string>("ChannelSent")

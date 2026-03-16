@@ -93,7 +93,7 @@ public class SetRegistrationModeCommandHandlerTests
                 c.ValueType == "Boolean" &&
                 c.Category == "Authentication" &&
                 c.Environment == "Production" &&
-                c.RequiresRestart == false &&
+!c.RequiresRestart &&
                 c.CreatedByUserId == _adminId),
             It.IsAny<CancellationToken>()), Times.Once);
     }

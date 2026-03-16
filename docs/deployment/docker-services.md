@@ -23,7 +23,6 @@
 | **alertmanager** | prom/alertmanager:v0.27.0 | 127.0.0.1:9093:9093 | 512MB | 0.5 | HTTP /-/healthy | alertmanager_data |
 | **cadvisor** | gcr.io/cadvisor/cadvisor:v0.49.1 | 127.0.0.1:8082:8080 | 512MB | 0.5 | (none) | (host mounts) |
 | **node-exporter** | prom/node-exporter:v1.8.2 | 127.0.0.1:9100:9100 | 256MB | 0.5 | (none) | (host mounts) |
-| **hyperdx** | hyperdx/hyperdx-local:latest | 8180:8080<br/>14317:4317<br/>14318:4318 | 4GB | 2 | HTTP /health | hyperdx_data<br/>hyperdx_logs |
 | **mailpit** | axllent/mailpit:v1.22 | 127.0.0.1:1025:1025<br/>127.0.0.1:8025:8025 | 128MB | 0.5 | HTTP /api/v1/messages | mailpit_data |
 | **n8n** | n8nio/n8n:1.114.4 | 127.0.0.1:5678:5678 | 1GB | 1 | (none) | (none) |
 | **socket-proxy** | ghcr.io/tecnativa/docker-socket-proxy:0.3.0 | (internal) | 256MB | 0.5 | HTTP /version | (socket) |
@@ -49,7 +48,6 @@
 | **alertmanager** | Alert routing | 📊 | observability, full |
 | **cadvisor** | Container metrics | 📊 | observability, full |
 | **node-exporter** | Host metrics | 📊 | observability, full |
-| **hyperdx** | Unified observability | 📊 | observability, full |
 | **mailpit** | Email testing (dev only) | 🔧 | dev, observability, full |
 | **n8n** | Workflow automation | 🔧 | automation, full |
 | **socket-proxy** | Docker API security | 🔒 | prod |
@@ -60,7 +58,6 @@
 |------|---------|-------------|
 | `docker-compose.yml` | Main service definitions | All |
 | `compose.traefik.yml` | Traefik override | Production |
-| `compose.hyperdx.yml` | HyperDX override | Observability |
 | `infra/secrets/*.secret` | Secret values (gitignored) | All |
 | `infra/env/*.env` | Environment configs | Dev/Prod |
 | `infra/prometheus.yml` | Scrape targets | Observability |
@@ -119,13 +116,6 @@
 - **Dashboards**: Auto-loaded from `./dashboards/`
 - **Anonymous Access**: Viewer role
 - **Iframe**: Enabled
-
-### HyperDX
-- **Logs**: 30 days retention
-- **Traces**: 30 days retention
-- **Sessions**: 7 days retention
-- **Storage**: 50GB max
-- **ClickHouse**: 4GB RAM limit
 
 ### Alertmanager
 - **Channels**: Email, Slack
@@ -292,7 +282,6 @@ docker run --rm -v vol:/source:ro -v /backup:/dest alpine tar czf /dest/vol.tar.
 **Monitoring**:
 - [ ] Configure Alertmanager channels
 - [ ] Set up Grafana dashboards
-- [ ] Enable HyperDX tracing
 - [ ] Test alert routing
 
 **Backup**:

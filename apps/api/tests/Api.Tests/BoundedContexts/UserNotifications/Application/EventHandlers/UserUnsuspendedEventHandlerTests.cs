@@ -41,8 +41,13 @@ public class UserUnsuspendedEventHandlerTests : IDisposable
         var userId = Guid.NewGuid();
         _dbContext.Users.Add(new UserEntity
         {
-            Id = userId, Email = "user@example.com", DisplayName = "Test User",
-            PasswordHash = "hash123", Role = "user", CreatedAt = DateTime.UtcNow, IsSuspended = false
+            Id = userId,
+            Email = "user@example.com",
+            DisplayName = "Test User",
+            PasswordHash = "hash123",
+            Role = "user",
+            CreatedAt = DateTime.UtcNow,
+            IsSuspended = false
         });
         await _dbContext.SaveChangesAsync();
 
@@ -67,8 +72,12 @@ public class UserUnsuspendedEventHandlerTests : IDisposable
         var userId = Guid.NewGuid();
         _dbContext.Users.Add(new UserEntity
         {
-            Id = userId, Email = "user@example.com", DisplayName = "Test User",
-            PasswordHash = "hash123", Role = "user", CreatedAt = DateTime.UtcNow
+            Id = userId,
+            Email = "user@example.com",
+            DisplayName = "Test User",
+            PasswordHash = "hash123",
+            Role = "user",
+            CreatedAt = DateTime.UtcNow
         });
         await _dbContext.SaveChangesAsync();
 

@@ -39,6 +39,7 @@ import {
   Zap,
 } from 'lucide-react';
 
+import { useDashboardMode } from '@/components/dashboard';
 import { Sheet, SheetClose, SheetContent, SheetTitle } from '@/components/ui/navigation/sheet';
 import { cn } from '@/lib/utils';
 
@@ -136,6 +137,10 @@ export const ExtraMeepleCardDrawer = React.memo(function ExtraMeepleCardDrawer({
 }: ExtraMeepleCardDrawerProps) {
   const config = ENTITY_CONFIG[entityType];
   const { Icon } = config;
+  const { isGameMode, activeSessionId } = useDashboardMode();
+
+  // During an active game session, highlight the drawer to signal session context
+  const inSessionContext = isGameMode && !!activeSessionId;
 
   return (
     <Sheet
@@ -153,6 +158,8 @@ export const ExtraMeepleCardDrawer = React.memo(function ExtraMeepleCardDrawer({
           'w-full sm:w-[600px] sm:max-w-[600px]',
           // Hide the built-in close button (we render our own in the colored header)
           '[&>button:first-child]:hidden',
+          // Session context: subtle indigo ring glow
+          inSessionContext && 'ring-2 ring-indigo-400/60',
           className
         )}
         data-testid={testId}
@@ -172,6 +179,16 @@ export const ExtraMeepleCardDrawer = React.memo(function ExtraMeepleCardDrawer({
           >
             {config.label}
           </h2>
+
+          {/* Session context badge */}
+          {inSessionContext && (
+            <span
+              className="ml-auto mr-8 rounded-full bg-white/20 px-2 py-0.5 text-xs font-medium text-white"
+              data-testid="drawer-session-badge"
+            >
+              In sessione
+            </span>
+          )}
 
           {/* Close button */}
           <SheetClose

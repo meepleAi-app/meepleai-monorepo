@@ -27,21 +27,7 @@ internal sealed class CoreSeedLayer : ISeedLayer
         context.Logger.LogInformation("[Core] Seeding AI models...");
         await mediator.Send(new SeedAiModelsCommand(), cancellationToken).ConfigureAwait(false);
 
-        // Test users, E2E users, and agent definitions are Dev-only
-        if (context.Profile >= SeedProfile.Dev)
-        {
-            context.Logger.LogInformation("[Core] Seeding test user (Dev only)...");
-            await mediator.Send(new SeedTestUserCommand(), cancellationToken).ConfigureAwait(false);
-
-            context.Logger.LogInformation("[Core] Seeding E2E test users (Dev only)...");
-            await mediator.Send(new SeedE2ETestUsersCommand(), cancellationToken).ConfigureAwait(false);
-
-            context.Logger.LogInformation("[Core] Seeding agent definitions (Dev only)...");
-            await mediator.Send(new SeedAgentDefinitionsCommand(), cancellationToken).ConfigureAwait(false);
-        }
-        else
-        {
-            context.Logger.LogInformation("[Core] Skipping test/E2E users and agent definitions (profile: {Profile})", context.Profile);
-        }
+        // Test users, E2E users, and agent definitions disabled — only admin + games in dev seed
+        context.Logger.LogInformation("[Core] Skipping test/E2E users and agent definitions (clean seed)");
     }
 }

@@ -199,8 +199,7 @@ internal sealed class SubmitRuleDisputeCommandHandler
 
         session.AddDispute(entry);
 
-        // 9. Persist disputes JSONB on the DB entity (in-memory repo holds the live state;
-        //    the DB row is updated so sessions can be restored after restart).
+        // 9. Persist disputes JSONB to DB for restart resilience
         await PersistDisputesToDbAsync(session, cancellationToken).ConfigureAwait(false);
 
         // 10. Update the in-memory repository

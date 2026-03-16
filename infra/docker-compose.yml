@@ -479,32 +479,7 @@ services:
           cpus: '0.25'
           memory: 256M
 
-  docker-socket-proxy:
-    image: tecnativa/docker-socket-proxy:0.2
-    container_name: meepleai-docker-proxy
-    restart: unless-stopped
-    profiles: [monitoring]
-    environment:
-      CONTAINERS: 1
-      SERVICES: 0
-      TASKS: 0
-      NETWORKS: 0
-      VOLUMES: 0
-      IMAGES: 0
-      INFO: 1
-      VERSION: 1
-      PING: 1
-      POST: 0
-      DELETE: 0
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock:ro
-    networks:
-      - meepleai
-    deploy:
-      resources:
-        limits:
-          cpus: '0.5'
-          memory: 128M
+  # docker-socket-proxy is defined in compose.traefik.yml (Linux-only, staging/prod)
 
   # ---------------------------------------------------------------------------
   # Automation services (profile: automation)

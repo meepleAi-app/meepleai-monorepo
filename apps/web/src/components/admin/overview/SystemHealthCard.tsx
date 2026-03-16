@@ -64,7 +64,6 @@ function formatServiceName(name: string): string {
     'email-smtp': 'Email SMTP',
     grafana: 'Grafana',
     prometheus: 'Prometheus',
-    hyperdx: 'HyperDX',
     's3-storage': 'S3 Storage',
   };
   return nameMap[name] ?? name;

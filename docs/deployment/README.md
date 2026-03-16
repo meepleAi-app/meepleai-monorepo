@@ -186,7 +186,6 @@ docker compose start qdrant
 |---------|--------|-------------|
 | **Grafana** | https://grafana.meepleai.com | `admin` / `<GRAFANA_ADMIN_PASSWORD>` |
 | **Prometheus** | :9090 (internal) | Metrics at `/metrics` |
-| **HyperDX** | Optional logs | `HYPERDX_API_KEY` + `SERVICE_NAME` in `.env` |
 
 **Dashboards**: System (CPU/mem/disk), API (latency/throughput), RAG (confidence), DB (pool/queries)
 

@@ -117,15 +117,19 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
             }
 
             // === RAPTOR: Build hierarchical summary tree (optional, non-blocking) ===
+            // Timeout: 60s max to prevent LLM calls from blocking the pipeline indefinitely
             if (_raptorIndexer != null && chunks.Count > 3)
             {
                 try
                 {
+                    using var raptorCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+                    raptorCts.CancelAfter(TimeSpan.FromSeconds(60));
+
                     var chunkTexts = chunks.Select(c => c.Text).ToList();
                     var gameId = pdfDoc.GameId ?? Guid.Empty;
                     var raptorResult = await _raptorIndexer.BuildTreeAsync(
                         pdfDoc.Id, gameId,
-                        chunkTexts, maxLevels: 3, cancellationToken).ConfigureAwait(false);
+                        chunkTexts, maxLevels: 3, raptorCts.Token).ConfigureAwait(false);
 
                     if (raptorResult.TotalNodes > 0)
                     {
@@ -138,8 +142,14 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
                             raptorResult.Levels, raptorResult.TotalNodes, pdfDoc.Id);
                     }
                 }
+                catch (OperationCanceledException ex) when (!cancellationToken.IsCancellationRequested)
+                {
+                    _logger.LogWarning(ex,
+                        "[PdfPipeline] RAPTOR indexing timed out for PDF {PdfId} (60s limit), continuing without hierarchical summaries",
+                        pdfDoc.Id);
+                }
 #pragma warning disable CA1031 // RAPTOR is optional enhancement, must not block pipeline
-                catch (Exception ex)
+                catch (Exception ex) when (!cancellationToken.IsCancellationRequested)
                 {
                     _logger.LogWarning(ex,
                         "[PdfPipeline] RAPTOR indexing failed for PDF {PdfId}, continuing without hierarchical summaries",

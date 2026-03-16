@@ -55,7 +55,7 @@ public abstract class IntegrationTestBase<TRepository> : IAsyncLifetime
                 KeepAlive = 10,
                 Pooling = true,
                 MinPoolSize = 1,
-                MaxPoolSize = 5,
+                MaxPoolSize = 2, // CI service containers have max_connections=100 (default)
                 ConnectionIdleLifetime = 30,
                 ConnectionPruningInterval = 5,
                 Timeout = 30,

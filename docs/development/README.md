@@ -332,8 +332,7 @@ pnpm test:coverage     # Coverage report
 
 **Logs Location**:
 - Console: stdout
-- HyperDX: http://localhost:8080 → logs panel
-- Seq (optional): http://localhost:5341
+- Grafana/Loki: http://localhost:3001 → logs panel
 
 ### Frontend Debugging
 

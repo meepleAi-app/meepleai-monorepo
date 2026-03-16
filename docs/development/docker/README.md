@@ -25,7 +25,7 @@ Comprehensive Docker Compose guides for MeepleAI local development.
 - Frontend & API endpoints
 - Database & storage connections (PostgreSQL, Redis, Qdrant)
 - AI & ML services (Embedding, Reranker, Unstructured, SmolDocling, Ollama)
-- Monitoring & observability (Grafana, Prometheus, Alertmanager, cAdvisor, HyperDX)
+- Monitoring & observability (Grafana, Prometheus, Alertmanager, cAdvisor)
 - Development tools (Mailpit, n8n)
 - API example requests
 - Health check scripts

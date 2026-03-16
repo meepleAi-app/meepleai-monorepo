@@ -40,7 +40,6 @@ docker compose logs -f api web
 | **Web** | http://localhost:3000 | N/A |
 | **Grafana** | http://localhost:3001 | `admin` / `monitoring.secret` |
 | **Prometheus** | http://localhost:9090 | None |
-| **HyperDX** | http://localhost:8180 | API key: `demo` |
 | **Qdrant** | http://localhost:6333 | None (localhost-only) |
 | **Mailpit** | http://localhost:8025 | None |
 | **n8n** | http://localhost:5678 | Setup on first visit |
@@ -124,13 +123,12 @@ Working on:
 - [ ] Rotate secrets every 90 days
 - [ ] Configure TLS/HTTPS in Traefik
 - [ ] Bind services to internal network (not `0.0.0.0`)
-- [ ] Enable authentication for Grafana, n8n, HyperDX
+- [ ] Enable authentication for Grafana, n8n
 - [ ] Restrict file permissions: `chmod 600 infra/secrets/*.secret`
 
 **Monitoring**:
 - [ ] Configure Alertmanager email/Slack
 - [ ] Set up Prometheus retention (30 days)
-- [ ] Enable HyperDX distributed tracing
 - [ ] Create Grafana dashboards (auto-provisioned)
 
 **Backup**:
@@ -193,7 +191,6 @@ Monitoring Stack (optional):
   prometheus → (scrapes all)
   grafana → prometheus
   alertmanager → prometheus
-  hyperdx → (nothing)
   cadvisor → (nothing)
   node-exporter → (nothing)
   mailpit → (nothing)
@@ -210,9 +207,6 @@ COMPOSE_PROFILES=minimal,observability docker compose up -d
 
 # With Traefik reverse proxy
 docker compose -f docker-compose.yml -f compose.traefik.yml up -d
-
-# With HyperDX unified observability
-docker compose -f docker-compose.yml -f compose.hyperdx.yml up -d
 
 # Force rebuild (after code changes)
 docker compose build --no-cache api web

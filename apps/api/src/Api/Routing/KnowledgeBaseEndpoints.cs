@@ -5,6 +5,7 @@ using Api.BoundedContexts.KnowledgeBase.Application.ContextEngineering.Queries;
 using Api.BoundedContexts.KnowledgeBase.Application.DTOs;
 using Api.BoundedContexts.KnowledgeBase.Application.Handlers;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries;
+using Api.BoundedContexts.KnowledgeBase.Application.Queries.GetGameDocuments;
 using Api.Extensions;
 using Api.Helpers;
 using Api.Infrastructure.Entities;
@@ -35,6 +36,7 @@ internal static class KnowledgeBaseEndpoints
         MapChatMessageEndpoints(group);
         MapChatExportEndpoints(group);
         MapContextEngineeringEndpoints(group);
+        MapGameDocumentsEndpoint(group);
 
         return group;
     }
@@ -844,6 +846,39 @@ internal static class KnowledgeBaseEndpoints
         var result = await mediator.Send(query, ct).ConfigureAwait(false);
 
         logger.LogInformation("Retrieved {SourceCount} context sources", result.Count);
+
+        return Results.Ok(result);
+    }
+
+    private static void MapGameDocumentsEndpoint(RouteGroupBuilder group)
+    {
+        group.MapGet("/knowledge-base/{gameId:guid}/documents", HandleGetGameDocuments)
+            .WithName("GetGameDocuments")
+            .RequireSession()
+            .WithTags("KnowledgeBase")
+            .WithSummary("Get KB documents for a game")
+            .WithDescription("Returns the list of KB documents linked to a game, ordered by creation date descending.")
+            .Produces<IReadOnlyList<GameDocumentDto>>()
+            .Produces(StatusCodes.Status401Unauthorized);
+    }
+
+    private static async Task<IResult> HandleGetGameDocuments(
+        Guid gameId,
+        HttpContext context,
+        IMediator mediator,
+        ILogger<Program> logger,
+        CancellationToken ct)
+    {
+        var session = context.Items[nameof(SessionStatusDto)] as SessionStatusDto;
+        if (session?.User?.Id is not Guid userId)
+        {
+            return Results.Unauthorized();
+        }
+
+        logger.LogDebug("GetGameDocuments for game {GameId} by user {UserId}", gameId, userId);
+
+        var query = new GetGameDocumentsQuery(gameId, userId);
+        var result = await mediator.Send(query, ct).ConfigureAwait(false);
 
         return Results.Ok(result);
     }

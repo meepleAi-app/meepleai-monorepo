@@ -12,6 +12,8 @@ import {
   SearchIcon,
   ZapIcon,
 } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
 
 import {
   enqueuePdf,
@@ -55,6 +57,7 @@ export function UploadZone({ initialGameId }: { initialGameId?: string } = {}) {
   const [uploads, setUploads] = useState<FileUploadState[]>([]);
   const [isDragOver, setIsDragOver] = useState(false);
   const [urgentPriority, setUrgentPriority] = useState(false);
+  const router = useRouter();
 
   // ── Validation ──────────────────────────────────────────────────────
 
@@ -74,6 +77,18 @@ export function UploadZone({ initialGameId }: { initialGameId?: string } = {}) {
     setUploads(prev => prev.map((u, i) => (i === index ? { ...u, ...update } : u)));
   }, []);
 
+  const handleEnqueueError = useCallback(
+    (documentId: string, error: unknown) => {
+      toast.error('PDF caricato ma non accodato', {
+        description: error instanceof Error ? error.message : "Errore durante l'accodamento",
+      });
+      setTimeout(() => {
+        router.push(`/admin/knowledge-base/documents?highlight=${documentId}`);
+      }, 2000);
+    },
+    [router]
+  );
+
   const uploadSingleFile = useCallback(
     async (file: File, index: number) => {
       if (!selectedGame) return;
@@ -89,8 +104,8 @@ export function UploadZone({ initialGameId }: { initialGameId?: string } = {}) {
         // Auto-enqueue for processing (Urgent=30 puts at head, Normal=10 default)
         try {
           await enqueuePdf(result.documentId, urgentPriority ? PRIORITY_URGENT : PRIORITY_NORMAL);
-        } catch {
-          // Enqueue is best-effort - document still uploaded successfully
+        } catch (enqueueErr) {
+          handleEnqueueError(result.documentId, enqueueErr);
         }
 
         updateUpload(index, { status: 'completed' });
@@ -101,7 +116,7 @@ export function UploadZone({ initialGameId }: { initialGameId?: string } = {}) {
         });
       }
     },
-    [api.pdf, selectedGame, updateUpload, urgentPriority]
+    [api.pdf, selectedGame, updateUpload, urgentPriority, handleEnqueueError]
   );
 
   const uploadChunkedFile = useCallback(
@@ -147,8 +162,8 @@ export function UploadZone({ initialGameId }: { initialGameId?: string } = {}) {
             completeResult.documentId,
             urgentPriority ? PRIORITY_URGENT : PRIORITY_NORMAL
           );
-        } catch {
-          // best-effort
+        } catch (enqueueErr) {
+          handleEnqueueError(completeResult.documentId, enqueueErr);
         }
 
         updateUpload(index, { status: 'completed' });
@@ -159,7 +174,7 @@ export function UploadZone({ initialGameId }: { initialGameId?: string } = {}) {
         });
       }
     },
-    [api.pdf, selectedGame, updateUpload, urgentPriority]
+    [api.pdf, selectedGame, updateUpload, urgentPriority, handleEnqueueError]
   );
 
   const startUpload = useCallback(

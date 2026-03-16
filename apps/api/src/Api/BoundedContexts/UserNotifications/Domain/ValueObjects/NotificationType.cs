@@ -55,6 +55,9 @@ internal sealed class NotificationType : ValueObject
     // ISSUE-5009: Agent linked to shared game notification
     public static readonly NotificationType AgentLinked = new("agent_linked");
 
+    // Game Night Improvvisata: Agent auto-created when PDF rulebook is processed
+    public static readonly NotificationType AgentAutoCreated = new("agent_auto_created");
+
     // ISSUE-5084: OpenRouter RPM threshold alert (admin)
     public static readonly NotificationType AdminOpenRouterRpmAlert = new("admin_openrouter_rpm_alert");
 
@@ -155,6 +158,7 @@ internal sealed class NotificationType : ValueObject
             "processing_job_completed" => ProcessingJobCompleted,
             "processing_job_failed" => ProcessingJobFailed,
             "agent_linked" => AgentLinked,
+            "agent_auto_created" => AgentAutoCreated,
             "admin_openrouter_rpm_alert" => AdminOpenRouterRpmAlert,
             "admin_openrouter_budget_alert" => AdminOpenRouterBudgetAlert,
             "admin_circuit_breaker_state_changed" => AdminCircuitBreakerStateChanged,

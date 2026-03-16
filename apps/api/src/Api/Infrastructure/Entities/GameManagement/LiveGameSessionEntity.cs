@@ -44,6 +44,7 @@ public class LiveGameSessionEntity
     public string ScoringConfigJson { get; set; } = default!;
     public string? GameStateJson { get; set; } // Free-form game state
     public string? TurnOrderJson { get; set; } // List<Guid> serialized
+    public string? DisputesJson { get; set; } // List<RuleDisputeEntry> serialized
 
     // Content
     public string? Notes { get; set; }

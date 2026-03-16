@@ -35,11 +35,22 @@ const EXCLUDED_PREFIXES = [
   '/twitter-card',
 ];
 
+/**
+ * Public path prefixes — allow without auth or onboarding check.
+ * /join/* is the guest landing page for live sessions (Task 18).
+ */
+const PUBLIC_PREFIXES = ['/join/'];
+
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // Skip excluded prefixes
   if (EXCLUDED_PREFIXES.some(prefix => pathname.startsWith(prefix))) {
+    return NextResponse.next();
+  }
+
+  // Skip public path prefixes (e.g. /join/*)
+  if (PUBLIC_PREFIXES.some(prefix => pathname.startsWith(prefix))) {
     return NextResponse.next();
   }
 

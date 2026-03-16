@@ -25,6 +25,7 @@ import { useEffect } from 'react';
 import dynamicImport from 'next/dynamic';
 import { useSearchParams } from 'next/navigation';
 
+import { UsageWidget } from '@/components/library/UsageWidget';
 import { Skeleton } from '@/components/ui/feedback/skeleton';
 import { useCardHand } from '@/stores/use-card-hand';
 
@@ -90,16 +91,28 @@ export function LibraryContent() {
 
   return (
     <>
-      {/* Tab content */}
-      {tab === 'proposals' ? (
-        <ProposalsPageClient />
-      ) : tab === 'private' ? (
-        <GamesPageClient />
-      ) : tab === 'wishlist' ? (
-        <WishlistPageClient />
-      ) : (
-        <CollectionPageClient />
-      )}
+      {/* Layout: main content + sidebar */}
+      <div className="flex gap-6 items-start">
+        {/* Tab content — takes remaining width */}
+        <div className="min-w-0 flex-1">
+          {tab === 'proposals' ? (
+            <ProposalsPageClient />
+          ) : tab === 'private' ? (
+            <GamesPageClient />
+          ) : tab === 'wishlist' ? (
+            <WishlistPageClient />
+          ) : (
+            <CollectionPageClient />
+          )}
+        </div>
+
+        {/* Usage widget — sticky sidebar on md+ screens */}
+        <aside className="hidden lg:block w-64 flex-shrink-0">
+          <div className="sticky top-20">
+            <UsageWidget />
+          </div>
+        </aside>
+      </div>
 
       {/* AddGameDrawer — driven by ?action=add URL param (Issue #5168) */}
       <AddGameDrawerController />

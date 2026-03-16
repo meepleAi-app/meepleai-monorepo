@@ -164,8 +164,7 @@ internal sealed class CreatePauseSnapshotCommandHandler
         //     Only publish if session has an active agent with a chat session
         if (session.AgentMode != AgentSessionMode.None && session.ChatSessionId.HasValue)
         {
-            // We use ChatSessionId as a proxy for AgentDefinitionId in the event;
-            // the actual agent definition ID must be resolved by the handler
+            // ChatSessionId serves as proxy for AgentDefinitionId; resolved by handler
             await _publisher
                 .Publish(new SessionSaveRequestedEvent(
                     pauseSnapshotId: snapshot.Id,

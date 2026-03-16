@@ -490,6 +490,9 @@ app.MapGet("/", () => Results.Json(new { ok = true, name = "MeepleAgentAI" }));
 // ISSUE-2511: Comprehensive health check endpoint
 app.MapHealthCheckEndpoints();
 
+// ISSUE-448: Independent status page (works even when frontend is down)
+app.MapStatusPageEndpoints();
+
 // OPS-01: Health check endpoints (backwards compatibility)
 app.MapHealthChecks("/health", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
 {

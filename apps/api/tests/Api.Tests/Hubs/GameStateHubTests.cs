@@ -1,6 +1,7 @@
 using Api.Hubs;
 using Api.Tests.Constants;
 using FluentAssertions;
+using MediatR;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging;
 using Moq;
@@ -34,7 +35,8 @@ public class GameStateHubTests
         _mockContext.Setup(c => c.UserIdentifier).Returns("test-user");
 
         var logger = new Mock<ILogger<GameStateHub>>();
-        _hub = new GameStateHub(logger.Object)
+        var publisher = new Mock<IPublisher>();
+        _hub = new GameStateHub(logger.Object, publisher.Object)
         {
             Clients = _mockClients.Object,
             Groups = _mockGroups.Object,

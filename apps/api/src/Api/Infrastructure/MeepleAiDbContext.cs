@@ -191,6 +191,7 @@ public class MeepleAiDbContext : DbContext
     // Issue #4754: ToolState for live game sessions
     public DbSet<ToolStateEntity> ToolStates => Set<ToolStateEntity>();
     public DbSet<SessionSnapshotEntity> SessionSnapshots => Set<SessionSnapshotEntity>(); // ISSUE-4755
+    public DbSet<PauseSnapshotEntity> PauseSnapshots => Set<PauseSnapshotEntity>(); // Game Night: full-state pause snapshots
     public DbSet<TurnOrderEntity> TurnOrders => Set<TurnOrderEntity>(); // ISSUE-4970: TurnOrder base toolkit
     public DbSet<WhiteboardStateEntity> WhiteboardStates => Set<WhiteboardStateEntity>(); // ISSUE-4971: Whiteboard base toolkit
     public DbSet<Api.Infrastructure.Entities.SessionTracking.SessionMediaEntity> SessionMedia => Set<Api.Infrastructure.Entities.SessionTracking.SessionMediaEntity>(); // ISSUE-4760

@@ -16,6 +16,7 @@ import {
   useQueueStats,
   type JobStatus,
 } from '@/app/admin/(dashboard)/knowledge-base/queue/lib/queue-api';
+import { PriorityBadge } from '@/components/admin/knowledge-base/priority-badge';
 import { Badge } from '@/components/ui/data-display/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/data-display/card';
 import { Skeleton } from '@/components/ui/feedback/skeleton';
@@ -139,9 +140,12 @@ export function QueuePreviewWidget() {
             >
               <FileIcon className="h-4 w-4 text-slate-500 dark:text-zinc-400 shrink-0" />
               <div className="min-w-0 flex-1">
-                <p className="text-sm font-medium text-slate-900 dark:text-zinc-100 truncate">
-                  {job.pdfFileName}
-                </p>
+                <div className="flex items-center gap-1.5">
+                  <p className="text-sm font-medium text-slate-900 dark:text-zinc-100 truncate">
+                    {job.pdfFileName}
+                  </p>
+                  <PriorityBadge priority={job.priority} />
+                </div>
                 {job.currentStep && (
                   <p className="text-xs text-blue-600 dark:text-blue-400">
                     Step: {job.currentStep}

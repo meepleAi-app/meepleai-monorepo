@@ -9,7 +9,7 @@ using Pgvector;
 namespace Api.Infrastructure.Migrations
 {
     /// <inheritdoc />
-    public partial class BetaV0InitialCreate : Migration
+    public partial class Beta0 : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -3238,6 +3238,31 @@ namespace Api.Infrastructure.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "GameEntityRelations",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    GameId = table.Column<Guid>(type: "uuid", nullable: false),
+                    SourceEntity = table.Column<string>(type: "text", nullable: false),
+                    SourceType = table.Column<string>(type: "text", nullable: false),
+                    Relation = table.Column<string>(type: "text", nullable: false),
+                    TargetEntity = table.Column<string>(type: "text", nullable: false),
+                    TargetType = table.Column<string>(type: "text", nullable: false),
+                    Confidence = table.Column<float>(type: "real", nullable: false),
+                    ExtractedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_GameEntityRelations", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_GameEntityRelations_games_GameId",
+                        column: x => x.GameId,
+                        principalTable: "games",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "GameSessions",
                 columns: table => new
                 {
@@ -3340,6 +3365,7 @@ namespace Api.Infrastructure.Migrations
                     scoring_config_json = table.Column<string>(type: "jsonb", nullable: false),
                     game_state_json = table.Column<string>(type: "jsonb", nullable: true),
                     turn_order_json = table.Column<string>(type: "jsonb", nullable: true),
+                    disputes_json = table.Column<string>(type: "jsonb", nullable: true),
                     notes = table.Column<string>(type: "character varying(2000)", maxLength: 2000, nullable: true),
                     agent_mode = table.Column<int>(type: "integer", nullable: false, defaultValue: 0),
                     chat_session_id = table.Column<Guid>(type: "uuid", nullable: true),
@@ -3991,6 +4017,34 @@ namespace Api.Infrastructure.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "pause_snapshots",
+                columns: table => new
+                {
+                    id = table.Column<Guid>(type: "uuid", nullable: false),
+                    live_game_session_id = table.Column<Guid>(type: "uuid", nullable: false),
+                    current_turn = table.Column<int>(type: "integer", nullable: false),
+                    current_phase = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: true),
+                    player_scores_json = table.Column<string>(type: "jsonb", nullable: false),
+                    attachment_ids_json = table.Column<string>(type: "jsonb", nullable: false),
+                    disputes_json = table.Column<string>(type: "jsonb", nullable: false),
+                    agent_conversation_summary = table.Column<string>(type: "character varying(5000)", maxLength: 5000, nullable: true),
+                    game_state_json = table.Column<string>(type: "jsonb", nullable: true),
+                    saved_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    saved_by_user_id = table.Column<Guid>(type: "uuid", nullable: false),
+                    is_auto_save = table.Column<bool>(type: "boolean", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_pause_snapshots", x => x.id);
+                    table.ForeignKey(
+                        name: "FK_pause_snapshots_live_game_sessions_live_game_session_id",
+                        column: x => x.live_game_session_id,
+                        principalTable: "live_game_sessions",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "session_invites",
                 columns: table => new
                 {
@@ -4326,6 +4380,36 @@ namespace Api.Infrastructure.Migrations
                         principalTable: "users",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Restrict);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "RaptorSummaries",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    PdfDocumentId = table.Column<Guid>(type: "uuid", nullable: false),
+                    GameId = table.Column<Guid>(type: "uuid", nullable: false),
+                    TreeLevel = table.Column<int>(type: "integer", nullable: false),
+                    ClusterIndex = table.Column<int>(type: "integer", nullable: false),
+                    SummaryText = table.Column<string>(type: "text", nullable: false),
+                    SourceChunkCount = table.Column<int>(type: "integer", nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_RaptorSummaries", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_RaptorSummaries_games_GameId",
+                        column: x => x.GameId,
+                        principalTable: "games",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_RaptorSummaries_pdf_documents_PdfDocumentId",
+                        column: x => x.PdfDocumentId,
+                        principalTable: "pdf_documents",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateTable(
@@ -6123,6 +6207,11 @@ namespace Api.Infrastructure.Migrations
                 columns: new[] { "SharedGameId", "Upvotes" });
 
             migrationBuilder.CreateIndex(
+                name: "IX_GameEntityRelations_GameId",
+                table: "GameEntityRelations",
+                column: "GameId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_games_Name",
                 table: "games",
                 column: "Name",
@@ -6561,6 +6650,21 @@ namespace Api.Infrastructure.Migrations
                 column: "UserId");
 
             migrationBuilder.CreateIndex(
+                name: "ix_pause_snapshots_live_game_session_id",
+                table: "pause_snapshots",
+                column: "live_game_session_id");
+
+            migrationBuilder.CreateIndex(
+                name: "ix_pause_snapshots_session_is_auto_save",
+                table: "pause_snapshots",
+                columns: new[] { "live_game_session_id", "is_auto_save" });
+
+            migrationBuilder.CreateIndex(
+                name: "ix_pause_snapshots_session_saved_at",
+                table: "pause_snapshots",
+                columns: new[] { "live_game_session_id", "saved_at" });
+
+            migrationBuilder.CreateIndex(
                 name: "ix_pdf_documents_base_document_id",
                 table: "pdf_documents",
                 column: "base_document_id");
@@ -6921,6 +7025,16 @@ namespace Api.Infrastructure.Migrations
                 table: "rag_user_configs",
                 column: "UserId",
                 unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_RaptorSummaries_GameId",
+                table: "RaptorSummaries",
+                column: "GameId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_RaptorSummaries_PdfDocumentId",
+                table: "RaptorSummaries",
+                column: "PdfDocumentId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_RecordPlayers_PlayRecordId",
@@ -8285,6 +8399,9 @@ namespace Api.Infrastructure.Migrations
                 name: "game_strategies");
 
             migrationBuilder.DropTable(
+                name: "GameEntityRelations");
+
+            migrationBuilder.DropTable(
                 name: "GameToolkits");
 
             migrationBuilder.DropTable(
@@ -8341,6 +8458,9 @@ namespace Api.Infrastructure.Migrations
                 name: "password_reset_tokens");
 
             migrationBuilder.DropTable(
+                name: "pause_snapshots");
+
+            migrationBuilder.DropTable(
                 name: "pdf_processing_metrics");
 
             migrationBuilder.DropTable(
@@ -8374,6 +8494,9 @@ namespace Api.Infrastructure.Migrations
 
             migrationBuilder.DropTable(
                 name: "rag_user_configs");
+
+            migrationBuilder.DropTable(
+                name: "RaptorSummaries");
 
             migrationBuilder.DropTable(
                 name: "record_scores");

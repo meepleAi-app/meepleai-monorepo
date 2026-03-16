@@ -40,10 +40,16 @@ export class AdminUsersPage extends BasePage {
 
   async changeUserRole(email: string, newRole: string): Promise<void> {
     const userRow = await this.findUserRow(email);
-    // InlineRoleSelect is a small Select component (w-[100px], h-7)
-    const roleSelect = userRow.locator('select, [role="combobox"]').first();
+    // InlineRoleSelect: shadcn Select uses a <button> trigger, not native <select>
+    const roleSelect = userRow.locator(
+      'select, [role="combobox"], button:has-text("User"), button:has-text("Editor"), button:has-text("Admin")',
+    ).first();
+    await expect(roleSelect).toBeVisible({ timeout: 5_000 });
     await roleSelect.click();
-    await this.page.getByRole('option', { name: new RegExp(`^${newRole}$`, 'i') }).click();
+    // Select the new role from dropdown
+    await this.page.getByRole('option', { name: new RegExp(`^${newRole}$`, 'i') })
+      .or(this.page.getByText(new RegExp(`^${newRole}$`, 'i')).last())
+      .click();
 
     // Wait for confirmation dialog "Change Role"
     const confirmDialog = this.page.locator('[role="alertdialog"]');

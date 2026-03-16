@@ -22,6 +22,10 @@ function formatFileSize(bytes: number): string {
 }
 
 export function RecentPdfsWidget() {
+  // Filter by processingState='Ready' (fully indexed).
+  // Note: PdfListItem has TWO status fields:
+  //   - processingState: state-machine value used for filtering (Ready, Pending, Processing, Failed)
+  //   - processingStatus: display label for the current pipeline step (Extracting, Chunking, etc.)
   const { data, isLoading } = useQuery({
     queryKey: ['admin', 'hub', 'recent-pdfs'],
     queryFn: () =>

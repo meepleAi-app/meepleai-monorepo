@@ -27,6 +27,7 @@ internal sealed class LiveGameSession : AggregateRoot<Guid>
     private readonly List<Guid> _turnOrder = new();
     private readonly List<RoundScore> _roundScores = new();
     private readonly List<TurnRecord> _turnRecords = new();
+    private readonly List<RuleDisputeEntry> _disputes = new();
 
 #pragma warning disable CS8618
     private LiveGameSession() : base()
@@ -69,6 +70,7 @@ internal sealed class LiveGameSession : AggregateRoot<Guid>
     public IReadOnlyList<Guid> TurnOrder => _turnOrder.AsReadOnly();
     public IReadOnlyList<RoundScore> RoundScores => _roundScores.AsReadOnly();
     public IReadOnlyList<TurnRecord> TurnRecords => _turnRecords.AsReadOnly();
+    public IReadOnlyList<RuleDisputeEntry> Disputes => _disputes.AsReadOnly();
 
     // === Computed Properties ===
 
@@ -583,6 +585,18 @@ internal sealed class LiveGameSession : AggregateRoot<Guid>
     /// </summary>
     public string? GetCurrentPhaseName() =>
         PhaseNames.Length > CurrentPhaseIndex ? PhaseNames[CurrentPhaseIndex] : null;
+
+    // === Disputes ===
+
+    /// <summary>
+    /// Adds a rule dispute arbitration entry to the session log.
+    /// Disputes are stored as JSONB and represent AI-resolved rule questions.
+    /// </summary>
+    public void AddDispute(RuleDisputeEntry dispute)
+    {
+        ArgumentNullException.ThrowIfNull(dispute);
+        _disputes.Add(dispute);
+    }
 
     // === State & Notes ===
 

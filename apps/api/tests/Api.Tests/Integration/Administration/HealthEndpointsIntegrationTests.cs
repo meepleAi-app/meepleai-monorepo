@@ -12,7 +12,7 @@ namespace Api.Tests.Integration.Administration;
 
 /// <summary>
 /// Integration tests for individual service health endpoints (Issue #892).
-/// Tests the 5 dedicated health endpoints: postgres, redis, qdrant, n8n, hyperdx.
+/// Tests the 4 dedicated health endpoints: postgres, redis, qdrant, n8n.
 ///
 /// Test Categories:
 /// 1. Individual Endpoint Tests: Each service endpoint returns correct data
@@ -43,7 +43,6 @@ public sealed class HealthEndpointsIntegrationTests
     [InlineData("redis", "Redis")]
     [InlineData("qdrant", "Qdrant")]
     [InlineData("n8n", "n8n")]
-    [InlineData("hyperdx", "HyperDX")]
     public async Task GetServiceHealth_ValidService_ReturnsHealthStatus(string serviceName, string displayName)
     {
         // Arrange
@@ -84,7 +83,6 @@ public sealed class HealthEndpointsIntegrationTests
     [InlineData("redis")]
     [InlineData("qdrant")]
     [InlineData("n8n")]
-    [InlineData("hyperdx")]
     public async Task GetServiceHealth_UnhealthyService_ReturnsUnhealthyStatus(string serviceName)
     {
         // Arrange
@@ -119,7 +117,6 @@ public sealed class HealthEndpointsIntegrationTests
     [InlineData("redis")]
     [InlineData("qdrant")]
     [InlineData("n8n")]
-    [InlineData("hyperdx")]
     public async Task GetServiceHealth_DegradedService_ReturnsDegradedStatus(string serviceName)
     {
         // Arrange
@@ -207,40 +204,11 @@ public sealed class HealthEndpointsIntegrationTests
         service.State.Should().Be("Healthy");
     }
 
-    [Fact]
-    public async Task GetServiceHealth_HyperDx_ReturnsObservabilityPlatformHealth()
-    {
-        // Arrange - Issue #892: HyperDX replaces Seq + Jaeger
-        var expectedStatus = new ServiceHealthStatus(
-            "hyperdx",
-            HealthState.Healthy,
-            null,
-            DateTime.UtcNow,
-            TimeSpan.FromMilliseconds(150));
-
-        _healthServiceMock
-            .Setup(s => s.GetServiceHealthAsync("hyperdx", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(expectedStatus);
-
-        var handler = CreateHandler();
-        var query = new GetInfrastructureHealthQuery { ServiceName = "hyperdx" };
-
-        // Act
-        var result = await handler.Handle(query, CancellationToken.None);
-
-        // Assert
-        result.Services.Should().ContainSingle();
-        var service = result.Services.ElementAt(0);
-        service.ServiceName.Should().Be("hyperdx");
-        service.State.Should().Be("Healthy");
-    }
-
     [Theory]
     [InlineData("postgres", 45.5)]
     [InlineData("redis", 12.3)]
     [InlineData("qdrant", 78.9)]
     [InlineData("n8n", 150.2)]
-    [InlineData("hyperdx", 200.1)]
     public async Task GetServiceHealth_ValidService_IncludesResponseTime(string serviceName, double responseTimeMs)
     {
         // Arrange

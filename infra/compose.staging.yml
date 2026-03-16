@@ -25,12 +25,13 @@ services:
     command: ["sh", "-c", "redis-server /etc/redis/redis.conf --requirepass $$REDIS_PASSWORD"]
     volumes:
       - redisdata-staging:/data
+      - ./redis/redis.conf:/etc/redis/redis.conf:ro
 
   qdrant:
     restart: always
     env_file: [./secrets/staging/qdrant.secret]
     environment:
-      QDRANT__SERVICE__API_KEY: ${QDRANT_API_KEY}
+      QDRANT__SERVICE__API_KEY: ${QDRANT_API_KEY:?QDRANT_API_KEY is required - see secrets/qdrant.secret.example}
     volumes:
       - qdrantdata-staging:/qdrant/storage
 

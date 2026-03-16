@@ -37,7 +37,6 @@ Files containing obsolete historical content, deprecated patterns, or superseded
 | `01-architecture/adr/adr-007-hybrid-llm.md` | 189 | Superseded ADR-004b | MERGE into single current ADR |
 | `01-architecture/adr/adr-013-nswag-typescript-generation.md` | 576 | Deprecated (NSwag removed) | DELETE - no longer relevant |
 | `01-architecture/adr/adr-014-nswag-msbuild-removal.md` | 327 | Deprecated (NSwag removed) | DELETE - migration complete |
-| `01-architecture/adr/adr-040-hyperdx-observability.md` | 149 | Deprecated tool | DELETE - not in use |
 | `01-architecture/adr/adr-041-meeple-card-universal-system.md` | 90 | Deprecated component | DELETE - superseded |
 
 **Total ADRs to Archive**: 15 files, 3,800+ lines
@@ -313,7 +312,6 @@ DELETE: 01-architecture/adr/adr-013-nswag-typescript-generation.md (deprecated)
 DELETE: 01-architecture/adr/adr-014-nswag-msbuild-removal.md (deprecated)
 DELETE: 01-architecture/adr/adr-019-shared-catalog-delete-workflow.md (no longer used)
 DELETE: 01-architecture/adr/adr-027-infrastructure-services-policy.md (legacy)
-DELETE: 01-architecture/adr/adr-040-hyperdx-observability.md (deprecated)
 DELETE: 01-architecture/adr/adr-041-meeple-card-universal-system.md (deprecated)
 MERGE: 01-architecture/adr/adr-007-hybrid-llm.md → single current version
 

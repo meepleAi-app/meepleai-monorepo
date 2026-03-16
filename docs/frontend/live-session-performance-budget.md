@@ -154,6 +154,6 @@ Track in production:
 |--------|-----------|-----------|
 | Feed render p95 | `performance.measure()` → analytics | Grafana |
 | Event delivery latency | Server timestamp vs client receive | Grafana |
-| Client event buffer size | Periodic sampling | HyperDX |
-| SSE reconnection count | Client counter | HyperDX |
+| Client event buffer size | Periodic sampling | Grafana |
+| SSE reconnection count | Client counter | Grafana |
 | Virtual list scroll FPS | `requestAnimationFrame` timing | Dev-only |

@@ -178,7 +178,6 @@ docker compose --profile ai up -d
 - `alertmanager` (alert management)
 - `cadvisor` (container metrics)
 - `node-exporter` (host metrics)
-- `hyperdx` (unified logs/traces) - optional with compose.hyperdx.yml
 
 **Resource Usage**:
 - **RAM**: ~8 GB
@@ -190,11 +189,7 @@ docker compose --profile ai up -d
 ```bash
 cd infra
 
-# Without HyperDX
 docker compose --profile observability up -d
-
-# With HyperDX (unified observability)
-docker compose -f docker-compose.yml -f compose.hyperdx.yml --profile observability up -d
 ```
 
 **When to Use**:
@@ -208,7 +203,6 @@ docker compose -f docker-compose.yml -f compose.hyperdx.yml --profile observabil
 - Alertmanager: http://localhost:9093
 - cAdvisor: http://localhost:8082
 - Node Exporter: http://localhost:9100/metrics
-- HyperDX (if enabled): http://localhost:8180
 
 **Monitoring Capabilities**:
 - Container resource usage (CPU, RAM, network, disk)
@@ -485,13 +479,12 @@ docker compose --profile ai up -d
 **Needs**: Full monitoring, metrics, logs
 
 ```bash
-# Observability with HyperDX
-docker compose -f docker-compose.yml -f compose.hyperdx.yml --profile observability up -d
+# Full observability stack
+docker compose --profile observability up -d
 
 # Access:
 # - Grafana: http://localhost:3001
 # - Prometheus: http://localhost:9090
-# - HyperDX: http://localhost:8180
 # - Alertmanager: http://localhost:9093
 ```
 

@@ -1,0 +1,44 @@
+# Integration: Local code + remote services via SSH tunnel + Traefik basic auth
+# Prerequisites: make tunnel (SSH tunnels to staging server)
+#
+# Usage: docker compose -f docker-compose.yml -f compose.integration.yml up api web -d
+
+services:
+  api:
+    ports: ["127.0.0.1:8080:8080"]
+    extra_hosts: ["host.docker.internal:host-gateway"]
+    env_file:
+      - ./secrets/integration/database.secret
+      - ./secrets/integration/redis.secret
+      - ./secrets/integration/qdrant.secret
+      - ./secrets/integration/jwt.secret
+      - ./secrets/integration/openrouter.secret
+      - ./secrets/integration/admin.secret
+      - ./secrets/integration/services-auth.secret
+    environment:
+      ASPNETCORE_ENVIRONMENT: Integration
+      ASPNETCORE_URLS: http://+:8080
+      POSTGRES_HOST: host.docker.internal
+      POSTGRES_PORT: "15432"
+      REDIS_HOST: host.docker.internal
+      REDIS_PORT: "16379"
+      QDRANT_URL: http://host.docker.internal:16333
+      EMBEDDING_PROVIDER: external
+      Embedding__Provider: External
+      EMBEDDING_MODEL: intfloat/multilingual-e5-large
+      EMBEDDING_DIMENSIONS: 1024
+      Embedding__Dimensions: 1024
+      LOCAL_EMBEDDING_URL: https://meepleai.app/services/embedding
+      Embedding__LocalServiceUrl: https://meepleai.app/services/embedding
+      RERANKER_URL: https://meepleai.app/services/reranker
+      EMBEDDING_FALLBACK_ENABLED: "false"
+      Embedding__FallbackEnabled: "false"
+    volumes:
+      - ./secrets/integration:/app/infra/secrets:ro
+
+  web:
+    ports: ["127.0.0.1:3000:3000"]
+    extra_hosts: ["host.docker.internal:host-gateway"]
+    environment:
+      NODE_ENV: development
+      NEXT_PUBLIC_API_BASE: http://localhost:8080

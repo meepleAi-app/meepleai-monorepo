@@ -529,7 +529,7 @@ pnpm audit --fix
 **Monitoring**:
 - [ ] Grafana alerts configured (failed logins, errors)
 - [ ] Prometheus metrics collecting (request rates, latencies)
-- [ ] Log aggregation working (Seq/HyperDX)
+- [ ] Log aggregation working (Loki)
 - [ ] Security scan scheduled (weekly Semgrep)
 
 **Validation**:

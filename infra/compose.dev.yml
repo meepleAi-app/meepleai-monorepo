@@ -30,7 +30,7 @@ services:
     env_file: [./secrets/dev/qdrant.secret]
     ports: ["127.0.0.1:6333:6333", "127.0.0.1:6334:6334"]
     environment:
-      QDRANT__SERVICE__API_KEY: ${QDRANT_API_KEY}
+      QDRANT__SERVICE__API_KEY: ${QDRANT_API_KEY:?QDRANT_API_KEY is required - see secrets/qdrant.secret.example}
 
   # ===========================================================================
   # Application Services

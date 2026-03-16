@@ -95,7 +95,15 @@ cd ../../infra && make dev            # All services
 
 ### Secret Management
 
-**System**: `.secret` files (Issue #2570) - 10 total files
+**System**: `.secret` files in per-environment directories (Issue #2570)
+
+```
+secrets/
+├── dev/           # Auto-generated (make secrets-dev)
+├── integration/   # Copies from staging + tunnel config
+├── staging/       # Manual setup (make secrets-staging)
+└── prod/          # Manual + strict validation (make secrets-prod)
+```
 
 | Priority | Files | Behavior |
 |----------|-------|----------|
@@ -105,8 +113,10 @@ cd ../../infra && make dev            # All services
 
 **Workflow**:
 ```bash
-# Setup: cd infra/secrets && pwsh setup-secrets.ps1 -SaveGenerated
-# Update: nano infra/secrets/redis.secret && docker compose restart redis
+# Setup: cd infra && make secrets-dev          # Dev (auto-generated)
+# Setup: cd infra && make secrets-integration   # Integration (from staging)
+# Setup: cd infra && make secrets-staging       # Staging (interactive)
+# Update: nano infra/secrets/staging/redis.secret && make staging
 ```
 
 **Rules**: ✅ Run setup script, gitignore `.secret`, rotate 90d | ❌ Commit secrets, use dev in prod

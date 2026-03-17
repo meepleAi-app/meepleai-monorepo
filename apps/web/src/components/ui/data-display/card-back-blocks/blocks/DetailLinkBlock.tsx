@@ -1,7 +1,8 @@
 'use client';
 
-import Link from 'next/link';
 import { memo } from 'react';
+
+import Link from 'next/link';
 
 interface DetailLinkBlockProps {
   title: string;

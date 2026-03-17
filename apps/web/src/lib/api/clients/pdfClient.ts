@@ -77,7 +77,8 @@ export function createPdfClient({ httpClient }: CreatePdfClientParams) {
     async uploadPdf(
       gameId: string,
       file: File,
-      onProgress?: (percent: number) => void
+      onProgress?: (percent: number) => void,
+      options?: { isPrivateGame?: boolean }
     ): Promise<{ documentId: string; fileName: string }> {
       const baseUrl = getApiBase();
       const url = `${baseUrl}/api/v1/ingest/pdf`;
@@ -126,7 +127,11 @@ export function createPdfClient({ httpClient }: CreatePdfClientParams) {
 
         const formData = new FormData();
         formData.append('file', file);
-        formData.append('gameId', gameId);
+        if (options?.isPrivateGame) {
+          formData.append('privateGameId', gameId);
+        } else {
+          formData.append('gameId', gameId);
+        }
         xhr.send(formData);
       });
     },

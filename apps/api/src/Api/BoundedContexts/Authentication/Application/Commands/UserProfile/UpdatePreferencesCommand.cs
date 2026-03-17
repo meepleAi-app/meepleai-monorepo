@@ -14,4 +14,7 @@ internal record UpdatePreferencesCommand : ICommand<UserProfileDto>
     public string Theme { get; init; } = null!;
     public bool EmailNotifications { get; init; }
     public int DataRetentionDays { get; init; }
+    public bool ShowProfile { get; init; } = true;
+    public bool ShowActivity { get; init; } = true;
+    public bool ShowLibrary { get; init; } = true;
 }

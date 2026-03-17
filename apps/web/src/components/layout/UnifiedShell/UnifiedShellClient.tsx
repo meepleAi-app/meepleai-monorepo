@@ -1,22 +1,23 @@
 'use client';
 
-import { type ReactNode, useEffect, useState } from 'react';
+import { type ReactNode, useEffect, useRef, useState } from 'react';
 
 import { usePathname } from 'next/navigation';
 
-import { AgentCreationSheet } from '@/components/agent/config/AgentCreationSheet';
 import { DashboardEngineProvider } from '@/components/dashboard';
 import { ErrorBoundary } from '@/components/errors/ErrorBoundary';
-import { SearchAgentSheet } from '@/components/sheets/SearchAgentSheet';
-import { SearchGameSheet } from '@/components/sheets/SearchGameSheet';
-import { SessionSheet } from '@/components/sheets/SessionSheet';
-import { ToolkitSheet } from '@/components/sheets/ToolkitSheet';
-import { ALL_DEFAULT_CARDS, PLACEHOLDER_ACTION_CARDS } from '@/config/entity-actions';
+import { ContextualBottomSheet } from '@/components/layout/ContextualBottomSheet';
+import { MobileTabBar } from '@/components/layout/MobileTabBar';
+import { DEFAULT_PINNED_CARDS } from '@/config/entity-actions';
+import { useContextualEntity } from '@/hooks/useContextualEntity';
+import { useContextualSheetActions } from '@/hooks/useContextualSheetActions';
 import { usePlaceholderActions } from '@/hooks/usePlaceholderActions';
 import { useResponsive } from '@/hooks/useResponsive';
 import { cn } from '@/lib/utils';
 import { useCardHand } from '@/stores/use-card-hand';
 
+import { AdminBreadcrumb } from './AdminBreadcrumb';
+import { AdminMobileDrawer } from './AdminMobileDrawer';
 import { AdminTabSidebar } from './AdminTabSidebar';
 import { CardStack } from './CardStack';
 import { ContextualBottomNav } from './ContextualBottomNav';
@@ -62,6 +63,13 @@ export function UnifiedShellClient({
   const isAdminContext = context === 'admin';
   const { isDesktop } = useResponsive();
   const { handleCardClick, activeSheet, closeSheet } = usePlaceholderActions();
+  const [adminDrawerOpen, setAdminDrawerOpen] = useState(false);
+
+  const mainRef = useRef<HTMLElement>(null);
+  const contextualEntity = useContextualEntity();
+  const sheetActions = useContextualSheetActions();
+  const [isBottomSheetOpen, setIsBottomSheetOpen] = useState(false);
+  const hasSheetContent = sheetActions.length > 0 || cards.length > 0;
 
   // Agent wizard handoff state: carries game + KB selection from SearchAgentSheet → AgentCreationSheet
   const [agentWizardState, setAgentWizardState] = useState<{
@@ -81,27 +89,16 @@ export function UnifiedShellClient({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAdmin, pathname]);
 
-  // Seed default cards (including placeholder action cards) on first load
+  // Seed default pinned section cards on first load
   useEffect(() => {
     if (cards.length === 0) {
-      ALL_DEFAULT_CARDS.forEach(card => {
+      DEFAULT_PINNED_CARDS.forEach(card => {
         drawCard(card);
         pinCard(card.id);
       });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  // Migration: add placeholder action cards for returning users who already have cards
-  // Guard: only runs if user has existing cards but no placeholders (not for fresh users)
-  useEffect(() => {
-    if (cards.length > 0 && !cards.some(c => c.isPlaceholder)) {
-      PLACEHOLDER_ACTION_CARDS.forEach(card => {
-        drawCard(card);
-        pinCard(card.id);
-      });
-    }
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <div className="flex flex-col h-screen">
@@ -112,6 +109,8 @@ export function UnifiedShellClient({
       <ErrorBoundary fallback={null} componentName="UnifiedTopNav">
         <UnifiedTopNav
           isAdmin={isAdmin}
+          onMenuToggle={isAdminContext ? () => setAdminDrawerOpen(true) : undefined}
+          isMenuOpen={isAdminContext ? adminDrawerOpen : undefined}
           userMenu={userMenu}
           notificationBell={notificationBell}
           searchTrigger={searchTrigger}
@@ -130,8 +129,16 @@ export function UnifiedShellClient({
         />
       </ErrorBoundary>
 
-      {/* Hand Drawer (mobile only, non-admin) */}
-      {!isDesktop && !isAdminContext && <HandDrawer onPlaceholderClick={handleCardClick} />}
+      {/* Admin mobile: breadcrumb + drawer */}
+      {isAdminContext && (
+        <>
+          <AdminBreadcrumb />
+          <AdminMobileDrawer open={adminDrawerOpen} onOpenChange={setAdminDrawerOpen} />
+        </>
+      )}
+
+      {/* Hand Drawer (desktop only, non-admin — replaced by MobileTabBar + ContextualBottomSheet on mobile) */}
+      {isDesktop && !isAdminContext && <HandDrawer onPlaceholderClick={handleCardClick} />}
 
       {/* Onboarding banner */}
       {onboardingBanner}
@@ -145,13 +152,14 @@ export function UnifiedShellClient({
               <AdminTabSidebar />
             ) : (
               <div className="hidden lg:flex">
-                <CardStack onPlaceholderClick={handleCardClick} />
+                <CardStack />
               </div>
             )}
           </ErrorBoundary>
 
           {/* Main content area */}
           <main
+            ref={mainRef}
             id="main-content"
             className={cn('flex-1 overflow-y-auto', 'focus:outline-none')}
             tabIndex={-1}
@@ -161,35 +169,25 @@ export function UnifiedShellClient({
         </div>
       </DashboardEngineProvider>
 
-      {/* Bottom Nav */}
-      <ErrorBoundary fallback={null} componentName="ContextualBottomNav">
-        <ContextualBottomNav />
-      </ErrorBoundary>
+      {/* Bottom Nav (desktop only — replaced by MobileTabBar on mobile) */}
+      <div className="hidden md:block">
+        <ErrorBoundary fallback={null} componentName="ContextualBottomNav">
+          <ContextualBottomNav />
+        </ErrorBoundary>
+      </div>
 
-      {/* Action sheets */}
-      <SearchGameSheet isOpen={activeSheet === 'search-game'} onClose={closeSheet} />
-      <SessionSheet isOpen={activeSheet === 'start-session'} onClose={closeSheet} />
-      <ToolkitSheet isOpen={activeSheet === 'toolkit'} onClose={closeSheet} />
-      <SearchAgentSheet
-        isOpen={activeSheet === 'search-agent'}
-        onClose={closeSheet}
-        onCreateAgent={(gameId, gameTitle, documentIds, documentSummary) => {
-          closeSheet();
-          setAgentWizardState({ gameId, gameTitle, documentIds, documentSummary });
-        }}
+      {/* Mobile Tab Bar */}
+      <MobileTabBar
+        contextualEntity={contextualEntity}
+        hasSheetContent={hasSheetContent}
+        onCenterTabPress={() => setIsBottomSheetOpen(true)}
       />
-      {agentWizardState && (
-        <AgentCreationSheet
-          isOpen={!!agentWizardState}
-          onClose={() => setAgentWizardState(null)}
-          initialGameId={agentWizardState.gameId}
-          initialGameTitle={agentWizardState.gameTitle}
-          initialDocumentIds={agentWizardState.documentIds}
-          initialDocumentSummary={agentWizardState.documentSummary}
-          skipGameSelection
-          skipKBUpload
-        />
-      )}
+
+      {/* Contextual Bottom Sheet (mobile) */}
+      <ContextualBottomSheet
+        isOpen={isBottomSheetOpen}
+        onClose={() => setIsBottomSheetOpen(false)}
+      />
     </div>
   );
 }

@@ -146,6 +146,15 @@ internal interface IUserLibraryRepository : IRepository<UserLibraryEntry, Guid>
     Task<int> GetAgentConfigCountAsync(Guid userId, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Gets the count of library entries grouped by game state for a user.
+    /// Returns a dictionary mapping GameStateType to count.
+    /// </summary>
+    /// <param name="userId">The user ID</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>Dictionary of game state to count</returns>
+    Task<Dictionary<GameStateType, int>> GetStateCountsAsync(Guid userId, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Gets unplayed games or games not played for a specified number of days.
     /// Issue #3916: Required for AI insights backlog detection.
     /// </summary>

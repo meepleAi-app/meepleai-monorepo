@@ -66,6 +66,7 @@ import {
   createOnboardingClient,
   createAccessRequestsClient,
   createAdminNotificationsClient,
+  createContactClient,
   type AuthClient,
   type GamesClient,
   type SessionsClient,
@@ -112,6 +113,7 @@ import {
   type OnboardingClient,
   type AccessRequestsClient,
   type AdminNotificationsClient,
+  type ContactClient,
 } from './clients';
 import { HttpClient, type HttpClientConfig } from './core/httpClient';
 
@@ -337,6 +339,9 @@ export interface ApiClient {
   /** Admin manual notification dispatch */
   adminNotifications: AdminNotificationsClient;
 
+  /** Public contact form submission */
+  contact: ContactClient;
+
   /** Generic DELETE helper (used in some legacy tests) */
   delete: (path: string) => Promise<void>;
 }
@@ -433,6 +438,7 @@ export function createApiClient(config?: ApiClientConfig): ApiClient {
     onboarding: createOnboardingClient({ httpClient }), // First-time user onboarding
     accessRequests: createAccessRequestsClient({ httpClient }), // Invite-only registration
     adminNotifications: createAdminNotificationsClient({ httpClient }), // Admin manual notifications
+    contact: createContactClient({ httpClient }), // Public contact form
     delete: (path: string) => httpClient.delete(path),
   };
 

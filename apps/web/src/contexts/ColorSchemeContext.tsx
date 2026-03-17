@@ -105,7 +105,7 @@ export function ColorSchemeProvider({ children }: ColorSchemeProviderProps) {
     (themeId: string) => {
       const theme = themes.find(t => t.id === themeId);
       if (!theme) {
-        console.warn(`Theme not found: ${themeId}`);
+        logger.warn(`Theme not found: ${themeId}`);
         return;
       }
 
@@ -164,7 +164,7 @@ export function ColorSchemeProvider({ children }: ColorSchemeProviderProps) {
     (themeId: string) => {
       const theme = themes.find(t => t.id === themeId);
       if (!theme || !theme.isCustom) {
-        console.warn('Cannot remove non-custom theme');
+        logger.warn('Cannot remove non-custom theme');
         return;
       }
 

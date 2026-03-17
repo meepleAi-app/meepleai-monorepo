@@ -20,7 +20,7 @@ import {
 } from '@/components/ui/admin/admin-confirmation-dialog';
 import { Button } from '@/components/ui/primitives/button';
 import { Input } from '@/components/ui/primitives/input';
-import { useToast } from '@/hooks/use-toast';
+import { useToast } from '@/hooks/useToast';
 import { api } from '@/lib/api';
 import type { ActiveOverride } from '@/lib/api/schemas';
 import { cn } from '@/lib/utils';

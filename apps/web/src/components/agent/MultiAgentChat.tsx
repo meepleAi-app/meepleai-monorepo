@@ -9,7 +9,7 @@ import { useState } from 'react';
 
 import { Send } from 'lucide-react';
 
-import { useExecuteWorkflow, useSwitchAgent } from '@/hooks/agent/use-orchestrator';
+import { useExecuteWorkflow, useSwitchAgent } from '@/hooks/agent/useOrchestrator';
 import type { AgentType } from '@/lib/api/orchestrator-client';
 
 import { AgentSelectorBadge } from './AgentSelectorBadge';
@@ -49,7 +49,7 @@ export function MultiAgentChat({ gameId, sessionId }: MultiAgentChatProps) {
       timestamp: new Date(),
     };
 
-    setMessages((prev) => [...prev, userMessage]);
+    setMessages(prev => [...prev, userMessage]);
     setInput('');
 
     executeWorkflow(
@@ -59,7 +59,7 @@ export function MultiAgentChat({ gameId, sessionId }: MultiAgentChatProps) {
         query: input,
       },
       {
-        onSuccess: (data) => {
+        onSuccess: data => {
           const assistantMessage: Message = {
             id: `assistant-${Date.now()}`,
             role: 'assistant',
@@ -69,7 +69,7 @@ export function MultiAgentChat({ gameId, sessionId }: MultiAgentChatProps) {
             timestamp: new Date(),
           };
 
-          setMessages((prev) => [...prev, assistantMessage]);
+          setMessages(prev => [...prev, assistantMessage]);
           setCurrentAgent(data.agent_type); // Update current agent from response
         },
       }
@@ -80,7 +80,7 @@ export function MultiAgentChat({ gameId, sessionId }: MultiAgentChatProps) {
     switchAgent(
       { sessionId, gameId, targetAgent },
       {
-        onSuccess: (data) => {
+        onSuccess: data => {
           setCurrentAgent(data.agent_type);
 
           // Add system message about switch
@@ -91,7 +91,7 @@ export function MultiAgentChat({ gameId, sessionId }: MultiAgentChatProps) {
             agentType: data.agent_type,
             timestamp: new Date(),
           };
-          setMessages((prev) => [...prev, systemMessage]);
+          setMessages(prev => [...prev, systemMessage]);
         },
       }
     );
@@ -112,7 +112,7 @@ export function MultiAgentChat({ gameId, sessionId }: MultiAgentChatProps) {
 
       {/* Messages */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
-        {messages.map((message) => (
+        {messages.map(message => (
           <ChatMessage
             key={message.id}
             role={message.role}
@@ -123,19 +123,13 @@ export function MultiAgentChat({ gameId, sessionId }: MultiAgentChatProps) {
           />
         ))}
 
-        {isExecuting && (
-          <ChatMessage
-            role="assistant"
-            content=""
-            isTyping
-          />
-        )}
+        {isExecuting && <ChatMessage role="assistant" content="" isTyping />}
       </div>
 
       {/* Input */}
       <div className="p-4 border-t">
         <form
-          onSubmit={(e) => {
+          onSubmit={e => {
             e.preventDefault();
             handleSend();
           }}
@@ -143,7 +137,7 @@ export function MultiAgentChat({ gameId, sessionId }: MultiAgentChatProps) {
         >
           <Input
             value={input}
-            onChange={(e) => setInput(e.target.value)}
+            onChange={e => setInput(e.target.value)}
             placeholder={`Ask ${currentAgent}...`}
             disabled={isExecuting}
           />

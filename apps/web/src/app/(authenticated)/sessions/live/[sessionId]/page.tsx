@@ -10,7 +10,7 @@
 
 import { use } from 'react';
 
-import { SessionCardParent } from '@/components/sessions/live/SessionCardParent';
+import { SessionCardParent } from '@/components/session/live/SessionCardParent';
 
 interface LiveSessionPageProps {
   params: Promise<{ sessionId: string }>;

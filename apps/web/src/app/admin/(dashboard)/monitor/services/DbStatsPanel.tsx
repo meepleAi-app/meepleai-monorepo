@@ -23,7 +23,7 @@ import {
 
 import { Badge } from '@/components/ui/data-display/badge';
 import { Button } from '@/components/ui/primitives/button';
-import { useToast } from '@/hooks/use-toast';
+import { useToast } from '@/hooks/useToast';
 import { api } from '@/lib/api';
 import type { DatabaseMetrics, TableSize } from '@/lib/api/schemas';
 import { cn } from '@/lib/utils';

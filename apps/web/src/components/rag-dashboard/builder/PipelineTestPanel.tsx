@@ -46,7 +46,7 @@ import {
   useRagPipelineTest,
   type BlockResult,
   type RetrievedDocument,
-} from '@/lib/hooks/useRagPipelineTest';
+} from '@/lib/domain-hooks/useRagPipelineTest';
 import { cn } from '@/lib/utils';
 
 import type { PipelineDefinition } from './types';
@@ -88,9 +88,7 @@ function BlockResultItem({ result, isExpanded, onToggle }: BlockResultItemProps)
         ) : (
           <XCircle className="h-4 w-4 text-red-500" />
         )}
-        <span className="text-sm font-medium flex-1 text-left truncate">
-          {result.blockName}
-        </span>
+        <span className="text-sm font-medium flex-1 text-left truncate">{result.blockName}</span>
         <div className="flex items-center gap-2 text-xs text-muted-foreground">
           <span>{result.durationMs}ms</span>
           <span>{result.tokensUsed} tok</span>
@@ -121,7 +119,7 @@ function BlockResultItem({ result, isExpanded, onToggle }: BlockResultItemProps)
                 {result.documents.length} documents retrieved
               </p>
               <div className="space-y-1">
-                {result.documents.slice(0, 3).map((doc) => (
+                {result.documents.slice(0, 3).map(doc => (
                   <DocumentPreview key={doc.id} document={doc} />
                 ))}
                 {result.documents.length > 3 && (
@@ -144,9 +142,7 @@ function BlockResultItem({ result, isExpanded, onToggle }: BlockResultItemProps)
               )}
             >
               <div className="flex items-center justify-between">
-                <span className="text-xs font-medium">
-                  {result.validation.type}
-                </span>
+                <span className="text-xs font-medium">{result.validation.type}</span>
                 <Badge
                   variant={result.validation.passed ? 'secondary' : 'outline'}
                   className="text-xs"
@@ -155,9 +151,7 @@ function BlockResultItem({ result, isExpanded, onToggle }: BlockResultItemProps)
                 </Badge>
               </div>
               {result.validation.details && (
-                <p className="text-xs text-muted-foreground mt-1">
-                  {result.validation.details}
-                </p>
+                <p className="text-xs text-muted-foreground mt-1">{result.validation.details}</p>
               )}
             </div>
           )}
@@ -180,9 +174,7 @@ function DocumentPreview({ document }: DocumentPreviewProps) {
           {(document.score * 100).toFixed(0)}%
         </Badge>
       </div>
-      <p className="text-xs text-muted-foreground line-clamp-2">
-        {document.content}
-      </p>
+      <p className="text-xs text-muted-foreground line-clamp-2">{document.content}</p>
     </div>
   );
 }
@@ -222,7 +214,7 @@ export function PipelineTestPanel({
   }, [pipeline, testQuery, startTest]);
 
   const handleToggleBlock = useCallback((blockId: string) => {
-    setExpandedBlocks((prev) => {
+    setExpandedBlocks(prev => {
       const next = new Set(prev);
       if (next.has(blockId)) {
         next.delete(blockId);
@@ -251,11 +243,11 @@ export function PipelineTestPanel({
           <Input
             placeholder="Enter test query..."
             value={testQuery}
-            onChange={(e) => setTestQuery(e.target.value)}
+            onChange={e => setTestQuery(e.target.value)}
             disabled={isRunning || disabled}
             className="h-8 text-sm"
             data-testid="test-query-input"
-            onKeyDown={(e) => {
+            onKeyDown={e => {
               if (e.key === 'Enter' && canRunTest) {
                 handleStartTest();
               }
@@ -287,12 +279,7 @@ export function PipelineTestPanel({
                 </Tooltip>
               </TooltipProvider>
             ) : (
-              <Button
-                size="sm"
-                variant="destructive"
-                onClick={cancelTest}
-                className="flex-1"
-              >
+              <Button size="sm" variant="destructive" onClick={cancelTest} className="flex-1">
                 <Square className="h-3 w-3 mr-1" />
                 Cancel
               </Button>
@@ -339,9 +326,7 @@ export function PipelineTestPanel({
           <Progress value={progress.percentage} className="h-2" />
 
           {progress.currentBlock && isRunning && (
-            <p className="text-xs text-muted-foreground">
-              Running: {progress.currentBlock.name}
-            </p>
+            <p className="text-xs text-muted-foreground">Running: {progress.currentBlock.name}</p>
           )}
         </div>
       )}
@@ -369,8 +354,7 @@ export function PipelineTestPanel({
                 <AlertCircle className="h-3 w-3 text-red-500" />
               )}
               <span>
-                {metrics.blocksExecuted - metrics.blocksFailed}/
-                {metrics.blocksExecuted} passed
+                {metrics.blocksExecuted - metrics.blocksFailed}/{metrics.blocksExecuted} passed
               </span>
             </div>
           </div>
@@ -381,7 +365,7 @@ export function PipelineTestPanel({
       <ScrollArea className="flex-1">
         <div className="p-2 space-y-1">
           {sortedBlockResults.length > 0 ? (
-            sortedBlockResults.map((result) => (
+            sortedBlockResults.map(result => (
               <BlockResultItem
                 key={result.blockId}
                 result={result}
@@ -393,9 +377,7 @@ export function PipelineTestPanel({
             <div className="text-center py-8 text-muted-foreground">
               <Play className="h-8 w-8 mx-auto mb-2 opacity-50" />
               <p className="text-sm">Run a test to see results</p>
-              <p className="text-xs mt-1">
-                {pipeline.nodes.length} blocks in pipeline
-              </p>
+              <p className="text-xs mt-1">{pipeline.nodes.length} blocks in pipeline</p>
             </div>
           ) : null}
         </div>

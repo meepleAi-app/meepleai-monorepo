@@ -21,7 +21,11 @@
  * @see https://developer.mozilla.org/en-US/docs/Web/API/Server-sent_events
  */
 
-import { RagStreamingEventSchema, type RagStreamingEvent } from '@/lib/api/schemas/streaming.schemas';
+import {
+  RagStreamingEventSchema,
+  type RagStreamingEvent,
+} from '@/lib/api/schemas/streaming.schemas';
+import { logger } from '@/lib/logger';
 
 /**
  * SSE Parser for handling streaming event data
@@ -68,7 +72,10 @@ export class SSEParser {
           events.push(event);
         }
       } catch (error) {
-        console.error('[SSEParser] Failed to parse event:', error, part);
+        logger.error(
+          `[SSEParser] Failed to parse event: ${part}`,
+          error instanceof Error ? error : undefined
+        );
         // Continue parsing other events even if one fails
       }
     }
@@ -114,7 +121,10 @@ export class SSEParser {
 
       return event;
     } catch (error) {
-      console.error('[SSEParser] JSON parse error:', error, dataLine);
+      logger.error(
+        `[SSEParser] JSON parse error: ${dataLine}`,
+        error instanceof Error ? error : undefined
+      );
       throw error;
     }
   }

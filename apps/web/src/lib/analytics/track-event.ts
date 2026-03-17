@@ -1,3 +1,5 @@
+import { logger } from '@/lib/logger';
+
 /**
  * Analytics Event Tracking Utility
  * Issue #3913 - Quick Actions Grid Enhancement
@@ -31,8 +33,7 @@
 export function trackEvent(eventName: string, properties?: Record<string, unknown>): void {
   // Development mode: log to console
   if (process.env.NODE_ENV === 'development') {
-    // eslint-disable-next-line no-console
-    console.info('[Analytics]', eventName, properties);
+    logger.info(`[Analytics] ${eventName} ${properties ? JSON.stringify(properties) : ''}`);
   }
 }
 

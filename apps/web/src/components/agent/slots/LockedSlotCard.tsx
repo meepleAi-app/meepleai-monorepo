@@ -23,6 +23,7 @@ import {
   DialogDescription,
 } from '@/components/ui/overlays/dialog';
 import { Button } from '@/components/ui/primitives/button';
+import { logger } from '@/lib/logger';
 
 interface LockedSlotCardProps {
   /** Number of locked slots */
@@ -77,12 +78,9 @@ function trackUpgradeClick(lockedSlotsCount: number, currentTier: string): void 
 
   // Console log for development - using warn to satisfy lint
   if (process.env.NODE_ENV === 'development') {
-     
-    console.warn('[Analytics] upgrade_cta_clicked', {
-      source: 'slot_management',
-      current_tier: currentTier,
-      locked_slots_count: lockedSlotsCount,
-    });
+    logger.warn(
+      `[Analytics] upgrade_cta_clicked source=slot_management tier=${currentTier} locked=${lockedSlotsCount}`
+    );
   }
 }
 

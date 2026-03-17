@@ -23,6 +23,9 @@ export interface CardBackComposerProps {
   className?: string;
 }
 
+// Each block component expects a specific discriminated variant of BlockData,
+// but the record maps all BlockTypes to one component type signature.
+
 const BLOCK_COMPONENTS: Record<
   BlockType,
   React.ComponentType<{ title: string; entityColor: string; data: any }>
@@ -68,15 +71,7 @@ export const CardBackComposer = memo(function CardBackComposer({
       {blockConfigs.map(config => {
         const Component = BLOCK_COMPONENTS[config.type];
         const data = blockData[config.type] ?? EMPTY_DATA[config.type];
-        return (
-          <Component
-            key={config.type}
-            title={config.title}
-            entityColor={color}
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            data={data as any}
-          />
-        );
+        return <Component key={config.type} title={config.title} entityColor={color} data={data} />;
       })}
     </div>
   );

@@ -9,6 +9,8 @@
 
 import { z } from 'zod';
 
+import { logger } from '@/lib/logger';
+
 // Game state types for library filtering (Issue #2866)
 // Valid enum values - strict parsing
 const VALID_GAME_STATES = ['Nuovo', 'InPrestito', 'Wishlist', 'Owned'] as const;
@@ -21,7 +23,7 @@ export const GameStateTypeWithFallbackSchema = z.string().transform(val => {
     return val as GameStateType;
   }
   // Log unknown state for debugging, fallback to 'Owned'
-  console.warn(`Unknown GameStateType received: "${val}", falling back to "Owned"`);
+  logger.warn(`Unknown GameStateType received: "${val}", falling back to "Owned"`);
   return 'Owned' as GameStateType;
 });
 

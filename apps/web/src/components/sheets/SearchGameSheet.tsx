@@ -16,13 +16,8 @@ import { useState, useMemo, useCallback } from 'react';
 import { Search, X, Loader2, BookOpen, Users, AlertCircle } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-} from '@/components/ui/navigation/sheet';
 import { Badge } from '@/components/ui/badge';
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/navigation/sheet';
 import { Button } from '@/components/ui/primitives/button';
 import { Input } from '@/components/ui/primitives/input';
 import { useLibrary } from '@/hooks/queries/useLibrary';

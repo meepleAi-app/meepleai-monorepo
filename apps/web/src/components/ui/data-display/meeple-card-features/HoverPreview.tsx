@@ -14,7 +14,7 @@ import * as React from 'react';
 import Link from 'next/link';
 
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/overlays';
-import { useMediaQuery } from '@/hooks/use-media-query';
+import { useMediaQuery } from '@/hooks/useMediaQuery';
 
 export interface HoverPreviewData {
   description?: string;

@@ -7,6 +7,7 @@ import { CreditCard, AlertCircle } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { getUserBudget, type UserBudgetDto } from '@/lib/api/clients/budgetClient';
+import { logger } from '@/lib/logger';
 
 interface BudgetBadgeProps {
   userId: string;
@@ -32,7 +33,7 @@ export function BudgetBadge({ userId, className }: BudgetBadgeProps) {
         setError(null);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load budget');
-        console.error('Budget fetch error:', err);
+        logger.error('Budget fetch error:', err);
       } finally {
         setLoading(false);
       }

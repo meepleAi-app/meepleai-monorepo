@@ -23,6 +23,7 @@
 import { Metadata } from 'next';
 
 import { type GameStatus, type SharedGame } from '@/lib/api';
+import { logger } from '@/lib/logger';
 
 import { AddGameButton } from './components/AddGameButton';
 import { GameGrid } from './components/GameGrid';
@@ -181,7 +182,7 @@ async function fetchGames(params: FetchGamesParams): Promise<PaginatedResponse> 
       totalPages: Math.ceil(data.total / data.pageSize),
     };
   } catch (error) {
-    console.error('Error fetching games:', error);
+    logger.error('Error fetching games:', error);
     return {
       games: [],
       total: 0,

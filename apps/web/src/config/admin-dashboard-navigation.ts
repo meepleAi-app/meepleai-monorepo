@@ -58,6 +58,7 @@ import {
   DownloadIcon,
   RotateCcwIcon,
   SaveIcon,
+  Palette,
 } from 'lucide-react';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -381,7 +382,7 @@ export const DASHBOARD_SECTIONS: DashboardSection[] = [
     label: 'System',
     icon: MonitorIcon,
     baseRoute: '/admin/monitor',
-    additionalRoutes: ['/admin/config', '/admin/notifications'],
+    additionalRoutes: ['/admin/config', '/admin/notifications', '/admin/ui-library'],
     actions: [
       {
         id: 'refresh',
@@ -523,6 +524,11 @@ export const DASHBOARD_SECTIONS: DashboardSection[] = [
         href: '/admin/config/n8n',
         label: 'n8n Workflows',
         icon: ZapIcon,
+      },
+      {
+        href: '/admin/ui-library',
+        label: 'UI Library',
+        icon: Palette,
       },
     ],
   },

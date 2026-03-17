@@ -13,6 +13,7 @@ import { useContextualEntity } from '@/hooks/useContextualEntity';
 import { useContextualSheetActions } from '@/hooks/useContextualSheetActions';
 import { usePlaceholderActions } from '@/hooks/usePlaceholderActions';
 import { useResponsive } from '@/hooks/useResponsive';
+import { useScrollHideNav } from '@/hooks/useScrollHideNav';
 import { cn } from '@/lib/utils';
 import { useCardHand } from '@/stores/use-card-hand';
 
@@ -66,6 +67,7 @@ export function UnifiedShellClient({
   const [adminDrawerOpen, setAdminDrawerOpen] = useState(false);
 
   const mainRef = useRef<HTMLElement>(null);
+  const { isNavVisible } = useScrollHideNav({ scrollContainerRef: mainRef });
   const contextualEntity = useContextualEntity();
   const sheetActions = useContextualSheetActions();
   const [isBottomSheetOpen, setIsBottomSheetOpen] = useState(false);
@@ -109,6 +111,7 @@ export function UnifiedShellClient({
       <ErrorBoundary fallback={null} componentName="UnifiedTopNav">
         <UnifiedTopNav
           isAdmin={isAdmin}
+          isNavVisible={isNavVisible}
           onMenuToggle={isAdminContext ? () => setAdminDrawerOpen(true) : undefined}
           isMenuOpen={isAdminContext ? adminDrawerOpen : undefined}
           userMenu={userMenu}

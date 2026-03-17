@@ -26,7 +26,6 @@ import { getFilterDisplayValue } from '../utils/filter-utils';
 
 import type { FilterConfig, FilterState } from '../entity-list-view.types';
 
-
 export interface FilterPanelProps<T> {
   /** Filter configuration */
   filters: FilterConfig<T>[];
@@ -96,7 +95,7 @@ export function FilterPanel<T>({
       {/* Active Filter Chips */}
       {activeCount > 0 && (
         <div className="flex flex-wrap gap-2">
-          {filters.map((filter) => {
+          {filters.map(filter => {
             const value = filterState[filter.id];
             if (!value) return null;
 
@@ -120,7 +119,7 @@ export function FilterPanel<T>({
 
       {/* Filter Controls */}
       <CollapsibleContent className="space-y-4 pt-2">
-        {filters.map((filter) => {
+        {filters.map(filter => {
           const value = filterState[filter.id];
 
           switch (filter.type) {
@@ -129,8 +128,8 @@ export function FilterPanel<T>({
                 <SelectFilter
                   key={filter.id}
                   filter={filter}
-                  value={value}
-                  onChange={(val) => onChange({ ...filterState, [filter.id]: val })}
+                  value={value as string | string[] | undefined}
+                  onChange={val => onChange({ ...filterState, [filter.id]: val })}
                 />
               );
 
@@ -139,8 +138,8 @@ export function FilterPanel<T>({
                 <CheckboxFilter
                   key={filter.id}
                   filter={filter}
-                  value={value}
-                  onChange={(val) => onChange({ ...filterState, [filter.id]: val })}
+                  value={value as boolean | undefined}
+                  onChange={val => onChange({ ...filterState, [filter.id]: val })}
                 />
               );
 
@@ -149,8 +148,8 @@ export function FilterPanel<T>({
                 <RangeFilter
                   key={filter.id}
                   filter={filter}
-                  value={value}
-                  onChange={(val) => onChange({ ...filterState, [filter.id]: val })}
+                  value={value as { min: number; max: number } | undefined}
+                  onChange={val => onChange({ ...filterState, [filter.id]: val })}
                 />
               );
 
@@ -159,8 +158,8 @@ export function FilterPanel<T>({
                 <DateRangeFilter
                   key={filter.id}
                   filter={filter}
-                  value={value}
-                  onChange={(val) => onChange({ ...filterState, [filter.id]: val })}
+                  value={value as { start: Date; end: Date } | undefined}
+                  onChange={val => onChange({ ...filterState, [filter.id]: val })}
                 />
               );
 
@@ -172,4 +171,3 @@ export function FilterPanel<T>({
     </Collapsible>
   );
 }
-

@@ -120,15 +120,13 @@ export function PlayerModeControls({
   const [userQuery, _setUserQuery] = useState(query || '');
 
   // Memoize callbacks to prevent hook recreation
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const handleSuggestionReceived = useCallback((suggestion: any, confidence: number) => {
+  const handleSuggestionReceived = useCallback((suggestion: unknown, confidence: number) => {
     // eslint-disable-next-line no-console
     console.log('Received suggestion:', suggestion, 'Confidence:', confidence);
   }, []);
 
   const handleSuggestionApplied = useCallback(
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (suggestion: any) => {
+    (suggestion: { action: string; rationale: string }) => {
       if (onSuggestionApplied) {
         onSuggestionApplied({
           action: suggestion.action,

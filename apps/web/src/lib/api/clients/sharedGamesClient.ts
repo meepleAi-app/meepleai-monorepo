@@ -776,6 +776,26 @@ export function createSharedGamesClient({ httpClient }: CreateSharedGamesClientP
       return result ?? [];
     },
 
+    // ========== User-Facing Document Access ==========
+
+    /**
+     * Get active documents for a shared game (Authenticated user)
+     * GET /api/v1/shared-games/{gameId}/documents
+     *
+     * Returns only active documents. Access requires the game to be RAG-public
+     * or the user to have the game in their library.
+     *
+     * @param gameId - Game UUID
+     * @returns List of active documents (may be empty if access is denied)
+     */
+    async getDocumentsForUser(gameId: string): Promise<SharedGameDocument[]> {
+      const result = await httpClient.get(
+        `/api/v1/shared-games/${gameId}/documents`,
+        z.array(SharedGameDocumentSchema)
+      );
+      return result ?? [];
+    },
+
     // ========== Rulebook Analysis (Issue #5454) ==========
 
     /**

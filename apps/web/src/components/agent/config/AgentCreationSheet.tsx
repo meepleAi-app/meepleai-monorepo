@@ -67,6 +67,14 @@ export interface AgentCreationSheetProps {
   initialGameId?: string;
   /** Pre-selected game title for header display */
   initialGameTitle?: string;
+  /** Pre-selected document IDs from SearchAgentSheet KB selection */
+  initialDocumentIds?: string[];
+  /** Human-readable summary of the pre-selected documents */
+  initialDocumentSummary?: string;
+  /** When true, skip the GameSelector section and show a read-only badge */
+  skipGameSelection?: boolean;
+  /** When true + initialDocumentIds present, skip PDF upload and show KB summary */
+  skipKBUpload?: boolean;
 }
 
 // --- Component ---
@@ -76,6 +84,10 @@ export function AgentCreationSheet({
   onClose,
   initialGameId,
   initialGameTitle,
+  initialDocumentIds,
+  initialDocumentSummary,
+  skipGameSelection = false,
+  skipKBUpload = false,
 }: AgentCreationSheetProps) {
   const router = useRouter();
 
@@ -156,6 +168,7 @@ export function AgentCreationSheet({
       agentType: selectedTypologyId ?? 'default',
       agentName: effectiveAgentName || undefined,
       strategyName: selectedStrategy,
+      documentIds: initialDocumentIds,
     });
   }, [
     selectedGameId,
@@ -166,6 +179,7 @@ export function AgentCreationSheet({
     selectedTypologyId,
     effectiveAgentName,
     selectedStrategy,
+    initialDocumentIds,
   ]);
 
   const toggleSection = useCallback((section: keyof typeof expandedSections) => {
@@ -295,26 +309,38 @@ export function AgentCreationSheet({
             />
             {expandedSections.game && (
               <div className="pb-4 space-y-3">
-                <GameSelector
-                  value={selectedGameId}
-                  onChange={handleGameChange}
-                  disabled={isCreating}
-                />
-                {selectedGameId && !isGameInCollection && (
-                  <div className="flex items-center gap-2 p-2 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">
-                    <BookOpen className="h-4 w-4 text-amber-600" />
-                    <span className="text-xs text-amber-700 dark:text-amber-300">
-                      Il gioco verrà aggiunto alla tua collezione
+                {skipGameSelection ? (
+                  /* Read-only badge when game is pre-selected from wizard */
+                  <div className="flex items-center gap-2 p-2 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                    <CheckCircle2 className="h-4 w-4 text-blue-600" />
+                    <span className="text-sm font-medium text-blue-700 dark:text-blue-300 truncate">
+                      {gameTitle}
                     </span>
                   </div>
-                )}
-                {selectedGameId && isGameInCollection && (
-                  <div className="flex items-center gap-2 p-2 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
-                    <CheckCircle2 className="h-4 w-4 text-green-600" />
-                    <span className="text-xs text-green-700 dark:text-green-300">
-                      In collezione
-                    </span>
-                  </div>
+                ) : (
+                  <>
+                    <GameSelector
+                      value={selectedGameId}
+                      onChange={handleGameChange}
+                      disabled={isCreating}
+                    />
+                    {selectedGameId && !isGameInCollection && (
+                      <div className="flex items-center gap-2 p-2 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">
+                        <BookOpen className="h-4 w-4 text-amber-600" />
+                        <span className="text-xs text-amber-700 dark:text-amber-300">
+                          Il gioco verrà aggiunto alla tua collezione
+                        </span>
+                      </div>
+                    )}
+                    {selectedGameId && isGameInCollection && (
+                      <div className="flex items-center gap-2 p-2 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
+                        <CheckCircle2 className="h-4 w-4 text-green-600" />
+                        <span className="text-xs text-green-700 dark:text-green-300">
+                          In collezione
+                        </span>
+                      </div>
+                    )}
+                  </>
                 )}
               </div>
             )}
@@ -328,9 +354,28 @@ export function AgentCreationSheet({
             />
             {expandedSections.knowledge && (
               <div className="pb-4 space-y-3">
-                {/* Drop Zone */}
-                <div
-                  className={`
+                {skipKBUpload && initialDocumentIds && initialDocumentIds.length > 0 ? (
+                  /* Read-only KB summary when pre-selected from SearchAgentSheet */
+                  <div className="flex items-start gap-2 p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
+                    <CheckCircle2 className="h-4 w-4 text-green-600 shrink-0 mt-0.5" />
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-green-700 dark:text-green-300">
+                        {initialDocumentIds.length} documento
+                        {initialDocumentIds.length !== 1 ? 'i' : ''} selezionato
+                        {initialDocumentIds.length !== 1 ? 'i' : ''}
+                      </p>
+                      {initialDocumentSummary && (
+                        <p className="text-xs text-green-600 dark:text-green-400 mt-0.5">
+                          {initialDocumentSummary}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    {/* Drop Zone */}
+                    <div
+                      className={`
                     relative border-2 border-dashed rounded-lg p-6 text-center transition-colors cursor-pointer
                     ${
                       isDragOver
@@ -339,92 +384,94 @@ export function AgentCreationSheet({
                     }
                     ${!selectedGameId ? 'opacity-50 pointer-events-none' : ''}
                   `}
-                  onDrop={handleDrop}
-                  onDragOver={handleDragOver}
-                  onDragLeave={handleDragLeave}
-                  onClick={() => selectedGameId && fileInputRef.current?.click()}
-                  role="button"
-                  tabIndex={0}
-                  aria-label="Upload PDF files"
-                >
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept=".pdf"
-                    multiple
-                    className="hidden"
-                    onChange={e => e.target.files && handleFileUpload(e.target.files)}
-                  />
-                  <Upload className="h-8 w-8 mx-auto text-muted-foreground/50 mb-2" />
-                  <p className="text-sm font-medium">Trascina PDF qui o clicca per caricare</p>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Regolamenti, FAQ, guide — max 50MB per file
-                  </p>
-                </div>
+                      onDrop={handleDrop}
+                      onDragOver={handleDragOver}
+                      onDragLeave={handleDragLeave}
+                      onClick={() => selectedGameId && fileInputRef.current?.click()}
+                      role="button"
+                      tabIndex={0}
+                      aria-label="Upload PDF files"
+                    >
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept=".pdf"
+                        multiple
+                        className="hidden"
+                        onChange={e => e.target.files && handleFileUpload(e.target.files)}
+                      />
+                      <Upload className="h-8 w-8 mx-auto text-muted-foreground/50 mb-2" />
+                      <p className="text-sm font-medium">Trascina PDF qui o clicca per caricare</p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Regolamenti, FAQ, guide — max 50MB per file
+                      </p>
+                    </div>
 
-                {!selectedGameId && (
-                  <p className="text-xs text-muted-foreground">
-                    Seleziona prima un gioco per caricare documenti.
-                  </p>
-                )}
+                    {!selectedGameId && (
+                      <p className="text-xs text-muted-foreground">
+                        Seleziona prima un gioco per caricare documenti.
+                      </p>
+                    )}
 
-                {/* Uploaded Files List */}
-                {uploadedFiles.length > 0 && (
-                  <div className="space-y-2">
-                    {uploadedFiles.map(file => (
-                      <div
-                        key={file.id}
-                        className="flex items-center gap-3 p-2 bg-muted/50 rounded-lg"
-                      >
-                        <FileText className="h-4 w-4 text-muted-foreground shrink-0" />
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium truncate">{file.name}</p>
-                          <div className="flex items-center gap-2">
-                            {file.status === 'uploading' && (
-                              <>
-                                <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
-                                  <div
-                                    className="h-full bg-primary rounded-full transition-all"
-                                    style={{ width: `${file.uploadProgress}%` }}
-                                  />
-                                </div>
-                                <span className="text-xs text-muted-foreground">
-                                  {file.uploadProgress}%
-                                </span>
-                              </>
-                            )}
-                            {file.status === 'processing' && (
-                              <span className="text-xs text-amber-600 flex items-center gap-1">
-                                <Loader2 className="h-3 w-3 animate-spin" />
-                                Elaborazione...
-                              </span>
-                            )}
-                            {file.status === 'completed' && (
-                              <span className="text-xs text-green-600 flex items-center gap-1">
-                                <CheckCircle2 className="h-3 w-3" />
-                                Completato
-                              </span>
-                            )}
-                            {file.status === 'error' && (
-                              <span className="text-xs text-red-600 flex items-center gap-1">
-                                <AlertCircle className="h-3 w-3" />
-                                {file.error || 'Errore'}
-                              </span>
-                            )}
+                    {/* Uploaded Files List */}
+                    {uploadedFiles.length > 0 && (
+                      <div className="space-y-2">
+                        {uploadedFiles.map(file => (
+                          <div
+                            key={file.id}
+                            className="flex items-center gap-3 p-2 bg-muted/50 rounded-lg"
+                          >
+                            <FileText className="h-4 w-4 text-muted-foreground shrink-0" />
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium truncate">{file.name}</p>
+                              <div className="flex items-center gap-2">
+                                {file.status === 'uploading' && (
+                                  <>
+                                    <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
+                                      <div
+                                        className="h-full bg-primary rounded-full transition-all"
+                                        style={{ width: `${file.uploadProgress}%` }}
+                                      />
+                                    </div>
+                                    <span className="text-xs text-muted-foreground">
+                                      {file.uploadProgress}%
+                                    </span>
+                                  </>
+                                )}
+                                {file.status === 'processing' && (
+                                  <span className="text-xs text-amber-600 flex items-center gap-1">
+                                    <Loader2 className="h-3 w-3 animate-spin" />
+                                    Elaborazione...
+                                  </span>
+                                )}
+                                {file.status === 'completed' && (
+                                  <span className="text-xs text-green-600 flex items-center gap-1">
+                                    <CheckCircle2 className="h-3 w-3" />
+                                    Completato
+                                  </span>
+                                )}
+                                {file.status === 'error' && (
+                                  <span className="text-xs text-red-600 flex items-center gap-1">
+                                    <AlertCircle className="h-3 w-3" />
+                                    {file.error || 'Errore'}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-6 w-6 shrink-0"
+                              onClick={() => removeFile(file.id)}
+                              aria-label={`Rimuovi ${file.name}`}
+                            >
+                              <Trash2 className="h-3 w-3" />
+                            </Button>
                           </div>
-                        </div>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-6 w-6 shrink-0"
-                          onClick={() => removeFile(file.id)}
-                          aria-label={`Rimuovi ${file.name}`}
-                        >
-                          <Trash2 className="h-3 w-3" />
-                        </Button>
+                        ))}
                       </div>
-                    ))}
-                  </div>
+                    )}
+                  </>
                 )}
               </div>
             )}

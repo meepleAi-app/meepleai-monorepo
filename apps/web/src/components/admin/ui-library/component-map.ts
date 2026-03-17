@@ -6,9 +6,67 @@ import type { ComponentType } from 'react';
 
 // ─── Data Display ─────────────────────────────────────────────────────────────
 
+import { ActivityFeed } from '@/components/admin/ActivityFeed';
+import { ActivityTimeline } from '@/components/admin/ActivityTimeline';
+import { AgentBuilderHeader } from '@/components/admin/agent-builder/AgentBuilderHeader';
+import { AgentBuilderSteps } from '@/components/admin/agent-builder/AgentBuilderSteps';
+import { AgentPreviewPanel } from '@/components/admin/agent-builder/AgentPreviewPanel';
+import { BasicInfoStep } from '@/components/admin/agent-builder/BasicInfoStep';
+import { PromptEditorStep } from '@/components/admin/agent-builder/PromptEditorStep';
+import { ReviewStep } from '@/components/admin/agent-builder/ReviewStep';
+import { ToolsStrategyStep } from '@/components/admin/agent-builder/ToolsStrategyStep';
+import { AgentBuilderForm } from '@/components/admin/agent-definitions/AgentBuilderForm';
+import { BuilderFilters } from '@/components/admin/agent-definitions/BuilderFilters';
+import { BuilderTable } from '@/components/admin/agent-definitions/BuilderTable';
+import { PhaseModelConfiguration } from '@/components/admin/agent-typologies/PhaseModelConfiguration';
+import { TypologyForm } from '@/components/admin/agent-typologies/TypologyForm';
+import { TypologyPromptEditor } from '@/components/admin/agent-typologies/TypologyPromptEditor';
+import { AgentKPICards } from '@/components/admin/agents/agent-kpi-cards'; // registry id: agent-kpi-cards
+import { AgentConfigPanel } from '@/components/admin/agents/AgentConfigPanel';
+import { AgentModeSelector } from '@/components/admin/agents/AgentModeSelector';
+import { ComparisonPanel } from '@/components/admin/agents/ComparisonPanel';
+import { CostBreakdownChart } from '@/components/admin/agents/CostBreakdownChart';
+import { MetricsKpiCards } from '@/components/admin/agents/MetricsKpiCards';
+import { TestChatInterface } from '@/components/admin/agents/TestChatInterface';
+import { TestMetricsDisplay } from '@/components/admin/agents/TestMetricsDisplay';
+import { TopAgentsTable } from '@/components/admin/agents/TopAgentsTable';
+import { UsageTrendChart } from '@/components/admin/agents/usage-trend-chart';
+import { UsageChart } from '@/components/admin/agents/UsageChart';
+import { AiModelsTable } from '@/components/admin/AiModelsTable';
+import { AlertRuleForm } from '@/components/admin/alert-rules/AlertRuleForm';
+import { AlertRuleList } from '@/components/admin/alert-rules/AlertRuleList';
+import { AlertTemplateGallery } from '@/components/admin/alert-rules/AlertTemplateGallery';
+import { AlertsBanner } from '@/components/admin/AlertsBanner';
+import { BudgetAlertBanner } from '@/components/admin/BudgetAlertBanner';
+import { BulkActionsToolbar } from '@/components/admin/bulk-actions-toolbar';
+import { BulkActionBar } from '@/components/admin/BulkActionBar';
 import { AIUsageDonut } from '@/components/admin/charts/AIUsageDonut';
-import { AdminContextualSidebar } from '@/components/admin/layout/AdminContextualSidebar';
-import { AdminShell } from '@/components/admin/layout/AdminShell';
+import { APIRequestsChart } from '@/components/admin/charts/APIRequestsChart';
+import { ChartsSection } from '@/components/admin/charts/ChartsSection';
+import { CommandCenterDashboard } from '@/components/admin/command-center/CommandCenterDashboard';
+import { DebugCostBadge } from '@/components/admin/debug-chat/DebugCostBadge';
+import { DebugEventCard } from '@/components/admin/debug-chat/DebugEventCard';
+import { DebugTimeline } from '@/components/admin/debug-chat/DebugTimeline';
+import { StrategySelectorBar } from '@/components/admin/debug-chat/StrategySelectorBar';
+import { DuplicateWarningDialog } from '@/components/admin/games/import/DuplicateWarningDialog';
+import { ProcessingMonitor } from '@/components/admin/games/processing/ProcessingMonitor';
+import { AdminGameWizard } from '@/components/admin/games/wizard/AdminGameWizard';
+import { BulkInviteDialog } from '@/components/admin/invitations/BulkInviteDialog';
+import { InvitationRow } from '@/components/admin/invitations/InvitationRow';
+import { InvitationStatusBadge } from '@/components/admin/invitations/InvitationStatusBadge';
+import { InviteUserDialog } from '@/components/admin/invitations/InviteUserDialog';
+import { KBSettings } from '@/components/admin/knowledge-base/kb-settings';
+import { ProcessingMetrics } from '@/components/admin/knowledge-base/processing-metrics';
+import { ProcessingQueue } from '@/components/admin/knowledge-base/processing-queue';
+import { RAGPipelineFlow } from '@/components/admin/knowledge-base/rag-pipeline-flow';
+import { UploadSettings } from '@/components/admin/knowledge-base/upload-settings';
+import { UploadZone } from '@/components/admin/knowledge-base/upload-zone';
+import { VectorCollectionCard } from '@/components/admin/knowledge-base/vector-collection-card';
+import { KPICard } from '@/components/admin/KPICard';
+import { AdminErrorBoundary } from '@/components/admin/layout/AdminErrorBoundary';
+import { AdminHubEmptyState } from '@/components/admin/layout/AdminHubEmptyState';
+import { AdminHubQuickLink } from '@/components/admin/layout/AdminHubQuickLink';
+import { AdminHubTabBar } from '@/components/admin/layout/AdminHubTabBar';
 import { AdminConfirmationDialog } from '@/components/ui/admin/admin-confirmation-dialog';
 import { Accordion } from '@/components/ui/data-display/accordion';
 import { DataTable } from '@/components/ui/data-display/data-table';
@@ -126,13 +184,10 @@ import { ToggleGroup } from '@/components/ui/primitives/toggle-group';
 // ─── Navigation ───────────────────────────────────────────────────────────────
 
 import { ActionGrid } from '@/components/ui/navigation/action-grid';
-import { BreadcrumbTrail } from '@/components/ui/navigation/breadcrumb-trail';
-import { CardFocusLayout } from '@/components/ui/navigation/card-focus-layout';
-import { CardStackPanel } from '@/components/ui/navigation/card-stack-panel';
 import { Command } from '@/components/ui/navigation/command';
 import { DropdownMenu } from '@/components/ui/navigation/dropdown-menu';
 import { FocusedCardArea } from '@/components/ui/navigation/focused-card-area';
-import { HandStack } from '@/components/ui/navigation/hand-stack';
+
 import { Separator } from '@/components/ui/navigation/separator';
 import { Sheet } from '@/components/ui/navigation/sheet';
 import { Tabs } from '@/components/ui/navigation/tabs';
@@ -188,13 +243,6 @@ import { BackgroundTexture } from '@/components/ui/BackgroundTexture';
 
 // ─── Admin — Layout ───────────────────────────────────────────────────────────
 
-import { AdminTopNav } from '@/components/admin/layout/AdminTopNav';
-import { AdminMobileNav } from '@/components/admin/layout/AdminMobileNav';
-import { AdminMobileTabBar } from '@/components/admin/layout/AdminMobileTabBar';
-import { AdminHubTabBar } from '@/components/admin/layout/AdminHubTabBar';
-import { AdminHubQuickLink } from '@/components/admin/layout/AdminHubQuickLink';
-import { AdminHubEmptyState } from '@/components/admin/layout/AdminHubEmptyState';
-import { AdminErrorBoundary } from '@/components/admin/layout/AdminErrorBoundary';
 import { EmergencyBanner } from '@/components/admin/layout/EmergencyBanner';
 
 // ─── Admin — Charts ───────────────────────────────────────────────────────────
@@ -204,41 +252,14 @@ import { WaterfallChart } from '@/components/admin/rag/WaterfallChart';
 import { StrategyBadge } from '@/components/admin/rag/StrategyBadge';
 import { TimelineStep } from '@/components/admin/rag/TimelineStep';
 import { ConfidenceBadge as RagConfidenceBadge } from '@/components/admin/rag/ConfidenceBadge';
-import { APIRequestsChart } from '@/components/admin/charts/APIRequestsChart';
-import { ChartsSection } from '@/components/admin/charts/ChartsSection';
 import { KpiCards as UsageKpiCards } from '@/components/admin/usage/KpiCards';
 import { RequestTimelineChart } from '@/components/admin/usage/RequestTimelineChart';
 import { CostBreakdownPanel } from '@/components/admin/usage/CostBreakdownPanel';
 import { FreeQuotaIndicator } from '@/components/admin/usage/FreeQuotaIndicator';
 import { RateLimitGauge } from '@/components/admin/usage/RateLimitGauge';
 import { RecentRequestsTable } from '@/components/admin/usage/RecentRequestsTable';
-import { AgentKPICards } from '@/components/admin/agents/agent-kpi-cards'; // registry id: agent-kpi-cards
-import { MetricsKpiCards } from '@/components/admin/agents/MetricsKpiCards';
-import { UsageChart } from '@/components/admin/agents/UsageChart';
-import { UsageTrendChart } from '@/components/admin/agents/usage-trend-chart';
-import { CostBreakdownChart } from '@/components/admin/agents/CostBreakdownChart';
 
 // ─── Admin — Agent Builder ────────────────────────────────────────────────────
-
-import { AgentBuilderHeader } from '@/components/admin/agent-builder/AgentBuilderHeader';
-import { AgentBuilderSteps } from '@/components/admin/agent-builder/AgentBuilderSteps';
-import { AgentPreviewPanel } from '@/components/admin/agent-builder/AgentPreviewPanel';
-import { BasicInfoStep } from '@/components/admin/agent-builder/BasicInfoStep';
-import { PromptEditorStep } from '@/components/admin/agent-builder/PromptEditorStep';
-import { ReviewStep } from '@/components/admin/agent-builder/ReviewStep';
-import { ToolsStrategyStep } from '@/components/admin/agent-builder/ToolsStrategyStep';
-import { AgentBuilderForm } from '@/components/admin/agent-definitions/AgentBuilderForm';
-import { BuilderFilters } from '@/components/admin/agent-definitions/BuilderFilters';
-import { BuilderTable } from '@/components/admin/agent-definitions/BuilderTable';
-import { AgentConfigPanel } from '@/components/admin/agents/AgentConfigPanel';
-import { AgentModeSelector } from '@/components/admin/agents/AgentModeSelector';
-import { TestChatInterface } from '@/components/admin/agents/TestChatInterface';
-import { TestMetricsDisplay } from '@/components/admin/agents/TestMetricsDisplay';
-import { TopAgentsTable } from '@/components/admin/agents/TopAgentsTable';
-import { ComparisonPanel } from '@/components/admin/agents/ComparisonPanel';
-import { PhaseModelConfiguration } from '@/components/admin/agent-typologies/PhaseModelConfiguration';
-import { TypologyForm } from '@/components/admin/agent-typologies/TypologyForm';
-import { TypologyPromptEditor } from '@/components/admin/agent-typologies/TypologyPromptEditor';
 
 // ─── Admin — Sandbox ──────────────────────────────────────────────────────────
 
@@ -255,20 +276,7 @@ import { AutoTestSummary } from '@/components/admin/sandbox/AutoTestSummary';
 
 // ─── Admin — Debug Chat ───────────────────────────────────────────────────────
 
-import { DebugCostBadge } from '@/components/admin/debug-chat/DebugCostBadge';
-import { DebugEventCard } from '@/components/admin/debug-chat/DebugEventCard';
-import { DebugTimeline } from '@/components/admin/debug-chat/DebugTimeline';
-import { StrategySelectorBar } from '@/components/admin/debug-chat/StrategySelectorBar';
-
 // ─── Admin — Knowledge Base ───────────────────────────────────────────────────
-
-import { KBSettings } from '@/components/admin/knowledge-base/kb-settings';
-import { ProcessingMetrics } from '@/components/admin/knowledge-base/processing-metrics';
-import { ProcessingQueue } from '@/components/admin/knowledge-base/processing-queue';
-import { RAGPipelineFlow } from '@/components/admin/knowledge-base/rag-pipeline-flow';
-import { UploadSettings } from '@/components/admin/knowledge-base/upload-settings';
-import { UploadZone } from '@/components/admin/knowledge-base/upload-zone';
-import { VectorCollectionCard } from '@/components/admin/knowledge-base/vector-collection-card';
 
 // ─── Admin — Shared Games ─────────────────────────────────────────────────────
 
@@ -295,10 +303,6 @@ import { ActivityFilters } from '@/components/admin/users/activity-filters';
 
 // ─── Admin — Alert Rules ──────────────────────────────────────────────────────
 
-import { AlertRuleForm } from '@/components/admin/alert-rules/AlertRuleForm';
-import { AlertRuleList } from '@/components/admin/alert-rules/AlertRuleList';
-import { AlertTemplateGallery } from '@/components/admin/alert-rules/AlertTemplateGallery';
-
 // ─── Admin — Notifications ────────────────────────────────────────────────────
 
 import { ChannelSelector } from '@/components/admin/notifications/ChannelSelector';
@@ -307,23 +311,13 @@ import { RecipientSelector } from '@/components/admin/notifications/RecipientSel
 
 // ─── Admin — Invitations ──────────────────────────────────────────────────────
 
-import { BulkInviteDialog } from '@/components/admin/invitations/BulkInviteDialog';
-import { InvitationRow } from '@/components/admin/invitations/InvitationRow';
-import { InvitationStatusBadge } from '@/components/admin/invitations/InvitationStatusBadge';
-import { InviteUserDialog } from '@/components/admin/invitations/InviteUserDialog';
-
 // ─── Admin — Strategies & Overview ───────────────────────────────────────────
 
 import { StrategyEditor } from '@/components/admin/strategies/StrategyEditor';
 import { QuickActionsWidget } from '@/components/admin/overview/QuickActionsWidget';
 import { SystemHealthCard } from '@/components/admin/overview/SystemHealthCard';
-import { CommandCenterDashboard } from '@/components/admin/command-center/CommandCenterDashboard';
 
 // ─── Admin — Games ────────────────────────────────────────────────────────────
-
-import { AdminGameWizard } from '@/components/admin/games/wizard/AdminGameWizard';
-import { ProcessingMonitor } from '@/components/admin/games/processing/ProcessingMonitor';
-import { DuplicateWarningDialog } from '@/components/admin/games/import/DuplicateWarningDialog';
 
 // ─── Admin — Playground ───────────────────────────────────────────────────────
 
@@ -331,17 +325,9 @@ import { BudgetDebugPanel } from '@/components/admin/playground/budget-debug-pan
 
 // ─── Admin — Misc ─────────────────────────────────────────────────────────────
 
-import { KPICard } from '@/components/admin/KPICard';
 import { KPICardsGrid } from '@/components/admin/KPICardsGrid';
 import { StatCard as AdminStatCard } from '@/components/admin/StatCard';
-import { ActivityFeed } from '@/components/admin/ActivityFeed';
-import { ActivityTimeline } from '@/components/admin/ActivityTimeline';
-import { AlertsBanner } from '@/components/admin/AlertsBanner';
-import { BudgetAlertBanner } from '@/components/admin/BudgetAlertBanner';
-import { BulkActionBar } from '@/components/admin/BulkActionBar';
-import { BulkActionsToolbar } from '@/components/admin/bulk-actions-toolbar';
 import { ServiceHealthMatrix } from '@/components/admin/ServiceHealthMatrix';
-import { AiModelsTable } from '@/components/admin/AiModelsTable';
 
 // ─── Component Map ────────────────────────────────────────────────────────────
 
@@ -456,13 +442,10 @@ export const COMPONENT_MAP: Record<string, ComponentType<any>> = {
 
   // Navigation
   'action-grid': ActionGrid,
-  'breadcrumb-trail': BreadcrumbTrail,
-  'card-focus-layout': CardFocusLayout,
-  'card-stack-panel': CardStackPanel,
   command: Command,
   'dropdown-menu': DropdownMenu,
   'focused-card-area': FocusedCardArea,
-  'hand-stack': HandStack,
+  // 'hand-stack': removed — component no longer exists
   separator: Separator,
   sheet: Sheet,
   tabs: Tabs,
@@ -514,11 +497,9 @@ export const COMPONENT_MAP: Record<string, ComponentType<any>> = {
   'background-texture': BackgroundTexture,
 
   // Admin — Layout
-  'admin-shell': AdminShell,
-  'admin-top-nav': AdminTopNav,
-  'admin-contextual-sidebar': AdminContextualSidebar,
-  'admin-mobile-nav': AdminMobileNav,
-  'admin-mobile-tab-bar': AdminMobileTabBar,
+  // 'admin-top-nav': removed — component no longer exists
+  // 'admin-mobile-nav': removed — component no longer exists
+
   'admin-hub-tab-bar': AdminHubTabBar,
   'admin-hub-quick-link': AdminHubQuickLink,
   'admin-hub-empty-state': AdminHubEmptyState,

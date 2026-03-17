@@ -29,8 +29,8 @@ import {
   type MeepleCardMetadata,
 } from '@/components/ui/data-display/meeple-card';
 import { getNavigationLinks } from '@/config/entity-navigation';
-import { useEntityActions } from '@/hooks/use-entity-actions';
 import { useAuthUser } from '@/hooks/useAuthUser';
+import { useEntityActions } from '@/hooks/useEntityActions';
 import type { Game } from '@/lib/api';
 
 // ============================================================================

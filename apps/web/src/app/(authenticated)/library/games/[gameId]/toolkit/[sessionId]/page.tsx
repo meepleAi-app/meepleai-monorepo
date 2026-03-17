@@ -15,7 +15,7 @@ import {
 } from '@/components/session';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/data-display/card';
 import { getGameTemplateByName } from '@/lib/config/game-templates';
-import { useSessionSync } from '@/lib/hooks/useSessionSync';
+import { useSessionSync } from '@/lib/domain-hooks/useSessionSync';
 import { useSessionStore } from '@/lib/stores/sessionStore';
 
 /**

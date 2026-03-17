@@ -43,7 +43,7 @@ import { Input } from '@/components/ui/primitives/input';
 import { Label } from '@/components/ui/primitives/label';
 import { useApiClient } from '@/lib/api/context';
 import type { AiToolkitSuggestion } from '@/lib/api/schemas/toolkit.schemas';
-import { usePrivateToolkitEditor } from '@/lib/hooks/usePrivateToolkitEditor';
+import { usePrivateToolkitEditor } from '@/lib/domain-hooks/usePrivateToolkitEditor';
 import type {
   CardToolDto,
   CounterToolDto,

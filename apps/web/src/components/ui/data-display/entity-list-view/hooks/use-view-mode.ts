@@ -27,6 +27,7 @@
 import { useCallback, useEffect } from 'react';
 
 import { useLocalStorage } from '@/hooks/useLocalStorage';
+import { logger } from '@/lib/logger';
 
 import type { ViewMode } from '../entity-list-view.types';
 
@@ -79,7 +80,7 @@ export function useViewMode(
     (newMode: ViewMode) => {
       // Validate mode is available
       if (!availableModes.includes(newMode)) {
-        console.warn(
+        logger.warn(
           `View mode "${newMode}" is not available. Available modes: ${availableModes.join(', ')}`
         );
         return;
@@ -106,7 +107,7 @@ export function useViewMode(
   useEffect(() => {
     if (!availableModes.includes(currentMode)) {
       const fallbackMode = availableModes[0] || 'grid';
-      console.warn(
+      logger.warn(
         `Current mode "${currentMode}" is not available. Falling back to "${fallbackMode}"`
       );
       setInternalMode(fallbackMode);

@@ -4,7 +4,7 @@ import { type ReactNode, useEffect, useRef, useState } from 'react';
 
 import { usePathname } from 'next/navigation';
 
-import { DashboardEngineProvider } from '@/components/dashboard';
+import { DashboardEngineProvider } from '@/components/dashboard-v2';
 import { ErrorBoundary } from '@/components/errors/ErrorBoundary';
 import { ContextualBottomSheet } from '@/components/layout/ContextualBottomSheet';
 import { MobileTabBar } from '@/components/layout/MobileTabBar';

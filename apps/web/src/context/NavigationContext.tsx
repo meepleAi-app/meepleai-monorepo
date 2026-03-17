@@ -15,6 +15,7 @@
 
 import { createContext, useContext, useCallback, useState, type ReactNode } from 'react';
 
+import { logger } from '@/lib/logger';
 import type { NavAction, NavTab, NavigationContextValue, PageNavConfig } from '@/types/navigation';
 
 // ─── Default Value ────────────────────────────────────────────────────────────
@@ -71,11 +72,7 @@ export function NavigationProvider({ children }: NavigationProviderProps) {
     clearNavConfig,
   };
 
-  return (
-    <NavigationContext.Provider value={value}>
-      {children}
-    </NavigationContext.Provider>
-  );
+  return <NavigationContext.Provider value={value}>{children}</NavigationContext.Provider>;
 }
 
 // ─── Hooks ────────────────────────────────────────────────────────────────────
@@ -89,9 +86,9 @@ export function NavigationProvider({ children }: NavigationProviderProps) {
 export function useNavigation(): NavigationContextValue {
   const ctx = useContext(NavigationContext);
   if (ctx === DEFAULT_VALUE && process.env.NODE_ENV === 'development') {
-    console.warn(
+    logger.warn(
       '[useNavigation] Used outside <NavigationProvider>. ' +
-      'Make sure <NavigationProvider> wraps the layout.'
+        'Make sure <NavigationProvider> wraps the layout.'
     );
   }
   return ctx;

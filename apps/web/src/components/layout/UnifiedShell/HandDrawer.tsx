@@ -1,7 +1,7 @@
 'use client';
 
-import { useDashboardMode } from '@/components/dashboard';
-import { SessionPanel } from '@/components/dashboard/SessionPanel';
+import { useDashboardMode } from '@/components/dashboard-v2';
+import { SessionPanel } from '@/components/dashboard-v2/SessionPanel';
 import type { HandCard } from '@/stores/use-card-hand';
 import { useCardHand } from '@/stores/use-card-hand';
 

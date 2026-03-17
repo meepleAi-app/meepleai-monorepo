@@ -12,7 +12,7 @@ import { PWAProvider } from '../PWAProvider';
 
 // Mock usePWA hook
 const mockUsePWA = vi.fn();
-vi.mock('@/lib/hooks/usePWA', () => ({
+vi.mock('@/lib/domain-hooks/usePWA', () => ({
   usePWA: () => mockUsePWA(),
 }));
 
@@ -22,7 +22,9 @@ vi.mock('framer-motion', async () => {
   return {
     ...actual,
     motion: {
-      div: ({ children, ...props }: { children?: React.ReactNode }) => <div {...props}>{children}</div>,
+      div: ({ children, ...props }: { children?: React.ReactNode }) => (
+        <div {...props}>{children}</div>
+      ),
     },
     AnimatePresence: ({ children }: { children?: React.ReactNode }) => <>{children}</>,
   };

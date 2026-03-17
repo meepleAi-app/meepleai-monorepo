@@ -22,8 +22,8 @@ import {
 
 import { Switch } from '@/components/ui/forms/switch';
 import { Button } from '@/components/ui/primitives/button';
-import { useToast } from '@/hooks/use-toast';
 import { usePushNotifications } from '@/hooks/usePushNotifications';
+import { useToast } from '@/hooks/useToast';
 
 interface NotificationPreferences {
   userId: string;

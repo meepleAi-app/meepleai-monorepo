@@ -95,7 +95,16 @@ export function GamingHubClient() {
   if (dashCtx.isSessionMode && dashCtx.hero.data) {
     return (
       <div className="py-6 space-y-4 w-full max-w-screen-xl mx-auto">
-        <SessionModeDashboard session={dashCtx.hero.data as any} />
+        <SessionModeDashboard
+          session={
+            dashCtx.hero.data as {
+              id: string;
+              gameId: string;
+              playerCount: number;
+              durationMinutes: number;
+            }
+          }
+        />
       </div>
     );
   }

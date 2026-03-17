@@ -3,6 +3,7 @@
 import { PlusIcon } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
+import { logger } from '@/lib/logger';
 
 import { CategoryRow } from './category-row';
 
@@ -28,17 +29,17 @@ const MOCK_CATEGORIES: Category[] = [
 export function CategoriesTable() {
   const handleEdit = (id: string) => {
     // TODO: Implement edit dialog
-    console.log('Edit category:', id);
+    logger.debug(`Edit category: ${id}`);
   };
 
   const handleDelete = (id: string) => {
     // TODO: Implement delete confirmation
-    console.log('Delete category:', id);
+    logger.debug(`Delete category: ${id}`);
   };
 
   const handleAddCategory = () => {
     // TODO: Implement add category dialog
-    console.log('Add category');
+    logger.debug('Add category');
   };
 
   return (

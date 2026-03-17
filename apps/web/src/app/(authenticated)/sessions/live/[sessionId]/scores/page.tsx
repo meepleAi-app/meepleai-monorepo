@@ -8,7 +8,7 @@
 
 import { use } from 'react';
 
-import { ScoreBoard } from '@/components/sessions/live/ScoreBoard';
+import { ScoreBoard } from '@/components/session/live/ScoreBoard';
 import { useLiveSessionStore } from '@/lib/stores/live-session-store';
 
 interface LiveSessionScoresPageProps {

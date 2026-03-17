@@ -137,11 +137,7 @@ describe('SessionQuotaBar - Tier Display', () => {
   });
 
   it('does not display remaining slots when zero', () => {
-    render(
-      <SessionQuotaBar
-        {...createQuotaProps({ remainingSlots: 0, canCreateNew: false })}
-      />
-    );
+    render(<SessionQuotaBar {...createQuotaProps({ remainingSlots: 0, canCreateNew: false })} />);
 
     expect(screen.queryByText(/slot disponibili/)).not.toBeInTheDocument();
   });

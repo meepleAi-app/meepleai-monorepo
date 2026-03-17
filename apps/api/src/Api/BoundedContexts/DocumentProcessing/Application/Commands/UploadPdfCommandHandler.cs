@@ -132,10 +132,10 @@ internal class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUp
         // Issue #3664: Handle private game PDF uploads
         if (command.PrivateGameId.HasValue)
         {
-            // Compute content hash and check for duplicates (private game)
+            // Compute content hash and check for duplicates (global — same file content across any game)
             var privateContentHash = await ComputeContentHashAsync(file, cancellationToken).ConfigureAwait(false);
             if (await _db.PdfDocuments.AnyAsync(
-                    p => p.ContentHash == privateContentHash && p.PrivateGameId == command.PrivateGameId.Value,
+                    p => p.ContentHash == privateContentHash,
                     cancellationToken).ConfigureAwait(false))
             {
                 return new PdfUploadResult(false, DuplicateContentErrorMessage, null);
@@ -156,10 +156,10 @@ internal class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUp
 
         var gameId = resolvedGameId.Value.ToString();
 
-        // Compute content hash and check for duplicates
+        // Compute content hash and check for duplicates (global — same file content across any game)
         var contentHash = await ComputeContentHashAsync(file, cancellationToken).ConfigureAwait(false);
         if (await _db.PdfDocuments.AnyAsync(
-                p => p.ContentHash == contentHash && p.GameId == resolvedGameId.Value,
+                p => p.ContentHash == contentHash,
                 cancellationToken).ConfigureAwait(false))
         {
             return new PdfUploadResult(false, DuplicateContentErrorMessage, null);

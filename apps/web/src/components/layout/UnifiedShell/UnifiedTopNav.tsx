@@ -12,6 +12,8 @@ import { AdminToggle } from './AdminToggle';
 
 interface UnifiedTopNavProps {
   isAdmin: boolean;
+  /** Whether the nav is visible (scroll-hide behaviour) */
+  isNavVisible?: boolean;
   /** Slot for user menu (passed from shell) */
   userMenu?: React.ReactNode;
   /** Slot for notification bell (passed from shell) */
@@ -28,6 +30,7 @@ interface UnifiedTopNavProps {
 
 export function UnifiedTopNav({
   isAdmin,
+  isNavVisible = true,
   userMenu,
   notificationBell,
   searchTrigger,
@@ -47,7 +50,9 @@ export function UnifiedTopNav({
         'sticky top-0 z-40 h-14',
         'flex items-center justify-between px-4',
         'bg-background/95 backdrop-blur-xl',
-        'border-b border-border/40'
+        'border-b border-border/40',
+        'transition-transform duration-300',
+        !isNavVisible && '-translate-y-full -mt-14 md:translate-y-0 md:mt-0'
       )}
       data-testid="unified-top-nav"
     >

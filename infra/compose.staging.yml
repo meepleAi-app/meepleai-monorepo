@@ -34,6 +34,14 @@ services:
       QDRANT__SERVICE__API_KEY: ${QDRANT_API_KEY:?QDRANT_API_KEY is required - see secrets/qdrant.secret.example}
     volumes:
       - qdrantdata-staging:/qdrant/storage
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.qdrant.rule=Host(`meepleai.app`) && PathPrefix(`/services/qdrant`)"
+      - "traefik.http.routers.qdrant.entrypoints=websecure"
+      - "traefik.http.routers.qdrant.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.qdrant.middlewares=integration-auth,strip-services-qdrant"
+      - "traefik.http.middlewares.strip-services-qdrant.stripprefix.prefixes=/services/qdrant"
+      - "traefik.http.services.qdrant.loadbalancer.server.port=6333"
 
   # ===========================================================================
   # Application Services

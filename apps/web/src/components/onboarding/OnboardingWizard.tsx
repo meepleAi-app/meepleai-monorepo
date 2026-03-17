@@ -28,6 +28,8 @@ import { ProfileStep } from './ProfileStep';
 export interface OnboardingWizardProps {
   token: string;
   role: string;
+  /** Skip to this step (default: 1). Use startStep={2} when password is already set (e.g. from accept-invite page). */
+  startStep?: number;
 }
 
 interface WizardState {
@@ -39,11 +41,13 @@ interface WizardState {
 
 const STEP_LABELS = ['Password', 'Profile', 'Interests', 'First Game', 'First Agent'];
 
-export function OnboardingWizard({ token, role: _role }: OnboardingWizardProps) {
+export function OnboardingWizard({ token, role: _role, startStep = 1 }: OnboardingWizardProps) {
   const router = useRouter();
   const [state, setState] = useState<WizardState>({
-    currentStep: 1,
-    passwordCompleted: false,
+    currentStep: startStep,
+    // When starting past step 1, password is already completed.
+    // This controls: goToPrev() clamping (min step 2) and "Skip wizard" link visibility.
+    passwordCompleted: startStep > 1,
     addedGameId: null,
     addedGameName: null,
   });

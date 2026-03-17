@@ -51,7 +51,7 @@ public sealed class QueueStreamServiceTests
 
         var completedEvt = new QueueStreamEvent(
             QueueStreamEventType.JobCompleted, jobId,
-            new JobCompletedData(5.0), DateTimeOffset.UtcNow);
+            new JobCompletedData(5.0, null, null, null), DateTimeOffset.UtcNow);
         await _service.PublishJobEventAsync(completedEvt, cts.Token);
 
         await subscriberTask;
@@ -157,7 +157,7 @@ public sealed class QueueStreamServiceTests
         // Act - publish a terminal event (JobFailed)
         var failedEvt = new QueueStreamEvent(
             QueueStreamEventType.JobFailed, jobId,
-            new JobFailedData("Test error", null, 0), DateTimeOffset.UtcNow);
+            new JobFailedData("Test error", null, 0, null, null, null), DateTimeOffset.UtcNow);
         await _service.PublishJobEventAsync(failedEvt, cts.Token);
 
         await subscriberTask;

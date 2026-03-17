@@ -7,8 +7,6 @@ using Api.Infrastructure;
 using Api.Infrastructure.Telemetry;
 using Api.Infrastructure.Health.Extensions;
 using Api.Infrastructure.Health.Models;
-using Microsoft.OpenApi.Models;
-using System.Diagnostics;
 
 namespace Api.Extensions;
 
@@ -38,21 +36,8 @@ internal static class ObservabilityServiceExtensions
             IConfiguration configuration,
             IWebHostEnvironment environment)
     {
-        // Issue #1563: HyperDX OpenTelemetry configuration
-#pragma warning disable S1075 // URIs should not be hardcoded - Default/Fallback value
-        var hyperDxEndpoint = configuration["HYPERDX_OTLP_ENDPOINT"] ?? "http://meepleai-hyperdx:14317";
-#pragma warning restore S1075
         var serviceName = "meepleai-api";
         var serviceVersion = "1.0.0";
-        var isDevelopment = environment.IsDevelopment();
-
-        // Issue #1567: Add logging for OpenTelemetry debugging
-        services.AddLogging(logging =>
-        {
-            logging.AddConsole();
-            logging.AddFilter("OpenTelemetry", LogLevel.Debug);
-            logging.AddFilter("System.Net.Http", LogLevel.Debug);
-        });
 
         services.AddOpenTelemetry()
             .ConfigureResource(resource => resource
@@ -65,17 +50,14 @@ internal static class ObservabilityServiceExtensions
                     ["deployment.environment"] = environment.EnvironmentName,
                     ["service.namespace"] = "meepleai"
                 }))
-            .WithTracing(tracing => tracing.ConfigureTracing(hyperDxEndpoint, isDevelopment))
-            .WithMetrics(metrics => metrics.ConfigureMetrics(hyperDxEndpoint));
+            .WithTracing(tracing => tracing.ConfigureTracing())
+            .WithMetrics(metrics => metrics.ConfigureMetrics());
 
         return services;
     }
 
-    private static TracerProviderBuilder ConfigureTracing(this TracerProviderBuilder tracing, string hyperDxEndpoint, bool isDevelopment)
+    private static TracerProviderBuilder ConfigureTracing(this TracerProviderBuilder tracing)
     {
-        var maxQueueSize = isDevelopment ? 512 : 2048;
-        var maxExportBatchSize = isDevelopment ? 128 : 512;
-
         return tracing
             .SetSampler(new AlwaysOnSampler())
             .AddAspNetCoreInstrumentation(options =>
@@ -96,64 +78,27 @@ internal static class ObservabilityServiceExtensions
             // Add explicit Activity Sources for tracing (not Meter sources)
             .AddSource("Microsoft.AspNetCore")  // ASP.NET Core framework traces
             .AddSource("System.Net.Http")       // HTTP client traces
-            .AddSource("test-telemetry")        // Issue #1567: Manual test spans
                                                 // Add custom MeepleAI Activity Sources for domain-specific tracing
             .AddSource(MeepleAiActivitySources.ApiSourceName)
             .AddSource(MeepleAiActivitySources.RagSourceName)
             .AddSource(MeepleAiActivitySources.VectorSearchSourceName)
             .AddSource(MeepleAiActivitySources.PdfProcessingSourceName)
             .AddSource(MeepleAiActivitySources.CacheSourceName)
-            // Issue #1563: Add sensitive data processor (P1-SEC3)
+            // Issue #1563: Sensitive data processor (P1-SEC3)
 #pragma warning disable CA2000 // Dispose objects before losing scope - OpenTelemetry takes ownership
-            .AddProcessor(new SensitiveDataProcessor())
+            .AddProcessor(new SensitiveDataProcessor());
 #pragma warning restore CA2000
-            // Issue #1567: HyperDX OTLP Exporter (HTTP instead of gRPC for compatibility)
-            // gRPC in .NET has issues with insecure connections even with AppContext switch
-            // Using HTTP/Protobuf as more reliable alternative for local development
-            .AddOtlpExporter(options =>
-            {
-                // Use HTTP endpoint (4318) instead of gRPC (4317)
-                // HTTP/Protobuf requires explicit /v1/traces path for traces
-                var httpEndpoint = hyperDxEndpoint.Replace(":4317", ":4318");
-                if (!httpEndpoint.EndsWith("/v1/traces", StringComparison.Ordinal))
-                {
-                    httpEndpoint = httpEndpoint.TrimEnd('/') + "/v1/traces";
-                }
-                options.Endpoint = new Uri(httpEndpoint);
-                options.Protocol = OpenTelemetry.Exporter.OtlpExportProtocol.HttpProtobuf;
-                options.ExportProcessorType = OpenTelemetry.ExportProcessorType.Batch;
-                options.BatchExportProcessorOptions = new OpenTelemetry.BatchExportProcessorOptions<Activity>
-                {
-                    MaxQueueSize = maxQueueSize,
-                    ScheduledDelayMilliseconds = 5000,
-                    ExporterTimeoutMilliseconds = 30000,
-                    MaxExportBatchSize = maxExportBatchSize
-                };
-            });
     }
 
-    private static MeterProviderBuilder ConfigureMetrics(this MeterProviderBuilder metrics, string hyperDxEndpoint)
+    private static MeterProviderBuilder ConfigureMetrics(this MeterProviderBuilder metrics)
     {
         return metrics
             .AddAspNetCoreInstrumentation()
             .AddHttpClientInstrumentation()
             .AddRuntimeInstrumentation()
             .AddMeter(MeepleAiMetrics.MeterName)
-            // Keep Prometheus exporter for Grafana infrastructure metrics
-            .AddPrometheusExporter()
-            // Issue #1567: Add HyperDX OTLP Exporter for metrics (HTTP for compatibility)
-            // Note: Metrics use PeriodicExportingMetricReader, not BatchProcessor like traces
-            .AddOtlpExporter(options =>
-            {
-                // HTTP/Protobuf requires explicit /v1/metrics path for metrics
-                var httpEndpoint = hyperDxEndpoint.Replace(":4317", ":4318");
-                if (!httpEndpoint.EndsWith("/v1/metrics", StringComparison.Ordinal))
-                {
-                    httpEndpoint = httpEndpoint.TrimEnd('/') + "/v1/metrics";
-                }
-                options.Endpoint = new Uri(httpEndpoint);
-                options.Protocol = OpenTelemetry.Exporter.OtlpExportProtocol.HttpProtobuf;
-            });
+            // Prometheus exporter for Grafana infrastructure metrics
+            .AddPrometheusExporter();
     }
 
     /// <summary>
@@ -265,13 +210,6 @@ internal static class ObservabilityServiceExtensions
                 "configuration",
                 failureStatus: HealthStatus.Degraded,
                 tags: ConfigurationTags);
-#pragma warning disable S125 // Sections of code should not be commented out
-        // HyperDX health check disabled - service not in default docker-compose profile
-        // .AddUrlGroup(
-        //     new Uri($"{hyperDxUrl}/health"),
-        //     name: "hyperdx",
-        //     tags: HyperDxTags);
-#pragma warning restore S125
     }
 
     /// <summary>

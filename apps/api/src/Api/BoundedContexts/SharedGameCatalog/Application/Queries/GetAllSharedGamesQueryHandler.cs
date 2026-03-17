@@ -66,7 +66,8 @@ internal sealed class GetAllSharedGamesQueryHandler : IRequestHandler<GetAllShar
                 g.ThumbnailUrl,
                 (GameStatus)g.Status,
                 g.CreatedAt,
-                g.ModifiedAt))
+                g.ModifiedAt,
+                g.IsRagPublic))
             .ToListAsync(cancellationToken)
             .ConfigureAwait(false);
 

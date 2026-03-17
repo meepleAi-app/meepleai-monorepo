@@ -1,7 +1,9 @@
+using Api.Infrastructure.Entities;
 using Api.BoundedContexts.KnowledgeBase.Application.Commands;
 using Api.BoundedContexts.KnowledgeBase.Application.Handlers;
 using Api.BoundedContexts.KnowledgeBase.Domain.Entities;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
+using Api.BoundedContexts.KnowledgeBase.Application.Services;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Api.Tests.Constants;
 using MediatR;
@@ -42,7 +44,7 @@ public class CreateChatThreadCommandHandlerTests
             .Setup(r => r.GetByGameIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<Agent>());
 
-        _handler = new CreateChatThreadCommandHandler(_mockRepository.Object, _mockAgentRepository.Object, _mockUnitOfWork.Object, _mockPublisher.Object, _mockLogger.Object);
+        _handler = new CreateChatThreadCommandHandler(_mockRepository.Object, _mockAgentRepository.Object, _mockUnitOfWork.Object, _mockPublisher.Object, CreatePermissiveRagAccessServiceMock(), _mockLogger.Object);
     }
 
     [Fact]
@@ -126,5 +128,11 @@ public class CreateChatThreadCommandHandlerTests
         // Act & Assert
         await Assert.ThrowsAsync<ArgumentNullException>(
             () => _handler.Handle(null!, TestContext.Current.CancellationToken));
+    }
+    private static IRagAccessService CreatePermissiveRagAccessServiceMock()
+    {
+        var mock = new Mock<IRagAccessService>();
+        mock.Setup(s => s.CanAccessRagAsync(It.IsAny<Guid>(), It.IsAny<Guid>(), It.IsAny<UserRole>(), It.IsAny<CancellationToken>())).ReturnsAsync(true);
+        return mock.Object;
     }
 }

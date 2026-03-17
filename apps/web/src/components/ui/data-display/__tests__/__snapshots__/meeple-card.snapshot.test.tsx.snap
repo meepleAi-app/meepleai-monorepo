@@ -12,10 +12,30 @@ exports[`MeepleCard - Snapshots > Complete Examples > should match snapshot for 
   tabindex="0"
 >
   <span
-    aria-hidden="true"
-    class="absolute left-0 top-0 bottom-0 w-1 group-hover:w-1.5 transition-all duration-250"
-    style="background-color: rgb(224, 97, 6);"
-  />
+    class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md backdrop-blur-[8px] font-quicksand font-bold text-[10px] uppercase tracking-wider text-white absolute top-2 left-2.5 z-[2]"
+    style="background-color: rgba(224, 97, 6, 0.85);"
+  >
+    <span
+      class="inline-flex items-center"
+    >
+      <span
+        class="inline-flex items-center justify-center rounded-full relative w-5 h-5 text-xs"
+        data-testid="mana-symbol-game"
+        style="--mana-color: 25 95% 45%; background: radial-gradient(circle at 35% 35%, rgb(224, 97, 6) 0%, rgba(224, 97, 6, 0.65) 100%); box-shadow: 0 4px 16px hsl(25 95% 45% / 0.35); outline: 2px solid hsl(25 95% 45% / 0.35); outline-offset: 2px;"
+      >
+        <span
+          aria-hidden="true"
+          class="absolute inset-[3px] rounded-full border border-white/[0.08]"
+        />
+        <span
+          class="relative z-[1] drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)]"
+        >
+          🎲
+        </span>
+      </span>
+    </span>
+    Game
+  </span>
   <div
     class="absolute top-1.5 left-1.5 sm:top-2 sm:left-2.5 z-10 flex flex-col gap-1 sm:gap-1.5"
     data-testid="meeple-card-tag-stack"
@@ -364,13 +384,33 @@ exports[`MeepleCard - Snapshots > Entity Types > should match snapshot for colle
   data-entity="custom"
   data-testid="meeple-card"
   data-variant="grid"
-  style="--mc-entity-color: hsl(220 70% 50%); will-change: transform, box-shadow, outline;"
+  style="--mc-entity-color: hsl(220 15% 45%); will-change: transform, box-shadow, outline;"
 >
   <span
-    aria-hidden="true"
-    class="absolute left-0 top-0 bottom-0 w-1 group-hover:w-1.5 transition-all duration-250"
-    style="background-color: rgb(38, 98, 217);"
-  />
+    class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md backdrop-blur-[8px] font-quicksand font-bold text-[10px] uppercase tracking-wider text-white absolute top-2 left-2.5 z-[2]"
+    style="background-color: rgba(98, 109, 132, 0.85);"
+  >
+    <span
+      class="inline-flex items-center"
+    >
+      <span
+        class="inline-flex items-center justify-center rounded-full relative w-5 h-5 text-xs"
+        data-testid="mana-symbol-custom"
+        style="--mana-color: 220 15% 45%; background: radial-gradient(circle at 35% 35%, rgb(98, 109, 132) 0%, rgba(98, 109, 132, 0.65) 100%); box-shadow: 0 4px 16px hsl(220 15% 45% / 0.35); outline: 2px solid hsl(220 15% 45% / 0.35); outline-offset: 2px;"
+      >
+        <span
+          aria-hidden="true"
+          class="absolute inset-[3px] rounded-full border border-white/[0.08]"
+        />
+        <span
+          class="relative z-[1] drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)]"
+        >
+          ✧
+        </span>
+      </span>
+    </span>
+    Custom
+  </span>
   <div
     class="absolute top-1.5 left-1.5 sm:top-2 sm:left-2.5 z-10 flex flex-col gap-1 sm:gap-1.5"
     data-testid="meeple-card-tag-stack"
@@ -378,7 +418,7 @@ exports[`MeepleCard - Snapshots > Entity Types > should match snapshot for colle
     <span
       class="max-w-[60px] sm:max-w-[80px] truncate px-1.5 sm:px-2 py-px sm:py-0.5 text-[8px] sm:text-[9px] font-extrabold uppercase tracking-[0.04em] text-white rounded-[5px] sm:rounded-[6px] shadow-sm cursor-default"
       data-state="closed"
-      style="background-color: rgb(38, 98, 217);"
+      style="background-color: rgb(98, 109, 132);"
     >
       Custom
     </span>
@@ -454,10 +494,30 @@ exports[`MeepleCard - Snapshots > Entity Types > should match snapshot for custo
   style="--mc-entity-color: hsl(142 76% 36%); will-change: transform, box-shadow, outline;"
 >
   <span
-    aria-hidden="true"
-    class="absolute left-0 top-0 bottom-0 w-1 group-hover:w-1.5 transition-all duration-250"
-    style="background-color: rgb(22, 162, 73);"
-  />
+    class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md backdrop-blur-[8px] font-quicksand font-bold text-[10px] uppercase tracking-wider text-white absolute top-2 left-2.5 z-[2]"
+    style="background-color: rgba(98, 109, 132, 0.85);"
+  >
+    <span
+      class="inline-flex items-center"
+    >
+      <span
+        class="inline-flex items-center justify-center rounded-full relative w-5 h-5 text-xs"
+        data-testid="mana-symbol-custom"
+        style="--mana-color: 220 15% 45%; background: radial-gradient(circle at 35% 35%, rgb(98, 109, 132) 0%, rgba(98, 109, 132, 0.65) 100%); box-shadow: 0 4px 16px hsl(220 15% 45% / 0.35); outline: 2px solid hsl(220 15% 45% / 0.35); outline-offset: 2px;"
+      >
+        <span
+          aria-hidden="true"
+          class="absolute inset-[3px] rounded-full border border-white/[0.08]"
+        />
+        <span
+          class="relative z-[1] drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)]"
+        >
+          ✧
+        </span>
+      </span>
+    </span>
+    Custom
+  </span>
   <div
     class="absolute top-1.5 left-1.5 sm:top-2 sm:left-2.5 z-10 flex flex-col gap-1 sm:gap-1.5"
     data-testid="meeple-card-tag-stack"
@@ -532,10 +592,30 @@ exports[`MeepleCard - Snapshots > Entity Types > should match snapshot for event
   style="--mc-entity-color: hsl(350 89% 60%); will-change: transform, box-shadow, outline;"
 >
   <span
-    aria-hidden="true"
-    class="absolute left-0 top-0 bottom-0 w-1 group-hover:w-1.5 transition-all duration-250"
-    style="background-color: rgb(244, 62, 92);"
-  />
+    class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md backdrop-blur-[8px] font-quicksand font-bold text-[10px] uppercase tracking-wider text-white absolute top-2 left-2.5 z-[2]"
+    style="background-color: rgba(244, 62, 92, 0.85);"
+  >
+    <span
+      class="inline-flex items-center"
+    >
+      <span
+        class="inline-flex items-center justify-center rounded-full relative w-5 h-5 text-xs"
+        data-testid="mana-symbol-event"
+        style="--mana-color: 350 89% 60%; background: radial-gradient(circle at 35% 35%, rgb(244, 62, 92) 0%, rgba(244, 62, 92, 0.65) 100%); box-shadow: 0 4px 16px hsl(350 89% 60% / 0.35); outline: 2px solid hsl(350 89% 60% / 0.35); outline-offset: 2px;"
+      >
+        <span
+          aria-hidden="true"
+          class="absolute inset-[3px] rounded-full border border-white/[0.08]"
+        />
+        <span
+          class="relative z-[1] drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)]"
+        >
+          ✦
+        </span>
+      </span>
+    </span>
+    Event
+  </span>
   <div
     class="absolute top-1.5 left-1.5 sm:top-2 sm:left-2.5 z-10 flex flex-col gap-1 sm:gap-1.5"
     data-testid="meeple-card-tag-stack"
@@ -669,10 +749,30 @@ exports[`MeepleCard - Snapshots > Entity Types > should match snapshot for game 
   style="--mc-entity-color: hsl(25 95% 45%); will-change: transform, box-shadow, outline;"
 >
   <span
-    aria-hidden="true"
-    class="absolute left-0 top-0 bottom-0 w-1 group-hover:w-1.5 transition-all duration-250"
-    style="background-color: rgb(224, 97, 6);"
-  />
+    class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md backdrop-blur-[8px] font-quicksand font-bold text-[10px] uppercase tracking-wider text-white absolute top-2 left-2.5 z-[2]"
+    style="background-color: rgba(224, 97, 6, 0.85);"
+  >
+    <span
+      class="inline-flex items-center"
+    >
+      <span
+        class="inline-flex items-center justify-center rounded-full relative w-5 h-5 text-xs"
+        data-testid="mana-symbol-game"
+        style="--mana-color: 25 95% 45%; background: radial-gradient(circle at 35% 35%, rgb(224, 97, 6) 0%, rgba(224, 97, 6, 0.65) 100%); box-shadow: 0 4px 16px hsl(25 95% 45% / 0.35); outline: 2px solid hsl(25 95% 45% / 0.35); outline-offset: 2px;"
+      >
+        <span
+          aria-hidden="true"
+          class="absolute inset-[3px] rounded-full border border-white/[0.08]"
+        />
+        <span
+          class="relative z-[1] drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)]"
+        >
+          🎲
+        </span>
+      </span>
+    </span>
+    Game
+  </span>
   <div
     class="absolute top-1.5 left-1.5 sm:top-2 sm:left-2.5 z-10 flex flex-col gap-1 sm:gap-1.5"
     data-testid="meeple-card-tag-stack"
@@ -810,10 +910,30 @@ exports[`MeepleCard - Snapshots > Entity Types > should match snapshot for playe
   style="--mc-entity-color: hsl(262 83% 58%); will-change: transform, box-shadow, outline;"
 >
   <span
-    aria-hidden="true"
-    class="absolute left-0 top-0 bottom-0 w-1 group-hover:w-1.5 transition-all duration-250"
-    style="background-color: rgb(124, 59, 237);"
-  />
+    class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md backdrop-blur-[8px] font-quicksand font-bold text-[10px] uppercase tracking-wider text-white absolute top-2 left-2.5 z-[2]"
+    style="background-color: rgba(124, 59, 237, 0.85);"
+  >
+    <span
+      class="inline-flex items-center"
+    >
+      <span
+        class="inline-flex items-center justify-center rounded-full relative w-5 h-5 text-xs"
+        data-testid="mana-symbol-player"
+        style="--mana-color: 262 83% 58%; background: radial-gradient(circle at 35% 35%, rgb(124, 59, 237) 0%, rgba(124, 59, 237, 0.65) 100%); box-shadow: 0 4px 16px hsl(262 83% 58% / 0.35); outline: 2px solid hsl(262 83% 58% / 0.35); outline-offset: 2px;"
+      >
+        <span
+          aria-hidden="true"
+          class="absolute inset-[3px] rounded-full border border-white/[0.08]"
+        />
+        <span
+          class="relative z-[1] drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)]"
+        >
+          ♟
+        </span>
+      </span>
+    </span>
+    Player
+  </span>
   <div
     class="absolute top-1.5 left-1.5 sm:top-2 sm:left-2.5 z-10 flex flex-col gap-1 sm:gap-1.5"
     data-testid="meeple-card-tag-stack"
@@ -1144,10 +1264,30 @@ exports[`MeepleCard - Snapshots > Layout Variants > should match snapshot for gr
   style="--mc-entity-color: hsl(25 95% 45%); will-change: transform, box-shadow, outline;"
 >
   <span
-    aria-hidden="true"
-    class="absolute left-0 top-0 bottom-0 w-1 group-hover:w-1.5 transition-all duration-250"
-    style="background-color: rgb(224, 97, 6);"
-  />
+    class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md backdrop-blur-[8px] font-quicksand font-bold text-[10px] uppercase tracking-wider text-white absolute top-2 left-2.5 z-[2]"
+    style="background-color: rgba(224, 97, 6, 0.85);"
+  >
+    <span
+      class="inline-flex items-center"
+    >
+      <span
+        class="inline-flex items-center justify-center rounded-full relative w-5 h-5 text-xs"
+        data-testid="mana-symbol-game"
+        style="--mana-color: 25 95% 45%; background: radial-gradient(circle at 35% 35%, rgb(224, 97, 6) 0%, rgba(224, 97, 6, 0.65) 100%); box-shadow: 0 4px 16px hsl(25 95% 45% / 0.35); outline: 2px solid hsl(25 95% 45% / 0.35); outline-offset: 2px;"
+      >
+        <span
+          aria-hidden="true"
+          class="absolute inset-[3px] rounded-full border border-white/[0.08]"
+        />
+        <span
+          class="relative z-[1] drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)]"
+        >
+          🎲
+        </span>
+      </span>
+    </span>
+    Game
+  </span>
   <div
     class="absolute top-1.5 left-1.5 sm:top-2 sm:left-2.5 z-10 flex flex-col gap-1 sm:gap-1.5"
     data-testid="meeple-card-tag-stack"
@@ -1821,10 +1961,30 @@ exports[`MeepleCard - Snapshots > Special States > should match snapshot with ba
   style="--mc-entity-color: hsl(25 95% 45%); will-change: transform, box-shadow, outline;"
 >
   <span
-    aria-hidden="true"
-    class="absolute left-0 top-0 bottom-0 w-1 group-hover:w-1.5 transition-all duration-250"
-    style="background-color: rgb(224, 97, 6);"
-  />
+    class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md backdrop-blur-[8px] font-quicksand font-bold text-[10px] uppercase tracking-wider text-white absolute top-2 left-2.5 z-[2]"
+    style="background-color: rgba(224, 97, 6, 0.85);"
+  >
+    <span
+      class="inline-flex items-center"
+    >
+      <span
+        class="inline-flex items-center justify-center rounded-full relative w-5 h-5 text-xs"
+        data-testid="mana-symbol-game"
+        style="--mana-color: 25 95% 45%; background: radial-gradient(circle at 35% 35%, rgb(224, 97, 6) 0%, rgba(224, 97, 6, 0.65) 100%); box-shadow: 0 4px 16px hsl(25 95% 45% / 0.35); outline: 2px solid hsl(25 95% 45% / 0.35); outline-offset: 2px;"
+      >
+        <span
+          aria-hidden="true"
+          class="absolute inset-[3px] rounded-full border border-white/[0.08]"
+        />
+        <span
+          class="relative z-[1] drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)]"
+        >
+          🎲
+        </span>
+      </span>
+    </span>
+    Game
+  </span>
   <div
     class="absolute top-1.5 left-1.5 sm:top-2 sm:left-2.5 z-10 flex flex-col gap-1 sm:gap-1.5"
     data-testid="meeple-card-tag-stack"
@@ -2159,10 +2319,30 @@ exports[`MeepleCard - Snapshots > Special States > should match snapshot with mi
   style="--mc-entity-color: hsl(25 95% 45%); will-change: transform, box-shadow, outline;"
 >
   <span
-    aria-hidden="true"
-    class="absolute left-0 top-0 bottom-0 w-1 group-hover:w-1.5 transition-all duration-250"
-    style="background-color: rgb(224, 97, 6);"
-  />
+    class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md backdrop-blur-[8px] font-quicksand font-bold text-[10px] uppercase tracking-wider text-white absolute top-2 left-2.5 z-[2]"
+    style="background-color: rgba(224, 97, 6, 0.85);"
+  >
+    <span
+      class="inline-flex items-center"
+    >
+      <span
+        class="inline-flex items-center justify-center rounded-full relative w-5 h-5 text-xs"
+        data-testid="mana-symbol-game"
+        style="--mana-color: 25 95% 45%; background: radial-gradient(circle at 35% 35%, rgb(224, 97, 6) 0%, rgba(224, 97, 6, 0.65) 100%); box-shadow: 0 4px 16px hsl(25 95% 45% / 0.35); outline: 2px solid hsl(25 95% 45% / 0.35); outline-offset: 2px;"
+      >
+        <span
+          aria-hidden="true"
+          class="absolute inset-[3px] rounded-full border border-white/[0.08]"
+        />
+        <span
+          class="relative z-[1] drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)]"
+        >
+          🎲
+        </span>
+      </span>
+    </span>
+    Game
+  </span>
   <div
     class="absolute top-1.5 left-1.5 sm:top-2 sm:left-2.5 z-10 flex flex-col gap-1 sm:gap-1.5"
     data-testid="meeple-card-tag-stack"
@@ -2406,10 +2586,30 @@ exports[`MeepleCard - Snapshots > Special States > should match snapshot with on
   tabindex="0"
 >
   <span
-    aria-hidden="true"
-    class="absolute left-0 top-0 bottom-0 w-1 group-hover:w-1.5 transition-all duration-250"
-    style="background-color: rgb(224, 97, 6);"
-  />
+    class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md backdrop-blur-[8px] font-quicksand font-bold text-[10px] uppercase tracking-wider text-white absolute top-2 left-2.5 z-[2]"
+    style="background-color: rgba(224, 97, 6, 0.85);"
+  >
+    <span
+      class="inline-flex items-center"
+    >
+      <span
+        class="inline-flex items-center justify-center rounded-full relative w-5 h-5 text-xs"
+        data-testid="mana-symbol-game"
+        style="--mana-color: 25 95% 45%; background: radial-gradient(circle at 35% 35%, rgb(224, 97, 6) 0%, rgba(224, 97, 6, 0.65) 100%); box-shadow: 0 4px 16px hsl(25 95% 45% / 0.35); outline: 2px solid hsl(25 95% 45% / 0.35); outline-offset: 2px;"
+      >
+        <span
+          aria-hidden="true"
+          class="absolute inset-[3px] rounded-full border border-white/[0.08]"
+        />
+        <span
+          class="relative z-[1] drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)]"
+        >
+          🎲
+        </span>
+      </span>
+    </span>
+    Game
+  </span>
   <div
     class="absolute top-1.5 left-1.5 sm:top-2 sm:left-2.5 z-10 flex flex-col gap-1 sm:gap-1.5"
     data-testid="meeple-card-tag-stack"
@@ -2656,10 +2856,30 @@ exports[`MeepleCard - Snapshots > Special States > should match snapshot without
   style="--mc-entity-color: hsl(25 95% 45%); will-change: transform, box-shadow, outline;"
 >
   <span
-    aria-hidden="true"
-    class="absolute left-0 top-0 bottom-0 w-1 group-hover:w-1.5 transition-all duration-250"
-    style="background-color: rgb(224, 97, 6);"
-  />
+    class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md backdrop-blur-[8px] font-quicksand font-bold text-[10px] uppercase tracking-wider text-white absolute top-2 left-2.5 z-[2]"
+    style="background-color: rgba(224, 97, 6, 0.85);"
+  >
+    <span
+      class="inline-flex items-center"
+    >
+      <span
+        class="inline-flex items-center justify-center rounded-full relative w-5 h-5 text-xs"
+        data-testid="mana-symbol-game"
+        style="--mana-color: 25 95% 45%; background: radial-gradient(circle at 35% 35%, rgb(224, 97, 6) 0%, rgba(224, 97, 6, 0.65) 100%); box-shadow: 0 4px 16px hsl(25 95% 45% / 0.35); outline: 2px solid hsl(25 95% 45% / 0.35); outline-offset: 2px;"
+      >
+        <span
+          aria-hidden="true"
+          class="absolute inset-[3px] rounded-full border border-white/[0.08]"
+        />
+        <span
+          class="relative z-[1] drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)]"
+        >
+          🎲
+        </span>
+      </span>
+    </span>
+    Game
+  </span>
   <div
     class="absolute top-1.5 left-1.5 sm:top-2 sm:left-2.5 z-10 flex flex-col gap-1 sm:gap-1.5"
     data-testid="meeple-card-tag-stack"

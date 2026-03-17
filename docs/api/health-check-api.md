@@ -84,7 +84,6 @@ GET http://localhost:8080/api/v1/health
 | **oauth-*** | 🟢 OPTIONAL | Config | 0s | Configuration check |
 | **grafana** | 🟢 OPTIONAL | HTTP | 5s | `GET /api/health` |
 | **prometheus** | 🟢 OPTIONAL | HTTP | 5s | `GET /-/healthy` |
-| **hyperdx** | 🟢 OPTIONAL | Config | 0s | Configuration check |
 
 ---
 

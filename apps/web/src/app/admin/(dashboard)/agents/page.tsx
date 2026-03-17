@@ -30,8 +30,6 @@ import {
 } from '@/components/ui/overlays/select';
 import { Button } from '@/components/ui/primitives/button';
 
-import { AgentsNavConfig } from './NavConfig';
-
 // Types from existing agent metrics
 interface AgentMetrics {
   totalInvocations: number;
@@ -121,7 +119,6 @@ export default function AgentsPage() {
 
   return (
     <div className="space-y-6">
-      <AgentsNavConfig />
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>

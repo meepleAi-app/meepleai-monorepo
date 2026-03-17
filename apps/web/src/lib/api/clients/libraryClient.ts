@@ -59,6 +59,7 @@ import {
   type MigrationChoiceRequest,
   type MigrationChoiceResponse,
 } from '../schemas/migrations.schemas';
+import { OwnershipResultSchema, type OwnershipResult } from '../schemas/ownership.schemas';
 import { GamePdfDtoSchema, type GamePdfDto } from '../schemas/pdf.schemas';
 import {
   PrivateGameDtoSchema,
@@ -142,6 +143,8 @@ export interface LibraryClient {
   getEntityLinkCount(entityType: string, entityId: string): Promise<number>;
   createEntityLink(request: CreateEntityLinkRequest): Promise<EntityLinkDto>;
   deleteEntityLink(linkId: string): Promise<void>;
+  // Ownership Declaration (RAG Access)
+  declareOwnership(gameId: string): Promise<OwnershipResult>;
   // Toolkit Dashboard (Issue #5147 — Epic B4)
   getActiveToolkit(gameId: string): Promise<ToolkitDashboardDto | null>;
   overrideToolkit(gameId: string, request?: OverrideToolkitRequest): Promise<ToolkitDashboardDto>;
@@ -791,6 +794,27 @@ export function createLibraryClient({ httpClient }: CreateLibraryClientParams): 
      */
     async deleteEntityLink(linkId: string): Promise<void> {
       await httpClient.delete(`/api/v1/library/entity-links/${linkId}`);
+    },
+
+    // ========== Ownership Declaration (RAG Access) ==========
+
+    /**
+     * Declare ownership of a game in user's library
+     * Transitions game state and grants RAG access if available
+     * POST /api/v1/library/{gameId}/declare-ownership
+     * @param gameId - Game UUID to declare ownership of
+     * @returns Ownership result with RAG access status
+     */
+    async declareOwnership(gameId: string): Promise<OwnershipResult> {
+      const data = await httpClient.post<OwnershipResult>(
+        `/api/v1/library/${gameId}/declare-ownership`,
+        {},
+        OwnershipResultSchema
+      );
+      if (!data) {
+        throw new Error('Failed to declare ownership');
+      }
+      return data;
     },
 
     // ========== Toolkit Dashboard (Issue #5147 — Epic B4) ==========

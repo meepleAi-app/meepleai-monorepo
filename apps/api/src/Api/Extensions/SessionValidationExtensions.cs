@@ -107,12 +107,32 @@ internal static class SessionValidationExtensions
         RequireRole(this SessionStatusDto session, UserRole requiredRole)
     {
         if (session.User == null ||
-            !string.Equals(session.User.Role, requiredRole.ToString(), StringComparison.OrdinalIgnoreCase))
+            !Enum.TryParse<UserRole>(session.User.Role, ignoreCase: true, out var userRole) ||
+            !HasSufficientRole(userRole, requiredRole))
         {
             return (false, Results.Forbid());
         }
 
         return (true, null);
+    }
+
+    /// <summary>
+    /// Checks if the user's role meets or exceeds the required role level.
+    /// Hierarchy: SuperAdmin > Admin > Editor > User
+    /// </summary>
+    private static bool HasSufficientRole(UserRole userRole, UserRole requiredRole)
+    {
+        // Role hierarchy (higher = more privileges)
+        static int RoleLevel(UserRole role) => role switch
+        {
+            UserRole.SuperAdmin => 3,
+            UserRole.Admin => 2,
+            UserRole.Editor => 1,
+            UserRole.User => 0,
+            _ => -1
+        };
+
+        return RoleLevel(userRole) >= RoleLevel(requiredRole);
     }
 
     /// <summary>
@@ -156,22 +176,8 @@ internal static class SessionValidationExtensions
     public static (bool IsAuthorized, IResult? ErrorResult)
         RequireAdminOrEditorRole(this SessionStatusDto session)
     {
-        if (session.User == null)
-        {
-            return (false, Results.Forbid());
-        }
-
-        var isAdmin = string.Equals(session.User.Role, UserRole.Admin.ToString(),
-            StringComparison.OrdinalIgnoreCase);
-        var isEditor = string.Equals(session.User.Role, UserRole.Editor.ToString(),
-            StringComparison.OrdinalIgnoreCase);
-
-        if (!isAdmin && !isEditor)
-        {
-            return (false, Results.Forbid());
-        }
-
-        return (true, null);
+        // Editor is the minimum required role; HasSufficientRole handles hierarchy
+        return session.RequireRole(UserRole.Editor);
     }
 
     /// <summary>

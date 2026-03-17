@@ -39,7 +39,6 @@ internal sealed class PurgeStaleDocumentsCommandHandler
         {
             var originalState = doc.ProcessingState;
             doc.ProcessingState = "Failed";
-            doc.ProcessingStatus = "failed";
             doc.ProcessingError = "Processing timed out (stale) - purged by admin";
             doc.ErrorCategory = "Service";
             doc.FailedAtState = originalState;

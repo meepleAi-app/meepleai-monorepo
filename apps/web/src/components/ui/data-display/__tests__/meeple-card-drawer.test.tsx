@@ -116,12 +116,7 @@ describe('MeepleCard — drawer integration (Issue #5025)', () => {
     });
 
     it('does not render the drawer', () => {
-      render(
-        <MeepleCard
-          {...defaultProps}
-          showInfoButton
-        />
-      );
+      render(<MeepleCard {...defaultProps} showInfoButton />);
 
       // Sheet/dialog should not be present
       expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
@@ -134,13 +129,7 @@ describe('MeepleCard — drawer integration (Issue #5025)', () => {
 
   describe('when entityId is present', () => {
     it('renders the info button as a <button> (not a link)', () => {
-      render(
-        <MeepleCard
-          {...defaultProps}
-          showInfoButton
-          entityId="game-1"
-        />
-      );
+      render(<MeepleCard {...defaultProps} showInfoButton entityId="game-1" />);
 
       const btn = screen.getByTestId('meeple-card-info-button');
       expect(btn.tagName).toBe('BUTTON');
@@ -150,13 +139,7 @@ describe('MeepleCard — drawer integration (Issue #5025)', () => {
       mockGameFetch();
       const user = userEvent.setup();
 
-      render(
-        <MeepleCard
-          {...defaultProps}
-          showInfoButton
-          entityId="game-1"
-        />
-      );
+      render(<MeepleCard {...defaultProps} showInfoButton entityId="game-1" />);
 
       const infoBtn = screen.getByTestId('meeple-card-info-button');
       await user.click(infoBtn);
@@ -171,17 +154,13 @@ describe('MeepleCard — drawer integration (Issue #5025)', () => {
       mockGameFetch();
       const user = userEvent.setup();
 
-      render(
-        <MeepleCard
-          {...defaultProps}
-          showInfoButton
-          entityId="game-1"
-        />
-      );
+      render(<MeepleCard {...defaultProps} showInfoButton entityId="game-1" />);
 
       // Open drawer
       await user.click(screen.getByTestId('meeple-card-info-button'));
-      await waitFor(() => expect(screen.getByTestId(DRAWER_TEST_IDS.ENTITY_LABEL)).toBeInTheDocument());
+      await waitFor(() =>
+        expect(screen.getByTestId(DRAWER_TEST_IDS.ENTITY_LABEL)).toBeInTheDocument()
+      );
 
       // Close via X
       const closeBtn = screen.getByRole('button', { name: /chiudi pannello/i });
@@ -196,14 +175,7 @@ describe('MeepleCard — drawer integration (Issue #5025)', () => {
       mockGameFetch();
       const user = userEvent.setup();
 
-      render(
-        <MeepleCard
-          {...defaultProps}
-          entity="game"
-          showInfoButton
-          entityId="game-1"
-        />
-      );
+      render(<MeepleCard {...defaultProps} entity="game" showInfoButton entityId="game-1" />);
 
       await user.click(screen.getByTestId('meeple-card-info-button'));
 
@@ -240,14 +212,7 @@ describe('MeepleCard — drawer integration (Issue #5025)', () => {
 
       const user = userEvent.setup();
 
-      render(
-        <MeepleCard
-          entity="agent"
-          title="Catan Expert"
-          showInfoButton
-          entityId="agent-1"
-        />
-      );
+      render(<MeepleCard entity="agent" title="Catan Expert" showInfoButton entityId="agent-1" />);
 
       await user.click(screen.getByTestId('meeple-card-info-button'));
 
@@ -262,13 +227,7 @@ describe('MeepleCard — drawer integration (Issue #5025)', () => {
       mockGameFetch();
       const user = userEvent.setup();
 
-      render(
-        <MeepleCard
-          {...defaultProps}
-          showInfoButton
-          entityId="specific-game-id"
-        />
-      );
+      render(<MeepleCard {...defaultProps} showInfoButton entityId="specific-game-id" />);
 
       await user.click(screen.getByTestId('meeple-card-info-button'));
 
@@ -287,13 +246,7 @@ describe('MeepleCard — drawer integration (Issue #5025)', () => {
 
   describe('backward compatibility: infoHref without entityId', () => {
     it('renders info button as a link when only infoHref is provided', () => {
-      render(
-        <MeepleCard
-          {...defaultProps}
-          showInfoButton
-          infoHref="/games/catan"
-        />
-      );
+      render(<MeepleCard {...defaultProps} showInfoButton infoHref="/games/catan" />);
 
       const btn = screen.getByTestId('meeple-card-info-button');
       expect(btn.tagName).toBe('A');
@@ -301,13 +254,7 @@ describe('MeepleCard — drawer integration (Issue #5025)', () => {
     });
 
     it('does not render drawer when only infoHref is provided', () => {
-      render(
-        <MeepleCard
-          {...defaultProps}
-          showInfoButton
-          infoHref="/games/catan"
-        />
-      );
+      render(<MeepleCard {...defaultProps} showInfoButton infoHref="/games/catan" />);
 
       expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     });
@@ -318,32 +265,28 @@ describe('MeepleCard — drawer integration (Issue #5025)', () => {
   // --------------------------------------------------------------------------
 
   it('does not render info button when showInfoButton is false even with entityId', () => {
-    render(
-      <MeepleCard
-        {...defaultProps}
-        showInfoButton={false}
-        entityId="game-1"
-      />
-    );
+    render(<MeepleCard {...defaultProps} showInfoButton={false} entityId="game-1" />);
 
     expect(screen.queryByTestId('meeple-card-info-button')).not.toBeInTheDocument();
   });
 
   // --------------------------------------------------------------------------
-  // Entity types without drawer mapping → button not rendered
+  // Entity types with drawer mapping → info button renders (Coming Soon content)
   // --------------------------------------------------------------------------
 
-  it('does not render info button for player entity (no drawer mapping)', () => {
-    render(
-      <MeepleCard
-        entity="player"
-        title="Marco"
-        showInfoButton
-        entityId="player-1"
-      />
-    );
+  it('renders info button for player entity (now mapped to drawer with Coming Soon content)', async () => {
+    const user = userEvent.setup();
 
-    // player has no DrawerEntityType mapping → button should not appear
-    expect(screen.queryByTestId('meeple-card-info-button')).not.toBeInTheDocument();
+    render(<MeepleCard entity="player" title="Marco" showInfoButton entityId="player-1" />);
+
+    // player is now mapped in DRAWER_ENTITY_TYPE_MAP → button should appear
+    const btn = screen.getByTestId('meeple-card-info-button');
+    expect(btn).toBeInTheDocument();
+
+    // Opening the drawer should show the entity label
+    await user.click(btn);
+    await waitFor(() => {
+      expect(screen.getByTestId(DRAWER_TEST_IDS.ENTITY_LABEL)).toBeInTheDocument();
+    });
   });
 });

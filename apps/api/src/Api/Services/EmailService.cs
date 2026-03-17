@@ -29,13 +29,15 @@ internal class EmailService : IEmailService
 
         _logger = logger;
 
-        // Load email configuration (S1450: configuration used only locally)
-        _fromAddress = configuration["Email:FromAddress"] ?? "noreply@meepleai.dev";
+        // Load email configuration with fallback to SMTP_* env var names from email.secret
+        // email.secret uses SMTP_HOST/SMTP_USER/SMTP_PASSWORD but EmailService originally
+        // expected Email:SmtpHost/Email:SmtpUsername/Email:SmtpPassword — bridge the gap
+        _fromAddress = configuration["Email:FromAddress"] ?? configuration["SMTP_FROM_EMAIL"] ?? "noreply@meepleai.dev";
         _fromName = configuration["Email:FromName"] ?? "MeepleAI";
-        _smtpHost = configuration["Email:SmtpHost"] ?? "localhost";
-        _smtpPort = int.Parse(configuration["Email:SmtpPort"] ?? "587", CultureInfo.InvariantCulture);
-        _smtpUsername = configuration["Email:SmtpUsername"];
-        _smtpPassword = configuration["Email:SmtpPassword"];
+        _smtpHost = configuration["Email:SmtpHost"] ?? configuration["SMTP_HOST"] ?? "localhost";
+        _smtpPort = int.Parse(configuration["Email:SmtpPort"] ?? configuration["SMTP_PORT"] ?? "587", CultureInfo.InvariantCulture);
+        _smtpUsername = configuration["Email:SmtpUsername"] ?? configuration["SMTP_USER"];
+        _smtpPassword = configuration["Email:SmtpPassword"] ?? configuration["SMTP_PASSWORD"] ?? configuration["GMAIL_APP_PASSWORD"];
         _enableSsl = bool.Parse(configuration["Email:EnableSsl"] ?? "true");
         _resetUrlBase = configuration["Email:ResetUrlBase"] ?? DefaultResetUrlBase;
         _frontendBaseUrl = configuration["Frontend:BaseUrl"] ?? DefaultFrontendBaseUrl;

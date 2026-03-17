@@ -34,8 +34,6 @@ import { Label } from '@/components/ui/label';
 import { api } from '@/lib/api';
 import type { AbTestAnalyticsDto } from '@/lib/api/schemas/ab-test.schemas';
 
-import { AgentsNavConfig } from '../../NavConfig';
-
 // ────── KPI Card ──────
 
 function KpiCard({
@@ -250,8 +248,6 @@ export default function AbTestAnalyticsPage() {
 
   return (
     <div className="space-y-8">
-      <AgentsNavConfig />
-
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">

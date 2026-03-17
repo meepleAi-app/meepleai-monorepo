@@ -115,6 +115,11 @@ export async function enqueuePdf(
 
 export type ProcessingPriority = 'Low' | 'Normal' | 'High' | 'Urgent';
 
+export const PRIORITY_LOW = 0;
+export const PRIORITY_NORMAL = 10;
+export const PRIORITY_HIGH = 20;
+export const PRIORITY_URGENT = 30;
+
 export interface QueueConfigDto {
   isPaused: boolean;
   maxConcurrentWorkers: number;

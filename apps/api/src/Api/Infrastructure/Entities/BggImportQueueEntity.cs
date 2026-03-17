@@ -1,9 +1,12 @@
+using Api.BoundedContexts.SharedGameCatalog.Domain.Enums;
+
 namespace Api.Infrastructure.Entities;
 
 /// <summary>
-/// Entity representing a BGG import job in the global rate-limited queue.
+/// Entity representing a BGG import/enrichment job in the global rate-limited queue.
 /// Supports singleton background worker processing at 1 request/second.
 /// Issue #3541 - BGG Import Queue Service
+/// Extended: JobType discriminator for Import vs Enrichment jobs.
 /// </summary>
 public sealed class BggImportQueueEntity
 {
@@ -11,15 +14,32 @@ public sealed class BggImportQueueEntity
     /// Primary key
     /// </summary>
     public Guid Id { get; set; }
-    /// <summary>
-    /// BGG game ID to import
-    /// </summary>
-    public required int BggId { get; set; }
 
     /// <summary>
-    /// Optional game name for UI display before import completes
+    /// Job type discriminator: Import (creates new game) or Enrichment (updates existing skeleton).
+    /// </summary>
+    public BggQueueJobType JobType { get; set; } = BggQueueJobType.Import;
+
+    /// <summary>
+    /// BGG game ID to import. Nullable for enrichment jobs where BggId is unknown (auto-match).
+    /// </summary>
+    public int? BggId { get; set; }
+
+    /// <summary>
+    /// Optional game name for UI display and auto-match search
     /// </summary>
     public string? GameName { get; set; }
+
+    /// <summary>
+    /// For enrichment jobs: the existing SharedGame to enrich. Null for import jobs.
+    /// </summary>
+    public Guid? SharedGameId { get; set; }
+
+    /// <summary>
+    /// Groups items enqueued in a single admin request. Used for batch completion notification.
+    /// Null for legacy import items.
+    /// </summary>
+    public Guid? BatchId { get; set; }
 
     /// <summary>
     /// Current status in the queue
@@ -48,7 +68,7 @@ public sealed class BggImportQueueEntity
     public DateTime? ProcessedAt { get; set; }
 
     /// <summary>
-    /// ID of the created SharedGame entity (if successful)
+    /// ID of the created SharedGame entity (if successful import)
     /// </summary>
     public Guid? CreatedGameId { get; set; }
 

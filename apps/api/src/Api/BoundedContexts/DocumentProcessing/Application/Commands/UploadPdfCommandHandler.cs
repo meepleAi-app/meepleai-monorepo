@@ -132,10 +132,10 @@ internal class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUp
         // Issue #3664: Handle private game PDF uploads
         if (command.PrivateGameId.HasValue)
         {
-            // Compute content hash and check for duplicates (private game)
+            // Compute content hash and check for duplicates (global — same file content across any game)
             var privateContentHash = await ComputeContentHashAsync(file, cancellationToken).ConfigureAwait(false);
             if (await _db.PdfDocuments.AnyAsync(
-                    p => p.ContentHash == privateContentHash && p.PrivateGameId == command.PrivateGameId.Value,
+                    p => p.ContentHash == privateContentHash,
                     cancellationToken).ConfigureAwait(false))
             {
                 return new PdfUploadResult(false, DuplicateContentErrorMessage, null);
@@ -156,10 +156,10 @@ internal class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUp
 
         var gameId = resolvedGameId.Value.ToString();
 
-        // Compute content hash and check for duplicates
+        // Compute content hash and check for duplicates (global — same file content across any game)
         var contentHash = await ComputeContentHashAsync(file, cancellationToken).ConfigureAwait(false);
         if (await _db.PdfDocuments.AnyAsync(
-                p => p.ContentHash == contentHash && p.GameId == resolvedGameId.Value,
+                p => p.ContentHash == contentHash,
                 cancellationToken).ConfigureAwait(false))
         {
             return new PdfUploadResult(false, DuplicateContentErrorMessage, null);
@@ -172,6 +172,26 @@ internal class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUp
         if (!storageSuccess)
         {
             return new PdfUploadResult(false, storageResult.ErrorMessage ?? "Failed to store file", null);
+        }
+
+        // Apply priority from command (admin upload with priority override)
+        if (!string.IsNullOrWhiteSpace(command.Priority))
+        {
+            var priorityEnum = string.Equals(command.Priority, "urgent", StringComparison.OrdinalIgnoreCase)
+                ? ProcessingPriority.Urgent
+                : ProcessingPriority.High;
+
+            pdfDoc!.ProcessingPriority = priorityEnum.ToString();
+
+            // Also update the ProcessingJob priority int for Quartz queue ordering
+            var job = await _db.ProcessingJobs
+                .FirstOrDefaultAsync(j => j.PdfDocumentId == pdfDoc.Id, cancellationToken).ConfigureAwait(false);
+            if (job != null)
+            {
+                job.Priority = (int)priorityEnum;
+            }
+
+            await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
         }
 
         // Reserve quota and start background processing
@@ -509,7 +529,7 @@ internal class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUp
                 ContentType = file.ContentType,
                 UploadedByUserId = userId,
                 UploadedAt = _timeProvider.GetUtcNow().UtcDateTime,
-                ProcessingStatus = "pending",
+
                 PrivateGameId = privateGameId, // Issue #3664
                 ContentHash = contentHash
             };
@@ -596,10 +616,16 @@ internal class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUp
             "Quota reserved for user {UserId}, PDF {PdfId}, expires at {ExpiresAt}",
             userId, storageResult.FileId, reservationResult.ExpiresAt);
 
-        // Start background processing
+        // Start background processing via fire-and-forget (immediate attempt)
         _backgroundTaskService.ExecuteWithCancellation(
             storageResult.FileId!,
-            (cancellationToken) => ProcessPdfAsync(storageResult.FileId!, storageResult.FilePath!, userId, cancellationToken));
+            (ct) => ProcessPdfAsync(storageResult.FileId!, storageResult.FilePath!, userId, ct));
+
+        // Also enqueue in the Quartz-based queue as a reliable fallback.
+        // If the fire-and-forget Task.Run completes first, the Quartz job will find
+        // the PDF already in Ready state and skip it. If Task.Run fails silently,
+        // the Quartz job will process it from Pending.
+        await EnqueueForProcessingSafelyAsync(pdfDoc.Id, userId, cancellationToken).ConfigureAwait(false);
 
         await InvalidateCacheSafelyAsync(gameId, "PDF upload", cancellationToken).ConfigureAwait(false);
 
@@ -614,7 +640,7 @@ internal class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUp
             FileName: pdfDoc.FileName,
             FilePath: pdfDoc.FilePath,
             FileSizeBytes: pdfDoc.FileSizeBytes,
-            ProcessingStatus: pdfDoc.ProcessingStatus,
+
             UploadedAt: pdfDoc.UploadedAt,
             ProcessedAt: pdfDoc.ProcessedAt,
             PageCount: pdfDoc.PageCount,
@@ -723,7 +749,7 @@ internal class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUp
                 _logger.LogWarning("⚠️ [PDF-DEBUG] ValidateAndPrepareProcessingAsync returned null for {PdfId} - EARLY EXIT", pdfId);
                 return; // Validation failed
             }
-            _logger.LogInformation("✅ [PDF-DEBUG] Validation passed for {PdfId}, Status: {Status}", pdfId, pdfDoc.ProcessingStatus);
+            _logger.LogInformation("✅ [PDF-DEBUG] Validation passed for {PdfId}, State: {State}", pdfId, pdfDoc.ProcessingState);
 
             // Step 1: Extract text with page tracking (20-40%)
             _logger.LogInformation("📄 [PDF-DEBUG] Step 1: Starting ExtractPdfContentAsync for {PdfId}", pdfId);
@@ -820,7 +846,7 @@ internal class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUp
             return null;
         }
 
-        _logger.LogInformation("✅ [PDF-DEBUG-VALIDATE] PDF found, current status: {Status}", pdfDoc.ProcessingStatus);
+        _logger.LogInformation("✅ [PDF-DEBUG-VALIDATE] PDF found, current state: {State}", pdfDoc.ProcessingState);
 
         // IDEMPOTENCY CHECK (#1742): Skip if already processing/processed
         var pendingState = nameof(PdfProcessingState.Pending);
@@ -841,7 +867,7 @@ internal class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUp
 
         // Mark as processing (optimistic locking)
         _logger.LogInformation("🔄 [PDF-DEBUG-VALIDATE] Updating status from 'pending' to 'processing'");
-        pdfDoc.ProcessingStatus = "processing";
+        pdfDoc.ProcessingState = "Uploading";
         await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
         _logger.LogInformation("✅ [PDF-DEBUG-VALIDATE] Status updated, proceeding with processing");
 
@@ -884,7 +910,7 @@ internal class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUp
             {
                 RecordPipelineMetricSafely("extraction_error", 0);
                 await UpdateProgressAsync(db, pdfId, ProcessingStep.Failed, 0, 0, startTime, extractResult.ErrorMessage, cancellationToken).ConfigureAwait(false);
-                pdfDoc.ProcessingStatus = "failed";
+                pdfDoc.ProcessingState = "Failed";
                 pdfDoc.ProcessingError = extractResult.ErrorMessage;
                 pdfDoc.ProcessedAt = _timeProvider.GetUtcNow().UtcDateTime;
                 await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
@@ -1131,7 +1157,7 @@ internal class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUp
     {
         await UpdateProgressAsync(db, pdfId, ProcessingStep.Failed, 0, 0, startTime, errorMessage, cancellationToken).ConfigureAwait(false);
         await quotaService.ReleaseQuotaAsync(userId, pdfId, CancellationToken.None).ConfigureAwait(false);
-        pdfDoc.ProcessingStatus = "failed";
+        pdfDoc.ProcessingState = "Failed";
         pdfDoc.ProcessingError = errorMessage;
         pdfDoc.ProcessedAt = _timeProvider.GetUtcNow().UtcDateTime;
         await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
@@ -1156,43 +1182,14 @@ internal class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUp
         await UpdateProgressAsync(db, pdfId, ProcessingStep.Indexing, 0, totalPages, startTime, null, cancellationToken).ConfigureAwait(false);
 
         var indexingStopwatch = Stopwatch.StartNew();
-        var qdrantService = scope.ServiceProvider.GetRequiredService<IQdrantService>();
 
-        // E2E fix: Ensure Qdrant collection exists before indexing
-        await qdrantService.EnsureCollectionExistsAsync(cancellationToken).ConfigureAwait(false);
-
-        var documentChunks = allDocumentChunks
-            .Select((chunk, index) => new DocumentChunk
-            {
-                Text = chunk.Text,
-                Embedding = embeddings[index],
-                Page = chunk.Page,
-                CharStart = chunk.CharStart,
-                CharEnd = chunk.CharEnd
-            })
-            .ToList();
-
-        // For private games GameId is null; use PrivateGameId as the Qdrant collection key
-        var qdrantGameId = (pdfDoc.PrivateGameId ?? pdfDoc.GameId)?.ToString()
-            ?? throw new InvalidOperationException($"PDF {pdfId} has neither GameId nor PrivateGameId");
-        var indexResult = await qdrantService.IndexDocumentChunksAsync(qdrantGameId, pdfId, documentChunks).ConfigureAwait(false);
+        // Vector store (Qdrant) has been removed — skip vector indexing.
         indexingStopwatch.Stop();
 
         RecordPipelineMetricSafely("indexing", indexingStopwatch.Elapsed.TotalMilliseconds);
 
-        if (!indexResult.Success)
-        {
-            await UpdateProgressAsync(db, pdfId, ProcessingStep.Failed, 0, 0, startTime, $"Qdrant indexing failed: {indexResult.ErrorMessage}", cancellationToken).ConfigureAwait(false);
-            await scope.ServiceProvider.GetRequiredService<IPdfUploadQuotaService>().ReleaseQuotaAsync(userId, pdfId, CancellationToken.None).ConfigureAwait(false);
-            pdfDoc.ProcessingStatus = "failed";
-            pdfDoc.ProcessingError = indexResult.ErrorMessage;
-            pdfDoc.ProcessedAt = _timeProvider.GetUtcNow().UtcDateTime;
-            await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
-            return;
-        }
-
-        // Update vector document
-        await UpdateVectorDocumentAsync(pdfId, pdfDoc, indexResult.IndexedCount, db, cancellationToken).ConfigureAwait(false);
+        // Update vector document with chunk count (no Qdrant indexing)
+        await UpdateVectorDocumentAsync(pdfId, pdfDoc, allDocumentChunks.Count, db, cancellationToken).ConfigureAwait(false);
 
         // Save text chunks to PostgreSQL for hybrid search (FTS)
         await SaveTextChunksForHybridSearchAsync(pdfId, pdfDoc, allDocumentChunks, db, cancellationToken).ConfigureAwait(false);
@@ -1295,8 +1292,7 @@ internal class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUp
         var totalPages = pdfDoc.PageCount ?? 0;
         await UpdateProgressAsync(db, pdfId, ProcessingStep.Completed, totalPages, totalPages, startTime, null, cancellationToken).ConfigureAwait(false);
 
-        pdfDoc.ProcessingStatus = "completed";
-        pdfDoc.ProcessingState = "Ready"; // Sync 7-state field with completion
+        pdfDoc.ProcessingState = "Ready";
         pdfDoc.ProcessedAt = _timeProvider.GetUtcNow().UtcDateTime;
         await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
@@ -1339,7 +1335,7 @@ internal class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUp
             var pdfDoc = await db.PdfDocuments.FindAsync(new object[] { cancelledPdfGuid }, CancellationToken.None).ConfigureAwait(false);
             if (pdfDoc != null)
             {
-                pdfDoc.ProcessingStatus = "failed";
+                pdfDoc.ProcessingState = "Failed";
                 pdfDoc.ProcessingError = "Processing cancelled by user";
                 pdfDoc.ProcessedAt = _timeProvider.GetUtcNow().UtcDateTime;
                 await db.SaveChangesAsync(CancellationToken.None).ConfigureAwait(false);
@@ -1370,7 +1366,7 @@ internal class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUp
             var pdfDoc = await db.PdfDocuments.FindAsync(new object[] { errorPdfGuid }, cancellationToken).ConfigureAwait(false);
             if (pdfDoc != null)
             {
-                pdfDoc.ProcessingStatus = "failed";
+                pdfDoc.ProcessingState = "Failed";
                 pdfDoc.ProcessingError = errorMessage;
                 pdfDoc.ProcessedAt = _timeProvider.GetUtcNow().UtcDateTime;
                 await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
@@ -1436,6 +1432,28 @@ internal class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUp
         {
             _logger.LogWarning(ex, "Unexpected error updating progress for PDF {PdfId}", pdfId);
         }
+    }
+
+    /// <summary>
+    /// Best-effort enqueue into the Quartz-based processing queue.
+    /// If the fire-and-forget Task.Run fails silently, the Quartz job acts as a reliable fallback.
+    /// Conflicts (PDF already queued) are expected and silently ignored.
+    /// </summary>
+    private async Task EnqueueForProcessingSafelyAsync(Guid pdfDocumentId, Guid userId, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await _mediator.Send(
+                new Queue.EnqueuePdfCommand(pdfDocumentId, userId, Priority: (int)ProcessingPriority.Normal),
+                cancellationToken).ConfigureAwait(false);
+            _logger.LogInformation("PDF {PdfId} enqueued for Quartz processing as fallback", pdfDocumentId);
+        }
+#pragma warning disable CA1031 // Best-effort enqueue — conflicts and cancellations are expected
+        catch (Exception ex)
+        {
+            _logger.LogDebug(ex, "Could not enqueue PDF {PdfId} for Quartz processing (may already be queued or request cancelled)", pdfDocumentId);
+        }
+#pragma warning restore CA1031
     }
 
     private async Task InvalidateCacheSafelyAsync(string gameId, string operation, CancellationToken cancellationToken)
@@ -1521,6 +1539,9 @@ internal class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUp
             pdfDoc!.Id.ToString(),
             ct => ProcessPdfAsync(pdfDoc.Id.ToString(), pdfDoc.FilePath, userId, ct));
 
+        // Quartz fallback (same pattern as regular game path)
+        await EnqueueForProcessingSafelyAsync(pdfDoc.Id, userId, cancellationToken).ConfigureAwait(false);
+
         _logger.LogInformation(
             "PDF uploaded successfully for private game {PrivateGameId}: {FileName} ({FileSize} bytes)",
             privateGameId, fileName, file.Length);
@@ -1531,7 +1552,7 @@ internal class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUp
             FileName: pdfDoc.FileName,
             FilePath: pdfDoc.FilePath,
             FileSizeBytes: pdfDoc.FileSizeBytes,
-            ProcessingStatus: pdfDoc.ProcessingStatus,
+
             UploadedAt: pdfDoc.UploadedAt,
             ProcessedAt: pdfDoc.ProcessedAt,
             PageCount: pdfDoc.PageCount,

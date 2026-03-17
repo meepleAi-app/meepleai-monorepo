@@ -74,7 +74,9 @@ export function ListPageHeader({
             onClick={() => onViewModeChange('grid')}
             className={cn(
               'p-2 rounded-md transition-colors min-h-[36px] min-w-[36px] flex items-center justify-center',
-              viewMode === 'grid' ? 'bg-primary text-primary-foreground' : 'hover:bg-muted text-muted-foreground'
+              viewMode === 'grid'
+                ? 'bg-primary text-primary-foreground'
+                : 'hover:bg-muted text-muted-foreground'
             )}
             aria-label="Grid view"
             aria-pressed={viewMode === 'grid'}
@@ -85,7 +87,9 @@ export function ListPageHeader({
             onClick={() => onViewModeChange('list')}
             className={cn(
               'p-2 rounded-md transition-colors min-h-[36px] min-w-[36px] flex items-center justify-center',
-              viewMode === 'list' ? 'bg-primary text-primary-foreground' : 'hover:bg-muted text-muted-foreground'
+              viewMode === 'list'
+                ? 'bg-primary text-primary-foreground'
+                : 'hover:bg-muted text-muted-foreground'
             )}
             aria-label="List view"
             aria-pressed={viewMode === 'list'}

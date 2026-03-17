@@ -33,7 +33,6 @@ public sealed class RagServiceIntegrationTests : IDisposable
 {
     private readonly MeepleAiDbContext _dbContext;
     private readonly Mock<IEmbeddingService> _mockEmbeddingService;
-    private readonly Mock<IQdrantService> _mockQdrantService;
     private readonly Mock<IHybridSearchService> _mockHybridSearchService;
     private readonly Mock<IAiResponseCacheService> _mockCache;
     private readonly Mock<IPromptTemplateService> _mockPromptTemplateService;
@@ -56,7 +55,6 @@ public sealed class RagServiceIntegrationTests : IDisposable
 
         // Initialize all mocks
         _mockEmbeddingService = new Mock<IEmbeddingService>();
-        _mockQdrantService = new Mock<IQdrantService>();
         _mockHybridSearchService = new Mock<IHybridSearchService>();
         _mockCache = new Mock<IAiResponseCacheService>();
         _mockPromptTemplateService = new Mock<IPromptTemplateService>();
@@ -88,7 +86,7 @@ public sealed class RagServiceIntegrationTests : IDisposable
 
         // Setup mocks for the RAG pipeline
         SetupEmbeddingServiceMock();
-        SetupQdrantServiceMock();
+
         SetupCacheMock(); // Cache miss
         SetupPromptTemplateMock();
         SetupQueryExpansionMock(query);
@@ -121,7 +119,7 @@ public sealed class RagServiceIntegrationTests : IDisposable
 
         // Setup mocks
         SetupEmbeddingServiceMock();
-        SetupQdrantServiceMock();
+
         SetupCacheMock();
 
         // Act
@@ -252,15 +250,11 @@ public sealed class RagServiceIntegrationTests : IDisposable
         var mockLlmService = CreateMockLlmService();
 
         return new RagService(
-            _mockEmbeddingService.Object,
-            _mockQdrantService.Object,
             _mockHybridSearchService.Object,
             mockLlmService,
             _mockCache.Object,
             _mockPromptTemplateService.Object,
             _mockLogger.Object,
-            _mockQueryExpansion.Object,
-            _mockReranker.Object,
             _mockConfigProvider.Object);
     }
 
@@ -322,40 +316,7 @@ public sealed class RagServiceIntegrationTests : IDisposable
             });
     }
 
-    private void SetupQdrantServiceMock()
-    {
-        var dummyResults = new List<SearchResultItem>
-        {
-            new SearchResultItem
-            {
-                Text = "The game supports 2-4 players.",
-                PdfId = Guid.NewGuid().ToString(),
-                Page = 1,
-                Score = 0.85f
-            },
-            new SearchResultItem
-            {
-                Text = "Setup takes approximately 10 minutes.",
-                PdfId = Guid.NewGuid().ToString(),
-                Page = 2,
-                Score = 0.75f
-            }
-        };
-
-        _mockQdrantService
-            .Setup(s => s.SearchAsync(
-                It.IsAny<string>(),
-                It.IsAny<float[]>(),
-                It.IsAny<string>(),
-                It.IsAny<int>(),
-                It.IsAny<List<string>?>(),
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new SearchResult
-            {
-                Success = true,
-                Results = dummyResults
-            });
-    }
+    // SetupQdrantServiceMock removed — IQdrantService no longer exists
 
     private void SetupHybridSearchServiceMock(Guid gameId)
     {
@@ -498,7 +459,7 @@ public sealed class RagServiceIntegrationTests : IDisposable
         var query = "How many players?";
 
         SetupEmbeddingServiceMock();
-        SetupQdrantServiceMock();
+
         SetupCacheMock();
         SetupPromptTemplateMock();
         SetupQueryExpansionMock(query);
@@ -524,7 +485,7 @@ public sealed class RagServiceIntegrationTests : IDisposable
         var query = "Setup instructions";
 
         SetupEmbeddingServiceMock();
-        SetupQdrantServiceMock();
+
         SetupCacheMock();
         SetupPromptTemplateMock();
         SetupQueryExpansionMock(query);
@@ -556,7 +517,7 @@ public sealed class RagServiceIntegrationTests : IDisposable
         var query = "Game rules";
 
         SetupEmbeddingServiceMock();
-        SetupQdrantServiceMock();
+
         SetupCacheMock();
         SetupPromptTemplateMock();
         SetupQueryExpansionMock(query);
@@ -591,7 +552,7 @@ public sealed class RagServiceIntegrationTests : IDisposable
         var query = "Winning conditions";
 
         SetupEmbeddingServiceMock();
-        SetupQdrantServiceMock();
+
         SetupCacheMock();
         SetupPromptTemplateMock();
         SetupQueryExpansionMock(query);
@@ -625,7 +586,7 @@ public sealed class RagServiceIntegrationTests : IDisposable
         var query = "Complex query";
 
         SetupEmbeddingServiceMock();
-        SetupQdrantServiceMock();
+
         SetupCacheMock();
         SetupPromptTemplateMock();
         SetupQueryExpansionMock(query);
@@ -660,7 +621,7 @@ public sealed class RagServiceIntegrationTests : IDisposable
         var query = "Test query";
 
         SetupEmbeddingServiceMock();
-        SetupQdrantServiceMock();
+
         SetupCacheMock();
         SetupPromptTemplateMock();
         SetupQueryExpansionMock(query);
@@ -700,7 +661,7 @@ public sealed class RagServiceIntegrationTests : IDisposable
         var query = "Boundary test query";
 
         SetupEmbeddingServiceMock();
-        SetupQdrantServiceMock();
+
         SetupCacheMock();
         SetupPromptTemplateMock();
         SetupQueryExpansionMock(query);
@@ -738,7 +699,7 @@ public sealed class RagServiceIntegrationTests : IDisposable
         var query = "Score threshold test";
 
         SetupEmbeddingServiceMock();
-        SetupQdrantServiceMock();
+
         SetupCacheMock();
         SetupPromptTemplateMock();
         SetupQueryExpansionMock(query);
@@ -772,7 +733,7 @@ public sealed class RagServiceIntegrationTests : IDisposable
         var query = "ConfigKeys test";
 
         SetupEmbeddingServiceMock();
-        SetupQdrantServiceMock();
+
         SetupCacheMock();
         SetupPromptTemplateMock();
         SetupQueryExpansionMock(query);
@@ -799,15 +760,11 @@ public sealed class RagServiceIntegrationTests : IDisposable
         var mockLlmService = CreateMockLlmService();
 
         return new RagService(
-            _mockEmbeddingService.Object,
-            _mockQdrantService.Object,
             _mockHybridSearchService.Object,
             mockLlmService,
             _mockCache.Object,
             _mockPromptTemplateService.Object,
             _mockLogger.Object,
-            _mockQueryExpansion.Object,
-            _mockReranker.Object,
             configMock.Object);
     }
 }

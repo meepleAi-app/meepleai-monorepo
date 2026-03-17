@@ -21,7 +21,6 @@ import { BuilderTable } from '@/components/admin/agent-definitions/BuilderTable'
 import { PhaseModelConfiguration } from '@/components/admin/agent-typologies/PhaseModelConfiguration';
 import { TypologyForm } from '@/components/admin/agent-typologies/TypologyForm';
 import { TypologyPromptEditor } from '@/components/admin/agent-typologies/TypologyPromptEditor';
-import { AgentKPICards } from '@/components/admin/agents/agent-kpi-cards'; // registry id: agent-kpi-cards
 import { AgentConfigPanel } from '@/components/admin/agents/AgentConfigPanel';
 import { AgentModeSelector } from '@/components/admin/agents/AgentModeSelector';
 import { ComparisonPanel } from '@/components/admin/agents/ComparisonPanel';
@@ -30,7 +29,6 @@ import { MetricsKpiCards } from '@/components/admin/agents/MetricsKpiCards';
 import { TestChatInterface } from '@/components/admin/agents/TestChatInterface';
 import { TestMetricsDisplay } from '@/components/admin/agents/TestMetricsDisplay';
 import { TopAgentsTable } from '@/components/admin/agents/TopAgentsTable';
-import { UsageTrendChart } from '@/components/admin/agents/usage-trend-chart';
 import { UsageChart } from '@/components/admin/agents/UsageChart';
 import { AiModelsTable } from '@/components/admin/AiModelsTable';
 import { AlertRuleForm } from '@/components/admin/alert-rules/AlertRuleForm';
@@ -63,10 +61,20 @@ import { UploadSettings } from '@/components/admin/knowledge-base/upload-setting
 import { UploadZone } from '@/components/admin/knowledge-base/upload-zone';
 import { VectorCollectionCard } from '@/components/admin/knowledge-base/vector-collection-card';
 import { KPICard } from '@/components/admin/KPICard';
+import { KPICardsGrid } from '@/components/admin/KPICardsGrid';
 import { AdminErrorBoundary } from '@/components/admin/layout/AdminErrorBoundary';
 import { AdminHubEmptyState } from '@/components/admin/layout/AdminHubEmptyState';
 import { AdminHubQuickLink } from '@/components/admin/layout/AdminHubQuickLink';
 import { AdminHubTabBar } from '@/components/admin/layout/AdminHubTabBar';
+import { EmergencyBanner } from '@/components/admin/layout/EmergencyBanner';
+import { ChannelSelector } from '@/components/admin/notifications/ChannelSelector';
+import { NotificationPreview } from '@/components/admin/notifications/NotificationPreview';
+import { RecipientSelector } from '@/components/admin/notifications/RecipientSelector';
+import { BudgetDebugPanel } from '@/components/admin/playground/budget-debug-panel';
+import { ConfidenceBadge as RagConfidenceBadge } from '@/components/admin/rag/ConfidenceBadge';
+import { PipelineDiagram } from '@/components/admin/rag/PipelineDiagram';
+import { StrategyBadge } from '@/components/admin/rag/StrategyBadge';
+import { WaterfallChart } from '@/components/admin/rag/WaterfallChart';
 import { AdminConfirmationDialog } from '@/components/ui/admin/admin-confirmation-dialog';
 import { Accordion } from '@/components/ui/data-display/accordion';
 import { DataTable } from '@/components/ui/data-display/data-table';
@@ -243,15 +251,9 @@ import { BackgroundTexture } from '@/components/ui/BackgroundTexture';
 
 // ─── Admin — Layout ───────────────────────────────────────────────────────────
 
-import { EmergencyBanner } from '@/components/admin/layout/EmergencyBanner';
-
 // ─── Admin — Charts ───────────────────────────────────────────────────────────
 
-import { PipelineDiagram } from '@/components/admin/rag/PipelineDiagram';
-import { WaterfallChart } from '@/components/admin/rag/WaterfallChart';
-import { StrategyBadge } from '@/components/admin/rag/StrategyBadge';
 import { TimelineStep } from '@/components/admin/rag/TimelineStep';
-import { ConfidenceBadge as RagConfidenceBadge } from '@/components/admin/rag/ConfidenceBadge';
 import { KpiCards as UsageKpiCards } from '@/components/admin/usage/KpiCards';
 import { RequestTimelineChart } from '@/components/admin/usage/RequestTimelineChart';
 import { CostBreakdownPanel } from '@/components/admin/usage/CostBreakdownPanel';
@@ -305,27 +307,18 @@ import { ActivityFilters } from '@/components/admin/users/activity-filters';
 
 // ─── Admin — Notifications ────────────────────────────────────────────────────
 
-import { ChannelSelector } from '@/components/admin/notifications/ChannelSelector';
-import { NotificationPreview } from '@/components/admin/notifications/NotificationPreview';
-import { RecipientSelector } from '@/components/admin/notifications/RecipientSelector';
-
 // ─── Admin — Invitations ──────────────────────────────────────────────────────
 
 // ─── Admin — Strategies & Overview ───────────────────────────────────────────
 
 import { StrategyEditor } from '@/components/admin/strategies/StrategyEditor';
-import { QuickActionsWidget } from '@/components/admin/overview/QuickActionsWidget';
-import { SystemHealthCard } from '@/components/admin/overview/SystemHealthCard';
 
 // ─── Admin — Games ────────────────────────────────────────────────────────────
 
 // ─── Admin — Playground ───────────────────────────────────────────────────────
 
-import { BudgetDebugPanel } from '@/components/admin/playground/budget-debug-panel';
-
 // ─── Admin — Misc ─────────────────────────────────────────────────────────────
 
-import { KPICardsGrid } from '@/components/admin/KPICardsGrid';
 import { StatCard as AdminStatCard } from '@/components/admin/StatCard';
 import { ServiceHealthMatrix } from '@/components/admin/ServiceHealthMatrix';
 
@@ -521,10 +514,8 @@ export const COMPONENT_MAP: Record<string, ComponentType<any>> = {
   'free-quota-indicator': FreeQuotaIndicator,
   'rate-limit-gauge': RateLimitGauge,
   'recent-requests-table': RecentRequestsTable,
-  'agent-kpi-cards': AgentKPICards,
   'metrics-kpi-cards': MetricsKpiCards,
   'usage-chart': UsageChart,
-  'usage-trend-chart': UsageTrendChart,
   'cost-breakdown-chart': CostBreakdownChart,
 
   // Admin — Agent Builder
@@ -614,8 +605,6 @@ export const COMPONENT_MAP: Record<string, ComponentType<any>> = {
 
   // Admin — Strategies & Overview
   'strategy-editor': StrategyEditor,
-  'quick-actions-widget': QuickActionsWidget,
-  'system-health-card': SystemHealthCard,
   'command-center-dashboard': CommandCenterDashboard,
 
   // Admin — Games

@@ -5,29 +5,135 @@
  * Add new stories here to make them available in the showcase.
  */
 
+// ─── Existing Stories ─────────────────────────────────────────────────────────
 import { actionGridStory } from './action-grid.story';
+import { agentStatsDisplayStory } from './agent-stats-display.story';
+import { agentStatusBadgeStory } from './agent-status-badge.story';
+import { alertStory } from './alert.story';
+import { badgeStory } from './badge.story';
+import { buttonStory } from './button.story';
+import { chatMessageStory } from './chat-message.story';
+import { checkboxStory } from './checkbox.story';
+import { collectionProgressStory } from './collection-progress.story';
 import { confidenceBadgeStory } from './confidence-badge.story';
+import { dialogStory } from './dialog.story';
+import { dropdownMenuStory } from './dropdown-menu.story';
 import { entityListViewStory } from './entity-list-view.story';
+import { formShowcaseStory } from './form-showcase.story';
 import { gameCarouselStory } from './game-carousel.story';
+import { inputStory } from './input.story';
+import { kpiCardsStory } from './kpi-cards.story';
+import { meepleAvatarStory } from './meeple-avatar.story';
 import { meepleCardStory } from './meeple-card.story';
+import { meepleLogoStory } from './meeple-logo.story';
 import { pageTransitionStory } from './page-transition.story';
+import { popoverStory } from './popover.story';
+import { progressStory } from './progress.story';
+import { radioGroupStory } from './radio-group.story';
+import { ratingStarsStory } from './rating-stars.story';
 import { ruleSourceCardStory } from './rule-source-card.story';
+import { switchStory } from './switch.story';
 import { tagStripStory } from './tag-strip.story';
 import { tierBadgeStory } from './tier-badge.story';
+
+// ─── Forms ────────────────────────────────────────────────────────────────────
+import { textareaStory } from './textarea.story';
+import { selectStory } from './select.story';
+
+// ─── Overlays ─────────────────────────────────────────────────────────────────
+import { sheetStory } from './sheet.story';
+import { tooltipStory } from './tooltip.story';
+
+// ─── Feedback ────────────────────────────────────────────────────────────────
+import { skeletonStory } from './skeleton.story';
+
+// ─── Navigation ──────────────────────────────────────────────────────────────
+import { tabsStory } from './tabs.story';
+
+// ─── Layout ──────────────────────────────────────────────────────────────────
+import { separatorStory } from './separator.story';
+
+// ─── Meeple ──────────────────────────────────────────────────────────────────
+
+// ─── Agent ───────────────────────────────────────────────────────────────────
+import { strategyBadgeStory } from './strategy-badge.story';
+
+// ─── Charts ──────────────────────────────────────────────────────────────────
+import { upgradePromptStory } from './upgrade-prompt.story';
+import { waterfallChartStory } from './waterfall-chart.story';
+
+// ─── Data Display ────────────────────────────────────────────────────────────
+import { statCardStory } from './stat-card.story';
+
+// ─── Gates ───────────────────────────────────────────────────────────────────
 
 import type { ShowcaseStory } from '../types';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const ALL_STORIES: ShowcaseStory<any>[] = [
+  // Data Display
   meepleCardStory,
   entityListViewStory,
   gameCarouselStory,
+  badgeStory,
+  ratingStarsStory,
+  statCardStory,
+
+  // Navigation
   actionGridStory,
-  tagStripStory,
-  pageTransitionStory,
+  tabsStory,
+  dropdownMenuStory,
+
+  // Feedback
   confidenceBadgeStory,
   tierBadgeStory,
   ruleSourceCardStory,
+  alertStory,
+  progressStory,
+  skeletonStory,
+
+  // Tags
+  tagStripStory,
+
+  // Animations
+  pageTransitionStory,
+
+  // Forms
+  buttonStory,
+  inputStory,
+  switchStory,
+  checkboxStory,
+  textareaStory,
+  selectStory,
+  radioGroupStory,
+  formShowcaseStory,
+
+  // Overlays
+  dialogStory,
+  sheetStory,
+  tooltipStory,
+  popoverStory,
+
+  // Layout
+  separatorStory,
+
+  // Meeple
+  meepleAvatarStory,
+  meepleLogoStory,
+  chatMessageStory,
+
+  // Agent
+  agentStatusBadgeStory,
+  agentStatsDisplayStory,
+  strategyBadgeStory,
+
+  // Charts
+  waterfallChartStory,
+  kpiCardsStory,
+
+  // Gates
+  upgradePromptStory,
+  collectionProgressStory,
 ];
 
 /** Look up a story by its slug id */

@@ -22,6 +22,12 @@ const CATEGORY_COLORS: Record<ShowcaseCategory, string> = {
   Tags: 'bg-purple-50 text-purple-700 dark:bg-purple-900/20 dark:text-purple-300',
   Animations: 'bg-pink-50 text-pink-700 dark:bg-pink-900/20 dark:text-pink-300',
   Gates: 'bg-rose-50 text-rose-700 dark:bg-rose-900/20 dark:text-rose-300',
+  Forms: 'bg-orange-50 text-orange-700 dark:bg-orange-900/20 dark:text-orange-300',
+  Charts: 'bg-cyan-50 text-cyan-700 dark:bg-cyan-900/20 dark:text-cyan-300',
+  Layout: 'bg-slate-50 text-slate-700 dark:bg-slate-900/20 dark:text-slate-300',
+  Overlays: 'bg-violet-50 text-violet-700 dark:bg-violet-900/20 dark:text-violet-300',
+  Meeple: 'bg-yellow-50 text-yellow-700 dark:bg-yellow-900/20 dark:text-yellow-300',
+  Agent: 'bg-teal-50 text-teal-700 dark:bg-teal-900/20 dark:text-teal-300',
 };
 
 export default function ShowcaseHomePage() {
@@ -69,7 +75,7 @@ export default function ShowcaseHomePage() {
 
             {/* Story cards */}
             <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
-              {stories.map((story) => {
+              {stories.map(story => {
                 const colorClass =
                   CATEGORY_COLORS[story.category] ?? 'bg-muted text-muted-foreground';
 

@@ -31,7 +31,15 @@ export type ShowcaseCategory =
   | 'Feedback'
   | 'Tags'
   | 'Animations'
-  | 'Gates';
+  | 'Gates'
+  | 'Forms'
+  | 'Charts'
+  | 'Layout'
+  | 'Overlays'
+  | 'Meeple'
+  | 'Agent';
+
+export type ComponentCategory = ShowcaseCategory;
 
 // ============================================================================
 // Story Interface

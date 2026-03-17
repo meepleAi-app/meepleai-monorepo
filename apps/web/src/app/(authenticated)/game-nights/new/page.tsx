@@ -8,7 +8,7 @@
 import { useRouter } from 'next/navigation';
 
 import { useCreateGameNight } from '@/hooks/queries/useGameNights';
-import { useToast } from '@/hooks/use-toast';
+import { useToast } from '@/hooks/useToast';
 import type { CreateGameNightInput } from '@/lib/api/schemas/game-nights.schemas';
 
 import { GameNightForm } from '../_components/GameNightForm';

@@ -1,4 +1,3 @@
- 
 /**
  * AdvancedFilterPanel Component (Issue #2873)
  *
@@ -12,7 +11,16 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
-import { Check, ChevronDown, RotateCcw, SlidersHorizontal, Users, Clock, Puzzle, Grid3X3 } from 'lucide-react';
+import {
+  Check,
+  ChevronDown,
+  RotateCcw,
+  SlidersHorizontal,
+  Users,
+  Clock,
+  Puzzle,
+  Grid3X3,
+} from 'lucide-react';
 
 import { Badge } from '@/components/ui/data-display/badge';
 import {
@@ -33,6 +41,7 @@ import { Checkbox } from '@/components/ui/primitives/checkbox';
 import { Slider } from '@/components/ui/primitives/slider';
 import { api } from '@/lib/api';
 import type { GameCategory, GameMechanic } from '@/lib/api/schemas/shared-games.schemas';
+import { logger } from '@/lib/logger';
 import { cn } from '@/lib/utils';
 
 import { type SearchFilters, DEFAULT_FILTERS } from './SharedGameSearchFilters';
@@ -81,7 +90,13 @@ interface FilterSectionProps {
   defaultOpen?: boolean;
 }
 
-function FilterSection({ title, icon, activeCount, children, defaultOpen = true }: FilterSectionProps) {
+function FilterSection({
+  title,
+  icon,
+  activeCount,
+  children,
+  defaultOpen = true,
+}: FilterSectionProps) {
   const [isOpen, setIsOpen] = useState(defaultOpen);
 
   return (
@@ -95,9 +110,7 @@ function FilterSection({ title, icon, activeCount, children, defaultOpen = true 
             {icon}
             {title}
             {activeCount > 0 && (
-              <Badge
-                className="h-5 min-w-5 px-1.5 text-xs bg-orange-500 hover:bg-orange-500 text-white border-0"
-              >
+              <Badge className="h-5 min-w-5 px-1.5 text-xs bg-orange-500 hover:bg-orange-500 text-white border-0">
                 {activeCount}
               </Badge>
             )}
@@ -110,9 +123,7 @@ function FilterSection({ title, icon, activeCount, children, defaultOpen = true 
           />
         </Button>
       </CollapsibleTrigger>
-      <CollapsibleContent className="px-2 pb-2 space-y-3">
-        {children}
-      </CollapsibleContent>
+      <CollapsibleContent className="px-2 pb-2 space-y-3">{children}</CollapsibleContent>
     </Collapsible>
   );
 }
@@ -158,7 +169,7 @@ export function AdvancedFilterPanel({
         setCategories(categoriesData);
         setMechanics(mechanicsData);
       } catch (error) {
-        console.error('Failed to load filter reference data:', error);
+        logger.error('Failed to load filter reference data:', error);
       } finally {
         setLoading(false);
       }
@@ -202,7 +213,14 @@ export function AdvancedFilterPanel({
     if (mechanicsCount > 0) count++;
     if (draftFilters.catalogOnly) count++;
     return count;
-  }, [playersCount, complexityCount, durationCount, categoriesCount, mechanicsCount, draftFilters.catalogOnly]);
+  }, [
+    playersCount,
+    complexityCount,
+    durationCount,
+    categoriesCount,
+    mechanicsCount,
+    draftFilters.catalogOnly,
+  ]);
 
   // ============================================================================
   // Handlers
@@ -270,20 +288,26 @@ export function AdvancedFilterPanel({
   // Get Current Slider Values
   // ============================================================================
 
-  const playersValue = useMemo(() => [
-    draftFilters.minPlayers ?? PLAYERS_MIN,
-    draftFilters.maxPlayers ?? PLAYERS_MAX,
-  ], [draftFilters.minPlayers, draftFilters.maxPlayers]);
+  const playersValue = useMemo(
+    () => [draftFilters.minPlayers ?? PLAYERS_MIN, draftFilters.maxPlayers ?? PLAYERS_MAX],
+    [draftFilters.minPlayers, draftFilters.maxPlayers]
+  );
 
-  const complexityValue = useMemo(() => [
-    draftFilters.minComplexity ?? COMPLEXITY_MIN,
-    draftFilters.maxComplexity ?? COMPLEXITY_MAX,
-  ], [draftFilters.minComplexity, draftFilters.maxComplexity]);
+  const complexityValue = useMemo(
+    () => [
+      draftFilters.minComplexity ?? COMPLEXITY_MIN,
+      draftFilters.maxComplexity ?? COMPLEXITY_MAX,
+    ],
+    [draftFilters.minComplexity, draftFilters.maxComplexity]
+  );
 
-  const durationValue = useMemo(() => [
-    draftFilters.minPlayingTime ?? DURATION_MIN,
-    draftFilters.maxPlayingTime ?? DURATION_MAX,
-  ], [draftFilters.minPlayingTime, draftFilters.maxPlayingTime]);
+  const durationValue = useMemo(
+    () => [
+      draftFilters.minPlayingTime ?? DURATION_MIN,
+      draftFilters.maxPlayingTime ?? DURATION_MAX,
+    ],
+    [draftFilters.minPlayingTime, draftFilters.maxPlayingTime]
+  );
 
   // ============================================================================
   // Render
@@ -302,9 +326,7 @@ export function AdvancedFilterPanel({
               </Badge>
             )}
           </SheetTitle>
-          <SheetDescription>
-            Personalizza la ricerca con filtri specifici
-          </SheetDescription>
+          <SheetDescription>Personalizza la ricerca con filtri specifici</SheetDescription>
         </SheetHeader>
 
         {/* Scrollable Content */}
@@ -379,7 +401,9 @@ export function AdvancedFilterPanel({
                   />
                   <div className="flex justify-between text-xs text-muted-foreground">
                     <span>Min: {durationValue[0]} min</span>
-                    <span>Max: {durationValue[1] === DURATION_MAX ? '300+' : durationValue[1]} min</span>
+                    <span>
+                      Max: {durationValue[1] === DURATION_MAX ? '300+' : durationValue[1]} min
+                    </span>
                   </div>
                 </div>
               </FilterSection>
@@ -416,7 +440,9 @@ export function AdvancedFilterPanel({
                     </label>
                   ))}
                   {categories.length === 0 && (
-                    <p className="text-sm text-muted-foreground p-2">Nessuna categoria disponibile</p>
+                    <p className="text-sm text-muted-foreground p-2">
+                      Nessuna categoria disponibile
+                    </p>
                   )}
                 </div>
               </FilterSection>
@@ -453,7 +479,9 @@ export function AdvancedFilterPanel({
                     </label>
                   ))}
                   {mechanics.length === 0 && (
-                    <p className="text-sm text-muted-foreground p-2">Nessuna meccanica disponibile</p>
+                    <p className="text-sm text-muted-foreground p-2">
+                      Nessuna meccanica disponibile
+                    </p>
                   )}
                 </div>
               </FilterSection>
@@ -463,9 +491,7 @@ export function AdvancedFilterPanel({
                 <label
                   className={cn(
                     'flex items-center justify-between py-2 px-2 rounded cursor-pointer transition-colors',
-                    draftFilters.catalogOnly
-                      ? 'bg-orange-500/10'
-                      : 'hover:bg-muted'
+                    draftFilters.catalogOnly ? 'bg-orange-500/10' : 'hover:bg-muted'
                   )}
                 >
                   <div className="space-y-0.5">

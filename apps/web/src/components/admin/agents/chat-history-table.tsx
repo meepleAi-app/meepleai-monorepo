@@ -6,6 +6,7 @@ import { ChevronDownIcon, ChevronRightIcon, Loader2 } from 'lucide-react';
 
 import { Badge } from '@/components/ui/badge';
 import { adminDashboardClient } from '@/lib/api/clients/adminDashboardClient';
+import { logger } from '@/lib/logger';
 
 interface ChatSession {
   id: string;
@@ -56,19 +57,19 @@ export function ChatHistoryTable() {
     setIsLoading(true);
     adminDashboardClient
       .getChatHistory()
-      .then((res) => {
+      .then(res => {
         const data = res as ChatHistoryResponse;
         setSessions(data?.sessions ?? []);
       })
-      .catch((err) => {
-        console.error('Failed to load chat history:', err);
+      .catch(err => {
+        logger.error('Failed to load chat history:', err);
         setError('Impossibile caricare la cronologia chat');
       })
       .finally(() => setIsLoading(false));
   }, []);
 
   const toggleRow = (id: string) => {
-    setExpandedRow((prev) => (prev === id ? null : id));
+    setExpandedRow(prev => (prev === id ? null : id));
   };
 
   const handleKeyDown = (e: KeyboardEvent<HTMLTableRowElement>, id: string) => {
@@ -131,14 +132,14 @@ export function ChatHistoryTable() {
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-200 dark:divide-zinc-700">
-            {sessions.map((session) => {
+            {sessions.map(session => {
               const isExpanded = expandedRow === session.id;
               return (
                 <Fragment key={session.id}>
                   <tr
                     className="hover:bg-slate-50/50 dark:hover:bg-zinc-900/50 cursor-pointer"
                     onClick={() => toggleRow(session.id)}
-                    onKeyDown={(e) => handleKeyDown(e, session.id)}
+                    onKeyDown={e => handleKeyDown(e, session.id)}
                     role="button"
                     tabIndex={0}
                   >
@@ -156,7 +157,10 @@ export function ChatHistoryTable() {
                       {session.userName}
                     </td>
                     <td className="py-3 px-4">
-                      <Badge variant="outline" className="bg-blue-100 text-blue-900 dark:bg-blue-900/30 dark:text-blue-300">
+                      <Badge
+                        variant="outline"
+                        className="bg-blue-100 text-blue-900 dark:bg-blue-900/30 dark:text-blue-300"
+                      >
                         {session.agent}
                       </Badge>
                     </td>
@@ -178,7 +182,9 @@ export function ChatHistoryTable() {
                             Chat Preview
                           </h4>
                           {session.preview.length === 0 ? (
-                            <p className="text-xs text-muted-foreground">Nessun messaggio da visualizzare</p>
+                            <p className="text-xs text-muted-foreground">
+                              Nessun messaggio da visualizzare
+                            </p>
                           ) : (
                             session.preview.map((msg, idx) => (
                               <div

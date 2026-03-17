@@ -122,8 +122,7 @@ export interface MeepleCardProps extends VariantProps<typeof meepleCardVariants>
 
   /** Feature: Quick Actions Menu (#3825) */
   quickActions?: Array<{
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    icon: any;
+    icon: LucideIcon;
     label: string;
     onClick: () => void;
     disabled?: boolean;

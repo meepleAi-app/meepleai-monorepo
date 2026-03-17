@@ -9,9 +9,9 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from '@/components/ui/data-display/collapsible';
-import { useAppMode } from '@/hooks/use-app-mode';
-import { cn } from '@/lib/utils';
+import { useAppMode } from '@/hooks/useAppMode';
 import type { AppMode } from '@/lib/stores/user-preferences';
+import { cn } from '@/lib/utils';
 import type { Citation } from '@/types';
 
 import { PdfPageModal } from './PdfPageModal';

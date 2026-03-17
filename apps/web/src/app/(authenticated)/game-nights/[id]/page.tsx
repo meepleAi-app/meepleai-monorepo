@@ -13,7 +13,7 @@ import { use, useEffect } from 'react';
 import { Calendar, Check, Edit, HelpCircle, MapPin, Send, Users, X, XCircle } from 'lucide-react';
 import Link from 'next/link';
 
-import { GameNightPlanningLayout } from '@/components/game-nights/GameNightPlanningLayout';
+import { GameNightPlanningLayout } from '@/components/game-night/planning/GameNightPlanningLayout';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';

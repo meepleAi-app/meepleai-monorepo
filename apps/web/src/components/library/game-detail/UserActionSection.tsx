@@ -43,6 +43,7 @@ import { useGameLabels, useRemoveLabelFromGame } from '@/hooks/queries/useLabels
 import type { LibraryGameDetail } from '@/hooks/queries/useLibrary';
 import { useUpdateGameState } from '@/hooks/queries/useLibrary';
 import type { GameStateType } from '@/lib/api/schemas/library.schemas';
+import { logger } from '@/lib/logger';
 import { cn } from '@/lib/utils';
 
 export interface UserActionSectionProps {
@@ -117,7 +118,7 @@ export function UserActionSection({ gameDetail }: UserActionSectionProps) {
       toast.error('Errore', {
         description: 'Impossibile aggiornare lo stato del gioco. Riprova.',
       });
-      console.error('Failed to update game state:', error);
+      logger.error('Failed to update game state:', error);
     }
   };
 

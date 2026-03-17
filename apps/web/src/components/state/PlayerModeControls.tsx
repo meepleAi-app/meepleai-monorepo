@@ -33,6 +33,7 @@ import {
 } from '@/components/ui/overlays/tooltip';
 import { Button } from '@/components/ui/primitives/button';
 import { usePlayerAISuggestion } from '@/lib/domain-hooks/usePlayerAISuggestion';
+import { logger } from '@/lib/logger';
 
 import { PlayerModeHelpModal } from './PlayerModeHelpModal';
 import { PlayerModeTour } from './PlayerModeTour';
@@ -121,8 +122,7 @@ export function PlayerModeControls({
 
   // Memoize callbacks to prevent hook recreation
   const handleSuggestionReceived = useCallback((suggestion: unknown, confidence: number) => {
-    // eslint-disable-next-line no-console
-    console.log('Received suggestion:', suggestion, 'Confidence:', confidence);
+    logger.debug(`Received suggestion: ${JSON.stringify(suggestion)} Confidence: ${confidence}`);
   }, []);
 
   const handleSuggestionApplied = useCallback(
@@ -144,7 +144,7 @@ export function PlayerModeControls({
   }, [onSuggestionIgnored]);
 
   const handleError = useCallback((error: string) => {
-    console.error('Suggestion error:', error);
+    logger.error(`Suggestion error: ${error}`);
   }, []);
 
   const [suggestionState, suggestionControls] = usePlayerAISuggestion({

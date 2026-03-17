@@ -18,6 +18,7 @@
 
 import { ApiError } from '../lib/api';
 import { extractCorrelationId } from '../lib/errorUtils';
+import { logger } from '../lib/logger';
 import { isRetryableError, retryWithBackoff } from '../lib/retryUtils';
 
 // ============================================================================
@@ -183,7 +184,7 @@ function setupBroadcastChannel(): void {
       }
     };
   } catch (error) {
-    console.error('[UploadWorker] BroadcastChannel not supported:', error);
+    logger.error('[UploadWorker] BroadcastChannel not supported:', error);
   }
 }
 
@@ -196,7 +197,7 @@ function broadcastQueueUpdate(): void {
         tabId: TAB_ID,
       } as BroadcastMessage);
     } catch (error) {
-      console.error('[UploadWorker] Failed to broadcast update:', error);
+      logger.error('[UploadWorker] Failed to broadcast update:', error);
     }
   }
 }
@@ -209,7 +210,7 @@ function broadcastUploadStarted(id: string): void {
         payload: { id, tabId: TAB_ID },
       } as BroadcastMessage);
     } catch (error) {
-      console.error('[UploadWorker] Failed to broadcast upload started:', error);
+      logger.error('[UploadWorker] Failed to broadcast upload started:', error);
     }
   }
 }
@@ -244,8 +245,7 @@ function markAsHandledByOtherTab(id: string): void {
   if (item && item.status === 'pending') {
     // Leave it pending but don't process it
     if (process.env.NODE_ENV !== 'production') {
-      // eslint-disable-next-line no-console
-      console.log(`[UploadWorker] Item ${id} being handled by another tab`);
+      logger.debug(`[UploadWorker] Item ${id} being handled by another tab`);
     }
   }
 }
@@ -403,7 +403,7 @@ async function processQueue(): Promise<void> {
       // Check if we have file data in storage (for resumed uploads)
       const fileData = fileDataCache.get(nextItem.id);
       if (!fileData) {
-        console.error(`[UploadWorker] No file data for item ${nextItem.id}`);
+        logger.error(`[UploadWorker] No file data for item ${nextItem.id}`);
         updateItemStatus(nextItem.id, 'failed', 0, 'File data not found');
         continue;
       }
@@ -615,15 +615,14 @@ self.onmessage = (event: MessageEvent<WorkerRequest>) => {
         state.items = message.payload.items;
         state.metrics = message.payload.metrics;
         if (process.env.NODE_ENV !== 'production') {
-          // eslint-disable-next-line no-console
-          console.log(`[UploadWorker] Restored ${state.items.length} items from main thread`);
+          logger.debug(`[UploadWorker] Restored ${state.items.length} items from main thread`);
         }
         notifyStateUpdate();
         void processQueue(); // Auto-start processing restored items
         break;
     }
   } catch (error) {
-    console.error('[UploadWorker] Error handling message:', error);
+    logger.error('[UploadWorker] Error handling message:', error);
     self.postMessage({
       type: 'WORKER_ERROR',
       payload: { message: error instanceof Error ? error.message : 'Unknown error' },
@@ -639,6 +638,5 @@ self.postMessage({
 } as WorkerResponse);
 
 if (process.env.NODE_ENV !== 'production') {
-  // eslint-disable-next-line no-console
-  console.log('[UploadWorker] Initialized, awaiting state restoration from main thread');
+  logger.debug('[UploadWorker] Initialized, awaiting state restoration from main thread');
 }

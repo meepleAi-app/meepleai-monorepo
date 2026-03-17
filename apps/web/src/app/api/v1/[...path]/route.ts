@@ -10,6 +10,8 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 
+import { logger } from '@/lib/logger';
+
 // Force dynamic rendering (required for proxying)
 export const dynamic = 'force-dynamic';
 
@@ -20,8 +22,7 @@ const API_BASE =
 
 // WEB-01: Only log in development
 if (process.env.NODE_ENV !== 'production') {
-  // eslint-disable-next-line no-console
-  console.log('[API Proxy] Module initialized with API_BASE:', API_BASE);
+  logger.debug(`[API Proxy] Module initialized with API_BASE: ${API_BASE}`);
 }
 
 /**
@@ -49,8 +50,7 @@ function copyResponseHeaders(source: Response, target: NextResponse, apiPath: st
     target.headers.append('set-cookie', cookie);
   }
   if (setCookies.length > 0 && process.env.NODE_ENV !== 'production') {
-    // eslint-disable-next-line no-console
-    console.log(`[API Proxy] Set-Cookie headers received: ${setCookies.length} cookie(s)`);
+    logger.debug(`[API Proxy] Set-Cookie headers received: ${setCookies.length} cookie(s)`);
   }
 
   source.headers.forEach((value, key) => {
@@ -60,8 +60,7 @@ function copyResponseHeaders(source: Response, target: NextResponse, apiPath: st
   });
 
   if (apiPath.includes('/auth/') && process.env.NODE_ENV !== 'production') {
-    // eslint-disable-next-line no-console
-    console.log(
+    logger.debug(
       `[API Proxy] Auth response: ${source.status} ${source.statusText}, Set-Cookie: ${setCookies.length > 0 ? `${setCookies.length} cookie(s)` : 'absent'}`
     );
   }
@@ -83,8 +82,7 @@ async function proxyRequest(request: NextRequest, method: string) {
     const apiPath = pathname.replace('/api/v1/', '/api/v1/');
     const targetUrl = `${API_BASE}${apiPath}${request.nextUrl.search}`;
     if (process.env.NODE_ENV !== 'production') {
-      // eslint-disable-next-line no-console
-      console.log(`[API Proxy] ${method} ${targetUrl}`);
+      logger.debug(`[API Proxy] ${method} ${targetUrl}`);
     }
 
     // Issue #2432: Use arrayBuffer() to preserve exact binary content
@@ -133,7 +131,7 @@ async function proxyRequest(request: NextRequest, method: string) {
 
     return nextResponse;
   } catch (error) {
-    console.error('[API Proxy] Error:', error);
+    logger.error('[API Proxy] Error:', error);
     return NextResponse.json(
       { error: 'Proxy error', message: error instanceof Error ? error.message : 'Unknown error' },
       { status: 502 }

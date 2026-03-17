@@ -14,6 +14,7 @@
  */
 
 import type { RulebookAnalysisDto } from '@/lib/api/schemas/shared-games.schemas';
+import { logger } from '@/lib/logger';
 
 // ============================================================================
 // Constants
@@ -109,7 +110,7 @@ export function cacheRulebookAnalyses(
     // Guard against oversized entries
     if (getApproximateSize(serialized) > MAX_ENTRY_SIZE_BYTES) {
       if (process.env.NODE_ENV !== 'production') {
-        console.warn(`[rules-cache] Entry for game ${gameId} exceeds max size, skipping`);
+        logger.warn(`[rules-cache] Entry for game ${gameId} exceeds max size, skipping`);
       }
       return false;
     }
@@ -126,7 +127,7 @@ export function cacheRulebookAnalyses(
     return true;
   } catch (error) {
     if (process.env.NODE_ENV !== 'production') {
-      console.warn(`[rules-cache] Failed to cache game ${gameId}:`, error);
+      logger.warn(`[rules-cache] Failed to cache game ${gameId}: ${error}`);
     }
     return false;
   }

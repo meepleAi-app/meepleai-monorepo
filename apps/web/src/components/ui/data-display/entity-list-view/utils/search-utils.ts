@@ -17,7 +17,6 @@
  * ```
  */
 function getNestedValue(obj: unknown, path: string): unknown {
-  // eslint-disable-next-line security/detect-object-injection
   return path
     .split('.')
     .reduce((acc: unknown, part) => (acc as Record<string, unknown>)?.[part], obj);

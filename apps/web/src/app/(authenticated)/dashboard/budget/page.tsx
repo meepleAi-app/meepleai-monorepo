@@ -17,6 +17,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Progress } from '@/components/ui/progress';
 import { useAuth } from '@/hooks/useAuth';
 import { getUserBudget, type UserBudgetDto } from '@/lib/api/clients/budgetClient';
+import { logger } from '@/lib/logger';
 
 /**
  * Budget Dashboard Page
@@ -40,7 +41,7 @@ export default function BudgetDashboardPage() {
         setError(null);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load budget');
-        console.error('Budget fetch error:', err);
+        logger.error('Budget fetch error:', err);
       } finally {
         setLoading(false);
       }

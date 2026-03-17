@@ -18,12 +18,18 @@ import { Button } from '@/components/ui/primitives/button';
 import { useTranslation } from '@/hooks/useTranslation';
 import { api } from '@/lib/api';
 import type { BggSearchResult, BggGameDetails } from '@/lib/api/schemas/games.schemas';
+import { logger } from '@/lib/logger';
 
 import { AddPrivateGameForm, type AddPrivateGameFormData } from './AddPrivateGameForm';
 import { BggGameSearch } from './BggGameSearch';
 
 export interface AddPrivateGameWithBggProps {
-  onSubmit: (data: AddPrivateGameFormData, source: 'Manual' | 'BoardGameGeek', bggId?: number, thumbnailUrl?: string) => Promise<void>;
+  onSubmit: (
+    data: AddPrivateGameFormData,
+    source: 'Manual' | 'BoardGameGeek',
+    bggId?: number,
+    thumbnailUrl?: string
+  ) => Promise<void>;
   onCancel: () => void;
   isSubmitting?: boolean;
 }
@@ -38,7 +44,9 @@ function mapBggDetailsToFormData(details: BggGameDetails): Partial<AddPrivateGam
     yearPublished: details.yearPublished ?? undefined,
     playingTimeMinutes: details.playingTime ?? undefined,
     minAge: details.minAge ?? undefined,
-    complexityRating: details.averageWeight ? Math.round(details.averageWeight * 10) / 10 : undefined,
+    complexityRating: details.averageWeight
+      ? Math.round(details.averageWeight * 10) / 10
+      : undefined,
     description: details.description ?? undefined,
     imageUrl: details.imageUrl ?? undefined,
   };
@@ -62,19 +70,27 @@ export function AddPrivateGameWithBgg({
       setFormInitialValues(mapBggDetailsToFormData(details));
       setStep('form-bgg');
     } catch (err) {
-      console.error('Failed to load BGG game details:', err);
+      logger.error('Failed to load BGG game details:', err);
       toast.error('Impossibile caricare i dettagli del gioco da BGG');
       setStep('choose');
     }
   }, []);
 
-  const handleFormSubmit = useCallback(async (data: AddPrivateGameFormData) => {
-    if (step === 'form-bgg' && bggDetails) {
-      await onSubmit(data, 'BoardGameGeek', bggDetails.bggId, bggDetails.thumbnailUrl ?? undefined);
-    } else {
-      await onSubmit(data, 'Manual');
-    }
-  }, [step, bggDetails, onSubmit]);
+  const handleFormSubmit = useCallback(
+    async (data: AddPrivateGameFormData) => {
+      if (step === 'form-bgg' && bggDetails) {
+        await onSubmit(
+          data,
+          'BoardGameGeek',
+          bggDetails.bggId,
+          bggDetails.thumbnailUrl ?? undefined
+        );
+      } else {
+        await onSubmit(data, 'Manual');
+      }
+    },
+    [step, bggDetails, onSubmit]
+  );
 
   const handleBack = useCallback(() => {
     setStep('choose');
@@ -88,8 +104,8 @@ export function AddPrivateGameWithBgg({
       <div className="space-y-6" data-testid="add-game-choose-mode">
         <div className="space-y-3">
           <p className="text-sm text-muted-foreground">
-            Cerca il gioco su BoardGameGeek per compilare automaticamente i dettagli,
-            oppure inserisci manualmente le informazioni.
+            Cerca il gioco su BoardGameGeek per compilare automaticamente i dettagli, oppure
+            inserisci manualmente le informazioni.
           </p>
 
           <BggGameSearch onSelect={handleBggSelect} />
@@ -126,7 +142,10 @@ export function AddPrivateGameWithBgg({
   // Step: Loading BGG details
   if (step === 'loading-bgg') {
     return (
-      <div className="flex flex-col items-center justify-center py-12 gap-3" data-testid="loading-bgg-details">
+      <div
+        className="flex flex-col items-center justify-center py-12 gap-3"
+        data-testid="loading-bgg-details"
+      >
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
         <p className="text-sm text-muted-foreground">Caricamento dettagli da BGG...</p>
       </div>
@@ -137,15 +156,13 @@ export function AddPrivateGameWithBgg({
   const isBggMode = step === 'form-bgg';
 
   return (
-    <div className="space-y-4" data-testid={isBggMode ? 'add-game-bgg-form' : 'add-game-manual-form'}>
+    <div
+      className="space-y-4"
+      data-testid={isBggMode ? 'add-game-bgg-form' : 'add-game-manual-form'}
+    >
       {/* Header with back button and source indicator */}
       <div className="flex items-center gap-2">
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={handleBack}
-          data-testid="back-to-search-btn"
-        >
+        <Button variant="ghost" size="sm" onClick={handleBack} data-testid="back-to-search-btn">
           <ArrowLeft className="h-4 w-4 mr-1" />
           Indietro
         </Button>
@@ -169,7 +186,9 @@ export function AddPrivateGameWithBgg({
         onCancel={onCancel}
         isSubmitting={isSubmitting}
         initialValues={isBggMode ? formInitialValues : undefined}
-        submitLabel={isBggMode ? t('privateGameForm.addFromBgg') : t('privateGameForm.addPrivateGame')}
+        submitLabel={
+          isBggMode ? t('privateGameForm.addFromBgg') : t('privateGameForm.addPrivateGame')
+        }
       />
     </div>
   );

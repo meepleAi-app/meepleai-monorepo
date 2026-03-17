@@ -11,6 +11,8 @@
 
 import { useEffect, useRef, useCallback, useState } from 'react';
 
+import { logger } from '@/lib/logger';
+
 // ============ SSE Event Types ============
 
 export type SessionSSEEventType =
@@ -159,7 +161,7 @@ export function useSessionStream(
           break;
       }
     } catch (err) {
-      console.error('[useSessionStream] Failed to parse SSE event:', err);
+      logger.error('[useSessionStream] Failed to parse SSE event:', err);
     }
   }, []);
 

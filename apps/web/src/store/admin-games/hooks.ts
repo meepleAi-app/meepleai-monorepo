@@ -8,6 +8,7 @@
 import { useCallback, useEffect } from 'react';
 
 import { useApiClient } from '@/lib/api/context';
+import { logger } from '@/lib/logger';
 
 import {
   useAdminGamesStore,
@@ -86,7 +87,7 @@ export function useAdminGamesData() {
 
       setGames(result);
     } catch (error) {
-      console.error('Failed to fetch admin games:', error);
+      logger.error('Failed to fetch admin games:', error);
       setError(error instanceof Error ? error.message : 'Failed to fetch games');
     }
   }, [sharedGames, page, pageSize, filters, setGames, setLoadingGames, setError]);
@@ -116,7 +117,7 @@ export function useReferenceData() {
       const result = await sharedGames.getCategories();
       setCategories(result);
     } catch (error) {
-      console.error('Failed to fetch categories:', error);
+      logger.error('Failed to fetch categories:', error);
       // Non-critical, don't set error state
     }
   }, [sharedGames, categories.length, setCategories, setLoadingCategories]);
@@ -129,7 +130,7 @@ export function useReferenceData() {
       const result = await sharedGames.getMechanics();
       setMechanics(result);
     } catch (error) {
-      console.error('Failed to fetch mechanics:', error);
+      logger.error('Failed to fetch mechanics:', error);
       // Non-critical, don't set error state
     }
   }, [sharedGames, mechanics.length, setMechanics, setLoadingMechanics]);
@@ -155,7 +156,7 @@ export function usePendingDeletesData() {
       const result = await sharedGames.getPendingDeletes({ page: 1, pageSize: 100 });
       setPendingDeletes(result);
     } catch (error) {
-      console.error('Failed to fetch pending deletes:', error);
+      logger.error('Failed to fetch pending deletes:', error);
       // Non-critical for badge display
     }
   }, [sharedGames, setPendingDeletes, setLoadingPendingDeletes]);
@@ -178,7 +179,7 @@ export function useGameDetail() {
         setSelectedGame(game);
         return game;
       } catch (error) {
-        console.error('Failed to fetch game:', error);
+        logger.error('Failed to fetch game:', error);
         setError(error instanceof Error ? error.message : 'Failed to fetch game');
         return null;
       }

@@ -1,3 +1,5 @@
+import { logger } from '@/lib/logger';
+
 /**
  * Upload Utility - Issue #4141
  *
@@ -38,18 +40,12 @@ export async function uploadChunks(
     // Retry logic for each chunk
     for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
       try {
-        await uploadChunk(
-          chunk,
-          chunkIndex,
-          totalChunks,
-          sessionId,
-          API_BASE
-        );
+        await uploadChunk(chunk, chunkIndex, totalChunks, sessionId, API_BASE);
         success = true;
         break;
       } catch (error) {
         lastError = error as Error;
-        console.error(
+        logger.error(
           `Chunk ${chunkIndex + 1}/${totalChunks} failed (attempt ${attempt}/${MAX_RETRIES}):`,
           error
         );
@@ -101,9 +97,7 @@ async function uploadChunk(
 
   if (!response.ok) {
     const errorText = await response.text();
-    throw new Error(
-      `HTTP ${response.status}: ${errorText || response.statusText}`
-    );
+    throw new Error(`HTTP ${response.status}: ${errorText || response.statusText}`);
   }
 }
 
@@ -126,9 +120,7 @@ async function finalizeUpload(
 
   if (!response.ok) {
     const errorText = await response.text();
-    throw new Error(
-      `Failed to finalize upload: HTTP ${response.status} - ${errorText}`
-    );
+    throw new Error(`Failed to finalize upload: HTTP ${response.status} - ${errorText}`);
   }
 
   const result = await response.json();
@@ -139,5 +131,5 @@ async function finalizeUpload(
  * Delay utility for retry backoff
  */
 function delay(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
+  return new Promise(resolve => setTimeout(resolve, ms));
 }

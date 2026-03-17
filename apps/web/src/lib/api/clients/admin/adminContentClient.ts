@@ -458,6 +458,15 @@ export function createAdminContentClient(http: HttpClient) {
       await http.post('/api/v1/admin/email-templates/' + id + '/publish', {});
     },
 
+    async previewEmailTemplate(id: string, testData?: Record<string, string>): Promise<string> {
+      const result = await http.post<{ html: string }>(
+        `/api/v1/admin/email-templates/${id}/preview`,
+        { testData },
+        z.object({ html: z.string() })
+      );
+      return result.html;
+    },
+
     // ========== Mechanic Extractor ==========
 
     async getMechanicDraft(

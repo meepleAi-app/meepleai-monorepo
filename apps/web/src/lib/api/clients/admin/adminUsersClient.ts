@@ -70,6 +70,36 @@ export type EndImpersonationResponse = {
   message: string;
 };
 
+// ========== Invitation Schemas (local to this sub-client) ==========
+
+const InvitationStatusSchema = z.enum(['Pending', 'Accepted', 'Expired', 'Revoked']);
+
+const InvitationSchema = z.object({
+  id: z.string().uuid(),
+  email: z.string().email(),
+  role: z.string(),
+  status: InvitationStatusSchema,
+  sentAt: z.string(),
+  expiresAt: z.string(),
+  acceptedAt: z.string().nullable().optional(),
+});
+
+const InvitationListResponseSchema = z.object({
+  invitations: z.array(InvitationSchema),
+  total: z.number(),
+});
+
+const InvitationStatsSchema = z.object({
+  total: z.number(),
+  pending: z.number(),
+  accepted: z.number(),
+  expired: z.number(),
+  revoked: z.number(),
+});
+
+export type Invitation = z.infer<typeof InvitationSchema>;
+export type InvitationStats = z.infer<typeof InvitationStatsSchema>;
+
 export function createAdminUsersClient(http: HttpClient) {
   return {
     // ========== User Management ==========
@@ -415,7 +445,7 @@ export function createAdminUsersClient(http: HttpClient) {
 
       const query = queryParams.toString();
       const response = await fetch(
-        `${http['baseUrl']}/api/v1/admin/api-keys/bulk/export${query ? `?${query}` : ''}`,
+        `${getApiBase()}/api/v1/admin/api-keys/bulk/export${query ? `?${query}` : ''}`,
         {
           method: 'GET',
           credentials: 'include',
@@ -438,7 +468,7 @@ export function createAdminUsersClient(http: HttpClient) {
 
       const query = queryParams.toString();
       const response = await fetch(
-        `${http['baseUrl']}/api/v1/admin/users/bulk/export${query ? `?${query}` : ''}`,
+        `${getApiBase()}/api/v1/admin/users/bulk/export${query ? `?${query}` : ''}`,
         {
           method: 'GET',
           credentials: 'include',
@@ -555,33 +585,3 @@ export function createAdminUsersClient(http: HttpClient) {
 }
 
 export type AdminUsersClient = ReturnType<typeof createAdminUsersClient>;
-
-// ========== Invitation Schemas (local to this sub-client) ==========
-
-const InvitationStatusSchema = z.enum(['Pending', 'Accepted', 'Expired', 'Revoked']);
-
-const InvitationSchema = z.object({
-  id: z.string().uuid(),
-  email: z.string().email(),
-  role: z.string(),
-  status: InvitationStatusSchema,
-  sentAt: z.string(),
-  expiresAt: z.string(),
-  acceptedAt: z.string().nullable().optional(),
-});
-
-const InvitationListResponseSchema = z.object({
-  invitations: z.array(InvitationSchema),
-  total: z.number(),
-});
-
-const InvitationStatsSchema = z.object({
-  total: z.number(),
-  pending: z.number(),
-  accepted: z.number(),
-  expired: z.number(),
-  revoked: z.number(),
-});
-
-export type Invitation = z.infer<typeof InvitationSchema>;
-export type InvitationStats = z.infer<typeof InvitationStatsSchema>;

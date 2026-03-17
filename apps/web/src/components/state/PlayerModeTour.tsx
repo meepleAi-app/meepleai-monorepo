@@ -34,8 +34,7 @@ interface CallBackProps {
 }
 const STATUS = { FINISHED: 'finished', SKIPPED: 'skipped' };
 const EVENTS = { TOUR_END: 'tour:end' };
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const Joyride = (_props: any) => null;
+const Joyride = (_props: Record<string, unknown>) => null;
 
 // ========== Tour Steps ==========
 
@@ -46,8 +45,8 @@ const TOUR_STEPS: Step[] = [
       <div>
         <h3 className="text-lg font-semibold mb-2">Benvenuto in Player Mode! 🎮</h3>
         <p className="text-sm text-muted-foreground">
-          Ti guiderò attraverso le funzionalità principali dell&apos;assistente AI per i tuoi
-          giochi da tavolo.
+          Ti guiderò attraverso le funzionalità principali dell&apos;assistente AI per i tuoi giochi
+          da tavolo.
         </p>
       </div>
     ),
@@ -63,8 +62,8 @@ const TOUR_STEPS: Step[] = [
           Clicca questo pulsante per richiedere un suggerimento sulla prossima mossa da effettuare.
         </p>
         <p className="text-xs text-muted-foreground">
-          L&apos;AI analizzerà lo stato del gioco e le regole strategiche per consigliarti la
-          mossa ottimale.
+          L&apos;AI analizzerà lo stato del gioco e le regole strategiche per consigliarti la mossa
+          ottimale.
         </p>
       </div>
     ),
@@ -79,9 +78,15 @@ const TOUR_STEPS: Step[] = [
           Questo indicatore mostra quanto l&apos;AI è sicura del suggerimento.
         </p>
         <ul className="text-xs space-y-1 text-muted-foreground">
-          <li>• <span className="font-medium">Alto (&gt;80%)</span>: Mossa fortemente consigliata</li>
-          <li>• <span className="font-medium">Medio (50-80%)</span>: Valida ma con rischi</li>
-          <li>• <span className="font-medium">Basso (&lt;50%)</span>: Valuta con cautela</li>
+          <li>
+            • <span className="font-medium">Alto (&gt;80%)</span>: Mossa fortemente consigliata
+          </li>
+          <li>
+            • <span className="font-medium">Medio (50-80%)</span>: Valida ma con rischi
+          </li>
+          <li>
+            • <span className="font-medium">Basso (&lt;50%)</span>: Valuta con cautela
+          </li>
         </ul>
       </div>
     ),
@@ -110,8 +115,8 @@ const TOUR_STEPS: Step[] = [
       <div>
         <h3 className="text-lg font-semibold mb-2">Mosse Alternative 🔄</h3>
         <p className="text-sm text-muted-foreground">
-          Opzioni alternative con confidenza inferiore. Utili se la mossa primaria non è
-          applicabile o vuoi esplorare strategie diverse.
+          Opzioni alternative con confidenza inferiore. Utili se la mossa primaria non è applicabile
+          o vuoi esplorare strategie diverse.
         </p>
       </div>
     ),
@@ -122,12 +127,15 @@ const TOUR_STEPS: Step[] = [
     content: (
       <div>
         <h3 className="text-lg font-semibold mb-2">Applica o Ignora ✓ / ✗</h3>
-        <p className="text-sm text-muted-foreground mb-2">
-          Dopo aver valutato il suggerimento:
-        </p>
+        <p className="text-sm text-muted-foreground mb-2">Dopo aver valutato il suggerimento:</p>
         <ul className="text-xs space-y-1 text-muted-foreground">
-          <li>• <span className="font-medium">Applica</span>: Conferma l&apos;utilizzo del suggerimento</li>
-          <li>• <span className="font-medium">Ignora</span>: Nasconde il suggerimento corrente</li>
+          <li>
+            • <span className="font-medium">Applica</span>: Conferma l&apos;utilizzo del
+            suggerimento
+          </li>
+          <li>
+            • <span className="font-medium">Ignora</span>: Nasconde il suggerimento corrente
+          </li>
         </ul>
         <p className="text-xs text-muted-foreground mt-2">
           Puoi richiedere nuovi suggerimenti in qualsiasi momento!
@@ -163,9 +171,7 @@ const TOUR_STEPS: Step[] = [
           <li>• Valutare mosse alternative</li>
           <li>• Accedere alla guida completa quando serve</li>
         </ul>
-        <p className="text-xs text-muted-foreground mt-2">
-          Buon divertimento! 🎲
-        </p>
+        <p className="text-xs text-muted-foreground mt-2">Buon divertimento! 🎲</p>
       </div>
     ),
     placement: 'center',
@@ -189,7 +195,11 @@ export interface PlayerModeTourProps {
 
 // ========== Main Component ==========
 
-export function PlayerModeTour({ autoStart = false, onTourComplete, forceRun = false }: PlayerModeTourProps) {
+export function PlayerModeTour({
+  autoStart = false,
+  onTourComplete,
+  forceRun = false,
+}: PlayerModeTourProps) {
   const [runTour, setRunTour] = useState(false);
 
   useEffect(() => {

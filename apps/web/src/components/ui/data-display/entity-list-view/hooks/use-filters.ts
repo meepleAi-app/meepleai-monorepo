@@ -35,7 +35,7 @@ import { useCallback, useMemo, useState } from 'react';
 
 import { applyFilters, countActiveFilters } from '../utils/filter-utils';
 
-import type { FilterConfig, FilterState } from '../entity-list-view.types';
+import type { FilterConfig, FilterState, FilterValue } from '../entity-list-view.types';
 
 /**
  * Return type for useFilters hook
@@ -46,8 +46,7 @@ export interface UseFiltersReturn<T> {
   /** Update filter state (merge or replace) */
   setFilterState: (state: FilterState | ((prev: FilterState) => FilterState)) => void;
   /** Update single filter value */
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  setFilter: (filterId: string, value: any) => void;
+  setFilter: (filterId: string, value: FilterValue) => void;
   /** Remove single filter */
   removeFilter: (filterId: string) => void;
   /** Clear all filters */
@@ -105,20 +104,16 @@ export function useFilters<T>(
   );
 
   // Set single filter value
-  const setFilter = useCallback(
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (filterId: string, value: any) => {
-      setInternalState((prev) => ({
-        ...prev,
-        [filterId]: value,
-      }));
-    },
-    []
-  );
+  const setFilter = useCallback((filterId: string, value: FilterValue) => {
+    setInternalState(prev => ({
+      ...prev,
+      [filterId]: value,
+    }));
+  }, []);
 
   // Remove single filter
   const removeFilter = useCallback((filterId: string) => {
-    setInternalState((prev) => {
+    setInternalState(prev => {
       const newState = { ...prev };
       // eslint-disable-next-line security/detect-object-injection
       delete newState[filterId];

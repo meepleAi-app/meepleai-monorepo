@@ -87,17 +87,6 @@ export const N8nDegraded: Story = {
 
 // ========== Unhealthy State ==========
 
-export const HyperDXUnhealthy: Story = {
-  args: {
-    serviceName: 'hyperdx',
-    status: 'Unhealthy',
-    responseTimeMs: undefined,
-    lastCheck: new Date(Date.now() - 300000), // 5 minutes ago
-    errorMessage: 'Connection refused: ECONNREFUSED 127.0.0.1:8180',
-    locale: 'it',
-  },
-};
-
 export const PrometheusUnhealthy: Story = {
   args: {
     serviceName: 'prometheus',

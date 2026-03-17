@@ -189,6 +189,7 @@ internal static class AdminQueueEndpoints
         [FromQuery] DateTimeOffset? toDate,
         [FromQuery] int? page,
         [FromQuery] int? pageSize,
+        [FromQuery] Guid? gameId,
         IMediator mediator,
         CancellationToken ct)
     {
@@ -198,7 +199,8 @@ internal static class AdminQueueEndpoints
             FromDate: fromDate,
             ToDate: toDate,
             Page: page ?? 1,
-            PageSize: pageSize ?? 20);
+            PageSize: pageSize ?? 20,
+            GameId: gameId);
         var result = await mediator.Send(query, ct).ConfigureAwait(false);
         return Results.Ok(result);
     }

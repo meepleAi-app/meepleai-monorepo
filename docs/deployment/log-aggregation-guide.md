@@ -5,9 +5,8 @@
 ## Overview
 
 MeepleAI uses Loki for centralized log aggregation from all services:
-- .NET API (Serilog → HyperDX + Fluent Bit → Loki)
+- .NET API (Serilog → Fluent Bit → Loki)
 - Python services (stdout → Fluent Bit → Loki)
-- Frontend (HyperDX Browser SDK)
 - All Docker containers (Fluent Bit → Loki)
 
 ## Architecture
@@ -198,4 +197,4 @@ docker exec meepleai-loki loki-cli compact /loki
 ## Related Documentation
 
 - [Monitoring Reference](./monitoring-reference.md) - Complete PromQL queries
-- [HyperDX Integration](../05-testing/backend/log-generation-test-plan.md) - Backend logs to HyperDX
+- [Log Generation Test Plan](../05-testing/backend/log-generation-test-plan.md) - Backend log testing

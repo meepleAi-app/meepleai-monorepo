@@ -51,6 +51,12 @@ infra/traefik/certs/*.*
 infra/secrets/*.secret
 !infra/secrets/*.secret.example
 
+# Per-environment secrets
+infra/secrets/dev/*.secret
+infra/secrets/integration/*.secret
+infra/secrets/staging/*.secret
+infra/secrets/prod/*.secret
+
 # Staging/Production secrets (Docker secrets format - plain text files)
 infra/secrets/staging/*.txt
 !infra/secrets/staging/*.txt.example
@@ -212,3 +218,4 @@ apps/web/next-env.d.ts
 
 # Seed dumps (binary files, not tracked in source control)
 infra/seed-dumps/
+.worktrees/

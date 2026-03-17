@@ -100,7 +100,6 @@ Observability and monitoring infrastructure. All are non-critical as they suppor
 |---------|------------|----------|-------------|
 | **Grafana** | HTTP health endpoint | ❌ No | Dashboard and visualization |
 | **Prometheus** | HTTP health endpoint | ❌ No | Metrics collection |
-| **HyperDX** | Configuration check | ❌ No | OpenTelemetry OTLP endpoint |
 
 ## Configuration
 
@@ -126,8 +125,6 @@ Health checks are automatically registered in `ObservabilityServiceExtensions.cs
 | `Email:Port` | *(optional)* | SMTP server port |
 | `Monitoring:GrafanaUrl` | `http://grafana:3000` | Grafana instance URL |
 | `Monitoring:PrometheusUrl` | `http://prometheus:9090` | Prometheus instance URL |
-| `HYPERDX_OTLP_ENDPOINT` | `http://meepleai-hyperdx:14317` | HyperDX OTLP endpoint |
-| `HYPERDX_API_KEY` | *(optional)* | HyperDX authentication |
 
 ## Docker Compose Integration
 

@@ -110,6 +110,14 @@ internal static class SessionTrackingEndpoints
         MapAddSessionEventEndpoint(group);
         MapGetSessionEventsEndpoint(group);
 
+        // AI-powered turn summary (Issue #277)
+        MapGetTurnSummaryEndpoint(group);
+
+        // Session checkpoint / deep save endpoints (Issue #278)
+        MapCreateCheckpointEndpoint(group);
+        MapListCheckpointsEndpoint(group);
+        MapRestoreCheckpointEndpoint(group);
+
         return group;
     }
 
@@ -694,7 +702,7 @@ internal static class SessionTrackingEndpoints
             return Results.Ok(result);
         })
         .RequireAuthenticatedUser()
-        .WithName("DrawCards")
+        .WithName("DrawSessionCards")
         .WithTags("SessionTracking", "CardDeck")
         .WithSummary("Draw cards from the deck")
         .Produces(200)
@@ -1944,6 +1952,125 @@ internal static class SessionTrackingEndpoints
         .Produces(404);
     }
 
+    // AI-powered turn summary (Issue #277)
+    // ============================================================================
+
+    private static void MapGetTurnSummaryEndpoint(RouteGroupBuilder group)
+    {
+        group.MapPost("/game-sessions/{sessionId:guid}/turn-summary", async (
+            Guid sessionId,
+            TurnSummaryRequest request,
+            HttpContext httpContext,
+            IMediator mediator,
+            CancellationToken ct) =>
+        {
+            var userId = httpContext.User.GetUserId();
+            if (userId == Guid.Empty)
+                return Results.Unauthorized();
+
+            var command = new GetTurnSummaryCommand(
+                sessionId,
+                userId,
+                request.FromPhase,
+                request.ToPhase,
+                request.LastNEvents);
+            var result = await mediator.Send(command, ct).ConfigureAwait(false);
+            return Results.Ok(result);
+        })
+        .RequireAuthenticatedUser()
+        .WithName("GetTurnSummary")
+        .WithTags("SessionTracking", "AI")
+        .WithSummary("Generate an AI-powered turn summary")
+        .WithDescription("Uses LLM to summarize recent session events. Requires Player role. Issue #277.")
+        .Produces<TurnSummaryResult>(200)
+        .Produces(400)
+        .Produces(401)
+        .Produces(403)
+        .Produces(404)
+        .Produces(409);
+    }
+
+
+    // ============================================================================
+    // Session checkpoint / deep save endpoints (Issue #278)
+    // ============================================================================
+
+    private static void MapCreateCheckpointEndpoint(RouteGroupBuilder group)
+    {
+        group.MapPost("/game-sessions/{sessionId:guid}/checkpoints", async (
+            Guid sessionId,
+            CreateCheckpointRequest request,
+            HttpContext httpContext,
+            IMediator mediator,
+            CancellationToken ct) =>
+        {
+            var userId = httpContext.User.GetUserId();
+            if (userId == Guid.Empty) return Results.Unauthorized();
+
+            var command = new Api.BoundedContexts.SessionTracking.Application.Commands.CreateSessionCheckpointCommand(
+                sessionId, userId, request.Name);
+            var result = await mediator.Send(command, ct).ConfigureAwait(false);
+            return Results.Created($"/api/v1/game-sessions/{sessionId}/checkpoints/{result.CheckpointId}", result);
+        })
+        .RequireAuthenticatedUser()
+        .WithName("CreateSessionCheckpoint")
+        .WithTags("SessionTracking", "Checkpoints")
+        .WithSummary("Create a session checkpoint (deep save)")
+        .WithDescription("Captures toolkit widget states and diary event count. Issue #278.")
+        .Produces(201).Produces(400).Produces(401).Produces(403).Produces(404).Produces(409);
+    }
+
+    private static void MapListCheckpointsEndpoint(RouteGroupBuilder group)
+    {
+        group.MapGet("/game-sessions/{sessionId:guid}/checkpoints", async (
+            Guid sessionId,
+            HttpContext httpContext,
+            IMediator mediator,
+            CancellationToken ct) =>
+        {
+            var userId = httpContext.User.GetUserId();
+            if (userId == Guid.Empty) return Results.Unauthorized();
+
+            var query = new Api.BoundedContexts.SessionTracking.Application.Queries.ListSessionCheckpointsQuery(
+                sessionId, userId);
+            var result = await mediator.Send(query, ct).ConfigureAwait(false);
+            return Results.Ok(result);
+        })
+        .RequireAuthenticatedUser()
+        .WithName("ListSessionCheckpoints")
+        .WithTags("SessionTracking", "Checkpoints")
+        .WithSummary("List session checkpoints")
+        .WithDescription("Returns all checkpoints for a session. Issue #278.")
+        .Produces<Api.BoundedContexts.SessionTracking.Application.Queries.ListSessionCheckpointsResult>(200)
+        .Produces(401).Produces(404);
+    }
+
+    private static void MapRestoreCheckpointEndpoint(RouteGroupBuilder group)
+    {
+        group.MapPost("/game-sessions/{sessionId:guid}/checkpoints/{checkpointId:guid}/restore", async (
+            Guid sessionId,
+            Guid checkpointId,
+            HttpContext httpContext,
+            IMediator mediator,
+            CancellationToken ct) =>
+        {
+            var userId = httpContext.User.GetUserId();
+            if (userId == Guid.Empty) return Results.Unauthorized();
+
+            var command = new Api.BoundedContexts.SessionTracking.Application.Commands.RestoreSessionCheckpointCommand(
+                sessionId, userId, checkpointId);
+            var result = await mediator.Send(command, ct).ConfigureAwait(false);
+            return Results.Ok(result);
+        })
+        .RequireAuthenticatedUser()
+        .WithName("RestoreSessionCheckpoint")
+        .WithTags("SessionTracking", "Checkpoints")
+        .WithSummary("Restore session from checkpoint")
+        .WithDescription("Restores toolkit widget states from a saved checkpoint. Issue #278.")
+        .Produces<Api.BoundedContexts.SessionTracking.Application.Commands.RestoreSessionCheckpointResult>(200)
+        .Produces(400).Produces(401).Produces(403).Produces(404).Produces(409);
+    }
+
     internal static RouteGroupBuilder MapSessionStatisticsEndpoints(this RouteGroupBuilder group)
     {
         group.MapGet("/game-sessions/session-statistics", async (
@@ -2026,3 +2153,9 @@ public sealed record SendChatActionRequest(string Content, int? TurnNumber = nul
 
 /// <summary>Request body for adding a session event (Issue #276).</summary>
 public sealed record AddSessionEventRequest(string EventType, string? Payload = null, string? Source = null);
+
+/// <summary>Request body for requesting an AI-generated turn summary (Issue #277).</summary>
+public sealed record TurnSummaryRequest(int? FromPhase = null, int? ToPhase = null, int? LastNEvents = null);
+
+/// <summary>Request body for creating a session checkpoint (Issue #278).</summary>
+internal record CreateCheckpointRequest(string Name);

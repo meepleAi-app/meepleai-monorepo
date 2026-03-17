@@ -9,14 +9,6 @@ using Api.BoundedContexts.GameToolbox.Infrastructure.DependencyInjection;
 using Api.BoundedContexts.GameToolkit.Infrastructure.DependencyInjection;
 using Api.BoundedContexts.KnowledgeBase.Infrastructure.DependencyInjection;
 using Api.BoundedContexts.KnowledgeBase.Infrastructure.EmbeddingProviders;
-using Api.BoundedContexts.SessionTracking.Infrastructure.DependencyInjection;
-using Api.BoundedContexts.SharedGameCatalog.Infrastructure.DependencyInjection;
-using Api.BoundedContexts.SystemConfiguration.Infrastructure.DependencyInjection;
-using Api.BoundedContexts.UserLibrary.Infrastructure.DependencyInjection;
-using Api.BoundedContexts.UserNotifications.Infrastructure.DependencyInjection;
-using Api.BoundedContexts.BusinessSimulations.Infrastructure.DependencyInjection;
-using Api.BoundedContexts.Gamification.Infrastructure.DependencyInjection;
-using Api.BoundedContexts.WorkflowIntegration.Infrastructure.DependencyInjection;
 using Api.Helpers;
 using Api.Services;
 using Api.Services.Pdf;
@@ -101,19 +93,10 @@ internal static class ApplicationServiceExtensions
         return services;
     }
 
-    private static IServiceCollection AddVectorSearchServices(
+    internal static IServiceCollection AddVectorSearchServices(
         this IServiceCollection services,
         IConfiguration configuration)
     {
-        // Qdrant services DISABLED — replaced by PgVectorStoreAdapter (registered in KnowledgeBaseServiceExtensions)
-        // IQdrantCollectionManager, IQdrantVectorIndexer, IQdrantVectorSearcher,
-        // IQdrantService, IPrivateQdrantService registrations removed.
-        // No-op stubs retained for handlers that depend on Qdrant interfaces at DI resolution time.
-        // These return empty results — actual vector operations go through PgVectorStoreAdapter.
-        services.AddSingleton<IQdrantClientAdapter, NoOpQdrantClientAdapter>();
-        services.AddSingleton<IQdrantService, NoOpQdrantService>();
-        services.AddSingleton<IPrivateQdrantService, NoOpPrivateQdrantService>();
-
         // ADR-016 Phase 2: Multi-provider embedding configuration
         services.Configure<EmbeddingConfiguration>(configuration.GetSection("Embedding"));
 
@@ -126,7 +109,7 @@ internal static class ApplicationServiceExtensions
         return services;
     }
 
-    private static IServiceCollection AddDomainServices(this IServiceCollection services)
+    internal static IServiceCollection AddDomainServices(this IServiceCollection services)
     {
         // Game and RuleSpec services
         // Issue #1185: RuleSpecService migrated to CQRS pattern in GameManagement bounded context
@@ -156,7 +139,7 @@ internal static class ApplicationServiceExtensions
         return services;
     }
 
-    private static IServiceCollection AddAiServices(this IServiceCollection services)
+    internal static IServiceCollection AddAiServices(this IServiceCollection services)
     {
         // ISSUE-958: ILlmService now registered in KnowledgeBaseServiceExtensions as HybridLlmService
         // (Removed old LlmService registration to prevent duplicate)
@@ -198,7 +181,7 @@ internal static class ApplicationServiceExtensions
         return services;
     }
 
-    private static IServiceCollection AddPdfServices(this IServiceCollection services)
+    internal static IServiceCollection AddPdfServices(this IServiceCollection services)
     {
         // PDF sub-services (SOLID refactoring - Phase 3)
         services.AddScoped<ITableDetectionService, TableDetectionService>();
@@ -224,7 +207,7 @@ internal static class ApplicationServiceExtensions
         return services;
     }
 
-    private static IServiceCollection AddChatServices(this IServiceCollection services)
+    internal static IServiceCollection AddChatServices(this IServiceCollection services)
     {
         // CHAT-05: Chat export services
         services.AddScoped<IChatExportService, ChatExportService>();
@@ -235,7 +218,7 @@ internal static class ApplicationServiceExtensions
         return services;
     }
 
-    private static IServiceCollection AddAdminServices(this IServiceCollection services)
+    internal static IServiceCollection AddAdminServices(this IServiceCollection services)
     {
         // ADMIN-01: User management - MIGRATED TO DDD/CQRS (handlers in Administration bounded context)
         // UserManagementService REMOVED (243 lines eliminated)
@@ -255,7 +238,7 @@ internal static class ApplicationServiceExtensions
         return services;
     }
 
-    private static IServiceCollection AddBggServices(this IServiceCollection services)
+    internal static IServiceCollection AddBggServices(this IServiceCollection services)
     {
         // AI-13: BoardGameGeek API integration
         services.AddScoped<IBggApiService, BggApiService>();
@@ -263,7 +246,7 @@ internal static class ApplicationServiceExtensions
         return services;
     }
 
-    private static IServiceCollection AddQualityServices(this IServiceCollection services)
+    internal static IServiceCollection AddQualityServices(this IServiceCollection services)
     {
         // AI-11: Quality tracking services
         // DDD Migration Phase 3.1: ResponseQualityService removed - quality logic now in QualityTrackingDomainService

@@ -1,45 +1,39 @@
 using Api.BoundedContexts.Authentication.Infrastructure.Persistence;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Events;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
-using Api.BoundedContexts.UserNotifications.Domain.Aggregates;
-using Api.BoundedContexts.UserNotifications.Domain.Repositories;
+using Api.BoundedContexts.UserNotifications.Application.Services;
 using Api.BoundedContexts.UserNotifications.Domain.ValueObjects;
 using Api.Infrastructure;
-using Api.Services;
 using Api.SharedKernel.Application.EventHandlers;
 using Microsoft.Extensions.Logging;
-using System.Text.Json;
 
 namespace Api.BoundedContexts.UserNotifications.Application.EventHandlers;
 
 /// <summary>
 /// Handles ShareRequestRejectedEvent to send notifications when a share request is rejected.
-/// Creates both in-app notifications and email notifications with rejection reason.
+/// Dispatches via NotificationDispatcher for multi-channel delivery (in-app, email, Slack).
 /// </summary>
 internal sealed class ShareRequestRejectedNotificationHandler
     : DomainEventHandlerBase<ShareRequestRejectedEvent>
 {
-    private readonly INotificationRepository _notificationRepository;
+    private readonly INotificationDispatcher _dispatcher;
     private readonly IUserRepository _userRepository;
     private readonly IShareRequestRepository _shareRequestRepository;
     private readonly ISharedGameRepository _sharedGameRepository;
-    private readonly IEmailService _emailService;
 
     public ShareRequestRejectedNotificationHandler(
         MeepleAiDbContext dbContext,
-        INotificationRepository notificationRepository,
+        INotificationDispatcher dispatcher,
         IUserRepository userRepository,
         IShareRequestRepository shareRequestRepository,
         ISharedGameRepository sharedGameRepository,
-        IEmailService emailService,
         ILogger<ShareRequestRejectedNotificationHandler> logger)
         : base(dbContext, logger)
     {
-        _notificationRepository = notificationRepository ?? throw new ArgumentNullException(nameof(notificationRepository));
+        _dispatcher = dispatcher ?? throw new ArgumentNullException(nameof(dispatcher));
         _userRepository = userRepository ?? throw new ArgumentNullException(nameof(userRepository));
         _shareRequestRepository = shareRequestRepository ?? throw new ArgumentNullException(nameof(shareRequestRepository));
         _sharedGameRepository = sharedGameRepository ?? throw new ArgumentNullException(nameof(sharedGameRepository));
-        _emailService = emailService ?? throw new ArgumentNullException(nameof(emailService));
     }
 
     protected override async Task HandleEventAsync(
@@ -79,61 +73,24 @@ internal sealed class ShareRequestRejectedNotificationHandler
 
         var gameTitle = sourceGame.Title;
 
-        // Create in-app notification
-        var notification = new Notification(
-            id: Guid.NewGuid(),
-            userId: shareRequest.UserId,
-            type: NotificationType.ShareRequestRejected,
-            severity: NotificationSeverity.Warning,
-            title: "Share Request Not Approved",
-            message: $"Your request to share \"{gameTitle}\" was not approved. Reason: {domainEvent.Reason}",
-            link: $"/contributions/requests/{domainEvent.ShareRequestId}",
-            metadata: JsonSerializer.Serialize(new Dictionary<string, object>(StringComparer.Ordinal)
-            {
-                ["shareRequestId"] = domainEvent.ShareRequestId,
-                ["gameTitle"] = gameTitle,
-                ["reason"] = domainEvent.Reason
-            }));
-
-        await _notificationRepository.AddAsync(notification, cancellationToken).ConfigureAwait(false);
-
-        Logger.LogInformation(
-            "Created in-app notification for rejected share request {ShareRequestId}",
-            domainEvent.ShareRequestId);
-
-        // Send email notification with detailed feedback (best-effort)
-        try
+        await _dispatcher.DispatchAsync(new NotificationMessage
         {
-            await _emailService.SendShareRequestRejectedEmailAsync(
-                user.Email,
+            Type = NotificationType.ShareRequestRejected,
+            RecipientUserId = shareRequest.UserId,
+            Payload = new ShareRequestPayload(
+                domainEvent.ShareRequestId,
                 user.DisplayName,
                 gameTitle,
-                domainEvent.Reason,
-                cancellationToken).ConfigureAwait(false);
+                sourceGame.ImageUrl),
+            DeepLinkPath = $"/contributions/requests/{domainEvent.ShareRequestId}"
+        }, cancellationToken).ConfigureAwait(false);
 
-            Logger.LogInformation(
-                "Sent share request rejected email to user {UserId} for game {GameTitle}",
-                shareRequest.UserId,
-                gameTitle);
-        }
-#pragma warning disable CA1031 // Do not catch general exception types
-        catch (Exception ex)
-        {
-            // Log error but don't fail handler - email is non-critical
-            Logger.LogError(
-                ex,
-                "Failed to send share request rejected email to user {UserId}",
-                shareRequest.UserId);
-        }
-#pragma warning restore CA1031
+        Logger.LogInformation(
+            "Dispatched notification for rejected share request {ShareRequestId}",
+            domainEvent.ShareRequestId);
     }
 
-    protected override Guid? GetUserId(ShareRequestRejectedEvent domainEvent)
-    {
-        // Note: We need to get userId from share request in HandleEventAsync
-        // Return null here as we don't have direct access to userId in the event
-        return null;
-    }
+    protected override Guid? GetUserId(ShareRequestRejectedEvent domainEvent) => null;
 
     protected override Dictionary<string, object?>? GetAuditMetadata(ShareRequestRejectedEvent domainEvent)
     {

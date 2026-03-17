@@ -20,6 +20,7 @@ import { MeepleCardInfoButton } from '../../meeple-card-info-button';
 import { ActionButtons } from '../../meeple-card-parts';
 import { MeepleCardQuickActions } from '../../meeple-card-quick-actions';
 
+import type { DrawerEntityType } from '../../extra-meeple-card/ExtraMeepleCardDrawer';
 import type {
   MeepleCardProps,
   MeepleCardAction,
@@ -58,7 +59,7 @@ export interface CardActionsProps {
   /** Info button tooltip */
   infoTooltip?: string;
   /** Drawer entity type (derived from entity) */
-  drawerEntityType?: 'game' | 'agent' | 'chat' | 'kb' | 'links';
+  drawerEntityType?: DrawerEntityType;
   /** Callback to open drawer */
   onDrawerOpen?: () => void;
   /** Test ID for the card (used by wishlist) */

@@ -1,3 +1,5 @@
+using Api.Infrastructure.Entities;
+using Api.BoundedContexts.KnowledgeBase.Application.Services;
 using Api.BoundedContexts.KnowledgeBase.Application.Commands;
 using Api.BoundedContexts.KnowledgeBase.Application.Handlers;
 using Api.BoundedContexts.KnowledgeBase.Domain.Entities;
@@ -30,6 +32,7 @@ public class CreateChatSessionCommandHandlerTests
         _handler = new CreateChatSessionCommandHandler(
             _mockRepository.Object,
             _mockUnitOfWork.Object,
+            CreatePermissiveRagAccessServiceMock(),
             _mockLogger.Object);
     }
 
@@ -174,6 +177,7 @@ public class CreateChatSessionCommandHandlerTests
             new CreateChatSessionCommandHandler(
                 null!,
                 _mockUnitOfWork.Object,
+                CreatePermissiveRagAccessServiceMock(),
                 _mockLogger.Object));
     }
 
@@ -185,6 +189,7 @@ public class CreateChatSessionCommandHandlerTests
             new CreateChatSessionCommandHandler(
                 _mockRepository.Object,
                 null!,
+                CreatePermissiveRagAccessServiceMock(),
                 _mockLogger.Object));
     }
 
@@ -196,6 +201,13 @@ public class CreateChatSessionCommandHandlerTests
             new CreateChatSessionCommandHandler(
                 _mockRepository.Object,
                 _mockUnitOfWork.Object,
+                CreatePermissiveRagAccessServiceMock(),
                 null!));
+    }
+    private static IRagAccessService CreatePermissiveRagAccessServiceMock()
+    {
+        var mock = new Mock<IRagAccessService>();
+        mock.Setup(s => s.CanAccessRagAsync(It.IsAny<Guid>(), It.IsAny<Guid>(), It.IsAny<UserRole>(), It.IsAny<CancellationToken>())).ReturnsAsync(true);
+        return mock.Object;
     }
 }

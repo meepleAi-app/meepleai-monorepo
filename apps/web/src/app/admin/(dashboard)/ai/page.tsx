@@ -29,7 +29,6 @@ import { AiLabTab } from './AiLabTab';
 import { DefinitionsTab } from './DefinitionsTab';
 import { LlmConfigTab } from './LlmConfigTab';
 import { ModelsTab } from './ModelsTab';
-import { AdminAiNavConfig } from './NavConfig';
 import { PromptsTab } from './PromptsTab';
 import { RagTab } from './RagTab';
 import { RequestsTab } from './RequestsTab';
@@ -138,8 +137,6 @@ export default async function AdminAiPage({ searchParams }: AdminAiPageProps) {
 
   return (
     <div className="space-y-5">
-      <AdminAiNavConfig />
-
       {/* Header */}
       <div>
         <h1 className="font-quicksand text-xl sm:text-2xl font-bold tracking-tight text-foreground">

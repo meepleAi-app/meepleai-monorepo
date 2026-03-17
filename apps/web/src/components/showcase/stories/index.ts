@@ -32,38 +32,38 @@ import { progressStory } from './progress.story';
 import { radioGroupStory } from './radio-group.story';
 import { ratingStarsStory } from './rating-stars.story';
 import { ruleSourceCardStory } from './rule-source-card.story';
+import { selectStory } from './select.story';
+import { separatorStory } from './separator.story';
+import { sheetStory } from './sheet.story';
+import { skeletonStory } from './skeleton.story';
+import { statCardStory } from './stat-card.story';
+import { strategyBadgeStory } from './strategy-badge.story';
 import { switchStory } from './switch.story';
+import { tabsStory } from './tabs.story';
 import { tagStripStory } from './tag-strip.story';
+import { textareaStory } from './textarea.story';
 import { tierBadgeStory } from './tier-badge.story';
 
 // ─── Forms ────────────────────────────────────────────────────────────────────
-import { textareaStory } from './textarea.story';
-import { selectStory } from './select.story';
 
 // ─── Overlays ─────────────────────────────────────────────────────────────────
-import { sheetStory } from './sheet.story';
 import { tooltipStory } from './tooltip.story';
 
 // ─── Feedback ────────────────────────────────────────────────────────────────
-import { skeletonStory } from './skeleton.story';
 
 // ─── Navigation ──────────────────────────────────────────────────────────────
-import { tabsStory } from './tabs.story';
 
 // ─── Layout ──────────────────────────────────────────────────────────────────
-import { separatorStory } from './separator.story';
 
 // ─── Meeple ──────────────────────────────────────────────────────────────────
 
 // ─── Agent ───────────────────────────────────────────────────────────────────
-import { strategyBadgeStory } from './strategy-badge.story';
 
 // ─── Charts ──────────────────────────────────────────────────────────────────
 import { upgradePromptStory } from './upgrade-prompt.story';
 import { waterfallChartStory } from './waterfall-chart.story';
 
 // ─── Data Display ────────────────────────────────────────────────────────────
-import { statCardStory } from './stat-card.story';
 
 // ─── Gates ───────────────────────────────────────────────────────────────────
 

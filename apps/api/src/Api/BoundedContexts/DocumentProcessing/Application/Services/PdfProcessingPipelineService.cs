@@ -117,19 +117,15 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
             }
 
             // === RAPTOR: Build hierarchical summary tree (optional, non-blocking) ===
-            // Timeout: 60s max to prevent LLM calls from blocking the pipeline indefinitely
             if (_raptorIndexer != null && chunks.Count > 3)
             {
                 try
                 {
-                    using var raptorCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-                    raptorCts.CancelAfter(TimeSpan.FromSeconds(60));
-
                     var chunkTexts = chunks.Select(c => c.Text).ToList();
                     var gameId = pdfDoc.GameId ?? Guid.Empty;
                     var raptorResult = await _raptorIndexer.BuildTreeAsync(
                         pdfDoc.Id, gameId,
-                        chunkTexts, maxLevels: 3, raptorCts.Token).ConfigureAwait(false);
+                        chunkTexts, maxLevels: 3, cancellationToken).ConfigureAwait(false);
 
                     if (raptorResult.TotalNodes > 0)
                     {
@@ -142,14 +138,8 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
                             raptorResult.Levels, raptorResult.TotalNodes, pdfDoc.Id);
                     }
                 }
-                catch (OperationCanceledException ex) when (!cancellationToken.IsCancellationRequested)
-                {
-                    _logger.LogWarning(ex,
-                        "[PdfPipeline] RAPTOR indexing timed out for PDF {PdfId} (60s limit), continuing without hierarchical summaries",
-                        pdfDoc.Id);
-                }
 #pragma warning disable CA1031 // RAPTOR is optional enhancement, must not block pipeline
-                catch (Exception ex) when (!cancellationToken.IsCancellationRequested)
+                catch (Exception ex)
                 {
                     _logger.LogWarning(ex,
                         "[PdfPipeline] RAPTOR indexing failed for PDF {PdfId}, continuing without hierarchical summaries",
@@ -203,15 +193,20 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
         string filePath,
         CancellationToken cancellationToken)
     {
-        // E2E fix: Use blob storage service instead of direct filesystem access (supports S3/R2)
-        var fileId = pdfDoc.Id.ToString();
+        // Issue #501: Use blob storage with correct GUID format (no hyphens) to match StoreAsync key format
+        var fileId = pdfDoc.Id.ToString("N"); // "N" = no hyphens, matches S3BlobStorageService.StoreAsync
         var gameId = (pdfDoc.PrivateGameId ?? pdfDoc.GameId)?.ToString() ?? string.Empty;
         var fileStream = await _blobStorageService.RetrieveAsync(fileId, gameId, cancellationToken).ConfigureAwait(false);
 
         if (fileStream == null)
         {
-            // Fallback to local filesystem for backward compatibility
+            // Fallback to local filesystem for backward compatibility (dev without S3)
             _logger.LogWarning("[PdfPipeline] Blob storage returned null for {PdfId}, falling back to filesystem path: {FilePath}", fileId, filePath);
+            if (!File.Exists(filePath))
+            {
+                throw new FileNotFoundException(
+                    $"PDF file not found in blob storage or filesystem: {filePath}", filePath);
+            }
             fileStream = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read);
         }
 

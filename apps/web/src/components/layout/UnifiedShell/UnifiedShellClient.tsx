@@ -99,8 +99,8 @@ export function UnifiedShellClient({
       <ErrorBoundary fallback={null} componentName="UnifiedTopNav">
         <UnifiedTopNav
           isAdmin={isAdmin}
-          onMenuToggle={() => setAdminDrawerOpen(true)}
-          isMenuOpen={adminDrawerOpen}
+          onMenuToggle={isAdminContext ? () => setAdminDrawerOpen(true) : undefined}
+          isMenuOpen={isAdminContext ? adminDrawerOpen : undefined}
           userMenu={userMenu}
           notificationBell={notificationBell}
           searchTrigger={searchTrigger}

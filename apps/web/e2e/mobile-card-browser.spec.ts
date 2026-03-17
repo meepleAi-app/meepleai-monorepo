@@ -3,11 +3,17 @@
  * Feature: mobile-ux-card-browser
  *
  * Test Coverage:
- * - MobileBottomBar visibility and navigation (5-domain tabs)
+ * - MobileTabBar visibility and navigation (mobile only, md:hidden)
  * - 2-column card grid on mobile viewport
  * - MeepleCardBrowser overlay (open, carousel, ESC close)
  * - DomainHub page (/hub) with 8 domain tiles
  * - Responsive behavior across mobile breakpoints
+ *
+ * Architecture Notes (post mobile-ux overhaul):
+ * - MobileTabBar replaces the old MobileBottomBar (data-testid: "mobile-tab-bar")
+ * - HandDrawer is now desktop-only (not tested on mobile viewports)
+ * - ContextualBottomNav is hidden on mobile (hidden md:flex)
+ * - SmartFAB deleted (replaced by morphing center tab in MobileTabBar)
  */
 
 import { test, expect } from '@playwright/test';
@@ -17,103 +23,87 @@ test.use({
   viewport: { width: 390, height: 844 },
 });
 
-test.describe('Mobile Card Browser - MobileBottomBar', () => {
+test.describe('Mobile Card Browser - MobileTabBar', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/hub');
     await page.waitForLoadState('networkidle');
   });
 
-  test('bottom bar is visible on mobile viewport', async ({ page }) => {
-    const bottomBar = page.locator('[data-testid="mobile-bottom-bar"]');
-    await expect(bottomBar).toBeVisible();
+  test('tab bar is visible on mobile viewport', async ({ page }) => {
+    const tabBar = page.locator('[data-testid="mobile-tab-bar"]');
+    await expect(tabBar).toBeVisible();
   });
 
-  test('bottom bar renders 5 tabs with correct labels', async ({ page }) => {
-    const bottomBar = page.locator('[data-testid="mobile-bottom-bar"]');
-    await expect(bottomBar).toBeVisible();
+  test('tab bar renders core tabs (Dashboard, Discover)', async ({ page }) => {
+    const tabBar = page.locator('[data-testid="mobile-tab-bar"]');
+    await expect(tabBar).toBeVisible();
 
-    // Verify all 5 tab labels are present
-    const expectedLabels = ['Home', 'Games', 'AI', 'Library', 'Settings'];
-    for (const label of expectedLabels) {
-      await expect(bottomBar.getByText(label, { exact: true })).toBeVisible();
-    }
+    // Dashboard and Discover are always visible (not auth-gated)
+    await expect(page.getByTestId('mobile-tab-dashboard')).toBeVisible();
+    await expect(page.getByTestId('mobile-tab-discover')).toBeVisible();
   });
 
-  test('bottom bar is hidden on desktop viewport', async ({ page }) => {
+  test('tab bar is hidden on desktop viewport', async ({ page }) => {
     await page.setViewportSize({ width: 1024, height: 768 });
     await page.goto('/hub');
     await page.waitForLoadState('networkidle');
 
-    const bottomBar = page.locator('[data-testid="mobile-bottom-bar"]');
-    await expect(bottomBar).toBeHidden();
+    const tabBar = page.locator('[data-testid="mobile-tab-bar"]');
+    await expect(tabBar).toBeHidden();
   });
 
-  test('bottom bar touch targets meet minimum 44x44px', async ({ page }) => {
-    const bottomBar = page.locator('[data-testid="mobile-bottom-bar"]');
-    await expect(bottomBar).toBeVisible();
+  test('tab bar touch targets meet minimum 44x44px', async ({ page }) => {
+    const tabBar = page.locator('[data-testid="mobile-tab-bar"]');
+    await expect(tabBar).toBeVisible();
 
-    const links = bottomBar.locator('a');
-    const count = await links.count();
-    expect(count).toBe(5);
+    // MobileTabBar uses links and optionally a button for the morphed center tab
+    const targets = tabBar.locator('a, button[data-testid^="mobile-tab-"]');
+    const count = await targets.count();
+    expect(count).toBeGreaterThanOrEqual(2);
 
     for (let i = 0; i < count; i++) {
-      const box = await links.nth(i).boundingBox();
+      const box = await targets.nth(i).boundingBox();
       expect(box).not.toBeNull();
       expect(box!.width).toBeGreaterThanOrEqual(44);
       expect(box!.height).toBeGreaterThanOrEqual(44);
     }
   });
 
-  test('Home tab navigates to /hub', async ({ page }) => {
-    await page.goto('/agents');
+  test('Dashboard tab navigates to /dashboard', async ({ page }) => {
+    await page.goto('/games');
     await page.waitForLoadState('networkidle');
 
-    const bottomBar = page.locator('[data-testid="mobile-bottom-bar"]');
-    const isVisible = await bottomBar.isVisible().catch(() => false);
-    if (!isVisible) test.skip(true, 'Bottom bar not visible in this environment');
+    const tabBar = page.locator('[data-testid="mobile-tab-bar"]');
+    const isVisible = await tabBar.isVisible().catch(() => false);
+    if (!isVisible) test.skip(true, 'Tab bar not visible in this environment');
 
-    await bottomBar.getByText('Home', { exact: true }).click();
-    await page.waitForURL(/\/hub/, { timeout: 5000 });
-    expect(page.url()).toContain('/hub');
+    await page.getByTestId('mobile-tab-dashboard').click();
+    await page.waitForURL(/\/dashboard/, { timeout: 5000 });
+    expect(page.url()).toContain('/dashboard');
   });
 
-  test('Games tab navigates to /discover', async ({ page }) => {
-    const bottomBar = page.locator('[data-testid="mobile-bottom-bar"]');
-    const isVisible = await bottomBar.isVisible().catch(() => false);
-    if (!isVisible) test.skip(true, 'Bottom bar not visible in this environment');
+  test('Discover tab navigates to /games', async ({ page }) => {
+    const tabBar = page.locator('[data-testid="mobile-tab-bar"]');
+    const isVisible = await tabBar.isVisible().catch(() => false);
+    if (!isVisible) test.skip(true, 'Tab bar not visible in this environment');
 
-    await bottomBar.getByText('Games', { exact: true }).click();
-    await page.waitForURL(/\/discover/, { timeout: 5000 });
-    expect(page.url()).toContain('/discover');
+    await page.getByTestId('mobile-tab-discover').click();
+    await page.waitForURL(/\/games/, { timeout: 5000 });
+    expect(page.url()).toContain('/games');
   });
 
-  test('AI tab navigates to /agents', async ({ page }) => {
-    const bottomBar = page.locator('[data-testid="mobile-bottom-bar"]');
-    const isVisible = await bottomBar.isVisible().catch(() => false);
-    if (!isVisible) test.skip(true, 'Bottom bar not visible in this environment');
+  test('Library tab navigates to /library (authenticated)', async ({ page }) => {
+    const tabBar = page.locator('[data-testid="mobile-tab-bar"]');
+    const isVisible = await tabBar.isVisible().catch(() => false);
+    if (!isVisible) test.skip(true, 'Tab bar not visible in this environment');
 
-    await bottomBar.getByText('AI', { exact: true }).click();
-    await page.waitForURL(/\/agents/, { timeout: 5000 });
-    expect(page.url()).toContain('/agents');
-  });
+    const libraryTab = page.getByTestId('mobile-tab-library');
+    const tabVisible = await libraryTab.isVisible().catch(() => false);
+    if (!tabVisible) test.skip(true, 'Library tab only visible when authenticated');
 
-  test('Library tab navigates to /library', async ({ page }) => {
-    const bottomBar = page.locator('[data-testid="mobile-bottom-bar"]');
-    const isVisible = await bottomBar.isVisible().catch(() => false);
-    if (!isVisible) test.skip(true, 'Bottom bar not visible in this environment');
-
-    await bottomBar.getByText('Library', { exact: true }).click();
+    await libraryTab.click();
     await page.waitForURL(/\/library/, { timeout: 5000 });
     expect(page.url()).toContain('/library');
-  });
-
-  test('Settings tab navigates to /profile', async ({ page }) => {
-    const bottomBar = page.locator('[data-testid="mobile-bottom-bar"]');
-    const isVisible = await bottomBar.isVisible().catch(() => false);
-    if (!isVisible) test.skip(true, 'Bottom bar not visible in this environment');
-
-    await bottomBar.getByText('Settings', { exact: true }).click();
-    await page.waitForURL(/\/profile|\/settings/, { timeout: 5000 });
   });
 });
 
@@ -323,13 +313,14 @@ test.describe('Mobile Card Browser - Responsive Breakpoints', () => {
   ];
 
   for (const viewport of mobileViewports) {
-    test(`bottom bar visible on ${viewport.name} (${viewport.width}px)`, async ({ page }) => {
+    test(`tab bar visible on ${viewport.name} (${viewport.width}px)`, async ({ page }) => {
       await page.setViewportSize({ width: viewport.width, height: viewport.height });
       await page.goto('/hub');
       await page.waitForLoadState('networkidle');
 
-      const bottomBar = page.locator('[data-testid="mobile-bottom-bar"]');
-      await expect(bottomBar).toBeVisible();
+      // MobileTabBar is md:hidden — only visible below 768px
+      const tabBar = page.locator('[data-testid="mobile-tab-bar"]');
+      await expect(tabBar).toBeVisible();
     });
 
     test(`domain hub grid renders on ${viewport.name}`, async ({ page }) => {
@@ -343,12 +334,13 @@ test.describe('Mobile Card Browser - Responsive Breakpoints', () => {
     });
   }
 
-  test('bottom bar is hidden at tablet breakpoint (768px)', async ({ page }) => {
+  test('tab bar is hidden at tablet breakpoint (768px)', async ({ page }) => {
     await page.setViewportSize({ width: 768, height: 1024 });
     await page.goto('/hub');
     await page.waitForLoadState('networkidle');
 
-    const bottomBar = page.locator('[data-testid="mobile-bottom-bar"]');
-    await expect(bottomBar).toBeHidden();
+    // MobileTabBar uses md:hidden — hidden at 768px and above
+    const tabBar = page.locator('[data-testid="mobile-tab-bar"]');
+    await expect(tabBar).toBeHidden();
   });
 });

@@ -44,6 +44,12 @@ export const COMPONENT_REGISTRY: ComponentEntry[] = [
     tier: 'static',
     description: 'Compact variant of MeepleCard for dense list views.',
     tags: ['card', 'compact', 'list'],
+    mockProps: {
+      entity: 'game',
+      title: 'Catan',
+      subtitle: 'Kosmos',
+      id: '550e8400-e29b-41d4-a716-446655440000',
+    },
   },
   {
     id: 'meeple-card-expanded',
@@ -54,6 +60,12 @@ export const COMPONENT_REGISTRY: ComponentEntry[] = [
     tier: 'static',
     description: 'Expanded variant of MeepleCard showing full details.',
     tags: ['card', 'expanded', 'detail'],
+    mockProps: {
+      entity: 'game',
+      title: 'Wingspan',
+      subtitle: 'Stonemaier Games',
+      id: '550e8400-e29b-41d4-a716-446655440001',
+    },
   },
   {
     id: 'meeple-card-featured',
@@ -64,6 +76,12 @@ export const COMPONENT_REGISTRY: ComponentEntry[] = [
     tier: 'static',
     description: 'Featured variant of MeepleCard for hero placement.',
     tags: ['card', 'featured', 'hero'],
+    mockProps: {
+      entity: 'game',
+      title: 'Terraforming Mars',
+      subtitle: 'FryxGames',
+      id: '550e8400-e29b-41d4-a716-446655440002',
+    },
   },
   {
     id: 'meeple-card-grid',
@@ -74,6 +92,12 @@ export const COMPONENT_REGISTRY: ComponentEntry[] = [
     tier: 'static',
     description: 'Grid variant of MeepleCard optimised for grid layouts.',
     tags: ['card', 'grid'],
+    mockProps: {
+      entity: 'game',
+      title: 'Pandemic',
+      subtitle: 'Z-Man Games',
+      id: '550e8400-e29b-41d4-a716-446655440003',
+    },
   },
   {
     id: 'meeple-card-hero',
@@ -84,6 +108,12 @@ export const COMPONENT_REGISTRY: ComponentEntry[] = [
     tier: 'static',
     description: 'Hero variant of MeepleCard for full-width banner display.',
     tags: ['card', 'hero', 'banner'],
+    mockProps: {
+      entity: 'game',
+      title: 'Azul',
+      subtitle: 'Plan B Games',
+      id: '550e8400-e29b-41d4-a716-446655440004',
+    },
   },
   {
     id: 'meeple-card-list',
@@ -94,6 +124,12 @@ export const COMPONENT_REGISTRY: ComponentEntry[] = [
     tier: 'static',
     description: 'List variant of MeepleCard for horizontal row display.',
     tags: ['card', 'list', 'row'],
+    mockProps: {
+      entity: 'game',
+      title: 'Ticket to Ride',
+      subtitle: 'Days of Wonder',
+      id: '550e8400-e29b-41d4-a716-446655440005',
+    },
   },
   {
     id: 'carta-estesa',
@@ -104,6 +140,18 @@ export const COMPONENT_REGISTRY: ComponentEntry[] = [
     tier: 'static',
     description: 'Extended card layout with back-face and flip animation support.',
     tags: ['card', 'flip', 'extended'],
+    mockProps: {
+      title: 'Catan',
+      subtitle: 'Kosmos',
+      entityColor: '25 95% 45%',
+      rating: 7.8,
+      stats: [
+        { label: 'Giocatori', value: '3-4', color: '25 95% 45%' },
+        { label: 'Durata', value: '60-120 min', color: '25 95% 45%' },
+      ],
+      tags: ['Strategia', 'Negoziazione'],
+      description: 'Build settlements, roads and cities on the island of Catan.',
+    },
   },
   {
     id: 'meeple-card-compound',
@@ -114,6 +162,7 @@ export const COMPONENT_REGISTRY: ComponentEntry[] = [
     tier: 'static',
     description: 'Compound card component combining multiple card sub-components.',
     tags: ['card', 'compound', 'composite'],
+    mockProps: { entity: 'game', title: 'Catan', id: '550e8400-e29b-41d4-a716-446655440000' },
   },
   {
     id: 'meeple-card-browser',
@@ -221,6 +270,13 @@ export const COMPONENT_REGISTRY: ComponentEntry[] = [
     tier: 'static',
     description: 'User avatar component with image fallback to initials.',
     tags: ['avatar', 'user', 'image'],
+    mockVariants: [
+      {
+        name: 'With Image',
+        props: { src: 'https://avatars.githubusercontent.com/u/1', alt: 'Alice Rossi' },
+      },
+      { name: 'Fallback Initials', props: { alt: 'Marco Bianchi' } },
+    ],
   },
   {
     id: 'badge',
@@ -231,6 +287,12 @@ export const COMPONENT_REGISTRY: ComponentEntry[] = [
     tier: 'static',
     description: 'Small badge label for status indicators and counts.',
     tags: ['badge', 'label', 'status'],
+    mockVariants: [
+      { name: 'Default', props: { children: 'Active', variant: 'default' } },
+      { name: 'Secondary', props: { children: 'Pending', variant: 'secondary' } },
+      { name: 'Destructive', props: { children: 'Error', variant: 'destructive' } },
+      { name: 'Outline', props: { children: 'Draft', variant: 'outline' } },
+    ],
   },
   {
     id: 'card',
@@ -241,6 +303,7 @@ export const COMPONENT_REGISTRY: ComponentEntry[] = [
     tier: 'static',
     description: 'Base card container with header, content, and footer slots.',
     tags: ['card', 'container', 'layout'],
+    mockProps: { children: 'Card content area' },
   },
   {
     id: 'card-grid-skeletons',
@@ -251,6 +314,7 @@ export const COMPONENT_REGISTRY: ComponentEntry[] = [
     tier: 'static',
     description: 'Loading skeleton grid that matches the shape of card grid layouts.',
     tags: ['skeleton', 'loading', 'grid'],
+    mockProps: { count: 4 },
   },
   {
     id: 'citation-link',
@@ -261,6 +325,10 @@ export const COMPONENT_REGISTRY: ComponentEntry[] = [
     tier: 'static',
     description: 'Inline citation link with source preview tooltip for AI chat responses.',
     tags: ['citation', 'link', 'ai', 'source'],
+    mockVariants: [
+      { name: 'Basic', props: { pageNumber: 12 } },
+      { name: 'With Document Name', props: { pageNumber: 42, documentName: 'Catan Rulebook.pdf' } },
+    ],
   },
   {
     id: 'collapsible',
@@ -281,6 +349,7 @@ export const COMPONENT_REGISTRY: ComponentEntry[] = [
     tier: 'static',
     description: 'Displays current vs maximum collection size for tier-limited users.',
     tags: ['collection', 'limit', 'tier'],
+    mockProps: { tier: 'free', stats: { gameCount: 18, storageMB: 45 } },
   },
   {
     id: 'confidence-badge',
@@ -302,6 +371,7 @@ export const COMPONENT_REGISTRY: ComponentEntry[] = [
     tier: 'static',
     description: 'Corner badge showing entity relationship type on a card.',
     tags: ['entity', 'link', 'badge', 'relationship'],
+    mockProps: { count: 3 },
   },
   {
     id: 'entity-link-card',
@@ -322,6 +392,11 @@ export const COMPONENT_REGISTRY: ComponentEntry[] = [
     tier: 'static',
     description: 'Compact chip displaying entity link type with icon.',
     tags: ['entity', 'link', 'chip'],
+    mockVariants: [
+      { name: 'ExpansionOf', props: { linkType: 'ExpansionOf' } },
+      { name: 'SequelOf', props: { linkType: 'SequelOf' } },
+      { name: 'RelatedTo', props: { linkType: 'RelatedTo' } },
+    ],
   },
   {
     id: 'entity-link-preview-row',
@@ -332,6 +407,7 @@ export const COMPONENT_REGISTRY: ComponentEntry[] = [
     tier: 'static',
     description: 'Footer row previewing linked entities with count overflow.',
     tags: ['entity', 'link', 'preview', 'row'],
+    mockProps: { linkType: 'ExpansionOf', targetName: 'Catan: Seafarers', totalCount: 3 },
   },
   {
     id: 'entity-relationship-graph',
@@ -372,6 +448,13 @@ export const COMPONENT_REGISTRY: ComponentEntry[] = [
     tier: 'static',
     description: 'Compact row of icon buttons for entity link actions.',
     tags: ['icon', 'bar', 'compact', 'actions'],
+    mockProps: {
+      groups: [
+        { entityType: 'Game', count: 2 },
+        { entityType: 'Agent', count: 1 },
+      ],
+      onIconClick: () => {},
+    },
   },
   {
     id: 'list-page-header',
@@ -382,6 +465,18 @@ export const COMPONENT_REGISTRY: ComponentEntry[] = [
     tier: 'static',
     description: 'Standardised page header for list pages with title, subtitle, and action slot.',
     tags: ['header', 'page', 'list'],
+    mockProps: {
+      title: 'My Games',
+      count: 42,
+      viewMode: 'grid',
+      onViewModeChange: () => {},
+      filters: [
+        { key: 'all', label: 'All' },
+        { key: 'owned', label: 'Owned' },
+        { key: 'wishlisted', label: 'Wishlist' },
+      ],
+      activeFilter: 'all',
+    },
   },
   {
     id: 'rating-stars',
@@ -392,6 +487,11 @@ export const COMPONENT_REGISTRY: ComponentEntry[] = [
     tier: 'static',
     description: 'Star rating display component with configurable max and precision.',
     tags: ['rating', 'stars', 'score'],
+    mockVariants: [
+      { name: 'High Rating', props: { rating: 8.7, maxRating: 10, showValue: true } },
+      { name: 'Medium Rating', props: { rating: 6.2, maxRating: 10, showValue: true } },
+      { name: '5-Star Scale', props: { rating: 4, maxRating: 5, showValue: true } },
+    ],
   },
   {
     id: 'stat-card',
@@ -402,6 +502,28 @@ export const COMPONENT_REGISTRY: ComponentEntry[] = [
     tier: 'static',
     description: 'KPI stat card with value, label, and optional trend indicator.',
     tags: ['stat', 'kpi', 'metric'],
+    mockVariants: [
+      {
+        name: 'Users Up',
+        props: {
+          label: 'Total Users',
+          value: 3891,
+          trend: 'up',
+          trendValue: '+12% from last month',
+        },
+      },
+      { name: 'Games Neutral', props: { label: 'Total Games', value: 1247, trend: 'neutral' } },
+      {
+        name: 'Agents Down',
+        props: {
+          label: 'Active Agents',
+          value: 42,
+          trend: 'down',
+          trendValue: '-2 this week',
+          variant: 'warning',
+        },
+      },
+    ],
   },
   {
     id: 'status-card',
@@ -412,6 +534,22 @@ export const COMPONENT_REGISTRY: ComponentEntry[] = [
     tier: 'static',
     description: 'Card showing service or entity status with colour-coded indicator.',
     tags: ['status', 'card', 'indicator'],
+    mockVariants: [
+      { name: 'Healthy', props: { name: 'API Server', status: 'healthy', latencyMs: 45 } },
+      {
+        name: 'Degraded',
+        props: {
+          name: 'Database',
+          status: 'degraded',
+          latencyMs: 1200,
+          errorMessage: 'Slow response time',
+        },
+      },
+      {
+        name: 'Unhealthy',
+        props: { name: 'Redis', status: 'unhealthy', errorMessage: 'Connection refused' },
+      },
+    ],
   },
   {
     id: 'table',
@@ -422,6 +560,7 @@ export const COMPONENT_REGISTRY: ComponentEntry[] = [
     tier: 'static',
     description: 'Base HTML table component with styled rows, headers, and cells.',
     tags: ['table', 'base', 'primitive'],
+    mockProps: {},
   },
   {
     id: 'tooltip-data-display',
@@ -432,6 +571,7 @@ export const COMPONENT_REGISTRY: ComponentEntry[] = [
     tier: 'static',
     description: 'Data-display tooltip wrapper for labelling icons and truncated text.',
     tags: ['tooltip', 'label'],
+    mockProps: {},
   },
   {
     id: 'user-role-badge',
@@ -442,6 +582,11 @@ export const COMPONENT_REGISTRY: ComponentEntry[] = [
     tier: 'static',
     description: 'Badge displaying a user role (Admin, Moderator, User) with colour coding.',
     tags: ['user', 'role', 'badge'],
+    mockVariants: [
+      { name: 'Admin', props: { role: 'Admin', showIcon: true } },
+      { name: 'Editor', props: { role: 'Editor', showIcon: true } },
+      { name: 'User', props: { role: 'User', showIcon: true } },
+    ],
   },
   {
     id: 'user-status-indicator',
@@ -452,6 +597,11 @@ export const COMPONENT_REGISTRY: ComponentEntry[] = [
     tier: 'static',
     description: 'Small dot indicator showing online/offline/away user status.',
     tags: ['user', 'status', 'online'],
+    mockVariants: [
+      { name: 'Active', props: { status: 'Active', showLabel: true } },
+      { name: 'Inactive', props: { status: 'Inactive', showLabel: true } },
+      { name: 'Suspended', props: { status: 'Suspended', showLabel: true } },
+    ],
   },
   {
     id: 'activity-list',
@@ -462,6 +612,31 @@ export const COMPONENT_REGISTRY: ComponentEntry[] = [
     tier: 'static',
     description: 'Chronological activity feed list with icon and timestamp per item.',
     tags: ['activity', 'feed', 'timeline'],
+    mockProps: {
+      events: [
+        {
+          id: '1',
+          type: 'game_added',
+          message: 'Alice Rossi added Catan to her collection',
+          timestamp: '2026-03-15T10:30:00Z',
+          severity: 'info',
+        },
+        {
+          id: '2',
+          type: 'user_registered',
+          message: 'Marco Bianchi registered a new account',
+          timestamp: '2026-03-15T09:15:00Z',
+          severity: 'success',
+        },
+        {
+          id: '3',
+          type: 'agent_error',
+          message: 'Rules Expert agent returned an error',
+          timestamp: '2026-03-15T08:00:00Z',
+          severity: 'error',
+        },
+      ],
+    },
   },
   // ─── MeepleCard Features ──────────────────────────────────────────────────
   {
@@ -473,6 +648,20 @@ export const COMPONENT_REGISTRY: ComponentEntry[] = [
     tier: 'static',
     description: 'Displays AI model name and version info on an agent card.',
     tags: ['agent', 'model', 'info'],
+    mockVariants: [
+      {
+        name: 'GPT-4o',
+        props: {
+          modelName: 'GPT-4o',
+          parameters: { temperature: 0.7, maxTokens: 2048 },
+          showIcon: true,
+        },
+      },
+      {
+        name: 'Claude 3.5 Sonnet',
+        props: { modelName: 'Claude 3.5 Sonnet', parameters: { temperature: 0.5 }, showIcon: true },
+      },
+    ],
   },
   {
     id: 'bulk-select-checkbox',
@@ -513,6 +702,12 @@ export const COMPONENT_REGISTRY: ComponentEntry[] = [
     tier: 'static',
     description: 'Badge showing document processing status (pending, indexed, failed).',
     tags: ['document', 'status', 'badge'],
+    mockVariants: [
+      { name: 'Indexed', props: { status: 'indexed' } },
+      { name: 'Processing', props: { status: 'processing' } },
+      { name: 'Failed', props: { status: 'failed' } },
+      { name: 'None', props: { status: 'none' } },
+    ],
   },
   {
     id: 'drag-handle',
@@ -543,6 +738,18 @@ export const COMPONENT_REGISTRY: ComponentEntry[] = [
     tier: 'static',
     description: 'Back face content for a flipped game card with stats and lore.',
     tags: ['game', 'card', 'back', 'flip'],
+    mockProps: {
+      complexityRating: 2.3,
+      playingTimeMinutes: 90,
+      minPlayers: 3,
+      maxPlayers: 4,
+      averageRating: 7.8,
+      timesPlayed: 12,
+      winRate: 42,
+      hasKb: true,
+      kbCardCount: 3,
+      tags: ['Strategia', 'Negoziazione', 'Famiglia'],
+    },
   },
   {
     id: 'hover-preview',
@@ -583,6 +790,29 @@ export const COMPONENT_REGISTRY: ComponentEntry[] = [
     tier: 'static',
     description: 'Back face content for a session card showing scores and players.',
     tags: ['session', 'card', 'back'],
+    mockProps: {
+      players: [
+        {
+          id: 'p1',
+          displayName: 'Alice Rossi',
+          color: 'red',
+          role: 'host',
+          totalScore: 10,
+          currentRank: 1,
+          isActive: true,
+        },
+        {
+          id: 'p2',
+          displayName: 'Marco Bianchi',
+          color: 'blue',
+          role: 'player',
+          totalScore: 8,
+          currentRank: 2,
+          isActive: true,
+        },
+      ],
+      status: 'inProgress',
+    },
   },
   {
     id: 'session-player-popup',
@@ -613,6 +843,45 @@ export const COMPONENT_REGISTRY: ComponentEntry[] = [
     tier: 'static',
     description: 'Table listing player scores in a session.',
     tags: ['session', 'score', 'table'],
+    mockProps: {
+      players: [
+        {
+          id: 'p1',
+          displayName: 'Alice Rossi',
+          color: 'red',
+          role: 'host',
+          totalScore: 10,
+          currentRank: 1,
+          isActive: true,
+        },
+        {
+          id: 'p2',
+          displayName: 'Marco Bianchi',
+          color: 'blue',
+          role: 'player',
+          totalScore: 7,
+          currentRank: 2,
+          isActive: true,
+        },
+        {
+          id: 'p3',
+          displayName: 'Giulia Verdi',
+          color: 'green',
+          role: 'player',
+          totalScore: 5,
+          currentRank: 3,
+          isActive: true,
+        },
+      ],
+      roundScores: [
+        { playerId: 'p1', round: 1, dimension: 'default', value: 4 },
+        { playerId: 'p1', round: 2, dimension: 'default', value: 6 },
+        { playerId: 'p2', round: 1, dimension: 'default', value: 3 },
+        { playerId: 'p2', round: 2, dimension: 'default', value: 4 },
+        { playerId: 'p3', round: 1, dimension: 'default', value: 2 },
+        { playerId: 'p3', round: 2, dimension: 'default', value: 3 },
+      ],
+    },
   },
   {
     id: 'session-status-badge',
@@ -623,6 +892,12 @@ export const COMPONENT_REGISTRY: ComponentEntry[] = [
     tier: 'static',
     description: 'Badge indicating session state (active, paused, completed).',
     tags: ['session', 'status', 'badge'],
+    mockVariants: [
+      { name: 'Setup', props: { status: 'setup' } },
+      { name: 'In Progress', props: { status: 'inProgress' } },
+      { name: 'Paused', props: { status: 'paused' } },
+      { name: 'Completed', props: { status: 'completed' } },
+    ],
   },
   {
     id: 'session-turn-sequence',
@@ -633,6 +908,39 @@ export const COMPONENT_REGISTRY: ComponentEntry[] = [
     tier: 'static',
     description: 'Visual display of player turn order in an active session.',
     tags: ['session', 'turn', 'order'],
+    mockProps: {
+      players: [
+        {
+          id: 'p1',
+          displayName: 'Alice',
+          color: 'red',
+          role: 'host',
+          totalScore: 10,
+          currentRank: 1,
+          isActive: true,
+        },
+        {
+          id: 'p2',
+          displayName: 'Marco',
+          color: 'blue',
+          role: 'player',
+          totalScore: 7,
+          currentRank: 2,
+          isActive: true,
+        },
+        {
+          id: 'p3',
+          displayName: 'Giulia',
+          color: 'green',
+          role: 'player',
+          totalScore: 5,
+          currentRank: 3,
+          isActive: false,
+        },
+      ],
+      turn: { currentIndex: 1, currentPlayerId: 'p2' },
+      isHost: false,
+    },
   },
   {
     id: 'snapshot-history-slider',
@@ -653,6 +961,12 @@ export const COMPONENT_REGISTRY: ComponentEntry[] = [
     tier: 'static',
     description: 'Generic status badge with configurable colour and label.',
     tags: ['status', 'badge', 'generic'],
+    mockVariants: [
+      { name: 'Owned', props: { status: 'owned' } },
+      { name: 'Wishlisted', props: { status: 'wishlisted' } },
+      { name: 'Played', props: { status: 'played' } },
+      { name: 'Multiple', props: { status: ['owned', 'played'] } },
+    ],
   },
   {
     id: 'time-travel-overlay',
@@ -683,6 +997,7 @@ export const COMPONENT_REGISTRY: ComponentEntry[] = [
     tier: 'static',
     description: 'Displays agent name and model info in a chat card.',
     tags: ['chat', 'agent', 'info'],
+    mockProps: { agent: { name: 'Rules Expert', modelName: 'GPT-4o-mini' } },
   },
   {
     id: 'chat-game-context',
@@ -693,6 +1008,7 @@ export const COMPONENT_REGISTRY: ComponentEntry[] = [
     tier: 'static',
     description: 'Shows the game context associated with a chat session.',
     tags: ['chat', 'game', 'context'],
+    mockProps: { game: { name: 'Catan', id: '550e8400-e29b-41d4-a716-446655440000' } },
   },
   {
     id: 'chat-stats-display',
@@ -703,6 +1019,9 @@ export const COMPONENT_REGISTRY: ComponentEntry[] = [
     tier: 'static',
     description: 'Displays token usage and response time stats for a chat.',
     tags: ['chat', 'stats', 'tokens'],
+    mockProps: {
+      stats: { messageCount: 24, lastMessageAt: '2026-03-15T10:30:00Z', durationMinutes: 35 },
+    },
   },
   {
     id: 'chat-status-badge',
@@ -713,6 +1032,12 @@ export const COMPONENT_REGISTRY: ComponentEntry[] = [
     tier: 'static',
     description: 'Badge showing the active/idle/error status of a chat session.',
     tags: ['chat', 'status', 'badge'],
+    mockVariants: [
+      { name: 'Active', props: { status: 'active' } },
+      { name: 'Waiting', props: { status: 'waiting' } },
+      { name: 'Archived', props: { status: 'archived' } },
+      { name: 'Closed', props: { status: 'closed' } },
+    ],
   },
   {
     id: 'chat-unread-badge',
@@ -723,6 +1048,11 @@ export const COMPONENT_REGISTRY: ComponentEntry[] = [
     tier: 'static',
     description: 'Numeric badge showing unread message count on a chat card.',
     tags: ['chat', 'unread', 'badge', 'count'],
+    mockVariants: [
+      { name: 'Few', props: { count: 3 } },
+      { name: 'Many', props: { count: 99 } },
+      { name: 'Overflow', props: { count: 150 } },
+    ],
   },
   {
     id: 'meeple-card-info-button',
@@ -753,6 +1083,16 @@ export const COMPONENT_REGISTRY: ComponentEntry[] = [
     tier: 'static',
     description: 'Mobile-optimised tag strip for MeepleCard that truncates with overflow.',
     tags: ['card', 'tags', 'mobile'],
+    mockProps: {
+      tags: [
+        { label: 'Strategia' },
+        { label: 'Negoziazione' },
+        { label: 'Famiglia' },
+        { label: '3-4 Giocatori' },
+        { label: '60-120 min' },
+      ],
+      maxVisibleMobile: 2,
+    },
   },
 
   // ─── Feedback ─────────────────────────────────────────────────────────────
@@ -797,6 +1137,17 @@ export const COMPONENT_REGISTRY: ComponentEntry[] = [
     tier: 'static',
     description: 'Linear progress bar for collection slot usage.',
     tags: ['collection', 'progress', 'bar'],
+    mockVariants: [
+      { name: 'Safe', props: { current: 18, max: 50, label: 'Games', unit: 'games' } },
+      {
+        name: 'Warning',
+        props: { current: 40, max: 50, label: 'Games', unit: 'games', showWarning: true },
+      },
+      {
+        name: 'Critical',
+        props: { current: 48, max: 50, label: 'Games', unit: 'games', showWarning: true },
+      },
+    ],
   },
   {
     id: 'feedback-confidence-badge',
@@ -827,6 +1178,15 @@ export const COMPONENT_REGISTRY: ComponentEntry[] = [
     tier: 'static',
     description: 'Sticky banner alerting admins when they are impersonating a user.',
     tags: ['impersonation', 'banner', 'admin'],
+    mockProps: {
+      isImpersonating: true,
+      impersonatedUser: {
+        id: '550e8400-e29b-41d4-a716-446655440010',
+        displayName: 'Marco Bianchi',
+        email: 'marco@example.com',
+      },
+      onEndImpersonation: () => {},
+    },
   },
   {
     id: 'offline-banner',
@@ -847,6 +1207,10 @@ export const COMPONENT_REGISTRY: ComponentEntry[] = [
     tier: 'static',
     description: 'Badge indicating a FAQ is available offline.',
     tags: ['offline', 'faq', 'badge'],
+    mockVariants: [
+      { name: 'Cached', props: { source: 'cached', confidence: 0.85 } },
+      { name: 'Offline', props: { source: 'offline' } },
+    ],
   },
   {
     id: 'progress',
@@ -877,6 +1241,7 @@ export const COMPONENT_REGISTRY: ComponentEntry[] = [
     tier: 'static',
     description: 'Toast notification container using the Sonner library.',
     tags: ['toast', 'notification', 'sonner'],
+    mockProps: {},
   },
   {
     id: 'tier-badge',
@@ -942,6 +1307,7 @@ export const COMPONENT_REGISTRY: ComponentEntry[] = [
     tier: 'static',
     description: 'Accessible form label with required indicator support.',
     tags: ['label', 'form', 'a11y'],
+    mockProps: { children: 'Email address', htmlFor: 'email' },
   },
   {
     id: 'radio-group',
@@ -972,6 +1338,7 @@ export const COMPONENT_REGISTRY: ComponentEntry[] = [
     tier: 'static',
     description: 'Custom scrollable area with styled scrollbar.',
     tags: ['scroll', 'area', 'container'],
+    mockProps: { children: 'Scrollable content area', className: 'h-32 w-64' },
   },
   {
     id: 'slider',
@@ -1066,6 +1433,13 @@ export const COMPONENT_REGISTRY: ComponentEntry[] = [
     tier: 'static',
     description: 'Breadcrumb navigation trail with auto-generated paths.',
     tags: ['breadcrumb', 'navigation', 'trail'],
+    mockProps: {
+      items: [
+        { label: 'Home', href: '/' },
+        { label: 'Library', href: '/library' },
+        { label: 'Catan' },
+      ],
+    },
   },
   {
     id: 'card-focus-layout',
@@ -1076,6 +1450,7 @@ export const COMPONENT_REGISTRY: ComponentEntry[] = [
     tier: 'static',
     description: 'Layout wrapper that gives focus to a single featured card.',
     tags: ['layout', 'focus', 'card'],
+    mockProps: { children: 'Featured card content' },
   },
   {
     id: 'card-stack-panel',
@@ -1116,6 +1491,7 @@ export const COMPONENT_REGISTRY: ComponentEntry[] = [
     tier: 'static',
     description: 'Content area that highlights a single focused entity card.',
     tags: ['card', 'focus', 'area'],
+    mockProps: { children: 'Focused entity card' },
   },
   {
     id: 'hand-stack',
@@ -1136,6 +1512,10 @@ export const COMPONENT_REGISTRY: ComponentEntry[] = [
     tier: 'static',
     description: 'Horizontal or vertical visual separator/divider.',
     tags: ['separator', 'divider', 'line'],
+    mockVariants: [
+      { name: 'Horizontal', props: { orientation: 'horizontal' } },
+      { name: 'Vertical', props: { orientation: 'vertical', className: 'h-8' } },
+    ],
   },
   {
     id: 'sheet',
@@ -1304,6 +1684,7 @@ export const COMPONENT_REGISTRY: ComponentEntry[] = [
     tier: 'static',
     description: 'Animation presets for modal entrance and exit transitions.',
     tags: ['modal', 'animation', 'transition'],
+    mockProps: {}, // Exports Framer Motion variants, not a renderable component
   },
   {
     id: 'page-transition',
@@ -1493,6 +1874,7 @@ export const COMPONENT_REGISTRY: ComponentEntry[] = [
     tier: 'static',
     description: '3D-style dice icon SVG for decorative use.',
     tags: ['icon', 'dice', '3d', 'decoration'],
+    mockProps: { className: 'w-12 h-12' },
   },
 
   // ─── Background ───────────────────────────────────────────────────────────
@@ -1506,6 +1888,7 @@ export const COMPONENT_REGISTRY: ComponentEntry[] = [
     tier: 'static',
     description: 'Subtle background texture overlay for page sections.',
     tags: ['background', 'texture', 'decoration'],
+    mockProps: { className: 'h-32 w-full' },
   },
 
   // ─── Admin — Layout ───────────────────────────────────────────────────────
@@ -1519,6 +1902,11 @@ export const COMPONENT_REGISTRY: ComponentEntry[] = [
     tier: 'static',
     description: 'Root layout shell for admin pages with sidebar and top nav.',
     tags: ['admin', 'layout', 'shell'],
+    mockProps: {
+      children: 'Admin page content',
+      userName: 'Alice Rossi',
+      userEmail: 'alice@meepleai.com',
+    },
   },
   {
     id: 'admin-top-nav',
@@ -1589,6 +1977,11 @@ export const COMPONENT_REGISTRY: ComponentEntry[] = [
     tier: 'static',
     description: 'Empty state placeholder for admin hub pages with no content.',
     tags: ['admin', 'empty', 'state'],
+    mockProps: {
+      icon: null,
+      title: 'No content yet',
+      description: 'This section is coming soon. Check back later for updates.',
+    },
   },
   {
     id: 'admin-error-boundary',
@@ -1599,6 +1992,7 @@ export const COMPONENT_REGISTRY: ComponentEntry[] = [
     tier: 'static',
     description: 'Error boundary component for graceful admin page error handling.',
     tags: ['admin', 'error', 'boundary'],
+    mockProps: { children: 'Protected admin content' },
   },
   {
     id: 'emergency-banner',
@@ -1674,6 +2068,13 @@ export const COMPONENT_REGISTRY: ComponentEntry[] = [
     tier: 'static',
     description: 'Donut chart showing AI usage breakdown by model or strategy.',
     tags: ['chart', 'donut', 'ai', 'usage'],
+    mockProps: {
+      data: [
+        { category: 'Embeddings', count: 4820 },
+        { category: 'Completions', count: 2340 },
+        { category: 'OCR', count: 567 },
+      ],
+    },
   },
   {
     id: 'api-requests-chart',
@@ -1684,6 +2085,17 @@ export const COMPONENT_REGISTRY: ComponentEntry[] = [
     tier: 'static',
     description: 'Line chart showing API request volume over time.',
     tags: ['chart', 'api', 'requests', 'timeline'],
+    mockProps: {
+      data: [
+        { date: '2026-03-10', count: 840 },
+        { date: '2026-03-11', count: 1120 },
+        { date: '2026-03-12', count: 960 },
+        { date: '2026-03-13', count: 1340 },
+        { date: '2026-03-14', count: 1080 },
+        { date: '2026-03-15', count: 1567 },
+        { date: '2026-03-16', count: 1247 },
+      ],
+    },
   },
   {
     id: 'charts-section',
@@ -1694,6 +2106,7 @@ export const COMPONENT_REGISTRY: ComponentEntry[] = [
     tier: 'static',
     description: 'Composed section grouping multiple admin dashboard charts.',
     tags: ['charts', 'section', 'dashboard'],
+    mockProps: {}, // Requires useDashboardData hook context
   },
   {
     id: 'usage-kpi-cards',
@@ -1714,6 +2127,68 @@ export const COMPONENT_REGISTRY: ComponentEntry[] = [
     tier: 'static',
     description: 'Timeline chart for LLM request volume and latency.',
     tags: ['chart', 'requests', 'timeline'],
+    mockProps: {
+      data: {
+        buckets: [
+          {
+            bucket: '2026-03-10',
+            manual: 40,
+            ragPipeline: 320,
+            eventDriven: 15,
+            automatedTest: 25,
+            agentTask: 180,
+            adminOperation: 8,
+            totalCostUsd: 0.042,
+          },
+          {
+            bucket: '2026-03-11',
+            manual: 55,
+            ragPipeline: 410,
+            eventDriven: 22,
+            automatedTest: 30,
+            agentTask: 220,
+            adminOperation: 12,
+            totalCostUsd: 0.061,
+          },
+          {
+            bucket: '2026-03-12',
+            manual: 38,
+            ragPipeline: 290,
+            eventDriven: 18,
+            automatedTest: 20,
+            agentTask: 165,
+            adminOperation: 6,
+            totalCostUsd: 0.038,
+          },
+          {
+            bucket: '2026-03-13',
+            manual: 62,
+            ragPipeline: 480,
+            eventDriven: 28,
+            automatedTest: 35,
+            agentTask: 240,
+            adminOperation: 15,
+            totalCostUsd: 0.074,
+          },
+          {
+            bucket: '2026-03-14',
+            manual: 49,
+            ragPipeline: 370,
+            eventDriven: 20,
+            automatedTest: 28,
+            agentTask: 195,
+            adminOperation: 10,
+            totalCostUsd: 0.055,
+          },
+        ],
+        period: '7d',
+        groupedByHour: false,
+        totalRequests: 4282,
+        totalCostUsd: 0.27,
+      },
+      period: '7d',
+      onPeriodChange: undefined,
+    },
   },
   {
     id: 'cost-breakdown-panel',
@@ -1724,6 +2199,34 @@ export const COMPONENT_REGISTRY: ComponentEntry[] = [
     tier: 'static',
     description: 'Panel with cost breakdown by model and time period.',
     tags: ['cost', 'breakdown', 'chart'],
+    mockProps: {
+      data: {
+        byModel: [
+          {
+            modelId: 'mistralai/mistral-7b-instruct',
+            costUsd: 0.12,
+            requests: 1840,
+            totalTokens: 182000,
+          },
+          { modelId: 'openai/gpt-4o-mini', costUsd: 0.08, requests: 640, totalTokens: 95000 },
+          { modelId: 'google/gemma-2-9b-it:free', costUsd: 0.0, requests: 320, totalTokens: 48000 },
+        ],
+        bySource: [
+          { source: 'RagPipeline', costUsd: 0.14, requests: 1950 },
+          { source: 'AgentTask', costUsd: 0.05, requests: 680 },
+          { source: 'Manual', costUsd: 0.01, requests: 170 },
+        ],
+        byTier: [
+          { tier: 'Premium', costUsd: 0.18, requests: 1200 },
+          { tier: 'Free', costUsd: 0.02, requests: 1600 },
+        ],
+        totalCostUsd: 0.2,
+        totalRequests: 2800,
+        period: '7d',
+      },
+      period: '7d',
+      onPeriodChange: undefined,
+    },
   },
   {
     id: 'free-quota-indicator',
@@ -1734,6 +2237,38 @@ export const COMPONENT_REGISTRY: ComponentEntry[] = [
     tier: 'static',
     description: 'Visual indicator for free-tier model quota consumption.',
     tags: ['quota', 'free', 'indicator'],
+    mockProps: {
+      data: {
+        models: [
+          {
+            modelId: 'google/gemma-2-9b-it:free',
+            requestsToday: 38,
+            dailyLimit: 50,
+            percentUsed: 0.76,
+            isExhausted: false,
+            nextResetUtc: '2026-03-18T00:00:00Z',
+          },
+          {
+            modelId: 'meta-llama/llama-3.2-3b-instruct:free',
+            requestsToday: 50,
+            dailyLimit: 50,
+            percentUsed: 1.0,
+            isExhausted: true,
+            nextResetUtc: '2026-03-18T00:00:00Z',
+          },
+          {
+            modelId: 'mistralai/mistral-7b-instruct:free',
+            requestsToday: 12,
+            dailyLimit: 50,
+            percentUsed: 0.24,
+            isExhausted: false,
+            nextResetUtc: '2026-03-18T00:00:00Z',
+          },
+        ],
+        totalFreeRequestsToday: 100,
+        generatedAt: '2026-03-17T14:30:00Z',
+      },
+    },
   },
   {
     id: 'rate-limit-gauge',
@@ -1744,6 +2279,20 @@ export const COMPONENT_REGISTRY: ComponentEntry[] = [
     tier: 'static',
     description: 'Circular gauge showing current RPM usage vs. rate limit.',
     tags: ['rate-limit', 'gauge', 'rpm'],
+    mockProps: {
+      status: {
+        balanceUsd: 18.42,
+        dailySpendUsd: 0.2,
+        todayRequestCount: 2800,
+        currentRpm: 14,
+        limitRpm: 20,
+        utilizationPercent: 0.7,
+        isThrottled: false,
+        isFreeTier: false,
+        rateLimitInterval: '1m',
+        lastUpdated: '2026-03-17T14:30:00Z',
+      },
+    },
   },
   {
     id: 'recent-requests-table',
@@ -1764,6 +2313,7 @@ export const COMPONENT_REGISTRY: ComponentEntry[] = [
     tier: 'static',
     description: 'KPI card grid for the agent monitoring overview page.',
     tags: ['agent', 'kpi', 'cards'],
+    mockProps: {}, // Uses internal mock data — no props required
   },
   {
     id: 'metrics-kpi-cards',
@@ -1774,6 +2324,30 @@ export const COMPONENT_REGISTRY: ComponentEntry[] = [
     tier: 'static',
     description: 'KPI cards showing agent metrics: total chats, avg latency, satisfaction.',
     tags: ['metrics', 'kpi', 'agent'],
+    mockProps: {
+      isLoading: false,
+      metrics: {
+        totalInvocations: 12847,
+        totalTokensUsed: 4820000,
+        totalCost: 18.42,
+        avgLatencyMs: 1240,
+        avgConfidenceScore: 0.87,
+        userSatisfactionRate: 0.91,
+        topQueries: [
+          { query: 'Come si costruisce a Catan?', count: 342 },
+          { query: 'Regole di Wingspan', count: 218 },
+        ],
+        costBreakdown: [
+          { category: 'RAG Pipeline', cost: 12.4, invocations: 8200, tokens: 3100000 },
+          { category: 'Agent Task', cost: 4.8, invocations: 3900, tokens: 1450000 },
+        ],
+        usageOverTime: [
+          { date: '2026-03-10', count: 1820, cost: 2.61, tokens: 680000 },
+          { date: '2026-03-11', count: 2140, cost: 3.12, tokens: 820000 },
+          { date: '2026-03-12', count: 1650, cost: 2.38, tokens: 610000 },
+        ],
+      },
+    },
   },
   {
     id: 'usage-chart',
@@ -1784,6 +2358,17 @@ export const COMPONENT_REGISTRY: ComponentEntry[] = [
     tier: 'static',
     description: 'Bar/line chart for agent usage volume over time.',
     tags: ['usage', 'chart', 'agent'],
+    mockProps: {
+      data: [
+        { date: '2026-03-10', count: 1820, cost: 2.61, tokens: 680000 },
+        { date: '2026-03-11', count: 2140, cost: 3.12, tokens: 820000 },
+        { date: '2026-03-12', count: 1650, cost: 2.38, tokens: 610000 },
+        { date: '2026-03-13', count: 2380, cost: 3.47, tokens: 910000 },
+        { date: '2026-03-14', count: 1990, cost: 2.89, tokens: 740000 },
+        { date: '2026-03-15', count: 2560, cost: 3.74, tokens: 980000 },
+        { date: '2026-03-16', count: 2307, cost: 3.21, tokens: 880000 },
+      ],
+    },
   },
   {
     id: 'usage-trend-chart',
@@ -1794,6 +2379,7 @@ export const COMPONENT_REGISTRY: ComponentEntry[] = [
     tier: 'static',
     description: 'Trend line chart comparing agent usage across periods.',
     tags: ['usage', 'trend', 'chart'],
+    mockProps: {}, // Uses internal mock data — no props required
   },
   {
     id: 'cost-breakdown-chart',
@@ -1804,6 +2390,14 @@ export const COMPONENT_REGISTRY: ComponentEntry[] = [
     tier: 'static',
     description: 'Stacked bar chart for LLM cost breakdown by agent.',
     tags: ['cost', 'chart', 'agent'],
+    mockProps: {
+      data: [
+        { category: 'Catan Assistant', cost: 7.82, invocations: 4120, tokens: 1540000 },
+        { category: 'Wingspan Guide', cost: 5.34, invocations: 2880, tokens: 1080000 },
+        { category: 'Pandemic Advisor', cost: 3.19, invocations: 1650, tokens: 620000 },
+        { category: 'Ticket to Ride Helper', cost: 2.07, invocations: 1197, tokens: 448000 },
+      ],
+    },
   },
 
   // ─── Admin — Agent ────────────────────────────────────────────────────────
@@ -1817,6 +2411,7 @@ export const COMPONENT_REGISTRY: ComponentEntry[] = [
     tier: 'static',
     description: 'Header bar for the multi-step agent builder wizard.',
     tags: ['agent', 'builder', 'header'],
+    mockProps: {}, // Self-contained breadcrumb — no props required
   },
   {
     id: 'agent-builder-steps',
@@ -1837,6 +2432,17 @@ export const COMPONENT_REGISTRY: ComponentEntry[] = [
     tier: 'static',
     description: 'Live preview panel showing agent configuration summary.',
     tags: ['agent', 'preview', 'panel'],
+    mockProps: {
+      agent: {
+        name: 'Catan Expert',
+        description:
+          'Risponde a domande sulle regole e strategie di Catan usando il manuale ufficiale.',
+        agentTypologyId: 'rag-assistant',
+        systemPrompt:
+          'Sei un esperto di Catan. Rispondi sempre con precisione citando le pagine del manuale.',
+        kbCardIds: ['kb-card-catan-rulebook', 'kb-card-catan-expansions'],
+      },
+    },
   },
   {
     id: 'basic-info-step',
@@ -1947,6 +2553,22 @@ export const COMPONENT_REGISTRY: ComponentEntry[] = [
     tier: 'static',
     description: 'Displays latency, token counts, and confidence from a test run.',
     tags: ['agent', 'metrics', 'test'],
+    mockProps: {
+      result: {
+        query: 'Quante risorse si ottengono con un insediamento adiacente a un numero 6 a Catan?',
+        response:
+          'Con un insediamento adiacente a un esagono numerato 6, ottieni 1 risorsa ogni volta che il 6 viene tirato sui dadi. Con una città sullo stesso esagono, ottieni 2 risorse. (Manuale Catan, p. 8)',
+        latency: 1842,
+        tokensUsed: 512,
+        costEstimate: 0.00038,
+        confidenceScore: 0.92,
+        citations: [
+          { page: 8, text: 'Insediamenti producono 1 risorsa per esagono adiacente...' },
+          { page: 9, text: 'Città producono 2 risorse per esagono adiacente...' },
+        ],
+        timestamp: new Date('2026-03-17T14:30:00Z'),
+      },
+    },
   },
   {
     id: 'top-agents-table',
@@ -1957,6 +2579,42 @@ export const COMPONENT_REGISTRY: ComponentEntry[] = [
     tier: 'static',
     description: 'Table ranking agents by usage, satisfaction, or cost.',
     tags: ['agent', 'table', 'ranking'],
+    mockProps: {
+      agents: [
+        {
+          typologyId: 'rag-catan',
+          typologyName: 'Catan Expert',
+          invocations: 4120,
+          cost: 7.82,
+          avgConfidence: 0.91,
+          avgLatencyMs: 1240,
+        },
+        {
+          typologyId: 'rag-wingspan',
+          typologyName: 'Wingspan Guide',
+          invocations: 2880,
+          cost: 5.34,
+          avgConfidence: 0.88,
+          avgLatencyMs: 1380,
+        },
+        {
+          typologyId: 'rag-pandemic',
+          typologyName: 'Pandemic Advisor',
+          invocations: 1650,
+          cost: 3.19,
+          avgConfidence: 0.85,
+          avgLatencyMs: 1560,
+        },
+        {
+          typologyId: 'rag-ticket',
+          typologyName: 'Ticket to Ride Helper',
+          invocations: 1197,
+          cost: 2.07,
+          avgConfidence: 0.82,
+          avgLatencyMs: 1720,
+        },
+      ],
+    },
   },
   {
     id: 'comparison-panel',
@@ -2061,6 +2719,38 @@ export const COMPONENT_REGISTRY: ComponentEntry[] = [
     tier: 'static',
     description: 'Card showing a retrieved document chunk with score and metadata.',
     tags: ['rag', 'chunk', 'retrieval'],
+    mockVariants: [
+      {
+        name: 'High score',
+        props: {
+          chunk: {
+            id: 'chunk-1',
+            score: 0.94,
+            text: 'Con un insediamento adiacente a un esagono numerato, il giocatore riceve una risorsa del tipo corrispondente ogni volta che quel numero viene tirato. Le città raddoppiano questa produzione.',
+            page: 8,
+            chunkIndex: 3,
+            pdfName: 'catan-manuale.pdf',
+            used: true,
+          },
+          expanded: true,
+        },
+      },
+      {
+        name: 'Low score',
+        props: {
+          chunk: {
+            id: 'chunk-2',
+            score: 0.31,
+            text: 'Il porto 3:1 permette al giocatore di scambiare 3 risorse dello stesso tipo con 1 qualsiasi risorsa della banca.',
+            page: 14,
+            chunkIndex: 7,
+            pdfName: 'catan-manuale.pdf',
+            used: false,
+          },
+          expanded: false,
+        },
+      },
+    ],
   },
   {
     id: 'pipeline-deep-metrics',
@@ -2071,6 +2761,26 @@ export const COMPONENT_REGISTRY: ComponentEntry[] = [
     tier: 'static',
     description: 'Deep metrics panel for the RAG pipeline showing precision and recall.',
     tags: ['pipeline', 'metrics', 'deep'],
+    mockProps: {
+      metrics: {
+        chunkSizeDistribution: [
+          { rangeLabel: '0-200', count: 12 },
+          { rangeLabel: '200-500', count: 48 },
+          { rangeLabel: '500-1000', count: 31 },
+          { rangeLabel: '1000+', count: 9 },
+        ],
+        qdrantStats: {
+          vectorsCount: 2840,
+          memoryUsageBytes: 45088768,
+          collectionStatus: 'green',
+        },
+        qualityIndicators: {
+          pageCoveragePercent: 94,
+          emptyChunksCount: 3,
+          duplicateDetectionCount: 7,
+        },
+      },
+    },
   },
   {
     id: 'debug-side-panel',
@@ -2101,6 +2811,56 @@ export const COMPONENT_REGISTRY: ComponentEntry[] = [
     tier: 'static',
     description: 'Summary view for auto test run results with pass/fail breakdown.',
     tags: ['test', 'summary', 'auto'],
+    mockProps: {
+      results: [
+        {
+          question: 'Quante risorse produce un insediamento?',
+          answer: '1 risorsa per esagono adiacente.',
+          confidence: 0.94,
+          passed: true,
+          latencyMs: 1230,
+        },
+        {
+          question: 'Come funziona il porto 2:1?',
+          answer:
+            'Il porto 2:1 permette di scambiare 2 risorse dello stesso tipo con qualsiasi risorsa.',
+          confidence: 0.91,
+          passed: true,
+          latencyMs: 1480,
+        },
+        {
+          question: 'Quanti punti vittoria servono per vincere?',
+          answer: '10 punti vittoria nelle condizioni standard.',
+          confidence: 0.88,
+          passed: true,
+          latencyMs: 1105,
+        },
+        {
+          question: "Cos'è il cavaliere più forte?",
+          answer:
+            'Il giocatore con il maggior numero di carte cavaliere giocate (min 3) riceve la carta Esercito più grande.',
+          confidence: 0.72,
+          passed: false,
+          latencyMs: 2340,
+        },
+        {
+          question: 'Come si costruisce una città?',
+          answer:
+            'Si piazza una città su un insediamento proprio spendendo 3 minerali e 2 cereali.',
+          confidence: 0.96,
+          passed: true,
+          latencyMs: 980,
+        },
+        {
+          question: 'Quando si rimescola il mazzo sviluppo?',
+          answer:
+            'Il mazzo sviluppo non si rimescola; quando è esaurito non è possibile acquistare altre carte.',
+          confidence: 0.83,
+          passed: true,
+          latencyMs: 1320,
+        },
+      ],
+    },
   },
 
   // ─── Admin — Debug Chat ───────────────────────────────────────────────────
@@ -2114,6 +2874,16 @@ export const COMPONENT_REGISTRY: ComponentEntry[] = [
     tier: 'static',
     description: 'Badge showing token cost for a debug chat request.',
     tags: ['debug', 'cost', 'badge', 'token'],
+    mockVariants: [
+      {
+        name: 'With cost',
+        props: { totalTokens: 1248, costUsd: 0.00094, modelId: 'mistralai/mistral-7b-instruct' },
+      },
+      {
+        name: 'Free model',
+        props: { totalTokens: 640, costUsd: 0, modelId: 'google/gemma-2-9b-it:free' },
+      },
+    ],
   },
   {
     id: 'debug-event-card',
@@ -2167,6 +2937,7 @@ export const COMPONENT_REGISTRY: ComponentEntry[] = [
     tier: 'static',
     description: 'Metrics panel showing document processing throughput and error rate.',
     tags: ['processing', 'metrics', 'knowledge-base'],
+    mockProps: {}, // Uses useQuery internally — no external props
   },
   {
     id: 'processing-queue',
@@ -2280,6 +3051,12 @@ export const COMPONENT_REGISTRY: ComponentEntry[] = [
     tier: 'static',
     description: 'Badge showing game approval status (pending, approved, rejected).',
     tags: ['game', 'status', 'badge'],
+    mockVariants: [
+      { name: 'Draft', props: { status: 'Draft' } },
+      { name: 'Pending Approval', props: { status: 'PendingApproval' } },
+      { name: 'Published', props: { status: 'Published' } },
+      { name: 'Archived', props: { status: 'Archived' } },
+    ],
   },
   {
     id: 'pdf-document-list',
@@ -2300,6 +3077,35 @@ export const COMPONENT_REGISTRY: ComponentEntry[] = [
     tier: 'static',
     description: 'Status indicator for PDF indexing into the vector database.',
     tags: ['pdf', 'indexing', 'status'],
+    mockVariants: [
+      {
+        name: 'Chunking in progress',
+        props: {
+          pdfId: 'pdf-catan-01',
+          status: 'chunked',
+          progress: 65,
+          currentStep: 'Chunking in progress...',
+        },
+      },
+      {
+        name: 'Fully indexed',
+        props: {
+          pdfId: 'pdf-wingspan-01',
+          status: 'indexed',
+          progress: 100,
+          currentStep: undefined,
+        },
+      },
+      {
+        name: 'Processing error',
+        props: {
+          pdfId: 'pdf-pandemic-01',
+          status: 'processing',
+          progress: 20,
+          currentStep: "Errore durante l'estrazione del testo",
+        },
+      },
+    ],
   },
   {
     id: 'pdf-upload-section',
@@ -2320,6 +3126,48 @@ export const COMPONENT_REGISTRY: ComponentEntry[] = [
     tier: 'static',
     description: 'Step-by-step readiness indicator for RAG setup on a shared game.',
     tags: ['rag', 'readiness', 'game'],
+    mockVariants: [
+      {
+        name: 'Ready',
+        props: {
+          readiness: {
+            gameId: 'game-catan-01',
+            gameTitle: 'Catan',
+            gameStatus: 'Published',
+            totalDocuments: 3,
+            readyDocuments: 3,
+            processingDocuments: 0,
+            failedDocuments: 0,
+            documents: [],
+            linkedAgent: {
+              agentId: 'agent-catan',
+              name: 'Catan Expert',
+              type: 'RagAssistant',
+              isActive: true,
+              isReady: true,
+            },
+            overallReadiness: 'ready',
+          },
+        },
+      },
+      {
+        name: 'No documents',
+        props: {
+          readiness: {
+            gameId: 'game-wingspan-01',
+            gameTitle: 'Wingspan',
+            gameStatus: 'Draft',
+            totalDocuments: 0,
+            readyDocuments: 0,
+            processingDocuments: 0,
+            failedDocuments: 0,
+            documents: [],
+            linkedAgent: null,
+            overallReadiness: 'no_documents',
+          },
+        },
+      },
+    ],
   },
   {
     id: 'inline-chat-panel',
@@ -2373,6 +3221,41 @@ export const COMPONENT_REGISTRY: ComponentEntry[] = [
     tier: 'static',
     description: 'Card summarising a user role with description and permission count.',
     tags: ['role', 'card', 'user'],
+    mockVariants: [
+      {
+        name: 'Admin',
+        props: {
+          role: 'Admin',
+          userCount: '3 utenti',
+          description: 'Accesso completo a tutte le funzionalità di amministrazione.',
+          iconName: 'shield',
+          colorClass: 'amber',
+          href: '/admin/users?role=admin',
+        },
+      },
+      {
+        name: 'Editor',
+        props: {
+          role: 'Editor',
+          userCount: '12 utenti',
+          description: 'Può gestire contenuti e approvare giochi nel catalogo condiviso.',
+          iconName: 'pencil',
+          colorClass: 'blue',
+          href: '/admin/users?role=editor',
+        },
+      },
+      {
+        name: 'User',
+        props: {
+          role: 'User',
+          userCount: '1.248 utenti',
+          description: 'Accesso standard alle funzionalità della piattaforma.',
+          iconName: 'user',
+          colorClass: 'green',
+          href: '/admin/users?role=user',
+        },
+      },
+    ],
   },
   {
     id: 'user-activity-table',
@@ -2449,6 +3332,24 @@ export const COMPONENT_REGISTRY: ComponentEntry[] = [
     tier: 'static',
     description: 'Preview of how a notification will appear to recipients.',
     tags: ['notification', 'preview'],
+    mockVariants: [
+      {
+        name: 'In-app only',
+        props: {
+          title: 'Nuovo gioco disponibile',
+          message: 'Catan è ora disponibile nel catalogo condiviso con manuale indicizzato.',
+          channels: ['inapp'],
+        },
+      },
+      {
+        name: 'Email + In-app',
+        props: {
+          title: 'Aggiornamento sistema',
+          message: 'Il sistema sarà in manutenzione domenica 20 marzo dalle 02:00 alle 04:00 CET.',
+          channels: ['inapp', 'email'],
+        },
+      },
+    ],
   },
   {
     id: 'recipient-selector',
@@ -2492,6 +3393,11 @@ export const COMPONENT_REGISTRY: ComponentEntry[] = [
     tier: 'static',
     description: 'Badge showing invitation status (pending, accepted, expired).',
     tags: ['invitation', 'status', 'badge'],
+    mockVariants: [
+      { name: 'Pending', props: { status: 'Pending' } },
+      { name: 'Accepted', props: { status: 'Accepted' } },
+      { name: 'Expired', props: { status: 'Expired' } },
+    ],
   },
   {
     id: 'invite-user-dialog',
@@ -2538,6 +3444,7 @@ export const COMPONENT_REGISTRY: ComponentEntry[] = [
     tier: 'static',
     description: 'Card summarising overall system health with service statuses.',
     tags: ['system', 'health', 'card', 'admin'],
+    mockProps: {}, // Fetches /api/v1/admin/operations/health internally
   },
 
   // ─── Admin — Command Center ───────────────────────────────────────────────
@@ -2610,6 +3517,35 @@ export const COMPONENT_REGISTRY: ComponentEntry[] = [
     tier: 'static',
     description: 'Single KPI card with metric value, label, and trend delta.',
     tags: ['kpi', 'card', 'metric'],
+    mockVariants: [
+      {
+        name: 'Positive trend',
+        props: {
+          title: 'Utenti Totali',
+          value: '1.248',
+          trend: 12,
+          trendLabel: 'vs mese scorso',
+          icon: null,
+          badge: undefined,
+        },
+      },
+      {
+        name: 'Negative trend',
+        props: {
+          title: 'Costo Giornaliero',
+          value: '$0.42',
+          trend: -8,
+          trendLabel: 'vs ieri',
+          icon: null,
+          badge: '3 avvisi',
+          badgeVariant: 'warning',
+        },
+      },
+      {
+        name: 'No trend',
+        props: { title: 'Sessioni Attive', value: '34', icon: null },
+      },
+    ],
   },
   {
     id: 'kpi-cards-grid',
@@ -2620,6 +3556,26 @@ export const COMPONENT_REGISTRY: ComponentEntry[] = [
     tier: 'static',
     description: 'Responsive grid layout composing multiple KPICard components.',
     tags: ['kpi', 'grid', 'cards'],
+    mockProps: {
+      cards: [
+        {
+          title: 'Utenti Totali',
+          value: '1.248',
+          trend: 12,
+          trendLabel: 'vs mese scorso',
+          icon: null,
+        },
+        { title: 'Sessioni Oggi', value: '87', trend: 5, trendLabel: 'vs ieri', icon: null },
+        {
+          title: 'Giochi nel Catalogo',
+          value: '342',
+          trend: 3,
+          trendLabel: 'nuovi questa settimana',
+          icon: null,
+        },
+        { title: 'Costo API Oggi', value: '$0.42', trend: -8, trendLabel: 'vs ieri', icon: null },
+      ],
+    },
   },
   {
     id: 'admin-stat-card',
@@ -2630,6 +3586,12 @@ export const COMPONENT_REGISTRY: ComponentEntry[] = [
     tier: 'static',
     description: 'Admin-styled stat card with icon and colour accent.',
     tags: ['stat', 'card', 'admin'],
+    mockProps: {
+      label: 'Documenti Indicizzati',
+      value: '1.840',
+      trend: 'up',
+      trendValue: '+24 questa settimana',
+    },
   },
   {
     id: 'activity-feed',
@@ -2640,6 +3602,42 @@ export const COMPONENT_REGISTRY: ComponentEntry[] = [
     tier: 'static',
     description: 'Real-time activity feed for admin overview showing recent events.',
     tags: ['activity', 'feed', 'realtime', 'admin'],
+    mockProps: {
+      events: [
+        {
+          id: 'ev-1',
+          type: 'user',
+          title: 'Nuovo utente registrato',
+          description: 'alice.rossi@email.it ha completato la registrazione',
+          timestamp: new Date('2026-03-17T14:28:00Z'),
+          severity: 'info',
+        },
+        {
+          id: 'ev-2',
+          type: 'game',
+          title: 'Gioco approvato',
+          description: '"Catan" è stato pubblicato nel catalogo condiviso',
+          timestamp: new Date('2026-03-17T14:10:00Z'),
+          severity: 'success',
+        },
+        {
+          id: 'ev-3',
+          type: 'ai',
+          title: 'Errore pipeline RAG',
+          description: "Timeout durante l'indicizzazione di pandemic-rulebook.pdf",
+          timestamp: new Date('2026-03-17T13:45:00Z'),
+          severity: 'error',
+        },
+        {
+          id: 'ev-4',
+          type: 'system',
+          title: 'Backup completato',
+          description: 'Backup automatico del database completato con successo',
+          timestamp: new Date('2026-03-17T13:00:00Z'),
+          severity: 'info',
+        },
+      ],
+    },
   },
   {
     id: 'activity-timeline',
@@ -2650,6 +3648,36 @@ export const COMPONENT_REGISTRY: ComponentEntry[] = [
     tier: 'static',
     description: 'Vertical timeline of admin activity events with icons.',
     tags: ['activity', 'timeline', 'admin'],
+    mockProps: {
+      events: [
+        {
+          id: 'ev-1',
+          type: 'user',
+          title: 'Nuovo utente registrato',
+          description: 'marco.bianchi@email.it ha completato la verifica email',
+          timestamp: new Date('2026-03-17T14:28:00Z'),
+          severity: 'info',
+        },
+        {
+          id: 'ev-2',
+          type: 'game',
+          title: 'Nuovo gioco importato da BGG',
+          description: '"Wingspan" importato con 2 espansioni',
+          timestamp: new Date('2026-03-17T14:05:00Z'),
+          severity: 'success',
+        },
+        {
+          id: 'ev-3',
+          type: 'ai',
+          title: 'Agente aggiornato',
+          description: 'Catan Expert aggiornato al modello mistral-7b-instruct',
+          timestamp: new Date('2026-03-17T13:22:00Z'),
+          severity: 'info',
+        },
+      ],
+      maxEvents: 5,
+      showViewAll: true,
+    },
   },
   {
     id: 'alerts-banner',
@@ -2660,6 +3688,28 @@ export const COMPONENT_REGISTRY: ComponentEntry[] = [
     tier: 'static',
     description: 'Dismissible banner listing active system alerts.',
     tags: ['alerts', 'banner', 'admin'],
+    mockVariants: [
+      {
+        name: 'All healthy',
+        props: { metrics: null, healthyServices: 12, totalServices: 12 },
+      },
+      {
+        name: 'Service issue',
+        props: {
+          metrics: {
+            totalUsers: 1248,
+            activeUsers: 87,
+            totalGames: 342,
+            totalSessions: 5820,
+            pendingRequests: 3,
+            recentActivity: [],
+            systemAlerts: ['Redis degradato: latenza elevata'],
+          },
+          healthyServices: 10,
+          totalServices: 12,
+        },
+      },
+    ],
   },
   {
     id: 'budget-alert-banner',
@@ -2700,6 +3750,18 @@ export const COMPONENT_REGISTRY: ComponentEntry[] = [
     tier: 'static',
     description: 'Matrix showing health status for all microservices.',
     tags: ['service', 'health', 'matrix'],
+    mockProps: {
+      services: [
+        { name: 'PostgreSQL', status: 'healthy', latencyMs: 4 },
+        { name: 'Redis', status: 'healthy', latencyMs: 1 },
+        { name: 'Qdrant', status: 'healthy', latencyMs: 8 },
+        { name: 'Embedding Service', status: 'healthy', latencyMs: 42 },
+        { name: 'Reranker Service', status: 'degraded', latencyMs: 340 },
+        { name: 'OpenRouter', status: 'healthy', latencyMs: 120 },
+        { name: 'S3 Storage', status: 'healthy', latencyMs: 28 },
+        { name: 'Email SMTP', status: 'down', latencyMs: undefined },
+      ],
+    },
   },
   {
     id: 'ai-models-table',

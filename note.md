@@ -12,11 +12,6 @@ Solo un test sul browser valida l'implementazione della US.
 ### User story
 
 /using-superpowers ultrathink /sc:spec-panel riflettiamo sulla seguente user story:
-sono un user, aggiungio un gioco presente alla shared library alla mia collezzione, seleziono di possederlo, dopo aver visto un popup che mi spiega cosa comporta dichiarare di possederlo,
-aggiungo il gioco alla mia libreria. Il RAG e' utilizzabile, possedendo il gioco (possiamo usare i RAG relativi al gioco), l'user crea un agente tutor e avvia una chat
-Per validare dobbiamo fare un test locale sul browser della US
-
-/using-superpowers ultrathink /sc:spec-panel riflettiamo sulla seguente user story:
 sono un admin e voglio provare un gioco che ho acquistato e che ho il pdf, voglio testare il processo di embeeding e come funziona l'agente usando il rag che gli ho fornito con il kb creato. dopo l'upload, voglio andare nella pagina admin per visualizzare le code di embeeding .
 Solo un test sul browser valida l'implementazione della US
 
@@ -25,15 +20,6 @@ Solo un test sul browser valida l'implementazione della US
 - Sei un game host e avrai due amici, Alessandro e Pouli, che vengono a trovarti per giocare a dei giochi da tavolo e vuoi usare meepleai.app come assistente, se ci sono delle opinioni differenti sulle regole, per fare un riassunto del funzionamento dei turni e per aiutare a preparare il primo turno di gioco. Vuoi usare l'app per tenere un diario, generare eventi random (tiro di un dado, pesca di una carta)(parte del toolkit di quel gioco), per ricordare il turno e/o la fase attuale (parte del toolkit di quel gioco)
 - Decidiamo 3 giochi, uno con il RAG presente (almeno un pdf inizializzato), uno che verra' creato (cercanwdolo in BGG e con pdf privato caricato) e uno senza pdf.
 - Durante la serata vuoi segnare delle note, degli eventi, come note vocali o come note, per tenere un diario di quello che succede durante la partita (parte del toolkit di quel gioco). un agente potrebbe aiutarti.
-
-/using-superpowers ultrathink /sc:spec-panel
-.esploriamo questa idea.
-Sei admin, vuoi inviare inviti via mail dopo aver creato un utenza, La persona che utilizza la mail, accede e viene portato alla pagina per cambiare password.
-Cambia password e accede con la nuova password. Aggiunge un gioco alla collezzione e crea un agente.
-Chiede all'agente a voce di descriverli lo scopo del gioco e una descrizione di un turno di gioco
-Admin puo' cambiare il ruolo di utenti e visualizzare log relativi.
-Controlla le open issue per non creare issue doppie. Prepara roadmap per implementazione
-Solo un test sul browser valida l'implementazione della US
 
 /using-superpowers ultrathink /sc:spec-panel analizziamo l'idea di toolbox. Un toolbox rappresenta un contenitore che puo' essere diverso gioco da gioco. Ci sono giochi che richiedono un semplice segnapunti e il tiro di dadi, altri con complesse fasi/turni e sistemi di punTEGGIO. potremmo usare deck di poker per estrarre una carta o mazzi con carte specializzate. E altre funzioni utili con un certo gioco.,
 
@@ -87,7 +73,3 @@ Bisogna decidere :
   -ci sono altre cose da poter inserire nella card? lo scopo e' far avere a portata azioni e collegamenti con un tipo di card verso altri tipi, collegati
 
   /superpowers:using-superpowers ultrathink /sc:spec-panel cerchiamo gap tra backend e frontend
-
-### Dashboard
-
-/superpowers:using-superpowers ultrathink /sc:spec-panel lavoriamo sulla dashboard. un utente nuovo logga per la prima volta,dopo che si e' registrato (oauth, registrato da solo o invito da email).

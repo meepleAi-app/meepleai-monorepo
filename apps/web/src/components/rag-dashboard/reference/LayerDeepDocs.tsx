@@ -112,20 +112,60 @@ async function routeQuery(
 }`,
     decisionTree: [
       { condition: 'Is it a simple rule question?', yes: 'FAST + rule_lookup', no: 'Continue...' },
-      { condition: 'Does user have Editor+ tier?', yes: 'Consider BALANCED/PRECISE', no: 'Cap at FAST/BALANCED' },
+      {
+        condition: 'Does user have Editor+ tier?',
+        yes: 'Consider BALANCED/PRECISE',
+        no: 'Cap at FAST/BALANCED',
+      },
       { condition: 'Complexity score > 3?', yes: 'BALANCED or PRECISE', no: 'FAST' },
-      { condition: 'Is it strategy advice?', yes: 'PRECISE (if allowed)', no: 'Use template default' },
+      {
+        condition: 'Is it strategy advice?',
+        yes: 'PRECISE (if allowed)',
+        no: 'Use template default',
+      },
     ],
     configuration: [
-      { name: 'maxComplexityScore', type: 'number', defaultVal: '5', description: 'Maximum complexity score (0-5)' },
-      { name: 'templateConfidenceThreshold', type: 'number', defaultVal: '0.7', description: 'Min confidence for template classification' },
-      { name: 'enableLlmClassification', type: 'boolean', defaultVal: 'true', description: 'Use LLM for ambiguous queries' },
-      { name: 'defaultStrategy', type: 'RagStrategy', defaultVal: 'FAST', description: 'Fallback strategy when routing fails' },
+      {
+        name: 'maxComplexityScore',
+        type: 'number',
+        defaultVal: '5',
+        description: 'Maximum complexity score (0-5)',
+      },
+      {
+        name: 'templateConfidenceThreshold',
+        type: 'number',
+        defaultVal: '0.7',
+        description: 'Min confidence for template classification',
+      },
+      {
+        name: 'enableLlmClassification',
+        type: 'boolean',
+        defaultVal: 'true',
+        description: 'Use LLM for ambiguous queries',
+      },
+      {
+        name: 'defaultStrategy',
+        type: 'RagStrategy',
+        defaultVal: 'FAST',
+        description: 'Fallback strategy when routing fails',
+      },
     ],
     useCases: [
-      { scenario: 'What are the rules for 7 in Catan?', behavior: 'rule_lookup, complexity=1, FAST', tokens: '280' },
-      { scenario: 'Help me plan resources for a 4-player game', behavior: 'resource_planning, complexity=3, BALANCED', tokens: '320' },
-      { scenario: 'Analyze this position and suggest moves', behavior: 'strategy_advice, complexity=5, PRECISE', tokens: '360' },
+      {
+        scenario: 'What are the rules for 7 in Catan?',
+        behavior: 'rule_lookup, complexity=1, FAST',
+        tokens: '280',
+      },
+      {
+        scenario: 'Help me plan resources for a 4-player game',
+        behavior: 'resource_planning, complexity=3, BALANCED',
+        tokens: '320',
+      },
+      {
+        scenario: 'Analyze this position and suggest moves',
+        behavior: 'strategy_advice, complexity=5, PRECISE',
+        tokens: '360',
+      },
     ],
   },
   {
@@ -168,20 +208,60 @@ async function checkCache(
   return null; // Cache miss
 }`,
     decisionTree: [
-      { condition: 'Exact query match in memory?', yes: 'Return cached (0 tokens)', no: 'Continue...' },
-      { condition: 'Strategy allows semantic cache?', yes: 'Check vector similarity', no: 'Cache miss' },
-      { condition: 'Similarity score > 0.90?', yes: 'Return cached (310 tokens)', no: 'Cache miss' },
-      { condition: 'Similarity score > 0.85?', yes: 'Use as context hint', no: 'Full retrieval needed' },
+      {
+        condition: 'Exact query match in memory?',
+        yes: 'Return cached (0 tokens)',
+        no: 'Continue...',
+      },
+      {
+        condition: 'Strategy allows semantic cache?',
+        yes: 'Check vector similarity',
+        no: 'Cache miss',
+      },
+      {
+        condition: 'Similarity score > 0.90?',
+        yes: 'Return cached (310 tokens)',
+        no: 'Cache miss',
+      },
+      {
+        condition: 'Similarity score > 0.85?',
+        yes: 'Use as context hint',
+        no: 'Full retrieval needed',
+      },
     ],
     configuration: [
-      { name: 'exactMatchTtl', type: 'number', defaultVal: '3600', description: 'TTL for exact matches in seconds' },
-      { name: 'semanticThreshold', type: 'number', defaultVal: '0.85', description: 'Minimum similarity for semantic match' },
-      { name: 'maxCacheSize', type: 'number', defaultVal: '10000', description: 'Maximum entries in vector cache' },
-      { name: 'embeddingModel', type: 'string', defaultVal: 'all-MiniLM-L6-v2', description: 'Model for query embeddings' },
+      {
+        name: 'exactMatchTtl',
+        type: 'number',
+        defaultVal: '3600',
+        description: 'TTL for exact matches in seconds',
+      },
+      {
+        name: 'semanticThreshold',
+        type: 'number',
+        defaultVal: '0.85',
+        description: 'Minimum similarity for semantic match',
+      },
+      {
+        name: 'maxCacheSize',
+        type: 'number',
+        defaultVal: '10000',
+        description: 'Maximum entries in vector cache',
+      },
+      {
+        name: 'embeddingModel',
+        type: 'string',
+        defaultVal: 'all-MiniLM-L6-v2',
+        description: 'Model for query embeddings',
+      },
     ],
     useCases: [
       { scenario: 'Repeated exact query', behavior: 'Memory cache hit', tokens: '0' },
-      { scenario: 'Similar phrasing (Catan 7 rule vs 7 roll in Catan)', behavior: 'Semantic cache hit', tokens: '310' },
+      {
+        scenario: 'Similar phrasing (Catan 7 rule vs 7 roll in Catan)',
+        behavior: 'Semantic cache hit',
+        tokens: '310',
+      },
       { scenario: 'Novel query', behavior: 'Cache miss, proceed to L3', tokens: '50' },
     ],
   },
@@ -227,21 +307,61 @@ async function retrieve(
 }`,
     decisionTree: [
       { condition: 'Strategy is FAST?', yes: 'Vector-only search, top 3', no: 'Continue...' },
-      { condition: 'Strategy is BALANCED?', yes: 'Hybrid search with RRF fusion', no: 'PRECISE path' },
-      { condition: 'Query has named entities?', yes: 'Multi-hop with entity expansion', no: 'Standard multi-hop' },
-      { condition: 'Web augmentation enabled?', yes: 'Include web search results', no: 'Local KB only' },
+      {
+        condition: 'Strategy is BALANCED?',
+        yes: 'Hybrid search with RRF fusion',
+        no: 'PRECISE path',
+      },
+      {
+        condition: 'Query has named entities?',
+        yes: 'Multi-hop with entity expansion',
+        no: 'Standard multi-hop',
+      },
+      {
+        condition: 'Web augmentation enabled?',
+        yes: 'Include web search results',
+        no: 'Local KB only',
+      },
     ],
     configuration: [
-      { name: 'vectorTopK', type: 'number', defaultVal: '5', description: 'Number of vector search results' },
-      { name: 'bm25TopK', type: 'number', defaultVal: '5', description: 'Number of BM25 search results' },
+      {
+        name: 'vectorTopK',
+        type: 'number',
+        defaultVal: '5',
+        description: 'Number of vector search results',
+      },
+      {
+        name: 'bm25TopK',
+        type: 'number',
+        defaultVal: '5',
+        description: 'Number of BM25 search results',
+      },
       { name: 'rrfK', type: 'number', defaultVal: '60', description: 'RRF constant for fusion' },
-      { name: 'maxHops', type: 'number', defaultVal: '3', description: 'Maximum multi-hop iterations' },
-      { name: 'chunkSize', type: 'number', defaultVal: '512', description: 'Document chunk size in tokens' },
+      {
+        name: 'maxHops',
+        type: 'number',
+        defaultVal: '3',
+        description: 'Maximum multi-hop iterations',
+      },
+      {
+        name: 'chunkSize',
+        type: 'number',
+        defaultVal: '512',
+        description: 'Document chunk size in tokens',
+      },
     ],
     useCases: [
       { scenario: 'Simple rule query (FAST)', behavior: 'Vector search, 3 chunks', tokens: '1500' },
-      { scenario: 'Complex setup question (BALANCED)', behavior: 'Hybrid search, 5 chunks + metadata', tokens: '3500' },
-      { scenario: 'Strategy analysis (PRECISE)', behavior: 'Multi-hop, entity expansion, web', tokens: '8000' },
+      {
+        scenario: 'Complex setup question (BALANCED)',
+        behavior: 'Hybrid search, 5 chunks + metadata',
+        tokens: '3500',
+      },
+      {
+        scenario: 'Strategy analysis (PRECISE)',
+        behavior: 'Multi-hop, entity expansion, web',
+        tokens: '8000',
+      },
     ],
   },
   {
@@ -287,18 +407,46 @@ async function evaluateRetrieval(
       { condition: 'Strategy is FAST?', yes: 'Skip CRAG (0 tokens)', no: 'Run evaluation' },
       { condition: 'T5 score > 0.8?', yes: 'Proceed to generation', no: 'Continue...' },
       { condition: 'T5 score > 0.5?', yes: 'Decompose-recompose', no: 'Trigger web search' },
-      { condition: 'Web search successful?', yes: 'Merge and proceed', no: 'Generate with warning' },
+      {
+        condition: 'Web search successful?',
+        yes: 'Merge and proceed',
+        no: 'Generate with warning',
+      },
     ],
     configuration: [
-      { name: 'correctThreshold', type: 'number', defaultVal: '0.8', description: 'Min score for correct rating' },
-      { name: 'ambiguousThreshold', type: 'number', defaultVal: '0.5', description: 'Min score for ambiguous rating' },
-      { name: 'evaluationModel', type: 'string', defaultVal: 'T5-Large', description: 'Model for relevance evaluation' },
-      { name: 'enableWebAugmentation', type: 'boolean', defaultVal: 'true', description: 'Allow web search for low scores' },
+      {
+        name: 'correctThreshold',
+        type: 'number',
+        defaultVal: '0.8',
+        description: 'Min score for correct rating',
+      },
+      {
+        name: 'ambiguousThreshold',
+        type: 'number',
+        defaultVal: '0.5',
+        description: 'Min score for ambiguous rating',
+      },
+      {
+        name: 'evaluationModel',
+        type: 'string',
+        defaultVal: 'T5-Large',
+        description: 'Model for relevance evaluation',
+      },
+      {
+        name: 'enableWebAugmentation',
+        type: 'boolean',
+        defaultVal: 'true',
+        description: 'Allow web search for low scores',
+      },
     ],
     useCases: [
       { scenario: 'High relevance retrieval', behavior: 'Proceed directly', tokens: '0-500' },
       { scenario: 'Partial match (ambiguous)', behavior: 'Query decomposition', tokens: '500' },
-      { scenario: 'Poor retrieval (incorrect)', behavior: 'Web search augmentation', tokens: '500+' },
+      {
+        scenario: 'Poor retrieval (incorrect)',
+        behavior: 'Web search augmentation',
+        tokens: '500+',
+      },
     ],
   },
   {
@@ -345,19 +493,55 @@ async function generate(
     decisionTree: [
       { condition: 'Strategy is FAST?', yes: 'Llama/Gemini (free)', no: 'Continue...' },
       { condition: 'Strategy is BALANCED?', yes: 'Claude Sonnet/DeepSeek', no: 'PRECISE path' },
-      { condition: 'PRECISE strategy?', yes: 'Multi-agent: Analyzer-Synthesizer-Validator', no: 'Error' },
-      { condition: 'Template requires citations?', yes: 'Add citation extraction step', no: 'Standard output' },
+      {
+        condition: 'PRECISE strategy?',
+        yes: 'Multi-agent: Analyzer-Synthesizer-Validator',
+        no: 'Error',
+      },
+      {
+        condition: 'Template requires citations?',
+        yes: 'Add citation extraction step',
+        no: 'Standard output',
+      },
     ],
     configuration: [
-      { name: 'maxOutputTokens', type: 'number', defaultVal: '2000', description: 'Maximum response tokens' },
-      { name: 'temperature', type: 'number', defaultVal: '0.3', description: 'LLM temperature (lower = more focused)' },
-      { name: 'enableStreaming', type: 'boolean', defaultVal: 'true', description: 'Stream response to user' },
-      { name: 'citationRequired', type: 'boolean', defaultVal: 'true', description: 'Require citations in output' },
+      {
+        name: 'maxOutputTokens',
+        type: 'number',
+        defaultVal: '2000',
+        description: 'Maximum response tokens',
+      },
+      {
+        name: 'temperature',
+        type: 'number',
+        defaultVal: '0.3',
+        description: 'LLM temperature (lower = more focused)',
+      },
+      {
+        name: 'enableStreaming',
+        type: 'boolean',
+        defaultVal: 'true',
+        description: 'Stream response to user',
+      },
+      {
+        name: 'citationRequired',
+        type: 'boolean',
+        defaultVal: 'true',
+        description: 'Require citations in output',
+      },
     ],
     useCases: [
       { scenario: 'Simple rule query', behavior: 'Single-pass with Llama', tokens: '1800-2000' },
-      { scenario: 'Complex setup guide', behavior: 'Claude Sonnet with structured output', tokens: '3000-3500' },
-      { scenario: 'Strategy analysis', behavior: '3-agent pipeline with Opus', tokens: '8000-12000' },
+      {
+        scenario: 'Complex setup guide',
+        behavior: 'Claude Sonnet with structured output',
+        tokens: '3000-3500',
+      },
+      {
+        scenario: 'Strategy analysis',
+        behavior: '3-agent pipeline with Opus',
+        tokens: '8000-12000',
+      },
     ],
   },
   {
@@ -408,16 +592,48 @@ async function validateResponse(
   return { isValid: true, ...reflection };
 }`,
     decisionTree: [
-      { condition: 'Strategy is FAST?', yes: 'Rule-based citation check (0 tokens)', no: 'Continue...' },
-      { condition: 'Strategy is BALANCED?', yes: 'Cross-encoder alignment (0 tokens)', no: 'PRECISE path' },
-      { condition: 'Self-RAG confidence > 0.7?', yes: 'Accept response', no: 'Regenerate with feedback' },
+      {
+        condition: 'Strategy is FAST?',
+        yes: 'Rule-based citation check (0 tokens)',
+        no: 'Continue...',
+      },
+      {
+        condition: 'Strategy is BALANCED?',
+        yes: 'Cross-encoder alignment (0 tokens)',
+        no: 'PRECISE path',
+      },
+      {
+        condition: 'Self-RAG confidence > 0.7?',
+        yes: 'Accept response',
+        no: 'Regenerate with feedback',
+      },
       { condition: 'Hallucination detected?', yes: 'Flag and regenerate', no: 'Pass validation' },
     ],
     configuration: [
-      { name: 'confidenceThreshold', type: 'number', defaultVal: '0.7', description: 'Min confidence to accept response' },
-      { name: 'maxReflectionIterations', type: 'number', defaultVal: '2', description: 'Max Self-RAG iterations' },
-      { name: 'crossEncoderModel', type: 'string', defaultVal: 'ms-marco-MiniLM', description: 'Cross-encoder for alignment' },
-      { name: 'enableHallucinationDetection', type: 'boolean', defaultVal: 'true', description: 'Check for unsupported claims' },
+      {
+        name: 'confidenceThreshold',
+        type: 'number',
+        defaultVal: '0.7',
+        description: 'Min confidence to accept response',
+      },
+      {
+        name: 'maxReflectionIterations',
+        type: 'number',
+        defaultVal: '2',
+        description: 'Max Self-RAG iterations',
+      },
+      {
+        name: 'crossEncoderModel',
+        type: 'string',
+        defaultVal: 'ms-marco-MiniLM',
+        description: 'Cross-encoder for alignment',
+      },
+      {
+        name: 'enableHallucinationDetection',
+        type: 'boolean',
+        defaultVal: 'true',
+        description: 'Check for unsupported claims',
+      },
     ],
     useCases: [
       { scenario: 'FAST response', behavior: 'Regex citation check', tokens: '0' },
@@ -446,7 +662,11 @@ function LayerTab({ layer, isActive, onClick }: LayerTabProps) {
         isActive ? 'border-primary bg-primary/10' : 'border-border bg-muted/30'
       )}
       onClick={onClick}
-      style={isActive ? { borderColor: layer.color, backgroundColor: `${layer.color}15`, color: layer.color } : undefined}
+      style={
+        isActive
+          ? { borderColor: layer.color, backgroundColor: `${layer.color}15`, color: layer.color }
+          : undefined
+      }
     >
       <span style={{ color: isActive ? layer.color : undefined }}>{layer.icon}</span>
       <span className="hidden sm:inline">{layer.shortName}:</span>
@@ -641,10 +861,7 @@ export function LayerDeepDocs({ className }: LayerDeepDocsProps) {
           >
             {/* Header */}
             <div className="flex items-start gap-4">
-              <div
-                className="p-3 rounded-xl"
-                style={{ backgroundColor: `${activeLayer.color}20` }}
-              >
+              <div className="p-3 rounded-xl" style={{ backgroundColor: `${activeLayer.color}20` }}>
                 <span style={{ color: activeLayer.color }}>{activeLayer.icon}</span>
               </div>
               <div>
@@ -687,9 +904,7 @@ export function LayerDeepDocs({ className }: LayerDeepDocsProps) {
               {activeTab === 'code' && (
                 <CodeBlock code={activeLayer.codeExample} title="Implementation Example" />
               )}
-              {activeTab === 'tree' && (
-                <DecisionTreeDisplay nodes={activeLayer.decisionTree} />
-              )}
+              {activeTab === 'tree' && <DecisionTreeDisplay nodes={activeLayer.decisionTree} />}
               {activeTab === 'config' && <ConfigTable options={activeLayer.configuration} />}
               {activeTab === 'cases' && (
                 <UseCaseList useCases={activeLayer.useCases} color={activeLayer.color} />

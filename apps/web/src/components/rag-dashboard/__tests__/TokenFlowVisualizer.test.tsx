@@ -20,7 +20,7 @@ vi.mock('framer-motion', () => ({
 }));
 
 // Import after mocking
-import { TokenFlowVisualizer } from '../TokenFlowVisualizer';
+import { TokenFlowVisualizer } from '../metrics/TokenFlowVisualizer';
 
 describe('TokenFlowVisualizer', () => {
   beforeEach(() => {
@@ -204,9 +204,9 @@ describe('TokenFlowVisualizer', () => {
       render(<TokenFlowVisualizer />);
 
       // Find expand buttons (they have aria-expanded attribute)
-      const expandButtons = screen.getAllByRole('button').filter(
-        btn => btn.hasAttribute('aria-expanded')
-      );
+      const expandButtons = screen
+        .getAllByRole('button')
+        .filter(btn => btn.hasAttribute('aria-expanded'));
 
       if (expandButtons.length > 0) {
         await user.click(expandButtons[0]);

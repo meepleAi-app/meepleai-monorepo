@@ -37,17 +37,15 @@ export function useScrollHideNav({
   }, [scrollContainerRef, threshold]);
 
   useEffect(() => {
-    if (disabled) return;
     const el = scrollContainerRef.current;
-    if (!el) return;
+    if (disabled || !el) return;
     lastScrollTop.current = el.scrollTop;
     el.addEventListener('scroll', handleScroll, { passive: true });
     return () => el.removeEventListener('scroll', handleScroll);
   }, [scrollContainerRef, handleScroll, disabled]);
 
-  if (disabled) {
-    return { isNavVisible: true, scrollDirection: null };
-  }
-
-  return { isNavVisible, scrollDirection };
+  return {
+    isNavVisible: disabled ? true : isNavVisible,
+    scrollDirection: disabled ? null : scrollDirection,
+  };
 }

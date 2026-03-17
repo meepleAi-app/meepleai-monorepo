@@ -9,6 +9,7 @@ import { ErrorBoundary } from '@/components/errors/ErrorBoundary';
 import { ContextualBottomSheet } from '@/components/layout/ContextualBottomSheet';
 import { MobileTabBar } from '@/components/layout/MobileTabBar';
 import { DEFAULT_PINNED_CARDS } from '@/config/entity-actions';
+import { useBottomPadding } from '@/hooks/useBottomPadding';
 import { useContextualEntity } from '@/hooks/useContextualEntity';
 import { useContextualSheetActions } from '@/hooks/useContextualSheetActions';
 import { usePlaceholderActions } from '@/hooks/usePlaceholderActions';
@@ -72,6 +73,7 @@ export function UnifiedShellClient({
   const sheetActions = useContextualSheetActions();
   const [isBottomSheetOpen, setIsBottomSheetOpen] = useState(false);
   const hasSheetContent = sheetActions.length > 0 || cards.length > 0;
+  const bottomPaddingClass = useBottomPadding();
 
   // Agent wizard handoff state: carries game + KB selection from SearchAgentSheet → AgentCreationSheet
   const [agentWizardState, setAgentWizardState] = useState<{
@@ -164,7 +166,7 @@ export function UnifiedShellClient({
           <main
             ref={mainRef}
             id="main-content"
-            className={cn('flex-1 overflow-y-auto', 'focus:outline-none')}
+            className={cn('flex-1 overflow-y-auto', 'focus:outline-none', bottomPaddingClass)}
             tabIndex={-1}
           >
             <ErrorBoundary componentName="PageContent">{children}</ErrorBoundary>
@@ -172,12 +174,10 @@ export function UnifiedShellClient({
         </div>
       </DashboardEngineProvider>
 
-      {/* Bottom Nav (desktop only — replaced by MobileTabBar on mobile) */}
-      <div className="hidden md:block">
-        <ErrorBoundary fallback={null} componentName="ContextualBottomNav">
-          <ContextualBottomNav />
-        </ErrorBoundary>
-      </div>
+      {/* Bottom Nav (desktop only — component uses hidden md:flex internally) */}
+      <ErrorBoundary fallback={null} componentName="ContextualBottomNav">
+        <ContextualBottomNav />
+      </ErrorBoundary>
 
       {/* Mobile Tab Bar */}
       <MobileTabBar

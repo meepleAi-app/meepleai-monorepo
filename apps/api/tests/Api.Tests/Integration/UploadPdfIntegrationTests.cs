@@ -1121,7 +1121,7 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
         doc.ContentType.Should().Be("application/pdf");
         doc.GameId.Should().Be(testGame.Id);
         doc.UploadedByUserId.Should().Be(testUser.Id);
-        doc.ProcessingStatus.Should().Be("pending");
+        doc.ProcessingState.ToString().Should().Be("Pending");
         doc.UploadedAt.Should().BeCloseTo(DateTime.UtcNow, TestConstants.Timing.AssertionTolerance);
 
         // Verify relationships loaded correctly
@@ -1328,7 +1328,6 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
         doc.FileName.Should().Be("result_validation.pdf");
         doc.FileSizeBytes.Should().Be(pdfBytes.Length);
         doc.ContentType.Should().Be("application/pdf");
-        doc.ProcessingStatus.Should().Be("pending", "newly uploaded document should be in pending status");
         doc.UploadedAt.Should().NotBe(default(DateTime), "upload timestamp should be set");
     }
 
@@ -1355,7 +1354,6 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
 
         // Mark as already processed
         var pdfDoc = await _dbContext!.PdfDocuments.FirstOrDefaultAsync(d => d.Id == pdfId, TestCancellationToken);
-        pdfDoc!.ProcessingStatus = "completed";
         await _dbContext.SaveChangesAsync(TestCancellationToken);
 
         // Act: Simulate duplicate background task
@@ -1369,7 +1367,7 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
 
         // Assert
         var finalDoc = await _dbContext.PdfDocuments.FirstOrDefaultAsync(d => d.Id == pdfId, TestCancellationToken);
-        finalDoc!.ProcessingStatus.Should().Be("completed");
+        finalDoc!.ProcessingState.ToString().Should().Be("Ready");
 
         if (File.Exists(filePath)) File.Delete(filePath);
     }

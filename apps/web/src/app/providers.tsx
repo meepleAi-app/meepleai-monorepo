@@ -22,6 +22,7 @@ import { SessionWarningModal } from '@/components/modals';
 import { IntlProvider } from '@/components/providers/IntlProvider';
 import { ThemeProvider } from '@/components/providers/ThemeProvider';
 import { PWAProvider } from '@/components/pwa';
+import { CardBrowserProvider } from '@/components/ui/data-display/meeple-card-browser';
 import { Toaster } from '@/components/ui/feedback/sonner';
 import { useGlobalKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
 import { useSessionCheck } from '@/hooks/useSessionCheck';
@@ -154,9 +155,11 @@ export function AppProviders({ children }: AppProvidersProps) {
                 showDetails={process.env.NODE_ENV === 'development'}
               >
                 <RouteErrorBoundary routeName="AppContent">
-                  <AddGameWizardProvider>
-                    <AppContent>{children}</AppContent>
-                  </AddGameWizardProvider>
+                  <CardBrowserProvider>
+                    <AddGameWizardProvider>
+                      <AppContent>{children}</AppContent>
+                    </AddGameWizardProvider>
+                  </CardBrowserProvider>
                 </RouteErrorBoundary>
               </ErrorBoundary>
             </LayoutProvider>

@@ -6,14 +6,13 @@
  * Part of Epic #5490 - Model Versioning & Availability Monitoring.
  */
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { AlertTriangle, CheckCircle2, Clock, RefreshCw, XCircle } from 'lucide-react';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/primitives/button';
-import { useSetNavConfig } from '@/hooks/useSetNavConfig';
 import { createAdminClient } from '@/lib/api/clients/adminClient';
 import { HttpClient } from '@/lib/api/core/httpClient';
 import type {
@@ -224,16 +223,8 @@ function ChangeHistoryTable({ changes }: { changes: ModelChangeHistoryDto[] }) {
 // ─── Page ────────────────────────────────────────────────────────────────────
 
 export default function ModelHealthPage() {
-  const setNavConfig = useSetNavConfig();
   const queryClient = useQueryClient();
   const [historyLimit] = useState(50);
-
-  useEffect(() => {
-    setNavConfig({
-      miniNav: [{ id: 'models', label: 'Model Health', href: '/admin/agents/models' }],
-      actionBar: [],
-    });
-  }, [setNavConfig]);
 
   // ── Queries ──
   const {

@@ -117,3 +117,11 @@ export const ENTITY_ACTIONS: Partial<Record<MeepleEntityType, BottomNavActionDef
   ],
   custom: [{ id: 'home', label: 'Home', icon: Home, variant: 'ghost' }],
 };
+
+/** Default pinned card definitions — auto-seeded on first load */
+export const DEFAULT_PINNED_CARDS = DEFAULT_ACTIONS.filter(a => a.drawCard).map(a => ({
+  id: `section-${a.id}`,
+  entity: a.drawCard!.entity,
+  title: a.label,
+  href: a.drawCard!.href,
+}));

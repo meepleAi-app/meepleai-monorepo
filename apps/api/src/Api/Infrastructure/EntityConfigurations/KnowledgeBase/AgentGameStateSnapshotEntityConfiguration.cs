@@ -38,7 +38,7 @@ internal class AgentGameStateSnapshotEntityConfiguration : IEntityTypeConfigurat
 
         // Issue #3547: Vector embedding for position similarity search
         builder.Property(e => e.Embedding)
-            .HasColumnType("vector(1536)");
+            .HasColumnType("vector(1024)");
 
         // Indexes for query performance
         builder.HasIndex(e => e.GameId);

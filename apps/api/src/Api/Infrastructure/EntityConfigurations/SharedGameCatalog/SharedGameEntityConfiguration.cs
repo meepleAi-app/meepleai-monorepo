@@ -109,6 +109,11 @@ internal class SharedGameEntityConfiguration : IEntityTypeConfiguration<SharedGa
             .IsRequired()
             .HasDefaultValue(false);
 
+        builder.Property(e => e.IsRagPublic)
+            .HasColumnName("is_rag_public")
+            .IsRequired()
+            .HasDefaultValue(false);
+
         // Global query filter for soft deletes
         builder.HasQueryFilter(e => !e.IsDeleted);
 

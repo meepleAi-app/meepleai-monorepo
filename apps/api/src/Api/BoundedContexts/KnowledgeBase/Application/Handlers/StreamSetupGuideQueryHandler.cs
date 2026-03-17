@@ -23,7 +23,6 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Handlers;
 internal class StreamSetupGuideQueryHandler : IStreamingQueryHandler<StreamSetupGuideQuery, RagStreamingEvent>
 {
     private readonly IEmbeddingService _embeddingService;
-    private readonly IQdrantService _qdrantService;
     private readonly ILlmService _llmService;
     private readonly IPromptTemplateService _promptTemplateService;
     private readonly IConfiguration _configuration;
@@ -53,7 +52,6 @@ STEP 2: <title>
 etc.";
     public StreamSetupGuideQueryHandler(
         IEmbeddingService embeddingService,
-        IQdrantService qdrantService,
         ILlmService llmService,
         IPromptTemplateService promptTemplateService,
         IConfiguration configuration,
@@ -61,7 +59,6 @@ etc.";
         TimeProvider? timeProvider = null)
     {
         _embeddingService = embeddingService ?? throw new ArgumentNullException(nameof(embeddingService));
-        _qdrantService = qdrantService ?? throw new ArgumentNullException(nameof(qdrantService));
         _llmService = llmService ?? throw new ArgumentNullException(nameof(llmService));
         _promptTemplateService = promptTemplateService ?? throw new ArgumentNullException(nameof(promptTemplateService));
         _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
@@ -209,43 +206,17 @@ etc.";
     }
 
     /// <summary>
-    /// Searches Qdrant for setup-related context chunks.
+    /// Searches for setup-related context chunks.
     /// Returns (success, context, references, confidence).
+    /// NOTE: Qdrant dependency removed — always returns no results (triggers default steps).
     /// </summary>
-    private async Task<(bool success, string? context, List<Snippet>? references, double? confidence)> SearchSetupContextAsync(
+    private Task<(bool success, string? context, List<Snippet>? references, double? confidence)> SearchSetupContextAsync(
         string gameId,
         float[] queryEmbedding,
         CancellationToken cancellationToken)
     {
-        var searchResult = await _qdrantService.SearchAsync(
-            gameId,
-            queryEmbedding,
-            limit: 10,
-            documentIds: null,
-            cancellationToken).ConfigureAwait(false);
-
-        if (!searchResult.Success || searchResult.Results.Count == 0)
-        {
-            _logger.LogInformation("No RAG results found for game {GameId}, using default steps", gameId);
-            return (false, null, null, null);
-        }
-
-        // Build context from retrieved chunks
-        var context = string.Join("\n\n---\n\n", searchResult.Results.Select(r =>
-            $"[Page {r.Page}]\n{r.Text}"));
-
-        // Build references for all steps
-        var allReferences = searchResult.Results.Select(r => new Snippet(
-            r.Text,
-            $"PDF:{r.PdfId}",
-            r.Page,
-            0,
-            r.Score
-        )).ToList();
-
-        var confidence = (double?)searchResult.Results.Max(r => r.Score);
-
-        return (true, context, allReferences, confidence);
+        _logger.LogInformation("No RAG results for game {GameId} — Qdrant removed, using default steps", gameId);
+        return Task.FromResult<(bool, string?, List<Snippet>?, double?)>((false, null, null, null));
     }
 
     /// <summary>

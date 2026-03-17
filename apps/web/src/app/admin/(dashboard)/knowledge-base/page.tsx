@@ -11,6 +11,7 @@ import {
 import { type Metadata } from 'next';
 import Link from 'next/link';
 
+import { KbHubClient } from '@/components/admin/knowledge-base/hub/kb-hub-client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/data-display/card';
 
 export const metadata: Metadata = {
@@ -95,6 +96,9 @@ export default function KnowledgeBasePage() {
           Manage documents, vector collections, and the RAG retrieval pipeline
         </p>
       </div>
+
+      {/* Live Dashboard Widgets */}
+      <KbHubClient />
 
       {/* Section Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

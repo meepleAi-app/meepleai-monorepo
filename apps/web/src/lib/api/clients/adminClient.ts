@@ -324,10 +324,10 @@ export function createAdminClient({ httpClient }: CreateAdminClientParams) {
      * Change user role (admin only) - Issue #124
      * PUT /api/v1/admin/users/{userId}/role
      */
-    async changeUserRole(userId: string, newRole: string): Promise<AdminUser> {
+    async changeUserRole(userId: string, newRole: string, reason?: string): Promise<AdminUser> {
       const result = await httpClient.put<AdminUser>(
         `/api/v1/admin/users/${encodeURIComponent(userId)}/role`,
-        { newRole },
+        { newRole, reason },
         AdminUserSchema
       );
       // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
@@ -1610,6 +1610,34 @@ export function createAdminClient({ httpClient }: CreateAdminClientParams) {
       if (params?.endDate) searchParams.set('endDate', params.endDate);
       const qs = searchParams.toString();
       const url = `/api/v1/admin/audit-log${qs ? `?${qs}` : ''}`;
+      const result = await httpClient.get<AuditLogListResult>(url, AuditLogListResultSchema);
+      if (!result) {
+        return {
+          entries: [],
+          totalCount: 0,
+          limit: params?.limit ?? 50,
+          offset: params?.offset ?? 0,
+        };
+      }
+      return result;
+    },
+
+    /**
+     * Get audit log entries filtered by target user
+     * GET /api/v1/admin/users/{userId}/audit-log
+     */
+    async getUserAuditLog(
+      userId: string,
+      params?: {
+        limit?: number;
+        offset?: number;
+      }
+    ): Promise<AuditLogListResult> {
+      const searchParams = new URLSearchParams();
+      if (params?.limit != null) searchParams.set('limit', String(params.limit));
+      if (params?.offset != null) searchParams.set('offset', String(params.offset));
+      const qs = searchParams.toString();
+      const url = `/api/v1/admin/users/${encodeURIComponent(userId)}/audit-log${qs ? `?${qs}` : ''}`;
       const result = await httpClient.get<AuditLogListResult>(url, AuditLogListResultSchema);
       if (!result) {
         return {
@@ -3173,6 +3201,23 @@ export function createAdminClient({ httpClient }: CreateAdminClientParams) {
     },
 
     /**
+     * Get queue jobs filtered by gameId (for mini-widget)
+     * GET /api/v1/admin/queue?gameId=...&pageSize=...&statusFilter=...
+     */
+    async getQueueJobs(params: {
+      gameId?: string;
+      limit?: number;
+      status?: string[];
+    }): Promise<PaginatedQueue | null> {
+      const qs = new URLSearchParams();
+      if (params.gameId) qs.set('gameId', params.gameId);
+      if (params.limit) qs.set('pageSize', String(params.limit));
+      if (params.status) qs.set('status', params.status.join(','));
+      const query = qs.toString();
+      return httpClient.get(`/api/v1/admin/queue${query ? `?${query}` : ''}`, PaginatedQueueSchema);
+    },
+
+    /**
      * Enqueue a new processing job
      * POST /api/v1/admin/queue/enqueue
      */
@@ -3273,6 +3318,20 @@ export function createAdminClient({ httpClient }: CreateAdminClientParams) {
       return ContainerLogsSchema.parse(res);
     },
 
+    // ========== RAG Public Access ==========
+
+    /**
+     * Set whether RAG access is public for all owners of a shared game.
+     * PUT /api/v1/admin/shared-games/{sharedGameId}/rag-access
+     * @param sharedGameId - Shared game UUID
+     * @param isPublic - Whether RAG access should be public
+     */
+    async setRagPublicAccess(sharedGameId: string, isPublic: boolean): Promise<void> {
+      await httpClient.put(`/api/v1/admin/shared-games/${sharedGameId}/rag-access`, {
+        isRagPublic: isPublic,
+      });
+    },
+
     // ========== Issue #119: Shared Game Documents ==========
 
     /**
@@ -3311,6 +3370,84 @@ export function createAdminClient({ httpClient }: CreateAdminClientParams) {
     async getActiveAiUsers(period: number = 30): Promise<ActiveAiUsersResult> {
       const response = await httpClient.get(`/api/v1/admin/monitoring/mau?period=${period}`);
       return response as ActiveAiUsersResult;
+    },
+
+    // ========== Invitation Management ==========
+
+    /**
+     * Send a single invitation email (admin only)
+     * POST /api/v1/admin/users/invite
+     */
+    async sendInvitation(request: { email: string; role: string }): Promise<{ id: string }> {
+      return httpClient.post('/api/v1/admin/users/invite', request);
+    },
+
+    /**
+     * Bulk send invitations via CSV (admin only)
+     * POST /api/v1/admin/users/bulk/invite
+     */
+    async bulkSendInvitations(
+      emails: string[],
+      role: string
+    ): Promise<{ sent: number; failed: number }> {
+      const csvContent = emails.join('\n');
+      const blob = new Blob([csvContent], { type: 'text/csv' });
+      const formData = new FormData();
+      formData.append('file', blob, 'invitations.csv');
+      formData.append('role', role);
+      const response = await fetch(`${getApiBase()}/api/v1/admin/users/bulk/invite`, {
+        method: 'POST',
+        body: formData,
+        credentials: 'include',
+      });
+      if (!response.ok) throw new Error('Bulk invite failed');
+      return response.json();
+    },
+
+    /**
+     * List invitations with optional filtering (admin only)
+     * GET /api/v1/admin/users/invitations
+     */
+    async getInvitations(params?: {
+      status?: string;
+      page?: number;
+      pageSize?: number;
+    }): Promise<{ invitations: Invitation[]; total: number }> {
+      const query = new URLSearchParams();
+      if (params?.status) query.set('status', params.status);
+      if (params?.page) query.set('page', params.page.toString());
+      if (params?.pageSize) query.set('pageSize', params.pageSize.toString());
+      const url = `/api/v1/admin/users/invitations${query.toString() ? `?${query}` : ''}`;
+      const result = await httpClient.get(url, InvitationListResponseSchema);
+      return result ?? { invitations: [], total: 0 };
+    },
+
+    /**
+     * Get invitation statistics (admin only)
+     * GET /api/v1/admin/users/invitations/stats
+     */
+    async getInvitationStats(): Promise<InvitationStats> {
+      const result = await httpClient.get(
+        '/api/v1/admin/users/invitations/stats',
+        InvitationStatsSchema
+      );
+      return result ?? { total: 0, pending: 0, accepted: 0, expired: 0, revoked: 0 };
+    },
+
+    /**
+     * Resend an existing invitation (admin only)
+     * POST /api/v1/admin/users/invitations/{invitationId}/resend
+     */
+    async resendInvitation(invitationId: string): Promise<void> {
+      await httpClient.post(`/api/v1/admin/users/invitations/${invitationId}/resend`, {});
+    },
+
+    /**
+     * Revoke an existing invitation (admin only)
+     * DELETE /api/v1/admin/users/invitations/{invitationId}
+     */
+    async revokeInvitation(invitationId: string): Promise<void> {
+      await httpClient.delete(`/api/v1/admin/users/invitations/${invitationId}`);
     },
   };
 }
@@ -3709,3 +3846,33 @@ export const ActiveAiUsersResultSchema = z.object({
 });
 
 export type ActiveAiUsersResult = z.infer<typeof ActiveAiUsersResultSchema>;
+
+// ========== Invitation Management Schemas ==========
+
+const InvitationStatusSchema = z.enum(['Pending', 'Accepted', 'Expired', 'Revoked']);
+
+const InvitationSchema = z.object({
+  id: z.string().uuid(),
+  email: z.string().email(),
+  role: z.string(),
+  status: InvitationStatusSchema,
+  sentAt: z.string(),
+  expiresAt: z.string(),
+  acceptedAt: z.string().nullable().optional(),
+});
+
+const InvitationListResponseSchema = z.object({
+  invitations: z.array(InvitationSchema),
+  total: z.number(),
+});
+
+const InvitationStatsSchema = z.object({
+  total: z.number(),
+  pending: z.number(),
+  accepted: z.number(),
+  expired: z.number(),
+  revoked: z.number(),
+});
+
+export type Invitation = z.infer<typeof InvitationSchema>;
+export type InvitationStats = z.infer<typeof InvitationStatsSchema>;

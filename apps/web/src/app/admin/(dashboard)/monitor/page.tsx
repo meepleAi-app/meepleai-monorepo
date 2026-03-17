@@ -9,18 +9,27 @@
 
 import { Suspense } from 'react';
 
-import { Bell, Database, HardDrive, Terminal, TestTube, Download, Mail } from 'lucide-react';
+import {
+  Bell,
+  Database,
+  HardDrive,
+  History,
+  Terminal,
+  TestTube,
+  Download,
+  Mail,
+} from 'lucide-react';
 
 import { AdminHubTabBar, type HubTab } from '@/components/admin/layout/AdminHubTabBar';
 import { AdminTabPersistence } from '@/components/admin/layout/AdminTabPersistence';
 
+import { AlertHistoryTab } from './AlertHistoryTab';
 import { AlertsTab } from './AlertsTab';
 import { BulkExportTab } from './BulkExportTab';
 import { CacheTab } from './CacheTab';
 import { CommandCenterTab } from './CommandCenterTab';
 import { EmailManagementTab } from './EmailManagementTab';
 import { InfrastructureTab } from './InfrastructureTab';
-import { AdminMonitorNavConfig } from './NavConfig';
 import { TestingTab } from './TestingTab';
 
 interface AdminMonitorPageProps {
@@ -40,6 +49,7 @@ const TABS: readonly HubTab[] = [
   { id: 'testing', label: 'Testing', href: '/admin/monitor?tab=testing', icon: <TestTube /> },
   { id: 'export', label: 'Bulk Export', href: '/admin/monitor?tab=export', icon: <Download /> },
   { id: 'email', label: 'Email', href: '/admin/monitor?tab=email', icon: <Mail /> },
+  { id: 'history', label: 'History', href: '/admin/monitor?tab=history', icon: <History /> },
 ] as const;
 
 type TabId = (typeof TABS)[number]['id'];
@@ -101,6 +111,12 @@ function renderTabContent(tab: TabId) {
           <EmailManagementTab />
         </Suspense>
       );
+    case 'history':
+      return (
+        <Suspense fallback={<TabSkeleton />}>
+          <AlertHistoryTab />
+        </Suspense>
+      );
     default:
       return null;
   }
@@ -112,7 +128,6 @@ export default async function AdminMonitorPage({ searchParams }: AdminMonitorPag
 
   return (
     <div className="space-y-5">
-      <AdminMonitorNavConfig />
       <div>
         <h1 className="font-quicksand text-xl sm:text-2xl font-bold tracking-tight text-foreground">
           Monitor

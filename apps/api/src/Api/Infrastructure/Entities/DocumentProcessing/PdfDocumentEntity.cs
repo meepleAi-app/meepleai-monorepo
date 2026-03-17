@@ -25,9 +25,6 @@ public class PdfDocumentEntity
     // Issue #4215: Granular 7-state tracking
     public string ProcessingState { get; set; } = "Pending"; // Enum stored as string: Pending, Uploading, Extracting, Chunking, Embedding, Indexing, Ready, Failed
 
-    // Deprecated: Keep for backward compatibility (migrate in Issue #4216)
-    public string ProcessingStatus { get; set; } = "pending"; // pending, processing, completed, failed
-
     public DateTime? ProcessedAt { get; set; }
     public int? PageCount { get; set; }
     public int? CharacterCount { get; set; }

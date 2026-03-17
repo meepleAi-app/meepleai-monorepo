@@ -37,6 +37,17 @@ internal sealed class NotificationPreferences : AggregateRoot<Guid>
     public bool EmailOnGameNightReminder { get; private set; } = true;
     public bool PushOnGameNightReminder { get; private set; } = true;
 
+    // Slack - Issue #slack-notification-system
+    public bool SlackEnabled { get; private set; } = true;
+    public bool SlackOnDocumentReady { get; private set; } = true;
+    public bool SlackOnDocumentFailed { get; private set; } = true;
+    public bool SlackOnRetryAvailable { get; private set; }
+    public bool SlackOnGameNightInvitation { get; private set; } = true;
+    public bool SlackOnGameNightReminder { get; private set; } = true;
+    public bool SlackOnShareRequestCreated { get; private set; } = true;
+    public bool SlackOnShareRequestApproved { get; private set; } = true;
+    public bool SlackOnBadgeEarned { get; private set; } = true;
+
 #pragma warning disable CS8618
     private NotificationPreferences() : base() { }
 #pragma warning restore CS8618
@@ -57,7 +68,11 @@ internal sealed class NotificationPreferences : AggregateRoot<Guid>
         string? pushEndpoint = null, string? pushP256dhKey = null, string? pushAuthKey = null,
         bool inAppOnGameNightInvitation = true, bool emailOnGameNightInvitation = true,
         bool pushOnGameNightInvitation = true, bool emailOnGameNightReminder = true,
-        bool pushOnGameNightReminder = true)
+        bool pushOnGameNightReminder = true,
+        bool slackEnabled = true, bool slackOnDocumentReady = true, bool slackOnDocumentFailed = true,
+        bool slackOnRetryAvailable = false, bool slackOnGameNightInvitation = true,
+        bool slackOnGameNightReminder = true, bool slackOnShareRequestCreated = true,
+        bool slackOnShareRequestApproved = true, bool slackOnBadgeEarned = true)
     {
         return new NotificationPreferences
         {
@@ -79,7 +94,16 @@ internal sealed class NotificationPreferences : AggregateRoot<Guid>
             EmailOnGameNightInvitation = emailOnGameNightInvitation,
             PushOnGameNightInvitation = pushOnGameNightInvitation,
             EmailOnGameNightReminder = emailOnGameNightReminder,
-            PushOnGameNightReminder = pushOnGameNightReminder
+            PushOnGameNightReminder = pushOnGameNightReminder,
+            SlackEnabled = slackEnabled,
+            SlackOnDocumentReady = slackOnDocumentReady,
+            SlackOnDocumentFailed = slackOnDocumentFailed,
+            SlackOnRetryAvailable = slackOnRetryAvailable,
+            SlackOnGameNightInvitation = slackOnGameNightInvitation,
+            SlackOnGameNightReminder = slackOnGameNightReminder,
+            SlackOnShareRequestCreated = slackOnShareRequestCreated,
+            SlackOnShareRequestApproved = slackOnShareRequestApproved,
+            SlackOnBadgeEarned = slackOnBadgeEarned
         };
     }
 
@@ -129,6 +153,21 @@ internal sealed class NotificationPreferences : AggregateRoot<Guid>
         InAppOnDocumentReady = onReady;
         InAppOnDocumentFailed = onFailed;
         InAppOnRetryAvailable = onRetry;
+    }
+
+    public void UpdateSlackPreferences(bool enabled, bool onDocumentReady, bool onDocumentFailed,
+        bool onRetryAvailable, bool onGameNightInvitation, bool onGameNightReminder,
+        bool onShareRequestCreated, bool onShareRequestApproved, bool onBadgeEarned)
+    {
+        SlackEnabled = enabled;
+        SlackOnDocumentReady = onDocumentReady;
+        SlackOnDocumentFailed = onDocumentFailed;
+        SlackOnRetryAvailable = onRetryAvailable;
+        SlackOnGameNightInvitation = onGameNightInvitation;
+        SlackOnGameNightReminder = onGameNightReminder;
+        SlackOnShareRequestCreated = onShareRequestCreated;
+        SlackOnShareRequestApproved = onShareRequestApproved;
+        SlackOnBadgeEarned = onBadgeEarned;
     }
 
     public void UpdateAllPreferences(

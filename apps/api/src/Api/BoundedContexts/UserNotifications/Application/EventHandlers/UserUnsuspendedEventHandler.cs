@@ -1,7 +1,8 @@
 using Api.BoundedContexts.Authentication.Domain.Events;
+using Api.BoundedContexts.UserNotifications.Application.Services;
+using Api.BoundedContexts.UserNotifications.Domain.ValueObjects;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
-using Api.Services;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -9,22 +10,23 @@ using Microsoft.Extensions.Logging;
 namespace Api.BoundedContexts.UserNotifications.Application.EventHandlers;
 
 /// <summary>
-/// Event handler that sends email notification when a user account is reactivated.
+/// Event handler that sends notification when a user account is reactivated.
+/// Dispatches via NotificationDispatcher for multi-channel delivery.
 /// Issue #2886: Email notification for user unsuspension.
 /// </summary>
 internal sealed class UserUnsuspendedEventHandler : INotificationHandler<UserUnsuspendedEvent>
 {
+    private readonly INotificationDispatcher _dispatcher;
     private readonly MeepleAiDbContext _dbContext;
-    private readonly IEmailService _emailService;
     private readonly ILogger<UserUnsuspendedEventHandler> _logger;
 
     public UserUnsuspendedEventHandler(
+        INotificationDispatcher dispatcher,
         MeepleAiDbContext dbContext,
-        IEmailService emailService,
         ILogger<UserUnsuspendedEventHandler> logger)
     {
+        _dispatcher = dispatcher ?? throw new ArgumentNullException(nameof(dispatcher));
         _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
-        _emailService = emailService ?? throw new ArgumentNullException(nameof(emailService));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -46,15 +48,18 @@ internal sealed class UserUnsuspendedEventHandler : INotificationHandler<UserUns
                 return;
             }
 
-            // Send email notification
-            await _emailService.SendAccountReactivatedEmailAsync(
-                toEmail: user.Email,
-                userName: user.DisplayName ?? user.Email,
-                cancellationToken)
-                .ConfigureAwait(false);
+            await _dispatcher.DispatchAsync(new NotificationMessage
+            {
+                Type = NotificationType.CooldownEnded,
+                RecipientUserId = notification.UserId,
+                Payload = new GenericPayload(
+                    "Account Reactivated",
+                    "Your account has been reactivated. Welcome back!"),
+                DeepLinkPath = "/dashboard"
+            }, cancellationToken).ConfigureAwait(false);
 
             _logger.LogInformation(
-                "Account reactivated notification sent to user {UserId}",
+                "Dispatched account reactivated notification to user {UserId}",
                 notification.UserId);
         }
 #pragma warning disable CA1031

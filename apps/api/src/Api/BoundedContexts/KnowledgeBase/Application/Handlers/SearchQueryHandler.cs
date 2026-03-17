@@ -1,9 +1,12 @@
 using Api.BoundedContexts.KnowledgeBase.Application.DTOs;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries;
+using Api.BoundedContexts.KnowledgeBase.Application.Services;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services;
 using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 using Api.BoundedContexts.KnowledgeBase.Infrastructure.Persistence.Mappers;
+using Api.Infrastructure.Entities;
+using Api.Middleware.Exceptions;
 using Api.Services;
 using Api.SharedKernel.Application.Interfaces;
 
@@ -20,6 +23,7 @@ internal class SearchQueryHandler : IQueryHandler<SearchQuery, List<SearchResult
     private readonly RrfFusionDomainService _rrfFusionService;
     private readonly IEmbeddingService _embeddingService;
     private readonly IHybridSearchService _hybridSearchService;
+    private readonly IRagAccessService _ragAccessService;
     private readonly ILogger<SearchQueryHandler> _logger;
 
     public SearchQueryHandler(
@@ -28,6 +32,7 @@ internal class SearchQueryHandler : IQueryHandler<SearchQuery, List<SearchResult
         RrfFusionDomainService rrfFusionService,
         IEmbeddingService embeddingService,
         IHybridSearchService hybridSearchService,
+        IRagAccessService ragAccessService,
         ILogger<SearchQueryHandler> logger)
     {
         _embeddingRepository = embeddingRepository ?? throw new ArgumentNullException(nameof(embeddingRepository));
@@ -35,6 +40,7 @@ internal class SearchQueryHandler : IQueryHandler<SearchQuery, List<SearchResult
         _rrfFusionService = rrfFusionService ?? throw new ArgumentNullException(nameof(rrfFusionService));
         _embeddingService = embeddingService ?? throw new ArgumentNullException(nameof(embeddingService));
         _hybridSearchService = hybridSearchService ?? throw new ArgumentNullException(nameof(hybridSearchService));
+        _ragAccessService = ragAccessService ?? throw new ArgumentNullException(nameof(ragAccessService));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -42,6 +48,17 @@ internal class SearchQueryHandler : IQueryHandler<SearchQuery, List<SearchResult
         SearchQuery query,
         CancellationToken cancellationToken)
     {
+        // RAG access enforcement
+        if (query.UserId.HasValue)
+        {
+            var userRole = Enum.TryParse<UserRole>(query.UserRole, ignoreCase: true, out var parsedRole)
+                ? parsedRole : UserRole.User;
+            var canAccess = await _ragAccessService.CanAccessRagAsync(
+                query.UserId.Value, query.GameId, userRole, cancellationToken).ConfigureAwait(false);
+            if (!canAccess)
+                throw new ForbiddenException("Accesso RAG non autorizzato");
+        }
+
         _logger.LogInformation(
             "[SearchQueryHandler] ENTRY - Processing SearchQuery: GameId={GameId}, Query={Query}, Mode={SearchMode}, TopK={TopK}",
             query.GameId, query.Query, query.SearchMode, query.TopK);

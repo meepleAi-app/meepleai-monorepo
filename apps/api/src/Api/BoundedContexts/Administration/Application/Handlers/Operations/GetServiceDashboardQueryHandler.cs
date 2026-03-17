@@ -26,7 +26,6 @@ internal class GetServiceDashboardQueryHandler : IRequestHandler<GetServiceDashb
         ["qdrant-collection"] = "Core Infrastructure",
         ["embedding"] = "AI Services",
         ["n8n"] = "External APIs",
-        ["hyperdx"] = "Monitoring",
     };
 
     /// <summary>
@@ -40,7 +39,6 @@ internal class GetServiceDashboardQueryHandler : IRequestHandler<GetServiceDashb
         ["qdrant-collection"] = "Qdrant Collection",
         ["embedding"] = "Embedding Service",
         ["n8n"] = "n8n Workflows",
-        ["hyperdx"] = "HyperDX",
     };
 
     public GetServiceDashboardQueryHandler(

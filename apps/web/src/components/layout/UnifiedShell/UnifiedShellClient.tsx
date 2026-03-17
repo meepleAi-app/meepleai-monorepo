@@ -1,16 +1,19 @@
 'use client';
 
-import { type ReactNode, useEffect } from 'react';
+import { type ReactNode, useEffect, useState } from 'react';
 
 import { usePathname } from 'next/navigation';
 
 import { DashboardEngineProvider } from '@/components/dashboard';
 import { ErrorBoundary } from '@/components/errors/ErrorBoundary';
 import { DEFAULT_PINNED_CARDS } from '@/config/entity-actions';
+import { usePlaceholderActions } from '@/hooks/usePlaceholderActions';
 import { useResponsive } from '@/hooks/useResponsive';
 import { cn } from '@/lib/utils';
 import { useCardHand } from '@/stores/use-card-hand';
 
+import { AdminBreadcrumb } from './AdminBreadcrumb';
+import { AdminMobileDrawer } from './AdminMobileDrawer';
 import { AdminTabSidebar } from './AdminTabSidebar';
 import { CardStack } from './CardStack';
 import { ContextualBottomNav } from './ContextualBottomNav';
@@ -55,6 +58,16 @@ export function UnifiedShellClient({
   } = useCardHand();
   const isAdminContext = context === 'admin';
   const { isDesktop } = useResponsive();
+  const { handleCardClick, activeSheet, closeSheet } = usePlaceholderActions();
+  const [adminDrawerOpen, setAdminDrawerOpen] = useState(false);
+
+  // Agent wizard handoff state: carries game + KB selection from SearchAgentSheet → AgentCreationSheet
+  const [agentWizardState, setAgentWizardState] = useState<{
+    gameId: string;
+    gameTitle: string;
+    documentIds: string[];
+    documentSummary: string;
+  } | null>(null);
 
   // Sync context with current route: admin routes → admin context, user routes → user context
   useEffect(() => {
@@ -86,6 +99,8 @@ export function UnifiedShellClient({
       <ErrorBoundary fallback={null} componentName="UnifiedTopNav">
         <UnifiedTopNav
           isAdmin={isAdmin}
+          onMenuToggle={() => setAdminDrawerOpen(true)}
+          isMenuOpen={adminDrawerOpen}
           userMenu={userMenu}
           notificationBell={notificationBell}
           searchTrigger={searchTrigger}
@@ -103,6 +118,14 @@ export function UnifiedShellClient({
           }
         />
       </ErrorBoundary>
+
+      {/* Admin mobile: breadcrumb + drawer */}
+      {isAdminContext && (
+        <>
+          <AdminBreadcrumb />
+          <AdminMobileDrawer open={adminDrawerOpen} onOpenChange={setAdminDrawerOpen} />
+        </>
+      )}
 
       {/* Hand Drawer (mobile only, non-admin) */}
       {!isDesktop && !isAdminContext && <HandDrawer />}

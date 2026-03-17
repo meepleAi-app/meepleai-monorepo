@@ -15,5 +15,8 @@ internal record UserProfileDto(
     string Language,
     string Theme,
     bool EmailNotifications,
-    int DataRetentionDays
+    int DataRetentionDays,
+    bool ShowProfile = true,
+    bool ShowActivity = true,
+    bool ShowLibrary = true
 );

@@ -107,6 +107,7 @@ internal static class UserLibraryEndpoints
         group.MapGet("/library", async (
             [FromQuery] int? page,
             [FromQuery] int? pageSize,
+            [FromQuery] string? search,
             [FromQuery] bool? favoritesOnly,
             [FromQuery] string[]? stateFilter,
             [FromQuery] string? sortBy,
@@ -125,6 +126,7 @@ internal static class UserLibraryEndpoints
 
             var query = new GetUserLibraryQuery(
                 UserId: userId,
+                Search: search,
                 Page: page ?? 1,
                 PageSize: pageSize ?? 20,
                 FavoritesOnly: favoritesOnly,

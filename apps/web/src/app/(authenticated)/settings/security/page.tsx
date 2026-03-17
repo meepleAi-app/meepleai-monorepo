@@ -7,7 +7,8 @@
 
 import React, { useState } from 'react';
 
-import { Shield, Download } from 'lucide-react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { Shield, Download, Loader2, AlertCircle } from 'lucide-react';
 
 import {
   Dialog,
@@ -18,27 +19,130 @@ import {
 } from '@/components/ui/overlays/dialog';
 import { Button } from '@/components/ui/primitives/button';
 import { Input } from '@/components/ui/primitives/input';
+import { api } from '@/lib/api';
 
 export default function SecuritySettingsPage() {
-  const [is2FAEnabled, setIs2FAEnabled] = useState(false);
+  const queryClient = useQueryClient();
+
   const [showSetupWizard, setShowSetupWizard] = useState(false);
   const [wizardStep, setWizardStep] = useState(1);
   const [verificationCode, setVerificationCode] = useState('');
 
-  // TODO: Fetch actual 2FA status from API
-  // const { data: status } = useQuery(['2fa-status'], () => fetch('/api/v1/users/me/2fa/status'));
+  // Setup data stored locally during the wizard flow
+  const [setupData, setSetupData] = useState<{
+    secret: string;
+    qrCodeUrl: string;
+    backupCodes: string[];
+  } | null>(null);
 
-  const recoveryCodes = [
-    'ABCD-1234-EFGH',
-    'IJKL-5678-MNOP',
-    'QRST-9012-UVWX',
-    'YZAB-3456-CDEF',
-    'GHIJ-7890-KLMN',
-  ];
+  // Recovery codes from enable2FA response (shown in step 3)
+  const [recoveryCodes, setRecoveryCodes] = useState<string[]>([]);
+
+  // Error message for user feedback
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  // Fetch 2FA status
+  const { data: twoFactorStatus, isLoading: statusLoading } = useQuery({
+    queryKey: ['2fa-status'],
+    queryFn: () => api.auth.getTwoFactorStatus(),
+  });
+  const is2FAEnabled = twoFactorStatus?.isEnabled ?? false;
+
+  // Setup 2FA mutation (step 1: get QR code + secret)
+  const setupMutation = useMutation({
+    mutationFn: () => api.auth.setup2FA(),
+    onSuccess: data => {
+      setSetupData(data);
+      setErrorMessage(null);
+      setWizardStep(1);
+      setVerificationCode('');
+      setShowSetupWizard(true);
+    },
+    onError: (error: Error) => {
+      setErrorMessage(error.message || 'Failed to start 2FA setup');
+    },
+  });
+
+  // Enable 2FA mutation (step 2: verify TOTP code)
+  const enableMutation = useMutation({
+    mutationFn: (code: string) => api.auth.enable2FA(code),
+    onSuccess: result => {
+      if (result.success) {
+        setRecoveryCodes(result.backupCodes ?? []);
+        setErrorMessage(null);
+        setWizardStep(3);
+        queryClient.invalidateQueries({ queryKey: ['2fa-status'] });
+      } else {
+        setErrorMessage(result.errorMessage || 'Verification failed. Please try again.');
+      }
+    },
+    onError: (error: Error) => {
+      setErrorMessage(error.message || 'Failed to verify code');
+    },
+  });
+
+  // Disable 2FA mutation
+  const disableMutation = useMutation({
+    mutationFn: () => api.auth.disable2FA('', ''),
+    onSuccess: result => {
+      if (result.success) {
+        setErrorMessage(null);
+        queryClient.invalidateQueries({ queryKey: ['2fa-status'] });
+      } else {
+        setErrorMessage(result.errorMessage || 'Failed to disable 2FA');
+      }
+    },
+    onError: (error: Error) => {
+      setErrorMessage(error.message || 'Failed to disable 2FA');
+    },
+  });
+
+  const handleEnableClick = () => {
+    setErrorMessage(null);
+    setupMutation.mutate();
+  };
+
+  const handleVerify = () => {
+    if (verificationCode.length !== 6) {
+      setErrorMessage('Please enter a 6-digit code');
+      return;
+    }
+    setErrorMessage(null);
+    enableMutation.mutate(verificationCode);
+  };
+
+  const handleCompleteSetup = () => {
+    setShowSetupWizard(false);
+    setWizardStep(1);
+    setVerificationCode('');
+    setSetupData(null);
+    setRecoveryCodes([]);
+    setErrorMessage(null);
+  };
+
+  // Loading state
+  if (statusLoading) {
+    return (
+      <div className="container max-w-2xl mx-auto py-8">
+        <h1 className="text-3xl font-bold mb-8">Security Settings</h1>
+        <div className="flex items-center justify-center py-12">
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="container max-w-2xl mx-auto py-8">
       <h1 className="text-3xl font-bold mb-8">Security Settings</h1>
+
+      {/* Page-level error message */}
+      {errorMessage && !showSetupWizard && (
+        <div className="flex items-center gap-2 p-3 mb-6 rounded-lg bg-destructive/10 text-destructive text-sm">
+          <AlertCircle className="h-4 w-4 shrink-0" />
+          <span>{errorMessage}</span>
+        </div>
+      )}
 
       {/* 2FA Section */}
       <div className="bg-card rounded-xl p-6 border border-border/50 mb-6">
@@ -53,18 +157,24 @@ export default function SecuritySettingsPage() {
             <div className="flex items-center gap-3">
               <div
                 className={`px-3 py-1 rounded-full text-sm font-medium ${
-                  is2FAEnabled
-                    ? 'bg-green-100 text-green-700'
-                    : 'bg-gray-100 text-gray-700'
+                  is2FAEnabled ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'
                 }`}
               >
                 {is2FAEnabled ? 'Enabled' : 'Disabled'}
               </div>
 
               {!is2FAEnabled ? (
-                <Button onClick={() => setShowSetupWizard(true)}>Enable 2FA</Button>
+                <Button onClick={handleEnableClick} disabled={setupMutation.isPending}>
+                  {setupMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  Enable 2FA
+                </Button>
               ) : (
-                <Button variant="destructive" onClick={() => setIs2FAEnabled(false)}>
+                <Button
+                  variant="destructive"
+                  onClick={() => disableMutation.mutate()}
+                  disabled={disableMutation.isPending}
+                >
+                  {disableMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   Disable 2FA
                 </Button>
               )}
@@ -74,36 +184,51 @@ export default function SecuritySettingsPage() {
       </div>
 
       {/* 2FA Setup Wizard */}
-      <Dialog open={showSetupWizard} onOpenChange={setShowSetupWizard}>
+      <Dialog
+        open={showSetupWizard}
+        onOpenChange={open => {
+          if (!open) handleCompleteSetup();
+        }}
+      >
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>Setup Two-Factor Authentication</DialogTitle>
             <DialogDescription>Step {wizardStep} of 3</DialogDescription>
           </DialogHeader>
 
+          {/* Wizard-level error message */}
+          {errorMessage && (
+            <div className="flex items-center gap-2 p-3 rounded-lg bg-destructive/10 text-destructive text-sm">
+              <AlertCircle className="h-4 w-4 shrink-0" />
+              <span>{errorMessage}</span>
+            </div>
+          )}
+
           {/* Step 1: QR Code */}
-          {wizardStep === 1 && (
+          {wizardStep === 1 && setupData && (
             <div className="space-y-4">
               <p className="text-sm text-muted-foreground">
                 Scan this QR code with your authenticator app (Google Authenticator, Authy, etc.)
               </p>
 
-              {/* Placeholder QR code - replace with actual QR */}
               <div className="bg-white p-4 rounded-lg mx-auto w-fit">
-                <div className="w-48 h-48 bg-gray-200 flex items-center justify-center">
-                  QR Code Here
-                  {/* TODO: Use qrcode.react library */}
-                </div>
+                <img src={setupData.qrCodeUrl} alt="2FA QR Code" className="w-48 h-48" />
               </div>
 
               <div>
                 <p className="text-sm font-medium mb-2">Or enter this code manually:</p>
-                <code className="block p-2 bg-muted rounded text-sm">
-                  JBSWY3DPEHPK3PXP
+                <code className="block p-2 bg-muted rounded text-sm break-all">
+                  {setupData.secret}
                 </code>
               </div>
 
-              <Button onClick={() => setWizardStep(2)} className="w-full">
+              <Button
+                onClick={() => {
+                  setErrorMessage(null);
+                  setWizardStep(2);
+                }}
+                className="w-full"
+              >
                 Continue
               </Button>
             </div>
@@ -121,15 +246,27 @@ export default function SecuritySettingsPage() {
                 placeholder="000000"
                 maxLength={6}
                 value={verificationCode}
-                onChange={e => setVerificationCode(e.target.value)}
+                onChange={e => setVerificationCode(e.target.value.replace(/[^0-9]/g, ''))}
                 className="text-center text-2xl tracking-widest"
               />
 
               <div className="flex gap-2">
-                <Button variant="outline" onClick={() => setWizardStep(1)} className="flex-1">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setErrorMessage(null);
+                    setWizardStep(1);
+                  }}
+                  className="flex-1"
+                >
                   Back
                 </Button>
-                <Button onClick={() => setWizardStep(3)} className="flex-1">
+                <Button
+                  onClick={handleVerify}
+                  className="flex-1"
+                  disabled={enableMutation.isPending}
+                >
+                  {enableMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   Verify
                 </Button>
               </div>
@@ -154,7 +291,6 @@ export default function SecuritySettingsPage() {
                 variant="outline"
                 className="w-full gap-2"
                 onClick={() => {
-                  // TODO: Download codes
                   const text = recoveryCodes.join('\n');
                   const blob = new Blob([text], { type: 'text/plain' });
                   const url = URL.createObjectURL(blob);
@@ -162,20 +298,14 @@ export default function SecuritySettingsPage() {
                   a.href = url;
                   a.download = '2fa-recovery-codes.txt';
                   a.click();
+                  URL.revokeObjectURL(url);
                 }}
               >
                 <Download className="h-4 w-4" />
                 Download Codes
               </Button>
 
-              <Button
-                onClick={() => {
-                  setIs2FAEnabled(true);
-                  setShowSetupWizard(false);
-                  setWizardStep(1);
-                }}
-                className="w-full"
-              >
+              <Button onClick={handleCompleteSetup} className="w-full">
                 Complete Setup
               </Button>
             </div>

@@ -33,6 +33,11 @@ public sealed class User : AggregateRoot<Guid>
     public string Theme { get; private set; }
     public int DataRetentionDays { get; private set; }
 
+    // Privacy preferences
+    public bool ShowProfile { get; private set; } = true;
+    public bool ShowActivity { get; private set; } = true;
+    public bool ShowLibrary { get; private set; } = true;
+
     // Gamification properties (Issue #3141)
     public int Level { get; private set; }
     public int ExperiencePoints { get; private set; }
@@ -110,6 +115,11 @@ public sealed class User : AggregateRoot<Guid>
         EmailNotifications = true;
         Theme = "system";
         DataRetentionDays = 90;
+
+        // Default privacy settings
+        ShowProfile = true;
+        ShowActivity = true;
+        ShowLibrary = true;
 
         // Default gamification (Issue #3141)
         Level = 1;
@@ -664,6 +674,16 @@ public sealed class User : AggregateRoot<Guid>
         Theme = theme;
         EmailNotifications = emailNotifications;
         DataRetentionDays = dataRetentionDays;
+    }
+
+    /// <summary>
+    /// Updates the user's privacy settings (profile visibility).
+    /// </summary>
+    public void UpdatePrivacySettings(bool showProfile, bool showActivity, bool showLibrary)
+    {
+        ShowProfile = showProfile;
+        ShowActivity = showActivity;
+        ShowLibrary = showLibrary;
     }
 
     /// <summary>

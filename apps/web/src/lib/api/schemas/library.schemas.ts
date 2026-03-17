@@ -64,6 +64,10 @@ export const UserLibraryStatsSchema = z.object({
   favoriteGames: z.number().int().nonnegative(),
   oldestAddedAt: z.string().datetime().nullable().optional(),
   newestAddedAt: z.string().datetime().nullable().optional(),
+  nuovoCount: z.number().int().nonnegative().default(0),
+  inPrestitoCount: z.number().int().nonnegative().default(0),
+  wishlistCount: z.number().int().nonnegative().default(0),
+  ownedCount: z.number().int().nonnegative().default(0),
 });
 
 export type UserLibraryStats = z.infer<typeof UserLibraryStatsSchema>;
@@ -132,6 +136,7 @@ export type UpdateGameStateRequest = z.infer<typeof UpdateGameStateRequestSchema
 export interface GetUserLibraryParams {
   page?: number;
   pageSize?: number;
+  search?: string;
   favoritesOnly?: boolean;
   stateFilter?: GameStateType[];
   sortBy?: 'addedAt' | 'title' | 'favorite';

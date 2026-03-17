@@ -154,12 +154,7 @@ export function useWhiteboardTool({
   // ── Save structured layer (debounced) ────────────────────────────────────────
 
   const saveStructured = useCallback(
-    (
-      tokens: WhiteboardToken[],
-      gridSize: GridSize,
-      showGrid: boolean,
-      mode: WhiteboardMode
-    ) => {
+    (tokens: WhiteboardToken[], gridSize: GridSize, showGrid: boolean, mode: WhiteboardMode) => {
       if (structuredTimerRef.current) clearTimeout(structuredTimerRef.current);
       structuredTimerRef.current = setTimeout(async () => {
         setIsPending(true);
@@ -174,9 +169,7 @@ export function useWhiteboardTool({
             }
           );
           if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`);
-          setWhiteboardState(prev =>
-            prev ? { ...prev, tokens, gridSize, showGrid, mode } : prev
-          );
+          setWhiteboardState(prev => (prev ? { ...prev, tokens, gridSize, showGrid, mode } : prev));
         } catch (err) {
           setError(err instanceof Error ? err.message : 'Failed to save whiteboard settings');
         } finally {
@@ -198,9 +191,7 @@ export function useWhiteboardTool({
         credentials: 'include',
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`);
-      setWhiteboardState(prev =>
-        prev ? { ...prev, strokes: [], tokens: [] } : prev
-      );
+      setWhiteboardState(prev => (prev ? { ...prev, strokes: [], tokens: [] } : prev));
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to clear whiteboard');
       throw err;

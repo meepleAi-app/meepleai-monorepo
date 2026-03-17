@@ -37,7 +37,7 @@ vi.mock('@/lib/stores/live-session-store', () => ({
 
 // ─── Mock useSessionScores ─────────────────────────────────────────────────────
 
-vi.mock('@/lib/hooks/use-session-scores', () => ({
+vi.mock('@/lib/domain-hooks/useSessionScores', () => ({
   useSessionScores: () => ({
     scores: mockScores,
     players: mockPlayers,
@@ -48,7 +48,7 @@ vi.mock('@/lib/hooks/use-session-scores', () => ({
 
 // ─── Mock useSignalRSession ───────────────────────────────────────────────────
 
-vi.mock('@/lib/hooks/use-signalr-session', () => ({
+vi.mock('@/lib/domain-hooks/useSignalrSession', () => ({
   useSignalRSession: () => ({
     connection: null,
     isConnected: true,

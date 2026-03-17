@@ -67,7 +67,7 @@ describe('usePrivateToolkitEditor — initial fetch (owner)', () => {
     const tk = makeToolkit();
     mockFetch([
       { ok: true, body: mockPrivateGame }, // ownership check
-      { ok: true, body: [tk] },             // toolkit fetch
+      { ok: true, body: [tk] }, // toolkit fetch
     ]);
 
     const { result } = renderHook(() => usePrivateToolkitEditor('priv-abc'));
@@ -80,11 +80,11 @@ describe('usePrivateToolkitEditor — initial fetch (owner)', () => {
     expect(result.current.error).toBeNull();
     expect(global.fetch).toHaveBeenCalledWith(
       expect.stringContaining('/api/v1/private-games/priv-abc'),
-      expect.objectContaining({ credentials: 'include' }),
+      expect.objectContaining({ credentials: 'include' })
     );
     expect(global.fetch).toHaveBeenCalledWith(
       expect.stringContaining('/api/v1/game-toolkits/by-private-game/priv-abc'),
-      expect.objectContaining({ credentials: 'include' }),
+      expect.objectContaining({ credentials: 'include' })
     );
   });
 
@@ -154,7 +154,7 @@ describe('usePrivateToolkitEditor — createToolkit', () => {
     const created = makeToolkit({ id: 'new-1', name: 'My Toolkit' });
     mockFetch([
       { ok: true, body: mockPrivateGame },
-      { ok: true, body: [] },      // initial toolkit fetch (empty)
+      { ok: true, body: [] }, // initial toolkit fetch (empty)
       { ok: true, body: created }, // create response
     ]);
 
@@ -168,7 +168,7 @@ describe('usePrivateToolkitEditor — createToolkit', () => {
     expect(result.current.toolkit?.name).toBe('My Toolkit');
     expect(global.fetch).toHaveBeenCalledWith(
       expect.stringContaining('/api/v1/game-toolkits/'),
-      expect.objectContaining({ method: 'POST' }),
+      expect.objectContaining({ method: 'POST' })
     );
     // Verify privateGameId is in the request body
     const createCall = (global.fetch as ReturnType<typeof vi.fn>).mock.calls[2];
@@ -215,7 +215,7 @@ describe('usePrivateToolkitEditor — updateOverrides', () => {
     expect(result.current.toolkit?.overridesTurnOrder).toBe(true);
     expect(global.fetch).toHaveBeenCalledWith(
       expect.stringContaining(`/api/v1/game-toolkits/${tk.id}`),
-      expect.objectContaining({ method: 'PUT' }),
+      expect.objectContaining({ method: 'PUT' })
     );
   });
 
@@ -231,7 +231,7 @@ describe('usePrivateToolkitEditor — updateOverrides', () => {
     await expect(
       act(async () => {
         await result.current.updateOverrides({ overridesTurnOrder: true });
-      }),
+      })
     ).rejects.toThrow('No toolkit loaded');
   });
 });
@@ -263,7 +263,7 @@ describe('usePrivateToolkitEditor — tool CRUD', () => {
     expect(result.current.toolkit?.diceTools).toHaveLength(1);
     expect(global.fetch).toHaveBeenCalledWith(
       expect.stringContaining('/dice-tools'),
-      expect.objectContaining({ method: 'POST' }),
+      expect.objectContaining({ method: 'POST' })
     );
   });
 
@@ -288,14 +288,16 @@ describe('usePrivateToolkitEditor — tool CRUD', () => {
     expect(result.current.toolkit?.diceTools).toHaveLength(0);
     expect(global.fetch).toHaveBeenCalledWith(
       expect.stringContaining('/dice-tools/'),
-      expect.objectContaining({ method: 'DELETE' }),
+      expect.objectContaining({ method: 'DELETE' })
     );
   });
 
   it('addCounterTool calls the counter-tools endpoint', async () => {
     const tk = makeToolkit();
     const withCounter = makeToolkit({
-      counterTools: [{ name: 'Risorse', minValue: 0, maxValue: 100, defaultValue: 0, isPerPlayer: true }],
+      counterTools: [
+        { name: 'Risorse', minValue: 0, maxValue: 100, defaultValue: 0, isPerPlayer: true },
+      ],
     });
     mockFetch([
       { ok: true, body: mockPrivateGame },

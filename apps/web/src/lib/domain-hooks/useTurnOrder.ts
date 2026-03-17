@@ -140,13 +140,10 @@ export function useTurnOrder({
     setIsAdvancing(true);
     setError(null);
     try {
-      const res = await fetch(
-        `${baseUrl}/api/v1/live-sessions/${sessionId}/turn-order/advance`,
-        {
-          method: 'POST',
-          credentials: 'include',
-        }
-      );
+      const res = await fetch(`${baseUrl}/api/v1/live-sessions/${sessionId}/turn-order/advance`, {
+        method: 'POST',
+        credentials: 'include',
+      });
       if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`);
       const data: TurnOrderData = await res.json();
       setTurnOrder(data);
@@ -164,13 +161,10 @@ export function useTurnOrder({
     setIsLoading(true);
     setError(null);
     try {
-      const res = await fetch(
-        `${baseUrl}/api/v1/live-sessions/${sessionId}/turn-order/reset`,
-        {
-          method: 'POST',
-          credentials: 'include',
-        }
-      );
+      const res = await fetch(`${baseUrl}/api/v1/live-sessions/${sessionId}/turn-order/reset`, {
+        method: 'POST',
+        credentials: 'include',
+      });
       if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`);
       const data: TurnOrderData = await res.json();
       setTurnOrder(data);
@@ -225,7 +219,8 @@ export function useTurnOrder({
           applySSEAdvance({
             currentPlayerName: payload['currentPlayerName'],
             previousPlayerName: payload['previousPlayerName'],
-            nextPlayerName: typeof payload['nextPlayerName'] === 'string' ? payload['nextPlayerName'] : '',
+            nextPlayerName:
+              typeof payload['nextPlayerName'] === 'string' ? payload['nextPlayerName'] : '',
             roundNumber: payload['roundNumber'],
           });
         }

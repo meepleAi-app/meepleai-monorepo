@@ -14,7 +14,7 @@ import Link from 'next/link';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { useSignalRSession } from '@/lib/hooks/use-signalr-session';
+import { useSignalRSession } from '@/lib/domain-hooks/useSignalrSession';
 import { useLiveSessionStore, type SessionStatus } from '@/lib/stores/live-session-store';
 
 // ─── Sub-components ───────────────────────────────────────────────────────────

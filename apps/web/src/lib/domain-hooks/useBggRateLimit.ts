@@ -70,7 +70,9 @@ function parseRateLimitHeaders(headers: Headers): BggRateLimitQuota {
 
   const resetAt = resetTimestamp ? new Date(resetTimestamp * 1000) : null;
   const now = new Date();
-  const countdown = resetAt ? Math.max(0, Math.ceil((resetAt.getTime() - now.getTime()) / 1000)) : 0;
+  const countdown = resetAt
+    ? Math.max(0, Math.ceil((resetAt.getTime() - now.getTime()) / 1000))
+    : 0;
 
   return {
     limit: limitNum,
@@ -112,10 +114,7 @@ export function useBggRateLimit(): UseBggRateLimitResult {
       if (!quota.resetAt) return; // Skip if no reset time
 
       const now = new Date();
-      const newCountdown = Math.max(
-        0,
-        Math.ceil((quota.resetAt.getTime() - now.getTime()) / 1000)
-      );
+      const newCountdown = Math.max(0, Math.ceil((quota.resetAt.getTime() - now.getTime()) / 1000));
 
       if (newCountdown === 0) {
         // Reset expired - quota should be refreshed

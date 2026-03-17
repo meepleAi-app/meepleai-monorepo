@@ -30,7 +30,7 @@ const SHARED_STATE: CounterState = {
 const PER_PLAYER_STATE: CounterState = {
   ...SHARED_STATE,
   isPerPlayer: true,
-  playerValues: { 'p1': 30, 'p2': 45 },
+  playerValues: { p1: 30, p2: 45 },
 };
 
 // ── Tests ─────────────────────────────────────────────────────────────────────
@@ -48,7 +48,7 @@ describe('useCounterTool', () => {
         useCounterTool({
           sessionId: 'sess-1',
           toolName: 'points',
-          
+
           apiBaseUrl: '',
         })
       );
@@ -67,7 +67,7 @@ describe('useCounterTool', () => {
         useCounterTool({
           sessionId: 'sess-1',
           toolName: 'points',
-          
+
           apiBaseUrl: '',
         })
       );
@@ -86,7 +86,9 @@ describe('useCounterTool', () => {
     it('applies optimistic update before API response', async () => {
       let resolveApi!: (val: unknown) => void;
       global.fetch = vi.fn().mockReturnValue(
-        new Promise(res => { resolveApi = res; })
+        new Promise(res => {
+          resolveApi = res;
+        })
       );
 
       const { result } = renderHook(() =>
@@ -97,20 +99,27 @@ describe('useCounterTool', () => {
       act(() => result.current.applyState(SHARED_STATE));
 
       // Start change without awaiting
-      act(() => { void result.current.applyChange('p1', 5); });
+      act(() => {
+        void result.current.applyChange('p1', 5);
+      });
 
       // Optimistic: currentValue should be 55 before API resolves
       expect(result.current.state?.currentValue).toBe(55);
 
       // Resolve the API
-      resolveApi({ ok: true, status: 200, json: vi.fn().mockResolvedValue({ stateData: { ...SHARED_STATE, currentValue: 55 } }) });
+      resolveApi({
+        ok: true,
+        status: 200,
+        json: vi.fn().mockResolvedValue({ stateData: { ...SHARED_STATE, currentValue: 55 } }),
+      });
       await waitFor(() => expect(result.current.isPending).toBe(false));
     });
 
     it('reconciles with server response', async () => {
       const serverState = { ...SHARED_STATE, currentValue: 55 };
       global.fetch = vi.fn().mockResolvedValue({
-        ok: true, status: 200,
+        ok: true,
+        status: 200,
         json: vi.fn().mockResolvedValue({ stateData: serverState }),
       });
 
@@ -120,14 +129,18 @@ describe('useCounterTool', () => {
 
       act(() => result.current.applyState(SHARED_STATE));
 
-      await act(async () => { await result.current.applyChange('p1', 5); });
+      await act(async () => {
+        await result.current.applyChange('p1', 5);
+      });
 
       expect(result.current.state).toEqual(serverState);
     });
 
     it('reverts optimistic update on API failure', async () => {
       global.fetch = vi.fn().mockResolvedValue({
-        ok: false, status: 500, statusText: 'Internal Server Error',
+        ok: false,
+        status: 500,
+        statusText: 'Internal Server Error',
         json: vi.fn(),
       });
 
@@ -137,7 +150,9 @@ describe('useCounterTool', () => {
 
       act(() => result.current.applyState(SHARED_STATE));
 
-      await act(async () => { await result.current.applyChange('p1', 5); });
+      await act(async () => {
+        await result.current.applyChange('p1', 5);
+      });
 
       // Should revert to 50
       expect(result.current.state?.currentValue).toBe(50);
@@ -146,7 +161,8 @@ describe('useCounterTool', () => {
 
     it('clamps value at maxValue', async () => {
       global.fetch = vi.fn().mockResolvedValue({
-        ok: true, status: 200,
+        ok: true,
+        status: 200,
         json: vi.fn().mockResolvedValue({ stateData: { ...SHARED_STATE, currentValue: 100 } }),
       });
 
@@ -155,7 +171,9 @@ describe('useCounterTool', () => {
       );
 
       act(() => result.current.applyState({ ...SHARED_STATE, currentValue: 98 }));
-      act(() => { void result.current.applyChange('p1', 10); });
+      act(() => {
+        void result.current.applyChange('p1', 10);
+      });
 
       // Clamped optimistically at 100
       expect(result.current.state?.currentValue).toBe(100);
@@ -163,7 +181,8 @@ describe('useCounterTool', () => {
 
     it('clamps value at minValue', async () => {
       global.fetch = vi.fn().mockResolvedValue({
-        ok: true, status: 200,
+        ok: true,
+        status: 200,
         json: vi.fn().mockResolvedValue({ stateData: { ...SHARED_STATE, currentValue: 0 } }),
       });
 
@@ -172,7 +191,9 @@ describe('useCounterTool', () => {
       );
 
       act(() => result.current.applyState({ ...SHARED_STATE, currentValue: 2 }));
-      act(() => { void result.current.applyChange('p1', -10); });
+      act(() => {
+        void result.current.applyChange('p1', -10);
+      });
 
       // Clamped at 0
       expect(result.current.state?.currentValue).toBe(0);
@@ -185,7 +206,9 @@ describe('useCounterTool', () => {
         useCounterTool({ sessionId: 's', toolName: 't', currentUserId: 'p1', apiBaseUrl: '' })
       );
 
-      await act(async () => { await result.current.applyChange('p1', 5); });
+      await act(async () => {
+        await result.current.applyChange('p1', 5);
+      });
 
       expect(global.fetch).not.toHaveBeenCalled();
     });
@@ -196,7 +219,8 @@ describe('useCounterTool', () => {
   describe('applyChange (per-player mode)', () => {
     it('updates only the specified player value', async () => {
       global.fetch = vi.fn().mockResolvedValue({
-        ok: true, status: 200,
+        ok: true,
+        status: 200,
         json: vi.fn().mockResolvedValue({
           stateData: {
             ...PER_PLAYER_STATE,
@@ -211,7 +235,9 @@ describe('useCounterTool', () => {
 
       act(() => result.current.applyState(PER_PLAYER_STATE));
 
-      act(() => { void result.current.applyChange('p1', 5); });
+      act(() => {
+        void result.current.applyChange('p1', 5);
+      });
 
       // Optimistic: p1 goes from 30 to 35, p2 stays at 45
       expect(result.current.state?.playerValues?.['p1']).toBe(35);
@@ -220,7 +246,8 @@ describe('useCounterTool', () => {
 
     it('initializes unknown player to defaultValue before applying change', async () => {
       global.fetch = vi.fn().mockResolvedValue({
-        ok: true, status: 200,
+        ok: true,
+        status: 200,
         json: vi.fn().mockResolvedValue({ stateData: PER_PLAYER_STATE }),
       });
 
@@ -231,7 +258,9 @@ describe('useCounterTool', () => {
       const stateNoP3: CounterState = { ...PER_PLAYER_STATE, playerValues: { p1: 30, p2: 45 } };
       act(() => result.current.applyState(stateNoP3));
 
-      act(() => { void result.current.applyChange('p3', 10); });
+      act(() => {
+        void result.current.applyChange('p3', 10);
+      });
 
       // p3 was unknown → starts at defaultValue (50), then +10 = 60
       expect(result.current.state?.playerValues?.['p3']).toBe(60);
@@ -244,7 +273,9 @@ describe('useCounterTool', () => {
     it('is true while API call is in flight', async () => {
       let resolveApi!: (val: unknown) => void;
       global.fetch = vi.fn().mockReturnValue(
-        new Promise(res => { resolveApi = res; })
+        new Promise(res => {
+          resolveApi = res;
+        })
       );
 
       const { result } = renderHook(() =>
@@ -252,11 +283,17 @@ describe('useCounterTool', () => {
       );
 
       act(() => result.current.applyState(SHARED_STATE));
-      act(() => { void result.current.applyChange('p1', 1); });
+      act(() => {
+        void result.current.applyChange('p1', 1);
+      });
 
       expect(result.current.isPending).toBe(true);
 
-      resolveApi({ ok: true, status: 200, json: vi.fn().mockResolvedValue({ stateData: SHARED_STATE }) });
+      resolveApi({
+        ok: true,
+        status: 200,
+        json: vi.fn().mockResolvedValue({ stateData: SHARED_STATE }),
+      });
       await waitFor(() => expect(result.current.isPending).toBe(false));
     });
   });

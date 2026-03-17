@@ -6,7 +6,7 @@ import { FileText, Lock, Globe } from 'lucide-react';
 
 import { Button } from '@/components/ui/primitives/button';
 import { Textarea } from '@/components/ui/primitives/textarea';
-import { useWidgetSync } from '@/lib/hooks/useWidgetSync';
+import { useWidgetSync } from '@/lib/domain-hooks/useWidgetSync';
 
 import { WidgetCard } from './WidgetCard';
 

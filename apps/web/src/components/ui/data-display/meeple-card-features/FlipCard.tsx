@@ -22,7 +22,7 @@ import { motion } from 'framer-motion';
 import { ExternalLink, RotateCcw, Tag, Cog, User, Paintbrush } from 'lucide-react';
 import Link from 'next/link';
 
-import { useMediaQuery } from '@/lib/hooks/useMediaQuery';
+import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { cn } from '@/lib/utils';
 
 import { CardBackComposer } from '../card-back-blocks/CardBackComposer';

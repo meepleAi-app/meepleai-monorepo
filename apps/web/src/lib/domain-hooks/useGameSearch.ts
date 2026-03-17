@@ -35,9 +35,7 @@ export function useGameSearch(query: string, debounceMs = 300) {
         return [];
       }
 
-      const response = await fetch(
-        `/api/v1/games/search?q=${encodeURIComponent(debouncedQuery)}`
-      );
+      const response = await fetch(`/api/v1/games/search?q=${encodeURIComponent(debouncedQuery)}`);
 
       if (!response.ok) {
         throw new Error('Failed to search games');

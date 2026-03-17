@@ -33,7 +33,7 @@ vi.mock('@/lib/api', () => ({
 // Mock toast notifications
 const mockToastSuccess = vi.fn();
 const mockToastError = vi.fn();
-vi.mock('@/hooks/use-toast', () => ({
+vi.mock('@/hooks/useToast', () => ({
   useToast: () => ({
     toast: {
       success: mockToastSuccess,

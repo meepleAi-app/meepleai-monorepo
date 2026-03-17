@@ -41,7 +41,7 @@ import {
 import { Button } from '@/components/ui/primitives/button';
 import { Input } from '@/components/ui/primitives/input';
 import { Label } from '@/components/ui/primitives/label';
-import { useToast } from '@/hooks/use-toast';
+import { useToast } from '@/hooks/useToast';
 import { api } from '@/lib/api';
 import type { PaginatedQueue, QueueStatus } from '@/lib/api/schemas';
 import { cn } from '@/lib/utils';

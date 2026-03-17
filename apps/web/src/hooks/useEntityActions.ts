@@ -43,7 +43,7 @@ import {
   useCollectionStatus,
   useRemoveFromCollection,
 } from './queries/useCollections';
-import { useCollectionActions, type AssociatedData } from './use-collection-actions';
+import { useCollectionActions, type AssociatedData } from './useCollectionActions';
 
 // ============================================================================
 // Types
@@ -134,10 +134,7 @@ export function useEntityActions({
   );
 
   // Generic collection mutations (disabled for games)
-  const addToGenericCollection = useAddToCollection(
-    genericEntityType || 'player',
-    id
-  );
+  const addToGenericCollection = useAddToCollection(genericEntityType || 'player', id);
   const removeFromGenericCollection = useRemoveFromCollection(
     genericEntityType || 'player',
     id,
@@ -157,16 +154,16 @@ export function useEntityActions({
               onClick: () => router.push('/login?reason=collection'),
             }
           : gameCollection.isInCollection
-          ? {
-              icon: Trash2,
-              label: 'Rimuovi da Collezione',
-              onClick: () => gameCollection.remove(),
-            }
-          : {
-              icon: Plus,
-              label: 'Aggiungi a Collezione',
-              onClick: () => (onAddToCollection ? onAddToCollection() : gameCollection.add()),
-            };
+            ? {
+                icon: Trash2,
+                label: 'Rimuovi da Collezione',
+                onClick: () => gameCollection.remove(),
+              }
+            : {
+                icon: Plus,
+                label: 'Aggiungi a Collezione',
+                onClick: () => (onAddToCollection ? onAddToCollection() : gameCollection.add()),
+              };
 
         const hasRag = data?.hasKb === true;
         const hasAgent = data?.hasAgent === true;
@@ -209,7 +206,7 @@ export function useEntityActions({
       case 'session': {
         // Issue #4263: Collection action for session (Save/Remove)
         const saveAction: QuickAction =
-          genericStatus?.inCollection ?? false
+          (genericStatus?.inCollection ?? false)
             ? {
                 icon: Bookmark,
                 label: 'Rimuovi dai Salvati',
@@ -250,7 +247,7 @@ export function useEntityActions({
       case 'agent': {
         // Issue #4263: Collection action for agent (Favorite/Unfavorite)
         const favoriteAction: QuickAction =
-          genericStatus?.inCollection ?? false
+          (genericStatus?.inCollection ?? false)
             ? {
                 icon: Heart,
                 label: 'Rimuovi dai Preferiti',
@@ -282,7 +279,7 @@ export function useEntityActions({
       case 'kb': {
         // Issue #4263: Collection action for document (Save/Remove)
         const saveAction: QuickAction =
-          genericStatus?.inCollection ?? false
+          (genericStatus?.inCollection ?? false)
             ? {
                 icon: Bookmark,
                 label: 'Rimuovi dai Salvati',
@@ -317,7 +314,7 @@ export function useEntityActions({
       case 'chatSession': {
         // Issue #4263: Collection action for chatSession (Pin/Unpin)
         const pinAction: QuickAction =
-          genericStatus?.inCollection ?? false
+          (genericStatus?.inCollection ?? false)
             ? {
                 icon: Pin,
                 label: 'Rimuovi Pin',
@@ -352,7 +349,7 @@ export function useEntityActions({
       case 'player': {
         // Issue #4263: Collection action for player (Follow/Unfollow)
         const followAction: QuickAction =
-          genericStatus?.inCollection ?? false
+          (genericStatus?.inCollection ?? false)
             ? {
                 icon: HeartHandshake,
                 label: 'Smetti di Seguire',
@@ -387,7 +384,7 @@ export function useEntityActions({
       case 'event': {
         // Issue #4263: Collection action for event (Interested/Remove)
         const interestedAction: QuickAction =
-          genericStatus?.inCollection ?? false
+          (genericStatus?.inCollection ?? false)
             ? {
                 icon: Star,
                 label: 'Rimuovi Interesse',

@@ -121,16 +121,16 @@ export function useCollectionActions(
       const previousLibraryStatus = queryClient.getQueryData(libraryStatusKey);
 
       // Optimistic update: this hook's cache
-      queryClient.setQueryData<LibraryStatusResponse>(queryKey, (old) => ({
+      queryClient.setQueryData<LibraryStatusResponse>(queryKey, old => ({
         inLibrary: true,
         isFavorite: old?.isFavorite ?? false,
         associatedData: null,
       }));
 
       // Optimistic update: useGameInLibraryStatus cache (cross-cache sync)
-      queryClient.setQueryData(libraryStatusKey, (old: Record<string, unknown> | undefined) => (
+      queryClient.setQueryData(libraryStatusKey, (old: Record<string, unknown> | undefined) =>
         old ? { ...old, inLibrary: true } : { inLibrary: true, isFavorite: false }
-      ));
+      );
 
       return { previous, previousLibraryStatus };
     },
@@ -185,9 +185,11 @@ export function useCollectionActions(
       }));
 
       // Optimistic update: useGameInLibraryStatus cache (cross-cache sync)
-      queryClient.setQueryData(libraryStatusKey, (old: Record<string, unknown> | undefined) => (
-        old ? { ...old, inLibrary: false, isFavorite: false } : { inLibrary: false, isFavorite: false }
-      ));
+      queryClient.setQueryData(libraryStatusKey, (old: Record<string, unknown> | undefined) =>
+        old
+          ? { ...old, inLibrary: false, isFavorite: false }
+          : { inLibrary: false, isFavorite: false }
+      );
 
       return { previous, previousLibraryStatus };
     },

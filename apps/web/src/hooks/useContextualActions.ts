@@ -12,16 +12,15 @@
 
 import { useMemo } from 'react';
 
-import {
-  BookmarkPlus,
-  BookmarkMinus,
-  Heart,
-  HeartOff,
-} from 'lucide-react';
+import { BookmarkPlus, BookmarkMinus, Heart, HeartOff } from 'lucide-react';
 
 import type { QuickAction } from '@/components/ui/data-display/meeple-card-quick-actions';
 
-import { useEntityActions, type UseEntityActionsProps, type EntityActions } from './use-entity-actions';
+import {
+  useEntityActions,
+  type UseEntityActionsProps,
+  type EntityActions,
+} from './useEntityActions';
 
 // ============================================================================
 // Types
@@ -69,11 +68,7 @@ const PRO_TIER_LABELS = new Set([
 ]);
 
 /** Labels that require at least 'basic' tier */
-const BASIC_TIER_LABELS = new Set([
-  'Avvia Sessione',
-  'Riprendi',
-  'Esporta',
-]);
+const BASIC_TIER_LABELS = new Set(['Avvia Sessione', 'Riprendi', 'Esporta']);
 
 function getRequiredTier(label: string): UserTier {
   if (PRO_TIER_LABELS.has(label)) return 'pro';

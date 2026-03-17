@@ -1,6 +1,6 @@
 'use client';
 
-import { Search, Bell } from 'lucide-react';
+import { Search, Bell, Menu } from 'lucide-react';
 import Link from 'next/link';
 
 import { ENTITY_NAV_ICONS } from '@/components/ui/data-display/meeple-card-features/navigation-icons';
@@ -20,6 +20,10 @@ interface UnifiedTopNavProps {
   searchTrigger?: React.ReactNode;
   /** Slot for mini card icons when hand is collapsed (mobile) */
   miniCards?: React.ReactNode;
+  /** Callback to open admin mobile drawer */
+  onMenuToggle?: () => void;
+  /** Whether the admin drawer is open (for aria-expanded) */
+  isMenuOpen?: boolean;
 }
 
 export function UnifiedTopNav({
@@ -28,6 +32,8 @@ export function UnifiedTopNav({
   notificationBell,
   searchTrigger,
   miniCards,
+  onMenuToggle,
+  isMenuOpen,
 }: UnifiedTopNavProps) {
   const { cards, focusedIdx } = useCardHand();
   const focusedCard = focusedIdx >= 0 && focusedIdx < cards.length ? cards[focusedIdx] : null;
@@ -45,6 +51,20 @@ export function UnifiedTopNav({
       )}
       data-testid="unified-top-nav"
     >
+      {/* Hamburger (mobile admin only) */}
+      {isAdmin && onMenuToggle && (
+        <button
+          type="button"
+          className="md:hidden flex items-center justify-center w-9 h-9 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
+          onClick={onMenuToggle}
+          aria-label="Open admin menu"
+          aria-expanded={isMenuOpen}
+          aria-controls="admin-mobile-drawer"
+        >
+          <Menu className="w-5 h-5" />
+        </button>
+      )}
+
       {/* Left: Logo */}
       <Link href="/" className="flex items-center gap-2 shrink-0">
         <span className="text-lg font-bold font-quicksand">MeepleAI</span>

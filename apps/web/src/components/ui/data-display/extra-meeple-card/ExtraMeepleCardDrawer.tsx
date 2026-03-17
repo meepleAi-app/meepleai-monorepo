@@ -39,6 +39,7 @@ import {
   Zap,
 } from 'lucide-react';
 
+import { EmbeddedChatView } from '@/components/chat-unified/EmbeddedChatView';
 import { useDashboardMode } from '@/components/dashboard';
 import { Sheet, SheetClose, SheetContent, SheetTitle } from '@/components/ui/navigation/sheet';
 import { cn } from '@/lib/utils';
@@ -83,6 +84,13 @@ export interface ExtraMeepleCardDrawerProps {
    * Maps the MeepleEntityType to the LinkEntityType for the API call.
    */
   linkEntityType?: LinkEntityType;
+  /** When present with chatSession entity type, renders EmbeddedChatView instead of ChatDrawerContent */
+  liveChatData?: {
+    threadId: string;
+    agentId: string;
+    gameId: string;
+    gameName: string;
+  };
   className?: string;
   'data-testid'?: string;
 }
@@ -132,6 +140,7 @@ export const ExtraMeepleCardDrawer = React.memo(function ExtraMeepleCardDrawer({
   open,
   onClose,
   linkEntityType,
+  liveChatData,
   className,
   'data-testid': testId,
 }: ExtraMeepleCardDrawerProps) {
@@ -210,6 +219,7 @@ export const ExtraMeepleCardDrawer = React.memo(function ExtraMeepleCardDrawer({
             entityType={entityType}
             entityId={entityId}
             linkEntityType={linkEntityType}
+            liveChatData={liveChatData}
           />
         </div>
       </SheetContent>
@@ -225,10 +235,12 @@ function DrawerEntityRouter({
   entityType,
   entityId,
   linkEntityType,
+  liveChatData,
 }: {
   entityType: DrawerEntityType;
   entityId: string;
   linkEntityType?: LinkEntityType;
+  liveChatData?: ExtraMeepleCardDrawerProps['liveChatData'];
 }) {
   switch (entityType) {
     case 'game':
@@ -237,6 +249,16 @@ function DrawerEntityRouter({
       return <AgentDrawerContent entityId={entityId} />;
     case 'chatSession':
     case 'chat':
+      if (liveChatData) {
+        return (
+          <EmbeddedChatView
+            threadId={liveChatData.threadId}
+            agentId={liveChatData.agentId}
+            gameId={liveChatData.gameId}
+            gameName={liveChatData.gameName}
+          />
+        );
+      }
       return <ChatDrawerContent entityId={entityId} />;
     case 'kb':
       return <KbDrawerContent entityId={entityId} />;

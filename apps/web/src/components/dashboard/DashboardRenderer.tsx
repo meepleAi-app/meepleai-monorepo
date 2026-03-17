@@ -1,9 +1,13 @@
 'use client';
 
-import { Suspense } from 'react';
+import { Suspense, useCallback } from 'react';
 
 import { AnimatePresence, motion } from 'framer-motion';
 
+import { ExtraMeepleCardDrawer } from '@/components/ui/data-display/extra-meeple-card';
+import { useDashboardSearchStore } from '@/stores/useDashboardSearchStore';
+
+import { AddToLibraryModal } from './AddToLibraryModal';
 import { useDashboardMode } from './useDashboardMode';
 import { HeroZone, StatsZone, CardsZone, AgentsSidebar, SessionBar, ScoreboardZone } from './zones';
 import './dashboard-transitions.css';
@@ -22,6 +26,26 @@ function ZoneSkeleton({ testId }: { testId: string }) {
  */
 export function DashboardRenderer() {
   const { state, isGameMode, isExploration } = useDashboardMode();
+  const { selectedGame, setSelectedGame, openChatDrawer, drawerState, closeChatDrawer } =
+    useDashboardSearchStore();
+
+  const handleModalSuccess = useCallback(
+    ({
+      gameId,
+      threadId,
+      agentId,
+      gameName,
+    }: {
+      gameId: string;
+      threadId: string;
+      agentId: string;
+      gameName: string;
+    }) => {
+      setSelectedGame(null);
+      openChatDrawer({ threadId, agentId, gameId, gameName });
+    },
+    [setSelectedGame, openChatDrawer]
+  );
 
   return (
     <div data-testid="dashboard-renderer" className="flex flex-col gap-6 w-full">
@@ -79,6 +103,24 @@ export function DashboardRenderer() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      <AddToLibraryModal
+        game={selectedGame}
+        isOpen={selectedGame !== null}
+        onClose={() => setSelectedGame(null)}
+        onSuccess={handleModalSuccess}
+      />
+
+      {drawerState && (
+        <ExtraMeepleCardDrawer
+          entityType="chatSession"
+          entityId={drawerState.threadId}
+          open={true}
+          onClose={closeChatDrawer}
+          liveChatData={drawerState}
+          data-testid="dashboard-chat-drawer"
+        />
+      )}
     </div>
   );
 }

@@ -16,10 +16,11 @@
  * getNestedValue(obj, 'game.title'); // 'Gloomhaven'
  * ```
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function getNestedValue(obj: any, path: string): any {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any, security/detect-object-injection
-  return path.split('.').reduce((acc: any, part) => acc?.[part], obj);
+function getNestedValue(obj: unknown, path: string): unknown {
+  // eslint-disable-next-line security/detect-object-injection
+  return path
+    .split('.')
+    .reduce((acc: unknown, part) => (acc as Record<string, unknown>)?.[part], obj);
 }
 
 /**
@@ -53,9 +54,9 @@ export function fuzzySearch<T>(items: T[], query: string, fields: string[]): T[]
 
   const lowerQuery = query.toLowerCase();
 
-  return items.filter((item) => {
+  return items.filter(item => {
     // Match if ANY field contains the query
-    return fields.some((field) => {
+    return fields.some(field => {
       const value = getNestedValue(item, field);
 
       // Only search string values

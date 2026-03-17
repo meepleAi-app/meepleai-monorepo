@@ -42,7 +42,7 @@ export const useWishlist = create<WishlistState>()(
       wishlistIds: new Set<string>(),
 
       toggleWishlist: (gameId: string) =>
-        set((state) => {
+        set(state => {
           const next = new Set(state.wishlistIds);
           if (next.has(gameId)) {
             next.delete(gameId);
@@ -53,14 +53,14 @@ export const useWishlist = create<WishlistState>()(
         }),
 
       addToWishlist: (gameId: string) =>
-        set((state) => {
+        set(state => {
           const next = new Set(state.wishlistIds);
           next.add(gameId);
           return { wishlistIds: next };
         }),
 
       removeFromWishlist: (gameId: string) =>
-        set((state) => {
+        set(state => {
           const next = new Set(state.wishlistIds);
           next.delete(gameId);
           return { wishlistIds: next };
@@ -73,14 +73,13 @@ export const useWishlist = create<WishlistState>()(
     {
       name: 'meepleai-wishlist', // localStorage key
       // Serialize Set to Array for JSON storage
-      partialize: (state) => ({
+      partialize: state => ({
         wishlistIds: Array.from(state.wishlistIds),
       }),
       // Deserialize Array back to Set
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      merge: (persistedState: any, currentState) => ({
+      merge: (persistedState: unknown, currentState) => ({
         ...currentState,
-        wishlistIds: new Set(persistedState?.wishlistIds || []),
+        wishlistIds: new Set((persistedState as { wishlistIds?: string[] })?.wishlistIds || []),
       }),
     }
   )

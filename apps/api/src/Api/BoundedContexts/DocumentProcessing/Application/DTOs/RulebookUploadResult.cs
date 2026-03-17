@@ -1,25 +1,24 @@
+using Api.BoundedContexts.DocumentProcessing.Domain.Enums;
+
 namespace Api.BoundedContexts.DocumentProcessing.Application.DTOs;
 
-internal sealed record RulebookUploadResult(
+/// <summary>
+/// Result of a rulebook upload operation.
+/// Indicates whether the PDF was newly uploaded or reused from an existing document.
+/// </summary>
+internal record RulebookUploadResult(
     Guid PdfDocumentId,
     bool IsNew,
     string Status,
     string Message)
 {
     /// <summary>
-    /// Maps PdfProcessingState to client-facing status string.
-    /// Pending/Uploading → "pending", Extracting..Indexing → "processing", Ready → "ready", Failed → "failed"
+    /// Maps a PdfProcessingState to a user-facing status string.
     /// </summary>
-    public static string MapStatus(Domain.Enums.PdfProcessingState state) => state switch
+    public static string MapStatus(PdfProcessingState state) => state switch
     {
-        Domain.Enums.PdfProcessingState.Pending => "pending",
-        Domain.Enums.PdfProcessingState.Uploading => "pending",
-        Domain.Enums.PdfProcessingState.Extracting => "processing",
-        Domain.Enums.PdfProcessingState.Chunking => "processing",
-        Domain.Enums.PdfProcessingState.Embedding => "processing",
-        Domain.Enums.PdfProcessingState.Indexing => "processing",
-        Domain.Enums.PdfProcessingState.Ready => "ready",
-        Domain.Enums.PdfProcessingState.Failed => "failed",
-        _ => "unknown"
+        PdfProcessingState.Ready => "ready",
+        PdfProcessingState.Failed => "failed",
+        _ => "pending"
     };
 }

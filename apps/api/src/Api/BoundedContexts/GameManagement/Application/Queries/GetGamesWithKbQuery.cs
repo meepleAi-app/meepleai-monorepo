@@ -1,10 +1,18 @@
-using Api.BoundedContexts.GameManagement.Application.DTOs;
 using Api.SharedKernel.Application.Interfaces;
 
 namespace Api.BoundedContexts.GameManagement.Application.Queries;
 
 /// <summary>
-/// Query to retrieve all games in a user's library that have KB-linked rulebooks.
-/// Powers the chat selection screen: games with "ready" KB are selectable, "processing" are disabled.
+/// Query to retrieve all games that have at least one indexed knowledge base document
+/// for a given user. Used by the rulebook upload flow to show which games already have PDFs.
 /// </summary>
-internal sealed record GetGamesWithKbQuery(Guid UserId) : IQuery<IReadOnlyList<GameWithKbDto>>;
+internal record GetGamesWithKbQuery(Guid UserId) : IQuery<List<GameWithKbDto>>;
+
+/// <summary>
+/// Lightweight DTO representing a game that has at least one knowledge base document.
+/// </summary>
+internal record GameWithKbDto(
+    Guid GameId,
+    string GameName,
+    int PdfCount,
+    string? LatestPdfStatus);

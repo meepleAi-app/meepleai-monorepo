@@ -5,10 +5,9 @@ using Microsoft.AspNetCore.Http;
 namespace Api.BoundedContexts.DocumentProcessing.Application.Commands;
 
 /// <summary>
-/// Command to upload a rulebook PDF for a game.
-/// Used by POST /api/v1/games/{gameId}/rulebook.
+/// Command to upload a rulebook PDF for a game with content-hash deduplication.
 /// </summary>
-internal sealed record AddRulebookCommand(
+internal record AddRulebookCommand(
     Guid GameId,
     Guid UserId,
     IFormFile File

@@ -259,7 +259,10 @@ internal static class UserProfileEndpoints
                 Language = payload.Language,
                 Theme = payload.Theme,
                 EmailNotifications = payload.EmailNotifications,
-                DataRetentionDays = payload.DataRetentionDays
+                DataRetentionDays = payload.DataRetentionDays,
+                ShowProfile = payload.ShowProfile,
+                ShowActivity = payload.ShowActivity,
+                ShowLibrary = payload.ShowLibrary
             };
 
             var updatedProfile = await mediator.Send(command, ct).ConfigureAwait(false);
@@ -310,7 +313,10 @@ internal static class UserProfileEndpoints
                 language = userProfile!.Language,
                 theme = userProfile.Theme,
                 emailNotifications = userProfile.EmailNotifications,
-                dataRetentionDays = userProfile.DataRetentionDays
+                dataRetentionDays = userProfile.DataRetentionDays,
+                showProfile = userProfile.ShowProfile,
+                showActivity = userProfile.ShowActivity,
+                showLibrary = userProfile.ShowLibrary
             };
 
             return Results.Json(preferences);
@@ -637,4 +643,7 @@ internal record UpdatePreferencesPayload(
     string Language,
     string Theme,
     bool EmailNotifications,
-    int DataRetentionDays);
+    int DataRetentionDays,
+    bool ShowProfile = true,
+    bool ShowActivity = true,
+    bool ShowLibrary = true);

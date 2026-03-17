@@ -116,7 +116,7 @@ export function AdminGameImportWizardClient() {
       <div className="flex min-h-screen flex-col items-center justify-center gap-4">
         <h1 className="text-2xl font-bold">Authentication Required</h1>
         <p className="text-muted-foreground">Please sign in to access the admin wizard.</p>
-        <Link href="/auth/signin">
+        <Link href="/login">
           <Button>Sign In</Button>
         </Link>
       </div>

@@ -45,7 +45,9 @@ Ricevo una notifica quando il pdf e’ pronto e posso creare l’agente con il r
 L’agente mi aiuta a preparare la tavola per la partita. L’agente ci aiuta a tenere traccia dei punteggi. L’agente ci aiuta se ci sono dubbi o discussioni sulle regole (decide chi ha ragione).A fine serata, non riusciamo a finire la partita e salviamo, con la memoria agente, con foto o altro lo stato della partita, per poter riprendere in un secondo momento.
 Controlla quanto e’ gia’ pronto e le issue aperte per determinare una roadmap al completamento della user story
 
-/using-superpowers ultrathink /sc:spec-panel miglioriamo la welcome page
+/using-superpowers ultrathink /sc:spec-panel Come admin, voglio vedere, organizzati in libreria, gli elementi ui, i layout, per poter vedere lo stato attuale senza dover crearlo nell'app
+
+/using-superpowers ultrathink /sc:spec-panel
 -user story serata descent
 /using-superpowers ultrathink /sc:spec-panel analizziamo questa user story, creiamo epic con issue
 create e issue aperte per completare la user story.

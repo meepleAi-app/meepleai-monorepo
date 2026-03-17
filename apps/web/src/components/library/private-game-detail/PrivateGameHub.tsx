@@ -140,9 +140,14 @@ export function PrivateGameHub({ privateGameId }: PrivateGameHubProps) {
       setUploadProgress(0);
 
       try {
-        const result = await api.pdf.uploadPdf(privateGameId, file, percent => {
-          setUploadProgress(percent);
-        });
+        const result = await api.pdf.uploadPdf(
+          privateGameId,
+          file,
+          percent => {
+            setUploadProgress(percent);
+          },
+          { isPrivateGame: true }
+        );
 
         setActivePdfId(result.documentId);
         setActivePdfName(file.name);

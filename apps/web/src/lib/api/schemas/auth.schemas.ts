@@ -203,6 +203,9 @@ export const UserPreferencesSchema = z.object({
   emailNotifications: z.boolean(),
   theme: z.enum(['light', 'dark', 'system']),
   dataRetentionDays: z.number().int().positive(),
+  showProfile: z.boolean().optional().default(true),
+  showActivity: z.boolean().optional().default(true),
+  showLibrary: z.boolean().optional().default(true),
 });
 
 export type UserPreferences = z.infer<typeof UserPreferencesSchema>;

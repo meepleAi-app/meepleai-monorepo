@@ -12,11 +12,7 @@ interface NotesBlockProps {
   };
 }
 
-export const NotesBlock = memo(function NotesBlock({
-  title,
-  entityColor,
-  data,
-}: NotesBlockProps) {
+export const NotesBlock = memo(function NotesBlock({ title, entityColor, data }: NotesBlockProps) {
   const { content, updatedAt } = data;
 
   return (
@@ -38,9 +34,7 @@ export const NotesBlock = memo(function NotesBlock({
       ) : (
         <div className="flex flex-col gap-1.5">
           <p className="whitespace-pre-wrap text-xs text-foreground">{content}</p>
-          <p className="text-[10px] text-muted-foreground">
-            Aggiornato: {updatedAt}
-          </p>
+          <p className="text-[10px] text-muted-foreground">Aggiornato: {updatedAt}</p>
         </div>
       )}
     </div>

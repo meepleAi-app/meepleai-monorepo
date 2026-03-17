@@ -10,14 +10,21 @@ import {
 } from '@/config/admin-dashboard-navigation';
 import { cn } from '@/lib/utils';
 
-export function AdminTabSidebar() {
+interface AdminTabSidebarProps {
+  /** Force visibility when rendered inside Sheet drawer (overrides hidden md:flex) */
+  forceVisible?: boolean;
+}
+
+export function AdminTabSidebar({ forceVisible }: AdminTabSidebarProps) {
   const pathname = usePathname();
   const activeSection = getActiveSection(pathname);
 
   return (
     <div
       className={cn(
-        'flex flex-col h-full w-[200px] border-r border-border/30',
+        forceVisible
+          ? 'flex flex-col h-full w-full'
+          : 'hidden md:flex flex-col h-full w-[200px] border-r border-border/30',
         'bg-background/50 backdrop-blur-sm'
       )}
       data-testid="admin-tab-sidebar"

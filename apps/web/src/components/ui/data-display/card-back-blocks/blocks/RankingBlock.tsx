@@ -45,7 +45,7 @@ export const RankingBlock = memo(function RankingBlock({
         <p className="text-xs text-muted-foreground italic">No data yet</p>
       ) : (
         <ol className="flex flex-col gap-1">
-          {players.map((player) => (
+          {players.map(player => (
             <li
               key={player.position}
               className={cn(

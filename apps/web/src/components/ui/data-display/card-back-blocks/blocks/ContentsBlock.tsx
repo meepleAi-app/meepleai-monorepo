@@ -65,7 +65,7 @@ export const ContentsBlock = memo(function ContentsBlock({
         <p className="text-xs text-muted-foreground italic">No data yet</p>
       ) : (
         <ul className="flex flex-col gap-1">
-          {items.map((item) => {
+          {items.map(item => {
             const dotColor = ENTITY_COLORS[item.entityType] ?? entityColor;
             return (
               <li key={item.id} className="flex items-center gap-2 text-xs">

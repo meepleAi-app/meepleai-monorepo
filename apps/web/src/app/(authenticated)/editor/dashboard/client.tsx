@@ -39,7 +39,13 @@ import { AdminAuthGuard, PlayersBadge, PlayTimeBadge, ComplexityBadge } from '@/
 import { useAuthUser } from '@/components/auth/AuthProvider';
 import { Spinner } from '@/components/loading';
 import { Badge } from '@/components/ui/data-display/badge';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/data-display/card';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/data-display/card';
 import {
   Table,
   TableBody,
@@ -61,6 +67,7 @@ import {
 import { Button } from '@/components/ui/primitives/button';
 import { Checkbox } from '@/components/ui/primitives/checkbox';
 import { api, type SharedGame, type GameStatus } from '@/lib/api';
+import { logger } from '@/lib/logger';
 
 // ========== Types ==========
 
@@ -182,14 +189,10 @@ function StatsCard({ title, count, icon, variant, onClick, active, subtitle }: S
             <p className="text-4xl font-bold font-mono">
               <AnimatedCounter value={count} />
             </p>
-            {subtitle && (
-              <p className="text-xs text-muted-foreground mt-1">{subtitle}</p>
-            )}
+            {subtitle && <p className="text-xs text-muted-foreground mt-1">{subtitle}</p>}
           </div>
           {/* eslint-disable-next-line security/detect-object-injection -- variant is typed union with matching variantStyles keys */}
-          <div className={`p-3 rounded-lg ${variantStyles[variant]} ${pulseClass}`}>
-            {icon}
-          </div>
+          <div className={`p-3 rounded-lg ${variantStyles[variant]} ${pulseClass}`}>{icon}</div>
         </div>
 
         {/* Progress bar for pending items */}
@@ -213,17 +216,17 @@ function PriorityBadge({ priority }: { priority: GamePriority }) {
     high: {
       icon: <AlertTriangle className="h-3 w-3" />,
       color: 'bg-red-100 text-red-700 border-red-300',
-      label: 'High'
+      label: 'High',
     },
     medium: {
       icon: <AlertCircle className="h-3 w-3" />,
       color: 'bg-amber-100 text-amber-700 border-amber-300',
-      label: 'Medium'
+      label: 'Medium',
     },
     low: {
       icon: <Circle className="h-3 w-3" />,
       color: 'bg-slate-100 text-slate-600 border-slate-300',
-      label: 'Low'
+      label: 'Low',
     },
   };
 
@@ -245,22 +248,22 @@ function GameStatusBadge({ status }: { status: GameStatus }) {
     Draft: {
       label: 'Draft',
       color: 'bg-slate-100 text-slate-700 border-slate-300',
-      icon: <FileText className="h-3 w-3" />
+      icon: <FileText className="h-3 w-3" />,
     },
     PendingApproval: {
       label: 'Pending Review',
       color: 'bg-orange-100 text-orange-700 border-orange-300',
-      icon: <Clock className="h-3 w-3" />
+      icon: <Clock className="h-3 w-3" />,
     },
     Published: {
       label: 'Approved',
       color: 'bg-emerald-100 text-emerald-700 border-emerald-300',
-      icon: <CheckCircle className="h-3 w-3" />
+      icon: <CheckCircle className="h-3 w-3" />,
     },
     Archived: {
       label: 'Rejected',
       color: 'bg-rose-100 text-rose-700 border-rose-300',
-      icon: <XCircle className="h-3 w-3" />
+      icon: <XCircle className="h-3 w-3" />,
     },
   };
 
@@ -327,7 +330,7 @@ export function EditorDashboardClient() {
       setGames(result.items);
       setLastUpdate(new Date());
     } catch (err) {
-      console.error('Failed to fetch games:', err);
+      logger.error('Failed to fetch games:', err);
       addToast('error', 'Failed to load games');
     } finally {
       setLoading(false);
@@ -432,7 +435,7 @@ export function EditorDashboardClient() {
       addToast('success', `"${game.title}" submitted for review`);
       fetchGames();
     } catch (err) {
-      console.error('Failed to submit for approval:', err);
+      logger.error('Failed to submit for approval:', err);
       addToast('error', 'Failed to submit for approval');
     } finally {
       setSubmitting(null);
@@ -445,15 +448,13 @@ export function EditorDashboardClient() {
 
     try {
       setBulkSubmitting(true);
-      const promises = Array.from(selectedIds).map(id =>
-        api.sharedGames.submitForApproval(id)
-      );
+      const promises = Array.from(selectedIds).map(id => api.sharedGames.submitForApproval(id));
       await Promise.all(promises);
       addToast('success', `${selectedIds.size} games submitted for review`);
       setSelectedIds(new Set());
       fetchGames();
     } catch (err) {
-      console.error('Failed to bulk submit:', err);
+      logger.error('Failed to bulk submit:', err);
       addToast('error', 'Failed to bulk submit');
     } finally {
       setBulkSubmitting(false);
@@ -485,7 +486,10 @@ export function EditorDashboardClient() {
           <div className="mb-8">
             <div className="flex items-center justify-between">
               <div>
-                <h1 className="text-4xl font-bold tracking-tight mb-2" data-testid="dashboard-title">
+                <h1
+                  className="text-4xl font-bold tracking-tight mb-2"
+                  data-testid="dashboard-title"
+                >
                   Editor Dashboard
                 </h1>
                 <p className="text-muted-foreground flex items-center gap-2">
@@ -513,7 +517,10 @@ export function EditorDashboardClient() {
           </div>
 
           {/* Stats Cards Grid - 2 col desktop, 1 col mobile */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8" data-testid="stats-section">
+          <div
+            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8"
+            data-testid="stats-section"
+          >
             <StatsCard
               title="Pending Review"
               count={stats.pending}
@@ -558,17 +565,17 @@ export function EditorDashboardClient() {
               <div className="flex items-center justify-between">
                 <div>
                   <CardTitle className="text-2xl font-bold">Submission Queue</CardTitle>
-                  <CardDescription>
-                    Manage and track your game submissions
-                  </CardDescription>
+                  <CardDescription>Manage and track your game submissions</CardDescription>
                 </div>
-                <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as FilterTab)}>
+                <Tabs value={activeTab} onValueChange={v => setActiveTab(v as FilterTab)}>
                   <TabsList>
                     <TabsTrigger value="all">All Games</TabsTrigger>
                     <TabsTrigger value="pending">
                       Pending
                       {games.filter(g => g.status === 'Draft').length > 0 && (
-                        <Badge className="ml-2 bg-orange-500">{games.filter(g => g.status === 'Draft').length}</Badge>
+                        <Badge className="ml-2 bg-orange-500">
+                          {games.filter(g => g.status === 'Draft').length}
+                        </Badge>
                       )}
                     </TabsTrigger>
                     <TabsTrigger value="inReview">

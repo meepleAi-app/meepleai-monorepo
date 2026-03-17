@@ -39,6 +39,7 @@ import {
   DialogDescription,
 } from '@/components/ui/overlays/dialog';
 import { usePdfProgress } from '@/hooks/usePdfProgress';
+import { logger } from '@/lib/logger';
 import { cn } from '@/lib/utils';
 import { formatTimeSpan } from '@/lib/utils/formatTimeSpan';
 import { getStepLabel, getStepOrder, ProcessingStep } from '@/types/pdf';
@@ -83,13 +84,13 @@ const PROCESSING_STEPS = [
 function _getStateFromStep(step: string): string {
   // Map ProcessingStep enum to PdfState
   const mapping: Record<string, string> = {
-    'Uploading': 'uploading',
-    'Extracting': 'extracting',
-    'Chunking': 'chunking',
-    'Embedding': 'embedding',
-    'Indexing': 'indexing',
-    'Completed': 'ready',
-    'Failed': 'failed',
+    Uploading: 'uploading',
+    Extracting: 'extracting',
+    Chunking: 'chunking',
+    Embedding: 'embedding',
+    Indexing: 'indexing',
+    Completed: 'ready',
+    Failed: 'failed',
   };
   return mapping[step] || step.toLowerCase();
 }
@@ -128,8 +129,8 @@ export function ProgressModal({
         onClose();
       }, 2000);
     },
-    onError: (err) => {
-      console.error('[ProgressModal] Error:', err);
+    onError: err => {
+      logger.error('[ProgressModal] Error:', err);
     },
   });
 
@@ -144,13 +145,13 @@ export function ProgressModal({
     if (status?.state) {
       // Map state back to ProcessingStep
       const stateMapping: Record<string, ProcessingStep> = {
-        'uploading': ProcessingStep.Uploading,
-        'extracting': ProcessingStep.Extracting,
-        'chunking': ProcessingStep.Chunking,
-        'embedding': ProcessingStep.Embedding,
-        'indexing': ProcessingStep.Indexing,
-        'ready': ProcessingStep.Completed,
-        'failed': ProcessingStep.Failed,
+        uploading: ProcessingStep.Uploading,
+        extracting: ProcessingStep.Extracting,
+        chunking: ProcessingStep.Chunking,
+        embedding: ProcessingStep.Embedding,
+        indexing: ProcessingStep.Indexing,
+        ready: ProcessingStep.Completed,
+        failed: ProcessingStep.Failed,
       };
       return stateMapping[status.state] || ProcessingStep.Uploading;
     }
@@ -179,7 +180,7 @@ export function ProgressModal({
       await onCancel();
       onClose();
     } catch (err) {
-      console.error('[ProgressModal] Cancel failed:', err);
+      logger.error('[ProgressModal] Cancel failed:', err);
     } finally {
       setIsCanceling(false);
       setShowCancelConfirm(false);
@@ -190,12 +191,13 @@ export function ProgressModal({
   // Render
   // ============================================================================
 
-  const isTerminalState = currentStep === ProcessingStep.Completed || currentStep === ProcessingStep.Failed;
+  const isTerminalState =
+    currentStep === ProcessingStep.Completed || currentStep === ProcessingStep.Failed;
   const hasError = currentStep === ProcessingStep.Failed || error || metricsError;
 
   return (
     <>
-      <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+      <Dialog open={isOpen} onOpenChange={open => !open && onClose()}>
         <DialogContent
           className="max-w-4xl"
           hideCloseButton={!isTerminalState}
@@ -224,8 +226,8 @@ export function ProgressModal({
               {hasError
                 ? 'An error occurred during processing. Please try again.'
                 : isTerminalState
-                ? 'Your PDF has been processed successfully.'
-                : getStepLabel(currentStep)}
+                  ? 'Your PDF has been processed successfully.'
+                  : getStepLabel(currentStep)}
             </DialogDescription>
           </DialogHeader>
 
@@ -233,7 +235,8 @@ export function ProgressModal({
           <div className="space-y-2" aria-live="polite" aria-atomic="true">
             <div className="flex justify-between text-sm font-nunito">
               <span className="text-muted-foreground">
-                {isPolling && '⚠️ '}{isConnected ? 'Live updates' : 'Checking status...'}
+                {isPolling && '⚠️ '}
+                {isConnected ? 'Live updates' : 'Checking status...'}
               </span>
               <span className="font-medium text-amber-600 dark:text-amber-400">
                 {progressValue}%
@@ -248,11 +251,12 @@ export function ProgressModal({
 
           {/* Step Indicators */}
           <div className="flex justify-between gap-2 py-4">
-            {PROCESSING_STEPS.slice(0, 6).map((step) => {
+            {PROCESSING_STEPS.slice(0, 6).map(step => {
               const stepOrder = getStepOrder(step);
               const isCurrent = stepOrder === currentStepOrder;
               const isComplete = stepOrder < currentStepOrder;
-              const isFailed = currentStep === ProcessingStep.Failed && stepOrder === currentStepOrder;
+              const isFailed =
+                currentStep === ProcessingStep.Failed && stepOrder === currentStepOrder;
 
               return (
                 <div key={step} className="flex flex-col items-center gap-2">
@@ -260,7 +264,9 @@ export function ProgressModal({
                     className={cn(
                       'flex h-8 w-8 items-center justify-center rounded-full border-2 transition-all duration-300',
                       isComplete && 'border-green-500 bg-green-500 text-white',
-                      isCurrent && !isFailed && 'border-amber-500 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 animate-pulse',
+                      isCurrent &&
+                        !isFailed &&
+                        'border-amber-500 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 animate-pulse',
                       isFailed && 'border-destructive bg-destructive/10 text-destructive',
                       !isComplete && !isCurrent && 'border-muted bg-muted/30 text-muted-foreground'
                     )}
@@ -297,13 +303,19 @@ export function ProgressModal({
               <div className="space-y-1">
                 <p className="text-xs text-muted-foreground font-nunito">Duration</p>
                 <p className="text-lg font-semibold font-quicksand">
-                  {metrics?.totalDuration ? formatTimeSpan(metrics.totalDuration) : 'Calculating...'}
+                  {metrics?.totalDuration
+                    ? formatTimeSpan(metrics.totalDuration)
+                    : 'Calculating...'}
                 </p>
               </div>
               <div className="space-y-1">
                 <p className="text-xs text-muted-foreground font-nunito">ETA</p>
                 <p className="text-lg font-semibold font-quicksand text-amber-600 dark:text-amber-400">
-                  {isTerminalState ? 'Complete' : (metrics?.estimatedTimeRemaining ? formatTimeSpan(metrics.estimatedTimeRemaining) : 'Calculating...')}
+                  {isTerminalState
+                    ? 'Complete'
+                    : metrics?.estimatedTimeRemaining
+                      ? formatTimeSpan(metrics.estimatedTimeRemaining)
+                      : 'Calculating...'}
                 </p>
               </div>
             </div>
@@ -313,7 +325,10 @@ export function ProgressModal({
           {hasError && (
             <div className="rounded-lg bg-destructive/10 p-4 border border-destructive/30">
               <p className="text-sm text-destructive font-nunito">
-                {status?.errorMessage || error?.message || metricsError?.message || 'An unknown error occurred'}
+                {status?.errorMessage ||
+                  error?.message ||
+                  metricsError?.message ||
+                  'An unknown error occurred'}
               </p>
             </div>
           )}
@@ -329,11 +344,7 @@ export function ProgressModal({
                 {isCanceling ? 'Canceling...' : 'Cancel Processing'}
               </Button>
             )}
-            {isTerminalState && (
-              <Button onClick={onClose}>
-                Close
-              </Button>
-            )}
+            {isTerminalState && <Button onClick={onClose}>Close</Button>}
           </div>
         </DialogContent>
       </Dialog>
@@ -344,7 +355,8 @@ export function ProgressModal({
           <DialogHeader>
             <DialogTitle>Cancel Processing?</DialogTitle>
             <DialogDescription>
-              This will stop the PDF processing. You can restart it later, but progress will be lost.
+              This will stop the PDF processing. You can restart it later, but progress will be
+              lost.
             </DialogDescription>
           </DialogHeader>
           <div className="flex justify-end gap-2 pt-4">
@@ -355,11 +367,7 @@ export function ProgressModal({
             >
               Continue Processing
             </Button>
-            <Button
-              variant="destructive"
-              onClick={handleCancel}
-              disabled={isCanceling}
-            >
+            <Button variant="destructive" onClick={handleCancel} disabled={isCanceling}>
               {isCanceling ? 'Canceling...' : 'Yes, Cancel'}
             </Button>
           </div>

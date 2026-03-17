@@ -4,9 +4,9 @@
  */
 
 import { RuleSourceCard, type RuleSourceCardProps } from '@/components/chat-unified/RuleSourceCard';
+import type { Citation } from '@/types';
 
 import type { ShowcaseStory } from '../types';
-import type { Citation } from '@/types';
 
 // ─── Sample Data ─────────────────────────────────────────────────────────────
 

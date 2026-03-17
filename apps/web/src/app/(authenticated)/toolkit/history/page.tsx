@@ -2,7 +2,8 @@
 
 import React, { useState } from 'react';
 
-import { Calendar, Filter, Trophy } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
+import { Calendar, Filter, Loader2, Trophy } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 import { SessionDetailModal } from '@/components/session/SessionDetailModal';
@@ -19,6 +20,7 @@ import {
 import { Button } from '@/components/ui/primitives/button';
 import { Input } from '@/components/ui/primitives/input';
 import { Label } from '@/components/ui/primitives/label';
+import { api } from '@/lib/api';
 
 /**
  * Toolkit History Page
@@ -32,8 +34,6 @@ import { Label } from '@/components/ui/primitives/label';
 export default function ToolkitHistoryPage() {
   const router = useRouter();
 
-  // Mock data for MVP (backend integration in Phase 2)
-  const [sessions] = useState<Session[]>([]);
   const [selectedSession, setSelectedSession] = useState<Session | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
@@ -41,6 +41,27 @@ export default function ToolkitHistoryPage() {
   const [gameFilter, setGameFilter] = useState<string>('');
   const [startDate, setStartDate] = useState<string>('');
   const [endDate, setEndDate] = useState<string>('');
+
+  // Fetch session history from API
+  const { data: sessionsData, isLoading } = useQuery({
+    queryKey: ['session-history', gameFilter, startDate, endDate],
+    queryFn: () =>
+      api.sessions.getHistory({
+        gameId: gameFilter || undefined,
+        startDate: startDate || undefined,
+        endDate: endDate || undefined,
+        limit: 20,
+      }),
+  });
+  const sessions: Session[] = (sessionsData?.sessions ?? []).map(s => ({
+    id: s.id,
+    sessionCode: s.id.slice(0, 6).toUpperCase(),
+    sessionType: s.gameId ? 'GameSpecific' : 'Generic',
+    gameId: s.gameId,
+    sessionDate: new Date(s.startedAt),
+    status: s.status === 'Completed' ? 'Finalized' : (s.status as Session['status']),
+    participantCount: s.playerCount,
+  }));
 
   /**
    * Handle view details
@@ -93,9 +114,6 @@ export default function ToolkitHistoryPage() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All games</SelectItem>
-                    <SelectItem value="7-wonders">7 Wonders</SelectItem>
-                    <SelectItem value="splendor">Splendor</SelectItem>
-                    <SelectItem value="catan">Catan</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -130,16 +148,19 @@ export default function ToolkitHistoryPage() {
         </Card>
 
         {/* Session List */}
-        {sessions.length === 0 ? (
+        {isLoading ? (
+          <Card>
+            <CardContent className="py-12 text-center">
+              <Loader2 className="w-8 h-8 mx-auto mb-4 animate-spin text-purple-600" />
+              <p className="text-gray-600 dark:text-gray-400">Loading sessions...</p>
+            </CardContent>
+          </Card>
+        ) : sessions.length === 0 ? (
           <Card>
             <CardContent className="py-12 text-center">
               <Calendar className="w-12 h-12 mx-auto mb-4 text-gray-400" />
-              <p className="text-gray-600 dark:text-gray-400 mb-4">
-                No sessions found
-              </p>
-              <Button onClick={() => router.push('/toolkit')}>
-                Start Your First Session
-              </Button>
+              <p className="text-gray-600 dark:text-gray-400 mb-4">No sessions found</p>
+              <Button onClick={() => router.push('/toolkit')}>Start Your First Session</Button>
             </CardContent>
           </Card>
         ) : (
@@ -149,9 +170,7 @@ export default function ToolkitHistoryPage() {
                 <CardHeader>
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      {session.gameIcon && (
-                        <span className="text-2xl">{session.gameIcon}</span>
-                      )}
+                      {session.gameIcon && <span className="text-2xl">{session.gameIcon}</span>}
                       <div>
                         <CardTitle className="text-base">
                           {session.gameName || 'Generic Session'}
@@ -159,9 +178,7 @@ export default function ToolkitHistoryPage() {
                         <p className="text-sm text-gray-500">{session.sessionCode}</p>
                       </div>
                     </div>
-                    <Badge
-                      variant={session.status === 'Finalized' ? 'default' : 'secondary'}
-                    >
+                    <Badge variant={session.status === 'Finalized' ? 'default' : 'secondary'}>
                       {session.status}
                     </Badge>
                   </div>

@@ -9,5 +9,9 @@ internal record UserLibraryStatsDto(
     int FavoriteGames,
     int PrivatePdfs,
     DateTime? OldestAddedAt,
-    DateTime? NewestAddedAt
+    DateTime? NewestAddedAt,
+    int NuovoCount = 0,
+    int InPrestitoCount = 0,
+    int WishlistCount = 0,
+    int OwnedCount = 0
 );

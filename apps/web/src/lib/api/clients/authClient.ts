@@ -88,6 +88,9 @@ export interface UpdatePreferencesRequest {
   emailNotifications?: boolean;
   theme?: 'light' | 'dark' | 'system';
   dataRetentionDays?: number;
+  showProfile?: boolean;
+  showActivity?: boolean;
+  showLibrary?: boolean;
 }
 
 export interface ChangePasswordRequest {

@@ -41,43 +41,17 @@
 
 ---
 
-**3. [Docker Volume Management](./docker-volume-management.md)** ⭐ NEW
-   - **Purpose**: Complete guide to volume management and data persistence
+**3. [Operations Manual](../operations/operations-manual.md)** ⭐ CONSOLIDATED
+   - **Purpose**: Centralized operations reference for all services
    - **Content**:
-     - Named vs anonymous volumes (with comparison)
-     - MeepleAI volume architecture (13 volumes mapped)
-     - Volume operations (create, inspect, remove, copy)
-     - Backup strategies (database dump, tar backup, automated scripts)
-     - Restore procedures (PostgreSQL, volumes, disaster recovery)
-     - Volume migration (server to server, storage upgrade)
-     - Best practices and troubleshooting
-   - **Time to Read**: 25 minutes
-   - **Use Case**: Backup setup, disaster recovery, data migration
-
----
-
-**4. [Deployment Quick Reference](./deployment-quick-reference.md)** ⭐ NEW
-   - **Purpose**: Fast reference for common deployment tasks
-   - **Content**:
-     - Deploy commands (staging, production)
-     - Docker commands (images, containers, volumes)
-     - Backup & restore commands
-     - Rollback procedures
-     - Health checks
-     - Troubleshooting quick fixes
-     - Emergency procedures
-     - Pre/post-deploy checklists
-   - **Time to Read**: 5 minutes
-   - **Use Case**: Daily operations, emergency reference
-
----
-
-**5. [Deployment Cheat Sheet](./deployment-cheatsheet.md)** ⭐ NEW
-   - **Purpose**: One-page visual reference for deployment and Docker
-   - **Content**:
-     - Visual deployment flow diagram
-     - Docker essentials (images, containers, volumes)
-     - Quick commands for all operations
+     - All service management (PostgreSQL, Redis, Qdrant, Traefik, monitoring, AI services)
+     - Backup & restore procedures, disaster recovery
+     - Incident response, routine maintenance schedules
+     - Docker volumes, profiles, lifecycle commands
+     - Cost notes per service
+   - **Time to Read**: Reference document (use TOC to navigate)
+   - **Use Case**: Daily operations, incident response, maintenance
+   - **Note**: Replaces docker-volume-management, deployment-quick-reference, deployment-cheatsheet, monitoring-quickstart, monitoring-reference, health-checks, capacity-planning, secrets-management, all runbooks
      - Version matrix (dev, staging, prod)
      - Quick links to all services
      - Pro tips for faster deploys

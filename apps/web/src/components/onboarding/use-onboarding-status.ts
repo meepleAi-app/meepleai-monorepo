@@ -38,10 +38,23 @@ export function useOnboardingStatus(): OnboardingStatus {
     staleTime: 30_000,
   });
 
+  // Local dismiss flags so the dialog closes immediately on user action,
+  // regardless of whether the API mutation succeeds.
+  // Backed by localStorage so dismissals survive component remounts and page refreshes
+  // even when the API call fails (resilience pattern matching hasVisitedDiscover below).
+  const [localWizardDismissed, setLocalWizardDismissed] = useState(false);
+  const [localChecklistDismissed, setLocalChecklistDismissed] = useState(false);
+
   // Read localStorage client-side only to avoid SSR hydration mismatch
   const [hasVisitedDiscover, setHasVisitedDiscover] = useState(false);
   useEffect(() => {
     setHasVisitedDiscover(localStorage.getItem('hasVisitedDiscover') === 'true');
+    if (localStorage.getItem('onboarding-wizard-dismissed') === 'true') {
+      setLocalWizardDismissed(true);
+    }
+    if (localStorage.getItem('onboarding-checklist-dismissed') === 'true') {
+      setLocalChecklistDismissed(true);
+    }
   }, []);
 
   const markWizardSeenMutation = useMutation({
@@ -95,12 +108,28 @@ export function useOnboardingStatus(): OnboardingStatus {
 
   return {
     isLoading,
-    showWizard: !data?.wizardSeenAt,
-    showChecklist: !data?.dismissedAt,
+    showWizard: !isLoading && !!data && !data.wizardSeenAt && !localWizardDismissed,
+    showChecklist: !isLoading && !!data && !data.dismissedAt && !localChecklistDismissed,
     steps,
     completedCount,
     totalSteps: TOTAL_STEPS,
-    dismiss: () => dismissMutation.mutate(),
-    markWizardSeen: () => markWizardSeenMutation.mutate(),
+    dismiss: () => {
+      setLocalChecklistDismissed(true);
+      try {
+        localStorage.setItem('onboarding-checklist-dismissed', 'true');
+      } catch {
+        /* SSR/quota */
+      }
+      dismissMutation.mutate();
+    },
+    markWizardSeen: () => {
+      setLocalWizardDismissed(true);
+      try {
+        localStorage.setItem('onboarding-wizard-dismissed', 'true');
+      } catch {
+        /* SSR/quota */
+      }
+      markWizardSeenMutation.mutate();
+    },
   };
 }

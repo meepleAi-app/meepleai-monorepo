@@ -20,6 +20,8 @@ import { Button } from '@/components/ui/primitives/button';
 import { createAdminClient } from '@/lib/api/clients/adminClient';
 import { HttpClient } from '@/lib/api/core/httpClient';
 
+import { RagEnhancementsTab } from './RagEnhancementsTab';
+
 const httpClient = new HttpClient();
 const adminClient = createAdminClient({ httpClient });
 
@@ -73,10 +75,14 @@ interface ClearCacheResult {
 }
 
 function SettingRow({ label, value }: { label: string; value: string | number | boolean }) {
-  const displayValue = typeof value === 'boolean' ? (value ? 'Enabled' : 'Disabled') : String(value);
-  const boolColor = typeof value === 'boolean'
-    ? value ? 'text-green-600 dark:text-green-400' : 'text-slate-400 dark:text-zinc-500'
-    : 'text-slate-900 dark:text-zinc-100';
+  const displayValue =
+    typeof value === 'boolean' ? (value ? 'Enabled' : 'Disabled') : String(value);
+  const boolColor =
+    typeof value === 'boolean'
+      ? value
+        ? 'text-green-600 dark:text-green-400'
+        : 'text-slate-400 dark:text-zinc-500'
+      : 'text-slate-900 dark:text-zinc-100';
 
   return (
     <div className="flex items-center justify-between py-2 border-b border-slate-100 dark:border-zinc-800 last:border-0">
@@ -175,8 +181,8 @@ export function KBSettings() {
             Read-only Configuration
           </p>
           <p className="text-xs text-blue-700 dark:text-blue-300 mt-1">
-            These settings are configured via environment variables and config files.
-            To modify them, update the server configuration and restart the API service.
+            These settings are configured via environment variables and config files. To modify
+            them, update the server configuration and restart the API service.
           </p>
         </div>
       </div>
@@ -213,18 +219,30 @@ export function KBSettings() {
 
         {/* Chunking Settings */}
         <SettingsCard title="Text Chunking" icon={LayersIcon}>
-          <SettingRow label="Default Chunk Size" value={`${settings.chunking.defaultChunkSize} chars`} />
+          <SettingRow
+            label="Default Chunk Size"
+            value={`${settings.chunking.defaultChunkSize} chars`}
+          />
           <SettingRow label="Chunk Overlap" value={`${settings.chunking.chunkOverlap} chars`} />
           <SettingRow label="Min Chunk Size" value={`${settings.chunking.minChunkSize} chars`} />
           <SettingRow label="Max Chunk Size" value={`${settings.chunking.maxChunkSize} chars`} />
-          <SettingRow label="Token Limit" value={`${settings.chunking.embeddingTokenLimit} tokens`} />
+          <SettingRow
+            label="Token Limit"
+            value={`${settings.chunking.embeddingTokenLimit} tokens`}
+          />
           <SettingRow label="Chars/Token Ratio" value={settings.chunking.charsPerToken} />
         </SettingsCard>
 
         {/* Cache Settings */}
         <SettingsCard title="Cache Configuration" icon={ServerIcon}>
-          <SettingRow label="Redis Host" value={`${settings.cache.redis.host}:${settings.cache.redis.port}`} />
-          <SettingRow label="HybridCache Expiration" value={settings.cache.hybridCache.defaultExpiration} />
+          <SettingRow
+            label="Redis Host"
+            value={`${settings.cache.redis.host}:${settings.cache.redis.port}`}
+          />
+          <SettingRow
+            label="HybridCache Expiration"
+            value={settings.cache.hybridCache.defaultExpiration}
+          />
           <SettingRow label="HybridCache L2" value={settings.cache.hybridCache.l2Enabled} />
           <SettingRow label="Multi-Tier Cache" value={settings.cache.multiTier.enabled} />
           <SettingRow label="L1 TTL" value={settings.cache.multiTier.l1Ttl} />
@@ -234,9 +252,7 @@ export function KBSettings() {
         {/* Reranker */}
         <SettingsCard title="Reranker Service" icon={BoxIcon}>
           <SettingRow label="Configured" value={settings.reranker.configured} />
-          {settings.reranker.url && (
-            <SettingRow label="URL" value={settings.reranker.url} />
-          )}
+          {settings.reranker.url && <SettingRow label="URL" value={settings.reranker.url} />}
           {!settings.reranker.configured && (
             <p className="text-xs text-amber-600 dark:text-amber-400 mt-2">
               Reranker not configured. Set RERANKER_URL to enable cross-encoder reranking.
@@ -255,6 +271,9 @@ export function KBSettings() {
         </SettingsCard>
       </div>
 
+      {/* RAG Enhancements */}
+      <RagEnhancementsTab />
+
       {/* Danger Zone */}
       <div className="bg-red-50/70 dark:bg-red-900/20 backdrop-blur-md rounded-xl p-6 border-2 border-red-200 dark:border-red-800">
         <div className="flex items-center gap-2 mb-4">
@@ -272,7 +291,9 @@ export function KBSettings() {
           {!showRebuildConfirm ? (
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-red-900 dark:text-red-200">Rebuild Vector Index</p>
+                <p className="text-sm font-medium text-red-900 dark:text-red-200">
+                  Rebuild Vector Index
+                </p>
                 <p className="text-xs text-red-600 dark:text-red-400">
                   Triggers reindexing of all Qdrant collections. May temporarily affect search.
                 </p>

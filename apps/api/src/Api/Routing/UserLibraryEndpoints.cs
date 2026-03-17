@@ -96,6 +96,9 @@ internal static class UserLibraryEndpoints
         MapOverrideToolkitEndpoint(group);
         MapUpdateToolkitWidgetEndpoint(group);
 
+        // Ownership declaration endpoint (Ownership/RAG access feature)
+        MapDeclareOwnershipEndpoint(group);
+
         return group;
     }
 
@@ -1446,6 +1449,53 @@ internal static class UserLibraryEndpoints
     }
 
     #endregion
+
+    /// <summary>
+    /// Declares explicit ownership of a game in the library, granting RAG access.
+    /// Idempotent: if already declared, returns current state without error.
+    /// </summary>
+    private static void MapDeclareOwnershipEndpoint(RouteGroupBuilder group)
+    {
+        group.MapPost("/library/{gameId:guid}/declare-ownership", async (
+            Guid gameId,
+            IMediator mediator,
+            HttpContext context,
+            CancellationToken ct) =>
+        {
+            var (authenticated, session, error) = context.TryGetAuthenticatedUser();
+            if (!authenticated) return error!;
+
+            if (!TryGetUserId(context, session, out var userId))
+            {
+                return Results.Unauthorized();
+            }
+
+            var command = new DeclareOwnershipCommand(userId, gameId);
+
+            try
+            {
+                var result = await mediator.Send(command, ct).ConfigureAwait(false);
+                return Results.Ok(result);
+            }
+            catch (NotFoundException ex)
+            {
+                return Results.NotFound(new { error = ex.Message });
+            }
+            catch (DomainException ex)
+            {
+                return Results.Conflict(new { error = ex.Message });
+            }
+        })
+        .RequireAuthenticatedUser()
+        .Produces<DeclareOwnershipResult>(200)
+        .Produces(401)
+        .Produces(404)
+        .Produces(409)
+        .WithTags("Library", "Ownership")
+        .WithSummary("Declare ownership of a game")
+        .WithDescription("Explicitly declares ownership of a game in the library, granting RAG access to the game's knowledge base. Idempotent.")
+        .WithOpenApi();
+    }
 
     private static bool TryGetUserId(HttpContext context, SessionStatusDto? session, out Guid userId)
     {

@@ -131,7 +131,6 @@ Next.js ◀──WebSocket (SignalR)── .NET API
 | Unstructured | HTTP `:8001` | ✅ | Estrazione PDF Stage 1 |
 | SmolDocling | HTTP `:8002` | ⚠️ | Estrazione PDF Stage 2 (implicita in label "S1/S2") |
 | Ollama | HTTP `:11434` | ❌ | Fallback LLM locale (solo se OpenRouter down) |
-| HyperDX | HTTP OTLP push | ✅ | Tracce distribuite |
 | Prometheus | HTTP `/metrics` scrape | ✅ | Metriche per scraping |
 | Mailpit | SMTP `:1025` | ❌ | Email dev (connessione non disegnata) |
 
@@ -270,7 +269,6 @@ L'API .NET chiama Orchestration via `POST /execute`. L'Orchestration **richiama*
 |----------|:-----:|-------|-------------|
 | **Prometheus** | `:9090` | TSDB metriche | Scrape HTTP da tutti i servizi. Retention 30d |
 | **Grafana** | `:3001` | Dashboard | Visualizzazione metriche. Datasource: Prometheus |
-| **HyperDX** | `:8180` | Osservabilità | Tracce distribuite OTLP |
 | **n8n** | `:5678` | Workflow automation | Webhook, scheduling. Usa PostgreSQL come DB |
 | **Mailpit** | `:8025` / `:1025` | SMTP dev | Cattura email in locale. UI web su `:8025` |
 | **Alertmanager** | `:9093` | Alert routing | Gestione alert da Prometheus |
@@ -294,7 +292,6 @@ L'API .NET chiama Orchestration via `POST /execute`. L'Orchestration **richiama*
 | Prometheus → .NET API | ✅ | Scrape `/metrics` (edge-route sinistra) |
 | Prometheus → AI/ML Services | ❌ | Scrape metriche (non disegnato nel PDF) |
 | Grafana → Prometheus | ✅ | Query PromQL (linea interna) |
-| .NET API → HyperDX | ✅ | OTLP push (edge-route destra) |
 | .NET API → Mailpit | ❌ | SMTP `:1025` (non disegnato nel PDF) |
 | Prometheus → Alertmanager | ❌ | Alert routing (non disegnato nel PDF) |
 | n8n → PostgreSQL | ✅ | Stato workflow (linea cross-zona) |
@@ -340,7 +337,6 @@ L'API .NET chiama Orchestration via `POST /execute`. L'Orchestration **richiama*
 
 | # | Sorgente | Destinazione | Protocollo | Label nel PDF |
 |:-:|---------|-------------|-----------|-------------|
-| 17 | .NET API | HyperDX | HTTP (OTLP) | `OTLP` (edge destra) |
 | 18 | Prometheus | .NET API | HTTP scrape | `scrape /metrics` (edge sinistra) |
 | 19 | Grafana | Prometheus | HTTP | Linea interna |
 
@@ -450,7 +446,7 @@ Browser → Next.js middleware → .NET API /api/v1/auth/login
 | `minimal` | PostgreSQL, Redis, Qdrant, API, Web | Dev base senza AI |
 | `dev` | minimal + Prometheus, Grafana, Mailpit, Alertmanager, cAdvisor | Dev con monitoraggio |
 | `ai` | dev + Embedding, Reranker, Orchestration, Unstructured, SmolDocling | Dev con AI completa |
-| `full` | ai + n8n, Ollama, HyperDX | Stack completo |
+| `full` | ai + n8n, Ollama | Stack completo |
 
 **Volumi persistenti:**
 

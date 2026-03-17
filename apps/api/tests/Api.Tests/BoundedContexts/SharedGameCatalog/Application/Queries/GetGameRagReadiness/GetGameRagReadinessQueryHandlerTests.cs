@@ -251,7 +251,6 @@ public sealed class GetGameRagReadinessQueryHandlerTests
             fileSize: new FileSize(1024),
             uploadedByUserId: Guid.NewGuid(),
             uploadedAt: DateTime.UtcNow,
-            processingStatus: state == PdfProcessingState.Ready ? "completed" : "processing",
             processedAt: state == PdfProcessingState.Ready ? DateTime.UtcNow : null,
             pageCount: state == PdfProcessingState.Ready ? 10 : null,
             processingError: null,

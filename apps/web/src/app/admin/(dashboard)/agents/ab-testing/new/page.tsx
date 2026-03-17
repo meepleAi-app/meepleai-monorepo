@@ -19,8 +19,6 @@ import { Checkbox } from '@/components/ui/primitives/checkbox';
 import { Textarea } from '@/components/ui/primitives/textarea';
 import { api } from '@/lib/api';
 
-import { AgentsNavConfig } from '../../NavConfig';
-
 // Available models for A/B testing (OpenRouter format)
 const AVAILABLE_MODELS = [
   { id: 'openai/gpt-4o', provider: 'OpenAI', name: 'GPT-4o' },
@@ -78,8 +76,6 @@ export default function NewAbTestPage() {
 
   return (
     <div className="space-y-8">
-      <AgentsNavConfig />
-
       {/* Header */}
       <div>
         <div className="flex items-center gap-3">

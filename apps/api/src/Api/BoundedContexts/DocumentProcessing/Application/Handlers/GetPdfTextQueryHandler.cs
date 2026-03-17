@@ -35,7 +35,7 @@ internal class GetPdfTextQueryHandler : IQueryHandler<GetPdfTextQuery, PdfTextRe
                     p.Id,
                     p.FileName,
                     p.ExtractedText,
-                    p.ProcessingStatus,
+                    p.ProcessingState,
                     p.ProcessedAt,
                     p.PageCount,
                     p.CharacterCount,

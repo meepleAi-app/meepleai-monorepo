@@ -410,7 +410,7 @@ public sealed class StrategyPatternRepositoryIntegrationTests : IAsyncLifetime
 
     private static float[] CreateNormalizedEmbedding(float baseValue)
     {
-        var embedding = new float[1536];
+        var embedding = new float[1024];
         for (int i = 0; i < embedding.Length; i++)
         {
             embedding[i] = baseValue + (i % 10) * 0.01f;

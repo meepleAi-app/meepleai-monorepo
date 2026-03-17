@@ -24,5 +24,16 @@ internal class NotificationPreferencesEntityConfiguration : IEntityTypeConfigura
         builder.Property(e => e.InAppOnDocumentReady).IsRequired().HasDefaultValue(true);
         builder.Property(e => e.InAppOnDocumentFailed).IsRequired().HasDefaultValue(true);
         builder.Property(e => e.InAppOnRetryAvailable).IsRequired().HasDefaultValue(true);
+
+        // Slack notification preferences
+        builder.Property(e => e.SlackEnabled).IsRequired().HasDefaultValue(true);
+        builder.Property(e => e.SlackOnDocumentReady).IsRequired().HasDefaultValue(true);
+        builder.Property(e => e.SlackOnDocumentFailed).IsRequired().HasDefaultValue(true);
+        builder.Property(e => e.SlackOnRetryAvailable).IsRequired().HasDefaultValue(false);
+        builder.Property(e => e.SlackOnGameNightInvitation).IsRequired().HasDefaultValue(true);
+        builder.Property(e => e.SlackOnGameNightReminder).IsRequired().HasDefaultValue(true);
+        builder.Property(e => e.SlackOnShareRequestCreated).IsRequired().HasDefaultValue(true);
+        builder.Property(e => e.SlackOnShareRequestApproved).IsRequired().HasDefaultValue(true);
+        builder.Property(e => e.SlackOnBadgeEarned).IsRequired().HasDefaultValue(true);
     }
 }

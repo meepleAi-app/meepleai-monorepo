@@ -5,8 +5,20 @@ import { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 
 import { AuthModal } from '@/components/auth';
+import { RequestAccessForm } from '@/components/auth/RequestAccessForm';
 import { AuthLayout } from '@/components/layouts';
 import { useTranslation } from '@/hooks/useTranslation';
+import { useApiClient } from '@/lib/api/context';
+
+// ============================================================================
+// Types
+// ============================================================================
+
+type RegistrationMode = 'loading' | 'public' | 'invite-only';
+
+// ============================================================================
+// Fallback (Suspense boundary)
+// ============================================================================
 
 export function RegisterFallback() {
   const { t } = useTranslation();
@@ -17,13 +29,35 @@ export function RegisterFallback() {
   );
 }
 
+// ============================================================================
+// Main content
+// ============================================================================
+
 export function RegisterPageContent() {
   const [mounted, setMounted] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(true);
+  const [registrationMode, setRegistrationMode] = useState<RegistrationMode>('loading');
+
+  const api = useApiClient();
 
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  // Fetch registration mode on mount (after client hydration)
+  useEffect(() => {
+    if (!mounted) return;
+
+    api.accessRequests
+      .getRegistrationMode()
+      .then(result => {
+        setRegistrationMode(result.publicRegistrationEnabled ? 'public' : 'invite-only');
+      })
+      .catch(() => {
+        // Fail closed: default to invite-only if we cannot determine the mode
+        setRegistrationMode('invite-only');
+      });
+  }, [mounted, api]);
 
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -37,16 +71,30 @@ export function RegisterPageContent() {
   };
 
   // Prevent SSR issues with TanStack Query
-  if (!mounted) {
+  if (!mounted || registrationMode === 'loading') {
     return (
       <AuthLayout title="Loading...">
-        <div className="text-center py-8">
+        <div className="text-center py-8" data-testid="register-loading">
           <div className="animate-pulse text-slate-500">Loading...</div>
         </div>
       </AuthLayout>
     );
   }
 
+  // Invite-only mode: show request access form
+  if (registrationMode === 'invite-only') {
+    return (
+      <AuthLayout
+        title="Request Access"
+        subtitle="Registration is currently by invitation only"
+        data-testid="register-page"
+      >
+        <RequestAccessForm />
+      </AuthLayout>
+    );
+  }
+
+  // Public mode: show the standard registration modal
   return (
     <AuthLayout
       title="Create Account"

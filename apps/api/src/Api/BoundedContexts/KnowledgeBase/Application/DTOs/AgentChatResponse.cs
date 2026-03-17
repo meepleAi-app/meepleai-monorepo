@@ -1,4 +1,5 @@
 using Api.BoundedContexts.KnowledgeBase.Domain.Enums;
+using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 
 namespace Api.BoundedContexts.KnowledgeBase.Application.DTOs;
 
@@ -52,6 +53,19 @@ public record AgentChatResponse
     /// Query timestamp (UTC)
     /// </summary>
     public required DateTime Timestamp { get; init; }
+
+    /// <summary>
+    /// Content access level for the current user.
+    /// FullAccess = owns the game (sees full text/images).
+    /// ReferenceOnly = doesn't own the game (sees metadata only).
+    /// </summary>
+    public ContentAccessLevel ContentAccessLevel { get; init; } = ContentAccessLevel.FullAccess;
+
+    /// <summary>
+    /// Whether the user has full access to source content.
+    /// Convenience property for frontend consumption.
+    /// </summary>
+    public bool HasFullAccess => ContentAccessLevel == ContentAccessLevel.FullAccess;
 }
 
 /// <summary>

@@ -122,58 +122,58 @@ export function MeepleCardBrowser() {
             aria-modal="true"
             aria-label="Card browser"
           >
-          {/* Header bar */}
-          <div className="flex items-center justify-between px-4 py-2 border-b border-border/30">
-            <button
-              onClick={handleClose}
-              className="p-2 rounded-full hover:bg-muted min-h-[44px] min-w-[44px] flex items-center justify-center"
-              aria-label="Close"
-            >
-              <X size={20} />
-            </button>
-            <span className="text-sm text-muted-foreground" data-testid="carousel-indicator">
-              {currentIndex + 1}/{cards.length}
-            </span>
-            <button
-              onClick={() => setShowDeckStack(true)}
-              className="p-2 rounded-full hover:bg-muted min-h-[44px] min-w-[44px] flex items-center justify-center"
-              aria-label="History"
-            >
-              <Layers size={20} />
-            </button>
-          </div>
-
-          {/* Carousel container */}
-          <div
-            ref={scrollRef}
-            className="flex-1 overflow-x-auto overflow-y-hidden snap-x snap-mandatory flex"
-            style={{ scrollSnapType: 'x mandatory' }}
-            onScroll={handleScroll}
-            data-testid="carousel-container"
-          >
-            {cards.map(card => (
-              <div
-                key={card.id}
-                className="w-full flex-shrink-0 snap-center p-4 flex flex-col"
-                style={{ scrollSnapAlign: 'center' }}
+            {/* Header bar */}
+            <div className="flex items-center justify-between px-4 py-2 border-b border-border/30">
+              <button
+                onClick={handleClose}
+                className="p-2 rounded-full hover:bg-muted min-h-[44px] min-w-[44px] flex items-center justify-center"
+                aria-label="Close"
               >
-                <MeepleCard
-                  entity={card.entity}
-                  variant="expanded"
-                  title={card.title}
-                  subtitle={card.subtitle}
-                  imageUrl={card.imageUrl}
-                />
-              </div>
-            ))}
-          </div>
+                <X size={20} />
+              </button>
+              <span className="text-sm text-muted-foreground" data-testid="carousel-indicator">
+                {currentIndex + 1}/{cards.length}
+              </span>
+              <button
+                onClick={() => setShowDeckStack(true)}
+                className="p-2 rounded-full hover:bg-muted min-h-[44px] min-w-[44px] flex items-center justify-center"
+                aria-label="History"
+              >
+                <Layers size={20} />
+              </button>
+            </div>
 
-          {/* Deck stack drawer */}
-          <DeckStackDrawer
-            isOpen={showDeckStack}
-            currentCardId={currentCard?.id ?? ''}
-            onClose={() => setShowDeckStack(false)}
-          />
+            {/* Carousel container */}
+            <div
+              ref={scrollRef}
+              className="flex-1 overflow-x-auto overflow-y-hidden snap-x snap-mandatory flex"
+              style={{ scrollSnapType: 'x mandatory' }}
+              onScroll={handleScroll}
+              data-testid="carousel-container"
+            >
+              {cards.map(card => (
+                <div
+                  key={card.id}
+                  className="w-full flex-shrink-0 snap-center p-4 flex flex-col"
+                  style={{ scrollSnapAlign: 'center' }}
+                >
+                  <MeepleCard
+                    entity={card.entity}
+                    variant="expanded"
+                    title={card.title}
+                    subtitle={card.subtitle}
+                    imageUrl={card.imageUrl}
+                  />
+                </div>
+              ))}
+            </div>
+
+            {/* Deck stack drawer */}
+            <DeckStackDrawer
+              isOpen={showDeckStack}
+              currentCardId={currentCard?.id ?? ''}
+              onClose={() => setShowDeckStack(false)}
+            />
           </motion.div>
         </motion.div>
       )}

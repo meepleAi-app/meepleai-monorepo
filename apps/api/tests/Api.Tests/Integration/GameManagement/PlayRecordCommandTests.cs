@@ -93,7 +93,7 @@ public sealed class PlayRecordCommandTests : IAsyncLifetime
 
     #region CreatePlayRecordCommand Tests
 
-    [Fact(Skip = "Migration infrastructure issue after main-dev consolidation - will be fixed separately")]
+    [Fact]
     public async Task CreatePlayRecordCommand_WithCatalogGame_CreatesSuccessfully()
     {
         // Arrange
@@ -120,7 +120,7 @@ public sealed class PlayRecordCommandTests : IAsyncLifetime
         record.CreatedByUserId.Should().Be(userId);
     }
 
-    [Fact(Skip = "Migration infrastructure issue after main-dev consolidation - will be fixed separately")]
+    [Fact]
     public async Task CreatePlayRecordCommand_FreeForm_CreatesSuccessfully()
     {
         // Arrange
@@ -154,7 +154,7 @@ public sealed class PlayRecordCommandTests : IAsyncLifetime
         record.GameName.Should().Be("Poker");
     }
 
-    [Fact(Skip = "Migration infrastructure issue after main-dev consolidation - will be fixed separately")]
+    [Fact]
     public async Task CreatePlayRecordCommand_NonExistentGame_ThrowsNotFoundException()
     {
         // Arrange
@@ -176,7 +176,7 @@ public sealed class PlayRecordCommandTests : IAsyncLifetime
 
     #region AddPlayerToRecordCommand Tests
 
-    [Fact(Skip = "Migration infrastructure issue after main-dev consolidation - will be fixed separately")]
+    [Fact]
     public async Task AddPlayerToRecordCommand_RegisteredUser_AddsSuccessfully()
     {
         // Arrange
@@ -198,7 +198,7 @@ public sealed class PlayRecordCommandTests : IAsyncLifetime
         players[0].DisplayName.Should().Be("Alice");
     }
 
-    [Fact(Skip = "Migration infrastructure issue after main-dev consolidation - will be fixed separately")]
+    [Fact]
     public async Task AddPlayerToRecordCommand_Guest_AddsSuccessfully()
     {
         // Arrange
@@ -223,7 +223,7 @@ public sealed class PlayRecordCommandTests : IAsyncLifetime
 
     #region RecordScoreCommand Tests
 
-    [Fact(Skip = "Migration infrastructure issue after main-dev consolidation - will be fixed separately")]
+    [Fact]
     public async Task RecordScoreCommand_ValidScore_RecordsSuccessfully()
     {
         // Arrange
@@ -250,7 +250,7 @@ public sealed class PlayRecordCommandTests : IAsyncLifetime
 
     #region StartPlayRecordCommand Tests
 
-    [Fact(Skip = "Migration infrastructure issue after main-dev consolidation - will be fixed separately")]
+    [Fact]
     public async Task StartPlayRecordCommand_PlannedRecord_StartsSuccessfully()
     {
         // Arrange
@@ -268,7 +268,7 @@ public sealed class PlayRecordCommandTests : IAsyncLifetime
         record.StartTime.Should().NotBeNull();
     }
 
-    [Fact(Skip = "Migration infrastructure issue after main-dev consolidation - will be fixed separately")]
+    [Fact]
     public async Task StartPlayRecordCommand_NonPlannedRecord_ThrowsConflictException()
     {
         // Arrange
@@ -287,7 +287,7 @@ public sealed class PlayRecordCommandTests : IAsyncLifetime
 
     #region CompletePlayRecordCommand Tests
 
-    [Fact(Skip = "Migration infrastructure issue after main-dev consolidation - will be fixed separately")]
+    [Fact]
     public async Task CompletePlayRecordCommand_WithManualDuration_CompletesSuccessfully()
     {
         // Arrange
@@ -310,7 +310,7 @@ public sealed class PlayRecordCommandTests : IAsyncLifetime
 
     #region UpdatePlayRecordCommand Tests
 
-    [Fact(Skip = "Migration infrastructure issue after main-dev consolidation - will be fixed separately")]
+    [Fact]
     public async Task UpdatePlayRecordCommand_ValidData_UpdatesSuccessfully()
     {
         // Arrange

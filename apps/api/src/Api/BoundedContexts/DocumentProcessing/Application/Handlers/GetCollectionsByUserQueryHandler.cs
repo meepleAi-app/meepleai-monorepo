@@ -64,7 +64,7 @@ internal class GetCollectionsByUserQueryHandler : IQueryHandler<GetCollectionsBy
                     FileName: pdfDoc.FileName.Value,
                     FilePath: pdfDoc.FilePath,
                     FileSizeBytes: pdfDoc.FileSize.Bytes,
-                    ProcessingStatus: pdfDoc.ProcessingStatus,
+
                     UploadedAt: pdfDoc.UploadedAt,
                     ProcessedAt: pdfDoc.ProcessedAt,
                     PageCount: pdfDoc.PageCount,

@@ -170,6 +170,7 @@ internal sealed class ChatWithSessionAgentCommandHandler : IStreamingQueryHandle
             command.UserQuestion,
             agentSession.GameId,
             thread,
+            userTier: null,
             cancellationToken).ConfigureAwait(false);
 
         _logger.LogDebug(

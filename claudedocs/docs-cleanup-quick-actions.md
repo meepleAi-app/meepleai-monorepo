@@ -24,7 +24,6 @@ rm docs/01-architecture/adr/adr-013-nswag-typescript-generation.md  # deprecated
 rm docs/01-architecture/adr/adr-014-nswag-msbuild-removal.md        # deprecated
 rm docs/01-architecture/adr/adr-019-shared-catalog-delete-workflow.md # no longer
 rm docs/01-architecture/adr/adr-027-infrastructure-services-policy.md # legacy
-rm docs/01-architecture/adr/adr-040-hyperdx-observability.md        # deprecated
 rm docs/01-architecture/adr/adr-041-meeple-card-universal-system.md # deprecated
 
 # Update ADR index

@@ -1,11 +1,13 @@
 using System.Text.Json;
 using Api.BoundedContexts.KnowledgeBase.Application.Commands;
 using Api.BoundedContexts.KnowledgeBase.Application.DTOs;
+using Api.BoundedContexts.KnowledgeBase.Application.Services;
 using Api.BoundedContexts.KnowledgeBase.Domain;
 using Api.BoundedContexts.KnowledgeBase.Domain.Entities;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 using Api.Infrastructure;
+using Api.Infrastructure.Entities;
 using Api.Infrastructure.Entities.KnowledgeBase;
 using Api.Middleware.Exceptions;
 using Api.SharedKernel.Exceptions;
@@ -28,17 +30,20 @@ internal sealed class CreateUserAgentCommandHandler : IRequestHandler<CreateUser
     private readonly IAgentRepository _agentRepository;
     private readonly MeepleAiDbContext _db;
     private readonly ITierEnforcementService _tierEnforcementService;
+    private readonly IRagAccessService _ragAccessService;
     private readonly ILogger<CreateUserAgentCommandHandler> _logger;
 
     public CreateUserAgentCommandHandler(
         IAgentRepository agentRepository,
         MeepleAiDbContext db,
         ITierEnforcementService tierEnforcementService,
+        IRagAccessService ragAccessService,
         ILogger<CreateUserAgentCommandHandler> logger)
     {
         _agentRepository = agentRepository ?? throw new ArgumentNullException(nameof(agentRepository));
         _db = db ?? throw new ArgumentNullException(nameof(db));
         _tierEnforcementService = tierEnforcementService ?? throw new ArgumentNullException(nameof(tierEnforcementService));
+        _ragAccessService = ragAccessService ?? throw new ArgumentNullException(nameof(ragAccessService));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -47,6 +52,19 @@ internal sealed class CreateUserAgentCommandHandler : IRequestHandler<CreateUser
         CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(request);
+
+        // Ownership/RAG access check — user must own the game or game must be RAG-public
+        var role = Enum.TryParse<UserRole>(request.UserRole, ignoreCase: true, out var parsedRole)
+            ? parsedRole
+            : UserRole.User;
+
+        var canAccess = await _ragAccessService.CanAccessRagAsync(
+            request.UserId, request.GameId, role, cancellationToken).ConfigureAwait(false);
+
+        if (!canAccess)
+        {
+            throw new ForbiddenException("Devi possedere il gioco per creare un agente");
+        }
 
         // E2-3: Tier enforcement — check agent creation quota via centralized service
         var canCreate = await _tierEnforcementService

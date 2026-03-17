@@ -25,6 +25,7 @@ import {
 } from '@/components/ui/overlays/select';
 import { Button } from '@/components/ui/primitives/button';
 import { Textarea } from '@/components/ui/primitives/textarea';
+import { logger } from '@/lib/logger';
 import { cn } from '@/lib/utils';
 
 import { PdfReferenceCard, type PdfReference } from './PdfReferenceCard';
@@ -149,23 +150,31 @@ export function AgentChatPanel({
         content: data.answer || 'Nessuna risposta disponibile',
         timestamp: new Date(),
         agentMode: selectedAgentMode,
-        pdfReferences: data.citations?.map((c: { documentId?: string; documentTitle?: string; pageNumber?: number; excerpt?: string; score?: number }) => ({
-          pdfId: c.documentId || selectedPdfIds[0] || 'pdf-1',
-          pdfName: c.documentTitle || 'Regolamento',
-          pageNumber: c.pageNumber || 1,
-          excerpt: c.excerpt || '',
-          confidence: c.score || 0.8,
-        })),
+        pdfReferences: data.citations?.map(
+          (c: {
+            documentId?: string;
+            documentTitle?: string;
+            pageNumber?: number;
+            excerpt?: string;
+            score?: number;
+          }) => ({
+            pdfId: c.documentId || selectedPdfIds[0] || 'pdf-1',
+            pdfName: c.documentTitle || 'Regolamento',
+            pageNumber: c.pageNumber || 1,
+            excerpt: c.excerpt || '',
+            confidence: c.score || 0.8,
+          })
+        ),
       };
 
       setMessages(prev => [...prev, agentMessage]);
       setIsTyping(false);
     } catch (error) {
-      console.error('Error calling agent:', error);
+      logger.error('Error calling agent:', error);
       const errorMessage: ChatMessage = {
         id: `error-${Date.now()}`,
         role: 'agent',
-        content: 'Errore nella comunicazione con l\'agente. Riprova.',
+        content: "Errore nella comunicazione con l'agente. Riprova.",
         timestamp: new Date(),
       };
       setMessages(prev => [...prev, errorMessage]);
@@ -275,21 +284,14 @@ export function AgentChatPanel({
 
             {/* Message Content */}
             <div
-              className={cn(
-                'flex-1 max-w-[80%]',
-                message.role === 'user' && 'flex justify-end'
-              )}
+              className={cn('flex-1 max-w-[80%]', message.role === 'user' && 'flex justify-end')}
             >
               {/* Agent Name & Model */}
               {message.role === 'agent' && (
                 <div className="flex items-center gap-2 mb-1">
-                  <span className="font-semibold text-sm">
-                    {selectedMode?.name || 'Agente AI'}
-                  </span>
+                  <span className="font-semibold text-sm">{selectedMode?.name || 'Agente AI'}</span>
                   {message.modelUsed && (
-                    <span className="text-xs text-muted-foreground">
-                      {message.modelUsed}
-                    </span>
+                    <span className="text-xs text-muted-foreground">{message.modelUsed}</span>
                   )}
                 </div>
               )}

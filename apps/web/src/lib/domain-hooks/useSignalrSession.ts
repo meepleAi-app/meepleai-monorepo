@@ -20,6 +20,7 @@ import {
   LogLevel,
 } from '@microsoft/signalr';
 
+import { logger } from '@/lib/logger';
 import {
   useLiveSessionStore,
   type RuleDispute,
@@ -142,13 +143,13 @@ export function useSignalRSession(sessionId: string | null): UseSignalRSessionRe
         store.getState().setOffline(false);
       })
       .catch((err: unknown) => {
-        console.error('[useSignalRSession] Connection failed:', err);
+        logger.error('[useSignalRSession] Connection failed:', err);
         store.getState().setConnected(false);
       });
 
     conn.onreconnected(() => {
       conn.invoke('JoinSession', sessionId).catch((err: unknown) => {
-        console.error('[useSignalRSession] Re-join failed:', err);
+        logger.error('[useSignalRSession] Re-join failed:', err);
       });
       setIsConnected(true);
       store.getState().setConnected(true);
@@ -171,7 +172,7 @@ export function useSignalRSession(sessionId: string | null): UseSignalRSessionRe
 
     return () => {
       conn.stop().catch((err: unknown) => {
-        console.error('[useSignalRSession] Stop failed:', err);
+        logger.error('[useSignalRSession] Stop failed:', err);
       });
       connectionRef.current = null;
       setConnection(null);

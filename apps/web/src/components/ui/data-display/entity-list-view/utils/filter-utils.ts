@@ -17,7 +17,6 @@ import type { FilterConfig, FilterState, FilterValue } from '../entity-list-view
  */
 function getNestedValue<T>(obj: T, field: keyof T | string): unknown {
   if (typeof field === 'string' && field.includes('.')) {
-    // eslint-disable-next-line security/detect-object-injection
     return field
       .split('.')
       .reduce((acc: unknown, part) => (acc as Record<string, unknown>)?.[part], obj as unknown);

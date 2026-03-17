@@ -9,7 +9,12 @@
 
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 
-import { calculateOptimalPosition, debounce, type TooltipPosition } from '@/lib/tooltip/positioning';
+import { logger } from '@/lib/logger';
+import {
+  calculateOptimalPosition,
+  debounce,
+  type TooltipPosition,
+} from '@/lib/tooltip/positioning';
 
 export interface UseSmartTooltipOptions {
   /** Enable smart positioning (default: true) */
@@ -61,7 +66,7 @@ export function useSmartTooltip(options: UseSmartTooltipOptions = {}): UseSmartT
     enabled = true,
     debounceMs = 100,
     repositionOnScroll = true,
-    repositionOnResize = true
+    repositionOnResize = true,
   } = options;
 
   const [position, setPosition] = useState<TooltipPosition | null>(null);
@@ -80,7 +85,7 @@ export function useSmartTooltip(options: UseSmartTooltipOptions = {}): UseSmartT
     const tooltipRect = tooltipRef.current.getBoundingClientRect();
     const viewport = {
       width: window.innerWidth,
-      height: window.innerHeight
+      height: window.innerHeight,
     };
 
     const newPosition = calculateOptimalPosition(
@@ -93,7 +98,7 @@ export function useSmartTooltip(options: UseSmartTooltipOptions = {}): UseSmartT
 
     // Performance monitoring (Epic #4068 - AC4: <16ms target)
     if (elapsed > 16) {
-      console.warn(`Tooltip positioning slow: ${elapsed.toFixed(2)}ms (target: <16ms)`);
+      logger.warn(`Tooltip positioning slow: ${elapsed.toFixed(2)}ms (target: <16ms)`);
     }
 
     setPosition(newPosition);
@@ -133,7 +138,7 @@ export function useSmartTooltip(options: UseSmartTooltipOptions = {}): UseSmartT
     if (!enabled || !triggerRef.current) return;
 
     const observer = new IntersectionObserver(
-      (entries) => {
+      entries => {
         const [entry] = entries;
         // Hide tooltip if trigger goes off-screen
         if (!entry.isIntersecting && isVisible) {
@@ -153,6 +158,6 @@ export function useSmartTooltip(options: UseSmartTooltipOptions = {}): UseSmartT
     setIsVisible,
     triggerRef,
     tooltipRef,
-    updatePosition
+    updatePosition,
   };
 }

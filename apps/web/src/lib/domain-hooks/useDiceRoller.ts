@@ -28,6 +28,7 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 
 import type { DiceRoll } from '@/components/session/types';
+import { logger } from '@/lib/logger';
 
 /**
  * API Response Types
@@ -175,7 +176,7 @@ export function useDiceRoller(options: UseDiceRollerOptions): DiceRollerState {
         }))
       );
     } catch (err) {
-      console.error('[useDiceRoller] Failed to fetch history:', err);
+      logger.error('[useDiceRoller] Failed to fetch history:', err);
     }
   }, [baseUrl, sessionId, historyLimit]);
 

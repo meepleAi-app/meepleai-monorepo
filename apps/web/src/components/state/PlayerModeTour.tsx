@@ -14,6 +14,8 @@
 
 import { useCallback, useState, useEffect } from 'react';
 
+import { logger } from '@/lib/logger';
+
 // TEMPORARILY DISABLED: react-joyride incompatible with React 19
 // import Joyride, { Step, CallBackProps, STATUS, EVENTS } from 'react-joyride';
 
@@ -230,8 +232,7 @@ export function PlayerModeTour({
 
       // Log events for debugging
       if (type === EVENTS.TOUR_END) {
-        // eslint-disable-next-line no-console
-        console.log('Player Mode tour completed');
+        logger.debug('Player Mode tour completed');
       }
     },
     [onTourComplete]

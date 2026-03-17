@@ -42,6 +42,7 @@ import { Input } from '@/components/ui/primitives/input';
 import { Label } from '@/components/ui/primitives/label';
 import { Textarea } from '@/components/ui/primitives/textarea';
 import { api, type GameCategory, type GameMechanic, type SharedGameDetail } from '@/lib/api';
+import { logger } from '@/lib/logger';
 
 import { PdfIndexingStatus } from './PdfIndexingStatus';
 import { PdfUploadSection, type UploadedPdf } from './PdfUploadSection';
@@ -156,7 +157,7 @@ export function GameForm({ game, onSubmit, onCancel, isLoading = false }: GameFo
         setCategories(categoriesResult);
         setMechanics(mechanicsResult);
       } catch (err) {
-        console.error('Failed to fetch reference data:', err);
+        logger.error('Failed to fetch reference data:', err);
         toast.error('Errore nel caricamento di categorie e meccaniche');
       }
     };
@@ -228,7 +229,7 @@ export function GameForm({ game, onSubmit, onCancel, isLoading = false }: GameFo
 
       onSubmit(gameId);
     } catch (error) {
-      console.error('Failed to save game:', error);
+      logger.error('Failed to save game:', error);
       toast.error('Errore nel salvataggio del gioco', {
         description: error instanceof Error ? error.message : 'Errore sconosciuto',
       });

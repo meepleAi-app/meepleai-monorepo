@@ -104,9 +104,29 @@ import { StrategyEditor } from '@/components/admin/strategies/StrategyEditor';
 import { CostBreakdownPanel } from '@/components/admin/usage/CostBreakdownPanel';
 import { FreeQuotaIndicator } from '@/components/admin/usage/FreeQuotaIndicator';
 import { KpiCards as UsageKpiCards } from '@/components/admin/usage/KpiCards';
+import { RateLimitGauge } from '@/components/admin/usage/RateLimitGauge';
+import { RecentRequestsTable } from '@/components/admin/usage/RecentRequestsTable';
 import { RequestTimelineChart } from '@/components/admin/usage/RequestTimelineChart';
+import { ActivityFilters } from '@/components/admin/users/activity-filters';
+import { ActivityTable } from '@/components/admin/users/activity-table';
+import { InlineRoleSelect } from '@/components/admin/users/InlineRoleSelect';
+import { PermissionsMatrix } from '@/components/admin/users/permissions-matrix';
+import { RoleCard } from '@/components/admin/users/role-card';
 import { AdminConfirmationDialog } from '@/components/ui/admin/admin-confirmation-dialog';
+import { AgentStatsDisplay } from '@/components/ui/agent/AgentStatsDisplay';
+import { AgentStatusBadge } from '@/components/ui/agent/AgentStatusBadge';
+import { FadeIn } from '@/components/ui/animations/FadeIn';
+import { PageTransition } from '@/components/ui/animations/PageTransition';
+import { StaggerChildren } from '@/components/ui/animations/StaggerChildren';
+import { BackgroundTexture } from '@/components/ui/BackgroundTexture';
 import { Accordion } from '@/components/ui/data-display/accordion';
+import { ActivityList } from '@/components/ui/data-display/activity-list/activity-list';
+import { Avatar } from '@/components/ui/data-display/avatar';
+import { Badge } from '@/components/ui/data-display/badge';
+import { Card } from '@/components/ui/data-display/card';
+import { CardGridSkeletons } from '@/components/ui/data-display/CardGridSkeletons';
+import { CitationLink } from '@/components/ui/data-display/citation-link';
+import { Collapsible } from '@/components/ui/data-display/collapsible';
 import { DataTable } from '@/components/ui/data-display/data-table';
 import { EntityListView } from '@/components/ui/data-display/entity-list-view/entity-list-view';
 import { GameExtraMeepleCard } from '@/components/ui/data-display/extra-meeple-card/EntityExtraMeepleCard'; // EntityExtraMeepleCard — uses GameExtraMeepleCard as representative
@@ -128,12 +148,6 @@ import { BulkSelectCheckbox } from '@/components/ui/data-display/meeple-card-fea
 import { CardAgentAction } from '@/components/ui/data-display/meeple-card-features/CardAgentAction';
 import { CardNavigationFooter } from '@/components/ui/data-display/meeple-card-features/CardNavigationFooter';
 import { MeepleInfoCard } from '@/components/ui/data-display/meeple-info-card';
-import { Avatar } from '@/components/ui/data-display/avatar';
-import { Badge } from '@/components/ui/data-display/badge';
-import { Card } from '@/components/ui/data-display/card';
-import { CardGridSkeletons } from '@/components/ui/data-display/CardGridSkeletons';
-import { CitationLink } from '@/components/ui/data-display/citation-link';
-import { Collapsible } from '@/components/ui/data-display/collapsible';
 import { CollectionLimitIndicator as CollectionLimitIndicatorDataDisplay } from '@/components/ui/data-display/CollectionLimitIndicator';
 import { ConfidenceBadge } from '@/components/ui/data-display/confidence-badge';
 import { EntityLinkBadge } from '@/components/ui/data-display/entity-link/entity-link-badge';
@@ -152,7 +166,6 @@ import { Table } from '@/components/ui/data-display/table';
 import { Tooltip as TooltipDataDisplay } from '@/components/ui/data-display/tooltip';
 import { UserRoleBadge } from '@/components/ui/data-display/user-role-badge';
 import { UserStatusIndicator } from '@/components/ui/data-display/user-status-indicator';
-import { ActivityList } from '@/components/ui/data-display/activity-list/activity-list';
 
 // ─── MeepleCard Features ──────────────────────────────────────────────────────
 
@@ -206,7 +219,14 @@ import { UpgradePrompt } from '@/components/ui/feedback/upgrade-prompt';
 import { Form } from '@/components/ui/forms/form';
 import { Switch } from '@/components/ui/forms/switch';
 import { FeatureGate } from '@/components/ui/gates/FeatureGate';
+import { PermissionGate } from '@/components/ui/gates/permission-gate';
+import { RoleGate } from '@/components/ui/gates/role-gate';
+import { TierGate } from '@/components/ui/gates/tier-gate';
+import { DiceIcon3D } from '@/components/ui/icons/dice-icon-3d';
 import { DateRangePicker } from '@/components/ui/inputs/date-range-picker';
+import { ChatMessage } from '@/components/ui/meeple/chat-message';
+import { FeedbackButtons } from '@/components/ui/meeple/feedback-buttons';
+import { ActionGrid } from '@/components/ui/navigation/action-grid';
 import { Button } from '@/components/ui/primitives/button';
 import { Checkbox } from '@/components/ui/primitives/checkbox';
 import { Input } from '@/components/ui/primitives/input';
@@ -221,11 +241,9 @@ import { ToggleGroup } from '@/components/ui/primitives/toggle-group';
 
 // ─── Navigation ───────────────────────────────────────────────────────────────
 
-import { ActionGrid } from '@/components/ui/navigation/action-grid';
 import { Command } from '@/components/ui/navigation/command';
 import { DropdownMenu } from '@/components/ui/navigation/dropdown-menu';
 import { FocusedCardArea } from '@/components/ui/navigation/focused-card-area';
-
 import { Separator } from '@/components/ui/navigation/separator';
 import { Sheet } from '@/components/ui/navigation/sheet';
 import { Tabs } from '@/components/ui/navigation/tabs';
@@ -244,10 +262,7 @@ import { Tooltip } from '@/components/ui/overlays/tooltip';
 
 // ─── Animations ───────────────────────────────────────────────────────────────
 
-import { FadeIn } from '@/components/ui/animations/FadeIn';
 // ModalAnimations exports animation variant objects, not a React component — skipped
-import { PageTransition } from '@/components/ui/animations/PageTransition';
-import { StaggerChildren } from '@/components/ui/animations/StaggerChildren';
 
 // ─── Tags ─────────────────────────────────────────────────────────────────────
 
@@ -257,34 +272,19 @@ import { TagStrip } from '@/components/ui/tags/TagStrip';
 
 // ─── Gates ────────────────────────────────────────────────────────────────────
 
-import { PermissionGate } from '@/components/ui/gates/permission-gate';
-import { RoleGate } from '@/components/ui/gates/role-gate';
-import { TierGate } from '@/components/ui/gates/tier-gate';
-
 // ─── Meeple ───────────────────────────────────────────────────────────────────
 
-import { ChatMessage } from '@/components/ui/meeple/chat-message';
-import { FeedbackButtons } from '@/components/ui/meeple/feedback-buttons';
 import { MeepleAvatar } from '@/components/ui/meeple/meeple-avatar';
 import { MeepleLogo } from '@/components/ui/meeple/meeple-logo';
 import { MotionButton } from '@/components/ui/meeple/motion-button';
 
 // ─── Agent ────────────────────────────────────────────────────────────────────
 
-import { AgentStatsDisplay } from '@/components/ui/agent/AgentStatsDisplay';
-import { AgentStatusBadge } from '@/components/ui/agent/AgentStatusBadge';
-
 // ─── Icons & Background ───────────────────────────────────────────────────────
-
-import { DiceIcon3D } from '@/components/ui/icons/dice-icon-3d';
-import { BackgroundTexture } from '@/components/ui/BackgroundTexture';
 
 // ─── Admin — Layout ───────────────────────────────────────────────────────────
 
 // ─── Admin — Charts ───────────────────────────────────────────────────────────
-
-import { RateLimitGauge } from '@/components/admin/usage/RateLimitGauge';
-import { RecentRequestsTable } from '@/components/admin/usage/RecentRequestsTable';
 
 // ─── Admin — Agent Builder ────────────────────────────────────────────────────
 
@@ -297,12 +297,6 @@ import { RecentRequestsTable } from '@/components/admin/usage/RecentRequestsTabl
 // ─── Admin — Shared Games ─────────────────────────────────────────────────────
 
 // ─── Admin — Users ────────────────────────────────────────────────────────────
-
-import { PermissionsMatrix } from '@/components/admin/users/permissions-matrix';
-import { InlineRoleSelect } from '@/components/admin/users/InlineRoleSelect';
-import { RoleCard } from '@/components/admin/users/role-card';
-import { ActivityTable } from '@/components/admin/users/activity-table';
-import { ActivityFilters } from '@/components/admin/users/activity-filters';
 
 // ─── Admin — Alert Rules ──────────────────────────────────────────────────────
 

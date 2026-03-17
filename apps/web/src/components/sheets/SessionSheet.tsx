@@ -30,6 +30,7 @@ import { Button } from '@/components/ui/primitives/button';
 import { useActiveSessions } from '@/hooks/queries/useActiveSessions';
 import type { GameSessionDto } from '@/lib/api/schemas';
 import type { UserLibraryEntry } from '@/lib/api/schemas/library.schemas';
+import { logger } from '@/lib/logger';
 
 // --- Types ---
 
@@ -210,7 +211,7 @@ export function SessionSheet({ isOpen, onClose }: SessionSheetProps) {
   const handleCreateSubmit = useCallback(
     (gameId: string | undefined, sessionType: SessionType) => {
       // Log for now — real API integration in future issue
-      console.log('[SessionSheet] Create session:', { gameId, sessionType });
+      logger.debug(`[SessionSheet] Create session: gameId=${gameId} type=${sessionType}`);
       onClose();
     },
     [onClose]

@@ -12,6 +12,7 @@ import { AlertTriangle, ArrowLeft, RefreshCcw } from 'lucide-react';
 import Link from 'next/link';
 
 import { Button } from '@/components/ui/primitives/button';
+import { logger } from '@/lib/logger';
 
 interface ErrorProps {
   error: Error & { digest?: string };
@@ -21,7 +22,7 @@ interface ErrorProps {
 export default function LibraryGameDetailError({ error, reset }: ErrorProps) {
   useEffect(() => {
     // Log error to monitoring service
-    console.error('Library Game Detail Error:', error);
+    logger.error('Library Game Detail Error:', error);
   }, [error]);
 
   return (
@@ -71,8 +72,8 @@ export default function LibraryGameDetailError({ error, reset }: ErrorProps) {
 
           {/* Description */}
           <p className="mb-6 font-nunito text-[#6B665C]">
-            Si è verificato un errore nel caricamento della pagina del gioco.
-            Prova a ricaricare o torna alla libreria.
+            Si è verificato un errore nel caricamento della pagina del gioco. Prova a ricaricare o
+            torna alla libreria.
           </p>
 
           {/* Error details (development only) */}
@@ -81,13 +82,9 @@ export default function LibraryGameDetailError({ error, reset }: ErrorProps) {
               <p className="mb-1 font-quicksand text-xs font-semibold uppercase tracking-wider text-[#9C958A]">
                 Dettagli errore
               </p>
-              <p className="font-mono text-sm text-[#6B665C]">
-                {error.message}
-              </p>
+              <p className="font-mono text-sm text-[#6B665C]">{error.message}</p>
               {error.digest && (
-                <p className="mt-1 font-mono text-xs text-[#9C958A]">
-                  Digest: {error.digest}
-                </p>
+                <p className="mt-1 font-mono text-xs text-[#9C958A]">Digest: {error.digest}</p>
               )}
             </div>
           )}

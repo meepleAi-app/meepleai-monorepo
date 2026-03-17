@@ -15,6 +15,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useSessionScores } from '@/lib/domain-hooks/useSessionScores';
 import { useSignalRSession } from '@/lib/domain-hooks/useSignalrSession';
+import { logger } from '@/lib/logger';
 import {
   useLiveSessionStore,
   type PlayerInfo,
@@ -166,7 +167,7 @@ export function ScoreBoard({ sessionId, isHost = false }: ScoreBoardProps) {
     const next = Math.max(0, current + delta);
     updateScore(playerName, next);
     sendScore(playerName, next).catch((err: unknown) => {
-      console.error('[ScoreBoard] sendScore failed:', err);
+      logger.error('[ScoreBoard] sendScore failed:', err);
     });
   }
 
@@ -174,7 +175,7 @@ export function ScoreBoard({ sessionId, isHost = false }: ScoreBoardProps) {
     resolveProposal(proposal.id, true);
     const next = (scores[proposal.playerName] ?? 0) + proposal.delta;
     sendScore(proposal.playerName, next).catch((err: unknown) => {
-      console.error('[ScoreBoard] sendScore (approve) failed:', err);
+      logger.error('[ScoreBoard] sendScore (approve) failed:', err);
     });
   }
 

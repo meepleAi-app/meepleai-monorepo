@@ -1,261 +1,261 @@
-# Deployment Guide
+# MeepleAI — Deployment Guide
 
-**MeepleAI Deployment** - Docker, Traefik, monitoring, production setup
-
----
-
-## Quick Reference
-
-| Environment | URL | Command |
-|-------------|-----|---------|
-| **Local** | http://localhost:3000 | `cd infra && docker compose --profile minimal up -d` |
-| **Staging** | https://staging.meepleai.com | `docker compose -f docker-compose.yml -f compose.traefik.yml --profile full up -d` |
-| **Production** | https://app.meepleai.com | Same as staging + `.env.production` |
-
-**Related**: [GitHub Alternatives & Cost Optimization](github-alternatives-cost-optimization.md)
+**Docker, Traefik, CI/CD, Integration Mode**
 
 ---
 
-## Architecture
+## Environments
 
-**Stack**: Traefik → Web (Next.js:3000) + API (.NET:8080) → Infrastructure (PostgreSQL:5432, Qdrant:6333, Redis:6379, n8n:5678, Grafana:3001, Prometheus:9090)
-
-**Docker Profiles**: `minimal` (postgres+qdrant+redis), `dev` (+ grafana+prometheus), `observability` (+ alertmanager), `ai` (OpenRouter), `automation` (n8n), `full` (all)
-
----
-
-## Local Development
-
-### Quick Start
-
-```bash
-# 1. Setup
-git clone <repo-url> && cd meepleai-monorepo
-cp .env.example .env.local  # Edit: OPENROUTER_API_KEY, ADMIN credentials
-
-# 2. Start Infrastructure
-cd infra && docker compose --profile minimal up -d
-
-# 3. Backend (Terminal 1)
-cd apps/api/src/Api && dotnet run  # :8080
-
-# 4. Frontend (Terminal 2)
-cd apps/web && pnpm dev  # :3000
-```
-
-**Full Docker** (all services):
-```bash
-cd infra && docker compose --profile full up -d
-# Access: Web :3000, API :8080, Grafana :3001, n8n :5678, Scalar :8080/scalar/v1
-```
+| Environment | URL | Branch | Deploy |
+|-------------|-----|--------|--------|
+| **Local Dev** | http://localhost:3000 | any | Manual (`dotnet run` + `pnpm dev`) |
+| **Integration** | localhost → staging services | any | SSH tunnel + local API/Web |
+| **Staging** | https://meepleai.app | `main-staging` | Auto (push) or manual dispatch |
+| **Production** | — | `main` | Not yet active |
 
 ---
 
-## Production Deployment
+## Quick Start — Local Development
 
-### Prerequisites Checklist
-
-| Requirement | Details |
-|-------------|---------|
-| Server | Ubuntu 22.04+, 8GB RAM, 4 CPU, 100GB SSD |
-| Software | Docker 24+, Docker Compose 2.20+ |
-| Network | Domain + DNS (A records), SSL via Traefik |
-| Ports | 80, 443 (Traefik), 22 (SSH) |
-
-### Setup Commands
+### Option A: Full Docker (tutto in container)
 
 ```bash
-# 1. Install Docker
-curl -fsSL https://get.docker.com | sh && sudo usermod -aG docker $USER
-
-# 2. Clone repo
-git clone <repo-url> /opt/meepleai && cd /opt/meepleai
-
-# 3. Create .env.production (see below)
-
-# 4. Start with Traefik
-cd infra && docker compose -f docker-compose.yml -f compose.traefik.yml \
-  --profile full --env-file ../.env.production up -d
-
-# 5. Verify
-docker compose ps && curl https://api.meepleai.com/health
+cd infra
+docker compose --profile dev up -d     # Core + monitoring
+# oppure
+docker compose --profile ai up -d      # Core + AI services
+# oppure
+docker compose --profile full up -d    # Everything
 ```
 
-### .env.production Template
+Access: Web `:3000`, API `:8080`, Grafana `:3001`, Scalar `:8080/scalar/v1`
+
+### Option B: Hybrid (infra Docker, API/Web locali)
 
 ```bash
-# API
-ASPNETCORE_ENVIRONMENT=Production
-ConnectionStrings__Postgres=Host=postgres;Database=meepleai_prod;Username=meepleai;Password=<pwd>
-OPENROUTER_API_KEY=<key>
-INITIAL_ADMIN_EMAIL=admin@meepleai.com
-INITIAL_ADMIN_PASSWORD=<secure-pwd>
+# 1. Infrastructure
+cd infra && docker compose up -d postgres redis qdrant
 
-# Frontend
-NEXT_PUBLIC_API_BASE=https://api.meepleai.com
-NEXT_PUBLIC_ENV=production
+# 2. API (Terminal 1)
+cd apps/api/src/Api && dotnet run    # :8080
 
-# Security
-CORS__AllowedOrigins__0=https://app.meepleai.com
-JWT_SECRET=<64-char-random>
-COOKIE_SECRET=<64-char-random>
-
-# Traefik
-TRAEFIK_ACME_EMAIL=admin@meepleai.com
-DOMAIN_WEB=app.meepleai.com
-DOMAIN_API=api.meepleai.com
-
-# Monitoring
-GRAFANA_ADMIN_PASSWORD=<secure-pwd>
+# 3. Frontend (Terminal 2)
+cd apps/web && pnpm dev              # :3000
 ```
 
-### Database Configuration (Issue #2460)
+### Option C: Integration (locale → staging services)
 
-**Option 1: Environment Variables** (Simple):
+Nessun Docker locale. API e frontend locali connessi ai servizi staging via SSH tunnel.
+
 ```bash
-POSTGRES_HOST=your-host.com
-POSTGRES_PORT=5432
-POSTGRES_DB=meepleai_prod
-POSTGRES_USER=admin
-POSTGRES_PASSWORD_FILE=/run/secrets/postgres-password  # Or POSTGRES_PASSWORD
+# 1. Apri tunnel (una volta)
+bash infra/scripts/integration-tunnel.sh
+
+# 2. API (Terminal 1)
+cd apps/api/src/Api && dotnet run --launch-profile Integration
+
+# 3. Frontend (Terminal 2)
+cd apps/web && pnpm dev
 ```
 
-**Option 2: Full Connection String** (Managed DBs - AWS RDS, Azure, GCP):
-```bash
-ConnectionStrings__Postgres="Host=db.rds.amazonaws.com;Database=meepleai_prod;Username=admin;Password=<pwd>;Pooling=true;Minimum Pool Size=5;Maximum Pool Size=50;SSL Mode=Require;Trust Server Certificate=false;Command Timeout=30;Timeout=15"
-```
+**Prerequisiti**: chiave SSH `~/.ssh/meepleai-staging`, secrets in `infra/secrets/integration/`.
 
-**Connection Pooling**:
-
-| Parameter | Value | Purpose |
-|-----------|-------|---------|
-| Pooling | true | Enable pooling |
-| Min/Max Pool | 5-10 / 50-100 | Pre-allocate + limit connections |
-| SSL Mode | Require | Force TLS encryption |
-| Command/Timeout | 30s / 15s | Prevent hangs |
-
-**Health Check**: `curl http://localhost:8080/health/config` → `"database_configured": true, "database_source": "postgres_vars|connection_string"`
-
-**HA Setup**: Primary-Replica (streaming replication) + PgBouncer (connection multiplexing) + HAProxy (load balancing) + Patroni (failover)
+Tunnel ports: PG `:15432`, Redis `:16379`, Qdrant `:16333`, Embedding `:18000`, Reranker `:18003`, Unstructured `:18001`, SmolDocling `:18002`, Ollama `:21434`.
 
 ---
 
-## Traefik & DNS
+## Docker Profiles
 
-**DNS Records** (A → server-ip):
+| Profile | Services | Use Case |
+|---------|----------|----------|
+| *(none)* | postgres, redis, qdrant, api, web | Infra base |
+| `ai` | + ollama, embedding, unstructured, smoldocling, reranker, orchestrator | PDF processing, RAG |
+| `monitoring` | + prometheus, grafana, alertmanager, node-exporter, cadvisor | Observability |
+| `automation` | + n8n, mailpit | Workflow, email test |
+| `storage` | + minio | S3-compatible local storage |
+
+Compose files:
+- `docker-compose.yml` — base (no ports, no secrets)
+- `compose.dev.yml` — dev override (ports, `secrets/dev/`)
+- `compose.staging.yml` — staging (Traefik labels, `secrets/staging/`)
+- `compose.integration.yml` — integration (SSH tunnel, `secrets/integration/`)
+- `compose.traefik.yml` — reverse proxy
+
+Dev override auto-loaded via `infra/.env`:
 ```
-app.meepleai.com, api.meepleai.com, n8n.meepleai.com, grafana.meepleai.com
+COMPOSE_FILE=docker-compose.yml;compose.dev.yml
 ```
 
-**SSL**: Automatic Let's Encrypt (Traefik auto-renews)
-**Dashboard**: https://traefik.meepleai.com (Basic Auth: `htpasswd -nb admin pwd`)
+---
+
+## CI/CD Pipeline
+
+### Branch Strategy
+
+```
+feature/*  --PR-->  main-dev  --merge-->  main-staging  (auto-deploy meepleai.app)
+                        |
+                   frontend-dev  (frontend features)
+```
+
+| Branch | Scopo | Deploy | CI |
+|--------|-------|--------|-----|
+| `feature/*` | Sviluppo feature | Nessuno | PR check |
+| `main-dev` | Integrazione sviluppo | Nessuno | CI completa |
+| `frontend-dev` | Feature frontend | Nessuno | CI completa |
+| `main-staging` | Ambiente attivo | meepleai.app (auto) | CI + Deploy |
+| `main` | Futuro production | Non attivo | Predisposta |
+
+### Deploy su meepleai.app
+
+```bash
+# Opzione 1: Merge su main-staging (auto-deploy)
+git checkout main-staging && git pull
+git merge main-dev
+git push origin main-staging
+
+# Opzione 2: Manual dispatch
+# GitHub Actions > "Deploy to Staging" > Run workflow
+```
+
+### Pipeline Steps (deploy-staging.yml)
+
+| Step | Descrizione |
+|------|-------------|
+| 1. CI Tests | Frontend + Backend + Python tests |
+| 2. Build Images | Docker build + push su GHCR (tag `staging-latest`) |
+| 3. SSH Deploy | `docker compose up -d` sul server Hetzner |
+| 4. Health Check | `curl localhost:8080/health` |
+| 5. Validation | `curl https://meepleai.app/health` |
+| 6. Notify | Slack + GitHub Summary |
+
+---
+
+## Staging Server
+
+**Server**: Hetzner CAX21 ARM64 — `deploy@204.168.135.69`
+**SSH Key**: `~/.ssh/meepleai-staging`
+
+### Accesso
+
+```bash
+ssh -i ~/.ssh/meepleai-staging deploy@204.168.135.69
+```
+
+### Struttura
+
+```
+/opt/meepleai/
+  docker-compose.yml
+  compose.staging.yml
+  compose.traefik.yml
+  secrets/           # *.secret files
+  traefik/           # Traefik config
+  scripts/           # Utility scripts
+```
+
+### Services esposti via Traefik (basic auth)
+
+| Servizio | URL | Porta interna |
+|----------|-----|---------------|
+| Web | https://meepleai.app | 3000 |
+| API | https://meepleai.app/api | 8080 |
+| Embedding | https://meepleai.app/services/embedding | 8000 |
+| Reranker | https://meepleai.app/services/reranker | 8003 |
+| Unstructured | https://meepleai.app/services/unstructured | 8001 |
+| SmolDocling | https://meepleai.app/services/smoldocling | 8002 |
+| Ollama | https://meepleai.app/services/ollama | 11434 |
+| Qdrant | https://meepleai.app/services/qdrant | 6333 |
+| Grafana | https://meepleai.app/grafana | 3000 |
+| Prometheus | https://meepleai.app/prometheus | 9090 |
+
+I servizi `/services/*` e monitoring sono protetti da basic auth (`INTEGRATION_BASIC_AUTH`).
+
+### Manual Deploy
+
+```bash
+ssh -i ~/.ssh/meepleai-staging deploy@204.168.135.69
+cd /opt/meepleai
+export QDRANT_API_KEY=$(grep QDRANT_API_KEY secrets/qdrant.secret | cut -d= -f2)
+export INTEGRATION_BASIC_AUTH='...'  # From traefik.secret
+docker compose -f docker-compose.yml -f compose.staging.yml -f compose.traefik.yml \
+  --profile ai --profile monitoring up -d
+```
+
+---
+
+## Secrets
+
+### Struttura
+
+```
+infra/secrets/
+  *.secret              # Dev locale (default)
+  dev/*.secret          # Dev Docker override (compose.dev.yml)
+  integration/*.secret  # Integration mode (staging credentials)
+  staging/*.secret      # Staging (server-side only)
+```
+
+### Setup iniziale
+
+```bash
+cd infra/secrets
+pwsh setup-secrets.ps1 -SaveGenerated   # Genera tutti i secret dev
+```
+
+### File richiesti
+
+| Priorità | File | Blocca startup |
+|----------|------|----------------|
+| CRITICAL | database, redis, qdrant, jwt, admin, embedding-service | Sì |
+| IMPORTANT | openrouter, unstructured-service, bgg | Warning |
+| OPTIONAL | oauth, email, monitoring, n8n, storage, traefik | Silenzioso |
+
+### Feature Flags
+
+Alcune feature richiedono un flag in `system_configurations` DB:
+
+```sql
+INSERT INTO system_configurations ("Id", "Key", "Value", "ValueType", "Category", "IsActive", ...)
+VALUES (gen_random_uuid(), 'Features.PdfUpload', 'true', 'boolean', 'Features', true, ...);
+```
 
 ---
 
 ## Backups
 
-**Daily Automated** (cron 2 AM):
+### Automatici (cron 2 AM)
+
 ```bash
 #!/bin/bash
 DATE=$(date +%Y%m%d_%H%M%S)
-docker exec meepleai-postgres pg_dump -U meepleai meepleai_prod | gzip > /opt/meepleai/backups/postgres_$DATE.sql.gz
-docker exec meepleai-qdrant tar -czf - /qdrant/storage > /opt/meepleai/backups/qdrant_$DATE.tar.gz
-find /opt/meepleai/backups -name "*.gz" -mtime +7 -delete
+docker exec meepleai-postgres pg_dump -U meepleai meepleai_staging | gzip > backups/postgres_$DATE.sql.gz
+docker exec meepleai-qdrant tar -czf - /qdrant/storage > backups/qdrant_$DATE.tar.gz
+find backups/ -name "*.gz" -mtime +7 -delete
 ```
 
-**Restore**:
+### Restore
+
 ```bash
-# PostgreSQL
 docker compose stop api
-gunzip -c backups/postgres_20260101.sql.gz | docker exec -i meepleai-postgres psql -U meepleai meepleai_prod
+gunzip -c backups/postgres_YYYYMMDD.sql.gz | docker exec -i meepleai-postgres psql -U meepleai meepleai_staging
 docker compose start api
-
-# Qdrant
-docker compose stop qdrant
-tar -xzf backups/qdrant_20260101.tar.gz -C /var/lib/docker/volumes/qdrant_data/_data/
-docker compose start qdrant
 ```
-
-**Migrations**: Auto-applied on startup via `DbInitializer.cs`. Manual: `docker exec -it meepleai-api dotnet ef database update`
 
 ---
 
 ## Monitoring
 
-| Service | Access | Credentials |
-|---------|--------|-------------|
-| **Grafana** | https://grafana.meepleai.com | `admin` / `<GRAFANA_ADMIN_PASSWORD>` |
-| **Prometheus** | :9090 (internal) | Metrics at `/metrics` |
+| Servizio | Accesso | Credenziali |
+|----------|---------|-------------|
+| Grafana | https://meepleai.app/grafana | `admin` / from monitoring.secret |
+| Prometheus | https://meepleai.app/prometheus | basic auth |
 
-**Dashboards**: System (CPU/mem/disk), API (latency/throughput), RAG (confidence), DB (pool/queries)
+**Alerts** (Alertmanager → Slack): API P95 >1s, Error rate >5%, DB pool exhausted, Disk >80%
 
-**Prometheus Metrics**:
-```
-http_requests_total{endpoint, method, status}
-http_request_duration_seconds{endpoint}
-rag_query_confidence{game}
-database_connections_active
-redis_cache_hit_rate
-```
-
-**Alerts** (Alertmanager → Slack):
-- API P95 >1s, Error rate >5%, DB pool exhausted, Disk >80%, RAG confidence <0.70
-
-**Logs**:
 ```bash
-docker compose logs -f api  # Real-time
-docker compose logs --tail 100 api  # Last 100
-```
-
----
-
-## Scaling & Security
-
-### Horizontal Scaling
-
-```yaml
-# docker-compose.prod.yml
-api:
-  replicas: 3  # Behind Traefik LB
-  resources: { limits: { cpus: '2', memory: 2G } }
-postgres-replica:  # Read replicas
-  environment: { POSTGRESQL_REPLICATION_MODE: slave }
-```
-
-**Caching**: L1 (in-memory) + L2 (Redis) → Games (5min), RAG (30min), Profiles (1min)
-
-### Security
-
-**Traefik TLS**: `minVersion: VersionTLS12` + `cipherSuites: [TLS_ECDHE_RSA_WITH_AES_*_GCM_SHA*]`
-
-**Firewall**:
-```bash
-sudo ufw allow 22/tcp 80/tcp 443/tcp && sudo ufw enable
-```
-
-**Secrets**: `.gitignore` (.env*, *.key), Docker Secrets: `/run/secrets/postgres_password`
-
----
-
-## CI/CD & Maintenance
-
-**Auto-Deploy** (push to `main`):
-```yaml
-# .github/workflows/deploy.yml
-ssh-action: cd /opt/meepleai && git pull && docker compose --profile full down && up -d --build
-```
-
-**Manual**: `ssh user@meepleai.com` → `cd /opt/meepleai && git pull && docker compose --profile full up -d --build`
-
-**Maintenance**:
-```bash
-# Monthly: Vacuum PostgreSQL
-docker exec meepleai-postgres vacuumdb -U meepleai -d meepleai_prod --analyze
-
-# Weekly: Optimize Qdrant
-curl -X POST http://localhost:6333/collections/documents/optimize
-
-# Cleanup: docker container/image/volume prune -f
+docker compose logs -f api          # Real-time
+docker compose logs --tail 100 api  # Ultimi 100
 ```
 
 ---
@@ -264,58 +264,37 @@ curl -X POST http://localhost:6333/collections/documents/optimize
 
 | Issue | Diagnostic | Fix |
 |-------|------------|-----|
-| API not responding | `docker compose logs api` | Check DB, restart: `docker compose restart api` |
-| CORS errors | `CORS__AllowedOrigins` | Update `.env`, restart |
-| SSL invalid | Traefik logs | Verify DNS, email in config |
-| DB pool exhausted | Grafana metrics | Increase `MaxPoolSize` |
-| High memory | `docker stats` | Adjust resource limits |
+| API non risponde | `docker compose logs api` | Check DB, `docker compose restart api` |
+| PDF upload 403 | Feature flag | Insert `Features.PdfUpload = true` in DB |
+| SuperAdmin 403 | Auth policy | Verificare che le policy includano `"SuperAdmin"` |
+| Endpoint duplicato | API crash on startup | Check `WithName()` unico per ogni endpoint |
+| Redis crash | `requirepass` config error | Verificare `secrets/dev/redis.secret` esiste |
+| CORS errors | `CORS__AllowedOrigins` | Aggiornare env, restart |
 
-**Health Checks**:
+### Health Checks
+
 ```bash
-curl https://api.meepleai.com/health  # API
-docker exec meepleai-postgres pg_isready -U meepleai  # DB
-curl http://localhost:6333/health  # Qdrant
-docker exec meepleai-redis redis-cli ping  # Redis
+curl http://localhost:8080/health                     # API
+docker exec meepleai-postgres pg_isready -U postgres  # DB
+curl http://localhost:6333/healthz                     # Qdrant
+docker exec meepleai-redis redis-cli ping             # Redis
 ```
 
 ---
 
-## Disaster Recovery
+## Guides
 
-**RTO**: <1h • **RPO**: <24h
-
-**Procedure**:
-```bash
-# 1. Provision server + Install Docker
-# 2. git clone <repo> /opt/meepleai && cd /opt/meepleai
-# 3. scp backup-server:.env.production .
-# 4. docker compose --profile full up -d
-# 5. gunzip -c backups/postgres_latest.sql.gz | docker exec -i meepleai-postgres psql -U meepleai meepleai_prod
-# 6. tar -xzf backups/qdrant_latest.tar.gz -C /var/lib/docker/volumes/qdrant_data/_data/
-# 7. docker compose restart && curl https://api.meepleai.com/health
-```
+| Guida | Contenuto |
+|-------|-----------|
+| [Staging Setup](./staging-setup-guide.md) | Setup server staging completo |
+| [SSH Manual Deploy](./ssh-manual-deploy.md) | Deploy manuale via SSH |
+| [Docker Versioning](./docker-versioning-guide.md) | Image tagging, GHCR |
+| [Deployment Workflows](./deployment-workflows-guide.md) | Pipeline staging → production |
+| [R2 Storage](./r2-storage-configuration-guide.md) | Cloudflare R2 setup |
+| [Infrastructure Cost](./infrastructure-cost-summary.md) | Budget per fase |
+| [Domain Setup](./domain-setup-guide.md) | DNS, SSL, Cloudflare |
+| [Environments](./environments.md) | Differenze dev/staging/prod |
 
 ---
 
-## Cost Optimization
-
-**Monthly Estimate** (AWS/DigitalOcean): ~$75-145
-- Server (8GB/4CPU): $40-80 • Storage (100GB): $10 • OpenRouter (10K): $20-50 • Backups (S3): $5
-
-**Strategies**: CDN (Cloudflare free), aggressive caching, optimize embeddings, auto-scale down, spot instances
-
----
-
-## Resources
-
-**Operations**: [Operations Manual](../operations/operations-manual.md) — Consolidated service management, backup/restore, monitoring, incident response, disaster recovery, maintenance schedules.
-
-**Guides**:
-- [Docker Versioning](./docker-versioning-guide.md), [Deployment Workflows](./deployment-workflows-guide.md)
-- [Cost Summary](./infrastructure-cost-summary.md), [Domain Setup](./domain-setup-guide.md), [Email/TOTP](./email-totp-services.md), [BGG API](./boardgamegeek-api-setup.md)
-
-**Related**: [Monitoring](../02-development/README.md#monitoring), [Testing](../05-testing/README.md), [Security](../06-security/README.md)
-
----
-
-**Version**: 1.1 • **Updated**: 2026-01-30 • **Maintainers**: DevOps Team
+**Version**: 2.0 | **Updated**: 2026-03-17 | **Maintainers**: DevOps Team

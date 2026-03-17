@@ -32,9 +32,9 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/data-display/card';
 import { cn } from '@/lib/utils';
 
-import { RAG_LAYERS, STRATEGY_CONFIGS } from './types';
+import { RAG_LAYERS, STRATEGY_CONFIGS } from '../types';
 
-import type { RagStrategy, RagLayer } from './types';
+import type { RagStrategy, RagLayer } from '../types';
 
 // =============================================================================
 // Token Estimates by Strategy (Extended to 6 strategies)
@@ -118,7 +118,7 @@ const LAYER_FLOW_DATA: Record<string, LayerDetailData> = {
   routing: {
     title: 'Layer 1: Intelligent Routing',
     fullDescription:
-      'Il routing layer analizza ogni query in ingresso per determinare la strategia RAG ottimale. Utilizza un classificatore che valuta: complessità della query, template richiesto, tier dell\'utente e contesto storico.',
+      "Il routing layer analizza ogni query in ingresso per determinare la strategia RAG ottimale. Utilizza un classificatore che valuta: complessità della query, template richiesto, tier dell'utente e contesto storico.",
     technicalDetails: [
       'Classificazione 3D: User Tier × Query Template × Complexity Score',
       'Complexity scoring: 0-5 basato su lunghezza, entità, operatori logici',
@@ -126,11 +126,39 @@ const LAYER_FLOW_DATA: Record<string, LayerDetailData> = {
       'Routing decision in <50ms per queries semplici',
     ],
     flowSteps: [
-      { id: 'input', name: 'Query Input', description: 'Riceve la query utente', icon: <MessageSquare className="h-4 w-4" /> },
-      { id: 'classify', name: 'Template Classification', description: 'Identifica il tipo di query', icon: <Brain className="h-4 w-4" />, tokens: 150 },
-      { id: 'score', name: 'Complexity Scoring', description: 'Calcola punteggio 0-5', icon: <Zap className="h-4 w-4" />, tokens: 80 },
-      { id: 'select', name: 'Strategy Selection', description: 'Sceglie FAST/BALANCED/PRECISE/...', icon: <Settings className="h-4 w-4" />, tokens: 50 },
-      { id: 'output', name: 'Route to Layer 2', description: 'Passa al cache layer', icon: <ArrowRight className="h-4 w-4" /> },
+      {
+        id: 'input',
+        name: 'Query Input',
+        description: 'Riceve la query utente',
+        icon: <MessageSquare className="h-4 w-4" />,
+      },
+      {
+        id: 'classify',
+        name: 'Template Classification',
+        description: 'Identifica il tipo di query',
+        icon: <Brain className="h-4 w-4" />,
+        tokens: 150,
+      },
+      {
+        id: 'score',
+        name: 'Complexity Scoring',
+        description: 'Calcola punteggio 0-5',
+        icon: <Zap className="h-4 w-4" />,
+        tokens: 80,
+      },
+      {
+        id: 'select',
+        name: 'Strategy Selection',
+        description: 'Sceglie FAST/BALANCED/PRECISE/...',
+        icon: <Settings className="h-4 w-4" />,
+        tokens: 50,
+      },
+      {
+        id: 'output',
+        name: 'Route to Layer 2',
+        description: 'Passa al cache layer',
+        icon: <ArrowRight className="h-4 w-4" />,
+      },
     ],
     models: {
       FAST: 'Keyword matching (no LLM)',
@@ -149,7 +177,7 @@ const LAYER_FLOW_DATA: Record<string, LayerDetailData> = {
   cache: {
     title: 'Layer 2: Semantic Cache',
     fullDescription:
-      'Il semantic cache intercetta queries simili già processate, riducendo fino all\'80% dei costi LLM. Combina cache esatto (Redis) con similarity matching semantico per catturare variazioni nella formulazione.',
+      "Il semantic cache intercetta queries simili già processate, riducendo fino all'80% dei costi LLM. Combina cache esatto (Redis) con similarity matching semantico per catturare variazioni nella formulazione.",
     technicalDetails: [
       'Two-tier: Memory Cache (exact) + Semantic Cache (similarity)',
       'Soglia similarità: 0.85 per hit semantico',
@@ -157,11 +185,40 @@ const LAYER_FLOW_DATA: Record<string, LayerDetailData> = {
       'Invalidazione automatica su aggiornamento rulebook',
     ],
     flowSteps: [
-      { id: 'hash', name: 'Query Hash', description: 'Genera hash per exact match', icon: <Database className="h-4 w-4" />, tokens: 0 },
-      { id: 'exact', name: 'Exact Match Check', description: 'Cerca in Redis cache', icon: <Search className="h-4 w-4" />, tokens: 0 },
-      { id: 'embed', name: 'Query Embedding', description: 'Genera embedding per similarity', icon: <Brain className="h-4 w-4" />, tokens: 50 },
-      { id: 'similar', name: 'Similarity Search', description: 'Cerca queries simili in Qdrant', icon: <Search className="h-4 w-4" />, tokens: 0 },
-      { id: 'decide', name: 'Hit/Miss Decision', description: 'Ritorna cached o procedi', icon: <CheckCircle className="h-4 w-4" /> },
+      {
+        id: 'hash',
+        name: 'Query Hash',
+        description: 'Genera hash per exact match',
+        icon: <Database className="h-4 w-4" />,
+        tokens: 0,
+      },
+      {
+        id: 'exact',
+        name: 'Exact Match Check',
+        description: 'Cerca in Redis cache',
+        icon: <Search className="h-4 w-4" />,
+        tokens: 0,
+      },
+      {
+        id: 'embed',
+        name: 'Query Embedding',
+        description: 'Genera embedding per similarity',
+        icon: <Brain className="h-4 w-4" />,
+        tokens: 50,
+      },
+      {
+        id: 'similar',
+        name: 'Similarity Search',
+        description: 'Cerca queries simili in Qdrant',
+        icon: <Search className="h-4 w-4" />,
+        tokens: 0,
+      },
+      {
+        id: 'decide',
+        name: 'Hit/Miss Decision',
+        description: 'Ritorna cached o procedi',
+        icon: <CheckCircle className="h-4 w-4" />,
+      },
     ],
     models: {
       FAST: 'Exact match only (50 tokens)',
@@ -188,11 +245,41 @@ const LAYER_FLOW_DATA: Record<string, LayerDetailData> = {
       'Chunk size: 512 tokens con 50 token overlap',
     ],
     flowSteps: [
-      { id: 'rewrite', name: 'Query Rewriting', description: 'Espande/riformula query', icon: <MessageSquare className="h-4 w-4" />, tokens: 200 },
-      { id: 'vector', name: 'Vector Search', description: 'Similarità semantica in Qdrant', icon: <Database className="h-4 w-4" />, tokens: 0 },
-      { id: 'bm25', name: 'BM25 Search', description: 'Keyword matching esatto', icon: <Search className="h-4 w-4" />, tokens: 0 },
-      { id: 'fusion', name: 'RRF Fusion', description: 'Combina e rerank risultati', icon: <Zap className="h-4 w-4" />, tokens: 0 },
-      { id: 'filter', name: 'Metadata Filter', description: 'Filtra per game/section', icon: <Settings className="h-4 w-4" />, tokens: 0 },
+      {
+        id: 'rewrite',
+        name: 'Query Rewriting',
+        description: 'Espande/riformula query',
+        icon: <MessageSquare className="h-4 w-4" />,
+        tokens: 200,
+      },
+      {
+        id: 'vector',
+        name: 'Vector Search',
+        description: 'Similarità semantica in Qdrant',
+        icon: <Database className="h-4 w-4" />,
+        tokens: 0,
+      },
+      {
+        id: 'bm25',
+        name: 'BM25 Search',
+        description: 'Keyword matching esatto',
+        icon: <Search className="h-4 w-4" />,
+        tokens: 0,
+      },
+      {
+        id: 'fusion',
+        name: 'RRF Fusion',
+        description: 'Combina e rerank risultati',
+        icon: <Zap className="h-4 w-4" />,
+        tokens: 0,
+      },
+      {
+        id: 'filter',
+        name: 'Metadata Filter',
+        description: 'Filtra per game/section',
+        icon: <Settings className="h-4 w-4" />,
+        tokens: 0,
+      },
     ],
     models: {
       FAST: 'Vector only, top-3',
@@ -219,11 +306,40 @@ const LAYER_FLOW_DATA: Record<string, LayerDetailData> = {
       'Web augmentation per risultati Ambiguous/Incorrect',
     ],
     flowSteps: [
-      { id: 'eval', name: 'Relevance Evaluation', description: 'T5 classifica documenti', icon: <CheckCircle className="h-4 w-4" />, tokens: 0 },
-      { id: 'correct', name: 'If Correct', description: 'Procedi a generation', icon: <ArrowRight className="h-4 w-4" /> },
-      { id: 'ambiguous', name: 'If Ambiguous', description: 'Decompose + web search', icon: <Globe className="h-4 w-4" />, tokens: 300 },
-      { id: 'incorrect', name: 'If Incorrect', description: 'Web-only fallback', icon: <Globe className="h-4 w-4" />, tokens: 500 },
-      { id: 'recompose', name: 'Recompose', description: 'Filtra a key sentences', icon: <Zap className="h-4 w-4" />, tokens: 200 },
+      {
+        id: 'eval',
+        name: 'Relevance Evaluation',
+        description: 'T5 classifica documenti',
+        icon: <CheckCircle className="h-4 w-4" />,
+        tokens: 0,
+      },
+      {
+        id: 'correct',
+        name: 'If Correct',
+        description: 'Procedi a generation',
+        icon: <ArrowRight className="h-4 w-4" />,
+      },
+      {
+        id: 'ambiguous',
+        name: 'If Ambiguous',
+        description: 'Decompose + web search',
+        icon: <Globe className="h-4 w-4" />,
+        tokens: 300,
+      },
+      {
+        id: 'incorrect',
+        name: 'If Incorrect',
+        description: 'Web-only fallback',
+        icon: <Globe className="h-4 w-4" />,
+        tokens: 500,
+      },
+      {
+        id: 'recompose',
+        name: 'Recompose',
+        description: 'Filtra a key sentences',
+        icon: <Zap className="h-4 w-4" />,
+        tokens: 200,
+      },
     ],
     models: {
       FAST: 'Skipped (0 tokens)',
@@ -250,11 +366,41 @@ const LAYER_FLOW_DATA: Record<string, LayerDetailData> = {
       'Multi-agent: Analyzer → Strategist → Validator',
     ],
     flowSteps: [
-      { id: 'template', name: 'Template Selection', description: 'Sceglie prompt template', icon: <MessageSquare className="h-4 w-4" />, tokens: 0 },
-      { id: 'context', name: 'Context Assembly', description: 'Assembla system + context + query', icon: <Database className="h-4 w-4" />, tokens: 500 },
-      { id: 'generate', name: 'LLM Generation', description: 'Genera risposta con citations', icon: <Brain className="h-4 w-4" />, tokens: 2000 },
-      { id: 'format', name: 'Output Formatting', description: 'Struttura risposta finale', icon: <Settings className="h-4 w-4" />, tokens: 100 },
-      { id: 'cite', name: 'Citation Injection', description: 'Aggiunge link ai sources', icon: <CheckCircle className="h-4 w-4" />, tokens: 0 },
+      {
+        id: 'template',
+        name: 'Template Selection',
+        description: 'Sceglie prompt template',
+        icon: <MessageSquare className="h-4 w-4" />,
+        tokens: 0,
+      },
+      {
+        id: 'context',
+        name: 'Context Assembly',
+        description: 'Assembla system + context + query',
+        icon: <Database className="h-4 w-4" />,
+        tokens: 500,
+      },
+      {
+        id: 'generate',
+        name: 'LLM Generation',
+        description: 'Genera risposta con citations',
+        icon: <Brain className="h-4 w-4" />,
+        tokens: 2000,
+      },
+      {
+        id: 'format',
+        name: 'Output Formatting',
+        description: 'Struttura risposta finale',
+        icon: <Settings className="h-4 w-4" />,
+        tokens: 100,
+      },
+      {
+        id: 'cite',
+        name: 'Citation Injection',
+        description: 'Aggiunge link ai sources',
+        icon: <CheckCircle className="h-4 w-4" />,
+        tokens: 0,
+      },
     ],
     models: {
       FAST: 'Llama 3.3 70B / Gemini Flash (free)',
@@ -281,11 +427,40 @@ const LAYER_FLOW_DATA: Record<string, LayerDetailData> = {
       'Auto-escalation: se confidence < 0.7, retry con PRECISE',
     ],
     flowSteps: [
-      { id: 'cite-check', name: 'Citation Check', description: 'Verifica ogni claim ha source', icon: <CheckCircle className="h-4 w-4" />, tokens: 0 },
-      { id: 'align', name: 'Alignment Check', description: 'Cross-encoder: risposta vs docs', icon: <Shield className="h-4 w-4" />, tokens: 0 },
-      { id: 'reflect', name: 'Self-Reflection', description: 'LLM valuta propria risposta', icon: <Brain className="h-4 w-4" />, tokens: 800 },
-      { id: 'score', name: 'Confidence Score', description: 'Calcola score 0-1', icon: <Zap className="h-4 w-4" />, tokens: 100 },
-      { id: 'escalate', name: 'Auto-Escalation', description: 'Retry se score < 0.7', icon: <ArrowRight className="h-4 w-4" /> },
+      {
+        id: 'cite-check',
+        name: 'Citation Check',
+        description: 'Verifica ogni claim ha source',
+        icon: <CheckCircle className="h-4 w-4" />,
+        tokens: 0,
+      },
+      {
+        id: 'align',
+        name: 'Alignment Check',
+        description: 'Cross-encoder: risposta vs docs',
+        icon: <Shield className="h-4 w-4" />,
+        tokens: 0,
+      },
+      {
+        id: 'reflect',
+        name: 'Self-Reflection',
+        description: 'LLM valuta propria risposta',
+        icon: <Brain className="h-4 w-4" />,
+        tokens: 800,
+      },
+      {
+        id: 'score',
+        name: 'Confidence Score',
+        description: 'Calcola score 0-1',
+        icon: <Zap className="h-4 w-4" />,
+        tokens: 100,
+      },
+      {
+        id: 'escalate',
+        name: 'Auto-Escalation',
+        description: 'Retry se score < 0.7',
+        icon: <ArrowRight className="h-4 w-4" />,
+      },
     ],
     models: {
       FAST: 'Rule-based only (0 tokens)',
@@ -377,7 +552,8 @@ function LayerModal({ layer, strategy, isOpen, onClose }: LayerModalProps) {
                   {strategy}
                 </span>
                 <span className="text-sm text-muted-foreground">
-                  Model: <span className="font-medium text-foreground">{data.models[strategy]}</span>
+                  Model:{' '}
+                  <span className="font-medium text-foreground">{data.models[strategy]}</span>
                 </span>
                 <span className="text-sm font-mono" style={{ color: layer.color }}>
                   {totalTokens.toLocaleString()} tokens
@@ -424,7 +600,10 @@ function LayerModal({ layer, strategy, isOpen, onClose }: LayerModalProps) {
                             <div className="text-sm font-medium">{step.name}</div>
                             <div className="text-xs text-muted-foreground">{step.description}</div>
                             {step.tokens !== undefined && step.tokens > 0 && (
-                              <div className="text-xs font-mono mt-1" style={{ color: layer.color }}>
+                              <div
+                                className="text-xs font-mono mt-1"
+                                style={{ color: layer.color }}
+                              >
                                 ~{step.tokens} tokens
                               </div>
                             )}
@@ -462,11 +641,15 @@ function LayerModal({ layer, strategy, isOpen, onClose }: LayerModalProps) {
                 <div className="grid grid-cols-3 gap-4">
                   <div className="p-4 rounded-xl bg-muted/50">
                     <div className="text-xs text-muted-foreground">Input Tokens</div>
-                    <div className="text-2xl font-bold font-mono">{tokens.input.toLocaleString()}</div>
+                    <div className="text-2xl font-bold font-mono">
+                      {tokens.input.toLocaleString()}
+                    </div>
                   </div>
                   <div className="p-4 rounded-xl bg-muted/50">
                     <div className="text-xs text-muted-foreground">Output Tokens</div>
-                    <div className="text-2xl font-bold font-mono">{tokens.output.toLocaleString()}</div>
+                    <div className="text-2xl font-bold font-mono">
+                      {tokens.output.toLocaleString()}
+                    </div>
                   </div>
                   <div className="p-4 rounded-xl" style={{ background: `${layer.color}15` }}>
                     <div className="text-xs text-muted-foreground">Total</div>
@@ -646,19 +829,21 @@ export function TokenFlowVisualizer({ className }: TokenFlowVisualizerProps) {
   const [modalLayer, setModalLayer] = useState<RagLayer | null>(null);
 
   const maxTokens = useMemo(() => {
-    return Math.max(
-      ...Object.values(STRATEGY_TOKENS[strategy]).map(t => t.input + t.output)
-    );
+    return Math.max(...Object.values(STRATEGY_TOKENS[strategy]).map(t => t.input + t.output));
   }, [strategy]);
 
   const totalTokens = useMemo(() => {
-    return Object.values(STRATEGY_TOKENS[strategy]).reduce(
-      (sum, t) => sum + t.input + t.output,
-      0
-    );
+    return Object.values(STRATEGY_TOKENS[strategy]).reduce((sum, t) => sum + t.input + t.output, 0);
   }, [strategy]);
 
-  const strategies: RagStrategy[] = ['FAST', 'BALANCED', 'PRECISE', 'EXPERT', 'CONSENSUS', 'CUSTOM'];
+  const strategies: RagStrategy[] = [
+    'FAST',
+    'BALANCED',
+    'PRECISE',
+    'EXPERT',
+    'CONSENSUS',
+    'CUSTOM',
+  ];
 
   return (
     <>
@@ -710,9 +895,7 @@ export function TokenFlowVisualizer({ className }: TokenFlowVisualizerProps) {
                 maxTokens={maxTokens}
                 index={index}
                 isExpanded={expandedLayer === layer.id}
-                onToggle={() =>
-                  setExpandedLayer(expandedLayer === layer.id ? null : layer.id)
-                }
+                onToggle={() => setExpandedLayer(expandedLayer === layer.id ? null : layer.id)}
                 onOpenModal={() => setModalLayer(layer)}
               />
             ))}

@@ -32,7 +32,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/data-d
 import { Button } from '@/components/ui/primitives/button';
 import { cn } from '@/lib/utils';
 
-import type { RagStrategy } from './types';
+import type { RagStrategy } from '../types';
 
 // =============================================================================
 // Types
@@ -124,11 +124,7 @@ TONE:
       'Tournament preparation',
       'Learning new games',
     ],
-    limitations: [
-      'Cannot give strategy advice',
-      'Does not rank games',
-      'Cannot predict errata',
-    ],
+    limitations: ['Cannot give strategy advice', 'Does not rank games', 'Cannot predict errata'],
     exampleQueries: [
       'What happens when I roll a 7 in Catan?',
       'Can I move through an enemy piece in Chess?',
@@ -520,7 +516,9 @@ export function AgentRoleConfigurator({ className }: AgentRoleConfiguratorProps)
                     <h3 className="text-lg font-semibold" style={{ color: selectedAgent.color }}>
                       {selectedAgent.name}
                     </h3>
-                    <p className="text-sm text-muted-foreground mt-1">{selectedAgent.description}</p>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      {selectedAgent.description}
+                    </p>
                   </div>
                 </div>
 
@@ -528,7 +526,11 @@ export function AgentRoleConfigurator({ className }: AgentRoleConfiguratorProps)
                 <div className="flex gap-2 border-b border-border pb-2">
                   {[
                     { id: 'overview', label: 'Overview', icon: <Settings2 className="h-3 w-3" /> },
-                    { id: 'prompt', label: 'System Prompt', icon: <MessageSquare className="h-3 w-3" /> },
+                    {
+                      id: 'prompt',
+                      label: 'System Prompt',
+                      icon: <MessageSquare className="h-3 w-3" />,
+                    },
                     { id: 'config', label: 'Model Config', icon: <Cpu className="h-3 w-3" /> },
                   ].map(tab => (
                     <button
@@ -654,7 +656,12 @@ export function AgentRoleConfigurator({ className }: AgentRoleConfiguratorProps)
                         <div className="text-xs font-medium text-muted-foreground">
                           Full System Prompt ({selectedAgent.tokenBudgets.systemPrompt} tokens)
                         </div>
-                        <Button variant="ghost" size="sm" onClick={handleCopyPrompt} className="h-7">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={handleCopyPrompt}
+                          className="h-7"
+                        >
                           {copied ? (
                             <Check className="h-3 w-3 text-green-500" />
                           ) : (

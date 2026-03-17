@@ -11,7 +11,7 @@
 
 'use client';
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useDeferredValue, useMemo, useState } from 'react';
 
 import { AnimatePresence, motion } from 'framer-motion';
 import { BookOpen, CheckSquare, Share2 } from 'lucide-react';
@@ -50,6 +50,7 @@ export default function CollectionPageClient() {
     sortDescending: true,
   });
   const [searchQuery, setSearchQuery] = useState('');
+  const deferredSearch = useDeferredValue(searchQuery);
 
   // View mode state (Issue #2866)
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
@@ -132,14 +133,26 @@ export default function CollectionPageClient() {
     getSelectedIds,
   } = useBulkSelectionStore();
 
+  // Merge deferred search into query params for server-side filtering
+  const queryParams = useMemo(
+    () => ({
+      ...filters,
+      ...(deferredSearch ? { search: deferredSearch } : {}),
+    }),
+    [filters, deferredSearch]
+  );
+
   // Fetch user's library and quota
-  const { data: libraryData, isLoading: libraryLoading, error: libraryError } = useLibrary(filters);
+  const {
+    data: libraryData,
+    isLoading: libraryLoading,
+    error: libraryError,
+  } = useLibrary(queryParams);
 
   const { data: quota, isLoading: quotaLoading, error: quotaError } = useLibraryQuota();
 
   const handleSearchChange = (query: string) => {
     setSearchQuery(query);
-    // TODO: Integrate with backend search when API supports it
   };
 
   const handleFavoritesChange = (enabled: boolean) => {
@@ -228,14 +241,8 @@ export default function CollectionPageClient() {
   const games = useMemo(() => libraryData?.items ?? [], [libraryData?.items]);
   const hasGames = games.length > 0;
 
-  // Client-side search filtering (until backend supports it)
-  const filteredGames = useMemo(
-    () =>
-      searchQuery
-        ? games.filter(game => game.gameTitle.toLowerCase().includes(searchQuery.toLowerCase()))
-        : games,
-    [games, searchQuery]
-  );
+  // Games are already filtered server-side via the search query parameter
+  const filteredGames = games;
 
   // Calculate state counts for filter badges (Issue #2866)
   const stateCounts = useMemo(() => {

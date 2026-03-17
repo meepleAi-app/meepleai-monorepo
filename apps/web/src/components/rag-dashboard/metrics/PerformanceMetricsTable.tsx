@@ -26,7 +26,7 @@ import {
   Minus,
 } from 'lucide-react';
 
-import type { RagStrategy, QueryTemplate } from './types';
+import type { RagStrategy, QueryTemplate } from '../types';
 
 // =============================================================================
 // Types
@@ -80,7 +80,14 @@ const PERFORMANCE_METRICS: PerformanceMetric[] = [
     description: 'Median response time',
     unit: 'ms',
     icon: <Timer className="h-4 w-4" />,
-    strategies: { FAST: 180, BALANCED: 450, PRECISE: 1200, EXPERT: 2500, CONSENSUS: 3500, CUSTOM: 800 },
+    strategies: {
+      FAST: 180,
+      BALANCED: 450,
+      PRECISE: 1200,
+      EXPERT: 2500,
+      CONSENSUS: 3500,
+      CUSTOM: 800,
+    },
     baseline: 500,
     trend: 'down',
     trendIsGood: true,
@@ -91,7 +98,14 @@ const PERFORMANCE_METRICS: PerformanceMetric[] = [
     description: '95th percentile response time',
     unit: 'ms',
     icon: <Timer className="h-4 w-4" />,
-    strategies: { FAST: 350, BALANCED: 850, PRECISE: 2800, EXPERT: 5000, CONSENSUS: 7000, CUSTOM: 1500 },
+    strategies: {
+      FAST: 350,
+      BALANCED: 850,
+      PRECISE: 2800,
+      EXPERT: 5000,
+      CONSENSUS: 7000,
+      CUSTOM: 1500,
+    },
     baseline: 1000,
     trend: 'down',
     trendIsGood: true,
@@ -157,7 +171,14 @@ const PERFORMANCE_METRICS: PerformanceMetric[] = [
     description: 'Failed queries percentage',
     unit: '%',
     icon: <Activity className="h-4 w-4" />,
-    strategies: { FAST: 2.5, BALANCED: 1.2, PRECISE: 0.5, EXPERT: 0.8, CONSENSUS: 0.3, CUSTOM: 1.5 },
+    strategies: {
+      FAST: 2.5,
+      BALANCED: 1.2,
+      PRECISE: 0.5,
+      EXPERT: 0.8,
+      CONSENSUS: 0.3,
+      CUSTOM: 1.5,
+    },
     baseline: 2.0,
     trend: 'down',
     trendIsGood: true,
@@ -223,13 +244,7 @@ const SYSTEM_HEALTH: SystemHealthMetric[] = [
 // Helper Components
 // =============================================================================
 
-function TrendIndicator({
-  trend,
-  isGood,
-}: {
-  trend: 'up' | 'down' | 'stable';
-  isGood: boolean;
-}) {
+function TrendIndicator({ trend, isGood }: { trend: 'up' | 'down' | 'stable'; isGood: boolean }) {
   const color = isGood ? 'text-green-500' : 'text-red-500';
 
   if (trend === 'up') {
@@ -302,7 +317,15 @@ function StrategyComparisonTable({
   selectedStrategy,
   onStrategyChange,
 }: StrategyTableProps) {
-  const strategies: (RagStrategy | 'all')[] = ['all', 'FAST', 'BALANCED', 'PRECISE', 'EXPERT', 'CONSENSUS', 'CUSTOM'];
+  const strategies: (RagStrategy | 'all')[] = [
+    'all',
+    'FAST',
+    'BALANCED',
+    'PRECISE',
+    'EXPERT',
+    'CONSENSUS',
+    'CUSTOM',
+  ];
 
   return (
     <div className="space-y-4">
@@ -332,7 +355,14 @@ function StrategyComparisonTable({
                 Metric
               </th>
               {(selectedStrategy === 'all'
-                ? (['FAST', 'BALANCED', 'PRECISE', 'EXPERT', 'CONSENSUS', 'CUSTOM'] as RagStrategy[])
+                ? ([
+                    'FAST',
+                    'BALANCED',
+                    'PRECISE',
+                    'EXPERT',
+                    'CONSENSUS',
+                    'CUSTOM',
+                  ] as RagStrategy[])
                 : [selectedStrategy as RagStrategy]
               ).map(s => (
                 <th
@@ -364,14 +394,19 @@ function StrategyComparisonTable({
                     <span className="text-primary">{metric.icon}</span>
                     <div>
                       <div className="text-sm font-medium">{metric.name}</div>
-                      <div className="text-xs text-muted-foreground">
-                        {metric.description}
-                      </div>
+                      <div className="text-xs text-muted-foreground">{metric.description}</div>
                     </div>
                   </div>
                 </td>
                 {(selectedStrategy === 'all'
-                  ? (['FAST', 'BALANCED', 'PRECISE', 'EXPERT', 'CONSENSUS', 'CUSTOM'] as RagStrategy[])
+                  ? ([
+                      'FAST',
+                      'BALANCED',
+                      'PRECISE',
+                      'EXPERT',
+                      'CONSENSUS',
+                      'CUSTOM',
+                    ] as RagStrategy[])
                   : [selectedStrategy as RagStrategy]
                 ).map(s => (
                   <td key={s} className="text-right py-3 px-4 font-mono text-sm">
@@ -425,9 +460,7 @@ function QueryTypePerformance({ metrics }: { metrics: QueryTypeMetrics[] }) {
               </div>
               <div className="text-left">
                 <div className="font-medium">{metric.label}</div>
-                <div className="text-xs text-muted-foreground">
-                  {metric.volume}% of queries
-                </div>
+                <div className="text-xs text-muted-foreground">{metric.volume}% of queries</div>
               </div>
             </div>
 
@@ -518,11 +551,7 @@ function SystemHealth({ metrics }: { metrics: SystemHealthMetric[] }) {
             value={metric.value}
             max={metric.max}
             color={
-              metric.status === 'healthy'
-                ? 'green'
-                : metric.status === 'warning'
-                  ? 'yellow'
-                  : 'red'
+              metric.status === 'healthy' ? 'green' : metric.status === 'warning' ? 'yellow' : 'red'
             }
           />
         </motion.div>

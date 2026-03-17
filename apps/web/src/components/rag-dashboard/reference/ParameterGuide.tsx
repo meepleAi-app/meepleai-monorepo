@@ -33,7 +33,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/data-d
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/navigation/tabs';
 import { cn } from '@/lib/utils';
 
-import { STRATEGIES, LAYERS, MODEL_PRICING } from './rag-data';
+import { STRATEGIES, LAYERS, MODEL_PRICING } from '../rag-data';
 
 // =============================================================================
 // Types

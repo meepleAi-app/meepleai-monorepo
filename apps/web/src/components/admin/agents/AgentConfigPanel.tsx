@@ -1,4 +1,3 @@
- 
 /**
  * AgentConfigPanel Component - Issue #2414 (Sub-Issue 2398.2)
  *
@@ -32,8 +31,18 @@ import { Settings2, ChevronDown, ChevronUp, Info } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/data-display/card';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/data-display/collapsible';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/data-display/card';
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@/components/ui/data-display/collapsible';
 import {
   Form,
   FormControl,
@@ -47,6 +56,7 @@ import { Switch } from '@/components/ui/forms/switch';
 import { Button } from '@/components/ui/primitives/button';
 import { Input } from '@/components/ui/primitives/input';
 import { Slider } from '@/components/ui/primitives/slider';
+import { logger } from '@/lib/logger';
 import { cn } from '@/lib/utils';
 
 // ============================================================================
@@ -146,7 +156,7 @@ function useAgentConfigStorage(mode: AgentMode) {
       const validated = agentConfigSchema.parse(parsed);
       return validated;
     } catch (error) {
-      console.error(`Failed to load config for ${mode}:`, error);
+      logger.error(`Failed to load config for ${mode}:`, error);
       return null;
     }
   };
@@ -157,7 +167,7 @@ function useAgentConfigStorage(mode: AgentMode) {
     try {
       localStorage.setItem(storageKey, JSON.stringify(config));
     } catch (error) {
-      console.error(`Failed to save config for ${mode}:`, error);
+      logger.error(`Failed to save config for ${mode}:`, error);
     }
   };
 

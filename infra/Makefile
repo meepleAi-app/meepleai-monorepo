@@ -16,13 +16,13 @@ dev-down: ## Stop dev environment
 		--profile automation --profile proxy --profile storage down
 
 tunnel: ## Open SSH tunnels to staging server
-	pwsh -File scripts/ssh-tunnel.ps1 -Action start
+	bash scripts/integration-tunnel.sh start
 
 tunnel-stop: ## Close SSH tunnels
-	pwsh -File scripts/ssh-tunnel.ps1 -Action stop
+	bash scripts/integration-tunnel.sh stop
 
 tunnel-status: ## Check SSH tunnel status
-	pwsh -File scripts/ssh-tunnel.ps1 -Action status
+	bash scripts/integration-tunnel.sh status
 
 integration: ## Start local api+web with remote services (run 'make tunnel' first)
 	@echo "Ensure tunnels are open: make tunnel"

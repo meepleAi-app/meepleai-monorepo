@@ -42,7 +42,11 @@ import { Input } from '@/components/ui/primitives/input';
 import { Label } from '@/components/ui/primitives/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/primitives/radio-group';
 import { Textarea } from '@/components/ui/primitives/textarea';
-import { SessionCreateFormSchema, type SessionCreateForm as SessionCreateFormData } from '@/lib/api/schemas/play-records.schemas';
+import {
+  SessionCreateFormSchema,
+  type SessionCreateForm as SessionCreateFormData,
+} from '@/lib/api/schemas/play-records.schemas';
+import { logger } from '@/lib/logger';
 import { usePlayRecordsStore } from '@/lib/stores/play-records-store';
 
 import { GameCombobox } from './GameCombobox';
@@ -64,12 +68,7 @@ export function SessionCreateForm({
   onCancel,
   isSubmitting = false,
 }: SessionCreateFormProps) {
-  const {
-    sessionCreation,
-    nextStep,
-    prevStep,
-    resetSessionCreation,
-  } = usePlayRecordsStore();
+  const { sessionCreation, nextStep, prevStep, resetSessionCreation } = usePlayRecordsStore();
 
   const [showBggDialog, setShowBggDialog] = useState(false);
   const [isAddingGame, setIsAddingGame] = useState(false);
@@ -105,7 +104,7 @@ export function SessionCreateForm({
     prevStep();
   };
 
-  const handleSubmit = form.handleSubmit((data) => {
+  const handleSubmit = form.handleSubmit(data => {
     onSubmit(data);
     resetSessionCreation();
     form.reset();
@@ -251,11 +250,9 @@ export function SessionCreateForm({
                       <Input
                         type="datetime-local"
                         value={
-                          field.value instanceof Date
-                            ? field.value.toISOString().slice(0, 16)
-                            : ''
+                          field.value instanceof Date ? field.value.toISOString().slice(0, 16) : ''
                         }
-                        onChange={(e) => field.onChange(new Date(e.target.value))}
+                        onChange={e => field.onChange(new Date(e.target.value))}
                         max={new Date().toISOString().slice(0, 16)}
                       />
                     </FormControl>
@@ -355,10 +352,7 @@ export function SessionCreateForm({
                 render={({ field }) => (
                   <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
                     <FormControl>
-                      <Checkbox
-                        checked={field.value}
-                        onCheckedChange={field.onChange}
-                      />
+                      <Checkbox checked={field.value} onCheckedChange={field.onChange} />
                     </FormControl>
                     <div className="space-y-1 leading-none">
                       <FormLabel>Enable Custom Scoring</FormLabel>
@@ -380,16 +374,14 @@ export function SessionCreateForm({
                         <FormLabel>Scoring Dimensions</FormLabel>
                         <FormControl>
                           <div className="space-y-2">
-                            {['Points', 'Ranking', 'Wins', 'Custom'].map((dim) => (
+                            {['Points', 'Ranking', 'Wins', 'Custom'].map(dim => (
                               <div key={dim} className="flex items-center space-x-2">
                                 <Checkbox
                                   checked={field.value?.includes(dim)}
-                                  onCheckedChange={(checked) => {
+                                  onCheckedChange={checked => {
                                     const current = field.value || [];
                                     field.onChange(
-                                      checked
-                                        ? [...current, dim]
-                                        : current.filter((d) => d !== dim)
+                                      checked ? [...current, dim] : current.filter(d => d !== dim)
                                     );
                                   }}
                                 />
@@ -410,7 +402,8 @@ export function SessionCreateForm({
                     <FormItem>
                       <FormLabel>Custom Dimension Units</FormLabel>
                       <FormDescription>
-                        Define units for custom dimensions (e.g., &quot;Victory Points&quot;, &quot;Resources&quot;)
+                        Define units for custom dimensions (e.g., &quot;Victory Points&quot;,
+                        &quot;Resources&quot;)
                       </FormDescription>
                       {/* TODO: Dynamic key-value inputs for dimension units */}
                       <Input placeholder="Coming soon..." disabled />
@@ -449,11 +442,7 @@ export function SessionCreateForm({
 
             <div className="flex gap-2">
               {currentStep < STEPS.length - 1 ? (
-                <Button
-                  type="button"
-                  onClick={handleNext}
-                  disabled={isSubmitting}
-                >
+                <Button type="button" onClick={handleNext} disabled={isSubmitting}>
                   Next
                   <ArrowRight className="w-4 h-4 ml-2" />
                 </Button>
@@ -507,7 +496,7 @@ export function SessionCreateForm({
                 setShowBggDialog(false);
                 toast.success('Game added to library');
               } catch (err) {
-                console.error('Add game error:', err);
+                logger.error('Add game error:', err);
                 toast.error('Failed to add game. Please try again.');
               } finally {
                 setIsAddingGame(false);

@@ -14,7 +14,7 @@ import { AlertTriangle, Check, Loader2, RefreshCw, Shield, X } from 'lucide-reac
 
 import { Badge } from '@/components/ui/data-display/badge';
 import { Button } from '@/components/ui/primitives/button';
-import { useToast } from '@/hooks/use-toast';
+import { useToast } from '@/hooks/useToast';
 import { api } from '@/lib/api';
 import { cn } from '@/lib/utils';
 

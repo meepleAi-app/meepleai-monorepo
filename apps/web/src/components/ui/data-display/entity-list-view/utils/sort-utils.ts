@@ -10,11 +10,11 @@
 /**
  * Get nested value from object using dot notation or keyof
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function getNestedValue<T>(obj: T, field: keyof T | string): any {
+function getNestedValue<T>(obj: T, field: keyof T | string): unknown {
   if (typeof field === 'string' && field.includes('.')) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any, security/detect-object-injection
-    return field.split('.').reduce((acc, part) => (acc as any)?.[part], obj as any);
+    return field
+      .split('.')
+      .reduce((acc: unknown, part) => (acc as Record<string, unknown>)?.[part], obj as unknown);
   }
   return obj[field as keyof T];
 }
@@ -79,7 +79,7 @@ export function createComparator<T>(
     if (valueB === null || valueB === undefined) return -1;
 
     // Apply comparator with type assertion
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any, security/detect-object-injection
-    return (sortComparators[type] as (a: any, b: any) => number)(valueA, valueB);
+    // eslint-disable-next-line security/detect-object-injection
+    return (sortComparators[type] as (a: unknown, b: unknown) => number)(valueA, valueB);
   };
 }

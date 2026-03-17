@@ -17,8 +17,8 @@ import { use, useState, useRef } from 'react';
 
 import { Bot, Loader2, Send } from 'lucide-react';
 
-import { ArbitroModal } from '@/components/sessions/live/ArbitroModal';
-import { DisputeHistory } from '@/components/sessions/live/DisputeHistory';
+import { ArbitroModal } from '@/components/session/live/ArbitroModal';
+import { DisputeHistory } from '@/components/session/live/DisputeHistory';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/primitives/textarea';
 import { useLiveSessionStore } from '@/lib/stores/live-session-store';

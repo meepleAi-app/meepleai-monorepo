@@ -21,22 +21,25 @@ import { Input } from '@/components/ui/primitives/input';
 import { Label } from '@/components/ui/primitives/label';
 import { Textarea } from '@/components/ui/primitives/textarea';
 import { useTranslation } from '@/hooks/useTranslation';
+import { logger } from '@/lib/logger';
 
 // Form schema with validation
-const AddPrivateGameFormSchema = z.object({
-  title: z.string().min(1, 'Title is required').max(200, 'Title too long'),
-  minPlayers: z.number().int().min(1, 'Min 1 player').max(99, 'Max 99 players'),
-  maxPlayers: z.number().int().min(1, 'Min 1 player').max(99, 'Max 99 players'),
-  yearPublished: z.number().int().min(1900).max(2100).nullable().optional(),
-  playingTimeMinutes: z.number().int().min(1).max(10000).nullable().optional(),
-  minAge: z.number().int().min(0).max(99).nullable().optional(),
-  complexityRating: z.number().min(0).max(5).nullable().optional(),
-  description: z.string().max(5000, 'Description too long').nullable().optional(),
-  imageUrl: z.string().url('Invalid URL').nullable().optional().or(z.literal('')),
-}).refine((data) => data.maxPlayers >= data.minPlayers, {
-  message: 'Max players must be >= min players',
-  path: ['maxPlayers'],
-});
+const AddPrivateGameFormSchema = z
+  .object({
+    title: z.string().min(1, 'Title is required').max(200, 'Title too long'),
+    minPlayers: z.number().int().min(1, 'Min 1 player').max(99, 'Max 99 players'),
+    maxPlayers: z.number().int().min(1, 'Min 1 player').max(99, 'Max 99 players'),
+    yearPublished: z.number().int().min(1900).max(2100).nullable().optional(),
+    playingTimeMinutes: z.number().int().min(1).max(10000).nullable().optional(),
+    minAge: z.number().int().min(0).max(99).nullable().optional(),
+    complexityRating: z.number().min(0).max(5).nullable().optional(),
+    description: z.string().max(5000, 'Description too long').nullable().optional(),
+    imageUrl: z.string().url('Invalid URL').nullable().optional().or(z.literal('')),
+  })
+  .refine(data => data.maxPlayers >= data.minPlayers, {
+    message: 'Max players must be >= min players',
+    path: ['maxPlayers'],
+  });
 
 export type AddPrivateGameFormData = z.infer<typeof AddPrivateGameFormSchema>;
 
@@ -84,7 +87,7 @@ export function AddPrivateGameForm({
     try {
       await onSubmit(data);
     } catch (error) {
-      console.error('Form submission error:', error);
+      logger.error('Form submission error:', error);
     }
   };
 
@@ -101,9 +104,7 @@ export function AddPrivateGameForm({
           placeholder={t('privateGameForm.titlePlaceholder')}
           disabled={isSubmitting}
         />
-        {errors.title && (
-          <p className="text-sm text-destructive">{errors.title.message}</p>
-        )}
+        {errors.title && <p className="text-sm text-destructive">{errors.title.message}</p>}
       </div>
 
       {/* Player Count */}
@@ -190,9 +191,7 @@ export function AddPrivateGameForm({
             placeholder={t('privateGameForm.minAgePlaceholder')}
             disabled={isSubmitting}
           />
-          {errors.minAge && (
-            <p className="text-sm text-destructive">{errors.minAge.message}</p>
-          )}
+          {errors.minAge && <p className="text-sm text-destructive">{errors.minAge.message}</p>}
         </div>
 
         <div className="space-y-2">
@@ -238,9 +237,7 @@ export function AddPrivateGameForm({
           placeholder={t('privateGameForm.imageUrlPlaceholder')}
           disabled={isSubmitting}
         />
-        {errors.imageUrl && (
-          <p className="text-sm text-destructive">{errors.imageUrl.message}</p>
-        )}
+        {errors.imageUrl && <p className="text-sm text-destructive">{errors.imageUrl.message}</p>}
       </div>
 
       {/* Form Actions */}
@@ -249,7 +246,9 @@ export function AddPrivateGameForm({
           {t('common.cancel')}
         </Button>
         <Button type="submit" disabled={isSubmitting}>
-          {isSubmitting ? t('privateGameForm.adding') : (submitLabel ?? t('privateGameForm.addPrivateGame'))}
+          {isSubmitting
+            ? t('privateGameForm.adding')
+            : (submitLabel ?? t('privateGameForm.addPrivateGame'))}
         </Button>
       </div>
     </form>

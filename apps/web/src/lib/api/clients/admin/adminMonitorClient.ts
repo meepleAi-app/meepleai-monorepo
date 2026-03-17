@@ -7,6 +7,7 @@
 
 import { z } from 'zod';
 
+import { getApiBase } from '../../core/httpClient';
 import {
   EnhancedServiceDashboardSchema,
   MetricsTimeSeriesResponseSchema,
@@ -115,7 +116,7 @@ export function createAdminMonitorClient(http: HttpClient) {
     // ========== Report Generation & Scheduling (Issue #920) ==========
 
     async generateReport(request: GenerateReportRequest): Promise<Blob> {
-      const response = await fetch(`${http['baseUrl']}/api/v1/admin/reports/generate`, {
+      const response = await fetch(`${getApiBase()}/api/v1/admin/reports/generate`, {
         method: 'POST',
         credentials: 'include',
         headers: {
@@ -164,15 +165,6 @@ export function createAdminMonitorClient(http: HttpClient) {
         GetReportExecutionsResponseSchema
       );
       return result ?? [];
-    },
-
-    async previewEmailTemplate(id: string, testData?: Record<string, string>): Promise<string> {
-      const result = await http.post<{ html: string }>(
-        `/api/v1/admin/email-templates/${id}/preview`,
-        { testData },
-        z.object({ html: z.string() })
-      );
-      return result.html;
     },
 
     // ========== OpenRouter Status ==========

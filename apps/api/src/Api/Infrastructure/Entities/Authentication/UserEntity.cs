@@ -66,6 +66,10 @@ public class UserEntity
     public bool OnboardingSkipped { get; set; }
     public DateTime? OnboardingCompletedAt { get; set; }
 
+    // Admin Invitation Flow: tracks who invited this user and when the invitation expires
+    public Guid? InvitedByUserId { get; set; }
+    public DateTime? InvitationExpiresAt { get; set; }
+
     // Navigation properties
     public ICollection<UserSessionEntity> Sessions { get; set; } = new List<UserSessionEntity>();
     public ICollection<UserBackupCodeEntity> BackupCodes { get; set; } = new List<UserBackupCodeEntity>();

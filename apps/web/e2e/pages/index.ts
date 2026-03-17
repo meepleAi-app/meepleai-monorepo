@@ -30,6 +30,26 @@ export { GamesHelper, type Game } from './helpers/GamesHelper';
 // Real Backend Helpers (Issue #3082 - Real backend integration)
 export { RealBackendHelper, createRealBackendHelper } from './helpers/RealBackendHelper';
 
+// Session Helpers (Game Night Improvvisata E2E)
+export { SessionHelper } from './helpers/SessionHelper';
+export {
+  MOCK_SESSION_ID,
+  MOCK_GAME_ID,
+  MOCK_INVITE_CODE,
+  MOCK_PRIVATE_GAME_ID,
+  MOCK_LIVE_SESSION,
+  MOCK_PLAYERS,
+  MOCK_RESUME_CONTEXT,
+  MOCK_BGG_SEARCH_RESULTS,
+  MOCK_IMPORT_BGG_RESPONSE,
+  MOCK_SCORE_PARSE_RECORDED,
+  MOCK_SCORE_PARSE_NEEDS_CONFIRM,
+  MOCK_SCORE_PARSE_AMBIGUOUS,
+  MOCK_SCORE_PARSE_UNRECOGNIZED,
+  MOCK_DISPUTE_RESPONSE,
+  MOCK_NOTIFICATION_AGENT_READY,
+} from './helpers/SessionHelper';
+
 // Pages - Authentication
 export { AuthPage } from './auth/AuthPage'; // Existing complex auth page
 export { LoginPage } from './auth/LoginPage'; // NEW - Simple login interactions

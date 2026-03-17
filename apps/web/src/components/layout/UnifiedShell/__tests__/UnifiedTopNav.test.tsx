@@ -1,5 +1,6 @@
 import { render, screen } from '@testing-library/react';
 import { act, renderHook } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { UnifiedTopNav } from '../UnifiedTopNav';
 import { useCardHand } from '@/stores/use-card-hand';
 
@@ -45,5 +46,25 @@ describe('UnifiedTopNav', () => {
   it('shows admin toggle for admin users', () => {
     render(<UnifiedTopNav isAdmin={true} />);
     expect(screen.getByTestId('admin-toggle')).toBeInTheDocument();
+  });
+
+  it('shows hamburger button for admin users', () => {
+    const onMenuToggle = vi.fn();
+    render(<UnifiedTopNav isAdmin={true} onMenuToggle={onMenuToggle} />);
+    const hamburger = screen.getByRole('button', { name: /open admin menu/i });
+    expect(hamburger).toBeInTheDocument();
+  });
+
+  it('calls onMenuToggle when hamburger is clicked', async () => {
+    const onMenuToggle = vi.fn();
+    render(<UnifiedTopNav isAdmin={true} onMenuToggle={onMenuToggle} />);
+    const hamburger = screen.getByRole('button', { name: /open admin menu/i });
+    await userEvent.click(hamburger);
+    expect(onMenuToggle).toHaveBeenCalledOnce();
+  });
+
+  it('does not show hamburger when onMenuToggle is not provided', () => {
+    render(<UnifiedTopNav isAdmin={true} />);
+    expect(screen.queryByRole('button', { name: /open admin menu/i })).not.toBeInTheDocument();
   });
 });

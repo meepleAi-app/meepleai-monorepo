@@ -18,7 +18,6 @@ export { Layout, PageHeader, PageContent, EmptyState, LoadingState } from './Lay
 // Phase 4-6: ActionBar + Breadcrumb removed — replaced by UnifiedShell ContextualBottomNav
 
 // Existing components
-export { ThemeSwitcher } from './ThemeSwitcher';
 export { toast } from './Toast';
 export { KeyboardShortcutsHelp } from './KeyboardShortcutsHelp';
 export { CommandPalette } from './CommandPalette';

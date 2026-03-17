@@ -27,4 +27,11 @@ describe('AdminTabSidebar', () => {
     // Overview section should show its sidebar items
     expect(screen.getByText('Dashboard')).toBeInTheDocument();
   });
+
+  it('has responsive classes to hide on mobile', () => {
+    render(<AdminTabSidebar />);
+    const sidebar = screen.getByTestId('admin-tab-sidebar');
+    expect(sidebar.className).toMatch(/hidden/);
+    expect(sidebar.className).toMatch(/md:flex/);
+  });
 });

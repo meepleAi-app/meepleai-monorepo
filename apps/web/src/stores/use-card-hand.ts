@@ -11,6 +11,8 @@ export interface HandCard {
   href: string;
   subtitle?: string;
   imageUrl?: string;
+  isPlaceholder?: boolean;
+  placeholderAction?: string;
 }
 
 const MAX_HAND_SIZE = 10;
@@ -138,13 +140,15 @@ export const useCardHand = create<CardHandState>((set, get) => ({
 
     let next = [...cards, card];
 
-    // FIFO eviction if over limit — skip pinned AND protected cards
+    // FIFO eviction if over limit — skip pinned, protected, AND placeholder cards
     if (next.length > maxHandSize) {
-      const evictIdx = next.findIndex(c => !pinnedIds.has(c.id) && !protectedIds.has(c.id));
+      const evictIdx = next.findIndex(
+        c => !pinnedIds.has(c.id) && !protectedIds.has(c.id) && !c.isPlaceholder
+      );
       if (evictIdx >= 0) {
         next = [...next.slice(0, evictIdx), ...next.slice(evictIdx + 1)];
       } else {
-        // All cards pinned or protected — drop the oldest (edge case)
+        // All cards pinned, protected, or placeholder — drop the oldest (edge case)
         next = next.slice(1);
       }
     }

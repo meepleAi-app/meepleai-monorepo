@@ -78,7 +78,7 @@ internal static class ObservabilityServiceExtensions
             // Add explicit Activity Sources for tracing (not Meter sources)
             .AddSource("Microsoft.AspNetCore")  // ASP.NET Core framework traces
             .AddSource("System.Net.Http")       // HTTP client traces
-                                                // Add custom MeepleAI Activity Sources for domain-specific tracing
+            // Add custom MeepleAI Activity Sources for domain-specific tracing
             .AddSource(MeepleAiActivitySources.ApiSourceName)
             .AddSource(MeepleAiActivitySources.RagSourceName)
             .AddSource(MeepleAiActivitySources.VectorSearchSourceName)

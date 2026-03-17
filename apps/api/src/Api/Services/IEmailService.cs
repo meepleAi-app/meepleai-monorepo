@@ -177,6 +177,20 @@ internal interface IEmailService
         string invitedByName,
         CancellationToken ct = default);
 
+    /// <summary>
+    /// Enhanced invitation email with custom message, platform intro, and expiry notice.
+    /// Used by the admin invitation flow (ProvisionAndInviteUser).
+    /// </summary>
+    Task SendInvitationEmailAsync(
+        string toEmail,
+        string displayName,
+        string role,
+        string token,
+        string invitedByName,
+        string? customMessage,
+        DateTime expiresAt,
+        CancellationToken ct = default);
+
     // ISSUE-4417: Raw email sending for queue processor
     /// <summary>
     /// Sends a pre-rendered HTML email via SMTP.

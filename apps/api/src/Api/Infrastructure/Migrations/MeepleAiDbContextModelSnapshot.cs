@@ -2551,6 +2551,39 @@ namespace Api.Infrastructure.Migrations
                     b.ToTable("access_requests", (string)null);
                 });
 
+            modelBuilder.Entity("Api.Infrastructure.Entities.Authentication.InvitationGameSuggestionEntity", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("GameId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("game_id");
+
+                    b.Property<Guid>("InvitationTokenId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("invitation_token_id");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("type");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("InvitationTokenId")
+                        .HasDatabaseName("IX_InvitationGameSuggestions_InvitationTokenId");
+
+                    b.HasIndex("InvitationTokenId", "GameId")
+                        .IsUnique()
+                        .HasDatabaseName("IX_InvitationGameSuggestions_TokenId_GameId");
+
+                    b.ToTable("invitation_game_suggestions", (string)null);
+                });
+
             modelBuilder.Entity("Api.Infrastructure.Entities.Authentication.InvitationTokenEntity", b =>
                 {
                     b.Property<Guid>("Id")
@@ -2570,6 +2603,11 @@ namespace Api.Infrastructure.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
 
+                    b.Property<string>("CustomMessage")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("custom_message");
+
                     b.Property<string>("Email")
                         .IsRequired()
                         .HasMaxLength(256)
@@ -2583,6 +2621,10 @@ namespace Api.Infrastructure.Migrations
                     b.Property<Guid>("InvitedByUserId")
                         .HasColumnType("uuid")
                         .HasColumnName("invited_by_user_id");
+
+                    b.Property<Guid?>("PendingUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("pending_user_id");
 
                     b.Property<DateTime?>("RevokedAt")
                         .HasColumnType("timestamp with time zone")
@@ -2613,6 +2655,10 @@ namespace Api.Infrastructure.Migrations
                     b.HasIndex("ExpiresAt");
 
                     b.HasIndex("InvitedByUserId");
+
+                    b.HasIndex("PendingUserId")
+                        .HasDatabaseName("IX_InvitationTokens_PendingUserId")
+                        .HasFilter("pending_user_id IS NOT NULL");
 
                     b.HasIndex("TokenHash")
                         .IsUnique();
@@ -10245,6 +10291,12 @@ namespace Api.Infrastructure.Migrations
                     b.PrimitiveCollection<List<string>>("Interests")
                         .HasColumnType("jsonb");
 
+                    b.Property<DateTime?>("InvitationExpiresAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("InvitedByUserId")
+                        .HasColumnType("uuid");
+
                     b.Property<bool>("IsContributor")
                         .HasColumnType("boolean");
 
@@ -10383,6 +10435,63 @@ namespace Api.Infrastructure.Migrations
                         .HasFilter("is_predefined = false");
 
                     b.ToTable("game_labels", (string)null);
+                });
+
+            modelBuilder.Entity("Api.Infrastructure.Entities.UserLibrary.GameSuggestionEntity", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid>("GameId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("game_id");
+
+                    b.Property<bool>("IsAccepted")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false)
+                        .HasColumnName("is_accepted");
+
+                    b.Property<bool>("IsDismissed")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false)
+                        .HasColumnName("is_dismissed");
+
+                    b.Property<string>("Source")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("source");
+
+                    b.Property<Guid>("SuggestedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("suggested_by_user_id");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SuggestedByUserId");
+
+                    b.HasIndex("UserId")
+                        .HasDatabaseName("IX_GameSuggestions_UserId");
+
+                    b.HasIndex("UserId", "GameId")
+                        .IsUnique()
+                        .HasDatabaseName("IX_GameSuggestions_UserId_GameId");
+
+                    b.HasIndex("UserId", "IsDismissed", "IsAccepted")
+                        .HasDatabaseName("IX_GameSuggestions_UserId_Status");
+
+                    b.ToTable("game_suggestions", (string)null);
                 });
 
             modelBuilder.Entity("Api.Infrastructure.Entities.UserLibrary.LibraryShareLinkEntity", b =>
@@ -12319,6 +12428,17 @@ namespace Api.Infrastructure.Migrations
                     b.Navigation("ReviewedByUser");
                 });
 
+            modelBuilder.Entity("Api.Infrastructure.Entities.Authentication.InvitationGameSuggestionEntity", b =>
+                {
+                    b.HasOne("Api.Infrastructure.Entities.Authentication.InvitationTokenEntity", "InvitationToken")
+                        .WithMany("GameSuggestions")
+                        .HasForeignKey("InvitationTokenId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("InvitationToken");
+                });
+
             modelBuilder.Entity("Api.Infrastructure.Entities.Authentication.InvitationTokenEntity", b =>
                 {
                     b.HasOne("Api.Infrastructure.Entities.UserEntity", "AcceptedByUser")
@@ -12332,9 +12452,16 @@ namespace Api.Infrastructure.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.HasOne("Api.Infrastructure.Entities.UserEntity", "PendingUser")
+                        .WithMany()
+                        .HasForeignKey("PendingUserId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
                     b.Navigation("AcceptedByUser");
 
                     b.Navigation("InvitedByUser");
+
+                    b.Navigation("PendingUser");
                 });
 
             modelBuilder.Entity("Api.Infrastructure.Entities.Authentication.ShareLinkEntity", b =>
@@ -13671,6 +13798,25 @@ namespace Api.Infrastructure.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("Api.Infrastructure.Entities.UserLibrary.GameSuggestionEntity", b =>
+                {
+                    b.HasOne("Api.Infrastructure.Entities.UserEntity", "SuggestedByUser")
+                        .WithMany()
+                        .HasForeignKey("SuggestedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Api.Infrastructure.Entities.UserEntity", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("SuggestedByUser");
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("Api.Infrastructure.Entities.UserLibrary.LibraryShareLinkEntity", b =>
                 {
                     b.HasOne("Api.Infrastructure.Entities.UserEntity", "User")
@@ -13921,6 +14067,11 @@ namespace Api.Infrastructure.Migrations
             modelBuilder.Entity("Api.Infrastructure.Entities.AdminReportEntity", b =>
                 {
                     b.Navigation("Executions");
+                });
+
+            modelBuilder.Entity("Api.Infrastructure.Entities.Authentication.InvitationTokenEntity", b =>
+                {
+                    b.Navigation("GameSuggestions");
                 });
 
             modelBuilder.Entity("Api.Infrastructure.Entities.ChatEntity", b =>

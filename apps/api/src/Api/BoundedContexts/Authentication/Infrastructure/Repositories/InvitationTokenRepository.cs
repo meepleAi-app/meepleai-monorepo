@@ -154,7 +154,9 @@ internal sealed class InvitationTokenRepository : IInvitationTokenRepository
             acceptedAt: entity.AcceptedAt,
             acceptedByUserId: entity.AcceptedByUserId,
             createdAt: entity.CreatedAt,
-            revokedAt: entity.RevokedAt);
+            revokedAt: entity.RevokedAt,
+            customMessage: entity.CustomMessage,
+            pendingUserId: entity.PendingUserId);
 
         return token;
     }
@@ -176,7 +178,10 @@ internal sealed class InvitationTokenRepository : IInvitationTokenRepository
             AcceptedAt = domain.AcceptedAt,
             AcceptedByUserId = domain.AcceptedByUserId,
             CreatedAt = domain.CreatedAt,
-            RevokedAt = domain.RevokedAt
+            RevokedAt = domain.RevokedAt,
+            // Issue #124: Admin invitation flow fields
+            CustomMessage = domain.CustomMessage,
+            PendingUserId = domain.PendingUserId
         };
     }
 }

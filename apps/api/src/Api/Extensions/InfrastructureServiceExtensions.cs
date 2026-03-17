@@ -401,6 +401,10 @@ internal static class InfrastructureServiceExtensions
         services.AddScoped<Infrastructure.Services.IBggImportQueueService, Infrastructure.Services.BggImportQueueService>();
         services.AddHostedService<Infrastructure.BackgroundServices.BggImportQueueBackgroundService>();
 
+        // Admin Invitation Flow: background services for invitation lifecycle
+        services.AddHostedService<Infrastructure.BackgroundServices.InvitationCleanupService>();
+        services.AddHostedService<Infrastructure.BackgroundServices.GameSuggestionProcessorService>();
+
         // Issue #936: Infisical secrets management client (POC)
         services.AddHttpClient("Infisical", client =>
         {

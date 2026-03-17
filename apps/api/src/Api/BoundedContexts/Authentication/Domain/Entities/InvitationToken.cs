@@ -1,5 +1,7 @@
 using Api.BoundedContexts.Authentication.Domain.Enums;
+using Api.BoundedContexts.Authentication.Domain.ValueObjects;
 using Api.SharedKernel.Domain.Entities;
+using Api.SharedKernel.Domain.ValueObjects;
 
 namespace Api.BoundedContexts.Authentication.Domain.Entities;
 
@@ -19,6 +21,11 @@ internal sealed class InvitationToken : AggregateRoot<Guid>
     public Guid? AcceptedByUserId { get; private set; }
     public DateTime CreatedAt { get; private set; }
     public DateTime? RevokedAt { get; private set; }
+    public string? CustomMessage { get; private set; }
+    public Guid? PendingUserId { get; private set; }
+
+    private readonly List<InvitationGameSuggestion> _gameSuggestions = new();
+    public IReadOnlyList<InvitationGameSuggestion> GameSuggestions => _gameSuggestions.AsReadOnly();
 
     private static readonly string[] AllowedRoles = { "User", "Editor", "Admin" };
 
@@ -63,6 +70,63 @@ internal sealed class InvitationToken : AggregateRoot<Guid>
             ExpiresAt = DateTime.UtcNow.AddDays(7),
             CreatedAt = DateTime.UtcNow
         };
+    }
+
+    /// <summary>
+    /// Factory method to create a new invitation token with extended provisioning data.
+    /// Uses TimeProvider for testable time handling.
+    /// </summary>
+    /// <param name="email">Email address value object of the invitee</param>
+    /// <param name="role">Role value object to assign upon acceptance</param>
+    /// <param name="pendingUserId">ID of the pre-provisioned pending user</param>
+    /// <param name="customMessage">Optional custom message from admin to invitee</param>
+    /// <param name="expiresInDays">Number of days until the invitation expires</param>
+    /// <param name="timeProvider">TimeProvider for testable time handling</param>
+    /// <param name="invitedByUserId">Admin user who created the invitation</param>
+    /// <param name="tokenHash">SHA-256 hash of the invitation token</param>
+    /// <returns>New InvitationToken instance with extended data</returns>
+    public static InvitationToken Create(
+        Email email,
+        Role role,
+        Guid pendingUserId,
+        string? customMessage,
+        int expiresInDays,
+        TimeProvider timeProvider,
+        string tokenHash,
+        Guid invitedByUserId = default)
+    {
+        ArgumentNullException.ThrowIfNull(email);
+        ArgumentNullException.ThrowIfNull(role);
+        ArgumentNullException.ThrowIfNull(timeProvider);
+        if (pendingUserId == Guid.Empty)
+            throw new ArgumentException("Pending user ID cannot be empty", nameof(pendingUserId));
+        if (string.IsNullOrWhiteSpace(tokenHash))
+            throw new ArgumentException("Token hash cannot be empty", nameof(tokenHash));
+
+        var now = timeProvider.GetUtcNow().UtcDateTime;
+
+        return new InvitationToken(Guid.NewGuid())
+        {
+            Email = email.Value,
+            Role = role.Value,
+            TokenHash = tokenHash,
+            InvitedByUserId = invitedByUserId,
+            Status = InvitationStatus.Pending,
+            ExpiresAt = now.AddDays(expiresInDays),
+            CreatedAt = now,
+            CustomMessage = customMessage,
+            PendingUserId = pendingUserId
+        };
+    }
+
+    /// <summary>
+    /// Adds a game suggestion to this invitation token.
+    /// </summary>
+    /// <param name="gameId">The game to suggest or pre-add</param>
+    /// <param name="type">Whether the game is pre-added or merely suggested</param>
+    public void AddGameSuggestion(Guid gameId, GameSuggestionType type)
+    {
+        _gameSuggestions.Add(InvitationGameSuggestion.Create(Id, gameId, type));
     }
 
     /// <summary>
@@ -127,7 +191,9 @@ internal sealed class InvitationToken : AggregateRoot<Guid>
         DateTime? acceptedAt,
         Guid? acceptedByUserId,
         DateTime createdAt,
-        DateTime? revokedAt = null)
+        DateTime? revokedAt = null,
+        string? customMessage = null,
+        Guid? pendingUserId = null)
     {
         Email = email;
         Role = role;
@@ -139,6 +205,8 @@ internal sealed class InvitationToken : AggregateRoot<Guid>
         AcceptedByUserId = acceptedByUserId;
         CreatedAt = createdAt;
         RevokedAt = revokedAt;
+        CustomMessage = customMessage;
+        PendingUserId = pendingUserId;
     }
 
     #endregion

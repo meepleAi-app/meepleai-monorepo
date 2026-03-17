@@ -39,7 +39,7 @@ import {
   Zap,
 } from 'lucide-react';
 
-import { useDashboardMode } from '@/components/dashboard';
+import { useDashboardMode } from '@/components/dashboard-v2';
 import { Sheet, SheetClose, SheetContent, SheetTitle } from '@/components/ui/navigation/sheet';
 import { cn } from '@/lib/utils';
 

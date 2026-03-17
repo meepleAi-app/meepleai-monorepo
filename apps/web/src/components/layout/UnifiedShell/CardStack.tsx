@@ -3,9 +3,9 @@
 import { AnimatePresence, motion } from 'framer-motion';
 import { ChevronRight, ChevronLeft } from 'lucide-react';
 
-import { useDashboardMode } from '@/components/dashboard';
-import { SessionPanel } from '@/components/dashboard/SessionPanel';
-import { SessionPanelCollapsed } from '@/components/dashboard/SessionPanelCollapsed';
+import { useDashboardMode } from '@/components/dashboard-v2';
+import { SessionPanel } from '@/components/dashboard-v2/SessionPanel';
+import { SessionPanelCollapsed } from '@/components/dashboard-v2/SessionPanelCollapsed';
 import { useSwipeGesture } from '@/hooks/useSwipeGesture';
 import { cn } from '@/lib/utils';
 import { useCardHand } from '@/stores/use-card-hand';

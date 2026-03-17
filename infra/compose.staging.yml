@@ -50,6 +50,7 @@ services:
       - ./secrets/staging/redis.secret
       - ./secrets/staging/qdrant.secret
       - ./secrets/staging/embedding-service.secret
+      - ./secrets/staging/email.secret
       - ./secrets/staging/storage.secret
     environment:
       ASPNETCORE_ENVIRONMENT: Staging
@@ -68,6 +69,8 @@ services:
       FrontendUrl: "https://meepleai.app"
       Authentication__SessionCookie__Secure: "true"
       Authentication__SessionCookie__SameSite: "Lax"
+    volumes:
+      - ./secrets:/app/infra/secrets:ro
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.api.rule=Host(`meepleai.app`) && PathPrefix(`/api`)"

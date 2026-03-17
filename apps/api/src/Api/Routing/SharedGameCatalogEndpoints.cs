@@ -391,7 +391,7 @@ internal static class SharedGameCatalogEndpoints
         // Document Management (Issue #2391 Sprint 1)
         group.MapGet("/admin/shared-games/{id:guid}/documents", HandleGetDocuments)
             .RequireAuthorization("AdminOrEditorPolicy")
-            .WithName("GetGameDocuments")
+            .WithName("GetSharedGameDocuments")
             .WithSummary("Get all documents for a game (Admin/Editor)")
             .Produces<List<SharedGameDocumentDto>>();
 

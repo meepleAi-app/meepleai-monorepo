@@ -20,6 +20,8 @@ interface UnifiedTopNavProps {
   searchTrigger?: React.ReactNode;
   /** Slot for mini card icons when hand is collapsed (mobile) */
   miniCards?: React.ReactNode;
+  /** Whether nav is visible (false = hidden via scroll-down). Mobile only. */
+  isNavVisible?: boolean;
 }
 
 export function UnifiedTopNav({
@@ -28,6 +30,7 @@ export function UnifiedTopNav({
   notificationBell,
   searchTrigger,
   miniCards,
+  isNavVisible = true,
 }: UnifiedTopNavProps) {
   const { cards, focusedIdx } = useCardHand();
   const focusedCard = focusedIdx >= 0 && focusedIdx < cards.length ? cards[focusedIdx] : null;
@@ -41,7 +44,10 @@ export function UnifiedTopNav({
         'sticky top-0 z-40 h-14',
         'flex items-center justify-between px-4',
         'bg-background/95 backdrop-blur-xl',
-        'border-b border-border/40'
+        'border-b border-border/40',
+        // Hide/reveal on mobile scroll
+        'transition-[transform,margin-top] duration-200 ease-out',
+        !isNavVisible && '-translate-y-full -mt-14 md:translate-y-0 md:mt-0'
       )}
       data-testid="unified-top-nav"
     >
@@ -50,8 +56,8 @@ export function UnifiedTopNav({
         <span className="text-lg font-bold font-quicksand">MeepleAI</span>
       </Link>
 
-      {/* Center: Focused card title */}
-      <div className="flex items-center gap-2 min-w-0 mx-4">
+      {/* Center: Focused card title — hidden on mobile (morphed tab handles this) */}
+      <div className="hidden md:flex items-center gap-2 min-w-0 mx-4">
         {focusedCard && Icon ? (
           <>
             <div

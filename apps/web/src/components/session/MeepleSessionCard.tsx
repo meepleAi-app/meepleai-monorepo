@@ -232,11 +232,7 @@ export function MeepleSessionCard({
 /**
  * MeepleSessionCard Skeleton for loading state
  */
-export function MeepleSessionCardSkeleton({
-  variant = 'grid',
-}: {
-  variant?: MeepleCardVariant;
-}) {
+export function MeepleSessionCardSkeleton({ variant = 'grid' }: { variant?: MeepleCardVariant }) {
   return (
     <MeepleCard
       entity="session"

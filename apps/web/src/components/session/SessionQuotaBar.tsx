@@ -130,7 +130,10 @@ export function SessionQuotaBar({
         </h3>
         {isAtLimit && (
           <div
-            className={cn('flex items-center gap-1 text-destructive', compact ? 'text-[10px]' : 'text-xs')}
+            className={cn(
+              'flex items-center gap-1 text-destructive',
+              compact ? 'text-[10px]' : 'text-xs'
+            )}
           >
             <AlertCircle className={cn(compact ? 'h-2.5 w-2.5' : 'h-3 w-3')} />
             <span>Limite raggiunto</span>

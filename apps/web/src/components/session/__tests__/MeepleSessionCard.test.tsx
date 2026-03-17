@@ -82,7 +82,9 @@ describe('MeepleSessionCard', () => {
   it('Configura not shown for non-owner non-admin user', () => {
     render(<MeepleSessionCard session={mockSetupSession} isOwner={false} isAdmin={false} />);
     expect(screen.queryByRole('button', { name: 'Configura' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'La sessione è completata' })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: 'La sessione è completata' })
+    ).not.toBeInTheDocument();
   });
 
   it('Configura shown and enabled for owner when not completed', () => {
@@ -112,11 +114,7 @@ describe('MeepleSessionCard', () => {
     const onConfigure = vi.fn();
 
     render(
-      <MeepleSessionCard
-        session={mockSetupSession}
-        isOwner={true}
-        onConfigure={onConfigure}
-      />,
+      <MeepleSessionCard session={mockSetupSession} isOwner={true} onConfigure={onConfigure} />
     );
 
     await user.click(screen.getByRole('button', { name: 'Configura' }));
@@ -146,13 +144,7 @@ describe('MeepleSessionCard', () => {
     const user = userEvent.setup();
     const onStart = vi.fn();
 
-    render(
-      <MeepleSessionCard
-        session={mockSetupSession}
-        isOwner={true}
-        onStart={onStart}
-      />,
-    );
+    render(<MeepleSessionCard session={mockSetupSession} isOwner={true} onStart={onStart} />);
 
     await user.click(screen.getByRole('button', { name: 'Avvia' }));
     expect(onStart).toHaveBeenCalledWith('session-001');
@@ -181,13 +173,7 @@ describe('MeepleSessionCard', () => {
     const user = userEvent.setup();
     const onPause = vi.fn();
 
-    render(
-      <MeepleSessionCard
-        session={mockInProgressSession}
-        isOwner={true}
-        onPause={onPause}
-      />,
-    );
+    render(<MeepleSessionCard session={mockInProgressSession} isOwner={true} onPause={onPause} />);
 
     await user.click(screen.getByRole('button', { name: 'Pausa' }));
     expect(onPause).toHaveBeenCalledWith('session-002');
@@ -216,13 +202,7 @@ describe('MeepleSessionCard', () => {
     const user = userEvent.setup();
     const onResume = vi.fn();
 
-    render(
-      <MeepleSessionCard
-        session={mockPausedSession}
-        isOwner={true}
-        onResume={onResume}
-      />,
-    );
+    render(<MeepleSessionCard session={mockPausedSession} isOwner={true} onResume={onResume} />);
 
     await user.click(screen.getByRole('button', { name: 'Riprendi' }));
     expect(onResume).toHaveBeenCalledWith('session-003');
@@ -245,26 +225,14 @@ describe('MeepleSessionCard', () => {
   });
 
   it('Partecipa shown and enabled for non-participant with available slots', () => {
-    render(
-      <MeepleSessionCard
-        session={mockSetupSession}
-        isParticipant={false}
-        hasSlots={true}
-      />,
-    );
+    render(<MeepleSessionCard session={mockSetupSession} isParticipant={false} hasSlots={true} />);
     const button = screen.getByRole('button', { name: 'Partecipa' });
     expect(button).toBeInTheDocument();
     expect(button).not.toBeDisabled();
   });
 
   it('Partecipa shown but disabled for non-participant when no slots', () => {
-    render(
-      <MeepleSessionCard
-        session={mockSetupSession}
-        isParticipant={false}
-        hasSlots={false}
-      />,
-    );
+    render(<MeepleSessionCard session={mockSetupSession} isParticipant={false} hasSlots={false} />);
     const button = screen.getByRole('button', { name: 'Sessione piena' });
     expect(button).toBeInTheDocument();
     // MeepleCardQuickActions uses aria-disabled for disabled buttons (to keep Radix Tooltip working)
@@ -281,7 +249,7 @@ describe('MeepleSessionCard', () => {
         isParticipant={false}
         hasSlots={true}
         onJoin={onJoin}
-      />,
+      />
     );
 
     await user.click(screen.getByRole('button', { name: 'Partecipa' }));
@@ -299,22 +267,14 @@ describe('MeepleSessionCard', () => {
 
   it('Lascia not shown for owner (even if participant)', () => {
     render(
-      <MeepleSessionCard
-        session={mockInProgressSession}
-        isParticipant={true}
-        isOwner={true}
-      />,
+      <MeepleSessionCard session={mockInProgressSession} isParticipant={true} isOwner={true} />
     );
     expect(screen.queryByRole('button', { name: 'Lascia' })).not.toBeInTheDocument();
   });
 
   it('Lascia shown for participant who is not the owner', () => {
     render(
-      <MeepleSessionCard
-        session={mockInProgressSession}
-        isParticipant={true}
-        isOwner={false}
-      />,
+      <MeepleSessionCard session={mockInProgressSession} isParticipant={true} isOwner={false} />
     );
     expect(screen.getByRole('button', { name: 'Lascia' })).toBeInTheDocument();
   });
@@ -329,7 +289,7 @@ describe('MeepleSessionCard', () => {
         isParticipant={true}
         isOwner={false}
         onLeave={onLeave}
-      />,
+      />
     );
 
     await user.click(screen.getByRole('button', { name: 'Lascia' }));
@@ -359,12 +319,7 @@ describe('MeepleSessionCard', () => {
     const user = userEvent.setup();
     const onExport = vi.fn();
 
-    render(
-      <MeepleSessionCard
-        session={mockCompletedSession}
-        onExport={onExport}
-      />,
-    );
+    render(<MeepleSessionCard session={mockCompletedSession} onExport={onExport} />);
 
     await user.click(screen.getByRole('button', { name: 'Esporta' }));
     expect(onExport).toHaveBeenCalledWith('session-004');
@@ -375,13 +330,7 @@ describe('MeepleSessionCard', () => {
   // --------------------------------------------------------------------------
 
   it('does not render Rivincita action', () => {
-    render(
-      <MeepleSessionCard
-        session={mockCompletedSession}
-        isOwner={true}
-        isAdmin={true}
-      />,
-    );
+    render(<MeepleSessionCard session={mockCompletedSession} isOwner={true} isAdmin={true} />);
     expect(screen.queryByRole('button', { name: 'Rivincita' })).not.toBeInTheDocument();
   });
 

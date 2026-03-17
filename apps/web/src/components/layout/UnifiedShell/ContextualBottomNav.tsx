@@ -12,7 +12,7 @@ export function ContextualBottomNav() {
     <nav
       className={cn(
         'sticky bottom-0 z-30',
-        'flex items-center justify-around px-2 py-1',
+        'hidden md:flex items-center justify-around px-2 py-1',
         'bg-background/95 backdrop-blur-xl',
         'border-t border-border/40',
         'pb-[env(safe-area-inset-bottom)]'

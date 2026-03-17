@@ -257,10 +257,7 @@ make logs s=api           # View service logs
 make help                 # Show all commands
 ```
 
-**Docker Quick Reference**: See [docs/deployment/](./docs/deployment/)
-- **Quick Start**: [docker-quickstart.md](./docs/deployment/docker-quickstart.md)
-- **Services**: [docker-services.md](./docs/deployment/docker-services.md)
-- **Cheatsheet**: [deployment-cheatsheet.md](./docs/deployment/deployment-cheatsheet.md)
+**Docker & Operations**: See [Operations Manual](./docs/operations/operations-manual.md) for complete service management, backup/restore, monitoring, incident response, and maintenance procedures.
 
 ## Project Structure
 
@@ -295,6 +292,7 @@ tests/Api.Tests/          # Backend test suite
 | Build fails (BE) | `dotnet clean && dotnet build` |
 | Testhost blocking | `tasklist \| grep testhost` → `taskkill //PID <PID> //F` |
 | Port conflict | `netstat -ano \| findstr :8080` → `taskkill /PID <PID> /F` |
+| Operations Manual | `docs/operations/operations-manual.md` — full service management reference |
 
 ## AI Assistant Context
 

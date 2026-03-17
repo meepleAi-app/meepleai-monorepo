@@ -11,7 +11,7 @@ import { Brain, Globe, Save, Loader2, ShieldCheck, AlertTriangle } from 'lucide-
 
 import { Switch } from '@/components/ui/forms/switch';
 import { Button } from '@/components/ui/primitives/button';
-import { useToast } from '@/hooks/use-toast';
+import { useToast } from '@/hooks/useToast';
 
 const CURRENT_CONSENT_VERSION = '1.0.0';
 

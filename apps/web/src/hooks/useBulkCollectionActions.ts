@@ -34,9 +34,7 @@ export interface BulkCollectionActions {
   /** Remove multiple entities from collection (triggers warning modal) */
   bulkRemove: (request: BulkRemoveFromCollectionRequest) => void;
   /** Fetch aggregated data for removal warning */
-  fetchAggregatedData: (
-    entityIds: readonly string[]
-  ) => Promise<BulkAssociatedDataDto>;
+  fetchAggregatedData: (entityIds: readonly string[]) => Promise<BulkAssociatedDataDto>;
   /** Whether add operation is loading */
   isAdding: boolean;
   /** Whether remove operation is loading */
@@ -61,15 +59,12 @@ export interface BulkCollectionActions {
  * @param entityType - Type of entities being operated on
  * @returns Bulk collection actions and loading states
  */
-export function useBulkCollectionActions(
-  entityType: EntityType
-): BulkCollectionActions {
+export function useBulkCollectionActions(entityType: EntityType): BulkCollectionActions {
   const queryClient = useQueryClient();
 
   // Bulk add mutation
   const addMutation = useMutation({
-    mutationFn: (request: BulkAddToCollectionRequest) =>
-      bulkAddToCollection(entityType, request),
+    mutationFn: (request: BulkAddToCollectionRequest) => bulkAddToCollection(entityType, request),
     onMutate: async () => {
       // Show loading toast
       toast.loading('Aggiungendo alla collezione...');
@@ -108,7 +103,7 @@ export function useBulkCollectionActions(
     },
     onError: (error: Error) => {
       toast.dismiss();
-      toast.error('Errore durante l\'aggiunta alla collezione', {
+      toast.error("Errore durante l'aggiunta alla collezione", {
         description: error.message,
       });
     },
@@ -166,8 +161,8 @@ export function useBulkCollectionActions(
   };
 
   return {
-    bulkAdd: (request) => addMutation.mutate(request),
-    bulkRemove: (request) => removeMutation.mutate(request),
+    bulkAdd: request => addMutation.mutate(request),
+    bulkRemove: request => removeMutation.mutate(request),
     fetchAggregatedData,
     isAdding: addMutation.isPending,
     isRemoving: removeMutation.isPending,

@@ -11,7 +11,7 @@
 
 import { use } from 'react';
 
-import { PlayerList } from '@/components/sessions/live/PlayerList';
+import { PlayerList } from '@/components/session/live/PlayerList';
 import { useLiveSessionStore } from '@/lib/stores/live-session-store';
 
 interface PlayersPageProps {

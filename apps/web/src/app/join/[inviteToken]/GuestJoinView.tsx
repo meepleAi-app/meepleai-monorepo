@@ -13,8 +13,8 @@ import { useEffect, useState, useCallback } from 'react';
 
 import { Loader2, Users } from 'lucide-react';
 
-import { GuestScoreProposal } from '@/components/sessions/live/GuestScoreProposal';
-import { ScoreBoard } from '@/components/sessions/live/ScoreBoard';
+import { GuestScoreProposal } from '@/components/session/live/GuestScoreProposal';
+import { ScoreBoard } from '@/components/session/live/ScoreBoard';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';

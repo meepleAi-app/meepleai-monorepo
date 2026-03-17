@@ -22,7 +22,7 @@ import { Button } from '@/components/ui/primitives/button';
 import { Input } from '@/components/ui/primitives/input';
 import { api } from '@/lib/api';
 import type { BggSearchResult } from '@/lib/api/schemas/games.schemas';
-import { useBggRateLimit } from '@/lib/hooks/use-bgg-rate-limit';
+import { useBggRateLimit } from '@/lib/domain-hooks/useBggRateLimit';
 import { cn } from '@/lib/utils';
 
 export interface BggGameSearchProps {
@@ -79,48 +79,57 @@ export function BggGameSearch({
     }
   }, []);
 
-  const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    setQuery(value);
+  const handleInputChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const value = e.target.value;
+      setQuery(value);
 
-    if (debounceRef.current) {
-      clearTimeout(debounceRef.current);
-    }
+      if (debounceRef.current) {
+        clearTimeout(debounceRef.current);
+      }
 
-    debounceRef.current = setTimeout(() => {
-      performSearch(value);
-    }, 300);
-  }, [performSearch]);
+      debounceRef.current = setTimeout(() => {
+        performSearch(value);
+      }, 300);
+    },
+    [performSearch]
+  );
 
-  const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (!isOpen || results.length === 0) return;
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLInputElement>) => {
+      if (!isOpen || results.length === 0) return;
 
-    switch (e.key) {
-      case 'ArrowDown':
-        e.preventDefault();
-        setHighlightedIndex(prev => Math.min(prev + 1, results.length - 1));
-        break;
-      case 'ArrowUp':
-        e.preventDefault();
-        setHighlightedIndex(prev => Math.max(prev - 1, 0));
-        break;
-      case 'Enter':
-        e.preventDefault();
-        if (highlightedIndex >= 0 && highlightedIndex < results.length) {
-          handleResultClick(results[highlightedIndex]);
-        }
-        break;
-      case 'Escape':
-        setIsOpen(false);
-        break;
-    }
-  }, [isOpen, results, highlightedIndex]); // eslint-disable-line react-hooks/exhaustive-deps
+      switch (e.key) {
+        case 'ArrowDown':
+          e.preventDefault();
+          setHighlightedIndex(prev => Math.min(prev + 1, results.length - 1));
+          break;
+        case 'ArrowUp':
+          e.preventDefault();
+          setHighlightedIndex(prev => Math.max(prev - 1, 0));
+          break;
+        case 'Enter':
+          e.preventDefault();
+          if (highlightedIndex >= 0 && highlightedIndex < results.length) {
+            handleResultClick(results[highlightedIndex]);
+          }
+          break;
+        case 'Escape':
+          setIsOpen(false);
+          break;
+      }
+    },
+    [isOpen, results, highlightedIndex]
+  ); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const handleResultClick = useCallback((result: BggSearchResult) => {
-    onSelect(result);
-    setIsOpen(false);
-    setQuery(result.name);
-  }, [onSelect]);
+  const handleResultClick = useCallback(
+    (result: BggSearchResult) => {
+      onSelect(result);
+      setIsOpen(false);
+      setQuery(result.name);
+    },
+    [onSelect]
+  );
 
   const handleExactSearch = useCallback(() => {
     if (query.length < 2) {
@@ -190,7 +199,10 @@ export function BggGameSearch({
 
       {/* Error Message */}
       {error && (
-        <div className="flex items-center gap-2 mt-2 text-sm text-destructive" data-testid="bgg-search-error">
+        <div
+          className="flex items-center gap-2 mt-2 text-sm text-destructive"
+          data-testid="bgg-search-error"
+        >
           <AlertCircle className="h-4 w-4" />
           {error}
         </div>
@@ -250,7 +262,7 @@ export function BggGameSearch({
                 target="_blank"
                 rel="noopener noreferrer"
                 className="p-1 hover:bg-background rounded"
-                onClick={(e) => e.stopPropagation()}
+                onClick={e => e.stopPropagation()}
                 title="Vedi su BGG"
               >
                 <ExternalLink className="h-4 w-4 text-muted-foreground" />

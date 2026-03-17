@@ -50,7 +50,7 @@ const mockGameDetail: GameDetail = {
 };
 
 vi.mock('@/lib/stores/useGameDetailStore', () => ({
-  useGameDetailStore: vi.fn((selector) => {
+  useGameDetailStore: vi.fn(selector => {
     const mockStore = {
       setGameId: vi.fn(),
       setCurrentState: vi.fn(),
@@ -67,9 +67,8 @@ describe('useGameDetail', () => {
   let queryClient: QueryClient;
 
   const createWrapper = () => {
-    return ({ children }: { children: ReactNode }) => (
-      createElement(QueryClientProvider, { client: queryClient }, children)
-    );
+    return ({ children }: { children: ReactNode }) =>
+      createElement(QueryClientProvider, { client: queryClient }, children);
   };
 
   beforeEach(() => {
@@ -125,9 +124,8 @@ describe('useUpdateGameState', () => {
   let queryClient: QueryClient;
 
   const createWrapper = () => {
-    return ({ children }: { children: ReactNode }) => (
-      createElement(QueryClientProvider, { client: queryClient }, children)
-    );
+    return ({ children }: { children: ReactNode }) =>
+      createElement(QueryClientProvider, { client: queryClient }, children);
   };
 
   beforeEach(() => {
@@ -176,9 +174,8 @@ describe('useRecordGameSession', () => {
   let queryClient: QueryClient;
 
   const createWrapper = () => {
-    return ({ children }: { children: ReactNode }) => (
-      createElement(QueryClientProvider, { client: queryClient }, children)
-    );
+    return ({ children }: { children: ReactNode }) =>
+      createElement(QueryClientProvider, { client: queryClient }, children);
   };
 
   beforeEach(() => {

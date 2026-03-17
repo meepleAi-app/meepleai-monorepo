@@ -32,7 +32,10 @@ const MOCK_STATE: WhiteboardState = {
 
 const MOCK_STROKE: Stroke = {
   id: 'stroke-1',
-  points: [{ x: 0, y: 0 }, { x: 10, y: 10 }],
+  points: [
+    { x: 0, y: 0 },
+    { x: 10, y: 10 },
+  ],
   color: '#000000',
   thickness: 4,
   isEraser: false,
@@ -44,9 +47,7 @@ let fetchMock: ReturnType<typeof vi.fn>;
 
 /** Render hook and wait for initial load to complete */
 async function renderAndLoad() {
-  const hook = renderHook(() =>
-    useWhiteboardTool({ sessionId: SESSION_ID, apiBaseUrl: API_BASE })
-  );
+  const hook = renderHook(() => useWhiteboardTool({ sessionId: SESSION_ID, apiBaseUrl: API_BASE }));
   await waitFor(() => expect(hook.result.current.isLoading).toBe(false));
   return hook;
 }
@@ -143,7 +144,8 @@ describe('saveStrokes', () => {
   beforeEach(() => {
     // shouldAdvanceTime: true lets waitFor work even with fake timers
     vi.useFakeTimers({ shouldAdvanceTime: true });
-    fetchMock = vi.fn()
+    fetchMock = vi
+      .fn()
       .mockResolvedValueOnce({ ok: true, status: 200, json: async () => MOCK_STATE })
       .mockResolvedValue({ ok: true, status: 200, json: async () => ({}) });
     global.fetch = fetchMock;
@@ -160,10 +162,14 @@ describe('saveStrokes', () => {
     );
     await waitFor(() => expect(result.current.isLoading).toBe(false));
 
-    act(() => { result.current.saveStrokes([MOCK_STROKE]); });
+    act(() => {
+      result.current.saveStrokes([MOCK_STROKE]);
+    });
 
     // Advance 400ms – not yet fired
-    act(() => { vi.advanceTimersByTime(400); });
+    act(() => {
+      vi.advanceTimersByTime(400);
+    });
     expect(fetchMock).toHaveBeenCalledTimes(1); // only initial load
   });
 
@@ -173,8 +179,12 @@ describe('saveStrokes', () => {
     );
     await waitFor(() => expect(result.current.isLoading).toBe(false));
 
-    act(() => { result.current.saveStrokes([MOCK_STROKE]); });
-    await act(async () => { vi.advanceTimersByTime(500); });
+    act(() => {
+      result.current.saveStrokes([MOCK_STROKE]);
+    });
+    await act(async () => {
+      vi.advanceTimersByTime(500);
+    });
 
     await waitFor(() =>
       expect(fetchMock).toHaveBeenCalledWith(
@@ -197,7 +207,9 @@ describe('saveStrokes', () => {
       result.current.saveStrokes([]);
       result.current.saveStrokes([MOCK_STROKE]);
     });
-    await act(async () => { vi.advanceTimersByTime(500); });
+    await act(async () => {
+      vi.advanceTimersByTime(500);
+    });
 
     // Should only have 2 fetch calls: 1 load + 1 debounced save
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
@@ -209,7 +221,8 @@ describe('saveStrokes', () => {
 describe('saveStructured', () => {
   beforeEach(() => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
-    fetchMock = vi.fn()
+    fetchMock = vi
+      .fn()
       .mockResolvedValueOnce({ ok: true, status: 200, json: async () => MOCK_STATE })
       .mockResolvedValue({ ok: true, status: 200, json: async () => ({}) });
     global.fetch = fetchMock;
@@ -226,15 +239,24 @@ describe('saveStructured', () => {
     );
     await waitFor(() => expect(result.current.isLoading).toBe(false));
 
-    act(() => { result.current.saveStructured([], '6x6', false, 'structured'); });
-    await act(async () => { vi.advanceTimersByTime(500); });
+    act(() => {
+      result.current.saveStructured([], '6x6', false, 'structured');
+    });
+    await act(async () => {
+      vi.advanceTimersByTime(500);
+    });
 
     await waitFor(() =>
       expect(fetchMock).toHaveBeenCalledWith(
         `${API_BASE}/api/v1/live-sessions/${SESSION_ID}/whiteboard/structured`,
         expect.objectContaining({
           method: 'PUT',
-          body: JSON.stringify({ tokens: [], gridSize: '6x6', showGrid: false, mode: 'structured' }),
+          body: JSON.stringify({
+            tokens: [],
+            gridSize: '6x6',
+            showGrid: false,
+            mode: 'structured',
+          }),
         })
       )
     );
@@ -245,7 +267,8 @@ describe('saveStructured', () => {
 
 describe('clear', () => {
   beforeEach(() => {
-    fetchMock = vi.fn()
+    fetchMock = vi
+      .fn()
       .mockResolvedValueOnce({ ok: true, status: 200, json: async () => MOCK_STATE })
       .mockResolvedValue({ ok: true, status: 200, json: async () => ({}) });
     global.fetch = fetchMock;
@@ -255,7 +278,9 @@ describe('clear', () => {
 
   it('calls clear endpoint', async () => {
     const { result } = await renderAndLoad();
-    await act(async () => { await result.current.clear(); });
+    await act(async () => {
+      await result.current.clear();
+    });
     expect(fetchMock).toHaveBeenCalledWith(
       `${API_BASE}/api/v1/live-sessions/${SESSION_ID}/whiteboard/clear`,
       expect.objectContaining({ method: 'POST' })
@@ -268,7 +293,8 @@ describe('clear', () => {
       strokes: [MOCK_STROKE],
       tokens: [{ id: 't1', color: '#ef4444', label: 'A', gridX: 0, gridY: 0 }],
     };
-    fetchMock = vi.fn()
+    fetchMock = vi
+      .fn()
       .mockResolvedValueOnce({ ok: true, status: 200, json: async () => stateWithData })
       .mockResolvedValue({ ok: true, status: 200, json: async () => ({}) });
     global.fetch = fetchMock;
@@ -278,14 +304,17 @@ describe('clear', () => {
     );
     await waitFor(() => expect(result.current.whiteboardState?.tokens).toHaveLength(1));
 
-    await act(async () => { await result.current.clear(); });
+    await act(async () => {
+      await result.current.clear();
+    });
 
     expect(result.current.whiteboardState?.strokes).toHaveLength(0);
     expect(result.current.whiteboardState?.tokens).toHaveLength(0);
   });
 
   it('throws and sets error when clear fails', async () => {
-    fetchMock = vi.fn()
+    fetchMock = vi
+      .fn()
       .mockResolvedValueOnce({ ok: true, status: 200, json: async () => MOCK_STATE })
       .mockResolvedValueOnce({ ok: false, status: 500, statusText: 'Internal Server Error' });
     global.fetch = fetchMock;
@@ -324,7 +353,9 @@ describe('applySSEEvent', () => {
     const { result } = await renderAndLoad();
 
     const event: WhiteboardSSEEvent = { type: 'stroke-added', stroke: MOCK_STROKE };
-    act(() => { result.current.applySSEEvent(event); });
+    act(() => {
+      result.current.applySSEEvent(event);
+    });
 
     expect(result.current.whiteboardState?.strokes).toHaveLength(1);
     expect(result.current.whiteboardState?.strokes[0]).toEqual(MOCK_STROKE);
@@ -341,7 +372,9 @@ describe('applySSEEvent', () => {
       showGrid: false,
       mode: 'structured',
     };
-    act(() => { result.current.applySSEEvent(event); });
+    act(() => {
+      result.current.applySSEEvent(event);
+    });
 
     expect(result.current.whiteboardState?.tokens).toEqual(newTokens);
     expect(result.current.whiteboardState?.gridSize).toBe('6x6');
@@ -367,7 +400,9 @@ describe('applySSEEvent', () => {
     await waitFor(() => expect(result.current.whiteboardState?.strokes).toHaveLength(1));
 
     const event: WhiteboardSSEEvent = { type: 'whiteboard-cleared' };
-    act(() => { result.current.applySSEEvent(event); });
+    act(() => {
+      result.current.applySSEEvent(event);
+    });
 
     expect(result.current.whiteboardState?.strokes).toHaveLength(0);
     expect(result.current.whiteboardState?.tokens).toHaveLength(0);
@@ -381,7 +416,9 @@ describe('applySSEEvent', () => {
     expect(result.current.whiteboardState).toBeNull();
 
     const event: WhiteboardSSEEvent = { type: 'stroke-added', stroke: MOCK_STROKE };
-    act(() => { result.current.applySSEEvent(event); });
+    act(() => {
+      result.current.applySSEEvent(event);
+    });
 
     expect(result.current.whiteboardState).toBeNull();
   });

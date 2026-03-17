@@ -244,9 +244,7 @@ export function useRagPipelineTest(
     blocksExecuted: 0,
     blocksFailed: 0,
   });
-  const [blockResults, setBlockResults] = useState<Map<string, BlockResult>>(
-    new Map()
-  );
+  const [blockResults, setBlockResults] = useState<Map<string, BlockResult>>(new Map());
 
   // Abort controller for cancellation
   const abortControllerRef = useRef<AbortController | null>(null);
@@ -254,24 +252,21 @@ export function useRagPipelineTest(
   /**
    * Parse SSE event line
    */
-  const parseSSEEvent = useCallback(
-    (eventType: string, data: string): PipelineTestEvent | null => {
-      try {
-        return JSON.parse(data) as PipelineTestEvent;
-      } catch {
-        console.error('[useRagPipelineTest] Failed to parse event:', eventType, data);
-        return null;
-      }
-    },
-    []
-  );
+  const parseSSEEvent = useCallback((eventType: string, data: string): PipelineTestEvent | null => {
+    try {
+      return JSON.parse(data) as PipelineTestEvent;
+    } catch {
+      console.error('[useRagPipelineTest] Failed to parse event:', eventType, data);
+      return null;
+    }
+  }, []);
 
   /**
    * Process incoming event
    */
   const processEvent = useCallback(
     (event: PipelineTestEvent) => {
-      setEvents((prev) => [...prev, event]);
+      setEvents(prev => [...prev, event]);
 
       switch (event.eventType) {
         case 'PipelineTestStartedEvent': {
@@ -287,7 +282,7 @@ export function useRagPipelineTest(
 
         case 'BlockExecutionStartedEvent': {
           const e = event as BlockStartedEvent;
-          setProgress((prev) => ({
+          setProgress(prev => ({
             ...prev,
             currentBlock: {
               id: e.blockId,
@@ -302,7 +297,7 @@ export function useRagPipelineTest(
 
         case 'BlockExecutionCompletedEvent': {
           const e = event as BlockCompletedEvent;
-          setProgress((prev) => ({
+          setProgress(prev => ({
             ...prev,
             completedBlocks: prev.completedBlocks + 1,
             percentage:
@@ -310,14 +305,14 @@ export function useRagPipelineTest(
                 ? Math.round(((prev.completedBlocks + 1) / prev.totalBlocks) * 100)
                 : 0,
           }));
-          setMetrics((prev) => ({
+          setMetrics(prev => ({
             ...prev,
             totalTokensUsed: prev.totalTokensUsed + e.tokensUsed,
             totalCost: prev.totalCost + e.cost,
             blocksExecuted: prev.blocksExecuted + 1,
             blocksFailed: prev.blocksFailed + (e.success ? 0 : 1),
           }));
-          setBlockResults((prev) => {
+          setBlockResults(prev => {
             const result: BlockResult = {
               blockId: e.blockId,
               blockType: e.blockType,
@@ -339,7 +334,7 @@ export function useRagPipelineTest(
 
         case 'DocumentsRetrievedEvent': {
           const e = event as DocumentsRetrievedEvent;
-          setBlockResults((prev) => {
+          setBlockResults(prev => {
             const existing = prev.get(e.blockId) || {
               blockId: e.blockId,
               blockType: 'unknown',
@@ -360,7 +355,7 @@ export function useRagPipelineTest(
 
         case 'ValidationResultEvent': {
           const e = event as ValidationResultEvent;
-          setBlockResults((prev) => {
+          setBlockResults(prev => {
             const existing = prev.get(e.blockId) || {
               blockId: e.blockId,
               blockType: 'unknown',
@@ -499,8 +494,7 @@ export function useRagPipelineTest(
           return;
         }
 
-        const errorObj =
-          err instanceof Error ? err : new Error('Pipeline test failed');
+        const errorObj = err instanceof Error ? err : new Error('Pipeline test failed');
         setError(errorObj);
         setIsRunning(false);
         onError?.(errorObj);

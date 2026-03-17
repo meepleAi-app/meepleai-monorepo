@@ -14,7 +14,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { renderHook, waitFor } from '@testing-library/react';
 
-import { useMediaQuery } from '../useMediaQuery';
+import { useMediaQuery } from '@/hooks/useMediaQuery';
 
 // Mock matchMedia
 const createMatchMediaMock = (matches: boolean) => {
@@ -180,7 +180,10 @@ describe('useMediaQuery', () => {
 
       unmount();
 
-      expect(matchMediaMock.removeEventListener).toHaveBeenCalledWith('change', expect.any(Function));
+      expect(matchMediaMock.removeEventListener).toHaveBeenCalledWith(
+        'change',
+        expect.any(Function)
+      );
     });
 
     it('should not update after unmount', async () => {
@@ -212,20 +215,16 @@ describe('useMediaQuery', () => {
       const mockQuery1 = createMatchMediaMock(false);
       const mockQuery2 = createMatchMediaMock(true);
 
-      const matchMediaSpy = vi
-        .fn()
-        .mockReturnValueOnce(mockQuery1)
-        .mockReturnValueOnce(mockQuery2);
+      const matchMediaSpy = vi.fn().mockReturnValueOnce(mockQuery1).mockReturnValueOnce(mockQuery2);
 
       Object.defineProperty(window, 'matchMedia', {
         writable: true,
         value: matchMediaSpy,
       });
 
-      const { result, rerender } = renderHook(
-        ({ query }) => useMediaQuery(query),
-        { initialProps: { query: '(min-width: 768px)' } }
-      );
+      const { result, rerender } = renderHook(({ query }) => useMediaQuery(query), {
+        initialProps: { query: '(min-width: 768px)' },
+      });
 
       expect(result.current).toBe(false);
 
@@ -240,20 +239,16 @@ describe('useMediaQuery', () => {
       const mockQuery1 = createMatchMediaMock(false);
       const mockQuery2 = createMatchMediaMock(true);
 
-      const matchMediaSpy = vi
-        .fn()
-        .mockReturnValueOnce(mockQuery1)
-        .mockReturnValueOnce(mockQuery2);
+      const matchMediaSpy = vi.fn().mockReturnValueOnce(mockQuery1).mockReturnValueOnce(mockQuery2);
 
       Object.defineProperty(window, 'matchMedia', {
         writable: true,
         value: matchMediaSpy,
       });
 
-      const { rerender } = renderHook(
-        ({ query }) => useMediaQuery(query),
-        { initialProps: { query: '(min-width: 768px)' } }
-      );
+      const { rerender } = renderHook(({ query }) => useMediaQuery(query), {
+        initialProps: { query: '(min-width: 768px)' },
+      });
 
       rerender({ query: '(min-width: 1024px)' });
 

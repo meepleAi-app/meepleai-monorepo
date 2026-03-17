@@ -18,10 +18,21 @@ import { useState, useCallback } from 'react';
 
 import { Brain, Check, HelpCircle, Lightbulb, Sparkles, X } from 'lucide-react';
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/data-display/card';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/overlays/tooltip';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/data-display/card';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/overlays/tooltip';
 import { Button } from '@/components/ui/primitives/button';
-import { usePlayerAISuggestion } from '@/lib/hooks/usePlayerAISuggestion';
+import { usePlayerAISuggestion } from '@/lib/domain-hooks/usePlayerAISuggestion';
 
 import { PlayerModeHelpModal } from './PlayerModeHelpModal';
 import { PlayerModeTour } from './PlayerModeTour';

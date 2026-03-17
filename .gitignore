@@ -3,6 +3,9 @@ node_modules/
 .pnpm-store/
 **/node_modules/
 
+# Benchmark results (auto-generated)
+infra/scripts/benchmark-results/*.json
+
 # Build outputs
 **/bin/
 **/obj/

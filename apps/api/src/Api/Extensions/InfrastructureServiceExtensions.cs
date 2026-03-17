@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Hybrid;
+using Microsoft.Extensions.Hosting;
 using StackExchange.Redis;
 using Polly;
 using Polly.Extensions.Http;
@@ -26,6 +27,11 @@ internal static class InfrastructureServiceExtensions
         services.AddHttpClients(configuration);
         services.AddTimeProvider();
         services.AddBackgroundServices();
+
+        // Prevent unhandled background service exceptions from crashing the host.
+        // Safety net for schema mismatches (integration mode) or transient DB failures.
+        services.Configure<HostOptions>(options =>
+            options.BackgroundServiceExceptionBehavior = BackgroundServiceExceptionBehavior.Ignore);
         services.AddStorageServices(); // Issue #2732: Storage services
 
         return services;

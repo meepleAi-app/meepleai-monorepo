@@ -30,6 +30,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/overlays/alert-dialog-primitives';
 import { api } from '@/lib/api';
+import { logger } from '@/lib/logger';
 
 // ISSUE #2374 Phase 5: Lazy load heavy modal component for bundle optimization
 // SharedGameDetailModal is only used when user selects catalog game (not BGG)
@@ -85,7 +86,7 @@ export default function AddGamePage() {
       router.push('/games');
       router.refresh();
     } catch (error) {
-      console.error('Failed to add game from catalog:', error);
+      logger.error('Failed to add game from catalog:', error);
       const errorMessage =
         error instanceof Error && error.message.includes('already in')
           ? 'Questo gioco è già nella tua libreria.'

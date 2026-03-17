@@ -25,6 +25,7 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 
 import type { ScoreEntry, TurnAdvancedPayload } from '@/components/session/types';
+import { logger } from '@/lib/logger';
 
 /**
  * SSE Event Types (from GST-003 backend)
@@ -160,7 +161,10 @@ export function useSessionSync(options: UseSessionSyncOptions): SessionSyncState
           }
         }
       } catch (err) {
-        console.error('[useSessionSync] Event parsing error:', err, event.data);
+        logger.error(
+          `[useSessionSync] Event parsing error: ${event.data}`,
+          err instanceof Error ? err : undefined
+        );
       }
     },
     [onScoreUpdate, onPaused, onResumed, onFinalized]
@@ -182,11 +186,11 @@ export function useSessionSync(options: UseSessionSyncOptions): SessionSyncState
         setIsConnected(true);
         setError(null);
         reconnectAttemptsRef.current = 0;
-        console.warn('[useSessionSync] Connected to SSE stream');
+        logger.warn('[useSessionSync] Connected to SSE stream');
       };
 
       eventSource.onerror = err => {
-        console.error('[useSessionSync] SSE error:', err);
+        logger.error('[useSessionSync] SSE error:', err);
         setIsConnected(false);
 
         const errorObj = new Error('SSE connection failed');
@@ -198,7 +202,7 @@ export function useSessionSync(options: UseSessionSyncOptions): SessionSyncState
           const delay = Math.min(Math.pow(2, reconnectAttemptsRef.current) * 1000, 30000);
           reconnectAttemptsRef.current += 1;
 
-          console.warn(
+          logger.warn(
             `[useSessionSync] Reconnecting in ${delay / 1000}s (attempt ${reconnectAttemptsRef.current}/${maxReconnectAttempts})`
           );
 
@@ -207,7 +211,7 @@ export function useSessionSync(options: UseSessionSyncOptions): SessionSyncState
             connect();
           }, delay);
         } else {
-          console.error('[useSessionSync] Max reconnection attempts reached');
+          logger.error('[useSessionSync] Max reconnection attempts reached');
           eventSource.close();
         }
       };
@@ -224,7 +228,7 @@ export function useSessionSync(options: UseSessionSyncOptions): SessionSyncState
             const payload = JSON.parse(event.data) as TurnAdvancedPayload;
             onTurnAdvanced(payload);
           } catch (err) {
-            console.error('[useSessionSync] session:toolkit parse error:', err);
+            logger.error('[useSessionSync] session:toolkit parse error:', err);
           }
         });
       }

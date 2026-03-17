@@ -12,6 +12,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 
+import { logger } from '@/lib/logger';
 import { initOfflineStorage, getStorageStats, clearAllData } from '@/lib/pwa/offline-storage';
 import { syncManager, type SyncState, type SyncResult } from '@/lib/pwa/sync-manager';
 
@@ -166,8 +167,7 @@ export function usePWA(): UsePWAReturn {
       swRegistrationRef.current = registration;
       setIsInstalled(true);
 
-      // eslint-disable-next-line no-console
-      console.log('[PWA] Service worker registered:', registration.scope);
+      logger.debug(`[PWA] Service worker registered: ${registration.scope}`);
 
       // Check for updates
       registration.addEventListener('updatefound', () => {
@@ -175,8 +175,7 @@ export function usePWA(): UsePWAReturn {
         if (newWorker) {
           newWorker.addEventListener('statechange', () => {
             if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-              // eslint-disable-next-line no-console
-              console.log('[PWA] New service worker available');
+              logger.debug('[PWA] New service worker available');
               setUpdateAvailable(true);
             }
           });
@@ -185,12 +184,11 @@ export function usePWA(): UsePWAReturn {
 
       // Handle controller change (after update)
       navigator.serviceWorker.addEventListener('controllerchange', () => {
-        // eslint-disable-next-line no-console
-        console.log('[PWA] Service worker controller changed');
+        logger.debug('[PWA] Service worker controller changed');
         setUpdateAvailable(false);
       });
     } catch (error) {
-      console.error('[PWA] Service worker registration failed:', error);
+      logger.error('[PWA] Service worker registration failed:', error);
     }
   };
 
@@ -210,16 +208,16 @@ export function usePWA(): UsePWAReturn {
     event.preventDefault();
     installPromptRef.current = event;
     setCanInstall(true);
-    // eslint-disable-next-line no-console
-    console.log('[PWA] Install prompt captured');
+
+    logger.debug('[PWA] Install prompt captured');
   };
 
   const handleAppInstalled = () => {
     setCanInstall(false);
     setIsStandalone(true);
     installPromptRef.current = null;
-    // eslint-disable-next-line no-console
-    console.log('[PWA] App installed');
+
+    logger.debug('[PWA] App installed');
   };
 
   // ==========================================================================
@@ -228,7 +226,7 @@ export function usePWA(): UsePWAReturn {
 
   const install = useCallback(async (): Promise<boolean> => {
     if (!installPromptRef.current) {
-      console.warn('[PWA] No install prompt available');
+      logger.warn('[PWA] No install prompt available');
       return false;
     }
 
@@ -236,8 +234,7 @@ export function usePWA(): UsePWAReturn {
       await installPromptRef.current.prompt();
       const { outcome } = await installPromptRef.current.userChoice;
 
-      // eslint-disable-next-line no-console
-      console.log('[PWA] Install prompt result:', outcome);
+      logger.debug(`[PWA] Install prompt result: ${outcome}`);
 
       if (outcome === 'accepted') {
         setCanInstall(false);
@@ -247,7 +244,7 @@ export function usePWA(): UsePWAReturn {
 
       return false;
     } catch (error) {
-      console.error('[PWA] Install prompt error:', error);
+      logger.error('[PWA] Install prompt error:', error);
       return false;
     }
   }, []);
@@ -278,7 +275,7 @@ export function usePWA(): UsePWAReturn {
       const stats = await getStorageStats();
       setStorageStats(stats);
     } catch (error) {
-      console.error('[PWA] Failed to get storage stats:', error);
+      logger.error('[PWA] Failed to get storage stats:', error);
     }
   }, []);
 

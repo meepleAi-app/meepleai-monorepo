@@ -4,6 +4,8 @@ import { Component, type ErrorInfo, type ReactNode } from 'react';
 
 import { AlertTriangle, RefreshCw, ChevronDown, ChevronUp } from 'lucide-react';
 
+import { logger } from '@/lib/logger';
+
 interface Props {
   children: ReactNode;
 }
@@ -25,7 +27,7 @@ export class AdminErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    console.error('[AdminErrorBoundary]', error, errorInfo);
+    logger.error(`[AdminErrorBoundary] ${error.message}`, error);
   }
 
   handleReload = () => {

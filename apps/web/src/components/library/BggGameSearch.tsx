@@ -23,6 +23,7 @@ import { Input } from '@/components/ui/primitives/input';
 import { api } from '@/lib/api';
 import type { BggSearchResult } from '@/lib/api/schemas/games.schemas';
 import { useBggRateLimit } from '@/lib/domain-hooks/useBggRateLimit';
+import { logger } from '@/lib/logger';
 import { cn } from '@/lib/utils';
 
 export interface BggGameSearchProps {
@@ -70,7 +71,7 @@ export function BggGameSearch({
         toast.info('Nessun risultato per la ricerca esatta');
       }
     } catch (err) {
-      console.error('BGG search error:', err);
+      logger.error('BGG search error:', err);
       setError('Errore nella ricerca BGG. Riprova.');
       setResults([]);
       setIsOpen(false);
@@ -120,7 +121,7 @@ export function BggGameSearch({
       }
     },
     [isOpen, results, highlightedIndex]
-  ); // eslint-disable-line react-hooks/exhaustive-deps
+  );
 
   const handleResultClick = useCallback(
     (result: BggSearchResult) => {

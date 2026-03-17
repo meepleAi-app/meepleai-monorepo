@@ -19,6 +19,8 @@ import React, {
   PropsWithChildren,
 } from 'react';
 
+import { logger } from '@/lib/logger';
+
 // ============================================================================
 // Types
 // ============================================================================
@@ -85,7 +87,7 @@ export function UIProvider({ children }: PropsWithChildren) {
         setEditingMessageId(null);
         setEditContent('');
       } catch (err) {
-        console.error('Failed to save edit:', err);
+        logger.error('Failed to save edit:', err);
         throw err;
       }
     },

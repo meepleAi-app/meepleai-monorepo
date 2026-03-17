@@ -26,6 +26,7 @@
 import { useCallback, useEffect, useRef } from 'react';
 
 import { useNetworkStatus, useOnlineCallback } from '@/hooks/useNetworkStatus';
+import { logger } from '@/lib/logger';
 import {
   useOfflineMessageQueueStore,
   selectPendingMessages,
@@ -136,7 +137,7 @@ export function useOfflineMessageQueue(
   // Manual replay trigger
   const replayQueue = useCallback(async () => {
     if (!sendMessage) {
-      console.warn('[useOfflineMessageQueue] No sendMessage function provided');
+      logger.warn('[useOfflineMessageQueue] No sendMessage function provided');
       return { sent: 0, failed: 0 };
     }
 

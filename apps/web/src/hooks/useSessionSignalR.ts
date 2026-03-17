@@ -12,6 +12,8 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 
 import * as signalR from '@microsoft/signalr';
 
+import { logger } from '@/lib/logger';
+
 // ---------------------------------------------------------------------------
 // Event types
 // ---------------------------------------------------------------------------
@@ -140,7 +142,7 @@ export function useSessionSignalR({
         // ----- Reconnection handlers -----
 
         connection.onreconnecting(error => {
-          console.warn('[useSessionSignalR] Reconnecting...', error);
+          logger.warn(`[useSessionSignalR] Reconnecting... ${error?.message ?? ''}`);
           setIsConnected(false);
           setConnectionError('Reconnecting...');
         });
@@ -151,12 +153,12 @@ export function useSessionSignalR({
 
           // Rejoin session group after reconnect
           connection.invoke('JoinSession', sessionId).catch(err => {
-            console.error('[useSessionSignalR] Failed to rejoin session:', err);
+            logger.error('[useSessionSignalR] Failed to rejoin session:', err);
           });
         });
 
         connection.onclose(error => {
-          console.error('[useSessionSignalR] Disconnected:', error);
+          logger.error('[useSessionSignalR] Disconnected:', error);
           setIsConnected(false);
           setConnectionError(error?.message ?? 'Connection closed');
         });
@@ -192,7 +194,7 @@ export function useSessionSignalR({
         setIsConnected(true);
         setConnectionError(null);
       } catch (err) {
-        console.error('[useSessionSignalR] Connection failed:', err);
+        logger.error('[useSessionSignalR] Connection failed:', err);
         const errorMsg = err instanceof Error ? err.message : 'Failed to connect';
         setConnectionError(errorMsg);
       }
@@ -205,11 +207,11 @@ export function useSessionSignalR({
       if (connectionRef.current) {
         connectionRef.current
           .invoke('LeaveSession', sessionId)
-          .catch(err => console.error('[useSessionSignalR] Failed to leave session:', err));
+          .catch(err => logger.error('[useSessionSignalR] Failed to leave session:', err));
 
         connectionRef.current
           .stop()
-          .catch(err => console.error('[useSessionSignalR] Failed to stop connection:', err));
+          .catch(err => logger.error('[useSessionSignalR] Failed to stop connection:', err));
 
         connectionRef.current = null;
       }

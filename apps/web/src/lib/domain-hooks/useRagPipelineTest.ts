@@ -34,6 +34,7 @@
 import { useState, useCallback, useRef } from 'react';
 
 import type { PipelineDefinition } from '@/components/rag-dashboard/builder/types';
+import { logger } from '@/lib/logger';
 
 // =============================================================================
 // Event Types (from backend)
@@ -256,7 +257,7 @@ export function useRagPipelineTest(
     try {
       return JSON.parse(data) as PipelineTestEvent;
     } catch {
-      console.error('[useRagPipelineTest] Failed to parse event:', eventType, data);
+      logger.error(`[useRagPipelineTest] Failed to parse event: ${eventType} ${data}`);
       return null;
     }
   }, []);

@@ -81,13 +81,12 @@ export function ContextualBottomSheet({ isOpen, onClose }: ContextualBottomSheet
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, onClose]);
 
-  // Prevent body scroll when open
+  // Prevent body scroll when open (mobile only — desktop scrolls via <main>)
   useEffect(() => {
-    if (isOpen) {
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = '';
-    }
+    if (!isOpen) return;
+    const isMobile = window.matchMedia('(max-width: 767px)').matches;
+    if (!isMobile) return;
+    document.body.style.overflow = 'hidden';
     return () => {
       document.body.style.overflow = '';
     };
@@ -117,13 +116,14 @@ export function ContextualBottomSheet({ isOpen, onClose }: ContextualBottomSheet
           <FocusTrap
             focusTrapOptions={{
               allowOutsideClick: true,
-              fallbackFocus: '[data-testid="bottom-sheet-backdrop"]',
+              fallbackFocus: '[role="dialog"]',
             }}
           >
             <motion.div
               role="dialog"
               aria-modal="true"
               aria-label={entityTitle || 'Contextual actions'}
+              tabIndex={-1}
               className={cn(
                 'fixed bottom-0 left-0 right-0 z-50',
                 'bg-card/95 backdrop-blur-xl rounded-t-2xl',

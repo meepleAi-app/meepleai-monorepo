@@ -129,11 +129,7 @@ describe('Card Back Blocks', () => {
 
   it('MembersBlock shows empty state when no members', () => {
     render(
-      <MembersBlock
-        title="Members"
-        entityColor={COLOR}
-        data={{ type: 'members', members: [] }}
-      />
+      <MembersBlock title="Members" entityColor={COLOR} data={{ type: 'members', members: [] }} />
     );
     expect(screen.getByText('No data yet')).toBeInTheDocument();
   });
@@ -169,11 +165,7 @@ describe('Card Back Blocks', () => {
 
   it('ContentsBlock shows empty state when no items', () => {
     render(
-      <ContentsBlock
-        title="Contents"
-        entityColor={COLOR}
-        data={{ type: 'contents', items: [] }}
-      />
+      <ContentsBlock title="Contents" entityColor={COLOR} data={{ type: 'contents', items: [] }} />
     );
     expect(screen.getByText('No data yet')).toBeInTheDocument();
   });
@@ -196,11 +188,7 @@ describe('Card Back Blocks', () => {
 
   it('HistoryBlock shows empty state when no entries', () => {
     render(
-      <HistoryBlock
-        title="History"
-        entityColor={COLOR}
-        data={{ type: 'history', entries: [] }}
-      />
+      <HistoryBlock title="History" entityColor={COLOR} data={{ type: 'history', entries: [] }} />
     );
     expect(screen.getByText('No data yet')).toBeInTheDocument();
   });

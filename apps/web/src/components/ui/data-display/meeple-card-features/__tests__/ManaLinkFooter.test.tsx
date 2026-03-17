@@ -4,7 +4,9 @@ import { ManaLinkFooter } from '../ManaLinkFooter';
 describe('ManaLinkFooter', () => {
   const mockOnPipClick = vi.fn();
 
-  beforeEach(() => { mockOnPipClick.mockClear(); });
+  beforeEach(() => {
+    mockOnPipClick.mockClear();
+  });
 
   it('renders mana pips for linked entity types', () => {
     render(

@@ -62,7 +62,7 @@ export const ProgressBlock = memo(function ProgressBlock({
             aria-valuemax={target}
           />
           {/* Milestone markers */}
-          {milestones?.map((milestone) => {
+          {milestones?.map(milestone => {
             const pos = target > 0 ? Math.min(100, (milestone.at / target) * 100) : 0;
             return (
               <span
@@ -78,7 +78,7 @@ export const ProgressBlock = memo(function ProgressBlock({
         {/* Milestones legend */}
         {milestones && milestones.length > 0 && (
           <ul className="flex flex-wrap gap-x-2 gap-y-0.5 text-[10px] text-muted-foreground">
-            {milestones.map((milestone) => (
+            {milestones.map(milestone => (
               <li key={milestone.at}>
                 {milestone.at}: {milestone.label}
               </li>

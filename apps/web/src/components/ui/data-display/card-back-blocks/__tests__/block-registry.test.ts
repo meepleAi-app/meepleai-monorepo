@@ -18,9 +18,22 @@ describe('block-registry', () => {
 
   it('returns blocks for all 16 entity types', () => {
     const allTypes = [
-      'game', 'session', 'player', 'event', 'collection', 'group',
-      'location', 'expansion', 'agent', 'kb', 'chatSession', 'note',
-      'toolkit', 'tool', 'achievement', 'custom',
+      'game',
+      'session',
+      'player',
+      'event',
+      'collection',
+      'group',
+      'location',
+      'expansion',
+      'agent',
+      'kb',
+      'chatSession',
+      'note',
+      'toolkit',
+      'tool',
+      'achievement',
+      'custom',
     ] as const;
     allTypes.forEach(type => {
       const blocks = getBlocksForEntity(type);
@@ -30,9 +43,22 @@ describe('block-registry', () => {
 
   it('every entity has at least an actions block', () => {
     const allTypes = [
-      'game', 'session', 'player', 'event', 'collection', 'group',
-      'location', 'expansion', 'agent', 'kb', 'chatSession', 'note',
-      'toolkit', 'tool', 'achievement', 'custom',
+      'game',
+      'session',
+      'player',
+      'event',
+      'collection',
+      'group',
+      'location',
+      'expansion',
+      'agent',
+      'kb',
+      'chatSession',
+      'note',
+      'toolkit',
+      'tool',
+      'achievement',
+      'custom',
     ] as const;
     allTypes.forEach(type => {
       const blocks = getBlocksForEntity(type);

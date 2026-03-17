@@ -11,7 +11,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { renderHook, waitFor } from '@testing-library/react';
 import { createElement, type ReactNode } from 'react';
 
-import { useGameSearch, type GameSearchResult } from '../use-game-search';
+import { useGameSearch, type GameSearchResult } from '../useGameSearch';
 import { createTestQueryClient } from '@/__tests__/utils/query-test-utils';
 
 // Mock global fetch
@@ -56,9 +56,7 @@ describe('useGameSearch', () => {
     queryClient = createTestQueryClient();
     vi.clearAllMocks();
     // Reset useDebounce to default behavior
-    vi.mocked(useDebounceModule.useDebounce).mockImplementation(
-      (value: string) => value
-    );
+    vi.mocked(useDebounceModule.useDebounce).mockImplementation((value: string) => value);
   });
 
   describe('Query Behavior', () => {
@@ -110,18 +108,18 @@ describe('useGameSearch', () => {
 
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
-      expect(global.fetch).toHaveBeenCalledWith(
-        '/api/v1/games/search?q=Catan%20%26%20Cities'
-      );
+      expect(global.fetch).toHaveBeenCalledWith('/api/v1/games/search?q=Catan%20%26%20Cities');
     });
   });
 
   describe('Debouncing', () => {
     it('should use debounced query', async () => {
-      vi.mocked(useDebounceModule.useDebounce).mockImplementation((value: string, delay: number) => {
-        expect(delay).toBe(300); // Default debounce
-        return value;
-      });
+      vi.mocked(useDebounceModule.useDebounce).mockImplementation(
+        (value: string, delay: number) => {
+          expect(delay).toBe(300); // Default debounce
+          return value;
+        }
+      );
 
       vi.mocked(global.fetch).mockResolvedValueOnce({
         ok: true,
@@ -306,9 +304,7 @@ describe('useGameSearch', () => {
       // Both queries should have been called
       expect(global.fetch).toHaveBeenCalledTimes(2);
       expect(global.fetch).toHaveBeenCalledWith('/api/v1/games/search?q=Catan');
-      expect(global.fetch).toHaveBeenCalledWith(
-        '/api/v1/games/search?q=Carcassonne'
-      );
+      expect(global.fetch).toHaveBeenCalledWith('/api/v1/games/search?q=Carcassonne');
     });
   });
 
@@ -316,7 +312,7 @@ describe('useGameSearch', () => {
     it('should indicate loading state', async () => {
       vi.mocked(global.fetch).mockImplementation(
         () =>
-          new Promise((resolve) =>
+          new Promise(resolve =>
             setTimeout(
               () =>
                 resolve({

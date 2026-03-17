@@ -71,7 +71,7 @@ describe('useGameToolkit', () => {
     expect(result.current.error).toBeNull();
     expect(global.fetch).toHaveBeenCalledWith(
       expect.stringContaining('/api/v1/game-toolkits/by-game/game-abc'),
-      expect.objectContaining({ method: 'GET', credentials: 'include' }),
+      expect.objectContaining({ method: 'GET', credentials: 'include' })
     );
   });
 
@@ -131,9 +131,7 @@ describe('useGameToolkit', () => {
   });
 
   it('sets error on network failure', async () => {
-    (global.fetch as ReturnType<typeof vi.fn>).mockRejectedValueOnce(
-      new Error('Network error'),
-    );
+    (global.fetch as ReturnType<typeof vi.fn>).mockRejectedValueOnce(new Error('Network error'));
 
     const { result } = renderHook(() => useGameToolkit('game-abc'));
     await waitFor(() => expect(result.current.isLoading).toBe(false));
@@ -151,7 +149,7 @@ describe('useGameToolkit', () => {
 
     const { result, rerender } = renderHook(
       ({ gameId }: { gameId: string }) => useGameToolkit(gameId),
-      { initialProps: { gameId: 'game-abc' } },
+      { initialProps: { gameId: 'game-abc' } }
     );
 
     await waitFor(() => expect(result.current.isLoading).toBe(false));
@@ -172,7 +170,7 @@ describe('useGameToolkit', () => {
 
     const { result, rerender } = renderHook(
       ({ gameId }: { gameId: string | null }) => useGameToolkit(gameId),
-      { initialProps: { gameId: 'game-abc' as string | null } },
+      { initialProps: { gameId: 'game-abc' as string | null } }
     );
 
     await waitFor(() => expect(result.current.isLoading).toBe(false));

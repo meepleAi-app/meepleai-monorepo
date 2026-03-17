@@ -62,7 +62,7 @@ vi.mock('@microsoft/signalr', () => ({
 // ──────────────────────────────────────────────────────────
 
 import { useLiveSessionStore } from '@/lib/stores/live-session-store';
-import { useSignalRSession } from '../use-signalr-session';
+import { useSignalRSession } from '../useSignalrSession';
 
 // ──────────────────────────────────────────────────────────
 // Store tests

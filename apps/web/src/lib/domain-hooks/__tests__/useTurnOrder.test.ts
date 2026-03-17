@@ -67,7 +67,9 @@ describe('useTurnOrder', () => {
       readyState: 0, // CONNECTING
     };
 
-    global.EventSource = vi.fn().mockImplementation(() => mockEventSource) as unknown as typeof EventSource;
+    global.EventSource = vi
+      .fn()
+      .mockImplementation(() => mockEventSource) as unknown as typeof EventSource;
   });
 
   afterEach(() => {
@@ -80,9 +82,7 @@ describe('useTurnOrder', () => {
     it('starts with null turnOrder', async () => {
       global.fetch = mockFetch(404, null);
 
-      const { result } = renderHook(() =>
-        useTurnOrder({ sessionId: 'sess-abc', apiBaseUrl: '' })
-      );
+      const { result } = renderHook(() => useTurnOrder({ sessionId: 'sess-abc', apiBaseUrl: '' }));
 
       expect(result.current.turnOrder).toBeNull();
     });
@@ -90,9 +90,7 @@ describe('useTurnOrder', () => {
     it('starts with isAdvancing=false', async () => {
       global.fetch = mockFetch(404, null);
 
-      const { result } = renderHook(() =>
-        useTurnOrder({ sessionId: 'sess-abc', apiBaseUrl: '' })
-      );
+      const { result } = renderHook(() => useTurnOrder({ sessionId: 'sess-abc', apiBaseUrl: '' }));
 
       expect(result.current.isAdvancing).toBe(false);
     });
@@ -100,9 +98,7 @@ describe('useTurnOrder', () => {
     it('starts with error=null', async () => {
       global.fetch = mockFetch(404, null);
 
-      const { result } = renderHook(() =>
-        useTurnOrder({ sessionId: 'sess-abc', apiBaseUrl: '' })
-      );
+      const { result } = renderHook(() => useTurnOrder({ sessionId: 'sess-abc', apiBaseUrl: '' }));
 
       expect(result.current.error).toBeNull();
     });
@@ -114,9 +110,7 @@ describe('useTurnOrder', () => {
     it('sets turnOrder on successful fetch', async () => {
       global.fetch = mockFetch(200, TURN_ORDER);
 
-      const { result } = renderHook(() =>
-        useTurnOrder({ sessionId: 'sess-abc', apiBaseUrl: '' })
-      );
+      const { result } = renderHook(() => useTurnOrder({ sessionId: 'sess-abc', apiBaseUrl: '' }));
 
       await waitFor(() => expect(result.current.isLoading).toBe(false));
       expect(result.current.turnOrder).toEqual(TURN_ORDER);
@@ -125,9 +119,7 @@ describe('useTurnOrder', () => {
     it('sets turnOrder to null on 404', async () => {
       global.fetch = mockFetch(404, null);
 
-      const { result } = renderHook(() =>
-        useTurnOrder({ sessionId: 'sess-abc', apiBaseUrl: '' })
-      );
+      const { result } = renderHook(() => useTurnOrder({ sessionId: 'sess-abc', apiBaseUrl: '' }));
 
       await waitFor(() => expect(result.current.isLoading).toBe(false));
       expect(result.current.turnOrder).toBeNull();
@@ -136,9 +128,7 @@ describe('useTurnOrder', () => {
     it('sets error on non-404 HTTP error', async () => {
       global.fetch = mockFetch(500, null);
 
-      const { result } = renderHook(() =>
-        useTurnOrder({ sessionId: 'sess-abc', apiBaseUrl: '' })
-      );
+      const { result } = renderHook(() => useTurnOrder({ sessionId: 'sess-abc', apiBaseUrl: '' }));
 
       await waitFor(() => expect(result.current.isLoading).toBe(false));
       expect(result.current.error).toMatch(/HTTP 500/);
@@ -154,13 +144,22 @@ describe('useTurnOrder', () => {
       let callCount = 0;
       global.fetch = vi.fn().mockImplementation(() => {
         callCount++;
-        if (callCount === 1) return Promise.resolve({ ok: false, status: 404, statusText: 'Not Found', json: vi.fn() });
-        return Promise.resolve({ ok: true, status: 200, statusText: 'OK', json: vi.fn().mockResolvedValue(ADVANCED) });
+        if (callCount === 1)
+          return Promise.resolve({
+            ok: false,
+            status: 404,
+            statusText: 'Not Found',
+            json: vi.fn(),
+          });
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          statusText: 'OK',
+          json: vi.fn().mockResolvedValue(ADVANCED),
+        });
       });
 
-      const { result } = renderHook(() =>
-        useTurnOrder({ sessionId: 'sess-abc', apiBaseUrl: '' })
-      );
+      const { result } = renderHook(() => useTurnOrder({ sessionId: 'sess-abc', apiBaseUrl: '' }));
 
       await waitFor(() => expect(result.current.isLoading).toBe(false));
 
@@ -176,9 +175,7 @@ describe('useTurnOrder', () => {
         return Promise.resolve({ ok: false, status: 409, statusText: 'Conflict', json: vi.fn() });
       });
 
-      const { result } = renderHook(() =>
-        useTurnOrder({ sessionId: 'sess-abc', apiBaseUrl: '' })
-      );
+      const { result } = renderHook(() => useTurnOrder({ sessionId: 'sess-abc', apiBaseUrl: '' }));
 
       await act(async () => {
         await expect(result.current.advance()).rejects.toThrow();
@@ -189,13 +186,13 @@ describe('useTurnOrder', () => {
 
     it('resets isAdvancing to false after advance completes', async () => {
       global.fetch = vi.fn().mockResolvedValue({
-        ok: true, status: 200, statusText: 'OK',
+        ok: true,
+        status: 200,
+        statusText: 'OK',
         json: vi.fn().mockResolvedValue(ADVANCED),
       });
 
-      const { result } = renderHook(() =>
-        useTurnOrder({ sessionId: 'sess-abc', apiBaseUrl: '' })
-      );
+      const { result } = renderHook(() => useTurnOrder({ sessionId: 'sess-abc', apiBaseUrl: '' }));
 
       await act(async () => {
         await result.current.advance();
@@ -210,13 +207,13 @@ describe('useTurnOrder', () => {
   describe('reset', () => {
     it('sets turnOrder to server response on success', async () => {
       global.fetch = vi.fn().mockResolvedValue({
-        ok: true, status: 200, statusText: 'OK',
+        ok: true,
+        status: 200,
+        statusText: 'OK',
         json: vi.fn().mockResolvedValue(TURN_ORDER),
       });
 
-      const { result } = renderHook(() =>
-        useTurnOrder({ sessionId: 'sess-abc', apiBaseUrl: '' })
-      );
+      const { result } = renderHook(() => useTurnOrder({ sessionId: 'sess-abc', apiBaseUrl: '' }));
 
       await act(async () => {
         await result.current.reset();
@@ -227,13 +224,13 @@ describe('useTurnOrder', () => {
 
     it('sets error on reset failure', async () => {
       global.fetch = vi.fn().mockResolvedValue({
-        ok: false, status: 503, statusText: 'Service Unavailable',
+        ok: false,
+        status: 503,
+        statusText: 'Service Unavailable',
         json: vi.fn(),
       });
 
-      const { result } = renderHook(() =>
-        useTurnOrder({ sessionId: 'sess-abc', apiBaseUrl: '' })
-      );
+      const { result } = renderHook(() => useTurnOrder({ sessionId: 'sess-abc', apiBaseUrl: '' }));
 
       await act(async () => {
         await expect(result.current.reset()).rejects.toThrow();
@@ -249,9 +246,7 @@ describe('useTurnOrder', () => {
     it('does nothing when turnOrder is null', async () => {
       global.fetch = mockFetch(404, null);
 
-      const { result } = renderHook(() =>
-        useTurnOrder({ sessionId: 'sess-abc', apiBaseUrl: '' })
-      );
+      const { result } = renderHook(() => useTurnOrder({ sessionId: 'sess-abc', apiBaseUrl: '' }));
 
       await waitFor(() => expect(result.current.isLoading).toBe(false));
 
@@ -272,9 +267,7 @@ describe('useTurnOrder', () => {
     it('updates currentPlayer, nextPlayer, roundNumber, and currentIndex from payload', async () => {
       global.fetch = mockFetch(200, TURN_ORDER);
 
-      const { result } = renderHook(() =>
-        useTurnOrder({ sessionId: 'sess-abc', apiBaseUrl: '' })
-      );
+      const { result } = renderHook(() => useTurnOrder({ sessionId: 'sess-abc', apiBaseUrl: '' }));
 
       await waitFor(() => expect(result.current.turnOrder).not.toBeNull());
 
@@ -338,9 +331,7 @@ describe('useTurnOrder', () => {
     it('closes the EventSource on unmount', async () => {
       global.fetch = mockFetch(404, null);
 
-      const { unmount } = renderHook(() =>
-        useTurnOrder({ sessionId: 'sess-123', apiBaseUrl: '' })
-      );
+      const { unmount } = renderHook(() => useTurnOrder({ sessionId: 'sess-123', apiBaseUrl: '' }));
 
       unmount();
 

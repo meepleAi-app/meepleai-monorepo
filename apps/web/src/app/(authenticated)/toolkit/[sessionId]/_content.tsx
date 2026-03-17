@@ -35,12 +35,12 @@ import {
   WhiteboardTool,
 } from '@/components/session';
 import type { CounterToolConfig, Participant } from '@/components/session/types';
-import { useCounterTool } from '@/lib/hooks/useCounterTool';
-import { useDiceRoller } from '@/lib/hooks/useDiceRoller';
-import { useGameToolkit } from '@/lib/hooks/useGameToolkit';
-import { useSessionSync } from '@/lib/hooks/useSessionSync';
-import { useTurnOrder } from '@/lib/hooks/useTurnOrder';
-import { useWhiteboardTool } from '@/lib/hooks/useWhiteboardTool';
+import { useCounterTool } from '@/lib/domain-hooks/useCounterTool';
+import { useDiceRoller } from '@/lib/domain-hooks/useDiceRoller';
+import { useGameToolkit } from '@/lib/domain-hooks/useGameToolkit';
+import { useSessionSync } from '@/lib/domain-hooks/useSessionSync';
+import { useTurnOrder } from '@/lib/domain-hooks/useTurnOrder';
+import { useWhiteboardTool } from '@/lib/domain-hooks/useWhiteboardTool';
 import { useSessionStore } from '@/lib/stores/sessionStore';
 import type { ToolId } from '@/lib/stores/sessionStore';
 import type { CounterToolDto } from '@/lib/types/gameToolkit';

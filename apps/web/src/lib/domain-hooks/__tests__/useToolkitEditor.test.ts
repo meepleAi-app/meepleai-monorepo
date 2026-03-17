@@ -68,7 +68,7 @@ describe('useToolkitEditor — initial fetch', () => {
     expect(result.current.error).toBeNull();
     expect(global.fetch).toHaveBeenCalledWith(
       expect.stringContaining('/api/v1/game-toolkits/by-game/game-abc'),
-      expect.objectContaining({ credentials: 'include' }),
+      expect.objectContaining({ credentials: 'include' })
     );
   });
 
@@ -116,7 +116,7 @@ describe('useToolkitEditor — createToolkit', () => {
   it('posts to /game-toolkits/ and updates state', async () => {
     const created = makeToolkit({ id: 'new-1', name: 'Catan Toolkit' });
     mockFetch([
-      { ok: true, body: [] },      // initial fetch (no toolkit)
+      { ok: true, body: [] }, // initial fetch (no toolkit)
       { ok: true, body: created }, // create
     ]);
 
@@ -130,7 +130,7 @@ describe('useToolkitEditor — createToolkit', () => {
     expect(result.current.toolkit?.name).toBe('Catan Toolkit');
     expect(global.fetch).toHaveBeenCalledWith(
       expect.stringContaining('/api/v1/game-toolkits/'),
-      expect.objectContaining({ method: 'POST' }),
+      expect.objectContaining({ method: 'POST' })
     );
   });
 
@@ -170,7 +170,7 @@ describe('useToolkitEditor — updateOverrides', () => {
     expect(result.current.toolkit?.overridesTurnOrder).toBe(true);
     expect(global.fetch).toHaveBeenCalledWith(
       expect.stringContaining(`/api/v1/game-toolkits/${tk.id}`),
-      expect.objectContaining({ method: 'PUT' }),
+      expect.objectContaining({ method: 'PUT' })
     );
   });
 
@@ -183,7 +183,7 @@ describe('useToolkitEditor — updateOverrides', () => {
     await expect(
       act(async () => {
         await result.current.updateOverrides({ overridesTurnOrder: true });
-      }),
+      })
     ).rejects.toThrow('No toolkit loaded');
   });
 });
@@ -214,7 +214,7 @@ describe('useToolkitEditor — tool CRUD', () => {
     expect(result.current.toolkit?.diceTools).toHaveLength(1);
     expect(global.fetch).toHaveBeenCalledWith(
       expect.stringContaining(`/dice-tools`),
-      expect.objectContaining({ method: 'POST' }),
+      expect.objectContaining({ method: 'POST' })
     );
   });
 
@@ -238,14 +238,16 @@ describe('useToolkitEditor — tool CRUD', () => {
     expect(result.current.toolkit?.diceTools).toHaveLength(0);
     expect(global.fetch).toHaveBeenCalledWith(
       expect.stringContaining('/dice-tools/'),
-      expect.objectContaining({ method: 'DELETE' }),
+      expect.objectContaining({ method: 'DELETE' })
     );
   });
 
   it('addCounterTool calls the counter-tools endpoint', async () => {
     const tk = makeToolkit();
     const withCounter = makeToolkit({
-      counterTools: [{ name: 'Risorse', minValue: 0, maxValue: 100, defaultValue: 0, isPerPlayer: true }],
+      counterTools: [
+        { name: 'Risorse', minValue: 0, maxValue: 100, defaultValue: 0, isPerPlayer: true },
+      ],
     });
     mockFetch([
       { ok: true, body: [tk] },
@@ -284,7 +286,10 @@ describe('useToolkitEditor — tool CRUD', () => {
         },
       ],
     });
-    mockFetch([{ ok: true, body: [tk] }, { ok: true, body: withCard }]);
+    mockFetch([
+      { ok: true, body: [tk] },
+      { ok: true, body: withCard },
+    ]);
 
     const { result } = renderHook(() => useToolkitEditor('game-abc'));
     await waitFor(() => expect(result.current.isLoading).toBe(false));
@@ -309,10 +314,19 @@ describe('useToolkitEditor — tool CRUD', () => {
     const tk = makeToolkit();
     const withTimer = makeToolkit({
       timerTools: [
-        { name: 'Countdown', durationSeconds: 60, timerType: 'countdown', autoStart: false, isPerPlayer: false },
+        {
+          name: 'Countdown',
+          durationSeconds: 60,
+          timerType: 'countdown',
+          autoStart: false,
+          isPerPlayer: false,
+        },
       ],
     });
-    mockFetch([{ ok: true, body: [tk] }, { ok: true, body: withTimer }]);
+    mockFetch([
+      { ok: true, body: [tk] },
+      { ok: true, body: withTimer },
+    ]);
 
     const { result } = renderHook(() => useToolkitEditor('game-abc'));
     await waitFor(() => expect(result.current.isLoading).toBe(false));
@@ -351,7 +365,7 @@ describe('useToolkitEditor — publish', () => {
     expect(result.current.toolkit?.version).toBe(2);
     expect(global.fetch).toHaveBeenCalledWith(
       expect.stringContaining(`/${tk.id}/publish`),
-      expect.objectContaining({ method: 'POST' }),
+      expect.objectContaining({ method: 'POST' })
     );
   });
 
@@ -364,7 +378,7 @@ describe('useToolkitEditor — publish', () => {
     await expect(
       act(async () => {
         await result.current.publish();
-      }),
+      })
     ).rejects.toThrow('No toolkit loaded');
   });
 });
@@ -373,14 +387,18 @@ describe('useToolkitEditor — isSaving', () => {
   it('sets isSaving true during API calls', async () => {
     const tk = makeToolkit();
     let resolveCreate!: (value: unknown) => void;
-    const createPromise = new Promise(r => { resolveCreate = r; });
+    const createPromise = new Promise(r => {
+      resolveCreate = r;
+    });
 
     (global.fetch as ReturnType<typeof vi.fn>)
       .mockResolvedValueOnce({ ok: true, json: async () => [tk] })
-      .mockReturnValueOnce(createPromise.then(() => ({
-        ok: true,
-        json: async () => makeToolkit({ name: 'New' }),
-      })));
+      .mockReturnValueOnce(
+        createPromise.then(() => ({
+          ok: true,
+          json: async () => makeToolkit({ name: 'New' }),
+        }))
+      );
 
     const { result } = renderHook(() => useToolkitEditor('game-abc'));
     await waitFor(() => expect(result.current.isLoading).toBe(false));
@@ -392,7 +410,9 @@ describe('useToolkitEditor — isSaving', () => {
 
     // Can't easily assert isSaving=true mid-flight in vitest, but we verify it resets
     resolveCreate(undefined);
-    await act(async () => { await savePromise!; });
+    await act(async () => {
+      await savePromise!;
+    });
     expect(result.current.isSaving).toBe(false);
   });
 });

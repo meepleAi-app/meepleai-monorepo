@@ -162,7 +162,7 @@ export function useDiceRoller(options: UseDiceRollerOptions): DiceRollerState {
       const data: DiceRollHistoryResponse[] = await response.json();
 
       setRollHistory(
-        data.map((roll) => ({
+        data.map(roll => ({
           id: roll.id,
           participantId: roll.participantId,
           participantName: roll.participantName,
@@ -188,22 +188,19 @@ export function useDiceRoller(options: UseDiceRollerOptions): DiceRollerState {
       setError(null);
 
       try {
-        const response = await fetch(
-          `${baseUrl}/api/v1/game-sessions/${sessionId}/dice`,
-          {
-            method: 'POST',
-            credentials: 'include',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              sessionId,
-              participantId,
-              formula,
-              label,
-            }),
-          }
-        );
+        const response = await fetch(`${baseUrl}/api/v1/game-sessions/${sessionId}/dice`, {
+          method: 'POST',
+          credentials: 'include',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            sessionId,
+            participantId,
+            formula,
+            label,
+          }),
+        });
 
         if (!response.ok) {
           const errorBody = await response.text();
@@ -228,7 +225,7 @@ export function useDiceRoller(options: UseDiceRollerOptions): DiceRollerState {
         pendingRollsRef.current.add(data.diceRollId);
 
         // Optimistic update
-        setRollHistory((prev) => [diceRoll, ...prev].slice(0, historyLimit));
+        setRollHistory(prev => [diceRoll, ...prev].slice(0, historyLimit));
 
         onRollReceived?.(diceRoll);
 
@@ -268,9 +265,9 @@ export function useDiceRoller(options: UseDiceRollerOptions): DiceRollerState {
       }
 
       // Add roll from other participant
-      setRollHistory((prev) => {
+      setRollHistory(prev => {
         // Check if we already have this roll (by ID)
-        if (prev.some((r) => r.id === event.diceRollId)) {
+        if (prev.some(r => r.id === event.diceRollId)) {
           return prev;
         }
         return [diceRoll, ...prev].slice(0, historyLimit);

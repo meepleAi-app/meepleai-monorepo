@@ -77,15 +77,15 @@ export interface UpdateStatePayload {
  * Hook for fetching game detail
  */
 export function useGameDetail(gameId: string) {
-  const setGameId = useGameDetailStore((s) => s.setGameId);
-  const setCurrentState = useGameDetailStore((s) => s.setCurrentState);
+  const setGameId = useGameDetailStore(s => s.setGameId);
+  const setCurrentState = useGameDetailStore(s => s.setCurrentState);
 
   return useQuery<GameDetail, Error>({
     queryKey: GAME_DETAIL_QUERY_KEY(gameId),
     queryFn: async () => {
       const response = await fetch(`/api/v1/library/games/${gameId}`);
       if (!response.ok) throw new Error('Failed to fetch game detail');
-      const result = await response.json() as GameDetail;
+      const result = (await response.json()) as GameDetail;
       setGameId(gameId);
       setCurrentState(result.currentState);
       return result;
@@ -100,9 +100,9 @@ export function useGameDetail(gameId: string) {
  */
 export function useUpdateGameState(gameId: string) {
   const queryClient = useQueryClient();
-  const setIsUpdatingState = useGameDetailStore((s) => s.setIsUpdatingState);
-  const setCurrentState = useGameDetailStore((s) => s.setCurrentState);
-  const setError = useGameDetailStore((s) => s.setError);
+  const setIsUpdatingState = useGameDetailStore(s => s.setIsUpdatingState);
+  const setCurrentState = useGameDetailStore(s => s.setCurrentState);
+  const setError = useGameDetailStore(s => s.setError);
 
   return useMutation({
     mutationFn: async (payload: UpdateStatePayload) => {
@@ -113,7 +113,7 @@ export function useUpdateGameState(gameId: string) {
       });
       if (!response.ok) throw new Error('Failed to update game state');
     },
-    onMutate: async (payload) => {
+    onMutate: async payload => {
       setIsUpdatingState(true);
 
       // Optimistic update
@@ -147,9 +147,9 @@ export function useUpdateGameState(gameId: string) {
  */
 export function useRecordGameSession(gameId: string) {
   const queryClient = useQueryClient();
-  const setIsRecordingSession = useGameDetailStore((s) => s.setIsRecordingSession);
-  const setOptimisticSessionId = useGameDetailStore((s) => s.setOptimisticSessionId);
-  const setError = useGameDetailStore((s) => s.setError);
+  const setIsRecordingSession = useGameDetailStore(s => s.setIsRecordingSession);
+  const setOptimisticSessionId = useGameDetailStore(s => s.setOptimisticSessionId);
+  const setError = useGameDetailStore(s => s.setError);
 
   return useMutation({
     mutationFn: async (payload: RecordSessionPayload) => {
@@ -162,7 +162,7 @@ export function useRecordGameSession(gameId: string) {
         }),
       });
       if (!response.ok) throw new Error('Failed to record session');
-      const result = await response.json() as { sessionId: string };
+      const result = (await response.json()) as { sessionId: string };
       return result.sessionId;
     },
     onMutate: async () => {
@@ -175,7 +175,7 @@ export function useRecordGameSession(gameId: string) {
 
       return { optimisticId };
     },
-    onSuccess: (sessionId) => {
+    onSuccess: sessionId => {
       // Invalidate to refetch with updated stats
       queryClient.invalidateQueries({ queryKey: GAME_DETAIL_QUERY_KEY(gameId) });
       setIsRecordingSession(false);

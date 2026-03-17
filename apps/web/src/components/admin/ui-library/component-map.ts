@@ -74,7 +74,37 @@ import { BudgetDebugPanel } from '@/components/admin/playground/budget-debug-pan
 import { ConfidenceBadge as RagConfidenceBadge } from '@/components/admin/rag/ConfidenceBadge';
 import { PipelineDiagram } from '@/components/admin/rag/PipelineDiagram';
 import { StrategyBadge } from '@/components/admin/rag/StrategyBadge';
+import { TimelineStep } from '@/components/admin/rag/TimelineStep';
 import { WaterfallChart } from '@/components/admin/rag/WaterfallChart';
+import { AgentConfigPanel as SandboxAgentConfigPanelImpl } from '@/components/admin/sandbox/AgentConfigPanel';
+import { AutoTestRunner } from '@/components/admin/sandbox/AutoTestRunner';
+import { AutoTestSummary } from '@/components/admin/sandbox/AutoTestSummary';
+import { DebugSidePanel } from '@/components/admin/sandbox/DebugSidePanel';
+import { PipelineDeepMetrics } from '@/components/admin/sandbox/PipelineDeepMetrics';
+import { PipelinePanel } from '@/components/admin/sandbox/PipelinePanel';
+import { PipelineStepCard } from '@/components/admin/sandbox/PipelineStepCard';
+import { PipelineTraceTree } from '@/components/admin/sandbox/PipelineTraceTree';
+import { RetrievedChunkCard } from '@/components/admin/sandbox/RetrievedChunkCard';
+import { SandboxChat } from '@/components/admin/sandbox/SandboxChat';
+import { ServiceHealthMatrix } from '@/components/admin/ServiceHealthMatrix';
+import { AdminSharedGameCardContainer } from '@/components/admin/shared-games/AdminSharedGameCardContainer';
+import { AgentBuilderModal } from '@/components/admin/shared-games/AgentBuilderModal';
+import { BggSearchPanel } from '@/components/admin/shared-games/BggSearchPanel';
+import { GameCatalogGrid } from '@/components/admin/shared-games/game-catalog-grid';
+import { GameForm } from '@/components/admin/shared-games/GameForm';
+import { GameStatusBadge } from '@/components/admin/shared-games/GameStatusBadge';
+import { PdfDocumentList } from '@/components/admin/shared-games/PdfDocumentList';
+import { PdfIndexingStatus } from '@/components/admin/shared-games/PdfIndexingStatus';
+import { PdfUploadSection } from '@/components/admin/shared-games/PdfUploadSection';
+import { AgentSetupPanel } from '@/components/admin/shared-games/rag-setup/AgentSetupPanel';
+import { InlineChatPanel } from '@/components/admin/shared-games/rag-setup/InlineChatPanel';
+import { RagReadinessIndicator } from '@/components/admin/shared-games/rag-setup/RagReadinessIndicator';
+import { StatCard as AdminStatCard } from '@/components/admin/StatCard';
+import { StrategyEditor } from '@/components/admin/strategies/StrategyEditor';
+import { CostBreakdownPanel } from '@/components/admin/usage/CostBreakdownPanel';
+import { FreeQuotaIndicator } from '@/components/admin/usage/FreeQuotaIndicator';
+import { KpiCards as UsageKpiCards } from '@/components/admin/usage/KpiCards';
+import { RequestTimelineChart } from '@/components/admin/usage/RequestTimelineChart';
 import { AdminConfirmationDialog } from '@/components/ui/admin/admin-confirmation-dialog';
 import { Accordion } from '@/components/ui/data-display/accordion';
 import { DataTable } from '@/components/ui/data-display/data-table';
@@ -253,11 +283,6 @@ import { BackgroundTexture } from '@/components/ui/BackgroundTexture';
 
 // ─── Admin — Charts ───────────────────────────────────────────────────────────
 
-import { TimelineStep } from '@/components/admin/rag/TimelineStep';
-import { KpiCards as UsageKpiCards } from '@/components/admin/usage/KpiCards';
-import { RequestTimelineChart } from '@/components/admin/usage/RequestTimelineChart';
-import { CostBreakdownPanel } from '@/components/admin/usage/CostBreakdownPanel';
-import { FreeQuotaIndicator } from '@/components/admin/usage/FreeQuotaIndicator';
 import { RateLimitGauge } from '@/components/admin/usage/RateLimitGauge';
 import { RecentRequestsTable } from '@/components/admin/usage/RecentRequestsTable';
 
@@ -265,35 +290,11 @@ import { RecentRequestsTable } from '@/components/admin/usage/RecentRequestsTabl
 
 // ─── Admin — Sandbox ──────────────────────────────────────────────────────────
 
-import { SandboxChat } from '@/components/admin/sandbox/SandboxChat';
-import { AgentConfigPanel as SandboxAgentConfigPanelImpl } from '@/components/admin/sandbox/AgentConfigPanel';
-import { PipelinePanel } from '@/components/admin/sandbox/PipelinePanel';
-import { PipelineStepCard } from '@/components/admin/sandbox/PipelineStepCard';
-import { PipelineTraceTree } from '@/components/admin/sandbox/PipelineTraceTree';
-import { RetrievedChunkCard } from '@/components/admin/sandbox/RetrievedChunkCard';
-import { PipelineDeepMetrics } from '@/components/admin/sandbox/PipelineDeepMetrics';
-import { DebugSidePanel } from '@/components/admin/sandbox/DebugSidePanel';
-import { AutoTestRunner } from '@/components/admin/sandbox/AutoTestRunner';
-import { AutoTestSummary } from '@/components/admin/sandbox/AutoTestSummary';
-
 // ─── Admin — Debug Chat ───────────────────────────────────────────────────────
 
 // ─── Admin — Knowledge Base ───────────────────────────────────────────────────
 
 // ─── Admin — Shared Games ─────────────────────────────────────────────────────
-
-import { AdminSharedGameCardContainer } from '@/components/admin/shared-games/AdminSharedGameCardContainer';
-import { AgentBuilderModal } from '@/components/admin/shared-games/AgentBuilderModal';
-import { BggSearchPanel } from '@/components/admin/shared-games/BggSearchPanel';
-import { GameCatalogGrid } from '@/components/admin/shared-games/game-catalog-grid';
-import { GameForm } from '@/components/admin/shared-games/GameForm';
-import { GameStatusBadge } from '@/components/admin/shared-games/GameStatusBadge';
-import { PdfDocumentList } from '@/components/admin/shared-games/PdfDocumentList';
-import { PdfIndexingStatus } from '@/components/admin/shared-games/PdfIndexingStatus';
-import { PdfUploadSection } from '@/components/admin/shared-games/PdfUploadSection';
-import { RagReadinessIndicator } from '@/components/admin/shared-games/rag-setup/RagReadinessIndicator';
-import { InlineChatPanel } from '@/components/admin/shared-games/rag-setup/InlineChatPanel';
-import { AgentSetupPanel } from '@/components/admin/shared-games/rag-setup/AgentSetupPanel';
 
 // ─── Admin — Users ────────────────────────────────────────────────────────────
 
@@ -311,16 +312,11 @@ import { ActivityFilters } from '@/components/admin/users/activity-filters';
 
 // ─── Admin — Strategies & Overview ───────────────────────────────────────────
 
-import { StrategyEditor } from '@/components/admin/strategies/StrategyEditor';
-
 // ─── Admin — Games ────────────────────────────────────────────────────────────
 
 // ─── Admin — Playground ───────────────────────────────────────────────────────
 
 // ─── Admin — Misc ─────────────────────────────────────────────────────────────
-
-import { StatCard as AdminStatCard } from '@/components/admin/StatCard';
-import { ServiceHealthMatrix } from '@/components/admin/ServiceHealthMatrix';
 
 // ─── Component Map ────────────────────────────────────────────────────────────
 

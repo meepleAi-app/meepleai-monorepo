@@ -1,8 +1,7 @@
 /**
  * Breadcrumb Labels Configuration
- * Issue #5 from mobile-first-ux-epic.md
  *
- * Maps route segments to human-readable labels for the MobileBreadcrumb component.
+ * Maps route segments to human-readable labels for breadcrumb navigation.
  * Used to build breadcrumb trails from the current pathname.
  */
 

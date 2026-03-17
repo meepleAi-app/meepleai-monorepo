@@ -25,7 +25,7 @@
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 
-import { useEntityActions } from '@/hooks/use-entity-actions';
+import { useEntityActions } from '@/hooks/useEntityActions';
 import { cn } from '@/lib/utils';
 
 import { MeepleCard } from '../meeple-card';

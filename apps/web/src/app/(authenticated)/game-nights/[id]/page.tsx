@@ -26,7 +26,7 @@ import {
   useRsvpGameNight,
 } from '@/hooks/queries/useGameNights';
 import { useSharedGames } from '@/hooks/queries/useSharedGames';
-import { useToast } from '@/hooks/use-toast';
+import { useToast } from '@/hooks/useToast';
 import type { RsvpStatus } from '@/lib/api/schemas/game-nights.schemas';
 import { useGameNightStore } from '@/store/game-night';
 

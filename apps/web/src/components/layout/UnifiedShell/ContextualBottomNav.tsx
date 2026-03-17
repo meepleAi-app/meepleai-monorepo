@@ -1,6 +1,6 @@
 'use client';
 
-import { useBottomNavActions } from '@/hooks/use-bottom-nav-actions';
+import { useBottomNavActions } from '@/hooks/useBottomNavActions';
 import { cn } from '@/lib/utils';
 
 import { ContextualBottomNavItem } from './ContextualBottomNavItem';

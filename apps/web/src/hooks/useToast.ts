@@ -14,11 +14,11 @@ export function useToast() {
     // In production, this should integrate with a toast component
     console.warn('[Toast]', toast.title, toast.description);
 
-    setToasts((prev) => [...prev, toast]);
+    setToasts(prev => [...prev, toast]);
 
     // Auto-remove after 3 seconds
     setTimeout(() => {
-      setToasts((prev) => prev.slice(1));
+      setToasts(prev => prev.slice(1));
     }, 3000);
   }, []);
 

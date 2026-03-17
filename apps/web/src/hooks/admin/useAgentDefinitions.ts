@@ -5,7 +5,13 @@
 
 'use client';
 
-import { useMutation, useQuery, useQueryClient, type UseMutationResult, type UseQueryResult } from '@tanstack/react-query';
+import {
+  useMutation,
+  useQuery,
+  useQueryClient,
+  type UseMutationResult,
+  type UseQueryResult,
+} from '@tanstack/react-query';
 import { toast } from 'sonner';
 
 import * as agentClient from '@/lib/api/admin-agent-client';
@@ -43,7 +49,9 @@ export function useAgentDefinitions(params?: {
 /**
  * Fetch single agent definition by ID
  */
-export function useAgentDefinition(id: string | null): UseQueryResult<AgentDefinitionResponse, Error> {
+export function useAgentDefinition(
+  id: string | null
+): UseQueryResult<AgentDefinitionResponse, Error> {
   return useQuery({
     queryKey: agentDefinitionsKeys.detail(id || ''),
     queryFn: () => agentClient.getAgentDefinition(id as string), // id guaranteed non-null by enabled condition
@@ -55,11 +63,14 @@ export function useAgentDefinition(id: string | null): UseQueryResult<AgentDefin
 /**
  * Fetch agent definition statistics
  */
-export function useAgentDefinitionStats(): UseQueryResult<{
-  totalCount: number;
-  byType: Record<string, number>;
-  recentTemplates: AgentDefinitionResponse[];
-}, Error> {
+export function useAgentDefinitionStats(): UseQueryResult<
+  {
+    totalCount: number;
+    byType: Record<string, number>;
+    recentTemplates: AgentDefinitionResponse[];
+  },
+  Error
+> {
   return useQuery({
     queryKey: agentDefinitionsKeys.stats(),
     queryFn: () => agentClient.getAgentDefinitionStats(),
@@ -79,7 +90,7 @@ export function useCreateAgent(): UseMutationResult<
 
   return useMutation({
     mutationFn: agentClient.createAgentDefinition,
-    onSuccess: (data) => {
+    onSuccess: data => {
       // Invalidate and refetch agent lists
       queryClient.invalidateQueries({ queryKey: agentDefinitionsKeys.lists() });
       queryClient.invalidateQueries({ queryKey: agentDefinitionsKeys.stats() });
@@ -89,7 +100,7 @@ export function useCreateAgent(): UseMutationResult<
 
       toast.success(`Agent "${data.name}" created successfully`);
     },
-    onError: (error) => {
+    onError: error => {
       toast.error(`Failed to create agent: ${error.message}`);
     },
   });
@@ -107,7 +118,7 @@ export function useUpdateAgent(): UseMutationResult<
 
   return useMutation({
     mutationFn: ({ id, data }) => agentClient.updateAgentDefinition(id, data),
-    onSuccess: (data) => {
+    onSuccess: data => {
       // Invalidate and refetch
       queryClient.invalidateQueries({ queryKey: agentDefinitionsKeys.lists() });
       queryClient.invalidateQueries({ queryKey: agentDefinitionsKeys.stats() });
@@ -117,7 +128,7 @@ export function useUpdateAgent(): UseMutationResult<
 
       toast.success(`Agent "${data.name}" updated successfully`);
     },
-    onError: (error) => {
+    onError: error => {
       toast.error(`Failed to update agent: ${error.message}`);
     },
   });
@@ -141,7 +152,7 @@ export function useDeleteAgent(): UseMutationResult<void, Error, string> {
 
       toast.success('Agent deleted successfully');
     },
-    onError: (error) => {
+    onError: error => {
       toast.error(`Failed to delete agent: ${error.message}`);
     },
   });

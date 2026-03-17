@@ -9,6 +9,8 @@
  * 5 tabs: Dashboard, Library, Discover, Chat, Profile
  * Auth-gated: Guest sees Dashboard + Discover only
  * Touch targets: 44x44px minimum (WCAG 2.1 AA)
+ *
+ * Center tab morphs to contextual entity when on detail pages.
  */
 
 'use client';
@@ -18,6 +20,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
 import { useCurrentUser } from '@/hooks/queries/useCurrentUser';
+import type { ContextualEntity } from '@/hooks/useContextualEntity';
 import { cn } from '@/lib/utils';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -30,6 +33,12 @@ interface TabItem {
   testId: string;
   /** Only show for authenticated users */
   authOnly?: boolean;
+}
+
+interface MobileTabBarProps {
+  contextualEntity?: ContextualEntity | null;
+  hasSheetContent?: boolean;
+  onCenterTabPress?: () => void;
 }
 
 // ─── Tab Configuration ───────────────────────────────────────────────────────
@@ -94,13 +103,20 @@ function isTabActive(href: string, pathname: string | null): boolean {
 
 // ─── MobileTabBar ────────────────────────────────────────────────────────────
 
-export function MobileTabBar() {
+export function MobileTabBar({
+  contextualEntity,
+  hasSheetContent = false,
+  onCenterTabPress,
+}: MobileTabBarProps) {
   const pathname = usePathname();
   const { data: user } = useCurrentUser();
 
   const isAuthenticated = !!user;
 
   const visibleTabs = TAB_ITEMS.filter(tab => !tab.authOnly || isAuthenticated);
+
+  const hasMorphedCenter = isAuthenticated && contextualEntity != null;
+  const centerIdx = visibleTabs.findIndex(t => t.href === '/games');
 
   return (
     <nav
@@ -110,7 +126,7 @@ export function MobileTabBar() {
         // Positioning
         'fixed bottom-0 left-0 right-0 z-40',
         // Height with safe area
-        'h-[72px] pb-[env(safe-area-inset-bottom)]',
+        'pb-[env(safe-area-inset-bottom)]',
         // Glassmorphism
         'bg-card/90 backdrop-blur-md backdrop-saturate-150',
         'border-t border-border/50',
@@ -120,8 +136,21 @@ export function MobileTabBar() {
       aria-label="Primary navigation"
       data-testid="mobile-tab-bar"
     >
-      <div className="flex items-center justify-around h-full px-2">
-        {visibleTabs.map(tab => {
+      {/* Swipe-up indicator */}
+      {hasSheetContent && hasMorphedCenter && (
+        <div className="absolute -top-2 left-1/2 -translate-x-1/2 w-9 h-1 bg-white/15 rounded-full" />
+      )}
+      <div className="flex items-center justify-around h-16 px-2">
+        {visibleTabs.map((tab, idx) => {
+          if (idx === centerIdx && hasMorphedCenter) {
+            return (
+              <MorphedCenterTab
+                key="morphed-center"
+                entity={contextualEntity!}
+                onPress={onCenterTabPress}
+              />
+            );
+          }
           const active = isTabActive(tab.href, pathname);
           return <TabLink key={tab.href} tab={tab} active={active} />;
         })}
@@ -162,5 +191,46 @@ function TabLink({ tab, active }: TabLinkProps) {
       <Icon className={cn('h-5 w-5', active && 'stroke-[2.5]')} aria-hidden="true" />
       <span className="text-[10px] font-nunito leading-tight">{tab.label}</span>
     </Link>
+  );
+}
+
+// ─── MorphedCenterTab ─────────────────────────────────────────────────────────
+
+function MorphedCenterTab({ entity, onPress }: { entity: ContextualEntity; onPress?: () => void }) {
+  const Icon = entity.icon;
+
+  return (
+    <button
+      type="button"
+      onClick={onPress}
+      aria-label={`${entity.title} actions`}
+      data-testid="mobile-tab-morphed-center"
+      className={cn(
+        'flex flex-col items-center justify-center gap-0.5',
+        'min-w-[44px] min-h-[44px]',
+        'px-2 py-1.5',
+        'rounded-lg',
+        'transition-all duration-300',
+        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2'
+      )}
+    >
+      <div
+        className="flex items-center justify-center w-11 h-11 rounded-xl border-2 transition-colors"
+        style={{
+          borderColor: `hsl(${entity.color} / 0.4)`,
+          background: `hsl(${entity.color} / 0.12)`,
+        }}
+      >
+        <span style={{ color: `hsl(${entity.color})` }}>
+          <Icon className="w-5 h-5" />
+        </span>
+      </div>
+      <span
+        className="text-[10px] font-nunito font-semibold leading-tight truncate max-w-[60px]"
+        style={{ color: `hsl(${entity.color})` }}
+      >
+        {entity.title}
+      </span>
+    </button>
   );
 }

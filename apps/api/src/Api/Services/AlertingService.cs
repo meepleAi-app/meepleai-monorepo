@@ -284,6 +284,13 @@ internal class SlackConfiguration
     public bool Enabled { get; set; }
     public string WebhookUrl { get; set; } = string.Empty;
     public string Channel { get; set; } = "#alerts";
+    public Dictionary<string, SlackChannelRoute>? ChannelRouting { get; set; }
+}
+
+internal class SlackChannelRoute
+{
+    public string WebhookUrl { get; set; } = string.Empty;
+    public string Channel { get; set; } = string.Empty;
 }
 
 internal class PagerDutyConfiguration

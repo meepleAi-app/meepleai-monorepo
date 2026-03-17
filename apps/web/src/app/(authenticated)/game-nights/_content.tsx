@@ -7,6 +7,8 @@
 
 'use client';
 
+import { useEffect } from 'react';
+
 import { Calendar, MapPin, Users } from 'lucide-react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
@@ -16,6 +18,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Skeleton } from '@/components/ui/feedback/skeleton';
 import { useMyGameNights, useUpcomingGameNights } from '@/hooks/queries/useGameNights';
 import type { GameNightDto } from '@/lib/api/schemas/game-nights.schemas';
+import { useCardHand } from '@/stores/use-card-hand';
 
 function GameNightCard({ event }: { event: GameNightDto }) {
   const scheduledDate = new Date(event.scheduledAt);
@@ -92,6 +95,16 @@ function EmptyState({ tab }: { tab: string }) {
 export function GameNightsContent() {
   const searchParams = useSearchParams();
   const tab = searchParams.get('tab') ?? 'upcoming';
+  const { drawCard } = useCardHand();
+
+  useEffect(() => {
+    drawCard({
+      id: 'section-game-nights',
+      entity: 'event',
+      title: 'Game Nights',
+      href: '/game-nights',
+    });
+  }, [drawCard]);
 
   const upcomingQuery = useUpcomingGameNights();
   const mineQuery = useMyGameNights();

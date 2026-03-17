@@ -11,6 +11,7 @@ import { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 
 import { AgentInfoCard } from '@/components/agent/AgentInfoCard';
+import { DeckTrackerSync } from '@/components/layout/DeckTrackerSync';
 import { MeepleCard, type MeepleCardMetadata } from '@/components/ui/data-display/meeple-card';
 import { getNavigationLinks } from '@/config/entity-navigation';
 import { api } from '@/lib/api';
@@ -84,8 +85,17 @@ export default async function AgentPage({ params }: AgentPageProps) {
     });
   }
 
+  const agentHref = `/agents/${agent.id}`;
+
   return (
     <div className="container max-w-7xl py-8">
+      <DeckTrackerSync
+        entity="agent"
+        id={agent.id}
+        title={agent.name}
+        href={agentHref}
+        subtitle={agent.isActive ? 'Active' : 'Inactive'}
+      />
       {/* Header */}
       <div className="mb-6">
         <h1 className="text-3xl font-bold tracking-tight mb-2">Agent Chat</h1>

@@ -182,7 +182,7 @@ public sealed class BggImportQueueServiceIntegrationTests : IAsyncLifetime
 
         // Assert - Only unique BGG IDs should be enqueued
         Assert.Equal(3, results.Count);
-        Assert.Equal(new[] { 1, 2, 3 }, results.Select(r => r.BggId).OrderBy(id => id));
+        Assert.Equal(new int?[] { 1, 2, 3 }, results.Select(r => r.BggId).OrderBy(id => id));
     }
 
     [Fact]

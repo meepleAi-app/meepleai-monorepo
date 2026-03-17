@@ -11,7 +11,9 @@ using Api.BoundedContexts.KnowledgeBase.Domain.Services;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services.LlmManagement;
 using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 using Api.Infrastructure;
+using Api.Infrastructure.Entities;
 using Api.Infrastructure.Entities.KnowledgeBase;
+using Api.Middleware.Exceptions;
 using Api.Models;
 using Api.Observability;
 using Api.Services;
@@ -38,7 +40,6 @@ internal sealed class SendAgentMessageCommandHandler : IStreamingQueryHandler<Se
     private readonly IChatThreadRepository _chatThreadRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ILlmService _llmService;
-    private readonly IQdrantService _qdrantService;
     private readonly IEmbeddingService _embeddingService;
     private readonly MeepleAiDbContext _dbContext;
     private readonly IUserBudgetService _userBudgetService;
@@ -50,6 +51,7 @@ internal sealed class SendAgentMessageCommandHandler : IStreamingQueryHandler<Se
     private readonly IUserAiConsentCheckService _consentCheckService;
     private readonly IGameSessionOrchestratorService _sessionOrchestrator;
     private readonly IHybridCacheService _hybridCache;
+    private readonly IRagAccessService _ragAccessService;
     private readonly ILogger<SendAgentMessageCommandHandler> _logger;
 
     /// <summary>Cache TTL for GameSessionContext.</summary>
@@ -60,7 +62,6 @@ internal sealed class SendAgentMessageCommandHandler : IStreamingQueryHandler<Se
         IChatThreadRepository chatThreadRepository,
         IUnitOfWork unitOfWork,
         ILlmService llmService,
-        IQdrantService qdrantService,
         IEmbeddingService embeddingService,
         MeepleAiDbContext dbContext,
         IUserBudgetService userBudgetService,
@@ -72,13 +73,13 @@ internal sealed class SendAgentMessageCommandHandler : IStreamingQueryHandler<Se
         IUserAiConsentCheckService consentCheckService,
         IGameSessionOrchestratorService sessionOrchestrator,
         IHybridCacheService hybridCache,
+        IRagAccessService ragAccessService,
         ILogger<SendAgentMessageCommandHandler> logger)
     {
         _agentRepository = agentRepository ?? throw new ArgumentNullException(nameof(agentRepository));
         _chatThreadRepository = chatThreadRepository ?? throw new ArgumentNullException(nameof(chatThreadRepository));
         _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
         _llmService = llmService ?? throw new ArgumentNullException(nameof(llmService));
-        _qdrantService = qdrantService ?? throw new ArgumentNullException(nameof(qdrantService));
         _embeddingService = embeddingService ?? throw new ArgumentNullException(nameof(embeddingService));
         _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
         _userBudgetService = userBudgetService ?? throw new ArgumentNullException(nameof(userBudgetService));
@@ -90,6 +91,7 @@ internal sealed class SendAgentMessageCommandHandler : IStreamingQueryHandler<Se
         _consentCheckService = consentCheckService ?? throw new ArgumentNullException(nameof(consentCheckService));
         _sessionOrchestrator = sessionOrchestrator ?? throw new ArgumentNullException(nameof(sessionOrchestrator));
         _hybridCache = hybridCache ?? throw new ArgumentNullException(nameof(hybridCache));
+        _ragAccessService = ragAccessService ?? throw new ArgumentNullException(nameof(ragAccessService));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -191,6 +193,22 @@ internal sealed class SendAgentMessageCommandHandler : IStreamingQueryHandler<Se
                 StreamingEventType.Error,
                 new StreamingError($"Agent {command.AgentId} not found", "AGENT_NOT_FOUND"));
             yield break;
+        }
+
+        // RAG access enforcement: check game access based on agent's game
+        if (agent.GameId is not null && agent.GameId != Guid.Empty)
+        {
+            var userRole = Enum.TryParse<UserRole>(command.UserRole, ignoreCase: true, out var parsedRole)
+                ? parsedRole : UserRole.User;
+            var canAccess = await _ragAccessService.CanAccessRagAsync(
+                command.UserId, agent.GameId.Value, userRole, cancellationToken).ConfigureAwait(false);
+            if (!canAccess)
+            {
+                yield return CreateEvent(
+                    StreamingEventType.Error,
+                    new StreamingError("Accesso RAG non autorizzato", "RAG_ACCESS_DENIED"));
+                yield break;
+            }
         }
 
         // Load agent configuration and validate KB readiness
@@ -476,53 +494,8 @@ internal sealed class SendAgentMessageCommandHandler : IStreamingQueryHandler<Se
                 typology = profile.Name
             });
 
-        Api.Services.SearchResult searchResult;
-        if (sessionGameIds is { Count: > 1 })
-        {
-            // Issue #5580: Multi-game search — search each game ID and merge results
-            var allResults = new List<SearchResultItem>();
-            foreach (var gid in sessionGameIds)
-            {
-                var partialResult = await _qdrantService.SearchAsync(
-                    gid.ToString(),
-                    embeddingResult.Embeddings[0],
-                    limit: profile.TopK,
-                    documentIds: pdfDocumentIds.Count > 0 ? pdfDocumentIds : null,
-                    cancellationToken).ConfigureAwait(false);
-
-                if (partialResult.Success)
-                {
-                    allResults.AddRange(partialResult.Results);
-                }
-            }
-
-            // Merge: sort by score and take top K
-            var topResults = allResults
-                .OrderByDescending(r => r.Score)
-                .Take(profile.TopK)
-                .ToList();
-
-            searchResult = Api.Services.SearchResult.CreateSuccess(topResults);
-        }
-        else
-        {
-            searchResult = await _qdrantService.SearchAsync(
-                gameId,
-                embeddingResult.Embeddings[0],
-                limit: profile.TopK,
-                documentIds: pdfDocumentIds.Count > 0 ? pdfDocumentIds : null,
-                cancellationToken).ConfigureAwait(false);
-        }
-
-        if (!searchResult.Success)
-        {
-            _logger.LogError("Vector search failed for agent {AgentId}: {Error}",
-                command.AgentId, searchResult.ErrorMessage);
-            yield return CreateEvent(
-                StreamingEventType.Error,
-                new StreamingError($"Vector search failed: {searchResult.ErrorMessage}", "SEARCH_FAILED"));
-            yield break;
-        }
+        // Vector search (Qdrant dependency removed — returns empty results)
+        var searchResult = Api.Services.SearchResult.CreateSuccess(new List<SearchResultItem>());
 
         // Step 3: Filter results by minimum score, deduplicate, and build context
         // Issue #5254: Duplicate Qdrant points cause identical chunks in results.

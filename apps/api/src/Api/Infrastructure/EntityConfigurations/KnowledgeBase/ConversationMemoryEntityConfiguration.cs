@@ -37,7 +37,7 @@ internal class ConversationMemoryEntityConfiguration : IEntityTypeConfiguration<
 
         // Issue #3547: Vector embedding for semantic search
         builder.Property(e => e.Embedding)
-            .HasColumnType("vector(1536)");
+            .HasColumnType("vector(1024)");
 
         // Indexes for query performance
         builder.HasIndex(e => e.SessionId);

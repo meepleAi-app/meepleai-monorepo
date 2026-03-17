@@ -457,7 +457,7 @@ public sealed class GetDashboardMetricsQueryHandlerTests
 
     /// <summary>
     /// Maps legacy test status values to the authoritative ProcessingState values.
-    /// Handler queries ProcessingState ("Ready"/"Failed"), not ProcessingStatus.
+    /// Handler queries ProcessingState ("Ready"/"Failed"), not legacy ProcessingStatus.
     /// </summary>
     private static string MapToProcessingState(string status) => status switch
     {
@@ -481,7 +481,6 @@ public sealed class GetDashboardMetricsQueryHandlerTests
             FileSizeBytes = 1024,
             UploadedByUserId = userId,
             UploadedAt = uploadedAt,
-            ProcessingStatus = ProcessingStatus,
             ProcessingState = MapToProcessingState(ProcessingStatus)
         };
     }

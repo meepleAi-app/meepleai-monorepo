@@ -4,6 +4,7 @@ import { type Metadata } from 'next';
 
 import { GameCatalogGrid } from '@/components/admin/shared-games/game-catalog-grid';
 import { GameFilters } from '@/components/admin/shared-games/game-filters';
+import { RecentlyProcessedWidget } from '@/components/admin/shared-games/RecentlyProcessedWidget';
 
 export const metadata: Metadata = {
   title: 'All Games',
@@ -30,6 +31,9 @@ export default function AllGamesPage() {
           Browse and manage the shared game catalog
         </p>
       </div>
+
+      {/* Recently Processed PDFs */}
+      <RecentlyProcessedWidget />
 
       {/* Filters */}
       <Suspense fallback={<CardSkeleton height="h-[160px]" />}>

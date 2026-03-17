@@ -9,6 +9,7 @@ using Api.SharedKernel.Infrastructure.Persistence;
 using Api.SharedKernel.Services;
 using Api.Tests.Constants;
 using FluentAssertions;
+using MediatR;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
@@ -28,6 +29,7 @@ public sealed class AutoCreateAgentOnPdfReadyHandlerTests
     private readonly Mock<IAgentDefinitionRepository> _agentDefinitionRepository;
     private readonly Mock<IUnitOfWork> _unitOfWork;
     private readonly Mock<ITierEnforcementService> _tierEnforcementService;
+    private readonly Mock<IPublisher> _publisher;
     private readonly Mock<ILogger<AutoCreateAgentOnPdfReadyHandler>> _logger;
 
     private readonly Guid _userId = Guid.NewGuid();
@@ -41,6 +43,7 @@ public sealed class AutoCreateAgentOnPdfReadyHandlerTests
         _agentDefinitionRepository = new Mock<IAgentDefinitionRepository>();
         _unitOfWork = new Mock<IUnitOfWork>();
         _tierEnforcementService = new Mock<ITierEnforcementService>();
+        _publisher = new Mock<IPublisher>();
         _logger = new Mock<ILogger<AutoCreateAgentOnPdfReadyHandler>>();
 
         // Default: tier quota not exceeded
@@ -52,6 +55,11 @@ public sealed class AutoCreateAgentOnPdfReadyHandlerTests
         _unitOfWork
             .Setup(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(1);
+
+        // Default: publisher is a no-op
+        _publisher
+            .Setup(p => p.Publish(It.IsAny<object>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
     }
 
     private AutoCreateAgentOnPdfReadyHandler CreateHandler() =>
@@ -60,6 +68,7 @@ public sealed class AutoCreateAgentOnPdfReadyHandlerTests
             _agentDefinitionRepository.Object,
             _unitOfWork.Object,
             _tierEnforcementService.Object,
+            _publisher.Object,
             _logger.Object);
 
     private VectorDocumentReadyIntegrationEvent CreateEvent(
@@ -419,6 +428,7 @@ public sealed class AutoCreateAgentOnPdfReadyHandlerTests
             _agentDefinitionRepository.Object,
             _unitOfWork.Object,
             _tierEnforcementService.Object,
+            _publisher.Object,
             _logger.Object));
     }
 
@@ -430,6 +440,7 @@ public sealed class AutoCreateAgentOnPdfReadyHandlerTests
             null!,
             _unitOfWork.Object,
             _tierEnforcementService.Object,
+            _publisher.Object,
             _logger.Object));
     }
 
@@ -441,6 +452,7 @@ public sealed class AutoCreateAgentOnPdfReadyHandlerTests
             _agentDefinitionRepository.Object,
             null!,
             _tierEnforcementService.Object,
+            _publisher.Object,
             _logger.Object));
     }
 
@@ -451,6 +463,19 @@ public sealed class AutoCreateAgentOnPdfReadyHandlerTests
             _privateGameRepository.Object,
             _agentDefinitionRepository.Object,
             _unitOfWork.Object,
+            null!,
+            _publisher.Object,
+            _logger.Object));
+    }
+
+    [Fact]
+    public void Constructor_NullPublisher_ThrowsArgumentNullException()
+    {
+        Assert.Throws<ArgumentNullException>(() => new AutoCreateAgentOnPdfReadyHandler(
+            _privateGameRepository.Object,
+            _agentDefinitionRepository.Object,
+            _unitOfWork.Object,
+            _tierEnforcementService.Object,
             null!,
             _logger.Object));
     }
@@ -463,6 +488,7 @@ public sealed class AutoCreateAgentOnPdfReadyHandlerTests
             _agentDefinitionRepository.Object,
             _unitOfWork.Object,
             _tierEnforcementService.Object,
+            _publisher.Object,
             null!));
     }
 }

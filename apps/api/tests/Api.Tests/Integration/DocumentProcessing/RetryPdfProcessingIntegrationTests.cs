@@ -181,7 +181,6 @@ public sealed class RetryPdfProcessingIntegrationTests : IAsyncLifetime
             UploadedByUserId = userId,
             UploadedAt = DateTime.UtcNow.AddHours(-1),
             ProcessingState = PdfProcessingState.Failed.ToString(),
-            ProcessingStatus = "failed",
             ProcessingError = "Network timeout",
             ErrorCategory = ErrorCategory.Network.ToString(),
             FailedAtState = PdfProcessingState.Extracting.ToString(),
@@ -210,7 +209,7 @@ public sealed class RetryPdfProcessingIntegrationTests : IAsyncLifetime
         Assert.Equal(1, updatedPdf.RetryCount);
         Assert.Equal(PdfProcessingState.Extracting.ToString(), updatedPdf.ProcessingState);
         Assert.Null(updatedPdf.ProcessingError);
-        Assert.Equal("processing", updatedPdf.ProcessingStatus);
+        Assert.Equal("Uploading", updatedPdf.ProcessingState);
     }
 
     [Fact]
@@ -234,7 +233,6 @@ public sealed class RetryPdfProcessingIntegrationTests : IAsyncLifetime
             UploadedByUserId = userId,
             UploadedAt = DateTime.UtcNow.AddHours(-1),
             ProcessingState = PdfProcessingState.Failed.ToString(),
-            ProcessingStatus = "failed",
             ProcessingError = "Final error",
             ErrorCategory = ErrorCategory.Service.ToString(),
             FailedAtState = PdfProcessingState.Indexing.ToString(),
@@ -286,7 +284,6 @@ public sealed class RetryPdfProcessingIntegrationTests : IAsyncLifetime
             UploadedByUserId = userId,
             UploadedAt = DateTime.UtcNow.AddHours(-1),
             ProcessingState = PdfProcessingState.Extracting.ToString(),
-            ProcessingStatus = "processing",
             RetryCount = 0,
             Language = "en"
         };
@@ -339,7 +336,6 @@ public sealed class RetryPdfProcessingIntegrationTests : IAsyncLifetime
             UploadedByUserId = ownerId, // Different owner
             UploadedAt = DateTime.UtcNow.AddHours(-1),
             ProcessingState = PdfProcessingState.Failed.ToString(),
-            ProcessingStatus = "failed",
             ProcessingError = "Error",
             RetryCount = 0,
             Language = "en"
@@ -392,7 +388,6 @@ public sealed class RetryPdfProcessingIntegrationTests : IAsyncLifetime
             UploadedByUserId = userId,
             UploadedAt = DateTime.UtcNow.AddHours(-1),
             ProcessingState = PdfProcessingState.Failed.ToString(),
-            ProcessingStatus = "failed",
             ProcessingError = "Error 1",
             ErrorCategory = ErrorCategory.Network.ToString(),
             FailedAtState = PdfProcessingState.Extracting.ToString(),
@@ -412,7 +407,6 @@ public sealed class RetryPdfProcessingIntegrationTests : IAsyncLifetime
         // Simulate another failure
         var pdf = await _dbContext.PdfDocuments.FindAsync(new object[] { pdfId }, TestCancellationToken);
         pdf!.ProcessingState = PdfProcessingState.Failed.ToString();
-        pdf.ProcessingStatus = "failed";
         pdf.ProcessingError = "Error 2";
         pdf.ErrorCategory = ErrorCategory.Parsing.ToString();
         pdf.FailedAtState = PdfProcessingState.Chunking.ToString();

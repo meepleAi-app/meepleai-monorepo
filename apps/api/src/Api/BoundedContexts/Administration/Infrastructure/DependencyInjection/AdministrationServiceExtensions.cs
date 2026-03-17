@@ -8,6 +8,8 @@ using Api.BoundedContexts.Administration.Infrastructure.Persistence;
 using Api.BoundedContexts.Administration.Infrastructure.Repositories;
 using Api.BoundedContexts.Administration.Infrastructure.Scheduling;
 using Api.BoundedContexts.Administration.Infrastructure.Services;
+using Api.Infrastructure.BackgroundServices;
+using Api.Infrastructure.Configuration;
 using Api.Infrastructure.Seeders;
 using Api.Infrastructure.Seeders.Catalog;
 using Api.Infrastructure.Seeders.Core;
@@ -25,12 +27,9 @@ namespace Api.BoundedContexts.Administration.Infrastructure.DependencyInjection;
 
 internal static class AdministrationServiceExtensions
 {
-#pragma warning disable S1133 // Method marked obsolete but kept for backward compatibility during migration
-    [Obsolete("Use AddAdministrationInfrastructure instead for modular registration")]
     public static IServiceCollection AddAdministrationContext(
         this IServiceCollection services,
         IConfiguration configuration)
-#pragma warning restore S1133
     {
         // Repositories
         services.AddScoped<IAlertRepository, AlertRepository>();
@@ -88,6 +87,10 @@ internal static class AdministrationServiceExtensions
         // Issue #891: Infrastructure health monitoring service
         services.AddScoped<IInfrastructureHealthService, InfrastructureHealthService>();
 
+        // Issue #448: Service health monitoring background service with hysteresis
+        services.Configure<HealthMonitorOptions>(configuration.GetSection(HealthMonitorOptions.SectionName));
+        services.AddHostedService<InfrastructureHealthMonitorService>();
+
         // Issue #893: Prometheus HTTP client with Polly retry policy
         services.AddHttpClient<IPrometheusQueryService, PrometheusHttpClient>()
             .AddPolicyHandler(GetRetryPolicy())
@@ -135,7 +138,9 @@ internal static class AdministrationServiceExtensions
         // ISSUE-916: Quartz.NET configuration for report scheduling
         services.AddQuartz(q =>
         {
+#pragma warning disable CS0618 // UseMicrosoftDependencyInjectionJobFactory is obsolete but still functional
             q.UseMicrosoftDependencyInjectionJobFactory();
+#pragma warning restore CS0618
             q.UseInMemoryStore(); // Use in-memory for alpha; can switch to DB persistence later
 
             // Register report generation job

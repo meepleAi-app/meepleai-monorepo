@@ -19,7 +19,7 @@ internal static class AdminGameWizardEndpoints
     {
         var group = endpoints.MapGroup("/admin/games/wizard")
             .WithTags("Admin - Game Wizard")
-            .RequireAuthorization(policy => policy.RequireRole("Admin"));
+            .RequireAuthorization(policy => policy.RequireRole("SuperAdmin", "Admin"));
 
         // POST /api/v1/admin/games/wizard/create - Create game from BGG data
         group.MapPost("/create", HandleCreateGame)

@@ -244,19 +244,141 @@ docker compose start api
 
 ---
 
+## Production Deployment
+
+### Prerequisites Checklist
+
+| Requirement | Details |
+|-------------|---------|
+| Server | Ubuntu 22.04+, 8GB RAM, 4 CPU, 100GB SSD |
+| Software | Docker 24+, Docker Compose 2.20+ |
+| Network | Domain + DNS (A records), SSL via Traefik |
+| Ports | 80, 443 (Traefik), 22 (SSH) |
+
+### Setup Commands
+
+```bash
+# 1. Install Docker
+curl -fsSL https://get.docker.com | sh && sudo usermod -aG docker $USER
+
+# 2. Clone repo
+git clone <repo-url> /opt/meepleai && cd /opt/meepleai
+
+# 3. Create .env.production (see below)
+
+# 4. Start with Traefik
+cd infra && docker compose -f docker-compose.yml -f compose.traefik.yml \
+  --profile full --env-file ../.env.production up -d
+
+# 5. Verify
+docker compose ps && curl https://api.meepleai.com/health
+```
+
+### Database Configuration (Issue #2460)
+
+**Option 1: Environment Variables** (Simple):
+```bash
+POSTGRES_HOST=your-host.com
+POSTGRES_PORT=5432
+POSTGRES_DB=meepleai_prod
+POSTGRES_USER=admin
+POSTGRES_PASSWORD_FILE=/run/secrets/postgres-password  # Or POSTGRES_PASSWORD
+```
+
+**Option 2: Full Connection String** (Managed DBs - AWS RDS, Azure, GCP):
+```bash
+ConnectionStrings__Postgres="Host=db.rds.amazonaws.com;Database=meepleai_prod;Username=admin;Password=<pwd>;Pooling=true;Minimum Pool Size=5;Maximum Pool Size=50;SSL Mode=Require;Trust Server Certificate=false;Command Timeout=30;Timeout=15"
+```
+
+**Connection Pooling**:
+
+| Parameter | Value | Purpose |
+|-----------|-------|---------|
+| Pooling | true | Enable pooling |
+| Min/Max Pool | 5-10 / 50-100 | Pre-allocate + limit connections |
+| SSL Mode | Require | Force TLS encryption |
+| Command/Timeout | 30s / 15s | Prevent hangs |
+
+---
+
 ## Monitoring
 
-| Servizio | Accesso | Credenziali |
-|----------|---------|-------------|
-| Grafana | https://meepleai.app/grafana | `admin` / from monitoring.secret |
-| Prometheus | https://meepleai.app/prometheus | basic auth |
+| Service | Access | Credentials |
+|---------|--------|-------------|
+| **Grafana** | https://meepleai.app/grafana | `admin` / from monitoring.secret |
+| **Prometheus** | https://meepleai.app/prometheus | basic auth |
 
-**Alerts** (Alertmanager → Slack): API P95 >1s, Error rate >5%, DB pool exhausted, Disk >80%
+**Dashboards**: System (CPU/mem/disk), API (latency/throughput), RAG (confidence), DB (pool/queries)
+
+**Prometheus Metrics**:
+```
+http_requests_total{endpoint, method, status}
+http_request_duration_seconds{endpoint}
+rag_query_confidence{game}
+database_connections_active
+redis_cache_hit_rate
+```
+
+**Alerts** (Alertmanager → Slack): API P95 >1s, Error rate >5%, DB pool exhausted, Disk >80%, RAG confidence <0.70
 
 ```bash
 docker compose logs -f api          # Real-time
 docker compose logs --tail 100 api  # Ultimi 100
 ```
+
+---
+
+## Scaling & Security
+
+### Horizontal Scaling
+
+```yaml
+# docker-compose.prod.yml
+api:
+  replicas: 3  # Behind Traefik LB
+  resources: { limits: { cpus: '2', memory: 2G } }
+postgres-replica:  # Read replicas
+  environment: { POSTGRESQL_REPLICATION_MODE: slave }
+```
+
+**Caching**: L1 (in-memory) + L2 (Redis) → Games (5min), RAG (30min), Profiles (1min)
+
+### Security
+
+**Traefik TLS**: `minVersion: VersionTLS12` + `cipherSuites: [TLS_ECDHE_RSA_WITH_AES_*_GCM_SHA*]`
+
+**Firewall**:
+```bash
+sudo ufw allow 22/tcp 80/tcp 443/tcp && sudo ufw enable
+```
+
+**Secrets**: `.gitignore` (.env*, *.key), Docker Secrets: `/run/secrets/postgres_password`
+
+---
+
+## Disaster Recovery
+
+**RTO**: <1h | **RPO**: <24h
+
+**Procedure**:
+```bash
+# 1. Provision server + Install Docker
+# 2. git clone <repo> /opt/meepleai && cd /opt/meepleai
+# 3. scp backup-server:.env.production .
+# 4. docker compose --profile full up -d
+# 5. gunzip -c backups/postgres_latest.sql.gz | docker exec -i meepleai-postgres psql -U meepleai meepleai_prod
+# 6. tar -xzf backups/qdrant_latest.tar.gz -C /var/lib/docker/volumes/qdrant_data/_data/
+# 7. docker compose restart && curl https://api.meepleai.com/health
+```
+
+---
+
+## Cost Optimization
+
+**Monthly Estimate** (AWS/DigitalOcean): ~$75-145
+- Server (8GB/4CPU): $40-80 | Storage (100GB): $10 | OpenRouter (10K): $20-50 | Backups (S3): $5
+
+**Strategies**: CDN (Cloudflare free), aggressive caching, optimize embeddings, auto-scale down, spot instances
 
 ---
 
@@ -282,7 +404,11 @@ docker exec meepleai-redis redis-cli ping             # Redis
 
 ---
 
-## Guides
+## Resources
+
+**Operations**: [Operations Manual](../operations/operations-manual.md) — Consolidated service management, backup/restore, monitoring, incident response, disaster recovery, maintenance schedules.
+
+**Guides**:
 
 | Guida | Contenuto |
 |-------|-----------|
@@ -294,7 +420,12 @@ docker exec meepleai-redis redis-cli ping             # Redis
 | [Infrastructure Cost](./infrastructure-cost-summary.md) | Budget per fase |
 | [Domain Setup](./domain-setup-guide.md) | DNS, SSL, Cloudflare |
 | [Environments](./environments.md) | Differenze dev/staging/prod |
+| [Email/TOTP](./email-totp-services.md) | Email and TOTP services |
+| [BGG API](./boardgamegeek-api-setup.md) | BoardGameGeek API setup |
+| [Cost Optimization](./github-alternatives-cost-optimization.md) | GitHub Alternatives & Cost |
+
+**Related**: [Monitoring](../02-development/README.md#monitoring), [Testing](../05-testing/README.md), [Security](../06-security/README.md)
 
 ---
 
-**Version**: 2.0 | **Updated**: 2026-03-17 | **Maintainers**: DevOps Team
+**Version**: 2.1 | **Updated**: 2026-03-17 | **Maintainers**: DevOps Team

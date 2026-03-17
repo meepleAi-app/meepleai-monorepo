@@ -1,6 +1,7 @@
 using Api.BoundedContexts.UserLibrary.Application.DTOs;
 using Api.BoundedContexts.UserLibrary.Application.Queries;
 using Api.BoundedContexts.UserLibrary.Domain.Repositories;
+using Api.BoundedContexts.UserLibrary.Domain.ValueObjects;
 using Api.SharedKernel.Application.Interfaces;
 
 namespace Api.BoundedContexts.UserLibrary.Application.Handlers;
@@ -26,13 +27,18 @@ internal class GetLibraryStatsQueryHandler : IQueryHandler<GetLibraryStatsQuery,
         var favoriteGames = await _libraryRepository.GetFavoriteCountAsync(query.UserId, cancellationToken).ConfigureAwait(false);
         var privatePdfs = await _libraryRepository.GetPrivatePdfCountAsync(query.UserId, cancellationToken).ConfigureAwait(false);
         var (oldest, newest) = await _libraryRepository.GetLibraryDateRangeAsync(query.UserId, cancellationToken).ConfigureAwait(false);
+        var stateCounts = await _libraryRepository.GetStateCountsAsync(query.UserId, cancellationToken).ConfigureAwait(false);
 
         return new UserLibraryStatsDto(
             TotalGames: totalGames,
             FavoriteGames: favoriteGames,
             PrivatePdfs: privatePdfs,
             OldestAddedAt: oldest,
-            NewestAddedAt: newest
+            NewestAddedAt: newest,
+            NuovoCount: stateCounts.GetValueOrDefault(GameStateType.Nuovo),
+            InPrestitoCount: stateCounts.GetValueOrDefault(GameStateType.InPrestito),
+            WishlistCount: stateCounts.GetValueOrDefault(GameStateType.Wishlist),
+            OwnedCount: stateCounts.GetValueOrDefault(GameStateType.Owned)
         );
     }
 }

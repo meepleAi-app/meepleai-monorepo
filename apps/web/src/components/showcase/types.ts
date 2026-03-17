@@ -39,6 +39,7 @@ export type ShowcaseCategory =
   | 'Meeple'
   | 'Agent';
 
+/** Alias for use in component registry */
 export type ComponentCategory = ShowcaseCategory;
 
 // ============================================================================

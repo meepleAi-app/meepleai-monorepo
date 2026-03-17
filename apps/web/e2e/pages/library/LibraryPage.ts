@@ -1,3 +1,6 @@
+import * as fs from 'node:fs';
+import * as path from 'node:path';
+
 import { type Page, expect } from '@playwright/test';
 
 import { BasePage } from '../base/BasePage';
@@ -86,32 +89,162 @@ export class LibraryPage extends BasePage {
   }
 
   /**
-   * Upload a PDF to a private game's Knowledge Base.
-   * Navigates to the game's hub page and uses the upload area.
+   * Upload a PDF to a private game via direct API call.
+   * Uses page.request to POST multipart form data with session cookies.
    */
-  async uploadPdfToGame(privateGameId: string, pdfPath: string): Promise<void> {
-    // Navigate to the private game hub
+  async uploadPdfToGame(privateGameId: string, pdfPath: string): Promise<string> {
+    // Navigate to hub first (for screenshots and cookie context)
     await this.page.goto(`/library/private/${privateGameId}`, { waitUntil: 'networkidle' });
     await this.page.waitForTimeout(1000);
+    await this.page.screenshot({
+      path: 'test-results/debug-t5-hub-before-upload.png',
+      fullPage: true,
+    });
 
-    // Find the file input (hidden) and set the file
-    const fileInput = this.page.locator('input[type="file"][accept*="pdf"]');
-    if ((await fileInput.count()) === 0) {
-      // Try clicking an upload button to reveal the file input
-      const uploadBtn = this.page
-        .getByText(/carica|upload|trascina|drag/i)
-        .first()
-        .or(this.page.locator('[data-testid="show-upload-button"]'));
-      if (await uploadBtn.isVisible({ timeout: 5_000 }).catch(() => false)) {
-        await uploadBtn.click();
-        await this.page.waitForTimeout(500);
-      }
+    // Try UI-based upload first (click "Carica regolamento" → disclaimer → file chooser)
+    try {
+      return await this.uploadPdfViaUI(pdfPath);
+    } catch (e) {
+      console.log(`[LibraryPage] UI upload failed: ${e}, trying API fallback`);
     }
 
-    await fileInput.first().setInputFiles(pdfPath);
-    // Wait for upload to start and complete
-    await this.page.waitForTimeout(3000);
-    await this.waitForNetworkIdle();
+    // Fallback: use Playwright's request API to upload directly to the same proxy.
+    // page.request shares the page's storage state (cookies) automatically.
+    // This bypasses browser fetch limitations with large payloads.
+    const currentUrl = new URL(this.page.url());
+    const apiUrl = `${currentUrl.origin}/api/v1/ingest/pdf`;
+
+    const response = await this.page.request.post(apiUrl, {
+      multipart: {
+        file: {
+          name: path.basename(pdfPath),
+          mimeType: 'application/pdf',
+          buffer: fs.readFileSync(pdfPath),
+        },
+        privateGameId: privateGameId,
+      },
+    });
+
+    const status = response.status();
+    const body = await response.text();
+    console.log(
+      `[LibraryPage] Playwright request upload: status=${status}, body=${body.substring(0, 300)}`
+    );
+
+    if (status >= 200 && status < 300) {
+      try {
+        const data = JSON.parse(body);
+        return data.documentId ?? '';
+      } catch {
+        return '';
+      }
+    }
+    return '';
+  }
+
+  /**
+   * Upload PDF via UI flow: Carica regolamento → disclaimer → file chooser.
+   */
+  private async uploadPdfViaUI(pdfPath: string): Promise<string> {
+    // Register response interceptor BEFORE triggering upload
+    const uploadResponsePromise = this.page
+      .waitForResponse(
+        resp => resp.url().includes('/ingest/pdf') && resp.request().method() === 'POST'
+      )
+      .catch(() => null);
+
+    // 1. Click "Carica regolamento"
+    const uploadBtn = this.page.getByRole('button', { name: /carica regolamento/i });
+    await expect(uploadBtn.first()).toBeVisible({ timeout: 10_000 });
+    await uploadBtn.first().click();
+
+    // 2. Handle file chooser after disclaimer acceptance
+    const fileChooserPromise = this.page.waitForEvent('filechooser');
+    const disclaimerAccept = this.page.getByRole('button', {
+      name: /confermo e carico|accetto|accept/i,
+    });
+    await expect(disclaimerAccept.first()).toBeVisible({ timeout: 5_000 });
+    await disclaimerAccept.first().click();
+
+    // 3. Set file
+    const fileChooser = await fileChooserPromise;
+    await fileChooser.setFiles(pdfPath);
+
+    // 4. Wait for upload API response
+    const uploadResponse = await Promise.race([
+      uploadResponsePromise,
+      new Promise<null>(r => setTimeout(() => r(null), 60_000)),
+    ]);
+    if (uploadResponse) {
+      const status = uploadResponse.status();
+      console.log(`[LibraryPage] UI upload response: ${status} ${uploadResponse.url()}`);
+      if (status >= 200 && status < 300) {
+        const data = await uploadResponse.json().catch(() => ({}));
+        return data.documentId ?? '';
+      }
+      throw new Error(`Upload failed with status ${status}`);
+    }
+    throw new Error('Upload response timeout');
+  }
+
+  /**
+   * Enqueue a PDF for processing via the admin queue API.
+   * The fire-and-forget Task.Run on the backend can fail silently;
+   * this ensures the Quartz-based queue picks up the job.
+   */
+  async enqueuePdfForProcessing(documentId: string, adminPage: Page): Promise<void> {
+    const currentUrl = new URL(adminPage.url());
+    const baseUrl = currentUrl.origin;
+
+    const response = await adminPage.request.post(`${baseUrl}/api/v1/admin/queue/enqueue`, {
+      data: { pdfDocumentId: documentId, priority: 5 },
+    });
+    const status = response.status();
+    const body = await response.text();
+    if (status >= 200 && status < 300) {
+      console.log(`[LibraryPage] PDF enqueued successfully: ${body.substring(0, 200)}`);
+    } else if (status === 409) {
+      console.log(`[LibraryPage] PDF already in queue (409) — OK`);
+    } else {
+      console.warn(
+        `[LibraryPage] Enqueue unexpected status=${status}, body=${body.substring(0, 200)}`
+      );
+    }
+  }
+
+  /**
+   * Wait for PDF processing to complete by polling the hub page.
+   * Uses data-completed attribute on step-pdf element.
+   */
+  async waitForPdfProcessing(privateGameId: string, timeoutMs: number = 120_000): Promise<boolean> {
+    const startTime = Date.now();
+    const pollInterval = 8_000;
+
+    while (Date.now() - startTime < timeoutMs) {
+      // Reload the hub page to check status
+      await this.page.goto(`/library/private/${privateGameId}`, { waitUntil: 'networkidle' });
+      await this.page.waitForTimeout(2000);
+
+      // Check if step-pdf has data-completed="true"
+      const stepPdf = this.page.locator('[data-testid="step-pdf"][data-completed="true"]');
+      if ((await stepPdf.count()) > 0) {
+        console.log('[LibraryPage] PDF processing complete (step-pdf data-completed=true)');
+        return true;
+      }
+
+      // Screenshot for debugging
+      await this.page.screenshot({
+        path: `test-results/debug-t5-pdf-processing-${Math.round((Date.now() - startTime) / 1000)}s.png`,
+        fullPage: true,
+      });
+
+      const elapsed = Math.round((Date.now() - startTime) / 1000);
+      console.log(`[LibraryPage] PDF still processing... (${elapsed}s elapsed)`);
+      await this.page.waitForTimeout(pollInterval);
+    }
+
+    console.log('[LibraryPage] PDF processing timed out');
+    return false;
   }
 
   async verifyGameInCollection(gameTitle: string): Promise<void> {

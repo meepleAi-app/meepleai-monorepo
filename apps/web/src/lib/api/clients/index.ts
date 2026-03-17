@@ -50,3 +50,4 @@ export * from './sandboxClient'; // RAG Sandbox Dashboard
 export * from './onboardingClient'; // First-time user onboarding
 export * from './accessRequestsClient'; // Invite-only registration
 export * from './adminNotificationsClient'; // Admin manual notifications
+export * from './contactClient'; // Public contact form

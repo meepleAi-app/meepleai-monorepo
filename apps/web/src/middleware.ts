@@ -23,6 +23,7 @@ const PUBLIC_PATHS = new Set([
   '/games',
   '/accept-invite',
   '/verify-email',
+  '/onboarding',
 ]);
 
 const EXCLUDED_PREFIXES = [
@@ -34,11 +35,22 @@ const EXCLUDED_PREFIXES = [
   '/twitter-card',
 ];
 
+/**
+ * Public path prefixes — allow without auth or onboarding check.
+ * /join/* is the guest landing page for live sessions (Task 18).
+ */
+const PUBLIC_PREFIXES = ['/join/'];
+
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // Skip excluded prefixes
   if (EXCLUDED_PREFIXES.some(prefix => pathname.startsWith(prefix))) {
+    return NextResponse.next();
+  }
+
+  // Skip public path prefixes (e.g. /join/*)
+  if (PUBLIC_PREFIXES.some(prefix => pathname.startsWith(prefix))) {
     return NextResponse.next();
   }
 
@@ -52,7 +64,7 @@ export function middleware(request: NextRequest) {
   const onboardingComplete = request.cookies.get('onboarding_completed')?.value;
 
   if (onboardingComplete === 'false') {
-    const onboardingUrl = new URL('/accept-invite', request.url);
+    const onboardingUrl = new URL('/onboarding', request.url);
     onboardingUrl.searchParams.set('redirect', pathname);
     return NextResponse.redirect(onboardingUrl);
   }

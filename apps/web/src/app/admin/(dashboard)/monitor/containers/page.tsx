@@ -6,13 +6,11 @@
  */
 
 import { ContainerDashboard } from './ContainerDashboard';
-import { ContainersNavConfig } from './NavConfig';
 import { RestartAllPanel } from './RestartAllPanel';
 
 export default function ContainerDashboardPage() {
   return (
     <div data-testid="containers-page" className="space-y-6">
-      <ContainersNavConfig />
       <div>
         <h1 className="font-quicksand text-xl sm:text-2xl font-bold tracking-tight text-foreground">
           Container Dashboard

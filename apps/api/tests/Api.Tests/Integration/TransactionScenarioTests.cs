@@ -385,7 +385,6 @@ public sealed class TransactionScenarioTests : IAsyncLifetime
             FilePath = "/path/scope_test.pdf",
             FileSizeBytes = 1000000,
             UploadedByUserId = userId,
-            ProcessingStatus = "pending"
         };
 
         // Act - Single transaction across multiple entity types

@@ -69,9 +69,7 @@ public class CorsTestFactory : WebApplicationFactory<Program>
 
             // Replace vector/embedding services (used by RagService, HybridSearchService, DocumentProcessing)
             // Scoped lifetime matches production registration (ApplicationServiceExtensions.cs:68,70)
-            services.RemoveAll(typeof(IQdrantService));
             services.RemoveAll(typeof(IEmbeddingService));
-            services.AddScoped<IQdrantService>(_ => Mock.Of<IQdrantService>());
             services.AddScoped<IEmbeddingService>(_ => Mock.Of<IEmbeddingService>());
 
             // Replace HybridCache service (used for L1/L2 caching throughout application)

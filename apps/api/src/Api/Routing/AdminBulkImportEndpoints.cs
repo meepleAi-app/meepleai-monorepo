@@ -22,7 +22,7 @@ internal static class AdminBulkImportEndpoints
     {
         var group = app.MapGroup("/api/v1/admin/games/bulk-import")
             .WithTags("Admin - Bulk Import")
-            .RequireAuthorization(policy => policy.RequireRole("Admin"));
+            .RequireAuthorization(policy => policy.RequireRole("SuperAdmin", "Admin"));
 
         // POST /api/v1/admin/games/bulk-import - Submit bulk import from JSON
         group.MapPost("/", HandleBulkImport)

@@ -19,6 +19,7 @@ interface CardStackItemProps {
   isPinned: boolean;
   onFocus: (index: number) => void;
   onDiscard: (id: string) => void;
+  onPlaceholderClick?: (card: HandCard) => void;
 }
 
 export function CardStackItem({
@@ -29,11 +30,18 @@ export function CardStackItem({
   isPinned,
   onFocus,
   onDiscard,
+  onPlaceholderClick,
 }: CardStackItemProps) {
   const Icon = ENTITY_NAV_ICONS[card.entity] ?? ENTITY_NAV_ICONS.game;
   const hsl = entityColors[card.entity]?.hsl ?? '220 70% 50%';
 
-  const handleClick = useCallback(() => onFocus(index), [onFocus, index]);
+  const handleClick = useCallback(() => {
+    if (card.isPlaceholder) {
+      onPlaceholderClick?.(card);
+    } else {
+      onFocus(index);
+    }
+  }, [card, onPlaceholderClick, onFocus, index]);
 
   const handleDiscard = useCallback(
     (e: React.MouseEvent) => {
@@ -51,6 +59,7 @@ export function CardStackItem({
         className={cn(
           'flex flex-col items-center gap-0.5 p-1.5 rounded-lg',
           'transition-all duration-200 cursor-pointer border',
+          card.isPlaceholder && 'border-dashed',
           isFocused
             ? 'bg-[hsl(var(--card-hsl)/0.12)] border-[hsl(var(--card-hsl)/0.4)] scale-105'
             : 'bg-card/60 border-border/30 hover:bg-card/80'
@@ -59,6 +68,7 @@ export function CardStackItem({
         data-testid={`card-stack-item-${card.id}`}
         data-focused={isFocused ? 'true' : 'false'}
         title={card.title}
+        aria-label={card.isPlaceholder ? `Azione: ${card.title}` : undefined}
       >
         <Icon
           className={cn(
@@ -79,6 +89,7 @@ export function CardStackItem({
       className={cn(
         'group flex items-center gap-3 px-3 py-2.5 rounded-lg w-full text-left',
         'transition-all duration-200 cursor-pointer border',
+        card.isPlaceholder && 'border-dashed',
         isFocused
           ? 'bg-[hsl(var(--card-hsl)/0.1)] border-[hsl(var(--card-hsl)/0.25)] shadow-sm'
           : 'bg-card/50 border-border/30 hover:bg-[hsl(var(--card-hsl)/0.06)] hover:border-[hsl(var(--card-hsl)/0.2)]'
@@ -86,6 +97,7 @@ export function CardStackItem({
       style={{ '--card-hsl': hsl } as React.CSSProperties}
       data-testid={`card-stack-item-${card.id}`}
       data-focused={isFocused ? 'true' : 'false'}
+      aria-label={card.isPlaceholder ? `Azione: ${card.title}` : undefined}
     >
       {/* Entity icon */}
       <div
@@ -105,7 +117,7 @@ export function CardStackItem({
             isFocused ? 'text-[hsl(var(--card-hsl))]' : 'text-foreground'
           )}
         >
-          {card.title}
+          {card.isPlaceholder ? `+ ${card.title}` : card.title}
         </p>
         {card.subtitle && (
           <p className="text-[10px] text-muted-foreground truncate font-nunito">{card.subtitle}</p>
@@ -117,20 +129,22 @@ export function CardStackItem({
         <Pin className="w-3 h-3 text-muted-foreground/50 shrink-0" aria-label="Pinned" />
       )}
 
-      {/* Discard button (visible on hover) */}
-      <button
-        type="button"
-        onClick={handleDiscard}
-        className={cn(
-          'flex items-center justify-center w-5 h-5 rounded shrink-0',
-          'text-muted-foreground/0 group-hover:text-muted-foreground/70',
-          'hover:!text-destructive hover:bg-destructive/10',
-          'transition-colors'
-        )}
-        aria-label="Discard card"
-      >
-        <X className="w-3 h-3" />
-      </button>
+      {/* Discard button (visible on hover, hidden for placeholder cards) */}
+      {!card.isPlaceholder && (
+        <button
+          type="button"
+          onClick={handleDiscard}
+          className={cn(
+            'flex items-center justify-center w-5 h-5 rounded shrink-0',
+            'text-muted-foreground/0 group-hover:text-muted-foreground/70',
+            'hover:!text-destructive hover:bg-destructive/10',
+            'transition-colors'
+          )}
+          aria-label="Discard card"
+        >
+          <X className="w-3 h-3" />
+        </button>
+      )}
     </button>
   );
 }

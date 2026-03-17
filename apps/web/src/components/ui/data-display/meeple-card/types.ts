@@ -14,18 +14,16 @@ import type { SnapshotInfo } from '../extra-meeple-card/types';
 import type { ModelParameters } from '../meeple-card-features/AgentModelInfo';
 import type { AgentStats } from '../meeple-card-features/AgentStatsDisplay';
 import type { AgentStatus } from '../meeple-card-features/AgentStatusBadge';
-import type { VariantProps } from 'class-variance-authority';
-import type { LucideIcon } from 'lucide-react';
-
-import type { meepleCardVariants } from '../meeple-card-styles';
-import type { MeepleCardFlipData } from '../meeple-card-features/FlipCard';
-import type { ChatStatus } from '../meeple-card-features/ChatStatusBadge';
 import type { ChatAgent } from '../meeple-card-features/ChatAgentInfo';
-import type { ChatStats } from '../meeple-card-features/ChatStatsDisplay';
 import type { ChatGame } from '../meeple-card-features/ChatGameContext';
-import type { TagConfig, TagPresetKey } from '../meeple-card-features/tag-presets';
+import type { ChatStats } from '../meeple-card-features/ChatStatsDisplay';
+import type { ChatStatus } from '../meeple-card-features/ChatStatusBadge';
 import type { DocumentIndexingStatus } from '../meeple-card-features/DocumentStatusBadge';
 import type { DragData } from '../meeple-card-features/DragHandle';
+import type { MeepleCardFlipData } from '../meeple-card-features/FlipCard';
+import type { GameBackData, GameBackActions } from '../meeple-card-features/GameBackContent';
+import type { LinkedEntityInfo } from '../meeple-card-features/ManaLinkFooter';
+import type { PrimaryAction } from '../meeple-card-features/PrimaryActions';
 import type {
   SessionStatus,
   SessionPlayerInfo,
@@ -35,9 +33,13 @@ import type {
   SessionActionHandlers,
   SessionBackData,
 } from '../meeple-card-features/session-types';
-import type { GameBackData, GameBackActions } from '../meeple-card-features/GameBackContent';
+import type { GlowState } from '../meeple-card-features/StatusGlow';
+import type { TagConfig, TagPresetKey } from '../meeple-card-features/tag-presets';
 import type { QuickAction } from '../meeple-card-quick-actions';
+import type { meepleCardVariants } from '../meeple-card-styles';
 import type { MeepleEntityType, MeepleCardVariant } from '../meeple-card-styles';
+import type { VariantProps } from 'class-variance-authority';
+import type { LucideIcon } from 'lucide-react';
 
 // ============================================================================
 // Core Interfaces (defined in meeple-card.tsx)
@@ -230,8 +232,19 @@ export interface MeepleCardProps extends VariantProps<typeof meepleCardVariants>
 
   // ========== NAVIGATION FOOTER (Epic #4688, Issue #4689) ==========
 
-  /** Navigation links to related entities (rendered as icon footer) */
+  /** @deprecated Use linkedEntities instead. Kept for backward compatibility. */
   navigateTo?: ResolvedNavigationLink[];
+
+  // ========== MANA FEATURES ==========
+
+  /** Mana-linked entities shown in link footer. When provided, replaces navigateTo. */
+  linkedEntities?: LinkedEntityInfo[];
+  /** Callback when a mana pip in the link footer is clicked */
+  onManaPipClick?: (entityType: MeepleEntityType) => void;
+  /** 1-2 primary actions shown on card front */
+  primaryActions?: PrimaryAction[];
+  /** Card glow state for status visualization */
+  glowState?: GlowState;
 
   // ========== AGENT ACTION FOOTER (Issue #4777, #4999) ==========
 
@@ -353,6 +366,9 @@ export type { GameBackData, GameBackActions } from '../meeple-card-features/Game
 export type { SnapshotInfo } from '../extra-meeple-card/types';
 export type { QuickAction } from '../meeple-card-quick-actions';
 export type { EntityLinkType } from '../entity-link/entity-link-types';
+export type { LinkedEntityInfo } from '../meeple-card-features/ManaLinkFooter';
+export type { PrimaryAction } from '../meeple-card-features/PrimaryActions';
+export type { GlowState } from '../meeple-card-features/StatusGlow';
 
 // Aliased exports (backward compatibility with monolith)
 export type { MeepleCardMetadata as MeepleMetadata };

@@ -64,6 +64,7 @@ import {
   createFeatureFlagsClient,
   createSandboxClient,
   createOnboardingClient,
+  createAccessRequestsClient,
   createAdminNotificationsClient,
   type AuthClient,
   type GamesClient,
@@ -109,6 +110,7 @@ import {
   type FeatureFlagsClient,
   type SandboxClient,
   type OnboardingClient,
+  type AccessRequestsClient,
   type AdminNotificationsClient,
 } from './clients';
 import { HttpClient, type HttpClientConfig } from './core/httpClient';
@@ -329,6 +331,9 @@ export interface ApiClient {
   /** First-time user onboarding */
   onboarding: OnboardingClient;
 
+  /** Access Requests — invite-only registration */
+  accessRequests: AccessRequestsClient;
+
   /** Admin manual notification dispatch */
   adminNotifications: AdminNotificationsClient;
 
@@ -426,6 +431,7 @@ export function createApiClient(config?: ApiClientConfig): ApiClient {
     featureFlags: createFeatureFlagsClient({ httpClient }), // User Feature Flags
     sandbox: createSandboxClient({ httpClient }), // RAG Sandbox Dashboard
     onboarding: createOnboardingClient({ httpClient }), // First-time user onboarding
+    accessRequests: createAccessRequestsClient({ httpClient }), // Invite-only registration
     adminNotifications: createAdminNotificationsClient({ httpClient }), // Admin manual notifications
     delete: (path: string) => httpClient.delete(path),
   };

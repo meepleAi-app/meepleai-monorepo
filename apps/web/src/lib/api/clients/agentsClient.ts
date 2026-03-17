@@ -33,6 +33,7 @@ import {
   type PlayerModeSuggestionResponse,
   type Typology, // Added for AGT-012
 } from '../schemas';
+import { QuickCreateResultSchema, type QuickCreateResult } from '../schemas/ownership.schemas';
 import { AgentCostEstimateSchema, type AgentCostEstimate } from '../schemas/rag-setup.schemas';
 
 import type { HttpClient } from '../core/httpClient';
@@ -458,6 +459,8 @@ export function createAgentsClient({ httpClient }: CreateAgentsClientParams) {
       agentName?: string;
       strategyName?: string;
       strategyParameters?: Record<string, unknown>;
+      /** Pre-selected KB document IDs (from SearchAgentSheet wizard) */
+      documentIds?: string[];
     }): Promise<{
       agentId: string;
       agentName: string;
@@ -693,6 +696,33 @@ export function createAgentsClient({ httpClient }: CreateAgentsClientParams) {
         request,
         AgentCostEstimateSchema
       );
+    },
+
+    // ========== Quick Create Tutor (Ownership RAG Access) ==========
+
+    /**
+     * Quick-create a tutor agent for a game after ownership declaration.
+     * Uses pre-existing KB cards to instantly set up a chat-ready agent.
+     * POST /api/v1/agents/quick-create
+     * @param gameId - Game UUID
+     * @param sharedGameId - Optional shared game UUID for catalog-linked games
+     */
+    async quickCreateTutor(gameId: string, sharedGameId?: string): Promise<QuickCreateResult> {
+      const body: { gameId: string; sharedGameId?: string } = { gameId };
+      if (sharedGameId) {
+        body.sharedGameId = sharedGameId;
+      }
+      const response = await httpClient.post<QuickCreateResult>(
+        '/api/v1/agents/quick-create',
+        body,
+        QuickCreateResultSchema
+      );
+
+      if (!response) {
+        throw new Error('Failed to quick-create tutor: no response from server');
+      }
+
+      return response;
     },
 
     /** Create agent with auto-link to SharedGame and document attachment */

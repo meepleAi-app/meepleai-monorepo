@@ -65,14 +65,14 @@ public class GetPdfDocumentsByGameQueryHandlerTests
 
         result[0].FileName.Should().Be("rulebook-en.pdf");
         result[0].GameId.Should().Be(gameId);
-        result[0].ProcessingStatus.Should().Be("completed");
+        result[0].ProcessingState.Should().Be("Ready");
         result[0].PageCount.Should().Be(24);
 
         result[1].FileName.Should().Be("quick-start.pdf");
         result[1].PageCount.Should().Be(4);
 
         result[2].FileName.Should().Be("reference-card.pdf");
-        result[2].ProcessingStatus.Should().Be("processing");
+        result[2].ProcessingState.Should().Be("Uploading");
         result[2].PageCount.Should().BeNull();
 
         _documentRepositoryMock.Verify(
@@ -173,10 +173,10 @@ public class GetPdfDocumentsByGameQueryHandlerTests
 
         // Assert
         result.Count.Should().Be(4);
-        result[0].ProcessingStatus.Should().Be("pending");
-        result[1].ProcessingStatus.Should().Be("processing");
-        result[2].ProcessingStatus.Should().Be("completed");
-        result[3].ProcessingStatus.Should().Be("failed");
+        result[0].ProcessingState.Should().Be("Pending");
+        result[1].ProcessingState.Should().Be("Uploading");
+        result[2].ProcessingState.Should().Be("Ready");
+        result[3].ProcessingState.Should().Be("Failed");
     }
 
     [Fact]

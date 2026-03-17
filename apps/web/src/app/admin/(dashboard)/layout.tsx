@@ -2,8 +2,9 @@ import { type ReactNode } from 'react';
 
 import { type Metadata } from 'next';
 
-import { AdminShell } from '@/components/admin/layout/AdminShell';
+import { PdfProcessingNotifier } from '@/components/admin/layout/PdfProcessingNotifier';
 import { RequireRole } from '@/components/auth/RequireRole';
+import { UnifiedShell } from '@/components/layout/UnifiedShell';
 
 export const metadata: Metadata = {
   title: {
@@ -15,16 +16,15 @@ export const metadata: Metadata = {
 
 /**
  * Dashboard route group layout.
- * Applies the unified AdminShell (TopNav + ContextualSidebar)
+ * Applies the UnifiedShell in admin context
  * to all pages under /admin/(dashboard)/.
  * Wrapped with RequireRole to enforce admin access.
  */
 export default function DashboardLayout({ children }: { children: ReactNode }) {
   return (
     <RequireRole allowedRoles={['Admin']}>
-      <AdminShell>
-        {children}
-      </AdminShell>
+      <PdfProcessingNotifier />
+      <UnifiedShell isAdmin>{children}</UnifiedShell>
     </RequireRole>
   );
 }

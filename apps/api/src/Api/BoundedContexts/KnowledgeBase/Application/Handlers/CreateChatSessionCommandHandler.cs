@@ -1,6 +1,9 @@
 using Api.BoundedContexts.KnowledgeBase.Application.Commands;
+using Api.BoundedContexts.KnowledgeBase.Application.Services;
 using Api.BoundedContexts.KnowledgeBase.Domain.Entities;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
+using Api.Infrastructure.Entities;
+using Api.Middleware.Exceptions;
 using Api.SharedKernel.Infrastructure.Persistence;
 using MediatR;
 using Microsoft.Extensions.Logging;
@@ -15,15 +18,18 @@ internal sealed class CreateChatSessionCommandHandler : IRequestHandler<CreateCh
 {
     private readonly IChatSessionRepository _sessionRepository;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly IRagAccessService _ragAccessService;
     private readonly ILogger<CreateChatSessionCommandHandler> _logger;
 
     public CreateChatSessionCommandHandler(
         IChatSessionRepository sessionRepository,
         IUnitOfWork unitOfWork,
+        IRagAccessService ragAccessService,
         ILogger<CreateChatSessionCommandHandler> logger)
     {
         _sessionRepository = sessionRepository ?? throw new ArgumentNullException(nameof(sessionRepository));
         _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
+        _ragAccessService = ragAccessService ?? throw new ArgumentNullException(nameof(ragAccessService));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -32,6 +38,16 @@ internal sealed class CreateChatSessionCommandHandler : IRequestHandler<CreateCh
         CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(request);
+
+        // RAG access enforcement
+        {
+            var userRole = Enum.TryParse<UserRole>(request.UserRole, ignoreCase: true, out var parsedRole)
+                ? parsedRole : UserRole.User;
+            var canAccess = await _ragAccessService.CanAccessRagAsync(
+                request.UserId, request.GameId, userRole, cancellationToken).ConfigureAwait(false);
+            if (!canAccess)
+                throw new ForbiddenException("Accesso RAG non autorizzato");
+        }
 
         _logger.LogInformation(
             "Creating chat session for user {UserId} and game {GameId}",

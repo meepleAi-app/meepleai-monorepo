@@ -51,7 +51,7 @@ export function AdminBreadcrumb() {
   }, [pathname]);
 
   return (
-    <div className="md:hidden" ref={dropdownRef}>
+    <div className="md:hidden relative" ref={dropdownRef}>
       <div
         className={cn(
           'h-9 bg-background/80 backdrop-blur-sm',

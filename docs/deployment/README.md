@@ -308,11 +308,11 @@ docker exec meepleai-redis redis-cli ping  # Redis
 
 ## Resources
 
-**Guides** (2026-01-30):
-- [Docker Versioning](./docker-versioning-guide.md), [Deployment Workflows](./deployment-workflows-guide.md), [Volume Management](./docker-volume-management.md)
+**Operations**: [Operations Manual](../operations/operations-manual.md) — Consolidated service management, backup/restore, monitoring, incident response, disaster recovery, maintenance schedules.
 
-**Guides** (2026-01-18):
-- [NEW-GUIDES-INDEX](./NEW-GUIDES-INDEX.md), [Cost Summary](./infrastructure-cost-summary.md), [Domain Setup](./domain-setup-guide.md), [Email/TOTP](./email-totp-services.md), [Monitoring](./monitoring-setup-guide.md), [BGG API](./boardgamegeek-api-setup.md), [Secrets](./secrets-management.md)
+**Guides**:
+- [Docker Versioning](./docker-versioning-guide.md), [Deployment Workflows](./deployment-workflows-guide.md)
+- [Cost Summary](./infrastructure-cost-summary.md), [Domain Setup](./domain-setup-guide.md), [Email/TOTP](./email-totp-services.md), [BGG API](./boardgamegeek-api-setup.md)
 
 **Related**: [Monitoring](../02-development/README.md#monitoring), [Testing](../05-testing/README.md), [Security](../06-security/README.md)
 

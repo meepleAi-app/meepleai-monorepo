@@ -129,9 +129,9 @@ internal static class SharedGameCatalogServiceExtensions
     {
         services.AddAuthorizationBuilder()
             .AddPolicy("AdminOrEditorPolicy", policy =>
-                policy.RequireRole("Admin", "Editor"))
+                policy.RequireRole("SuperAdmin", "Admin", "Editor"))
             .AddPolicy("AdminOnlyPolicy", policy =>
-                policy.RequireRole("Admin"));
+                policy.RequireRole("SuperAdmin", "Admin"));
 
         return services;
     }

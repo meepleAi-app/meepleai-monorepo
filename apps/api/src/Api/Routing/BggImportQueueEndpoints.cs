@@ -20,7 +20,7 @@ internal static class BggImportQueueEndpoints
     {
         var group = endpoints.MapGroup("/api/v1/admin/bgg-queue")
             .WithTags("BGG Import Queue")
-            .RequireAuthorization(policy => policy.RequireRole("Admin")); // Admin-only endpoints
+            .RequireAuthorization(policy => policy.RequireRole("SuperAdmin", "Admin")); // Admin-only endpoints
 
         // GET /api/v1/admin/bgg-queue/status - Get current queue status
         group.MapGet("/status", GetQueueStatus)

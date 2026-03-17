@@ -1,16 +1,26 @@
 'use client';
 
+import { AnimatePresence, motion } from 'framer-motion';
 import { ChevronRight, ChevronLeft } from 'lucide-react';
 
+import { useDashboardMode } from '@/components/dashboard';
+import { SessionPanel } from '@/components/dashboard/SessionPanel';
+import { SessionPanelCollapsed } from '@/components/dashboard/SessionPanelCollapsed';
 import { useSwipeGesture } from '@/hooks/useSwipeGesture';
 import { cn } from '@/lib/utils';
 import { useCardHand } from '@/stores/use-card-hand';
+import type { HandCard } from '@/stores/use-card-hand';
 
 import { CardStackItem } from './CardStackItem';
 
-export function CardStack() {
+interface CardStackProps {
+  onPlaceholderClick?: (card: HandCard) => void;
+}
+
+export function CardStack({ onPlaceholderClick }: CardStackProps = {}) {
   const { cards, focusedIdx, pinnedIds, expandedStack, focusCard, discardCard, toggleExpandStack } =
     useCardHand();
+  const { isGameMode } = useDashboardMode();
 
   const level = expandedStack ? ('card' as const) : ('mini' as const);
   const pinnedCards = cards.filter(c => pinnedIds.has(c.id));
@@ -67,10 +77,28 @@ export function CardStack() {
               isPinned={false}
               onFocus={focusCard}
               onDiscard={discardCard}
+              onPlaceholderClick={onPlaceholderClick}
             />
           );
         })}
       </div>
+
+      {/* Dynamic slot — session panel when in game mode */}
+      <AnimatePresence>
+        {isGameMode && (
+          <motion.div
+            layout
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ duration: 0.2 }}
+            className="px-1.5"
+            data-testid="card-stack-dynamic-slot"
+          >
+            {expandedStack ? <SessionPanel /> : <SessionPanelCollapsed />}
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Separator */}
       {pinnedCards.length > 0 && dynamicCards.length > 0 && (
@@ -91,6 +119,7 @@ export function CardStack() {
               isPinned={true}
               onFocus={focusCard}
               onDiscard={discardCard}
+              onPlaceholderClick={onPlaceholderClick}
             />
           );
         })}

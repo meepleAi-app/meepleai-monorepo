@@ -17,6 +17,7 @@ using Api.BoundedContexts.SharedGameCatalog.Application.Queries.GetUserBadges;
 using Api.BoundedContexts.SharedGameCatalog.Application.Queries.GetBadgeLeaderboard;
 using Api.BoundedContexts.SharedGameCatalog.Application.Queries.GetMyActiveReviews;
 using Api.BoundedContexts.SharedGameCatalog.Application.Queries.CheckPrivateGameDuplicates;
+using Api.BoundedContexts.SharedGameCatalog.Application.Queries.GetGameDocumentsForUser;
 using Api.BoundedContexts.SharedGameCatalog.Application.Queries.GetGameRagReadiness;
 using Api.BoundedContexts.SharedGameCatalog.Application.Queries.GetSharedGameDocuments;
 using Api.BoundedContexts.SharedGameCatalog.Application.Commands.ToggleBadgeDisplay;
@@ -51,6 +52,7 @@ internal static class SharedGameCatalogEndpoints
         MapBadgeEndpoints(group);
         MapTrendingEndpoints(group);
         MapWizardEndpoints(group); // Issue #4139: PDF Wizard endpoints
+        MapUserGameEndpoints(group); // User-facing game endpoints
 
         return group;
     }
@@ -117,6 +119,49 @@ internal static class SharedGameCatalogEndpoints
             .WithDescription("Increments the upvote count for a FAQ. Rate limited to prevent abuse.")
             .Produces<UpvoteFaqResultDto>()
             .Produces(StatusCodes.Status404NotFound);
+    }
+
+    // ========================================
+    // USER GAME ENDPOINTS (Authenticated)
+    // ========================================
+
+    private static void MapUserGameEndpoints(RouteGroupBuilder group)
+    {
+        // Get active documents for a shared game (authenticated users with access)
+        group.MapGet("/shared-games/{gameId:guid}/documents", HandleGetGameDocumentsForUser)
+            .RequireAuthorization()
+            .WithName("GetSharedGameDocumentsForUser")
+            .WithSummary("Get active documents for a shared game (Authenticated)")
+            .WithDescription("Returns active documents for a game. Access requires the game to be RAG-public or the user to have the game in their library.")
+            .Produces<IReadOnlyList<SharedGameDocumentDto>>()
+            .Produces(StatusCodes.Status401Unauthorized)
+            .Produces(StatusCodes.Status404NotFound);
+    }
+
+    private static async Task<IResult> HandleGetGameDocumentsForUser(
+        Guid gameId,
+        IMediator mediator,
+        HttpContext context,
+        CancellationToken ct)
+    {
+        var userIdClaim = context.User.FindFirst("user_id")?.Value
+            ?? context.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+
+        if (!Guid.TryParse(userIdClaim, out var userId))
+        {
+            return Results.Unauthorized();
+        }
+
+        try
+        {
+            var query = new GetGameDocumentsForUserQuery(gameId, userId);
+            var result = await mediator.Send(query, ct).ConfigureAwait(false);
+            return Results.Ok(result);
+        }
+        catch (Middleware.Exceptions.NotFoundException)
+        {
+            return Results.NotFound();
+        }
     }
 
     // ========================================

@@ -11,7 +11,7 @@
 
 import { type ReactNode, use } from 'react';
 
-import { SessionNavConfig } from '@/components/sessions/live/SessionNavConfig';
+import { SessionNavConfig } from '@/components/session/live/SessionNavConfig';
 
 interface LiveSessionLayoutProps {
   children: ReactNode;

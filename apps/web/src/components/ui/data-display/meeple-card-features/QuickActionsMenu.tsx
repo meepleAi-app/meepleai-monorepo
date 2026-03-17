@@ -38,6 +38,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/navigation/dropdown-menu';
 import { Button } from '@/components/ui/primitives/button';
+import { logger } from '@/lib/logger';
 import { cn } from '@/lib/utils';
 
 // ============================================================================
@@ -88,7 +89,7 @@ export function QuickActionsMenu({
   'data-testid': testId,
 }: QuickActionsMenuProps) {
   // Filter actions based on role and hidden flag
-  const visibleActions = actions.filter((action) => {
+  const visibleActions = actions.filter(action => {
     // Skip if explicitly hidden
     if (action.hidden) return false;
 
@@ -105,10 +106,7 @@ export function QuickActionsMenu({
     return null;
   }
 
-  const handleActionClick = async (
-    e: React.MouseEvent,
-    action: QuickAction
-  ) => {
+  const handleActionClick = async (e: React.MouseEvent, action: QuickAction) => {
     // Stop propagation to prevent card onClick
     e.stopPropagation();
 
@@ -118,12 +116,11 @@ export function QuickActionsMenu({
       await action.onClick();
     } catch (error) {
       // Error handling delegated to action callback
-      console.error('QuickActionsMenu: action error:', error);
+      logger.error('QuickActionsMenu: action error:', error);
     }
   };
 
-  const iconSize =
-    size === 'sm' ? 'h-4 w-4' : size === 'lg' ? 'h-6 w-6' : 'h-5 w-5';
+  const iconSize = size === 'sm' ? 'h-4 w-4' : size === 'lg' ? 'h-6 w-6' : 'h-5 w-5';
 
   return (
     <DropdownMenu>
@@ -131,7 +128,7 @@ export function QuickActionsMenu({
         <Button
           variant="ghost"
           size={size === 'sm' ? 'sm' : size === 'lg' ? 'lg' : 'icon'}
-          onClick={(e) => e.stopPropagation()}
+          onClick={e => e.stopPropagation()}
           aria-label="Open quick actions menu"
           className={cn('rounded-full', className)}
           data-testid={testId || 'quick-actions-trigger'}
@@ -147,7 +144,7 @@ export function QuickActionsMenu({
           return (
             <div key={`${action.label}-${index}`}>
               <DropdownMenuItem
-                onClick={(e) => handleActionClick(e, action)}
+                onClick={e => handleActionClick(e, action)}
                 disabled={action.disabled}
                 className={cn(
                   action.destructive &&

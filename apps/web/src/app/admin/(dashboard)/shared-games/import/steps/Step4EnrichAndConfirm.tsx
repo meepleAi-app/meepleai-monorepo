@@ -28,6 +28,7 @@ import { Input } from '@/components/ui/primitives/input';
 import { Label } from '@/components/ui/primitives/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/primitives/radio-group';
 import { useCheckDuplicate } from '@/hooks/wizard/useCheckDuplicate';
+import { logger } from '@/lib/logger';
 import { cn } from '@/lib/utils';
 import { useGameImportWizardStore, type EnrichedGameData } from '@/stores/useGameImportWizardStore';
 
@@ -344,7 +345,7 @@ export function Step4EnrichAndConfirm({ onComplete }: Step4EnrichAndConfirmProps
       }
     } catch (err) {
       // Error handled by store (toast + state)
-      console.error('Failed to submit wizard:', err);
+      logger.error('Failed to submit wizard:', err);
     }
   }, [
     enrichedData,

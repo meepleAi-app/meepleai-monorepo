@@ -32,6 +32,8 @@
 
 import { useMemo, useState } from 'react';
 
+import { logger } from '@/lib/logger';
+
 import type { SortOption } from '../entity-list-view.types';
 
 /**
@@ -63,8 +65,7 @@ export function useSort<T>(
   controlledSort?: string
 ): UseSortReturn<T> {
   // Find initial sort option
-  const initialSort =
-    defaultSort || (sortOptions.length > 0 ? sortOptions[0].value : 'default');
+  const initialSort = defaultSort || (sortOptions.length > 0 ? sortOptions[0].value : 'default');
 
   // Internal state
   const [internalSort, setInternalSort] = useState(initialSort);
@@ -80,11 +81,13 @@ export function useSort<T>(
     }
 
     // Find selected sort option
-    const selectedOption = sortOptions.find((opt) => opt.value === currentSort);
+    const selectedOption = sortOptions.find(opt => opt.value === currentSort);
 
     // No valid option found - return unsorted
     if (!selectedOption) {
-      console.warn(`Sort option "${currentSort}" not found. Available: ${sortOptions.map((o) => o.value).join(', ')}`);
+      logger.warn(
+        `Sort option "${currentSort}" not found. Available: ${sortOptions.map(o => o.value).join(', ')}`
+      );
       return items;
     }
 

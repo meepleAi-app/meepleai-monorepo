@@ -23,6 +23,7 @@ import {
 } from '@/components/ui/overlays/select';
 import { Button } from '@/components/ui/primitives/button';
 import { Label } from '@/components/ui/primitives/label';
+import { logger } from '@/lib/logger';
 import { cn } from '@/lib/utils';
 
 // ============================================================================
@@ -158,7 +159,7 @@ export function AgentConfigForm({
         router.push(`/chat?gameId=${encodeURIComponent(gameId)}`);
       }
     } catch (error) {
-      console.error('Failed to save agent config:', error);
+      logger.error('Failed to save agent config:', error);
       setSaveError('Errore durante la configurazione. Riprova.');
     } finally {
       setIsSaving(false);

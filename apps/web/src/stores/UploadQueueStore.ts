@@ -153,8 +153,7 @@ class UploadQueueStore {
       switch (response.type) {
         case 'WORKER_READY':
           if (process.env.NODE_ENV !== 'production') {
-            // eslint-disable-next-line no-console
-            console.log('[UploadQueueStore] Worker ready');
+            logger.debug('[UploadQueueStore] Worker ready');
           }
           this.isReady = true;
           this.workerError = null;
@@ -271,7 +270,7 @@ class UploadQueueStore {
     }
 
     this.restartCount++;
-    console.warn(`[UploadQueueStore] Restarting worker (attempt ${this.restartCount})`);
+    logger.warn(`[UploadQueueStore] Restarting worker (attempt ${this.restartCount})`);
 
     // CRITICAL FIX: Preserve current state before terminating
     const stateToRestore = { ...this.state };
@@ -369,8 +368,7 @@ class UploadQueueStore {
     }
 
     if (process.env.NODE_ENV !== 'production') {
-      // eslint-disable-next-line no-console
-      console.log(
+      logger.debug(
         `[UploadQueueStore] Processing ${this.pendingFileRequests.length} buffered file requests`
       );
     }
@@ -457,8 +455,7 @@ class UploadQueueStore {
     const saved = this.loadFromLocalStorage();
     if (saved && saved.items.length > 0) {
       if (process.env.NODE_ENV !== 'production') {
-        // eslint-disable-next-line no-console
-        console.log(`[UploadQueueStore] Restoring ${saved.items.length} items to worker`);
+        logger.debug(`[UploadQueueStore] Restoring ${saved.items.length} items to worker`);
       }
 
       this.postMessage({
@@ -496,7 +493,7 @@ class UploadQueueStore {
     this.ensureWorkerInitialized();
 
     if (!this.isReady || !this.worker) {
-      console.warn('[UploadQueueStore] Worker not ready, buffering files until worker initializes');
+      logger.warn('[UploadQueueStore] Worker not ready, buffering files until worker initializes');
 
       // Buffer the request instead of dropping it
       this.pendingFileRequests.push({ files, gameId, language });
@@ -620,7 +617,7 @@ class UploadQueueStore {
     }
 
     if (!this.isReady) {
-      console.warn('[UploadQueueStore] Worker not ready, message may be delayed');
+      logger.warn('[UploadQueueStore] Worker not ready, message may be delayed');
     }
 
     try {
@@ -656,8 +653,7 @@ class UploadQueueStore {
             // Only cleanup if queue is empty and no active uploads
             if (stats.total === 0 || (stats.pending === 0 && stats.uploading === 0)) {
               if (process.env.NODE_ENV !== 'production') {
-                // eslint-disable-next-line no-console
-                console.log('[UploadQueueStore] Idle cleanup - terminating worker');
+                logger.debug('[UploadQueueStore] Idle cleanup - terminating worker');
               }
               this.destroy();
             }
@@ -690,8 +686,7 @@ class UploadQueueStore {
     this.isReady = false;
 
     if (process.env.NODE_ENV !== 'production') {
-      // eslint-disable-next-line no-console
-      console.log('[UploadQueueStore] Worker destroyed and cleaned up');
+      logger.debug('[UploadQueueStore] Worker destroyed and cleaned up');
     }
   }
 }

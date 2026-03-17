@@ -23,6 +23,7 @@ import {
 import { Alert, AlertDescription } from '@/components/ui/feedback/alert';
 import { Button } from '@/components/ui/primitives/button';
 import { api, type GameFAQ } from '@/lib/api';
+import { logger } from '@/lib/logger';
 
 // ============================================================================
 // Types
@@ -54,7 +55,7 @@ export function GameFAQTab({ gameId, gameTitle }: GameFAQTabProps) {
         const result = await api.games.getFAQs(gameId, 10, 0);
         setFaqs(result.faqs);
       } catch (err) {
-        console.error('Failed to fetch FAQs:', err);
+        logger.error('Failed to fetch FAQs:', err);
         setError('Errore nel caricamento delle FAQ. Riprova più tardi.');
       } finally {
         setLoading(false);
@@ -73,7 +74,7 @@ export function GameFAQTab({ gameId, gameTitle }: GameFAQTabProps) {
       // Update local state
       setFaqs(prev => prev.map(faq => (faq.id === faqId ? updatedFAQ : faq)));
     } catch (err) {
-      console.error('Failed to upvote FAQ:', err);
+      logger.error('Failed to upvote FAQ:', err);
     } finally {
       setUpvoting(null);
     }

@@ -25,13 +25,9 @@ import {
   CommandItem,
   CommandList,
 } from '@/components/ui/navigation/command';
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/overlays/popover';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/overlays/popover';
 import { Button } from '@/components/ui/primitives/button';
-import { useGameSearch } from '@/lib/hooks/use-game-search';
+import { useGameSearch } from '@/lib/domain-hooks/useGameSearch';
 import { cn } from '@/lib/utils';
 
 export interface GameComboboxProps {
@@ -54,7 +50,7 @@ export function GameCombobox({
 
   const { data: games = [], isLoading } = useGameSearch(search);
 
-  const selectedGame = games.find((g) => g.id === value);
+  const selectedGame = games.find(g => g.id === value);
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -69,9 +65,7 @@ export function GameCombobox({
           {selectedGame ? (
             <span className="flex items-center gap-2">
               <span className="truncate">{selectedGame.name}</span>
-              {selectedGame.source && (
-                <GameSourceBadge source={selectedGame.source} />
-              )}
+              {selectedGame.source && <GameSourceBadge source={selectedGame.source} />}
             </span>
           ) : (
             <span className="text-muted-foreground">{placeholder}</span>
@@ -81,25 +75,17 @@ export function GameCombobox({
       </PopoverTrigger>
       <PopoverContent className="w-full p-0" align="start">
         <Command shouldFilter={false}>
-          <CommandInput
-            placeholder="Type to search..."
-            value={search}
-            onValueChange={setSearch}
-          />
+          <CommandInput placeholder="Type to search..." value={search} onValueChange={setSearch} />
           <CommandList>
             {isLoading ? (
               <div className="flex items-center justify-center py-6">
                 <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-                <span className="ml-2 text-sm text-muted-foreground">
-                  Searching...
-                </span>
+                <span className="ml-2 text-sm text-muted-foreground">Searching...</span>
               </div>
             ) : games.length === 0 ? (
               <CommandEmpty>
                 <div className="py-6 text-center">
-                  <p className="text-sm text-muted-foreground mb-2">
-                    No games found
-                  </p>
+                  <p className="text-sm text-muted-foreground mb-2">No games found</p>
                   {onNotFound && search && (
                     <Button
                       variant="link"
@@ -118,7 +104,7 @@ export function GameCombobox({
               </CommandEmpty>
             ) : (
               <CommandGroup>
-                {games.map((game) => (
+                {games.map(game => (
                   <CommandItem
                     key={game.id}
                     value={game.id}

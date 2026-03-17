@@ -115,14 +115,15 @@ class Logger {
   /**
    * Log error
    */
-  error(message: string, error?: Error, context?: Partial<ErrorContext>): void {
+  error(message: string, error?: unknown, context?: Partial<ErrorContext>): void {
+    const errorObj = error instanceof Error ? error : error ? new Error(String(error)) : undefined;
     const entry: LogEntry = {
       level: LogLevel.ERROR,
       message,
       timestamp: new Date().toISOString(),
       context: context as ErrorContext,
-      error: error ? sanitizeError(error) : undefined,
-      severity: error ? getErrorSeverity(error) : ErrorSeverity.ERROR,
+      error: errorObj ? sanitizeError(errorObj) : undefined,
+      severity: errorObj ? getErrorSeverity(errorObj) : ErrorSeverity.ERROR,
     };
 
     this.addToQueue(entry);

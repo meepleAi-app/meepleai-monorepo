@@ -24,7 +24,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useApiClient } from '@/lib/api/context';
-import { useGameSearch } from '@/lib/hooks/use-game-search';
+import { useGameSearch } from '@/lib/domain-hooks/useGameSearch';
 
 // ── Types ──────────────────────────────────────────────────────────────
 

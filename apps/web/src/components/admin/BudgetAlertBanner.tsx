@@ -17,6 +17,7 @@ import { AlertTriangle, AlertCircle, X } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/feedback/alert';
 import { Button } from '@/components/ui/primitives/button';
 import { BUDGET_ALERT_THRESHOLDS, type CostTrackingDto } from '@/lib/api';
+import { logger } from '@/lib/logger';
 
 interface BudgetAlertBannerProps {
   costData: CostTrackingDto;
@@ -40,7 +41,7 @@ export function BudgetAlertBanner({ costData }: BudgetAlertBannerProps) {
         }
       }
     } catch (error) {
-      console.warn('localStorage unavailable for budget alert:', error);
+      logger.warn(`localStorage unavailable for budget alert: ${error}`);
       // Degrade gracefully - alert remains dismissible for session only
     }
   }, []);
@@ -50,7 +51,7 @@ export function BudgetAlertBanner({ costData }: BudgetAlertBannerProps) {
     try {
       localStorage.setItem('budget-alert-dismissed', new Date().toISOString());
     } catch (error) {
-      console.warn('Failed to persist budget alert dismissal:', error);
+      logger.warn(`Failed to persist budget alert dismissal: ${error}`);
       // Still dismiss for current session
     }
   };

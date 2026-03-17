@@ -20,6 +20,7 @@ import React, {
 } from 'react';
 
 import { api } from '@/lib/api';
+import { logger } from '@/lib/logger';
 import { Game, Agent } from '@/types';
 
 // ============================================================================
@@ -101,7 +102,7 @@ export function GameProvider({ children }: PropsWithChildren) {
         return currentId;
       });
     } catch (err) {
-      console.error('Failed to load games:', err);
+      logger.error('Failed to load games:', err);
       setError('Failed to load games');
       setGames([]);
     } finally {
@@ -123,7 +124,7 @@ export function GameProvider({ children }: PropsWithChildren) {
         setSelectedAgentId(null);
       }
     } catch (err) {
-      console.error('Failed to load agents:', err);
+      logger.error('Failed to load agents:', err);
       setError('Failed to load agents');
       setAgents([]);
       setSelectedAgentId(null);
@@ -173,7 +174,7 @@ export function GameProvider({ children }: PropsWithChildren) {
       setSelectedGameId(newGame.id);
       return newGame;
     } catch (err) {
-      console.error('Failed to create game:', err);
+      logger.error('Failed to create game:', err);
       setError('Failed to create game');
       throw err;
     }

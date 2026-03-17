@@ -31,7 +31,7 @@ import { Button } from '@/components/ui/primitives/button';
 import { Input } from '@/components/ui/primitives/input';
 import { Label } from '@/components/ui/primitives/label';
 import type { PlayRecordStatus } from '@/lib/api/schemas/play-records.schemas';
-import { usePlayHistory } from '@/lib/hooks/use-play-records';
+import { usePlayHistory } from '@/lib/domain-hooks/usePlayRecords';
 import {
   usePlayRecordsStore,
   selectFilters,

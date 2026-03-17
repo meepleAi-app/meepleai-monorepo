@@ -1,8 +1,16 @@
 /**
- * Dashboard V2 Components - Issue #4581
- * Barrel export for Gaming Hub Dashboard components
+ * Dashboard Components
+ * Consolidated barrel export for all Dashboard components
  */
 
+// Dashboard Engine (formerly components/dashboard/)
+export { dashboardMachine } from './DashboardEngine';
+export type { DashboardEvent, DashboardEngineContext } from './DashboardEngine';
+export { DashboardEngineProvider } from './DashboardEngineProvider';
+export { DashboardRenderer } from './DashboardRenderer';
+export { useDashboardMode } from './useDashboardMode';
+
+// Dashboard V2 Components (Issue #4581)
 export { EmptyState } from './empty-states';
 export { FilterBar } from './filter-bar';
 export { GameCollectionGrid } from './game-collection-grid';

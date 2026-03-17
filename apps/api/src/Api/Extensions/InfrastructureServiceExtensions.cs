@@ -304,7 +304,7 @@ internal static class InfrastructureServiceExtensions
                 ?? "http://embedding-service:8000";
 #pragma warning restore S1075
             client.BaseAddress = new Uri(serviceUrl);
-            client.Timeout = TimeSpan.FromSeconds(60);
+            client.Timeout = TimeSpan.FromSeconds(300);
         })
         .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler
         {

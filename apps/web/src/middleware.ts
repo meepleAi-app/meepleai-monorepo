@@ -22,6 +22,7 @@ const PUBLIC_PATHS = new Set([
   '/reset-password',
   '/games',
   '/accept-invite',
+  '/setup-account',
   '/verify-email',
   '/onboarding',
 ]);

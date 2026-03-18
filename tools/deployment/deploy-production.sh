@@ -15,7 +15,7 @@ NC='\033[0m'
 
 # Configuration
 ENVIRONMENT="production"
-DOCKER_REGISTRY="${DOCKER_REGISTRY:-ghcr.io/degrassiaaron}"
+DOCKER_REGISTRY="${DOCKER_REGISTRY:-ghcr.io/meepleai-app}"
 IMAGE_TAG="${IMAGE_TAG:-$(git rev-parse --short HEAD)}"
 PRODUCTION_HOST="${PRODUCTION_HOST:-meepleai.dev}"
 REQUIRE_STAGING_APPROVAL="${REQUIRE_STAGING_APPROVAL:-true}"

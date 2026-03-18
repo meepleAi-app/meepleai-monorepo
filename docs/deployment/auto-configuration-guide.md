@@ -2,7 +2,7 @@
 
 > **Last Updated**: 2026-01-17
 > **Related ADR**: [ADR-021 - Auto-Configuration System](../01-architecture/adr/adr-021-auto-configuration-system.md)
-> **Related Issues**: [#2511](https://github.com/DegrassiAaron/meepleai-monorepo/issues/2511), [#2522](https://github.com/DegrassiAaron/meepleai-monorepo/issues/2522)
+> **Related Issues**: [#2511](https://github.com/meepleAi-app/meepleai-monorepo/issues/2511), [#2522](https://github.com/meepleAi-app/meepleai-monorepo/issues/2522)
 
 ## Overview
 
@@ -64,7 +64,7 @@ node --version
 ### Step 1: Clone Repository
 
 ```bash
-git clone https://github.com/DegrassiAaron/meepleai-monorepo.git
+git clone https://github.com/meepleAi-app/meepleai-monorepo.git
 cd meepleai-monorepo
 ```
 
@@ -757,4 +757,4 @@ dotnet run
 ---
 
 **Maintained by**: MeepleAI DevOps Team
-**Questions**: Open an issue on [GitHub](https://github.com/DegrassiAaron/meepleai-monorepo/issues)
+**Questions**: Open an issue on [GitHub](https://github.com/meepleAi-app/meepleai-monorepo/issues)

@@ -24,4 +24,13 @@ public interface IRagAccessService
     /// Returns empty list if the user has no RAG access.
     /// </summary>
     Task<List<Guid>> GetAccessibleKbCardsAsync(Guid userId, Guid gameId, UserRole role, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Gets accessible KB card IDs, filtered by a user selection list.
+    /// If selectedIds is null/empty, returns all accessible KBs (backward compatible).
+    /// </summary>
+    Task<List<Guid>> GetAccessibleKbCardsFilteredAsync(
+        Guid userId, Guid gameId, UserRole role,
+        List<Guid>? selectedIds,
+        CancellationToken cancellationToken = default);
 }

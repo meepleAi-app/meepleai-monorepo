@@ -589,8 +589,8 @@ pnpm test:e2e --headed
 ## Additional Resources
 
 - [Playwright Documentation](https://playwright.dev/)
-- [Issue #2919: Playwright Configuration & Best Practices](https://github.com/DegrassiAaron/meepleai-monorepo/issues/2919)
-- [Issue #1497: Multi-Browser Testing](https://github.com/DegrassiAaron/meepleai-monorepo/issues/1497)
-- [Issue #1498: E2E Code Coverage](https://github.com/DegrassiAaron/meepleai-monorepo/issues/1498)
-- [Issue #2008: Retry Strategy](https://github.com/DegrassiAaron/meepleai-monorepo/issues/2008)
+- [Issue #2919: Playwright Configuration & Best Practices](https://github.com/meepleAi-app/meepleai-monorepo/issues/2919)
+- [Issue #1497: Multi-Browser Testing](https://github.com/meepleAi-app/meepleai-monorepo/issues/1497)
+- [Issue #1498: E2E Code Coverage](https://github.com/meepleAi-app/meepleai-monorepo/issues/1498)
+- [Issue #2008: Retry Strategy](https://github.com/meepleAi-app/meepleai-monorepo/issues/2008)
 - [Memory: e2e-playwright-patterns](apps/web/e2e/README-BEST-PRACTICES.md)

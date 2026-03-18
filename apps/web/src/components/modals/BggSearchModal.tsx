@@ -17,7 +17,7 @@ interface BggSearchModalProps {
 /**
  * BoardGameGeek search modal component.
  * Allows users to search BGG and import game metadata.
- * AI-13: https://github.com/DegrassiAaron/meepleai-monorepo/issues/420
+ * AI-13: https://github.com/meepleAi-app/meepleai-monorepo/issues/420
  */
 export function BggSearchModal({ isOpen, onClose, onSelect }: BggSearchModalProps) {
   const [query, setQuery] = useState('');

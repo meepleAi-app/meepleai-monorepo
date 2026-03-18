@@ -1,7 +1,7 @@
 # Admin Dashboard User Guide
 
 > **Status**: 🚧 Planned (UI not yet implemented)
-> **Related Issue**: [#2464 - Admin Dashboard UI Implementation](https://github.com/DegrassiAaron/meepleai-monorepo/issues/2464), [#2571 - Admin Dashboard Enhancements](https://github.com/DegrassiAaron/meepleai-monorepo/issues/2571)
+> **Related Issue**: [#2464 - Admin Dashboard UI Implementation](https://github.com/meepleAi-app/meepleai-monorepo/issues/2464), [#2571 - Admin Dashboard Enhancements](https://github.com/meepleAi-app/meepleai-monorepo/issues/2571)
 > **Last Updated**: 2026-01-17
 
 ---
@@ -13,8 +13,8 @@
 **Expected Completion**: Q1 2026 (Issue #2464)
 
 **Tracking Issues**:
-- [#2464 - Admin Dashboard UI Implementation](https://github.com/DegrassiAaron/meepleai-monorepo/issues/2464)
-- [#2571 - Admin Dashboard Enhancements](https://github.com/DegrassiAaron/meepleai-monorepo/issues/2571)
+- [#2464 - Admin Dashboard UI Implementation](https://github.com/meepleAi-app/meepleai-monorepo/issues/2464)
+- [#2571 - Admin Dashboard Enhancements](https://github.com/meepleAi-app/meepleai-monorepo/issues/2571)
 
 ---
 
@@ -225,8 +225,8 @@ Once the admin dashboard UI is implemented, this guide will be updated with:
 - Common workflows and best practices
 
 **Want to contribute?** Check the tracking issues:
-- [#2464 - Admin Dashboard UI](https://github.com/DegrassiAaron/meepleai-monorepo/issues/2464)
-- [#2571 - Admin Enhancements](https://github.com/DegrassiAaron/meepleai-monorepo/issues/2571)
+- [#2464 - Admin Dashboard UI](https://github.com/meepleAi-app/meepleai-monorepo/issues/2464)
+- [#2571 - Admin Enhancements](https://github.com/meepleAi-app/meepleai-monorepo/issues/2571)
 
 ---
 

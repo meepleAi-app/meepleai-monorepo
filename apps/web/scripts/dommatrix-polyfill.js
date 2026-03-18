@@ -1,12 +1,14 @@
 /**
- * DOMMatrix/DOMPoint polyfill for Node.js build workers
+ * DOMMatrix polyfill for Node.js build workers
  *
- * Loaded via NODE_OPTIONS=--require before Next.js starts,
- * ensuring all build worker processes have the polyfill.
+ * Issue #1817: pdfjs-dist and framer-motion require DOMMatrix which doesn't
+ * exist in Node.js. This preload script ensures the polyfill is available
+ * in ALL processes including Turbopack build workers.
  *
- * @see Issue #1817
+ * Loaded via NODE_OPTIONS="--require ./scripts/dommatrix-polyfill.js"
  */
-if (typeof globalThis.DOMMatrix === 'undefined') {
+
+if (typeof globalThis !== 'undefined' && !globalThis.DOMMatrix) {
   globalThis.DOMMatrix = class DOMMatrix {
     constructor(init) {
       this.m11 = 1;
@@ -71,6 +73,7 @@ if (typeof globalThis.DOMMatrix === 'undefined') {
     static fromFloat64Array(a) {
       return new DOMMatrix(Array.from(a));
     }
+
     translate() {
       return this;
     }
@@ -113,6 +116,7 @@ if (typeof globalThis.DOMMatrix === 'undefined') {
     transformPoint() {
       return { x: 0, y: 0, z: 0, w: 1 };
     }
+
     toFloat32Array() {
       return new Float32Array([
         this.m11,
@@ -182,12 +186,14 @@ if (typeof globalThis.DOMMatrix === 'undefined') {
       };
     }
     toString() {
-      return this.is2D
-        ? `matrix(${this.a}, ${this.b}, ${this.c}, ${this.d}, ${this.e}, ${this.f})`
-        : `matrix3d(${this.m11}, ${this.m12}, ${this.m13}, ${this.m14}, ${this.m21}, ${this.m22}, ${this.m23}, ${this.m24}, ${this.m31}, ${this.m32}, ${this.m33}, ${this.m34}, ${this.m41}, ${this.m42}, ${this.m43}, ${this.m44})`;
+      if (this.is2D)
+        return `matrix(${this.a}, ${this.b}, ${this.c}, ${this.d}, ${this.e}, ${this.f})`;
+      return `matrix3d(${this.m11}, ${this.m12}, ${this.m13}, ${this.m14}, ${this.m21}, ${this.m22}, ${this.m23}, ${this.m24}, ${this.m31}, ${this.m32}, ${this.m33}, ${this.m34}, ${this.m41}, ${this.m42}, ${this.m43}, ${this.m44})`;
     }
   };
+}
 
+if (typeof globalThis !== 'undefined' && !globalThis.DOMPoint) {
   globalThis.DOMPoint = class DOMPoint {
     constructor(x = 0, y = 0, z = 0, w = 1) {
       this.x = x;
@@ -195,8 +201,8 @@ if (typeof globalThis.DOMMatrix === 'undefined') {
       this.z = z;
       this.w = w;
     }
-    static fromPoint(o) {
-      return new DOMPoint(o?.x, o?.y, o?.z, o?.w);
+    static fromPoint(other) {
+      return new DOMPoint(other?.x, other?.y, other?.z, other?.w);
     }
     matrixTransform() {
       return this;

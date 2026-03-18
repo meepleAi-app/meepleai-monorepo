@@ -751,7 +751,7 @@ public async Task CheckPermission_WithSufficientTier_ReturnsAllowed()
 
 ## References
 
-- Epic #4068: https://github.com/DegrassiAaron/meepleai-monorepo/issues/4068
+- Epic #4068: https://github.com/meepleAi-app/meepleai-monorepo/issues/4068
 - Issue #4177: Permission Data Model & Schema
 - ADR-050: Permission System Architecture
 - OpenAPI Spec: http://localhost:8080/scalar/v1 (after `dotnet run`)

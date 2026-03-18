@@ -20,6 +20,11 @@ export enum ProcessingStep {
 /**
  * Processing progress response from API
  */
+/**
+ * @deprecated Import `ProcessingProgress` from `@/lib/api` instead.
+ * This interface is stale — the authoritative type is the Zod schema
+ * in `lib/api/schemas/pdf.schemas.ts` (ProcessingProgressSchema).
+ */
 export interface ProcessingProgress {
   currentStep: ProcessingStep;
   percentComplete: number;
@@ -117,7 +122,7 @@ export function getPdfStateLabel(state: PdfState): string {
     ready: 'Ready',
     failed: 'Failed',
   };
-   
+
   return labels[state];
 }
 
@@ -142,6 +147,6 @@ export function getPdfStateOrder(state: PdfState): number {
     ready: 6,
     failed: 6,
   };
-   
+
   return order[state];
 }

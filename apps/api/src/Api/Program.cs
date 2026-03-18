@@ -15,6 +15,7 @@ using Api.BoundedContexts.Administration.Infrastructure.DependencyInjection;
 using Api.BoundedContexts.AgentMemory.Infrastructure.DependencyInjection;
 using Api.BoundedContexts.Authentication.Infrastructure.DependencyInjection;
 using Api.BoundedContexts.BusinessSimulations.Infrastructure.DependencyInjection;
+using Api.BoundedContexts.DatabaseSync.Infrastructure;
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.DependencyInjection;
 using Api.BoundedContexts.EntityRelationships.Infrastructure.DependencyInjection;
 using Api.BoundedContexts.Gamification.Infrastructure.DependencyInjection;
@@ -358,6 +359,9 @@ builder.Services.AddBusinessSimulationsContext();
 // AgentMemory bounded context (game/group/player memory for AI agents)
 builder.Services.AddAgentMemoryContext();
 
+// DatabaseSync bounded context (admin DB sync via SSH tunnel sidecar)
+builder.Services.AddDatabaseSyncContext(builder.Configuration);
+
 // ISSUE-2370: SharedGameCatalog bounded context
 // ISSUE-2454: Background processing configuration
 builder.Services.AddSharedGameCatalogContext(builder.Configuration);
@@ -678,6 +682,7 @@ v1Api.MapUserActivityEndpoints();      // Issue #4652: User activity log for Adm
 v1Api.MapAdminAgentAnalyticsEndpoints(); // Issue #4653: Agents analytics for Admin Dashboard
 v1Api.MapAdminKnowledgeBaseEndpoints();  // Issues #4654, #4655: KB and SharedGames for Admin Dashboard
 v1Api.MapAdminOperationsEndpoints();   // Issue #3696: Operations - Service Control Panel
+v1Api.MapDatabaseSyncEndpoints();     // Database sync admin panel
 v1Api.MapAdminDockerEndpoints();       // Issue #139: Docker container management (Phase 3)
 v1Api.MapFeatureFlagEndpoints();       // Feature flag management
 v1Api.MapPromptManagementEndpoints();  // Prompt templates & evaluation

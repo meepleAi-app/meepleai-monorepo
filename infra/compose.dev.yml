@@ -71,6 +71,8 @@ services:
   web:
     env_file: [./env/web.env.dev]
     ports: ["127.0.0.1:3000:3000"]
+    environment:
+      API_BASE_URL: http://api:8080
 
   # ===========================================================================
   # AI Services (profile: ai) — ports only

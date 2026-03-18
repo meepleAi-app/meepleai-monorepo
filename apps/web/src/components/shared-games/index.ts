@@ -18,6 +18,10 @@ export {
 export { SharedGameDetailModal, type SharedGameDetailModalProps } from './SharedGameDetailModal';
 export { KnowledgeBaseTab, type KnowledgeBaseTabProps } from './KnowledgeBaseTab';
 export { ContributorsSection } from './ContributorsSection';
+export { MeepleContributorCard } from './MeepleContributorCard';
+/**
+ * @deprecated Use MeepleContributorCard instead. Kept for backward compatibility.
+ */
 export { ContributorCard } from './ContributorCard';
 /**
  * @deprecated Use MeepleGameCatalogCard from '@/components/catalog' instead.

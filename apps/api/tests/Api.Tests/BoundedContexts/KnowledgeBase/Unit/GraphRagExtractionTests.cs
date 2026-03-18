@@ -18,12 +18,12 @@ using Xunit;
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Unit;
 
 /// <summary>
-/// Tests for RAPTOR hierarchical indexing integration in the PDF processing pipeline.
-/// Verifies that RAPTOR is invoked correctly, skipped when absent, and non-blocking on failure.
+/// Tests for Graph RAG entity extraction integration in the PDF processing pipeline.
+/// Verifies that IEntityExtractor is invoked correctly, skipped when absent, and non-blocking on failure.
 /// </summary>
 [Trait("Category", TestCategories.Unit)]
 [Trait("BoundedContext", "KnowledgeBase")]
-public class RaptorPipelineIntegrationTests : IDisposable
+public class GraphRagExtractionTests : IDisposable
 {
     private readonly MeepleAiDbContext _db;
     private readonly Mock<IPdfTextExtractor> _pdfTextExtractorMock = new();
@@ -31,7 +31,7 @@ public class RaptorPipelineIntegrationTests : IDisposable
     private readonly Mock<ITextChunkingService> _chunkingServiceMock = new();
     private readonly Mock<IEmbeddingService> _embeddingServiceMock = new();
     private readonly Mock<IBlobStorageService> _blobStorageServiceMock = new();
-    private readonly Mock<IRaptorIndexer> _raptorIndexerMock = new();
+    private readonly Mock<IEntityExtractor> _entityExtractorMock = new();
     private readonly Mock<IFeatureFlagService> _featureFlagServiceMock = new();
     private readonly TimeProvider _timeProvider = TimeProvider.System;
     private readonly ILogger<PdfProcessingPipelineService> _logger =
@@ -40,19 +40,19 @@ public class RaptorPipelineIntegrationTests : IDisposable
     private readonly Guid _pdfDocumentId = Guid.NewGuid();
     private readonly Guid _gameId = Guid.NewGuid();
 
-    public RaptorPipelineIntegrationTests()
+    public GraphRagExtractionTests()
     {
         var options = new DbContextOptionsBuilder<MeepleAiDbContext>()
-            .UseInMemoryDatabase(databaseName: $"RaptorPipelineTest_{Guid.NewGuid()}")
+            .UseInMemoryDatabase(databaseName: $"GraphRagPipelineTest_{Guid.NewGuid()}")
             .Options;
         _db = new MeepleAiDbContext(
             options,
             new Mock<IMediator>().Object,
             new Mock<IDomainEventCollector>().Object);
 
-        // Default: raptor-retrieval feature flag enabled so RAPTOR indexing runs
+        // Default: graph-traversal feature flag enabled so entity extraction runs
         _featureFlagServiceMock
-            .Setup(f => f.IsEnabledAsync("rag.enhancement.raptor-retrieval", null))
+            .Setup(f => f.IsEnabledAsync("rag.enhancement.graph-traversal", null))
             .ReturnsAsync(true);
     }
 
@@ -63,179 +63,196 @@ public class RaptorPipelineIntegrationTests : IDisposable
     }
 
     [Fact]
-    public async Task ProcessAsync_WithRaptorIndexer_AndMoreThan3Chunks_CallsBuildTreeAsync()
+    public async Task ProcessAsync_WithEntityExtractor_CallsExtractAndSavesRelations()
     {
         // Arrange
-        var pdfDoc = SeedPdfDocument("Uploading");
-        SetupExtractorToReturn("chunk1 text. chunk2 text. chunk3 text. chunk4 text.", 4);
+        SeedPdfDocument("Uploading");
+        var longText = new string('A', 300); // >= 200 char threshold
+        SetupExtractorToReturn(longText, 4);
         SetupChunkingToReturn(4);
         SetupEmbeddingsToReturn(4);
         SetupBlobStorageToReturn();
 
-        var raptorResult = new RaptorTreeResult(
-            TotalNodes: 2, Levels: 2,
-            Summaries: new List<RaptorSummaryNode>
-            {
-                new(TreeLevel: 1, ClusterIndex: 0, SummaryText: "Summary of cluster 0", SourceChunkCount: 2),
-                new(TreeLevel: 1, ClusterIndex: 1, SummaryText: "Summary of cluster 1", SourceChunkCount: 2)
-            });
+        var extractionResult = new EntityExtractionResult(
+        [
+            new ExtractedRelation("Catan", "Game", "HasMechanic", "Trading", "Mechanic", 0.8f),
+            new ExtractedRelation("Catan", "Game", "HasComponent", "Hex Tiles", "Component", 0.8f)
+        ], 3);
 
-        _raptorIndexerMock
-            .Setup(r => r.BuildTreeAsync(
-                _pdfDocumentId, _gameId,
-                It.IsAny<IReadOnlyList<string>>(), 3,
+        _entityExtractorMock
+            .Setup(e => e.ExtractEntitiesAsync(
+                _gameId, It.IsAny<string>(),
+                It.IsAny<string>(),
                 It.IsAny<CancellationToken>()))
-            .ReturnsAsync(raptorResult);
+            .ReturnsAsync(extractionResult);
 
-        var sut = CreatePipelineService(withRaptor: true);
+        var sut = CreatePipelineService(withEntityExtractor: true);
 
         // Act
         await sut.ProcessAsync(_pdfDocumentId, "/fake/path.pdf", Guid.NewGuid(), CancellationToken.None);
 
         // Assert
-        _raptorIndexerMock.Verify(
-            r => r.BuildTreeAsync(
-                _pdfDocumentId, _gameId,
-                It.Is<IReadOnlyList<string>>(list => list.Count == 4),
-                3,
+        _entityExtractorMock.Verify(
+            e => e.ExtractEntitiesAsync(
+                _gameId, It.IsAny<string>(),
+                It.IsAny<string>(),
                 It.IsAny<CancellationToken>()),
             Times.Once);
 
-        // Verify summaries were saved
-        var savedSummaries = await _db.RaptorSummaries.ToListAsync();
-        Assert.Equal(2, savedSummaries.Count);
-        Assert.All(savedSummaries, s =>
+        var savedRelations = await _db.GameEntityRelations.ToListAsync();
+        Assert.Equal(2, savedRelations.Count);
+        Assert.All(savedRelations, r =>
         {
-            Assert.Equal(_pdfDocumentId, s.PdfDocumentId);
-            Assert.Equal(_gameId, s.GameId);
+            Assert.Equal(_gameId, r.GameId);
+            Assert.NotEqual(Guid.Empty, r.Id);
         });
+
+        // Verify PDF reaches Ready state
+        var doc = await _db.PdfDocuments.FindAsync(_pdfDocumentId);
+        Assert.Equal("Ready", doc!.ProcessingState);
     }
 
     [Fact]
-    public async Task ProcessAsync_WithoutRaptorIndexer_DoesNotThrow()
+    public async Task ProcessAsync_WithoutEntityExtractor_DoesNotThrow()
     {
         // Arrange
-        var pdfDoc = SeedPdfDocument("Uploading");
-        SetupExtractorToReturn("chunk1. chunk2. chunk3. chunk4.", 4);
+        SeedPdfDocument("Uploading");
+        SetupExtractorToReturn(new string('A', 300), 4);
         SetupChunkingToReturn(4);
         SetupEmbeddingsToReturn(4);
         SetupBlobStorageToReturn();
 
-        var sut = CreatePipelineService(withRaptor: false);
+        var sut = CreatePipelineService(withEntityExtractor: false);
 
-        // Act — should complete without error
+        // Act
         await sut.ProcessAsync(_pdfDocumentId, "/fake/path.pdf", Guid.NewGuid(), CancellationToken.None);
 
         // Assert: PDF should reach Ready state
         var doc = await _db.PdfDocuments.FindAsync(_pdfDocumentId);
         Assert.Equal("Ready", doc!.ProcessingState);
 
-        // No RAPTOR summaries saved
-        var summaries = await _db.RaptorSummaries.ToListAsync();
-        Assert.Empty(summaries);
+        // No entity relations saved
+        var relations = await _db.GameEntityRelations.ToListAsync();
+        Assert.Empty(relations);
     }
 
     [Fact]
-    public async Task ProcessAsync_WhenBuildTreeAsyncThrows_ContinuesProcessing()
+    public async Task ProcessAsync_WhenEntityExtractionThrows_ContinuesProcessing()
     {
         // Arrange
-        var pdfDoc = SeedPdfDocument("Uploading");
-        SetupExtractorToReturn("chunk1. chunk2. chunk3. chunk4.", 4);
+        SeedPdfDocument("Uploading");
+        SetupExtractorToReturn(new string('A', 300), 4);
         SetupChunkingToReturn(4);
         SetupEmbeddingsToReturn(4);
         SetupBlobStorageToReturn();
 
-        _raptorIndexerMock
-            .Setup(r => r.BuildTreeAsync(
-                It.IsAny<Guid>(), It.IsAny<Guid>(),
-                It.IsAny<IReadOnlyList<string>>(),
-                It.IsAny<int>(),
+        _entityExtractorMock
+            .Setup(e => e.ExtractEntitiesAsync(
+                It.IsAny<Guid>(), It.IsAny<string>(),
+                It.IsAny<string>(),
                 It.IsAny<CancellationToken>()))
             .ThrowsAsync(new InvalidOperationException("LLM service unavailable"));
 
-        var sut = CreatePipelineService(withRaptor: true);
+        var sut = CreatePipelineService(withEntityExtractor: true);
 
         // Act — should NOT throw, pipeline continues
         await sut.ProcessAsync(_pdfDocumentId, "/fake/path.pdf", Guid.NewGuid(), CancellationToken.None);
 
-        // Assert: PDF should still reach Ready state despite RAPTOR failure
+        // Assert: PDF should still reach Ready state despite Graph RAG failure
         var doc = await _db.PdfDocuments.FindAsync(_pdfDocumentId);
         Assert.Equal("Ready", doc!.ProcessingState);
     }
 
     [Fact]
-    public async Task ProcessAsync_With3OrFewerChunks_SkipsRaptor()
+    public async Task ProcessAsync_WithShortText_SkipsEntityExtraction()
     {
-        // Arrange
-        var pdfDoc = SeedPdfDocument("Uploading");
-        SetupExtractorToReturn("chunk1. chunk2. chunk3.", 3);
-        SetupChunkingToReturn(3); // Exactly 3 chunks — threshold not met
-        SetupEmbeddingsToReturn(3);
+        // Arrange — text shorter than 200 chars
+        SeedPdfDocument("Uploading");
+        SetupExtractorToReturn("Short text.", 1);
+        SetupChunkingToReturn(1);
+        SetupEmbeddingsToReturn(1);
         SetupBlobStorageToReturn();
 
-        var sut = CreatePipelineService(withRaptor: true);
+        var sut = CreatePipelineService(withEntityExtractor: true);
 
         // Act
         await sut.ProcessAsync(_pdfDocumentId, "/fake/path.pdf", Guid.NewGuid(), CancellationToken.None);
 
-        // Assert: RAPTOR should NOT be called
-        _raptorIndexerMock.Verify(
-            r => r.BuildTreeAsync(
-                It.IsAny<Guid>(), It.IsAny<Guid>(),
-                It.IsAny<IReadOnlyList<string>>(),
-                It.IsAny<int>(),
+        // Assert: Entity extractor should NOT be called
+        _entityExtractorMock.Verify(
+            e => e.ExtractEntitiesAsync(
+                It.IsAny<Guid>(), It.IsAny<string>(),
+                It.IsAny<string>(),
                 It.IsAny<CancellationToken>()),
             Times.Never);
     }
 
     [Fact]
-    public async Task ProcessAsync_WithNullGameId_PassesGuidEmpty()
+    public async Task ProcessAsync_WithEmptyExtractionResult_DoesNotSaveRelations()
     {
-        // Arrange — seed PDF with null GameId
-        var pdfDoc = new PdfDocumentEntity
-        {
-            Id = _pdfDocumentId,
-            GameId = null,
-            FileName = "test.pdf",
-            FilePath = "/fake/path/test.pdf",
-            ContentType = "application/pdf",
-            FileSizeBytes = 1024,
-            UploadedByUserId = Guid.NewGuid(),
-            ProcessingState = "Uploading",
-            UploadedAt = DateTime.UtcNow
-        };
-        _db.PdfDocuments.Add(pdfDoc);
-        _db.SaveChanges();
-
-        SetupExtractorToReturn("chunk1. chunk2. chunk3. chunk4.", 4);
+        // Arrange
+        SeedPdfDocument("Uploading");
+        SetupExtractorToReturn(new string('A', 300), 4);
         SetupChunkingToReturn(4);
         SetupEmbeddingsToReturn(4);
         SetupBlobStorageToReturn();
 
-        _raptorIndexerMock
-            .Setup(r => r.BuildTreeAsync(
-                _pdfDocumentId, Guid.Empty,
-                It.IsAny<IReadOnlyList<string>>(), 3,
+        _entityExtractorMock
+            .Setup(e => e.ExtractEntitiesAsync(
+                It.IsAny<Guid>(), It.IsAny<string>(),
+                It.IsAny<string>(),
                 It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new RaptorTreeResult(0, 0, new List<RaptorSummaryNode>()));
+            .ReturnsAsync(new EntityExtractionResult([], 0));
 
-        var sut = CreatePipelineService(withRaptor: true);
+        var sut = CreatePipelineService(withEntityExtractor: true);
 
         // Act
         await sut.ProcessAsync(_pdfDocumentId, "/fake/path.pdf", Guid.NewGuid(), CancellationToken.None);
 
-        // Assert: called with Guid.Empty for null GameId
-        _raptorIndexerMock.Verify(
-            r => r.BuildTreeAsync(
-                _pdfDocumentId, Guid.Empty,
-                It.IsAny<IReadOnlyList<string>>(), 3,
+        // Assert: no relations saved
+        var relations = await _db.GameEntityRelations.ToListAsync();
+        Assert.Empty(relations);
+
+        // But PDF still completes
+        var doc = await _db.PdfDocuments.FindAsync(_pdfDocumentId);
+        Assert.Equal("Ready", doc!.ProcessingState);
+    }
+
+    [Fact]
+    public async Task ProcessAsync_TruncatesTextTo8000Chars()
+    {
+        // Arrange
+        SeedPdfDocument("Uploading");
+        var longText = new string('A', 15000); // Much longer than 8000
+        SetupExtractorToReturn(longText, 4);
+        SetupChunkingToReturn(4);
+        SetupEmbeddingsToReturn(4);
+        SetupBlobStorageToReturn();
+
+        _entityExtractorMock
+            .Setup(e => e.ExtractEntitiesAsync(
+                It.IsAny<Guid>(), It.IsAny<string>(),
+                It.Is<string>(s => s.Length == 8000),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new EntityExtractionResult([], 0));
+
+        var sut = CreatePipelineService(withEntityExtractor: true);
+
+        // Act
+        await sut.ProcessAsync(_pdfDocumentId, "/fake/path.pdf", Guid.NewGuid(), CancellationToken.None);
+
+        // Assert: called with truncated text (8000 chars)
+        _entityExtractorMock.Verify(
+            e => e.ExtractEntitiesAsync(
+                It.IsAny<Guid>(), It.IsAny<string>(),
+                It.Is<string>(s => s.Length == 8000),
                 It.IsAny<CancellationToken>()),
             Times.Once);
     }
 
     // ── Helpers ──────────────────────────────────────────────────────────────
 
-    private PdfProcessingPipelineService CreatePipelineService(bool withRaptor)
+    private PdfProcessingPipelineService CreatePipelineService(bool withEntityExtractor)
     {
         return new PdfProcessingPipelineService(
             _db,
@@ -246,8 +263,8 @@ public class RaptorPipelineIntegrationTests : IDisposable
             _blobStorageServiceMock.Object,
             _timeProvider,
             _logger,
-            raptorIndexer: withRaptor ? _raptorIndexerMock.Object : null,
-            entityExtractor: null,
+            raptorIndexer: null,
+            entityExtractor: withEntityExtractor ? _entityExtractorMock.Object : null,
             vectorStore: null,
             featureFlagService: _featureFlagServiceMock.Object);
     }
@@ -258,7 +275,7 @@ public class RaptorPipelineIntegrationTests : IDisposable
         {
             Id = _pdfDocumentId,
             GameId = _gameId,
-            FileName = "test.pdf",
+            FileName = "Catan Rules.pdf",
             FilePath = "/fake/path/test.pdf",
             ContentType = "application/pdf",
             FileSizeBytes = 1024,
@@ -283,7 +300,7 @@ public class RaptorPipelineIntegrationTests : IDisposable
         var pageChunks = Enumerable.Range(1, pageCount)
             .Select(p => new PageTextChunk(
                 PageNumber: p,
-                Text: $"chunk{p} text",
+                Text: fullText,
                 CharStartIndex: (p - 1) * 50,
                 CharEndIndex: p * 50))
             .ToList();

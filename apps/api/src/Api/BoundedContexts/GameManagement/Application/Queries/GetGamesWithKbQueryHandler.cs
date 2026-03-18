@@ -28,18 +28,19 @@ internal sealed class GetGamesWithKbQueryHandler
 
         // Cross-context read via direct EF joins through EntityLink.
         // UserLibraryEntries (user's games) → EntityLink (Game→KbCard) → PdfDocument
+        // Note: Uses SharedGameId (mapped column) not GameId (ignored CLR-only wrapper).
         var rows = await (
             from lib in _db.UserLibraryEntries
-            where lib.UserId == query.UserId
+            where lib.UserId == query.UserId && lib.SharedGameId != null
             join link in _db.EntityLinks
-                on new { Type = MeepleEntityType.Game, Id = lib.GameId }
+                on new { Type = MeepleEntityType.Game, Id = (Guid)lib.SharedGameId! }
                 equals new { Type = link.SourceEntityType, Id = link.SourceEntityId }
             where link.TargetEntityType == MeepleEntityType.KbCard
                 && !link.IsDeleted
             join pdf in _db.PdfDocuments
                 on link.TargetEntityId equals pdf.Id
             join game in _db.Games
-                on lib.GameId equals game.Id
+                on lib.SharedGameId equals game.Id
             select new
             {
                 game.Id,

@@ -73,6 +73,8 @@ services:
       LOCAL_EMBEDDING_URL: http://embedding-service:8000
       Embedding__LocalServiceUrl: http://embedding-service:8000
       RERANKER_URL: http://reranker-service:8003
+      EMBEDDING_MODEL: intfloat/multilingual-e5-base
+      Embedding__Dimensions: 768
       Authentication__OAuth__CallbackBaseUrl: "https://meepleai.app"
       FrontendUrl: "https://meepleai.app"
       Authentication__SessionCookie__Secure: "true"
@@ -99,6 +101,7 @@ services:
       NODE_ENV: production
       NEXT_PUBLIC_API_BASE: "https://meepleai.app"
       NEXT_PUBLIC_APP_URL: "https://meepleai.app"
+      API_BASE_URL: http://api:8080
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.web.rule=Host(`meepleai.app`)"
@@ -224,6 +227,7 @@ services:
     volumes:
       - ./traefik/traefik.staging.yml:/etc/traefik/traefik.yml:ro
     labels:
+      - "traefik.enable=true"
       - "traefik.http.middlewares.integration-auth.basicauth.users=${INTEGRATION_BASIC_AUTH}"
       - "traefik.http.middlewares.rate-limit.ratelimit.average=100"
       - "traefik.http.middlewares.rate-limit.ratelimit.burst=50"

@@ -32,6 +32,7 @@ internal sealed class RagPromptAssemblyService : IRagPromptAssemblyService
     private readonly IQueryComplexityClassifier _complexityClassifier;
     private readonly IRetrievalRelevanceEvaluator _relevanceEvaluator;
     private readonly IQueryExpander _queryExpander;
+    private readonly IGraphRetrievalService _graphRetrievalService;
     private readonly ILogger<RagPromptAssemblyService> _logger;
 
     // RAG search parameters
@@ -77,6 +78,7 @@ internal sealed class RagPromptAssemblyService : IRagPromptAssemblyService
         IQueryComplexityClassifier complexityClassifier,
         IRetrievalRelevanceEvaluator relevanceEvaluator,
         IQueryExpander queryExpander,
+        IGraphRetrievalService graphRetrievalService,
         ILogger<RagPromptAssemblyService> logger)
     {
         _embeddingService = embeddingService ?? throw new ArgumentNullException(nameof(embeddingService));
@@ -88,6 +90,7 @@ internal sealed class RagPromptAssemblyService : IRagPromptAssemblyService
         _complexityClassifier = complexityClassifier ?? throw new ArgumentNullException(nameof(complexityClassifier));
         _relevanceEvaluator = relevanceEvaluator ?? throw new ArgumentNullException(nameof(relevanceEvaluator));
         _queryExpander = queryExpander ?? throw new ArgumentNullException(nameof(queryExpander));
+        _graphRetrievalService = graphRetrievalService ?? throw new ArgumentNullException(nameof(graphRetrievalService));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -379,7 +382,23 @@ internal sealed class RagPromptAssemblyService : IRagPromptAssemblyService
                     SnippetPreview: chunk.Text.Length > 120 ? string.Concat(chunk.Text.AsSpan(0, 117), "...") : chunk.Text));
             }
 
-            return (sb.ToString().TrimEnd(), citations);
+            var ragContext = sb.ToString().TrimEnd();
+
+            // === Graph RAG: Inject entity context ===
+            if (activeEnhancements.HasFlag(RagEnhancement.GraphTraversal))
+            {
+                var graphContext = await _graphRetrievalService
+                    .GetEntityContextAsync(gameId, maxRelations: 15, ct).ConfigureAwait(false);
+
+                if (!string.IsNullOrEmpty(graphContext))
+                {
+                    ragContext = string.Concat(ragContext, "\n", graphContext);
+                    _logger.LogInformation("Graph RAG: injected {Length} chars of entity context for game {GameId}",
+                        graphContext.Length, gameId);
+                }
+            }
+
+            return (ragContext, citations);
         }
         catch (Exception ex)
         {

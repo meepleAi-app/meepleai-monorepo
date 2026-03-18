@@ -28,6 +28,7 @@ public class RagPromptAssemblyEnhancementsTests
     private readonly Mock<IQueryComplexityClassifier> _complexityClassifierMock;
     private readonly Mock<IRetrievalRelevanceEvaluator> _relevanceEvaluatorMock;
     private readonly Mock<IQueryExpander> _queryExpanderMock;
+    private readonly Mock<IGraphRetrievalService> _graphRetrievalMock;
     private readonly Mock<ILogger<RagPromptAssemblyService>> _loggerMock;
 
     private static readonly Guid TestGameId = Guid.NewGuid();
@@ -44,6 +45,7 @@ public class RagPromptAssemblyEnhancementsTests
         _complexityClassifierMock = new Mock<IQueryComplexityClassifier>();
         _relevanceEvaluatorMock = new Mock<IRetrievalRelevanceEvaluator>();
         _queryExpanderMock = new Mock<IQueryExpander>();
+        _graphRetrievalMock = new Mock<IGraphRetrievalService>();
         _loggerMock = new Mock<ILogger<RagPromptAssemblyService>>();
 
         // Default: query expansion returns empty (no expansions)
@@ -82,6 +84,7 @@ public class RagPromptAssemblyEnhancementsTests
             _complexityClassifierMock.Object,
             _relevanceEvaluatorMock.Object,
             _queryExpanderMock.Object,
+            _graphRetrievalMock.Object,
             _loggerMock.Object);
     }
 

@@ -54,6 +54,25 @@ import {
 
 import type { HttpClient } from '../core/httpClient';
 
+// ─── Setup Wizard Types ──────────────────────────────────────────────────────
+
+export interface SetupChecklistComponent {
+  name: string;
+  quantity: number;
+  checked: boolean;
+}
+
+export interface SetupChecklistStep {
+  order: number;
+  instruction: string;
+  completed: boolean;
+}
+
+export interface SetupChecklistData {
+  components: SetupChecklistComponent[];
+  steps: SetupChecklistStep[];
+}
+
 const BASE = '/api/v1/live-sessions';
 const GAME_NIGHT_BASE = '/api/v1/game-night';
 
@@ -185,6 +204,20 @@ export interface LiveSessionsClient {
    * POST /api/v1/game-night/sessions/{sessionId}/pause-snapshot
    */
   createPauseSnapshot(sessionId: string): Promise<CreatePauseSnapshotResponse>;
+
+  // ========== Setup Wizard (Task 8) ==========
+
+  /**
+   * Generate a setup checklist for the session.
+   * POST /api/v1/live-sessions/{sessionId}/setup-checklist
+   */
+  generateSetupChecklist(sessionId: string, playerCount: number): Promise<SetupChecklistData>;
+
+  /**
+   * Update the setup checklist for the session.
+   * PUT /api/v1/live-sessions/{sessionId}/setup-checklist
+   */
+  updateSetupChecklist(sessionId: string, data: SetupChecklistData): Promise<void>;
 }
 
 export function createLiveSessionsClient({
@@ -402,6 +435,21 @@ export function createLiveSessionsClient({
       );
       if (!response) throw new Error('Pause snapshot creation failed');
       return CreatePauseSnapshotResponseSchema.parse(response);
+    },
+
+    // ========== Setup Wizard (Task 8) ==========
+
+    async generateSetupChecklist(sessionId, playerCount) {
+      const response = await httpClient.post<SetupChecklistData>(
+        `${BASE}/${encodeURIComponent(sessionId)}/setup-checklist`,
+        { playerCount }
+      );
+      if (!response) throw new Error('Setup checklist generation failed');
+      return response;
+    },
+
+    async updateSetupChecklist(sessionId, data) {
+      await httpClient.put(`${BASE}/${encodeURIComponent(sessionId)}/setup-checklist`, data);
     },
   };
 }

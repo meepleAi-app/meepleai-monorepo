@@ -39,6 +39,7 @@ interface FileUploadState {
 const MAX_SINGLE_UPLOAD_SIZE = 10 * 1024 * 1024; // 10MB threshold for chunked upload
 const ACCEPTED_TYPES = ['application/pdf'];
 const MAX_FILE_SIZE = 500 * 1024 * 1024; // 500MB
+const MAX_CONCURRENT_UPLOADS = 3;
 
 // ── Component ──────────────────────────────────────────────────────────
 
@@ -194,18 +195,30 @@ export function UploadZone({ initialGameId }: { initialGameId?: string } = {}) {
       const startIndex = uploads.length;
       setUploads(prev => [...prev, ...validFiles]);
 
-      // Start uploads for valid files
-      for (let i = 0; i < validFiles.length; i++) {
-        if (validFiles[i].status === 'error') continue;
-        const file = validFiles[i].file;
-        const idx = startIndex + i;
+      // Upload files with concurrency limit
+      const uploadable = validFiles
+        .map((vf, i) => ({ vf, idx: startIndex + i }))
+        .filter(({ vf }) => vf.status !== 'error');
 
-        if (file.size > MAX_SINGLE_UPLOAD_SIZE) {
-          uploadChunkedFile(file, idx);
+      const queue = [...uploadable];
+      const runNext = async (): Promise<void> => {
+        const item = queue.shift();
+        if (!item) return;
+        const { vf, idx } = item;
+        if (vf.file.size > MAX_SINGLE_UPLOAD_SIZE) {
+          await uploadChunkedFile(vf.file, idx);
         } else {
-          uploadSingleFile(file, idx);
+          await uploadSingleFile(vf.file, idx);
         }
-      }
+        await runNext();
+      };
+
+      // Start up to MAX_CONCURRENT_UPLOADS workers
+      const workers = Array.from(
+        { length: Math.min(MAX_CONCURRENT_UPLOADS, uploadable.length) },
+        () => runNext()
+      );
+      await Promise.all(workers);
     },
     [selectedGame, uploads.length, validateFile, uploadSingleFile, uploadChunkedFile]
   );
@@ -266,13 +279,13 @@ export function UploadZone({ initialGameId }: { initialGameId?: string } = {}) {
       {/* Game Selector */}
       <div className="bg-white/70 dark:bg-zinc-800/70 backdrop-blur-md rounded-xl p-4 border border-slate-200/50 dark:border-zinc-700/50">
         <label className="block text-sm font-medium text-slate-700 dark:text-zinc-300 mb-2">
-          Select Game <span className="text-red-500">*</span>
+          Seleziona Gioco <span className="text-red-500">*</span>
         </label>
         <div className="relative">
           <div className="relative">
             <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
             <Input
-              placeholder="Search games..."
+              placeholder="Cerca giochi..."
               value={gameQuery}
               onChange={e => {
                 setGameQuery(e.target.value);
@@ -288,7 +301,7 @@ export function UploadZone({ initialGameId }: { initialGameId?: string } = {}) {
                 className="absolute right-2 top-1/2 -translate-y-1/2 bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300"
               >
                 <CheckCircleIcon className="w-3 h-3 mr-1" />
-                Selected
+                Selezionato
               </Badge>
             )}
           </div>
@@ -298,10 +311,10 @@ export function UploadZone({ initialGameId }: { initialGameId?: string } = {}) {
               {isSearching ? (
                 <div className="p-3 text-sm text-slate-500 text-center">
                   <LoaderIcon className="w-4 h-4 animate-spin inline mr-2" />
-                  Searching...
+                  Ricerca...
                 </div>
               ) : gameResults.length === 0 ? (
-                <div className="p-3 text-sm text-slate-500 text-center">No games found</div>
+                <div className="p-3 text-sm text-slate-500 text-center">Nessun gioco trovato</div>
               ) : (
                 gameResults.map(game => (
                   <button
@@ -327,7 +340,7 @@ export function UploadZone({ initialGameId }: { initialGameId?: string } = {}) {
       <div className="bg-white/70 dark:bg-zinc-800/70 backdrop-blur-md rounded-xl p-3 border border-slate-200/50 dark:border-zinc-700/50 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <span className="text-sm font-medium text-slate-700 dark:text-zinc-300">
-            Processing Priority
+            Priorità Elaborazione
           </span>
           {urgentPriority && (
             <span className="text-xs text-amber-600 dark:text-amber-400">— in testa alla coda</span>
@@ -344,7 +357,7 @@ export function UploadZone({ initialGameId }: { initialGameId?: string } = {}) {
           }`}
         >
           {urgentPriority && <ZapIcon className="w-3.5 h-3.5" />}
-          {urgentPriority ? 'Urgent' : 'Normal'}
+          {urgentPriority ? 'Urgente' : 'Normale'}
         </button>
       </div>
 
@@ -377,7 +390,7 @@ export function UploadZone({ initialGameId }: { initialGameId?: string } = {}) {
           multiple
           onChange={handleFileChange}
           className="hidden"
-          aria-label="Select PDF files to upload"
+          aria-label="Seleziona file PDF da caricare"
         />
         <div className="flex flex-col items-center justify-center text-center">
           <div className="w-16 h-16 bg-amber-100 dark:bg-amber-900/30 rounded-full flex items-center justify-center mb-4">
@@ -385,18 +398,18 @@ export function UploadZone({ initialGameId }: { initialGameId?: string } = {}) {
           </div>
           <h3 className="font-quicksand text-lg font-bold text-slate-900 dark:text-zinc-100 mb-2">
             {selectedGame
-              ? 'Drop PDF files here or click to browse'
-              : 'Select a game above to start uploading'}
+              ? 'Trascina i PDF qui o clicca per sfogliare'
+              : 'Seleziona un gioco sopra per iniziare il caricamento'}
           </h3>
           <p className="text-sm text-slate-600 dark:text-zinc-400 mb-4">
             {selectedGame
-              ? `Uploading for: ${selectedGame.name} — Files > 10MB use chunked upload automatically`
-              : 'A game must be selected before uploading documents'}
+              ? `Caricamento per: ${selectedGame.name} — File > 10MB usano upload chunked automaticamente`
+              : 'Devi selezionare un gioco prima di caricare documenti'}
           </p>
           <div className="flex items-center gap-4 text-xs text-slate-500 dark:text-zinc-500">
             <div className="flex items-center gap-1">
               <FileTextIcon className="w-4 h-4" />
-              <span>PDF only</span>
+              <span>Solo PDF</span>
             </div>
             <span>Max 500MB per file</span>
           </div>
@@ -408,11 +421,11 @@ export function UploadZone({ initialGameId }: { initialGameId?: string } = {}) {
         <div className="bg-white/70 dark:bg-zinc-800/70 backdrop-blur-md rounded-xl p-4 border border-slate-200/50 dark:border-zinc-700/50 space-y-3">
           <div className="flex items-center justify-between">
             <h3 className="font-quicksand font-bold text-sm text-slate-900 dark:text-zinc-100">
-              Uploads ({uploads.filter(u => u.status === 'completed').length}/{uploads.length})
+              Caricamenti ({uploads.filter(u => u.status === 'completed').length}/{uploads.length})
             </h3>
             {uploads.every(u => u.status === 'completed' || u.status === 'error') && (
               <Button variant="ghost" size="sm" onClick={() => setUploads([])}>
-                Clear all
+                Cancella tutto
               </Button>
             )}
           </div>
@@ -470,7 +483,7 @@ export function UploadZone({ initialGameId }: { initialGameId?: string } = {}) {
                     />
                   </div>
                   <div className="text-xs text-slate-500 text-right">
-                    {upload.status === 'processing' ? 'Processing...' : `${upload.progress}%`}
+                    {upload.status === 'processing' ? 'Elaborazione...' : `${upload.progress}%`}
                   </div>
                 </div>
               )}

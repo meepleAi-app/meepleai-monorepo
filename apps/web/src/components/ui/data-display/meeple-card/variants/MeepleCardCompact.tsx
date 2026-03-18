@@ -41,8 +41,8 @@ export const MeepleCardCompact = React.memo(function MeepleCardCompact(
     entity,
     title,
     subtitle,
-    imageUrl,
-    avatarUrl,
+    imageUrl: _imageUrl,
+    avatarUrl: _avatarUrl,
     actions = [],
     customColor,
     onClick,
@@ -71,7 +71,6 @@ export const MeepleCardCompact = React.memo(function MeepleCardCompact(
   } = props;
 
   const variant = 'compact' as const;
-  const coverSrc = entity === 'player' ? avatarUrl || imageUrl : imageUrl;
   // eslint-disable-next-line security/detect-object-injection
   const color = customColor || entityColors[entity].hsl;
   const hasQuickActions = !!(quickActions && quickActions.length > 0);

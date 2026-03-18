@@ -87,7 +87,7 @@ export function SandboxChat({ selectedMessageId, onSelectMessage }: SandboxChatP
   const {
     state: streamState,
     sendMessage: sendStreamMessage,
-    stopStreaming,
+    stopStreaming: _stopStreaming,
   } = useDebugChatStream({
     onComplete: (answer, metadata) => {
       const chunks = extractChunksFromDebug(metadata.debugEvents);

@@ -19,7 +19,7 @@ export function DebugCostBadge({ totalTokens, costUsd, modelId }: DebugCostBadge
         {totalTokens.toLocaleString()}
       </span>
       <span>tokens</span>
-      {costUsd != null && costUsd > 0 && (
+      {costUsd !== null && costUsd !== undefined && costUsd > 0 && (
         <>
           <span className="text-border">|</span>
           <span className="tabular-nums">${costUsd.toFixed(4)}</span>

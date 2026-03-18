@@ -96,6 +96,12 @@ internal class CreateChatThreadCommandHandler : ICommandHandler<CreateChatThread
             agentType: command.AgentType // Issue #4362
         );
 
+        // Set selected KB IDs (null = use all for game, as before)
+        if (command.SelectedKnowledgeBaseIds is { Count: > 0 })
+        {
+            thread.SetSelectedKnowledgeBases(command.SelectedKnowledgeBaseIds);
+        }
+
         // Add initial message if provided
         if (!string.IsNullOrWhiteSpace(command.InitialMessage))
         {

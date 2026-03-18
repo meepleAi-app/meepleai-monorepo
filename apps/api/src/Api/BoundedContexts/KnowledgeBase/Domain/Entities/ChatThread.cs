@@ -33,6 +33,12 @@ internal sealed class ChatThread : AggregateRoot<Guid>
     /// </summary>
     public int LastSummarizedMessageCount { get; private set; }
 
+    /// <summary>
+    /// JSON-serialized list of VectorDocument IDs selected for RAG.
+    /// Null = use all VectorDocuments for the game (default behavior).
+    /// </summary>
+    public string? SelectedKnowledgeBaseIdsJson { get; private set; }
+
     private readonly List<ChatMessage> _messages = new();
     public IReadOnlyList<ChatMessage> Messages => _messages.AsReadOnly();
 
@@ -245,6 +251,31 @@ internal sealed class ChatThread : AggregateRoot<Guid>
 
         ConversationSummary = summary.Trim();
         LastSummarizedMessageCount = _messages.Count;
+    }
+
+    /// <summary>
+    /// Sets the selected knowledge base IDs for this chat thread.
+    /// </summary>
+    public void SetSelectedKnowledgeBases(List<Guid>? knowledgeBaseIds)
+    {
+        if (knowledgeBaseIds == null || knowledgeBaseIds.Count == 0)
+        {
+            SelectedKnowledgeBaseIdsJson = null;
+            return;
+        }
+
+        SelectedKnowledgeBaseIdsJson = JsonSerializer.Serialize(knowledgeBaseIds);
+    }
+
+    /// <summary>
+    /// Gets the selected knowledge base IDs, or null if all should be used.
+    /// </summary>
+    public List<Guid>? GetSelectedKnowledgeBaseIds()
+    {
+        if (string.IsNullOrEmpty(SelectedKnowledgeBaseIdsJson))
+            return null;
+
+        return JsonSerializer.Deserialize<List<Guid>>(SelectedKnowledgeBaseIdsJson);
     }
 
     /// <summary>

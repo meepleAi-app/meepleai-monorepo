@@ -15,6 +15,7 @@ using Api.BoundedContexts.Administration.Infrastructure.DependencyInjection;
 using Api.BoundedContexts.AgentMemory.Infrastructure.DependencyInjection;
 using Api.BoundedContexts.Authentication.Infrastructure.DependencyInjection;
 using Api.BoundedContexts.BusinessSimulations.Infrastructure.DependencyInjection;
+using Api.BoundedContexts.DatabaseSync.Infrastructure;
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.DependencyInjection;
 using Api.BoundedContexts.EntityRelationships.Infrastructure.DependencyInjection;
 using Api.BoundedContexts.Gamification.Infrastructure.DependencyInjection;
@@ -357,6 +358,9 @@ builder.Services.AddBusinessSimulationsContext();
 
 // AgentMemory bounded context (game/group/player memory for AI agents)
 builder.Services.AddAgentMemoryContext();
+
+// DatabaseSync bounded context (admin DB sync via SSH tunnel sidecar)
+builder.Services.AddDatabaseSyncContext(builder.Configuration);
 
 // ISSUE-2370: SharedGameCatalog bounded context
 // ISSUE-2454: Background processing configuration

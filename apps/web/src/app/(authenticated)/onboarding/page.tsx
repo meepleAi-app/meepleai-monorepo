@@ -27,7 +27,7 @@ export default function OnboardingPage() {
   // Redirect if already onboarded
   useEffect(() => {
     if (!authLoading && user?.onboardingCompleted) {
-      router.replace('/');
+      router.replace('/dashboard');
     }
   }, [authLoading, user, router]);
 
@@ -73,7 +73,7 @@ export default function OnboardingPage() {
     try {
       await api.auth.updateProfile({ displayName: trimmed });
       await api.auth.completeOnboarding(false);
-      router.push('/');
+      router.push('/dashboard');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Si è verificato un errore. Riprova.');
     } finally {

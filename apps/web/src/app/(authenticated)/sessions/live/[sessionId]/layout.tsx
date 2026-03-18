@@ -5,11 +5,16 @@
  *
  * Wraps live session pages with session-specific MiniNav tabs:
  * Partita · Chat AI · Punteggi · Foto · Giocatori
+ *
+ * Includes a back button to return to the dashboard/play tab.
  */
 
 'use client';
 
 import { type ReactNode, use } from 'react';
+
+import { ArrowLeft } from 'lucide-react';
+import Link from 'next/link';
 
 import { SessionNavConfig } from '@/components/session/live/SessionNavConfig';
 
@@ -23,6 +28,16 @@ export default function LiveSessionLayout({ children, params }: LiveSessionLayou
 
   return (
     <>
+      <div className="flex items-center gap-2 px-4 py-2 border-b border-border/40">
+        <Link
+          href="/dashboard"
+          className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
+          aria-label="Torna alla dashboard"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          <span>Torna al Play</span>
+        </Link>
+      </div>
       <SessionNavConfig sessionId={sessionId} />
       {children}
     </>

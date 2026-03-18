@@ -6,7 +6,6 @@
 
 export { GameDetailHero, type GameDetailHeroProps } from './GameDetailHero';
 export { GameDetailHeroCard, type GameDetailHeroCardProps } from './GameDetailHeroCard';
-export { GameSideCard, type GameSideCardProps } from './GameSideCard';
 export { UserActionSection, type UserActionSectionProps } from './UserActionSection';
 export { CatalogDetailsSection, type CatalogDetailsSectionProps } from './CatalogDetailsSection';
 export { GameDetailOverviewTab, type GameDetailOverviewTabProps } from './GameDetailOverviewTab';

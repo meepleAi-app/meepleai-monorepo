@@ -46,8 +46,6 @@ export { AddPrivateGameWithBgg, type AddPrivateGameWithBggProps } from './AddPri
 export {
   GameDetailHero,
   type GameDetailHeroProps,
-  GameSideCard,
-  type GameSideCardProps,
   UserActionSection,
   type UserActionSectionProps,
 } from './game-detail';

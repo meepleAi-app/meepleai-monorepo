@@ -57,9 +57,9 @@ services:
       OLLAMA_URL: http://ollama:11434
       EMBEDDING_PROVIDER: external
       Embedding__Provider: External
-      EMBEDDING_MODEL: intfloat/multilingual-e5-large
-      EMBEDDING_DIMENSIONS: 1024
-      Embedding__Dimensions: 1024
+      EMBEDDING_MODEL: intfloat/multilingual-e5-base
+      EMBEDDING_DIMENSIONS: 768
+      Embedding__Dimensions: 768
       LOCAL_EMBEDDING_URL: http://embedding-service:8000
       Embedding__LocalServiceUrl: http://embedding-service:8000
       EMBEDDING_FALLBACK_ENABLED: "false"

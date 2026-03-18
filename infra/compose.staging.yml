@@ -73,6 +73,8 @@ services:
       LOCAL_EMBEDDING_URL: http://embedding-service:8000
       Embedding__LocalServiceUrl: http://embedding-service:8000
       RERANKER_URL: http://reranker-service:8003
+      EMBEDDING_MODEL: intfloat/multilingual-e5-base
+      Embedding__Dimensions: 768
       Authentication__OAuth__CallbackBaseUrl: "https://meepleai.app"
       FrontendUrl: "https://meepleai.app"
       Authentication__SessionCookie__Secure: "true"

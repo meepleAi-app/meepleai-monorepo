@@ -958,7 +958,7 @@ git commit -m "feat(kb): extend IRagAccessService + RagAccessService with filter
 - Modify: `apps/api/src/Api/BoundedContexts/KnowledgeBase/Infrastructure/Persistence/ChatThreadRepository.cs`
 - Create: new migration file (auto-generated)
 
-- [ ] **Step 1: Add property to ChatThreadEntity**
+- [x] **Step 1: Add property to ChatThreadEntity**
 
 File: `apps/api/src/Api/Infrastructure/Entities/KnowledgeBase/ChatThreadEntity.cs`
 
@@ -971,7 +971,7 @@ Add:
 public string? SelectedKnowledgeBaseIdsJson { get; set; }
 ```
 
-- [ ] **Step 2: Update MapToPersistence in ChatThreadRepository**
+- [x] **Step 2: Update MapToPersistence in ChatThreadRepository**
 
 File: `apps/api/src/Api/BoundedContexts/KnowledgeBase/Infrastructure/Persistence/ChatThreadRepository.cs`
 
@@ -983,7 +983,7 @@ SelectedKnowledgeBaseIdsJson = domainEntity.SelectedKnowledgeBaseIdsJson
 
 After the existing `LastSummarizedMessageCount = domainEntity.LastSummarizedMessageCount` line.
 
-- [ ] **Step 3: Update MapToDomain in ChatThreadRepository**
+- [x] **Step 3: Update MapToDomain in ChatThreadRepository**
 
 In `MapToDomain()` (around line 344-357), add after the `LastSummarizedMessageCount` hydration block:
 
@@ -998,21 +998,21 @@ if (!string.IsNullOrEmpty(entity.SelectedKnowledgeBaseIdsJson))
 
 This follows the same reflection-based hydration pattern used for `ConversationSummary` (line 345-349).
 
-- [ ] **Step 4: Run build to verify compilation**
+- [x] **Step 4: Run build to verify compilation**
 
 Run: `dotnet build apps/api/src/Api/Api.csproj --no-restore`
 Expected: Build succeeded
 
-- [ ] **Step 5: Create migration**
+- [x] **Step 5: Create migration**
 
 Run: `cd apps/api/src/Api && dotnet ef migrations add AddSelectedKnowledgeBaseIdsToChatThread`
 Expected: Migration file created
 
-- [ ] **Step 6: Review migration SQL**
+- [x] **Step 6: Review migration SQL**
 
 Read the generated migration file, verify it only adds one nullable text column to `chat_threads`.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add apps/api/src/Api/Infrastructure/Entities/KnowledgeBase/ChatThreadEntity.cs \
@@ -1028,7 +1028,7 @@ git commit -m "feat(db): add SelectedKnowledgeBaseIdsJson to ChatThread entity, 
 **Files:**
 - Create: `tests/Api.Tests/Integration/PdfKbLinkFlowTests.cs`
 
-- [ ] **Step 1: Write integration test**
+- [x] **Step 1: Write integration test**
 
 ```csharp
 namespace Api.Tests.Integration;
@@ -1062,12 +1062,12 @@ public class PdfKbLinkFlowTests
 }
 ```
 
-- [ ] **Step 2: Run tests**
+- [x] **Step 2: Run tests**
 
 Run: `dotnet test tests/Api.Tests --filter "FullyQualifiedName~PdfKbLinkFlowTests" -v minimal`
 Expected: PASS
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add tests/Api.Tests/Integration/PdfKbLinkFlowTests.cs

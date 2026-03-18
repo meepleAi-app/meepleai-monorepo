@@ -18,7 +18,7 @@ Piano di implementazione a 3 fasi per migliorare la stabilità del server E2E e 
 ## 📋 GitHub Issues Creati
 
 ### Phase 1: Critical Fixes ⚡
-**Issue**: [#2007](https://github.com/DegrassiAaron/meepleai-monorepo/issues/2007)
+**Issue**: [#2007](https://github.com/meepleAi-app/meepleai-monorepo/issues/2007)
 **Priority**: 🔴 High
 **Time**: 4-8 hours
 **Target**: 57% → 90% pass rate
@@ -37,7 +37,7 @@ Piano di implementazione a 3 fasi per migliorare la stabilità del server E2E e 
 ---
 
 ### Phase 2: Performance Optimization 🚀
-**Issue**: [#2008](https://github.com/DegrassiAaron/meepleai-monorepo/issues/2008)
+**Issue**: [#2008](https://github.com/meepleAi-app/meepleai-monorepo/issues/2008)
 **Priority**: 🟡 Medium
 **Time**: 5-6 hours
 **Dependencies**: Phase 1 (#2007) complete
@@ -58,7 +58,7 @@ Piano di implementazione a 3 fasi per migliorare la stabilità del server E2E e 
 ---
 
 ### Phase 3: Production Infrastructure 🏗️
-**Issue**: [#2009](https://github.com/DegrassiAaron/meepleai-monorepo/issues/2009)
+**Issue**: [#2009](https://github.com/meepleAi-app/meepleai-monorepo/issues/2009)
 **Priority**: 🟢 Low (can be deferred)
 **Time**: 12-18 hours
 **Dependencies**: Phase 1 (#2007) + Phase 2 (#2008) complete
@@ -82,9 +82,9 @@ Piano di implementazione a 3 fasi per migliorare la stabilità del server E2E e 
 | Phase | Pass Rate | Local Execution | CI Execution | Server Crashes | GitHub Issue |
 |-------|-----------|-----------------|--------------|----------------|--------------|
 | **Baseline** | 57% (20/35) | ~8min (partial) | N/A | 100% after 20 tests | - |
-| **Phase 1** | 90% (31/35) | 12-15min | ~15min | 0% | [#2007](https://github.com/DegrassiAaron/meepleai-monorepo/issues/2007) |
-| **Phase 2** | 95% (33/35) | 8-10min | <15min | 0% | [#2008](https://github.com/DegrassiAaron/meepleai-monorepo/issues/2008) |
-| **Phase 3** | 98% (34/35) | 8-10min | 5-7min | 0% | [#2009](https://github.com/DegrassiAaron/meepleai-monorepo/issues/2009) |
+| **Phase 1** | 90% (31/35) | 12-15min | ~15min | 0% | [#2007](https://github.com/meepleAi-app/meepleai-monorepo/issues/2007) |
+| **Phase 2** | 95% (33/35) | 8-10min | <15min | 0% | [#2008](https://github.com/meepleAi-app/meepleai-monorepo/issues/2008) |
+| **Phase 3** | 98% (34/35) | 8-10min | 5-7min | 0% | [#2009](https://github.com/meepleAi-app/meepleai-monorepo/issues/2009) |
 
 ---
 
@@ -158,9 +158,9 @@ Piano di implementazione a 3 fasi per migliorare la stabilità del server E2E e 
 - **PDCA Act**: [docs/pdca/e2e-server-stability/act.md](../../docs/pdca/e2e-server-stability/act.md)
 
 ### Implementation Guides
-- **Phase 1 Details**: [GitHub Issue #2007](https://github.com/DegrassiAaron/meepleai-monorepo/issues/2007)
-- **Phase 2 Details**: [GitHub Issue #2008](https://github.com/DegrassiAaron/meepleai-monorepo/issues/2008)
-- **Phase 3 Details**: [GitHub Issue #2009](https://github.com/DegrassiAaron/meepleai-monorepo/issues/2009)
+- **Phase 1 Details**: [GitHub Issue #2007](https://github.com/meepleAi-app/meepleai-monorepo/issues/2007)
+- **Phase 2 Details**: [GitHub Issue #2008](https://github.com/meepleAi-app/meepleai-monorepo/issues/2008)
+- **Phase 3 Details**: [GitHub Issue #2009](https://github.com/meepleAi-app/meepleai-monorepo/issues/2009)
 
 ### To Be Created
 - [ ] `docs/02-development/testing/e2e-testing-guide.md`
@@ -264,10 +264,10 @@ Month 2: Phase 3 (Infrastructure)
 
 ## 🔗 Quick Links
 
-- **GitHub Project**: [MeepleAI Monorepo](https://github.com/DegrassiAaron/meepleai-monorepo)
-- **Phase 1 Issue**: [#2007 - Critical Fixes](https://github.com/DegrassiAaron/meepleai-monorepo/issues/2007)
-- **Phase 2 Issue**: [#2008 - Performance Optimization](https://github.com/DegrassiAaron/meepleai-monorepo/issues/2008)
-- **Phase 3 Issue**: [#2009 - Production Infrastructure](https://github.com/DegrassiAaron/meepleai-monorepo/issues/2009)
+- **GitHub Project**: [MeepleAI Monorepo](https://github.com/meepleAi-app/meepleai-monorepo)
+- **Phase 1 Issue**: [#2007 - Critical Fixes](https://github.com/meepleAi-app/meepleai-monorepo/issues/2007)
+- **Phase 2 Issue**: [#2008 - Performance Optimization](https://github.com/meepleAi-app/meepleai-monorepo/issues/2008)
+- **Phase 3 Issue**: [#2009 - Production Infrastructure](https://github.com/meepleAi-app/meepleai-monorepo/issues/2009)
 - **Research Report**: [server-stability-research-2025-12-08.md](./server-stability-research-2025-12-08.md)
 
 ---

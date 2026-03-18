@@ -55,7 +55,7 @@ Aggiungere intelligenza AI alla dashboard hub tramite insights personalizzati, r
 
 #### Issue #4308: AI Insights Service (RAG Integration)
 **Story Points**: 3
-**GitHub Issue**: https://github.com/DegrassiAaron/meepleai-monorepo/issues/4308
+**GitHub Issue**: https://github.com/meepleAi-app/meepleai-monorepo/issues/4308
 **Assignee**: Backend Team + AI Team
 **Dependencies**: RAG service operational
 
@@ -105,7 +105,7 @@ return new AIInsight {
 
 #### Issue #4309: Wishlist Management API
 **Story Points**: 2
-**GitHub Issue**: https://github.com/DegrassiAaron/meepleai-monorepo/issues/4309
+**GitHub Issue**: https://github.com/meepleAi-app/meepleai-monorepo/issues/4309
 **Assignee**: Backend Team
 **Dependencies**: None
 
@@ -138,7 +138,7 @@ CREATE TABLE WishlistItems (
 
 #### Issue #4310: Catalog Trending Analytics
 **Story Points**: 2
-**GitHub Issue**: https://github.com/DegrassiAaron/meepleai-monorepo/issues/4310
+**GitHub Issue**: https://github.com/meepleAi-app/meepleai-monorepo/issues/4310
 **Assignee**: Backend Team
 **Dependencies**: None
 
@@ -171,7 +171,7 @@ PercentageChange = ((ThisWeekScore - LastWeekScore) / LastWeekScore) * 100;
 
 #### Issue #4311: AI Insights Widget Component
 **Story Points**: 2
-**GitHub Issue**: https://github.com/DegrassiAaron/meepleai-monorepo/issues/4311
+**GitHub Issue**: https://github.com/meepleAi-app/meepleai-monorepo/issues/4311
 **Assignee**: Frontend Team
 **Dependencies**: #4308 (Backend AI service)
 
@@ -212,7 +212,7 @@ interface AIInsightsWidgetProps {
 
 #### Issue #4312: Wishlist Highlights Component
 **Story Points**: 2
-**GitHub Issue**: https://github.com/DegrassiAaron/meepleai-monorepo/issues/4312
+**GitHub Issue**: https://github.com/meepleAi-app/meepleai-monorepo/issues/4312
 **Assignee**: Frontend Team
 **Dependencies**: #4309 (Backend wishlist API)
 
@@ -248,7 +248,7 @@ interface WishlistHighlightsProps {
 
 #### Issue #4313: Catalog Trending Widget
 **Story Points**: 2
-**GitHub Issue**: https://github.com/DegrassiAaron/meepleai-monorepo/issues/4313
+**GitHub Issue**: https://github.com/meepleAi-app/meepleai-monorepo/issues/4313
 **Assignee**: Frontend Team
 **Dependencies**: #4310 (Backend trending analytics)
 

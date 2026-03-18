@@ -30,6 +30,7 @@ internal static class FeatureFlagSeeder
         new("api_access", "REST API access via API keys", true, false, false, true),
         new("Features.PdfUpload", "Enable/disable PDF upload feature (standard + chunked)", true, true, true, true),
         new("Features.StreamingResponses", "Enable/disable SSE streaming AI responses", true, true, true, true),
+        new("alpha_layout", "Alpha mobile-first layout with 4-tab navigation (AlphaShell)", false, false, false, false),
     ];
 
     /// <summary>

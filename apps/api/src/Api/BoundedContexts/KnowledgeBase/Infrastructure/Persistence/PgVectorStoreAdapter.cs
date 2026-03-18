@@ -212,7 +212,7 @@ internal sealed class PgVectorStoreAdapter : IQdrantVectorStoreAdapter
         var connection = _context.Database.GetDbConnection();
         await EnsureConnectionOpenAsync(connection, cancellationToken).ConfigureAwait(false);
 
-        // Resolve game_id from VectorDocuments table via the embedding's VectorDocumentId.
+        // Resolve game_id from vector_documents table via the embedding's VectorDocumentId.
         // All embeddings in a batch typically share the same VectorDocumentId.
         var vectorDocumentIds = embeddings.Select(e => e.VectorDocumentId).Distinct().ToList();
         var gameIdLookup = new Dictionary<Guid, Guid>();
@@ -220,7 +220,7 @@ internal sealed class PgVectorStoreAdapter : IQdrantVectorStoreAdapter
         var lookupCmd = (NpgsqlCommand)connection.CreateCommand();
         await using (lookupCmd.ConfigureAwait(false))
         {
-            lookupCmd.CommandText = "SELECT \"Id\", \"GameId\" FROM \"VectorDocuments\" WHERE \"Id\" = ANY(@ids)";
+            lookupCmd.CommandText = "SELECT \"Id\", \"GameId\" FROM vector_documents WHERE \"Id\" = ANY(@ids)";
             lookupCmd.Parameters.AddWithValue("@ids", vectorDocumentIds.ToArray());
 
             var reader = await lookupCmd.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
@@ -328,7 +328,7 @@ internal sealed class PgVectorStoreAdapter : IQdrantVectorStoreAdapter
 
     public async Task EnsureCollectionExistsAsync(
         Guid gameId,
-        int vectorDimension = 1024,
+        int vectorDimension = 768,
         CancellationToken cancellationToken = default)
     {
         var connection = _context.Database.GetDbConnection();

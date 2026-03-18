@@ -212,6 +212,62 @@ public class GameStateHub : Hub
     // ── Game Night Improvvisata methods (Task 10) ────────────────────────────
 
     /// <summary>
+    /// Broadcast that a structured dispute was opened.
+    /// Called by server-side event handlers when a player initiates a v2 dispute.
+    /// </summary>
+    public async Task BroadcastDisputeOpened(string sessionId, object disputeData)
+    {
+        await Clients.Group(GetSessionGroup(sessionId))
+            .SendAsync("DisputeOpened", disputeData).ConfigureAwait(false);
+
+        _logger.LogInformation(
+            "DisputeOpened broadcast for session {SessionId}",
+            sessionId);
+    }
+
+    /// <summary>
+    /// Broadcast that an AI verdict is ready for voting.
+    /// Called after the arbitrator produces a structured verdict.
+    /// </summary>
+    public async Task BroadcastVerdictReady(string sessionId, object verdictData)
+    {
+        await Clients.Group(GetSessionGroup(sessionId))
+            .SendAsync("VerdictReady", verdictData).ConfigureAwait(false);
+
+        _logger.LogInformation(
+            "VerdictReady broadcast for session {SessionId}",
+            sessionId);
+    }
+
+    /// <summary>
+    /// Broadcast that a vote was cast on a dispute.
+    /// Called after each player votes on the AI verdict.
+    /// </summary>
+    public async Task BroadcastVoteCast(string sessionId, object voteData)
+    {
+        await Clients.Group(GetSessionGroup(sessionId))
+            .SendAsync("VoteCast", voteData).ConfigureAwait(false);
+
+        _logger.LogDebug(
+            "VoteCast broadcast for session {SessionId}",
+            sessionId);
+    }
+
+    /// <summary>
+    /// Broadcast that a structured dispute has been fully resolved (votes tallied).
+    /// Called by server-side event handlers after the tally is complete.
+    /// </summary>
+    public async Task BroadcastDisputeResolved(string sessionId, object resolution)
+    {
+        await Clients.Group(GetSessionGroup(sessionId))
+            .SendAsync("StructuredDisputeResolved", resolution).ConfigureAwait(false);
+
+        _logger.LogInformation(
+            "StructuredDisputeResolved broadcast for session {SessionId}",
+            sessionId);
+    }
+
+    /// <summary>
     /// Broadcast a dispute verdict to all clients in the session.
     /// Called by server-side event handlers after AI arbitration.
     /// </summary>

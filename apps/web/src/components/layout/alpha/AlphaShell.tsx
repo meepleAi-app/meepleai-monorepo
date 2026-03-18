@@ -1,18 +1,20 @@
 /**
- * AlphaShell — Stub layout shell for the alpha UI redesign.
+ * AlphaShell — Server component layout shell for the alpha UI redesign.
  *
- * Activated via the `alpha-layout` feature flag.
- * This is a placeholder that will be replaced with the full
- * alpha navigation system in Task 1.1.
+ * Activated via the `alpha-layout` feature flag in (authenticated)/layout.tsx.
+ * Mirrors the UnifiedShell pattern: server component receives isAdmin from
+ * the parent layout and delegates rendering to AlphaShellClient.
  */
 
 import { type ReactNode } from 'react';
+
+import { AlphaShellClient } from './AlphaShellClient';
 
 interface AlphaShellProps {
   children: ReactNode;
   isAdmin?: boolean;
 }
 
-export function AlphaShell({ children }: AlphaShellProps) {
-  return <div className="alpha-shell">{children}</div>;
+export async function AlphaShell({ children, isAdmin = false }: AlphaShellProps) {
+  return <AlphaShellClient isAdmin={isAdmin}>{children}</AlphaShellClient>;
 }

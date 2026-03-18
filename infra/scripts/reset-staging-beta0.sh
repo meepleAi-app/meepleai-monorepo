@@ -122,9 +122,9 @@ log "Image cleanup done (before: $BEFORE, after: $AFTER)"
 log "Phase 5: Pulling latest images and starting services..."
 
 # Pull latest staging images
-docker pull ghcr.io/degrassiaaron/meepleai-monorepo/api:staging-latest 2>/dev/null && \
+docker pull ghcr.io/meepleai-app/meepleai-monorepo/api:staging-latest 2>/dev/null && \
   log "  Pulled: API staging-latest" || warn "  API image pull failed (will use cached)"
-docker pull ghcr.io/degrassiaaron/meepleai-monorepo/web:staging-latest 2>/dev/null && \
+docker pull ghcr.io/meepleai-app/meepleai-monorepo/web:staging-latest 2>/dev/null && \
   log "  Pulled: Web staging-latest" || warn "  Web image pull failed (will use cached)"
 
 # Start core services first (DB, cache, vector)

@@ -11,7 +11,7 @@ import urllib.request
 import urllib.error
 from pathlib import Path
 
-REPO_OWNER = "DegrassiAaron"
+REPO_OWNER = "meepleAi-app"
 REPO_NAME = "meepleai-monorepo"
 GITHUB_API = "https://api.github.com"
 

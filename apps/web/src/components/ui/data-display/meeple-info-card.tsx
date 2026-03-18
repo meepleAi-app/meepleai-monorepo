@@ -35,7 +35,6 @@ import {
   formatFileSize,
   documentTypeLabels,
   documentTypeColors,
-  getStatusIndicator,
   isDocumentReady,
 } from '@/components/library/kb-utils';
 import { PdfUploadModal } from '@/components/library/PdfUploadModal';
@@ -290,9 +289,6 @@ export function MeepleInfoCard({
               {!docsLoading && !docsError && documents.length > 0 && (
                 <div className="space-y-3">
                   {documents.map(doc => {
-                    const status = getStatusIndicator(
-                      doc.processingState || doc.processingStatus || 'pending'
-                    );
                     const ready = isDocumentReady(doc);
                     return (
                       <div

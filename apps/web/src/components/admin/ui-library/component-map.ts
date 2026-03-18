@@ -127,10 +127,23 @@ import { Card } from '@/components/ui/data-display/card';
 import { CardGridSkeletons } from '@/components/ui/data-display/CardGridSkeletons';
 import { CitationLink } from '@/components/ui/data-display/citation-link';
 import { Collapsible } from '@/components/ui/data-display/collapsible';
+import { CollectionLimitIndicator as CollectionLimitIndicatorDataDisplay } from '@/components/ui/data-display/CollectionLimitIndicator';
+import { ConfidenceBadge } from '@/components/ui/data-display/confidence-badge';
 import { DataTable } from '@/components/ui/data-display/data-table';
+import { AddEntityLinkModal } from '@/components/ui/data-display/entity-link/add-entity-link-modal';
+import { CompactIconBar } from '@/components/ui/data-display/entity-link/compact-icon-bar';
+import { EntityLinkBadge } from '@/components/ui/data-display/entity-link/entity-link-badge';
+import { EntityLinkCard } from '@/components/ui/data-display/entity-link/entity-link-card';
+import { EntityLinkChip } from '@/components/ui/data-display/entity-link/entity-link-chip';
+import { EntityLinkPreviewRow } from '@/components/ui/data-display/entity-link/entity-link-preview-row';
+import { EntityRelationshipGraph } from '@/components/ui/data-display/entity-link/entity-relationship-graph';
+import { RelatedEntitiesSection } from '@/components/ui/data-display/entity-link/related-entities-section';
 import { EntityListView } from '@/components/ui/data-display/entity-list-view/entity-list-view';
 import { GameExtraMeepleCard } from '@/components/ui/data-display/extra-meeple-card/EntityExtraMeepleCard'; // EntityExtraMeepleCard — uses GameExtraMeepleCard as representative
 import { ExtraMeepleCard } from '@/components/ui/data-display/extra-meeple-card/ExtraMeepleCard';
+import { ExtraMeepleCardDrawer } from '@/components/ui/data-display/extra-meeple-card/ExtraMeepleCardDrawer';
+import { GameCarousel } from '@/components/ui/data-display/game-carousel';
+import { ListPageHeader } from '@/components/ui/data-display/ListPageHeader';
 import { CartaEstesa } from '@/components/ui/data-display/meeple-card/CartaEstesa';
 import { MeepleCard } from '@/components/ui/data-display/meeple-card/MeepleCard';
 import { MeepleCardCompact } from '@/components/ui/data-display/meeple-card/variants/MeepleCardCompact';
@@ -139,27 +152,19 @@ import { MeepleCardFeatured } from '@/components/ui/data-display/meeple-card/var
 import { MeepleCardGrid } from '@/components/ui/data-display/meeple-card/variants/MeepleCardGrid';
 import { MeepleCardHero } from '@/components/ui/data-display/meeple-card/variants/MeepleCardHero';
 import { MeepleCardList } from '@/components/ui/data-display/meeple-card/variants/MeepleCardList';
-import { MeepleCards } from '@/components/ui/data-display/meeple-card-compound'; // compound
 import { MeepleCardBrowser } from '@/components/ui/data-display/meeple-card-browser/MeepleCardBrowser';
-import { ExtraMeepleCardDrawer } from '@/components/ui/data-display/extra-meeple-card/ExtraMeepleCardDrawer';
-import { GameCarousel } from '@/components/ui/data-display/game-carousel';
+import { MeepleCards } from '@/components/ui/data-display/meeple-card-compound'; // compound
 import { AgentModelInfo } from '@/components/ui/data-display/meeple-card-features/AgentModelInfo';
 import { BulkSelectCheckbox } from '@/components/ui/data-display/meeple-card-features/BulkSelectCheckbox';
 import { CardAgentAction } from '@/components/ui/data-display/meeple-card-features/CardAgentAction';
 import { CardNavigationFooter } from '@/components/ui/data-display/meeple-card-features/CardNavigationFooter';
-import { MeepleInfoCard } from '@/components/ui/data-display/meeple-info-card';
-import { CollectionLimitIndicator as CollectionLimitIndicatorDataDisplay } from '@/components/ui/data-display/CollectionLimitIndicator';
-import { ConfidenceBadge } from '@/components/ui/data-display/confidence-badge';
-import { EntityLinkBadge } from '@/components/ui/data-display/entity-link/entity-link-badge';
-import { EntityLinkCard } from '@/components/ui/data-display/entity-link/entity-link-card';
-import { EntityLinkChip } from '@/components/ui/data-display/entity-link/entity-link-chip';
-import { EntityLinkPreviewRow } from '@/components/ui/data-display/entity-link/entity-link-preview-row';
-import { EntityRelationshipGraph } from '@/components/ui/data-display/entity-link/entity-relationship-graph';
-import { RelatedEntitiesSection } from '@/components/ui/data-display/entity-link/related-entities-section';
-import { AddEntityLinkModal } from '@/components/ui/data-display/entity-link/add-entity-link-modal';
-import { CompactIconBar } from '@/components/ui/data-display/entity-link/compact-icon-bar';
-import { ListPageHeader } from '@/components/ui/data-display/ListPageHeader';
-import { RatingStars } from '@/components/ui/data-display/rating-stars';
+import { ChatAgentInfo } from '@/components/ui/data-display/meeple-card-features/ChatAgentInfo';
+import { ChatGameContext } from '@/components/ui/data-display/meeple-card-features/ChatGameContext';
+import { ChatStatsDisplay } from '@/components/ui/data-display/meeple-card-features/ChatStatsDisplay';
+import { ChatStatusBadge } from '@/components/ui/data-display/meeple-card-features/ChatStatusBadge';
+import { ChatUnreadBadge } from '@/components/ui/data-display/meeple-card-features/ChatUnreadBadge';
+import { DocumentStatusBadge } from '@/components/ui/data-display/meeple-card-features/DocumentStatusBadge';
+import { DragHandle } from '@/components/ui/data-display/meeple-card-features/DragHandle';
 import { StatCard } from '@/components/ui/data-display/stat-card';
 import { StatusCard } from '@/components/ui/data-display/status-card';
 import { Table } from '@/components/ui/data-display/table';
@@ -169,8 +174,6 @@ import { UserStatusIndicator } from '@/components/ui/data-display/user-status-in
 
 // ─── MeepleCard Features ──────────────────────────────────────────────────────
 
-import { DocumentStatusBadge } from '@/components/ui/data-display/meeple-card-features/DocumentStatusBadge';
-import { DragHandle } from '@/components/ui/data-display/meeple-card-features/DragHandle';
 import { FlipCard } from '@/components/ui/data-display/meeple-card-features/FlipCard';
 import { GameBackContent } from '@/components/ui/data-display/meeple-card-features/GameBackContent';
 import { HoverPreview } from '@/components/ui/data-display/meeple-card-features/HoverPreview';
@@ -186,14 +189,11 @@ import { SnapshotHistorySlider } from '@/components/ui/data-display/meeple-card-
 import { StatusBadge } from '@/components/ui/data-display/meeple-card-features/StatusBadge';
 import { TimeTravelOverlay } from '@/components/ui/data-display/meeple-card-features/TimeTravelOverlay';
 import { WishlistButton } from '@/components/ui/data-display/meeple-card-features/WishlistButton';
-import { ChatAgentInfo } from '@/components/ui/data-display/meeple-card-features/ChatAgentInfo';
-import { ChatGameContext } from '@/components/ui/data-display/meeple-card-features/ChatGameContext';
-import { ChatStatsDisplay } from '@/components/ui/data-display/meeple-card-features/ChatStatsDisplay';
-import { ChatStatusBadge } from '@/components/ui/data-display/meeple-card-features/ChatStatusBadge';
-import { ChatUnreadBadge } from '@/components/ui/data-display/meeple-card-features/ChatUnreadBadge';
 import { MeepleCardInfoButton } from '@/components/ui/data-display/meeple-card-info-button';
 import { MeepleCardQuickActions } from '@/components/ui/data-display/meeple-card-quick-actions';
 import { MobileTagDisplay } from '@/components/ui/data-display/meeple-card-mobile-tags'; // registry name: MeepleCardMobileTags
+import { MeepleInfoCard } from '@/components/ui/data-display/meeple-info-card';
+import { RatingStars } from '@/components/ui/data-display/rating-stars';
 
 // ─── Feedback ─────────────────────────────────────────────────────────────────
 
@@ -226,7 +226,25 @@ import { DiceIcon3D } from '@/components/ui/icons/dice-icon-3d';
 import { DateRangePicker } from '@/components/ui/inputs/date-range-picker';
 import { ChatMessage } from '@/components/ui/meeple/chat-message';
 import { FeedbackButtons } from '@/components/ui/meeple/feedback-buttons';
+import { MeepleAvatar } from '@/components/ui/meeple/meeple-avatar';
+import { MeepleLogo } from '@/components/ui/meeple/meeple-logo';
+import { MotionButton } from '@/components/ui/meeple/motion-button';
 import { ActionGrid } from '@/components/ui/navigation/action-grid';
+import { Command } from '@/components/ui/navigation/command';
+import { DropdownMenu } from '@/components/ui/navigation/dropdown-menu';
+import { FocusedCardArea } from '@/components/ui/navigation/focused-card-area';
+import { Separator } from '@/components/ui/navigation/separator';
+import { Sheet } from '@/components/ui/navigation/sheet';
+import { Tabs } from '@/components/ui/navigation/tabs';
+import { ThemeToggle } from '@/components/ui/navigation/ThemeToggle';
+import { AlertDialog as AlertDialogPrimitivesComponent } from '@/components/ui/overlays/alert-dialog-primitives';
+import { ConfirmationDialog } from '@/components/ui/overlays/confirmation-dialog';
+import { Dialog } from '@/components/ui/overlays/dialog';
+import { HoverCard } from '@/components/ui/overlays/hover-card';
+import { Popover } from '@/components/ui/overlays/popover';
+import { Select } from '@/components/ui/overlays/select';
+import { SmartTooltip } from '@/components/ui/overlays/smart-tooltip';
+import { Tooltip } from '@/components/ui/overlays/tooltip';
 import { Button } from '@/components/ui/primitives/button';
 import { Checkbox } from '@/components/ui/primitives/checkbox';
 import { Input } from '@/components/ui/primitives/input';
@@ -239,26 +257,7 @@ import { Textarea } from '@/components/ui/primitives/textarea';
 import { Toggle } from '@/components/ui/primitives/toggle';
 import { ToggleGroup } from '@/components/ui/primitives/toggle-group';
 
-// ─── Navigation ───────────────────────────────────────────────────────────────
-
-import { Command } from '@/components/ui/navigation/command';
-import { DropdownMenu } from '@/components/ui/navigation/dropdown-menu';
-import { FocusedCardArea } from '@/components/ui/navigation/focused-card-area';
-import { Separator } from '@/components/ui/navigation/separator';
-import { Sheet } from '@/components/ui/navigation/sheet';
-import { Tabs } from '@/components/ui/navigation/tabs';
-import { ThemeToggle } from '@/components/ui/navigation/ThemeToggle';
-
 // ─── Overlays ─────────────────────────────────────────────────────────────────
-
-import { AlertDialog as AlertDialogPrimitivesComponent } from '@/components/ui/overlays/alert-dialog-primitives';
-import { ConfirmationDialog } from '@/components/ui/overlays/confirmation-dialog';
-import { Dialog } from '@/components/ui/overlays/dialog';
-import { HoverCard } from '@/components/ui/overlays/hover-card';
-import { Popover } from '@/components/ui/overlays/popover';
-import { Select } from '@/components/ui/overlays/select';
-import { SmartTooltip } from '@/components/ui/overlays/smart-tooltip';
-import { Tooltip } from '@/components/ui/overlays/tooltip';
 
 // ─── Animations ───────────────────────────────────────────────────────────────
 
@@ -269,16 +268,6 @@ import { Tooltip } from '@/components/ui/overlays/tooltip';
 import { TagBadge } from '@/components/ui/tags/TagBadge';
 import { TagOverflow } from '@/components/ui/tags/TagOverflow';
 import { TagStrip } from '@/components/ui/tags/TagStrip';
-
-// ─── Gates ────────────────────────────────────────────────────────────────────
-
-// ─── Meeple ───────────────────────────────────────────────────────────────────
-
-import { MeepleAvatar } from '@/components/ui/meeple/meeple-avatar';
-import { MeepleLogo } from '@/components/ui/meeple/meeple-logo';
-import { MotionButton } from '@/components/ui/meeple/motion-button';
-
-// ─── Agent ────────────────────────────────────────────────────────────────────
 
 // ─── Icons & Background ───────────────────────────────────────────────────────
 
@@ -314,7 +303,10 @@ import { MotionButton } from '@/components/ui/meeple/motion-button';
 
 // ─── Component Map ────────────────────────────────────────────────────────────
 
-export const COMPONENT_MAP: Record<string, ComponentType<any>> = {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- heterogeneous component registry requires flexible prop types
+type AnyComponent = ComponentType<any>;
+
+export const COMPONENT_MAP: Record<string, AnyComponent> = {
   // Data Display
   'meeple-card': MeepleCard,
   'meeple-card-compact': MeepleCardCompact,
@@ -324,15 +316,15 @@ export const COMPONENT_MAP: Record<string, ComponentType<any>> = {
   'meeple-card-hero': MeepleCardHero,
   'meeple-card-list': MeepleCardList,
   'carta-estesa': CartaEstesa,
-  'meeple-card-compound': MeepleCards as unknown as ComponentType<any>,
+  'meeple-card-compound': MeepleCards as unknown as AnyComponent,
   'meeple-card-browser': MeepleCardBrowser,
   'extra-meeple-card': ExtraMeepleCard,
   'extra-meeple-card-drawer': ExtraMeepleCardDrawer,
   'entity-extra-meeple-card': GameExtraMeepleCard, // representative variant
-  'entity-list-view': EntityListView as ComponentType<any>,
+  'entity-list-view': EntityListView as AnyComponent,
   'game-carousel': GameCarousel,
   'meeple-info-card': MeepleInfoCard,
-  'data-table': DataTable as ComponentType<any>,
+  'data-table': DataTable as AnyComponent,
   accordion: Accordion,
   avatar: Avatar,
   badge: Badge,
@@ -486,7 +478,7 @@ export const COMPONENT_MAP: Record<string, ComponentType<any>> = {
   'admin-hub-tab-bar': AdminHubTabBar,
   'admin-hub-quick-link': AdminHubQuickLink,
   'admin-hub-empty-state': AdminHubEmptyState,
-  'admin-error-boundary': AdminErrorBoundary as unknown as ComponentType<any>,
+  'admin-error-boundary': AdminErrorBoundary as unknown as AnyComponent,
   'emergency-banner': EmergencyBanner,
 
   // Admin — Charts & RAG

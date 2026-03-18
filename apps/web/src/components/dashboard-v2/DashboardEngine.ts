@@ -43,7 +43,7 @@ export const dashboardMachine = setup({
     events: {} as DashboardEvent,
   },
   actions: {
-    setSessionDetected: assign(({ context, event }) => {
+    setSessionDetected: assign(({ context: _context, event }) => {
       if (event.type !== 'SESSION_DETECTED') return {};
       return {
         activeSessionId: event.sessionId,
@@ -59,7 +59,7 @@ export const dashboardMachine = setup({
         bufferedEvents: [...context.bufferedEvents, event],
       };
     }),
-    beginExitTransition: assign(({ context }) => ({
+    beginExitTransition: assign(({ context: _context }) => ({
       transitionTarget: 'exploration' as const,
       previousState: 'gameMode' as const,
       transitionType: 'fade' as const,
@@ -73,7 +73,7 @@ export const dashboardMachine = setup({
       previousState: null as 'exploration' | 'gameMode' | null,
       bufferedEvents: [] as DashboardEvent[],
     })),
-    processBuffer: assign(({ context }) => ({
+    processBuffer: assign(({ context: _context }) => ({
       transitionTarget: 'exploration' as const,
       previousState: 'gameMode' as const,
       bufferedEvents: [] as DashboardEvent[],

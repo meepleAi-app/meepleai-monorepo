@@ -71,7 +71,7 @@ export const MeepleCardHero = React.memo(function MeepleCardHero(props: MeepleCa
     actions = [],
     rating,
     ratingMax = 5,
-    badge,
+    badge: _badge,
     customColor,
     onClick,
     loading = false,
@@ -149,12 +149,17 @@ export const MeepleCardHero = React.memo(function MeepleCardHero(props: MeepleCa
     showWishlistBtn ||
     !!(showInfoButton && (entityId || infoHref));
 
-  const { isMobile, showMobileActions, setShowMobileActions, handleMobileClick, cardRef } =
-    useMobileInteraction({
-      hasMobileActions,
-      flippable,
-      onClick,
-    });
+  const {
+    isMobile,
+    showMobileActions: _showMobileActions,
+    setShowMobileActions: _setShowMobileActions,
+    handleMobileClick,
+    cardRef,
+  } = useMobileInteraction({
+    hasMobileActions,
+    flippable,
+    onClick,
+  });
 
   const handleDesktopClick = () => {
     if (flippable) return;

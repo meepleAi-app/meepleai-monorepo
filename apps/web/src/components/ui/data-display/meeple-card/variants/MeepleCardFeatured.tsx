@@ -150,12 +150,17 @@ export const MeepleCardFeatured = React.memo(function MeepleCardFeatured(
     showWishlistBtn ||
     !!(showInfoButton && (entityId || infoHref));
 
-  const { isMobile, showMobileActions, setShowMobileActions, handleMobileClick, cardRef } =
-    useMobileInteraction({
-      hasMobileActions,
-      flippable,
-      onClick,
-    });
+  const {
+    isMobile,
+    showMobileActions: _showMobileActions,
+    setShowMobileActions: _setShowMobileActions,
+    handleMobileClick,
+    cardRef,
+  } = useMobileInteraction({
+    hasMobileActions,
+    flippable,
+    onClick,
+  });
 
   const handleDesktopClick = () => {
     if (flippable) return;

@@ -37,7 +37,6 @@ export const ManaSymbol = memo(function ManaSymbol({
   className,
   onClick,
   'data-testid': dataTestId,
-  ...props
 }: ManaSymbolProps) {
   const config = MANA_DISPLAY[entity];
   const color = customColor ?? entityColors[entity].hsl;

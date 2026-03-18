@@ -9,6 +9,7 @@ import React, { useState } from 'react';
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Shield, Download, Loader2, AlertCircle } from 'lucide-react';
+import Image from 'next/image';
 
 import {
   Dialog,
@@ -212,7 +213,13 @@ export default function SecuritySettingsPage() {
               </p>
 
               <div className="bg-white p-4 rounded-lg mx-auto w-fit">
-                <img src={setupData.qrCodeUrl} alt="2FA QR Code" className="w-48 h-48" />
+                <Image
+                  src={setupData.qrCodeUrl}
+                  alt="2FA QR Code"
+                  width={192}
+                  height={192}
+                  unoptimized
+                />
               </div>
 
               <div>

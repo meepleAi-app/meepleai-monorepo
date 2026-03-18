@@ -41,7 +41,7 @@ export const MeepleCardExpanded = React.memo(function MeepleCardExpanded(
     avatarUrl,
     metadata = [],
     tags = [],
-    maxVisibleTags,
+    maxVisibleTags: _maxVisibleTags,
     customColor,
     onClick,
     className,

@@ -42,7 +42,7 @@ export function GroupMemoryPanel({ groupId }: GroupMemoryPanelProps) {
         if (!cancelled) {
           setGroup(data);
         }
-      } catch (err) {
+      } catch (_err) {
         if (!cancelled) {
           setError('Failed to load group data');
         }

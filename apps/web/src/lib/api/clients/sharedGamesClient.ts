@@ -8,23 +8,6 @@
 import { z } from 'zod';
 
 import { type HttpClient } from '../core/httpClient';
-
-// ========== Recently Processed Documents ==========
-
-export const RecentlyProcessedDocumentSchema = z.object({
-  pdfDocumentId: z.string(),
-  jobId: z.string().nullable(),
-  fileName: z.string(),
-  processingState: z.string(),
-  timestamp: z.string(),
-  errorCategory: z.string().nullable(),
-  canRetry: z.boolean(),
-  sharedGameId: z.string(),
-  gameName: z.string(),
-  thumbnailUrl: z.string().nullable(),
-});
-
-export type RecentlyProcessedDocument = z.infer<typeof RecentlyProcessedDocumentSchema>;
 import {
   agentDefinitionDtoSchema,
   kbCardDtoSchema,
@@ -73,6 +56,23 @@ import {
   type BatchApprovalResult,
   type RulebookAnalysisDto,
 } from '../schemas/shared-games.schemas';
+
+// ========== Recently Processed Documents ==========
+
+export const RecentlyProcessedDocumentSchema = z.object({
+  pdfDocumentId: z.string(),
+  jobId: z.string().nullable(),
+  fileName: z.string(),
+  processingState: z.string(),
+  timestamp: z.string(),
+  errorCategory: z.string().nullable(),
+  canRetry: z.boolean(),
+  sharedGameId: z.string(),
+  gameName: z.string(),
+  thumbnailUrl: z.string().nullable(),
+});
+
+export type RecentlyProcessedDocument = z.infer<typeof RecentlyProcessedDocumentSchema>;
 
 export interface CreateSharedGamesClientParams {
   httpClient: HttpClient;

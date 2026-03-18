@@ -21,15 +21,31 @@ vi.mock('../components/HeroSection', () => ({
 vi.mock('../components/InfoGrid', () => ({
   InfoGrid: ({ minPlayers, maxPlayers, averageWeight }: any) => (
     <div data-testid="info-grid">
-      <div>Players: {minPlayers}-{maxPlayers}</div>
+      <div>
+        Players: {minPlayers}-{maxPlayers}
+      </div>
       {averageWeight && <div>Weight: {averageWeight}</div>}
     </div>
   ),
 }));
 
 vi.mock('@/components/games/detail/GameOverviewTab', () => ({
-  GameOverviewTab: ({ game }: any) => (
-    <div data-testid="overview-tab">Overview: {game.title}</div>
+  GameOverviewTab: ({ game }: any) => <div data-testid="overview-tab">Overview: {game.title}</div>,
+}));
+
+vi.mock('@/components/games/detail/GameRulesTab', () => ({
+  GameRulesTab: ({ gameId, documents, isLoading }: any) => (
+    <div data-testid="rules-tab">
+      Rules: {gameId} ({documents?.length ?? 0} docs) {isLoading ? 'loading' : 'ready'}
+    </div>
+  ),
+}));
+
+vi.mock('@/components/games/detail/GameSessionsTab', () => ({
+  GameSessionsTab: ({ gameId, sessions, isLoading }: any) => (
+    <div data-testid="sessions-tab">
+      Sessions: {gameId} ({sessions?.length ?? 0} sessions) {isLoading ? 'loading' : 'ready'}
+    </div>
   ),
 }));
 
@@ -39,6 +55,12 @@ vi.mock('../components/GameFAQTab', () => ({
       FAQ: {gameTitle} ({gameId})
     </div>
   ),
+}));
+
+// Mock hooks
+vi.mock('@/hooks/queries/useGames', () => ({
+  useGameDocuments: () => ({ data: [], isLoading: false }),
+  useGameSessions: () => ({ data: [], isLoading: false }),
 }));
 
 // Mock fetch
@@ -137,6 +159,38 @@ describe('GameDetailClient', () => {
       expect(screen.getByTestId('overview-tab')).toBeVisible();
     });
 
+    it('should show Rules tab when clicked', async () => {
+      const user = userEvent.setup();
+      (global.fetch as any).mockResolvedValue({
+        ok: true,
+        json: async () => ({ averageWeight: 3.5 }),
+      });
+
+      render(<GameDetailClient game={mockGame} />);
+
+      const rulesTab = screen.getByRole('tab', { name: /regole/i });
+      await user.click(rulesTab);
+
+      expect(screen.getByTestId('rules-tab')).toBeInTheDocument();
+      expect(screen.getByTestId('rules-tab')).toBeVisible();
+    });
+
+    it('should show Sessions tab when clicked', async () => {
+      const user = userEvent.setup();
+      (global.fetch as any).mockResolvedValue({
+        ok: true,
+        json: async () => ({ averageWeight: 3.5 }),
+      });
+
+      render(<GameDetailClient game={mockGame} />);
+
+      const sessionsTab = screen.getByRole('tab', { name: /partite/i });
+      await user.click(sessionsTab);
+
+      expect(screen.getByTestId('sessions-tab')).toBeInTheDocument();
+      expect(screen.getByTestId('sessions-tab')).toBeVisible();
+    });
+
     it('should show FAQ tab when clicked', async () => {
       const user = userEvent.setup();
       (global.fetch as any).mockResolvedValue({
@@ -162,7 +216,7 @@ describe('GameDetailClient', () => {
 
       render(<GameDetailClient game={mockGame} />);
 
-      const chatTab = screen.getByRole('tab', { name: /chat ai/i });
+      const chatTab = screen.getByRole('tab', { name: /chat/i });
       await user.click(chatTab);
 
       // Chat tab now renders inline content (no separate GameChatTab component)
@@ -191,7 +245,7 @@ describe('GameDetailClient', () => {
       expect(screen.queryByTestId('overview-tab')).not.toBeInTheDocument();
     });
 
-    it('should render all three tab triggers', () => {
+    it('should render all five tab triggers', () => {
       (global.fetch as any).mockResolvedValue({
         ok: true,
         json: async () => ({ averageWeight: 3.5 }),
@@ -200,8 +254,10 @@ describe('GameDetailClient', () => {
       render(<GameDetailClient game={mockGame} />);
 
       expect(screen.getByRole('tab', { name: /panoramica|info/i })).toBeInTheDocument();
+      expect(screen.getByRole('tab', { name: /regole/i })).toBeInTheDocument();
+      expect(screen.getByRole('tab', { name: /partite/i })).toBeInTheDocument();
       expect(screen.getByRole('tab', { name: /faq/i })).toBeInTheDocument();
-      expect(screen.getByRole('tab', { name: /chat ai/i })).toBeInTheDocument();
+      expect(screen.getByRole('tab', { name: /chat/i })).toBeInTheDocument();
     });
   });
 
@@ -250,10 +306,7 @@ describe('GameDetailClient', () => {
       render(<GameDetailClient game={mockGame} />);
 
       await waitFor(() => {
-        expect(consoleError).toHaveBeenCalledWith(
-          'Failed to fetch BGG weight:',
-          expect.any(Error)
-        );
+        expect(consoleError).toHaveBeenCalledWith('Failed to fetch BGG weight:', expect.any(Error));
       });
 
       consoleError.mockRestore();
@@ -330,7 +383,7 @@ describe('GameDetailClient', () => {
 
       render(<GameDetailClient game={mockGame} />);
 
-      const chatTab = screen.getByRole('tab', { name: /chat ai/i });
+      const chatTab = screen.getByRole('tab', { name: /chat/i });
       await user.click(chatTab);
 
       // Chat tab now renders a link to unified chat with gameId param
@@ -362,7 +415,7 @@ describe('GameDetailClient', () => {
       render(<GameDetailClient game={mockGame} />);
 
       const tabList = screen.getByRole('tablist');
-      expect(tabList).toHaveClass('grid', 'w-full', 'grid-cols-3');
+      expect(tabList).toHaveClass('grid', 'w-full', 'grid-cols-5');
     });
   });
 

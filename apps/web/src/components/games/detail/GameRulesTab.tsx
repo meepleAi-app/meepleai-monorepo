@@ -1,23 +1,58 @@
 /**
  * Game Rules Tab Component
  *
- * Displays PDF rulebooks, RuleSpecs, and document management
+ * Displays PDF rulebooks and document management with processing state badges.
+ * Uses the 7-state PdfProcessingState for granular status display.
+ *
+ * Issue M3: Connect KB documents to game detail
  */
+
+'use client';
 
 import React from 'react';
 
-import { FileText, Download, Eye, CheckCircle, Clock, XCircle, AlertCircle } from 'lucide-react';
+import {
+  FileText,
+  Download,
+  Eye,
+  CheckCircle,
+  Clock,
+  XCircle,
+  AlertCircle,
+  Upload,
+  Loader2,
+} from 'lucide-react';
+import Link from 'next/link';
 
+import { EmptyStateCard } from '@/components/features/common/EmptyStateCard';
 import { Badge } from '@/components/ui/data-display/badge';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/data-display/card';
-import { Alert, AlertDescription } from '@/components/ui/feedback/alert';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/data-display/card';
+import { Skeleton } from '@/components/ui/feedback/skeleton';
 import { Button } from '@/components/ui/primitives/button';
-import { Game, PdfDocumentDto } from '@/lib/api';
+import type { PdfDocumentDto } from '@/lib/api/schemas/pdf.schemas';
+
+// ============================================================================
+// Types
+// ============================================================================
 
 interface GameRulesTabProps {
-  game: Game;
+  gameId: string;
   documents: PdfDocumentDto[];
+  isLoading?: boolean;
 }
+
+// Processing states ordered by pipeline progression
+const ACTIVE_STATES = ['Uploading', 'Extracting', 'Chunking', 'Embedding', 'Indexing'];
+
+// ============================================================================
+// Helpers
+// ============================================================================
 
 function formatFileSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
@@ -25,214 +60,269 @@ function formatFileSize(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-function getStatusIcon(status: string) {
-  switch (status.toLowerCase()) {
-    case 'completed':
-      return <CheckCircle className="h-4 w-4 text-green-500" />;
-    case 'processing':
-      return <Clock className="h-4 w-4 text-blue-500" />;
-    case 'failed':
-      return <XCircle className="h-4 w-4 text-red-500" />;
-    case 'pending':
-      return <Clock className="h-4 w-4 text-yellow-500" />;
-    default:
-      return <AlertCircle className="h-4 w-4 text-gray-500" />;
+function getProcessingStateIcon(state: string) {
+  const stateLower = state.toLowerCase();
+  if (stateLower === 'ready') {
+    return <CheckCircle className="h-4 w-4 text-green-500" />;
   }
+  if (stateLower === 'failed') {
+    return <XCircle className="h-4 w-4 text-red-500" />;
+  }
+  if (stateLower === 'pending') {
+    return <Clock className="h-4 w-4 text-yellow-500" />;
+  }
+  // Active states: Uploading, Extracting, Chunking, Embedding, Indexing
+  return <Loader2 className="h-4 w-4 text-blue-500 animate-spin" />;
 }
 
-function getStatusBadge(status: string) {
-  const statusLower = status.toLowerCase();
-  switch (statusLower) {
-    case 'completed':
-      return (
-        <Badge variant="default" className="bg-green-600">
-          Completed
-        </Badge>
-      );
-    case 'processing':
-      return (
-        <Badge variant="default" className="bg-blue-600">
-          Processing
-        </Badge>
-      );
-    case 'failed':
-      return <Badge variant="destructive">Failed</Badge>;
-    case 'pending':
-      return <Badge variant="secondary">Pending</Badge>;
-    default:
-      return <Badge variant="outline">{status}</Badge>;
+function getProcessingStateBadge(state: string) {
+  const isActive = ACTIVE_STATES.some(s => s.toLowerCase() === state.toLowerCase());
+
+  if (state.toLowerCase() === 'ready') {
+    return (
+      <Badge variant="default" className="bg-green-600">
+        Pronto
+      </Badge>
+    );
   }
+  if (state.toLowerCase() === 'failed') {
+    return <Badge variant="destructive">Fallito</Badge>;
+  }
+  if (state.toLowerCase() === 'pending') {
+    return <Badge variant="secondary">In attesa</Badge>;
+  }
+  if (isActive) {
+    return (
+      <Badge variant="default" className="bg-blue-600 animate-pulse">
+        {state}
+      </Badge>
+    );
+  }
+  return <Badge variant="outline">{state}</Badge>;
 }
 
-export function GameRulesTab({ game: _game, documents = [] }: GameRulesTabProps) {
-  const completedDocuments = documents.filter(
-    doc => doc.processingStatus.toLowerCase() === 'completed'
+// ============================================================================
+// Component
+// ============================================================================
+
+export function GameRulesTab({ gameId, documents = [], isLoading = false }: GameRulesTabProps) {
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <Card>
+          <CardHeader>
+            <Skeleton className="h-6 w-48" />
+            <Skeleton className="h-4 w-64 mt-2" />
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <Skeleton className="h-16 w-full" />
+            <Skeleton className="h-16 w-full" />
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // Group documents by processing state
+  const readyDocuments = documents.filter(
+    doc =>
+      (doc.processingState ?? doc.processingStatus).toLowerCase() === 'ready' ||
+      (doc.processingState ?? doc.processingStatus).toLowerCase() === 'completed'
   );
-  const processingDocuments = documents.filter(doc =>
-    ['processing', 'pending'].includes(doc.processingStatus.toLowerCase())
+  const activeDocuments = documents.filter(doc => {
+    const state = (doc.processingState ?? doc.processingStatus).toLowerCase();
+    return ACTIVE_STATES.some(s => s.toLowerCase() === state) || state === 'pending';
+  });
+  const failedDocuments = documents.filter(
+    doc => (doc.processingState ?? doc.processingStatus).toLowerCase() === 'failed'
   );
-  const failedDocuments = documents.filter(doc => doc.processingStatus.toLowerCase() === 'failed');
+
+  if (documents.length === 0) {
+    return (
+      <EmptyStateCard
+        title="Nessun documento"
+        description="Carica le regole del gioco per consultarle con l'assistente AI"
+        ctaLabel="Carica Regolamento"
+        onCtaClick={() => {
+          // Navigate to upload — for now link to admin upload
+          window.location.href = `/admin/knowledge-base?gameId=${gameId}`;
+        }}
+        icon={FileText}
+        entityColor="25 95% 45%" // orange for game-related
+      />
+    );
+  }
 
   return (
     <div className="space-y-6">
-      {/* PDF Documents Card */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center justify-between">
-            <span>Rulebooks & Documents</span>
-            <Badge variant="secondary">{documents.length} total</Badge>
-          </CardTitle>
-          <CardDescription>Uploaded PDF rulebooks and documentation</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {documents.length === 0 ? (
-            <Alert>
-              <FileText className="h-4 w-4" />
-              <AlertDescription>
-                No rulebooks have been uploaded for this game yet.
-              </AlertDescription>
-            </Alert>
-          ) : (
-            <div className="space-y-4">
-              {/* Completed Documents */}
-              {completedDocuments.length > 0 && (
-                <div className="space-y-3">
-                  <h4 className="font-semibold text-sm text-muted-foreground">Ready to Use</h4>
-                  <div className="space-y-2">
-                    {completedDocuments.map(doc => (
-                      <div
-                        key={doc.id}
-                        className="flex items-center justify-between p-4 border border-border/50 dark:border-border/30 rounded-lg hover:bg-muted/50 dark:hover:bg-muted/30 transition-colors"
-                      >
-                        <div className="flex items-center gap-3 flex-1 min-w-0">
-                          {getStatusIcon(doc.processingStatus)}
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2">
-                              <p className="font-medium truncate">{doc.fileName}</p>
-                              {getStatusBadge(doc.processingStatus)}
-                            </div>
-                            <div className="flex items-center gap-3 text-xs text-muted-foreground mt-1">
-                              <span>{formatFileSize(doc.fileSizeBytes)}</span>
-                              {doc.pageCount && <span>•</span>}
-                              {doc.pageCount && <span>{doc.pageCount} pages</span>}
-                              <span>•</span>
-                              <span>Uploaded {new Date(doc.uploadedAt).toLocaleDateString()}</span>
-                            </div>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-2 ml-4">
-                          <Button size="sm" variant="outline" disabled>
-                            <Eye className="h-4 w-4 mr-2" />
-                            View
-                          </Button>
-                          <Button size="sm" variant="outline" disabled>
-                            <Download className="h-4 w-4 mr-2" />
-                            Download
-                          </Button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
+      {/* Upload button */}
+      <div className="flex justify-end">
+        <Button asChild variant="outline" size="sm">
+          <Link href={`/admin/knowledge-base?gameId=${gameId}`}>
+            <Upload className="h-4 w-4 mr-2" />
+            Carica Documento
+          </Link>
+        </Button>
+      </div>
 
-              {/* Processing Documents */}
-              {processingDocuments.length > 0 && (
-                <div className="space-y-3">
-                  <h4 className="font-semibold text-sm text-muted-foreground">Processing</h4>
-                  <div className="space-y-2">
-                    {processingDocuments.map(doc => (
-                      <div
-                        key={doc.id}
-                        className="flex items-center justify-between p-4 border border-border/50 dark:border-border/30 rounded-lg bg-blue-50 dark:bg-blue-900/10"
-                      >
-                        <div className="flex items-center gap-3 flex-1 min-w-0">
-                          {getStatusIcon(doc.processingStatus)}
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2">
-                              <p className="font-medium truncate">{doc.fileName}</p>
-                              {getStatusBadge(doc.processingStatus)}
-                            </div>
-                            <div className="flex items-center gap-3 text-xs text-muted-foreground mt-1">
-                              <span>{formatFileSize(doc.fileSizeBytes)}</span>
-                              <span>•</span>
-                              <span>Uploaded {new Date(doc.uploadedAt).toLocaleDateString()}</span>
-                            </div>
-                          </div>
-                        </div>
+      {/* Ready Documents */}
+      {readyDocuments.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center justify-between">
+              <span>Regolamenti Disponibili</span>
+              <Badge variant="secondary">{readyDocuments.length}</Badge>
+            </CardTitle>
+            <CardDescription>Documenti pronti per la consultazione AI</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              {readyDocuments.map(doc => (
+                <div
+                  key={doc.id}
+                  className="flex items-center justify-between p-4 border border-border/50 dark:border-border/30 rounded-lg hover:bg-muted/50 dark:hover:bg-muted/30 transition-colors"
+                >
+                  <div className="flex items-center gap-3 flex-1 min-w-0">
+                    {getProcessingStateIcon(doc.processingState ?? doc.processingStatus)}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <p className="font-medium truncate">{doc.fileName}</p>
+                        {getProcessingStateBadge(doc.processingState ?? doc.processingStatus)}
                       </div>
-                    ))}
+                      <div className="flex items-center gap-3 text-xs text-muted-foreground mt-1">
+                        <span>{formatFileSize(doc.fileSizeBytes)}</span>
+                        {doc.pageCount && (
+                          <>
+                            <span>&middot;</span>
+                            <span>{doc.pageCount} pagine</span>
+                          </>
+                        )}
+                        <span>&middot;</span>
+                        <span>
+                          Caricato il {new Date(doc.uploadedAt).toLocaleDateString('it-IT')}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 ml-4">
+                    <Button size="sm" variant="outline" disabled>
+                      <Eye className="h-4 w-4 mr-2" />
+                      Vedi
+                    </Button>
+                    <Button size="sm" variant="outline" disabled>
+                      <Download className="h-4 w-4 mr-2" />
+                      Scarica
+                    </Button>
                   </div>
                 </div>
-              )}
-
-              {/* Failed Documents */}
-              {failedDocuments.length > 0 && (
-                <div className="space-y-3">
-                  <h4 className="font-semibold text-sm text-muted-foreground">Failed</h4>
-                  <div className="space-y-2">
-                    {failedDocuments.map(doc => (
-                      <div
-                        key={doc.id}
-                        className="flex items-center justify-between p-4 border border-red-200 dark:border-red-700 rounded-lg bg-red-50 dark:bg-red-900/10"
-                      >
-                        <div className="flex items-center gap-3 flex-1 min-w-0">
-                          {getStatusIcon(doc.processingStatus)}
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2">
-                              <p className="font-medium truncate">{doc.fileName}</p>
-                              {getStatusBadge(doc.processingStatus)}
-                            </div>
-                            <div className="flex items-center gap-3 text-xs text-muted-foreground mt-1">
-                              <span>{formatFileSize(doc.fileSizeBytes)}</span>
-                              <span>•</span>
-                              <span>Uploaded {new Date(doc.uploadedAt).toLocaleDateString()}</span>
-                            </div>
-                          </div>
-                        </div>
-                        <Button size="sm" variant="outline" disabled>
-                          Retry
-                        </Button>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
+              ))}
             </div>
-          )}
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      )}
 
-      {/* RuleSpec Section (Placeholder) */}
-      <Card>
-        <CardHeader>
-          <CardTitle>RuleSpec Versions</CardTitle>
-          <CardDescription>Structured rule specifications and version history</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Alert>
-            <AlertCircle className="h-4 w-4" />
-            <AlertDescription>
-              RuleSpec integration coming soon. This will allow you to view and manage structured
-              rule versions.
-            </AlertDescription>
-          </Alert>
-        </CardContent>
-      </Card>
+      {/* Processing Documents */}
+      {activeDocuments.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center justify-between">
+              <span>In Elaborazione</span>
+              <Badge variant="secondary">{activeDocuments.length}</Badge>
+            </CardTitle>
+            <CardDescription>Documenti in fase di processing</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              {activeDocuments.map(doc => {
+                const state = doc.processingState ?? doc.processingStatus;
+                return (
+                  <div
+                    key={doc.id}
+                    className="flex items-center justify-between p-4 border border-blue-200 dark:border-blue-800 rounded-lg bg-blue-50/50 dark:bg-blue-900/10"
+                  >
+                    <div className="flex items-center gap-3 flex-1 min-w-0">
+                      {getProcessingStateIcon(state)}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <p className="font-medium truncate">{doc.fileName}</p>
+                          {getProcessingStateBadge(state)}
+                        </div>
+                        <div className="flex items-center gap-3 text-xs text-muted-foreground mt-1">
+                          <span>{formatFileSize(doc.fileSizeBytes)}</span>
+                          <span>&middot;</span>
+                          <span>
+                            Caricato il {new Date(doc.uploadedAt).toLocaleDateString('it-IT')}
+                          </span>
+                          {doc.progressPercentage > 0 && (
+                            <>
+                              <span>&middot;</span>
+                              <span>{doc.progressPercentage}%</span>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
-      {/* Upload Section (Placeholder) */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Upload New Rulebook</CardTitle>
-          <CardDescription>Add PDF rulebooks to this game</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Alert>
-            <AlertCircle className="h-4 w-4" />
-            <AlertDescription>Document upload functionality coming soon.</AlertDescription>
-          </Alert>
-        </CardContent>
-      </Card>
+      {/* Failed Documents */}
+      {failedDocuments.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center justify-between">
+              <span>Falliti</span>
+              <Badge variant="destructive">{failedDocuments.length}</Badge>
+            </CardTitle>
+            <CardDescription>Documenti con errori di elaborazione</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              {failedDocuments.map(doc => (
+                <div
+                  key={doc.id}
+                  className="flex items-center justify-between p-4 border border-red-200 dark:border-red-700 rounded-lg bg-red-50/50 dark:bg-red-900/10"
+                >
+                  <div className="flex items-center gap-3 flex-1 min-w-0">
+                    {getProcessingStateIcon('failed')}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <p className="font-medium truncate">{doc.fileName}</p>
+                        {getProcessingStateBadge('failed')}
+                      </div>
+                      <div className="flex items-center gap-3 text-xs text-muted-foreground mt-1">
+                        <span>{formatFileSize(doc.fileSizeBytes)}</span>
+                        <span>&middot;</span>
+                        <span>
+                          Caricato il {new Date(doc.uploadedAt).toLocaleDateString('it-IT')}
+                        </span>
+                        {doc.processingError && (
+                          <>
+                            <span>&middot;</span>
+                            <span className="text-red-500 truncate max-w-[200px]">
+                              {doc.processingError}
+                            </span>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  {doc.canRetry && (
+                    <Button size="sm" variant="outline" disabled>
+                      <AlertCircle className="h-4 w-4 mr-2" />
+                      Riprova
+                    </Button>
+                  )}
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }

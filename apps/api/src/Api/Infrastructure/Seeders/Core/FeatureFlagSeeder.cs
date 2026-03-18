@@ -39,6 +39,13 @@ internal static class FeatureFlagSeeder
         new("Features:Arbitro.DemocraticOverride", "Enable democratic override voting on dispute verdicts", true, true, true, true),
         new("Features:AgentMemory.Enabled", "Enable persistent agent memory system", true, true, true, true),
         new("Features:AgentMemory.GuestClaim", "Enable guest account claiming for player history", true, true, true, true),
+
+        // RAG Enhancement flags
+        new("rag.enhancement.adaptive-routing", "Adaptive RAG: skip retrieval for simple queries", true, false, true, true),
+        new("rag.enhancement.crag-evaluation", "CRAG: evaluate retrieval quality before generation", true, false, false, true),
+        new("rag.enhancement.rag-fusion-queries", "RAG-Fusion: multi-query retrieval for better recall", true, false, true, true),
+        new("rag.enhancement.raptor-retrieval", "RAPTOR: hierarchical summary retrieval", true, false, false, true),
+        new("rag.enhancement.graph-traversal", "Graph RAG: entity relation context injection", true, false, false, true),
     ];
 
     /// <summary>

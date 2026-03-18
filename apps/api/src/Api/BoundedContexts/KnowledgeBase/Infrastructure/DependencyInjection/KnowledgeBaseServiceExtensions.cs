@@ -134,6 +134,9 @@ internal static class KnowledgeBaseServiceExtensions
         // RAG Enhancements: Graph RAG entity extractor for knowledge graph construction
         services.AddScoped<IEntityExtractor, EntityExtractor>();
 
+        // RAG Enhancements: Graph RAG retrieval service for entity context injection
+        services.AddScoped<IGraphRetrievalService, GraphRetrievalService>();
+
         // ISSUE-4336: Multi-Agent Router (intelligent routing between Tutor/Arbitro/Decisore)
         services.AddSingleton<Domain.Services.MultiAgentRouter.IntentClassifier>();
         services.AddSingleton<Domain.Services.MultiAgentRouter.RoutingMetricsCollector>();

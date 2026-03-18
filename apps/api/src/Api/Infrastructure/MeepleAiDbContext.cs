@@ -202,6 +202,7 @@ public class MeepleAiDbContext : DbContext
     public DbSet<GameNightPlaylistEntity> GameNightPlaylists => Set<GameNightPlaylistEntity>(); // ISSUE-5582: Game Night Playlist
     public DbSet<GameNightEventEntity> GameNightEvents => Set<GameNightEventEntity>(); // ISSUE-42: Game Night Event
     public DbSet<GameNightRsvpEntity> GameNightRsvps => Set<GameNightRsvpEntity>(); // ISSUE-42: Game Night RSVP
+    public DbSet<RuleDisputeEntity> RuleDisputes => Set<RuleDisputeEntity>(); // Structured rule dispute persistence
     public DbSet<Api.Infrastructure.Entities.SessionTracking.SessionChatMessageEntity> SessionChatMessages => Set<Api.Infrastructure.Entities.SessionTracking.SessionChatMessageEntity>(); // ISSUE-4760
 
     // Issue #4220: Notification preferences
@@ -313,6 +314,7 @@ public class MeepleAiDbContext : DbContext
         modelBuilder.Ignore<BoundedContexts.GameManagement.Domain.Entities.SessionAttachment.SessionAttachment>(); // ISSUE-5360
         modelBuilder.Ignore<BoundedContexts.GameManagement.Domain.Entities.LiveSessionPlayer>(); // ISSUE-4747
         modelBuilder.Ignore<BoundedContexts.GameManagement.Domain.Entities.LiveSessionTeam>(); // ISSUE-4747
+        modelBuilder.Ignore<BoundedContexts.GameManagement.Domain.Entities.RuleDispute>(); // Structured rule dispute aggregate
         modelBuilder.Ignore<BoundedContexts.Administration.Domain.Entities.AdminReport>(); // ISSUE-916
         modelBuilder.Ignore<BoundedContexts.Administration.Domain.Entities.ReportExecution>(); // ISSUE-916
         modelBuilder.Ignore<BoundedContexts.DocumentProcessing.Domain.Entities.DocumentCollection>(); // ISSUE-2051

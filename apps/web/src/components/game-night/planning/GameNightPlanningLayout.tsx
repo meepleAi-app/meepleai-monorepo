@@ -7,9 +7,9 @@ import { Plus, Users } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useGameNightStore } from '@/store/game-night';
 
-import { AISuggestionCard } from './AISuggestionCard';
 import { GameNightTimeline } from './GameNightTimeline';
 import { InlineGamePicker } from './InlineGamePicker';
+import { MeepleAISuggestionCard } from './MeepleAISuggestionCard';
 import { MeepleDealtGameCard } from './MeepleDealtGameCard';
 
 const ROTATIONS = [-2, 1, -1, 2, -0.5, 1.5];
@@ -62,7 +62,7 @@ export function GameNightPlanningLayout({
         </div>
 
         {/* AI suggestions — contextual based on player count */}
-        <AISuggestionCard suggestions={[]} />
+        <MeepleAISuggestionCard suggestions={[]} />
       </div>
 
       {/* Right column — table, picker, timeline */}

@@ -17,6 +17,26 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 import { AgentChatPanel, type ChatMessage, type AgentMode, type GamePdf } from '../AgentChatPanel';
 
+// Mock MeeplePdfReferenceCard (migrated from PdfReferenceCard)
+vi.mock('../MeeplePdfReferenceCard', () => ({
+  MeeplePdfReferenceCard: ({
+    reference,
+    onJumpToPage,
+  }: {
+    reference: { pdfId: string; pdfName: string; pageNumber: number; excerpt: string };
+    onJumpToPage: (pageNumber: number, pdfId: string) => void;
+  }) => (
+    <div
+      data-testid="meeple-pdf-reference-card"
+      onClick={() => onJumpToPage(reference.pageNumber, reference.pdfId)}
+    >
+      <span>{reference.pdfName}</span>
+      <span>Pag. {reference.pageNumber}</span>
+      {reference.excerpt && <span>{reference.excerpt}</span>}
+    </div>
+  ),
+}));
+
 // Mock fetch globally
 global.fetch = vi.fn();
 
@@ -406,7 +426,7 @@ describe('AgentChatPanel', () => {
       // Simulate slow API response
       vi.mocked(global.fetch).mockImplementationOnce(
         () =>
-          new Promise((resolve) => {
+          new Promise(resolve => {
             setTimeout(
               () =>
                 resolve({

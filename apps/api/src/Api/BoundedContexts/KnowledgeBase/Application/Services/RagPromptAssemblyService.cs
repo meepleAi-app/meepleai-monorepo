@@ -8,6 +8,7 @@ using Api.BoundedContexts.KnowledgeBase.Domain.Services.Enhancements;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services.Reranking;
 using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 using Api.Models;
+using Api.Observability;
 using Api.Services;
 using Api.SharedKernel.Domain.ValueObjects;
 using Microsoft.Extensions.Logging;
@@ -168,11 +169,21 @@ internal sealed class RagPromptAssemblyService : IRagPromptAssemblyService
                     .GetActiveEnhancementsAsync(userTier, ct).ConfigureAwait(false);
             }
 
+            foreach (var flag in activeEnhancements.GetIndividualFlags())
+            {
+                MeepleAiMetrics.RagEnhancementActivations.Add(1,
+                    new KeyValuePair<string, object?>("enhancement", flag.ToString()));
+            }
+
             if (activeEnhancements.HasFlag(RagEnhancement.AdaptiveRouting))
             {
                 var complexity = await _complexityClassifier.ClassifyAsync(userQuestion, ct).ConfigureAwait(false);
                 _logger.LogInformation("Adaptive RAG: {Level} (confidence: {Confidence:F2})",
                     complexity.Level, complexity.Confidence);
+
+                MeepleAiMetrics.RagAdaptiveRoutingDecisions.Add(1,
+                    new KeyValuePair<string, object?>("level", complexity.Level.ToString()),
+                    new KeyValuePair<string, object?>("skipped_retrieval", (!complexity.RequiresRetrieval).ToString()));
 
                 debugCollector?.Add(StreamingEventType.DebugAdaptiveRouting,
                     new DebugAdaptiveRoutingData(
@@ -195,6 +206,7 @@ internal sealed class RagPromptAssemblyService : IRagPromptAssemblyService
                 var fusionStopwatch = System.Diagnostics.Stopwatch.StartNew();
                 queries = await _queryExpander.ExpandAsync(userQuestion, ct).ConfigureAwait(false);
                 fusionStopwatch.Stop();
+                MeepleAiMetrics.RagFusionQueryCount.Record(queries.Count);
                 _logger.LogInformation("RAG-Fusion: expanded to {Count} query variants", queries.Count);
 
                 if (queries.Count > 1)
@@ -240,6 +252,12 @@ internal sealed class RagPromptAssemblyService : IRagPromptAssemblyService
                 .OrderByDescending(r => r.Score)
                 .ToList();
 
+            MeepleAiMetrics.RagRetrievalChunkCount.Record(filteredChunks.Count);
+            if (filteredChunks.Count > 0)
+            {
+                MeepleAiMetrics.RagRetrievalAvgScore.Record(filteredChunks.Average(c => (double)c.Score));
+            }
+
             if (filteredChunks.Count == 0)
             {
                 _logger.LogInformation("No chunks above minScore {MinScore} for game {GameId}", DefaultMinScore, gameId);
@@ -265,6 +283,9 @@ internal sealed class RagPromptAssemblyService : IRagPromptAssemblyService
 
                 var evaluation = await _relevanceEvaluator
                     .EvaluateAsync(userQuestion, scoredChunks, ct).ConfigureAwait(false);
+
+                MeepleAiMetrics.RagCragVerdicts.Add(1,
+                    new KeyValuePair<string, object?>("verdict", evaluation.Verdict.ToString()));
 
                 if (evaluation.ShouldRequery)
                 {

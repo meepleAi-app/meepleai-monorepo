@@ -12,6 +12,7 @@
 import React from 'react';
 
 import { Users, Clock, Calendar, Trophy, PlayCircle } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 
 import { EmptyStateCard } from '@/components/features/common/EmptyStateCard';
 import { Badge } from '@/components/ui/data-display/badge';
@@ -82,6 +83,7 @@ export function GameSessionsTab({
   sessions = [],
   isLoading = false,
 }: GameSessionsTabProps) {
+  const router = useRouter();
   if (isLoading) {
     return (
       <div className="space-y-6">
@@ -119,7 +121,7 @@ export function GameSessionsTab({
         ctaLabel="Inizia una Partita"
         onCtaClick={() => {
           // Navigate to play tab or session creation
-          window.location.href = '/play';
+          router.push('/play');
         }}
         icon={PlayCircle}
         entityColor="220 70% 50%" // blue for sessions

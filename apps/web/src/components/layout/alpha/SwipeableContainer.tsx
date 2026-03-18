@@ -23,16 +23,16 @@ interface SwipeableContainerProps {
   children: ReactNode[];
 }
 
+const SECTION_TITLES: Record<AlphaTab, string> = {
+  home: 'Home',
+  library: 'Libreria',
+  play: 'Gioca',
+  chat: 'Chat',
+};
+
 export function SwipeableContainer({ children }: SwipeableContainerProps) {
   const { activeTab, setActiveTab, setSectionTitle } = useAlphaNav();
   const activeIndex = TAB_ORDER.indexOf(activeTab);
-
-  const SECTION_TITLES: Record<AlphaTab, string> = {
-    home: 'Home',
-    library: 'Libreria',
-    play: 'Gioca',
-    chat: 'Chat',
-  };
 
   const navigateToIndex = useCallback(
     (index: number) => {

@@ -23,6 +23,7 @@ import {
   Loader2,
 } from 'lucide-react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 
 import { EmptyStateCard } from '@/components/features/common/EmptyStateCard';
 import { Badge } from '@/components/ui/data-display/badge';
@@ -106,6 +107,7 @@ function getProcessingStateBadge(state: string) {
 // ============================================================================
 
 export function GameRulesTab({ gameId, documents = [], isLoading = false }: GameRulesTabProps) {
+  const router = useRouter();
   if (isLoading) {
     return (
       <div className="space-y-6">
@@ -145,7 +147,7 @@ export function GameRulesTab({ gameId, documents = [], isLoading = false }: Game
         ctaLabel="Carica Regolamento"
         onCtaClick={() => {
           // Navigate to upload — for now link to admin upload
-          window.location.href = `/admin/knowledge-base?gameId=${gameId}`;
+          router.push(`/admin/knowledge-base?gameId=${gameId}`);
         }}
         icon={FileText}
         entityColor="25 95% 45%" // orange for game-related

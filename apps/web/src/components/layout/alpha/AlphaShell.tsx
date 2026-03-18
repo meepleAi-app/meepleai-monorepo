@@ -1,7 +1,7 @@
 /**
  * AlphaShell — Server component layout shell for the alpha UI redesign.
  *
- * Activated via the `alpha-layout` feature flag in (authenticated)/layout.tsx.
+ * Activated via the `alpha_layout` feature flag in (authenticated)/layout.tsx.
  * Mirrors the UnifiedShell pattern: server component receives isAdmin from
  * the parent layout and delegates rendering to AlphaShellClient.
  */

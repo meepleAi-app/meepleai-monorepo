@@ -1,7 +1,7 @@
 /**
  * Authenticated Route Group Layout
  *
- * Uses LayoutSwitch to conditionally render AlphaShell (alpha-layout flag)
+ * Uses LayoutSwitch to conditionally render AlphaShell (alpha_layout flag)
  * or UnifiedShell (default). Both shells are server-rendered and passed as
  * slots so the client-side flag check can swap between them.
  */

@@ -23,14 +23,12 @@ export function CardDetailModal() {
 
   const isOpen = detailEntityId !== null && detailEntityType !== null;
 
-  if (!isOpen || !detailEntityId) {
-    return null;
-  }
-
+  // Always render the drawer so exit animations can play.
+  // The Sheet component controls visibility via the `open` prop.
   return (
     <ExtraMeepleCardDrawer
-      entityType={detailEntityType as DrawerEntityType}
-      entityId={detailEntityId}
+      entityType={(detailEntityType ?? 'game') as DrawerEntityType}
+      entityId={detailEntityId ?? ''}
       open={isOpen}
       onClose={closeDetail}
     />

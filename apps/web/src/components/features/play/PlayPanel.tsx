@@ -160,7 +160,7 @@ export function PlayPanel() {
       {/* FAB: Nuova Sessione */}
       <button
         onClick={() => router.push('/sessions/new')}
-        className="fixed bottom-20 right-4 lg:bottom-6 lg:right-6 z-40
+        className="absolute bottom-20 right-4 lg:bottom-6 lg:right-6 z-40
                    w-14 h-14 rounded-full flex items-center justify-center
                    text-white shadow-lg hover:shadow-xl
                    transition-all duration-200 hover:scale-105 active:scale-95"

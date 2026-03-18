@@ -7,6 +7,8 @@
 
 import { z } from 'zod';
 
+import { logger } from '@/lib/logger';
+
 import {
   AgentDtoSchema,
   AgentResponseDtoSchema,
@@ -459,6 +461,8 @@ export function createAgentsClient({ httpClient }: CreateAgentsClientParams) {
       agentName?: string;
       strategyName?: string;
       strategyParameters?: Record<string, unknown>;
+      /** Pre-selected KB document IDs (from SearchAgentSheet wizard) */
+      documentIds?: string[];
     }): Promise<{
       agentId: string;
       agentName: string;
@@ -630,7 +634,7 @@ export function createAgentsClient({ httpClient }: CreateAgentsClientParams) {
                 const event = JSON.parse(data);
                 yield event as SSEEvent;
               } catch (e) {
-                console.error('Failed to parse SSE event:', e);
+                logger.error('Failed to parse SSE event:', e);
               }
             }
           }

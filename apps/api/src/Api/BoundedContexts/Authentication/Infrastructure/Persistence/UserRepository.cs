@@ -80,7 +80,7 @@ public class UserRepository : RepositoryBase, IUserRepository
             Id = entity.Id,
             Email = entity.Email.Value,
             DisplayName = entity.DisplayName,
-            PasswordHash = entity.PasswordHash.Value,
+            PasswordHash = entity.PasswordHash?.Value,
             Role = entity.Role.Value,
             Tier = entity.Tier.Value,
             CreatedAt = entity.CreatedAt,
@@ -106,7 +106,11 @@ public class UserRepository : RepositoryBase, IUserRepository
             AvatarUrl = entity.AvatarUrl,
             Bio = entity.Bio,
             OnboardingWizardSeenAt = entity.OnboardingWizardSeenAt,
-            OnboardingDismissedAt = entity.OnboardingDismissedAt
+            OnboardingDismissedAt = entity.OnboardingDismissedAt,
+            // Issue #124: Admin invitation flow — pending user fields
+            Status = entity.Status.ToString(),
+            InvitedByUserId = entity.InvitedByUserId,
+            InvitationExpiresAt = entity.InvitationExpiresAt
         };
 
         // Map backup codes
@@ -146,9 +150,13 @@ public class UserRepository : RepositoryBase, IUserRepository
         // Update scalar properties
         existingUser.Email = entity.Email.Value;
         existingUser.DisplayName = entity.DisplayName;
-        existingUser.PasswordHash = entity.PasswordHash.Value;
+        existingUser.PasswordHash = entity.PasswordHash?.Value;
         existingUser.Role = entity.Role.Value;
         existingUser.Tier = entity.Tier.Value;
+        // Issue #124: Admin invitation flow — update status and invitation fields
+        existingUser.Status = entity.Status.ToString();
+        existingUser.InvitedByUserId = entity.InvitedByUserId;
+        existingUser.InvitationExpiresAt = entity.InvitationExpiresAt;
         existingUser.TotpSecretEncrypted = entity.TotpSecret?.EncryptedValue;
         existingUser.IsTwoFactorEnabled = entity.IsTwoFactorEnabled;
         existingUser.TwoFactorEnabledAt = entity.TwoFactorEnabledAt;
@@ -243,18 +251,17 @@ public class UserRepository : RepositoryBase, IUserRepository
             throw new InvalidOperationException("Persisted user record is missing an Email value.");
         }
 
-        if (string.IsNullOrWhiteSpace(entity.PasswordHash))
-        {
-            throw new InvalidOperationException($"Persisted user record {entity.Id} is missing a password hash.");
-        }
-
         if (string.IsNullOrWhiteSpace(entity.Role))
         {
             throw new InvalidOperationException($"Persisted user record {entity.Id} is missing a role.");
         }
 
         var email = new Email(entity.Email);
-        var passwordHash = PasswordHash.FromStored(entity.PasswordHash);
+        // Issue #124: PasswordHash can be null for pending (invited) users
+        var isPendingUser = string.IsNullOrWhiteSpace(entity.PasswordHash);
+        var passwordHash = isPendingUser
+            ? PasswordHash.Create("TemporaryPlaceholder123!") // Placeholder for constructor; overridden below
+            : PasswordHash.FromStored(entity.PasswordHash);
         var role = Role.Parse(entity.Role);
         var tier = !string.IsNullOrWhiteSpace(entity.Tier) ? UserTier.Parse(entity.Tier) : UserTier.Free;
         var displayName = string.IsNullOrWhiteSpace(entity.DisplayName)
@@ -269,6 +276,12 @@ public class UserRepository : RepositoryBase, IUserRepository
             role: role,
             tier: tier
         );
+
+        // Issue #124: Restore null PasswordHash for pending users (overrides placeholder)
+        if (isPendingUser)
+        {
+            user.RestorePasswordHash(null);
+        }
 
         // Reconstruct preferences (use domain method to apply)
         user.UpdatePreferences(
@@ -339,6 +352,15 @@ public class UserRepository : RepositoryBase, IUserRepository
             entity.OnboardingCompleted,
             entity.OnboardingSkipped,
             entity.OnboardingCompletedAt);
+
+        // Issue #124: Restore account status and invitation state for pending users
+        if (!string.IsNullOrWhiteSpace(entity.Status)
+            && Enum.TryParse<Api.SharedKernel.Domain.Enums.UserAccountStatus>(entity.Status, out var status))
+        {
+            user.RestoreAccountStatus(status);
+        }
+
+        user.RestoreInvitationState(entity.InvitedByUserId, entity.InvitationExpiresAt);
 
         return user;
     }

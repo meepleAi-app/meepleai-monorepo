@@ -10,7 +10,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { RefreshCw, Sparkles } from 'lucide-react';
 
 import { Button } from '@/components/ui/primitives/button';
-import { usePWA } from '@/lib/hooks/usePWA';
+import { usePWA } from '@/lib/domain-hooks/usePWA';
 import { cn } from '@/lib/utils';
 
 // ============================================================================
@@ -38,10 +38,7 @@ export function UpdatePrompt({ className }: UpdatePromptProps) {
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: -50 }}
         transition={{ type: 'spring', damping: 25 }}
-        className={cn(
-          'fixed top-4 left-4 right-4 z-50 mx-auto max-w-md',
-          className
-        )}
+        className={cn('fixed top-4 left-4 right-4 z-50 mx-auto max-w-md', className)}
       >
         <div className="relative overflow-hidden rounded-xl bg-gradient-to-r from-blue-600/90 to-blue-500/90 p-4 text-white shadow-xl backdrop-blur-sm">
           <div className="flex items-start gap-4">

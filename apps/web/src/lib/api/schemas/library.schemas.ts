@@ -9,6 +9,8 @@
 
 import { z } from 'zod';
 
+import { logger } from '@/lib/logger';
+
 // Game state types for library filtering (Issue #2866)
 // Valid enum values - strict parsing
 const VALID_GAME_STATES = ['Nuovo', 'InPrestito', 'Wishlist', 'Owned'] as const;
@@ -21,7 +23,7 @@ export const GameStateTypeWithFallbackSchema = z.string().transform(val => {
     return val as GameStateType;
   }
   // Log unknown state for debugging, fallback to 'Owned'
-  console.warn(`Unknown GameStateType received: "${val}", falling back to "Owned"`);
+  logger.warn(`Unknown GameStateType received: "${val}", falling back to "Owned"`);
   return 'Owned' as GameStateType;
 });
 
@@ -64,6 +66,10 @@ export const UserLibraryStatsSchema = z.object({
   favoriteGames: z.number().int().nonnegative(),
   oldestAddedAt: z.string().datetime().nullable().optional(),
   newestAddedAt: z.string().datetime().nullable().optional(),
+  nuovoCount: z.number().int().nonnegative().default(0),
+  inPrestitoCount: z.number().int().nonnegative().default(0),
+  wishlistCount: z.number().int().nonnegative().default(0),
+  ownedCount: z.number().int().nonnegative().default(0),
 });
 
 export type UserLibraryStats = z.infer<typeof UserLibraryStatsSchema>;
@@ -132,6 +138,7 @@ export type UpdateGameStateRequest = z.infer<typeof UpdateGameStateRequestSchema
 export interface GetUserLibraryParams {
   page?: number;
   pageSize?: number;
+  search?: string;
   favoritesOnly?: boolean;
   stateFilter?: GameStateType[];
   sortBy?: 'addedAt' | 'title' | 'favorite';

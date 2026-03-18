@@ -16,13 +16,13 @@ dev-down: ## Stop dev environment
 		--profile automation --profile proxy --profile storage down
 
 tunnel: ## Open SSH tunnels to staging server
-	pwsh -File scripts/ssh-tunnel.ps1 -Action start
+	bash scripts/integration-tunnel.sh start
 
 tunnel-stop: ## Close SSH tunnels
-	pwsh -File scripts/ssh-tunnel.ps1 -Action stop
+	bash scripts/integration-tunnel.sh stop
 
 tunnel-status: ## Check SSH tunnel status
-	pwsh -File scripts/ssh-tunnel.ps1 -Action status
+	bash scripts/integration-tunnel.sh status
 
 integration: ## Start local api+web with remote services (run 'make tunnel' first)
 	@echo "Ensure tunnels are open: make tunnel"
@@ -62,6 +62,20 @@ secrets-staging: ## Setup staging secrets
 secrets-prod: ## Setup production secrets
 	pwsh -File secrets/setup-secrets.ps1 -Environment prod
 
+# === Database Seeds ===
+
+snapshot: ## Snapshot staging DB to infra/seeds/ (requires SSH access)
+	bash scripts/snapshot-staging.sh
+
+restore-staging: ## Restore staging DB from latest snapshot
+	bash scripts/restore-staging.sh
+
+restore-local: ## Restore local dev DB from latest snapshot (requires make dev running)
+	bash scripts/restore-local.sh
+
+seed-games: ## Seed test games on staging via API (requires SSH access)
+	bash scripts/seed-all-games-staging.sh
+
 # === Utilities ===
 
 logs: ## Tail logs for a service (usage: make logs s=api)
@@ -85,4 +99,5 @@ help: ## Show this help
 .PHONY: dev dev-core dev-down tunnel tunnel-stop tunnel-status integration \
         integration-down staging staging-down prod prod-down \
         secrets-dev secrets-integration secrets-staging secrets-prod \
+        snapshot restore-staging restore-local seed-games \
         logs ps build clean help

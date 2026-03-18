@@ -106,10 +106,7 @@ describe('AdminGameImportWizardClient', () => {
 
       expect(screen.getByText('Authentication Required')).toBeInTheDocument();
       expect(screen.getByText('Please sign in to access the admin wizard.')).toBeInTheDocument();
-      expect(screen.getByRole('link', { name: /sign in/i })).toHaveAttribute(
-        'href',
-        '/auth/signin'
-      );
+      expect(screen.getByRole('link', { name: /sign in/i })).toHaveAttribute('href', '/login');
     });
 
     it('renders wizard when authenticated', () => {

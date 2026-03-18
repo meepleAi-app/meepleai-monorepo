@@ -2,7 +2,7 @@ using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Api.BoundedContexts.Administration.Application.Queries.CheckPermission;
 using Api.BoundedContexts.Administration.Application.Services;
-using Api.BoundedContexts.Administration.Domain.Enums;
+using Api.SharedKernel.Domain.Enums;
 using Api.BoundedContexts.Administration.Domain.ValueObjects;
 using Api.SharedKernel.Domain.ValueObjects;
 using Api.Infrastructure;

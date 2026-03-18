@@ -44,6 +44,7 @@ import { ProgressBadge } from '@/components/pdf/progress-badge';
 import { Button } from '@/components/ui/primitives/button';
 import { api } from '@/lib/api';
 import type { PdfDocumentDto } from '@/lib/api';
+import { logger } from '@/lib/logger';
 import { cn } from '@/lib/utils';
 
 // ============================================================================
@@ -161,7 +162,7 @@ export function MeepleInfoCard({
       const docs = await api.documents.getDocumentsByGame(gameId);
       setDocuments(docs);
     } catch (err) {
-      console.error('[MeepleInfoCard] Failed to fetch documents:', err);
+      logger.error('[MeepleInfoCard] Failed to fetch documents:', err);
       setDocsError('Impossibile caricare i documenti');
     } finally {
       setDocsLoading(false);

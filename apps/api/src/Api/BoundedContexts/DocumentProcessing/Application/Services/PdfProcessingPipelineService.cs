@@ -1,6 +1,7 @@
 using Api.BoundedContexts.DocumentProcessing.Domain.Enums;
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.External;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services.Enhancements;
+using Api.BoundedContexts.KnowledgeBase.Infrastructure.Persistence;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Api.Infrastructure.Entities.KnowledgeBase;
@@ -8,6 +9,8 @@ using Api.Services;
 using Api.Services.Pdf;
 using Microsoft.EntityFrameworkCore;
 using System.Text.Json;
+using KbEntities = Api.BoundedContexts.KnowledgeBase.Domain.Entities;
+using KbValueObjects = Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 
 namespace Api.BoundedContexts.DocumentProcessing.Application.Services;
 
@@ -30,6 +33,7 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
     private readonly TimeProvider _timeProvider;
     private readonly ILogger<PdfProcessingPipelineService> _logger;
     private readonly IRaptorIndexer? _raptorIndexer;
+    private readonly IQdrantVectorStoreAdapter? _vectorStore;
 
     public PdfProcessingPipelineService(
         MeepleAiDbContext db,
@@ -40,7 +44,8 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
         IBlobStorageService blobStorageService,
         TimeProvider timeProvider,
         ILogger<PdfProcessingPipelineService> logger,
-        IRaptorIndexer? raptorIndexer = null)
+        IRaptorIndexer? raptorIndexer = null,
+        IQdrantVectorStoreAdapter? vectorStore = null)
     {
         _db = db ?? throw new ArgumentNullException(nameof(db));
         _pdfTextExtractor = pdfTextExtractor ?? throw new ArgumentNullException(nameof(pdfTextExtractor));
@@ -51,6 +56,7 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
         _timeProvider = timeProvider ?? throw new ArgumentNullException(nameof(timeProvider));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _raptorIndexer = raptorIndexer;
+        _vectorStore = vectorStore;
     }
 
     public async Task ProcessAsync(
@@ -117,19 +123,15 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
             }
 
             // === RAPTOR: Build hierarchical summary tree (optional, non-blocking) ===
-            // Timeout: 60s max to prevent LLM calls from blocking the pipeline indefinitely
             if (_raptorIndexer != null && chunks.Count > 3)
             {
                 try
                 {
-                    using var raptorCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-                    raptorCts.CancelAfter(TimeSpan.FromSeconds(60));
-
                     var chunkTexts = chunks.Select(c => c.Text).ToList();
                     var gameId = pdfDoc.GameId ?? Guid.Empty;
                     var raptorResult = await _raptorIndexer.BuildTreeAsync(
                         pdfDoc.Id, gameId,
-                        chunkTexts, maxLevels: 3, raptorCts.Token).ConfigureAwait(false);
+                        chunkTexts, maxLevels: 3, cancellationToken).ConfigureAwait(false);
 
                     if (raptorResult.TotalNodes > 0)
                     {
@@ -142,14 +144,8 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
                             raptorResult.Levels, raptorResult.TotalNodes, pdfDoc.Id);
                     }
                 }
-                catch (OperationCanceledException ex) when (!cancellationToken.IsCancellationRequested)
-                {
-                    _logger.LogWarning(ex,
-                        "[PdfPipeline] RAPTOR indexing timed out for PDF {PdfId} (60s limit), continuing without hierarchical summaries",
-                        pdfDoc.Id);
-                }
 #pragma warning disable CA1031 // RAPTOR is optional enhancement, must not block pipeline
-                catch (Exception ex) when (!cancellationToken.IsCancellationRequested)
+                catch (Exception ex)
                 {
                     _logger.LogWarning(ex,
                         "[PdfPipeline] RAPTOR indexing failed for PDF {PdfId}, continuing without hierarchical summaries",
@@ -203,15 +199,20 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
         string filePath,
         CancellationToken cancellationToken)
     {
-        // E2E fix: Use blob storage service instead of direct filesystem access (supports S3/R2)
-        var fileId = pdfDoc.Id.ToString();
+        // Issue #501: Use blob storage with correct GUID format (no hyphens) to match StoreAsync key format
+        var fileId = pdfDoc.Id.ToString("N"); // "N" = no hyphens, matches S3BlobStorageService.StoreAsync
         var gameId = (pdfDoc.PrivateGameId ?? pdfDoc.GameId)?.ToString() ?? string.Empty;
         var fileStream = await _blobStorageService.RetrieveAsync(fileId, gameId, cancellationToken).ConfigureAwait(false);
 
         if (fileStream == null)
         {
-            // Fallback to local filesystem for backward compatibility
+            // Fallback to local filesystem for backward compatibility (dev without S3)
             _logger.LogWarning("[PdfPipeline] Blob storage returned null for {PdfId}, falling back to filesystem path: {FilePath}", fileId, filePath);
+            if (!File.Exists(filePath))
+            {
+                throw new FileNotFoundException(
+                    $"PDF file not found in blob storage or filesystem: {filePath}", filePath);
+            }
             fileStream = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read);
         }
 
@@ -372,11 +373,9 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
         List<float[]> embeddings,
         CancellationToken cancellationToken)
     {
-        // Vector store (Qdrant) has been removed — skip vector indexing.
-        // Still update the VectorDocument record for tracking purposes.
         var chunkCount = chunks.Count;
 
-        // Update or create VectorDocument record
+        // Update or create VectorDocument record (tracking)
         var vectorDoc = await _db.VectorDocuments
             .FirstOrDefaultAsync(v => v.PdfDocumentId == pdfDoc.Id, cancellationToken)
             .ConfigureAwait(false);
@@ -387,7 +386,7 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
             {
                 Id = Guid.NewGuid(),
                 GameId = pdfDoc.GameId,
-                SharedGameId = pdfDoc.SharedGameId, // Issue #5185: propagate SharedGameId from PDF
+                SharedGameId = pdfDoc.SharedGameId,
                 PdfDocumentId = pdfDoc.Id,
                 IndexingStatus = "completed",
                 ChunkCount = chunkCount,
@@ -405,6 +404,48 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
         }
 
         await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+        // Index embeddings in pgvector for semantic search
+        if (_vectorStore != null && embeddings.Count == chunks.Count)
+        {
+            var gameId = pdfDoc.GameId ?? pdfDoc.SharedGameId ?? Guid.Empty;
+            if (gameId == Guid.Empty)
+            {
+                _logger.LogWarning(
+                    "[PdfPipeline] No GameId for PDF {PdfId}, skipping pgvector indexing",
+                    pdfDoc.Id);
+                return;
+            }
+
+            // Ensure pgvector table + HNSW index exist (idempotent)
+            var dimension = embeddings[0].Length;
+            await _vectorStore.EnsureCollectionExistsAsync(gameId, dimension, cancellationToken)
+                .ConfigureAwait(false);
+
+            // Delete old embeddings for this document (re-processing support)
+            await _vectorStore.DeleteByVectorDocumentIdAsync(vectorDoc.Id, cancellationToken)
+                .ConfigureAwait(false);
+
+            // Build Embedding domain objects and bulk-insert via pgvector COPY
+            var modelName = _embeddingService.GetModelName();
+            var embeddingEntities = chunks.Select((chunk, i) =>
+                new KbEntities.Embedding(
+                    id: Guid.NewGuid(),
+                    vectorDocumentId: vectorDoc.Id,
+                    textContent: chunk.Text,
+                    vector: new KbValueObjects.Vector(embeddings[i]),
+                    model: modelName,
+                    chunkIndex: i,
+                    pageNumber: Math.Max(1, chunk.Page)))
+                .ToList();
+
+            await _vectorStore.IndexBatchAsync(embeddingEntities, cancellationToken)
+                .ConfigureAwait(false);
+
+            _logger.LogInformation(
+                "[PdfPipeline] Indexed {Count} embeddings in pgvector for PDF {PdfId} (gameId={GameId})",
+                embeddingEntities.Count, pdfDoc.Id, gameId);
+        }
     }
 
     private async Task SaveTextChunksAsync(

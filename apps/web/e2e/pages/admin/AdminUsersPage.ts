@@ -8,8 +8,8 @@ export class AdminUsersPage extends BasePage {
   }
 
   async goto(): Promise<void> {
-    await this.page.goto('/admin/users');
-    await this.waitForLoad();
+    await this.page.goto('/admin/users', { waitUntil: 'domcontentloaded' });
+    await this.page.waitForTimeout(2000);
   }
 
   async clickInviteButton(): Promise<void> {
@@ -41,13 +41,16 @@ export class AdminUsersPage extends BasePage {
   async changeUserRole(email: string, newRole: string): Promise<void> {
     const userRow = await this.findUserRow(email);
     // InlineRoleSelect: shadcn Select uses a <button> trigger, not native <select>
-    const roleSelect = userRow.locator(
-      'select, [role="combobox"], button:has-text("User"), button:has-text("Editor"), button:has-text("Admin")',
-    ).first();
+    const roleSelect = userRow
+      .locator(
+        'select, [role="combobox"], button:has-text("User"), button:has-text("Editor"), button:has-text("Admin")'
+      )
+      .first();
     await expect(roleSelect).toBeVisible({ timeout: 5_000 });
     await roleSelect.click();
     // Select the new role from dropdown
-    await this.page.getByRole('option', { name: new RegExp(`^${newRole}$`, 'i') })
+    await this.page
+      .getByRole('option', { name: new RegExp(`^${newRole}$`, 'i') })
       .or(this.page.getByText(new RegExp(`^${newRole}$`, 'i')).last())
       .click();
 

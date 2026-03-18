@@ -45,7 +45,7 @@ vi.mock('../PdfPageModal', () => ({
 }));
 
 // Mock useAppMode hook
-vi.mock('@/hooks/use-app-mode', () => ({
+vi.mock('@/hooks/useAppMode', () => ({
   useAppMode: () => 'casual',
 }));
 

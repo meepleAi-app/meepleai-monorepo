@@ -106,7 +106,8 @@ test.describe('Admin-User Onboarding Flow', () => {
     await test.step('Fill and send invitation', async () => {
       await adminUsersPage.fillInvitationForm(testUserEmail, 'user');
       await adminUsersPage.submitInvitation();
-      await adminUsersPage.waitForNetworkIdle();
+      // Don't use waitForNetworkIdle — admin page has continuous health polling
+      await page.waitForTimeout(3000);
     });
 
     await test.step('Extract invitation token/URL', async () => {

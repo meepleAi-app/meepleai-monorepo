@@ -89,7 +89,7 @@ export function IntlProvider({ children, locale }: IntlProviderProps) {
         // Only log missing translation errors in development
         if (process.env.NODE_ENV === 'development') {
           if (err.code === 'MISSING_TRANSLATION') {
-            console.warn('Missing translation:', err.message);
+            logger.warn(`Missing translation: ${err.message}`);
           } else {
             logger.error(
               'Intl error',

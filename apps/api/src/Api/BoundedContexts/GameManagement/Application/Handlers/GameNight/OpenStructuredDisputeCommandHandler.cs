@@ -4,6 +4,7 @@ using Api.BoundedContexts.GameManagement.Domain.Repositories;
 using Api.Middleware.Exceptions;
 using Api.Services;
 using Api.SharedKernel.Application.Interfaces;
+using Api.SharedKernel.Infrastructure.Persistence;
 
 namespace Api.BoundedContexts.GameManagement.Application.Handlers.GameNight;
 
@@ -22,15 +23,18 @@ internal sealed class OpenStructuredDisputeCommandHandler
     private readonly ILiveSessionRepository _sessionRepository;
     private readonly IRuleDisputeRepository _disputeRepository;
     private readonly IFeatureFlagService _featureFlagService;
+    private readonly IUnitOfWork _unitOfWork;
 
     public OpenStructuredDisputeCommandHandler(
         ILiveSessionRepository sessionRepository,
         IRuleDisputeRepository disputeRepository,
-        IFeatureFlagService featureFlagService)
+        IFeatureFlagService featureFlagService,
+        IUnitOfWork unitOfWork)
     {
         _sessionRepository = sessionRepository ?? throw new ArgumentNullException(nameof(sessionRepository));
         _disputeRepository = disputeRepository ?? throw new ArgumentNullException(nameof(disputeRepository));
         _featureFlagService = featureFlagService ?? throw new ArgumentNullException(nameof(featureFlagService));
+        _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
     }
 
     public async Task<Guid> Handle(
@@ -88,6 +92,8 @@ internal sealed class OpenStructuredDisputeCommandHandler
         await _disputeRepository
             .AddAsync(dispute, cancellationToken)
             .ConfigureAwait(false);
+
+        await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
         return dispute.Id;
     }

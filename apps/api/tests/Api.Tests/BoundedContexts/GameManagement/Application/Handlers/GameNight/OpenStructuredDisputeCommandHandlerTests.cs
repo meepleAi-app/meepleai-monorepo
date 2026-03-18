@@ -4,6 +4,7 @@ using Api.BoundedContexts.GameManagement.Domain.Entities;
 using Api.BoundedContexts.GameManagement.Domain.Repositories;
 using Api.Middleware.Exceptions;
 using Api.Services;
+using Api.SharedKernel.Infrastructure.Persistence;
 using Api.Tests.Constants;
 using Moq;
 using Xunit;
@@ -21,6 +22,7 @@ public class OpenStructuredDisputeCommandHandlerTests
     private readonly Mock<ILiveSessionRepository> _sessionRepositoryMock;
     private readonly Mock<IRuleDisputeRepository> _disputeRepositoryMock;
     private readonly Mock<IFeatureFlagService> _featureFlagServiceMock;
+    private readonly Mock<IUnitOfWork> _unitOfWorkMock;
     private readonly OpenStructuredDisputeCommandHandler _openHandler;
     private readonly RespondToDisputeCommandHandler _respondHandler;
     private readonly RespondentTimeoutCommandHandler _timeoutHandler;
@@ -36,14 +38,17 @@ public class OpenStructuredDisputeCommandHandlerTests
         _sessionRepositoryMock = new Mock<ILiveSessionRepository>();
         _disputeRepositoryMock = new Mock<IRuleDisputeRepository>();
         _featureFlagServiceMock = new Mock<IFeatureFlagService>();
+        _unitOfWorkMock = new Mock<IUnitOfWork>();
 
         _openHandler = new OpenStructuredDisputeCommandHandler(
             _sessionRepositoryMock.Object,
             _disputeRepositoryMock.Object,
-            _featureFlagServiceMock.Object);
+            _featureFlagServiceMock.Object,
+            _unitOfWorkMock.Object);
 
         _respondHandler = new RespondToDisputeCommandHandler(
-            _disputeRepositoryMock.Object);
+            _disputeRepositoryMock.Object,
+            _unitOfWorkMock.Object);
 
         _timeoutHandler = new RespondentTimeoutCommandHandler(
             _disputeRepositoryMock.Object);

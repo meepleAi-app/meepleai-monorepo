@@ -3,6 +3,7 @@ using Api.BoundedContexts.GameManagement.Domain.Repositories;
 using Api.Middleware.Exceptions;
 using Api.Services;
 using Api.SharedKernel.Application.Interfaces;
+using Api.SharedKernel.Infrastructure.Persistence;
 
 namespace Api.BoundedContexts.GameManagement.Application.Handlers.GameNight;
 
@@ -18,13 +19,16 @@ internal sealed class CastVoteOnDisputeCommandHandler
 {
     private readonly IRuleDisputeRepository _disputeRepository;
     private readonly IFeatureFlagService _featureFlagService;
+    private readonly IUnitOfWork _unitOfWork;
 
     public CastVoteOnDisputeCommandHandler(
         IRuleDisputeRepository disputeRepository,
-        IFeatureFlagService featureFlagService)
+        IFeatureFlagService featureFlagService,
+        IUnitOfWork unitOfWork)
     {
         _disputeRepository = disputeRepository ?? throw new ArgumentNullException(nameof(disputeRepository));
         _featureFlagService = featureFlagService ?? throw new ArgumentNullException(nameof(featureFlagService));
+        _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
     }
 
     public async Task Handle(
@@ -56,5 +60,7 @@ internal sealed class CastVoteOnDisputeCommandHandler
         await _disputeRepository
             .UpdateAsync(dispute, cancellationToken)
             .ConfigureAwait(false);
+
+        await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
     }
 }

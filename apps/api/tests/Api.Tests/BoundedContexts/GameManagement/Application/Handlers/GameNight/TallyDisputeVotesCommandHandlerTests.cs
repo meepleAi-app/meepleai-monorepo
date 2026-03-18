@@ -5,6 +5,7 @@ using Api.BoundedContexts.GameManagement.Domain.Enums;
 using Api.BoundedContexts.GameManagement.Domain.Repositories;
 using Api.BoundedContexts.GameManagement.Domain.ValueObjects;
 using Api.Middleware.Exceptions;
+using Api.SharedKernel.Infrastructure.Persistence;
 using Api.Tests.Constants;
 using Moq;
 using Xunit;
@@ -20,6 +21,7 @@ public class TallyDisputeVotesCommandHandlerTests
 {
     private readonly Mock<IRuleDisputeRepository> _disputeRepositoryMock;
     private readonly Mock<ILiveSessionRepository> _sessionRepositoryMock;
+    private readonly Mock<IUnitOfWork> _unitOfWorkMock;
     private readonly TallyDisputeVotesCommandHandler _handler;
 
     private static readonly Guid DefaultSessionId = Guid.NewGuid();
@@ -31,10 +33,12 @@ public class TallyDisputeVotesCommandHandlerTests
     {
         _disputeRepositoryMock = new Mock<IRuleDisputeRepository>();
         _sessionRepositoryMock = new Mock<ILiveSessionRepository>();
+        _unitOfWorkMock = new Mock<IUnitOfWork>();
 
         _handler = new TallyDisputeVotesCommandHandler(
             _disputeRepositoryMock.Object,
-            _sessionRepositoryMock.Object);
+            _sessionRepositoryMock.Object,
+            _unitOfWorkMock.Object);
     }
 
     // === Helpers ===

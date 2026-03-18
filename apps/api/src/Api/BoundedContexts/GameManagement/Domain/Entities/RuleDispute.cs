@@ -110,7 +110,7 @@ internal sealed class RuleDispute : AggregateRoot<Guid>
     /// <summary>
     /// Tallies votes and determines the final outcome.
     /// Majority accepts -> VerdictAccepted; otherwise -> VerdictOverridden.
-    /// Raises StructuredDisputeResolvedEvent.
+    /// Does NOT raise event — call <see cref="RaiseResolvedEvent"/> after setting override rule.
     /// </summary>
     public void TallyVotes()
     {
@@ -126,9 +126,19 @@ internal sealed class RuleDispute : AggregateRoot<Guid>
         FinalOutcome = accepts > rejects
             ? DisputeOutcome.VerdictAccepted
             : DisputeOutcome.VerdictOverridden;
+    }
+
+    /// <summary>
+    /// Raises the StructuredDisputeResolvedEvent. Call after TallyVotes and SetOverrideRule
+    /// so the event captures the final OverrideRule value.
+    /// </summary>
+    public void RaiseResolvedEvent()
+    {
+        if (FinalOutcome == DisputeOutcome.Pending)
+            throw new InvalidOperationException("Cannot raise resolved event before tallying votes.");
 
         AddDomainEvent(new StructuredDisputeResolvedEvent(
-            Id, SessionId, GameId, Verdict, FinalOutcome, OverrideRule));
+            Id, SessionId, GameId, Verdict!, FinalOutcome, OverrideRule));
     }
 
     /// <summary>

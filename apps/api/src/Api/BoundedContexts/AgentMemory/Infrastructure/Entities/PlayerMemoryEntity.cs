@@ -13,4 +13,5 @@ public class PlayerMemoryEntity
     public string? GameStatsJson { get; set; }  // JSONB
     public DateTime? ClaimedAt { get; set; }
     public DateTime CreatedAt { get; set; }
+    public DateTime? UpdatedAt { get; set; }
 }

@@ -6,6 +6,7 @@ using Api.BoundedContexts.GameManagement.Domain.Repositories;
 using Api.BoundedContexts.GameManagement.Domain.ValueObjects;
 using Api.Middleware.Exceptions;
 using Api.Services;
+using Api.SharedKernel.Infrastructure.Persistence;
 using Api.Tests.Constants;
 using Moq;
 using Xunit;
@@ -21,6 +22,7 @@ public class CastVoteOnDisputeCommandHandlerTests
 {
     private readonly Mock<IRuleDisputeRepository> _disputeRepositoryMock;
     private readonly Mock<IFeatureFlagService> _featureFlagServiceMock;
+    private readonly Mock<IUnitOfWork> _unitOfWorkMock;
     private readonly CastVoteOnDisputeCommandHandler _handler;
 
     private static readonly Guid DefaultSessionId = Guid.NewGuid();
@@ -32,10 +34,12 @@ public class CastVoteOnDisputeCommandHandlerTests
     {
         _disputeRepositoryMock = new Mock<IRuleDisputeRepository>();
         _featureFlagServiceMock = new Mock<IFeatureFlagService>();
+        _unitOfWorkMock = new Mock<IUnitOfWork>();
 
         _handler = new CastVoteOnDisputeCommandHandler(
             _disputeRepositoryMock.Object,
-            _featureFlagServiceMock.Object);
+            _featureFlagServiceMock.Object,
+            _unitOfWorkMock.Object);
     }
 
     // === Helpers ===

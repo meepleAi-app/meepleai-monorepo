@@ -11,7 +11,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Services;
 /// into RAG chat system prompts during active sessions.
 /// Cross-context read-only dependency on AgentMemory bounded context.
 /// </summary>
-internal sealed class AgentMemoryContextBuilder
+internal sealed class AgentMemoryContextBuilder : IAgentMemoryContextBuilder
 {
     private const string FeatureFlag = "Features:AgentMemory.Enabled";
 

@@ -346,7 +346,7 @@ internal static class KnowledgeBaseServiceExtensions
         services.AddScoped<IRagEnhancementService, RagEnhancementService>();
 
         // Agent Memory context builder — injects house rules, group preferences into RAG prompts
-        services.AddScoped<AgentMemoryContextBuilder>();
+        services.AddScoped<IAgentMemoryContextBuilder, AgentMemoryContextBuilder>();
 
         // E4-3: Session query budget — Redis-backed per-session AI query tracking
         services.AddScoped<ISessionQueryBudgetService, SessionQueryBudgetService>();

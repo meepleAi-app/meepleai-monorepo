@@ -33,7 +33,7 @@ internal sealed class ChatWithSessionAgentCommandHandler : IStreamingQueryHandle
     private readonly ILiveSessionRepository _liveSessionRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IRagPromptAssemblyService _ragPromptService;
-    private readonly AgentMemoryContextBuilder _agentMemoryContextBuilder;
+    private readonly IAgentMemoryContextBuilder _agentMemoryContextBuilder;
     private readonly ILlmService _llmService;
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly ILogger<ChatWithSessionAgentCommandHandler> _logger;
@@ -50,7 +50,7 @@ internal sealed class ChatWithSessionAgentCommandHandler : IStreamingQueryHandle
         ILiveSessionRepository liveSessionRepository,
         IUnitOfWork unitOfWork,
         IRagPromptAssemblyService ragPromptService,
-        AgentMemoryContextBuilder agentMemoryContextBuilder,
+        IAgentMemoryContextBuilder agentMemoryContextBuilder,
         ILlmService llmService,
         IServiceScopeFactory scopeFactory,
         ILogger<ChatWithSessionAgentCommandHandler> logger)

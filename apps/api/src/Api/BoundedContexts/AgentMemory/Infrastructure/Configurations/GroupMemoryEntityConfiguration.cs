@@ -34,6 +34,9 @@ internal sealed class GroupMemoryEntityConfiguration : IEntityTypeConfiguration<
             .HasColumnName("created_at")
             .IsRequired();
 
+        builder.Property(e => e.UpdatedAt)
+            .HasColumnName("updated_at");
+
         // --- JSON Columns ---
 
         builder.Property(e => e.MembersJson)

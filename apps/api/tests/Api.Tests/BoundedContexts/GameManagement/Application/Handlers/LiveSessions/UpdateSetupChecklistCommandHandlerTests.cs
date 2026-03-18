@@ -5,6 +5,7 @@ using Api.BoundedContexts.GameManagement.Domain.Entities;
 using Api.BoundedContexts.GameManagement.Domain.Models;
 using Api.BoundedContexts.GameManagement.Domain.Repositories;
 using Api.Middleware.Exceptions;
+using Api.SharedKernel.Infrastructure.Persistence;
 using Api.Tests.Constants;
 using FluentValidation.TestHelper;
 using Moq;
@@ -21,6 +22,7 @@ namespace Api.Tests.BoundedContexts.GameManagement.Application.Handlers.LiveSess
 public class UpdateSetupChecklistCommandHandlerTests
 {
     private readonly Mock<ILiveSessionRepository> _repositoryMock;
+    private readonly Mock<IUnitOfWork> _unitOfWorkMock;
     private readonly UpdateSetupChecklistCommandHandler _handler;
     private readonly UpdateSetupChecklistCommandValidator _validator;
 
@@ -30,7 +32,8 @@ public class UpdateSetupChecklistCommandHandlerTests
     public UpdateSetupChecklistCommandHandlerTests()
     {
         _repositoryMock = new Mock<ILiveSessionRepository>();
-        _handler = new UpdateSetupChecklistCommandHandler(_repositoryMock.Object);
+        _unitOfWorkMock = new Mock<IUnitOfWork>();
+        _handler = new UpdateSetupChecklistCommandHandler(_repositoryMock.Object, _unitOfWorkMock.Object);
         _validator = new UpdateSetupChecklistCommandValidator();
     }
 

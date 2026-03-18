@@ -68,7 +68,7 @@ internal sealed class PlayerMemoryRepository : RepositoryBase, IPlayerMemoryRepo
         var entities = await DbContext.PlayerMemories
             .AsNoTracking()
             .Where(e => e.GuestName != null
-                && EF.Functions.ILike(e.GuestName, guestName)
+                && EF.Functions.ILike(e.GuestName!, guestName.Replace("%", "\\%").Replace("_", "\\_"))
                 && e.UserId == null)
             .ToListAsync(ct)
             .ConfigureAwait(false);

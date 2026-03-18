@@ -6,6 +6,7 @@ using Api.Middleware.Exceptions;
 using Api.Models;
 using Api.Services;
 using Api.SharedKernel.Application.Interfaces;
+using Api.SharedKernel.Infrastructure.Persistence;
 using MediatR;
 
 namespace Api.BoundedContexts.GameManagement.Application.Handlers.LiveSessions;
@@ -24,15 +25,18 @@ internal class GenerateSetupChecklistCommandHandler
     private readonly ILiveSessionRepository _sessionRepository;
     private readonly IMediator _mediator;
     private readonly IFeatureFlagService _featureFlagService;
+    private readonly IUnitOfWork _unitOfWork;
 
     public GenerateSetupChecklistCommandHandler(
         ILiveSessionRepository sessionRepository,
         IMediator mediator,
-        IFeatureFlagService featureFlagService)
+        IFeatureFlagService featureFlagService,
+        IUnitOfWork unitOfWork)
     {
         _sessionRepository = sessionRepository ?? throw new ArgumentNullException(nameof(sessionRepository));
         _mediator = mediator ?? throw new ArgumentNullException(nameof(mediator));
         _featureFlagService = featureFlagService ?? throw new ArgumentNullException(nameof(featureFlagService));
+        _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
     }
 
     public async Task<SetupChecklistData> Handle(
@@ -90,8 +94,14 @@ internal class GenerateSetupChecklistCommandHandler
             components,
             steps);
 
-        // 6. Set checklist on session
+        // 6. Set checklist on session and persist
         session.SetSetupChecklist(checklist);
+
+        await _sessionRepository
+            .UpdateAsync(session, cancellationToken)
+            .ConfigureAwait(false);
+
+        await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
         return checklist;
     }

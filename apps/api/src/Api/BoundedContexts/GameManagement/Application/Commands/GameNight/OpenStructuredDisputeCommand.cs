@@ -9,6 +9,5 @@ namespace Api.BoundedContexts.GameManagement.Application.Commands.GameNight;
 internal record OpenStructuredDisputeCommand(
     Guid SessionId,
     Guid InitiatorPlayerId,
-    string InitiatorClaim,
-    Guid? RespondentPlayerId = null
+    string InitiatorClaim
 ) : ICommand<Guid>;

@@ -33,6 +33,9 @@ internal sealed class GameMemoryEntityConfiguration : IEntityTypeConfiguration<G
             .HasColumnName("created_at")
             .IsRequired();
 
+        builder.Property(e => e.UpdatedAt)
+            .HasColumnName("updated_at");
+
         // --- JSON Columns ---
 
         builder.Property(e => e.HouseRulesJson)

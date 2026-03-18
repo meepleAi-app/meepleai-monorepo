@@ -647,8 +647,7 @@ internal static class LiveSessionEndpoints
         var command = new OpenStructuredDisputeCommand(
             sessionId,
             request.InitiatorPlayerId,
-            request.InitiatorClaim,
-            request.RespondentPlayerId);
+            request.InitiatorClaim);
 
         var disputeId = await mediator.Send(command, cancellationToken).ConfigureAwait(false);
         return Results.Created($"/api/v1/live-sessions/{sessionId}/disputes/{disputeId}", disputeId);
@@ -858,8 +857,7 @@ internal static class LiveSessionEndpoints
     // Dispute v2 request models
     internal sealed record OpenDisputeRequest(
         Guid InitiatorPlayerId,
-        string InitiatorClaim,
-        Guid? RespondentPlayerId = null);
+        string InitiatorClaim);
 
     internal sealed record RespondToDisputeRequest(
         Guid RespondentPlayerId,

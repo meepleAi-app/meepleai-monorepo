@@ -13,4 +13,5 @@ public class GroupMemoryEntity
     public string? PreferencesJson { get; set; }  // JSONB
     public string? StatsJson { get; set; }  // JSONB
     public DateTime CreatedAt { get; set; }
+    public DateTime? UpdatedAt { get; set; }
 }

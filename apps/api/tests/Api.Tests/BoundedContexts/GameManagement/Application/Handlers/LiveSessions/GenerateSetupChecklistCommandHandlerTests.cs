@@ -9,6 +9,7 @@ using Api.BoundedContexts.KnowledgeBase.Application.Queries;
 using Api.Middleware.Exceptions;
 using Api.Models;
 using Api.Services;
+using Api.SharedKernel.Infrastructure.Persistence;
 using Api.Tests.Constants;
 using MediatR;
 using Moq;
@@ -27,6 +28,7 @@ public class GenerateSetupChecklistCommandHandlerTests
     private readonly Mock<ILiveSessionRepository> _repositoryMock;
     private readonly Mock<IMediator> _mediatorMock;
     private readonly Mock<IFeatureFlagService> _featureFlagServiceMock;
+    private readonly Mock<IUnitOfWork> _unitOfWorkMock;
     private readonly GenerateSetupChecklistCommandHandler _handler;
 
     private static readonly Guid DefaultSessionId = Guid.NewGuid();
@@ -38,11 +40,13 @@ public class GenerateSetupChecklistCommandHandlerTests
         _repositoryMock = new Mock<ILiveSessionRepository>();
         _mediatorMock = new Mock<IMediator>();
         _featureFlagServiceMock = new Mock<IFeatureFlagService>();
+        _unitOfWorkMock = new Mock<IUnitOfWork>();
 
         _handler = new GenerateSetupChecklistCommandHandler(
             _repositoryMock.Object,
             _mediatorMock.Object,
-            _featureFlagServiceMock.Object);
+            _featureFlagServiceMock.Object,
+            _unitOfWorkMock.Object);
     }
 
     // === Helpers ===

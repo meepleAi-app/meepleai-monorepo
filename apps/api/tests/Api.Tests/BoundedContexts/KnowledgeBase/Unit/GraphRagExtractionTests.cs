@@ -32,6 +32,7 @@ public class GraphRagExtractionTests : IDisposable
     private readonly Mock<IEmbeddingService> _embeddingServiceMock = new();
     private readonly Mock<IBlobStorageService> _blobStorageServiceMock = new();
     private readonly Mock<IEntityExtractor> _entityExtractorMock = new();
+    private readonly Mock<IFeatureFlagService> _featureFlagServiceMock = new();
     private readonly TimeProvider _timeProvider = TimeProvider.System;
     private readonly ILogger<PdfProcessingPipelineService> _logger =
         NullLogger<PdfProcessingPipelineService>.Instance;
@@ -48,6 +49,11 @@ public class GraphRagExtractionTests : IDisposable
             options,
             new Mock<IMediator>().Object,
             new Mock<IDomainEventCollector>().Object);
+
+        // Default: graph-traversal feature flag enabled so entity extraction runs
+        _featureFlagServiceMock
+            .Setup(f => f.IsEnabledAsync("rag.enhancement.graph-traversal", null))
+            .ReturnsAsync(true);
     }
 
     public void Dispose()
@@ -258,7 +264,9 @@ public class GraphRagExtractionTests : IDisposable
             _timeProvider,
             _logger,
             raptorIndexer: null,
-            entityExtractor: withEntityExtractor ? _entityExtractorMock.Object : null);
+            entityExtractor: withEntityExtractor ? _entityExtractorMock.Object : null,
+            vectorStore: null,
+            featureFlagService: _featureFlagServiceMock.Object);
     }
 
     private PdfDocumentEntity SeedPdfDocument(string state)

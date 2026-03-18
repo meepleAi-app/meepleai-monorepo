@@ -35,6 +35,7 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
     private readonly IRaptorIndexer? _raptorIndexer;
     private readonly IEntityExtractor? _entityExtractor;
     private readonly IQdrantVectorStoreAdapter? _vectorStore;
+    private readonly IFeatureFlagService? _featureFlagService;
 
     public PdfProcessingPipelineService(
         MeepleAiDbContext db,
@@ -47,7 +48,8 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
         ILogger<PdfProcessingPipelineService> logger,
         IRaptorIndexer? raptorIndexer = null,
         IEntityExtractor? entityExtractor = null,
-        IQdrantVectorStoreAdapter? vectorStore = null)
+        IQdrantVectorStoreAdapter? vectorStore = null,
+        IFeatureFlagService? featureFlagService = null)
     {
         _db = db ?? throw new ArgumentNullException(nameof(db));
         _pdfTextExtractor = pdfTextExtractor ?? throw new ArgumentNullException(nameof(pdfTextExtractor));
@@ -60,6 +62,7 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
         _raptorIndexer = raptorIndexer;
         _entityExtractor = entityExtractor;
         _vectorStore = vectorStore;
+        _featureFlagService = featureFlagService;
     }
 
     public async Task ProcessAsync(
@@ -126,7 +129,11 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
             }
 
             // === RAPTOR: Build hierarchical summary tree (optional, non-blocking) ===
-            if (_raptorIndexer != null && chunks.Count > 3)
+            // Check if raptor-retrieval enhancement is globally enabled before spending LLM tokens
+            var raptorEnabled = _featureFlagService != null
+                && await _featureFlagService.IsEnabledAsync("rag.enhancement.raptor-retrieval").ConfigureAwait(false);
+
+            if (_raptorIndexer != null && raptorEnabled && chunks.Count > 3)
             {
                 try
                 {
@@ -159,7 +166,11 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
             }
 
             // === Graph RAG: Extract entity relations (optional, non-blocking) ===
-            if (_entityExtractor is not null && fullText.Length >= 200)
+            // Check if graph-traversal enhancement is globally enabled before spending LLM tokens
+            var graphRagEnabled = _featureFlagService != null
+                && await _featureFlagService.IsEnabledAsync("rag.enhancement.graph-traversal").ConfigureAwait(false);
+
+            if (_entityExtractor is not null && graphRagEnabled && fullText.Length >= 200)
             {
                 try
                 {

@@ -1,4 +1,4 @@
-/implementa https://github.com/DegrassiAaron/meepleai-monorepo/issues/2843
+/implementa https://github.com/meepleAi-app/meepleai-monorepo/issues/2843
 aggiorna i checkpoint della issue
 
 Nice-To-Have

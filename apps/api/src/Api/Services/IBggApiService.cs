@@ -5,7 +5,7 @@ namespace Api.Services;
 /// <summary>
 /// Service for interacting with BoardGameGeek XML API v2.
 /// Provides search and game details retrieval with caching and rate limiting.
-/// AI-13: https://github.com/DegrassiAaron/meepleai-monorepo/issues/420
+/// AI-13: https://github.com/meepleAi-app/meepleai-monorepo/issues/420
 /// </summary>
 public interface IBggApiService
 {

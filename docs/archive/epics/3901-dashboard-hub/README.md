@@ -2,7 +2,7 @@
 
 **Status**: ✅ CLOSED (9/9 tasks completed - 100%)
 **Closed**: 2026-02-12
-**Epic Link**: [#3901](https://github.com/DegrassiAaron/meepleai-monorepo/issues/3901)
+**Epic Link**: [#3901](https://github.com/meepleAi-app/meepleai-monorepo/issues/3901)
 
 ---
 

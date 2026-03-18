@@ -84,4 +84,4 @@ Write-Host ""
 Write-Host "💡 Tips:" -ForegroundColor Yellow
 Write-Host "  - Run before commits: pwsh scripts/security-check-local.ps1"
 Write-Host "  - Install safety: pip install safety (for Python checks)"
-Write-Host "  - View Dependabot alerts: gh api repos/DegrassiAaron/meepleai-monorepo/dependabot/alerts"
+Write-Host "  - View Dependabot alerts: gh api repos/meepleAi-app/meepleai-monorepo/dependabot/alerts"

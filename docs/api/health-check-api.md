@@ -2,7 +2,7 @@
 
 > **Last Updated**: 2026-01-17
 > **Related**: [Health Check System](../04-deployment/health-checks.md)
-> **Issue**: [#2511](https://github.com/DegrassiAaron/meepleai-monorepo/issues/2511)
+> **Issue**: [#2511](https://github.com/meepleAi-app/meepleai-monorepo/issues/2511)
 
 ---
 
@@ -299,4 +299,4 @@ public async Task HealthEndpoint_ShouldReturnHealthyWithAllServices()
 ---
 
 **Maintained by**: MeepleAI API Team
-**Questions**: [GitHub Issues](https://github.com/DegrassiAaron/meepleai-monorepo/issues)
+**Questions**: [GitHub Issues](https://github.com/meepleAi-app/meepleai-monorepo/issues)

@@ -230,6 +230,21 @@ if (forwardedHeadersEnabled)
             options.RequireHeaderSymmetry = requireHeaderSymmetry.Value;
         }
     });
+
+    // SEC-C3: Warn if no trusted proxies are configured in non-Development
+    if (!builder.Environment.IsDevelopment())
+    {
+        var cfgProxies = forwardedHeadersSection.GetSection("KnownProxies").Get<string[]>() ?? Array.Empty<string>();
+        var cfgNetworks = forwardedHeadersSection.GetSection("KnownNetworks").Get<string[]>() ?? Array.Empty<string>();
+
+        if (cfgProxies.Length == 0 && cfgNetworks.Length == 0)
+        {
+            Log.Warning(
+                "SEC-C3: ForwardedHeaders enabled but no KnownProxies or KnownNetworks configured. " +
+                "All proxies are trusted — IP-based rate limiting can be bypassed via X-Forwarded-For spoofing. " +
+                "Configure ForwardedHeaders:KnownProxies or ForwardedHeaders:KnownNetworks in appsettings");
+        }
+    }
 }
 
 builder.Services.Configure<SessionCookieConfiguration>(builder.Configuration.GetSection("Authentication:SessionCookie"));

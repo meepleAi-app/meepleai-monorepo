@@ -1,6 +1,6 @@
 // apps/web/src/components/layout/UnifiedShell/__tests__/use-bottom-nav-actions.test.ts
 import { act, renderHook } from '@testing-library/react';
-import { useBottomNavActions } from '@/hooks/use-bottom-nav-actions';
+import { useBottomNavActions } from '@/hooks/useBottomNavActions';
 import { useCardHand } from '@/stores/use-card-hand';
 
 const mockPush = vi.fn();

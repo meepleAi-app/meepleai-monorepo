@@ -27,9 +27,11 @@
 
 import { useCallback, useEffect, useState } from 'react';
 
-import type { z } from 'zod';
+import { logger } from '@/lib/logger';
 
 import { safeStorage } from './safeStorage';
+
+import type { z } from 'zod';
 
 type StorageType = 'local' | 'session';
 
@@ -69,7 +71,7 @@ export function useValidatedStorage<T>(
         }
       } catch (error) {
         if (process.env.NODE_ENV !== 'production') {
-          console.error(`[useValidatedStorage] Failed to set "${key}":`, error);
+          logger.error(`[useValidatedStorage] Failed to set "${key}":`, error);
         }
       }
     },

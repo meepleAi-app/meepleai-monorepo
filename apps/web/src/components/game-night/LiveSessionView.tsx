@@ -41,7 +41,7 @@ import { useAgentChatStream } from '@/hooks/useAgentChatStream';
 import { useResponsive } from '@/hooks/useResponsive';
 import { api } from '@/lib/api';
 import type { LiveSessionDto } from '@/lib/api/schemas/live-sessions.schemas';
-import { useSessionSync } from '@/lib/hooks/useSessionSync';
+import { useSessionSync } from '@/lib/domain-hooks/useSessionSync';
 import { useSessionStore } from '@/lib/stores/sessionStore';
 import { useQuickViewStore } from '@/store/quick-view';
 

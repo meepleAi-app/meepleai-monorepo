@@ -11,15 +11,15 @@ import { PlayerModeControls } from '../PlayerModeControls';
 import type {
   PlayerAISuggestionState,
   PlayerAISuggestionControls,
-} from '@/lib/hooks/usePlayerAISuggestion';
+} from '@/lib/domain-hooks/usePlayerAISuggestion';
 
 // Mock the hook
-vi.mock('@/lib/hooks/usePlayerAISuggestion', () => ({
+vi.mock('@/lib/domain-hooks/usePlayerAISuggestion', () => ({
   usePlayerAISuggestion: vi.fn(),
 }));
 
 // Import after mock to get mocked version
-import { usePlayerAISuggestion } from '@/lib/hooks/usePlayerAISuggestion';
+import { usePlayerAISuggestion } from '@/lib/domain-hooks/usePlayerAISuggestion';
 
 describe('PlayerModeControls', () => {
   const mockGameState = {

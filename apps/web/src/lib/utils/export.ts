@@ -10,6 +10,8 @@
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
 
+import { logger } from '@/lib/logger';
+
 /**
  * Testing metrics data structure for export
  */
@@ -275,7 +277,7 @@ export async function exportTestingMetricsToPDF(
     const defaultFilename = `testing-dashboard-${new Date().toISOString().split('T')[0]}.pdf`;
     pdf.save(filename || defaultFilename);
   } catch (error) {
-    console.error('PDF export failed:', error);
+    logger.error('PDF export failed:', error);
     throw new Error('Failed to generate PDF. Please try again.');
   }
 }

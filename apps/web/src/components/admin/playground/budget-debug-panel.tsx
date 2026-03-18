@@ -11,6 +11,7 @@ import {
   getAdminBudgetOverview,
   type AdminBudgetOverviewDto,
 } from '@/lib/api/clients/budgetClient';
+import { logger } from '@/lib/logger';
 
 interface BudgetDebugPanelProps {
   className?: string;
@@ -35,7 +36,7 @@ export function BudgetDebugPanel({ className }: BudgetDebugPanelProps) {
         setError(null);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load budget overview');
-        console.error('Budget overview fetch error:', err);
+        logger.error('Budget overview fetch error:', err);
       } finally {
         setLoading(false);
       }

@@ -21,7 +21,7 @@ import { Badge } from '@/components/ui/data-display/badge';
 import { type DateRange, DateRangePicker } from '@/components/ui/inputs/date-range-picker';
 import { Button } from '@/components/ui/primitives/button';
 import { Input } from '@/components/ui/primitives/input';
-import { useToast } from '@/hooks/use-toast';
+import { useToast } from '@/hooks/useToast';
 import { api } from '@/lib/api';
 import type { AuditLogEntry, AuditLogListResult } from '@/lib/api/schemas';
 import { cn } from '@/lib/utils';

@@ -17,6 +17,7 @@ import { useAddGameWizard } from '@/components/library/add-game-sheet/AddGameWiz
 import { useOnboardingStatus } from '@/components/onboarding/use-onboarding-status';
 import { WelcomeChecklist } from '@/components/onboarding/WelcomeChecklist';
 import { WelcomeWizard } from '@/components/onboarding/WelcomeWizard';
+import { useUpcomingGameNights } from '@/hooks/queries/useGameNights';
 import { useAuthUser } from '@/hooks/useAuthUser';
 import { useDashboardContext } from '@/hooks/useDashboardContext';
 import { useDashboardStore } from '@/lib/stores/dashboard-store';
@@ -57,11 +58,15 @@ export function GamingHubClient() {
     drawCard({ id: 'section-dashboard', entity: 'custom', title: 'Dashboard', href: '/dashboard' });
   }, [drawCard]);
 
+  // Upcoming game night
+  const { data: upcomingNights } = useUpcomingGameNights();
+  const upcomingGameNight = upcomingNights?.[0] ?? null;
+
   // Context detection
   const dashCtx = useDashboardContext({
     recentSessions,
     games,
-    upcomingGameNight: null, // TODO: wire to real API
+    upcomingGameNight,
     incompleteSessions: [],
   });
 
@@ -90,7 +95,16 @@ export function GamingHubClient() {
   if (dashCtx.isSessionMode && dashCtx.hero.data) {
     return (
       <div className="py-6 space-y-4 w-full max-w-screen-xl mx-auto">
-        <SessionModeDashboard session={dashCtx.hero.data as any} />
+        <SessionModeDashboard
+          session={
+            dashCtx.hero.data as {
+              id: string;
+              gameId: string;
+              playerCount: number;
+              durationMinutes: number;
+            }
+          }
+        />
       </div>
     );
   }

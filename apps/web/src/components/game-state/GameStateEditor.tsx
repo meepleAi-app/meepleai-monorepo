@@ -13,8 +13,15 @@ import Form from '@rjsf/core';
 import validator from '@rjsf/validator-ajv8';
 import { Save } from 'lucide-react';
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/data-display/card';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/data-display/card';
 import { Button } from '@/components/ui/primitives/button';
+import { logger } from '@/lib/logger';
 import { useGameStateStore } from '@/lib/stores/game-state-store';
 import type { GameState } from '@/types/game-state';
 
@@ -85,7 +92,7 @@ export function GameStateEditor({ sessionId, onSave, onCancel }: GameStateEditor
       await useGameStateStore.getState().saveState(sessionId);
       onSave?.(currentState);
     } catch (error) {
-      console.error('Failed to save state:', error);
+      logger.error('Failed to save state:', error);
     }
   }, [currentState, sessionId, onSave]);
 

@@ -66,7 +66,7 @@ import { useAgentConfig, useToggleLibraryFavorite } from '@/hooks/queries';
 import { libraryKeys } from '@/hooks/queries/useLibrary';
 import { api } from '@/lib/api';
 import type { UserLibraryEntry, GameStateType } from '@/lib/api';
-import { useViewTransition } from '@/lib/hooks/useViewTransition';
+import { useViewTransition } from '@/lib/domain-hooks/useViewTransition';
 
 import { AgentDrawerSheet } from './AgentDrawerSheet';
 import { ChatDrawerSheet } from './ChatDrawerSheet';

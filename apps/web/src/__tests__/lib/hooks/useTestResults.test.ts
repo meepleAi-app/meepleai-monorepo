@@ -15,7 +15,7 @@ import {
   useSaveTestResult,
   useDeleteTestResult,
   TEST_RESULTS_QUERY_KEYS,
-} from '@/lib/hooks/useTestResults';
+} from '@/lib/domain-hooks/useTestResults';
 import type { TestResult, TestResultList } from '@/lib/api/schemas/test-results.schemas';
 
 // Mock the API module

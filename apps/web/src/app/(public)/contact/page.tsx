@@ -20,6 +20,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/data-d
 import { Separator } from '@/components/ui/navigation/separator';
 import { Button } from '@/components/ui/primitives/button';
 import { useTranslation } from '@/hooks/useTranslation';
+import { api } from '@/lib/api';
 
 // Subject keys for the dropdown
 const SUBJECT_KEYS = ['general', 'support', 'feedback', 'partnership', 'press', 'other'] as const;
@@ -49,17 +50,20 @@ export default function ContactPage() {
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
   ) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    setFormData(prev => ({ ...prev, [name]: value }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setStatus('sending');
 
-    // Simulate API call
     try {
-      // TODO: Replace with actual API call
-      await new Promise((resolve) => setTimeout(resolve, 1500));
+      await api.contact.send({
+        name: formData.name,
+        email: formData.email,
+        subject: formData.subject,
+        message: formData.message,
+      });
       setStatus('success');
       setFormData({ name: '', email: '', subject: '', message: '' });
     } catch {
@@ -72,10 +76,7 @@ export default function ContactPage() {
       <div className="max-w-4xl mx-auto">
         {/* Header */}
         <div className="mb-8 text-center">
-          <h1
-            className="text-3xl font-bold text-foreground"
-            data-testid="contact-heading"
-          >
+          <h1 className="text-3xl font-bold text-foreground" data-testid="contact-heading">
             {t('pages.contact.title')}
           </h1>
           <p className="text-slate-600 dark:text-slate-400 mt-2 max-w-2xl mx-auto">
@@ -150,7 +151,7 @@ export default function ContactPage() {
                     className="w-full px-3 py-2 border border-border/50 dark:border-border/30 rounded-md bg-card/90 backdrop-blur-[12px] dark:bg-card dark:backdrop-blur-none text-foreground focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   >
                     <option value="">{t('pages.contact.form.subjectPlaceholder')}</option>
-                    {SUBJECT_KEYS.map((key) => (
+                    {SUBJECT_KEYS.map(key => (
                       <option key={key} value={key}>
                         {t(`pages.contact.subjects.${key}`)}
                       </option>
@@ -179,11 +180,7 @@ export default function ContactPage() {
                 </div>
 
                 {/* Submit Button */}
-                <Button
-                  type="submit"
-                  disabled={status === 'sending'}
-                  className="w-full"
-                >
+                <Button type="submit" disabled={status === 'sending'} className="w-full">
                   {status === 'sending'
                     ? t('pages.contact.form.sending')
                     : t('pages.contact.form.submit')}
@@ -227,9 +224,7 @@ export default function ContactPage() {
                   <p className="text-sm font-medium text-slate-500 dark:text-slate-400">
                     {t('pages.contact.info.response')}
                   </p>
-                  <p className="text-foreground">
-                    {t('pages.contact.info.responseValue')}
-                  </p>
+                  <p className="text-foreground">{t('pages.contact.info.responseValue')}</p>
                 </div>
                 <Separator />
                 <div>

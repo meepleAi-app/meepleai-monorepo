@@ -32,6 +32,7 @@ import {
   type RagExecutionDetail,
 } from '@/lib/api/clients/adminClient';
 import { HttpClient } from '@/lib/api/core/httpClient';
+import { logger } from '@/lib/logger';
 import { cn } from '@/lib/utils';
 
 // Initialize AdminClient instance
@@ -78,7 +79,7 @@ function parseExecutionTrace(traceJson: string | null): ExecutionTrace | null {
 
     return null;
   } catch (error) {
-    console.error('Failed to parse execution trace:', error);
+    logger.error('Failed to parse execution trace:', error);
     return null;
   }
 }
@@ -197,7 +198,7 @@ export default function PipelineExplorerPage() {
           setSelectedExecutionId(result.items[0].id);
         }
       } catch (err) {
-        console.error('Failed to fetch executions:', err);
+        logger.error('Failed to fetch executions:', err);
         setError('Failed to load RAG executions');
       } finally {
         setIsLoadingList(false);
@@ -221,7 +222,7 @@ export default function PipelineExplorerPage() {
         const detail = await adminClient.getRagExecutionById(selectedExecutionId);
         setExecutionDetail(detail);
       } catch (err) {
-        console.error('Failed to fetch execution detail:', err);
+        logger.error('Failed to fetch execution detail:', err);
         setError('Failed to load execution details');
       } finally {
         setIsLoadingDetail(false);

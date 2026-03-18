@@ -28,6 +28,7 @@ namespace Api.Extensions;
 /// - BulkImportAdmin:       1 req/5min — heavy admin batch operation
 /// - AgentQuery:           30 req/min  — AI query (expensive, per user)
 /// - AgentCreation:        10 req/min  — AI agent creation (per user)
+/// - ContactForm:           5 req/hour — anonymous contact form spam prevention (IP-based)
 /// </summary>
 internal static class RateLimitingServiceExtensions
 {
@@ -101,6 +102,9 @@ internal static class RateLimitingServiceExtensions
                     RateLimitPartition.GetNoLimiter<string>("unlimited"));
 
                 options.AddPolicy("AuthPasswordReset", _ =>
+                    RateLimitPartition.GetNoLimiter<string>("unlimited"));
+
+                options.AddPolicy("ContactForm", _ =>
                     RateLimitPartition.GetNoLimiter<string>("unlimited"));
             });
 
@@ -384,6 +388,24 @@ internal static class RateLimitingServiceExtensions
                     factory: _ => new SlidingWindowRateLimiterOptions
                     {
                         Window = TimeSpan.FromMinutes(1),
+                        PermitLimit = 5,
+                        SegmentsPerWindow = 6,
+                        QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                        QueueLimit = 0,
+                    });
+            });
+
+            // Policy 17: ContactForm - 5 req/hour per IP for anonymous contact form submissions
+            // Prevents spam abuse on the public contact endpoint.
+            options.AddPolicy("ContactForm", httpContext =>
+            {
+                var ipAddress = GetClientIpAddress(httpContext);
+
+                return RateLimitPartition.GetSlidingWindowLimiter(
+                    partitionKey: $"contact-form-{ipAddress}",
+                    factory: _ => new SlidingWindowRateLimiterOptions
+                    {
+                        Window = TimeSpan.FromHours(1),
                         PermitLimit = 5,
                         SegmentsPerWindow = 6,
                         QueueProcessingOrder = QueueProcessingOrder.OldestFirst,

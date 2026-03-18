@@ -23,7 +23,10 @@ using LogoutApiKeyCommand = Api.BoundedContexts.Authentication.Application.Comma
 using LogoutAllDevicesCommand = Api.BoundedContexts.Authentication.Application.Commands.LogoutAllDevicesCommand;
 using GetSessionByTokenHashQuery = Api.BoundedContexts.Authentication.Application.Queries.GetSessionByTokenHashQuery;
 using AcceptInvitationCommand = Api.BoundedContexts.Authentication.Application.Commands.Invitation.AcceptInvitationCommand;
+using ActivateInvitedAccountCommand = Api.BoundedContexts.Authentication.Application.Commands.Invitation.ActivateInvitedAccountCommand;
 using ValidateInvitationTokenQuery = Api.BoundedContexts.Authentication.Application.Queries.Invitation.ValidateInvitationTokenQuery;
+using GetPendingInvitationsQuery = Api.BoundedContexts.Authentication.Application.Queries.Invitation.GetPendingInvitationsQuery;
+using GetInvitationByIdQuery = Api.BoundedContexts.Authentication.Application.Queries.Invitation.GetInvitationByIdQuery;
 
 namespace Api.Routing;
 
@@ -61,6 +64,8 @@ internal static class AuthenticationEndpoints
         // ISSUE-124: Invitation acceptance endpoints (public, unauthenticated)
         MapAcceptInvitationEndpoint(group);
         MapValidateInvitationEndpoint(group);
+        MapActivateAccountEndpoint(group);
+        MapValidateInvitationGetEndpoint(group);
 
         return group;
     }
@@ -683,7 +688,90 @@ Clients can also store the key securely and send it via the `Authorization: ApiK
         .WithName("ValidateInvitationToken")
         .WithTags("Authentication", "Invitations")
         .WithSummary("Validate an invitation token")
-        .WithDescription("Checks whether an invitation token is valid without consuming it. Returns role and expiry info.")
+        .WithDescription("Checks whether an invitation token is valid without consuming it. Returns email and display name for valid tokens, or a uniform error reason (\"invalid\" or \"already_used\") to prevent state enumeration.")
+        .RequireRateLimiting("AuthRegister")
+        .Produces(200)
+        .Produces(400);
+    }
+
+    // ISSUE-124: Activate invited account (public, unauthenticated)
+    private static void MapActivateAccountEndpoint(RouteGroupBuilder group)
+    {
+        group.MapPost("/auth/activate-account", async (
+            HttpContext context,
+            IMediator mediator,
+            IConfigurationService configService,
+            ILogger<Program> logger,
+            CancellationToken ct) =>
+        {
+            ActivateAccountPayload? payload;
+            try
+            {
+                payload = await context.Request.ReadFromJsonAsync<ActivateAccountPayload>(ct).ConfigureAwait(false);
+            }
+            catch (System.Text.Json.JsonException)
+            {
+                return Results.BadRequest(new { error = "Invalid request payload" });
+            }
+
+            if (payload == null)
+            {
+                return Results.BadRequest(new { error = "Invalid request payload" });
+            }
+
+            if (string.IsNullOrWhiteSpace(payload.Token) || string.IsNullOrWhiteSpace(payload.Password))
+            {
+                return Results.BadRequest(new { error = "Token and password are required" });
+            }
+
+            logger.LogInformation("Account activation attempt via invitation token");
+
+            var command = new ActivateInvitedAccountCommand(payload.Token, payload.Password);
+            var result = await mediator.Send(command, ct).ConfigureAwait(false);
+
+            // Set auth cookie for immediate login (follows existing login pattern)
+            var sessionExpirationDays = (await configService.GetValueAsync<int?>("Authentication:SessionManagement:SessionExpirationDays", 30).ConfigureAwait(false)) ?? 30;
+            var expiresAt = DateTime.UtcNow.AddDays(sessionExpirationDays);
+            CookieHelpers.WriteSessionCookie(context, result.SessionToken, expiresAt);
+
+            logger.LogInformation("Account activated via invitation, session created");
+
+            return Results.Ok(new { sessionToken = result.SessionToken, requiresOnboarding = result.RequiresOnboarding });
+        })
+        .WithName("ActivateInvitedAccount")
+        .WithTags("Authentication", "Invitations")
+        .WithSummary("Activate an invited account by setting a password")
+        .WithDescription("Activates a pending invited user account. Sets the password, transitions the user to Active status, creates a session, and returns a session token for immediate login.")
+        .RequireRateLimiting("AuthRegister")
+        .Produces(200)
+        .Produces(400);
+    }
+
+    // ISSUE-124: Validate invitation token via GET (public, unauthenticated)
+    private static void MapValidateInvitationGetEndpoint(RouteGroupBuilder group)
+    {
+        group.MapGet("/auth/validate-invitation", async (
+            string token,
+            IMediator mediator,
+            ILogger<Program> logger,
+            CancellationToken ct) =>
+        {
+            if (string.IsNullOrWhiteSpace(token))
+            {
+                return Results.BadRequest(new { error = "Token is required" });
+            }
+
+            logger.LogInformation("Invitation token validation attempt (GET)");
+
+            var query = new ValidateInvitationTokenQuery(token);
+            var result = await mediator.Send(query, ct).ConfigureAwait(false);
+
+            return Results.Ok(result);
+        })
+        .WithName("ValidateInvitationTokenGet")
+        .WithTags("Authentication", "Invitations")
+        .WithSummary("Validate an invitation token (GET)")
+        .WithDescription("Checks whether an invitation token is valid without consuming it. Accepts token as query parameter. Returns email and display name for valid tokens.")
         .RequireRateLimiting("AuthRegister")
         .Produces(200)
         .Produces(400);
@@ -699,3 +787,8 @@ internal record AcceptInvitationPayload(string Token, string Password, string Co
 /// Payload for validating an invitation token (Issue #124).
 /// </summary>
 internal record ValidateInvitationPayload(string Token);
+
+/// <summary>
+/// Payload for activating an invited account (Issue #124).
+/// </summary>
+internal record ActivateAccountPayload(string Token, string Password);

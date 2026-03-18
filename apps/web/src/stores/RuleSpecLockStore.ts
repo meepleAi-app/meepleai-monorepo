@@ -19,6 +19,7 @@ import { devtools, subscribeWithSelector } from 'zustand/middleware';
 import { immer } from 'zustand/middleware/immer';
 
 import type { EditorLock, RuleSpec, RuleSpecConflict } from '@/lib/api/schemas';
+import { logger } from '@/lib/logger';
 
 // ============================================================================
 // Types
@@ -210,7 +211,7 @@ export const useRuleSpecLockStore = create<RuleSpecLockStore>()(
               await api.releaseEditorLock(gameId);
             } catch (error) {
               // Log but don't throw - lock will expire anyway
-              console.warn('Failed to release lock:', error);
+              logger.warn(`Failed to release lock: ${error}`);
             }
           }
 
@@ -270,7 +271,7 @@ export const useRuleSpecLockStore = create<RuleSpecLockStore>()(
             const status = await api.getEditorLockStatus(gameId);
             return status;
           } catch (error) {
-            console.warn('Failed to check lock status:', error);
+            logger.warn(`Failed to check lock status: ${error}`);
             return null;
           }
         },

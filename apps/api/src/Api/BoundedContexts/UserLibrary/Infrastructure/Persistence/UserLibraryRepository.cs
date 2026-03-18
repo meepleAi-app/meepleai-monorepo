@@ -221,6 +221,22 @@ internal class UserLibraryRepository : RepositoryBase, IUserLibraryRepository
     }
 
     /// <inheritdoc />
+    public async Task<Dictionary<GameStateType, int>> GetStateCountsAsync(Guid userId, CancellationToken cancellationToken = default)
+    {
+        var stateCounts = await DbContext.UserLibraryEntries
+            .AsNoTracking()
+            .Where(e => e.UserId == userId && e.SharedGameId != null)
+            .GroupBy(e => e.CurrentState)
+            .Select(g => new { State = g.Key, Count = g.Count() })
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        return stateCounts.ToDictionary(
+            x => (GameStateType)x.State,
+            x => x.Count);
+    }
+
+    /// <inheritdoc />
     public async Task<int> GetAgentConfigCountAsync(Guid userId, CancellationToken cancellationToken = default)
     {
         return await DbContext.UserLibraryEntries

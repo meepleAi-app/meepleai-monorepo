@@ -23,7 +23,7 @@ vi.mock('framer-motion', () => ({
 }));
 
 // Import after mocking
-import { PerformanceMetricsTable } from '../PerformanceMetricsTable';
+import { PerformanceMetricsTable } from '../metrics/PerformanceMetricsTable';
 
 describe('PerformanceMetricsTable', () => {
   beforeEach(() => {

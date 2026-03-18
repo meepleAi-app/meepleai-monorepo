@@ -24,6 +24,7 @@ import Link from 'next/link';
 import { GameOverviewTab } from '@/components/games/detail/GameOverviewTab';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/navigation/tabs';
 import { Button } from '@/components/ui/primitives/button';
+import { logger } from '@/lib/logger';
 
 import { GameFAQTab } from './components/GameFAQTab';
 import { HeroSection } from './components/HeroSection';
@@ -75,7 +76,7 @@ export function GameDetailClient({ game }: GameDetailClientProps) {
           setBggWeight(data.averageWeight);
         }
       })
-      .catch(err => console.error('Failed to fetch BGG weight:', err));
+      .catch(err => logger.error('Failed to fetch BGG weight:', err));
   }, [game.bggId]);
 
   return (
@@ -139,9 +140,7 @@ export function GameDetailClient({ game }: GameDetailClientProps) {
               Parla con l&apos;assistente AI su {game.title}
             </p>
             <Button asChild>
-              <Link href={`/chat/new?gameId=${game.id}`}>
-                Avvia Chat AI
-              </Link>
+              <Link href={`/chat/new?gameId=${game.id}`}>Avvia Chat AI</Link>
             </Button>
           </div>
         </TabsContent>

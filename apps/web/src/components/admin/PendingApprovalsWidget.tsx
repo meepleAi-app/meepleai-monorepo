@@ -12,9 +12,8 @@ import { Skeleton } from '@/components/ui/feedback/skeleton';
 import { Button } from '@/components/ui/primitives/button';
 import { api } from '@/lib/api';
 import type { SharedGame } from '@/lib/api/schemas/shared-games.schemas';
+import { logger } from '@/lib/logger';
 import { cn } from '@/lib/utils';
-
-
 
 // ============================================================================
 // Types
@@ -49,7 +48,7 @@ export function PendingApprovalsWidget({
   className,
   'data-testid': testId = 'pending-approvals-widget',
   limit = 3,
-}: PendingApprovalsWidgetProps){
+}: PendingApprovalsWidgetProps) {
   // ============================================================================
   // State
   // ============================================================================
@@ -77,7 +76,7 @@ export function PendingApprovalsWidget({
       setGames(data.items);
       setTotal(data.total);
     } catch (err) {
-      console.error('Failed to fetch pending approvals:', err);
+      logger.error('Failed to fetch pending approvals:', err);
       setError('Errore nel caricamento delle approvazioni in attesa');
       toast.error('Impossibile caricare le approvazioni');
     } finally {
@@ -105,8 +104,8 @@ export function PendingApprovalsWidget({
 
       toast.success(`"${gameTitle}" approvato con successo`);
     } catch (err) {
-      console.error('Failed to approve game:', err);
-      toast.error('Errore nell\'approvazione del gioco');
+      logger.error('Failed to approve game:', err);
+      toast.error("Errore nell'approvazione del gioco");
 
       // Refetch on error to restore state
       await fetchPendingApprovals();
@@ -123,7 +122,7 @@ export function PendingApprovalsWidget({
     setProcessingIds(prev => new Set(prev).add(gameId));
 
     try {
-      await api.sharedGames.rejectPublication(gameId, 'Rifiutato dall\'amministratore');
+      await api.sharedGames.rejectPublication(gameId, "Rifiutato dall'amministratore");
 
       // Optimistic update
       setGames(prev => prev.filter(g => g.id !== gameId));
@@ -131,7 +130,7 @@ export function PendingApprovalsWidget({
 
       toast.success(`"${gameTitle}" rifiutato`);
     } catch (err) {
-      console.error('Failed to reject game:', err);
+      logger.error('Failed to reject game:', err);
       toast.error('Errore nel rifiuto del gioco');
 
       // Refetch on error to restore state
@@ -179,7 +178,9 @@ export function PendingApprovalsWidget({
       <Card className={className} data-testid={testId}>
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between">
-            <CardTitle className="text-base font-semibold" data-testid="widget-title">In Attesa di Approvazione</CardTitle>
+            <CardTitle className="text-base font-semibold" data-testid="widget-title">
+              In Attesa di Approvazione
+            </CardTitle>
             <Skeleton className="h-5 w-8" />
           </div>
         </CardHeader>
@@ -205,7 +206,11 @@ export function PendingApprovalsWidget({
           <CardTitle className="text-base font-semibold">In Attesa di Approvazione</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="p-4 bg-red-50 text-red-700 rounded-lg text-sm" role="alert" data-testid="widget-error">
+          <div
+            className="p-4 bg-red-50 text-red-700 rounded-lg text-sm"
+            role="alert"
+            data-testid="widget-error"
+          >
             {error}
           </div>
         </CardContent>
@@ -225,10 +230,7 @@ export function PendingApprovalsWidget({
           <CardTitle className="text-base font-semibold">In Attesa di Approvazione</CardTitle>
           <div className="flex items-center gap-2">
             {total > 0 && (
-              <Badge
-                variant="outline"
-                className="bg-amber-50 text-amber-700 border-amber-200"
-              >
+              <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200">
                 {total}
               </Badge>
             )}
@@ -251,12 +253,14 @@ export function PendingApprovalsWidget({
           // Empty State
           <div className="py-8 text-center text-muted-foreground" data-testid="empty-state">
             <Clock className="h-10 w-10 mx-auto mb-2 text-muted-foreground/50" aria-hidden="true" />
-            <p className="text-sm" data-testid="empty-state-message">Nessun gioco in attesa di approvazione</p>
+            <p className="text-sm" data-testid="empty-state-message">
+              Nessun gioco in attesa di approvazione
+            </p>
           </div>
         ) : (
           // Games List
           <div className="space-y-3" role="list">
-            {games.map((game) => {
+            {games.map(game => {
               const isProcessing = processingIds.has(game.id);
 
               return (
@@ -273,10 +277,7 @@ export function PendingApprovalsWidget({
                 >
                   {/* Game Info */}
                   <div className="mb-2">
-                    <h4
-                      className="font-medium text-sm text-foreground truncate"
-                      title={game.title}
-                    >
+                    <h4 className="font-medium text-sm text-foreground truncate" title={game.title}>
                       {game.title}
                     </h4>
                     <p className="text-xs text-muted-foreground mt-0.5">

@@ -106,13 +106,11 @@ internal class CompleteChunkedUploadCommandHandler : ICommandHandler<CompleteChu
                 );
             }
 
-            // Check for duplicate content on the same game
+            // Check for duplicate content globally (same file content across any game)
             if (contentHash != null)
             {
                 var isDuplicate = await _dbContext.PdfDocuments.AnyAsync(
-                    p => p.ContentHash == contentHash &&
-                         ((session.GameId.HasValue && p.GameId == session.GameId) ||
-                          (session.PrivateGameId.HasValue && p.PrivateGameId == session.PrivateGameId)),
+                    p => p.ContentHash == contentHash,
                     cancellationToken).ConfigureAwait(false);
 
                 if (isDuplicate)

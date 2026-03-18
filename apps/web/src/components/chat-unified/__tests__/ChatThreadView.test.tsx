@@ -76,6 +76,11 @@ vi.mock('@/hooks/useAgentChatStream', () => ({
   },
 }));
 
+// Mock RagEnhancementsBadge (uses useQuery which requires QueryClientProvider)
+vi.mock('../RagEnhancementsBadge', () => ({
+  RagEnhancementsBadge: () => <div data-testid="rag-badge-mock" />,
+}));
+
 // Mock ChatInfoPanel
 vi.mock('@/components/chat/ChatInfoPanel', () => ({
   ChatInfoPanel: ({ citations, suggestedQuestions }: any) => (

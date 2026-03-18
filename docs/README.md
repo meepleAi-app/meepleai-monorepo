@@ -64,9 +64,8 @@ docs/
 
 **DevOps**
 - [Deployment Guide](./deployment/README.md) - Infrastructure deployment
-- [Secrets Management](./deployment/secrets-management.md) - Secret system
-- [Monitoring Quickstart](./deployment/monitoring-quickstart.md) - Grafana + Prometheus
-- [Docker Services](./deployment/docker-services.md) - Docker Compose setup
+- [Operations Manual](./operations/operations-manual.md) - Service management, backup, monitoring, incident response
+- [Deployment Workflows](./deployment/deployment-workflows-guide.md) - CI/CD pipeline
 
 **QA/Tester**
 - [Testing Guide](./testing/README.md) - Testing philosophy and pyramid
@@ -77,7 +76,7 @@ docs/
 **Security**
 - [Security Guide](./security/README.md) - Security documentation
 - [OWASP Compliance](./security/owasp-top-10-compliance.md) - OWASP Top 10
-- [Secrets Management](./deployment/secrets-management.md) - Secret system
+- [Operations Manual](./operations/operations-manual.md) - Secrets, incident response, DR
 - [OAuth Testing](./testing/backend/oauth-testing.md) - OAuth security
 
 ---

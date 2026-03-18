@@ -173,6 +173,9 @@ export function createLibraryClient({ httpClient }: CreateLibraryClientParams): 
       if (params?.pageSize !== undefined) {
         queryParams.append('pageSize', String(params.pageSize));
       }
+      if (params?.search) {
+        queryParams.append('search', params.search);
+      }
       if (params?.favoritesOnly !== undefined) {
         queryParams.append('favoritesOnly', String(params.favoritesOnly));
       }
@@ -223,6 +226,10 @@ export function createLibraryClient({ httpClient }: CreateLibraryClientParams): 
           favoriteGames: 0,
           oldestAddedAt: null,
           newestAddedAt: null,
+          nuovoCount: 0,
+          inPrestitoCount: 0,
+          wishlistCount: 0,
+          ownedCount: 0,
         }
       );
     },

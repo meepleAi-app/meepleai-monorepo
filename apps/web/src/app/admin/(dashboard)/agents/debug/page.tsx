@@ -31,6 +31,7 @@ import {
   type RagExecutionDetail,
 } from '@/lib/api/clients/adminClient';
 import { HttpClient } from '@/lib/api/core/httpClient';
+import { logger } from '@/lib/logger';
 import { cn } from '@/lib/utils';
 
 // Initialize AdminClient instance
@@ -91,7 +92,7 @@ function parseExecutionTrace(traceJson: string | null): WaterfallCall[] | null {
 
     return null;
   } catch (error) {
-    console.error('Failed to parse execution trace:', error);
+    logger.error('Failed to parse execution trace:', error);
     return null;
   }
 }
@@ -226,7 +227,7 @@ export default function DebugConsolePage() {
 
         setTotalCount(result.totalCount);
       } catch (error) {
-        console.error('Failed to fetch executions:', error);
+        logger.error('Failed to fetch executions:', error);
       } finally {
         setIsLoading(false);
         setIsLoadingMore(false);
@@ -242,7 +243,7 @@ export default function DebugConsolePage() {
       const detail = await adminClient.getRagExecutionById(id);
       setSelectedExecution(detail);
     } catch (error) {
-      console.error('Failed to fetch execution detail:', error);
+      logger.error('Failed to fetch execution detail:', error);
     } finally {
       setIsLoadingDetail(false);
     }

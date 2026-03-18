@@ -7,14 +7,11 @@ import { Dices, Plus, Minus, History, X, Loader2 } from 'lucide-react';
 
 import { Badge } from '@/components/ui/data-display/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/data-display/card';
-import {
-  HoverCard,
-  HoverCardContent,
-  HoverCardTrigger,
-} from '@/components/ui/overlays/hover-card';
+import { HoverCard, HoverCardContent, HoverCardTrigger } from '@/components/ui/overlays/hover-card';
 import { Button } from '@/components/ui/primitives/button';
 import { Input } from '@/components/ui/primitives/input';
 import { ScrollArea } from '@/components/ui/primitives/scroll-area';
+import { logger } from '@/lib/logger';
 
 import { DiceRoll, DiceType, DICE_TYPES } from './types';
 
@@ -37,49 +34,92 @@ const DiceIcon = ({ sides, size = 24 }: { sides: number; size?: number }) => {
       return (
         <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
           <polygon points="12,2 22,20 2,20" fill={color} stroke="currentColor" strokeWidth="1.5" />
-          <text x="12" y="15" textAnchor="middle" fontSize="8" fill="white" fontWeight="bold">4</text>
+          <text x="12" y="15" textAnchor="middle" fontSize="8" fill="white" fontWeight="bold">
+            4
+          </text>
         </svg>
       );
     case 6:
       return (
         <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-          <rect x="3" y="3" width="18" height="18" rx="2" fill={color} stroke="currentColor" strokeWidth="1.5" />
-          <text x="12" y="16" textAnchor="middle" fontSize="10" fill="white" fontWeight="bold">6</text>
+          <rect
+            x="3"
+            y="3"
+            width="18"
+            height="18"
+            rx="2"
+            fill={color}
+            stroke="currentColor"
+            strokeWidth="1.5"
+          />
+          <text x="12" y="16" textAnchor="middle" fontSize="10" fill="white" fontWeight="bold">
+            6
+          </text>
         </svg>
       );
     case 8:
       return (
         <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-          <polygon points="12,1 22,7 22,17 12,23 2,17 2,7" fill={color} stroke="currentColor" strokeWidth="1.5" />
-          <text x="12" y="16" textAnchor="middle" fontSize="9" fill="white" fontWeight="bold">8</text>
+          <polygon
+            points="12,1 22,7 22,17 12,23 2,17 2,7"
+            fill={color}
+            stroke="currentColor"
+            strokeWidth="1.5"
+          />
+          <text x="12" y="16" textAnchor="middle" fontSize="9" fill="white" fontWeight="bold">
+            8
+          </text>
         </svg>
       );
     case 10:
       return (
         <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-          <polygon points="12,1 21,8 18,22 6,22 3,8" fill={color} stroke="currentColor" strokeWidth="1.5" />
-          <text x="12" y="15" textAnchor="middle" fontSize="8" fill="white" fontWeight="bold">10</text>
+          <polygon
+            points="12,1 21,8 18,22 6,22 3,8"
+            fill={color}
+            stroke="currentColor"
+            strokeWidth="1.5"
+          />
+          <text x="12" y="15" textAnchor="middle" fontSize="8" fill="white" fontWeight="bold">
+            10
+          </text>
         </svg>
       );
     case 12:
       return (
         <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-          <polygon points="12,1 20,5 22,13 17,21 7,21 2,13 4,5" fill={color} stroke="currentColor" strokeWidth="1.5" />
-          <text x="12" y="15" textAnchor="middle" fontSize="8" fill="white" fontWeight="bold">12</text>
+          <polygon
+            points="12,1 20,5 22,13 17,21 7,21 2,13 4,5"
+            fill={color}
+            stroke="currentColor"
+            strokeWidth="1.5"
+          />
+          <text x="12" y="15" textAnchor="middle" fontSize="8" fill="white" fontWeight="bold">
+            12
+          </text>
         </svg>
       );
     case 20:
       return (
         <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-          <polygon points="12,1 22,8 19,21 5,21 2,8" fill={color} stroke="currentColor" strokeWidth="1.5" />
-          <text x="12" y="15" textAnchor="middle" fontSize="8" fill="white" fontWeight="bold">20</text>
+          <polygon
+            points="12,1 22,8 19,21 5,21 2,8"
+            fill={color}
+            stroke="currentColor"
+            strokeWidth="1.5"
+          />
+          <text x="12" y="15" textAnchor="middle" fontSize="8" fill="white" fontWeight="bold">
+            20
+          </text>
         </svg>
       );
     case 100:
       return (
         <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
           <circle cx="12" cy="12" r="10" fill={color} stroke="currentColor" strokeWidth="1.5" />
-          <text x="12" y="15" textAnchor="middle" fontSize="7" fill="white" fontWeight="bold">%</text>
+          <text x="12" y="15" textAnchor="middle" fontSize="7" fill="white" fontWeight="bold">
+            %
+          </text>
         </svg>
       );
     default:
@@ -89,12 +129,12 @@ const DiceIcon = ({ sides, size = 24 }: { sides: number; size?: number }) => {
 
 function getDiceColor(sides: number): string {
   const colors: Record<number, string> = {
-    4: '#ef4444',   // red
-    6: '#f97316',   // orange
-    8: '#eab308',   // yellow
-    10: '#22c55e',  // green
-    12: '#0ea5e9',  // sky
-    20: '#8b5cf6',  // violet
+    4: '#ef4444', // red
+    6: '#f97316', // orange
+    8: '#eab308', // yellow
+    10: '#22c55e', // green
+    12: '#0ea5e9', // sky
+    20: '#8b5cf6', // violet
     100: '#ec4899', // pink
   };
   // eslint-disable-next-line security/detect-object-injection
@@ -140,26 +180,29 @@ export function DiceRoller({
       setLabel(''); // Clear label after roll
     } catch {
       // Error handling - could show toast
-      console.error('Roll failed');
+      logger.error('Roll failed');
     } finally {
       setIsRolling(false);
     }
   }, [disabled, isRolling, getFormula, label, onRoll]);
 
-  const handleQuickRoll = useCallback(async (type: DiceType) => {
-    if (disabled || isRolling) return;
+  const handleQuickRoll = useCallback(
+    async (type: DiceType) => {
+      if (disabled || isRolling) return;
 
-    setIsRolling(true);
-    try {
-      const sides = DICE_TYPES.find(d => d.type === type)?.sides || 20;
-      const result = await onRoll(`1d${sides}`);
-      setLastRoll(result);
-    } catch {
-      console.error('Roll failed');
-    } finally {
-      setIsRolling(false);
-    }
-  }, [disabled, isRolling, onRoll]);
+      setIsRolling(true);
+      try {
+        const sides = DICE_TYPES.find(d => d.type === type)?.sides || 20;
+        const result = await onRoll(`1d${sides}`);
+        setLastRoll(result);
+      } catch {
+        logger.error('Roll failed');
+      } finally {
+        setIsRolling(false);
+      }
+    },
+    [disabled, isRolling, onRoll]
+  );
 
   const incrementCount = () => setDiceCount(prev => Math.min(prev + 1, 100));
   const decrementCount = () => setDiceCount(prev => Math.max(prev - 1, 1));
@@ -176,7 +219,12 @@ export function DiceRoller({
           </CardTitle>
           <HoverCard open={showHistory} onOpenChange={setShowHistory}>
             <HoverCardTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setShowHistory(!showHistory)}>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                onClick={() => setShowHistory(!showHistory)}
+              >
                 <History className="h-4 w-4" />
               </Button>
             </HoverCardTrigger>
@@ -186,12 +234,10 @@ export function DiceRoller({
               </div>
               <ScrollArea className="h-64">
                 {rollHistory.length === 0 ? (
-                  <div className="p-4 text-center text-sm text-slate-500">
-                    No rolls yet
-                  </div>
+                  <div className="p-4 text-center text-sm text-slate-500">No rolls yet</div>
                 ) : (
                   <div className="p-2 space-y-2">
-                    {rollHistory.map((roll) => (
+                    {rollHistory.map(roll => (
                       <div
                         key={roll.id}
                         className="p-2 rounded-lg bg-white/50 dark:bg-slate-800/50 border border-amber-900/10"
@@ -206,7 +252,9 @@ export function DiceRoller({
                           <span className="text-xs text-slate-500">
                             [{roll.rolls.join(', ')}]
                             {roll.modifier !== 0 && (
-                              <span className={roll.modifier > 0 ? 'text-emerald-600' : 'text-red-600'}>
+                              <span
+                                className={roll.modifier > 0 ? 'text-emerald-600' : 'text-red-600'}
+                              >
                                 {roll.modifier > 0 ? ` +${roll.modifier}` : ` ${roll.modifier}`}
                               </span>
                             )}
@@ -216,9 +264,7 @@ export function DiceRoller({
                           </span>
                         </div>
                         {roll.label && (
-                          <div className="text-xs text-slate-500 mt-1 italic">
-                            {roll.label}
-                          </div>
+                          <div className="text-xs text-slate-500 mt-1 italic">{roll.label}</div>
                         )}
                       </div>
                     ))}
@@ -260,9 +306,7 @@ export function DiceRoller({
         <div className="grid grid-cols-2 gap-3">
           {/* Dice Count */}
           <div className="space-y-1">
-            <label className="text-xs font-medium text-slate-600 dark:text-slate-400">
-              Count
-            </label>
+            <label className="text-xs font-medium text-slate-600 dark:text-slate-400">Count</label>
             <div className="flex items-center gap-1">
               <Button
                 variant="outline"
@@ -276,7 +320,9 @@ export function DiceRoller({
               <Input
                 type="number"
                 value={diceCount}
-                onChange={(e) => setDiceCount(Math.max(1, Math.min(100, parseInt(e.target.value) || 1)))}
+                onChange={e =>
+                  setDiceCount(Math.max(1, Math.min(100, parseInt(e.target.value) || 1)))
+                }
                 className="h-8 w-14 text-center font-mono"
                 min={1}
                 max={100}
@@ -312,7 +358,9 @@ export function DiceRoller({
               <Input
                 type="number"
                 value={modifier}
-                onChange={(e) => setModifier(Math.max(-100, Math.min(100, parseInt(e.target.value) || 0)))}
+                onChange={e =>
+                  setModifier(Math.max(-100, Math.min(100, parseInt(e.target.value) || 0)))
+                }
                 className="h-8 w-14 text-center font-mono"
                 min={-100}
                 max={100}
@@ -340,7 +388,7 @@ export function DiceRoller({
             <Input
               placeholder="e.g., 2d6+3"
               value={customFormula}
-              onChange={(e) => setCustomFormula(e.target.value.toUpperCase())}
+              onChange={e => setCustomFormula(e.target.value.toUpperCase())}
               className="font-mono"
               disabled={disabled}
             />
@@ -365,7 +413,7 @@ export function DiceRoller({
           <Input
             placeholder="e.g., Attack roll"
             value={label}
-            onChange={(e) => setLabel(e.target.value)}
+            onChange={e => setLabel(e.target.value)}
             maxLength={100}
             disabled={disabled}
           />
@@ -413,7 +461,9 @@ export function DiceRoller({
                     </motion.span>
                   ))}
                   {lastRoll.modifier !== 0 && (
-                    <span className={`font-bold ${lastRoll.modifier > 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+                    <span
+                      className={`font-bold ${lastRoll.modifier > 0 ? 'text-emerald-600' : 'text-red-600'}`}
+                    >
                       {lastRoll.modifier > 0 ? `+${lastRoll.modifier}` : lastRoll.modifier}
                     </span>
                   )}
@@ -421,7 +471,11 @@ export function DiceRoller({
                 <motion.div
                   initial={{ scale: 0.5 }}
                   animate={{ scale: 1 }}
-                  transition={{ delay: lastRoll.rolls.length * 0.1, type: 'spring', stiffness: 300 }}
+                  transition={{
+                    delay: lastRoll.rolls.length * 0.1,
+                    type: 'spring',
+                    stiffness: 300,
+                  }}
                   className="text-4xl font-black text-amber-700 dark:text-amber-400"
                 >
                   {lastRoll.total}

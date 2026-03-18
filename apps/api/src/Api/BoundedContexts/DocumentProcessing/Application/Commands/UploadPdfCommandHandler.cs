@@ -132,13 +132,63 @@ internal class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUp
         // Issue #3664: Handle private game PDF uploads
         if (command.PrivateGameId.HasValue)
         {
-            // Compute content hash and check for duplicates (private game)
+            // Compute content hash and check for existing KBs with same content
             var privateContentHash = await ComputeContentHashAsync(file, cancellationToken).ConfigureAwait(false);
-            if (await _db.PdfDocuments.AnyAsync(
-                    p => p.ContentHash == privateContentHash && p.PrivateGameId == command.PrivateGameId.Value,
-                    cancellationToken).ConfigureAwait(false))
+
+            // Check 1: User's own PDFs with same content (any game)
+            var privateUserMatch = await _db.PdfDocuments
+                .AsNoTracking()
+                .Where(p => p.ContentHash == privateContentHash && p.UploadedByUserId == userId)
+                .Select(p => new
+                {
+                    p.Id,
+                    p.FileName,
+                    p.ProcessingState,
+                    p.SharedGameId,
+                    GameName = _db.Games.Where(g => g.Id == p.GameId).Select(g => g.Name).FirstOrDefault(),
+                    TotalChunks = _db.VectorDocuments.Where(vd => vd.PdfDocumentId == p.Id).Select(vd => (int?)vd.ChunkCount).FirstOrDefault()
+                })
+                .FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
+
+            if (privateUserMatch != null)
             {
-                return new PdfUploadResult(false, DuplicateContentErrorMessage, null);
+                var kbInfo = new ExistingKbInfoDto(
+                    PdfDocumentId: privateUserMatch.Id,
+                    Source: "user",
+                    FileName: privateUserMatch.FileName,
+                    ProcessingState: privateUserMatch.ProcessingState ?? "Pending",
+                    TotalChunks: privateUserMatch.TotalChunks,
+                    OriginalGameName: privateUserMatch.GameName,
+                    SharedGameId: null);
+                return new PdfUploadResult(true, "Existing KB found in your uploads", null, kbInfo);
+            }
+
+            // Check 2: SharedGameCatalog PDFs with same content
+            var privateSharedMatch = await _db.PdfDocuments
+                .AsNoTracking()
+                .Where(p => p.ContentHash == privateContentHash && p.SharedGameId != null)
+                .Select(p => new
+                {
+                    p.Id,
+                    p.FileName,
+                    p.ProcessingState,
+                    p.SharedGameId,
+                    GameName = _db.SharedGames.Where(sg => sg.Id == p.SharedGameId).Select(sg => sg.Title).FirstOrDefault(),
+                    TotalChunks = _db.VectorDocuments.Where(vd => vd.PdfDocumentId == p.Id).Select(vd => (int?)vd.ChunkCount).FirstOrDefault()
+                })
+                .FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
+
+            if (privateSharedMatch != null)
+            {
+                var kbInfo = new ExistingKbInfoDto(
+                    PdfDocumentId: privateSharedMatch.Id,
+                    Source: "shared",
+                    FileName: privateSharedMatch.FileName,
+                    ProcessingState: privateSharedMatch.ProcessingState ?? "Pending",
+                    TotalChunks: privateSharedMatch.TotalChunks,
+                    OriginalGameName: privateSharedMatch.GameName,
+                    SharedGameId: privateSharedMatch.SharedGameId);
+                return new PdfUploadResult(true, "Existing KB found in shared catalog", null, kbInfo);
             }
 
             return await HandlePrivateGamePdfUploadAsync(
@@ -156,13 +206,63 @@ internal class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUp
 
         var gameId = resolvedGameId.Value.ToString();
 
-        // Compute content hash and check for duplicates
+        // Compute content hash and check for existing KBs with same content
         var contentHash = await ComputeContentHashAsync(file, cancellationToken).ConfigureAwait(false);
-        if (await _db.PdfDocuments.AnyAsync(
-                p => p.ContentHash == contentHash && p.GameId == resolvedGameId.Value,
-                cancellationToken).ConfigureAwait(false))
+
+        // Check 1: User's own PDFs with same content (any game)
+        var userMatch = await _db.PdfDocuments
+            .AsNoTracking()
+            .Where(p => p.ContentHash == contentHash && p.UploadedByUserId == userId)
+            .Select(p => new
+            {
+                p.Id,
+                p.FileName,
+                p.ProcessingState,
+                p.SharedGameId,
+                GameName = _db.Games.Where(g => g.Id == p.GameId).Select(g => g.Name).FirstOrDefault(),
+                TotalChunks = _db.VectorDocuments.Where(vd => vd.PdfDocumentId == p.Id).Select(vd => (int?)vd.ChunkCount).FirstOrDefault()
+            })
+            .FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
+
+        if (userMatch != null)
         {
-            return new PdfUploadResult(false, DuplicateContentErrorMessage, null);
+            var kbInfo = new ExistingKbInfoDto(
+                PdfDocumentId: userMatch.Id,
+                Source: "user",
+                FileName: userMatch.FileName,
+                ProcessingState: userMatch.ProcessingState ?? "Pending",
+                TotalChunks: userMatch.TotalChunks,
+                OriginalGameName: userMatch.GameName,
+                SharedGameId: null);
+            return new PdfUploadResult(true, "Existing KB found in your uploads", null, kbInfo);
+        }
+
+        // Check 2: SharedGameCatalog PDFs with same content
+        var sharedMatch = await _db.PdfDocuments
+            .AsNoTracking()
+            .Where(p => p.ContentHash == contentHash && p.SharedGameId != null)
+            .Select(p => new
+            {
+                p.Id,
+                p.FileName,
+                p.ProcessingState,
+                p.SharedGameId,
+                GameName = _db.SharedGames.Where(sg => sg.Id == p.SharedGameId).Select(sg => sg.Title).FirstOrDefault(),
+                TotalChunks = _db.VectorDocuments.Where(vd => vd.PdfDocumentId == p.Id).Select(vd => (int?)vd.ChunkCount).FirstOrDefault()
+            })
+            .FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
+
+        if (sharedMatch != null)
+        {
+            var kbInfo = new ExistingKbInfoDto(
+                PdfDocumentId: sharedMatch.Id,
+                Source: "shared",
+                FileName: sharedMatch.FileName,
+                ProcessingState: sharedMatch.ProcessingState ?? "Pending",
+                TotalChunks: sharedMatch.TotalChunks,
+                OriginalGameName: sharedMatch.GameName,
+                SharedGameId: sharedMatch.SharedGameId);
+            return new PdfUploadResult(true, "Existing KB found in shared catalog", null, kbInfo);
         }
 
         // Store file and create database record

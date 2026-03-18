@@ -69,7 +69,7 @@ vi.mock('../QuerySimulator', () => ({
   QuerySimulator: () => <div data-testid="query-simulator">QuerySimulator</div>,
 }));
 
-vi.mock('../TokenFlowVisualizer', () => ({
+vi.mock('../metrics/TokenFlowVisualizer', () => ({
   TokenFlowVisualizer: () => <div data-testid="token-flow">TokenFlowVisualizer</div>,
 }));
 
@@ -77,7 +77,7 @@ vi.mock('../ArchitectureExplorer', () => ({
   ArchitectureExplorer: () => <div data-testid="architecture-explorer">ArchitectureExplorer</div>,
 }));
 
-vi.mock('../LayerDeepDocs', () => ({
+vi.mock('../reference/LayerDeepDocs', () => ({
   LayerDeepDocs: () => <div data-testid="layer-docs">LayerDeepDocs</div>,
 }));
 
@@ -93,15 +93,17 @@ vi.mock('../VariantComparisonTool', () => ({
   VariantComparisonTool: () => <div data-testid="variant-comparison">VariantComparisonTool</div>,
 }));
 
-vi.mock('../PerformanceMetricsTable', () => ({
-  PerformanceMetricsTable: () => <div data-testid="performance-metrics">PerformanceMetricsTable</div>,
+vi.mock('../metrics/PerformanceMetricsTable', () => ({
+  PerformanceMetricsTable: () => (
+    <div data-testid="performance-metrics">PerformanceMetricsTable</div>
+  ),
 }));
 
 vi.mock('../PromptTemplateBuilder', () => ({
   PromptTemplateBuilder: () => <div data-testid="prompt-builder">PromptTemplateBuilder</div>,
 }));
 
-vi.mock('../AgentRoleConfigurator', () => ({
+vi.mock('../config/AgentRoleConfigurator', () => ({
   AgentRoleConfigurator: () => <div data-testid="agent-role-config">AgentRoleConfigurator</div>,
 }));
 
@@ -121,7 +123,7 @@ vi.mock('../TechnicalReference', () => ({
   TechnicalReference: () => <div data-testid="technical-reference">TechnicalReference</div>,
 }));
 
-vi.mock('../ParameterGuide', () => ({
+vi.mock('../reference/ParameterGuide', () => ({
   ParameterGuide: () => <div data-testid="parameter-guide">ParameterGuide</div>,
 }));
 
@@ -187,7 +189,7 @@ describe('Navigation Integration (Tabbed Dashboard)', () => {
 
   describe('NAVIGATION_GROUPS configuration', () => {
     it('should have all required tab groups', () => {
-      const groupIds = NAVIGATION_GROUPS.map((g) => g.id);
+      const groupIds = NAVIGATION_GROUPS.map(g => g.id);
       expect(groupIds).toContain('overview');
       expect(groupIds).toContain('architecture');
       expect(groupIds).toContain('agents');
@@ -200,21 +202,21 @@ describe('Navigation Integration (Tabbed Dashboard)', () => {
     });
 
     it('should have labels for all groups', () => {
-      NAVIGATION_GROUPS.forEach((group) => {
+      NAVIGATION_GROUPS.forEach(group => {
         expect(group.label).toBeTruthy();
         expect(group.label.length).toBeGreaterThan(0);
       });
     });
 
     it('should have icons for all groups', () => {
-      NAVIGATION_GROUPS.forEach((group) => {
+      NAVIGATION_GROUPS.forEach(group => {
         expect(group.icon).toBeTruthy();
         expect(group.icon.length).toBeGreaterThan(0);
       });
     });
 
     it('should have descriptions for all groups', () => {
-      NAVIGATION_GROUPS.forEach((group) => {
+      NAVIGATION_GROUPS.forEach(group => {
         expect(group.description).toBeTruthy();
         expect(group.description.length).toBeGreaterThan(0);
       });

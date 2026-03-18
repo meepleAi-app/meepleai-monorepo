@@ -15,7 +15,7 @@ vi.mock('@/lib/api', () => ({
 }));
 
 const mockToast = vi.hoisted(() => vi.fn());
-vi.mock('@/hooks/use-toast', () => ({
+vi.mock('@/hooks/useToast', () => ({
   useToast: () => ({ toast: mockToast }),
 }));
 

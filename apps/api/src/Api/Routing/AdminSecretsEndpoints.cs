@@ -54,7 +54,7 @@ internal static class AdminSecretsEndpoints
 
     private static IResult HandleGetSecrets(HttpContext context, IConfiguration config, ILogger<Program> logger)
     {
-        var (authorized, session, error) = context.RequireAdminSession();
+        var (authorized, session, error) = context.RequireSuperAdminSession();
         if (!authorized) return error!;
 
         var reveal = context.Request.Query.ContainsKey("reveal");
@@ -103,7 +103,7 @@ internal static class AdminSecretsEndpoints
     private static async Task<IResult> HandleUpdateSecrets(
         HttpContext context, IConfiguration config, ILogger<Program> logger, CancellationToken ct)
     {
-        var (authorized, session, error) = context.RequireAdminSession();
+        var (authorized, session, error) = context.RequireSuperAdminSession();
         if (!authorized) return error!;
 
         var secretsDir = GetSecretsDirectory(config);
@@ -117,22 +117,27 @@ internal static class AdminSecretsEndpoints
         var updatedFiles = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         foreach (var update in body.Updates)
         {
-            if (update.FileName.Contains("..", StringComparison.Ordinal) || update.FileName.Contains('/', StringComparison.Ordinal) || update.FileName.Contains('\\', StringComparison.Ordinal))
+            // Path traversal: canonicalize and verify stays inside secretsDir
+            var filePath = Path.GetFullPath(Path.Combine(secretsDir, update.FileName));
+            if (!filePath.StartsWith(secretsDir, StringComparison.OrdinalIgnoreCase))
                 return Results.BadRequest(new { error = $"Invalid fileName: {update.FileName}" });
 
-            if (!System.Text.RegularExpressions.Regex.IsMatch(update.Key, @"^[A-Z][A-Z0-9_]*$", System.Text.RegularExpressions.RegexOptions.None, TimeSpan.FromSeconds(1)))
+            if (!System.Text.RegularExpressions.Regex.IsMatch(update.Key, @"^[A-Za-z][A-Za-z0-9_]*$", System.Text.RegularExpressions.RegexOptions.None, TimeSpan.FromSeconds(1)))
                 return Results.BadRequest(new { error = $"Invalid key format: {update.Key}" });
 
-            var filePath = Path.Combine(secretsDir, update.FileName);
             if (!File.Exists(filePath))
                 return Results.BadRequest(new { error = $"File not found: {update.FileName}" });
 
-            var lines = await File.ReadAllLinesAsync(filePath, ct).ConfigureAwait(false);
+            // Read original text to preserve line endings
+            var originalText = await File.ReadAllTextAsync(filePath, ct).ConfigureAwait(false);
+            var lineEnding = originalText.Contains("\r\n", StringComparison.Ordinal) ? "\r\n" : "\n";
+            var lines = originalText.Split(lineEnding).ToList();
+
             var found = false;
-            for (var i = 0; i < lines.Length; i++)
+            for (var i = 0; i < lines.Count; i++)
             {
-                if (lines[i].TrimStart().StartsWith('#') || !lines[i].Contains('=')) continue;
-                var eqIdx = lines[i].IndexOf('=');
+                if (lines[i].TrimStart().StartsWith('#') || !lines[i].Contains('=', StringComparison.Ordinal)) continue;
+                var eqIdx = lines[i].IndexOf('=', StringComparison.Ordinal);
                 var lineKey = lines[i][..eqIdx].Trim();
                 if (string.Equals(lineKey, update.Key, StringComparison.Ordinal))
                 {
@@ -144,12 +149,10 @@ internal static class AdminSecretsEndpoints
 
             if (!found)
             {
-                var newLines = lines.ToList();
-                newLines.Add($"{update.Key}={update.Value}");
-                lines = newLines.ToArray();
+                lines.Add($"{update.Key}={update.Value}");
             }
 
-            await File.WriteAllLinesAsync(filePath, lines, ct).ConfigureAwait(false);
+            await File.WriteAllTextAsync(filePath, string.Join(lineEnding, lines), ct).ConfigureAwait(false);
             updatedFiles.Add(update.FileName);
 
             logger.LogInformation("Admin {UserId} updated secret {Key} in {File}",
@@ -162,7 +165,7 @@ internal static class AdminSecretsEndpoints
     private static IResult HandleRestart(
         HttpContext context, IHostApplicationLifetime lifetime, ILogger<Program> logger)
     {
-        var (authorized, session, error) = context.RequireAdminSession();
+        var (authorized, session, error) = context.RequireSuperAdminSession();
         if (!authorized) return error!;
 
         logger.LogWarning("Admin {UserId} initiated API restart via secrets management", session!.User!.Id);

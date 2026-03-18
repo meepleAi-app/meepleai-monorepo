@@ -41,7 +41,7 @@ export function SecretsPanel() {
     const updates: SecretUpdate[] = [];
     for (const [fileName, entries] of Object.entries(dirtyValues)) {
       for (const [key, value] of Object.entries(entries)) {
-        if (value) updates.push({ fileName, key, value });
+        updates.push({ fileName, key, value });
       }
     }
     if (updates.length === 0) return;
@@ -70,7 +70,7 @@ export function SecretsPanel() {
       const poll = setInterval(async () => {
         attempts++;
         try {
-          const resp = await fetch('/api/v1/health');
+          const resp = await fetch('/health/live');
           if (resp.ok) {
             clearInterval(poll);
             setIsRestarting(false);

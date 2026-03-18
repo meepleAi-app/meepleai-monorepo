@@ -20,39 +20,8 @@ namespace Api.Infrastructure.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            var now = "NOW() AT TIME ZONE 'UTC'";
-
-            foreach (var (key, isEnabled, description) in Flags)
-            {
-                var value = isEnabled ? "true" : "false";
-                migrationBuilder.Sql($"""
-                    INSERT INTO "system_configurations"
-                        ("Id", "Key", "Value", "ValueType", "Description", "Category",
-                         "IsActive", "RequiresRestart", "Environment", "Version",
-                         "CreatedAt", "UpdatedAt", "CreatedByUserId")
-                    SELECT
-                        gen_random_uuid(),
-                        '{key}',
-                        '{value}',
-                        'bool',
-                        '{description}',
-                        'Features',
-                        true,
-                        false,
-                        'All',
-                        1,
-                        {now},
-                        {now},
-                        COALESCE(
-                            (SELECT "Id" FROM "users" WHERE "Role" = 'Admin' ORDER BY "CreatedAt" LIMIT 1),
-                            '00000000-0000-0000-0000-000000000000'::uuid
-                        )
-                    WHERE NOT EXISTS (
-                        SELECT 1 FROM "system_configurations"
-                        WHERE "Key" = '{key}' AND "Environment" = 'All'
-                    );
-                    """);
-            }
+            // No-op: feature flags are seeded at runtime by FeatureFlagSeeder
+            // (which runs after admin user creation, avoiding FK constraint violations on fresh DBs).
         }
 
         /// <inheritdoc />

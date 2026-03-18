@@ -31,6 +31,14 @@ internal static class FeatureFlagSeeder
         new("Features.PdfUpload", "Enable/disable PDF upload feature (standard + chunked)", true, true, true, true),
         new("Features.StreamingResponses", "Enable/disable SSE streaming AI responses", true, true, true, true),
         new("alpha_layout", "Alpha mobile-first layout with 4-tab navigation (AlphaShell)", false, false, false, false),
+
+        // Game Night v2 feature flags
+        new("Features:SetupWizard.Enabled", "Enable Setup Wizard for live sessions", true, true, true, true),
+        new("Features:SetupWizard.BggFallback", "Enable BGG data fallback in setup checklist cascade", false, false, false, false),
+        new("Features:Arbitro.StructuredDisputes", "Enable v2 structured dispute system", true, true, true, true),
+        new("Features:Arbitro.DemocraticOverride", "Enable democratic override voting on dispute verdicts", true, true, true, true),
+        new("Features:AgentMemory.Enabled", "Enable persistent agent memory system", true, true, true, true),
+        new("Features:AgentMemory.GuestClaim", "Enable guest account claiming for player history", true, true, true, true),
     ];
 
     /// <summary>

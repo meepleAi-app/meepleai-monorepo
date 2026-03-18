@@ -33,6 +33,7 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
     private readonly TimeProvider _timeProvider;
     private readonly ILogger<PdfProcessingPipelineService> _logger;
     private readonly IRaptorIndexer? _raptorIndexer;
+    private readonly IEntityExtractor? _entityExtractor;
     private readonly IQdrantVectorStoreAdapter? _vectorStore;
 
     public PdfProcessingPipelineService(
@@ -45,6 +46,7 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
         TimeProvider timeProvider,
         ILogger<PdfProcessingPipelineService> logger,
         IRaptorIndexer? raptorIndexer = null,
+        IEntityExtractor? entityExtractor = null,
         IQdrantVectorStoreAdapter? vectorStore = null)
     {
         _db = db ?? throw new ArgumentNullException(nameof(db));
@@ -56,6 +58,7 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
         _timeProvider = timeProvider ?? throw new ArgumentNullException(nameof(timeProvider));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _raptorIndexer = raptorIndexer;
+        _entityExtractor = entityExtractor;
         _vectorStore = vectorStore;
     }
 
@@ -151,6 +154,51 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
                         "[PdfPipeline] RAPTOR indexing failed for PDF {PdfId}, continuing without hierarchical summaries",
                         pdfDoc.Id);
                     // Non-blocking: document processing continues even if RAPTOR fails
+                }
+#pragma warning restore CA1031
+            }
+
+            // === Graph RAG: Extract entity relations (optional, non-blocking) ===
+            if (_entityExtractor is not null && fullText.Length >= 200)
+            {
+                try
+                {
+                    var gameId = pdfDoc.GameId ?? Guid.Empty;
+                    var gameTitle = pdfDoc.FileName ?? "Unknown";
+                    var extraction = await _entityExtractor.ExtractEntitiesAsync(
+                        gameId, gameTitle,
+                        fullText[..Math.Min(fullText.Length, 8000)],
+                        cancellationToken).ConfigureAwait(false);
+
+                    if (extraction.Relations.Count > 0)
+                    {
+                        var entities = extraction.Relations.Select(r => new GameEntityRelationEntity
+                        {
+                            Id = Guid.NewGuid(),
+                            GameId = gameId,
+                            SourceEntity = r.SourceEntity,
+                            SourceType = r.SourceType,
+                            Relation = r.Relation,
+                            TargetEntity = r.TargetEntity,
+                            TargetType = r.TargetType,
+                            Confidence = r.Confidence,
+                            ExtractedAt = DateTime.UtcNow
+                        }).ToList();
+
+                        _db.GameEntityRelations.AddRange(entities);
+                        await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+                        _logger.LogInformation(
+                            "[PdfPipeline] Graph RAG: extracted {RelCount} relations for PDF {PdfId}",
+                            entities.Count, pdfDoc.Id);
+                    }
+                }
+#pragma warning disable CA1031 // Graph RAG is optional enhancement
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex,
+                        "[PdfPipeline] Graph RAG extraction failed for PDF {PdfId}, continuing",
+                        pdfDoc.Id);
                 }
 #pragma warning restore CA1031
             }

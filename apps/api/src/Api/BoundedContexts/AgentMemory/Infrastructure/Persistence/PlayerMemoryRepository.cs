@@ -63,6 +63,30 @@ internal sealed class PlayerMemoryRepository : RepositoryBase, IPlayerMemoryRepo
         return entity != null ? MapToDomain(entity) : null;
     }
 
+    public async Task<IReadOnlyList<PlayerMemory>> GetAllByGuestNameAsync(string guestName, CancellationToken ct = default)
+    {
+        var entities = await DbContext.PlayerMemories
+            .AsNoTracking()
+            .Where(e => e.GuestName != null
+                && EF.Functions.ILike(e.GuestName, guestName)
+                && e.UserId == null)
+            .ToListAsync(ct)
+            .ConfigureAwait(false);
+
+        return entities.Select(MapToDomain).ToList();
+    }
+
+    public async Task<IReadOnlyList<PlayerMemory>> GetAllByUserIdAsync(Guid userId, CancellationToken ct = default)
+    {
+        var entities = await DbContext.PlayerMemories
+            .AsNoTracking()
+            .Where(e => e.UserId == userId)
+            .ToListAsync(ct)
+            .ConfigureAwait(false);
+
+        return entities.Select(MapToDomain).ToList();
+    }
+
     public async Task AddAsync(PlayerMemory memory, CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(memory);

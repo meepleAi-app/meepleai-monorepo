@@ -3,37 +3,39 @@
 /**
  * AlphaShellClient — Client component providing the alpha layout structure.
  *
- * Mobile-first layout with:
- * - Top nav bar (placeholder — Task 1.2 will replace)
- * - Scrollable main content area
- * - Bottom tab bar (placeholder — Task 1.3 will replace)
+ * Layout:
+ * - Desktop: sidebar + (topnav + main content)
+ * - Mobile: topnav + main content + bottom tab bar
  *
  * Uses h-dvh (dynamic viewport height) for mobile-safe full height.
  */
 
-import { type ReactNode } from 'react';
+import { useRef, type ReactNode } from 'react';
+
+import { AlphaDesktopSidebar } from './AlphaDesktopSidebar';
+import { AlphaTabBar } from './AlphaTabBar';
+import { AlphaTopNav } from './AlphaTopNav';
 
 interface AlphaShellClientProps {
   children: ReactNode;
   isAdmin: boolean;
 }
 
-export function AlphaShellClient({ children }: AlphaShellClientProps) {
+export function AlphaShellClient({ children, isAdmin }: AlphaShellClientProps) {
+  const mainRef = useRef<HTMLElement>(null);
+
   return (
-    <div className="flex flex-col h-dvh bg-background">
-      {/* AlphaTopNav placeholder — Task 1.2 will replace */}
-      <div className="h-14 border-b border-border/40 flex items-center px-4">
-        <span className="font-quicksand font-bold">MeepleAI</span>
-      </div>
+    <div className="flex h-dvh bg-background">
+      <AlphaDesktopSidebar isAdmin={isAdmin} className="hidden lg:flex" />
 
-      <main className="flex-1 overflow-y-auto pb-16">{children}</main>
+      <div className="flex flex-col flex-1 min-w-0">
+        <AlphaTopNav isAdmin={isAdmin} scrollContainerRef={mainRef} />
 
-      {/* AlphaTabBar placeholder — Task 1.3 will replace */}
-      <div className="fixed bottom-0 left-0 right-0 h-14 border-t border-border/40 bg-card/90 backdrop-blur-md flex items-center justify-around z-40">
-        <span className="text-xs text-muted-foreground">Home</span>
-        <span className="text-xs text-muted-foreground">Libreria</span>
-        <span className="text-xs text-muted-foreground">Play</span>
-        <span className="text-xs text-muted-foreground">Chat</span>
+        <main ref={mainRef} className="flex-1 overflow-y-auto pb-16 lg:pb-0">
+          {children}
+        </main>
+
+        <AlphaTabBar />
       </div>
     </div>
   );

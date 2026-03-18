@@ -226,6 +226,7 @@ services:
     volumes:
       - ./traefik/traefik.staging.yml:/etc/traefik/traefik.yml:ro
     labels:
+      - "traefik.enable=true"
       - "traefik.http.middlewares.integration-auth.basicauth.users=${INTEGRATION_BASIC_AUTH}"
       - "traefik.http.middlewares.rate-limit.ratelimit.average=100"
       - "traefik.http.middlewares.rate-limit.ratelimit.burst=50"

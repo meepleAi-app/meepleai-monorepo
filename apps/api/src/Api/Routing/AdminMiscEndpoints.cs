@@ -130,7 +130,7 @@ internal static class AdminMiscEndpoints
             return Results.Json(new
             {
                 success = true,
-                message = "E2E test users seeded: admin@meepleai.dev, editor@meepleai.dev, user@meepleai.dev"
+                message = "E2E test users seeded: admin (from INITIAL_ADMIN_EMAIL), editor@meepleai.dev, user@meepleai.dev"
             });
         });
 

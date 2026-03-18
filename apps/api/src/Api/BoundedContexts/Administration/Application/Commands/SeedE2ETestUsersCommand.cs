@@ -7,7 +7,7 @@ namespace Api.BoundedContexts.Administration.Application.Commands;
 /// Creates admin, editor, and user accounts with predictable credentials.
 ///
 /// Users created:
-/// - admin@meepleai.dev / Demo123! (Admin role)
+/// - Admin: email from INITIAL_ADMIN_EMAIL secret, password from ADMIN_PASSWORD secret (Admin role)
 /// - editor@meepleai.dev / Demo123! (Editor role)
 /// - user@meepleai.dev / Demo123! (User role)
 /// </summary>

@@ -595,6 +595,7 @@ v1Api.MapRulebookAnalysisEndpoints(); // ISSUE-2402: Rulebook analysis service
 v1Api.MapLlmEndpoints(); // ISSUE-2391: Sprint 2 - LLM provider management
 v1Api.MapAiEndpoints();
 v1Api.MapPdfEndpoints();
+v1Api.MapRulebookEndpoints(); // Rulebook upload with PDF deduplication + games-with-kb query
 v1Api.MapDocumentCollectionEndpoints();
 v1Api.MapRuleSpecEndpoints();
 

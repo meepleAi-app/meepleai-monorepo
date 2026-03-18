@@ -25,13 +25,28 @@ if [ ! -f "$ADMIN_SECRET_FILE" ]; then
   echo "Run: cd infra && make secrets-dev"
   exit 1
 fi
-ADMIN_PASSWORD=$(grep -oP 'ADMIN_PASSWORD=\K.*' "$ADMIN_SECRET_FILE" || true)
+ADMIN_PASSWORD=$(sed -n 's/^ADMIN_PASSWORD=//p' "$ADMIN_SECRET_FILE" | head -1)
 if [ -z "$ADMIN_PASSWORD" ]; then
   echo "ERROR: ADMIN_PASSWORD not found in $ADMIN_SECRET_FILE"
   exit 1
 fi
 
-ADMIN_EMAIL="admin@meepleai.dev"
+# Read admin email from secret (fallback to default)
+ADMIN_EMAIL=$(sed -n 's/^ADMIN_EMAIL=//p' "$ADMIN_SECRET_FILE" | head -1)
+[ -z "$ADMIN_EMAIL" ] && ADMIN_EMAIL=$(sed -n 's/^INITIAL_ADMIN_EMAIL=//p' "$ADMIN_SECRET_FILE" | head -1)
+[ -z "$ADMIN_EMAIL" ] && ADMIN_EMAIL="admin@meepleai.app"
+
+# Helper: extract JSON string field (portable, no grep -oP)
+json_str() {
+  local json="$1" field="$2"
+  echo "$json" | sed -n "s/.*\"$field\"[[:space:]]*:[[:space:]]*\"\([^\"]*\)\".*/\1/p" | head -1
+}
+
+# Helper: extract JSON numeric field
+json_num() {
+  local json="$1" field="$2"
+  echo "$json" | sed -n "s/.*\"$field\"[[:space:]]*:[[:space:]]*\([0-9][0-9]*\).*/\1/p" | head -1
+}
 
 echo "=== Step 1: Admin Login ==="
 LOGIN_RESPONSE=$(curl -s -w "\n%{http_code}" -X POST "$API_BASE/auth/login" \
@@ -70,12 +85,16 @@ CREATE_RESPONSE=$(curl -s -w "\n%{http_code}" -X POST "$API_BASE/admin/shared-ga
     "bggId": 13
   }')
 HTTP_CODE=$(echo "$CREATE_RESPONSE" | tail -1)
-GAME_ID=$(echo "$CREATE_RESPONSE" | sed '$d' | tr -d '"')
+BODY=$(echo "$CREATE_RESPONSE" | sed '$d')
 
-if [ "$HTTP_CODE" != "201" ]; then
-  echo "ERROR: Create game failed (HTTP $HTTP_CODE): $GAME_ID"
+if [ "$HTTP_CODE" != "200" ] && [ "$HTTP_CODE" != "201" ]; then
+  echo "ERROR: Create game failed (HTTP $HTTP_CODE): $BODY"
   exit 1
 fi
+# Response may be bare GUID or JSON with id/gameId field
+GAME_ID=$(json_str "$BODY" "id")
+[ -z "$GAME_ID" ] && GAME_ID=$(json_str "$BODY" "gameId")
+[ -z "$GAME_ID" ] && GAME_ID=$(echo "$BODY" | tr -d '"[:space:]')
 echo "Game created: $GAME_ID"
 
 echo ""
@@ -85,7 +104,7 @@ PUBLISH_RESPONSE=$(curl -s -w "\n%{http_code}" -X POST \
   -b "$COOKIE_JAR")
 HTTP_CODE=$(echo "$PUBLISH_RESPONSE" | tail -1)
 
-if [ "$HTTP_CODE" != "204" ]; then
+if [ "$HTTP_CODE" != "200" ] && [ "$HTTP_CODE" != "204" ]; then
   BODY=$(echo "$PUBLISH_RESPONSE" | sed '$d')
   echo "ERROR: Quick-publish failed (HTTP $HTTP_CODE): $BODY"
   exit 1
@@ -106,8 +125,9 @@ if [ "$HTTP_CODE" != "200" ] && [ "$HTTP_CODE" != "201" ]; then
   exit 1
 fi
 
-# Extract pdfId from response
-PDF_ID=$(echo "$BODY" | grep -oP '"documentId"\s*:\s*"\K[^"]+' || echo "$BODY" | grep -oP '"id"\s*:\s*"\K[^"]+' || echo "")
+# Response: { "documentId": "...", "fileName": "..." }
+PDF_ID=$(json_str "$BODY" "documentId")
+[ -z "$PDF_ID" ] && PDF_ID=$(json_str "$BODY" "id")
 if [ -z "$PDF_ID" ]; then
   echo "WARNING: Could not extract PDF ID from response. Full response:"
   echo "$BODY"
@@ -123,23 +143,26 @@ echo "=== Step 5: Poll Processing Status ==="
 MAX_WAIT=300
 ELAPSED=0
 INTERVAL=10
-CURRENT_STATE="unknown"
+CURRENT_STEP="unknown"
 
 while [ $ELAPSED -lt $MAX_WAIT ]; do
   STATUS_RESPONSE=$(curl -s -X GET "$API_BASE/pdfs/$PDF_ID/progress" \
     -b "$COOKIE_JAR")
-  CURRENT_STATE=$(echo "$STATUS_RESPONSE" | grep -oP '"currentState"\s*:\s*"\K[^"]+' || echo "unknown")
-  PROGRESS=$(echo "$STATUS_RESPONSE" | grep -oP '"overallProgress"\s*:\s*\K[0-9.]+' || echo "0")
+  # Response: ProcessingProgress { currentStep: enum, percentComplete: 0-100 }
+  CURRENT_STEP=$(json_str "$STATUS_RESPONSE" "currentStep")
+  PERCENT=$(json_num "$STATUS_RESPONSE" "percentComplete")
+  [ -z "$CURRENT_STEP" ] && CURRENT_STEP="unknown"
+  [ -z "$PERCENT" ] && PERCENT="0"
 
-  echo "  [$ELAPSED s] State: $CURRENT_STATE | Progress: ${PROGRESS}%"
+  echo "  [${ELAPSED}s] Step: $CURRENT_STEP | Progress: ${PERCENT}%"
 
-  if [ "$CURRENT_STATE" = "Ready" ]; then
+  if [ "$CURRENT_STEP" = "Completed" ]; then
     echo ""
-    echo "PDF Processing Complete!"
+    echo "=== PDF Processing Complete! ==="
     break
   fi
 
-  if [ "$CURRENT_STATE" = "Failed" ]; then
+  if [ "$CURRENT_STEP" = "Failed" ]; then
     echo "ERROR: PDF processing failed!"
     echo "$STATUS_RESPONSE"
     exit 1
@@ -150,14 +173,14 @@ while [ $ELAPSED -lt $MAX_WAIT ]; do
 done
 
 if [ $ELAPSED -ge $MAX_WAIT ]; then
-  echo "WARNING: Timeout waiting for PDF processing ($MAX_WAIT s). Check status manually."
+  echo "WARNING: Timeout waiting for PDF processing (${MAX_WAIT}s). Check status manually."
 fi
 
 echo ""
 echo "=== Step 6: Register Test User ==="
 REG_RESPONSE=$(curl -s -w "\n%{http_code}" -X POST "$API_BASE/auth/register" \
   -H "Content-Type: application/json" \
-  -d '{"email":"testuser@meepleai.dev","password":"TestUser123!"}')
+  -d '{"email":"testuser@meepleai.dev","password":"TestUser123!","displayName":"Test User"}')
 HTTP_CODE=$(echo "$REG_RESPONSE" | tail -1)
 BODY=$(echo "$REG_RESPONSE" | sed '$d')
 
@@ -178,7 +201,7 @@ echo ""
 echo "  Game ID:    $GAME_ID"
 echo "  Game Title: I Coloni di Catan"
 echo "  PDF ID:     $PDF_ID"
-echo "  PDF Status: $CURRENT_STATE"
+echo "  PDF Status: $CURRENT_STEP"
 echo ""
 echo "  Test User:  testuser@meepleai.dev"
 echo "  Password:   TestUser123!"

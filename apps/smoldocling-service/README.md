@@ -257,7 +257,7 @@ Apache 2.0 (matches SmolDocling model license)
 
 - [SmolDocling on Hugging Face](https://huggingface.co/docling-project/SmolDocling-256M-preview)
 - [Docling Documentation](https://github.com/docling-project/docling)
-- [Issue #945 (BGAI-005)](https://github.com/DegrassiAaron/meepleai-monorepo/issues/945)
+- [Issue #945 (BGAI-005)](https://github.com/meepleAi-app/meepleai-monorepo/issues/945)
 
 ---
 

@@ -4,26 +4,31 @@
  * Coordinates all interactive components:
  * - HeroSection (image, title overlay)
  * - InfoGrid (3-col metadata)
- * - Tabs (Overview, FAQ, Chat)
+ * - Tabs (Overview, Rules, Sessions, FAQ, Chat)
  *   - GameOverviewTab (reuses from /games/detail)
+ *   - GameRulesTab (KB documents with processing state)
+ *   - GameSessionsTab (session history with stats)
  *   - GameFAQTab (Accordion with placeholder)
  *   - GameChatTab (AI chat + quick questions)
  *
  * Pattern: Client component receives server-fetched data as props
  *
- * Issue #1841 (PAGE-005)
+ * Issue #1841 (PAGE-005), M3/M4: Wire Rules & Sessions tabs
  */
 
 'use client';
 
 import React, { useState } from 'react';
 
-import { ArrowLeft, Info, HelpCircle, MessageSquare } from 'lucide-react';
+import { ArrowLeft, Info, FileText, PlayCircle, HelpCircle, MessageSquare } from 'lucide-react';
 import Link from 'next/link';
 
 import { GameOverviewTab } from '@/components/games/detail/GameOverviewTab';
+import { GameRulesTab } from '@/components/games/detail/GameRulesTab';
+import { GameSessionsTab } from '@/components/games/detail/GameSessionsTab';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/navigation/tabs';
 import { Button } from '@/components/ui/primitives/button';
+import { useGameDocuments, useGameSessions } from '@/hooks/queries/useGames';
 import { logger } from '@/lib/logger';
 
 import { GameFAQTab } from './components/GameFAQTab';
@@ -62,6 +67,10 @@ export function GameDetailClient({ game }: GameDetailClientProps) {
 
   // Fetch BGG details for complexity/weight (for InfoGrid)
   const [bggWeight, setBggWeight] = React.useState<number | null>(null);
+
+  // Fetch documents and sessions when their tabs are active (or eagerly)
+  const { data: documents = [], isLoading: documentsLoading } = useGameDocuments(game.id);
+  const { data: sessions = [], isLoading: sessionsLoading } = useGameSessions(game.id);
 
   React.useEffect(() => {
     if (!game.bggId) return;
@@ -103,30 +112,52 @@ export function GameDetailClient({ game }: GameDetailClientProps) {
         averageWeight={bggWeight}
       />
 
-      {/* Tabs (Overview, FAQ, Chat) */}
+      {/* Tabs (Overview, Rules, Sessions, FAQ, Chat) */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="overview" className="flex items-center gap-2">
+        <TabsList className="grid w-full grid-cols-5">
+          <TabsTrigger value="overview" className="flex items-center gap-1.5">
             <Info className="h-4 w-4" />
             <span className="hidden sm:inline">Panoramica</span>
-            <span className="sm:hidden">Info</span>
+            <span className="sm:hidden text-xs">Info</span>
           </TabsTrigger>
-          <TabsTrigger value="faq" className="flex items-center gap-2">
+          <TabsTrigger value="rules" className="flex items-center gap-1.5">
+            <FileText className="h-4 w-4" />
+            <span className="hidden sm:inline">Regole</span>
+            <span className="sm:hidden text-xs">Regole</span>
+          </TabsTrigger>
+          <TabsTrigger value="sessions" className="flex items-center gap-1.5">
+            <PlayCircle className="h-4 w-4" />
+            <span className="hidden sm:inline">Partite</span>
+            <span className="sm:hidden text-xs">Partite</span>
+          </TabsTrigger>
+          <TabsTrigger value="faq" className="flex items-center gap-1.5">
             <HelpCircle className="h-4 w-4" />
-            FAQ
+            <span className="hidden sm:inline">FAQ</span>
+            <span className="sm:hidden text-xs">FAQ</span>
           </TabsTrigger>
-          <TabsTrigger value="chat" className="flex items-center gap-2">
+          <TabsTrigger value="chat" className="flex items-center gap-1.5">
             <MessageSquare className="h-4 w-4" />
-            Chat AI
+            <span className="hidden sm:inline">Chat AI</span>
+            <span className="sm:hidden text-xs">Chat</span>
           </TabsTrigger>
         </TabsList>
 
-        {/* Overview Tab (Reuses GameOverviewTab) */}
+        {/* Overview Tab */}
         <TabsContent value="overview" className="mt-6">
           <GameOverviewTab game={game} />
         </TabsContent>
 
-        {/* FAQ Tab (Accordion with placeholder data) */}
+        {/* Rules Tab (M3: KB Documents) */}
+        <TabsContent value="rules" className="mt-6">
+          <GameRulesTab gameId={game.id} documents={documents} isLoading={documentsLoading} />
+        </TabsContent>
+
+        {/* Sessions Tab (M4: Session History) */}
+        <TabsContent value="sessions" className="mt-6">
+          <GameSessionsTab gameId={game.id} sessions={sessions} isLoading={sessionsLoading} />
+        </TabsContent>
+
+        {/* FAQ Tab */}
         <TabsContent value="faq" className="mt-6">
           <GameFAQTab gameId={game.id} gameTitle={game.title} />
         </TabsContent>

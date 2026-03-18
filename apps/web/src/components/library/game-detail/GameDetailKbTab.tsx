@@ -5,11 +5,17 @@
  *
  * Listens for 'game-detail:upload-pdf' CustomEvent from the ActionBar
  * and triggers PDF upload via MeepleInfoCard's internal state.
+ * Includes RulebookSection for direct rulebook upload and chat navigation.
  */
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 
+import { useRouter } from 'next/navigation';
+
+import { useAuth } from '@/components/auth/AuthProvider';
+import { RulebookSection } from '@/components/game/rulebook-section';
 import { MeepleInfoCard } from '@/components/ui/data-display/meeple-info-card';
+import { useGamesWithKb } from '@/lib/domain-hooks/use-games-with-kb';
 
 export interface GameDetailKbTabProps {
   gameId: string;
@@ -19,6 +25,15 @@ export interface GameDetailKbTabProps {
 
 export function GameDetailKbTab({ gameId, gameTitle, bggId }: GameDetailKbTabProps) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const router = useRouter();
+  const { user } = useAuth();
+
+  const { data: gamesWithKb } = useGamesWithKb(user?.id ?? '');
+
+  const rulebooks = useMemo(() => {
+    const game = gamesWithKb?.find(g => g.gameId === gameId);
+    return game?.rulebooks ?? [];
+  }, [gamesWithKb, gameId]);
 
   // Bridge the ActionBar 'upload-pdf' event — scroll KB tab into view as feedback
   useEffect(() => {
@@ -30,7 +45,7 @@ export function GameDetailKbTab({ gameId, gameTitle, bggId }: GameDetailKbTabPro
   }, []);
 
   return (
-    <div ref={containerRef}>
+    <div ref={containerRef} className="space-y-6">
       <MeepleInfoCard
         gameId={gameId}
         gameTitle={gameTitle}
@@ -38,6 +53,11 @@ export function GameDetailKbTab({ gameId, gameTitle, bggId }: GameDetailKbTabPro
         showKnowledgeBase
         showSocialLinks
         showStats={false}
+      />
+      <RulebookSection
+        gameId={gameId}
+        rulebooks={rulebooks}
+        onChatClick={() => router.push(`/chat/new?game=${gameId}`)}
       />
     </div>
   );

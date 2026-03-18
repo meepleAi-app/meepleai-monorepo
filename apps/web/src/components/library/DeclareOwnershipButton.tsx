@@ -76,7 +76,11 @@ export function DeclareOwnershipButton({
           sharedGameId={sharedGameId}
           ownershipResult={ownershipResult}
           open={confirmationOpen}
-          onOpenChange={setConfirmationOpen}
+          onOpenChange={open => {
+            setConfirmationOpen(open);
+            // Re-trigger parent callback on close to ensure query refetch completes
+            if (!open) onOwnershipDeclared?.(ownershipResult);
+          }}
         />
       )}
     </>

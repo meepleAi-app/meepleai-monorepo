@@ -20,9 +20,8 @@ internal sealed class SeedE2ETestUsersCommandHandler : ICommandHandler<SeedE2ETe
 {
     private const string TestPassword = "Demo123!";
 
-    private static readonly (string Email, string DisplayName, Role Role)[] TestUsers =
+    private static readonly (string Email, string DisplayName, Role Role)[] NonAdminTestUsers =
     [
-        ("admin@meepleai.dev", "E2E Admin User", Role.Admin),
         ("editor@meepleai.dev", "E2E Editor User", Role.Editor),
         ("user@meepleai.dev", "E2E Regular User", Role.User),
     ];
@@ -50,7 +49,48 @@ internal sealed class SeedE2ETestUsersCommandHandler : ICommandHandler<SeedE2ETe
 
         var usersCreated = 0;
 
-        foreach (var (emailStr, displayName, role) in TestUsers)
+        // Admin E2E user: use email/password from secret (same source as SeedAdminUserCommandHandler)
+        // This avoids creating a second admin with a different email than the one in admin.secret.
+        var adminEmail = _configuration["INITIAL_ADMIN_EMAIL"]
+            ?? Environment.GetEnvironmentVariable("INITIAL_ADMIN_EMAIL")
+            ?? _configuration["ADMIN_EMAIL"]
+            ?? Environment.GetEnvironmentVariable("ADMIN_EMAIL");
+
+        if (!string.IsNullOrWhiteSpace(adminEmail))
+        {
+            var email = new Email(adminEmail);
+            var existingAdmin = await _userRepository.GetByEmailAsync(email, cancellationToken).ConfigureAwait(false);
+
+            if (existingAdmin != null)
+            {
+                _logger.LogInformation("E2E admin user already exists: {Email}. Skipping.", adminEmail);
+            }
+            else
+            {
+                var adminPassword = SecretsHelper.GetSecretOrValue(_configuration, "ADMIN_PASSWORD", _logger, required: false)
+                    ?? Environment.GetEnvironmentVariable("ADMIN_PASSWORD")
+                    ?? TestPassword;
+
+                var adminUser = new User(
+                    id: Guid.NewGuid(),
+                    email: email,
+                    displayName: "E2E Admin User",
+                    passwordHash: PasswordHash.Create(adminPassword),
+                    role: Role.Admin
+                );
+
+                await _userRepository.AddAsync(adminUser, cancellationToken).ConfigureAwait(false);
+                usersCreated++;
+                _logger.LogInformation("E2E admin user created: {Email} with role Admin", adminEmail);
+            }
+        }
+        else
+        {
+            _logger.LogWarning("INITIAL_ADMIN_EMAIL not configured — skipping E2E admin user seed");
+        }
+
+        // Non-admin E2E users: hardcoded emails and password
+        foreach (var (emailStr, displayName, role) in NonAdminTestUsers)
         {
             var email = new Email(emailStr);
             var existingUser = await _userRepository.GetByEmailAsync(email, cancellationToken).ConfigureAwait(false);
@@ -61,26 +101,16 @@ internal sealed class SeedE2ETestUsersCommandHandler : ICommandHandler<SeedE2ETe
                 continue;
             }
 
-            // Use admin.secret password for admin, hardcoded password for other E2E users
-            var password = role == Role.Admin
-                ? SecretsHelper.GetSecretOrValue(_configuration, "ADMIN_PASSWORD", _logger, required: false)
-                    ?? Environment.GetEnvironmentVariable("ADMIN_PASSWORD")
-                    ?? TestPassword
-                : TestPassword;
-
-            var passwordHash = PasswordHash.Create(password);
-
             var user = new User(
                 id: Guid.NewGuid(),
                 email: email,
                 displayName: displayName,
-                passwordHash: passwordHash,
+                passwordHash: PasswordHash.Create(TestPassword),
                 role: role
             );
 
             await _userRepository.AddAsync(user, cancellationToken).ConfigureAwait(false);
             usersCreated++;
-
             _logger.LogInformation("E2E test user created: {Email} with role {Role}", emailStr, role);
         }
 

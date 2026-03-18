@@ -12,4 +12,6 @@ public sealed record InvitationDto(
     DateTime ExpiresAt,
     DateTime CreatedAt,
     DateTime? AcceptedAt,
-    Guid InvitedByUserId);
+    Guid InvitedByUserId,
+    bool EmailSent = true,
+    List<GameSuggestionDto>? GameSuggestions = null);

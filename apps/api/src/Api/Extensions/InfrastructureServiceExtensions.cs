@@ -304,7 +304,7 @@ internal static class InfrastructureServiceExtensions
                 ?? "http://embedding-service:8000";
 #pragma warning restore S1075
             client.BaseAddress = new Uri(serviceUrl);
-            client.Timeout = TimeSpan.FromSeconds(60);
+            client.Timeout = TimeSpan.FromSeconds(300);
         })
         .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler
         {
@@ -400,6 +400,10 @@ internal static class InfrastructureServiceExtensions
         // Issue #3541: BGG import queue service
         services.AddScoped<Infrastructure.Services.IBggImportQueueService, Infrastructure.Services.BggImportQueueService>();
         services.AddHostedService<Infrastructure.BackgroundServices.BggImportQueueBackgroundService>();
+
+        // Admin Invitation Flow: background services for invitation lifecycle
+        services.AddHostedService<Infrastructure.BackgroundServices.InvitationCleanupService>();
+        services.AddHostedService<Infrastructure.BackgroundServices.GameSuggestionProcessorService>();
 
         // Issue #936: Infisical secrets management client (POC)
         services.AddHttpClient("Infisical", client =>

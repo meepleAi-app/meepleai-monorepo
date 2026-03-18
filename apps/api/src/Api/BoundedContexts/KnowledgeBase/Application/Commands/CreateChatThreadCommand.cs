@@ -13,5 +13,6 @@ internal record CreateChatThreadCommand(
     string? InitialMessage = null,
     Guid? AgentId = null,
     string? AgentType = null, // Issue #4362
-    string? UserRole = null
+    string? UserRole = null,
+    List<Guid>? SelectedKnowledgeBaseIds = null  // VectorDocument IDs to use for RAG
 ) : ICommand<ChatThreadDto>;

@@ -4,7 +4,7 @@
 
 set -e
 
-REPO="DegrassiAaron/meepleai-monorepo"
+REPO="meepleAi-app/meepleai-monorepo"
 ISSUE_DIR=".github"
 
 echo "🔒 Creating Security Issues on GitHub"

@@ -1,6 +1,7 @@
 using Api.BoundedContexts.Authentication.Domain.Repositories;
 using Api.BoundedContexts.Authentication.Infrastructure.Persistence;
 using Api.BoundedContexts.Authentication.Infrastructure.Repositories;
+using Api.BoundedContexts.Authentication.Infrastructure.Services;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -28,6 +29,9 @@ internal static class AuthenticationServiceExtensions
 
         // Register Unit of Work
         services.AddScoped<IUnitOfWork, EfCoreUnitOfWork>();
+
+        // Admin Invitation Flow: singleton channel for game suggestion processing
+        services.AddSingleton<GameSuggestionChannel>();
 
         // MediatR handlers are auto-registered via assembly scanning in Program.cs
 

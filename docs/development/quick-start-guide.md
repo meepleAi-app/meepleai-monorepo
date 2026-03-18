@@ -171,7 +171,7 @@ git branch -D feature/complex-ai
 ### **Check Branch Protection**
 ```bash
 # Via GitHub API
-gh api repos/DegrassiAaron/meepleai-monorepo/branches/main/protection \
+gh api repos/meepleAi-app/meepleai-monorepo/branches/main/protection \
   | jq '{pr_required: .required_pull_request_reviews.required_approving_review_count, checks: .required_status_checks.contexts}'
 ```
 

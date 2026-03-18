@@ -7,7 +7,7 @@
 
 services:
   docker-socket-proxy:
-    image: ghcr.io/tecnativa/docker-socket-proxy:0.3
+    image: ghcr.io/tecnativa/docker-socket-proxy:0.6
     container_name: meepleai-socket-proxy
     restart: always
     environment:

@@ -4,11 +4,16 @@ import { type ReactNode, useEffect, useRef, useState } from 'react';
 
 import { usePathname } from 'next/navigation';
 
+import { AgentCreationSheet } from '@/components/agent/config/AgentCreationSheet';
 import { DashboardEngineProvider } from '@/components/dashboard-v2';
 import { ErrorBoundary } from '@/components/errors/ErrorBoundary';
 import { ContextualBottomSheet } from '@/components/layout/ContextualBottomSheet';
 import { MobileTabBar } from '@/components/layout/MobileTabBar';
-import { DEFAULT_PINNED_CARDS } from '@/config/entity-actions';
+import { SearchAgentSheet } from '@/components/sheets/SearchAgentSheet';
+import { SearchGameSheet } from '@/components/sheets/SearchGameSheet';
+import { SessionSheet } from '@/components/sheets/SessionSheet';
+import { ToolkitSheet } from '@/components/sheets/ToolkitSheet';
+import { ALL_DEFAULT_CARDS, PLACEHOLDER_ACTION_CARDS } from '@/config/entity-actions';
 import { useBottomPadding } from '@/hooks/useBottomPadding';
 import { useContextualEntity } from '@/hooks/useContextualEntity';
 import { useContextualSheetActions } from '@/hooks/useContextualSheetActions';
@@ -93,10 +98,22 @@ export function UnifiedShellClient({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAdmin, pathname]);
 
-  // Seed default pinned section cards on first load
+  // Seed default cards (pinned + placeholders) on first load
   useEffect(() => {
     if (cards.length === 0) {
-      DEFAULT_PINNED_CARDS.forEach(card => {
+      ALL_DEFAULT_CARDS.forEach(card => {
+        drawCard(card);
+        pinCard(card.id);
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Migration: inject placeholder cards for returning users who don't have them yet
+  useEffect(() => {
+    const hasPlaceholders = cards.some(c => c.isPlaceholder);
+    if (cards.length > 0 && !hasPlaceholders) {
+      PLACEHOLDER_ACTION_CARDS.forEach(card => {
         drawCard(card);
         pinCard(card.id);
       });
@@ -157,7 +174,7 @@ export function UnifiedShellClient({
               <AdminTabSidebar />
             ) : (
               <div className="hidden lg:flex">
-                <CardStack />
+                <CardStack onPlaceholderClick={handleCardClick} />
               </div>
             )}
           </ErrorBoundary>
@@ -191,6 +208,33 @@ export function UnifiedShellClient({
         isOpen={isBottomSheetOpen}
         onClose={() => setIsBottomSheetOpen(false)}
       />
+
+      {/* Placeholder action sheets */}
+      <SearchAgentSheet
+        isOpen={activeSheet === 'search-agent'}
+        onClose={closeSheet}
+        onCreateAgent={(gameId, gameTitle, documentIds, documentSummary) => {
+          closeSheet();
+          setAgentWizardState({ gameId, gameTitle, documentIds, documentSummary });
+        }}
+      />
+      <SearchGameSheet isOpen={activeSheet === 'search-game'} onClose={closeSheet} />
+      <SessionSheet isOpen={activeSheet === 'start-session'} onClose={closeSheet} />
+      <ToolkitSheet isOpen={activeSheet === 'toolkit'} onClose={closeSheet} />
+
+      {/* Agent creation wizard (opened after SearchAgentSheet KB selection) */}
+      {agentWizardState && (
+        <AgentCreationSheet
+          isOpen={true}
+          onClose={() => setAgentWizardState(null)}
+          initialGameId={agentWizardState.gameId}
+          initialGameTitle={agentWizardState.gameTitle}
+          initialDocumentIds={agentWizardState.documentIds}
+          initialDocumentSummary={agentWizardState.documentSummary}
+          skipGameSelection
+          skipKBUpload
+        />
+      )}
     </div>
   );
 }

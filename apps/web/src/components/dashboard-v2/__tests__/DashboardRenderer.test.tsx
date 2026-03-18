@@ -96,7 +96,7 @@ describe('DashboardRenderer', () => {
     expect(screen.getByTestId('hero-zone')).toBeInTheDocument();
     expect(screen.getByTestId('stats-zone')).toBeInTheDocument();
     expect(screen.getByTestId('cards-zone')).toBeInTheDocument();
-    expect(screen.getByTestId('agents-sidebar')).toBeInTheDocument();
+    // AgentsSidebar removed — agents now shown in CardStack
   });
 
   it('shows game mode zones when state is gameMode', () => {
@@ -114,7 +114,6 @@ describe('DashboardRenderer', () => {
     expect(screen.queryByTestId('hero-zone')).not.toBeInTheDocument();
     expect(screen.queryByTestId('stats-zone')).not.toBeInTheDocument();
     expect(screen.queryByTestId('cards-zone')).not.toBeInTheDocument();
-    expect(screen.queryByTestId('agents-sidebar')).not.toBeInTheDocument();
   });
 
   it('does not show game mode zones in exploration', () => {

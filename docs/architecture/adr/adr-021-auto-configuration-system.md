@@ -550,5 +550,5 @@ dotnet run
 ---
 
 **Decision Maker**: Engineering Lead
-**Implementation**: Issues [#2511](https://github.com/DegrassiAaron/meepleai-monorepo/issues/2511), [#2522](https://github.com/DegrassiAaron/meepleai-monorepo/issues/2522)
+**Implementation**: Issues [#2511](https://github.com/meepleAi-app/meepleai-monorepo/issues/2511), [#2522](https://github.com/meepleAi-app/meepleai-monorepo/issues/2522)
 **Status**: ✅ Production-ready (as of 2026-01-17)

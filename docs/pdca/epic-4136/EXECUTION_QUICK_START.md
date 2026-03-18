@@ -144,12 +144,12 @@
 
 ### Check Epic Progress
 ```bash
-gh issue view 4136 --repo DegrassiAaron/meepleai-monorepo
+gh issue view 4136 --repo meepleAi-app/meepleai-monorepo
 ```
 
 ### Check Sub-Issue Status
 ```bash
-gh issue list --repo DegrassiAaron/meepleai-monorepo --search "is:issue label:Epic-4136" --json number,state,title
+gh issue list --repo meepleAi-app/meepleai-monorepo --search "is:issue label:Epic-4136" --json number,state,title
 ```
 
 ### Test Status

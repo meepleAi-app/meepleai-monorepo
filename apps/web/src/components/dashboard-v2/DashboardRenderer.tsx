@@ -9,7 +9,7 @@ import { useDashboardSearchStore } from '@/stores/useDashboardSearchStore';
 
 import { AddToLibraryModal } from './AddToLibraryModal';
 import { useDashboardMode } from './useDashboardMode';
-import { HeroZone, StatsZone, CardsZone, AgentsSidebar, SessionBar, ScoreboardZone } from './zones';
+import { HeroZone, StatsZone, CardsZone, SessionBar, ScoreboardZone } from './zones';
 import './dashboard-transitions.css';
 
 /** Skeleton fallback for lazy-loaded zones. */
@@ -69,16 +69,9 @@ export function DashboardRenderer() {
               <StatsZone />
             </Suspense>
 
-            <div className="flex flex-col lg:flex-row gap-6">
-              <div className="flex-1 min-w-0">
-                <Suspense fallback={<ZoneSkeleton testId="cards-skeleton" />}>
-                  <CardsZone />
-                </Suspense>
-              </div>
-              <Suspense fallback={<ZoneSkeleton testId="agents-skeleton" />}>
-                <AgentsSidebar />
-              </Suspense>
-            </div>
+            <Suspense fallback={<ZoneSkeleton testId="cards-skeleton" />}>
+              <CardsZone />
+            </Suspense>
           </motion.div>
         )}
 

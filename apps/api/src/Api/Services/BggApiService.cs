@@ -13,7 +13,7 @@ namespace Api.Services;
 /// <summary>
 /// Implementation of BoardGameGeek XML API v2 integration.
 /// Provides cached search and game details retrieval with retry logic.
-/// AI-13: https://github.com/DegrassiAaron/meepleai-monorepo/issues/420
+/// AI-13: https://github.com/meepleAi-app/meepleai-monorepo/issues/420
 /// Note: BGG_API_TOKEN required as of Jan 2026 for XML API authentication.
 /// </summary>
 internal class BggApiService : IBggApiService

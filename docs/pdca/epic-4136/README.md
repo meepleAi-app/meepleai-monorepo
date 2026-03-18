@@ -149,7 +149,7 @@ This starts **Issue #4154: Backend - Upload PDF Command & Handler** (Day 1, Week
 
 ## 🔗 References
 
-- **Epic Issue**: [#4136](https://github.com/DegrassiAaron/meepleai-monorepo/issues/4136)
+- **Epic Issue**: [#4136](https://github.com/meepleAi-app/meepleai-monorepo/issues/4136)
 - **Spec Document**: [epic-4136-breakdown.md](../../04-features/admin-game-import/epic-4136-breakdown.md)
 - **Task List**: Use `/tasks` command
 - **PDCA Docs**: This directory (`docs/pdca/epic-4136/`)

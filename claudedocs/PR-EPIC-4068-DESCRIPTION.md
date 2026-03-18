@@ -334,6 +334,6 @@ dotnet ef database update 20260211222833_AddAgentDefinitionStrategyField
 
 **Ready for Review** ✅
 
-**Reviewers**: @DegrassiAaron
+**Reviewers**: @meepleAi-app
 **Labels**: epic, p1-high, enhancement, frontend, backend
 **Milestone**: Epic #4068 - MeepleCard Enhancements

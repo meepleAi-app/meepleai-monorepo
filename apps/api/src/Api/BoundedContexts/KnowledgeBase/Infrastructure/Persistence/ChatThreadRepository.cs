@@ -354,6 +354,13 @@ internal class ChatThreadRepository : RepositoryBase, IChatThreadRepository
             lastSummarizedProp?.SetValue(thread, entity.LastSummarizedMessageCount);
         }
 
+        // Hydrate selected KB IDs
+        if (!string.IsNullOrEmpty(entity.SelectedKnowledgeBaseIdsJson))
+        {
+            var kbIdsProp = typeof(ChatThread).GetProperty("SelectedKnowledgeBaseIdsJson");
+            kbIdsProp?.SetValue(thread, entity.SelectedKnowledgeBaseIdsJson);
+        }
+
         return thread;
     }
 
@@ -395,7 +402,8 @@ internal class ChatThreadRepository : RepositoryBase, IChatThreadRepository
             LastMessageAt = domainEntity.LastMessageAt,
             MessagesJson = messagesJson,
             ConversationSummary = domainEntity.ConversationSummary, // Issue #5259
-            LastSummarizedMessageCount = domainEntity.LastSummarizedMessageCount
+            LastSummarizedMessageCount = domainEntity.LastSummarizedMessageCount,
+            SelectedKnowledgeBaseIdsJson = domainEntity.SelectedKnowledgeBaseIdsJson
         };
     }
 

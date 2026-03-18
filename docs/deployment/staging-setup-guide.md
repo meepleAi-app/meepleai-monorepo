@@ -429,7 +429,7 @@ ssh -i ~/.ssh/meepleai-staging deploy@<IP_SERVER>
 cd /opt/meepleai
 
 # Clona il repository
-git clone https://github.com/DegrassiAaron/meepleai-monorepo.git .
+git clone https://github.com/meepleAi-app/meepleai-monorepo.git .
 git checkout main-staging
 
 # Copia i secret files nella directory infra

@@ -66,4 +66,21 @@ internal sealed class RagAccessService : IRagAccessService
             .ToListAsync(cancellationToken)
             .ConfigureAwait(false);
     }
+
+    /// <inheritdoc />
+    public async Task<List<Guid>> GetAccessibleKbCardsFilteredAsync(
+        Guid userId, Guid gameId, UserRole role,
+        List<Guid>? selectedIds,
+        CancellationToken cancellationToken = default)
+    {
+        var allAccessible = await GetAccessibleKbCardsAsync(userId, gameId, role, cancellationToken)
+            .ConfigureAwait(false);
+
+        if (selectedIds is not { Count: > 0 })
+            return allAccessible;
+
+        // Intersect: only return IDs that are both accessible AND selected
+        var selectedSet = new HashSet<Guid>(selectedIds);
+        return allAccessible.Where(id => selectedSet.Contains(id)).ToList();
+    }
 }

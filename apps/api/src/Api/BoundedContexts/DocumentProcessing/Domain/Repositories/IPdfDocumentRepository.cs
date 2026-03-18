@@ -12,4 +12,5 @@ internal interface IPdfDocumentRepository : IRepository<PdfDocument, Guid>
     Task<IReadOnlyList<PdfDocument>> GetByIdsAsync(IEnumerable<Guid> ids, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<PdfDocument>> FindByUserIdAsync(Guid userId, CancellationToken cancellationToken = default); // Issue #2732: Quota queries
     Task<bool> ExistsByContentHashAsync(string contentHash, Guid? gameId, Guid? privateGameId, CancellationToken cancellationToken = default);
+    Task<PdfDocument?> FindByContentHashAsync(string contentHash, CancellationToken cancellationToken = default);
 }

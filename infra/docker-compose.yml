@@ -202,6 +202,10 @@ services:
     container_name: meepleai-embedding
     restart: unless-stopped
     profiles: [ai]
+    environment:
+      # Model selection: e5-large (quality), e5-base (2x faster), e5-small (4x faster)
+      # Override: EMBEDDING_MODEL=intfloat/multilingual-e5-base
+      - EMBEDDING_MODEL=${EMBEDDING_MODEL:-intfloat/multilingual-e5-large}
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 30s

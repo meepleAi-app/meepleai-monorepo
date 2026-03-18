@@ -1,7 +1,7 @@
 using Api.BoundedContexts.Authentication.Domain.Events;
 using Api.BoundedContexts.Authentication.Domain.ValueObjects;
 using Api.SharedKernel.Domain.ValueObjects;
-using Api.BoundedContexts.Administration.Domain.Enums; // Epic #4068: UserAccountStatus
+using Api.SharedKernel.Domain.Enums; // Epic #4068: UserAccountStatus (moved to SharedKernel)
 using Api.SharedKernel.Domain.Entities;
 using Api.SharedKernel.Domain.Exceptions;
 
@@ -59,6 +59,10 @@ public sealed class User : AggregateRoot<Guid>
     // Backup codes collection (DDD)
     private readonly List<BackupCode> _backupCodes = new();
     public IReadOnlyCollection<BackupCode> BackupCodes => _backupCodes.AsReadOnly();
+
+    // Admin invitation properties (admin invitation flow)
+    public Guid? InvitedByUserId { get; private set; }
+    public DateTime? InvitationExpiresAt { get; private set; }
 
     // Onboarding preferences (Issue #124: Invitation system)
     public List<string>? Interests { get; private set; }
@@ -130,6 +134,109 @@ public sealed class User : AggregateRoot<Guid>
         LockedUntil = null;
 
         IsTwoFactorEnabled = false;
+    }
+
+    /// <summary>
+    /// Creates a new user in Pending state (admin-provisioned, no password yet).
+    /// The user must activate their account via invitation to set a password and become Active.
+    /// </summary>
+    /// <param name="email">The user's email address.</param>
+    /// <param name="displayName">The user's display name.</param>
+    /// <param name="role">The assigned role.</param>
+    /// <param name="tier">The assigned subscription tier.</param>
+    /// <param name="invitedByUserId">The ID of the admin who created this invitation.</param>
+    /// <param name="expiresAt">When the invitation expires (UTC).</param>
+    /// <param name="timeProvider">Time provider for testability.</param>
+    /// <returns>A new User in Pending state.</returns>
+    public static User CreatePending(
+        Email email,
+        string displayName,
+        Role role,
+        UserTier tier,
+        Guid invitedByUserId,
+        DateTime expiresAt,
+        TimeProvider timeProvider)
+    {
+        ArgumentNullException.ThrowIfNull(email);
+        ArgumentNullException.ThrowIfNull(displayName);
+        ArgumentNullException.ThrowIfNull(role);
+        ArgumentNullException.ThrowIfNull(tier);
+        ArgumentNullException.ThrowIfNull(timeProvider);
+
+        var user = new User
+        {
+            Id = Guid.NewGuid(),
+            Email = email,
+            DisplayName = displayName,
+            PasswordHash = null!,
+            Role = role,
+            Tier = tier,
+            Status = UserAccountStatus.Pending,
+            CreatedAt = timeProvider.GetUtcNow().UtcDateTime,
+            InvitedByUserId = invitedByUserId,
+            InvitationExpiresAt = expiresAt,
+            EmailVerified = false,
+
+            // Default preferences
+            Language = "en",
+            EmailNotifications = true,
+            Theme = "system",
+            DataRetentionDays = 90,
+
+            // Default privacy settings
+            ShowProfile = true,
+            ShowActivity = true,
+            ShowLibrary = true,
+
+            // Default gamification (Issue #3141)
+            Level = 1,
+            ExperiencePoints = 0,
+
+            // Default lockout state (Issue #3339)
+            FailedLoginAttempts = 0,
+            LockedUntil = null,
+
+            IsTwoFactorEnabled = false,
+        };
+
+        user.AddDomainEvent(new UserProvisionedEvent(
+            user.Id,
+            email.Value,
+            displayName,
+            role.Value,
+            tier.Value,
+            invitedByUserId));
+
+        return user;
+    }
+
+    /// <summary>
+    /// Activates a pending user account from an invitation.
+    /// Transitions the user from Pending to Active, sets their password, and marks email as verified.
+    /// </summary>
+    /// <param name="passwordHash">The user's chosen password hash.</param>
+    /// <param name="timeProvider">Time provider for testability.</param>
+    /// <exception cref="InvalidOperationException">Thrown when user is not in Pending status.</exception>
+    public void ActivateFromInvitation(PasswordHash passwordHash, TimeProvider timeProvider)
+    {
+        ArgumentNullException.ThrowIfNull(passwordHash);
+        ArgumentNullException.ThrowIfNull(timeProvider);
+
+        if (Status != UserAccountStatus.Pending)
+            throw new InvalidOperationException("Only users in Pending status can be activated from an invitation.");
+
+        PasswordHash = passwordHash;
+        Status = UserAccountStatus.Active;
+        EmailVerified = true;
+        EmailVerifiedAt = timeProvider.GetUtcNow().UtcDateTime;
+        VerificationGracePeriodEndsAt = null;
+
+        AddDomainEvent(new UserActivatedFromInvitationEvent(
+            Id,
+            Email.Value,
+            Role.Value,
+            Tier.Value,
+            InvitedByUserId!.Value));
     }
 
     /// <summary>
@@ -880,6 +987,37 @@ public sealed class User : AggregateRoot<Guid>
         Bio = bio;
         OnboardingWizardSeenAt = wizardSeenAt;
         OnboardingDismissedAt = dismissedAt;
+    }
+
+    /// <summary>
+    /// Restores invitation state from persistence layer.
+    /// Internal method to avoid reflection in repository (S3011 compliance).
+    /// Should only be called by UserRepository during entity materialization.
+    /// </summary>
+    internal void RestoreInvitationState(Guid? invitedByUserId, DateTime? invitationExpiresAt)
+    {
+        InvitedByUserId = invitedByUserId;
+        InvitationExpiresAt = invitationExpiresAt;
+    }
+
+    /// <summary>
+    /// Restores account status from persistence layer.
+    /// Issue #124: Internal method to avoid reflection in repository (S3011 compliance).
+    /// Should only be called by UserRepository during entity materialization.
+    /// </summary>
+    internal void RestoreAccountStatus(UserAccountStatus status)
+    {
+        Status = status;
+    }
+
+    /// <summary>
+    /// Restores password hash from persistence layer. Null for pending (invited) users.
+    /// Issue #124: Internal method to avoid reflection in repository (S3011 compliance).
+    /// Should only be called by UserRepository during entity materialization.
+    /// </summary>
+    internal void RestorePasswordHash(PasswordHash? passwordHash)
+    {
+        PasswordHash = passwordHash!;
     }
 
     /// <summary>

@@ -57,6 +57,10 @@ internal class UserEntityConfiguration : IEntityTypeConfiguration<UserEntity>
         builder.Property(e => e.OnboardingWizardSeenAt).IsRequired(false);
         builder.Property(e => e.OnboardingDismissedAt).IsRequired(false);
 
+        // Admin Invitation Flow
+        builder.Property(e => e.InvitedByUserId).IsRequired(false);
+        builder.Property(e => e.InvitationExpiresAt).IsRequired(false);
+
         // Relationships
         builder.HasMany(e => e.Sessions)
             .WithOne(s => s.User)

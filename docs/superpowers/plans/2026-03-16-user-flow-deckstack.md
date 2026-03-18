@@ -22,7 +22,7 @@ Foundation layer: extend the store, config, and card components to support place
 - Modify: `apps/web/src/stores/use-card-hand.ts`
 - Test: `apps/web/src/__tests__/stores/use-card-hand-placeholder.test.ts`
 
-- [ ] **Step 1: Write failing test for placeholder card in store**
+- [x] **Step 1: Write failing test for placeholder card in store**
 
 ```typescript
 // apps/web/src/__tests__/stores/use-card-hand-placeholder.test.ts
@@ -77,12 +77,12 @@ describe('useCardHand - placeholder cards', () => {
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `cd apps/web && pnpm vitest run src/__tests__/stores/use-card-hand-placeholder.test.ts`
 Expected: FAIL — `isPlaceholder` and `placeholderAction` not in `HandCard` type
 
-- [ ] **Step 3: Extend HandCard interface**
+- [x] **Step 3: Extend HandCard interface**
 
 Add optional fields to `HandCard` in `apps/web/src/stores/use-card-hand.ts`:
 
@@ -101,17 +101,17 @@ export interface HandCard {
 
 Also update FIFO eviction logic in `drawCard` to skip cards where `isPlaceholder === true` (treat like pinned/protected during eviction).
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `cd apps/web && pnpm vitest run src/__tests__/stores/use-card-hand-placeholder.test.ts`
 Expected: PASS
 
-- [ ] **Step 5: Run existing store tests to check no regressions**
+- [x] **Step 5: Run existing store tests to check no regressions**
 
 Run: `cd apps/web && pnpm vitest run src/__tests__/stores/`
 Expected: All existing tests PASS
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add apps/web/src/stores/use-card-hand.ts apps/web/src/__tests__/stores/use-card-hand-placeholder.test.ts
@@ -126,7 +126,7 @@ git commit -m "feat(card-hand): extend HandCard with isPlaceholder and placehold
 - Modify: `apps/web/src/config/entity-actions.ts`
 - Test: `apps/web/src/__tests__/config/placeholder-action-cards.test.ts`
 
-- [ ] **Step 1: Write failing test for placeholder cards config**
+- [x] **Step 1: Write failing test for placeholder cards config**
 
 ```typescript
 // apps/web/src/__tests__/config/placeholder-action-cards.test.ts
@@ -162,12 +162,12 @@ describe('PLACEHOLDER_ACTION_CARDS', () => {
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `cd apps/web && pnpm vitest run src/__tests__/config/placeholder-action-cards.test.ts`
 Expected: FAIL — exports not found
 
-- [ ] **Step 3: Add PLACEHOLDER_ACTION_CARDS and ALL_DEFAULT_CARDS to entity-actions.ts**
+- [x] **Step 3: Add PLACEHOLDER_ACTION_CARDS and ALL_DEFAULT_CARDS to entity-actions.ts**
 
 At the bottom of `apps/web/src/config/entity-actions.ts`, add:
 
@@ -215,12 +215,12 @@ export const ALL_DEFAULT_CARDS: HandCard[] = [
 ];
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `cd apps/web && pnpm vitest run src/__tests__/config/placeholder-action-cards.test.ts`
 Expected: PASS
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add apps/web/src/config/entity-actions.ts apps/web/src/__tests__/config/placeholder-action-cards.test.ts
@@ -235,7 +235,7 @@ git commit -m "feat(config): add PLACEHOLDER_ACTION_CARDS and ALL_DEFAULT_CARDS 
 - Create: `apps/web/src/hooks/usePlaceholderActions.ts`
 - Test: `apps/web/src/__tests__/hooks/usePlaceholderActions.test.ts`
 
-- [ ] **Step 1: Write failing test**
+- [x] **Step 1: Write failing test**
 
 ```typescript
 // apps/web/src/__tests__/hooks/usePlaceholderActions.test.ts
@@ -298,12 +298,12 @@ describe('usePlaceholderActions', () => {
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `cd apps/web && pnpm vitest run src/__tests__/hooks/usePlaceholderActions.test.ts`
 Expected: FAIL — module not found
 
-- [ ] **Step 3: Implement usePlaceholderActions**
+- [x] **Step 3: Implement usePlaceholderActions**
 
 ```typescript
 // apps/web/src/hooks/usePlaceholderActions.ts
@@ -333,12 +333,12 @@ export function usePlaceholderActions() {
 }
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `cd apps/web && pnpm vitest run src/__tests__/hooks/usePlaceholderActions.test.ts`
 Expected: PASS
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add apps/web/src/hooks/usePlaceholderActions.ts apps/web/src/__tests__/hooks/usePlaceholderActions.test.ts
@@ -352,11 +352,11 @@ git commit -m "feat(hooks): add usePlaceholderActions hook for action card click
 **Files:**
 - Modify: `apps/web/src/components/layout/UnifiedShell/CardStackItem.tsx`
 
-- [ ] **Step 1: Read the current CardStackItem implementation**
+- [x] **Step 1: Read the current CardStackItem implementation**
 
 Read `apps/web/src/components/layout/UnifiedShell/CardStackItem.tsx` to understand the existing render structure, especially how the Link/button root element works and where to add conditional logic.
 
-- [ ] **Step 2: Add placeholder-specific rendering**
+- [x] **Step 2: Add placeholder-specific rendering**
 
 Modify `CardStackItem.tsx`:
 
@@ -370,12 +370,12 @@ Modify `CardStackItem.tsx`:
    - In card mode: prefix title with "+" (e.g., "+ Cerca Agente")
 3. For regular cards: no changes (keep `<Link>`)
 
-- [ ] **Step 3: Verify visually**
+- [x] **Step 3: Verify visually**
 
 Run: `cd apps/web && pnpm dev`
 Navigate to dashboard. CardStack should render placeholder cards with dashed borders. Click should not navigate.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add apps/web/src/components/layout/UnifiedShell/CardStackItem.tsx
@@ -389,11 +389,11 @@ git commit -m "feat(card-stack): render placeholder cards with dashed style and 
 **Files:**
 - Modify: `apps/web/src/components/layout/UnifiedShell/HandDrawerCard.tsx`
 
-- [ ] **Step 1: Read the current HandDrawerCard implementation**
+- [x] **Step 1: Read the current HandDrawerCard implementation**
 
 Read `apps/web/src/components/layout/UnifiedShell/HandDrawerCard.tsx` to understand the existing `<Link>` root.
 
-- [ ] **Step 2: Add placeholder-specific rendering**
+- [x] **Step 2: Add placeholder-specific rendering**
 
 Modify `HandDrawerCard.tsx`:
 
@@ -405,7 +405,7 @@ Modify `HandDrawerCard.tsx`:
    - Add "+" overlay on the icon
 3. For regular cards: no changes
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add apps/web/src/components/layout/UnifiedShell/HandDrawerCard.tsx
@@ -419,11 +419,11 @@ git commit -m "feat(hand-drawer): render placeholder cards with button root and 
 **Files:**
 - Modify: `apps/web/src/components/layout/UnifiedShell/UnifiedShellClient.tsx`
 
-- [ ] **Step 1: Read UnifiedShellClient to understand seeding logic**
+- [x] **Step 1: Read UnifiedShellClient to understand seeding logic**
 
 Read `apps/web/src/components/layout/UnifiedShell/UnifiedShellClient.tsx`. Find the `cards.length === 0` seeding block and the CardStack/HandDrawer render calls.
 
-- [ ] **Step 2: Add placeholder migration for returning users**
+- [x] **Step 2: Add placeholder migration for returning users**
 
 After the existing `useEffect` seeding block, add:
 
@@ -442,7 +442,7 @@ useEffect(() => {
 }, []); // eslint-disable-line react-hooks/exhaustive-deps
 ```
 
-- [ ] **Step 3: Wire usePlaceholderActions to CardStack and HandDrawer**
+- [x] **Step 3: Wire usePlaceholderActions to CardStack and HandDrawer**
 
 In the `UnifiedShellClient` component:
 
@@ -467,21 +467,21 @@ const { handleCardClick, activeSheet, closeSheet } = usePlaceholderActions();
 
 Note: Sheet components will be built in later tasks. Use placeholder `<div>` for now to verify wiring works.
 
-- [ ] **Step 4: Update initial seeding to use ALL_DEFAULT_CARDS**
+- [x] **Step 4: Update initial seeding to use ALL_DEFAULT_CARDS**
 
 In the existing `cards.length === 0` block, replace `DEFAULT_PINNED_CARDS` with `ALL_DEFAULT_CARDS` so new users get placeholder cards on first load.
 
-- [ ] **Step 5: Pass onPlaceholderClick through CardStack and HandDrawer**
+- [x] **Step 5: Pass onPlaceholderClick through CardStack and HandDrawer**
 
 `CardStack.tsx` needs to accept `onPlaceholderClick` prop and forward it to each `CardStackItem`.
 `HandDrawer.tsx` needs to accept `onPlaceholderClick` prop and forward it to each `HandDrawerCard`.
 
-- [ ] **Step 6: Verify visually**
+- [x] **Step 6: Verify visually**
 
 Run: `cd apps/web && pnpm dev`
 Clear localStorage/sessionStorage (to test new user flow). Navigate to dashboard. 4 placeholder cards should appear pinned in CardStack with dashed borders. Clicking them should log the action (or show placeholder div).
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add apps/web/src/components/layout/UnifiedShell/UnifiedShellClient.tsx apps/web/src/components/layout/UnifiedShell/CardStack.tsx apps/web/src/components/layout/UnifiedShell/HandDrawer.tsx
@@ -496,7 +496,7 @@ git commit -m "feat(unified-shell): wire placeholder actions + migration for ret
 - Create: `apps/web/src/components/layout/DeckTrackerSync.tsx`
 - Test: `apps/web/src/__tests__/components/DeckTrackerSync.test.tsx`
 
-- [ ] **Step 1: Write failing test**
+- [x] **Step 1: Write failing test**
 
 ```typescript
 // apps/web/src/__tests__/components/DeckTrackerSync.test.tsx
@@ -539,12 +539,12 @@ describe('DeckTrackerSync', () => {
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `cd apps/web && pnpm vitest run src/__tests__/components/DeckTrackerSync.test.tsx`
 Expected: FAIL — module not found
 
-- [ ] **Step 3: Implement DeckTrackerSync**
+- [x] **Step 3: Implement DeckTrackerSync**
 
 ```typescript
 // apps/web/src/components/layout/DeckTrackerSync.tsx
@@ -574,12 +574,12 @@ export function DeckTrackerSync({ entity, id, title, href, subtitle, imageUrl }:
 }
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `cd apps/web && pnpm vitest run src/__tests__/components/DeckTrackerSync.test.tsx`
 Expected: PASS
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add apps/web/src/components/layout/DeckTrackerSync.tsx apps/web/src/__tests__/components/DeckTrackerSync.test.tsx
@@ -594,11 +594,11 @@ git commit -m "feat(layout): add DeckTrackerSync client component for RSC page i
 - Modify: `apps/web/src/app/(authenticated)/agents/[id]/page.tsx` (RSC — use DeckTrackerSync)
 - Modify: `apps/web/src/app/(authenticated)/knowledge-base/[id]/page.tsx` (Client — use drawCard directly)
 
-- [ ] **Step 1: Read agents/[id]/page.tsx to understand structure**
+- [x] **Step 1: Read agents/[id]/page.tsx to understand structure**
 
 Read the file. Identify if it's async (RSC) and where to insert `<DeckTrackerSync>`.
 
-- [ ] **Step 2: Add DeckTrackerSync to agent detail page**
+- [x] **Step 2: Add DeckTrackerSync to agent detail page**
 
 In `agents/[id]/page.tsx`, after loading agent data, add:
 
@@ -616,11 +616,11 @@ import { DeckTrackerSync } from '@/components/layout/DeckTrackerSync';
 />
 ```
 
-- [ ] **Step 3: Read knowledge-base/[id]/page.tsx to understand structure**
+- [x] **Step 3: Read knowledge-base/[id]/page.tsx to understand structure**
 
 Read the file. Check whether it has `'use client'` directive at the top.
 
-- [ ] **Step 4: Add card tracking to KB detail page**
+- [x] **Step 4: Add card tracking to KB detail page**
 
 **If Client Component** (`'use client'` present): import and use `useCardHand` directly:
 **If Server Component** (async, no `'use client'`): use `<DeckTrackerSync>` instead (same as agent page).
@@ -645,12 +645,12 @@ useEffect(() => {
 }, [documentData?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 ```
 
-- [ ] **Step 5: Verify typecheck passes**
+- [x] **Step 5: Verify typecheck passes**
 
 Run: `cd apps/web && pnpm typecheck`
 Expected: No errors
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add apps/web/src/app/\(authenticated\)/agents/\[id\]/page.tsx apps/web/src/app/\(authenticated\)/knowledge-base/\[id\]/page.tsx
@@ -666,24 +666,24 @@ git commit -m "feat(pages): add DeckTrackerSync to agent and KB detail pages"
 - Delete: `apps/web/src/components/dashboard/zones/AgentsSidebar.tsx` (if separate file)
 - Delete: Related test file (if exists)
 
-- [ ] **Step 1: Read DashboardRenderer to find AgentsSidebar usage**
+- [x] **Step 1: Read DashboardRenderer to find AgentsSidebar usage**
 
 Read `apps/web/src/components/dashboard/DashboardRenderer.tsx`. Find where `AgentsSidebar` is imported and rendered.
 
-- [ ] **Step 2: Remove AgentsSidebar from layout**
+- [x] **Step 2: Remove AgentsSidebar from layout**
 
 Remove the import and render of `AgentsSidebar`. Adjust the flex layout so `CardsZone` takes full width.
 
-- [ ] **Step 3: Remove AgentsSidebar component file and tests**
+- [x] **Step 3: Remove AgentsSidebar component file and tests**
 
 Delete the component file and any related test file.
 
-- [ ] **Step 4: Verify typecheck and existing tests**
+- [x] **Step 4: Verify typecheck and existing tests**
 
 Run: `cd apps/web && pnpm typecheck && pnpm vitest run src/__tests__/`
 Expected: No type errors. Tests pass (some may need updating if they reference AgentsSidebar).
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add -A
@@ -703,11 +703,11 @@ The core new feature: search for a game, select knowledge bases, then create an 
 - Create: `apps/api/src/Api/BoundedContexts/SharedGameCatalog/Application/Queries/GetGameDocumentsForUserHandler.cs`
 - Modify: `apps/api/src/Api/Routing/SharedGameCatalogEndpoints.cs` (or equivalent routing file)
 
-- [ ] **Step 1: Explore existing admin endpoint**
+- [x] **Step 1: Explore existing admin endpoint**
 
 Read the admin documents endpoint to understand the query pattern, DTOs, and response format. Search for `GetSharedGameDocumentsQuery` or similar in the backend.
 
-- [ ] **Step 2: Create GetGameDocumentsForUserQuery**
+- [x] **Step 2: Create GetGameDocumentsForUserQuery**
 
 Follow CQRS pattern. The query should:
 - Accept `GameId` and `UserId`
@@ -715,15 +715,15 @@ Follow CQRS pattern. The query should:
 - Return only `isActive=true` documents
 - Response: `SharedGameDocument[]` (same DTO as admin)
 
-- [ ] **Step 3: Add endpoint routing**
+- [x] **Step 3: Add endpoint routing**
 
 Add `GET /api/v1/shared-games/{gameId}/documents` mapped to the new query. Require `[Authorize]` (authenticated user, not admin).
 
-- [ ] **Step 4: Write integration test**
+- [x] **Step 4: Write integration test**
 
 Test the endpoint with different access scenarios: user with game in library (allowed), user without (forbidden), public game (allowed).
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add apps/api/
@@ -739,11 +739,11 @@ git commit -m "feat(api): add user-facing GET /shared-games/{gameId}/documents e
 - Create: `apps/web/src/hooks/queries/useSharedGameDocuments.ts`
 - Test: `apps/web/src/__tests__/hooks/useSharedGameDocuments.test.ts`
 
-- [ ] **Step 1: Read sharedGamesClient.ts to understand pattern**
+- [x] **Step 1: Read sharedGamesClient.ts to understand pattern**
 
 Read `apps/web/src/lib/api/clients/sharedGamesClient.ts`. Find how other methods are structured.
 
-- [ ] **Step 2: Add getDocuments method to sharedGamesClient**
+- [x] **Step 2: Add getDocuments method to sharedGamesClient**
 
 ```typescript
 // In sharedGamesClient.ts
@@ -753,7 +753,7 @@ async getDocuments(gameId: string): Promise<SharedGameDocument[]> {
 }
 ```
 
-- [ ] **Step 3: Write failing test for useSharedGameDocuments hook**
+- [x] **Step 3: Write failing test for useSharedGameDocuments hook**
 
 ```typescript
 // apps/web/src/__tests__/hooks/useSharedGameDocuments.test.ts
@@ -763,7 +763,7 @@ import { useSharedGameDocuments } from '@/hooks/queries/useSharedGameDocuments';
 // ... wrapper with QueryClientProvider, MSW handler for /api/v1/shared-games/game-1/documents
 ```
 
-- [ ] **Step 4: Implement useSharedGameDocuments hook**
+- [x] **Step 4: Implement useSharedGameDocuments hook**
 
 ```typescript
 // apps/web/src/hooks/queries/useSharedGameDocuments.ts
@@ -781,12 +781,12 @@ export function useSharedGameDocuments(gameId: string | null) {
 }
 ```
 
-- [ ] **Step 5: Run test**
+- [x] **Step 5: Run test**
 
 Run: `cd apps/web && pnpm vitest run src/__tests__/hooks/useSharedGameDocuments.test.ts`
 Expected: PASS
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add apps/web/src/lib/api/clients/sharedGamesClient.ts apps/web/src/hooks/queries/useSharedGameDocuments.ts apps/web/src/__tests__/hooks/useSharedGameDocuments.test.ts
@@ -801,11 +801,11 @@ git commit -m "feat(api): add useSharedGameDocuments hook for user-facing KB doc
 - Create: `apps/web/src/components/sheets/KBSelectionPanel.tsx`
 - Test: `apps/web/src/__tests__/components/sheets/KBSelectionPanel.test.tsx`
 
-- [ ] **Step 1: Write failing test for auto-selection algorithm**
+- [x] **Step 1: Write failing test for auto-selection algorithm**
 
 Test: given a list of documents, auto-selects latest Rulebook + latest Errata. Test edge cases: no errata, multiple rulebook versions, single KB only.
 
-- [ ] **Step 2: Implement KBSelectionPanel**
+- [x] **Step 2: Implement KBSelectionPanel**
 
 Component receives `gameId`, fetches documents via `useSharedGameDocuments`, applies auto-selection, and renders:
 - Auto-selected section (green border, checked)
@@ -823,12 +823,12 @@ interface KBSelectionPanelProps {
 }
 ```
 
-- [ ] **Step 3: Run test to verify it passes**
+- [x] **Step 3: Run test to verify it passes**
 
 Run: `cd apps/web && pnpm vitest run src/__tests__/components/sheets/KBSelectionPanel.test.tsx`
 Expected: PASS
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add apps/web/src/components/sheets/KBSelectionPanel.tsx apps/web/src/__tests__/components/sheets/KBSelectionPanel.test.tsx
@@ -843,11 +843,11 @@ git commit -m "feat(sheets): add KBSelectionPanel with smart auto-selection algo
 - Create: `apps/web/src/components/sheets/SearchAgentSheet.tsx`
 - Test: `apps/web/src/__tests__/components/sheets/SearchAgentSheet.test.tsx`
 
-- [ ] **Step 1: Write failing test for SearchAgentSheet**
+- [x] **Step 1: Write failing test for SearchAgentSheet**
 
 Test: renders search input, shows games from library + shared, filters by KB availability, clicking game navigates to KB selection panel.
 
-- [ ] **Step 2: Implement SearchAgentSheet**
+- [x] **Step 2: Implement SearchAgentSheet**
 
 Two-step sheet:
 1. Game search (input + scope filters + results list)
@@ -864,9 +864,9 @@ interface SearchAgentSheetProps {
 
 Uses bottom sheet (mobile) / right drawer (desktop) pattern matching `AgentCreationSheet`.
 
-- [ ] **Step 3: Run test to verify it passes**
+- [x] **Step 3: Run test to verify it passes**
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add apps/web/src/components/sheets/SearchAgentSheet.tsx apps/web/src/__tests__/components/sheets/SearchAgentSheet.test.tsx
@@ -882,11 +882,11 @@ git commit -m "feat(sheets): add SearchAgentSheet with game search and KB select
 - Modify: `apps/web/src/hooks/queries/useCreateAgentFlow.ts`
 - Modify: `apps/web/src/lib/api/clients/agentsClient.ts`
 
-- [ ] **Step 1: Read AgentCreationSheet to understand step rendering**
+- [x] **Step 1: Read AgentCreationSheet to understand step rendering**
 
 Read `apps/web/src/components/agent/config/AgentCreationSheet.tsx`. Identify the step/section rendering logic and where `GameSelector` and PDF upload are rendered.
 
-- [ ] **Step 2: Add new props to AgentCreationSheet**
+- [x] **Step 2: Add new props to AgentCreationSheet**
 
 ```typescript
 interface AgentCreationSheetProps {
@@ -905,20 +905,20 @@ Conditional rendering:
 - If `skipGameSelection`: don't render GameSelector section, show read-only game badge
 - If `skipKBUpload` + `initialDocumentIds`: don't render PDF upload, show read-only KB summary with "Modifica" link
 
-- [ ] **Step 3: Extend useCreateAgentFlow to accept documentIds**
+- [x] **Step 3: Extend useCreateAgentFlow to accept documentIds**
 
 In `apps/web/src/hooks/queries/useCreateAgentFlow.ts`, add `documentIds?: string[]` to the input type and forward it in the mutation payload.
 
-- [ ] **Step 4: Update agentsClient.createWithSetup to forward documentIds**
+- [x] **Step 4: Update agentsClient.createWithSetup to forward documentIds**
 
 In `apps/web/src/lib/api/clients/agentsClient.ts`, ensure the `createWithSetup` method includes `documentIds` in the API call body.
 
-- [ ] **Step 5: Verify typecheck**
+- [x] **Step 5: Verify typecheck**
 
 Run: `cd apps/web && pnpm typecheck`
 Expected: No errors
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add apps/web/src/components/agent/config/AgentCreationSheet.tsx apps/web/src/hooks/queries/useCreateAgentFlow.ts apps/web/src/lib/api/clients/agentsClient.ts
@@ -932,7 +932,7 @@ git commit -m "feat(agent-wizard): add pre-fill props for game and KB document s
 **Files:**
 - Modify: `apps/web/src/components/layout/UnifiedShell/UnifiedShellClient.tsx`
 
-- [ ] **Step 1: Replace placeholder div with SearchAgentSheet**
+- [x] **Step 1: Replace placeholder div with SearchAgentSheet**
 
 ```typescript
 import { SearchAgentSheet } from '@/components/sheets/SearchAgentSheet';
@@ -967,12 +967,12 @@ const [agentWizardState, setAgentWizardState] = useState<{
 )}
 ```
 
-- [ ] **Step 2: Verify end-to-end flow visually**
+- [x] **Step 2: Verify end-to-end flow visually**
 
 Run: `cd apps/web && pnpm dev`
 Click "Cerca Agente" placeholder → SearchAgentSheet opens → search game → select KB → wizard opens with pre-fill.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add apps/web/src/components/layout/UnifiedShell/UnifiedShellClient.tsx
@@ -989,11 +989,11 @@ git commit -m "feat(shell): wire SearchAgentSheet + AgentCreationSheet handoff"
 - Create: `apps/web/src/components/sheets/SearchGameSheet.tsx`
 - Test: `apps/web/src/__tests__/components/sheets/SearchGameSheet.test.tsx`
 
-- [ ] **Step 1: Write failing test**
+- [x] **Step 1: Write failing test**
 
 Test: renders search, shows games from library + shared (no KB filter), clicking navigates to game page.
 
-- [ ] **Step 2: Implement SearchGameSheet**
+- [x] **Step 2: Implement SearchGameSheet**
 
 Similar structure to SearchAgentSheet step 1, but:
 - No KB filter — show all games
@@ -1008,9 +1008,9 @@ interface SearchGameSheetProps {
 }
 ```
 
-- [ ] **Step 3: Run test, verify passes**
-- [ ] **Step 4: Wire into UnifiedShellClient (replace placeholder div)**
-- [ ] **Step 5: Commit**
+- [x] **Step 3: Run test, verify passes**
+- [x] **Step 4: Wire into UnifiedShellClient (replace placeholder div)**
+- [x] **Step 5: Commit**
 
 ```bash
 git add apps/web/src/components/sheets/SearchGameSheet.tsx apps/web/src/__tests__/components/sheets/SearchGameSheet.test.tsx apps/web/src/components/layout/UnifiedShell/UnifiedShellClient.tsx
@@ -1025,11 +1025,11 @@ git commit -m "feat(sheets): add SearchGameSheet for game search quick action"
 - Create: `apps/web/src/components/sheets/SessionSheet.tsx`
 - Test: `apps/web/src/__tests__/components/sheets/SessionSheet.test.tsx`
 
-- [ ] **Step 1: Write failing test**
+- [x] **Step 1: Write failing test**
 
 Test two states: (a) with active sessions → renders list, (b) no sessions → renders creation form.
 
-- [ ] **Step 2: Implement SessionSheet**
+- [x] **Step 2: Implement SessionSheet**
 
 Two states:
 - Active/paused sessions exist: list with status badges, click navigates to session
@@ -1043,9 +1043,9 @@ interface SessionSheetProps {
 }
 ```
 
-- [ ] **Step 3: Run test, verify passes**
-- [ ] **Step 4: Wire into UnifiedShellClient**
-- [ ] **Step 5: Commit**
+- [x] **Step 3: Run test, verify passes**
+- [x] **Step 4: Wire into UnifiedShellClient**
+- [x] **Step 5: Commit**
 
 ```bash
 git add apps/web/src/components/sheets/SessionSheet.tsx apps/web/src/__tests__/components/sheets/SessionSheet.test.tsx apps/web/src/components/layout/UnifiedShell/UnifiedShellClient.tsx
@@ -1062,16 +1062,16 @@ git commit -m "feat(sheets): add SessionSheet for session management quick actio
 - Create: `apps/web/src/components/toolkit/DiceRoller.tsx`
 - Test: `apps/web/src/__tests__/components/toolkit/DiceRoller.test.tsx`
 
-- [ ] **Step 1: Write failing test**
+- [x] **Step 1: Write failing test**
 
 Test: renders dice type selector (d4-d20), count selector (1-10), roll button, displays results.
 
-- [ ] **Step 2: Implement DiceRoller**
+- [x] **Step 2: Implement DiceRoller**
 
 Stateless component with local state for: dice type, count, results array. Uses `Math.random()` for rolls (client-only, no SSR concern since it's inside a sheet).
 
-- [ ] **Step 3: Run test, verify passes**
-- [ ] **Step 4: Commit**
+- [x] **Step 3: Run test, verify passes**
+- [x] **Step 4: Commit**
 
 ```bash
 git add apps/web/src/components/toolkit/DiceRoller.tsx apps/web/src/__tests__/components/toolkit/DiceRoller.test.tsx
@@ -1086,16 +1086,16 @@ git commit -m "feat(toolkit): add DiceRoller component"
 - Create: `apps/web/src/components/toolkit/Timer.tsx`
 - Test: `apps/web/src/__tests__/components/toolkit/Timer.test.tsx`
 
-- [ ] **Step 1: Write failing test**
+- [x] **Step 1: Write failing test**
 
 Test: countdown mode (set time, start, pause, reset), stopwatch mode (start, lap, stop).
 
-- [ ] **Step 2: Implement Timer**
+- [x] **Step 2: Implement Timer**
 
 Local state with `useRef` for interval. Two modes: countdown (configurable minutes/seconds) and stopwatch.
 
-- [ ] **Step 3: Run test, verify passes**
-- [ ] **Step 4: Commit**
+- [x] **Step 3: Run test, verify passes**
+- [x] **Step 4: Commit**
 
 ```bash
 git add apps/web/src/components/toolkit/Timer.tsx apps/web/src/__tests__/components/toolkit/Timer.test.tsx
@@ -1110,16 +1110,16 @@ git commit -m "feat(toolkit): add Timer component with countdown and stopwatch m
 - Create: `apps/web/src/components/toolkit/Counter.tsx`
 - Test: `apps/web/src/__tests__/components/toolkit/Counter.test.tsx`
 
-- [ ] **Step 1: Write failing test**
+- [x] **Step 1: Write failing test**
 
 Test: increment, decrement, reset, multiple named counters.
 
-- [ ] **Step 2: Implement Counter**
+- [x] **Step 2: Implement Counter**
 
 Multiple counters with labels. Each has +/- buttons and reset. "Add counter" button.
 
-- [ ] **Step 3: Run test, verify passes**
-- [ ] **Step 4: Commit**
+- [x] **Step 3: Run test, verify passes**
+- [x] **Step 4: Commit**
 
 ```bash
 git add apps/web/src/components/toolkit/Counter.tsx apps/web/src/__tests__/components/toolkit/Counter.test.tsx
@@ -1134,16 +1134,16 @@ git commit -m "feat(toolkit): add Counter component with multiple named counters
 - Create: `apps/web/src/components/toolkit/Scoreboard.tsx`
 - Test: `apps/web/src/__tests__/components/toolkit/Scoreboard.test.tsx`
 
-- [ ] **Step 1: Write failing test**
+- [x] **Step 1: Write failing test**
 
 Test: add player, update score, sort by score, remove player.
 
-- [ ] **Step 2: Implement Scoreboard**
+- [x] **Step 2: Implement Scoreboard**
 
 Table with player name + score. Add player form. +/- buttons per player. Sort toggle.
 
-- [ ] **Step 3: Run test, verify passes**
-- [ ] **Step 4: Commit**
+- [x] **Step 3: Run test, verify passes**
+- [x] **Step 4: Commit**
 
 ```bash
 git add apps/web/src/components/toolkit/Scoreboard.tsx apps/web/src/__tests__/components/toolkit/Scoreboard.test.tsx
@@ -1158,16 +1158,16 @@ git commit -m "feat(toolkit): add Scoreboard component for N-player scoring"
 - Create: `apps/web/src/components/toolkit/Randomizer.tsx`
 - Test: `apps/web/src/__tests__/components/toolkit/Randomizer.test.tsx`
 
-- [ ] **Step 1: Write failing test**
+- [x] **Step 1: Write failing test**
 
 Test: add items to list, pick random, display result, clear list.
 
-- [ ] **Step 2: Implement Randomizer**
+- [x] **Step 2: Implement Randomizer**
 
 Input for adding items, list display, "Pick random" button with result highlight.
 
-- [ ] **Step 3: Run test, verify passes**
-- [ ] **Step 4: Commit**
+- [x] **Step 3: Run test, verify passes**
+- [x] **Step 4: Commit**
 
 ```bash
 git add apps/web/src/components/toolkit/Randomizer.tsx apps/web/src/__tests__/components/toolkit/Randomizer.test.tsx
@@ -1182,11 +1182,11 @@ git commit -m "feat(toolkit): add Randomizer component for random selection from
 - Create: `apps/web/src/components/sheets/ToolkitSheet.tsx`
 - Test: `apps/web/src/__tests__/components/sheets/ToolkitSheet.test.tsx`
 
-- [ ] **Step 1: Write failing test**
+- [x] **Step 1: Write failing test**
 
 Test: renders grid of 5 tools, clicking a tool renders it inline, back button returns to grid.
 
-- [ ] **Step 2: Implement ToolkitSheet**
+- [x] **Step 2: Implement ToolkitSheet**
 
 Grid of tool cards. Click opens tool inline (replaces grid). Back button returns to grid.
 
@@ -1197,9 +1197,9 @@ interface ToolkitSheetProps {
 }
 ```
 
-- [ ] **Step 3: Run test, verify passes**
-- [ ] **Step 4: Wire into UnifiedShellClient (replace placeholder div)**
-- [ ] **Step 5: Commit**
+- [x] **Step 3: Run test, verify passes**
+- [x] **Step 4: Wire into UnifiedShellClient (replace placeholder div)**
+- [x] **Step 5: Commit**
 
 ```bash
 git add apps/web/src/components/sheets/ToolkitSheet.tsx apps/web/src/__tests__/components/sheets/ToolkitSheet.test.tsx apps/web/src/components/layout/UnifiedShell/UnifiedShellClient.tsx
@@ -1215,16 +1215,16 @@ git commit -m "feat(sheets): add ToolkitSheet with 5 board game tools"
 **Files:**
 - Create: `apps/web/src/__tests__/integration/placeholder-cards-flow.test.tsx`
 
-- [ ] **Step 1: Write integration test**
+- [x] **Step 1: Write integration test**
 
 Test the full flow: render UnifiedShellClient → placeholder cards visible → click "Cerca Agente" → SearchAgentSheet opens → select game → KB panel → confirm → AgentCreationSheet opens with pre-fill.
 
-- [ ] **Step 2: Run test**
+- [x] **Step 2: Run test**
 
 Run: `cd apps/web && pnpm vitest run src/__tests__/integration/placeholder-cards-flow.test.tsx`
 Expected: PASS
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add apps/web/src/__tests__/integration/placeholder-cards-flow.test.tsx
@@ -1235,22 +1235,22 @@ git commit -m "test(integration): add full placeholder cards flow test"
 
 ### Task 25: Typecheck + lint + full test suite
 
-- [ ] **Step 1: Run typecheck**
+- [x] **Step 1: Run typecheck**
 
 Run: `cd apps/web && pnpm typecheck`
 Expected: No errors
 
-- [ ] **Step 2: Run lint**
+- [x] **Step 2: Run lint**
 
 Run: `cd apps/web && pnpm lint`
 Expected: No errors (fix any if found)
 
-- [ ] **Step 3: Run full test suite**
+- [x] **Step 3: Run full test suite**
 
 Run: `cd apps/web && pnpm test`
 Expected: All tests pass
 
-- [ ] **Step 4: Fix any failures and commit**
+- [x] **Step 4: Fix any failures and commit**
 
 ```bash
 git add -A
@@ -1261,11 +1261,11 @@ git commit -m "chore: fix lint and test issues from deckstack implementation"
 
 ### Task 26: Final review + PR
 
-- [ ] **Step 1: Review all changes**
+- [x] **Step 1: Review all changes**
 
 Run: `git diff main...HEAD --stat` to see all changed files.
 
-- [ ] **Step 2: Create PR**
+- [x] **Step 2: Create PR**
 
 PR to parent branch (track with `git config branch.<feature>.parent`). Title: "feat: add deckstack placeholder actions + search agent flow + toolkit"
 

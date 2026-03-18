@@ -8,6 +8,7 @@ AI-09: Multi-language embeddings support (LOCAL implementation)
 """
 
 import logging
+import os
 from contextlib import asynccontextmanager
 from typing import List
 
@@ -26,8 +27,21 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Model configuration
-MODEL_NAME = "intfloat/multilingual-e5-large"
+# Model configuration — configurable via environment variable
+# Supported models:
+#   intfloat/multilingual-e5-large  (1024 dim, ~560M params, higher quality)
+#   intfloat/multilingual-e5-base   (768 dim, ~278M params, ~2x faster)
+#   intfloat/multilingual-e5-small  (384 dim, ~118M params, ~4x faster)
+ALLOWED_MODELS = {
+    "intfloat/multilingual-e5-large",
+    "intfloat/multilingual-e5-base",
+    "intfloat/multilingual-e5-small",
+}
+MODEL_NAME = os.environ.get("EMBEDDING_MODEL", "intfloat/multilingual-e5-large")
+if MODEL_NAME not in ALLOWED_MODELS:
+    raise ValueError(
+        f"EMBEDDING_MODEL={MODEL_NAME!r} not in allowed models: {ALLOWED_MODELS}"
+    )
 SUPPORTED_LANGUAGES = ["en", "it", "de", "fr", "es"]
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 # Hard guard to prevent runaway memory use on very long inputs

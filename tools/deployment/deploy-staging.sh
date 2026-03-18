@@ -15,7 +15,7 @@ NC='\033[0m' # No Color
 
 # Configuration
 ENVIRONMENT="staging"
-DOCKER_REGISTRY="${DOCKER_REGISTRY:-ghcr.io/degrassiaaron}"
+DOCKER_REGISTRY="${DOCKER_REGISTRY:-ghcr.io/meepleai-app}"
 IMAGE_TAG="${IMAGE_TAG:-$(git rev-parse --short HEAD)}"
 STAGING_HOST="${STAGING_HOST:-staging.meepleai.dev}"
 REQUIRE_TESTS="${REQUIRE_TESTS:-true}"

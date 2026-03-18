@@ -107,7 +107,7 @@ Check `pnpm storybook doctor` for version mismatches.
 ### Current State
 - **Coverage**: 0% (no stories yet)
 - **Mode**: Non-blocking (CI runs but doesn't block merge)
-- **Phase 2**: [Issue #1823](https://github.com/DegrassiAaron/meepleai-monorepo/issues/1823) - Create 50+ stories
+- **Phase 2**: [Issue #1823](https://github.com/meepleAi-app/meepleai-monorepo/issues/1823) - Create 50+ stories
 - **Phase 3**: Enable blocking mode at 50%+ coverage
 
 ### Usage

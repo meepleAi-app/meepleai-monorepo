@@ -30,18 +30,19 @@ Workflows are organized by category with consistent naming prefixes:
 ## Core CI/CD
 
 ### ci.yml - Main CI Pipeline
-- **Triggers**: Push/PR to main, main-dev, frontend-dev
+- **Triggers**: PR to main, main-dev, main-staging, frontend-dev, backend-dev
 - **Jobs**: Frontend (lint, typecheck, test, build), Backend (build, test), E2E critical paths
-- **Features**: Path-based filtering, parallel execution, Codecov integration
+- **Features**: Path-based filtering, parallel execution, Codecov integration, dynamic runner selection (self-hosted for staging/prod PRs, GitHub-hosted for dev PRs)
 
 ### deploy-staging.yml - Staging Deployment
 - **Triggers**: Push to `main-staging` branch, manual dispatch
 - **Jobs**: Pre-deploy tests, Docker build, SSH/K8s deploy, validation
 - **Features**: Automatic deployment (no approval), health checks
 
-### deploy-production.yml - Production Deployment
+### deploy-production.yml - Production Deployment (DISABLED)
+- **Status**: Disabled (`.yml.disabled`) — no production environment yet
+- **Re-enable**: Rename back to `.yml` when production environment is ready
 - **Triggers**: Push/tag to `main` branch, manual dispatch
-- **Jobs**: Staging verification, tests, Docker build, approval gate, blue-green deploy
 - **Features**: Manual approval required, rollback capability, GitHub Release creation
 
 ## Testing Workflows
@@ -82,9 +83,9 @@ Workflows are organized by category with consistent naming prefixes:
 ## Automation Workflows
 
 ### auto-branch-policy.yml - Branch Protection
-- **Triggers**: PR to main, main-dev
+- **Triggers**: PR to main, main-staging, main-dev
 - **Jobs**: Validate source branch matches policy
-- **Policy**: main ← main-dev only; main-dev ← frontend-dev, feature/*, fix/*, etc.
+- **Policy**: main ← main-staging only; main-staging ← main-dev only; main-dev ← frontend-dev, backend-dev, feature/*, fix/*, etc.
 
 ### auto-dependabot.yml - Dependabot Auto-merge
 - **Triggers**: Dependabot PRs with `automerge` label
@@ -120,8 +121,24 @@ See individual workflow files for environment-specific configuration.
 
 ## Self-Hosted ARM64 Runner
 
-All workflows use the configuration toggle pattern for runner selection:
+Workflows use a tiered runner selection strategy to balance cost and concurrency:
 
+| Branch target | Runner | Rationale |
+|--------------|--------|-----------|
+| `main-dev`, `frontend-dev`, `backend-dev` | `ubuntu-latest` | High PR concurrency, no queue |
+| `main-staging`, `main` | Self-hosted (ARM64) | Low frequency, saves GH Actions minutes |
+| Deploy workflows | Self-hosted (ARM64) | Always staging/prod, free compute |
+
+**CI (`ci.yml`)** uses dynamic selection via the `changes` job output:
+```yaml
+# In changes job:
+runner: ${{ steps.select-runner.outputs.runner }}
+
+# In downstream jobs:
+runs-on: ${{ needs.changes.outputs.runner }}
+```
+
+**Other workflows** use the static toggle pattern:
 ```yaml
 runs-on: ${{ vars.RUNNER || 'ubuntu-latest' }}
 ```

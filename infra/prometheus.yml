@@ -51,9 +51,6 @@ scrape_configs:
           service: 'meepleai-web'
           component: 'frontend'
 
-  # Jaeger scrape removed - replaced by HyperDX unified observability (Issue #1564)
-  # HyperDX exposes its own metrics if needed at hyperdx:8180/metrics
-
   # Scrape Grafana metrics (optional)
   - job_name: 'grafana'
     static_configs:

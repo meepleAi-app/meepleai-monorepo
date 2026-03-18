@@ -97,18 +97,18 @@ PRs are blocked if:
 ## Dashboard
 
 Access the Codecov dashboard at:
-- **Main**: https://codecov.io/gh/DegrassiAaron/meepleai-monorepo
-- **Backend flag**: https://codecov.io/gh/DegrassiAaron/meepleai-monorepo?flag=backend
-- **Frontend flag**: https://codecov.io/gh/DegrassiAaron/meepleai-monorepo?flag=frontend
+- **Main**: https://codecov.io/gh/meepleAi-app/meepleai-monorepo
+- **Backend flag**: https://codecov.io/gh/meepleAi-app/meepleai-monorepo?flag=backend
+- **Frontend flag**: https://codecov.io/gh/meepleAi-app/meepleai-monorepo?flag=frontend
 
 ## Badges
 
 README badges show current coverage:
 
 ```markdown
-[![codecov](https://codecov.io/gh/DegrassiAaron/meepleai-monorepo/graph/badge.svg)](https://codecov.io/gh/DegrassiAaron/meepleai-monorepo)
-[![Backend Coverage](https://codecov.io/gh/DegrassiAaron/meepleai-monorepo/branch/main/graph/badge.svg?flag=backend)](https://codecov.io/gh/DegrassiAaron/meepleai-monorepo?flag=backend)
-[![Frontend Coverage](https://codecov.io/gh/DegrassiAaron/meepleai-monorepo/branch/main/graph/badge.svg?flag=frontend)](https://codecov.io/gh/DegrassiAaron/meepleai-monorepo?flag=frontend)
+[![codecov](https://codecov.io/gh/meepleAi-app/meepleai-monorepo/graph/badge.svg)](https://codecov.io/gh/meepleAi-app/meepleai-monorepo)
+[![Backend Coverage](https://codecov.io/gh/meepleAi-app/meepleai-monorepo/branch/main/graph/badge.svg?flag=backend)](https://codecov.io/gh/meepleAi-app/meepleai-monorepo?flag=backend)
+[![Frontend Coverage](https://codecov.io/gh/meepleAi-app/meepleai-monorepo/branch/main/graph/badge.svg?flag=frontend)](https://codecov.io/gh/meepleAi-app/meepleai-monorepo?flag=frontend)
 ```
 
 ## Local Coverage

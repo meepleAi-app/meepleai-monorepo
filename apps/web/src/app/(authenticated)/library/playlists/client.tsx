@@ -7,7 +7,7 @@
  * Handles loading (skeleton) and empty states.
  */
 
-import { PlaylistCard } from '@/components/playlists/PlaylistCard';
+import { MeeplePlaylistCard } from '@/components/playlists/MeeplePlaylistCard';
 import { PlaylistForm } from '@/components/playlists/PlaylistForm';
 import { usePlaylists } from '@/hooks/queries/usePlaylists';
 
@@ -54,7 +54,7 @@ export default function PlaylistsPage() {
       ) : (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {playlists.map(playlist => (
-            <PlaylistCard key={playlist.id} playlist={playlist} />
+            <MeeplePlaylistCard key={playlist.id} playlist={playlist} />
           ))}
         </div>
       )}

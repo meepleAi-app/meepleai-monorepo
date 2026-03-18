@@ -27,33 +27,20 @@ import { useVoiceOutput } from '@/hooks/useVoiceOutput';
 import { api } from '@/lib/api';
 import { cn } from '@/lib/utils';
 import { useVoicePreferencesStore } from '@/store/voice/store';
-import type { Citation } from '@/types';
 import { isAdminOrAbove, isEditorOrAbove } from '@/types/auth';
 
+import { AgentSwitchDialog } from './AgentSwitchDialog';
+import { ChatInfoPanel } from './ChatInfoPanel';
+import { ChatInputArea } from './ChatInputArea';
+import { ChatMessageList, type ChatMessageItem } from './ChatMessageList';
 import { ChatThreadHeader } from './ChatThreadHeader';
-import { CitationBadge } from './CitationBadge';
 import { DebugStepCard } from './DebugStepCard';
 import { DebugSummaryBar } from './DebugSummaryBar';
-import { ResponseMetaBadge } from './ResponseMetaBadge';
-import { RuleSourceCard } from './RuleSourceCard';
-import { TechnicalDetailsPanel } from './TechnicalDetailsPanel';
-import { TtsSpeakerButton } from './TtsSpeakerButton';
-import { VoiceMicButton } from './VoiceMicButton';
-import { VoiceSettingsPopover } from './VoiceSettingsPopover';
 import { VoiceTranscriptOverlay } from './VoiceTranscriptOverlay';
 
 // ============================================================================
 // Types
 // ============================================================================
-
-interface ChatMessage {
-  id: string;
-  role: 'user' | 'assistant';
-  content: string;
-  timestamp?: string;
-  citations?: Citation[];
-  followUpQuestions?: string[];
-}
 
 interface ThreadData {
   id: string;
@@ -62,7 +49,7 @@ interface ThreadData {
   agentId?: string | null;
   agentTypology?: string | null;
   status: string;
-  messages: ChatMessage[];
+  messages: ChatMessageItem[];
 }
 
 export interface ChatThreadViewProps {
@@ -83,7 +70,7 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
 
   // State
   const [thread, setThread] = useState<ThreadData | null>(null);
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [messages, setMessages] = useState<ChatMessageItem[]>([]);
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [isSending, setIsSending] = useState(false);
@@ -131,6 +118,7 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
     language: voicePrefs.language,
     preferredVoiceURI: voicePrefs.voiceURI ?? undefined,
     rate: voicePrefs.rate,
+    autoDetectLanguage: true,
   });
 
   const handleVoiceTap = useCallback(() => {
@@ -145,7 +133,7 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
   // SSE Streaming (Issue #4364)
   const { state: streamState, sendMessage: sendViaSSE } = useAgentChatStream({
     onComplete: (answer, metadata) => {
-      const assistantMessage: ChatMessage = {
+      const assistantMessage: ChatMessageItem = {
         id: `assistant-${Date.now()}`,
         role: 'assistant',
         content: answer,
@@ -196,7 +184,7 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
           return;
         }
 
-        const mappedMessages: ChatMessage[] = (threadData.messages ?? []).map(m => ({
+        const mappedMessages: ChatMessageItem[] = (threadData.messages ?? []).map(m => ({
           id: m.backendMessageId ?? `msg-${Date.now()}-${Math.random()}`,
           role: m.role as 'user' | 'assistant',
           content: m.content,
@@ -240,7 +228,7 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
         if (mappedMessages.length === 0 && agentId && gameName) {
           const welcomeContent = buildWelcomeMessage(agentTypology, gameName);
           const followUps = getWelcomeFollowUpQuestions(agentTypology, gameName);
-          const welcomeMessage: ChatMessage = {
+          const welcomeMessage: ChatMessageItem = {
             id: 'welcome-message',
             role: 'assistant',
             content: welcomeContent,
@@ -272,7 +260,7 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
       setError(null);
 
       // Optimistic UI: add user message
-      const userMessage: ChatMessage = {
+      const userMessage: ChatMessageItem = {
         id: `user-${Date.now()}`,
         role: 'user',
         content: messageContent,
@@ -301,7 +289,7 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
         if (response?.messages) {
           setMessages(
             response.messages.map(
-              (m): ChatMessage => ({
+              (m): ChatMessageItem => ({
                 id: m.backendMessageId ?? `msg-${Date.now()}-${Math.random()}`,
                 role: m.role as 'user' | 'assistant',
                 content: m.content,
@@ -447,32 +435,11 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
 
       {/* Agent switch confirmation dialog */}
       {showAgentConfirm && pendingAgent && (
-        <div
-          className="mx-4 mt-2 p-3 bg-amber-50 dark:bg-amber-500/10 rounded-lg border border-amber-200 dark:border-amber-500/20 flex items-center justify-between gap-3"
-          role="alertdialog"
-          data-testid="agent-switch-confirm"
-        >
-          <p className="text-sm font-nunito text-amber-900 dark:text-amber-200">
-            Vuoi cambiare agente a <strong>{AGENT_NAMES[pendingAgent]}</strong>? La cronologia viene
-            mantenuta.
-          </p>
-          <div className="flex gap-2 flex-shrink-0">
-            <button
-              onClick={() => void handleAgentChangeConfirm()}
-              className="px-3 py-1.5 text-xs font-medium bg-amber-500 text-white rounded-md hover:bg-amber-600 transition-colors"
-              data-testid="agent-switch-confirm-btn"
-            >
-              Conferma
-            </button>
-            <button
-              onClick={handleAgentChangeCancel}
-              className="px-3 py-1.5 text-xs font-medium bg-white dark:bg-card text-muted-foreground rounded-md border hover:bg-muted/50 transition-colors"
-              data-testid="agent-switch-cancel-btn"
-            >
-              Annulla
-            </button>
-          </div>
-        </div>
+        <AgentSwitchDialog
+          pendingAgentName={AGENT_NAMES[pendingAgent]}
+          onConfirm={() => void handleAgentChangeConfirm()}
+          onCancel={handleAgentChangeCancel}
+        />
       )}
 
       {/* Error banner */}
@@ -574,130 +541,19 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
               className="flex-1 overflow-y-auto px-4 py-4 space-y-4"
               data-testid="messages-area"
             >
-              {messages.length === 0 ? (
-                <div className="flex items-center justify-center h-full">
-                  <div className="text-center text-muted-foreground">
-                    <p className="text-lg font-quicksand mb-2">Inizia la conversazione</p>
-                    <p className="text-sm font-nunito">Scrivi un messaggio per cominciare.</p>
-                  </div>
-                </div>
-              ) : (
-                messages.map((msg, msgIndex) => {
-                  // Show strategy badge on the last assistant message when available
-                  const isLastAssistant =
-                    msg.role === 'assistant' &&
-                    !streamState.isStreaming &&
-                    msgIndex === messages.length - 1;
-
-                  return (
-                    <div
-                      key={msg.id}
-                      className={cn(
-                        'max-w-[85%] rounded-2xl px-4 py-3',
-                        msg.role === 'user'
-                          ? 'ml-auto bg-amber-500 text-white'
-                          : 'mr-auto bg-white/70 dark:bg-card/70 backdrop-blur-md border border-border/50'
-                      )}
-                      data-testid={`message-${msg.role}`}
-                    >
-                      <p className="text-sm whitespace-pre-wrap font-nunito">{msg.content}</p>
-                      {msg.role === 'assistant' && isTtsSupported && voicePrefs.ttsEnabled && (
-                        <TtsSpeakerButton
-                          text={msg.content}
-                          isSpeaking={isSpeaking}
-                          onSpeak={speak}
-                          onStop={stopSpeaking}
-                        />
-                      )}
-                      {msg.citations && msg.citations.length > 0 && (
-                        <RuleSourceCard citations={msg.citations} gameTitle={game?.title} />
-                      )}
-                      {isLastAssistant && streamState.strategyTier && (
-                        <div className="mt-2">
-                          <ResponseMetaBadge strategyTier={streamState.strategyTier} />
-                        </div>
-                      )}
-                      {isLastAssistant && isEditor && streamState.debugSteps.length > 0 && (
-                        <TechnicalDetailsPanel
-                          debugSteps={streamState.debugSteps}
-                          executionId={streamState.executionId}
-                          showDebugLink={isAdmin}
-                        />
-                      )}
-                    </div>
-                  );
-                })
-              )}
-              {/* Streaming status message */}
-              {streamState.statusMessage && (
-                <div
-                  className="flex items-center gap-2 text-xs text-muted-foreground font-nunito"
-                  data-testid="stream-status"
-                >
-                  <div className="h-3 w-3 border-2 border-amber-500/30 border-t-amber-500 rounded-full animate-spin" />
-                  {streamState.statusMessage}
-                </div>
-              )}
-
-              {/* Model downgrade banner */}
-              {streamState.modelDowngrade && (
-                <div
-                  className="mx-0 mb-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-200"
-                  data-testid="model-downgrade-banner"
-                >
-                  <div className="flex items-center gap-2">
-                    <svg
-                      className="h-4 w-4 shrink-0"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth={2}
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
-                      />
-                    </svg>
-                    <span>
-                      {streamState.modelDowngrade.isLocalFallback
-                        ? `Modello ${streamState.modelDowngrade.originalModel} non disponibile. Risposta generata con modello locale (${streamState.modelDowngrade.fallbackModel}).`
-                        : `Modello cambiato: ${streamState.modelDowngrade.originalModel} → ${streamState.modelDowngrade.fallbackModel}`}
-                    </span>
-                  </div>
-                  {streamState.modelDowngrade.upgradeMessage && (
-                    <div className="mt-1.5 flex items-center gap-2">
-                      <a
-                        href="/pricing"
-                        className="font-medium text-amber-900 underline dark:text-amber-100"
-                      >
-                        Passa a Premium
-                      </a>
-                      <span className="text-amber-600 dark:text-amber-400">
-                        per modelli più veloci e affidabili
-                      </span>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* Streaming response bubble */}
-              {streamState.isStreaming && streamState.currentAnswer && (
-                <div
-                  className="max-w-[85%] mr-auto rounded-2xl px-4 py-3 bg-white/70 dark:bg-card/70 backdrop-blur-md border border-border/50"
-                  data-testid="message-streaming"
-                >
-                  <p className="text-sm whitespace-pre-wrap font-nunito">
-                    {streamState.currentAnswer}
-                  </p>
-                  <div className="mt-1 flex items-center gap-1">
-                    <div className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse" />
-                    <span className="text-[10px] text-muted-foreground">In scrittura...</span>
-                  </div>
-                </div>
-              )}
-
-              <div ref={messagesEndRef} />
+              <ChatMessageList
+                messages={messages}
+                streamState={streamState}
+                isEditor={isEditor}
+                isAdmin={isAdmin}
+                gameTitle={game?.title}
+                isTtsSupported={isTtsSupported}
+                ttsEnabled={voicePrefs.ttsEnabled}
+                isSpeaking={isSpeaking}
+                onSpeak={speak}
+                onStopSpeaking={stopSpeaking}
+                messagesEndRef={messagesEndRef}
+              />
             </div>
           )}
 
@@ -718,73 +574,19 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
           )}
 
           {/* Input */}
-          <div
-            className="border-t border-border/50 dark:border-border/30 p-4 bg-background/95 backdrop-blur-[12px] dark:bg-card dark:backdrop-blur-none"
-            data-testid="chat-input-area"
-          >
-            <div className="flex items-end gap-2 max-w-3xl mx-auto">
-              <textarea
-                value={inputValue}
-                onChange={e => setInputValue(e.target.value)}
-                onKeyDown={handleKeyDown}
-                placeholder="Scrivi un messaggio..."
-                rows={1}
-                className={cn(
-                  'flex-1 resize-none rounded-xl border border-border/50 px-4 py-3',
-                  'bg-white/70 dark:bg-card/70 backdrop-blur-md text-sm font-nunito',
-                  'placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-amber-500/40',
-                  'max-h-32'
-                )}
-                disabled={isSending || streamState.isStreaming}
-                data-testid="message-input"
-              />
-              <VoiceMicButton
-                state={voiceState}
-                onTap={handleVoiceTap}
-                disabled={!isVoiceSupported || isSending || streamState.isStreaming}
-                size="md"
-              />
-              {isVoiceSupported && (
-                <VoiceSettingsPopover
-                  preferences={voicePrefs}
-                  onPreferencesChange={updates => {
-                    if (updates.ttsEnabled !== undefined)
-                      voicePrefs.setTtsEnabled(updates.ttsEnabled);
-                    if (updates.autoSend !== undefined) voicePrefs.setAutoSend(updates.autoSend);
-                    if (updates.language !== undefined) voicePrefs.setLanguage(updates.language);
-                    if (updates.voiceURI !== undefined) voicePrefs.setVoiceURI(updates.voiceURI);
-                    if (updates.rate !== undefined) voicePrefs.setRate(updates.rate);
-                  }}
-                  availableVoices={availableVoices}
-                />
-              )}
-              <button
-                onClick={() => void handleSendMessage()}
-                disabled={!inputValue.trim() || isSending || streamState.isStreaming}
-                className={cn(
-                  'p-3 rounded-xl transition-all duration-200 flex-shrink-0',
-                  inputValue.trim() && !isSending && !streamState.isStreaming
-                    ? 'bg-amber-500 hover:bg-amber-600 text-white cursor-pointer'
-                    : 'bg-muted text-muted-foreground cursor-not-allowed'
-                )}
-                aria-label="Invia messaggio"
-                data-testid="send-btn"
-              >
-                {isSending ? (
-                  <div className="h-5 w-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                ) : (
-                  <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"
-                    />
-                  </svg>
-                )}
-              </button>
-            </div>
-          </div>
+          <ChatInputArea
+            inputValue={inputValue}
+            onInputChange={setInputValue}
+            onSend={() => void handleSendMessage()}
+            onKeyDown={handleKeyDown}
+            isSending={isSending}
+            isStreaming={streamState.isStreaming}
+            voiceState={voiceState}
+            onVoiceTap={handleVoiceTap}
+            isVoiceSupported={isVoiceSupported}
+            voicePrefs={voicePrefs}
+            availableVoices={availableVoices}
+          />
         </div>
 
         {/* Agent Settings Drawer */}
@@ -803,42 +605,12 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
         )}
 
         {/* Info Panel (right) - Hidden on mobile */}
-        <div className="hidden lg:flex w-[340px] flex-shrink-0 flex-col border-l border-border/50 bg-card/50 p-4 overflow-y-auto">
-          {game && (
-            <div className="mb-4">
-              <h4 className="text-sm font-semibold font-quicksand mb-1">{game.title}</h4>
-              <p className="text-xs text-muted-foreground">Gioco collegato</p>
-            </div>
-          )}
-          {allCitations.length > 0 && (
-            <div className="mb-4">
-              <h4 className="text-sm font-semibold font-quicksand mb-2">
-                Citazioni ({allCitations.length})
-              </h4>
-              <div className="flex flex-wrap gap-1">
-                {allCitations.slice(0, 20).map((c, i) => (
-                  <CitationBadge key={`panel-${c.documentId}-${c.pageNumber}-${i}`} citation={c} />
-                ))}
-              </div>
-            </div>
-          )}
-          {suggestedQuestions.length > 0 && (
-            <div>
-              <h4 className="text-sm font-semibold font-quicksand mb-2">Domande suggerite</h4>
-              <div className="space-y-1">
-                {suggestedQuestions.map((q, i) => (
-                  <button
-                    key={i}
-                    onClick={() => handleQuestionClick(q)}
-                    className="block w-full text-left text-xs px-2 py-1.5 rounded hover:bg-muted/50 transition-colors text-muted-foreground hover:text-foreground"
-                  >
-                    {q}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
+        <ChatInfoPanel
+          game={game}
+          citations={allCitations}
+          suggestedQuestions={suggestedQuestions}
+          onQuestionClick={handleQuestionClick}
+        />
       </div>
     </div>
   );

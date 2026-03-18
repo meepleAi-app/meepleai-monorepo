@@ -2,6 +2,8 @@
 
 import { useState, useEffect, useCallback } from 'react';
 
+import { logger } from '@/lib/logger';
+
 const STORAGE_KEY = 'rag-dashboard-accordion-state';
 
 export interface AccordionStateOptions {
@@ -41,7 +43,7 @@ export function useAccordionState(options: AccordionStateOptions = {}) {
       }
     } catch {
       // If localStorage fails, keep defaults
-      console.warn('[useAccordionState] Failed to load from localStorage');
+      logger.warn('[useAccordionState] Failed to load from localStorage');
     }
     setIsInitialized(true);
   }, [storageKey]);
@@ -52,7 +54,7 @@ export function useAccordionState(options: AccordionStateOptions = {}) {
       try {
         localStorage.setItem(storageKey, JSON.stringify(openSections));
       } catch {
-        console.warn('[useAccordionState] Failed to save to localStorage');
+        logger.warn('[useAccordionState] Failed to save to localStorage');
       }
     }
   }, [openSections, storageKey, isInitialized]);
@@ -61,9 +63,9 @@ export function useAccordionState(options: AccordionStateOptions = {}) {
    * Toggle a section open/closed
    */
   const toggleSection = useCallback((sectionId: string) => {
-    setOpenSections((prev) => {
+    setOpenSections(prev => {
       if (prev.includes(sectionId)) {
-        return prev.filter((id) => id !== sectionId);
+        return prev.filter(id => id !== sectionId);
       }
       return [...prev, sectionId];
     });
@@ -100,7 +102,7 @@ export function useAccordionState(options: AccordionStateOptions = {}) {
    * Open a section (if not already open)
    */
   const openSection = useCallback((sectionId: string) => {
-    setOpenSections((prev) => {
+    setOpenSections(prev => {
       if (prev.includes(sectionId)) return prev;
       return [...prev, sectionId];
     });
@@ -110,7 +112,7 @@ export function useAccordionState(options: AccordionStateOptions = {}) {
    * Close a section (if open)
    */
   const closeSection = useCallback((sectionId: string) => {
-    setOpenSections((prev) => prev.filter((id) => id !== sectionId));
+    setOpenSections(prev => prev.filter(id => id !== sectionId));
   }, []);
 
   return {

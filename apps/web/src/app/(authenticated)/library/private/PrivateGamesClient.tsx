@@ -75,6 +75,7 @@ import type {
   PrivateGameDto,
   GetPrivateGamesParams,
 } from '@/lib/api/schemas/private-games.schemas';
+import { logger } from '@/lib/logger';
 
 type SortByOption = 'title' | 'createdAt' | 'updatedAt';
 type SortDirection = 'asc' | 'desc';
@@ -132,7 +133,7 @@ export default function PrivateGamesClient() {
         setHasNextPage(response.hasNextPage);
         setHasPreviousPage(response.hasPreviousPage);
       } catch (err) {
-        console.error('Failed to load private games:', err);
+        logger.error('Failed to load private games:', err);
         setError(t('privateGames.loadError'));
       } finally {
         setLoading(false);
@@ -190,7 +191,7 @@ export default function PrivateGamesClient() {
       setSelectedGame(null);
       await loadGames();
     } catch (err) {
-      console.error('Failed to update private game:', err);
+      logger.error('Failed to update private game:', err);
       throw err;
     } finally {
       setIsSubmitting(false);
@@ -206,7 +207,7 @@ export default function PrivateGamesClient() {
       setSelectedGame(null);
       await loadGames();
     } catch (err) {
-      console.error('Failed to delete private game:', err);
+      logger.error('Failed to delete private game:', err);
     } finally {
       setIsDeleting(false);
     }
@@ -567,7 +568,7 @@ function EditPrivateGameFormInner({
     try {
       await onSubmit(data);
     } catch (error) {
-      console.error('Form submission error:', error);
+      logger.error('Form submission error:', error);
     }
   };
 

@@ -14,8 +14,6 @@ import { Textarea } from '@/components/ui/primitives/textarea';
 import { api } from '@/lib/api';
 import type { GameToolkitTemplateDto } from '@/lib/api/schemas/toolkit.schemas';
 
-import { AgentsNavConfig } from '../NavConfig';
-
 function ReviewCard({
   template,
   onApprove,
@@ -149,7 +147,6 @@ export default function AdminTemplateReviewPage() {
 
   return (
     <div className="space-y-6">
-      <AgentsNavConfig />
       <div>
         <h1 className="font-quicksand text-2xl font-bold tracking-tight text-foreground">
           Template Review Queue

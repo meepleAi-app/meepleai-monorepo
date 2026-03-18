@@ -30,6 +30,7 @@ import { Input } from '@/components/ui/primitives/input';
 import { Label } from '@/components/ui/primitives/label';
 import { api } from '@/lib/api';
 import type { UserActivityDto, UserActivityFilters } from '@/lib/api/schemas';
+import { logger } from '@/lib/logger';
 
 export interface UserActivityTimelineProps {
   /** User ID to fetch activity for. If null, fetches current user's activity */
@@ -109,7 +110,7 @@ export function UserActivityTimeline({
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to load activity';
       setError(message);
-      console.error('Failed to fetch user activity:', err);
+      logger.error('Failed to fetch user activity:', err);
     } finally {
       setIsLoading(false);
     }

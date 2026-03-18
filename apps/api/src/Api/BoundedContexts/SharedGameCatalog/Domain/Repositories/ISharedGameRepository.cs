@@ -1,4 +1,5 @@
 using Api.BoundedContexts.SharedGameCatalog.Domain.Aggregates;
+using Api.BoundedContexts.SharedGameCatalog.Domain.Enums;
 
 namespace Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
 
@@ -76,4 +77,16 @@ public interface ISharedGameRepository
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>The game if found, null otherwise</returns>
     Task<SharedGame?> GetByIdWithDeletedAsync(Guid id, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Checks if a game with the exact title (case-insensitive) already exists.
+    /// Used for duplicate detection during Excel import.
+    /// </summary>
+    Task<bool> ExistsByTitleAsync(string title, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Gets all shared games with the specified GameDataStatus.
+    /// Used for querying skeleton games for bulk enrichment.
+    /// </summary>
+    Task<List<SharedGame>> GetByGameDataStatusAsync(GameDataStatus status, CancellationToken cancellationToken = default);
 }

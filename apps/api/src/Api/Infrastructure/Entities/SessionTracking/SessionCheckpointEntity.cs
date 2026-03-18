@@ -12,6 +12,8 @@ public class SessionCheckpointEntity
     public string SnapshotData { get; set; } = "{}";
     public int DiaryEventCount { get; set; }
     public Guid? CreatedBy { get; set; }
+    public bool IsDeleted { get; set; }
+    public DateTime? DeletedAt { get; set; }
 
     public SessionEntity Session { get; set; } = default!;
 }

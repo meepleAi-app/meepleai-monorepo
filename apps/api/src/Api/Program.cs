@@ -11,7 +11,22 @@ using Api.Observability;
 using Api.Routing;
 using Api.Routing.GameManagement;
 using Api.BoundedContexts.GameManagement.Routing; // Issue #4273
-using Api.BoundedContexts.UserNotifications.Infrastructure.DependencyInjection; // Issue #4220
+using Api.BoundedContexts.Administration.Infrastructure.DependencyInjection;
+using Api.BoundedContexts.Authentication.Infrastructure.DependencyInjection;
+using Api.BoundedContexts.BusinessSimulations.Infrastructure.DependencyInjection;
+using Api.BoundedContexts.DocumentProcessing.Infrastructure.DependencyInjection;
+using Api.BoundedContexts.EntityRelationships.Infrastructure.DependencyInjection;
+using Api.BoundedContexts.Gamification.Infrastructure.DependencyInjection;
+using Api.BoundedContexts.GameManagement.Infrastructure.DependencyInjection;
+using Api.BoundedContexts.GameToolbox.Infrastructure.DependencyInjection;
+using Api.BoundedContexts.GameToolkit.Infrastructure.DependencyInjection;
+using Api.BoundedContexts.KnowledgeBase.Infrastructure.DependencyInjection;
+using Api.BoundedContexts.SessionTracking.Infrastructure.DependencyInjection;
+using Api.BoundedContexts.SharedGameCatalog.Infrastructure.DependencyInjection;
+using Api.BoundedContexts.SystemConfiguration.Infrastructure.DependencyInjection;
+using Api.BoundedContexts.UserLibrary.Infrastructure.DependencyInjection;
+using Api.BoundedContexts.UserNotifications.Infrastructure.DependencyInjection;
+using Api.BoundedContexts.WorkflowIntegration.Infrastructure.DependencyInjection;
 using Api.Services;
 using Microsoft.AspNetCore.Cors.Infrastructure;
 using Microsoft.AspNetCore.HttpOverrides;
@@ -36,11 +51,6 @@ using System.Linq;
 using System.Net;
 using System.Security.Claims;
 using AspNetIpNetwork = Microsoft.AspNetCore.HttpOverrides.IPNetwork;
-
-// Issue #1567: Enable HTTP/2 for gRPC without TLS (required for OpenTelemetry OTLP exporter)
-// This allows gRPC connections over http:// (insecure) instead of requiring https://
-// Required for local development with HyperDX
-AppContext.SetSwitch("System.Net.Http.SocketsHttpHandler.Http2UnencryptedSupport", true);
 
 // Load environment variables from .env.development file (single source of truth for secrets)
 // SECURITY: Only load .env files in Development environment - NEVER in Production/CI
@@ -273,17 +283,71 @@ builder.Services.AddMediatR(cfg =>
 });
 
 // Application services (Domain, AI, Admin)
-// BGAI-001-v2: Pass configuration for PDF extractor provider selection
-#pragma warning disable CS0618 // Type or member is obsolete
-builder.Services.AddApplicationServices(builder.Configuration);
-#pragma warning restore CS0618
+builder.Services.AddVectorSearchServices(builder.Configuration);
+builder.Services.AddDomainServices();
+builder.Services.AddAiServices();
+builder.Services.AddPdfServices();
+builder.Services.AddChatServices();
+builder.Services.AddAdminServices();
+builder.Services.AddBggServices();
+builder.Services.AddQualityServices();
 
+// DDD-PHASE2: Authentication bounded context (repositories for CQRS handlers)
+builder.Services.AddAuthenticationContext();
+
+// DDD-PHASE2: GameManagement bounded context (repositories for CQRS handlers)
+builder.Services.AddGameManagementContext();
+
+// Issue #4753: GameToolkit bounded context (toolkit configs, tools, templates)
+builder.Services.AddGameToolkitContext();
+
+// Epic #412: GameToolbox bounded context (toolbox containers, card decks, phases)
+builder.Services.AddGameToolboxContext();
+
+// Issue #5130: EntityRelationships bounded context (entity links, relationships)
+builder.Services.AddEntityRelationshipsContext();
+
+// DDD-PHASE3: KnowledgeBase bounded context
+builder.Services.AddKnowledgeBaseServices();
+
+// DDD-PHASE3: WorkflowIntegration bounded context
+builder.Services.AddWorkflowIntegrationContext(builder.Configuration);
+
+// DDD-PHASE3: SystemConfiguration bounded context
+builder.Services.AddSystemConfigurationContext();
+
+// DDD-PHASE3: Administration bounded context
+// ISSUE-2528: Pass configuration for orphaned task cleanup options
+builder.Services.AddAdministrationContext(builder.Configuration);
+
+// DDD-PHASE4: DocumentProcessing bounded context
+// BGAI-001-v2: Pass configuration for PDF extractor provider selection
+builder.Services.AddDocumentProcessingContext(builder.Configuration);
+
+// ISSUE-2053: UserNotifications bounded context
+builder.Services.AddUserNotificationsContext(builder.Configuration);
+
+// UserLibrary bounded context
+builder.Services.AddUserLibraryContext();
+
+// GST-003: SessionTracking bounded context
+builder.Services.AddSessionTrackingContext();
+
+// Issue #3922: Gamification bounded context (achievements, badges)
+builder.Services.AddGamificationContext();
+
+// Issue #3720: BusinessSimulations bounded context (financial ledger, simulations)
+builder.Services.AddBusinessSimulationsContext();
+
+// ISSUE-2370: SharedGameCatalog bounded context
+// ISSUE-2454: Background processing configuration
+builder.Services.AddSharedGameCatalogContext(builder.Configuration);
+
+// ISSUE-2371: SharedGameCatalog authorization policies
+builder.Services.AddSharedGameCatalogPolicies();
 
 // Authentication services (Auth, OAuth, 2FA, API keys, Sessions)
 builder.Services.AddAuthenticationServices(builder.Configuration);
-
-// User Notifications bounded context (Issue #4220)
-builder.Services.AddUserNotificationsContext();
 
 // Observability services (OpenTelemetry, Health checks, Swagger)
 builder.Services.AddObservabilityServices(builder.Configuration, builder.Environment);
@@ -421,6 +485,9 @@ app.MapGet("/", () => Results.Json(new { ok = true, name = "MeepleAgentAI" }));
 // ISSUE-2511: Comprehensive health check endpoint
 app.MapHealthCheckEndpoints();
 
+// ISSUE-448: Independent status page (works even when frontend is down)
+app.MapStatusPageEndpoints();
+
 // OPS-01: Health check endpoints (backwards compatibility)
 app.MapHealthChecks("/health", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
 {
@@ -484,9 +551,11 @@ app.MapHealthChecks("/health/config", new Microsoft.AspNetCore.Diagnostics.Healt
 var v1Api = app.MapGroup("/api/v1");
 
 v1Api.MapAuthEndpoints();
+v1Api.MapAccessRequestEndpoints(); // Invite-only registration: access requests + registration mode
 v1Api.MapPermissionEndpoints(); // Epic #4068: Permission system endpoints
 v1Api.MapShareLinkEndpoints(); // ISSUE-2052: Shareable chat thread links
 v1Api.MapUserProfileEndpoints();
+v1Api.MapOnboardingEndpoints(); // First-time user onboarding endpoints
 v1Api.MapUserAiConsentEndpoints(); // Issue #5512: GDPR AI consent
 v1Api.MapUserLlmDataEndpoints(); // Issue #5509: GDPR right to erasure for LLM data
 v1Api.MapUserAccountEndpoints(); // GDPR Art. 17: Self-service account deletion
@@ -496,6 +565,7 @@ v1Api.MapPlayRecordEndpoints(); // ISSUE-3889/3890: Play record tracking
 v1Api.MapLiveSessionEndpoints(); // Issue #4749: Live session CQRS endpoints
 v1Api.MapSessionAttachmentEndpoints(); // Issue #5365: Session photo attachment endpoints
 v1Api.MapGameToolkitEndpoints(); // Issue #4753: Game toolkit CQRS endpoints
+v1Api.MapGameToolboxEndpoints(); // Epic #412: Game toolbox per-game containers
 v1Api.MapToolStateEndpoints(); // Issue #4754: Tool state CQRS endpoints
 v1Api.MapTurnOrderEndpoints(); // Issue #4970: TurnOrder base toolkit endpoints
 v1Api.MapWhiteboardEndpoints(); // Issue #4971: Whiteboard base toolkit endpoints
@@ -516,6 +586,7 @@ v1Api.MapAdminOpenRouterEndpoints();    // Issue #5077: OpenRouter usage monitor
 v1Api.MapAdminEmergencyControlsEndpoints(); // Issue #5476: LLM emergency controls
 v1Api.MapAdminLlmConfigEndpoints();        // Issue #5495: LLM system configuration CRUD
 app.MapAdminBulkImportEndpoints();       // Issue #4354: Bulk import endpoint routing
+v1Api.MapGroup("/admin/catalog-ingestion").MapAdminCatalogIngestionEndpoints(); // Admin bulk Excel import + enrichment
 app.MapPdfAnalyticsEndpoints();          // Issue #3715: PDF analytics dashboard
 app.MapChatAnalyticsEndpoints();         // Issue #3714: Chat analytics dashboard
 app.MapModelPerformanceEndpoints();      // Issue #3716: Model performance dashboard
@@ -551,6 +622,9 @@ v1Api.MapAdminQueueEndpoints();         // Issue #4731: Processing queue managem
 v1Api.MapAdminStorageMigrationEndpoints(); // S3 storage migration (local → S3)
 v1Api.MapAdminEmailEndpoints();        // Issue #4430: Email queue dashboard monitoring
 v1Api.MapAdminEmailTemplateEndpoints(); // Issue #52: Admin email template management
+v1Api.MapAdminNotificationQueueEndpoints(); // Admin notification queue monitoring
+v1Api.MapAdminSlackEndpoints();        // Admin Slack connection & team channel management
+v1Api.MapAdminManualNotificationEndpoints(); // Admin manual notification send
 v1Api.MapAdminBusinessStatsEndpoints(); // Issue #4562: App Usage Stats (Epic #3688)
 v1Api.MapAdminAgentDefinitionEndpoints(); // Issue #3809: Agent Definition management (AI Lab)
 v1Api.MapAgentPlaygroundEndpoints();    // Issue #3810: Agent Playground with SSE streaming
@@ -558,12 +632,16 @@ v1Api.MapPlaygroundTestScenarioEndpoints(); // Issue #4396: Playground Test Scen
 v1Api.MapAdminStrategyEndpoints();      // Issue #3811: Strategy Editor for RAG pipelines
 v1Api.MapAdminRagExecutionEndpoints();  // Issue #4458: RAG Execution History
 v1Api.MapAdminDebugChatEndpoints();    // Admin Debug Chat with real-time pipeline tracing
+v1Api.MapAdminSandboxEndpoints();     // RAG Sandbox Dashboard: documents, chunks, metrics
+v1Api.MapRagEnhancementAdminEndpoints();    // RAG Enhancement toggles (admin)
+v1Api.MapRagEnhancementEstimateEndpoints(); // RAG Enhancement cost estimate (user-facing)
 v1Api.MapMonitoringEndpoints();        // Issues #891 + #893: Infrastructure health & Prometheus metrics
 v1Api.MapAlertEndpoints();             // Alert management
 v1Api.MapAlertConfigEndpoints();       // Alert rules (Issue #921)
 v1Api.MapAlertConfigurationEndpoints(); // Alert configuration (Issue #915)
 v1Api.MapNotificationEndpoints();      // User notifications (Issue #2053)
 v1Api.MapNotificationPreferencesEndpoints(); // Notification preferences (Issue #4220)
+v1Api.MapSlackIntegrationEndpoints();        // Slack OAuth connect/disconnect/status
 v1Api.MapUnsubscribeEndpoints();       // Issue #38: GDPR-compliant email unsubscribe
 v1Api.MapCollectionWizardEndpoints();  // Issue #4823: Collection wizard game preview
 v1Api.MapUserLibraryEndpoints();       // User game library
@@ -645,13 +723,9 @@ v1Api.MapGroup("/admin/test-results").MapAdminTestResultEndpoints();
 // Issue #3541: BGG import queue management (admin-only)
 v1Api.MapBggImportQueueEndpoints();
 
-// Issue #1565: Telemetry test endpoints for HyperDX integration testing
 // SEC-01: Only register test endpoints in Development to prevent exposure in staging/QA
 if (app.Environment.IsDevelopment())
 {
-    v1Api.MapTelemetryTestEndpoints();
-    v1Api.MapTestTelemetryEndpoints(); // Issue #1567: Manual span test endpoint
-
     // Issue #2004: Runbook validation test endpoints
     v1Api.MapTestEndpoints();
 }
@@ -703,7 +777,8 @@ static bool ShouldSkipMigrations(WebApplication app, MeepleAiDbContext db)
     }
 
     // PERF: Skip auto-migration in Staging/Production — handled by deploy pipeline (migrate-db job)
-    if (app.Environment.IsEnvironment("Staging") || app.Environment.IsProduction())
+    var forceMigrations = app.Configuration.GetValue<bool?>("FORCE_MIGRATIONS").GetValueOrDefault(false);
+    if (!forceMigrations && (app.Environment.IsEnvironment("Staging") || app.Environment.IsProduction()))
     {
         app.Logger.LogInformation("Skipping auto-migration in {Environment} — migrations handled by deploy pipeline", app.Environment.EnvironmentName);
         return true;

@@ -5,6 +5,7 @@ import React, { createContext, useContext, type ReactNode } from 'react';
 import { useQuery } from '@tanstack/react-query';
 
 import { getUserPermissions } from '@/lib/api/permissions';
+import { logger } from '@/lib/logger';
 import type { UserTier, UserRole } from '@/types/permissions';
 import { hasMinimumTier, isAdmin } from '@/types/permissions';
 
@@ -24,12 +25,12 @@ export function PermissionProvider({ children }: { children: ReactNode }) {
     queryKey: ['permissions', 'me'],
     queryFn: getUserPermissions,
     staleTime: 5 * 60 * 1000,
-    retry: 2
+    retry: 2,
   });
 
   // Error handling: fallback to safe default permissions
   if (error) {
-    console.error('Failed to load user permissions:', error);
+    logger.error('Failed to load user permissions:', error);
 
     // Return minimal safe defaults (Free tier, User role)
     const safeDefaults: PermissionContextValue = {
@@ -38,7 +39,7 @@ export function PermissionProvider({ children }: { children: ReactNode }) {
       canAccess: () => false, // Deny all features on error (safe default)
       hasTier: () => false,
       isAdmin: () => false,
-      loading: false
+      loading: false,
     };
 
     return <PermissionContext.Provider value={safeDefaults}>{children}</PermissionContext.Provider>;
@@ -47,10 +48,10 @@ export function PermissionProvider({ children }: { children: ReactNode }) {
   const value: PermissionContextValue = {
     tier: data?.tier ?? 'free',
     role: data?.role ?? 'user',
-    canAccess: (feature) => data?.accessibleFeatures?.includes(feature) ?? false,
-    hasTier: (tier) => hasMinimumTier(data?.tier ?? 'free', tier),
+    canAccess: feature => data?.accessibleFeatures?.includes(feature) ?? false,
+    hasTier: tier => hasMinimumTier(data?.tier ?? 'free', tier),
     isAdmin: () => isAdmin(data?.role ?? 'user'),
-    loading: isLoading
+    loading: isLoading,
   };
 
   return <PermissionContext.Provider value={value}>{children}</PermissionContext.Provider>;

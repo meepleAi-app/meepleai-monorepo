@@ -17,7 +17,13 @@
 import { CheckCircleIcon, AlertTriangleIcon, XCircleIcon, PlayIcon } from 'lucide-react';
 
 import { Badge } from '@/components/ui/data-display/badge';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/data-display/card';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/data-display/card';
 import { Button } from '@/components/ui/primitives/button';
 import type { ServiceHealthStatus } from '@/lib/api';
 
@@ -69,10 +75,6 @@ const serviceDescriptions: Record<string, { it: string; en: string }> = {
   n8n: {
     it: 'Motore di automazione workflow',
     en: 'Workflow automation engine',
-  },
-  hyperdx: {
-    it: 'Piattaforma di osservabilità e logging',
-    en: 'Observability and logging platform',
   },
 };
 
@@ -126,9 +128,7 @@ export function ServiceStatusCard({
       <CardContent className="space-y-3">
         {/* Status */}
         <div className="flex items-center justify-between">
-          <span className="text-sm font-medium">
-            {locale === 'it' ? 'Stato:' : 'Status:'}
-          </span>
+          <span className="text-sm font-medium">{locale === 'it' ? 'Stato:' : 'Status:'}</span>
           <Badge variant="outline" className={config.iconColor}>
             {config.label[locale === 'it' ? 'it' : 'en']}
           </Badge>

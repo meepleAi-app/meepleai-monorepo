@@ -506,6 +506,38 @@ public class HybridAdaptiveRoutingStrategyTests
 
     #endregion
 
+    #region Region-aware routing (Issue #28)
+
+    [Fact]
+    public void SelectProvider_WithRegion_PropagatesUserRegionOnDecision()
+    {
+        // Arrange
+        var user = CreateUser(Role.Admin);
+        var sut = CreateStrategy();
+
+        // Act
+        var decision = sut.SelectProvider(user, RagStrategy.Balanced, region: "eu-west-1");
+
+        // Assert
+        Assert.Equal("eu-west-1", decision.UserRegion);
+    }
+
+    [Fact]
+    public void SelectProvider_WithoutRegion_UserRegionIsNull()
+    {
+        // Arrange
+        var user = CreateUser(Role.Admin);
+        var sut = CreateStrategy();
+
+        // Act
+        var decision = sut.SelectProvider(user, RagStrategy.Balanced);
+
+        // Assert
+        Assert.Null(decision.UserRegion);
+    }
+
+    #endregion
+
     private static AuthUser CreateUser(Role role)
     {
         var email = Email.Parse($"test.{role.Value}@meepleai.dev");

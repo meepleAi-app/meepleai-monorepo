@@ -1,6 +1,5 @@
 using Serilog;
 using Serilog.Events;
-using Serilog.Sinks.OpenTelemetry;
 
 namespace Api.Logging;
 
@@ -24,9 +23,6 @@ internal static class LoggingConfiguration
         var defaultLogLevel = GetDefaultLogLevel(environment.EnvironmentName, configuration);
         var aspNetCoreLogLevel = GetLogLevel(configuration, "Logging:LogLevel:Microsoft.AspNetCore", LogEventLevel.Warning);
         var efCoreLogLevel = GetLogLevel(configuration, "Logging:LogLevel:Microsoft.EntityFrameworkCore", LogEventLevel.Warning);
-
-        // Issue #1563: HyperDX OTLP configuration
-        var hyperDxLogsEndpoint = configuration["HYPERDX_LOGS_ENDPOINT"] ?? "http://meepleai-hyperdx:14318/v1/logs";
 
         // Build logger configuration
         var loggerConfig = new LoggerConfiguration()
@@ -59,21 +55,6 @@ internal static class LoggingConfiguration
         loggerConfig.WriteTo.Console(
             outputTemplate: consoleTemplate,
             restrictedToMinimumLevel: GetConsoleLogLevel(environment.EnvironmentName));
-
-        // Issue #1563: Add HyperDX OTLP sink (replaces Seq)
-        loggerConfig.WriteTo.OpenTelemetry(options =>
-        {
-            options.Endpoint = hyperDxLogsEndpoint;
-            options.Protocol = OtlpProtocol.HttpProtobuf;
-            options.ResourceAttributes = new Dictionary<string, object>
-(StringComparer.Ordinal)
-            {
-                ["service.name"] = "meepleai-api",
-                ["deployment.environment"] = environment.EnvironmentName,
-                ["service.namespace"] = "meepleai"
-            };
-            options.RestrictedToMinimumLevel = GetHyperDxLogLevel(configuration);
-        });
 
         return loggerConfig;
     }
@@ -130,21 +111,4 @@ internal static class LoggingConfiguration
         };
     }
 
-    /// <summary>
-    /// Gets the HyperDX log level based on environment and configuration.
-    /// Issue #1563: All environments should log to HyperDX, but threshold may vary.
-    /// </summary>
-    private static LogEventLevel GetHyperDxLogLevel(ConfigurationManager configuration)
-    {
-        // Check for explicit HyperDX log level configuration
-        var configuredLevel = configuration["Logging:LogLevel:HyperDX"];
-        if (!string.IsNullOrWhiteSpace(configuredLevel) &&
-            Enum.TryParse<LogEventLevel>(configuredLevel, true, out var level))
-        {
-            return level;
-        }
-
-        // Default: log everything to HyperDX (centralized aggregation)
-        return LogEventLevel.Debug;
-    }
 }

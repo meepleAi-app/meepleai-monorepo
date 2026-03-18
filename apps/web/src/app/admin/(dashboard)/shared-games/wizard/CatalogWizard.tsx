@@ -1,8 +1,8 @@
 /**
- * CatalogWizard - 3-Step Guided Wizard for Shared Game Content
+ * CatalogWizard - 5-Step Guided Wizard for Shared Game Content
  *
  * Issue #118: Guided Wizard for admin content management.
- * Steps: 1) Select Game  2) Upload PDFs  3) Review & Submit
+ * Steps: 1) Select Game  2) Upload PDFs  3) Review  4) Agent Setup  5) RAG Testing
  */
 
 'use client';
@@ -12,14 +12,19 @@ import { useCallback, useRef, useState } from 'react';
 import {
   ArrowLeft,
   ArrowRight,
+  Bot,
   CheckCircle2,
   FileUp,
   Loader2,
+  MessageSquare,
   Search,
+  SkipForward,
   XCircle,
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
+import { AgentSetupPanel } from '@/components/admin/shared-games/rag-setup/AgentSetupPanel';
+import { InlineChatPanel } from '@/components/admin/shared-games/rag-setup/InlineChatPanel';
 import {
   Card,
   CardContent,
@@ -35,8 +40,9 @@ import type {
   BulkUploadPdfsResult,
   SharedGameDocumentsResult,
 } from '@/lib/api/clients/adminClient';
+import type { DocumentStatus, AgentInfo } from '@/lib/api/schemas/rag-setup.schemas';
 
-type WizardStep = 1 | 2 | 3;
+type WizardStep = 1 | 2 | 3 | 4 | 5;
 
 interface SelectedGame {
   id: string;
@@ -56,6 +62,12 @@ export function CatalogWizard() {
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<Array<{ id: string; title: string }>>([]);
+
+  // Step 4 & 5 state
+  const [ragDocuments, setRagDocuments] = useState<DocumentStatus[]>([]);
+  const [existingAgent, setExistingAgent] = useState<AgentInfo | null>(null);
+  const [agentId, setAgentId] = useState<string | null>(null);
+  const [chatThreadId, setChatThreadId] = useState<string | null>(null);
 
   const handleSearch = useCallback(async () => {
     if (!searchQuery.trim()) return;
@@ -116,6 +128,33 @@ export function CatalogWizard() {
     }
   }, [selectedGame, selectedFiles]);
 
+  const handleProceedToAgentSetup = useCallback(async () => {
+    if (!selectedGame) return;
+    setIsLoading(true);
+    setError(null);
+    try {
+      const readiness = await api.sharedGames.getGameRagReadiness(selectedGame.id);
+      if (readiness) {
+        setRagDocuments(readiness.documents);
+        setExistingAgent(readiness.linkedAgent);
+        if (readiness.linkedAgent) {
+          setAgentId(readiness.linkedAgent.agentId);
+        }
+      }
+      setStep(4);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load RAG status');
+    } finally {
+      setIsLoading(false);
+    }
+  }, [selectedGame]);
+
+  const handleAgentCreated = useCallback((info: { agentId: string; chatThreadId: string }) => {
+    setAgentId(info.agentId);
+    setChatThreadId(info.chatThreadId);
+    setStep(5);
+  }, []);
+
   const handleFinish = useCallback(() => {
     if (selectedGame) {
       router.push(`/admin/shared-games/${selectedGame.id}`);
@@ -128,24 +167,27 @@ export function CatalogWizard() {
     { number: 1, label: 'Select Game' },
     { number: 2, label: 'Upload PDFs' },
     { number: 3, label: 'Review' },
+    { number: 4, label: 'Agent Setup' },
+    { number: 5, label: 'RAG Test' },
   ] as const;
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
-      <div className="flex items-center justify-center gap-4">
+      {/* Stepper */}
+      <div className="flex items-center justify-center gap-2 sm:gap-4">
         {steps.map((s, i) => (
-          <div key={s.number} className="flex items-center gap-2">
+          <div key={s.number} className="flex items-center gap-1 sm:gap-2">
             <div
-              className={`flex h-8 w-8 items-center justify-center rounded-full text-sm font-medium ${
+              className={`flex h-7 w-7 items-center justify-center rounded-full text-xs font-medium sm:h-8 sm:w-8 sm:text-sm ${
                 step >= s.number
                   ? 'bg-orange-500 text-white'
                   : 'bg-zinc-200 text-zinc-500 dark:bg-zinc-700 dark:text-zinc-400'
               }`}
             >
-              {step > s.number ? <CheckCircle2 className="h-4 w-4" /> : s.number}
+              {step > s.number ? <CheckCircle2 className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> : s.number}
             </div>
             <span
-              className={`text-sm ${
+              className={`hidden text-xs sm:inline sm:text-sm ${
                 step >= s.number
                   ? 'font-medium text-zinc-900 dark:text-zinc-100'
                   : 'text-zinc-500 dark:text-zinc-400'
@@ -155,7 +197,7 @@ export function CatalogWizard() {
             </span>
             {i < steps.length - 1 && (
               <div
-                className={`h-px w-12 ${
+                className={`h-px w-6 sm:w-10 ${
                   step > s.number ? 'bg-orange-500' : 'bg-zinc-200 dark:bg-zinc-700'
                 }`}
               />
@@ -170,6 +212,7 @@ export function CatalogWizard() {
         </Alert>
       )}
 
+      {/* Step 1: Select Game */}
       {step === 1 && (
         <Card className="rounded-xl border bg-white/70 backdrop-blur-md dark:bg-zinc-900/70">
           <CardHeader>
@@ -212,6 +255,7 @@ export function CatalogWizard() {
         </Card>
       )}
 
+      {/* Step 2: Upload PDFs */}
       {step === 2 && selectedGame && (
         <Card className="rounded-xl border bg-white/70 backdrop-blur-md dark:bg-zinc-900/70">
           <CardHeader>
@@ -287,6 +331,7 @@ export function CatalogWizard() {
         </Card>
       )}
 
+      {/* Step 3: Review Upload Results */}
       {step === 3 && uploadResult && (
         <Card className="rounded-xl border bg-white/70 backdrop-blur-md dark:bg-zinc-900/70">
           <CardHeader>
@@ -331,13 +376,86 @@ export function CatalogWizard() {
                 ))}
               </div>
             )}
-            <div className="flex justify-end pt-4">
-              <Button onClick={handleFinish}>
+            <div className="flex justify-between pt-4">
+              <Button variant="outline" onClick={handleFinish}>
                 <CheckCircle2 className="mr-2 h-4 w-4" /> View Game Details
+              </Button>
+              <Button onClick={handleProceedToAgentSetup} disabled={isLoading}>
+                {isLoading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Loading...
+                  </>
+                ) : (
+                  <>
+                    <Bot className="mr-2 h-4 w-4" /> Setup Agent
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </>
+                )}
               </Button>
             </div>
           </CardContent>
         </Card>
+      )}
+
+      {/* Step 4: Agent Setup */}
+      {step === 4 && selectedGame && (
+        <div className="space-y-4">
+          <AgentSetupPanel
+            gameId={selectedGame.id}
+            gameTitle={selectedGame.title}
+            documents={ragDocuments}
+            existingAgent={existingAgent}
+            onAgentCreated={handleAgentCreated}
+          />
+          <div className="flex justify-between">
+            <Button variant="outline" onClick={() => setStep(3)}>
+              <ArrowLeft className="mr-2 h-4 w-4" /> Back
+            </Button>
+            {existingAgent && (
+              <Button
+                onClick={() => {
+                  setAgentId(existingAgent.agentId);
+                  setStep(5);
+                }}
+              >
+                <MessageSquare className="mr-2 h-4 w-4" /> Test Chat
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Button>
+            )}
+            <Button variant="ghost" onClick={handleFinish}>
+              <SkipForward className="mr-2 h-4 w-4" /> Skip & Finish
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Step 5: RAG Testing */}
+      {step === 5 && (
+        <div className="space-y-4">
+          <Card className="rounded-xl border bg-white/70 backdrop-blur-md dark:bg-zinc-900/70">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <MessageSquare className="h-5 w-5" />
+                Test RAG Agent
+              </CardTitle>
+              <CardDescription>
+                Ask questions about the uploaded documents to verify the RAG pipeline works
+                correctly.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <InlineChatPanel agentId={agentId} chatThreadId={chatThreadId} />
+            </CardContent>
+          </Card>
+          <div className="flex justify-between">
+            <Button variant="outline" onClick={() => setStep(4)}>
+              <ArrowLeft className="mr-2 h-4 w-4" /> Back
+            </Button>
+            <Button onClick={handleFinish}>
+              <CheckCircle2 className="mr-2 h-4 w-4" /> Finish & View Game
+            </Button>
+          </div>
+        </div>
       )}
     </div>
   );

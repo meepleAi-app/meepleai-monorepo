@@ -221,6 +221,22 @@ internal class UserLibraryRepository : RepositoryBase, IUserLibraryRepository
     }
 
     /// <inheritdoc />
+    public async Task<Dictionary<GameStateType, int>> GetStateCountsAsync(Guid userId, CancellationToken cancellationToken = default)
+    {
+        var stateCounts = await DbContext.UserLibraryEntries
+            .AsNoTracking()
+            .Where(e => e.UserId == userId && e.SharedGameId != null)
+            .GroupBy(e => e.CurrentState)
+            .Select(g => new { State = g.Key, Count = g.Count() })
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        return stateCounts.ToDictionary(
+            x => (GameStateType)x.State,
+            x => x.Count);
+    }
+
+    /// <inheritdoc />
     public async Task<int> GetAgentConfigCountAsync(Guid userId, CancellationToken cancellationToken = default)
     {
         return await DbContext.UserLibraryEntries
@@ -441,6 +457,13 @@ internal class UserLibraryRepository : RepositoryBase, IUserLibraryRepository
             privatePdfIdProp?.SetValue(entry, entity.PrivatePdfId.Value);
         }
 
+        // Hydrate OwnershipDeclaredAt from DB using reflection (private setter)
+        if (entity.OwnershipDeclaredAt.HasValue)
+        {
+            var ownershipDeclaredAtProp = typeof(UserLibraryEntry).GetProperty("OwnershipDeclaredAt");
+            ownershipDeclaredAtProp?.SetValue(entry, entity.OwnershipDeclaredAt.Value);
+        }
+
         // Clear domain events that were raised during construction
         // (we don't want to re-raise events for existing entities)
         entry.ClearDomainEvents();
@@ -572,6 +595,7 @@ internal class UserLibraryRepository : RepositoryBase, IUserLibraryRepository
             CustomPdfFileSizeBytes = domainEntity.CustomPdfMetadata?.FileSizeBytes,
             CustomPdfOriginalFileName = domainEntity.CustomPdfMetadata?.OriginalFileName,
             PrivatePdfId = domainEntity.PrivatePdfId,
+            OwnershipDeclaredAt = domainEntity.OwnershipDeclaredAt,
 
             // Game state
             CurrentState = (int)domainEntity.CurrentState.Value,

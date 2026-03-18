@@ -71,7 +71,11 @@ internal class NotificationPreferencesRepository : RepositoryBase, INotification
             entity.PushEndpoint, entity.PushP256dhKey, entity.PushAuthKey,
             entity.InAppOnGameNightInvitation, entity.EmailOnGameNightInvitation,
             entity.PushOnGameNightInvitation, entity.EmailOnGameNightReminder,
-            entity.PushOnGameNightReminder
+            entity.PushOnGameNightReminder,
+            entity.SlackEnabled, entity.SlackOnDocumentReady, entity.SlackOnDocumentFailed,
+            entity.SlackOnRetryAvailable, entity.SlackOnGameNightInvitation,
+            entity.SlackOnGameNightReminder, entity.SlackOnShareRequestCreated,
+            entity.SlackOnShareRequestApproved, entity.SlackOnBadgeEarned
         );
     }
 
@@ -97,7 +101,16 @@ internal class NotificationPreferencesRepository : RepositoryBase, INotification
             EmailOnGameNightInvitation = domain.EmailOnGameNightInvitation,
             PushOnGameNightInvitation = domain.PushOnGameNightInvitation,
             EmailOnGameNightReminder = domain.EmailOnGameNightReminder,
-            PushOnGameNightReminder = domain.PushOnGameNightReminder
+            PushOnGameNightReminder = domain.PushOnGameNightReminder,
+            SlackEnabled = domain.SlackEnabled,
+            SlackOnDocumentReady = domain.SlackOnDocumentReady,
+            SlackOnDocumentFailed = domain.SlackOnDocumentFailed,
+            SlackOnRetryAvailable = domain.SlackOnRetryAvailable,
+            SlackOnGameNightInvitation = domain.SlackOnGameNightInvitation,
+            SlackOnGameNightReminder = domain.SlackOnGameNightReminder,
+            SlackOnShareRequestCreated = domain.SlackOnShareRequestCreated,
+            SlackOnShareRequestApproved = domain.SlackOnShareRequestApproved,
+            SlackOnBadgeEarned = domain.SlackOnBadgeEarned
         };
     }
 }

@@ -9,7 +9,7 @@ namespace Api.BoundedContexts.Authentication.Application.Commands.Invitation;
 
 /// <summary>
 /// Handles bulk invitation sending from CSV content.
-/// Parses CSV rows and dispatches individual SendInvitationCommand per valid row.
+/// Parses CSV rows and dispatches individual ProvisionAndInviteUserCommand per valid row.
 /// Issue #124: User invitation system.
 /// </summary>
 internal sealed class BulkSendInvitationsCommandHandler
@@ -68,7 +68,7 @@ internal sealed class BulkSendInvitationsCommandHandler
             var parts = trimmedLine.Split(',', StringSplitOptions.TrimEntries);
             if (parts.Length < 2)
             {
-                failed.Add(new BulkInviteFailure(trimmedLine, "Invalid CSV format: expected email,role"));
+                failed.Add(new BulkInviteFailure(trimmedLine, "Invalid CSV format: expected email,role[,displayName,tier,expiresInDays]"));
                 continue;
             }
 
@@ -82,17 +82,32 @@ internal sealed class BulkSendInvitationsCommandHandler
                 continue;
             }
 
+            // Optional CSV columns: displayName (col 2), tier (col 3), expiresInDays (col 4)
+            var displayName = parts.Length > 2 && !string.IsNullOrWhiteSpace(parts[2]) ? parts[2].Trim() : email;
+            var tier = parts.Length > 3 && !string.IsNullOrWhiteSpace(parts[3]) ? parts[3].Trim() : "Free";
+            var expiresInDays = 7;
+            if (parts.Length > 4 && int.TryParse(parts[4].Trim(), System.Globalization.CultureInfo.InvariantCulture, out var parsedDays) && parsedDays > 0)
+                expiresInDays = parsedDays;
+
             try
             {
                 var result = await _sender.Send(
-                    new SendInvitationCommand(email, role, command.InvitedByUserId),
+                    new ProvisionAndInviteUserCommand(
+                        Email: email,
+                        DisplayName: displayName,
+                        Role: role,
+                        Tier: tier,
+                        CustomMessage: null,
+                        ExpiresInDays: expiresInDays,
+                        GameSuggestions: new List<GameSuggestionDto>(),
+                        InvitedByUserId: command.InvitedByUserId),
                     cancellationToken).ConfigureAwait(false);
                 successful.Add(result);
             }
 #pragma warning disable CA1031 // Do not catch general exception types
             catch (Exception ex)
             {
-                _logger.LogWarning(ex, "Failed to send invitation to {Email}", email);
+                _logger.LogWarning(ex, "Failed to provision invitation for {Email}", email);
                 var userFacingError = ex switch
                 {
                     Api.Middleware.Exceptions.ConflictException => "A pending invitation or user already exists for this email",

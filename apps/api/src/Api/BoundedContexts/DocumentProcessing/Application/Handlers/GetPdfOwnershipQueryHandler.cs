@@ -39,7 +39,6 @@ internal class GetPdfOwnershipQueryHandler : IQueryHandler<GetPdfOwnershipQuery,
                 Id: document.Id,
                 UploadedByUserId: document.UploadedByUserId,
                 GameId: document.GameId,
-                ProcessingStatus: document.ProcessingStatus,
                 ProcessingState: document.ProcessingState.ToString()
             );
         }

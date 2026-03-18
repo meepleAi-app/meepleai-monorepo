@@ -45,10 +45,6 @@ internal static class AiEndpoints
 
         MapPlayerModeSuggestionEndpoint(group);
 
-        // REMOVED: MapBggEndpoints(group); - Now handled by dedicated BggEndpoints.cs (Issue #3120)
-
-        // REMOVED: MapChessKnowledgeEndpoints(group); - Now handled by AdminMiscEndpoints.cs (duplicate route fix)
-
         // UI-01: Chat management endpoints
         return group;
     }
@@ -71,10 +67,6 @@ internal static class AiEndpoints
         group.MapPost("/agents/explain", HandleExplainRequest)
         .RequireSession(); // Issue #1446: Automatic session validation
     }
-
-    // REMOVED: MapBggEndpoints - Now handled by dedicated BggEndpoints.cs (Issue #3120)
-
-    // REMOVED: MapChessKnowledgeEndpoints - Now handled by AdminMiscEndpoints.cs (duplicate route fix)
 
     private static void MapSetupGuideEndpoint(RouteGroupBuilder group)
     {
@@ -310,8 +302,6 @@ internal static class AiEndpoints
         );
         await mediator.Send(logCommand, CancellationToken.None).ConfigureAwait(false);
     }
-
-
     private static async Task<IResult> HandleQaRequest(
         QaRequest req,
         HttpContext context,
@@ -495,12 +485,6 @@ internal static class AiEndpoints
 
         return Results.Json(resp);
     }
-
-    // REMOVED: HandleBggSearch, HandleGetBggGameDetails, HandleBatchThumbnails
-    // Now handled by dedicated BggEndpoints.cs (Issue #3120)
-
-    // REMOVED: HandleIndexChessKnowledge, HandleSearchChessKnowledge, HandleDeleteChessKnowledge
-    // Now handled by AdminMiscEndpoints.cs (duplicate route fix)
 
     private static async Task<IResult> HandleSetupGuide(
         SetupGuideRequest req,

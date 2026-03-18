@@ -9,6 +9,7 @@ import InvitationsPage from '../page';
 const mockGetInvitations = vi.hoisted(() => vi.fn());
 const mockGetInvitationStats = vi.hoisted(() => vi.fn());
 const mockResendInvitation = vi.hoisted(() => vi.fn());
+const mockRevokeInvitation = vi.hoisted(() => vi.fn());
 const mockSendInvitation = vi.hoisted(() => vi.fn());
 const mockBulkSendInvitations = vi.hoisted(() => vi.fn());
 
@@ -18,6 +19,7 @@ vi.mock('@/lib/api', () => ({
       getInvitations: mockGetInvitations,
       getInvitationStats: mockGetInvitationStats,
       resendInvitation: mockResendInvitation,
+      revokeInvitation: mockRevokeInvitation,
       sendInvitation: mockSendInvitation,
       bulkSendInvitations: mockBulkSendInvitations,
     },
@@ -39,6 +41,7 @@ const mockStats = {
   pending: 3,
   accepted: 5,
   expired: 1,
+  revoked: 0,
   total: 9,
 };
 
@@ -75,7 +78,7 @@ describe('InvitationsPage', () => {
       items: mockInvitations,
       totalCount: 2,
       page: 1,
-      pageSize: 50,
+      pageSize: 20,
     });
   });
 
@@ -87,16 +90,17 @@ describe('InvitationsPage', () => {
     expect(screen.getByRole('button', { name: /bulk invite/i })).toBeInTheDocument();
   });
 
-  it('renders filter tabs with counts', async () => {
+  it('renders stats cards with data', async () => {
     renderWithQuery(<InvitationsPage />);
 
     await waitFor(() => {
-      expect(screen.getByRole('tab', { name: /all/i })).toBeInTheDocument();
+      expect(screen.getByText('Total')).toBeInTheDocument();
     });
 
-    expect(screen.getByRole('tab', { name: /pending/i })).toBeInTheDocument();
-    expect(screen.getByRole('tab', { name: /accepted/i })).toBeInTheDocument();
-    expect(screen.getByRole('tab', { name: /expired/i })).toBeInTheDocument();
+    expect(screen.getByText('Pending')).toBeInTheDocument();
+    expect(screen.getByText('Accepted')).toBeInTheDocument();
+    expect(screen.getByText('Expired')).toBeInTheDocument();
+    expect(screen.getByText('Revoked')).toBeInTheDocument();
   });
 
   it('renders invitation rows after loading', async () => {
@@ -107,23 +111,6 @@ describe('InvitationsPage', () => {
     });
 
     expect(screen.getByText('bob@example.com')).toBeInTheDocument();
-  });
-
-  it('switches filter tabs and refetches', async () => {
-    renderWithQuery(<InvitationsPage />);
-
-    await waitFor(() => {
-      expect(screen.getByText('alice@example.com')).toBeInTheDocument();
-    });
-
-    // Click "Pending" filter
-    await user.click(screen.getByRole('tab', { name: /pending/i }));
-
-    await waitFor(() => {
-      expect(mockGetInvitations).toHaveBeenCalledWith(
-        expect.objectContaining({ status: 'Pending' })
-      );
-    });
   });
 
   it('calls resend API when resend button clicked', async () => {
@@ -151,13 +138,13 @@ describe('InvitationsPage', () => {
       items: [],
       totalCount: 0,
       page: 1,
-      pageSize: 50,
+      pageSize: 20,
     });
 
     renderWithQuery(<InvitationsPage />);
 
     await waitFor(() => {
-      expect(screen.getByText('No invitations found.')).toBeInTheDocument();
+      expect(screen.getByText('No invitations sent yet')).toBeInTheDocument();
     });
   });
 });

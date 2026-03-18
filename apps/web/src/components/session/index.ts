@@ -1,4 +1,14 @@
-// Session Toolkit Components - Barrel Export
+// Session Components - Consolidated Barrel Export
+
+// Session cards (formerly components/sessions/)
+export { SessionQuotaBar, type SessionQuotaBarProps } from './SessionQuotaBar';
+export {
+  MeepleSessionCard,
+  MeepleSessionCardSkeleton,
+  type MeepleSessionCardProps,
+} from './MeepleSessionCard';
+
+// Session Toolkit Components
 
 export { LiveIndicator } from './LiveIndicator';
 export { LiveScoreSheet } from './LiveScoreSheet';
@@ -57,6 +67,8 @@ export { LiveSessionLayout } from './LiveSessionLayout';
 export { MobileStatusBar } from './MobileStatusBar';
 export { ActivityFeedInputBar } from './ActivityFeedInputBar';
 export { MobileScorebar } from './MobileScorebar';
+export { TurnSummaryButton } from './TurnSummaryButton';
+export type { TurnSummaryButtonProps } from './TurnSummaryButton';
 
 export type {
   Participant,

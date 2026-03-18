@@ -37,6 +37,7 @@
 import { useState, useCallback, useMemo } from 'react';
 
 import { useQuery } from '@tanstack/react-query';
+import { useQueryClient } from '@tanstack/react-query';
 import {
   MessageCircle,
   Settings,
@@ -62,14 +63,17 @@ import type {
   GameBackActions,
 } from '@/components/ui/data-display/meeple-card-features/GameBackContent';
 import { useAgentConfig, useToggleLibraryFavorite } from '@/hooks/queries';
+import { libraryKeys } from '@/hooks/queries/useLibrary';
 import { api } from '@/lib/api';
 import type { UserLibraryEntry, GameStateType } from '@/lib/api';
-import { useViewTransition } from '@/lib/hooks/useViewTransition';
+import { useViewTransition } from '@/lib/domain-hooks/useViewTransition';
 
 import { AgentDrawerSheet } from './AgentDrawerSheet';
 import { ChatDrawerSheet } from './ChatDrawerSheet';
+import { DeclareOwnershipButton } from './DeclareOwnershipButton';
 import { getDocumentStatus, mapToIndexingStatus } from './kb-utils';
 import { KbDrawerSheet } from './KbDrawerSheet';
+import { RagAccessBadge } from './RagAccessBadge';
 import { SessionDrawerSheet } from './SessionDrawerSheet';
 
 // ============================================================================
@@ -175,6 +179,7 @@ export function MeepleLibraryGameCard({
   className,
 }: MeepleLibraryGameCardProps) {
   const { navigateWithTransition } = useViewTransition();
+  const queryClient = useQueryClient();
   const [isTogglingFavorite, setIsTogglingFavorite] = useState(false);
   // Issue #4777: Agent creation sheet state
   const [agentSheetOpen, setAgentSheetOpen] = useState(false);
@@ -235,6 +240,11 @@ export function MeepleLibraryGameCard({
       setIsTogglingFavorite(false);
     }
   }, [isTogglingFavorite, toggleFavoriteMutation, game.gameId, game.isFavorite, game.gameTitle]);
+
+  const handleOwnershipDeclared = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: libraryKeys.lists() });
+    queryClient.invalidateQueries({ queryKey: libraryKeys.gameDetail(game.gameId) });
+  }, [queryClient, game.gameId]);
 
   const handleSelect = (id: string, _selected: boolean) => {
     if (onSelect) {
@@ -343,6 +353,9 @@ export function MeepleLibraryGameCard({
   // Badge: Show favorite if applicable
   const badge = game.isFavorite ? '❤️ Preferito' : undefined;
 
+  // Show RAG access status for games with KB
+  const showRagBadge = game.hasKb || game.currentState === 'Owned';
+
   // Flip data — notes go into default BackContent as description
   const flipData: MeepleCardFlipData | undefined =
     flippable && game.notes ? { description: game.notes } : undefined;
@@ -356,7 +369,7 @@ export function MeepleLibraryGameCard({
       minPlayers: game.minPlayers,
       maxPlayers: game.maxPlayers,
       averageRating: game.averageRating,
-      timesPlayed: 0,
+      // timesPlayed, winRate, totalPlayTimeMinutes: populated when session aggregate API is available
       hasKb: game.hasKb,
       kbCardCount: game.kbCardCount,
       kbDocuments: kbDocuments?.map(d => ({
@@ -387,9 +400,6 @@ export function MeepleLibraryGameCard({
         : undefined,
       onToggleFavorite: handleToggleFavorite,
       isFavorite: game.isFavorite,
-      onNewSession: () => {
-        navigateWithTransition(`/library/games/${game.gameId}/sessions/new`);
-      },
     };
   }, [
     flippable,
@@ -436,7 +446,7 @@ export function MeepleLibraryGameCard({
         kbCards={kbDocuments?.map(d => ({ status: mapToIndexingStatus(d) }))}
         // Navigation footer: open drawers instead of navigating
         navigateTo={[
-          { entity: 'document' as const, label: 'KB', onClick: () => setKbDrawerOpen(true) },
+          { entity: 'kb' as const, label: 'KB', onClick: () => setKbDrawerOpen(true) },
           { entity: 'agent' as const, label: 'Agents', onClick: () => setAgentDrawerOpen(true) },
           {
             entity: 'chatSession' as const,
@@ -464,6 +474,19 @@ export function MeepleLibraryGameCard({
         selected={isSelected}
         onSelect={handleSelect}
       />
+
+      {/* Ownership + RAG Access indicators */}
+      {(game.currentState === 'Nuovo' || showRagBadge) && (
+        <div className="flex items-center gap-2 mt-1 px-1">
+          <DeclareOwnershipButton
+            gameId={game.gameId}
+            gameName={game.gameTitle}
+            gameState={game.currentState}
+            onOwnershipDeclared={handleOwnershipDeclared}
+          />
+          {showRagBadge && <RagAccessBadge hasRagAccess={game.hasRagAccess} isRagPublic={false} />}
+        </div>
+      )}
 
       {/* KB Drawer */}
       <KbDrawerSheet

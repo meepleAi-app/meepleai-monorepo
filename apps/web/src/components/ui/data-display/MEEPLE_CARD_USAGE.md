@@ -80,7 +80,7 @@ const actions = useEntityActions({
 #### Document
 ```tsx
 const actions = useEntityActions({
-  entity: 'document',
+  entity: 'kb',
   id: doc.id,
   userId: currentUserId,
   userRole: currentUserRole,
@@ -138,7 +138,7 @@ interface MeepleCardProps {
 ```tsx
 // Document with role-gated actions
 const actions = useEntityActions({
-  entity: 'document',
+  entity: 'kb',
   id: doc.id,
   userId: currentUserId,
   userRole: currentUserRole,

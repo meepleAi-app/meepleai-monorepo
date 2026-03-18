@@ -25,10 +25,13 @@ import { cn } from '@/lib/utils';
 // Types
 // ============================================================================
 
-export type DocumentIndexingStatus = 'processing' | 'indexed' | 'failed' | 'none';
+export type KbIndexingStatus = 'processing' | 'indexed' | 'failed' | 'none';
 
-interface DocumentStatusBadgeProps {
-  status: DocumentIndexingStatus;
+/** @deprecated Use KbIndexingStatus instead */
+export type DocumentIndexingStatus = KbIndexingStatus;
+
+interface KbStatusBadgeProps {
+  status: KbIndexingStatus;
   size?: 'sm' | 'md';
   className?: string;
 }
@@ -38,7 +41,7 @@ interface DocumentStatusBadgeProps {
 // ============================================================================
 
 const statusConfig: Record<
-  DocumentIndexingStatus,
+  KbIndexingStatus,
   {
     label: string;
     icon: React.ElementType;
@@ -56,7 +59,7 @@ const statusConfig: Record<
     containerClass: 'bg-blue-50 border-blue-200 dark:bg-blue-950/40 dark:border-blue-800',
     textClass: 'text-blue-700 dark:text-blue-300',
     iconClass: 'text-blue-500 dark:text-blue-400',
-    testId: 'document-status-processing',
+    testId: 'kb-status-processing',
   },
   indexed: {
     label: 'Indicizzata',
@@ -64,7 +67,7 @@ const statusConfig: Record<
     containerClass: 'bg-green-50 border-green-200 dark:bg-green-950/40 dark:border-green-800',
     textClass: 'text-green-700 dark:text-green-300',
     iconClass: 'text-green-500 dark:text-green-400',
-    testId: 'document-status-indexed',
+    testId: 'kb-status-indexed',
   },
   failed: {
     label: 'Errore',
@@ -72,7 +75,7 @@ const statusConfig: Record<
     containerClass: 'bg-red-50 border-red-200 dark:bg-red-950/40 dark:border-red-800',
     textClass: 'text-red-700 dark:text-red-300',
     iconClass: 'text-red-500 dark:text-red-400',
-    testId: 'document-status-failed',
+    testId: 'kb-status-failed',
   },
   none: {
     label: 'Non indicizzata',
@@ -80,7 +83,7 @@ const statusConfig: Record<
     containerClass: 'bg-muted/50 border-border/60 dark:bg-muted/30',
     textClass: 'text-muted-foreground',
     iconClass: 'text-muted-foreground/70',
-    testId: 'document-status-none',
+    testId: 'kb-status-none',
   },
 };
 
@@ -88,11 +91,11 @@ const statusConfig: Record<
 // Component
 // ============================================================================
 
-export const DocumentStatusBadge = memo(function DocumentStatusBadge({
+export const KbStatusBadge = memo(function KbStatusBadge({
   status,
   size = 'sm',
   className,
-}: DocumentStatusBadgeProps) {
+}: KbStatusBadgeProps) {
   // eslint-disable-next-line security/detect-object-injection -- status is from typed union
   const config = statusConfig[status];
   const Icon = config.icon;
@@ -106,7 +109,7 @@ export const DocumentStatusBadge = memo(function DocumentStatusBadge({
         config.textClass,
         className
       )}
-      aria-label={`Stato documento: ${config.label}`}
+      aria-label={`Stato KB: ${config.label}`}
       data-testid={config.testId}
     >
       <Icon
@@ -121,3 +124,6 @@ export const DocumentStatusBadge = memo(function DocumentStatusBadge({
     </span>
   );
 });
+
+/** @deprecated Use KbStatusBadge instead */
+export const DocumentStatusBadge = KbStatusBadge;

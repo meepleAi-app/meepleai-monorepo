@@ -20,7 +20,7 @@ import { Separator } from '@/components/ui/navigation/separator';
 import { Button } from '@/components/ui/primitives/button';
 import { useTranslation } from '@/hooks/useTranslation';
 
-// Value keys for the values section
+// Value keys for the values section (must match i18n keys in pages.about.values.*)
 const VALUE_KEYS = ['accessibility', 'precision', 'community', 'innovation'] as const;
 
 // Icons for each value
@@ -40,10 +40,7 @@ export default function AboutPage() {
       <div className="max-w-4xl mx-auto">
         {/* Header */}
         <div className="mb-8 text-center">
-          <h1
-            className="text-3xl font-bold text-foreground"
-            data-testid="about-heading"
-          >
+          <h1 className="text-3xl font-bold text-foreground" data-testid="about-heading">
             {t('pages.about.title')}
           </h1>
           <p className="text-slate-600 dark:text-slate-400 mt-2 max-w-2xl mx-auto">
@@ -89,7 +86,7 @@ export default function AboutPage() {
             {t('pages.about.values.title')}
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {VALUE_KEYS.map((key) => (
+            {VALUE_KEYS.map(key => (
               <Card key={key} className="bg-card">
                 <CardHeader className="pb-2">
                   <CardTitle className="text-lg flex items-center gap-2">

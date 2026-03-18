@@ -105,7 +105,6 @@ internal sealed class GetAllPdfsQueryHandler : IQueryHandler<GetAllPdfsQuery, Pd
                 p.FileName,
                 p.Game != null ? p.Game.Name : null,
                 p.GameId != Guid.Empty ? p.GameId : null,
-                p.ProcessingStatus,
                 p.ProcessingState,
                 MapStateToProgress(p.ProcessingState),
                 p.FileSizeBytes,

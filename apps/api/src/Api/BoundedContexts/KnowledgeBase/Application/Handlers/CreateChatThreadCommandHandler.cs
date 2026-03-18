@@ -1,9 +1,12 @@
 using Api.BoundedContexts.Administration.Domain.Events;
 using Api.BoundedContexts.KnowledgeBase.Application.Commands;
 using Api.BoundedContexts.KnowledgeBase.Application.DTOs;
+using Api.BoundedContexts.KnowledgeBase.Application.Services;
 using Api.BoundedContexts.KnowledgeBase.Domain.Entities;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
+using Api.Infrastructure.Entities;
+using Api.Middleware.Exceptions;
 using Api.SharedKernel.Application.Interfaces;
 using Api.SharedKernel.Infrastructure.Persistence;
 using MediatR;
@@ -20,6 +23,7 @@ internal class CreateChatThreadCommandHandler : ICommandHandler<CreateChatThread
     private readonly IAgentRepository _agentRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IPublisher _publisher;
+    private readonly IRagAccessService _ragAccessService;
     private readonly ILogger<CreateChatThreadCommandHandler> _logger;
 
     public CreateChatThreadCommandHandler(
@@ -27,18 +31,31 @@ internal class CreateChatThreadCommandHandler : ICommandHandler<CreateChatThread
         IAgentRepository agentRepository,
         IUnitOfWork unitOfWork,
         IPublisher publisher,
+        IRagAccessService ragAccessService,
         ILogger<CreateChatThreadCommandHandler> logger)
     {
         _threadRepository = threadRepository ?? throw new ArgumentNullException(nameof(threadRepository));
         _agentRepository = agentRepository ?? throw new ArgumentNullException(nameof(agentRepository));
         _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
         _publisher = publisher ?? throw new ArgumentNullException(nameof(publisher));
+        _ragAccessService = ragAccessService ?? throw new ArgumentNullException(nameof(ragAccessService));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
     public async Task<ChatThreadDto> Handle(CreateChatThreadCommand command, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(command);
+
+        // RAG access enforcement: check game access if GameId provided
+        if (command.GameId.HasValue)
+        {
+            var userRole = Enum.TryParse<UserRole>(command.UserRole, ignoreCase: true, out var parsedRole)
+                ? parsedRole : UserRole.User;
+            var canAccess = await _ragAccessService.CanAccessRagAsync(
+                command.UserId, command.GameId.Value, userRole, cancellationToken).ConfigureAwait(false);
+            if (!canAccess)
+                throw new ForbiddenException("Accesso RAG non autorizzato");
+        }
 
         // Resolve game ID: input may be a shared_games.Id — convert to games.Id
         Guid? resolvedGameId = null;
@@ -78,6 +95,12 @@ internal class CreateChatThreadCommandHandler : ICommandHandler<CreateChatThread
             agentId: resolvedAgentId,
             agentType: command.AgentType // Issue #4362
         );
+
+        // Set selected KB IDs (null = use all for game, as before)
+        if (command.SelectedKnowledgeBaseIds is { Count: > 0 })
+        {
+            thread.SetSelectedKnowledgeBases(command.SelectedKnowledgeBaseIds);
+        }
 
         // Add initial message if provided
         if (!string.IsNullOrWhiteSpace(command.InitialMessage))

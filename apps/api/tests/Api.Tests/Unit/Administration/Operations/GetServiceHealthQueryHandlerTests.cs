@@ -18,14 +18,11 @@ public sealed class GetServiceHealthQueryHandlerTests
 
     public GetServiceHealthQueryHandlerTests()
     {
-        // Note: HealthCheckService cannot be mocked (no interface, non-virtual methods)
-        // These tests should be integration tests instead
-        // Temporarily skip mock setup - tests will be moved to integration suite
-        _mockHealthCheckService = null!;
-        _handler = null!;
+        _mockHealthCheckService = new Mock<HealthCheckService>();
+        _handler = new GetServiceHealthQueryHandler(_mockHealthCheckService.Object);
     }
 
-    [Fact(Skip = "HealthCheckService cannot be mocked - move to integration tests")]
+    [Fact]
     [Trait("Category", "Unit")]
     [Trait("BoundedContext", "Administration")]
     public async Task Handle_AllServicesHealthy_ReturnsHealthyStatus()
@@ -39,7 +36,7 @@ public sealed class GetServiceHealthQueryHandlerTests
         );
 
         _mockHealthCheckService
-            .Setup(x => x.CheckHealthAsync(It.IsAny<CancellationToken>()))
+            .Setup(x => x.CheckHealthAsync(It.IsAny<Func<HealthCheckRegistration, bool>?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(healthReport);
 
         // Act
@@ -51,7 +48,7 @@ public sealed class GetServiceHealthQueryHandlerTests
         Assert.All(result.Services, s => Assert.Equal("Healthy", s.Status));
     }
 
-    [Fact(Skip = "HealthCheckService cannot be mocked - move to integration tests")]
+    [Fact]
     [Trait("Category", "Unit")]
     [Trait("BoundedContext", "Administration")]
     public async Task Handle_CriticalServiceUnhealthy_ReturnsUnhealthyStatus()
@@ -64,7 +61,7 @@ public sealed class GetServiceHealthQueryHandlerTests
         );
 
         _mockHealthCheckService
-            .Setup(x => x.CheckHealthAsync(It.IsAny<CancellationToken>()))
+            .Setup(x => x.CheckHealthAsync(It.IsAny<Func<HealthCheckRegistration, bool>?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(healthReport);
 
         // Act
@@ -77,7 +74,7 @@ public sealed class GetServiceHealthQueryHandlerTests
         Assert.True(postgresService.IsCritical);
     }
 
-    [Fact(Skip = "HealthCheckService cannot be mocked - move to integration tests")]
+    [Fact]
     [Trait("Category", "Unit")]
     [Trait("BoundedContext", "Administration")]
     public async Task Handle_NonCriticalServiceUnhealthy_ReturnsDegradedStatus()
@@ -90,7 +87,7 @@ public sealed class GetServiceHealthQueryHandlerTests
         );
 
         _mockHealthCheckService
-            .Setup(x => x.CheckHealthAsync(It.IsAny<CancellationToken>()))
+            .Setup(x => x.CheckHealthAsync(It.IsAny<Func<HealthCheckRegistration, bool>?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(healthReport);
 
         // Act
@@ -100,7 +97,7 @@ public sealed class GetServiceHealthQueryHandlerTests
         Assert.Equal("Degraded", result.OverallStatus);
     }
 
-    [Fact(Skip = "HealthCheckService cannot be mocked - move to integration tests")]
+    [Fact]
     [Trait("Category", "Unit")]
     [Trait("BoundedContext", "Administration")]
     public async Task Handle_ServiceWithDescription_IncludesDescription()
@@ -112,7 +109,7 @@ public sealed class GetServiceHealthQueryHandlerTests
         );
 
         _mockHealthCheckService
-            .Setup(x => x.CheckHealthAsync(It.IsAny<CancellationToken>()))
+            .Setup(x => x.CheckHealthAsync(It.IsAny<Func<HealthCheckRegistration, bool>?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(healthReport);
 
         // Act

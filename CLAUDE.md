@@ -6,13 +6,17 @@
 
 | Task | Command | Location |
 |------|---------|----------|
-| Start API | `dotnet run` | `apps/api/src/Api/` |
-| Start Web | `pnpm dev` | `apps/web/` |
+| Start Dev (full) | `make dev` | `infra/` |
+| Start Dev (core) | `make dev-core` | `infra/` |
+| Start Integration | `make tunnel && make integration` | `infra/` |
+| Deploy Staging | `make staging` | `infra/` (on server) |
+| Setup Secrets | `make secrets-dev` | `infra/` |
+| Start API (no Docker) | `dotnet run` | `apps/api/src/Api/` |
+| Start Web (no Docker) | `pnpm dev` | `apps/web/` |
 | Run Tests | `dotnet test` / `pnpm test` | Root of each app |
-| Setup Secrets | `pwsh setup-secrets.ps1 -SaveGenerated` | `infra/secrets/` |
 | Migration | `dotnet ef migrations add Name` | `apps/api/src/Api/` |
 | API Docs | http://localhost:8080/scalar/v1 | Browser |
-| Infra | `docker compose up -d postgres qdrant redis` | `infra/` |
+| All Make commands | `make help` | `infra/` |
 
 ## Stack & Features
 
@@ -79,20 +83,27 @@ cd apps/api/src/Api && dotnet restore
 cd ../../../web && pnpm install
 
 # 2. Secrets (auto-gen saves 15-30min)
-cd ../../infra/secrets && pwsh setup-secrets.ps1 -SaveGenerated
+cd ../../infra && make secrets-dev
 
 # 3. Frontend env
-cd ../../apps/web && cp .env.development.example .env.local
+cd ../apps/web && cp .env.development.example .env.local
 
-# 4. Start services
-cd ../../infra && docker compose up -d postgres qdrant redis
-cd ../apps/api/src/Api && dotnet run  # Terminal 1: :8080
-cd ../../../web && pnpm dev           # Terminal 2: :3000
+# 4. Start services (Docker)
+cd ../../infra && make dev            # All services
+# OR: make dev-core                   # Core only (no AI/monitoring)
 ```
 
 ### Secret Management
 
-**System**: `.secret` files (Issue #2570) - 10 total files
+**System**: `.secret` files in per-environment directories (Issue #2570)
+
+```
+secrets/
+├── dev/           # Auto-generated (make secrets-dev)
+├── integration/   # Copies from staging + tunnel config
+├── staging/       # Manual setup (make secrets-staging)
+└── prod/          # Manual + strict validation (make secrets-prod)
+```
 
 | Priority | Files | Behavior |
 |----------|-------|----------|
@@ -102,8 +113,10 @@ cd ../../../web && pnpm dev           # Terminal 2: :3000
 
 **Workflow**:
 ```bash
-# Setup: cd infra/secrets && pwsh setup-secrets.ps1 -SaveGenerated
-# Update: nano infra/secrets/redis.secret && docker compose restart redis
+# Setup: cd infra && make secrets-dev          # Dev (auto-generated)
+# Setup: cd infra && make secrets-integration   # Integration (from staging)
+# Setup: cd infra && make secrets-staging       # Staging (interactive)
+# Update: nano infra/secrets/staging/redis.secret && make staging
 ```
 
 **Rules**: ✅ Run setup script, gitignore `.secret`, rotate 90d | ❌ Commit secrets, use dev in prod
@@ -232,17 +245,19 @@ pnpm typecheck && pnpm lint         # Quality
 | **Lint** | Built into build | `pnpm lint` |
 | **Clean** | `dotnet clean` | `rm -rf .next` |
 
-**Infra**:
+**Infra** (from `infra/`):
 ```bash
-docker compose up -d postgres qdrant redis  # Start core
-docker compose logs -f api                  # View logs
-docker compose down -v                      # Reset (⚠️ data loss!)
+make dev                  # Start all local services
+make dev-core             # Start core only (postgres, redis, qdrant, api, web)
+make dev-down             # Stop dev
+make tunnel               # SSH tunnel for integration env
+make integration          # Local code + remote services
+make staging              # Deploy staging (on server)
+make logs s=api           # View service logs
+make help                 # Show all commands
 ```
 
-**Docker Quick Reference**: See [docs/deployment/](./docs/deployment/)
-- **Quick Start**: [docker-quickstart.md](./docs/deployment/docker-quickstart.md)
-- **Services**: [docker-services.md](./docs/deployment/docker-services.md)
-- **Cheatsheet**: [deployment-cheatsheet.md](./docs/deployment/deployment-cheatsheet.md)
+**Docker & Operations**: See [Operations Manual](./docs/operations/operations-manual.md) for complete service management, backup/restore, monitoring, incident response, and maintenance procedures.
 
 ## Project Structure
 
@@ -277,6 +292,7 @@ tests/Api.Tests/          # Backend test suite
 | Build fails (BE) | `dotnet clean && dotnet build` |
 | Testhost blocking | `tasklist \| grep testhost` → `taskkill //PID <PID> //F` |
 | Port conflict | `netstat -ano \| findstr :8080` → `taskkill /PID <PID> /F` |
+| Operations Manual | `docs/operations/operations-manual.md` — full service management reference |
 
 ## AI Assistant Context
 

@@ -111,7 +111,7 @@ function AdminGameCard({
 
   const navigateTo: ResolvedNavigationLink[] = [
     {
-      entity: 'document',
+      entity: 'kb',
       label: 'Info',
       onClick: () => onOpenExtraCard(game.id),
     },

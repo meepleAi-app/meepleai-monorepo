@@ -3,6 +3,9 @@ node_modules/
 .pnpm-store/
 **/node_modules/
 
+# Benchmark results (auto-generated)
+infra/scripts/benchmark-results/*.json
+
 # Build outputs
 **/bin/
 **/obj/
@@ -50,6 +53,12 @@ infra/traefik/certs/*.*
 # Exclude actual secret files but keep templates
 infra/secrets/*.secret
 !infra/secrets/*.secret.example
+
+# Per-environment secrets
+infra/secrets/dev/*.secret
+infra/secrets/integration/*.secret
+infra/secrets/staging/*.secret
+infra/secrets/prod/*.secret
 
 # Staging/Production secrets (Docker secrets format - plain text files)
 infra/secrets/staging/*.txt
@@ -212,3 +221,6 @@ apps/web/next-env.d.ts
 
 # Seed dumps (binary files, not tracked in source control)
 infra/seed-dumps/
+.worktrees/
+infra/.env
+apps/api/src/Api/Properties/launchSettings.json

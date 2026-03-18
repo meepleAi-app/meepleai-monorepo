@@ -37,6 +37,16 @@ internal sealed class LiveSessionRepository : ILiveSessionRepository
         return Task.FromResult<IReadOnlyList<LiveGameSession>>(activeSessions);
     }
 
+    public Task<IReadOnlyList<LiveGameSession>> GetAllActiveAsync(CancellationToken cancellationToken = default)
+    {
+        var activeSessions = _sessions.Values
+            .Where(s => s.IsActive)
+            .OrderByDescending(s => s.UpdatedAt)
+            .ToList();
+
+        return Task.FromResult<IReadOnlyList<LiveGameSession>>(activeSessions);
+    }
+
     public Task AddAsync(LiveGameSession session, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(session);

@@ -77,7 +77,13 @@ internal enum StreamingEventType
     DebugCacheCheck = 19,       // Cache hit/miss with timing
     DebugDocumentCheck = 20,    // Document readiness check result
     ModelDowngrade = 21,        // LLM fallback notification (model was downgraded)
-    DebugTypologyProfile = 22   // Typology profile used for this query
+    DebugTypologyProfile = 22,  // Typology profile used for this query
+
+    // RAG Enhancement debug events (types 23-26)
+    DebugAdaptiveRouting = 23,    // Adaptive RAG query complexity classification
+    DebugCragEvaluation = 24,     // CRAG retrieval relevance evaluation
+    DebugRagFusion = 25,          // RAG-Fusion query expansion results
+    DebugContextWindow = 26       // Context window usage and history compression
 }
 
 internal record RagStreamingEvent(
@@ -188,6 +194,36 @@ internal record DebugDocumentCheckData(
     int TotalCount,
     double DurationMs);
 
+internal record DebugAdaptiveRoutingData(
+    string ComplexityLevel,
+    double Confidence,
+    string Reason,
+    bool SkippedRetrieval);
+
+internal record DebugCragEvaluationData(
+    string Verdict,
+    double Confidence,
+    string Reason,
+    bool Requeried,
+    int OriginalChunkCount,
+    int FinalChunkCount);
+
+internal record DebugRagFusionData(
+    int QueryVariantCount,
+    IReadOnlyList<string> Queries,
+    double DurationMs);
+
+internal record DebugContextWindowData(
+    int SystemPromptTokens,
+    int UserPromptTokens,
+    int TotalEstimatedTokens,
+    int ModelContextLimit,
+    double UsagePercentage,
+    bool HistoryCompressed,
+    int? OriginalMessageCount,
+    int? IncludedMessageCount,
+    string? CompressionReason);
+
 /// <summary>
 /// Admin Debug Chat request DTO for real-time pipeline tracing.
 /// </summary>
@@ -197,7 +233,20 @@ internal record DebugChatRequest(
     Guid? chatId = null,
     IReadOnlyList<Guid>? documentIds = null,
     string? strategyOverride = null,
-    bool includePrompts = false);
+    bool includePrompts = false,
+    DebugChatConfigOverride? configOverride = null);
+
+/// <summary>
+/// Inline config override for sandbox debug chat sessions.
+/// Allows admin to test different RAG parameters without Redis session.
+/// </summary>
+internal record DebugChatConfigOverride(
+    double? DenseWeight = null,
+    int? TopK = null,
+    bool? RerankingEnabled = null,
+    double? Temperature = null,
+    int? MaxTokens = null,
+    string? Model = null);
 
 // CHAT-02: Follow-Up Questions models
 internal record StreamingFollowUpQuestions(

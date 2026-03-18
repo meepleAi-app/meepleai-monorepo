@@ -621,15 +621,13 @@ export function CollectionDashboard({ className }: CollectionDashboardProps) {
 
   const stateCounts = useMemo(() => {
     if (!statsData) return undefined;
-    // Note: State counts would need backend API enhancement to provide byState breakdown
-    // For now, return only what the API provides
     return {
       total: statsData.totalGames,
       favorites: statsData.favoriteGames,
-      nuovo: 0, // TODO: API enhancement needed
-      inPrestito: 0, // TODO: API enhancement needed
-      wishlist: 0, // TODO: API enhancement needed
-      owned: statsData.totalGames - statsData.favoriteGames, // Approximation
+      nuovo: statsData.nuovoCount ?? 0,
+      inPrestito: statsData.inPrestitoCount ?? 0,
+      wishlist: statsData.wishlistCount ?? 0,
+      owned: statsData.ownedCount ?? 0,
     };
   }, [statsData]);
 

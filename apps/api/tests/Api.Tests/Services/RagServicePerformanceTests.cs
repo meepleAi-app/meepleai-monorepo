@@ -242,7 +242,6 @@ public sealed class RagServicePerformanceTests : IDisposable
     {
         // Create mocks with realistic latency simulation
         var mockEmbeddingService = CreateMockEmbeddingService();
-        var mockQdrantService = CreateMockQdrantService();
         var mockHybridSearchService = CreateMockHybridSearchService();
         var mockCache = CreateMockCacheService();
         var mockPromptTemplateService = CreateMockPromptTemplateService();
@@ -256,15 +255,11 @@ public sealed class RagServicePerformanceTests : IDisposable
         var mockConfigProvider = RagTestHelpers.CreateDefaultConfigProvider().Object;
 
         return new RagService(
-            mockEmbeddingService,
-            mockQdrantService,
             mockHybridSearchService,
             mockLlmService,
             mockCache,
             mockPromptTemplateService,
             mockLogger.Object,
-            mockQueryExpansion,
-            mockReranker,
             mockConfigProvider);
     }
 
@@ -292,49 +287,6 @@ public sealed class RagServicePerformanceTests : IDisposable
         return mock.Object;
     }
 
-    private IQdrantService CreateMockQdrantService()
-    {
-        var mock = new Mock<IQdrantService>();
-
-        var dummyResults = new List<SearchResultItem>
-        {
-            new SearchResultItem
-            {
-                Text = "The game supports 2-4 players.",
-                PdfId = Guid.NewGuid().ToString(),
-                Page = 1,
-                Score = 0.85f
-            },
-            new SearchResultItem
-            {
-                Text = "Setup takes approximately 10 minutes.",
-                PdfId = Guid.NewGuid().ToString(),
-                Page = 2,
-                Score = 0.75f
-            }
-        };
-
-        mock.Setup(s => s.SearchAsync(
-                It.IsAny<string>(),
-                It.IsAny<float[]>(),
-                It.IsAny<string>(),
-                It.IsAny<int>(),
-                It.IsAny<List<string>?>(),
-                It.IsAny<CancellationToken>()))
-            .Returns(async (string gameId, float[] embedding, string lang, int limit, List<string>? documentIds, CancellationToken ct) =>
-            {
-                // Simulate test-optimized vector search latency: 20-60ms
-                // (Reduced from 100-200ms to ensure P95 <3000ms target)
-                await Task.Delay(Random.Shared.Next(20, 60), ct);
-                return new SearchResult
-                {
-                    Success = true,
-                    Results = dummyResults
-                };
-            });
-
-        return mock.Object;
-    }
 
     private IHybridSearchService CreateMockHybridSearchService()
     {

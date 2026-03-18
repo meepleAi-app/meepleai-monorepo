@@ -5,7 +5,7 @@ catalog:
       bggId: 13
       language: en
       pdf: "catan_en_rulebook.pdf"
-      seedAgent: true
+      seedAgent: false
       fallbackImageUrl: "https://cf.geekdo-images.com/W3Bsga_uLP9kO91gZ7H8yw__original/img/IwRwEpu1I6YfkyYjFIekCh80ntc=/0x0/filters:format(jpeg)/pic2419375.jpg"
       fallbackThumbnailUrl: "https://cf.geekdo-images.com/W3Bsga_uLP9kO91gZ7H8yw__small/img/7a0LOL48K-2lC3IG0HyYT3XxJBs=/fit-in/200x150/filters:strip_icc()/pic2419375.jpg"
     - title: "Wingspan"
@@ -22,6 +22,13 @@ catalog:
       seedAgent: false
       fallbackImageUrl: "https://cf.geekdo-images.com/aPSHJO0d0XOpQR5X-wJonw__original/img/AkbtYVc6xXJF3c9EUrakklcclKw=/0x0/filters:format(png)/pic6973671.png"
       fallbackThumbnailUrl: "https://cf.geekdo-images.com/aPSHJO0d0XOpQR5X-wJonw__small/img/ccsXKrdGJw-YSClWwzVUwk5Nh9Y=/fit-in/200x150/filters:strip_icc()/pic6973671.png"
+    - title: "Descent: Journeys in the Dark (Second Edition)"
+      bggId: 104162
+      language: en
+      pdf: "descent_rulebook.pdf"
+      seedAgent: false
+      fallbackImageUrl: "https://cf.geekdo-images.com/ZTkiJEPvz2O3vmMJWfjrbw__original/img/GZJIjJPJKk1a4Bx-rM-3KL6O4hk=/0x0/filters:format(jpeg)/pic1180640.jpg"
+      fallbackThumbnailUrl: "https://cf.geekdo-images.com/ZTkiJEPvz2O3vmMJWfjrbw__small/img/cO_2QvC_2BCb-Smd0xp4a5G2n-s=/fit-in/200x150/filters:strip_icc()/pic1180640.jpg"
 
   defaultAgent:
     name: "MeepleAssistant POC"

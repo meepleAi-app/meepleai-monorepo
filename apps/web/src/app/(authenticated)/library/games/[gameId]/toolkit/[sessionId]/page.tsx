@@ -8,7 +8,7 @@ import { toast } from 'sonner';
 
 import {
   SessionHeader,
-  ParticipantCard,
+  MeepleParticipantCard,
   ScoreInput,
   Scoreboard,
   type SyncStatus,
@@ -199,7 +199,7 @@ export default function GameSpecificSessionPage() {
           <div className="lg:col-span-1 space-y-4">
             <h2 className="text-lg font-semibold mb-4">Participants</h2>
             {participants.map(participant => (
-              <ParticipantCard key={participant.id} participant={participant} />
+              <MeepleParticipantCard key={participant.id} participant={participant} />
             ))}
 
             {/* Template Info */}

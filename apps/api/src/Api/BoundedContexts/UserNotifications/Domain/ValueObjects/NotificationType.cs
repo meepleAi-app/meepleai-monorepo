@@ -55,6 +55,9 @@ internal sealed class NotificationType : ValueObject
     // ISSUE-5009: Agent linked to shared game notification
     public static readonly NotificationType AgentLinked = new("agent_linked");
 
+    // Game Night Improvvisata: Agent auto-created when PDF rulebook is processed
+    public static readonly NotificationType AgentAutoCreated = new("agent_auto_created");
+
     // ISSUE-5084: OpenRouter RPM threshold alert (admin)
     public static readonly NotificationType AdminOpenRouterRpmAlert = new("admin_openrouter_rpm_alert");
 
@@ -75,6 +78,15 @@ internal sealed class NotificationType : ValueObject
 
     // ISSUE-5501: Auto-fallback activated when model deprecated (admin)
     public static readonly NotificationType AdminModelAutoFallback = new("admin_model_auto_fallback");
+
+    // Admin notification for new access request (invite-only registration)
+    public static readonly NotificationType AdminAccessRequestCreated = new("admin_access_request_created");
+
+    // Admin manual notification sent from compose UI
+    public static readonly NotificationType AdminManualNotification = new("admin_manual_notification");
+
+    // Admin notification when PDF processing starts (enriched with uploader details)
+    public static readonly NotificationType AdminPdfProcessingStarted = new("admin_pdf_processing_started");
 
     // ISSUE-44/47: Game night notification types
     public static readonly NotificationType GameNightInvitation = new("game_night_invitation");
@@ -146,6 +158,7 @@ internal sealed class NotificationType : ValueObject
             "processing_job_completed" => ProcessingJobCompleted,
             "processing_job_failed" => ProcessingJobFailed,
             "agent_linked" => AgentLinked,
+            "agent_auto_created" => AgentAutoCreated,
             "admin_openrouter_rpm_alert" => AdminOpenRouterRpmAlert,
             "admin_openrouter_budget_alert" => AdminOpenRouterBudgetAlert,
             "admin_circuit_breaker_state_changed" => AdminCircuitBreakerStateChanged,
@@ -161,6 +174,9 @@ internal sealed class NotificationType : ValueObject
             "game_night_reminder_24h" => GameNightReminder24h,
             "game_night_reminder_1h" => GameNightReminder1h,
             "game_night_cancelled" => GameNightCancelled,
+            "admin_access_request_created" => AdminAccessRequestCreated,
+            "admin_manual_notification" => AdminManualNotification,
+            "admin_pdf_processing_started" => AdminPdfProcessingStarted,
             _ => throw new ArgumentException($"Unknown notification type: {value}", nameof(value))
         };
     }

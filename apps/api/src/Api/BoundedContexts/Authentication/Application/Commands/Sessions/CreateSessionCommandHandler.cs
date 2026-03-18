@@ -74,7 +74,12 @@ internal class CreateSessionCommandHandler : ICommandHandler<CreateSessionComman
             IsTwoFactorEnabled: user.IsTwoFactorEnabled,
             TwoFactorEnabledAt: user.TwoFactorEnabledAt,
             Level: user.Level,
-            ExperiencePoints: user.ExperiencePoints
+            ExperiencePoints: user.ExperiencePoints,
+            EmailVerified: user.EmailVerified,
+            EmailVerifiedAt: user.EmailVerifiedAt,
+            VerificationGracePeriodEndsAt: user.VerificationGracePeriodEndsAt,
+            OnboardingCompleted: user.OnboardingCompleted,
+            OnboardingSkipped: user.OnboardingSkipped
         );
     }
 }

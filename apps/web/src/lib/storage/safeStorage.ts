@@ -21,6 +21,8 @@
  * ```
  */
 
+import { logger } from '@/lib/logger';
+
 import type { z } from 'zod';
 
 type StorageType = 'local' | 'session';
@@ -34,12 +36,7 @@ function getStorage(type: StorageType): Storage | null {
  * Read a value from storage, validating it against a Zod schema.
  * Returns the fallback if the key is missing, unparseable, or fails validation.
  */
-function get<T>(
-  key: string,
-  schema: z.ZodType<T>,
-  fallback: T,
-  type: StorageType = 'local'
-): T {
+function get<T>(key: string, schema: z.ZodType<T>, fallback: T, type: StorageType = 'local'): T {
   const storage = getStorage(type);
   if (!storage) return fallback;
 
@@ -56,16 +53,15 @@ function get<T>(
 
     // Validation failed — log and return fallback
     if (process.env.NODE_ENV !== 'production') {
-      console.warn(
-        `[safeStorage] Validation failed for key "${key}":`,
-        result.error.issues ?? result.error
+      logger.warn(
+        `[safeStorage] Validation failed for key "${key}": ${JSON.stringify(result.error.issues ?? result.error)}`
       );
     }
     return fallback;
   } catch {
     // JSON parse error or unexpected failure
     if (process.env.NODE_ENV !== 'production') {
-      console.warn(`[safeStorage] Failed to read key "${key}" from ${type}Storage`);
+      logger.warn(`[safeStorage] Failed to read key "${key}" from ${type}Storage`);
     }
     return fallback;
   }
@@ -99,7 +95,7 @@ function set<T>(key: string, value: T, type: StorageType = 'local'): boolean {
     return true;
   } catch (error) {
     if (process.env.NODE_ENV !== 'production') {
-      console.error(`[safeStorage] Failed to write key "${key}":`, error);
+      logger.error(`[safeStorage] Failed to write key "${key}":`, error);
     }
     return false;
   }
@@ -117,7 +113,7 @@ function setRaw(key: string, value: string, type: StorageType = 'local'): boolea
     return true;
   } catch (error) {
     if (process.env.NODE_ENV !== 'production') {
-      console.error(`[safeStorage] Failed to write key "${key}":`, error);
+      logger.error(`[safeStorage] Failed to write key "${key}":`, error);
     }
     return false;
   }

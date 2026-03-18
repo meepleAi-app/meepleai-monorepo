@@ -22,6 +22,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/data-display/card';
 import { WizardSteps } from '@/components/wizard';
 import { useWizardAutoSave, clearDraft } from '@/hooks/wizard/useWizardAutoSave';
+import { logger } from '@/lib/logger';
 import { useGameImportWizardStore } from '@/stores/useGameImportWizardStore';
 
 import { Step1UploadPdf } from './steps/Step1UploadPdf';
@@ -77,7 +78,7 @@ export function AdminGameImportWizardClient() {
       // Toast and navigation handled by store
     } catch (err) {
       // Error already handled by store
-      console.error('Wizard submission failed:', err);
+      logger.error('Wizard submission failed:', err);
     }
   }, [submitWizard]);
 
@@ -116,7 +117,7 @@ export function AdminGameImportWizardClient() {
       <div className="flex min-h-screen flex-col items-center justify-center gap-4">
         <h1 className="text-2xl font-bold">Authentication Required</h1>
         <p className="text-muted-foreground">Please sign in to access the admin wizard.</p>
-        <Link href="/auth/signin">
+        <Link href="/login">
           <Button>Sign In</Button>
         </Link>
       </div>
@@ -176,6 +177,17 @@ export function AdminGameImportWizardClient() {
           <p className="text-muted-foreground">
             Import a game from PDF by uploading, reviewing metadata, matching with BGG, and
             finalizing.
+          </p>
+          {/* Cross-link to manual creation (#255) */}
+          <p className="text-sm text-muted-foreground mt-2">
+            Or{' '}
+            <Link
+              href="/admin/shared-games/new"
+              className="text-primary font-medium underline underline-offset-2 hover:text-primary/80"
+            >
+              create a game manually
+            </Link>{' '}
+            without a PDF.
           </p>
         </div>
 

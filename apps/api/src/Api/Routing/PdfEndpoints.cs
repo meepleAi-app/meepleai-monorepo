@@ -453,7 +453,23 @@ internal static class PdfEndpoints
         }
 
         var userId = session!.User!.Id;
-        var result = await mediator.Send(new UploadPdfCommand(gameId, metadata, privateGameId, userId, file!), ct).ConfigureAwait(false);
+        var priority = context.Request.Query["priority"].FirstOrDefault();
+        // Bug fix: Only allow priority override for admin users to prevent privilege escalation
+        if (priority != null && !string.Equals(session.User.Role, "Admin", StringComparison.OrdinalIgnoreCase))
+        {
+            priority = null;
+        }
+        var result = await mediator.Send(new UploadPdfCommand(gameId, metadata, privateGameId, userId, file!, Priority: priority), ct).ConfigureAwait(false);
+
+        if (result.ExistingKb != null)
+        {
+            return Results.Ok(new
+            {
+                existingKbFound = true,
+                existingKb = result.ExistingKb,
+                message = result.Message
+            });
+        }
 
         if (!result.Success)
         {
@@ -1142,7 +1158,7 @@ internal static class PdfEndpoints
             success = true,
             characterCount = result.CharacterCount,
             pageCount = result.PageCount,
-            processingStatus = result.ProcessingStatus
+            processingState = result.ProcessingState
         });
     }
 

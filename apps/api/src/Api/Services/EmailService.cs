@@ -29,13 +29,15 @@ internal class EmailService : IEmailService
 
         _logger = logger;
 
-        // Load email configuration (S1450: configuration used only locally)
-        _fromAddress = configuration["Email:FromAddress"] ?? "noreply@meepleai.dev";
+        // Load email configuration with fallback to SMTP_* env var names from email.secret
+        // email.secret uses SMTP_HOST/SMTP_USER/SMTP_PASSWORD but EmailService originally
+        // expected Email:SmtpHost/Email:SmtpUsername/Email:SmtpPassword — bridge the gap
+        _fromAddress = configuration["Email:FromAddress"] ?? configuration["SMTP_FROM_EMAIL"] ?? "noreply@meepleai.dev";
         _fromName = configuration["Email:FromName"] ?? "MeepleAI";
-        _smtpHost = configuration["Email:SmtpHost"] ?? "localhost";
-        _smtpPort = int.Parse(configuration["Email:SmtpPort"] ?? "587", CultureInfo.InvariantCulture);
-        _smtpUsername = configuration["Email:SmtpUsername"];
-        _smtpPassword = configuration["Email:SmtpPassword"];
+        _smtpHost = configuration["Email:SmtpHost"] ?? configuration["SMTP_HOST"] ?? "localhost";
+        _smtpPort = int.Parse(configuration["Email:SmtpPort"] ?? configuration["SMTP_PORT"] ?? "587", CultureInfo.InvariantCulture);
+        _smtpUsername = configuration["Email:SmtpUsername"] ?? configuration["SMTP_USER"];
+        _smtpPassword = configuration["Email:SmtpPassword"] ?? configuration["SMTP_PASSWORD"] ?? configuration["GMAIL_APP_PASSWORD"];
         _enableSsl = bool.Parse(configuration["Email:EnableSsl"] ?? "true");
         _resetUrlBase = configuration["Email:ResetUrlBase"] ?? DefaultResetUrlBase;
         _frontendBaseUrl = configuration["Frontend:BaseUrl"] ?? DefaultFrontendBaseUrl;
@@ -2526,6 +2528,56 @@ internal class EmailService : IEmailService
 #pragma warning restore CA1031
     }
 
+    // ISSUE-124: Enhanced invitation email with custom message, platform intro, and expiry notice
+    public async Task SendInvitationEmailAsync(
+        string toEmail,
+        string displayName,
+        string role,
+        string token,
+        string invitedByName,
+        string? customMessage,
+        DateTime expiresAt,
+        CancellationToken ct = default)
+    {
+        try
+        {
+            var setupLink = $"{_frontendBaseUrl}/setup-account?token={Uri.EscapeDataString(token)}";
+            var subject = "Sei stato invitato su MeepleAI!";
+            var body = BuildEnhancedInvitationEmailBody(displayName, role, setupLink, invitedByName, customMessage, expiresAt);
+
+            using var message = new MailMessage();
+            message.From = new MailAddress(_fromAddress, _fromName);
+            message.To.Add(new MailAddress(toEmail));
+            message.Subject = subject;
+            message.Body = body;
+            message.IsBodyHtml = true;
+
+            using var smtpClient = new SmtpClient(_smtpHost, _smtpPort);
+            smtpClient.EnableSsl = _enableSsl;
+
+            if (!string.IsNullOrEmpty(_smtpUsername) && !string.IsNullOrEmpty(_smtpPassword))
+            {
+                smtpClient.Credentials = new NetworkCredential(_smtpUsername, _smtpPassword);
+            }
+
+            await smtpClient.SendMailAsync(message, ct).ConfigureAwait(false);
+
+            _logger.LogInformation(
+                "Enhanced invitation email sent successfully to {Email} for role {Role}",
+                DataMasking.MaskEmail(toEmail), role);
+        }
+#pragma warning disable CA1031 // Do not catch general exception types
+        catch (Exception ex)
+        {
+            _logger.LogError(
+                ex,
+                "Failed to send enhanced invitation email to {Email}",
+                DataMasking.MaskEmail(toEmail));
+            throw new InvalidOperationException("Failed to send invitation email", ex);
+        }
+#pragma warning restore CA1031
+    }
+
     // ISSUE-4417: Raw email sending for queue processor
     public async Task SendRawEmailAsync(
         string toEmail,
@@ -2613,6 +2665,77 @@ internal class EmailService : IEmailService
     <div style=""margin-top: 20px; text-align: center; font-size: 12px; color: #999;"">
         <p>This is an automated message, please do not reply to this email.</p>
         <p>&copy; 2025 MeepleAI. All rights reserved.</p>
+    </div>
+</body>
+</html>
+";
+    }
+
+    private static string BuildEnhancedInvitationEmailBody(
+        string displayName,
+        string role,
+        string setupLink,
+        string invitedByName,
+        string? customMessage,
+        DateTime expiresAt)
+    {
+        var roleDisplay = string.IsNullOrWhiteSpace(role) ? "utente" : role;
+        var safeDisplayName = System.Net.WebUtility.HtmlEncode(displayName);
+        var safeInvitedByName = System.Net.WebUtility.HtmlEncode(invitedByName);
+        var expiryFormatted = expiresAt.ToString("dd MMMM yyyy", CultureInfo.GetCultureInfo("it-IT"));
+
+        var customMessageBlock = string.Empty;
+        if (!string.IsNullOrWhiteSpace(customMessage))
+        {
+            var safeMessage = System.Net.WebUtility.HtmlEncode(customMessage);
+            customMessageBlock = $@"
+        <div style=""background-color: #f0f4f8; border-left: 4px solid #3498db; padding: 15px 20px; margin: 20px 0; border-radius: 0 5px 5px 0;"">
+            <p style=""margin: 0 0 8px 0; font-size: 13px; color: #666; font-weight: bold;"">{safeInvitedByName} dice:</p>
+            <p style=""margin: 0; font-style: italic; color: #444;"">&ldquo;{safeMessage}&rdquo;</p>
+        </div>";
+        }
+
+        return $@"
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset=""utf-8"">
+    <meta name=""viewport"" content=""width=device-width, initial-scale=1.0"">
+    <title>Sei stato invitato su MeepleAI!</title>
+</head>
+<body style=""font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;"">
+    <div style=""background-color: #f8f9fa; padding: 20px; border-radius: 5px; margin-bottom: 20px;"">
+        <h1 style=""color: #2c3e50; margin: 0;"">MeepleAI</h1>
+    </div>
+
+    <div style=""background-color: #ffffff; padding: 30px; border-radius: 5px; border: 1px solid #e0e0e0;"">
+        <h2 style=""color: #2c3e50; margin-top: 0;"">Ciao {safeDisplayName}!</h2>
+
+        <p><strong>{safeInvitedByName}</strong> ti ha invitato a unirti a MeepleAI come <strong>{roleDisplay}</strong>.</p>
+{customMessageBlock}
+        <p style=""color: #555;"">MeepleAI &egrave; il tuo assistente AI per giochi da tavolo. Gestisci la tua collezione, ottieni risposte dalle regole dei tuoi giochi, e scopri nuovi titoli.</p>
+
+        <p>Clicca il pulsante qui sotto per configurare il tuo account:</p>
+
+        <div style=""text-align: center; margin: 30px 0;"">
+            <a href=""{setupLink}"" style=""background-color: #3498db; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold;"">Configura il tuo account</a>
+        </div>
+
+        <p>Oppure copia e incolla questo link nel tuo browser:</p>
+        <p style=""word-break: break-all; color: #3498db;"">{setupLink}</p>
+
+        <p style=""margin-top: 30px; padding-top: 20px; border-top: 1px solid #e0e0e0; font-size: 14px; color: #666;"">
+            Questo invito scade il <strong>{expiryFormatted}</strong>. Se scade, chiedi al tuo amministratore di inviarne uno nuovo.
+        </p>
+
+        <p style=""font-size: 14px; color: #666;"">
+            Se non ti aspettavi questo invito, puoi ignorare questa email.
+        </p>
+    </div>
+
+    <div style=""margin-top: 20px; text-align: center; font-size: 12px; color: #999;"">
+        <p>Questo &egrave; un messaggio automatico, non rispondere a questa email.</p>
+        <p>&copy; 2025 MeepleAI. Tutti i diritti riservati.</p>
     </div>
 </body>
 </html>

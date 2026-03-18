@@ -1,6 +1,11 @@
 using Api.BoundedContexts.SharedGameCatalog.Application.Commands;
+using Api.BoundedContexts.SharedGameCatalog.Domain.Enums;
+using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
+using Api.Infrastructure.Entities;
 using Api.Infrastructure.Services;
 using Api.Models;
+using Api.Services;
+using Api.SharedKernel.Infrastructure.Persistence;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
@@ -23,6 +28,9 @@ internal sealed class BggImportQueueBackgroundService : BackgroundService
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly ILogger<BggImportQueueBackgroundService> _logger;
     private readonly BggImportQueueConfiguration _config;
+
+    private static readonly TimeSpan StaleThreshold = TimeSpan.FromMinutes(5);
+    private static readonly TimeSpan StaleRecoveryInterval = TimeSpan.FromMinutes(5);
 
     public BggImportQueueBackgroundService(
         IServiceScopeFactory scopeFactory,
@@ -69,6 +77,10 @@ internal sealed class BggImportQueueBackgroundService : BackgroundService
             await Task.Delay(initialDelay, stoppingToken).ConfigureAwait(false);
         }
 
+        // Recover stale items on startup
+        await RecoverStaleItemsAsync(stoppingToken).ConfigureAwait(false);
+        var lastStaleRecovery = DateTime.UtcNow;
+
         while (!stoppingToken.IsCancellationRequested)
         {
             try
@@ -91,6 +103,13 @@ internal sealed class BggImportQueueBackgroundService : BackgroundService
             }
 #pragma warning restore CA1031
 
+            // Periodic stale recovery
+            if (DateTime.UtcNow - lastStaleRecovery > StaleRecoveryInterval)
+            {
+                await RecoverStaleItemsAsync(stoppingToken).ConfigureAwait(false);
+                lastStaleRecovery = DateTime.UtcNow;
+            }
+
             // Rate limiting: Wait for configured interval (default 1 second for BGG API)
             var interval = TimeSpan.FromSeconds(_config.ProcessingIntervalSeconds);
             await Task.Delay(interval, stoppingToken).ConfigureAwait(false);
@@ -108,9 +127,12 @@ internal sealed class BggImportQueueBackgroundService : BackgroundService
     {
         // Scope 1: Read next queued item (isolated from handler's DbContext)
         Guid queueItemId;
-        int bggId;
+        int? bggId;
         int retryCount;
         Guid? requestedByUserId;
+        BggQueueJobType jobType;
+        Guid? sharedGameId;
+        string? gameName;
         {
             using var readScope = _scopeFactory.CreateScope();
             var readQueueService = readScope.ServiceProvider.GetRequiredService<IBggImportQueueService>();
@@ -129,6 +151,9 @@ internal sealed class BggImportQueueBackgroundService : BackgroundService
             bggId = queueItem.BggId;
             retryCount = queueItem.RetryCount;
             requestedByUserId = queueItem.RequestedByUserId;
+            jobType = queueItem.JobType;
+            sharedGameId = queueItem.SharedGameId;
+            gameName = queueItem.GameName;
 
             _logger.LogInformation(
                 "Processing BGG import: Id={Id}, BggId={BggId}, Position={Position}, Attempt={Attempt}",
@@ -147,8 +172,18 @@ internal sealed class BggImportQueueBackgroundService : BackgroundService
             var mediator = commandScope.ServiceProvider.GetRequiredService<IMediator>();
 
             var userId = requestedByUserId ?? Guid.Empty;
-            var command = new ImportGameFromBggCommand(bggId, userId);
-            createdGameId = await mediator.Send(command, cancellationToken).ConfigureAwait(false);
+
+            if (jobType == BggQueueJobType.Import && bggId.HasValue)
+            {
+                var command = new ImportGameFromBggCommand(bggId.Value, userId);
+                createdGameId = await mediator.Send(command, cancellationToken).ConfigureAwait(false);
+            }
+            else if (jobType == BggQueueJobType.Enrichment && sharedGameId.HasValue)
+            {
+                createdGameId = await ProcessEnrichmentItemAsync(
+                    commandScope.ServiceProvider, sharedGameId.Value, bggId, gameName,
+                    cancellationToken).ConfigureAwait(false);
+            }
         }
         catch (Exception ex)
         {
@@ -214,6 +249,149 @@ internal sealed class BggImportQueueBackgroundService : BackgroundService
                 }
             }
         }
+    }
+
+    /// <summary>
+    /// Process an enrichment queue item: fetch BGG details and update the existing SharedGame.
+    /// If BggId is null, auto-match by searching BGG with the game name.
+    /// </summary>
+    private async Task<Guid?> ProcessEnrichmentItemAsync(
+        IServiceProvider serviceProvider,
+        Guid sharedGameId,
+        int? bggId,
+        string? gameName,
+        CancellationToken cancellationToken)
+    {
+        var repository = serviceProvider.GetRequiredService<ISharedGameRepository>();
+        var bggService = serviceProvider.GetRequiredService<IBggApiService>();
+        var unitOfWork = serviceProvider.GetRequiredService<IUnitOfWork>();
+
+        var game = await repository.GetByIdAsync(sharedGameId, cancellationToken).ConfigureAwait(false);
+        if (game is null)
+        {
+            throw new InvalidOperationException($"SharedGame {sharedGameId} not found for enrichment");
+        }
+
+        // Transition to Enriching state
+        game.TransitionDataStatusTo(GameDataStatus.Enriching);
+
+        // Auto-match if BggId is unknown
+        var resolvedBggId = bggId;
+        if (!resolvedBggId.HasValue && !string.IsNullOrWhiteSpace(gameName))
+        {
+            var searchResults = await bggService.SearchGamesAsync(gameName, exact: true, ct: cancellationToken)
+                .ConfigureAwait(false);
+
+            if (searchResults.Count == 0)
+            {
+                // Retry with non-exact search
+                searchResults = await bggService.SearchGamesAsync(gameName, exact: false, ct: cancellationToken)
+                    .ConfigureAwait(false);
+            }
+
+            if (searchResults.Count == 0)
+            {
+                game.TransitionDataStatusTo(GameDataStatus.Failed);
+                await unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+                throw new InvalidOperationException($"No BGG match found for '{gameName}'");
+            }
+
+            if (searchResults.Count > 5)
+            {
+                game.TransitionDataStatusTo(GameDataStatus.Failed);
+                await unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+                throw new InvalidOperationException(
+                    $"Ambiguous BGG match for '{gameName}': {searchResults.Count} results. Provide BggId manually.");
+            }
+
+            resolvedBggId = searchResults[0].BggId;
+            _logger.LogInformation(
+                "Auto-matched '{GameName}' to BggId={BggId} ({MatchName})",
+                gameName, resolvedBggId, searchResults[0].Name);
+        }
+
+        if (!resolvedBggId.HasValue)
+        {
+            game.TransitionDataStatusTo(GameDataStatus.Failed);
+            await unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+            throw new InvalidOperationException(
+                $"Cannot enrich SharedGame {sharedGameId}: no BggId and no GameName for auto-match");
+        }
+
+        // Fetch full details from BGG
+        var details = await bggService.GetGameDetailsAsync(resolvedBggId.Value, ct: cancellationToken)
+            .ConfigureAwait(false);
+
+        if (details is null)
+        {
+            game.TransitionDataStatusTo(GameDataStatus.Failed);
+            await unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+            throw new InvalidOperationException($"BGG game {resolvedBggId} not found");
+        }
+
+        // Map and enrich
+        var complexityRating = details.AverageWeight.HasValue
+            ? (decimal?)Math.Round((decimal)details.AverageWeight.Value, 2)
+            : null;
+        var averageRating = details.AverageRating.HasValue
+            ? (decimal?)Math.Round((decimal)details.AverageRating.Value, 2)
+            : null;
+
+#pragma warning disable S1075 // URIs should not be hardcoded - Default/Fallback placeholder for games without BGG images
+        var imageUrl = details.ImageUrl ?? "https://placehold.co/300x300?text=No+Image";
+#pragma warning restore S1075
+        var thumbnailUrl = details.ThumbnailUrl ?? imageUrl;
+
+        game.EnrichFromBgg(
+            description: details.Description ?? "Imported from BoardGameGeek",
+            yearPublished: details.YearPublished ?? DateTime.UtcNow.Year,
+            minPlayers: details.MinPlayers ?? 1,
+            maxPlayers: details.MaxPlayers ?? 4,
+            playingTimeMinutes: details.PlayingTime ?? details.MinPlayTime ?? 60,
+            minAge: details.MinAge ?? 8,
+            complexityRating: complexityRating,
+            averageRating: averageRating,
+            imageUrl: imageUrl,
+            thumbnailUrl: thumbnailUrl,
+            rulebookUrl: null,
+            bggId: resolvedBggId.Value);
+
+        await unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+        _logger.LogInformation(
+            "Enriched SharedGame {SharedGameId} from BGG {BggId} ({Title})",
+            sharedGameId, resolvedBggId.Value, details.Name);
+
+        return sharedGameId;
+    }
+
+    /// <summary>
+    /// Recover items stuck in Processing state for longer than the threshold.
+    /// </summary>
+    private async Task RecoverStaleItemsAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            using var scope = _scopeFactory.CreateScope();
+            var queueService = scope.ServiceProvider.GetRequiredService<IBggImportQueueService>();
+
+            var recovered = await queueService.RecoverStaleItemsAsync(StaleThreshold, cancellationToken)
+                .ConfigureAwait(false);
+
+            if (recovered > 0)
+            {
+                _logger.LogWarning(
+                    "Recovered {Count} stale BGG import items (stuck in Processing > {Minutes}min)",
+                    recovered, StaleThreshold.TotalMinutes);
+            }
+        }
+#pragma warning disable CA1031 // Do not catch general exception types
+        // BACKGROUND SERVICE: Stale recovery failure should not crash the service
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error during stale item recovery");
+        }
+#pragma warning restore CA1031
     }
 
     /// <summary>

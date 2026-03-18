@@ -1,0 +1,142 @@
+# Game Night Improvvisata — Completion Roadmap
+
+**Date**: 2026-03-16 | **Epic**: #379 (CLOSED — all 26 issues) | **Implementation**: 100%
+
+---
+
+## Executive Summary
+
+La user story "Game Night Improvvisata" è **100% implementata** a livello di codice. Tutte le 26 issue dell'Epic #379 sono chiuse. La verifica end-to-end del codice (2026-03-16) conferma che ogni componente del journey è wired e funzionante.
+
+**Cosa rimane**: validazione E2E, edge case coverage, aggiornamento documentazione.
+
+---
+
+## Verification Results (2026-03-16)
+
+### Journey Step-by-Step Status
+
+| # | Step | Backend | Frontend | Tests | Overall |
+|---|------|---------|----------|-------|---------|
+| 1 | Cerco gioco nell'app | ✅ | ✅ | ✅ E2E | ✅ |
+| 2 | Cerco in BGG | ✅ `GET /bgg/search` | ✅ `BggSearchPanel` | ✅ E2E | ✅ |
+| 3 | Aggiungo privato + posseduto | ✅ `POST /import-bgg` | ✅ Import UI | ⚠️ Mock only | ✅ |
+| 4 | Carico PDF + disclaimer | ✅ Chunked upload | ✅ Upload UI | ⚠️ Mock only | ✅ |
+| 5 | Notifica PDF pronto | ✅ SSE + deep link | ✅ `NotificationPanel` | ❌ No E2E | ✅ |
+| 6 | Agent auto-creato | ✅ Dual-path handler | N/A (automatic) | ✅ 40+ unit | ✅ |
+| 7 | Agente aiuta preparare | ✅ RAG + chat | ✅ Chat UI | ⚠️ Mock only | ✅ |
+| 8 | ScoreAssistant NLP | ✅ Parse + auto-record | ✅ `ScoreAssistant` | ❌ No E2E | ✅ |
+| 9 | Arbitro dispute | ✅ `SubmitRuleDispute` | ✅ Arbitro UI | ❌ No E2E | ✅ |
+| 10 | Salva stato + foto | ✅ `PauseSnapshot` + async AI | ✅ `ResumeSessionPanel` | ⚠️ Mock only | ✅ |
+| 11 | Riprendi con recap | ✅ Resume + recap + invite refresh | ✅ 3-component UX | ❌ No E2E | ✅ |
+
+### Key Verified Components
+
+| Component | Implementation | Evidence |
+|-----------|---------------|----------|
+| `AutoCreateAgentOnPdfReadyHandler` | ✅ Dual-path (KnowledgeBase + GameManagement) | 200+ lines, 40+ tests |
+| `PauseSnapshot` entity | ✅ Full schema, JSONB, 3 indexes | 30+ tests, migration presente |
+| `GenerateAgentSummaryHandler` | ✅ Async AI summary in italiano | Fire-and-forget with fallback |
+| `NotifyAgentReadyHandler` | ✅ Event → SSE → deep link | Full chain verified |
+| `ParseAndRecordScoreCommandHandler` | ✅ NLP + auto-record at 80%+ | Bidirectional agent↔scores |
+| `ResumeSessionFromSnapshotCommandHandler` | ✅ Recap + fresh invite + auto-save cleanup | 3 frontend components |
+
+---
+
+## Roadmap: Validation & Quality
+
+### Phase 1: Mock E2E Journey (2-3 giorni)
+
+Espandere i test E2E mock-based per coprire il journey completo UI.
+
+| Task | File da creare/aggiornare | Effort |
+|------|---------------------------|--------|
+| Complete UI journey test | `e2e/game-night-improvvisata-journey.spec.ts` | 1 giorno |
+| ScoreAssistant confidence flows | `e2e/sessions/score-assistant.spec.ts` | 0.5 giorni |
+| Arbitro verdict display | `e2e/sessions/rule-arbitration.spec.ts` | 0.5 giorni |
+| Resume + recap + photo review | `e2e/sessions/session-resume.spec.ts` | 0.5 giorni |
+| SSE notification mock | `e2e/notifications/pdf-ready.spec.ts` | 0.5 giorni |
+
+**Deliverable**: Copertura UI 100% del journey con mock
+
+### Phase 2: Backend Integration E2E (3-4 giorni)
+
+Test con backend reale, servizi ML mockati.
+
+| Task | Scope | Effort |
+|------|-------|--------|
+| Real session lifecycle | Create → invite → join → score → pause → resume | 2 giorni |
+| Data integrity checks | Verify DB state after each operation | 1 giorno |
+| Concurrent access | Two browser contexts, real SignalR | 1 giorno |
+
+**Requires**: API + PostgreSQL + Redis running
+**Deliverable**: Integrità dati verificata end-to-end
+
+### Phase 3: Edge Case Hardening (1-2 giorni) — VERIFIED 2026-03-16
+
+Full analysis: [`docs/testing/game-night-edge-cases-analysis.md`](../testing/game-night-edge-cases-analysis.md)
+
+| Edge Case | Status | Evidence |
+|-----------|--------|----------|
+| PDF retry on failure | ✅ Handled | `MaxRetries = 3`, `PdfFailedEvent` with notification |
+| Agent summary LLM failure | ✅ Handled | Fire-and-forget + fallback "Sessione ripresa dal turno X" |
+| Expired invite join | ✅ Handled | `CanJoin = false`, `ReasonCannotJoin`, host can regenerate |
+| Score parse < 60% confidence | ✅ Handled | `RequiresConfirmation = true` + candidate list |
+| Agent quota exceeded | ✅ Handled | Silent skip + warning log, user can create manually |
+| PDF too large (> 100MB) | ✅ Handled | Tier limits + structure validation + user-friendly error |
+| Concurrent score updates | ✅ Handled | `RowVersion` optimistic concurrency on LiveGameSession |
+| Resume after long pause | ⚠️ Design choice | No max duration (OK), fresh 24h invite on resume |
+
+**Result**: 7/8 fully handled, 1/8 is a design choice (no max pause duration). **No action required.**
+
+### Phase 4: Documentation Update (0.5 giorni)
+
+| Doc | Action |
+|-----|--------|
+| Vertical slice spec | Add "Implementation Status" section — all items ✅ |
+| Roadmap | Add Game Night Improvvisata to completed section |
+| API contracts | Clarify: `game-night-api-contracts.md` = scheduled events, NOT Improvvisata |
+
+### Phase 5: Full Pipeline Test (5-7 giorni, opzionale)
+
+Test con stack completo (embedding service, Qdrant) per validare:
+- PDF upload → processing → embedding → vector indexing → agent auto-create
+- RAG query con contenuto reale del PDF
+- Agent recap generation con LLM reale
+
+**Richiede**: Tutti i servizi attivi (API + PG + Qdrant + Redis + Embedding + LLM)
+
+---
+
+## Deferred Features (Spec'd But Not Implemented)
+
+Funzionalità nel design spec classificate "Should Have" o "Nice to Have", intenzionalmente non implementate:
+
+| Feature | Spec Section | Priority | Reason |
+|---------|-------------|----------|--------|
+| Auto-save ogni 10 minuti | Section 3 | 🟢 LOW | Background service, non critico per MVP |
+| Offline score buffer | Section 2 | 🟢 LOW | Requires service worker, complex |
+| Guest reconnection token | Section 2 | 🟢 LOW | localStorage persistence |
+| QR code per invite | Section 2 | 🟢 LOW | Client-side `qrcode.react`, trivial |
+| PDF processing progress bar | Section 1 | 🟢 LOW | Visual only, status polling exists |
+
+**Raccomandazione**: Creare issue GitHub per ciascuna se si decide di implementarle in futuro.
+
+---
+
+## Timeline Summary
+
+| Phase | Effort | Cumulativo | Deliverable |
+|-------|--------|------------|-------------|
+| Phase 1: Mock E2E | 2-3 giorni | 2-3 giorni | UI coverage 100% |
+| Phase 2: Integration E2E | 3-4 giorni | 5-7 giorni | Data integrity verified |
+| Phase 3: Edge cases | 1-2 giorni | 6-9 giorni | Edge cases hardened |
+| Phase 4: Docs update | 0.5 giorni | 6.5-9.5 giorni | Docs current |
+| Phase 5: Full pipeline | 5-7 giorni | 11.5-16.5 giorni | Complete validation |
+
+**MVP validation (Phase 1-4)**: 6.5-9.5 giorni
+**Complete validation (Phase 1-5)**: 11.5-16.5 giorni
+
+---
+
+**Last Updated**: 2026-03-16

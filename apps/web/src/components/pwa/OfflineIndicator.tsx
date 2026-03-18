@@ -12,7 +12,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { WifiOff, RefreshCw, CloudOff, Check, AlertTriangle } from 'lucide-react';
 
 import { Button } from '@/components/ui/primitives/button';
-import { usePWA } from '@/lib/hooks/usePWA';
+import { usePWA } from '@/lib/domain-hooks/usePWA';
 import { cn } from '@/lib/utils';
 
 // ============================================================================
@@ -67,9 +67,10 @@ export function OfflineIndicator({
       return {
         icon: <WifiOff className="h-4 w-4" />,
         message: 'You are offline',
-        subMessage: syncState.pendingCount > 0
-          ? `${syncState.pendingCount} action${syncState.pendingCount > 1 ? 's' : ''} pending`
-          : 'Changes will sync when connected',
+        subMessage:
+          syncState.pendingCount > 0
+            ? `${syncState.pendingCount} action${syncState.pendingCount > 1 ? 's' : ''} pending`
+            : 'Changes will sync when connected',
         variant: 'offline' as const,
       };
     }

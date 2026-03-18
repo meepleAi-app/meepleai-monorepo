@@ -20,6 +20,7 @@ import { Alert, AlertDescription } from '@/components/ui/feedback/alert';
 import { Skeleton } from '@/components/ui/feedback/skeleton';
 import { Button } from '@/components/ui/primitives/button';
 import { useEntityNavigation } from '@/hooks/useEntityNavigation';
+import { useCardHand } from '@/stores/use-card-hand';
 
 interface DocumentDetail {
   id: string;
@@ -38,21 +39,30 @@ export default function KnowledgeBaseDetailPage({ params }: { params: Promise<{ 
   const [loading, setLoading] = useState(true);
   const [error, _setError] = useState<string | null>(null);
 
-  const navigationLinks = useEntityNavigation('document', {
+  const navigationLinks = useEntityNavigation('kb', {
     id: documentId,
     gameId: document?.gameId,
     agentId: document?.agentId,
   });
 
+  const drawCard = useCardHand(s => s.drawCard);
+
   useEffect(() => {
     // Attempt to load document metadata
     // The actual API may vary - this provides the page structure
     setLoading(false);
-    setDocument({
+    const doc = {
       id: documentId,
       fileName: 'Documento',
+    };
+    setDocument(doc);
+    drawCard({
+      id: documentId,
+      entity: 'kb',
+      title: doc.fileName,
+      href: `/knowledge-base/${documentId}`,
     });
-  }, [documentId]);
+  }, [documentId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (loading) {
     return (
@@ -95,7 +105,7 @@ export default function KnowledgeBaseDetailPage({ params }: { params: Promise<{ 
         {/* Hero Card */}
         <section className="mb-8 flex justify-center">
           <MeepleCard
-            entity="document"
+            entity="kb"
             variant="hero"
             title={document.fileName}
             subtitle={document.gameName ? `Gioco: ${document.gameName}` : 'Knowledge Base'}

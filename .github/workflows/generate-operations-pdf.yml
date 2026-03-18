@@ -1,0 +1,52 @@
+name: Generate Operations Manual PDF
+
+on:
+  push:
+    paths:
+      - 'docs/operations/operations-manual.md'
+      - 'docs/operations/.md-to-pdf.js'
+    branches: [main, main-dev]
+  workflow_dispatch:
+
+jobs:
+  generate-pdf:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Chromium dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgbm-dev libnss3 libatk-bridge2.0-0 libxss1
+
+      - name: Install md-to-pdf
+        run: npm install -g md-to-pdf
+
+      - name: Generate PDF
+        run: |
+          cd docs/operations
+          md-to-pdf operations-manual.md --config-file .md-to-pdf.js
+
+      - name: Upload as workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: operations-manual-pdf
+          path: docs/operations/operations-manual.pdf
+          retention-days: 90
+
+      - name: Upload to GitHub Release
+        if: github.ref == 'refs/heads/main'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ops-manual-${{ github.run_number }}
+          name: Operations Manual (Build ${{ github.run_number }})
+          files: docs/operations/operations-manual.pdf
+          draft: false
+          prerelease: false

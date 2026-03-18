@@ -9,6 +9,8 @@
 
 import { z } from 'zod';
 
+import { logger } from '@/lib/logger';
+
 // Game state types for library filtering (Issue #2866)
 // Valid enum values - strict parsing
 const VALID_GAME_STATES = ['Nuovo', 'InPrestito', 'Wishlist', 'Owned'] as const;
@@ -21,7 +23,7 @@ export const GameStateTypeWithFallbackSchema = z.string().transform(val => {
     return val as GameStateType;
   }
   // Log unknown state for debugging, fallback to 'Owned'
-  console.warn(`Unknown GameStateType received: "${val}", falling back to "Owned"`);
+  logger.warn(`Unknown GameStateType received: "${val}", falling back to "Owned"`);
   return 'Owned' as GameStateType;
 });
 
@@ -46,6 +48,8 @@ export const UserLibraryEntrySchema = z.object({
   kbCardCount: z.number().int().nonnegative().default(0), // total PDF documents linked
   kbIndexedCount: z.number().int().nonnegative().default(0), // PDFs with ProcessingState.Ready
   kbProcessingCount: z.number().int().nonnegative().default(0), // PDFs currently in pipeline
+  ownershipDeclaredAt: z.string().datetime().nullable().optional(), // when user declared ownership
+  hasRagAccess: z.boolean().default(false), // whether user has RAG access for this game
   agentIsOwned: z.boolean().default(true), // always true in library context
   minPlayers: z.number().int().nullable().optional(),
   maxPlayers: z.number().int().nullable().optional(),
@@ -62,6 +66,10 @@ export const UserLibraryStatsSchema = z.object({
   favoriteGames: z.number().int().nonnegative(),
   oldestAddedAt: z.string().datetime().nullable().optional(),
   newestAddedAt: z.string().datetime().nullable().optional(),
+  nuovoCount: z.number().int().nonnegative().default(0),
+  inPrestitoCount: z.number().int().nonnegative().default(0),
+  wishlistCount: z.number().int().nonnegative().default(0),
+  ownedCount: z.number().int().nonnegative().default(0),
 });
 
 export type UserLibraryStats = z.infer<typeof UserLibraryStatsSchema>;
@@ -130,6 +138,7 @@ export type UpdateGameStateRequest = z.infer<typeof UpdateGameStateRequestSchema
 export interface GetUserLibraryParams {
   page?: number;
   pageSize?: number;
+  search?: string;
   favoritesOnly?: boolean;
   stateFilter?: GameStateType[];
   sortBy?: 'addedAt' | 'title' | 'favorite';
@@ -287,6 +296,9 @@ export const GameDetailDtoSchema = z.object({
   lastPlayed: z.string().datetime().nullable(),
   winRate: z.string().nullable(),
   avgDuration: z.string().nullable(),
+
+  // RAG access
+  hasRagAccess: z.boolean().optional().default(false),
 
   // Optional extended data
   recentSessions: z.array(LibraryGameSessionSchema).nullable().optional(),

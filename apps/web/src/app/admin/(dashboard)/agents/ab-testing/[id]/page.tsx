@@ -30,8 +30,6 @@ import { Textarea } from '@/components/ui/primitives/textarea';
 import { api } from '@/lib/api';
 import type { AbTestSessionRevealedDto } from '@/lib/api/schemas/ab-test.schemas';
 
-import { AgentsNavConfig } from '../../NavConfig';
-
 // Evaluation dimensions
 const DIMENSIONS = ['accuracy', 'completeness', 'clarity', 'tone'] as const;
 type Dimension = (typeof DIMENSIONS)[number];
@@ -149,8 +147,6 @@ export function AbTestEvaluationPageInner({ id }: { id: string }) {
 
   return (
     <div className="space-y-8">
-      <AgentsNavConfig />
-
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">

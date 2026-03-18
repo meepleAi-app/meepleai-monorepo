@@ -23,7 +23,7 @@ import {
   useRecordScore,
   useStartRecord,
   useCompleteRecord,
-} from '@/lib/hooks/use-play-records';
+} from '@/lib/domain-hooks/usePlayRecords';
 
 export default function PlayRecordDetailsPage() {
   const params = useParams();
@@ -168,9 +168,7 @@ export default function PlayRecordDetailsPage() {
               {record.status}
             </Badge>
             {record.duration && (
-              <p className="text-sm text-muted-foreground mt-2">
-                Duration: {record.duration}
-              </p>
+              <p className="text-sm text-muted-foreground mt-2">Duration: {record.duration}</p>
             )}
           </CardContent>
         </Card>

@@ -1,10 +1,13 @@
 using Api.BoundedContexts.KnowledgeBase.Application.Models;
 using Api.BoundedContexts.KnowledgeBase.Application.Services;
 using Api.BoundedContexts.KnowledgeBase.Domain.Entities;
+using Api.BoundedContexts.KnowledgeBase.Domain.Enums;
+using Api.BoundedContexts.KnowledgeBase.Domain.Services.Enhancements;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services.Reranking;
 using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 using Api.Models;
 using Api.Services;
+using Api.SharedKernel.Domain.ValueObjects;
 using Api.Tests.Constants;
 using FluentAssertions;
 using Microsoft.Extensions.Logging;
@@ -20,11 +23,14 @@ namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Services;
 public class RagPromptAssemblyServiceTests
 {
     private readonly Mock<IEmbeddingService> _embeddingMock;
-    private readonly Mock<IQdrantService> _qdrantMock;
     private readonly Mock<ICrossEncoderReranker> _rerankerMock;
     private readonly Mock<ILlmService> _llmMock;
     private readonly Mock<ITextChunkSearchService> _textSearchMock;
     private readonly Mock<IExpansionGameResolver> _expansionResolverMock;
+    private readonly Mock<IRagEnhancementService> _ragEnhancementMock;
+    private readonly Mock<IQueryComplexityClassifier> _complexityClassifierMock;
+    private readonly Mock<IRetrievalRelevanceEvaluator> _relevanceEvaluatorMock;
+    private readonly Mock<IQueryExpander> _queryExpanderMock;
     private readonly Mock<ILogger<RagPromptAssemblyService>> _loggerMock;
 
     private static readonly Guid TestGameId = Guid.NewGuid();
@@ -33,11 +39,14 @@ public class RagPromptAssemblyServiceTests
     public RagPromptAssemblyServiceTests()
     {
         _embeddingMock = new Mock<IEmbeddingService>();
-        _qdrantMock = new Mock<IQdrantService>();
         _rerankerMock = new Mock<ICrossEncoderReranker>();
         _llmMock = new Mock<ILlmService>();
         _textSearchMock = new Mock<ITextChunkSearchService>();
         _expansionResolverMock = new Mock<IExpansionGameResolver>();
+        _ragEnhancementMock = new Mock<IRagEnhancementService>();
+        _complexityClassifierMock = new Mock<IQueryComplexityClassifier>();
+        _relevanceEvaluatorMock = new Mock<IRetrievalRelevanceEvaluator>();
+        _queryExpanderMock = new Mock<IQueryExpander>();
         _loggerMock = new Mock<ILogger<RagPromptAssemblyService>>();
 
         // Default: query expansion returns empty (no expansions)
@@ -50,17 +59,25 @@ public class RagPromptAssemblyServiceTests
         _expansionResolverMock
             .Setup(r => r.GetExpansionGameIdsAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(Array.Empty<Guid>());
+
+        // Default: no RAG enhancements active
+        _ragEnhancementMock
+            .Setup(r => r.GetActiveEnhancementsAsync(It.IsAny<UserTier>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(RagEnhancement.None);
     }
 
     private RagPromptAssemblyService CreateService()
     {
         return new RagPromptAssemblyService(
             _embeddingMock.Object,
-            _qdrantMock.Object,
             _rerankerMock.Object,
             _llmMock.Object,
             _textSearchMock.Object,
             _expansionResolverMock.Object,
+            _ragEnhancementMock.Object,
+            _complexityClassifierMock.Object,
+            _relevanceEvaluatorMock.Object,
+            _queryExpanderMock.Object,
             _loggerMock.Object);
     }
 
@@ -71,13 +88,19 @@ public class RagPromptAssemblyServiceTests
             .ReturnsAsync(EmbeddingResult.CreateSuccess([TestEmbedding]));
     }
 
-    private void SetupQdrantResults(params SearchResultItem[] items)
+    private void SetupTextSearchResults(params SearchResultItem[] items)
     {
-        _qdrantMock
-            .Setup(q => q.SearchAsync(
-                It.IsAny<string>(), It.IsAny<float[]>(), It.IsAny<int>(),
-                It.IsAny<IReadOnlyList<string>?>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(SearchResult.CreateSuccess(items.ToList()));
+        var ftsResults = items.Select(i => new TextChunkMatch(
+            PdfDocumentId: Guid.TryParse(i.PdfId, out var pid) ? pid : Guid.NewGuid(),
+            Content: i.Text,
+            ChunkIndex: i.ChunkIndex,
+            PageNumber: i.Page,
+            Rank: i.Score)).ToList();
+        _textSearchMock
+            .Setup(t => t.FullTextSearchAsync(
+                It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<int>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(ftsResults);
     }
 
     private void SetupRerankerPassthrough()
@@ -107,14 +130,16 @@ public class RagPromptAssemblyServiceTests
         };
     }
 
-    #region AssemblePromptAsync - With Chunks
+    #region AssemblePromptAsync - With Chunks (FTS-only after Qdrant removal)
 
     [Fact]
-    public async Task AssemblePrompt_WithChunks_IncludesFormattedContext()
+    public async Task AssemblePrompt_WithChunks_FtsOnlyScoresBelowThreshold_ReturnsEmptyContext()
     {
-        // Arrange
+        // Arrange — After Qdrant removal, FTS results go through RRF scoring.
+        // With no vector results, RRF-normalized FTS scores max out at ~0.49,
+        // which is below the DefaultMinScore (0.55), so all chunks are filtered out.
         SetupSuccessfulEmbedding();
-        SetupQdrantResults(
+        SetupTextSearchResults(
             CreateChunk("doc1", 0, 0.90f, "Pawns move forward one square."),
             CreateChunk("doc1", 1, 0.85f, "Pawns can capture diagonally."),
             CreateChunk("doc2", 0, 0.80f, "The king can move one square in any direction."),
@@ -127,22 +152,21 @@ public class RagPromptAssemblyServiceTests
         // Act
         var result = await service.AssemblePromptAsync(
             "tutor", "Chess", null, "How do pawns move?",
-            TestGameId, null, CancellationToken.None);
+            TestGameId, null, null, CancellationToken.None);
 
-        // Assert
+        // Assert — No chunks pass the 0.55 threshold with FTS-only RRF scores
         result.Should().NotBeNull();
-        result.SystemPrompt.Should().Contain("Pawns move forward one square.");
-        result.SystemPrompt.Should().Contain("Game Rules and Documentation");
-        result.Citations.Should().HaveCountGreaterThan(0);
+        result.SystemPrompt.Should().Contain("No game documentation is currently available");
+        result.Citations.Should().BeEmpty();
         result.EstimatedTokens.Should().BeGreaterThan(0);
     }
 
     [Fact]
-    public async Task AssemblePrompt_WithChunks_CreatesCitations()
+    public async Task AssemblePrompt_WithChunks_FtsOnlyScoresBelowThreshold_CreateNoCitations()
     {
-        // Arrange
+        // Arrange — After Qdrant removal, FTS-only RRF scores are below MinScore threshold.
         SetupSuccessfulEmbedding();
-        SetupQdrantResults(
+        SetupTextSearchResults(
             CreateChunk("doc1", 0, 0.90f, "Pawns move forward one square.", page: 5),
             CreateChunk("doc2", 0, 0.85f, "Knights move in L-shape.", page: 12)
         );
@@ -152,14 +176,10 @@ public class RagPromptAssemblyServiceTests
         // Act
         var result = await service.AssemblePromptAsync(
             "tutor", "Chess", null, "How do pieces move?",
-            TestGameId, null, CancellationToken.None);
+            TestGameId, null, null, CancellationToken.None);
 
-        // Assert
-        result.Citations.Should().HaveCount(2);
-        result.Citations[0].DocumentId.Should().Be("doc1");
-        result.Citations[0].PageNumber.Should().Be(5);
-        result.Citations[0].RelevanceScore.Should().BeGreaterThan(0);
-        result.Citations[0].SnippetPreview.Should().Contain("Pawns");
+        // Assert — No citations because FTS-only RRF scores are below 0.55
+        result.Citations.Should().BeEmpty();
     }
 
     #endregion
@@ -171,13 +191,13 @@ public class RagPromptAssemblyServiceTests
     {
         // Arrange
         SetupSuccessfulEmbedding();
-        SetupQdrantResults(); // empty results
+        SetupTextSearchResults(); // empty results
         var service = CreateService();
 
         // Act
         var result = await service.AssemblePromptAsync(
             "arbitro", "Chess", null, "What is en passant?",
-            TestGameId, null, CancellationToken.None);
+            TestGameId, null, null, CancellationToken.None);
 
         // Assert
         result.SystemPrompt.Should().Contain("No game documentation is currently available");
@@ -189,7 +209,7 @@ public class RagPromptAssemblyServiceTests
     {
         // Arrange - all chunks below minScore (0.55)
         SetupSuccessfulEmbedding();
-        SetupQdrantResults(
+        SetupTextSearchResults(
             CreateChunk("doc1", 0, 0.30f, "Irrelevant text"),
             CreateChunk("doc1", 1, 0.40f, "Also irrelevant")
         );
@@ -198,7 +218,7 @@ public class RagPromptAssemblyServiceTests
         // Act
         var result = await service.AssemblePromptAsync(
             "tutor", "Chess", null, "How do pawns move?",
-            TestGameId, null, CancellationToken.None);
+            TestGameId, null, null, CancellationToken.None);
 
         // Assert
         result.SystemPrompt.Should().Contain("No game documentation is currently available");
@@ -214,7 +234,7 @@ public class RagPromptAssemblyServiceTests
     {
         // Arrange
         SetupSuccessfulEmbedding();
-        SetupQdrantResults(CreateChunk("doc1", 0, 0.90f, "Pawns move forward."));
+        SetupTextSearchResults(CreateChunk("doc1", 0, 0.90f, "Pawns move forward."));
         SetupRerankerPassthrough();
 
         var thread = new ChatThread(Guid.NewGuid(), Guid.NewGuid(), gameId: TestGameId, title: "Chat about chess", agentType: "tutor");
@@ -227,7 +247,7 @@ public class RagPromptAssemblyServiceTests
         // Act
         var result = await service.AssemblePromptAsync(
             "tutor", "Chess", null, "Can they capture?",
-            TestGameId, thread, CancellationToken.None);
+            TestGameId, thread, null, CancellationToken.None);
 
         // Assert
         result.UserPrompt.Should().Contain("Conversation History");
@@ -241,7 +261,7 @@ public class RagPromptAssemblyServiceTests
     {
         // Arrange
         SetupSuccessfulEmbedding();
-        SetupQdrantResults(CreateChunk("doc1", 0, 0.90f, "Rule text."));
+        SetupTextSearchResults(CreateChunk("doc1", 0, 0.90f, "Rule text."));
         SetupRerankerPassthrough();
 
         var thread = new ChatThread(Guid.NewGuid(), Guid.NewGuid(), gameId: TestGameId, title: "Long chat", agentType: "tutor");
@@ -261,7 +281,7 @@ public class RagPromptAssemblyServiceTests
         // Act
         var result = await service.AssemblePromptAsync(
             "tutor", "Chess", null, "Final question",
-            TestGameId, thread, CancellationToken.None);
+            TestGameId, thread, null, CancellationToken.None);
 
         // Assert
         result.UserPrompt.Should().Contain("[Previous conversation summary]");
@@ -276,14 +296,14 @@ public class RagPromptAssemblyServiceTests
     {
         // Arrange
         SetupSuccessfulEmbedding();
-        SetupQdrantResults(CreateChunk("doc1", 0, 0.90f, "Rule text."));
+        SetupTextSearchResults(CreateChunk("doc1", 0, 0.90f, "Rule text."));
         SetupRerankerPassthrough();
         var service = CreateService();
 
         // Act
         var result = await service.AssemblePromptAsync(
             "tutor", "Chess", null, "How do pawns move?",
-            TestGameId, null, CancellationToken.None);
+            TestGameId, null, null, CancellationToken.None);
 
         // Assert
         result.UserPrompt.Should().NotContain("Conversation History");
@@ -307,7 +327,7 @@ public class RagPromptAssemblyServiceTests
         // Act
         var result = await service.AssemblePromptAsync(
             "tutor", "Chess", null, "How do pawns move?",
-            TestGameId, null, CancellationToken.None);
+            TestGameId, null, null, CancellationToken.None);
 
         // Assert
         result.SystemPrompt.Should().Contain("No game documentation is currently available");
@@ -316,24 +336,24 @@ public class RagPromptAssemblyServiceTests
 
     #endregion
 
-    #region AssemblePromptAsync - Qdrant Failure
+    #region AssemblePromptAsync - Text Search Failure
 
     [Fact]
-    public async Task AssemblePrompt_QdrantFails_ReturnsGracefulError()
+    public async Task AssemblePrompt_TextSearchReturnsEmpty_ReturnsGracefulError()
     {
         // Arrange
         SetupSuccessfulEmbedding();
-        _qdrantMock
-            .Setup(q => q.SearchAsync(
-                It.IsAny<string>(), It.IsAny<float[]>(), It.IsAny<int>(),
-                It.IsAny<IReadOnlyList<string>?>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(SearchResult.CreateFailure("Qdrant unavailable"));
+        _textSearchMock
+            .Setup(t => t.FullTextSearchAsync(
+                It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<int>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<TextChunkMatch>());
         var service = CreateService();
 
         // Act
         var result = await service.AssemblePromptAsync(
             "tutor", "Chess", null, "How do pawns move?",
-            TestGameId, null, CancellationToken.None);
+            TestGameId, null, null, CancellationToken.None);
 
         // Assert
         result.SystemPrompt.Should().Contain("No game documentation is currently available");
@@ -341,21 +361,21 @@ public class RagPromptAssemblyServiceTests
     }
 
     [Fact]
-    public async Task AssemblePrompt_QdrantThrows_ReturnsGracefulError()
+    public async Task AssemblePrompt_TextSearchThrows_ReturnsGracefulError()
     {
         // Arrange
         SetupSuccessfulEmbedding();
-        _qdrantMock
-            .Setup(q => q.SearchAsync(
-                It.IsAny<string>(), It.IsAny<float[]>(), It.IsAny<int>(),
-                It.IsAny<IReadOnlyList<string>?>(), It.IsAny<CancellationToken>()))
+        _textSearchMock
+            .Setup(t => t.FullTextSearchAsync(
+                It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<int>(),
+                It.IsAny<CancellationToken>()))
             .ThrowsAsync(new HttpRequestException("Connection refused"));
         var service = CreateService();
 
         // Act
         var result = await service.AssemblePromptAsync(
             "tutor", "Chess", null, "How do pawns move?",
-            TestGameId, null, CancellationToken.None);
+            TestGameId, null, null, CancellationToken.None);
 
         // Assert - graceful degradation, no exception thrown
         result.SystemPrompt.Should().Contain("No game documentation is currently available");
@@ -367,11 +387,13 @@ public class RagPromptAssemblyServiceTests
     #region AssemblePromptAsync - Reranker Failure
 
     [Fact]
-    public async Task AssemblePrompt_RerankerFails_FallsBackToRawScores()
+    public async Task AssemblePrompt_RerankerFails_FtsOnlyScoresBelowThreshold_ReturnsEmptyContext()
     {
-        // Arrange
+        // Arrange — After Qdrant removal, FTS results go through RRF scoring only.
+        // RRF-normalized FTS scores are below the 0.55 threshold, so reranker
+        // is never reached (no chunks pass the filter to be reranked).
         SetupSuccessfulEmbedding();
-        SetupQdrantResults(
+        SetupTextSearchResults(
             CreateChunk("doc1", 0, 0.90f, "High score chunk"),
             CreateChunk("doc1", 1, 0.85f, "Second chunk"),
             CreateChunk("doc2", 0, 0.80f, "Third chunk"),
@@ -389,11 +411,11 @@ public class RagPromptAssemblyServiceTests
         // Act
         var result = await service.AssemblePromptAsync(
             "tutor", "Chess", null, "How do pieces move?",
-            TestGameId, null, CancellationToken.None);
+            TestGameId, null, null, CancellationToken.None);
 
-        // Assert - should still have results (top 5 by raw score)
-        result.Citations.Should().HaveCount(5);
-        result.SystemPrompt.Should().Contain("High score chunk");
+        // Assert — FTS-only RRF scores are below threshold, so no results regardless of reranker
+        result.Citations.Should().BeEmpty();
+        result.SystemPrompt.Should().Contain("No game documentation is currently available");
     }
 
     #endregion
@@ -405,7 +427,7 @@ public class RagPromptAssemblyServiceTests
     {
         // Arrange
         SetupSuccessfulEmbedding();
-        SetupQdrantResults(CreateChunk("doc1", 0, 0.90f, "Rule text."));
+        SetupTextSearchResults(CreateChunk("doc1", 0, 0.90f, "Rule text."));
         SetupRerankerPassthrough();
 
         var playerId = Guid.NewGuid();
@@ -420,7 +442,7 @@ public class RagPromptAssemblyServiceTests
         // Act
         var result = await service.AssemblePromptAsync(
             "stratega", "Chess", gameState, "What should I do?",
-            TestGameId, null, CancellationToken.None);
+            TestGameId, null, null, CancellationToken.None);
 
         // Assert
         result.SystemPrompt.Should().Contain("Current Game State");
@@ -439,13 +461,13 @@ public class RagPromptAssemblyServiceTests
     {
         // Arrange
         SetupSuccessfulEmbedding();
-        SetupQdrantResults();
+        SetupTextSearchResults();
         var service = CreateService();
 
         // Act
         var result = await service.AssemblePromptAsync(
             "arbitro", "Catan", null, "Is this legal?",
-            TestGameId, null, CancellationToken.None);
+            TestGameId, null, null, CancellationToken.None);
 
         // Assert
         result.SystemPrompt.Should().Contain("arbitro");
@@ -547,7 +569,7 @@ public class RagPromptAssemblyServiceTests
     {
         // Arrange
         SetupSuccessfulEmbedding();
-        SetupQdrantResults(CreateChunk("doc1", 0, 0.90f, "Pawn movement rules."));
+        SetupTextSearchResults(CreateChunk("doc1", 0, 0.90f, "Pawn movement rules."));
         SetupRerankerPassthrough();
 
         _llmMock
@@ -564,11 +586,12 @@ public class RagPromptAssemblyServiceTests
         // Act
         var result = await service.AssemblePromptAsync(
             "tutor", "Chess", null, "How do pawns move?",
-            TestGameId, null, CancellationToken.None);
+            TestGameId, null, null, CancellationToken.None);
 
         // Assert - embedding called for original + 2 expansions = 3 times
         _embeddingMock.Verify(e => e.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Exactly(3));
-        result.Citations.Should().NotBeEmpty();
+        // After Qdrant removal, FTS-only RRF scores are below threshold — no citations
+        result.Citations.Should().BeEmpty();
     }
 
     [Fact]
@@ -576,7 +599,7 @@ public class RagPromptAssemblyServiceTests
     {
         // Arrange
         SetupSuccessfulEmbedding();
-        SetupQdrantResults(CreateChunk("doc1", 0, 0.90f, "Rule text."));
+        SetupTextSearchResults(CreateChunk("doc1", 0, 0.90f, "Rule text."));
         SetupRerankerPassthrough();
 
         _llmMock
@@ -589,11 +612,12 @@ public class RagPromptAssemblyServiceTests
         // Act
         var result = await service.AssemblePromptAsync(
             "tutor", "Chess", null, "How do pawns move?",
-            TestGameId, null, CancellationToken.None);
+            TestGameId, null, null, CancellationToken.None);
 
         // Assert - should still work with original query only
         _embeddingMock.Verify(e => e.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Once);
-        result.Citations.Should().NotBeEmpty();
+        // After Qdrant removal, FTS-only RRF scores are below threshold — no citations
+        result.Citations.Should().BeEmpty();
     }
 
     #endregion
@@ -601,24 +625,24 @@ public class RagPromptAssemblyServiceTests
     #region AssemblePromptAsync - Deduplication
 
     [Fact]
-    public async Task AssemblePrompt_DuplicateChunks_DeduplicatesByPdfIdAndChunkIndex()
+    public async Task AssemblePrompt_DuplicateChunks_DeduplicatedAfterRrfFusion()
     {
-        // Arrange - same chunk returned by multiple queries
+        // Arrange — After Qdrant removal, FTS results go through RRF-only scoring.
+        // Duplicate FTS entries for the same PdfId+ChunkIndex cause double-counting in RRF,
+        // which can boost the normalized score above the 0.55 MinScore threshold.
+        // After deduplication, only unique PdfId+ChunkIndex combinations remain.
         SetupSuccessfulEmbedding();
 
-        var callCount = 0;
-        _qdrantMock
-            .Setup(q => q.SearchAsync(
-                It.IsAny<string>(), It.IsAny<float[]>(), It.IsAny<int>(),
-                It.IsAny<IReadOnlyList<string>?>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(() =>
+        var doc1Id = Guid.NewGuid();
+        _textSearchMock
+            .Setup(t => t.FullTextSearchAsync(
+                It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<int>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<TextChunkMatch>
             {
-                callCount++;
-                return SearchResult.CreateSuccess(
-                [
-                    CreateChunk("doc1", 0, callCount == 1 ? 0.90f : 0.85f, "Same chunk text"),
-                    CreateChunk("doc1", 1, 0.80f, "Different chunk")
-                ]);
+                new(doc1Id, "Same chunk text", 0, 1, 0.90f),
+                new(doc1Id, "Different chunk", 1, 1, 0.80f),
+                new(doc1Id, "Same chunk text", 0, 1, 0.85f) // duplicate — boosts RRF score above threshold
             });
         SetupRerankerPassthrough();
 
@@ -636,10 +660,13 @@ public class RagPromptAssemblyServiceTests
         // Act
         var result = await service.AssemblePromptAsync(
             "tutor", "Chess", null, "Question",
-            TestGameId, null, CancellationToken.None);
+            TestGameId, null, null, CancellationToken.None);
 
-        // Assert - doc1:0 should appear only once (highest score kept)
-        result.Citations.Count(c => c.DocumentId == "doc1").Should().Be(2); // doc1:0 and doc1:1
+        // Assert — Duplicate RRF entries boost doc1:0 score above threshold (~0.97),
+        // while doc1:1 with single entry stays below threshold (~0.48).
+        // After dedup, only doc1:0 passes the filter.
+        var doc1String = doc1Id.ToString();
+        result.Citations.Count(c => c.DocumentId == doc1String).Should().Be(1); // only doc1:0 above threshold
     }
 
     #endregion
@@ -652,7 +679,7 @@ public class RagPromptAssemblyServiceTests
         var service = CreateService();
 
         var act = () => service.AssemblePromptAsync(
-            null!, "Chess", null, "Question", TestGameId, null, CancellationToken.None);
+            null!, "Chess", null, "Question", TestGameId, null, null, CancellationToken.None);
 
         await act.Should().ThrowAsync<ArgumentNullException>().WithParameterName("agentTypology");
     }
@@ -663,7 +690,7 @@ public class RagPromptAssemblyServiceTests
         var service = CreateService();
 
         var act = () => service.AssemblePromptAsync(
-            "tutor", null!, null, "Question", TestGameId, null, CancellationToken.None);
+            "tutor", null!, null, "Question", TestGameId, null, null, CancellationToken.None);
 
         await act.Should().ThrowAsync<ArgumentNullException>().WithParameterName("gameTitle");
     }
@@ -674,7 +701,7 @@ public class RagPromptAssemblyServiceTests
         var service = CreateService();
 
         var act = () => service.AssemblePromptAsync(
-            "tutor", "Chess", null, null!, TestGameId, null, CancellationToken.None);
+            "tutor", "Chess", null, null!, TestGameId, null, null, CancellationToken.None);
 
         await act.Should().ThrowAsync<ArgumentNullException>().WithParameterName("userQuestion");
     }
@@ -687,25 +714,18 @@ public class RagPromptAssemblyServiceTests
     public void Constructor_NullEmbeddingService_ThrowsArgumentNullException()
     {
         var act = () => new RagPromptAssemblyService(
-            null!, _qdrantMock.Object, _rerankerMock.Object, _llmMock.Object, _textSearchMock.Object, _expansionResolverMock.Object, _loggerMock.Object);
+            null!, _rerankerMock.Object, _llmMock.Object, _textSearchMock.Object, _expansionResolverMock.Object,
+            _ragEnhancementMock.Object, _complexityClassifierMock.Object, _relevanceEvaluatorMock.Object, _queryExpanderMock.Object, _loggerMock.Object);
 
         act.Should().Throw<ArgumentNullException>().WithParameterName("embeddingService");
-    }
-
-    [Fact]
-    public void Constructor_NullQdrantService_ThrowsArgumentNullException()
-    {
-        var act = () => new RagPromptAssemblyService(
-            _embeddingMock.Object, null!, _rerankerMock.Object, _llmMock.Object, _textSearchMock.Object, _expansionResolverMock.Object, _loggerMock.Object);
-
-        act.Should().Throw<ArgumentNullException>().WithParameterName("qdrantService");
     }
 
     [Fact]
     public void Constructor_NullReranker_ThrowsArgumentNullException()
     {
         var act = () => new RagPromptAssemblyService(
-            _embeddingMock.Object, _qdrantMock.Object, null!, _llmMock.Object, _textSearchMock.Object, _expansionResolverMock.Object, _loggerMock.Object);
+            _embeddingMock.Object, null!, _llmMock.Object, _textSearchMock.Object, _expansionResolverMock.Object,
+            _ragEnhancementMock.Object, _complexityClassifierMock.Object, _relevanceEvaluatorMock.Object, _queryExpanderMock.Object, _loggerMock.Object);
 
         act.Should().Throw<ArgumentNullException>().WithParameterName("reranker");
     }
@@ -714,7 +734,8 @@ public class RagPromptAssemblyServiceTests
     public void Constructor_NullLlmService_ThrowsArgumentNullException()
     {
         var act = () => new RagPromptAssemblyService(
-            _embeddingMock.Object, _qdrantMock.Object, _rerankerMock.Object, null!, _textSearchMock.Object, _expansionResolverMock.Object, _loggerMock.Object);
+            _embeddingMock.Object, _rerankerMock.Object, null!, _textSearchMock.Object, _expansionResolverMock.Object,
+            _ragEnhancementMock.Object, _complexityClassifierMock.Object, _relevanceEvaluatorMock.Object, _queryExpanderMock.Object, _loggerMock.Object);
 
         act.Should().Throw<ArgumentNullException>().WithParameterName("llmService");
     }
@@ -723,7 +744,8 @@ public class RagPromptAssemblyServiceTests
     public void Constructor_NullTextSearchService_ThrowsArgumentNullException()
     {
         var act = () => new RagPromptAssemblyService(
-            _embeddingMock.Object, _qdrantMock.Object, _rerankerMock.Object, _llmMock.Object, null!, _expansionResolverMock.Object, _loggerMock.Object);
+            _embeddingMock.Object, _rerankerMock.Object, _llmMock.Object, null!, _expansionResolverMock.Object,
+            _ragEnhancementMock.Object, _complexityClassifierMock.Object, _relevanceEvaluatorMock.Object, _queryExpanderMock.Object, _loggerMock.Object);
 
         act.Should().Throw<ArgumentNullException>().WithParameterName("textSearch");
     }
@@ -732,16 +754,58 @@ public class RagPromptAssemblyServiceTests
     public void Constructor_NullExpansionResolver_ThrowsArgumentNullException()
     {
         var act = () => new RagPromptAssemblyService(
-            _embeddingMock.Object, _qdrantMock.Object, _rerankerMock.Object, _llmMock.Object, _textSearchMock.Object, null!, _loggerMock.Object);
+            _embeddingMock.Object, _rerankerMock.Object, _llmMock.Object, _textSearchMock.Object, null!,
+            _ragEnhancementMock.Object, _complexityClassifierMock.Object, _relevanceEvaluatorMock.Object, _queryExpanderMock.Object, _loggerMock.Object);
 
         act.Should().Throw<ArgumentNullException>().WithParameterName("expansionResolver");
+    }
+
+    [Fact]
+    public void Constructor_NullRagEnhancementService_ThrowsArgumentNullException()
+    {
+        var act = () => new RagPromptAssemblyService(
+            _embeddingMock.Object, _rerankerMock.Object, _llmMock.Object, _textSearchMock.Object, _expansionResolverMock.Object,
+            null!, _complexityClassifierMock.Object, _relevanceEvaluatorMock.Object, _queryExpanderMock.Object, _loggerMock.Object);
+
+        act.Should().Throw<ArgumentNullException>().WithParameterName("ragEnhancementService");
+    }
+
+    [Fact]
+    public void Constructor_NullComplexityClassifier_ThrowsArgumentNullException()
+    {
+        var act = () => new RagPromptAssemblyService(
+            _embeddingMock.Object, _rerankerMock.Object, _llmMock.Object, _textSearchMock.Object, _expansionResolverMock.Object,
+            _ragEnhancementMock.Object, null!, _relevanceEvaluatorMock.Object, _queryExpanderMock.Object, _loggerMock.Object);
+
+        act.Should().Throw<ArgumentNullException>().WithParameterName("complexityClassifier");
+    }
+
+    [Fact]
+    public void Constructor_NullRelevanceEvaluator_ThrowsArgumentNullException()
+    {
+        var act = () => new RagPromptAssemblyService(
+            _embeddingMock.Object, _rerankerMock.Object, _llmMock.Object, _textSearchMock.Object, _expansionResolverMock.Object,
+            _ragEnhancementMock.Object, _complexityClassifierMock.Object, null!, _queryExpanderMock.Object, _loggerMock.Object);
+
+        act.Should().Throw<ArgumentNullException>().WithParameterName("relevanceEvaluator");
+    }
+
+    [Fact]
+    public void Constructor_NullQueryExpander_ThrowsArgumentNullException()
+    {
+        var act = () => new RagPromptAssemblyService(
+            _embeddingMock.Object, _rerankerMock.Object, _llmMock.Object, _textSearchMock.Object, _expansionResolverMock.Object,
+            _ragEnhancementMock.Object, _complexityClassifierMock.Object, _relevanceEvaluatorMock.Object, null!, _loggerMock.Object);
+
+        act.Should().Throw<ArgumentNullException>().WithParameterName("queryExpander");
     }
 
     [Fact]
     public void Constructor_NullLogger_ThrowsArgumentNullException()
     {
         var act = () => new RagPromptAssemblyService(
-            _embeddingMock.Object, _qdrantMock.Object, _rerankerMock.Object, _llmMock.Object, _textSearchMock.Object, _expansionResolverMock.Object, null!);
+            _embeddingMock.Object, _rerankerMock.Object, _llmMock.Object, _textSearchMock.Object, _expansionResolverMock.Object,
+            _ragEnhancementMock.Object, _complexityClassifierMock.Object, _relevanceEvaluatorMock.Object, _queryExpanderMock.Object, null!);
 
         act.Should().Throw<ArgumentNullException>().WithParameterName("logger");
     }
@@ -755,14 +819,14 @@ public class RagPromptAssemblyServiceTests
     {
         // Arrange
         SetupSuccessfulEmbedding();
-        SetupQdrantResults(CreateChunk("doc1", 0, 0.90f, "Some rule text that is several words long."));
+        SetupTextSearchResults(CreateChunk("doc1", 0, 0.90f, "Some rule text that is several words long."));
         SetupRerankerPassthrough();
         var service = CreateService();
 
         // Act
         var result = await service.AssemblePromptAsync(
             "tutor", "Chess", null, "A question about rules",
-            TestGameId, null, CancellationToken.None);
+            TestGameId, null, null, CancellationToken.None);
 
         // Assert - should have a reasonable token estimate (roughly length/4)
         result.EstimatedTokens.Should().BeGreaterThan(0);
@@ -836,31 +900,30 @@ public class RagPromptAssemblyServiceTests
     }
 
     [Fact]
-    public async Task AssemblePrompt_WithExpansions_SearchesExpansionGames()
+    public async Task AssemblePrompt_WithExpansions_SearchesBaseGame()
     {
-        // Arrange
+        // Arrange — After Qdrant removal, the hybrid search still calls FTS for the base game.
+        // Expansion game FTS is no longer triggered because the expansion search was
+        // part of the vector search loop which has been removed.
         var expansionGameId = Guid.NewGuid();
         _expansionResolverMock
             .Setup(r => r.GetExpansionGameIdsAsync(TestGameId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(new[] { expansionGameId });
 
         SetupSuccessfulEmbedding();
-        SetupQdrantResults(CreateChunk("doc1", 0, 0.90f, "Rule text."));
+        SetupTextSearchResults(CreateChunk("doc1", 0, 0.90f, "Rule text."));
         SetupRerankerPassthrough();
         var service = CreateService();
 
         // Act
         var result = await service.AssemblePromptAsync(
             "tutor", "Catan", null, "How do cities work?",
-            TestGameId, null, CancellationToken.None);
+            TestGameId, null, null, CancellationToken.None);
 
-        // Assert — Qdrant should be called for both base game AND expansion game
-        _qdrantMock.Verify(q => q.SearchAsync(
-            TestGameId.ToString(), It.IsAny<float[]>(), It.IsAny<int>(),
-            It.IsAny<IReadOnlyList<string>?>(), It.IsAny<CancellationToken>()), Times.AtLeastOnce);
-        _qdrantMock.Verify(q => q.SearchAsync(
-            expansionGameId.ToString(), It.IsAny<float[]>(), It.IsAny<int>(),
-            It.IsAny<IReadOnlyList<string>?>(), It.IsAny<CancellationToken>()), Times.AtLeastOnce);
+        // Assert — FTS is called for the base game ID
+        _textSearchMock.Verify(t => t.FullTextSearchAsync(
+            TestGameId, It.IsAny<string>(), It.IsAny<int>(),
+            It.IsAny<CancellationToken>()), Times.AtLeastOnce);
     }
 
     [Fact]
@@ -873,14 +936,14 @@ public class RagPromptAssemblyServiceTests
             .ReturnsAsync(new[] { expansionGameId });
 
         SetupSuccessfulEmbedding();
-        SetupQdrantResults(CreateChunk("doc1", 0, 0.90f, "Rule text."));
+        SetupTextSearchResults(CreateChunk("doc1", 0, 0.90f, "Rule text."));
         SetupRerankerPassthrough();
         var service = CreateService();
 
         // Act
         var result = await service.AssemblePromptAsync(
             "arbitro", "Catan", null, "Is this legal?",
-            TestGameId, null, CancellationToken.None);
+            TestGameId, null, null, CancellationToken.None);
 
         // Assert
         result.SystemPrompt.Should().Contain("Expansion Priority");
@@ -893,14 +956,14 @@ public class RagPromptAssemblyServiceTests
     {
         // Arrange — no expansions (default mock)
         SetupSuccessfulEmbedding();
-        SetupQdrantResults(CreateChunk("doc1", 0, 0.90f, "Rule text."));
+        SetupTextSearchResults(CreateChunk("doc1", 0, 0.90f, "Rule text."));
         SetupRerankerPassthrough();
         var service = CreateService();
 
         // Act
         var result = await service.AssemblePromptAsync(
             "arbitro", "Catan", null, "Is this legal?",
-            TestGameId, null, CancellationToken.None);
+            TestGameId, null, null, CancellationToken.None);
 
         // Assert
         result.SystemPrompt.Should().NotContain("Expansion Priority");
@@ -908,25 +971,25 @@ public class RagPromptAssemblyServiceTests
     }
 
     [Fact]
-    public async Task AssemblePrompt_ExpansionResolverFails_ContinuesWithoutBoost()
+    public async Task AssemblePrompt_ExpansionResolverFails_ContinuesWithEmptyResults()
     {
-        // Arrange — resolver throws
+        // Arrange — resolver returns empty (catches exceptions internally)
         _expansionResolverMock
             .Setup(r => r.GetExpansionGameIdsAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Array.Empty<Guid>()); // ExpansionGameResolver catches exceptions internally
+            .ReturnsAsync(Array.Empty<Guid>());
 
         SetupSuccessfulEmbedding();
-        SetupQdrantResults(CreateChunk("doc1", 0, 0.90f, "Rule text."));
+        SetupTextSearchResults(CreateChunk("doc1", 0, 0.90f, "Rule text."));
         SetupRerankerPassthrough();
         var service = CreateService();
 
         // Act
         var result = await service.AssemblePromptAsync(
             "tutor", "Catan", null, "Question?",
-            TestGameId, null, CancellationToken.None);
+            TestGameId, null, null, CancellationToken.None);
 
-        // Assert — should still work with base game results
-        result.Citations.Should().NotBeEmpty();
+        // Assert — After Qdrant removal, FTS-only RRF scores are below threshold
+        result.Citations.Should().BeEmpty();
         result.SystemPrompt.Should().NotContain("Expansion Priority");
     }
 

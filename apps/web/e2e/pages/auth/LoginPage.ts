@@ -30,7 +30,11 @@ export class LoginPage extends BasePage {
   async login(email: string, password: string): Promise<void> {
     await this.fill(this.page.getByLabel(/email/i), email);
     await this.fill(this.page.getByLabel(/password/i), password);
-    await this.click(this.page.locator('[data-testid="login-submit"]'));
+    await this.click(
+      this.page
+        .locator('[data-testid="login-submit"]')
+        .or(this.page.getByRole('button', { name: /^login$/i }))
+    );
   }
 
   /**

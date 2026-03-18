@@ -155,7 +155,7 @@ jobs:
 
       - name: Run Database Migrations
         working-directory: apps/api/src/Api
-        run: dotnet ef database update
+        run: dotnet ef database update --no-build --configuration Release
         env:
           POSTGRES_HOST: localhost
           POSTGRES_PORT: "5432"
@@ -496,7 +496,7 @@ jobs:
 
       - name: Run Database Migrations
         working-directory: apps/api/src/Api
-        run: dotnet ef database update
+        run: dotnet ef database update --no-build --configuration Release
         env:
           POSTGRES_HOST: localhost
           POSTGRES_PORT: "5432"

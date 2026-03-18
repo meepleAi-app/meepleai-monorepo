@@ -1,4 +1,6 @@
+using Api.Infrastructure.Entities;
 using Api.BoundedContexts.DocumentProcessing.Domain.Repositories;
+using Api.BoundedContexts.KnowledgeBase.Application.Services;
 using Api.BoundedContexts.KnowledgeBase.Application.DTOs;
 using Api.BoundedContexts.KnowledgeBase.Application.Handlers;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries;
@@ -60,6 +62,7 @@ public class StreamQaQueryHandlerTests
             _rrfFusionServiceMock.Object,
             _embeddingServiceMock.Object,
             _hybridSearchServiceMock.Object,
+            CreatePermissiveRagAccessServiceMock(),
             searchLoggerMock.Object
         );
 
@@ -1097,5 +1100,11 @@ public class StreamQaQueryHandlerTests
 
         return thread;
     }
-}
 
+    private static IRagAccessService CreatePermissiveRagAccessServiceMock()
+    {
+        var mock = new Mock<IRagAccessService>();
+        mock.Setup(s => s.CanAccessRagAsync(It.IsAny<Guid>(), It.IsAny<Guid>(), It.IsAny<UserRole>(), It.IsAny<CancellationToken>())).ReturnsAsync(true);
+        return mock.Object;
+    }
+}

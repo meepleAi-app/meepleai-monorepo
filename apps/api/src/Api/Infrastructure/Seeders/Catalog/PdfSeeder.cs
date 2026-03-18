@@ -118,7 +118,6 @@ internal static class PdfSeeder
                     ContentType = "application/pdf",
                     Language = entry.Language,
                     ProcessingState = nameof(PdfProcessingState.Pending),
-                    ProcessingStatus = "pending",
                     IsPublic = true,
                     DocumentType = "base",
                     SortOrder = 0,

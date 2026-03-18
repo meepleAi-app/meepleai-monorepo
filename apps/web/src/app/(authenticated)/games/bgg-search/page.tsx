@@ -3,6 +3,8 @@ import Link from 'next/link';
 
 import { BggSearchPanel } from '@/components/games/BggSearchPanel';
 
+export const dynamic = 'force-dynamic';
+
 export const metadata = {
   title: 'BGG Search - Add Games | MeepleAI',
   description: 'Search BoardGameGeek and add games to your library for Game Night.',

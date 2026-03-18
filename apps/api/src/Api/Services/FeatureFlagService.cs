@@ -9,6 +9,20 @@ using Microsoft.Extensions.Logging;
 
 namespace Api.Services;
 
+public static class FeatureFlagConstants
+{
+    public const string RagAuxModelKey = "rag.enhancement.aux-model";
+
+    public static readonly string[] RagEnhancements =
+    [
+        "rag.enhancement.adaptive-routing",
+        "rag.enhancement.crag-evaluation",
+        "rag.enhancement.raptor-retrieval",
+        "rag.enhancement.rag-fusion-queries",
+        "rag.enhancement.graph-traversal"
+    ];
+}
+
 /// <summary>
 /// CONFIG-05: Feature flags service implementation.
 /// Provides runtime feature toggling with role-based and tier-based access control.
@@ -109,6 +123,14 @@ internal class FeatureFlagService : IFeatureFlagService
         ArgumentNullException.ThrowIfNull(user);
         if (string.IsNullOrWhiteSpace(featureName))
             throw new ArgumentException("Feature name cannot be empty", nameof(featureName));
+
+        // Admin users bypass all tier-based restrictions
+        if (user.Role.IsAdmin())
+        {
+            _logger.LogDebug("Feature {FeatureName} granted for admin user {UserId} (tier bypass)",
+                featureName, user.Id);
+            return true;
+        }
 
         // Map User.Role (ValueObject) to UserRole enum
         var userRole = MapRoleToUserRole(user.Role);

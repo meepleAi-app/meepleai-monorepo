@@ -21,6 +21,7 @@ import {
   type CreateAlertRule,
   type AlertRule,
 } from '@/lib/api/schemas/alert-rules.schemas';
+import { logger } from '@/lib/logger';
 
 // Severity options with visual indicators
 const SEVERITY_OPTIONS = [
@@ -90,7 +91,7 @@ export function AlertRuleForm({ rule, initialData, onSubmit, onCancel }: AlertRu
       }
       onSubmit();
     } catch (error) {
-      console.error('Failed to save rule:', error);
+      logger.error('Failed to save rule:', error);
       toast.error('Failed to save alert rule', {
         description: error instanceof Error ? error.message : 'Unknown error',
       });

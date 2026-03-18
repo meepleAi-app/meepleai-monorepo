@@ -8,14 +8,12 @@
  */
 
 import { DbStatsPanel } from './DbStatsPanel';
-import { ServicesNavConfig } from './NavConfig';
 import { RestartServicePanel } from './RestartServicePanel';
 import { ServicesDashboard } from './ServicesDashboard';
 
 export default function ServiceDashboardPage() {
   return (
     <div className="space-y-5" data-testid="services-page">
-      <ServicesNavConfig />
       <div>
         <h1 className="font-quicksand text-xl sm:text-2xl font-bold tracking-tight text-foreground">
           Service Dashboard

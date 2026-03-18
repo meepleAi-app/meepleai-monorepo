@@ -8,7 +8,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import NotificationSettingsPage from '../page';
 
 // Mock useToast
-vi.mock('@/hooks/use-toast', () => ({
+vi.mock('@/hooks/useToast', () => ({
   useToast: () => ({
     toast: vi.fn(),
   }),

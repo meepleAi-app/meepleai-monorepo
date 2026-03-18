@@ -18,6 +18,8 @@
 import { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 
+import { logger } from '@/lib/logger';
+
 import { GameDetailClient } from './game-detail-client';
 
 // ============================================================================
@@ -65,7 +67,7 @@ async function fetchGame(id: string): Promise<Game | null> {
 
     return response.json();
   } catch (error) {
-    console.error(`Error fetching game ${id}:`, error);
+    logger.error(`Error fetching game ${id}:`, error);
     return null;
   }
 }

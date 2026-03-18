@@ -41,6 +41,12 @@ internal class UpdatePreferencesCommandHandler : ICommandHandler<UpdatePreferenc
             command.EmailNotifications,
             command.DataRetentionDays);
 
+        // Update privacy settings
+        user.UpdatePrivacySettings(
+            command.ShowProfile,
+            command.ShowActivity,
+            command.ShowLibrary);
+
         // Persist updates
         await _userRepository.UpdateAsync(user, cancellationToken).ConfigureAwait(false);
         await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
@@ -57,7 +63,10 @@ internal class UpdatePreferencesCommandHandler : ICommandHandler<UpdatePreferenc
             user.Language,
             user.Theme,
             user.EmailNotifications,
-            user.DataRetentionDays
+            user.DataRetentionDays,
+            user.ShowProfile,
+            user.ShowActivity,
+            user.ShowLibrary
         );
     }
 }

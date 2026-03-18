@@ -24,10 +24,20 @@ describe('InvitationStatusBadge', () => {
     expect(badge).toHaveClass('text-green-900');
   });
 
-  it('renders Expired status with red styling', () => {
+  it('renders Expired status with slate styling', () => {
     render(<InvitationStatusBadge status="Expired" />);
 
     const badge = screen.getByText('Expired');
+    expect(badge).toBeInTheDocument();
+    expect(badge).toHaveClass('border-slate-300');
+    expect(badge).toHaveClass('bg-slate-50');
+    expect(badge).toHaveClass('text-slate-700');
+  });
+
+  it('renders Revoked status with red styling', () => {
+    render(<InvitationStatusBadge status="Revoked" />);
+
+    const badge = screen.getByText('Revoked');
     expect(badge).toBeInTheDocument();
     expect(badge).toHaveClass('border-red-300');
     expect(badge).toHaveClass('bg-red-50');

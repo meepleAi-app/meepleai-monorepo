@@ -22,6 +22,7 @@ export function QuickView() {
     isCollapsed,
     activeTab,
     selectedGameId,
+    sessionId,
     mode,
     setActiveTab,
     close,
@@ -99,7 +100,12 @@ export function QuickView() {
         {activeTab === 'rules' && <RulesContent gameId={selectedGameId} />}
         {activeTab === 'faq' && <FaqContent gameId={selectedGameId} />}
         {activeTab === 'ai' && (
-          <AIQuickViewContent gameId={selectedGameId ?? ''} gameName="Gioco" />
+          <AIQuickViewContent
+            gameId={selectedGameId ?? ''}
+            gameName="Gioco"
+            mode={mode}
+            sessionId={sessionId}
+          />
         )}
       </div>
     </aside>

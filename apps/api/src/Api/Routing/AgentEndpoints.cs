@@ -58,6 +58,9 @@ internal static class AgentEndpoints
         // Issue #5585: Arbiter Mode — dispute arbitration
         MapAskArbiterEndpoint(group);
 
+        // Ownership/RAG access: Quick agent creation
+        MapQuickCreateAgentEndpoint(group);
+
         return group;
     }
 
@@ -268,7 +271,8 @@ internal static class AgentEndpoints
                 Query: req.Query,
                 GameId: req.GameId,
                 ChatThreadId: req.ChatThreadId,
-                UserId: session!.User!.Id
+                UserId: session!.User!.Id,
+                UserRole: session.User!.Role
             );
 
             var result = await mediator.Send(command, ct).ConfigureAwait(false);
@@ -374,10 +378,14 @@ internal static class AgentEndpoints
     {
         group.MapPost("/agents/chat/ask", async (
             AskAgentQuestionRequest req,
+            HttpContext context,
             IMediator mediator,
             ILogger<Program> logger,
             CancellationToken ct = default) =>
         {
+            // Session validated by RequireSessionFilter
+            var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
+
             var command = new AskAgentQuestionCommand
             {
                 Question = req.Question,
@@ -387,7 +395,9 @@ internal static class AgentEndpoints
                 Language = req.Language,
                 TopK = req.TopK ?? 5,
                 MinScore = req.MinScore ?? 0.6,
-                GameSessionId = req.GameSessionId
+                GameSessionId = req.GameSessionId,
+                UserId = session.User!.Id,
+                UserRole = session.User!.Role
             };
 
             var result = await mediator.Send(command, ct).ConfigureAwait(false);
@@ -398,6 +408,7 @@ internal static class AgentEndpoints
 
             return Results.Ok(result);
         })
+        .RequireSession()
         .WithName("AskAgentQuestion")
         .WithTags("POC")
         .Produces<AgentChatResponse>(200)
@@ -416,12 +427,14 @@ internal static class AgentEndpoints
             CancellationToken ct = default) =>
         {
             // Session validated by RequireSessionFilter
-            _ = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
+            var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
 
             var command = new TutorQueryCommand(
                 GameId: req.GameId,
                 SessionId: req.SessionId,
-                Query: req.Query
+                Query: req.Query,
+                UserId: session.User!.Id,
+                UserRole: session.User!.Role
             );
 
             var result = await mediator.Send(command, ct).ConfigureAwait(false);
@@ -545,7 +558,8 @@ internal static class AgentEndpoints
                 UserId: session.User!.Id,
                 GameId: request.GameId,
                 ChatThreadId: request.ChatThreadId,
-                PreferredAgentId: request.PreferredAgentId
+                PreferredAgentId: request.PreferredAgentId,
+                UserRole: session.User!.Role
             );
 
             // Set SSE headers
@@ -808,7 +822,11 @@ internal static class AgentEndpoints
                 AgentName: req.AgentName,
                 StrategyName: req.StrategyName,
                 StrategyParameters: req.StrategyParameters
-            );
+            )
+            {
+                SharedGameId = req.SharedGameId,
+                DocumentIds = req.DocumentIds
+            };
 
             var result = await mediator.Send(command, ct).ConfigureAwait(false);
 
@@ -959,6 +977,52 @@ internal static class AgentEndpoints
         .Produces(403)
         .Produces(404);
     }
+
+    /// <summary>
+    /// Quick-create an agent + chat thread for a game after ownership is declared.
+    /// Automatically selects all indexed KB cards.
+    /// </summary>
+    private static void MapQuickCreateAgentEndpoint(RouteGroupBuilder group)
+    {
+        group.MapPost("/agents/quick-create", async (
+            QuickCreateAgentRequest req,
+            HttpContext context,
+            IMediator mediator,
+            ILogger<Program> logger,
+            CancellationToken ct = default) =>
+        {
+            var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
+
+            var command = new QuickCreateAgentCommand(
+                UserId: session.User!.Id,
+                GameId: req.GameId,
+                SharedGameId: req.SharedGameId,
+                UserRole: session.User.Role,
+                UserTier: session.User.Tier
+            );
+
+            var result = await mediator.Send(command, ct).ConfigureAwait(false);
+
+            logger.LogInformation(
+                "User {UserId} quick-created agent {AgentId} for game {GameId}",
+                session.User.Id, result.AgentId, req.GameId);
+
+            return Results.Created($"/api/v1/agents/{result.AgentId}", result);
+        })
+        .RequireSession()
+        .RequireRateLimiting("AgentCreation")
+        .WithName("QuickCreateAgent")
+        .WithTags("Agents", "User", "Ownership")
+        .WithSummary("Quick-create agent for an owned game")
+        .WithDescription(
+            "Creates a Tutor agent with all indexed KB cards + an initial chat thread. " +
+            "Requires RAG access (ownership declared or game is RAG-public).")
+        .Produces<QuickCreateAgentResult>(201)
+        .Produces(400)
+        .Produces(401)
+        .Produces(403)
+        .Produces(429);
+    }
 }
 
 /// <summary>
@@ -1087,7 +1151,9 @@ internal record CreateAgentWithSetupRequest(
     string AgentType,
     string? AgentName = null,
     string? StrategyName = null,
-    IDictionary<string, object>? StrategyParameters = null
+    IDictionary<string, object>? StrategyParameters = null,
+    Guid? SharedGameId = null,
+    List<Guid>? DocumentIds = null
 );
 
 /// <summary>
@@ -1109,4 +1175,12 @@ internal record AskArbiterRequest(
     string Situation,
     string PositionA,
     string PositionB
+);
+
+/// <summary>
+/// Request for quick agent creation after ownership declaration.
+/// </summary>
+internal record QuickCreateAgentRequest(
+    Guid GameId,
+    Guid? SharedGameId = null
 );

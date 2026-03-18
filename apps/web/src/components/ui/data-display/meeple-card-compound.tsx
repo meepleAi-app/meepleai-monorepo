@@ -46,10 +46,10 @@ const AgentCard = React.memo(function AgentCard(props: EntityCardProps) {
 });
 AgentCard.displayName = 'MeepleCards.Agent';
 
-const DocumentCard = React.memo(function DocumentCard(props: EntityCardProps) {
-  return <MeepleCard entity="document" {...props} />;
+const KbCard = React.memo(function KbCard(props: EntityCardProps) {
+  return <MeepleCard entity="kb" {...props} />;
 });
-DocumentCard.displayName = 'MeepleCards.Document';
+KbCard.displayName = 'MeepleCards.Kb';
 
 const ChatSessionCard = React.memo(function ChatSessionCard(props: EntityCardProps) {
   return <MeepleCard entity="chatSession" {...props} />;
@@ -66,10 +66,6 @@ const ToolkitCard = React.memo(function ToolkitCard(props: EntityCardProps) {
 });
 ToolkitCard.displayName = 'MeepleCards.Toolkit';
 
-const KbCardCard = React.memo(function KbCardCard(props: EntityCardProps) {
-  return <MeepleCard entity="kb_card" {...props} />;
-});
-KbCardCard.displayName = 'MeepleCards.KbCard';
 
 // ── Compound export ─────────────────────────────────────────────────────────
 
@@ -90,16 +86,14 @@ export const MeepleCards = {
   Session: SessionCard,
   /** AI agent card (cyan accent) */
   Agent: AgentCard,
-  /** Document/PDF card (slate accent) */
-  Document: DocumentCard,
+  /** Knowledge base card (teal accent) */
+  Kb: KbCard,
   /** Chat session card (violet accent) */
   ChatSession: ChatSessionCard,
   /** Event card (rose accent) */
   Event: EventCard,
   /** Game toolkit card (green accent) */
   Toolkit: ToolkitCard,
-  /** Knowledge base card */
-  KbCard: KbCardCard,
   /** Base card for dynamic entity types */
   Base: MeepleCard,
 } as const;

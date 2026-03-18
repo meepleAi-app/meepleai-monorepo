@@ -19,7 +19,6 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Handlers;
 internal class StreamExplainQueryHandler : IStreamingQueryHandler<StreamExplainQuery, RagStreamingEvent>
 {
     private readonly IEmbeddingService _embeddingService;
-    private readonly IQdrantService _qdrantService;
     private readonly ILogger<StreamExplainQueryHandler> _logger;
     private readonly TimeProvider _timeProvider;
 
@@ -31,12 +30,10 @@ internal class StreamExplainQueryHandler : IStreamingQueryHandler<StreamExplainQ
 
     public StreamExplainQueryHandler(
         IEmbeddingService embeddingService,
-        IQdrantService qdrantService,
         ILogger<StreamExplainQueryHandler> logger,
         TimeProvider? timeProvider = null)
     {
         _embeddingService = embeddingService ?? throw new ArgumentNullException(nameof(embeddingService));
-        _qdrantService = qdrantService ?? throw new ArgumentNullException(nameof(qdrantService));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _timeProvider = timeProvider ?? TimeProvider.System;
     }
@@ -145,31 +142,17 @@ internal class StreamExplainQueryHandler : IStreamingQueryHandler<StreamExplainQ
     /// <summary>
     /// Searches for topic content and builds citations.
     /// Returns (searchResults, citations) or (null, null) if no results found.
+    /// NOTE: Qdrant dependency removed — always returns null (no results).
     /// </summary>
-    private async Task<(IReadOnlyList<SearchResultItem>? searchResults, List<Snippet>? citations)> SearchForTopicContentAsync(
+    private Task<(IReadOnlyList<SearchResultItem>? searchResults, List<Snippet>? citations)> SearchForTopicContentAsync(
         string gameId,
         string topic,
         float[] topicEmbedding,
         CancellationToken cancellationToken)
     {
-        var searchResult = await _qdrantService.SearchAsync(gameId, topicEmbedding, limit: 5, documentIds: null, cancellationToken).ConfigureAwait(false);
-
-        if (!searchResult.Success || searchResult.Results.Count == 0)
-        {
-            _logger.LogInformation("No vector results found for topic {Topic} in game {GameId}",
-                topic, gameId);
-            return (null, null);
-        }
-
-        var citations = searchResult.Results.Select(r => new Snippet(
-            r.Text,
-            $"PDF:{r.PdfId}",
-            r.Page,
-            0,
-            r.Score
-        )).ToList();
-
-        return (searchResult.Results, citations);
+        _logger.LogInformation("No vector results for topic {Topic} in game {GameId} — Qdrant removed",
+            topic, gameId);
+        return Task.FromResult<(IReadOnlyList<SearchResultItem>?, List<Snippet>?)>((null, null));
     }
 
     /// <summary>

@@ -521,19 +521,11 @@ const nextConfig = {
   // Note: API proxy is now handled by catch-all API route at app/api/[...path]/route.ts
   // This preserves Set-Cookie headers from backend (Issue #703)
 
-  // Turbopack configuration for Next.js 16
-  turbopack: {
-    resolveAlias: {
-      // Stub out @hyperdx/browser when API key not configured to avoid
-      // Turbopack module factory errors with Node.js polyfill dependencies
-      ...(!process.env.NEXT_PUBLIC_HYPERDX_API_KEY
-        ? { '@hyperdx/browser': './src/lib/hyperdx-stub.ts' }
-        : {}),
-    },
-  },
-
   // Fix cross-origin warning from 127.0.0.1 to localhost
   allowedDevOrigins: ['127.0.0.1', 'localhost'],
+
+  // Turbopack config (default bundler in Next.js 16)
+  turbopack: {},
 
   // Webpack config for backward compatibility (use --webpack flag if needed)
   webpack: config => {

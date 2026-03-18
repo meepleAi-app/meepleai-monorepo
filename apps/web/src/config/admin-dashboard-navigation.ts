@@ -49,6 +49,16 @@ import {
   HeartPulseIcon,
   BarChart3Icon,
   BoxIcon,
+  FlaskConicalIcon,
+  PlusIcon,
+  HelpCircleIcon,
+  CheckCircleIcon,
+  RefreshCwIcon,
+  Trash2Icon,
+  DownloadIcon,
+  RotateCcwIcon,
+  SaveIcon,
+  Palette,
 } from 'lucide-react';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -66,6 +76,19 @@ export interface DashboardSidebarItem {
   activePattern?: RegExp;
 }
 
+export interface DashboardSectionAction {
+  /** Unique action id */
+  id: string;
+  /** Button label */
+  label: string;
+  /** Lucide icon name (used for rendering) */
+  icon: LucideIcon;
+  /** Route to navigate to (if action is navigational) */
+  route?: string;
+  /** Visual variant */
+  variant?: 'primary' | 'default';
+}
+
 export interface DashboardSection {
   /** Section unique ID */
   id: string;
@@ -81,6 +104,8 @@ export interface DashboardSection {
   description: string;
   /** Sidebar items for this section */
   sidebarItems: DashboardSidebarItem[];
+  /** Contextual actions for this section (replaces NavConfig action bars) */
+  actions?: DashboardSectionAction[];
   /** Visual group (kept for backwards compatibility, all sections render flat) */
   group: 'core' | 'ai';
 }
@@ -122,6 +147,27 @@ export const DASHBOARD_SECTIONS: DashboardSection[] = [
     label: 'Content',
     icon: FileTextIcon,
     baseRoute: '/admin/shared-games',
+    actions: [
+      {
+        id: 'add-game',
+        label: 'Add Game',
+        icon: PlusIcon,
+        route: '/admin/shared-games/new',
+        variant: 'primary',
+      },
+      {
+        id: 'new-faq',
+        label: 'New FAQ',
+        icon: HelpCircleIcon,
+        route: '/admin/faqs',
+      },
+      {
+        id: 'approve',
+        label: 'Approve Submissions',
+        icon: CheckCircleIcon,
+        route: '/admin/shared-games',
+      },
+    ],
     additionalRoutes: [
       '/admin/content',
       '/admin/knowledge-base',
@@ -196,6 +242,27 @@ export const DASHBOARD_SECTIONS: DashboardSection[] = [
     icon: BrainCircuitIcon,
     baseRoute: '/admin/agents',
     additionalRoutes: ['/admin/ai'],
+    actions: [
+      {
+        id: 'new-agent',
+        label: 'New Agent',
+        icon: BotIcon,
+        route: '/admin/agents/new',
+        variant: 'primary',
+      },
+      {
+        id: 'new-definition',
+        label: 'New Definition',
+        icon: FileTextIcon,
+        route: '/admin/agents/definitions/create',
+      },
+      {
+        id: 'new-prompt',
+        label: 'New Prompt',
+        icon: PlusIcon,
+        route: '/admin/prompts/new',
+      },
+    ],
     description: 'AI agents, models, RAG, and analytics',
     group: 'ai',
     sidebarItems: [
@@ -242,6 +309,11 @@ export const DASHBOARD_SECTIONS: DashboardSection[] = [
         icon: MessageSquareCodeIcon,
       },
       {
+        href: '/admin/agents/sandbox',
+        label: 'RAG Sandbox',
+        icon: FlaskConicalIcon,
+      },
+      {
         href: '/admin/agents/strategy',
         label: 'Strategy Config',
         icon: Settings2Icon,
@@ -285,6 +357,13 @@ export const DASHBOARD_SECTIONS: DashboardSection[] = [
         icon: MailIcon,
       },
       {
+        href: '/admin/users/access-requests',
+        label: 'Access Requests',
+        icon: ClipboardListIcon,
+        badgeKey: 'accessRequestsPending',
+        activePattern: /^\/admin\/users\/access-requests/,
+      },
+      {
         href: '/admin/users/roles',
         label: 'Roles & Permissions',
         icon: ShieldIcon,
@@ -303,7 +382,40 @@ export const DASHBOARD_SECTIONS: DashboardSection[] = [
     label: 'System',
     icon: MonitorIcon,
     baseRoute: '/admin/monitor',
-    additionalRoutes: ['/admin/config'],
+    additionalRoutes: ['/admin/config', '/admin/notifications', '/admin/ui-library'],
+    actions: [
+      {
+        id: 'refresh',
+        label: 'Refresh',
+        icon: RefreshCwIcon,
+        route: '/admin/monitor?action=refresh',
+        variant: 'primary',
+      },
+      {
+        id: 'clear-cache',
+        label: 'Clear Cache',
+        icon: Trash2Icon,
+        route: '/admin/monitor?action=clear-cache',
+      },
+      {
+        id: 'run-tests',
+        label: 'Run Tests',
+        icon: FlaskConicalIcon,
+        route: '/admin/monitor?action=run-tests',
+      },
+      {
+        id: 'save-config',
+        label: 'Save Changes',
+        icon: SaveIcon,
+        route: '/admin/config?action=save',
+      },
+      {
+        id: 'reset-config',
+        label: 'Reset Defaults',
+        icon: RotateCcwIcon,
+        route: '/admin/config?action=reset',
+      },
+    ],
     description: 'Monitoring, alerts, cache, and system configuration',
     group: 'core',
     sidebarItems: [
@@ -379,6 +491,13 @@ export const DASHBOARD_SECTIONS: DashboardSection[] = [
         icon: BoxIcon,
         activePattern: /^\/admin\/monitor\/containers/,
       },
+      // Admin Notifications
+      {
+        href: '/admin/notifications/compose',
+        label: 'Send Notification',
+        icon: BellIcon,
+        activePattern: /^\/admin\/notifications\/compose/,
+      },
       // Config items
       {
         href: '/admin/config?tab=general',
@@ -406,6 +525,11 @@ export const DASHBOARD_SECTIONS: DashboardSection[] = [
         label: 'n8n Workflows',
         icon: ZapIcon,
       },
+      {
+        href: '/admin/ui-library',
+        label: 'UI Library',
+        icon: Palette,
+      },
     ],
   },
 
@@ -415,6 +539,21 @@ export const DASHBOARD_SECTIONS: DashboardSection[] = [
     label: 'Analytics',
     icon: BarChartIcon,
     baseRoute: '/admin/analytics',
+    actions: [
+      {
+        id: 'export-report',
+        label: 'Export Report',
+        icon: DownloadIcon,
+        route: '/admin/analytics?action=export',
+        variant: 'primary',
+      },
+      {
+        id: 'new-api-key',
+        label: 'New API Key',
+        icon: KeyIcon,
+        route: '/admin/api-keys/new',
+      },
+    ],
     description: 'Usage statistics, audit logs, and reports',
     group: 'core',
     sidebarItems: [

@@ -30,6 +30,8 @@ export type { ToolItem, ToolRailProps } from './ToolRail';
 export type { SessionToolLayoutProps } from './SessionToolLayout';
 export type { TurnIndicatorBarProps } from './TurnIndicatorBar';
 export { ParticipantCard } from './ParticipantCard';
+export { MeepleParticipantCard } from './MeepleParticipantCard';
+export type { MeepleParticipantCardProps } from './MeepleParticipantCard';
 export { ScoreInput } from './ScoreInput';
 export { Scoreboard } from './Scoreboard';
 export { SessionDetailModal } from './SessionDetailModal';

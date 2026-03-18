@@ -12,6 +12,7 @@ using Api.Routing;
 using Api.Routing.GameManagement;
 using Api.BoundedContexts.GameManagement.Routing; // Issue #4273
 using Api.BoundedContexts.Administration.Infrastructure.DependencyInjection;
+using Api.BoundedContexts.AgentMemory.Infrastructure.DependencyInjection;
 using Api.BoundedContexts.Authentication.Infrastructure.DependencyInjection;
 using Api.BoundedContexts.BusinessSimulations.Infrastructure.DependencyInjection;
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.DependencyInjection;
@@ -338,6 +339,9 @@ builder.Services.AddGamificationContext();
 
 // Issue #3720: BusinessSimulations bounded context (financial ledger, simulations)
 builder.Services.AddBusinessSimulationsContext();
+
+// AgentMemory bounded context (game/group/player memory for AI agents)
+builder.Services.AddAgentMemoryContext();
 
 // ISSUE-2370: SharedGameCatalog bounded context
 // ISSUE-2454: Background processing configuration

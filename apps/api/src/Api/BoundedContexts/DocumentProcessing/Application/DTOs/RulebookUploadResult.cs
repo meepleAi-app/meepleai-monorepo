@@ -17,8 +17,11 @@ internal record RulebookUploadResult(
     /// </summary>
     public static string MapStatus(PdfProcessingState state) => state switch
     {
+        PdfProcessingState.Pending or PdfProcessingState.Uploading => "pending",
+        PdfProcessingState.Extracting or PdfProcessingState.Chunking
+            or PdfProcessingState.Embedding or PdfProcessingState.Indexing => "processing",
         PdfProcessingState.Ready => "ready",
         PdfProcessingState.Failed => "failed",
-        _ => "pending"
+        _ => "unknown"
     };
 }

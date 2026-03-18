@@ -1,5 +1,6 @@
 using Api.BoundedContexts.DocumentProcessing.Application.Commands;
 using Api.BoundedContexts.DocumentProcessing.Application.DTOs;
+using Api.BoundedContexts.GameManagement.Application.DTOs;
 using Api.BoundedContexts.GameManagement.Application.Queries;
 using Api.Tests.Constants;
 using FluentAssertions;
@@ -31,7 +32,7 @@ public sealed class RulebookEndpointsTests
             pdfDocumentId,
             IsNew: true,
             Status: "pending",
-            Message: "Rulebook uploaded successfully and queued for processing.");
+            Message: "Regolamento caricato con successo.");
 
         _mediatorMock
             .Setup(m => m.Send(It.IsAny<AddRulebookCommand>(), It.IsAny<CancellationToken>()))
@@ -65,7 +66,7 @@ public sealed class RulebookEndpointsTests
             existingPdfDocumentId,
             IsNew: false,
             Status: "ready",
-            Message: "Rulebook already exists and has been reused.");
+            Message: "Regolamento già disponibile — collegato al tuo gioco!");
 
         _mediatorMock
             .Setup(m => m.Send(It.IsAny<AddRulebookCommand>(), It.IsAny<CancellationToken>()))
@@ -95,8 +96,17 @@ public sealed class RulebookEndpointsTests
         var userId = Guid.NewGuid();
         var expectedGames = new List<GameWithKbDto>
         {
-            new(Guid.NewGuid(), "Catan", PdfCount: 2, LatestPdfStatus: "Indexed"),
-            new(Guid.NewGuid(), "Ticket to Ride", PdfCount: 1, LatestPdfStatus: "Indexed"),
+            new(Guid.NewGuid(), "Catan", null, "ready",
+                new List<RulebookDto>
+                {
+                    new(Guid.NewGuid(), "catan-rules.pdf", "ready", DateTime.UtcNow),
+                    new(Guid.NewGuid(), "catan-expansion.pdf", "processing", null),
+                }),
+            new(Guid.NewGuid(), "Ticket to Ride", "https://example.com/ttr.jpg", "ready",
+                new List<RulebookDto>
+                {
+                    new(Guid.NewGuid(), "ttr-rules.pdf", "ready", DateTime.UtcNow),
+                }),
         };
 
         _mediatorMock
@@ -111,10 +121,11 @@ public sealed class RulebookEndpointsTests
         // Assert
         result.Should().NotBeNull();
         result.Should().HaveCount(2);
-        result[0].GameName.Should().Be("Catan");
-        result[0].PdfCount.Should().Be(2);
-        result[1].GameName.Should().Be("Ticket to Ride");
-        result[1].PdfCount.Should().Be(1);
+        result[0].Title.Should().Be("Catan");
+        result[0].Rulebooks.Should().HaveCount(2);
+        result[0].OverallKbStatus.Should().Be("ready");
+        result[1].Title.Should().Be("Ticket to Ride");
+        result[1].Rulebooks.Should().HaveCount(1);
 
         _mediatorMock.Verify(
             m => m.Send(It.IsAny<GetGamesWithKbQuery>(), It.IsAny<CancellationToken>()),
@@ -126,7 +137,7 @@ public sealed class RulebookEndpointsTests
     {
         // Arrange
         var userId = Guid.NewGuid();
-        var expectedGames = new List<GameWithKbDto>();
+        IReadOnlyList<GameWithKbDto> expectedGames = new List<GameWithKbDto>();
 
         _mediatorMock
             .Setup(m => m.Send(It.IsAny<GetGamesWithKbQuery>(), It.IsAny<CancellationToken>()))

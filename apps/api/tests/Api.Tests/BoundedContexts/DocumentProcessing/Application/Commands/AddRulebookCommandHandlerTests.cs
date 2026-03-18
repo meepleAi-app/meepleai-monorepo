@@ -14,6 +14,8 @@ using Api.Infrastructure;
 using Api.Services;
 using Api.Services.Pdf;
 using Api.SharedKernel.Services;
+using Api.Infrastructure.Entities;
+using Api.Infrastructure.Entities.UserLibrary;
 using Api.Tests.Constants;
 using Api.Tests.TestHelpers;
 using FluentAssertions;
@@ -51,6 +53,12 @@ public sealed class AddRulebookCommandHandlerTests : IDisposable
     {
         _pdfDocumentRepository = new Mock<IPdfDocumentRepository>();
         _db = TestDbContextFactory.CreateInMemoryDbContext();
+
+        // Seed game and library entry for ownership validation
+        _db.Games.Add(new GameEntity { Id = TestGameId, Name = "Test Game" });
+        _db.UserLibraryEntries.Add(new UserLibraryEntryEntity { UserId = TestUserId, SharedGameId = TestGameId });
+        _db.SaveChanges();
+
         _mediator = new Mock<IMediator>();
         _blobStorageService = new Mock<IBlobStorageService>();
         _tierEnforcementService = new Mock<ITierEnforcementService>();
@@ -130,7 +138,7 @@ public sealed class AddRulebookCommandHandlerTests : IDisposable
         // Assert
         result.Should().NotBeNull();
         result.IsNew.Should().BeFalse();
-        result.Status.Should().Be("pending");
+        result.Status.Should().Be("processing");
         result.PdfDocumentId.Should().Be(TestPdfId);
         result.Message.Should().Contain("in elaborazione");
     }

@@ -70,6 +70,26 @@ internal sealed class AddRulebookCommandHandler : ICommandHandler<AddRulebookCom
         var userId = command.UserId;
         var gameId = command.GameId;
 
+        // Step 0: Validate game exists and user owns it
+        var game = await _db.Games
+            .AsNoTracking()
+            .FirstOrDefaultAsync(g => g.Id == gameId, cancellationToken)
+            .ConfigureAwait(false);
+
+        if (game is null)
+        {
+            throw new Middleware.Exceptions.NotFoundException($"Game {gameId} not found.");
+        }
+
+        var ownsGame = await _db.UserLibraryEntries
+            .AnyAsync(ule => ule.UserId == userId && ule.SharedGameId == gameId, cancellationToken)
+            .ConfigureAwait(false);
+
+        if (!ownsGame)
+        {
+            throw new Middleware.Exceptions.ForbiddenException($"User {userId} does not own game {gameId}.");
+        }
+
         // Step 1: Compute SHA-256 hash
         var contentHash = await ComputeContentHashAsync(file, cancellationToken).ConfigureAwait(false);
 
@@ -110,8 +130,8 @@ internal sealed class AddRulebookCommandHandler : ICommandHandler<AddRulebookCom
                 "Found existing PDF {PdfId} with matching hash but Failed state — treating as new upload",
                 existingDoc.Id);
 
-            // Clean up stale EntityLinks if any exist
-            await CleanupStaleEntityLinksAsync(existingDoc.Id, cancellationToken).ConfigureAwait(false);
+            // Clean up stale EntityLinks from this game to the failed PDF
+            await CleanupStaleEntityLinksAsync(existingDoc.Id, gameId, cancellationToken).ConfigureAwait(false);
 
             return await HandleNewUploadAsync(gameId, userId, file, contentHash, cancellationToken)
                 .ConfigureAwait(false);
@@ -330,13 +350,15 @@ internal sealed class AddRulebookCommandHandler : ICommandHandler<AddRulebookCom
     /// <summary>
     /// Cleans up stale EntityLinks for a failed PDF document.
     /// </summary>
-    private async Task CleanupStaleEntityLinksAsync(Guid pdfDocumentId, CancellationToken cancellationToken)
+    private async Task CleanupStaleEntityLinksAsync(Guid pdfDocumentId, Guid gameId, CancellationToken cancellationToken)
     {
         try
         {
             var staleLinks = await _db.EntityLinks
                 .Where(el => el.TargetEntityId == pdfDocumentId
-                    && el.TargetEntityType == MeepleEntityType.KbCard)
+                    && el.TargetEntityType == MeepleEntityType.KbCard
+                    && el.SourceEntityId == gameId
+                    && el.SourceEntityType == MeepleEntityType.Game)
                 .ToListAsync(cancellationToken)
                 .ConfigureAwait(false);
 

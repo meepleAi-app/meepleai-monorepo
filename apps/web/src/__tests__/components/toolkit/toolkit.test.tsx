@@ -333,6 +333,10 @@ describe('Scoreboard', () => {
     const user = userEvent.setup();
     render(<Scoreboard />);
 
+    // Add a player first so the table (with "Punti" header) is rendered
+    await user.type(screen.getByRole('textbox', { name: 'New player name' }), 'Alice');
+    await user.click(screen.getByRole('button', { name: 'Add player' }));
+
     // The sort button is a plain <button> inside the <th> (not the mocked Button component)
     const sortBtn =
       screen.getByText('Punti').closest('button') ??

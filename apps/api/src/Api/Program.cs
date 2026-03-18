@@ -641,6 +641,7 @@ v1Api.MapAdminDebugChatEndpoints();    // Admin Debug Chat with real-time pipeli
 v1Api.MapAdminSandboxEndpoints();     // RAG Sandbox Dashboard: documents, chunks, metrics
 v1Api.MapRagEnhancementAdminEndpoints();    // RAG Enhancement toggles (admin)
 v1Api.MapRagEnhancementEstimateEndpoints(); // RAG Enhancement cost estimate (user-facing)
+v1Api.MapAdminRagQualityEndpoints();        // RAG Quality report: index health + game breakdown
 v1Api.MapMonitoringEndpoints();        // Issues #891 + #893: Infrastructure health & Prometheus metrics
 v1Api.MapAlertEndpoints();             // Alert management
 v1Api.MapAlertConfigEndpoints();       // Alert rules (Issue #921)

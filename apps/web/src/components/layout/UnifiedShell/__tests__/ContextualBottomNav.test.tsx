@@ -22,23 +22,40 @@ describe('ContextualBottomNav', () => {
     act(() => result.current.clear());
   });
 
-  it('shows default actions when no card focused', () => {
+  it('renders empty nav when no card focused', () => {
     render(<ContextualBottomNav />);
-    expect(screen.getByText('Library')).toBeInTheDocument();
-    expect(screen.getByText('Discover')).toBeInTheDocument();
-    expect(screen.getByText('Chat')).toBeInTheDocument();
-    expect(screen.getByText('Sessions')).toBeInTheDocument();
+    const nav = screen.getByTestId('contextual-bottom-nav');
+    expect(nav).toBeInTheDocument();
+    // No actions rendered when no card focused
+    expect(nav.children).toHaveLength(0);
   });
 
-  it('shows entity actions when game card focused', () => {
+  it('shows session actions when session card focused', () => {
+    const { result } = renderHook(() => useCardHand());
+    act(() => {
+      result.current.drawCard({
+        id: 's1',
+        entity: 'session',
+        title: 'Game Night',
+        href: '/sessions/s1',
+      });
+    });
+
+    render(<ContextualBottomNav />);
+    expect(screen.getByText('Regole')).toBeInTheDocument();
+    expect(screen.getByText('FAQ')).toBeInTheDocument();
+    expect(screen.getByText('Chiedi AI')).toBeInTheDocument();
+    expect(screen.getByText('Punteggi')).toBeInTheDocument();
+  });
+
+  it('renders empty nav when non-session card focused', () => {
     const { result } = renderHook(() => useCardHand());
     act(() => {
       result.current.drawCard({ id: 'g1', entity: 'game', title: 'Catan', href: '/library/g1' });
     });
 
     render(<ContextualBottomNav />);
-    expect(screen.getByText('Nuova Sessione')).toBeInTheDocument();
-    expect(screen.getByText('Wishlist')).toBeInTheDocument();
-    expect(screen.queryByText('Library')).not.toBeInTheDocument();
+    const nav = screen.getByTestId('contextual-bottom-nav');
+    expect(nav.children).toHaveLength(0);
   });
 });

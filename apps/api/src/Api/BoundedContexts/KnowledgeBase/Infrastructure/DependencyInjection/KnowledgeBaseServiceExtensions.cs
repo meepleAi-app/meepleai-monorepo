@@ -345,6 +345,9 @@ internal static class KnowledgeBaseServiceExtensions
         // RAG enhancements orchestrator — feature flag integration for advanced RAG features
         services.AddScoped<IRagEnhancementService, RagEnhancementService>();
 
+        // Agent Memory context builder — injects house rules, group preferences into RAG prompts
+        services.AddScoped<IAgentMemoryContextBuilder, AgentMemoryContextBuilder>();
+
         // E4-3: Session query budget — Redis-backed per-session AI query tracking
         services.AddScoped<ISessionQueryBudgetService, SessionQueryBudgetService>();
     }

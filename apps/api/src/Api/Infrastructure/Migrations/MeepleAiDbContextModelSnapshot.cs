@@ -470,6 +470,148 @@ namespace Api.Infrastructure.Migrations
                     b.ToTable("user_token_usage", (string)null);
                 });
 
+            modelBuilder.Entity("Api.BoundedContexts.AgentMemory.Infrastructure.Entities.GameMemoryEntity", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("CustomSetupJson")
+                        .HasColumnType("jsonb")
+                        .HasColumnName("custom_setup_json");
+
+                    b.Property<Guid>("GameId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("game_id");
+
+                    b.Property<string>("HouseRulesJson")
+                        .HasColumnType("jsonb")
+                        .HasColumnName("house_rules_json");
+
+                    b.Property<string>("NotesJson")
+                        .HasColumnType("jsonb")
+                        .HasColumnName("notes_json");
+
+                    b.Property<Guid>("OwnerId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("owner_id");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("GameId", "OwnerId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_game_memories_game_id_owner_id");
+
+                    b.ToTable("game_memories", (string)null);
+                });
+
+            modelBuilder.Entity("Api.BoundedContexts.AgentMemory.Infrastructure.Entities.GroupMemoryEntity", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid>("CreatorId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("creator_id");
+
+                    b.Property<string>("MembersJson")
+                        .HasColumnType("jsonb")
+                        .HasColumnName("members_json");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("name");
+
+                    b.Property<string>("PreferencesJson")
+                        .HasColumnType("jsonb")
+                        .HasColumnName("preferences_json");
+
+                    b.Property<string>("StatsJson")
+                        .HasColumnType("jsonb")
+                        .HasColumnName("stats_json");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatorId")
+                        .HasDatabaseName("ix_group_memories_creator_id");
+
+                    b.ToTable("group_memories", (string)null);
+                });
+
+            modelBuilder.Entity("Api.BoundedContexts.AgentMemory.Infrastructure.Entities.PlayerMemoryEntity", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTime?>("ClaimedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("claimed_at");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("GameStatsJson")
+                        .HasColumnType("jsonb")
+                        .HasColumnName("game_stats_json");
+
+                    b.Property<Guid?>("GroupId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("group_id");
+
+                    b.Property<string>("GuestName")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("guest_name");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<Guid?>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("GroupId")
+                        .HasDatabaseName("ix_player_memories_group_id")
+                        .HasFilter("group_id IS NOT NULL");
+
+                    b.HasIndex("GuestName")
+                        .HasDatabaseName("ix_player_memories_guest_name")
+                        .HasFilter("user_id IS NULL");
+
+                    b.HasIndex("UserId")
+                        .HasDatabaseName("ix_player_memories_user_id")
+                        .HasFilter("user_id IS NOT NULL");
+
+                    b.ToTable("player_memories", (string)null);
+                });
+
             modelBuilder.Entity("Api.BoundedContexts.BusinessSimulations.Domain.Entities.CostScenario", b =>
                 {
                     b.Property<Guid>("Id")
@@ -4000,6 +4142,10 @@ namespace Api.Infrastructure.Migrations
                         .HasColumnType("character varying(6)")
                         .HasColumnName("session_code");
 
+                    b.Property<string>("SetupChecklistJson")
+                        .HasColumnType("jsonb")
+                        .HasColumnName("setup_checklist_json");
+
                     b.Property<DateTime?>("StartedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("started_at");
@@ -4356,6 +4502,81 @@ namespace Api.Infrastructure.Migrations
                         .HasDatabaseName("IX_RecordScores_Player_Dimension_Unique");
 
                     b.ToTable("record_scores", (string)null);
+                });
+
+            modelBuilder.Entity("Api.Infrastructure.Entities.GameManagement.RuleDisputeEntity", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<int>("FinalOutcome")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0)
+                        .HasColumnName("final_outcome");
+
+                    b.Property<Guid>("GameId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("game_id");
+
+                    b.Property<string>("InitiatorClaim")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)")
+                        .HasColumnName("initiator_claim");
+
+                    b.Property<Guid>("InitiatorPlayerId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("initiator_player_id");
+
+                    b.Property<string>("OverrideRule")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)")
+                        .HasColumnName("override_rule");
+
+                    b.Property<string>("RelatedDisputeIdsJson")
+                        .HasColumnType("jsonb")
+                        .HasColumnName("related_dispute_ids_json");
+
+                    b.Property<string>("RespondentClaim")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)")
+                        .HasColumnName("respondent_claim");
+
+                    b.Property<Guid?>("RespondentPlayerId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("respondent_player_id");
+
+                    b.Property<Guid>("SessionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("session_id");
+
+                    b.Property<string>("VerdictJson")
+                        .HasColumnType("jsonb")
+                        .HasColumnName("verdict_json");
+
+                    b.Property<string>("VotesJson")
+                        .HasColumnType("jsonb")
+                        .HasColumnName("votes_json");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("GameId")
+                        .HasDatabaseName("ix_rule_disputes_game_id");
+
+                    b.HasIndex("SessionId")
+                        .HasDatabaseName("ix_rule_disputes_session_id");
+
+                    b.HasIndex("GameId", "CreatedAt")
+                        .HasDatabaseName("ix_rule_disputes_game_id_created_at");
+
+                    b.ToTable("rule_disputes", (string)null);
                 });
 
             modelBuilder.Entity("Api.Infrastructure.Entities.GameManagement.SessionAttachmentEntity", b =>
@@ -12838,6 +13059,17 @@ namespace Api.Infrastructure.Migrations
                         .IsRequired();
 
                     b.Navigation("RecordPlayer");
+                });
+
+            modelBuilder.Entity("Api.Infrastructure.Entities.GameManagement.RuleDisputeEntity", b =>
+                {
+                    b.HasOne("Api.Infrastructure.Entities.GameManagement.LiveGameSessionEntity", "Session")
+                        .WithMany()
+                        .HasForeignKey("SessionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Session");
                 });
 
             modelBuilder.Entity("Api.Infrastructure.Entities.GameManagement.SessionInviteEntity", b =>

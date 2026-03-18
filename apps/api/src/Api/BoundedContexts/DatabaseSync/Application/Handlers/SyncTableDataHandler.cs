@@ -33,7 +33,8 @@ internal class SyncTableDataHandler : ICommandHandler<SyncTableDataCommand, Sync
 
     public async Task<SyncResult> Handle(SyncTableDataCommand command, CancellationToken cancellationToken)
     {
-        var expectedConfirmation = $"SYNC {command.TableName} {command.Direction}";
+        var target = command.Direction == SyncDirection.LocalToStaging ? "STAGING" : "LOCAL";
+        var expectedConfirmation = $"SYNC {command.TableName} TO {target}";
         if (!string.Equals(command.Confirmation, expectedConfirmation, StringComparison.Ordinal))
         {
             return new SyncResult(false, 0, 0, Guid.Empty,
@@ -63,6 +64,11 @@ internal class SyncTableDataHandler : ICommandHandler<SyncTableDataCommand, Sync
                 sourceConn = remoteConn;
                 targetConn = localConn;
             }
+
+            // Validate table name against information_schema (prevent SQL injection)
+            var tableExists = await TableExistsAsync(sourceConn, "public", command.TableName, cancellationToken).ConfigureAwait(false);
+            if (!tableExists)
+                return new SyncResult(false, 0, 0, Guid.Empty, $"Table '{command.TableName}' does not exist");
 
             // Acquire advisory lock on target to prevent concurrent sync operations
             var lockAcquired = false;
@@ -202,6 +208,18 @@ internal class SyncTableDataHandler : ICommandHandler<SyncTableDataCommand, Sync
             details: details);
         _dbContext.Set<AuditLog>().Add(auditLog);
         await _dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+    }
+
+    private static async Task<bool> TableExistsAsync(NpgsqlConnection conn, string schema, string table, CancellationToken ct)
+    {
+        var cmd = new NpgsqlCommand(
+            "SELECT EXISTS(SELECT 1 FROM information_schema.tables WHERE table_schema = $1 AND table_name = $2)", conn);
+        await using (cmd.ConfigureAwait(false))
+        {
+            cmd.Parameters.AddWithValue(schema);
+            cmd.Parameters.AddWithValue(table);
+            return (bool)(await cmd.ExecuteScalarAsync(ct).ConfigureAwait(false))!;
+        }
     }
 
     private static async Task<bool> TryAcquireAdvisoryLockAsync(NpgsqlConnection conn, CancellationToken ct)

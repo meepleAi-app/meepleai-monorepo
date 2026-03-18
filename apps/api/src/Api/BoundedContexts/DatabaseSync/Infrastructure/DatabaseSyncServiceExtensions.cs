@@ -1,4 +1,3 @@
-using System.Text.Json.Serialization;
 using Api.BoundedContexts.DatabaseSync.Domain.Interfaces;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -43,11 +42,6 @@ internal static class DatabaseSyncServiceExtensions
             var tunnelClient = sp.GetRequiredService<ISshTunnelClient>();
             var logger = sp.GetRequiredService<ILogger<RemoteDatabaseConnector>>();
             return new RemoteDatabaseConnector(tunnelClient, remoteConnStr, logger);
-        });
-
-        services.ConfigureHttpJsonOptions(options =>
-        {
-            options.SerializerOptions.Converters.Add(new JsonStringEnumConverter());
         });
 
         return services;

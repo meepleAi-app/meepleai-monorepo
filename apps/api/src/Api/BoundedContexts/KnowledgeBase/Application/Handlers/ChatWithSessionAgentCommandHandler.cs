@@ -12,6 +12,7 @@ using Api.SharedKernel.Infrastructure.Persistence;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using System.Runtime.CompilerServices;
+using System.Globalization;
 
 namespace Api.BoundedContexts.KnowledgeBase.Application.Handlers;
 
@@ -29,8 +30,10 @@ internal sealed class ChatWithSessionAgentCommandHandler : IStreamingQueryHandle
     private readonly IAgentTypologyRepository _typologyRepository;
     private readonly IChatThreadRepository _chatThreadRepository;
     private readonly IGameRepository _gameRepository;
+    private readonly ILiveSessionRepository _liveSessionRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IRagPromptAssemblyService _ragPromptService;
+    private readonly IAgentMemoryContextBuilder _agentMemoryContextBuilder;
     private readonly ILlmService _llmService;
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly ILogger<ChatWithSessionAgentCommandHandler> _logger;
@@ -44,8 +47,10 @@ internal sealed class ChatWithSessionAgentCommandHandler : IStreamingQueryHandle
         IAgentTypologyRepository typologyRepository,
         IChatThreadRepository chatThreadRepository,
         IGameRepository gameRepository,
+        ILiveSessionRepository liveSessionRepository,
         IUnitOfWork unitOfWork,
         IRagPromptAssemblyService ragPromptService,
+        IAgentMemoryContextBuilder agentMemoryContextBuilder,
         ILlmService llmService,
         IServiceScopeFactory scopeFactory,
         ILogger<ChatWithSessionAgentCommandHandler> logger)
@@ -54,8 +59,10 @@ internal sealed class ChatWithSessionAgentCommandHandler : IStreamingQueryHandle
         _typologyRepository = typologyRepository ?? throw new ArgumentNullException(nameof(typologyRepository));
         _chatThreadRepository = chatThreadRepository ?? throw new ArgumentNullException(nameof(chatThreadRepository));
         _gameRepository = gameRepository ?? throw new ArgumentNullException(nameof(gameRepository));
+        _liveSessionRepository = liveSessionRepository ?? throw new ArgumentNullException(nameof(liveSessionRepository));
         _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
         _ragPromptService = ragPromptService ?? throw new ArgumentNullException(nameof(ragPromptService));
+        _agentMemoryContextBuilder = agentMemoryContextBuilder ?? throw new ArgumentNullException(nameof(agentMemoryContextBuilder));
         _llmService = llmService ?? throw new ArgumentNullException(nameof(llmService));
         _scopeFactory = scopeFactory ?? throw new ArgumentNullException(nameof(scopeFactory));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
@@ -177,6 +184,27 @@ internal sealed class ChatWithSessionAgentCommandHandler : IStreamingQueryHandle
             "Prompt assembled: {EstimatedTokens} tokens, {CitationCount} citations",
             assembled.EstimatedTokens, assembled.Citations.Count);
 
+        // Inject AgentMemory context (house rules, group preferences, notes) into system prompt
+        var systemPrompt = assembled.SystemPrompt;
+        var liveSession = await _liveSessionRepository
+            .GetByIdAsync(agentSession.GameSessionId, cancellationToken)
+            .ConfigureAwait(false);
+        var groupId = liveSession?.GroupId;
+
+        var memoryContext = await _agentMemoryContextBuilder.BuildContextAsync(
+            agentSession.GameId, agentSession.UserId, groupId, cancellationToken)
+            .ConfigureAwait(false);
+
+        if (!string.IsNullOrWhiteSpace(memoryContext))
+        {
+            systemPrompt = string.Create(CultureInfo.InvariantCulture,
+                $"{systemPrompt}\n\n## Agent Memory Context\n{memoryContext}");
+
+            _logger.LogInformation(
+                "Injected agent memory context into system prompt for session {SessionId} ({ContextLength} chars)",
+                command.AgentSessionId, memoryContext.Length);
+        }
+
         // Stream LLM response token by token
         var fullResponse = new StringBuilder();
         LlmUsage? finalUsage = null;
@@ -187,7 +215,7 @@ internal sealed class ChatWithSessionAgentCommandHandler : IStreamingQueryHandle
         try
         {
             await foreach (var chunk in _llmService.GenerateCompletionStreamAsync(
-                assembled.SystemPrompt,
+                systemPrompt,
                 assembled.UserPrompt,
                 RequestSource.AgentTask,
                 cancellationToken).ConfigureAwait(false))

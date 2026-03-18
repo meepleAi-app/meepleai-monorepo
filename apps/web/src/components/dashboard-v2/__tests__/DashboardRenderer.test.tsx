@@ -1,4 +1,6 @@
 import { render, screen } from '@testing-library/react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import React from 'react';
 import { describe, it, expect, vi, type Mock } from 'vitest';
 
 import { DashboardRenderer } from '../DashboardRenderer';
@@ -13,6 +15,26 @@ vi.mock('../useDashboardMode', () => ({
 }));
 
 // ---------------------------------------------------------------------------
+// Mock useDashboardSearchStore — avoids zustand store dependency
+// ---------------------------------------------------------------------------
+vi.mock('@/stores/useDashboardSearchStore', () => ({
+  useDashboardSearchStore: () => ({
+    selectedGame: null,
+    setSelectedGame: vi.fn(),
+    openChatDrawer: vi.fn(),
+    drawerState: null,
+    closeChatDrawer: vi.fn(),
+  }),
+}));
+
+// ---------------------------------------------------------------------------
+// Mock AddToLibraryModal — avoids query client dependency
+// ---------------------------------------------------------------------------
+vi.mock('../AddToLibraryModal', () => ({
+  AddToLibraryModal: () => null,
+}));
+
+// ---------------------------------------------------------------------------
 // Mock zone components — avoids their internal dependencies
 // ---------------------------------------------------------------------------
 vi.mock('../zones', () => ({
@@ -22,6 +44,13 @@ vi.mock('../zones', () => ({
   AgentsSidebar: () => <div data-testid="agents-sidebar">AgentsSidebar</div>,
   SessionBar: () => <div data-testid="session-bar">SessionBar</div>,
   ScoreboardZone: () => <div data-testid="scoreboard-zone">ScoreboardZone</div>,
+}));
+
+// ---------------------------------------------------------------------------
+// Mock ExtraMeepleCardDrawer — avoids heavy component dependency
+// ---------------------------------------------------------------------------
+vi.mock('@/components/ui/data-display/extra-meeple-card', () => ({
+  ExtraMeepleCardDrawer: () => null,
 }));
 
 // ---------------------------------------------------------------------------
@@ -80,18 +109,28 @@ function mockGameMode() {
 }
 
 // ---------------------------------------------------------------------------
+// Render helper with QueryClientProvider
+// ---------------------------------------------------------------------------
+function renderWithProviders(ui: React.ReactElement) {
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+  return render(<QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>);
+}
+
+// ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
 describe('DashboardRenderer', () => {
   it('renders the dashboard-renderer root element', () => {
     mockExploration();
-    render(<DashboardRenderer />);
+    renderWithProviders(<DashboardRenderer />);
     expect(screen.getByTestId('dashboard-renderer')).toBeInTheDocument();
   });
 
   it('shows exploration zones when state is exploration', () => {
     mockExploration();
-    render(<DashboardRenderer />);
+    renderWithProviders(<DashboardRenderer />);
 
     expect(screen.getByTestId('hero-zone')).toBeInTheDocument();
     expect(screen.getByTestId('stats-zone')).toBeInTheDocument();
@@ -101,7 +140,7 @@ describe('DashboardRenderer', () => {
 
   it('shows game mode zones when state is gameMode', () => {
     mockGameMode();
-    render(<DashboardRenderer />);
+    renderWithProviders(<DashboardRenderer />);
 
     expect(screen.getByTestId('session-bar')).toBeInTheDocument();
     expect(screen.getByTestId('scoreboard-zone')).toBeInTheDocument();
@@ -109,7 +148,7 @@ describe('DashboardRenderer', () => {
 
   it('does not show exploration zones in gameMode', () => {
     mockGameMode();
-    render(<DashboardRenderer />);
+    renderWithProviders(<DashboardRenderer />);
 
     expect(screen.queryByTestId('hero-zone')).not.toBeInTheDocument();
     expect(screen.queryByTestId('stats-zone')).not.toBeInTheDocument();
@@ -118,7 +157,7 @@ describe('DashboardRenderer', () => {
 
   it('does not show game mode zones in exploration', () => {
     mockExploration();
-    render(<DashboardRenderer />);
+    renderWithProviders(<DashboardRenderer />);
 
     expect(screen.queryByTestId('session-bar')).not.toBeInTheDocument();
     expect(screen.queryByTestId('scoreboard-zone')).not.toBeInTheDocument();

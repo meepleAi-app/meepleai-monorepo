@@ -76,7 +76,7 @@ etc.";
             yield break;
         }
 
-        _logger.LogInformation("Starting streaming setup guide generation for game {GameId}", query.GameId);
+        _logger.LogInformation("Starting streaming setup guide generation for game {GameId} with {PlayerCount} players", query.GameId, query.PlayerCount);
 
         // Emit initial state update
         yield return CreateEvent(StreamingEventType.StateUpdate,
@@ -86,7 +86,7 @@ etc.";
         cancellationToken.ThrowIfCancellationRequested();
 
         // Generate setup guide using internal method (no yield in try-catch)
-        var result = await GenerateSetupGuideInternalAsync(query.GameId, cancellationToken).ConfigureAwait(false);
+        var result = await GenerateSetupGuideInternalAsync(query.GameId, query.PlayerCount, cancellationToken).ConfigureAwait(false);
 
         if (!result.Success)
         {
@@ -125,6 +125,7 @@ etc.";
     /// </summary>
     private async Task<SetupGuideGenerationResult> GenerateSetupGuideInternalAsync(
         string gameId,
+        int playerCount,
         CancellationToken cancellationToken)
     {
         try
@@ -147,7 +148,7 @@ etc.";
 
             // Step 3: Generate setup steps with LLM
             var (llmSuccess, steps, tokenUsage) = await GenerateLlmSetupStepsAsync(
-                gameId, context!, allReferences!, cancellationToken).ConfigureAwait(false);
+                gameId, playerCount, context!, allReferences!, cancellationToken).ConfigureAwait(false);
             if (!llmSuccess)
             {
                 return SetupGuideGenerationResult.CreateDefault();
@@ -225,15 +226,30 @@ etc.";
     /// </summary>
     private async Task<(bool success, List<SetupGuideStep>? steps, (int TotalTokens, int PromptTokens, int CompletionTokens) tokenUsage)> GenerateLlmSetupStepsAsync(
         string gameId,
+        int playerCount,
         string context,
         List<Snippet> allReferences,
         CancellationToken cancellationToken)
     {
         var systemPrompt = await GetSetupGuideSystemPromptAsync(cancellationToken).ConfigureAwait(false);
+
+        var playerCountInstruction = playerCount > 0
+            ? $@"
+
+PLAYER COUNT: {playerCount} players
+ADDITIONAL REQUIREMENTS:
+- Provide the complete list of all components needed for {playerCount} players
+- Adapt quantities and distribution of materials for exactly {playerCount} players
+- Include step-by-step setup procedure specific to {playerCount} players
+- Respond in structured format with components and steps:
+  Components: list each component with name and quantity needed for {playerCount} players
+  Steps: numbered setup steps adapted to {playerCount} players"
+            : "";
+
         var userPrompt = $@"CONTEXT FROM RULEBOOK:
 {context}
 
-TASK: Generate a step-by-step setup guide for this board game. Focus on the initial setup before gameplay begins.";
+TASK: Generate a step-by-step setup guide for this board game. Focus on the initial setup before gameplay begins.{playerCountInstruction}";
 
         var llmResult = await _llmService.GenerateCompletionAsync(systemPrompt, userPrompt, RequestSource.Manual, cancellationToken).ConfigureAwait(false);
 

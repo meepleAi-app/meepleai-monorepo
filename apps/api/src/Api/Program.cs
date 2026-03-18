@@ -12,6 +12,7 @@ using Api.Routing;
 using Api.Routing.GameManagement;
 using Api.BoundedContexts.GameManagement.Routing; // Issue #4273
 using Api.BoundedContexts.Administration.Infrastructure.DependencyInjection;
+using Api.BoundedContexts.AgentMemory.Infrastructure.DependencyInjection;
 using Api.BoundedContexts.Authentication.Infrastructure.DependencyInjection;
 using Api.BoundedContexts.BusinessSimulations.Infrastructure.DependencyInjection;
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.DependencyInjection;
@@ -339,6 +340,9 @@ builder.Services.AddGamificationContext();
 // Issue #3720: BusinessSimulations bounded context (financial ledger, simulations)
 builder.Services.AddBusinessSimulationsContext();
 
+// AgentMemory bounded context (game/group/player memory for AI agents)
+builder.Services.AddAgentMemoryContext();
+
 // ISSUE-2370: SharedGameCatalog bounded context
 // ISSUE-2454: Background processing configuration
 builder.Services.AddSharedGameCatalogContext(builder.Configuration);
@@ -578,6 +582,7 @@ v1Api.MapRuleConflictFaqEndpoints(); // ISSUE-3966: Rule conflict FAQ management
 v1Api.MapSessionTrackingEndpoints(); // GST-003: Session tracking real-time collaboration
 v1Api.MapSessionStatisticsEndpoints(); // P4: Session analytics dashboard
 v1Api.MapSharedGameCatalogEndpoints(); // ISSUE-2371: Shared game catalog Phase 2
+v1Api.MapAgentMemoryEndpoints(); // AgentMemory: group, game memory, player stats endpoints
 app.MapAdminGameImportWizardEndpoints(); // Issue #4157: Admin game import wizard
 v1Api.MapAdminGameWizardEndpoints();    // Admin Game+PDF+Agent Wizard
 v1Api.MapAdminSharedGameContentEndpoints(); // Issue #236: Admin shared game content + MAU monitoring

@@ -160,7 +160,7 @@ describe('HeroZone', () => {
 
     renderWithProviders(<HeroZone />);
 
-    expect(screen.getByText(/Aggiungi il tuo primo gioco/)).toBeInTheDocument();
+    expect(screen.getByText(/Cerca un gioco/)).toBeInTheDocument();
   });
 
   it('shows stats summary for existing user', () => {
@@ -183,6 +183,6 @@ describe('HeroZone', () => {
 
     renderWithProviders(<HeroZone />);
 
-    expect(screen.queryByText(/Aggiungi il tuo primo gioco/)).not.toBeInTheDocument();
+    expect(screen.queryByTestId('hero-search-cta')).not.toBeInTheDocument();
   });
 });

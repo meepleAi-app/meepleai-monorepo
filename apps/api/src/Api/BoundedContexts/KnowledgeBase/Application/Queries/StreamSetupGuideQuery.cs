@@ -9,6 +9,8 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Queries;
 /// AI-03: RAG-based setup guide generation with streaming delivery
 /// </summary>
 /// <param name="GameId">The game ID to generate setup guide for</param>
+/// <param name="PlayerCount">Number of players (0 = generic setup, >0 = adapted to player count)</param>
 internal record StreamSetupGuideQuery(
-    string GameId
+    string GameId,
+    int PlayerCount = 0
 ) : IStreamingQuery<RagStreamingEvent>;

@@ -48,7 +48,7 @@ export function AlphaShellClient({ children, isAdmin }: AlphaShellClientProps) {
 
   return (
     <div className="flex h-dvh bg-background">
-      <AlphaDesktopSidebar isAdmin={isAdmin} className="hidden lg:flex" />
+      <AlphaDesktopSidebar isAdmin={isAdmin} />
 
       <div className="flex flex-col flex-1 min-w-0">
         <AlphaTopNav isAdmin={isAdmin} scrollContainerRef={mainRef} />

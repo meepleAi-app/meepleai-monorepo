@@ -74,7 +74,7 @@ export function SwipeableContainer({ children }: SwipeableContainerProps) {
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.25, ease: 'easeOut' }}
-          className="absolute inset-0 overflow-y-auto h-full"
+          className="absolute inset-0 overflow-y-auto h-full pb-16 lg:pb-0"
         >
           {activeChild}
         </motion.div>

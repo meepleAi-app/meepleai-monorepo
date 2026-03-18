@@ -34,7 +34,7 @@ const SIDEBAR_TABS: SidebarTabConfig[] = [
     label: 'Home',
     sectionTitle: 'Home',
     icon: House,
-    colorVar: 'var(--primary)',
+    colorVar: 'hsl(var(--primary))',
   },
   {
     id: 'library',

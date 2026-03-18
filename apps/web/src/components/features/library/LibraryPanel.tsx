@@ -76,7 +76,7 @@ export function LibraryPanel() {
               entityColor={entityColors.game.hsl}
             />
           ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 mt-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mt-4">
               {libraryItems.map(entry => (
                 <MeepleCard
                   key={entry.gameId}
@@ -119,7 +119,7 @@ export function LibraryPanel() {
               entityColor={entityColors.game.hsl}
             />
           ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
               {catalogItems.map(game => (
                 <MeepleCard
                   key={game.id}
@@ -157,7 +157,7 @@ export function LibraryPanel() {
               entityColor="350 89% 60%"
             />
           ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 mt-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mt-4">
               {wishlistItems.map(item => (
                 <MeepleCard
                   key={item.id}

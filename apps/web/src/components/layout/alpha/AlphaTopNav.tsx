@@ -7,16 +7,17 @@
  * - Sticky header with glassmorphism styling
  * - Left: MeepleAI logo linking to /dashboard
  * - Center: dynamic section title from alphaNavStore
- * - Right: notification bell + user avatar dropdown
+ * - Right: NotificationBell (unread badge + sheet) + user avatar dropdown
  * - Mobile: hides on scroll down, shows on scroll up
  * - Desktop: always visible
  */
 
 import { useRef } from 'react';
 
-import { Bell, LogOut, Settings, Shield, User } from 'lucide-react';
+import { LogOut, Settings, Shield, User } from 'lucide-react';
 import Link from 'next/link';
 
+import { NotificationBell } from '@/components/notifications';
 import { Avatar, AvatarFallback } from '@/components/ui/data-display/avatar';
 import {
   DropdownMenu,
@@ -71,15 +72,8 @@ export function AlphaTopNav({ isAdmin, scrollContainerRef }: AlphaTopNavProps) {
 
       {/* Right: Notification bell + User avatar */}
       <div className="flex items-center gap-2 shrink-0">
-        {/* Notification bell */}
-        <button
-          type="button"
-          className="relative flex items-center justify-center w-9 h-9 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
-          aria-label="Notifications"
-        >
-          <Bell className="w-4 h-4" />
-          {/* Badge placeholder — wire to real notification count later */}
-        </button>
+        {/* Notification bell with unread badge + NotificationCenter sheet */}
+        <NotificationBell />
 
         {/* User avatar dropdown */}
         <DropdownMenu>

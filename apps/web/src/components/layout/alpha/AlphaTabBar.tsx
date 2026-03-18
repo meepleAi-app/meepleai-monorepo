@@ -35,7 +35,7 @@ const TABS: TabConfig[] = [
     sectionTitle: 'Home',
     icon: House,
     // No entity-custom exists; use primary accent
-    colorVar: 'var(--primary)',
+    colorVar: 'hsl(var(--primary))',
   },
   {
     id: 'library',

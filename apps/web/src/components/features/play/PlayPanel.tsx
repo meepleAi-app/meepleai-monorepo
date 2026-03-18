@@ -83,7 +83,7 @@ export function PlayPanel() {
               entityColor={entityColors.session.hsl}
             />
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mt-4">
               {active.map(session => (
                 <MeepleCard
                   key={session.id}
@@ -131,7 +131,7 @@ export function PlayPanel() {
               entityColor={entityColors.session.hsl}
             />
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mt-4">
               {history.map(session => (
                 <MeepleCard
                   key={session.id}

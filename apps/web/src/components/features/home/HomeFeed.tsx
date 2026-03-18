@@ -56,7 +56,7 @@ export function HomeFeed() {
             entityColor={entityColors.session.hsl}
           />
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
             {sessions.map(session => (
               <MeepleCard
                 key={session.id}
@@ -100,7 +100,7 @@ export function HomeFeed() {
             entityColor={entityColors.game.hsl}
           />
         ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {games.map(entry => (
               <MeepleCard
                 key={entry.gameId}
@@ -134,7 +134,7 @@ export function HomeFeed() {
             entityColor={entityColors.event.hsl}
           />
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
             {nights.map(night => (
               <MeepleCard
                 key={night.id}
@@ -177,7 +177,7 @@ export function HomeFeed() {
             entityColor={entityColors.chatSession.hsl}
           />
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
             {chats.map(chat => (
               <MeepleCard
                 key={chat.id}

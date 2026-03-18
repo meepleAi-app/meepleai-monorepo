@@ -261,7 +261,7 @@ public class UserRepository : RepositoryBase, IUserRepository
         var isPendingUser = string.IsNullOrWhiteSpace(entity.PasswordHash);
         var passwordHash = isPendingUser
             ? PasswordHash.Create("TemporaryPlaceholder123!") // Placeholder for constructor; overridden below
-            : PasswordHash.FromStored(entity.PasswordHash);
+            : PasswordHash.FromStored(entity.PasswordHash!);
         var role = Role.Parse(entity.Role);
         var tier = !string.IsNullOrWhiteSpace(entity.Tier) ? UserTier.Parse(entity.Tier) : UserTier.Free;
         var displayName = string.IsNullOrWhiteSpace(entity.DisplayName)

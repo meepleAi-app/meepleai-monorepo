@@ -95,6 +95,8 @@ services:
       LOCAL_EMBEDDING_URL: http://embedding-service:8000
       Embedding__LocalServiceUrl: http://embedding-service:8000
       RERANKER_URL: http://reranker-service:8003
+      EMBEDDING_MODEL: intfloat/multilingual-e5-base
+      Embedding__Dimensions: 768
       Authentication__OAuth__CallbackBaseUrl: "https://${PROD_DOMAIN}"
       FrontendUrl: "https://${PROD_DOMAIN}"
       Authentication__SessionCookie__Secure: "true"
@@ -127,6 +129,7 @@ services:
       NODE_ENV: production
       NEXT_PUBLIC_API_BASE: "https://${PROD_DOMAIN}"
       NEXT_PUBLIC_APP_URL: "https://${PROD_DOMAIN}"
+      API_BASE_URL: http://api:8080
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.web.rule=Host(`${PROD_DOMAIN}`)"

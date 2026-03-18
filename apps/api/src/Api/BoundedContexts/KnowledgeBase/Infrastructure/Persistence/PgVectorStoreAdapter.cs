@@ -328,7 +328,7 @@ internal sealed class PgVectorStoreAdapter : IQdrantVectorStoreAdapter
 
     public async Task EnsureCollectionExistsAsync(
         Guid gameId,
-        int vectorDimension = 1024,
+        int vectorDimension = 768,
         CancellationToken cancellationToken = default)
     {
         var connection = _context.Database.GetDbConnection();

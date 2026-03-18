@@ -392,6 +392,8 @@ function AgentChatTab({
   isFullscreen,
   onFullscreenToggle,
 }: AgentChatTabProps) {
+  const [threadError, setThreadError] = useState<string | null>(null);
+  const [creatingThread, setCreatingThread] = useState(false);
   // Loading status
   if (readinessLoading) {
     return (
@@ -490,7 +492,10 @@ function AgentChatTab({
         <Button
           variant="default"
           size="sm"
+          disabled={creatingThread}
           onClick={async () => {
+            setThreadError(null);
+            setCreatingThread(true);
             try {
               const thread = await api.chat.createThread({
                 agentId,
@@ -499,14 +504,34 @@ function AgentChatTab({
               if (thread?.id) {
                 onThreadCreated(thread.id);
               }
-            } catch {
-              // Handle error silently
+            } catch (err) {
+              const message =
+                err instanceof Error ? err.message : 'Impossibile creare la conversazione';
+              setThreadError(message);
+            } finally {
+              setCreatingThread(false);
             }
           }}
           className="rounded-full"
         >
-          Inizia Conversazione
+          {creatingThread ? (
+            <>
+              <Loader2 className="mr-1.5 h-4 w-4 animate-spin" aria-hidden="true" />
+              Creazione...
+            </>
+          ) : (
+            'Inizia Conversazione'
+          )}
         </Button>
+        {threadError && (
+          <p
+            className="mt-2 max-w-xs font-nunito text-xs text-red-600"
+            role="alert"
+            data-testid="thread-creation-error"
+          >
+            {threadError}
+          </p>
+        )}
       </div>
     );
   }

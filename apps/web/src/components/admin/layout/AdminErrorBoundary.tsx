@@ -26,7 +26,7 @@ export class AdminErrorBoundary extends Component<Props, State> {
     return { hasError: true, error };
   }
 
-  componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+  componentDidCatch(error: Error, _errorInfo: ErrorInfo) {
     logger.error(`[AdminErrorBoundary] ${error.message}`, error);
   }
 

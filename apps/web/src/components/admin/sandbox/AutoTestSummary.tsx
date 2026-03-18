@@ -10,7 +10,7 @@ interface AutoTestSummaryProps {
   results: AutoTestResult[];
 }
 
-function getScoreBadgeStyle(passed: number, total: number): string {
+function getScoreBadgeStyle(passed: number, _total: number): string {
   if (passed >= 6) return 'border-green-400 bg-green-50 text-green-700';
   if (passed >= 4) return 'border-amber-400 bg-amber-50 text-amber-700';
   return 'border-red-400 bg-red-50 text-red-700';

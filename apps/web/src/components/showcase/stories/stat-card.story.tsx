@@ -5,7 +5,7 @@
 
 'use client';
 
-import { Users, GamepadIcon, Brain, TrendingUp } from 'lucide-react';
+import { Users } from 'lucide-react';
 
 import { StatCard } from '@/components/ui/data-display/stat-card';
 
@@ -18,13 +18,6 @@ type StatCardShowcaseProps = {
   trendValue: string;
   variant: string;
   loading: boolean;
-};
-
-const ICON_MAP: Record<string, typeof Users> = {
-  Users,
-  GamepadIcon,
-  Brain,
-  TrendingUp,
 };
 
 export const statCardStory: ShowcaseStory<StatCardShowcaseProps> = {

@@ -39,7 +39,7 @@ export function ClaimGuestGames() {
     try {
       const results = await api.agentMemory.getClaimableGuests(trimmed);
       setGuests(results);
-    } catch (err) {
+    } catch (_err) {
       setError('Failed to search for guests');
     } finally {
       setSearching(false);
@@ -58,7 +58,7 @@ export function ClaimGuestGames() {
     try {
       await api.agentMemory.claimGuest(playerMemoryId);
       setClaimedIds(prev => new Set(prev).add(playerMemoryId));
-    } catch (err) {
+    } catch (_err) {
       setError('Failed to claim guest identity');
     } finally {
       setClaimingId(null);

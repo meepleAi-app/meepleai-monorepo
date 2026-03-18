@@ -18,7 +18,7 @@ interface StepPercentiles {
   p99: number;
 }
 
-interface ProcessingMetrics {
+interface ProcessingMetricsData {
   averages: Record<string, StepAverages>;
   percentiles: Record<string, StepPercentiles>;
   lastUpdated: string;
@@ -57,7 +57,7 @@ export function ProcessingMetrics() {
     isRefetching,
   } = useQuery({
     queryKey: ['admin', 'processing', 'metrics'],
-    queryFn: () => apiClient.admin.getProcessingMetrics() as Promise<ProcessingMetrics | null>,
+    queryFn: () => apiClient.admin.getProcessingMetrics() as Promise<ProcessingMetricsData | null>,
     staleTime: 60_000,
     refetchInterval: 60_000,
   });

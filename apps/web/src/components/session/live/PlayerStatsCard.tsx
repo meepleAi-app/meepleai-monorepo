@@ -53,7 +53,7 @@ export function PlayerStatsCard({ userId, gameId }: PlayerStatsCardProps) {
         if (!cancelled) {
           setStats(data);
         }
-      } catch (err) {
+      } catch (_err) {
         if (!cancelled) {
           setError('Failed to load player stats');
         }

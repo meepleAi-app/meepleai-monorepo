@@ -14,7 +14,6 @@
 import { useState } from 'react';
 
 import { BookOpen, Search, Heart } from 'lucide-react';
-import { useRouter } from 'next/navigation';
 
 import { EmptyStateCard, SkeletonCardGrid } from '@/components/features/common';
 import { MeepleCard, entityColors } from '@/components/ui/data-display/meeple-card';
@@ -25,7 +24,6 @@ import { useWishlist } from '@/hooks/queries/useWishlist';
 import { useAlphaNav } from '@/hooks/useAlphaNav';
 
 export function LibraryPanel() {
-  const router = useRouter();
   const { openDetail } = useAlphaNav();
   const [activeTab, setActiveTab] = useState('my-games');
   const [catalogSearch, setCatalogSearch] = useState('');

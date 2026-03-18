@@ -95,6 +95,8 @@ services:
       LOCAL_EMBEDDING_URL: http://embedding-service:8000
       Embedding__LocalServiceUrl: http://embedding-service:8000
       RERANKER_URL: http://reranker-service:8003
+      EMBEDDING_MODEL: intfloat/multilingual-e5-base
+      Embedding__Dimensions: 768
       Authentication__OAuth__CallbackBaseUrl: "https://${PROD_DOMAIN}"
       FrontendUrl: "https://${PROD_DOMAIN}"
       Authentication__SessionCookie__Secure: "true"

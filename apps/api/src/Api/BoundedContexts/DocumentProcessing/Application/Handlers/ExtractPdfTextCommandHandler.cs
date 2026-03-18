@@ -67,8 +67,7 @@ internal class ExtractPdfTextCommandHandler : ICommandHandler<ExtractPdfTextComm
 
         try
         {
-            // 3. Update status to processing (both deprecated + 7-state)
-            pdf.ProcessingStatus = "processing";
+            // 3. Update status to processing
             pdf.ProcessingState = "Extracting";
             pdf.ExtractingStartedAt = _timeProvider.GetUtcNow().UtcDateTime;
             await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
@@ -84,7 +83,6 @@ internal class ExtractPdfTextCommandHandler : ICommandHandler<ExtractPdfTextComm
             {
                 _logger.LogError("Text extraction failed for PDF {PdfId}: {Error}",
                     pdfId, extractResult.ErrorMessage);
-                pdf.ProcessingStatus = "failed";
                 pdf.ProcessingState = "Failed";
                 pdf.ProcessingError = extractResult.ErrorMessage;
                 pdf.ProcessedAt = _timeProvider.GetUtcNow().UtcDateTime;
@@ -104,7 +102,6 @@ internal class ExtractPdfTextCommandHandler : ICommandHandler<ExtractPdfTextComm
             pdf.ExtractedText = fullText;
             pdf.PageCount = extractResult.TotalPages;
             pdf.CharacterCount = extractResult.TotalCharacters;
-            pdf.ProcessingStatus = "completed";
             pdf.ProcessingState = "Ready";
             pdf.ProcessingError = null;
             pdf.ProcessedAt = _timeProvider.GetUtcNow().UtcDateTime;
@@ -116,7 +113,7 @@ internal class ExtractPdfTextCommandHandler : ICommandHandler<ExtractPdfTextComm
             // Verify data was actually saved
             var verifyPdf = await _db.PdfDocuments.AsNoTracking().FirstOrDefaultAsync(p => p.Id == pdfId, cancellationToken).ConfigureAwait(false);
             _logger.LogInformation("🔍 [EXTRACT-DEBUG] Verification query: Status={Status}, PageCount={Pages}, HasText={HasText}",
-                verifyPdf?.ProcessingStatus, verifyPdf?.PageCount, verifyPdf?.ExtractedText != null);
+                verifyPdf?.ProcessingState, verifyPdf?.PageCount, verifyPdf?.ExtractedText != null);
 
             _logger.LogInformation("Text extraction completed for PDF {PdfId}: {PageCount} pages, {CharCount} characters",
                 pdfId, extractResult.TotalPages, extractResult.TotalCharacters);

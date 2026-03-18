@@ -30,4 +30,27 @@ describe('AIQuickViewContent', () => {
     const matches = screen.getAllByText(/catan/i);
     expect(matches.length).toBeGreaterThan(0);
   });
+
+  it('shows game-mode prompts by default', () => {
+    render(<AIQuickViewContent gameId="g1" gameName="Catan" />);
+    expect(screen.getByText(/spiega le regole/i)).toBeInTheDocument();
+    expect(screen.queryByText(/riassumi il turno/i)).not.toBeInTheDocument();
+  });
+
+  it('shows session-mode prompts when mode is session', () => {
+    render(<AIQuickViewContent gameId="g1" gameName="Catan" mode="session" sessionId="s1" />);
+    expect(screen.getByText(/riassumi il turno/i)).toBeInTheDocument();
+    expect(screen.getByText(/chi sta vincendo/i)).toBeInTheDocument();
+    expect(screen.queryByText(/spiega le regole/i)).not.toBeInTheDocument();
+  });
+
+  it('shows session context label in session mode', () => {
+    render(<AIQuickViewContent gameId="g1" gameName="Catan" mode="session" sessionId="s1" />);
+    expect(screen.getByText(/sessione live/i)).toBeInTheDocument();
+  });
+
+  it('shows AI assistant label in game mode', () => {
+    render(<AIQuickViewContent gameId="g1" gameName="Catan" mode="game" />);
+    expect(screen.getByText(/ai assistente/i)).toBeInTheDocument();
+  });
 });

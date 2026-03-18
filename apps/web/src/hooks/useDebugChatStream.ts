@@ -32,6 +32,11 @@ const StreamingEventType = {
   DebugSearchDetails: 18,
   DebugCacheCheck: 19,
   DebugDocumentCheck: 20,
+  // RAG Enhancement debug events
+  DebugAdaptiveRouting: 23,
+  DebugCragEvaluation: 24,
+  DebugRagFusion: 25,
+  DebugContextWindow: 26,
 } as const;
 
 /** Human-readable labels for debug event types */
@@ -47,6 +52,10 @@ const DEBUG_EVENT_LABELS: Record<number, string> = {
   [StreamingEventType.DebugSearchDetails]: 'Search Details',
   [StreamingEventType.DebugCacheCheck]: 'Cache Check',
   [StreamingEventType.DebugDocumentCheck]: 'Document Check',
+  [StreamingEventType.DebugAdaptiveRouting]: 'Adaptive Routing',
+  [StreamingEventType.DebugCragEvaluation]: 'CRAG Evaluation',
+  [StreamingEventType.DebugRagFusion]: 'RAG-Fusion',
+  [StreamingEventType.DebugContextWindow]: 'Context Window',
 };
 
 export interface DebugEvent {
@@ -84,11 +93,14 @@ export interface DebugChatStreamState {
 }
 
 export interface DebugChatStreamCallbacks {
-  onComplete?: (answer: string, metadata: {
-    totalTokens: number;
-    chatThreadId: string | null;
-    debugEvents: DebugEvent[];
-  }) => void;
+  onComplete?: (
+    answer: string,
+    metadata: {
+      totalTokens: number;
+      chatThreadId: string | null;
+      debugEvents: DebugEvent[];
+    }
+  ) => void;
   onError?: (error: string) => void;
   onDebugEvent?: (event: DebugEvent) => void;
 }
@@ -103,6 +115,15 @@ const INITIAL_STATE: DebugChatStreamState = {
   totalTokens: 0,
   debugEvents: [],
 };
+
+export interface DebugChatConfigOverride {
+  denseWeight?: number;
+  topK?: number;
+  rerankingEnabled?: boolean;
+  temperature?: number;
+  maxTokens?: number;
+  model?: string;
+}
 
 export function useDebugChatStream(callbacks?: DebugChatStreamCallbacks) {
   const [state, setState] = useState<DebugChatStreamState>(INITIAL_STATE);
@@ -127,7 +148,15 @@ export function useDebugChatStream(callbacks?: DebugChatStreamCallbacks) {
   }, [stopStreaming]);
 
   const sendMessage = useCallback(
-    (gameId: string, query: string, strategyOverride?: string, threadId?: string) => {
+    (
+      gameId: string,
+      query: string,
+      strategyOverride?: string,
+      threadId?: string,
+      configOverride?: DebugChatConfigOverride,
+      documentIds?: string[],
+      includePrompts?: boolean
+    ) => {
       stopStreaming();
 
       const requestId = Date.now();
@@ -150,6 +179,9 @@ export function useDebugChatStream(callbacks?: DebugChatStreamCallbacks) {
       const body: Record<string, unknown> = { gameId, query };
       if (threadId) body.chatId = threadId;
       if (strategyOverride) body.strategyOverride = strategyOverride;
+      if (configOverride) body.configOverride = configOverride;
+      if (documentIds && documentIds.length > 0) body.documentIds = documentIds;
+      if (includePrompts) body.includePrompts = true;
 
       fetch(url, {
         method: 'POST',
@@ -262,14 +294,11 @@ export function useDebugChatStream(callbacks?: DebugChatStreamCallbacks) {
                       statusMessage: null,
                     };
 
-                    callbacksRef.current?.onComplete?.(
-                      finalState.currentAnswer,
-                      {
-                        totalTokens: finalState.totalTokens,
-                        chatThreadId: finalState.chatThreadId,
-                        debugEvents: finalState.debugEvents,
-                      }
-                    );
+                    callbacksRef.current?.onComplete?.(finalState.currentAnswer, {
+                      totalTokens: finalState.totalTokens,
+                      chatThreadId: finalState.chatThreadId,
+                      debugEvents: finalState.debugEvents,
+                    });
 
                     return finalState;
                   });

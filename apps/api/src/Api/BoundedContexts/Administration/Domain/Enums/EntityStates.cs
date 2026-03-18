@@ -36,12 +36,3 @@ public enum DocumentProcessingState
     Failed
 }
 
-/// <summary>
-/// User account status
-/// </summary>
-public enum UserAccountStatus
-{
-    Active,
-    Suspended,
-    Banned
-}

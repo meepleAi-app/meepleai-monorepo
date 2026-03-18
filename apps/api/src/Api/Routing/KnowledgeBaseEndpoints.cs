@@ -5,6 +5,7 @@ using Api.BoundedContexts.KnowledgeBase.Application.ContextEngineering.Queries;
 using Api.BoundedContexts.KnowledgeBase.Application.DTOs;
 using Api.BoundedContexts.KnowledgeBase.Application.Handlers;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries;
+using Api.BoundedContexts.KnowledgeBase.Application.Queries.GetGameDocuments;
 using Api.Extensions;
 using Api.Helpers;
 using Api.Infrastructure.Entities;
@@ -35,6 +36,8 @@ internal static class KnowledgeBaseEndpoints
         MapChatMessageEndpoints(group);
         MapChatExportEndpoints(group);
         MapContextEngineeringEndpoints(group);
+        MapGameDocumentsEndpoint(group);
+        MapLinkKbEndpoint(group);
 
         return group;
     }
@@ -235,7 +238,9 @@ internal static class KnowledgeBaseEndpoints
             TopK: req.topK ?? 5,
             MinScore: req.minScore ?? 0.55,
             SearchMode: req.searchMode ?? "hybrid",
-            Language: req.language ?? "en"
+            Language: req.language ?? "en",
+            UserId: session!.User!.Id,
+            UserRole: session.User!.Role
         );
 
         var results = await mediator.Send(query, ct).ConfigureAwait(false);
@@ -287,7 +292,9 @@ internal static class KnowledgeBaseEndpoints
             GameId: gameId,
             Question: req.query!,  // Already validated by QueryValidator above
             Language: req.language ?? "en",
-            BypassCache: req.bypassCache ?? false
+            BypassCache: req.bypassCache ?? false,
+            UserId: session!.User!.Id,
+            UserRole: session.User!.Role
         );
 
         logger.LogDebug("[KnowledgeBase.Ask] Sending AskQuestionQuery to mediator...");
@@ -470,7 +477,9 @@ internal static class KnowledgeBaseEndpoints
             Title: req.Title,
             InitialMessage: req.InitialMessage,
             AgentId: req.AgentId,
-            AgentType: req.AgentType // Issue #4362
+            AgentType: req.AgentType, // Issue #4362
+            UserRole: session.User!.Role,
+            SelectedKnowledgeBaseIds: req.SelectedKnowledgeBaseIds
         );
 
         var result = await mediator.Send(command, ct).ConfigureAwait(false);
@@ -842,6 +851,68 @@ internal static class KnowledgeBaseEndpoints
 
         return Results.Ok(result);
     }
+
+    private static void MapGameDocumentsEndpoint(RouteGroupBuilder group)
+    {
+        group.MapGet("/knowledge-base/{gameId:guid}/documents", HandleGetGameDocuments)
+            .WithName("GetGameDocuments")
+            .RequireSession()
+            .WithTags("KnowledgeBase")
+            .WithSummary("Get KB documents for a game")
+            .WithDescription("Returns the list of KB documents linked to a game, ordered by creation date descending.")
+            .Produces<IReadOnlyList<GameDocumentDto>>()
+            .Produces(StatusCodes.Status401Unauthorized);
+    }
+
+    private static void MapLinkKbEndpoint(RouteGroupBuilder group)
+    {
+        group.MapPost("/games/{gameId:guid}/knowledge-base/link", HandleLinkKb)
+            .WithName("LinkExistingKbToGame")
+            .RequireSession()
+            .WithTags("KnowledgeBase")
+            .WithSummary("Link an existing KB to a game")
+            .WithDescription("Creates a VectorDocument clone linking an existing processed PDF to a different game. The pgvector embeddings are shared.");
+    }
+
+    private static async Task<IResult> HandleLinkKb(
+        Guid gameId,
+        LinkKbRequest request,
+        HttpContext context,
+        IMediator mediator,
+        CancellationToken ct)
+    {
+        var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
+
+        var result = await mediator.Send(new LinkExistingKbToGameCommand(
+            UserId: session.User!.Id,
+            TargetGameId: gameId,
+            SourcePdfDocumentId: request.PdfDocumentId), ct).ConfigureAwait(false);
+
+        return string.Equals(result.Status, "linked", StringComparison.Ordinal)
+            ? Results.Ok(result)
+            : Results.Accepted(value: result);
+    }
+
+    private static async Task<IResult> HandleGetGameDocuments(
+        Guid gameId,
+        HttpContext context,
+        IMediator mediator,
+        ILogger<Program> logger,
+        CancellationToken ct)
+    {
+        var session = context.Items[nameof(SessionStatusDto)] as SessionStatusDto;
+        if (session?.User?.Id is not Guid userId)
+        {
+            return Results.Unauthorized();
+        }
+
+        logger.LogDebug("GetGameDocuments for game {GameId} by user {UserId}", gameId, userId);
+
+        var query = new GetGameDocumentsQuery(gameId, userId);
+        var result = await mediator.Send(query, ct).ConfigureAwait(false);
+
+        return Results.Ok(result);
+    }
 }
 
 /// <summary>
@@ -884,3 +955,8 @@ internal record AssembleContextRequest(
     IDictionary<string, int>? MaxTokensPerSource = null,
     bool? IncludeEmbedding = null
 );
+
+/// <summary>
+/// Request model for linking an existing KB (processed PDF) to a different game.
+/// </summary>
+internal record LinkKbRequest(Guid PdfDocumentId);

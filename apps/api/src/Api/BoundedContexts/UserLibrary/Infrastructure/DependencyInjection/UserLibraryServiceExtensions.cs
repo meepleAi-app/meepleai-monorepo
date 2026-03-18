@@ -1,3 +1,4 @@
+using Api.BoundedContexts.UserLibrary.Application.EventHandlers;
 using Api.BoundedContexts.UserLibrary.Domain.Repositories;
 using Api.BoundedContexts.UserLibrary.Domain.Services;
 using Api.BoundedContexts.UserLibrary.Infrastructure.Persistence;
@@ -24,9 +25,14 @@ internal static class UserLibraryServiceExtensions
         services.AddScoped<IProposalMigrationRepository, ProposalMigrationRepository>(); // Issue #3666: Migration choice flow
         services.AddScoped<IWishlistRepository, WishlistRepository>(); // Issue #3917: Wishlist management
         services.AddScoped<IUserCollectionRepository, UserCollectionRepository>(); // Issue #4263: Generic user collections
+        services.AddScoped<IGameSuggestionRepository, GameSuggestionRepository>(); // Admin Invitation Flow: game suggestions
 
         // Register domain services
         services.AddScoped<IGameLibraryQuotaService, GameLibraryQuotaService>();
+
+        // Register event handlers (consumed by background services via DI scope)
+        services.AddScoped<GamePreAddedHandler>(); // Admin Invitation Flow: pre-add games to library
+        services.AddScoped<GameSuggestedHandler>(); // Admin Invitation Flow: create game suggestions
 
         // MediatR handlers are auto-registered via assembly scanning in Program.cs
 

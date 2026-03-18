@@ -205,6 +205,9 @@ export {
   emailTemplateKeys,
 } from './useEmailTemplates';
 
+// Feature Flags queries
+export { useUserFeatures, featureFlagKeys } from './useFeatureFlags';
+
 // Re-export from @tanstack/react-query for convenience
 export {
   useQuery,

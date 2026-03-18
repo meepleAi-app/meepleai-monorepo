@@ -1,4 +1,4 @@
-import { screen } from '@testing-library/react';
+import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
@@ -10,6 +10,14 @@ vi.mock('sonner', () => ({
   toast: {
     success: vi.fn(),
     error: vi.fn(),
+  },
+}));
+
+vi.mock('@/lib/api', () => ({
+  api: {
+    auth: {
+      saveInterests: vi.fn().mockResolvedValue({ ok: true, message: 'saved' }),
+    },
   },
 }));
 
@@ -87,6 +95,8 @@ describe('InterestsStep', () => {
     await user.click(screen.getByTestId('interest-strategy'));
     await user.click(screen.getByRole('button', { name: /continue/i }));
 
-    expect(onComplete).toHaveBeenCalled();
+    await waitFor(() => {
+      expect(onComplete).toHaveBeenCalled();
+    });
   });
 });

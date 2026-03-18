@@ -182,7 +182,8 @@ internal sealed class SearchSharedGamesQueryHandler : IRequestHandler<SearchShar
                 g.ThumbnailUrl,
                 (GameStatus)g.Status,
                 g.CreatedAt,
-                g.ModifiedAt))
+                g.ModifiedAt,
+                g.IsRagPublic))
             .ToListAsync(cancellationToken)
             .ConfigureAwait(false);
 

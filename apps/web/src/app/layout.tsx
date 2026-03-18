@@ -5,14 +5,10 @@
  * It wraps all pages with shared providers and global styles.
  *
  * Issue #1077: FE-IMP-001 - Bootstrap App Router + Shared Providers
- * Issue #1566: [P3] ⚛️ Implement HyperDX Browser SDK (Next.js)
- *
  * @see https://nextjs.org/docs/app/building-your-application/routing/layouts-and-pages
  */
 
-import { Quicksand, Nunito } from 'next/font/google';
-
-import { HyperDXProvider } from '@/components/HyperDXProvider';
+import { Quicksand, Inter } from 'next/font/google';
 
 import { AppProviders } from './providers';
 
@@ -31,10 +27,10 @@ const quicksand = Quicksand({
   display: 'swap',
 });
 
-const nunito = Nunito({
+const inter = Inter({
   subsets: ['latin'],
-  weight: ['300', '400', '600', '700'],
-  variable: '--font-nunito',
+  weight: ['400', '500', '600', '700'],
+  variable: '--font-inter',
   display: 'swap',
 });
 
@@ -70,10 +66,8 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="it" suppressHydrationWarning>
-      <body className={`${quicksand.variable} ${nunito.variable}`} suppressHydrationWarning>
-        <HyperDXProvider>
-          <AppProviders>{children}</AppProviders>
-        </HyperDXProvider>
+      <body className={`${quicksand.variable} ${inter.variable}`} suppressHydrationWarning>
+        <AppProviders>{children}</AppProviders>
       </body>
     </html>
   );

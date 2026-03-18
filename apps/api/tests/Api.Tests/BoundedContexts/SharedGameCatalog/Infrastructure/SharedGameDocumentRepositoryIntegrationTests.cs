@@ -287,7 +287,6 @@ public sealed class SharedGameDocumentRepositoryIntegrationTests : IAsyncLifetim
             ContentType = "application/pdf",
             UploadedByUserId = _testUserId,
             UploadedAt = DateTime.UtcNow,
-            ProcessingStatus = "completed"
         };
 
         _dbContext.PdfDocuments.Add(pdfDoc);

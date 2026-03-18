@@ -1,45 +1,36 @@
 using Api.BoundedContexts.SharedGameCatalog.Domain.Events;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
-using Api.BoundedContexts.SharedGameCatalog.Domain.ValueObjects;
-using Api.BoundedContexts.UserNotifications.Domain.Aggregates;
-using Api.BoundedContexts.UserNotifications.Domain.Repositories;
+using Api.BoundedContexts.UserNotifications.Application.Services;
 using Api.BoundedContexts.UserNotifications.Domain.ValueObjects;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
-using Api.Services;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 
 namespace Api.BoundedContexts.UserNotifications.Application.EventHandlers;
 
 /// <summary>
 /// Event handler that creates celebratory notifications when users earn badges.
-/// ISSUE-2741: Badge earned notification system with in-app and email alerts.
+/// Dispatches via NotificationDispatcher for multi-channel delivery (in-app, email, Slack).
+/// ISSUE-2741: Badge earned notification system.
 /// </summary>
 internal sealed class BadgeEarnedNotificationHandler : INotificationHandler<BadgeEarnedEvent>
 {
-    private readonly INotificationRepository _notificationRepository;
+    private readonly INotificationDispatcher _dispatcher;
     private readonly IBadgeRepository _badgeRepository;
     private readonly MeepleAiDbContext _dbContext;
-    private readonly IEmailService _emailService;
-    private readonly IConfiguration _configuration;
     private readonly ILogger<BadgeEarnedNotificationHandler> _logger;
 
     public BadgeEarnedNotificationHandler(
-        INotificationRepository notificationRepository,
+        INotificationDispatcher dispatcher,
         IBadgeRepository badgeRepository,
         MeepleAiDbContext dbContext,
-        IEmailService emailService,
-        IConfiguration configuration,
         ILogger<BadgeEarnedNotificationHandler> logger)
     {
-        _notificationRepository = notificationRepository ?? throw new ArgumentNullException(nameof(notificationRepository));
+        _dispatcher = dispatcher ?? throw new ArgumentNullException(nameof(dispatcher));
         _badgeRepository = badgeRepository ?? throw new ArgumentNullException(nameof(badgeRepository));
         _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
-        _emailService = emailService ?? throw new ArgumentNullException(nameof(emailService));
-        _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -74,54 +65,19 @@ internal sealed class BadgeEarnedNotificationHandler : INotificationHandler<Badg
                 return;
             }
 
-            // Create in-app notification (celebratory with modal display)
-            var inAppNotification = new Notification(
-                id: Guid.NewGuid(),
-                userId: notification.UserId,
-                type: NotificationType.BadgeEarned,
-                severity: NotificationSeverity.Success,
-                title: GetCelebratoryTitle(badge.Tier),
-                message: $"You've earned the \"{badge.Name}\" badge! {badge.Description}",
-                link: "/users/me/badges",
-                metadata: System.Text.Json.JsonSerializer.Serialize(new
-                {
-                    badgeId = notification.BadgeId,
-                    badgeCode = notification.BadgeCode,
-                    badgeName = badge.Name,
-                    badgeDescription = badge.Description,
-                    badgeIconUrl = badge.IconUrl,
-                    badgeTier = badge.Tier.ToString(),
-                    displayType = "Modal",  // Show as modal, not just toast
-                    showAnimation = true,
-                    shareEnabled = true
-                }));
-
-            await _notificationRepository.AddAsync(inAppNotification, cancellationToken)
-                .ConfigureAwait(false);
-
-            // Send email notification (celebratory)
-            // Note: In future, check user.Preferences.ReceiveBadgeEmails when preferences system is implemented (#2742)
-#pragma warning disable S1075 // URIs should not be hardcoded - Default/Fallback value
-            var baseUrl = _configuration["App:BaseUrl"] ?? "https://meepleai.com";
-#pragma warning restore S1075
-
-            await _emailService.SendBadgeEarnedEmailAsync(
-                toEmail: user.Email,
-                userName: user.DisplayName ?? user.Email,
-                badgeName: badge.Name,
-                badgeDescription: badge.Description,
-                badgeIconUrl: badge.IconUrl,
-                badgeTier: badge.Tier.ToString(),
-                badgeTierColor: GetTierColor(badge.Tier),
-                profileUrl: $"{baseUrl}/users/{user.Id}/badges",
-                shareText: $"I just earned the \"{badge.Name}\" badge on MeepleAI!",
-                cancellationToken)
-                .ConfigureAwait(false);
-
-            await _dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+            await _dispatcher.DispatchAsync(new NotificationMessage
+            {
+                Type = NotificationType.BadgeEarned,
+                RecipientUserId = notification.UserId,
+                Payload = new BadgePayload(
+                    notification.BadgeId,
+                    badge.Name,
+                    badge.Description),
+                DeepLinkPath = "/users/me/badges"
+            }, cancellationToken).ConfigureAwait(false);
 
             _logger.LogInformation(
-                "Created badge earned notification for user {UserId} - Badge: {BadgeName} ({BadgeTier})",
+                "Dispatched badge earned notification for user {UserId} - Badge: {BadgeName} ({BadgeTier})",
                 notification.UserId,
                 badge.Name,
                 badge.Tier);
@@ -137,24 +93,4 @@ internal sealed class BadgeEarnedNotificationHandler : INotificationHandler<Badg
         }
 #pragma warning restore CA1031
     }
-
-    private static string GetCelebratoryTitle(BadgeTier tier) => tier switch
-    {
-        BadgeTier.Bronze => "Badge Earned! 🥉",
-        BadgeTier.Silver => "Badge Earned! 🥈",
-        BadgeTier.Gold => "Badge Earned! 🥇",
-        BadgeTier.Platinum => "Amazing Achievement! ⭐",
-        BadgeTier.Diamond => "Legendary Badge! 💎",
-        _ => "Badge Earned! 🎉"
-    };
-
-    private static string GetTierColor(BadgeTier tier) => tier switch
-    {
-        BadgeTier.Bronze => "#CD7F32",
-        BadgeTier.Silver => "#C0C0C0",
-        BadgeTier.Gold => "#FFD700",
-        BadgeTier.Platinum => "#E5E4E2",
-        BadgeTier.Diamond => "#B9F2FF",
-        _ => "#6B7280"
-    };
 }

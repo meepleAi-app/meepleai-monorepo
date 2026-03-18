@@ -3,7 +3,6 @@ using Api.BoundedContexts.KnowledgeBase.Application.DTOs;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries.EstimateAgentCost;
 using Api.BoundedContexts.SharedGameCatalog.Application.Queries;
 using Api.Filters;
-using Api.Services;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 
@@ -22,62 +21,10 @@ internal static class AdminKnowledgeBaseEndpoints
             .AddEndpointFilter<RequireAdminSessionFilter>();
 
         // GET /api/v1/admin/kb/vector-collections (#4655, #4785)
-        kbGroup.MapGet("/vector-collections", async (
-            IQdrantClientAdapter qdrantClient,
-            ILogger<Program> logger,
-            CancellationToken cancellationToken) =>
+        // Vector store (Qdrant) has been removed — returns empty collections.
+        kbGroup.MapGet("/vector-collections", () =>
         {
-            try
-            {
-                var collectionNames = await qdrantClient.ListCollectionsAsync(cancellationToken)
-                    .ConfigureAwait(false);
-
-                var collections = new List<object>();
-                foreach (var name in collectionNames)
-                {
-                    try
-                    {
-                        var info = await qdrantClient.GetCollectionInfoAsync(name, cancellationToken)
-                            .ConfigureAwait(false);
-
-                        var vectorCount = (long)info.PointsCount;
-                        var dimensions = 384; // Default for sentence-transformers
-                        var memoryBytes = vectorCount * dimensions * 4L;
-                        var indexedCount = (long)info.IndexedVectorsCount;
-                        var health = vectorCount > 0 && indexedCount > 0
-                            ? (int)Math.Min(100, (indexedCount * 100) / Math.Max(1, vectorCount))
-                            : 0;
-
-                        collections.Add(new
-                        {
-                            name,
-                            vectorCount,
-                            dimensions,
-                            storage = FormatBytes(memoryBytes),
-                            health,
-                        });
-                    }
-                    catch (Exception ex)
-                    {
-                        logger.LogWarning(ex, "Failed to get info for collection {CollectionName}", name);
-                        collections.Add(new
-                        {
-                            name,
-                            vectorCount = 0L,
-                            dimensions = 0,
-                            storage = "N/A",
-                            health = 0,
-                        });
-                    }
-                }
-
-                return Results.Ok(new { collections });
-            }
-            catch (Exception ex)
-            {
-                logger.LogError(ex, "Failed to list Qdrant collections");
-                return Results.Ok(new { collections = Array.Empty<object>() });
-            }
+            return Results.Ok(new { collections = Array.Empty<object>() });
         });
 
         // GET /api/v1/admin/kb/processing-queue (#4655, #4785)
@@ -141,18 +88,6 @@ internal static class AdminKnowledgeBaseEndpoints
         return group;
     }
 
-    private static string FormatBytes(long bytes)
-    {
-        string[] sizes = ["B", "KB", "MB", "GB", "TB"];
-        double len = bytes;
-        var order = 0;
-        while (len >= 1024 && order < sizes.Length - 1)
-        {
-            order++;
-            len /= 1024;
-        }
-        return $"{len:0.##} {sizes[order]}";
-    }
 }
 
 /// <summary>

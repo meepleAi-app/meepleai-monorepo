@@ -127,7 +127,7 @@ public sealed class PerformanceQueryTests : IAsyncLifetime
                 FilePath = $"/path/document{i:D4}.pdf",
                 FileSizeBytes = 1000000 + (i * 5000),
                 UploadedByUserId = users[i % users.Count].Id,
-                ProcessingStatus = i % 5 == 0 ? "completed" : "pending"
+                ProcessingState = i % 5 == 0 ? "Ready" : "Pending"
             });
         }
 

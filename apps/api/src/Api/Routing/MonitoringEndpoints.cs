@@ -155,7 +155,6 @@ internal static class MonitoringEndpoints
         MapGenericServiceHealthEndpoint(group, "/health/redis", "redis", "GetRedisHealth", "Redis");
         MapGenericServiceHealthEndpoint(group, "/health/qdrant", "qdrant", "GetQdrantHealth", "Qdrant");
         MapGenericServiceHealthEndpoint(group, "/health/n8n", "n8n", "GetN8NHealth", "n8n");
-        MapGenericServiceHealthEndpoint(group, "/health/hyperdx", "hyperdx", "GetHyperDxHealth", "HyperDX");
     }
 
     private static void MapMetricsTimeSeriesEndpoint(RouteGroupBuilder group)

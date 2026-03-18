@@ -1,10 +1,11 @@
+import { logger } from '@/lib/logger';
+
 /**
  * Analytics Event Tracking Utility
  * Issue #3913 - Quick Actions Grid Enhancement
  * Issue #3982 - Dashboard Business Metrics Tracking
  *
  * Provides centralized event tracking for user interactions.
- * Events are forwarded to HyperDX in production via addAction().
  *
  * @example
  * ```tsx
@@ -21,13 +22,10 @@
  * ```
  */
 
-import { trackEvent as hyperdxTrackEvent } from '@/lib/hyperdx';
-
 /**
  * Track a user interaction event
  *
- * Events are forwarded to HyperDX for production telemetry
- * and logged to console in development mode.
+ * Events are logged to console in development mode.
  *
  * @param eventName - Event identifier (e.g., 'dashboard_quick_action_library')
  * @param properties - Optional event metadata
@@ -35,18 +33,8 @@ import { trackEvent as hyperdxTrackEvent } from '@/lib/hyperdx';
 export function trackEvent(eventName: string, properties?: Record<string, unknown>): void {
   // Development mode: log to console
   if (process.env.NODE_ENV === 'development') {
-    // eslint-disable-next-line no-console
-    console.info('[Analytics]', eventName, properties);
+    logger.info(`[Analytics] ${eventName} ${properties ? JSON.stringify(properties) : ''}`);
   }
-
-  // Forward to HyperDX for production telemetry
-  const sanitizedProperties = properties
-    ? Object.fromEntries(
-        Object.entries(properties).map(([k, v]) => [k, typeof v === 'object' ? JSON.stringify(v) : v])
-      ) as Record<string, string | number | boolean>
-    : undefined;
-
-  hyperdxTrackEvent(eventName, sanitizedProperties);
 }
 
 /**

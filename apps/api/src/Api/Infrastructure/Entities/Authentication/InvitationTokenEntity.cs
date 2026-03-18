@@ -52,10 +52,26 @@ public sealed class InvitationTokenEntity
     [Column("created_at")]
     public DateTime CreatedAt { get; set; }
 
+    [Column("revoked_at")]
+    public DateTime? RevokedAt { get; set; }
+
+    // Admin Invitation Flow: custom message and pending user provisioning
+    [MaxLength(500)]
+    [Column("custom_message")]
+    public string? CustomMessage { get; set; }
+
+    [Column("pending_user_id")]
+    public Guid? PendingUserId { get; set; }
+
     // Navigation properties
     [ForeignKey(nameof(InvitedByUserId))]
     public UserEntity? InvitedByUser { get; set; }
 
     [ForeignKey(nameof(AcceptedByUserId))]
     public UserEntity? AcceptedByUser { get; set; }
+
+    [ForeignKey(nameof(PendingUserId))]
+    public UserEntity? PendingUser { get; set; }
+
+    public ICollection<InvitationGameSuggestionEntity> GameSuggestions { get; set; } = new List<InvitationGameSuggestionEntity>();
 }

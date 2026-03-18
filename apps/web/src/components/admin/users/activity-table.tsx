@@ -1,14 +1,20 @@
 'use client';
 
+import { useEffect } from 'react';
+
 import { useQuery } from '@tanstack/react-query';
 
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { api } from '@/lib/api';
 import type { AuditLogEntry } from '@/lib/api/schemas/admin.schemas';
 
 interface ActivityTableProps {
   actionFilter?: string;
   dateRange?: string;
+  page?: number;
+  onPageChange?: (page: number) => void;
+  onTotalCountChange?: (count: number) => void;
 }
 
 const actionTypeColors: Record<string, string> = {
@@ -28,7 +34,7 @@ const resultColors: Record<string, string> = {
   Denied: 'bg-amber-100 text-amber-900 dark:bg-amber-900/30 dark:text-amber-300',
 };
 
-function getDateRange(range?: string): { startDate?: string; endDate?: string } {
+export function getDateRange(range?: string): { startDate?: string; endDate?: string } {
   if (!range || range === 'all') return {};
   const now = new Date();
   const end = now.toISOString();
@@ -81,14 +87,23 @@ function formatAction(action: string): string {
     .trim();
 }
 
-export function ActivityTable({ actionFilter, dateRange }: ActivityTableProps) {
+const PAGE_SIZE = 50;
+
+export function ActivityTable({
+  actionFilter,
+  dateRange,
+  page = 0,
+  onPageChange,
+  onTotalCountChange,
+}: ActivityTableProps) {
   const dateParams = getDateRange(dateRange);
 
   const { data, isLoading, isError } = useQuery({
-    queryKey: ['admin', 'audit-log', 'activity', actionFilter, dateRange],
+    queryKey: ['admin', 'audit-log', 'activity', actionFilter, dateRange, page],
     queryFn: () =>
       api.admin.getAuditLogs({
-        limit: 50,
+        limit: PAGE_SIZE,
+        offset: page * PAGE_SIZE,
         action: actionFilter && actionFilter !== 'all' ? actionFilter : undefined,
         ...dateParams,
       }),
@@ -96,6 +111,13 @@ export function ActivityTable({ actionFilter, dateRange }: ActivityTableProps) {
   });
 
   const entries: AuditLogEntry[] = data?.entries ?? [];
+  const totalCount = data?.totalCount ?? 0;
+  const totalPages = Math.ceil(totalCount / PAGE_SIZE);
+
+  // Notify parent of total count changes
+  useEffect(() => {
+    onTotalCountChange?.(totalCount);
+  }, [totalCount, onTotalCountChange]);
 
   if (isLoading) {
     return (
@@ -210,6 +232,34 @@ export function ActivityTable({ actionFilter, dateRange }: ActivityTableProps) {
           </tbody>
         </table>
       </div>
+
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between px-4 py-3 border-t border-amber-200/50 dark:border-zinc-700/50">
+          <p className="text-sm text-muted-foreground">
+            Showing {page * PAGE_SIZE + 1}–{Math.min((page + 1) * PAGE_SIZE, totalCount)} of{' '}
+            {totalCount.toLocaleString()}
+          </p>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={page === 0}
+              onClick={() => onPageChange?.(page - 1)}
+            >
+              Previous
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={page >= totalPages - 1}
+              onClick={() => onPageChange?.(page + 1)}
+            >
+              Next
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -1,107 +1,190 @@
-# Docker Compose - Staging Environment
-# Extends docker-compose.yml with staging-specific configurations
-# Production-like environment for pre-release testing
+# Staging: meepleai.app deployment
+# Server: deploy@204.168.135.69 (Hetzner CAX21 ARM64)
 #
-# Usage:
-#   docker compose -f docker-compose.yml -f compose.staging.yml up -d
-#   docker compose -f docker-compose.yml -f compose.staging.yml down
-#
-# Secrets: Uses env_file (.secret files) — same pattern as docker-compose.yml.
+# Usage: docker compose -f docker-compose.yml -f compose.staging.yml -f compose.traefik.yml \
+#          --profile ai --profile monitoring --profile proxy up -d
 
 services:
-  # ============================================================================
-  # Core Infrastructure - Staging Configuration
-  # ============================================================================
+  # ===========================================================================
+  # Core Infrastructure
+  # ===========================================================================
 
   postgres:
-    restart: unless-stopped
-    env_file:
-      - ./secrets/database.secret
+    restart: always
+    env_file: [./secrets/staging/database.secret]
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-meepleai_staging}
       POSTGRES_USER: ${POSTGRES_USER:-meepleai}
     volumes:
       - pgdata-staging:/var/lib/postgresql/data
       - ./init/postgres-init.sql:/docker-entrypoint-initdb.d/init.sql:ro
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
-      interval: 10s
-      timeout: 5s
-      retries: 10
 
   redis:
-    restart: unless-stopped
-    env_file:
-      - ./secrets/redis.secret
-    command: ["sh", "-c", "redis-server /etc/redis/redis.conf --requirepass $REDIS_PASSWORD"]
+    restart: always
+    env_file: [./secrets/staging/redis.secret]
+    command: ["sh", "-c", "redis-server /etc/redis/redis.conf --requirepass $$REDIS_PASSWORD"]
     volumes:
       - redisdata-staging:/data
       - ./redis/redis.conf:/etc/redis/redis.conf:ro
 
   qdrant:
-    restart: unless-stopped
-    env_file:
-      - ./secrets/qdrant.secret
+    restart: always
+    env_file: [./secrets/staging/qdrant.secret]
     environment:
       QDRANT__SERVICE__API_KEY: ${QDRANT_API_KEY:?QDRANT_API_KEY is required - see secrets/qdrant.secret.example}
     volumes:
       - qdrantdata-staging:/qdrant/storage
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.qdrant.rule=Host(`meepleai.app`) && PathPrefix(`/services/qdrant`)"
+      - "traefik.http.routers.qdrant.entrypoints=websecure"
+      - "traefik.http.routers.qdrant.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.qdrant.middlewares=integration-auth,strip-services-qdrant"
+      - "traefik.http.middlewares.strip-services-qdrant.stripprefix.prefixes=/services/qdrant"
+      - "traefik.http.services.qdrant.loadbalancer.server.port=6333"
 
-  # ============================================================================
-  # Application Services - Staging Configuration
-  # ============================================================================
+  # ===========================================================================
+  # Application Services
+  # ===========================================================================
 
   api:
-    restart: unless-stopped
+    restart: always
     env_file:
-      - ./secrets/database.secret
-      - ./secrets/jwt.secret
-      - ./secrets/admin.secret
-      - ./secrets/openrouter.secret
-      - ./secrets/oauth.secret
+      - ./secrets/staging/database.secret
+      - ./secrets/staging/jwt.secret
+      - ./secrets/staging/admin.secret
+      - ./secrets/staging/openrouter.secret
+      - ./secrets/staging/oauth.secret
+      - ./secrets/staging/redis.secret
+      - ./secrets/staging/qdrant.secret
+      - ./secrets/staging/embedding-service.secret
+      - ./secrets/staging/email.secret
+      - ./secrets/staging/storage.secret
     environment:
       ASPNETCORE_ENVIRONMENT: Staging
+      ASPNETCORE_URLS: http://+:8080
+      POSTGRES_HOST: postgres
       POSTGRES_USER: ${POSTGRES_USER:-meepleai}
       POSTGRES_DB: ${POSTGRES_DB:-meepleai_staging}
-      # OAuth: callback URL must match the public domain (not localhost)
+      REDIS_HOST: redis
+      QDRANT_URL: http://qdrant:6333
+      EMBEDDING_PROVIDER: external
+      Embedding__Provider: External
+      LOCAL_EMBEDDING_URL: http://embedding-service:8000
+      Embedding__LocalServiceUrl: http://embedding-service:8000
+      RERANKER_URL: http://reranker-service:8003
       Authentication__OAuth__CallbackBaseUrl: "https://meepleai.app"
-      # Frontend URL for post-OAuth redirect (not localhost)
       FrontendUrl: "https://meepleai.app"
-      # HTTPS cookies for staging (Traefik terminates TLS)
       Authentication__SessionCookie__Secure: "true"
       Authentication__SessionCookie__SameSite: "Lax"
+    volumes:
+      - ./secrets:/app/infra/secrets:ro
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.api.rule=Host(`meepleai.app`) && PathPrefix(`/api`)"
+      - "traefik.http.routers.api.entrypoints=websecure"
+      - "traefik.http.routers.api.tls.certresolver=letsencrypt"
+      - "traefik.http.services.api.loadbalancer.server.port=8080"
     logging:
       driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
+      options: { max-size: "10m", max-file: "3" }
 
   web:
-    restart: unless-stopped
+    restart: always
     build:
       args:
         NEXT_PUBLIC_API_BASE: "https://meepleai.app"
         NEXT_PUBLIC_APP_URL: "https://meepleai.app"
-        NEXT_PUBLIC_SITE_URL: "https://meepleai.app"
     environment:
-      NODE_ENV: staging
+      NODE_ENV: production
       NEXT_PUBLIC_API_BASE: "https://meepleai.app"
       NEXT_PUBLIC_APP_URL: "https://meepleai.app"
-      NEXT_PUBLIC_SITE_URL: "https://meepleai.app"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.web.rule=Host(`meepleai.app`)"
+      - "traefik.http.routers.web.entrypoints=websecure"
+      - "traefik.http.routers.web.tls.certresolver=letsencrypt"
+      - "traefik.http.services.web.loadbalancer.server.port=3000"
     logging:
       driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
+      options: { max-size: "10m", max-file: "3" }
 
-  # ============================================================================
-  # Observability Stack - Full Enabled for Staging
-  # ============================================================================
+  # ===========================================================================
+  # AI Services — Traefik basic auth for integration access
+  # ===========================================================================
+
+  embedding-service:
+    restart: always
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.embedding.rule=Host(`meepleai.app`) && PathPrefix(`/services/embedding`)"
+      - "traefik.http.routers.embedding.entrypoints=websecure"
+      - "traefik.http.routers.embedding.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.embedding.middlewares=integration-auth,strip-services-embedding"
+      - "traefik.http.middlewares.strip-services-embedding.stripprefix.prefixes=/services/embedding"
+      - "traefik.http.services.embedding.loadbalancer.server.port=8000"
+
+  reranker-service:
+    restart: always
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.reranker.rule=Host(`meepleai.app`) && PathPrefix(`/services/reranker`)"
+      - "traefik.http.routers.reranker.entrypoints=websecure"
+      - "traefik.http.routers.reranker.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.reranker.middlewares=integration-auth,strip-services-reranker"
+      - "traefik.http.middlewares.strip-services-reranker.stripprefix.prefixes=/services/reranker"
+      - "traefik.http.services.reranker.loadbalancer.server.port=8003"
+
+  unstructured-service:
+    restart: always
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.unstructured.rule=Host(`meepleai.app`) && PathPrefix(`/services/unstructured`)"
+      - "traefik.http.routers.unstructured.entrypoints=websecure"
+      - "traefik.http.routers.unstructured.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.unstructured.middlewares=integration-auth,strip-services-unstructured"
+      - "traefik.http.middlewares.strip-services-unstructured.stripprefix.prefixes=/services/unstructured"
+      - "traefik.http.services.unstructured.loadbalancer.server.port=8001"
+
+  smoldocling-service:
+    restart: always
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.smoldocling.rule=Host(`meepleai.app`) && PathPrefix(`/services/smoldocling`)"
+      - "traefik.http.routers.smoldocling.entrypoints=websecure"
+      - "traefik.http.routers.smoldocling.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.smoldocling.middlewares=integration-auth,strip-services-smoldocling"
+      - "traefik.http.middlewares.strip-services-smoldocling.stripprefix.prefixes=/services/smoldocling"
+      - "traefik.http.services.smoldocling.loadbalancer.server.port=8002"
+
+  ollama:
+    restart: always
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.ollama.rule=Host(`meepleai.app`) && PathPrefix(`/services/ollama`)"
+      - "traefik.http.routers.ollama.entrypoints=websecure"
+      - "traefik.http.routers.ollama.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.ollama.middlewares=integration-auth,strip-services-ollama"
+      - "traefik.http.middlewares.strip-services-ollama.stripprefix.prefixes=/services/ollama"
+      - "traefik.http.services.ollama.loadbalancer.server.port=11434"
+
+  # ===========================================================================
+  # Monitoring — Traefik basic auth
+  # ===========================================================================
 
   grafana:
-    restart: unless-stopped
-    env_file:
-      - ./secrets/monitoring.secret
+    restart: always
+    env_file: [./secrets/staging/monitoring.secret]
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.grafana.rule=Host(`meepleai.app`) && PathPrefix(`/grafana`)"
+      - "traefik.http.routers.grafana.entrypoints=websecure"
+      - "traefik.http.routers.grafana.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.grafana.middlewares=integration-auth"
+      - "traefik.http.services.grafana.loadbalancer.server.port=3000"
+    environment:
+      GF_SERVER_ROOT_URL: "https://meepleai.app/grafana"
+      GF_SERVER_SERVE_FROM_SUB_PATH: "true"
     volumes:
       - grafana-staging:/var/lib/grafana
       - ./grafana-datasources.yml:/etc/grafana/provisioning/datasources/datasources.yml:ro
@@ -109,11 +192,18 @@ services:
       - ./dashboards:/var/lib/grafana/dashboards:ro
 
   prometheus:
-    restart: unless-stopped
+    restart: always
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.prometheus.rule=Host(`meepleai.app`) && PathPrefix(`/prometheus`)"
+      - "traefik.http.routers.prometheus.entrypoints=websecure"
+      - "traefik.http.routers.prometheus.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.prometheus.middlewares=integration-auth"
+      - "traefik.http.services.prometheus.loadbalancer.server.port=9090"
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
       - '--storage.tsdb.path=/prometheus'
-      - '--storage.tsdb.retention.time=60d'  # Longer retention for staging
+      - '--storage.tsdb.retention.time=60d'
       - '--web.enable-lifecycle'
     volumes:
       - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
@@ -121,14 +211,26 @@ services:
       - prometheus-staging:/prometheus
 
   alertmanager:
-    restart: unless-stopped
+    restart: always
 
   n8n:
-    restart: unless-stopped
+    restart: always
 
-# ============================================================================
-# Staging-specific Volumes
-# ============================================================================
+  # ===========================================================================
+  # Traefik overrides — basic auth middleware + staging config mount
+  # ===========================================================================
+
+  traefik:
+    volumes:
+      - ./traefik/traefik.staging.yml:/etc/traefik/traefik.yml:ro
+    labels:
+      - "traefik.http.middlewares.integration-auth.basicauth.users=${INTEGRATION_BASIC_AUTH}"
+      - "traefik.http.middlewares.rate-limit.ratelimit.average=100"
+      - "traefik.http.middlewares.rate-limit.ratelimit.burst=50"
+
+# =============================================================================
+# Preserve existing staging volume names to avoid data loss
+# =============================================================================
 volumes:
   pgdata-staging:
     name: meepleai-pgdata-staging

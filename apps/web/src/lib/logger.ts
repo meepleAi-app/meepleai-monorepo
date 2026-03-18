@@ -46,7 +46,6 @@ export interface LoggerConfig {
  */
 const DEFAULT_CONFIG: LoggerConfig = {
   enableConsole: process.env.NODE_ENV === 'development',
-  // Disable custom remote logging - using HyperDX instead
   enableRemote: process.env.NEXT_PUBLIC_ENABLE_REMOTE_LOGS === 'true',
   // Prefer explicit env; otherwise fall back to same-origin relative path to avoid mixed-origin failures
   remoteEndpoint: process.env.NEXT_PUBLIC_LOG_ENDPOINT || '/api/v1/logs',
@@ -116,14 +115,15 @@ class Logger {
   /**
    * Log error
    */
-  error(message: string, error?: Error, context?: Partial<ErrorContext>): void {
+  error(message: string, error?: unknown, context?: Partial<ErrorContext>): void {
+    const errorObj = error instanceof Error ? error : error ? new Error(String(error)) : undefined;
     const entry: LogEntry = {
       level: LogLevel.ERROR,
       message,
       timestamp: new Date().toISOString(),
       context: context as ErrorContext,
-      error: error ? sanitizeError(error) : undefined,
-      severity: error ? getErrorSeverity(error) : ErrorSeverity.ERROR,
+      error: errorObj ? sanitizeError(errorObj) : undefined,
+      severity: errorObj ? getErrorSeverity(errorObj) : ErrorSeverity.ERROR,
     };
 
     this.addToQueue(entry);

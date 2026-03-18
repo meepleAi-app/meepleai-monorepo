@@ -33,6 +33,7 @@ import {
   TooltipTrigger,
 } from '@/components/ui/overlays/tooltip';
 import { Button } from '@/components/ui/primitives/button';
+import { logger } from '@/lib/logger';
 import { cn } from '@/lib/utils';
 
 // ============================================================================
@@ -80,7 +81,7 @@ export function WishlistButton({
     } catch (error) {
       // Error handling delegated to parent (onToggle callback)
       // Component remains stable even if callback throws
-      console.error('WishlistButton: onToggle error:', error);
+      logger.error('WishlistButton: onToggle error:', error);
     }
   };
 

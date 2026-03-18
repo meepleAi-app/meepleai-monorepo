@@ -147,12 +147,18 @@ function ToolkitIcon({ className }: IconProps) {
 export const ENTITY_NAV_ICONS: Record<MeepleEntityType, React.ComponentType<IconProps>> = {
   game: GameIcon,
   agent: AgentIcon,
-  document: DocumentIcon,
+  kb: DocumentIcon,
   session: SessionIcon,
   player: PlayerIcon,
   chatSession: ChatIcon,
   event: GameIcon, // fallback
   toolkit: ToolkitIcon,
+  tool: ToolkitIcon,
+  collection: GameIcon, // fallback
+  group: PlayerIcon, // fallback
+  location: GameIcon, // fallback
+  expansion: GameIcon, // fallback
+  achievement: GameIcon, // fallback
+  note: DocumentIcon, // fallback
   custom: GameIcon, // fallback
-  kb_card: DocumentIcon, // KB card uses document icon
 };

@@ -5,13 +5,11 @@ namespace Api.Infrastructure.Telemetry;
 
 /// <summary>
 /// OpenTelemetry processor that scrubs sensitive data from traces before export.
-/// Prevents passwords, tokens, API keys, and other secrets from being sent to HyperDX.
+/// Prevents passwords, tokens, API keys, and other secrets from being sent to external exporters.
 /// </summary>
 /// <remarks>
 /// This processor runs for every span before it's exported, adding minimal overhead
 /// while ensuring compliance with data privacy requirements.
-///
-/// Based on code review fix P1-SEC3 from hyperdx-implementation-plan.md
 /// </remarks>
 internal class SensitiveDataProcessor : BaseProcessor<Activity>
 {

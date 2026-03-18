@@ -20,7 +20,13 @@ import { AlertCircle, Code, EyeOff } from 'lucide-react';
 import { useForm, Controller, type Resolver } from 'react-hook-form';
 import { toast } from 'sonner';
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/data-display/card';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/data-display/card';
 import { Alert, AlertDescription } from '@/components/ui/feedback/alert';
 import { ConfirmDialog } from '@/components/ui/feedback/confirm-dialog';
 import { Separator } from '@/components/ui/navigation/separator';
@@ -34,8 +40,13 @@ import {
   type CreateTypology,
   type Typology,
 } from '@/lib/api/schemas/agent-typologies.schemas';
+import { logger } from '@/lib/logger';
 
-import { PhaseModelConfiguration, type StrategyPhaseModels, type StrategyOptions } from './PhaseModelConfiguration';
+import {
+  PhaseModelConfiguration,
+  type StrategyPhaseModels,
+  type StrategyOptions,
+} from './PhaseModelConfiguration';
 import { PromptPreview } from './PromptPreview';
 import { StrategySelector } from './StrategySelector';
 import { TypologyPromptEditor } from './TypologyPromptEditor';
@@ -65,7 +76,9 @@ export function TypologyForm({
   isProposal = false,
 }: TypologyFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [showAdvancedParams, setShowAdvancedParams] = useState(!!typology?.defaultStrategyParameters);
+  const [showAdvancedParams, setShowAdvancedParams] = useState(
+    !!typology?.defaultStrategyParameters
+  );
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const [jsonError, setJsonError] = useState<string | null>(null);
   const [promptError, setPromptError] = useState<string | null>(null);
@@ -130,7 +143,9 @@ export function TypologyForm({
       if (isEditMode) {
         await agentTypologiesApi.update(typology.id, data);
         typologyId = typology.id;
-        toast.success(isProposal ? 'Proposta aggiornata con successo' : 'Tipologia aggiornata con successo');
+        toast.success(
+          isProposal ? 'Proposta aggiornata con successo' : 'Tipologia aggiornata con successo'
+        );
       } else {
         // Issue #3182: Use propose endpoint for editor proposals
         const result = isProposal
@@ -142,10 +157,15 @@ export function TypologyForm({
 
       onSubmit(typologyId);
     } catch (error) {
-      console.error('Failed to save typology:', error);
-      toast.error(isProposal ? 'Errore nel salvataggio della proposta' : 'Errore nel salvataggio della tipologia', {
-        description: error instanceof Error ? error.message : 'Errore sconosciuto',
-      });
+      logger.error('Failed to save typology:', error);
+      toast.error(
+        isProposal
+          ? 'Errore nel salvataggio della proposta'
+          : 'Errore nel salvataggio della tipologia',
+        {
+          description: error instanceof Error ? error.message : 'Errore sconosciuto',
+        }
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -231,7 +251,8 @@ export function TypologyForm({
                 Stato corrente: <span className="font-medium">{typology.status}</span>
               </p>
               <p className="text-xs text-muted-foreground mt-2">
-                Lo stato viene gestito dal workflow di approvazione (Draft → PendingReview → Approved)
+                Lo stato viene gestito dal workflow di approvazione (Draft → PendingReview →
+                Approved)
               </p>
             </div>
           )}
@@ -305,7 +326,9 @@ export function TypologyForm({
       </Card>
 
       {/* Issue #3245: Phase-Model Configuration for RAG Strategies */}
-      {['FAST', 'BALANCED', 'PRECISE', 'EXPERT', 'CONSENSUS', 'CUSTOM'].includes(watch('defaultStrategyName')) && (
+      {['FAST', 'BALANCED', 'PRECISE', 'EXPERT', 'CONSENSUS', 'CUSTOM'].includes(
+        watch('defaultStrategyName')
+      ) && (
         <PhaseModelConfiguration
           strategy={watch('defaultStrategyName')}
           phaseModels={phaseModels}
@@ -395,9 +418,12 @@ export function TypologyForm({
                   <AlertDescription>{jsonError}</AlertDescription>
                 </Alert>
               )}
-              {errors.defaultStrategyParameters && typeof errors.defaultStrategyParameters.message === 'string' && (
-                <p className="text-sm text-destructive mt-1">{errors.defaultStrategyParameters.message}</p>
-              )}
+              {errors.defaultStrategyParameters &&
+                typeof errors.defaultStrategyParameters.message === 'string' && (
+                  <p className="text-sm text-destructive mt-1">
+                    {errors.defaultStrategyParameters.message}
+                  </p>
+                )}
               <p className="text-xs text-muted-foreground mt-1">
                 Esempio: <code>{`{"topK": 5, "scoreThreshold": 0.7, "rerank": true}`}</code>
               </p>
@@ -416,10 +442,7 @@ export function TypologyForm({
         >
           Annulla
         </Button>
-        <Button
-          type="submit"
-          disabled={isSubmitting || isLoading || !!jsonError || !!promptError}
-        >
+        <Button type="submit" disabled={isSubmitting || isLoading || !!jsonError || !!promptError}>
           {isSubmitting ? 'Salvataggio...' : isEditMode ? 'Aggiorna Tipologia' : 'Crea Tipologia'}
         </Button>
       </div>

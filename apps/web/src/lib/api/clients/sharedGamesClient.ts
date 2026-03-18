@@ -8,6 +8,23 @@
 import { z } from 'zod';
 
 import { type HttpClient } from '../core/httpClient';
+
+// ========== Recently Processed Documents ==========
+
+export const RecentlyProcessedDocumentSchema = z.object({
+  pdfDocumentId: z.string(),
+  jobId: z.string().nullable(),
+  fileName: z.string(),
+  processingState: z.string(),
+  timestamp: z.string(),
+  errorCategory: z.string().nullable(),
+  canRetry: z.boolean(),
+  sharedGameId: z.string(),
+  gameName: z.string(),
+  thumbnailUrl: z.string().nullable(),
+});
+
+export type RecentlyProcessedDocument = z.infer<typeof RecentlyProcessedDocumentSchema>;
 import {
   agentDefinitionDtoSchema,
   kbCardDtoSchema,
@@ -759,6 +776,26 @@ export function createSharedGamesClient({ httpClient }: CreateSharedGamesClientP
       return result ?? [];
     },
 
+    // ========== User-Facing Document Access ==========
+
+    /**
+     * Get active documents for a shared game (Authenticated user)
+     * GET /api/v1/shared-games/{gameId}/documents
+     *
+     * Returns only active documents. Access requires the game to be RAG-public
+     * or the user to have the game in their library.
+     *
+     * @param gameId - Game UUID
+     * @returns List of active documents (may be empty if access is denied)
+     */
+    async getDocumentsForUser(gameId: string): Promise<SharedGameDocument[]> {
+      const result = await httpClient.get(
+        `/api/v1/shared-games/${gameId}/documents`,
+        z.array(SharedGameDocumentSchema)
+      );
+      return result ?? [];
+    },
+
     // ========== Rulebook Analysis (Issue #5454) ==========
 
     /**
@@ -870,6 +907,23 @@ export function createSharedGamesClient({ httpClient }: CreateSharedGamesClientP
         `/api/v1/admin/shared-games/${gameId}/rag-readiness`,
         GameRagReadinessSchema
       );
+    },
+
+    // ========== Recently Processed Documents ==========
+
+    /**
+     * Get recently processed PDF documents across all shared games (ADMIN)
+     * GET /api/v1/admin/shared-games/recently-processed?limit={limit}
+     *
+     * @param limit - Max number of results (default 10)
+     * @returns List of recently processed documents
+     */
+    async getRecentlyProcessed(limit = 10): Promise<RecentlyProcessedDocument[]> {
+      const result = await httpClient.get(
+        `/api/v1/admin/shared-games/recently-processed?limit=${limit}`,
+        z.array(RecentlyProcessedDocumentSchema)
+      );
+      return result ?? [];
     },
   };
 }

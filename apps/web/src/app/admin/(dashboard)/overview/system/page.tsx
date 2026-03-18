@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react';
 import { createAdminClient } from '@/lib/api/clients/adminClient';
 import { HttpClient } from '@/lib/api/core/httpClient';
 import type { InfrastructureDetails } from '@/lib/api/schemas/admin.schemas';
+import { logger } from '@/lib/logger';
 
 const httpClient = new HttpClient();
 const adminClient = createAdminClient({ httpClient });
@@ -30,7 +31,7 @@ export default function SystemHealthPage() {
           setInfraData(data);
         }
       } catch (error) {
-        console.error('Failed to fetch infrastructure details:', error);
+        logger.error('Failed to fetch infrastructure details:', error);
       } finally {
         setLoading(false);
       }

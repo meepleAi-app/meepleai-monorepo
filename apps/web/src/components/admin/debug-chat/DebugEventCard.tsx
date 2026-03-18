@@ -24,6 +24,9 @@ import {
   HardDriveIcon,
   CheckCircle2Icon,
   XCircleIcon,
+  BrainIcon,
+  GitBranchIcon,
+  GaugeIcon,
 } from 'lucide-react';
 
 import type { DebugEvent } from '@/hooks/useDebugChatStream';
@@ -42,6 +45,10 @@ const EVENT_CONFIG: Record<number, { icon: React.ElementType; color: string; bg:
   18: { icon: DatabaseIcon, color: 'text-indigo-400', bg: 'bg-indigo-500/10' }, // SearchDetails
   19: { icon: HardDriveIcon, color: 'text-sky-400', bg: 'bg-sky-500/10' }, // CacheCheck
   20: { icon: CheckCircle2Icon, color: 'text-teal-400', bg: 'bg-teal-500/10' }, // DocumentCheck
+  23: { icon: BrainIcon, color: 'text-emerald-400', bg: 'bg-emerald-500/10' }, // AdaptiveRouting
+  24: { icon: SearchIcon, color: 'text-orange-400', bg: 'bg-orange-500/10' }, // CRAG Evaluation
+  25: { icon: GitBranchIcon, color: 'text-cyan-400', bg: 'bg-cyan-500/10' }, // RAG-Fusion
+  26: { icon: GaugeIcon, color: 'text-rose-400', bg: 'bg-rose-500/10' }, // Context Window
 };
 
 function formatMs(ms: number): string {
@@ -118,6 +125,14 @@ function EventDetail({ type, data }: { type: number; data: Record<string, unknow
       return <CostUpdateDetail data={data} />;
     case 15: // ValidationLayer
       return <ValidationDetail data={data} />;
+    case 23: // AdaptiveRouting
+      return <AdaptiveRoutingDetail data={data} />;
+    case 24: // CRAG Evaluation
+      return <CragEvaluationDetail data={data} />;
+    case 25: // RAG-Fusion
+      return <RagFusionDetail data={data} />;
+    case 26: // Context Window
+      return <ContextWindowDetail data={data} />;
     default:
       return <JsonDetail data={data} />;
   }
@@ -215,6 +230,166 @@ function ValidationDetail({ data }: { data: Record<string, unknown> }) {
           <span className="text-muted-foreground">Details</span>
           <span className="truncate">{String(data.details)}</span>
         </>
+      )}
+    </div>
+  );
+}
+
+function AdaptiveRoutingDetail({ data }: { data: Record<string, unknown> }) {
+  return (
+    <div className="space-y-1 text-xs">
+      <div className="flex justify-between">
+        <span className="text-muted-foreground">Complexity:</span>
+        <span
+          className={cn(
+            'font-medium',
+            data.complexityLevel === 'Simple'
+              ? 'text-green-400'
+              : data.complexityLevel === 'Moderate'
+                ? 'text-amber-400'
+                : 'text-red-400'
+          )}
+        >
+          {String(data.complexityLevel)}
+        </span>
+      </div>
+      <div className="flex justify-between">
+        <span className="text-muted-foreground">Confidence:</span>
+        <span>{(((data.confidence as number) ?? 0) * 100).toFixed(0)}%</span>
+      </div>
+      <div className="flex justify-between">
+        <span className="text-muted-foreground">Retrieval:</span>
+        <span className={data.skippedRetrieval ? 'text-green-400' : 'text-blue-400'}>
+          {data.skippedRetrieval ? 'Skipped (saved tokens)' : 'Required'}
+        </span>
+      </div>
+      {data.reason != null && (
+        <p className="text-muted-foreground italic mt-1">{String(data.reason)}</p>
+      )}
+    </div>
+  );
+}
+
+function CragEvaluationDetail({ data }: { data: Record<string, unknown> }) {
+  return (
+    <div className="space-y-1 text-xs">
+      <div className="flex justify-between">
+        <span className="text-muted-foreground">Verdict:</span>
+        <span
+          className={cn(
+            'font-medium',
+            data.verdict === 'Correct'
+              ? 'text-green-400'
+              : data.verdict === 'Ambiguous'
+                ? 'text-amber-400'
+                : 'text-red-400'
+          )}
+        >
+          {String(data.verdict)}
+        </span>
+      </div>
+      <div className="flex justify-between">
+        <span className="text-muted-foreground">Re-queried:</span>
+        <span>{data.requeried ? 'Yes' : 'No'}</span>
+      </div>
+      <div className="flex justify-between">
+        <span className="text-muted-foreground">Chunks:</span>
+        <span>
+          {data.originalChunkCount as number} &rarr; {data.finalChunkCount as number}
+        </span>
+      </div>
+    </div>
+  );
+}
+
+function RagFusionDetail({ data }: { data: Record<string, unknown> }) {
+  const queries = data.queries as string[] | undefined;
+  return (
+    <div className="space-y-1 text-xs">
+      <div className="flex justify-between">
+        <span className="text-muted-foreground">Query variants:</span>
+        <span className="font-medium">{data.queryVariantCount as number}</span>
+      </div>
+      {queries && (
+        <ul className="mt-1 space-y-0.5">
+          {queries.map((q: string, i: number) => (
+            <li key={i} className="text-muted-foreground flex items-start gap-1">
+              <span className="text-cyan-400 shrink-0">{i === 0 ? '\u25CF' : '\u25CB'}</span>
+              <span className={i === 0 ? 'font-medium text-foreground' : ''}>{q}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+      {data.durationMs != null && (
+        <div className="flex justify-between mt-1">
+          <span className="text-muted-foreground">Duration:</span>
+          <span>{formatMs(data.durationMs as number)}</span>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ContextWindowDetail({ data }: { data: Record<string, unknown> }) {
+  const usagePercentage = (data.usagePercentage as number) ?? 0;
+  return (
+    <div className="space-y-2 text-xs">
+      {/* Usage bar */}
+      <div>
+        <div className="flex justify-between mb-1">
+          <span className="text-muted-foreground">Context usage:</span>
+          <span
+            className={cn(
+              'font-medium',
+              usagePercentage < 50
+                ? 'text-green-400'
+                : usagePercentage < 80
+                  ? 'text-amber-400'
+                  : 'text-red-400'
+            )}
+          >
+            {usagePercentage}%
+          </span>
+        </div>
+        <div className="w-full bg-zinc-700 rounded-full h-2">
+          <div
+            className={cn(
+              'h-2 rounded-full transition-all',
+              usagePercentage < 50
+                ? 'bg-green-500'
+                : usagePercentage < 80
+                  ? 'bg-amber-500'
+                  : 'bg-red-500'
+            )}
+            style={{ width: `${Math.min(usagePercentage, 100)}%` }}
+          />
+        </div>
+      </div>
+      <div className="flex justify-between">
+        <span className="text-muted-foreground">System prompt:</span>
+        <span>{data.systemPromptTokens as number} tokens</span>
+      </div>
+      <div className="flex justify-between">
+        <span className="text-muted-foreground">User prompt:</span>
+        <span>{data.userPromptTokens as number} tokens</span>
+      </div>
+      <div className="flex justify-between">
+        <span className="text-muted-foreground">Total:</span>
+        <span className="font-medium">
+          {Number(data.totalEstimatedTokens)} / {Number(data.modelContextLimit)}
+        </span>
+      </div>
+      {Boolean(data.historyCompressed) && (
+        <div className="mt-1 p-2 rounded bg-amber-500/10 border border-amber-500/20">
+          <p className="text-amber-400 font-medium">History compressed</p>
+          <p className="text-muted-foreground">
+            {data.originalMessageCount as number} messages &rarr; summary + last{' '}
+            {data.includedMessageCount as number} included
+          </p>
+          {data.compressionReason != null && (
+            <p className="text-muted-foreground italic mt-0.5">{String(data.compressionReason)}</p>
+          )}
+        </div>
       )}
     </div>
   );

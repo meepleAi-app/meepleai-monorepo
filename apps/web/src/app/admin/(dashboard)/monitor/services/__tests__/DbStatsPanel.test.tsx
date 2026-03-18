@@ -22,7 +22,7 @@ vi.mock('@/lib/api', () => ({
   },
 }));
 
-vi.mock('@/hooks/use-toast', () => ({
+vi.mock('@/hooks/useToast', () => ({
   useToast: () => ({
     toast: mockToast,
   }),

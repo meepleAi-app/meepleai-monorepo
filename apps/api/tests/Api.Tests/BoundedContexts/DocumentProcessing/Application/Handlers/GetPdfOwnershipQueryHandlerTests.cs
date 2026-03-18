@@ -60,7 +60,7 @@ public class GetPdfOwnershipQueryHandlerTests
         result.Id.Should().Be(pdfId);
         result.UploadedByUserId.Should().Be(userId);
         result.GameId.Should().Be(gameId);
-        result.ProcessingStatus.Should().Be("completed");
+        result.ProcessingState.Should().Be("Ready");
 
         _documentRepositoryMock.Verify(
             r => r.GetByIdAsync(pdfId, It.IsAny<CancellationToken>()),
@@ -92,11 +92,11 @@ public class GetPdfOwnershipQueryHandlerTests
         result.Should().NotBeNull();
         result.Id.Should().Be(pdfId);
         result.UploadedByUserId.Should().Be(userId);
-        result.ProcessingStatus.Should().Be("pending");
+        result.ProcessingState.Should().Be("Pending");
     }
 
     [Fact]
-    public async Task Handle_ProcessingDocument_ReturnsOwnershipWithProcessingStatus()
+    public async Task Handle_ProcessingDocument_ReturnsOwnershipWithProcessingState()
     {
         // Arrange
         var pdfId = Guid.NewGuid();
@@ -119,7 +119,7 @@ public class GetPdfOwnershipQueryHandlerTests
 
         // Assert
         result.Should().NotBeNull();
-        result.ProcessingStatus.Should().Be("processing");
+        result.ProcessingState.Should().Be("Uploading");
     }
 
     [Fact]
@@ -146,7 +146,7 @@ public class GetPdfOwnershipQueryHandlerTests
 
         // Assert
         result.Should().NotBeNull();
-        result.ProcessingStatus.Should().Be("failed");
+        result.ProcessingState.Should().Be("Failed");
     }
     [Fact]
     public async Task Handle_NonExistentDocument_ReturnsNull()

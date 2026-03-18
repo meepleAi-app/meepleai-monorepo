@@ -75,11 +75,9 @@ public sealed class AgentEndpointsSmokeTests : IAsyncLifetime
                     var mockRedis = new Mock<IConnectionMultiplexer>();
                     services.AddSingleton(mockRedis.Object);
 
-                    // Mock vector/embedding services to avoid external dependencies
-                    services.RemoveAll(typeof(Api.Services.IQdrantService));
+                    // Mock embedding services to avoid external dependencies
                     services.RemoveAll(typeof(Api.Services.IEmbeddingService));
 
-                    var mockQdrant = new Mock<Api.Services.IQdrantService>();
                     var mockEmbedding = new Mock<Api.Services.IEmbeddingService>();
 
                     // Setup mock responses for InvokeAgent test
@@ -94,16 +92,6 @@ public sealed class AgentEndpointsSmokeTests : IAsyncLifetime
                         .Setup(e => e.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
                         .ReturnsAsync(embeddingResult);
 
-                    mockQdrant
-                        .Setup(q => q.SearchAsync(
-                            It.IsAny<string>(),
-                            It.IsAny<float[]>(),
-                            It.IsAny<int>(),
-                            It.IsAny<IReadOnlyList<string>?>(),
-                            It.IsAny<CancellationToken>()))
-                        .ReturnsAsync(Api.Services.SearchResult.CreateSuccess(new List<Api.Services.SearchResultItem>()));
-
-                    services.AddScoped<Api.Services.IQdrantService>(_ => mockQdrant.Object);
                     services.AddScoped<Api.Services.IEmbeddingService>(_ => mockEmbedding.Object);
 
                     // Mock HybridCache infrastructure (both HybridCache + IHybridCacheService required for event handlers)

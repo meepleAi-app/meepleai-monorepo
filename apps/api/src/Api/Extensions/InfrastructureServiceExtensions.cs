@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Hybrid;
+using Microsoft.Extensions.Hosting;
 using StackExchange.Redis;
 using Polly;
 using Polly.Extensions.Http;
@@ -26,6 +27,11 @@ internal static class InfrastructureServiceExtensions
         services.AddHttpClients(configuration);
         services.AddTimeProvider();
         services.AddBackgroundServices();
+
+        // Prevent unhandled background service exceptions from crashing the host.
+        // Safety net for schema mismatches (integration mode) or transient DB failures.
+        services.Configure<HostOptions>(options =>
+            options.BackgroundServiceExceptionBehavior = BackgroundServiceExceptionBehavior.Ignore);
         services.AddStorageServices(); // Issue #2732: Storage services
 
         return services;
@@ -298,7 +304,7 @@ internal static class InfrastructureServiceExtensions
                 ?? "http://embedding-service:8000";
 #pragma warning restore S1075
             client.BaseAddress = new Uri(serviceUrl);
-            client.Timeout = TimeSpan.FromSeconds(60);
+            client.Timeout = TimeSpan.FromSeconds(300);
         })
         .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler
         {
@@ -394,6 +400,10 @@ internal static class InfrastructureServiceExtensions
         // Issue #3541: BGG import queue service
         services.AddScoped<Infrastructure.Services.IBggImportQueueService, Infrastructure.Services.BggImportQueueService>();
         services.AddHostedService<Infrastructure.BackgroundServices.BggImportQueueBackgroundService>();
+
+        // Admin Invitation Flow: background services for invitation lifecycle
+        services.AddHostedService<Infrastructure.BackgroundServices.InvitationCleanupService>();
+        services.AddHostedService<Infrastructure.BackgroundServices.GameSuggestionProcessorService>();
 
         // Issue #936: Infisical secrets management client (POC)
         services.AddHttpClient("Infisical", client =>

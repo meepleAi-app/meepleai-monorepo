@@ -216,9 +216,15 @@ export function CoverImage({
     session: 'linear-gradient(135deg, hsl(240,30%,85%), hsl(240,40%,70%))',
     event: 'linear-gradient(135deg, hsl(350,40%,85%), hsl(350,60%,70%))',
     toolkit: 'linear-gradient(135deg, hsl(142,30%,85%), hsl(142,50%,75%))',
-    document: 'linear-gradient(135deg, hsl(210,30%,85%), hsl(210,40%,70%))',
-    custom: 'linear-gradient(135deg, hsl(220,30%,85%), hsl(220,40%,70%))',
-    kb_card: 'linear-gradient(135deg, hsl(174,30%,85%), hsl(174,50%,70%))',
+    tool: 'linear-gradient(135deg, hsl(195,30%,85%), hsl(195,50%,70%))',
+    kb: 'linear-gradient(135deg, hsl(174,30%,85%), hsl(174,50%,70%))',
+    collection: 'linear-gradient(135deg, hsl(20,40%,85%), hsl(20,60%,72%))',
+    group: 'linear-gradient(135deg, hsl(280,30%,85%), hsl(280,45%,72%))',
+    location: 'linear-gradient(135deg, hsl(200,30%,85%), hsl(200,50%,72%))',
+    expansion: 'linear-gradient(135deg, hsl(290,30%,85%), hsl(290,50%,72%))',
+    achievement: 'linear-gradient(135deg, hsl(45,50%,85%), hsl(45,80%,70%))',
+    note: 'linear-gradient(135deg, hsl(40,20%,85%), hsl(40,30%,72%))',
+    custom: 'linear-gradient(135deg, hsl(220,15%,85%), hsl(220,15%,70%))',
   };
 
   // Entity emoji fallbacks (when no image)
@@ -230,9 +236,15 @@ export function CoverImage({
     session: '\uD83C\uDFB2',
     event: '\uD83C\uDFC6',
     toolkit: '\uD83D\uDEE0\uFE0F',
-    document: '\uD83D\uDCC4',
+    tool: '\uD83D\uDD27',
+    kb: '\uD83D\uDCC4',
+    collection: '\uD83D\uDCDA',
+    group: '\uD83D\uDC65',
+    location: '\uD83D\uDCCD',
+    expansion: '\uD83D\uDCE6',
+    achievement: '\uD83C\uDFC6',
+    note: '\uD83D\uDCDD',
     custom: '\uD83C\uDFB2',
-    kb_card: '\uD83D\uDCCB',
   };
 
   return (

@@ -2,13 +2,13 @@
  * Gaming Hub Dashboard - Issue #4584
  * Epic #4575: Gaming Hub Dashboard - Phase 2
  *
- * Authenticated user dashboard with gaming-focused hub
+ * Authenticated user dashboard with gaming-focused hub.
+ * Uses DashboardRenderer (user-dashboard-engine) which fetches
+ * data via React Query hooks internally.
  */
 
 import { RequireRole } from '@/components/auth/RequireRole';
-
-import { GamingHubClient } from '../gaming-hub-client';
-import { DashboardNavConfig } from './NavConfig';
+import { DashboardRenderer } from '@/components/dashboard-v2';
 
 import type { Metadata } from 'next';
 
@@ -28,8 +28,7 @@ export const dynamic = 'force-dynamic';
 export default function GamingHubDashboardPage() {
   return (
     <RequireRole allowedRoles={['User', 'Editor', 'Admin']}>
-      <DashboardNavConfig />
-      <GamingHubClient />
+      <DashboardRenderer />
     </RequireRole>
   );
 }

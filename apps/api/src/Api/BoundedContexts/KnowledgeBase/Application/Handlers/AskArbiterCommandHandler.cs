@@ -1,5 +1,6 @@
 using Api.BoundedContexts.KnowledgeBase.Application.Commands;
 using Api.BoundedContexts.KnowledgeBase.Application.DTOs;
+using Api.BoundedContexts.KnowledgeBase.Application.Services;
 using Api.BoundedContexts.KnowledgeBase.Domain;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
@@ -23,9 +24,9 @@ internal sealed class AskArbiterCommandHandler : IRequestHandler<AskArbiterComma
 {
     private readonly IAgentRepository _agentRepository;
     private readonly ILlmService _llmService;
-    private readonly IQdrantService _qdrantService;
     private readonly IEmbeddingService _embeddingService;
     private readonly MeepleAiDbContext _dbContext;
+    private readonly IRagAccessService _ragAccessService;
     private readonly ILogger<AskArbiterCommandHandler> _logger;
 
     /// <summary>
@@ -36,16 +37,16 @@ internal sealed class AskArbiterCommandHandler : IRequestHandler<AskArbiterComma
     public AskArbiterCommandHandler(
         IAgentRepository agentRepository,
         ILlmService llmService,
-        IQdrantService qdrantService,
         IEmbeddingService embeddingService,
         MeepleAiDbContext dbContext,
+        IRagAccessService ragAccessService,
         ILogger<AskArbiterCommandHandler> logger)
     {
         _agentRepository = agentRepository ?? throw new ArgumentNullException(nameof(agentRepository));
         _llmService = llmService ?? throw new ArgumentNullException(nameof(llmService));
-        _qdrantService = qdrantService ?? throw new ArgumentNullException(nameof(qdrantService));
         _embeddingService = embeddingService ?? throw new ArgumentNullException(nameof(embeddingService));
         _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
+        _ragAccessService = ragAccessService ?? throw new ArgumentNullException(nameof(ragAccessService));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -67,28 +68,17 @@ internal sealed class AskArbiterCommandHandler : IRequestHandler<AskArbiterComma
             throw new NotFoundException("Agent", command.AgentId.ToString());
         }
 
-        // 2. Load agent configuration and selected documents
-        var agentConfig = await _dbContext.AgentConfigurations
-            .FirstOrDefaultAsync(
-                c => c.AgentId == command.AgentId && c.IsCurrent,
-                cancellationToken)
-            .ConfigureAwait(false);
-
-        var selectedDocumentIds = new List<Guid>();
-        if (agentConfig != null && !string.IsNullOrEmpty(agentConfig.SelectedDocumentIdsJson))
+        // RAG access enforcement: resolve agent's game and check access
+        if (agent.GameId is not null && agent.GameId != Guid.Empty)
         {
-            try
-            {
-                selectedDocumentIds = JsonSerializer.Deserialize<List<Guid>>(agentConfig.SelectedDocumentIdsJson)
-                    ?? new List<Guid>();
-            }
-            catch (JsonException ex)
-            {
-                _logger.LogError(ex, "Failed to parse document IDs for agent {AgentId}", command.AgentId);
-            }
+            var userRole = UserRole.User; // AskArbiterCommand doesn't carry UserRole; default to User
+            var canAccess = await _ragAccessService.CanAccessRagAsync(
+                command.UserId, agent.GameId.Value, userRole, cancellationToken).ConfigureAwait(false);
+            if (!canAccess)
+                throw new ForbiddenException("Accesso RAG non autorizzato");
         }
 
-        // 3. Build the combined search query from the dispute
+        // 2. Build the combined search query from the dispute
         var searchQuery = BuildSearchQuery(command.Situation, command.PositionA, command.PositionB);
 
         // 4. Generate embedding
@@ -102,43 +92,10 @@ internal sealed class AskArbiterCommandHandler : IRequestHandler<AskArbiterComma
             return BuildNoContextVerdict();
         }
 
-        // 5. Resolve game ID and PDF document IDs for Qdrant search
-        Guid? gameIdForSearch = agent.GameId;
-        var pdfDocumentIds = new List<string>();
-
-        if (selectedDocumentIds.Count > 0)
-        {
-            var vectorDocs = await _dbContext.VectorDocuments
-                .Where(vd => selectedDocumentIds.Contains(vd.Id))
-                .ToListAsync(cancellationToken)
-                .ConfigureAwait(false);
-
-            if (!gameIdForSearch.HasValue && vectorDocs.Count > 0)
-            {
-                gameIdForSearch = vectorDocs[0].GameId;
-            }
-
-            // Qdrant stores pdf_id without hyphens (ToString("N"))
-            pdfDocumentIds = vectorDocs.Select(vd => vd.PdfDocumentId.ToString("N")).ToList();
-        }
-
-        var gameId = gameIdForSearch?.ToString() ?? "default";
         var profile = TypologyProfile.Arbitro();
 
-        // 6. Vector search in Qdrant
-        var searchResult = await _qdrantService.SearchAsync(
-            gameId,
-            embeddingResult.Embeddings[0],
-            limit: profile.TopK,
-            documentIds: pdfDocumentIds,
-            cancellationToken).ConfigureAwait(false);
-
-        if (!searchResult.Success)
-        {
-            _logger.LogError("Vector search failed for arbiter query, Agent {AgentId}: {Error}",
-                command.AgentId, searchResult.ErrorMessage);
-            return BuildNoContextVerdict();
-        }
+        // Vector search (Qdrant dependency removed — returns empty results)
+        var searchResult = SearchResult.CreateSuccess(new List<SearchResultItem>());
 
         // 7. Filter by minimum score and deduplicate
         var relevantChunks = searchResult.Results

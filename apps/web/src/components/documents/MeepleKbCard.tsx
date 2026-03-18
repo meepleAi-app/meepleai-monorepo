@@ -31,7 +31,7 @@
 import { MessageCircle, RefreshCw, Download, Trash2 } from 'lucide-react';
 
 import { MeepleCard, type MeepleCardVariant } from '@/components/ui/data-display/meeple-card';
-import type { DocumentIndexingStatus } from '@/components/ui/data-display/meeple-card-features/DocumentStatusBadge';
+import type { KbIndexingStatus } from '@/components/ui/data-display/meeple-card-features/DocumentStatusBadge';
 import { getNavigationLinks } from '@/config/entity-navigation';
 import type { PdfDocumentDto } from '@/lib/api/schemas/pdf.schemas';
 
@@ -63,9 +63,9 @@ export interface MeepleKbCardProps {
 // ============================================================================
 
 /**
- * Map PdfDocumentDto.processingStatus string to DocumentIndexingStatus.
+ * Map PdfDocumentDto.processingStatus string to KbIndexingStatus.
  */
-function mapDocumentStatus(processingStatus: string): DocumentIndexingStatus {
+function mapDocumentStatus(processingStatus: string): KbIndexingStatus {
   switch (processingStatus) {
     case 'Completed':
     case 'Ready':
@@ -155,7 +155,7 @@ export function MeepleKbCard({
   return (
     <MeepleCard
       id={document.id}
-      entity="document"
+      entity="kb"
       variant={variant}
       title={document.fileName}
       subtitle={subtitle}
@@ -168,7 +168,7 @@ export function MeepleKbCard({
       infoHref={`/documents/${document.id}`}
       infoTooltip="Vai al dettaglio"
       // Navigation footer: Game + Agent links
-      navigateTo={getNavigationLinks('document', {
+      navigateTo={getNavigationLinks('kb', {
         id: document.id,
         gameId: document.gameId,
       })}
@@ -187,7 +187,7 @@ export function MeepleKbCardSkeleton({
 }) {
   return (
     <MeepleCard
-      entity="document"
+      entity="kb"
       variant={variant}
       title=""
       loading

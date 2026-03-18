@@ -1,20 +1,12 @@
+using Api.BoundedContexts.Authentication.Application.DTOs;
 using Api.SharedKernel.Application.Interfaces;
 
-#pragma warning disable MA0048 // File name must match type name - Contains Query with Response record
 namespace Api.BoundedContexts.Authentication.Application.Queries.Invitation;
 
 /// <summary>
-/// Query to validate an invitation token.
-/// Returns whether the token is valid without exposing sensitive data like email.
+/// Query to validate an invitation token with security-hardened uniform error responses.
+/// Returns IsValid with email/displayName on success, or a uniform error reason on failure.
+/// Security: only "invalid" and "already_used" error reasons to prevent state enumeration.
 /// Issue #124: User invitation system.
 /// </summary>
-internal record ValidateInvitationTokenQuery(string Token) : IQuery<ValidateInvitationTokenResponse>;
-
-/// <summary>
-/// Response for invitation token validation.
-/// Note: Does NOT include Email for security reasons.
-/// </summary>
-public sealed record ValidateInvitationTokenResponse(
-    bool Valid,
-    string? Role,
-    DateTime? ExpiresAt);
+internal record ValidateInvitationTokenQuery(string Token) : IQuery<InvitationValidationDto>;

@@ -21,6 +21,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/naviga
 import { Button } from '@/components/ui/primitives/button';
 import { useAuth, type AuthUser } from '@/hooks/useAuth';
 import { api } from '@/lib/api';
+import { logger } from '@/lib/logger';
 
 import { LoginForm, LoginFormData } from './LoginForm';
 import OAuthButtons from './OAuthButtons';
@@ -78,34 +79,82 @@ export function AuthModal({
   }, [isOpen, defaultMode, clearError]);
 
   // Handle login submission with 2FA support
-  const handleLogin = useCallback(async (data: LoginFormData) => {
-    setIsAuthenticating(true);
-    setError('');
+  const handleLogin = useCallback(
+    async (data: LoginFormData) => {
+      setIsAuthenticating(true);
+      setError('');
 
-    try {
-      const response = await api.auth.login({
-        email: data.email,
-        password: data.password,
-      });
+      try {
+        const response = await api.auth.login({
+          email: data.email,
+          password: data.password,
+        });
 
-      // Check if 2FA is required
-      if (response.requiresTwoFactor && response.tempSessionToken) {
-        setTempSessionToken(response.tempSessionToken);
-        setShow2FA(true);
+        // Check if 2FA is required
+        if (response.requiresTwoFactor && response.tempSessionToken) {
+          setTempSessionToken(response.tempSessionToken);
+          setShow2FA(true);
+          setIsAuthenticating(false);
+          return;
+        }
+
+        // Normal login - user should be present
+        if (response.user) {
+          await loadCurrentUser(); // Sync useAuth state
+          onSuccess?.(response.user);
+          onClose();
+          // Redirect admins to admin dashboard, others to specified redirect or default dashboard
+          const targetUrl = response.user.role?.toLowerCase() === 'admin' ? '/admin' : redirectTo;
+
+          // Small delay to ensure session cookie is persisted before navigation
+          // This prevents race condition with middleware session validation
+          await new Promise(resolve => setTimeout(resolve, 100));
+
+          // Refresh router to revalidate middleware with new session cookie
+          router.refresh();
+
+          // Navigate using Next.js router for smooth client-side transition
+          await router.push(targetUrl);
+        } else {
+          throw new Error('Login failed: No user data received');
+        }
+      } catch (err) {
+        const errorMessage =
+          err instanceof Error ? err.message : 'Login failed. Please check your credentials.';
+        setError(errorMessage);
+        logger.error('Login failed:', err);
+      } finally {
         setIsAuthenticating(false);
+      }
+    },
+    [loadCurrentUser, onSuccess, onClose, router, redirectTo]
+  );
+
+  // Handle 2FA verification (Issue #3077)
+  const handle2FAVerify = useCallback(
+    async (data: TwoFactorVerificationData) => {
+      if (!tempSessionToken) {
+        setTwoFactorError('Session expired. Please login again.');
         return;
       }
 
-      // Normal login - user should be present
-      if (response.user) {
+      setIsAuthenticating(true);
+      setTwoFactorError('');
+
+      try {
+        const user = await api.auth.verify2FALogin(
+          tempSessionToken,
+          data.code,
+          data.rememberDevice
+        );
+
         await loadCurrentUser(); // Sync useAuth state
-        onSuccess?.(response.user);
+        onSuccess?.(user);
         onClose();
         // Redirect admins to admin dashboard, others to specified redirect or default dashboard
-        const targetUrl = response.user.role?.toLowerCase() === 'admin' ? '/admin' : redirectTo;
+        const targetUrl = user.role?.toLowerCase() === 'admin' ? '/admin' : redirectTo;
 
         // Small delay to ensure session cookie is persisted before navigation
-        // This prevents race condition with middleware session validation
         await new Promise(resolve => setTimeout(resolve, 100));
 
         // Refresh router to revalidate middleware with new session cookie
@@ -113,59 +162,17 @@ export function AuthModal({
 
         // Navigate using Next.js router for smooth client-side transition
         await router.push(targetUrl);
-      } else {
-        throw new Error('Login failed: No user data received');
+      } catch (err) {
+        const errorMessage =
+          err instanceof Error ? err.message : 'Invalid verification code. Please try again.';
+        setTwoFactorError(errorMessage);
+        logger.error('2FA verification failed:', err);
+      } finally {
+        setIsAuthenticating(false);
       }
-    } catch (err) {
-      const errorMessage =
-        err instanceof Error ? err.message : 'Login failed. Please check your credentials.';
-      setError(errorMessage);
-      console.error('Login failed:', err);
-    } finally {
-      setIsAuthenticating(false);
-    }
-  }, [loadCurrentUser, onSuccess, onClose, router, redirectTo]);
-
-  // Handle 2FA verification (Issue #3077)
-  const handle2FAVerify = useCallback(async (data: TwoFactorVerificationData) => {
-    if (!tempSessionToken) {
-      setTwoFactorError('Session expired. Please login again.');
-      return;
-    }
-
-    setIsAuthenticating(true);
-    setTwoFactorError('');
-
-    try {
-      const user = await api.auth.verify2FALogin(
-        tempSessionToken,
-        data.code,
-        data.rememberDevice
-      );
-
-      await loadCurrentUser(); // Sync useAuth state
-      onSuccess?.(user);
-      onClose();
-      // Redirect admins to admin dashboard, others to specified redirect or default dashboard
-      const targetUrl = user.role?.toLowerCase() === 'admin' ? '/admin' : redirectTo;
-
-      // Small delay to ensure session cookie is persisted before navigation
-      await new Promise(resolve => setTimeout(resolve, 100));
-
-      // Refresh router to revalidate middleware with new session cookie
-      router.refresh();
-
-      // Navigate using Next.js router for smooth client-side transition
-      await router.push(targetUrl);
-    } catch (err) {
-      const errorMessage =
-        err instanceof Error ? err.message : 'Invalid verification code. Please try again.';
-      setTwoFactorError(errorMessage);
-      console.error('2FA verification failed:', err);
-    } finally {
-      setIsAuthenticating(false);
-    }
-  }, [tempSessionToken, loadCurrentUser, onSuccess, onClose, router, redirectTo]);
+    },
+    [tempSessionToken, loadCurrentUser, onSuccess, onClose, router, redirectTo]
+  );
 
   // Handle cancel 2FA - go back to login form
   const handleCancel2FA = useCallback(() => {
@@ -175,39 +182,45 @@ export function AuthModal({
   }, []);
 
   // Handle registration submission
-  const handleRegister = useCallback(async (data: Omit<RegisterFormData, 'confirmPassword'>) => {
-    setIsAuthenticating(true);
-    setError('');
+  const handleRegister = useCallback(
+    async (data: Omit<RegisterFormData, 'confirmPassword'>) => {
+      setIsAuthenticating(true);
+      setError('');
 
-    try {
-      const user = await register(data);
-      onSuccess?.(user);
-      onClose();
-      // Redirect to email verification pending page with email as parameter
-      // The user needs to verify their email before accessing the dashboard
+      try {
+        const user = await register(data);
+        onSuccess?.(user);
+        onClose();
+        // Redirect to email verification pending page with email as parameter
+        // The user needs to verify their email before accessing the dashboard
 
-      // Small delay to ensure session cookie is persisted before navigation
-      await new Promise(resolve => setTimeout(resolve, 100));
+        // Small delay to ensure session cookie is persisted before navigation
+        await new Promise(resolve => setTimeout(resolve, 100));
 
-      // Navigate using Next.js router for smooth client-side transition
-      await router.push(`/verification-pending?email=${encodeURIComponent(data.email)}`);
-    } catch (err) {
-      const errorMessage =
-        err instanceof Error ? err.message : 'Registration failed. Please try again.';
-      setError(errorMessage);
-      console.error('Registration failed:', err);
-    } finally {
-      setIsAuthenticating(false);
-    }
-  }, [register, onSuccess, onClose, router]);
+        // Navigate using Next.js router for smooth client-side transition
+        await router.push(`/verification-pending?email=${encodeURIComponent(data.email)}`);
+      } catch (err) {
+        const errorMessage =
+          err instanceof Error ? err.message : 'Registration failed. Please try again.';
+        setError(errorMessage);
+        logger.error('Registration failed:', err);
+      } finally {
+        setIsAuthenticating(false);
+      }
+    },
+    [register, onSuccess, onClose, router]
+  );
 
   // Handle tab change
-  const handleTabChange = useCallback((value: string) => {
-    setActiveTab(value as 'login' | 'register');
-    clearError();
-    setError('');
-    setIsAuthenticating(false);
-  }, [clearError]);
+  const handleTabChange = useCallback(
+    (value: string) => {
+      setActiveTab(value as 'login' | 'register');
+      clearError();
+      setError('');
+      setIsAuthenticating(false);
+    },
+    [clearError]
+  );
 
   // Determine modal title based on current state
   const getModalTitle = () => {

@@ -34,12 +34,18 @@ const ENTITY_BORDER_COLORS: Record<MeepleEntityType, string> = {
   player: 'border-l-[hsl(262,83%,58%)]',
   session: 'border-l-[hsl(240,60%,55%)]',
   agent: 'border-l-[hsl(38,92%,50%)]',
-  document: 'border-l-[hsl(210,40%,55%)]',
+  kb: 'border-l-[hsl(174,60%,40%)]',
   chatSession: 'border-l-[hsl(220,80%,55%)]',
   event: 'border-l-[hsl(350,89%,60%)]',
   toolkit: 'border-l-[hsl(142,70%,45%)]',
-  custom: 'border-l-[hsl(30,15%,50%)]',
-  kb_card: 'border-l-[hsl(174,60%,40%)]',
+  tool: 'border-l-[hsl(195,80%,50%)]',
+  collection: 'border-l-[hsl(20,70%,42%)]',
+  group: 'border-l-[hsl(280,50%,48%)]',
+  location: 'border-l-[hsl(200,55%,45%)]',
+  expansion: 'border-l-[hsl(290,65%,50%)]',
+  achievement: 'border-l-[hsl(45,90%,48%)]',
+  note: 'border-l-[hsl(40,30%,42%)]',
+  custom: 'border-l-[hsl(220,15%,45%)]',
 };
 
 // ============================================================================

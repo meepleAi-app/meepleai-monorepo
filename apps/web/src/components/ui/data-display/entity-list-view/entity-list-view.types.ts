@@ -110,10 +110,22 @@ export type FilterConfig<T> =
   | DateRangeFilter<T>;
 
 /**
+ * Possible filter values for each filter type
+ */
+export type FilterValue =
+  | string
+  | string[]
+  | boolean
+  | number
+  | { min: number; max: number }
+  | { start: Date; end: Date }
+  | null
+  | undefined;
+
+/**
  * Active filter state (filterId -> filterValue)
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type FilterState = Record<string, any>;
+export type FilterState = Record<string, FilterValue>;
 
 // ============================================================================
 // Grid Configuration
@@ -189,8 +201,7 @@ export interface TableColumnConfig {
  *
  * @template T - Type of items in the list
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export interface EntityListViewProps<T = any> {
+export interface EntityListViewProps<T = unknown> {
   // ========== REQUIRED ==========
 
   /** Array of items to display */

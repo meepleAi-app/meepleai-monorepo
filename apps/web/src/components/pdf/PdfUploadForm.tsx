@@ -19,6 +19,7 @@ import { Label } from '@/components/ui/primitives/label';
 import { useChunkedUpload } from '@/hooks/useChunkedUpload';
 import { ApiError } from '@/lib/api';
 import { categorizeError, type CategorizedError, extractCorrelationId } from '@/lib/errorUtils';
+import { logger } from '@/lib/logger';
 import { retryWithBackoff, isRetryableError } from '@/lib/retryUtils';
 
 // Dynamic import to prevent SSR issues with react-pdf
@@ -164,7 +165,7 @@ export function PdfUploadForm({
         setValidationErrors({});
       }
     } catch (error) {
-      console.error('Validation error:', error);
+      logger.error('Validation error:', error);
       setValidationErrors({ general: 'Failed to validate file. Please try again.' });
       setFile(null);
       e.target.value = '';

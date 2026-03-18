@@ -50,7 +50,7 @@ import {
   usePublishEmailTemplate,
   useUpdateEmailTemplate,
 } from '@/hooks/queries/useEmailTemplates';
-import { useToast } from '@/hooks/use-toast';
+import { useToast } from '@/hooks/useToast';
 import type { EmailTemplateDto } from '@/lib/api';
 
 import { getPlaceholdersForType, getDefaultTestData } from './_placeholders';

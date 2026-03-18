@@ -1,13 +1,13 @@
 /**
- * UnifiedHeader - Mobile-only compact header
+ * UnifiedHeader - Compact header for public/unauthenticated pages
  * Issue #3104 - Unify header navigation
  *
- * Desktop navigation is now handled by the Sidebar component.
- * This header renders only on mobile (< md breakpoint).
+ * Used by PublicLayout for guest pages (home, about, pricing, etc.).
+ * Authenticated users use UnifiedShell instead.
  *
  * Features:
  * - Compact 48px height
- * - Left: Hamburger drawer + Logo (icon only)
+ * - Left: Logo (icon only)
  * - Right: Notifications + User avatar dropdown
  * - Glass morphism design
  * - WCAG 2.1 AA compliance
@@ -17,19 +17,12 @@
 
 import { useState, useEffect, useTransition } from 'react';
 
-import {
-  Settings,
-  Shield,
-  LogOut,
-  UserIcon,
-  User,
-  FileEdit,
-} from 'lucide-react';
+import { Settings, Shield, LogOut, UserIcon, User, FileEdit } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
 import { logoutAction } from '@/actions/auth';
-import { MobileNavDrawer } from '@/components/layout/MobileNavDrawer';
+// MobileNavDrawer removed — navigation handled by UnifiedShell CardStack
 import { NotificationBell } from '@/components/notifications';
 import { MeepleLogo } from '@/components/ui/meeple/meeple-logo';
 import {
@@ -58,7 +51,8 @@ export function UnifiedHeader({ className }: UnifiedHeaderProps) {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isLoggingOut, startTransition] = useTransition();
 
-  const isAdmin = user?.role?.toLowerCase() === 'admin' || user?.role?.toLowerCase() === 'superadmin';
+  const isAdmin =
+    user?.role?.toLowerCase() === 'admin' || user?.role?.toLowerCase() === 'superadmin';
   const isEditor = user?.role?.toLowerCase() === 'editor' || isAdmin;
 
   useEffect(() => {
@@ -122,9 +116,7 @@ export function UnifiedHeader({ className }: UnifiedHeaderProps) {
         <DropdownMenuContent align="end" className="w-56">
           <DropdownMenuLabel>
             <div className="flex flex-col space-y-1">
-              <p className="text-sm font-medium leading-none">
-                {user.displayName || 'Utente'}
-              </p>
+              <p className="text-sm font-medium leading-none">{user.displayName || 'Utente'}</p>
               <p className="text-xs leading-none text-muted-foreground">{user.email}</p>
             </div>
           </DropdownMenuLabel>
@@ -209,9 +201,6 @@ export function UnifiedHeader({ className }: UnifiedHeaderProps) {
       <div className="container mx-auto flex h-12 items-center justify-between px-4">
         {/* Left: Mobile Nav + Logo (icon only) */}
         <div className="flex items-center gap-2">
-          {isAuthenticated && !isAuthLoading && (
-            <MobileNavDrawer />
-          )}
           <Link href="/" className="flex items-center" aria-label="MeepleAI Home">
             <MeepleLogo variant="icon" size="sm" />
           </Link>
@@ -219,9 +208,7 @@ export function UnifiedHeader({ className }: UnifiedHeaderProps) {
 
         {/* Right: Notifications + User Menu */}
         <div className="flex items-center gap-1">
-          {isAuthenticated && !isAuthLoading && (
-            <NotificationBell />
-          )}
+          {isAuthenticated && !isAuthLoading && <NotificationBell />}
           <UserMenu />
         </div>
       </div>

@@ -1,5 +1,6 @@
 using Api.BoundedContexts.SharedGameCatalog.Domain.Aggregates;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Entities;
+using Api.BoundedContexts.SharedGameCatalog.Domain.Enums;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
 using Api.BoundedContexts.SharedGameCatalog.Domain.ValueObjects;
 using Api.Infrastructure;
@@ -88,7 +89,11 @@ internal sealed class SharedGameRepository : ISharedGameRepository
         GameRules? rules = null;
         if (!string.IsNullOrEmpty(entity.RulesContent) && !string.IsNullOrEmpty(entity.RulesLanguage))
         {
-            rules = GameRules.Create(entity.RulesContent, entity.RulesLanguage);
+            rules = GameRules.Create(entity.RulesContent, entity.RulesLanguage, entity.RulesExternalUrl);
+        }
+        else if (!string.IsNullOrEmpty(entity.RulesExternalUrl))
+        {
+            rules = GameRules.CreateFromUrl(entity.RulesExternalUrl);
         }
 
         // Use internal reconstruction constructor (no events)
@@ -113,7 +118,9 @@ internal sealed class SharedGameRepository : ISharedGameRepository
             entity.ModifiedAt,
             entity.IsDeleted,
             entity.BggId,
-            entity.AgentDefinitionId); // Issue #4228
+            entity.AgentDefinitionId,
+            (GameDataStatus)entity.GameDataStatus,
+            entity.HasUploadedPdf);
     }
 
     private static SharedGameEntity MapToEntity(SharedGame game)
@@ -134,8 +141,11 @@ internal sealed class SharedGameRepository : ISharedGameRepository
             ImageUrl = game.ImageUrl,
             ThumbnailUrl = game.ThumbnailUrl,
             Status = (int)game.Status,
+            GameDataStatus = (int)game.GameDataStatus,
             RulesContent = game.Rules?.Content,
             RulesLanguage = game.Rules?.Language,
+            RulesExternalUrl = game.Rules?.ExternalUrl,
+            HasUploadedPdf = game.HasUploadedPdf,
             // SearchVector managed by PostgreSQL trigger
             CreatedBy = game.CreatedBy,
             ModifiedBy = game.ModifiedBy,
@@ -174,5 +184,24 @@ internal sealed class SharedGameRepository : ISharedGameRepository
             .FirstOrDefaultAsync(g => g.Id == id, cancellationToken).ConfigureAwait(false);
 
         return gameEntity != null ? MapToDomain(gameEntity) : null;
+    }
+
+    public async Task<bool> ExistsByTitleAsync(string title, CancellationToken cancellationToken = default)
+    {
+        return await _context.SharedGames
+            .AsNoTracking()
+            .AnyAsync(g => EF.Functions.ILike(g.Title, title), cancellationToken)
+            .ConfigureAwait(false);
+    }
+
+    public async Task<List<SharedGame>> GetByGameDataStatusAsync(GameDataStatus status, CancellationToken cancellationToken = default)
+    {
+        var entities = await _context.SharedGames
+            .AsNoTracking()
+            .Where(g => g.GameDataStatus == (int)status)
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        return entities.Select(MapToDomain).ToList();
     }
 }

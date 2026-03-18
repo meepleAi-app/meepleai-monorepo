@@ -16,7 +16,7 @@ import {
 
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/data-display/badge';
-import { useToast } from '@/hooks/use-toast';
+import { useToast } from '@/hooks/useToast';
 import { api } from '@/lib/api';
 
 type N8nConfig = {

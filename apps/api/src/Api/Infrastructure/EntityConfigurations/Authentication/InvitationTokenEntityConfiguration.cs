@@ -20,11 +20,19 @@ internal class InvitationTokenEntityConfiguration : IEntityTypeConfiguration<Inv
         builder.Property(e => e.CreatedAt).IsRequired();
         builder.Property(e => e.AcceptedAt);
         builder.Property(e => e.AcceptedByUserId);
+        builder.Property(e => e.RevokedAt);
+
+        // Admin Invitation Flow: custom message and pending user
+        builder.Property(e => e.CustomMessage).HasMaxLength(500).IsRequired(false);
+        builder.Property(e => e.PendingUserId).IsRequired(false);
 
         // Indexes
         builder.HasIndex(e => e.TokenHash).IsUnique();
         builder.HasIndex(e => new { e.Email, e.Status });
         builder.HasIndex(e => e.ExpiresAt);
+        builder.HasIndex(e => e.PendingUserId)
+            .HasDatabaseName("IX_InvitationTokens_PendingUserId")
+            .HasFilter("pending_user_id IS NOT NULL");
 
         // Relationships — FK to users table
         builder.HasOne(e => e.InvitedByUser)
@@ -37,5 +45,17 @@ internal class InvitationTokenEntityConfiguration : IEntityTypeConfiguration<Inv
             .HasForeignKey(e => e.AcceptedByUserId)
             .IsRequired(false)
             .OnDelete(DeleteBehavior.SetNull);
+
+        builder.HasOne(e => e.PendingUser)
+            .WithMany()
+            .HasForeignKey(e => e.PendingUserId)
+            .IsRequired(false)
+            .OnDelete(DeleteBehavior.SetNull);
+
+        // GameSuggestions — cascade delete when invitation is removed
+        builder.HasMany(e => e.GameSuggestions)
+            .WithOne(gs => gs.InvitationToken)
+            .HasForeignKey(gs => gs.InvitationTokenId)
+            .OnDelete(DeleteBehavior.Cascade);
     }
 }

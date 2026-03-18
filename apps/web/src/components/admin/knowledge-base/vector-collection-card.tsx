@@ -3,7 +3,7 @@
  * Issue #4861: MeepleCard design system for /admin/knowledge-base/vectors
  * Issue #4877: Qdrant Advanced Operations + Delete
  *
- * Displays a Qdrant vector collection using MeepleCard entity="document" variant="grid"
+ * Displays a Qdrant vector collection using MeepleCard entity="kb" variant="grid"
  * with collection metrics, health status badge, and admin quick actions.
  */
 
@@ -69,7 +69,7 @@ export function VectorCollectionCard({
 
   return (
     <MeepleCard
-      entity="document"
+      entity="kb"
       variant="grid"
       title={name}
       subtitle={`${vectorCount.toLocaleString()} vectors · ${dimensions}D · ${storage}`}

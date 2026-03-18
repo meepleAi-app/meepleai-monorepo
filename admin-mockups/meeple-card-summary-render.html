@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MeepleCard Component Summary - Visual Reference</title>
+<link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700;800&family=Nunito:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #f8f6f3;
+  --bg-card: rgba(255,255,255,0.90);
+  --text: #1a1a2e;
+  --text-sec: #64748b;
+  --text-muted: #94a3b8;
+  --border: rgba(0,0,0,0.06);
+  --shadow-sm: 0 2px 8px rgba(120,80,40,0.06);
+  --shadow-md: 0 4px 20px rgba(120,80,40,0.08);
+  --shadow-lg: 0 8px 32px rgba(120,80,40,0.12);
+  --shadow-xl: 0 12px 48px rgba(120,80,40,0.16);
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family:'Nunito',sans-serif; background:var(--bg); color:var(--text); line-height:1.6; padding:32px; }
+h1,h2,h3 { font-family:'Quicksand',sans-serif; }
+.page-title { text-align:center; margin-bottom:8px; font-size:2rem; }
+.page-subtitle { text-align:center; color:var(--text-sec); margin-bottom:48px; font-size:0.95rem; }
+
+/* Section */
+.section { margin-bottom:56px; }
+.section-title { font-size:1.3rem; font-weight:700; margin-bottom:6px; display:flex; align-items:center; gap:10px; }
+.section-title .num { width:28px; height:28px; border-radius:50%; background:hsl(25,95%,45%); color:white; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:700; }
+.section-desc { color:var(--text-sec); font-size:0.85rem; margin-bottom:20px; }
+
+/* Grid */
+.card-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(220px, 1fr)); gap:20px; }
+.card-grid-3 { display:grid; grid-template-columns:repeat(3, 1fr); gap:20px; }
+
+/* ── MeepleCard ── */
+.mc {
+  position:relative; border-radius:16px; overflow:hidden;
+  background:var(--bg-card); backdrop-filter:blur(12px) saturate(180%);
+  border:1px solid var(--border);
+  box-shadow:var(--shadow-sm);
+  transition:transform 0.35s cubic-bezier(0.4,0,0.2,1), box-shadow 0.35s, outline 0.35s;
+  outline:2px solid transparent; outline-offset:2px;
+  cursor:pointer;
+}
+.mc:hover { transform:translateY(-6px); box-shadow:var(--shadow-xl); }
+
+/* Entity Glow on hover */
+.mc.e-game:hover    { outline-color:hsla(25,95%,45%,0.4); }
+.mc.e-player:hover  { outline-color:hsla(262,83%,58%,0.4); }
+.mc.e-session:hover { outline-color:hsla(240,60%,55%,0.4); }
+.mc.e-agent:hover   { outline-color:hsla(38,92%,50%,0.4); }
+.mc.e-doc:hover     { outline-color:hsla(210,40%,55%,0.4); }
+.mc.e-chat:hover    { outline-color:hsla(220,80%,55%,0.4); }
+.mc.e-event:hover   { outline-color:hsla(350,89%,60%,0.4); }
+
+/* Left border accent */
+.mc .accent {
+  position:absolute; left:0; top:0; bottom:0; width:4px;
+  transition:width 0.25s;
+}
+.mc:hover .accent { width:6px; }
+
+/* Cover */
+.mc .cover {
+  position:relative; overflow:hidden;
+  aspect-ratio:7/10;
+}
+.mc .cover img {
+  width:100%; height:100%; object-fit:cover;
+  transition:transform 0.5s;
+}
+.mc:hover .cover img { transform:scale(1.06); }
+
+/* Shimmer */
+.mc .cover .shimmer {
+  position:absolute; inset:0;
+  background:linear-gradient(105deg, transparent 40%, rgba(255,255,255,0.25) 50%, transparent 60%);
+  transform:translateX(-100%);
+  pointer-events:none;
+}
+.mc:hover .cover .shimmer { animation:shimmer 0.8s ease-out forwards; }
+@keyframes shimmer { 0%{transform:translateX(-100%)} 100%{transform:translateX(100%)} }
+
+/* Gradient overlay */
+.mc .cover .gradient {
+  position:absolute; inset:0; pointer-events:none;
+}
+
+/* Entity badge */
+.mc .entity-badge {
+  position:absolute; top:8px; left:10px; z-index:5;
+  padding:2px 8px; border-radius:6px;
+  font-family:'Quicksand',sans-serif; font-weight:800;
+  font-size:9px; text-transform:uppercase; letter-spacing:0.04em;
+  color:white; box-shadow:0 1px 3px rgba(0,0,0,0.2);
+}
+
+/* Content */
+.mc .content { padding:10px 14px 14px; display:flex; flex-direction:column; gap:4px; }
+.mc .title { font-family:'Quicksand',sans-serif; font-weight:700; font-size:0.95rem; line-height:1.3; }
+.mc .subtitle { font-size:0.78rem; color:var(--text-sec); line-height:1.3; }
+
+/* Rating */
+.mc .rating { display:flex; align-items:center; gap:2px; margin-top:2px; }
+.mc .rating .star { font-size:0.78rem; }
+.mc .rating .star.full { color:#f59e0b; }
+.mc .rating .star.half { color:rgba(245,158,11,0.5); }
+.mc .rating .star.empty { color:rgba(0,0,0,0.12); }
+.mc .rating .val { font-size:0.7rem; font-weight:600; color:var(--text-sec); margin-left:4px; }
+
+/* Metadata chips */
+.mc .meta { display:flex; flex-wrap:wrap; gap:6px; margin-top:4px; }
+.mc .meta .chip {
+  font-size:10px; color:var(--text-sec);
+  background:#f1f5f9; padding:2px 8px; border-radius:6px;
+  display:flex; align-items:center; gap:3px;
+}
+
+/* Quick actions (hover reveal) */
+.mc .quick-actions {
+  position:absolute; top:8px; right:8px; z-index:10;
+  display:flex; flex-direction:column; gap:6px;
+  opacity:0; transition:opacity 0.3s;
+}
+.mc:hover .quick-actions { opacity:1; }
+.mc .quick-actions .qa-btn {
+  width:30px; height:30px; border-radius:50%;
+  background:rgba(255,255,255,0.85); backdrop-filter:blur(8px);
+  border:1px solid rgba(255,255,255,0.6);
+  display:flex; align-items:center; justify-content:center;
+  font-size:14px; cursor:pointer;
+  transition:transform 0.3s, box-shadow 0.3s;
+}
+.mc .quick-actions .qa-btn:hover { transform:scale(1.1); box-shadow:var(--shadow-md); }
+
+/* Placeholder gradient */
+.mc .placeholder {
+  aspect-ratio:7/10; display:flex; align-items:center; justify-content:center;
+  font-size:3rem; opacity:0.5;
+}
+
+/* ── LIST VARIANT ── */
+.mc-list {
+  display:flex; flex-direction:row; align-items:center; gap:14px;
+  padding:12px 14px; border-radius:12px;
+  background:var(--bg-card); backdrop-filter:blur(12px);
+  border:1px solid var(--border); box-shadow:var(--shadow-sm);
+  transition:transform 0.3s, box-shadow 0.3s;
+  cursor:pointer;
+}
+.mc-list:hover { transform:translateX(4px); box-shadow:var(--shadow-md); }
+.mc-list .dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+.mc-list .thumb { width:56px; height:56px; border-radius:10px; overflow:hidden; flex-shrink:0; }
+.mc-list .thumb img { width:100%; height:100%; object-fit:cover; }
+.mc-list .info { flex:1; min-width:0; }
+.mc-list .info .title { font-family:'Quicksand',sans-serif; font-weight:700; font-size:0.9rem; }
+.mc-list .info .subtitle { font-size:0.78rem; color:var(--text-sec); }
+
+/* ── COMPACT VARIANT ── */
+.mc-compact {
+  display:flex; flex-direction:row; align-items:center; gap:8px;
+  padding:8px 12px; border-radius:8px;
+  background:rgba(255,255,255,0.8); border:1px solid rgba(0,0,0,0.04);
+  cursor:pointer; transition:background 0.2s;
+}
+.mc-compact:hover { background:var(--bg-card); }
+.mc-compact .dot { width:6px; height:6px; border-radius:50%; flex-shrink:0; }
+.mc-compact .title { font-family:'Quicksand',sans-serif; font-weight:600; font-size:0.85rem; }
+.mc-compact .subtitle { font-size:0.75rem; color:var(--text-sec); }
+
+/* ── HERO VARIANT ── */
+.mc-hero {
+  position:relative; border-radius:24px; overflow:hidden;
+  min-height:280px; box-shadow:var(--shadow-xl);
+  transition:transform 0.35s, box-shadow 0.35s;
+  cursor:pointer;
+}
+.mc-hero:hover { transform:scale(1.01); box-shadow:0 16px 64px rgba(120,80,40,0.2); }
+.mc-hero img { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; }
+.mc-hero .ribbon {
+  position:absolute; top:16px; right:-32px; z-index:5;
+  padding:4px 40px; font-family:'Quicksand',sans-serif;
+  font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.06em;
+  color:white; transform:rotate(45deg); box-shadow:0 2px 6px rgba(0,0,0,0.3);
+}
+.mc-hero .hero-content {
+  position:relative; z-index:2;
+  display:flex; flex-direction:column; justify-content:flex-end;
+  min-height:280px; padding:24px;
+}
+.mc-hero .hero-content .title {
+  font-family:'Quicksand',sans-serif; font-weight:700; font-size:1.6rem;
+  color:white; text-shadow:0 2px 8px rgba(0,0,0,0.3);
+}
+.mc-hero .hero-content .subtitle {
+  font-size:0.9rem; color:rgba(255,255,255,0.85); margin-top:4px;
+}
+.mc-hero .hero-content .meta { margin-top:8px; }
+.mc-hero .hero-content .meta .chip { background:rgba(255,255,255,0.2); color:white; }
+
+/* Featured */
+.mc-featured .cover { aspect-ratio:16/9; }
+
+/* Nav Footer */
+.mc .nav-footer {
+  display:flex; gap:4px; padding:6px 14px 10px; border-top:1px solid var(--border);
+}
+.mc .nav-footer .nav-icon {
+  width:28px; height:28px; border-radius:50%; background:#f1f5f9;
+  display:flex; align-items:center; justify-content:center;
+  font-size:12px; cursor:pointer; transition:background 0.2s;
+}
+.mc .nav-footer .nav-icon:hover { background:#e2e8f0; }
+
+/* Info */
+.info-table { width:100%; border-collapse:collapse; font-size:0.85rem; }
+.info-table td { padding:6px 12px; border-bottom:1px solid var(--border); vertical-align:top; }
+.info-table td:first-child { font-weight:600; width:140px; color:var(--text-sec); }
+.info-table code { background:#f1f5f9; padding:2px 6px; border-radius:4px; font-size:0.8rem; }
+
+/* Color swatches */
+.swatches { display:flex; gap:12px; flex-wrap:wrap; }
+.swatch { text-align:center; }
+.swatch .circle { width:48px; height:48px; border-radius:50%; margin:0 auto 6px; box-shadow:var(--shadow-sm); }
+.swatch .label { font-size:0.7rem; font-weight:600; }
+.swatch .hsl { font-size:0.65rem; color:var(--text-muted); }
+
+/* Status badges */
+.status-badge { display:inline-flex; align-items:center; gap:4px; padding:2px 8px; border-radius:6px; font-size:10px; font-weight:700; }
+.sb-owned { background:#dcfce7; color:#166534; }
+.sb-wishlisted { background:#fef3c7; color:#92400e; }
+.sb-played { background:#dbeafe; color:#1e40af; }
+</style>
+</head>
+<body>
+
+<h1 class="page-title">MeepleCard Component System</h1>
+<p class="page-subtitle">Universal card component for all MeepleAI entities &mdash; 10 entity types &times; 5 layout variants &times; 30+ features</p>
+
+<!-- ═══════════════════════════════════════════════════════════════════════════
+     SECTION 1: ENTITY COLORS
+     ═══════════════════════════════════════════════════════════════════════════ -->
+<div class="section">
+  <div class="section-title"><span class="num">1</span> Entity Color System (10 types)</div>
+  <p class="section-desc">Each entity type has a unique HSL color used for border accent, badge, glow ring, gradient overlays, and flip card header.</p>
+  <div class="swatches">
+    <div class="swatch"><div class="circle" style="background:hsl(25,95%,45%)"></div><div class="label">Game</div><div class="hsl">25 95% 45%</div></div>
+    <div class="swatch"><div class="circle" style="background:hsl(262,83%,58%)"></div><div class="label">Player</div><div class="hsl">262 83% 58%</div></div>
+    <div class="swatch"><div class="circle" style="background:hsl(240,60%,55%)"></div><div class="label">Session</div><div class="hsl">240 60% 55%</div></div>
+    <div class="swatch"><div class="circle" style="background:hsl(38,92%,50%)"></div><div class="label">Agent</div><div class="hsl">38 92% 50%</div></div>
+    <div class="swatch"><div class="circle" style="background:hsl(210,40%,55%)"></div><div class="label">Document</div><div class="hsl">210 40% 55%</div></div>
+    <div class="swatch"><div class="circle" style="background:hsl(220,80%,55%)"></div><div class="label">Chat</div><div class="hsl">220 80% 55%</div></div>
+    <div class="swatch"><div class="circle" style="background:hsl(350,89%,60%)"></div><div class="label">Event</div><div class="hsl">350 89% 60%</div></div>
+    <div class="swatch"><div class="circle" style="background:hsl(142,70%,45%)"></div><div class="label">Toolkit</div><div class="hsl">142 70% 45%</div></div>
+    <div class="swatch"><div class="circle" style="background:hsl(174,60%,40%)"></div><div class="label">KB Card</div><div class="hsl">174 60% 40%</div></div>
+    <div class="swatch"><div class="circle" style="background:hsl(220,70%,50%)"></div><div class="label">Custom</div><div class="hsl">220 70% 50%</div></div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════════════
+     SECTION 2: GRID VARIANT (all entities)
+     ═══════════════════════════════════════════════════════════════════════════ -->
+<div class="section">
+  <div class="section-title"><span class="num">2</span> Grid Variant &mdash; All Entity Types</div>
+  <p class="section-desc">Default variant with 7:10 cover, left border accent, entity badge, glassmorphism, warm shadows, shimmer on hover, entity glow ring.</p>
+  <div class="card-grid">
+
+    <!-- Game -->
+    <div class="mc e-game">
+      <span class="accent" style="background:hsl(25,95%,45%)"></span>
+      <div class="cover">
+        <img src="https://cf.geekdo-images.com/WPKk3MeT3EKhKnhFLB8OoA__itemrep/img/yJB95GXRb10MKzqxKOXGKjgMrPQ=/fit-in/246x300/filters:strip_icc()/pic3490053.jpg" alt="Catan">
+        <div class="gradient" style="background:linear-gradient(to top, hsla(25,95%,45%,0.15), transparent 60%)"></div>
+        <div class="shimmer"></div>
+      </div>
+      <span class="entity-badge" style="background:hsl(25,95%,45%)">Game</span>
+      <div class="quick-actions">
+        <div class="qa-btn" title="Info">ℹ️</div>
+        <div class="qa-btn" title="Add to Library">📚</div>
+        <div class="qa-btn" title="Create Agent">🤖</div>
+      </div>
+      <div class="content">
+        <div class="title">Catan</div>
+        <div class="subtitle">Klaus Teuber &middot; 1995</div>
+        <div class="rating">
+          <span class="star full">★</span><span class="star full">★</span><span class="star full">★</span><span class="star half">★</span><span class="star empty">★</span>
+          <span class="val">7.2</span>
+        </div>
+        <div class="meta">
+          <span class="chip">👥 3-4</span>
+          <span class="chip">⏱ 60-120m</span>
+        </div>
+      </div>
+      <div class="nav-footer">
+        <div class="nav-icon" title="Documents">📄</div>
+        <div class="nav-icon" title="Agent">🤖</div>
+        <div class="nav-icon" title="Sessions">🎲</div>
+      </div>
+    </div>
+
+    <!-- Player -->
+    <div class="mc e-player">
+      <span class="accent" style="background:hsl(262,83%,58%)"></span>
+      <div class="placeholder" style="background:linear-gradient(135deg, hsl(262,30%,85%), hsl(262,50%,75%))">👤</div>
+      <span class="entity-badge" style="background:hsl(262,83%,58%)">Player</span>
+      <div class="content">
+        <div class="title">Marco Rossi</div>
+        <div class="subtitle">@marco_games</div>
+        <div class="meta">
+          <span class="chip">🎮 142 plays</span>
+          <span class="chip">🏆 Top 5%</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Session -->
+    <div class="mc e-session">
+      <span class="accent" style="background:hsl(240,60%,55%)"></span>
+      <div class="placeholder" style="background:linear-gradient(135deg, hsl(240,30%,85%), hsl(240,40%,70%))">🎲</div>
+      <span class="entity-badge" style="background:hsl(240,60%,55%)">Session</span>
+      <div class="content">
+        <div class="title">Serata Azul</div>
+        <div class="subtitle">Azul &middot; Casa di Marco</div>
+        <div class="meta">
+          <span class="chip">👥 4 giocatori</span>
+          <span class="chip">⏱ 45 min</span>
+        </div>
+        <div style="margin-top:6px">
+          <span class="status-badge sb-played">▶ In corso</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Agent -->
+    <div class="mc e-agent">
+      <span class="accent" style="background:hsl(38,92%,50%)"></span>
+      <div class="placeholder" style="background:linear-gradient(135deg, hsl(38,40%,85%), hsl(38,60%,70%))">🤖</div>
+      <span class="entity-badge" style="background:hsl(38,92%,50%)">Agent</span>
+      <div class="content">
+        <div class="title">Azul Rules Expert</div>
+        <div class="subtitle">RAG Strategy &middot; GPT-4o-mini</div>
+        <div class="meta">
+          <span class="chip">💬 342 invocazioni</span>
+        </div>
+        <div style="margin-top:6px">
+          <span class="status-badge" style="background:#dcfce7;color:#166534">● Active</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Document -->
+    <div class="mc e-doc">
+      <span class="accent" style="background:hsl(210,40%,55%)"></span>
+      <div class="placeholder" style="background:linear-gradient(135deg, hsl(210,30%,85%), hsl(210,40%,70%))">📄</div>
+      <span class="entity-badge" style="background:hsl(210,40%,55%)">Document</span>
+      <div class="content">
+        <div class="title">azul_rulebook.pdf</div>
+        <div class="subtitle">Azul &middot; Regolamento base</div>
+        <div class="meta">
+          <span class="chip">📄 12 pagine</span>
+          <span class="chip">⬇ 2.4 MB</span>
+        </div>
+        <div style="margin-top:6px">
+          <span class="status-badge" style="background:#dcfce7;color:#166534">✓ Indexed</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ChatSession -->
+    <div class="mc e-chat">
+      <span class="accent" style="background:hsl(220,80%,55%)"></span>
+      <div class="placeholder" style="background:linear-gradient(135deg, hsl(220,30%,88%), hsl(220,50%,75%));aspect-ratio:4/3">💬</div>
+      <span class="entity-badge" style="background:hsl(220,80%,55%)">Chat</span>
+      <div class="content">
+        <div class="title">Come si gioca ad Azul?</div>
+        <div class="subtitle">Azul &middot; Azul Rules Expert</div>
+        <div class="meta">
+          <span class="chip">💬 12 messaggi</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Event -->
+    <div class="mc e-event">
+      <span class="accent" style="background:hsl(350,89%,60%)"></span>
+      <div class="placeholder" style="background:linear-gradient(135deg, hsl(350,40%,85%), hsl(350,60%,70%))">🏆</div>
+      <span class="entity-badge" style="background:hsl(350,89%,60%)">Event</span>
+      <div class="content">
+        <div class="title">MeepleAI Tournament</div>
+        <div class="subtitle">Grand Finals &middot; March 15</div>
+        <div class="meta">
+          <span class="chip">🏆 32 team</span>
+          <span class="chip">📅 15 Mar</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════════════
+     SECTION 3: LIST + COMPACT VARIANTS
+     ═══════════════════════════════════════════════════════════════════════════ -->
+<div class="section">
+  <div class="section-title"><span class="num">3</span> List &amp; Compact Variants</div>
+  <p class="section-desc">List: horizontal with 56px thumbnail, slides right on hover. Compact: minimal footprint, dot indicator.</p>
+  <div style="display:grid; grid-template-columns:1fr 1fr; gap:32px;">
+    <div>
+      <h3 style="margin-bottom:12px; font-size:0.9rem; color:var(--text-sec)">List Variant</h3>
+      <div style="display:flex; flex-direction:column; gap:8px;">
+        <div class="mc-list">
+          <span class="dot" style="background:hsl(25,95%,45%)"></span>
+          <div class="thumb"><img src="https://cf.geekdo-images.com/WPKk3MeT3EKhKnhFLB8OoA__itemrep/img/yJB95GXRb10MKzqxKOXGKjgMrPQ=/fit-in/246x300/filters:strip_icc()/pic3490053.jpg" alt="Catan"></div>
+          <div class="info"><div class="title">Catan</div><div class="subtitle">Klaus Teuber &middot; 3-4p &middot; 60-120m</div></div>
+        </div>
+        <div class="mc-list">
+          <span class="dot" style="background:hsl(262,83%,58%)"></span>
+          <div class="thumb" style="background:linear-gradient(135deg, hsl(262,30%,85%), hsl(262,50%,75%)); display:flex; align-items:center; justify-content:center; font-size:1.5rem">👤</div>
+          <div class="info"><div class="title">Marco Rossi</div><div class="subtitle">@marco_games &middot; 142 plays</div></div>
+        </div>
+        <div class="mc-list">
+          <span class="dot" style="background:hsl(38,92%,50%)"></span>
+          <div class="thumb" style="background:linear-gradient(135deg, hsl(38,40%,85%), hsl(38,60%,70%)); display:flex; align-items:center; justify-content:center; font-size:1.5rem">🤖</div>
+          <div class="info"><div class="title">Catan Expert Agent</div><div class="subtitle">RAG Strategy &middot; Active</div></div>
+        </div>
+      </div>
+    </div>
+    <div>
+      <h3 style="margin-bottom:12px; font-size:0.9rem; color:var(--text-sec)">Compact Variant</h3>
+      <div style="display:flex; flex-direction:column; gap:6px;">
+        <div class="mc-compact">
+          <span class="dot" style="background:hsl(25,95%,45%)"></span>
+          <div><span class="title">Catan</span> <span class="subtitle">&middot; 3-4 players</span></div>
+        </div>
+        <div class="mc-compact">
+          <span class="dot" style="background:hsl(240,60%,55%)"></span>
+          <div><span class="title">Serata Azul</span> <span class="subtitle">&middot; In corso</span></div>
+        </div>
+        <div class="mc-compact">
+          <span class="dot" style="background:hsl(220,80%,55%)"></span>
+          <div><span class="title">Come si gioca?</span> <span class="subtitle">&middot; 12 msg</span></div>
+        </div>
+        <div class="mc-compact">
+          <span class="dot" style="background:hsl(210,40%,55%)"></span>
+          <div><span class="title">azul_rulebook.pdf</span> <span class="subtitle">&middot; 2.4 MB</span></div>
+        </div>
+        <div class="mc-compact">
+          <span class="dot" style="background:hsl(350,89%,60%)"></span>
+          <div><span class="title">Tournament</span> <span class="subtitle">&middot; Mar 15</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════════════
+     SECTION 4: HERO VARIANT
+     ═══════════════════════════════════════════════════════════════════════════ -->
+<div class="section">
+  <div class="section-title"><span class="num">4</span> Hero Variant</div>
+  <p class="section-desc">Full-bleed background, ribbon entity indicator, rich gradient overlay, min-height 320px, scale(1.01) hover.</p>
+  <div class="mc-hero e-game">
+    <img src="https://cf.geekdo-images.com/WPKk3MeT3EKhKnhFLB8OoA__itemrep/img/yJB95GXRb10MKzqxKOXGKjgMrPQ=/fit-in/246x300/filters:strip_icc()/pic3490053.jpg" alt="Catan Hero">
+    <div style="position:absolute;inset:0;background:linear-gradient(180deg, transparent 0%, hsla(25,95%,45%,0.1) 30%, hsla(25,95%,45%,0.6) 70%, hsla(25,95%,45%,0.9) 100%)"></div>
+    <div class="ribbon" style="background:hsl(25,95%,45%)">Game</div>
+    <div class="hero-content">
+      <div class="title">Game of the Month: Catan</div>
+      <div class="subtitle">The classic gateway game that started it all</div>
+      <div class="meta">
+        <span class="chip">⭐ Editor's Pick</span>
+        <span class="chip">👥 10K+ plays</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════════════
+     SECTION 5: FEATURES MATRIX
+     ═══════════════════════════════════════════════════════════════════════════ -->
+<div class="section">
+  <div class="section-title"><span class="num">5</span> Feature Matrix</div>
+  <p class="section-desc">All opt-in features available on MeepleCard. Features are additive and composable.</p>
+  <table class="info-table">
+    <tr><td>Entity Types</td><td><code>game</code> <code>player</code> <code>session</code> <code>agent</code> <code>document</code> <code>chatSession</code> <code>event</code> <code>toolkit</code> <code>kb_card</code> <code>custom</code></td></tr>
+    <tr><td>Layout Variants</td><td><code>grid</code> (7:10 cover) &middot; <code>list</code> (56px thumb) &middot; <code>compact</code> (dot only) &middot; <code>featured</code> (16:9) &middot; <code>hero</code> (full-bleed)</td></tr>
+    <tr><td>Visual Effects</td><td>Glassmorphism &middot; Warm shadows &middot; Entity glow rings &middot; Shimmer on hover &middot; Cover scale(1.06) &middot; Badge pulse animation</td></tr>
+    <tr><td>3D Flip</td><td>Perspective 1200px &middot; Framer Motion 0.7s &middot; Entity-colored back header &middot; Diagonal stripe pattern</td></tr>
+    <tr><td>Quick Actions</td><td>Hover-reveal glass buttons &middot; Staggered float-up animation &middot; Entity-colored hover glow &middot; WCAG 44px touch targets</td></tr>
+    <tr><td>Info Button</td><td>Opens <code>ExtraMeepleCardDrawer</code> (tabbed detail view) &middot; Supports game/agent/chat/kb entities</td></tr>
+    <tr><td>Tag Strip</td><td>Vertical left-edge tags &middot; Presets + custom &middot; Overflow indicator &middot; Pulse for "new"</td></tr>
+    <tr><td>Wishlist</td><td>Heart toggle button &middot; Animated fill &middot; Optimistic update</td></tr>
+    <tr><td>Hover Preview</td><td>Floating panel with description, designer, categories, mechanics, complexity</td></tr>
+    <tr><td>Bulk Selection</td><td>Checkbox overlay &middot; Multi-select mode &middot; Visual selected state</td></tr>
+    <tr><td>Drag &amp; Drop</td><td>Drag handle &middot; Reorder support &middot; Drag data</td></tr>
+    <tr><td>Status Badges</td><td><code>owned</code> <code>wishlisted</code> <code>played</code> <code>borrowed</code> <code>for-trade</code> &middot; Multi-status arrays</td></tr>
+    <tr><td>Navigation Footer</td><td>Related entity icons (📄🤖🎲) &middot; Configurable links &middot; Entity-aware routing</td></tr>
+    <tr><td>Agent Action Footer</td><td>Create Agent / Chat with Agent &middot; KB status indicator</td></tr>
+    <tr><td>Session Features</td><td>Status badge &middot; Player popup &middot; Turn sequence &middot; Score table &middot; Action buttons &middot; Back content</td></tr>
+    <tr><td>Agent Features</td><td>Status badge (active/idle/training/error) &middot; Model info &middot; Stats display &middot; Capabilities</td></tr>
+    <tr><td>Chat Features</td><td>Status badge &middot; Agent info &middot; Game context &middot; Stats &middot; Preview &middot; Unread count</td></tr>
+    <tr><td>Document Features</td><td>Indexing status badge (indexed/processing/failed) &middot; KB worst-status rollup</td></tr>
+    <tr><td>Snapshot History</td><td>Time slider &middot; Snapshot selection &middot; Time travel overlay</td></tr>
+    <tr><td>Entity Links</td><td>Link count badge &middot; Preview row &middot; Cross-entity relationships</td></tr>
+    <tr><td>Compound API</td><td><code>MeepleCards.Game</code> <code>.Player</code> <code>.Session</code> <code>.Agent</code> <code>.Document</code> <code>.ChatSession</code> <code>.Event</code> <code>.Toolkit</code> <code>.KbCard</code></td></tr>
+    <tr><td>Performance</td><td><code>React.memo</code> &middot; Lazy-loaded images &middot; CSS-driven animations &middot; Reduced motion support</td></tr>
+    <tr><td>Accessibility</td><td>WCAG AA &middot; Keyboard nav (Tab/Enter/Space) &middot; <code>aria-label</code> auto-gen &middot; Focus rings &middot; Screen reader support</td></tr>
+  </table>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════════════
+     SECTION 6: ADAPTER COMPONENTS
+     ═══════════════════════════════════════════════════════════════════════════ -->
+<div class="section">
+  <div class="section-title"><span class="num">6</span> Adapter Components</div>
+  <p class="section-desc">Domain-specific wrappers that map API data to MeepleCard props.</p>
+  <table class="info-table">
+    <tr><td><code>MeepleGameCard</code></td><td>Game catalog display with BGG data, ratings, metadata mapping</td></tr>
+    <tr><td><code>MeepleGameCatalogCard</code></td><td>Shared game catalog with catalog badge</td></tr>
+    <tr><td><code>MeepleUserLibraryCard</code></td><td>User library card with collection status + quick actions</td></tr>
+    <tr><td><code>MeepleLibraryGameCard</code></td><td>Library game card (private game) with wishlist + agent actions</td></tr>
+    <tr><td><code>MeeplePlayerCard</code></td><td>Player entity with avatar, play count, ranking</td></tr>
+    <tr><td><code>MeepleSessionCard</code></td><td>Session entity with status, players, turn info, scores</td></tr>
+    <tr><td><code>MeepleAgentCard</code></td><td>Agent entity with status, model info, stats, capabilities</td></tr>
+    <tr><td><code>MeepleKbCard</code></td><td>KB document with indexing status, page count</td></tr>
+    <tr><td><code>MeepleChatCard</code></td><td>Chat session with agent info, game context, unread count</td></tr>
+    <tr><td><code>BggGameCard</code></td><td>BGG import preview card</td></tr>
+    <tr><td><code>SharedGameExtraMeepleCard</code></td><td>Admin shared game management card</td></tr>
+  </table>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════════════
+     SECTION 7: FILE ARCHITECTURE
+     ═══════════════════════════════════════════════════════════════════════════ -->
+<div class="section">
+  <div class="section-title"><span class="num">7</span> File Architecture</div>
+  <p class="section-desc">Component is split across multiple files for maintainability.</p>
+  <table class="info-table">
+    <tr><td>Core</td><td><code>meeple-card.tsx</code> (main component, ~560 lines) &middot; <code>meeple-card-styles.ts</code> (CVA variants) &middot; <code>meeple-card-parts.tsx</code> (visual subcomponents)</td></tr>
+    <tr><td>Actions</td><td><code>meeple-card-quick-actions.tsx</code> &middot; <code>meeple-card-info-button.tsx</code></td></tr>
+    <tr><td>Compound</td><td><code>meeple-card-compound.tsx</code> (MeepleCards.Game, .Player, etc.)</td></tr>
+    <tr><td>Features (32 files)</td><td>FlipCard, TagStrip, TagBadge, StatusBadge, WishlistButton, DragHandle, BulkSelectCheckbox, HoverPreview, QuickActionsMenu, CardNavigationFooter, CardAgentAction, NavigationIcons, SessionStatusBadge, SessionActionButtons, SessionBackContent, SessionScoreTable, SessionTurnSequence, SessionPlayerPopup, SessionScoreModal, SnapshotHistorySlider, TimeTravelOverlay, AgentStatusBadge, AgentModelInfo, AgentStatsDisplay, ChatStatusBadge, ChatAgentInfo, ChatGameContext, ChatStatsDisplay, ChatUnreadBadge, DocumentStatusBadge, GameBackContent, TagOverflow</td></tr>
+    <tr><td>Extra Drawer</td><td><code>extra-meeple-card/</code> &mdash; ExtraMeepleCard, ExtraMeepleCardDrawer, tabs (Overview, AI, History, Media, Scoreboard, Toolkit)</td></tr>
+    <tr><td>Tests</td><td>22+ test files covering unit, a11y, snapshots, contexts, permissions, compound, drawer, agent, chat</td></tr>
+    <tr><td>Docs</td><td><code>meeple-card.md</code> &middot; <code>meeple-card-v2-design-tokens.md</code> &middot; <code>meeple-card-v2-migration.md</code> &middot; <code>MEEPLE_CARD_USAGE.md</code></td></tr>
+  </table>
+</div>
+
+<div style="text-align:center; padding:32px; color:var(--text-muted); font-size:0.8rem;">
+  Generated 2026-03-13 &middot; MeepleCard v2 (Epic #4604) &middot; ADR-041
+</div>
+
+</body>
+</html>

@@ -20,6 +20,7 @@ import { Badge } from '@/components/ui/data-display/badge';
 import { Button } from '@/components/ui/primitives/button';
 import { api } from '@/lib/api';
 import type { GameCategory, GameMechanic } from '@/lib/api/schemas/shared-games.schemas';
+import { logger } from '@/lib/logger';
 import { cn } from '@/lib/utils';
 
 import { AdvancedFilterPanel } from './AdvancedFilterPanel';
@@ -95,7 +96,7 @@ export function SharedGameSearchFilters({
         setCategories(categoriesData);
         setMechanics(mechanicsData);
       } catch (error) {
-        console.error('Failed to load filter reference data:', error);
+        logger.error('Failed to load filter reference data:', error);
       }
     };
 
@@ -252,10 +253,13 @@ export function SharedGameSearchFilters({
           )}
           {(filters.minComplexity !== null || filters.maxComplexity !== null) && (
             <Badge className="gap-1 bg-orange-500/10 text-orange-700 dark:text-orange-400 border-orange-500/30">
-              Complessit&agrave;: {filters.minComplexity?.toFixed(1) ?? '1.0'}-{filters.maxComplexity?.toFixed(1) ?? '5.0'}
+              Complessit&agrave;: {filters.minComplexity?.toFixed(1) ?? '1.0'}-
+              {filters.maxComplexity?.toFixed(1) ?? '5.0'}
               <button
                 type="button"
-                onClick={() => onFiltersChange({ ...filters, minComplexity: null, maxComplexity: null })}
+                onClick={() =>
+                  onFiltersChange({ ...filters, minComplexity: null, maxComplexity: null })
+                }
                 className="ml-1 hover:text-orange-900 dark:hover:text-orange-300"
                 aria-label="Rimuovi filtro complessit&agrave;"
               >
@@ -268,7 +272,9 @@ export function SharedGameSearchFilters({
               {filters.minPlayingTime ?? '5'}-{filters.maxPlayingTime ?? '300+'} min
               <button
                 type="button"
-                onClick={() => onFiltersChange({ ...filters, minPlayingTime: null, maxPlayingTime: null })}
+                onClick={() =>
+                  onFiltersChange({ ...filters, minPlayingTime: null, maxPlayingTime: null })
+                }
                 className="ml-1 hover:text-orange-900 dark:hover:text-orange-300"
                 aria-label="Rimuovi filtro durata"
               >

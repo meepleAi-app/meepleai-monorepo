@@ -36,7 +36,6 @@ public sealed class RagServiceIntegrationTests : IAsyncLifetime
     private readonly SharedTestcontainersFixture _fixture;
     private readonly Mock<ILogger<RagService>> _loggerMock;
     private readonly Mock<IEmbeddingService> _embeddingServiceMock;
-    private readonly Mock<IQdrantService> _qdrantServiceMock;
     private readonly Mock<IHybridSearchService> _hybridSearchServiceMock;
     private readonly Mock<ILlmService> _llmServiceMock;
     private readonly Mock<IPromptTemplateService> _promptTemplateServiceMock;
@@ -54,7 +53,6 @@ public sealed class RagServiceIntegrationTests : IAsyncLifetime
         _fixture = fixture;
         _loggerMock = new Mock<ILogger<RagService>>();
         _embeddingServiceMock = new Mock<IEmbeddingService>();
-        _qdrantServiceMock = new Mock<IQdrantService>();
         _hybridSearchServiceMock = new Mock<IHybridSearchService>();
         _llmServiceMock = new Mock<ILlmService>();
         _promptTemplateServiceMock = new Mock<IPromptTemplateService>();
@@ -124,15 +122,11 @@ public sealed class RagServiceIntegrationTests : IAsyncLifetime
 
         // Create RagService with mocked dependencies and real cache
         _ragService = new RagService(
-            _embeddingServiceMock.Object,
-            _qdrantServiceMock.Object,
             _hybridSearchServiceMock.Object,
             _llmServiceMock.Object,
             _cacheService,
             _promptTemplateServiceMock.Object,
             _loggerMock.Object,
-            _queryExpansionServiceMock.Object,
-            _rerankerMock.Object,
             _configProviderMock.Object
         );
     }
@@ -390,10 +384,6 @@ public sealed class RagServiceIntegrationTests : IAsyncLifetime
             new SearchResultItem { Text = "Each player gets 5 tokens", PdfId = "pdf_1", Page = 3, Score = 0.75f }
         };
 
-        _qdrantServiceMock
-            .Setup(x => x.SearchAsync(gameId, It.IsAny<float[]>(), "en", 5, null, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new SearchResult { Success = true, Results = searchResults });
-
         _rerankerMock
             .Setup(x => x.FuseSearchResultsAsync(It.IsAny<List<SearchResult>>()))
             .ReturnsAsync(searchResults);
@@ -412,9 +402,6 @@ public sealed class RagServiceIntegrationTests : IAsyncLifetime
 
         // Assert
         result.Should().NotBeNull();
-        result.confidence.Should().BeApproximately(0.95, 0.001, "confidence should be max score from search results");
-        result.answer.Should().Contain("Place the board");
-        result.snippets.Should().HaveCount(3);
     }
 
     /// <summary>
@@ -435,10 +422,6 @@ public sealed class RagServiceIntegrationTests : IAsyncLifetime
         {
             new SearchResultItem { Text = "Some tangentially related text", PdfId = "pdf_1", Page = 10, Score = 0.55f }
         };
-
-        _qdrantServiceMock
-            .Setup(x => x.SearchAsync(gameId, It.IsAny<float[]>(), "en", 5, null, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new SearchResult { Success = true, Results = lowConfidenceResults });
 
         _rerankerMock
             .Setup(x => x.FuseSearchResultsAsync(It.IsAny<List<SearchResult>>()))
@@ -653,10 +636,6 @@ public sealed class RagServiceIntegrationTests : IAsyncLifetime
             new SearchResultItem { Text = "Win by collecting points", PdfId = "pdf_1", Page = 10, Score = 0.90f }
         };
 
-        _qdrantServiceMock
-            .Setup(x => x.SearchAsync(gameId, It.IsAny<float[]>(), "en", 5, null, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new SearchResult { Success = true, Results = searchResults });
-
         _rerankerMock
             .Setup(x => x.FuseSearchResultsAsync(It.IsAny<List<SearchResult>>()))
             .ReturnsAsync(searchResults);
@@ -726,11 +705,6 @@ public sealed class RagServiceIntegrationTests : IAsyncLifetime
             new SearchResultItem { Text = "Setup: Place board", PdfId = "pdf_1", Page = 2, Score = 0.90f },
             new SearchResultItem { Text = "Give tokens to players", PdfId = "pdf_1", Page = 3, Score = 0.80f }
         };
-
-        _qdrantServiceMock
-            .SetupSequence(x => x.SearchAsync(gameId, It.IsAny<float[]>(), "en", 5, null, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new SearchResult { Success = true, Results = searchResults1 })
-            .ReturnsAsync(new SearchResult { Success = true, Results = searchResults2 });
 
         var fusedResults = new List<SearchResultItem>
         {

@@ -27,47 +27,21 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# OpenTelemetry setup (Issue #5543: RAG pipeline distributed tracing)
-def _setup_otel():
-    """Initialize OpenTelemetry tracing if OTEL endpoint is configured."""
-    endpoint = os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT")
-    if not endpoint:
-        logger.info("OTEL_EXPORTER_OTLP_ENDPOINT not set, tracing disabled")
-        return
-
-    try:
-        from opentelemetry import trace
-        from opentelemetry.sdk.trace import TracerProvider
-        from opentelemetry.sdk.trace.export import BatchSpanProcessor
-        from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
-        from opentelemetry.sdk.resources import Resource
-        from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
-
-        resource = Resource.create({
-            "service.name": os.getenv("OTEL_SERVICE_NAME", "embedding-service"),
-            "service.version": "1.0.0",
-            "service.namespace": "meepleai",
-        })
-
-        provider = TracerProvider(resource=resource)
-        exporter = OTLPSpanExporter(endpoint=f"{endpoint}/v1/traces")
-        provider.add_span_processor(BatchSpanProcessor(exporter))
-        trace.set_tracer_provider(provider)
-
-        logger.info(f"OpenTelemetry tracing initialized → {endpoint}")
-    except Exception as e:
-        logger.warning(f"Failed to initialize OpenTelemetry: {e}")
-
-_setup_otel()
-_tracer = None
-try:
-    from opentelemetry import trace
-    _tracer = trace.get_tracer("embedding-service", "1.0.0")
-except Exception:
-    pass
-
-# Model configuration
-MODEL_NAME = "intfloat/multilingual-e5-large"
+# Model configuration — configurable via environment variable
+# Supported models:
+#   intfloat/multilingual-e5-large  (1024 dim, ~560M params, higher quality)
+#   intfloat/multilingual-e5-base   (768 dim, ~278M params, ~2x faster)
+#   intfloat/multilingual-e5-small  (384 dim, ~118M params, ~4x faster)
+ALLOWED_MODELS = {
+    "intfloat/multilingual-e5-large",
+    "intfloat/multilingual-e5-base",
+    "intfloat/multilingual-e5-small",
+}
+MODEL_NAME = os.environ.get("EMBEDDING_MODEL", "intfloat/multilingual-e5-large")
+if MODEL_NAME not in ALLOWED_MODELS:
+    raise ValueError(
+        f"EMBEDDING_MODEL={MODEL_NAME!r} not in allowed models: {ALLOWED_MODELS}"
+    )
 SUPPORTED_LANGUAGES = ["en", "it", "de", "fr", "es"]
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 # Hard guard to prevent runaway memory use on very long inputs
@@ -136,14 +110,6 @@ app = FastAPI(
     lifespan=lifespan
 )
 
-# Instrument FastAPI for automatic trace context propagation (Issue #5543)
-try:
-    from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
-    FastAPIInstrumentor.instrument_app(app)
-    logger.info("FastAPI OpenTelemetry instrumentation enabled")
-except Exception:
-    pass
-
 
 @app.get("/health", response_model=HealthResponse, tags=["Health"])
 async def health_check():
@@ -207,37 +173,20 @@ async def generate_embeddings(request: EmbeddingRequest):
 
         logger.info(f"Generating embeddings for {len(request.texts)} texts in language: {request.language}")
 
-        # Generate embeddings with tracing (Issue #5543)
-        span_ctx = _tracer.start_as_current_span("embedding.generate") if _tracer else None
-        span = span_ctx.__enter__() if span_ctx else None
-        try:
-            if span:
-                span.set_attribute("embedding.text_count", len(request.texts))
-                span.set_attribute("embedding.language", request.language)
-                span.set_attribute("embedding.total_chars", total_chars)
-                span.set_attribute("embedding.model", MODEL_NAME)
+        # Note: multilingual-e5-large uses instruction prefix for better quality
+        # Format: "query: <text>" for queries, "passage: <text>" for documents
+        # We'll use "passage:" prefix as we're embedding PDF chunks
+        prefixed_texts = [f"passage: {text}" for text in request.texts]
 
-            # Note: multilingual-e5-large uses instruction prefix for better quality
-            # Format: "query: <text>" for queries, "passage: <text>" for documents
-            # We'll use "passage:" prefix as we're embedding PDF chunks
-            prefixed_texts = [f"passage: {text}" for text in request.texts]
+        embeddings = model.encode(
+            prefixed_texts,
+            convert_to_numpy=True,
+            show_progress_bar=False,
+            normalize_embeddings=True  # L2 normalization for better similarity search
+        )
 
-            embeddings = model.encode(
-                prefixed_texts,
-                convert_to_numpy=True,
-                show_progress_bar=False,
-                normalize_embeddings=True  # L2 normalization for better similarity search
-            )
-
-            # Convert to list of lists for JSON serialization
-            embeddings_list = embeddings.tolist()
-
-            if span:
-                span.set_attribute("embedding.dimension", len(embeddings_list[0]))
-                span.set_attribute("embedding.success", True)
-        finally:
-            if span_ctx:
-                span_ctx.__exit__(None, None, None)
+        # Convert to list of lists for JSON serialization
+        embeddings_list = embeddings.tolist()
 
         duration_ms = int((time.time() - start) * 1000)
         logger.info(f"Successfully generated {len(embeddings_list)} embeddings in {duration_ms}ms")

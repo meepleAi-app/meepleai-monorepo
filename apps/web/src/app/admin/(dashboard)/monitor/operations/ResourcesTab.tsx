@@ -23,7 +23,7 @@ import {
 } from '@/components/ui/admin/admin-confirmation-dialog';
 import { DataTable, SortableHeader } from '@/components/ui/data-display/data-table';
 import { Button } from '@/components/ui/primitives/button';
-import { useToast } from '@/hooks/use-toast';
+import { useToast } from '@/hooks/useToast';
 import { api } from '@/lib/api';
 import type {
   CacheMetrics,

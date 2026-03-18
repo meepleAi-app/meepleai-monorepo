@@ -2,7 +2,7 @@ name: CI
 
 on:
   pull_request:
-    branches: [main, main-dev, main-staging]
+    branches: [main, main-dev, main-staging, frontend-dev, backend-dev]
   workflow_dispatch:
   workflow_call:  # Allow reuse by deploy-staging.yml
 
@@ -27,6 +27,7 @@ jobs:
       backend: ${{ steps.filter.outputs.backend }}
       python: ${{ steps.filter.outputs.python }}
       infra: ${{ steps.filter.outputs.infra }}
+      runner: ${{ steps.select-runner.outputs.runner }}
     steps:
       - uses: actions/checkout@v6
       - uses: dorny/paths-filter@v3
@@ -47,10 +48,22 @@ jobs:
               - 'infra/**'
               - 'docker-compose*.yml'
 
+      - name: Select runner (self-hosted for staging/prod, GitHub-hosted for dev)
+        id: select-runner
+        run: |
+          TARGET="${{ github.base_ref || github.ref_name }}"
+          if [[ "$TARGET" == "main-staging" || "$TARGET" == "main" ]]; then
+            echo "runner=${{ vars.RUNNER || 'ubuntu-latest' }}" >> $GITHUB_OUTPUT
+            echo "🏃 Using self-hosted runner for $TARGET"
+          else
+            echo "runner=ubuntu-latest" >> $GITHUB_OUTPUT
+            echo "🏃 Using GitHub-hosted runner for $TARGET"
+          fi
+
   # Frontend: Lint, Typecheck, Test (Unit + E2E subset)
   frontend:
     name: Frontend - Build & Test
-    runs-on: ubuntu-latest
+    runs-on: ${{ needs.changes.outputs.runner }}
     needs: changes
     if: needs.changes.outputs.frontend == 'true' || github.event_name == 'workflow_dispatch'
     defaults:
@@ -102,7 +115,7 @@ jobs:
   # Backend Unit Tests (fast, no service containers needed)
   backend-unit:
     name: Backend - Unit Tests
-    runs-on: ubuntu-latest
+    runs-on: ${{ needs.changes.outputs.runner }}
     needs: changes
     if: needs.changes.outputs.backend == 'true' || github.event_name == 'workflow_dispatch'
     defaults:
@@ -154,7 +167,7 @@ jobs:
   # Phase 2+3: 4 parallel threads per shard, 3-shard matrix for ~4-12x total speedup
   backend-integration:
     name: Backend - Integration (${{ matrix.shard.name }})
-    runs-on: ubuntu-latest
+    runs-on: ${{ needs.changes.outputs.runner }}
     needs: changes
     if: needs.changes.outputs.backend == 'true' || github.event_name == 'workflow_dispatch'
     strategy:
@@ -340,7 +353,7 @@ jobs:
   # Python Services: Pytest for orchestration-service
   python-tests:
     name: Python - Orchestration Service Tests
-    runs-on: ubuntu-latest
+    runs-on: ${{ needs.changes.outputs.runner }}
     needs: changes
     if: needs.changes.outputs.python == 'true' || needs.changes.outputs.backend == 'true' || github.event_name == 'workflow_dispatch'
     defaults:
@@ -388,7 +401,7 @@ jobs:
   # Full E2E suite with 4-shard parallel execution runs separately in e2e-tests.yml
   e2e:
     name: E2E - Critical Paths
-    runs-on: ubuntu-latest
+    runs-on: ${{ needs.changes.outputs.runner }}
     needs: changes
     if: needs.changes.outputs.frontend == 'true' || github.event_name == 'workflow_dispatch'
 

@@ -45,6 +45,7 @@ public class LiveGameSessionEntity
     public string? GameStateJson { get; set; } // Free-form game state
     public string? TurnOrderJson { get; set; } // List<Guid> serialized
     public string? DisputesJson { get; set; } // List<RuleDisputeEntry> serialized
+    public string? SetupChecklistJson { get; set; } // SetupChecklistData serialized
 
     // Content
     public string? Notes { get; set; }

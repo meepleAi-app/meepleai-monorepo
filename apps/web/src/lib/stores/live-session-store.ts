@@ -31,6 +31,12 @@ export interface RuleDispute {
   ruleReferences: string[];
   raisedByPlayerName: string;
   timestamp: string;
+  // v2 fields (optional for backward compatibility)
+  confidence?: 'High' | 'Medium' | 'Low';
+  outcome?: 'Pending' | 'VerdictAccepted' | 'VerdictOverridden';
+  votesAccepted?: number;
+  votesRejected?: number;
+  overrideRule?: string;
 }
 
 export type SessionStatus = 'InProgress' | 'Paused' | 'Completed';

@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 
-import { AddToLibraryModal } from '@/components/dashboard/AddToLibraryModal';
+import { AddToLibraryModal } from '@/components/dashboard-v2/AddToLibraryModal';
 
 // Mock the api module
 const mockAddGame = vi.fn();

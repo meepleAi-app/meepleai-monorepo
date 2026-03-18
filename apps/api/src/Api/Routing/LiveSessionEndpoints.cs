@@ -1,14 +1,17 @@
+using Api.BoundedContexts.GameManagement.Application.Commands.GameNight;
 using Api.BoundedContexts.GameManagement.Application.Commands.LiveSessions;
 using Api.BoundedContexts.GameManagement.Application.DTOs;
 using Api.BoundedContexts.GameManagement.Application.DTOs.GameSessionContext;
 using Api.BoundedContexts.GameManagement.Application.DTOs.LiveSessions;
 using Api.BoundedContexts.GameManagement.Application.DTOs.SessionSnapshot;
 using Api.BoundedContexts.GameManagement.Application.DTOs.ToolState;
+using Api.BoundedContexts.GameManagement.Application.Queries.GameNight;
 using Api.BoundedContexts.GameManagement.Application.Queries.GameSessionContext;
 using Api.BoundedContexts.GameManagement.Application.Queries.LiveSessions;
 using Api.BoundedContexts.GameManagement.Application.Queries.ToolState;
 using Api.BoundedContexts.GameManagement.Domain.Entities.SessionSnapshot;
 using Api.BoundedContexts.GameManagement.Domain.Enums;
+using Api.BoundedContexts.GameManagement.Domain.Models;
 using Api.BoundedContexts.KnowledgeBase.Application.Commands;
 using Api.BoundedContexts.KnowledgeBase.Application.DTOs;
 using Api.Extensions;
@@ -202,6 +205,81 @@ internal static class LiveSessionEndpoints
             .WithTags("LiveSessions")
             .WithSummary("Save complete session state")
             .WithDescription("Save complete session state with pause + snapshot + agent persist. Issue #122.");
+
+        group.MapPost("/live-sessions/{sessionId}/setup-checklist", HandleGenerateSetupChecklist)
+            .RequireAuthenticatedUser()
+            .Produces<SetupChecklistData>(200)
+            .Produces(400)
+            .Produces(404)
+            .Produces(401)
+            .WithTags("LiveSessions")
+            .WithSummary("Generate setup checklist from game rulebook via RAG")
+            .WithDescription("Generates a player-count-specific setup checklist by querying the game's PDF rulebook through the KnowledgeBase RAG pipeline.");
+
+        group.MapPut("/live-sessions/{sessionId}/setup-checklist", HandleUpdateSetupChecklist)
+            .RequireAuthenticatedUser()
+            .Produces(204)
+            .Produces(400)
+            .Produces(404)
+            .Produces(401)
+            .WithTags("LiveSessions")
+            .WithSummary("Update setup checklist state")
+            .WithDescription("Replaces the setup checklist data, used when the user toggles components or completes steps in the setup wizard.");
+
+        // === Dispute v2 ===
+
+        group.MapPost("/live-sessions/{sessionId}/disputes", HandleOpenDispute)
+            .RequireAuthenticatedUser()
+            .Produces<Guid>(201)
+            .Produces(400)
+            .Produces(404)
+            .WithTags("LiveSessions")
+            .WithSummary("Open a structured rule dispute")
+            .WithDescription("Opens a new structured rule dispute during a live game session. Returns the dispute ID.");
+
+        group.MapPut("/live-sessions/{sessionId}/disputes/{disputeId}/respond", HandleRespondToDispute)
+            .RequireAuthenticatedUser()
+            .Produces(204)
+            .Produces(400)
+            .Produces(404)
+            .WithTags("LiveSessions")
+            .WithSummary("Respond to a dispute")
+            .WithDescription("Adds a respondent's counter-claim to an existing dispute.");
+
+        group.MapPost("/live-sessions/{sessionId}/disputes/{disputeId}/timeout", HandleRespondentTimeout)
+            .RequireAuthenticatedUser()
+            .Produces(204)
+            .Produces(400)
+            .Produces(404)
+            .WithTags("LiveSessions")
+            .WithSummary("Trigger respondent timeout")
+            .WithDescription("Handles the timeout scenario when a respondent does not reply to a dispute.");
+
+        group.MapPost("/live-sessions/{sessionId}/disputes/{disputeId}/vote", HandleCastVote)
+            .RequireAuthenticatedUser()
+            .Produces(204)
+            .Produces(400)
+            .Produces(404)
+            .WithTags("LiveSessions")
+            .WithSummary("Cast a vote on a dispute verdict")
+            .WithDescription("Records a player's vote on an active dispute verdict.");
+
+        group.MapPost("/live-sessions/{sessionId}/disputes/{disputeId}/tally", HandleTallyVotes)
+            .RequireAuthenticatedUser()
+            .Produces(204)
+            .Produces(400)
+            .Produces(404)
+            .WithTags("LiveSessions")
+            .WithSummary("Tally dispute votes")
+            .WithDescription("Tallies all cast votes on a dispute and determines the final outcome.");
+
+        group.MapGet("/games/{gameId}/dispute-history", HandleGetDisputeHistory)
+            .RequireAuthenticatedUser()
+            .Produces<GetGameDisputeHistoryResult>(200)
+            .Produces(404)
+            .WithTags("LiveSessions")
+            .WithSummary("Get game dispute history")
+            .WithDescription("Returns all rule dispute entries across every session played for a given game.");
 
         // === Queries ===
         // NOTE: Literal-segment routes MUST be registered before parameterized {sessionId} route
@@ -538,6 +616,102 @@ internal static class LiveSessionEndpoints
         return Results.Ok(result);
     }
 
+    private static async Task<IResult> HandleGenerateSetupChecklist(
+        Guid sessionId,
+        [FromBody] GenerateSetupChecklistRequest request,
+        [FromServices] IMediator mediator,
+        CancellationToken cancellationToken)
+    {
+        var checklist = await mediator.Send(
+            new GenerateSetupChecklistCommand(sessionId, request.PlayerCount), cancellationToken).ConfigureAwait(false);
+        return Results.Ok(checklist);
+    }
+
+    private static async Task<IResult> HandleUpdateSetupChecklist(
+        Guid sessionId,
+        [FromBody] SetupChecklistData checklist,
+        [FromServices] IMediator mediator,
+        CancellationToken cancellationToken)
+    {
+        await mediator.Send(
+            new UpdateSetupChecklistCommand(sessionId, checklist), cancellationToken).ConfigureAwait(false);
+        return Results.NoContent();
+    }
+
+    private static async Task<IResult> HandleOpenDispute(
+        Guid sessionId,
+        [FromBody] OpenDisputeRequest request,
+        [FromServices] IMediator mediator,
+        CancellationToken cancellationToken)
+    {
+        var command = new OpenStructuredDisputeCommand(
+            sessionId,
+            request.InitiatorPlayerId,
+            request.InitiatorClaim);
+
+        var disputeId = await mediator.Send(command, cancellationToken).ConfigureAwait(false);
+        return Results.Created($"/api/v1/live-sessions/{sessionId}/disputes/{disputeId}", disputeId);
+    }
+
+    private static async Task<IResult> HandleRespondToDispute(
+        Guid sessionId,
+        Guid disputeId,
+        [FromBody] RespondToDisputeRequest request,
+        [FromServices] IMediator mediator,
+        CancellationToken cancellationToken)
+    {
+        await mediator.Send(
+            new RespondToDisputeCommand(disputeId, request.RespondentPlayerId, request.RespondentClaim),
+            cancellationToken).ConfigureAwait(false);
+        return Results.NoContent();
+    }
+
+    private static async Task<IResult> HandleRespondentTimeout(
+        Guid sessionId,
+        Guid disputeId,
+        [FromServices] IMediator mediator,
+        CancellationToken cancellationToken)
+    {
+        await mediator.Send(new RespondentTimeoutCommand(disputeId), cancellationToken).ConfigureAwait(false);
+        return Results.NoContent();
+    }
+
+    private static async Task<IResult> HandleCastVote(
+        Guid sessionId,
+        Guid disputeId,
+        [FromBody] CastVoteRequest request,
+        [FromServices] IMediator mediator,
+        CancellationToken cancellationToken)
+    {
+        await mediator.Send(
+            new CastVoteOnDisputeCommand(disputeId, request.PlayerId, request.AcceptsVerdict),
+            cancellationToken).ConfigureAwait(false);
+        return Results.NoContent();
+    }
+
+    private static async Task<IResult> HandleTallyVotes(
+        Guid sessionId,
+        Guid disputeId,
+        [FromBody] TallyVotesRequest request,
+        [FromServices] IMediator mediator,
+        CancellationToken cancellationToken)
+    {
+        await mediator.Send(
+            new TallyDisputeVotesCommand(disputeId, request.OverrideRule),
+            cancellationToken).ConfigureAwait(false);
+        return Results.NoContent();
+    }
+
+    private static async Task<IResult> HandleGetDisputeHistory(
+        Guid gameId,
+        [FromServices] IMediator mediator,
+        CancellationToken cancellationToken)
+    {
+        var result = await mediator.Send(
+            new GetGameDisputeHistoryQuery(gameId), cancellationToken).ConfigureAwait(false);
+        return Results.Ok(result);
+    }
+
     #endregion
 
     #region Query Handlers
@@ -677,6 +851,24 @@ internal static class LiveSessionEndpoints
     private sealed record ParseScoreRequest(string Message, bool AutoRecord = true);
 
     private sealed record ConfirmScoreRequest(Guid PlayerId, string Dimension, int Value, int Round);
+
+    private sealed record GenerateSetupChecklistRequest(int PlayerCount);
+
+    // Dispute v2 request models
+    internal sealed record OpenDisputeRequest(
+        Guid InitiatorPlayerId,
+        string InitiatorClaim);
+
+    internal sealed record RespondToDisputeRequest(
+        Guid RespondentPlayerId,
+        string RespondentClaim);
+
+    internal sealed record CastVoteRequest(
+        Guid PlayerId,
+        bool AcceptsVerdict);
+
+    internal sealed record TallyVotesRequest(
+        string? OverrideRule = null);
 
     #endregion
 }

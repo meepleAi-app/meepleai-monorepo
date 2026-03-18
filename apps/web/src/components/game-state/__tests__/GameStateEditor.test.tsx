@@ -41,9 +41,9 @@ vi.mock('@rjsf/validator-ajv8', () => ({
   default: {},
 }));
 
-// Mock PlayerStateCard
-vi.mock('../PlayerStateCard', () => ({
-  PlayerStateCard: ({
+// Mock MeeplePlayerStateCard (migrated from PlayerStateCard)
+vi.mock('../MeeplePlayerStateCard', () => ({
+  MeeplePlayerStateCard: ({
     player,
     isCurrentPlayer,
     editable,
@@ -440,11 +440,7 @@ describe('GameStateEditor - Issue #2766', () => {
       const changeScoreBtn = screen.getAllByTestId('change-score-btn')[0];
       fireEvent.click(changeScoreBtn);
 
-      expect(mockUpdateField).toHaveBeenCalledWith(
-        ['players', '0', 'score'],
-        100,
-        'Update score'
-      );
+      expect(mockUpdateField).toHaveBeenCalledWith(['players', '0', 'score'], 100, 'Update score');
     });
   });
 

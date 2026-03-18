@@ -4,6 +4,7 @@ using Api.BoundedContexts.KnowledgeBase.Infrastructure.Persistence;
 using Api.Infrastructure;
 using Api.Tests.Constants;
 using FluentAssertions;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.Extensions.Logging;
@@ -34,7 +35,8 @@ public sealed class PgVectorStoreAdapterTests
         _mockContext = new Mock<MeepleAiDbContext>(
             options,
             Mock.Of<MediatR.IMediator>(),
-            Mock.Of<Api.SharedKernel.Application.Services.IDomainEventCollector>())
+            Mock.Of<Api.SharedKernel.Application.Services.IDomainEventCollector>(),
+            Mock.Of<IDataProtectionProvider>())
         { CallBase = false };
 
         _mockDatabase = new Mock<DatabaseFacade>(_mockContext.Object);

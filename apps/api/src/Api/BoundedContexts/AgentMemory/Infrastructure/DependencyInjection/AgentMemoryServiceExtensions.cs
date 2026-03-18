@@ -1,3 +1,5 @@
+using Api.BoundedContexts.AgentMemory.Domain.Repositories;
+using Api.BoundedContexts.AgentMemory.Infrastructure.Persistence;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Api.BoundedContexts.AgentMemory.Infrastructure.DependencyInjection;
@@ -12,7 +14,11 @@ internal static class AgentMemoryServiceExtensions
     /// </summary>
     public static IServiceCollection AddAgentMemoryContext(this IServiceCollection services)
     {
-        // Repositories will be registered here in Task 20
+        // Repositories
+        services.AddScoped<IGameMemoryRepository, GameMemoryRepository>();
+        services.AddScoped<IGroupMemoryRepository, GroupMemoryRepository>();
+        services.AddScoped<IPlayerMemoryRepository, PlayerMemoryRepository>();
+
         return services;
     }
 }

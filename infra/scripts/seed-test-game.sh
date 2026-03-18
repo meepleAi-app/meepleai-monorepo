@@ -31,7 +31,10 @@ if [ -z "$ADMIN_PASSWORD" ]; then
   exit 1
 fi
 
-ADMIN_EMAIL="admin@meepleai.dev"
+# Read admin email from secret (fallback to default)
+ADMIN_EMAIL=$(sed -n 's/^ADMIN_EMAIL=//p' "$ADMIN_SECRET_FILE" | head -1)
+[ -z "$ADMIN_EMAIL" ] && ADMIN_EMAIL=$(sed -n 's/^INITIAL_ADMIN_EMAIL=//p' "$ADMIN_SECRET_FILE" | head -1)
+[ -z "$ADMIN_EMAIL" ] && ADMIN_EMAIL="admin@meepleai.app"
 
 # Helper: extract JSON string field (portable, no grep -oP)
 json_str() {

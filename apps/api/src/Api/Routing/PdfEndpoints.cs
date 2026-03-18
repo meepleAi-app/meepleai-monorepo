@@ -461,6 +461,16 @@ internal static class PdfEndpoints
         }
         var result = await mediator.Send(new UploadPdfCommand(gameId, metadata, privateGameId, userId, file!, Priority: priority), ct).ConfigureAwait(false);
 
+        if (result.ExistingKb != null)
+        {
+            return Results.Ok(new
+            {
+                existingKbFound = true,
+                existingKb = result.ExistingKb,
+                message = result.Message
+            });
+        }
+
         if (!result.Success)
         {
             logger.LogWarning("PDF upload failed: {Error}", result.Message);

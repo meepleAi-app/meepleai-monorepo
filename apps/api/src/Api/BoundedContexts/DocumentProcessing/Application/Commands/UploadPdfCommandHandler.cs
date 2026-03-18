@@ -139,7 +139,12 @@ internal class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUp
             var privateUserMatch = await _db.PdfDocuments
                 .AsNoTracking()
                 .Where(p => p.ContentHash == privateContentHash && p.UploadedByUserId == userId)
-                .Select(p => new { p.Id, p.FileName, p.ProcessingState, p.SharedGameId,
+                .Select(p => new
+                {
+                    p.Id,
+                    p.FileName,
+                    p.ProcessingState,
+                    p.SharedGameId,
                     GameName = _db.Games.Where(g => g.Id == p.GameId).Select(g => g.Name).FirstOrDefault(),
                     TotalChunks = _db.VectorDocuments.Where(vd => vd.PdfDocumentId == p.Id).Select(vd => (int?)vd.ChunkCount).FirstOrDefault()
                 })
@@ -162,7 +167,12 @@ internal class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUp
             var privateSharedMatch = await _db.PdfDocuments
                 .AsNoTracking()
                 .Where(p => p.ContentHash == privateContentHash && p.SharedGameId != null)
-                .Select(p => new { p.Id, p.FileName, p.ProcessingState, p.SharedGameId,
+                .Select(p => new
+                {
+                    p.Id,
+                    p.FileName,
+                    p.ProcessingState,
+                    p.SharedGameId,
                     GameName = _db.SharedGames.Where(sg => sg.Id == p.SharedGameId).Select(sg => sg.Title).FirstOrDefault(),
                     TotalChunks = _db.VectorDocuments.Where(vd => vd.PdfDocumentId == p.Id).Select(vd => (int?)vd.ChunkCount).FirstOrDefault()
                 })
@@ -203,7 +213,12 @@ internal class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUp
         var userMatch = await _db.PdfDocuments
             .AsNoTracking()
             .Where(p => p.ContentHash == contentHash && p.UploadedByUserId == userId)
-            .Select(p => new { p.Id, p.FileName, p.ProcessingState, p.SharedGameId,
+            .Select(p => new
+            {
+                p.Id,
+                p.FileName,
+                p.ProcessingState,
+                p.SharedGameId,
                 GameName = _db.Games.Where(g => g.Id == p.GameId).Select(g => g.Name).FirstOrDefault(),
                 TotalChunks = _db.VectorDocuments.Where(vd => vd.PdfDocumentId == p.Id).Select(vd => (int?)vd.ChunkCount).FirstOrDefault()
             })
@@ -226,7 +241,12 @@ internal class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUp
         var sharedMatch = await _db.PdfDocuments
             .AsNoTracking()
             .Where(p => p.ContentHash == contentHash && p.SharedGameId != null)
-            .Select(p => new { p.Id, p.FileName, p.ProcessingState, p.SharedGameId,
+            .Select(p => new
+            {
+                p.Id,
+                p.FileName,
+                p.ProcessingState,
+                p.SharedGameId,
                 GameName = _db.SharedGames.Where(sg => sg.Id == p.SharedGameId).Select(sg => sg.Title).FirstOrDefault(),
                 TotalChunks = _db.VectorDocuments.Where(vd => vd.PdfDocumentId == p.Id).Select(vd => (int?)vd.ChunkCount).FirstOrDefault()
             })

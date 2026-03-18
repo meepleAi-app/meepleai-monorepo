@@ -50,6 +50,8 @@ export interface PdfProcessingProgressBarProps {
   onError?: (error: string) => void;
   /** Callback when user cancels processing */
   onCancel?: () => void;
+  /** Callback when user requests processing retry (parent handles actual retry API call) */
+  onRetry?: (pdfId: string) => void;
   /** Additional CSS classes */
   className?: string;
 }
@@ -107,7 +109,7 @@ const STEP_CONFIG: Record<ProcessingStepValue, StepConfig> = {
   Failed: {
     icon: XCircle,
     label: 'Errore',
-    description: 'Si è verificato un errore durante l\'elaborazione.',
+    description: "Si è verificato un errore durante l'elaborazione.",
   },
 };
 
@@ -187,10 +189,8 @@ function StepIndicator({ step, currentStep, index }: StepIndicatorProps) {
       <div
         className={cn(
           'relative flex h-10 w-10 items-center justify-center rounded-full border-2 transition-all duration-300',
-          isCompleted &&
-            'border-green-500 bg-green-500/10 text-green-600 dark:text-green-400',
-          isActive &&
-            'border-primary bg-primary/10 text-primary animate-pulse',
+          isCompleted && 'border-green-500 bg-green-500/10 text-green-600 dark:text-green-400',
+          isActive && 'border-primary bg-primary/10 text-primary animate-pulse',
           isPending && 'border-muted-foreground/30 text-muted-foreground/50',
           isFailed && 'border-destructive bg-destructive/10 text-destructive'
         )}
@@ -201,11 +201,11 @@ function StepIndicator({ step, currentStep, index }: StepIndicatorProps) {
           <Icon className="h-5 w-5" />
         )}
 
-        {/* Connector Line (except for last step) */}
+        {/* Connector Line (except for last step, hidden on mobile) */}
         {index < PROCESSING_STEPS.length - 1 && (
           <div
             className={cn(
-              'absolute left-full top-1/2 h-0.5 w-8 -translate-y-1/2 transition-colors duration-300',
+              'absolute left-full top-1/2 hidden h-0.5 w-8 -translate-y-1/2 transition-colors duration-300 sm:block',
               isCompleted ? 'bg-green-500' : 'bg-muted-foreground/30'
             )}
           />
@@ -237,19 +237,17 @@ export function PdfProcessingProgressBar({
   onComplete,
   onError,
   onCancel,
+  onRetry,
   className,
 }: PdfProcessingProgressBarProps) {
   const [showCancelDialog, setShowCancelDialog] = useState(false);
   const [isCanceling, setIsCanceling] = useState(false);
 
-  const { progress, isLoading, error, refetch } = usePdfProcessingProgress(
-    pdfId,
-    {
-      pollingInterval: 500,
-      onComplete,
-      onError,
-    }
-  );
+  const { progress, isLoading, error, refetch } = usePdfProcessingProgress(pdfId, {
+    pollingInterval: 2000,
+    onComplete,
+    onError,
+  });
 
   const currentStep: ProcessingStepValue = progress?.currentStep ?? 'Uploading';
   const percentComplete = progress?.percentComplete ?? 0;
@@ -276,24 +274,22 @@ export function PdfProcessingProgressBar({
   }, [pdfId, onCancel]);
 
   const handleRetry = useCallback(() => {
+    if (onRetry) {
+      onRetry(pdfId);
+    }
     refetch();
-  }, [refetch]);
+  }, [onRetry, pdfId, refetch]);
 
   // Loading state
   if (isLoading && !progress) {
     return (
       <div
-        className={cn(
-          'rounded-lg border bg-card p-6',
-          className
-        )}
+        className={cn('rounded-lg border bg-card p-6', className)}
         data-testid="pdf-progress-loading"
       >
         <div className="flex items-center justify-center gap-3">
           <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-          <span className="text-sm text-muted-foreground">
-            Caricamento stato elaborazione...
-          </span>
+          <span className="text-sm text-muted-foreground">Caricamento stato elaborazione...</span>
         </div>
       </div>
     );
@@ -303,22 +299,15 @@ export function PdfProcessingProgressBar({
   if (error && !progress) {
     return (
       <div
-        className={cn(
-          'rounded-lg border border-destructive/50 bg-destructive/5 p-6',
-          className
-        )}
+        className={cn('rounded-lg border border-destructive/50 bg-destructive/5 p-6', className)}
         role="alert"
         data-testid="pdf-progress-error"
       >
         <div className="flex flex-col items-center gap-4">
           <AlertCircle className="h-10 w-10 text-destructive" />
           <div className="text-center">
-            <p className="font-medium text-destructive">
-              Errore di connessione
-            </p>
-            <p className="mt-1 text-sm text-muted-foreground">
-              {error.message}
-            </p>
+            <p className="font-medium text-destructive">Errore di connessione</p>
+            <p className="mt-1 text-sm text-muted-foreground">{error.message}</p>
           </div>
           <Button variant="outline" size="sm" onClick={handleRetry}>
             <RefreshCw className="mr-2 h-4 w-4" />
@@ -338,9 +327,7 @@ export function PdfProcessingProgressBar({
     >
       {/* Header */}
       <div className="mb-6 flex items-center justify-between">
-        <h3 className="text-lg font-semibold">
-          Elaborazione PDF
-        </h3>
+        <h3 className="text-lg font-semibold">Elaborazione PDF</h3>
         {isProcessing && (
           <Button
             variant="ghost"
@@ -361,16 +348,11 @@ export function PdfProcessingProgressBar({
 
       {/* Step Indicators */}
       <div
-        className="mb-6 flex items-center justify-between overflow-x-auto pb-2"
+        className="mb-6 flex items-center justify-between gap-1 overflow-x-auto pb-2 sm:gap-0"
         aria-label="Passaggi elaborazione"
       >
         {PROCESSING_STEPS.map((step, index) => (
-          <StepIndicator
-            key={step}
-            step={step}
-            currentStep={currentStep}
-            index={index}
-          />
+          <StepIndicator key={step} step={step} currentStep={currentStep} index={index} />
         ))}
       </div>
 
@@ -400,12 +382,8 @@ export function PdfProcessingProgressBar({
           className="flex items-center justify-between text-sm text-muted-foreground"
           aria-live="polite"
         >
-          <span>
-            Tempo trascorso: {formatTimeSpan(progress.elapsedTime)}
-          </span>
-          <span>
-            Tempo stimato: {formatTimeSpan(progress.estimatedTimeRemaining)}
-          </span>
+          <span>Tempo trascorso: {formatTimeSpan(progress.elapsedTime)}</span>
+          <span>Tempo stimato: {formatTimeSpan(progress.estimatedTimeRemaining)}</span>
         </div>
       )}
 
@@ -419,13 +397,9 @@ export function PdfProcessingProgressBar({
           <div className="flex items-start gap-3">
             <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-destructive" />
             <div className="flex-1">
-              <p className="font-medium text-destructive">
-                Elaborazione fallita
-              </p>
+              <p className="font-medium text-destructive">Elaborazione fallita</p>
               {progress?.errorMessage && (
-                <p className="mt-1 text-sm text-muted-foreground">
-                  {progress.errorMessage}
-                </p>
+                <p className="mt-1 text-sm text-muted-foreground">{progress.errorMessage}</p>
               )}
             </div>
             <Button variant="outline" size="sm" onClick={handleRetry}>

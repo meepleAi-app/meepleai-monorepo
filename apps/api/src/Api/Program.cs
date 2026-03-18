@@ -15,6 +15,7 @@ using Api.BoundedContexts.Administration.Infrastructure.DependencyInjection;
 using Api.BoundedContexts.AgentMemory.Infrastructure.DependencyInjection;
 using Api.BoundedContexts.Authentication.Infrastructure.DependencyInjection;
 using Api.BoundedContexts.BusinessSimulations.Infrastructure.DependencyInjection;
+using Api.BoundedContexts.DatabaseSync.Infrastructure;
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.DependencyInjection;
 using Api.BoundedContexts.EntityRelationships.Infrastructure.DependencyInjection;
 using Api.BoundedContexts.Gamification.Infrastructure.DependencyInjection;
@@ -230,6 +231,21 @@ if (forwardedHeadersEnabled)
             options.RequireHeaderSymmetry = requireHeaderSymmetry.Value;
         }
     });
+
+    // SEC-C3: Warn if no trusted proxies are configured in non-Development
+    if (!builder.Environment.IsDevelopment())
+    {
+        var cfgProxies = forwardedHeadersSection.GetSection("KnownProxies").Get<string[]>() ?? Array.Empty<string>();
+        var cfgNetworks = forwardedHeadersSection.GetSection("KnownNetworks").Get<string[]>() ?? Array.Empty<string>();
+
+        if (cfgProxies.Length == 0 && cfgNetworks.Length == 0)
+        {
+            Log.Warning(
+                "SEC-C3: ForwardedHeaders enabled but no KnownProxies or KnownNetworks configured. " +
+                "All proxies are trusted — IP-based rate limiting can be bypassed via X-Forwarded-For spoofing. " +
+                "Configure ForwardedHeaders:KnownProxies or ForwardedHeaders:KnownNetworks in appsettings");
+        }
+    }
 }
 
 builder.Services.Configure<SessionCookieConfiguration>(builder.Configuration.GetSection("Authentication:SessionCookie"));
@@ -342,6 +358,9 @@ builder.Services.AddBusinessSimulationsContext();
 
 // AgentMemory bounded context (game/group/player memory for AI agents)
 builder.Services.AddAgentMemoryContext();
+
+// DatabaseSync bounded context (admin DB sync via SSH tunnel sidecar)
+builder.Services.AddDatabaseSyncContext(builder.Configuration);
 
 // ISSUE-2370: SharedGameCatalog bounded context
 // ISSUE-2454: Background processing configuration
@@ -665,6 +684,7 @@ v1Api.MapUserActivityEndpoints();      // Issue #4652: User activity log for Adm
 v1Api.MapAdminAgentAnalyticsEndpoints(); // Issue #4653: Agents analytics for Admin Dashboard
 v1Api.MapAdminKnowledgeBaseEndpoints();  // Issues #4654, #4655: KB and SharedGames for Admin Dashboard
 v1Api.MapAdminOperationsEndpoints();   // Issue #3696: Operations - Service Control Panel
+v1Api.MapDatabaseSyncEndpoints();     // Database sync admin panel
 v1Api.MapAdminDockerEndpoints();       // Issue #139: Docker container management (Phase 3)
 v1Api.MapFeatureFlagEndpoints();       // Feature flag management
 v1Api.MapPromptManagementEndpoints();  // Prompt templates & evaluation

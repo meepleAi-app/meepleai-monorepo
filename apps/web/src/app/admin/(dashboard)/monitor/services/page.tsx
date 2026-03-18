@@ -7,6 +7,8 @@
  * response time trends, database stats, and service restart controls.
  */
 
+import { SecretsPanel } from '@/components/admin/secrets/SecretsPanel';
+
 import { DbStatsPanel } from './DbStatsPanel';
 import { RestartServicePanel } from './RestartServicePanel';
 import { ServicesDashboard } from './ServicesDashboard';
@@ -30,6 +32,9 @@ export default function ServiceDashboardPage() {
 
       {/* Issue #133: Service Restart Controls (SuperAdmin only) */}
       <RestartServicePanel />
+
+      {/* Secrets Management (staging/dev) */}
+      <SecretsPanel />
     </div>
   );
 }

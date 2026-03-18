@@ -102,8 +102,10 @@ internal class RateLimitingMiddleware
         catch (Exception ex)
         {
             // MIDDLEWARE BOUNDARY PATTERN: Rate limiting middleware must fail-open to avoid self-DOS
-            // Rationale: This catch should only handle rate limiting infrastructure failures (e.g. Redis down).
-            _logger.LogWarning(ex, "Rate limiting middleware encountered an error; allowing request (fail-open)");
+            // SEC-I4: Error level so alerting detects rate limit infrastructure failures (e.g. Redis down)
+            _logger.LogError(ex,
+                "SEC-I4: Rate limiting fail-open. Redis may be down — all requests allowed without rate limiting. Path: {Path}, Method: {Method}",
+                context.Request.Path, context.Request.Method);
             await _next(context).ConfigureAwait(false);
             return;
         }

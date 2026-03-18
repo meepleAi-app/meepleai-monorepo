@@ -5,6 +5,7 @@ import React from 'react';
 import { Crown, Loader2 } from 'lucide-react';
 
 import { MeepleCard } from '@/components/ui/data-display/meeple-card';
+import { hexToHsl } from '@/lib/color-utils';
 import { cn } from '@/lib/utils';
 
 import type { Participant } from './types';
@@ -109,49 +110,6 @@ export function MeepleParticipantCard({
       )}
     </div>
   );
-}
-
-/**
- * Convert a hex color string to HSL string format for MeepleCard customColor.
- * Returns format: "H S% L%" (e.g., "262 83% 58%").
- */
-function hexToHsl(hex: string): string {
-  // Strip # if present
-  const clean = hex.replace(/^#/, '');
-
-  // Parse RGB
-  let r: number, g: number, b: number;
-  if (clean.length === 3) {
-    r = parseInt(clean[0] + clean[0], 16) / 255;
-    g = parseInt(clean[1] + clean[1], 16) / 255;
-    b = parseInt(clean[2] + clean[2], 16) / 255;
-  } else {
-    r = parseInt(clean.substring(0, 2), 16) / 255;
-    g = parseInt(clean.substring(2, 4), 16) / 255;
-    b = parseInt(clean.substring(4, 6), 16) / 255;
-  }
-
-  const max = Math.max(r, g, b);
-  const min = Math.min(r, g, b);
-  const l = (max + min) / 2;
-
-  if (max === min) {
-    return `0 0% ${Math.round(l * 100)}%`;
-  }
-
-  const d = max - min;
-  const s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
-
-  let h: number;
-  if (max === r) {
-    h = ((g - b) / d + (g < b ? 6 : 0)) / 6;
-  } else if (max === g) {
-    h = ((b - r) / d + 2) / 6;
-  } else {
-    h = ((r - g) / d + 4) / 6;
-  }
-
-  return `${Math.round(h * 360)} ${Math.round(s * 100)}% ${Math.round(l * 100)}%`;
 }
 
 export type { MeepleParticipantCardProps };

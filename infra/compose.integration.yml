@@ -38,9 +38,9 @@ services:
       # AI services via meepleai.app (both modes)
       EMBEDDING_PROVIDER: external
       Embedding__Provider: External
-      EMBEDDING_MODEL: intfloat/multilingual-e5-large
-      EMBEDDING_DIMENSIONS: 1024
-      Embedding__Dimensions: 1024
+      EMBEDDING_MODEL: intfloat/multilingual-e5-base
+      EMBEDDING_DIMENSIONS: 768
+      Embedding__Dimensions: 768
       LOCAL_EMBEDDING_URL: https://meepleai.app/services/embedding
       Embedding__LocalServiceUrl: https://meepleai.app/services/embedding
       RERANKER_URL: https://meepleai.app/services/reranker

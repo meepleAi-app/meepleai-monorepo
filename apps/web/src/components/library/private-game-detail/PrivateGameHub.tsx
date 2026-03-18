@@ -15,7 +15,7 @@ import { usePrivateGame } from '@/hooks/queries/useLibrary';
 import { api } from '@/lib/api';
 
 import { ActivationChecklist, type PdfStatus, type AgentStatus } from './ActivationChecklist';
-import { PausedSessionCard, type PausedSession } from './PausedSessionCard';
+import { MeeplePausedSessionCard, type PausedSession } from './MeeplePausedSessionCard';
 
 interface PrivateGameHubProps {
   privateGameId: string;
@@ -275,7 +275,7 @@ export function PrivateGameHub({ privateGameId }: PrivateGameHubProps) {
         <div className="space-y-3">
           <h3 className="text-lg font-semibold">Partite in pausa</h3>
           {pausedSessions.map(session => (
-            <PausedSessionCard
+            <MeeplePausedSessionCard
               key={session.id}
               session={session}
               onResume={handleResumeSession}

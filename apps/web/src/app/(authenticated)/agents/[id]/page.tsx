@@ -1,17 +1,19 @@
 /**
  * Agent Detail Page - Chat with AI Agent
  *
- * Displays agent information with MeepleCard + AgentInfoCard (tabbed chat interface).
- * Follows game page pattern: hero card + companion info card.
+ * Displays agent information with MeepleCard hero + AgentExtraMeepleCard (tabbed interface).
+ * AgentExtraMeepleCard includes: Chat (SSE streaming), Overview, Stats, History, KB tabs.
  *
- * POC: Agent chat page with SSE streaming, history, and KB context display
+ * The embedded chat tab validates agent readiness (KB populated, RAG initialized)
+ * before enabling the chat interface.
  */
 
 import { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 
-import { AgentInfoCard } from '@/components/agent/AgentInfoCard';
 import { DeckTrackerSync } from '@/components/layout/DeckTrackerSync';
+import { AgentExtraMeepleCard } from '@/components/ui/data-display/extra-meeple-card/entities/AgentExtraMeepleCard';
+import type { AgentDetailData } from '@/components/ui/data-display/extra-meeple-card/types';
 import { MeepleCard, type MeepleCardMetadata } from '@/components/ui/data-display/meeple-card';
 import { getNavigationLinks } from '@/config/entity-navigation';
 import { api } from '@/lib/api';
@@ -87,6 +89,21 @@ export default async function AgentPage({ params }: AgentPageProps) {
 
   const agentHref = `/agents/${agent.id}`;
 
+  // Build AgentDetailData for the ExtraMeepleCard
+  const agentDetailData: AgentDetailData = {
+    id: agent.id,
+    name: agent.name,
+    type: agent.type,
+    strategyName: agent.strategyName,
+    strategyParameters: agent.strategyParameters,
+    isActive: agent.isActive,
+    isIdle: agent.isIdle,
+    invocationCount: agent.invocationCount,
+    lastInvokedAt: agent.lastInvokedAt,
+    createdAt: agent.createdAt,
+    gameId: agent.gameId ?? undefined,
+  };
+
   return (
     <div className="container max-w-7xl py-8">
       <DeckTrackerSync
@@ -104,7 +121,7 @@ export default async function AgentPage({ params }: AgentPageProps) {
         </p>
       </div>
 
-      {/* Main Content: MeepleCard + AgentInfoCard */}
+      {/* Main Content: MeepleCard + AgentExtraMeepleCard */}
       <section className="flex flex-col lg:flex-row lg:items-start gap-6">
         {/* Left: Agent Hero Card */}
         <MeepleCard
@@ -116,8 +133,8 @@ export default async function AgentPage({ params }: AgentPageProps) {
           navigateTo={getNavigationLinks('agent', { id: agent.id })}
         />
 
-        {/* Right: Tabbed Chat Interface */}
-        <AgentInfoCard agentId={agent.id} agentName={agent.name} />
+        {/* Right: Tabbed Chat + Info Interface */}
+        <AgentExtraMeepleCard data={agentDetailData} enableChat />
       </section>
     </div>
   );

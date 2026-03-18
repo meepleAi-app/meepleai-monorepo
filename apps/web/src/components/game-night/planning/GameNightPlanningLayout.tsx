@@ -7,10 +7,10 @@ import { Plus, Users } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useGameNightStore } from '@/store/game-night';
 
-import { AISuggestionCard } from './AISuggestionCard';
-import { DealtGameCard } from './DealtGameCard';
 import { GameNightTimeline } from './GameNightTimeline';
 import { InlineGamePicker } from './InlineGamePicker';
+import { MeepleAISuggestionCard } from './MeepleAISuggestionCard';
+import { MeepleDealtGameCard } from './MeepleDealtGameCard';
 
 const ROTATIONS = [-2, 1, -1, 2, -0.5, 1.5];
 
@@ -62,7 +62,7 @@ export function GameNightPlanningLayout({
         </div>
 
         {/* AI suggestions — contextual based on player count */}
-        <AISuggestionCard suggestions={[]} />
+        <MeepleAISuggestionCard suggestions={[]} />
       </div>
 
       {/* Right column — table, picker, timeline */}
@@ -87,7 +87,7 @@ export function GameNightPlanningLayout({
           ) : (
             <div className="flex flex-wrap gap-4 p-4 rounded-xl bg-muted/30 border border-border min-h-[120px]">
               {selectedGames.map((game, i) => (
-                <DealtGameCard
+                <MeepleDealtGameCard
                   key={game.id}
                   game={game}
                   onRemove={removeGame}

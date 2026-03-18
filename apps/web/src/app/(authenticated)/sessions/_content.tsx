@@ -18,7 +18,7 @@ import { Clock, Crown, History, Loader2, Play, Search, Users } from 'lucide-reac
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 
-import { ResumeSessionCard } from '@/components/session/ResumeSessionCard';
+import { MeepleResumeSessionCard } from '@/components/session/MeepleResumeSessionCard';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -265,7 +265,7 @@ export function SessionsContent() {
               </h2>
               <div className="space-y-3">
                 {pausedSessions.map(session => (
-                  <ResumeSessionCard
+                  <MeepleResumeSessionCard
                     key={session.id}
                     sessionId={session.id}
                     gameName={session.gameName}

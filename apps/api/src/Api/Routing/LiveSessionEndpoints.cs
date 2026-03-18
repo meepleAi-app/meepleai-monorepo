@@ -9,6 +9,7 @@ using Api.BoundedContexts.GameManagement.Application.Queries.LiveSessions;
 using Api.BoundedContexts.GameManagement.Application.Queries.ToolState;
 using Api.BoundedContexts.GameManagement.Domain.Entities.SessionSnapshot;
 using Api.BoundedContexts.GameManagement.Domain.Enums;
+using Api.BoundedContexts.GameManagement.Domain.Models;
 using Api.BoundedContexts.KnowledgeBase.Application.Commands;
 using Api.BoundedContexts.KnowledgeBase.Application.DTOs;
 using Api.Extensions;
@@ -202,6 +203,26 @@ internal static class LiveSessionEndpoints
             .WithTags("LiveSessions")
             .WithSummary("Save complete session state")
             .WithDescription("Save complete session state with pause + snapshot + agent persist. Issue #122.");
+
+        group.MapPost("/live-sessions/{sessionId}/setup-checklist", HandleGenerateSetupChecklist)
+            .RequireAuthenticatedUser()
+            .Produces<SetupChecklistData>(200)
+            .Produces(400)
+            .Produces(404)
+            .Produces(401)
+            .WithTags("LiveSessions")
+            .WithSummary("Generate setup checklist from game rulebook via RAG")
+            .WithDescription("Generates a player-count-specific setup checklist by querying the game's PDF rulebook through the KnowledgeBase RAG pipeline.");
+
+        group.MapPut("/live-sessions/{sessionId}/setup-checklist", HandleUpdateSetupChecklist)
+            .RequireAuthenticatedUser()
+            .Produces(204)
+            .Produces(400)
+            .Produces(404)
+            .Produces(401)
+            .WithTags("LiveSessions")
+            .WithSummary("Update setup checklist state")
+            .WithDescription("Replaces the setup checklist data, used when the user toggles components or completes steps in the setup wizard.");
 
         // === Queries ===
         // NOTE: Literal-segment routes MUST be registered before parameterized {sessionId} route
@@ -538,6 +559,28 @@ internal static class LiveSessionEndpoints
         return Results.Ok(result);
     }
 
+    private static async Task<IResult> HandleGenerateSetupChecklist(
+        Guid sessionId,
+        [FromBody] GenerateSetupChecklistRequest request,
+        [FromServices] IMediator mediator,
+        CancellationToken cancellationToken)
+    {
+        var checklist = await mediator.Send(
+            new GenerateSetupChecklistCommand(sessionId, request.PlayerCount), cancellationToken).ConfigureAwait(false);
+        return Results.Ok(checklist);
+    }
+
+    private static async Task<IResult> HandleUpdateSetupChecklist(
+        Guid sessionId,
+        [FromBody] SetupChecklistData checklist,
+        [FromServices] IMediator mediator,
+        CancellationToken cancellationToken)
+    {
+        await mediator.Send(
+            new UpdateSetupChecklistCommand(sessionId, checklist), cancellationToken).ConfigureAwait(false);
+        return Results.NoContent();
+    }
+
     #endregion
 
     #region Query Handlers
@@ -677,6 +720,8 @@ internal static class LiveSessionEndpoints
     private sealed record ParseScoreRequest(string Message, bool AutoRecord = true);
 
     private sealed record ConfirmScoreRequest(Guid PlayerId, string Dimension, int Value, int Round);
+
+    private sealed record GenerateSetupChecklistRequest(int PlayerCount);
 
     #endregion
 }

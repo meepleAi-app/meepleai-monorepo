@@ -19,20 +19,6 @@ export { SharedGameDetailModal, type SharedGameDetailModalProps } from './Shared
 export { KnowledgeBaseTab, type KnowledgeBaseTabProps } from './KnowledgeBaseTab';
 export { ContributorsSection } from './ContributorsSection';
 export { MeepleContributorCard } from './MeepleContributorCard';
-/**
- * @deprecated Use MeepleContributorCard instead. Kept for backward compatibility.
- */
-export { ContributorCard } from './ContributorCard';
-/**
- * @deprecated Use MeepleGameCatalogCard from '@/components/catalog' instead.
- * Kept temporarily for backward compatibility — will be removed in Task 15.
- */
-export {
-  CatalogGameCard,
-  CatalogGameCardSkeleton,
-  type CatalogGameCardProps,
-  type CommunityStats,
-} from './CatalogGameCard';
 
 // Re-export the replacement component for migration convenience
 export {

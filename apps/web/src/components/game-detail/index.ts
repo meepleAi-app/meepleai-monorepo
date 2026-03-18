@@ -14,10 +14,6 @@ export {
   type MeeplePdfReferenceCardProps,
   type PdfReference,
 } from './MeeplePdfReferenceCard';
-/**
- * @deprecated Use MeeplePdfReferenceCard instead. Kept for backward compatibility.
- */
-export { PdfReferenceCard, type PdfReferenceCardProps } from './PdfReferenceCard';
 export { TypingIndicator } from './TypingIndicator';
 export { SplitViewLayout, type SplitViewLayoutProps } from './SplitViewLayout';
 export { GameHeroSection } from './game-hero-section';

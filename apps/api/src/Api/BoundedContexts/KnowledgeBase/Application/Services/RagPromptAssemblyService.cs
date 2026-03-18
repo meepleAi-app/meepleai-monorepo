@@ -332,6 +332,35 @@ internal sealed class RagPromptAssemblyService : IRagPromptAssemblyService
                         FinalChunkCount: filteredChunks.Count));
             }
 
+            // === RAPTOR: Multi-granularity retrieval ===
+            if (activeEnhancements.HasFlag(RagEnhancement.RaptorRetrieval))
+            {
+                var raptorChunks = await _textSearch.SearchRaptorSummariesAsync(
+                    gameId, userQuestion, topK: 3, ct).ConfigureAwait(false);
+
+                if (raptorChunks.Count > 0)
+                {
+                    foreach (var rc in raptorChunks)
+                    {
+                        filteredChunks.Add(new SearchResultItem
+                        {
+                            Score = rc.Rank * 1.1f, // Slight boost for RAPTOR summaries
+                            Text = rc.Content,
+                            PdfId = rc.PdfDocumentId.ToString(),
+                            Page = rc.PageNumber ?? 0,
+                            ChunkIndex = rc.ChunkIndex
+                        });
+                    }
+
+                    filteredChunks = filteredChunks
+                        .OrderByDescending(c => c.Score)
+                        .Take(RerankedTopK + 2) // Allow slightly more chunks when RAPTOR active
+                        .ToList();
+
+                    _logger.LogInformation("RAPTOR: added {Count} summary chunks to context", raptorChunks.Count);
+                }
+            }
+
             // Step 4: Sentence window expansion — include adjacent chunks for more context
             filteredChunks = await TrySentenceWindowExpansionAsync(filteredChunks, ct).ConfigureAwait(false);
 

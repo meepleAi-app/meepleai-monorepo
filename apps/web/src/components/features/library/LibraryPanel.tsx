@@ -27,6 +27,7 @@ import { useAlphaNav } from '@/hooks/useAlphaNav';
 export function LibraryPanel() {
   const router = useRouter();
   const { openDetail } = useAlphaNav();
+  const [activeTab, setActiveTab] = useState('my-games');
   const [catalogSearch, setCatalogSearch] = useState('');
 
   const { data: library, isLoading: libraryLoading } = useLibrary({
@@ -50,7 +51,7 @@ export function LibraryPanel() {
 
   return (
     <div className="p-4 sm:p-6">
-      <Tabs defaultValue="my-games" className="w-full">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="w-full grid grid-cols-3">
           <TabsTrigger value="my-games">I Miei Giochi</TabsTrigger>
           <TabsTrigger value="catalog">Catalogo</TabsTrigger>
@@ -66,12 +67,7 @@ export function LibraryPanel() {
               title="La tua libreria e' vuota"
               description="Aggiungi giochi dal catalogo per costruire la tua collezione personale."
               ctaLabel="Esplora Catalogo"
-              onCtaClick={() => {
-                const tabTrigger = document.querySelector<HTMLButtonElement>(
-                  '[data-state][value="catalog"]'
-                );
-                tabTrigger?.click();
-              }}
+              onCtaClick={() => setActiveTab('catalog')}
               icon={BookOpen}
               entityColor={entityColors.game.hsl}
             />
@@ -147,12 +143,7 @@ export function LibraryPanel() {
               title="La tua wishlist e' vuota"
               description="Aggiungi giochi alla wishlist dal catalogo per non dimenticarli."
               ctaLabel="Esplora Catalogo"
-              onCtaClick={() => {
-                const tabTrigger = document.querySelector<HTMLButtonElement>(
-                  '[data-state][value="catalog"]'
-                );
-                tabTrigger?.click();
-              }}
+              onCtaClick={() => setActiveTab('catalog')}
               icon={Heart}
               entityColor="350 89% 60%"
             />

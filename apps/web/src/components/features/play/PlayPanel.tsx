@@ -10,6 +10,8 @@
  * Includes a FAB for creating new sessions.
  */
 
+import { useState } from 'react';
+
 import { useQuery } from '@tanstack/react-query';
 import { Gamepad2, History, Plus } from 'lucide-react';
 import { useRouter } from 'next/navigation';
@@ -39,6 +41,7 @@ function useSessionHistory(limit: number = 20) {
 export function PlayPanel() {
   const router = useRouter();
   const { openDetail } = useAlphaNav();
+  const [activeTab, setActiveTab] = useState('active');
 
   const { data: activeSessions, isLoading: activeLoading } = useActiveSessions(20);
   const { data: historySessions, isLoading: historyLoading } = useSessionHistory(20);
@@ -63,7 +66,7 @@ export function PlayPanel() {
 
   return (
     <div className="p-4 sm:p-6 relative">
-      <Tabs defaultValue="active" className="w-full">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="w-full grid grid-cols-2">
           <TabsTrigger value="active">Sessioni Attive</TabsTrigger>
           <TabsTrigger value="history">Storico</TabsTrigger>
@@ -121,12 +124,7 @@ export function PlayPanel() {
               title="Nessuna partita completata"
               description="Completa le tue sessioni di gioco per vederle nello storico."
               ctaLabel="Vai alle Sessioni"
-              onCtaClick={() => {
-                const tabTrigger = document.querySelector<HTMLButtonElement>(
-                  '[data-state][value="active"]'
-                );
-                tabTrigger?.click();
-              }}
+              onCtaClick={() => setActiveTab('active')}
               icon={History}
               entityColor={entityColors.session.hsl}
             />

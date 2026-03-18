@@ -12,11 +12,13 @@
  * - Desktop: always visible
  */
 
-import { useRef } from 'react';
+import { useTransition } from 'react';
 
 import { LogOut, Settings, Shield, User } from 'lucide-react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 
+import { logoutAction } from '@/actions/auth';
 import { NotificationBell } from '@/components/notifications';
 import { Avatar, AvatarFallback } from '@/components/ui/data-display/avatar';
 import {
@@ -27,24 +29,25 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/navigation/dropdown-menu';
 import { useAlphaNav } from '@/hooks/useAlphaNav';
-import { useScrollHideNav } from '@/hooks/useScrollHideNav';
 import { cn } from '@/lib/utils';
 
 interface AlphaTopNavProps {
   isAdmin: boolean;
-  /** Ref to the scroll container for scroll-hide detection */
-  scrollContainerRef?: React.RefObject<HTMLElement | null>;
 }
 
-export function AlphaTopNav({ isAdmin, scrollContainerRef }: AlphaTopNavProps) {
+export function AlphaTopNav({ isAdmin }: AlphaTopNavProps) {
   const { sectionTitle } = useAlphaNav();
-  const fallbackRef = useRef<HTMLElement | null>(null);
+  const router = useRouter();
+  const [isLoggingOut, startTransition] = useTransition();
 
-  const { isNavVisible } = useScrollHideNav({
-    scrollContainerRef: scrollContainerRef ?? fallbackRef,
-    threshold: 10,
-    disabled: !scrollContainerRef,
-  });
+  const handleLogout = () => {
+    startTransition(async () => {
+      const result = await logoutAction();
+      if (result.success) {
+        router.push('/login');
+      }
+    });
+  };
 
   return (
     <header
@@ -52,9 +55,7 @@ export function AlphaTopNav({ isAdmin, scrollContainerRef }: AlphaTopNavProps) {
         'sticky top-0 z-40 h-14',
         'flex items-center justify-between px-4',
         'bg-background/90 backdrop-blur-xl',
-        'border-b border-border/40',
-        'transition-transform duration-300',
-        !isNavVisible && '-translate-y-full md:translate-y-0'
+        'border-b border-border/40'
       )}
       data-testid="alpha-top-nav"
     >
@@ -115,9 +116,14 @@ export function AlphaTopNav({ isAdmin, scrollContainerRef }: AlphaTopNavProps) {
               </>
             )}
             <DropdownMenuSeparator />
-            <DropdownMenuItem className="flex items-center gap-2 cursor-pointer text-destructive focus:text-destructive">
+            <DropdownMenuItem
+              onClick={handleLogout}
+              disabled={isLoggingOut}
+              className="flex items-center gap-2 cursor-pointer text-destructive focus:text-destructive"
+              data-testid="logout-menu-item"
+            >
               <LogOut className="w-4 h-4" />
-              <span>Logout</span>
+              <span>{isLoggingOut ? 'Disconnessione...' : 'Logout'}</span>
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

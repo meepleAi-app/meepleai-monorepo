@@ -10,6 +10,7 @@
  */
 export function hexToHsl(hex: string): string | undefined {
   const clean = hex.replace(/^#/, '');
+  // eslint-disable-next-line security/detect-unsafe-regex -- fixed-length hex validation, no backtracking risk
   if (!/^[0-9a-fA-F]{3}([0-9a-fA-F]{3})?$/.test(clean)) return undefined;
 
   const fullHex =

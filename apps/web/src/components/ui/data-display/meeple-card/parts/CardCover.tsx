@@ -37,7 +37,14 @@ export interface CardCoverProps {
  * Delegates actual image rendering to the existing CoverImage component.
  * Compact variant does not render a cover image.
  */
-export function CardCover({ src, alt, variant, entity, customColor, className }: CardCoverProps) {
+export function CardCover({
+  src,
+  alt,
+  variant,
+  entity,
+  customColor,
+  className: _className,
+}: CardCoverProps) {
   if (variant === 'compact') return null;
 
   return (

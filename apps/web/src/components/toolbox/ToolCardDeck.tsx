@@ -21,7 +21,7 @@ interface ToolCardDeckProps {
  * Epic #412 — Game Toolbox.
  */
 export function ToolCardDeck({
-  toolboxId,
+  toolboxId: _toolboxId,
   deckId,
   className = '',
   'data-testid': testId,

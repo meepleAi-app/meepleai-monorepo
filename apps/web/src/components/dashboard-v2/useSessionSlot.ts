@@ -61,7 +61,7 @@ function computeDurationMinutes(startedAt: string | null): number {
  * into the data shape needed by SessionPanel / SessionPanelCollapsed.
  */
 export function useSessionSlot(): SessionSlotData {
-  const { isGameMode, activeSessionId } = useDashboardMode();
+  const { isGameMode, activeSessionId: _activeSessionId } = useDashboardMode();
   const activeSession = useSessionStore(s => s.activeSession);
 
   const gameId = activeSession?.gameId ?? undefined;

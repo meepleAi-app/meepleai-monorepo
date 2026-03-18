@@ -218,11 +218,9 @@ export function KBSelectionPanel({ gameId, gameTitle, onBack, onConfirm }: KBSel
     );
   }, [documents]);
 
-  // All Rulebook docs (type 0)
-  const rulebookDocs = grouped[0] ?? [];
-
   const handleToggle = useCallback(
     (id: string) => {
+      const currentRulebookDocs = grouped[0] ?? [];
       setSelectedIds(prev => {
         const next = new Set(prev);
         const doc = documents.find(d => d.id === id);
@@ -241,7 +239,7 @@ export function KBSelectionPanel({ gameId, gameTitle, onBack, onConfirm }: KBSel
         } else {
           // Only 1 Rulebook version at a time: deselect any other Rulebook
           if (doc.documentType === 0) {
-            rulebookDocs.forEach(rb => next.delete(rb.id));
+            currentRulebookDocs.forEach(rb => next.delete(rb.id));
           }
           next.add(id);
         }
@@ -249,7 +247,7 @@ export function KBSelectionPanel({ gameId, gameTitle, onBack, onConfirm }: KBSel
         return next;
       });
     },
-    [documents, rulebookDocs]
+    [documents, grouped]
   );
 
   const handleConfirm = useCallback(() => {

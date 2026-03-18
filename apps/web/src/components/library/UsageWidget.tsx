@@ -30,12 +30,6 @@ function formatMax(max: number): string {
   return String(max);
 }
 
-function progressColor(percentage: number): string {
-  if (percentage >= 95) return 'bg-red-500';
-  if (percentage >= 80) return 'bg-amber-500';
-  return 'bg-primary';
-}
-
 function labelColor(percentage: number): string {
   if (percentage >= 95) return 'text-red-600 dark:text-red-400';
   if (percentage >= 80) return 'text-amber-600 dark:text-amber-400';

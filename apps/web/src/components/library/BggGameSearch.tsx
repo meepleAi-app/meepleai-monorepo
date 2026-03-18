@@ -96,6 +96,15 @@ export function BggGameSearch({
     [performSearch]
   );
 
+  const handleResultClick = useCallback(
+    (result: BggSearchResult) => {
+      onSelect(result);
+      setIsOpen(false);
+      setQuery(result.name);
+    },
+    [onSelect]
+  );
+
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLInputElement>) => {
       if (!isOpen || results.length === 0) return;
@@ -120,16 +129,7 @@ export function BggGameSearch({
           break;
       }
     },
-    [isOpen, results, highlightedIndex]
-  );
-
-  const handleResultClick = useCallback(
-    (result: BggSearchResult) => {
-      onSelect(result);
-      setIsOpen(false);
-      setQuery(result.name);
-    },
-    [onSelect]
+    [isOpen, results, highlightedIndex, handleResultClick]
   );
 
   const handleExactSearch = useCallback(() => {

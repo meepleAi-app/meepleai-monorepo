@@ -9,3 +9,4 @@ export { GameTableZoneSessions } from './GameTableZoneSessions';
 export type { GameTableZoneSessionsProps } from './GameTableZoneSessions';
 export { GameStatsPanel } from './GameStatsPanel';
 export type { GameStatsPanelProps } from './GameStatsPanel';
+export { GameTableSkeleton } from './GameTableSkeleton';

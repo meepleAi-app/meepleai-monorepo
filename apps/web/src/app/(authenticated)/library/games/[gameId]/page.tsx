@@ -1,74 +1,87 @@
 /**
- * Library Game Detail Page
+ * Library Game Detail Page — Game Table Layout
  *
- * Displays game detail with hero card + tabbed content.
- * Draws a card into the hand via the useCardHand store.
+ * Replaces the legacy tab-based detail page with a zone-based Game Table layout.
+ * Three zones (Tools, Knowledge, Sessions) surround a central MeepleCard hero.
+ * Modals (notes, remove) are handled inside GameTableZoneTools.
+ *
+ * Issue #3513 — Game Table Detail
  */
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { ArrowLeft, Users, Clock, BarChart3 } from 'lucide-react';
+import { useParams, useRouter } from 'next/navigation';
 
-import { useQueryClient } from '@tanstack/react-query';
-import { ArrowLeft } from 'lucide-react';
-import { useParams, useRouter, useSearchParams } from 'next/navigation';
-
-import { DeclareOwnershipButton } from '@/components/library/DeclareOwnershipButton';
-import { EditNotesModal } from '@/components/library/EditNotesModal';
+import { MechanicIcon } from '@/components/icons/mechanics/MechanicIcon';
 import {
-  GameDetailHeroCard,
-  GameDetailOverviewTab,
-  GameDetailAgentTab,
-  GameDetailKbTab,
-  GameDetailSessionsTab,
-} from '@/components/library/game-detail';
-import { RagAccessBadge } from '@/components/library/RagAccessBadge';
-import { RemoveGameDialog } from '@/components/library/RemoveGameDialog';
-import { RelatedEntitiesSection } from '@/components/ui/data-display/entity-link/related-entities-section';
+  GameTableLayout,
+  GameTableDrawer,
+  GameTableZoneTools,
+  GameTableZoneKnowledge,
+  GameTableZoneSessions,
+  GameTableSkeleton,
+} from '@/components/library/game-table';
+import { MeepleCard } from '@/components/ui/data-display/meeple-card';
+import type { MeepleCardMetadata } from '@/components/ui/data-display/meeple-card/types';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/feedback/alert';
 import { Button } from '@/components/ui/primitives/button';
-import { useLibraryGameDetail, libraryKeys } from '@/hooks/queries/useLibrary';
+import { useLibraryGameDetail } from '@/hooks/queries/useLibrary';
+import { useGameTableDrawer } from '@/lib/stores/gameTableDrawerStore';
 
-import LibraryGameDetailLoading from './loading';
+// ============================================================================
+// Helpers
+// ============================================================================
+
+function buildPlayerLabel(min: number | null, max: number | null): string | null {
+  if (min == null && max == null) return null;
+  if (min != null && max != null) return min === max ? `${min}` : `${min}-${max}`;
+  return `${min ?? max}`;
+}
+
+function buildSubtitle(publisher: string | null, year: number | null): string | undefined {
+  const parts: string[] = [];
+  if (publisher) parts.push(publisher);
+  if (year) parts.push(`(${year})`);
+  return parts.length > 0 ? parts.join(' ') : undefined;
+}
+
+function mapStateToLabel(
+  currentState: string
+): { text: string; variant: 'success' | 'warning' | 'error' | 'info' } | undefined {
+  switch (currentState) {
+    case 'Owned':
+      return { text: 'Posseduto', variant: 'success' };
+    case 'Nuovo':
+      return { text: 'Nuovo', variant: 'info' };
+    case 'InPrestito':
+      return { text: 'In Prestito', variant: 'warning' };
+    case 'Wishlist':
+      return { text: 'Wishlist', variant: 'info' };
+    default:
+      return undefined;
+  }
+}
+
+// ============================================================================
+// Page component
+// ============================================================================
 
 export default function LibraryGameDetailPage() {
   const params = useParams();
   const router = useRouter();
-  const searchParams = useSearchParams();
   const gameId = params?.gameId as string;
-  const tab = searchParams.get('tab');
 
-  const queryClient = useQueryClient();
   const { data: gameDetail, isLoading, error } = useLibraryGameDetail(gameId);
+  const drawer = useGameTableDrawer();
 
-  // Use API-provided RAG access flag (accounts for ownership, admin role, and RAG-public games)
-  const hasRagAccess = gameDetail?.hasRagAccess ?? false;
+  // --- Loading ---
+  if (isLoading) return <GameTableSkeleton />;
 
-  const handleOwnershipDeclared = () => {
-    queryClient.invalidateQueries({ queryKey: libraryKeys.lists() });
-    queryClient.invalidateQueries({ queryKey: libraryKeys.gameDetail(gameId) });
-  };
-
-  // Event-driven modal state (from ActionBar CustomEvents)
-  const [isNotesModalOpen, setIsNotesModalOpen] = useState(false);
-  const [isRemoveDialogOpen, setIsRemoveDialogOpen] = useState(false);
-
-  useEffect(() => {
-    const handleEditNotes = () => setIsNotesModalOpen(true);
-    const handleRemoveGame = () => setIsRemoveDialogOpen(true);
-
-    document.addEventListener('game-detail:edit-notes', handleEditNotes);
-    document.addEventListener('game-detail:remove-game', handleRemoveGame);
-    return () => {
-      document.removeEventListener('game-detail:edit-notes', handleEditNotes);
-      document.removeEventListener('game-detail:remove-game', handleRemoveGame);
-    };
-  }, []);
-
-  // Error state
+  // --- Error ---
   if (error) {
     return (
-      <div className="mx-auto max-w-6xl px-4 py-8">
+      <div className="mx-auto max-w-6xl px-4 py-8" data-testid="error-state">
         <Alert variant="destructive">
           <AlertTitle>Errore</AlertTitle>
           <AlertDescription>
@@ -85,10 +98,10 @@ export default function LibraryGameDetailPage() {
     );
   }
 
-  // Game not found
-  if (!isLoading && !gameDetail) {
+  // --- Not found ---
+  if (!gameDetail) {
     return (
-      <div className="mx-auto max-w-6xl px-4 py-8">
+      <div className="mx-auto max-w-6xl px-4 py-8" data-testid="not-found-state">
         <Alert>
           <AlertTitle>Gioco non trovato</AlertTitle>
           <AlertDescription>Questo gioco non è presente nella tua libreria.</AlertDescription>
@@ -101,64 +114,74 @@ export default function LibraryGameDetailPage() {
     );
   }
 
-  // Loading state
-  if (isLoading || !gameDetail) {
-    return <LibraryGameDetailLoading />;
+  // --- Build metadata chips ---
+  const metadata: MeepleCardMetadata[] = [];
+
+  const playerLabel = buildPlayerLabel(gameDetail.minPlayers, gameDetail.maxPlayers);
+  if (playerLabel) {
+    metadata.push({ icon: Users, label: `${playerLabel} giocatori` });
   }
 
+  if (gameDetail.playingTimeMinutes) {
+    metadata.push({ icon: Clock, label: `${gameDetail.playingTimeMinutes} min` });
+  }
+
+  if (gameDetail.complexityRating != null) {
+    metadata.push({
+      icon: BarChart3,
+      label: `${gameDetail.complexityRating.toFixed(1)} / 5`,
+    });
+  }
+
+  // --- Mechanic icon for cover overlay ---
+  const firstMechanicSlug = gameDetail.mechanics?.[0]?.slug;
+  const mechanicIcon = firstMechanicSlug ? (
+    <MechanicIcon mechanic={firstMechanicSlug} size={18} />
+  ) : undefined;
+
+  // --- State label for cover overlay ---
+  const stateLabel = mapStateToLabel(gameDetail.currentState);
+
+  // --- Flip data ---
+  const flipData = {
+    description: gameDetail.description || undefined,
+    categories: gameDetail.categories,
+    mechanics: gameDetail.mechanics,
+    designers: gameDetail.designers,
+    publishers: gameDetail.publishers,
+    complexityRating: gameDetail.complexityRating,
+    minAge: gameDetail.minAge,
+  };
+
   return (
-    <>
-      <div style={{ viewTransitionName: `meeple-card-${gameId}` }}>
-        <GameDetailHeroCard gameDetail={gameDetail} />
-      </div>
-
-      {/* Ownership + RAG Access indicators */}
-      {(gameDetail.currentState === 'Nuovo' || hasRagAccess) && (
-        <div className="mx-auto max-w-6xl px-4 pt-3 flex items-center gap-3">
-          <DeclareOwnershipButton
-            gameId={gameId}
-            gameName={gameDetail.gameTitle}
-            gameState={gameDetail.currentState}
-            onOwnershipDeclared={handleOwnershipDeclared}
-          />
-          <RagAccessBadge hasRagAccess={hasRagAccess} isRagPublic={false} />
-        </div>
-      )}
-
-      <div className="mx-auto max-w-6xl px-4 py-4">
-        {tab === 'agent' ? (
-          <GameDetailAgentTab gameId={gameId} gameTitle={gameDetail.gameTitle} />
-        ) : tab === 'kb' ? (
-          <GameDetailKbTab
-            gameId={gameId}
-            gameTitle={gameDetail.gameTitle}
-            bggId={gameDetail.bggId}
-          />
-        ) : tab === 'sessions' ? (
-          <GameDetailSessionsTab gameId={gameId} />
-        ) : tab === 'links' ? (
-          <RelatedEntitiesSection entityType="Game" entityId={gameId} />
-        ) : (
-          <GameDetailOverviewTab gameDetail={gameDetail} />
-        )}
-      </div>
-
-      {/* Event-driven modals */}
-      <EditNotesModal
-        isOpen={isNotesModalOpen}
-        onClose={() => setIsNotesModalOpen(false)}
-        gameId={gameDetail.gameId}
-        gameTitle={gameDetail.gameTitle}
-        currentNotes={gameDetail.notes}
-      />
-
-      <RemoveGameDialog
-        isOpen={isRemoveDialogOpen}
-        onClose={() => setIsRemoveDialogOpen(false)}
-        gameId={gameDetail.gameId}
-        gameTitle={gameDetail.gameTitle}
-        onRemoved={() => router.push('/library')}
-      />
-    </>
+    <GameTableLayout
+      card={
+        <MeepleCard
+          entity="game"
+          variant="hero"
+          flippable
+          title={gameDetail.gameTitle}
+          subtitle={buildSubtitle(gameDetail.gamePublisher, gameDetail.gameYearPublished)}
+          imageUrl={gameDetail.gameImageUrl || undefined}
+          rating={gameDetail.averageRating ?? undefined}
+          ratingMax={10}
+          metadata={metadata}
+          mechanicIcon={mechanicIcon}
+          stateLabel={stateLabel}
+          flipData={flipData}
+          data-testid="game-hero-card"
+        />
+      }
+      toolsZone={<GameTableZoneTools gameDetail={gameDetail} gameId={gameId} />}
+      knowledgeZone={<GameTableZoneKnowledge gameId={gameId} agentId={gameId} />}
+      sessionsZone={<GameTableZoneSessions gameDetail={gameDetail} gameId={gameId} />}
+      drawer={
+        drawer.content ? (
+          <GameTableDrawer content={drawer.content} onClose={drawer.close} />
+        ) : undefined
+      }
+      drawerOpen={drawer.isOpen}
+      onDrawerClose={drawer.close}
+    />
   );
 }

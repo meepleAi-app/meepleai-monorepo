@@ -19,18 +19,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/overlays/select';
+import { useAvailableModels } from '@/hooks/queries/useModels';
 import { cn } from '@/lib/utils';
 import { useAgentStore } from '@/stores/agentStore';
 
 export type ModelTier = 'free' | 'normal' | 'premium' | 'custom';
-
-interface Model {
-  id: string;
-  name: string;
-  tier: ModelTier;
-  costPerQuery: string;
-  description: string;
-}
 
 interface TierConfig {
   id: ModelTier;
@@ -43,59 +36,11 @@ const tiers: TierConfig[] = [
   { id: 'free', name: 'Free', icon: <Sparkles className="h-4 w-4" />, color: 'text-green-400' },
   { id: 'normal', name: 'Normal', icon: <Sparkles className="h-4 w-4" />, color: 'text-blue-400' },
   { id: 'premium', name: 'Premium', icon: <Crown className="h-4 w-4" />, color: 'text-purple-400' },
-  { id: 'custom', name: 'Custom', icon: <Settings className="h-4 w-4" />, color: 'text-orange-400' },
-];
-
-// Mock data - replace with API call
-const models: Model[] = [
   {
-    id: 'gpt-4o-mini',
-    name: 'GPT-4o Mini',
-    tier: 'free',
-    costPerQuery: '$0.0005',
-    description: 'Fast, efficient for simple queries',
-  },
-  {
-    id: 'llama-3.3',
-    name: 'Llama 3.3',
-    tier: 'free',
-    costPerQuery: '$0.0003',
-    description: 'Open source, good performance',
-  },
-  {
-    id: 'claude-3-haiku',
-    name: 'Claude 3 Haiku',
-    tier: 'normal',
-    costPerQuery: '$0.001',
-    description: 'Fast and intelligent',
-  },
-  {
-    id: 'gpt-4-turbo',
-    name: 'GPT-4 Turbo',
-    tier: 'normal',
-    costPerQuery: '$0.002',
-    description: 'High capability, reasonable cost',
-  },
-  {
-    id: 'claude-3-sonnet',
-    name: 'Claude 3 Sonnet',
-    tier: 'premium',
-    costPerQuery: '$0.005',
-    description: 'Balanced performance',
-  },
-  {
-    id: 'gpt-4',
-    name: 'GPT-4',
-    tier: 'premium',
-    costPerQuery: '$0.003',
-    description: 'High quality reasoning',
-  },
-  {
-    id: 'claude-3-opus',
-    name: 'Claude 3 Opus',
-    tier: 'premium',
-    costPerQuery: '$0.015',
-    description: 'Best quality, complex reasoning',
+    id: 'custom',
+    name: 'Custom',
+    icon: <Settings className="h-4 w-4" />,
+    color: 'text-orange-400',
   },
 ];
 
@@ -106,14 +51,15 @@ interface ModelTierSelectorProps {
 
 export function ModelTierSelector({ userTier = 'free', isAdmin = false }: ModelTierSelectorProps) {
   const { selectedModelId, selectedTierId, setSelectedModel, setSelectedTier } = useAgentStore();
+  const { data: models = [], isLoading } = useAvailableModels(selectedTierId ?? undefined);
 
   // Filter available tiers based on user tier
   const tierOrder: ModelTier[] = ['free', 'normal', 'premium', 'custom'];
   const userTierIndex = tierOrder.indexOf(userTier);
 
-  const isModelAccessible = (modelTier: ModelTier) => {
+  const isModelAccessible = (modelTier: string) => {
     if (isAdmin) return true;
-    const modelTierIndex = tierOrder.indexOf(modelTier);
+    const modelTierIndex = tierOrder.indexOf(modelTier as ModelTier);
     return modelTierIndex <= userTierIndex;
   };
 
@@ -169,50 +115,60 @@ export function ModelTierSelector({ userTier = 'free', isAdmin = false }: ModelT
           <span className="ml-1 text-red-400">*</span>
         </label>
 
-        <Select value={selectedModelId || ''} onValueChange={setSelectedModel}>
+        <Select value={selectedModelId || ''} onValueChange={setSelectedModel} disabled={isLoading}>
           <SelectTrigger className="w-full bg-slate-900 border-slate-700">
-            <SelectValue placeholder="Choose AI model..." />
+            <SelectValue placeholder={isLoading ? 'Loading models...' : 'Choose AI model...'} />
           </SelectTrigger>
           <SelectContent>
-            {tierOrder
-              .filter(tier => tier !== 'custom' || isAdmin)
-              .map(tier => {
-                const tierModels = filteredModels.filter(m => m.tier === tier);
-                if (tierModels.length === 0) return null;
+            {filteredModels.length === 0 && !isLoading ? (
+              <div className="py-4 text-center text-sm text-slate-500">No models available</div>
+            ) : (
+              tierOrder
+                .filter(tier => tier !== 'custom' || isAdmin)
+                .map(tier => {
+                  const tierModels = filteredModels.filter(m => m.tier === tier);
+                  if (tierModels.length === 0) return null;
 
-                const tierConfig = tiers.find(t => t.id === tier);
+                  const tierConfig = tiers.find(t => t.id === tier);
 
-                return (
-                  <SelectGroup key={tier}>
-                    <SelectLabel className="flex items-center gap-2">
-                      <span className={tierConfig?.color}>{tierConfig?.icon}</span>
-                      {tierConfig?.name} Models
-                    </SelectLabel>
-                    {tierModels.map(model => {
-                      const accessible = isModelAccessible(model.tier);
-                      return (
-                        <SelectItem
-                          key={model.id}
-                          value={model.id}
-                          disabled={!accessible}
-                          className={!accessible ? 'opacity-50' : ''}
-                        >
-                          <div className="flex items-center justify-between gap-4 w-full">
-                            <div className="flex flex-col">
-                              <span className="flex items-center gap-2">
-                                {model.name}
-                                {!accessible && <Lock className="h-3 w-3 text-slate-500" />}
+                  return (
+                    <SelectGroup key={tier}>
+                      <SelectLabel className="flex items-center gap-2">
+                        <span className={tierConfig?.color}>{tierConfig?.icon}</span>
+                        {tierConfig?.name} Models
+                      </SelectLabel>
+                      {tierModels.map(model => {
+                        const accessible = isModelAccessible(model.tier);
+                        return (
+                          <SelectItem
+                            key={model.id}
+                            value={model.id}
+                            disabled={!accessible}
+                            className={!accessible ? 'opacity-50' : ''}
+                          >
+                            <div className="flex items-center justify-between gap-4 w-full">
+                              <div className="flex flex-col">
+                                <span className="flex items-center gap-2">
+                                  {model.name}
+                                  {!accessible && <Lock className="h-3 w-3 text-slate-500" />}
+                                </span>
+                                {model.description && (
+                                  <span className="text-xs text-slate-500">
+                                    {model.description}
+                                  </span>
+                                )}
+                              </div>
+                              <span className="text-xs text-slate-400">
+                                ${model.costPer1kInputTokens.toFixed(4)}/1k
                               </span>
-                              <span className="text-xs text-slate-500">{model.description}</span>
                             </div>
-                            <span className="text-xs text-slate-400">{model.costPerQuery}</span>
-                          </div>
-                        </SelectItem>
-                      );
-                    })}
-                  </SelectGroup>
-                );
-              })}
+                          </SelectItem>
+                        );
+                      })}
+                    </SelectGroup>
+                  );
+                })
+            )}
           </SelectContent>
         </Select>
 

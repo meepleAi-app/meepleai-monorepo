@@ -56,6 +56,10 @@ export const UserLibraryEntrySchema = z.object({
   playingTimeMinutes: z.number().int().nullable().optional(),
   complexityRating: z.number().nullable().optional(),
   averageRating: z.number().nullable().optional(),
+  // Issue #3663: Private game distinction fields
+  privateGameId: z.string().uuid().nullable().optional(), // non-null when entry is a private/custom game
+  isPrivateGame: z.boolean().default(false), // computed flag from backend
+  canProposeToCatalog: z.boolean().default(false), // whether private game can be proposed
 });
 
 export type UserLibraryEntry = z.infer<typeof UserLibraryEntrySchema>;

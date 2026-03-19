@@ -77,7 +77,7 @@ on:
         default: ""
     secrets:
       SLACK_GITNOTIFY_WEBHOOK_URL:
-        required: true
+        required: false
       SLACK_CRITICAL_WEBHOOK_URL:
         required: false
 

@@ -20,7 +20,6 @@ permissions:
 jobs:
   notify-start:
     if: github.event_name != 'workflow_call'
-    continue-on-error: true
     uses: ./.github/workflows/notify-slack.yml
     with:
       event: started
@@ -630,7 +629,6 @@ jobs:
   notify-end:
     if: always() && github.event_name != 'workflow_call'
     needs: [changes, frontend, backend-unit, backend-integration, python-tests, e2e, ci-success]
-    continue-on-error: true
     uses: ./.github/workflows/notify-slack.yml
     with:
       event: ${{ contains(toJSON(needs), '"result":"failure"') && 'failed' || contains(toJSON(needs), '"result":"cancelled"') && 'cancelled' || 'completed' }}

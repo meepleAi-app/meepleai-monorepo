@@ -136,7 +136,7 @@ internal static class AdminUserTierEndpoints
     private static void MapUserRoleChangeEndpoint(RouteGroupBuilder group)
     {
         group.MapPut("/admin/users/{userId:guid}/role", HandleChangeUserRole)
-            .RequireSuperAdminSession()
+            .RequireAdminSession()
             .WithName("ChangeUserRole")
             .WithTags("Admin", "Users")
             .WithSummary("Change a single user's role")

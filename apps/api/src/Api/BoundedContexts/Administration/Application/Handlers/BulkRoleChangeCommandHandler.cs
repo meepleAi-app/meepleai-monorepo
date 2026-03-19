@@ -104,7 +104,8 @@ internal class BulkRoleChangeCommandHandler : ICommandHandler<BulkRoleChangeComm
                 catch (Exception ex)
                 {
                     _logger.LogError(ex, "Error changing role for user {UserId}", userId);
-                    errors.Add($"User {userId}: {ex.Message}");
+                    // Sanitize error: do not leak role details (e.g. SuperAdmin status)
+                    errors.Add($"Cannot change role for user {userId}");
                 }
 #pragma warning restore CA1031
             }

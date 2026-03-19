@@ -385,30 +385,44 @@ public sealed class User : AggregateRoot<Guid>
     {
         ArgumentNullException.ThrowIfNull(newRole);
         ArgumentNullException.ThrowIfNull(requesterRole);
-        // Only admins can assign roles
-        if (!requesterRole.IsAdmin())
-            throw new DomainException("Only administrators can assign roles");
 
-        // Cannot assign admin role to self (must be done by another admin)
-        if (newRole.IsAdmin() && Role.IsAdmin())
-            throw new DomainException("Cannot modify admin role through self-service");
+        // Only SuperAdmin can assign roles
+        if (!requesterRole.IsSuperAdmin())
+            throw new DomainException("Only the SuperAdmin can assign roles");
 
-        var oldRole = Role;
+        // Cannot assign SuperAdmin role (it's seeded, not assignable)
+        if (newRole.IsSuperAdmin())
+            throw new DomainException("SuperAdmin role cannot be assigned — it is created during system seed only");
+
+        // Cannot change a SuperAdmin's role (immutable)
+        if (this.Role.IsSuperAdmin())
+            throw new DomainException("SuperAdmin role is immutable and cannot be changed");
+
+        var oldRole = this.Role;
         Role = newRole;
         AddDomainEvent(new RoleChangedEvent(Id, oldRole, newRole));
     }
 
     /// <summary>
-    /// Updates the user's role (admin-only operation).
+    /// Updates the user's role (superadmin-only operation).
     /// Use this in admin handlers where authorization is already verified.
     /// </summary>
     public void UpdateRole(Role newRole)
     {
         ArgumentNullException.ThrowIfNull(newRole);
-        if (Role == newRole)
+
+        // SuperAdmin role is immutable
+        if (this.Role.IsSuperAdmin())
+            throw new DomainException("SuperAdmin role is immutable and cannot be changed");
+
+        // Cannot promote to SuperAdmin via UpdateRole
+        if (newRole.IsSuperAdmin())
+            throw new DomainException("SuperAdmin role cannot be assigned — it is created during system seed only");
+
+        if (this.Role == newRole)
             return; // No change
 
-        var oldRole = Role;
+        var oldRole = this.Role;
         Role = newRole;
         AddDomainEvent(new RoleChangedEvent(Id, oldRole, newRole));
     }

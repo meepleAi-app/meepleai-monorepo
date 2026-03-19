@@ -159,4 +159,56 @@ public class RoleTests
         // Assert
         Assert.Equal(Role.Admin.Value, roleString);
     }
+
+    [Fact]
+    public void Parse_WithCreator_ShouldReturnCreatorRole()
+    {
+        var role = Role.Parse("creator");
+        Assert.Equal("creator", role.Value);
+        Assert.True(role.IsCreator());
+    }
+
+    [Fact]
+    public void Creator_HasPermission_ForCreatorAndUser_Only()
+    {
+        var creator = Role.Creator;
+        Assert.True(creator.HasPermission(Role.Creator));
+        Assert.True(creator.HasPermission(Role.User));
+        Assert.False(creator.HasPermission(Role.Editor));
+        Assert.False(creator.HasPermission(Role.Admin));
+        Assert.False(creator.HasPermission(Role.SuperAdmin));
+    }
+
+    [Fact]
+    public void Editor_HasPermission_ForCreator()
+    {
+        var editor = Role.Editor;
+        Assert.True(editor.HasPermission(Role.Creator));
+        Assert.True(editor.HasPermission(Role.Editor));
+        Assert.True(editor.HasPermission(Role.User));
+        Assert.False(editor.HasPermission(Role.Admin));
+        Assert.False(editor.HasPermission(Role.SuperAdmin));
+    }
+
+    [Fact]
+    public void Admin_HasPermission_ForCreator()
+    {
+        var admin = Role.Admin;
+        Assert.True(admin.HasPermission(Role.Creator));
+        Assert.True(admin.HasPermission(Role.Editor));
+        Assert.True(admin.HasPermission(Role.User));
+        Assert.True(admin.HasPermission(Role.Admin));
+        Assert.False(admin.HasPermission(Role.SuperAdmin));
+    }
+
+    [Fact]
+    public void SuperAdmin_HasPermission_ForAllRoles()
+    {
+        var superAdmin = Role.SuperAdmin;
+        Assert.True(superAdmin.HasPermission(Role.User));
+        Assert.True(superAdmin.HasPermission(Role.Creator));
+        Assert.True(superAdmin.HasPermission(Role.Editor));
+        Assert.True(superAdmin.HasPermission(Role.Admin));
+        Assert.True(superAdmin.HasPermission(Role.SuperAdmin));
+    }
 }

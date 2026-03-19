@@ -50,7 +50,7 @@ fi
 
 # Run lint-staged for frontend
 echo "🔍 Running frontend lint-staged..."
-(cd apps/web && npx lint-staged) || {
+(cd apps/web && npx lint-staged --no-stash) || {
   echo "❌ Lint-staged checks failed. Please fix the issues before committing."
   exit 1
 }

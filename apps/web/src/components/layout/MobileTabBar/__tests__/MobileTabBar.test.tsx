@@ -285,8 +285,10 @@ describe('MobileTabBar', () => {
     it('should have 72px height', () => {
       renderTabBar();
 
+      // h-16 (64px) is on the inner flex container, not the nav wrapper
       const nav = screen.getByTestId('mobile-tab-bar');
-      expect(nav).toHaveClass('h-16');
+      const innerContainer = nav.querySelector('.h-16');
+      expect(innerContainer).toBeInTheDocument();
     });
   });
 

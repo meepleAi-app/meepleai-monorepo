@@ -129,6 +129,8 @@ export const MeepleCardGrid = React.memo(function MeepleCardGrid(props: MeepleCa
     onManaPipClick,
     primaryActions,
     glowState,
+    mechanicIcon,
+    stateLabel,
   } = props;
 
   const variant = 'grid' as const;
@@ -296,6 +298,8 @@ export const MeepleCardGrid = React.memo(function MeepleCardGrid(props: MeepleCa
         variant={variant}
         entity={entity}
         customColor={customColor}
+        mechanicIcon={mechanicIcon}
+        stateLabel={stateLabel}
       />
 
       {/* Content area */}

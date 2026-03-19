@@ -10,11 +10,10 @@ using DomainVector = Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects.Vecto
 namespace Api.BoundedContexts.KnowledgeBase.Infrastructure.Persistence;
 
 /// <summary>
-/// pgvector-backed implementation of IQdrantVectorStoreAdapter.
+/// pgvector-backed implementation of IVectorStoreAdapter.
 /// Uses a dedicated pgvector_embeddings table with HNSW indexing for similarity search.
-/// Replaces Qdrant as the vector store for MVP stack simplification.
 /// </summary>
-internal sealed class PgVectorStoreAdapter : IQdrantVectorStoreAdapter
+internal sealed class PgVectorStoreAdapter : IVectorStoreAdapter
 {
     private readonly MeepleAiDbContext _context;
     private readonly ILogger<PgVectorStoreAdapter> _logger;

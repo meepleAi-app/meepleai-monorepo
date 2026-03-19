@@ -17,7 +17,7 @@ internal class HybridSearchService : IHybridSearchService
 {
     private readonly IKeywordSearchService _keywordSearchService;
     private readonly IEmbeddingService _embeddingService;
-    private readonly IQdrantVectorStoreAdapter _vectorStore;
+    private readonly IVectorStoreAdapter _vectorStore;
     private readonly ILogger<HybridSearchService> _logger;
     private readonly HybridSearchConfiguration _config;
 
@@ -29,7 +29,7 @@ internal class HybridSearchService : IHybridSearchService
     public HybridSearchService(
         IKeywordSearchService keywordSearchService,
         IEmbeddingService embeddingService,
-        IQdrantVectorStoreAdapter vectorStore,
+        IVectorStoreAdapter vectorStore,
         ILogger<HybridSearchService> logger,
         IOptions<HybridSearchConfiguration> config)
     {

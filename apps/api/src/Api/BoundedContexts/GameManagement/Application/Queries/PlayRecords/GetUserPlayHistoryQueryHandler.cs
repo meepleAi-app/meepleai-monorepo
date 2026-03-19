@@ -4,7 +4,7 @@ using Api.Infrastructure;
 using Api.SharedKernel.Application.Interfaces;
 using Microsoft.EntityFrameworkCore;
 
-namespace Api.BoundedContexts.GameManagement.Application.Handlers.PlayRecords;
+namespace Api.BoundedContexts.GameManagement.Application.Queries.PlayRecords;
 
 /// <summary>
 /// Handles retrieving paginated play history for a user.

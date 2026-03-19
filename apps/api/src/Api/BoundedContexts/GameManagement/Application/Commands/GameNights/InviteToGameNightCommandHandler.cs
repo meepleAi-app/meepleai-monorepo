@@ -4,7 +4,7 @@ using Api.Middleware.Exceptions;
 using Api.SharedKernel.Application.Interfaces;
 using Api.SharedKernel.Infrastructure.Persistence;
 
-namespace Api.BoundedContexts.GameManagement.Application.Handlers.GameNights;
+namespace Api.BoundedContexts.GameManagement.Application.Commands.GameNights;
 
 /// <summary>
 /// Handles inviting additional users to a published game night.

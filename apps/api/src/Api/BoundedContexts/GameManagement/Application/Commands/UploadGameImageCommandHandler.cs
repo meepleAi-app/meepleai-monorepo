@@ -5,7 +5,7 @@ using Api.Infrastructure.Security;
 using Api.Services.Pdf;
 using Api.SharedKernel.Application.Interfaces;
 
-namespace Api.BoundedContexts.GameManagement.Application.Handlers;
+namespace Api.BoundedContexts.GameManagement.Application.Commands;
 
 /// <summary>
 /// Handles game image upload command.

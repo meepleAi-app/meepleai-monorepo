@@ -5,7 +5,7 @@ using Api.BoundedContexts.GameManagement.Domain.ValueObjects;
 using Api.SharedKernel.Application.Interfaces;
 using Api.SharedKernel.Infrastructure.Persistence;
 
-namespace Api.BoundedContexts.GameManagement.Application.Handlers;
+namespace Api.BoundedContexts.GameManagement.Application.Commands;
 
 /// <summary>
 /// Handles game update command.

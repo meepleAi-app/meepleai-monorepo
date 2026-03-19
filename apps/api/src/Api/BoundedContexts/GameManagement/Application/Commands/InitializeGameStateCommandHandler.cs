@@ -9,7 +9,7 @@ using Api.SharedKernel.Application.Interfaces;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 
-namespace Api.BoundedContexts.GameManagement.Application.Handlers;
+namespace Api.BoundedContexts.GameManagement.Application.Commands;
 
 /// <summary>
 /// Handles initialization of game session state from template.

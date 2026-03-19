@@ -49,7 +49,6 @@ public class ImageFileValidatorTests
     {
         // Arrange - JPEG Exif magic bytes: FF D8 FF E1
         var jpegBytes = new byte[] { 0xFF, 0xD8, 0xFF, 0xE1, 0x00, 0x10, 0x45, 0x78 };
-        using var stream = new MemoryStream(jpegBytes);
 
         // Act
         var result = await ImageFileValidator.ValidateMagicBytesAsync(stream, "image/jpeg");
@@ -63,7 +62,6 @@ public class ImageFileValidatorTests
     {
         // Arrange - JPEG Canon magic bytes: FF D8 FF E2
         var jpegBytes = new byte[] { 0xFF, 0xD8, 0xFF, 0xE2, 0x00, 0x10, 0x00, 0x00 };
-        using var stream = new MemoryStream(jpegBytes);
 
         // Act
         var result = await ImageFileValidator.ValidateMagicBytesAsync(stream, "image/jpeg");
@@ -77,7 +75,6 @@ public class ImageFileValidatorTests
     {
         // Arrange - JPEG Samsung magic bytes: FF D8 FF E3
         var jpegBytes = new byte[] { 0xFF, 0xD8, 0xFF, 0xE3, 0x00, 0x10, 0x00, 0x00 };
-        using var stream = new MemoryStream(jpegBytes);
 
         // Act
         var result = await ImageFileValidator.ValidateMagicBytesAsync(stream, "image/jpeg");
@@ -91,7 +88,6 @@ public class ImageFileValidatorTests
     {
         // Arrange - JPEG raw magic bytes: FF D8 FF DB
         var jpegBytes = new byte[] { 0xFF, 0xD8, 0xFF, 0xDB, 0x00, 0x10, 0x00, 0x00 };
-        using var stream = new MemoryStream(jpegBytes);
 
         // Act
         var result = await ImageFileValidator.ValidateMagicBytesAsync(stream, "image/jpeg");
@@ -133,7 +129,6 @@ public class ImageFileValidatorTests
     {
         // Arrange - PNG magic bytes but checking for JPEG
         var pngBytes = new byte[] { 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A };
-        using var stream = new MemoryStream(pngBytes);
 
         // Act
         var result = await ImageFileValidator.ValidateMagicBytesAsync(stream, "image/jpeg");
@@ -202,7 +197,6 @@ public class ImageFileValidatorTests
     {
         // Arrange
         var pngBytes = new byte[] { 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0x00, 0x00 };
-        using var stream = new MemoryStream(pngBytes);
         stream.Position = 5; // Set to middle of stream
 
         // Act

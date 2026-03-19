@@ -4,7 +4,7 @@ using Api.Middleware.Exceptions;
 using Api.SharedKernel.Application.Interfaces;
 using Api.SharedKernel.Infrastructure.Persistence;
 
-namespace Api.BoundedContexts.GameManagement.Application.Handlers.GameNight;
+namespace Api.BoundedContexts.GameManagement.Application.Commands.GameNight;
 
 /// <summary>
 /// Handles <see cref="TallyDisputeVotesCommand"/>.

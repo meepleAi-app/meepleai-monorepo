@@ -1,7 +1,7 @@
 using Api.BoundedContexts.GameManagement.Application.DTOs;
 using Api.BoundedContexts.GameManagement.Domain.Entities.GameNightPlaylist;
 
-namespace Api.BoundedContexts.GameManagement.Application.Handlers.Playlists;
+namespace Api.BoundedContexts.GameManagement.Application.Commands.Playlists;
 
 /// <summary>
 /// Shared mapping helper for playlist handlers.

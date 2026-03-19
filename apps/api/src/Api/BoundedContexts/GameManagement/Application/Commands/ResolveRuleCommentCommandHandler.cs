@@ -6,7 +6,7 @@ using Api.Models;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
-namespace Api.BoundedContexts.GameManagement.Application.Handlers;
+namespace Api.BoundedContexts.GameManagement.Application.Commands;
 
 /// <summary>
 /// Handles resolving rule comments with optional recursive reply resolution.

@@ -6,7 +6,7 @@ using Api.Middleware.Exceptions;
 using Api.SharedKernel.Application.Interfaces;
 using MediatR;
 
-namespace Api.BoundedContexts.GameManagement.Application.Handlers.LiveSessions;
+namespace Api.BoundedContexts.GameManagement.Application.Commands.LiveSessions;
 
 /// <summary>
 /// Handles advancing the turn phase in a live session.

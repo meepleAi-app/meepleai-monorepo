@@ -8,7 +8,7 @@ using Api.SharedKernel.Domain.Exceptions;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Api.SharedKernel.Services;
 
-namespace Api.BoundedContexts.GameManagement.Application.Handlers;
+namespace Api.BoundedContexts.GameManagement.Application.Commands;
 
 /// <summary>
 /// Handles importing a BoardGameGeek game as a PrivateGame with tier quota enforcement.

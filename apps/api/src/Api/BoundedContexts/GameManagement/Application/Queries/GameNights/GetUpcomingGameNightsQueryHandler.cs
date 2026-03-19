@@ -5,7 +5,7 @@ using Api.Infrastructure;
 using Api.SharedKernel.Application.Interfaces;
 using Microsoft.EntityFrameworkCore;
 
-namespace Api.BoundedContexts.GameManagement.Application.Handlers.GameNights;
+namespace Api.BoundedContexts.GameManagement.Application.Queries.GameNights;
 
 /// <summary>
 /// Handles retrieval of upcoming published game nights.

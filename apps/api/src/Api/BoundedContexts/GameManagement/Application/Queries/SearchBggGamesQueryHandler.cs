@@ -3,7 +3,7 @@ using Api.Models;
 using Api.Services;
 using Api.SharedKernel.Application.Interfaces;
 
-namespace Api.BoundedContexts.GameManagement.Application.Handlers;
+namespace Api.BoundedContexts.GameManagement.Application.Queries;
 
 /// <summary>
 /// Handler for SearchBggGamesQuery.

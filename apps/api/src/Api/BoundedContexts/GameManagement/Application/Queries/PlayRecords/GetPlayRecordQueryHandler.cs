@@ -5,7 +5,7 @@ using Api.Middleware.Exceptions;
 using Api.SharedKernel.Application.Interfaces;
 using Microsoft.EntityFrameworkCore;
 
-namespace Api.BoundedContexts.GameManagement.Application.Handlers.PlayRecords;
+namespace Api.BoundedContexts.GameManagement.Application.Queries.PlayRecords;
 
 /// <summary>
 /// Handles retrieving a single play record with full details.

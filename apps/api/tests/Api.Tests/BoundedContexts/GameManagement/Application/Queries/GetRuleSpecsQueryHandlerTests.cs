@@ -1,4 +1,4 @@
-using Api.BoundedContexts.GameManagement.Application.Handlers;
+using Api.BoundedContexts.GameManagement.Application.Commands;
 using Api.BoundedContexts.GameManagement.Application.Queries;
 using Api.Infrastructure;
 using Api.SharedKernel.Application.Services;
@@ -67,7 +67,6 @@ public class GetRuleSpecsQueryHandlerTests
     public async Task Handle_WithRuleAtoms_IncludesAtoms()
     {
         // Arrange - fresh context per test
-        using var context = CreateFreshDbContext();
         var handler = CreateHandler(context);
         var gameId = Guid.NewGuid();
         var ruleSpec = CreateRuleSpec(gameId, "1.0", DateTime.UtcNow);
@@ -128,7 +127,6 @@ public class GetRuleSpecsQueryHandlerTests
     public async Task Handle_WithNoRuleSpecs_ReturnsEmptyList()
     {
         // Arrange - fresh context per test
-        using var context = CreateFreshDbContext();
         var handler = CreateHandler(context);
         var gameId = Guid.NewGuid();
         var query = new GetRuleSpecsQuery(gameId);
@@ -145,7 +143,6 @@ public class GetRuleSpecsQueryHandlerTests
     public async Task Handle_WithMultipleGames_FiltersCorrectly()
     {
         // Arrange - fresh context per test
-        using var context = CreateFreshDbContext();
         var handler = CreateHandler(context);
         var gameId1 = Guid.NewGuid();
         var gameId2 = Guid.NewGuid();
@@ -171,7 +168,6 @@ public class GetRuleSpecsQueryHandlerTests
     public async Task Handle_WithVersionHierarchy_IncludesParentId()
     {
         // Arrange - fresh context per test
-        using var context = CreateFreshDbContext();
         var handler = CreateHandler(context);
         var gameId = Guid.NewGuid();
         var parentSpec = CreateRuleSpec(gameId, "1.0", DateTime.UtcNow.AddDays(-7));
@@ -202,7 +198,6 @@ public class GetRuleSpecsQueryHandlerTests
     public async Task Handle_WithCancellationToken_Cancels()
     {
         // Arrange - fresh context per test
-        using var context = CreateFreshDbContext();
         var handler = CreateHandler(context);
         var gameId = Guid.NewGuid();
         var query = new GetRuleSpecsQuery(gameId);
@@ -221,7 +216,6 @@ public class GetRuleSpecsQueryHandlerTests
     public async Task Handle_WithNullAtomFields_HandlesGracefully()
     {
         // Arrange - fresh context per test
-        using var context = CreateFreshDbContext();
         var handler = CreateHandler(context);
         var gameId = Guid.NewGuid();
         var ruleSpec = CreateRuleSpec(gameId, "1.0", DateTime.UtcNow);

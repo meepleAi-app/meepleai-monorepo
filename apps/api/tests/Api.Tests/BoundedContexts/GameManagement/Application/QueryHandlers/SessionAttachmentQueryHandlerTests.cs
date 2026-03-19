@@ -1,5 +1,4 @@
 using Api.BoundedContexts.GameManagement.Application.Queries;
-using Api.BoundedContexts.GameManagement.Application.QueryHandlers;
 using Api.BoundedContexts.GameManagement.Application.Services;
 using Api.BoundedContexts.GameManagement.Domain.Entities;
 using Api.BoundedContexts.GameManagement.Domain.Entities.SessionAttachment;

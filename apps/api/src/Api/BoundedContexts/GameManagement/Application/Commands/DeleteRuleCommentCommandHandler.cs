@@ -3,7 +3,7 @@ using Api.Infrastructure;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
-namespace Api.BoundedContexts.GameManagement.Application.Handlers;
+namespace Api.BoundedContexts.GameManagement.Application.Commands;
 
 /// <summary>
 /// Handles deletion of rule comments with ownership/admin authorization.

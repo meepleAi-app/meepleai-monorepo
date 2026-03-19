@@ -3,7 +3,7 @@ using Api.Hubs;
 using MediatR;
 using Microsoft.AspNetCore.SignalR;
 
-namespace Api.BoundedContexts.GameManagement.Application.Handlers.GameNight;
+namespace Api.BoundedContexts.GameManagement.Application.Commands.GameNight;
 
 /// <summary>
 /// Broadcasts the structured dispute resolution result to all clients in the session

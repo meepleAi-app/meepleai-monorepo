@@ -4,7 +4,7 @@ using Api.BoundedContexts.GameManagement.Domain.Repositories;
 using Api.BoundedContexts.GameManagement.Domain.ValueObjects;
 using Api.SharedKernel.Application.Interfaces;
 
-namespace Api.BoundedContexts.GameManagement.Application.Handlers.LiveSessions;
+namespace Api.BoundedContexts.GameManagement.Application.Commands.LiveSessions;
 
 /// <summary>
 /// Handles live session creation.

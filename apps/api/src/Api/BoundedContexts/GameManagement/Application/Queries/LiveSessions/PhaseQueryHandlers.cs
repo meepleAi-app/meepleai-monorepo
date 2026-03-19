@@ -3,7 +3,7 @@ using Api.BoundedContexts.GameManagement.Domain.Repositories;
 using Api.Middleware.Exceptions;
 using Api.SharedKernel.Application.Interfaces;
 
-namespace Api.BoundedContexts.GameManagement.Application.Handlers.LiveSessions;
+namespace Api.BoundedContexts.GameManagement.Application.Queries.LiveSessions;
 
 /// <summary>
 /// Handles querying the current turn phases state of a live session.

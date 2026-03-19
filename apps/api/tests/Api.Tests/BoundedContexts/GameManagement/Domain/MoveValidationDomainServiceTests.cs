@@ -64,7 +64,6 @@ public class MoveValidationDomainServiceTests
     public async Task ValidateMoveAsync_WithNullSession_ThrowsArgumentNullException()
     {
         // Arrange - fresh context per test
-        using var context = CreateFreshDbContext();
         var service = CreateService(context);
         var move = new Move("Alice", "roll dice");
 
@@ -77,7 +76,6 @@ public class MoveValidationDomainServiceTests
     public async Task ValidateMoveAsync_WithNullMove_ThrowsArgumentNullException()
     {
         // Arrange - fresh context per test
-        using var context = CreateFreshDbContext();
         var service = CreateService(context);
         var session = CreateDefaultSession();
 
@@ -90,7 +88,6 @@ public class MoveValidationDomainServiceTests
     public async Task ValidateMoveAsync_WithFinishedSession_ReturnsInvalid()
     {
         // Arrange - fresh context per test
-        using var context = CreateFreshDbContext();
         var service = CreateService(context);
         var session = CreateDefaultSession();
         session.Start();
@@ -110,7 +107,6 @@ public class MoveValidationDomainServiceTests
     public async Task ValidateMoveAsync_WithPlayerNotInSession_ReturnsInvalid()
     {
         // Arrange - fresh context per test
-        using var context = CreateFreshDbContext();
         var service = CreateService(context);
         var session = CreateDefaultSession();
         session.Start();
@@ -128,7 +124,6 @@ public class MoveValidationDomainServiceTests
     public async Task ValidateMoveAsync_WithNoRuleSpec_ReturnsUncertain()
     {
         // Arrange - fresh context per test
-        using var context = CreateFreshDbContext();
         var service = CreateService(context);
         var session = CreateDefaultSession();
         session.Start();
@@ -148,7 +143,6 @@ public class MoveValidationDomainServiceTests
     public async Task ValidateMoveAsync_WithRuleSpec_FindsApplicableRules()
     {
         // Arrange - fresh context per test
-        using var context = CreateFreshDbContext();
         var service = CreateService(context);
         var gameId = Guid.NewGuid();
 
@@ -177,7 +171,6 @@ public class MoveValidationDomainServiceTests
     public async Task ValidateMoveAsync_WithSpecificVersion_UsesCorrectVersion()
     {
         // Arrange - fresh context per test
-        using var context = CreateFreshDbContext();
         var service = CreateService(context);
         var gameId = Guid.NewGuid();
 
@@ -207,7 +200,6 @@ public class MoveValidationDomainServiceTests
     public async Task ValidateMoveAsync_WithComplexAction_FindsRelevantRules()
     {
         // Arrange - fresh context per test
-        using var context = CreateFreshDbContext();
         var service = CreateService(context);
         var gameId = Guid.NewGuid();
 
@@ -238,7 +230,6 @@ public class MoveValidationDomainServiceTests
     public async Task ValidateMoveAsync_WithPosition_ConsidersPositionInMatching()
     {
         // Arrange - fresh context per test
-        using var context = CreateFreshDbContext();
         var service = CreateService(context);
         var gameId = Guid.NewGuid();
 
@@ -263,7 +254,6 @@ public class MoveValidationDomainServiceTests
     public async Task ValidateMoveAsync_WithNoApplicableRules_ReturnsLowConfidence()
     {
         // Arrange - fresh context per test
-        using var context = CreateFreshDbContext();
         var service = CreateService(context);
         var gameId = Guid.NewGuid();
 
@@ -289,7 +279,6 @@ public class MoveValidationDomainServiceTests
     public async Task ValidateMoveAsync_WithMultipleRulesAndReferences_ReturnsHighConfidence()
     {
         // Arrange - fresh context per test
-        using var context = CreateFreshDbContext();
         var service = CreateService(context);
         var gameId = Guid.NewGuid();
 
@@ -316,7 +305,6 @@ public class MoveValidationDomainServiceTests
     public async Task ValidateMoveAsync_DuringSetup_ProvidesSuggestions()
     {
         // Arrange - fresh context per test
-        using var context = CreateFreshDbContext();
         var service = CreateService(context);
         var gameId = Guid.NewGuid();
 
@@ -342,7 +330,6 @@ public class MoveValidationDomainServiceTests
     public async Task ValidateMoveAsync_WithRestrictiveRules_ProvidesSuggestions()
     {
         // Arrange - fresh context per test
-        using var context = CreateFreshDbContext();
         var service = CreateService(context);
         var gameId = Guid.NewGuid();
 

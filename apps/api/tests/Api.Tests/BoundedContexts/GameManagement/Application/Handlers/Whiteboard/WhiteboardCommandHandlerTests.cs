@@ -1,6 +1,5 @@
 using Api.BoundedContexts.GameManagement.Application.Commands.Whiteboard;
 using Api.BoundedContexts.GameManagement.Application.Events;
-using Api.BoundedContexts.GameManagement.Application.Handlers.Whiteboard;
 using Api.BoundedContexts.GameManagement.Domain.Entities;
 using Api.BoundedContexts.GameManagement.Domain.Entities.WhiteboardState;
 using Api.BoundedContexts.GameManagement.Domain.Repositories;

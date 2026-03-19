@@ -3,7 +3,7 @@ using Api.BoundedContexts.GameManagement.Domain.Repositories;
 using Api.Middleware.Exceptions;
 using Api.SharedKernel.Application.Interfaces;
 
-namespace Api.BoundedContexts.GameManagement.Application.Handlers.GameNight;
+namespace Api.BoundedContexts.GameManagement.Application.Commands.GameNight;
 
 /// <summary>
 /// Handles <see cref="RespondentTimeoutCommand"/>.

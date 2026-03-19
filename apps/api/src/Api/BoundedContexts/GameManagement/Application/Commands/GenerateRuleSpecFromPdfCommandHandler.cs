@@ -6,7 +6,7 @@ using Api.Infrastructure.Entities;
 using Api.SharedKernel.Application.Interfaces;
 using Microsoft.EntityFrameworkCore;
 
-namespace Api.BoundedContexts.GameManagement.Application.Handlers;
+namespace Api.BoundedContexts.GameManagement.Application.Commands;
 
 /// <summary>
 /// Handles generating a RuleSpec from a PDF document's extracted rules.

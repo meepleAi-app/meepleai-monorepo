@@ -5,7 +5,7 @@ using Api.SharedKernel.Application.Interfaces;
 using Microsoft.EntityFrameworkCore;
 using System.Globalization;
 
-namespace Api.BoundedContexts.GameManagement.Application.Handlers;
+namespace Api.BoundedContexts.GameManagement.Application.Queries;
 
 /// <summary>
 /// Handles retrieval of a specific version of a rule specification.

@@ -5,7 +5,7 @@ using Api.SharedKernel.Application.Interfaces;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 
-namespace Api.BoundedContexts.GameManagement.Application.Handlers.GameNights;
+namespace Api.BoundedContexts.GameManagement.Application.Commands.GameNights;
 
 /// <summary>
 /// Handles creation of a new game night event.

@@ -6,7 +6,7 @@ using Api.Models;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
-namespace Api.BoundedContexts.GameManagement.Application.Handlers;
+namespace Api.BoundedContexts.GameManagement.Application.Queries;
 
 /// <summary>
 /// Handles retrieval of rule comments for a specific game version.

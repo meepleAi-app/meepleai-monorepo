@@ -9,7 +9,7 @@ using Api.SharedKernel.Application.Interfaces;
 using Api.SharedKernel.Infrastructure.Persistence;
 using MediatR;
 
-namespace Api.BoundedContexts.GameManagement.Application.Handlers.LiveSessions;
+namespace Api.BoundedContexts.GameManagement.Application.Commands.LiveSessions;
 
 /// <summary>
 /// Handles GenerateSetupChecklistCommand.

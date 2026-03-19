@@ -11,7 +11,7 @@ using Api.SharedKernel.Services;
 using MediatR;
 using Microsoft.Extensions.Logging;
 
-namespace Api.BoundedContexts.GameManagement.Application.Handlers.LiveSessions;
+namespace Api.BoundedContexts.GameManagement.Application.Commands.LiveSessions;
 
 /// <summary>
 /// Orchestrates: pause session + save + create snapshot + persist agent state + generate recap.

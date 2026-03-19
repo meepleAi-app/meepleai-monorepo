@@ -79,7 +79,6 @@ public sealed class SessionAttachmentServiceTests
     [Fact]
     public async Task UploadAsync_WhenSuccessful_ReturnsBlobUrlAndSize()
     {
-        using var stream = CreateMinimalJpegStream();
         var fileId = Guid.NewGuid().ToString("N");
         var storagePath = $"session-photos-abc/{fileId}_photo.jpg";
 
@@ -100,7 +99,6 @@ public sealed class SessionAttachmentServiceTests
     [Fact]
     public async Task UploadAsync_UsesSessionIdAsStorageFolder()
     {
-        using var stream = CreateMinimalJpegStream();
         var sessionId = Guid.NewGuid();
         string? capturedFolder = null;
 
@@ -120,7 +118,6 @@ public sealed class SessionAttachmentServiceTests
     [Fact]
     public async Task UploadAsync_IncludesPlayerIdInFileName()
     {
-        using var stream = CreateMinimalJpegStream();
         var playerId = Guid.NewGuid();
         string? capturedFileName = null;
 
@@ -167,7 +164,6 @@ public sealed class SessionAttachmentServiceTests
     [Fact]
     public async Task UploadAsync_ThumbnailFailure_StillReturnsSuccess()
     {
-        using var stream = CreateMinimalJpegStream();
 
         var callCount = 0;
         _blobStorageMock

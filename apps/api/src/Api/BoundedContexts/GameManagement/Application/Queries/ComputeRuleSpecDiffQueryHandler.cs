@@ -6,7 +6,7 @@ using Api.Models;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
-namespace Api.BoundedContexts.GameManagement.Application.Handlers;
+namespace Api.BoundedContexts.GameManagement.Application.Queries;
 
 /// <summary>
 /// Handles computing differences between RuleSpec versions using domain service.

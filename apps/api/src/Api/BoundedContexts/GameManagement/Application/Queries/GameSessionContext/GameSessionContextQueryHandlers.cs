@@ -4,7 +4,7 @@ using Api.BoundedContexts.GameManagement.Application.Services;
 using Api.Services;
 using Api.SharedKernel.Application.Interfaces;
 
-namespace Api.BoundedContexts.GameManagement.Application.Handlers.GameSessionContext;
+namespace Api.BoundedContexts.GameManagement.Application.Queries.GameSessionContext;
 
 /// <summary>
 /// Handles GetGameSessionContextQuery by delegating to the orchestrator service.

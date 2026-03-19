@@ -12,7 +12,7 @@ using Api.Services;
 using MediatR;
 using Microsoft.Extensions.Logging;
 
-namespace Api.BoundedContexts.GameManagement.Application.Handlers;
+namespace Api.BoundedContexts.GameManagement.Application.Commands;
 
 /// <summary>
 /// Handler for SuggestMoveCommand - generates move suggestions using Player Mode agent.

@@ -1,10 +1,11 @@
+using Api.BoundedContexts.GameManagement.Application.Commands.Playlists;
 using Api.BoundedContexts.GameManagement.Application.DTOs;
 using Api.BoundedContexts.GameManagement.Application.Queries.Playlists;
 using Api.BoundedContexts.GameManagement.Domain.Entities.GameNightPlaylist;
 using Api.Middleware.Exceptions;
 using Api.SharedKernel.Application.Interfaces;
 
-namespace Api.BoundedContexts.GameManagement.Application.Handlers.Playlists;
+namespace Api.BoundedContexts.GameManagement.Application.Queries.Playlists;
 
 /// <summary>
 /// Handles getting a playlist by its share token (public access).

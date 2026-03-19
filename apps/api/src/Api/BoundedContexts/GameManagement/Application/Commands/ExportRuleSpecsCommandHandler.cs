@@ -7,7 +7,7 @@ using System.IO.Compression;
 using System.Text.Json;
 using System.Globalization;
 
-namespace Api.BoundedContexts.GameManagement.Application.Handlers;
+namespace Api.BoundedContexts.GameManagement.Application.Commands;
 
 /// <summary>
 /// Handles exporting multiple rule specifications as a ZIP archive.

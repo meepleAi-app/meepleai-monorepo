@@ -1,6 +1,5 @@
 using Microsoft.Extensions.Logging;
 using Api.BoundedContexts.GameManagement.Application.Commands;
-using Api.BoundedContexts.GameManagement.Application.Handlers;
 using Api.Infrastructure;
 using Api.Tests.TestHelpers;
 using Moq;
@@ -67,7 +66,6 @@ public class ResolveRuleCommentCommandHandlerTests
     public void Constructor_WithNullTimeProvider_ThrowsArgumentNullException()
     {
         // Arrange - fresh resources per test
-        using var context = CreateFreshDbContext();
         var loggerMock = new Mock<ILogger<ResolveRuleCommentCommandHandler>>();
 
         // Act & Assert
@@ -82,7 +80,6 @@ public class ResolveRuleCommentCommandHandlerTests
     public void Constructor_WithNullLogger_ThrowsArgumentNullException()
     {
         // Arrange - fresh resources per test
-        using var context = CreateFreshDbContext();
         var timeProviderMock = CreateTimeProviderMock();
 
         // Act & Assert

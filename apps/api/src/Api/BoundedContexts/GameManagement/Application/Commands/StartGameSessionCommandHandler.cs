@@ -10,7 +10,7 @@ using Api.SharedKernel.Domain.Exceptions;
 using Api.SharedKernel.Guards;
 using Api.SharedKernel.Infrastructure.Persistence;
 
-namespace Api.BoundedContexts.GameManagement.Application.Handlers;
+namespace Api.BoundedContexts.GameManagement.Application.Commands;
 
 /// <summary>
 /// Handles game session start command.

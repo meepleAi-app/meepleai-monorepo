@@ -3,7 +3,7 @@ using Api.Infrastructure.ExternalServices.BoardGameGeek;
 using Api.SharedKernel.Application.Interfaces;
 using Microsoft.Extensions.Logging;
 
-namespace Api.BoundedContexts.GameManagement.Application.Handlers.GameNight;
+namespace Api.BoundedContexts.GameManagement.Application.Queries.GameNight;
 
 /// <summary>
 /// Handles BGG game search for the Game Night Improvvisata flow.

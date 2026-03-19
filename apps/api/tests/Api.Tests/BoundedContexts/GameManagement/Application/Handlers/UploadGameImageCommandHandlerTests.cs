@@ -1,6 +1,5 @@
 using Api.BoundedContexts.GameManagement.Application.Commands;
 using Api.BoundedContexts.GameManagement.Application.DTOs;
-using Api.BoundedContexts.GameManagement.Application.Handlers;
 using Api.Services.Pdf;
 using Microsoft.Extensions.Logging;
 using Moq;
@@ -126,7 +125,6 @@ public class UploadGameImageCommandHandlerTests
     {
         // Arrange
         var gameId = Guid.NewGuid().ToString();
-        using var stream = CreateValidPngStream();
         var command = new UploadGameImageCommand(
             GameId: gameId,
             FileName: "test.exe",
@@ -154,7 +152,6 @@ public class UploadGameImageCommandHandlerTests
     {
         // Arrange
         var gameId = Guid.NewGuid().ToString();
-        using var stream = CreateValidPngStream();
         var command = new UploadGameImageCommand(
             GameId: gameId,
             FileName: "test.png",

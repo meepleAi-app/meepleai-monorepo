@@ -4,7 +4,7 @@ using Api.BoundedContexts.GameManagement.Application.Mappers;
 using Api.BoundedContexts.GameManagement.Domain.Repositories;
 using Api.SharedKernel.Application.Interfaces;
 
-namespace Api.BoundedContexts.GameManagement.Application.Handlers;
+namespace Api.BoundedContexts.GameManagement.Application.Queries;
 
 /// <summary>
 /// Handles query to get session history with filters.

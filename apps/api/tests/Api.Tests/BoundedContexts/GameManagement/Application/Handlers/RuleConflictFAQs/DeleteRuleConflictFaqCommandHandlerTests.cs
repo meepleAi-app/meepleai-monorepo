@@ -1,5 +1,4 @@
 using Api.BoundedContexts.GameManagement.Application.Commands.RuleConflictFAQs;
-using Api.BoundedContexts.GameManagement.Application.Handlers.RuleConflictFAQs;
 using Api.BoundedContexts.GameManagement.Domain.Repositories;
 using Api.Middleware.Exceptions;
 using Api.SharedKernel.Infrastructure.Persistence;

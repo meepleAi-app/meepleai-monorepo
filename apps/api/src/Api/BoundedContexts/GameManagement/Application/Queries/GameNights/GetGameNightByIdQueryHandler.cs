@@ -6,7 +6,7 @@ using Api.Middleware.Exceptions;
 using Api.SharedKernel.Application.Interfaces;
 using Microsoft.EntityFrameworkCore;
 
-namespace Api.BoundedContexts.GameManagement.Application.Handlers.GameNights;
+namespace Api.BoundedContexts.GameManagement.Application.Queries.GameNights;
 
 /// <summary>
 /// Handles retrieval of a game night by ID.

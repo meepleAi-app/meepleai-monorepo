@@ -4,7 +4,7 @@ using Api.BoundedContexts.GameManagement.Domain.Entities.GameNightPlaylist;
 using Api.SharedKernel.Application.Interfaces;
 using Api.SharedKernel.Infrastructure.Persistence;
 
-namespace Api.BoundedContexts.GameManagement.Application.Handlers.Playlists;
+namespace Api.BoundedContexts.GameManagement.Application.Commands.Playlists;
 
 /// <summary>
 /// Handles playlist creation.

@@ -1,5 +1,4 @@
 using Api.BoundedContexts.GameManagement.Application.Commands.Session;
-using Api.BoundedContexts.GameManagement.Application.Handlers.Session;
 using Api.Hubs;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities.GameManagement;

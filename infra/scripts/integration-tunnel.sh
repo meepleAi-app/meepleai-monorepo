@@ -7,7 +7,6 @@
 # Opens SSH tunnels to staging server (meepleai.app) for:
 #   - PostgreSQL  :15432 -> staging:5432
 #   - Redis       :16379 -> staging:6379
-#   - Qdrant      :16333 -> staging:6333
 #   - Embedding   :18000 -> staging:8000
 #   - Reranker    :18003 -> staging:8003
 #   - Unstructured:18001 -> staging:8001
@@ -34,7 +33,6 @@ print_ports() {
     echo "  -- Core ------------------------------------"
     echo "  PostgreSQL    localhost:15432 -> staging:5432"
     echo "  Redis         localhost:16379 -> staging:6379"
-    echo "  Qdrant        localhost:16333 -> staging:6333"
     echo ""
     echo "  -- AI Services -----------------------------"
     echo "  Embedding     localhost:18000 -> staging:8000"
@@ -71,7 +69,6 @@ do_start() {
       -i "$SSH_KEY" \
       -L 15432:localhost:5432 \
       -L 16379:localhost:6379 \
-      -L 16333:localhost:6333 \
       -L 18000:localhost:8000 \
       -L 18001:localhost:8001 \
       -L 18002:localhost:8002 \

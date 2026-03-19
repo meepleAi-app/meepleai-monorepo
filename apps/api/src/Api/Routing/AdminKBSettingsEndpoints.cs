@@ -40,10 +40,7 @@ internal static class AdminKBSettingsEndpoints
             ?? configuration["Embedding:LocalServiceUrl"]
             ?? "http://embedding-service:8000";
 
-        // Qdrant settings
-        var qdrantUrl = configuration["QDRANT_URL"] ?? "http://localhost:6333";
 #pragma warning restore S1075
-        var qdrantGrpcPort = configuration["QDRANT_GRPC_PORT"];
 
         // Redis settings
         var redisHost = Environment.GetEnvironmentVariable("REDIS_HOST")
@@ -85,9 +82,8 @@ internal static class AdminKBSettingsEndpoints
             },
             vectorDatabase = new
             {
-                type = "Qdrant",
-                url = MaskUrl(qdrantUrl),
-                grpcPort = qdrantGrpcPort ?? "default",
+                type = "pgvector",
+                backend = "PostgreSQL",
             },
             chunking = new
             {

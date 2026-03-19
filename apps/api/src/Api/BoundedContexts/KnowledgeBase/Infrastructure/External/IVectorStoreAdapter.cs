@@ -4,13 +4,13 @@ using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 namespace Api.BoundedContexts.KnowledgeBase.Infrastructure.Persistence;
 
 /// <summary>
-/// Adapter interface for Qdrant vector database operations.
-/// Abstracts Qdrant SDK details from domain layer.
+/// Adapter interface for vector store operations (currently backed by pgvector).
+/// Abstracts vector database details from domain layer.
 /// </summary>
-internal interface IQdrantVectorStoreAdapter
+internal interface IVectorStoreAdapter
 {
     /// <summary>
-    /// Performs vector similarity search in Qdrant.
+    /// Performs vector similarity search.
     /// Issue #2051: Supports document filtering via documentIds
     /// </summary>
     Task<List<Embedding>> SearchAsync(
@@ -35,7 +35,7 @@ internal interface IQdrantVectorStoreAdapter
         CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Indexes a batch of embeddings into Qdrant.
+    /// Indexes a batch of embeddings into the vector store.
     /// </summary>
     Task IndexBatchAsync(
         List<Embedding> embeddings,
@@ -49,14 +49,14 @@ internal interface IQdrantVectorStoreAdapter
         CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Checks if Qdrant collection exists for the given game.
+    /// Checks if vector data exists for the given game.
     /// </summary>
     Task<bool> CollectionExistsAsync(
         Guid gameId,
         CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Creates a new Qdrant collection for a game if it doesn't exist.
+    /// Ensures the vector store is ready for the given game.
     /// </summary>
     Task EnsureCollectionExistsAsync(
         Guid gameId,

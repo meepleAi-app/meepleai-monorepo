@@ -12,6 +12,25 @@ import type { GameState, GameStateTemplate, PlayerState } from '@/types/game-sta
 
 import { GameStateEditor } from '../GameStateEditor';
 
+// Mock logger — source uses logger.error, not console.error directly
+const mockLoggerError = vi.fn();
+vi.mock('@/lib/logger', () => ({
+  logger: {
+    debug: vi.fn(),
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: (...args: unknown[]) => mockLoggerError(...args),
+  },
+  getLogger: () => ({
+    debug: vi.fn(),
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: (...args: unknown[]) => mockLoggerError(...args),
+  }),
+  resetLogger: vi.fn(),
+  LogLevel: { DEBUG: 'debug', INFO: 'info', WARN: 'warn', ERROR: 'error' },
+}));
+
 // Mock RJSF Form component
 vi.mock('@rjsf/core', () => ({
   default: ({
@@ -397,7 +416,7 @@ describe('GameStateEditor - Issue #2766', () => {
     });
 
     it('should handle save error gracefully', async () => {
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      mockLoggerError.mockClear();
       mockSaveState.mockRejectedValue(new Error('Save failed'));
 
       mockUseGameStateStore.mockReturnValue({
@@ -415,10 +434,9 @@ describe('GameStateEditor - Issue #2766', () => {
       fireEvent.click(screen.getByRole('button', { name: /save/i }));
 
       await waitFor(() => {
-        expect(consoleSpy).toHaveBeenCalledWith('Failed to save state:', expect.any(Error));
+        // Source uses logger.error, not console.error directly
+        expect(mockLoggerError).toHaveBeenCalledWith('Failed to save state:', expect.any(Error));
       });
-
-      consoleSpy.mockRestore();
     });
   });
 

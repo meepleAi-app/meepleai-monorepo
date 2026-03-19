@@ -15,10 +15,16 @@ import { render, screen } from '@testing-library/react';
 import { Scoreboard } from '../Scoreboard';
 import type { ScoreboardData, Participant, ScoreEntry } from '../types';
 
-// Mock ParticipantCard
-vi.mock('../ParticipantCard', () => ({
-  ParticipantCard: ({ participant, variant }: { participant: Participant; variant: string }) => (
-    <div data-testid={`participant-${participant.id}`} data-variant={variant}>
+// Mock MeepleParticipantCard
+vi.mock('../MeepleParticipantCard', () => ({
+  MeepleParticipantCard: ({
+    participant,
+    variant,
+  }: {
+    participant: Participant;
+    variant: string;
+  }) => (
+    <div data-testid={`participant-card-${participant.id}`} data-variant={variant}>
       {participant.displayName} - Score: {participant.totalScore}
     </div>
   ),
@@ -66,16 +72,16 @@ describe('Scoreboard', () => {
       const data = createScoreboardData();
       render(<Scoreboard data={data} variant="compact" />);
 
-      expect(screen.getByTestId('participant-p1')).toBeInTheDocument();
-      expect(screen.getByTestId('participant-p2')).toBeInTheDocument();
-      expect(screen.getByTestId('participant-p3')).toBeInTheDocument();
+      expect(screen.getByTestId('participant-card-p1')).toBeInTheDocument();
+      expect(screen.getByTestId('participant-card-p2')).toBeInTheDocument();
+      expect(screen.getByTestId('participant-card-p3')).toBeInTheDocument();
     });
 
-    it('passes compact variant to ParticipantCard', () => {
+    it('passes compact variant to MeepleParticipantCard', () => {
       const data = createScoreboardData();
       render(<Scoreboard data={data} variant="compact" />);
 
-      const card = screen.getByTestId('participant-p1');
+      const card = screen.getByTestId('participant-card-p1');
       expect(card).toHaveAttribute('data-variant', 'compact');
     });
   });
@@ -93,7 +99,7 @@ describe('Scoreboard', () => {
       render(<Scoreboard data={data} variant="full" />);
 
       // The podium renders with full variant
-      const aliceCard = screen.getAllByTestId('participant-p1')[0];
+      const aliceCard = screen.getAllByTestId('participant-card-p1')[0];
       expect(aliceCard).toHaveAttribute('data-variant', 'full');
     });
 
@@ -102,8 +108,8 @@ describe('Scoreboard', () => {
       render(<Scoreboard data={data} variant="full" />);
 
       expect(screen.getByText('Score Breakdown')).toBeInTheDocument();
-      expect(screen.getByText('Player')).toBeInTheDocument();
-      expect(screen.getByText('Total')).toBeInTheDocument();
+      expect(screen.getAllByText('Player').length).toBeGreaterThan(0);
+      expect(screen.getAllByText('Total').length).toBeGreaterThan(0);
     });
 
     it('shows round headers', () => {

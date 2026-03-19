@@ -10,7 +10,7 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 import { PlayHistory } from '@/components/play-records/PlayHistory';
-import * as usePlayRecordsHooks from '@/lib/hooks/use-play-records';
+import * as usePlayRecordsHooks from '@/lib/domain-hooks/usePlayRecords';
 
 // Mock next/navigation
 vi.mock('next/navigation', () => ({
@@ -20,7 +20,7 @@ vi.mock('next/navigation', () => ({
 }));
 
 // Mock hooks
-vi.mock('@/lib/hooks/use-play-records', () => ({
+vi.mock('@/lib/domain-hooks/usePlayRecords', () => ({
   usePlayHistory: vi.fn(),
 }));
 

@@ -15,7 +15,7 @@ export { Layout, PageHeader, PageContent, EmptyState, LoadingState } from './Lay
 
 // Logo — TopNavbar removed, use MeepleLogo directly from '@/components/ui/meeple/meeple-logo'
 
-// Phase 4-6: ActionBar + Breadcrumb removed — replaced by UnifiedShell ContextualBottomNav
+// Phase 4-6: ActionBar + Breadcrumb removed — replaced by UserShell ContextualBottomNav
 
 // Existing components
 export { toast } from './Toast';

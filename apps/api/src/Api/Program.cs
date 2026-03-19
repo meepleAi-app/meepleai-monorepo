@@ -443,8 +443,7 @@ builder.Services.AddCors(options =>
             )
             .AllowAnyMethod()
             .AllowCredentials()
-            // Issue #1563 (P0-3): Expose trace headers for frontend correlation
-            .WithExposedHeaders("X-Trace-Id", "X-Span-Id", "traceparent", "tracestate");
+            .WithExposedHeaders("X-Trace-Id", "X-Span-Id", "traceparent", "tracestate"); // Issue #1563 (P0-3): Expose trace headers for frontend correlation
     });
 });
 

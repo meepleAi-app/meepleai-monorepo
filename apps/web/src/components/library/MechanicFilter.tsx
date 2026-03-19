@@ -34,6 +34,7 @@ export function MechanicFilter({ mechanics, selected, onSelect }: MechanicFilter
         return (
           <button
             key={mechanic}
+            aria-pressed={isSelected}
             onClick={() => onSelect(mechanic)}
             className={cn(
               'flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition-colors',

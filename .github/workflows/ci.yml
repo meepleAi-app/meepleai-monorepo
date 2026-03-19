@@ -296,9 +296,9 @@ jobs:
           echo "🔧 Creating CI secret files for integration tests..."
           mkdir -p infra/secrets
           printf 'POSTGRES_USER=postgres\nPOSTGRES_PASSWORD=testpass\nPOSTGRES_DB=meepleai_test\n' > infra/secrets/database.secret
-          printf 'REDIS_PASSWORD=\n' > infra/secrets/redis.secret
+          printf 'REDIS_PASSWORD=redis-ci-test\n' > infra/secrets/redis.secret
           printf 'JWT_SECRET_KEY=ci-test-jwt-secret-key-minimum-32-chars-long\nJWT_ISSUER=meepleai-ci-test\nJWT_AUDIENCE=meepleai-ci-test\n' > infra/secrets/jwt.secret
-          printf 'ADMIN_EMAIL=admin@test.local\nADMIN_PASSWORD=CiTestPassword123!\nADMIN_DISPLAY_NAME=CI Admin\n' > infra/secrets/admin.secret
+          printf 'ADMIN_EMAIL=admin@test.local\nADMIN_PASSWORD=CiTestPassword123!\nADMIN_DISPLAY_NAME=CI Admin\nINITIAL_ADMIN_EMAIL=admin@test.local\nINITIAL_ADMIN_DISPLAY_NAME=CI Admin\n' > infra/secrets/admin.secret
           printf 'QDRANT_URL=http://localhost:6333\n' > infra/secrets/qdrant.secret
           printf 'EMBEDDING_SERVICE_URL=http://localhost:8000\n' > infra/secrets/embedding-service.secret
           echo "✅ CI secret files created"
@@ -494,9 +494,9 @@ jobs:
         run: |
           mkdir -p infra/secrets
           printf 'POSTGRES_USER=postgres\nPOSTGRES_PASSWORD=postgres_test_password\nPOSTGRES_DB=meepleai_test\n' > infra/secrets/database.secret
-          printf 'REDIS_PASSWORD=\n' > infra/secrets/redis.secret
+          printf 'REDIS_PASSWORD=redis-ci-test\n' > infra/secrets/redis.secret
           printf 'JWT_SECRET_KEY=ci-test-jwt-secret-key-minimum-32-chars-long\nJWT_ISSUER=meepleai-ci-test\nJWT_AUDIENCE=meepleai-ci-test\n' > infra/secrets/jwt.secret
-          printf 'ADMIN_EMAIL=admin@test.local\nADMIN_PASSWORD=CiTestPassword123!\nADMIN_DISPLAY_NAME=CI Admin\n' > infra/secrets/admin.secret
+          printf 'ADMIN_EMAIL=admin@test.local\nADMIN_PASSWORD=CiTestPassword123!\nADMIN_DISPLAY_NAME=CI Admin\nINITIAL_ADMIN_EMAIL=admin@test.local\nINITIAL_ADMIN_DISPLAY_NAME=CI Admin\n' > infra/secrets/admin.secret
           printf 'QDRANT_URL=http://localhost:6333\n' > infra/secrets/qdrant.secret
           printf 'EMBEDDING_SERVICE_URL=http://localhost:8000\n' > infra/secrets/embedding-service.secret
 

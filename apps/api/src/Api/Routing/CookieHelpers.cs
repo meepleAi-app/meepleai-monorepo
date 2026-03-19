@@ -79,8 +79,8 @@ internal static class CookieHelpers
         var secure = configuration.Secure ?? isHttps;
         var path = string.IsNullOrWhiteSpace(configuration.Path) ? "/" : configuration.Path;
 
-        // Use same SameSite as session cookie
-        var sameSite = configuration.SameSite ?? (secure ? SameSiteMode.None : SameSiteMode.Lax);
+        // SEC-I5: Use same SameSite as session cookie — Lax for CSRF protection
+        var sameSite = configuration.SameSite ?? SameSiteMode.Lax;
 
         var options = new CookieOptions
         {
@@ -196,7 +196,6 @@ internal static class CookieHelpers
         }
 
         var secure = configuration.Secure ?? isHttps;
-        var secureForced = false;
 
         // Use configured SameSite or sensible defaults
         SameSiteMode sameSite;
@@ -208,19 +207,15 @@ internal static class CookieHelpers
         }
         else
         {
-            // Production/HTTPS: Default to SameSite=None for cross-origin
+            // SEC-I5: Production — default SameSite=Lax for CSRF protection
+            // Lax allows same-site navigation (links, GET) but blocks cross-site POST.
+            // Only use SameSite=None if API and frontend are on different domains.
             if (!secure && !configuration.Secure.HasValue)
             {
                 secure = true;
-                secureForced = true;
             }
 
-            sameSite = configuration.SameSite ?? (secure ? SameSiteMode.None : SameSiteMode.Lax);
-
-            if (secureForced && sameSite != SameSiteMode.None)
-            {
-                sameSite = SameSiteMode.None;
-            }
+            sameSite = configuration.SameSite ?? SameSiteMode.Lax;
         }
 
         var path = string.IsNullOrWhiteSpace(configuration.Path) ? "/" : configuration.Path;

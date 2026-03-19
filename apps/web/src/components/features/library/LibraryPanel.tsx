@@ -21,10 +21,10 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/naviga
 import { useLibrary } from '@/hooks/queries/useLibrary';
 import { useSharedGames } from '@/hooks/queries/useSharedGames';
 import { useWishlist } from '@/hooks/queries/useWishlist';
-import { useAlphaNav } from '@/hooks/useAlphaNav';
+import { useNavigation } from '@/hooks/useNavigation';
 
 export function LibraryPanel() {
-  const { openDetail } = useAlphaNav();
+  const { openDetail } = useNavigation();
   const [activeTab, setActiveTab] = useState('my-games');
   const [catalogSearch, setCatalogSearch] = useState('');
 

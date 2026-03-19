@@ -26,6 +26,16 @@ internal interface ITextChunkSearchService
         int chunkIndex,
         int radius,
         CancellationToken ct);
+
+    /// <summary>
+    /// Searches RAPTOR hierarchical summaries for a game using keyword matching.
+    /// Higher tree levels (broader summaries) are preferred.
+    /// </summary>
+    Task<List<TextChunkMatch>> SearchRaptorSummariesAsync(
+        Guid gameId,
+        string query,
+        int topK,
+        CancellationToken ct);
 }
 
 /// <summary>

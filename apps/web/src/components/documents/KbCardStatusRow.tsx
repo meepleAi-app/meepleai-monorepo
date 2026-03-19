@@ -65,9 +65,11 @@ function mapProcessingState(state: string): DocumentIndexingStatus {
     case 'Embedding':
     case 'Indexing':
     case 'Uploading':
+      return 'processing';
     case 'Pending':
     case 'Queued':
-      return 'processing';
+      // Pending/Queued = waiting to start, not yet actively processing
+      return 'none';
     default:
       return 'none';
   }

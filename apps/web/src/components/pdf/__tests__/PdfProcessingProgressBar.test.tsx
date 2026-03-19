@@ -123,19 +123,22 @@ describe('PdfProcessingProgressBar', () => {
       ['Chunking', 'Suddivisione del testo in chunks...', 50],
       ['Embedding', 'Generazione degli embeddings vettoriali...', 70],
       ['Indexing', 'Indicizzazione nel database vettoriale...', 90],
-    ] as const)('should display correct description for %s step', (step, expectedDescription, percent) => {
-      mockUsePdfProcessingProgress.mockReturnValue({
-        progress: createMockProgress({ currentStep: step, percentComplete: percent }),
-        isLoading: false,
-        error: null,
-        refetch: mockRefetch,
-      });
+    ] as const)(
+      'should display correct description for %s step',
+      (step, expectedDescription, percent) => {
+        mockUsePdfProcessingProgress.mockReturnValue({
+          progress: createMockProgress({ currentStep: step, percentComplete: percent }),
+          isLoading: false,
+          error: null,
+          refetch: mockRefetch,
+        });
 
-      render(<PdfProcessingProgressBar {...defaultProps} />);
+        render(<PdfProcessingProgressBar {...defaultProps} />);
 
-      expect(screen.getByText(expectedDescription)).toBeInTheDocument();
-      expect(screen.getByText(`${percent}%`)).toBeInTheDocument();
-    });
+        expect(screen.getByText(expectedDescription)).toBeInTheDocument();
+        expect(screen.getByText(`${percent}%`)).toBeInTheDocument();
+      }
+    );
 
     it('should highlight active step', () => {
       mockUsePdfProcessingProgress.mockReturnValue({
@@ -321,7 +324,9 @@ describe('PdfProcessingProgressBar', () => {
       render(<PdfProcessingProgressBar {...defaultProps} />);
 
       expect(screen.getByRole('status')).toBeInTheDocument();
-      expect(screen.getByText('Elaborazione completata! Il PDF è pronto per le domande.')).toBeInTheDocument();
+      expect(
+        screen.getByText('Elaborazione completata! Il PDF è pronto per le domande.')
+      ).toBeInTheDocument();
     });
 
     it('should hide cancel button when completed', () => {
@@ -590,7 +595,9 @@ describe('PdfProcessingProgressBar', () => {
     it('should have accessible region role', () => {
       render(<PdfProcessingProgressBar {...defaultProps} />);
 
-      expect(screen.getByRole('region', { name: /progresso elaborazione pdf/i })).toBeInTheDocument();
+      expect(
+        screen.getByRole('region', { name: /progresso elaborazione pdf/i })
+      ).toBeInTheDocument();
     });
 
     it('should have aria-live region for progress updates', () => {
@@ -657,7 +664,7 @@ describe('PdfProcessingProgressBar', () => {
       expect(mockUsePdfProcessingProgress).toHaveBeenCalledWith(
         'test-pdf-id-123',
         expect.objectContaining({
-          pollingInterval: 500,
+          pollingInterval: 2000,
         })
       );
     });
@@ -666,7 +673,9 @@ describe('PdfProcessingProgressBar', () => {
       const onComplete = vi.fn();
       const onError = vi.fn();
 
-      render(<PdfProcessingProgressBar {...defaultProps} onComplete={onComplete} onError={onError} />);
+      render(
+        <PdfProcessingProgressBar {...defaultProps} onComplete={onComplete} onError={onError} />
+      );
 
       expect(mockUsePdfProcessingProgress).toHaveBeenCalledWith(
         defaultProps.pdfId,

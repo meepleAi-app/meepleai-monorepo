@@ -35,13 +35,23 @@ vi.mock('../AddToLibraryModal', () => ({
 }));
 
 // ---------------------------------------------------------------------------
+// Mock tavolo components — avoids their internal dependencies
+// ---------------------------------------------------------------------------
+vi.mock('../tavolo', () => ({
+  TavoloLayout: ({ children }: { children: React.ReactNode }) => (
+    <div data-testid="tavolo-layout">{children}</div>
+  ),
+  TavoloSection: ({ children, title }: { children: React.ReactNode; title: string }) => (
+    <div data-testid={`tavolo-section-${title}`}>{children}</div>
+  ),
+  ActiveSessionCard: () => <div data-testid="active-session-card" />,
+}));
+
+// ---------------------------------------------------------------------------
 // Mock zone components — avoids their internal dependencies
 // ---------------------------------------------------------------------------
 vi.mock('../zones', () => ({
   HeroZone: () => <div data-testid="hero-zone">HeroZone</div>,
-  StatsZone: () => <div data-testid="stats-zone">StatsZone</div>,
-  CardsZone: () => <div data-testid="cards-zone">CardsZone</div>,
-  AgentsSidebar: () => <div data-testid="agents-sidebar">AgentsSidebar</div>,
   SessionBar: () => <div data-testid="session-bar">SessionBar</div>,
   ScoreboardZone: () => <div data-testid="scoreboard-zone">ScoreboardZone</div>,
 }));
@@ -51,6 +61,32 @@ vi.mock('../zones', () => ({
 // ---------------------------------------------------------------------------
 vi.mock('@/components/ui/data-display/extra-meeple-card', () => ({
   ExtraMeepleCardDrawer: () => null,
+}));
+
+// ---------------------------------------------------------------------------
+// Mock next/navigation — avoids router invariant error
+// ---------------------------------------------------------------------------
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({
+    push: vi.fn(),
+    replace: vi.fn(),
+    back: vi.fn(),
+  }),
+}));
+
+// ---------------------------------------------------------------------------
+// Mock data hooks — avoids API calls
+// ---------------------------------------------------------------------------
+vi.mock('@/hooks/queries/useActiveSessions', () => ({
+  useActiveSessions: () => ({ data: { sessions: [] }, isLoading: false }),
+}));
+
+vi.mock('@/hooks/queries/useAgents', () => ({
+  useAgents: () => ({ data: [], isLoading: false }),
+}));
+
+vi.mock('@/hooks/queries/useLibrary', () => ({
+  useRecentlyAddedGames: () => ({ data: { items: [] }, isLoading: false }),
 }));
 
 // ---------------------------------------------------------------------------
@@ -128,14 +164,12 @@ describe('DashboardRenderer', () => {
     expect(screen.getByTestId('dashboard-renderer')).toBeInTheDocument();
   });
 
-  it('shows exploration zones when state is exploration', () => {
+  it('shows hero zone and tavolo layout when state is exploration', () => {
     mockExploration();
     renderWithProviders(<DashboardRenderer />);
 
     expect(screen.getByTestId('hero-zone')).toBeInTheDocument();
-    expect(screen.getByTestId('stats-zone')).toBeInTheDocument();
-    expect(screen.getByTestId('cards-zone')).toBeInTheDocument();
-    // AgentsSidebar removed — agents now shown in CardStack
+    expect(screen.getByTestId('tavolo-layout')).toBeInTheDocument();
   });
 
   it('shows game mode zones when state is gameMode', () => {
@@ -146,13 +180,12 @@ describe('DashboardRenderer', () => {
     expect(screen.getByTestId('scoreboard-zone')).toBeInTheDocument();
   });
 
-  it('does not show exploration zones in gameMode', () => {
+  it('does not show hero zone in gameMode', () => {
     mockGameMode();
     renderWithProviders(<DashboardRenderer />);
 
     expect(screen.queryByTestId('hero-zone')).not.toBeInTheDocument();
-    expect(screen.queryByTestId('stats-zone')).not.toBeInTheDocument();
-    expect(screen.queryByTestId('cards-zone')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('tavolo-layout')).not.toBeInTheDocument();
   });
 
   it('does not show game mode zones in exploration', () => {

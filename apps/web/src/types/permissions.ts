@@ -47,10 +47,6 @@ export function hasMinimumTier(userTier: UserTier, requiredTier: UserTier): bool
   return TIER_HIERARCHY[userTier] >= TIER_HIERARCHY[requiredTier];
 }
 
-export function isAdmin(role: UserRole): boolean {
-  return role === 'admin' || role === 'superadmin';
-}
-
 export const ROLE_HIERARCHY: Record<UserRole, number> = {
   user: 0,
   creator: 1,
@@ -61,6 +57,10 @@ export const ROLE_HIERARCHY: Record<UserRole, number> = {
 
 export function hasMinimumRole(userRole: UserRole, requiredRole: UserRole): boolean {
   return ROLE_HIERARCHY[userRole] >= ROLE_HIERARCHY[requiredRole];
+}
+
+export function isAdmin(role: UserRole): boolean {
+  return hasMinimumRole(role, 'admin');
 }
 
 export function isSuperAdmin(role: UserRole): boolean {

@@ -20,7 +20,7 @@
 
 ## Stack & Features
 
-**Backend** (.NET 9): ASP.NET Minimal APIs + MediatR | PostgreSQL 16 + EF Core | Qdrant + Redis | FluentValidation | xUnit + Testcontainers
+**Backend** (.NET 9): ASP.NET Minimal APIs + MediatR | PostgreSQL 16 + EF Core (pgvector) + Redis | FluentValidation | xUnit + Testcontainers
 
 **Frontend** (Next.js 16): App Router + React 19 | Tailwind 4 + shadcn/ui | Zustand + React Query | Vitest + Playwright
 
@@ -107,7 +107,7 @@ secrets/
 
 | Priority | Files | Behavior |
 |----------|-------|----------|
-| 🔴 CRITICAL | database, redis, qdrant, jwt, admin, embedding-service | Blocks startup |
+| 🔴 CRITICAL | database, redis, jwt, admin, embedding-service | Blocks startup |
 | 🟡 IMPORTANT | openrouter, unstructured-service, bgg | Warns |
 | 🟢 OPTIONAL | oauth, email, monitoring, n8n, storage, traefik, smoldocling/reranker | Silent |
 
@@ -248,7 +248,7 @@ pnpm typecheck && pnpm lint         # Quality
 **Infra** (from `infra/`):
 ```bash
 make dev                  # Start all local services
-make dev-core             # Start core only (postgres, redis, qdrant, api, web)
+make dev-core             # Start core only (postgres, redis, api, web)
 make dev-down             # Stop dev
 make tunnel               # SSH tunnel for integration env
 make integration          # Local code + remote services

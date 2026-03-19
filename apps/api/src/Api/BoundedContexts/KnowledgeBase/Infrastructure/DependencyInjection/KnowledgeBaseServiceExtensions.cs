@@ -305,7 +305,7 @@ internal static class KnowledgeBaseServiceExtensions
         services.AddScoped<IModelCompatibilityRepository, ModelCompatibilityRepository>(); // Issue #5496: Model compatibility matrix + change log
 
         // Infrastructure - Adapters (Scoped - uses MeepleAiDbContext for pgvector operations)
-        services.AddScoped<IQdrantVectorStoreAdapter, PgVectorStoreAdapter>();
+        services.AddScoped<IVectorStoreAdapter, PgVectorStoreAdapter>();
         // Infrastructure - In-Memory Repository (Singleton - shared in-memory store)
         services.AddSingleton<IChunkRepository, InMemoryChunkRepository>();
     }

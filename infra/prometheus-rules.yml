@@ -324,23 +324,6 @@ groups:
             Check Redis container health.
           runbook_url: "https://docs.meepleai.dev/runbooks/dependency-down"
 
-      # CRITICAL: Qdrant vector DB is down
-      - alert: QdrantDown
-        expr: |
-          up{job="qdrant"} == 0
-        for: 2m
-        labels:
-          severity: critical
-          service: meepleai-api
-          category: dependency
-        annotations:
-          summary: "Qdrant vector database is unreachable"
-          description: |
-            The API cannot connect to Qdrant.
-            RAG operations and semantic search are failing.
-            Check Qdrant container health at http://localhost:6333/healthz
-          runbook_url: "https://docs.meepleai.dev/runbooks/dependency-down"
-
   - name: meepleai_warning_alerts
     interval: 1m
     rules:

@@ -118,16 +118,16 @@ internal static class SessionValidationExtensions
 
     /// <summary>
     /// Checks if the user's role meets or exceeds the required role level.
-    /// Hierarchy: SuperAdmin > Admin > Editor > User
+    /// Hierarchy: SuperAdmin (4) > Admin (3) > Editor (2) > Creator (1) > User (0)
     /// </summary>
     private static bool HasSufficientRole(UserRole userRole, UserRole requiredRole)
     {
-        // Role hierarchy (higher = more privileges)
         static int RoleLevel(UserRole role) => role switch
         {
-            UserRole.SuperAdmin => 3,
-            UserRole.Admin => 2,
-            UserRole.Editor => 1,
+            UserRole.SuperAdmin => 4,
+            UserRole.Admin => 3,
+            UserRole.Editor => 2,
+            UserRole.Creator => 1,
             UserRole.User => 0,
             _ => -1
         };

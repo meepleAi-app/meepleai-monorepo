@@ -46,6 +46,7 @@ services:
       - ./secrets/dev/admin.secret
       - ./secrets/dev/embedding-service.secret
       - ./secrets/dev/storage.secret
+      - ./secrets/dev/db-sync.secret
       - ./env/api.env.dev
     ports: ["127.0.0.1:8080:8080"]
     environment:
@@ -158,6 +159,29 @@ services:
     environment:
       MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin123}
+
+  # ===========================================================================
+  # Database Sync (profile: db-sync)
+  # ===========================================================================
+
+  ssh-tunnel-sidecar:
+    build:
+      context: ./sidecar/ssh-tunnel
+      dockerfile: Dockerfile
+    container_name: meepleai-ssh-tunnel-sidecar
+    restart: "no"
+    volumes:
+      - ${SSH_KEY_PATH:-~/.ssh/meepleai-staging}:/root/.ssh/key:ro
+    env_file:
+      - ./secrets/dev/db-sync.secret
+    environment:
+      - ALLOWED_HOSTS=204.168.135.69
+      - MAX_TUNNEL_DURATION=3600
+      - DEFAULT_HOST=204.168.135.69
+    networks:
+      - meepleai
+    profiles:
+      - db-sync
 
 # =============================================================================
 # Dev-specific volumes (separate from base to avoid conflicts)

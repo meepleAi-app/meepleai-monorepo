@@ -16,10 +16,10 @@
 
 import { ExtraMeepleCardDrawer } from '@/components/ui/data-display/extra-meeple-card/ExtraMeepleCardDrawer';
 import type { DrawerEntityType } from '@/components/ui/data-display/extra-meeple-card/ExtraMeepleCardDrawer';
-import { useAlphaNav } from '@/hooks/useAlphaNav';
+import { useNavigation } from '@/hooks/useNavigation';
 
 export function CardDetailModal() {
-  const { detailEntityId, detailEntityType, closeDetail } = useAlphaNav();
+  const { detailEntityId, detailEntityType, closeDetail } = useNavigation();
 
   const isOpen = detailEntityId !== null && detailEntityType !== null;
 

@@ -23,11 +23,11 @@ import { useActiveSessions } from '@/hooks/queries/useActiveSessions';
 import { useRecentChatSessions } from '@/hooks/queries/useChatSessions';
 import { useUpcomingGameNights } from '@/hooks/queries/useGameNights';
 import { useRecentlyAddedGames } from '@/hooks/queries/useLibrary';
-import { useAlphaNav } from '@/hooks/useAlphaNav';
+import { useNavigation } from '@/hooks/useNavigation';
 
 export function HomeFeed() {
   const router = useRouter();
-  const { openDetail } = useAlphaNav();
+  const { openDetail } = useNavigation();
 
   const { data: activeSessions, isLoading: sessionsLoading } = useActiveSessions(5);
   const { data: recentGames, isLoading: gamesLoading } = useRecentlyAddedGames(6);

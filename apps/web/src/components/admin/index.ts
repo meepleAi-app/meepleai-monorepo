@@ -20,7 +20,7 @@ export { ActivityTimeline, type ActivityTimelineProps } from './ActivityTimeline
 // ActivityEvent type is centralized in utils/activityUtils
 export type { ActivityEvent } from './utils/activityUtils';
 
-// Issue #881: Modular admin layout components (AdminHeader/AdminSidebar/AdminLayout removed — replaced by UnifiedShell)
+// Issue #881: Modular admin layout components (AdminHeader/AdminSidebar/AdminLayout removed — replaced by UserShell)
 export {
   AdminBreadcrumbs,
   type AdminBreadcrumbsProps,

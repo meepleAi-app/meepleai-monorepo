@@ -1,0 +1,72 @@
+using Api.BoundedContexts.Authentication.Application.DTOs;
+using Api.BoundedContexts.SharedGameCatalog.Application.DTOs;
+
+#pragma warning disable MA0048 // File name must match type name - DTOs grouped in one file
+namespace Api.Routing;
+
+/// <summary>
+/// Request payload for ending impersonation (Issue #3349).
+/// </summary>
+internal record EndImpersonationRequest(Guid SessionId);
+
+/// <summary>
+/// Response for end impersonation action (Issue #3349).
+/// </summary>
+internal record EndImpersonationResponse(bool Success, string Message);
+
+/// <summary>
+/// Request payload for updating user tier.
+/// </summary>
+internal record UpdateUserTierRequest(string Tier);
+
+/// <summary>
+/// Request payload for setting user level.
+/// </summary>
+internal record SetUserLevelRequest(int Level);
+
+/// <summary>
+/// Request payload for bulk password reset.
+/// </summary>
+internal record BulkPasswordResetRequest(IReadOnlyList<Guid> UserIds, string NewPassword);
+
+/// <summary>
+/// Request payload for bulk role change.
+/// </summary>
+internal record BulkRoleChangeRequest(IReadOnlyList<Guid> UserIds, string NewRole);
+
+/// <summary>
+/// Request payload for suspending a user account.
+/// </summary>
+internal record SuspendUserRequest(string? Reason);
+
+/// <summary>
+/// Request payload for resetting user password (Issue #2890).
+/// </summary>
+internal record ResetUserPasswordRequest(string NewPassword);
+
+/// <summary>
+/// Request payload for sending email to user (Issue #2890).
+/// </summary>
+internal record SendUserEmailRequest(string Subject, string Body);
+
+/// <summary>
+/// Request payload for sending an invitation (Issue #124).
+/// </summary>
+internal record SendInvitationRequest(string Email, string Role);
+
+/// <summary>
+/// Request payload for provisioning and inviting a user (Issue #124).
+/// </summary>
+internal record ProvisionAndInviteRequest(
+    string Email,
+    string DisplayName,
+    string Role,
+    string? Tier = "free",
+    string? CustomMessage = null,
+    int? ExpiresInDays = 7,
+    List<GameSuggestionDto>? GameSuggestions = null);
+
+/// <summary>
+/// Request payload for changing a user's role (Issue #124).
+/// </summary>
+internal record ChangeUserRoleRequest(string NewRole, string? Reason = null);

@@ -14,7 +14,7 @@
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
 
-import { Check, Crown, Users, Zap } from 'lucide-react';
+import { Check, Clock, Crown, Users, Zap } from 'lucide-react';
 
 import { toast } from '@/components/layout/Toast';
 import { Badge } from '@/components/ui/data-display/badge';
@@ -28,6 +28,7 @@ import { Switch } from '@/components/ui/forms/switch';
 import { cn } from '@/lib/utils';
 
 import { BulkActionBar, type BulkAction } from './BulkActionBar';
+import { ConfigHistoryDialog } from './ConfigHistoryDialog';
 import {
   api,
   SystemConfigurationDto,
@@ -68,6 +69,8 @@ export default function FeatureFlagsTab({
   const [featureFlags, setFeatureFlags] = useState<SystemConfigurationDto[]>([]);
   const [toggling, setToggling] = useState<string | null>(null);
   const [selectedFlags, setSelectedFlags] = useState<Set<string>>(new Set());
+  const [historyConfigId, setHistoryConfigId] = useState<string | null>(null);
+  const [historyConfigKey, setHistoryConfigKey] = useState('');
 
   useEffect(() => {
     // Filter configurations to show only FeatureFlag category
@@ -319,7 +322,9 @@ export default function FeatureFlagsTab({
                   <th className="px-4 py-3 text-left w-10">
                     <input
                       type="checkbox"
-                      checked={selectedFlags.size === featureFlags.length && featureFlags.length > 0}
+                      checked={
+                        selectedFlags.size === featureFlags.length && featureFlags.length > 0
+                      }
                       onChange={e => (e.target.checked ? selectAllFlags() : clearSelection())}
                       className="rounded border-border"
                       aria-label="Select all feature flags"
@@ -346,23 +351,24 @@ export default function FeatureFlagsTab({
                           <div
                             className={cn(
                               'inline-flex items-center gap-1.5 cursor-help',
-                               
+
                               TIER_COLORS[tier]
                             )}
                           >
-                            { }
+                            {}
                             {TIER_ICONS[tier]}
                             <span>{tier}</span>
                           </div>
                         </TooltipTrigger>
                         <TooltipContent>
-                          { }
+                          {}
                           <p>{TIER_DESCRIPTIONS[tier]}</p>
                         </TooltipContent>
                       </Tooltip>
                     </th>
                   ))}
                 <th className="px-4 py-3 text-left font-semibold text-foreground">Status</th>
+                <th className="px-4 py-3 text-center font-semibold text-foreground">History</th>
               </tr>
             </thead>
             <tbody>
@@ -419,9 +425,8 @@ export default function FeatureFlagsTab({
                     {/* Tier Toggles */}
                     {hasTierSupport &&
                       TIER_ORDER.map(tier => {
-                         
                         const tierField = TIER_FIELD_MAP[tier];
-                         
+
                         const tierValue = flag[tierField];
                         const isTierEnabled = tierValue === true;
                         const isTierToggling = toggling === `${flag.id}-${tier}`;
@@ -486,15 +491,29 @@ export default function FeatureFlagsTab({
                             ⚠️ Restart
                           </Badge>
                         )}
-                        {!flag.isActive && (
-                          <Badge variant="destructive">🔒 Inactive</Badge>
-                        )}
+                        {!flag.isActive && <Badge variant="destructive">🔒 Inactive</Badge>}
                         {flag.version > 1 && (
                           <Badge variant="outline" className="text-xs">
                             v{flag.version}
                           </Badge>
                         )}
                       </div>
+                    </td>
+
+                    {/* History Button */}
+                    <td className="px-4 py-4 text-center">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setHistoryConfigId(flag.id);
+                          setHistoryConfigKey(flag.key);
+                        }}
+                        className="inline-flex items-center justify-center rounded-md p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
+                        aria-label={`History for ${flag.key}`}
+                        data-testid={`btn-history-${flag.id}`}
+                      >
+                        <Clock className="h-4 w-4" />
+                      </button>
                     </td>
                   </tr>
                 );
@@ -530,6 +549,17 @@ export default function FeatureFlagsTab({
           </ul>
         </div>
       </div>
+
+      {/* History Dialog */}
+      <ConfigHistoryDialog
+        open={!!historyConfigId}
+        onOpenChange={open => {
+          if (!open) setHistoryConfigId(null);
+        }}
+        configId={historyConfigId ?? ''}
+        configKey={historyConfigKey}
+        onRollbackComplete={onConfigurationChange}
+      />
     </TooltipProvider>
   );
 }

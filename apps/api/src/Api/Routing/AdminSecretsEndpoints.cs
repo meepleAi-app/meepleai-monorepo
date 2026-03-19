@@ -54,7 +54,7 @@ internal static class AdminSecretsEndpoints
 
     private static IResult HandleGetSecrets(HttpContext context, IConfiguration config, ILogger<Program> logger)
     {
-        var (authorized, session, error) = context.RequireSuperAdminSession();
+        var (authorized, session, error) = context.RequireAdminSession();
         if (!authorized) return error!;
 
         var reveal = context.Request.Query.ContainsKey("reveal");
@@ -103,7 +103,7 @@ internal static class AdminSecretsEndpoints
     private static async Task<IResult> HandleUpdateSecrets(
         HttpContext context, IConfiguration config, ILogger<Program> logger, CancellationToken ct)
     {
-        var (authorized, session, error) = context.RequireSuperAdminSession();
+        var (authorized, session, error) = context.RequireAdminSession();
         if (!authorized) return error!;
 
         var secretsDir = GetSecretsDirectory(config);
@@ -165,7 +165,7 @@ internal static class AdminSecretsEndpoints
     private static IResult HandleRestart(
         HttpContext context, IHostApplicationLifetime lifetime, ILogger<Program> logger)
     {
-        var (authorized, session, error) = context.RequireSuperAdminSession();
+        var (authorized, session, error) = context.RequireAdminSession();
         if (!authorized) return error!;
 
         logger.LogWarning("Admin {UserId} initiated API restart via secrets management", session!.User!.Id);

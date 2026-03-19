@@ -49,3 +49,19 @@ export {
   UserActionSection,
   type UserActionSectionProps,
 } from './game-detail';
+
+// Shelf Components — vetrina layout for library browse pages
+export { ShelfCard, type ShelfCardProps, type ManaPip, type ManaPipType } from './ShelfCard';
+export { ShelfRow, type ShelfRowProps } from './ShelfRow';
+
+// Mechanic Filter Chip Row
+export { MechanicFilter, type MechanicFilterProps } from './MechanicFilter';
+
+// Personal Library Page — vetrina layout
+export { PersonalLibraryPage, type PersonalLibraryPageProps } from './PersonalLibraryPage';
+
+// Library Toolbar — search + count controls
+export { LibraryToolbar, type LibraryToolbarProps } from './LibraryToolbar';
+
+// Public Library Page — shared catalog browse experience
+export { PublicLibraryPage, type PublicLibraryPageProps } from './PublicLibraryPage';

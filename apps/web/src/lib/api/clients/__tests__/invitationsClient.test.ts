@@ -178,7 +178,7 @@ describe('InvitationsClient - Issue #132', () => {
       const client = createInvitationsClient({ httpClient: mockHttpClient });
       const result = await client.getInvitationStats();
 
-      expect(result).toEqual({ pending: 0, accepted: 0, expired: 0, total: 0 });
+      expect(result).toEqual({ pending: 0, accepted: 0, expired: 0, revoked: 0, total: 0 });
     });
   });
 

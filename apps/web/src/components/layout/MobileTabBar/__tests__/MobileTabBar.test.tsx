@@ -286,7 +286,7 @@ describe('MobileTabBar', () => {
       renderTabBar();
 
       const nav = screen.getByTestId('mobile-tab-bar');
-      expect(nav).toHaveClass('h-[72px]');
+      expect(nav).toHaveClass('h-16');
     });
   });
 

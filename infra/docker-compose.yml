@@ -32,30 +32,6 @@ services:
           cpus: '1.0'
           memory: 1G
 
-  qdrant:
-    image: qdrant/qdrant:v1.12.4
-    container_name: meepleai-qdrant
-    restart: unless-stopped
-    volumes:
-      - qdrant_data:/qdrant/storage
-    healthcheck:
-      # Note: wget/curl not available in Qdrant image, use bash TCP health check
-      test: ["CMD-SHELL", "bash -c 'exec 3<>/dev/tcp/127.0.0.1/6333 && echo -e \"GET /readyz HTTP/1.1\\r\\nHost: localhost\\r\\nConnection: close\\r\\n\\r\\n\" >&3 && grep -q \"HTTP/1.1 200\" <&3'"]
-      interval: 10s
-      timeout: 5s
-      retries: 10
-      start_period: 10s
-    networks:
-      - meepleai
-    deploy:
-      resources:
-        limits:
-          cpus: '2.0'
-          memory: 4G
-        reservations:
-          cpus: '1.0'
-          memory: 2G
-
   redis:
     image: redis:7.4.1-alpine3.20
     container_name: meepleai-redis
@@ -95,8 +71,6 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-      qdrant:
-        condition: service_started
       redis:
         condition: service_healthy
     healthcheck:
@@ -587,7 +561,6 @@ services:
 volumes:
   # Database & Cache
   postgres_data:
-  qdrant_data:
 
   # ML Service Model Caches
   ollama_data:

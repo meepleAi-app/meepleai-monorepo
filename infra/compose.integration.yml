@@ -1,17 +1,17 @@
 # Integration: Local API + frontend → staging services (meepleai.app)
 #
 # Two modes:
-#   A) SSH tunnel: Postgres/Redis/Qdrant via SSH tunnel to staging server
-#      Prerequisites: ssh -L 15432:localhost:5432 -L 16379:localhost:6379 -L 16333:localhost:6333 deploy@204.168.135.69
+#   A) SSH tunnel: Postgres/Redis via SSH tunnel to staging server
+#      Prerequisites: ssh -L 15432:localhost:5432 -L 16379:localhost:6379 deploy@204.168.135.69
 #
-#   B) Full remote: ALL services via meepleai.app (Qdrant exposed via Traefik)
+#   B) Full remote: ALL services via meepleai.app
 #      No SSH tunnel needed — everything goes through HTTPS + basic auth
 #
 # Usage:
 #   docker compose -f docker-compose.yml -f compose.integration.yml up api web -d
 #
 # Secrets: cp -r infra/secrets/integration.example/ infra/secrets/integration/
-#   Required: database.secret, redis.secret, qdrant.secret, jwt.secret,
+#   Required: database.secret, redis.secret, jwt.secret,
 #             openrouter.secret, admin.secret, services-auth.secret
 
 services:
@@ -21,7 +21,6 @@ services:
     env_file:
       - ./secrets/integration/database.secret
       - ./secrets/integration/redis.secret
-      - ./secrets/integration/qdrant.secret
       - ./secrets/integration/jwt.secret
       - ./secrets/integration/openrouter.secret
       - ./secrets/integration/admin.secret
@@ -34,7 +33,6 @@ services:
       POSTGRES_PORT: "15432"
       REDIS_HOST: host.docker.internal
       REDIS_PORT: "16379"
-      QDRANT_URL: http://host.docker.internal:16333
       # AI services via meepleai.app (both modes)
       EMBEDDING_PROVIDER: external
       Embedding__Provider: External
@@ -47,7 +45,6 @@ services:
       EMBEDDING_FALLBACK_ENABLED: "false"
       Embedding__FallbackEnabled: "false"
       # Mode B overrides (uncomment to use full remote without SSH tunnel):
-      # QDRANT_URL: https://meepleai.app/services/qdrant
       # POSTGRES_HOST: meepleai.app  # Requires Traefik TCP route (not yet configured)
       # REDIS_HOST: meepleai.app     # Requires Traefik TCP route (not yet configured)
     volumes:

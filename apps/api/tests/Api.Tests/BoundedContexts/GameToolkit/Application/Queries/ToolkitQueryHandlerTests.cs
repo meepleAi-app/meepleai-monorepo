@@ -1,4 +1,3 @@
-using Api.BoundedContexts.GameToolkit.Application.Handlers;
 using Api.BoundedContexts.GameToolkit.Application.Queries;
 using Api.BoundedContexts.GameToolkit.Domain.Repositories;
 using Api.Tests.Constants;

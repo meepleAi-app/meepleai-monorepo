@@ -1,5 +1,4 @@
 using Api.BoundedContexts.SystemConfiguration.Application.Commands;
-using Api.BoundedContexts.SystemConfiguration.Application.Handlers;
 using Api.BoundedContexts.SystemConfiguration.Domain.Repositories;
 using Api.Tests.Constants;
 using MediatR;

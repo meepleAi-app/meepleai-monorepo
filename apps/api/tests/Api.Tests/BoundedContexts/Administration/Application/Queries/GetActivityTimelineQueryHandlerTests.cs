@@ -1,5 +1,4 @@
 using Api.BoundedContexts.Administration.Application.DTOs;
-using Api.BoundedContexts.Administration.Application.Handlers;
 using Api.BoundedContexts.Administration.Application.Queries;
 using Api.BoundedContexts.Administration.Domain.Services;
 using Api.Tests.Constants;

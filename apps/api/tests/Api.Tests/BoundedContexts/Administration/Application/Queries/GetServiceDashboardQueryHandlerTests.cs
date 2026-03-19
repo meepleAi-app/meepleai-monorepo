@@ -1,5 +1,5 @@
 using Api.BoundedContexts.Administration.Application.DTOs;
-using Api.BoundedContexts.Administration.Application.Handlers.Operations;
+using Api.BoundedContexts.Administration.Application.Queries;
 using Api.BoundedContexts.Administration.Application.Queries.Operations;
 using Api.BoundedContexts.Administration.Domain.Models;
 using Api.BoundedContexts.Administration.Domain.Services;

@@ -1,4 +1,3 @@
-using Api.BoundedContexts.BusinessSimulations.Application.Handlers;
 using Api.BoundedContexts.BusinessSimulations.Application.Queries;
 using Api.BoundedContexts.KnowledgeBase.Domain.Models;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services;

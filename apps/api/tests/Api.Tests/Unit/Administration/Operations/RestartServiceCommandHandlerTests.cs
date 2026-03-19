@@ -1,5 +1,6 @@
 using Api.BoundedContexts.Administration.Application.Commands.Operations;
-using Api.BoundedContexts.Administration.Application.Handlers.Operations;
+using Api.BoundedContexts.Administration.Application.Commands;
+using Api.BoundedContexts.Administration.Application.Queries;
 using Api.BoundedContexts.Administration.Domain.Repositories;
 using Api.BoundedContexts.Authentication.Domain.Entities;
 using Api.SharedKernel.Domain.ValueObjects;

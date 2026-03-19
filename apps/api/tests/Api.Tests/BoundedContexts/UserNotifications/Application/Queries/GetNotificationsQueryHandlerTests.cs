@@ -1,4 +1,3 @@
-using Api.BoundedContexts.UserNotifications.Application.Handlers;
 using Api.BoundedContexts.UserNotifications.Application.Queries;
 using Api.BoundedContexts.UserNotifications.Domain.Aggregates;
 using Api.BoundedContexts.UserNotifications.Domain.Repositories;

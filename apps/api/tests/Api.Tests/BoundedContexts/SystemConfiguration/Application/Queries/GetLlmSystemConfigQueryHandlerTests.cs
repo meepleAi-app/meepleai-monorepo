@@ -1,4 +1,3 @@
-using Api.BoundedContexts.SystemConfiguration.Application.Handlers;
 using Api.BoundedContexts.SystemConfiguration.Application.Queries;
 using Api.BoundedContexts.SystemConfiguration.Domain.Entities;
 using Api.BoundedContexts.SystemConfiguration.Domain.Repositories;

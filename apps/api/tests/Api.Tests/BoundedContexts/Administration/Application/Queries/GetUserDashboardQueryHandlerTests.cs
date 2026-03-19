@@ -1,4 +1,3 @@
-using Api.BoundedContexts.Administration.Application.Handlers;
 using Api.BoundedContexts.Administration.Application.Queries;
 using Api.Services;
 using Microsoft.Extensions.Logging;

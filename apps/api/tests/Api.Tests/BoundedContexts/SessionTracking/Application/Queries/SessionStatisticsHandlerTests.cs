@@ -1,5 +1,4 @@
 using Api.BoundedContexts.SessionTracking.Application.DTOs;
-using Api.BoundedContexts.SessionTracking.Application.Handlers;
 using Api.BoundedContexts.SessionTracking.Application.Queries;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities.SessionTracking;

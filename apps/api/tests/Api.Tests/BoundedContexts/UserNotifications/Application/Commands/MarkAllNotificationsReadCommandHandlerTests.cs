@@ -1,5 +1,4 @@
 using Api.BoundedContexts.UserNotifications.Application.Commands;
-using Api.BoundedContexts.UserNotifications.Application.Handlers;
 using Api.BoundedContexts.UserNotifications.Domain.Repositories;
 using Api.Tests.Constants;
 using Microsoft.Extensions.Logging;

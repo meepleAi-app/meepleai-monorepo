@@ -1,4 +1,3 @@
-using Api.BoundedContexts.DocumentProcessing.Application.Handlers;
 using Api.BoundedContexts.DocumentProcessing.Application.Queries;
 using Api.BoundedContexts.DocumentProcessing.Domain.Entities;
 using Api.BoundedContexts.DocumentProcessing.Domain.Repositories;

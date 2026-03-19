@@ -1,5 +1,4 @@
 using Api.BoundedContexts.UserNotifications.Application.Commands;
-using Api.BoundedContexts.UserNotifications.Application.Handlers;
 using Api.BoundedContexts.UserNotifications.Infrastructure.Configuration;
 using Api.Tests.Constants;
 using Microsoft.AspNetCore.DataProtection;

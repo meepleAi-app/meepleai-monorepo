@@ -1,5 +1,5 @@
 using Api.BoundedContexts.BusinessSimulations.Application.DTOs;
-using Api.BoundedContexts.BusinessSimulations.Application.Handlers;
+using Api.BoundedContexts.BusinessSimulations.Application.Commands;
 using Api.BoundedContexts.BusinessSimulations.Application.Queries;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;

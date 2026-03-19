@@ -1,5 +1,4 @@
 using Api.BoundedContexts.BusinessSimulations.Application.Commands;
-using Api.BoundedContexts.BusinessSimulations.Application.Handlers;
 using Api.BoundedContexts.BusinessSimulations.Domain.Entities;
 using Api.BoundedContexts.BusinessSimulations.Domain.Enums;
 using Api.BoundedContexts.BusinessSimulations.Domain.Repositories;

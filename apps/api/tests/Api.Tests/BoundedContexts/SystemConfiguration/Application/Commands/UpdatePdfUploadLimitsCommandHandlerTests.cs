@@ -1,6 +1,5 @@
 using Api.BoundedContexts.SystemConfiguration.Application.Commands;
 using Api.BoundedContexts.SystemConfiguration.Application.DTOs;
-using Api.BoundedContexts.SystemConfiguration.Application.Handlers;
 using Api.BoundedContexts.SystemConfiguration.Domain.Repositories;
 using Api.BoundedContexts.SystemConfiguration.Domain.ValueObjects;
 using Api.Tests.Constants;

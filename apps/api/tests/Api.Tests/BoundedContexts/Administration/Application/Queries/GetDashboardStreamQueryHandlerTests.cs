@@ -1,5 +1,4 @@
 using System.Runtime.CompilerServices;
-using Api.BoundedContexts.Administration.Application.Handlers;
 using Api.BoundedContexts.Administration.Application.Queries;
 using Api.BoundedContexts.Administration.Domain.Events;
 using Api.BoundedContexts.Administration.Domain.Services;

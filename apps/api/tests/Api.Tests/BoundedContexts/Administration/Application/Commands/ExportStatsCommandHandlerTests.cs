@@ -1,5 +1,4 @@
 using Api.BoundedContexts.Administration.Application.Commands;
-using Api.BoundedContexts.Administration.Application.Handlers;
 using Api.Models;
 using Api.Services;
 using Api.Tests.Constants;

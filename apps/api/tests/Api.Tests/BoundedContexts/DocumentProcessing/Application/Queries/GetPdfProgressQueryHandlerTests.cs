@@ -1,4 +1,3 @@
-using Api.BoundedContexts.DocumentProcessing.Application.Handlers;
 using Api.BoundedContexts.DocumentProcessing.Application.Queries;
 using Api.Infrastructure;
 using Api.Tests.TestHelpers;

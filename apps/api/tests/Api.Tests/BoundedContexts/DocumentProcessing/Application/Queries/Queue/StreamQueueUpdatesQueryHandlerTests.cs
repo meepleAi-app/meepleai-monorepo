@@ -1,5 +1,5 @@
 using Api.BoundedContexts.DocumentProcessing.Application.DTOs;
-using Api.BoundedContexts.DocumentProcessing.Application.Handlers.Queue;
+using Api.BoundedContexts.DocumentProcessing.Application.Queries;
 using Api.BoundedContexts.DocumentProcessing.Application.Queries.Queue;
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.Services;
 using Api.Tests.Constants;

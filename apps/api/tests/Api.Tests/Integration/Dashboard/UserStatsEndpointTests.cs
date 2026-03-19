@@ -1,4 +1,5 @@
-using Api.BoundedContexts.Administration.Application.Handlers.UserStats;
+using Api.BoundedContexts.Administration.Application.Commands;
+using Api.BoundedContexts.Administration.Application.Queries;
 using Api.BoundedContexts.Administration.Application.Queries.UserStats;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;

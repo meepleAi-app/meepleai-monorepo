@@ -1,6 +1,5 @@
 using Moq;
 using MediatR;
-using Api.BoundedContexts.Administration.Application.Handlers;
 using Api.BoundedContexts.Administration.Application.Queries;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;

@@ -1,6 +1,5 @@
 using Api.BoundedContexts.GameToolkit.Application.Commands;
 using Api.BoundedContexts.GameToolkit.Application.DTOs;
-using Api.BoundedContexts.GameToolkit.Application.Handlers;
 using Api.BoundedContexts.GameToolkit.Domain.Enums;
 using Api.Tests.Constants;
 using Microsoft.Extensions.Logging;

@@ -119,8 +119,11 @@ internal static class DocumentProcessingServiceExtensions
             services.AddScoped<IPdfTextExtractor, DocnetPdfTextExtractor>();
         }
 
-        // Shared PDF processing pipeline (used by recovery job and future handler consolidation)
+        // Shared PDF processing pipeline (used by recovery job and Quartz queue processor)
         services.AddScoped<IPdfProcessingPipelineService, PdfProcessingPipelineService>();
+
+        // Upload-specific background processor: wraps the pipeline + adds quota lifecycle and event publishing
+        services.AddScoped<IPdfUploadBackgroundProcessor, PdfUploadBackgroundProcessor>();
 
         // Stale PDF recovery: runs once on startup to reprocess stuck PDFs
         services.AddHostedService<StalePdfRecoveryService>();

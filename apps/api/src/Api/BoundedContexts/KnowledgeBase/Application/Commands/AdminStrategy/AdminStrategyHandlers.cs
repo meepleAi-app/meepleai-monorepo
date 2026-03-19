@@ -5,7 +5,7 @@ using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using MediatR;
 using Microsoft.Extensions.Logging;
 
-namespace Api.BoundedContexts.KnowledgeBase.Application.Handlers.AdminStrategy;
+namespace Api.BoundedContexts.KnowledgeBase.Application.Commands.AdminStrategy;
 
 /// <summary>
 /// Handlers for Admin Strategy CRUD operations.

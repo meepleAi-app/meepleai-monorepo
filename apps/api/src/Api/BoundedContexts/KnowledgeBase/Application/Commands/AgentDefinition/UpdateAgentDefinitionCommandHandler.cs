@@ -6,7 +6,7 @@ using Api.Middleware.Exceptions;
 using MediatR;
 using Microsoft.Extensions.Logging;
 
-namespace Api.BoundedContexts.KnowledgeBase.Application.Handlers.AgentDefinition;
+namespace Api.BoundedContexts.KnowledgeBase.Application.Commands.AgentDefinition;
 
 /// <summary>
 /// Handler for UpdateAgentDefinitionCommand.

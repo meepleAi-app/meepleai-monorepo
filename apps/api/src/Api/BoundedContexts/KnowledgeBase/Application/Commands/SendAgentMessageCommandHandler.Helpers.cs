@@ -8,7 +8,7 @@ using Api.Models;
 using Api.Services;
 using Microsoft.EntityFrameworkCore;
 
-namespace Api.BoundedContexts.KnowledgeBase.Application.Handlers;
+namespace Api.BoundedContexts.KnowledgeBase.Application.Commands;
 
 internal sealed partial class SendAgentMessageCommandHandler
 {

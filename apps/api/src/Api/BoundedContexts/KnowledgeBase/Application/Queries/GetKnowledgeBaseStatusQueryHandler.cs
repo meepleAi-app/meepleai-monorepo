@@ -6,7 +6,7 @@ using Api.Models;
 using Api.SharedKernel.Application.Interfaces;
 using Microsoft.EntityFrameworkCore;
 
-namespace Api.BoundedContexts.KnowledgeBase.Application.Handlers;
+namespace Api.BoundedContexts.KnowledgeBase.Application.Queries;
 
 /// <summary>
 /// Handles GetKnowledgeBaseStatusQuery.

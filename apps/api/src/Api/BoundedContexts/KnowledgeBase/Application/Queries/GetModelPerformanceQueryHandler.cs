@@ -4,7 +4,7 @@ using Api.Infrastructure;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
-namespace Api.BoundedContexts.KnowledgeBase.Application.Handlers;
+namespace Api.BoundedContexts.KnowledgeBase.Application.Queries;
 
 /// <summary>
 /// Handler for GetModelPerformanceQuery.

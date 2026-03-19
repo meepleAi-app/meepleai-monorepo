@@ -18,7 +18,7 @@ using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
-namespace Api.BoundedContexts.KnowledgeBase.Application.Handlers;
+namespace Api.BoundedContexts.KnowledgeBase.Application.Commands;
 
 /// <summary>
 /// Orchestrated handler: validates slots → optionally adds game to library →

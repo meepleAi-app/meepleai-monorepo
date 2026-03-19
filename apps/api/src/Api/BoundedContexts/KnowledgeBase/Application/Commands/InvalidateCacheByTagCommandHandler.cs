@@ -2,7 +2,7 @@ using Api.BoundedContexts.KnowledgeBase.Application.Commands;
 using Api.Services;
 using Api.SharedKernel.Application.Interfaces;
 
-namespace Api.BoundedContexts.KnowledgeBase.Application.Handlers;
+namespace Api.BoundedContexts.KnowledgeBase.Application.Commands;
 
 /// <summary>
 /// Handler for InvalidateCacheByTagCommand.

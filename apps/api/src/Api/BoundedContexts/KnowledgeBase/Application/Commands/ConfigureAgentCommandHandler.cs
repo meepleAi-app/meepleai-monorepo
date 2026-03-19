@@ -4,7 +4,7 @@ using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 using MediatR;
 using Microsoft.Extensions.Logging;
 
-namespace Api.BoundedContexts.KnowledgeBase.Application.Handlers;
+namespace Api.BoundedContexts.KnowledgeBase.Application.Commands;
 
 /// <summary>
 /// Handler for ConfigureAgentCommand.

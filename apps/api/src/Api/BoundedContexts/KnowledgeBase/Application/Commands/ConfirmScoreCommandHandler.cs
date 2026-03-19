@@ -3,7 +3,7 @@ using Api.BoundedContexts.KnowledgeBase.Application.Commands;
 using Api.SharedKernel.Application.Interfaces;
 using MediatR;
 
-namespace Api.BoundedContexts.KnowledgeBase.Application.Handlers;
+namespace Api.BoundedContexts.KnowledgeBase.Application.Commands;
 
 /// <summary>
 /// Handles confirming a previously parsed score by delegating to RecordLiveSessionScoreCommand.

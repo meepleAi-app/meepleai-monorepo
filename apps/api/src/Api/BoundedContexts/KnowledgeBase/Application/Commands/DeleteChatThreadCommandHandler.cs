@@ -3,7 +3,7 @@ using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.SharedKernel.Application.Interfaces;
 using Api.SharedKernel.Infrastructure.Persistence;
 
-namespace Api.BoundedContexts.KnowledgeBase.Application.Handlers;
+namespace Api.BoundedContexts.KnowledgeBase.Application.Commands;
 
 /// <summary>
 /// Handler for DeleteChatThreadCommand.

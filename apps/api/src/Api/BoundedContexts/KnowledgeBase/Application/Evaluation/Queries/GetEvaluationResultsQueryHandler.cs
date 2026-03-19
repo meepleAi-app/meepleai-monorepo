@@ -4,7 +4,7 @@ using Api.BoundedContexts.KnowledgeBase.Application.Evaluation.Queries;
 using Api.BoundedContexts.KnowledgeBase.Domain.Evaluation;
 
 #pragma warning disable MA0048 // File name must match type name - Contains Handler with related types
-namespace Api.BoundedContexts.KnowledgeBase.Application.Evaluation.Handlers;
+namespace Api.BoundedContexts.KnowledgeBase.Application.Evaluation.Queries;
 
 /// <summary>
 /// Handler for GetEvaluationResultsQuery.

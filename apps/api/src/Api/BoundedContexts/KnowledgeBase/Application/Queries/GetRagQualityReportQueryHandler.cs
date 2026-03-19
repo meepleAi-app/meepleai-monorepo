@@ -7,7 +7,7 @@ using Api.SharedKernel.Domain.ValueObjects;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
-namespace Api.BoundedContexts.KnowledgeBase.Application.Handlers;
+namespace Api.BoundedContexts.KnowledgeBase.Application.Queries;
 
 /// <summary>
 /// Handler for GetRagQualityReportQuery.

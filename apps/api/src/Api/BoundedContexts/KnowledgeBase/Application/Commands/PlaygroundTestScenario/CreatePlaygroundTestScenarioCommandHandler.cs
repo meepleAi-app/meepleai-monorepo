@@ -4,7 +4,7 @@ using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using MediatR;
 using Microsoft.Extensions.Logging;
 
-namespace Api.BoundedContexts.KnowledgeBase.Application.Handlers.PlaygroundTestScenario;
+namespace Api.BoundedContexts.KnowledgeBase.Application.Commands.PlaygroundTestScenario;
 
 /// <summary>
 /// Handler for CreatePlaygroundTestScenarioCommand.

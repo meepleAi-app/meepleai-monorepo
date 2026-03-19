@@ -14,7 +14,7 @@ using Microsoft.Extensions.Logging;
 using System.Runtime.CompilerServices;
 using System.Globalization;
 
-namespace Api.BoundedContexts.KnowledgeBase.Application.Handlers;
+namespace Api.BoundedContexts.KnowledgeBase.Application.Commands;
 
 /// <summary>
 /// Handler for ChatWithSessionAgentCommand.

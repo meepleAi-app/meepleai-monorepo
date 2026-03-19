@@ -1,7 +1,7 @@
 using Api.BoundedContexts.KnowledgeBase.Application.DTOs;
 using Api.BoundedContexts.KnowledgeBase.Domain.Entities;
 
-namespace Api.BoundedContexts.KnowledgeBase.Application.Handlers.AbTest;
+namespace Api.BoundedContexts.KnowledgeBase.Application.Commands.AbTest;
 
 /// <summary>
 /// Maps AbTestSession domain entities to DTOs.

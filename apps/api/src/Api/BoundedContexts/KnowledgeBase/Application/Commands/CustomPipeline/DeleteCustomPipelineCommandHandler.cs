@@ -2,7 +2,7 @@ using Api.BoundedContexts.KnowledgeBase.Application.Commands.CustomPipeline;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using MediatR;
 
-namespace Api.BoundedContexts.KnowledgeBase.Application.Handlers.CustomPipeline;
+namespace Api.BoundedContexts.KnowledgeBase.Application.Commands.CustomPipeline;
 
 /// <summary>
 /// Handler for DeleteCustomPipelineCommand.

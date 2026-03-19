@@ -6,7 +6,7 @@ using Api.Models;
 using Api.Services;
 using MediatR;
 
-namespace Api.BoundedContexts.KnowledgeBase.Application.Handlers;
+namespace Api.BoundedContexts.KnowledgeBase.Application.Commands;
 
 /// <summary>
 /// Handler for InvokeChessAgentCommand.

@@ -4,7 +4,7 @@ using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 using Api.SharedKernel.Application.Interfaces;
 
-namespace Api.BoundedContexts.KnowledgeBase.Application.Handlers.AbTest;
+namespace Api.BoundedContexts.KnowledgeBase.Application.Commands.AbTest;
 
 /// <summary>
 /// Handles evaluation of A/B test variants and returns revealed results.

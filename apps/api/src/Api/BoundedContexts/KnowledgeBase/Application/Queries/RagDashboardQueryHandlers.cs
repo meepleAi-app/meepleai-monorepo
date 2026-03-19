@@ -5,7 +5,7 @@ using Api.BoundedContexts.KnowledgeBase.Infrastructure.Repositories;
 using Api.Services;
 using Api.SharedKernel.Application.Interfaces;
 
-namespace Api.BoundedContexts.KnowledgeBase.Application.Handlers;
+namespace Api.BoundedContexts.KnowledgeBase.Application.Queries;
 
 // Issue #3304, #5311: RAG Dashboard query handlers with DB persistence.
 

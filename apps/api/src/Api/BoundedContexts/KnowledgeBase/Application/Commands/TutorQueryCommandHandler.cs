@@ -6,7 +6,7 @@ using Api.Infrastructure.Entities;
 using Api.Middleware.Exceptions;
 using MediatR;
 
-namespace Api.BoundedContexts.KnowledgeBase.Application.Handlers;
+namespace Api.BoundedContexts.KnowledgeBase.Application.Commands;
 
 /// <summary>
 /// ISSUE-3499: Handler for TutorQueryCommand.

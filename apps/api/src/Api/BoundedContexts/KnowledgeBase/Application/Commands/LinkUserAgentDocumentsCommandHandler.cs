@@ -3,7 +3,7 @@ using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.SharedKernel.Infrastructure.Persistence;
 using MediatR;
 
-namespace Api.BoundedContexts.KnowledgeBase.Application.Handlers;
+namespace Api.BoundedContexts.KnowledgeBase.Application.Commands;
 
 /// <summary>
 /// Handler for LinkUserAgentDocumentsCommand.

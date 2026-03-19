@@ -5,7 +5,7 @@ using Api.BoundedContexts.KnowledgeBase.Application.Queries;
 using MediatR;
 using Microsoft.Extensions.Logging;
 
-namespace Api.BoundedContexts.KnowledgeBase.Application.Handlers;
+namespace Api.BoundedContexts.KnowledgeBase.Application.Queries;
 
 /// <summary>
 /// Handles retrieval of ledger state change history.

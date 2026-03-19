@@ -5,7 +5,7 @@ using Api.BoundedContexts.KnowledgeBase.Domain.Services;
 using MediatR;
 using Microsoft.Extensions.Logging;
 
-namespace Api.BoundedContexts.KnowledgeBase.Application.Handlers;
+namespace Api.BoundedContexts.KnowledgeBase.Application.Queries;
 
 /// <summary>
 /// Aggregates OpenRouter account status, rate-limit utilization, and daily request count

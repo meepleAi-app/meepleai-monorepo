@@ -1,5 +1,6 @@
 using Api.BoundedContexts.KnowledgeBase.Application.Commands.AgentDefinition;
-using Api.BoundedContexts.KnowledgeBase.Application.Handlers.AgentDefinition;
+using Api.BoundedContexts.KnowledgeBase.Application.Commands.AgentDefinition;
+using Api.BoundedContexts.KnowledgeBase.Application.Queries.AgentDefinition;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.Tests.Constants;
 using FluentAssertions;

@@ -3,7 +3,7 @@ using Api.SharedKernel.Application.Interfaces;
 using Microsoft.Extensions.Logging;
 using Quartz;
 
-namespace Api.BoundedContexts.KnowledgeBase.Application.Handlers;
+namespace Api.BoundedContexts.KnowledgeBase.Application.Commands;
 
 /// <summary>
 /// Issue #5503: Triggers an immediate model availability check via Quartz scheduler.

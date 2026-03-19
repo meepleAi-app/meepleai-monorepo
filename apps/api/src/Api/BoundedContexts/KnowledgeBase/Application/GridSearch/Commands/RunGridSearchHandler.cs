@@ -7,7 +7,7 @@ using Api.Observability;
 using MediatR;
 using Microsoft.Extensions.Logging;
 
-namespace Api.BoundedContexts.KnowledgeBase.Application.GridSearch.Handlers;
+namespace Api.BoundedContexts.KnowledgeBase.Application.GridSearch.Commands;
 
 /// <summary>
 /// ADR-016 Phase 5: Handler for running grid search evaluations.

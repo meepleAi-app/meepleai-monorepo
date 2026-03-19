@@ -3,7 +3,7 @@ using Microsoft.Extensions.Logging;
 using Api.BoundedContexts.KnowledgeBase.Application.Evaluation.Commands;
 using Api.BoundedContexts.KnowledgeBase.Domain.Evaluation;
 
-namespace Api.BoundedContexts.KnowledgeBase.Application.Evaluation.Handlers;
+namespace Api.BoundedContexts.KnowledgeBase.Application.Evaluation.Commands;
 
 /// <summary>
 /// Handler for LoadDatasetCommand.

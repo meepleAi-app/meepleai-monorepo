@@ -3,7 +3,7 @@ using Api.BoundedContexts.KnowledgeBase.Application.Queries.AgentDefinition;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using MediatR;
 
-namespace Api.BoundedContexts.KnowledgeBase.Application.Handlers.AgentDefinition;
+namespace Api.BoundedContexts.KnowledgeBase.Application.Queries.AgentDefinition;
 
 /// <summary>
 /// Handler for GetAllAgentDefinitionsQuery.

@@ -1,9 +1,10 @@
+using Api.BoundedContexts.KnowledgeBase.Application.Commands.PlaygroundTestScenario;
 using Api.BoundedContexts.KnowledgeBase.Application.DTOs;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries.PlaygroundTestScenario;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using MediatR;
 
-namespace Api.BoundedContexts.KnowledgeBase.Application.Handlers.PlaygroundTestScenario;
+namespace Api.BoundedContexts.KnowledgeBase.Application.Queries.PlaygroundTestScenario;
 
 /// <summary>
 /// Handler for GetPlaygroundTestScenarioByIdQuery.

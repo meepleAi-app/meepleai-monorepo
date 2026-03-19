@@ -1,5 +1,5 @@
 using Api.BoundedContexts.KnowledgeBase.Application.Commands.AdminStrategy;
-using Api.BoundedContexts.KnowledgeBase.Application.Handlers.AdminStrategy;
+using Api.BoundedContexts.KnowledgeBase.Application.Commands.AdminStrategy;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries.AdminStrategy;
 using Api.BoundedContexts.KnowledgeBase.Domain.Entities;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;

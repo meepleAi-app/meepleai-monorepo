@@ -1,10 +1,11 @@
+using Api.BoundedContexts.KnowledgeBase.Application.Commands.AbTest;
 using Api.BoundedContexts.KnowledgeBase.Application.DTOs;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries.AbTest;
 using Api.BoundedContexts.KnowledgeBase.Domain.Enums;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.SharedKernel.Application.Interfaces;
 
-namespace Api.BoundedContexts.KnowledgeBase.Application.Handlers.AbTest;
+namespace Api.BoundedContexts.KnowledgeBase.Application.Queries.AbTest;
 
 /// <summary>
 /// Handles GetAbTestQuery — returns blind session (no model info).

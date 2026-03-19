@@ -4,7 +4,7 @@ using Api.BoundedContexts.KnowledgeBase.Domain.Models;
 using Api.Models;
 using Api.Services.LlmClients;
 
-namespace Api.BoundedContexts.KnowledgeBase.Application.Handlers;
+namespace Api.BoundedContexts.KnowledgeBase.Application.Commands;
 
 internal sealed partial class PlaygroundChatCommandHandler
 {

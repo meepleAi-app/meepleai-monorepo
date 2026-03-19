@@ -8,7 +8,7 @@ using Api.SharedKernel.Application.Interfaces;
 using Microsoft.Extensions.Logging;
 using System.Diagnostics;
 
-namespace Api.BoundedContexts.KnowledgeBase.Application.Handlers.AbTest;
+namespace Api.BoundedContexts.KnowledgeBase.Application.Commands.AbTest;
 
 /// <summary>
 /// Handles creation of A/B test sessions with parallel model response generation.

@@ -8,7 +8,7 @@ using Api.Models;
 using Api.SharedKernel.Application.Interfaces;
 using Microsoft.Extensions.Logging;
 
-namespace Api.BoundedContexts.KnowledgeBase.Application.Handlers.Decisore;
+namespace Api.BoundedContexts.KnowledgeBase.Application.Commands.Decisore;
 
 /// <summary>
 /// Streaming handler for AnalyzeGameStateCommand.

@@ -4,7 +4,7 @@ using MediatR;
 using Microsoft.Extensions.Logging;
 using StackExchange.Redis;
 
-namespace Api.BoundedContexts.KnowledgeBase.Application.Handlers;
+namespace Api.BoundedContexts.KnowledgeBase.Application.Commands;
 
 /// <summary>
 /// Handler for DeleteUserLlmDataCommand.

@@ -4,7 +4,7 @@ using Api.Infrastructure.Entities;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
-namespace Api.BoundedContexts.KnowledgeBase.Application.Handlers;
+namespace Api.BoundedContexts.KnowledgeBase.Application.Commands;
 
 /// <summary>
 /// Handler for ProvideAgentFeedbackCommand.

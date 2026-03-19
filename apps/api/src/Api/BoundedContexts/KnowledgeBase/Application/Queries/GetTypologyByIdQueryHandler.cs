@@ -5,7 +5,7 @@ using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 using Api.Middleware.Exceptions;
 using MediatR;
 
-namespace Api.BoundedContexts.KnowledgeBase.Application.Handlers;
+namespace Api.BoundedContexts.KnowledgeBase.Application.Queries;
 
 /// <summary>
 /// Handler for GetTypologyByIdQuery with role-based visibility.

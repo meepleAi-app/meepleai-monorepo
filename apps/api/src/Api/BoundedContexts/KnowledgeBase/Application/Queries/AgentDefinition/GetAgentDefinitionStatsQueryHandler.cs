@@ -2,7 +2,7 @@ using Api.BoundedContexts.KnowledgeBase.Application.Queries.AgentDefinition;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.SharedKernel.Application.Interfaces;
 
-namespace Api.BoundedContexts.KnowledgeBase.Application.Handlers.AgentDefinition;
+namespace Api.BoundedContexts.KnowledgeBase.Application.Queries.AgentDefinition;
 
 /// <summary>
 /// Handler for GetAgentDefinitionStatsQuery.

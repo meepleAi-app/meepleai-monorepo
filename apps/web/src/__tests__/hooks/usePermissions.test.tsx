@@ -68,7 +68,7 @@ describe('usePermissions', () => {
         role: 'creator',
         status: 'Active',
         limits: { maxGames: 500, storageQuotaMB: 5000 },
-        accessibleFeatures: ['wishlist', 'bulk-select', 'drag-drop', 'agent.create']
+        accessibleFeatures: ['wishlist', 'bulk-select', 'drag-drop', 'agent.create'],
       };
 
       vi.mocked(permissionsApi.getUserPermissions).mockResolvedValue(mockPermissions);
@@ -92,7 +92,7 @@ describe('usePermissions', () => {
         role: 'user',
         status: 'Active',
         limits: { maxGames: 50, storageQuotaMB: 100 },
-        accessibleFeatures: ['wishlist']
+        accessibleFeatures: ['wishlist'],
       };
 
       vi.mocked(permissionsApi.getUserPermissions).mockResolvedValue(mockPermissions);
@@ -115,7 +115,13 @@ describe('usePermissions', () => {
         role: 'admin',
         status: 'Active',
         limits: { maxGames: 2147483647, storageQuotaMB: 2147483647 },
-        accessibleFeatures: ['wishlist', 'bulk-select', 'drag-drop', 'agent.create', 'analytics.view']
+        accessibleFeatures: [
+          'wishlist',
+          'bulk-select',
+          'drag-drop',
+          'agent.create',
+          'analytics.view',
+        ],
       };
 
       vi.mocked(permissionsApi.getUserPermissions).mockResolvedValue(mockPermissions);
@@ -138,9 +144,7 @@ describe('usePermissions', () => {
       // Suppress console.error for this test
       const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
-      vi.mocked(permissionsApi.getUserPermissions).mockRejectedValue(
-        new Error('Network error')
-      );
+      vi.mocked(permissionsApi.getUserPermissions).mockRejectedValue(new Error('Network error'));
 
       const { result } = renderHook(() => usePermissions(), { wrapper });
 
@@ -176,7 +180,7 @@ describe('usePermissions', () => {
           role: 'user',
           status: 'Active',
           limits: { maxGames: 100, storageQuotaMB: 500 },
-          accessibleFeatures: ['wishlist', 'drag-drop']
+          accessibleFeatures: ['wishlist', 'drag-drop'],
         });
       });
 
@@ -198,7 +202,7 @@ describe('usePermissions', () => {
       role: 'creator',
       status: 'Active',
       limits: { maxGames: 500, storageQuotaMB: 5000 },
-      accessibleFeatures: ['wishlist', 'bulk-select', 'drag-drop', 'agent.create']
+      accessibleFeatures: ['wishlist', 'bulk-select', 'drag-drop', 'agent.create'],
     };
 
     beforeEach(() => {
@@ -225,16 +229,16 @@ describe('usePermissions', () => {
       });
 
       // User is Pro (level 2)
-      expect(result.current.hasTier('free')).toBe(true);    // free < pro
-      expect(result.current.hasTier('normal')).toBe(true);  // normal < pro
-      expect(result.current.hasTier('pro')).toBe(true);     // pro == pro
+      expect(result.current.hasTier('free')).toBe(true); // free < pro
+      expect(result.current.hasTier('normal')).toBe(true); // normal < pro
+      expect(result.current.hasTier('pro')).toBe(true); // pro == pro
       expect(result.current.hasTier('enterprise')).toBe(false); // enterprise > pro
     });
 
     it('isAdmin() returns true for admin and superadmin roles', async () => {
       const adminPermissions: UserPermissions = {
         ...mockPermissions,
-        role: 'admin'
+        role: 'admin',
       };
 
       vi.mocked(permissionsApi.getUserPermissions).mockResolvedValue(adminPermissions);
@@ -267,7 +271,7 @@ describe('usePermissions', () => {
         role: 'user',
         status: 'Active',
         limits: { maxGames: 100, storageQuotaMB: 500 },
-        accessibleFeatures: ['wishlist']
+        accessibleFeatures: ['wishlist'],
       };
 
       vi.mocked(permissionsApi.getUserPermissions).mockResolvedValue(mockPermissions);
@@ -293,7 +297,7 @@ describe('usePermissions', () => {
         role: 'user',
         status: 'Active',
         limits: { maxGames: 500, storageQuotaMB: 5000 },
-        accessibleFeatures: ['wishlist', 'bulk-select']
+        accessibleFeatures: ['wishlist', 'bulk-select'],
       };
 
       vi.mocked(permissionsApi.getUserPermissions).mockResolvedValue(mockPermissions);
@@ -323,10 +327,12 @@ describe('usePermissions', () => {
         role: 'user',
         status: 'Active',
         limits: { maxGames: 100, storageQuotaMB: 500 },
-        accessibleFeatures: undefined as unknown as string[]
+        accessibleFeatures: undefined as unknown as string[],
       };
 
-      vi.mocked(permissionsApi.getUserPermissions).mockResolvedValue(incompletePermissions as UserPermissions);
+      vi.mocked(permissionsApi.getUserPermissions).mockResolvedValue(
+        incompletePermissions as UserPermissions
+      );
 
       const { result } = renderHook(() => usePermissions(), { wrapper });
 
@@ -344,10 +350,12 @@ describe('usePermissions', () => {
         role: null,
         status: 'Active',
         limits: { maxGames: 50, storageQuotaMB: 100 },
-        accessibleFeatures: []
+        accessibleFeatures: [],
       };
 
-      vi.mocked(permissionsApi.getUserPermissions).mockResolvedValue(nullPermissions as unknown as UserPermissions);
+      vi.mocked(permissionsApi.getUserPermissions).mockResolvedValue(
+        nullPermissions as unknown as UserPermissions
+      );
 
       const { result } = renderHook(() => usePermissions(), { wrapper });
 
@@ -379,7 +387,7 @@ describe('usePermissions', () => {
         role: 'user',
         status: 'Active',
         limits: { maxGames: 100, storageQuotaMB: 500 },
-        accessibleFeatures: ['wishlist']
+        accessibleFeatures: ['wishlist'],
       };
 
       vi.mocked(permissionsApi.getUserPermissions).mockResolvedValue(mockPermissions);
@@ -396,9 +404,7 @@ describe('usePermissions', () => {
     it('sets loading=false after error', async () => {
       const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
-      vi.mocked(permissionsApi.getUserPermissions).mockRejectedValue(
-        new Error('API error')
-      );
+      vi.mocked(permissionsApi.getUserPermissions).mockRejectedValue(new Error('API error'));
 
       const { result } = renderHook(() => usePermissions(), { wrapper });
 
@@ -419,7 +425,7 @@ describe('usePermissions', () => {
       role: 'user',
       status: 'Active',
       limits: { maxGames: 500, storageQuotaMB: 5000 },
-      accessibleFeatures: []
+      accessibleFeatures: [],
     };
 
     beforeEach(() => {
@@ -434,10 +440,10 @@ describe('usePermissions', () => {
       });
 
       // Pro user (level 2)
-      expect(result.current.hasTier('free')).toBe(true);       // 0 < 2 ✓
-      expect(result.current.hasTier('normal')).toBe(true);     // 1 < 2 ✓
-      expect(result.current.hasTier('premium')).toBe(true);    // 2 == 2 ✓
-      expect(result.current.hasTier('pro')).toBe(true);        // 2 == 2 ✓
+      expect(result.current.hasTier('free')).toBe(true); // 0 < 2 ✓
+      expect(result.current.hasTier('normal')).toBe(true); // 1 < 2 ✓
+      expect(result.current.hasTier('premium')).toBe(true); // 2 == 2 ✓
+      expect(result.current.hasTier('pro')).toBe(true); // 2 == 2 ✓
       expect(result.current.hasTier('enterprise')).toBe(false); // 3 > 2 ✗
     });
   });
@@ -449,7 +455,7 @@ describe('usePermissions', () => {
         role: 'admin',
         status: 'Active',
         limits: { maxGames: 100, storageQuotaMB: 500 },
-        accessibleFeatures: []
+        accessibleFeatures: [],
       };
 
       vi.mocked(permissionsApi.getUserPermissions).mockResolvedValue(adminUser);
@@ -469,7 +475,7 @@ describe('usePermissions', () => {
         role: 'superadmin',
         status: 'Active',
         limits: { maxGames: 50, storageQuotaMB: 100 },
-        accessibleFeatures: []
+        accessibleFeatures: [],
       };
 
       vi.mocked(permissionsApi.getUserPermissions).mockResolvedValue(superAdminUser);
@@ -492,7 +498,7 @@ describe('usePermissions', () => {
           role,
           status: 'Active',
           limits: { maxGames: 500, storageQuotaMB: 5000 },
-          accessibleFeatures: []
+          accessibleFeatures: [],
         };
 
         vi.mocked(permissionsApi.getUserPermissions).mockResolvedValue(mockPermissions);
@@ -506,6 +512,90 @@ describe('usePermissions', () => {
         expect(result.current.isAdmin()).toBe(false);
       }
     });
+
+    it('isSuperAdmin() returns true only for superadmin role', async () => {
+      const superAdminUser: UserPermissions = {
+        tier: 'free',
+        role: 'superadmin',
+        status: 'Active',
+        limits: { maxGames: 50, storageQuotaMB: 100 },
+        accessibleFeatures: [],
+      };
+
+      vi.mocked(permissionsApi.getUserPermissions).mockResolvedValue(superAdminUser);
+
+      const { result } = renderHook(() => usePermissions(), { wrapper });
+
+      await waitFor(() => {
+        expect(result.current.loading).toBe(false);
+      });
+
+      expect(result.current.isSuperAdmin()).toBe(true);
+      expect(result.current.isAdmin()).toBe(true); // superadmin is also admin
+    });
+
+    it('isSuperAdmin() returns false for admin role', async () => {
+      const adminUser: UserPermissions = {
+        tier: 'normal',
+        role: 'admin',
+        status: 'Active',
+        limits: { maxGames: 100, storageQuotaMB: 500 },
+        accessibleFeatures: [],
+      };
+
+      vi.mocked(permissionsApi.getUserPermissions).mockResolvedValue(adminUser);
+
+      const { result } = renderHook(() => usePermissions(), { wrapper });
+
+      await waitFor(() => {
+        expect(result.current.loading).toBe(false);
+      });
+
+      expect(result.current.isSuperAdmin()).toBe(false);
+      expect(result.current.isAdmin()).toBe(true);
+    });
+
+    it('hasRole() checks minimum role level', async () => {
+      const creatorUser: UserPermissions = {
+        tier: 'pro',
+        role: 'creator',
+        status: 'Active',
+        limits: { maxGames: 500, storageQuotaMB: 5000 },
+        accessibleFeatures: [],
+      };
+
+      vi.mocked(permissionsApi.getUserPermissions).mockResolvedValue(creatorUser);
+
+      const { result } = renderHook(() => usePermissions(), { wrapper });
+
+      await waitFor(() => {
+        expect(result.current.loading).toBe(false);
+      });
+
+      // Creator (level 1) has user access but not editor
+      expect(result.current.hasRole('user')).toBe(true);
+      expect(result.current.hasRole('creator')).toBe(true);
+      expect(result.current.hasRole('editor')).toBe(false);
+      expect(result.current.hasRole('admin')).toBe(false);
+      expect(result.current.hasRole('superadmin')).toBe(false);
+    });
+
+    it('hasRole() returns false for all roles on error defaults', async () => {
+      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+      vi.mocked(permissionsApi.getUserPermissions).mockRejectedValue(new Error('Network error'));
+
+      const { result } = renderHook(() => usePermissions(), { wrapper });
+
+      await waitFor(() => {
+        expect(result.current.loading).toBe(false);
+      });
+
+      expect(result.current.hasRole('user')).toBe(false);
+      expect(result.current.isSuperAdmin()).toBe(false);
+
+      consoleSpy.mockRestore();
+    });
   });
 
   describe('Feature Access Logic', () => {
@@ -515,7 +605,7 @@ describe('usePermissions', () => {
         role: 'user',
         status: 'Active',
         limits: { maxGames: 500, storageQuotaMB: 5000 },
-        accessibleFeatures: ['wishlist', 'bulk-select']
+        accessibleFeatures: ['wishlist', 'bulk-select'],
       };
 
       vi.mocked(permissionsApi.getUserPermissions).mockResolvedValue(mockPermissions);
@@ -537,7 +627,7 @@ describe('usePermissions', () => {
         role: 'user',
         status: 'Active',
         limits: { maxGames: 50, storageQuotaMB: 100 },
-        accessibleFeatures: []
+        accessibleFeatures: [],
       };
 
       vi.mocked(permissionsApi.getUserPermissions).mockResolvedValue(mockPermissions);
@@ -560,7 +650,7 @@ describe('usePermissions', () => {
         role: 'user',
         status: 'Active',
         limits: { maxGames: 100, storageQuotaMB: 500 },
-        accessibleFeatures: ['wishlist']
+        accessibleFeatures: ['wishlist'],
       };
 
       vi.mocked(permissionsApi.getUserPermissions).mockResolvedValue(mockPermissions);
@@ -575,9 +665,9 @@ describe('usePermissions', () => {
       const cache = queryClient.getQueryCache();
       const queries = cache.getAll();
 
-      expect(queries.some(q =>
-        JSON.stringify(q.queryKey) === JSON.stringify(['permissions', 'me'])
-      )).toBe(true);
+      expect(
+        queries.some(q => JSON.stringify(q.queryKey) === JSON.stringify(['permissions', 'me']))
+      ).toBe(true);
     });
 
     it('invalidates cache when query client is invalidated', async () => {
@@ -586,7 +676,7 @@ describe('usePermissions', () => {
         role: 'user',
         status: 'Active',
         limits: { maxGames: 100, storageQuotaMB: 500 },
-        accessibleFeatures: ['wishlist']
+        accessibleFeatures: ['wishlist'],
       };
 
       vi.mocked(permissionsApi.getUserPermissions).mockResolvedValue(mockPermissions);

@@ -7,14 +7,21 @@ import { useQuery } from '@tanstack/react-query';
 import { getUserPermissions } from '@/lib/api/permissions';
 import { logger } from '@/lib/logger';
 import type { UserTier, UserRole } from '@/types/permissions';
-import { hasMinimumTier, isAdmin } from '@/types/permissions';
+import {
+  hasMinimumTier,
+  isAdmin,
+  hasMinimumRole,
+  isSuperAdmin as isSuperAdminFn,
+} from '@/types/permissions';
 
 interface PermissionContextValue {
   tier: UserTier;
   role: UserRole;
   canAccess: (feature: string) => boolean;
   hasTier: (tier: UserTier) => boolean;
+  hasRole: (role: UserRole) => boolean;
   isAdmin: () => boolean;
+  isSuperAdmin: () => boolean;
   loading: boolean;
 }
 
@@ -38,7 +45,9 @@ export function PermissionProvider({ children }: { children: ReactNode }) {
       role: 'user',
       canAccess: () => false, // Deny all features on error (safe default)
       hasTier: () => false,
+      hasRole: () => false,
       isAdmin: () => false,
+      isSuperAdmin: () => false,
       loading: false,
     };
 
@@ -50,7 +59,9 @@ export function PermissionProvider({ children }: { children: ReactNode }) {
     role: data?.role ?? 'user',
     canAccess: feature => data?.accessibleFeatures?.includes(feature) ?? false,
     hasTier: tier => hasMinimumTier(data?.tier ?? 'free', tier),
+    hasRole: role => hasMinimumRole(data?.role ?? 'user', role),
     isAdmin: () => isAdmin(data?.role ?? 'user'),
+    isSuperAdmin: () => isSuperAdminFn(data?.role ?? 'user'),
     loading: isLoading,
   };
 

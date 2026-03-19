@@ -142,9 +142,9 @@ internal static class AdminUserTierEndpoints
             .WithSummary("Change a single user's role")
             .WithDescription(@"Change a user's role. Automatically audited via [AuditableAction].
 
-**Authorization**: Admin session required
+**Authorization**: SuperAdmin session required
 
-**Valid Roles**: Admin, Editor, User
+**Valid Roles**: Admin, Editor, Creator, User
 
 **Optional**: Reason field (max 500 chars) for audit trail
 
@@ -286,7 +286,7 @@ internal static class AdminUserTierEndpoints
         ILogger<Program> logger,
         CancellationToken ct)
     {
-        var (authorized, session, error) = context.RequireAdminSession();
+        var (authorized, session, error) = context.RequireSuperAdminSession();
         if (!authorized) return error!;
 
         logger.LogInformation("Admin {AdminId} changing role for user {UserId} to {NewRole}, reason: {Reason}",

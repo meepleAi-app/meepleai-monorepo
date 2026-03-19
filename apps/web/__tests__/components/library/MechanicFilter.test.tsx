@@ -25,17 +25,13 @@ describe('MechanicFilter', () => {
   });
 
   it('highlights selected mechanic', () => {
-    render(
-      <MechanicFilter mechanics={mechanics} selected={['area-control']} onSelect={vi.fn()} />
-    );
+    render(<MechanicFilter mechanics={mechanics} selected={['area-control']} onSelect={vi.fn()} />);
     const chip = screen.getByText(/area control/i).closest('button');
     expect(chip).toHaveClass('bg-[#f0a030]');
   });
 
   it('does not highlight unselected mechanics', () => {
-    render(
-      <MechanicFilter mechanics={mechanics} selected={['area-control']} onSelect={vi.fn()} />
-    );
+    render(<MechanicFilter mechanics={mechanics} selected={['area-control']} onSelect={vi.fn()} />);
     const chip = screen.getByText(/engine building/i).closest('button');
     expect(chip).toHaveClass('bg-[#21262d]');
     expect(chip).not.toHaveClass('bg-[#f0a030]');
@@ -74,13 +70,7 @@ describe('MechanicFilter', () => {
   });
 
   it('falls back to raw mechanic key when label not found', () => {
-    render(
-      <MechanicFilter
-        mechanics={['unknown-mechanic']}
-        selected={[]}
-        onSelect={vi.fn()}
-      />
-    );
+    render(<MechanicFilter mechanics={['unknown-mechanic']} selected={[]} onSelect={vi.fn()} />);
     expect(screen.getByText('unknown-mechanic')).toBeInTheDocument();
   });
 

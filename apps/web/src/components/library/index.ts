@@ -53,3 +53,6 @@ export {
 // Shelf Components — vetrina layout for library browse pages
 export { ShelfCard, type ShelfCardProps, type ManaPip, type ManaPipType } from './ShelfCard';
 export { ShelfRow, type ShelfRowProps } from './ShelfRow';
+
+// Mechanic Filter Chip Row
+export { MechanicFilter, type MechanicFilterProps } from './MechanicFilter';

@@ -11,7 +11,7 @@ namespace Api.BoundedContexts.Administration.Application.Handlers;
 
 internal class ChangeUserRoleCommandHandler : ICommandHandler<ChangeUserRoleCommand, UserDto>
 {
-    private static readonly string[] AllowedRoles = { "Admin", "Editor", "User" };
+    private static readonly string[] AllowedRoles = { "Admin", "Editor", "Creator", "User" };
 
     private readonly IUserRepository _userRepository;
     private readonly IUnitOfWork _unitOfWork;

@@ -2,7 +2,7 @@
  * Library Game Detail Page
  *
  * Displays game detail with hero card + tabbed content.
- * Draws a card into the hand via UnifiedShell's useCardHand store.
+ * Draws a card into the hand via the useCardHand store.
  */
 
 'use client';

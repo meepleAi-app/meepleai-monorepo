@@ -1,8 +1,8 @@
 /**
  * PublicLayout Component - Issue #2230
- * Simplified: removed old Sidebar/ActionBar refs (replaced by UnifiedShell)
+ * Simplified: removed old Sidebar/ActionBar refs (replaced by UserShell)
  *
- * Layout wrapper for public pages. Authenticated users see UnifiedShell
+ * Layout wrapper for public pages. Authenticated users see UserShell
  * via the (authenticated) route group; this layout is for unauthenticated
  * pages only (home, about, pricing, etc.).
  */

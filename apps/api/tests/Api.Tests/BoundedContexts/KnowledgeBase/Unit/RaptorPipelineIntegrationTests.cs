@@ -32,6 +32,7 @@ public class RaptorPipelineIntegrationTests : IDisposable
     private readonly Mock<IEmbeddingService> _embeddingServiceMock = new();
     private readonly Mock<IBlobStorageService> _blobStorageServiceMock = new();
     private readonly Mock<IRaptorIndexer> _raptorIndexerMock = new();
+    private readonly Mock<IFeatureFlagService> _featureFlagServiceMock = new();
     private readonly TimeProvider _timeProvider = TimeProvider.System;
     private readonly ILogger<PdfProcessingPipelineService> _logger =
         NullLogger<PdfProcessingPipelineService>.Instance;
@@ -48,6 +49,11 @@ public class RaptorPipelineIntegrationTests : IDisposable
             options,
             new Mock<IMediator>().Object,
             new Mock<IDomainEventCollector>().Object);
+
+        // Default: raptor-retrieval feature flag enabled so RAPTOR indexing runs
+        _featureFlagServiceMock
+            .Setup(f => f.IsEnabledAsync("rag.enhancement.raptor-retrieval", null))
+            .ReturnsAsync(true);
     }
 
     public void Dispose()
@@ -240,7 +246,10 @@ public class RaptorPipelineIntegrationTests : IDisposable
             _blobStorageServiceMock.Object,
             _timeProvider,
             _logger,
-            withRaptor ? _raptorIndexerMock.Object : null);
+            raptorIndexer: withRaptor ? _raptorIndexerMock.Object : null,
+            entityExtractor: null,
+            vectorStore: null,
+            featureFlagService: _featureFlagServiceMock.Object);
     }
 
     private PdfDocumentEntity SeedPdfDocument(string state)

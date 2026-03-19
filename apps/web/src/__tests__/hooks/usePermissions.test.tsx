@@ -528,6 +528,90 @@ describe('usePermissions', () => {
         expect(result.current.isAdmin()).toBe(false);
       }
     });
+
+    it('isSuperAdmin() returns true only for superadmin role', async () => {
+      const superAdminUser: UserPermissions = {
+        tier: 'free',
+        role: 'superadmin',
+        status: 'Active',
+        limits: { maxGames: 50, storageQuotaMB: 100 },
+        accessibleFeatures: [],
+      };
+
+      vi.mocked(permissionsApi.getUserPermissions).mockResolvedValue(superAdminUser);
+
+      const { result } = renderHook(() => usePermissions(), { wrapper });
+
+      await waitFor(() => {
+        expect(result.current.loading).toBe(false);
+      });
+
+      expect(result.current.isSuperAdmin()).toBe(true);
+      expect(result.current.isAdmin()).toBe(true); // superadmin is also admin
+    });
+
+    it('isSuperAdmin() returns false for admin role', async () => {
+      const adminUser: UserPermissions = {
+        tier: 'normal',
+        role: 'admin',
+        status: 'Active',
+        limits: { maxGames: 100, storageQuotaMB: 500 },
+        accessibleFeatures: [],
+      };
+
+      vi.mocked(permissionsApi.getUserPermissions).mockResolvedValue(adminUser);
+
+      const { result } = renderHook(() => usePermissions(), { wrapper });
+
+      await waitFor(() => {
+        expect(result.current.loading).toBe(false);
+      });
+
+      expect(result.current.isSuperAdmin()).toBe(false);
+      expect(result.current.isAdmin()).toBe(true);
+    });
+
+    it('hasRole() checks minimum role level', async () => {
+      const creatorUser: UserPermissions = {
+        tier: 'pro',
+        role: 'creator',
+        status: 'Active',
+        limits: { maxGames: 500, storageQuotaMB: 5000 },
+        accessibleFeatures: [],
+      };
+
+      vi.mocked(permissionsApi.getUserPermissions).mockResolvedValue(creatorUser);
+
+      const { result } = renderHook(() => usePermissions(), { wrapper });
+
+      await waitFor(() => {
+        expect(result.current.loading).toBe(false);
+      });
+
+      // Creator (level 1) has user access but not editor
+      expect(result.current.hasRole('user')).toBe(true);
+      expect(result.current.hasRole('creator')).toBe(true);
+      expect(result.current.hasRole('editor')).toBe(false);
+      expect(result.current.hasRole('admin')).toBe(false);
+      expect(result.current.hasRole('superadmin')).toBe(false);
+    });
+
+    it('hasRole() returns false for all roles on error defaults', async () => {
+      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+      vi.mocked(permissionsApi.getUserPermissions).mockRejectedValue(new Error('Network error'));
+
+      const { result } = renderHook(() => usePermissions(), { wrapper });
+
+      await waitFor(() => {
+        expect(result.current.loading).toBe(false);
+      });
+
+      expect(result.current.hasRole('user')).toBe(false);
+      expect(result.current.isSuperAdmin()).toBe(false);
+
+      consoleSpy.mockRestore();
+    });
   });
 
   describe('Feature Access Logic', () => {

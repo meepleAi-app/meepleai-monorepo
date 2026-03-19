@@ -8,6 +8,7 @@ using Api.BoundedContexts.KnowledgeBase.Domain.Services.Enhancements;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services.Reranking;
 using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 using Api.Models;
+using Api.Observability;
 using Api.Services;
 using Api.SharedKernel.Domain.ValueObjects;
 using Microsoft.Extensions.Logging;
@@ -31,6 +32,7 @@ internal sealed class RagPromptAssemblyService : IRagPromptAssemblyService
     private readonly IQueryComplexityClassifier _complexityClassifier;
     private readonly IRetrievalRelevanceEvaluator _relevanceEvaluator;
     private readonly IQueryExpander _queryExpander;
+    private readonly IGraphRetrievalService _graphRetrievalService;
     private readonly ILogger<RagPromptAssemblyService> _logger;
 
     // RAG search parameters
@@ -76,6 +78,7 @@ internal sealed class RagPromptAssemblyService : IRagPromptAssemblyService
         IQueryComplexityClassifier complexityClassifier,
         IRetrievalRelevanceEvaluator relevanceEvaluator,
         IQueryExpander queryExpander,
+        IGraphRetrievalService graphRetrievalService,
         ILogger<RagPromptAssemblyService> logger)
     {
         _embeddingService = embeddingService ?? throw new ArgumentNullException(nameof(embeddingService));
@@ -87,6 +90,7 @@ internal sealed class RagPromptAssemblyService : IRagPromptAssemblyService
         _complexityClassifier = complexityClassifier ?? throw new ArgumentNullException(nameof(complexityClassifier));
         _relevanceEvaluator = relevanceEvaluator ?? throw new ArgumentNullException(nameof(relevanceEvaluator));
         _queryExpander = queryExpander ?? throw new ArgumentNullException(nameof(queryExpander));
+        _graphRetrievalService = graphRetrievalService ?? throw new ArgumentNullException(nameof(graphRetrievalService));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -168,11 +172,21 @@ internal sealed class RagPromptAssemblyService : IRagPromptAssemblyService
                     .GetActiveEnhancementsAsync(userTier, ct).ConfigureAwait(false);
             }
 
+            foreach (var flag in activeEnhancements.GetIndividualFlags())
+            {
+                MeepleAiMetrics.RagEnhancementActivations.Add(1,
+                    new KeyValuePair<string, object?>("enhancement", flag.ToString()));
+            }
+
             if (activeEnhancements.HasFlag(RagEnhancement.AdaptiveRouting))
             {
                 var complexity = await _complexityClassifier.ClassifyAsync(userQuestion, ct).ConfigureAwait(false);
                 _logger.LogInformation("Adaptive RAG: {Level} (confidence: {Confidence:F2})",
                     complexity.Level, complexity.Confidence);
+
+                MeepleAiMetrics.RagAdaptiveRoutingDecisions.Add(1,
+                    new KeyValuePair<string, object?>("level", complexity.Level.ToString()),
+                    new KeyValuePair<string, object?>("skipped_retrieval", (!complexity.RequiresRetrieval).ToString()));
 
                 debugCollector?.Add(StreamingEventType.DebugAdaptiveRouting,
                     new DebugAdaptiveRoutingData(
@@ -195,6 +209,7 @@ internal sealed class RagPromptAssemblyService : IRagPromptAssemblyService
                 var fusionStopwatch = System.Diagnostics.Stopwatch.StartNew();
                 queries = await _queryExpander.ExpandAsync(userQuestion, ct).ConfigureAwait(false);
                 fusionStopwatch.Stop();
+                MeepleAiMetrics.RagFusionQueryCount.Record(queries.Count);
                 _logger.LogInformation("RAG-Fusion: expanded to {Count} query variants", queries.Count);
 
                 if (queries.Count > 1)
@@ -240,6 +255,12 @@ internal sealed class RagPromptAssemblyService : IRagPromptAssemblyService
                 .OrderByDescending(r => r.Score)
                 .ToList();
 
+            MeepleAiMetrics.RagRetrievalChunkCount.Record(filteredChunks.Count);
+            if (filteredChunks.Count > 0)
+            {
+                MeepleAiMetrics.RagRetrievalAvgScore.Record(filteredChunks.Average(c => (double)c.Score));
+            }
+
             if (filteredChunks.Count == 0)
             {
                 _logger.LogInformation("No chunks above minScore {MinScore} for game {GameId}", DefaultMinScore, gameId);
@@ -265,6 +286,9 @@ internal sealed class RagPromptAssemblyService : IRagPromptAssemblyService
 
                 var evaluation = await _relevanceEvaluator
                     .EvaluateAsync(userQuestion, scoredChunks, ct).ConfigureAwait(false);
+
+                MeepleAiMetrics.RagCragVerdicts.Add(1,
+                    new KeyValuePair<string, object?>("verdict", evaluation.Verdict.ToString()));
 
                 if (evaluation.ShouldRequery)
                 {
@@ -311,6 +335,35 @@ internal sealed class RagPromptAssemblyService : IRagPromptAssemblyService
                         FinalChunkCount: filteredChunks.Count));
             }
 
+            // === RAPTOR: Multi-granularity retrieval ===
+            if (activeEnhancements.HasFlag(RagEnhancement.RaptorRetrieval))
+            {
+                var raptorChunks = await _textSearch.SearchRaptorSummariesAsync(
+                    gameId, userQuestion, topK: 3, ct).ConfigureAwait(false);
+
+                if (raptorChunks.Count > 0)
+                {
+                    foreach (var rc in raptorChunks)
+                    {
+                        filteredChunks.Add(new SearchResultItem
+                        {
+                            Score = rc.Rank * 1.1f, // Slight boost for RAPTOR summaries
+                            Text = rc.Content,
+                            PdfId = rc.PdfDocumentId.ToString(),
+                            Page = rc.PageNumber ?? 0,
+                            ChunkIndex = rc.ChunkIndex
+                        });
+                    }
+
+                    filteredChunks = filteredChunks
+                        .OrderByDescending(c => c.Score)
+                        .Take(RerankedTopK + 2) // Allow slightly more chunks when RAPTOR active
+                        .ToList();
+
+                    _logger.LogInformation("RAPTOR: added {Count} summary chunks to context", raptorChunks.Count);
+                }
+            }
+
             // Step 4: Sentence window expansion — include adjacent chunks for more context
             filteredChunks = await TrySentenceWindowExpansionAsync(filteredChunks, ct).ConfigureAwait(false);
 
@@ -329,7 +382,23 @@ internal sealed class RagPromptAssemblyService : IRagPromptAssemblyService
                     SnippetPreview: chunk.Text.Length > 120 ? string.Concat(chunk.Text.AsSpan(0, 117), "...") : chunk.Text));
             }
 
-            return (sb.ToString().TrimEnd(), citations);
+            var ragContext = sb.ToString().TrimEnd();
+
+            // === Graph RAG: Inject entity context ===
+            if (activeEnhancements.HasFlag(RagEnhancement.GraphTraversal))
+            {
+                var graphContext = await _graphRetrievalService
+                    .GetEntityContextAsync(gameId, maxRelations: 15, ct).ConfigureAwait(false);
+
+                if (!string.IsNullOrEmpty(graphContext))
+                {
+                    ragContext = string.Concat(ragContext, "\n", graphContext);
+                    _logger.LogInformation("Graph RAG: injected {Length} chars of entity context for game {GameId}",
+                        graphContext.Length, gameId);
+                }
+            }
+
+            return (ragContext, citations);
         }
         catch (Exception ex)
         {

@@ -38,6 +38,7 @@ import { api } from '@/lib/api';
 import type { RuleSpec } from '@/lib/api/schemas';
 import { createErrorContext } from '@/lib/errors';
 import { logger } from '@/lib/logger';
+import { sanitizeHtml } from '@/lib/security/sanitize';
 import { cn } from '@/lib/utils';
 import { getErrorMessage } from '@/lib/utils/errorHandler';
 import {
@@ -113,53 +114,10 @@ export function EditorClient() {
   // Debounced content for auto-save (2 second delay)
   const debouncedContent = useDebounce(viewMode === 'rich' ? richContent : jsonContent, 2000);
 
-  // Sanitized rich content for XSS protection (SEC-715)
-  // SSR-safe: Only sanitize in browser environment to avoid "window is not defined"
+  // SEC-I3: Sanitized rich content using centralized sanitization library
   const sanitizedRichContent = useMemo(() => {
     if (!richContent) return '';
-
-    // Return unsanitized content during SSR (server-side rendering)
-    // Content will be sanitized on client-side hydration
-    if (typeof window === 'undefined') return richContent;
-
-    // Lazy-load DOMPurify only in browser
-    const DOMPurify = require('dompurify');
-
-    return DOMPurify.sanitize(richContent, {
-      ALLOWED_TAGS: [
-        'p',
-        'br',
-        'strong',
-        'em',
-        'u',
-        's',
-        'h1',
-        'h2',
-        'h3',
-        'h4',
-        'h5',
-        'h6',
-        'ul',
-        'ol',
-        'li',
-        'blockquote',
-        'code',
-        'pre',
-        'a',
-        'table',
-        'thead',
-        'tbody',
-        'tr',
-        'th',
-        'td',
-        'span',
-        'div',
-      ],
-      ALLOWED_ATTR: ['href', 'class', 'style', 'target', 'rel'],
-      ALLOW_DATA_ATTR: false,
-      ALLOW_UNKNOWN_PROTOCOLS: false,
-      SAFE_FOR_TEMPLATES: true,
-    });
+    return sanitizeHtml(richContent);
   }, [richContent]);
 
   const initializeHistory = useCallback((content: string) => {

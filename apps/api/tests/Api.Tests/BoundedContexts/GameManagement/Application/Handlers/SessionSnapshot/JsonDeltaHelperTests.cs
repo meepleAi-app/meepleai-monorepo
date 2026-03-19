@@ -1,4 +1,4 @@
-using Api.BoundedContexts.GameManagement.Application.Handlers.SessionSnapshot;
+using Api.BoundedContexts.GameManagement.Application.Commands.SessionSnapshot;
 using Api.Tests.Constants;
 using Xunit;
 

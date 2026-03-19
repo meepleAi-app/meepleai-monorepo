@@ -1,4 +1,4 @@
-using Api.BoundedContexts.GameManagement.Application.Handlers.TurnOrder;
+using Api.BoundedContexts.GameManagement.Application.Commands.TurnOrder;
 using Api.BoundedContexts.GameManagement.Application.Queries.TurnOrder;
 using Api.BoundedContexts.GameManagement.Domain.Entities.TurnOrder;
 using Api.Middleware.Exceptions;

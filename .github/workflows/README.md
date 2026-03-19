@@ -25,6 +25,9 @@ Workflows are organized by category with consistent naming prefixes:
 ├── auto-branch-policy.yml    # Branch protection rules
 ├── auto-dependabot.yml       # Dependabot auto-merge
 ├── auto-validate.yml         # Workflow validation
+│
+├── # Reusable Workflows
+├── notify-slack.yml              # Reusable: centralized Slack notifications
 ```
 
 ## Core CI/CD
@@ -114,10 +117,28 @@ Workflows are organized by category with consistent naming prefixes:
 ### Required Secrets
 - `CODECOV_TOKEN` - Code coverage uploads
 - `LHCI_GITHUB_APP_TOKEN` - Lighthouse CI (optional, falls back to GITHUB_TOKEN)
-- `SLACK_WEBHOOK_URL` - Failure notifications (optional)
+- `SLACK_WEBHOOK_URL` - Generic Slack notifications (existing, optional)
+- `SLACK_GITNOTIFY_WEBHOOK_URL` - GitHub Actions main channel notifications (optional)
+- `SLACK_CRITICAL_WEBHOOK_URL` - Critical failure notifications for deploy/security/runner (optional)
 
 ### Environment Variables
 See individual workflow files for environment-specific configuration.
+
+## Notification Architecture
+
+All workflows use the centralized `notify-slack.yml` reusable workflow for Slack notifications.
+
+**How it works:**
+- Every workflow adds `notify-start` (runs in parallel) and `notify-end` (runs after all jobs)
+- `notify-start` sends a "Started" notification to the main channel
+- `notify-end` sends "Success", "Failed", or "Cancelled" to the main channel
+- Critical workflows (deploy, security, runner-health) also send failures to the critical channel
+
+**Channels:**
+- Main channel (`SLACK_GITNOTIFY_WEBHOOK_URL`): All events from all workflows
+- Critical channel (`SLACK_CRITICAL_WEBHOOK_URL`): Only failures from deploy, security, and runner-health workflows
+
+**Adding notifications to a new workflow:** Add `notify-start` and `notify-end` jobs following the pattern in any existing workflow.
 
 ## Self-Hosted ARM64 Runner
 
@@ -242,4 +263,4 @@ act -W .github/workflows/ci.yml --dryrun
 
 ---
 
-**Last Updated**: 2026-03-09
+**Last Updated**: 2026-03-19

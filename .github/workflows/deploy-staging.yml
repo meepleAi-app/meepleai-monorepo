@@ -41,6 +41,23 @@ env:
   ENVIRONMENT: staging
 
 jobs:
+  notify-start:
+    continue-on-error: true
+    uses: ./.github/workflows/notify-slack.yml
+    with:
+      event: started
+      workflow_name: "Deploy to Staging"
+      environment: staging
+      branch: ${{ github.head_ref || github.ref_name }}
+      actor: ${{ github.actor }}
+      commit_sha: ${{ github.sha }}
+      commit_message: ${{ github.event.head_commit.message || 'Manual trigger' }}
+      run_url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+      job_list: '["detect-changes", "pre-deploy-check", "build", "migrate-db", "snapshot-baseline", "deploy", "validate", "e2e-staging"]'
+      caller_workflow_id: ${{ github.workflow_id }}
+    secrets:
+      SLACK_GITNOTIFY_WEBHOOK_URL: ${{ secrets.SLACK_GITNOTIFY_WEBHOOK_URL }}
+
   # Detect which components changed
   detect-changes:
     name: Detect Changes
@@ -672,31 +689,21 @@ jobs:
           path: apps/web/playwright-report/
           retention-days: 7
 
-  # Notify on completion
-  notify:
-    name: Notify
-    runs-on: ${{ vars.RUNNER || 'ubuntu-latest' }}
-    needs: [build, deploy, validate, e2e-staging]
+  notify-end:
     if: always()
-    steps:
-      - name: Slack Notification
-        if: vars.SLACK_WEBHOOK_URL != ''
-        uses: 8398a7/action-slack@v3
-        with:
-          status: ${{ job.status }}
-          fields: repo,message,commit,author,action,workflow
-          webhook_url: ${{ secrets.SLACK_WEBHOOK_URL }}
-        env:
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
-
-      - name: Summary
-        run: |
-          echo "## 🚀 Staging Deployment Summary" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "| Item | Value |" >> $GITHUB_STEP_SUMMARY
-          echo "|------|-------|" >> $GITHUB_STEP_SUMMARY
-          echo "| Version | \`${{ needs.build.outputs.version }}\` |" >> $GITHUB_STEP_SUMMARY
-          echo "| API Built | ${{ needs.build.outputs.api_built }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Web Built | ${{ needs.build.outputs.web_built }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Environment | staging |" >> $GITHUB_STEP_SUMMARY
-          echo "| URL | https://meepleai.app |" >> $GITHUB_STEP_SUMMARY
+    needs: [detect-changes, pre-deploy-check, build, migrate-db, snapshot-baseline, deploy, validate, e2e-staging]
+    continue-on-error: true
+    uses: ./.github/workflows/notify-slack.yml
+    with:
+      event: ${{ contains(toJSON(needs), '"result":"failure"') && 'failed' || contains(toJSON(needs), '"result":"cancelled"') && 'cancelled' || 'completed' }}
+      workflow_name: "Deploy to Staging"
+      environment: staging
+      is_critical: true
+      branch: ${{ github.head_ref || github.ref_name }}
+      actor: ${{ github.actor }}
+      commit_sha: ${{ github.sha }}
+      commit_message: ${{ github.event.head_commit.message || 'Manual trigger' }}
+      run_url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+    secrets:
+      SLACK_GITNOTIFY_WEBHOOK_URL: ${{ secrets.SLACK_GITNOTIFY_WEBHOOK_URL }}
+      SLACK_CRITICAL_WEBHOOK_URL: ${{ secrets.SLACK_CRITICAL_WEBHOOK_URL }}

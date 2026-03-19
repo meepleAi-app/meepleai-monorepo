@@ -17,6 +17,23 @@ permissions:
   actions: read
 
 jobs:
+  notify-start:
+    continue-on-error: true
+    uses: ./.github/workflows/notify-slack.yml
+    with:
+      event: started
+      workflow_name: "Security Scan"
+      environment: security
+      branch: ${{ github.head_ref || github.ref_name }}
+      actor: ${{ github.actor }}
+      commit_sha: ${{ github.sha }}
+      commit_message: ${{ github.event.head_commit.message || 'Manual trigger' }}
+      run_url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+      job_list: '["codeql", "dependencies", "secrets"]'
+      caller_workflow_id: ${{ github.workflow_id }}
+    secrets:
+      SLACK_GITNOTIFY_WEBHOOK_URL: ${{ secrets.SLACK_GITNOTIFY_WEBHOOK_URL }}
+
   # CodeQL SAST — forced to ubuntu-latest because CodeQL CLI doesn't support linux/arm64
   codeql:
     name: CodeQL Analysis
@@ -145,3 +162,22 @@ jobs:
           category: semgrep
         if: always()
         continue-on-error: true  # Code scanning might not be enabled in repo settings
+
+  notify-end:
+    if: always()
+    needs: [codeql, dependencies, secrets]
+    continue-on-error: true
+    uses: ./.github/workflows/notify-slack.yml
+    with:
+      event: ${{ contains(toJSON(needs), '"result":"failure"') && 'failed' || contains(toJSON(needs), '"result":"cancelled"') && 'cancelled' || 'completed' }}
+      workflow_name: "Security Scan"
+      environment: security
+      is_critical: true
+      branch: ${{ github.head_ref || github.ref_name }}
+      actor: ${{ github.actor }}
+      commit_sha: ${{ github.sha }}
+      commit_message: ${{ github.event.head_commit.message || 'Manual trigger' }}
+      run_url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+    secrets:
+      SLACK_GITNOTIFY_WEBHOOK_URL: ${{ secrets.SLACK_GITNOTIFY_WEBHOOK_URL }}
+      SLACK_CRITICAL_WEBHOOK_URL: ${{ secrets.SLACK_CRITICAL_WEBHOOK_URL }}

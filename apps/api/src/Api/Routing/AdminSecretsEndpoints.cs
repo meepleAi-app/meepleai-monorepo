@@ -54,7 +54,7 @@ internal static class AdminSecretsEndpoints
 
     private static IResult HandleGetSecrets(HttpContext context, IConfiguration config, ILogger<Program> logger)
     {
-        var (authorized, session, error) = context.RequireSuperAdminSession();
+        var (authorized, session, error) = context.RequireAdminSession();
         if (!authorized) return error!;
 
         var reveal = context.Request.Query.ContainsKey("reveal");
@@ -103,7 +103,7 @@ internal static class AdminSecretsEndpoints
     private static async Task<IResult> HandleUpdateSecrets(
         HttpContext context, IConfiguration config, ILogger<Program> logger, CancellationToken ct)
     {
-        var (authorized, session, error) = context.RequireSuperAdminSession();
+        var (authorized, session, error) = context.RequireAdminSession();
         if (!authorized) return error!;
 
         var secretsDir = GetSecretsDirectory(config);
@@ -165,7 +165,7 @@ internal static class AdminSecretsEndpoints
     private static IResult HandleRestart(
         HttpContext context, IHostApplicationLifetime lifetime, ILogger<Program> logger)
     {
-        var (authorized, session, error) = context.RequireSuperAdminSession();
+        var (authorized, session, error) = context.RequireAdminSession();
         if (!authorized) return error!;
 
         logger.LogWarning("Admin {UserId} initiated API restart via secrets management", session!.User!.Id);
@@ -185,6 +185,7 @@ internal static class AdminSecretsEndpoints
 
     private static string? GetSecretsDirectory(IConfiguration config)
     {
+        // Use dedicated env var for secrets management (avoids conflict with SecretLoader's SECRETS_DIRECTORY)
         var dir = config["SECRETS_MANAGEMENT_DIR"]
             ?? Environment.GetEnvironmentVariable("SECRETS_MANAGEMENT_DIR")
             ?? config["SECRETS_DIRECTORY"]
@@ -192,7 +193,7 @@ internal static class AdminSecretsEndpoints
         if (string.IsNullOrEmpty(dir)) return null;
 
         if (!Path.IsPathRooted(dir))
-            dir = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, dir));
+            dir = Path.GetFullPath(Path.Combine(Directory.GetCurrentDirectory(), dir));
 
         return Directory.Exists(dir) ? dir : null;
     }

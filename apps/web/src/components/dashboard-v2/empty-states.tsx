@@ -6,7 +6,7 @@
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 
-type EmptyStateVariant = 'no-games' | 'no-sessions' | 'no-upcoming';
+type EmptyStateVariant = 'no-games' | 'no-sessions' | 'no-upcoming' | 'no-agents';
 
 interface EmptyStateProps {
   variant: EmptyStateVariant;
@@ -16,13 +16,13 @@ interface EmptyStateProps {
 const emptyStateConfig = {
   'no-games': {
     icon: '📚',
-    title: 'Nessun gioco nella collezione',
+    title: 'Il tavolo è vuoto — esplora il catalogo',
     description: 'Aggiungi i tuoi primi giochi per iniziare a tracciare le partite!',
     actionLabel: '+ Aggiungi Gioco',
   },
   'no-sessions': {
     icon: '🎲',
-    title: 'Nessuna partita recente',
+    title: 'Nessuna partita in corso — inizia a giocare',
     description: 'Registra la tua prima sessione di gioco!',
     actionLabel: '+ Nuova Partita',
   },
@@ -31,6 +31,12 @@ const emptyStateConfig = {
     title: 'Nessuna partita programmata',
     description: 'Pianifica la tua prossima sessione di gioco!',
     actionLabel: '+ Pianifica',
+  },
+  'no-agents': {
+    icon: '🤖',
+    title: 'Configura il tuo primo agente AI',
+    description: 'Crea un agente AI per ricevere suggerimenti sui tuoi giochi da tavolo.',
+    actionLabel: '+ Crea Agente',
   },
 };
 

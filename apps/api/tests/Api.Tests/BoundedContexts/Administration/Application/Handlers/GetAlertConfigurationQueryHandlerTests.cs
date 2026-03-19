@@ -1,4 +1,4 @@
-using Api.BoundedContexts.Administration.Application.Handlers.AlertConfiguration;
+using Api.BoundedContexts.Administration.Application.Commands.AlertConfiguration;
 using Api.BoundedContexts.Administration.Application.Queries.AlertConfiguration;
 using Api.BoundedContexts.Administration.Domain.Aggregates.AlertConfigurations;
 using Api.BoundedContexts.Administration.Domain.Repositories;

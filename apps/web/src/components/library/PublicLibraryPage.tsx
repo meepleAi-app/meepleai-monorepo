@@ -14,7 +14,7 @@
 
 'use client';
 
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useRef } from 'react';
 
 import { Search, Loader2 } from 'lucide-react';
 
@@ -95,21 +95,24 @@ export function PublicLibraryPage({ className }: PublicLibraryPageProps) {
     true
   );
 
-  // Previous pages accumulated (for "load more")
-  const [allItems, setAllItems] = useState<SharedGame[]>([]);
+  // Accumulate items across pages using a ref (avoids stale closure issues)
+  const accumulatedRef = useRef<SharedGame[]>([]);
 
-  // Accumulate items when page changes
+  // Merge incoming page into the accumulated list (deduped by id)
   const currentItems = useMemo(() => {
     const incoming = catalogData?.items ?? [];
-    if (page === 1) return incoming;
-    // Merge avoiding duplicates
-    const existingIds = new Set(allItems.map(g => g.id));
-    const merged = [...allItems, ...incoming.filter(g => !existingIds.has(g.id))];
+    if (page === 1) {
+      accumulatedRef.current = incoming;
+      return incoming;
+    }
+    const existingIds = new Set(accumulatedRef.current.map(g => g.id));
+    const merged = [...accumulatedRef.current, ...incoming.filter(g => !existingIds.has(g.id))];
+    accumulatedRef.current = merged;
     return merged;
-  }, [catalogData, page, allItems]);
+  }, [catalogData, page]);
 
   // User's library — for "inLibrary" badge
-  const { data: libraryData } = useLibrary({ pageSize: 500 });
+  const { data: libraryData } = useLibrary({ pageSize: 100 });
   const userGameIds = useMemo(() => {
     const ids = new Set<string>();
     for (const entry of libraryData?.items ?? []) {
@@ -133,22 +136,21 @@ export function PublicLibraryPage({ className }: PublicLibraryPageProps) {
 
   const handleSearchChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     setSearch(e.target.value);
+    accumulatedRef.current = [];
     setPage(1);
-    setAllItems([]);
   }, []);
 
   const handleMechanicToggle = useCallback((mechanic: string) => {
     setSelectedMechanics(prev =>
       prev.includes(mechanic) ? prev.filter(m => m !== mechanic) : [...prev, mechanic]
     );
+    accumulatedRef.current = [];
     setPage(1);
-    setAllItems([]);
   }, []);
 
   const handleLoadMore = useCallback(() => {
-    setAllItems(currentItems as typeof allItems);
     setPage(p => p + 1);
-  }, [currentItems]);
+  }, []);
 
   // ------------------------------------------------------------------
   // Derived state

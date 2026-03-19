@@ -2,26 +2,17 @@ using Api.BoundedContexts.Authentication.Application.Commands.Invitation;
 using Api.BoundedContexts.Authentication.Application.Commands.RevokeInvitation;
 using Api.BoundedContexts.Authentication.Application.DTOs;
 using Api.BoundedContexts.Authentication.Application.Queries.Invitation;
-using Api.BoundedContexts.SharedGameCatalog.Application.DTOs;
 using Api.Extensions;
 using Api.Infrastructure.Security;
+using Api.Routing;
 using MediatR;
 
-namespace Api.Routing;
+#pragma warning disable MA0048 // File name must match type name - Endpoints and DTOs in same file
+namespace Api.Routing.Admin;
 
-/// <summary>
-/// Admin invitation management endpoints (Issue #124).
-/// Covers sending, listing, resending, and revoking invitations.
-/// </summary>
-internal static class AdminInvitationEndpoints
+internal static class AdminUserInvitationEndpoints
 {
-    public static void Map(RouteGroupBuilder group)
-    {
-        MapInvitationEndpoints(group);
-    }
-
-    // ISSUE-124: Invitation system endpoints
-    private static void MapInvitationEndpoints(RouteGroupBuilder group)
+    public static void MapInvitationEndpoints(RouteGroupBuilder group)
     {
         group.MapPost("/admin/users/invite", HandleSendInvitation)
             .WithName("SendInvitation")

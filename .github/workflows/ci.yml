@@ -48,17 +48,11 @@ jobs:
               - 'infra/**'
               - 'docker-compose*.yml'
 
-      - name: Select runner (self-hosted for staging/prod, GitHub-hosted for dev)
+      - name: Select runner (GitHub-hosted for all CI jobs)
         id: select-runner
         run: |
-          TARGET="${{ github.base_ref || github.ref_name }}"
-          if [[ "$TARGET" == "main-staging" || "$TARGET" == "main" ]]; then
-            echo "runner=${{ vars.RUNNER || 'ubuntu-latest' }}" >> $GITHUB_OUTPUT
-            echo "🏃 Using self-hosted runner for $TARGET"
-          else
-            echo "runner=ubuntu-latest" >> $GITHUB_OUTPUT
-            echo "🏃 Using GitHub-hosted runner for $TARGET"
-          fi
+          echo "runner=ubuntu-latest" >> $GITHUB_OUTPUT
+          echo "🏃 Using GitHub-hosted runner"
 
   # Frontend: Lint, Typecheck, Test (Unit + E2E subset)
   frontend:

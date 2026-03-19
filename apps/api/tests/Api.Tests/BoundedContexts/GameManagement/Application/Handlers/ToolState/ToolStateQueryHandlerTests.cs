@@ -1,4 +1,4 @@
-using Api.BoundedContexts.GameManagement.Application.Handlers.ToolState;
+using Api.BoundedContexts.GameManagement.Application.Commands.ToolState;
 using Api.BoundedContexts.GameManagement.Application.Queries.ToolState;
 using Api.BoundedContexts.GameManagement.Domain.Entities.ToolState;
 using Api.Tests.Constants;

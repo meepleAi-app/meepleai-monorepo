@@ -3,7 +3,7 @@ using Api.BoundedContexts.KnowledgeBase.Application.Commands;
 using Api.BoundedContexts.KnowledgeBase.Application.ContextEngineering.Commands;
 using Api.BoundedContexts.KnowledgeBase.Application.ContextEngineering.Queries;
 using Api.BoundedContexts.KnowledgeBase.Application.DTOs;
-using Api.BoundedContexts.KnowledgeBase.Application.Handlers;
+
 using Api.BoundedContexts.KnowledgeBase.Application.Queries;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries.GetGameDocuments;
 using Api.Extensions;

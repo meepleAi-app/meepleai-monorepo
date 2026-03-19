@@ -1,5 +1,6 @@
 using Api.BoundedContexts.WorkflowIntegration.Application.Commands;
-using Api.BoundedContexts.WorkflowIntegration.Application.Handlers;
+using Api.BoundedContexts.WorkflowIntegration.Application.Commands;
+using Api.BoundedContexts.WorkflowIntegration.Application.Queries;
 using Api.BoundedContexts.WorkflowIntegration.Domain.Entities;
 using Api.BoundedContexts.WorkflowIntegration.Domain.Repositories;
 using Api.BoundedContexts.WorkflowIntegration.Domain.ValueObjects;

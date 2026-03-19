@@ -8,9 +8,8 @@
  * Issue #5168 — AddGameDrawer (right-side Sheet for adding games)
  *
  * Tab routing:
- *   (default)           → Collection  → CollectionPageClient (shared catalog games)
- *   ?tab=private        → Games tab   → GamesPageClient    (personal private games)
- *   ?tab=wishlist       → Wishlist    → WishlistPageClient
+ *   (default)           → La mia Libreria  → PersonalLibraryPage (vetrina layout)
+ *   ?tab=public         → Catalogo Condiviso → placeholder (Task 10)
  *
  * Action routing:
  *   ?action=add         → AddGameDrawer opens (wizard: manual or from catalog)
@@ -49,26 +48,20 @@ export function LibraryLoadingSkeleton() {
 
 // ── Dynamic imports (ssr: false avoids DOMMatrix / framer-motion issues) ─────
 
-// Default tab: personal games (Issue #5167 — was PrivateGamesClient)
-const GamesPageClient = dynamicImport(() => import('./private/PrivateGamesClient'), {
-  ssr: false,
-  loading: () => <LibraryLoadingSkeleton />,
-});
+// Default tab: personal library vetrina (Issue #5167 rework)
+const PersonalLibraryPageClient = dynamicImport(
+  () =>
+    import('@/components/library/PersonalLibraryPage').then(mod => ({
+      default: mod.PersonalLibraryPage,
+    })),
+  {
+    ssr: false,
+    loading: () => <LibraryLoadingSkeleton />,
+  }
+);
 
-// Collection tab: shared catalog games (Issue #5167 — was LibraryPageClient)
-const CollectionPageClient = dynamicImport(() => import('./CollectionPageClient'), {
-  ssr: false,
-  loading: () => <LibraryLoadingSkeleton />,
-});
-
-// Import WishlistPage directly — it is a clean client component (no LibraryNavTabs)
-const WishlistPageClient = dynamicImport(() => import('./wishlist/page'), {
-  ssr: false,
-  loading: () => <LibraryLoadingSkeleton />,
-});
-
-// Proposals tab: user's game proposals to shared catalog
-const ProposalsPageClient = dynamicImport(() => import('./proposals/MyProposalsClient'), {
+// Public catalog tab: shared catalog browse (Task 10 — placeholder)
+const PublicLibraryPageClient = dynamicImport(() => import('./public/PublicLibraryClient'), {
   ssr: false,
   loading: () => <LibraryLoadingSkeleton />,
 });
@@ -95,15 +88,7 @@ export function LibraryContent() {
       <div className="flex gap-6 items-start">
         {/* Tab content — takes remaining width */}
         <div className="min-w-0 flex-1">
-          {tab === 'proposals' ? (
-            <ProposalsPageClient />
-          ) : tab === 'private' ? (
-            <GamesPageClient />
-          ) : tab === 'wishlist' ? (
-            <WishlistPageClient />
-          ) : (
-            <CollectionPageClient />
-          )}
+          {tab === 'public' ? <PublicLibraryPageClient /> : <PersonalLibraryPageClient />}
         </div>
 
         {/* Usage widget — sticky sidebar on md+ screens */}

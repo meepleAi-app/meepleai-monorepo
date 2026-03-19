@@ -89,9 +89,10 @@ jobs:
   send:
     name: Send Slack Notification
     runs-on: ubuntu-latest
-    if: inputs.event != '' && secrets.SLACK_GITNOTIFY_WEBHOOK_URL != ''
+    if: inputs.event != ''
     env:
       SLACK_CRITICAL_WEBHOOK_URL: ${{ secrets.SLACK_CRITICAL_WEBHOOK_URL }}
+      SLACK_WEBHOOK_URL: ${{ secrets.SLACK_GITNOTIFY_WEBHOOK_URL }}
     steps:
       # ----------------------------------------------------------------
       # Step 1: Detect if workflow is blocked by concurrency
@@ -203,9 +204,8 @@ jobs:
       # Step 3: Send blocked notification (if detected)
       # ----------------------------------------------------------------
       - name: Send blocked notification
-        if: steps.blocked.outputs.blocked == 'true'
+        if: steps.blocked.outputs.blocked == 'true' && env.SLACK_WEBHOOK_URL != ''
         env:
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_GITNOTIFY_WEBHOOK_URL }}
           INPUT_WORKFLOW_NAME: ${{ inputs.workflow_name }}
           INPUT_BRANCH: ${{ inputs.branch }}
           INPUT_ACTOR: ${{ inputs.actor }}
@@ -262,8 +262,8 @@ jobs:
       # Step 4: Send main notification
       # ----------------------------------------------------------------
       - name: Send main notification
+        if: env.SLACK_WEBHOOK_URL != ''
         env:
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_GITNOTIFY_WEBHOOK_URL }}
           INPUT_WORKFLOW_NAME: ${{ inputs.workflow_name }}
           INPUT_BRANCH: ${{ inputs.branch }}
           INPUT_ACTOR: ${{ inputs.actor }}

@@ -67,7 +67,7 @@ public sealed class ScoreUpdatedEventHandlerIntegrationTests : IAsyncLifetime
         services.AddScoped<IUnitOfWork, UnitOfWork>();
 
         // Register MediatR with all handlers from the KnowledgeBase bounded context (Issue #3258 - proper integration test)
-        services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(Api.BoundedContexts.KnowledgeBase.Application.Handlers.UpdateAgentSessionStateCommandHandler).Assembly));
+        services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(Api.BoundedContexts.KnowledgeBase.Application.Commands.UpdateAgentSessionStateCommandHandler).Assembly));
 
         // HybridCache (required by event handlers) - Issue #2620
         services.AddHybridCache();

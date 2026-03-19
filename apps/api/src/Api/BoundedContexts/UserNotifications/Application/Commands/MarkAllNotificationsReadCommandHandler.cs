@@ -1,0 +1,51 @@
+using Api.BoundedContexts.UserNotifications.Application.Commands;
+using Api.BoundedContexts.UserNotifications.Domain.Repositories;
+using Api.Observability;
+using Api.SharedKernel.Application.Interfaces;
+using Microsoft.Extensions.Logging;
+using System.Diagnostics;
+
+namespace Api.BoundedContexts.UserNotifications.Application.Commands;
+
+/// <summary>
+/// Handler for MarkAllNotificationsReadCommand.
+/// Bulk operation to mark all user notifications as read.
+/// </summary>
+internal class MarkAllNotificationsReadCommandHandler : ICommandHandler<MarkAllNotificationsReadCommand, int>
+{
+    private readonly INotificationRepository _notificationRepository;
+    private readonly ILogger<MarkAllNotificationsReadCommandHandler> _logger;
+
+    public MarkAllNotificationsReadCommandHandler(
+        INotificationRepository notificationRepository,
+        ILogger<MarkAllNotificationsReadCommandHandler> logger)
+    {
+        ArgumentNullException.ThrowIfNull(notificationRepository);
+        _notificationRepository = notificationRepository;
+        ArgumentNullException.ThrowIfNull(logger);
+        _logger = logger;
+    }
+
+    public async Task<int> Handle(MarkAllNotificationsReadCommand command, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(command);
+        var stopwatch = Stopwatch.StartNew();
+
+        var count = await _notificationRepository.MarkAllAsReadAsync(command.UserId, cancellationToken).ConfigureAwait(false);
+
+        stopwatch.Stop();
+        MeepleAiMetrics.RecordNotificationMarkAllRead(stopwatch.Elapsed.TotalMilliseconds, count);
+
+        if (count > 0)
+        {
+            _logger.LogInformation("Marked {Count} notifications as read for user {UserId}",
+                count, command.UserId);
+        }
+        else
+        {
+            _logger.LogDebug("No unread notifications to mark for user {UserId}", command.UserId);
+        }
+
+        return count;
+    }
+}

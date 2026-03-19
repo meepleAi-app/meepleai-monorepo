@@ -1,5 +1,5 @@
 using Api.BoundedContexts.GameManagement.Application.Commands.RuleConflictFAQs;
-using Api.BoundedContexts.GameManagement.Application.Handlers.RuleConflictFAQs;
+using Api.BoundedContexts.GameManagement.Application.Commands.RuleConflictFAQs;
 using Api.BoundedContexts.GameManagement.Domain.Entities;
 using Api.BoundedContexts.GameManagement.Domain.Events;
 using Api.BoundedContexts.GameManagement.Domain.Repositories;

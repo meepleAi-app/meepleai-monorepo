@@ -7,13 +7,13 @@ const MECHANIC_LABELS: Record<string, string> = {
   'area-control': 'Area Control',
   'deck-building': 'Deck Building',
   'worker-placement': 'Worker Placement',
-  'cooperative': 'Cooperativo',
-  'competitive': 'Competitivo',
+  cooperative: 'Cooperativo',
+  competitive: 'Competitivo',
   'dice-rolling': 'Dice Rolling',
   'puzzle-abstract': 'Puzzle/Abstract',
   'narrative-rpg': 'Narrativo/RPG',
   'tile-placement': 'Tile Placement',
-  'trading': 'Trading',
+  trading: 'Trading',
   'set-collection': 'Set Collection',
   'dungeon-crawler': 'Dungeon Crawler',
   'route-building': 'Route Building',
@@ -29,7 +29,7 @@ export interface MechanicFilterProps {
 export function MechanicFilter({ mechanics, selected, onSelect }: MechanicFilterProps) {
   return (
     <div className="flex flex-wrap gap-2">
-      {mechanics.map((mechanic) => {
+      {mechanics.map(mechanic => {
         const isSelected = selected.includes(mechanic);
         return (
           <button

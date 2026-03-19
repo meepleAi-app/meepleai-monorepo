@@ -138,6 +138,7 @@ public sealed class AdminGameImportWizardEndpointsIntegrationTests : IAsyncLifet
     public async Task UploadPdf_WithEmptyFile_Returns400BadRequest()
     {
         // Arrange
+        using var scope = _factory.Services.CreateScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
         var (userId, sessionToken) = await TestSessionHelper.CreateAdminSessionAsync(dbContext);
 
@@ -176,6 +177,7 @@ public sealed class AdminGameImportWizardEndpointsIntegrationTests : IAsyncLifet
     public async Task UploadPdf_WithUserRole_Returns403Forbidden()
     {
         // Arrange
+        using var scope = _factory.Services.CreateScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
         var (userId, sessionToken) = await TestSessionHelper.CreateUserSessionAsync(dbContext); // Regular user, not admin/editor
 
@@ -194,6 +196,7 @@ public sealed class AdminGameImportWizardEndpointsIntegrationTests : IAsyncLifet
     public async Task UploadPdf_WithEditorRole_Returns200Ok()
     {
         // Arrange
+        using var scope = _factory.Services.CreateScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
         var (userId, sessionToken) = await TestSessionHelper.CreateEditorSessionAsync(dbContext); // Editor role allowed
 
@@ -216,6 +219,7 @@ public sealed class AdminGameImportWizardEndpointsIntegrationTests : IAsyncLifet
     public async Task ExtractMetadata_WithValidFilePath_Returns200Ok()
     {
         // Arrange
+        using var scope = _factory.Services.CreateScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
         var (userId, sessionToken) = await TestSessionHelper.CreateAdminSessionAsync(dbContext);
 
@@ -237,6 +241,7 @@ public sealed class AdminGameImportWizardEndpointsIntegrationTests : IAsyncLifet
     public async Task ExtractMetadata_WithEmptyFilePath_Returns400BadRequest()
     {
         // Arrange
+        using var scope = _factory.Services.CreateScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
         var (userId, sessionToken) = await TestSessionHelper.CreateAdminSessionAsync(dbContext);
 
@@ -276,6 +281,7 @@ public sealed class AdminGameImportWizardEndpointsIntegrationTests : IAsyncLifet
     public async Task EnrichFromBgg_WithValidData_Returns200Ok()
     {
         // Arrange
+        using var scope = _factory.Services.CreateScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
         var (userId, sessionToken) = await TestSessionHelper.CreateAdminSessionAsync(dbContext);
 
@@ -306,6 +312,7 @@ public sealed class AdminGameImportWizardEndpointsIntegrationTests : IAsyncLifet
     public async Task EnrichFromBgg_WithInvalidBggId_Returns400BadRequest()
     {
         // Arrange
+        using var scope = _factory.Services.CreateScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
         var (userId, sessionToken) = await TestSessionHelper.CreateAdminSessionAsync(dbContext);
 
@@ -347,6 +354,7 @@ public sealed class AdminGameImportWizardEndpointsIntegrationTests : IAsyncLifet
     public async Task ConfirmImport_WithValidBggId_ReturnsCreated()
     {
         // Arrange
+        using var scope = _factory.Services.CreateScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
         var (userId, sessionToken) = await TestSessionHelper.CreateAdminSessionAsync(dbContext);
 
@@ -368,6 +376,7 @@ public sealed class AdminGameImportWizardEndpointsIntegrationTests : IAsyncLifet
     public async Task ConfirmImport_WithInvalidBggId_Returns400BadRequest()
     {
         // Arrange
+        using var scope = _factory.Services.CreateScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
         var (userId, sessionToken) = await TestSessionHelper.CreateAdminSessionAsync(dbContext);
 

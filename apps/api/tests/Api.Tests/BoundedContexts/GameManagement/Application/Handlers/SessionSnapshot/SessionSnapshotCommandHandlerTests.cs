@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Api.BoundedContexts.GameManagement.Application.Commands.SessionSnapshot;
+using Api.BoundedContexts.GameManagement.Application.Commands.SessionSnapshot;
 using Api.BoundedContexts.GameManagement.Domain.Entities;
 using Api.BoundedContexts.GameManagement.Domain.Entities.SessionAttachment;
 using Api.BoundedContexts.GameManagement.Domain.Entities.SessionSnapshot;

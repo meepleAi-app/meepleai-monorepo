@@ -130,6 +130,7 @@ public class UploadPdfCommandHandlerTests
     public void Constructor_WithNullScopeFactory_ThrowsArgumentNullException()
     {
         // Arrange - fresh resources per test
+        using var context = CreateFreshDbContext();
         var (_, loggerMock, pdfTextExtractorMock, tableExtractorMock, backgroundTaskServiceMock, cacheServiceMock, blobStorageServiceMock, quotaServiceMock, pdfOptions, mediatorMock) = CreateMocks();
 
         // Act
@@ -156,6 +157,7 @@ public class UploadPdfCommandHandlerTests
     public void Constructor_WithNullLogger_ThrowsArgumentNullException()
     {
         // Arrange - fresh resources per test
+        using var context = CreateFreshDbContext();
         var (scopeFactoryMock, _, pdfTextExtractorMock, tableExtractorMock, backgroundTaskServiceMock, cacheServiceMock, blobStorageServiceMock, quotaServiceMock, pdfOptions, mediatorMock) = CreateMocks();
 
         // Act
@@ -182,6 +184,7 @@ public class UploadPdfCommandHandlerTests
     public void Constructor_WithNullPdfTextExtractor_ThrowsArgumentNullException()
     {
         // Arrange - fresh resources per test
+        using var context = CreateFreshDbContext();
         var (scopeFactoryMock, loggerMock, _, tableExtractorMock, backgroundTaskServiceMock, cacheServiceMock, blobStorageServiceMock, quotaServiceMock, pdfOptions, mediatorMock) = CreateMocks();
 
         // Act
@@ -208,6 +211,7 @@ public class UploadPdfCommandHandlerTests
     public void Constructor_WithNullTableExtractor_ThrowsArgumentNullException()
     {
         // Arrange - fresh resources per test
+        using var context = CreateFreshDbContext();
         var (scopeFactoryMock, loggerMock, pdfTextExtractorMock, _, backgroundTaskServiceMock, cacheServiceMock, blobStorageServiceMock, quotaServiceMock, pdfOptions, mediatorMock) = CreateMocks();
 
         // Act
@@ -234,6 +238,7 @@ public class UploadPdfCommandHandlerTests
     public void Constructor_WithNullBackgroundTaskService_ThrowsArgumentNullException()
     {
         // Arrange - fresh resources per test
+        using var context = CreateFreshDbContext();
         var (scopeFactoryMock, loggerMock, pdfTextExtractorMock, tableExtractorMock, _, cacheServiceMock, blobStorageServiceMock, quotaServiceMock, pdfOptions, mediatorMock) = CreateMocks();
 
         // Act
@@ -260,6 +265,7 @@ public class UploadPdfCommandHandlerTests
     public void Constructor_WithNullCacheService_ThrowsArgumentNullException()
     {
         // Arrange - fresh resources per test
+        using var context = CreateFreshDbContext();
         var (scopeFactoryMock, loggerMock, pdfTextExtractorMock, tableExtractorMock, backgroundTaskServiceMock, _, blobStorageServiceMock, quotaServiceMock, pdfOptions, mediatorMock) = CreateMocks();
 
         // Act
@@ -286,6 +292,7 @@ public class UploadPdfCommandHandlerTests
     public void Constructor_WithNullBlobStorageService_ThrowsArgumentNullException()
     {
         // Arrange - fresh resources per test
+        using var context = CreateFreshDbContext();
         var (scopeFactoryMock, loggerMock, pdfTextExtractorMock, tableExtractorMock, backgroundTaskServiceMock, cacheServiceMock, _, quotaServiceMock, pdfOptions, mediatorMock) = CreateMocks();
 
         // Act
@@ -312,6 +319,7 @@ public class UploadPdfCommandHandlerTests
     public void Constructor_WithNullQuotaService_ThrowsArgumentNullException()
     {
         // Arrange - fresh resources per test
+        using var context = CreateFreshDbContext();
         var (scopeFactoryMock, loggerMock, pdfTextExtractorMock, tableExtractorMock, backgroundTaskServiceMock, cacheServiceMock, blobStorageServiceMock, _, pdfOptions, mediatorMock) = CreateMocks();
 
         // Act
@@ -338,6 +346,7 @@ public class UploadPdfCommandHandlerTests
     public void Constructor_WithNullPdfOptions_ThrowsArgumentNullException()
     {
         // Arrange - fresh resources per test
+        using var context = CreateFreshDbContext();
         var (scopeFactoryMock, loggerMock, pdfTextExtractorMock, tableExtractorMock, backgroundTaskServiceMock, cacheServiceMock, blobStorageServiceMock, quotaServiceMock, _, mediatorMock) = CreateMocks();
 
         // Act

@@ -454,6 +454,7 @@ public class UnstructuredPdfTextExtractorTests
         // Arrange
         var extractor = CreateExtractor();
         var pdfStream = CreateTestPdfStream();
+        using var cts = new CancellationTokenSource();
         await cts.CancelAsync();
 
         _mockHttpMessageHandler
@@ -465,6 +466,7 @@ public class UnstructuredPdfTextExtractorTests
             .ThrowsAsync(new TaskCanceledException());
 
         // Act & Assert
+        using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cts.Token, TestCancellationToken);
         var act = () => extractor.ExtractTextAsync(pdfStream, cancellationToken: linkedCts.Token);
         await act.Should().ThrowAsync<TaskCanceledException>();
     }

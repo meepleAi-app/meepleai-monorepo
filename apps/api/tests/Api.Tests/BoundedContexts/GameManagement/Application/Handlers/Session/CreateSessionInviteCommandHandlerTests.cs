@@ -1,4 +1,5 @@
 using Api.BoundedContexts.GameManagement.Application.Commands.Session;
+using Api.BoundedContexts.GameManagement.Application.Commands.Session;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities.GameManagement;
 using Api.Middleware.Exceptions;

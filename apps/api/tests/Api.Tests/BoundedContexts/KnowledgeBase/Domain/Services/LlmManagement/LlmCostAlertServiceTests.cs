@@ -633,6 +633,7 @@ public sealed class LlmCostAlertServiceTests
     public async Task CheckWeeklyCostThresholdAsync_PassesCancellationToken()
     {
         // Arrange
+        using var cts = new CancellationTokenSource();
         var token = cts.Token;
 
         _costLogRepositoryMock
@@ -652,6 +653,7 @@ public sealed class LlmCostAlertServiceTests
     public async Task CheckMonthlyCostProjectionAsync_PassesCancellationToken()
     {
         // Arrange
+        using var cts = new CancellationTokenSource();
         var token = cts.Token;
 
         _costLogRepositoryMock

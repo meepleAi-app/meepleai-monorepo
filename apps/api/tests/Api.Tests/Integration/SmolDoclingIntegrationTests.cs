@@ -178,6 +178,7 @@ public class SmolDoclingIntegrationTests : IAsyncLifetime
         await cts.CancelAsync(); // Cancel before calling
 
         // Assert - should throw TaskCanceledException
+        using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cts.Token, TestCancellationToken);
         await Assert.ThrowsAsync<TaskCanceledException>(() =>
             _extractor!.ExtractTextAsync(pdfStream, cancellationToken: linkedCts.Token));
 

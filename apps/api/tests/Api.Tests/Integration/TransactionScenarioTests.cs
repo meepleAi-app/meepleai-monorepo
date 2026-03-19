@@ -313,6 +313,7 @@ public sealed class TransactionScenarioTests : IAsyncLifetime
             {
                 try
                 {
+                    using var scope = _serviceProvider!.CreateScope();
                     var ctx = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
 
                     await using var transaction = await ctx.Database.BeginTransactionAsync(TestCancellationToken);

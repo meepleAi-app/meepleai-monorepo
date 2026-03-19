@@ -142,6 +142,7 @@ public sealed class SessionBroadcastServiceTests : IDisposable
     {
         // Arrange
         var sessionId = Guid.NewGuid();
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(2));
         var received1 = new List<SseEventEnvelope>();
         var received2 = new List<SseEventEnvelope>();
 
@@ -215,6 +216,7 @@ public sealed class SessionBroadcastServiceTests : IDisposable
         // Arrange
         var sessionId = Guid.NewGuid();
         var userId = Guid.NewGuid();
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(2));
         var receivedEvents = new List<SseEventEnvelope>();
 
         var subTask = Task.Run(async () =>
@@ -254,6 +256,7 @@ public sealed class SessionBroadcastServiceTests : IDisposable
         // Arrange
         var session1Id = Guid.NewGuid();
         var session2Id = Guid.NewGuid();
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(2));
         var session1Events = new List<SseEventEnvelope>();
 
         var sub1Task = Task.Run(async () =>
@@ -303,6 +306,7 @@ public sealed class SessionBroadcastServiceTests : IDisposable
         var sessionId = Guid.NewGuid();
         var user1 = Guid.NewGuid();
         var user2 = Guid.NewGuid();
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(2));
         var received1 = new List<SseEventEnvelope>();
         var received2 = new List<SseEventEnvelope>();
 
@@ -350,6 +354,7 @@ public sealed class SessionBroadcastServiceTests : IDisposable
         var sessionId = Guid.NewGuid();
         var targetUser = Guid.NewGuid();
         var otherUser = Guid.NewGuid();
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(2));
         var targetReceived = new List<SseEventEnvelope>();
         var otherReceived = new List<SseEventEnvelope>();
 
@@ -484,6 +489,7 @@ public sealed class SessionBroadcastServiceTests : IDisposable
         // Arrange
         var sessionId = Guid.NewGuid();
         var userId = Guid.NewGuid();
+        using var cts1 = new CancellationTokenSource(TimeSpan.FromSeconds(2));
 
         // Subscribe and publish one event to ensure pool exists
         var firstEvents = new List<SseEventEnvelope>();
@@ -547,6 +553,7 @@ public sealed class SessionBroadcastServiceTests : IDisposable
     {
         // Arrange
         var sessionId = Guid.NewGuid();
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(2));
 
         var sub1 = Task.Run(async () =>
         {
@@ -576,6 +583,7 @@ public sealed class SessionBroadcastServiceTests : IDisposable
     {
         // Arrange
         var sessionId = Guid.NewGuid();
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(2));
         var completed1 = false;
         var completed2 = false;
 
@@ -612,6 +620,7 @@ public sealed class SessionBroadcastServiceTests : IDisposable
         // Arrange
         var sessionId = Guid.NewGuid();
         var userId = Guid.NewGuid();
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(2));
         var receivedEvents = new List<SseEventEnvelope>();
 
         var sub = Task.Run(async () =>

@@ -4,6 +4,7 @@ using Api.BoundedContexts.KnowledgeBase.Application.Commands;
 using Api.BoundedContexts.KnowledgeBase.Application.Services;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services.LlmManagement;
+using Api.BoundedContexts.KnowledgeBase.Application.Commands;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries;
 using Api.BoundedContexts.KnowledgeBase.Domain.Entities;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
@@ -228,6 +229,7 @@ public sealed class SendAgentMessagePersistenceTests : IAsyncLifetime
         await ConsumeStream(command);
 
         // Assert - read back from DB
+        using var readCtx = CreateReadContext();
         var thread = await readCtx.ChatThreads.AsNoTracking().FirstAsync(t => t.UserId == _userId);
         var messages = System.Text.Json.JsonSerializer.Deserialize<List<MessageDto>>(thread.MessagesJson)!;
 
@@ -249,6 +251,7 @@ public sealed class SendAgentMessagePersistenceTests : IAsyncLifetime
         await ConsumeStream(command);
 
         // Assert
+        using var readCtx = CreateReadContext();
         var thread = await readCtx.ChatThreads.AsNoTracking().FirstAsync(t => t.UserId == _userId);
         thread.LastMessageAt.Should().BeAfter(beforeStream);
     }
@@ -267,6 +270,7 @@ public sealed class SendAgentMessagePersistenceTests : IAsyncLifetime
         var complete = events.Last().Data.Should().BeOfType<StreamingComplete>().Subject;
         complete.chatThreadId.Should().NotBeNull();
 
+        using var readCtx = CreateReadContext();
         var thread = await readCtx.ChatThreads.AsNoTracking()
             .FirstOrDefaultAsync(t => t.Id == complete.chatThreadId!.Value);
 
@@ -297,6 +301,7 @@ public sealed class SendAgentMessagePersistenceTests : IAsyncLifetime
         await ConsumeStream(followUpCommand);
 
         // Assert - same thread, now 4 messages (2 user + 2 assistant)
+        using var readCtx = CreateReadContext();
         var thread = await readCtx.ChatThreads.AsNoTracking().FirstAsync(t => t.Id == threadId);
         var messages = System.Text.Json.JsonSerializer.Deserialize<List<MessageDto>>(thread.MessagesJson)!;
         messages.Count.Should().Be(4);
@@ -327,6 +332,7 @@ public sealed class SendAgentMessagePersistenceTests : IAsyncLifetime
         events.Should().Contain(e => e.Type == StreamingEventType.Complete);
 
         // Verify: only user message persisted (no assistant message since response was empty)
+        using var readCtx = CreateReadContext();
         var thread = await readCtx.ChatThreads.AsNoTracking().FirstAsync(t => t.UserId == _userId);
         var messages = System.Text.Json.JsonSerializer.Deserialize<List<MessageDto>>(thread.MessagesJson)!;
         messages.Count.Should().Be(1);
@@ -364,6 +370,7 @@ public sealed class SendAgentMessagePersistenceTests : IAsyncLifetime
         }
 
         // Assert - user message was persisted before streaming started
+        using var readCtx = CreateReadContext();
         var threads = await readCtx.ChatThreads.AsNoTracking()
             .Where(t => t.UserId == _userId)
             .ToListAsync();
@@ -392,6 +399,7 @@ public sealed class SendAgentMessagePersistenceTests : IAsyncLifetime
         error.errorCode.Should().Be("AGENT_NOT_FOUND");
 
         // No thread created
+        using var readCtx = CreateReadContext();
         var count = await readCtx.ChatThreads.CountAsync(t => t.UserId == _userId);
         count.Should().Be(0);
     }
@@ -418,6 +426,7 @@ public sealed class SendAgentMessagePersistenceTests : IAsyncLifetime
         await ConsumeStream(command);
 
         // Assert
+        using var readCtx = CreateReadContext();
         var thread = await readCtx.ChatThreads.AsNoTracking().FirstAsync(t => t.UserId == _userId);
         var messages = System.Text.Json.JsonSerializer.Deserialize<List<MessageDto>>(thread.MessagesJson)!;
 

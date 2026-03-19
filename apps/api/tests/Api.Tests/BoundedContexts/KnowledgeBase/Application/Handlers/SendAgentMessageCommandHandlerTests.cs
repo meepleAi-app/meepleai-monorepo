@@ -2,6 +2,7 @@ using Api.Infrastructure.Entities;
 using Api.BoundedContexts.Administration.Application.Services;
 using Api.BoundedContexts.GameManagement.Application.Services;
 using Api.BoundedContexts.KnowledgeBase.Application.Commands;
+using Api.BoundedContexts.KnowledgeBase.Application.Commands;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries;
 using Api.BoundedContexts.KnowledgeBase.Application.Services;
 using Api.BoundedContexts.KnowledgeBase.Domain.Entities;

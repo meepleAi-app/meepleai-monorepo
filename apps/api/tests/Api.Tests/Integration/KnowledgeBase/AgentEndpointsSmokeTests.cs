@@ -173,6 +173,7 @@ public sealed class AgentEndpointsSmokeTests : IAsyncLifetime
         _adminUserId = registerJson.RootElement.GetProperty("user").GetProperty("id").GetGuid();
 
         // Update role to "Admin" in DB (PascalCase to match UserRole.Admin.ToString())
+        using (var scope = _factory.Services.CreateScope())
         {
             var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
             var adminUser = await dbContext.Users.FirstAsync(u => u.Id == _adminUserId);
@@ -182,6 +183,7 @@ public sealed class AgentEndpointsSmokeTests : IAsyncLifetime
         }
 
         // Create test game directly in DB
+        using (var scope = _factory.Services.CreateScope())
         {
             var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
             _gameId = Guid.NewGuid();

@@ -91,6 +91,7 @@ public class DatabaseMetricsQueryTests : IAsyncLifetime
     public async Task Handle_FormatsBytesCorrectly()
     {
         // Arrange
+        using var scope = _serviceProvider!.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
         var handler = new GetDatabaseMetricsQueryHandler(db);
         var query = new GetDatabaseMetricsQuery();
@@ -107,6 +108,7 @@ public class DatabaseMetricsQueryTests : IAsyncLifetime
     public async Task Handle_WithNullQuery_ThrowsArgumentNullException()
     {
         // Arrange
+        using var scope = _serviceProvider!.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
         var handler = new GetDatabaseMetricsQueryHandler(db);
 

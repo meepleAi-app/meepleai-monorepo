@@ -129,6 +129,7 @@ public class CitationValidationServiceTests
     public async Task ValidateCitations_DocumentNotFound_ReturnsInvalid()
     {
         // Arrange - fresh context per test
+        using var context = CreateFreshDbContext();
         var service = CreateService(context);
         var (gameId, _, _) = await SeedTestDataAsync(context);
 
@@ -154,6 +155,7 @@ public class CitationValidationServiceTests
     public async Task ValidateCitations_InvalidPageNumber_ReturnsInvalid()
     {
         // Arrange - fresh context per test - PDF1 has 10 pages, try page 15
+        using var context = CreateFreshDbContext();
         var service = CreateService(context);
         var (gameId, pdf1Id, _) = await SeedTestDataAsync(context);
 
@@ -197,6 +199,7 @@ public class CitationValidationServiceTests
     public async Task ValidateCitations_MalformedSource_ReturnsInvalid()
     {
         // Arrange - fresh context per test - Invalid source format (not "PDF:guid")
+        using var context = CreateFreshDbContext();
         var service = CreateService(context);
         var (gameId, _, _) = await SeedTestDataAsync(context);
 
@@ -219,6 +222,7 @@ public class CitationValidationServiceTests
     public async Task ValidateCitations_NullSource_ReturnsInvalid()
     {
         // Arrange - fresh context per test
+        using var context = CreateFreshDbContext();
         var service = CreateService(context);
         var (gameId, _, _) = await SeedTestDataAsync(context);
 
@@ -240,6 +244,7 @@ public class CitationValidationServiceTests
     public async Task ValidateCitations_MixedValidInvalid_ReturnsPartiallyValid()
     {
         // Arrange - fresh context per test - 2 valid, 1 invalid
+        using var context = CreateFreshDbContext();
         var service = CreateService(context);
         var (gameId, pdf1Id, pdf2Id) = await SeedTestDataAsync(context);
 
@@ -268,6 +273,7 @@ public class CitationValidationServiceTests
     public async Task ValidateCitations_BoundaryPages_ValidatesCorrectly()
     {
         // Arrange - fresh context per test - Test boundary pages (first and last)
+        using var context = CreateFreshDbContext();
         var service = CreateService(context);
         var (gameId, pdf1Id, pdf2Id) = await SeedTestDataAsync(context);
 
@@ -292,6 +298,7 @@ public class CitationValidationServiceTests
     public async Task ValidateSingleCitation_Valid_ReturnsTrue()
     {
         // Arrange - fresh context per test
+        using var context = CreateFreshDbContext();
         var service = CreateService(context);
         var (gameId, pdf1Id, _) = await SeedTestDataAsync(context);
 
@@ -308,6 +315,7 @@ public class CitationValidationServiceTests
     public async Task ValidateSingleCitation_Invalid_ReturnsFalse()
     {
         // Arrange - fresh context per test
+        using var context = CreateFreshDbContext();
         var service = CreateService(context);
         var (gameId, _, _) = await SeedTestDataAsync(context);
 
@@ -325,6 +333,7 @@ public class CitationValidationServiceTests
     public async Task ValidateCitations_InvalidGameId_ReturnsInvalid()
     {
         // Arrange - fresh context per test
+        using var context = CreateFreshDbContext();
         var service = CreateService(context);
         var (_, pdf1Id, _) = await SeedTestDataAsync(context);
 
@@ -349,6 +358,7 @@ public class CitationValidationServiceTests
     public async Task ValidateCitations_NegativePageNumber_ReturnsInvalid()
     {
         // Arrange - fresh context per test - Negative page number
+        using var context = CreateFreshDbContext();
         var service = CreateService(context);
         var (gameId, pdf1Id, _) = await SeedTestDataAsync(context);
 
@@ -370,6 +380,7 @@ public class CitationValidationServiceTests
     public async Task ValidateCitations_LargeCollection_ValidatesAll()
     {
         // Arrange - fresh context per test - Large collection of valid citations
+        using var context = CreateFreshDbContext();
         var service = CreateService(context);
         var (gameId, pdf1Id, _) = await SeedTestDataAsync(context);
 
@@ -395,6 +406,7 @@ public class CitationValidationServiceTests
     public async Task ValidateCitations_ValidationAccuracy_CalculatesCorrectly()
     {
         // Arrange - fresh context per test - 7 valid, 3 invalid = 70% accuracy
+        using var context = CreateFreshDbContext();
         var service = CreateService(context);
         var (gameId, validPdfId, _) = await SeedTestDataAsync(context);
 
@@ -428,6 +440,7 @@ public class CitationValidationServiceTests
     public async Task ValidateCitations_DuplicateCitations_ValidatesEach()
     {
         // Arrange - fresh context per test - Same citation repeated
+        using var context = CreateFreshDbContext();
         var service = CreateService(context);
         var (gameId, pdf1Id, _) = await SeedTestDataAsync(context);
 
@@ -451,6 +464,7 @@ public class CitationValidationServiceTests
     public async Task ValidateCitations_WhitespaceSource_ReturnsInvalid()
     {
         // Arrange - fresh context per test - Whitespace-only source
+        using var context = CreateFreshDbContext();
         var service = CreateService(context);
         var (gameId, _, _) = await SeedTestDataAsync(context);
 
@@ -472,6 +486,7 @@ public class CitationValidationServiceTests
     public async Task ValidateCitations_EmptyStringSource_ReturnsInvalid()
     {
         // Arrange - fresh context per test - Empty string source
+        using var context = CreateFreshDbContext();
         var service = CreateService(context);
         var (gameId, _, _) = await SeedTestDataAsync(context);
 
@@ -493,6 +508,7 @@ public class CitationValidationServiceTests
     public async Task ValidateCitations_InvalidGuidInSource_ReturnsInvalid()
     {
         // Arrange - fresh context per test - Invalid GUID format
+        using var context = CreateFreshDbContext();
         var service = CreateService(context);
         var (gameId, _, _) = await SeedTestDataAsync(context);
 
@@ -514,6 +530,7 @@ public class CitationValidationServiceTests
     public async Task ValidateCitations_MultiplePdfDocuments_ValidatesCrossDocument()
     {
         // Arrange - fresh context per test - Citations from both PDFs
+        using var context = CreateFreshDbContext();
         var service = CreateService(context);
         var (gameId, pdf1Id, pdf2Id) = await SeedTestDataAsync(context);
 
@@ -539,6 +556,7 @@ public class CitationValidationServiceTests
     public async Task ValidateCitations_SourceWithoutColon_ReturnsInvalid()
     {
         // Arrange - fresh context per test - Source missing colon separator
+        using var context = CreateFreshDbContext();
         var service = CreateService(context);
         var (gameId, _, _) = await SeedTestDataAsync(context);
 
@@ -560,6 +578,7 @@ public class CitationValidationServiceTests
     public async Task ValidateCitations_SourceWithWrongPrefix_ReturnsInvalid()
     {
         // Arrange - fresh context per test - Wrong prefix (not "PDF:")
+        using var context = CreateFreshDbContext();
         var service = CreateService(context);
         var (gameId, pdf1Id, _) = await SeedTestDataAsync(context);
 
@@ -581,6 +600,7 @@ public class CitationValidationServiceTests
     public async Task ValidateSingleCitation_NegativePage_ReturnsFalse()
     {
         // Arrange - fresh context per test
+        using var context = CreateFreshDbContext();
         var service = CreateService(context);
         var (gameId, pdf1Id, _) = await SeedTestDataAsync(context);
 
@@ -597,6 +617,7 @@ public class CitationValidationServiceTests
     public async Task ValidateCitations_AllErrorTypes_ReturnsMultipleErrors()
     {
         // Arrange - fresh context per test - Create one of each error type
+        using var context = CreateFreshDbContext();
         var service = CreateService(context);
         var (gameId, pdf1Id, _) = await SeedTestDataAsync(context);
 

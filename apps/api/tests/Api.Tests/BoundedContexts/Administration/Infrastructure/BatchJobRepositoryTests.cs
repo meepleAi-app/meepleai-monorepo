@@ -76,6 +76,7 @@ public sealed class BatchJobRepositoryTests : IClassFixture<SharedTestcontainers
     public async Task GetByIdAsync_WithExistingJob_ShouldReturnJob()
     {
         // Arrange
+        using var dbContext = _fixture.CreateDbContext(_connectionString!);
         var repository = new BatchJobRepository(dbContext);
         var job = BatchJob.Create(JobType.CostAnalysis, "{}", TestUserId);
         await repository.AddAsync(job);
@@ -93,6 +94,7 @@ public sealed class BatchJobRepositoryTests : IClassFixture<SharedTestcontainers
     public async Task GetByIdAsync_WithNonExistentJob_ShouldReturnNull()
     {
         // Arrange
+        using var dbContext = _fixture.CreateDbContext(_connectionString!);
         var repository = new BatchJobRepository(dbContext);
         var nonExistentId = Guid.NewGuid();
 
@@ -111,6 +113,7 @@ public sealed class BatchJobRepositoryTests : IClassFixture<SharedTestcontainers
     public async Task GetAllAsync_WithMultipleJobs_ShouldReturnAll()
     {
         // Arrange
+        using var dbContext = _fixture.CreateDbContext(_connectionString!);
         var repository = new BatchJobRepository(dbContext);
         await repository.AddAsync(BatchJob.Create(JobType.ResourceForecast, "{}", TestUserId));
         await repository.AddAsync(BatchJob.Create(JobType.CostAnalysis, "{}", TestUserId));
@@ -128,6 +131,7 @@ public sealed class BatchJobRepositoryTests : IClassFixture<SharedTestcontainers
     public async Task GetPagedAsync_WithPagination_ShouldReturnCorrectPage()
     {
         // Arrange
+        using var dbContext = _fixture.CreateDbContext(_connectionString!);
         var repository = new BatchJobRepository(dbContext);
 
         // Create 5 jobs
@@ -155,6 +159,7 @@ public sealed class BatchJobRepositoryTests : IClassFixture<SharedTestcontainers
     public async Task GetByStatusAsync_WithQueuedStatus_ShouldReturnOnlyQueuedJobs()
     {
         // Arrange
+        using var dbContext = _fixture.CreateDbContext(_connectionString!);
         var repository = new BatchJobRepository(dbContext);
 
         var queuedJob = BatchJob.Create(JobType.ResourceForecast, "{}", TestUserId);
@@ -181,6 +186,7 @@ public sealed class BatchJobRepositoryTests : IClassFixture<SharedTestcontainers
     public async Task GetByStatusAsync_WithRunningStatus_ShouldReturnOnlyRunningJobs()
     {
         // Arrange
+        using var dbContext = _fixture.CreateDbContext(_connectionString!);
         var repository = new BatchJobRepository(dbContext);
 
         var job1 = BatchJob.Create(JobType.BggSync, "{}", TestUserId);
@@ -203,6 +209,7 @@ public sealed class BatchJobRepositoryTests : IClassFixture<SharedTestcontainers
     public async Task GetByStatusAsync_WithFailedStatus_ShouldReturnOnlyFailedJobs()
     {
         // Arrange
+        using var dbContext = _fixture.CreateDbContext(_connectionString!);
         var repository = new BatchJobRepository(dbContext);
 
         var failedJob = BatchJob.Create(JobType.CostAnalysis, "{}", TestUserId);
@@ -228,6 +235,7 @@ public sealed class BatchJobRepositoryTests : IClassFixture<SharedTestcontainers
     public async Task UpdateAsync_WithProgressUpdate_ShouldPersistChanges()
     {
         // Arrange
+        using var dbContext = _fixture.CreateDbContext(_connectionString!);
         var repository = new BatchJobRepository(dbContext);
         var job = BatchJob.Create(JobType.DataCleanup, "{}", TestUserId);
         await repository.AddAsync(job);
@@ -249,6 +257,7 @@ public sealed class BatchJobRepositoryTests : IClassFixture<SharedTestcontainers
     public async Task UpdateAsync_WithStatusChange_ShouldPersistChanges()
     {
         // Arrange
+        using var dbContext = _fixture.CreateDbContext(_connectionString!);
         var repository = new BatchJobRepository(dbContext);
         var job = BatchJob.Create(JobType.BggSync, "{}", TestUserId);
         await repository.AddAsync(job);
@@ -273,6 +282,7 @@ public sealed class BatchJobRepositoryTests : IClassFixture<SharedTestcontainers
     public async Task DeleteAsync_WithExistingJob_ShouldRemoveFromDatabase()
     {
         // Arrange
+        using var dbContext = _fixture.CreateDbContext(_connectionString!);
         var repository = new BatchJobRepository(dbContext);
         var job = BatchJob.Create(JobType.ResourceForecast, "{}", TestUserId);
         await repository.AddAsync(job);
@@ -295,6 +305,7 @@ public sealed class BatchJobRepositoryTests : IClassFixture<SharedTestcontainers
     public async Task GetOldestQueuedJobAsync_WithMultipleQueuedJobs_ShouldReturnOldest()
     {
         // Arrange
+        using var dbContext = _fixture.CreateDbContext(_connectionString!);
         var repository = new BatchJobRepository(dbContext);
 
         var job1 = BatchJob.Create(JobType.ResourceForecast, "{}", TestUserId);
@@ -323,6 +334,7 @@ public sealed class BatchJobRepositoryTests : IClassFixture<SharedTestcontainers
     public async Task GetAllAsync_Count_ShouldReturnCorrectTotal()
     {
         // Arrange
+        using var dbContext = _fixture.CreateDbContext(_connectionString!);
         var repository = new BatchJobRepository(dbContext);
 
         await repository.AddAsync(BatchJob.Create(JobType.ResourceForecast, "{}", TestUserId));
@@ -344,6 +356,7 @@ public sealed class BatchJobRepositoryTests : IClassFixture<SharedTestcontainers
     public async Task GetAllAsync_WithDifferentJobTypes_ShouldReturnAll()
     {
         // Arrange
+        using var dbContext = _fixture.CreateDbContext(_connectionString!);
         var repository = new BatchJobRepository(dbContext);
 
         await repository.AddAsync(BatchJob.Create(JobType.ResourceForecast, "{}", TestUserId));

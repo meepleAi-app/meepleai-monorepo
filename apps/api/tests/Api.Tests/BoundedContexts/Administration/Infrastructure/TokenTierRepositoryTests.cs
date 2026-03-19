@@ -70,6 +70,7 @@ public sealed class TokenTierRepositoryTests : IClassFixture<SharedTestcontainer
     public async Task GetAllTiersAsync_WithMultipleTiers_ShouldReturnAll()
     {
         // Arrange
+        using var dbContext = _fixture.CreateDbContext(_connectionString!);
         var repository = new TokenTierRepository(dbContext);
         await repository.AddAsync(TokenTier.CreateFreeTier());
         await repository.AddAsync(TokenTier.CreateBasicTier());
@@ -86,6 +87,7 @@ public sealed class TokenTierRepositoryTests : IClassFixture<SharedTestcontainer
     public async Task GetActiveTiersAsync_WithInactiveTier_ShouldReturnOnlyActive()
     {
         // Arrange
+        using var dbContext = _fixture.CreateDbContext(_connectionString!);
         var repository = new TokenTierRepository(dbContext);
         var activeTier = TokenTier.CreateFreeTier();
         var inactiveTier = TokenTier.CreateBasicTier();
@@ -107,6 +109,7 @@ public sealed class TokenTierRepositoryTests : IClassFixture<SharedTestcontainer
     public async Task UpdateAsync_WithModifiedLimits_ShouldPersistChanges()
     {
         // Arrange
+        using var dbContext = _fixture.CreateDbContext(_connectionString!);
         var repository = new TokenTierRepository(dbContext);
         var tier = TokenTier.CreateFreeTier();
         await repository.AddAsync(tier);
@@ -128,6 +131,7 @@ public sealed class TokenTierRepositoryTests : IClassFixture<SharedTestcontainer
     public async Task DeleteAsync_ShouldSoftDeleteTier()
     {
         // Arrange
+        using var dbContext = _fixture.CreateDbContext(_connectionString!);
         var repository = new TokenTierRepository(dbContext);
         var tier = TokenTier.CreateFreeTier();
         await repository.AddAsync(tier);

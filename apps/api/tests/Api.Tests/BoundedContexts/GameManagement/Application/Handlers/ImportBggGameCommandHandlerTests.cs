@@ -1,4 +1,6 @@
 using Api.BoundedContexts.GameManagement.Application.Commands;
+using Api.BoundedContexts.GameManagement.Application.Commands;
+using Api.BoundedContexts.GameManagement.Application.Queries;
 using Api.BoundedContexts.UserLibrary.Domain.Entities;
 using Api.BoundedContexts.UserLibrary.Domain.Repositories;
 using Api.Infrastructure.ExternalServices.BoardGameGeek;

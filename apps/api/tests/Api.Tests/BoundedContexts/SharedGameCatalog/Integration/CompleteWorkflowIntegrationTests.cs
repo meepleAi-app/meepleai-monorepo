@@ -217,6 +217,7 @@ public sealed class CompleteWorkflowIntegrationTests : IAsyncLifetime
         };
 
         // Act 2: Enrich from BGG
+        using var scope = _factory.Services.CreateScope();
         var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
 
         // Simulate BGG enrichment (GetBggGameDetailsQuery already mocked)
@@ -256,6 +257,7 @@ public sealed class CompleteWorkflowIntegrationTests : IAsyncLifetime
     public async Task AgentLinking_LinksAgentToSharedGame()
     {
         // Arrange: Create SharedGame
+        using var scope = _factory.Services.CreateScope();
         var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
         var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
 
@@ -299,6 +301,7 @@ public sealed class CompleteWorkflowIntegrationTests : IAsyncLifetime
     public async Task KbDocuments_AreVisibleForSharedGame()
     {
         // Arrange: Create SharedGame with indexed PDF
+        using var scope = _factory.Services.CreateScope();
         var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
         var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
 
@@ -338,6 +341,7 @@ public sealed class CompleteWorkflowIntegrationTests : IAsyncLifetime
     [Fact(Skip = "Command signature changed - needs refactoring")]
     public async Task CompleteFlow_PdfToAgentCreation()
     {
+        using var scope = _factory.Services.CreateScope();
         var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
         var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
 

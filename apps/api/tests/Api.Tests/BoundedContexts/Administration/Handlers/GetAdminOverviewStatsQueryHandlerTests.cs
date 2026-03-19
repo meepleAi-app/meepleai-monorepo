@@ -1,6 +1,7 @@
 using Api.BoundedContexts.Administration.Application.DTOs;
 using Api.BoundedContexts.Administration.Application.Commands;
 using Api.BoundedContexts.Administration.Application.Queries;
+using Api.BoundedContexts.Administration.Application.Queries;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;

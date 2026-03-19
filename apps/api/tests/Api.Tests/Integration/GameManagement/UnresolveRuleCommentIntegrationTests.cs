@@ -1,5 +1,7 @@
 using Api.Tests.Infrastructure;
 using Api.BoundedContexts.GameManagement.Application.Commands;
+using Api.BoundedContexts.GameManagement.Application.Commands;
+using Api.BoundedContexts.GameManagement.Application.Queries;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Api.SharedKernel.Application.Services;

@@ -2,6 +2,7 @@ using Api.BoundedContexts.Authentication.Domain.Entities;
 using Api.BoundedContexts.GameManagement.Domain.Entities;
 using Api.BoundedContexts.DocumentProcessing.Application.Commands;
 using Api.BoundedContexts.DocumentProcessing.Application.DTOs;
+using Api.BoundedContexts.DocumentProcessing.Application.Commands;
 using Api.BoundedContexts.DocumentProcessing.Application.Queries;
 using Api.BoundedContexts.DocumentProcessing.Domain.Repositories;
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.Persistence;

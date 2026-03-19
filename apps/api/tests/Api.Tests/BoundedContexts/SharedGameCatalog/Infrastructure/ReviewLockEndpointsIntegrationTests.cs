@@ -553,6 +553,7 @@ public sealed class ReviewLockEndpointsIntegrationTests : IAsyncLifetime
 
     private async Task<Guid> CreateShareRequestAsync(ShareRequestStatus status)
     {
+        using var scope = _factory.Services.CreateScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
 
         // Create game with all required fields to satisfy database constraints

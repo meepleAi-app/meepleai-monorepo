@@ -100,6 +100,7 @@ public sealed class DocumentProcessingE2ETests : E2ETestBase
 
         var pdfContent = CreateMinimalPdfBytes();
 
+        using var content = new MultipartFormDataContent();
         var fileContent = new ByteArrayContent(pdfContent);
         fileContent.Headers.ContentType = new MediaTypeHeaderValue("application/pdf");
         content.Add(fileContent, "file", "test.pdf");
@@ -129,6 +130,7 @@ public sealed class DocumentProcessingE2ETests : E2ETestBase
         // Create a text file pretending to be PDF
         var invalidContent = Encoding.UTF8.GetBytes("This is not a PDF file");
 
+        using var content = new MultipartFormDataContent();
         var fileContent = new ByteArrayContent(invalidContent);
         fileContent.Headers.ContentType = new MediaTypeHeaderValue("text/plain");
         content.Add(fileContent, "file", "fake.txt");
@@ -154,6 +156,7 @@ public sealed class DocumentProcessingE2ETests : E2ETestBase
         var (sessionToken, _) = await RegisterUserAsync(email, "ValidPassword123!");
         SetSessionCookie(sessionToken);
 
+        using var content = new MultipartFormDataContent();
         var fileContent = new ByteArrayContent(Array.Empty<byte>());
         fileContent.Headers.ContentType = new MediaTypeHeaderValue("application/pdf");
         content.Add(fileContent, "file", "empty.pdf");
@@ -185,6 +188,7 @@ public sealed class DocumentProcessingE2ETests : E2ETestBase
         // Upload a PDF first
         var pdfContent = CreateMinimalPdfBytes();
 
+        using var content = new MultipartFormDataContent();
         var fileContent = new ByteArrayContent(pdfContent);
         fileContent.Headers.ContentType = new MediaTypeHeaderValue("application/pdf");
         content.Add(fileContent, "file", "status-test.pdf");
@@ -246,6 +250,7 @@ public sealed class DocumentProcessingE2ETests : E2ETestBase
         // Upload a PDF first
         var pdfContent = CreateMinimalPdfBytes();
 
+        using var content = new MultipartFormDataContent();
         var fileContent = new ByteArrayContent(pdfContent);
         fileContent.Headers.ContentType = new MediaTypeHeaderValue("application/pdf");
         content.Add(fileContent, "file", "text-test.pdf");
@@ -334,6 +339,7 @@ public sealed class DocumentProcessingE2ETests : E2ETestBase
         var pdfContent = CreateMinimalPdfBytes();
 
         // Step 3: Upload PDF
+        using var content = new MultipartFormDataContent();
         var fileContent = new ByteArrayContent(pdfContent);
         fileContent.Headers.ContentType = new MediaTypeHeaderValue("application/pdf");
         content.Add(fileContent, "file", "journey-test.pdf");

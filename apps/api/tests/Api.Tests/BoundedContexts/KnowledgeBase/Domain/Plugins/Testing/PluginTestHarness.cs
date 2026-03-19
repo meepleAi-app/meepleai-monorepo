@@ -304,6 +304,7 @@ public abstract class PluginTestHarness<TPlugin> where TPlugin : IRagPlugin
     {
         // Arrange
         var plugin = CreatePlugin();
+        using var cts = new CancellationTokenSource();
         await cts.CancelAsync();
 
         // Act & Assert

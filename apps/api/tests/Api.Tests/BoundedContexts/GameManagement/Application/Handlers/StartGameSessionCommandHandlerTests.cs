@@ -1,6 +1,8 @@
 using Api.SharedKernel.Domain.ValueObjects;
 using Api.BoundedContexts.GameManagement.Application.Commands;
 using Api.BoundedContexts.GameManagement.Application.DTOs;
+using Api.BoundedContexts.GameManagement.Application.Commands;
+using Api.BoundedContexts.GameManagement.Application.Queries;
 using Api.BoundedContexts.GameManagement.Domain.Entities;
 using Api.BoundedContexts.GameManagement.Domain.Repositories;
 using Api.BoundedContexts.GameManagement.Domain.Services;

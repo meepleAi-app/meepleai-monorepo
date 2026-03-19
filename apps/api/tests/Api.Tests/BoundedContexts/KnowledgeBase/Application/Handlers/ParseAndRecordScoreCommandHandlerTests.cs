@@ -4,6 +4,7 @@ using Api.BoundedContexts.GameManagement.Application.Queries.LiveSessions;
 using Api.BoundedContexts.GameManagement.Application.Services;
 using Api.BoundedContexts.GameManagement.Domain.Enums;
 using Api.BoundedContexts.KnowledgeBase.Application.Commands;
+using Api.BoundedContexts.KnowledgeBase.Application.Commands;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services;
 using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;

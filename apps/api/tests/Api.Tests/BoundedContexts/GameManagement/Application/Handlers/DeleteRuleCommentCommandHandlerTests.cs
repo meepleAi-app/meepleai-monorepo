@@ -1,5 +1,7 @@
 using Microsoft.Extensions.Logging;
 using Api.BoundedContexts.GameManagement.Application.Commands;
+using Api.BoundedContexts.GameManagement.Application.Commands;
+using Api.BoundedContexts.GameManagement.Application.Queries;
 using Api.Infrastructure;
 using Api.Tests.TestHelpers;
 using Moq;
@@ -58,6 +60,7 @@ public class DeleteRuleCommentCommandHandlerTests
     public void Constructor_WithNullLogger_ThrowsArgumentNullException()
     {
         // Arrange - fresh resources per test
+        using var context = CreateFreshDbContext();
 
         // Act & Assert
         Assert.Throws<ArgumentNullException>(() =>

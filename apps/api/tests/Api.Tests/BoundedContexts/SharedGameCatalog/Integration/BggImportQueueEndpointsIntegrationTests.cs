@@ -189,6 +189,7 @@ public sealed class BggImportQueueEndpointsIntegrationTests : IAsyncLifetime
     public async Task GetQueueStatus_ExcludesCompletedAndFailed()
     {
         // Arrange
+        using var scope = _factory.Services.CreateScope();
         var queueService = scope.ServiceProvider.GetRequiredService<IBggImportQueueService>();
 
         await queueService.EnqueueAsync(1, "Queued");
@@ -229,6 +230,7 @@ public sealed class BggImportQueueEndpointsIntegrationTests : IAsyncLifetime
         Assert.Equal(BggImportStatus.Queued, result.Status);
 
         // Verify database persistence
+        using var scope = _factory.Services.CreateScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
         var dbEntry = await dbContext.BggImportQueue.FirstOrDefaultAsync(q => q.BggId == 174430);
         Assert.NotNull(dbEntry);
@@ -238,6 +240,7 @@ public sealed class BggImportQueueEndpointsIntegrationTests : IAsyncLifetime
     public async Task EnqueueSingle_WithDuplicateBggId_ReturnsConflict()
     {
         // Arrange
+        using var scope = _factory.Services.CreateScope();
         var queueService = scope.ServiceProvider.GetRequiredService<IBggImportQueueService>();
         await queueService.EnqueueAsync(266192, "Wingspan");
 
@@ -298,6 +301,7 @@ public sealed class BggImportQueueEndpointsIntegrationTests : IAsyncLifetime
     public async Task EnqueueBatch_WithSomeExisting_EnqueuesOnlyNew()
     {
         // Arrange
+        using var scope = _factory.Services.CreateScope();
         var queueService = scope.ServiceProvider.GetRequiredService<IBggImportQueueService>();
         await queueService.EnqueueAsync(174430, "Gloomhaven"); // Pre-existing
 
@@ -340,6 +344,7 @@ public sealed class BggImportQueueEndpointsIntegrationTests : IAsyncLifetime
     public async Task CancelQueuedImport_WithQueuedEntry_ReturnsNoContent()
     {
         // Arrange
+        using var scope = _factory.Services.CreateScope();
         var queueService = scope.ServiceProvider.GetRequiredService<IBggImportQueueService>();
         var entity = await queueService.EnqueueAsync(123, "Test Game");
 
@@ -359,6 +364,7 @@ public sealed class BggImportQueueEndpointsIntegrationTests : IAsyncLifetime
     public async Task CancelQueuedImport_WithNonQueuedStatus_ReturnsNotFound()
     {
         // Arrange
+        using var scope = _factory.Services.CreateScope();
         var queueService = scope.ServiceProvider.GetRequiredService<IBggImportQueueService>();
         var entity = await queueService.EnqueueAsync(456, "Processing Game");
         await queueService.MarkAsProcessingAsync(entity.Id);
@@ -392,6 +398,7 @@ public sealed class BggImportQueueEndpointsIntegrationTests : IAsyncLifetime
     public async Task RetryFailedImport_WithFailedEntry_ReturnsNoContent()
     {
         // Arrange
+        using var scope = _factory.Services.CreateScope();
         var queueService = scope.ServiceProvider.GetRequiredService<IBggImportQueueService>();
         var entity = await queueService.EnqueueAsync(789, "Failed Game");
         await queueService.MarkAsProcessingAsync(entity.Id);
@@ -415,6 +422,7 @@ public sealed class BggImportQueueEndpointsIntegrationTests : IAsyncLifetime
     public async Task RetryFailedImport_WithNonFailedStatus_ReturnsNotFound()
     {
         // Arrange
+        using var scope = _factory.Services.CreateScope();
         var queueService = scope.ServiceProvider.GetRequiredService<IBggImportQueueService>();
         var entity = await queueService.EnqueueAsync(999, "Queued Game");
 
@@ -447,6 +455,7 @@ public sealed class BggImportQueueEndpointsIntegrationTests : IAsyncLifetime
     public async Task GetByBggId_WithExistingBggId_ReturnsOk()
     {
         // Arrange
+        using var scope = _factory.Services.CreateScope();
         var queueService = scope.ServiceProvider.GetRequiredService<IBggImportQueueService>();
         await queueService.EnqueueAsync(12345, "Test Game");
 
@@ -483,6 +492,7 @@ public sealed class BggImportQueueEndpointsIntegrationTests : IAsyncLifetime
     public async Task StreamQueueProgress_ReturnsCorrectCounts()
     {
         // Arrange
+        using var scope = _factory.Services.CreateScope();
         var queueService = scope.ServiceProvider.GetRequiredService<IBggImportQueueService>();
 
         await queueService.EnqueueAsync(1, "Queued 1");
@@ -531,6 +541,7 @@ public sealed class BggImportQueueEndpointsIntegrationTests : IAsyncLifetime
     public async Task StreamQueueProgress_SendsPeriodicUpdates()
     {
         // Arrange
+        using var scope = _factory.Services.CreateScope();
         var queueService = scope.ServiceProvider.GetRequiredService<IBggImportQueueService>();
         await queueService.EnqueueAsync(1, "Test Game");
 
@@ -542,6 +553,7 @@ public sealed class BggImportQueueEndpointsIntegrationTests : IAsyncLifetime
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
         var stream = await response.Content.ReadAsStreamAsync(cts.Token);
+        using var reader = new StreamReader(stream);
 
         var eventCount = 0;
         try
@@ -568,6 +580,7 @@ public sealed class BggImportQueueEndpointsIntegrationTests : IAsyncLifetime
     public async Task StreamQueueProgress_IncludesActiveItemsOnly()
     {
         // Arrange
+        using var scope = _factory.Services.CreateScope();
         var queueService = scope.ServiceProvider.GetRequiredService<IBggImportQueueService>();
 
         // Add 15 items (should only return top 10 active)
@@ -577,9 +590,11 @@ public sealed class BggImportQueueEndpointsIntegrationTests : IAsyncLifetime
         }
 
         // Act
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(3));
         var response = await _client.GetAsync("/api/v1/admin/bgg-queue/stream", cts.Token);
 
         var stream = await response.Content.ReadAsStreamAsync(cts.Token);
+        using var reader = new StreamReader(stream);
 
         var dataLine = await reader.ReadLineAsync(cts.Token);
         Assert.NotNull(dataLine);

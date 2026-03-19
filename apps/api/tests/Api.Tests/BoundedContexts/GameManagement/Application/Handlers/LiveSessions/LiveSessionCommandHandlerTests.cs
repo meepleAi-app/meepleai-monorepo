@@ -1,4 +1,5 @@
 using Api.BoundedContexts.GameManagement.Application.Commands.LiveSessions;
+using Api.BoundedContexts.GameManagement.Application.Commands.LiveSessions;
 using Api.BoundedContexts.GameManagement.Domain.Entities;
 using Api.BoundedContexts.GameManagement.Domain.Enums;
 using Api.BoundedContexts.GameManagement.Domain.Repositories;
@@ -1136,6 +1137,7 @@ public class LiveSessionCommandHandlerTests
 
         var handler = new StartLiveSessionCommandHandler(_repositoryMock.Object, _timeProvider);
         var command = new StartLiveSessionCommand(sessionId);
+        using var cts = new CancellationTokenSource();
         var ct = cts.Token;
 
         // Act

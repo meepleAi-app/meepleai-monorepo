@@ -1,4 +1,6 @@
 using Api.BoundedContexts.GameManagement.Application.Commands;
+using Api.BoundedContexts.GameManagement.Application.Commands;
+using Api.BoundedContexts.GameManagement.Application.Queries;
 using Api.BoundedContexts.GameManagement.Domain.Repositories;
 using Api.Infrastructure;
 using Api.SharedKernel.Infrastructure.Persistence;
@@ -71,6 +73,7 @@ public class CreateRuleCommentCommandHandlerTests
     public void Constructor_WithNullTimeProvider_ThrowsArgumentNullException()
     {
         // Arrange - fresh resources per test
+        using var context = CreateFreshDbContext();
         var loggerMock = new Mock<ILogger<CreateRuleCommentCommandHandler>>();
 
         // Act & Assert
@@ -85,6 +88,7 @@ public class CreateRuleCommentCommandHandlerTests
     public void Constructor_WithNullLogger_ThrowsArgumentNullException()
     {
         // Arrange - fresh resources per test
+        using var context = CreateFreshDbContext();
         var timeProviderMock = CreateTimeProviderMock();
 
         // Act & Assert

@@ -152,6 +152,7 @@ public class ProviderHealthCheckServiceTests
         var service = new ProviderHealthCheckService(serviceScopeFactory, logger.Object);
 
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(12));
+        using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cts.Token, TestCancellationToken);
 
         // Act
         await service.StartAsync(linkedCts.Token);
@@ -186,6 +187,8 @@ public class ProviderHealthCheckServiceTests
         var logger = new Mock<ILogger<ProviderHealthCheckService>>();
         var service = new ProviderHealthCheckService(serviceScopeFactory, logger.Object);
 
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(12));
+        using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cts.Token, TestCancellationToken);
 
         // Act
         await service.StartAsync(linkedCts.Token);
@@ -225,6 +228,7 @@ public class ProviderHealthCheckServiceTests
         var service = new ProviderHealthCheckService(serviceScopeFactory, logger.Object);
 
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(16));
+        using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cts.Token, TestCancellationToken);
 
         // Act
         await service.StartAsync(linkedCts.Token);

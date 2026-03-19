@@ -175,6 +175,7 @@ public sealed class CompleteChunkedUploadCommandHandlerPrivateGameTests : IDispo
         backgroundTaskMock
             .Setup(b => b.ExecuteWithCancellation(It.IsAny<string>(), It.IsAny<Func<CancellationToken, Task>>()));
 
+        using var dbContext = TestDbContextFactory.CreateInMemoryDbContext();
         var scopeFactoryMock = new Mock<IServiceScopeFactory>();
         var pdfTextExtractorMock = new Mock<IPdfTextExtractor>();
         var tableExtractorMock = new Mock<IPdfTableExtractor>();

@@ -181,6 +181,7 @@ public sealed class OAuthAccountRepositoryIntegrationTests : IAsyncLifetime
     /// </summary>
     private async Task<T> ExecuteInScopeAsync<T>(Func<IOAuthAccountRepository, IUnitOfWork, Task<T>> action)
     {
+        using var scope = _serviceProvider!.CreateScope();
         var scopedRepo = scope.ServiceProvider.GetRequiredService<IOAuthAccountRepository>();
         var scopedUow = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
         return await action(scopedRepo, scopedUow);

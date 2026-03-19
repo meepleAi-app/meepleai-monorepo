@@ -83,6 +83,7 @@ public sealed class TokenTrackingServiceTests : IClassFixture<SharedTestcontaine
     public async Task TrackUsageAsync_At80Percent_ShouldLogWarning()
     {
         // Arrange
+        using var dbContext = _fixture.CreateDbContext(_connectionString!);
         var tierRepo = new TokenTierRepository(dbContext);
         var usageRepo = new UserTokenUsageRepository(dbContext);
         var mockCache = new Mock<IHybridCacheService>();
@@ -111,6 +112,7 @@ public sealed class TokenTrackingServiceTests : IClassFixture<SharedTestcontaine
     public async Task TrackUsageAsync_At100Percent_ShouldBlockUser()
     {
         // Arrange
+        using var dbContext = _fixture.CreateDbContext(_connectionString!);
         var tierRepo = new TokenTierRepository(dbContext);
         var usageRepo = new UserTokenUsageRepository(dbContext);
         var mockCache = new Mock<IHybridCacheService>();
@@ -141,6 +143,7 @@ public sealed class TokenTrackingServiceTests : IClassFixture<SharedTestcontaine
     public async Task CheckLimitsAsync_ForUserBelowLimit_ShouldReturnNotExceeded()
     {
         // Arrange
+        using var dbContext = _fixture.CreateDbContext(_connectionString!);
         var tierRepo = new TokenTierRepository(dbContext);
         var usageRepo = new UserTokenUsageRepository(dbContext);
         var mockCache = new Mock<IHybridCacheService>();
@@ -180,6 +183,7 @@ public sealed class TokenTrackingServiceTests : IClassFixture<SharedTestcontaine
     public async Task ResetMonthlyUsageAsync_ShouldClearUsageCounters()
     {
         // Arrange
+        using var dbContext = _fixture.CreateDbContext(_connectionString!);
         var tierRepo = new TokenTierRepository(dbContext);
         var usageRepo = new UserTokenUsageRepository(dbContext);
         var mockCache = new Mock<IHybridCacheService>();

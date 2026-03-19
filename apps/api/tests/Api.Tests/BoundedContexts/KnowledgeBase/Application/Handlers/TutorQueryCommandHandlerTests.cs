@@ -2,6 +2,7 @@ using Api.Infrastructure.Entities;
 using System.Net;
 using System.Text.Json;
 using Api.BoundedContexts.KnowledgeBase.Application.Commands;
+using Api.BoundedContexts.KnowledgeBase.Application.Commands;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries;
 using Api.BoundedContexts.KnowledgeBase.Application.Services;
 using Microsoft.Extensions.Logging;

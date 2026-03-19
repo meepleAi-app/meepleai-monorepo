@@ -702,6 +702,7 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
                 barrier.SignalAndWait();
 
                 // Execute simultaneously with scoped handler to avoid DbContext concurrency
+                using var scope = _serviceProvider!.CreateScope();
                 var handler = scope.ServiceProvider.GetRequiredService<UploadPdfCommandHandler>();
                 return await handler.Handle(command, TestCancellationToken);
             }));

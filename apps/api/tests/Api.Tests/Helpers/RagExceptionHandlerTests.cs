@@ -464,6 +464,7 @@ public class RagExceptionHandlerTests
     public void HandleServiceException_WithActivity_SetsErrorStatus()
     {
         // Arrange
+        using var activity = MeepleAiActivitySources.Rag.StartActivity("Test");
         var exception = new InvalidOperationException("Configuration error");
         Func<string, TestResult> failureFactory = errorMessage => TestResult.CreateFailure(errorMessage);
 

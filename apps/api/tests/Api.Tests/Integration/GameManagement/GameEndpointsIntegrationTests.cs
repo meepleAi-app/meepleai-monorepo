@@ -143,6 +143,7 @@ public sealed class GameEndpointsIntegrationTests : IAsyncLifetime
     public async Task GetAllGames_WithPagination_ReturnsPagedResults()
     {
         // Arrange
+        using var scope = _factory.Services.CreateScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
         var (userId, sessionToken) = await TestSessionHelper.CreateUserSessionAsync(dbContext);
 
@@ -165,6 +166,7 @@ public sealed class GameEndpointsIntegrationTests : IAsyncLifetime
     public async Task GetAllGames_WithSearchFilter_ReturnsFilteredResults()
     {
         // Arrange
+        using var scope = _factory.Services.CreateScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
         var (userId, sessionToken) = await TestSessionHelper.CreateUserSessionAsync(dbContext);
 
@@ -207,6 +209,7 @@ public sealed class GameEndpointsIntegrationTests : IAsyncLifetime
     public async Task GetGameById_NonExistentGame_ReturnsNotFoundOrUnauthorized()
     {
         // Arrange
+        using var scope = _factory.Services.CreateScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
         var (userId, sessionToken) = await TestSessionHelper.CreateUserSessionAsync(dbContext);
 
@@ -249,6 +252,7 @@ public sealed class GameEndpointsIntegrationTests : IAsyncLifetime
     public async Task CreateGame_WithUserSession_RequiresAdminOrEditor()
     {
         // Arrange - Regular user session
+        using var scope = _factory.Services.CreateScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
         var (userId, sessionToken) = await TestSessionHelper.CreateUserSessionAsync(dbContext);
 

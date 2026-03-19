@@ -879,6 +879,7 @@ public class TwoFactorSecurityPenetrationTests : IAsyncLifetime
 
     private string GenerateRandom4DigitCode()
     {
+        using var rng = System.Security.Cryptography.RandomNumberGenerator.Create();
         var bytes = new byte[2];
         rng.GetBytes(bytes);
         var value = BitConverter.ToUInt16(bytes, 0) % 10000;

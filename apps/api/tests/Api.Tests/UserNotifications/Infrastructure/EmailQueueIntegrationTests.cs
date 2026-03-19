@@ -103,6 +103,7 @@ public sealed class EmailQueueIntegrationTests : IDisposable
         var emailId = Guid.NewGuid();
         var userId = Guid.NewGuid();
 
+        using (var seedCtx = CreateDbContext())
         {
             seedCtx.Set<EmailQueueEntity>().Add(new EmailQueueEntity
             {
@@ -127,6 +128,7 @@ public sealed class EmailQueueIntegrationTests : IDisposable
             It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
 
+        using (var jobCtx = CreateDbContext())
         {
             var repo = CreateRepository(jobCtx);
             var job = new EmailProcessorJob(repo, _emailService.Object, jobCtx, _logger.Object);
@@ -134,6 +136,7 @@ public sealed class EmailQueueIntegrationTests : IDisposable
         }
 
         // Assert: email should now be sent
+        using (var verifyCtx = CreateDbContext())
         {
             var entity = await verifyCtx.Set<EmailQueueEntity>()
                 .AsNoTracking()
@@ -157,6 +160,7 @@ public sealed class EmailQueueIntegrationTests : IDisposable
         var emailId = Guid.NewGuid();
         var userId = Guid.NewGuid();
 
+        using (var seedCtx = CreateDbContext())
         {
             seedCtx.Set<EmailQueueEntity>().Add(new EmailQueueEntity
             {
@@ -182,6 +186,7 @@ public sealed class EmailQueueIntegrationTests : IDisposable
             .ThrowsAsync(new InvalidOperationException("Connection refused"));
 
         // Act: run the processor — should fail and move to dead letter
+        using (var jobCtx = CreateDbContext())
         {
             var repo = CreateRepository(jobCtx);
             var job = new EmailProcessorJob(repo, _emailService.Object, jobCtx, _logger.Object);
@@ -189,6 +194,7 @@ public sealed class EmailQueueIntegrationTests : IDisposable
         }
 
         // Assert: email should be dead_letter with retryCount=3
+        using (var verifyCtx = CreateDbContext())
         {
             var entity = await verifyCtx.Set<EmailQueueEntity>()
                 .AsNoTracking()

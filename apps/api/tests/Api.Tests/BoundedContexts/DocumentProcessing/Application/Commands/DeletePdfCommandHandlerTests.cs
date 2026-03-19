@@ -81,6 +81,7 @@ public class DeletePdfCommandHandlerTests
     public void Constructor_WithNullBlobStorageService_ThrowsArgumentNullException()
     {
         // Arrange - fresh resources per test
+        using var context = CreateFreshDbContext();
         var (_, cacheServiceMock, loggerMock) = CreateMocks();
 
         // Act
@@ -99,6 +100,7 @@ public class DeletePdfCommandHandlerTests
     public void Constructor_WithNullCacheService_ThrowsArgumentNullException()
     {
         // Arrange - fresh resources per test
+        using var context = CreateFreshDbContext();
         var (blobStorageServiceMock, _, loggerMock) = CreateMocks();
 
         // Act
@@ -117,6 +119,7 @@ public class DeletePdfCommandHandlerTests
     public void Constructor_WithNullLogger_ThrowsArgumentNullException()
     {
         // Arrange - fresh resources per test
+        using var context = CreateFreshDbContext();
         var (blobStorageServiceMock, cacheServiceMock, _) = CreateMocks();
 
         // Act

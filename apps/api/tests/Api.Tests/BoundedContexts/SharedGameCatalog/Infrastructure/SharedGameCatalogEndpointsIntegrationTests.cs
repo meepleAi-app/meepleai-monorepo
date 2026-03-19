@@ -238,6 +238,7 @@ public sealed class SharedGameCatalogEndpointsIntegrationTests : IAsyncLifetime
     public async Task ApprovePublication_WithPendingApprovalGame_ReturnsNoContent()
     {
         // Arrange - Issue #2688: Setup admin authentication
+        using var authScope = _factory.Services.CreateScope();
         var authDbContext = authScope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
         var (adminUserId, sessionToken) = await TestSessionHelper.CreateAdminSessionAsync(authDbContext);
 
@@ -254,6 +255,7 @@ public sealed class SharedGameCatalogEndpointsIntegrationTests : IAsyncLifetime
         Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
 
         // Issue #2707: Use fresh scope for assertions to prevent ObjectDisposedException
+        using var assertScope = _factory.Services.CreateScope();
         var dbContext = assertScope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
         var updatedGame = await dbContext.SharedGames.FindAsync(game.Id);
         Assert.NotNull(updatedGame);
@@ -264,6 +266,7 @@ public sealed class SharedGameCatalogEndpointsIntegrationTests : IAsyncLifetime
     public async Task RejectPublication_WithPendingApprovalGame_ReturnsNoContent()
     {
         // Arrange - Issue #2688: Setup admin authentication
+        using var authScope = _factory.Services.CreateScope();
         var authDbContext = authScope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
         var (adminUserId, sessionToken) = await TestSessionHelper.CreateAdminSessionAsync(authDbContext);
 
@@ -282,6 +285,7 @@ public sealed class SharedGameCatalogEndpointsIntegrationTests : IAsyncLifetime
         Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
 
         // Issue #2707: Use fresh scope for assertions to prevent ObjectDisposedException
+        using var assertScope = _factory.Services.CreateScope();
         var dbContext = assertScope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
         var updatedGame = await dbContext.SharedGames.FindAsync(game.Id);
         Assert.NotNull(updatedGame);
@@ -292,6 +296,7 @@ public sealed class SharedGameCatalogEndpointsIntegrationTests : IAsyncLifetime
     public async Task GetPendingApprovals_ReturnsPendingGames()
     {
         // Arrange - Issue #2688: Setup admin authentication
+        using var authScope = _factory.Services.CreateScope();
         var authDbContext = authScope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
         var (adminUserId, sessionToken) = await TestSessionHelper.CreateAdminSessionAsync(authDbContext);
 
@@ -335,6 +340,7 @@ public sealed class SharedGameCatalogEndpointsIntegrationTests : IAsyncLifetime
     public async Task AdminOnlyEndpoint_WithRegularUser_Returns403Forbidden()
     {
         // Arrange - Setup regular user authentication (not admin)
+        using var authScope = _factory.Services.CreateScope();
         var authDbContext = authScope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
         var (userId, sessionToken) = await TestSessionHelper.CreateUserSessionAsync(authDbContext);
 
@@ -359,6 +365,7 @@ public sealed class SharedGameCatalogEndpointsIntegrationTests : IAsyncLifetime
     public async Task CreateSharedGame_WithValidData_Returns201Created()
     {
         // Arrange - Setup admin authentication
+        using var authScope = _factory.Services.CreateScope();
         var authDbContext = authScope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
         var (adminUserId, sessionToken) = await TestSessionHelper.CreateAdminSessionAsync(authDbContext);
 
@@ -393,6 +400,7 @@ public sealed class SharedGameCatalogEndpointsIntegrationTests : IAsyncLifetime
         Assert.NotEqual(Guid.Empty, gameId);
 
         // Verify game was created in DB with Draft status
+        using var assertScope = _factory.Services.CreateScope();
         var dbContext = assertScope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
         var createdGame = await dbContext.SharedGames.FindAsync(gameId);
         Assert.NotNull(createdGame);
@@ -429,6 +437,7 @@ public sealed class SharedGameCatalogEndpointsIntegrationTests : IAsyncLifetime
     public async Task CreateSharedGame_WithRegularUser_Returns403Forbidden()
     {
         // Arrange - Regular user, not admin
+        using var authScope = _factory.Services.CreateScope();
         var authDbContext = authScope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
         var (userId, sessionToken) = await TestSessionHelper.CreateUserSessionAsync(authDbContext);
 
@@ -461,6 +470,7 @@ public sealed class SharedGameCatalogEndpointsIntegrationTests : IAsyncLifetime
     public async Task CreateSharedGame_WithEditorRole_Returns201Created()
     {
         // Arrange - Editor role should also be allowed
+        using var authScope = _factory.Services.CreateScope();
         var authDbContext = authScope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
         var (editorUserId, sessionToken) = await TestSessionHelper.CreateEditorSessionAsync(authDbContext);
 
@@ -495,6 +505,7 @@ public sealed class SharedGameCatalogEndpointsIntegrationTests : IAsyncLifetime
         Assert.NotEqual(Guid.Empty, gameId);
 
         // Verify game was created with Editor as creator
+        using var assertScope = _factory.Services.CreateScope();
         var dbContext = assertScope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
         var createdGame = await dbContext.SharedGames.FindAsync(gameId);
         Assert.NotNull(createdGame);
@@ -510,6 +521,7 @@ public sealed class SharedGameCatalogEndpointsIntegrationTests : IAsyncLifetime
     public async Task BggSearch_WithValidQuery_ReturnsResults()
     {
         // Arrange - Issue #2688: Setup admin authentication
+        using var authScope = _factory.Services.CreateScope();
         var authDbContext = authScope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
         var (adminUserId, sessionToken) = await TestSessionHelper.CreateAdminSessionAsync(authDbContext);
 
@@ -542,6 +554,7 @@ public sealed class SharedGameCatalogEndpointsIntegrationTests : IAsyncLifetime
     public async Task CheckBggDuplicate_WithNonExistentBggId_ReturnsNoDuplicate()
     {
         // Arrange
+        using var authScope = _factory.Services.CreateScope();
         var authDbContext = authScope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
         var (adminUserId, sessionToken) = await TestSessionHelper.CreateAdminSessionAsync(authDbContext);
 
@@ -566,6 +579,7 @@ public sealed class SharedGameCatalogEndpointsIntegrationTests : IAsyncLifetime
     public async Task CheckBggDuplicate_WithExistingBggId_ReturnsDuplicate()
     {
         // Arrange
+        using var authScope = _factory.Services.CreateScope();
         var authDbContext = authScope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
         var (adminUserId, sessionToken) = await TestSessionHelper.CreateAdminSessionAsync(authDbContext);
 
@@ -601,6 +615,7 @@ public sealed class SharedGameCatalogEndpointsIntegrationTests : IAsyncLifetime
     public async Task UpdateFromBgg_WithNonExistentGame_ReturnsNotFound()
     {
         // Arrange
+        using var authScope = _factory.Services.CreateScope();
         var authDbContext = authScope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
         var (adminUserId, sessionToken) = await TestSessionHelper.CreateAdminSessionAsync(authDbContext);
 
@@ -639,6 +654,7 @@ public sealed class SharedGameCatalogEndpointsIntegrationTests : IAsyncLifetime
     public async Task UpdateFromBgg_WithRegularUser_Returns403Forbidden()
     {
         // Arrange - Regular user, not admin
+        using var authScope = _factory.Services.CreateScope();
         var authDbContext = authScope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
         var (userId, sessionToken) = await TestSessionHelper.CreateUserSessionAsync(authDbContext);
 
@@ -694,6 +710,7 @@ public sealed class SharedGameCatalogEndpointsIntegrationTests : IAsyncLifetime
     /// </summary>
     private async Task<SharedGameEntity> CreateTestGameAsync(GameStatus status, Guid? createdBy = null)
     {
+        using var scope = _factory.Services.CreateScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
 
         var game = new SharedGameEntity

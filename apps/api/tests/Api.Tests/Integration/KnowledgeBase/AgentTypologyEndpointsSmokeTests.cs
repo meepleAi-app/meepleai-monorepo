@@ -131,6 +131,7 @@ public sealed class AgentTypologyEndpointsSmokeTests : IAsyncLifetime
         _editorCookie = registerEditorResponse.Headers.GetValues("Set-Cookie").First();
 
         // Manually set editor role in DB
+        using (var scope = _factory.Services.CreateScope())
         {
             var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
             var editorUser = await dbContext.Users.FirstAsync(u => u.Email == editorEmail);
@@ -153,6 +154,7 @@ public sealed class AgentTypologyEndpointsSmokeTests : IAsyncLifetime
         _adminCookie = registerAdminResponse.Headers.GetValues("Set-Cookie").First();
 
         // Manually set admin role in DB
+        using (var scope = _factory.Services.CreateScope())
         {
             var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
             var adminUser = await dbContext.Users.FirstAsync(u => u.Email == adminEmail);

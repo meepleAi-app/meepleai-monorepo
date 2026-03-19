@@ -35,6 +35,7 @@ import { AgentStatusBadge } from '@/components/ui/data-display/meeple-card-featu
 import { DocumentStatusBadge } from '@/components/ui/data-display/meeple-card-features/DocumentStatusBadge';
 import { Tabs, TabsList, TabsContent } from '@/components/ui/navigation/tabs';
 import { Button } from '@/components/ui/primitives/button';
+import { useAgentKbDocs, useAgentThreads } from '@/hooks/queries/useAgentData';
 import { useAgentStatus } from '@/hooks/useAgentStatus';
 import { api } from '@/lib/api';
 import { cn } from '@/lib/utils';
@@ -80,8 +81,8 @@ export const AgentExtraMeepleCard = React.memo(function AgentExtraMeepleCard({
   const [activeTab, setActiveTab] = useState<AgentTab>(enableChat ? 'chat' : 'overview');
   const [chatThreadId, setChatThreadId] = useState<string | null>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const { threads, loading: threadsLoading } = useAgentThreads(data.id);
-  const { docs, loading: docsLoading } = useAgentKbDocs(data.gameId);
+  const { data: threads = [], isLoading: threadsLoading } = useAgentThreads(data.id);
+  const { data: docs = [], isLoading: docsLoading } = useAgentKbDocs(data.gameId);
   const colors = ENTITY_COLORS.agent;
 
   // Agent readiness validation — always called (rules of hooks) but result
@@ -594,105 +595,4 @@ function KbDocItem({ doc }: { doc: KbDocumentPreview }) {
       <DocumentStatusBadge status={doc.status} size="sm" />
     </div>
   );
-}
-
-// ── Agent data-fetching hooks  ──────────────────────────────────────────────
-
-function useAgentThreads(agentId: string) {
-  const [threads, setThreads] = React.useState<ChatThreadPreview[]>([]);
-  const [loading, setLoading] = React.useState(true);
-
-  React.useEffect(() => {
-    if (!agentId) return;
-    const controller = new AbortController();
-
-    (async () => {
-      try {
-        const res = await fetch(`/api/v1/chat/threads?agentId=${agentId}`, {
-          signal: controller.signal,
-        });
-        if (!res.ok) return;
-        const json = (await res.json()) as unknown[];
-        setThreads(mapThreads(json));
-      } catch (err) {
-        if (err instanceof Error && err.name === 'AbortError') return;
-      } finally {
-        setLoading(false);
-      }
-    })();
-
-    return () => {
-      controller.abort();
-    };
-  }, [agentId]);
-
-  return { threads, loading };
-}
-
-function useAgentKbDocs(gameId: string | undefined) {
-  const [docs, setDocs] = React.useState<KbDocumentPreview[]>([]);
-  const [loading, setLoading] = React.useState(!!gameId);
-
-  React.useEffect(() => {
-    if (!gameId) {
-      setLoading(false);
-      return;
-    }
-    const controller = new AbortController();
-
-    (async () => {
-      try {
-        const res = await fetch(`/api/v1/library/games/${gameId}/documents`, {
-          signal: controller.signal,
-        });
-        if (!res.ok) return;
-        const json = (await res.json()) as unknown[];
-        setDocs(mapKbDocs(json));
-      } catch (err) {
-        if (err instanceof Error && err.name === 'AbortError') return;
-      } finally {
-        setLoading(false);
-      }
-    })();
-
-    return () => {
-      controller.abort();
-    };
-  }, [gameId]);
-
-  return { docs, loading };
-}
-
-function mapThreads(json: unknown[]): ChatThreadPreview[] {
-  return json.map(raw => {
-    const t = raw as Record<string, unknown>;
-    const messages = Array.isArray(t.messages) ? (t.messages as Record<string, unknown>[]) : [];
-    const firstMsg = messages[0];
-    const preview = typeof firstMsg?.content === 'string' ? firstMsg.content : '';
-    return {
-      id: String(t.id ?? ''),
-      createdAt: String(t.createdAt ?? t.startedAt ?? new Date().toISOString()),
-      messageCount: messages.length,
-      firstMessagePreview: preview,
-    };
-  });
-}
-
-function mapKbDocs(json: unknown[]): KbDocumentPreview[] {
-  return json.map(raw => {
-    const d = raw as Record<string, unknown>;
-    const statusMap: Record<string, KbDocumentPreview['status']> = {
-      indexed: 'indexed',
-      processing: 'processing',
-      failed: 'failed',
-      none: 'none',
-    };
-    const rawStatus = String(d.status ?? 'none').toLowerCase();
-    return {
-      id: String(d.id ?? ''),
-      fileName: String(d.fileName ?? d.name ?? 'Documento'),
-      uploadedAt: String(d.uploadedAt ?? d.createdAt ?? new Date().toISOString()),
-      status: statusMap[rawStatus] ?? 'none',
-    };
-  });
 }

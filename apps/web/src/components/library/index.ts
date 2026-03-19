@@ -42,13 +42,16 @@ export { LibraryNavTabs } from './LibraryNavTabs';
 export { BggGameSearch, type BggGameSearchProps } from './BggGameSearch';
 export { AddPrivateGameWithBgg, type AddPrivateGameWithBggProps } from './AddPrivateGameWithBgg';
 
-// Game Detail Components (Issue #3513)
+// Game Table Components (replaces legacy game-detail — Issue #3513)
 export {
-  GameDetailHero,
-  type GameDetailHeroProps,
-  UserActionSection,
-  type UserActionSectionProps,
-} from './game-detail';
+  GameTableLayout,
+  GameTableDrawer,
+  GameTableZoneTools,
+  GameTableZoneKnowledge,
+  GameTableZoneSessions,
+  GameStatsPanel,
+  GameTableSkeleton,
+} from './game-table';
 
 // Shelf Components — vetrina layout for library browse pages
 export { ShelfCard, type ShelfCardProps, type ManaPip, type ManaPipType } from './ShelfCard';

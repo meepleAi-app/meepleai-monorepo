@@ -19,6 +19,7 @@ permissions:
   pull-requests: write
   checks: write
 
+  actions: read
 jobs:
   notify-start:
     uses: ./.github/workflows/notify-slack.yml

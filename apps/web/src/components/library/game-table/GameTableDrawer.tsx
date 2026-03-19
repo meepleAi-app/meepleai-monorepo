@@ -2,6 +2,7 @@
 
 import { X } from 'lucide-react';
 
+import { GameStatsPanel } from '@/components/library/game-table/GameStatsPanel';
 import { Button } from '@/components/ui/primitives/button';
 import type { DrawerContent } from '@/lib/stores/gameTableDrawerStore';
 
@@ -43,20 +44,25 @@ const DRAWER_ICONS: Record<DrawerContent['type'], string> = {
 function DrawerContentRenderer({ content }: { content: DrawerContent }) {
   switch (content.type) {
     case 'chat':
+      // TODO: wire to real component
       return content.threadId ? (
         <div className="text-[#e6edf3]">Chat thread: {content.threadId}</div>
       ) : (
         <div className="text-[#8b949e]">Select a chat thread for agent {content.agentId}</div>
       );
     case 'stats':
-      return <div className="text-[#8b949e]">Statistics panel — gameId: {content.gameId}</div>;
+      return <GameStatsPanel gameId={content.gameId} />;
     case 'kb':
+      // TODO: wire to real component
       return <div className="text-[#8b949e]">Knowledge Base — {content.gameId}</div>;
     case 'toolkit':
+      // TODO: wire to real component
       return <div className="text-[#8b949e]">Toolkit — {content.gameId}</div>;
     case 'document':
+      // TODO: wire to real component
       return <div className="text-[#8b949e]">Document — {content.documentId}</div>;
     case 'session':
+      // TODO: wire to real component
       return <div className="text-[#8b949e]">Session — {content.sessionId}</div>;
     default:
       return null;

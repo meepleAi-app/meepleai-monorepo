@@ -7,6 +7,12 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { GameTableDrawer } from '../GameTableDrawer';
 import type { DrawerContent } from '@/lib/stores/gameTableDrawerStore';
 
+vi.mock('@/components/library/game-table/GameStatsPanel', () => ({
+  GameStatsPanel: ({ gameId }: { gameId: string }) => (
+    <div data-testid="game-stats-panel">Stats for {gameId}</div>
+  ),
+}));
+
 describe('GameTableDrawer', () => {
   it('renders header with title and close button', () => {
     const content: DrawerContent = { type: 'stats', gameId: 'g1' };

@@ -11,6 +11,31 @@ import type { LibraryGameDetail } from '@/hooks/queries/useLibrary';
 // Mocks
 // ============================================================================
 
+const mockPush = vi.fn();
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({ push: mockPush, replace: vi.fn(), back: vi.fn(), prefetch: vi.fn() }),
+}));
+
+const mockInvalidateQueries = vi.fn();
+vi.mock('@tanstack/react-query', () => ({
+  useQueryClient: () => ({ invalidateQueries: mockInvalidateQueries }),
+}));
+
+vi.mock('@/hooks/queries/useLibrary', async () => {
+  const actual = await vi.importActual<typeof import('@/hooks/queries/useLibrary')>(
+    '@/hooks/queries/useLibrary'
+  );
+  return {
+    ...actual,
+    useUpdateGameState: () => ({ mutateAsync: vi.fn(), isPending: false }),
+  };
+});
+
+vi.mock('@/hooks/queries/useLabels', () => ({
+  useGameLabels: () => ({ data: [], isLoading: false }),
+  useRemoveLabelFromGame: () => ({ mutateAsync: vi.fn() }),
+}));
+
 vi.mock('@/components/library/EditNotesModal', () => ({
   EditNotesModal: ({ isOpen }: { isOpen: boolean }) =>
     isOpen ? <div data-testid="edit-notes-modal">EditNotesModal</div> : null,
@@ -23,6 +48,15 @@ vi.mock('@/components/library/RemoveGameDialog', () => ({
 
 vi.mock('@/components/library/DeclareOwnershipButton', () => ({
   DeclareOwnershipButton: () => <div data-testid="ownership-btn">Ownership</div>,
+}));
+
+vi.mock('@/components/library/FavoriteToggle', () => ({
+  FavoriteToggle: () => <div data-testid="favorite-toggle">Favorite</div>,
+}));
+
+vi.mock('@/components/library/labels', () => ({
+  LabelBadge: () => <div data-testid="label-badge">Label</div>,
+  LabelSelector: () => <div data-testid="label-selector">Add Label</div>,
 }));
 
 vi.mock('@/components/library/RagAccessBadge', () => ({

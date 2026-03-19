@@ -126,8 +126,7 @@ export default function GamePreviewPage() {
   const mechanicIconNode = useMemo(() => {
     if (!gameDetail?.mechanics || gameDetail.mechanics.length === 0) return undefined;
     const firstMechanic = gameDetail.mechanics[0];
-    const slug = firstMechanic.name?.toLowerCase().replace(/\s+/g, '-') ?? '';
-    return <MechanicIcon mechanic={slug} size={20} />;
+    return <MechanicIcon mechanic={firstMechanic.slug} size={20} />;
   }, [gameDetail]);
 
   // ============================================================================
@@ -167,10 +166,16 @@ export default function GamePreviewPage() {
   // Main Render
   // ============================================================================
 
-  const subtitle =
-    (gameDetail.publishers && gameDetail.publishers.length > 0
-      ? gameDetail.publishers[0].name
-      : '') + (gameDetail.yearPublished ? ` (${gameDetail.yearPublished})` : '');
+  const subtitle = (() => {
+    const parts: string[] = [];
+    if (gameDetail.publishers && gameDetail.publishers.length > 0) {
+      parts.push(gameDetail.publishers[0].name);
+    }
+    if (gameDetail.yearPublished) {
+      parts.push(`(${gameDetail.yearPublished})`);
+    }
+    return parts.length > 0 ? parts.join(' ') : undefined;
+  })();
 
   return (
     <div className="min-h-screen bg-[#0d1117] py-8 px-4">

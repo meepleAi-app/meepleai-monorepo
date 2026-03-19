@@ -160,6 +160,7 @@ export default function LibraryGameDetailPage() {
           entity="game"
           variant="hero"
           flippable
+          entityId={gameId}
           title={gameDetail.gameTitle}
           subtitle={buildSubtitle(gameDetail.gamePublisher, gameDetail.gameYearPublished)}
           imageUrl={gameDetail.gameImageUrl || undefined}

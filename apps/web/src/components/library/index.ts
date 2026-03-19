@@ -49,3 +49,7 @@ export {
   UserActionSection,
   type UserActionSectionProps,
 } from './game-detail';
+
+// Shelf Components — vetrina layout for library browse pages
+export { ShelfCard, type ShelfCardProps, type ManaPip, type ManaPipType } from './ShelfCard';
+export { ShelfRow, type ShelfRowProps } from './ShelfRow';

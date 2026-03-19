@@ -5,6 +5,25 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+
+const mockLoggerError = vi.hoisted(() => vi.fn());
+vi.mock('@/lib/logger', () => ({
+  logger: {
+    debug: vi.fn(),
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: (...args: unknown[]) => mockLoggerError(...args),
+  },
+  getLogger: () => ({
+    debug: vi.fn(),
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: (...args: unknown[]) => mockLoggerError(...args),
+  }),
+  resetLogger: vi.fn(),
+  LogLevel: { DEBUG: 'debug', INFO: 'info', WARN: 'warn', ERROR: 'error' },
+}));
+
 import { GameDetailClient } from '../game-detail-client';
 
 // Mock all sub-components
@@ -300,16 +319,17 @@ describe('GameDetailClient', () => {
     });
 
     it('should handle fetch error gracefully', async () => {
-      const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+      mockLoggerError.mockClear();
       (global.fetch as any).mockRejectedValue(new Error('Network error'));
 
       render(<GameDetailClient game={mockGame} />);
 
       await waitFor(() => {
-        expect(consoleError).toHaveBeenCalledWith('Failed to fetch BGG weight:', expect.any(Error));
+        expect(mockLoggerError).toHaveBeenCalledWith(
+          'Failed to fetch BGG weight:',
+          expect.any(Error)
+        );
       });
-
-      consoleError.mockRestore();
     });
 
     it('should handle non-OK response gracefully', async () => {

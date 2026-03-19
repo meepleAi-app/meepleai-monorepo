@@ -56,3 +56,9 @@ export { ShelfRow, type ShelfRowProps } from './ShelfRow';
 
 // Mechanic Filter Chip Row
 export { MechanicFilter, type MechanicFilterProps } from './MechanicFilter';
+
+// Personal Library Page — vetrina layout
+export { PersonalLibraryPage, type PersonalLibraryPageProps } from './PersonalLibraryPage';
+
+// Library Toolbar — search + count controls
+export { LibraryToolbar, type LibraryToolbarProps } from './LibraryToolbar';

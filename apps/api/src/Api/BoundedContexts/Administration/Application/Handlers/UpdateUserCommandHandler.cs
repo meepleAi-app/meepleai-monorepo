@@ -56,11 +56,10 @@ internal class UpdateUserCommandHandler : ICommandHandler<UpdateUserCommand, Use
             user.UpdateDisplayName(command.DisplayName.Trim());
         }
 
-        // Update role if provided
+        // Role changes are NOT allowed via UpdateUser — use PUT /admin/users/{id}/role (SuperAdmin only)
         if (!string.IsNullOrWhiteSpace(command.Role))
         {
-            var newRole = Role.Parse(command.Role);
-            user.UpdateRole(newRole);
+            throw new DomainException("Role changes must use the dedicated role change endpoint (requires SuperAdmin)");
         }
 
         // Save changes

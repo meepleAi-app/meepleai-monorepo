@@ -293,7 +293,7 @@ internal static class AdminUserActivityEndpoints
         ILogger<Program> logger,
         CancellationToken ct)
     {
-        var (authorized, session, error) = context.RequireAdminSession();
+        var (authorized, session, error) = context.RequireSuperAdminSession();
         if (!authorized) return error!;
 
         logger.LogInformation("Admin {AdminId} initiating bulk role change for {Count} users to role {Role}",

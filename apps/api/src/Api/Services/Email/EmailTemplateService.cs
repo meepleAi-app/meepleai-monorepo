@@ -1,197 +1,25 @@
 using System.Globalization;
-using System.Net;
-using System.Net.Mail;
-using Api.Infrastructure.Security;
-using Microsoft.Extensions.Configuration;
 
-namespace Api.Services;
+namespace Api.Services.Email;
 
-internal class EmailService : IEmailService
+/// <summary>
+/// Renders HTML email bodies for all notification types.
+/// Uses URL configuration to build links embedded in templates.
+/// </summary>
+internal sealed class EmailTemplateService : IEmailTemplateService
 {
-    private readonly ILogger<EmailService> _logger;
-    private readonly string _fromAddress;
-    private readonly string _fromName;
-    private readonly string _smtpHost;
-    private readonly int _smtpPort;
-    private readonly string? _smtpUsername;
-    private readonly string? _smtpPassword;
-    private readonly bool _enableSsl;
-    private readonly string _resetUrlBase;
     private readonly string _frontendBaseUrl;
 
-    public EmailService(IConfiguration configuration, ILogger<EmailService> logger)
+    public EmailTemplateService(IConfiguration configuration)
     {
-        // S1075: Default values extracted to const
 #pragma warning disable S1075 // URIs should not be hardcoded - Default/Fallback value
-        const string DefaultResetUrlBase = "http://localhost:3000/reset-password";
         const string DefaultFrontendBaseUrl = "http://localhost:3000";
 #pragma warning restore S1075
 
-        _logger = logger;
-
-        // Load email configuration with fallback to SMTP_* env var names from email.secret
-        // email.secret uses SMTP_HOST/SMTP_USER/SMTP_PASSWORD but EmailService originally
-        // expected Email:SmtpHost/Email:SmtpUsername/Email:SmtpPassword — bridge the gap
-        _fromAddress = configuration["Email:FromAddress"] ?? configuration["SMTP_FROM_EMAIL"] ?? "noreply@meepleai.dev";
-        _fromName = configuration["Email:FromName"] ?? "MeepleAI";
-        _smtpHost = configuration["Email:SmtpHost"] ?? configuration["SMTP_HOST"] ?? "localhost";
-        _smtpPort = int.Parse(configuration["Email:SmtpPort"] ?? configuration["SMTP_PORT"] ?? "587", CultureInfo.InvariantCulture);
-        _smtpUsername = configuration["Email:SmtpUsername"] ?? configuration["SMTP_USER"];
-        _smtpPassword = configuration["Email:SmtpPassword"] ?? configuration["SMTP_PASSWORD"] ?? configuration["GMAIL_APP_PASSWORD"];
-        _enableSsl = bool.Parse(configuration["Email:EnableSsl"] ?? "true");
-        _resetUrlBase = configuration["Email:ResetUrlBase"] ?? DefaultResetUrlBase;
         _frontendBaseUrl = configuration["Frontend:BaseUrl"] ?? DefaultFrontendBaseUrl;
     }
 
-    public async Task SendPasswordResetEmailAsync(
-        string toEmail,
-        string toName,
-        string resetToken,
-        CancellationToken ct = default)
-    {
-        try
-        {
-            var resetUrl = $"{_resetUrlBase}?token={Uri.EscapeDataString(resetToken)}";
-            var subject = "Reset Your MeepleAI Password";
-            var body = BuildPasswordResetEmailBody(toName, resetUrl);
-
-            using var message = new MailMessage();
-            message.From = new MailAddress(_fromAddress, _fromName);
-            message.To.Add(new MailAddress(toEmail, toName));
-            message.Subject = subject;
-            message.Body = body;
-            message.IsBodyHtml = true;
-
-            using var smtpClient = new SmtpClient(_smtpHost, _smtpPort);
-            smtpClient.EnableSsl = _enableSsl;
-
-            if (!string.IsNullOrEmpty(_smtpUsername) && !string.IsNullOrEmpty(_smtpPassword))
-            {
-                smtpClient.Credentials = new NetworkCredential(_smtpUsername, _smtpPassword);
-            }
-
-            await smtpClient.SendMailAsync(message, ct).ConfigureAwait(false);
-
-            _logger.LogInformation(
-                "Password reset email sent successfully to {Email}",
-                DataMasking.MaskEmail(toEmail));
-        }
-#pragma warning disable CA1031 // Do not catch general exception types
-#pragma warning disable S125 // Sections of code should not be commented out
-        // ADAPTER PATTERN: Wraps external SMTP service exceptions (authentication, network, timeout) into domain exception
-        // External service integration requires catching all SMTP exceptions to provide consistent error handling
-#pragma warning restore S125
-        catch (Exception ex)
-        {
-            _logger.LogError(
-                ex,
-                "Failed to send password reset email to {Email}",
-                DataMasking.MaskEmail(toEmail));
-            throw new InvalidOperationException("Failed to send password reset email", ex);
-        }
-#pragma warning restore CA1031
-    }
-
-    public async Task SendTwoFactorDisabledEmailAsync(
-        string toEmail,
-        string toName,
-        bool wasAdminOverride,
-        CancellationToken ct = default)
-    {
-        try
-        {
-            var subject = "Two-Factor Authentication Disabled";
-            var body = BuildTwoFactorDisabledEmailBody(toName, wasAdminOverride);
-
-            using var message = new MailMessage();
-            message.From = new MailAddress(_fromAddress, _fromName);
-            message.To.Add(new MailAddress(toEmail, toName));
-            message.Subject = subject;
-            message.Body = body;
-            message.IsBodyHtml = true;
-
-            using var smtpClient = new SmtpClient(_smtpHost, _smtpPort);
-            smtpClient.EnableSsl = _enableSsl;
-
-            if (!string.IsNullOrEmpty(_smtpUsername) && !string.IsNullOrEmpty(_smtpPassword))
-            {
-                smtpClient.Credentials = new NetworkCredential(_smtpUsername, _smtpPassword);
-            }
-
-            await smtpClient.SendMailAsync(message, ct).ConfigureAwait(false);
-
-            _logger.LogInformation(
-                "Two-factor authentication disabled email sent successfully to {Email} (Admin override: {AdminOverride})",
-                DataMasking.MaskEmail(toEmail),
-                wasAdminOverride);
-        }
-#pragma warning disable CA1031 // Do not catch general exception types
-#pragma warning disable S125 // Sections of code should not be commented out
-        // ADAPTER PATTERN: Wraps external SMTP service exceptions (authentication, network, timeout) into domain exception
-        // External service integration requires catching all SMTP exceptions to provide consistent error handling
-#pragma warning restore S125
-        catch (Exception ex)
-        {
-            _logger.LogError(
-                ex,
-                "Failed to send two-factor authentication disabled email to {Email}",
-                DataMasking.MaskEmail(toEmail));
-            throw new InvalidOperationException("Failed to send two-factor authentication disabled email", ex);
-        }
-#pragma warning restore CA1031
-    }
-
-    // ISSUE-3071: Email verification
-    public async Task SendVerificationEmailAsync(
-        string toEmail,
-        string toName,
-        string verificationToken,
-        CancellationToken ct = default)
-    {
-        try
-        {
-            var verifyUrl = $"{_frontendBaseUrl}/verify-email?token={Uri.EscapeDataString(verificationToken)}";
-            var subject = "Verify Your MeepleAI Email";
-            var body = BuildVerificationEmailBody(toName, verifyUrl);
-
-            using var message = new MailMessage();
-            message.From = new MailAddress(_fromAddress, _fromName);
-            message.To.Add(new MailAddress(toEmail, toName));
-            message.Subject = subject;
-            message.Body = body;
-            message.IsBodyHtml = true;
-
-            using var smtpClient = new SmtpClient(_smtpHost, _smtpPort);
-            smtpClient.EnableSsl = _enableSsl;
-
-            if (!string.IsNullOrEmpty(_smtpUsername) && !string.IsNullOrEmpty(_smtpPassword))
-            {
-                smtpClient.Credentials = new NetworkCredential(_smtpUsername, _smtpPassword);
-            }
-
-            await smtpClient.SendMailAsync(message, ct).ConfigureAwait(false);
-
-            _logger.LogInformation(
-                "Verification email sent successfully to {Email}",
-                DataMasking.MaskEmail(toEmail));
-        }
-#pragma warning disable CA1031 // Do not catch general exception types
-#pragma warning disable S125 // Sections of code should not be commented out
-        // ADAPTER PATTERN: Wraps external SMTP service exceptions (authentication, network, timeout) into domain exception
-        // External service integration requires catching all SMTP exceptions to provide consistent error handling
-#pragma warning restore S125
-        catch (Exception ex)
-        {
-            _logger.LogError(
-                ex,
-                "Failed to send verification email to {Email}",
-                DataMasking.MaskEmail(toEmail));
-            throw new InvalidOperationException("Failed to send verification email", ex);
-        }
-#pragma warning restore CA1031
-    }
-
-    private static string BuildVerificationEmailBody(string userName, string verifyUrl)
+    public string BuildVerificationEmailBody(string userName, string verifyUrl)
     {
         return $@"
 <!DOCTYPE html>
@@ -241,7 +69,7 @@ internal class EmailService : IEmailService
 ";
     }
 
-    private static string BuildPasswordResetEmailBody(string userName, string resetUrl)
+    public string BuildPasswordResetEmailBody(string userName, string resetUrl)
     {
         return $@"
 <!DOCTYPE html>
@@ -290,7 +118,7 @@ internal class EmailService : IEmailService
 ";
     }
 
-    private static string BuildTwoFactorDisabledEmailBody(string userName, bool wasAdminOverride)
+    public string BuildTwoFactorDisabledEmailBody(string userName, bool wasAdminOverride)
     {
         var reason = wasAdminOverride
             ? "An administrator has disabled two-factor authentication on your account, likely due to a support request for lost authenticator access."
@@ -352,140 +180,7 @@ internal class EmailService : IEmailService
 ";
     }
 
-    // ISSUE-918: Report email delivery
-    public async Task SendReportEmailAsync(
-        IReadOnlyList<string> recipients,
-        string reportName,
-        string reportDescription,
-        byte[] reportContent,
-        string fileName,
-        long fileSizeBytes,
-        CancellationToken ct = default)
-    {
-        if (recipients is null || recipients.Count == 0)
-        {
-            _logger.LogWarning("No recipients provided for report email: {ReportName}", reportName);
-            return;
-        }
-
-        const long MaxAttachmentSize = 10 * 1024 * 1024; // 10 MB
-        if (fileSizeBytes > MaxAttachmentSize)
-        {
-            _logger.LogWarning(
-                "Report too large for email attachment: {FileName} ({Size} bytes). Limit: {Limit} bytes",
-                fileName, fileSizeBytes, MaxAttachmentSize);
-            throw new InvalidOperationException($"Report size ({fileSizeBytes} bytes) exceeds email attachment limit ({MaxAttachmentSize} bytes)");
-        }
-
-        try
-        {
-            var subject = $"[MeepleAI] Report Ready: {reportName}";
-            var body = BuildReportEmailBody(reportName, reportDescription, fileName, fileSizeBytes);
-
-            using var message = new MailMessage();
-            message.From = new MailAddress(_fromAddress, _fromName);
-
-            foreach (var recipient in recipients)
-            {
-                message.To.Add(new MailAddress(recipient));
-            }
-
-            message.Subject = subject;
-            message.Body = body;
-            message.IsBodyHtml = true;
-
-            var attachment = new System.Net.Mail.Attachment(
-                new System.IO.MemoryStream(reportContent),
-                fileName);
-            message.Attachments.Add(attachment);
-
-            using var smtpClient = new SmtpClient(_smtpHost, _smtpPort);
-            smtpClient.EnableSsl = _enableSsl;
-
-            if (!string.IsNullOrEmpty(_smtpUsername) && !string.IsNullOrEmpty(_smtpPassword))
-            {
-                smtpClient.Credentials = new NetworkCredential(_smtpUsername, _smtpPassword);
-            }
-
-            await smtpClient.SendMailAsync(message, ct).ConfigureAwait(false);
-
-            _logger.LogInformation(
-                "Report email sent successfully: {ReportName} to {RecipientCount} recipients",
-                reportName, recipients.Count);
-        }
-#pragma warning disable CA1031 // Do not catch general exception types
-#pragma warning disable S125 // Sections of code should not be commented out
-        // ADAPTER PATTERN: Wraps external SMTP service exceptions (authentication, network, timeout) into domain exception
-#pragma warning restore S125
-        catch (Exception ex)
-        {
-            _logger.LogError(
-                ex,
-                "Failed to send report email: {ReportName} to {RecipientCount} recipients",
-                reportName, recipients.Count);
-            throw new InvalidOperationException($"Failed to send report email for {reportName}", ex);
-        }
-#pragma warning restore CA1031
-    }
-
-    public async Task SendReportFailureEmailAsync(
-        IReadOnlyList<string> recipients,
-        string reportName,
-        string errorMessage,
-        CancellationToken ct = default)
-    {
-        if (recipients is null || recipients.Count == 0)
-        {
-            _logger.LogWarning("No recipients provided for report failure email: {ReportName}", reportName);
-            return;
-        }
-
-        try
-        {
-            var subject = $"[MeepleAI] Report Generation Failed: {reportName}";
-            var body = BuildReportFailureEmailBody(reportName, errorMessage);
-
-            using var message = new MailMessage();
-            message.From = new MailAddress(_fromAddress, _fromName);
-
-            foreach (var recipient in recipients)
-            {
-                message.To.Add(new MailAddress(recipient));
-            }
-
-            message.Subject = subject;
-            message.Body = body;
-            message.IsBodyHtml = true;
-
-            using var smtpClient = new SmtpClient(_smtpHost, _smtpPort);
-            smtpClient.EnableSsl = _enableSsl;
-
-            if (!string.IsNullOrEmpty(_smtpUsername) && !string.IsNullOrEmpty(_smtpPassword))
-            {
-                smtpClient.Credentials = new NetworkCredential(_smtpUsername, _smtpPassword);
-            }
-
-            await smtpClient.SendMailAsync(message, ct).ConfigureAwait(false);
-
-            _logger.LogInformation(
-                "Report failure email sent successfully: {ReportName} to {RecipientCount} recipients",
-                reportName, recipients.Count);
-        }
-#pragma warning disable CA1031 // Do not catch general exception types
-#pragma warning disable S125 // Sections of code should not be commented out
-        // BACKGROUND SERVICE: Failure notification email is best-effort, must not propagate exceptions
-#pragma warning restore S125
-        catch (Exception ex)
-        {
-            _logger.LogError(
-                ex,
-                "Failed to send report failure email: {ReportName} to {RecipientCount} recipients",
-                reportName, recipients.Count);
-        }
-#pragma warning restore CA1031
-    }
-
-    private static string BuildReportEmailBody(
+    public string BuildReportEmailBody(
         string reportName,
         string reportDescription,
         string fileName,
@@ -539,7 +234,7 @@ internal class EmailService : IEmailService
 ";
     }
 
-    private static string BuildReportFailureEmailBody(string reportName, string errorMessage)
+    public string BuildReportFailureEmailBody(string reportName, string errorMessage)
     {
         var failedAt = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture);
 
@@ -586,198 +281,7 @@ internal class EmailService : IEmailService
 ";
     }
 
-    // ===== ISSUE-2739: Share Request Notification Emails =====
-
-    public async Task SendShareRequestCreatedEmailAsync(
-        string toEmail,
-        string userName,
-        string gameTitle,
-        string contributionType,
-        Guid shareRequestId,
-        CancellationToken ct = default)
-    {
-        try
-        {
-            var subject = "Share Request Submitted";
-            var body = BuildShareRequestCreatedEmailBody(userName, gameTitle, contributionType, shareRequestId);
-
-            using var message = new MailMessage();
-            message.From = new MailAddress(_fromAddress, _fromName);
-            message.To.Add(new MailAddress(toEmail, userName));
-            message.Subject = subject;
-            message.Body = body;
-            message.IsBodyHtml = true;
-
-            using var smtpClient = new SmtpClient(_smtpHost, _smtpPort);
-            smtpClient.EnableSsl = _enableSsl;
-
-            if (!string.IsNullOrEmpty(_smtpUsername) && !string.IsNullOrEmpty(_smtpPassword))
-            {
-                smtpClient.Credentials = new NetworkCredential(_smtpUsername, _smtpPassword);
-            }
-
-            await smtpClient.SendMailAsync(message, ct).ConfigureAwait(false);
-
-            _logger.LogInformation(
-                "Share request created email sent to {Email} for game {GameTitle}",
-                DataMasking.MaskEmail(toEmail),
-                gameTitle);
-        }
-#pragma warning disable CA1031 // Do not catch general exception types
-        catch (Exception ex)
-        {
-            _logger.LogError(
-                ex,
-                "Failed to send share request created email to {Email}",
-                DataMasking.MaskEmail(toEmail));
-            throw new InvalidOperationException("Failed to send share request created email", ex);
-        }
-#pragma warning restore CA1031
-    }
-
-    public async Task SendShareRequestApprovedEmailAsync(
-        string toEmail,
-        string userName,
-        string gameTitle,
-        Guid sharedGameId,
-        Guid userId,
-        CancellationToken ct = default)
-    {
-        try
-        {
-            var subject = "Contribution Approved! 🎉";
-            var body = BuildShareRequestApprovedEmailBody(userName, gameTitle, sharedGameId, userId);
-
-            using var message = new MailMessage();
-            message.From = new MailAddress(_fromAddress, _fromName);
-            message.To.Add(new MailAddress(toEmail, userName));
-            message.Subject = subject;
-            message.Body = body;
-            message.IsBodyHtml = true;
-
-            using var smtpClient = new SmtpClient(_smtpHost, _smtpPort);
-            smtpClient.EnableSsl = _enableSsl;
-
-            if (!string.IsNullOrEmpty(_smtpUsername) && !string.IsNullOrEmpty(_smtpPassword))
-            {
-                smtpClient.Credentials = new NetworkCredential(_smtpUsername, _smtpPassword);
-            }
-
-            await smtpClient.SendMailAsync(message, ct).ConfigureAwait(false);
-
-            _logger.LogInformation(
-                "Share request approved email sent to {Email} for game {GameTitle}",
-                DataMasking.MaskEmail(toEmail),
-                gameTitle);
-        }
-#pragma warning disable CA1031 // Do not catch general exception types
-        catch (Exception ex)
-        {
-            _logger.LogError(
-                ex,
-                "Failed to send share request approved email to {Email}",
-                DataMasking.MaskEmail(toEmail));
-            throw new InvalidOperationException("Failed to send share request approved email", ex);
-        }
-#pragma warning restore CA1031
-    }
-
-    public async Task SendShareRequestRejectedEmailAsync(
-        string toEmail,
-        string userName,
-        string gameTitle,
-        string reason,
-        CancellationToken ct = default)
-    {
-        try
-        {
-            var subject = "Share Request Not Approved";
-            var body = BuildShareRequestRejectedEmailBody(userName, gameTitle, reason);
-
-            using var message = new MailMessage();
-            message.From = new MailAddress(_fromAddress, _fromName);
-            message.To.Add(new MailAddress(toEmail, userName));
-            message.Subject = subject;
-            message.Body = body;
-            message.IsBodyHtml = true;
-
-            using var smtpClient = new SmtpClient(_smtpHost, _smtpPort);
-            smtpClient.EnableSsl = _enableSsl;
-
-            if (!string.IsNullOrEmpty(_smtpUsername) && !string.IsNullOrEmpty(_smtpPassword))
-            {
-                smtpClient.Credentials = new NetworkCredential(_smtpUsername, _smtpPassword);
-            }
-
-            await smtpClient.SendMailAsync(message, ct).ConfigureAwait(false);
-
-            _logger.LogInformation(
-                "Share request rejected email sent to {Email} for game {GameTitle}",
-                DataMasking.MaskEmail(toEmail),
-                gameTitle);
-        }
-#pragma warning disable CA1031 // Do not catch general exception types
-        catch (Exception ex)
-        {
-            _logger.LogError(
-                ex,
-                "Failed to send share request rejected email to {Email}",
-                DataMasking.MaskEmail(toEmail));
-            throw new InvalidOperationException("Failed to send share request rejected email", ex);
-        }
-#pragma warning restore CA1031
-    }
-
-    public async Task SendShareRequestChangesRequestedEmailAsync(
-        string toEmail,
-        string userName,
-        string gameTitle,
-        string feedback,
-        Guid shareRequestId,
-        CancellationToken ct = default)
-    {
-        try
-        {
-            var subject = "Changes Requested for Your Contribution";
-            var body = BuildShareRequestChangesRequestedEmailBody(userName, gameTitle, feedback, shareRequestId);
-
-            using var message = new MailMessage();
-            message.From = new MailAddress(_fromAddress, _fromName);
-            message.To.Add(new MailAddress(toEmail, userName));
-            message.Subject = subject;
-            message.Body = body;
-            message.IsBodyHtml = true;
-
-            using var smtpClient = new SmtpClient(_smtpHost, _smtpPort);
-            smtpClient.EnableSsl = _enableSsl;
-
-            if (!string.IsNullOrEmpty(_smtpUsername) && !string.IsNullOrEmpty(_smtpPassword))
-            {
-                smtpClient.Credentials = new NetworkCredential(_smtpUsername, _smtpPassword);
-            }
-
-            await smtpClient.SendMailAsync(message, ct).ConfigureAwait(false);
-
-            _logger.LogInformation(
-                "Share request changes requested email sent to {Email} for game {GameTitle}",
-                DataMasking.MaskEmail(toEmail),
-                gameTitle);
-        }
-#pragma warning disable CA1031 // Do not catch general exception types
-        catch (Exception ex)
-        {
-            _logger.LogError(
-                ex,
-                "Failed to send share request changes requested email to {Email}",
-                DataMasking.MaskEmail(toEmail));
-            throw new InvalidOperationException("Failed to send share request changes requested email", ex);
-        }
-#pragma warning restore CA1031
-    }
-
-    // Email template builders
-
-    private string BuildShareRequestCreatedEmailBody(
+    public string BuildShareRequestCreatedEmailBody(
         string userName,
         string gameTitle,
         string contributionType,
@@ -833,7 +337,7 @@ internal class EmailService : IEmailService
 ";
     }
 
-    private string BuildShareRequestApprovedEmailBody(
+    public string BuildShareRequestApprovedEmailBody(
         string userName,
         string gameTitle,
         Guid sharedGameId,
@@ -890,7 +394,7 @@ internal class EmailService : IEmailService
 ";
     }
 
-    private string BuildShareRequestRejectedEmailBody(
+    public string BuildShareRequestRejectedEmailBody(
         string userName,
         string gameTitle,
         string reason)
@@ -945,7 +449,7 @@ internal class EmailService : IEmailService
 ";
     }
 
-    private string BuildShareRequestChangesRequestedEmailBody(
+    public string BuildShareRequestChangesRequestedEmailBody(
         string userName,
         string gameTitle,
         string feedback,
@@ -1001,62 +505,7 @@ internal class EmailService : IEmailService
 ";
     }
 
-    // ISSUE-2740: Admin share request digest email
-    public async Task SendAdminShareRequestDigestEmailAsync(
-        string toEmail,
-        string toName,
-        int totalPending,
-        int oldestPendingDays,
-        int createdToday,
-        Dictionary<string, int> pendingByType,
-        string reviewQueueUrl,
-        CancellationToken ct = default)
-    {
-        try
-        {
-            var subject = $"[MeepleAI Admin] Share Request Digest - {totalPending} Pending";
-            var body = BuildAdminShareRequestDigestEmailBody(
-                toName,
-                totalPending,
-                oldestPendingDays,
-                createdToday,
-                pendingByType,
-                reviewQueueUrl);
-
-            using var message = new MailMessage();
-            message.From = new MailAddress(_fromAddress, _fromName);
-            message.To.Add(new MailAddress(toEmail, toName));
-            message.Subject = subject;
-            message.Body = body;
-            message.IsBodyHtml = true;
-
-            using var client = new SmtpClient(_smtpHost, _smtpPort);
-            client.EnableSsl = _enableSsl;
-
-            if (!string.IsNullOrEmpty(_smtpUsername) && !string.IsNullOrEmpty(_smtpPassword))
-            {
-                client.Credentials = new NetworkCredential(_smtpUsername, _smtpPassword);
-            }
-
-            await client.SendMailAsync(message, ct).ConfigureAwait(false);
-
-            _logger.LogInformation(
-                "Admin digest email sent: To={MaskedEmail}, TotalPending={TotalPending}",
-                DataMasking.MaskEmail(toEmail),
-                totalPending);
-        }
-#pragma warning disable CA1031
-        catch (Exception ex)
-        {
-            _logger.LogError(ex,
-                "Failed to send admin digest email to {MaskedEmail}",
-                DataMasking.MaskEmail(toEmail));
-            throw new InvalidOperationException("Failed to send admin digest email", ex);
-        }
-#pragma warning restore CA1031
-    }
-
-    private string BuildAdminShareRequestDigestEmailBody(
+    public string BuildAdminShareRequestDigestEmailBody(
         string adminName,
         int totalPending,
         int oldestPendingDays,
@@ -1143,138 +592,7 @@ internal class EmailService : IEmailService
 ";
     }
 
-    // ISSUE-2741: Badge earned email implementation
-    public async Task SendBadgeEarnedEmailAsync(
-        string toEmail,
-        string userName,
-        string badgeName,
-        string badgeDescription,
-        string? badgeIconUrl,
-        string badgeTier,
-        string badgeTierColor,
-        string profileUrl,
-        string shareText,
-        CancellationToken ct = default)
-    {
-        try
-        {
-            var subject = $"🎉 Badge Earned: {badgeName}!";
-            var body = BuildBadgeEarnedEmailBody(
-                userName,
-                badgeName,
-                badgeDescription,
-                badgeIconUrl,
-                badgeTier,
-                badgeTierColor,
-                profileUrl,
-                shareText);
-
-            using var message = new MailMessage();
-            message.From = new MailAddress(_fromAddress, _fromName);
-            message.To.Add(new MailAddress(toEmail, userName));
-            message.Subject = subject;
-            message.Body = body;
-            message.IsBodyHtml = true;
-
-            using var smtpClient = new SmtpClient(_smtpHost, _smtpPort);
-            smtpClient.EnableSsl = _enableSsl;
-
-            if (!string.IsNullOrEmpty(_smtpUsername) && !string.IsNullOrEmpty(_smtpPassword))
-            {
-                smtpClient.Credentials = new NetworkCredential(_smtpUsername, _smtpPassword);
-            }
-
-            await smtpClient.SendMailAsync(message, ct).ConfigureAwait(false);
-
-            _logger.LogInformation(
-                "Badge earned email sent successfully to {Email} for badge {BadgeName}",
-                DataMasking.MaskEmail(toEmail),
-                badgeName);
-        }
-#pragma warning disable CA1031 // Do not catch general exception types
-#pragma warning disable S125 // Sections of code should not be commented out
-        // ADAPTER PATTERN: Wraps external SMTP service exceptions (authentication, network, timeout) into domain exception
-        // External service integration requires catching all SMTP exceptions to provide consistent error handling
-#pragma warning restore S125
-        catch (Exception ex)
-        {
-            _logger.LogError(
-                ex,
-                "Failed to send badge earned email to {Email} for badge {BadgeName}",
-                DataMasking.MaskEmail(toEmail),
-                badgeName);
-            throw new InvalidOperationException($"Failed to send badge earned email for {badgeName}", ex);
-        }
-#pragma warning restore CA1031
-    }
-
-    public async Task SendMilestoneBadgeEarnedEmailAsync(
-        string toEmail,
-        string userName,
-        string badgeName,
-        string badgeDescription,
-        string? badgeIconUrl,
-        string badgeTier,
-        string milestoneMessage,
-        int totalContributions,
-        string profileUrl,
-        string leaderboardUrl,
-        CancellationToken ct = default)
-    {
-        try
-        {
-            var subject = $"🌟 Milestone Achievement: {badgeName}!";
-            var body = BuildMilestoneBadgeEarnedEmailBody(
-                userName,
-                badgeName,
-                badgeDescription,
-                badgeIconUrl,
-                badgeTier,
-                milestoneMessage,
-                totalContributions,
-                profileUrl,
-                leaderboardUrl);
-
-            using var message = new MailMessage();
-            message.From = new MailAddress(_fromAddress, _fromName);
-            message.To.Add(new MailAddress(toEmail, userName));
-            message.Subject = subject;
-            message.Body = body;
-            message.IsBodyHtml = true;
-
-            using var smtpClient = new SmtpClient(_smtpHost, _smtpPort);
-            smtpClient.EnableSsl = _enableSsl;
-
-            if (!string.IsNullOrEmpty(_smtpUsername) && !string.IsNullOrEmpty(_smtpPassword))
-            {
-                smtpClient.Credentials = new NetworkCredential(_smtpUsername, _smtpPassword);
-            }
-
-            await smtpClient.SendMailAsync(message, ct).ConfigureAwait(false);
-
-            _logger.LogInformation(
-                "Milestone badge email sent successfully to {Email} for badge {BadgeName}",
-                DataMasking.MaskEmail(toEmail),
-                badgeName);
-        }
-#pragma warning disable CA1031 // Do not catch general exception types
-#pragma warning disable S125 // Sections of code should not be commented out
-        // ADAPTER PATTERN: Wraps external SMTP service exceptions (authentication, network, timeout) into domain exception
-        // External service integration requires catching all SMTP exceptions to provide consistent error handling
-#pragma warning restore S125
-        catch (Exception ex)
-        {
-            _logger.LogError(
-                ex,
-                "Failed to send milestone badge email to {Email} for badge {BadgeName}",
-                DataMasking.MaskEmail(toEmail),
-                badgeName);
-            throw new InvalidOperationException($"Failed to send milestone badge email for {badgeName}", ex);
-        }
-#pragma warning restore CA1031
-    }
-
-    private static string BuildBadgeEarnedEmailBody(
+    public string BuildBadgeEarnedEmailBody(
         string userName,
         string badgeName,
         string badgeDescription,
@@ -1343,7 +661,7 @@ internal class EmailService : IEmailService
 ";
     }
 
-    private static string BuildMilestoneBadgeEarnedEmailBody(
+    public string BuildMilestoneBadgeEarnedEmailBody(
         string userName,
         string badgeName,
         string badgeDescription,
@@ -1420,62 +738,7 @@ internal class EmailService : IEmailService
 ";
     }
 
-    // ISSUE-2742: Rate limit cooldown ended email implementation
-    public async Task SendCooldownEndedEmailAsync(
-        string toEmail,
-        string userName,
-        int remainingMonthly,
-        int remainingPending,
-        string libraryUrl,
-        CancellationToken ct = default)
-    {
-        try
-        {
-            var subject = "Ready to Contribute Again! 🎉";
-            var body = BuildCooldownEndedEmailBody(
-                userName,
-                remainingMonthly,
-                remainingPending,
-                libraryUrl);
-
-            using var message = new MailMessage();
-            message.From = new MailAddress(_fromAddress, _fromName);
-            message.To.Add(new MailAddress(toEmail, userName));
-            message.Subject = subject;
-            message.Body = body;
-            message.IsBodyHtml = true;
-
-            using var smtpClient = new SmtpClient(_smtpHost, _smtpPort);
-            smtpClient.EnableSsl = _enableSsl;
-
-            if (!string.IsNullOrEmpty(_smtpUsername) && !string.IsNullOrEmpty(_smtpPassword))
-            {
-                smtpClient.Credentials = new NetworkCredential(_smtpUsername, _smtpPassword);
-            }
-
-            await smtpClient.SendMailAsync(message, ct).ConfigureAwait(false);
-
-            _logger.LogInformation(
-                "Cooldown ended email sent successfully to {Email}",
-                DataMasking.MaskEmail(toEmail));
-        }
-#pragma warning disable CA1031 // Do not catch general exception types
-#pragma warning disable S125 // Sections of code should not be commented out
-        // ADAPTER PATTERN: Wraps external SMTP service exceptions (authentication, network, timeout) into domain exception
-        // External service integration requires catching all SMTP exceptions to provide consistent error handling
-#pragma warning restore S125
-        catch (Exception ex)
-        {
-            _logger.LogError(
-                ex,
-                "Failed to send cooldown ended email to {Email}",
-                DataMasking.MaskEmail(toEmail));
-            throw new InvalidOperationException("Failed to send cooldown ended email", ex);
-        }
-#pragma warning restore CA1031
-    }
-
-    private static string BuildCooldownEndedEmailBody(
+    public string BuildCooldownEndedEmailBody(
         string userName,
         int remainingMonthly,
         int remainingPending,
@@ -1536,103 +799,7 @@ internal class EmailService : IEmailService
 ";
     }
 
-    // ISSUE-2886: User suspension notification emails
-    public async Task SendAccountSuspendedEmailAsync(
-        string toEmail,
-        string userName,
-        string? reason,
-        CancellationToken ct = default)
-    {
-        try
-        {
-            var subject = "Your MeepleAI Account Has Been Suspended";
-            var body = BuildAccountSuspendedEmailBody(userName, reason);
-
-            using var message = new MailMessage();
-            message.From = new MailAddress(_fromAddress, _fromName);
-            message.To.Add(new MailAddress(toEmail, userName));
-            message.Subject = subject;
-            message.Body = body;
-            message.IsBodyHtml = true;
-
-            using var smtpClient = new SmtpClient(_smtpHost, _smtpPort);
-            smtpClient.EnableSsl = _enableSsl;
-
-            if (!string.IsNullOrEmpty(_smtpUsername) && !string.IsNullOrEmpty(_smtpPassword))
-            {
-                smtpClient.Credentials = new NetworkCredential(_smtpUsername, _smtpPassword);
-            }
-
-            await smtpClient.SendMailAsync(message, ct).ConfigureAwait(false);
-
-            _logger.LogInformation(
-                "Account suspended email sent successfully to {Email}",
-                DataMasking.MaskEmail(toEmail));
-        }
-#pragma warning disable CA1031 // Do not catch general exception types
-#pragma warning disable S125 // Sections of code should not be commented out
-        // ADAPTER PATTERN: Wraps external SMTP service exceptions (authentication, network, timeout) into domain exception
-        // External service integration requires catching all SMTP exceptions to provide consistent error handling
-#pragma warning restore S125
-        catch (Exception ex)
-        {
-            _logger.LogError(
-                ex,
-                "Failed to send account suspended email to {Email}",
-                DataMasking.MaskEmail(toEmail));
-            throw new InvalidOperationException("Failed to send account suspended email", ex);
-        }
-#pragma warning restore CA1031
-    }
-
-    public async Task SendAccountReactivatedEmailAsync(
-        string toEmail,
-        string userName,
-        CancellationToken ct = default)
-    {
-        try
-        {
-            var subject = "Your MeepleAI Account Has Been Reactivated";
-            var body = BuildAccountReactivatedEmailBody(userName);
-
-            using var message = new MailMessage();
-            message.From = new MailAddress(_fromAddress, _fromName);
-            message.To.Add(new MailAddress(toEmail, userName));
-            message.Subject = subject;
-            message.Body = body;
-            message.IsBodyHtml = true;
-
-            using var smtpClient = new SmtpClient(_smtpHost, _smtpPort);
-            smtpClient.EnableSsl = _enableSsl;
-
-            if (!string.IsNullOrEmpty(_smtpUsername) && !string.IsNullOrEmpty(_smtpPassword))
-            {
-                smtpClient.Credentials = new NetworkCredential(_smtpUsername, _smtpPassword);
-            }
-
-            await smtpClient.SendMailAsync(message, ct).ConfigureAwait(false);
-
-            _logger.LogInformation(
-                "Account reactivated email sent successfully to {Email}",
-                DataMasking.MaskEmail(toEmail));
-        }
-#pragma warning disable CA1031 // Do not catch general exception types
-#pragma warning disable S125 // Sections of code should not be commented out
-        // ADAPTER PATTERN: Wraps external SMTP service exceptions (authentication, network, timeout) into domain exception
-        // External service integration requires catching all SMTP exceptions to provide consistent error handling
-#pragma warning restore S125
-        catch (Exception ex)
-        {
-            _logger.LogError(
-                ex,
-                "Failed to send account reactivated email to {Email}",
-                DataMasking.MaskEmail(toEmail));
-            throw new InvalidOperationException("Failed to send account reactivated email", ex);
-        }
-#pragma warning restore CA1031
-    }
-
-    private static string BuildAccountSuspendedEmailBody(string userName, string? reason)
+    public string BuildAccountSuspendedEmailBody(string userName, string? reason)
     {
         var reasonSection = !string.IsNullOrWhiteSpace(reason)
             ? $@"
@@ -1685,7 +852,7 @@ internal class EmailService : IEmailService
 ";
     }
 
-    private static string BuildAccountReactivatedEmailBody(string userName)
+    public string BuildAccountReactivatedEmailBody(string userName)
     {
         return $@"
 <!DOCTYPE html>
@@ -1735,67 +902,11 @@ internal class EmailService : IEmailService
 ";
     }
 
-    // ISSUE-3676: Account lockout notification
-    public async Task SendAccountLockedEmailAsync(
-        string toEmail,
+    public string BuildAccountLockedEmailBody(
         string userName,
         int failedAttempts,
         DateTime lockedUntil,
-        string? ipAddress,
-        CancellationToken ct = default)
-    {
-        // Ensure lockedUntil is UTC for consistent timezone display
-        if (lockedUntil.Kind != DateTimeKind.Utc)
-        {
-            _logger.LogWarning(
-                "lockedUntil provided with Kind={Kind}, converting to UTC",
-                lockedUntil.Kind);
-            lockedUntil = lockedUntil.ToUniversalTime();
-        }
-
-        try
-        {
-            var subject = "Security Alert: Your MeepleAI Account Has Been Locked";
-            var body = BuildAccountLockedEmailBody(userName, failedAttempts, lockedUntil, ipAddress);
-
-            using var message = new MailMessage();
-            message.From = new MailAddress(_fromAddress, _fromName);
-            message.To.Add(new MailAddress(toEmail, userName));
-            message.Subject = subject;
-            message.Body = body;
-            message.IsBodyHtml = true;
-
-            using var smtpClient = new SmtpClient(_smtpHost, _smtpPort);
-            smtpClient.EnableSsl = _enableSsl;
-
-            if (!string.IsNullOrEmpty(_smtpUsername) && !string.IsNullOrEmpty(_smtpPassword))
-            {
-                smtpClient.Credentials = new NetworkCredential(_smtpUsername, _smtpPassword);
-            }
-
-            await smtpClient.SendMailAsync(message, ct).ConfigureAwait(false);
-
-            _logger.LogInformation(
-                "Account locked email sent successfully to {Email}",
-                DataMasking.MaskEmail(toEmail));
-        }
-#pragma warning disable CA1031 // Do not catch general exception types
-#pragma warning disable S125 // Sections of code should not be commented out
-        // ADAPTER PATTERN: Wraps external SMTP service exceptions (authentication, network, timeout) into domain exception
-        // External service integration requires catching all SMTP exceptions to provide consistent error handling
-#pragma warning restore S125
-        catch (Exception ex)
-        {
-            _logger.LogError(
-                ex,
-                "Failed to send account locked email to {Email}",
-                DataMasking.MaskEmail(toEmail));
-            throw new InvalidOperationException("Failed to send account locked email", ex);
-        }
-#pragma warning restore CA1031
-    }
-
-    private static string BuildAccountLockedEmailBody(string userName, int failedAttempts, DateTime lockedUntil, string? ipAddress)
+        string? ipAddress)
     {
         var lockDurationMinutes = (int)Math.Ceiling((lockedUntil - DateTime.UtcNow).TotalMinutes);
         var ipSection = !string.IsNullOrWhiteSpace(ipAddress)
@@ -1868,100 +979,7 @@ internal class EmailService : IEmailService
 ";
     }
 
-    // ISSUE-3668: Game proposal lifecycle notification emails
-    public async Task SendShareRequestReviewStartedEmailAsync(
-        string toEmail,
-        string userName,
-        string gameTitle,
-        Guid shareRequestId,
-        CancellationToken ct = default)
-    {
-        try
-        {
-            var subject = "Your Game Proposal Is Now Under Review";
-            var body = BuildShareRequestReviewStartedEmailBody(userName, gameTitle, shareRequestId);
-
-            using var message = new MailMessage();
-            message.From = new MailAddress(_fromAddress, _fromName);
-            message.To.Add(new MailAddress(toEmail, userName));
-            message.Subject = subject;
-            message.Body = body;
-            message.IsBodyHtml = true;
-
-            using var smtpClient = new SmtpClient(_smtpHost, _smtpPort);
-            smtpClient.EnableSsl = _enableSsl;
-
-            if (!string.IsNullOrEmpty(_smtpUsername) && !string.IsNullOrEmpty(_smtpPassword))
-            {
-                smtpClient.Credentials = new NetworkCredential(_smtpUsername, _smtpPassword);
-            }
-
-            await smtpClient.SendMailAsync(message, ct).ConfigureAwait(false);
-
-            _logger.LogInformation(
-                "Review started email sent to {Email} for game {GameTitle}",
-                DataMasking.MaskEmail(toEmail),
-                gameTitle);
-        }
-#pragma warning disable CA1031 // Do not catch general exception types
-        catch (Exception ex)
-        {
-            _logger.LogError(
-                ex,
-                "Failed to send review started email to {Email}",
-                DataMasking.MaskEmail(toEmail));
-            throw new InvalidOperationException("Failed to send review started email", ex);
-        }
-#pragma warning restore CA1031
-    }
-
-    public async Task SendShareRequestKbMergedEmailAsync(
-        string toEmail,
-        string userName,
-        string gameTitle,
-        Guid sharedGameId,
-        CancellationToken ct = default)
-    {
-        try
-        {
-            var subject = "Your Game Proposal Has Been Merged";
-            var body = BuildShareRequestKbMergedEmailBody(userName, gameTitle, sharedGameId);
-
-            using var message = new MailMessage();
-            message.From = new MailAddress(_fromAddress, _fromName);
-            message.To.Add(new MailAddress(toEmail, userName));
-            message.Subject = subject;
-            message.Body = body;
-            message.IsBodyHtml = true;
-
-            using var smtpClient = new SmtpClient(_smtpHost, _smtpPort);
-            smtpClient.EnableSsl = _enableSsl;
-
-            if (!string.IsNullOrEmpty(_smtpUsername) && !string.IsNullOrEmpty(_smtpPassword))
-            {
-                smtpClient.Credentials = new NetworkCredential(_smtpUsername, _smtpPassword);
-            }
-
-            await smtpClient.SendMailAsync(message, ct).ConfigureAwait(false);
-
-            _logger.LogInformation(
-                "KB merged email sent to {Email} for game {GameTitle}",
-                DataMasking.MaskEmail(toEmail),
-                gameTitle);
-        }
-#pragma warning disable CA1031 // Do not catch general exception types
-        catch (Exception ex)
-        {
-            _logger.LogError(
-                ex,
-                "Failed to send KB merged email to {Email}",
-                DataMasking.MaskEmail(toEmail));
-            throw new InvalidOperationException("Failed to send KB merged email", ex);
-        }
-#pragma warning restore CA1031
-    }
-
-    private string BuildShareRequestReviewStartedEmailBody(
+    public string BuildShareRequestReviewStartedEmailBody(
         string userName,
         string gameTitle,
         Guid shareRequestId)
@@ -2016,7 +1034,7 @@ internal class EmailService : IEmailService
 ";
     }
 
-    private string BuildShareRequestKbMergedEmailBody(
+    public string BuildShareRequestKbMergedEmailBody(
         string userName,
         string gameTitle,
         Guid sharedGameId)
@@ -2070,56 +1088,7 @@ internal class EmailService : IEmailService
 ";
     }
 
-    // ISSUE-4159: Shared game submission notification for admins
-    public async Task SendSharedGameSubmittedForApprovalEmailAsync(
-        string toEmail,
-        string toName,
-        string gameTitle,
-        string submitterName,
-        Guid gameId,
-        CancellationToken ct = default)
-    {
-        try
-        {
-            var reviewUrl = $"{_frontendBaseUrl}/admin/approval-queue?gameId={gameId}";
-            var subject = "New Game Submitted for Approval";
-            var body = BuildSharedGameSubmittedEmailBody(toName, gameTitle, submitterName, reviewUrl);
-
-            using var message = new MailMessage();
-            message.From = new MailAddress(_fromAddress, _fromName);
-            message.To.Add(new MailAddress(toEmail, toName));
-            message.Subject = subject;
-            message.Body = body;
-            message.IsBodyHtml = true;
-
-            using var smtpClient = new SmtpClient(_smtpHost, _smtpPort);
-            smtpClient.EnableSsl = _enableSsl;
-
-            if (!string.IsNullOrEmpty(_smtpUsername) && !string.IsNullOrEmpty(_smtpPassword))
-            {
-                smtpClient.Credentials = new NetworkCredential(_smtpUsername, _smtpPassword);
-            }
-
-            await smtpClient.SendMailAsync(message, ct).ConfigureAwait(false);
-
-            _logger.LogInformation(
-                "Shared game approval notification email sent to admin {Email} for game {GameTitle}",
-                DataMasking.MaskEmail(toEmail),
-                gameTitle);
-        }
-#pragma warning disable CA1031 // Do not catch general exception types
-        catch (Exception ex)
-        {
-            _logger.LogError(
-                ex,
-                "Failed to send shared game approval notification email to {Email}",
-                DataMasking.MaskEmail(toEmail));
-            throw new InvalidOperationException("Failed to send shared game approval notification email", ex);
-        }
-#pragma warning restore CA1031
-    }
-
-    private string BuildSharedGameSubmittedEmailBody(
+    public string BuildSharedGameSubmittedEmailBody(
         string adminName,
         string gameTitle,
         string submitterName,
@@ -2173,143 +1142,7 @@ internal class EmailService : IEmailService
 ";
     }
 
-    // ISSUE-4220: PDF notification emails
-    public async Task SendPdfReadyEmailAsync(
-        string toEmail,
-        string userName,
-        string fileName,
-        Guid pdfDocumentId,
-        CancellationToken ct = default)
-    {
-        try
-        {
-            var subject = "Your PDF is Ready - MeepleAI";
-            var body = BuildPdfReadyEmailBody(userName, fileName, pdfDocumentId);
-
-            using var message = new MailMessage();
-            message.From = new MailAddress(_fromAddress, _fromName);
-            message.To.Add(new MailAddress(toEmail, userName));
-            message.Subject = subject;
-            message.Body = body;
-            message.IsBodyHtml = true;
-
-            using var smtpClient = new SmtpClient(_smtpHost, _smtpPort);
-            smtpClient.EnableSsl = _enableSsl;
-
-            if (!string.IsNullOrEmpty(_smtpUsername) && !string.IsNullOrEmpty(_smtpPassword))
-            {
-                smtpClient.Credentials = new NetworkCredential(_smtpUsername, _smtpPassword);
-            }
-
-            await smtpClient.SendMailAsync(message, ct).ConfigureAwait(false);
-
-            _logger.LogInformation(
-                "PDF ready email sent successfully to {Email}",
-                DataMasking.MaskEmail(toEmail));
-        }
-#pragma warning disable CA1031 // Do not catch general exception types
-        catch (Exception ex)
-        {
-            _logger.LogError(
-                ex,
-                "Failed to send PDF ready email to {Email}",
-                DataMasking.MaskEmail(toEmail));
-            throw new InvalidOperationException("Failed to send PDF ready email", ex);
-        }
-#pragma warning restore CA1031
-    }
-
-    public async Task SendPdfFailedEmailAsync(
-        string toEmail,
-        string userName,
-        string fileName,
-        string errorMessage,
-        CancellationToken ct = default)
-    {
-        try
-        {
-            var subject = "PDF Processing Failed - MeepleAI";
-            var body = BuildPdfFailedEmailBody(userName, fileName, errorMessage);
-
-            using var message = new MailMessage();
-            message.From = new MailAddress(_fromAddress, _fromName);
-            message.To.Add(new MailAddress(toEmail, userName));
-            message.Subject = subject;
-            message.Body = body;
-            message.IsBodyHtml = true;
-
-            using var smtpClient = new SmtpClient(_smtpHost, _smtpPort);
-            smtpClient.EnableSsl = _enableSsl;
-
-            if (!string.IsNullOrEmpty(_smtpUsername) && !string.IsNullOrEmpty(_smtpPassword))
-            {
-                smtpClient.Credentials = new NetworkCredential(_smtpUsername, _smtpPassword);
-            }
-
-            await smtpClient.SendMailAsync(message, ct).ConfigureAwait(false);
-
-            _logger.LogInformation(
-                "PDF failed email sent successfully to {Email}",
-                DataMasking.MaskEmail(toEmail));
-        }
-#pragma warning disable CA1031 // Do not catch general exception types
-        catch (Exception ex)
-        {
-            _logger.LogError(
-                ex,
-                "Failed to send PDF failed email to {Email}",
-                DataMasking.MaskEmail(toEmail));
-            throw new InvalidOperationException("Failed to send PDF failed email", ex);
-        }
-#pragma warning restore CA1031
-    }
-
-    public async Task SendPdfRetryEmailAsync(
-        string toEmail,
-        string userName,
-        string fileName,
-        int retryCount,
-        CancellationToken ct = default)
-    {
-        try
-        {
-            var subject = "PDF Processing Retry - MeepleAI";
-            var body = BuildPdfRetryEmailBody(userName, fileName, retryCount);
-
-            using var message = new MailMessage();
-            message.From = new MailAddress(_fromAddress, _fromName);
-            message.To.Add(new MailAddress(toEmail, userName));
-            message.Subject = subject;
-            message.Body = body;
-            message.IsBodyHtml = true;
-
-            using var smtpClient = new SmtpClient(_smtpHost, _smtpPort);
-            smtpClient.EnableSsl = _enableSsl;
-
-            if (!string.IsNullOrEmpty(_smtpUsername) && !string.IsNullOrEmpty(_smtpPassword))
-            {
-                smtpClient.Credentials = new NetworkCredential(_smtpUsername, _smtpPassword);
-            }
-
-            await smtpClient.SendMailAsync(message, ct).ConfigureAwait(false);
-
-            _logger.LogInformation(
-                "PDF retry email sent successfully to {Email}",
-                DataMasking.MaskEmail(toEmail));
-        }
-#pragma warning disable CA1031 // Do not catch general exception types
-        catch (Exception ex)
-        {
-            _logger.LogError(
-                ex,
-                "Failed to send PDF retry email to {Email}",
-                DataMasking.MaskEmail(toEmail));
-            throw new InvalidOperationException("Failed to send PDF retry email", ex);
-        }
-#pragma warning restore CA1031
-    }
-
-    private string BuildPdfReadyEmailBody(
+    public string BuildPdfReadyEmailBody(
         string userName,
         string fileName,
         Guid pdfDocumentId)
@@ -2366,7 +1199,7 @@ internal class EmailService : IEmailService
 ";
     }
 
-    private string BuildPdfFailedEmailBody(
+    public string BuildPdfFailedEmailBody(
         string userName,
         string fileName,
         string errorMessage)
@@ -2428,7 +1261,7 @@ internal class EmailService : IEmailService
 ";
     }
 
-    private string BuildPdfRetryEmailBody(
+    public string BuildPdfRetryEmailBody(
         string userName,
         string fileName,
         int retryCount)
@@ -2481,146 +1314,7 @@ internal class EmailService : IEmailService
 ";
     }
 
-    // ISSUE-124: Invitation system emails
-    public async Task SendInvitationEmailAsync(
-        string toEmail,
-        string role,
-        string token,
-        string invitedByName,
-        CancellationToken ct = default)
-    {
-        try
-        {
-            var inviteLink = $"{_frontendBaseUrl}/accept-invite?token={Uri.EscapeDataString(token)}";
-            var subject = "You've been invited to MeepleAI";
-            var body = BuildInvitationEmailBody(role, inviteLink, invitedByName);
-
-            using var message = new MailMessage();
-            message.From = new MailAddress(_fromAddress, _fromName);
-            message.To.Add(new MailAddress(toEmail));
-            message.Subject = subject;
-            message.Body = body;
-            message.IsBodyHtml = true;
-
-            using var smtpClient = new SmtpClient(_smtpHost, _smtpPort);
-            smtpClient.EnableSsl = _enableSsl;
-
-            if (!string.IsNullOrEmpty(_smtpUsername) && !string.IsNullOrEmpty(_smtpPassword))
-            {
-                smtpClient.Credentials = new NetworkCredential(_smtpUsername, _smtpPassword);
-            }
-
-            await smtpClient.SendMailAsync(message, ct).ConfigureAwait(false);
-
-            _logger.LogInformation(
-                "Invitation email sent successfully to {Email} for role {Role}",
-                DataMasking.MaskEmail(toEmail), role);
-        }
-#pragma warning disable CA1031 // Do not catch general exception types
-        catch (Exception ex)
-        {
-            _logger.LogError(
-                ex,
-                "Failed to send invitation email to {Email}",
-                DataMasking.MaskEmail(toEmail));
-            throw new InvalidOperationException("Failed to send invitation email", ex);
-        }
-#pragma warning restore CA1031
-    }
-
-    // ISSUE-124: Enhanced invitation email with custom message, platform intro, and expiry notice
-    public async Task SendInvitationEmailAsync(
-        string toEmail,
-        string displayName,
-        string role,
-        string token,
-        string invitedByName,
-        string? customMessage,
-        DateTime expiresAt,
-        CancellationToken ct = default)
-    {
-        try
-        {
-            var setupLink = $"{_frontendBaseUrl}/setup-account?token={Uri.EscapeDataString(token)}";
-            var subject = "Sei stato invitato su MeepleAI!";
-            var body = BuildEnhancedInvitationEmailBody(displayName, role, setupLink, invitedByName, customMessage, expiresAt);
-
-            using var message = new MailMessage();
-            message.From = new MailAddress(_fromAddress, _fromName);
-            message.To.Add(new MailAddress(toEmail));
-            message.Subject = subject;
-            message.Body = body;
-            message.IsBodyHtml = true;
-
-            using var smtpClient = new SmtpClient(_smtpHost, _smtpPort);
-            smtpClient.EnableSsl = _enableSsl;
-
-            if (!string.IsNullOrEmpty(_smtpUsername) && !string.IsNullOrEmpty(_smtpPassword))
-            {
-                smtpClient.Credentials = new NetworkCredential(_smtpUsername, _smtpPassword);
-            }
-
-            await smtpClient.SendMailAsync(message, ct).ConfigureAwait(false);
-
-            _logger.LogInformation(
-                "Enhanced invitation email sent successfully to {Email} for role {Role}",
-                DataMasking.MaskEmail(toEmail), role);
-        }
-#pragma warning disable CA1031 // Do not catch general exception types
-        catch (Exception ex)
-        {
-            _logger.LogError(
-                ex,
-                "Failed to send enhanced invitation email to {Email}",
-                DataMasking.MaskEmail(toEmail));
-            throw new InvalidOperationException("Failed to send invitation email", ex);
-        }
-#pragma warning restore CA1031
-    }
-
-    // ISSUE-4417: Raw email sending for queue processor
-    public async Task SendRawEmailAsync(
-        string toEmail,
-        string subject,
-        string htmlBody,
-        CancellationToken ct = default)
-    {
-        try
-        {
-            using var message = new MailMessage();
-            message.From = new MailAddress(_fromAddress, _fromName);
-            message.To.Add(new MailAddress(toEmail));
-            message.Subject = subject;
-            message.Body = htmlBody;
-            message.IsBodyHtml = true;
-
-            using var smtpClient = new SmtpClient(_smtpHost, _smtpPort);
-            smtpClient.EnableSsl = _enableSsl;
-
-            if (!string.IsNullOrEmpty(_smtpUsername) && !string.IsNullOrEmpty(_smtpPassword))
-            {
-                smtpClient.Credentials = new NetworkCredential(_smtpUsername, _smtpPassword);
-            }
-
-            await smtpClient.SendMailAsync(message, ct).ConfigureAwait(false);
-
-            _logger.LogInformation(
-                "Raw email sent successfully to {Email}",
-                DataMasking.MaskEmail(toEmail));
-        }
-#pragma warning disable CA1031 // Do not catch general exception types
-        catch (Exception ex)
-#pragma warning restore CA1031
-        {
-            _logger.LogError(
-                ex,
-                "Failed to send raw email to {Email}",
-                DataMasking.MaskEmail(toEmail));
-            throw new InvalidOperationException("Failed to send raw email", ex);
-        }
-    }
-
-    private static string BuildInvitationEmailBody(string role, string inviteLink, string invitedByName)
+    public string BuildInvitationEmailBody(string role, string inviteLink, string invitedByName)
     {
         var roleDisplay = string.IsNullOrWhiteSpace(role) ? "user" : role;
 
@@ -2671,7 +1365,7 @@ internal class EmailService : IEmailService
 ";
     }
 
-    private static string BuildEnhancedInvitationEmailBody(
+    public string BuildEnhancedInvitationEmailBody(
         string displayName,
         string role,
         string setupLink,

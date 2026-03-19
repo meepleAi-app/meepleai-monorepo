@@ -1,4 +1,5 @@
 using Api.Services;
+using Api.Services.Email;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Moq;
@@ -8,18 +9,28 @@ using Api.Tests.Constants;
 namespace Api.Tests.Services;
 
 /// <summary>
-/// Unit tests for EmailService report delivery methods
+/// Unit tests for EmailSenderService report delivery methods
 /// ISSUE-918: Email delivery integration tests
 /// </summary>
 [Trait("Category", TestCategories.Unit)]
 public sealed class EmailServiceReportTests
 {
-    private readonly Mock<ILogger<EmailService>> _mockLogger;
+    private readonly Mock<ILogger<EmailSenderService>> _mockLogger;
+    private readonly Mock<IEmailTemplateService> _mockTemplates;
     private readonly IConfiguration _configuration;
 
     public EmailServiceReportTests()
     {
-        _mockLogger = new Mock<ILogger<EmailService>>();
+        _mockLogger = new Mock<ILogger<EmailSenderService>>();
+        _mockTemplates = new Mock<IEmailTemplateService>();
+
+        _mockTemplates
+            .Setup(t => t.BuildReportEmailBody(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<long>()))
+            .Returns("<html>Report</html>");
+
+        _mockTemplates
+            .Setup(t => t.BuildReportFailureEmailBody(It.IsAny<string>(), It.IsAny<string>()))
+            .Returns("<html>Failure</html>");
 
         var inMemorySettings = new Dictionary<string, string?>
         {
@@ -39,7 +50,7 @@ public sealed class EmailServiceReportTests
     public async Task SendReportEmailAsync_WithNoRecipients_ShouldLogWarningAndReturn()
     {
         // Arrange
-        var service = new EmailService(_configuration, _mockLogger.Object);
+        var service = new EmailSenderService(_mockTemplates.Object, _configuration, _mockLogger.Object);
         var emptyRecipients = new List<string>();
         var reportContent = new byte[] { 1, 2, 3 };
 
@@ -68,7 +79,7 @@ public sealed class EmailServiceReportTests
     public async Task SendReportEmailAsync_WithTooLargeAttachment_ShouldThrowInvalidOperationException()
     {
         // Arrange
-        var service = new EmailService(_configuration, _mockLogger.Object);
+        var service = new EmailSenderService(_mockTemplates.Object, _configuration, _mockLogger.Object);
         var recipients = new List<string> { "user@test.com" };
         var largeContent = new byte[11 * 1024 * 1024]; // 11 MB
 
@@ -90,7 +101,7 @@ public sealed class EmailServiceReportTests
     public async Task SendReportFailureEmailAsync_WithNoRecipients_ShouldLogWarningAndReturn()
     {
         // Arrange
-        var service = new EmailService(_configuration, _mockLogger.Object);
+        var service = new EmailSenderService(_mockTemplates.Object, _configuration, _mockLogger.Object);
         var emptyRecipients = new List<string>();
 
         // Act
@@ -112,13 +123,10 @@ public sealed class EmailServiceReportTests
     }
 
     [Fact]
-    public void EmailService_WithValidRecipients_ShouldBuildCorrectReportBody()
+    public void EmailSenderService_WithValidConfiguration_ShouldBeInstantiatable()
     {
-        // Arrange
-        var service = new EmailService(_configuration, _mockLogger.Object);
-
-        // This test verifies the email service can be instantiated
-        // Integration test with real SMTP server would be in E2E tests
+        // Arrange & Act
+        var service = new EmailSenderService(_mockTemplates.Object, _configuration, _mockLogger.Object);
 
         // Assert
         Assert.NotNull(service);

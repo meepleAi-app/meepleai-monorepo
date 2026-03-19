@@ -7,3 +7,5 @@ export { GameTableZoneKnowledge } from './GameTableZoneKnowledge';
 export type { GameTableZoneKnowledgeProps } from './GameTableZoneKnowledge';
 export { GameTableZoneSessions } from './GameTableZoneSessions';
 export type { GameTableZoneSessionsProps } from './GameTableZoneSessions';
+export { GameStatsPanel } from './GameStatsPanel';
+export type { GameStatsPanelProps } from './GameStatsPanel';

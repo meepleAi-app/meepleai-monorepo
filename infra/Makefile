@@ -8,7 +8,7 @@ dev: ## Start full local development (all profiles)
 		--profile ai --profile monitoring --profile automation \
 		--profile proxy --profile storage up -d
 
-dev-core: ## Start core only (postgres, redis, qdrant, api, web)
+dev-core: ## Start core only (postgres, redis, api, web)
 	$(COMPOSE) -f compose.dev.yml up -d
 
 dev-down: ## Stop dev environment

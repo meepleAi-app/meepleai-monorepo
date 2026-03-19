@@ -88,13 +88,13 @@ export const AgentCharacterSheet = React.memo(function AgentCharacterSheet({
           'lg:sticky lg:top-8',
           'flex flex-col gap-4',
           'rounded-2xl overflow-hidden',
-          'bg-white/70 backdrop-blur-md shadow-[0_8px_32px_rgba(0,0,0,0.12)] border border-white/20',
+          'bg-[#161b22] border border-[#30363d]',
           'p-5'
         )}
         data-testid="agent-portrait"
       >
         {/* Avatar */}
-        <div className="flex flex-col items-center gap-3 pb-3 border-b border-slate-100">
+        <div className="flex flex-col items-center gap-3 pb-3 border-b border-[#30363d]">
           <div
             className="w-20 h-20 rounded-2xl flex items-center justify-center shadow-lg"
             style={{ background: avatarGradient }}
@@ -106,13 +106,13 @@ export const AgentCharacterSheet = React.memo(function AgentCharacterSheet({
           {/* Name + type badge */}
           <div className="text-center">
             <h2
-              className="font-quicksand text-lg font-bold text-slate-800 leading-tight"
+              className="font-quicksand text-lg font-bold text-[#e6edf3] leading-tight"
               data-testid="agent-name"
             >
               {data.name}
             </h2>
             <span
-              className="inline-flex items-center gap-1 mt-1 px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 font-nunito text-[10px] font-semibold uppercase tracking-wider"
+              className="inline-flex items-center gap-1 mt-1 px-2 py-0.5 rounded-full bg-blue-500/100/20 text-blue-400 font-nunito text-[10px] font-semibold uppercase tracking-wider"
               data-testid="agent-type-badge"
             >
               {data.type}
@@ -127,7 +127,7 @@ export const AgentCharacterSheet = React.memo(function AgentCharacterSheet({
         {data.gameName && data.gameId && (
           <a
             href={`/library/games/${data.gameId}`}
-            className="flex items-center gap-2 text-blue-600 hover:text-blue-700 transition-colors"
+            className="flex items-center gap-2 text-blue-400 hover:text-blue-400 transition-colors"
             data-testid="agent-game-link"
           >
             <ExternalLink className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
@@ -168,13 +168,15 @@ export const AgentCharacterSheet = React.memo(function AgentCharacterSheet({
               key={i}
               className={cn(
                 'w-8 h-8 rounded-full border-2 transition-colors',
-                i < docs.length ? 'bg-blue-500 border-blue-600' : 'bg-slate-100 border-slate-200'
+                i < docs.length
+                  ? 'bg-blue-500/100 border-blue-600'
+                  : 'bg-[#30363d] border-[#484f58]'
               )}
               aria-hidden="true"
             />
           ))}
           {docs.length > 5 && (
-            <span className="font-nunito text-[10px] text-slate-400">+{docs.length - 5}</span>
+            <span className="font-nunito text-[10px] text-[#8b949e]">+{docs.length - 5}</span>
           )}
         </div>
 
@@ -184,9 +186,9 @@ export const AgentCharacterSheet = React.memo(function AgentCharacterSheet({
             href={`/library/games/${data.gameId}/agent`}
             className={cn(
               'flex items-center justify-center gap-2 rounded-xl border py-2.5 px-4',
-              'bg-white border-blue-200 text-blue-700',
+              'bg-[#21262d] border-blue-500/30 text-blue-400',
               'font-nunito text-xs font-semibold',
-              'transition-colors hover:bg-blue-50',
+              'transition-colors hover:bg-blue-500/100/10',
               'focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-1'
             )}
             data-testid="agent-configure-btn"
@@ -201,7 +203,7 @@ export const AgentCharacterSheet = React.memo(function AgentCharacterSheet({
       <div className="flex-1 flex flex-col gap-6 min-w-0">
         {/* Section 1: Equipaggiamento — Knowledge Base */}
         <section
-          className="rounded-2xl bg-white/70 backdrop-blur-md shadow-[0_8px_32px_rgba(0,0,0,0.08)] border border-white/20 p-5"
+          className="rounded-2xl bg-[#161b22] border border-[#30363d] p-5"
           data-testid="section-equipaggiamento"
         >
           <SectionHeader
@@ -216,12 +218,12 @@ export const AgentCharacterSheet = React.memo(function AgentCharacterSheet({
             </div>
           ) : !data.gameId ? (
             <EmptyState
-              icon={<FileText className="h-8 w-8 text-slate-300" />}
+              icon={<FileText className="h-8 w-8 text-[#484f58]" />}
               message="Nessun gioco collegato a questo agente"
             />
           ) : docs.length === 0 ? (
             <EmptyState
-              icon={<FileText className="h-8 w-8 text-slate-300" />}
+              icon={<FileText className="h-8 w-8 text-[#484f58]" />}
               message="Equipaggia il tuo agente — carica un regolamento"
               cta={
                 <a
@@ -245,7 +247,7 @@ export const AgentCharacterSheet = React.memo(function AgentCharacterSheet({
 
         {/* Section 2: Area Azione — Chat */}
         <section
-          className="rounded-2xl bg-white/70 backdrop-blur-md shadow-[0_8px_32px_rgba(0,0,0,0.08)] border border-white/20 p-5"
+          className="rounded-2xl bg-[#161b22] border border-[#30363d] p-5"
           data-testid="section-area-azione"
         >
           <SectionHeader
@@ -267,7 +269,7 @@ export const AgentCharacterSheet = React.memo(function AgentCharacterSheet({
 
         {/* Section 3: Storia — Conversazioni Recenti */}
         <section
-          className="rounded-2xl bg-white/70 backdrop-blur-md shadow-[0_8px_32px_rgba(0,0,0,0.08)] border border-white/20 p-5"
+          className="rounded-2xl bg-[#161b22] border border-[#30363d] p-5"
           data-testid="section-storia"
         >
           <SectionHeader
@@ -282,7 +284,7 @@ export const AgentCharacterSheet = React.memo(function AgentCharacterSheet({
             </div>
           ) : threads.length === 0 ? (
             <EmptyState
-              icon={<MessageSquare className="h-8 w-8 text-slate-300" />}
+              icon={<MessageSquare className="h-8 w-8 text-[#484f58]" />}
               message="Inizia la tua prima conversazione"
             />
           ) : (
@@ -333,7 +335,7 @@ function AgentChatSection({
     return (
       <div className="flex flex-col items-center justify-center py-8 text-center">
         <Loader2 className="mb-3 h-8 w-8 animate-spin text-blue-500" />
-        <p className="font-nunito text-sm text-slate-500">
+        <p className="font-nunito text-sm text-[#8b949e]">
           Verifica disponibilit&agrave; agente...
         </p>
       </div>
@@ -343,7 +345,7 @@ function AgentChatSection({
   if (readinessError) {
     return (
       <div className="flex flex-col items-center justify-center py-8 text-center">
-        <div className="mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-red-50">
+        <div className="mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-red-500/10">
           <AlertCircle className="h-7 w-7 text-red-400" />
         </div>
         <p className="font-nunito text-sm text-red-600">{readinessError}</p>
@@ -354,13 +356,13 @@ function AgentChatSection({
   if (readiness && !readiness.isReady) {
     return (
       <div className="flex flex-col items-center justify-center py-8 text-center">
-        <div className="mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-amber-50">
+        <div className="mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-amber-500/10">
           <AlertCircle className="h-7 w-7 text-amber-500" />
         </div>
-        <h4 className="mb-1 font-quicksand text-base font-semibold text-slate-800">
+        <h4 className="mb-1 font-quicksand text-base font-semibold text-[#e6edf3]">
           Agente non configurato
         </h4>
-        <p className="max-w-xs font-nunito text-sm text-slate-500 mb-4">
+        <p className="max-w-xs font-nunito text-sm text-[#8b949e] mb-4">
           {readiness.blockingReason || 'Configura la Knowledge Base per abilitare la chat'}
         </p>
         <Button
@@ -379,7 +381,7 @@ function AgentChatSection({
   if (readiness?.isReady && chatThreadId) {
     return (
       <div
-        className="h-[480px] rounded-xl overflow-hidden border border-slate-200/60"
+        className="h-[480px] rounded-xl overflow-hidden border border-[#30363d]/60"
         data-testid="chat-thread-view-wrapper"
       >
         <ChatThreadView threadId={chatThreadId} />
@@ -390,13 +392,13 @@ function AgentChatSection({
   if (readiness?.isReady) {
     return (
       <div className="flex flex-col items-center justify-center py-8 text-center">
-        <div className="mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-50">
+        <div className="mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-500/10">
           <MessageSquare className="h-7 w-7 text-blue-500" />
         </div>
-        <h4 className="mb-1 font-quicksand text-base font-semibold text-slate-800">
+        <h4 className="mb-1 font-quicksand text-base font-semibold text-[#e6edf3]">
           Chat con {agentName}
         </h4>
-        <p className="max-w-xs font-nunito text-sm text-slate-500 mb-4">
+        <p className="max-w-xs font-nunito text-sm text-[#8b949e] mb-4">
           Pronto &bull; {readiness.documentCount} documenti nella KB
         </p>
         <Button
@@ -449,7 +451,7 @@ function AgentChatSection({
   // Null state while readiness is not yet determined
   return (
     <EmptyState
-      icon={<MessageCircle className="h-8 w-8 text-slate-300" />}
+      icon={<MessageCircle className="h-8 w-8 text-[#484f58]" />}
       message="Inizia la tua prima conversazione"
     />
   );
@@ -469,13 +471,13 @@ function SectionHeader({
   subtitle: string;
 }) {
   return (
-    <div className="flex items-center gap-2 mb-4 pb-3 border-b border-slate-100">
-      <span className="text-blue-600" aria-hidden="true">
+    <div className="flex items-center gap-2 mb-4 pb-3 border-b border-[#30363d]">
+      <span className="text-blue-400" aria-hidden="true">
         {icon}
       </span>
       <div>
-        <h3 className="font-quicksand text-sm font-bold text-slate-800 leading-tight">{title}</h3>
-        <p className="font-nunito text-[10px] text-slate-400 uppercase tracking-wider">
+        <h3 className="font-quicksand text-sm font-bold text-[#e6edf3] leading-tight">{title}</h3>
+        <p className="font-nunito text-[10px] text-[#8b949e] uppercase tracking-wider">
           {subtitle}
         </p>
       </div>
@@ -485,12 +487,12 @@ function SectionHeader({
 
 function StatPip({ label, value, icon }: { label: string; value: string; icon: React.ReactNode }) {
   return (
-    <div className="rounded-xl bg-slate-50 border border-slate-100 p-2.5 flex flex-col gap-0.5">
-      <div className="flex items-center gap-1 text-slate-400">
+    <div className="rounded-xl bg-[#21262d] border border-[#30363d] p-2.5 flex flex-col gap-0.5">
+      <div className="flex items-center gap-1 text-[#8b949e]">
         {icon}
         <span className="font-nunito text-[9px] uppercase tracking-wider">{label}</span>
       </div>
-      <span className="font-quicksand text-sm font-bold text-slate-800">{value}</span>
+      <span className="font-quicksand text-sm font-bold text-[#e6edf3]">{value}</span>
     </div>
   );
 }
@@ -507,7 +509,7 @@ function EmptyState({
   return (
     <div className="flex flex-col items-center gap-2 py-8 text-center">
       {icon}
-      <p className="font-nunito text-xs text-slate-400">{message}</p>
+      <p className="font-nunito text-xs text-[#8b949e]">{message}</p>
       {cta}
     </div>
   );
@@ -525,18 +527,18 @@ function ThreadItem({ thread }: { thread: ChatThreadPreview }) {
       : thread.firstMessagePreview;
 
   return (
-    <li className="flex items-start gap-3 rounded-lg bg-white/50 border border-slate-200/40 p-2.5">
-      <MessageSquare className="h-4 w-4 mt-0.5 shrink-0 text-slate-400" aria-hidden="true" />
+    <li className="flex items-start gap-3 rounded-lg bg-[#21262d] border border-[#30363d] p-2.5">
+      <MessageSquare className="h-4 w-4 mt-0.5 shrink-0 text-[#8b949e]" aria-hidden="true" />
       <div className="flex-1 min-w-0 space-y-0.5">
         <div className="flex items-center justify-between gap-2">
-          <p className="font-nunito text-[10px] text-slate-400">{date}</p>
-          <p className="font-nunito text-[10px] text-slate-400">{thread.messageCount} msg</p>
+          <p className="font-nunito text-[10px] text-[#8b949e]">{date}</p>
+          <p className="font-nunito text-[10px] text-[#8b949e]">{thread.messageCount} msg</p>
         </div>
-        {preview && <p className="font-nunito text-xs text-slate-600 leading-relaxed">{preview}</p>}
+        {preview && <p className="font-nunito text-xs text-[#8b949e] leading-relaxed">{preview}</p>}
       </div>
       <a
         href={`/chat/${thread.id}`}
-        className="shrink-0 font-nunito text-[10px] font-medium text-blue-600 hover:underline"
+        className="shrink-0 font-nunito text-[10px] font-medium text-blue-400 hover:underline"
         aria-label={`Vai al thread del ${date}`}
       >
         <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
@@ -553,11 +555,11 @@ function KbDocItem({ doc }: { doc: KbDocumentPreview }) {
   });
 
   return (
-    <li className="flex items-center gap-3 rounded-lg bg-white/50 border border-slate-200/40 p-2.5">
-      <FileText className="h-4 w-4 shrink-0 text-slate-400" aria-hidden="true" />
+    <li className="flex items-center gap-3 rounded-lg bg-[#21262d] border border-[#30363d] p-2.5">
+      <FileText className="h-4 w-4 shrink-0 text-[#8b949e]" aria-hidden="true" />
       <div className="flex-1 min-w-0">
-        <p className="font-nunito text-xs font-medium text-slate-700 truncate">{doc.fileName}</p>
-        <p className="font-nunito text-[10px] text-slate-400">{date}</p>
+        <p className="font-nunito text-xs font-medium text-[#e6edf3] truncate">{doc.fileName}</p>
+        <p className="font-nunito text-[10px] text-[#8b949e]">{date}</p>
       </div>
       <DocumentStatusBadge status={doc.status} size="sm" />
     </li>
@@ -578,7 +580,7 @@ function useAgentThreads(agentId: string) {
 
     (async () => {
       try {
-        const res = await fetch(`/api/v1/chat/threads?agentId=${agentId}`, {
+        const res = await fetch(`/api/v1/chat-threads/my?agentId=${agentId}`, {
           signal: controller.signal,
         });
         if (!res.ok) return;
@@ -612,7 +614,7 @@ function useAgentKbDocs(gameId: string | undefined) {
 
     (async () => {
       try {
-        const res = await fetch(`/api/v1/library/games/${gameId}/documents`, {
+        const res = await fetch(`/api/v1/knowledge-base/${gameId}/documents`, {
           signal: controller.signal,
         });
         if (!res.ok) return;

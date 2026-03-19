@@ -67,6 +67,7 @@ export default async function AgentPage({ params }: AgentPageProps) {
     lastInvokedAt: agent.lastInvokedAt,
     createdAt: agent.createdAt,
     gameId: agent.gameId ?? undefined,
+    gameName: agent.gameName ?? undefined,
   };
 
   return (

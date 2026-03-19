@@ -1,0 +1,390 @@
+# Centralized Slack Notification — Reusable Workflow
+# Called by all other workflows to send structured Slack notifications.
+# Uses Block Kit for rich formatting with environment-aware routing.
+
+name: Notify Slack
+
+on:
+  workflow_call:
+    inputs:
+      event:
+        description: "Notification event type"
+        required: true
+        type: string  # started | completed | failed | cancelled | blocked
+      workflow_name:
+        description: "Human-readable workflow name"
+        required: true
+        type: string
+      environment:
+        description: "Deployment environment"
+        required: false
+        type: string
+        default: "ci"  # production | staging | ci | test | security | infra | automation
+      is_critical:
+        description: "Route failures to critical channel"
+        required: false
+        type: boolean
+        default: false
+      branch:
+        description: "Git branch name"
+        required: false
+        type: string
+        default: ""
+      actor:
+        description: "GitHub actor who triggered the workflow"
+        required: false
+        type: string
+        default: ""
+      commit_sha:
+        description: "Full commit SHA"
+        required: false
+        type: string
+        default: ""
+      commit_message:
+        description: "Commit message"
+        required: false
+        type: string
+        default: ""
+      run_url:
+        description: "URL to the workflow run"
+        required: false
+        type: string
+        default: ""
+      job_list:
+        description: "JSON array of job names"
+        required: false
+        type: string
+        default: "[]"
+      caller_workflow_id:
+        description: "Caller workflow ID for blocked detection"
+        required: false
+        type: string
+        default: ""
+      block_reason:
+        description: "Why the workflow is blocked"
+        required: false
+        type: string
+        default: ""
+      changes_summary:
+        description: "File change summary"
+        required: false
+        type: string
+        default: ""
+      estimated_duration:
+        description: "Measured duration from prior runs"
+        required: false
+        type: string
+        default: ""
+    secrets:
+      SLACK_GITNOTIFY_WEBHOOK_URL:
+        required: true
+      SLACK_CRITICAL_WEBHOOK_URL:
+        required: false
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  send:
+    name: Send Slack Notification
+    runs-on: ubuntu-latest
+    if: inputs.event != '' && secrets.SLACK_GITNOTIFY_WEBHOOK_URL != ''
+    env:
+      SLACK_CRITICAL_WEBHOOK_URL: ${{ secrets.SLACK_CRITICAL_WEBHOOK_URL }}
+    steps:
+      # ----------------------------------------------------------------
+      # Step 1: Detect if workflow is blocked by concurrency
+      # ----------------------------------------------------------------
+      - name: Check if blocked
+        id: blocked
+        if: inputs.event == 'started' && inputs.caller_workflow_id != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          INPUT_CALLER_WORKFLOW_ID: ${{ inputs.caller_workflow_id }}
+        run: |
+          REPO="${{ github.repository }}"
+
+          QUEUED_COUNT=$(gh api "repos/${REPO}/actions/workflows/${INPUT_CALLER_WORKFLOW_ID}/runs?status=queued" \
+            --jq '.total_count' 2>/dev/null || echo "0")
+          WAITING_COUNT=$(gh api "repos/${REPO}/actions/workflows/${INPUT_CALLER_WORKFLOW_ID}/runs?status=waiting" \
+            --jq '.total_count' 2>/dev/null || echo "0")
+
+          TOTAL=$((QUEUED_COUNT + WAITING_COUNT))
+
+          if [ "$TOTAL" -gt 1 ]; then
+            echo "blocked=true" >> "$GITHUB_OUTPUT"
+            echo "reason=concurrency — another run is queued" >> "$GITHUB_OUTPUT"
+          else
+            echo "blocked=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      # ----------------------------------------------------------------
+      # Step 2: Build notification context (emoji, colors, fields)
+      # ----------------------------------------------------------------
+      - name: Set notification context
+        id: context
+        env:
+          INPUT_ENVIRONMENT: ${{ inputs.environment }}
+          INPUT_EVENT: ${{ inputs.event }}
+          INPUT_COMMIT_MESSAGE: ${{ inputs.commit_message }}
+          INPUT_COMMIT_SHA: ${{ inputs.commit_sha }}
+          INPUT_JOB_LIST: ${{ inputs.job_list }}
+          INPUT_CHANGES_SUMMARY: ${{ inputs.changes_summary }}
+          INPUT_ESTIMATED_DURATION: ${{ inputs.estimated_duration }}
+          INPUT_BLOCK_REASON: ${{ inputs.block_reason }}
+        run: |
+          # --- Environment mapping ---
+          case "$INPUT_ENVIRONMENT" in
+            production)  ENV_EMOJI="🚀"; ENV_COLOR="#FF0000" ;;
+            staging)     ENV_EMOJI="🧪"; ENV_COLOR="#7C3AED" ;;
+            ci)          ENV_EMOJI="🔄"; ENV_COLOR="#2563EB" ;;
+            test)        ENV_EMOJI="🧪"; ENV_COLOR="#0891B2" ;;
+            security)    ENV_EMOJI="🛡️"; ENV_COLOR="#DC2626" ;;
+            infra)       ENV_EMOJI="🏗️"; ENV_COLOR="#D97706" ;;
+            automation)  ENV_EMOJI="⚙️"; ENV_COLOR="#6B7280" ;;
+            *)           ENV_EMOJI="🔄"; ENV_COLOR="#2563EB" ;;
+          esac
+
+          # --- Event / status mapping ---
+          case "$INPUT_EVENT" in
+            started)    STATUS_EMOJI="🔵"; STATUS_COLOR="#2563EB"; STATUS_DISPLAY="Started" ;;
+            blocked)    STATUS_EMOJI="⏳"; STATUS_COLOR="#F59E0B"; STATUS_DISPLAY="Blocked" ;;
+            completed)  STATUS_EMOJI="✅"; STATUS_COLOR="#10B981"; STATUS_DISPLAY="Success" ;;
+            failed)     STATUS_EMOJI="❌"; STATUS_COLOR="#EF4444"; STATUS_DISPLAY="Failed" ;;
+            cancelled)  STATUS_EMOJI="⚠️"; STATUS_COLOR="#6B7280"; STATUS_DISPLAY="Cancelled" ;;
+            *)          STATUS_EMOJI="ℹ️"; STATUS_COLOR="#6B7280"; STATUS_DISPLAY="$INPUT_EVENT" ;;
+          esac
+
+          # --- Commit info ---
+          COMMIT_MSG=$(echo "$INPUT_COMMIT_MESSAGE" | head -1)
+          # Escape special JSON characters
+          COMMIT_MSG=$(echo "$COMMIT_MSG" | sed 's/\\/\\\\/g' | sed 's/"/\\"/g' | sed ':a;N;$!ba;s/\n/\\n/g')
+
+          SHA_SHORT="${INPUT_COMMIT_SHA:0:7}"
+
+          ENV_LABEL=$(echo "$INPUT_ENVIRONMENT" | tr '[:lower:]' '[:upper:]')
+
+          # --- Optional Block Kit fields ---
+          OPTIONAL_FIELDS=""
+
+          if [ -n "$INPUT_JOB_LIST" ] && [ "$INPUT_JOB_LIST" != "[]" ]; then
+            JOBS_DISPLAY=$(echo "$INPUT_JOB_LIST" | tr -d '[]"' | sed 's/,/, /g')
+            OPTIONAL_FIELDS="${OPTIONAL_FIELDS},{\"type\":\"section\",\"text\":{\"type\":\"mrkdwn\",\"text\":\"*Jobs:*\n${JOBS_DISPLAY}\"}}"
+          fi
+
+          if [ -n "$INPUT_CHANGES_SUMMARY" ]; then
+            CHANGES_ESCAPED=$(echo "$INPUT_CHANGES_SUMMARY" | sed 's/\\/\\\\/g' | sed 's/"/\\"/g' | sed ':a;N;$!ba;s/\n/\\n/g')
+            OPTIONAL_FIELDS="${OPTIONAL_FIELDS},{\"type\":\"section\",\"text\":{\"type\":\"mrkdwn\",\"text\":\"*Changes:*\n${CHANGES_ESCAPED}\"}}"
+          fi
+
+          if [ -n "$INPUT_ESTIMATED_DURATION" ]; then
+            OPTIONAL_FIELDS="${OPTIONAL_FIELDS},{\"type\":\"section\",\"text\":{\"type\":\"mrkdwn\",\"text\":\"*Est. Time:*\n${INPUT_ESTIMATED_DURATION}\"}}"
+          fi
+
+          if [ -n "$INPUT_BLOCK_REASON" ]; then
+            BLOCK_ESCAPED=$(echo "$INPUT_BLOCK_REASON" | sed 's/\\/\\\\/g' | sed 's/"/\\"/g' | sed ':a;N;$!ba;s/\n/\\n/g')
+            OPTIONAL_FIELDS="${OPTIONAL_FIELDS},{\"type\":\"section\",\"text\":{\"type\":\"mrkdwn\",\"text\":\"*Reason:*\n${BLOCK_ESCAPED}\"}}"
+          fi
+
+          # Write outputs
+          {
+            echo "emoji=${ENV_EMOJI}"
+            echo "env_label=${ENV_LABEL}"
+            echo "status=${STATUS_DISPLAY}"
+            echo "status_emoji=${STATUS_EMOJI}"
+            echo "status_color=${STATUS_COLOR}"
+            echo "sha_short=${SHA_SHORT}"
+            echo "commit_msg=${COMMIT_MSG}"
+            echo "optional_fields=${OPTIONAL_FIELDS}"
+          } >> "$GITHUB_OUTPUT"
+
+      # ----------------------------------------------------------------
+      # Step 3: Send blocked notification (if detected)
+      # ----------------------------------------------------------------
+      - name: Send blocked notification
+        if: steps.blocked.outputs.blocked == 'true'
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_GITNOTIFY_WEBHOOK_URL }}
+          INPUT_WORKFLOW_NAME: ${{ inputs.workflow_name }}
+          INPUT_BRANCH: ${{ inputs.branch }}
+          INPUT_ACTOR: ${{ inputs.actor }}
+          INPUT_RUN_URL: ${{ inputs.run_url }}
+          CTX_ENV_LABEL: ${{ steps.context.outputs.env_label }}
+          CTX_SHA_SHORT: ${{ steps.context.outputs.sha_short }}
+          BLOCKED_REASON: ${{ steps.blocked.outputs.reason }}
+        run: |
+          curl -sf -X POST "$SLACK_WEBHOOK_URL" \
+            -H 'Content-Type: application/json' \
+            -d "$(cat <<PAYLOAD
+          {
+            "attachments": [{
+              "color": "#F59E0B",
+              "blocks": [
+                {
+                  "type": "header",
+                  "text": {
+                    "type": "plain_text",
+                    "text": "⏳ ${CTX_ENV_LABEL} — Blocked"
+                  }
+                },
+                {
+                  "type": "section",
+                  "fields": [
+                    {"type": "mrkdwn", "text": "*Workflow:*\n${INPUT_WORKFLOW_NAME}"},
+                    {"type": "mrkdwn", "text": "*Branch:*\n\`${INPUT_BRANCH}\`"},
+                    {"type": "mrkdwn", "text": "*Commit:*\n\`${CTX_SHA_SHORT}\`"},
+                    {"type": "mrkdwn", "text": "*Actor:*\n${INPUT_ACTOR}"}
+                  ]
+                },
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "*Reason:*\n${BLOCKED_REASON}"
+                  }
+                },
+                {
+                  "type": "actions",
+                  "elements": [{
+                    "type": "button",
+                    "text": {"type": "plain_text", "text": "View Run"},
+                    "url": "${INPUT_RUN_URL}"
+                  }]
+                }
+              ]
+            }]
+          }
+          PAYLOAD
+          )" || echo "Slack notification failed (blocked)"
+
+      # ----------------------------------------------------------------
+      # Step 4: Send main notification
+      # ----------------------------------------------------------------
+      - name: Send main notification
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_GITNOTIFY_WEBHOOK_URL }}
+          INPUT_WORKFLOW_NAME: ${{ inputs.workflow_name }}
+          INPUT_BRANCH: ${{ inputs.branch }}
+          INPUT_ACTOR: ${{ inputs.actor }}
+          INPUT_RUN_URL: ${{ inputs.run_url }}
+          CTX_STATUS_EMOJI: ${{ steps.context.outputs.status_emoji }}
+          CTX_ENV_LABEL: ${{ steps.context.outputs.env_label }}
+          CTX_STATUS: ${{ steps.context.outputs.status }}
+          CTX_STATUS_COLOR: ${{ steps.context.outputs.status_color }}
+          CTX_SHA_SHORT: ${{ steps.context.outputs.sha_short }}
+          CTX_COMMIT_MSG: ${{ steps.context.outputs.commit_msg }}
+          CTX_OPTIONAL_FIELDS: ${{ steps.context.outputs.optional_fields }}
+        run: |
+          curl -sf -X POST "$SLACK_WEBHOOK_URL" \
+            -H 'Content-Type: application/json' \
+            -d "$(cat <<PAYLOAD
+          {
+            "attachments": [{
+              "color": "${CTX_STATUS_COLOR}",
+              "blocks": [
+                {
+                  "type": "header",
+                  "text": {
+                    "type": "plain_text",
+                    "text": "${CTX_STATUS_EMOJI} ${CTX_ENV_LABEL} — ${CTX_STATUS}"
+                  }
+                },
+                {
+                  "type": "section",
+                  "fields": [
+                    {"type": "mrkdwn", "text": "*Workflow:*\n${INPUT_WORKFLOW_NAME}"},
+                    {"type": "mrkdwn", "text": "*Branch:*\n\`${INPUT_BRANCH}\`"},
+                    {"type": "mrkdwn", "text": "*Commit:*\n\`${CTX_SHA_SHORT}\`"},
+                    {"type": "mrkdwn", "text": "*Actor:*\n${INPUT_ACTOR}"}
+                  ]
+                },
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "*Commit:* ${CTX_COMMIT_MSG}"
+                  }
+                }
+                ${CTX_OPTIONAL_FIELDS},
+                {
+                  "type": "actions",
+                  "elements": [{
+                    "type": "button",
+                    "text": {"type": "plain_text", "text": "View Run"},
+                    "url": "${INPUT_RUN_URL}"
+                  }]
+                }
+              ]
+            }]
+          }
+          PAYLOAD
+          )" || echo "Slack notification failed"
+
+      # ----------------------------------------------------------------
+      # Step 5: Send critical channel notification (failures only)
+      # ----------------------------------------------------------------
+      - name: Send critical notification
+        if: (inputs.event == 'failed' || inputs.event == 'cancelled') && inputs.is_critical == true
+        env:
+          INPUT_WORKFLOW_NAME: ${{ inputs.workflow_name }}
+          INPUT_BRANCH: ${{ inputs.branch }}
+          INPUT_ACTOR: ${{ inputs.actor }}
+          INPUT_RUN_URL: ${{ inputs.run_url }}
+          CTX_STATUS_EMOJI: ${{ steps.context.outputs.status_emoji }}
+          CTX_ENV_LABEL: ${{ steps.context.outputs.env_label }}
+          CTX_STATUS: ${{ steps.context.outputs.status }}
+          CTX_STATUS_COLOR: ${{ steps.context.outputs.status_color }}
+          CTX_SHA_SHORT: ${{ steps.context.outputs.sha_short }}
+          CTX_COMMIT_MSG: ${{ steps.context.outputs.commit_msg }}
+          CTX_OPTIONAL_FIELDS: ${{ steps.context.outputs.optional_fields }}
+        run: |
+          if [ -z "$SLACK_CRITICAL_WEBHOOK_URL" ]; then
+            echo "No critical webhook URL configured — skipping"
+            exit 0
+          fi
+
+          curl -sf -X POST "$SLACK_CRITICAL_WEBHOOK_URL" \
+            -H 'Content-Type: application/json' \
+            -d "$(cat <<PAYLOAD
+          {
+            "attachments": [{
+              "color": "${CTX_STATUS_COLOR}",
+              "blocks": [
+                {
+                  "type": "header",
+                  "text": {
+                    "type": "plain_text",
+                    "text": "${CTX_STATUS_EMOJI} ${CTX_ENV_LABEL} — ${CTX_STATUS}"
+                  }
+                },
+                {
+                  "type": "section",
+                  "fields": [
+                    {"type": "mrkdwn", "text": "*Workflow:*\n${INPUT_WORKFLOW_NAME}"},
+                    {"type": "mrkdwn", "text": "*Branch:*\n\`${INPUT_BRANCH}\`"},
+                    {"type": "mrkdwn", "text": "*Commit:*\n\`${CTX_SHA_SHORT}\`"},
+                    {"type": "mrkdwn", "text": "*Actor:*\n${INPUT_ACTOR}"}
+                  ]
+                },
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "*Commit:* ${CTX_COMMIT_MSG}"
+                  }
+                }
+                ${CTX_OPTIONAL_FIELDS},
+                {
+                  "type": "actions",
+                  "elements": [{
+                    "type": "button",
+                    "text": {"type": "plain_text", "text": "View Run"},
+                    "url": "${INPUT_RUN_URL}"
+                  }]
+                }
+              ]
+            }]
+          }
+          PAYLOAD
+          )" || echo "Slack notification failed (critical)"

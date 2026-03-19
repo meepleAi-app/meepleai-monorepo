@@ -64,11 +64,6 @@ internal static class SecretDefinitions
             "REDIS_PASSWORD"
         ),
 
-        ["qdrant"] = new(
-            SecretLevel.Optional, // Qdrant replaced by pgvector — secret no longer required
-            "QDRANT_API_KEY"
-        ),
-
         ["jwt"] = new(
             SecretLevel.Critical,
             "JWT_SECRET_KEY",

@@ -105,7 +105,6 @@ public class SessionSyncServiceTests
     {
         // Arrange
         var sessionId = Guid.NewGuid();
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(2));
 
         var receivedEvents1 = new List<ParticipantAddedEvent>();
         var receivedEvents2 = new List<ParticipantAddedEvent>();
@@ -187,7 +186,6 @@ public class SessionSyncServiceTests
         // Arrange
         var session1Id = Guid.NewGuid();
         var session2Id = Guid.NewGuid();
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(2));
 
         var session1Events = new List<ParticipantAddedEvent>();
 

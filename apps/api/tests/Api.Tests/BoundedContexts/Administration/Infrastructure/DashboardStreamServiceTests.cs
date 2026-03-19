@@ -107,7 +107,6 @@ public class DashboardStreamServiceTests
         // Arrange
         var user1Id = Guid.NewGuid();
         var user2Id = Guid.NewGuid();
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(2));
 
         var receivedEvents1 = new List<DashboardStatsUpdatedEvent>();
         var receivedEvents2 = new List<DashboardStatsUpdatedEvent>();
@@ -163,7 +162,6 @@ public class DashboardStreamServiceTests
         // Arrange
         var targetUserId = Guid.NewGuid();
         var otherUserId = Guid.NewGuid();
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(2));
 
         var targetUserEvents = new List<DashboardNotificationEvent>();
         var otherUserEvents = new List<DashboardNotificationEvent>();
@@ -249,7 +247,6 @@ public class DashboardStreamServiceTests
     {
         // Arrange
         var userId = Guid.NewGuid();
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(2));
 
         var receivedEvents = new List<DashboardActivityEvent>();
         var subscriptionTask = Task.Run(async () =>
@@ -289,7 +286,6 @@ public class DashboardStreamServiceTests
     {
         // Arrange
         var userId = Guid.NewGuid();
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(2));
 
         var receivedEvents = new List<DashboardSessionUpdatedEvent>();
         var subscriptionTask = Task.Run(async () =>

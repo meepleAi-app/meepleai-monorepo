@@ -84,7 +84,6 @@ public class VacuumDatabaseCommandTests : IAsyncLifetime
     public async Task Handle_WithFullVacuum_ExecutesSuccessfully()
     {
         // Arrange
-        using var scope = _serviceProvider!.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
         var handler = new VacuumDatabaseCommandHandler(db);
         var command = new VacuumDatabaseCommand(Confirmed: true, FullVacuum: true);
@@ -100,7 +99,6 @@ public class VacuumDatabaseCommandTests : IAsyncLifetime
     public async Task Handle_WithoutConfirmation_ThrowsInvalidOperationException()
     {
         // Arrange
-        using var scope = _serviceProvider!.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
         var handler = new VacuumDatabaseCommandHandler(db);
         var command = new VacuumDatabaseCommand(Confirmed: false);
@@ -117,7 +115,6 @@ public class VacuumDatabaseCommandTests : IAsyncLifetime
     public async Task Handle_WithNullCommand_ThrowsArgumentNullException()
     {
         // Arrange
-        using var scope = _serviceProvider!.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
         var handler = new VacuumDatabaseCommandHandler(db);
 

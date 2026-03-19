@@ -183,7 +183,6 @@ public sealed class S3BlobStorageIntegrationTests : IAsyncLifetime
 
         // Arrange
         var content = "Exists check content"u8.ToArray();
-        using var stream = new MemoryStream(content);
         var gameId = Guid.NewGuid().ToString("N");
         var storeResult = await _sut.StoreAsync(stream, "exists-test.pdf", gameId);
         Assert.True(storeResult.Success);
@@ -225,7 +224,6 @@ public sealed class S3BlobStorageIntegrationTests : IAsyncLifetime
 
         // Arrange
         var content = "Presigned URL test content"u8.ToArray();
-        using var stream = new MemoryStream(content);
         var gameId = Guid.NewGuid().ToString("N");
         var storeResult = await _sut.StoreAsync(stream, "presigned-test.pdf", gameId);
         Assert.True(storeResult.Success);
@@ -254,7 +252,6 @@ public sealed class S3BlobStorageIntegrationTests : IAsyncLifetime
 
         // Arrange
         var content = "Delete test content"u8.ToArray();
-        using var stream = new MemoryStream(content);
         var gameId = Guid.NewGuid().ToString("N");
         var storeResult = await _sut.StoreAsync(stream, "delete-test.pdf", gameId);
         Assert.True(storeResult.Success);

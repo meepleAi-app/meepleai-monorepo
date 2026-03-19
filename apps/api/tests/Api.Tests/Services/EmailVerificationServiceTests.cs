@@ -87,7 +87,6 @@ public class EmailVerificationServiceTests
     public async Task SendVerificationEmailAsync_WithAlreadyVerifiedUser_ReturnsTrue()
     {
         // Arrange
-        using var dbContext = CreateInMemoryDbContext();
         var userId = Guid.NewGuid();
         var user = new UserEntity
         {
@@ -124,7 +123,6 @@ public class EmailVerificationServiceTests
     public async Task SendVerificationEmailAsync_WithNonExistentUser_ReturnsFalse()
     {
         // Arrange
-        using var dbContext = CreateInMemoryDbContext();
         var service = CreateService(dbContext);
 
         // Act
@@ -142,7 +140,6 @@ public class EmailVerificationServiceTests
     public async Task VerifyEmailAsync_WithValidToken_VerifiesEmail()
     {
         // Arrange
-        using var dbContext = CreateInMemoryDbContext();
         var userId = Guid.NewGuid();
         var user = new UserEntity
         {
@@ -193,7 +190,6 @@ public class EmailVerificationServiceTests
     public async Task VerifyEmailAsync_WithExpiredToken_ReturnsFalse()
     {
         // Arrange
-        using var dbContext = CreateInMemoryDbContext();
         var userId = Guid.NewGuid();
         var user = new UserEntity
         {
@@ -238,7 +234,6 @@ public class EmailVerificationServiceTests
     public async Task VerifyEmailAsync_WithAlreadyUsedToken_ReturnsFalse()
     {
         // Arrange
-        using var dbContext = CreateInMemoryDbContext();
         var userId = Guid.NewGuid();
         var user = new UserEntity
         {
@@ -279,7 +274,6 @@ public class EmailVerificationServiceTests
     public async Task VerifyEmailAsync_WithInvalidToken_ReturnsFalse()
     {
         // Arrange
-        using var dbContext = CreateInMemoryDbContext();
         var service = CreateService(dbContext);
 
         // Act
@@ -293,7 +287,6 @@ public class EmailVerificationServiceTests
     public async Task ResendVerificationEmailAsync_WithUnverifiedUser_SendsEmail()
     {
         // Arrange
-        using var dbContext = CreateInMemoryDbContext();
         var userId = Guid.NewGuid();
         var user = new UserEntity
         {
@@ -341,7 +334,6 @@ public class EmailVerificationServiceTests
     public async Task ResendVerificationEmailAsync_WhenRateLimited_ThrowsException()
     {
         // Arrange
-        using var dbContext = CreateInMemoryDbContext();
         var userId = Guid.NewGuid();
         var user = new UserEntity
         {
@@ -376,7 +368,6 @@ public class EmailVerificationServiceTests
     public async Task ResendVerificationEmailAsync_WithNonExistentEmail_ReturnsTrueForSecurity()
     {
         // Arrange
-        using var dbContext = CreateInMemoryDbContext();
 
         _mockRateLimitService
             .Setup(x => x.CheckRateLimitAsync(
@@ -404,7 +395,6 @@ public class EmailVerificationServiceTests
     public async Task IsEmailVerifiedAsync_WithVerifiedUser_ReturnsTrue()
     {
         // Arrange
-        using var dbContext = CreateInMemoryDbContext();
         var userId = Guid.NewGuid();
         var user = new UserEntity
         {
@@ -432,7 +422,6 @@ public class EmailVerificationServiceTests
     public async Task IsEmailVerifiedAsync_WithUnverifiedUser_ReturnsFalse()
     {
         // Arrange
-        using var dbContext = CreateInMemoryDbContext();
         var userId = Guid.NewGuid();
         var user = new UserEntity
         {

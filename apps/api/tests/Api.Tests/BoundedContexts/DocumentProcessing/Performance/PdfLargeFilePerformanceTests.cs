@@ -213,7 +213,6 @@ public class PdfLargeFilePerformanceTests
 
         await using var pdfStream = CreateDummyPdfStream();
 
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
         var sw = System.Diagnostics.Stopwatch.StartNew();
         var result = await orchestrator.ExtractPagedTextWithFallbackAsync(pdfStream, cancellationToken: cts.Token);
         sw.Stop();

@@ -1,6 +1,5 @@
 using System.Threading;
 using Api.BoundedContexts.KnowledgeBase.Application.Commands;
-using Api.BoundedContexts.KnowledgeBase.Application.Commands;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
@@ -65,7 +64,6 @@ public class ProvideAgentFeedbackCommandHandlerTests
     public async Task Handle_WithValidNotHelpfulOutcome_Succeeds()
     {
         // Arrange
-        using var context = CreateFreshDbContext();
         var handler = new ProvideAgentFeedbackCommandHandler(context, _mockLogger.Object);
         var command = new ProvideAgentFeedbackCommand
         {
@@ -89,7 +87,6 @@ public class ProvideAgentFeedbackCommandHandlerTests
     public async Task Handle_WithValidIncorrectOutcome_Succeeds()
     {
         // Arrange
-        using var context = CreateFreshDbContext();
         var handler = new ProvideAgentFeedbackCommandHandler(context, _mockLogger.Object);
         var command = new ProvideAgentFeedbackCommand
         {
@@ -119,7 +116,6 @@ public class ProvideAgentFeedbackCommandHandlerTests
     public async Task Handle_WithInvalidOutcome_ThrowsArgumentException(string invalidOutcome)
     {
         // Arrange
-        using var context = CreateFreshDbContext();
         var handler = new ProvideAgentFeedbackCommandHandler(context, _mockLogger.Object);
         var command = new ProvideAgentFeedbackCommand
         {
@@ -143,7 +139,6 @@ public class ProvideAgentFeedbackCommandHandlerTests
     public async Task Handle_WithNullOutcome_RemovesExistingFeedback()
     {
         // Arrange
-        using var context = CreateFreshDbContext();
         var userId = Guid.NewGuid();
         var messageId = Guid.NewGuid();
 
@@ -181,7 +176,6 @@ public class ProvideAgentFeedbackCommandHandlerTests
     public async Task Handle_WithEmptyOutcome_RemovesExistingFeedback()
     {
         // Arrange
-        using var context = CreateFreshDbContext();
         var userId = Guid.NewGuid();
         var messageId = Guid.NewGuid();
 
@@ -218,7 +212,6 @@ public class ProvideAgentFeedbackCommandHandlerTests
     public async Task Handle_WithNullMessageId_ThrowsArgumentException()
     {
         // Arrange
-        using var context = CreateFreshDbContext();
         var handler = new ProvideAgentFeedbackCommandHandler(context, _mockLogger.Object);
         var command = new ProvideAgentFeedbackCommand
         {
@@ -237,7 +230,6 @@ public class ProvideAgentFeedbackCommandHandlerTests
     public async Task Handle_WithEmptyMessageId_ThrowsArgumentException()
     {
         // Arrange
-        using var context = CreateFreshDbContext();
         var handler = new ProvideAgentFeedbackCommandHandler(context, _mockLogger.Object);
         var command = new ProvideAgentFeedbackCommand
         {
@@ -256,7 +248,6 @@ public class ProvideAgentFeedbackCommandHandlerTests
     public async Task Handle_WithNullEndpoint_ThrowsArgumentException()
     {
         // Arrange
-        using var context = CreateFreshDbContext();
         var handler = new ProvideAgentFeedbackCommandHandler(context, _mockLogger.Object);
         var command = new ProvideAgentFeedbackCommand
         {
@@ -275,7 +266,6 @@ public class ProvideAgentFeedbackCommandHandlerTests
     public async Task Handle_WithNullUserId_ThrowsArgumentException()
     {
         // Arrange
-        using var context = CreateFreshDbContext();
         var handler = new ProvideAgentFeedbackCommandHandler(context, _mockLogger.Object);
         var command = new ProvideAgentFeedbackCommand
         {
@@ -293,7 +283,6 @@ public class ProvideAgentFeedbackCommandHandlerTests
     public async Task Handle_WithExistingFeedback_UpdatesOutcome()
     {
         // Arrange
-        using var context = CreateFreshDbContext();
         var userId = Guid.NewGuid();
         var messageId = Guid.NewGuid();
 
@@ -335,7 +324,6 @@ public class ProvideAgentFeedbackCommandHandlerTests
     public async Task Handle_WithComment_StoresComment()
     {
         // Arrange
-        using var context = CreateFreshDbContext();
         var handler = new ProvideAgentFeedbackCommandHandler(context, _mockLogger.Object);
         var command = new ProvideAgentFeedbackCommand
         {
@@ -361,7 +349,6 @@ public class ProvideAgentFeedbackCommandHandlerTests
     public async Task Handle_WithNullComment_StoresNullComment()
     {
         // Arrange
-        using var context = CreateFreshDbContext();
         var handler = new ProvideAgentFeedbackCommandHandler(context, _mockLogger.Object);
         var command = new ProvideAgentFeedbackCommand
         {
@@ -387,7 +374,6 @@ public class ProvideAgentFeedbackCommandHandlerTests
     public async Task Handle_WithEmptyComment_StoresNullComment()
     {
         // Arrange
-        using var context = CreateFreshDbContext();
         var handler = new ProvideAgentFeedbackCommandHandler(context, _mockLogger.Object);
         var command = new ProvideAgentFeedbackCommand
         {
@@ -411,7 +397,6 @@ public class ProvideAgentFeedbackCommandHandlerTests
     public async Task Handle_WithCommentUpdate_UpdatesComment()
     {
         // Arrange
-        using var context = CreateFreshDbContext();
         var userId = Guid.NewGuid();
         var messageId = Guid.NewGuid();
 
@@ -452,7 +437,6 @@ public class ProvideAgentFeedbackCommandHandlerTests
     public async Task Handle_WithCommentOnPositiveFeedback_StoresComment()
     {
         // Arrange - Comments should work for any outcome type
-        using var context = CreateFreshDbContext();
         var handler = new ProvideAgentFeedbackCommandHandler(context, _mockLogger.Object);
         var command = new ProvideAgentFeedbackCommand
         {
@@ -477,7 +461,6 @@ public class ProvideAgentFeedbackCommandHandlerTests
     public async Task Handle_WithCommentTrim_TrimsWhitespace()
     {
         // Arrange
-        using var context = CreateFreshDbContext();
         var handler = new ProvideAgentFeedbackCommandHandler(context, _mockLogger.Object);
         var command = new ProvideAgentFeedbackCommand
         {

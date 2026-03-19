@@ -200,7 +200,6 @@ public sealed class AgentChatEndpointsIntegrationTests : IAsyncLifetime
 
         // Validate error event in stream
         var stream = await response.Content.ReadAsStreamAsync();
-        using var reader = new StreamReader(stream);
 
         var events = new List<RagStreamingEvent>();
         string? line;

@@ -172,7 +172,6 @@ public sealed class PrivatePdfUploadIntegrationTests : IAsyncLifetime
             NullLogger<PrivatePdfProgressStreamService>.Instance);
 
         var receivedProgress = new List<ProcessingProgressJson>();
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
 
         // Start subscriber
         var subscriberTask = Task.Run(async () =>
@@ -253,7 +252,6 @@ public sealed class PrivatePdfUploadIntegrationTests : IAsyncLifetime
 
         var subscriber1Progress = new List<ProcessingProgressJson>();
         var subscriber2Progress = new List<ProcessingProgressJson>();
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
 
         // Start two subscribers
         var subscriber1Task = Task.Run(async () =>
@@ -429,7 +427,6 @@ public sealed class PrivatePdfUploadIntegrationTests : IAsyncLifetime
             NullLogger<PrivatePdfProgressStreamService>.Instance);
 
         var receivedProgress = new List<ProcessingProgressJson>();
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
 
         // Subscribe to progress
         var subscriberTask = Task.Run(async () =>
@@ -477,7 +474,6 @@ public sealed class PrivatePdfUploadIntegrationTests : IAsyncLifetime
             NullLogger<PrivatePdfProgressStreamService>.Instance);
 
         var receivedProgress = new List<ProcessingProgressJson>();
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
 
         var subscriberTask = Task.Run(async () =>
         {

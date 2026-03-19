@@ -264,7 +264,6 @@ public sealed class AdminGameCreationJourneyE2ETests : E2ETestBase
         foreach (var (fileName, _) in pdfFiles)
         {
             var pdfContent = CreateMinimalPdfBytes();
-            using var content = new MultipartFormDataContent();
             var fileContent = new ByteArrayContent(pdfContent);
             fileContent.Headers.ContentType = new MediaTypeHeaderValue("application/pdf");
             content.Add(fileContent, "file", fileName);
@@ -292,7 +291,6 @@ public sealed class AdminGameCreationJourneyE2ETests : E2ETestBase
         ClearAuthentication();
 
         var pdfContent = CreateMinimalPdfBytes();
-        using var content = new MultipartFormDataContent();
         var fileContent = new ByteArrayContent(pdfContent);
         fileContent.Headers.ContentType = new MediaTypeHeaderValue("application/pdf");
         content.Add(fileContent, "file", "unauthorized-test.pdf");

@@ -95,7 +95,6 @@ public sealed class MigrationRollbackIntegrationTests : IAsyncLifetime
     public async Task MigrateUp_ShouldCreateExpectedTables()
     {
         // Arrange
-        using var dbContext = _serviceProvider!.GetRequiredService<MeepleAiDbContext>();
         await dbContext.Database.MigrateAsync(TestCancellationToken);
 
         // Act - Query information_schema for multi-agent tables
@@ -130,7 +129,6 @@ public sealed class MigrationRollbackIntegrationTests : IAsyncLifetime
     public async Task MigrateUpAndDown_ShouldNotThrowExceptions()
     {
         // Arrange
-        using var dbContext = _serviceProvider!.GetRequiredService<MeepleAiDbContext>();
 
         // Act - Apply all migrations
         await dbContext.Database.MigrateAsync(TestCancellationToken);
@@ -155,7 +153,6 @@ public sealed class MigrationRollbackIntegrationTests : IAsyncLifetime
     public async Task MigrateUp_PgvectorExtension_ShouldBeAvailable()
     {
         // Arrange
-        using var dbContext = _serviceProvider!.GetRequiredService<MeepleAiDbContext>();
         await dbContext.Database.MigrateAsync(TestCancellationToken);
 
         // Act - Check pgvector extension is installed
@@ -178,7 +175,6 @@ public sealed class MigrationRollbackIntegrationTests : IAsyncLifetime
     public async Task MigrateUp_ConversationMemoryTable_ShouldHaveCorrectColumns()
     {
         // Arrange
-        using var dbContext = _serviceProvider!.GetRequiredService<MeepleAiDbContext>();
         await dbContext.Database.MigrateAsync(TestCancellationToken);
 
         // Act - Query column information for conversation_memory
@@ -220,7 +216,6 @@ public sealed class MigrationRollbackIntegrationTests : IAsyncLifetime
     public async Task MigrateUp_StrategyPatternsTable_ShouldHaveCorrectColumns()
     {
         // Arrange
-        using var dbContext = _serviceProvider!.GetRequiredService<MeepleAiDbContext>();
         await dbContext.Database.MigrateAsync(TestCancellationToken);
 
         // Act

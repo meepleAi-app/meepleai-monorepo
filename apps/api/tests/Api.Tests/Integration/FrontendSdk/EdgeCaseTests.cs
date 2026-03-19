@@ -424,7 +424,6 @@ public class EdgeCaseTests : IAsyncLifetime
     public async Task LongRequest_WithCancellation_CleansupProperly()
     {
         // Arrange
-        using var cts = new CancellationTokenSource();
         var request = new HttpRequestMessage(HttpMethod.Get, "/health");
 
         // Act - Start request and cancel after short delay

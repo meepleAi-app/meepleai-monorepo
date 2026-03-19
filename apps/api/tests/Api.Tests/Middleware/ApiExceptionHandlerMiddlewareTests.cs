@@ -100,7 +100,6 @@ public class ApiExceptionHandlerMiddlewareTests
         Assert.Equal(404, _httpContext.Response.StatusCode);
 
         _httpContext.Response.Body.Seek(0, SeekOrigin.Begin);
-        using var reader = new StreamReader(_httpContext.Response.Body);
         var responseBody = await reader.ReadToEndAsync(TestCancellationToken);
         using var errorResponse = ParseErrorResponse(responseBody);
 
@@ -126,9 +125,7 @@ public class ApiExceptionHandlerMiddlewareTests
         Assert.Equal(401, _httpContext.Response.StatusCode);
 
         _httpContext.Response.Body.Seek(0, SeekOrigin.Begin);
-        using var reader = new StreamReader(_httpContext.Response.Body);
         var responseBody = await reader.ReadToEndAsync(TestCancellationToken);
-        using var errorResponse = ParseErrorResponse(responseBody);
 
         Assert.Equal("unauthorized", errorResponse.RootElement.GetProperty("error").GetString());
         Assert.Equal("Token expired", errorResponse.RootElement.GetProperty("message").GetString());
@@ -172,9 +169,7 @@ public class ApiExceptionHandlerMiddlewareTests
         Assert.Equal(409, _httpContext.Response.StatusCode);
 
         _httpContext.Response.Body.Seek(0, SeekOrigin.Begin);
-        using var reader = new StreamReader(_httpContext.Response.Body);
         var responseBody = await reader.ReadToEndAsync(TestCancellationToken);
-        using var errorResponse = ParseErrorResponse(responseBody);
 
         Assert.Equal("conflict", errorResponse.RootElement.GetProperty("error").GetString());
     }
@@ -198,9 +193,7 @@ public class ApiExceptionHandlerMiddlewareTests
         Assert.Equal(400, _httpContext.Response.StatusCode);
 
         _httpContext.Response.Body.Seek(0, SeekOrigin.Begin);
-        using var reader = new StreamReader(_httpContext.Response.Body);
         var responseBody = await reader.ReadToEndAsync(TestCancellationToken);
-        using var errorResponse = ParseErrorResponse(responseBody);
 
         Assert.Equal("domain_error", errorResponse.RootElement.GetProperty("error").GetString());
     }
@@ -228,9 +221,7 @@ public class ApiExceptionHandlerMiddlewareTests
         Assert.Equal(400, _httpContext.Response.StatusCode);
 
         _httpContext.Response.Body.Seek(0, SeekOrigin.Begin);
-        using var reader = new StreamReader(_httpContext.Response.Body);
         var responseBody = await reader.ReadToEndAsync(TestCancellationToken);
-        using var errorResponse = ParseErrorResponse(responseBody);
 
         Assert.Equal("validation_error", errorResponse.RootElement.GetProperty("error").GetString());
     }
@@ -292,9 +283,7 @@ public class ApiExceptionHandlerMiddlewareTests
         Assert.Equal(404, _httpContext.Response.StatusCode);
 
         _httpContext.Response.Body.Seek(0, SeekOrigin.Begin);
-        using var reader = new StreamReader(_httpContext.Response.Body);
         var responseBody = await reader.ReadToEndAsync(TestCancellationToken);
-        using var errorResponse = ParseErrorResponse(responseBody);
 
         Assert.Equal("not_found", errorResponse.RootElement.GetProperty("error").GetString());
     }
@@ -337,9 +326,7 @@ public class ApiExceptionHandlerMiddlewareTests
         Assert.Equal(500, _httpContext.Response.StatusCode);
 
         _httpContext.Response.Body.Seek(0, SeekOrigin.Begin);
-        using var reader = new StreamReader(_httpContext.Response.Body);
         var responseBody = await reader.ReadToEndAsync(TestCancellationToken);
-        using var errorResponse = ParseErrorResponse(responseBody);
 
         Assert.Equal("internal_server_error", errorResponse.RootElement.GetProperty("error").GetString());
     }
@@ -378,7 +365,6 @@ public class ApiExceptionHandlerMiddlewareTests
 
         // Assert
         _httpContext.Response.Body.Seek(0, SeekOrigin.Begin);
-        using var reader = new StreamReader(_httpContext.Response.Body);
         var responseBody = await reader.ReadToEndAsync(TestCancellationToken);
         var errorResponse = JsonSerializer.Deserialize<JsonDocument>(responseBody);
 
@@ -403,7 +389,6 @@ public class ApiExceptionHandlerMiddlewareTests
 
         // Assert
         _httpContext.Response.Body.Seek(0, SeekOrigin.Begin);
-        using var reader = new StreamReader(_httpContext.Response.Body);
         var responseBody = await reader.ReadToEndAsync(TestCancellationToken);
         var errorResponse = JsonSerializer.Deserialize<JsonDocument>(responseBody);
 
@@ -429,7 +414,6 @@ public class ApiExceptionHandlerMiddlewareTests
 
         // Assert
         _httpContext.Response.Body.Seek(0, SeekOrigin.Begin);
-        using var reader = new StreamReader(_httpContext.Response.Body);
         var responseBody = await reader.ReadToEndAsync(TestCancellationToken);
         var errorResponse = JsonSerializer.Deserialize<JsonDocument>(responseBody);
 
@@ -496,7 +480,6 @@ public class ApiExceptionHandlerMiddlewareTests
         Assert.Equal(expectedStatusCode, _httpContext.Response.StatusCode);
 
         _httpContext.Response.Body.Seek(0, SeekOrigin.Begin);
-        using var reader = new StreamReader(_httpContext.Response.Body);
         var responseBody = await reader.ReadToEndAsync(TestCancellationToken);
         var errorResponse = JsonSerializer.Deserialize<JsonDocument>(responseBody);
 
@@ -527,7 +510,6 @@ public class ApiExceptionHandlerMiddlewareTests
         Assert.Equal(expectedStatusCode, _httpContext.Response.StatusCode);
 
         _httpContext.Response.Body.Seek(0, SeekOrigin.Begin);
-        using var reader = new StreamReader(_httpContext.Response.Body);
         var responseBody = await reader.ReadToEndAsync(TestCancellationToken);
         var errorResponse = JsonSerializer.Deserialize<JsonDocument>(responseBody);
 

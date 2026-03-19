@@ -183,7 +183,6 @@ public sealed class ExcelImportIntegrationTests : IAsyncLifetime
     public async Task Import_EmptyName_ReportsRowError()
     {
         // Arrange
-        using var workbook = new XLWorkbook();
         var worksheet = workbook.Worksheets.Add("Games");
         worksheet.Cell(1, 1).Value = "Name";
         worksheet.Cell(1, 2).Value = "BggId";
@@ -206,7 +205,6 @@ public sealed class ExcelImportIntegrationTests : IAsyncLifetime
     public async Task Import_InvalidBggId_ReportsRowError()
     {
         // Arrange
-        using var workbook = new XLWorkbook();
         var worksheet = workbook.Worksheets.Add("Games");
         worksheet.Cell(1, 1).Value = "Name";
         worksheet.Cell(1, 2).Value = "BggId";
@@ -229,7 +227,6 @@ public sealed class ExcelImportIntegrationTests : IAsyncLifetime
     public async Task Import_NoBggIdColumn_SucceedsWithNullBggId()
     {
         // Arrange: Excel with only Name column
-        using var workbook = new XLWorkbook();
         var worksheet = workbook.Worksheets.Add("Games");
         worksheet.Cell(1, 1).Value = "Name";
         worksheet.Cell(2, 1).Value = "Catan";
@@ -281,7 +278,6 @@ public sealed class ExcelImportIntegrationTests : IAsyncLifetime
 
     private static IFormFile CreateExcelFile(params (string Name, int? BggId)[] games)
     {
-        using var workbook = new XLWorkbook();
         var worksheet = workbook.Worksheets.Add("Games");
 
         worksheet.Cell(1, 1).Value = "Name";

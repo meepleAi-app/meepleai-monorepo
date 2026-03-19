@@ -673,7 +673,6 @@ public class EmbeddingBasedSemanticChunkerTests
     {
         // Arrange
         var rulebookContent = CreateTestRulebookWithParagraphs(5);
-        using var cts = new CancellationTokenSource();
         cts.Cancel(); // Cancel immediately
 
         _mockEmbeddingService

@@ -184,7 +184,6 @@ public class ITextPdfTableExtractorTests
     {
         // Arrange
         var tempPdfPath = CreateTempPdfFile();
-        using var cts = new CancellationTokenSource();
         await cts.CancelAsync(); // Cancel immediately
 
         try

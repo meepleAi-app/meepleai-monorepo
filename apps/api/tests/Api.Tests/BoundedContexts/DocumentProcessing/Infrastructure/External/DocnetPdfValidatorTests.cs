@@ -76,7 +76,6 @@ public sealed class DocnetPdfValidatorTests : IDisposable
     public async Task ValidateAsync_WhitespaceFileName_ReturnsFailure()
     {
         // Arrange
-        using var stream = new MemoryStream();
 
         // Act
         var result = await _validator.ValidateAsync(stream, "   ", TestCancellationToken);
@@ -122,7 +121,6 @@ public sealed class DocnetPdfValidatorTests : IDisposable
     public async Task ValidateAsync_EmptyStream_ReturnsFailure()
     {
         // Arrange: Empty stream
-        using var stream = new MemoryStream();
 
         // Act
         var result = await _validator.ValidateAsync(stream, "test.pdf", TestCancellationToken);
@@ -150,7 +148,6 @@ public sealed class DocnetPdfValidatorTests : IDisposable
     {
         // Arrange: 51 MB file (over 50 MB limit)
         var data = CreatePdfLikeBytes(51 * 1024 * 1024); // 51 MB
-        using var stream = new MemoryStream(data);
 
         // Act
         var result = await _validator.ValidateAsync(stream, "test.pdf", TestCancellationToken);
@@ -165,7 +162,6 @@ public sealed class DocnetPdfValidatorTests : IDisposable
     {
         // Arrange: PDF file with .pdf extension
         var data = CreatePdfLikeBytes(1024);
-        using var stream = new MemoryStream(data);
 
         // Act
         var result = await _validator.ValidateAsync(stream, "document.pdf", TestCancellationToken);
@@ -179,7 +175,6 @@ public sealed class DocnetPdfValidatorTests : IDisposable
     {
         // Arrange: File without .pdf extension
         var data = CreatePdfLikeBytes(1024);
-        using var stream = new MemoryStream(data);
 
         // Act
         var result = await _validator.ValidateAsync(stream, "document.txt", TestCancellationToken);

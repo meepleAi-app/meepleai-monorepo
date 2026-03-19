@@ -421,7 +421,6 @@ public sealed class AuthenticationEndpointsIntegrationTests : IAsyncLifetime
         // The endpoint requires SessionStatusDto in HttpContext.Items (set by auth middleware).
         // In integration tests with mocked IHybridCacheService, the middleware validation
         // may not populate HttpContext.Items correctly, so we test with direct DB session.
-        using var authScope = _factory.Services.CreateScope();
         var dbContext = authScope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
         var (userId, sessionToken) = await TestSessionHelper.CreateUserSessionAsync(dbContext);
 
@@ -457,7 +456,6 @@ public sealed class AuthenticationEndpointsIntegrationTests : IAsyncLifetime
     public async Task GetUserSessions_WithValidSession_ReturnsSessions()
     {
         // Arrange - Create authenticated session
-        using var authScope = _factory.Services.CreateScope();
         var dbContext = authScope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
         var (userId, sessionToken) = await TestSessionHelper.CreateUserSessionAsync(dbContext);
 
@@ -481,7 +479,6 @@ public sealed class AuthenticationEndpointsIntegrationTests : IAsyncLifetime
     public async Task RevokeSession_WithValidSession_ReturnsOk()
     {
         // Arrange - Create two sessions, revoke one
-        using var authScope = _factory.Services.CreateScope();
         var dbContext = authScope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
         var (userId, sessionToken) = await TestSessionHelper.CreateUserSessionAsync(dbContext);
 
@@ -523,7 +520,6 @@ public sealed class AuthenticationEndpointsIntegrationTests : IAsyncLifetime
     public async Task RevokeAllSessions_WithValidSession_RevokesOtherSessions()
     {
         // Arrange - Create authenticated session
-        using var authScope = _factory.Services.CreateScope();
         var dbContext = authScope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
         var (userId, sessionToken) = await TestSessionHelper.CreateUserSessionAsync(dbContext);
 

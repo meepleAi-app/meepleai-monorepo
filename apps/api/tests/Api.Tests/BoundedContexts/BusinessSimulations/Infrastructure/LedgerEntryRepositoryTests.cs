@@ -80,7 +80,6 @@ public sealed class LedgerEntryRepositoryTests
     public async Task GetByIdAsync_WithNonExistentId_ShouldReturnNull()
     {
         // Arrange
-        using var dbContext = CreateDbContext();
         var repo = CreateRepository(dbContext);
 
         // Act
@@ -98,7 +97,6 @@ public sealed class LedgerEntryRepositoryTests
     public async Task GetAllAsync_WithMultipleEntries_ShouldReturnAllOrderedByDateDesc()
     {
         // Arrange
-        using var dbContext = CreateDbContext();
         var repo = CreateRepository(dbContext);
 
         await repo.AddAsync(CreateTestEntry(date: BaseDate.AddDays(1)));
@@ -119,7 +117,6 @@ public sealed class LedgerEntryRepositoryTests
     public async Task GetAllAsync_WithNoEntries_ShouldReturnEmpty()
     {
         // Arrange
-        using var dbContext = CreateDbContext();
         var repo = CreateRepository(dbContext);
 
         // Act
@@ -137,7 +134,6 @@ public sealed class LedgerEntryRepositoryTests
     public async Task UpdateAsync_ShouldPersistChanges()
     {
         // Arrange
-        using var dbContext = CreateDbContext();
         var repo = CreateRepository(dbContext);
         var entry = CreateTestEntry();
         await repo.AddAsync(entry);
@@ -164,7 +160,6 @@ public sealed class LedgerEntryRepositoryTests
     public async Task DeleteAsync_ShouldRemoveEntry()
     {
         // Arrange
-        using var dbContext = CreateDbContext();
         var repo = CreateRepository(dbContext);
         var entry = CreateTestEntry();
         await repo.AddAsync(entry);
@@ -187,7 +182,6 @@ public sealed class LedgerEntryRepositoryTests
     public async Task ExistsAsync_WithExistingEntry_ShouldReturnTrue()
     {
         // Arrange
-        using var dbContext = CreateDbContext();
         var repo = CreateRepository(dbContext);
         var entry = CreateTestEntry();
         await repo.AddAsync(entry);
@@ -204,7 +198,6 @@ public sealed class LedgerEntryRepositoryTests
     public async Task ExistsAsync_WithNonExistentEntry_ShouldReturnFalse()
     {
         // Arrange
-        using var dbContext = CreateDbContext();
         var repo = CreateRepository(dbContext);
 
         // Act
@@ -222,7 +215,6 @@ public sealed class LedgerEntryRepositoryTests
     public async Task GetByDateRangeAsync_ShouldReturnEntriesInRange()
     {
         // Arrange
-        using var dbContext = CreateDbContext();
         var repo = CreateRepository(dbContext);
 
         await repo.AddAsync(CreateTestEntry(date: BaseDate.AddDays(1)));
@@ -244,7 +236,6 @@ public sealed class LedgerEntryRepositoryTests
     public async Task GetByDateRangeAsync_WithPagination_ShouldRespectPageSize()
     {
         // Arrange
-        using var dbContext = CreateDbContext();
         var repo = CreateRepository(dbContext);
 
         for (int i = 0; i < 5; i++)
@@ -265,7 +256,6 @@ public sealed class LedgerEntryRepositoryTests
     public async Task GetByDateRangeAsync_WithInvalidPage_ShouldDefaultToPage1()
     {
         // Arrange
-        using var dbContext = CreateDbContext();
         var repo = CreateRepository(dbContext);
         await repo.AddAsync(CreateTestEntry());
         await dbContext.SaveChangesAsync();
@@ -287,7 +277,6 @@ public sealed class LedgerEntryRepositoryTests
     public async Task GetByTypeAsync_ShouldFilterByType()
     {
         // Arrange
-        using var dbContext = CreateDbContext();
         var repo = CreateRepository(dbContext);
 
         await repo.AddAsync(CreateTestEntry(type: LedgerEntryType.Income));
@@ -311,7 +300,6 @@ public sealed class LedgerEntryRepositoryTests
     public async Task GetByCategoryAsync_ShouldFilterByCategory()
     {
         // Arrange
-        using var dbContext = CreateDbContext();
         var repo = CreateRepository(dbContext);
 
         await repo.AddAsync(CreateTestEntry(category: LedgerCategory.Subscription));
@@ -335,7 +323,6 @@ public sealed class LedgerEntryRepositoryTests
     public async Task GetSummaryByDateRangeAsync_ShouldSumByType()
     {
         // Arrange
-        using var dbContext = CreateDbContext();
         var repo = CreateRepository(dbContext);
 
         await repo.AddAsync(CreateTestEntry(type: LedgerEntryType.Income, amount: 100m));
@@ -357,7 +344,6 @@ public sealed class LedgerEntryRepositoryTests
     public async Task GetSummaryByDateRangeAsync_WithNoEntries_ShouldReturnZeros()
     {
         // Arrange
-        using var dbContext = CreateDbContext();
         var repo = CreateRepository(dbContext);
 
         // Act

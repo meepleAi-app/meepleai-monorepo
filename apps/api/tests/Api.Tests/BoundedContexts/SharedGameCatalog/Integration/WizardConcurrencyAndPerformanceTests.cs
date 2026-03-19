@@ -260,7 +260,6 @@ public class WizardConcurrencyAndPerformanceTests
                 AverageRating = 7.8m
             });
 
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
 
         // Extract (path format: {fileId}_{timestamp}.pdf)
         var extractHandler = new ExtractGameMetadataFromPdfQueryHandler(

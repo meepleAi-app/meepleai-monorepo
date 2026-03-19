@@ -149,7 +149,6 @@ public sealed class PdfKbLinkFlowIntegrationTests : IAsyncLifetime
         await _unitOfWork!.SaveChangesAsync(TestCancellationToken);
 
         // Act — retrieve from fresh context
-        using var scope = _serviceProvider!.CreateScope();
         var freshRepo = scope.ServiceProvider.GetRequiredService<IChatThreadRepository>();
         var retrieved = await freshRepo.GetByIdAsync(threadId, TestCancellationToken);
 
@@ -177,7 +176,6 @@ public sealed class PdfKbLinkFlowIntegrationTests : IAsyncLifetime
         await _unitOfWork!.SaveChangesAsync(TestCancellationToken);
 
         // Act — retrieve
-        using var scope = _serviceProvider!.CreateScope();
         var freshRepo = scope.ServiceProvider.GetRequiredService<IChatThreadRepository>();
         var retrieved = await freshRepo.GetByIdAsync(threadId, TestCancellationToken);
 
@@ -209,7 +207,6 @@ public sealed class PdfKbLinkFlowIntegrationTests : IAsyncLifetime
         await _unitOfWork.SaveChangesAsync(TestCancellationToken);
 
         // Act — verify
-        using var scope = _serviceProvider!.CreateScope();
         var freshRepo = scope.ServiceProvider.GetRequiredService<IChatThreadRepository>();
         var final = await freshRepo.GetByIdAsync(threadId, TestCancellationToken);
 
@@ -241,7 +238,6 @@ public sealed class PdfKbLinkFlowIntegrationTests : IAsyncLifetime
         await _unitOfWork.SaveChangesAsync(TestCancellationToken);
 
         // Verify
-        using var scope = _serviceProvider!.CreateScope();
         var freshRepo = scope.ServiceProvider.GetRequiredService<IChatThreadRepository>();
         var final = await freshRepo.GetByIdAsync(threadId, TestCancellationToken);
 

@@ -114,7 +114,6 @@ public sealed class LedgerStateSchemaTests
         var schema = LedgerStateSchema.CreateEmpty(new[] { "Player1" });
 
         // Act
-        using var jsonDoc = schema.ToJsonDocument();
         var root = jsonDoc.RootElement;
 
         // Assert - camelCase property names
@@ -163,7 +162,6 @@ public sealed class LedgerStateSchemaTests
         var schema = LedgerStateSchema.CreateEmpty(new[] { "Alice", "Bob", "Charlie" });
 
         // Act
-        using var jsonDoc = schema.ToJsonDocument();
         var roundtripped = LedgerStateSchema.FromJsonDocument(jsonDoc);
 
         // Assert
@@ -317,7 +315,6 @@ public sealed class LedgerStateSchemaTests
         };
 
         // Act
-        using var jsonDoc = schema.ToJsonDocument();
         var restored = LedgerStateSchema.FromJsonDocument(jsonDoc);
 
         // Assert
@@ -344,7 +341,6 @@ public sealed class LedgerStateSchemaTests
         };
 
         // Act
-        using var jsonDoc = schema.ToJsonDocument();
         var json = jsonDoc.RootElement.GetRawText();
 
         // Assert

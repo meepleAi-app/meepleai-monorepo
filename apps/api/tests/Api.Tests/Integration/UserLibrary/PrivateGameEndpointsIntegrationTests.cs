@@ -223,7 +223,6 @@ public sealed class PrivateGameEndpointsIntegrationTests : IAsyncLifetime
     public async Task AddPrivateGame_BggGame_WithValidSession_ReturnsCreated()
     {
         // Arrange
-        using var scope = _factory.Services.CreateScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
         var (userId, sessionToken) = await TestSessionHelper.CreateUserSessionAsync(dbContext);
 
@@ -272,7 +271,6 @@ public sealed class PrivateGameEndpointsIntegrationTests : IAsyncLifetime
     public async Task AddPrivateGame_InvalidPlayerCounts_ReturnsBadRequest()
     {
         // Arrange
-        using var scope = _factory.Services.CreateScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
         var (userId, sessionToken) = await TestSessionHelper.CreateUserSessionAsync(dbContext);
 
@@ -310,7 +308,6 @@ public sealed class PrivateGameEndpointsIntegrationTests : IAsyncLifetime
     public async Task GetPrivateGame_ExistingGame_ReturnsOk()
     {
         // Arrange
-        using var scope = _factory.Services.CreateScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
         var (userId, sessionToken) = await TestSessionHelper.CreateUserSessionAsync(dbContext);
 
@@ -356,7 +353,6 @@ public sealed class PrivateGameEndpointsIntegrationTests : IAsyncLifetime
     public async Task GetPrivateGame_NonExistentGame_ReturnsNotFound()
     {
         // Arrange
-        using var scope = _factory.Services.CreateScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
         var (userId, sessionToken) = await TestSessionHelper.CreateUserSessionAsync(dbContext);
 
@@ -385,7 +381,6 @@ public sealed class PrivateGameEndpointsIntegrationTests : IAsyncLifetime
     public async Task UpdatePrivateGame_OwnGame_ReturnsOk()
     {
         // Arrange
-        using var scope = _factory.Services.CreateScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
         var (userId, sessionToken) = await TestSessionHelper.CreateUserSessionAsync(dbContext);
 
@@ -443,7 +438,6 @@ public sealed class PrivateGameEndpointsIntegrationTests : IAsyncLifetime
     public async Task UpdatePrivateGame_OtherUsersGame_ReturnsForbidden()
     {
         // Arrange
-        using var scope = _factory.Services.CreateScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
 
         // Create first user's game
@@ -508,7 +502,6 @@ public sealed class PrivateGameEndpointsIntegrationTests : IAsyncLifetime
     public async Task DeletePrivateGame_OwnGame_ReturnsNoContent()
     {
         // Arrange
-        using var scope = _factory.Services.CreateScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
         var (userId, sessionToken) = await TestSessionHelper.CreateUserSessionAsync(dbContext);
 
@@ -558,7 +551,6 @@ public sealed class PrivateGameEndpointsIntegrationTests : IAsyncLifetime
     public async Task DeletePrivateGame_OtherUsersGame_ReturnsForbidden()
     {
         // Arrange
-        using var scope = _factory.Services.CreateScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
 
         // Create first user's game
@@ -611,7 +603,6 @@ public sealed class PrivateGameEndpointsIntegrationTests : IAsyncLifetime
     public async Task DeletePrivateGame_NonExistentGame_ReturnsNotFound()
     {
         // Arrange
-        using var scope = _factory.Services.CreateScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
         var (userId, sessionToken) = await TestSessionHelper.CreateUserSessionAsync(dbContext);
 
@@ -640,7 +631,6 @@ public sealed class PrivateGameEndpointsIntegrationTests : IAsyncLifetime
     public async Task PrivateGame_FullCrudLifecycle_Succeeds()
     {
         // Arrange
-        using var scope = _factory.Services.CreateScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
         var (userId, sessionToken) = await TestSessionHelper.CreateUserSessionAsync(dbContext);
 

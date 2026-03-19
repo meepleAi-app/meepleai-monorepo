@@ -382,7 +382,6 @@ public sealed class Week12SimpleValidationTests : IAsyncLifetime
         // Act
         var tasks = Enumerable.Range(0, 15).Select(async i =>
         {
-            using var scope = _serviceProvider.CreateScope();
             var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
 
             var game = new GameEntity
@@ -410,7 +409,6 @@ public sealed class Week12SimpleValidationTests : IAsyncLifetime
         // Act
         var tasks = Enumerable.Range(0, 10).Select(async i =>
         {
-            using var scope = _serviceProvider.CreateScope();
             var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
 
             using var transaction = await dbContext.Database.BeginTransactionAsync(TestCancellationToken);
@@ -453,14 +451,12 @@ public sealed class Week12SimpleValidationTests : IAsyncLifetime
         // Act
         var readTasks = Enumerable.Range(0, 10).Select(async _ =>
         {
-            using var scope = _serviceProvider.CreateScope();
             var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
             return await dbContext.Games.FindAsync(new object[] { game.Id }, TestCancellationToken);
         });
 
         var writeTasks = Enumerable.Range(0, 5).Select(async i =>
         {
-            using var scope = _serviceProvider.CreateScope();
             var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
 
             var newGame = new GameEntity { Id = Guid.NewGuid(), Name = $"Write {i}", CreatedAt = DateTime.UtcNow };
@@ -480,7 +476,6 @@ public sealed class Week12SimpleValidationTests : IAsyncLifetime
         // Act
         var tasks = Enumerable.Range(0, 10).Select(async i =>
         {
-            using var scope = _serviceProvider.CreateScope();
             var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
 
             var game = new GameEntity { Id = Guid.NewGuid(), Name = $"Rapid {i}", CreatedAt = DateTime.UtcNow };
@@ -533,7 +528,6 @@ public sealed class Week12SimpleValidationTests : IAsyncLifetime
         // Act
         var tasks = Enumerable.Range(0, 20).Select(async _ =>
         {
-            using var scope = _serviceProvider.CreateScope();
             var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
             return await dbContext.Games.CountAsync(TestCancellationToken);
         });
@@ -557,7 +551,6 @@ public sealed class Week12SimpleValidationTests : IAsyncLifetime
         {
             try
             {
-                using var scope = _serviceProvider.CreateScope();
                 var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
 
                 var gameToUpdate = await dbContext.Games.FindAsync(new object[] { game.Id }, TestCancellationToken);

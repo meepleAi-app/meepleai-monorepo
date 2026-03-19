@@ -72,7 +72,6 @@ public sealed class QueueStreamServiceTests
             new JobStartedData(Guid.NewGuid(), "Processing"),
             DateTimeOffset.UtcNow);
 
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
         var queueReceived = new List<QueueStreamEvent>();
 
         // Start queue subscriber in background
@@ -109,7 +108,6 @@ public sealed class QueueStreamServiceTests
             QueueStreamEventType.QueueReordered, jobId,
             new QueueReorderedData(new List<Guid>()), DateTimeOffset.UtcNow);
 
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
         var queueReceived = new List<QueueStreamEvent>();
 
         // Start queue subscriber
@@ -141,7 +139,6 @@ public sealed class QueueStreamServiceTests
     {
         // Arrange
         var jobId = Guid.NewGuid();
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
         var received = new List<QueueStreamEvent>();
 
         var subscriberTask = Task.Run(async () =>

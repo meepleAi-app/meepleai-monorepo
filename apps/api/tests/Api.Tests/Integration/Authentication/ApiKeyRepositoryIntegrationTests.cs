@@ -183,7 +183,6 @@ public sealed class ApiKeyRepositoryIntegrationTests : IAsyncLifetime
     /// </summary>
     private async Task<T> ExecuteInScopeAsync<T>(Func<IApiKeyRepository, IUnitOfWork, Task<T>> action)
     {
-        using var scope = _serviceProvider!.CreateScope();
         var scopedRepo = scope.ServiceProvider.GetRequiredService<IApiKeyRepository>();
         var scopedUow = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
         return await action(scopedRepo, scopedUow);

@@ -135,8 +135,6 @@ public sealed class ContextEngineeringMigrationRollbackTests : IAsyncLifetime
     public async Task CleanRollback_ReapplyAfterRollback_RecreatesTablesSuccessfully()
     {
         // Arrange - Apply, rollback, and reapply
-        using var scope = _serviceProvider!.CreateScope();
-        using var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
 
         await dbContext.Database.MigrateAsync(TestCancellationToken);
         var migrator = dbContext.GetInfrastructure().GetRequiredService<IMigrator>();
@@ -155,8 +153,6 @@ public sealed class ContextEngineeringMigrationRollbackTests : IAsyncLifetime
     public async Task CleanRollback_VerifiesIndexesRestoredAfterReapply()
     {
         // Arrange - Apply, rollback, reapply
-        using var scope = _serviceProvider!.CreateScope();
-        using var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
 
         await dbContext.Database.MigrateAsync(TestCancellationToken);
         var migrator = dbContext.GetInfrastructure().GetRequiredService<IMigrator>();
@@ -176,8 +172,6 @@ public sealed class ContextEngineeringMigrationRollbackTests : IAsyncLifetime
     public async Task CleanRollback_MigrationHistory_ReflectsRollbackState()
     {
         // Arrange
-        using var scope = _serviceProvider!.CreateScope();
-        using var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
 
         await dbContext.Database.MigrateAsync(TestCancellationToken);
         var appliedBefore = (await dbContext.Database.GetAppliedMigrationsAsync(TestCancellationToken)).ToList();
@@ -196,8 +190,6 @@ public sealed class ContextEngineeringMigrationRollbackTests : IAsyncLifetime
     public async Task CleanRollback_PgvectorExtension_RemovedAfterFullRollback()
     {
         // Arrange
-        using var scope = _serviceProvider!.CreateScope();
-        using var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
 
         await dbContext.Database.MigrateAsync(TestCancellationToken);
 
@@ -232,8 +224,6 @@ public sealed class ContextEngineeringMigrationRollbackTests : IAsyncLifetime
     public async Task RollbackWithData_DataIsRemovedCleanly()
     {
         // Arrange - Apply migrations and insert data
-        using var scope = _serviceProvider!.CreateScope();
-        using var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
 
         await dbContext.Database.MigrateAsync(TestCancellationToken);
         await InsertContextEngineeringTestDataAsync(dbContext);
@@ -260,8 +250,6 @@ public sealed class ContextEngineeringMigrationRollbackTests : IAsyncLifetime
     public async Task RollbackWithData_ReapplyCreatesEmptyTables()
     {
         // Arrange - Apply, insert data, rollback
-        using var scope = _serviceProvider!.CreateScope();
-        using var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
 
         await dbContext.Database.MigrateAsync(TestCancellationToken);
         await InsertContextEngineeringTestDataAsync(dbContext);
@@ -286,8 +274,6 @@ public sealed class ContextEngineeringMigrationRollbackTests : IAsyncLifetime
     public async Task RollbackWithData_NoOrphanedSequencesOrConstraints()
     {
         // Arrange
-        using var scope = _serviceProvider!.CreateScope();
-        using var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
 
         await dbContext.Database.MigrateAsync(TestCancellationToken);
         await InsertContextEngineeringTestDataAsync(dbContext);
@@ -317,8 +303,6 @@ public sealed class ContextEngineeringMigrationRollbackTests : IAsyncLifetime
     public async Task RollbackWithData_LargeDataset_CompletesWithinTimeout()
     {
         // Arrange - Apply migrations and insert larger dataset
-        using var scope = _serviceProvider!.CreateScope();
-        using var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
 
         await dbContext.Database.MigrateAsync(TestCancellationToken);
 
@@ -361,8 +345,6 @@ public sealed class ContextEngineeringMigrationRollbackTests : IAsyncLifetime
     public async Task PartialRollback_ToPostInitialMigration_PreservesContextEngineeringTables()
     {
         // Arrange - Apply all migrations
-        using var scope = _serviceProvider!.CreateScope();
-        using var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
 
         await dbContext.Database.MigrateAsync(TestCancellationToken);
 
@@ -383,8 +365,6 @@ public sealed class ContextEngineeringMigrationRollbackTests : IAsyncLifetime
     public async Task PartialRollback_ToInitialCreate_PreservesContextEngineeringTables()
     {
         // Arrange - Apply all migrations
-        using var scope = _serviceProvider!.CreateScope();
-        using var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
 
         await dbContext.Database.MigrateAsync(TestCancellationToken);
 
@@ -407,8 +387,6 @@ public sealed class ContextEngineeringMigrationRollbackTests : IAsyncLifetime
     public async Task PartialRollback_FromInitialCreateToZero_RemovesContextEngineeringTables()
     {
         // Arrange - Apply only InitialCreate
-        using var scope = _serviceProvider!.CreateScope();
-        using var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
 
         var migrator = dbContext.GetInfrastructure().GetRequiredService<IMigrator>();
         await migrator.MigrateAsync(InitialCreateMigration, TestCancellationToken);
@@ -434,8 +412,6 @@ public sealed class ContextEngineeringMigrationRollbackTests : IAsyncLifetime
     public async Task ForeignKeyConstraints_ConversationMemory_CascadeOnUserDelete()
     {
         // Arrange - Apply migrations and seed data with FK relationships
-        using var scope = _serviceProvider!.CreateScope();
-        using var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
 
         await dbContext.Database.MigrateAsync(TestCancellationToken);
 
@@ -479,8 +455,6 @@ public sealed class ContextEngineeringMigrationRollbackTests : IAsyncLifetime
     public async Task ForeignKeyConstraints_ConversationMemory_RejectsInvalidUserId()
     {
         // Arrange
-        using var scope = _serviceProvider!.CreateScope();
-        using var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
 
         await dbContext.Database.MigrateAsync(TestCancellationToken);
 
@@ -507,8 +481,6 @@ public sealed class ContextEngineeringMigrationRollbackTests : IAsyncLifetime
     public async Task ForeignKeyConstraints_RollbackPreservesFKIntegrity()
     {
         // Arrange - Apply all, rollback to InitialCreate, verify FK still enforced
-        using var scope = _serviceProvider!.CreateScope();
-        using var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
 
         await dbContext.Database.MigrateAsync(TestCancellationToken);
 

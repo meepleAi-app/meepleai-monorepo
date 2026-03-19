@@ -72,7 +72,6 @@ public class GetCatalogTrendingQueryHandlerTests
     public async Task Handle_WithNoEvents_ReturnsEmptyList()
     {
         // Arrange
-        using var context = CreateInMemoryContext();
 
         // Setup cache to execute factory
         _cacheMock.Setup(c => c.GetOrCreateAsync(
@@ -97,7 +96,6 @@ public class GetCatalogTrendingQueryHandlerTests
     public async Task Handle_WithEvents_ReturnsRankedTrending()
     {
         // Arrange
-        using var context = CreateInMemoryContext();
 
         var game1Id = Guid.NewGuid();
         var game2Id = Guid.NewGuid();
@@ -148,7 +146,6 @@ public class GetCatalogTrendingQueryHandlerTests
     public async Task Handle_WithLimit_RespectsLimit()
     {
         // Arrange
-        using var context = CreateInMemoryContext();
 
         // Create 5 games with events
         for (int i = 0; i < 5; i++)
@@ -182,7 +179,6 @@ public class GetCatalogTrendingQueryHandlerTests
     public async Task Handle_WithEventCounts_ReturnsCorrectCounts()
     {
         // Arrange
-        using var context = CreateInMemoryContext();
         var gameId = Guid.NewGuid();
 
         context.Set<GameAnalyticsEventEntity>().AddRange(
@@ -225,7 +221,6 @@ public class GetCatalogTrendingQueryHandlerTests
     public async Task Handle_OldEventsExcluded_ReturnsOnlyRecentEvents()
     {
         // Arrange
-        using var context = CreateInMemoryContext();
         var recentGameId = Guid.NewGuid();
         var oldGameId = Guid.NewGuid();
 
@@ -271,7 +266,6 @@ public class GetCatalogTrendingQueryHandlerTests
     public async Task Handle_WithNullQuery_ThrowsArgumentNullException()
     {
         // Arrange
-        using var context = CreateInMemoryContext();
         var handler = new GetCatalogTrendingQueryHandler(context, _cacheMock.Object, _loggerMock.Object);
 
         // Act
@@ -285,7 +279,6 @@ public class GetCatalogTrendingQueryHandlerTests
     public async Task Handle_CachedDataTrimmedToRequestedLimit()
     {
         // Arrange - cache has 10 items, but user requests only 3
-        using var context = CreateInMemoryContext();
         var cachedTrending = Enumerable.Range(1, 10).Select(i => new TrendingGameDto
         {
             Rank = i,
@@ -328,7 +321,6 @@ public class GetCatalogTrendingQueryHandlerTests
     public void Constructor_WithNullCache_ThrowsArgumentNullException()
     {
         // Arrange
-        using var context = CreateInMemoryContext();
 
         // Act
         var act = () => new GetCatalogTrendingQueryHandler(context, null!, _loggerMock.Object);

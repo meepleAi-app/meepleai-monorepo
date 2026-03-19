@@ -140,7 +140,6 @@ public sealed class UserLibraryEndpointsIntegrationTests : IAsyncLifetime
     public async Task GetLibrary_WithPagination_ReturnsPagedResults()
     {
         // Arrange
-        using var scope = _factory.Services.CreateScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
         var (userId, sessionToken) = await TestSessionHelper.CreateUserSessionAsync(dbContext);
 
@@ -163,7 +162,6 @@ public sealed class UserLibraryEndpointsIntegrationTests : IAsyncLifetime
     public async Task GetLibrary_WithFavoritesFilter_ReturnsFilteredResults()
     {
         // Arrange
-        using var scope = _factory.Services.CreateScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
         var (userId, sessionToken) = await TestSessionHelper.CreateUserSessionAsync(dbContext);
 
@@ -205,7 +203,6 @@ public sealed class UserLibraryEndpointsIntegrationTests : IAsyncLifetime
     public async Task AddGameToLibrary_WithValidSession_RequiresExistingGame()
     {
         // Arrange
-        using var scope = _factory.Services.CreateScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
         var (userId, sessionToken) = await TestSessionHelper.CreateUserSessionAsync(dbContext);
 
@@ -248,7 +245,6 @@ public sealed class UserLibraryEndpointsIntegrationTests : IAsyncLifetime
     public async Task RemoveGameFromLibrary_GameNotInLibrary_ReturnsAppropriateError()
     {
         // Arrange
-        using var scope = _factory.Services.CreateScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
         var (userId, sessionToken) = await TestSessionHelper.CreateUserSessionAsync(dbContext);
 
@@ -309,7 +305,6 @@ public sealed class UserLibraryEndpointsIntegrationTests : IAsyncLifetime
     public async Task GetLibraryStats_WithValidSession_ReturnsStats()
     {
         // Arrange
-        using var scope = _factory.Services.CreateScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
         var (userId, sessionToken) = await TestSessionHelper.CreateUserSessionAsync(dbContext);
 
@@ -346,7 +341,6 @@ public sealed class UserLibraryEndpointsIntegrationTests : IAsyncLifetime
     public async Task GetLibraryQuota_WithValidSession_ReturnsQuotaInfo()
     {
         // Arrange
-        using var scope = _factory.Services.CreateScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
         var (userId, sessionToken) = await TestSessionHelper.CreateUserSessionAsync(dbContext);
 

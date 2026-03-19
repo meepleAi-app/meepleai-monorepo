@@ -6,14 +6,34 @@ import { renderHook, act, waitFor } from '@testing-library/react';
 import { useLocalStorage } from '../useLocalStorage';
 import { vi } from 'vitest';
 
+// Mock logger — source uses logger.warn/error, not console.* directly
+const mockLoggerWarn = vi.fn();
+vi.mock('@/lib/logger', () => ({
+  logger: {
+    debug: vi.fn(),
+    info: vi.fn(),
+    warn: (...args: unknown[]) => mockLoggerWarn(...args),
+    error: vi.fn(),
+  },
+  getLogger: () => ({
+    debug: vi.fn(),
+    info: vi.fn(),
+    warn: (...args: unknown[]) => mockLoggerWarn(...args),
+    error: vi.fn(),
+  }),
+  resetLogger: vi.fn(),
+  LogLevel: { DEBUG: 'debug', INFO: 'info', WARN: 'warn', ERROR: 'error' },
+}));
+
 describe('useLocalStorage', () => {
   const TEST_KEY = 'test-key';
 
   beforeEach(() => {
     // Clear localStorage before each test
     localStorage.clear();
-    // Clear console mocks
+    // Clear mocks
     vi.clearAllMocks();
+    mockLoggerWarn.mockClear();
   });
 
   describe('Initialization', () => {
@@ -41,18 +61,15 @@ describe('useLocalStorage', () => {
     });
 
     it('should use default value when stored value is invalid JSON', () => {
-      const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation();
+      mockLoggerWarn.mockClear();
       localStorage.setItem(TEST_KEY, 'invalid-json{');
 
       const { result } = renderHook(() => useLocalStorage(TEST_KEY, 'default'));
 
       expect(result.current[0]).toBe('default');
-      expect(consoleWarnSpy).toHaveBeenCalledWith(
-        expect.stringContaining('Error reading localStorage'),
-        expect.any(Error)
+      expect(mockLoggerWarn).toHaveBeenCalledWith(
+        expect.stringContaining('Error reading localStorage')
       );
-
-      consoleWarnSpy.mockRestore();
     });
   });
 
@@ -72,7 +89,7 @@ describe('useLocalStorage', () => {
       const { result } = renderHook(() => useLocalStorage(TEST_KEY, 5));
 
       act(() => {
-        result.current[1]((prev) => prev + 10);
+        result.current[1](prev => prev + 10);
       });
 
       expect(result.current[0]).toBe(15);
@@ -206,7 +223,6 @@ describe('useLocalStorage', () => {
     });
 
     it('should handle invalid JSON in storage events gracefully', () => {
-      const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation();
       const { result } = renderHook(() => useLocalStorage(TEST_KEY, 'default'));
 
       act(() => {
@@ -218,15 +234,12 @@ describe('useLocalStorage', () => {
         window.dispatchEvent(event);
       });
 
-      expect(consoleWarnSpy).toHaveBeenCalledWith(
-        expect.stringContaining('Error parsing storage event'),
-        expect.any(Error)
+      expect(mockLoggerWarn).toHaveBeenCalledWith(
+        expect.stringContaining('Error parsing storage event')
       );
 
       // Value should not change on parse error
       expect(result.current[0]).toBe('default');
-
-      consoleWarnSpy.mockRestore();
     });
   });
 
@@ -269,7 +282,7 @@ describe('useLocalStorage', () => {
       const { result } = renderHook(() => useLocalStorage<UserPrefs>(TEST_KEY, defaultPrefs));
 
       act(() => {
-        result.current[1]((prev) => ({ ...prev, theme: 'dark', fontSize: 18 }));
+        result.current[1](prev => ({ ...prev, theme: 'dark', fontSize: 18 }));
       });
 
       expect(result.current[0]).toEqual({

@@ -16,7 +16,7 @@ import { createTestQueryClient } from '@/__tests__/utils/query-test-utils';
 
 // Mock useGameSearch hook
 const mockUseGameSearch = vi.fn();
-vi.mock('@/lib/hooks/use-game-search', () => ({
+vi.mock('@/lib/domain-hooks/useGameSearch', () => ({
   useGameSearch: () => mockUseGameSearch(),
 }));
 

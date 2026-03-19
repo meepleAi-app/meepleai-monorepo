@@ -39,7 +39,7 @@ vi.mock('@/lib/stores/live-session-store', () => ({
     selector(mockStoreState),
 }));
 
-vi.mock('@/components/sessions/live/ScoreBoard', () => ({
+vi.mock('@/components/session/live/ScoreBoard', () => ({
   ScoreBoard: ({ sessionId }: { sessionId: string }) => (
     <div data-testid="scoreboard" data-session-id={sessionId}>
       Scoreboard
@@ -207,7 +207,7 @@ describe('GuestScoreProposal', () => {
   });
 
   it('enforces max 3 pending proposals limit', async () => {
-    const { GuestScoreProposal } = await import('@/components/sessions/live/GuestScoreProposal');
+    const { GuestScoreProposal } = await import('@/components/session/live/GuestScoreProposal');
 
     render(<GuestScoreProposal guestName="Luigi" onPropose={vi.fn()} />);
 
@@ -217,7 +217,7 @@ describe('GuestScoreProposal', () => {
 
   it('shows proposal form when under limit', async () => {
     mockStoreState.pendingProposals = []; // no pending
-    const { GuestScoreProposal } = await import('@/components/sessions/live/GuestScoreProposal');
+    const { GuestScoreProposal } = await import('@/components/session/live/GuestScoreProposal');
 
     render(<GuestScoreProposal guestName="Luigi" onPropose={vi.fn()} />);
 

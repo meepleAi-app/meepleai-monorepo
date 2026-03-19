@@ -8,6 +8,24 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { renderHook, act, waitFor } from '@testing-library/react';
 
+const mockLoggerError = vi.hoisted(() => vi.fn());
+vi.mock('@/lib/logger', () => ({
+  logger: {
+    debug: vi.fn(),
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: (...args: unknown[]) => mockLoggerError(...args),
+  },
+  getLogger: () => ({
+    debug: vi.fn(),
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: (...args: unknown[]) => mockLoggerError(...args),
+  }),
+  resetLogger: vi.fn(),
+  LogLevel: { DEBUG: 'debug', INFO: 'info', WARN: 'warn', ERROR: 'error' },
+}));
+
 import { usePdfs } from '../usePdfs';
 
 // Mock fetch
@@ -40,7 +58,7 @@ describe('usePdfs', () => {
 
     it('should set loading to true while fetching', async () => {
       let resolvePromise: () => void;
-      const fetchPromise = new Promise<void>((resolve) => {
+      const fetchPromise = new Promise<void>(resolve => {
         resolvePromise = resolve;
       });
 
@@ -111,10 +129,9 @@ describe('usePdfs', () => {
 
       expect(result.current.pdfs).toEqual(mockPdfs);
       expect(result.current.error).toBeNull();
-      expect(mockFetch).toHaveBeenCalledWith(
-        'http://localhost:8080/api/v1/games/game-123/pdfs',
-        { credentials: 'include' }
-      );
+      expect(mockFetch).toHaveBeenCalledWith('http://localhost:8080/api/v1/games/game-123/pdfs', {
+        credentials: 'include',
+      });
     });
 
     it('should handle empty response', async () => {
@@ -133,7 +150,7 @@ describe('usePdfs', () => {
     });
 
     it('should handle API error response', async () => {
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      mockLoggerError.mockClear();
 
       mockFetch.mockResolvedValueOnce({
         ok: false,
@@ -148,13 +165,11 @@ describe('usePdfs', () => {
 
       expect(result.current.error).toBe('Unable to load uploaded PDFs. Please try again.');
       expect(result.current.pdfs).toEqual([]);
-      expect(consoleSpy).toHaveBeenCalledWith('Failed to load PDFs:', 'Not Found');
-
-      consoleSpy.mockRestore();
+      expect(mockLoggerError).toHaveBeenCalledWith(expect.stringContaining('Failed to load PDFs'));
     });
 
     it('should handle network error', async () => {
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      mockLoggerError.mockClear();
 
       mockFetch.mockRejectedValueOnce(new Error('Network error'));
 
@@ -165,18 +180,36 @@ describe('usePdfs', () => {
       });
 
       expect(result.current.error).toBe('Unable to load uploaded PDFs. Please try again.');
-      expect(consoleSpy).toHaveBeenCalled();
-
-      consoleSpy.mockRestore();
+      expect(mockLoggerError).toHaveBeenCalled();
     });
   });
 
   describe('refetch', () => {
     it('should allow manual refetch', async () => {
-      const mockPdfs1 = [{ id: 'pdf-1', fileName: 'old.pdf', fileSizeBytes: 100, uploadedAt: '2024-01-01T00:00:00Z', uploadedByUserId: 'user-1' }];
+      const mockPdfs1 = [
+        {
+          id: 'pdf-1',
+          fileName: 'old.pdf',
+          fileSizeBytes: 100,
+          uploadedAt: '2024-01-01T00:00:00Z',
+          uploadedByUserId: 'user-1',
+        },
+      ];
       const mockPdfs2 = [
-        { id: 'pdf-1', fileName: 'old.pdf', fileSizeBytes: 100, uploadedAt: '2024-01-01T00:00:00Z', uploadedByUserId: 'user-1' },
-        { id: 'pdf-2', fileName: 'new.pdf', fileSizeBytes: 200, uploadedAt: '2024-01-02T00:00:00Z', uploadedByUserId: 'user-1' },
+        {
+          id: 'pdf-1',
+          fileName: 'old.pdf',
+          fileSizeBytes: 100,
+          uploadedAt: '2024-01-01T00:00:00Z',
+          uploadedByUserId: 'user-1',
+        },
+        {
+          id: 'pdf-2',
+          fileName: 'new.pdf',
+          fileSizeBytes: 200,
+          uploadedAt: '2024-01-02T00:00:00Z',
+          uploadedByUserId: 'user-1',
+        },
       ];
 
       mockFetch.mockResolvedValueOnce({
@@ -230,18 +263,33 @@ describe('usePdfs', () => {
 
   describe('gameId changes', () => {
     it('should refetch when gameId changes', async () => {
-      const mockPdfs1 = [{ id: 'pdf-1', fileName: 'game1.pdf', fileSizeBytes: 100, uploadedAt: '2024-01-01T00:00:00Z', uploadedByUserId: 'user-1' }];
-      const mockPdfs2 = [{ id: 'pdf-2', fileName: 'game2.pdf', fileSizeBytes: 200, uploadedAt: '2024-01-02T00:00:00Z', uploadedByUserId: 'user-1' }];
+      const mockPdfs1 = [
+        {
+          id: 'pdf-1',
+          fileName: 'game1.pdf',
+          fileSizeBytes: 100,
+          uploadedAt: '2024-01-01T00:00:00Z',
+          uploadedByUserId: 'user-1',
+        },
+      ];
+      const mockPdfs2 = [
+        {
+          id: 'pdf-2',
+          fileName: 'game2.pdf',
+          fileSizeBytes: 200,
+          uploadedAt: '2024-01-02T00:00:00Z',
+          uploadedByUserId: 'user-1',
+        },
+      ];
 
       mockFetch.mockResolvedValueOnce({
         ok: true,
         json: async () => ({ pdfs: mockPdfs1 }),
       });
 
-      const { result, rerender } = renderHook(
-        ({ gameId }) => usePdfs(gameId),
-        { initialProps: { gameId: 'game-1' } }
-      );
+      const { result, rerender } = renderHook(({ gameId }) => usePdfs(gameId), {
+        initialProps: { gameId: 'game-1' },
+      });
 
       await waitFor(() => {
         expect(result.current.pdfs).toEqual(mockPdfs1);
@@ -264,13 +312,22 @@ describe('usePdfs', () => {
     it('should clear pdfs when gameId becomes null', async () => {
       mockFetch.mockResolvedValueOnce({
         ok: true,
-        json: async () => ({ pdfs: [{ id: 'pdf-1', fileName: 'test.pdf', fileSizeBytes: 100, uploadedAt: '2024-01-01T00:00:00Z', uploadedByUserId: 'user-1' }] }),
+        json: async () => ({
+          pdfs: [
+            {
+              id: 'pdf-1',
+              fileName: 'test.pdf',
+              fileSizeBytes: 100,
+              uploadedAt: '2024-01-01T00:00:00Z',
+              uploadedByUserId: 'user-1',
+            },
+          ],
+        }),
       });
 
-      const { result, rerender } = renderHook(
-        ({ gameId }) => usePdfs(gameId),
-        { initialProps: { gameId: 'game-1' as string | null } }
-      );
+      const { result, rerender } = renderHook(({ gameId }) => usePdfs(gameId), {
+        initialProps: { gameId: 'game-1' as string | null },
+      });
 
       await waitFor(() => {
         expect(result.current.pdfs).toHaveLength(1);

@@ -8,8 +8,13 @@
  */
 
 import { render, screen } from '@testing-library/react';
+import { vi } from 'vitest';
 import { GameRulesTab } from '../GameRulesTab';
 import type { PdfDocumentDto } from '@/lib/api/schemas/pdf.schemas';
+
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({ push: vi.fn(), replace: vi.fn(), back: vi.fn() }),
+}));
 
 const createMockDocument = (overrides?: Partial<PdfDocumentDto>): PdfDocumentDto => ({
   id: 'pdf-1',

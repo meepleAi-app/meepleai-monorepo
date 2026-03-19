@@ -31,7 +31,7 @@ vi.mock('@/lib/api/context', () => ({
 }));
 
 // Mock game search
-vi.mock('@/lib/hooks/use-game-search', () => ({
+vi.mock('@/lib/domain-hooks/useGameSearch', () => ({
   useGameSearch: () => ({ data: [], isLoading: false }),
 }));
 

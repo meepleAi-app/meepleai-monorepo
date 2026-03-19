@@ -1,6 +1,24 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 
+const mockLoggerDebug = vi.hoisted(() => vi.fn());
+vi.mock('@/lib/logger', () => ({
+  logger: {
+    debug: (...args: unknown[]) => mockLoggerDebug(...args),
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn(),
+  },
+  getLogger: () => ({
+    debug: (...args: unknown[]) => mockLoggerDebug(...args),
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn(),
+  }),
+  resetLogger: vi.fn(),
+  LogLevel: { DEBUG: 'debug', INFO: 'info', WARN: 'warn', ERROR: 'error' },
+}));
+
 import { CategoriesTable } from '../categories-table';
 
 describe('CategoriesTable', () => {
@@ -39,13 +57,12 @@ describe('CategoriesTable', () => {
   });
 
   it('handles Add Category button click', () => {
-    const consoleSpy = vi.spyOn(console, 'log');
+    mockLoggerDebug.mockClear();
     render(<CategoriesTable />);
 
     const addButton = screen.getByRole('button', { name: /add category/i });
     fireEvent.click(addButton);
 
-    expect(consoleSpy).toHaveBeenCalledWith('Add category');
-    consoleSpy.mockRestore();
+    expect(mockLoggerDebug).toHaveBeenCalledWith('Add category');
   });
 });

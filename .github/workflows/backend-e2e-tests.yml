@@ -20,6 +20,23 @@ permissions:
   checks: write
 
 jobs:
+  notify-start:
+    continue-on-error: true
+    uses: ./.github/workflows/notify-slack.yml
+    with:
+      event: started
+      workflow_name: "Backend E2E Tests"
+      environment: test
+      branch: ${{ github.head_ref || github.ref_name }}
+      actor: ${{ github.actor }}
+      commit_sha: ${{ github.sha }}
+      commit_message: ${{ github.event.head_commit.message || 'Manual trigger' }}
+      run_url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+      job_list: '["changes", "backend-e2e-tests", "backend-e2e-quality-gate"]'
+      caller_workflow_id: ${{ github.workflow_id }}
+    secrets:
+      SLACK_GITNOTIFY_WEBHOOK_URL: ${{ secrets.SLACK_GITNOTIFY_WEBHOOK_URL }}
+
   # Quick path filtering
   changes:
     name: Detect Changes
@@ -151,3 +168,20 @@ jobs:
               repo: context.repo.repo,
               body: body
             });
+
+  notify-end:
+    if: always()
+    needs: [changes, backend-e2e-tests, backend-e2e-quality-gate]
+    continue-on-error: true
+    uses: ./.github/workflows/notify-slack.yml
+    with:
+      event: ${{ contains(toJSON(needs), '"result":"failure"') && 'failed' || contains(toJSON(needs), '"result":"cancelled"') && 'cancelled' || 'completed' }}
+      workflow_name: "Backend E2E Tests"
+      environment: test
+      branch: ${{ github.head_ref || github.ref_name }}
+      actor: ${{ github.actor }}
+      commit_sha: ${{ github.sha }}
+      commit_message: ${{ github.event.head_commit.message || 'Manual trigger' }}
+      run_url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+    secrets:
+      SLACK_GITNOTIFY_WEBHOOK_URL: ${{ secrets.SLACK_GITNOTIFY_WEBHOOK_URL }}

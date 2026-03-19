@@ -8,6 +8,23 @@ on:
       - main-dev
 
 jobs:
+  notify-start:
+    continue-on-error: true
+    uses: ./.github/workflows/notify-slack.yml
+    with:
+      event: started
+      workflow_name: "Branch Policy"
+      environment: automation
+      branch: ${{ github.head_ref || github.ref_name }}
+      actor: ${{ github.actor }}
+      commit_sha: ${{ github.sha }}
+      commit_message: ${{ github.event.head_commit.message || 'Manual trigger' }}
+      run_url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+      job_list: '["validate-source-branch"]'
+      caller_workflow_id: ${{ github.workflow_id }}
+    secrets:
+      SLACK_GITNOTIFY_WEBHOOK_URL: ${{ secrets.SLACK_GITNOTIFY_WEBHOOK_URL }}
+
   validate-source-branch:
     runs-on: ${{ vars.RUNNER || 'ubuntu-latest' }}
     steps:
@@ -80,3 +97,20 @@ jobs:
 
           echo ""
           echo "Branch policy validated successfully"
+
+  notify-end:
+    if: always()
+    needs: [validate-source-branch]
+    continue-on-error: true
+    uses: ./.github/workflows/notify-slack.yml
+    with:
+      event: ${{ contains(toJSON(needs), '"result":"failure"') && 'failed' || contains(toJSON(needs), '"result":"cancelled"') && 'cancelled' || 'completed' }}
+      workflow_name: "Branch Policy"
+      environment: automation
+      branch: ${{ github.head_ref || github.ref_name }}
+      actor: ${{ github.actor }}
+      commit_sha: ${{ github.sha }}
+      commit_message: ${{ github.event.head_commit.message || 'Manual trigger' }}
+      run_url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+    secrets:
+      SLACK_GITNOTIFY_WEBHOOK_URL: ${{ secrets.SLACK_GITNOTIFY_WEBHOOK_URL }}

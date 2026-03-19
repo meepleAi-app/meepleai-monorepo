@@ -39,10 +39,11 @@ public class ToggleAgentAccessCommandHandlerTests : IDisposable
         _loggerMock = new Mock<ILogger<ToggleAgentAccessCommandHandler>>();
 
         // Setup SignalR mock chain
+        // Handler uses Clients.Group() (not User()) because SignalR identity ≠ participant DB GUID
         var mockClients = new Mock<IHubClients>();
         var mockClientProxy = new Mock<ISingleClientProxy>();
         _hubContextMock.Setup(h => h.Clients).Returns(mockClients.Object);
-        mockClients.Setup(c => c.User(It.IsAny<string>())).Returns(mockClientProxy.Object);
+        mockClients.Setup(c => c.Group(It.IsAny<string>())).Returns(mockClientProxy.Object);
         mockClientProxy
             .Setup(p => p.SendCoreAsync(It.IsAny<string>(), It.IsAny<object?[]>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
@@ -74,7 +75,7 @@ public class ToggleAgentAccessCommandHandlerTests : IDisposable
         Assert.True(participant.AgentAccessEnabled);
 
         _hubContextMock.Verify(h =>
-            h.Clients.User(participantId.ToString()), Times.Once);
+            h.Clients.Group($"session:{sessionId}"), Times.Once);
     }
 
     [Fact]
@@ -98,7 +99,7 @@ public class ToggleAgentAccessCommandHandlerTests : IDisposable
         Assert.False(participant.AgentAccessEnabled);
 
         _hubContextMock.Verify(h =>
-            h.Clients.User(participantId.ToString()), Times.Once);
+            h.Clients.Group($"session:{sessionId}"), Times.Once);
     }
 
     [Fact]

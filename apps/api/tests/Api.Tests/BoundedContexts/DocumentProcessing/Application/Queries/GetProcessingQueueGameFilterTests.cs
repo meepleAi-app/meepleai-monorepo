@@ -2,7 +2,6 @@ using Api.BoundedContexts.DocumentProcessing.Application.Handlers.Queue;
 using Api.BoundedContexts.DocumentProcessing.Application.Queries.Queue;
 using Api.Infrastructure.Entities;
 using Api.Infrastructure.Entities.DocumentProcessing;
-using Api.Infrastructure.Entities.SharedGameCatalog;
 using Api.Tests.Constants;
 using Api.Tests.TestHelpers;
 using FluentAssertions;
@@ -36,9 +35,11 @@ public sealed class GetProcessingQueueGameFilterTests : IDisposable
     [Fact]
     public async Task Handle_WithGameId_ReturnsOnlyJobsForThatGame()
     {
-        // Arrange
+        // Arrange — handler filters by PdfDocument.SharedGameId directly (not junction table)
         var pdfForGame = CreatePdfDocument("game-rules.pdf");
+        pdfForGame.SharedGameId = _gameId;
         var pdfForOtherGame = CreatePdfDocument("other-rules.pdf");
+        pdfForOtherGame.SharedGameId = _otherGameId;
         var pdfUnlinked = CreatePdfDocument("unlinked.pdf");
 
         _dbContext.PdfDocuments.AddRange(pdfForGame, pdfForOtherGame, pdfUnlinked);
@@ -48,24 +49,6 @@ public sealed class GetProcessingQueueGameFilterTests : IDisposable
         var jobUnlinked = CreateProcessingJob(pdfUnlinked.Id);
 
         _dbContext.ProcessingJobs.AddRange(jobForGame, jobForOtherGame, jobUnlinked);
-
-        _dbContext.SharedGameDocuments.AddRange(
-            new SharedGameDocumentEntity
-            {
-                Id = Guid.NewGuid(),
-                SharedGameId = _gameId,
-                PdfDocumentId = pdfForGame.Id,
-                CreatedBy = _userId,
-                CreatedAt = DateTime.UtcNow
-            },
-            new SharedGameDocumentEntity
-            {
-                Id = Guid.NewGuid(),
-                SharedGameId = _otherGameId,
-                PdfDocumentId = pdfForOtherGame.Id,
-                CreatedBy = _userId,
-                CreatedAt = DateTime.UtcNow
-            });
 
         await _dbContext.SaveChangesAsync();
 
@@ -85,6 +68,7 @@ public sealed class GetProcessingQueueGameFilterTests : IDisposable
     {
         // Arrange
         var pdf1 = CreatePdfDocument("rules-1.pdf");
+        pdf1.SharedGameId = _gameId;
         var pdf2 = CreatePdfDocument("rules-2.pdf");
         var pdf3 = CreatePdfDocument("rules-3.pdf");
 
@@ -94,15 +78,6 @@ public sealed class GetProcessingQueueGameFilterTests : IDisposable
             CreateProcessingJob(pdf1.Id),
             CreateProcessingJob(pdf2.Id),
             CreateProcessingJob(pdf3.Id));
-
-        _dbContext.SharedGameDocuments.Add(new SharedGameDocumentEntity
-        {
-            Id = Guid.NewGuid(),
-            SharedGameId = _gameId,
-            PdfDocumentId = pdf1.Id,
-            CreatedBy = _userId,
-            CreatedAt = DateTime.UtcNow
-        });
 
         await _dbContext.SaveChangesAsync();
 
@@ -119,20 +94,11 @@ public sealed class GetProcessingQueueGameFilterTests : IDisposable
     [Fact]
     public async Task Handle_WithGameId_NoMatchingDocuments_ReturnsEmpty()
     {
-        // Arrange
+        // Arrange — link to a different game via SharedGameId
         var pdf = CreatePdfDocument("some-rules.pdf");
+        pdf.SharedGameId = _otherGameId;
         _dbContext.PdfDocuments.Add(pdf);
         _dbContext.ProcessingJobs.Add(CreateProcessingJob(pdf.Id));
-
-        // Link to a different game
-        _dbContext.SharedGameDocuments.Add(new SharedGameDocumentEntity
-        {
-            Id = Guid.NewGuid(),
-            SharedGameId = _otherGameId,
-            PdfDocumentId = pdf.Id,
-            CreatedBy = _userId,
-            CreatedAt = DateTime.UtcNow
-        });
 
         await _dbContext.SaveChangesAsync();
 
@@ -149,9 +115,11 @@ public sealed class GetProcessingQueueGameFilterTests : IDisposable
     [Fact]
     public async Task Handle_WithGameIdAndStatusFilter_CombinesFilters()
     {
-        // Arrange
+        // Arrange — handler filters by PdfDocument.SharedGameId directly
         var pdfQueued = CreatePdfDocument("queued-rules.pdf");
+        pdfQueued.SharedGameId = _gameId;
         var pdfFailed = CreatePdfDocument("failed-rules.pdf");
+        pdfFailed.SharedGameId = _gameId;
 
         _dbContext.PdfDocuments.AddRange(pdfQueued, pdfFailed);
 
@@ -159,24 +127,6 @@ public sealed class GetProcessingQueueGameFilterTests : IDisposable
         var jobFailed = CreateProcessingJob(pdfFailed.Id, status: "Failed");
 
         _dbContext.ProcessingJobs.AddRange(jobQueued, jobFailed);
-
-        _dbContext.SharedGameDocuments.AddRange(
-            new SharedGameDocumentEntity
-            {
-                Id = Guid.NewGuid(),
-                SharedGameId = _gameId,
-                PdfDocumentId = pdfQueued.Id,
-                CreatedBy = _userId,
-                CreatedAt = DateTime.UtcNow
-            },
-            new SharedGameDocumentEntity
-            {
-                Id = Guid.NewGuid(),
-                SharedGameId = _gameId,
-                PdfDocumentId = pdfFailed.Id,
-                CreatedBy = _userId,
-                CreatedAt = DateTime.UtcNow
-            });
 
         await _dbContext.SaveChangesAsync();
 

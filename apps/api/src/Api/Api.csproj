@@ -11,7 +11,7 @@
     <!-- Living Documentation: Generate XML documentation file for API -->
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <!-- Suppress warnings: 1591=missing XML comments, code quality warnings temporarily disabled for build -->
-    <NoWarn>$(NoWarn);1591;MA0016;MA0051;CA1859;CA1309;S1199;S1172;S3267;MA0048;S4144;S4136;S101;S3358;S6677;MA0132;S2139;S2971;S1066;S3263</NoWarn>
+    <NoWarn>$(NoWarn);1591;MA0016;MA0051;CA1859;CA1309;S1199;S1172;S3267;MA0048;S4144;S4136;S101;S3358;S6677;MA0132;S2139;S2971;S1066</NoWarn>
   </PropertyGroup>
   <ItemGroup>
     <InternalsVisibleTo Include="Api.Tests" />

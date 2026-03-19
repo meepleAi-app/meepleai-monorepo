@@ -1,7 +1,6 @@
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Authentication;
 using Api.Services;
-using Api.Services.Email;
 using Api.Configuration;
 using Api.Infrastructure.Authentication;
 using Api.BoundedContexts.Authentication.Application.Interfaces;
@@ -105,10 +104,7 @@ internal static class AuthenticationServiceExtensions
     {
         // AUTH-04: Password reset services
         services.AddScoped<IPasswordResetService, PasswordResetService>();
-
-        // Email services: template rendering + SMTP dispatch (split from monolithic EmailService)
-        services.AddScoped<IEmailTemplateService, EmailTemplateService>();
-        services.AddScoped<IEmailService, EmailSenderService>();
+        services.AddScoped<IEmailService, EmailService>();
 
         // ISSUE-4416: Push notification service
         services.AddScoped<IPushNotificationService, PushNotificationService>();

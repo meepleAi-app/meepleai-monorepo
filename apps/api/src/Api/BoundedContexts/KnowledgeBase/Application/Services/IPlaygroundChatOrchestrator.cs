@@ -26,4 +26,5 @@ internal sealed record PlaygroundChatRequest(
     string Message,
     Guid? GameId,
     string? Strategy,
-    string? ModelOverride);
+    string? ModelOverride,
+    string? ProviderOverride = null);

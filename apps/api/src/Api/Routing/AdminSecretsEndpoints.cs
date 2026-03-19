@@ -185,7 +185,9 @@ internal static class AdminSecretsEndpoints
 
     private static string? GetSecretsDirectory(IConfiguration config)
     {
-        var dir = config["SECRETS_DIRECTORY"]
+        var dir = config["SECRETS_MANAGEMENT_DIR"]
+            ?? Environment.GetEnvironmentVariable("SECRETS_MANAGEMENT_DIR")
+            ?? config["SECRETS_DIRECTORY"]
             ?? Environment.GetEnvironmentVariable("SECRETS_DIRECTORY");
         if (string.IsNullOrEmpty(dir)) return null;
 

@@ -1,6 +1,5 @@
 using System.Globalization;
 using System.Text;
-using Api.BoundedContexts.Authentication.Application.Commands.ApiKeys;
 using Api.BoundedContexts.Authentication.Domain.Entities;
 using Api.BoundedContexts.Authentication.Infrastructure.Persistence;
 using Api.SharedKernel.Application.DTOs;
@@ -9,7 +8,7 @@ using Api.SharedKernel.Domain.Exceptions;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Microsoft.Extensions.Logging;
 
-namespace Api.BoundedContexts.Authentication.Application.Handlers;
+namespace Api.BoundedContexts.Authentication.Application.Commands.ApiKeys;
 
 /// <summary>
 /// Handler for bulk API key import from CSV.

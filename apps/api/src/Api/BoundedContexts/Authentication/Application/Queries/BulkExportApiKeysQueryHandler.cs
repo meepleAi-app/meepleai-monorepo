@@ -1,11 +1,10 @@
 using System.Globalization;
 using System.Text;
-using Api.BoundedContexts.Authentication.Application.Queries;
 using Api.BoundedContexts.Authentication.Infrastructure.Persistence;
 using Api.SharedKernel.Application.Interfaces;
 using Microsoft.Extensions.Logging;
 
-namespace Api.BoundedContexts.Authentication.Application.Handlers;
+namespace Api.BoundedContexts.Authentication.Application.Queries;
 
 /// <summary>
 /// Handler for bulk API key export to CSV.

@@ -1,5 +1,4 @@
 using Api.BoundedContexts.Administration.Domain.Repositories;
-using Api.BoundedContexts.Authentication.Application.Commands;
 using Api.BoundedContexts.Authentication.Infrastructure.Persistence;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.BoundedContexts.UserLibrary.Domain.Repositories;
@@ -7,7 +6,7 @@ using Api.BoundedContexts.UserNotifications.Domain.Repositories;
 using Api.Middleware.Exceptions;
 using Api.SharedKernel.Application.Interfaces;
 
-namespace Api.BoundedContexts.Authentication.Application.Handlers;
+namespace Api.BoundedContexts.Authentication.Application.Commands;
 
 /// <summary>
 /// Handler for GDPR Art. 20 data portability.

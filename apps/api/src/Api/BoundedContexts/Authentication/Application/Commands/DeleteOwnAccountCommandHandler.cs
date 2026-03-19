@@ -1,4 +1,3 @@
-using Api.BoundedContexts.Authentication.Application.Commands;
 using Api.BoundedContexts.Authentication.Infrastructure.Persistence;
 using Api.BoundedContexts.KnowledgeBase.Application.Commands;
 using Api.SharedKernel.Application.Interfaces;
@@ -6,7 +5,7 @@ using Api.Middleware.Exceptions;
 using Api.SharedKernel.Infrastructure.Persistence;
 using MediatR;
 
-namespace Api.BoundedContexts.Authentication.Application.Handlers;
+namespace Api.BoundedContexts.Authentication.Application.Commands;
 
 /// <summary>
 /// Handler for self-service account deletion (GDPR Art. 17 right to erasure).

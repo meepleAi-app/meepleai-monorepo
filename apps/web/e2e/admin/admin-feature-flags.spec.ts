@@ -121,15 +121,13 @@ async function mockConfigurationsEndpoint(page: Page) {
 }
 
 async function mockCatchAllAdmin(page: Page) {
-  await page
-    .context()
-    .route(`${API_BASE}/api/v1/admin/**`, route =>
-      route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({ data: [] }),
-      })
-    );
+  await page.context().route(`${API_BASE}/api/v1/admin/**`, route =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ data: [] }),
+    })
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -257,11 +255,8 @@ test.describe('Feature Flags — Admin Config Tab', () => {
     await expect(ragToggle).toBeVisible({ timeout: 5000 });
     await ragToggle.click();
 
-    // Wait a beat for the dialog event to fire
-    await page.waitForTimeout(500);
-
-    // Assert the confirmation dialog appeared with the expected message
-    expect(dialogAppeared).toBe(true);
+    // Wait for the dialog event to fire
+    await expect.poll(() => dialogAppeared, { timeout: 5000 }).toBe(true);
     expect(dialogMessage).toContain('RagCaching');
     expect(dialogMessage).toContain('Are you sure');
 

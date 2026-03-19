@@ -38,6 +38,7 @@ export function ConfigHistoryDialog({
 
   const fetchHistory = useCallback(async () => {
     if (!configId) return;
+    setHistory([]);
     setLoading(true);
     try {
       const data = await api.config.getHistory(configId, 20);

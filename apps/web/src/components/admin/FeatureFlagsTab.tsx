@@ -355,13 +355,11 @@ export default function FeatureFlagsTab({
                               TIER_COLORS[tier]
                             )}
                           >
-                            {}
                             {TIER_ICONS[tier]}
                             <span>{tier}</span>
                           </div>
                         </TooltipTrigger>
                         <TooltipContent>
-                          {}
                           <p>{TIER_DESCRIPTIONS[tier]}</p>
                         </TooltipContent>
                       </Tooltip>

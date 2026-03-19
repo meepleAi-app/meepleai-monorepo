@@ -1,5 +1,5 @@
 using Api.BoundedContexts.GameManagement.Application.Commands.GameNight;
-using Api.BoundedContexts.GameManagement.Application.Handlers.GameNight;
+using Api.BoundedContexts.GameManagement.Application.Commands.GameNight;
 using Api.BoundedContexts.GameManagement.Domain.Entities;
 using Api.BoundedContexts.GameManagement.Domain.Repositories;
 using Api.Middleware.Exceptions;

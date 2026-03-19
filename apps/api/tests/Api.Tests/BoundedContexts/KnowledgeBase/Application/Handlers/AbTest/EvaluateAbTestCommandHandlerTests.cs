@@ -1,5 +1,5 @@
 using Api.BoundedContexts.KnowledgeBase.Application.Commands.AbTest;
-using Api.BoundedContexts.KnowledgeBase.Application.Handlers.AbTest;
+using Api.BoundedContexts.KnowledgeBase.Application.Commands.AbTest;
 using Api.BoundedContexts.KnowledgeBase.Domain.Entities;
 using Api.BoundedContexts.KnowledgeBase.Domain.Enums;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;

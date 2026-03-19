@@ -1,5 +1,6 @@
 using Api.BoundedContexts.SessionTracking.Application.Commands;
-using Api.BoundedContexts.SessionTracking.Application.Handlers;
+using Api.BoundedContexts.SessionTracking.Application.Commands;
+using Api.BoundedContexts.SessionTracking.Application.Queries;
 using Api.BoundedContexts.SessionTracking.Domain.Entities;
 using Api.BoundedContexts.SessionTracking.Domain.Repositories;
 using Api.Middleware.Exceptions;

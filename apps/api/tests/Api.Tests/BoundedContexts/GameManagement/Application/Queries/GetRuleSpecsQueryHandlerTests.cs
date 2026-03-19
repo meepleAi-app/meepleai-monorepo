@@ -1,4 +1,5 @@
-using Api.BoundedContexts.GameManagement.Application.Handlers;
+using Api.BoundedContexts.GameManagement.Application.Commands;
+using Api.BoundedContexts.GameManagement.Application.Queries;
 using Api.BoundedContexts.GameManagement.Application.Queries;
 using Api.Infrastructure;
 using Api.SharedKernel.Application.Services;

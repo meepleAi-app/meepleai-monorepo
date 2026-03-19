@@ -42,7 +42,6 @@ env:
 
 jobs:
   notify-start:
-    continue-on-error: true
     uses: ./.github/workflows/notify-slack.yml
     with:
       event: started
@@ -692,7 +691,6 @@ jobs:
   notify-end:
     if: always()
     needs: [detect-changes, pre-deploy-check, build, migrate-db, snapshot-baseline, deploy, validate, e2e-staging]
-    continue-on-error: true
     uses: ./.github/workflows/notify-slack.yml
     with:
       event: ${{ contains(toJSON(needs), '"result":"failure"') && 'failed' || contains(toJSON(needs), '"result":"cancelled"') && 'cancelled' || 'completed' }}

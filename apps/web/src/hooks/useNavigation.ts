@@ -1,15 +1,8 @@
-'use client';
-
 /**
- * useNavigation — consume the current page navigation config.
- * Issue #5034 - Navigation Config System
+ * useNavigation Hook
  *
- * Re-export from NavigationContext for convenience.
- * Provides MiniNav tabs and ActionBar actions to layout components.
- *
- * @example
- *   const { miniNavTabs, actionBarActions, activeZone } = useNavigation();
+ * Re-export of the navigation store for convenient hook-style usage.
  */
 
-export { useNavigation } from '@/context/NavigationContext';
-export type { NavigationContextValue } from '@/types/navigation';
+export { useNavStore as useNavigation } from '@/lib/stores/navStore';
+export type { NavTab } from '@/lib/stores/navStore';

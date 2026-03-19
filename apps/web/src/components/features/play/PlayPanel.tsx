@@ -20,7 +20,7 @@ import { EmptyStateCard, SkeletonCardGrid } from '@/components/features/common';
 import { MeepleCard, entityColors } from '@/components/ui/data-display/meeple-card';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/navigation/tabs';
 import { useActiveSessions, sessionsKeys } from '@/hooks/queries/useActiveSessions';
-import { useAlphaNav } from '@/hooks/useAlphaNav';
+import { useNavigation } from '@/hooks/useNavigation';
 import { api } from '@/lib/api';
 import type { PaginatedSessionsResponse } from '@/lib/api/schemas';
 
@@ -40,7 +40,7 @@ function useSessionHistory(limit: number = 20) {
 
 export function PlayPanel() {
   const router = useRouter();
-  const { openDetail } = useAlphaNav();
+  const { openDetail } = useNavigation();
   const [activeTab, setActiveTab] = useState('active');
 
   const { data: activeSessions, isLoading: activeLoading } = useActiveSessions(20);

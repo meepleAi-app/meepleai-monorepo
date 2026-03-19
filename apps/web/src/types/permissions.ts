@@ -4,7 +4,7 @@
 
 export type UserTier = 'free' | 'normal' | 'premium' | 'pro' | 'enterprise';
 export type UserRole = 'user' | 'editor' | 'creator' | 'admin' | 'superadmin';
-export type UserAccountStatus = 'Active' | 'Suspended' | 'Banned';
+export type UserAccountStatus = 'Active' | 'Suspended' | 'Banned' | 'Pending';
 
 export interface CollectionLimits {
   maxGames: number;
@@ -40,7 +40,7 @@ export const TIER_HIERARCHY: Record<UserTier, number> = {
   normal: 1,
   premium: 2,
   pro: 2,
-  enterprise: 3
+  enterprise: 3,
 };
 
 export function hasMinimumTier(userTier: UserTier, requiredTier: UserTier): boolean {
@@ -49,4 +49,28 @@ export function hasMinimumTier(userTier: UserTier, requiredTier: UserTier): bool
 
 export function isAdmin(role: UserRole): boolean {
   return role === 'admin' || role === 'superadmin';
+}
+
+export const ROLE_HIERARCHY: Record<UserRole, number> = {
+  user: 0,
+  creator: 1,
+  editor: 2,
+  admin: 3,
+  superadmin: 4,
+};
+
+export function hasMinimumRole(userRole: UserRole, requiredRole: UserRole): boolean {
+  return ROLE_HIERARCHY[userRole] >= ROLE_HIERARCHY[requiredRole];
+}
+
+export function isSuperAdmin(role: UserRole): boolean {
+  return role === 'superadmin';
+}
+
+export function isEditor(role: UserRole): boolean {
+  return role === 'editor' || role === 'admin' || role === 'superadmin';
+}
+
+export function isCreator(role: UserRole): boolean {
+  return role === 'creator' || isEditor(role);
 }

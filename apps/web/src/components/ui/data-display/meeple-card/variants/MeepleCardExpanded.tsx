@@ -19,7 +19,12 @@ import { cn } from '@/lib/utils';
 import { StatusBadge } from '../../meeple-card-features/StatusBadge';
 import { WishlistButton } from '../../meeple-card-features/WishlistButton';
 import { CoverImage } from '../../meeple-card-parts';
-import { entityColors, meepleCardVariants, contentVariants } from '../../meeple-card-styles';
+import {
+  entityColors,
+  meepleCardVariants,
+  contentVariants,
+  coverOverlayStyles,
+} from '../../meeple-card-styles';
 
 import type { MeepleCardProps } from '../types';
 
@@ -52,6 +57,8 @@ export const MeepleCardExpanded = React.memo(function MeepleCardExpanded(
     isWishlisted,
     onWishlistToggle,
     id,
+    mechanicIcon,
+    stateLabel,
   } = props;
 
   const variant = 'expanded' as const;
@@ -102,6 +109,35 @@ export const MeepleCardExpanded = React.memo(function MeepleCardExpanded(
         {status && (
           <div className="absolute top-3 left-3 z-10">
             <StatusBadge status={status} showIcon={showStatusIcon} />
+          </div>
+        )}
+
+        {/* MtG-inspired cover overlay slots */}
+        {(mechanicIcon || stateLabel) && (
+          <div className={coverOverlayStyles.container}>
+            {mechanicIcon ? (
+              <div
+                data-testid="mechanic-icon-slot"
+                data-slot="mechanic-icon"
+                className={coverOverlayStyles.mechanicIcon}
+              >
+                {mechanicIcon}
+              </div>
+            ) : (
+              <div />
+            )}
+            {stateLabel && (
+              <div
+                data-testid="state-label-slot"
+                data-slot="state-label"
+                className={cn(
+                  coverOverlayStyles.stateLabel.base,
+                  coverOverlayStyles.stateLabel[stateLabel.variant]
+                )}
+              >
+                {stateLabel.text}
+              </div>
+            )}
           </div>
         )}
       </div>

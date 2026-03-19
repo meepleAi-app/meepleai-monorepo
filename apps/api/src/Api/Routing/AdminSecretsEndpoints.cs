@@ -193,7 +193,7 @@ internal static class AdminSecretsEndpoints
         if (string.IsNullOrEmpty(dir)) return null;
 
         if (!Path.IsPathRooted(dir))
-            dir = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, dir));
+            dir = Path.GetFullPath(Path.Combine(Directory.GetCurrentDirectory(), dir));
 
         return Directory.Exists(dir) ? dir : null;
     }

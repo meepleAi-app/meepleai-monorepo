@@ -4,7 +4,7 @@ import { type Metadata } from 'next';
 
 import { PdfProcessingNotifier } from '@/components/admin/layout/PdfProcessingNotifier';
 import { RequireRole } from '@/components/auth/RequireRole';
-import { UnifiedShell } from '@/components/layout/UnifiedShell';
+import { AdminShell } from '@/components/layout/AdminShell';
 
 export const metadata: Metadata = {
   title: {
@@ -16,15 +16,14 @@ export const metadata: Metadata = {
 
 /**
  * Dashboard route group layout.
- * Applies the UnifiedShell in admin context
- * to all pages under /admin/(dashboard)/.
+ * Applies the AdminShell to all pages under /admin/(dashboard)/.
  * Wrapped with RequireRole to enforce admin access.
  */
 export default function DashboardLayout({ children }: { children: ReactNode }) {
   return (
     <RequireRole allowedRoles={['Admin']}>
       <PdfProcessingNotifier />
-      <UnifiedShell isAdmin>{children}</UnifiedShell>
+      <AdminShell>{children}</AdminShell>
     </RequireRole>
   );
 }

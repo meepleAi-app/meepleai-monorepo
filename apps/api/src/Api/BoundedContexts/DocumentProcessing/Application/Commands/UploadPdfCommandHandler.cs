@@ -13,6 +13,7 @@ using Api.Infrastructure.Entities;
 using Api.Infrastructure.Security;
 using Api.Models;
 using Api.Observability;
+using Api.Services;
 using Api.Services.Exceptions;
 using Api.Services.Pdf;
 using Api.SharedKernel.Application.Interfaces;

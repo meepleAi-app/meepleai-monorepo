@@ -7,6 +7,8 @@
  * @module components/ui/data-display/meeple-card/types
  */
 
+import type React from 'react';
+
 import type { ResolvedNavigationLink } from '@/config/entity-navigation';
 
 import type { EntityLinkType } from '../entity-link/entity-link-types';
@@ -282,6 +284,23 @@ export interface MeepleCardProps extends VariantProps<typeof meepleCardVariants>
   kbCards?: {
     status: DocumentIndexingStatus;
   }[];
+
+  // ========== MtG-INSPIRED COVER OVERLAY SLOTS ==========
+
+  /**
+   * MtG-inspired cover overlay: classification icon shown bottom-left of the cover image.
+   * Rendered inside a frosted glass pill with backdrop-blur.
+   */
+  mechanicIcon?: React.ReactNode;
+
+  /**
+   * MtG-inspired cover overlay: state badge shown bottom-right of the cover image.
+   * Semantic color variants: success (emerald), warning (amber), error (red), info (blue).
+   */
+  stateLabel?: {
+    text: string;
+    variant: 'success' | 'warning' | 'error' | 'info';
+  };
 
   // ========== SESSION ENTITY FEATURES (Issue #4751) ==========
 

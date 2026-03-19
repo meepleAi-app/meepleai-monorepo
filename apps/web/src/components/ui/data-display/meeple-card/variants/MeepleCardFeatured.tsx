@@ -129,6 +129,8 @@ export const MeepleCardFeatured = React.memo(function MeepleCardFeatured(
     firstLinkPreview,
     onLinksClick,
     kbCards,
+    mechanicIcon,
+    stateLabel,
   } = props;
 
   const variant = 'featured' as const;
@@ -274,6 +276,8 @@ export const MeepleCardFeatured = React.memo(function MeepleCardFeatured(
         variant={variant}
         entity={entity}
         customColor={customColor}
+        mechanicIcon={mechanicIcon}
+        stateLabel={stateLabel}
       />
 
       {/* Content area */}

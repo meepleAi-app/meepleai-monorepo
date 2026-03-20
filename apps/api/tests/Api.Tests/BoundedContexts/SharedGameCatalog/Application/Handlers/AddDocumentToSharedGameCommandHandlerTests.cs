@@ -80,6 +80,14 @@ public class AddDocumentToSharedGameCommandHandlerTests
             CreatedBy: createdBy);
 
         // Add PDF document to context so existence check passes
+        _context.PdfDocuments.Add(new PdfDocumentEntity
+        {
+            Id = pdfId,
+            FileName = "test.pdf",
+            FilePath = "/uploads/test.pdf",
+            FileSizeBytes = 1024,
+            UploadedByUserId = createdBy
+        });
         await _context.SaveChangesAsync();
 
         // Mock game exists
@@ -175,6 +183,14 @@ public class AddDocumentToSharedGameCommandHandlerTests
             CreatedBy: createdBy);
 
         // Add PDF document to context so existence check passes
+        _context.PdfDocuments.Add(new PdfDocumentEntity
+        {
+            Id = pdfId,
+            FileName = "test.pdf",
+            FilePath = "/uploads/test.pdf",
+            FileSizeBytes = 1024,
+            UploadedByUserId = createdBy
+        });
         await _context.SaveChangesAsync();
 
         var game = CreateTestGame(gameId);

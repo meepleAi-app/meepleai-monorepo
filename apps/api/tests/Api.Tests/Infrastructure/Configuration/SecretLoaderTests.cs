@@ -286,7 +286,7 @@ public sealed class SecretLoaderTests : IDisposable
 
         // Assert
         result.TotalProcessed.Should().BeGreaterThan(0, "should count all processed secrets");
-        result.LoadedSecrets.Count.Should().Be(6, "6 secret files loaded");
+        result.LoadedSecrets.Count.Should().Be(5, "5 recognized secret files loaded (qdrant is not a defined secret)");
         result.MissingImportant.Should().NotBeEmpty("openrouter is missing");
     }
 

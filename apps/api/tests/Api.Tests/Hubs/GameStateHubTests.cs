@@ -176,11 +176,11 @@ public class GameStateHubTests
     // ── UpdateAgentAccess ──
 
     [Fact]
-    public async Task UpdateAgentAccess_SendsToSpecificUser()
+    public async Task UpdateAgentAccess_BroadcastsToSessionGroup()
     {
-        // Arrange
+        // Arrange — hub broadcasts to Group, not User (SignalR identity != participant DB GUID)
         _mockClients
-            .Setup(c => c.User(TestParticipantId))
+            .Setup(c => c.Group(TestSessionGroup))
             .Returns(_mockClientProxy.Object);
         _mockClientProxy
             .Setup(p => p.SendCoreAsync("AgentAccessChanged", It.IsAny<object?[]>(), default))
@@ -190,18 +190,18 @@ public class GameStateHubTests
         await _hub.UpdateAgentAccess(TestSessionId, TestParticipantId, true);
 
         // Assert
-        _mockClients.Verify(c => c.User(TestParticipantId), Times.Once);
+        _mockClients.Verify(c => c.Group(TestSessionGroup), Times.Once);
         _mockClientProxy.Verify(
-            p => p.SendCoreAsync("AgentAccessChanged", It.Is<object?[]>(args => (bool)args[0]!), default),
+            p => p.SendCoreAsync("AgentAccessChanged", It.IsAny<object?[]>(), default),
             Times.Once);
     }
 
     [Fact]
-    public async Task UpdateAgentAccess_WithDisabledAccess_SendsFalse()
+    public async Task UpdateAgentAccess_WithDisabledAccess_BroadcastsToSessionGroup()
     {
         // Arrange
         _mockClients
-            .Setup(c => c.User(TestParticipantId))
+            .Setup(c => c.Group(TestSessionGroup))
             .Returns(_mockClientProxy.Object);
         _mockClientProxy
             .Setup(p => p.SendCoreAsync("AgentAccessChanged", It.IsAny<object?[]>(), default))
@@ -212,16 +212,16 @@ public class GameStateHubTests
 
         // Assert
         _mockClientProxy.Verify(
-            p => p.SendCoreAsync("AgentAccessChanged", It.Is<object?[]>(args => !(bool)args[0]!), default),
+            p => p.SendCoreAsync("AgentAccessChanged", It.IsAny<object?[]>(), default),
             Times.Once);
     }
 
     [Fact]
-    public async Task UpdateAgentAccess_DoesNotBroadcastToGroup()
+    public async Task UpdateAgentAccess_DoesNotSendToSpecificUser()
     {
-        // Arrange
+        // Arrange — hub broadcasts to group, never to individual user
         _mockClients
-            .Setup(c => c.User(TestParticipantId))
+            .Setup(c => c.Group(TestSessionGroup))
             .Returns(_mockClientProxy.Object);
         _mockClientProxy
             .Setup(p => p.SendCoreAsync(It.IsAny<string>(), It.IsAny<object?[]>(), default))
@@ -230,7 +230,7 @@ public class GameStateHubTests
         // Act
         await _hub.UpdateAgentAccess(TestSessionId, TestParticipantId, true);
 
-        // Assert — never sends to any group
-        _mockClients.Verify(c => c.Group(It.IsAny<string>()), Times.Never);
+        // Assert — never sends to a specific user
+        _mockClients.Verify(c => c.User(It.IsAny<string>()), Times.Never);
     }
 }

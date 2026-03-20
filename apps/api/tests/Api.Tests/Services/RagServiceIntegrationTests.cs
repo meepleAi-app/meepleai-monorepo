@@ -126,14 +126,13 @@ public sealed class RagServiceIntegrationTests : IDisposable
         var result = await ragService.ExplainAsync(gameId, topic, cancellationToken: TestCancellationToken);
 
         // Assert - ExplainResponse is a record with lowercase parameters
+        // Note: Vector retrieval (Qdrant) has been removed, so ExplainAsync returns
+        // an empty response with a message indicating no results were found.
         Assert.NotNull(result);
         Assert.NotNull(result.outline);
-        Assert.NotNull(result.outline.mainTopic);
-        Assert.NotNull(result.outline.sections);
         Assert.NotNull(result.script);
-        Assert.NotEmpty(result.script);
         Assert.NotNull(result.citations);
-        Assert.True(result.estimatedReadingTimeMinutes > 0);
+        Assert.True(result.estimatedReadingTimeMinutes >= 0);
     }
 
     /// <summary>

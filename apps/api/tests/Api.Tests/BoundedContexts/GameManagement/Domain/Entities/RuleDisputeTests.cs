@@ -252,6 +252,7 @@ public class RuleDisputeTests
 
         // Act
         dispute.TallyVotes();
+        dispute.RaiseResolvedEvent();
 
         // Assert
         var domainEvent = Assert.Single(dispute.DomainEvents);

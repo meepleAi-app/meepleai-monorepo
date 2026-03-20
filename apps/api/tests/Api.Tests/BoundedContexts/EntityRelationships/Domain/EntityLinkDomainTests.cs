@@ -2,6 +2,7 @@ using Api.BoundedContexts.EntityRelationships.Domain.Aggregates;
 using Api.BoundedContexts.EntityRelationships.Domain.Enums;
 using Api.BoundedContexts.EntityRelationships.Domain.Events;
 using Api.Tests.Constants;
+using FluentAssertions;
 using Xunit;
 
 namespace Api.Tests.BoundedContexts.EntityRelationships.Domain;
@@ -27,13 +28,13 @@ public class EntityLinkDomainTests
             EntityLinkType.ExpansionOf,
             EntityLinkScope.User, _ownerId);
 
-        Assert.NotEqual(Guid.Empty, link.Id);
-        Assert.Equal(MeepleEntityType.Game, link.SourceEntityType);
-        Assert.Equal(_sourceId, link.SourceEntityId);
-        Assert.Equal(MeepleEntityType.Game, link.TargetEntityType);
-        Assert.Equal(_targetId, link.TargetEntityId);
-        Assert.Equal(EntityLinkType.ExpansionOf, link.LinkType);
-        Assert.Equal(_ownerId, link.OwnerUserId);
+        link.Id.Should().NotBe(Guid.Empty);
+        link.SourceEntityType.Should().Be(MeepleEntityType.Game);
+        link.SourceEntityId.Should().Be(_sourceId);
+        link.TargetEntityType.Should().Be(MeepleEntityType.Game);
+        link.TargetEntityId.Should().Be(_targetId);
+        link.LinkType.Should().Be(EntityLinkType.ExpansionOf);
+        link.OwnerUserId.Should().Be(_ownerId);
     }
 
     [Fact]
@@ -46,7 +47,7 @@ public class EntityLinkDomainTests
             EntityLinkType.RelatedTo,
             EntityLinkScope.User, _ownerId);
 
-        Assert.True(link.IsAdminApproved);
+        link.IsAdminApproved.Should().BeTrue();
     }
 
     [Fact]
@@ -59,7 +60,7 @@ public class EntityLinkDomainTests
             EntityLinkType.RelatedTo,
             EntityLinkScope.Shared, _ownerId);
 
-        Assert.False(link.IsAdminApproved);
+        link.IsAdminApproved.Should().BeFalse();
     }
 
     [Fact]
@@ -72,8 +73,8 @@ public class EntityLinkDomainTests
             EntityLinkScope.Shared, _ownerId,
             isBggImported: true);
 
-        Assert.True(link.IsAdminApproved);
-        Assert.True(link.IsBggImported);
+        link.IsAdminApproved.Should().BeTrue();
+        link.IsBggImported.Should().BeTrue();
     }
 
     [Fact]
@@ -86,11 +87,12 @@ public class EntityLinkDomainTests
             EntityLinkScope.User, _ownerId);
 
         var events = link.PopDomainEvents();
-        Assert.Single(events);
-        var evt = Assert.IsType<EntityLinkCreatedEvent>(events[0]);
-        Assert.Equal(link.Id, evt.EntityLinkId);
-        Assert.Equal(EntityLinkType.CollaboratesWith, evt.LinkType);
-        Assert.Equal(_ownerId, evt.OwnerUserId);
+        events.Should().ContainSingle();
+        events[0].Should().BeOfType<EntityLinkCreatedEvent>();
+        var evt = (EntityLinkCreatedEvent)events[0];
+        evt.EntityLinkId.Should().Be(link.Id);
+        evt.LinkType.Should().Be(EntityLinkType.CollaboratesWith);
+        evt.OwnerUserId.Should().Be(_ownerId);
     }
 
     [Fact]
@@ -105,7 +107,7 @@ public class EntityLinkDomainTests
         link.PopDomainEvents(); // first call clears
         var events = link.PopDomainEvents(); // second call should be empty
 
-        Assert.Empty(events);
+        events.Should().BeEmpty();
     }
 
     // ──────────────────────────────────────────────────────────────────────────
@@ -117,13 +119,14 @@ public class EntityLinkDomainTests
     {
         var sameId = Guid.NewGuid();
 
-        var ex = Assert.Throws<ArgumentException>(() => EntityLink.Create(
+        var act = () => EntityLink.Create(
             MeepleEntityType.Game, sameId,
             MeepleEntityType.Game, sameId,
             EntityLinkType.RelatedTo,
-            EntityLinkScope.User, _ownerId));
+            EntityLinkScope.User, _ownerId);
+        var ex = act.Should().Throw<ArgumentException>().Which;
 
-        Assert.Contains("same", ex.Message, StringComparison.OrdinalIgnoreCase);
+        ex.Message.Should().ContainEquivalentOf("same");
     }
 
     [Fact]
@@ -138,7 +141,7 @@ public class EntityLinkDomainTests
             EntityLinkType.RelatedTo,
             EntityLinkScope.User, _ownerId);
 
-        Assert.NotNull(link);
+        link.Should().NotBeNull();
     }
 
     // ──────────────────────────────────────────────────────────────────────────
@@ -161,7 +164,7 @@ public class EntityLinkDomainTests
             MeepleEntityType.Game, _targetId,
             linkType, EntityLinkScope.User, _ownerId);
 
-        Assert.Equal(expected, link.IsBidirectional);
+        link.IsBidirectional.Should().Be(expected);
     }
 
     // ──────────────────────────────────────────────────────────────────────────
@@ -177,9 +180,9 @@ public class EntityLinkDomainTests
             EntityLinkType.ExpansionOf,
             EntityLinkScope.Shared, _ownerId);
 
-        Assert.False(link.IsAdminApproved);
+        link.IsAdminApproved.Should().BeFalse();
         link.Approve();
-        Assert.True(link.IsAdminApproved);
+        link.IsAdminApproved.Should().BeTrue();
     }
 
     // ──────────────────────────────────────────────────────────────────────────
@@ -200,10 +203,11 @@ public class EntityLinkDomainTests
         link.Delete(adminId);
 
         var events = link.PopDomainEvents();
-        Assert.Single(events);
-        var evt = Assert.IsType<EntityLinkDeletedEvent>(events[0]);
-        Assert.Equal(link.Id, evt.EntityLinkId);
-        Assert.Equal(adminId, evt.DeletedByUserId);
+        events.Should().ContainSingle();
+        events[0].Should().BeOfType<EntityLinkDeletedEvent>();
+        var evt = (EntityLinkDeletedEvent)events[0];
+        evt.EntityLinkId.Should().Be(link.Id);
+        evt.DeletedByUserId.Should().Be(adminId);
     }
 
     // ──────────────────────────────────────────────────────────────────────────
@@ -221,7 +225,7 @@ public class EntityLinkDomainTests
             EntityLinkScope.User, _ownerId,
             metadata: metadata);
 
-        Assert.Equal(metadata, link.Metadata);
+        link.Metadata.Should().Be(metadata);
     }
 
     [Fact]
@@ -236,7 +240,7 @@ public class EntityLinkDomainTests
         var newMetadata = "{\"notes\":\"updated\"}";
         link.UpdateMetadata(newMetadata);
 
-        Assert.Equal(newMetadata, link.Metadata);
+        link.Metadata.Should().Be(newMetadata);
     }
 
     // ── KbCard entity type (Issue #5184) ──────────────────────────────────────
@@ -244,7 +248,7 @@ public class EntityLinkDomainTests
     [Fact]
     public void MeepleEntityType_KbCard_HasValue9()
     {
-        Assert.Equal(9, (int)MeepleEntityType.KbCard);
+        ((int)MeepleEntityType.KbCard).Should().Be(9);
     }
 
     [Fact]
@@ -259,10 +263,10 @@ public class EntityLinkDomainTests
             EntityLinkType.PartOf,
             EntityLinkScope.User, _ownerId);
 
-        Assert.Equal(MeepleEntityType.KbCard, link.SourceEntityType);
-        Assert.Equal(pdfId, link.SourceEntityId);
-        Assert.Equal(MeepleEntityType.Game, link.TargetEntityType);
-        Assert.Equal(gameId, link.TargetEntityId);
-        Assert.Equal(EntityLinkType.PartOf, link.LinkType);
+        link.SourceEntityType.Should().Be(MeepleEntityType.KbCard);
+        link.SourceEntityId.Should().Be(pdfId);
+        link.TargetEntityType.Should().Be(MeepleEntityType.Game);
+        link.TargetEntityId.Should().Be(gameId);
+        link.LinkType.Should().Be(EntityLinkType.PartOf);
     }
 }

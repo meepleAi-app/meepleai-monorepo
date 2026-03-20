@@ -1,5 +1,6 @@
 using Api.BoundedContexts.WorkflowIntegration.Application.Commands;
-using Api.BoundedContexts.WorkflowIntegration.Application.Handlers;
+using Api.BoundedContexts.WorkflowIntegration.Application.Commands;
+using Api.BoundedContexts.WorkflowIntegration.Application.Queries;
 using Api.BoundedContexts.WorkflowIntegration.Domain.Entities;
 using Api.BoundedContexts.WorkflowIntegration.Domain.Repositories;
 using Api.BoundedContexts.WorkflowIntegration.Domain.ValueObjects;
@@ -7,6 +8,7 @@ using Api.SharedKernel.Domain.Exceptions;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Moq;
 using Xunit;
+using FluentAssertions;
 using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.WorkflowIntegration.Application.Handlers;
@@ -62,10 +64,10 @@ public class UpdateN8NConfigCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal("Updated Name", result.Name);
-        Assert.Equal("https://new.n8n.com", result.BaseUrl);
-        Assert.Equal("https://webhook.new.com", result.WebhookUrl);
+        result.Should().NotBeNull();
+        result.Name.Should().Be("Updated Name");
+        result.BaseUrl.Should().Be("https://new.n8n.com");
+        result.WebhookUrl.Should().Be("https://webhook.new.com");
 
         _mockRepository.Verify(
             r => r.UpdateAsync(existingConfig, It.IsAny<CancellationToken>()),
@@ -94,10 +96,10 @@ public class UpdateN8NConfigCommandHandlerTests
             .ReturnsAsync((N8NConfiguration?)null);
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<DomainException>(
-            () => _handler.Handle(command, TestContext.Current.CancellationToken));
-        Assert.Contains("not found", exception.Message);
-        Assert.Contains(configId.ToString(), exception.Message);
+        var act = () => _handler.Handle(command, TestContext.Current.CancellationToken);
+        var exception = (await act.Should().ThrowAsync<DomainException>()).Which;
+        exception.Message.Should().Contain("not found");
+        exception.Message.Should().Contain(configId.ToString());
 
         _mockRepository.Verify(
             r => r.UpdateAsync(It.IsAny<N8NConfiguration>(), It.IsAny<CancellationToken>()),
@@ -139,7 +141,7 @@ public class UpdateN8NConfigCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.True(result.IsActive);
+        result.IsActive.Should().BeTrue();
     }
 
     [Fact]
@@ -173,7 +175,7 @@ public class UpdateN8NConfigCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.False(result.IsActive);
+        result.IsActive.Should().BeFalse();
     }
 
     [Fact]
@@ -208,7 +210,7 @@ public class UpdateN8NConfigCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert - WebhookUrl should remain unchanged when null is passed
-        Assert.Equal("https://old.webhook.com", result.WebhookUrl);
+        result.WebhookUrl.Should().Be("https://old.webhook.com");
     }
 
     [Fact]
@@ -242,7 +244,7 @@ public class UpdateN8NConfigCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.Equal("Updated Name Only", result.Name);
+        result.Name.Should().Be("Updated Name Only");
         // Original URL should be preserved (UpdateConfiguration handles null properly)
     }
 

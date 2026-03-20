@@ -1,8 +1,10 @@
+using Api.BoundedContexts.KnowledgeBase.Application.Commands;
 using Api.BoundedContexts.KnowledgeBase.Application.Configuration;
-using Api.BoundedContexts.KnowledgeBase.Application.Evaluation.Handlers;
+using Api.BoundedContexts.KnowledgeBase.Application.Evaluation.Commands;
+using Api.BoundedContexts.KnowledgeBase.Application.Evaluation.Queries;
 using Api.BoundedContexts.KnowledgeBase.Application.Evaluation.Services;
-using Api.BoundedContexts.KnowledgeBase.Application.GridSearch.Handlers;
-using Api.BoundedContexts.KnowledgeBase.Application.Handlers;
+using Api.BoundedContexts.KnowledgeBase.Application.GridSearch.Commands;
+using Api.BoundedContexts.KnowledgeBase.Application.Queries;
 using Api.BoundedContexts.KnowledgeBase.Application.Reports.Services;
 using Api.BoundedContexts.KnowledgeBase.Application.Services;
 using Api.BoundedContexts.KnowledgeBase.Application.Services.Chunking;
@@ -305,7 +307,7 @@ internal static class KnowledgeBaseServiceExtensions
         services.AddScoped<IModelCompatibilityRepository, ModelCompatibilityRepository>(); // Issue #5496: Model compatibility matrix + change log
 
         // Infrastructure - Adapters (Scoped - uses MeepleAiDbContext for pgvector operations)
-        services.AddScoped<IQdrantVectorStoreAdapter, PgVectorStoreAdapter>();
+        services.AddScoped<IVectorStoreAdapter, PgVectorStoreAdapter>();
         // Infrastructure - In-Memory Repository (Singleton - shared in-memory store)
         services.AddSingleton<IChunkRepository, InMemoryChunkRepository>();
     }

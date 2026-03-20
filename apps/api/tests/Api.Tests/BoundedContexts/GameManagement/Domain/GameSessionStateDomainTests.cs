@@ -3,6 +3,7 @@ using Api.BoundedContexts.GameManagement.Domain.Entities;
 using Api.Middleware.Exceptions;
 using Api.Tests.Constants;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.GameManagement.Domain;
 
@@ -22,13 +23,13 @@ public class GameSessionStateDomainTests
         var state = GameSessionState.Create(stateId, sessionId, templateId, initialState, "testuser");
 
         // Assert
-        Assert.Equal(stateId, state.Id);
-        Assert.Equal(sessionId, state.GameSessionId);
-        Assert.Equal(templateId, state.TemplateId);
-        Assert.Equal(1, state.Version);
-        Assert.Equal("testuser", state.LastUpdatedBy);
-        Assert.NotNull(state.CurrentState);
-        Assert.Empty(state.Snapshots);
+        state.Id.Should().Be(stateId);
+        state.GameSessionId.Should().Be(sessionId);
+        state.TemplateId.Should().Be(templateId);
+        state.Version.Should().Be(1);
+        state.LastUpdatedBy.Should().Be("testuser");
+        state.CurrentState.Should().NotBeNull();
+        state.Snapshots.Should().BeEmpty();
     }
 
     [Fact]
@@ -38,9 +39,10 @@ public class GameSessionStateDomainTests
         var initialState = JsonDocument.Parse("{}");
 
         // Act & Assert
-        var exception = Assert.Throws<ArgumentException>(() =>
-            GameSessionState.Create(Guid.NewGuid(), Guid.Empty, Guid.NewGuid(), initialState, "user"));
-        Assert.Contains("GameSessionId cannot be empty", exception.Message, StringComparison.OrdinalIgnoreCase);
+        var act = () =>
+            GameSessionState.Create(Guid.NewGuid(), Guid.Empty, Guid.NewGuid(), initialState, "user");
+        var exception = act.Should().Throw<ArgumentException>().Which;
+        exception.Message.Should().ContainEquivalentOf("GameSessionId cannot be empty");
     }
 
     [Fact]
@@ -50,17 +52,19 @@ public class GameSessionStateDomainTests
         var initialState = JsonDocument.Parse("{}");
 
         // Act & Assert
-        var exception = Assert.Throws<ArgumentException>(() =>
-            GameSessionState.Create(Guid.NewGuid(), Guid.NewGuid(), Guid.Empty, initialState, "user"));
-        Assert.Contains("TemplateId cannot be empty", exception.Message, StringComparison.OrdinalIgnoreCase);
+        var act = () =>
+            GameSessionState.Create(Guid.NewGuid(), Guid.NewGuid(), Guid.Empty, initialState, "user");
+        var exception = act.Should().Throw<ArgumentException>().Which;
+        exception.Message.Should().ContainEquivalentOf("TemplateId cannot be empty");
     }
 
     [Fact]
     public void Create_WithNullInitialState_ThrowsArgumentNullException()
     {
         // Act & Assert
-        Assert.Throws<ArgumentNullException>(() =>
-            GameSessionState.Create(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), null!, "user"));
+        var act = () =>
+            GameSessionState.Create(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), null!, "user");
+        act.Should().Throw<ArgumentNullException>();
     }
 
     [Fact]
@@ -70,9 +74,10 @@ public class GameSessionStateDomainTests
         var initialState = JsonDocument.Parse("{}");
 
         // Act & Assert
-        var exception = Assert.Throws<ArgumentException>(() =>
-            GameSessionState.Create(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), initialState, ""));
-        Assert.Contains("CreatedBy cannot be empty", exception.Message, StringComparison.OrdinalIgnoreCase);
+        var act = () =>
+            GameSessionState.Create(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), initialState, "");
+        var exception = act.Should().Throw<ArgumentException>().Which;
+        exception.Message.Should().ContainEquivalentOf("CreatedBy cannot be empty");
     }
 
     [Fact]
@@ -86,9 +91,9 @@ public class GameSessionStateDomainTests
         state.UpdateState(newState, "updater");
 
         // Assert
-        Assert.Equal(2, state.Version); // Version incremented
-        Assert.Equal("updater", state.LastUpdatedBy);
-        Assert.NotNull(state.CurrentState);
+        state.Version.Should().Be(2); // Version incremented
+        state.LastUpdatedBy.Should().Be("updater");
+        state.CurrentState.Should().NotBeNull();
     }
 
     [Fact]
@@ -101,10 +106,10 @@ public class GameSessionStateDomainTests
         var snapshot = state.CreateSnapshot(turnNumber: 1, description: "Turn 1 end", createdBy: "user");
 
         // Assert
-        Assert.NotNull(snapshot);
-        Assert.Equal(1, snapshot.TurnNumber);
-        Assert.Equal("Turn 1 end", snapshot.Description);
-        Assert.Single(state.Snapshots);
+        snapshot.Should().NotBeNull();
+        snapshot.TurnNumber.Should().Be(1);
+        snapshot.Description.Should().Be("Turn 1 end");
+        state.Snapshots.Should().ContainSingle();
     }
 
     [Fact]
@@ -115,9 +120,10 @@ public class GameSessionStateDomainTests
         state.CreateSnapshot(1, "First", "user");
 
         // Act & Assert
-        var exception = Assert.Throws<InvalidOperationException>(() =>
-            state.CreateSnapshot(1, "Duplicate", "user"));
-        Assert.Contains("already exists", exception.Message, StringComparison.OrdinalIgnoreCase);
+        var act = () =>
+            state.CreateSnapshot(1, "Duplicate", "user");
+        var exception = act.Should().Throw<InvalidOperationException>().Which;
+        exception.Message.Should().ContainEquivalentOf("already exists");
     }
 
     [Fact]
@@ -127,9 +133,10 @@ public class GameSessionStateDomainTests
         var state = CreateTestState();
 
         // Act & Assert
-        var exception = Assert.Throws<ArgumentException>(() =>
-            state.CreateSnapshot(-1, "Invalid", "user"));
-        Assert.Contains("cannot be negative", exception.Message, StringComparison.OrdinalIgnoreCase);
+        var act = () =>
+            state.CreateSnapshot(-1, "Invalid", "user");
+        var exception = act.Should().Throw<ArgumentException>().Which;
+        exception.Message.Should().ContainEquivalentOf("cannot be negative");
     }
 
     [Fact]
@@ -148,9 +155,9 @@ public class GameSessionStateDomainTests
         state.RestoreFromSnapshot(snapshot.Id, "restorer");
 
         // Assert
-        Assert.Equal(4, state.Version); // Version incremented (initial=1, update=2, update=3, restore=4)
-        Assert.Equal("restorer", state.LastUpdatedBy);
-        Assert.Equal(2, state.Snapshots.Count); // Original + backup snapshot
+        state.Version.Should().Be(4); // Version incremented (initial=1, update=2, update=3, restore=4)
+        state.LastUpdatedBy.Should().Be("restorer");
+        state.Snapshots.Count.Should().Be(2); // Original + backup snapshot
     }
 
     [Fact]
@@ -160,8 +167,9 @@ public class GameSessionStateDomainTests
         var state = CreateTestState();
 
         // Act & Assert
-        Assert.Throws<NotFoundException>(() =>
-            state.RestoreFromSnapshot(Guid.NewGuid(), "user"));
+        var act = () =>
+            state.RestoreFromSnapshot(Guid.NewGuid(), "user");
+        act.Should().Throw<NotFoundException>();
     }
 
     [Fact]
@@ -175,8 +183,8 @@ public class GameSessionStateDomainTests
         var snapshot = state.GetSnapshotByTurn(1);
 
         // Assert
-        Assert.NotNull(snapshot);
-        Assert.Equal(1, snapshot.TurnNumber);
+        snapshot.Should().NotBeNull();
+        snapshot.TurnNumber.Should().Be(1);
     }
 
     [Fact]
@@ -189,7 +197,7 @@ public class GameSessionStateDomainTests
         var snapshot = state.GetSnapshotByTurn(999);
 
         // Assert
-        Assert.Null(snapshot);
+        snapshot.Should().BeNull();
     }
 
     [Fact]
@@ -205,9 +213,9 @@ public class GameSessionStateDomainTests
         var latest = state.GetLatestSnapshot();
 
         // Assert
-        Assert.NotNull(latest);
-        Assert.Equal(2, latest.TurnNumber);
-        Assert.Equal("Second", latest.Description);
+        latest.Should().NotBeNull();
+        latest.TurnNumber.Should().Be(2);
+        latest.Description.Should().Be("Second");
     }
 
     [Fact]
@@ -220,7 +228,7 @@ public class GameSessionStateDomainTests
         var latest = state.GetLatestSnapshot();
 
         // Assert
-        Assert.Null(latest);
+        latest.Should().BeNull();
     }
 
     [Fact]
@@ -234,9 +242,9 @@ public class GameSessionStateDomainTests
         var jsonString = state.GetStateAsString();
 
         // Assert
-        Assert.NotNull(jsonString);
-        Assert.Contains("Alice", jsonString);
-        Assert.Contains("42", jsonString);
+        jsonString.Should().NotBeNull();
+        jsonString.Should().Contain("Alice");
+        jsonString.Should().Contain("42");
     }
 
     // Helper method

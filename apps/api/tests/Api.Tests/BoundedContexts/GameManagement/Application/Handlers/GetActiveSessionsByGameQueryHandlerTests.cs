@@ -1,10 +1,12 @@
-using Api.BoundedContexts.GameManagement.Application.Handlers;
+using Api.BoundedContexts.GameManagement.Application.Commands;
+using Api.BoundedContexts.GameManagement.Application.Queries;
 using Api.BoundedContexts.GameManagement.Application.Queries;
 using Api.BoundedContexts.GameManagement.Domain.Entities;
 using Api.BoundedContexts.GameManagement.Domain.Repositories;
 using Api.BoundedContexts.GameManagement.Domain.ValueObjects;
 using Moq;
 using Xunit;
+using FluentAssertions;
 using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.GameManagement.Application.Handlers;
@@ -44,9 +46,9 @@ public class GetActiveSessionsByGameQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal(2, result.Count);
-        Assert.All(result, dto => Assert.Equal(gameId, dto.GameId));
+        result.Should().NotBeNull();
+        result.Count.Should().Be(2);
+        result.Should().OnlyContain(dto => dto.GameId == gameId);
     }
 
     [Fact]
@@ -64,8 +66,8 @@ public class GetActiveSessionsByGameQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Empty(result);
+        result.Should().NotBeNull();
+        result.Should().BeEmpty();
     }
 
     [Fact]
@@ -96,11 +98,11 @@ public class GetActiveSessionsByGameQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Single(result);
-        Assert.Equal(2, result[0].Players.Count);
-        Assert.Equal("Alice", result[0].Players[0].PlayerName);
-        Assert.Equal("Bob", result[0].Players[1].PlayerName);
+        result.Should().NotBeNull();
+        result.Should().ContainSingle();
+        result[0].Players.Count.Should().Be(2);
+        result[0].Players[0].PlayerName.Should().Be("Alice");
+        result[0].Players[1].PlayerName.Should().Be("Bob");
     }
 
     [Fact]
@@ -140,9 +142,9 @@ public class GetActiveSessionsByGameQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Single(result);
-        Assert.Equal(gameId1, result[0].GameId);
+        result.Should().NotBeNull();
+        result.Should().ContainSingle();
+        result[0].GameId.Should().Be(gameId1);
     }
 
     private static GameSession CreateActiveSession(Guid gameId)

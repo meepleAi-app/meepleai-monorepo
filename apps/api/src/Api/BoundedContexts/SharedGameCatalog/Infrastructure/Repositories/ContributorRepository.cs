@@ -3,6 +3,8 @@ using Api.BoundedContexts.SharedGameCatalog.Domain.Entities;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
 using Api.BoundedContexts.SharedGameCatalog.Domain.ValueObjects;
 using Api.Infrastructure;
+using Api.SharedKernel.Application.Services;
+using Api.SharedKernel.Infrastructure;
 using Api.Infrastructure.Entities.SharedGameCatalog;
 using Microsoft.EntityFrameworkCore;
 
@@ -12,27 +14,26 @@ namespace Api.BoundedContexts.SharedGameCatalog.Infrastructure.Repositories;
 /// Repository implementation for Contributor entity.
 /// ISSUE-2735: API - Endpoints Contributor Stats
 /// </summary>
-internal sealed class ContributorRepository : IContributorRepository
+internal sealed class ContributorRepository : RepositoryBase, IContributorRepository
 {
-    private readonly MeepleAiDbContext _context;
 
-    public ContributorRepository(MeepleAiDbContext context)
+    public ContributorRepository(MeepleAiDbContext dbContext, IDomainEventCollector eventCollector)
+        : base(dbContext, eventCollector)
     {
-        _context = context ?? throw new ArgumentNullException(nameof(context));
     }
 
     public async Task AddAsync(Contributor contributor, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(contributor);
         var entity = MapToEntity(contributor);
-        await _context.Set<ContributorEntity>().AddAsync(entity, cancellationToken).ConfigureAwait(false);
+        await DbContext.Set<ContributorEntity>().AddAsync(entity, cancellationToken).ConfigureAwait(false);
     }
 
     public async Task<List<Contributor>> GetBySharedGameAsync(
         Guid sharedGameId,
         CancellationToken cancellationToken = default)
     {
-        var entities = await _context.Set<ContributorEntity>()
+        var entities = await DbContext.Set<ContributorEntity>()
             .AsNoTracking()
             .Include(c => c.Contributions)
             .Where(c => c.SharedGameId == sharedGameId)
@@ -50,7 +51,7 @@ internal sealed class ContributorRepository : IContributorRepository
         int pageSize,
         CancellationToken cancellationToken = default)
     {
-        var query = _context.Set<ContributorEntity>()
+        var query = DbContext.Set<ContributorEntity>()
             .AsNoTracking()
             .Include(c => c.Contributions)
             .Where(c => c.UserId == userId);
@@ -73,7 +74,7 @@ internal sealed class ContributorRepository : IContributorRepository
         Guid contributorId,
         CancellationToken cancellationToken = default)
     {
-        var entity = await _context.Set<ContributorEntity>()
+        var entity = await DbContext.Set<ContributorEntity>()
             .AsNoTracking()
             .Include(c => c.Contributions)
             .FirstOrDefaultAsync(c => c.Id == contributorId, cancellationToken)
@@ -86,7 +87,7 @@ internal sealed class ContributorRepository : IContributorRepository
     {
         ArgumentNullException.ThrowIfNull(contributor);
         var entity = MapToEntity(contributor);
-        _context.Set<ContributorEntity>().Update(entity);
+        DbContext.Set<ContributorEntity>().Update(entity);
     }
 
     #region Mapping Methods

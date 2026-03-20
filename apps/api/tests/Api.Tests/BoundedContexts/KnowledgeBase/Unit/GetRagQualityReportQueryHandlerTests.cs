@@ -3,6 +3,7 @@ using Api.BoundedContexts.KnowledgeBase.Application.Queries;
 using Api.Tests.Constants;
 using MediatR;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Unit;
 
@@ -14,7 +15,7 @@ public class GetRagQualityReportQueryHandlerTests
     public void Query_ShouldImplementIRequest_WithCorrectResponseType()
     {
         var query = new GetRagQualityReportQuery();
-        Assert.IsAssignableFrom<IRequest<RagQualityReportDto>>(query);
+        query.Should().BeAssignableTo<IRequest<RagQualityReportDto>>();
     }
 
     [Fact]
@@ -42,14 +43,14 @@ public class GetRagQualityReportQueryHandlerTests
             TopGamesByChunkCount: [breakdown],
             EnhancementStatuses: [status]);
 
-        Assert.Equal(100, dto.TotalIndexedDocuments);
-        Assert.Equal(50, dto.TotalRaptorSummaries);
-        Assert.Equal(200, dto.TotalEntityRelations);
-        Assert.Equal(1500, dto.TotalEmbeddedChunks);
-        Assert.Single(dto.TopGamesByChunkCount);
-        Assert.Single(dto.EnhancementStatuses);
-        Assert.Equal("Catan", dto.TopGamesByChunkCount[0].GameTitle);
-        Assert.Equal("AdaptiveRouting", dto.EnhancementStatuses[0].Name);
+        dto.TotalIndexedDocuments.Should().Be(100);
+        dto.TotalRaptorSummaries.Should().Be(50);
+        dto.TotalEntityRelations.Should().Be(200);
+        dto.TotalEmbeddedChunks.Should().Be(1500);
+        dto.TopGamesByChunkCount.Should().ContainSingle();
+        dto.EnhancementStatuses.Should().ContainSingle();
+        dto.TopGamesByChunkCount[0].GameTitle.Should().Be("Catan");
+        dto.EnhancementStatuses[0].Name.Should().Be("AdaptiveRouting");
     }
 
     [Fact]
@@ -57,7 +58,7 @@ public class GetRagQualityReportQueryHandlerTests
     {
         var a = new RagQualityGameBreakdown(Guid.Empty, "Test", 10, 2, 3);
         var b = new RagQualityGameBreakdown(Guid.Empty, "Test", 10, 2, 3);
-        Assert.Equal(a, b); // Records have value equality
+        b.Should().Be(a); // Records have value equality
     }
 
     [Fact]
@@ -65,6 +66,6 @@ public class GetRagQualityReportQueryHandlerTests
     {
         var a = new RagEnhancementStatusDto("X", "key", true, false, true);
         var b = new RagEnhancementStatusDto("X", "key", true, false, true);
-        Assert.Equal(a, b);
+        b.Should().Be(a);
     }
 }

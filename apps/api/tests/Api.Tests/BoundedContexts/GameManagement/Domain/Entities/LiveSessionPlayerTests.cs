@@ -3,6 +3,7 @@ using Api.BoundedContexts.GameManagement.Domain.Enums;
 using Api.SharedKernel.Domain.Exceptions;
 using Api.Tests.Constants;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.GameManagement.Domain.Entities;
 
@@ -32,54 +33,56 @@ public class LiveSessionPlayerTests
         var userId = Guid.NewGuid();
         var player = CreatePlayer(userId: userId);
 
-        Assert.Equal("Marco", player.DisplayName);
-        Assert.Equal(PlayerColor.Red, player.Color);
-        Assert.Equal(PlayerRole.Player, player.Role);
-        Assert.Equal(userId, player.UserId);
-        Assert.Equal(0, player.TotalScore);
-        Assert.Equal(0, player.CurrentRank);
-        Assert.True(player.IsActive);
-        Assert.Null(player.TeamId);
+        player.DisplayName.Should().Be("Marco");
+        player.Color.Should().Be(PlayerColor.Red);
+        player.Role.Should().Be(PlayerRole.Player);
+        player.UserId.Should().Be(userId);
+        player.TotalScore.Should().Be(0);
+        player.CurrentRank.Should().Be(0);
+        (player.IsActive).Should().BeTrue();
+        player.TeamId.Should().BeNull();
     }
 
     [Fact]
     public void Constructor_GuestPlayer_NoUserId()
     {
         var player = CreatePlayer(userId: null);
-        Assert.Null(player.UserId);
+        player.UserId.Should().BeNull();
     }
 
     [Fact]
     public void Constructor_EmptyPlayerId_ThrowsValidationException()
     {
-        Assert.Throws<ValidationException>(() =>
-            new LiveSessionPlayer(Guid.Empty, Guid.NewGuid(), null, "Test", PlayerColor.Red, PlayerRole.Player, DateTime.UtcNow));
+        var act = () =>
+            new LiveSessionPlayer(Guid.Empty, Guid.NewGuid(), null, "Test", PlayerColor.Red, PlayerRole.Player, DateTime.UtcNow);
+        act.Should().Throw<ValidationException>();
     }
 
     [Fact]
     public void Constructor_EmptySessionId_ThrowsValidationException()
     {
-        Assert.Throws<ValidationException>(() =>
-            new LiveSessionPlayer(Guid.NewGuid(), Guid.Empty, null, "Test", PlayerColor.Red, PlayerRole.Player, DateTime.UtcNow));
+        var act = () =>
+            new LiveSessionPlayer(Guid.NewGuid(), Guid.Empty, null, "Test", PlayerColor.Red, PlayerRole.Player, DateTime.UtcNow);
+        act.Should().Throw<ValidationException>();
     }
 
     [Fact]
     public void Constructor_EmptyDisplayName_ThrowsValidationException()
     {
-        Assert.Throws<ValidationException>(() => CreatePlayer(displayName: ""));
+        ((Action)(() => CreatePlayer(displayName: ""))).Should().Throw<ValidationException>();
     }
 
     [Fact]
     public void Constructor_DisplayNameTooLong_ThrowsValidationException()
     {
-        Assert.Throws<ValidationException>(() => CreatePlayer(displayName: new string('x', 101)));
+        ((Action)(() => CreatePlayer(displayName: new string('x', 101)))).Should().Throw<ValidationException>();
     }
 
     [Fact]
     public void Constructor_TrimsDisplayName()
     {
         var player = CreatePlayer(displayName: "  Marco  ");
-        Assert.Equal("Marco", player.DisplayName);
+        player.DisplayName.Should().Be("Marco");
     }
 
     [Fact]
@@ -88,8 +91,8 @@ public class LiveSessionPlayerTests
         var player = CreatePlayer();
         player.UpdateScore(42, 1);
 
-        Assert.Equal(42, player.TotalScore);
-        Assert.Equal(1, player.CurrentRank);
+        player.TotalScore.Should().Be(42);
+        player.CurrentRank.Should().Be(1);
     }
 
     [Fact]
@@ -100,7 +103,7 @@ public class LiveSessionPlayerTests
 
         player.AssignToTeam(teamId);
 
-        Assert.Equal(teamId, player.TeamId);
+        player.TeamId.Should().Be(teamId);
     }
 
     [Fact]
@@ -110,7 +113,7 @@ public class LiveSessionPlayerTests
         player.AssignToTeam(Guid.NewGuid());
         player.AssignToTeam(null);
 
-        Assert.Null(player.TeamId);
+        player.TeamId.Should().BeNull();
     }
 
     [Fact]
@@ -119,7 +122,7 @@ public class LiveSessionPlayerTests
         var player = CreatePlayer(role: PlayerRole.Player);
         player.ChangeRole(PlayerRole.Host);
 
-        Assert.Equal(PlayerRole.Host, player.Role);
+        player.Role.Should().Be(PlayerRole.Host);
     }
 
     [Fact]
@@ -128,7 +131,7 @@ public class LiveSessionPlayerTests
         var player = CreatePlayer();
         player.Deactivate();
 
-        Assert.False(player.IsActive);
+        (player.IsActive).Should().BeFalse();
     }
 
     [Fact]
@@ -138,7 +141,7 @@ public class LiveSessionPlayerTests
         player.Deactivate();
         player.Activate();
 
-        Assert.True(player.IsActive);
+        (player.IsActive).Should().BeTrue();
     }
 
     [Fact]
@@ -147,14 +150,14 @@ public class LiveSessionPlayerTests
         var player = CreatePlayer();
         player.UpdateDisplayName("Luca");
 
-        Assert.Equal("Luca", player.DisplayName);
+        player.DisplayName.Should().Be("Luca");
     }
 
     [Fact]
     public void UpdateDisplayName_Empty_ThrowsValidationException()
     {
         var player = CreatePlayer();
-        Assert.Throws<ValidationException>(() => player.UpdateDisplayName(""));
+        ((Action)(() => player.UpdateDisplayName(""))).Should().Throw<ValidationException>();
     }
 
     [Fact]
@@ -163,6 +166,6 @@ public class LiveSessionPlayerTests
         var player = CreatePlayer(color: PlayerColor.Red);
         player.UpdateColor(PlayerColor.Blue);
 
-        Assert.Equal(PlayerColor.Blue, player.Color);
+        player.Color.Should().Be(PlayerColor.Blue);
     }
 }

@@ -12,6 +12,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Services;
 
@@ -246,8 +247,8 @@ public sealed class OpenRouterRpmAlertBackgroundServiceTests : IDisposable
         await InvokeCheckRpmAsync(sut);
 
         // Assert
-        Assert.NotNull(captured);
-        Assert.True(captured!.Severity.IsError);
+        captured.Should().NotBeNull();
+        captured!.Severity.IsError.Should().BeTrue();
     }
 
     [Fact]
@@ -274,7 +275,7 @@ public sealed class OpenRouterRpmAlertBackgroundServiceTests : IDisposable
         await InvokeCheckRpmAsync(sut);
 
         // Assert
-        Assert.NotNull(captured);
-        Assert.True(captured!.Severity.IsWarning);
+        captured.Should().NotBeNull();
+        captured!.Severity.IsWarning.Should().BeTrue();
     }
 }

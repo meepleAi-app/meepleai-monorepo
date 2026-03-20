@@ -1,12 +1,14 @@
 using Api.BoundedContexts.KnowledgeBase.Application.Commands;
 using Api.BoundedContexts.KnowledgeBase.Application.DTOs;
-using Api.BoundedContexts.KnowledgeBase.Application.Handlers;
+using Api.BoundedContexts.KnowledgeBase.Application.Commands;
+using Api.BoundedContexts.KnowledgeBase.Application.Queries;
 using Api.BoundedContexts.KnowledgeBase.Infrastructure.Repositories;
 using Api.Infrastructure.Entities.KnowledgeBase;
 using Api.Tests.Constants;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Handlers.RagDashboard;
 
@@ -49,8 +51,8 @@ public class SaveRagConfigCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal(config.ActiveStrategy, result.ActiveStrategy);
+        result.Should().NotBeNull();
+        result.ActiveStrategy.Should().Be(config.ActiveStrategy);
     }
 
     [Fact]
@@ -70,10 +72,10 @@ public class SaveRagConfigCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.Equal("Semantic", result.ActiveStrategy);
-        Assert.Equal(config.Generation.Temperature, result.Generation.Temperature);
-        Assert.Equal(config.Retrieval.ChunkSize, result.Retrieval.ChunkSize);
-        Assert.Equal(config.Reranker.Model, result.Reranker.Model);
+        result.ActiveStrategy.Should().Be("Semantic");
+        result.Generation.Temperature.Should().Be(config.Generation.Temperature);
+        result.Retrieval.ChunkSize.Should().Be(config.Retrieval.ChunkSize);
+        result.Reranker.Model.Should().Be(config.Reranker.Model);
     }
 
     [Fact]
@@ -123,7 +125,7 @@ public class SaveRagConfigCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.Equal(strategy, result.ActiveStrategy);
+        result.ActiveStrategy.Should().Be(strategy);
     }
 
     [Fact]
@@ -141,10 +143,10 @@ public class SaveRagConfigCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.Equal(config.Generation.Temperature, result.Generation.Temperature);
-        Assert.Equal(config.Generation.TopK, result.Generation.TopK);
-        Assert.Equal(config.Generation.TopP, result.Generation.TopP);
-        Assert.Equal(config.Generation.MaxTokens, result.Generation.MaxTokens);
+        result.Generation.Temperature.Should().Be(config.Generation.Temperature);
+        result.Generation.TopK.Should().Be(config.Generation.TopK);
+        result.Generation.TopP.Should().Be(config.Generation.TopP);
+        result.Generation.MaxTokens.Should().Be(config.Generation.MaxTokens);
     }
 
     [Fact]
@@ -162,10 +164,10 @@ public class SaveRagConfigCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.Equal(config.Retrieval.ChunkSize, result.Retrieval.ChunkSize);
-        Assert.Equal(config.Retrieval.ChunkOverlap, result.Retrieval.ChunkOverlap);
-        Assert.Equal(config.Retrieval.TopResults, result.Retrieval.TopResults);
-        Assert.Equal(config.Retrieval.SimilarityThreshold, result.Retrieval.SimilarityThreshold);
+        result.Retrieval.ChunkSize.Should().Be(config.Retrieval.ChunkSize);
+        result.Retrieval.ChunkOverlap.Should().Be(config.Retrieval.ChunkOverlap);
+        result.Retrieval.TopResults.Should().Be(config.Retrieval.TopResults);
+        result.Retrieval.SimilarityThreshold.Should().Be(config.Retrieval.SimilarityThreshold);
     }
 
     private static RagConfigDto CreateValidConfig()

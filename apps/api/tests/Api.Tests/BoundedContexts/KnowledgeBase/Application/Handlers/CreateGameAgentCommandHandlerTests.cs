@@ -1,6 +1,7 @@
 using Api.BoundedContexts.KnowledgeBase.Application.Commands;
-using Api.BoundedContexts.KnowledgeBase.Application.Handlers;
+using Api.BoundedContexts.KnowledgeBase.Application.Queries;
 using Api.BoundedContexts.KnowledgeBase.Domain.Entities;
+using Api.BoundedContexts.KnowledgeBase.Domain.Enums;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Aggregates;
@@ -12,6 +13,7 @@ using Api.SharedKernel.Infrastructure.Persistence;
 using Api.Tests.Constants;
 using LibraryAgentConfiguration = Api.BoundedContexts.UserLibrary.Domain.ValueObjects.AgentConfiguration;
 using Microsoft.Extensions.Logging;
+using FluentAssertions;
 using Moq;
 using Xunit;
 
@@ -54,8 +56,9 @@ public sealed class CreateGameAgentCommandHandlerTests
             _unitOfWorkMock.Object,
             _loggerMock.Object);
 
-        // Default: game and approved typology found
+        // Default: game found, KB indexed, and approved typology found
         SetupGameFound();
+        SetupCompletedKnowledgeBase();
         SetupApprovedTypology();
     }
 
@@ -74,11 +77,11 @@ public sealed class CreateGameAgentCommandHandlerTests
         var command = BuildCommand(userTier: "Free", userRole: "User");
 
         // Act & Assert
-        var ex = await Assert.ThrowsAsync<ConflictException>(
-            () => _handler.Handle(command, TestContext.Current.CancellationToken));
+        Func<Task> act = () => _handler.Handle(command, TestContext.Current.CancellationToken);
+        var ex = (await act.Should().ThrowAsync<ConflictException>()).Which;
 
-        Assert.Contains("Agent limit reached (3)", ex.Message, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("Upgrade your tier", ex.Message, StringComparison.OrdinalIgnoreCase);
+        ex.Message.Should().ContainEquivalentOf("Agent limit reached (3)");
+        ex.Message.Should().ContainEquivalentOf("Upgrade your tier");
     }
 
     [Fact]
@@ -92,8 +95,8 @@ public sealed class CreateGameAgentCommandHandlerTests
         var command = BuildCommand(userTier: "Free", userRole: "User");
 
         // Act & Assert
-        await Assert.ThrowsAsync<ConflictException>(
-            () => _handler.Handle(command, TestContext.Current.CancellationToken));
+        Func<Task> act = () => _handler.Handle(command, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<ConflictException>();
     }
 
     [Fact]
@@ -120,8 +123,8 @@ public sealed class CreateGameAgentCommandHandlerTests
         // Act & Assert: admin bypasses quota — handler completes successfully
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
-        Assert.NotNull(result);
-        Assert.Equal("ready", result.Status);
+        result.Should().NotBeNull();
+        result.Status.Should().Be("ready");
     }
 
     [Fact]
@@ -146,8 +149,8 @@ public sealed class CreateGameAgentCommandHandlerTests
         // Act & Assert: editor bypasses quota — handler completes successfully
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
-        Assert.NotNull(result);
-        Assert.Equal("ready", result.Status);
+        result.Should().NotBeNull();
+        result.Status.Should().Be("ready");
     }
 
     [Fact]
@@ -167,10 +170,10 @@ public sealed class CreateGameAgentCommandHandlerTests
         var command = BuildCommand(userTier: "Free", userRole: "User");
 
         // Act & Assert: quota check passes; conflicts on "already exists" (not quota)
-        var ex = await Assert.ThrowsAsync<ConflictException>(
-            () => _handler.Handle(command, TestContext.Current.CancellationToken));
+        Func<Task> act = () => _handler.Handle(command, TestContext.Current.CancellationToken);
+        var ex = (await act.Should().ThrowAsync<ConflictException>()).Which;
 
-        Assert.DoesNotContain("Agent limit reached", ex.Message, StringComparison.OrdinalIgnoreCase);
+        ex.Message.Should().NotContainEquivalentOf("Agent limit reached");
     }
 
     [Fact]
@@ -189,10 +192,10 @@ public sealed class CreateGameAgentCommandHandlerTests
         var command = BuildCommand(userTier: "Premium", userRole: "User");
 
         // Act & Assert: quota passes (premium allows 50); conflicts on "already exists"
-        var ex = await Assert.ThrowsAsync<ConflictException>(
-            () => _handler.Handle(command, TestContext.Current.CancellationToken));
+        Func<Task> act = () => _handler.Handle(command, TestContext.Current.CancellationToken);
+        var ex = (await act.Should().ThrowAsync<ConflictException>()).Which;
 
-        Assert.DoesNotContain("Agent limit reached", ex.Message, StringComparison.OrdinalIgnoreCase);
+        ex.Message.Should().NotContainEquivalentOf("Agent limit reached");
     }
 
     // ──────────────────────────────────────────────────
@@ -229,6 +232,18 @@ public sealed class CreateGameAgentCommandHandlerTests
         _gameRepoMock
             .Setup(r => r.GetByIdAsync(_gameId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(game);
+    }
+
+    private void SetupCompletedKnowledgeBase()
+    {
+        var indexingInfo = new VectorDocumentIndexingInfo(
+            VectorDocumentIndexingStatus.Completed,
+            ChunkCount: 10,
+            IndexingError: null);
+
+        _vectorDocRepoMock
+            .Setup(r => r.GetIndexingInfoByGameIdAsync(_gameId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(indexingInfo);
     }
 
     private void SetupApprovedTypology()

@@ -1,10 +1,12 @@
-using Api.BoundedContexts.GameManagement.Application.Handlers;
+using Api.BoundedContexts.GameManagement.Application.Commands;
+using Api.BoundedContexts.GameManagement.Application.Queries;
 using Api.BoundedContexts.GameManagement.Application.Queries;
 using Api.BoundedContexts.GameManagement.Domain.Entities;
 using Api.BoundedContexts.GameManagement.Domain.Repositories;
 using Api.BoundedContexts.GameManagement.Domain.ValueObjects;
 using Moq;
 using Xunit;
+using FluentAssertions;
 using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.GameManagement.Application.Handlers;
@@ -40,12 +42,12 @@ public class GetGameSessionByIdQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal(session.Id, result.Id);
-        Assert.Equal(gameId, result.GameId);
-        Assert.Equal("Setup", result.Status);
-        Assert.NotNull(result.Players);
-        Assert.Single(result.Players);
+        result.Should().NotBeNull();
+        result.Id.Should().Be(session.Id);
+        result.GameId.Should().Be(gameId);
+        result.Status.Should().Be("Setup");
+        result.Players.Should().NotBeNull();
+        result.Players.Should().ContainSingle();
     }
 
     [Fact]
@@ -63,7 +65,7 @@ public class GetGameSessionByIdQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.Null(result);
+        result.Should().BeNull();
     }
 
     [Fact]
@@ -94,11 +96,11 @@ public class GetGameSessionByIdQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal(3, result.Players.Count);
-        Assert.Equal("Player 1", result.Players[0].PlayerName);
-        Assert.Equal(1, result.Players[0].PlayerOrder);
-        Assert.Equal("Red", result.Players[0].Color);
+        result.Should().NotBeNull();
+        result.Players.Count.Should().Be(3);
+        result.Players[0].PlayerName.Should().Be("Player 1");
+        result.Players[0].PlayerOrder.Should().Be(1);
+        result.Players[0].Color.Should().Be("Red");
     }
 
     [Fact]
@@ -125,8 +127,9 @@ public class GetGameSessionByIdQueryHandlerTests
     public async Task Handle_WithNullQuery_ThrowsArgumentNullException()
     {
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentNullException>(
-            () => _handler.Handle(null!, TestContext.Current.CancellationToken));
+        var act = 
+            () => _handler.Handle(null!, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<ArgumentNullException>();
     }
 
     [Fact]
@@ -147,10 +150,10 @@ public class GetGameSessionByIdQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal("Completed", result.Status);
-        Assert.Equal("Player 1", result.WinnerName);
-        Assert.NotNull(result.CompletedAt);
+        result.Should().NotBeNull();
+        result.Status.Should().Be("Completed");
+        result.WinnerName.Should().Be("Player 1");
+        result.CompletedAt.Should().NotBeNull();
     }
 
     private static GameSession CreateSession(Guid gameId)

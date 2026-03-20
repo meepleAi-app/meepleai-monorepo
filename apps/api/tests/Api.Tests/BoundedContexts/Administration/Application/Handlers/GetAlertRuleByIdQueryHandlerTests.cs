@@ -1,4 +1,4 @@
-using Api.BoundedContexts.Administration.Application.Handlers.AlertRules;
+using Api.BoundedContexts.Administration.Application.Commands.AlertRules;
 using Api.BoundedContexts.Administration.Application.Queries.AlertRules;
 using Api.BoundedContexts.Administration.Domain.Aggregates.AlertRules;
 using Api.BoundedContexts.Administration.Domain.Repositories;
@@ -142,8 +142,9 @@ public class GetAlertRuleByIdQueryHandlerTests
         GetAlertRuleByIdQuery? query = null;
 
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentNullException>(() =>
-            _handler.Handle(query!, CancellationToken.None));
+        var act = () =>
+            _handler.Handle(query!, CancellationToken.None);
+        await act.Should().ThrowAsync<ArgumentNullException>();
 
         _mockRepository.Verify(r => r.GetByIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Never);
     }
@@ -152,6 +153,7 @@ public class GetAlertRuleByIdQueryHandlerTests
     public void Constructor_WithNullRepository_ThrowsArgumentNullException()
     {
         // Act & Assert
-        Assert.Throws<ArgumentNullException>(() => new GetAlertRuleByIdQueryHandler(null!));
+        var act = () => new GetAlertRuleByIdQueryHandler(null!);
+act.Should().Throw<ArgumentNullException>();
     }
 }

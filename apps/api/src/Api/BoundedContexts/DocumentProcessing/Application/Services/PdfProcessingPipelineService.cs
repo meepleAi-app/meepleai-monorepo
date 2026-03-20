@@ -34,7 +34,7 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
     private readonly ILogger<PdfProcessingPipelineService> _logger;
     private readonly IRaptorIndexer? _raptorIndexer;
     private readonly IEntityExtractor? _entityExtractor;
-    private readonly IQdrantVectorStoreAdapter? _vectorStore;
+    private readonly IVectorStoreAdapter? _vectorStore;
     private readonly IFeatureFlagService? _featureFlagService;
 
     public PdfProcessingPipelineService(
@@ -48,7 +48,7 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
         ILogger<PdfProcessingPipelineService> logger,
         IRaptorIndexer? raptorIndexer = null,
         IEntityExtractor? entityExtractor = null,
-        IQdrantVectorStoreAdapter? vectorStore = null,
+        IVectorStoreAdapter? vectorStore = null,
         IFeatureFlagService? featureFlagService = null)
     {
         _db = db ?? throw new ArgumentNullException(nameof(db));

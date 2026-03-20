@@ -53,7 +53,7 @@ export function SecretsPanel() {
       setDirtyValues({});
       setShowRestartBanner(true);
       refetch();
-    } catch (err) {
+    } catch (_err) {
       toast({ title: 'Errore durante il salvataggio', variant: 'destructive' });
     } finally {
       setIsSaving(false);

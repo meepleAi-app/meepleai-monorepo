@@ -15,6 +15,7 @@ using Microsoft.Extensions.Logging;
 using Moq;
 using Npgsql;
 using Xunit;
+using FluentAssertions;
 using Api.Tests.Constants;
 
 namespace Api.Tests.Integration.Authentication;
@@ -167,16 +168,16 @@ public sealed class AdminDisable2FAIntegrationTests : IAsyncLifetime
 
         // Assert
         _output("Verifying results...");
-        Assert.NotNull(result);
-        Assert.True(result.Success, $"Expected Success=true, got: {result.ErrorMessage}");
-        Assert.Null(result.ErrorMessage);
+        result.Should().NotBeNull();
+        result.Success.Should().BeTrue($"Expected Success=true, got: {result.ErrorMessage}");
+        result.ErrorMessage.Should().BeNull();
 
         // Verify 2FA is disabled in database
         var userRepository = _serviceProvider!.GetRequiredService<IUserRepository>();
         var updatedTargetUser = await userRepository.GetByIdAsync(targetUser.Id, TestCancellationToken);
-        Assert.NotNull(updatedTargetUser);
-        Assert.False(updatedTargetUser.IsTwoFactorEnabled, "2FA should be disabled");
-        Assert.Null(updatedTargetUser.TwoFactorEnabledAt);
+        updatedTargetUser.Should().NotBeNull();
+        updatedTargetUser.IsTwoFactorEnabled.Should().BeFalse("2FA should be disabled");
+        updatedTargetUser.TwoFactorEnabledAt.Should().BeNull();
 
         // Verify email notification was triggered
         _mockEmailService!.Verify(
@@ -233,15 +234,15 @@ public sealed class AdminDisable2FAIntegrationTests : IAsyncLifetime
         var result = await _mediator!.Send(command, TestCancellationToken);
 
         // Assert
-        Assert.False(result.Success);
-        Assert.Contains("Unauthorized", result.ErrorMessage);
-        Assert.Contains("Admin role required", result.ErrorMessage);
+        result.Success.Should().BeFalse();
+        result.ErrorMessage.Should().Contain("Unauthorized");
+        result.ErrorMessage.Should().Contain("Admin role required");
 
         // Verify 2FA is still enabled
         var userRepository = _serviceProvider!.GetRequiredService<IUserRepository>();
         var updatedTargetUser = await userRepository.GetByIdAsync(targetUser.Id, TestCancellationToken);
-        Assert.NotNull(updatedTargetUser);
-        Assert.True(updatedTargetUser.IsTwoFactorEnabled, "2FA should remain enabled");
+        updatedTargetUser.Should().NotBeNull();
+        updatedTargetUser.IsTwoFactorEnabled.Should().BeTrue("2FA should remain enabled");
 
         // Verify no email was sent
         _mockEmailService!.Verify(
@@ -273,8 +274,8 @@ public sealed class AdminDisable2FAIntegrationTests : IAsyncLifetime
         var result = await _mediator!.Send(command, TestCancellationToken);
 
         // Assert
-        Assert.False(result.Success);
-        Assert.Equal("Admin user not found", result.ErrorMessage);
+        result.Success.Should().BeFalse();
+        result.ErrorMessage.Should().Be("Admin user not found");
 
         _output("✓ Test passed: Non-existent admin user handled correctly");
     }
@@ -295,8 +296,8 @@ public sealed class AdminDisable2FAIntegrationTests : IAsyncLifetime
         var result = await _mediator!.Send(command, TestCancellationToken);
 
         // Assert
-        Assert.False(result.Success);
-        Assert.Equal("Target user not found", result.ErrorMessage);
+        result.Success.Should().BeFalse();
+        result.ErrorMessage.Should().Be("Target user not found");
 
         _output("✓ Test passed: Non-existent target user handled correctly");
     }
@@ -328,8 +329,8 @@ public sealed class AdminDisable2FAIntegrationTests : IAsyncLifetime
         var result = await _mediator!.Send(command, TestCancellationToken);
 
         // Assert
-        Assert.False(result.Success);
-        Assert.Contains("not enabled", result.ErrorMessage);
+        result.Success.Should().BeFalse();
+        result.ErrorMessage.Should().Contain("not enabled");
 
         _output("✓ Test passed: Attempting to disable non-enabled 2FA handled correctly");
     }
@@ -360,11 +361,11 @@ public sealed class AdminDisable2FAIntegrationTests : IAsyncLifetime
         var result = await _mediator!.Send(command, TestCancellationToken);
 
         // Assert - Admin should be allowed to disable their own 2FA via this endpoint
-        Assert.True(result.Success);
+        result.Success.Should().BeTrue();
 
         var updatedAdmin = await userRepository.GetByIdAsync(adminUser.Id, TestCancellationToken);
-        Assert.NotNull(updatedAdmin);
-        Assert.False(updatedAdmin.IsTwoFactorEnabled);
+        updatedAdmin.Should().NotBeNull();
+        updatedAdmin.IsTwoFactorEnabled.Should().BeFalse();
 
         // Email should be sent to admin
         _mockEmailService!.Verify(

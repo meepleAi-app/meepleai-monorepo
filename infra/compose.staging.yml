@@ -27,22 +27,6 @@ services:
       - redisdata-staging:/data
       - ./redis/redis.conf:/etc/redis/redis.conf:ro
 
-  qdrant:
-    restart: always
-    env_file: [./secrets/staging/qdrant.secret]
-    environment:
-      QDRANT__SERVICE__API_KEY: ${QDRANT_API_KEY:?QDRANT_API_KEY is required - see secrets/qdrant.secret.example}
-    volumes:
-      - qdrantdata-staging:/qdrant/storage
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.qdrant.rule=Host(`meepleai.app`) && PathPrefix(`/services/qdrant`)"
-      - "traefik.http.routers.qdrant.entrypoints=websecure"
-      - "traefik.http.routers.qdrant.tls.certresolver=letsencrypt"
-      - "traefik.http.routers.qdrant.middlewares=integration-auth,strip-services-qdrant"
-      - "traefik.http.middlewares.strip-services-qdrant.stripprefix.prefixes=/services/qdrant"
-      - "traefik.http.services.qdrant.loadbalancer.server.port=6333"
-
   # ===========================================================================
   # Application Services
   # ===========================================================================
@@ -56,7 +40,6 @@ services:
       - ./secrets/staging/openrouter.secret
       - ./secrets/staging/oauth.secret
       - ./secrets/staging/redis.secret
-      - ./secrets/staging/qdrant.secret
       - ./secrets/staging/embedding-service.secret
       - ./secrets/staging/email.secret
       - ./secrets/staging/storage.secret
@@ -67,7 +50,6 @@ services:
       POSTGRES_USER: ${POSTGRES_USER:-meepleai}
       POSTGRES_DB: ${POSTGRES_DB:-meepleai_staging}
       REDIS_HOST: redis
-      QDRANT_URL: http://qdrant:6333
       EMBEDDING_PROVIDER: external
       Embedding__Provider: External
       LOCAL_EMBEDDING_URL: http://embedding-service:8000
@@ -238,8 +220,6 @@ services:
 volumes:
   pgdata-staging:
     name: meepleai-pgdata-staging
-  qdrantdata-staging:
-    name: meepleai-qdrantdata-staging
   redisdata-staging:
     name: meepleai-redisdata-staging
   prometheus-staging:

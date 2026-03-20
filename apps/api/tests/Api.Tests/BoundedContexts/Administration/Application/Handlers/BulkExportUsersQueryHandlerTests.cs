@@ -1,10 +1,7 @@
-using Api.BoundedContexts.Administration.Application.Commands;
 using Api.BoundedContexts.Administration.Application.Queries;
-using Api.BoundedContexts.Administration.Application.Queries;
-using Api.BoundedContexts.Authentication.Domain.Entities;
-using Api.SharedKernel.Domain.ValueObjects;
-using Api.BoundedContexts.Authentication.Domain.ValueObjects;
-using Api.BoundedContexts.Authentication.Infrastructure.Persistence;
+using Api.BoundedContexts.Administration.Domain.Entities;
+using Api.BoundedContexts.Administration.Domain.Repositories;
+using Api.Tests.BoundedContexts.Administration.TestHelpers;
 using FluentAssertions;
 using Microsoft.Extensions.Logging;
 using Moq;
@@ -14,19 +11,19 @@ using Api.Tests.Constants;
 namespace Api.Tests.BoundedContexts.Administration.Application.Handlers;
 
 [Trait("Category", TestCategories.Unit)]
-
+[Trait("BoundedContext", "Administration")]
 public class BulkExportUsersQueryHandlerTests
 {
-    private readonly Mock<IUserRepository> _mockUserRepository;
+    private readonly Mock<IUserProfileRepository> _mockUserProfileRepository;
     private readonly Mock<ILogger<BulkExportUsersQueryHandler>> _mockLogger;
     private readonly BulkExportUsersQueryHandler _handler;
 
     public BulkExportUsersQueryHandlerTests()
     {
-        _mockUserRepository = new Mock<IUserRepository>();
+        _mockUserProfileRepository = new Mock<IUserProfileRepository>();
         _mockLogger = new Mock<ILogger<BulkExportUsersQueryHandler>>();
         _handler = new BulkExportUsersQueryHandler(
-            _mockUserRepository.Object,
+            _mockUserProfileRepository.Object,
             _mockLogger.Object
         );
     }
@@ -35,14 +32,14 @@ public class BulkExportUsersQueryHandlerTests
     public async Task Handle_WithNoFilters_ShouldExportAllUsers()
     {
         // Arrange
-        var users = new List<User>
+        var users = new List<UserProfile>
         {
-            CreateTestUser(Guid.NewGuid(), "user1@test.com", "User One", Role.User),
-            CreateTestUser(Guid.NewGuid(), "admin@test.com", "Admin User", Role.Admin),
-            CreateTestUser(Guid.NewGuid(), "editor@test.com", "Editor User", Role.Editor)
+            new UserProfileBuilder().WithEmail("user1@test.com").WithDisplayName("User One").WithRole("user").Build(),
+            new UserProfileBuilder().WithEmail("admin@test.com").WithDisplayName("Admin User").WithRole("admin").Build(),
+            new UserProfileBuilder().WithEmail("editor@test.com").WithDisplayName("Editor User").WithRole("editor").Build()
         };
 
-        _mockUserRepository.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
+        _mockUserProfileRepository.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(users);
 
         var query = new BulkExportUsersQuery();
@@ -63,14 +60,14 @@ public class BulkExportUsersQueryHandlerTests
     public async Task Handle_WithRoleFilter_ShouldExportOnlyMatchingUsers()
     {
         // Arrange
-        var users = new List<User>
+        var users = new List<UserProfile>
         {
-            CreateTestUser(Guid.NewGuid(), "user1@test.com", "User One", Role.User),
-            CreateTestUser(Guid.NewGuid(), "admin@test.com", "Admin User", Role.Admin),
-            CreateTestUser(Guid.NewGuid(), "user2@test.com", "User Two", Role.User)
+            new UserProfileBuilder().WithEmail("user1@test.com").WithDisplayName("User One").WithRole("user").Build(),
+            new UserProfileBuilder().WithEmail("admin@test.com").WithDisplayName("Admin User").WithRole("admin").Build(),
+            new UserProfileBuilder().WithEmail("user2@test.com").WithDisplayName("User Two").WithRole("user").Build()
         };
 
-        _mockUserRepository.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
+        _mockUserProfileRepository.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(users);
 
         var query = new BulkExportUsersQuery(Role: "user");
@@ -89,14 +86,14 @@ public class BulkExportUsersQueryHandlerTests
     public async Task Handle_WithSearchFilter_ShouldExportMatchingUsers()
     {
         // Arrange
-        var users = new List<User>
+        var users = new List<UserProfile>
         {
-            CreateTestUser(Guid.NewGuid(), "john@test.com", "John Doe", Role.User),
-            CreateTestUser(Guid.NewGuid(), "jane@test.com", "Jane Smith", Role.User),
-            CreateTestUser(Guid.NewGuid(), "johnny@test.com", "Johnny Walker", Role.User)
+            new UserProfileBuilder().WithEmail("john@test.com").WithDisplayName("John Doe").Build(),
+            new UserProfileBuilder().WithEmail("jane@test.com").WithDisplayName("Jane Smith").Build(),
+            new UserProfileBuilder().WithEmail("johnny@test.com").WithDisplayName("Johnny Walker").Build()
         };
 
-        _mockUserRepository.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
+        _mockUserProfileRepository.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(users);
 
         var query = new BulkExportUsersQuery(SearchTerm: "john");
@@ -114,14 +111,14 @@ public class BulkExportUsersQueryHandlerTests
     public async Task Handle_WithRoleAndSearchFilters_ShouldApplyBothFilters()
     {
         // Arrange
-        var users = new List<User>
+        var users = new List<UserProfile>
         {
-            CreateTestUser(Guid.NewGuid(), "admin1@test.com", "Admin One", Role.Admin),
-            CreateTestUser(Guid.NewGuid(), "admin2@test.com", "Admin Two", Role.Admin),
-            CreateTestUser(Guid.NewGuid(), "user1@test.com", "User One", Role.User)
+            new UserProfileBuilder().WithEmail("admin1@test.com").WithDisplayName("Admin One").WithRole("admin").Build(),
+            new UserProfileBuilder().WithEmail("admin2@test.com").WithDisplayName("Admin Two").WithRole("admin").Build(),
+            new UserProfileBuilder().WithEmail("user1@test.com").WithDisplayName("User One").WithRole("user").Build()
         };
 
-        _mockUserRepository.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
+        _mockUserProfileRepository.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(users);
 
         var query = new BulkExportUsersQuery(Role: "admin", SearchTerm: "One");
@@ -140,8 +137,8 @@ public class BulkExportUsersQueryHandlerTests
     public async Task Handle_WithNoMatchingUsers_ShouldReturnHeaderOnly()
     {
         // Arrange
-        _mockUserRepository.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<User>());
+        _mockUserProfileRepository.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<UserProfile>());
 
         var query = new BulkExportUsersQuery();
 
@@ -156,12 +153,12 @@ public class BulkExportUsersQueryHandlerTests
     public async Task Handle_WithSpecialCharactersInFields_ShouldEscapeProperly()
     {
         // Arrange
-        var users = new List<User>
+        var users = new List<UserProfile>
         {
-            CreateTestUser(Guid.NewGuid(), "user@test.com", "User, With Comma", Role.User)
+            new UserProfileBuilder().WithEmail("user@test.com").WithDisplayName("User, With Comma").Build()
         };
 
-        _mockUserRepository.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
+        _mockUserProfileRepository.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(users);
 
         var query = new BulkExportUsersQuery();
@@ -177,11 +174,15 @@ public class BulkExportUsersQueryHandlerTests
     public async Task Handle_ShouldIncludeCreatedAtTimestamp()
     {
         // Arrange
-        var user = CreateTestUser(Guid.NewGuid(), "user@test.com", "Test User", Role.User);
-        var users = new List<User> { user };
+        var createdAt = new DateTime(2025, 6, 15, 10, 30, 0, DateTimeKind.Utc);
+        var user = new UserProfileBuilder()
+            .WithEmail("user@test.com")
+            .WithDisplayName("Test User")
+            .WithCreatedAt(createdAt)
+            .Build();
 
-        _mockUserRepository.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(users);
+        _mockUserProfileRepository.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<UserProfile> { user });
 
         var query = new BulkExportUsersQuery();
 
@@ -189,17 +190,6 @@ public class BulkExportUsersQueryHandlerTests
         var csv = await _handler.Handle(query, CancellationToken.None);
 
         // Assert
-        csv.Should().Contain(user.CreatedAt.ToString("yyyy-MM-dd HH:mm:ss"));
-    }
-
-    private static User CreateTestUser(Guid id, string email, string displayName, Role role)
-    {
-        return new User(
-            id: id,
-            email: new Email(email),
-            displayName: displayName,
-            passwordHash: PasswordHash.Create("Password123!"),
-            role: role
-        );
+        csv.Should().Contain(createdAt.ToString("yyyy-MM-dd HH:mm:ss"));
     }
 }

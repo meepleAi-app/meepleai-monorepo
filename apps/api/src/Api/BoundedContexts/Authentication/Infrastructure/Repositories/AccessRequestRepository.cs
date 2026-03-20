@@ -3,6 +3,8 @@ using Api.BoundedContexts.Authentication.Domain.Enums;
 using Api.BoundedContexts.Authentication.Domain.Repositories;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities.Authentication;
+using Api.SharedKernel.Application.Services;
+using Api.SharedKernel.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 
 namespace Api.BoundedContexts.Authentication.Infrastructure.Repositories;
@@ -11,19 +13,14 @@ namespace Api.BoundedContexts.Authentication.Infrastructure.Repositories;
 /// Repository implementation for AccessRequest aggregate.
 /// Handles mapping between domain and infrastructure entities.
 /// </summary>
-internal sealed class AccessRequestRepository : IAccessRequestRepository
+internal sealed class AccessRequestRepository : RepositoryBase, IAccessRequestRepository
 {
-    private readonly MeepleAiDbContext _context;
-
-    public AccessRequestRepository(MeepleAiDbContext context)
-    {
-        ArgumentNullException.ThrowIfNull(context);
-        _context = context;
-    }
+    public AccessRequestRepository(MeepleAiDbContext dbContext, IDomainEventCollector eventCollector)
+        : base(dbContext, eventCollector) { }
 
     public async Task<AccessRequest?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        var entity = await _context.AccessRequests
+        var entity = await DbContext.AccessRequests
             .FirstOrDefaultAsync(e => e.Id == id, cancellationToken)
             .ConfigureAwait(false);
         return entity is null ? null : MapToDomain(entity);
@@ -31,7 +28,7 @@ internal sealed class AccessRequestRepository : IAccessRequestRepository
 
     public async Task<IReadOnlyList<AccessRequest>> GetAllAsync(CancellationToken cancellationToken = default)
     {
-        var entities = await _context.AccessRequests
+        var entities = await DbContext.AccessRequests
             .OrderByDescending(e => e.RequestedAt)
             .ToListAsync(cancellationToken)
             .ConfigureAwait(false);
@@ -41,14 +38,16 @@ internal sealed class AccessRequestRepository : IAccessRequestRepository
     public async Task AddAsync(AccessRequest entity, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(entity);
+        CollectDomainEvents(entity);
         var infrastructureEntity = MapToInfrastructure(entity);
-        await _context.AccessRequests.AddAsync(infrastructureEntity, cancellationToken).ConfigureAwait(false);
+        await DbContext.AccessRequests.AddAsync(infrastructureEntity, cancellationToken).ConfigureAwait(false);
     }
 
     public async Task UpdateAsync(AccessRequest entity, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(entity);
-        var existing = await _context.AccessRequests
+        CollectDomainEvents(entity);
+        var existing = await DbContext.AccessRequests
             .FindAsync(new object[] { entity.Id }, cancellationToken)
             .ConfigureAwait(false);
 
@@ -65,17 +64,17 @@ internal sealed class AccessRequestRepository : IAccessRequestRepository
     public async Task DeleteAsync(AccessRequest entity, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(entity);
-        var existing = await _context.AccessRequests
+        var existing = await DbContext.AccessRequests
             .FindAsync(new object[] { entity.Id }, cancellationToken)
             .ConfigureAwait(false);
 
         if (existing is not null)
-            _context.AccessRequests.Remove(existing);
+            DbContext.AccessRequests.Remove(existing);
     }
 
     public async Task<bool> ExistsAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        return await _context.AccessRequests
+        return await DbContext.AccessRequests
             .AnyAsync(e => e.Id == id, cancellationToken)
             .ConfigureAwait(false);
     }
@@ -84,7 +83,7 @@ internal sealed class AccessRequestRepository : IAccessRequestRepository
     {
         var normalizedEmail = email.Trim().ToLowerInvariant();
         var pendingStatus = AccessRequestStatus.Pending.ToString();
-        var entity = await _context.AccessRequests
+        var entity = await DbContext.AccessRequests
             .FirstOrDefaultAsync(e => e.Email == normalizedEmail && e.Status == pendingStatus, cancellationToken)
             .ConfigureAwait(false);
         return entity is null ? null : MapToDomain(entity);
@@ -93,7 +92,7 @@ internal sealed class AccessRequestRepository : IAccessRequestRepository
     public async Task<IReadOnlyList<AccessRequest>> GetByStatusAsync(
         AccessRequestStatus? status, int page, int pageSize, CancellationToken cancellationToken = default)
     {
-        var query = _context.AccessRequests.AsQueryable();
+        var query = DbContext.AccessRequests.AsQueryable();
         if (status.HasValue)
         {
             var statusString = status.Value.ToString();
@@ -113,14 +112,14 @@ internal sealed class AccessRequestRepository : IAccessRequestRepository
     public async Task<int> CountByStatusAsync(AccessRequestStatus status, CancellationToken cancellationToken = default)
     {
         var statusString = status.ToString();
-        return await _context.AccessRequests
+        return await DbContext.AccessRequests
             .CountAsync(e => e.Status == statusString, cancellationToken)
             .ConfigureAwait(false);
     }
 
     public async Task<int> CountAllAsync(CancellationToken cancellationToken = default)
     {
-        return await _context.AccessRequests
+        return await DbContext.AccessRequests
             .CountAsync(cancellationToken)
             .ConfigureAwait(false);
     }

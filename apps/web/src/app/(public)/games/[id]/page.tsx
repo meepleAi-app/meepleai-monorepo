@@ -10,7 +10,7 @@
 
 'use client';
 
-import { useEffect, useState, useCallback, useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 
 import {
   AlertCircle,
@@ -32,10 +32,7 @@ import { MeepleCard } from '@/components/ui/data-display/meeple-card';
 import { Alert, AlertDescription } from '@/components/ui/feedback/alert';
 import { Skeleton } from '@/components/ui/feedback/skeleton';
 import { Button } from '@/components/ui/primitives/button';
-import { useGameInLibraryStatus, useAddGameToLibrary } from '@/hooks/queries';
-import { api, type SharedGameDetail } from '@/lib/api';
-import { createErrorContext } from '@/lib/errors';
-import { logger } from '@/lib/logger';
+import { useGameInLibraryStatus, useAddGameToLibrary, useSharedGame } from '@/hooks/queries';
 
 // ============================================================================
 // Main Component
@@ -55,38 +52,9 @@ export default function GamePreviewPage() {
   const addToLibrary = useAddGameToLibrary();
   const inLibrary = libraryStatus?.inLibrary ?? false;
 
-  // Game data
-  const [gameDetail, setGameDetail] = useState<SharedGameDetail | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  // Load game data from shared-games API
-  useEffect(() => {
-    if (!gameId) return;
-
-    const loadGame = async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        const data = await api.sharedGames.getById(gameId);
-        if (!data) {
-          throw new Error('Game not found');
-        }
-        setGameDetail(data);
-      } catch (err) {
-        setError('Failed to load game');
-        logger.error(
-          'Failed to load game details',
-          err instanceof Error ? err : new Error(String(err)),
-          createErrorContext('GamePreviewPage', 'loadGame', { gameId })
-        );
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadGame();
-  }, [gameId]);
+  // Game data via React Query
+  const { data: gameDetail, isLoading: loading, isError } = useSharedGame(gameId ?? '', !!gameId);
+  const error = isError ? 'Failed to load game' : null;
 
   const handleAddToLibrary = useCallback(async () => {
     if (!gameId) return;

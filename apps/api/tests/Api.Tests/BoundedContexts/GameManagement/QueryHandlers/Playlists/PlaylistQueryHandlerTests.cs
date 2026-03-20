@@ -5,6 +5,7 @@ using Api.Middleware.Exceptions;
 using Api.Tests.Constants;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.GameManagement.QueryHandlers.Playlists;
 
@@ -33,8 +34,8 @@ public class PlaylistQueryHandlerTests
 
         var result = await handler.Handle(query, CancellationToken.None);
 
-        Assert.Equal(playlist.Id, result.Id);
-        Assert.Equal("Test", result.Name);
+        result.Id.Should().Be(playlist.Id);
+        result.Name.Should().Be("Test");
     }
 
     [Fact]
@@ -45,8 +46,9 @@ public class PlaylistQueryHandlerTests
 
         var handler = new GetPlaylistQueryHandler(_repositoryMock.Object);
 
-        await Assert.ThrowsAsync<NotFoundException>(() =>
-            handler.Handle(new GetPlaylistQuery(Guid.NewGuid(), _userId), CancellationToken.None));
+        var act = () =>
+            handler.Handle(new GetPlaylistQuery(Guid.NewGuid(), _userId), CancellationToken.None);
+        await act.Should().ThrowAsync<NotFoundException>();
     }
 
     [Fact]
@@ -58,8 +60,9 @@ public class PlaylistQueryHandlerTests
 
         var handler = new GetPlaylistQueryHandler(_repositoryMock.Object);
 
-        await Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
-            handler.Handle(new GetPlaylistQuery(playlist.Id, _userId), CancellationToken.None));
+        var act = () =>
+            handler.Handle(new GetPlaylistQuery(playlist.Id, _userId), CancellationToken.None);
+        await act.Should().ThrowAsync<UnauthorizedAccessException>();
     }
 
     #endregion
@@ -80,7 +83,7 @@ public class PlaylistQueryHandlerTests
 
         var result = await handler.Handle(query, CancellationToken.None);
 
-        Assert.Equal("Shared", result.Name);
+        result.Name.Should().Be("Shared");
     }
 
     [Fact]
@@ -91,8 +94,9 @@ public class PlaylistQueryHandlerTests
 
         var handler = new GetPlaylistByShareTokenQueryHandler(_repositoryMock.Object);
 
-        await Assert.ThrowsAsync<NotFoundException>(() =>
-            handler.Handle(new GetPlaylistByShareTokenQuery("invalid"), CancellationToken.None));
+        var act = () =>
+            handler.Handle(new GetPlaylistByShareTokenQuery("invalid"), CancellationToken.None);
+        await act.Should().ThrowAsync<NotFoundException>();
     }
 
     #endregion
@@ -116,11 +120,11 @@ public class PlaylistQueryHandlerTests
 
         var result = await handler.Handle(query, CancellationToken.None);
 
-        Assert.Equal(2, result.Total);
-        Assert.Equal(2, result.Playlists.Count);
-        Assert.Equal(1, result.Page);
-        Assert.Equal(20, result.PageSize);
-        Assert.Equal(1, result.TotalPages);
+        result.Total.Should().Be(2);
+        result.Playlists.Count.Should().Be(2);
+        result.Page.Should().Be(1);
+        result.PageSize.Should().Be(20);
+        result.TotalPages.Should().Be(1);
     }
 
     [Fact]
@@ -134,9 +138,9 @@ public class PlaylistQueryHandlerTests
 
         var result = await handler.Handle(query, CancellationToken.None);
 
-        Assert.Equal(0, result.Total);
-        Assert.Empty(result.Playlists);
-        Assert.Equal(0, result.TotalPages);
+        result.Total.Should().Be(0);
+        result.Playlists.Should().BeEmpty();
+        result.TotalPages.Should().Be(0);
     }
 
     #endregion

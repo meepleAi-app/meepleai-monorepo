@@ -62,11 +62,11 @@ public class MultiModelEvaluatorTests
         var result = await _evaluator.EvaluateWithEnsembleAsync(move, state, playerColor, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.InRange(result.Score, 0.83, 0.85);  // Weighted average within range
-        Assert.True(result.Confidence >= 0.75, $"Expected confidence ≥0.75, got {result.Confidence}");
-        Assert.Equal("high", result.Agreement);
-        Assert.True(result.Variance < 0.01, $"Expected low variance, got {result.Variance}");
+        result.Should().NotBeNull();
+        result.Score.Should().BeInRange(0.83, 0.85);  // Weighted average within range
+        (result.Confidence >= 0.75).Should().BeTrue($"Expected confidence ≥0.75, got {result.Confidence}");
+        result.Agreement.Should().Be("high");
+        (result.Variance < 0.01).Should().BeTrue($"Expected low variance, got {result.Variance}");
     }
 
     [Fact]
@@ -95,10 +95,10 @@ public class MultiModelEvaluatorTests
         var result = await _evaluator.EvaluateWithEnsembleAsync(move, state, "white", TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.True(result.Variance > 0.04, $"Expected high variance, got {result.Variance}");
-        Assert.Equal("low", result.Agreement);
-        Assert.True(result.Confidence <= 0.50, $"Expected low confidence, got {result.Confidence}");
+        result.Should().NotBeNull();
+        (result.Variance > 0.04).Should().BeTrue($"Expected high variance, got {result.Variance}");
+        result.Agreement.Should().Be("low");
+        (result.Confidence <= 0.50).Should().BeTrue($"Expected low confidence, got {result.Confidence}");
     }
 
     [Fact]
@@ -128,9 +128,9 @@ public class MultiModelEvaluatorTests
         var result = await _evaluator.EvaluateWithEnsembleAsync(move, state, "white", TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         // Weighted score should be closer to GPT-4's 0.9 than simple average 0.63
-        Assert.InRange(result.Score, 0.64, 0.68);
+        result.Score.Should().BeInRange(0.64, 0.68);
     }
 
     [Fact]
@@ -163,10 +163,10 @@ public class MultiModelEvaluatorTests
         var result = await _evaluator.EvaluateWithEnsembleAsync(move, state, "white", TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal(0.3, result.Confidence);  // Fallback confidence
-        Assert.Equal("none", result.Agreement);
-        Assert.Contains("Ensemble unavailable", result.Reasoning);
+        result.Should().NotBeNull();
+        result.Confidence.Should().Be(0.3);  // Fallback confidence
+        result.Agreement.Should().Be("none");
+        result.Reasoning.Should().Contain("Ensemble unavailable");
     }
 
     [Fact]
@@ -201,8 +201,8 @@ public class MultiModelEvaluatorTests
         var result = await _evaluator.EvaluateWithEnsembleAsync(move, state, "white", TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.Equal(cachedResult, result);
-        Assert.Equal("Cached evaluation", result.Reasoning);
+        result.Should().Be(cachedResult);
+        result.Reasoning.Should().Be("Cached evaluation");
 
         // Verify LLM service was NOT called (cache hit)
         _mockLlmService.Verify(
@@ -246,9 +246,9 @@ public class MultiModelEvaluatorTests
         var result = await _evaluator.EvaluateWithEnsembleAsync(move, state, "white", TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         // Weighted with 2 models: (0.85*0.4 + 0.80*0.25) / (0.4 + 0.25) = 0.83
-        Assert.InRange(result.Score, 0.82, 0.84);
+        result.Score.Should().BeInRange(0.82, 0.84);
     }
 
     // Helper methods

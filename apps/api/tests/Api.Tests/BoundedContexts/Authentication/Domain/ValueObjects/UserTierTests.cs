@@ -2,6 +2,7 @@ using Api.BoundedContexts.Authentication.Domain.ValueObjects;
 using Api.SharedKernel.Domain.ValueObjects;
 using Api.SharedKernel.Domain.Exceptions;
 using Xunit;
+using FluentAssertions;
 using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.Authentication.Domain.ValueObjects;
@@ -23,8 +24,8 @@ public class UserTierTests
         var tier = UserTier.Parse(tierValue);
 
         // Assert
-        Assert.NotNull(tier);
-        Assert.Equal(tierValue.ToLowerInvariant(), tier.Value);
+        tier.Should().NotBeNull();
+        tier.Value.Should().Be(tierValue.ToLowerInvariant());
     }
 
     [Theory]
@@ -37,8 +38,8 @@ public class UserTierTests
         var tier = UserTier.Parse(tierValue);
 
         // Assert
-        Assert.NotNull(tier);
-        Assert.Equal(tierValue.ToLowerInvariant(), tier.Value);
+        tier.Should().NotBeNull();
+        tier.Value.Should().Be(tierValue.ToLowerInvariant());
     }
 
     [Theory]
@@ -48,8 +49,9 @@ public class UserTierTests
     public void Parse_EmptyOrWhitespace_ThrowsValidationException(string? tierValue)
     {
         // Act & Assert
-        var exception = Assert.Throws<ValidationException>(() => UserTier.Parse(tierValue!));
-        Assert.Contains("User tier cannot be empty", exception.Message);
+        var act = () => UserTier.Parse(tierValue!);
+        var exception = act.Should().Throw<ValidationException>().Which;
+        exception.Message.Should().Contain("User tier cannot be empty");
     }
 
     [Theory]
@@ -59,9 +61,10 @@ public class UserTierTests
     public void Parse_InvalidTier_ThrowsValidationException(string tierValue)
     {
         // Act & Assert
-        var exception = Assert.Throws<ValidationException>(() => UserTier.Parse(tierValue));
-        Assert.Contains("Invalid user tier", exception.Message);
-        Assert.Contains("free, normal, premium", exception.Message);
+        var act = () => UserTier.Parse(tierValue);
+        var exception = act.Should().Throw<ValidationException>().Which;
+        exception.Message.Should().Contain("Invalid user tier");
+        exception.Message.Should().Contain("free, normal, premium");
     }
     [Theory]
     [InlineData("free")]
@@ -79,7 +82,7 @@ public class UserTierTests
         };
 
         // Assert
-        Assert.Equal(expectedValue, tier.Value);
+        tier.Value.Should().Be(expectedValue);
     }
     [Theory]
     [InlineData("free", true, false, false)]
@@ -91,9 +94,9 @@ public class UserTierTests
         var tier = UserTier.Parse(tierValue);
 
         // Act & Assert
-        Assert.Equal(expectedIsFree, tier.IsFree());
-        Assert.Equal(expectedIsNormal, tier.IsNormal());
-        Assert.Equal(expectedIsPremium, tier.IsPremium());
+        tier.IsFree().Should().Be(expectedIsFree);
+        tier.IsNormal().Should().Be(expectedIsNormal);
+        tier.IsPremium().Should().Be(expectedIsPremium);
     }
     [Theory]
     [InlineData("free", 0)]
@@ -108,7 +111,7 @@ public class UserTierTests
         var level = tier.GetLevel();
 
         // Assert
-        Assert.Equal(expectedLevel, level);
+        level.Should().Be(expectedLevel);
     }
 
     [Fact]
@@ -120,9 +123,9 @@ public class UserTierTests
         var premium = UserTier.Premium;
 
         // Assert
-        Assert.True(free.GetLevel() < normal.GetLevel());
-        Assert.True(normal.GetLevel() < premium.GetLevel());
-        Assert.True(free.GetLevel() < premium.GetLevel());
+        (free.GetLevel() < normal.GetLevel()).Should().BeTrue();
+        (normal.GetLevel() < premium.GetLevel()).Should().BeTrue();
+        (free.GetLevel() < premium.GetLevel()).Should().BeTrue();
     }
     [Theory]
     [InlineData("premium", "normal", true)]    // Premium has Normal level
@@ -141,7 +144,7 @@ public class UserTierTests
         var hasLevel = tier.HasLevel(requiredLevel);
 
         // Assert
-        Assert.Equal(expected, hasLevel);
+        hasLevel.Should().Be(expected);
     }
     [Fact]
     public void Equals_SameTierValues_ReturnsTrue()
@@ -151,7 +154,7 @@ public class UserTierTests
         var tier2 = UserTier.Parse("premium");
 
         // Act & Assert
-        Assert.Equal(tier1, tier2);
+        tier2.Should().Be(tier1);
     }
 
     [Fact]
@@ -162,7 +165,7 @@ public class UserTierTests
         var tier2 = UserTier.Parse("premium");
 
         // Act & Assert
-        Assert.NotEqual(tier1, tier2);
+        tier2.Should().NotBe(tier1);
     }
 
     [Fact]
@@ -173,7 +176,7 @@ public class UserTierTests
         var tier2 = UserTier.Parse("free");
 
         // Act & Assert
-        Assert.Equal(tier1, tier2);
+        tier2.Should().Be(tier1);
     }
     [Theory]
     [InlineData("free")]
@@ -188,7 +191,7 @@ public class UserTierTests
         var result = tier.ToString();
 
         // Assert
-        Assert.Equal(tierValue, result);
+        result.Should().Be(tierValue);
     }
     [Fact]
     public void ImplicitStringConversion_WorksCorrectly()
@@ -200,6 +203,6 @@ public class UserTierTests
         string tierString = tier;
 
         // Assert
-        Assert.Equal("premium", tierString);
+        tierString.Should().Be("premium");
     }
 }

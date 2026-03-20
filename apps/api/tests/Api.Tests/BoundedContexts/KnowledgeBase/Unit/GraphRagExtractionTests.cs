@@ -14,6 +14,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Unit;
 
@@ -100,16 +101,16 @@ public class GraphRagExtractionTests : IDisposable
             Times.Once);
 
         var savedRelations = await _db.GameEntityRelations.ToListAsync();
-        Assert.Equal(2, savedRelations.Count);
-        Assert.All(savedRelations, r =>
+        savedRelations.Count.Should().Be(2);
+        savedRelations.Should().AllSatisfy(r =>
         {
-            Assert.Equal(_gameId, r.GameId);
-            Assert.NotEqual(Guid.Empty, r.Id);
+            r.GameId.Should().Be(_gameId);
+            r.Id.Should().NotBe(Guid.Empty);
         });
 
         // Verify PDF reaches Ready state
         var doc = await _db.PdfDocuments.FindAsync(_pdfDocumentId);
-        Assert.Equal("Ready", doc!.ProcessingState);
+        doc!.ProcessingState.Should().Be("Ready");
     }
 
     [Fact]
@@ -129,11 +130,11 @@ public class GraphRagExtractionTests : IDisposable
 
         // Assert: PDF should reach Ready state
         var doc = await _db.PdfDocuments.FindAsync(_pdfDocumentId);
-        Assert.Equal("Ready", doc!.ProcessingState);
+        doc!.ProcessingState.Should().Be("Ready");
 
         // No entity relations saved
         var relations = await _db.GameEntityRelations.ToListAsync();
-        Assert.Empty(relations);
+        relations.Should().BeEmpty();
     }
 
     [Fact]
@@ -160,7 +161,7 @@ public class GraphRagExtractionTests : IDisposable
 
         // Assert: PDF should still reach Ready state despite Graph RAG failure
         var doc = await _db.PdfDocuments.FindAsync(_pdfDocumentId);
-        Assert.Equal("Ready", doc!.ProcessingState);
+        doc!.ProcessingState.Should().Be("Ready");
     }
 
     [Fact]
@@ -211,11 +212,11 @@ public class GraphRagExtractionTests : IDisposable
 
         // Assert: no relations saved
         var relations = await _db.GameEntityRelations.ToListAsync();
-        Assert.Empty(relations);
+        relations.Should().BeEmpty();
 
         // But PDF still completes
         var doc = await _db.PdfDocuments.FindAsync(_pdfDocumentId);
-        Assert.Equal("Ready", doc!.ProcessingState);
+        doc!.ProcessingState.Should().Be("Ready");
     }
 
     [Fact]

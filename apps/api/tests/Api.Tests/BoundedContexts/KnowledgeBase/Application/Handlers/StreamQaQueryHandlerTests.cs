@@ -18,6 +18,7 @@ using System.Text;
 using Xunit;
 using Api.Tests.Constants;
 using DomainSearchResult = Api.BoundedContexts.KnowledgeBase.Domain.Entities.SearchResult;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Handlers;
 
@@ -109,29 +110,29 @@ public class StreamQaQueryHandlerTests
         }
 
         // Assert
-        Assert.NotEmpty(events);
+        events.Should().NotBeEmpty();
 
         // Verify event sequence
-        Assert.Equal(StreamingEventType.StateUpdate, events[0].Type);
-        var stateUpdate = Assert.IsType<StreamingStateUpdate>(events[0].Data);
-        Assert.Equal("Searching knowledge base...", stateUpdate.message);
+        events[0].Type.Should().Be(StreamingEventType.StateUpdate);
+        var stateUpdate = events[0].Data.Should().BeOfType<StreamingStateUpdate>().Which;
+        stateUpdate.message.Should().Be("Searching knowledge base...");
 
         // Citations event
         var citationsEvent = events.FirstOrDefault(e => e.Type == StreamingEventType.Citations);
-        Assert.NotNull(citationsEvent);
-        var citations = Assert.IsType<StreamingCitations>(citationsEvent.Data);
-        Assert.NotEmpty(citations.citations);
+        citationsEvent.Should().NotBeNull();
+        var citations = citationsEvent.Data.Should().BeOfType<StreamingCitations>().Which;
+        citations.citations.Should().NotBeEmpty();
 
         // Token events
         var tokenEvents = events.Where(e => e.Type == StreamingEventType.Token).ToList();
-        Assert.NotEmpty(tokenEvents);
+        tokenEvents.Should().NotBeEmpty();
 
         // Complete event
         var completeEvent = events.LastOrDefault(e => e.Type == StreamingEventType.Complete);
-        Assert.NotNull(completeEvent);
-        var complete = Assert.IsType<StreamingComplete>(completeEvent.Data);
-        Assert.True(complete.totalTokens > 0);
-        Assert.True(complete.confidence.HasValue);
+        completeEvent.Should().NotBeNull();
+        var complete = completeEvent.Data.Should().BeOfType<StreamingComplete>().Which;
+        (complete.totalTokens > 0).Should().BeTrue();
+        complete.confidence.HasValue.Should().BeTrue();
     }
 
     [Fact]
@@ -162,12 +163,12 @@ public class StreamQaQueryHandlerTests
 
         // Assert
         var tokenEvents = events.Where(e => e.Type == StreamingEventType.Token).ToList();
-        Assert.Equal(tokens.Length, tokenEvents.Count);
+        tokenEvents.Count.Should().Be(tokens.Length);
 
         for (int i = 0; i < tokens.Length; i++)
         {
-            var tokenData = Assert.IsType<StreamingToken>(tokenEvents[i].Data);
-            Assert.Equal(tokens[i], tokenData.token);
+            var tokenData = tokenEvents[i].Data.Should().BeOfType<StreamingToken>().Which;
+            tokenData.token.Should().Be(tokens[i]);
         }
 
         // Verify complete answer in cache
@@ -217,31 +218,31 @@ public class StreamQaQueryHandlerTests
 
         // Assert
         var stateUpdate = events.FirstOrDefault(e => e.Type == StreamingEventType.StateUpdate);
-        Assert.NotNull(stateUpdate);
-        var state = Assert.IsType<StreamingStateUpdate>(stateUpdate.Data);
-        Assert.Equal("Retrieved from cache", state.message);
+        stateUpdate.Should().NotBeNull();
+        var state = stateUpdate.Data.Should().BeOfType<StreamingStateUpdate>().Which;
+        state.message.Should().Be("Retrieved from cache");
 
         // Should emit citations from cache
         var citationsEvent = events.FirstOrDefault(e => e.Type == StreamingEventType.Citations);
-        Assert.NotNull(citationsEvent);
-        var citations = Assert.IsType<StreamingCitations>(citationsEvent.Data);
-        Assert.Single(citations.citations);
+        citationsEvent.Should().NotBeNull();
+        var citations = citationsEvent.Data.Should().BeOfType<StreamingCitations>().Which;
+        citations.citations.Should().ContainSingle();
 
         // Should stream cached answer as tokens
         var tokenEvents = events.Where(e => e.Type == StreamingEventType.Token).ToList();
-        Assert.NotEmpty(tokenEvents);
+        tokenEvents.Should().NotBeEmpty();
 
         var reconstructedAnswer = string.Join("", tokenEvents.Select(e => ((StreamingToken)e.Data!).token));
-        Assert.Equal(cachedAnswer, reconstructedAnswer);
+        reconstructedAnswer.Should().Be(cachedAnswer);
 
         // Complete event should have cached metadata
         var completeEvent = events.LastOrDefault(e => e.Type == StreamingEventType.Complete);
-        Assert.NotNull(completeEvent);
-        var complete = Assert.IsType<StreamingComplete>(completeEvent.Data);
-        Assert.Equal(50, complete.promptTokens);
-        Assert.Equal(20, complete.completionTokens);
-        Assert.Equal(70, complete.totalTokens);
-        Assert.Equal(0.85, complete.confidence);
+        completeEvent.Should().NotBeNull();
+        var complete = completeEvent.Data.Should().BeOfType<StreamingComplete>().Which;
+        complete.promptTokens.Should().Be(50);
+        complete.completionTokens.Should().Be(20);
+        complete.totalTokens.Should().Be(70);
+        complete.confidence.Should().Be(0.85);
 
         // Should NOT call search or LLM
         _hybridSearchServiceMock.Verify(
@@ -362,9 +363,9 @@ public class StreamQaQueryHandlerTests
         }
 
         // Assert - should complete successfully without chat history
-        Assert.NotEmpty(events);
+        events.Should().NotBeEmpty();
         var completeEvent = events.LastOrDefault(e => e.Type == StreamingEventType.Complete);
-        Assert.NotNull(completeEvent);
+        completeEvent.Should().NotBeNull();
     }
     [Fact]
     public async Task Handle_EmptyQuery_ReturnsError()
@@ -380,11 +381,11 @@ public class StreamQaQueryHandlerTests
         }
 
         // Assert
-        Assert.Single(events);
-        Assert.Equal(StreamingEventType.Error, events[0].Type);
-        var error = Assert.IsType<StreamingError>(events[0].Data);
-        Assert.Equal("Please provide a question", error.errorMessage);
-        Assert.Equal("INVALID_QUERY", error.errorCode);
+        events.Should().ContainSingle();
+        events[0].Type.Should().Be(StreamingEventType.Error);
+        var error = events[0].Data.Should().BeOfType<StreamingError>().Which;
+        error.errorMessage.Should().Be("Please provide a question");
+        error.errorCode.Should().Be("INVALID_QUERY");
     }
 
     [Fact]
@@ -401,8 +402,8 @@ public class StreamQaQueryHandlerTests
         }
 
         // Assert
-        Assert.Single(events);
-        Assert.Equal(StreamingEventType.Error, events[0].Type);
+        events.Should().ContainSingle();
+        events[0].Type.Should().Be(StreamingEventType.Error);
     }
 
     [Fact]
@@ -419,8 +420,8 @@ public class StreamQaQueryHandlerTests
         }
 
         // Assert
-        Assert.Single(events);
-        Assert.Equal(StreamingEventType.Error, events[0].Type);
+        events.Should().ContainSingle();
+        events[0].Type.Should().Be(StreamingEventType.Error);
     }
     [Fact]
     public async Task Handle_SearchReturnsNoResults_ReturnsError()
@@ -455,10 +456,10 @@ public class StreamQaQueryHandlerTests
 
         // Assert
         var errorEvent = events.FirstOrDefault(e => e.Type == StreamingEventType.Error);
-        Assert.NotNull(errorEvent);
-        var error = Assert.IsType<StreamingError>(errorEvent.Data);
-        Assert.Contains("No relevant information found", error.errorMessage, StringComparison.OrdinalIgnoreCase);
-        Assert.Equal("NO_RESULTS", error.errorCode);
+        errorEvent.Should().NotBeNull();
+        var error = errorEvent.Data.Should().BeOfType<StreamingError>().Which;
+        error.errorMessage.Should().ContainEquivalentOf("No relevant information found");
+        error.errorCode.Should().Be("NO_RESULTS");
 
         // Should not call LLM
         _llmServiceMock.Verify(
@@ -510,8 +511,8 @@ public class StreamQaQueryHandlerTests
         }
 
         // Assert
-        Assert.True(events.Count < 100); // Should stop before all tokens
-        Assert.True(cts.IsCancellationRequested);
+        (events.Count < 100).Should().BeTrue(); // Should stop before all tokens
+        cts.IsCancellationRequested.Should().BeTrue();
     }
     [Fact]
     public async Task Handle_CalculatesConfidenceScores()
@@ -549,9 +550,9 @@ public class StreamQaQueryHandlerTests
 
         // Assert
         var completeEvent = events.LastOrDefault(e => e.Type == StreamingEventType.Complete);
-        Assert.NotNull(completeEvent);
-        var complete = Assert.IsType<StreamingComplete>(completeEvent.Data);
-        Assert.Equal(0.78, complete.confidence!.Value, 0.001);
+        completeEvent.Should().NotBeNull();
+        var complete = completeEvent.Data.Should().BeOfType<StreamingComplete>().Which;
+        complete.confidence!.Value.Should().BeApproximately(0.78, 0.001);
 
         _qualityTrackingServiceMock.Verify(x => x.CalculateSearchConfidence(It.IsAny<List<DomainSearchResult>>()), Times.Once);
         _qualityTrackingServiceMock.Verify(x => x.CalculateLlmConfidence(It.IsAny<string>(), It.IsAny<List<DomainSearchResult>>()), Times.Once);
@@ -646,21 +647,21 @@ public class StreamQaQueryHandlerTests
 
         // Assert
         var completeEvent = events.LastOrDefault(e => e.Type == StreamingEventType.Complete);
-        Assert.NotNull(completeEvent);
-        var complete = Assert.IsType<StreamingComplete>(completeEvent.Data);
+        completeEvent.Should().NotBeNull();
+        var complete = completeEvent.Data.Should().BeOfType<StreamingComplete>().Which;
 
         // Validate confidence is below ADR-006 threshold (0.70)
-        Assert.True(complete.confidence.HasValue);
-        Assert.True(complete.confidence.Value < 0.70, $"Expected confidence < 0.70 (warning threshold), got {complete.confidence.Value}");
-        Assert.Equal(0.65, complete.confidence.Value, 0.001);
+        complete.confidence.HasValue.Should().BeTrue();
+        (complete.confidence.Value < 0.70).Should().BeTrue($"Expected confidence < 0.70 (warning threshold), got {complete.confidence.Value}");
+        complete.confidence.Value.Should().BeApproximately(0.65, 0.001);
 
         // Verify response still completes (no error)
         var errorEvent = events.FirstOrDefault(e => e.Type == StreamingEventType.Error);
-        Assert.Null(errorEvent);
+        errorEvent.Should().BeNull();
 
         // Verify token events were emitted
         var tokenEvents = events.Where(e => e.Type == StreamingEventType.Token).ToList();
-        Assert.NotEmpty(tokenEvents);
+        tokenEvents.Should().NotBeEmpty();
     }
 
     [Fact]
@@ -750,12 +751,12 @@ public class StreamQaQueryHandlerTests
 
         // Assert
         var completeEvent = events.LastOrDefault(e => e.Type == StreamingEventType.Complete);
-        Assert.NotNull(completeEvent);
-        var complete = Assert.IsType<StreamingComplete>(completeEvent.Data);
+        completeEvent.Should().NotBeNull();
+        var complete = completeEvent.Data.Should().BeOfType<StreamingComplete>().Which;
 
         // Verify overall confidence reflects low LLM confidence (hallucination detection)
-        Assert.True(complete.confidence.HasValue);
-        Assert.True(complete.confidence.Value < 0.90, "Overall confidence should be reduced when LLM provides no citations");
+        complete.confidence.HasValue.Should().BeTrue();
+        (complete.confidence.Value < 0.90).Should().BeTrue("Overall confidence should be reduced when LLM provides no citations");
 
         // Verify search confidence was high but LLM confidence was low
         _qualityTrackingServiceMock.Verify(
@@ -771,7 +772,7 @@ public class StreamQaQueryHandlerTests
 
         // Verify full answer was constructed
         var tokenEvents = events.Where(e => e.Type == StreamingEventType.Token).ToList();
-        Assert.Equal(answerWithoutCitations.Length, tokenEvents.Count);
+        tokenEvents.Count.Should().Be(answerWithoutCitations.Length);
     }
 
     [Fact]
@@ -825,11 +826,11 @@ public class StreamQaQueryHandlerTests
 
         // Verify response completed successfully
         var completeEvent = events.LastOrDefault(e => e.Type == StreamingEventType.Complete);
-        Assert.NotNull(completeEvent);
+        completeEvent.Should().NotBeNull();
 
         // Verify no errors
         var errorEvent = events.FirstOrDefault(e => e.Type == StreamingEventType.Error);
-        Assert.Null(errorEvent);
+        errorEvent.Should().BeNull();
     }
 
     [Fact]
@@ -876,21 +877,21 @@ public class StreamQaQueryHandlerTests
         catch (HttpRequestException ex)
         {
             exceptionThrown = true;
-            Assert.Contains("LLM streaming error", ex.Message, StringComparison.OrdinalIgnoreCase);
+            ex.Message.Should().ContainEquivalentOf("LLM streaming error");
         }
 
         // Assert exception was thrown (not caught by handler)
-        Assert.True(exceptionThrown, "HttpRequestException should propagate from streaming error");
+        exceptionThrown.Should().BeTrue("HttpRequestException should propagate from streaming error");
 
         // Verify some token events were emitted before error
-        Assert.True(partialTokensReceived, "Should have received partial tokens before error");
+        partialTokensReceived.Should().BeTrue("Should have received partial tokens before error");
         var tokenEvents = events.Where(e => e.Type == StreamingEventType.Token).ToList();
-        Assert.NotEmpty(tokenEvents);
-        Assert.True(tokenEvents.Count == 3, "Should have exactly 3 tokens before error (from StreamTokensWithError)");
+        tokenEvents.Should().NotBeEmpty();
+        (tokenEvents.Count == 3).Should().BeTrue("Should have exactly 3 tokens before error (from StreamTokensWithError)");
 
         // Verify NO Complete event (streaming was interrupted)
         var completeEvent = events.FirstOrDefault(e => e.Type == StreamingEventType.Complete);
-        Assert.Null(completeEvent);
+        completeEvent.Should().BeNull();
 
         // Verify cache was NOT called (no storage of partial response)
         _cacheMock.Verify(

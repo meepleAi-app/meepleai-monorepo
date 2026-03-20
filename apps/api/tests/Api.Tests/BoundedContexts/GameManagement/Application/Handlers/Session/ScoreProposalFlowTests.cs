@@ -14,6 +14,7 @@ using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.GameManagement.Application.Handlers.Session;
 
@@ -137,8 +138,9 @@ public sealed class ScoreProposalFlowTests
             Round: 1, Dimension: "Points", Value: 10, ProposerName: null);
 
         // Act & Assert
-        await Assert.ThrowsAsync<NotFoundException>(() =>
-            _proposeSut.Handle(command, CancellationToken.None));
+        var act = () =>
+            _proposeSut.Handle(command, CancellationToken.None);
+        await act.Should().ThrowAsync<NotFoundException>();
     }
 
     [Fact]
@@ -152,8 +154,9 @@ public sealed class ScoreProposalFlowTests
             Round: 1, Dimension: "Points", Value: 10, ProposerName: null);
 
         // Act & Assert
-        await Assert.ThrowsAsync<NotFoundException>(() =>
-            _proposeSut.Handle(command, CancellationToken.None));
+        var act = () =>
+            _proposeSut.Handle(command, CancellationToken.None);
+        await act.Should().ThrowAsync<NotFoundException>();
     }
 
     [Fact]
@@ -167,8 +170,9 @@ public sealed class ScoreProposalFlowTests
             Round: 1, Dimension: "Points", Value: 10, ProposerName: null);
 
         // Act & Assert
-        await Assert.ThrowsAsync<ConflictException>(() =>
-            _proposeSut.Handle(command, CancellationToken.None));
+        var act = () =>
+            _proposeSut.Handle(command, CancellationToken.None);
+        await act.Should().ThrowAsync<ConflictException>();
     }
 
     // ── ConfirmScore Tests ──
@@ -223,8 +227,9 @@ public sealed class ScoreProposalFlowTests
             Round: 1, Dimension: "Points", Value: 10);
 
         // Act & Assert
-        await Assert.ThrowsAsync<ForbiddenException>(() =>
-            _confirmSut.Handle(command, CancellationToken.None));
+        var act = () =>
+            _confirmSut.Handle(command, CancellationToken.None);
+        await act.Should().ThrowAsync<ForbiddenException>();
     }
 
     [Fact]
@@ -236,7 +241,8 @@ public sealed class ScoreProposalFlowTests
             Round: 1, Dimension: "Points", Value: 10);
 
         // Act & Assert
-        await Assert.ThrowsAsync<NotFoundException>(() =>
-            _confirmSut.Handle(command, CancellationToken.None));
+        var act = () =>
+            _confirmSut.Handle(command, CancellationToken.None);
+        await act.Should().ThrowAsync<NotFoundException>();
     }
 }

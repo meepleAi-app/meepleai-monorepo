@@ -9,6 +9,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
+using FluentAssertions;
 using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.Authentication.Infrastructure.Persistence;
@@ -44,10 +45,10 @@ public class OAuthAccountRepositoryTests : SharedDatabaseTestBase<OAuthAccountRe
         var result = await Repository.GetByUserIdAndProviderAsync(userId, "google", TestCancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal(account.Id, result.Id);
-        Assert.Equal("google", result.Provider);
-        Assert.Equal("google_user_123", result.ProviderUserId);
+        result.Should().NotBeNull();
+        result.Id.Should().Be(account.Id);
+        result.Provider.Should().Be("google");
+        result.ProviderUserId.Should().Be("google_user_123");
     }
 
     [Fact]
@@ -64,8 +65,8 @@ public class OAuthAccountRepositoryTests : SharedDatabaseTestBase<OAuthAccountRe
         var result = await Repository.GetByUserIdAndProviderAsync(userId, "GITHUB", TestCancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal(account.Id, result.Id);
+        result.Should().NotBeNull();
+        result.Id.Should().Be(account.Id);
     }
 
     [Fact]
@@ -79,7 +80,7 @@ public class OAuthAccountRepositoryTests : SharedDatabaseTestBase<OAuthAccountRe
         var result = await Repository.GetByUserIdAndProviderAsync(userId, "google", TestCancellationToken);
 
         // Assert
-        Assert.Null(result);
+        result.Should().BeNull();
     }
     [Fact]
     public async Task GetByProviderUserIdAsync_ExistingAccount_ReturnsAccount()
@@ -95,10 +96,10 @@ public class OAuthAccountRepositoryTests : SharedDatabaseTestBase<OAuthAccountRe
         var result = await Repository.GetByProviderUserIdAsync("discord", "discord_user_789");
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal(account.Id, result.Id);
-        Assert.Equal(userId, result.UserId);
-        Assert.Equal("discord_user_789", result.ProviderUserId);
+        result.Should().NotBeNull();
+        result.Id.Should().Be(account.Id);
+        result.UserId.Should().Be(userId);
+        result.ProviderUserId.Should().Be("discord_user_789");
     }
 
     [Fact]
@@ -120,8 +121,8 @@ public class OAuthAccountRepositoryTests : SharedDatabaseTestBase<OAuthAccountRe
         var result = await Repository.GetByProviderUserIdAsync("google", "google_12345");
 
         // Assert - Should find user1
-        Assert.NotNull(result);
-        Assert.Equal(user1Id, result.UserId);
+        result.Should().NotBeNull();
+        result.UserId.Should().Be(user1Id);
     }
 
     [Fact]
@@ -134,7 +135,7 @@ public class OAuthAccountRepositoryTests : SharedDatabaseTestBase<OAuthAccountRe
         var result = await Repository.GetByProviderUserIdAsync("google", "nonexistent_id");
 
         // Assert
-        Assert.Null(result);
+        result.Should().BeNull();
     }
     [Fact]
     public async Task GetByUserIdAsync_NoAccounts_ReturnsEmptyList()
@@ -147,7 +148,7 @@ public class OAuthAccountRepositoryTests : SharedDatabaseTestBase<OAuthAccountRe
         var accounts = await Repository.GetByUserIdAsync(userId, TestCancellationToken);
 
         // Assert
-        Assert.Empty(accounts);
+        accounts.Should().BeEmpty();
     }
 
     [Fact]
@@ -170,11 +171,11 @@ public class OAuthAccountRepositoryTests : SharedDatabaseTestBase<OAuthAccountRe
         var accounts = await Repository.GetByUserIdAsync(userId, TestCancellationToken);
 
         // Assert
-        Assert.Equal(3, accounts.Count);
+        accounts.Count.Should().Be(3);
         // Should be ordered by Provider alphabetically
-        Assert.Equal("discord", accounts[0].Provider);
-        Assert.Equal("github", accounts[1].Provider);
-        Assert.Equal("google", accounts[2].Provider);
+        accounts[0].Provider.Should().Be("discord");
+        accounts[1].Provider.Should().Be("github");
+        accounts[2].Provider.Should().Be("google");
     }
 
     [Fact]
@@ -199,8 +200,8 @@ public class OAuthAccountRepositoryTests : SharedDatabaseTestBase<OAuthAccountRe
         var user2Accounts = await Repository.GetByUserIdAsync(user2Id, TestCancellationToken);
 
         // Assert
-        Assert.Equal(2, user1Accounts.Count);
-        Assert.Single(user2Accounts);
+        user1Accounts.Count.Should().Be(2);
+        user2Accounts.Should().ContainSingle();
     }
     [Fact]
     public async Task AddAsync_NewAccount_PersistsSuccessfully()
@@ -223,13 +224,13 @@ public class OAuthAccountRepositoryTests : SharedDatabaseTestBase<OAuthAccountRe
 
         // Assert
         var persisted = await DbContext.OAuthAccounts.FirstOrDefaultAsync(oa => oa.Id == account.Id, TestCancellationToken);
-        Assert.NotNull(persisted);
-        Assert.Equal(userId, persisted.UserId);
-        Assert.Equal("google", persisted.Provider);
-        Assert.Equal("google_unique_id", persisted.ProviderUserId);
-        Assert.Equal("encrypted_access_token_123", persisted.AccessTokenEncrypted);
-        Assert.Equal("encrypted_refresh_token_456", persisted.RefreshTokenEncrypted);
-        Assert.NotNull(persisted.TokenExpiresAt);
+        persisted.Should().NotBeNull();
+        persisted.UserId.Should().Be(userId);
+        persisted.Provider.Should().Be("google");
+        persisted.ProviderUserId.Should().Be("google_unique_id");
+        persisted.AccessTokenEncrypted.Should().Be("encrypted_access_token_123");
+        persisted.RefreshTokenEncrypted.Should().Be("encrypted_refresh_token_456");
+        persisted.TokenExpiresAt.Should().NotBeNull();
     }
 
     [Fact]
@@ -252,8 +253,8 @@ public class OAuthAccountRepositoryTests : SharedDatabaseTestBase<OAuthAccountRe
 
         // Assert
         var persisted = await DbContext.OAuthAccounts.FirstOrDefaultAsync(oa => oa.Id == account.Id, TestCancellationToken);
-        Assert.NotNull(persisted);
-        Assert.Null(persisted.RefreshTokenEncrypted);
+        persisted.Should().NotBeNull();
+        persisted.RefreshTokenEncrypted.Should().BeNull();
     }
     [Fact]
     public async Task UpdateAsync_RefreshTokens_UpdatesCorrectly()
@@ -267,7 +268,7 @@ public class OAuthAccountRepositoryTests : SharedDatabaseTestBase<OAuthAccountRe
 
         // Act - Simulate token refresh
         var trackedAccount = await Repository.GetByUserIdAndProviderAsync(userId, "google", TestCancellationToken);
-        Assert.NotNull(trackedAccount);
+        trackedAccount.Should().NotBeNull();
         trackedAccount.UpdateTokens(
             "new_access_token_encrypted",
             "new_refresh_token_encrypted",
@@ -279,11 +280,11 @@ public class OAuthAccountRepositoryTests : SharedDatabaseTestBase<OAuthAccountRe
 
         // Assert
         var updated = await Repository.GetByUserIdAndProviderAsync(userId, "google", TestCancellationToken);
-        Assert.NotNull(updated);
-        Assert.Equal("new_access_token_encrypted", updated.AccessTokenEncrypted);
-        Assert.Equal("new_refresh_token_encrypted", updated.RefreshTokenEncrypted);
-        Assert.NotNull(updated.TokenExpiresAt);
-        Assert.True(updated.UpdatedAt > updated.CreatedAt);
+        updated.Should().NotBeNull();
+        updated.AccessTokenEncrypted.Should().Be("new_access_token_encrypted");
+        updated.RefreshTokenEncrypted.Should().Be("new_refresh_token_encrypted");
+        updated.TokenExpiresAt.Should().NotBeNull();
+        (updated.UpdatedAt > updated.CreatedAt).Should().BeTrue();
     }
 
     [Fact]
@@ -298,7 +299,7 @@ public class OAuthAccountRepositoryTests : SharedDatabaseTestBase<OAuthAccountRe
 
         // Act
         var trackedAccount = await Repository.GetByUserIdAndProviderAsync(userId, "discord", TestCancellationToken);
-        Assert.NotNull(trackedAccount);
+        trackedAccount.Should().NotBeNull();
         trackedAccount.UpdateTokens("new_access_token_only", null, DateTime.UtcNow.AddHours(1));
         DbContext.ChangeTracker.Clear(); // Clear any tracked entities before update
         await Repository.UpdateAsync(trackedAccount, TestCancellationToken);
@@ -306,8 +307,8 @@ public class OAuthAccountRepositoryTests : SharedDatabaseTestBase<OAuthAccountRe
 
         // Assert
         var updated = await Repository.GetByUserIdAndProviderAsync(userId, "discord", TestCancellationToken);
-        Assert.NotNull(updated);
-        Assert.Equal("new_access_token_only", updated.AccessTokenEncrypted);
+        updated.Should().NotBeNull();
+        updated.AccessTokenEncrypted.Should().Be("new_access_token_only");
     }
     [Fact]
     public async Task DeleteAsync_ExistingAccount_RemovesFromDatabase()
@@ -325,7 +326,7 @@ public class OAuthAccountRepositoryTests : SharedDatabaseTestBase<OAuthAccountRe
 
         // Assert
         var deleted = await DbContext.OAuthAccounts.FirstOrDefaultAsync(oa => oa.Id == account.Id, TestCancellationToken);
-        Assert.Null(deleted);
+        deleted.Should().BeNull();
     }
 
     [Fact]
@@ -362,14 +363,14 @@ public class OAuthAccountRepositoryTests : SharedDatabaseTestBase<OAuthAccountRe
 
         // Assert
         var persisted = await DbContext.OAuthAccounts.FirstOrDefaultAsync(oa => oa.Id == account.Id, TestCancellationToken);
-        Assert.NotNull(persisted);
-        Assert.Equal(account.Id, persisted.Id);
-        Assert.Equal(account.UserId, persisted.UserId);
-        Assert.Equal(account.Provider, persisted.Provider);
-        Assert.Equal(account.ProviderUserId, persisted.ProviderUserId);
-        Assert.Equal(account.AccessTokenEncrypted, persisted.AccessTokenEncrypted);
-        Assert.Equal(account.RefreshTokenEncrypted, persisted.RefreshTokenEncrypted);
-        Assert.Equal(account.TokenExpiresAt, persisted.TokenExpiresAt);
+        persisted.Should().NotBeNull();
+        persisted.Id.Should().Be(account.Id);
+        persisted.UserId.Should().Be(account.UserId);
+        persisted.Provider.Should().Be(account.Provider);
+        persisted.ProviderUserId.Should().Be(account.ProviderUserId);
+        persisted.AccessTokenEncrypted.Should().Be(account.AccessTokenEncrypted);
+        persisted.RefreshTokenEncrypted.Should().Be(account.RefreshTokenEncrypted);
+        persisted.TokenExpiresAt.Should().Be(account.TokenExpiresAt);
     }
 
     [Fact]
@@ -386,12 +387,12 @@ public class OAuthAccountRepositoryTests : SharedDatabaseTestBase<OAuthAccountRe
         var retrieved = await Repository.GetByUserIdAndProviderAsync(userId, "discord", TestCancellationToken);
 
         // Assert
-        Assert.NotNull(retrieved);
-        Assert.Equal(account.Id, retrieved.Id);
-        Assert.Equal(account.UserId, retrieved.UserId);
-        Assert.Equal(account.Provider, retrieved.Provider);
-        Assert.Equal(account.ProviderUserId, retrieved.ProviderUserId);
-        Assert.Equal(account.AccessTokenEncrypted, retrieved.AccessTokenEncrypted);
+        retrieved.Should().NotBeNull();
+        retrieved.Id.Should().Be(account.Id);
+        retrieved.UserId.Should().Be(account.UserId);
+        retrieved.Provider.Should().Be(account.Provider);
+        retrieved.ProviderUserId.Should().Be(account.ProviderUserId);
+        retrieved.AccessTokenEncrypted.Should().Be(account.AccessTokenEncrypted);
     }
     [Fact]
     public async Task MultiProvider_UserWithThreeProviders_AllPersistCorrectly()
@@ -412,15 +413,15 @@ public class OAuthAccountRepositoryTests : SharedDatabaseTestBase<OAuthAccountRe
 
         // Assert
         var allAccounts = await Repository.GetByUserIdAsync(userId, TestCancellationToken);
-        Assert.Equal(3, allAccounts.Count);
+        allAccounts.Count.Should().Be(3);
 
         var google = await Repository.GetByUserIdAndProviderAsync(userId, "google", TestCancellationToken);
         var github = await Repository.GetByUserIdAndProviderAsync(userId, "github", TestCancellationToken);
         var discord = await Repository.GetByUserIdAndProviderAsync(userId, "discord", TestCancellationToken);
 
-        Assert.NotNull(google);
-        Assert.NotNull(github);
-        Assert.NotNull(discord);
+        google.Should().NotBeNull();
+        github.Should().NotBeNull();
+        discord.Should().NotBeNull();
     }
     /// <summary>
     /// Creates a test user in the database to satisfy FK constraints for OAuth accounts.
@@ -467,4 +468,3 @@ public class OAuthAccountRepositoryTests : SharedDatabaseTestBase<OAuthAccountRe
         );
     }
 }
-

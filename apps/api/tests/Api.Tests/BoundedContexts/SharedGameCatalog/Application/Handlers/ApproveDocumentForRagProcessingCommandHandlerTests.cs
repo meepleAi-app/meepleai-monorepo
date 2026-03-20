@@ -9,6 +9,7 @@ using MediatR;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.SharedGameCatalog.Application.Handlers;
 
@@ -76,11 +77,11 @@ public class ApproveDocumentForRagProcessingCommandHandlerTests
         var result = await _handler.Handle(command, CancellationToken.None);
 
         // Assert
-        Assert.Equal(MediatR.Unit.Value, result);
-        Assert.Equal(DocumentApprovalStatus.Approved, document.ApprovalStatus);
-        Assert.Equal(TestAdminId, document.ApprovedBy);
-        Assert.NotNull(document.ApprovedAt);
-        Assert.Equal("Approved for processing", document.ApprovalNotes);
+        result.Should().Be(MediatR.Unit.Value);
+        document.ApprovalStatus.Should().Be(DocumentApprovalStatus.Approved);
+        document.ApprovedBy.Should().Be(TestAdminId);
+        document.ApprovedAt.Should().NotBeNull();
+        document.ApprovalNotes.Should().Be("Approved for processing");
     }
 
     [Fact]
@@ -131,11 +132,11 @@ public class ApproveDocumentForRagProcessingCommandHandlerTests
             m => m.Publish(It.IsAny<DocumentApprovedForRagEvent>(), It.IsAny<CancellationToken>()),
             Times.Once);
 
-        Assert.NotNull(capturedEvent);
-        Assert.Equal(document.Id, capturedEvent.DocumentId);
-        Assert.Equal(TestGameId, capturedEvent.SharedGameId);
-        Assert.Equal(TestPdfDocumentId, capturedEvent.PdfDocumentId);
-        Assert.Equal(TestAdminId, capturedEvent.ApprovedBy);
+        capturedEvent.Should().NotBeNull();
+        capturedEvent.DocumentId.Should().Be(document.Id);
+        capturedEvent.SharedGameId.Should().Be(TestGameId);
+        capturedEvent.PdfDocumentId.Should().Be(TestPdfDocumentId);
+        capturedEvent.ApprovedBy.Should().Be(TestAdminId);
     }
 
     [Fact]
@@ -155,8 +156,8 @@ public class ApproveDocumentForRagProcessingCommandHandlerTests
         await _handler.Handle(command, CancellationToken.None);
 
         // Assert
-        Assert.Equal(DocumentApprovalStatus.Approved, document.ApprovalStatus);
-        Assert.Null(document.ApprovalNotes);
+        document.ApprovalStatus.Should().Be(DocumentApprovalStatus.Approved);
+        document.ApprovalNotes.Should().BeNull();
     }
 
     #endregion
@@ -176,10 +177,10 @@ public class ApproveDocumentForRagProcessingCommandHandlerTests
             .ReturnsAsync((SharedGameDocument?)null);
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<NotFoundException>(
-            () => _handler.Handle(command, CancellationToken.None));
+        var act = () => _handler.Handle(command, CancellationToken.None);
+        var exception = (await act.Should().ThrowAsync<NotFoundException>()).Which;
 
-        Assert.Equal("SharedGameDocument", exception.ResourceType);
+        exception.ResourceType.Should().Be("SharedGameDocument");
     }
 
     [Fact]
@@ -198,10 +199,10 @@ public class ApproveDocumentForRagProcessingCommandHandlerTests
             .ReturnsAsync(document);
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<ConflictException>(
-            () => _handler.Handle(command, CancellationToken.None));
+        var act = () => _handler.Handle(command, CancellationToken.None);
+        var exception = (await act.Should().ThrowAsync<ConflictException>()).Which;
 
-        Assert.Contains("Document approval failed", exception.Message);
+        exception.Message.Should().Contain("Document approval failed");
     }
 
     [Fact]
@@ -220,18 +221,18 @@ public class ApproveDocumentForRagProcessingCommandHandlerTests
             .ReturnsAsync(document);
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<ConflictException>(
-            () => _handler.Handle(command, CancellationToken.None));
+        var act = () => _handler.Handle(command, CancellationToken.None);
+        var exception = (await act.Should().ThrowAsync<ConflictException>()).Which;
 
-        Assert.Contains("Document approval failed", exception.Message);
+        exception.Message.Should().Contain("Document approval failed");
     }
 
     [Fact]
     public async Task Handle_WithNullCommand_ThrowsArgumentNullException()
     {
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentNullException>(
-            () => _handler.Handle(null!, CancellationToken.None));
+        var act = () => _handler.Handle(null!, CancellationToken.None);
+        await act.Should().ThrowAsync<ArgumentNullException>();
     }
 
     #endregion
@@ -275,8 +276,8 @@ public class ApproveDocumentForRagProcessingCommandHandlerTests
             .ReturnsAsync((SharedGameDocument?)null);
 
         // Act & Assert
-        await Assert.ThrowsAsync<NotFoundException>(
-            () => _handler.Handle(command, CancellationToken.None));
+        var act = () => _handler.Handle(command, CancellationToken.None);
+        await act.Should().ThrowAsync<NotFoundException>();
 
         _unitOfWorkMock.Verify(
             u => u.SaveChangesAsync(It.IsAny<CancellationToken>()),
@@ -296,8 +297,8 @@ public class ApproveDocumentForRagProcessingCommandHandlerTests
             .ReturnsAsync((SharedGameDocument?)null);
 
         // Act & Assert
-        await Assert.ThrowsAsync<NotFoundException>(
-            () => _handler.Handle(command, CancellationToken.None));
+        var act = () => _handler.Handle(command, CancellationToken.None);
+        await act.Should().ThrowAsync<NotFoundException>();
 
         _mediatorMock.Verify(
             m => m.Publish(It.IsAny<DocumentApprovedForRagEvent>(), It.IsAny<CancellationToken>()),
@@ -325,8 +326,8 @@ public class ApproveDocumentForRagProcessingCommandHandlerTests
             .ThrowsAsync(new OperationCanceledException());
 
         // Act & Assert
-        await Assert.ThrowsAsync<OperationCanceledException>(
-            () => _handler.Handle(command, cts.Token));
+        var act = () => _handler.Handle(command, cts.Token);
+        await act.Should().ThrowAsync<OperationCanceledException>();
     }
 
     #endregion

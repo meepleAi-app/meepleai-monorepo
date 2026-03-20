@@ -8,6 +8,7 @@ using Api.Tests.Constants;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Handlers;
 
@@ -50,10 +51,10 @@ public class ConfigureAgentCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.True(result.Success);
-        Assert.Equal(agentId, result.AgentId);
-        Assert.Contains("configured successfully", result.Message);
+        result.Should().NotBeNull();
+        result.Success.Should().BeTrue();
+        result.AgentId.Should().Be(agentId);
+        result.Message.Should().Contain("configured successfully");
 
         _mockRepository.Verify(r => r.UpdateAsync(agent, It.IsAny<CancellationToken>()), Times.Once);
     }
@@ -73,16 +74,16 @@ public class ConfigureAgentCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.False(result.Success);
-        Assert.Equal("AGENT_NOT_FOUND", result.ErrorCode);
+        result.Should().NotBeNull();
+        result.Success.Should().BeFalse();
+        result.ErrorCode.Should().Be("AGENT_NOT_FOUND");
     }
 
     [Fact]
     public async Task Handle_WithNullCommand_ThrowsArgumentNullException()
     {
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentNullException>(
-            () => _handler.Handle(null!, TestContext.Current.CancellationToken));
+        Func<Task> act = () => _handler.Handle(null!, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<ArgumentNullException>();
     }
 }

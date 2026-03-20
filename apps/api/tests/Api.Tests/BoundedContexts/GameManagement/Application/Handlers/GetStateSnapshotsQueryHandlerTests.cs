@@ -7,6 +7,7 @@ using Api.BoundedContexts.GameManagement.Domain.Repositories;
 using Api.Middleware.Exceptions;
 using Moq;
 using Xunit;
+using FluentAssertions;
 using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.GameManagement.Application.Handlers;
@@ -42,11 +43,11 @@ public class GetStateSnapshotsQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal(3, result.Count);
-        Assert.Equal(1, result[0].TurnNumber);
-        Assert.Equal(2, result[1].TurnNumber);
-        Assert.Equal(3, result[2].TurnNumber);
+        result.Should().NotBeNull();
+        result.Count.Should().Be(3);
+        result[0].TurnNumber.Should().Be(1);
+        result[1].TurnNumber.Should().Be(2);
+        result[2].TurnNumber.Should().Be(3);
     }
 
     [Fact]
@@ -64,8 +65,8 @@ public class GetStateSnapshotsQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Empty(result);
+        result.Should().NotBeNull();
+        result.Should().BeEmpty();
     }
 
     [Fact]
@@ -80,10 +81,11 @@ public class GetStateSnapshotsQueryHandlerTests
             .ReturnsAsync((GameSessionState?)null);
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<NotFoundException>(
-            () => _handler.Handle(query, TestContext.Current.CancellationToken));
+        var act = 
+            () => _handler.Handle(query, TestContext.Current.CancellationToken);
+        var exception = (await act.Should().ThrowAsync<NotFoundException>()).Which;
 
-        Assert.Contains("GameSessionState", exception.Message);
+        exception.Message.Should().Contain("GameSessionState");
     }
 
     [Fact]
@@ -111,8 +113,9 @@ public class GetStateSnapshotsQueryHandlerTests
     public async Task Handle_WithNullQuery_ThrowsArgumentNullException()
     {
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentNullException>(
-            () => _handler.Handle(null!, TestContext.Current.CancellationToken));
+        var act = 
+            () => _handler.Handle(null!, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<ArgumentNullException>();
     }
 
     [Fact]
@@ -130,12 +133,12 @@ public class GetStateSnapshotsQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         var firstSnapshot = result.First();
-        Assert.NotEqual(Guid.Empty, firstSnapshot.Id);
-        Assert.Equal(1, firstSnapshot.TurnNumber);
-        Assert.Equal("Turn 1 snapshot", firstSnapshot.Description);
-        Assert.NotNull(firstSnapshot.CreatedAt);
+        firstSnapshot.Id.Should().NotBe(Guid.Empty);
+        firstSnapshot.TurnNumber.Should().Be(1);
+        firstSnapshot.Description.Should().Be("Turn 1 snapshot");
+        firstSnapshot.CreatedAt.Should().NotBe(default(DateTime));
     }
 
     private static GameSessionState CreateGameSessionState()

@@ -11,6 +11,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.SharedGameCatalog.Application.Handlers;
 
@@ -72,21 +73,21 @@ public class GetSharedGameByIdQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal(game.Id, result.Id);
-        Assert.Equal("Catan", result.Title);
-        Assert.Equal(1995, result.YearPublished);
-        Assert.Equal(3, result.MinPlayers);
-        Assert.Equal(4, result.MaxPlayers);
-        Assert.Equal(90, result.PlayingTimeMinutes);
-        Assert.Equal(10, result.MinAge);
-        Assert.Equal(2.5m, result.ComplexityRating);
-        Assert.Equal(7.8m, result.AverageRating);
-        Assert.Equal(13, result.BggId);
-        Assert.NotNull(result.Rules);
-        Assert.Equal("Rules content", result.Rules.Content);
-        Assert.Equal("en", result.Rules.Language);
-        Assert.Equal(userId, result.CreatedBy);
+        result.Should().NotBeNull();
+        result.Id.Should().Be(game.Id);
+        result.Title.Should().Be("Catan");
+        result.YearPublished.Should().Be(1995);
+        result.MinPlayers.Should().Be(3);
+        result.MaxPlayers.Should().Be(4);
+        result.PlayingTimeMinutes.Should().Be(90);
+        result.MinAge.Should().Be(10);
+        result.ComplexityRating.Should().Be(2.5m);
+        result.AverageRating.Should().Be(7.8m);
+        result.BggId.Should().Be(13);
+        result.Rules.Should().NotBeNull();
+        result.Rules.Content.Should().Be("Rules content");
+        result.Rules.Language.Should().Be("en");
+        result.CreatedBy.Should().Be(userId);
     }
 
     [Fact]
@@ -104,7 +105,7 @@ public class GetSharedGameByIdQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.Null(result);
+        result.Should().BeNull();
     }
 
     [Fact]
@@ -138,7 +139,7 @@ public class GetSharedGameByIdQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Null(result.Rules);
+        result.Should().NotBeNull();
+        result.Rules.Should().BeNull();
     }
 }

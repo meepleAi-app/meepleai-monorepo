@@ -358,8 +358,8 @@ public sealed class ApproveGameProposalFlowIntegrationTests : IAsyncLifetime
             AdminNotes: null);
 
         // Act & Assert
-        await Assert.ThrowsAsync<NotFoundException>(
-            () => _commandHandler.Handle(command, TestContext.Current.CancellationToken));
+        var act = () => _commandHandler.Handle(command, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<NotFoundException>();
     }
 
     [Fact]
@@ -383,8 +383,8 @@ public sealed class ApproveGameProposalFlowIntegrationTests : IAsyncLifetime
             AdminNotes: null);
 
         // Act & Assert
-        await Assert.ThrowsAsync<NotFoundException>(
-            () => _commandHandler.Handle(command, TestContext.Current.CancellationToken));
+        var act = () => _commandHandler.Handle(command, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<NotFoundException>();
     }
 
     [Fact]

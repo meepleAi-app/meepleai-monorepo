@@ -10,6 +10,7 @@ using Api.Tests.Constants;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.SharedGameCatalog.Application.Handlers;
 
@@ -88,7 +89,7 @@ public class UpdateShareRequestDocumentsCommandHandlerTests
             u => u.SaveChangesAsync(It.IsAny<CancellationToken>()),
             Times.Once);
 
-        Assert.Equal(2, shareRequest.AttachedDocuments.Count);
+        shareRequest.AttachedDocuments.Count.Should().Be(2);
     }
 
     [Fact]
@@ -105,8 +106,8 @@ public class UpdateShareRequestDocumentsCommandHandlerTests
             .ReturnsAsync((ShareRequest?)null);
 
         // Act & Assert
-        await Assert.ThrowsAsync<InvalidOperationException>(
-            () => _handler.Handle(command, TestContext.Current.CancellationToken));
+        var act = () => _handler.Handle(command, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<InvalidOperationException>();
     }
 
     [Fact]
@@ -131,8 +132,8 @@ public class UpdateShareRequestDocumentsCommandHandlerTests
             .ReturnsAsync(shareRequest);
 
         // Act & Assert
-        await Assert.ThrowsAsync<InvalidOperationException>(
-            () => _handler.Handle(command, TestContext.Current.CancellationToken));
+        var act = () => _handler.Handle(command, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<InvalidOperationException>();
     }
 
     [Fact]
@@ -166,8 +167,8 @@ public class UpdateShareRequestDocumentsCommandHandlerTests
             .ReturnsAsync(documents);
 
         // Act & Assert
-        await Assert.ThrowsAsync<InvalidOperationException>(
-            () => _handler.Handle(command, TestContext.Current.CancellationToken));
+        var act = () => _handler.Handle(command, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<InvalidOperationException>();
     }
 
     private static PdfDocument CreateMockDocument(Guid id, Guid userId)

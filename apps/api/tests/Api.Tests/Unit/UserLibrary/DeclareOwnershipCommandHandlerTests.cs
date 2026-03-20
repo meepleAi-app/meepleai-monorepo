@@ -16,6 +16,7 @@ using Api.Tests.TestHelpers;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.Unit.UserLibrary;
 
@@ -70,10 +71,10 @@ public sealed class DeclareOwnershipCommandHandlerTests
         var result = await handler.Handle(command, CancellationToken.None);
 
         // Assert
-        Assert.Equal("Owned", result.GameState);
-        Assert.NotNull(result.OwnershipDeclaredAt);
-        Assert.True(result.HasRagAccess);
-        Assert.Equal(2, result.KbCardCount);
+        result.GameState.Should().Be("Owned");
+        result.OwnershipDeclaredAt.Should().NotBeNull();
+        result.HasRagAccess.Should().BeTrue();
+        result.KbCardCount.Should().Be(2);
         _mockRepo.Verify(r => r.UpdateAsync(entry, It.IsAny<CancellationToken>()), Times.Once);
         _mockUow.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
@@ -91,7 +92,7 @@ public sealed class DeclareOwnershipCommandHandlerTests
         var command = new DeclareOwnershipCommand(UserId, GameId);
 
         // Act & Assert
-        await Assert.ThrowsAsync<NotFoundException>(() => handler.Handle(command, CancellationToken.None));
+        await ((Func<Task>)(() => handler.Handle(command, CancellationToken.None))).Should().ThrowAsync<NotFoundException>();
     }
 
     [Fact]
@@ -111,7 +112,7 @@ public sealed class DeclareOwnershipCommandHandlerTests
         var command = new DeclareOwnershipCommand(UserId, GameId);
 
         // Act & Assert
-        await Assert.ThrowsAsync<DomainException>(() => handler.Handle(command, CancellationToken.None));
+        await ((Func<Task>)(() => handler.Handle(command, CancellationToken.None))).Should().ThrowAsync<DomainException>();
     }
 
     [Fact]
@@ -143,9 +144,9 @@ public sealed class DeclareOwnershipCommandHandlerTests
         var result = await handler.Handle(command, CancellationToken.None);
 
         // Assert — should succeed without error and return the same declared-at timestamp
-        Assert.Equal("Owned", result.GameState);
-        Assert.Equal(originalDeclaredAt, result.OwnershipDeclaredAt);
-        Assert.True(result.IsRagPublic);
+        result.GameState.Should().Be("Owned");
+        result.OwnershipDeclaredAt.Should().Be(originalDeclaredAt);
+        result.IsRagPublic.Should().BeTrue();
     }
 
     #region Helpers

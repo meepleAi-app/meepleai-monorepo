@@ -85,8 +85,8 @@ public sealed class CreateAgentTypologyCommandHandlerTests
             CreatedBy: Guid.NewGuid());
 
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentException>(
-            () => _handler.Handle(command, TestContext.Current.CancellationToken));
+        Func<Task> act = () => _handler.Handle(command, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<ArgumentException>();
 
         _mockRepository.Verify(r =>
             r.AddAsync(It.IsAny<AgentTypology>(), It.IsAny<CancellationToken>()),
@@ -106,8 +106,8 @@ public sealed class CreateAgentTypologyCommandHandlerTests
             CreatedBy: Guid.Empty);
 
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentException>(
-            () => _handler.Handle(command, TestContext.Current.CancellationToken));
+        Func<Task> act = () => _handler.Handle(command, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<ArgumentException>();
     }
 
     [Fact]

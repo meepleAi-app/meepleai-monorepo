@@ -683,8 +683,9 @@ public class EmbeddingBasedSemanticChunkerTests
             .ThrowsAsync(new OperationCanceledException());
 
         // Act & Assert - Should propagate cancellation
-        await Assert.ThrowsAsync<OperationCanceledException>(() =>
-            _service.ChunkAsync(rulebookContent, null, cts.Token));
+        var act = () =>
+            _service.ChunkAsync(rulebookContent, null, cts.Token);
+        await act.Should().ThrowAsync<OperationCanceledException>();
     }
 
     #endregion

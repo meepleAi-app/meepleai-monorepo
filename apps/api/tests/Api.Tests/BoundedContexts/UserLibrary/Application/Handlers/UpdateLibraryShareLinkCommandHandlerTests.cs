@@ -234,8 +234,8 @@ public class UpdateLibraryShareLinkCommandHandlerTests
             .ReturnsAsync((LibraryShareLink?)null);
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<NotFoundException>(
-            () => _handler.Handle(command, TestContext.Current.CancellationToken));
+        var act = () => _handler.Handle(command, TestContext.Current.CancellationToken);
+        var exception = (await act.Should().ThrowAsync<NotFoundException>()).Which;
 
         exception.Message.Should().Contain(shareToken);
 
@@ -274,8 +274,8 @@ public class UpdateLibraryShareLinkCommandHandlerTests
             .ReturnsAsync(shareLink);
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<NotFoundException>(
-            () => _handler.Handle(command, TestContext.Current.CancellationToken));
+        var act2 = () => _handler.Handle(command, TestContext.Current.CancellationToken);
+        var exception = (await act2.Should().ThrowAsync<NotFoundException>()).Which;
 
         // Should throw NotFoundException to hide existence from non-owners
         exception.Message.Should().Contain(shareToken);
@@ -314,8 +314,8 @@ public class UpdateLibraryShareLinkCommandHandlerTests
             .ReturnsAsync(shareLink);
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<DomainException>(
-            () => _handler.Handle(command, TestContext.Current.CancellationToken));
+        var act3 = () => _handler.Handle(command, TestContext.Current.CancellationToken);
+        var exception = (await act3.Should().ThrowAsync<DomainException>()).Which;
 
         exception.Message.Should().Contain("revoked");
 
@@ -348,8 +348,8 @@ public class UpdateLibraryShareLinkCommandHandlerTests
             .ReturnsAsync(shareLink);
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<DomainException>(
-            () => _handler.Handle(command, TestContext.Current.CancellationToken));
+        var act4 = () => _handler.Handle(command, TestContext.Current.CancellationToken);
+        var exception = (await act4.Should().ThrowAsync<DomainException>()).Which;
 
         exception.Message.Should().Contain("Invalid privacy level");
     }
@@ -384,8 +384,8 @@ public class UpdateLibraryShareLinkCommandHandlerTests
             .ReturnsAsync(shareLink);
 
         // Act & Assert
-        await Assert.ThrowsAsync<InvalidOperationException>(
-            () => _handler.Handle(command, TestContext.Current.CancellationToken));
+        var act5 = () => _handler.Handle(command, TestContext.Current.CancellationToken);
+        await act5.Should().ThrowAsync<InvalidOperationException>();
     }
 
     #endregion
@@ -396,8 +396,8 @@ public class UpdateLibraryShareLinkCommandHandlerTests
     public async Task Handle_WithNullCommand_ThrowsArgumentNullException()
     {
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentNullException>(
-            () => _handler.Handle(null!, TestContext.Current.CancellationToken));
+        var act6 = () => _handler.Handle(null!, TestContext.Current.CancellationToken);
+        await act6.Should().ThrowAsync<ArgumentNullException>();
     }
 
     #endregion

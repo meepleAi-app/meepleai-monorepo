@@ -73,6 +73,7 @@ public class IndexPdfCommandHandlerTests
     public void Constructor_WithTimeProvider_CreatesInstance()
     {
         // Arrange - fresh resources per test
+        using var context = CreateFreshDbContext();
         var (chunkingServiceMock, embeddingServiceMock, loggerMock, indexingSettingsMock) = CreateMocks();
         var timeProvider = TimeProvider.System;
 
@@ -93,6 +94,7 @@ public class IndexPdfCommandHandlerTests
     public void Constructor_WithNullTimeProvider_UsesSystemTimeProvider()
     {
         // Arrange - fresh resources per test
+        using var context = CreateFreshDbContext();
         var (chunkingServiceMock, embeddingServiceMock, loggerMock, indexingSettingsMock) = CreateMocks();
 
         // Act
@@ -222,6 +224,7 @@ public class IndexPdfCommandHandlerTests
     public async Task Handle_WithLargeInput_ProcessesEmbeddingsInBatches()
     {
         // Arrange: Create 250 chunks (should trigger 3 batches with size 100)
+        using var context = CreateFreshDbContext();
         var (chunkingServiceMock, embeddingServiceMock, loggerMock, indexingSettingsMock) = CreateMocks();
 
         var gameId = Guid.NewGuid();
@@ -285,6 +288,7 @@ public class IndexPdfCommandHandlerTests
     public async Task Handle_WithBatchSize100_Makes12ApiCallsFor1200Chunks()
     {
         // Arrange
+        using var context = CreateFreshDbContext();
         var (chunkingServiceMock, embeddingServiceMock, loggerMock, indexingSettingsMock) = CreateMocks();
 
         var gameId = Guid.NewGuid();
@@ -336,6 +340,7 @@ public class IndexPdfCommandHandlerTests
     public async Task Handle_WithFailedBatch_PropagatesException()
     {
         // Arrange
+        using var context = CreateFreshDbContext();
         var (chunkingServiceMock, embeddingServiceMock, loggerMock, indexingSettingsMock) = CreateMocks();
 
         var gameId = Guid.NewGuid();
@@ -396,6 +401,7 @@ public class IndexPdfCommandHandlerTests
     public async Task Handle_WithEmptyExtractedText_ReturnsTextExtractionRequired()
     {
         // Arrange
+        using var context = CreateFreshDbContext();
         var (chunkingServiceMock, embeddingServiceMock, loggerMock, indexingSettingsMock) = CreateMocks();
 
         var gameId = Guid.NewGuid();
@@ -440,6 +446,7 @@ public class IndexPdfCommandHandlerTests
     public async Task Handle_WithExtractedText_SetsProcessingStateToReady()
     {
         // Arrange: PDF has extracted text but ProcessingState is Extracting (not Ready)
+        using var context = CreateFreshDbContext();
         var (chunkingServiceMock, embeddingServiceMock, loggerMock, indexingSettingsMock) = CreateMocks();
 
         var gameId = Guid.NewGuid();
@@ -483,6 +490,7 @@ public class IndexPdfCommandHandlerTests
     public async Task Handle_WhenChunkingFails_SetsProcessingStateToFailed()
     {
         // Arrange
+        using var context = CreateFreshDbContext();
         var (chunkingServiceMock, embeddingServiceMock, loggerMock, indexingSettingsMock) = CreateMocks();
 
         var gameId = Guid.NewGuid();
@@ -516,6 +524,7 @@ public class IndexPdfCommandHandlerTests
     public async Task Handle_WhenUnexpectedExceptionOccurs_PersistsFailedState()
     {
         // Arrange
+        using var context = CreateFreshDbContext();
         var (chunkingServiceMock, embeddingServiceMock, loggerMock, indexingSettingsMock) = CreateMocks();
 
         var gameId = Guid.NewGuid();

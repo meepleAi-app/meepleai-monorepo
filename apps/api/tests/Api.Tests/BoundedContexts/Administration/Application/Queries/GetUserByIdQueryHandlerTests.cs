@@ -71,6 +71,7 @@ public class GetUserByIdQueryHandlerTests
     public async Task Handle_WithNonExistentUser_ReturnsNull()
     {
         // Arrange - fresh context per test
+        using var context = CreateFreshDbContext();
         var handler = CreateHandler(context);
 
         var nonExistentId = Guid.NewGuid();
@@ -87,6 +88,7 @@ public class GetUserByIdQueryHandlerTests
     public async Task Handle_WithUserHavingActiveSessions_ReturnsLastSeenAt()
     {
         // Arrange - fresh context per test
+        using var context = CreateFreshDbContext();
         var handler = CreateHandler(context);
 
         var userId = Guid.NewGuid();
@@ -133,6 +135,7 @@ public class GetUserByIdQueryHandlerTests
     public async Task Handle_WithMultipleSessions_ReturnsLatestLastSeenAt()
     {
         // Arrange - fresh context per test
+        using var context = CreateFreshDbContext();
         var handler = CreateHandler(context);
 
         var userId = Guid.NewGuid();
@@ -192,6 +195,7 @@ public class GetUserByIdQueryHandlerTests
     public async Task Handle_IgnoresRevokedSessions_WhenCalculatingLastSeen()
     {
         // Arrange - fresh context per test
+        using var context = CreateFreshDbContext();
         var handler = CreateHandler(context);
 
         var userId = Guid.NewGuid();
@@ -237,6 +241,7 @@ public class GetUserByIdQueryHandlerTests
     public async Task Handle_WithEmptyDisplayName_ReturnsEmptyString()
     {
         // Arrange - fresh context per test
+        using var context = CreateFreshDbContext();
         var handler = CreateHandler(context);
 
         var userId = Guid.NewGuid();

@@ -212,6 +212,7 @@ public class UpdateUserTierCommandHandlerTests : IAsyncLifetime
     public async Task Handle_UpgradeTierFromFreeToNormal_Persists()
     {
         // Arrange
+        using var scope = _serviceProvider.CreateScope();
         var services = GetServices(scope);
 
         var adminUser = new UserBuilder().WithEmail("admin2@test.com").AsAdmin().Build();
@@ -245,6 +246,7 @@ public class UpdateUserTierCommandHandlerTests : IAsyncLifetime
     public async Task Handle_DowngradeTierFromPremiumToFree_Persists()
     {
         // Arrange
+        using var scope = _serviceProvider.CreateScope();
         var services = GetServices(scope);
 
         var adminUser = new UserBuilder().WithEmail("admin3@test.com").AsAdmin().Build();
@@ -277,6 +279,7 @@ public class UpdateUserTierCommandHandlerTests : IAsyncLifetime
     public async Task Handle_NonAdminRequester_ThrowsDomainException()
     {
         // Arrange
+        using var scope = _serviceProvider.CreateScope();
         var services = GetServices(scope);
 
         // Create non-admin user
@@ -323,6 +326,7 @@ public class UpdateUserTierCommandHandlerTests : IAsyncLifetime
     public async Task Handle_InvalidTierValue_ThrowsDomainException()
     {
         // Arrange
+        using var scope = _serviceProvider.CreateScope();
         var services = GetServices(scope);
 
         var adminUser = new UserBuilder().WithEmail("admin4@test.com").AsAdmin().Build();
@@ -353,6 +357,7 @@ public class UpdateUserTierCommandHandlerTests : IAsyncLifetime
     public async Task Handle_NonExistentUser_ThrowsDomainException()
     {
         // Arrange
+        using var scope = _serviceProvider.CreateScope();
         var services = GetServices(scope);
 
         var adminUser = new UserBuilder().WithEmail("admin5@test.com").AsAdmin().Build();
@@ -380,6 +385,7 @@ public class UpdateUserTierCommandHandlerTests : IAsyncLifetime
     public async Task Handle_NonExistentRequester_ThrowsDomainException()
     {
         // Arrange
+        using var scope = _serviceProvider.CreateScope();
         var services = GetServices(scope);
 
         var targetUser = new UserBuilder().WithEmail("target3@test.com").WithTier(UserTier.Free).Build();
@@ -416,6 +422,7 @@ public class UpdateUserTierCommandHandlerTests : IAsyncLifetime
     public async Task Handle_AdminChangingOwnTier_SucceedsIfAllowed()
     {
         // Arrange
+        using var scope = _serviceProvider.CreateScope();
         var services = GetServices(scope);
 
         // Create admin user with Normal tier (unusual but possible scenario)
@@ -454,6 +461,7 @@ public class UpdateUserTierCommandHandlerTests : IAsyncLifetime
     public async Task Handle_SettingSameTier_IsIdempotent()
     {
         // Arrange
+        using var scope = _serviceProvider.CreateScope();
         var services = GetServices(scope);
 
         var adminUser = new UserBuilder().WithEmail("admin6@test.com").AsAdmin().Build();
@@ -491,6 +499,7 @@ public class UpdateUserTierCommandHandlerTests : IAsyncLifetime
     public async Task Handle_EditorRequester_ThrowsDomainException()
     {
         // Arrange
+        using var scope = _serviceProvider.CreateScope();
         var services = GetServices(scope);
 
         // Create editor user (per CLAUDE.md: admin/editor/user roles exist)

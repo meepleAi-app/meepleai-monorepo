@@ -144,6 +144,7 @@ public class GetUnreadCountQueryHandlerTests
         // Arrange
         var userId = Guid.NewGuid();
         var query = new GetUnreadCountQuery(userId);
+        using var cts = new CancellationTokenSource();
         cts.Cancel();
 
         _mockNotificationRepository

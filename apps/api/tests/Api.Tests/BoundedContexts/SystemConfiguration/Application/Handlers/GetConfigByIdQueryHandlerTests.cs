@@ -25,7 +25,7 @@ public class GetConfigByIdQueryHandlerTests
     {
         // Arrange
         var configId = Guid.NewGuid();
-        var config = new SystemConfig(Guid.NewGuid(), 
+        var config = new SystemConfig(Guid.NewGuid(),
             new ConfigKey("app.setting"), "42", "integer",
             Guid.NewGuid(), "A test setting", "General");
 

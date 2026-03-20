@@ -223,7 +223,7 @@ public sealed class ImportBggGameCommandHandlerTests
         var command = CreateCommand();
 
         // Act & Assert
-        var act = 
+        var act =
             () => _sut.Handle(command, CancellationToken.None);
         var ex = (await act.Should().ThrowAsync<QuotaExceededException>()).Which;
 
@@ -241,7 +241,7 @@ public sealed class ImportBggGameCommandHandlerTests
         var command = CreateCommand();
 
         // Act
-        var act = 
+        var act =
             () => _sut.Handle(command, CancellationToken.None);
         await act.Should().ThrowAsync<QuotaExceededException>();
 
@@ -267,7 +267,7 @@ public sealed class ImportBggGameCommandHandlerTests
         var command = CreateCommand();
 
         // Act & Assert
-        var act = 
+        var act =
             () => _sut.Handle(command, CancellationToken.None);
         await act.Should().ThrowAsync<ConflictException>();
     }
@@ -284,7 +284,7 @@ public sealed class ImportBggGameCommandHandlerTests
         var command = CreateCommand();
 
         // Act
-        var act = 
+        var act =
             () => _sut.Handle(command, CancellationToken.None);
         await act.Should().ThrowAsync<ConflictException>();
 
@@ -311,7 +311,7 @@ public sealed class ImportBggGameCommandHandlerTests
         var command = CreateCommand();
 
         // Act & Assert
-        var act = 
+        var act =
             () => _sut.Handle(command, CancellationToken.None);
         await act.Should().ThrowAsync<NotFoundException>();
     }
@@ -329,7 +329,7 @@ public sealed class ImportBggGameCommandHandlerTests
         var command = CreateCommand();
 
         // Act
-        var act = 
+        var act =
             () => _sut.Handle(command, CancellationToken.None);
         await act.Should().ThrowAsync<NotFoundException>();
 

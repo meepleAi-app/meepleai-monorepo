@@ -209,7 +209,7 @@ public class SimulateErrorCommandHandlerTests
         // Act & Assert
         var act = () =>
             new SimulateErrorCommandHandler(null!, _configuration);
-act.Should().Throw<ArgumentNullException>();
+        act.Should().Throw<ArgumentNullException>();
     }
 
     [Fact]
@@ -218,6 +218,6 @@ act.Should().Throw<ArgumentNullException>();
         // Act & Assert
         var act = () =>
             new SimulateErrorCommandHandler(_mockLogger.Object, null!);
-act.Should().Throw<ArgumentNullException>();
+        act.Should().Throw<ArgumentNullException>();
     }
 }

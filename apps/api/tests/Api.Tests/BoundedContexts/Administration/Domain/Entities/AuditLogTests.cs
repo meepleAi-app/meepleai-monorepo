@@ -43,7 +43,7 @@ public class AuditLogTests
         // Act & Assert
         var act = () =>
             new AuditLog(id, null, null!, "resource", "success");
-act.Should().Throw<ArgumentNullException>();
+        act.Should().Throw<ArgumentNullException>();
     }
 
     [Fact]

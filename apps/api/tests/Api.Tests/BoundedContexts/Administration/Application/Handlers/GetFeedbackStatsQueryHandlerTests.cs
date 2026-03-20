@@ -54,7 +54,7 @@ public class GetFeedbackStatsQueryHandlerTests
         // Act & Assert
         var act = () =>
             new GetFeedbackStatsQueryHandler(null!, _mockLogger.Object);
-act.Should().Throw<ArgumentNullException>();
+        act.Should().Throw<ArgumentNullException>();
     }
 
     [Fact]
@@ -66,7 +66,7 @@ act.Should().Throw<ArgumentNullException>();
         // Act & Assert
         var act = () =>
             new GetFeedbackStatsQueryHandler(context, null!);
-act.Should().Throw<ArgumentNullException>();
+        act.Should().Throw<ArgumentNullException>();
     }
     [Fact]
     public void Query_WithDefaultParameters_ConstructsCorrectly()

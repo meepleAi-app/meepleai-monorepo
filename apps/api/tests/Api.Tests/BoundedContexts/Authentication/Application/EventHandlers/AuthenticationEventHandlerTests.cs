@@ -409,7 +409,7 @@ public class AuthenticationEventHandlerTests
         // Act & Assert
         var act = () =>
             new ApiKeyRevokedEventHandler(null!, logger.Object);
-act.Should().Throw<ArgumentNullException>();
+        act.Should().Throw<ArgumentNullException>();
     }
 
     [Fact]
@@ -421,7 +421,7 @@ act.Should().Throw<ArgumentNullException>();
         // Act & Assert
         var act = () =>
             new ApiKeyRevokedEventHandler(dbContext, null!);
-act.Should().Throw<ArgumentNullException>();
+        act.Should().Throw<ArgumentNullException>();
     }
 
     #endregion

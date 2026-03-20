@@ -44,12 +44,12 @@ internal static class AdminSandboxEndpoints
             .ProducesProblem(StatusCodes.Status404NotFound);
 
         // GET /api/v1/admin/sandbox/pdfs/{id}/chunks/preview
-        // Returns chunk previews for a specific PDF document
+        // Returns paginated chunk previews for a specific PDF document
         sandboxGroup.MapGet("/pdfs/{id:guid}/chunks/preview", HandleGetChunksPreview)
             .WithName("GetSandboxPdfChunksPreview")
             .WithSummary("Get chunk previews for a PDF document (Admin Sandbox)")
-            .WithDescription("Returns text chunk previews from the vector index for a specific PDF document.")
-            .Produces<IReadOnlyList<ChunkPreviewDto>>(StatusCodes.Status200OK)
+            .WithDescription("Returns paginated text chunk previews from the vector index for a specific PDF document. Supports page, pageSize, and search query parameters.")
+            .Produces<PaginatedChunksResult>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status401Unauthorized)
             .ProducesProblem(StatusCodes.Status403Forbidden);
 
@@ -139,11 +139,17 @@ internal static class AdminSandboxEndpoints
 
     private static async Task<IResult> HandleGetChunksPreview(
         Guid id,
-        int? limit,
+        int? page,
+        int? pageSize,
+        string? search,
         IMediator mediator,
         CancellationToken ct)
     {
-        var query = new GetPdfChunksPreviewQuery(id, limit ?? 20);
+        var query = new GetPdfChunksPreviewQuery(
+            PdfId: id,
+            Page: page ?? 1,
+            PageSize: pageSize ?? 20,
+            Search: search);
         var result = await mediator.Send(query, ct).ConfigureAwait(false);
         return Results.Ok(result);
     }

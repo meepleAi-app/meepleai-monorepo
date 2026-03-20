@@ -91,7 +91,7 @@ public class UserDomainTests
         var user = CreateTestUser(role: Role.User);
 
         // Act
-        user.AssignRole(Role.Editor, Role.Admin);
+        user.AssignRole(Role.Editor, Role.SuperAdmin);
 
         // Assert
         Assert.Equal(Role.Editor, user.Role);
@@ -114,10 +114,10 @@ public class UserDomainTests
         // Arrange
         var user = CreateTestUser(role: Role.Admin);
 
-        // Act & Assert
+        // Act & Assert — Only SuperAdmin can assign roles, so Admin requester is rejected
         var exception = Assert.Throws<DomainException>(() =>
             user.AssignRole(Role.Admin, Role.Admin));
-        Assert.Contains("Cannot modify admin role through self-service", exception.Message);
+        Assert.Contains("Only the SuperAdmin can assign roles", exception.Message);
     }
 
     // ChangePassword Tests

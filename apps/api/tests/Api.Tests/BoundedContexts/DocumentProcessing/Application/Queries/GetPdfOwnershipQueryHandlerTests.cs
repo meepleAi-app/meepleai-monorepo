@@ -118,7 +118,7 @@ public class GetPdfOwnershipQueryHandlerTests
 
         // Assert
         result.Should().NotBeNull();
-        result.ProcessingState.Should().Be("Uploading");
+        result.ProcessingState.Should().Be("Extracting");
     }
 
     [Fact]

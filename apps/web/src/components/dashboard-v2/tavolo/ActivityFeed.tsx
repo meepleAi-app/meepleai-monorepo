@@ -26,16 +26,20 @@ const EVENT_ICONS: Record<ActivityEventType, typeof MessageSquare> = {
   wishlist_added: Heart,
 };
 
+// ─── Constants ──────────────────────────────────────────────────────────────
+
+const FEED_PARAMS = {
+  types: [] as ActivityEventType[],
+  search: '',
+  skip: 0,
+  take: 20,
+  order: 'desc' as const,
+} as const;
+
 // ─── Component ───────────────────────────────────────────────────────────────
 
 export function ActivityFeed() {
-  const { data, isLoading } = useActivityTimeline({
-    types: [],
-    search: '',
-    skip: 0,
-    take: 20,
-    order: 'desc',
-  });
+  const { data, isLoading } = useActivityTimeline(FEED_PARAMS);
 
   if (isLoading) {
     return (

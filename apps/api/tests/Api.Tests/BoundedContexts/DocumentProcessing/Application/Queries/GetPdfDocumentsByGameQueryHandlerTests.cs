@@ -71,7 +71,7 @@ public class GetPdfDocumentsByGameQueryHandlerTests
         result[1].PageCount.Should().Be(4);
 
         result[2].FileName.Should().Be("reference-card.pdf");
-        result[2].ProcessingState.Should().Be("Uploading");
+        result[2].ProcessingState.Should().Be("Extracting");
         result[2].PageCount.Should().BeNull();
 
         _documentRepositoryMock.Verify(
@@ -173,7 +173,7 @@ public class GetPdfDocumentsByGameQueryHandlerTests
         // Assert
         result.Count.Should().Be(4);
         result[0].ProcessingState.Should().Be("Pending");
-        result[1].ProcessingState.Should().Be("Uploading");
+        result[1].ProcessingState.Should().Be("Extracting");
         result[2].ProcessingState.Should().Be("Ready");
         result[3].ProcessingState.Should().Be("Failed");
     }

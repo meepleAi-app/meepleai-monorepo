@@ -1,7 +1,7 @@
 using Api.BoundedContexts.KnowledgeBase.Application.Commands;
-using Api.BoundedContexts.KnowledgeBase.Application.Commands;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries;
 using Api.BoundedContexts.KnowledgeBase.Domain.Entities;
+using Api.BoundedContexts.KnowledgeBase.Domain.Enums;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Aggregates;
@@ -55,8 +55,9 @@ public sealed class CreateGameAgentCommandHandlerTests
             _unitOfWorkMock.Object,
             _loggerMock.Object);
 
-        // Default: game and approved typology found
+        // Default: game found, KB indexed, and approved typology found
         SetupGameFound();
+        SetupCompletedKnowledgeBase();
         SetupApprovedTypology();
     }
 
@@ -230,6 +231,18 @@ public sealed class CreateGameAgentCommandHandlerTests
         _gameRepoMock
             .Setup(r => r.GetByIdAsync(_gameId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(game);
+    }
+
+    private void SetupCompletedKnowledgeBase()
+    {
+        var indexingInfo = new VectorDocumentIndexingInfo(
+            VectorDocumentIndexingStatus.Completed,
+            ChunkCount: 10,
+            IndexingError: null);
+
+        _vectorDocRepoMock
+            .Setup(r => r.GetIndexingInfoByGameIdAsync(_gameId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(indexingInfo);
     }
 
     private void SetupApprovedTypology()

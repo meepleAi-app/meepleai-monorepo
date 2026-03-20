@@ -11,13 +11,36 @@
 
 import React from 'react';
 
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, screen } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 import { AgentCharacterSheet } from '@/components/agent/AgentCharacterSheet';
 import type { AgentDetailData } from '@/components/ui/data-display/extra-meeple-card/types';
 
+// ── Query Client wrapper ────────────────────────────────────────────────────
+
+function renderWithQuery(ui: React.ReactElement) {
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+  });
+  return render(<QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>);
+}
+
 // ── Mocks ──────────────────────────────────────────────────────────────────
+
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({
+    push: vi.fn(),
+    replace: vi.fn(),
+    back: vi.fn(),
+    forward: vi.fn(),
+    refresh: vi.fn(),
+    prefetch: vi.fn(),
+  }),
+  usePathname: () => '/',
+  useSearchParams: () => new URLSearchParams(),
+}));
 
 vi.mock('@/hooks/useAgentStatus', () => ({
   useAgentStatus: vi.fn(() => ({
@@ -63,18 +86,27 @@ const mockAgent: AgentDetailData = {
   gameName: 'Pandemic',
 };
 
+// ── Wrapper ─────────────────────────────────────────────────────────────────
+
+const createQueryClient = () => new QueryClient({ defaultOptions: { queries: { retry: false } } });
+
+function renderWithProviders(ui: React.ReactElement) {
+  const queryClient = createQueryClient();
+  return render(<QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>);
+}
+
 // ── Tests ──────────────────────────────────────────────────────────────────
 
 describe('AgentCharacterSheet', () => {
   it('renders agent name and type badge', () => {
-    render(<AgentCharacterSheet data={mockAgent} />);
+    renderWithQuery(<AgentCharacterSheet data={mockAgent} />);
 
     expect(screen.getByTestId('agent-name')).toHaveTextContent('Sherlock RAG');
     expect(screen.getByTestId('agent-type-badge')).toHaveTextContent('qa');
   });
 
   it('renders stats in portrait section', () => {
-    render(<AgentCharacterSheet data={mockAgent} />);
+    renderWithQuery(<AgentCharacterSheet data={mockAgent} />);
 
     const statsGrid = screen.getByTestId('agent-stats-grid');
     expect(statsGrid).toBeInTheDocument();
@@ -90,7 +122,7 @@ describe('AgentCharacterSheet', () => {
   });
 
   it('renders Equipaggiamento section', () => {
-    render(<AgentCharacterSheet data={mockAgent} />);
+    renderWithQuery(<AgentCharacterSheet data={mockAgent} />);
 
     const section = screen.getByTestId('section-equipaggiamento');
     expect(section).toBeInTheDocument();
@@ -99,7 +131,7 @@ describe('AgentCharacterSheet', () => {
   });
 
   it('renders Area Azione section', () => {
-    render(<AgentCharacterSheet data={mockAgent} />);
+    renderWithQuery(<AgentCharacterSheet data={mockAgent} />);
 
     const section = screen.getByTestId('section-area-azione');
     expect(section).toBeInTheDocument();
@@ -108,7 +140,7 @@ describe('AgentCharacterSheet', () => {
   });
 
   it('renders Storia section', () => {
-    render(<AgentCharacterSheet data={mockAgent} />);
+    renderWithQuery(<AgentCharacterSheet data={mockAgent} />);
 
     const section = screen.getByTestId('section-storia');
     expect(section).toBeInTheDocument();
@@ -117,7 +149,7 @@ describe('AgentCharacterSheet', () => {
   });
 
   it('renders game link when gameName is present', () => {
-    render(<AgentCharacterSheet data={mockAgent} />);
+    renderWithQuery(<AgentCharacterSheet data={mockAgent} />);
 
     const link = screen.getByTestId('agent-game-link');
     expect(link).toBeInTheDocument();
@@ -132,7 +164,7 @@ describe('AgentCharacterSheet', () => {
       gameName: undefined,
     };
 
-    render(<AgentCharacterSheet data={agentWithoutGame} />);
+    renderWithQuery(<AgentCharacterSheet data={agentWithoutGame} />);
 
     expect(screen.queryByTestId('agent-game-link')).not.toBeInTheDocument();
   });
@@ -144,14 +176,14 @@ describe('AgentCharacterSheet', () => {
       gameName: undefined,
     };
 
-    render(<AgentCharacterSheet data={agentWithoutGame} />);
+    renderWithQuery(<AgentCharacterSheet data={agentWithoutGame} />);
 
     const section = screen.getByTestId('section-equipaggiamento');
     expect(section).toHaveTextContent('Nessun gioco collegato a questo agente');
   });
 
   it('shows empty state for Storia when no threads', () => {
-    render(<AgentCharacterSheet data={mockAgent} />);
+    renderWithQuery(<AgentCharacterSheet data={mockAgent} />);
 
     const section = screen.getByTestId('section-storia');
     // With empty fetch mock, empty state message should appear once threads load
@@ -159,7 +191,7 @@ describe('AgentCharacterSheet', () => {
   });
 
   it('renders configure button when gameId is present', () => {
-    render(<AgentCharacterSheet data={mockAgent} />);
+    renderWithQuery(<AgentCharacterSheet data={mockAgent} />);
 
     const btn = screen.getByTestId('agent-configure-btn');
     expect(btn).toBeInTheDocument();

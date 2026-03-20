@@ -18,6 +18,15 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { AgentCharacterSheet } from '@/components/agent/AgentCharacterSheet';
 import type { AgentDetailData } from '@/components/ui/data-display/extra-meeple-card/types';
 
+// ── Query Client wrapper ────────────────────────────────────────────────────
+
+function renderWithQuery(ui: React.ReactElement) {
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+  });
+  return render(<QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>);
+}
+
 // ── Mocks ──────────────────────────────────────────────────────────────────
 
 vi.mock('@/hooks/useAgentStatus', () => ({
@@ -77,14 +86,14 @@ function renderWithProviders(ui: React.ReactElement) {
 
 describe('AgentCharacterSheet', () => {
   it('renders agent name and type badge', () => {
-    renderWithProviders(<AgentCharacterSheet data={mockAgent} />);
+    renderWithQuery(<AgentCharacterSheet data={mockAgent} />);
 
     expect(screen.getByTestId('agent-name')).toHaveTextContent('Sherlock RAG');
     expect(screen.getByTestId('agent-type-badge')).toHaveTextContent('qa');
   });
 
   it('renders stats in portrait section', () => {
-    renderWithProviders(<AgentCharacterSheet data={mockAgent} />);
+    renderWithQuery(<AgentCharacterSheet data={mockAgent} />);
 
     const statsGrid = screen.getByTestId('agent-stats-grid');
     expect(statsGrid).toBeInTheDocument();
@@ -100,7 +109,7 @@ describe('AgentCharacterSheet', () => {
   });
 
   it('renders Equipaggiamento section', () => {
-    renderWithProviders(<AgentCharacterSheet data={mockAgent} />);
+    renderWithQuery(<AgentCharacterSheet data={mockAgent} />);
 
     const section = screen.getByTestId('section-equipaggiamento');
     expect(section).toBeInTheDocument();
@@ -109,7 +118,7 @@ describe('AgentCharacterSheet', () => {
   });
 
   it('renders Area Azione section', () => {
-    renderWithProviders(<AgentCharacterSheet data={mockAgent} />);
+    renderWithQuery(<AgentCharacterSheet data={mockAgent} />);
 
     const section = screen.getByTestId('section-area-azione');
     expect(section).toBeInTheDocument();
@@ -118,7 +127,7 @@ describe('AgentCharacterSheet', () => {
   });
 
   it('renders Storia section', () => {
-    renderWithProviders(<AgentCharacterSheet data={mockAgent} />);
+    renderWithQuery(<AgentCharacterSheet data={mockAgent} />);
 
     const section = screen.getByTestId('section-storia');
     expect(section).toBeInTheDocument();
@@ -127,7 +136,7 @@ describe('AgentCharacterSheet', () => {
   });
 
   it('renders game link when gameName is present', () => {
-    renderWithProviders(<AgentCharacterSheet data={mockAgent} />);
+    renderWithQuery(<AgentCharacterSheet data={mockAgent} />);
 
     const link = screen.getByTestId('agent-game-link');
     expect(link).toBeInTheDocument();
@@ -142,7 +151,7 @@ describe('AgentCharacterSheet', () => {
       gameName: undefined,
     };
 
-    renderWithProviders(<AgentCharacterSheet data={agentWithoutGame} />);
+    renderWithQuery(<AgentCharacterSheet data={agentWithoutGame} />);
 
     expect(screen.queryByTestId('agent-game-link')).not.toBeInTheDocument();
   });
@@ -154,14 +163,14 @@ describe('AgentCharacterSheet', () => {
       gameName: undefined,
     };
 
-    renderWithProviders(<AgentCharacterSheet data={agentWithoutGame} />);
+    renderWithQuery(<AgentCharacterSheet data={agentWithoutGame} />);
 
     const section = screen.getByTestId('section-equipaggiamento');
     expect(section).toHaveTextContent('Nessun gioco collegato a questo agente');
   });
 
   it('shows empty state for Storia when no threads', () => {
-    renderWithProviders(<AgentCharacterSheet data={mockAgent} />);
+    renderWithQuery(<AgentCharacterSheet data={mockAgent} />);
 
     const section = screen.getByTestId('section-storia');
     // With empty fetch mock, empty state message should appear once threads load
@@ -169,7 +178,7 @@ describe('AgentCharacterSheet', () => {
   });
 
   it('renders configure button when gameId is present', () => {
-    renderWithProviders(<AgentCharacterSheet data={mockAgent} />);
+    renderWithQuery(<AgentCharacterSheet data={mockAgent} />);
 
     const btn = screen.getByTestId('agent-configure-btn');
     expect(btn).toBeInTheDocument();

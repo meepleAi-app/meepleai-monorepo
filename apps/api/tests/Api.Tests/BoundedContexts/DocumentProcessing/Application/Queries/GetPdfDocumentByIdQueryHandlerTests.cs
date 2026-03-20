@@ -114,7 +114,7 @@ public class GetPdfDocumentByIdQueryHandlerTests
 
         // Assert
         result.Should().NotBeNull();
-        result.ProcessingState.Should().Be("Uploading");
+        result.ProcessingState.Should().Be("Extracting");
         result.PageCount.Should().BeNull();
         result.ProcessedAt.Should().BeNull();
     }

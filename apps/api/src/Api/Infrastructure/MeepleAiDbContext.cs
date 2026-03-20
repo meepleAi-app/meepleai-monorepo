@@ -81,6 +81,9 @@ public class MeepleAiDbContext : DbContext
     public DbSet<VectorDocumentEntity> VectorDocuments => Set<VectorDocumentEntity>();
     public DbSet<TextChunkEntity> TextChunks => Set<TextChunkEntity>(); // AI-14: Hybrid search
     public DbSet<BoundedContexts.Administration.Domain.Entities.UserAiConsent> UserAiConsents => Set<BoundedContexts.Administration.Domain.Entities.UserAiConsent>(); // ISSUE-5512: GDPR AI consent
+    public DbSet<BoundedContexts.Administration.Domain.Entities.UserProfile> UserProfiles => Set<BoundedContexts.Administration.Domain.Entities.UserProfile>(); // Phase 6: Admin user profile projection
+    public DbSet<BoundedContexts.BusinessSimulations.Domain.Entities.UserBudget> UserBudgets => Set<BoundedContexts.BusinessSimulations.Domain.Entities.UserBudget>(); // Phase 6: Budget/tier projection
+    public DbSet<BoundedContexts.SystemConfiguration.Domain.Entities.UserPreferences> UserPreferences => Set<BoundedContexts.SystemConfiguration.Domain.Entities.UserPreferences>(); // Phase 6: User preferences projection
     public DbSet<AuditLogEntity> AuditLogs => Set<AuditLogEntity>();
     public DbSet<AiRequestLogEntity> AiRequestLogs => Set<AiRequestLogEntity>();
     public DbSet<AgentFeedbackEntity> AgentFeedbacks => Set<AgentFeedbackEntity>();

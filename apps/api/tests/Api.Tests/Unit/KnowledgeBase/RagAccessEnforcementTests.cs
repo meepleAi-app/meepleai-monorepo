@@ -57,8 +57,8 @@ public sealed class RagAccessEnforcementTests
             StrategyParameters: null);
 
         // Act & Assert
-        var ex = await Assert.ThrowsAsync<ForbiddenException>(
-            () => handler.Handle(command, CancellationToken.None));
+        var act = () => handler.Handle(command, CancellationToken.None);
+        var ex = (await act.Should().ThrowAsync<ForbiddenException>()).Which;
         ex.Message.Should().Contain("possedere il gioco");
     }
 
@@ -158,8 +158,8 @@ public sealed class RagAccessEnforcementTests
             StrategyParameters: null);
 
         // Act & Assert
-        var ex = await Assert.ThrowsAsync<ForbiddenException>(
-            () => handler.Handle(command, CancellationToken.None));
+        var act = () => handler.Handle(command, CancellationToken.None);
+        var ex = (await act.Should().ThrowAsync<ForbiddenException>()).Which;
         ex.Message.Should().Contain("possedere il gioco");
     }
 

@@ -241,7 +241,7 @@ public sealed class CreatePauseSnapshotCommandHandlerTests
         // Assert
         capturedSnapshot.Should().NotBeNull();
         capturedSnapshot!.AttachmentIds.Count.Should().Be(2);
-        Assert.All(photoIds, id => Assert.Contains(id, capturedSnapshot.AttachmentIds));
+        capturedSnapshot.AttachmentIds.Should().Contain(photoIds);
     }
 
     [Fact]

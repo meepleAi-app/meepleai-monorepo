@@ -72,7 +72,7 @@ public class BulkImportApiKeysCommandHandlerTests
         result.Data.Count.Should().Be(2);
 
         // Verify plaintext keys are returned
-        Assert.All(result.Data, dto => Assert.False(string.IsNullOrWhiteSpace(dto.PlaintextKey)));
+        result.Data.Should().OnlyContain(dto => !string.IsNullOrWhiteSpace(dto.PlaintextKey));
 
         // Verify repository was called
         _mockApiKeyRepository.Verify(r => r.AddAsync(It.IsAny<ApiKey>(), It.IsAny<CancellationToken>()), Times.Exactly(2));

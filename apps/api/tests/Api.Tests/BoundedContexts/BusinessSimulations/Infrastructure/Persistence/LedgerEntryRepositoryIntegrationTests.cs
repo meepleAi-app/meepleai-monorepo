@@ -244,7 +244,7 @@ public class LedgerEntryRepositoryIntegrationTests : IAsyncLifetime
 
         // Assert
         total.Should().Be(2);
-        Assert.All(entries, e => Assert.True(e.Date >= from && e.Date <= to));
+        entries.Should().OnlyContain(e => e.Date >= from && e.Date <= to);
     }
 
     [Fact]
@@ -276,7 +276,7 @@ public class LedgerEntryRepositoryIntegrationTests : IAsyncLifetime
 
         // Assert
         total.Should().Be(2);
-        Assert.All(entries, e => Assert.Equal(LedgerEntryType.Income, e.Type));
+        entries.Should().OnlyContain(e => e.Type == LedgerEntryType.Income);
     }
 
     [Fact]
@@ -288,7 +288,7 @@ public class LedgerEntryRepositoryIntegrationTests : IAsyncLifetime
 
         // Assert
         total.Should().Be(3);
-        Assert.All(entries, e => Assert.Equal(LedgerEntryType.Expense, e.Type));
+        entries.Should().OnlyContain(e => e.Type == LedgerEntryType.Expense);
     }
 
     [Fact]
@@ -300,7 +300,7 @@ public class LedgerEntryRepositoryIntegrationTests : IAsyncLifetime
 
         // Assert
         total.Should().Be(1);
-        Assert.All(entries, e => Assert.Equal(LedgerCategory.Subscription, e.Category));
+        entries.Should().OnlyContain(e => e.Category == LedgerCategory.Subscription);
     }
 
     [Fact]
@@ -321,12 +321,11 @@ public class LedgerEntryRepositoryIntegrationTests : IAsyncLifetime
 
         // Assert
         total.Should().Be(2);
-        Assert.All(entries, e =>
-        {
-            Assert.Equal(LedgerEntryType.Expense, e.Type);
-            Assert.Equal(LedgerEntrySource.Manual, e.Source);
-            Assert.True(e.Date >= dateFrom && e.Date <= dateTo);
-        });
+        entries.Should().OnlyContain(e =>
+            e.Type == LedgerEntryType.Expense &&
+            e.Source == LedgerEntrySource.Manual &&
+            e.Date >= dateFrom && e.Date <= dateTo
+        );
     }
 
     [Fact]

@@ -48,7 +48,7 @@ public class GetActiveSessionsByGameQueryHandlerTests
         // Assert
         result.Should().NotBeNull();
         result.Count.Should().Be(2);
-        Assert.All(result, dto => Assert.Equal(gameId, dto.GameId));
+        result.Should().OnlyContain(dto => dto.GameId == gameId);
     }
 
     [Fact]

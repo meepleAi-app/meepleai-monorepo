@@ -272,7 +272,7 @@ public class OllamaLlmClientTests
 
         // Assert
         results.Length.Should().Be(5);
-        Assert.All(results, r => Assert.True(r.Success));
+        results.Should().OnlyContain(r => r.Success);
     }
 
     [Fact]

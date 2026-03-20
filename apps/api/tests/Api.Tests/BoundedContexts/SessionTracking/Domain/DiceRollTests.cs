@@ -29,7 +29,7 @@ public class DiceRollTests
         diceRoll.Label.Should().BeNull();
         diceRoll.Modifier.Should().Be(3);
         diceRoll.GetRolls().Length.Should().Be(2);
-        Assert.All(diceRoll.GetRolls(), r => Assert.InRange(r, 1, 6));
+        diceRoll.GetRolls().Should().OnlyContain(r => r >= 1 && r <= 6);
         diceRoll.IsDeleted.Should().BeFalse();
     }
 
@@ -127,7 +127,7 @@ public class DiceRollTests
         // Assert
         var rolls = diceRoll.GetRolls();
         rolls.Length.Should().Be(5);
-        Assert.All(rolls, r => Assert.InRange(r, 1, 6));
+        rolls.Should().OnlyContain(r => r >= 1 && r <= 6);
     }
 
     [Fact]

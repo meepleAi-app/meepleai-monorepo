@@ -15,6 +15,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Moq;
 using StackExchange.Redis;
+using FluentAssertions;
 using Xunit;
 
 namespace Api.Tests.Integration.KnowledgeBase;
@@ -127,7 +128,7 @@ public sealed class AgentTypologyEndpointsSmokeTests : IAsyncLifetime
             DisplayName = "Editor User"
         });
 
-        Assert.Equal(HttpStatusCode.OK, registerEditorResponse.StatusCode);
+        registerEditorResponse.StatusCode.Should().Be(HttpStatusCode.OK);
         _editorCookie = registerEditorResponse.Headers.GetValues("Set-Cookie").First();
 
         // Manually set editor role in DB
@@ -150,7 +151,7 @@ public sealed class AgentTypologyEndpointsSmokeTests : IAsyncLifetime
             DisplayName = "Admin User"
         });
 
-        Assert.Equal(HttpStatusCode.OK, registerAdminResponse.StatusCode);
+        registerAdminResponse.StatusCode.Should().Be(HttpStatusCode.OK);
         _adminCookie = registerAdminResponse.Headers.GetValues("Set-Cookie").First();
 
         // Manually set admin role in DB
@@ -196,12 +197,12 @@ public sealed class AgentTypologyEndpointsSmokeTests : IAsyncLifetime
             throw new Exception($"Expected 201 Created but got {response.StatusCode}. Response: {errorBody}");
         }
 
-        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Created);
 
         var result = await response.Content.ReadFromJsonAsync<AgentTypologyDto>();
-        Assert.NotNull(result);
-        Assert.Equal("Test Typology", result.Name);
-        Assert.Equal("Draft", result.Status);
+        result.Should().NotBeNull();
+        result.Name.Should().Be("Test Typology");
+        result.Status.Should().Be("Draft");
         Assert.NotEqual(Guid.Empty, result.CreatedBy); // Endpoint sets ProposedBy from session.User.Id
     }
 
@@ -241,13 +242,13 @@ public sealed class AgentTypologyEndpointsSmokeTests : IAsyncLifetime
         var response = await _client.SendAsync(testRequest);
 
         // Assert
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var responseBody = await response.Content.ReadAsStringAsync();
         var result = System.Text.Json.JsonDocument.Parse(responseBody).RootElement;
 
-        Assert.True(result.GetProperty("success").GetBoolean());
-        Assert.True(result.TryGetProperty("response", out var responseText));
+        (result.GetProperty("success").GetBoolean()).Should().BeTrue();
+        (result.TryGetProperty("response", out var responseText)).Should().BeTrue();
         Assert.NotEqual(string.Empty, responseText.GetString());
     }
 
@@ -284,10 +285,8 @@ public sealed class AgentTypologyEndpointsSmokeTests : IAsyncLifetime
 
         // Assert: Should fail with 422 (validation error - FluentValidation runs before handler sees ownership)
         // Or 400 if handler catches and returns BadRequest
-        Assert.True(
-            response.StatusCode == HttpStatusCode.BadRequest ||
-            response.StatusCode == HttpStatusCode.UnprocessableEntity,
-            $"Expected 400 or 422, got {response.StatusCode}");
+        (response.StatusCode == HttpStatusCode.BadRequest ||
+            response.StatusCode == HttpStatusCode.UnprocessableEntity).Should().BeTrue($"Expected 400 or 422, got {response.StatusCode}");
     }
 
     [Fact]
@@ -312,6 +311,6 @@ public sealed class AgentTypologyEndpointsSmokeTests : IAsyncLifetime
 
         // Assert: Middleware returns 422 UnprocessableEntity when no auth (FluentValidation runs first)
         // Auth check happens AFTER model binding and validation
-        Assert.Equal(HttpStatusCode.UnprocessableEntity, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.UnprocessableEntity);
     }
 }

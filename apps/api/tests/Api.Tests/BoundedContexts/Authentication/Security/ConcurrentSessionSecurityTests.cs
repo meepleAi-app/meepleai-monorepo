@@ -298,7 +298,7 @@ public class ConcurrentSessionSecurityTests : IDisposable
         uniqueTokens.Should().Be(1000);
 
         // Verify token format (should be base64-like, long enough for security)
-        Assert.All(tokens, t => Assert.True(t.Length >= 32, "Token should be at least 32 characters"));
+        tokens.Should().OnlyContain(t => t.Length >= 32, "Token should be at least 32 characters");
     }
 
     #endregion

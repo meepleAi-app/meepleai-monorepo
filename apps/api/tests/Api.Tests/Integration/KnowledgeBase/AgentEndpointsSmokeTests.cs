@@ -398,20 +398,16 @@ public sealed class AgentEndpointsSmokeTests : IAsyncLifetime
         // SSE endpoint should return 200 OK with text/event-stream content type
         // The endpoint may return 403 if additional authorization checks fail (e.g., subscription tier)
         // For smoke test, we accept any valid response that proves endpoint is reachable
-        Assert.True(
-            response.StatusCode == HttpStatusCode.OK ||
-            response.StatusCode == HttpStatusCode.Forbidden || // May require additional permissions
-            response.StatusCode == HttpStatusCode.NotFound, // Endpoint might not be registered in test environment
-            $"Expected OK, Forbidden, or NotFound, got {response.StatusCode}");
+        (response.StatusCode == HttpStatusCode.OK ||
+            response.StatusCode == HttpStatusCode.Forbidden ||
+            response.StatusCode == HttpStatusCode.NotFound).Should().BeTrue($"Expected OK, Forbidden, or NotFound, got {response.StatusCode}");
 
         // If we got 200, verify content type is correct for SSE
         if (response.StatusCode == HttpStatusCode.OK)
         {
             // Note: Content-Type might vary based on streaming implementation
             var contentType = response.Content.Headers.ContentType?.MediaType;
-            Assert.True(
-                contentType == "text/event-stream" || contentType == "application/json",
-                $"Expected text/event-stream or application/json, got {contentType}");
+            (contentType == "text/event-stream" || contentType == "application/json").Should().BeTrue($"Expected text/event-stream or application/json, got {contentType}");
         }
     }
 
@@ -431,10 +427,8 @@ public sealed class AgentEndpointsSmokeTests : IAsyncLifetime
 
         // Assert
         // Config may not exist yet (404) or exist (200), both are valid for smoke test
-        Assert.True(
-            response.StatusCode == HttpStatusCode.OK ||
-            response.StatusCode == HttpStatusCode.NotFound,
-            $"Expected OK or NotFound, got {response.StatusCode}");
+        (response.StatusCode == HttpStatusCode.OK ||
+            response.StatusCode == HttpStatusCode.NotFound).Should().BeTrue($"Expected OK or NotFound, got {response.StatusCode}");
     }
 
     // ========================================
@@ -463,11 +457,9 @@ public sealed class AgentEndpointsSmokeTests : IAsyncLifetime
 
         // Assert - For smoke test, we accept 200 OK or 422 (if typology validation fails)
         // The important thing is that authentication works and endpoint is reachable
-        Assert.True(
-            response.StatusCode == HttpStatusCode.OK ||
+        (response.StatusCode == HttpStatusCode.OK ||
             response.StatusCode == HttpStatusCode.UnprocessableEntity ||
-            response.StatusCode == HttpStatusCode.NotFound,
-            $"Expected OK, UnprocessableEntity, or NotFound but got {response.StatusCode}");
+            response.StatusCode == HttpStatusCode.NotFound).Should().BeTrue($"Expected OK, UnprocessableEntity, or NotFound but got {response.StatusCode}");
     }
 
     // ========================================

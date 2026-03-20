@@ -73,7 +73,7 @@ public sealed class ActivityTimelineServiceFilterTests : IDisposable
         // Assert
         totalCount.Should().Be(1);
         events.Should().ContainSingle();
-        Assert.All(events, e => Assert.Equal("game_added", e.Type));
+        events.Should().OnlyContain(e => e.Type == "game_added");
     }
 
     [Fact]
@@ -158,10 +158,11 @@ public sealed class ActivityTimelineServiceFilterTests : IDisposable
 
         // Assert
         totalCount.Should().Be(2);
-        Assert.All(events, e =>
+        events.Should().AllSatisfy(e =>
         {
-            var gameEvt = Assert.IsType<GameAddedEvent>(e);
-            Assert.Contains("Wing", gameEvt.GameName, StringComparison.OrdinalIgnoreCase);
+            e.Should().BeOfType<GameAddedEvent>();
+            var gameEvt = (GameAddedEvent)e;
+            gameEvt.GameName.Should().ContainEquivalentOf("Wing");
         });
     }
 
@@ -218,10 +219,9 @@ public sealed class ActivityTimelineServiceFilterTests : IDisposable
 
         // Assert
         totalCount.Should().Be(2);
-        Assert.All(events, e =>
-        {
-            Assert.True(e.Type == "game_added" || e.Type == "session_completed");
-        });
+        events.Should().OnlyContain(e =>
+            e.Type == "game_added" || e.Type == "session_completed"
+        );
     }
 
     [Fact]

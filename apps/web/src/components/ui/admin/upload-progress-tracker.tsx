@@ -100,16 +100,16 @@ export function UploadProgressTracker({
   const [hidden, setHidden] = useState(false);
 
   // Auto-hide 5 seconds after reaching a terminal state
+  const currentState = status?.state;
   useEffect(() => {
-    if (!status) return;
-    if (status.state !== 'ready' && status.state !== 'failed') return;
+    if (currentState !== 'ready' && currentState !== 'failed') return;
 
     const timer = setTimeout(() => {
       setHidden(true);
     }, 5000);
 
     return () => clearTimeout(timer);
-  }, [status?.state]);
+  }, [currentState]);
 
   if (!documentId || !status || hidden) return null;
 

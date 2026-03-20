@@ -931,7 +931,7 @@ export function createSharedGamesClient({ httpClient }: CreateSharedGamesClientP
 
     /**
      * Get seeding status for all shared games (ADMIN ONLY)
-     * GET /api/v1/shared-game-catalog/admin/shared-games/seeding-status
+     * GET /api/v1/admin/shared-games/seeding-status
      *
      * Returns all games with their GameDataStatus for seeding progress tracking.
      *
@@ -939,7 +939,7 @@ export function createSharedGamesClient({ httpClient }: CreateSharedGamesClientP
      */
     async getSeedingStatus(): Promise<SeedingGameList> {
       const result = await httpClient.get(
-        '/api/v1/shared-game-catalog/admin/shared-games/seeding-status',
+        '/api/v1/admin/shared-games/seeding-status',
         SeedingGameListSchema
       );
       return result ?? [];
@@ -957,13 +957,13 @@ export function createSharedGamesClient({ httpClient }: CreateSharedGamesClientP
 
     /**
      * Download the seeding tracking export as an Excel file (ADMIN ONLY)
-     * GET /api/v1/shared-game-catalog/admin/shared-games/seeding-status/export
+     * GET /api/v1/admin/shared-games/tracking-export
      *
      * Uses raw fetch because httpClient.get() parses JSON; blob download requires
      * the raw response body.
      */
     async downloadTrackingExport(): Promise<void> {
-      const path = '/api/v1/shared-game-catalog/admin/shared-games/seeding-status/export';
+      const path = '/api/v1/admin/shared-games/tracking-export';
       const response = await fetch(`${getApiBase()}${path}`, {
         method: 'GET',
         credentials: 'include',

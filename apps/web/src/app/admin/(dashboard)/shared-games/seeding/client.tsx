@@ -111,7 +111,22 @@ export function SeedingPageClient() {
     intervalRef.current = setInterval(() => {
       void fetchGames();
     }, POLLING_INTERVAL_MS);
+
+    // Pause polling when tab is hidden to reduce backend load
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        if (intervalRef.current) clearInterval(intervalRef.current);
+      } else {
+        void fetchGames();
+        intervalRef.current = setInterval(() => {
+          void fetchGames();
+        }, POLLING_INTERVAL_MS);
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
     return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
   }, [fetchGames]);

@@ -136,13 +136,11 @@ namespace Api.Infrastructure.Migrations
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
-            // Remove seeded games (only skeleton games created by system seed admin)
+            // Remove all seeded games (regardless of enrichment status) then the seed admin user
             migrationBuilder.Sql("""
                 DELETE FROM shared_games
-                WHERE created_by = (SELECT id FROM users WHERE email = 'system-seed@meepleai.app')
-                AND game_data_status = 0;
+                WHERE created_by = (SELECT id FROM users WHERE email = 'system-seed@meepleai.app');
 
-                -- Remove system seed admin user
                 DELETE FROM users WHERE email = 'system-seed@meepleai.app';
                 """);
 

@@ -204,7 +204,7 @@ public class ValidationAccuracyMetricsTests
         // MCC = (TP*TN - FP*FN) / sqrt((TP+FP)(TP+FN)(TN+FP)(TN+FN))
         // MCC = (50*40 - 10*5) / sqrt((60)(55)(50)(45))
         // MCC = (2000 - 50) / sqrt(7425000) = 1950 / 2724.9 ≈ 0.7155
-        Assert.InRange(mcc, 0.71, 0.72);
+        mcc.Should().BeInRange(0.71, 0.72);
     }
 
     [Fact]
@@ -306,7 +306,7 @@ public class ValidationAccuracyMetricsTests
         metrics.F1Score.Should().Be(1.0);
         metrics.Accuracy.Should().Be(1.0);
         metrics.Specificity.Should().Be(1.0);
-        Assert.True(metrics.MeetsBaselineThreshold);
+        metrics.MeetsBaselineThreshold.Should().BeTrue();
         metrics.QualityLevel.Should().Be(ValidationAccuracyLevel.Excellent);
     }
 
@@ -326,7 +326,7 @@ public class ValidationAccuracyMetricsTests
         metrics.F1Score.Should().Be(0.0);
         metrics.Accuracy.Should().Be(0.0);
         metrics.Specificity.Should().Be(0.0);
-        Assert.False(metrics.MeetsBaselineThreshold);
+        metrics.MeetsBaselineThreshold.Should().BeFalse();
         metrics.QualityLevel.Should().Be(ValidationAccuracyLevel.Critical);
     }
 
@@ -342,7 +342,7 @@ public class ValidationAccuracyMetricsTests
 
         // Act & Assert
         metrics.Accuracy.Should().Be(0.80);
-        Assert.True(metrics.MeetsBaselineThreshold);
+        metrics.MeetsBaselineThreshold.Should().BeTrue();
         metrics.QualityLevel.Should().Be(ValidationAccuracyLevel.Good);
     }
 }

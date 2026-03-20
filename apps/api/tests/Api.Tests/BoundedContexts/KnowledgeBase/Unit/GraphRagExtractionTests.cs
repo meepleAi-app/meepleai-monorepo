@@ -134,7 +134,7 @@ public class GraphRagExtractionTests : IDisposable
 
         // No entity relations saved
         var relations = await _db.GameEntityRelations.ToListAsync();
-        Assert.Empty(relations);
+        relations.Should().BeEmpty();
     }
 
     [Fact]
@@ -212,7 +212,7 @@ public class GraphRagExtractionTests : IDisposable
 
         // Assert: no relations saved
         var relations = await _db.GameEntityRelations.ToListAsync();
-        Assert.Empty(relations);
+        relations.Should().BeEmpty();
 
         // But PDF still completes
         var doc = await _db.PdfDocuments.FindAsync(_pdfDocumentId);

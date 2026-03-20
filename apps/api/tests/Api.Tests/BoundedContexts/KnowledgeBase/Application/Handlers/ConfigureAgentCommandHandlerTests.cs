@@ -51,8 +51,8 @@ public class ConfigureAgentCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.True(result.Success);
+        result.Should().NotBeNull();
+        result.Success.Should().BeTrue();
         result.AgentId.Should().Be(agentId);
         result.Message.Should().Contain("configured successfully");
 
@@ -74,8 +74,8 @@ public class ConfigureAgentCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.False(result.Success);
+        result.Should().NotBeNull();
+        result.Success.Should().BeFalse();
         result.ErrorCode.Should().Be("AGENT_NOT_FOUND");
     }
 
@@ -83,7 +83,7 @@ public class ConfigureAgentCommandHandlerTests
     public async Task Handle_WithNullCommand_ThrowsArgumentNullException()
     {
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentNullException>(
-            () => _handler.Handle(null!, TestContext.Current.CancellationToken));
+        Func<Task> act = () => _handler.Handle(null!, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<ArgumentNullException>();
     }
 }

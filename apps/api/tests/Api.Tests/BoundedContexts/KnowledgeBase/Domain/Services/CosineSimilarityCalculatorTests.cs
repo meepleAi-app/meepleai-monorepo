@@ -43,7 +43,7 @@ public class CosineSimilarityCalculatorTests
         var similarity = _calculator.CalculateCosineSimilarity(text1, text2);
 
         // Assert - Cosine similarity should be very high for semantically similar texts
-        Assert.True(similarity >= 0.85, $"Expected similarity ≥0.85 for highly similar texts, got {similarity:F3}");
+        (similarity >= 0.85).Should().BeTrue($"Expected similarity ≥0.85 for highly similar texts, got {similarity:F3}");
     }
 
     [Fact]
@@ -57,8 +57,7 @@ public class CosineSimilarityCalculatorTests
         var similarity = _calculator.CalculateCosineSimilarity(text1, text2);
 
         // Assert - Should have low-moderate similarity (same topic, limited shared vocabulary)
-        Assert.True(similarity >= 0.15 && similarity < 0.85,
-            $"Expected similarity between 0.15-0.85 for moderately similar texts, got {similarity:F3}");
+        (similarity >= 0.15 && similarity < 0.85).Should().BeTrue($"Expected similarity between 0.15-0.85 for moderately similar texts, got {similarity:F3}");
     }
 
     [Fact]
@@ -72,7 +71,7 @@ public class CosineSimilarityCalculatorTests
         var similarity = _calculator.CalculateCosineSimilarity(text1, text2);
 
         // Assert - Should have moderate-low similarity (different pieces but shared chess terminology)
-        Assert.True(similarity < 0.90, $"Expected similarity <0.90 for different chess pieces, got {similarity:F3}");
+        (similarity < 0.90).Should().BeTrue($"Expected similarity <0.90 for different chess pieces, got {similarity:F3}");
     }
 
     [Fact]
@@ -86,7 +85,7 @@ public class CosineSimilarityCalculatorTests
         var similarity = _calculator.CalculateCosineSimilarity(text1, text2);
 
         // Assert - Should have very low or zero similarity
-        Assert.True(similarity < 0.30, $"Expected similarity <0.30 for completely different texts, got {similarity:F3}");
+        (similarity < 0.30).Should().BeTrue($"Expected similarity <0.30 for completely different texts, got {similarity:F3}");
     }
 
     [Fact]
@@ -146,7 +145,7 @@ public class CosineSimilarityCalculatorTests
         var similarity = _calculator.CalculateCosineSimilarity(text1, text2);
 
         // Assert - Should be identical (case-insensitive)
-        Assert.True(similarity >= 0.99, $"Expected case-insensitive similarity ≥0.99, got {similarity:F3}");
+        (similarity >= 0.99).Should().BeTrue($"Expected case-insensitive similarity ≥0.99, got {similarity:F3}");
     }
 
     [Fact]
@@ -160,7 +159,7 @@ public class CosineSimilarityCalculatorTests
         var similarity = _calculator.CalculateCosineSimilarity(text1, text2);
 
         // Assert - Punctuation should be normalized
-        Assert.True(similarity >= 0.99, $"Expected punctuation-agnostic similarity ≥0.99, got {similarity:F3}");
+        (similarity >= 0.99).Should().BeTrue($"Expected punctuation-agnostic similarity ≥0.99, got {similarity:F3}");
     }
 
     [Fact]
@@ -174,8 +173,7 @@ public class CosineSimilarityCalculatorTests
         var similarity = _calculator.CalculateCosineSimilarity(text1, text2);
 
         // Assert - Should still be very high since same words are present
-        Assert.True(similarity >= 0.90,
-            $"Expected high similarity for same words in different order, got {similarity:F3}");
+        (similarity >= 0.90).Should().BeTrue($"Expected high similarity for same words in different order, got {similarity:F3}");
     }
 
     [Fact]
@@ -189,8 +187,7 @@ public class CosineSimilarityCalculatorTests
         var similarity = _calculator.CalculateCosineSimilarity(text1, text2);
 
         // Assert - Should have good but not perfect similarity (different term frequencies)
-        Assert.True(similarity >= 0.60 && similarity < 1.0,
-            $"Expected moderate-high similarity with different term frequencies, got {similarity:F3}");
+        (similarity >= 0.60 && similarity < 1.0).Should().BeTrue($"Expected moderate-high similarity with different term frequencies, got {similarity:F3}");
     }
 
     [Fact]
@@ -211,8 +208,7 @@ public class CosineSimilarityCalculatorTests
         var similarity = _calculator.CalculateCosineSimilarity(text1, text2);
 
         // Assert - Should achieve consensus threshold for semantically equivalent explanations
-        Assert.True(similarity >= 0.80,
-            $"Expected similarity ≥0.80 for semantically similar long texts, got {similarity:F3}");
+        (similarity >= 0.80).Should().BeTrue($"Expected similarity ≥0.80 for semantically similar long texts, got {similarity:F3}");
     }
 
     [Fact]
@@ -236,8 +232,7 @@ public class CosineSimilarityCalculatorTests
         var similarity = _calculator.CalculateCosineSimilarity(gpt4Response, claudeResponse);
 
         // Assert - Very similar explanations should meet consensus threshold
-        Assert.True(similarity >= 0.85,
-            $"Expected similarity ≥0.85 for consensus-quality responses, got {similarity:F3}");
+        (similarity >= 0.85).Should().BeTrue($"Expected similarity ≥0.85 for consensus-quality responses, got {similarity:F3}");
     }
 
     [Fact]
@@ -251,8 +246,7 @@ public class CosineSimilarityCalculatorTests
         var similarity = _calculator.CalculateCosineSimilarity(response1, response2);
 
         // Assert - Completely different topics should have very low similarity
-        Assert.True(similarity < 0.50,
-            $"Expected similarity <0.50 for non-consensus responses, got {similarity:F3}");
+        (similarity < 0.50).Should().BeTrue($"Expected similarity <0.50 for non-consensus responses, got {similarity:F3}");
     }
 
     [Fact]
@@ -266,8 +260,7 @@ public class CosineSimilarityCalculatorTests
         var similarity = _calculator.CalculateCosineSimilarity(text1, text2);
 
         // Assert - Short identical content should have very high similarity
-        Assert.True(similarity >= 0.95,
-            $"Expected similarity ≥0.95 for short identical texts, got {similarity:F3}");
+        (similarity >= 0.95).Should().BeTrue($"Expected similarity ≥0.95 for short identical texts, got {similarity:F3}");
     }
 
     [Fact]
@@ -303,8 +296,7 @@ public class CosineSimilarityCalculatorTests
         {
             var similarity = _calculator.CalculateCosineSimilarity(text1, text2);
 
-            Assert.True(similarity >= 0.0 && similarity <= 1.0,
-                $"Similarity must be in [0,1] range, got {similarity:F3} for texts: '{text1}' vs '{text2}'");
+            (similarity >= 0.0 && similarity <= 1.0).Should().BeTrue($"Similarity must be in [0,1] range, got {similarity:F3} for texts: '{text1}' vs '{text2}'");
         }
     }
 

@@ -66,8 +66,8 @@ public sealed class GetGamePdfIndexingStatusQueryHandlerTests
         var query = new GetGamePdfIndexingStatusQuery(gameId, userId);
 
         // Act & Assert
-        await Assert.ThrowsAsync<NotFoundException>(
-            () => _handler.Handle(query, TestContext.Current.CancellationToken));
+        Func<Task> act = () => _handler.Handle(query, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<NotFoundException>();
     }
 
     // ──────────────────────────────────────────────────
@@ -123,8 +123,8 @@ public sealed class GetGamePdfIndexingStatusQueryHandlerTests
         var query = new GetGamePdfIndexingStatusQuery(gameId, userId);
 
         // Act & Assert
-        await Assert.ThrowsAsync<NotFoundException>(
-            () => _handler.Handle(query, TestContext.Current.CancellationToken));
+        Func<Task> act = () => _handler.Handle(query, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<NotFoundException>();
     }
 
     [Fact]
@@ -154,8 +154,8 @@ public sealed class GetGamePdfIndexingStatusQueryHandlerTests
         var query = new GetGamePdfIndexingStatusQuery(gameId, differentUserId);
 
         // Act & Assert
-        await Assert.ThrowsAsync<ForbiddenException>(
-            () => _handler.Handle(query, TestContext.Current.CancellationToken));
+        Func<Task> act = () => _handler.Handle(query, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<ForbiddenException>();
     }
 
     [Fact]
@@ -175,8 +175,8 @@ public sealed class GetGamePdfIndexingStatusQueryHandlerTests
         var query = new GetGamePdfIndexingStatusQuery(gameId, userId);
 
         // Act & Assert
-        await Assert.ThrowsAsync<NotFoundException>(
-            () => _handler.Handle(query, TestContext.Current.CancellationToken));
+        Func<Task> act = () => _handler.Handle(query, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<NotFoundException>();
     }
 
     // ──────────────────────────────────────────────────
@@ -200,8 +200,8 @@ public sealed class GetGamePdfIndexingStatusQueryHandlerTests
         // Assert
         result.Status.Should().Be("pending");
         result.Progress.Should().Be(0);
-        Assert.Null(result.ChunkCount);
-        Assert.Null(result.ErrorMessage);
+        result.ChunkCount.Should().BeNull();
+        result.ErrorMessage.Should().BeNull();
     }
 
     [Fact]
@@ -220,9 +220,9 @@ public sealed class GetGamePdfIndexingStatusQueryHandlerTests
 
         // Assert
         result.Status.Should().Be("processing");
-        Assert.Null(result.Progress);
-        Assert.Null(result.ChunkCount);
-        Assert.Null(result.ErrorMessage);
+        result.Progress.Should().BeNull();
+        result.ChunkCount.Should().BeNull();
+        result.ErrorMessage.Should().BeNull();
     }
 
     [Fact]
@@ -243,7 +243,7 @@ public sealed class GetGamePdfIndexingStatusQueryHandlerTests
         result.Status.Should().Be("indexed");
         result.Progress.Should().Be(100);
         result.ChunkCount.Should().Be(42);
-        Assert.Null(result.ErrorMessage);
+        result.ErrorMessage.Should().BeNull();
     }
 
     [Fact]
@@ -262,8 +262,8 @@ public sealed class GetGamePdfIndexingStatusQueryHandlerTests
 
         // Assert
         result.Status.Should().Be("failed");
-        Assert.Null(result.Progress);
-        Assert.Null(result.ChunkCount);
+        result.Progress.Should().BeNull();
+        result.ChunkCount.Should().BeNull();
         result.ErrorMessage.Should().Be("Embedding service unavailable");
     }
 
@@ -284,7 +284,7 @@ public sealed class GetGamePdfIndexingStatusQueryHandlerTests
 
         // Assert
         result.Status.Should().Be("indexed");
-        Assert.Null(result.ErrorMessage);
+        result.ErrorMessage.Should().BeNull();
     }
 
     // ──────────────────────────────────────────────────

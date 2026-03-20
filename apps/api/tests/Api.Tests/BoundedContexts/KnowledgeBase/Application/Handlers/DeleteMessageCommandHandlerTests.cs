@@ -62,10 +62,10 @@ public class DeleteMessageCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         result.Id.Should().Be(threadId);
         result.Messages.Should().ContainSingle();
-        Assert.True(result.Messages[0].IsDeleted);
+        result.Messages[0].IsDeleted.Should().BeTrue();
 
         _mockRepository.Verify(r => r.UpdateAsync(thread, It.IsAny<CancellationToken>()), Times.Once);
         _mockUnitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
@@ -85,8 +85,8 @@ public class DeleteMessageCommandHandlerTests
         var command = new DeleteMessageCommand(threadId, messageId, userId, false);
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
-            () => _handler.Handle(command, TestContext.Current.CancellationToken));
+        Func<Task> act = () => _handler.Handle(command, TestContext.Current.CancellationToken);
+        var exception = (await act.Should().ThrowAsync<InvalidOperationException>()).Which;
 
         exception.Message.Should().Contain(threadId.ToString());
 
@@ -112,8 +112,8 @@ public class DeleteMessageCommandHandlerTests
         var command = new DeleteMessageCommand(threadId, messageId, differentUserId, false);
 
         // Act & Assert
-        await Assert.ThrowsAsync<UnauthorizedAccessException>(
-            () => _handler.Handle(command, TestContext.Current.CancellationToken));
+        Func<Task> act = () => _handler.Handle(command, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<UnauthorizedAccessException>();
 
         _mockRepository.Verify(r => r.UpdateAsync(It.IsAny<ChatThread>(), It.IsAny<CancellationToken>()), Times.Never);
         _mockUnitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
@@ -140,9 +140,9 @@ public class DeleteMessageCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         result.Messages.Should().ContainSingle();
-        Assert.True(result.Messages[0].IsDeleted);
+        result.Messages[0].IsDeleted.Should().BeTrue();
 
         _mockRepository.Verify(r => r.UpdateAsync(thread, It.IsAny<CancellationToken>()), Times.Once);
         _mockUnitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
@@ -164,8 +164,8 @@ public class DeleteMessageCommandHandlerTests
         var command = new DeleteMessageCommand(threadId, nonExistentMessageId, userId, false);
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<KeyNotFoundException>(
-            () => _handler.Handle(command, TestContext.Current.CancellationToken));
+        Func<Task> act = () => _handler.Handle(command, TestContext.Current.CancellationToken);
+        var exception = (await act.Should().ThrowAsync<KeyNotFoundException>()).Which;
 
         exception.Message.Should().Contain(nonExistentMessageId.ToString());
         exception.Message.Should().Contain(threadId.ToString());
@@ -197,9 +197,9 @@ public class DeleteMessageCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         result.Messages.Should().ContainSingle();
-        Assert.True(result.Messages[0].IsDeleted);
+        result.Messages[0].IsDeleted.Should().BeTrue();
 
         // Should not update or save since already deleted
         _mockRepository.Verify(r => r.UpdateAsync(It.IsAny<ChatThread>(), It.IsAny<CancellationToken>()), Times.Never);
@@ -210,7 +210,7 @@ public class DeleteMessageCommandHandlerTests
     public async Task Handle_NullCommand_ThrowsArgumentNullException()
     {
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentNullException>(
-            () => _handler.Handle(null!, TestContext.Current.CancellationToken));
+        Func<Task> act = () => _handler.Handle(null!, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<ArgumentNullException>();
     }
 }

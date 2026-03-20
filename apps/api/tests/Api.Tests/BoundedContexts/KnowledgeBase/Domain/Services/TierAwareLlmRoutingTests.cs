@@ -261,8 +261,8 @@ public sealed class TierAwareLlmRoutingTests
         var user = CreateUser(Role.User, UserTier.Premium);
 
         // Act & Assert
-        var exception = Assert.Throws<UnauthorizedAccessException>(
-            () => sut.SelectProvider(user, RagStrategy.Expert));
+        Action act = () => sut.SelectProvider(user, RagStrategy.Expert);
+        var exception = act.Should().Throw<UnauthorizedAccessException>().Which;
 
         exception.Message.Should().Contain("Premium");
         exception.Message.Should().Contain("EXPERT");

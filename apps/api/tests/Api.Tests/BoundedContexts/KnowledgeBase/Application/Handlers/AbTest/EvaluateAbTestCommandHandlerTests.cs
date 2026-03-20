@@ -51,17 +51,17 @@ public sealed class EvaluateAbTestCommandHandlerTests
 
         var result = await sut.Handle(command, CancellationToken.None);
 
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         result.Status.Should().Be("Evaluated");
-        Assert.NotNull(result.WinnerLabel);
-        Assert.NotNull(result.WinnerModelId);
+        result.WinnerLabel.Should().NotBeNull();
+        result.WinnerModelId.Should().NotBeNull();
 
         // Revealed mode — model info visible
         Assert.All(result.Variants, v =>
         {
-            Assert.NotEmpty(v.Provider);
-            Assert.NotEmpty(v.ModelId);
-            Assert.NotNull(v.Evaluation);
+            v.Provider.Should().NotBeEmpty();
+            v.ModelId.Should().NotBeEmpty();
+            v.Evaluation.Should().NotBeNull();
         });
 
         _repoMock.Verify(r => r.UpdateAsync(session, It.IsAny<CancellationToken>()), Times.Once);
@@ -78,8 +78,9 @@ public sealed class EvaluateAbTestCommandHandlerTests
             new VariantEvaluationInput("A", 5, 5, 5, 5)
         ]);
 
-        await Assert.ThrowsAsync<InvalidOperationException>(() =>
-            sut.Handle(command, CancellationToken.None));
+        Func<Task> act = () =>
+            sut.Handle(command, CancellationToken.None);
+        await act.Should().ThrowAsync<InvalidOperationException>();
     }
 
     [Fact]
@@ -98,7 +99,7 @@ public sealed class EvaluateAbTestCommandHandlerTests
         var result = await sut.Handle(command, CancellationToken.None);
 
         result.Status.Should().Be("InProgress");
-        Assert.Null(result.WinnerLabel);
+        result.WinnerLabel.Should().BeNull();
     }
 
     [Fact]

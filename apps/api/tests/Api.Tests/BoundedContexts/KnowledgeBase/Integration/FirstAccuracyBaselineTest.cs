@@ -163,7 +163,7 @@ public class FirstAccuracyBaselineTest
         _output.WriteLine($"Total: {allTestCases.Count} test cases");
 
         // Verify we have the expected cases
-        Assert.True(allTestCases.Count >= 20, $"Expected at least 20 test cases, got {allTestCases.Count}");
+        (allTestCases.Count >= 20).Should().BeTrue($"Expected at least 20 test cases, got {allTestCases.Count}");
 
         // Act - Execute accuracy test
         _output.WriteLine("\n--- Running Accuracy Test on Live RAG API ---");
@@ -236,8 +236,7 @@ public class FirstAccuracyBaselineTest
             _output.WriteLine($"❌ FAILED: Accuracy {overallMetrics.Accuracy:P2} below 80% threshold");
         }
 
-        Assert.True(overallMetrics.MeetsBaselineThreshold,
-            $"Accuracy {overallMetrics.Accuracy:P2} below 80% threshold. Target: ≥80%");
+        overallMetrics.MeetsBaselineThreshold.Should().BeTrue($"Accuracy {overallMetrics.Accuracy:P2} below 80% threshold. Target: ≥80%");
     }
 
     /// <summary>
@@ -287,8 +286,7 @@ public class FirstAccuracyBaselineTest
         _output.WriteLine($"Loaded {testCases.Count} expert-annotated test cases");
 
         // Verify we have at least 100 expert-annotated cases (should be 110)
-        Assert.True(testCases.Count >= 100,
-            $"Expected at least 100 expert-annotated test cases, got {testCases.Count}");
+        (testCases.Count >= 100).Should().BeTrue($"Expected at least 100 expert-annotated test cases, got {testCases.Count}");
 
         // Group by game for reporting
         var byGame = testCases.GroupBy(tc => tc.GameId).ToDictionary(g => g.Key, g => g.Count());
@@ -413,8 +411,7 @@ public class FirstAccuracyBaselineTest
             _output.WriteLine($"   Need at least {(int)Math.Ceiling(testCases.Count * 0.8)} correct for 80% threshold");
         }
 
-        Assert.True(overallMetrics.MeetsBaselineThreshold,
-            $"BGAI-081 Accuracy {overallMetrics.Accuracy:P2} below 80% threshold. " +
+        overallMetrics.MeetsBaselineThreshold.Should().BeTrue($"BGAI-081 Accuracy {overallMetrics.Accuracy:P2} below 80% threshold. " +
             $"Got {overallMetrics.TruePositives}/{testCases.Count} correct, need {(int)Math.Ceiling(testCases.Count * 0.8)}.");
     }
 
@@ -538,8 +535,7 @@ public class FirstAccuracyBaselineTest
             _output.WriteLine($"❌ FAILED: Accuracy {overallMetrics.Accuracy:P2} below 80% threshold");
         }
 
-        Assert.True(overallMetrics.MeetsBaselineThreshold,
-            $"Accuracy {overallMetrics.Accuracy:P2} below 80% threshold. Target: ≥80%");
+        overallMetrics.MeetsBaselineThreshold.Should().BeTrue($"Accuracy {overallMetrics.Accuracy:P2} below 80% threshold. Target: ≥80%");
     }
 
     /// <summary>

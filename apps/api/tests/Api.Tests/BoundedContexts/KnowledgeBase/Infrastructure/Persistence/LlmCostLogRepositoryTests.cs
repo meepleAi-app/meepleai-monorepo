@@ -88,8 +88,8 @@ public class LlmCostLogRepositoryTests : SharedDatabaseTestBase<LlmCostLogReposi
         log.InputCost.Should().Be(0.00015m);
         log.OutputCost.Should().Be(0.0003m);
         log.TotalCost.Should().Be(0.00045m);
-        Assert.True(log.Success);
-        Assert.Null(log.ErrorMessage);
+        log.Success.Should().BeTrue();
+        log.ErrorMessage.Should().BeNull();
         log.LatencyMs.Should().Be(1500);
     }
 

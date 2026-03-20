@@ -51,7 +51,7 @@ public class GetUserAgentSlotsQueryHandlerTests
         result.Used.Should().Be(0);
         result.Available.Should().Be(3);
         result.Slots.Count.Should().Be(3);
-        Assert.All(result.Slots, slot => Assert.Equal("available", slot.Status));
+        Assert.All(result.Slots, slot => slot.Status.Should().Be("available"));
     }
 
     [Fact]
@@ -83,15 +83,15 @@ public class GetUserAgentSlotsQueryHandlerTests
 
         // First 2 slots should be active with agent details
         result.Slots[0].Status.Should().Be("active");
-        Assert.NotNull(result.Slots[0].AgentId);
+        result.Slots[0].AgentId.Should().NotBeNull();
         result.Slots[0].AgentName.Should().Be("Agent1");
 
         result.Slots[1].Status.Should().Be("active");
-        Assert.NotNull(result.Slots[1].AgentId);
+        result.Slots[1].AgentId.Should().NotBeNull();
 
         // Third slot should be available
         result.Slots[2].Status.Should().Be("available");
-        Assert.Null(result.Slots[2].AgentId);
+        result.Slots[2].AgentId.Should().BeNull();
     }
 
     [Fact]
@@ -116,7 +116,7 @@ public class GetUserAgentSlotsQueryHandlerTests
         result.Total.Should().Be(3);
         result.Used.Should().Be(3);
         result.Available.Should().Be(0);
-        Assert.All(result.Slots, slot => Assert.Equal("active", slot.Status));
+        Assert.All(result.Slots, slot => slot.Status.Should().Be("active"));
     }
 
     [Theory]
@@ -290,8 +290,8 @@ public class GetUserAgentSlotsQueryHandlerTests
     public async Task Handle_NullRequest_ThrowsArgumentNullException()
     {
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentNullException>(
-            () => _handler.Handle(null!, TestContext.Current.CancellationToken));
+        Func<Task> act = () => _handler.Handle(null!, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<ArgumentNullException>();
     }
 
     private static Agent CreateAgent(

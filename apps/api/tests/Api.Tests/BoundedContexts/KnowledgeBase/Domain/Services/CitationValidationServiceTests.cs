@@ -96,13 +96,13 @@ public class CitationValidationServiceTests
         var result = await service.ValidateCitationsAsync(snippets, gameId.ToString(), TestCancellationToken);
 
         // Assert
-        Assert.True(result.IsValid);
+        result.IsValid.Should().BeTrue();
         result.TotalCitations.Should().Be(3);
         result.ValidCitations.Should().Be(3);
         result.InvalidCitations.Should().Be(0);
-        Assert.Empty(result.Errors);
+        result.Errors.Should().BeEmpty();
         result.ValidationAccuracy.Should().Be(1.0);
-        Assert.Contains("All 3 citations valid", result.Message, StringComparison.OrdinalIgnoreCase);
+        result.Message.Should().ContainEquivalentOf("All 3 citations valid");
     }
 
     [Fact]
@@ -119,10 +119,10 @@ public class CitationValidationServiceTests
         var result = await service.ValidateCitationsAsync(snippets, gameId.ToString(), TestCancellationToken);
 
         // Assert
-        Assert.True(result.IsValid);
+        result.IsValid.Should().BeTrue();
         result.TotalCitations.Should().Be(0);
         result.ValidCitations.Should().Be(0);
-        Assert.Empty(result.Errors);
+        result.Errors.Should().BeEmpty();
         result.Message.Should().Be("No citations to validate");
     }
 
@@ -144,12 +144,12 @@ public class CitationValidationServiceTests
         var result = await service.ValidateCitationsAsync(snippets, gameId.ToString(), TestCancellationToken);
 
         // Assert
-        Assert.False(result.IsValid);
+        result.IsValid.Should().BeFalse();
         result.TotalCitations.Should().Be(1);
         result.ValidCitations.Should().Be(0);
         result.Errors.Should().ContainSingle();
         result.Errors[0].ErrorType.Should().Be(CitationErrorType.DocumentNotFound);
-        Assert.Contains("not found", result.Errors[0].ErrorMessage, StringComparison.OrdinalIgnoreCase);
+        result.Errors[0].ErrorMessage.Should().ContainEquivalentOf("not found");
     }
 
     [Fact]
@@ -169,12 +169,12 @@ public class CitationValidationServiceTests
         var result = await service.ValidateCitationsAsync(snippets, gameId.ToString(), TestCancellationToken);
 
         // Assert
-        Assert.False(result.IsValid);
+        result.IsValid.Should().BeFalse();
         result.TotalCitations.Should().Be(1);
         result.ValidCitations.Should().Be(0);
         result.Errors.Should().ContainSingle();
         result.Errors[0].ErrorType.Should().Be(CitationErrorType.InvalidPageNumber);
-        Assert.Contains("Invalid page number", result.Errors[0].ErrorMessage, StringComparison.OrdinalIgnoreCase);
+        result.Errors[0].ErrorMessage.Should().ContainEquivalentOf("Invalid page number");
     }
 
     [Fact]
@@ -191,7 +191,7 @@ public class CitationValidationServiceTests
         var result = await service.ValidateCitationsAsync(snippets, gameId.ToString(), TestCancellationToken);
 
         // Assert
-        Assert.False(result.IsValid);
+        result.IsValid.Should().BeFalse();
         result.Errors.Should().ContainSingle();
         result.Errors[0].ErrorType.Should().Be(CitationErrorType.InvalidPageNumber);
     }
@@ -213,10 +213,10 @@ public class CitationValidationServiceTests
         var result = await service.ValidateCitationsAsync(snippets, gameId.ToString(), TestCancellationToken);
 
         // Assert
-        Assert.False(result.IsValid);
+        result.IsValid.Should().BeFalse();
         result.Errors.Should().ContainSingle();
         result.Errors[0].ErrorType.Should().Be(CitationErrorType.MalformedSource);
-        Assert.Contains("Invalid source format", result.Errors[0].ErrorMessage, StringComparison.OrdinalIgnoreCase);
+        result.Errors[0].ErrorMessage.Should().ContainEquivalentOf("Invalid source format");
     }
 
     [Fact]
@@ -236,7 +236,7 @@ public class CitationValidationServiceTests
         var result = await service.ValidateCitationsAsync(snippets, gameId.ToString(), TestCancellationToken);
 
         // Assert
-        Assert.False(result.IsValid);
+        result.IsValid.Should().BeFalse();
         result.Errors.Should().ContainSingle();
         result.Errors[0].ErrorType.Should().Be(CitationErrorType.MalformedSource);
     }
@@ -261,7 +261,7 @@ public class CitationValidationServiceTests
         var result = await service.ValidateCitationsAsync(snippets, gameId.ToString(), TestCancellationToken);
 
         // Assert
-        Assert.False(result.IsValid); // Not all valid
+        result.IsValid.Should().BeFalse(); // Not all valid
         result.TotalCitations.Should().Be(3);
         result.ValidCitations.Should().Be(2);
         result.InvalidCitations.Should().Be(1);
@@ -290,9 +290,9 @@ public class CitationValidationServiceTests
         var result = await service.ValidateCitationsAsync(snippets, gameId.ToString(), TestCancellationToken);
 
         // Assert
-        Assert.True(result.IsValid);
+        result.IsValid.Should().BeTrue();
         result.ValidCitations.Should().Be(4);
-        Assert.Empty(result.Errors);
+        result.Errors.Should().BeEmpty();
     }
 
     [Fact]
@@ -309,7 +309,7 @@ public class CitationValidationServiceTests
         var result = await service.ValidateSingleCitationAsync(snippet, gameId.ToString(), TestCancellationToken);
 
         // Assert
-        Assert.True(result);
+        result.Should().BeTrue();
     }
 
     [Fact]
@@ -327,7 +327,7 @@ public class CitationValidationServiceTests
         var result = await service.ValidateSingleCitationAsync(snippet, gameId.ToString(), TestCancellationToken);
 
         // Assert
-        Assert.False(result);
+        result.Should().BeFalse();
     }
 
     [Fact]
@@ -347,7 +347,7 @@ public class CitationValidationServiceTests
         var result = await service.ValidateCitationsAsync(snippets, "invalid-game-id", TestCancellationToken);
 
         // Assert
-        Assert.False(result.IsValid);
+        result.IsValid.Should().BeFalse();
         result.Errors.Should().ContainSingle();
         result.Errors[0].ErrorType.Should().Be(CitationErrorType.MalformedSource);
         result.Errors[0].ErrorMessage.Should().Contain("Invalid game ID");
@@ -372,7 +372,7 @@ public class CitationValidationServiceTests
         var result = await service.ValidateCitationsAsync(snippets, gameId.ToString(), TestCancellationToken);
 
         // Assert
-        Assert.False(result.IsValid);
+        result.IsValid.Should().BeFalse();
         result.Errors.Should().ContainSingle();
         result.Errors[0].ErrorType.Should().Be(CitationErrorType.InvalidPageNumber);
     }
@@ -396,11 +396,11 @@ public class CitationValidationServiceTests
         var result = await service.ValidateCitationsAsync(snippets, gameId.ToString(), TestCancellationToken);
 
         // Assert
-        Assert.True(result.IsValid);
+        result.IsValid.Should().BeTrue();
         result.TotalCitations.Should().Be(100);
         result.ValidCitations.Should().Be(100);
         result.ValidationAccuracy.Should().Be(1.0);
-        Assert.Empty(result.Errors);
+        result.Errors.Should().BeEmpty();
     }
 
     [Fact]
@@ -430,7 +430,7 @@ public class CitationValidationServiceTests
         var result = await service.ValidateCitationsAsync(snippets, gameId.ToString(), TestCancellationToken);
 
         // Assert
-        Assert.False(result.IsValid);
+        result.IsValid.Should().BeFalse();
         result.TotalCitations.Should().Be(10);
         result.ValidCitations.Should().Be(7);
         result.InvalidCitations.Should().Be(3);
@@ -456,7 +456,7 @@ public class CitationValidationServiceTests
         var result = await service.ValidateCitationsAsync(snippets, gameId.ToString(), TestCancellationToken);
 
         // Assert
-        Assert.True(result.IsValid);
+        result.IsValid.Should().BeTrue();
         result.TotalCitations.Should().Be(3);
         result.ValidCitations.Should().Be(3);
     }
@@ -478,7 +478,7 @@ public class CitationValidationServiceTests
         var result = await service.ValidateCitationsAsync(snippets, gameId.ToString(), TestCancellationToken);
 
         // Assert
-        Assert.False(result.IsValid);
+        result.IsValid.Should().BeFalse();
         result.Errors.Should().ContainSingle();
         result.Errors[0].ErrorType.Should().Be(CitationErrorType.MalformedSource);
     }
@@ -500,7 +500,7 @@ public class CitationValidationServiceTests
         var result = await service.ValidateCitationsAsync(snippets, gameId.ToString(), TestCancellationToken);
 
         // Assert
-        Assert.False(result.IsValid);
+        result.IsValid.Should().BeFalse();
         result.Errors.Should().ContainSingle();
         result.Errors[0].ErrorType.Should().Be(CitationErrorType.MalformedSource);
     }
@@ -522,7 +522,7 @@ public class CitationValidationServiceTests
         var result = await service.ValidateCitationsAsync(snippets, gameId.ToString(), TestCancellationToken);
 
         // Assert
-        Assert.False(result.IsValid);
+        result.IsValid.Should().BeFalse();
         result.Errors.Should().ContainSingle();
         result.Errors[0].ErrorType.Should().Be(CitationErrorType.DocumentNotFound);
     }
@@ -548,7 +548,7 @@ public class CitationValidationServiceTests
         var result = await service.ValidateCitationsAsync(snippets, gameId.ToString(), TestCancellationToken);
 
         // Assert
-        Assert.True(result.IsValid);
+        result.IsValid.Should().BeTrue();
         result.TotalCitations.Should().Be(5);
         result.ValidCitations.Should().Be(5);
     }
@@ -570,7 +570,7 @@ public class CitationValidationServiceTests
         var result = await service.ValidateCitationsAsync(snippets, gameId.ToString(), TestCancellationToken);
 
         // Assert
-        Assert.False(result.IsValid);
+        result.IsValid.Should().BeFalse();
         result.Errors.Should().ContainSingle();
         result.Errors[0].ErrorType.Should().Be(CitationErrorType.MalformedSource);
     }
@@ -592,7 +592,7 @@ public class CitationValidationServiceTests
         var result = await service.ValidateCitationsAsync(snippets, gameId.ToString(), TestCancellationToken);
 
         // Assert
-        Assert.False(result.IsValid);
+        result.IsValid.Should().BeFalse();
         result.Errors.Should().ContainSingle();
         result.Errors[0].ErrorType.Should().Be(CitationErrorType.MalformedSource);
     }
@@ -611,7 +611,7 @@ public class CitationValidationServiceTests
         var result = await service.ValidateSingleCitationAsync(snippet, gameId.ToString(), TestCancellationToken);
 
         // Assert
-        Assert.False(result);
+        result.Should().BeFalse();
     }
 
     [Fact]
@@ -634,7 +634,7 @@ public class CitationValidationServiceTests
         var result = await service.ValidateCitationsAsync(snippets, gameId.ToString(), TestCancellationToken);
 
         // Assert
-        Assert.False(result.IsValid);
+        result.IsValid.Should().BeFalse();
         result.TotalCitations.Should().Be(3);
         result.ValidCitations.Should().Be(0);
         result.Errors.Count.Should().Be(3);

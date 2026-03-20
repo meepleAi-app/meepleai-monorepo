@@ -51,7 +51,7 @@ public class SaveRagConfigCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         result.ActiveStrategy.Should().Be(config.ActiveStrategy);
     }
 

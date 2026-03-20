@@ -48,29 +48,32 @@ public sealed class OpenRouterUsageServiceTests
     [Fact]
     public void Constructor_NullHttpFactory_ThrowsArgumentNullException()
     {
-        Assert.Throws<ArgumentNullException>(() =>
-            new OpenRouterUsageService(null!, _redisMock.Object, _configMock.Object, _loggerMock.Object));
+        Action act = () =>
+            new OpenRouterUsageService(null!, _redisMock.Object, _configMock.Object, _loggerMock.Object);
+        act.Should().Throw<ArgumentNullException>();
     }
 
     [Fact]
     public void Constructor_NullRedis_ThrowsArgumentNullException()
     {
-        Assert.Throws<ArgumentNullException>(() =>
-            new OpenRouterUsageService(_httpFactoryMock.Object, null!, _configMock.Object, _loggerMock.Object));
+        Action act = () =>
+            new OpenRouterUsageService(_httpFactoryMock.Object, null!, _configMock.Object, _loggerMock.Object);
+        act.Should().Throw<ArgumentNullException>();
     }
 
     [Fact]
     public void Constructor_NullLogger_ThrowsArgumentNullException()
     {
-        Assert.Throws<ArgumentNullException>(() =>
-            new OpenRouterUsageService(_httpFactoryMock.Object, _redisMock.Object, _configMock.Object, null!));
+        Action act = () =>
+            new OpenRouterUsageService(_httpFactoryMock.Object, _redisMock.Object, _configMock.Object, null!);
+        act.Should().Throw<ArgumentNullException>();
     }
 
     [Fact]
     public void Constructor_ValidDependencies_DoesNotThrow()
     {
         var sut = CreateSut();
-        Assert.NotNull(sut);
+        sut.Should().NotBeNull();
     }
 
     // ─── GetAccountStatusAsync ───────────────────────────────────────────────
@@ -101,11 +104,11 @@ public sealed class OpenRouterUsageServiceTests
         var result = await sut.GetAccountStatusAsync();
 
         // Assert
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         result.BalanceUsd.Should().Be(4.50m);
         result.LimitUsd.Should().Be(5.00m);
         result.UsageUsd.Should().Be(0.50m);
-        Assert.False(result.IsFreeTier);
+        result.IsFreeTier.Should().BeFalse();
         result.RateLimitRequests.Should().Be(200);
         result.RateLimitInterval.Should().Be("minute");
         result.LastUpdated.Should().Be(new DateTime(2026, 2, 22, 10, 0, 0, DateTimeKind.Utc));
@@ -125,7 +128,7 @@ public sealed class OpenRouterUsageServiceTests
         var result = await sut.GetAccountStatusAsync();
 
         // Assert
-        Assert.Null(result);
+        result.Should().BeNull();
     }
 
     [Fact]
@@ -142,7 +145,7 @@ public sealed class OpenRouterUsageServiceTests
         var result = await sut.GetAccountStatusAsync();
 
         // Assert
-        Assert.Null(result);
+        result.Should().BeNull();
     }
 
     // ─── GetDailySpendAsync ──────────────────────────────────────────────────
@@ -265,6 +268,6 @@ public sealed class OpenRouterUsageServiceTests
         var ex = await Record.ExceptionAsync(() => sut.RecordRequestCostAsync(0.01m));
 
         // Assert
-        Assert.Null(ex);
+        ex.Should().BeNull();
     }
 }

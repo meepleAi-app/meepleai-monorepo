@@ -21,7 +21,7 @@ public class HnswConfigurationTests
         config.M.Should().Be(16);
         config.EfConstruct.Should().Be(100);
         config.FullScanThreshold.Should().Be(10000);
-        Assert.False(config.OnDisk);
+        config.OnDisk.Should().BeFalse();
     }
 
     [Fact]
@@ -34,47 +34,52 @@ public class HnswConfigurationTests
         config.M.Should().Be(32);
         config.EfConstruct.Should().Be(200);
         config.FullScanThreshold.Should().Be(5000);
-        Assert.True(config.OnDisk);
+        config.OnDisk.Should().BeTrue();
     }
 
     [Fact]
     public void Create_WithMBelowMin_ThrowsArgumentOutOfRangeException()
     {
         // Act & Assert - m must be between 4 and 64
-        Assert.Throws<ArgumentOutOfRangeException>(() =>
-            HnswConfiguration.Create(m: 3, efConstruct: 100));
+        Action act = () =>
+            HnswConfiguration.Create(m: 3, efConstruct: 100);
+        act.Should().Throw<ArgumentOutOfRangeException>();
     }
 
     [Fact]
     public void Create_WithMAboveMax_ThrowsArgumentOutOfRangeException()
     {
         // Act & Assert - m must be between 4 and 64
-        Assert.Throws<ArgumentOutOfRangeException>(() =>
-            HnswConfiguration.Create(m: 65, efConstruct: 100));
+        Action act = () =>
+            HnswConfiguration.Create(m: 65, efConstruct: 100);
+        act.Should().Throw<ArgumentOutOfRangeException>();
     }
 
     [Fact]
     public void Create_WithEfConstructBelowMin_ThrowsArgumentOutOfRangeException()
     {
         // Act & Assert - efConstruct must be between 10 and 500
-        Assert.Throws<ArgumentOutOfRangeException>(() =>
-            HnswConfiguration.Create(m: 16, efConstruct: 9));
+        Action act = () =>
+            HnswConfiguration.Create(m: 16, efConstruct: 9);
+        act.Should().Throw<ArgumentOutOfRangeException>();
     }
 
     [Fact]
     public void Create_WithEfConstructAboveMax_ThrowsArgumentOutOfRangeException()
     {
         // Act & Assert - efConstruct must be between 10 and 500
-        Assert.Throws<ArgumentOutOfRangeException>(() =>
-            HnswConfiguration.Create(m: 16, efConstruct: 501));
+        Action act = () =>
+            HnswConfiguration.Create(m: 16, efConstruct: 501);
+        act.Should().Throw<ArgumentOutOfRangeException>();
     }
 
     [Fact]
     public void Create_WithNegativeFullScanThreshold_ThrowsArgumentOutOfRangeException()
     {
         // Act & Assert
-        Assert.Throws<ArgumentOutOfRangeException>(() =>
-            HnswConfiguration.Create(m: 16, efConstruct: 100, fullScanThreshold: -1));
+        Action act = () =>
+            HnswConfiguration.Create(m: 16, efConstruct: 100, fullScanThreshold: -1);
+        act.Should().Throw<ArgumentOutOfRangeException>();
     }
 
     [Fact]
@@ -86,7 +91,7 @@ public class HnswConfigurationTests
         // Assert
         config.M.Should().Be(24);
         config.EfConstruct.Should().Be(200);
-        Assert.False(config.OnDisk);
+        config.OnDisk.Should().BeFalse();
     }
 
     [Fact]
@@ -98,7 +103,7 @@ public class HnswConfigurationTests
         // Assert
         config.M.Should().Be(12);
         config.EfConstruct.Should().Be(64);
-        Assert.True(config.OnDisk);
+        config.OnDisk.Should().BeTrue();
     }
 
     [Fact]
@@ -110,7 +115,7 @@ public class HnswConfigurationTests
 
         // Act & Assert
         config2.Should().Be(config1);
-        Assert.True(config1.Equals(config2));
+        config1.Equals(config2).Should().BeTrue();
     }
 
     [Fact]
@@ -145,7 +150,7 @@ public class HnswConfigurationTests
         var result = config.ToString();
 
         // Assert
-        Assert.Contains("m=16", result, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("ef_construct=100", result, StringComparison.OrdinalIgnoreCase);
+        result.Should().ContainEquivalentOf("m=16");
+        result.Should().ContainEquivalentOf("ef_construct=100");
     }
 }

@@ -109,7 +109,7 @@ public sealed class CircuitBreakerStateChangedEventHandlerTests : IDisposable
 
         await _handler.Handle(evt, CancellationToken.None);
 
-        Assert.NotNull(captured);
+        captured.Should().NotBeNull();
         captured!.Severity.Should().Be(expectedSeverity);
         captured.Type.Should().Be(NotificationType.AdminCircuitBreakerStateChanged);
         captured.Link.Should().Be("/admin/agents/usage");
@@ -146,8 +146,8 @@ public sealed class CircuitBreakerStateChangedEventHandlerTests : IDisposable
         await _handler.Handle(evt, CancellationToken.None);
 
         // Assert
-        Assert.Contains("OPENED", captured!.Title, StringComparison.Ordinal);
-        Assert.Contains("openrouter", captured.Title, StringComparison.Ordinal);
+        captured!.Title.Should().Contain("OPENED");
+        captured.Title.Should().Contain("openrouter");
     }
 
     [Fact]
@@ -167,8 +167,8 @@ public sealed class CircuitBreakerStateChangedEventHandlerTests : IDisposable
         await _handler.Handle(evt, CancellationToken.None);
 
         // Assert
-        Assert.Contains("recovered", captured!.Title, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("ollama", captured.Title, StringComparison.Ordinal);
+        captured!.Title.Should().ContainEquivalentOf("recovered");
+        captured.Title.Should().Contain("ollama");
     }
 
     // ── Message equals reason ─────────────────────────────────────────────────

@@ -93,15 +93,15 @@ public class UpdateAgentLlmConfigurationCommandHandlerTests
         var result = await _handler.Handle(command, CancellationToken.None);
 
         // Assert
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         result.LlmModel.Should().Be("meta-llama/llama-3.1-70b-instruct:free");
         result.Temperature.Should().Be(0.7m);
         result.MaxTokens.Should().Be(4096);
-        Assert.True(result.IsCurrent);
+        result.IsCurrent.Should().BeTrue();
 
         // Old config should be deactivated
         var oldInDb = await _db.Set<AgentConfigurationEntity>().FindAsync(oldConfig.Id);
-        Assert.False(oldInDb!.IsCurrent);
+        oldInDb!.IsCurrent.Should().BeFalse();
     }
 
     [Fact]
@@ -122,8 +122,8 @@ public class UpdateAgentLlmConfigurationCommandHandlerTests
             ModelId: "anthropic/claude-3.5-sonnet", Temperature: null, MaxTokens: null, SelectedDocumentIds: null);
 
         // Act & Assert
-        await Assert.ThrowsAsync<ForbiddenException>(
-            () => _handler.Handle(command, CancellationToken.None));
+        Func<Task> act = () => _handler.Handle(command, CancellationToken.None);
+        await act.Should().ThrowAsync<ForbiddenException>();
     }
 
     [Fact]
@@ -171,8 +171,8 @@ public class UpdateAgentLlmConfigurationCommandHandlerTests
             ModelId: null, Temperature: 1.0m, MaxTokens: null, SelectedDocumentIds: null);
 
         // Act & Assert
-        await Assert.ThrowsAsync<ForbiddenException>(
-            () => _handler.Handle(command, CancellationToken.None));
+        Func<Task> act = () => _handler.Handle(command, CancellationToken.None);
+        await act.Should().ThrowAsync<ForbiddenException>();
     }
 
     [Fact]
@@ -220,8 +220,8 @@ public class UpdateAgentLlmConfigurationCommandHandlerTests
             ModelId: null, Temperature: 0.5m, MaxTokens: null, SelectedDocumentIds: null);
 
         // Act & Assert
-        await Assert.ThrowsAsync<NotFoundException>(
-            () => _handler.Handle(command, CancellationToken.None));
+        Func<Task> act = () => _handler.Handle(command, CancellationToken.None);
+        await act.Should().ThrowAsync<NotFoundException>();
     }
 
     [Fact]
@@ -260,7 +260,7 @@ public class UpdateAgentLlmConfigurationCommandHandlerTests
             ModelId: null, Temperature: null, MaxTokens: null, SelectedDocumentIds: null);
 
         // Act & Assert
-        await Assert.ThrowsAsync<NotFoundException>(
-            () => _handler.Handle(command, CancellationToken.None));
+        Func<Task> act = () => _handler.Handle(command, CancellationToken.None);
+        await act.Should().ThrowAsync<NotFoundException>();
     }
 }

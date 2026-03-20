@@ -65,8 +65,8 @@ public class UpdateUserAgentCommandHandlerTests
             Name: "New Name", StrategyName: null, StrategyParameters: null);
 
         // Act & Assert
-        await Assert.ThrowsAsync<ForbiddenException>(
-            () => _handler.Handle(command, CancellationToken.None));
+        Func<Task> act = () => _handler.Handle(command, CancellationToken.None);
+        await act.Should().ThrowAsync<ForbiddenException>();
     }
 
     [Fact]
@@ -104,8 +104,8 @@ public class UpdateUserAgentCommandHandlerTests
             Name: null, StrategyName: "HybridSearch", StrategyParameters: null);
 
         // Act & Assert
-        await Assert.ThrowsAsync<ForbiddenException>(
-            () => _handler.Handle(command, CancellationToken.None));
+        Func<Task> act = () => _handler.Handle(command, CancellationToken.None);
+        await act.Should().ThrowAsync<ForbiddenException>();
     }
 
     [Fact]
@@ -123,8 +123,8 @@ public class UpdateUserAgentCommandHandlerTests
             Name: null, StrategyName: "HybridSearch", StrategyParameters: parameters);
 
         // Act & Assert
-        await Assert.ThrowsAsync<ForbiddenException>(
-            () => _handler.Handle(command, CancellationToken.None));
+        Func<Task> act = () => _handler.Handle(command, CancellationToken.None);
+        await act.Should().ThrowAsync<ForbiddenException>();
     }
 
     [Fact]
@@ -166,7 +166,7 @@ public class UpdateUserAgentCommandHandlerTests
 
         // Assert
         result.StrategyName.Should().Be("IterativeRAG");
-        Assert.True(result.StrategyParameters.Count > 0);
+        (result.StrategyParameters.Count > 0).Should().BeTrue();
     }
 
     [Fact]
@@ -181,8 +181,8 @@ public class UpdateUserAgentCommandHandlerTests
             Name: "X", StrategyName: null, StrategyParameters: null);
 
         // Act & Assert
-        await Assert.ThrowsAsync<NotFoundException>(
-            () => _handler.Handle(command, CancellationToken.None));
+        Func<Task> act = () => _handler.Handle(command, CancellationToken.None);
+        await act.Should().ThrowAsync<NotFoundException>();
     }
 
     [Fact]
@@ -201,8 +201,8 @@ public class UpdateUserAgentCommandHandlerTests
             Name: "Taken Name", StrategyName: null, StrategyParameters: null);
 
         // Act & Assert
-        var ex = await Assert.ThrowsAsync<ConflictException>(
-            () => _handler.Handle(command, CancellationToken.None));
+        Func<Task> act = () => _handler.Handle(command, CancellationToken.None);
+        var ex = (await act.Should().ThrowAsync<ConflictException>()).Which;
         ex.Message.Should().Contain("Taken Name");
     }
 

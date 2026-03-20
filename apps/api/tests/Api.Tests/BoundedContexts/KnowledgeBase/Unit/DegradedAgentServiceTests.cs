@@ -170,8 +170,8 @@ public class DegradedAgentServiceTests
 
         // Assert
         capability.Level.Should().Be(AgentCapabilityLevel.Full);
-        Assert.True(capability.HasKbCards);
-        Assert.False(capability.HasRulebookAnalysis);
+        capability.HasKbCards.Should().BeTrue();
+        capability.HasRulebookAnalysis.Should().BeFalse();
     }
 
     [Fact]
@@ -222,8 +222,8 @@ public class DegradedAgentServiceTests
 
         // Assert
         capability.Level.Should().Be(AgentCapabilityLevel.Full);
-        Assert.True(capability.HasKbCards);
-        Assert.True(capability.HasRulebookAnalysis);
+        capability.HasKbCards.Should().BeTrue();
+        capability.HasRulebookAnalysis.Should().BeTrue();
     }
 
     [Fact]
@@ -261,8 +261,8 @@ public class DegradedAgentServiceTests
 
         // Assert
         capability.Level.Should().Be(AgentCapabilityLevel.Degraded);
-        Assert.False(capability.HasKbCards);
-        Assert.True(capability.HasBggMetadata);
+        capability.HasKbCards.Should().BeFalse();
+        capability.HasBggMetadata.Should().BeTrue();
     }
 
     [Fact]
@@ -298,8 +298,8 @@ public class DegradedAgentServiceTests
 
         // Assert
         capability.Level.Should().Be(AgentCapabilityLevel.Degraded);
-        Assert.False(capability.HasKbCards);
-        Assert.True(capability.HasBggMetadata);
+        capability.HasKbCards.Should().BeFalse();
+        capability.HasBggMetadata.Should().BeTrue();
     }
 
     [Fact]
@@ -314,9 +314,9 @@ public class DegradedAgentServiceTests
 
         // Assert
         capability.Level.Should().Be(AgentCapabilityLevel.None);
-        Assert.False(capability.HasKbCards);
-        Assert.False(capability.HasBggMetadata);
-        Assert.False(capability.HasRulebookAnalysis);
+        capability.HasKbCards.Should().BeFalse();
+        capability.HasBggMetadata.Should().BeFalse();
+        capability.HasRulebookAnalysis.Should().BeFalse();
     }
 
     [Fact]
@@ -339,8 +339,8 @@ public class DegradedAgentServiceTests
 
         // Assert
         capability.Level.Should().Be(AgentCapabilityLevel.None);
-        Assert.False(capability.HasKbCards);
-        Assert.False(capability.HasBggMetadata);
+        capability.HasKbCards.Should().BeFalse();
+        capability.HasBggMetadata.Should().BeFalse();
     }
 
     #endregion
@@ -352,9 +352,9 @@ public class DegradedAgentServiceTests
     {
         var capability = AgentCapability.Full();
         capability.Level.Should().Be(AgentCapabilityLevel.Full);
-        Assert.True(capability.HasKbCards);
-        Assert.True(capability.HasBggMetadata);
-        Assert.False(capability.HasRulebookAnalysis);
+        capability.HasKbCards.Should().BeTrue();
+        capability.HasBggMetadata.Should().BeTrue();
+        capability.HasRulebookAnalysis.Should().BeFalse();
         capability.Description.Should().Contain("Full RAG");
     }
 
@@ -362,7 +362,7 @@ public class DegradedAgentServiceTests
     public void AgentCapability_Full_WithRulebook_ShouldIncludeRulebookInDescription()
     {
         var capability = AgentCapability.Full(hasRulebookAnalysis: true);
-        Assert.True(capability.HasRulebookAnalysis);
+        capability.HasRulebookAnalysis.Should().BeTrue();
         capability.Description.Should().Contain("rulebook analysis");
     }
 
@@ -371,9 +371,9 @@ public class DegradedAgentServiceTests
     {
         var capability = AgentCapability.Degraded();
         capability.Level.Should().Be(AgentCapabilityLevel.Degraded);
-        Assert.False(capability.HasKbCards);
-        Assert.True(capability.HasBggMetadata);
-        Assert.False(capability.HasRulebookAnalysis);
+        capability.HasKbCards.Should().BeFalse();
+        capability.HasBggMetadata.Should().BeTrue();
+        capability.HasRulebookAnalysis.Should().BeFalse();
         capability.Description.Should().Contain("BGG metadata only");
     }
 
@@ -382,9 +382,9 @@ public class DegradedAgentServiceTests
     {
         var capability = AgentCapability.None();
         capability.Level.Should().Be(AgentCapabilityLevel.None);
-        Assert.False(capability.HasKbCards);
-        Assert.False(capability.HasBggMetadata);
-        Assert.False(capability.HasRulebookAnalysis);
+        capability.HasKbCards.Should().BeFalse();
+        capability.HasBggMetadata.Should().BeFalse();
+        capability.HasRulebookAnalysis.Should().BeFalse();
         capability.Description.Should().Contain("No knowledge sources");
     }
 

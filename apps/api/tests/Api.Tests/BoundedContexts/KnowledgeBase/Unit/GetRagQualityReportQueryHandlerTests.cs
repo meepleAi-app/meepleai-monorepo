@@ -15,7 +15,7 @@ public class GetRagQualityReportQueryHandlerTests
     public void Query_ShouldImplementIRequest_WithCorrectResponseType()
     {
         var query = new GetRagQualityReportQuery();
-        Assert.IsAssignableFrom<IRequest<RagQualityReportDto>>(query);
+        query.Should().BeAssignableTo<IRequest<RagQualityReportDto>>();
     }
 
     [Fact]
@@ -58,7 +58,7 @@ public class GetRagQualityReportQueryHandlerTests
     {
         var a = new RagQualityGameBreakdown(Guid.Empty, "Test", 10, 2, 3);
         var b = new RagQualityGameBreakdown(Guid.Empty, "Test", 10, 2, 3);
-        Assert.Equal(a, b); // Records have value equality
+        b.Should().Be(a); // Records have value equality
     }
 
     [Fact]

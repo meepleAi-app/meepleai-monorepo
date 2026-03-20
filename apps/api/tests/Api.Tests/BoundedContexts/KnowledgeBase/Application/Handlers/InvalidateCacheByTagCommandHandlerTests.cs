@@ -53,8 +53,8 @@ public class InvalidateCacheByTagCommandHandlerTests
         var command = new InvalidateCacheByTagCommand("");
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<ArgumentException>(
-            () => _handler.Handle(command, TestContext.Current.CancellationToken));
+        Func<Task> act = () => _handler.Handle(command, TestContext.Current.CancellationToken);
+        var exception = (await act.Should().ThrowAsync<ArgumentException>()).Which;
 
         exception.Message.Should().Contain("Tag cannot be empty");
 
@@ -68,8 +68,8 @@ public class InvalidateCacheByTagCommandHandlerTests
         var command = new InvalidateCacheByTagCommand("   ");
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<ArgumentException>(
-            () => _handler.Handle(command, TestContext.Current.CancellationToken));
+        Func<Task> act = () => _handler.Handle(command, TestContext.Current.CancellationToken);
+        var exception = (await act.Should().ThrowAsync<ArgumentException>()).Which;
 
         exception.Message.Should().Contain("Tag cannot be empty");
 
@@ -99,7 +99,7 @@ public class InvalidateCacheByTagCommandHandlerTests
     public async Task Handle_NullCommand_ThrowsArgumentNullException()
     {
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentNullException>(
-            () => _handler.Handle(null!, TestContext.Current.CancellationToken));
+        Func<Task> act = () => _handler.Handle(null!, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<ArgumentNullException>();
     }
 }

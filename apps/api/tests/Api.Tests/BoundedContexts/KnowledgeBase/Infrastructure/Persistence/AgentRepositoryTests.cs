@@ -36,7 +36,7 @@ internal class AgentRepositoryTests : SharedDatabaseTestBase<AgentRepository>
 
         // Assert
         var retrieved = await Repository.GetByIdAsync(agent.Id, CancellationToken.None);
-        Assert.NotNull(retrieved);
+        retrieved.Should().NotBeNull();
         retrieved.Name.Should().Be(agent.Name);
         retrieved.Type.Value.Should().Be(agent.Type.Value);
     }
@@ -52,7 +52,7 @@ internal class AgentRepositoryTests : SharedDatabaseTestBase<AgentRepository>
         var retrieved = await Repository.GetByIdAsync(agent.Id, CancellationToken.None);
 
         // Assert
-        Assert.NotNull(retrieved);
+        retrieved.Should().NotBeNull();
         retrieved.Id.Should().Be(agent.Id);
         retrieved.Name.Should().Be(agent.Name);
     }
@@ -64,7 +64,7 @@ internal class AgentRepositoryTests : SharedDatabaseTestBase<AgentRepository>
         var retrieved = await Repository.GetByIdAsync(Guid.NewGuid(), CancellationToken.None);
 
         // Assert
-        Assert.Null(retrieved);
+        retrieved.Should().BeNull();
     }
 
     [Fact]
@@ -78,7 +78,7 @@ internal class AgentRepositoryTests : SharedDatabaseTestBase<AgentRepository>
         var retrieved = await Repository.GetByNameAsync("Unique Agent", CancellationToken.None);
 
         // Assert
-        Assert.NotNull(retrieved);
+        retrieved.Should().NotBeNull();
         retrieved.Id.Should().Be(agent.Id);
     }
 
@@ -99,7 +99,7 @@ internal class AgentRepositoryTests : SharedDatabaseTestBase<AgentRepository>
 
         // Assert
         activeAgents.Count.Should().Be(2);
-        Assert.All(activeAgents, a => Assert.True(a.IsActive));
+        Assert.All(activeAgents, a => a.IsActive.Should().BeTrue());
     }
 
     [Fact]
@@ -119,7 +119,7 @@ internal class AgentRepositoryTests : SharedDatabaseTestBase<AgentRepository>
 
         // Assert
         ragAgents.Count.Should().Be(2);
-        Assert.All(ragAgents, a => Assert.Equal("RAG", a.Type.Value));
+        Assert.All(ragAgents, a => a.Type.Value.Should().Be("RAG"));
     }
 
     [Fact]
@@ -153,7 +153,7 @@ internal class AgentRepositoryTests : SharedDatabaseTestBase<AgentRepository>
 
         // Assert
         var retrieved = await Repository.GetByIdAsync(agent.Id, CancellationToken.None);
-        Assert.Null(retrieved);
+        retrieved.Should().BeNull();
     }
 
     [Fact]
@@ -167,7 +167,7 @@ internal class AgentRepositoryTests : SharedDatabaseTestBase<AgentRepository>
         var exists = await Repository.ExistsAsync("Exists", CancellationToken.None);
 
         // Assert
-        Assert.True(exists);
+        exists.Should().BeTrue();
     }
 
     [Fact]
@@ -177,7 +177,7 @@ internal class AgentRepositoryTests : SharedDatabaseTestBase<AgentRepository>
         var exists = await Repository.ExistsAsync("Does Not Exist", CancellationToken.None);
 
         // Assert
-        Assert.False(exists);
+        exists.Should().BeFalse();
     }
 
     // Helper methods

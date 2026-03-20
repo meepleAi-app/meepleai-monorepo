@@ -5,6 +5,7 @@ using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
 using Api.Tests.Constants;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Integration;
 
@@ -107,7 +108,7 @@ public class GoldenDatasetAccuracyIntegrationTests
     {
         // Arrange
         var testCases = await _loader.LoadAllAsync(TestCancellationToken);
-        Assert.NotEmpty(testCases);
+        testCases.Should().NotBeEmpty();
 
         var results = new List<AccuracyEvaluationResult>();
 
@@ -122,10 +123,10 @@ public class GoldenDatasetAccuracyIntegrationTests
         var metrics = _evaluator.CalculateAggregatedMetrics(results);
 
         // Assert
-        Assert.Equal(testCases.Count, metrics.TruePositives); // All correct
-        Assert.Equal(0, metrics.FalseNegatives);
-        Assert.Equal(1.0, metrics.Accuracy); // 100%
-        Assert.True(metrics.MeetsBaselineThreshold);
+        metrics.TruePositives.Should().Be(testCases.Count); // All correct
+        metrics.FalseNegatives.Should().Be(0);
+        metrics.Accuracy.Should().Be(1.0); // 100%
+        metrics.MeetsBaselineThreshold.Should().BeTrue();
     }
 
     /// <summary>
@@ -137,7 +138,7 @@ public class GoldenDatasetAccuracyIntegrationTests
     {
         // Arrange
         var testCases = await _loader.LoadAllAsync(TestCancellationToken);
-        Assert.NotEmpty(testCases);
+        testCases.Should().NotBeEmpty();
 
         var results = new List<AccuracyEvaluationResult>();
         var targetCorrect = (int)Math.Ceiling(testCases.Count * 0.80); // 80%
@@ -157,8 +158,8 @@ public class GoldenDatasetAccuracyIntegrationTests
         var metrics = _evaluator.CalculateAggregatedMetrics(results);
 
         // Assert
-        Assert.True(metrics.Accuracy >= 0.80, $"Expected accuracy ≥0.80, got {metrics.Accuracy:F2}");
-        Assert.True(metrics.MeetsBaselineThreshold);
+        (metrics.Accuracy >= 0.80).Should().BeTrue($"Expected accuracy ≥0.80, got {metrics.Accuracy:F2}");
+        metrics.MeetsBaselineThreshold.Should().BeTrue();
     }
 
     /// <summary>
@@ -170,7 +171,7 @@ public class GoldenDatasetAccuracyIntegrationTests
     {
         // Arrange
         var testCases = await _loader.LoadAllAsync(TestCancellationToken);
-        Assert.NotEmpty(testCases);
+        testCases.Should().NotBeEmpty();
 
         var results = new List<AccuracyEvaluationResult>();
         var targetCorrect = (int)Math.Ceiling(testCases.Count * 0.60); // 60%
@@ -190,8 +191,8 @@ public class GoldenDatasetAccuracyIntegrationTests
         var metrics = _evaluator.CalculateAggregatedMetrics(results);
 
         // Assert
-        Assert.True(metrics.Accuracy < 0.80, $"Expected accuracy <0.80, got {metrics.Accuracy:F2}");
-        Assert.False(metrics.MeetsBaselineThreshold);
+        (metrics.Accuracy < 0.80).Should().BeTrue($"Expected accuracy <0.80, got {metrics.Accuracy:F2}");
+        metrics.MeetsBaselineThreshold.Should().BeFalse();
     }
 
     /// <summary>
@@ -205,7 +206,7 @@ public class GoldenDatasetAccuracyIntegrationTests
         var sampleSize = Math.Min(50, (await _loader.LoadAllAsync(TestCancellationToken)).Count);
         var sampledCases = await _loader.SampleAsync(sampleSize, stratified: true, TestCancellationToken);
 
-        Assert.True(sampledCases.Count <= sampleSize);
+        (sampledCases.Count <= sampleSize).Should().BeTrue();
 
         // Act - Evaluate sample
         var results = new List<AccuracyEvaluationResult>();
@@ -221,9 +222,9 @@ public class GoldenDatasetAccuracyIntegrationTests
         var mediumCount = results.Count(r => r.Difficulty == "medium");
         var hardCount = results.Count(r => r.Difficulty == "hard");
 
-        Assert.True(easyCount + mediumCount + hardCount == results.Count);
+        (easyCount + mediumCount + hardCount == results.Count).Should().BeTrue();
         // All should be correct (perfect simulation)
-        Assert.All(results, r => Assert.True(r.IsCorrect));
+        Assert.All(results, r => r.IsCorrect.Should().BeTrue());
     }
 
     /// <summary>
@@ -235,7 +236,7 @@ public class GoldenDatasetAccuracyIntegrationTests
     {
         // Arrange
         var testCases = await _loader.LoadAllAsync(TestCancellationToken);
-        Assert.NotEmpty(testCases);
+        testCases.Should().NotBeEmpty();
 
         var results = new List<AccuracyEvaluationResult>();
 
@@ -271,11 +272,11 @@ public class GoldenDatasetAccuracyIntegrationTests
         var metricsByDifficulty = _evaluator.CalculateMetricsByDifficulty(results);
 
         // Assert
-        Assert.NotEmpty(metricsByDifficulty);
+        metricsByDifficulty.Should().NotBeEmpty();
         if (metricsByDifficulty.ContainsKey("easy"))
         {
             var easyMetrics = metricsByDifficulty["easy"];
-            Assert.True(easyMetrics.Accuracy >= 0.90, "Easy questions should have high accuracy");
+            (easyMetrics.Accuracy >= 0.90).Should().BeTrue("Easy questions should have high accuracy");
         }
     }
 
@@ -307,8 +308,8 @@ public class GoldenDatasetAccuracyIntegrationTests
         var result = await _evaluator.EvaluateTestCaseAsync(testCase, hallucinatedResponse, TestCancellationToken);
 
         // Assert
-        Assert.False(result.NoForbiddenKeywords); // Should detect forbidden keyword
-        Assert.False(result.IsCorrect); // Should mark as incorrect
+        result.NoForbiddenKeywords.Should().BeFalse(); // Should detect forbidden keyword
+        result.IsCorrect.Should().BeFalse(); // Should mark as incorrect
     }
 
     /// <summary>
@@ -335,8 +336,8 @@ public class GoldenDatasetAccuracyIntegrationTests
         var result = await _evaluator.EvaluateTestCaseAsync(testCase, responseWithCitations, TestCancellationToken);
 
         // Assert
-        Assert.True(result.CitationsValid);
-        Assert.Equal(1.0, result.CitationValidityRate);
+        result.CitationsValid.Should().BeTrue();
+        result.CitationValidityRate.Should().Be(1.0);
     }
 
     // Helper methods to simulate RAG responses

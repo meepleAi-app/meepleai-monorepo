@@ -43,7 +43,7 @@ public class EntityExtractorTests
             CancellationToken.None);
 
         result.Relations.Count.Should().Be(3);
-        Assert.Equal(4, result.TotalEntities); // Catan, Trading, Hex Tiles, Resource Collection
+        result.TotalEntities.Should().Be(4); // Catan, Trading, Hex Tiles, Resource Collection
 
         var first = result.Relations[0];
         first.SourceEntity.Should().Be("Catan");
@@ -66,7 +66,7 @@ public class EntityExtractorTests
             Guid.NewGuid(), "Catan", "Some rulebook text.",
             CancellationToken.None);
 
-        Assert.Empty(result.Relations);
+        result.Relations.Should().BeEmpty();
         result.TotalEntities.Should().Be(0);
     }
 
@@ -83,7 +83,7 @@ public class EntityExtractorTests
             Guid.NewGuid(), "Catan", "Some rulebook text.",
             CancellationToken.None);
 
-        Assert.Empty(result.Relations);
+        result.Relations.Should().BeEmpty();
         result.TotalEntities.Should().Be(0);
     }
 
@@ -94,7 +94,7 @@ public class EntityExtractorTests
             Guid.NewGuid(), "Catan", "",
             CancellationToken.None);
 
-        Assert.Empty(result.Relations);
+        result.Relations.Should().BeEmpty();
         result.TotalEntities.Should().Be(0);
 
         _llmServiceMock.Verify(
@@ -111,7 +111,7 @@ public class EntityExtractorTests
             Guid.NewGuid(), "Catan", "   \t\n  ",
             CancellationToken.None);
 
-        Assert.Empty(result.Relations);
+        result.Relations.Should().BeEmpty();
         result.TotalEntities.Should().Be(0);
 
         _llmServiceMock.Verify(
@@ -140,7 +140,7 @@ public class EntityExtractorTests
             Guid.NewGuid(), "Catan", "Catan rules text.",
             CancellationToken.None);
 
-        Assert.All(result.Relations, r => Assert.Equal(0.8f, r.Confidence));
+        Assert.All(result.Relations, r => r.Confidence.Should().Be(0.8f));
     }
 
     [Fact]
@@ -149,10 +149,10 @@ public class EntityExtractorTests
         using var cts = new CancellationTokenSource();
         await cts.CancelAsync();
 
-        await Assert.ThrowsAsync<OperationCanceledException>(
-            () => _sut.ExtractEntitiesAsync(
+        Func<Task> act = () => _sut.ExtractEntitiesAsync(
                 Guid.NewGuid(), "Catan", "Some text.",
-                cts.Token));
+                cts.Token);
+        await act.Should().ThrowAsync<OperationCanceledException>();
     }
 
     [Fact]
@@ -195,7 +195,7 @@ public class EntityExtractorTests
             Guid.NewGuid(), "Catan", "Some rules text.",
             CancellationToken.None);
 
-        Assert.Empty(result.Relations);
+        result.Relations.Should().BeEmpty();
         result.TotalEntities.Should().Be(0);
     }
 }

@@ -43,7 +43,7 @@ public class ListAdminStrategiesHandlerTests
         var handler = new ListAdminStrategiesHandler(_mockRepo.Object);
         var result = await handler.Handle(new ListAdminStrategiesQuery(), TestContext.Current.CancellationToken);
 
-        Assert.Empty(result);
+        result.Should().BeEmpty();
     }
 }
 
@@ -63,7 +63,7 @@ public class GetAdminStrategyByIdHandlerTests
         var handler = new GetAdminStrategyByIdHandler(_mockRepo.Object);
         var result = await handler.Handle(new GetAdminStrategyByIdQuery(strategy.Id), TestContext.Current.CancellationToken);
 
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         result.Name.Should().Be("Test");
     }
 
@@ -76,7 +76,7 @@ public class GetAdminStrategyByIdHandlerTests
         var handler = new GetAdminStrategyByIdHandler(_mockRepo.Object);
         var result = await handler.Handle(new GetAdminStrategyByIdQuery(Guid.NewGuid()), TestContext.Current.CancellationToken);
 
-        Assert.Null(result);
+        result.Should().BeNull();
     }
 }
 
@@ -137,8 +137,8 @@ public class UpdateAdminStrategyHandlerTests
 
         var handler = new UpdateAdminStrategyHandler(_mockRepo.Object, _mockLogger.Object);
 
-        await Assert.ThrowsAsync<KeyNotFoundException>(
-            () => handler.Handle(command, TestContext.Current.CancellationToken));
+        Func<Task> act = () => handler.Handle(command, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<KeyNotFoundException>();
     }
 }
 
@@ -159,8 +159,8 @@ public class DeleteAdminStrategyHandlerTests
         var handler = new DeleteAdminStrategyHandler(_mockRepo.Object, _mockLogger.Object);
         var result = await handler.Handle(new DeleteAdminStrategyCommand(strategy.Id, Guid.NewGuid()), TestContext.Current.CancellationToken);
 
-        Assert.True(result);
-        Assert.True(strategy.IsDeleted);
+        result.Should().BeTrue();
+        strategy.IsDeleted.Should().BeTrue();
         _mockRepo.Verify(r => r.UpdateAsync(strategy, It.IsAny<CancellationToken>()), Times.Once);
     }
 
@@ -173,6 +173,6 @@ public class DeleteAdminStrategyHandlerTests
         var handler = new DeleteAdminStrategyHandler(_mockRepo.Object, _mockLogger.Object);
         var result = await handler.Handle(new DeleteAdminStrategyCommand(Guid.NewGuid(), Guid.NewGuid()), TestContext.Current.CancellationToken);
 
-        Assert.False(result);
+        result.Should().BeFalse();
     }
 }

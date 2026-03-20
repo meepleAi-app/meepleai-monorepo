@@ -130,8 +130,9 @@ public class SessionContextPromptBuilderTests
     public void BuildSessionPreamble_NullContext_ThrowsArgumentNullException()
     {
         // Act & Assert
-        Assert.Throws<ArgumentNullException>(() =>
-            SessionContextPromptBuilder.BuildSessionPreamble(null!));
+        Action act = () =>
+            SessionContextPromptBuilder.BuildSessionPreamble(null!);
+        act.Should().Throw<ArgumentNullException>();
     }
 
     [Fact]
@@ -141,7 +142,7 @@ public class SessionContextPromptBuilderTests
         var message = SessionContextPromptBuilder.GetNoAiDegradationMessage();
 
         // Assert
-        Assert.False(string.IsNullOrWhiteSpace(message));
+        string.IsNullOrWhiteSpace(message).Should().BeFalse();
         message.Should().Contain("Knowledge Base");
     }
 

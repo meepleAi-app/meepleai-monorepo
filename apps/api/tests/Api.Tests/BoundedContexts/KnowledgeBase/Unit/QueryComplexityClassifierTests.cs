@@ -38,7 +38,7 @@ public class QueryComplexityClassifierTests
         var result = await _sut.ClassifyAsync(query);
 
         result.Level.Should().Be(QueryComplexityLevel.Simple);
-        Assert.True(result.Confidence >= 0.9f);
+        (result.Confidence >= 0.9f).Should().BeTrue();
         _llmServiceMock.VerifyNoOtherCalls();
     }
 
@@ -53,7 +53,7 @@ public class QueryComplexityClassifierTests
         var result = await _sut.ClassifyAsync(query);
 
         result.Level.Should().Be(QueryComplexityLevel.Complex);
-        Assert.True(result.Confidence >= 0.8f);
+        (result.Confidence >= 0.8f).Should().BeTrue();
         _llmServiceMock.VerifyNoOtherCalls();
     }
 
@@ -183,7 +183,7 @@ public class QueryComplexityClassifierTests
         var result = QueryComplexityClassifier.ClassifyByHeuristic(
             "what is the maximum number of players allowed in this game?");
 
-        Assert.Null(result);
+        result.Should().BeNull();
     }
 
     [Fact]
@@ -192,6 +192,6 @@ public class QueryComplexityClassifierTests
         // Only 1 complex indicator, needs 2+
         var result = QueryComplexityClassifier.ClassifyByHeuristic("compare these two games");
 
-        Assert.Null(result);
+        result.Should().BeNull();
     }
 }

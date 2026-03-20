@@ -71,7 +71,7 @@ public class RagAccuracyEvaluatorTests
         var result = await _evaluator.EvaluateTestCaseAsync(testCase, response, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.True(result.KeywordsMatch);
+        result.KeywordsMatch.Should().BeTrue();
         result.KeywordMatchRate.Should().Be(1.0);
     }
 
@@ -86,8 +86,8 @@ public class RagAccuracyEvaluatorTests
         var result = await _evaluator.EvaluateTestCaseAsync(testCase, response, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.False(result.KeywordsMatch); // Not all keywords present
-        Assert.Equal(2.0 / 3.0, result.KeywordMatchRate, precision: 2); // 2 out of 3
+        result.KeywordsMatch.Should().BeFalse(); // Not all keywords present
+        result.KeywordMatchRate.Should().BeApproximately(2.0 / 3.0, 0.01); // 2 out of 3
     }
 
     [Fact]
@@ -101,7 +101,7 @@ public class RagAccuracyEvaluatorTests
         var result = await _evaluator.EvaluateTestCaseAsync(testCase, response, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.True(result.KeywordsMatch);
+        result.KeywordsMatch.Should().BeTrue();
         result.KeywordMatchRate.Should().Be(1.0);
     }
 
@@ -128,7 +128,7 @@ public class RagAccuracyEvaluatorTests
         var result = await _evaluator.EvaluateTestCaseAsync(testCase, response, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.True(result.CitationsValid);
+        result.CitationsValid.Should().BeTrue();
         result.CitationValidityRate.Should().Be(1.0);
     }
 
@@ -155,7 +155,7 @@ public class RagAccuracyEvaluatorTests
         var result = await _evaluator.EvaluateTestCaseAsync(testCase, response, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.False(result.CitationsValid);
+        result.CitationsValid.Should().BeFalse();
         result.CitationValidityRate.Should().Be(0.0);
     }
 
@@ -182,7 +182,7 @@ public class RagAccuracyEvaluatorTests
         var result = await _evaluator.EvaluateTestCaseAsync(testCase, response, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.False(result.CitationsValid);
+        result.CitationsValid.Should().BeFalse();
         result.CitationValidityRate.Should().Be(0.0);
     }
 
@@ -197,7 +197,7 @@ public class RagAccuracyEvaluatorTests
         var result = await _evaluator.EvaluateTestCaseAsync(testCase, response, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.True(result.CitationsValid);
+        result.CitationsValid.Should().BeTrue();
         result.CitationValidityRate.Should().Be(1.0);
     }
 
@@ -212,8 +212,8 @@ public class RagAccuracyEvaluatorTests
         var result = await _evaluator.EvaluateTestCaseAsync(testCase, response, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.False(result.NoForbiddenKeywords); // Hallucination detected
-        Assert.False(result.IsCorrect); // Should be marked incorrect
+        result.NoForbiddenKeywords.Should().BeFalse(); // Hallucination detected
+        result.IsCorrect.Should().BeFalse(); // Should be marked incorrect
     }
 
     [Fact]
@@ -227,7 +227,7 @@ public class RagAccuracyEvaluatorTests
         var result = await _evaluator.EvaluateTestCaseAsync(testCase, response, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.True(result.NoForbiddenKeywords);
+        result.NoForbiddenKeywords.Should().BeTrue();
     }
 
     [Fact]
@@ -257,10 +257,10 @@ public class RagAccuracyEvaluatorTests
         var result = await _evaluator.EvaluateTestCaseAsync(testCase, response, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.True(result.KeywordsMatch);
-        Assert.True(result.CitationsValid);
-        Assert.True(result.NoForbiddenKeywords);
-        Assert.True(result.IsCorrect);
+        result.KeywordsMatch.Should().BeTrue();
+        result.CitationsValid.Should().BeTrue();
+        result.NoForbiddenKeywords.Should().BeTrue();
+        result.IsCorrect.Should().BeTrue();
     }
 
     [Fact]
@@ -277,8 +277,8 @@ public class RagAccuracyEvaluatorTests
         var result = await _evaluator.EvaluateTestCaseAsync(testCase, response, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.False(result.KeywordsMatch);
-        Assert.False(result.IsCorrect); // Fails because keywords don't match
+        result.KeywordsMatch.Should().BeFalse();
+        result.IsCorrect.Should().BeFalse(); // Fails because keywords don't match
     }
 
     [Fact]
@@ -319,8 +319,8 @@ public class RagAccuracyEvaluatorTests
         var response = CreateQaResponse("Answer");
 
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentNullException>(
-            () => _evaluator.EvaluateTestCaseAsync(null!, response));
+        Func<Task> act = () => _evaluator.EvaluateTestCaseAsync(null!, response);
+        await act.Should().ThrowAsync<ArgumentNullException>();
     }
 
     [Fact]
@@ -330,8 +330,8 @@ public class RagAccuracyEvaluatorTests
         var testCase = CreateTestCase();
 
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentNullException>(
-            () => _evaluator.EvaluateTestCaseAsync(testCase, null!));
+        Func<Task> act = () => _evaluator.EvaluateTestCaseAsync(testCase, null!);
+        await act.Should().ThrowAsync<ArgumentNullException>();
     }
 
     [Fact]
@@ -351,8 +351,8 @@ public class RagAccuracyEvaluatorTests
         // Assert
         metrics.TruePositives.Should().Be(3);
         metrics.FalseNegatives.Should().Be(0);
-        Assert.Equal(1.0, metrics.Accuracy); // 100% correct
-        Assert.True(metrics.MeetsBaselineThreshold);
+        metrics.Accuracy.Should().Be(1.0); // 100% correct
+        metrics.MeetsBaselineThreshold.Should().BeTrue();
     }
 
     [Fact]
@@ -371,10 +371,10 @@ public class RagAccuracyEvaluatorTests
         var metrics = _evaluator.CalculateAggregatedMetrics(results);
 
         // Assert
-        Assert.Equal(2, metrics.TruePositives); // 2 correct
-        Assert.Equal(2, metrics.FalseNegatives); // 2 incorrect
-        Assert.Equal(0.50, metrics.Accuracy); // 50% accuracy
-        Assert.False(metrics.MeetsBaselineThreshold); // Below 80%
+        metrics.TruePositives.Should().Be(2); // 2 correct
+        metrics.FalseNegatives.Should().Be(2); // 2 incorrect
+        metrics.Accuracy.Should().Be(0.50); // 50% accuracy
+        metrics.MeetsBaselineThreshold.Should().BeFalse(); // Below 80%
     }
 
     [Fact]
@@ -406,16 +406,16 @@ public class RagAccuracyEvaluatorTests
         var metricsByDifficulty = _evaluator.CalculateMetricsByDifficulty(results);
 
         // Assert
-        Assert.Equal(2, metricsByDifficulty.Count); // easy and hard
-        Assert.True(metricsByDifficulty.ContainsKey("easy"));
-        Assert.True(metricsByDifficulty.ContainsKey("hard"));
+        metricsByDifficulty.Count.Should().Be(2); // easy and hard
+        metricsByDifficulty.ContainsKey("easy").Should().BeTrue();
+        metricsByDifficulty.ContainsKey("hard").Should().BeTrue();
 
         var easyMetrics = metricsByDifficulty["easy"];
-        Assert.Equal(2, easyMetrics.TruePositives); // Both easy cases correct
+        easyMetrics.TruePositives.Should().Be(2); // Both easy cases correct
         easyMetrics.Accuracy.Should().Be(1.0);
 
         var hardMetrics = metricsByDifficulty["hard"];
-        Assert.Equal(0, hardMetrics.TruePositives); // Hard case incorrect
+        hardMetrics.TruePositives.Should().Be(0); // Hard case incorrect
         hardMetrics.FalseNegatives.Should().Be(1);
         hardMetrics.Accuracy.Should().Be(0.0);
     }
@@ -435,9 +435,9 @@ public class RagAccuracyEvaluatorTests
         var metricsByCategory = _evaluator.CalculateMetricsByCategory(results);
 
         // Assert
-        Assert.Equal(2, metricsByCategory.Count); // gameplay and setup
-        Assert.True(metricsByCategory.ContainsKey("gameplay"));
-        Assert.True(metricsByCategory.ContainsKey("setup"));
+        metricsByCategory.Count.Should().Be(2); // gameplay and setup
+        metricsByCategory.ContainsKey("gameplay").Should().BeTrue();
+        metricsByCategory.ContainsKey("setup").Should().BeTrue();
 
         var gameplayMetrics = metricsByCategory["gameplay"];
         gameplayMetrics.TruePositives.Should().Be(2);
@@ -459,9 +459,9 @@ public class RagAccuracyEvaluatorTests
         var metricsByGame = _evaluator.CalculateMetricsByGame(results);
 
         // Assert
-        Assert.Equal(2, metricsByGame.Count); // game1 and game2
-        Assert.True(metricsByGame.ContainsKey("game1"));
-        Assert.True(metricsByGame.ContainsKey("game2"));
+        metricsByGame.Count.Should().Be(2); // game1 and game2
+        metricsByGame.ContainsKey("game1").Should().BeTrue();
+        metricsByGame.ContainsKey("game2").Should().BeTrue();
 
         var game1Metrics = metricsByGame["game1"];
         game1Metrics.TruePositives.Should().Be(2);

@@ -85,7 +85,7 @@ public class GetAvailableModelsQueryHandlerTests
         var result = await _handler.Handle(query, CancellationToken.None);
 
         // Assert
-        Assert.Empty(result.Models);
+        result.Models.Should().BeEmpty();
         _mockService.Verify(s => s.GetAllModels(), Times.Never);
         _mockService.Verify(s => s.GetModelsByTier(It.IsAny<ModelTier>()), Times.Never);
     }
@@ -141,7 +141,7 @@ public class GetAvailableModelsQueryHandlerTests
         dto.CostPer1kInputTokens.Should().Be(0.001m);
         dto.CostPer1kOutputTokens.Should().Be(0.002m);
         dto.MaxTokens.Should().Be(8192);
-        Assert.True(dto.SupportsStreaming);
+        dto.SupportsStreaming.Should().BeTrue();
         dto.Description.Should().Be("Test description");
     }
 

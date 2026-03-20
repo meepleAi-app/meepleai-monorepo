@@ -240,12 +240,12 @@ public class RagValidationPipelineIntegrationTests : IAsyncLifetime
 
         // Assert
         _output("Validating result...");
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         // Note: May be 4 or 5 layers depending on accuracy tracking availability
-        Assert.True(result.TotalLayers >= 4, $"Expected ≥4 layers, got {result.TotalLayers}");
-        Assert.True(result.LayersPassed >= 3, $"Expected ≥3 layers passed, got {result.LayersPassed}");
+        (result.TotalLayers >= 4).Should().BeTrue($"Expected ≥4 layers, got {result.TotalLayers}");
+        (result.LayersPassed >= 3).Should().BeTrue($"Expected ≥3 layers passed, got {result.LayersPassed}");
         // IsValid may be false if citation validation fails (3/4 or 3/5) - acceptable for integration test
-        Assert.True(result.LayersPassed >= 3, $"At least 3 layers should pass, got {result.LayersPassed}");
+        (result.LayersPassed >= 3).Should().BeTrue($"At least 3 layers should pass, got {result.LayersPassed}");
 
         _output($"✓ Test 1 passed: Full pipeline executed");
         _output($"  Layers: {result.LayersPassed}/{result.TotalLayers}");
@@ -284,10 +284,10 @@ public class RagValidationPipelineIntegrationTests : IAsyncLifetime
 
         // Assert
         _output("Validating result...");
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         result.TotalLayers.Should().Be(3);
         // Citation validation may fail if VectorDocument not found in repo query
-        Assert.True(result.LayersPassed >= 1, $"At least 1 layer should pass, got {result.LayersPassed}");
+        (result.LayersPassed >= 1).Should().BeTrue($"At least 1 layer should pass, got {result.LayersPassed}");
 
         _output($"✓ Test 2 passed: Standard validation executed");
         _output($"  Result: IsValid={result.IsValid}, Layers={result.LayersPassed}/3");
@@ -322,7 +322,7 @@ public class RagValidationPipelineIntegrationTests : IAsyncLifetime
         );
 
         // Assert
-        Assert.False(result.IsValid);
+        result.IsValid.Should().BeFalse();
         result.Severity.Should().Be(RagValidationSeverity.Critical);
 
         _output($"✓ Test 3 passed: Low confidence rejected");
@@ -357,7 +357,7 @@ public class RagValidationPipelineIntegrationTests : IAsyncLifetime
         );
 
         // Assert
-        Assert.False(result.IsValid);
+        result.IsValid.Should().BeFalse();
         _output($"✓ Test 4 passed: Hallucination detected");
     }
     [Fact]
@@ -390,7 +390,7 @@ public class RagValidationPipelineIntegrationTests : IAsyncLifetime
         );
 
         // Assert
-        Assert.False(result.IsValid);
+        result.IsValid.Should().BeFalse();
         _output($"✓ Test 5 passed: Invalid citation detected");
     }
     private async Task SeedTestDataAsync()

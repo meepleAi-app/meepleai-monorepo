@@ -109,7 +109,7 @@ public class EvaluationMetricsTests
             sampleCount: 30); // Exactly 30 samples
 
         // Act & Assert
-        Assert.True(metrics.MeetsBaselineRequirements());
+        metrics.MeetsBaselineRequirements().Should().BeTrue();
     }
 
     [Fact]
@@ -126,7 +126,7 @@ public class EvaluationMetricsTests
             sampleCount: 29); // Below 30 threshold
 
         // Act & Assert
-        Assert.False(metrics.MeetsBaselineRequirements());
+        metrics.MeetsBaselineRequirements().Should().BeFalse();
     }
 
     [Fact]
@@ -143,7 +143,7 @@ public class EvaluationMetricsTests
             sampleCount: 30);
 
         // Act & Assert
-        Assert.True(metrics.MeetsPhase4Target());
+        metrics.MeetsPhase4Target().Should().BeTrue();
     }
 
     [Fact]
@@ -160,7 +160,7 @@ public class EvaluationMetricsTests
             sampleCount: 30);
 
         // Act & Assert
-        Assert.False(metrics.MeetsPhase4Target());
+        metrics.MeetsPhase4Target().Should().BeFalse();
     }
 
     [Fact]
@@ -177,7 +177,7 @@ public class EvaluationMetricsTests
             sampleCount: 50);
 
         // Act & Assert
-        Assert.True(metrics.MeetsPhase5Target());
+        metrics.MeetsPhase5Target().Should().BeTrue();
     }
 
     [Fact]
@@ -194,7 +194,7 @@ public class EvaluationMetricsTests
             sampleCount: 50);
 
         // Act & Assert
-        Assert.False(metrics.MeetsPhase5Target());
+        metrics.MeetsPhase5Target().Should().BeFalse();
     }
 
     [Fact]
@@ -211,7 +211,7 @@ public class EvaluationMetricsTests
             sampleCount: 50);
 
         // Act & Assert
-        Assert.False(metrics.MeetsPhase5Target());
+        metrics.MeetsPhase5Target().Should().BeFalse();
     }
 
     [Fact]
@@ -228,7 +228,7 @@ public class EvaluationMetricsTests
             sampleCount: 50);
 
         // Act & Assert
-        Assert.True(metrics.MeetsPhase5Target());
+        metrics.MeetsPhase5Target().Should().BeTrue();
     }
 
     [Theory]

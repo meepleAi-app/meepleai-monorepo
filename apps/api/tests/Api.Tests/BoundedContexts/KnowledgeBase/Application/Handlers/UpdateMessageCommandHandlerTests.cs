@@ -62,11 +62,11 @@ public class UpdateMessageCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         result.Id.Should().Be(threadId);
         result.Messages.Should().ContainSingle();
         result.Messages[0].Content.Should().Be(newContent);
-        Assert.NotNull(result.Messages[0].UpdatedAt);
+        result.Messages[0].UpdatedAt.Should().NotBeNull();
 
         _mockRepository.Verify(r => r.UpdateAsync(thread, It.IsAny<CancellationToken>()), Times.Once);
         _mockUnitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
@@ -86,8 +86,8 @@ public class UpdateMessageCommandHandlerTests
         var command = new UpdateMessageCommand(threadId, messageId, "New content", userId);
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
-            () => _handler.Handle(command, TestContext.Current.CancellationToken));
+        Func<Task> act = () => _handler.Handle(command, TestContext.Current.CancellationToken);
+        var exception = (await act.Should().ThrowAsync<InvalidOperationException>()).Which;
 
         exception.Message.Should().Contain(threadId.ToString());
 
@@ -113,8 +113,8 @@ public class UpdateMessageCommandHandlerTests
         var command = new UpdateMessageCommand(threadId, messageId, "New content", differentUserId);
 
         // Act & Assert
-        await Assert.ThrowsAsync<UnauthorizedAccessException>(
-            () => _handler.Handle(command, TestContext.Current.CancellationToken));
+        Func<Task> act = () => _handler.Handle(command, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<UnauthorizedAccessException>();
 
         _mockRepository.Verify(r => r.UpdateAsync(It.IsAny<ChatThread>(), It.IsAny<CancellationToken>()), Times.Never);
         _mockUnitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
@@ -136,8 +136,8 @@ public class UpdateMessageCommandHandlerTests
         var command = new UpdateMessageCommand(threadId, nonExistentMessageId, "New content", userId);
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<KeyNotFoundException>(
-            () => _handler.Handle(command, TestContext.Current.CancellationToken));
+        Func<Task> act = () => _handler.Handle(command, TestContext.Current.CancellationToken);
+        var exception = (await act.Should().ThrowAsync<KeyNotFoundException>()).Which;
 
         exception.Message.Should().Contain(nonExistentMessageId.ToString());
         exception.Message.Should().Contain(threadId.ToString());
@@ -169,21 +169,21 @@ public class UpdateMessageCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         result.Messages.Count.Should().Be(4);
 
         // First message should be updated
         result.Messages[0].Content.Should().Be("Updated user message 1");
-        Assert.NotNull(result.Messages[0].UpdatedAt);
+        result.Messages[0].UpdatedAt.Should().NotBeNull();
 
         // Subsequent AI response should be invalidated
-        Assert.True(result.Messages[1].IsInvalidated);
+        result.Messages[1].IsInvalidated.Should().BeTrue();
 
         // User messages are not invalidated (only AI responses)
-        Assert.False(result.Messages[2].IsInvalidated);
+        result.Messages[2].IsInvalidated.Should().BeFalse();
 
         // But the AI response after that user message should be invalidated
-        Assert.True(result.Messages[3].IsInvalidated);
+        result.Messages[3].IsInvalidated.Should().BeTrue();
 
         _mockRepository.Verify(r => r.UpdateAsync(thread, It.IsAny<CancellationToken>()), Times.Once);
         _mockUnitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
@@ -193,7 +193,7 @@ public class UpdateMessageCommandHandlerTests
     public async Task Handle_NullCommand_ThrowsArgumentNullException()
     {
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentNullException>(
-            () => _handler.Handle(null!, TestContext.Current.CancellationToken));
+        Func<Task> act = () => _handler.Handle(null!, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<ArgumentNullException>();
     }
 }

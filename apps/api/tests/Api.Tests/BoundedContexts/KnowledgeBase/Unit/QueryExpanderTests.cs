@@ -105,8 +105,8 @@ public class QueryExpanderTests
                 It.IsAny<string>(), It.IsAny<string>(), It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new OperationCanceledException());
 
-        await Assert.ThrowsAsync<OperationCanceledException>(
-            () => _sut.ExpandAsync("test query", cts.Token));
+        Func<Task> act = () => _sut.ExpandAsync("test query", cts.Token);
+        await act.Should().ThrowAsync<OperationCanceledException>();
     }
 
     [Fact]
@@ -119,7 +119,7 @@ public class QueryExpanderTests
 
         var result = await _sut.ExpandAsync("original", CancellationToken.None);
 
-        Assert.Equal(5, result.Count); // original + 4 max
+        result.Count.Should().Be(5); // original + 4 max
         result[0].Should().Be("original");
     }
 

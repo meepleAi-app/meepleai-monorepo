@@ -67,32 +67,32 @@ public class StreamSetupGuideQueryHandlerTests
         }
 
         // Assert
-        Assert.NotEmpty(events);
+        events.Should().NotBeEmpty();
 
         // State update events
         var stateUpdates = events.Where(e => e.Type == StreamingEventType.StateUpdate).ToList();
-        Assert.NotEmpty(stateUpdates);
-        var firstState = Assert.IsType<StreamingStateUpdate>(stateUpdates[0].Data);
+        stateUpdates.Should().NotBeEmpty();
+        var firstState = stateUpdates[0].Data.Should().BeOfType<StreamingStateUpdate>().Which;
         firstState.message.Should().Be("Preparing setup guide...");
 
         // Setup step events
         var stepEvents = events.Where(e => e.Type == StreamingEventType.SetupStep).ToList();
-        Assert.NotEmpty(stepEvents);
+        stepEvents.Should().NotBeEmpty();
 
         foreach (var stepEvent in stepEvents)
         {
-            var step = Assert.IsType<StreamingSetupStep>(stepEvent.Data);
-            Assert.NotNull(step.step);
-            Assert.True(step.step.stepNumber > 0);
-            Assert.NotEmpty(step.step.title);
-            Assert.NotEmpty(step.step.instruction);
+            var step = stepEvent.Data.Should().BeOfType<StreamingSetupStep>().Which;
+            step.step.Should().NotBeNull();
+            (step.step.stepNumber > 0).Should().BeTrue();
+            step.step.title.Should().NotBeEmpty();
+            step.step.instruction.Should().NotBeEmpty();
         }
 
         // Complete event
         var completeEvent = events.LastOrDefault(e => e.Type == StreamingEventType.Complete);
-        Assert.NotNull(completeEvent);
-        var complete = Assert.IsType<StreamingComplete>(completeEvent.Data);
-        Assert.True(complete.estimatedReadingTimeMinutes >= 5);
+        completeEvent.Should().NotBeNull();
+        var complete = completeEvent.Data.Should().BeOfType<StreamingComplete>().Which;
+        (complete.estimatedReadingTimeMinutes >= 5).Should().BeTrue();
     }
 
     [Fact]
@@ -117,14 +117,14 @@ public class StreamSetupGuideQueryHandlerTests
         var stepEvents = events.Where(e => e.Type == StreamingEventType.SetupStep).ToList();
         stepEvents.Count.Should().Be(5);
 
-        var step1 = Assert.IsType<StreamingSetupStep>(stepEvents[0].Data).step;
+        var step1 = stepEvents[0].Data.Should().BeOfType<StreamingSetupStep>().Which.step;
         step1.stepNumber.Should().Be(1);
         step1.title.Should().Be("Prepare Components");
 
         var completeEvent = events.LastOrDefault(e => e.Type == StreamingEventType.Complete);
-        Assert.NotNull(completeEvent);
-        var complete = Assert.IsType<StreamingComplete>(completeEvent.Data);
-        Assert.Equal(0, complete.totalTokens); // No LLM call, so 0 tokens
+        completeEvent.Should().NotBeNull();
+        var complete = completeEvent.Data.Should().BeOfType<StreamingComplete>().Which;
+        complete.totalTokens.Should().Be(0); // No LLM call, so 0 tokens
     }
 
     [Fact]
@@ -152,8 +152,8 @@ public class StreamSetupGuideQueryHandlerTests
         // All default steps are non-optional
         foreach (var stepEvent in stepEvents)
         {
-            var step = Assert.IsType<StreamingSetupStep>(stepEvent.Data).step;
-            Assert.False(step.isOptional);
+            var step = stepEvent.Data.Should().BeOfType<StreamingSetupStep>().Which.step;
+            step.isOptional.Should().BeFalse();
         }
     }
     [Fact]
@@ -182,14 +182,14 @@ public class StreamSetupGuideQueryHandlerTests
         // When embedding fails, handler returns default steps with Success=true (graceful degradation)
         // So we check for the initial "Preparing" state update instead
         var stateUpdate = events.FirstOrDefault(e => e.Type == StreamingEventType.StateUpdate);
-        Assert.NotNull(stateUpdate);
-        var stateData = Assert.IsType<StreamingStateUpdate>(stateUpdate.Data);
+        stateUpdate.Should().NotBeNull();
+        var stateData = stateUpdate.Data.Should().BeOfType<StreamingStateUpdate>().Which;
         stateData.message.Should().Be("Preparing setup guide...");
 
         var stepEvents = events.Where(e => e.Type == StreamingEventType.SetupStep).ToList();
-        Assert.Equal(5, stepEvents.Count); // Default has 5 steps
+        stepEvents.Count.Should().Be(5); // Default has 5 steps
 
-        var step1 = Assert.IsType<StreamingSetupStep>(stepEvents[0].Data).step;
+        var step1 = stepEvents[0].Data.Should().BeOfType<StreamingSetupStep>().Which.step;
         step1.title.Should().Be("Prepare Components");
 
         // Should NOT call LLM
@@ -217,7 +217,7 @@ public class StreamSetupGuideQueryHandlerTests
 
         // Assert
         var stepEvents = events.Where(e => e.Type == StreamingEventType.SetupStep).ToList();
-        Assert.Equal(5, stepEvents.Count); // Default steps
+        stepEvents.Count.Should().Be(5); // Default steps
 
         // Should NOT call LLM when no vector results
         _llmServiceMock.Verify(
@@ -248,7 +248,7 @@ public class StreamSetupGuideQueryHandlerTests
 
         // Assert
         var stepEvents = events.Where(e => e.Type == StreamingEventType.SetupStep).ToList();
-        Assert.Equal(5, stepEvents.Count); // Default steps
+        stepEvents.Count.Should().Be(5); // Default steps
     }
 
     [Fact]
@@ -270,7 +270,7 @@ public class StreamSetupGuideQueryHandlerTests
 
         // Assert
         var stepEvents = events.Where(e => e.Type == StreamingEventType.SetupStep).ToList();
-        Assert.Equal(5, stepEvents.Count); // Default steps
+        stepEvents.Count.Should().Be(5); // Default steps
     }
 
     [Fact]
@@ -293,10 +293,10 @@ public class StreamSetupGuideQueryHandlerTests
 
         // Assert
         var stepEvents = events.Where(e => e.Type == StreamingEventType.SetupStep).ToList();
-        Assert.Equal(5, stepEvents.Count); // Default steps
+        stepEvents.Count.Should().Be(5); // Default steps
 
         var completeEvent = events.LastOrDefault(e => e.Type == StreamingEventType.Complete);
-        Assert.NotNull(completeEvent);
+        completeEvent.Should().NotBeNull();
     }
     [Fact]
     public async Task Handle_EmptyGameId_ReturnsError()
@@ -314,7 +314,7 @@ public class StreamSetupGuideQueryHandlerTests
         // Assert
         events.Should().ContainSingle();
         events[0].Type.Should().Be(StreamingEventType.Error);
-        var error = Assert.IsType<StreamingError>(events[0].Data);
+        var error = events[0].Data.Should().BeOfType<StreamingError>().Which;
         error.errorMessage.Should().Be("Game ID is required.");
         error.errorCode.Should().Be("EMPTY_GAME_ID");
     }
@@ -389,8 +389,8 @@ public class StreamSetupGuideQueryHandlerTests
         }
 
         // Assert
-        Assert.InRange(events.Count, 1, 5); // Should stop early
-        Assert.True(cts.IsCancellationRequested);
+        events.Count.Should().BeInRange(1, 5); // Should stop early
+        cts.IsCancellationRequested.Should().BeTrue();
     }
     [Fact]
     public async Task Handle_PromptDatabaseEnabled_QdrantRemoved_ReturnsDefaultSteps()
@@ -428,7 +428,7 @@ public class StreamSetupGuideQueryHandlerTests
 
         // Assert — Qdrant removed, so search always fails → default steps, LLM never called
         var stepEvents = events.Where(e => e.Type == StreamingEventType.SetupStep).ToList();
-        Assert.Equal(5, stepEvents.Count); // Default steps
+        stepEvents.Count.Should().Be(5); // Default steps
 
         _llmServiceMock.Verify(
             x => x.GenerateCompletionAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()),
@@ -457,7 +457,7 @@ public class StreamSetupGuideQueryHandlerTests
 
         // Assert — Qdrant removed, so search always fails → default steps, LLM never called
         var stepEvents = events.Where(e => e.Type == StreamingEventType.SetupStep).ToList();
-        Assert.Equal(5, stepEvents.Count); // Default steps
+        stepEvents.Count.Should().Be(5); // Default steps
 
         _promptTemplateServiceMock.Verify(
             x => x.GetActivePromptAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()),
@@ -505,7 +505,7 @@ public class StreamSetupGuideQueryHandlerTests
 
         // Assert — Qdrant removed, so search always fails → default steps, LLM never called
         var stepEvents = events.Where(e => e.Type == StreamingEventType.SetupStep).ToList();
-        Assert.Equal(5, stepEvents.Count); // Default steps
+        stepEvents.Count.Should().Be(5); // Default steps
 
         _llmServiceMock.Verify(
             x => x.GenerateCompletionAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()),
@@ -532,9 +532,9 @@ public class StreamSetupGuideQueryHandlerTests
 
         // Assert
         var completeEvent = events.LastOrDefault(e => e.Type == StreamingEventType.Complete);
-        Assert.NotNull(completeEvent);
-        var complete = Assert.IsType<StreamingComplete>(completeEvent.Data);
-        Assert.True(complete.estimatedReadingTimeMinutes >= 5); // Minimum 5 minutes
+        completeEvent.Should().NotBeNull();
+        var complete = completeEvent.Data.Should().BeOfType<StreamingComplete>().Which;
+        (complete.estimatedReadingTimeMinutes >= 5).Should().BeTrue(); // Minimum 5 minutes
     }
 
     [Fact]
@@ -561,9 +561,9 @@ public class StreamSetupGuideQueryHandlerTests
         stepEvents.Count.Should().Be(5);
 
         var completeEvent = events.LastOrDefault(e => e.Type == StreamingEventType.Complete);
-        Assert.NotNull(completeEvent);
-        var complete = Assert.IsType<StreamingComplete>(completeEvent.Data);
-        Assert.Equal(10, complete.estimatedReadingTimeMinutes); // 5 steps * 2 min/step
+        completeEvent.Should().NotBeNull();
+        var complete = completeEvent.Data.Should().BeOfType<StreamingComplete>().Which;
+        complete.estimatedReadingTimeMinutes.Should().Be(10); // 5 steps * 2 min/step
     }
 
     private static IConfiguration CreateConfiguration(bool promptDatabaseEnabled)

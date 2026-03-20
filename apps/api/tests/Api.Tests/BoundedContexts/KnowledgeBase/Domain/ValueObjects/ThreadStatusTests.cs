@@ -24,8 +24,8 @@ public class ThreadStatusTests
 
         // Assert
         status.Should().Be(ThreadStatus.Active);
-        Assert.True(status.IsActive);
-        Assert.False(status.IsClosed);
+        status.IsActive.Should().BeTrue();
+        status.IsClosed.Should().BeFalse();
     }
 
     [Theory]
@@ -40,8 +40,8 @@ public class ThreadStatusTests
 
         // Assert
         status.Should().Be(ThreadStatus.Closed);
-        Assert.True(status.IsClosed);
-        Assert.False(status.IsActive);
+        status.IsClosed.Should().BeTrue();
+        status.IsActive.Should().BeFalse();
     }
 
     [Theory]
@@ -75,8 +75,8 @@ public class ThreadStatusTests
 
         // Act & Assert
         status2.Should().Be(status1);
-        Assert.True(status1 == status2);
-        Assert.False(status1 != status2);
+        (status1 == status2).Should().BeTrue();
+        (status1 != status2).Should().BeFalse();
     }
 
     [Fact]
@@ -88,8 +88,8 @@ public class ThreadStatusTests
 
         // Act & Assert
         status2.Should().NotBe(status1);
-        Assert.False(status1 == status2);
-        Assert.True(status1 != status2);
+        (status1 == status2).Should().BeFalse();
+        (status1 != status2).Should().BeTrue();
     }
 
     [Fact]

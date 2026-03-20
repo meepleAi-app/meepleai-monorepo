@@ -105,7 +105,7 @@ public sealed class FreeModelQuotaTrackerTests
 
         var result = await _sut.IsRpdExhaustedAsync("model:free");
 
-        Assert.True(result);
+        result.Should().BeTrue();
     }
 
     [Fact]
@@ -117,7 +117,7 @@ public sealed class FreeModelQuotaTrackerTests
 
         var result = await _sut.IsRpdExhaustedAsync("model:free");
 
-        Assert.False(result);
+        result.Should().BeFalse();
     }
 
     [Fact]
@@ -129,7 +129,7 @@ public sealed class FreeModelQuotaTrackerTests
 
         var result = await _sut.IsRpdExhaustedAsync("model:free");
 
-        Assert.False(result);
+        result.Should().BeFalse();
     }
 
     [Fact]
@@ -141,7 +141,7 @@ public sealed class FreeModelQuotaTrackerTests
 
         var result = await _sut.IsRpdExhaustedAsync("model:free");
 
-        Assert.False(result);
+        result.Should().BeFalse();
     }
 
     // ─── GetLastErrorTypeAsync ───────────────────────────────────────────────
@@ -171,7 +171,7 @@ public sealed class FreeModelQuotaTrackerTests
 
         var result = await _sut.GetLastErrorTypeAsync();
 
-        Assert.Null(result);
+        result.Should().BeNull();
     }
 
     [Fact]
@@ -183,7 +183,7 @@ public sealed class FreeModelQuotaTrackerTests
 
         var result = await _sut.GetLastErrorTypeAsync();
 
-        Assert.Null(result);
+        result.Should().BeNull();
     }
 
     [Fact]
@@ -195,7 +195,7 @@ public sealed class FreeModelQuotaTrackerTests
 
         var result = await _sut.GetLastErrorTypeAsync();
 
-        Assert.Null(result);
+        result.Should().BeNull();
     }
 
     // ─── GetRpdResetTimeAsync ────────────────────────────────────────────────
@@ -224,7 +224,7 @@ public sealed class FreeModelQuotaTrackerTests
 
         var result = await _sut.GetRpdResetTimeAsync();
 
-        Assert.Null(result);
+        result.Should().BeNull();
     }
 
     [Fact]
@@ -236,7 +236,7 @@ public sealed class FreeModelQuotaTrackerTests
 
         var result = await _sut.GetRpdResetTimeAsync();
 
-        Assert.Null(result);
+        result.Should().BeNull();
     }
 
     [Fact]
@@ -248,6 +248,6 @@ public sealed class FreeModelQuotaTrackerTests
 
         var result = await _sut.GetRpdResetTimeAsync();
 
-        Assert.Null(result);
+        result.Should().BeNull();
     }
 }

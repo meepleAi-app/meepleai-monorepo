@@ -71,12 +71,12 @@ public sealed class LlmRequestLogRepositoryTests : SharedDatabaseTestBase<LlmReq
         log.TotalTokens.Should().Be(700);
         log.CostUsd.Should().Be(0.0025m);
         log.LatencyMs.Should().Be(480);
-        Assert.True(log.Success);
-        Assert.Null(log.ErrorMessage);
-        Assert.False(log.IsStreaming);
-        Assert.False(log.IsFreeModel);
+        log.Success.Should().BeTrue();
+        log.ErrorMessage.Should().BeNull();
+        log.IsStreaming.Should().BeFalse();
+        log.IsFreeModel.Should().BeFalse();
         log.SessionId.Should().Be("test-session");
-        Assert.True(log.RequestedAt >= before && log.RequestedAt <= DateTime.UtcNow);
+        (log.RequestedAt >= before && log.RequestedAt <= DateTime.UtcNow).Should().BeTrue();
     }
 
     [Fact]
@@ -94,8 +94,7 @@ public sealed class LlmRequestLogRepositoryTests : SharedDatabaseTestBase<LlmReq
         // Assert
         var log = await DbContext.LlmRequestLogs.SingleAsync(TestCancellationToken);
         var expectedExpiry = log.RequestedAt.AddDays(30);
-        Assert.True(Math.Abs((log.ExpiresAt - expectedExpiry).TotalSeconds) < 2,
-            $"ExpiresAt {log.ExpiresAt} should be ~30 days after RequestedAt {log.RequestedAt}");
+        (Math.Abs((log.ExpiresAt - expectedExpiry).TotalSeconds) < 2).Should().BeTrue($"ExpiresAt {log.ExpiresAt} should be ~30 days after RequestedAt {log.RequestedAt}");
     }
 
     [Fact]
@@ -114,7 +113,7 @@ public sealed class LlmRequestLogRepositoryTests : SharedDatabaseTestBase<LlmReq
 
         // Assert
         var log = await DbContext.LlmRequestLogs.SingleAsync(TestCancellationToken);
-        Assert.False(log.Success);
+        log.Success.Should().BeFalse();
         log.ErrorMessage.Should().Be("Rate limit exceeded");
     }
 

@@ -83,13 +83,13 @@ public class InvokeAgentCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         result.AgentId.Should().Be(agentId);
         result.AgentName.Should().Be("Test Agent");
         result.AgentType.Should().Be(AgentType.RagAgent.Value);
         result.Query.Should().Be("What are the rules for Catan?");
-        Assert.True(result.Confidence >= 0.0 && result.Confidence <= 1.0);
-        Assert.NotEmpty(result.Results);
+        (result.Confidence >= 0.0 && result.Confidence <= 1.0).Should().BeTrue();
+        result.Results.Should().NotBeEmpty();
 
         // Verify agent was updated
         _mockAgentRepo.Verify(r => r.UpdateAsync(It.IsAny<Agent>(), It.IsAny<CancellationToken>()), Times.Once);
@@ -109,9 +109,10 @@ public class InvokeAgentCommandHandlerTests
         );
 
         // Act & Assert
-        var ex = await Assert.ThrowsAsync<InvalidOperationException>(async () =>
-            await _handler.Handle(command, TestContext.Current.CancellationToken));
-        Assert.Contains("not found", ex.Message, StringComparison.OrdinalIgnoreCase);
+        Func<Task> act = async () =>
+            await _handler.Handle(command, TestContext.Current.CancellationToken);
+        var ex = (await act.Should().ThrowAsync<InvalidOperationException>()).Which;
+        ex.Message.Should().ContainEquivalentOf("not found");
     }
 
     [Fact]
@@ -131,8 +132,9 @@ public class InvokeAgentCommandHandlerTests
         );
 
         // Act & Assert
-        var ex = await Assert.ThrowsAsync<InvalidOperationException>(async () =>
-            await _handler.Handle(command, TestContext.Current.CancellationToken));
+        Func<Task> act = async () =>
+            await _handler.Handle(command, TestContext.Current.CancellationToken);
+        var ex = (await act.Should().ThrowAsync<InvalidOperationException>()).Which;
         ex.Message.ToLower().Should().Contain("not active");
     }
 
@@ -154,8 +156,9 @@ public class InvokeAgentCommandHandlerTests
         );
 
         // Act & Assert
-        var ex = await Assert.ThrowsAsync<InvalidOperationException>(async () =>
-            await _handler.Handle(command, TestContext.Current.CancellationToken));
+        Func<Task> act = async () =>
+            await _handler.Handle(command, TestContext.Current.CancellationToken);
+        var ex = (await act.Should().ThrowAsync<InvalidOperationException>()).Which;
         ex.Message.ToLower().Should().Contain("embedding");
     }
 
@@ -191,11 +194,11 @@ public class InvokeAgentCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         result.ResultCount.Should().Be(0);
         result.Confidence.Should().Be(0.0);
         result.QualityLevel.Should().Be("Low");
-        Assert.Empty(result.Results);
+        result.Results.Should().BeEmpty();
     }
 
     [Fact]
@@ -221,7 +224,7 @@ public class InvokeAgentCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         result.ResultCount.Should().Be(0);
         result.QualityLevel.Should().Be("Low");
     }
@@ -263,7 +266,7 @@ public class InvokeAgentCommandHandlerTests
 
         // Assert
         agent.InvocationCount.Should().Be(initialCount + 1);
-        Assert.NotNull(agent.LastInvokedAt);
+        agent.LastInvokedAt.Should().NotBeNull();
     }
 
     [Fact]
@@ -301,9 +304,9 @@ public class InvokeAgentCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         // With high similarity vectors, we should get high confidence
-        Assert.True(result.Confidence >= 0.80 || result.QualityLevel == "High");
+        (result.Confidence >= 0.80 || result.QualityLevel == "High").Should().BeTrue();
     }
 
     // Helper methods

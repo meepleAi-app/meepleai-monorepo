@@ -53,7 +53,7 @@ public class GetMyChatHistoryQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         result.TotalCount.Should().Be(3);
         result.Chats.Count.Should().Be(3);
         result.Chats[0].Title.Should().Be("Thread 1");
@@ -75,9 +75,9 @@ public class GetMyChatHistoryQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         result.TotalCount.Should().Be(0);
-        Assert.Empty(result.Chats);
+        result.Chats.Should().BeEmpty();
     }
 
     [Fact]
@@ -109,7 +109,7 @@ public class GetMyChatHistoryQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         result.TotalCount.Should().Be(5);
         result.Chats.Count.Should().Be(2);
         result.Chats[0].Title.Should().Be("Thread 3");
@@ -120,8 +120,8 @@ public class GetMyChatHistoryQueryHandlerTests
     public async Task Handle_WithNullQuery_ThrowsArgumentNullException()
     {
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentNullException>(
-            () => _handler.Handle(null!, TestContext.Current.CancellationToken));
+        Func<Task> act = () => _handler.Handle(null!, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<ArgumentNullException>();
     }
 
     private static ChatThread CreateThread(Guid userId, Guid? gameId, string title)

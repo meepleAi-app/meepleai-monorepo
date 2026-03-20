@@ -64,9 +64,9 @@ public class GridSearchConfigurationTests
         var configs = GridSearchConfiguration.GetAllConfigurations();
 
         // Assert - Should contain dense, baseline, and sparse chunking
-        Assert.True(configs.Any(c => c.Chunking.Name == "dense"));
-        Assert.True(configs.Any(c => c.Chunking.Name == "baseline"));
-        Assert.True(configs.Any(c => c.Chunking.Name == "sparse"));
+        configs.Any(c => c.Chunking.Name == "dense").Should().BeTrue();
+        configs.Any(c => c.Chunking.Name == "baseline").Should().BeTrue();
+        configs.Any(c => c.Chunking.Name == "sparse").Should().BeTrue();
     }
 
     [Fact]
@@ -76,8 +76,8 @@ public class GridSearchConfigurationTests
         var configs = GridSearchConfiguration.GetAllConfigurations();
 
         // Assert - Should contain none and scalar_int8
-        Assert.True(configs.Any(c => c.Quantization.Type == QuantizationType.None));
-        Assert.True(configs.Any(c => c.Quantization.Type == QuantizationType.ScalarInt8));
+        configs.Any(c => c.Quantization.Type == QuantizationType.None).Should().BeTrue();
+        configs.Any(c => c.Quantization.Type == QuantizationType.ScalarInt8).Should().BeTrue();
     }
 
     [Fact]
@@ -87,8 +87,8 @@ public class GridSearchConfigurationTests
         var configs = GridSearchConfiguration.GetAllConfigurations();
 
         // Assert - Should contain no_rerank and bge_rerank
-        Assert.True(configs.Any(c => !c.Reranking.Enabled));
-        Assert.True(configs.Any(c => c.Reranking.Enabled));
+        configs.Any(c => !c.Reranking.Enabled).Should().BeTrue();
+        configs.Any(c => c.Reranking.Enabled).Should().BeTrue();
     }
 }
 
@@ -211,8 +211,8 @@ public class RerankingConfigTests
 
         // Assert
         noRerank.DisplayName.Should().Be("No Reranking");
-        Assert.False(noRerank.Enabled);
-        Assert.Null(noRerank.ModelName);
+        noRerank.Enabled.Should().BeFalse();
+        noRerank.ModelName.Should().BeNull();
     }
 
     [Fact]
@@ -224,7 +224,7 @@ public class RerankingConfigTests
 
         // Assert
         bge.DisplayName.Should().Be("BGE Reranker v2-m3");
-        Assert.True(bge.Enabled);
+        bge.Enabled.Should().BeTrue();
         bge.ModelName.Should().Be("BAAI/bge-reranker-v2-m3");
     }
 }

@@ -30,9 +30,9 @@ public sealed class AbTestSessionTests
         session.Id.Should().NotBe(Guid.Empty);
         session.CreatedBy.Should().Be(UserId);
         session.Query.Should().Be("What are the rules for Catan?");
-        Assert.Null(session.KnowledgeBaseId);
+        session.KnowledgeBaseId.Should().BeNull();
         session.Status.Should().Be(AbTestStatus.Draft);
-        Assert.Empty(session.Variants);
+        session.Variants.Should().BeEmpty();
     }
 
     [Fact]
@@ -55,22 +55,25 @@ public sealed class AbTestSessionTests
     [Fact]
     public void Create_WithEmptyUserId_ThrowsValidation()
     {
-        Assert.Throws<ValidationException>(() =>
-            AbTestSession.Create(Guid.Empty, "Test query"));
+        Action act = () =>
+            AbTestSession.Create(Guid.Empty, "Test query");
+        act.Should().Throw<ValidationException>();
     }
 
     [Fact]
     public void Create_WithNullQuery_ThrowsValidation()
     {
-        Assert.Throws<ValidationException>(() =>
-            AbTestSession.Create(UserId, null!));
+        Action act = () =>
+            AbTestSession.Create(UserId, null!);
+        act.Should().Throw<ValidationException>();
     }
 
     [Fact]
     public void Create_WithEmptyQuery_ThrowsValidation()
     {
-        Assert.Throws<ValidationException>(() =>
-            AbTestSession.Create(UserId, "   "));
+        Action act = () =>
+            AbTestSession.Create(UserId, "   ");
+        act.Should().Throw<ValidationException>();
     }
 
     [Fact]
@@ -78,8 +81,9 @@ public sealed class AbTestSessionTests
     {
         var longQuery = new string('x', 2001);
 
-        Assert.Throws<ValidationException>(() =>
-            AbTestSession.Create(UserId, longQuery));
+        Action act = () =>
+            AbTestSession.Create(UserId, longQuery);
+        act.Should().Throw<ValidationException>();
     }
 
     [Fact]
@@ -129,8 +133,9 @@ public sealed class AbTestSessionTests
         session.AddVariant("C", "P", "m3");
         session.AddVariant("D", "P", "m4");
 
-        Assert.Throws<ValidationException>(() =>
-            session.AddVariant("E", "P", "m5"));
+        Action act = () =>
+            session.AddVariant("E", "P", "m5");
+        act.Should().Throw<ValidationException>();
     }
 
     [Fact]
@@ -139,8 +144,9 @@ public sealed class AbTestSessionTests
         var session = AbTestSession.Create(UserId, "Test");
         session.AddVariant("A", "P1", "m1");
 
-        Assert.Throws<ValidationException>(() =>
-            session.AddVariant("A", "P2", "m2"));
+        Action act = () =>
+            session.AddVariant("A", "P2", "m2");
+        act.Should().Throw<ValidationException>();
     }
 
     [Fact]
@@ -149,8 +155,9 @@ public sealed class AbTestSessionTests
         var session = AbTestSession.Create(UserId, "Test");
         session.AddVariant("A", "P1", "m1");
 
-        Assert.Throws<ValidationException>(() =>
-            session.AddVariant("a", "P2", "m2"));
+        Action act = () =>
+            session.AddVariant("a", "P2", "m2");
+        act.Should().Throw<ValidationException>();
     }
 
     [Fact]
@@ -158,8 +165,9 @@ public sealed class AbTestSessionTests
     {
         var session = CreateInProgressSession();
 
-        Assert.Throws<InvalidOperationException>(() =>
-            session.AddVariant("C", "P", "m3"));
+        Action act = () =>
+            session.AddVariant("C", "P", "m3");
+        act.Should().Throw<InvalidOperationException>();
     }
 
     [Fact]
@@ -167,8 +175,9 @@ public sealed class AbTestSessionTests
     {
         var session = AbTestSession.Create(UserId, "Test");
 
-        Assert.Throws<ArgumentException>(() =>
-            session.AddVariant("", "P", "m1"));
+        Action act = () =>
+            session.AddVariant("", "P", "m1");
+        act.Should().Throw<ArgumentException>();
     }
 
     [Fact]
@@ -176,8 +185,9 @@ public sealed class AbTestSessionTests
     {
         var session = AbTestSession.Create(UserId, "Test");
 
-        Assert.Throws<ArgumentException>(() =>
-            session.AddVariant("A", "", "m1"));
+        Action act = () =>
+            session.AddVariant("A", "", "m1");
+        act.Should().Throw<ArgumentException>();
     }
 
     [Fact]
@@ -185,8 +195,9 @@ public sealed class AbTestSessionTests
     {
         var session = AbTestSession.Create(UserId, "Test");
 
-        Assert.Throws<ArgumentException>(() =>
-            session.AddVariant("A", "P", ""));
+        Action act = () =>
+            session.AddVariant("A", "P", "");
+        act.Should().Throw<ArgumentException>();
     }
 
     // --- StartTest tests ---
@@ -250,8 +261,9 @@ public sealed class AbTestSessionTests
         var session = AbTestSession.Create(UserId, "Test");
         var variant = session.AddVariant("A", "P", "m1");
 
-        Assert.Throws<ArgumentException>(() =>
-            variant.RecordResponse("", 100, 500, 0.001m));
+        Action act = () =>
+            variant.RecordResponse("", 100, 500, 0.001m);
+        act.Should().Throw<ArgumentException>();
     }
 
     [Fact]
@@ -260,8 +272,9 @@ public sealed class AbTestSessionTests
         var session = AbTestSession.Create(UserId, "Test");
         var variant = session.AddVariant("A", "P", "m1");
 
-        Assert.Throws<ArgumentException>(() =>
-            variant.RecordResponse("response", -1, 500, 0.001m));
+        Action act = () =>
+            variant.RecordResponse("response", -1, 500, 0.001m);
+        act.Should().Throw<ArgumentException>();
     }
 
     // --- Variant MarkFailed tests ---
@@ -274,7 +287,7 @@ public sealed class AbTestSessionTests
 
         variant.MarkFailed("Model timeout after 30s");
 
-        Assert.True(variant.Failed);
+        variant.Failed.Should().BeTrue();
         variant.ErrorMessage.Should().Be("Model timeout after 30s");
     }
 
@@ -290,9 +303,9 @@ public sealed class AbTestSessionTests
         var eval = AbTestEvaluation.Create(EvaluatorId, 5, 4, 3, 4);
         session.EvaluateVariant("A", eval);
 
-        Assert.NotNull(session.Variants[0].Evaluation);
+        session.Variants[0].Evaluation.Should().NotBeNull();
         session.Variants[0].Evaluation!.Accuracy.Should().Be(5);
-        Assert.Equal(AbTestStatus.InProgress, session.Status); // Not all evaluated yet
+        session.Status.Should().Be(AbTestStatus.InProgress); // Not all evaluated yet
     }
 
     [Fact]
@@ -306,7 +319,7 @@ public sealed class AbTestSessionTests
         session.EvaluateVariant("B", AbTestEvaluation.Create(EvaluatorId, 3, 3, 4, 5));
 
         session.Status.Should().Be(AbTestStatus.Evaluated);
-        Assert.NotNull(session.CompletedAt);
+        session.CompletedAt.Should().NotBeNull();
     }
 
     [Fact]
@@ -332,8 +345,9 @@ public sealed class AbTestSessionTests
         session.AddVariant("A", "P", "m1");
         session.AddVariant("B", "P", "m2");
 
-        Assert.Throws<InvalidOperationException>(() =>
-            session.EvaluateVariant("A", AbTestEvaluation.Create(EvaluatorId, 5, 5, 5, 5)));
+        Action act = () =>
+            session.EvaluateVariant("A", AbTestEvaluation.Create(EvaluatorId, 5, 5, 5, 5));
+        act.Should().Throw<InvalidOperationException>();
     }
 
     [Fact]
@@ -341,8 +355,9 @@ public sealed class AbTestSessionTests
     {
         var session = CreateInProgressSession();
 
-        Assert.Throws<ValidationException>(() =>
-            session.EvaluateVariant("Z", AbTestEvaluation.Create(EvaluatorId, 5, 5, 5, 5)));
+        Action act = () =>
+            session.EvaluateVariant("Z", AbTestEvaluation.Create(EvaluatorId, 5, 5, 5, 5));
+        act.Should().Throw<ValidationException>();
     }
 
     [Fact]
@@ -353,8 +368,9 @@ public sealed class AbTestSessionTests
 
         session.EvaluateVariant("A", AbTestEvaluation.Create(EvaluatorId, 5, 5, 5, 5));
 
-        Assert.Throws<InvalidOperationException>(() =>
-            session.EvaluateVariant("A", AbTestEvaluation.Create(EvaluatorId, 3, 3, 3, 3)));
+        Action act = () =>
+            session.EvaluateVariant("A", AbTestEvaluation.Create(EvaluatorId, 3, 3, 3, 3));
+        act.Should().Throw<InvalidOperationException>();
     }
 
     // --- GetWinner tests ---
@@ -371,7 +387,7 @@ public sealed class AbTestSessionTests
 
         var winner = session.GetWinner();
 
-        Assert.NotNull(winner);
+        winner.Should().NotBeNull();
         winner.Label.Should().Be("B");
     }
 
@@ -380,7 +396,7 @@ public sealed class AbTestSessionTests
     {
         var session = CreateInProgressSession();
 
-        Assert.Null(session.GetWinner());
+        session.GetWinner().Should().BeNull();
     }
 
     // --- TotalCost tests ---
@@ -425,29 +441,33 @@ public sealed class AbTestSessionTests
     [Fact]
     public void AbTestEvaluation_ScoreBelow1_ThrowsValidation()
     {
-        Assert.Throws<ValidationException>(() =>
-            AbTestEvaluation.Create(EvaluatorId, 0, 3, 3, 3));
+        Action act = () =>
+            AbTestEvaluation.Create(EvaluatorId, 0, 3, 3, 3);
+        act.Should().Throw<ValidationException>();
     }
 
     [Fact]
     public void AbTestEvaluation_ScoreAbove5_ThrowsValidation()
     {
-        Assert.Throws<ValidationException>(() =>
-            AbTestEvaluation.Create(EvaluatorId, 6, 3, 3, 3));
+        Action act = () =>
+            AbTestEvaluation.Create(EvaluatorId, 6, 3, 3, 3);
+        act.Should().Throw<ValidationException>();
     }
 
     [Fact]
     public void AbTestEvaluation_EmptyEvaluatorId_ThrowsValidation()
     {
-        Assert.Throws<ValidationException>(() =>
-            AbTestEvaluation.Create(Guid.Empty, 3, 3, 3, 3));
+        Action act = () =>
+            AbTestEvaluation.Create(Guid.Empty, 3, 3, 3, 3);
+        act.Should().Throw<ValidationException>();
     }
 
     [Fact]
     public void AbTestEvaluation_NotesOver2000_ThrowsValidation()
     {
-        Assert.Throws<ValidationException>(() =>
-            AbTestEvaluation.Create(EvaluatorId, 3, 3, 3, 3, new string('x', 2001)));
+        Action act = () =>
+            AbTestEvaluation.Create(EvaluatorId, 3, 3, 3, 3, new string('x', 2001));
+        act.Should().Throw<ValidationException>();
     }
 
     // --- Helpers ---

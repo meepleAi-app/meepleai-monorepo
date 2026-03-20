@@ -126,12 +126,12 @@ public sealed class GenerateAgentSummaryHandlerTests
         await _sut.Handle(notification, CancellationToken.None);
 
         // Assert
-        Assert.NotNull(capturedSystemPrompt);
-        Assert.Contains("riassunto", capturedSystemPrompt, StringComparison.OrdinalIgnoreCase);
-        Assert.NotNull(capturedUserPrompt);
+        capturedSystemPrompt.Should().NotBeNull();
+        capturedSystemPrompt.Should().ContainEquivalentOf("riassunto");
+        capturedUserPrompt.Should().NotBeNull();
         // User prompt should include actual message content
-        Assert.Contains("[user]", capturedUserPrompt, StringComparison.Ordinal);
-        Assert.Contains("[assistant]", capturedUserPrompt, StringComparison.Ordinal);
+        capturedUserPrompt.Should().Contain("[user]");
+        capturedUserPrompt.Should().Contain("[assistant]");
     }
 
     [Fact]
@@ -158,9 +158,9 @@ public sealed class GenerateAgentSummaryHandlerTests
         await _sut.Handle(notification, CancellationToken.None);
 
         // Assert — only last 50 messages (26..75) should be in the prompt
-        Assert.NotNull(capturedUserPrompt);
-        Assert.Contains("Messaggio 75", capturedUserPrompt, StringComparison.Ordinal);
-        Assert.Contains("Messaggio 26", capturedUserPrompt, StringComparison.Ordinal);
+        capturedUserPrompt.Should().NotBeNull();
+        capturedUserPrompt.Should().Contain("Messaggio 75");
+        capturedUserPrompt.Should().Contain("Messaggio 26");
         capturedUserPrompt.Should().NotContain("Messaggio 25");
         capturedUserPrompt.Should().NotContain("Messaggio 1");
     }
@@ -226,7 +226,7 @@ public sealed class GenerateAgentSummaryHandlerTests
             () => _sut.Handle(notification, CancellationToken.None));
 
         // Assert
-        Assert.Null(exception);
+        exception.Should().BeNull();
     }
 
     [Fact]

@@ -76,9 +76,9 @@ public class ValidateMoveCommandHandlerTests
         var result = await _handler.Handle(command, CancellationToken.None);
 
         // Assert
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         result.Decision.Should().Be("VALID");
-        Assert.True(result.Confidence > 0.7);
+        (result.Confidence > 0.7).Should().BeTrue();
 
         _mockArbitroService.Verify(
             s => s.ValidateMoveAsync(
@@ -108,8 +108,8 @@ public class ValidateMoveCommandHandlerTests
         };
 
         // Act & Assert
-        await Assert.ThrowsAsync<NotFoundException>(
-            () => _handler.Handle(command, CancellationToken.None));
+        Func<Task> act = () => _handler.Handle(command, CancellationToken.None);
+        await act.Should().ThrowAsync<NotFoundException>();
     }
 
     [Fact]
@@ -150,7 +150,7 @@ public class ValidateMoveCommandHandlerTests
         var result = await _handler.Handle(command, CancellationToken.None);
 
         // Assert
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
 
         _mockArbitroService.Verify(
             s => s.ValidateMoveAsync(
@@ -167,8 +167,8 @@ public class ValidateMoveCommandHandlerTests
     public async Task Handle_WithNullCommand_ThrowsArgumentNullException()
     {
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentNullException>(
-            () => _handler.Handle(null!, CancellationToken.None));
+        Func<Task> act = () => _handler.Handle(null!, CancellationToken.None);
+        await act.Should().ThrowAsync<ArgumentNullException>();
     }
 
     [Fact]
@@ -206,11 +206,11 @@ public class ValidateMoveCommandHandlerTests
         await _handler.Handle(command, CancellationToken.None);
 
         // Assert
-        Assert.NotNull(capturedMove);
+        capturedMove.Should().NotBeNull();
         capturedMove.PlayerName.Should().Be("Diana");
         capturedMove.Action.Should().Be("draw card");
         capturedMove.Position.Should().Be("top of deck");
-        Assert.NotNull(capturedMove.AdditionalContext);
+        capturedMove.AdditionalContext.Should().NotBeNull();
         capturedMove.AdditionalContext["deck"].Should().Be("main");
     }
 

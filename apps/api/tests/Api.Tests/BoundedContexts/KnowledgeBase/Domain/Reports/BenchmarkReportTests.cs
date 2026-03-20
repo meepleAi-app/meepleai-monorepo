@@ -24,10 +24,10 @@ public class BenchmarkReportTests
         var report = BenchmarkReport.FromGridSearchResult(gridSearchResult);
 
         // Assert
-        Assert.NotNull(report);
+        report.Should().NotBeNull();
         report.Title.Should().Contain("test-dataset");
         report.DatasetName.Should().Be("test-dataset");
-        Assert.NotNull(report.GridSearchResult);
+        report.GridSearchResult.Should().NotBeNull();
     }
 
     [Fact]
@@ -42,7 +42,7 @@ public class BenchmarkReportTests
         var afterCreation = DateTime.UtcNow;
 
         // Assert
-        Assert.InRange(report.GeneratedAt, beforeCreation, afterCreation);
+        report.GeneratedAt.Should().BeOnOrAfter(beforeCreation).And.BeOnOrBefore(afterCreation);
     }
 
     [Fact]
@@ -236,7 +236,7 @@ public class BenchmarkReportTests
         var report = BenchmarkReport.FromGridSearchResult(gridSearchResult);
 
         // Assert
-        Assert.True(report.Summary.MeetsPhase5Target);
+        report.Summary.MeetsPhase5Target.Should().BeTrue();
     }
 
     [Fact]
@@ -293,8 +293,8 @@ public class BenchmarkReportTests
         // Assert - When no successful configs, Max() and Min() on empty sequences throw
         // The report should handle this gracefully
         report.Summary.SuccessfulConfigurations.Should().Be(0);
-        Assert.Null(report.Summary.RecommendedConfiguration);
-        Assert.False(report.Summary.MeetsPhase5Target);
+        report.Summary.RecommendedConfiguration.Should().BeNull();
+        report.Summary.MeetsPhase5Target.Should().BeFalse();
     }
 
     [Fact]

@@ -35,10 +35,10 @@ public class NaturalLanguageStateParserTests
         var result = await _parser.ParseAsync("ho 5 punti", null, TestCancellationToken);
 
         result.ChangeType.Should().Be(StateChangeType.ScoreChange);
-        Assert.True(result.HasStateChanges);
+        result.HasStateChanges.Should().BeTrue();
         result.ExtractedState.Keys.Should().Contain("score");
         result.ExtractedState["score"].Should().Be(5);
-        Assert.True(result.Confidence > 0.8f);
+        (result.Confidence > 0.8f).Should().BeTrue();
     }
 
     [Fact]
@@ -81,15 +81,14 @@ public class NaturalLanguageStateParserTests
         var result = await _parser.ParseAsync("ho 2 pietra e 4 grano", null, TestCancellationToken);
 
         // Should detect at least some state change
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
 
         // If it extracts state, verify it's a valid resource or composite change
         if (result.HasStateChanges)
         {
-            Assert.True(
-                result.ChangeType == StateChangeType.ResourceChange ||
+            (result.ChangeType == StateChangeType.ResourceChange ||
                 result.ChangeType == StateChangeType.Composite ||
-                result.ChangeType == StateChangeType.ScoreChange);
+                result.ChangeType == StateChangeType.ScoreChange).Should().BeTrue();
 
             // At least stone should be extracted based on common resource pattern
             if (result.ExtractedState.ContainsKey("resources.stone"))
@@ -134,7 +133,7 @@ public class NaturalLanguageStateParserTests
         result.ChangeType.Should().Be(StateChangeType.TurnChange);
         result.ExtractedState.Keys.Should().Contain("currentPlayer");
         result.ExtractedState["currentPlayer"].Should().Be("Marco");
-        Assert.True(result.Confidence > 0.9f);
+        (result.Confidence > 0.9f).Should().BeTrue();
     }
 
     [Fact]
@@ -184,9 +183,9 @@ public class NaturalLanguageStateParserTests
         result.ChangeType.Should().Be(StateChangeType.Composite);
         result.ExtractedState.Keys.Should().Contain("buildings.roads");
         result.ExtractedState.Keys.Should().Contain("score");
-        Assert.True(result.RequiresConfirmation);
+        result.RequiresConfirmation.Should().BeTrue();
         // Check exact warning message
-        Assert.Contains(result.Warnings, w => w.Contains("Rilevate modifiche multiple"));
+        result.Warnings.Should().Contain(w => w.Contains("Rilevate modifiche multiple"));
     }
 
     #endregion
@@ -219,8 +218,8 @@ public class NaturalLanguageStateParserTests
             TestCancellationToken);
 
         result.ChangeType.Should().Be(StateChangeType.NoChange);
-        Assert.False(result.HasStateChanges);
-        Assert.Empty(result.ExtractedState);
+        result.HasStateChanges.Should().BeFalse();
+        result.ExtractedState.Should().BeEmpty();
     }
 
     [Fact]
@@ -234,7 +233,7 @@ public class NaturalLanguageStateParserTests
 
             // If no exception, should return NoChange
             result.ChangeType.Should().Be(StateChangeType.NoChange);
-            Assert.False(result.HasStateChanges);
+            result.HasStateChanges.Should().BeFalse();
         }
         catch (ArgumentException)
         {
@@ -255,7 +254,7 @@ public class NaturalLanguageStateParserTests
         var result = await _parser.ParseAsync(longMessage, null, TestCancellationToken);
 
         // Should either succeed or fail gracefully, not hang
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
     }
 
     [Fact]
@@ -264,7 +263,7 @@ public class NaturalLanguageStateParserTests
         var result = await _parser.ParseAsync("ho 99999 punti", null, TestCancellationToken);
 
         // Should not extract scores beyond reasonable limits
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
     }
 
     [Fact]
@@ -273,7 +272,7 @@ public class NaturalLanguageStateParserTests
         var result = await _parser.ParseAsync("ho 5 punti <script>alert('xss')</script>", null, TestCancellationToken);
 
         // Parser doesn't sanitize - that's responsibility of input validation
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         result.OriginalMessage.Should().Be("ho 5 punti <script>alert('xss')</script>");
     }
 
@@ -286,7 +285,7 @@ public class NaturalLanguageStateParserTests
     {
         var result = await _parser.ParseAsync("ho 5 punti", null, TestCancellationToken);
 
-        Assert.True(result.Confidence >= 0.8f);
+        (result.Confidence >= 0.8f).Should().BeTrue();
     }
 
     [Fact]
@@ -295,7 +294,7 @@ public class NaturalLanguageStateParserTests
         var result = await _parser.ParseAsync("forse ho 5 punti o forse 6", null, TestCancellationToken);
 
         // Even if extracted, confidence should be lower due to ambiguity
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
     }
 
     #endregion

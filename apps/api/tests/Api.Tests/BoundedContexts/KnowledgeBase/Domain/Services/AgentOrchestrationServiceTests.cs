@@ -51,7 +51,7 @@ public class AgentOrchestrationServiceTests
         var agents = CreateAllAgents();
         var selected = _sut.SelectAgentForQuery(query, agents);
 
-        Assert.NotNull(selected);
+        selected.Should().NotBeNull();
         selected.Type.Value.Should().Be(AgentType.RulesInterpreter.Value);
     }
 
@@ -65,7 +65,7 @@ public class AgentOrchestrationServiceTests
         var agents = CreateAllAgents();
         var selected = _sut.SelectAgentForQuery(query, agents);
 
-        Assert.NotNull(selected);
+        selected.Should().NotBeNull();
         selected.Type.Value.Should().Be(AgentType.CitationAgent.Value);
     }
 
@@ -79,7 +79,7 @@ public class AgentOrchestrationServiceTests
         var agents = CreateAllAgents();
         var selected = _sut.SelectAgentForQuery(query, agents);
 
-        Assert.NotNull(selected);
+        selected.Should().NotBeNull();
         selected.Type.Value.Should().Be(AgentType.ConfidenceAgent.Value);
     }
 
@@ -92,7 +92,7 @@ public class AgentOrchestrationServiceTests
         var agents = CreateAllAgents();
         var selected = _sut.SelectAgentForQuery(query, agents);
 
-        Assert.NotNull(selected);
+        selected.Should().NotBeNull();
         selected.Type.Value.Should().Be(AgentType.ConversationAgent.Value);
     }
 
@@ -105,7 +105,7 @@ public class AgentOrchestrationServiceTests
         var agents = CreateAllAgents();
         var selected = _sut.SelectAgentForQuery(query, agents);
 
-        Assert.NotNull(selected);
+        selected.Should().NotBeNull();
         selected.Type.Value.Should().Be(AgentType.RagAgent.Value);
     }
 
@@ -124,7 +124,7 @@ public class AgentOrchestrationServiceTests
         // "rules" query but no RulesInterpreter available → falls back to RAG
         var selected = _sut.SelectAgentForQuery("What are the rules?", agents);
 
-        Assert.NotNull(selected);
+        selected.Should().NotBeNull();
         selected.Type.Value.Should().Be(AgentType.RagAgent.Value);
     }
 
@@ -138,7 +138,7 @@ public class AgentOrchestrationServiceTests
 
         var selected = _sut.SelectAgentForQuery("Tell me about Catan", agents);
 
-        Assert.NotNull(selected);
+        selected.Should().NotBeNull();
         selected.Type.Value.Should().Be(AgentType.CitationAgent.Value);
     }
 
@@ -146,7 +146,7 @@ public class AgentOrchestrationServiceTests
     public void SelectAgentForQuery_EmptyList_ReturnsNull()
     {
         var selected = _sut.SelectAgentForQuery("Hello", new List<Agent>());
-        Assert.Null(selected);
+        selected.Should().BeNull();
     }
 
     [Fact]
@@ -158,7 +158,7 @@ public class AgentOrchestrationServiceTests
         };
 
         var selected = _sut.SelectAgentForQuery("Hello", agents);
-        Assert.Null(selected);
+        selected.Should().BeNull();
     }
 
     [Fact]

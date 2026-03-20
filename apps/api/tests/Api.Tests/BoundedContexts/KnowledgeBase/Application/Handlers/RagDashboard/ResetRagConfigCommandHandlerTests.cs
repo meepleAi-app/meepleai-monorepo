@@ -45,12 +45,12 @@ public class ResetRagConfigCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.NotNull(result.Generation);
-        Assert.NotNull(result.Retrieval);
-        Assert.NotNull(result.Reranker);
-        Assert.NotNull(result.Models);
-        Assert.NotNull(result.StrategySpecific);
+        result.Should().NotBeNull();
+        result.Generation.Should().NotBeNull();
+        result.Retrieval.Should().NotBeNull();
+        result.Reranker.Should().NotBeNull();
+        result.Models.Should().NotBeNull();
+        result.StrategySpecific.Should().NotBeNull();
     }
 
     [Fact]
@@ -146,7 +146,7 @@ public class ResetRagConfigCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.True(result.Reranker.Enabled);
+        result.Reranker.Enabled.Should().BeTrue();
         result.Reranker.Model.Should().Be("cross-encoder/ms-marco-MiniLM-L-12-v2");
         result.Reranker.TopN.Should().Be(10);
     }
@@ -166,8 +166,8 @@ public class ResetRagConfigCommandHandlerTests
 
         // Assert
         result.Models.PrimaryModel.Should().Be("gpt-4o-mini");
-        Assert.Null(result.Models.FallbackModel);
-        Assert.Null(result.Models.EvaluationModel);
+        result.Models.FallbackModel.Should().BeNull();
+        result.Models.EvaluationModel.Should().BeNull();
     }
 
     [Fact]

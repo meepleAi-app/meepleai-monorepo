@@ -48,10 +48,10 @@ public class GetCacheStatsQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         result.TotalHits.Should().Be(100);
         result.TotalMisses.Should().Be(50);
-        Assert.Equal(100.0 / 150.0, result.HitRate, 3); // 100 / 150
+        result.HitRate.Should().BeApproximately(100.0 / 150.0, 0.001); // 100 / 150
         result.TotalKeys.Should().Be(200);
         result.CacheSizeBytes.Should().Be(1024 * 1024);
 
@@ -79,10 +79,10 @@ public class GetCacheStatsQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         result.TotalHits.Should().Be(0);
         result.TotalMisses.Should().Be(0);
-        Assert.Equal(0, result.HitRate); // Avoid division by zero
+        result.HitRate.Should().Be(0); // Avoid division by zero
         result.TotalKeys.Should().Be(0);
         result.CacheSizeBytes.Should().Be(0);
     }
@@ -109,17 +109,17 @@ public class GetCacheStatsQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         result.TotalHits.Should().Be(50);
         result.TotalMisses.Should().Be(25);
-        Assert.Equal(50.0 / 75.0, result.HitRate, 3); // 50 / 75
+        result.HitRate.Should().BeApproximately(50.0 / 75.0, 0.001); // 50 / 75
     }
 
     [Fact]
     public async Task Handle_NullQuery_ThrowsArgumentNullException()
     {
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentNullException>(
-            () => _handler.Handle(null!, TestContext.Current.CancellationToken));
+        Func<Task> act = () => _handler.Handle(null!, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<ArgumentNullException>();
     }
 }

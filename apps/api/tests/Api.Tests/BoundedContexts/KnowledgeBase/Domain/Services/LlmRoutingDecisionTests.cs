@@ -21,8 +21,8 @@ public class LlmRoutingDecisionTests
         var ollamaDecision = LlmRoutingDecision.Ollama("llama3:8b", "test reason");
 
         // Assert
-        Assert.Null(openRouterDecision.UserRegion);
-        Assert.Null(ollamaDecision.UserRegion);
+        openRouterDecision.UserRegion.Should().BeNull();
+        ollamaDecision.UserRegion.Should().BeNull();
     }
 
     [Fact]
@@ -48,7 +48,7 @@ public class LlmRoutingDecisionTests
         var decision = new LlmRoutingDecision("DeepSeek", "deepseek-chat", "direct routing");
 
         // Assert
-        Assert.Null(decision.UserRegion);
+        decision.UserRegion.Should().BeNull();
     }
 
     [Fact]

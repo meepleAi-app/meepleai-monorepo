@@ -48,11 +48,11 @@ public class GetAgentByIdQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         result.Id.Should().Be(agentId);
         result.Name.Should().Be("TestAgent");
         result.Type.Should().Be("RAG");
-        Assert.True(result.IsActive);
+        result.IsActive.Should().BeTrue();
     }
 
     [Fact]
@@ -71,14 +71,14 @@ public class GetAgentByIdQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.Null(result);
+        result.Should().BeNull();
     }
 
     [Fact]
     public async Task Handle_WithNullQuery_ThrowsArgumentNullException()
     {
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentNullException>(
-            () => _handler.Handle(null!, TestContext.Current.CancellationToken));
+        Func<Task> act = () => _handler.Handle(null!, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<ArgumentNullException>();
     }
 }

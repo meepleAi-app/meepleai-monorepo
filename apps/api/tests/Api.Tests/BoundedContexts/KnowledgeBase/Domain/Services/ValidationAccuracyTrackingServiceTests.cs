@@ -85,7 +85,7 @@ public class ValidationAccuracyTrackingServiceTests
         metrics.Accuracy.Should().Be(1.0);
         metrics.Precision.Should().Be(1.0);
         metrics.Recall.Should().Be(1.0);
-        Assert.True(metrics.MeetsBaselineThreshold);
+        metrics.MeetsBaselineThreshold.Should().BeTrue();
     }
 
     [Fact]
@@ -99,11 +99,11 @@ public class ValidationAccuracyTrackingServiceTests
         var metrics = _service.CalculateAccuracyMetrics(evaluationResult, expectedValidCount);
 
         // Assert
-        Assert.Equal(80, metrics.TruePositives); // Min of expected (80) and actual (90)
-        Assert.Equal(10, metrics.TrueNegatives); // Min of expected invalid (20) and actual invalid (10)
-        Assert.Equal(10, metrics.FalsePositives); // Actual (90) - Expected (80)
-        Assert.Equal(0, metrics.FalseNegatives); // Expected (80) - Actual (90) capped at 0
-        Assert.Equal(0.90, metrics.Accuracy); // (80 + 10) / 100
+        metrics.TruePositives.Should().Be(80); // Min of expected (80) and actual (90)
+        metrics.TrueNegatives.Should().Be(10); // Min of expected invalid (20) and actual invalid (10)
+        metrics.FalsePositives.Should().Be(10); // Actual (90) - Expected (80)
+        metrics.FalseNegatives.Should().Be(0); // Expected (80) - Actual (90) capped at 0
+        metrics.Accuracy.Should().Be(0.90); // (80 + 10) / 100
     }
 
     [Fact]
@@ -117,19 +117,20 @@ public class ValidationAccuracyTrackingServiceTests
         var metrics = _service.CalculateAccuracyMetrics(evaluationResult, expectedValidCount);
 
         // Assert
-        Assert.Equal(70, metrics.TruePositives); // Min of expected (80) and actual (70)
-        Assert.Equal(20, metrics.TrueNegatives); // Min of expected invalid (20) and actual invalid (30)
-        Assert.Equal(0, metrics.FalsePositives); // Actual (70) - Expected (80) capped at 0
-        Assert.Equal(10, metrics.FalseNegatives); // Expected (80) - Actual (70)
-        Assert.Equal(0.90, metrics.Accuracy); // (70 + 20) / 100
+        metrics.TruePositives.Should().Be(70); // Min of expected (80) and actual (70)
+        metrics.TrueNegatives.Should().Be(20); // Min of expected invalid (20) and actual invalid (30)
+        metrics.FalsePositives.Should().Be(0); // Actual (70) - Expected (80) capped at 0
+        metrics.FalseNegatives.Should().Be(10); // Expected (80) - Actual (70)
+        metrics.Accuracy.Should().Be(0.90); // (70 + 20) / 100
     }
 
     [Fact]
     public void CalculateAccuracyMetrics_WithNullEvaluation_ThrowsArgumentNullException()
     {
         // Act & Assert
-        Assert.Throws<ArgumentNullException>(() =>
-            _service.CalculateAccuracyMetrics(null!, 50));
+        Action act = () =>
+            _service.CalculateAccuracyMetrics(null!, 50);
+        act.Should().Throw<ArgumentNullException>();
     }
 
     [Fact]
@@ -139,8 +140,9 @@ public class ValidationAccuracyTrackingServiceTests
         var evaluationResult = CreateEvaluationResult(totalQueries: 100, passedAll: 80);
 
         // Act & Assert
-        Assert.Throws<ArgumentException>(() =>
-            _service.CalculateAccuracyMetrics(evaluationResult, -1));
+        Action act = () =>
+            _service.CalculateAccuracyMetrics(evaluationResult, -1);
+        act.Should().Throw<ArgumentException>();
     }
 
     [Fact]
@@ -150,8 +152,9 @@ public class ValidationAccuracyTrackingServiceTests
         var evaluationResult = CreateEvaluationResult(totalQueries: 100, passedAll: 80);
 
         // Act & Assert
-        Assert.Throws<ArgumentException>(() =>
-            _service.CalculateAccuracyMetrics(evaluationResult, 101));
+        Action act = () =>
+            _service.CalculateAccuracyMetrics(evaluationResult, 101);
+        act.Should().Throw<ArgumentException>();
     }
 
     [Fact]
@@ -181,8 +184,9 @@ public class ValidationAccuracyTrackingServiceTests
         var evaluationResult = CreateEvaluationResult(totalQueries: 100, passedAll: 80);
 
         // Act & Assert
-        Assert.Throws<ArgumentNullException>(() =>
-            _service.CalculateMetricDimensionAccuracy(evaluationResult, 80, null!));
+        Action act = () =>
+            _service.CalculateMetricDimensionAccuracy(evaluationResult, 80, null!);
+        act.Should().Throw<ArgumentNullException>();
     }
 
     [Fact]
@@ -222,8 +226,9 @@ public class ValidationAccuracyTrackingServiceTests
         var expectedCounts = new List<int>();
 
         // Act & Assert
-        Assert.Throws<ArgumentException>(() =>
-            _service.CalculateAggregatedAccuracy(emptyList, expectedCounts));
+        Action act = () =>
+            _service.CalculateAggregatedAccuracy(emptyList, expectedCounts);
+        act.Should().Throw<ArgumentException>();
     }
 
     [Fact]
@@ -237,8 +242,9 @@ public class ValidationAccuracyTrackingServiceTests
         var expectedCounts = new List<int> { 80, 70 }; // Mismatched length
 
         // Act & Assert
-        Assert.Throws<ArgumentException>(() =>
-            _service.CalculateAggregatedAccuracy(evaluations, expectedCounts));
+        Action act = () =>
+            _service.CalculateAggregatedAccuracy(evaluations, expectedCounts);
+        act.Should().Throw<ArgumentException>();
     }
 
     [Fact]
@@ -256,11 +262,11 @@ public class ValidationAccuracyTrackingServiceTests
 
         // Assert
         report.Context.Should().Be("Overall Validation");
-        Assert.True(report.MeetsBaseline);
+        report.MeetsBaseline.Should().BeTrue();
         report.QualityLevel.Should().Be(ValidationAccuracyLevel.Excellent);
         report.Summary.Should().Contain("Overall Validation");
-        Assert.Contains("95", report.Summary); // Accuracy percentage (locale-independent check)
-        Assert.NotEmpty(report.Recommendations);
+        report.Summary.Should().Contain("95"); // Accuracy percentage (locale-independent check)
+        report.Recommendations.Should().NotBeEmpty();
     }
 
     [Fact]
@@ -278,11 +284,11 @@ public class ValidationAccuracyTrackingServiceTests
 
         // Assert
         report.Context.Should().Be("Layer 1: Confidence");
-        Assert.False(report.MeetsBaseline); // Accuracy = 70%, below 80%
+        report.MeetsBaseline.Should().BeFalse(); // Accuracy = 70%, below 80%
         report.QualityLevel.Should().Be(ValidationAccuracyLevel.Fair);
-        Assert.Contains("⚠️", report.Summary); // Warning emoji
-        Assert.NotEmpty(report.Recommendations);
-        Assert.Contains(report.Recommendations, r => r.Contains("below baseline threshold"));
+        report.Summary.Should().Contain("⚠️"); // Warning emoji
+        report.Recommendations.Should().NotBeEmpty();
+        report.Recommendations.Should().Contain(r => r.Contains("below baseline threshold"));
     }
 
     [Fact]
@@ -299,8 +305,8 @@ public class ValidationAccuracyTrackingServiceTests
         var report = _service.GenerateAccuracyReport(metrics, "Test Context");
 
         // Assert
-        Assert.Contains(report.Recommendations, r => r.Contains("precision"));
-        Assert.Contains(report.Recommendations, r => r.Contains("false positive"));
+        report.Recommendations.Should().Contain(r => r.Contains("precision"));
+        report.Recommendations.Should().Contain(r => r.Contains("false positive"));
     }
 
     [Fact]
@@ -318,7 +324,7 @@ public class ValidationAccuracyTrackingServiceTests
 
         // Assert
         // The service reports low recall via "High false negative" warning
-        Assert.Contains(report.Recommendations, r => r.Contains("false negative", StringComparison.OrdinalIgnoreCase));
+        report.Recommendations.Should().Contain(r => r.Contains("false negative", StringComparison.OrdinalIgnoreCase));
     }
 
     [Fact]
@@ -335,17 +341,18 @@ public class ValidationAccuracyTrackingServiceTests
         var report = _service.GenerateAccuracyReport(metrics, "Perfect Validation");
 
         // Assert
-        Assert.True(report.MeetsBaseline);
+        report.MeetsBaseline.Should().BeTrue();
         report.QualityLevel.Should().Be(ValidationAccuracyLevel.Excellent);
-        Assert.Contains(report.Recommendations, r => r.Contains("performing well"));
+        report.Recommendations.Should().Contain(r => r.Contains("performing well"));
     }
 
     [Fact]
     public void GenerateAccuracyReport_WithNullMetrics_ThrowsArgumentNullException()
     {
         // Act & Assert
-        Assert.Throws<ArgumentNullException>(() =>
-            _service.GenerateAccuracyReport(null!, "Test Context"));
+        Action act = () =>
+            _service.GenerateAccuracyReport(null!, "Test Context");
+        act.Should().Throw<ArgumentNullException>();
     }
 
     [Fact]
@@ -355,8 +362,9 @@ public class ValidationAccuracyTrackingServiceTests
         var metrics = ValidationAccuracyMetrics.Create(80, 15, 3, 2);
 
         // Act & Assert
-        Assert.Throws<ArgumentException>(() =>
-            _service.GenerateAccuracyReport(metrics, null!));
+        Action act = () =>
+            _service.GenerateAccuracyReport(metrics, null!);
+        act.Should().Throw<ArgumentException>();
     }
 
     [Fact]
@@ -366,8 +374,9 @@ public class ValidationAccuracyTrackingServiceTests
         var metrics = ValidationAccuracyMetrics.Create(80, 15, 3, 2);
 
         // Act & Assert
-        Assert.Throws<ArgumentException>(() =>
-            _service.GenerateAccuracyReport(metrics, ""));
+        Action act = () =>
+            _service.GenerateAccuracyReport(metrics, "");
+        act.Should().Throw<ArgumentException>();
     }
 
     [Fact]
@@ -389,7 +398,7 @@ public class ValidationAccuracyTrackingServiceTests
 
         // Assert
         var after = DateTime.UtcNow;
-        Assert.InRange(report.Timestamp, before, after);
+        report.Timestamp.Should().BeOnOrAfter(before).And.BeOnOrBefore(after);
     }
 
     [Theory]

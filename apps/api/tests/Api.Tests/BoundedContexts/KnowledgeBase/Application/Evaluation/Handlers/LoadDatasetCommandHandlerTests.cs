@@ -53,7 +53,7 @@ public class LoadDatasetCommandHandlerTests
             var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
             // Assert
-            Assert.NotNull(result);
+            result.Should().NotBeNull();
             result.Name.Should().Be("test-dataset");
             result.Version.Should().Be("1.0");
             result.Count.Should().Be(1);
@@ -72,15 +72,15 @@ public class LoadDatasetCommandHandlerTests
         var command = new LoadDatasetCommand { FilePath = "/path/to/nonexistent.json" };
 
         // Act & Assert
-        await Assert.ThrowsAsync<FileNotFoundException>(
-            () => _handler.Handle(command, TestContext.Current.CancellationToken));
+        Func<Task> act = () => _handler.Handle(command, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<FileNotFoundException>();
     }
 
     [Fact]
     public async Task Handle_WithNullCommand_ThrowsArgumentNullException()
     {
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentNullException>(
-            () => _handler.Handle(null!, TestContext.Current.CancellationToken));
+        Func<Task> act = () => _handler.Handle(null!, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<ArgumentNullException>();
     }
 }

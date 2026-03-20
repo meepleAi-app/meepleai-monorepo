@@ -32,8 +32,8 @@ public class VectorDocumentTests
         document.Language.Should().Be("en");
         document.TotalChunks.Should().Be(10);
         document.SearchCount.Should().Be(0);
-        Assert.Null(document.LastSearchedAt);
-        Assert.Null(document.Metadata);
+        document.LastSearchedAt.Should().BeNull();
+        document.Metadata.Should().BeNull();
     }
 
     [Fact]
@@ -60,8 +60,9 @@ public class VectorDocumentTests
         var pdfDocumentId = Guid.NewGuid();
 
         // Act & Assert
-        var exception = Assert.Throws<ArgumentException>(() =>
-            new VectorDocument(id, gameId, pdfDocumentId, "", 10));
+        Action act = () =>
+            new VectorDocument(id, gameId, pdfDocumentId, "", 10);
+        var exception = act.Should().Throw<ArgumentException>().Which;
         exception.Message.Should().Contain("Language cannot be empty");
     }
 
@@ -74,8 +75,9 @@ public class VectorDocumentTests
         var pdfDocumentId = Guid.NewGuid();
 
         // Act & Assert
-        Assert.Throws<ArgumentException>(() =>
-            new VectorDocument(id, gameId, pdfDocumentId, "   ", 10));
+        Action act = () =>
+            new VectorDocument(id, gameId, pdfDocumentId, "   ", 10);
+        act.Should().Throw<ArgumentException>();
     }
 
     [Fact]
@@ -87,8 +89,9 @@ public class VectorDocumentTests
         var pdfDocumentId = Guid.NewGuid();
 
         // Act & Assert
-        var exception = Assert.Throws<ArgumentException>(() =>
-            new VectorDocument(id, gameId, pdfDocumentId, "en", 0));
+        Action act = () =>
+            new VectorDocument(id, gameId, pdfDocumentId, "en", 0);
+        var exception = act.Should().Throw<ArgumentException>().Which;
         exception.Message.Should().Contain("Total chunks must be positive");
     }
 
@@ -101,8 +104,9 @@ public class VectorDocumentTests
         var pdfDocumentId = Guid.NewGuid();
 
         // Act & Assert
-        Assert.Throws<ArgumentException>(() =>
-            new VectorDocument(id, gameId, pdfDocumentId, "en", -5));
+        Action act = () =>
+            new VectorDocument(id, gameId, pdfDocumentId, "en", -5);
+        act.Should().Throw<ArgumentException>();
     }
 
     [Fact]
@@ -117,9 +121,9 @@ public class VectorDocumentTests
 
         // Assert
         document.SearchCount.Should().Be(1);
-        Assert.NotNull(document.LastSearchedAt);
-        Assert.True(document.LastSearchedAt >= beforeSearch);
-        Assert.True(document.LastSearchedAt <= DateTime.UtcNow);
+        document.LastSearchedAt.Should().NotBeNull();
+        (document.LastSearchedAt >= beforeSearch).Should().BeTrue();
+        (document.LastSearchedAt <= DateTime.UtcNow).Should().BeTrue();
     }
 
     [Fact]
@@ -176,7 +180,7 @@ public class VectorDocumentTests
         document.SetMetadata(null);
 
         // Assert
-        Assert.Null(document.Metadata);
+        document.Metadata.Should().BeNull();
     }
 
     [Fact]
@@ -189,8 +193,8 @@ public class VectorDocumentTests
         var document = CreateTestDocument();
 
         // Assert
-        Assert.True(document.IndexedAt >= beforeCreation);
-        Assert.True(document.IndexedAt <= DateTime.UtcNow);
+        (document.IndexedAt >= beforeCreation).Should().BeTrue();
+        (document.IndexedAt <= DateTime.UtcNow).Should().BeTrue();
     }
 
     // ── SharedGameId (Issue #5185) ────────────────────────────────────────────
@@ -200,7 +204,7 @@ public class VectorDocumentTests
     {
         var document = CreateTestDocument();
 
-        Assert.Null(document.SharedGameId);
+        document.SharedGameId.Should().BeNull();
     }
 
     [Fact]
@@ -244,7 +248,7 @@ public class VectorDocumentTests
 
         document.SetSharedGameId(null);
 
-        Assert.Null(document.SharedGameId);
+        document.SharedGameId.Should().BeNull();
     }
 
     // Helper method

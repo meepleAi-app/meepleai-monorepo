@@ -178,8 +178,8 @@ public class HybridAdaptiveRoutingStrategyTests
         var user = CreateUser(Role.User);
 
         // Act & Assert
-        var exception = Assert.Throws<UnauthorizedAccessException>(
-            () => sut.SelectProvider(user, RagStrategy.Expert));
+        Action act = () => sut.SelectProvider(user, RagStrategy.Expert);
+        var exception = act.Should().Throw<UnauthorizedAccessException>().Which;
 
         exception.Message.Should().Contain("User");
         exception.Message.Should().Contain("EXPERT");
@@ -199,7 +199,7 @@ public class HybridAdaptiveRoutingStrategyTests
 
         // Assert - All should succeed
         decisions.Count.Should().Be(strategies.Length);
-        Assert.All(decisions, d => Assert.Contains("Tier: Admin", d.Reason));
+        Assert.All(decisions, d => d.Reason.Should().Contain("Tier: Admin"));
     }
 
     [Fact]
@@ -214,8 +214,8 @@ public class HybridAdaptiveRoutingStrategyTests
         var user = CreateUser(Role.User);
 
         // Act & Assert - Should deny access on error (fail closed)
-        var exception = Assert.Throws<UnauthorizedAccessException>(
-            () => sut.SelectProvider(user, RagStrategy.Balanced));
+        Action act = () => sut.SelectProvider(user, RagStrategy.Balanced);
+        var exception = act.Should().Throw<UnauthorizedAccessException>().Which;
     }
 
     #endregion
@@ -359,8 +359,8 @@ public class HybridAdaptiveRoutingStrategyTests
         var user = CreateUser(Role.User);
 
         // Act & Assert
-        var exception = Assert.Throws<InvalidOperationException>(
-            () => sut.SelectProvider(user, RagStrategy.Balanced));
+        Action act = () => sut.SelectProvider(user, RagStrategy.Balanced);
+        var exception = act.Should().Throw<InvalidOperationException>().Which;
 
         exception.Message.Should().Contain("AI providers are disabled");
     }
@@ -427,7 +427,7 @@ public class HybridAdaptiveRoutingStrategyTests
 
         // Assert - Original model kept when no mapping exists
         decision.ModelId.Should().Be("meta-llama/llama-3.3-70b-instruct:free");
-        Assert.DoesNotContain("Budget mode:", decision.Reason); // No downgrade occurred
+        decision.Reason.Should().NotContain("Budget mode:"); // No downgrade occurred
     }
 
     #endregion
@@ -487,7 +487,7 @@ public class HybridAdaptiveRoutingStrategyTests
         var decision = sut.SelectProvider(user, RagStrategy.Precise);
 
         // Assert
-        Assert.NotNull(decision.Reason);
+        decision.Reason.Should().NotBeNull();
         decision.Reason.Should().Contain("Strategy: PRECISE");
         decision.Reason.Should().Contain("Tier: Editor");
     }
@@ -534,7 +534,7 @@ public class HybridAdaptiveRoutingStrategyTests
         var decision = sut.SelectProvider(user, RagStrategy.Balanced);
 
         // Assert
-        Assert.Null(decision.UserRegion);
+        decision.UserRegion.Should().BeNull();
     }
 
     #endregion

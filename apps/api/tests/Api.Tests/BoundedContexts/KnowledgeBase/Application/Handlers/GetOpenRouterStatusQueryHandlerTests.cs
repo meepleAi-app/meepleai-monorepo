@@ -80,8 +80,8 @@ public class GetOpenRouterStatusQueryHandlerTests
         result.CurrentRpm.Should().Be(80);
         result.LimitRpm.Should().Be(200);
         result.UtilizationPercent.Should().Be(0.4);
-        Assert.False(result.IsThrottled);
-        Assert.False(result.IsFreeTier);
+        result.IsThrottled.Should().BeFalse();
+        result.IsFreeTier.Should().BeFalse();
         result.RateLimitInterval.Should().Be("minute");
         result.LastUpdated.Should().Be(now);
     }
@@ -112,9 +112,9 @@ public class GetOpenRouterStatusQueryHandlerTests
 
         // Assert — null-coalescing fallbacks
         result.BalanceUsd.Should().Be(0m);
-        Assert.False(result.IsFreeTier);
+        result.IsFreeTier.Should().BeFalse();
         result.RateLimitInterval.Should().Be(string.Empty);
-        Assert.Null(result.LastUpdated);
+        result.LastUpdated.Should().BeNull();
         // Rate limit and request count still populated
         result.CurrentRpm.Should().Be(5);
         result.TodayRequestCount.Should().Be(3);
@@ -144,7 +144,7 @@ public class GetOpenRouterStatusQueryHandlerTests
         var result = await _handler.Handle(new GetOpenRouterStatusQuery(), CancellationToken.None);
 
         // Assert
-        Assert.True(result.IsThrottled);
+        result.IsThrottled.Should().BeTrue();
         result.UtilizationPercent.Should().Be(1.0);
     }
 

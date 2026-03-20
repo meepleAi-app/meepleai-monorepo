@@ -45,7 +45,7 @@ public class LlmCostCalculatorTests
         result.InputCost.Should().Be(0.00027m);
         result.OutputCost.Should().Be(0.00055m);
         result.TotalCost.Should().Be(0.00082m);
-        Assert.False(result.IsFree);
+        result.IsFree.Should().BeFalse();
     }
 
     [Fact]
@@ -65,7 +65,7 @@ public class LlmCostCalculatorTests
         result.InputCost.Should().Be(0.00125m);
         result.OutputCost.Should().Be(0.00075m);
         result.TotalCost.Should().Be(0.002m);
-        Assert.False(result.IsFree);
+        result.IsFree.Should().BeFalse();
     }
 
     [Fact]
@@ -83,7 +83,7 @@ public class LlmCostCalculatorTests
         result.InputCost.Should().Be(0m);
         result.OutputCost.Should().Be(0m);
         result.TotalCost.Should().Be(0m);
-        Assert.True(result.IsFree);
+        result.IsFree.Should().BeTrue();
     }
 
     [Fact]
@@ -101,7 +101,7 @@ public class LlmCostCalculatorTests
         result.InputCost.Should().Be(0m);
         result.OutputCost.Should().Be(0m);
         result.TotalCost.Should().Be(0m);
-        Assert.True(result.IsFree);
+        result.IsFree.Should().BeTrue();
     }
 
     [Fact]
@@ -118,7 +118,7 @@ public class LlmCostCalculatorTests
         // Assert - Should treat as free
         result.ModelId.Should().Be(modelId);
         result.TotalCost.Should().Be(0m);
-        Assert.True(result.IsFree);
+        result.IsFree.Should().BeTrue();
     }
 
     [Fact]
@@ -148,7 +148,7 @@ public class LlmCostCalculatorTests
 
         // Assert
         result.TotalCost.Should().Be(0m);
-        Assert.True(result.IsFree);
+        result.IsFree.Should().BeTrue();
     }
 
     [Fact]
@@ -176,12 +176,12 @@ public class LlmCostCalculatorTests
         var pricing = _calculator.GetModelPricing("deepseek/deepseek-chat");
 
         // Assert
-        Assert.NotNull(pricing);
+        pricing.Should().NotBeNull();
         pricing.ModelId.Should().Be("deepseek/deepseek-chat");
         pricing.Provider.Should().Be("OpenRouter");
         pricing.InputCostPer1M.Should().Be(0.27m);
         pricing.OutputCostPer1M.Should().Be(1.10m);
-        Assert.False(pricing.IsFree);
+        pricing.IsFree.Should().BeFalse();
     }
 
     [Fact]
@@ -191,7 +191,7 @@ public class LlmCostCalculatorTests
         var pricing = _calculator.GetModelPricing("nonexistent/model");
 
         // Assert
-        Assert.Null(pricing);
+        pricing.Should().BeNull();
     }
 
     [Fact]
@@ -233,13 +233,13 @@ public class LlmCostCalculatorTests
         foreach (var (modelId, provider) in models)
         {
             var pricing = _calculator.GetModelPricing(modelId);
-            Assert.NotNull(pricing);
+            pricing.Should().NotBeNull();
             pricing.ModelId.Should().Be(modelId);
             pricing.Provider.Should().Be(provider);
 
             // Verify calculation works
             var cost = _calculator.CalculateCost(modelId, provider, 1000, 500);
-            Assert.NotNull(cost);
+            cost.Should().NotBeNull();
             cost.ModelId.Should().Be(modelId);
         }
     }

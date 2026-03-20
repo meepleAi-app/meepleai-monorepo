@@ -58,25 +58,25 @@ public class StreamExplainQueryHandlerTests
         }
 
         // Assert
-        Assert.NotEmpty(events);
+        events.Should().NotBeEmpty();
 
         // Verify initial state updates
         events[0].Type.Should().Be(StreamingEventType.StateUpdate);
-        var stateUpdate1 = Assert.IsType<StreamingStateUpdate>(events[0].Data);
+        var stateUpdate1 = events[0].Data.Should().BeOfType<StreamingStateUpdate>().Which;
         stateUpdate1.message.Should().Be("Generating embeddings for topic...");
 
         events[1].Type.Should().Be(StreamingEventType.StateUpdate);
-        var stateUpdate2 = Assert.IsType<StreamingStateUpdate>(events[1].Data);
+        var stateUpdate2 = events[1].Data.Should().BeOfType<StreamingStateUpdate>().Which;
         stateUpdate2.message.Should().Be("Searching vector database for relevant content...");
 
         // NO_RESULTS error (Qdrant removed)
         var errorEvent = events.FirstOrDefault(e => e.Type == StreamingEventType.Error);
-        Assert.NotNull(errorEvent);
-        var error = Assert.IsType<StreamingError>(errorEvent.Data);
+        errorEvent.Should().NotBeNull();
+        var error = errorEvent.Data.Should().BeOfType<StreamingError>().Which;
         error.errorCode.Should().Be("NO_RESULTS");
 
         // Verify all events have timestamps
-        Assert.All(events, evt => Assert.Equal(_fakeTimeProvider.GetUtcNow().UtcDateTime, evt.Timestamp));
+        Assert.All(events, evt => evt.Timestamp.Should().Be(_fakeTimeProvider.GetUtcNow().UtcDateTime));
     }
 
     [Fact]
@@ -95,7 +95,7 @@ public class StreamExplainQueryHandlerTests
         // Assert
         events.Should().ContainSingle();
         events[0].Type.Should().Be(StreamingEventType.Error);
-        var error = Assert.IsType<StreamingError>(events[0].Data);
+        var error = events[0].Data.Should().BeOfType<StreamingError>().Which;
         error.errorMessage.Should().Be("Please provide a topic to explain.");
         error.errorCode.Should().Be("EMPTY_TOPIC");
     }
@@ -159,8 +159,8 @@ public class StreamExplainQueryHandlerTests
 
         // Assert
         var errorEvent = events.FirstOrDefault(e => e.Type == StreamingEventType.Error);
-        Assert.NotNull(errorEvent);
-        var error = Assert.IsType<StreamingError>(errorEvent.Data);
+        errorEvent.Should().NotBeNull();
+        var error = errorEvent.Data.Should().BeOfType<StreamingError>().Which;
         error.errorMessage.Should().Be("Unable to process topic.");
         error.errorCode.Should().Be("EMBEDDING_FAILED");
     }
@@ -188,8 +188,8 @@ public class StreamExplainQueryHandlerTests
 
         // Assert
         var errorEvent = events.FirstOrDefault(e => e.Type == StreamingEventType.Error);
-        Assert.NotNull(errorEvent);
-        var error = Assert.IsType<StreamingError>(errorEvent.Data);
+        errorEvent.Should().NotBeNull();
+        var error = errorEvent.Data.Should().BeOfType<StreamingError>().Which;
         error.errorCode.Should().Be("EMBEDDING_FAILED");
     }
 
@@ -209,8 +209,8 @@ public class StreamExplainQueryHandlerTests
 
         // Assert — NO_RESULTS since Qdrant is removed
         var errorEvent = events.FirstOrDefault(e => e.Type == StreamingEventType.Error);
-        Assert.NotNull(errorEvent);
-        var error = Assert.IsType<StreamingError>(errorEvent.Data);
+        errorEvent.Should().NotBeNull();
+        var error = errorEvent.Data.Should().BeOfType<StreamingError>().Which;
         error.errorCode.Should().Be("NO_RESULTS");
     }
 

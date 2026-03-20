@@ -24,8 +24,8 @@ public class ChunkPayloadTests
         payload.GameId.Should().Be(string.Empty);
         payload.PdfId.Should().Be(string.Empty);
         payload.Level.Should().Be(0);
-        Assert.True(payload.IsRoot);
-        Assert.False(payload.HasChildren);
+        payload.IsRoot.Should().BeTrue();
+        payload.HasChildren.Should().BeFalse();
     }
 
     [Fact]
@@ -57,7 +57,7 @@ public class ChunkPayloadTests
         payload.Heading.Should().Be("Game Setup");
         payload.ElementType.Should().Be("NarrativeText");
         payload.TokenCount.Should().Be(250);
-        Assert.False(payload.IsRoot);
+        payload.IsRoot.Should().BeFalse();
     }
 
     [Fact]
@@ -74,8 +74,8 @@ public class ChunkPayloadTests
 
         // Assert
         payload.Level.Should().Be(0);
-        Assert.Null(payload.ParentChunkId);
-        Assert.True(payload.IsRoot);
+        payload.ParentChunkId.Should().BeNull();
+        payload.IsRoot.Should().BeTrue();
     }
 
     [Fact]
@@ -94,35 +94,37 @@ public class ChunkPayloadTests
         // Assert
         payload.Level.Should().Be(2);
         payload.ParentChunkId.Should().Be("section-001");
-        Assert.False(payload.IsRoot);
+        payload.IsRoot.Should().BeFalse();
     }
 
     [Fact]
     public void CreateChild_WithEmptyParentId_ThrowsArgumentException()
     {
         // Act & Assert
-        Assert.Throws<ArgumentException>(() =>
+        Action act = () =>
             ChunkPayload.CreateChild(
                 gameId: TestGameId,
                 pdfDocumentId: TestPdfId,
                 pageNumber: 1,
                 chunkIndex: 0,
                 level: 1,
-                parentChunkId: ""));
+                parentChunkId: "");
+        act.Should().Throw<ArgumentException>();
     }
 
     [Fact]
     public void CreateChild_WithNullParentId_ThrowsArgumentException()
     {
         // Act & Assert
-        Assert.Throws<ArgumentException>(() =>
+        Action act = () =>
             ChunkPayload.CreateChild(
                 gameId: TestGameId,
                 pdfDocumentId: TestPdfId,
                 pageNumber: 1,
                 chunkIndex: 0,
                 level: 1,
-                parentChunkId: null!));
+                parentChunkId: null!);
+        act.Should().Throw<ArgumentException>();
     }
 
     [Fact]
@@ -142,7 +144,7 @@ public class ChunkPayloadTests
 
         // Assert
         updated.ChildChunkIds.Count.Should().Be(3);
-        Assert.True(updated.HasChildren);
+        updated.HasChildren.Should().BeTrue();
         updated.ChildChunkIds.Should().Contain("child-1");
         updated.ChildChunkIds.Should().Contain("child-2");
         updated.ChildChunkIds.Should().Contain("child-3");
@@ -222,7 +224,7 @@ public class ChunkPayloadTests
         var result = payload.ToString();
 
         // Assert
-        Assert.Contains("page=5", result, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("level=1", result, StringComparison.OrdinalIgnoreCase);
+        result.Should().ContainEquivalentOf("page=5");
+        result.Should().ContainEquivalentOf("level=1");
     }
 }

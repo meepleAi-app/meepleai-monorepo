@@ -76,7 +76,7 @@ public class GetQueryEfficiencyReportQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         result.StartDate.Should().Be(startDate);
         result.EndDate.Should().Be(endDate);
         result.TotalQueries.Should().Be(500);
@@ -122,12 +122,12 @@ public class GetQueryEfficiencyReportQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         result.TotalQueries.Should().Be(0);
         result.TotalCost.Should().Be(0);
-        Assert.Empty(result.TopCostlyQueries);
-        Assert.Empty(result.AverageTokensByOperation);
-        Assert.Empty(result.OptimizationRecommendations);
+        result.TopCostlyQueries.Should().BeEmpty();
+        result.AverageTokensByOperation.Should().BeEmpty();
+        result.OptimizationRecommendations.Should().BeEmpty();
     }
 
     [Fact]
@@ -143,8 +143,8 @@ public class GetQueryEfficiencyReportQueryHandlerTests
         var query = new GetQueryEfficiencyReportQuery { StartDate = startDate, EndDate = endDate };
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
-            () => _handler.Handle(query, TestContext.Current.CancellationToken));
+        Func<Task> act = () => _handler.Handle(query, TestContext.Current.CancellationToken);
+        var exception = (await act.Should().ThrowAsync<InvalidOperationException>()).Which;
 
         exception.Message.Should().Be("Analysis failed");
 
@@ -155,7 +155,7 @@ public class GetQueryEfficiencyReportQueryHandlerTests
     public async Task Handle_NullQuery_ThrowsArgumentNullException()
     {
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentNullException>(
-            () => _handler.Handle(null!, TestContext.Current.CancellationToken));
+        Func<Task> act = () => _handler.Handle(null!, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<ArgumentNullException>();
     }
 }

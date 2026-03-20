@@ -36,7 +36,7 @@ public class RagAccessServiceTests
         var result = await service.CanAccessRagAsync(UserId, GameId, role);
 
         // Assert
-        Assert.True(result);
+        result.Should().BeTrue();
     }
 
     [Fact]
@@ -50,7 +50,7 @@ public class RagAccessServiceTests
         var result = await service.CanAccessRagAsync(UserId, GameId, UserRole.User);
 
         // Assert
-        Assert.True(result);
+        result.Should().BeTrue();
     }
 
     [Fact]
@@ -72,7 +72,7 @@ public class RagAccessServiceTests
         var result = await service.CanAccessRagAsync(UserId, GameId, UserRole.User);
 
         // Assert
-        Assert.True(result);
+        result.Should().BeTrue();
     }
 
     [Fact]
@@ -95,7 +95,7 @@ public class RagAccessServiceTests
         var result = await service.CanAccessRagAsync(UserId, GameId, UserRole.User);
 
         // Assert
-        Assert.False(result);
+        result.Should().BeFalse();
     }
 
     #endregion
@@ -156,7 +156,7 @@ public class RagAccessServiceTests
         var result = await service.GetAccessibleKbCardsAsync(UserId, GameId, UserRole.User);
 
         // Assert
-        Assert.Empty(result);
+        result.Should().BeEmpty();
     }
 
     #endregion

@@ -152,7 +152,7 @@ public sealed class LlmResilienceCombinedFailureTests
         var sut = CreateSut();
         var result = await sut.GenerateCompletionAsync("sys", "user");
 
-        Assert.True(result.Success);
+        result.Success.Should().BeTrue();
 
         // OpenRouter must never be called — proactive rerouting should prevent any attempt
         _openRouterMock.Verify(
@@ -196,7 +196,7 @@ public sealed class LlmResilienceCombinedFailureTests
         var result = await sut.GenerateCompletionAsync("sys", "user");
 
         // Request must succeed via Ollama fallback
-        Assert.True(result.Success);
+        result.Success.Should().BeTrue();
 
         // Circuit breaker registry must have recorded the OpenRouter failure
         _circuitBreakerRegistryMock.Verify(
@@ -236,7 +236,7 @@ public sealed class LlmResilienceCombinedFailureTests
 
         breaker.State.Should().Be(CircuitState.Closed);
         breaker.ConsecutiveFailures.Should().Be(4);
-        Assert.True(breaker.AllowsRequests());
+        breaker.AllowsRequests().Should().BeTrue();
     }
 
     // ─── Scenario 4: Circuit open bypasses OpenRouter, routes to Ollama ─────────
@@ -281,7 +281,7 @@ public sealed class LlmResilienceCombinedFailureTests
         var sut = CreateSut();
         var result = await sut.GenerateCompletionAsync("sys", "user");
 
-        Assert.True(result.Success);
+        result.Success.Should().BeTrue();
 
         // OpenRouter must never be called — circuit breaker should prevent any attempt
         _openRouterMock.Verify(

@@ -19,7 +19,7 @@ public sealed class CircuitBreakerStateConfigurableThresholdTests
         var state = new CircuitBreakerState();
 
         state.State.Should().Be(CircuitState.Closed);
-        Assert.True(state.AllowsRequests());
+        state.AllowsRequests().Should().BeTrue();
 
         // Should open after 5 failures (default)
         for (var i = 0; i < 5; i++)
@@ -53,7 +53,7 @@ public sealed class CircuitBreakerStateConfigurableThresholdTests
 
         // Wait for open duration to expire, then transition to HalfOpen
         Thread.Sleep(1100);
-        Assert.True(state.AllowsRequests());
+        state.AllowsRequests().Should().BeTrue();
         state.State.Should().Be(CircuitState.HalfOpen);
 
         // One success isn't enough
@@ -114,7 +114,7 @@ public sealed class CircuitBreakerStateConfigurableThresholdTests
         state.RecordSuccess();
 
         var status = state.GetStatus();
-        Assert.Contains("/5", status); // Shows configured threshold
+        status.Should().Contain("/5"); // Shows configured threshold
     }
 
     [Fact]

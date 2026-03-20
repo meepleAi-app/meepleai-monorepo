@@ -51,7 +51,7 @@ public sealed class AbTestBudgetServiceTests
 
         var result = await _sut.HasBudgetRemainingAsync();
 
-        Assert.True(result);
+        result.Should().BeTrue();
     }
 
     [Fact]
@@ -62,7 +62,7 @@ public sealed class AbTestBudgetServiceTests
 
         var result = await _sut.HasBudgetRemainingAsync();
 
-        Assert.False(result);
+        result.Should().BeFalse();
     }
 
     [Fact]
@@ -73,7 +73,7 @@ public sealed class AbTestBudgetServiceTests
 
         var result = await _sut.HasBudgetRemainingAsync();
 
-        Assert.False(result);
+        result.Should().BeFalse();
     }
 
     [Fact]
@@ -84,7 +84,7 @@ public sealed class AbTestBudgetServiceTests
 
         var result = await _sut.HasBudgetRemainingAsync();
 
-        Assert.True(result);
+        result.Should().BeTrue();
     }
 
     [Fact]
@@ -95,7 +95,7 @@ public sealed class AbTestBudgetServiceTests
 
         var result = await _sut.HasBudgetRemainingAsync();
 
-        Assert.True(result);
+        result.Should().BeTrue();
     }
 
     [Fact]
@@ -147,7 +147,7 @@ public sealed class AbTestBudgetServiceTests
 
         var result = await _sut.HasRateLimitRemainingAsync(userId, isAdmin: false);
 
-        Assert.True(result);
+        result.Should().BeTrue();
     }
 
     [Fact]
@@ -159,7 +159,7 @@ public sealed class AbTestBudgetServiceTests
 
         var result = await _sut.HasRateLimitRemainingAsync(userId, isAdmin: false);
 
-        Assert.False(result);
+        result.Should().BeFalse();
     }
 
     [Fact]
@@ -171,7 +171,7 @@ public sealed class AbTestBudgetServiceTests
 
         var result = await _sut.HasRateLimitRemainingAsync(userId, isAdmin: true);
 
-        Assert.True(result);
+        result.Should().BeTrue();
     }
 
     [Fact]
@@ -183,7 +183,7 @@ public sealed class AbTestBudgetServiceTests
 
         var result = await _sut.HasRateLimitRemainingAsync(userId, isAdmin: true);
 
-        Assert.False(result);
+        result.Should().BeFalse();
     }
 
     [Fact]
@@ -195,7 +195,7 @@ public sealed class AbTestBudgetServiceTests
 
         var result = await _sut.HasRateLimitRemainingAsync(userId, isAdmin: false);
 
-        Assert.True(result);
+        result.Should().BeTrue();
     }
 
     [Fact]
@@ -260,7 +260,7 @@ public sealed class AbTestBudgetServiceTests
 
         var result = await _sut.GetCachedResponseAsync("What is bluffing?", "gpt-4o-mini");
 
-        Assert.Null(result);
+        result.Should().BeNull();
     }
 
     [Fact]
@@ -336,12 +336,12 @@ public sealed class AbTestBudgetServiceTests
         _dbMock.Setup(db => db.StringGetAsync(It.Is<RedisKey>(k => k.ToString().Contains("daily_budget")), It.IsAny<CommandFlags>()))
             .ReturnsAsync((RedisValue)"4.99");
 
-        Assert.True(await _sut.HasBudgetRemainingAsync());
+        (await _sut.HasBudgetRemainingAsync()).Should().BeTrue();
 
         _dbMock.Setup(db => db.StringGetAsync(It.Is<RedisKey>(k => k.ToString().Contains("daily_budget")), It.IsAny<CommandFlags>()))
             .ReturnsAsync((RedisValue)"5.01");
 
-        Assert.False(await _sut.HasBudgetRemainingAsync());
+        (await _sut.HasBudgetRemainingAsync()).Should().BeFalse();
     }
 
     [Fact]
@@ -351,6 +351,6 @@ public sealed class AbTestBudgetServiceTests
         var service = new AbTestBudgetService(_redisMock.Object, emptyConfig, _loggerMock.Object);
 
         // Should not throw — defaults to $5/day, 50 editor, 200 admin
-        Assert.NotNull(service);
+        service.Should().NotBeNull();
     }
 }

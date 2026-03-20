@@ -78,7 +78,7 @@ public class ParseLedgerMessageCommandHandlerTests
         result.Confidence.Should().Be(0.9f);
         result.ExtractedState.Keys.Should().Contain("score");
         result.ExtractedState["score"].Should().Be(5);
-        Assert.Empty(result.Conflicts);
+        result.Conflicts.Should().BeEmpty();
     }
 
     [Fact]
@@ -121,7 +121,7 @@ public class ParseLedgerMessageCommandHandlerTests
         var result = await _handler.Handle(command, TestCancellationToken);
 
         // Assert
-        Assert.NotEmpty(result.Conflicts);
+        result.Conflicts.Should().NotBeEmpty();
         result.Conflicts.Should().ContainSingle();
         result.Conflicts[0].PropertyName.Should().Be("score");
         result.Conflicts[0].Severity.Should().Be("High");
@@ -138,8 +138,8 @@ public class ParseLedgerMessageCommandHandlerTests
         var command = new ParseLedgerMessageCommand(sessionId, "test", Guid.NewGuid());
 
         // Act & Assert
-        await Assert.ThrowsAsync<InvalidOperationException>(
-            async () => await _handler.Handle(command, TestCancellationToken));
+        Func<Task> act = async () => await _handler.Handle(command, TestCancellationToken);
+        await act.Should().ThrowAsync<InvalidOperationException>();
     }
 
     #region Issue #2468 - Extended Test Suite

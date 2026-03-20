@@ -30,9 +30,9 @@ public class AgentTests
         agent.Name.Should().Be(name);
         agent.Type.Should().Be(type);
         agent.Strategy.Should().Be(strategy);
-        Assert.True(agent.IsActive);
+        agent.IsActive.Should().BeTrue();
         agent.InvocationCount.Should().Be(0);
-        Assert.Null(agent.LastInvokedAt);
+        agent.LastInvokedAt.Should().BeNull();
     }
 
     [Fact]
@@ -107,7 +107,7 @@ public class AgentTests
         agent.Activate();
 
         // Assert
-        Assert.True(agent.IsActive);
+        agent.IsActive.Should().BeTrue();
     }
 
     [Fact]
@@ -120,7 +120,7 @@ public class AgentTests
         agent.Activate();
 
         // Assert
-        Assert.True(agent.IsActive);
+        agent.IsActive.Should().BeTrue();
     }
 
     [Fact]
@@ -133,7 +133,7 @@ public class AgentTests
         agent.Deactivate();
 
         // Assert
-        Assert.False(agent.IsActive);
+        agent.IsActive.Should().BeFalse();
     }
 
     [Fact]
@@ -146,7 +146,7 @@ public class AgentTests
         agent.Deactivate();
 
         // Assert
-        Assert.False(agent.IsActive);
+        agent.IsActive.Should().BeFalse();
     }
 
     [Fact]
@@ -161,9 +161,9 @@ public class AgentTests
 
         // Assert
         agent.InvocationCount.Should().Be(1);
-        Assert.NotNull(agent.LastInvokedAt);
-        Assert.True(agent.LastInvokedAt >= beforeInvocation);
-        Assert.True(agent.LastInvokedAt <= DateTime.UtcNow);
+        agent.LastInvokedAt.Should().NotBeNull();
+        (agent.LastInvokedAt >= beforeInvocation).Should().BeTrue();
+        (agent.LastInvokedAt <= DateTime.UtcNow).Should().BeTrue();
     }
 
     [Fact]
@@ -253,7 +253,7 @@ public class AgentTests
         var isRecentlyUsed = agent.IsRecentlyUsed;
 
         // Assert
-        Assert.True(isRecentlyUsed);
+        isRecentlyUsed.Should().BeTrue();
     }
 
     [Fact]
@@ -266,7 +266,7 @@ public class AgentTests
         var isRecentlyUsed = agent.IsRecentlyUsed;
 
         // Assert
-        Assert.False(isRecentlyUsed);
+        isRecentlyUsed.Should().BeFalse();
     }
 
     [Fact]
@@ -279,7 +279,7 @@ public class AgentTests
         var isIdle = agent.IsIdle;
 
         // Assert
-        Assert.True(isIdle);
+        isIdle.Should().BeTrue();
     }
 
     [Fact]
@@ -293,7 +293,7 @@ public class AgentTests
         var isIdle = agent.IsIdle;
 
         // Assert
-        Assert.False(isIdle);
+        isIdle.Should().BeFalse();
     }
 
     // ── Issue #4682: Agent-Game Association + User Ownership ──
@@ -333,8 +333,8 @@ public class AgentTests
         );
 
         // Assert
-        Assert.Null(agent.GameId);
-        Assert.Null(agent.CreatedByUserId);
+        agent.GameId.Should().BeNull();
+        agent.CreatedByUserId.Should().BeNull();
     }
 
     [Fact]
@@ -354,7 +354,7 @@ public class AgentTests
 
         // Assert
         agent.GameId.Should().Be(gameId);
-        Assert.Null(agent.CreatedByUserId);
+        agent.CreatedByUserId.Should().BeNull();
     }
 
     // ── Issue #97: SetGameId / ClearGameId domain methods ──
@@ -410,7 +410,7 @@ public class AgentTests
         agent.ClearGameId();
 
         // Assert
-        Assert.Null(agent.GameId);
+        agent.GameId.Should().BeNull();
     }
 
     [Fact]
@@ -418,13 +418,13 @@ public class AgentTests
     {
         // Arrange
         var agent = CreateTestAgent();
-        Assert.Null(agent.GameId);
+        agent.GameId.Should().BeNull();
 
         // Act
         agent.ClearGameId();
 
         // Assert
-        Assert.Null(agent.GameId);
+        agent.GameId.Should().BeNull();
     }
 
     // Helper method

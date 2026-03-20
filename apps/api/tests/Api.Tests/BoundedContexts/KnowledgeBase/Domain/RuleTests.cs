@@ -36,19 +36,19 @@ public class RuleTests
         rule.Description.Should().Be(description);
         rule.Type.Should().Be(ruleType);
         rule.PrecedenceLevel.Should().Be(10);
-        Assert.True(rule.IsActive);
+        rule.IsActive.Should().BeTrue();
     }
 
     [Fact]
     public void Rule_Create_WithEmptyName_ShouldThrowArgumentException()
     {
         // Arrange & Act & Assert
-        Assert.Throws<ArgumentException>(() =>
+        Action act = () =>
             new Rule(
                 Guid.NewGuid(), Guid.NewGuid(), "", "desc",
                 RuleType.Movement, 10, "context", "pattern"
-            )
-        );
+            );
+        act.Should().Throw<ArgumentException>();
     }
 
     [Fact]
@@ -67,7 +67,7 @@ public class RuleTests
         rule.Description.Should().Be("Updated description");
         rule.ValidationPattern.Should().Be("new pattern");
         rule.PrecedenceLevel.Should().Be(20);
-        Assert.NotNull(rule.UpdatedAt);
+        rule.UpdatedAt.Should().NotBeNull();
     }
 
     [Fact]
@@ -83,7 +83,7 @@ public class RuleTests
         rule.Activate();
 
         // Assert
-        Assert.True(rule.IsActive);
+        rule.IsActive.Should().BeTrue();
     }
 
     [Fact]
@@ -99,7 +99,7 @@ public class RuleTests
         rule.Deactivate();
 
         // Assert
-        Assert.False(rule.IsActive);
+        rule.IsActive.Should().BeFalse();
     }
 
     [Fact]
@@ -112,8 +112,8 @@ public class RuleTests
         );
 
         // Act & Assert
-        Assert.True(rule.AppliesTo("knight"));
-        Assert.True(rule.AppliesTo("BISHOP")); // Case insensitive
-        Assert.False(rule.AppliesTo("pawn"));
+        rule.AppliesTo("knight").Should().BeTrue();
+        rule.AppliesTo("BISHOP").Should().BeTrue(); // Case insensitive
+        rule.AppliesTo("pawn").Should().BeFalse();
     }
 }

@@ -94,7 +94,7 @@ public sealed class UpdateSnapshotSummaryHandlerTests
         await _sut.Handle(notification, CancellationToken.None);
 
         // Assert
-        Assert.NotNull(capturedSnapshot);
+        capturedSnapshot.Should().NotBeNull();
         capturedSnapshot!.AgentConversationSummary.Should().Be(TestSummary);
     }
 
@@ -131,7 +131,7 @@ public sealed class UpdateSnapshotSummaryHandlerTests
             () => _sut.Handle(notification, CancellationToken.None));
 
         // Assert
-        Assert.Null(exception);
+        exception.Should().BeNull();
 
         // UpdateAsync should NOT be called when snapshot was not found
         _snapshotRepoMock.Verify(

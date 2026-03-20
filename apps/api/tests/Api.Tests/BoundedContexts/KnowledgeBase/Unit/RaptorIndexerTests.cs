@@ -32,7 +32,7 @@ public class RaptorIndexerTests
 
         result.TotalNodes.Should().Be(0);
         result.Levels.Should().Be(0);
-        Assert.Empty(result.Summaries);
+        result.Summaries.Should().BeEmpty();
     }
 
     [Fact]
@@ -46,7 +46,7 @@ public class RaptorIndexerTests
 
         result.TotalNodes.Should().Be(0);
         result.Levels.Should().Be(0);
-        Assert.Empty(result.Summaries);
+        result.Summaries.Should().BeEmpty();
     }
 
     [Fact]
@@ -100,7 +100,7 @@ public class RaptorIndexerTests
         level2.Should().ContainSingle();
 
         // Each level-1 summary covers 5 source chunks
-        Assert.All(level1, s => Assert.Equal(5, s.SourceChunkCount));
+        Assert.All(level1, s => s.SourceChunkCount.Should().Be(5));
 
         // Level-2 summary covers 3 level-1 summaries
         level2[0].SourceChunkCount.Should().Be(3);
@@ -163,8 +163,8 @@ public class RaptorIndexerTests
             CancellationToken.None);
 
         result.Levels.Should().Be(1);
-        Assert.Equal(3, result.TotalNodes); // 3 clusters at level 1
-        Assert.All(result.Summaries, s => Assert.Equal(1, s.TreeLevel));
+        result.TotalNodes.Should().Be(3); // 3 clusters at level 1
+        Assert.All(result.Summaries, s => s.TreeLevel.Should().Be(1));
     }
 
     [Fact]
@@ -194,11 +194,11 @@ public class RaptorIndexerTests
 
         var chunks = new[] { "A.", "B.", "C." };
 
-        await Assert.ThrowsAsync<OperationCanceledException>(
-            () => _sut.BuildTreeAsync(
+        Func<Task> act = () => _sut.BuildTreeAsync(
                 Guid.NewGuid(), Guid.NewGuid(),
                 chunks, maxLevels: 3,
-                cts.Token));
+                cts.Token);
+        await act.Should().ThrowAsync<OperationCanceledException>();
     }
 
     [Fact]

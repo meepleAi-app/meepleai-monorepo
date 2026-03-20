@@ -167,44 +167,48 @@ public class CreateChatSessionCommandHandlerTests
     public async Task Handle_WithNullCommand_ThrowsArgumentNullException()
     {
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentNullException>(() =>
-            _handler.Handle(null!, TestContext.Current.CancellationToken));
+        Func<Task> act = () =>
+            _handler.Handle(null!, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<ArgumentNullException>();
     }
 
     [Fact]
     public void Constructor_WithNullRepository_ThrowsArgumentNullException()
     {
         // Act & Assert
-        Assert.Throws<ArgumentNullException>(() =>
+        Action act = () =>
             new CreateChatSessionCommandHandler(
                 null!,
                 _mockUnitOfWork.Object,
                 CreatePermissiveRagAccessServiceMock(),
-                _mockLogger.Object));
+                _mockLogger.Object);
+        act.Should().Throw<ArgumentNullException>();
     }
 
     [Fact]
     public void Constructor_WithNullUnitOfWork_ThrowsArgumentNullException()
     {
         // Act & Assert
-        Assert.Throws<ArgumentNullException>(() =>
+        Action act = () =>
             new CreateChatSessionCommandHandler(
                 _mockRepository.Object,
                 null!,
                 CreatePermissiveRagAccessServiceMock(),
-                _mockLogger.Object));
+                _mockLogger.Object);
+        act.Should().Throw<ArgumentNullException>();
     }
 
     [Fact]
     public void Constructor_WithNullLogger_ThrowsArgumentNullException()
     {
         // Act & Assert
-        Assert.Throws<ArgumentNullException>(() =>
+        Action act = () =>
             new CreateChatSessionCommandHandler(
                 _mockRepository.Object,
                 _mockUnitOfWork.Object,
                 CreatePermissiveRagAccessServiceMock(),
-                null!));
+                null!);
+        act.Should().Throw<ArgumentNullException>();
     }
     private static IRagAccessService CreatePermissiveRagAccessServiceMock()
     {

@@ -67,18 +67,16 @@ public class AgentTierLimitsTests
     [Fact]
     public void MaxAgentsPerTier_ContainsAllExpectedTiers()
     {
-        Assert.True(AgentTierLimits.MaxAgentsPerTier.ContainsKey("free"));
-        Assert.True(AgentTierLimits.MaxAgentsPerTier.ContainsKey("normal"));
-        Assert.True(AgentTierLimits.MaxAgentsPerTier.ContainsKey("premium"));
-        Assert.True(AgentTierLimits.MaxAgentsPerTier.ContainsKey("pro"));
-        Assert.True(AgentTierLimits.MaxAgentsPerTier.ContainsKey("enterprise"));
+        AgentTierLimits.MaxAgentsPerTier.ContainsKey("free").Should().BeTrue();
+        AgentTierLimits.MaxAgentsPerTier.ContainsKey("normal").Should().BeTrue();
+        AgentTierLimits.MaxAgentsPerTier.ContainsKey("premium").Should().BeTrue();
+        AgentTierLimits.MaxAgentsPerTier.ContainsKey("pro").Should().BeTrue();
+        AgentTierLimits.MaxAgentsPerTier.ContainsKey("enterprise").Should().BeTrue();
     }
 
     [Fact]
     public void MaxAgentsPerTier_IsCaseInsensitive()
     {
-        Assert.Equal(
-            AgentTierLimits.MaxAgentsPerTier["free"],
-            AgentTierLimits.MaxAgentsPerTier["Free"]);
+        AgentTierLimits.MaxAgentsPerTier["Free"].Should().Be(AgentTierLimits.MaxAgentsPerTier["free"]);
     }
 }

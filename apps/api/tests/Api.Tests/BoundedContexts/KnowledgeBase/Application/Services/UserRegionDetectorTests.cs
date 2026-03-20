@@ -45,7 +45,7 @@ public class UserRegionDetectorTests
         var result = detector.DetectRegion();
 
         // Assert
-        Assert.Null(result);
+        result.Should().BeNull();
     }
 
     [Fact]
@@ -59,7 +59,7 @@ public class UserRegionDetectorTests
         var result = detector.DetectRegion();
 
         // Assert
-        Assert.Null(result);
+        result.Should().BeNull();
     }
 
     [Theory]
@@ -76,7 +76,7 @@ public class UserRegionDetectorTests
         var result = detector.DetectRegion();
 
         // Assert
-        Assert.Null(result);
+        result.Should().BeNull();
     }
 
     private static UserRegionDetector CreateDetector(string? acceptLanguage)

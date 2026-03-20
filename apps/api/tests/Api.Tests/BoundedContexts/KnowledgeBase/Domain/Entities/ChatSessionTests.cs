@@ -31,12 +31,12 @@ public class ChatSessionTests
         session.GameId.Should().Be(gameId);
         session.Title.Should().Be(title);
         session.AgentConfigJson.Should().Be("{}");
-        Assert.False(session.IsArchived);
+        session.IsArchived.Should().BeFalse();
         session.MessageCount.Should().Be(0);
-        Assert.False(session.HasMessages);
-        Assert.Null(session.LastMessage);
-        Assert.Null(session.UserLibraryEntryId);
-        Assert.Null(session.AgentSessionId);
+        session.HasMessages.Should().BeFalse();
+        session.LastMessage.Should().BeNull();
+        session.UserLibraryEntryId.Should().BeNull();
+        session.AgentSessionId.Should().BeNull();
     }
 
     [Fact]
@@ -70,8 +70,9 @@ public class ChatSessionTests
     public void ChatSession_Create_WithEmptyUserId_ThrowsArgumentException()
     {
         // Arrange & Act & Assert
-        var ex = Assert.Throws<ArgumentException>(() =>
-            new ChatSession(Guid.NewGuid(), Guid.Empty, Guid.NewGuid()));
+        Action act = () =>
+            new ChatSession(Guid.NewGuid(), Guid.Empty, Guid.NewGuid());
+        var ex = act.Should().Throw<ArgumentException>().Which;
         ex.Message.Should().Contain("UserId cannot be empty");
     }
 
@@ -79,8 +80,9 @@ public class ChatSessionTests
     public void ChatSession_Create_WithEmptyGameId_ThrowsArgumentException()
     {
         // Arrange & Act & Assert
-        var ex = Assert.Throws<ArgumentException>(() =>
-            new ChatSession(Guid.NewGuid(), Guid.NewGuid(), Guid.Empty));
+        Action act = () =>
+            new ChatSession(Guid.NewGuid(), Guid.NewGuid(), Guid.Empty);
+        var ex = act.Should().Throw<ArgumentException>().Which;
         ex.Message.Should().Contain("GameId cannot be empty");
     }
 
@@ -104,7 +106,7 @@ public class ChatSessionTests
         var session = new ChatSession(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid());
 
         // Assert
-        Assert.InRange(session.CreatedAt, before, DateTime.UtcNow.AddSeconds(1));
+        session.CreatedAt.Should().BeOnOrAfter(before).And.BeOnOrBefore(DateTime.UtcNow.AddSeconds(1));
         session.LastMessageAt.Should().Be(session.CreatedAt);
     }
 
@@ -117,7 +119,7 @@ public class ChatSessionTests
         // Assert
         var events = session.DomainEvents.ToList();
         events.Should().ContainSingle();
-        Assert.IsType<Api.BoundedContexts.KnowledgeBase.Domain.Events.ChatSessionCreatedEvent>(events[0]);
+        events[0].Should().BeOfType<Api.BoundedContexts.KnowledgeBase.Domain.Events.ChatSessionCreatedEvent>();
     }
 
     [Fact]
@@ -131,10 +133,10 @@ public class ChatSessionTests
 
         // Assert
         session.MessageCount.Should().Be(1);
-        Assert.True(session.HasMessages);
-        Assert.NotNull(session.LastMessage);
-        Assert.Equal("Hello, I need help with this game", session.LastMessage!.Content);
-        Assert.True(session.LastMessage.IsUserMessage);
+        session.HasMessages.Should().BeTrue();
+        session.LastMessage.Should().NotBeNull();
+        session.LastMessage!.Content.Should().Be("Hello, I need help with this game");
+        session.LastMessage.IsUserMessage.Should().BeTrue();
         session.LastMessage.SequenceNumber.Should().Be(0);
     }
 
@@ -149,8 +151,8 @@ public class ChatSessionTests
 
         // Assert
         session.MessageCount.Should().Be(1);
-        Assert.NotNull(session.LastMessage);
-        Assert.True(session.LastMessage!.IsAssistantMessage);
+        session.LastMessage.Should().NotBeNull();
+        session.LastMessage!.IsAssistantMessage.Should().BeTrue();
     }
 
     [Fact]
@@ -164,8 +166,8 @@ public class ChatSessionTests
 
         // Assert
         session.MessageCount.Should().Be(1);
-        Assert.NotNull(session.LastMessage);
-        Assert.True(session.LastMessage!.IsSystemMessage);
+        session.LastMessage.Should().NotBeNull();
+        session.LastMessage!.IsSystemMessage.Should().BeTrue();
     }
 
     [Fact]
@@ -183,7 +185,7 @@ public class ChatSessionTests
         session.AddUserMessage("Test message", metadata);
 
         // Assert
-        Assert.NotNull(session.LastMessage!.MetadataJson);
+        session.LastMessage!.MetadataJson.Should().NotBeNull();
     }
 
     [Fact]
@@ -200,7 +202,7 @@ public class ChatSessionTests
         session.AddUserMessage("Test message");
 
         // Assert
-        Assert.True(session.LastMessageAt >= initialTimestamp);
+        (session.LastMessageAt >= initialTimestamp).Should().BeTrue();
     }
 
     [Fact]
@@ -216,7 +218,7 @@ public class ChatSessionTests
         // Assert
         var events = session.DomainEvents.ToList();
         events.Should().ContainSingle();
-        Assert.IsType<Api.BoundedContexts.KnowledgeBase.Domain.Events.ChatSessionMessageAddedEvent>(events[0]);
+        events[0].Should().BeOfType<Api.BoundedContexts.KnowledgeBase.Domain.Events.ChatSessionMessageAddedEvent>();
     }
 
     [Fact]
@@ -227,8 +229,9 @@ public class ChatSessionTests
         session.Archive();
 
         // Act & Assert
-        var ex = Assert.Throws<InvalidOperationException>(() =>
-            session.AddUserMessage("Test"));
+        Action act = () =>
+            session.AddUserMessage("Test");
+        var ex = act.Should().Throw<InvalidOperationException>().Which;
         ex.Message.Should().Contain("archived session");
     }
 
@@ -239,8 +242,9 @@ public class ChatSessionTests
         var session = new ChatSession(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid());
 
         // Act & Assert
-        Assert.Throws<ArgumentNullException>(() =>
-            session.AddMessage(null!));
+        Action act = () =>
+            session.AddMessage(null!);
+        act.Should().Throw<ArgumentNullException>();
     }
 
     [Fact]
@@ -357,8 +361,9 @@ public class ChatSessionTests
         var session = new ChatSession(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid());
 
         // Act & Assert
-        var ex = Assert.Throws<ArgumentException>(() =>
-            session.LinkToAgentSession(Guid.Empty));
+        Action act = () =>
+            session.LinkToAgentSession(Guid.Empty);
+        var ex = act.Should().Throw<ArgumentException>().Which;
         ex.Message.Should().Contain("AgentSessionId cannot be empty");
     }
 
@@ -372,7 +377,7 @@ public class ChatSessionTests
         session.Archive();
 
         // Assert
-        Assert.True(session.IsArchived);
+        session.IsArchived.Should().BeTrue();
     }
 
     [Fact]
@@ -388,7 +393,7 @@ public class ChatSessionTests
         // Assert
         var events = session.DomainEvents.ToList();
         events.Should().ContainSingle();
-        Assert.IsType<Api.BoundedContexts.KnowledgeBase.Domain.Events.ChatSessionArchivedEvent>(events[0]);
+        events[0].Should().BeOfType<Api.BoundedContexts.KnowledgeBase.Domain.Events.ChatSessionArchivedEvent>();
     }
 
     [Fact]
@@ -403,8 +408,8 @@ public class ChatSessionTests
         session.Archive();
 
         // Assert
-        Assert.True(session.IsArchived);
-        Assert.Empty(session.DomainEvents); // No new events raised
+        session.IsArchived.Should().BeTrue();
+        session.DomainEvents.Should().BeEmpty(); // No new events raised
     }
 
     [Fact]
@@ -418,7 +423,7 @@ public class ChatSessionTests
         session.Unarchive();
 
         // Assert
-        Assert.False(session.IsArchived);
+        session.IsArchived.Should().BeFalse();
     }
 
     [Fact]
@@ -431,7 +436,7 @@ public class ChatSessionTests
         session.Unarchive();
 
         // Assert
-        Assert.False(session.IsArchived);
+        session.IsArchived.Should().BeFalse();
     }
 
     [Fact]

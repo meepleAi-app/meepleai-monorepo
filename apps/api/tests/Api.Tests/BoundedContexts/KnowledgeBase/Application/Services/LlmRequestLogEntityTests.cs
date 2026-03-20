@@ -27,21 +27,21 @@ public sealed class LlmRequestLogEntityTests
 
         // Assert
         entity.Id.Should().NotBe(Guid.Empty);
-        Assert.True(entity.RequestedAt <= DateTime.UtcNow);
-        Assert.True(entity.RequestedAt > DateTime.UtcNow.AddSeconds(-5));
-        Assert.Equal("Manual", entity.RequestSource); // Default from enum name
-        Assert.Null(entity.UserId);
-        Assert.Null(entity.UserRole);
+        (entity.RequestedAt <= DateTime.UtcNow).Should().BeTrue();
+        (entity.RequestedAt > DateTime.UtcNow.AddSeconds(-5)).Should().BeTrue();
+        entity.RequestSource.Should().Be("Manual"); // Default from enum name
+        entity.UserId.Should().BeNull();
+        entity.UserRole.Should().BeNull();
         entity.PromptTokens.Should().Be(0);
         entity.CompletionTokens.Should().Be(0);
         entity.TotalTokens.Should().Be(0);
         entity.CostUsd.Should().Be(0m);
         entity.LatencyMs.Should().Be(0);
-        Assert.False(entity.Success);
-        Assert.Null(entity.ErrorMessage);
-        Assert.False(entity.IsStreaming);
-        Assert.False(entity.IsFreeModel);
-        Assert.Null(entity.SessionId);
+        entity.Success.Should().BeFalse();
+        entity.ErrorMessage.Should().BeNull();
+        entity.IsStreaming.Should().BeFalse();
+        entity.IsFreeModel.Should().BeFalse();
+        entity.SessionId.Should().BeNull();
     }
 
     [Fact]
@@ -55,7 +55,7 @@ public sealed class LlmRequestLogEntityTests
         };
 
         // Assert — Issue #27: UserRegion defaults to null
-        Assert.Null(entity.UserRegion);
+        entity.UserRegion.Should().BeNull();
     }
 
     [Theory]
@@ -159,8 +159,8 @@ public sealed class LlmRequestLogEntityTests
         entity.TotalTokens.Should().Be(totalTokens);
         entity.CostUsd.Should().Be(costUsd);
         entity.LatencyMs.Should().Be(latencyMs);
-        Assert.True(entity.IsStreaming);
-        Assert.NotNull(entity.UserId);
+        entity.IsStreaming.Should().BeTrue();
+        entity.UserId.Should().NotBeNull();
         entity.UserRole.Should().Be("User");
         entity.SessionId.Should().Be("sess-abc");
     }

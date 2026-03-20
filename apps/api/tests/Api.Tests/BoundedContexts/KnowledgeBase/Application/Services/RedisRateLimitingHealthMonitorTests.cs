@@ -53,7 +53,7 @@ public sealed class RedisRateLimitingHealthMonitorTests
     {
         var monitor = CreateMonitor();
 
-        Assert.False(monitor.IsRateLimitingDegraded);
+        monitor.IsRateLimitingDegraded.Should().BeFalse();
     }
 
     [Fact]
@@ -95,32 +95,36 @@ public sealed class RedisRateLimitingHealthMonitorTests
     [Fact]
     public void Constructor_NullRedis_Throws()
     {
-        Assert.Throws<ArgumentNullException>(() =>
+        Action act = () =>
             new RedisRateLimitingHealthMonitor(
-                null!, _scopeFactoryMock.Object, _configuration, _loggerMock.Object));
+                null!, _scopeFactoryMock.Object, _configuration, _loggerMock.Object);
+        act.Should().Throw<ArgumentNullException>();
     }
 
     [Fact]
     public void Constructor_NullScopeFactory_Throws()
     {
-        Assert.Throws<ArgumentNullException>(() =>
+        Action act = () =>
             new RedisRateLimitingHealthMonitor(
-                _redisMock.Object, null!, _configuration, _loggerMock.Object));
+                _redisMock.Object, null!, _configuration, _loggerMock.Object);
+        act.Should().Throw<ArgumentNullException>();
     }
 
     [Fact]
     public void Constructor_NullConfiguration_Throws()
     {
-        Assert.Throws<ArgumentNullException>(() =>
+        Action act = () =>
             new RedisRateLimitingHealthMonitor(
-                _redisMock.Object, _scopeFactoryMock.Object, null!, _loggerMock.Object));
+                _redisMock.Object, _scopeFactoryMock.Object, null!, _loggerMock.Object);
+        act.Should().Throw<ArgumentNullException>();
     }
 
     [Fact]
     public void Constructor_NullLogger_Throws()
     {
-        Assert.Throws<ArgumentNullException>(() =>
+        Action act = () =>
             new RedisRateLimitingHealthMonitor(
-                _redisMock.Object, _scopeFactoryMock.Object, _configuration, null!));
+                _redisMock.Object, _scopeFactoryMock.Object, _configuration, null!);
+        act.Should().Throw<ArgumentNullException>();
     }
 }

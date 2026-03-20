@@ -96,7 +96,7 @@ public class CreateAgentWithSetupCommandHandlerTests
         result.AgentId.Should().NotBe(Guid.Empty);
         result.ThreadId.Should().NotBe(Guid.Empty);
         result.SlotUsed.Should().Be(1);
-        Assert.False(result.GameAddedToCollection);
+        result.GameAddedToCollection.Should().BeFalse();
 
         _mockAgentRepo.Verify(r => r.AddAsync(It.IsAny<Agent>(), It.IsAny<CancellationToken>()), Times.Once);
         _mockChatRepo.Verify(r => r.AddAsync(It.IsAny<ChatThread>(), It.IsAny<CancellationToken>()), Times.Once);
@@ -117,7 +117,7 @@ public class CreateAgentWithSetupCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.True(result.GameAddedToCollection);
+        result.GameAddedToCollection.Should().BeTrue();
         _mockLibraryRepo.Verify(
             r => r.AddAsync(It.IsAny<UserLibraryEntry>(), It.IsAny<CancellationToken>()),
             Times.Once);
@@ -137,7 +137,7 @@ public class CreateAgentWithSetupCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.False(result.GameAddedToCollection);
+        result.GameAddedToCollection.Should().BeFalse();
         _mockLibraryRepo.Verify(
             r => r.AddAsync(It.IsAny<UserLibraryEntry>(), It.IsAny<CancellationToken>()),
             Times.Never);
@@ -173,8 +173,8 @@ public class CreateAgentWithSetupCommandHandlerTests
         var command = CreateCommand(tier: "free");
 
         // Act & Assert
-        await Assert.ThrowsAsync<ConflictException>(
-            () => _handler.Handle(command, TestContext.Current.CancellationToken));
+        Func<Task> act = () => _handler.Handle(command, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<ConflictException>();
     }
 
     [Fact]
@@ -247,7 +247,7 @@ public class CreateAgentWithSetupCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.StartsWith("RAG-", result.AgentName);
+        result.AgentName.Should().StartWith("RAG-");
     }
 
     [Fact]
@@ -279,8 +279,8 @@ public class CreateAgentWithSetupCommandHandlerTests
         var command = CreateCommand();
 
         // Act & Assert
-        await Assert.ThrowsAsync<InvalidOperationException>(
-            () => _handler.Handle(command, TestContext.Current.CancellationToken));
+        Func<Task> act = () => _handler.Handle(command, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<InvalidOperationException>();
 
         _mockUnitOfWork.Verify(u => u.RollbackTransactionAsync(It.IsAny<CancellationToken>()), Times.Once);
         _mockUnitOfWork.Verify(u => u.CommitTransactionAsync(It.IsAny<CancellationToken>()), Times.Never);
@@ -289,8 +289,8 @@ public class CreateAgentWithSetupCommandHandlerTests
     [Fact]
     public async Task Handle_NullRequest_ThrowsArgumentNullException()
     {
-        await Assert.ThrowsAsync<ArgumentNullException>(
-            () => _handler.Handle(null!, TestContext.Current.CancellationToken));
+        Func<Task> act = () => _handler.Handle(null!, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<ArgumentNullException>();
     }
 
     [Fact]

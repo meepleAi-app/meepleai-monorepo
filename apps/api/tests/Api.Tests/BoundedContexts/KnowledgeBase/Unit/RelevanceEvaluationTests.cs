@@ -14,7 +14,7 @@ public class RelevanceEvaluationTests
     {
         var sut = new RelevanceEvaluation(RelevanceVerdict.Correct, 0.95f, "High scores");
 
-        Assert.True(sut.UseRetrievedDocuments);
+        sut.UseRetrievedDocuments.Should().BeTrue();
     }
 
     [Fact]
@@ -22,7 +22,7 @@ public class RelevanceEvaluationTests
     {
         var sut = new RelevanceEvaluation(RelevanceVerdict.Correct, 0.95f, "High scores");
 
-        Assert.False(sut.ShouldRequery);
+        sut.ShouldRequery.Should().BeFalse();
     }
 
     [Fact]
@@ -30,7 +30,7 @@ public class RelevanceEvaluationTests
     {
         var sut = new RelevanceEvaluation(RelevanceVerdict.Ambiguous, 0.7f, "Partially relevant");
 
-        Assert.True(sut.UseRetrievedDocuments);
+        sut.UseRetrievedDocuments.Should().BeTrue();
     }
 
     [Fact]
@@ -38,7 +38,7 @@ public class RelevanceEvaluationTests
     {
         var sut = new RelevanceEvaluation(RelevanceVerdict.Ambiguous, 0.7f, "Partially relevant");
 
-        Assert.True(sut.ShouldRequery);
+        sut.ShouldRequery.Should().BeTrue();
     }
 
     [Fact]
@@ -46,7 +46,7 @@ public class RelevanceEvaluationTests
     {
         var sut = new RelevanceEvaluation(RelevanceVerdict.Incorrect, 0.9f, "Not relevant");
 
-        Assert.False(sut.UseRetrievedDocuments);
+        sut.UseRetrievedDocuments.Should().BeFalse();
     }
 
     [Fact]
@@ -54,7 +54,7 @@ public class RelevanceEvaluationTests
     {
         var sut = new RelevanceEvaluation(RelevanceVerdict.Incorrect, 0.9f, "Not relevant");
 
-        Assert.True(sut.ShouldRequery);
+        sut.ShouldRequery.Should().BeTrue();
     }
 
     [Fact]

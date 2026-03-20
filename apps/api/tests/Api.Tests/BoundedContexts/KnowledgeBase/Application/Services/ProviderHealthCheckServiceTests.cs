@@ -36,7 +36,7 @@ public class ProviderHealthCheckServiceTests
         var service = new ProviderHealthCheckService(serviceScopeFactory, logger.Object);
 
         // Assert
-        Assert.NotNull(service);
+        service.Should().NotBeNull();
     }
 
     [Fact]
@@ -46,8 +46,9 @@ public class ProviderHealthCheckServiceTests
         var logger = new Mock<ILogger<ProviderHealthCheckService>>();
 
         // Act & Assert
-        Assert.Throws<ArgumentNullException>(() =>
-            new ProviderHealthCheckService(null!, logger.Object));
+        Action act = () =>
+            new ProviderHealthCheckService(null!, logger.Object);
+        act.Should().Throw<ArgumentNullException>();
     }
 
     [Fact]
@@ -57,8 +58,9 @@ public class ProviderHealthCheckServiceTests
         var serviceScopeFactory = CreateServiceScopeFactory(new List<ILlmClient>());
 
         // Act & Assert
-        Assert.Throws<ArgumentNullException>(() =>
-            new ProviderHealthCheckService(serviceScopeFactory, null!));
+        Action act = () =>
+            new ProviderHealthCheckService(serviceScopeFactory, null!);
+        act.Should().Throw<ArgumentNullException>();
     }
 
     [Fact]
@@ -76,7 +78,7 @@ public class ProviderHealthCheckServiceTests
         var health = service.GetProviderHealth("Ollama");
 
         // Assert - Before StartAsync, no health status available
-        Assert.Null(health);
+        health.Should().BeNull();
     }
 
     [Fact]
@@ -124,7 +126,7 @@ public class ProviderHealthCheckServiceTests
         var allHealth = service.GetAllProviderHealth();
 
         // Assert
-        Assert.NotNull(allHealth);
+        allHealth.Should().NotBeNull();
         allHealth.Count.Should().Be(2);
         allHealth.Keys.Should().Contain("Ollama");
         allHealth.Keys.Should().Contain("OpenRouter");
@@ -165,8 +167,8 @@ public class ProviderHealthCheckServiceTests
         await service.StopAsync(TestCancellationToken);
 
         // Assert
-        Assert.NotNull(health);
-        Assert.True(health.IsAvailable());
+        health.Should().NotBeNull();
+        health.IsAvailable().Should().BeTrue();
     }
 
     [Fact]
@@ -201,8 +203,8 @@ public class ProviderHealthCheckServiceTests
         await service.StopAsync(TestCancellationToken);
 
         // Assert
-        Assert.NotNull(health);
-        Assert.False(health.IsAvailable());
+        health.Should().NotBeNull();
+        health.IsAvailable().Should().BeFalse();
     }
 
     [Fact]
@@ -241,8 +243,8 @@ public class ProviderHealthCheckServiceTests
         await service.StopAsync(TestCancellationToken);
 
         // Assert
-        Assert.NotNull(health);
-        Assert.False(health.IsAvailable()); // Health check should fail due to timeout
+        health.Should().NotBeNull();
+        health.IsAvailable().Should().BeFalse(); // Health check should fail due to timeout
     }
 
     [Fact]
@@ -269,7 +271,7 @@ public class ProviderHealthCheckServiceTests
         await service.StopAsync(TestCancellationToken);
 
         // Assert - No exception thrown, service stopped gracefully
-        Assert.True(true);
+        true.Should().BeTrue();
     }
     private Mock<ILlmClient> CreateMockClient(string providerName)
     {

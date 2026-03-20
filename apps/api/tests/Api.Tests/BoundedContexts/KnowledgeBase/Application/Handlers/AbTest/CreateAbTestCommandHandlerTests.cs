@@ -56,7 +56,7 @@ public sealed class CreateAbTestCommandHandlerTests
 
         var result = await sut.Handle(command, CancellationToken.None);
 
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         result.Query.Should().Be("What are the rules?");
         result.Status.Should().Be("InProgress");
         result.Variants.Count.Should().Be(2);
@@ -102,8 +102,9 @@ public sealed class CreateAbTestCommandHandlerTests
         var sut = CreateSut();
         var command = new CreateAbTestCommand(UserId, "Test", ["m1", "m2"]);
 
-        await Assert.ThrowsAsync<InvalidOperationException>(() =>
-            sut.Handle(command, CancellationToken.None));
+        Func<Task> act = () =>
+            sut.Handle(command, CancellationToken.None);
+        await act.Should().ThrowAsync<InvalidOperationException>();
     }
 
     [Fact]
@@ -114,8 +115,9 @@ public sealed class CreateAbTestCommandHandlerTests
         var sut = CreateSut();
         var command = new CreateAbTestCommand(UserId, "Test", ["m1", "m2"]);
 
-        await Assert.ThrowsAsync<InvalidOperationException>(() =>
-            sut.Handle(command, CancellationToken.None));
+        Func<Task> act = () =>
+            sut.Handle(command, CancellationToken.None);
+        await act.Should().ThrowAsync<InvalidOperationException>();
     }
 
     [Fact]
@@ -138,8 +140,8 @@ public sealed class CreateAbTestCommandHandlerTests
 
         var result = await sut.Handle(command, CancellationToken.None);
 
-        Assert.False(result.Variants[0].Failed);
-        Assert.True(result.Variants[1].Failed);
+        result.Variants[0].Failed.Should().BeFalse();
+        result.Variants[1].Failed.Should().BeTrue();
     }
 
     [Fact]
@@ -154,8 +156,8 @@ public sealed class CreateAbTestCommandHandlerTests
         // This is enforced by the DTO type itself — AbTestVariantDto has no Provider/ModelId
         Assert.All(result.Variants, v =>
         {
-            Assert.NotNull(v.Label);
-            Assert.NotNull(v.Response);
+            v.Label.Should().NotBeNull();
+            v.Response.Should().NotBeNull();
         });
     }
 

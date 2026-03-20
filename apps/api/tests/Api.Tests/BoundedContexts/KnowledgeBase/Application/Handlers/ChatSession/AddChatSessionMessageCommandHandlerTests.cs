@@ -88,7 +88,7 @@ public class AddChatSessionMessageCommandHandlerTests
         // Assert
         result.Should().NotBe(Guid.Empty);
         session.MessageCount.Should().Be(1);
-        Assert.True(session.LastMessage!.IsAssistantMessage);
+        session.LastMessage!.IsAssistantMessage.Should().BeTrue();
     }
 
     [Fact]
@@ -112,7 +112,7 @@ public class AddChatSessionMessageCommandHandlerTests
 
         // Assert
         result.Should().NotBe(Guid.Empty);
-        Assert.True(session.LastMessage!.IsSystemMessage);
+        session.LastMessage!.IsSystemMessage.Should().BeTrue();
     }
 
     [Fact]
@@ -142,7 +142,7 @@ public class AddChatSessionMessageCommandHandlerTests
         await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(session.LastMessage!.MetadataJson);
+        session.LastMessage!.MetadataJson.Should().NotBeNull();
     }
 
     [Fact]
@@ -160,8 +160,9 @@ public class AddChatSessionMessageCommandHandlerTests
             Content: "Test message");
 
         // Act & Assert
-        var ex = await Assert.ThrowsAsync<NotFoundException>(() =>
-            _handler.Handle(command, TestContext.Current.CancellationToken));
+        Func<Task> act = () =>
+            _handler.Handle(command, TestContext.Current.CancellationToken);
+        var ex = (await act.Should().ThrowAsync<NotFoundException>()).Which;
         ex.Message.Should().Contain("ChatSession");
     }
 
@@ -229,41 +230,45 @@ public class AddChatSessionMessageCommandHandlerTests
     public async Task Handle_WithNullCommand_ThrowsArgumentNullException()
     {
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentNullException>(() =>
-            _handler.Handle(null!, TestContext.Current.CancellationToken));
+        Func<Task> act = () =>
+            _handler.Handle(null!, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<ArgumentNullException>();
     }
 
     [Fact]
     public void Constructor_WithNullRepository_ThrowsArgumentNullException()
     {
         // Act & Assert
-        Assert.Throws<ArgumentNullException>(() =>
+        Action act = () =>
             new AddChatSessionMessageCommandHandler(
                 null!,
                 _mockUnitOfWork.Object,
-                _mockLogger.Object));
+                _mockLogger.Object);
+        act.Should().Throw<ArgumentNullException>();
     }
 
     [Fact]
     public void Constructor_WithNullUnitOfWork_ThrowsArgumentNullException()
     {
         // Act & Assert
-        Assert.Throws<ArgumentNullException>(() =>
+        Action act = () =>
             new AddChatSessionMessageCommandHandler(
                 _mockRepository.Object,
                 null!,
-                _mockLogger.Object));
+                _mockLogger.Object);
+        act.Should().Throw<ArgumentNullException>();
     }
 
     [Fact]
     public void Constructor_WithNullLogger_ThrowsArgumentNullException()
     {
         // Act & Assert
-        Assert.Throws<ArgumentNullException>(() =>
+        Action act = () =>
             new AddChatSessionMessageCommandHandler(
                 _mockRepository.Object,
                 _mockUnitOfWork.Object,
-                null!));
+                null!);
+        act.Should().Throw<ArgumentNullException>();
     }
 
     private static Api.BoundedContexts.KnowledgeBase.Domain.Entities.ChatSession CreateTestSession(Guid sessionId)

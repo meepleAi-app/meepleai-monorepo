@@ -140,7 +140,7 @@ public sealed class LlmResilienceChaosTests
 
         breaker.State.Should().Be(CircuitState.Open);
         breaker.ConsecutiveFailures.Should().Be(5);
-        Assert.False(breaker.AllowsRequests());
+        breaker.AllowsRequests().Should().BeFalse();
     }
 
     /// <summary>
@@ -157,7 +157,7 @@ public sealed class LlmResilienceChaosTests
             breaker.RecordFailure();
 
         breaker.State.Should().Be(CircuitState.Closed);
-        Assert.True(breaker.AllowsRequests());
+        breaker.AllowsRequests().Should().BeTrue();
 
         breaker.RecordSuccess(); // Reset
         breaker.ConsecutiveFailures.Should().Be(0);
@@ -194,7 +194,7 @@ public sealed class LlmResilienceChaosTests
         var sut = CreateSut();
         var result = await sut.GenerateCompletionAsync("sys", "user");
 
-        Assert.True(result.Success);
+        result.Success.Should().BeTrue();
     }
 
     // ─── Scenario 3: All providers down → meaningful error ─────────────────────
@@ -228,8 +228,8 @@ public sealed class LlmResilienceChaosTests
         var result = await sut.GenerateCompletionAsync("sys", "user");
 
         // Must return failure, not throw unhandled exception
-        Assert.False(result.Success);
-        Assert.NotNull(result.ErrorMessage);
+        result.Success.Should().BeFalse();
+        result.ErrorMessage.Should().NotBeNull();
     }
 
     // ─── Scenario 4: Circuit half-open → probe success → recovery ──────────────
@@ -259,7 +259,7 @@ public sealed class LlmResilienceChaosTests
         openedAtProp!.SetValue(breaker, DateTime.UtcNow.AddSeconds(-31));
 
         // AllowsRequests transitions to HalfOpen
-        Assert.True(breaker.AllowsRequests());
+        breaker.AllowsRequests().Should().BeTrue();
         breaker.State.Should().Be(CircuitState.HalfOpen);
 
         // 3 consecutive successes → close
@@ -268,12 +268,12 @@ public sealed class LlmResilienceChaosTests
         breaker.RecordSuccess();
 
         breaker.State.Should().Be(CircuitState.Closed);
-        Assert.True(breaker.AllowsRequests());
+        breaker.AllowsRequests().Should().BeTrue();
 
         // Verify transition chain: Closed→Open→HalfOpen→Closed
-        Assert.Contains(transitions, t => t.from == CircuitState.Closed && t.to == CircuitState.Open);
-        Assert.Contains(transitions, t => t.from == CircuitState.Open && t.to == CircuitState.HalfOpen);
-        Assert.Contains(transitions, t => t.from == CircuitState.HalfOpen && t.to == CircuitState.Closed);
+        transitions.Should().Contain(t => t.from == CircuitState.Closed && t.to == CircuitState.Open);
+        transitions.Should().Contain(t => t.from == CircuitState.Open && t.to == CircuitState.HalfOpen);
+        transitions.Should().Contain(t => t.from == CircuitState.HalfOpen && t.to == CircuitState.Closed);
     }
 
     // ─── Scenario 5: Circuit half-open → probe failure → reopen ────────────────
@@ -305,7 +305,7 @@ public sealed class LlmResilienceChaosTests
         breaker.RecordFailure();
 
         breaker.State.Should().Be(CircuitState.Open);
-        Assert.False(breaker.AllowsRequests());
+        breaker.AllowsRequests().Should().BeFalse();
     }
 
     // ─── Scenario 6: Redis unavailable → health monitor degrades gracefully ────
@@ -344,7 +344,7 @@ public sealed class LlmResilienceChaosTests
             CancellationToken.None);
 
         result.Status.Should().Be(Microsoft.Extensions.Diagnostics.HealthChecks.HealthStatus.Degraded);
-        Assert.Contains("rate limiting is disabled", result.Description, StringComparison.OrdinalIgnoreCase);
+        result.Description.Should().ContainEquivalentOf("rate limiting is disabled");
     }
 
     // ─── Additional resilience scenarios ───────────────────────────────────────
@@ -364,11 +364,11 @@ public sealed class LlmResilienceChaosTests
         for (int i = 0; i < 5; i++)
             breaker.RecordFailure();
 
-        Assert.Equal(1, callbackCount); // Closed→Open
+        callbackCount.Should().Be(1); // Closed→Open
 
         // Admin reset: Open → Closed
         breaker.Reset();
-        Assert.Equal(2, callbackCount); // Open→Closed
+        callbackCount.Should().Be(2); // Open→Closed
     }
 
     /// <summary>
@@ -398,7 +398,7 @@ public sealed class LlmResilienceChaosTests
         var sut = CreateSut(emergencyOverrideService: emergencyMock.Object);
         var result = await sut.GenerateCompletionAsync("sys", "user");
 
-        Assert.True(result.Success);
+        result.Success.Should().BeTrue();
 
         // OpenRouter must not be called
         _openRouterMock.Verify(
@@ -433,7 +433,7 @@ public sealed class LlmResilienceChaosTests
         var sut = CreateSut();
         var result = await sut.GenerateCompletionAsync("sys", "user");
 
-        Assert.True(result.Success);
+        result.Success.Should().BeTrue();
 
         _openRouterMock.Verify(
             c => c.GenerateCompletionAsync(

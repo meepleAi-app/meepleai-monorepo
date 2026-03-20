@@ -63,7 +63,7 @@ public class CreateChatThreadCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         result.UserId.Should().Be(userId);
         result.GameId.Should().Be(gameId);
         result.Title.Should().Be(title);
@@ -90,13 +90,13 @@ public class CreateChatThreadCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         result.UserId.Should().Be(userId);
         result.GameId.Should().Be(gameId);
         result.Title.Should().Be(title);
         result.Status.Should().Be("active");
         result.MessageCount.Should().Be(0);
-        Assert.Empty(result.Messages);
+        result.Messages.Should().BeEmpty();
 
         _mockRepository.Verify(r => r.AddAsync(It.IsAny<ChatThread>(), It.IsAny<CancellationToken>()), Times.Once);
         _mockUnitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
@@ -114,9 +114,9 @@ public class CreateChatThreadCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         result.UserId.Should().Be(userId);
-        Assert.Null(result.GameId);
+        result.GameId.Should().BeNull();
         result.Title.Should().Be(title);
         result.Status.Should().Be("active");
 
@@ -128,8 +128,8 @@ public class CreateChatThreadCommandHandlerTests
     public async Task Handle_WithNullCommand_ThrowsArgumentNullException()
     {
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentNullException>(
-            () => _handler.Handle(null!, TestContext.Current.CancellationToken));
+        Func<Task> act = () => _handler.Handle(null!, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<ArgumentNullException>();
     }
     private static IRagAccessService CreatePermissiveRagAccessServiceMock()
     {

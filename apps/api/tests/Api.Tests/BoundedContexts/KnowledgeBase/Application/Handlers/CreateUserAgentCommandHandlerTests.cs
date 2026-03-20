@@ -84,7 +84,7 @@ public class CreateUserAgentCommandHandlerTests
         var result = await _handler.Handle(command, CancellationToken.None);
 
         // Assert
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         result.Name.Should().Be("My Agent");
         result.Type.Should().Be("RAG");
         result.StrategyName.Should().Be("HybridSearch");
@@ -151,7 +151,7 @@ public class CreateUserAgentCommandHandlerTests
 
         // Assert
         result.StrategyName.Should().Be("IterativeRAG");
-        Assert.True(result.StrategyParameters.Count > 0);
+        (result.StrategyParameters.Count > 0).Should().BeTrue();
     }
 
     [Fact]
@@ -186,8 +186,8 @@ public class CreateUserAgentCommandHandlerTests
         );
 
         // Act & Assert
-        var ex = await Assert.ThrowsAsync<TierLimitExceededException>(
-            () => _handler.Handle(command, CancellationToken.None));
+        Func<Task> act = () => _handler.Handle(command, CancellationToken.None);
+        var ex = (await act.Should().ThrowAsync<TierLimitExceededException>()).Which;
         ex.LimitType.Should().Be("CreateAgent");
         ex.Current.Should().Be(1);
         ex.Max.Should().Be(1);
@@ -219,7 +219,7 @@ public class CreateUserAgentCommandHandlerTests
         var result = await _handler.Handle(command, CancellationToken.None);
 
         // Assert
-        Assert.StartsWith("RAG-", result.Name);
+        result.Name.Should().StartWith("RAG-");
     }
 
     [Fact]
@@ -280,7 +280,7 @@ public class CreateUserAgentCommandHandlerTests
         var result = await _handler.Handle(command, CancellationToken.None);
 
         // Assert
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
     }
 
     [Fact]
@@ -306,8 +306,8 @@ public class CreateUserAgentCommandHandlerTests
         );
 
         // Act & Assert
-        var ex = await Assert.ThrowsAsync<ConflictException>(
-            () => _handler.Handle(command, CancellationToken.None));
+        Func<Task> act = () => _handler.Handle(command, CancellationToken.None);
+        var ex = (await act.Should().ThrowAsync<ConflictException>()).Which;
         ex.Message.Should().Contain("Could not generate unique name");
     }
 

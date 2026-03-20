@@ -29,11 +29,11 @@ public class ChatThreadExportTests
         var exported = thread.Export(ExportFormat.Json);
 
         // Assert
-        Assert.NotNull(exported);
+        exported.Should().NotBeNull();
         exported.Format.Should().Be(ExportFormat.Json);
         exported.ContentType.Should().Be("application/json");
         exported.FileExtension.Should().Be("json");
-        Assert.False(string.IsNullOrWhiteSpace(exported.Content));
+        string.IsNullOrWhiteSpace(exported.Content).Should().BeFalse();
 
         // Verify JSON structure
         exported.Content.Should().Contain("\"id\":");
@@ -61,11 +61,11 @@ public class ChatThreadExportTests
         var exported = thread.Export(ExportFormat.Markdown);
 
         // Assert
-        Assert.NotNull(exported);
+        exported.Should().NotBeNull();
         exported.Format.Should().Be(ExportFormat.Markdown);
         exported.ContentType.Should().Be("text/markdown");
         exported.FileExtension.Should().Be("md");
-        Assert.False(string.IsNullOrWhiteSpace(exported.Content));
+        string.IsNullOrWhiteSpace(exported.Content).Should().BeFalse();
 
         // Verify Markdown structure
         exported.Content.Should().Contain("# Epic Battle");
@@ -125,7 +125,7 @@ public class ChatThreadExportTests
         var exported = thread.Export(ExportFormat.Json);
 
         // Assert
-        Assert.NotNull(exported);
+        exported.Should().NotBeNull();
         exported.Content.Should().Contain("\"status\": \"closed\"");
     }
 
@@ -138,8 +138,9 @@ public class ChatThreadExportTests
         var thread = new ChatThread(threadId, userId);
 
         // Act & Assert
-        Assert.Throws<ArgumentOutOfRangeException>(() =>
-            thread.Export((ExportFormat)999));
+        Action act = () =>
+            thread.Export((ExportFormat)999);
+        act.Should().Throw<ArgumentOutOfRangeException>();
     }
 
     [Fact]
@@ -165,9 +166,9 @@ public class ChatThreadExportTests
         var msg2Index = content.IndexOf("Message 2", StringComparison.Ordinal);
         var resp2Index = content.IndexOf("Response 2", StringComparison.Ordinal);
 
-        Assert.True(msg1Index < resp1Index);
-        Assert.True(resp1Index < msg2Index);
-        Assert.True(msg2Index < resp2Index);
+        (msg1Index < resp1Index).Should().BeTrue();
+        (resp1Index < msg2Index).Should().BeTrue();
+        (msg2Index < resp2Index).Should().BeTrue();
     }
 
     [Fact]
@@ -184,8 +185,8 @@ public class ChatThreadExportTests
         var afterExport = DateTime.UtcNow;
 
         // Assert
-        Assert.True(exported.ExportedAt >= beforeExport);
-        Assert.True(exported.ExportedAt <= afterExport);
+        (exported.ExportedAt >= beforeExport).Should().BeTrue();
+        (exported.ExportedAt <= afterExport).Should().BeTrue();
     }
 }
 

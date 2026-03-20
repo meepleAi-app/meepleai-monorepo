@@ -83,9 +83,9 @@ public class TutorQueryCommandHandlerTests
         var result = await _handler.Handle(command, CancellationToken.None);
 
         // Assert
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         result.AgentType.Should().Be("tutor");
-        Assert.Equal("To set up the game, follow these steps...", result.Response);
+        result.Response.Should().Be("To set up the game, follow these steps...");
         result.Confidence.Should().Be(0.95);
         result.Citations.Should().ContainSingle();
         result.Citations[0].Should().Be("setup_guide.pdf:p1");
@@ -111,11 +111,11 @@ public class TutorQueryCommandHandlerTests
             .ThrowsAsync(new HttpRequestException("Service unavailable"));
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
-            () => _handler.Handle(command, CancellationToken.None));
+        Func<Task> act = () => _handler.Handle(command, CancellationToken.None);
+        var exception = (await act.Should().ThrowAsync<InvalidOperationException>()).Which;
 
         exception.Message.Should().Be("Tutor agent service unavailable");
-        Assert.IsType<HttpRequestException>(exception.InnerException);
+        exception.InnerException.Should().BeOfType<HttpRequestException>();
     }
 
     [Fact]
@@ -143,8 +143,8 @@ public class TutorQueryCommandHandlerTests
 
         // Act & Assert - JsonSerializer.Deserialize throws JsonException
         // which is caught and re-thrown by handler's catch block
-        await Assert.ThrowsAnyAsync<Exception>(
-            () => _handler.Handle(command, CancellationToken.None));
+        Func<Task> act = () => _handler.Handle(command, CancellationToken.None);
+        await act.Should().ThrowAsync<Exception>();
     }
 
     [Fact]
@@ -172,11 +172,11 @@ public class TutorQueryCommandHandlerTests
 
         // Act & Assert - EnsureSuccessStatusCode throws HttpRequestException
         // which is caught and wrapped in InvalidOperationException by handler
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
-            () => _handler.Handle(command, CancellationToken.None));
+        Func<Task> act = () => _handler.Handle(command, CancellationToken.None);
+        var exception = (await act.Should().ThrowAsync<InvalidOperationException>()).Which;
 
         exception.Message.Should().Be("Tutor agent service unavailable");
-        Assert.IsType<HttpRequestException>(exception.InnerException);
+        exception.InnerException.Should().BeOfType<HttpRequestException>();
     }
 
     [Theory]
@@ -264,7 +264,7 @@ public class TutorQueryCommandHandlerTests
         var result = await _handler.Handle(command, CancellationToken.None);
 
         // Assert
-        Assert.Empty(result.Citations);
+        result.Citations.Should().BeEmpty();
     }
 
     [Fact]

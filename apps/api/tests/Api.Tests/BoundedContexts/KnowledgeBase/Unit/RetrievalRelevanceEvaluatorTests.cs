@@ -31,7 +31,7 @@ public class RetrievalRelevanceEvaluatorTests
         var result = await _sut.EvaluateAsync("some query", Array.Empty<ScoredChunk>());
 
         result.Verdict.Should().Be(RelevanceVerdict.Incorrect);
-        Assert.False(result.UseRetrievedDocuments);
+        result.UseRetrievedDocuments.Should().BeFalse();
         _llmServiceMock.VerifyNoOtherCalls();
     }
 
@@ -59,8 +59,8 @@ public class RetrievalRelevanceEvaluatorTests
         var result = await _sut.EvaluateAsync("How do you score in Catan?", chunks);
 
         result.Verdict.Should().Be(RelevanceVerdict.Correct);
-        Assert.True(result.UseRetrievedDocuments);
-        Assert.False(result.ShouldRequery);
+        result.UseRetrievedDocuments.Should().BeTrue();
+        result.ShouldRequery.Should().BeFalse();
         _llmServiceMock.Verify(
             x => x.GenerateJsonAsync<RelevanceClassification>(
                 It.IsAny<string>(), It.IsAny<string>(), It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()),
@@ -82,8 +82,8 @@ public class RetrievalRelevanceEvaluatorTests
         var result = await _sut.EvaluateAsync("How do you score in Catan?", chunks);
 
         result.Verdict.Should().Be(RelevanceVerdict.Incorrect);
-        Assert.False(result.UseRetrievedDocuments);
-        Assert.True(result.ShouldRequery);
+        result.UseRetrievedDocuments.Should().BeFalse();
+        result.ShouldRequery.Should().BeTrue();
         _llmServiceMock.Verify(
             x => x.GenerateJsonAsync<RelevanceClassification>(
                 It.IsAny<string>(), It.IsAny<string>(), It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()),
@@ -133,8 +133,8 @@ public class RetrievalRelevanceEvaluatorTests
         var result = await _sut.EvaluateAsync("query", chunks);
 
         result.Verdict.Should().Be(RelevanceVerdict.Ambiguous);
-        Assert.True(result.UseRetrievedDocuments);
-        Assert.True(result.ShouldRequery);
+        result.UseRetrievedDocuments.Should().BeTrue();
+        result.ShouldRequery.Should().BeTrue();
     }
 
     // --- LLM error fallback ---
@@ -157,7 +157,7 @@ public class RetrievalRelevanceEvaluatorTests
 
         result.Verdict.Should().Be(RelevanceVerdict.Correct);
         result.Confidence.Should().Be(0.5f);
-        Assert.True(result.UseRetrievedDocuments);
+        result.UseRetrievedDocuments.Should().BeTrue();
     }
 
     [Fact]

@@ -111,10 +111,8 @@ public sealed class GameEndpointsIntegrationTests : IAsyncLifetime
         var response = await _client.GetAsync("/api/v1/games");
 
         // Assert - Games list may be public or require auth depending on configuration
-        Assert.True(
-            response.StatusCode == HttpStatusCode.OK ||
-            response.StatusCode == HttpStatusCode.Unauthorized,
-            $"Expected OK or Unauthorized, got {response.StatusCode}");
+        (response.StatusCode == HttpStatusCode.OK ||
+            response.StatusCode == HttpStatusCode.Unauthorized).Should().BeTrue($"Expected OK or Unauthorized, got {response.StatusCode}");
     }
 
     [Fact]
@@ -134,10 +132,8 @@ public sealed class GameEndpointsIntegrationTests : IAsyncLifetime
         var response = await _client.SendAsync(request);
 
         // Assert - With mocked auth middleware, may return Unauthorized
-        Assert.True(
-            response.StatusCode == HttpStatusCode.OK ||
-            response.StatusCode == HttpStatusCode.Unauthorized,
-            $"Expected OK or Unauthorized, got {response.StatusCode}");
+        (response.StatusCode == HttpStatusCode.OK ||
+            response.StatusCode == HttpStatusCode.Unauthorized).Should().BeTrue($"Expected OK or Unauthorized, got {response.StatusCode}");
     }
 
     [Fact]
@@ -157,10 +153,8 @@ public sealed class GameEndpointsIntegrationTests : IAsyncLifetime
         var response = await _client.SendAsync(request);
 
         // Assert
-        Assert.True(
-            response.StatusCode == HttpStatusCode.OK ||
-            response.StatusCode == HttpStatusCode.Unauthorized,
-            $"Expected OK or Unauthorized, got {response.StatusCode}");
+        (response.StatusCode == HttpStatusCode.OK ||
+            response.StatusCode == HttpStatusCode.Unauthorized).Should().BeTrue($"Expected OK or Unauthorized, got {response.StatusCode}");
     }
 
     [Fact]
@@ -180,10 +174,8 @@ public sealed class GameEndpointsIntegrationTests : IAsyncLifetime
         var response = await _client.SendAsync(request);
 
         // Assert
-        Assert.True(
-            response.StatusCode == HttpStatusCode.OK ||
-            response.StatusCode == HttpStatusCode.Unauthorized,
-            $"Expected OK or Unauthorized, got {response.StatusCode}");
+        (response.StatusCode == HttpStatusCode.OK ||
+            response.StatusCode == HttpStatusCode.Unauthorized).Should().BeTrue($"Expected OK or Unauthorized, got {response.StatusCode}");
     }
 
     // ========================================
@@ -200,10 +192,8 @@ public sealed class GameEndpointsIntegrationTests : IAsyncLifetime
         var response = await _client.GetAsync($"/api/v1/games/{gameId}");
 
         // Assert - Non-existent resource may return NotFound or Unauthorized
-        Assert.True(
-            response.StatusCode == HttpStatusCode.NotFound ||
-            response.StatusCode == HttpStatusCode.Unauthorized,
-            $"Expected NotFound or Unauthorized, got {response.StatusCode}");
+        (response.StatusCode == HttpStatusCode.NotFound ||
+            response.StatusCode == HttpStatusCode.Unauthorized).Should().BeTrue($"Expected NotFound or Unauthorized, got {response.StatusCode}");
     }
 
     [Fact]
@@ -224,10 +214,8 @@ public sealed class GameEndpointsIntegrationTests : IAsyncLifetime
         var response = await _client.SendAsync(request);
 
         // Assert - Game not found should return NotFound (or Unauthorized if auth fails)
-        Assert.True(
-            response.StatusCode == HttpStatusCode.NotFound ||
-            response.StatusCode == HttpStatusCode.Unauthorized,
-            $"Expected NotFound or Unauthorized, got {response.StatusCode}");
+        (response.StatusCode == HttpStatusCode.NotFound ||
+            response.StatusCode == HttpStatusCode.Unauthorized).Should().BeTrue($"Expected NotFound or Unauthorized, got {response.StatusCode}");
     }
 
     // ========================================
@@ -267,11 +255,9 @@ public sealed class GameEndpointsIntegrationTests : IAsyncLifetime
         var response = await _client.SendAsync(request);
 
         // Assert - Regular users may not have permission to create games
-        Assert.True(
-            response.StatusCode == HttpStatusCode.Created ||
+        (response.StatusCode == HttpStatusCode.Created ||
             response.StatusCode == HttpStatusCode.Forbidden ||
-            response.StatusCode == HttpStatusCode.Unauthorized,
-            $"Expected Created, Forbidden, or Unauthorized, got {response.StatusCode}");
+            response.StatusCode == HttpStatusCode.Unauthorized).Should().BeTrue($"Expected Created, Forbidden, or Unauthorized, got {response.StatusCode}");
     }
 
     // ========================================
@@ -325,10 +311,8 @@ public sealed class GameEndpointsIntegrationTests : IAsyncLifetime
         var response = await _client.PostAsJsonAsync($"/api/v1/games/{gameId}/sessions/start", new { });
 
         // Assert - Non-existent game may return NotFound or Unauthorized
-        Assert.True(
-            response.StatusCode == HttpStatusCode.NotFound ||
-            response.StatusCode == HttpStatusCode.Unauthorized,
-            $"Expected NotFound or Unauthorized, got {response.StatusCode}");
+        (response.StatusCode == HttpStatusCode.NotFound ||
+            response.StatusCode == HttpStatusCode.Unauthorized).Should().BeTrue($"Expected NotFound or Unauthorized, got {response.StatusCode}");
     }
 
     [Fact]
@@ -338,10 +322,8 @@ public sealed class GameEndpointsIntegrationTests : IAsyncLifetime
         var response = await _client.GetAsync("/api/v1/games/sessions/active");
 
         // Assert - Endpoint may not exist or require auth
-        Assert.True(
-            response.StatusCode == HttpStatusCode.NotFound ||
-            response.StatusCode == HttpStatusCode.Unauthorized,
-            $"Expected NotFound or Unauthorized, got {response.StatusCode}");
+        (response.StatusCode == HttpStatusCode.NotFound ||
+            response.StatusCode == HttpStatusCode.Unauthorized).Should().BeTrue($"Expected NotFound or Unauthorized, got {response.StatusCode}");
     }
 
     [Fact]
@@ -354,10 +336,8 @@ public sealed class GameEndpointsIntegrationTests : IAsyncLifetime
         var response = await _client.GetAsync($"/api/v1/games/sessions/{sessionId}");
 
         // Assert - Non-existent session may return NotFound or Unauthorized
-        Assert.True(
-            response.StatusCode == HttpStatusCode.NotFound ||
-            response.StatusCode == HttpStatusCode.Unauthorized,
-            $"Expected NotFound or Unauthorized, got {response.StatusCode}");
+        (response.StatusCode == HttpStatusCode.NotFound ||
+            response.StatusCode == HttpStatusCode.Unauthorized).Should().BeTrue($"Expected NotFound or Unauthorized, got {response.StatusCode}");
     }
 
     [Fact]
@@ -370,10 +350,8 @@ public sealed class GameEndpointsIntegrationTests : IAsyncLifetime
         var response = await _client.PostAsync($"/api/v1/games/sessions/{sessionId}/end", null);
 
         // Assert - Non-existent session may return NotFound or Unauthorized
-        Assert.True(
-            response.StatusCode == HttpStatusCode.NotFound ||
-            response.StatusCode == HttpStatusCode.Unauthorized,
-            $"Expected NotFound or Unauthorized, got {response.StatusCode}");
+        (response.StatusCode == HttpStatusCode.NotFound ||
+            response.StatusCode == HttpStatusCode.Unauthorized).Should().BeTrue($"Expected NotFound or Unauthorized, got {response.StatusCode}");
     }
 
     [Fact]
@@ -386,10 +364,8 @@ public sealed class GameEndpointsIntegrationTests : IAsyncLifetime
         var response = await _client.PostAsync($"/api/v1/games/sessions/{sessionId}/pause", null);
 
         // Assert - Non-existent session may return NotFound or Unauthorized
-        Assert.True(
-            response.StatusCode == HttpStatusCode.NotFound ||
-            response.StatusCode == HttpStatusCode.Unauthorized,
-            $"Expected NotFound or Unauthorized, got {response.StatusCode}");
+        (response.StatusCode == HttpStatusCode.NotFound ||
+            response.StatusCode == HttpStatusCode.Unauthorized).Should().BeTrue($"Expected NotFound or Unauthorized, got {response.StatusCode}");
     }
 
     [Fact]
@@ -402,10 +378,8 @@ public sealed class GameEndpointsIntegrationTests : IAsyncLifetime
         var response = await _client.PostAsync($"/api/v1/games/sessions/{sessionId}/resume", null);
 
         // Assert - Non-existent session may return NotFound or Unauthorized
-        Assert.True(
-            response.StatusCode == HttpStatusCode.NotFound ||
-            response.StatusCode == HttpStatusCode.Unauthorized,
-            $"Expected NotFound or Unauthorized, got {response.StatusCode}");
+        (response.StatusCode == HttpStatusCode.NotFound ||
+            response.StatusCode == HttpStatusCode.Unauthorized).Should().BeTrue($"Expected NotFound or Unauthorized, got {response.StatusCode}");
     }
 
     [Fact]
@@ -418,10 +392,8 @@ public sealed class GameEndpointsIntegrationTests : IAsyncLifetime
         var response = await _client.PostAsJsonAsync($"/api/v1/games/sessions/{sessionId}/complete", new { });
 
         // Assert - Non-existent session may return NotFound or Unauthorized
-        Assert.True(
-            response.StatusCode == HttpStatusCode.NotFound ||
-            response.StatusCode == HttpStatusCode.Unauthorized,
-            $"Expected NotFound or Unauthorized, got {response.StatusCode}");
+        (response.StatusCode == HttpStatusCode.NotFound ||
+            response.StatusCode == HttpStatusCode.Unauthorized).Should().BeTrue($"Expected NotFound or Unauthorized, got {response.StatusCode}");
     }
 
     [Fact]
@@ -434,10 +406,8 @@ public sealed class GameEndpointsIntegrationTests : IAsyncLifetime
         var response = await _client.PostAsync($"/api/v1/games/sessions/{sessionId}/abandon", null);
 
         // Assert - Non-existent session may return NotFound or Unauthorized
-        Assert.True(
-            response.StatusCode == HttpStatusCode.NotFound ||
-            response.StatusCode == HttpStatusCode.Unauthorized,
-            $"Expected NotFound or Unauthorized, got {response.StatusCode}");
+        (response.StatusCode == HttpStatusCode.NotFound ||
+            response.StatusCode == HttpStatusCode.Unauthorized).Should().BeTrue($"Expected NotFound or Unauthorized, got {response.StatusCode}");
     }
 
     // ========================================
@@ -467,10 +437,8 @@ public sealed class GameEndpointsIntegrationTests : IAsyncLifetime
         var response = await _client.GetAsync($"/api/v1/games/sessions/{sessionId}/history");
 
         // Assert - Non-existent session may return NotFound or Unauthorized
-        Assert.True(
-            response.StatusCode == HttpStatusCode.NotFound ||
-            response.StatusCode == HttpStatusCode.Unauthorized,
-            $"Expected NotFound or Unauthorized, got {response.StatusCode}");
+        (response.StatusCode == HttpStatusCode.NotFound ||
+            response.StatusCode == HttpStatusCode.Unauthorized).Should().BeTrue($"Expected NotFound or Unauthorized, got {response.StatusCode}");
     }
 
     [Fact]
@@ -483,10 +451,8 @@ public sealed class GameEndpointsIntegrationTests : IAsyncLifetime
         var response = await _client.GetAsync($"/api/v1/games/sessions/{sessionId}/stats");
 
         // Assert - Non-existent session may return NotFound or Unauthorized
-        Assert.True(
-            response.StatusCode == HttpStatusCode.NotFound ||
-            response.StatusCode == HttpStatusCode.Unauthorized,
-            $"Expected NotFound or Unauthorized, got {response.StatusCode}");
+        (response.StatusCode == HttpStatusCode.NotFound ||
+            response.StatusCode == HttpStatusCode.Unauthorized).Should().BeTrue($"Expected NotFound or Unauthorized, got {response.StatusCode}");
     }
 
     // ========================================
@@ -503,10 +469,8 @@ public sealed class GameEndpointsIntegrationTests : IAsyncLifetime
         var response = await _client.GetAsync($"/api/v1/games/sessions/{sessionId}/state");
 
         // Assert - Non-existent session may return NotFound or Unauthorized
-        Assert.True(
-            response.StatusCode == HttpStatusCode.NotFound ||
-            response.StatusCode == HttpStatusCode.Unauthorized,
-            $"Expected NotFound or Unauthorized, got {response.StatusCode}");
+        (response.StatusCode == HttpStatusCode.NotFound ||
+            response.StatusCode == HttpStatusCode.Unauthorized).Should().BeTrue($"Expected NotFound or Unauthorized, got {response.StatusCode}");
     }
 
     [Fact]
@@ -519,10 +483,8 @@ public sealed class GameEndpointsIntegrationTests : IAsyncLifetime
         var response = await _client.PostAsJsonAsync($"/api/v1/games/sessions/{sessionId}/state/initialize", new { });
 
         // Assert - Non-existent session may return NotFound or Unauthorized
-        Assert.True(
-            response.StatusCode == HttpStatusCode.NotFound ||
-            response.StatusCode == HttpStatusCode.Unauthorized,
-            $"Expected NotFound or Unauthorized, got {response.StatusCode}");
+        (response.StatusCode == HttpStatusCode.NotFound ||
+            response.StatusCode == HttpStatusCode.Unauthorized).Should().BeTrue($"Expected NotFound or Unauthorized, got {response.StatusCode}");
     }
 
     [Fact]
@@ -535,10 +497,8 @@ public sealed class GameEndpointsIntegrationTests : IAsyncLifetime
         var response = await _client.PutAsJsonAsync($"/api/v1/games/sessions/{sessionId}/state", new { });
 
         // Assert - Non-existent session may return NotFound or Unauthorized
-        Assert.True(
-            response.StatusCode == HttpStatusCode.NotFound ||
-            response.StatusCode == HttpStatusCode.Unauthorized,
-            $"Expected NotFound or Unauthorized, got {response.StatusCode}");
+        (response.StatusCode == HttpStatusCode.NotFound ||
+            response.StatusCode == HttpStatusCode.Unauthorized).Should().BeTrue($"Expected NotFound or Unauthorized, got {response.StatusCode}");
     }
 
     [Fact]
@@ -551,10 +511,8 @@ public sealed class GameEndpointsIntegrationTests : IAsyncLifetime
         var response = await _client.GetAsync($"/api/v1/games/sessions/{sessionId}/state/snapshots");
 
         // Assert - Non-existent session may return NotFound or Unauthorized
-        Assert.True(
-            response.StatusCode == HttpStatusCode.NotFound ||
-            response.StatusCode == HttpStatusCode.Unauthorized,
-            $"Expected NotFound or Unauthorized, got {response.StatusCode}");
+        (response.StatusCode == HttpStatusCode.NotFound ||
+            response.StatusCode == HttpStatusCode.Unauthorized).Should().BeTrue($"Expected NotFound or Unauthorized, got {response.StatusCode}");
     }
 
     [Fact]
@@ -567,10 +525,8 @@ public sealed class GameEndpointsIntegrationTests : IAsyncLifetime
         var response = await _client.PostAsJsonAsync($"/api/v1/games/sessions/{sessionId}/state/snapshots", new { });
 
         // Assert - Non-existent session may return NotFound or Unauthorized
-        Assert.True(
-            response.StatusCode == HttpStatusCode.NotFound ||
-            response.StatusCode == HttpStatusCode.Unauthorized,
-            $"Expected NotFound or Unauthorized, got {response.StatusCode}");
+        (response.StatusCode == HttpStatusCode.NotFound ||
+            response.StatusCode == HttpStatusCode.Unauthorized).Should().BeTrue($"Expected NotFound or Unauthorized, got {response.StatusCode}");
     }
 
     [Fact]
@@ -584,10 +540,8 @@ public sealed class GameEndpointsIntegrationTests : IAsyncLifetime
         var response = await _client.PostAsync($"/api/v1/games/sessions/{sessionId}/state/snapshots/{snapshotId}/restore", null);
 
         // Assert - Non-existent session may return NotFound or Unauthorized
-        Assert.True(
-            response.StatusCode == HttpStatusCode.NotFound ||
-            response.StatusCode == HttpStatusCode.Unauthorized,
-            $"Expected NotFound or Unauthorized, got {response.StatusCode}");
+        (response.StatusCode == HttpStatusCode.NotFound ||
+            response.StatusCode == HttpStatusCode.Unauthorized).Should().BeTrue($"Expected NotFound or Unauthorized, got {response.StatusCode}");
     }
 
     // ========================================
@@ -607,10 +561,8 @@ public sealed class GameEndpointsIntegrationTests : IAsyncLifetime
         });
 
         // Assert - Non-existent session may return NotFound or Unauthorized
-        Assert.True(
-            response.StatusCode == HttpStatusCode.NotFound ||
-            response.StatusCode == HttpStatusCode.Unauthorized,
-            $"Expected NotFound or Unauthorized, got {response.StatusCode}");
+        (response.StatusCode == HttpStatusCode.NotFound ||
+            response.StatusCode == HttpStatusCode.Unauthorized).Should().BeTrue($"Expected NotFound or Unauthorized, got {response.StatusCode}");
     }
 
     // ========================================
@@ -627,10 +579,8 @@ public sealed class GameEndpointsIntegrationTests : IAsyncLifetime
         var response = await _client.PostAsJsonAsync($"/api/v1/games/sessions/{sessionId}/suggest", new { });
 
         // Assert - Non-existent session may return NotFound or Unauthorized
-        Assert.True(
-            response.StatusCode == HttpStatusCode.NotFound ||
-            response.StatusCode == HttpStatusCode.Unauthorized,
-            $"Expected NotFound or Unauthorized, got {response.StatusCode}");
+        (response.StatusCode == HttpStatusCode.NotFound ||
+            response.StatusCode == HttpStatusCode.Unauthorized).Should().BeTrue($"Expected NotFound or Unauthorized, got {response.StatusCode}");
     }
 
     [Fact]
@@ -646,10 +596,8 @@ public sealed class GameEndpointsIntegrationTests : IAsyncLifetime
         });
 
         // Assert - Non-existent session may return NotFound or Unauthorized
-        Assert.True(
-            response.StatusCode == HttpStatusCode.NotFound ||
-            response.StatusCode == HttpStatusCode.Unauthorized,
-            $"Expected NotFound or Unauthorized, got {response.StatusCode}");
+        (response.StatusCode == HttpStatusCode.NotFound ||
+            response.StatusCode == HttpStatusCode.Unauthorized).Should().BeTrue($"Expected NotFound or Unauthorized, got {response.StatusCode}");
     }
 
     // ========================================
@@ -702,10 +650,8 @@ public sealed class GameEndpointsIntegrationTests : IAsyncLifetime
         var response = await _client.PostAsync($"/api/v1/games/{gameId}/image", content);
 
         // Assert - Non-existent game may return NotFound or Unauthorized
-        Assert.True(
-            response.StatusCode == HttpStatusCode.NotFound ||
-            response.StatusCode == HttpStatusCode.Unauthorized,
-            $"Expected NotFound or Unauthorized, got {response.StatusCode}");
+        (response.StatusCode == HttpStatusCode.NotFound ||
+            response.StatusCode == HttpStatusCode.Unauthorized).Should().BeTrue($"Expected NotFound or Unauthorized, got {response.StatusCode}");
     }
 
     // ========================================
@@ -737,9 +683,7 @@ public sealed class GameEndpointsIntegrationTests : IAsyncLifetime
         var response = await _client.PutAsJsonAsync($"/api/v1/games/{gameId}/publish", publishRequest);
 
         // Assert - Non-existent game with no auth
-        Assert.True(
-            response.StatusCode == HttpStatusCode.NotFound ||
-            response.StatusCode == HttpStatusCode.Unauthorized,
-            $"Expected NotFound or Unauthorized, got {response.StatusCode}");
+        (response.StatusCode == HttpStatusCode.NotFound ||
+            response.StatusCode == HttpStatusCode.Unauthorized).Should().BeTrue($"Expected NotFound or Unauthorized, got {response.StatusCode}");
     }
 }

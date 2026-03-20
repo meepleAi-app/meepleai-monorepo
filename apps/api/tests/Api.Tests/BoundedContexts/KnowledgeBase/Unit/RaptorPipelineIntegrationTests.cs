@@ -133,7 +133,7 @@ public class RaptorPipelineIntegrationTests : IDisposable
 
         // No RAPTOR summaries saved
         var summaries = await _db.RaptorSummaries.ToListAsync();
-        Assert.Empty(summaries);
+        summaries.Should().BeEmpty();
     }
 
     [Fact]

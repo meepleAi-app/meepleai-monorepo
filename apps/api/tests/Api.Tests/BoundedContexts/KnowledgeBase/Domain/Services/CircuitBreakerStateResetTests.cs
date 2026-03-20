@@ -24,8 +24,8 @@ public sealed class CircuitBreakerStateResetTests
         cb.State.Should().Be(CircuitState.Closed);
         cb.ConsecutiveFailures.Should().Be(0);
         cb.ConsecutiveSuccesses.Should().Be(0);
-        Assert.Null(cb.OpenedAt);
-        Assert.NotNull(cb.LastAttemptAt);
+        cb.OpenedAt.Should().BeNull();
+        cb.LastAttemptAt.Should().NotBeNull();
     }
 
     [Fact]
@@ -43,7 +43,7 @@ public sealed class CircuitBreakerStateResetTests
 
         cb.State.Should().Be(CircuitState.Closed);
         cb.ConsecutiveFailures.Should().Be(0);
-        Assert.Null(cb.OpenedAt);
+        cb.OpenedAt.Should().BeNull();
     }
 
     [Fact]
@@ -80,7 +80,7 @@ public sealed class CircuitBreakerStateResetTests
         cb.Reset();
 
         // No transition from Closed → Closed
-        Assert.False(callbackInvoked);
+        callbackInvoked.Should().BeFalse();
     }
 
     [Fact]
@@ -92,14 +92,14 @@ public sealed class CircuitBreakerStateResetTests
         for (var i = 0; i < 5; i++)
             cb.RecordFailure();
 
-        Assert.True(cb.ConsecutiveFailures > 0);
-        Assert.NotNull(cb.OpenedAt);
+        (cb.ConsecutiveFailures > 0).Should().BeTrue();
+        cb.OpenedAt.Should().NotBeNull();
 
         cb.Reset();
 
         cb.ConsecutiveFailures.Should().Be(0);
         cb.ConsecutiveSuccesses.Should().Be(0);
-        Assert.Null(cb.OpenedAt);
+        cb.OpenedAt.Should().BeNull();
     }
 
     [Fact]
@@ -110,8 +110,8 @@ public sealed class CircuitBreakerStateResetTests
 
         cb.Reset();
 
-        Assert.NotNull(cb.LastAttemptAt);
-        Assert.True(cb.LastAttemptAt >= before);
+        cb.LastAttemptAt.Should().NotBeNull();
+        (cb.LastAttemptAt >= before).Should().BeTrue();
     }
 
     [Fact]
@@ -123,10 +123,10 @@ public sealed class CircuitBreakerStateResetTests
         for (var i = 0; i < 5; i++)
             cb.RecordFailure();
 
-        Assert.False(cb.AllowsRequests());
+        cb.AllowsRequests().Should().BeFalse();
 
         cb.Reset();
 
-        Assert.True(cb.AllowsRequests());
+        cb.AllowsRequests().Should().BeTrue();
     }
 }

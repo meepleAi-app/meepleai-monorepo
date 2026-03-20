@@ -67,7 +67,7 @@ public class GetMonthlyOptimizationReportQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         result.Year.Should().Be(year);
         result.Month.Should().Be(month);
         result.EfficiencyAnalysis.TotalCost.Should().Be(150.50m);
@@ -89,8 +89,8 @@ public class GetMonthlyOptimizationReportQueryHandlerTests
         var query = new GetMonthlyOptimizationReportQuery { Year = year, Month = month };
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
-            () => _handler.Handle(query, TestContext.Current.CancellationToken));
+        Func<Task> act = () => _handler.Handle(query, TestContext.Current.CancellationToken);
+        var exception = (await act.Should().ThrowAsync<InvalidOperationException>()).Which;
 
         exception.Message.Should().Be("Report generation failed");
 
@@ -101,7 +101,7 @@ public class GetMonthlyOptimizationReportQueryHandlerTests
     public async Task Handle_NullQuery_ThrowsArgumentNullException()
     {
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentNullException>(
-            () => _handler.Handle(null!, TestContext.Current.CancellationToken));
+        Func<Task> act = () => _handler.Handle(null!, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<ArgumentNullException>();
     }
 }

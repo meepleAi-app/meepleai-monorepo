@@ -20,7 +20,7 @@ public class ChatContextDomainServiceTests
     {
         var thread = new ChatThread(Guid.NewGuid(), Guid.NewGuid());
         var result = _service.BuildChatHistoryContext(thread);
-        Assert.Empty(result);
+        result.Should().BeEmpty();
     }
 
     [Fact]
@@ -142,7 +142,7 @@ public class ChatContextDomainServiceTests
     {
         var thread = new ChatThread(Guid.NewGuid(), Guid.NewGuid());
         thread.AddUserMessage("Test");
-        Assert.True(_service.ShouldIncludeChatHistory(thread));
+        _service.ShouldIncludeChatHistory(thread).Should().BeTrue();
     }
 
     [Fact]
@@ -151,20 +151,20 @@ public class ChatContextDomainServiceTests
         var thread = new ChatThread(Guid.NewGuid(), Guid.NewGuid());
         thread.AddUserMessage("Test");
         thread.CloseThread();
-        Assert.False(_service.ShouldIncludeChatHistory(thread));
+        _service.ShouldIncludeChatHistory(thread).Should().BeFalse();
     }
 
     [Fact]
     public void ShouldIncludeChatHistory_WithEmptyThread_ReturnsFalse()
     {
         var thread = new ChatThread(Guid.NewGuid(), Guid.NewGuid());
-        Assert.False(_service.ShouldIncludeChatHistory(thread));
+        _service.ShouldIncludeChatHistory(thread).Should().BeFalse();
     }
 
     [Fact]
     public void ShouldIncludeChatHistory_WithNull_ReturnsFalse()
     {
-        Assert.False(_service.ShouldIncludeChatHistory(null!));
+        _service.ShouldIncludeChatHistory(null!).Should().BeFalse();
     }
 
     // ========================================================================
@@ -205,14 +205,14 @@ public class ChatContextDomainServiceTests
     [Fact]
     public void ValidateGameContext_WithValidGuid_ReturnsTrue()
     {
-        Assert.True(_service.ValidateGameContext(Guid.NewGuid()));
+        _service.ValidateGameContext(Guid.NewGuid()).Should().BeTrue();
     }
 
     [Fact]
     public void ValidateGameContext_WithEmpty_ReturnsFalse()
     {
-        Assert.False(_service.ValidateGameContext(Guid.Empty));
-        Assert.False(_service.ValidateGameContext(null));
+        _service.ValidateGameContext(Guid.Empty).Should().BeFalse();
+        _service.ValidateGameContext(null).Should().BeFalse();
     }
 
     // ========================================================================

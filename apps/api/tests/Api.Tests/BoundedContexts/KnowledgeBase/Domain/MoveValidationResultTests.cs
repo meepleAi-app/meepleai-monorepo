@@ -27,13 +27,13 @@ public class MoveValidationResultTests
         );
 
         // Assert
-        Assert.True(result.IsValid);
+        result.IsValid.Should().BeTrue();
         result.Reason.Should().Be("Move is legal per Knight rules");
         result.ConfidenceScore.Should().Be(0.95);
         result.ExecutionTimeMs.Should().Be(42.5);
         result.AppliedRuleIds.Should().ContainSingle();
         result.Citations.Should().ContainSingle();
-        Assert.Null(result.ErrorMessage);
+        result.ErrorMessage.Should().BeNull();
     }
 
     [Fact]
@@ -52,9 +52,9 @@ public class MoveValidationResultTests
         );
 
         // Assert
-        Assert.False(result.IsValid);
+        result.IsValid.Should().BeFalse();
         result.Reason.Should().Contain("violates");
-        Assert.Null(result.ErrorMessage);
+        result.ErrorMessage.Should().BeNull();
     }
 
     [Fact]
@@ -64,20 +64,20 @@ public class MoveValidationResultTests
         var result = MoveValidationResult.Error("Network timeout", 150.0);
 
         // Assert
-        Assert.False(result.IsValid);
+        result.IsValid.Should().BeFalse();
         result.Reason.Should().Be("Validation error occurred");
         result.ErrorMessage.Should().Be("Network timeout");
         result.ConfidenceScore.Should().Be(0);
-        Assert.Empty(result.AppliedRuleIds);
-        Assert.Empty(result.Citations);
+        result.AppliedRuleIds.Should().BeEmpty();
+        result.Citations.Should().BeEmpty();
     }
 
     [Fact]
     public void Valid_WithInvalidConfidence_ShouldThrowArgumentOutOfRangeException()
     {
         // Act & Assert
-        Assert.Throws<ArgumentOutOfRangeException>(() =>
-            MoveValidationResult.Valid("reason", new List<Guid>(), 1.5, new List<string>(), 10)
-        );
+        Action act = () =>
+            MoveValidationResult.Valid("reason", new List<Guid>(), 1.5, new List<string>(), 10);
+        act.Should().Throw<ArgumentOutOfRangeException>();
     }
 }

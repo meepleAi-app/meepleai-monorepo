@@ -14,7 +14,7 @@ public class QueryComplexityTests
     {
         var sut = QueryComplexity.Simple("test", 0.9f);
 
-        Assert.False(sut.RequiresRetrieval);
+        sut.RequiresRetrieval.Should().BeFalse();
     }
 
     [Fact]
@@ -22,7 +22,7 @@ public class QueryComplexityTests
     {
         var sut = QueryComplexity.Simple("test", 0.9f);
 
-        Assert.True(sut.CanDowngradeToFast);
+        sut.CanDowngradeToFast.Should().BeTrue();
     }
 
     [Fact]
@@ -30,7 +30,7 @@ public class QueryComplexityTests
     {
         var sut = QueryComplexity.Simple("test", 0.9f);
 
-        Assert.False(sut.RequiresMultiStep);
+        sut.RequiresMultiStep.Should().BeFalse();
     }
 
     [Fact]
@@ -38,7 +38,7 @@ public class QueryComplexityTests
     {
         var sut = QueryComplexity.Moderate("test", 0.8f);
 
-        Assert.True(sut.RequiresRetrieval);
+        sut.RequiresRetrieval.Should().BeTrue();
     }
 
     [Fact]
@@ -46,7 +46,7 @@ public class QueryComplexityTests
     {
         var sut = QueryComplexity.Moderate("test", 0.8f);
 
-        Assert.False(sut.CanDowngradeToFast);
+        sut.CanDowngradeToFast.Should().BeFalse();
     }
 
     [Fact]
@@ -54,7 +54,7 @@ public class QueryComplexityTests
     {
         var sut = QueryComplexity.Moderate("test", 0.8f);
 
-        Assert.False(sut.RequiresMultiStep);
+        sut.RequiresMultiStep.Should().BeFalse();
     }
 
     [Fact]
@@ -62,7 +62,7 @@ public class QueryComplexityTests
     {
         var sut = QueryComplexity.Complex("test", 0.7f);
 
-        Assert.True(sut.RequiresRetrieval);
+        sut.RequiresRetrieval.Should().BeTrue();
     }
 
     [Fact]
@@ -70,7 +70,7 @@ public class QueryComplexityTests
     {
         var sut = QueryComplexity.Complex("test", 0.7f);
 
-        Assert.True(sut.RequiresMultiStep);
+        sut.RequiresMultiStep.Should().BeTrue();
     }
 
     [Fact]
@@ -78,7 +78,7 @@ public class QueryComplexityTests
     {
         var sut = QueryComplexity.Complex("test", 0.7f);
 
-        Assert.False(sut.CanDowngradeToFast);
+        sut.CanDowngradeToFast.Should().BeFalse();
     }
 
     [Fact]

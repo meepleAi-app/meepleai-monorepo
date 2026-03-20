@@ -58,7 +58,7 @@ public class ProvideAgentFeedbackCommandHandlerTests
 
         // Assert
         var feedback = await context.AgentFeedbacks.FirstOrDefaultAsync(TestCancellationToken);
-        Assert.NotNull(feedback);
+        feedback.Should().NotBeNull();
         feedback.Outcome.Should().Be("helpful");
     }
 
@@ -82,7 +82,7 @@ public class ProvideAgentFeedbackCommandHandlerTests
 
         // Assert
         var feedback = await context.AgentFeedbacks.FirstOrDefaultAsync(TestCancellationToken);
-        Assert.NotNull(feedback);
+        feedback.Should().NotBeNull();
         feedback.Outcome.Should().Be("not-helpful");
     }
 
@@ -106,7 +106,7 @@ public class ProvideAgentFeedbackCommandHandlerTests
 
         // Assert
         var feedback = await context.AgentFeedbacks.FirstOrDefaultAsync(TestCancellationToken);
-        Assert.NotNull(feedback);
+        feedback.Should().NotBeNull();
         feedback.Outcome.Should().Be("incorrect");
     }
 
@@ -132,12 +132,12 @@ public class ProvideAgentFeedbackCommandHandlerTests
         };
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<ArgumentException>(
-            () => handler.Handle(command, TestCancellationToken));
+        Func<Task> act = () => handler.Handle(command, TestCancellationToken);
+        var exception = (await act.Should().ThrowAsync<ArgumentException>()).Which;
 
-        Assert.Contains("Invalid outcome", exception.Message, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains(invalidOutcome, exception.Message, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("helpful, not-helpful, incorrect", exception.Message, StringComparison.OrdinalIgnoreCase);
+        exception.Message.Should().ContainEquivalentOf("Invalid outcome");
+        exception.Message.Should().ContainEquivalentOf(invalidOutcome);
+        exception.Message.Should().ContainEquivalentOf("helpful, not-helpful, incorrect");
     }
 
     [Fact]
@@ -175,7 +175,7 @@ public class ProvideAgentFeedbackCommandHandlerTests
 
         // Assert
         var feedback = await context.AgentFeedbacks.FirstOrDefaultAsync(TestCancellationToken);
-        Assert.Null(feedback);
+        feedback.Should().BeNull();
     }
 
     [Fact]
@@ -213,7 +213,7 @@ public class ProvideAgentFeedbackCommandHandlerTests
 
         // Assert
         var feedback = await context.AgentFeedbacks.FirstOrDefaultAsync(TestCancellationToken);
-        Assert.Null(feedback);
+        feedback.Should().BeNull();
     }
     [Fact]
     public async Task Handle_WithNullMessageId_ThrowsArgumentException()
@@ -230,8 +230,8 @@ public class ProvideAgentFeedbackCommandHandlerTests
         };
 
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentException>(
-            () => handler.Handle(command, TestContext.Current.CancellationToken));
+        Func<Task> act = () => handler.Handle(command, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<ArgumentException>();
     }
 
     [Fact]
@@ -249,8 +249,8 @@ public class ProvideAgentFeedbackCommandHandlerTests
         };
 
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentException>(
-            () => handler.Handle(command, TestContext.Current.CancellationToken));
+        Func<Task> act = () => handler.Handle(command, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<ArgumentException>();
     }
 
     [Fact]
@@ -268,8 +268,8 @@ public class ProvideAgentFeedbackCommandHandlerTests
         };
 
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentException>(
-            () => handler.Handle(command, TestContext.Current.CancellationToken));
+        Func<Task> act = () => handler.Handle(command, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<ArgumentException>();
     }
 
     [Fact]
@@ -287,8 +287,8 @@ public class ProvideAgentFeedbackCommandHandlerTests
         };
 
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentException>(
-            () => handler.Handle(command, TestContext.Current.CancellationToken));
+        Func<Task> act = () => handler.Handle(command, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<ArgumentException>();
     }
     [Fact]
     public async Task Handle_WithExistingFeedback_UpdatesOutcome()
@@ -325,7 +325,7 @@ public class ProvideAgentFeedbackCommandHandlerTests
 
         // Assert
         var feedback = await context.AgentFeedbacks.FirstOrDefaultAsync(TestContext.Current.CancellationToken);
-        Assert.NotNull(feedback);
+        feedback.Should().NotBeNull();
         feedback.Outcome.Should().Be("not-helpful");
         feedback.Endpoint.Should().Be("/api/v1/search");
     }
@@ -353,7 +353,7 @@ public class ProvideAgentFeedbackCommandHandlerTests
 
         // Assert
         var feedback = await context.AgentFeedbacks.FirstOrDefaultAsync(TestCancellationToken);
-        Assert.NotNull(feedback);
+        feedback.Should().NotBeNull();
         feedback.Outcome.Should().Be("not-helpful");
         feedback.Comment.Should().Be("The response was unclear about game setup rules");
     }
@@ -379,9 +379,9 @@ public class ProvideAgentFeedbackCommandHandlerTests
 
         // Assert
         var feedback = await context.AgentFeedbacks.FirstOrDefaultAsync(TestCancellationToken);
-        Assert.NotNull(feedback);
+        feedback.Should().NotBeNull();
         feedback.Outcome.Should().Be("helpful");
-        Assert.Null(feedback.Comment);
+        feedback.Comment.Should().BeNull();
     }
 
     [Fact]
@@ -404,8 +404,8 @@ public class ProvideAgentFeedbackCommandHandlerTests
 
         // Assert
         var feedback = await context.AgentFeedbacks.FirstOrDefaultAsync(TestCancellationToken);
-        Assert.NotNull(feedback);
-        Assert.Null(feedback.Comment);
+        feedback.Should().NotBeNull();
+        feedback.Comment.Should().BeNull();
     }
 
     [Fact]
@@ -445,7 +445,7 @@ public class ProvideAgentFeedbackCommandHandlerTests
 
         // Assert
         var feedback = await context.AgentFeedbacks.FirstOrDefaultAsync(TestCancellationToken);
-        Assert.NotNull(feedback);
+        feedback.Should().NotBeNull();
         feedback.Comment.Should().Be("Adding a comment to existing feedback");
     }
 
@@ -469,7 +469,7 @@ public class ProvideAgentFeedbackCommandHandlerTests
 
         // Assert
         var feedback = await context.AgentFeedbacks.FirstOrDefaultAsync(TestCancellationToken);
-        Assert.NotNull(feedback);
+        feedback.Should().NotBeNull();
         feedback.Outcome.Should().Be("helpful");
         feedback.Comment.Should().Be("Great explanation of the rules!");
     }
@@ -494,7 +494,7 @@ public class ProvideAgentFeedbackCommandHandlerTests
 
         // Assert
         var feedback = await context.AgentFeedbacks.FirstOrDefaultAsync(TestCancellationToken);
-        Assert.NotNull(feedback);
+        feedback.Should().NotBeNull();
         feedback.Comment.Should().Be("Comment with extra spaces");
     }
 }

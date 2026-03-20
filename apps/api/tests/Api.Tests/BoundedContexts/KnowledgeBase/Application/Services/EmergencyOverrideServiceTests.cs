@@ -65,7 +65,7 @@ public sealed class EmergencyOverrideServiceTests : IDisposable
         // Verify the key contains the action name
         var call = _dbMock.Invocations
             .First(i => i.Method.Name == "StringSetAsync");
-        Assert.Contains("llm:emergency:force-ollama-only", call.Arguments[0]!.ToString()!, StringComparison.Ordinal);
+        call.Arguments[0]!.ToString()!.Should().Contain("llm:emergency:force-ollama-only");
     }
 
     [Fact]
@@ -96,7 +96,7 @@ public sealed class EmergencyOverrideServiceTests : IDisposable
             "force-ollama-only", 30, "Test", Guid.NewGuid());
 
         // L1 cache should be invalidated
-        Assert.False(_memoryCache.TryGetValue("emergency:force-ollama-only", out _));
+        _memoryCache.TryGetValue("emergency:force-ollama-only", out _).Should().BeFalse();
     }
 
     [Fact]
@@ -106,8 +106,9 @@ public sealed class EmergencyOverrideServiceTests : IDisposable
         _dbMock.SetReturnsDefault<Task<bool>>(
             Task.FromException<bool>(new RedisException("Connection refused")));
 
-        await Assert.ThrowsAsync<RedisException>(() =>
-            _sut.ActivateOverrideAsync("force-ollama-only", 30, "Test", Guid.NewGuid()));
+        Func<Task> act = () =>
+            _sut.ActivateOverrideAsync("force-ollama-only", 30, "Test", Guid.NewGuid());
+        await act.Should().ThrowAsync<RedisException>();
     }
 
     // ─── DeactivateOverrideAsync ────────────────────────────────────────────
@@ -142,7 +143,7 @@ public sealed class EmergencyOverrideServiceTests : IDisposable
 
         await _sut.DeactivateOverrideAsync("reset-circuit-breaker", Guid.NewGuid());
 
-        Assert.False(_memoryCache.TryGetValue("emergency:reset-circuit-breaker", out _));
+        _memoryCache.TryGetValue("emergency:reset-circuit-breaker", out _).Should().BeFalse();
     }
 
     // ─── IsOverrideActiveAsync ──────────────────────────────────────────────
@@ -158,7 +159,7 @@ public sealed class EmergencyOverrideServiceTests : IDisposable
 
         var result = await _sut.IsOverrideActiveAsync("force-ollama-only");
 
-        Assert.True(result);
+        result.Should().BeTrue();
     }
 
     [Fact]
@@ -170,7 +171,7 @@ public sealed class EmergencyOverrideServiceTests : IDisposable
 
         var result = await _sut.IsOverrideActiveAsync("force-ollama-only");
 
-        Assert.False(result);
+        result.Should().BeFalse();
     }
 
     [Fact]
@@ -181,7 +182,7 @@ public sealed class EmergencyOverrideServiceTests : IDisposable
 
         var result = await _sut.IsOverrideActiveAsync("force-ollama-only");
 
-        Assert.True(result);
+        result.Should().BeTrue();
         // Redis should NOT be called because L1 cache hit
         _dbMock.Verify(
             d => d.KeyExistsAsync(It.IsAny<RedisKey>(), It.IsAny<CommandFlags>()),
@@ -197,11 +198,11 @@ public sealed class EmergencyOverrideServiceTests : IDisposable
 
         // First call: cache miss → Redis
         var result1 = await _sut.IsOverrideActiveAsync("force-ollama-only");
-        Assert.True(result1);
+        result1.Should().BeTrue();
 
         // Second call: should use cache
         var result2 = await _sut.IsOverrideActiveAsync("force-ollama-only");
-        Assert.True(result2);
+        result2.Should().BeTrue();
 
         // Redis should be called only once
         _dbMock.Verify(
@@ -219,7 +220,7 @@ public sealed class EmergencyOverrideServiceTests : IDisposable
         var result = await _sut.IsOverrideActiveAsync("force-ollama-only");
 
         // Fail-open: Redis down → overrides inactive (safe default)
-        Assert.False(result);
+        result.Should().BeFalse();
     }
 
     // ─── IsForceOllamaOnlyAsync ─────────────────────────────────────────────
@@ -235,7 +236,7 @@ public sealed class EmergencyOverrideServiceTests : IDisposable
 
         var result = await _sut.IsForceOllamaOnlyAsync();
 
-        Assert.True(result);
+        result.Should().BeTrue();
     }
 
     // ─── GetActiveOverridesAsync ────────────────────────────────────────────
@@ -249,7 +250,7 @@ public sealed class EmergencyOverrideServiceTests : IDisposable
 
         var result = await _sut.GetActiveOverridesAsync();
 
-        Assert.Empty(result);
+        result.Should().BeEmpty();
     }
 
     [Fact]
@@ -261,6 +262,6 @@ public sealed class EmergencyOverrideServiceTests : IDisposable
 
         var result = await _sut.GetActiveOverridesAsync();
 
-        Assert.Empty(result);
+        result.Should().BeEmpty();
     }
 }

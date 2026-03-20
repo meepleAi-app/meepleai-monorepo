@@ -47,7 +47,7 @@ public class UpdateChatThreadTitleCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         result.Id.Should().Be(threadId);
         result.Title.Should().Be(newTitle);
 
@@ -67,8 +67,8 @@ public class UpdateChatThreadTitleCommandHandlerTests
         var command = new UpdateChatThreadTitleCommand(threadId, "New Title");
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
-            () => _handler.Handle(command, TestContext.Current.CancellationToken));
+        Func<Task> act = () => _handler.Handle(command, TestContext.Current.CancellationToken);
+        var exception = (await act.Should().ThrowAsync<InvalidOperationException>()).Which;
         exception.Message.Should().Contain("not found");
     }
 
@@ -76,7 +76,7 @@ public class UpdateChatThreadTitleCommandHandlerTests
     public async Task Handle_WithNullCommand_ThrowsArgumentNullException()
     {
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentNullException>(
-            () => _handler.Handle(null!, TestContext.Current.CancellationToken));
+        Func<Task> act = () => _handler.Handle(null!, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<ArgumentNullException>();
     }
 }

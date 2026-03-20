@@ -72,11 +72,11 @@ public class CreateAgentCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         result.Name.Should().Be("Test Agent");
         result.Type.Should().Be("RAG");
         result.StrategyName.Should().Be("CustomStrategy");
-        Assert.True(result.IsActive);
+        result.IsActive.Should().BeTrue();
         result.Id.Should().NotBe(Guid.Empty);
 
         _mockAgentRepo.Verify(r => r.ExistsAsync(command.Name, It.IsAny<CancellationToken>()), Times.Once);
@@ -99,10 +99,11 @@ public class CreateAgentCommandHandlerTests
             .ReturnsAsync(true);
 
         // Act & Assert
-        var ex = await Assert.ThrowsAsync<InvalidOperationException>(async () =>
-            await _handler.Handle(command, TestContext.Current.CancellationToken));
+        Func<Task> act = async () =>
+            await _handler.Handle(command, TestContext.Current.CancellationToken);
+        var ex = (await act.Should().ThrowAsync<InvalidOperationException>()).Which;
 
-        Assert.Contains("already exists", ex.Message, StringComparison.OrdinalIgnoreCase);
+        ex.Message.Should().ContainEquivalentOf("already exists");
         _mockAgentRepo.Verify(r => r.AddAsync(It.IsAny<Agent>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
@@ -122,10 +123,11 @@ public class CreateAgentCommandHandlerTests
             .ReturnsAsync(false);
 
         // Act & Assert
-        var ex = await Assert.ThrowsAsync<ArgumentException>(async () =>
-            await _handler.Handle(command, TestContext.Current.CancellationToken));
+        Func<Task> act = async () =>
+            await _handler.Handle(command, TestContext.Current.CancellationToken);
+        var ex = (await act.Should().ThrowAsync<ArgumentException>()).Which;
 
-        Assert.Contains("Unknown AgentType", ex.Message, StringComparison.OrdinalIgnoreCase);
+        ex.Message.Should().ContainEquivalentOf("Unknown AgentType");
     }
 
     [Theory]
@@ -156,7 +158,7 @@ public class CreateAgentCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         result.Type.ToUpperInvariant().Should().Be(agentType.ToUpperInvariant());
     }
 
@@ -184,8 +186,8 @@ public class CreateAgentCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.False(result.IsActive);
+        result.Should().NotBeNull();
+        result.IsActive.Should().BeFalse();
     }
 
     [Fact]
@@ -220,9 +222,9 @@ public class CreateAgentCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         result.StrategyName.Should().Be("CustomRAG");
-        Assert.NotNull(capturedAgent);
+        capturedAgent.Should().NotBeNull();
         capturedAgent.Strategy.Parameters.Count.Should().Be(3);
     }
 
@@ -230,8 +232,9 @@ public class CreateAgentCommandHandlerTests
     public async Task Handle_WithNullRequest_ThrowsArgumentNullException()
     {
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentNullException>(async () =>
-            await _handler.Handle(null!, TestContext.Current.CancellationToken));
+        Func<Task> act = async () =>
+            await _handler.Handle(null!, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<ArgumentNullException>();
     }
 
     [Fact]
@@ -259,9 +262,9 @@ public class CreateAgentCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.True(result.CreatedAt >= beforeCreation);
-        Assert.True(result.CreatedAt <= DateTime.UtcNow.AddSeconds(1));
+        result.Should().NotBeNull();
+        (result.CreatedAt >= beforeCreation).Should().BeTrue();
+        (result.CreatedAt <= DateTime.UtcNow.AddSeconds(1)).Should().BeTrue();
     }
 
     [Fact]
@@ -287,9 +290,9 @@ public class CreateAgentCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         result.InvocationCount.Should().Be(0);
-        Assert.Null(result.LastInvokedAt);
+        result.LastInvokedAt.Should().BeNull();
     }
 
     [Fact]
@@ -315,9 +318,9 @@ public class CreateAgentCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         result.StrategyName.Should().Be("BasicStrategy");
-        Assert.Empty(result.StrategyParameters);
+        result.StrategyParameters.Should().BeEmpty();
     }
 
     [Fact]
@@ -357,8 +360,9 @@ public class CreateAgentCommandHandlerTests
     public async Task Constructor_WithNullAgentRepository_ThrowsArgumentNullException()
     {
         // Act & Assert
-        var ex = Assert.Throws<ArgumentNullException>(() =>
-            new CreateAgentCommandHandler(null!, _db, _mockLogger.Object));
+        Action act = () =>
+            new CreateAgentCommandHandler(null!, _db, _mockLogger.Object);
+        var ex = act.Should().Throw<ArgumentNullException>().Which;
 
         ex.ParamName.Should().Be("agentRepository");
     }
@@ -367,8 +371,9 @@ public class CreateAgentCommandHandlerTests
     public async Task Constructor_WithNullDb_ThrowsArgumentNullException()
     {
         // Act & Assert
-        var ex = Assert.Throws<ArgumentNullException>(() =>
-            new CreateAgentCommandHandler(_mockAgentRepo.Object, null!, _mockLogger.Object));
+        Action act = () =>
+            new CreateAgentCommandHandler(_mockAgentRepo.Object, null!, _mockLogger.Object);
+        var ex = act.Should().Throw<ArgumentNullException>().Which;
 
         ex.ParamName.Should().Be("db");
     }
@@ -377,8 +382,9 @@ public class CreateAgentCommandHandlerTests
     public async Task Constructor_WithNullLogger_ThrowsArgumentNullException()
     {
         // Act & Assert
-        var ex = Assert.Throws<ArgumentNullException>(() =>
-            new CreateAgentCommandHandler(_mockAgentRepo.Object, _db, null!));
+        Action act = () =>
+            new CreateAgentCommandHandler(_mockAgentRepo.Object, _db, null!);
+        var ex = act.Should().Throw<ArgumentNullException>().Which;
 
         ex.ParamName.Should().Be("logger");
     }
@@ -409,7 +415,7 @@ public class CreateAgentCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         result.Type.Should().Be("RAG");
     }
 
@@ -437,7 +443,7 @@ public class CreateAgentCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.True(result.IsActive);
+        result.Should().NotBeNull();
+        result.IsActive.Should().BeTrue();
     }
 }

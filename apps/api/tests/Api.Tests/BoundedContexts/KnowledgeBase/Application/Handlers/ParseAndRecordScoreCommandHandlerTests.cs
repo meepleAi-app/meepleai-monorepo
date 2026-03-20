@@ -94,7 +94,7 @@ public class ParseAndRecordScoreCommandHandlerTests
         result.PlayerId.Should().Be(_playerId);
         result.Value.Should().Be(5);
         result.Dimension.Should().Be("points");
-        Assert.False(result.RequiresConfirmation);
+        result.RequiresConfirmation.Should().BeFalse();
 
         _mockMediator.Verify(m => m.Send(
             It.Is<RecordLiveSessionScoreCommand>(c =>
@@ -137,7 +137,7 @@ public class ParseAndRecordScoreCommandHandlerTests
 
         // Assert
         result.Status.Should().Be("parsed");
-        Assert.True(result.RequiresConfirmation);
+        result.RequiresConfirmation.Should().BeTrue();
         result.PlayerId.Should().Be(_playerId);
 
         _mockMediator.Verify(m => m.Send(
@@ -207,7 +207,7 @@ public class ParseAndRecordScoreCommandHandlerTests
 
         // Assert
         result.Status.Should().Be("ambiguous");
-        Assert.True(result.RequiresConfirmation);
+        result.RequiresConfirmation.Should().BeTrue();
         result.AmbiguousCandidates.Count.Should().Be(2);
         result.AmbiguousCandidates.Should().Contain("Marco Rossi");
         result.AmbiguousCandidates.Should().Contain("Marco Bianchi");
@@ -245,7 +245,7 @@ public class ParseAndRecordScoreCommandHandlerTests
 
         // Assert
         result.Status.Should().Be("parsed");
-        Assert.True(result.RequiresConfirmation);
+        result.RequiresConfirmation.Should().BeTrue();
         result.Message.Should().Contain("Giovanni");
         result.Message.Should().Contain("not found");
     }

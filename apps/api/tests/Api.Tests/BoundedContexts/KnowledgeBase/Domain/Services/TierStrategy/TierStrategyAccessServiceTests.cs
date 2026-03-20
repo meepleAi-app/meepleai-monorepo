@@ -98,7 +98,7 @@ public class TierStrategyAccessServiceTests
         var strategies = await _service.GetAvailableStrategiesAsync(LlmUserTier.Anonymous, CancellationToken.None);
 
         // Assert
-        Assert.Empty(strategies);
+        strategies.Should().BeEmpty();
     }
 
     [Fact]
@@ -188,7 +188,7 @@ public class TierStrategyAccessServiceTests
         var result = await _service.HasAccessToStrategyAsync(LlmUserTier.User, RagStrategy.Precise, CancellationToken.None);
 
         // Assert
-        Assert.True(result);
+        result.Should().BeTrue();
     }
 
     [Fact]
@@ -206,7 +206,7 @@ public class TierStrategyAccessServiceTests
         var result = await _service.HasAccessToStrategyAsync(LlmUserTier.User, RagStrategy.Fast, CancellationToken.None);
 
         // Assert
-        Assert.False(result);
+        result.Should().BeFalse();
     }
 
     [Fact]
@@ -257,7 +257,7 @@ public class TierStrategyAccessServiceTests
         var strategies = await _service.GetAvailableStrategiesAsync(LlmUserTier.User, CancellationToken.None);
 
         // Assert
-        Assert.Empty(strategies);
+        strategies.Should().BeEmpty();
     }
 
     #endregion
@@ -274,11 +274,11 @@ public class TierStrategyAccessServiceTests
         var result = await _service.ValidateAccessAsync(LlmUserTier.User, RagStrategy.Fast, CancellationToken.None);
 
         // Assert
-        Assert.True(result.IsValid);
+        result.IsValid.Should().BeTrue();
         result.Tier.Should().Be(LlmUserTier.User);
         result.Strategy.Should().Be(RagStrategy.Fast);
         result.Message.Should().Be("Access granted");
-        Assert.Null(result.AvailableStrategies);
+        result.AvailableStrategies.Should().BeNull();
     }
 
     [Fact]
@@ -291,11 +291,11 @@ public class TierStrategyAccessServiceTests
         var result = await _service.ValidateAccessAsync(LlmUserTier.User, RagStrategy.Expert, CancellationToken.None);
 
         // Assert
-        Assert.False(result.IsValid);
+        result.IsValid.Should().BeFalse();
         result.Tier.Should().Be(LlmUserTier.User);
         result.Strategy.Should().Be(RagStrategy.Expert);
         result.Message.Should().Contain("Access denied");
-        Assert.NotNull(result.AvailableStrategies);
+        result.AvailableStrategies.Should().NotBeNull();
         result.AvailableStrategies.Should().Contain(RagStrategy.Fast);
         result.AvailableStrategies.Should().Contain(RagStrategy.Balanced);
     }
@@ -310,10 +310,10 @@ public class TierStrategyAccessServiceTests
         var result = await _service.ValidateAccessAsync(LlmUserTier.Anonymous, RagStrategy.Fast, CancellationToken.None);
 
         // Assert
-        Assert.False(result.IsValid);
+        result.IsValid.Should().BeFalse();
         result.Message.Should().Contain("no available strategies");
-        Assert.NotNull(result.AvailableStrategies);
-        Assert.Empty(result.AvailableStrategies);
+        result.AvailableStrategies.Should().NotBeNull();
+        result.AvailableStrategies.Should().BeEmpty();
     }
 
     #endregion
@@ -335,7 +335,7 @@ public class TierStrategyAccessServiceTests
         var result = await _service.GetDefaultStrategyAsync(tier, CancellationToken.None);
 
         // Assert
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         result.Value.Should().Be(expectedDefault);
     }
 
@@ -349,7 +349,7 @@ public class TierStrategyAccessServiceTests
         var result = await _service.GetDefaultStrategyAsync(LlmUserTier.Anonymous, CancellationToken.None);
 
         // Assert
-        Assert.Null(result);
+        result.Should().BeNull();
     }
 
     [Fact]
@@ -364,8 +364,8 @@ public class TierStrategyAccessServiceTests
         var result = await _service.GetDefaultStrategyAsync(LlmUserTier.User, CancellationToken.None);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal(RagStrategy.Precise, result.Value); // Lower complexity than Expert
+        result.Should().NotBeNull();
+        result.Value.Should().Be(RagStrategy.Precise); // Lower complexity than Expert
     }
 
     #endregion

@@ -49,7 +49,7 @@ public class GetAllAgentsQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         result.Count.Should().Be(2);
     }
 
@@ -72,9 +72,9 @@ public class GetAllAgentsQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         result.Should().ContainSingle();
-        Assert.True(result[0].IsActive);
+        result[0].IsActive.Should().BeTrue();
     }
 
     [Fact]
@@ -96,7 +96,7 @@ public class GetAllAgentsQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         result.Should().ContainSingle();
         result[0].Type.Should().Be("RAG");
     }

@@ -39,7 +39,7 @@ public class ConfidenceValidationServiceTests
         var result = _service.ValidateConfidence(confidence);
 
         // Assert
-        Assert.True(result.IsValid);
+        result.IsValid.Should().BeTrue();
         result.ActualConfidence.Should().Be(0.85);
         result.RequiredThreshold.Should().Be(0.70);
         result.Severity.Should().Be(ValidationSeverity.Pass);
@@ -56,7 +56,7 @@ public class ConfidenceValidationServiceTests
         var result = _service.ValidateConfidence(confidence);
 
         // Assert
-        Assert.True(result.IsValid);
+        result.IsValid.Should().BeTrue();
         result.ActualConfidence.Should().Be(0.70);
         result.Severity.Should().Be(ValidationSeverity.Pass);
     }
@@ -71,7 +71,7 @@ public class ConfidenceValidationServiceTests
         var result = _service.ValidateConfidence(confidence);
 
         // Assert
-        Assert.False(result.IsValid);
+        result.IsValid.Should().BeFalse();
         result.ActualConfidence.Should().Be(0.65);
         result.RequiredThreshold.Should().Be(0.70);
         result.Severity.Should().Be(ValidationSeverity.Warning);
@@ -89,11 +89,11 @@ public class ConfidenceValidationServiceTests
         var result = _service.ValidateConfidence(confidence);
 
         // Assert
-        Assert.False(result.IsValid);
+        result.IsValid.Should().BeFalse();
         result.ActualConfidence.Should().Be(0.45);
         result.RequiredThreshold.Should().Be(0.70);
         result.Severity.Should().Be(ValidationSeverity.Critical);
-        Assert.Contains("critically low", result.ValidationMessage, StringComparison.OrdinalIgnoreCase);
+        result.ValidationMessage.Should().ContainEquivalentOf("critically low");
     }
 
     [Fact]
@@ -103,11 +103,11 @@ public class ConfidenceValidationServiceTests
         var result = _service.ValidateConfidence(null);
 
         // Assert
-        Assert.False(result.IsValid);
-        Assert.Null(result.ActualConfidence);
+        result.IsValid.Should().BeFalse();
+        result.ActualConfidence.Should().BeNull();
         result.RequiredThreshold.Should().Be(0.70);
         result.Severity.Should().Be(ValidationSeverity.Unknown);
-        Assert.Contains("No confidence score", result.ValidationMessage, StringComparison.OrdinalIgnoreCase);
+        result.ValidationMessage.Should().ContainEquivalentOf("No confidence score");
     }
 
     [Fact]
@@ -120,7 +120,7 @@ public class ConfidenceValidationServiceTests
         var result = _service.ValidateConfidence(confidence);
 
         // Assert
-        Assert.False(result.IsValid);
+        result.IsValid.Should().BeFalse();
         result.ActualConfidence.Should().Be(0.0);
         result.Severity.Should().Be(ValidationSeverity.Critical);
     }
@@ -135,7 +135,7 @@ public class ConfidenceValidationServiceTests
         var result = _service.ValidateConfidence(confidence);
 
         // Assert
-        Assert.True(result.IsValid);
+        result.IsValid.Should().BeTrue();
         result.ActualConfidence.Should().Be(1.0);
         result.Severity.Should().Be(ValidationSeverity.Pass);
     }
@@ -150,8 +150,8 @@ public class ConfidenceValidationServiceTests
         var result = _service.ValidateConfidence(confidence);
 
         // Assert
-        Assert.False(result.IsValid); // Below 0.70
-        Assert.Equal(ValidationSeverity.Warning, result.Severity); // Above 0.60
+        result.IsValid.Should().BeFalse(); // Below 0.70
+        result.Severity.Should().Be(ValidationSeverity.Warning); // Above 0.60
     }
 
     [Fact]
@@ -164,8 +164,8 @@ public class ConfidenceValidationServiceTests
         var result = _service.ValidateConfidence(confidence);
 
         // Assert
-        Assert.False(result.IsValid); // Below 0.70
-        Assert.Equal(ValidationSeverity.Warning, result.Severity); // At 0.60 boundary
+        result.IsValid.Should().BeFalse(); // Below 0.70
+        result.Severity.Should().Be(ValidationSeverity.Warning); // At 0.60 boundary
     }
 
     [Fact]
@@ -178,8 +178,8 @@ public class ConfidenceValidationServiceTests
         var result = _service.ValidateConfidence(confidence);
 
         // Assert
-        Assert.False(result.IsValid);
-        Assert.Equal(ValidationSeverity.Critical, result.Severity); // Below 0.60
+        result.IsValid.Should().BeFalse();
+        result.Severity.Should().Be(ValidationSeverity.Critical); // Below 0.60
     }
 
     // ========== Additional Edge Case Tests (BGAI-031) ==========
@@ -194,10 +194,10 @@ public class ConfidenceValidationServiceTests
         var result = _service.ValidateConfidence(confidence);
 
         // Assert
-        Assert.False(result.IsValid);
+        result.IsValid.Should().BeFalse();
         result.ActualConfidence.Should().Be(-0.5);
         result.Severity.Should().Be(ValidationSeverity.Critical);
-        Assert.Contains("critically low", result.ValidationMessage, StringComparison.OrdinalIgnoreCase);
+        result.ValidationMessage.Should().ContainEquivalentOf("critically low");
     }
 
     [Fact]
@@ -210,7 +210,7 @@ public class ConfidenceValidationServiceTests
         var result = _service.ValidateConfidence(confidence);
 
         // Assert
-        Assert.True(result.IsValid); // >= 0.70 threshold
+        result.IsValid.Should().BeTrue(); // >= 0.70 threshold
         result.ActualConfidence.Should().Be(1.5);
         result.Severity.Should().Be(ValidationSeverity.Pass);
     }
@@ -225,7 +225,7 @@ public class ConfidenceValidationServiceTests
         var result = _service.ValidateConfidence(confidence);
 
         // Assert
-        Assert.True(result.IsValid);
+        result.IsValid.Should().BeTrue();
         result.Severity.Should().Be(ValidationSeverity.Pass);
     }
 
@@ -239,7 +239,7 @@ public class ConfidenceValidationServiceTests
         var result = _service.ValidateConfidence(confidence);
 
         // Assert
-        Assert.False(result.IsValid);
+        result.IsValid.Should().BeFalse();
         result.Severity.Should().Be(ValidationSeverity.Warning);
     }
 
@@ -255,9 +255,9 @@ public class ConfidenceValidationServiceTests
         var result3 = _service.ValidateConfidence(confidence);
 
         // Assert - All results should be identical
-        Assert.True(result1.IsValid);
-        Assert.True(result2.IsValid);
-        Assert.True(result3.IsValid);
+        result1.IsValid.Should().BeTrue();
+        result2.IsValid.Should().BeTrue();
+        result3.IsValid.Should().BeTrue();
         result2.Severity.Should().Be(result1.Severity);
         result3.Severity.Should().Be(result2.Severity);
     }
@@ -269,8 +269,8 @@ public class ConfidenceValidationServiceTests
         var result = _service.ValidateConfidence(0.80);
 
         // Assert - Verify all required properties are set
-        Assert.NotNull(result);
-        Assert.NotNull(result.ValidationMessage);
+        result.Should().NotBeNull();
+        result.ValidationMessage.Should().NotBeNull();
         result.IsValid.Should().NotBe(default(bool));
         result.RequiredThreshold.Should().NotBe(default(double));
         // Severity is set to Pass (enum value 0), which is valid and intentional
@@ -290,7 +290,7 @@ public class ConfidenceValidationServiceTests
         var result = _service.ValidateConfidence(confidence);
 
         // Assert
-        Assert.True(result.IsValid);
+        result.IsValid.Should().BeTrue();
         result.Severity.Should().Be(expectedSeverity);
     }
 
@@ -305,7 +305,7 @@ public class ConfidenceValidationServiceTests
         var result = _service.ValidateConfidence(confidence);
 
         // Assert
-        Assert.False(result.IsValid);
+        result.IsValid.Should().BeFalse();
         result.Severity.Should().Be(expectedSeverity);
     }
 
@@ -321,7 +321,7 @@ public class ConfidenceValidationServiceTests
         var result = _service.ValidateConfidence(confidence);
 
         // Assert
-        Assert.False(result.IsValid);
+        result.IsValid.Should().BeFalse();
         result.Severity.Should().Be(expectedSeverity);
     }
 
@@ -337,10 +337,10 @@ public class ConfidenceValidationServiceTests
         var result = _service.ValidateConfidence(confidence);
 
         // Assert
-        Assert.False(result.IsValid);
+        result.IsValid.Should().BeFalse();
         result.Severity.Should().Be(ValidationSeverity.Critical);
-        Assert.Contains("Invalid confidence value (NaN)", result.ValidationMessage, StringComparison.OrdinalIgnoreCase);
-        Assert.True(double.IsNaN(result.ActualConfidence!.Value));
+        result.ValidationMessage.Should().ContainEquivalentOf("Invalid confidence value (NaN)");
+        double.IsNaN(result.ActualConfidence!.Value).Should().BeTrue();
     }
 
     [Fact]
@@ -353,10 +353,10 @@ public class ConfidenceValidationServiceTests
         var result = _service.ValidateConfidence(confidence);
 
         // Assert
-        Assert.False(result.IsValid);
+        result.IsValid.Should().BeFalse();
         result.Severity.Should().Be(ValidationSeverity.Critical);
-        Assert.Contains("Invalid confidence value (Positive Infinity)", result.ValidationMessage, StringComparison.OrdinalIgnoreCase);
-        Assert.True(double.IsPositiveInfinity(result.ActualConfidence!.Value));
+        result.ValidationMessage.Should().ContainEquivalentOf("Invalid confidence value (Positive Infinity)");
+        double.IsPositiveInfinity(result.ActualConfidence!.Value).Should().BeTrue();
     }
 
     [Fact]
@@ -369,10 +369,10 @@ public class ConfidenceValidationServiceTests
         var result = _service.ValidateConfidence(confidence);
 
         // Assert
-        Assert.False(result.IsValid);
+        result.IsValid.Should().BeFalse();
         result.Severity.Should().Be(ValidationSeverity.Critical);
-        Assert.Contains("Invalid confidence value (Negative Infinity)", result.ValidationMessage, StringComparison.OrdinalIgnoreCase);
-        Assert.True(double.IsNegativeInfinity(result.ActualConfidence!.Value));
+        result.ValidationMessage.Should().ContainEquivalentOf("Invalid confidence value (Negative Infinity)");
+        double.IsNegativeInfinity(result.ActualConfidence!.Value).Should().BeTrue();
     }
 
     [Theory]
@@ -387,7 +387,7 @@ public class ConfidenceValidationServiceTests
         var result = _service.ValidateConfidence(confidence);
 
         // Assert
-        Assert.True(result.IsValid);
+        result.IsValid.Should().BeTrue();
         result.Severity.Should().Be(ValidationSeverity.Pass);
     }
 
@@ -403,7 +403,7 @@ public class ConfidenceValidationServiceTests
         var result = _service.ValidateConfidence(confidence);
 
         // Assert
-        Assert.False(result.IsValid);
+        result.IsValid.Should().BeFalse();
         result.Severity.Should().Be(ValidationSeverity.Warning);
     }
 }

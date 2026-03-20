@@ -48,7 +48,7 @@ public class AddMessageCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         result.Id.Should().Be(threadId);
         result.MessageCount.Should().Be(1);
         result.Messages.Should().ContainSingle();
@@ -79,7 +79,7 @@ public class AddMessageCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         result.Id.Should().Be(threadId);
         result.MessageCount.Should().Be(2);
         result.Messages.Count.Should().Be(2);
@@ -102,8 +102,8 @@ public class AddMessageCommandHandlerTests
         var command = new AddMessageCommand(threadId, "test content", ChatMessage.UserRole);
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
-            () => _handler.Handle(command, TestContext.Current.CancellationToken));
+        Func<Task> act = () => _handler.Handle(command, TestContext.Current.CancellationToken);
+        var exception = (await act.Should().ThrowAsync<InvalidOperationException>()).Which;
         exception.Message.Should().Contain("not found");
     }
 
@@ -122,8 +122,8 @@ public class AddMessageCommandHandlerTests
         var command = new AddMessageCommand(threadId, "test content", "unknown_role");
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
-            () => _handler.Handle(command, TestContext.Current.CancellationToken));
+        Func<Task> act = () => _handler.Handle(command, TestContext.Current.CancellationToken);
+        var exception = (await act.Should().ThrowAsync<InvalidOperationException>()).Which;
         exception.Message.Should().Contain("Unknown role");
     }
 
@@ -131,7 +131,7 @@ public class AddMessageCommandHandlerTests
     public async Task Handle_WithNullCommand_ThrowsArgumentNullException()
     {
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentNullException>(
-            () => _handler.Handle(null!, TestContext.Current.CancellationToken));
+        Func<Task> act = () => _handler.Handle(null!, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<ArgumentNullException>();
     }
 }

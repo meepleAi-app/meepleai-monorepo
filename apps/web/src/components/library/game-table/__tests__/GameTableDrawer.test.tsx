@@ -1,6 +1,9 @@
 /**
  * @vitest-environment jsdom
  */
+import { type ReactNode } from 'react';
+
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 
@@ -13,17 +16,31 @@ vi.mock('@/components/library/game-table/GameStatsPanel', () => ({
   ),
 }));
 
+vi.mock('@/hooks/queries/useAgentData', () => ({
+  useAgentKbDocs: () => ({ data: [], isLoading: false }),
+  useAgentThreads: () => ({ data: [], isLoading: false }),
+}));
+
+function createWrapper() {
+  const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  return function Wrapper({ children }: { children: ReactNode }) {
+    return <QueryClientProvider client={qc}>{children}</QueryClientProvider>;
+  };
+}
+
 describe('GameTableDrawer', () => {
   it('renders header with title and close button', () => {
     const content: DrawerContent = { type: 'stats', gameId: 'g1' };
-    render(<GameTableDrawer content={content} onClose={vi.fn()} />);
+    render(<GameTableDrawer content={content} onClose={vi.fn()} />, { wrapper: createWrapper() });
     expect(screen.getByText('Statistiche')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /chiudi/i })).toBeInTheDocument();
   });
 
   it('calls onClose when close button clicked', () => {
     const onClose = vi.fn();
-    render(<GameTableDrawer content={{ type: 'kb', gameId: 'g1' }} onClose={onClose} />);
+    render(<GameTableDrawer content={{ type: 'kb', gameId: 'g1' }} onClose={onClose} />, {
+      wrapper: createWrapper(),
+    });
     fireEvent.click(screen.getByRole('button', { name: /chiudi/i }));
     expect(onClose).toHaveBeenCalledOnce();
   });
@@ -38,14 +55,18 @@ describe('GameTableDrawer', () => {
       [{ type: 'session', sessionId: 's1' }, 'Sessione'],
     ];
     for (const [content, title] of cases) {
-      const { unmount } = render(<GameTableDrawer content={content} onClose={vi.fn()} />);
+      const { unmount } = render(<GameTableDrawer content={content} onClose={vi.fn()} />, {
+        wrapper: createWrapper(),
+      });
       expect(screen.getByText(title)).toBeInTheDocument();
       unmount();
     }
   });
 
   it('renders icon for content type', () => {
-    render(<GameTableDrawer content={{ type: 'chat', agentId: 'a1' }} onClose={vi.fn()} />);
+    render(<GameTableDrawer content={{ type: 'chat', agentId: 'a1' }} onClose={vi.fn()} />, {
+      wrapper: createWrapper(),
+    });
     expect(screen.getByText('💬')).toBeInTheDocument();
   });
 });

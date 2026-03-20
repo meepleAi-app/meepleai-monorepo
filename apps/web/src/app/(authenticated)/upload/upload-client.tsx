@@ -33,10 +33,12 @@ import { LoadingButton, Spinner } from '@/components/loading';
 import { PdfTable } from '@/components/pdf/PdfTable';
 import { PdfUploadForm } from '@/components/pdf/PdfUploadForm';
 import { ProcessingProgress } from '@/components/progress';
+import { UploadProgressTracker } from '@/components/ui/admin/upload-progress-tracker';
 import { Card } from '@/components/ui/data-display/card';
 import { Button } from '@/components/ui/primitives/button';
 import { MultiFileUpload } from '@/components/upload';
 import { WizardSteps } from '@/components/wizard/WizardSteps';
+import { useAdminRole } from '@/hooks/useAdminRole';
 import { useAuthUser } from '@/hooks/useAuthUser';
 import { useGames } from '@/hooks/wizard/useGames';
 import { usePdfs, type PdfDocument } from '@/hooks/wizard/usePdfs';
@@ -59,6 +61,7 @@ export function UploadClient({
   onUploadError,
 }: UploadClientProps = {}) {
   const { user, loading: authLoading } = useAuthUser();
+  const { isAdminOrAbove } = useAdminRole();
 
   // Wizard state management
   const { state: wizardState, dispatch: wizardDispatch } = useWizard();
@@ -569,7 +572,27 @@ export function UploadClient({
               <strong>{ruleSpec?.gameId ?? confirmedGameId ?? 'unknown game'}</strong> has been
               published successfully!
             </p>
-            <div className="flex gap-3 justify-center">
+
+            {/* Real-time progress tracker */}
+            {enableProcessingProgress && wizardState.documentId && (
+              <UploadProgressTracker
+                documentId={wizardState.documentId}
+                fileName={confirmedGame?.title}
+                className="mt-4 text-left"
+              />
+            )}
+
+            {/* Admin-only: link to queue dashboard */}
+            {isAdminOrAbove && confirmedGameId && (
+              <Link
+                href={`/admin/knowledge-base/queue?flow=embedding&gameId=${confirmedGameId}&gameName=${encodeURIComponent(confirmedGame?.title ?? '')}`}
+                className="mt-4 inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+              >
+                Vai alla Queue →
+              </Link>
+            )}
+
+            <div className="flex gap-3 justify-center mt-6">
               <Button onClick={resetWizard}>Import Another PDF</Button>
               <Button asChild variant="secondary">
                 <Link href={`/editor?gameId=${ruleSpec?.gameId ?? confirmedGameId ?? ''}`}>

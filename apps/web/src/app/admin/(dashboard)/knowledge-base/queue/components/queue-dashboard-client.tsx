@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 
 import { useQueryClient } from '@tanstack/react-query';
 import { ArrowLeftIcon, PlusIcon, RefreshCwIcon } from 'lucide-react';
@@ -24,13 +24,25 @@ import { useQueueList, useJobDetail } from '../lib/queue-api';
 
 import type { QueueFilters } from '../lib/queue-api';
 
-export function QueueDashboardClient({ gameId }: { gameId?: string }) {
+export function QueueDashboardClient({
+  gameId,
+  highlightJobId,
+}: {
+  gameId?: string;
+  highlightJobId?: string;
+}) {
   const queryClient = useQueryClient();
   const [filters, setFilters] = useState<QueueFilters>({
     page: 1,
     pageSize: 20,
   });
   const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (highlightJobId) {
+      setSelectedJobId(highlightJobId);
+    }
+  }, [highlightJobId]);
 
   // SSE connections
   const { connectionState: queueSSEState, reconnect: reconnectQueueSSE } = useQueueSSE(true);

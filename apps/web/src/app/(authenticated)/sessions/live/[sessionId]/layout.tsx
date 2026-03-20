@@ -16,7 +16,9 @@ import { type ReactNode, use } from 'react';
 import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 
+import { ContextBarRegistrar } from '@/components/layout/ContextBar';
 import { SessionNavConfig } from '@/components/session/live/SessionNavConfig';
+import { LiveSessionContextBar } from '@/components/session/LiveSessionContextBar';
 
 interface LiveSessionLayoutProps {
   children: ReactNode;
@@ -28,6 +30,9 @@ export default function LiveSessionLayout({ children, params }: LiveSessionLayou
 
   return (
     <>
+      <ContextBarRegistrar alwaysVisible>
+        <LiveSessionContextBar />
+      </ContextBarRegistrar>
       <div className="flex items-center gap-2 px-4 py-2 border-b border-border/40">
         <Link
           href="/dashboard"

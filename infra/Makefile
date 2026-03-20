@@ -26,10 +26,11 @@ tunnel-status: ## Check SSH tunnel status
 
 integration: ## Start local api+web with remote services (run 'make tunnel' first)
 	@echo "Ensure tunnels are open: make tunnel"
-	$(COMPOSE) -f compose.integration.yml up api web -d
+	bash scripts/integration-start.sh
 
-integration-down: ## Stop integration
-	$(COMPOSE) -f compose.integration.yml down
+integration-down: ## Stop integration (local processes + tunnels)
+	bash scripts/integration-start.sh stop
+	bash scripts/integration-tunnel.sh stop
 
 staging: ## Deploy staging on server (meepleai.app)
 	$(COMPOSE) -f compose.staging.yml -f compose.traefik.yml \

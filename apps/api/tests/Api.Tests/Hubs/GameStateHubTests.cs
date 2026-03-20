@@ -178,7 +178,7 @@ public class GameStateHubTests
     [Fact]
     public async Task UpdateAgentAccess_SendsToSessionGroup()
     {
-        // Arrange
+        // Arrange — hub broadcasts to Group, not User (SignalR identity != participant DB GUID)
         _mockClients
             .Setup(c => c.Group(TestSessionGroup))
             .Returns(_mockClientProxy.Object);
@@ -197,7 +197,7 @@ public class GameStateHubTests
     }
 
     [Fact]
-    public async Task UpdateAgentAccess_WithDisabledAccess_SendsFalse()
+    public async Task UpdateAgentAccess_WithDisabledAccess_BroadcastsToSessionGroup()
     {
         // Arrange
         _mockClients
@@ -219,7 +219,7 @@ public class GameStateHubTests
     [Fact]
     public async Task UpdateAgentAccess_DoesNotSendToSpecificUser()
     {
-        // Arrange
+        // Arrange — hub broadcasts to group, never to individual user
         _mockClients
             .Setup(c => c.Group(TestSessionGroup))
             .Returns(_mockClientProxy.Object);

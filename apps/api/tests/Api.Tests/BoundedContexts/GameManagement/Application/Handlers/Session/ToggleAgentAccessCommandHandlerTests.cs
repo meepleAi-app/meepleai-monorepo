@@ -38,10 +38,9 @@ public class ToggleAgentAccessCommandHandlerTests : IDisposable
         _hubContextMock = new Mock<IHubContext<GameStateHub>>();
         _loggerMock = new Mock<ILogger<ToggleAgentAccessCommandHandler>>();
 
-        // Setup SignalR mock chain
-        // Handler uses Clients.Group() (not User()) because SignalR identity ≠ participant DB GUID
+        // Setup SignalR mock chain — handler broadcasts to Group, not User
         var mockClients = new Mock<IHubClients>();
-        var mockClientProxy = new Mock<ISingleClientProxy>();
+        var mockClientProxy = new Mock<IClientProxy>();
         _hubContextMock.Setup(h => h.Clients).Returns(mockClients.Object);
         mockClients.Setup(c => c.Group(It.IsAny<string>())).Returns(mockClientProxy.Object);
         mockClientProxy

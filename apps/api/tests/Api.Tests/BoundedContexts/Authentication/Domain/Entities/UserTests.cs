@@ -332,7 +332,7 @@ public sealed class UserTests
     #region AssignRole Tests
 
     [Fact]
-    public void AssignRole_WithAdminRequester_UpdatesRole()
+    public void AssignRole_WithSuperAdminRequester_UpdatesRole()
     {
         // Arrange
         var user = CreateValidUser();
@@ -349,7 +349,7 @@ public sealed class UserTests
     }
 
     [Fact]
-    public void AssignRole_WithNonAdminRequester_ThrowsDomainException()
+    public void AssignRole_WithNonSuperAdminRequester_ThrowsDomainException()
     {
         // Arrange
         var user = CreateValidUser();
@@ -363,9 +363,9 @@ public sealed class UserTests
     }
 
     [Fact]
-    public void AssignRole_AdminAssigningAdminToAdmin_ThrowsDomainException()
+    public void AssignRole_AdminRequester_ThrowsDomainException()
     {
-        // Arrange
+        // Arrange — Only SuperAdmin can assign roles; Admin is not sufficient
         var admin = CreateAdminUser();
 
         // Act — Admin requester is rejected because only SuperAdmin can assign roles
@@ -383,7 +383,7 @@ public sealed class UserTests
         var user = CreateValidUser();
 
         // Act
-        var action = () => user.AssignRole(null!, Role.Admin);
+        var action = () => user.AssignRole(null!, Role.SuperAdmin);
 
         // Assert
         action.Should().Throw<ArgumentNullException>();

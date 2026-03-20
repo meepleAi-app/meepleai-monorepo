@@ -8,6 +8,7 @@ using Api.Tests.Constants;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Handlers;
 
@@ -73,16 +74,16 @@ public class GetOpenRouterStatusQueryHandlerTests
         var result = await _handler.Handle(new GetOpenRouterStatusQuery(), CancellationToken.None);
 
         // Assert
-        Assert.Equal(4.50m, result.BalanceUsd);
-        Assert.Equal(0.0025m, result.DailySpendUsd);
-        Assert.Equal(42, result.TodayRequestCount);
-        Assert.Equal(80, result.CurrentRpm);
-        Assert.Equal(200, result.LimitRpm);
-        Assert.Equal(0.4, result.UtilizationPercent);
-        Assert.False(result.IsThrottled);
-        Assert.False(result.IsFreeTier);
-        Assert.Equal("minute", result.RateLimitInterval);
-        Assert.Equal(now, result.LastUpdated);
+        result.BalanceUsd.Should().Be(4.50m);
+        result.DailySpendUsd.Should().Be(0.0025m);
+        result.TodayRequestCount.Should().Be(42);
+        result.CurrentRpm.Should().Be(80);
+        result.LimitRpm.Should().Be(200);
+        result.UtilizationPercent.Should().Be(0.4);
+        result.IsThrottled.Should().BeFalse();
+        result.IsFreeTier.Should().BeFalse();
+        result.RateLimitInterval.Should().Be("minute");
+        result.LastUpdated.Should().Be(now);
     }
 
     [Fact]
@@ -110,13 +111,13 @@ public class GetOpenRouterStatusQueryHandlerTests
         var result = await _handler.Handle(new GetOpenRouterStatusQuery(), CancellationToken.None);
 
         // Assert — null-coalescing fallbacks
-        Assert.Equal(0m, result.BalanceUsd);
-        Assert.False(result.IsFreeTier);
-        Assert.Equal(string.Empty, result.RateLimitInterval);
-        Assert.Null(result.LastUpdated);
+        result.BalanceUsd.Should().Be(0m);
+        result.IsFreeTier.Should().BeFalse();
+        result.RateLimitInterval.Should().Be(string.Empty);
+        result.LastUpdated.Should().BeNull();
         // Rate limit and request count still populated
-        Assert.Equal(5, result.CurrentRpm);
-        Assert.Equal(3, result.TodayRequestCount);
+        result.CurrentRpm.Should().Be(5);
+        result.TodayRequestCount.Should().Be(3);
     }
 
     [Fact]
@@ -143,8 +144,8 @@ public class GetOpenRouterStatusQueryHandlerTests
         var result = await _handler.Handle(new GetOpenRouterStatusQuery(), CancellationToken.None);
 
         // Assert
-        Assert.True(result.IsThrottled);
-        Assert.Equal(1.0, result.UtilizationPercent);
+        result.IsThrottled.Should().BeTrue();
+        result.UtilizationPercent.Should().Be(1.0);
     }
 
     [Fact]

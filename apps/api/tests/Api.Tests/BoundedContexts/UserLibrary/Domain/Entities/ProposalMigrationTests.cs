@@ -25,34 +25,36 @@ public class ProposalMigrationTests
         var migration = ProposalMigration.Create(shareRequestId, privateGameId, sharedGameId, userId);
 
         // Assert
-        Assert.NotEqual(Guid.Empty, migration.Id);
-        Assert.Equal(shareRequestId, migration.ShareRequestId);
-        Assert.Equal(privateGameId, migration.PrivateGameId);
-        Assert.Equal(sharedGameId, migration.SharedGameId);
-        Assert.Equal(userId, migration.UserId);
-        Assert.Equal(PostApprovalMigrationChoice.Pending, migration.Choice);
-        Assert.True(migration.IsPending);
-        Assert.Null(migration.ChoiceAt);
+        migration.Id.Should().NotBe(Guid.Empty);
+        migration.ShareRequestId.Should().Be(shareRequestId);
+        migration.PrivateGameId.Should().Be(privateGameId);
+        migration.SharedGameId.Should().Be(sharedGameId);
+        migration.UserId.Should().Be(userId);
+        migration.Choice.Should().Be(PostApprovalMigrationChoice.Pending);
+        migration.IsPending.Should().BeTrue();
+        migration.ChoiceAt.Should().BeNull();
     }
 
     [Fact]
     public void Create_WithEmptyShareRequestId_ThrowsArgumentException()
     {
         // Arrange & Act & Assert
-        var exception = Assert.Throws<ArgumentException>(() =>
-            ProposalMigration.Create(Guid.Empty, Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid()));
+        var act = () =>
+            ProposalMigration.Create(Guid.Empty, Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid());
+        var exception = act.Should().Throw<ArgumentException>().Which;
 
-        Assert.Equal("shareRequestId", exception.ParamName);
+        exception.ParamName.Should().Be("shareRequestId");
     }
 
     [Fact]
     public void Create_WithEmptyUserId_ThrowsArgumentException()
     {
         // Arrange & Act & Assert
-        var exception = Assert.Throws<ArgumentException>(() =>
-            ProposalMigration.Create(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), Guid.Empty));
+        var act2 = () =>
+            ProposalMigration.Create(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), Guid.Empty);
+        var exception = act2.Should().Throw<ArgumentException>().Which;
 
-        Assert.Equal("userId", exception.ParamName);
+        exception.ParamName.Should().Be("userId");
     }
 
     [Fact]
@@ -66,10 +68,10 @@ public class ProposalMigrationTests
         migration.ChooseLinkToCatalog();
 
         // Assert
-        Assert.Equal(PostApprovalMigrationChoice.LinkToCatalog, migration.Choice);
-        Assert.NotNull(migration.ChoiceAt);
-        Assert.True(migration.ChoiceAt >= beforeChoice);
-        Assert.False(migration.IsPending);
+        migration.Choice.Should().Be(PostApprovalMigrationChoice.LinkToCatalog);
+        migration.ChoiceAt.Should().NotBeNull();
+        (migration.ChoiceAt >= beforeChoice).Should().BeTrue();
+        migration.IsPending.Should().BeFalse();
     }
 
     [Fact]
@@ -83,10 +85,10 @@ public class ProposalMigrationTests
         migration.ChooseKeepPrivate();
 
         // Assert
-        Assert.Equal(PostApprovalMigrationChoice.KeepPrivate, migration.Choice);
-        Assert.NotNull(migration.ChoiceAt);
-        Assert.True(migration.ChoiceAt >= beforeChoice);
-        Assert.False(migration.IsPending);
+        migration.Choice.Should().Be(PostApprovalMigrationChoice.KeepPrivate);
+        migration.ChoiceAt.Should().NotBeNull();
+        (migration.ChoiceAt >= beforeChoice).Should().BeTrue();
+        migration.IsPending.Should().BeFalse();
     }
 
     [Fact]
@@ -97,8 +99,9 @@ public class ProposalMigrationTests
         migration.ChooseLinkToCatalog();
 
         // Act & Assert
-        var exception = Assert.Throws<InvalidOperationException>(() => migration.ChooseLinkToCatalog());
-        Assert.Contains("already been made", exception.Message);
+        var act3 = () => migration.ChooseLinkToCatalog();
+        var exception = act3.Should().Throw<InvalidOperationException>().Which;
+        exception.Message.Should().Contain("already been made");
     }
 
     [Fact]
@@ -109,8 +112,9 @@ public class ProposalMigrationTests
         migration.ChooseKeepPrivate();
 
         // Act & Assert
-        var exception = Assert.Throws<InvalidOperationException>(() => migration.ChooseKeepPrivate());
-        Assert.Contains("already been made", exception.Message);
+        var act4 = () => migration.ChooseKeepPrivate();
+        var exception = act4.Should().Throw<InvalidOperationException>().Which;
+        exception.Message.Should().Contain("already been made");
     }
 
     [Fact]
@@ -121,7 +125,8 @@ public class ProposalMigrationTests
         migration.ChooseLinkToCatalog();
 
         // Act & Assert
-        var exception = Assert.Throws<InvalidOperationException>(() => migration.ChooseKeepPrivate());
-        Assert.Contains("already been made", exception.Message);
+        var act5 = () => migration.ChooseKeepPrivate();
+        var exception = act5.Should().Throw<InvalidOperationException>().Which;
+        exception.Message.Should().Contain("already been made");
     }
 }

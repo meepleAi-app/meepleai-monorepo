@@ -5,6 +5,7 @@ using Api.Tests.Constants;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Handlers.RagDashboard;
 
@@ -41,11 +42,11 @@ public class GetStrategyTimeSeriesQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.NotNull(result.LatencyTrend);
-        Assert.NotNull(result.RelevanceTrend);
-        Assert.NotNull(result.QueryCountTrend);
-        Assert.NotNull(result.CostTrend);
+        result.Should().NotBeNull();
+        result.LatencyTrend.Should().NotBeNull();
+        result.RelevanceTrend.Should().NotBeNull();
+        result.QueryCountTrend.Should().NotBeNull();
+        result.CostTrend.Should().NotBeNull();
     }
 
     [Theory]
@@ -65,7 +66,7 @@ public class GetStrategyTimeSeriesQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
     }
 
     [Theory]
@@ -88,8 +89,8 @@ public class GetStrategyTimeSeriesQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal(strategyId, result.StrategyId);
+        result.Should().NotBeNull();
+        result.StrategyId.Should().Be(strategyId);
     }
 
     [Fact]
@@ -106,7 +107,7 @@ public class GetStrategyTimeSeriesQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotEmpty(result.LatencyTrend);
+        result.LatencyTrend.Should().NotBeEmpty();
     }
 
     [Fact]
@@ -125,7 +126,7 @@ public class GetStrategyTimeSeriesQueryHandlerTests
         // Assert
         foreach (var point in result.LatencyTrend)
         {
-            Assert.True(point.Value >= 0);
+            (point.Value >= 0).Should().BeTrue();
         }
     }
 
@@ -145,7 +146,7 @@ public class GetStrategyTimeSeriesQueryHandlerTests
         // Assert
         foreach (var point in result.RelevanceTrend)
         {
-            Assert.InRange(point.Value, 0.0, 1.0);
+            point.Value.Should().BeInRange(0.0, 1.0);
         }
     }
 
@@ -165,7 +166,7 @@ public class GetStrategyTimeSeriesQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
     }
 
     [Fact]

@@ -38,16 +38,18 @@ public sealed class WishlistCommandHandlerTests
     public void AddHandler_NullRepository_ThrowsArgumentNullException()
     {
         // Act & Assert
-        Assert.Throws<ArgumentNullException>(() =>
-            new AddToWishlistCommandHandler(null!, _unitOfWorkMock.Object));
+        var act = () =>
+            new AddToWishlistCommandHandler(null!, _unitOfWorkMock.Object);
+        act.Should().Throw<ArgumentNullException>();
     }
 
     [Fact]
     public void AddHandler_NullUnitOfWork_ThrowsArgumentNullException()
     {
         // Act & Assert
-        Assert.Throws<ArgumentNullException>(() =>
-            new AddToWishlistCommandHandler(_wishlistRepoMock.Object, null!));
+        var act2 = () =>
+            new AddToWishlistCommandHandler(_wishlistRepoMock.Object, null!);
+        act2.Should().Throw<ArgumentNullException>();
     }
 
     [Fact]
@@ -144,15 +146,17 @@ public sealed class WishlistCommandHandlerTests
     [Fact]
     public void UpdateHandler_NullRepository_ThrowsArgumentNullException()
     {
-        Assert.Throws<ArgumentNullException>(() =>
-            new UpdateWishlistItemCommandHandler(null!, _unitOfWorkMock.Object));
+        var act3 = () =>
+            new UpdateWishlistItemCommandHandler(null!, _unitOfWorkMock.Object);
+        act3.Should().Throw<ArgumentNullException>();
     }
 
     [Fact]
     public void UpdateHandler_NullUnitOfWork_ThrowsArgumentNullException()
     {
-        Assert.Throws<ArgumentNullException>(() =>
-            new UpdateWishlistItemCommandHandler(_wishlistRepoMock.Object, null!));
+        var act4 = () =>
+            new UpdateWishlistItemCommandHandler(_wishlistRepoMock.Object, null!);
+        act4.Should().Throw<ArgumentNullException>();
     }
 
     [Fact]
@@ -248,15 +252,17 @@ public sealed class WishlistCommandHandlerTests
     [Fact]
     public void RemoveHandler_NullRepository_ThrowsArgumentNullException()
     {
-        Assert.Throws<ArgumentNullException>(() =>
-            new RemoveFromWishlistCommandHandler(null!, _unitOfWorkMock.Object));
+        var act5 = () =>
+            new RemoveFromWishlistCommandHandler(null!, _unitOfWorkMock.Object);
+        act5.Should().Throw<ArgumentNullException>();
     }
 
     [Fact]
     public void RemoveHandler_NullUnitOfWork_ThrowsArgumentNullException()
     {
-        Assert.Throws<ArgumentNullException>(() =>
-            new RemoveFromWishlistCommandHandler(_wishlistRepoMock.Object, null!));
+        var act6 = () =>
+            new RemoveFromWishlistCommandHandler(_wishlistRepoMock.Object, null!);
+        act6.Should().Throw<ArgumentNullException>();
     }
 
     [Fact]
@@ -346,8 +352,9 @@ public sealed class WishlistCommandHandlerTests
     [Fact]
     public void GetWishlistHandler_NullRepository_ThrowsArgumentNullException()
     {
-        Assert.Throws<ArgumentNullException>(() =>
-            new GetWishlistQueryHandler(null!));
+        var act7 = () =>
+            new GetWishlistQueryHandler(null!);
+        act7.Should().Throw<ArgumentNullException>();
     }
 
     [Fact]
@@ -413,8 +420,9 @@ public sealed class WishlistCommandHandlerTests
     [Fact]
     public void GetHighlightsHandler_NullRepository_ThrowsArgumentNullException()
     {
-        Assert.Throws<ArgumentNullException>(() =>
-            new GetWishlistHighlightsQueryHandler(null!));
+        var act8 = () =>
+            new GetWishlistHighlightsQueryHandler(null!);
+        act8.Should().Throw<ArgumentNullException>();
     }
 
     [Fact]

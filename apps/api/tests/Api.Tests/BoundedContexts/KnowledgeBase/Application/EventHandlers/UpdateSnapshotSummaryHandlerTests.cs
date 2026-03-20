@@ -6,6 +6,7 @@ using Api.Tests.Constants;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.EventHandlers;
 
@@ -93,8 +94,8 @@ public sealed class UpdateSnapshotSummaryHandlerTests
         await _sut.Handle(notification, CancellationToken.None);
 
         // Assert
-        Assert.NotNull(capturedSnapshot);
-        Assert.Equal(TestSummary, capturedSnapshot!.AgentConversationSummary);
+        capturedSnapshot.Should().NotBeNull();
+        capturedSnapshot!.AgentConversationSummary.Should().Be(TestSummary);
     }
 
     [Fact]
@@ -130,7 +131,7 @@ public sealed class UpdateSnapshotSummaryHandlerTests
             () => _sut.Handle(notification, CancellationToken.None));
 
         // Assert
-        Assert.Null(exception);
+        exception.Should().BeNull();
 
         // UpdateAsync should NOT be called when snapshot was not found
         _snapshotRepoMock.Verify(

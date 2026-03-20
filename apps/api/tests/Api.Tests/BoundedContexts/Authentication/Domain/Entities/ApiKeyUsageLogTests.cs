@@ -1,6 +1,7 @@
 using Api.BoundedContexts.Authentication.Domain.Entities;
 using Api.Tests.Constants;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.Authentication.Domain.Entities;
 
@@ -38,15 +39,15 @@ public class ApiKeyUsageLogTests
             usedAt);
 
         // Assert
-        Assert.Equal(id, log.Id);
-        Assert.Equal(keyId, log.KeyId);
-        Assert.Equal(endpoint, log.Endpoint);
-        Assert.Equal(ipAddress, log.IpAddress);
-        Assert.Equal(userAgent, log.UserAgent);
-        Assert.Equal(httpMethod, log.HttpMethod);
-        Assert.Equal(statusCode, log.StatusCode);
-        Assert.Equal(responseTimeMs, log.ResponseTimeMs);
-        Assert.Equal(usedAt, log.UsedAt);
+        log.Id.Should().Be(id);
+        log.KeyId.Should().Be(keyId);
+        log.Endpoint.Should().Be(endpoint);
+        log.IpAddress.Should().Be(ipAddress);
+        log.UserAgent.Should().Be(userAgent);
+        log.HttpMethod.Should().Be(httpMethod);
+        log.StatusCode.Should().Be(statusCode);
+        log.ResponseTimeMs.Should().Be(responseTimeMs);
+        log.UsedAt.Should().Be(usedAt);
     }
 
     [Fact]
@@ -61,15 +62,15 @@ public class ApiKeyUsageLogTests
         var log = ApiKeyUsageLog.Create(id, keyId, endpoint);
 
         // Assert
-        Assert.Equal(id, log.Id);
-        Assert.Equal(keyId, log.KeyId);
-        Assert.Equal(endpoint, log.Endpoint);
-        Assert.Null(log.IpAddress);
-        Assert.Null(log.UserAgent);
-        Assert.Null(log.HttpMethod);
-        Assert.Null(log.StatusCode);
-        Assert.Null(log.ResponseTimeMs);
-        Assert.True(log.UsedAt <= DateTime.UtcNow);
+        log.Id.Should().Be(id);
+        log.KeyId.Should().Be(keyId);
+        log.Endpoint.Should().Be(endpoint);
+        log.IpAddress.Should().BeNull();
+        log.UserAgent.Should().BeNull();
+        log.HttpMethod.Should().BeNull();
+        log.StatusCode.Should().BeNull();
+        log.ResponseTimeMs.Should().BeNull();
+        (log.UsedAt <= DateTime.UtcNow).Should().BeTrue();
     }
 
     [Theory]
@@ -83,8 +84,9 @@ public class ApiKeyUsageLogTests
         var keyId = Guid.NewGuid();
 
         // Act & Assert
-        Assert.Throws<ArgumentException>(() =>
-            ApiKeyUsageLog.Create(id, keyId, endpoint!));
+        var act = () =>
+            ApiKeyUsageLog.Create(id, keyId, endpoint!);
+act.Should().Throw<ArgumentException>();
     }
 
     [Fact]
@@ -99,7 +101,7 @@ public class ApiKeyUsageLogTests
         var log = ApiKeyUsageLog.Create(id, keyId, endpoint);
 
         // Assert
-        Assert.Equal(endpoint, log.Endpoint);
+        log.Endpoint.Should().Be(endpoint);
     }
 
     [Fact]
@@ -115,7 +117,7 @@ public class ApiKeyUsageLogTests
         var log = ApiKeyUsageLog.Create(id, keyId, endpoint, ipAddress);
 
         // Assert
-        Assert.Equal(ipAddress, log.IpAddress);
+        log.IpAddress.Should().Be(ipAddress);
     }
 
     [Fact]
@@ -136,7 +138,7 @@ public class ApiKeyUsageLogTests
                 httpMethod: method);
 
             // Assert
-            Assert.Equal(method, log.HttpMethod);
+            log.HttpMethod.Should().Be(method);
         }
     }
 
@@ -162,6 +164,6 @@ public class ApiKeyUsageLogTests
             statusCode: statusCode);
 
         // Assert
-        Assert.Equal(statusCode, log.StatusCode);
+        log.StatusCode.Should().Be(statusCode);
     }
 }

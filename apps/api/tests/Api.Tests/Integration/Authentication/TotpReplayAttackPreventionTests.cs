@@ -13,6 +13,7 @@ using Moq;
 using Npgsql;
 using OtpNet;
 using Polly;
+using FluentAssertions;
 using Xunit;
 using Api.Tests.Constants;
 
@@ -289,15 +290,15 @@ public sealed class TotpReplayAttackPreventionTests : IAsyncLifetime
         var result = await _totpService!.VerifyCodeAsync(user.Id, validCode);
 
         // Assert
-        Assert.True(result, "Valid TOTP code should succeed on first use");
+        result.Should().BeTrue("Valid TOTP code should succeed on first use");
 
         // Verify code was stored in used_totp_codes table
         var usedCode = await _dbContext.UsedTotpCodes
             .FirstOrDefaultAsync(u => u.UserId == user.Id, TestCancellationToken);
-        Assert.NotNull(usedCode);
-        Assert.Equal(user.Id, usedCode.UserId);
-        Assert.NotNull(usedCode.CodeHash);
-        Assert.True(usedCode.ExpiresAt > DateTime.UtcNow);
+        usedCode.Should().NotBeNull();
+        usedCode.UserId.Should().Be(user.Id);
+        usedCode.CodeHash.Should().NotBeNull();
+        (usedCode.ExpiresAt > DateTime.UtcNow).Should().BeTrue();
 
         _output("✅ TEST 1 PASSED: Valid TOTP code works on first use");
     }
@@ -326,13 +327,13 @@ public sealed class TotpReplayAttackPreventionTests : IAsyncLifetime
         var secondAttempt = await _totpService.VerifyCodeAsync(user.Id, validCode);
 
         // Assert
-        Assert.True(firstAttempt, "First use of valid TOTP code should succeed");
-        Assert.False(secondAttempt, "🔴 CRITICAL: Replay attack MUST be blocked - code already used");
+        firstAttempt.Should().BeTrue("First use of valid TOTP code should succeed");
+        secondAttempt.Should().BeFalse("🔴 CRITICAL: Replay attack MUST be blocked - code already used");
 
         // Verify only ONE entry in used_totp_codes (first use)
         var usedCodesCount = await _dbContext.UsedTotpCodes
             .CountAsync(u => u.UserId == user.Id, TestCancellationToken);
-        Assert.Equal(1, usedCodesCount);
+        usedCodesCount.Should().Be(1);
 
         _output("✅ TEST 2 PASSED: Replay attack successfully blocked");
     }
@@ -364,14 +365,14 @@ public sealed class TotpReplayAttackPreventionTests : IAsyncLifetime
         var secondResult = await _totpService.VerifyCodeAsync(user.Id, secondCode);
 
         // Assert
-        Assert.True(firstResult, "First TOTP code should succeed");
-        Assert.True(secondResult, "Second TOTP code (different time step) should also succeed");
-        Assert.NotEqual(firstCode, secondCode); // Codes should be different
+        firstResult.Should().BeTrue("First TOTP code should succeed");
+        secondResult.Should().BeTrue("Second TOTP code (different time step) should also succeed");
+        secondCode.Should().NotBe(firstCode);
 
         // Verify TWO entries in used_totp_codes
         var usedCodesCount = await _dbContext.UsedTotpCodes
             .CountAsync(u => u.UserId == user.Id, TestCancellationToken);
-        Assert.Equal(2, usedCodesCount);
+        usedCodesCount.Should().Be(2);
 
         _output("✅ TEST 3 PASSED: Different TOTP codes work independently");
     }
@@ -412,7 +413,7 @@ public sealed class TotpReplayAttackPreventionTests : IAsyncLifetime
         var result = await _totpService!.VerifyCodeAsync(user.Id, validCode);
 
         // Assert
-        Assert.True(result, "New valid code should work even with expired codes in DB");
+        result.Should().BeTrue("New valid code should work even with expired codes in DB");
 
         _output("✅ TEST 4 PASSED: Expired codes do not interfere");
     }
@@ -436,12 +437,12 @@ public sealed class TotpReplayAttackPreventionTests : IAsyncLifetime
         var result = await _totpService!.VerifyCodeAsync(user.Id, invalidCode);
 
         // Assert
-        Assert.False(result, "Invalid TOTP code should fail");
+        result.Should().BeFalse("Invalid TOTP code should fail");
 
         // Verify NO entry in used_totp_codes (invalid codes are not stored)
         var usedCodesCount = await _dbContext.UsedTotpCodes
             .CountAsync(u => u.UserId == user.Id, TestCancellationToken);
-        Assert.Equal(0, usedCodesCount);
+        usedCodesCount.Should().Be(0);
 
         _output("✅ TEST 5 PASSED: Invalid TOTP code fails correctly");
     }

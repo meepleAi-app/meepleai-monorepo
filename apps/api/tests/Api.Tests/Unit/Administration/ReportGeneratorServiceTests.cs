@@ -6,6 +6,7 @@ using Api.Infrastructure.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Moq;
+using FluentAssertions;
 using Xunit;
 using Api.Tests.Constants;
 
@@ -54,12 +55,12 @@ public sealed class ReportGeneratorServiceTests : IDisposable
             parameters);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.NotEmpty(result.Content);
-        Assert.EndsWith(".csv", result.FileName);
-        Assert.Equal(result.Content.Length, result.FileSizeBytes);
-        Assert.Contains("template", result.Metadata.Keys);
-        Assert.Contains("SystemHealth", result.FileName);
+        result.Should().NotBeNull();
+        result.Content.Should().NotBeEmpty();
+        result.FileName.Should().EndWith(".csv");
+        result.FileSizeBytes.Should().Be(result.Content.Length);
+        result.Metadata.Keys.Should().Contain("template");
+        result.FileName.Should().Contain("SystemHealth");
     }
 
     [Fact]
@@ -75,10 +76,10 @@ public sealed class ReportGeneratorServiceTests : IDisposable
             parameters);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.NotEmpty(result.Content);
-        Assert.EndsWith(".json", result.FileName);
-        Assert.True(result.FileSizeBytes > 0);
+        result.Should().NotBeNull();
+        result.Content.Should().NotBeEmpty();
+        result.FileName.Should().EndWith(".json");
+        (result.FileSizeBytes > 0).Should().BeTrue();
     }
 
     [Fact]
@@ -94,10 +95,10 @@ public sealed class ReportGeneratorServiceTests : IDisposable
             parameters);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.NotEmpty(result.Content);
-        Assert.EndsWith(".pdf", result.FileName);
-        Assert.True(result.FileSizeBytes > 0);
+        result.Should().NotBeNull();
+        result.Content.Should().NotBeEmpty();
+        result.FileName.Should().EndWith(".pdf");
+        (result.FileSizeBytes > 0).Should().BeTrue();
     }
 
     [Fact]
@@ -113,8 +114,8 @@ public sealed class ReportGeneratorServiceTests : IDisposable
             parameters);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Contains("template", result.Metadata.Keys);
+        result.Should().NotBeNull();
+        result.Metadata.Keys.Should().Contain("template");
     }
 
     [Theory]
@@ -128,8 +129,9 @@ public sealed class ReportGeneratorServiceTests : IDisposable
         var parameters = new Dictionary<string, object> { ["hours"] = invalidHours };
 
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentException>(() =>
-            _sut.GenerateAsync(ReportTemplate.SystemHealth, ReportFormat.Json, parameters));
+        var act = () =>
+            _sut.GenerateAsync(ReportTemplate.SystemHealth, ReportFormat.Json, parameters);
+        await act.Should().ThrowAsync<ArgumentException>();
     }
 
     [Theory]
@@ -146,8 +148,8 @@ public sealed class ReportGeneratorServiceTests : IDisposable
         var (isValid, errorMessage) = _sut.ValidateParameters(ReportTemplate.SystemHealth, parameters);
 
         // Assert
-        Assert.True(isValid);
-        Assert.Null(errorMessage);
+        isValid.Should().BeTrue();
+        errorMessage.Should().BeNull();
     }
 
     [Fact]
@@ -160,8 +162,8 @@ public sealed class ReportGeneratorServiceTests : IDisposable
         var (isValid, errorMessage) = _sut.ValidateParameters(ReportTemplate.SystemHealth, parameters);
 
         // Assert
-        Assert.True(isValid);
-        Assert.Null(errorMessage);
+        isValid.Should().BeTrue();
+        errorMessage.Should().BeNull();
     }
 
     #endregion
@@ -185,10 +187,10 @@ public sealed class ReportGeneratorServiceTests : IDisposable
             parameters);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.NotEmpty(result.Content);
-        Assert.EndsWith(".csv", result.FileName);
-        Assert.Contains("UserActivity", result.FileName);
+        result.Should().NotBeNull();
+        result.Content.Should().NotBeEmpty();
+        result.FileName.Should().EndWith(".csv");
+        result.FileName.Should().Contain("UserActivity");
     }
 
     [Fact]
@@ -208,9 +210,9 @@ public sealed class ReportGeneratorServiceTests : IDisposable
             parameters);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.NotEmpty(result.Content);
-        Assert.EndsWith(".json", result.FileName);
+        result.Should().NotBeNull();
+        result.Content.Should().NotBeEmpty();
+        result.FileName.Should().EndWith(".json");
     }
 
     [Fact]
@@ -230,9 +232,9 @@ public sealed class ReportGeneratorServiceTests : IDisposable
             parameters);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.NotEmpty(result.Content);
-        Assert.EndsWith(".pdf", result.FileName);
+        result.Should().NotBeNull();
+        result.Content.Should().NotBeEmpty();
+        result.FileName.Should().EndWith(".pdf");
     }
 
     [Fact]
@@ -245,9 +247,9 @@ public sealed class ReportGeneratorServiceTests : IDisposable
         var (isValid, errorMessage) = _sut.ValidateParameters(ReportTemplate.UserActivity, parameters);
 
         // Assert
-        Assert.False(isValid);
-        Assert.NotNull(errorMessage);
-        Assert.Contains("startDate", errorMessage);
+        isValid.Should().BeFalse();
+        errorMessage.Should().NotBeNull();
+        errorMessage.Should().Contain("startDate");
     }
 
     [Fact]
@@ -260,9 +262,9 @@ public sealed class ReportGeneratorServiceTests : IDisposable
         var (isValid, errorMessage) = _sut.ValidateParameters(ReportTemplate.UserActivity, parameters);
 
         // Assert
-        Assert.False(isValid);
-        Assert.NotNull(errorMessage);
-        Assert.Contains("endDate", errorMessage);
+        isValid.Should().BeFalse();
+        errorMessage.Should().NotBeNull();
+        errorMessage.Should().Contain("endDate");
     }
 
     [Fact]
@@ -279,8 +281,8 @@ public sealed class ReportGeneratorServiceTests : IDisposable
         var (isValid, errorMessage) = _sut.ValidateParameters(ReportTemplate.UserActivity, parameters);
 
         // Assert
-        Assert.False(isValid);
-        Assert.NotNull(errorMessage);
+        isValid.Should().BeFalse();
+        errorMessage.Should().NotBeNull();
     }
 
     [Fact]
@@ -297,8 +299,8 @@ public sealed class ReportGeneratorServiceTests : IDisposable
         var (isValid, errorMessage) = _sut.ValidateParameters(ReportTemplate.UserActivity, parameters);
 
         // Assert
-        Assert.True(isValid);
-        Assert.Null(errorMessage);
+        isValid.Should().BeTrue();
+        errorMessage.Should().BeNull();
     }
 
     #endregion
@@ -322,10 +324,10 @@ public sealed class ReportGeneratorServiceTests : IDisposable
             parameters);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.NotEmpty(result.Content);
-        Assert.EndsWith(".csv", result.FileName);
-        Assert.Contains("AIUsage", result.FileName);
+        result.Should().NotBeNull();
+        result.Content.Should().NotBeEmpty();
+        result.FileName.Should().EndWith(".csv");
+        result.FileName.Should().Contain("AIUsage");
     }
 
     [Fact]
@@ -345,12 +347,12 @@ public sealed class ReportGeneratorServiceTests : IDisposable
             parameters);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.NotEmpty(result.Content);
+        result.Should().NotBeNull();
+        result.Content.Should().NotBeEmpty();
         // ReportData.Metadata contains template/format/generatedAt, not report-specific metadata
-        Assert.Contains("template", result.Metadata.Keys);
-        Assert.Contains("format", result.Metadata.Keys);
-        Assert.Equal("AIUsage", result.Metadata["template"].ToString());
+        result.Metadata.Keys.Should().Contain("template");
+        result.Metadata.Keys.Should().Contain("format");
+        result.Metadata["template"].ToString().Should().Be("AIUsage");
     }
 
     [Fact]
@@ -370,9 +372,9 @@ public sealed class ReportGeneratorServiceTests : IDisposable
             parameters);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.NotEmpty(result.Content);
-        Assert.EndsWith(".pdf", result.FileName);
+        result.Should().NotBeNull();
+        result.Content.Should().NotBeEmpty();
+        result.FileName.Should().EndWith(".pdf");
     }
 
     [Fact]
@@ -385,8 +387,8 @@ public sealed class ReportGeneratorServiceTests : IDisposable
         var (isValid, errorMessage) = _sut.ValidateParameters(ReportTemplate.AIUsage, parameters);
 
         // Assert
-        Assert.False(isValid);
-        Assert.Contains("startDate", errorMessage!);
+        isValid.Should().BeFalse();
+        errorMessage!.Should().Contain("startDate");
     }
 
     [Fact]
@@ -399,8 +401,8 @@ public sealed class ReportGeneratorServiceTests : IDisposable
         var (isValid, errorMessage) = _sut.ValidateParameters(ReportTemplate.AIUsage, parameters);
 
         // Assert
-        Assert.False(isValid);
-        Assert.Contains("endDate", errorMessage!);
+        isValid.Should().BeFalse();
+        errorMessage!.Should().Contain("endDate");
     }
 
     [Fact]
@@ -417,8 +419,8 @@ public sealed class ReportGeneratorServiceTests : IDisposable
         var (isValid, errorMessage) = _sut.ValidateParameters(ReportTemplate.AIUsage, parameters);
 
         // Assert
-        Assert.True(isValid);
-        Assert.Null(errorMessage);
+        isValid.Should().BeTrue();
+        errorMessage.Should().BeNull();
     }
 
     #endregion
@@ -442,10 +444,10 @@ public sealed class ReportGeneratorServiceTests : IDisposable
             parameters);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.NotEmpty(result.Content);
-        Assert.EndsWith(".csv", result.FileName);
-        Assert.Contains("ContentMetrics", result.FileName);
+        result.Should().NotBeNull();
+        result.Content.Should().NotBeEmpty();
+        result.FileName.Should().EndWith(".csv");
+        result.FileName.Should().Contain("ContentMetrics");
     }
 
     [Fact]
@@ -465,9 +467,9 @@ public sealed class ReportGeneratorServiceTests : IDisposable
             parameters);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.NotEmpty(result.Content);
-        Assert.EndsWith(".json", result.FileName);
+        result.Should().NotBeNull();
+        result.Content.Should().NotBeEmpty();
+        result.FileName.Should().EndWith(".json");
     }
 
     [Fact]
@@ -487,9 +489,9 @@ public sealed class ReportGeneratorServiceTests : IDisposable
             parameters);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.NotEmpty(result.Content);
-        Assert.EndsWith(".pdf", result.FileName);
+        result.Should().NotBeNull();
+        result.Content.Should().NotBeEmpty();
+        result.FileName.Should().EndWith(".pdf");
     }
 
     [Fact]
@@ -502,8 +504,8 @@ public sealed class ReportGeneratorServiceTests : IDisposable
         var (isValid, errorMessage) = _sut.ValidateParameters(ReportTemplate.ContentMetrics, parameters);
 
         // Assert
-        Assert.False(isValid);
-        Assert.Contains("startDate", errorMessage!);
+        isValid.Should().BeFalse();
+        errorMessage!.Should().Contain("startDate");
     }
 
     [Fact]
@@ -516,8 +518,8 @@ public sealed class ReportGeneratorServiceTests : IDisposable
         var (isValid, errorMessage) = _sut.ValidateParameters(ReportTemplate.ContentMetrics, parameters);
 
         // Assert
-        Assert.False(isValid);
-        Assert.Contains("endDate", errorMessage!);
+        isValid.Should().BeFalse();
+        errorMessage!.Should().Contain("endDate");
     }
 
     [Fact]
@@ -534,8 +536,8 @@ public sealed class ReportGeneratorServiceTests : IDisposable
         var (isValid, errorMessage) = _sut.ValidateParameters(ReportTemplate.ContentMetrics, parameters);
 
         // Assert
-        Assert.True(isValid);
-        Assert.Null(errorMessage);
+        isValid.Should().BeTrue();
+        errorMessage.Should().BeNull();
     }
 
     #endregion
@@ -554,9 +556,9 @@ public sealed class ReportGeneratorServiceTests : IDisposable
         var pdfResult = await _sut.GenerateAsync(ReportTemplate.SystemHealth, ReportFormat.Pdf, parameters);
 
         // Assert
-        Assert.EndsWith(".csv", csvResult.FileName);
-        Assert.EndsWith(".json", jsonResult.FileName);
-        Assert.EndsWith(".pdf", pdfResult.FileName);
+        csvResult.FileName.Should().EndWith(".csv");
+        jsonResult.FileName.Should().EndWith(".json");
+        pdfResult.FileName.Should().EndWith(".pdf");
     }
 
     [Fact]
@@ -571,9 +573,9 @@ public sealed class ReportGeneratorServiceTests : IDisposable
         var pdfResult = await _sut.GenerateAsync(ReportTemplate.SystemHealth, ReportFormat.Pdf, parameters);
 
         // Assert
-        Assert.True(csvResult.FileSizeBytes > 0);
-        Assert.True(jsonResult.FileSizeBytes > 0);
-        Assert.True(pdfResult.FileSizeBytes > 0);
+        (csvResult.FileSizeBytes > 0).Should().BeTrue();
+        (jsonResult.FileSizeBytes > 0).Should().BeTrue();
+        (pdfResult.FileSizeBytes > 0).Should().BeTrue();
     }
 
     [Fact]
@@ -586,11 +588,11 @@ public sealed class ReportGeneratorServiceTests : IDisposable
         var result = await _sut.GenerateAsync(ReportTemplate.SystemHealth, ReportFormat.Csv, parameters);
 
         // Assert
-        Assert.Contains("template", result.Metadata.Keys);
-        Assert.Contains("format", result.Metadata.Keys);
-        Assert.Contains("generatedAt", result.Metadata.Keys);
-        Assert.Equal("SystemHealth", result.Metadata["template"].ToString());
-        Assert.Equal("Csv", result.Metadata["format"].ToString());
+        result.Metadata.Keys.Should().Contain("template");
+        result.Metadata.Keys.Should().Contain("format");
+        result.Metadata.Keys.Should().Contain("generatedAt");
+        result.Metadata["template"].ToString().Should().Be("SystemHealth");
+        result.Metadata["format"].ToString().Should().Be("Csv");
     }
 
     #endregion
@@ -607,8 +609,8 @@ public sealed class ReportGeneratorServiceTests : IDisposable
         var result = await _sut.GenerateAsync(ReportTemplate.SystemHealth, ReportFormat.Json, parameters);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.NotEmpty(result.Content);
+        result.Should().NotBeNull();
+        result.Content.Should().NotBeEmpty();
     }
 
     [Fact]
@@ -621,8 +623,8 @@ public sealed class ReportGeneratorServiceTests : IDisposable
         var result = await _sut.GenerateAsync(ReportTemplate.SystemHealth, ReportFormat.Json, parameters);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.NotEmpty(result.Content);
+        result.Should().NotBeNull();
+        result.Content.Should().NotBeEmpty();
     }
 
     [Fact]
@@ -635,8 +637,8 @@ public sealed class ReportGeneratorServiceTests : IDisposable
         var result = await _sut.GenerateAsync(ReportTemplate.SystemHealth, ReportFormat.Csv, parameters);
 
         // Assert
-        Assert.Contains("SystemHealth", result.FileName);
-        Assert.Matches(@"\d{8}_\d{6}", result.FileName); // Timestamp pattern: YYYYMMDD_HHMMSS
+        result.FileName.Should().Contain("SystemHealth");
+        result.FileName.Should().MatchRegex(@"\d{8}_\d{6}");
     }
 
     #endregion

@@ -3,6 +3,7 @@ using Api.BoundedContexts.Authentication.Domain.ValueObjects;
 using Api.SharedKernel.Domain.ValueObjects;
 using Api.SharedKernel.Domain.Exceptions;
 using Xunit;
+using FluentAssertions;
 using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.Authentication.Domain.Entities;
@@ -26,8 +27,8 @@ public class UserOAuthTests
         user.LinkOAuthAccount(oauthAccount);
 
         // Assert
-        Assert.Single(user.OAuthAccounts);
-        Assert.Contains(user.OAuthAccounts, a => a.Provider == "google");
+        user.OAuthAccounts.Should().ContainSingle();
+        user.OAuthAccounts.Should().Contain(a => a.Provider == "google");
     }
 
     [Fact]
@@ -43,9 +44,9 @@ public class UserOAuthTests
         user.LinkOAuthAccount(discordAccount);
 
         // Assert
-        Assert.Equal(2, user.OAuthAccounts.Count);
-        Assert.Contains(user.OAuthAccounts, a => a.Provider == "google");
-        Assert.Contains(user.OAuthAccounts, a => a.Provider == "discord");
+        user.OAuthAccounts.Count.Should().Be(2);
+        user.OAuthAccounts.Should().Contain(a => a.Provider == "google");
+        user.OAuthAccounts.Should().Contain(a => a.Provider == "discord");
     }
 
     [Fact]
@@ -58,9 +59,10 @@ public class UserOAuthTests
         user.LinkOAuthAccount(firstAccount);
 
         // Act & Assert
-        var exception = Assert.Throws<DomainException>(() =>
-            user.LinkOAuthAccount(duplicateAccount));
-        Assert.Contains("OAuth provider 'google' is already linked", exception.Message);
+        var act = () =>
+            user.LinkOAuthAccount(duplicateAccount);
+        var exception = act.Should().Throw<DomainException>().Which;
+        exception.Message.Should().Contain("OAuth provider 'google' is already linked");
     }
 
     [Fact]
@@ -70,7 +72,8 @@ public class UserOAuthTests
         var user = CreateTestUser();
 
         // Act & Assert
-        Assert.Throws<ArgumentNullException>(() => user.LinkOAuthAccount(null!));
+        var act = () => user.LinkOAuthAccount(null!);
+act.Should().Throw<ArgumentNullException>();
     }
 
     [Fact]
@@ -81,9 +84,10 @@ public class UserOAuthTests
 
         // Act & Assert
         // Note: OAuthAccount constructor validates this, but we test User's validation too
-        var exception = Assert.Throws<ValidationException>(() =>
-            CreateTestOAuthAccount("facebook", user.Id)); // Unsupported provider
-        Assert.Contains("Unsupported OAuth provider: facebook", exception.Message);
+        var act = () =>
+            CreateTestOAuthAccount("facebook", user.Id);
+        var exception = act.Should().Throw<ValidationException>().Which; // Unsupported provider
+        exception.Message.Should().Contain("Unsupported OAuth provider: facebook");
     }
 
     [Fact]
@@ -98,9 +102,9 @@ public class UserOAuthTests
         user.LinkOAuthAccount(oauthAccount);
 
         // Assert
-        Assert.Equal(initialCount + 1, user.OAuthAccounts.Count);
+        user.OAuthAccounts.Count.Should().Be(initialCount + 1);
         var linkedAccount = user.OAuthAccounts.First(a => a.Provider == "github");
-        Assert.Equal(oauthAccount.Id, linkedAccount.Id);
+        linkedAccount.Id.Should().Be(oauthAccount.Id);
     }
 
     [Fact]
@@ -115,9 +119,9 @@ public class UserOAuthTests
         var collection = user.OAuthAccounts;
 
         // Assert
-        Assert.IsAssignableFrom<IReadOnlyCollection<OAuthAccount>>(collection);
+        collection.Should().BeAssignableTo<IReadOnlyCollection<OAuthAccount>>();
         // Collection should be readonly and not allow direct modification
-        Assert.Single(collection);
+        collection.Should().ContainSingle();
     }
     [Fact]
     public void UnlinkOAuthAccount_ValidProvider_RemovesFromCollection()
@@ -131,8 +135,8 @@ public class UserOAuthTests
         user.UnlinkOAuthAccount("google");
 
         // Assert
-        Assert.Empty(user.OAuthAccounts);
-        Assert.DoesNotContain(user.OAuthAccounts, a => a.Provider == "google");
+        user.OAuthAccounts.Should().BeEmpty();
+        user.OAuthAccounts.Should().NotContain(a => a.Provider == "google");
     }
 
     [Fact]
@@ -142,9 +146,10 @@ public class UserOAuthTests
         var user = CreateTestUser();
 
         // Act & Assert
-        var exception = Assert.Throws<DomainException>(() =>
-            user.UnlinkOAuthAccount("google"));
-        Assert.Contains("OAuth provider 'google' is not linked", exception.Message);
+        var act = () =>
+            user.UnlinkOAuthAccount("google");
+        var exception = act.Should().Throw<DomainException>().Which;
+        exception.Message.Should().Contain("OAuth provider 'google' is not linked");
     }
 
     [Theory]
@@ -157,9 +162,10 @@ public class UserOAuthTests
         var user = CreateTestUser();
 
         // Act & Assert
-        var exception = Assert.Throws<ValidationException>(() =>
-            user.UnlinkOAuthAccount(invalidProvider!));
-        Assert.Contains("Provider cannot be empty", exception.Message);
+        var act = () =>
+            user.UnlinkOAuthAccount(invalidProvider!);
+        var exception = act.Should().Throw<ValidationException>().Which;
+        exception.Message.Should().Contain("Provider cannot be empty");
     }
 
     [Fact]
@@ -171,9 +177,10 @@ public class UserOAuthTests
         user.LinkOAuthAccount(oauthAccount); // Only OAuth account
 
         // Act & Assert
-        var exception = Assert.Throws<DomainException>(() =>
-            user.UnlinkOAuthAccount("google"));
-        Assert.Contains("User must have at least one authentication method", exception.Message);
+        var act = () =>
+            user.UnlinkOAuthAccount("google");
+        var exception = act.Should().Throw<DomainException>().Which;
+        exception.Message.Should().Contain("User must have at least one authentication method");
     }
 
     [Fact]
@@ -188,8 +195,8 @@ public class UserOAuthTests
         user.UnlinkOAuthAccount("google");
 
         // Assert
-        Assert.Empty(user.OAuthAccounts);
-        Assert.True(user.HasAnyAuthenticationMethod()); // Still has password
+        user.OAuthAccounts.Should().BeEmpty();
+        user.HasAnyAuthenticationMethod().Should().BeTrue(); // Still has password
     }
 
     [Fact]
@@ -206,9 +213,9 @@ public class UserOAuthTests
         user.UnlinkOAuthAccount("google");
 
         // Assert
-        Assert.Single(user.OAuthAccounts);
-        Assert.Contains(user.OAuthAccounts, a => a.Provider == "discord");
-        Assert.True(user.HasAnyAuthenticationMethod()); // Still has Discord
+        user.OAuthAccounts.Should().ContainSingle();
+        user.OAuthAccounts.Should().Contain(a => a.Provider == "discord");
+        user.HasAnyAuthenticationMethod().Should().BeTrue(); // Still has Discord
     }
     [Fact]
     public void GetOAuthAccount_ProviderExists_ReturnsAccount()
@@ -222,9 +229,9 @@ public class UserOAuthTests
         var result = user.GetOAuthAccount("google");
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal("google", result.Provider);
-        Assert.Equal(oauthAccount.Id, result.Id);
+        result.Should().NotBeNull();
+        result.Provider.Should().Be("google");
+        result.Id.Should().Be(oauthAccount.Id);
     }
 
     [Fact]
@@ -237,7 +244,7 @@ public class UserOAuthTests
         var result = user.GetOAuthAccount("google");
 
         // Assert
-        Assert.Null(result);
+        result.Should().BeNull();
     }
 
     [Theory]
@@ -255,8 +262,8 @@ public class UserOAuthTests
         var result = user.GetOAuthAccount(searchProvider);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal(linkedProvider, result.Provider);
+        result.Should().NotBeNull();
+        result.Provider.Should().Be(linkedProvider);
     }
     [Fact]
     public void HasOAuthAccount_ProviderLinked_ReturnsTrue()
@@ -270,7 +277,7 @@ public class UserOAuthTests
         var result = user.HasOAuthAccount("google");
 
         // Assert
-        Assert.True(result);
+        result.Should().BeTrue();
     }
 
     [Fact]
@@ -283,7 +290,7 @@ public class UserOAuthTests
         var result = user.HasOAuthAccount("google");
 
         // Assert
-        Assert.False(result);
+        result.Should().BeFalse();
     }
 
     [Theory]
@@ -299,7 +306,7 @@ public class UserOAuthTests
         var result = user.HasOAuthAccount(invalidProvider!);
 
         // Assert
-        Assert.False(result);
+        result.Should().BeFalse();
     }
 
     [Theory]
@@ -317,7 +324,7 @@ public class UserOAuthTests
         var result = user.HasOAuthAccount(searchProvider);
 
         // Assert
-        Assert.True(result);
+        result.Should().BeTrue();
     }
     [Fact]
     public void HasAnyAuthenticationMethod_UserHasPasswordOnly_ReturnsTrue()
@@ -329,7 +336,7 @@ public class UserOAuthTests
         var result = user.HasAnyAuthenticationMethod();
 
         // Assert
-        Assert.True(result);
+        result.Should().BeTrue();
     }
 
     [Fact]
@@ -344,7 +351,7 @@ public class UserOAuthTests
         var result = user.HasAnyAuthenticationMethod();
 
         // Assert
-        Assert.True(result);
+        result.Should().BeTrue();
     }
 
     [Fact]
@@ -359,7 +366,7 @@ public class UserOAuthTests
         var result = user.HasAnyAuthenticationMethod();
 
         // Assert
-        Assert.True(result);
+        result.Should().BeTrue();
     }
 
     [Fact]
@@ -372,7 +379,7 @@ public class UserOAuthTests
         var result = user.HasAnyAuthenticationMethod();
 
         // Assert
-        Assert.False(result); // Edge case validation
+        result.Should().BeFalse(); // Edge case validation
     }
     [Fact]
     public void LinkMultipleProviders_GoogleDiscordGitHub_AllLinkedSuccessfully()
@@ -389,10 +396,10 @@ public class UserOAuthTests
         user.LinkOAuthAccount(githubAccount);
 
         // Assert
-        Assert.Equal(3, user.OAuthAccounts.Count);
-        Assert.Contains(user.OAuthAccounts, a => a.Provider == "google");
-        Assert.Contains(user.OAuthAccounts, a => a.Provider == "discord");
-        Assert.Contains(user.OAuthAccounts, a => a.Provider == "github");
+        user.OAuthAccounts.Count.Should().Be(3);
+        user.OAuthAccounts.Should().Contain(a => a.Provider == "google");
+        user.OAuthAccounts.Should().Contain(a => a.Provider == "discord");
+        user.OAuthAccounts.Should().Contain(a => a.Provider == "github");
     }
 
     [Fact]
@@ -411,10 +418,10 @@ public class UserOAuthTests
         user.UnlinkOAuthAccount("discord"); // Unlink middle provider
 
         // Assert
-        Assert.Equal(2, user.OAuthAccounts.Count);
-        Assert.Contains(user.OAuthAccounts, a => a.Provider == "google");
-        Assert.Contains(user.OAuthAccounts, a => a.Provider == "github");
-        Assert.DoesNotContain(user.OAuthAccounts, a => a.Provider == "discord");
+        user.OAuthAccounts.Count.Should().Be(2);
+        user.OAuthAccounts.Should().Contain(a => a.Provider == "google");
+        user.OAuthAccounts.Should().Contain(a => a.Provider == "github");
+        user.OAuthAccounts.Should().NotContain(a => a.Provider == "discord");
     }
 
     [Fact]
@@ -426,28 +433,28 @@ public class UserOAuthTests
         var discordAccount = CreateTestOAuthAccount("discord", user.Id);
 
         // Act & Assert - Initial state
-        Assert.Empty(user.OAuthAccounts);
+        user.OAuthAccounts.Should().BeEmpty();
 
         // Add first account
         user.LinkOAuthAccount(googleAccount);
-        Assert.Single(user.OAuthAccounts);
-        Assert.True(user.HasOAuthAccount("google"));
+        user.OAuthAccounts.Should().ContainSingle();
+        user.HasOAuthAccount("google").Should().BeTrue();
 
         // Add second account
         user.LinkOAuthAccount(discordAccount);
-        Assert.Equal(2, user.OAuthAccounts.Count);
-        Assert.True(user.HasOAuthAccount("discord"));
+        user.OAuthAccounts.Count.Should().Be(2);
+        user.HasOAuthAccount("discord").Should().BeTrue();
 
         // Remove first account
         user.UnlinkOAuthAccount("google");
-        Assert.Single(user.OAuthAccounts);
-        Assert.False(user.HasOAuthAccount("google"));
-        Assert.True(user.HasOAuthAccount("discord"));
+        user.OAuthAccounts.Should().ContainSingle();
+        user.HasOAuthAccount("google").Should().BeFalse();
+        user.HasOAuthAccount("discord").Should().BeTrue();
 
         // Remove last account
         user.UnlinkOAuthAccount("discord");
-        Assert.Empty(user.OAuthAccounts);
-        Assert.False(user.HasOAuthAccount("discord"));
+        user.OAuthAccounts.Should().BeEmpty();
+        user.HasOAuthAccount("discord").Should().BeFalse();
     }
     /// <summary>
     /// Creates a test user with email, password, and User role.

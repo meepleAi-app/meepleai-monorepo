@@ -7,6 +7,7 @@ using Api.Tests.Constants;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.SharedGameCatalog.Application.Handlers;
 
@@ -68,7 +69,7 @@ public class WithdrawShareRequestCommandHandlerTests
             u => u.SaveChangesAsync(It.IsAny<CancellationToken>()),
             Times.Once);
 
-        Assert.Equal(ShareRequestStatus.Withdrawn, shareRequest.Status);
+        shareRequest.Status.Should().Be(ShareRequestStatus.Withdrawn);
     }
 
     [Fact]
@@ -83,8 +84,8 @@ public class WithdrawShareRequestCommandHandlerTests
             .ReturnsAsync((ShareRequest?)null);
 
         // Act & Assert
-        await Assert.ThrowsAsync<InvalidOperationException>(
-            () => _handler.Handle(command, TestContext.Current.CancellationToken));
+        var act = () => _handler.Handle(command, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<InvalidOperationException>();
     }
 
     [Fact]
@@ -108,7 +109,7 @@ public class WithdrawShareRequestCommandHandlerTests
             .ReturnsAsync(shareRequest);
 
         // Act & Assert
-        await Assert.ThrowsAsync<InvalidOperationException>(
-            () => _handler.Handle(command, TestContext.Current.CancellationToken));
+        var act = () => _handler.Handle(command, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<InvalidOperationException>();
     }
 }

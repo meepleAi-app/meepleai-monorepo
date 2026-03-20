@@ -7,6 +7,7 @@ using Api.Tests.Constants;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.UserLibrary.Application.Handlers;
 
@@ -79,8 +80,8 @@ public class UnlinkAgentFromPrivateGameCommandHandlerTests
             u => u.SaveChangesAsync(It.IsAny<CancellationToken>()),
             Times.Once);
 
-        Assert.NotNull(capturedGame);
-        Assert.Null(capturedGame.AgentDefinitionId);
+        capturedGame.Should().NotBeNull();
+        capturedGame.AgentDefinitionId.Should().BeNull();
     }
 
     [Fact]
@@ -96,8 +97,8 @@ public class UnlinkAgentFromPrivateGameCommandHandlerTests
             .ReturnsAsync((PrivateGame?)null);
 
         // Act & Assert
-        await Assert.ThrowsAsync<NotFoundException>(
-            () => _handler.Handle(command, TestContext.Current.CancellationToken));
+        var act = () => _handler.Handle(command, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<NotFoundException>();
 
         _repositoryMock.Verify(
             r => r.UpdateAsync(It.IsAny<PrivateGame>(), It.IsAny<CancellationToken>()),
@@ -135,8 +136,8 @@ public class UnlinkAgentFromPrivateGameCommandHandlerTests
             .ReturnsAsync(game);
 
         // Act & Assert
-        await Assert.ThrowsAsync<InvalidOperationException>(
-            () => _handler.Handle(command, TestContext.Current.CancellationToken));
+        var act2 = () => _handler.Handle(command, TestContext.Current.CancellationToken);
+        await act2.Should().ThrowAsync<InvalidOperationException>();
 
         _repositoryMock.Verify(
             r => r.UpdateAsync(It.IsAny<PrivateGame>(), It.IsAny<CancellationToken>()),

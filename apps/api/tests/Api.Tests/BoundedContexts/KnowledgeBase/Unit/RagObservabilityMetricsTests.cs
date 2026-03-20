@@ -1,5 +1,6 @@
 using Api.Observability;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Unit;
 
@@ -10,12 +11,12 @@ public class RagObservabilityMetricsTests
     [Fact]
     public void RagMetrics_RetrievalQualityMetrics_AreDefinedAndNotNull()
     {
-        Assert.NotNull(MeepleAiMetrics.RagRetrievalChunkCount);
-        Assert.NotNull(MeepleAiMetrics.RagRetrievalAvgScore);
-        Assert.NotNull(MeepleAiMetrics.RagEnhancementActivations);
-        Assert.NotNull(MeepleAiMetrics.RagRetrievalFallbacks);
-        Assert.NotNull(MeepleAiMetrics.RagCragVerdicts);
-        Assert.NotNull(MeepleAiMetrics.RagAdaptiveRoutingDecisions);
-        Assert.NotNull(MeepleAiMetrics.RagFusionQueryCount);
+        MeepleAiMetrics.RagRetrievalChunkCount.Should().NotBeNull();
+        MeepleAiMetrics.RagRetrievalAvgScore.Should().NotBeNull();
+        MeepleAiMetrics.RagEnhancementActivations.Should().NotBeNull();
+        MeepleAiMetrics.RagRetrievalFallbacks.Should().NotBeNull();
+        MeepleAiMetrics.RagCragVerdicts.Should().NotBeNull();
+        MeepleAiMetrics.RagAdaptiveRoutingDecisions.Should().NotBeNull();
+        MeepleAiMetrics.RagFusionQueryCount.Should().NotBeNull();
     }
 }

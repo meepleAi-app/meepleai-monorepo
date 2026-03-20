@@ -9,6 +9,7 @@ using Api.Tests.Constants;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Handlers;
 
@@ -45,7 +46,7 @@ public class UpdateUserAgentCommandHandlerTests
         var result = await _handler.Handle(command, CancellationToken.None);
 
         // Assert
-        Assert.Equal("New Name", result.Name);
+        result.Name.Should().Be("New Name");
         _repository.Verify(r => r.UpdateAsync(It.IsAny<Agent>(), It.IsAny<CancellationToken>()), Times.Once);
     }
 
@@ -64,8 +65,8 @@ public class UpdateUserAgentCommandHandlerTests
             Name: "New Name", StrategyName: null, StrategyParameters: null);
 
         // Act & Assert
-        await Assert.ThrowsAsync<ForbiddenException>(
-            () => _handler.Handle(command, CancellationToken.None));
+        Func<Task> act = () => _handler.Handle(command, CancellationToken.None);
+        await act.Should().ThrowAsync<ForbiddenException>();
     }
 
     [Fact]
@@ -86,7 +87,7 @@ public class UpdateUserAgentCommandHandlerTests
         var result = await _handler.Handle(command, CancellationToken.None);
 
         // Assert
-        Assert.Equal("Admin Renamed", result.Name);
+        result.Name.Should().Be("Admin Renamed");
     }
 
     [Fact]
@@ -103,8 +104,8 @@ public class UpdateUserAgentCommandHandlerTests
             Name: null, StrategyName: "HybridSearch", StrategyParameters: null);
 
         // Act & Assert
-        await Assert.ThrowsAsync<ForbiddenException>(
-            () => _handler.Handle(command, CancellationToken.None));
+        Func<Task> act = () => _handler.Handle(command, CancellationToken.None);
+        await act.Should().ThrowAsync<ForbiddenException>();
     }
 
     [Fact]
@@ -122,8 +123,8 @@ public class UpdateUserAgentCommandHandlerTests
             Name: null, StrategyName: "HybridSearch", StrategyParameters: parameters);
 
         // Act & Assert
-        await Assert.ThrowsAsync<ForbiddenException>(
-            () => _handler.Handle(command, CancellationToken.None));
+        Func<Task> act = () => _handler.Handle(command, CancellationToken.None);
+        await act.Should().ThrowAsync<ForbiddenException>();
     }
 
     [Fact]
@@ -143,7 +144,7 @@ public class UpdateUserAgentCommandHandlerTests
         var result = await _handler.Handle(command, CancellationToken.None);
 
         // Assert
-        Assert.Equal("HybridSearch", result.StrategyName);
+        result.StrategyName.Should().Be("HybridSearch");
     }
 
     [Fact]
@@ -164,8 +165,8 @@ public class UpdateUserAgentCommandHandlerTests
         var result = await _handler.Handle(command, CancellationToken.None);
 
         // Assert
-        Assert.Equal("IterativeRAG", result.StrategyName);
-        Assert.True(result.StrategyParameters.Count > 0);
+        result.StrategyName.Should().Be("IterativeRAG");
+        (result.StrategyParameters.Count > 0).Should().BeTrue();
     }
 
     [Fact]
@@ -180,8 +181,8 @@ public class UpdateUserAgentCommandHandlerTests
             Name: "X", StrategyName: null, StrategyParameters: null);
 
         // Act & Assert
-        await Assert.ThrowsAsync<NotFoundException>(
-            () => _handler.Handle(command, CancellationToken.None));
+        Func<Task> act = () => _handler.Handle(command, CancellationToken.None);
+        await act.Should().ThrowAsync<NotFoundException>();
     }
 
     [Fact]
@@ -200,9 +201,9 @@ public class UpdateUserAgentCommandHandlerTests
             Name: "Taken Name", StrategyName: null, StrategyParameters: null);
 
         // Act & Assert
-        var ex = await Assert.ThrowsAsync<ConflictException>(
-            () => _handler.Handle(command, CancellationToken.None));
-        Assert.Contains("Taken Name", ex.Message);
+        Func<Task> act = () => _handler.Handle(command, CancellationToken.None);
+        var ex = (await act.Should().ThrowAsync<ConflictException>()).Which;
+        ex.Message.Should().Contain("Taken Name");
     }
 
     [Fact]
@@ -222,7 +223,7 @@ public class UpdateUserAgentCommandHandlerTests
         var result = await _handler.Handle(command, CancellationToken.None);
 
         // Assert
-        Assert.Equal("Same Name", result.Name);
+        result.Name.Should().Be("Same Name");
         _repository.Verify(r => r.ExistsByNameForUserAsync(It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 }

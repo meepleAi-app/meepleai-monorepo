@@ -11,6 +11,7 @@ using FluentValidation.TestHelper;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.GameManagement.Application.GameNight;
 
@@ -81,11 +82,11 @@ public sealed class StartImprovvisataSessionCommandHandlerTests
         var result = await _sut.Handle(command, CancellationToken.None);
 
         // Assert
-        Assert.NotEqual(Guid.Empty, result.SessionId);
-        Assert.NotNull(result.InviteCode);
-        Assert.Equal(6, result.InviteCode.Length);
-        Assert.StartsWith("/join/", result.ShareLink);
-        Assert.Equal(32, result.ShareLink.Length - "/join/".Length); // UUID without hyphens = 32 chars
+        result.SessionId.Should().NotBe(Guid.Empty);
+        result.InviteCode.Should().NotBeNull();
+        result.InviteCode.Length.Should().Be(6);
+        result.ShareLink.Should().StartWith("/join/");
+        (result.ShareLink.Length - "/join/".Length).Should().Be(32); // UUID without hyphens = 32 chars
     }
 
     [Fact]
@@ -100,9 +101,9 @@ public sealed class StartImprovvisataSessionCommandHandlerTests
 
         // Assert
         var savedSession = await _dbContext.LiveGameSessions.FindAsync(result.SessionId);
-        Assert.NotNull(savedSession);
-        Assert.Equal("Wingspan", savedSession.GameName);
-        Assert.Equal(TestUserId, savedSession.CreatedByUserId);
+        savedSession.Should().NotBeNull();
+        savedSession.GameName.Should().Be("Wingspan");
+        savedSession.CreatedByUserId.Should().Be(TestUserId);
     }
 
     [Fact]
@@ -117,11 +118,11 @@ public sealed class StartImprovvisataSessionCommandHandlerTests
 
         // Assert
         var savedInvite = _dbContext.SessionInvites.FirstOrDefault(i => i.SessionId == result.SessionId);
-        Assert.NotNull(savedInvite);
-        Assert.Equal(result.InviteCode, savedInvite.Pin);
-        Assert.Equal(TestUserId, savedInvite.CreatedByUserId);
-        Assert.False(savedInvite.IsRevoked);
-        Assert.Equal(0, savedInvite.CurrentUses);
+        savedInvite.Should().NotBeNull();
+        savedInvite.Pin.Should().Be(result.InviteCode);
+        savedInvite.CreatedByUserId.Should().Be(TestUserId);
+        (savedInvite.IsRevoked).Should().BeFalse();
+        savedInvite.CurrentUses.Should().Be(0);
     }
 
     [Fact]
@@ -136,10 +137,9 @@ public sealed class StartImprovvisataSessionCommandHandlerTests
 
         // Assert
         var savedInvite = _dbContext.SessionInvites.FirstOrDefault(i => i.SessionId == result.SessionId);
-        Assert.NotNull(savedInvite);
+        savedInvite.Should().NotBeNull();
         var expectedExpiry = DateTime.UtcNow.AddHours(23); // at least 23h from now
-        Assert.True(savedInvite.ExpiresAt > expectedExpiry,
-            $"Expected ExpiresAt > {expectedExpiry:u} but was {savedInvite.ExpiresAt:u}");
+        (savedInvite.ExpiresAt > expectedExpiry).Should().BeTrue($"Expected ExpiresAt > {expectedExpiry:u} but was {savedInvite.ExpiresAt:u}");
     }
 
     [Fact]
@@ -154,8 +154,8 @@ public sealed class StartImprovvisataSessionCommandHandlerTests
 
         // Assert
         var savedInvite = _dbContext.SessionInvites.FirstOrDefault(i => i.SessionId == result.SessionId);
-        Assert.NotNull(savedInvite);
-        Assert.Equal(10, savedInvite.MaxUses);
+        savedInvite.Should().NotBeNull();
+        savedInvite.MaxUses.Should().Be(10);
     }
 
     [Fact]
@@ -191,9 +191,9 @@ public sealed class StartImprovvisataSessionCommandHandlerTests
         await _sut.Handle(command, CancellationToken.None);
 
         // Assert
-        Assert.NotNull(capturedSession);
-        Assert.NotNull(capturedSession.Host);
-        Assert.Equal(TestUserId, capturedSession.Host!.UserId);
+        capturedSession.Should().NotBeNull();
+        capturedSession.Host.Should().NotBeNull();
+        capturedSession.Host!.UserId.Should().Be(TestUserId);
     }
 
     // ─── Error cases ─────────────────────────────────────────────────────────
@@ -205,8 +205,9 @@ public sealed class StartImprovvisataSessionCommandHandlerTests
         var command = new StartImprovvisataSessionCommand(TestUserId, TestPrivateGameId);
 
         // Act & Assert
-        await Assert.ThrowsAsync<NotFoundException>(() =>
-            _sut.Handle(command, CancellationToken.None));
+        var act = () =>
+            _sut.Handle(command, CancellationToken.None);
+        await act.Should().ThrowAsync<NotFoundException>();
     }
 
     [Fact]
@@ -229,8 +230,9 @@ public sealed class StartImprovvisataSessionCommandHandlerTests
         var command = new StartImprovvisataSessionCommand(TestUserId, TestPrivateGameId);
 
         // Act & Assert
-        await Assert.ThrowsAsync<NotFoundException>(() =>
-            _sut.Handle(command, CancellationToken.None));
+        var act = () =>
+            _sut.Handle(command, CancellationToken.None);
+        await act.Should().ThrowAsync<NotFoundException>();
     }
 
     [Fact]
@@ -241,8 +243,9 @@ public sealed class StartImprovvisataSessionCommandHandlerTests
         var command = new StartImprovvisataSessionCommand(TestUserId, TestPrivateGameId);
 
         // Act & Assert
-        await Assert.ThrowsAsync<ForbiddenException>(() =>
-            _sut.Handle(command, CancellationToken.None));
+        var act = () =>
+            _sut.Handle(command, CancellationToken.None);
+        await act.Should().ThrowAsync<ForbiddenException>();
     }
 
     // ─── Tier enforcement ────────────────────────────────────────────────────
@@ -271,11 +274,12 @@ public sealed class StartImprovvisataSessionCommandHandlerTests
         var command = new StartImprovvisataSessionCommand(TestUserId, TestPrivateGameId);
 
         // Act & Assert
-        var ex = await Assert.ThrowsAsync<ConflictException>(() =>
-            _sut.Handle(command, CancellationToken.None));
+        var act = () =>
+            _sut.Handle(command, CancellationToken.None);
+        var ex = (await act.Should().ThrowAsync<ConflictException>()).Which;
 
-        Assert.Contains("limite di giochi privati", ex.Message, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("3/3", ex.Message, StringComparison.Ordinal);
+        ex.Message.Should().ContainEquivalentOf("limite di giochi privati");
+        ex.Message.Should().Contain("3/3");
     }
 
     [Fact]
@@ -289,7 +293,7 @@ public sealed class StartImprovvisataSessionCommandHandlerTests
         var result = await _sut.Handle(command, CancellationToken.None);
 
         // Assert — session created and usage recorded
-        Assert.NotEqual(Guid.Empty, result.SessionId);
+        result.SessionId.Should().NotBe(Guid.Empty);
         _tierEnforcementMock.Verify(
             t => t.RecordUsageAsync(TestUserId, TierAction.CreatePrivateGame, It.IsAny<CancellationToken>()),
             Times.Once);

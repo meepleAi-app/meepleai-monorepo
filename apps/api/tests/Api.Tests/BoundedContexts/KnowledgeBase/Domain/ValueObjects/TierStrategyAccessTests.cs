@@ -2,6 +2,7 @@ using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 using Api.BoundedContexts.SystemConfiguration.Domain.ValueObjects;
 using Api.Tests.Constants;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 
@@ -25,10 +26,10 @@ public class TierStrategyAccessTests
         var access = TierStrategyAccess.Create(UserTier.Free, strategies);
 
         // Assert
-        Assert.Equal(UserTier.Free, access.Tier);
-        Assert.Equal(2, access.AvailableStrategies.Count);
-        Assert.Contains(RagStrategy.Fast, access.AvailableStrategies);
-        Assert.Contains(RagStrategy.Balanced, access.AvailableStrategies);
+        access.Tier.Should().Be(UserTier.Free);
+        access.AvailableStrategies.Count.Should().Be(2);
+        access.AvailableStrategies.Should().Contain(RagStrategy.Fast);
+        access.AvailableStrategies.Should().Contain(RagStrategy.Balanced);
     }
 
     [Fact]
@@ -41,7 +42,7 @@ public class TierStrategyAccessTests
         var access = TierStrategyAccess.Create(UserTier.Admin, strategies, canAccessCustom: true);
 
         // Assert
-        Assert.True(access.CanAccessCustom);
+        access.CanAccessCustom.Should().BeTrue();
     }
 
     [Fact]
@@ -54,7 +55,7 @@ public class TierStrategyAccessTests
         var access = TierStrategyAccess.Create(UserTier.Free, strategies);
 
         // Assert
-        Assert.Equal(2, access.AvailableStrategies.Count);
+        access.AvailableStrategies.Count.Should().Be(2);
     }
 
     [Fact]
@@ -67,8 +68,8 @@ public class TierStrategyAccessTests
         var access = TierStrategyAccess.Create(UserTier.Free, strategies);
 
         // Assert
-        Assert.Equal(2, access.AvailableStrategies.Count);
-        Assert.DoesNotContain(RagStrategy.None, access.AvailableStrategies);
+        access.AvailableStrategies.Count.Should().Be(2);
+        access.AvailableStrategies.Should().NotContain(RagStrategy.None);
     }
 
     [Fact]
@@ -81,9 +82,9 @@ public class TierStrategyAccessTests
         var access = TierStrategyAccess.Create(UserTier.Admin, strategies, canAccessCustom: true);
 
         // Assert
-        Assert.Equal(RagStrategy.Fast, access.AvailableStrategies[0]);
-        Assert.Equal(RagStrategy.Precise, access.AvailableStrategies[1]);
-        Assert.Equal(RagStrategy.Custom, access.AvailableStrategies[2]);
+        access.AvailableStrategies[0].Should().Be(RagStrategy.Fast);
+        access.AvailableStrategies[1].Should().Be(RagStrategy.Precise);
+        access.AvailableStrategies[2].Should().Be(RagStrategy.Custom);
     }
 
     #endregion
@@ -97,10 +98,10 @@ public class TierStrategyAccessTests
         var access = TierStrategyAccess.NoAccess(UserTier.Free);
 
         // Assert
-        Assert.Equal(UserTier.Free, access.Tier);
-        Assert.Empty(access.AvailableStrategies);
-        Assert.False(access.CanAccessCustom);
-        Assert.False(access.HasAnyAccess);
+        access.Tier.Should().Be(UserTier.Free);
+        access.AvailableStrategies.Should().BeEmpty();
+        access.CanAccessCustom.Should().BeFalse();
+        access.HasAnyAccess.Should().BeFalse();
     }
 
     #endregion
@@ -114,7 +115,7 @@ public class TierStrategyAccessTests
         var access = TierStrategyAccess.Create(UserTier.Free, new[] { RagStrategy.Fast });
 
         // Assert
-        Assert.True(access.HasAnyAccess);
+        access.HasAnyAccess.Should().BeTrue();
     }
 
     [Fact]
@@ -124,7 +125,7 @@ public class TierStrategyAccessTests
         var access = TierStrategyAccess.NoAccess(UserTier.Free);
 
         // Assert
-        Assert.False(access.HasAnyAccess);
+        access.HasAnyAccess.Should().BeFalse();
     }
 
     #endregion
@@ -138,8 +139,8 @@ public class TierStrategyAccessTests
         var access = TierStrategyAccess.Create(UserTier.Free, new[] { RagStrategy.Fast, RagStrategy.Balanced });
 
         // Act & Assert
-        Assert.True(access.HasAccessTo(RagStrategy.Fast));
-        Assert.True(access.HasAccessTo(RagStrategy.Balanced));
+        access.HasAccessTo(RagStrategy.Fast).Should().BeTrue();
+        access.HasAccessTo(RagStrategy.Balanced).Should().BeTrue();
     }
 
     [Fact]
@@ -149,8 +150,8 @@ public class TierStrategyAccessTests
         var access = TierStrategyAccess.Create(UserTier.Free, new[] { RagStrategy.Fast, RagStrategy.Balanced });
 
         // Act & Assert
-        Assert.False(access.HasAccessTo(RagStrategy.Precise));
-        Assert.False(access.HasAccessTo(RagStrategy.Custom));
+        access.HasAccessTo(RagStrategy.Precise).Should().BeFalse();
+        access.HasAccessTo(RagStrategy.Custom).Should().BeFalse();
     }
 
     [Fact]
@@ -160,7 +161,7 @@ public class TierStrategyAccessTests
         var access = TierStrategyAccess.Create(UserTier.Free, new[] { RagStrategy.Fast });
 
         // Act & Assert
-        Assert.True(access.HasAccessTo(RagStrategy.None));
+        access.HasAccessTo(RagStrategy.None).Should().BeTrue();
     }
 
     [Fact]
@@ -178,8 +179,8 @@ public class TierStrategyAccessTests
             canAccessCustom: false);
 
         // Act & Assert
-        Assert.True(accessWithCustom.HasAccessTo(RagStrategy.Custom));
-        Assert.False(accessWithoutCustom.HasAccessTo(RagStrategy.Custom));
+        accessWithCustom.HasAccessTo(RagStrategy.Custom).Should().BeTrue();
+        accessWithoutCustom.HasAccessTo(RagStrategy.Custom).Should().BeFalse();
     }
 
     #endregion
@@ -196,10 +197,10 @@ public class TierStrategyAccessTests
         var result = access.ToString();
 
         // Assert
-        Assert.Contains("TierStrategyAccess", result);
-        Assert.Contains("Free", result);
-        Assert.Contains("Fast", result);
-        Assert.Contains("Balanced", result);
+        result.Should().Contain("TierStrategyAccess");
+        result.Should().Contain("Free");
+        result.Should().Contain("Fast");
+        result.Should().Contain("Balanced");
     }
 
     #endregion
@@ -222,10 +223,10 @@ public class TierStrategyValidationResultTests
         var result = TierStrategyValidationResult.Success(UserTier.Free, RagStrategy.Fast);
 
         // Assert
-        Assert.True(result.IsValid);
-        Assert.Equal(UserTier.Free, result.Tier);
-        Assert.Equal(RagStrategy.Fast, result.RequestedStrategy);
-        Assert.Contains("granted", result.Message, StringComparison.OrdinalIgnoreCase);
+        result.IsValid.Should().BeTrue();
+        result.Tier.Should().Be(UserTier.Free);
+        result.RequestedStrategy.Should().Be(RagStrategy.Fast);
+        result.Message.Should().ContainEquivalentOf("granted");
     }
 
     [Fact]
@@ -235,10 +236,10 @@ public class TierStrategyValidationResultTests
         var result = TierStrategyValidationResult.AccessDenied(UserTier.Free, RagStrategy.Custom);
 
         // Assert
-        Assert.False(result.IsValid);
-        Assert.Equal(UserTier.Free, result.Tier);
-        Assert.Equal(RagStrategy.Custom, result.RequestedStrategy);
-        Assert.Contains("denied", result.Message, StringComparison.OrdinalIgnoreCase);
+        result.IsValid.Should().BeFalse();
+        result.Tier.Should().Be(UserTier.Free);
+        result.RequestedStrategy.Should().Be(RagStrategy.Custom);
+        result.Message.Should().ContainEquivalentOf("denied");
     }
 
     [Fact]
@@ -248,10 +249,10 @@ public class TierStrategyValidationResultTests
         var result = TierStrategyValidationResult.NoAccess(UserTier.Free);
 
         // Assert
-        Assert.False(result.IsValid);
-        Assert.Equal(UserTier.Free, result.Tier);
-        Assert.Equal(RagStrategy.None, result.RequestedStrategy);
-        Assert.Contains("no RAG strategy access", result.Message, StringComparison.OrdinalIgnoreCase);
+        result.IsValid.Should().BeFalse();
+        result.Tier.Should().Be(UserTier.Free);
+        result.RequestedStrategy.Should().Be(RagStrategy.None);
+        result.Message.Should().ContainEquivalentOf("no RAG strategy access");
     }
 
     #endregion

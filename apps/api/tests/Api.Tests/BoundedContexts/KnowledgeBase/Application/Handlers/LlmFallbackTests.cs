@@ -22,6 +22,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Handlers;
 
@@ -117,9 +118,9 @@ public sealed class LlmFallbackTests : IDisposable
         var events = await CollectEvents(handler, command);
 
         // Assert
-        Assert.Equal(3, callCount); // primary + retry + fallback
-        Assert.Contains(events, e => e.Type == StreamingEventType.Token);
-        Assert.Contains(events, e => e.Type == StreamingEventType.Complete);
+        callCount.Should().Be(3); // primary + retry + fallback
+        events.Should().Contain(e => e.Type == StreamingEventType.Token);
+        events.Should().Contain(e => e.Type == StreamingEventType.Complete);
 
         // Verify fallback model was Ollama
         _mockLlmService.Verify(s => s.GenerateCompletionWithModelAsync(
@@ -163,14 +164,14 @@ public sealed class LlmFallbackTests : IDisposable
 
         // Assert
         var downgradeEvent = events.FirstOrDefault(e => e.Type == StreamingEventType.ModelDowngrade);
-        Assert.NotNull(downgradeEvent);
+        downgradeEvent.Should().NotBeNull();
 
-        var downgrade = Assert.IsType<StreamingModelDowngrade>(downgradeEvent.Data);
-        Assert.Equal(freeModel, downgrade.OriginalModel);
-        Assert.Equal(AgentDefaults.OllamaFallbackModel, downgrade.FallbackModel);
-        Assert.True(downgrade.IsLocalFallback);
-        Assert.NotNull(downgrade.UpgradeMessage);
-        Assert.Contains("Premium", downgrade.UpgradeMessage, StringComparison.OrdinalIgnoreCase);
+        var downgrade = downgradeEvent.Data.Should().BeOfType<StreamingModelDowngrade>().Which;
+        downgrade.OriginalModel.Should().Be(freeModel);
+        downgrade.FallbackModel.Should().Be(AgentDefaults.OllamaFallbackModel);
+        downgrade.IsLocalFallback.Should().BeTrue();
+        downgrade.UpgradeMessage.Should().NotBeNull();
+        downgrade.UpgradeMessage.Should().ContainEquivalentOf("Premium");
     }
 
     // ───────────────────────────────────────────────────────────────────
@@ -228,7 +229,7 @@ public sealed class LlmFallbackTests : IDisposable
         var events = await CollectEvents(handler, command);
 
         // Assert
-        Assert.Contains(events, e => e.Type == StreamingEventType.Token);
+        events.Should().Contain(e => e.Type == StreamingEventType.Token);
         _mockLlmService.Verify(s => s.GenerateCompletionWithModelAsync(
             fallbackModel,
             It.IsAny<string>(), It.IsAny<string>(),
@@ -289,11 +290,11 @@ public sealed class LlmFallbackTests : IDisposable
 
         // Assert
         var downgradeEvent = events.FirstOrDefault(e => e.Type == StreamingEventType.ModelDowngrade);
-        Assert.NotNull(downgradeEvent);
+        downgradeEvent.Should().NotBeNull();
 
-        var downgrade = Assert.IsType<StreamingModelDowngrade>(downgradeEvent.Data);
-        Assert.Null(downgrade.UpgradeMessage);
-        Assert.False(downgrade.IsLocalFallback);
+        var downgrade = downgradeEvent.Data.Should().BeOfType<StreamingModelDowngrade>().Which;
+        downgrade.UpgradeMessage.Should().BeNull();
+        downgrade.IsLocalFallback.Should().BeFalse();
     }
 
     // ───────────────────────────────────────────────────────────────────
@@ -331,9 +332,9 @@ public sealed class LlmFallbackTests : IDisposable
         var events = await CollectEvents(handler, command);
 
         // Assert
-        Assert.Equal(2, callCount); // primary + retry (no fallback)
-        Assert.DoesNotContain(events, e => e.Type == StreamingEventType.ModelDowngrade);
-        Assert.Contains(events, e => e.Type == StreamingEventType.Token);
+        callCount.Should().Be(2); // primary + retry (no fallback)
+        events.Should().NotContain(e => e.Type == StreamingEventType.ModelDowngrade);
+        events.Should().Contain(e => e.Type == StreamingEventType.Token);
     }
 
     // ───────────────────────────────────────────────────────────────────
@@ -364,12 +365,12 @@ public sealed class LlmFallbackTests : IDisposable
 
         // Assert
         var errorEvent = events.LastOrDefault(e => e.Type == StreamingEventType.Error);
-        Assert.NotNull(errorEvent);
+        errorEvent.Should().NotBeNull();
 
-        var error = Assert.IsType<StreamingError>(errorEvent.Data);
-        Assert.Equal("LLM_FAILED", error.errorCode);
+        var error = errorEvent.Data.Should().BeOfType<StreamingError>().Which;
+        error.errorCode.Should().Be("LLM_FAILED");
         // Error message is now sanitized (no provider internals leaked)
-        Assert.Contains("non è al momento disponibile", error.errorMessage, StringComparison.OrdinalIgnoreCase);
+        error.errorMessage.Should().ContainEquivalentOf("non è al momento disponibile");
     }
 
     // ───────────────────────────────────────────────────────────────────

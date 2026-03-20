@@ -16,6 +16,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Moq;
+using FluentAssertions;
 using Xunit;
 using Api.Tests.Constants;
 
@@ -96,13 +97,13 @@ public sealed class RagServiceIntegrationTests : IDisposable
         var result = await ragService.AskAsync(gameId, query, cancellationToken: TestCancellationToken);
 
         // Assert - QaResponse is a record with lowercase parameters
-        Assert.NotNull(result);
-        Assert.NotNull(result.answer);
-        Assert.NotEmpty(result.answer);
-        Assert.NotNull(result.snippets);
-        Assert.True(result.promptTokens >= 0);
-        Assert.True(result.completionTokens >= 0);
-        Assert.True(result.totalTokens >= 0);
+        result.Should().NotBeNull();
+        result.answer.Should().NotBeNull();
+        result.answer.Should().NotBeEmpty();
+        result.snippets.Should().NotBeNull();
+        (result.promptTokens >= 0).Should().BeTrue();
+        (result.completionTokens >= 0).Should().BeTrue();
+        (result.totalTokens >= 0).Should().BeTrue();
     }
 
     /// <summary>
@@ -128,13 +129,13 @@ public sealed class RagServiceIntegrationTests : IDisposable
 
         // Assert - After Qdrant removal, vector retrieval returns empty results,
         // so ExplainAsync returns an empty explain response with a message.
-        Assert.NotNull(result);
-        Assert.NotNull(result.outline);
-        Assert.NotNull(result.script);
-        Assert.NotEmpty(result.script); // Contains the "no relevant information" message
-        Assert.NotNull(result.citations);
-        Assert.Empty(result.citations); // No citations when no vector results
-        Assert.Equal(0, result.estimatedReadingTimeMinutes); // No reading time for empty response
+        result.Should().NotBeNull();
+        result.outline.Should().NotBeNull();
+        result.script.Should().NotBeNull();
+        result.script.Should().NotBeEmpty();
+        result.citations.Should().NotBeNull();
+        result.citations.Should().BeEmpty();
+        result.estimatedReadingTimeMinutes.Should().Be(0);
     }
 
     /// <summary>
@@ -162,11 +163,11 @@ public sealed class RagServiceIntegrationTests : IDisposable
             cancellationToken: TestCancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.NotNull(result.answer);
-        Assert.NotEmpty(result.answer);
-        Assert.NotNull(result.snippets);
-        Assert.True(result.totalTokens >= 0);
+        result.Should().NotBeNull();
+        result.answer.Should().NotBeNull();
+        result.answer.Should().NotBeEmpty();
+        result.snippets.Should().NotBeNull();
+        (result.totalTokens >= 0).Should().BeTrue();
     }
 
     /// <summary>
@@ -183,9 +184,9 @@ public sealed class RagServiceIntegrationTests : IDisposable
         var result = await ragService.AskAsync(gameId, "", cancellationToken: TestCancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal("Please provide a question", result.answer);
-        Assert.Empty(result.snippets);
+        result.Should().NotBeNull();
+        result.answer.Should().Be("Please provide a question");
+        result.snippets.Should().BeEmpty();
     }
 
     /// <summary>
@@ -209,10 +210,10 @@ public sealed class RagServiceIntegrationTests : IDisposable
         var result = await ragService.AskAsync(gameId, query, cancellationToken: TestCancellationToken);
 
         // Assert - When embedding fails, no results are returned → "Not specified"
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         // When embedding fails, RagService returns empty results which triggers "Not specified" response
-        Assert.Equal("Not specified", result.answer);
-        Assert.Empty(result.snippets);
+        result.answer.Should().Be("Not specified");
+        result.snippets.Should().BeEmpty();
     }
 
     /// <summary>
@@ -237,10 +238,10 @@ public sealed class RagServiceIntegrationTests : IDisposable
         var result = await ragService.AskAsync(gameId, query, cancellationToken: TestCancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal("Cached answer", result.answer);
-        Assert.Single(result.snippets);
-        Assert.Equal(30, result.totalTokens);
+        result.Should().NotBeNull();
+        result.answer.Should().Be("Cached answer");
+        result.snippets.Should().ContainSingle();
+        result.totalTokens.Should().Be(30);
     }
 
     // ==================== Helper Methods ====================
@@ -496,7 +497,7 @@ public sealed class RagServiceIntegrationTests : IDisposable
         var result = await ragService.AskAsync(gameId, query, cancellationToken: TestCancellationToken);
 
         // Assert - Verify TopK configuration was requested
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         customMock.Verify(c => c.GetRagConfigAsync(RagTestHelpers.ConfigKeys.TopK, It.IsAny<int>()), Times.AtLeastOnce);
     }
 
@@ -528,9 +529,9 @@ public sealed class RagServiceIntegrationTests : IDisposable
         var result = await ragService.AskAsync(gameId, query, cancellationToken: TestCancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.NotNull(result.answer);
-        Assert.NotEmpty(result.answer);
+        result.Should().NotBeNull();
+        result.answer.Should().NotBeNull();
+        result.answer.Should().NotBeEmpty();
         // Configuration was used during query processing
         customMock.Verify(c => c.GetRagConfigAsync(RagTestHelpers.ConfigKeys.TopK, It.IsAny<int>()), Times.AtLeastOnce);
     }
@@ -563,8 +564,8 @@ public sealed class RagServiceIntegrationTests : IDisposable
         var result = await ragService.AskAsync(gameId, query, cancellationToken: TestCancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.NotNull(result.answer);
+        result.Should().NotBeNull();
+        result.answer.Should().NotBeNull();
         customMock.Verify(c => c.GetRagConfigAsync(RagTestHelpers.ConfigKeys.TopK, It.IsAny<int>()), Times.AtLeastOnce);
     }
 
@@ -597,9 +598,9 @@ public sealed class RagServiceIntegrationTests : IDisposable
         var result = await ragService.AskAsync(gameId, query, cancellationToken: TestCancellationToken);
 
         // Assert - Service should handle extreme values gracefully
-        Assert.NotNull(result);
-        Assert.NotNull(result.answer);
-        Assert.True(result.totalTokens >= 0);
+        result.Should().NotBeNull();
+        result.answer.Should().NotBeNull();
+        (result.totalTokens >= 0).Should().BeTrue();
     }
 
     /// <summary>
@@ -632,8 +633,8 @@ public sealed class RagServiceIntegrationTests : IDisposable
         var result = await ragService.AskAsync(gameId, query, cancellationToken: TestCancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.NotNull(result.answer);
+        result.Should().NotBeNull();
+        result.answer.Should().NotBeNull();
         // Verify configuration was requested (would be clamped by provider in real scenario)
         customMock.Verify(c => c.GetRagConfigAsync(RagTestHelpers.ConfigKeys.TopK, It.IsAny<int>()), Times.AtLeastOnce);
     }
@@ -672,9 +673,9 @@ public sealed class RagServiceIntegrationTests : IDisposable
         var result = await ragService.AskAsync(gameId, query, cancellationToken: TestCancellationToken);
 
         // Assert - Service should handle boundary values correctly
-        Assert.NotNull(result);
-        Assert.NotNull(result.answer);
-        Assert.True(result.totalTokens >= 0);
+        result.Should().NotBeNull();
+        result.answer.Should().NotBeNull();
+        (result.totalTokens >= 0).Should().BeTrue();
 
         // Verify TopK configuration was requested
         customMock.Verify(c => c.GetRagConfigAsync(RagTestHelpers.ConfigKeys.TopK, It.IsAny<int>()), Times.AtLeastOnce);
@@ -710,13 +711,13 @@ public sealed class RagServiceIntegrationTests : IDisposable
         var result = await ragService.AskAsync(gameId, query, cancellationToken: TestCancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.NotNull(result.answer);
+        result.Should().NotBeNull();
+        result.answer.Should().NotBeNull();
 
         // At minimum score (0.0), should accept most results
         // At maximum score (1.0), should be very selective
         // Both should return valid responses from our mocked data
-        Assert.True(result.totalTokens >= 0);
+        (result.totalTokens >= 0).Should().BeTrue();
         customMock.Verify(c => c.GetRagConfigAsync(RagTestHelpers.ConfigKeys.TopK, It.IsAny<int>()), Times.AtLeastOnce);
     }
 
@@ -747,10 +748,10 @@ public sealed class RagServiceIntegrationTests : IDisposable
         customMock.Verify(c => c.GetRagConfigAsync(RagTestHelpers.ConfigKeys.TopK, It.IsAny<int>()), Times.AtLeastOnce);
 
         // Verify that using constants is type-safe and readable
-        Assert.Equal("TopK", RagTestHelpers.ConfigKeys.TopK);
-        Assert.Equal("MinScore", RagTestHelpers.ConfigKeys.MinScore);
-        Assert.Equal("RrfK", RagTestHelpers.ConfigKeys.RrfK);
-        Assert.Equal("MaxQueryVariations", RagTestHelpers.ConfigKeys.MaxQueryVariations);
+        RagTestHelpers.ConfigKeys.TopK.Should().Be("TopK");
+        RagTestHelpers.ConfigKeys.MinScore.Should().Be("MinScore");
+        RagTestHelpers.ConfigKeys.RrfK.Should().Be("RrfK");
+        RagTestHelpers.ConfigKeys.MaxQueryVariations.Should().Be("MaxQueryVariations");
     }
 
     /// <summary>

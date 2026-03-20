@@ -15,6 +15,7 @@ using MediatR;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.Unit.KnowledgeBase;
 
@@ -71,10 +72,10 @@ public sealed class QuickCreateAgentCommandHandlerTests
         var result = await handler.Handle(command, CancellationToken.None);
 
         // Assert
-        Assert.NotEqual(Guid.Empty, result.AgentId);
-        Assert.NotEqual(Guid.Empty, result.ChatThreadId);
-        Assert.Contains("Test Game", result.AgentName);
-        Assert.Equal(2, result.KbCardCount);
+        result.AgentId.Should().NotBe(Guid.Empty);
+        result.ChatThreadId.Should().NotBe(Guid.Empty);
+        result.AgentName.Should().Contain("Test Game");
+        result.KbCardCount.Should().Be(2);
         _mockAgentRepo.Verify(r => r.AddAsync(It.IsAny<Agent>(), It.IsAny<CancellationToken>()), Times.Once);
         _mockChatThreadRepo.Verify(r => r.AddAsync(It.IsAny<ChatThread>(), It.IsAny<CancellationToken>()), Times.Once);
         _mockUow.Verify(u => u.CommitTransactionAsync(It.IsAny<CancellationToken>()), Times.Once);
@@ -93,7 +94,7 @@ public sealed class QuickCreateAgentCommandHandlerTests
         var command = new QuickCreateAgentCommand(UserId, GameId, null, "User", "free");
 
         // Act & Assert
-        await Assert.ThrowsAsync<ForbiddenException>(() => handler.Handle(command, CancellationToken.None));
+        await ((Func<Task>)(() => handler.Handle(command, CancellationToken.None))).Should().ThrowAsync<ForbiddenException>();
     }
 
     [Fact]
@@ -139,7 +140,7 @@ public sealed class QuickCreateAgentCommandHandlerTests
         var result = await handler.Handle(command, CancellationToken.None);
 
         // Assert — only completed docs are counted
-        Assert.Equal(2, result.KbCardCount);
+        result.KbCardCount.Should().Be(2);
     }
 
     #region Helpers

@@ -10,6 +10,7 @@ using Api.Tests.TestHelpers;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.Administration.Application.Services;
 
@@ -66,12 +67,12 @@ public sealed class ActivityTimelineServiceTests : IDisposable
         var result = await _service.GetRecentActivitiesAsync(_userId);
 
         // Assert
-        Assert.Equal(3, result.Count);
-        Assert.True(result[0].Timestamp >= result[1].Timestamp);
-        Assert.True(result[1].Timestamp >= result[2].Timestamp);
-        Assert.Equal("chat_saved", result[0].Type);
-        Assert.Equal("session_completed", result[1].Type);
-        Assert.Equal("game_added", result[2].Type);
+        result.Count.Should().Be(3);
+        (result[0].Timestamp >= result[1].Timestamp).Should().BeTrue();
+        (result[1].Timestamp >= result[2].Timestamp).Should().BeTrue();
+        result[0].Type.Should().Be("chat_saved");
+        result[1].Type.Should().Be("session_completed");
+        result[2].Type.Should().Be("game_added");
     }
 
     [Fact]
@@ -93,7 +94,7 @@ public sealed class ActivityTimelineServiceTests : IDisposable
         var result = await _service.GetRecentActivitiesAsync(_userId, limit: 3);
 
         // Assert
-        Assert.Equal(3, result.Count);
+        result.Count.Should().Be(3);
     }
 
     [Fact]
@@ -103,8 +104,8 @@ public sealed class ActivityTimelineServiceTests : IDisposable
         var result = await _service.GetRecentActivitiesAsync(_userId);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Empty(result);
+        result.Should().NotBeNull();
+        result.Should().BeEmpty();
     }
 
     [Fact]
@@ -121,11 +122,11 @@ public sealed class ActivityTimelineServiceTests : IDisposable
         var result = await _service.GetRecentActivitiesAsync(_userId);
 
         // Assert
-        Assert.Equal(3, result.Count);
+        result.Count.Should().Be(3);
         var types = result.Select(e => e.Type).ToHashSet();
-        Assert.Contains("game_added", types);
-        Assert.Contains("session_completed", types);
-        Assert.Contains("chat_saved", types);
+        types.Should().Contain("game_added");
+        types.Should().Contain("session_completed");
+        types.Should().Contain("chat_saved");
     }
 
     [Fact]
@@ -140,12 +141,12 @@ public sealed class ActivityTimelineServiceTests : IDisposable
         var result = await _service.GetRecentActivitiesAsync(_userId);
 
         // Assert
-        Assert.Single(result);
-        var evt = Assert.IsType<GameAddedEvent>(result[0]);
-        Assert.Equal("game_added", evt.Type);
-        Assert.Equal("Azul", evt.GameName);
-        Assert.Equal(game.Id, evt.GameId);
-        Assert.Equal("https://example.com/azul.jpg", evt.CoverUrl);
+        result.Should().ContainSingle();
+        var evt = result[0].Should().BeOfType<GameAddedEvent>().Subject;
+        evt.Type.Should().Be("game_added");
+        evt.GameName.Should().Be("Azul");
+        evt.GameId.Should().Be(game.Id);
+        evt.CoverUrl.Should().Be("https://example.com/azul.jpg");
     }
 
     [Fact]
@@ -161,11 +162,11 @@ public sealed class ActivityTimelineServiceTests : IDisposable
         var result = await _service.GetRecentActivitiesAsync(_userId);
 
         // Assert - library entry + session = 2 events
-        Assert.Equal(2, result.Count);
+        result.Count.Should().Be(2);
         var sessionEvt = result.OfType<SessionCompletedEvent>().Single();
-        Assert.Equal("session_completed", sessionEvt.Type);
-        Assert.Equal("Root", sessionEvt.GameName);
-        Assert.Equal(120, sessionEvt.Duration);
+        sessionEvt.Type.Should().Be("session_completed");
+        sessionEvt.GameName.Should().Be("Root");
+        sessionEvt.Duration.Should().Be(120);
     }
 
     [Fact]
@@ -179,10 +180,10 @@ public sealed class ActivityTimelineServiceTests : IDisposable
         var result = await _service.GetRecentActivitiesAsync(_userId);
 
         // Assert
-        Assert.Single(result);
-        var evt = Assert.IsType<ChatSavedEvent>(result[0]);
-        Assert.Equal("chat_saved", evt.Type);
-        Assert.Equal("Strategy discussion", evt.Topic);
+        result.Should().ContainSingle();
+        var evt = result[0].Should().BeOfType<ChatSavedEvent>().Subject;
+        evt.Type.Should().Be("chat_saved");
+        evt.Topic.Should().Be("Strategy discussion");
     }
 
     [Fact]
@@ -199,9 +200,9 @@ public sealed class ActivityTimelineServiceTests : IDisposable
         // Assert
         // Should have both game_added and wishlist_added for the same entry
         var wishlistEvents = result.Where(e => e.Type == "wishlist_added").ToList();
-        Assert.Single(wishlistEvents);
-        var evt = Assert.IsType<WishlistAddedEvent>(wishlistEvents[0]);
-        Assert.Equal("Gloomhaven", evt.GameName);
+        wishlistEvents.Should().ContainSingle();
+        var evt = wishlistEvents[0].Should().BeOfType<WishlistAddedEvent>().Subject;
+        evt.GameName.Should().Be("Gloomhaven");
     }
 
     [Fact]
@@ -238,7 +239,7 @@ public sealed class ActivityTimelineServiceTests : IDisposable
         var result = await _service.GetRecentActivitiesAsync(_userId);
 
         // Assert - should only have our user's events
-        Assert.Single(result); // Only the game_added for our user
+        result.Should().ContainSingle(); // Only the game_added for our user
     }
 
     [Fact]
@@ -255,7 +256,7 @@ public sealed class ActivityTimelineServiceTests : IDisposable
         var result = await _service.GetRecentActivitiesAsync(_userId);
 
         // Assert
-        Assert.Equal(10, result.Count);
+        result.Count.Should().Be(10);
     }
 
     [Fact]

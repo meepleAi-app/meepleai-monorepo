@@ -21,6 +21,7 @@ import {
   Upload,
   Zap,
 } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 
 import { ChatThreadView } from '@/components/chat-unified/ChatThreadView';
 import { AgentStatusBadge } from '@/components/ui/data-display/meeple-card-features/AgentStatusBadge';
@@ -113,7 +114,7 @@ export const AgentCharacterSheet = React.memo(function AgentCharacterSheet({
               {data.name}
             </h2>
             <span
-              className="inline-flex items-center gap-1 mt-1 px-2 py-0.5 rounded-full bg-blue-500/100/20 text-blue-400 font-nunito text-[10px] font-semibold uppercase tracking-wider"
+              className="inline-flex items-center gap-1 mt-1 px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-400 font-nunito text-[10px] font-semibold uppercase tracking-wider"
               data-testid="agent-type-badge"
             >
               {data.type}
@@ -169,9 +170,7 @@ export const AgentCharacterSheet = React.memo(function AgentCharacterSheet({
               key={i}
               className={cn(
                 'w-8 h-8 rounded-full border-2 transition-colors',
-                i < docs.length
-                  ? 'bg-blue-500/100 border-blue-600'
-                  : 'bg-[#30363d] border-[#484f58]'
+                i < docs.length ? 'bg-blue-500 border-blue-600' : 'bg-[#30363d] border-[#484f58]'
               )}
               aria-hidden="true"
             />
@@ -189,7 +188,7 @@ export const AgentCharacterSheet = React.memo(function AgentCharacterSheet({
               'flex items-center justify-center gap-2 rounded-xl border py-2.5 px-4',
               'bg-[#21262d] border-blue-500/30 text-blue-400',
               'font-nunito text-xs font-semibold',
-              'transition-colors hover:bg-blue-500/100/10',
+              'transition-colors hover:bg-blue-500/10',
               'focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-1'
             )}
             data-testid="agent-configure-btn"
@@ -329,6 +328,7 @@ function AgentChatSection({
   chatThreadId,
   onThreadCreated,
 }: AgentChatSectionProps) {
+  const router = useRouter();
   const [threadError, setThreadError] = useState<string | null>(null);
   const [creatingThread, setCreatingThread] = useState(false);
 
@@ -369,7 +369,7 @@ function AgentChatSection({
         <Button
           variant="outline"
           size="sm"
-          onClick={() => (window.location.href = `/admin/ai-lab/agents/${agentId}/edit`)}
+          onClick={() => router.push(`/admin/ai-lab/agents/${agentId}/edit`)}
           className="rounded-full gap-2"
         >
           <Settings className="h-4 w-4" />

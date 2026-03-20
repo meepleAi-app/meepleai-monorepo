@@ -29,6 +29,19 @@ function renderWithQuery(ui: React.ReactElement) {
 
 // ── Mocks ──────────────────────────────────────────────────────────────────
 
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({
+    push: vi.fn(),
+    replace: vi.fn(),
+    back: vi.fn(),
+    forward: vi.fn(),
+    refresh: vi.fn(),
+    prefetch: vi.fn(),
+  }),
+  usePathname: () => '/',
+  useSearchParams: () => new URLSearchParams(),
+}));
+
 vi.mock('@/hooks/useAgentStatus', () => ({
   useAgentStatus: vi.fn(() => ({
     status: null,

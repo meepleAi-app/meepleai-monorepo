@@ -240,7 +240,7 @@ public class AbandonGameSessionCommandHandlerTests
             Reason: "Test");
 
         // Act & Assert
-        var act = 
+        var act =
             () => _handler.Handle(command, TestContext.Current.CancellationToken);
         var exception = (await act.Should().ThrowAsync<InvalidOperationException>()).Which;
 
@@ -271,7 +271,7 @@ public class AbandonGameSessionCommandHandlerTests
             Reason: "Too late");
 
         // Act & Assert
-        var act = 
+        var act =
             () => _handler.Handle(command, TestContext.Current.CancellationToken);
         var exception = (await act.Should().ThrowAsync<InvalidOperationException>()).Which;
 
@@ -299,7 +299,7 @@ public class AbandonGameSessionCommandHandlerTests
             Reason: "Second reason");
 
         // Act & Assert
-        var act = 
+        var act =
             () => _handler.Handle(command, TestContext.Current.CancellationToken);
         var exception = (await act.Should().ThrowAsync<InvalidOperationException>()).Which;
 

@@ -52,7 +52,7 @@ public class GetLlmHealthQueryHandlerTests
             new GetLlmHealthQueryHandler(
                 null!,
                 _circuitBreakerRegistryMock.Object);
-act.Should().Throw<ArgumentNullException>();
+        act.Should().Throw<ArgumentNullException>();
     }
 
     [Fact]
@@ -63,7 +63,7 @@ act.Should().Throw<ArgumentNullException>();
             new GetLlmHealthQueryHandler(
                 _healthCheckServiceMock.Object,
                 null!);
-act.Should().Throw<ArgumentNullException>();
+        act.Should().Throw<ArgumentNullException>();
     }
     [Fact]
     public void Query_ConstructsCorrectly()

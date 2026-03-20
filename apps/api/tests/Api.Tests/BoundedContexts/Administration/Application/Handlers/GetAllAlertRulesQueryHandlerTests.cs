@@ -242,6 +242,6 @@ public class GetAllAlertRulesQueryHandlerTests
     {
         // Act & Assert
         var act = () => new GetAllAlertRulesQueryHandler(null!);
-act.Should().Throw<ArgumentNullException>();
+        act.Should().Throw<ArgumentNullException>();
     }
 }

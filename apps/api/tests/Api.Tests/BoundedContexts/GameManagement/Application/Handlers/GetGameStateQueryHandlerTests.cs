@@ -91,7 +91,7 @@ public class GetGameStateQueryHandlerTests
     public async Task Handle_WithNullQuery_ThrowsArgumentNullException()
     {
         // Act & Assert
-        var act = 
+        var act =
             () => _handler.Handle(null!, TestContext.Current.CancellationToken);
         await act.Should().ThrowAsync<ArgumentNullException>();
     }

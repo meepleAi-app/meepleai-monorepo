@@ -45,7 +45,7 @@ public class RollbackConfigCommandHandlerTests
         // Arrange
         var configId = Guid.NewGuid();
         var userId = Guid.NewGuid();
-        var config = new SystemConfig(Guid.NewGuid(), 
+        var config = new SystemConfig(Guid.NewGuid(),
             new ConfigKey("app.timeout"), "30", "integer",
             userId, "Timeout setting", "Performance");
 

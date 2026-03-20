@@ -89,9 +89,11 @@ export const DRAWER_ENTITY_TYPE_MAP: Partial<
 
 export const meepleCardVariants = cva(
   // Base styles for all variants — v2 warm styling (Issue #4604)
+  // Env-aware: reads --env-card-lift from parent .env-tavolo/.env-hub
   [
     'group relative overflow-hidden cursor-pointer',
     'transition-all duration-[350ms] ease-[cubic-bezier(0.4,0,0.2,1)]',
+    'motion-reduce:transition-none',
     'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
   ],
   {

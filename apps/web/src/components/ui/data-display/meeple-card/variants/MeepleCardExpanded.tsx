@@ -18,7 +18,7 @@ import { cn } from '@/lib/utils';
 
 import { StatusBadge } from '../../meeple-card-features/StatusBadge';
 import { WishlistButton } from '../../meeple-card-features/WishlistButton';
-import { CoverImage } from '../../meeple-card-parts';
+import { CoverImage, MeepleCardSkeleton } from '../../meeple-card-parts';
 import {
   entityColors,
   meepleCardVariants,
@@ -59,9 +59,14 @@ export const MeepleCardExpanded = React.memo(function MeepleCardExpanded(
     id,
     mechanicIcon,
     stateLabel,
+    loading = false,
   } = props;
 
   const variant = 'expanded' as const;
+
+  if (loading) {
+    return <MeepleCardSkeleton variant={variant} />;
+  }
   const coverSrc = entity === 'player' ? avatarUrl || imageUrl : imageUrl;
   // eslint-disable-next-line security/detect-object-injection
   const color = customColor || entityColors[entity].hsl;

@@ -25,10 +25,12 @@ ACTION="${1:-all}"
 load_secrets() {
     for f in "$SECRETS_DIR"/*.secret; do
         [ -f "$f" ] || continue
-        while IFS='=' read -r key value; do
+        while IFS= read -r line; do
             # Skip comments and empty lines
-            [[ "$key" =~ ^[[:space:]]*# ]] && continue
-            [[ -z "$key" ]] && continue
+            [[ "$line" =~ ^[[:space:]]*# ]] && continue
+            [[ -z "$line" ]] && continue
+            local key="${line%%=*}"
+            local value="${line#*=}"
             export "$key=$value"
         done < "$f"
     done

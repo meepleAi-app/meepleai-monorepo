@@ -4,7 +4,10 @@ import { useCallback, useState } from 'react';
 
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { XCircleIcon, RefreshCwIcon, Trash2Icon, FileTextIcon, ClockIcon } from 'lucide-react';
+import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 
+import { ChunkPreviewTab } from '@/components/ui/admin/chunk-preview-tab';
 import { Badge } from '@/components/ui/data-display/badge';
 import { Skeleton } from '@/components/ui/feedback/skeleton';
 import { Separator } from '@/components/ui/navigation/separator';
@@ -27,6 +30,16 @@ import { JobStepTimeline } from './job-step-timeline';
 import { cancelJob, retryJob, removeJob } from '../lib/queue-api';
 
 import type { ProcessingJobDetailDto } from '../lib/queue-api';
+
+function hasPassedChunking(job: ProcessingJobDetailDto): boolean {
+  const chunkingStep = job.steps?.find(
+    s =>
+      s.stepName === 'Chunking' ||
+      s.stepName === 'Chunk' ||
+      s.stepName.toLowerCase().includes('chunk')
+  );
+  return chunkingStep?.status === 'Completed' || job.status === 'Completed';
+}
 
 interface JobDetailPanelProps {
   job: ProcessingJobDetailDto | null | undefined;
@@ -66,6 +79,9 @@ export function JobDetailPanel({ job, isLoading }: JobDetailPanelProps) {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const [removeDialogOpen, setRemoveDialogOpen] = useState(false);
+  const searchParams = useSearchParams();
+  const flowGameId = searchParams.get('gameId');
+  const flowGameName = searchParams.get('gameName');
 
   const invalidateQueries = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: ['admin', 'queue'] });
@@ -183,11 +199,30 @@ export function JobDetailPanel({ job, isLoading }: JobDetailPanelProps) {
         <JobLogViewer logs={allLogs} />
       </div>
 
-      {/* Actions */}
-      {(canCancel || canRetry || canRemove) && (
+      {/* Chunk Preview */}
+      {job.pdfDocumentId && hasPassedChunking(job) && (
         <>
           <Separator />
-          <div className="flex gap-2">
+          <div>
+            <h4 className="mb-2 text-sm font-medium">Chunks</h4>
+            <ChunkPreviewTab pdfDocumentId={job.pdfDocumentId} />
+          </div>
+        </>
+      )}
+
+      {/* Actions */}
+      {(canCancel || canRetry || canRemove || (job.status === 'Completed' && flowGameId)) && (
+        <>
+          <Separator />
+          <div className="flex flex-wrap gap-2">
+            {job.status === 'Completed' && flowGameId && (
+              <Link
+                href={`/admin/games/${flowGameId}/agent/test?flow=embedding&gameName=${encodeURIComponent(flowGameName ?? '')}`}
+                className="inline-flex items-center gap-2 rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+              >
+                Testa Agent →
+              </Link>
+            )}
             {canCancel && (
               <Button
                 variant="outline"

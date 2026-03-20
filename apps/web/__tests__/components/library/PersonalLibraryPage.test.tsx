@@ -214,9 +214,9 @@ describe('PersonalLibraryPage', () => {
 
     render(<PersonalLibraryPage />);
 
-    const cards = screen.getAllByTestId('shelf-card');
-    // At minimum, expect cards for both catalog games
-    const titles = cards.map(c => c.textContent);
+    // At minimum, expect cards for both catalog games (testids are shelf-card-catalog-{id})
+    const cards = document.querySelectorAll('[data-testid^="shelf-card-catalog-"]');
+    const titles = Array.from(cards).map(c => c.textContent);
     expect(titles.some(t => t?.includes('Catan'))).toBe(true);
     expect(titles.some(t => t?.includes('Pandemic'))).toBe(true);
   });

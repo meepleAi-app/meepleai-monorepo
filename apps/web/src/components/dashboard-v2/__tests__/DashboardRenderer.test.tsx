@@ -35,16 +35,26 @@ vi.mock('../AddToLibraryModal', () => ({
 }));
 
 // ---------------------------------------------------------------------------
-// Mock tavolo components — avoids their internal dependencies
+// Mock TavoloZone — avoids its internal dependencies
 // ---------------------------------------------------------------------------
-vi.mock('../tavolo', () => ({
-  TavoloLayout: ({ children }: { children: React.ReactNode }) => (
+vi.mock('../TavoloZone', () => ({
+  TavoloZone: ({ children }: { children: React.ReactNode }) => (
     <div data-testid="tavolo-layout">{children}</div>
   ),
-  TavoloSection: ({ children, title }: { children: React.ReactNode; title: string }) => (
-    <div data-testid={`tavolo-section-${title}`}>{children}</div>
-  ),
-  ActiveSessionCard: () => <div data-testid="active-session-card" />,
+}));
+
+// ---------------------------------------------------------------------------
+// Mock OnboardingFlow — avoids its internal dependencies
+// ---------------------------------------------------------------------------
+vi.mock('../OnboardingFlow', () => ({
+  OnboardingFlow: () => null,
+}));
+
+// ---------------------------------------------------------------------------
+// Mock OverlayHybrid — avoids its internal dependencies
+// ---------------------------------------------------------------------------
+vi.mock('@/components/ui/overlays', () => ({
+  OverlayHybrid: () => null,
 }));
 
 // ---------------------------------------------------------------------------
@@ -54,6 +64,14 @@ vi.mock('../zones', () => ({
   HeroZone: () => <div data-testid="hero-zone">HeroZone</div>,
   SessionBar: () => <div data-testid="session-bar">SessionBar</div>,
   ScoreboardZone: () => <div data-testid="scoreboard-zone">ScoreboardZone</div>,
+  ActiveSessionZone: () => <div data-testid="active-session-zone">ActiveSessionZone</div>,
+  GameNightZone: () => <div data-testid="game-night-zone">GameNightZone</div>,
+  AgentZone: () => <div data-testid="agent-zone">AgentZone</div>,
+  StatsZone: () => <div data-testid="stats-zone">StatsZone</div>,
+  FeedZone: () => <div data-testid="feed-zone">FeedZone</div>,
+  SuggestedZone: () => <div data-testid="suggested-zone">SuggestedZone</div>,
+  AgentsSidebar: () => <div data-testid="agents-sidebar">AgentsSidebar</div>,
+  CardsZone: () => <div data-testid="cards-zone">CardsZone</div>,
 }));
 
 // ---------------------------------------------------------------------------

@@ -17,6 +17,7 @@ permissions:
   pull-requests: write
   checks: write
 
+  actions: read
 jobs:
   notify-start:
     if: github.event_name != 'workflow_call'

@@ -12,6 +12,7 @@ using Api.Tests.Constants;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.AgentMemory.Application.EventHandlers;
 
@@ -73,12 +74,12 @@ public class OnDisputeOverriddenAddHouseRuleHandlerTests
         await _handler.Handle(notification, CancellationToken.None);
 
         // Assert
-        Assert.NotNull(capturedMemory);
-        Assert.Equal(gameId, capturedMemory!.GameId);
-        Assert.Equal(ownerId, capturedMemory.OwnerId);
-        Assert.Single(capturedMemory.HouseRules);
-        Assert.Equal(overrideRule, capturedMemory.HouseRules[0].Description);
-        Assert.Equal(HouseRuleSource.DisputeOverride, capturedMemory.HouseRules[0].Source);
+        capturedMemory.Should().NotBeNull();
+        capturedMemory!.GameId.Should().Be(gameId);
+        capturedMemory.OwnerId.Should().Be(ownerId);
+        capturedMemory.HouseRules.Should().ContainSingle();
+        capturedMemory.HouseRules[0].Description.Should().Be(overrideRule);
+        capturedMemory.HouseRules[0].Source.Should().Be(HouseRuleSource.DisputeOverride);
 
         _unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
@@ -112,9 +113,9 @@ public class OnDisputeOverriddenAddHouseRuleHandlerTests
         await _handler.Handle(notification, CancellationToken.None);
 
         // Assert
-        Assert.Equal(2, existingMemory.HouseRules.Count);
-        Assert.Equal(overrideRule, existingMemory.HouseRules[1].Description);
-        Assert.Equal(HouseRuleSource.DisputeOverride, existingMemory.HouseRules[1].Source);
+        existingMemory.HouseRules.Count.Should().Be(2);
+        existingMemory.HouseRules[1].Description.Should().Be(overrideRule);
+        existingMemory.HouseRules[1].Source.Should().Be(HouseRuleSource.DisputeOverride);
 
         _gameMemoryRepoMock.Verify(r => r.UpdateAsync(existingMemory, It.IsAny<CancellationToken>()), Times.Once);
         _unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);

@@ -6,6 +6,7 @@ using Api.Tests.Constants;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.Administration.Application.Handlers;
 
@@ -70,14 +71,14 @@ public class GetPrometheusMetricsQueryHandlerTests
         var result = await _handler.Handle(query, CancellationToken.None);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal("matrix", result.ResultType);
-        Assert.Single(result.TimeSeries);
+        result.Should().NotBeNull();
+        result.ResultType.Should().Be("matrix");
+        result.TimeSeries.Should().ContainSingle();
 
         var ts = result.TimeSeries.ElementAt(0);
-        Assert.Equal("gpt-4", ts.Metric["model_id"]);
-        Assert.Equal(3, ts.Values.Count);
-        Assert.Equal(15.7, ts.Values.Last().Value);
+        ts.Metric["model_id"].Should().Be("gpt-4");
+        ts.Values.Count.Should().Be(3);
+        ts.Values.Last().Value.Should().Be(15.7);
 
         _mockPrometheusService.Verify(
             s => s.QueryRangeAsync(query.Query, query.Start, query.End, query.Step, It.IsAny<CancellationToken>()),
@@ -111,8 +112,8 @@ public class GetPrometheusMetricsQueryHandlerTests
         var result = await _handler.Handle(query, CancellationToken.None);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Empty(result.TimeSeries);
+        result.Should().NotBeNull();
+        result.TimeSeries.Should().BeEmpty();
     }
 
     [Fact]
@@ -152,14 +153,14 @@ public class GetPrometheusMetricsQueryHandlerTests
         var result = await _handler.Handle(query, CancellationToken.None);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal(2, result.TimeSeries.Count);
+        result.Should().NotBeNull();
+        result.TimeSeries.Count.Should().Be(2);
 
         var status200 = result.TimeSeries.First(ts => ts.Metric.ContainsKey("status") && ts.Metric["status"] == "200");
         var status500 = result.TimeSeries.First(ts => ts.Metric.ContainsKey("status") && ts.Metric["status"] == "500");
 
-        Assert.Equal(95.5, status200.Values.ElementAt(0).Value);
-        Assert.Equal(4.5, status500.Values.ElementAt(0).Value);
+        status200.Values.ElementAt(0).Value.Should().Be(95.5);
+        status500.Values.ElementAt(0).Value.Should().Be(4.5);
     }
 
     [Fact]
@@ -184,8 +185,9 @@ public class GetPrometheusMetricsQueryHandlerTests
             .ThrowsAsync(new InvalidOperationException("Prometheus query failed"));
 
         // Act & Assert
-        await Assert.ThrowsAsync<InvalidOperationException>(() =>
-            _handler.Handle(query, CancellationToken.None));
+        var act = () =>
+            _handler.Handle(query, CancellationToken.None);
+        await act.Should().ThrowAsync<InvalidOperationException>();
 
         _mockPrometheusService.Verify(
             s => s.QueryRangeAsync(It.IsAny<string>(), It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<string>(), It.IsAny<CancellationToken>()),

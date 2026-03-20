@@ -9,6 +9,7 @@ using Api.Tests.Constants;
 using Api.Tests.TestHelpers;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.GameManagement.Application.Handlers.Session;
 
@@ -93,12 +94,12 @@ public sealed class JoinSessionCommandHandlerTests
         var command = new JoinSessionCommand(TestPin, GuestName: "Alice", UserId: null);
         var result = await _sut.Handle(command, CancellationToken.None);
 
-        Assert.NotNull(result);
-        Assert.Equal(SessionId, result.SessionId);
-        Assert.Equal("Alice", result.DisplayName);
-        Assert.Equal("Player", result.Role);
-        Assert.NotNull(result.ConnectionToken);
-        Assert.Equal(6, result.ConnectionToken.Length);
+        result.Should().NotBeNull();
+        result.SessionId.Should().Be(SessionId);
+        result.DisplayName.Should().Be("Alice");
+        result.Role.Should().Be("Player");
+        result.ConnectionToken.Should().NotBeNull();
+        result.ConnectionToken.Length.Should().Be(6);
     }
 
     [Fact]
@@ -110,9 +111,9 @@ public sealed class JoinSessionCommandHandlerTests
         var command = new JoinSessionCommand(TestLinkToken, GuestName: null, UserId: userId);
         var result = await _sut.Handle(command, CancellationToken.None);
 
-        Assert.NotNull(result);
-        Assert.Equal(SessionId, result.SessionId);
-        Assert.Equal("Player", result.Role);
+        result.Should().NotBeNull();
+        result.SessionId.Should().Be(SessionId);
+        result.Role.Should().Be("Player");
     }
 
     [Fact]
@@ -122,8 +123,9 @@ public sealed class JoinSessionCommandHandlerTests
 
         var command = new JoinSessionCommand(TestPin, GuestName: "Alice", UserId: null);
 
-        await Assert.ThrowsAsync<ConflictException>(() =>
-            _sut.Handle(command, CancellationToken.None));
+        var act = () =>
+            _sut.Handle(command, CancellationToken.None);
+        await act.Should().ThrowAsync<ConflictException>();
     }
 
     [Fact]
@@ -133,8 +135,9 @@ public sealed class JoinSessionCommandHandlerTests
 
         var command = new JoinSessionCommand(TestPin, GuestName: "Alice", UserId: null);
 
-        await Assert.ThrowsAsync<ConflictException>(() =>
-            _sut.Handle(command, CancellationToken.None));
+        var act = () =>
+            _sut.Handle(command, CancellationToken.None);
+        await act.Should().ThrowAsync<ConflictException>();
     }
 
     [Fact]
@@ -144,8 +147,9 @@ public sealed class JoinSessionCommandHandlerTests
 
         var command = new JoinSessionCommand(TestPin, GuestName: "Alice", UserId: null);
 
-        await Assert.ThrowsAsync<ConflictException>(() =>
-            _sut.Handle(command, CancellationToken.None));
+        var act = () =>
+            _sut.Handle(command, CancellationToken.None);
+        await act.Should().ThrowAsync<ConflictException>();
     }
 
     [Fact]
@@ -155,8 +159,9 @@ public sealed class JoinSessionCommandHandlerTests
 
         var command = new JoinSessionCommand(TestPin, GuestName: null, UserId: null);
 
-        await Assert.ThrowsAsync<Api.SharedKernel.Domain.Exceptions.ValidationException>(() =>
-            _sut.Handle(command, CancellationToken.None));
+        var act = () =>
+            _sut.Handle(command, CancellationToken.None);
+        await act.Should().ThrowAsync<Api.SharedKernel.Domain.Exceptions.ValidationException>();
     }
 
     [Fact]
@@ -166,8 +171,9 @@ public sealed class JoinSessionCommandHandlerTests
 
         var command = new JoinSessionCommand(TestPin, GuestName: "   ", UserId: null);
 
-        await Assert.ThrowsAsync<Api.SharedKernel.Domain.Exceptions.ValidationException>(() =>
-            _sut.Handle(command, CancellationToken.None));
+        var act = () =>
+            _sut.Handle(command, CancellationToken.None);
+        await act.Should().ThrowAsync<Api.SharedKernel.Domain.Exceptions.ValidationException>();
     }
 
     [Fact]
@@ -193,8 +199,9 @@ public sealed class JoinSessionCommandHandlerTests
 
         var command = new JoinSessionCommand(TestPin, GuestName: null, UserId: userId);
 
-        await Assert.ThrowsAsync<ConflictException>(() =>
-            _sut.Handle(command, CancellationToken.None));
+        var act = () =>
+            _sut.Handle(command, CancellationToken.None);
+        await act.Should().ThrowAsync<ConflictException>();
     }
 
     [Fact]
@@ -204,8 +211,9 @@ public sealed class JoinSessionCommandHandlerTests
 
         var command = new JoinSessionCommand("INVALID", GuestName: "Alice", UserId: null);
 
-        await Assert.ThrowsAsync<NotFoundException>(() =>
-            _sut.Handle(command, CancellationToken.None));
+        var act = () =>
+            _sut.Handle(command, CancellationToken.None);
+        await act.Should().ThrowAsync<NotFoundException>();
     }
 
     [Fact]
@@ -217,7 +225,7 @@ public sealed class JoinSessionCommandHandlerTests
         await _sut.Handle(command, CancellationToken.None);
 
         var invite = _dbContext.SessionInvites.First();
-        Assert.Equal(1, invite.CurrentUses);
+        invite.CurrentUses.Should().Be(1);
     }
 
     [Fact]
@@ -246,7 +254,8 @@ public sealed class JoinSessionCommandHandlerTests
 
         var command = new JoinSessionCommand(TestPin, GuestName: "Alice", UserId: null);
 
-        await Assert.ThrowsAsync<ConflictException>(() =>
-            _sut.Handle(command, CancellationToken.None));
+        var act = () =>
+            _sut.Handle(command, CancellationToken.None);
+        await act.Should().ThrowAsync<ConflictException>();
     }
 }

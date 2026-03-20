@@ -6,6 +6,7 @@ using Api.BoundedContexts.AgentMemory.Domain.Repositories;
 using Api.Tests.Constants;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.AgentMemory.Application.Handlers;
 
@@ -47,17 +48,17 @@ public class GetPlayerStatsQueryHandlerTests
         var result = await _handler.Handle(query, CancellationToken.None);
 
         // Assert
-        Assert.Single(result);
+        result.Should().ContainSingle();
         var dto = result[0];
-        Assert.Equal(groupId, dto.GroupId);
-        Assert.Single(dto.GameStats);
+        dto.GroupId.Should().Be(groupId);
+        dto.GameStats.Should().ContainSingle();
 
         var gameStat = dto.GameStats[0];
-        Assert.Equal(gameId, gameStat.GameId);
-        Assert.Equal(1, gameStat.Wins);
-        Assert.Equal(1, gameStat.Losses);
-        Assert.Equal(2, gameStat.TotalPlayed);
-        Assert.Equal(150, gameStat.BestScore);
+        gameStat.GameId.Should().Be(gameId);
+        gameStat.Wins.Should().Be(1);
+        gameStat.Losses.Should().Be(1);
+        gameStat.TotalPlayed.Should().Be(2);
+        gameStat.BestScore.Should().Be(150);
     }
 
     [Fact]
@@ -76,7 +77,7 @@ public class GetPlayerStatsQueryHandlerTests
         var result = await _handler.Handle(query, CancellationToken.None);
 
         // Assert
-        Assert.Empty(result);
+        result.Should().BeEmpty();
     }
 
     [Fact]
@@ -100,6 +101,6 @@ public class GetPlayerStatsQueryHandlerTests
         var result = await _handler.Handle(query, CancellationToken.None);
 
         // Assert
-        Assert.Equal(2, result.Count);
+        result.Count.Should().Be(2);
     }
 }

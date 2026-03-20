@@ -1,6 +1,7 @@
 using Api.BoundedContexts.GameManagement.Domain.ValueObjects;
 using Api.Tests.Constants;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.GameManagement.Domain.ValueObjects;
 
@@ -19,57 +20,61 @@ public class RuleDisputeEntryTests
             raisedByPlayerName: "Marco",
             timestamp: DateTime.UtcNow);
 
-        Assert.Equal("Marco", entry.RaisedByPlayerName);
-        Assert.Single(entry.RuleReferences);
-        Assert.NotEqual(Guid.Empty, entry.Id);
+        entry.RaisedByPlayerName.Should().Be("Marco");
+        entry.RuleReferences.Should().ContainSingle();
+        entry.Id.Should().NotBe(Guid.Empty);
     }
 
     [Fact]
     public void Create_WithEmptyDescription_ShouldThrow()
     {
-        Assert.Throws<ArgumentException>(() => new RuleDisputeEntry(
+        var act = () => new RuleDisputeEntry(
             id: Guid.NewGuid(),
             description: "",
             verdict: "verdict",
             ruleReferences: new List<string>(),
             raisedByPlayerName: "Marco",
-            timestamp: DateTime.UtcNow));
+            timestamp: DateTime.UtcNow);
+        act.Should().Throw<ArgumentException>();
     }
 
     [Fact]
     public void Create_WithWhitespaceDescription_ShouldThrow()
     {
-        Assert.Throws<ArgumentException>(() => new RuleDisputeEntry(
+        var act = () => new RuleDisputeEntry(
             id: Guid.NewGuid(),
             description: "   ",
             verdict: "verdict",
             ruleReferences: new List<string>(),
             raisedByPlayerName: "Marco",
-            timestamp: DateTime.UtcNow));
+            timestamp: DateTime.UtcNow);
+        act.Should().Throw<ArgumentException>();
     }
 
     [Fact]
     public void Create_WithEmptyVerdict_ShouldThrow()
     {
-        Assert.Throws<ArgumentException>(() => new RuleDisputeEntry(
+        var act = () => new RuleDisputeEntry(
             id: Guid.NewGuid(),
             description: "Some dispute",
             verdict: "",
             ruleReferences: new List<string>(),
             raisedByPlayerName: "Marco",
-            timestamp: DateTime.UtcNow));
+            timestamp: DateTime.UtcNow);
+        act.Should().Throw<ArgumentException>();
     }
 
     [Fact]
     public void Create_WithEmptyPlayerName_ShouldThrow()
     {
-        Assert.Throws<ArgumentException>(() => new RuleDisputeEntry(
+        var act = () => new RuleDisputeEntry(
             id: Guid.NewGuid(),
             description: "Some dispute",
             verdict: "Some verdict",
             ruleReferences: new List<string>(),
             raisedByPlayerName: "",
-            timestamp: DateTime.UtcNow));
+            timestamp: DateTime.UtcNow);
+        act.Should().Throw<ArgumentException>();
     }
 
     [Fact]
@@ -83,7 +88,7 @@ public class RuleDisputeEntryTests
             raisedByPlayerName: "Marco",
             timestamp: DateTime.UtcNow);
 
-        Assert.NotEqual(Guid.Empty, entry.Id);
+        entry.Id.Should().NotBe(Guid.Empty);
     }
 
     [Fact]
@@ -97,8 +102,8 @@ public class RuleDisputeEntryTests
             raisedByPlayerName: "Marco",
             timestamp: DateTime.UtcNow);
 
-        Assert.NotNull(entry.RuleReferences);
-        Assert.Empty(entry.RuleReferences);
+        entry.RuleReferences.Should().NotBeNull();
+        entry.RuleReferences.Should().BeEmpty();
     }
 
     [Fact]
@@ -114,9 +119,9 @@ public class RuleDisputeEntryTests
             raisedByPlayerName: "Anna",
             timestamp: DateTime.UtcNow);
 
-        Assert.Equal(3, entry.RuleReferences.Count);
-        Assert.Contains("Page 5", entry.RuleReferences);
-        Assert.Contains("Section 2.1", entry.RuleReferences);
+        entry.RuleReferences.Count.Should().Be(3);
+        entry.RuleReferences.Should().Contain("Page 5");
+        entry.RuleReferences.Should().Contain("Section 2.1");
     }
 
     [Fact]
@@ -132,6 +137,6 @@ public class RuleDisputeEntryTests
             raisedByPlayerName: "Luca",
             timestamp: timestamp);
 
-        Assert.Equal(timestamp, entry.Timestamp);
+        entry.Timestamp.Should().Be(timestamp);
     }
 }

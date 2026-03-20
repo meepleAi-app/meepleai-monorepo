@@ -7,6 +7,7 @@ using Api.BoundedContexts.GameManagement.Domain.ValueObjects;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Moq;
 using Xunit;
+using FluentAssertions;
 using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.GameManagement.Application.Handlers;
@@ -47,10 +48,10 @@ public class CompleteGameSessionCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal(session.Id, result.Id);
-        Assert.Equal("Player 1", result.WinnerName);
-        Assert.Equal(SessionStatus.Completed.ToString(), result.Status);
+        result.Should().NotBeNull();
+        result.Id.Should().Be(session.Id);
+        result.WinnerName.Should().Be("Player 1");
+        result.Status.Should().Be(SessionStatus.Completed.ToString());
 
         _sessionRepositoryMock.Verify(r => r.UpdateAsync(session, It.IsAny<CancellationToken>()), Times.Once);
         _unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
@@ -73,9 +74,9 @@ public class CompleteGameSessionCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Null(result.WinnerName);
-        Assert.Equal(SessionStatus.Completed.ToString(), result.Status);
+        result.Should().NotBeNull();
+        result.WinnerName.Should().BeNull();
+        result.Status.Should().Be(SessionStatus.Completed.ToString());
     }
 
     [Fact]
@@ -90,10 +91,11 @@ public class CompleteGameSessionCommandHandlerTests
             .ReturnsAsync((GameSession?)null);
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
-            () => _handler.Handle(command, TestContext.Current.CancellationToken));
+        var act = 
+            () => _handler.Handle(command, TestContext.Current.CancellationToken);
+        var exception = (await act.Should().ThrowAsync<InvalidOperationException>()).Which;
 
-        Assert.Contains(sessionId.ToString(), exception.Message);
+        exception.Message.Should().Contain(sessionId.ToString());
         _unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
     }
 
@@ -126,8 +128,9 @@ public class CompleteGameSessionCommandHandlerTests
     public async Task Handle_WithNullCommand_ThrowsArgumentNullException()
     {
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentNullException>(
-            () => _handler.Handle(null!, TestContext.Current.CancellationToken));
+        var act = 
+            () => _handler.Handle(null!, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<ArgumentNullException>();
     }
 
     private static GameSession CreateActiveSession(Guid gameId)

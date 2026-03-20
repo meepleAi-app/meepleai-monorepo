@@ -7,6 +7,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using Moq.Protected;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.DatabaseSync.Infrastructure;
 
@@ -40,9 +41,9 @@ public class SshTunnelClientTests
         var result = await CreateClient().GetStatusAsync();
 
         // Assert
-        Assert.Equal(TunnelState.Open, result.Status);
-        Assert.Equal(120, result.UptimeSeconds);
-        Assert.Equal("Tunnel open", result.Message);
+        result.Status.Should().Be(TunnelState.Open);
+        result.UptimeSeconds.Should().Be(120);
+        result.Message.Should().Be("Tunnel open");
     }
 
     [Fact]
@@ -52,8 +53,8 @@ public class SshTunnelClientTests
 
         var result = await CreateClient().GetStatusAsync();
 
-        Assert.Equal(TunnelState.Closed, result.Status);
-        Assert.Equal(0, result.UptimeSeconds);
+        result.Status.Should().Be(TunnelState.Closed);
+        result.UptimeSeconds.Should().Be(0);
     }
 
     [Fact]
@@ -70,8 +71,8 @@ public class SshTunnelClientTests
         var result = await CreateClient().GetStatusAsync();
 
         // Assert
-        Assert.Equal(TunnelState.Error, result.Status);
-        Assert.Contains("Connection refused", result.Message);
+        result.Status.Should().Be(TunnelState.Error);
+        result.Message.Should().Contain("Connection refused");
     }
 
     [Fact]
@@ -85,7 +86,7 @@ public class SshTunnelClientTests
 
         var result = await CreateClient().GetStatusAsync();
 
-        Assert.Equal(TunnelState.Error, result.Status);
+        result.Status.Should().Be(TunnelState.Error);
     }
 
     [Fact]
@@ -95,8 +96,8 @@ public class SshTunnelClientTests
 
         var result = await CreateClient().OpenAsync();
 
-        Assert.Equal(TunnelState.Opening, result.Status);
-        Assert.Equal("Connecting...", result.Message);
+        result.Status.Should().Be(TunnelState.Opening);
+        result.Message.Should().Be("Connecting...");
     }
 
     [Fact]
@@ -110,7 +111,7 @@ public class SshTunnelClientTests
 
         var result = await CreateClient().OpenAsync();
 
-        Assert.Equal(TunnelState.Error, result.Status);
+        result.Status.Should().Be(TunnelState.Error);
     }
 
     [Fact]
@@ -120,7 +121,7 @@ public class SshTunnelClientTests
 
         var result = await CreateClient().CloseAsync();
 
-        Assert.Equal(TunnelState.Closed, result.Status);
+        result.Status.Should().Be(TunnelState.Closed);
     }
 
     [Fact]
@@ -134,8 +135,8 @@ public class SshTunnelClientTests
 
         var result = await CreateClient().CloseAsync();
 
-        Assert.Equal(TunnelState.Error, result.Status);
-        Assert.Contains("Timeout", result.Message);
+        result.Status.Should().Be(TunnelState.Error);
+        result.Message.Should().Contain("Timeout");
     }
 
     [Fact]
@@ -157,9 +158,9 @@ public class SshTunnelClientTests
 
         await CreateClient().GetStatusAsync();
 
-        Assert.NotNull(capturedRequest);
-        Assert.Equal("Bearer", capturedRequest!.Headers.Authorization?.Scheme);
-        Assert.Equal(AuthToken, capturedRequest.Headers.Authorization?.Parameter);
+        capturedRequest.Should().NotBeNull();
+        capturedRequest!.Headers.Authorization?.Scheme.Should().Be("Bearer");
+        capturedRequest.Headers.Authorization?.Parameter.Should().Be(AuthToken);
     }
 
     [Fact]
@@ -169,7 +170,7 @@ public class SshTunnelClientTests
 
         var result = await CreateClient().GetStatusAsync();
 
-        Assert.Equal(TunnelState.Error, result.Status);
+        result.Status.Should().Be(TunnelState.Error);
     }
 
     private void SetupResponse(HttpMethod method, string path, object body)

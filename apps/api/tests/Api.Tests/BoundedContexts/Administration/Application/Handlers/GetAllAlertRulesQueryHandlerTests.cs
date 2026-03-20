@@ -241,6 +241,7 @@ public class GetAllAlertRulesQueryHandlerTests
     public void Constructor_WithNullRepository_ThrowsArgumentNullException()
     {
         // Act & Assert
-        Assert.Throws<ArgumentNullException>(() => new GetAllAlertRulesQueryHandler(null!));
+        var act = () => new GetAllAlertRulesQueryHandler(null!);
+act.Should().Throw<ArgumentNullException>();
     }
 }

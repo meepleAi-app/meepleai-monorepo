@@ -2,6 +2,7 @@ using Api.BoundedContexts.KnowledgeBase.Domain.Enums;
 using Api.Services;
 using Api.Tests.Constants;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Unit;
 
@@ -24,26 +25,26 @@ public class FeatureFlagConstantsTests
         foreach (var flag in allFlags)
         {
             var key = flag.ToFeatureFlagKey();
-            Assert.Contains(key, FeatureFlagConstants.RagEnhancements);
+            FeatureFlagConstants.RagEnhancements.Should().Contain(key);
         }
     }
 
     [Fact]
     public void RagEnhancements_ShouldHaveFiveEntries()
     {
-        Assert.Equal(5, FeatureFlagConstants.RagEnhancements.Length);
+        FeatureFlagConstants.RagEnhancements.Length.Should().Be(5);
     }
 
     [Fact]
     public void RagAuxModelKey_ShouldHaveCorrectValue()
     {
-        Assert.Equal("rag.enhancement.aux-model", FeatureFlagConstants.RagAuxModelKey);
+        FeatureFlagConstants.RagAuxModelKey.Should().Be("rag.enhancement.aux-model");
     }
 
     [Fact]
     public void RagEnhancements_ShouldNotContainDuplicates()
     {
         var distinct = FeatureFlagConstants.RagEnhancements.Distinct().ToArray();
-        Assert.Equal(FeatureFlagConstants.RagEnhancements.Length, distinct.Length);
+        distinct.Length.Should().Be(FeatureFlagConstants.RagEnhancements.Length);
     }
 }

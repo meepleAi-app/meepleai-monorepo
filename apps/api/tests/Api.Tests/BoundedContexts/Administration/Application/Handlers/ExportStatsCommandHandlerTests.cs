@@ -96,8 +96,9 @@ public class ExportStatsCommandHandlerTests
         ExportStatsCommand? command = null;
 
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentNullException>(() =>
-            _handler.Handle(command!, CancellationToken.None));
+        var act = () =>
+            _handler.Handle(command!, CancellationToken.None);
+        await act.Should().ThrowAsync<ArgumentNullException>();
 
         _mockAdminStatsService.Verify(
             s => s.ExportDashboardDataAsync(It.IsAny<ExportDataRequest>(), It.IsAny<CancellationToken>()),

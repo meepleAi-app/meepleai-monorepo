@@ -13,6 +13,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Npgsql;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.GameManagement.Application.Integration;
 
@@ -116,9 +117,9 @@ public sealed class RuleConflictFaqRepositoryTests : IAsyncLifetime
 
         // Assert
         var entity = await _context.RuleConflictFAQs.FindAsync(faq.Id);
-        Assert.NotNull(entity);
-        Assert.Equal("test_pattern", entity.Pattern);
-        Assert.Equal(5, entity.Priority);
+        entity.Should().NotBeNull();
+        entity.Pattern.Should().Be("test_pattern");
+        entity.Priority.Should().Be(5);
     }
 
     [Fact]
@@ -149,7 +150,7 @@ public sealed class RuleConflictFaqRepositoryTests : IAsyncLifetime
 
         // Act & Assert
         await _repository.AddAsync(faq2, TestCancellationToken);
-        await Assert.ThrowsAsync<DbUpdateException>(() => _context.SaveChangesAsync(TestCancellationToken));
+        await ((Func<Task>)(() => _context.SaveChangesAsync(TestCancellationToken))).Should().ThrowAsync<DbUpdateException>();
     }
 
     [Fact]
@@ -175,7 +176,7 @@ public sealed class RuleConflictFaqRepositoryTests : IAsyncLifetime
 
         // Assert
         var faqEntity = await _context.RuleConflictFAQs.FindAsync(faq.Id);
-        Assert.Null(faqEntity); // FAQ deleted via CASCADE
+        faqEntity.Should().BeNull(); // FAQ deleted via CASCADE
     }
 
     [Fact]
@@ -202,8 +203,8 @@ public sealed class RuleConflictFaqRepositoryTests : IAsyncLifetime
             TestCancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal(faq.Id, result.Id);
+        result.Should().NotBeNull();
+        result.Id.Should().Be(faq.Id);
     }
 
     [Fact]
@@ -225,10 +226,10 @@ public sealed class RuleConflictFaqRepositoryTests : IAsyncLifetime
         var results = await _repository.GetByGameIdAsync(game.Id, TestCancellationToken);
 
         // Assert
-        Assert.Equal(3, results.Count);
-        Assert.Equal(50, results[0].UsageCount); // Highest first
-        Assert.Equal(25, results[1].UsageCount);
-        Assert.Equal(10, results[2].UsageCount);
+        results.Count.Should().Be(3);
+        results[0].UsageCount.Should().Be(50); // Highest first
+        results[1].UsageCount.Should().Be(25);
+        results[2].UsageCount.Should().Be(10);
     }
 
     private async Task<GameEntity> CreateTestGameAsync()

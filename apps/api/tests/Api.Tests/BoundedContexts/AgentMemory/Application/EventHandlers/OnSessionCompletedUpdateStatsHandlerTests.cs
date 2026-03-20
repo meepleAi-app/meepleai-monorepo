@@ -9,6 +9,7 @@ using Api.SharedKernel.Infrastructure.Persistence;
 using Api.Tests.Constants;
 using Microsoft.Extensions.Logging;
 using Moq;
+using FluentAssertions;
 using Xunit;
 
 namespace Api.Tests.BoundedContexts.AgentMemory.Application.EventHandlers;
@@ -84,21 +85,21 @@ public class OnSessionCompletedUpdateStatsHandlerTests
         await _handler.Handle(notification, CancellationToken.None);
 
         // Assert: Alice updated
-        Assert.Single(aliceMemory.GameStats);
-        Assert.Equal(gameId, aliceMemory.GameStats[0].GameId);
-        Assert.Equal(1, aliceMemory.GameStats[0].Wins);
-        Assert.Equal(0, aliceMemory.GameStats[0].Losses);
-        Assert.Equal(100, aliceMemory.GameStats[0].BestScore);
+        aliceMemory.GameStats.Should().ContainSingle();
+        aliceMemory.GameStats[0].GameId.Should().Be(gameId);
+        aliceMemory.GameStats[0].Wins.Should().Be(1);
+        aliceMemory.GameStats[0].Losses.Should().Be(0);
+        aliceMemory.GameStats[0].BestScore.Should().Be(100);
 
         _playerMemoryRepoMock.Verify(
             r => r.UpdateAsync(aliceMemory, It.IsAny<CancellationToken>()), Times.Once);
 
         // Assert: Bob created
-        Assert.NotNull(capturedGuestMemory);
-        Assert.Equal("Bob", capturedGuestMemory!.GuestName);
-        Assert.Single(capturedGuestMemory.GameStats);
-        Assert.Equal(0, capturedGuestMemory.GameStats[0].Wins);
-        Assert.Equal(1, capturedGuestMemory.GameStats[0].Losses);
+        capturedGuestMemory.Should().NotBeNull();
+        capturedGuestMemory!.GuestName.Should().Be("Bob");
+        capturedGuestMemory.GameStats.Should().ContainSingle();
+        capturedGuestMemory.GameStats[0].Wins.Should().Be(0);
+        capturedGuestMemory.GameStats[0].Losses.Should().Be(1);
 
         _unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
@@ -132,10 +133,10 @@ public class OnSessionCompletedUpdateStatsHandlerTests
         await _handler.Handle(notification, CancellationToken.None);
 
         // Assert
-        Assert.Equal(1, group.Stats.TotalSessions);
-        Assert.True(group.Stats.GamePlayCounts.ContainsKey(gameId));
-        Assert.Equal(1, group.Stats.GamePlayCounts[gameId]);
-        Assert.Equal(completedAt, group.Stats.LastPlayedAt);
+        group.Stats.TotalSessions.Should().Be(1);
+        group.Stats.GamePlayCounts.ContainsKey(gameId).Should().BeTrue();
+        group.Stats.GamePlayCounts[gameId].Should().Be(1);
+        group.Stats.LastPlayedAt.Should().Be(completedAt);
 
         _groupMemoryRepoMock.Verify(r => r.UpdateAsync(group, It.IsAny<CancellationToken>()), Times.Once);
         _unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);

@@ -366,8 +366,8 @@ duplicate@test.com,Duplicate User,user,Password123!";
         var command = new BulkImportUsersCommand(csvContent, adminId);
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<Api.SharedKernel.Domain.Exceptions.DomainException>(
-            () => handler.Handle(command, TestCancellationToken));
+        var act = () => handler.Handle(command, TestCancellationToken);
+        var exception = (await act.Should().ThrowAsync<Api.SharedKernel.Domain.Exceptions.DomainException>()).Which;
 
         exception.Message.Should().Contain("already exist");
     }

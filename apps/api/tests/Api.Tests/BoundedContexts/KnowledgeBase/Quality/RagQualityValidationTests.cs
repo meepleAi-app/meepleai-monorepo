@@ -10,6 +10,7 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using System.Text;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Quality;
 
@@ -76,7 +77,7 @@ public class RagQualityValidationTests : IAsyncLifetime
     {
         // Arrange
         var questions = LoadQuestionsFromFixture();
-        Assert.Equal(20, questions.Count);
+        questions.Count.Should().Be(20);
 
         var results = new List<(GoldenDatasetTestCase TestCase, QaResponse Response, AccuracyEvaluationResult Result, double Latency)>();
 
@@ -99,16 +100,11 @@ public class RagQualityValidationTests : IAsyncLifetime
         var reportPath = GenerateMarkdownReport(results, metrics);
 
         // Assert - Validate success criteria
-        Assert.True(metrics.Accuracy >= 0.90,
-            $"Accuracy {metrics.Accuracy:F2} < 90% threshold. See report: {reportPath}");
-        Assert.True(metrics.AvgConfidence >= 0.70,
-            $"Avg Confidence {metrics.AvgConfidence:F2} < 0.70 threshold. See report: {reportPath}");
-        Assert.True(metrics.CitationRate >= 0.95,
-            $"Citation Rate {metrics.CitationRate:F2} < 95% threshold. See report: {reportPath}");
-        Assert.True(metrics.HallucinationRate <= 0.03,
-            $"Hallucination Rate {metrics.HallucinationRate:F2} > 3% threshold. See report: {reportPath}");
-        Assert.True(metrics.AvgLatency <= 5.0,
-            $"Avg Latency {metrics.AvgLatency:F2}s > 5s threshold. See report: {reportPath}");
+        (metrics.Accuracy >= 0.90).Should().BeTrue($"Accuracy {metrics.Accuracy:F2} < 90% threshold. See report: {reportPath}");
+        (metrics.AvgConfidence >= 0.70).Should().BeTrue($"Avg Confidence {metrics.AvgConfidence:F2} < 0.70 threshold. See report: {reportPath}");
+        (metrics.CitationRate >= 0.95).Should().BeTrue($"Citation Rate {metrics.CitationRate:F2} < 95% threshold. See report: {reportPath}");
+        (metrics.HallucinationRate <= 0.03).Should().BeTrue($"Hallucination Rate {metrics.HallucinationRate:F2} > 3% threshold. See report: {reportPath}");
+        (metrics.AvgLatency <= 5.0).Should().BeTrue($"Avg Latency {metrics.AvgLatency:F2}s > 5s threshold. See report: {reportPath}");
     }
 
     /// <summary>

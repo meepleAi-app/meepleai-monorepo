@@ -1,6 +1,7 @@
 using Api.BoundedContexts.KnowledgeBase.Domain.Services;
 using Api.Tests.Constants;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Domain.Services;
 
@@ -20,8 +21,8 @@ public class LlmRoutingDecisionTests
         var ollamaDecision = LlmRoutingDecision.Ollama("llama3:8b", "test reason");
 
         // Assert
-        Assert.Null(openRouterDecision.UserRegion);
-        Assert.Null(ollamaDecision.UserRegion);
+        openRouterDecision.UserRegion.Should().BeNull();
+        ollamaDecision.UserRegion.Should().BeNull();
     }
 
     [Fact]
@@ -34,10 +35,10 @@ public class LlmRoutingDecisionTests
         var regionDecision = decision with { UserRegion = "eu-west" };
 
         // Assert
-        Assert.Equal("eu-west", regionDecision.UserRegion);
-        Assert.Equal(decision.ProviderName, regionDecision.ProviderName);
-        Assert.Equal(decision.ModelId, regionDecision.ModelId);
-        Assert.Equal(decision.Reason, regionDecision.Reason);
+        regionDecision.UserRegion.Should().Be("eu-west");
+        regionDecision.ProviderName.Should().Be(decision.ProviderName);
+        regionDecision.ModelId.Should().Be(decision.ModelId);
+        regionDecision.Reason.Should().Be(decision.Reason);
     }
 
     [Fact]
@@ -47,7 +48,7 @@ public class LlmRoutingDecisionTests
         var decision = new LlmRoutingDecision("DeepSeek", "deepseek-chat", "direct routing");
 
         // Assert
-        Assert.Null(decision.UserRegion);
+        decision.UserRegion.Should().BeNull();
     }
 
     [Fact]
@@ -60,6 +61,6 @@ public class LlmRoutingDecisionTests
         };
 
         // Assert
-        Assert.Equal("us-east", decision.UserRegion);
+        decision.UserRegion.Should().Be("us-east");
     }
 }

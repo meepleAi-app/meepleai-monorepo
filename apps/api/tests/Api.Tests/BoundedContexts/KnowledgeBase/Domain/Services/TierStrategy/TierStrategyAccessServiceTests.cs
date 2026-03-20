@@ -6,6 +6,7 @@ using Api.Tests.Constants;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Domain.Services.TierStrategy;
 
@@ -84,7 +85,7 @@ public class TierStrategyAccessServiceTests
         var result = await _service.HasAccessToStrategyAsync(tier, strategy, CancellationToken.None);
 
         // Assert
-        Assert.Equal(expectedAccess, result);
+        result.Should().Be(expectedAccess);
     }
 
     [Fact]
@@ -97,7 +98,7 @@ public class TierStrategyAccessServiceTests
         var strategies = await _service.GetAvailableStrategiesAsync(LlmUserTier.Anonymous, CancellationToken.None);
 
         // Assert
-        Assert.Empty(strategies);
+        strategies.Should().BeEmpty();
     }
 
     [Fact]
@@ -110,10 +111,10 @@ public class TierStrategyAccessServiceTests
         var strategies = await _service.GetAvailableStrategiesAsync(LlmUserTier.User, CancellationToken.None);
 
         // Assert
-        Assert.Equal(2, strategies.Count);
-        Assert.Contains(RagStrategy.Fast, strategies);
-        Assert.Contains(RagStrategy.Balanced, strategies);
-        Assert.DoesNotContain(RagStrategy.Precise, strategies);
+        strategies.Count.Should().Be(2);
+        strategies.Should().Contain(RagStrategy.Fast);
+        strategies.Should().Contain(RagStrategy.Balanced);
+        strategies.Should().NotContain(RagStrategy.Precise);
     }
 
     [Fact]
@@ -126,14 +127,14 @@ public class TierStrategyAccessServiceTests
         var strategies = await _service.GetAvailableStrategiesAsync(LlmUserTier.Editor, CancellationToken.None);
 
         // Assert
-        Assert.Equal(6, strategies.Count);
-        Assert.Contains(RagStrategy.Fast, strategies);
-        Assert.Contains(RagStrategy.Balanced, strategies);
-        Assert.Contains(RagStrategy.Precise, strategies);
-        Assert.Contains(RagStrategy.SentenceWindow, strategies);
-        Assert.Contains(RagStrategy.StepBack, strategies);
-        Assert.Contains(RagStrategy.QueryExpansion, strategies);
-        Assert.DoesNotContain(RagStrategy.Expert, strategies);
+        strategies.Count.Should().Be(6);
+        strategies.Should().Contain(RagStrategy.Fast);
+        strategies.Should().Contain(RagStrategy.Balanced);
+        strategies.Should().Contain(RagStrategy.Precise);
+        strategies.Should().Contain(RagStrategy.SentenceWindow);
+        strategies.Should().Contain(RagStrategy.StepBack);
+        strategies.Should().Contain(RagStrategy.QueryExpansion);
+        strategies.Should().NotContain(RagStrategy.Expert);
     }
 
     [Fact]
@@ -146,8 +147,8 @@ public class TierStrategyAccessServiceTests
         var strategies = await _service.GetAvailableStrategiesAsync(LlmUserTier.Admin, CancellationToken.None);
 
         // Assert
-        Assert.Equal(Enum.GetValues<RagStrategy>().Length, strategies.Count);
-        Assert.Contains(RagStrategy.Custom, strategies);
+        strategies.Count.Should().Be(Enum.GetValues<RagStrategy>().Length);
+        strategies.Should().Contain(RagStrategy.Custom);
     }
 
     [Fact]
@@ -160,15 +161,15 @@ public class TierStrategyAccessServiceTests
         var strategies = await _service.GetAvailableStrategiesAsync(LlmUserTier.Premium, CancellationToken.None);
 
         // Assert
-        Assert.Equal(11, strategies.Count);
-        Assert.DoesNotContain(RagStrategy.Custom, strategies);
-        Assert.Contains(RagStrategy.Consensus, strategies);
-        Assert.Contains(RagStrategy.SentenceWindow, strategies);
-        Assert.Contains(RagStrategy.Iterative, strategies);
-        Assert.Contains(RagStrategy.MultiAgent, strategies);
-        Assert.Contains(RagStrategy.StepBack, strategies);
-        Assert.Contains(RagStrategy.QueryExpansion, strategies);
-        Assert.Contains(RagStrategy.RagFusion, strategies);
+        strategies.Count.Should().Be(11);
+        strategies.Should().NotContain(RagStrategy.Custom);
+        strategies.Should().Contain(RagStrategy.Consensus);
+        strategies.Should().Contain(RagStrategy.SentenceWindow);
+        strategies.Should().Contain(RagStrategy.Iterative);
+        strategies.Should().Contain(RagStrategy.MultiAgent);
+        strategies.Should().Contain(RagStrategy.StepBack);
+        strategies.Should().Contain(RagStrategy.QueryExpansion);
+        strategies.Should().Contain(RagStrategy.RagFusion);
     }
 
     #endregion
@@ -187,7 +188,7 @@ public class TierStrategyAccessServiceTests
         var result = await _service.HasAccessToStrategyAsync(LlmUserTier.User, RagStrategy.Precise, CancellationToken.None);
 
         // Assert
-        Assert.True(result);
+        result.Should().BeTrue();
     }
 
     [Fact]
@@ -205,7 +206,7 @@ public class TierStrategyAccessServiceTests
         var result = await _service.HasAccessToStrategyAsync(LlmUserTier.User, RagStrategy.Fast, CancellationToken.None);
 
         // Assert
-        Assert.False(result);
+        result.Should().BeFalse();
     }
 
     [Fact]
@@ -220,7 +221,7 @@ public class TierStrategyAccessServiceTests
         var strategies = await _service.GetAvailableStrategiesAsync(LlmUserTier.Admin, CancellationToken.None);
 
         // Assert
-        Assert.Equal(Enum.GetValues<RagStrategy>().Length, strategies.Count);
+        strategies.Count.Should().Be(Enum.GetValues<RagStrategy>().Length);
     }
 
     [Fact]
@@ -235,10 +236,10 @@ public class TierStrategyAccessServiceTests
         var strategies = await _service.GetAvailableStrategiesAsync(LlmUserTier.User, CancellationToken.None);
 
         // Assert
-        Assert.Equal(3, strategies.Count);
-        Assert.Contains(RagStrategy.Fast, strategies);
-        Assert.Contains(RagStrategy.Balanced, strategies);
-        Assert.Contains(RagStrategy.Precise, strategies);
+        strategies.Count.Should().Be(3);
+        strategies.Should().Contain(RagStrategy.Fast);
+        strategies.Should().Contain(RagStrategy.Balanced);
+        strategies.Should().Contain(RagStrategy.Precise);
     }
 
     [Fact]
@@ -256,7 +257,7 @@ public class TierStrategyAccessServiceTests
         var strategies = await _service.GetAvailableStrategiesAsync(LlmUserTier.User, CancellationToken.None);
 
         // Assert
-        Assert.Empty(strategies);
+        strategies.Should().BeEmpty();
     }
 
     #endregion
@@ -273,11 +274,11 @@ public class TierStrategyAccessServiceTests
         var result = await _service.ValidateAccessAsync(LlmUserTier.User, RagStrategy.Fast, CancellationToken.None);
 
         // Assert
-        Assert.True(result.IsValid);
-        Assert.Equal(LlmUserTier.User, result.Tier);
-        Assert.Equal(RagStrategy.Fast, result.Strategy);
-        Assert.Equal("Access granted", result.Message);
-        Assert.Null(result.AvailableStrategies);
+        result.IsValid.Should().BeTrue();
+        result.Tier.Should().Be(LlmUserTier.User);
+        result.Strategy.Should().Be(RagStrategy.Fast);
+        result.Message.Should().Be("Access granted");
+        result.AvailableStrategies.Should().BeNull();
     }
 
     [Fact]
@@ -290,13 +291,13 @@ public class TierStrategyAccessServiceTests
         var result = await _service.ValidateAccessAsync(LlmUserTier.User, RagStrategy.Expert, CancellationToken.None);
 
         // Assert
-        Assert.False(result.IsValid);
-        Assert.Equal(LlmUserTier.User, result.Tier);
-        Assert.Equal(RagStrategy.Expert, result.Strategy);
-        Assert.Contains("Access denied", result.Message);
-        Assert.NotNull(result.AvailableStrategies);
-        Assert.Contains(RagStrategy.Fast, result.AvailableStrategies);
-        Assert.Contains(RagStrategy.Balanced, result.AvailableStrategies);
+        result.IsValid.Should().BeFalse();
+        result.Tier.Should().Be(LlmUserTier.User);
+        result.Strategy.Should().Be(RagStrategy.Expert);
+        result.Message.Should().Contain("Access denied");
+        result.AvailableStrategies.Should().NotBeNull();
+        result.AvailableStrategies.Should().Contain(RagStrategy.Fast);
+        result.AvailableStrategies.Should().Contain(RagStrategy.Balanced);
     }
 
     [Fact]
@@ -309,10 +310,10 @@ public class TierStrategyAccessServiceTests
         var result = await _service.ValidateAccessAsync(LlmUserTier.Anonymous, RagStrategy.Fast, CancellationToken.None);
 
         // Assert
-        Assert.False(result.IsValid);
-        Assert.Contains("no available strategies", result.Message);
-        Assert.NotNull(result.AvailableStrategies);
-        Assert.Empty(result.AvailableStrategies);
+        result.IsValid.Should().BeFalse();
+        result.Message.Should().Contain("no available strategies");
+        result.AvailableStrategies.Should().NotBeNull();
+        result.AvailableStrategies.Should().BeEmpty();
     }
 
     #endregion
@@ -334,8 +335,8 @@ public class TierStrategyAccessServiceTests
         var result = await _service.GetDefaultStrategyAsync(tier, CancellationToken.None);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal(expectedDefault, result.Value);
+        result.Should().NotBeNull();
+        result.Value.Should().Be(expectedDefault);
     }
 
     [Fact]
@@ -348,7 +349,7 @@ public class TierStrategyAccessServiceTests
         var result = await _service.GetDefaultStrategyAsync(LlmUserTier.Anonymous, CancellationToken.None);
 
         // Assert
-        Assert.Null(result);
+        result.Should().BeNull();
     }
 
     [Fact]
@@ -363,8 +364,8 @@ public class TierStrategyAccessServiceTests
         var result = await _service.GetDefaultStrategyAsync(LlmUserTier.User, CancellationToken.None);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal(RagStrategy.Precise, result.Value); // Lower complexity than Expert
+        result.Should().NotBeNull();
+        result.Value.Should().Be(RagStrategy.Precise); // Lower complexity than Expert
     }
 
     #endregion

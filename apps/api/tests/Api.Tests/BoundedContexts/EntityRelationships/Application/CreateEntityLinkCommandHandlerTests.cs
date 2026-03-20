@@ -8,6 +8,7 @@ using Api.SharedKernel.Infrastructure.Persistence;
 using Api.Tests.Constants;
 using Microsoft.Extensions.Logging;
 using Moq;
+using FluentAssertions;
 using Xunit;
 
 namespace Api.Tests.BoundedContexts.EntityRelationships.Application;
@@ -59,10 +60,10 @@ public class CreateEntityLinkCommandHandlerTests
         var dto = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotEqual(Guid.Empty, dto.Id);
-        Assert.True(dto.IsAdminApproved, "BR-04: user scope should be auto-approved");
-        Assert.Equal(EntityLinkType.ExpansionOf, dto.LinkType);
-        Assert.False(dto.IsBidirectional, "expansion_of is directed");
+        dto.Id.Should().NotBe(Guid.Empty);
+        dto.IsAdminApproved.Should().BeTrue("BR-04: user scope should be auto-approved");
+        dto.LinkType.Should().Be(EntityLinkType.ExpansionOf);
+        dto.IsBidirectional.Should().BeFalse("expansion_of is directed");
         _repoMock.Verify(r => r.AddAsync(It.IsAny<EntityLink>(), It.IsAny<CancellationToken>()), Times.Once);
         _unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
@@ -85,7 +86,7 @@ public class CreateEntityLinkCommandHandlerTests
 
         var dto = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
-        Assert.False(dto.IsAdminApproved, "Shared scope requires explicit admin approval");
+        dto.IsAdminApproved.Should().BeFalse("Shared scope requires explicit admin approval");
     }
 
     [Fact]
@@ -106,7 +107,7 @@ public class CreateEntityLinkCommandHandlerTests
 
         var dto = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
-        Assert.True(dto.IsBidirectional, "companion_to is bilateral");
+        dto.IsBidirectional.Should().BeTrue("companion_to is bilateral");
     }
 
     [Fact]
@@ -128,8 +129,8 @@ public class CreateEntityLinkCommandHandlerTests
 
         var dto = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
-        Assert.True(dto.IsAdminApproved, "BGG imported links are always auto-approved");
-        Assert.True(dto.IsBggImported);
+        dto.IsAdminApproved.Should().BeTrue("BGG imported links are always auto-approved");
+        dto.IsBggImported.Should().BeTrue();
     }
 
     // ── BR-08: Duplicate check ─────────────────────────────────────────────────
@@ -152,8 +153,9 @@ public class CreateEntityLinkCommandHandlerTests
             EntityLinkScope.User,
             _ownerId);
 
-        await Assert.ThrowsAsync<DuplicateEntityLinkException>(() =>
-            _handler.Handle(command, TestContext.Current.CancellationToken));
+        var act = () =>
+            _handler.Handle(command, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<DuplicateEntityLinkException>();
 
         _repoMock.Verify(r => r.AddAsync(It.IsAny<EntityLink>(), It.IsAny<CancellationToken>()), Times.Never);
         _unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
@@ -164,8 +166,9 @@ public class CreateEntityLinkCommandHandlerTests
     [Fact]
     public async Task Handle_NullCommand_ThrowsArgumentNullException()
     {
-        await Assert.ThrowsAsync<ArgumentNullException>(() =>
-            _handler.Handle(null!, TestContext.Current.CancellationToken));
+        var act2 = () =>
+            _handler.Handle(null!, TestContext.Current.CancellationToken);
+        await act2.Should().ThrowAsync<ArgumentNullException>();
     }
 
     // ── Validator tests ───────────────────────────────────────────────────────
@@ -184,8 +187,8 @@ public class CreateEntityLinkCommandHandlerTests
         var validator = new CreateEntityLinkCommandValidator();
         var result = validator.Validate(command);
 
-        Assert.False(result.IsValid);
-        Assert.Contains(result.Errors, e => e.PropertyName == "TargetEntityId");
+        result.IsValid.Should().BeFalse();
+        result.Errors.Should().Contain(e => e.PropertyName == "TargetEntityId");
     }
 
     [Fact]
@@ -201,8 +204,8 @@ public class CreateEntityLinkCommandHandlerTests
         var validator = new CreateEntityLinkCommandValidator();
         var result = validator.Validate(command);
 
-        Assert.False(result.IsValid);
-        Assert.Contains(result.Errors, e => e.PropertyName == "OwnerUserId");
+        result.IsValid.Should().BeFalse();
+        result.Errors.Should().Contain(e => e.PropertyName == "OwnerUserId");
     }
 
     [Fact]
@@ -218,6 +221,6 @@ public class CreateEntityLinkCommandHandlerTests
         var validator = new CreateEntityLinkCommandValidator();
         var result = validator.Validate(command);
 
-        Assert.True(result.IsValid);
+        result.IsValid.Should().BeTrue();
     }
 }

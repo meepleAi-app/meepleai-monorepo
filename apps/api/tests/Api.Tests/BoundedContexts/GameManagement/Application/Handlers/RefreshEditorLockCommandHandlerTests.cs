@@ -4,6 +4,7 @@ using Api.BoundedContexts.GameManagement.Application.Queries;
 using Api.BoundedContexts.GameManagement.Application.Services;
 using Moq;
 using Xunit;
+using FluentAssertions;
 using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.GameManagement.Application.Handlers;
@@ -40,7 +41,7 @@ public class RefreshEditorLockCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.True(result);
+        (result).Should().BeTrue();
         _lockServiceMock.Verify(
             s => s.RefreshLockAsync(gameId, userId, It.IsAny<CancellationToken>()),
             Times.Once);
@@ -62,7 +63,7 @@ public class RefreshEditorLockCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.False(result);
+        (result).Should().BeFalse();
     }
 
     [Fact]
@@ -81,7 +82,7 @@ public class RefreshEditorLockCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.False(result);
+        (result).Should().BeFalse();
     }
 
     [Fact]
@@ -110,7 +111,8 @@ public class RefreshEditorLockCommandHandlerTests
     public async Task Handle_WithNullCommand_ThrowsArgumentNullException()
     {
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentNullException>(
-            () => _handler.Handle(null!, TestContext.Current.CancellationToken));
+        var act = 
+            () => _handler.Handle(null!, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<ArgumentNullException>();
     }
 }

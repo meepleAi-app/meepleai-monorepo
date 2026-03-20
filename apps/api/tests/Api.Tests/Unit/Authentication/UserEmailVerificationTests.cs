@@ -3,6 +3,7 @@ using Api.BoundedContexts.Authentication.Domain.Entities;
 using Api.BoundedContexts.Authentication.Domain.Events;
 using Api.BoundedContexts.Authentication.Domain.ValueObjects;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.Unit.Authentication;
 
@@ -24,10 +25,10 @@ public sealed class UserEmailVerificationTests
         user.VerifyEmail();
 
         // Assert
-        Assert.True(user.EmailVerified);
-        Assert.NotNull(user.EmailVerifiedAt);
-        Assert.Null(user.VerificationGracePeriodEndsAt); // Grace period cleared
-        Assert.True(user.EmailVerifiedAt.Value.Kind == DateTimeKind.Utc);
+        user.EmailVerified.Should().BeTrue();
+        user.EmailVerifiedAt.Should().NotBeNull();
+        user.VerificationGracePeriodEndsAt.Should().BeNull(); // Grace period cleared
+        user.EmailVerifiedAt.Value.Kind.Should().Be(DateTimeKind.Utc);
     }
 
     [Fact]
@@ -40,10 +41,10 @@ public sealed class UserEmailVerificationTests
         user.VerifyEmail();
 
         // Assert
-        Assert.Single(user.DomainEvents);
-        var domainEvent = Assert.IsType<EmailVerifiedEvent>(user.DomainEvents.First());
-        Assert.Equal(user.Id, domainEvent.UserId);
-        Assert.Equal(user.EmailVerifiedAt, domainEvent.VerifiedAt);
+        user.DomainEvents.Should().ContainSingle();
+        var domainEvent = user.DomainEvents.First().Should().BeOfType<EmailVerifiedEvent>().Subject;
+        domainEvent.UserId.Should().Be(user.Id);
+        domainEvent.VerifiedAt.Should().Be(user.EmailVerifiedAt);
     }
 
     [Fact]
@@ -59,8 +60,8 @@ public sealed class UserEmailVerificationTests
         user.VerifyEmail();
 
         // Assert - no change, no new events
-        Assert.Equal(firstVerifiedAt, user.EmailVerifiedAt);
-        Assert.Empty(user.DomainEvents);
+        user.EmailVerifiedAt.Should().Be(firstVerifiedAt);
+        user.DomainEvents.Should().BeEmpty();
     }
 
     [Fact]
@@ -76,7 +77,7 @@ public sealed class UserEmailVerificationTests
         var result = user.IsInGracePeriod(timeProvider);
 
         // Assert
-        Assert.True(result);
+        result.Should().BeTrue();
     }
 
     [Fact]
@@ -92,7 +93,7 @@ public sealed class UserEmailVerificationTests
         var result = user.IsInGracePeriod(timeProvider);
 
         // Assert
-        Assert.False(result);
+        result.Should().BeFalse();
     }
 
     [Fact]
@@ -105,7 +106,7 @@ public sealed class UserEmailVerificationTests
         var result = user.IsInGracePeriod();
 
         // Assert
-        Assert.False(result);
+        result.Should().BeFalse();
     }
 
     [Fact]
@@ -121,7 +122,7 @@ public sealed class UserEmailVerificationTests
         var result = user.RequiresVerification(timeProvider);
 
         // Assert
-        Assert.True(result);
+        result.Should().BeTrue();
     }
 
     [Fact]
@@ -137,7 +138,7 @@ public sealed class UserEmailVerificationTests
         var result = user.RequiresVerification(timeProvider);
 
         // Assert
-        Assert.False(result); // Still in grace period
+        result.Should().BeFalse(); // Still in grace period
     }
 
     [Fact]
@@ -151,7 +152,7 @@ public sealed class UserEmailVerificationTests
         var result = user.RequiresVerification();
 
         // Assert
-        Assert.False(result); // Verified users never require verification
+        result.Should().BeFalse(); // Verified users never require verification
     }
 
     [Fact]
@@ -165,7 +166,7 @@ public sealed class UserEmailVerificationTests
         user.SetVerificationGracePeriod(gracePeriodEnd);
 
         // Assert
-        Assert.Equal(gracePeriodEnd, user.VerificationGracePeriodEndsAt);
+        user.VerificationGracePeriodEndsAt.Should().Be(gracePeriodEnd);
     }
 
     [Fact]
@@ -179,7 +180,7 @@ public sealed class UserEmailVerificationTests
         user.SetVerificationGracePeriod(DateTime.UtcNow.AddDays(7));
 
         // Assert
-        Assert.Null(user.VerificationGracePeriodEndsAt); // Should not set for verified users
+        user.VerificationGracePeriodEndsAt.Should().BeNull(); // Should not set for verified users
     }
 
     [Fact]
@@ -193,7 +194,7 @@ public sealed class UserEmailVerificationTests
         user.VerifyEmail();
 
         // Assert
-        Assert.Null(user.VerificationGracePeriodEndsAt); // Grace period cleared
+        user.VerificationGracePeriodEndsAt.Should().BeNull(); // Grace period cleared
     }
 
     /// <summary>

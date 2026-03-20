@@ -198,10 +198,8 @@ public sealed class PrivateGameEndpointsIntegrationTests : IAsyncLifetime
         // Assert
         // Note: May return Unauthorized in test environment due to auth middleware mocking
         var responseBody = await response.Content.ReadAsStringAsync();
-        Assert.True(
-            response.StatusCode == HttpStatusCode.Created ||
-            response.StatusCode == HttpStatusCode.Unauthorized,
-            $"Expected Created or Unauthorized, got {response.StatusCode}. Body: {responseBody}");
+        (response.StatusCode == HttpStatusCode.Created ||
+            response.StatusCode == HttpStatusCode.Unauthorized).Should().BeTrue($"Expected Created or Unauthorized, got {response.StatusCode}. Body: {responseBody}");
 
         if (response.StatusCode == HttpStatusCode.Created)
         {
@@ -253,10 +251,8 @@ public sealed class PrivateGameEndpointsIntegrationTests : IAsyncLifetime
         var response = await _client.SendAsync(httpRequest);
 
         // Assert
-        Assert.True(
-            response.StatusCode == HttpStatusCode.Created ||
-            response.StatusCode == HttpStatusCode.Unauthorized,
-            $"Expected Created or Unauthorized, got {response.StatusCode}");
+        (response.StatusCode == HttpStatusCode.Created ||
+            response.StatusCode == HttpStatusCode.Unauthorized).Should().BeTrue($"Expected Created or Unauthorized, got {response.StatusCode}");
 
         if (response.StatusCode == HttpStatusCode.Created)
         {
@@ -295,11 +291,9 @@ public sealed class PrivateGameEndpointsIntegrationTests : IAsyncLifetime
 
         // Assert
         // FluentValidation returns 422 UnprocessableEntity (Issue #1449)
-        Assert.True(
-            response.StatusCode == HttpStatusCode.BadRequest ||
+        (response.StatusCode == HttpStatusCode.BadRequest ||
             response.StatusCode == HttpStatusCode.UnprocessableEntity ||
-            response.StatusCode == HttpStatusCode.Unauthorized,
-            $"Expected BadRequest/UnprocessableEntity or Unauthorized, got {response.StatusCode}");
+            response.StatusCode == HttpStatusCode.Unauthorized).Should().BeTrue($"Expected BadRequest/UnprocessableEntity or Unauthorized, got {response.StatusCode}");
     }
 
     #endregion
@@ -338,10 +332,8 @@ public sealed class PrivateGameEndpointsIntegrationTests : IAsyncLifetime
         var response = await _client.SendAsync(httpRequest);
 
         // Assert
-        Assert.True(
-            response.StatusCode == HttpStatusCode.OK ||
-            response.StatusCode == HttpStatusCode.Unauthorized,
-            $"Expected OK or Unauthorized, got {response.StatusCode}");
+        (response.StatusCode == HttpStatusCode.OK ||
+            response.StatusCode == HttpStatusCode.Unauthorized).Should().BeTrue($"Expected OK or Unauthorized, got {response.StatusCode}");
 
         if (response.StatusCode == HttpStatusCode.OK)
         {
@@ -371,10 +363,8 @@ public sealed class PrivateGameEndpointsIntegrationTests : IAsyncLifetime
         var response = await _client.SendAsync(httpRequest);
 
         // Assert
-        Assert.True(
-            response.StatusCode == HttpStatusCode.NotFound ||
-            response.StatusCode == HttpStatusCode.Unauthorized,
-            $"Expected NotFound or Unauthorized, got {response.StatusCode}");
+        (response.StatusCode == HttpStatusCode.NotFound ||
+            response.StatusCode == HttpStatusCode.Unauthorized).Should().BeTrue($"Expected NotFound or Unauthorized, got {response.StatusCode}");
     }
 
     #endregion
@@ -423,10 +413,8 @@ public sealed class PrivateGameEndpointsIntegrationTests : IAsyncLifetime
         var response = await _client.SendAsync(httpRequest);
 
         // Assert
-        Assert.True(
-            response.StatusCode == HttpStatusCode.OK ||
-            response.StatusCode == HttpStatusCode.Unauthorized,
-            $"Expected OK or Unauthorized, got {response.StatusCode}");
+        (response.StatusCode == HttpStatusCode.OK ||
+            response.StatusCode == HttpStatusCode.Unauthorized).Should().BeTrue($"Expected OK or Unauthorized, got {response.StatusCode}");
 
         if (response.StatusCode == HttpStatusCode.OK)
         {
@@ -494,10 +482,8 @@ public sealed class PrivateGameEndpointsIntegrationTests : IAsyncLifetime
         var response = await _client.SendAsync(httpRequest);
 
         // Assert
-        Assert.True(
-            response.StatusCode == HttpStatusCode.Forbidden ||
-            response.StatusCode == HttpStatusCode.Unauthorized,
-            $"Expected Forbidden or Unauthorized, got {response.StatusCode}");
+        (response.StatusCode == HttpStatusCode.Forbidden ||
+            response.StatusCode == HttpStatusCode.Unauthorized).Should().BeTrue($"Expected Forbidden or Unauthorized, got {response.StatusCode}");
     }
 
     #endregion
@@ -536,10 +522,8 @@ public sealed class PrivateGameEndpointsIntegrationTests : IAsyncLifetime
         var response = await _client.SendAsync(httpRequest);
 
         // Assert
-        Assert.True(
-            response.StatusCode == HttpStatusCode.NoContent ||
-            response.StatusCode == HttpStatusCode.Unauthorized,
-            $"Expected NoContent or Unauthorized, got {response.StatusCode}");
+        (response.StatusCode == HttpStatusCode.NoContent ||
+            response.StatusCode == HttpStatusCode.Unauthorized).Should().BeTrue($"Expected NoContent or Unauthorized, got {response.StatusCode}");
 
         if (response.StatusCode == HttpStatusCode.NoContent)
         {
@@ -601,10 +585,8 @@ public sealed class PrivateGameEndpointsIntegrationTests : IAsyncLifetime
         var response = await _client.SendAsync(httpRequest);
 
         // Assert
-        Assert.True(
-            response.StatusCode == HttpStatusCode.Forbidden ||
-            response.StatusCode == HttpStatusCode.Unauthorized,
-            $"Expected Forbidden or Unauthorized, got {response.StatusCode}");
+        (response.StatusCode == HttpStatusCode.Forbidden ||
+            response.StatusCode == HttpStatusCode.Unauthorized).Should().BeTrue($"Expected Forbidden or Unauthorized, got {response.StatusCode}");
     }
 
     [Fact]
@@ -626,10 +608,8 @@ public sealed class PrivateGameEndpointsIntegrationTests : IAsyncLifetime
         var response = await _client.SendAsync(httpRequest);
 
         // Assert
-        Assert.True(
-            response.StatusCode == HttpStatusCode.NotFound ||
-            response.StatusCode == HttpStatusCode.Unauthorized,
-            $"Expected NotFound or Unauthorized, got {response.StatusCode}");
+        (response.StatusCode == HttpStatusCode.NotFound ||
+            response.StatusCode == HttpStatusCode.Unauthorized).Should().BeTrue($"Expected NotFound or Unauthorized, got {response.StatusCode}");
     }
 
     #endregion

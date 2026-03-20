@@ -6,6 +6,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.Administration.Application.Handlers;
 
@@ -45,11 +46,12 @@ public class SimulateErrorCommandHandlerTests
         var command = new SimulateErrorCommand("500");
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(async () =>
-            await _handler.Handle(command, TestContext.Current.CancellationToken));
+        var act = async () =>
+            await _handler.Handle(command, TestContext.Current.CancellationToken);
+        var exception = (await act.Should().ThrowAsync<InvalidOperationException>()).Which;
 
-        Assert.Contains("Simulated 500 Internal Server Error", exception.Message);
-        Assert.Contains("test endpoint", exception.Message);
+        exception.Message.Should().Contain("Simulated 500 Internal Server Error");
+        exception.Message.Should().Contain("test endpoint");
 
         // Verify logging
         _mockLogger.Verify(
@@ -69,11 +71,12 @@ public class SimulateErrorCommandHandlerTests
         var command = new SimulateErrorCommand("400");
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<ArgumentException>(async () =>
-            await _handler.Handle(command, TestContext.Current.CancellationToken));
+        var act = async () =>
+            await _handler.Handle(command, TestContext.Current.CancellationToken);
+        var exception = (await act.Should().ThrowAsync<ArgumentException>()).Which;
 
-        Assert.Contains("Simulated 400 Bad Request", exception.Message);
-        Assert.Contains("test endpoint", exception.Message);
+        exception.Message.Should().Contain("Simulated 400 Bad Request");
+        exception.Message.Should().Contain("test endpoint");
     }
 
     [Fact]
@@ -83,11 +86,12 @@ public class SimulateErrorCommandHandlerTests
         var command = new SimulateErrorCommand("exception");
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<ApplicationException>(async () =>
-            await _handler.Handle(command, TestContext.Current.CancellationToken));
+        var act = async () =>
+            await _handler.Handle(command, TestContext.Current.CancellationToken);
+        var exception = (await act.Should().ThrowAsync<ApplicationException>()).Which;
 
-        Assert.Contains("Simulated unhandled exception", exception.Message);
-        Assert.Contains("test endpoint", exception.Message);
+        exception.Message.Should().Contain("Simulated unhandled exception");
+        exception.Message.Should().Contain("test endpoint");
     }
 
     [Fact]
@@ -98,8 +102,9 @@ public class SimulateErrorCommandHandlerTests
         using var cts = new CancellationTokenSource(TimeSpan.FromMilliseconds(100));
 
         // Act & Assert
-        await Assert.ThrowsAnyAsync<Exception>(async () =>
-            await _handler.Handle(command, cts.Token));
+        var act = async () =>
+            await _handler.Handle(command, cts.Token);
+        await act.Should().ThrowAsync<Exception>();
     }
 
     [Fact]
@@ -109,11 +114,12 @@ public class SimulateErrorCommandHandlerTests
         var command = new SimulateErrorCommand("invalid_type");
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<ArgumentException>(async () =>
-            await _handler.Handle(command, TestContext.Current.CancellationToken));
+        var act = async () =>
+            await _handler.Handle(command, TestContext.Current.CancellationToken);
+        var exception = (await act.Should().ThrowAsync<ArgumentException>()).Which;
 
-        Assert.Contains("Invalid error type: invalid_type", exception.Message);
-        Assert.Contains("Valid types: 500, 400, timeout, exception", exception.Message);
+        exception.Message.Should().Contain("Invalid error type: invalid_type");
+        exception.Message.Should().Contain("Valid types: 500, 400, timeout, exception");
     }
 
     [Theory]
@@ -126,8 +132,9 @@ public class SimulateErrorCommandHandlerTests
         var command = new SimulateErrorCommand(errorType);
 
         // Act & Assert
-        await Assert.ThrowsAnyAsync<Exception>(async () =>
-            await _handler.Handle(command, TestContext.Current.CancellationToken));
+        var act = async () =>
+            await _handler.Handle(command, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<Exception>();
 
         // Verify logging
         _mockLogger.Verify(
@@ -157,10 +164,11 @@ public class SimulateErrorCommandHandlerTests
         var command = new SimulateErrorCommand("500");
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(async () =>
-            await handlerWithDisabledEndpoints.Handle(command, TestContext.Current.CancellationToken));
+        var act = async () =>
+            await handlerWithDisabledEndpoints.Handle(command, TestContext.Current.CancellationToken);
+        var exception = (await act.Should().ThrowAsync<InvalidOperationException>()).Which;
 
-        Assert.Contains("Test endpoints are disabled in this environment", exception.Message);
+        exception.Message.Should().Contain("Test endpoints are disabled in this environment");
 
         // Verify warning was logged
         _mockLogger.Verify(
@@ -189,8 +197,9 @@ public class SimulateErrorCommandHandlerTests
         // Act & Assert - All should throw appropriate exceptions
         foreach (var command in commands)
         {
-            await Assert.ThrowsAnyAsync<Exception>(async () =>
-                await _handler.Handle(command, TestContext.Current.CancellationToken));
+            var act = async () =>
+                await _handler.Handle(command, TestContext.Current.CancellationToken);
+            await act.Should().ThrowAsync<Exception>();
         }
     }
 
@@ -198,15 +207,17 @@ public class SimulateErrorCommandHandlerTests
     public void Constructor_WithNullLogger_ThrowsArgumentNullException()
     {
         // Act & Assert
-        Assert.Throws<ArgumentNullException>(() =>
-            new SimulateErrorCommandHandler(null!, _configuration));
+        var act = () =>
+            new SimulateErrorCommandHandler(null!, _configuration);
+act.Should().Throw<ArgumentNullException>();
     }
 
     [Fact]
     public void Constructor_WithNullConfiguration_ThrowsArgumentNullException()
     {
         // Act & Assert
-        Assert.Throws<ArgumentNullException>(() =>
-            new SimulateErrorCommandHandler(_mockLogger.Object, null!));
+        var act = () =>
+            new SimulateErrorCommandHandler(_mockLogger.Object, null!);
+act.Should().Throw<ArgumentNullException>();
     }
 }

@@ -471,7 +471,7 @@ public sealed class Week12SimpleValidationTests : IAsyncLifetime
         await Task.WhenAll(readTasks.Cast<Task>().Concat(writeTasks));
 
         // Assert - No deadlock, all completed
-        Assert.True(true);
+        true.Should().BeTrue();
     }
 
     [Fact]
@@ -693,7 +693,7 @@ public sealed class Week12SimpleValidationTests : IAsyncLifetime
         catch (DbUpdateException)
         {
             // Expected if database has length constraint
-            Assert.True(true);
+            true.Should().BeTrue();
         }
     }
 

@@ -8,6 +8,7 @@ using Api.SharedKernel.Domain.Exceptions;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Moq;
 using Xunit;
+using FluentAssertions;
 using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.Authentication.Application;
@@ -44,11 +45,11 @@ public class UserProfileHandlerTests
         var result = await handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal(userId, result.Id);
-        Assert.Equal(user.Email.Value, result.Email);
-        Assert.Equal(user.DisplayName, result.DisplayName);
-        Assert.Equal(user.Role.Value, result.Role);
+        result.Should().NotBeNull();
+        result.Id.Should().Be(userId);
+        result.Email.Should().Be(user.Email.Value);
+        result.DisplayName.Should().Be(user.DisplayName);
+        result.Role.Should().Be(user.Role.Value);
     }
 
     [Fact]
@@ -67,7 +68,7 @@ public class UserProfileHandlerTests
         var result = await handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.Null(result);
+        result.Should().BeNull();
     }
     [Fact]
     public async Task UpdateProfile_DisplayNameOnly_UpdatesSuccessfully()
@@ -91,7 +92,7 @@ public class UserProfileHandlerTests
         await handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.Equal("New Display Name", user.DisplayName);
+        user.DisplayName.Should().Be("New Display Name");
         _unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
 
@@ -120,7 +121,7 @@ public class UserProfileHandlerTests
         await handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.Equal("newemail@test.com", user.Email.Value);
+        user.Email.Value.Should().Be("newemail@test.com");
         _unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
 
@@ -148,9 +149,10 @@ public class UserProfileHandlerTests
         };
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<DomainException>(() =>
-            handler.Handle(command, TestContext.Current.CancellationToken));
-        Assert.Contains("Email is already in use", exception.Message);
+        var act = () =>
+            handler.Handle(command, TestContext.Current.CancellationToken);
+        var exception = (await act.Should().ThrowAsync<DomainException>()).Which;
+        exception.Message.Should().Contain("Email is already in use");
     }
 
     [Fact]
@@ -171,9 +173,10 @@ public class UserProfileHandlerTests
         };
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<DomainException>(() =>
-            handler.Handle(command, TestContext.Current.CancellationToken));
-        Assert.Contains("User not found", exception.Message);
+        var act = () =>
+            handler.Handle(command, TestContext.Current.CancellationToken);
+        var exception = (await act.Should().ThrowAsync<DomainException>()).Which;
+        exception.Message.Should().Contain("User not found");
     }
     [Fact]
     public async Task ChangePassword_CorrectCurrentPassword_ChangesSuccessfully()
@@ -199,8 +202,8 @@ public class UserProfileHandlerTests
         await handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.True(user.VerifyPassword("NewPassword456!"));
-        Assert.False(user.VerifyPassword(currentPassword));
+        user.VerifyPassword("NewPassword456!").Should().BeTrue();
+        user.VerifyPassword(currentPassword).Should().BeFalse();
         _unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
 
@@ -224,9 +227,10 @@ public class UserProfileHandlerTests
         };
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<DomainException>(() =>
-            handler.Handle(command, TestContext.Current.CancellationToken));
-        Assert.Contains("Current password is incorrect", exception.Message);
+        var act = () =>
+            handler.Handle(command, TestContext.Current.CancellationToken);
+        var exception = (await act.Should().ThrowAsync<DomainException>()).Which;
+        exception.Message.Should().Contain("Current password is incorrect");
     }
 
     [Fact]
@@ -249,8 +253,9 @@ public class UserProfileHandlerTests
         };
 
         // Act & Assert
-        await Assert.ThrowsAsync<ValidationException>(() =>
-            handler.Handle(command, TestContext.Current.CancellationToken));
+        var act = () =>
+            handler.Handle(command, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<ValidationException>();
     }
 
     [Fact]
@@ -271,9 +276,10 @@ public class UserProfileHandlerTests
         };
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<DomainException>(() =>
-            handler.Handle(command, TestContext.Current.CancellationToken));
-        Assert.Contains("User not found", exception.Message);
+        var act = () =>
+            handler.Handle(command, TestContext.Current.CancellationToken);
+        var exception = (await act.Should().ThrowAsync<DomainException>()).Which;
+        exception.Message.Should().Contain("User not found");
     }
     private static User CreateTestUser(Guid? userId = null, string password = "TestPassword123!")
     {

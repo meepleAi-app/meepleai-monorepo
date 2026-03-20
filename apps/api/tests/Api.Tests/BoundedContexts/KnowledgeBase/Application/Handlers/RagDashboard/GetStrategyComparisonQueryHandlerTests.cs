@@ -6,6 +6,7 @@ using Api.Tests.Constants;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Handlers.RagDashboard;
 
@@ -46,11 +47,11 @@ public class GetStrategyComparisonQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.NotNull(result.Strategies);
-        Assert.NotNull(result.LatencyRanking);
-        Assert.NotNull(result.QualityRanking);
-        Assert.NotNull(result.CostEfficiencyRanking);
+        result.Should().NotBeNull();
+        result.Strategies.Should().NotBeNull();
+        result.LatencyRanking.Should().NotBeNull();
+        result.QualityRanking.Should().NotBeNull();
+        result.CostEfficiencyRanking.Should().NotBeNull();
     }
 
     [Fact]
@@ -63,7 +64,7 @@ public class GetStrategyComparisonQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.True(result.Strategies.Count >= 6); // All strategies
+        (result.Strategies.Count >= 6).Should().BeTrue(); // All strategies
     }
 
     [Fact]
@@ -79,9 +80,9 @@ public class GetStrategyComparisonQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.Equal(2, result.Strategies.Count);
-        Assert.Contains(result.Strategies, s => s.StrategyId == "Hybrid");
-        Assert.Contains(result.Strategies, s => s.StrategyId == "Semantic");
+        result.Strategies.Count.Should().Be(2);
+        result.Strategies.Should().Contain(s => s.StrategyId == "Hybrid");
+        result.Strategies.Should().Contain(s => s.StrategyId == "Semantic");
     }
 
     [Fact]
@@ -94,9 +95,9 @@ public class GetStrategyComparisonQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotEmpty(result.LatencyRanking);
-        Assert.NotEmpty(result.QualityRanking);
-        Assert.NotEmpty(result.CostEfficiencyRanking);
+        result.LatencyRanking.Should().NotBeEmpty();
+        result.QualityRanking.Should().NotBeEmpty();
+        result.CostEfficiencyRanking.Should().NotBeEmpty();
     }
 
     [Fact]
@@ -109,8 +110,8 @@ public class GetStrategyComparisonQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result.RecommendedStrategy);
-        Assert.NotNull(result.RecommendationReason);
+        result.RecommendedStrategy.Should().NotBeNull();
+        result.RecommendationReason.Should().NotBeNull();
     }
 
     [Fact]
@@ -125,11 +126,11 @@ public class GetStrategyComparisonQueryHandlerTests
         // Assert
         foreach (var strategy in result.Strategies)
         {
-            Assert.NotNull(strategy.StrategyId);
-            Assert.True(strategy.TotalQueries >= 0);
-            Assert.True(strategy.AverageLatencyMs >= 0);
-            Assert.InRange(strategy.AverageRelevanceScore, 0.0, 1.0);
-            Assert.True(strategy.TotalCost >= 0);
+            strategy.StrategyId.Should().NotBeNull();
+            (strategy.TotalQueries >= 0).Should().BeTrue();
+            (strategy.AverageLatencyMs >= 0).Should().BeTrue();
+            strategy.AverageRelevanceScore.Should().BeInRange(0.0, 1.0);
+            (strategy.TotalCost >= 0).Should().BeTrue();
         }
     }
 
@@ -147,7 +148,7 @@ public class GetStrategyComparisonQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
     }
 
     [Fact]

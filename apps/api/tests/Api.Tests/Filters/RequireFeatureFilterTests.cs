@@ -12,6 +12,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.Filters;
 
@@ -66,8 +67,8 @@ public class RequireFeatureFilterTests
         var result = await filter.InvokeAsync(invocationContext, next);
 
         // Assert
-        Assert.False(nextCalled);
-        Assert.NotNull(result);
+        nextCalled.Should().BeFalse();
+        result.Should().NotBeNull();
     }
 
     [Fact]
@@ -93,7 +94,7 @@ public class RequireFeatureFilterTests
         await filter.InvokeAsync(invocationContext, next);
 
         // Assert
-        Assert.True(nextCalled);
+        nextCalled.Should().BeTrue();
     }
 
     [Fact]
@@ -119,8 +120,8 @@ public class RequireFeatureFilterTests
         var result = await filter.InvokeAsync(invocationContext, next);
 
         // Assert
-        Assert.False(nextCalled);
-        Assert.NotNull(result);
+        nextCalled.Should().BeFalse();
+        result.Should().NotBeNull();
     }
 
     [Fact]
@@ -142,19 +143,19 @@ public class RequireFeatureFilterTests
         var result = await filter.InvokeAsync(invocationContext, next);
 
         // Assert
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
     }
 
     [Fact]
     public void Constructor_WithEmptyFeatureName_ThrowsArgumentException()
     {
-        Assert.Throws<ArgumentException>(() => new RequireFeatureFilter(""));
+        ((Action)(() => new RequireFeatureFilter(""))).Should().Throw<ArgumentException>();
     }
 
     [Fact]
     public void Constructor_WithNullFeatureName_ThrowsArgumentNullException()
     {
-        Assert.Throws<ArgumentNullException>(() => new RequireFeatureFilter(null!));
+        ((Action)(() => new RequireFeatureFilter(null!))).Should().Throw<ArgumentNullException>();
     }
 
     [Fact]
@@ -180,7 +181,7 @@ public class RequireFeatureFilterTests
         await filter.InvokeAsync(invocationContext, next);
 
         // Assert
-        Assert.True(nextCalled);
+        nextCalled.Should().BeTrue();
     }
 
     [Fact]
@@ -205,7 +206,7 @@ public class RequireFeatureFilterTests
         var result = await filter.InvokeAsync(invocationContext, next);
 
         // Assert
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
     }
 
     #region Helper Methods

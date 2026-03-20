@@ -8,6 +8,7 @@ using Api.SharedKernel.Application.Services;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Moq;
+using FluentAssertions;
 using Xunit;
 
 namespace Api.Tests.BoundedContexts.SessionTracking.Application.Handlers;
@@ -46,11 +47,11 @@ public sealed class GetSessionStatisticsHandlerTests : IDisposable
         var query = new GetSessionStatisticsQuery(_userId);
         var result = await _handler.Handle(query, CancellationToken.None);
 
-        Assert.Equal(0, result.TotalSessions);
-        Assert.Equal(0, result.TotalGamesPlayed);
-        Assert.Equal("00:00:00", result.AverageSessionDuration);
-        Assert.Empty(result.MostPlayedGames);
-        Assert.Empty(result.MonthlyActivity);
+        result.TotalSessions.Should().Be(0);
+        result.TotalGamesPlayed.Should().Be(0);
+        result.AverageSessionDuration.Should().Be("00:00:00");
+        result.MostPlayedGames.Should().BeEmpty();
+        result.MonthlyActivity.Should().BeEmpty();
     }
 
     [Fact]
@@ -64,8 +65,8 @@ public sealed class GetSessionStatisticsHandlerTests : IDisposable
         var query = new GetSessionStatisticsQuery(_userId);
         var result = await _handler.Handle(query, CancellationToken.None);
 
-        Assert.Equal(3, result.TotalSessions);
-        Assert.Equal(2, result.TotalGamesPlayed);
+        result.TotalSessions.Should().Be(3);
+        result.TotalGamesPlayed.Should().Be(2);
     }
 
     [Fact]
@@ -77,7 +78,7 @@ public sealed class GetSessionStatisticsHandlerTests : IDisposable
         var query = new GetSessionStatisticsQuery(_userId);
         var result = await _handler.Handle(query, CancellationToken.None);
 
-        Assert.Equal(1, result.TotalSessions);
+        result.TotalSessions.Should().Be(1);
     }
 
     [Fact]
@@ -89,7 +90,7 @@ public sealed class GetSessionStatisticsHandlerTests : IDisposable
         var query = new GetSessionStatisticsQuery(_userId);
         var result = await _handler.Handle(query, CancellationToken.None);
 
-        Assert.Equal(1, result.TotalSessions);
+        result.TotalSessions.Should().Be(1);
     }
 
     [Fact]
@@ -102,7 +103,7 @@ public sealed class GetSessionStatisticsHandlerTests : IDisposable
         var query = new GetSessionStatisticsQuery(_userId);
         var result = await _handler.Handle(query, CancellationToken.None);
 
-        Assert.NotEqual("00:00:00", result.AverageSessionDuration);
+        result.AverageSessionDuration.Should().NotBe("00:00:00");
     }
 
     [Fact]
@@ -118,9 +119,9 @@ public sealed class GetSessionStatisticsHandlerTests : IDisposable
         var query = new GetSessionStatisticsQuery(_userId);
         var result = await _handler.Handle(query, CancellationToken.None);
 
-        Assert.Equal(2, result.MostPlayedGames.Count);
-        Assert.Equal(3, result.MostPlayedGames[0].PlayCount);
-        Assert.Equal(game1, result.MostPlayedGames[0].GameId);
+        result.MostPlayedGames.Count.Should().Be(2);
+        result.MostPlayedGames[0].PlayCount.Should().Be(3);
+        result.MostPlayedGames[0].GameId.Should().Be(game1);
     }
 
     [Fact]
@@ -133,7 +134,7 @@ public sealed class GetSessionStatisticsHandlerTests : IDisposable
         var query = new GetSessionStatisticsQuery(_userId, 12);
         var result = await _handler.Handle(query, CancellationToken.None);
 
-        Assert.True(result.MonthlyActivity.Count >= 2);
+        (result.MonthlyActivity.Count >= 2).Should().BeTrue();
     }
 
     [Fact]
@@ -145,7 +146,7 @@ public sealed class GetSessionStatisticsHandlerTests : IDisposable
         var query = new GetSessionStatisticsQuery(_userId, 6);
         var result = await _handler.Handle(query, CancellationToken.None);
 
-        Assert.Equal(1, result.TotalSessions);
+        result.TotalSessions.Should().Be(1);
     }
 
     private async Task SeedSession(
@@ -210,10 +211,10 @@ public sealed class GetGameStatisticsHandlerTests : IDisposable
         var query = new GetGameStatisticsQuery(_userId, _gameId);
         var result = await _handler.Handle(query, CancellationToken.None);
 
-        Assert.Equal(0, result.TotalPlays);
-        Assert.Equal(0, result.Wins);
-        Assert.Equal(0.0, result.WinRate);
-        Assert.Equal("00:00:00", result.AverageSessionDuration);
+        result.TotalPlays.Should().Be(0);
+        result.Wins.Should().Be(0);
+        result.WinRate.Should().Be(0.0);
+        result.AverageSessionDuration.Should().Be("00:00:00");
     }
 
     [Fact]
@@ -225,7 +226,7 @@ public sealed class GetGameStatisticsHandlerTests : IDisposable
         var query = new GetGameStatisticsQuery(_userId, _gameId);
         var result = await _handler.Handle(query, CancellationToken.None);
 
-        Assert.Equal(2, result.TotalPlays);
+        result.TotalPlays.Should().Be(2);
     }
 
     [Fact]
@@ -237,8 +238,8 @@ public sealed class GetGameStatisticsHandlerTests : IDisposable
         var query = new GetGameStatisticsQuery(_userId, _gameId);
         var result = await _handler.Handle(query, CancellationToken.None);
 
-        Assert.Equal(100m, result.HighScore);
-        Assert.Equal(75.0, result.AverageScore);
+        result.HighScore.Should().Be(100m);
+        result.AverageScore.Should().Be(75.0);
     }
 
     [Fact]
@@ -250,7 +251,7 @@ public sealed class GetGameStatisticsHandlerTests : IDisposable
         var query = new GetGameStatisticsQuery(_userId, _gameId);
         var result = await _handler.Handle(query, CancellationToken.None);
 
-        Assert.Equal(1, result.TotalPlays);
+        result.TotalPlays.Should().Be(1);
     }
 
     [Fact]
@@ -259,7 +260,7 @@ public sealed class GetGameStatisticsHandlerTests : IDisposable
         var query = new GetGameStatisticsQuery(_userId, _gameId);
         var result = await _handler.Handle(query, CancellationToken.None);
 
-        Assert.Equal(_gameId, result.GameId);
+        result.GameId.Should().Be(_gameId);
     }
 
     [Fact]
@@ -273,7 +274,7 @@ public sealed class GetGameStatisticsHandlerTests : IDisposable
         var query = new GetGameStatisticsQuery(_userId, _gameId);
         var result = await _handler.Handle(query, CancellationToken.None);
 
-        Assert.Equal(0.5, result.WinRate);
+        result.WinRate.Should().Be(0.5);
     }
 
     private async Task SeedSessionWithScore(DateTime sessionDate, decimal score, bool isDeleted = false)

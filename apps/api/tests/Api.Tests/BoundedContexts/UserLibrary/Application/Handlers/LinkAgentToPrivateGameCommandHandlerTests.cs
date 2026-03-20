@@ -9,6 +9,7 @@ using MediatR;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.UserLibrary.Application.Handlers;
 
@@ -88,8 +89,8 @@ public sealed class LinkAgentToPrivateGameCommandHandlerTests
             u => u.SaveChangesAsync(It.IsAny<CancellationToken>()),
             Times.Once);
 
-        Assert.NotNull(capturedGame);
-        Assert.Equal(agentId, capturedGame.AgentDefinitionId);
+        capturedGame.Should().NotBeNull();
+        capturedGame.AgentDefinitionId.Should().Be(agentId);
     }
 
     [Fact]
@@ -160,7 +161,7 @@ public sealed class LinkAgentToPrivateGameCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert: agent link succeeded, auto-link failure was swallowed
-        Assert.Equal(MediatR.Unit.Value, result);
+        result.Should().Be(MediatR.Unit.Value);
         _unitOfWorkMock.Verify(
             u => u.SaveChangesAsync(It.IsAny<CancellationToken>()),
             Times.Once);
@@ -180,8 +181,8 @@ public sealed class LinkAgentToPrivateGameCommandHandlerTests
             .ReturnsAsync((PrivateGame?)null);
 
         // Act & Assert
-        await Assert.ThrowsAsync<NotFoundException>(
-            () => _handler.Handle(command, TestContext.Current.CancellationToken));
+        var act = () => _handler.Handle(command, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<NotFoundException>();
 
         _repositoryMock.Verify(
             r => r.UpdateAsync(It.IsAny<PrivateGame>(), It.IsAny<CancellationToken>()),
@@ -225,8 +226,8 @@ public sealed class LinkAgentToPrivateGameCommandHandlerTests
             .ReturnsAsync(game);
 
         // Act & Assert — handler must surface 409 Conflict, not 500 InvalidOperationException
-        await Assert.ThrowsAsync<ConflictException>(
-            () => _handler.Handle(command, TestContext.Current.CancellationToken));
+        var act2 = () => _handler.Handle(command, TestContext.Current.CancellationToken);
+        await act2.Should().ThrowAsync<ConflictException>();
 
         _repositoryMock.Verify(
             r => r.UpdateAsync(It.IsAny<PrivateGame>(), It.IsAny<CancellationToken>()),

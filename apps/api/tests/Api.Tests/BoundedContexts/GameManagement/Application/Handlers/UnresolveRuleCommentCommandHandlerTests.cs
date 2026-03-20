@@ -6,6 +6,7 @@ using Api.Infrastructure;
 using Api.Tests.TestHelpers;
 using Moq;
 using Xunit;
+using FluentAssertions;
 using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.GameManagement.Application.Handlers;
@@ -46,7 +47,7 @@ public class UnresolveRuleCommentCommandHandlerTests
             loggerMock.Object);
 
         // Assert
-        Assert.NotNull(handler);
+        handler.Should().NotBeNull();
     }
 
     [Fact]
@@ -57,11 +58,12 @@ public class UnresolveRuleCommentCommandHandlerTests
         var loggerMock = new Mock<ILogger<UnresolveRuleCommentCommandHandler>>();
 
         // Act & Assert
-        Assert.Throws<ArgumentNullException>(() =>
+        var act = () =>
             new UnresolveRuleCommentCommandHandler(
                 null!,
                 timeProviderMock.Object,
-                loggerMock.Object));
+                loggerMock.Object);
+        act.Should().Throw<ArgumentNullException>();
     }
 
     [Fact]
@@ -72,11 +74,12 @@ public class UnresolveRuleCommentCommandHandlerTests
         var loggerMock = new Mock<ILogger<UnresolveRuleCommentCommandHandler>>();
 
         // Act & Assert
-        Assert.Throws<ArgumentNullException>(() =>
+        var act = () =>
             new UnresolveRuleCommentCommandHandler(
                 context,
                 null!,
-                loggerMock.Object));
+                loggerMock.Object);
+        act.Should().Throw<ArgumentNullException>();
     }
 
     [Fact]
@@ -87,11 +90,12 @@ public class UnresolveRuleCommentCommandHandlerTests
         var timeProviderMock = CreateTimeProviderMock();
 
         // Act & Assert
-        Assert.Throws<ArgumentNullException>(() =>
+        var act = () =>
             new UnresolveRuleCommentCommandHandler(
                 context,
                 timeProviderMock.Object,
-                null!));
+                null!);
+        act.Should().Throw<ArgumentNullException>();
     }
     [Fact]
     public void Command_AsOwner_ConstructsCorrectly()
@@ -107,10 +111,10 @@ public class UnresolveRuleCommentCommandHandlerTests
             UnresolveParent: false);
 
         // Assert
-        Assert.Equal(commentId, command.CommentId);
-        Assert.Equal(userId, command.UserId);
-        Assert.False(command.IsAdmin);
-        Assert.False(command.UnresolveParent);
+        command.CommentId.Should().Be(commentId);
+        command.UserId.Should().Be(userId);
+        (command.IsAdmin).Should().BeFalse();
+        (command.UnresolveParent).Should().BeFalse();
     }
 
     [Fact]
@@ -127,9 +131,9 @@ public class UnresolveRuleCommentCommandHandlerTests
             UnresolveParent: false);
 
         // Assert
-        Assert.Equal(commentId, command.CommentId);
-        Assert.Equal(adminUserId, command.UserId);
-        Assert.True(command.IsAdmin);
+        command.CommentId.Should().Be(commentId);
+        command.UserId.Should().Be(adminUserId);
+        (command.IsAdmin).Should().BeTrue();
     }
 
     [Fact]
@@ -143,7 +147,7 @@ public class UnresolveRuleCommentCommandHandlerTests
             UnresolveParent: true);
 
         // Assert
-        Assert.True(command.UnresolveParent);
+        (command.UnresolveParent).Should().BeTrue();
     }
 
     [Fact]
@@ -158,8 +162,8 @@ public class UnresolveRuleCommentCommandHandlerTests
             UserId: userId);
 
         // Assert - Both default to false
-        Assert.False(command.IsAdmin);
-        Assert.False(command.UnresolveParent);
+        (command.IsAdmin).Should().BeFalse();
+        (command.UnresolveParent).Should().BeFalse();
     }
 
     [Fact]
@@ -173,8 +177,8 @@ public class UnresolveRuleCommentCommandHandlerTests
             UnresolveParent: true);
 
         // Assert
-        Assert.True(command.IsAdmin);
-        Assert.True(command.UnresolveParent);
+        (command.IsAdmin).Should().BeTrue();
+        (command.UnresolveParent).Should().BeTrue();
     }
 
     [Fact]
@@ -188,7 +192,7 @@ public class UnresolveRuleCommentCommandHandlerTests
             UnresolveParent: false); // No parent exists
 
         // Assert
-        Assert.False(command.UnresolveParent);
+        (command.UnresolveParent).Should().BeFalse();
     }
 
     [Fact]
@@ -209,8 +213,8 @@ public class UnresolveRuleCommentCommandHandlerTests
             UserId: user2Id);
 
         // Assert
-        Assert.NotEqual(command1.CommentId, command2.CommentId);
-        Assert.NotEqual(command1.UserId, command2.UserId);
+        command2.CommentId.Should().NotBe(command1.CommentId);
+        command2.UserId.Should().NotBe(command1.UserId);
     }
     // NOTE: Full integration tests for Handle method (comment unresolve, parent unresolve cascading,
     // authorization, navigation property loading) should be in integration test suite

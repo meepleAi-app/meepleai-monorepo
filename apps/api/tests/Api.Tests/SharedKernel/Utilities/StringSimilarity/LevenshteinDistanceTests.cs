@@ -1,5 +1,6 @@
 using Api.SharedKernel.Utilities.StringSimilarity;
 using Api.Tests.Constants;
+using FluentAssertions;
 using Xunit;
 
 namespace Api.Tests.SharedKernel.Utilities.StringSimilarity;
@@ -32,7 +33,7 @@ public class LevenshteinDistanceTests
         var actualDistance = LevenshteinDistance.CalculateDistance(source, target);
 
         // Assert
-        Assert.Equal(expectedDistance, actualDistance);
+        actualDistance.Should().Be(expectedDistance);
     }
 
     [Theory]
@@ -54,7 +55,7 @@ public class LevenshteinDistanceTests
         var actualSimilarity = LevenshteinDistance.CalculateSimilarityScore(source, target);
 
         // Assert
-        Assert.Equal(expectedSimilarity, actualSimilarity, precision: 1);
+        actualSimilarity.Should().BeApproximately(expectedSimilarity, 1);
     }
 
     [Fact]
@@ -67,7 +68,7 @@ public class LevenshteinDistanceTests
         var similarity = LevenshteinDistance.CalculateSimilarityScore(text, text);
 
         // Assert
-        Assert.Equal(100.0, similarity);
+        similarity.Should().Be(100.0);
     }
 
     [Fact]
@@ -81,7 +82,7 @@ public class LevenshteinDistanceTests
         var similarity = LevenshteinDistance.CalculateSimilarityScore(source, target);
 
         // Assert
-        Assert.True(similarity < 30.0, $"Expected similarity < 30%, got {similarity}%");
+        (similarity < 30.0).Should().BeTrue($"Expected similarity < 30%, got {similarity}%");
     }
 
     [Theory]
@@ -95,7 +96,7 @@ public class LevenshteinDistanceTests
         var actualSimilarity = LevenshteinDistance.CalculateSimilarityScore(source, target);
 
         // Assert
-        Assert.Equal(expectedSimilarity, actualSimilarity, precision: 1);
+        actualSimilarity.Should().BeApproximately(expectedSimilarity, 1);
     }
 
     [Fact]
@@ -110,7 +111,7 @@ public class LevenshteinDistanceTests
         var distance2 = LevenshteinDistance.CalculateDistance(s2, s1);
 
         // Assert
-        Assert.Equal(distance1, distance2);
+        distance2.Should().Be(distance1);
     }
 
     [Theory]
@@ -126,6 +127,6 @@ public class LevenshteinDistanceTests
         var actualSimilarity = LevenshteinDistance.CalculateSimilarityScore(source, target);
 
         // Assert
-        Assert.Equal(expectedSimilarity, actualSimilarity, precision: 1);
+        actualSimilarity.Should().BeApproximately(expectedSimilarity, 1);
     }
 }

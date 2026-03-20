@@ -1,6 +1,7 @@
 using Api.BoundedContexts.DocumentProcessing.Domain.ValueObjects;
 using Api.SharedKernel.Domain.Exceptions;
 using Api.Tests.Constants;
+using FluentAssertions;
 using Xunit;
 
 namespace Api.Tests.BoundedContexts.DocumentProcessing.Domain.ValueObjects;
@@ -29,7 +30,7 @@ public class LanguageCodeTests
         var languageCode = new LanguageCode(code);
 
         // Assert
-        Assert.Equal(code.ToLowerInvariant(), languageCode.Value);
+        languageCode.Value.Should().Be(code.ToLowerInvariant());
     }
 
     [Theory]
@@ -44,7 +45,7 @@ public class LanguageCodeTests
         var languageCode = new LanguageCode(input);
 
         // Assert
-        Assert.Equal(expected, languageCode.Value);
+        languageCode.Value.Should().Be(expected);
     }
 
     [Theory]
@@ -54,8 +55,9 @@ public class LanguageCodeTests
     public void Constructor_WithEmptyValue_ThrowsValidationException(string? invalidCode)
     {
         // Act & Assert
-        var exception = Assert.Throws<ValidationException>(() => new LanguageCode(invalidCode!));
-        Assert.Contains("Language code cannot be empty", exception.Message);
+        var act = () => new LanguageCode(invalidCode!);
+        var exception = act.Should().Throw<ValidationException>().Which;
+        exception.Message.Should().Contain("Language code cannot be empty");
     }
 
     [Theory]
@@ -65,12 +67,10 @@ public class LanguageCodeTests
     public void Constructor_WithInvalidLength_ThrowsValidationException(string invalidCode)
     {
         // Act & Assert
-        var exception = Assert.Throws<ValidationException>(() => new LanguageCode(invalidCode));
-        Assert.True(
-            exception.Message.Contains("must be at least 2 characters") ||
-            exception.Message.Contains("must be exactly 2 characters"),
-            $"Expected length validation message, got: {exception.Message}"
-        );
+        var act = () => new LanguageCode(invalidCode);
+        var exception = act.Should().Throw<ValidationException>().Which;
+        (exception.Message.Contains("must be at least 2 characters") ||
+            exception.Message.Contains("must be exactly 2 characters")).Should().BeTrue($"Expected length validation message, got: {exception.Message}");
     }
 
     [Theory]
@@ -81,19 +81,20 @@ public class LanguageCodeTests
     public void Constructor_WithUnsupportedLanguage_ThrowsValidationException(string unsupportedCode)
     {
         // Act & Assert
-        var exception = Assert.Throws<ValidationException>(() => new LanguageCode(unsupportedCode));
-        Assert.Contains("must be one of:", exception.Message);
+        var act = () => new LanguageCode(unsupportedCode);
+        var exception = act.Should().Throw<ValidationException>().Which;
+        exception.Message.Should().Contain("must be one of:");
     }
 
     [Fact]
     public void StaticInstances_AreCorrectlyDefined()
     {
         // Assert
-        Assert.Equal("en", LanguageCode.English.Value);
-        Assert.Equal("it", LanguageCode.Italian.Value);
-        Assert.Equal("de", LanguageCode.German.Value);
-        Assert.Equal("fr", LanguageCode.French.Value);
-        Assert.Equal("es", LanguageCode.Spanish.Value);
+        LanguageCode.English.Value.Should().Be("en");
+        LanguageCode.Italian.Value.Should().Be("it");
+        LanguageCode.German.Value.Should().Be("de");
+        LanguageCode.French.Value.Should().Be("fr");
+        LanguageCode.Spanish.Value.Should().Be("es");
     }
 
     [Theory]
@@ -109,7 +110,7 @@ public class LanguageCodeTests
         var result = LanguageCode.IsSupported(code!);
 
         // Assert
-        Assert.Equal(expected, result);
+        result.Should().Be(expected);
     }
 
     [Fact]
@@ -119,17 +120,17 @@ public class LanguageCodeTests
         var supported = LanguageCode.GetSupportedLanguages();
 
         // Assert
-        Assert.Contains("en", supported);
-        Assert.Contains("it", supported);
-        Assert.Contains("de", supported);
-        Assert.Contains("fr", supported);
-        Assert.Contains("es", supported);
-        Assert.Contains("pt", supported);
-        Assert.Contains("pl", supported);
-        Assert.Contains("nl", supported);
-        Assert.Contains("ja", supported);
-        Assert.Contains("zh", supported);
-        Assert.Equal(10, supported.Count);
+        supported.Should().Contain("en");
+        supported.Should().Contain("it");
+        supported.Should().Contain("de");
+        supported.Should().Contain("fr");
+        supported.Should().Contain("es");
+        supported.Should().Contain("pt");
+        supported.Should().Contain("pl");
+        supported.Should().Contain("nl");
+        supported.Should().Contain("ja");
+        supported.Should().Contain("zh");
+        supported.Count.Should().Be(10);
     }
 
     [Fact]
@@ -141,9 +142,9 @@ public class LanguageCodeTests
         var code3 = LanguageCode.English;
 
         // Act & Assert
-        Assert.Equal(code1, code2);
-        Assert.Equal(code1, code3);
-        Assert.Equal(code2, code3);
+        code2.Should().Be(code1);
+        code3.Should().Be(code1);
+        code3.Should().Be(code2);
     }
 
     [Fact]
@@ -155,9 +156,9 @@ public class LanguageCodeTests
         var german = LanguageCode.German;
 
         // Act & Assert
-        Assert.NotEqual(english, italian);
-        Assert.NotEqual(english, german);
-        Assert.NotEqual(italian, german);
+        italian.Should().NotBe(english);
+        german.Should().NotBe(english);
+        german.Should().NotBe(italian);
     }
 
     [Theory]
@@ -173,6 +174,6 @@ public class LanguageCodeTests
         var result = languageCode.ToString();
 
         // Assert
-        Assert.Equal(code, result);
+        result.Should().Be(code);
     }
 }

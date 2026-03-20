@@ -16,6 +16,7 @@ using MediatR;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.GameManagement.Application.GameNight;
 
@@ -155,10 +156,10 @@ public sealed class SubmitRuleDisputeCommandHandlerTests
         var result = await _sut.Handle(command, CancellationToken.None);
 
         // Assert
-        Assert.NotEqual(Guid.Empty, result.Id);
-        Assert.False(string.IsNullOrWhiteSpace(result.Verdict));
-        Assert.NotNull(result.RuleReferences);
-        Assert.NotEmpty(result.RuleReferences);
+        result.Id.Should().NotBe(Guid.Empty);
+        (string.IsNullOrWhiteSpace(result.Verdict)).Should().BeFalse();
+        result.RuleReferences.Should().NotBeNull();
+        result.RuleReferences.Should().NotBeEmpty();
     }
 
     [Fact]
@@ -179,10 +180,10 @@ public sealed class SubmitRuleDisputeCommandHandlerTests
         await _sut.Handle(command, CancellationToken.None);
 
         // Assert
-        Assert.NotNull(updatedSession);
-        Assert.Single(updatedSession!.Disputes);
-        Assert.Equal(command.Description, updatedSession.Disputes[0].Description);
-        Assert.Equal(command.RaisedByPlayerName, updatedSession.Disputes[0].RaisedByPlayerName);
+        updatedSession.Should().NotBeNull();
+        updatedSession!.Disputes.Should().ContainSingle();
+        updatedSession.Disputes[0].Description.Should().Be(command.Description);
+        updatedSession.Disputes[0].RaisedByPlayerName.Should().Be(command.RaisedByPlayerName);
     }
 
     [Fact]
@@ -231,14 +232,14 @@ public sealed class SubmitRuleDisputeCommandHandlerTests
         await _sut.Handle(command, CancellationToken.None);
 
         // Assert — prompt must contain the arbitration markers
-        Assert.NotNull(capturedSystemPrompt);
-        Assert.Contains("ARBITRO", capturedSystemPrompt, StringComparison.OrdinalIgnoreCase);
-        Assert.NotNull(capturedUserPrompt);
-        Assert.Contains(command.Description, capturedUserPrompt, StringComparison.Ordinal);
-        Assert.Contains("VERDETTO:", capturedUserPrompt, StringComparison.Ordinal);
-        Assert.Contains("REGOLA:", capturedUserPrompt, StringComparison.Ordinal);
-        Assert.Contains("NOTA:", capturedUserPrompt, StringComparison.Ordinal);
-        Assert.Contains("Wingspan", capturedUserPrompt, StringComparison.Ordinal);
+        capturedSystemPrompt.Should().NotBeNull();
+        capturedSystemPrompt.Should().ContainEquivalentOf("ARBITRO");
+        capturedUserPrompt.Should().NotBeNull();
+        capturedUserPrompt.Should().Contain(command.Description);
+        capturedUserPrompt.Should().Contain("VERDETTO:");
+        capturedUserPrompt.Should().Contain("REGOLA:");
+        capturedUserPrompt.Should().Contain("NOTA:");
+        capturedUserPrompt.Should().Contain("Wingspan");
     }
 
     [Fact]
@@ -268,10 +269,10 @@ public sealed class SubmitRuleDisputeCommandHandlerTests
         await _sut.Handle(command, CancellationToken.None);
 
         // Assert
-        Assert.NotNull(capturedUserPrompt);
-        Assert.Contains("Prima disputa?", capturedUserPrompt, StringComparison.Ordinal);
-        Assert.Contains("Seconda disputa?", capturedUserPrompt, StringComparison.Ordinal);
-        Assert.Contains("Verdetti precedenti", capturedUserPrompt, StringComparison.Ordinal);
+        capturedUserPrompt.Should().NotBeNull();
+        capturedUserPrompt.Should().Contain("Prima disputa?");
+        capturedUserPrompt.Should().Contain("Seconda disputa?");
+        capturedUserPrompt.Should().Contain("Verdetti precedenti");
     }
 
     [Fact]
@@ -285,7 +286,7 @@ public sealed class SubmitRuleDisputeCommandHandlerTests
         var result = await _sut.Handle(command, CancellationToken.None);
 
         // Assert — verdict text extracted from "VERDETTO:" section
-        Assert.Contains("ragione", result.Verdict, StringComparison.OrdinalIgnoreCase);
+        result.Verdict.Should().ContainEquivalentOf("ragione");
     }
 
     [Fact]
@@ -299,8 +300,8 @@ public sealed class SubmitRuleDisputeCommandHandlerTests
         var result = await _sut.Handle(command, CancellationToken.None);
 
         // Assert — REGOLA section content ends up in RuleReferences
-        Assert.NotEmpty(result.RuleReferences);
-        Assert.Contains(result.RuleReferences, r => r.Contains("pag.", StringComparison.OrdinalIgnoreCase));
+        result.RuleReferences.Should().NotBeEmpty();
+        result.RuleReferences.Should().Contain(r => r.Contains("pag.", StringComparison.OrdinalIgnoreCase));
     }
 
     [Fact]
@@ -314,8 +315,8 @@ public sealed class SubmitRuleDisputeCommandHandlerTests
         var result = await _sut.Handle(command, CancellationToken.None);
 
         // Assert — NOTA section present in response fixture
-        Assert.NotNull(result.Note);
-        Assert.Contains("FAQ", result.Note, StringComparison.OrdinalIgnoreCase);
+        result.Note.Should().NotBeNull();
+        result.Note.Should().ContainEquivalentOf("FAQ");
     }
 
     // ─── Error cases ──────────────────────────────────────────────────────────
@@ -331,8 +332,9 @@ public sealed class SubmitRuleDisputeCommandHandlerTests
         var command = BuildCommand();
 
         // Act & Assert
-        await Assert.ThrowsAsync<NotFoundException>(() =>
-            _sut.Handle(command, CancellationToken.None));
+        var act = () =>
+            _sut.Handle(command, CancellationToken.None);
+        await act.Should().ThrowAsync<NotFoundException>();
     }
 
     [Fact]
@@ -352,8 +354,9 @@ public sealed class SubmitRuleDisputeCommandHandlerTests
         var command = BuildCommand();
 
         // Act & Assert
-        await Assert.ThrowsAsync<ConflictException>(() =>
-            _sut.Handle(command, CancellationToken.None));
+        var act = () =>
+            _sut.Handle(command, CancellationToken.None);
+        await act.Should().ThrowAsync<ConflictException>();
     }
 
     [Fact]
@@ -378,8 +381,9 @@ public sealed class SubmitRuleDisputeCommandHandlerTests
         var command = BuildCommand();
 
         // Act & Assert
-        await Assert.ThrowsAsync<ConflictException>(() =>
-            _sut.Handle(command, CancellationToken.None));
+        var act = () =>
+            _sut.Handle(command, CancellationToken.None);
+        await act.Should().ThrowAsync<ConflictException>();
     }
 
     [Fact]
@@ -397,8 +401,9 @@ public sealed class SubmitRuleDisputeCommandHandlerTests
         var command = BuildCommand();
 
         // Act & Assert
-        await Assert.ThrowsAsync<InvalidOperationException>(() =>
-            _sut.Handle(command, CancellationToken.None));
+        var act = () =>
+            _sut.Handle(command, CancellationToken.None);
+        await act.Should().ThrowAsync<InvalidOperationException>();
     }
 
     // ─── Tier enforcement ─────────────────────────────────────────────────────
@@ -428,11 +433,12 @@ public sealed class SubmitRuleDisputeCommandHandlerTests
         var command = BuildCommand();
 
         // Act & Assert
-        var ex = await Assert.ThrowsAsync<ConflictException>(() =>
-            _sut.Handle(command, CancellationToken.None));
+        var act = () =>
+            _sut.Handle(command, CancellationToken.None);
+        var ex = (await act.Should().ThrowAsync<ConflictException>()).Which;
 
-        Assert.Contains("limite di domande", ex.Message, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("30/30", ex.Message, StringComparison.Ordinal);
+        ex.Message.Should().ContainEquivalentOf("limite di domande");
+        ex.Message.Should().Contain("30/30");
 
         // LLM must not be called when quota is exceeded
         _llmServiceMock.Verify(
@@ -453,7 +459,7 @@ public sealed class SubmitRuleDisputeCommandHandlerTests
         var result = await _sut.Handle(command, CancellationToken.None);
 
         // Assert — verdict returned and usage recorded
-        Assert.NotEqual(Guid.Empty, result.Id);
+        result.Id.Should().NotBe(Guid.Empty);
         _tierEnforcementMock.Verify(
             t => t.RecordUsageAsync(TestUserId, TierAction.SessionAgentQuery, It.IsAny<CancellationToken>()),
             Times.Once);
@@ -474,11 +480,11 @@ public sealed class SubmitRuleDisputeCommandHandlerTests
         var (verdict, refs, note) = SubmitRuleDisputeCommandHandler.ParseArbitrationResponse(response);
 
         // Assert
-        Assert.Contains("Giocatore A", verdict, StringComparison.Ordinal);
-        Assert.NotEmpty(refs);
-        Assert.Contains("Pag. 5", refs[0], StringComparison.Ordinal);
-        Assert.NotNull(note);
-        Assert.Contains("FAQ", note, StringComparison.Ordinal);
+        verdict.Should().Contain("Giocatore A");
+        refs.Should().NotBeEmpty();
+        refs[0].Should().Contain("Pag. 5");
+        note.Should().NotBeNull();
+        note.Should().Contain("FAQ");
     }
 
     [Fact]
@@ -491,9 +497,9 @@ public sealed class SubmitRuleDisputeCommandHandlerTests
         var (verdict, refs, note) = SubmitRuleDisputeCommandHandler.ParseArbitrationResponse(response);
 
         // Assert — fallback: full response as verdict
-        Assert.Equal(response, verdict);
-        Assert.Empty(refs);
-        Assert.Null(note);
+        verdict.Should().Be(response);
+        refs.Should().BeEmpty();
+        note.Should().BeNull();
     }
 
     [Fact]
@@ -503,9 +509,9 @@ public sealed class SubmitRuleDisputeCommandHandlerTests
         var (verdict, refs, note) = SubmitRuleDisputeCommandHandler.ParseArbitrationResponse(string.Empty);
 
         // Assert
-        Assert.False(string.IsNullOrWhiteSpace(verdict));
-        Assert.Empty(refs);
-        Assert.Null(note);
+        (string.IsNullOrWhiteSpace(verdict)).Should().BeFalse();
+        refs.Should().BeEmpty();
+        note.Should().BeNull();
     }
 
     [Fact]
@@ -521,7 +527,7 @@ public sealed class SubmitRuleDisputeCommandHandlerTests
         var (_, refs, _) = SubmitRuleDisputeCommandHandler.ParseArbitrationResponse(response);
 
         // Assert
-        Assert.True(refs.Count >= 2, $"Expected at least 2 references, got {refs.Count}");
+        (refs.Count >= 2).Should().BeTrue($"Expected at least 2 references, got {refs.Count}");
     }
 
     [Fact]
@@ -536,9 +542,9 @@ public sealed class SubmitRuleDisputeCommandHandlerTests
         var (verdict, refs, note) = SubmitRuleDisputeCommandHandler.ParseArbitrationResponse(response);
 
         // Assert
-        Assert.Contains("giocatore B", verdict, StringComparison.OrdinalIgnoreCase);
-        Assert.NotEmpty(refs);
-        Assert.Null(note);
+        verdict.Should().ContainEquivalentOf("giocatore B");
+        refs.Should().NotBeEmpty();
+        note.Should().BeNull();
     }
 }
 

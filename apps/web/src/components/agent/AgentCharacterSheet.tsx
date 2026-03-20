@@ -26,6 +26,7 @@ import { ChatThreadView } from '@/components/chat-unified/ChatThreadView';
 import { AgentStatusBadge } from '@/components/ui/data-display/meeple-card-features/AgentStatusBadge';
 import { DocumentStatusBadge } from '@/components/ui/data-display/meeple-card-features/DocumentStatusBadge';
 import { Button } from '@/components/ui/primitives/button';
+import { useAgentKbDocs, useAgentThreads } from '@/hooks/queries/useAgentData';
 import { useAgentStatus } from '@/hooks/useAgentStatus';
 import { api } from '@/lib/api';
 import { cn } from '@/lib/utils';
@@ -57,8 +58,8 @@ export const AgentCharacterSheet = React.memo(function AgentCharacterSheet({
 }: AgentCharacterSheetProps) {
   const [chatThreadId, setChatThreadId] = useState<string | null>(null);
 
-  const { threads, loading: threadsLoading } = useAgentThreads(data.id);
-  const { docs, loading: docsLoading } = useAgentKbDocs(data.gameId);
+  const { data: threads = [], isLoading: threadsLoading } = useAgentThreads(data.id);
+  const { data: docs = [], isLoading: docsLoading } = useAgentKbDocs(data.gameId);
   const {
     status: chatReadiness,
     isLoading: readinessLoading,
@@ -564,109 +565,6 @@ function KbDocItem({ doc }: { doc: KbDocumentPreview }) {
       <DocumentStatusBadge status={doc.status} size="sm" />
     </li>
   );
-}
-
-// ============================================================================
-// Data-fetching hooks (isolated to this component)
-// ============================================================================
-
-function useAgentThreads(agentId: string) {
-  const [threads, setThreads] = React.useState<ChatThreadPreview[]>([]);
-  const [loading, setLoading] = React.useState(true);
-
-  React.useEffect(() => {
-    if (!agentId) return;
-    const controller = new AbortController();
-
-    (async () => {
-      try {
-        const res = await fetch(`/api/v1/chat-threads/my?agentId=${agentId}`, {
-          signal: controller.signal,
-        });
-        if (!res.ok) return;
-        const json = (await res.json()) as unknown[];
-        setThreads(mapThreads(json));
-      } catch (err) {
-        if (err instanceof Error && err.name === 'AbortError') return;
-      } finally {
-        setLoading(false);
-      }
-    })();
-
-    return () => {
-      controller.abort();
-    };
-  }, [agentId]);
-
-  return { threads, loading };
-}
-
-function useAgentKbDocs(gameId: string | undefined) {
-  const [docs, setDocs] = React.useState<KbDocumentPreview[]>([]);
-  const [loading, setLoading] = React.useState(!!gameId);
-
-  React.useEffect(() => {
-    if (!gameId) {
-      setLoading(false);
-      return;
-    }
-    const controller = new AbortController();
-
-    (async () => {
-      try {
-        const res = await fetch(`/api/v1/knowledge-base/${gameId}/documents`, {
-          signal: controller.signal,
-        });
-        if (!res.ok) return;
-        const json = (await res.json()) as unknown[];
-        setDocs(mapKbDocs(json));
-      } catch (err) {
-        if (err instanceof Error && err.name === 'AbortError') return;
-      } finally {
-        setLoading(false);
-      }
-    })();
-
-    return () => {
-      controller.abort();
-    };
-  }, [gameId]);
-
-  return { docs, loading };
-}
-
-function mapThreads(json: unknown[]): ChatThreadPreview[] {
-  return json.map(raw => {
-    const t = raw as Record<string, unknown>;
-    const messages = Array.isArray(t.messages) ? (t.messages as Record<string, unknown>[]) : [];
-    const firstMsg = messages[0];
-    const preview = typeof firstMsg?.content === 'string' ? firstMsg.content : '';
-    return {
-      id: String(t.id ?? ''),
-      createdAt: String(t.createdAt ?? t.startedAt ?? new Date().toISOString()),
-      messageCount: messages.length,
-      firstMessagePreview: preview,
-    };
-  });
-}
-
-function mapKbDocs(json: unknown[]): KbDocumentPreview[] {
-  return json.map(raw => {
-    const d = raw as Record<string, unknown>;
-    const statusMap: Record<string, KbDocumentPreview['status']> = {
-      indexed: 'indexed',
-      processing: 'processing',
-      failed: 'failed',
-      none: 'none',
-    };
-    const rawStatus = String(d.status ?? 'none').toLowerCase();
-    return {
-      id: String(d.id ?? ''),
-      fileName: String(d.fileName ?? d.name ?? 'Documento'),
-      uploadedAt: String(d.uploadedAt ?? d.createdAt ?? new Date().toISOString()),
-      status: statusMap[rawStatus] ?? 'none',
-    };
-  });
 }
 
 function formatRelativeTime(timestamp: string): string {

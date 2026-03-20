@@ -42,6 +42,15 @@ export {
   libraryKeys,
 } from './useLibrary';
 
+// Agent Data hooks — KB docs & chat threads (Phase 0: Game Table Detail)
+export {
+  useAgentKbDocs,
+  useAgentThreads,
+  agentDataKeys,
+  mapKbDocs,
+  mapThreads,
+} from './useAgentData';
+
 // Agent Documents queries and mutations (Issue #2399)
 export {
   useAgentDocuments,

@@ -1,4 +1,4 @@
-using Api.BoundedContexts.GameManagement.Application.Handlers.LiveSessions;
+using Api.BoundedContexts.GameManagement.Application.Commands.LiveSessions;
 using Api.BoundedContexts.GameManagement.Application.Queries.LiveSessions;
 using Api.BoundedContexts.GameManagement.Domain.Entities;
 using Api.BoundedContexts.GameManagement.Domain.Enums;
@@ -8,6 +8,7 @@ using Api.Tests.Constants;
 using Microsoft.Extensions.Time.Testing;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.GameManagement.Application.Handlers.LiveSessions;
 
@@ -54,11 +55,11 @@ public class GetTurnPhasesQueryHandlerTests
         var result = await handler.Handle(
             new GetTurnPhasesQuery(sessionId), TestContext.Current.CancellationToken);
 
-        Assert.Equal(0, result.CurrentPhaseIndex);
-        Assert.Equal("Draw", result.CurrentPhaseName);
-        Assert.Equal(3, result.PhaseNames.Length);
-        Assert.Equal(3, result.TotalPhases);
-        Assert.True(result.HasPhases);
+        result.CurrentPhaseIndex.Should().Be(0);
+        result.CurrentPhaseName.Should().Be("Draw");
+        result.PhaseNames.Length.Should().Be(3);
+        result.TotalPhases.Should().Be(3);
+        (result.HasPhases).Should().BeTrue();
     }
 
     [Fact]
@@ -74,11 +75,11 @@ public class GetTurnPhasesQueryHandlerTests
         var result = await handler.Handle(
             new GetTurnPhasesQuery(sessionId), TestContext.Current.CancellationToken);
 
-        Assert.Equal(0, result.CurrentPhaseIndex);
-        Assert.Null(result.CurrentPhaseName);
-        Assert.Empty(result.PhaseNames);
-        Assert.Equal(0, result.TotalPhases);
-        Assert.False(result.HasPhases);
+        result.CurrentPhaseIndex.Should().Be(0);
+        result.CurrentPhaseName.Should().BeNull();
+        result.PhaseNames.Should().BeEmpty();
+        result.TotalPhases.Should().Be(0);
+        (result.HasPhases).Should().BeFalse();
     }
 
     [Fact]
@@ -96,8 +97,8 @@ public class GetTurnPhasesQueryHandlerTests
         var result = await handler.Handle(
             new GetTurnPhasesQuery(sessionId), TestContext.Current.CancellationToken);
 
-        Assert.Equal(1, result.CurrentPhaseIndex);
-        Assert.Equal("Action", result.CurrentPhaseName);
+        result.CurrentPhaseIndex.Should().Be(1);
+        result.CurrentPhaseName.Should().Be("Action");
     }
 
     [Fact]
@@ -115,8 +116,8 @@ public class GetTurnPhasesQueryHandlerTests
         var result = await handler.Handle(
             new GetTurnPhasesQuery(sessionId), TestContext.Current.CancellationToken);
 
-        Assert.Equal(2, result.CurrentTurnIndex);
-        Assert.Equal(0, result.CurrentPhaseIndex); // Reset after turn advance
+        result.CurrentTurnIndex.Should().Be(2);
+        result.CurrentPhaseIndex.Should().Be(0); // Reset after turn advance
     }
 
     [Fact]
@@ -128,9 +129,10 @@ public class GetTurnPhasesQueryHandlerTests
 
         var handler = CreateHandler();
 
-        await Assert.ThrowsAsync<NotFoundException>(() =>
+        var act = () =>
             handler.Handle(
-                new GetTurnPhasesQuery(sessionId), TestContext.Current.CancellationToken));
+                new GetTurnPhasesQuery(sessionId), TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<NotFoundException>();
     }
 
     [Fact]
@@ -138,8 +140,9 @@ public class GetTurnPhasesQueryHandlerTests
     {
         var handler = CreateHandler();
 
-        await Assert.ThrowsAsync<ArgumentNullException>(() =>
-            handler.Handle(null!, TestContext.Current.CancellationToken));
+        var act = () =>
+            handler.Handle(null!, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<ArgumentNullException>();
     }
 
     [Fact]

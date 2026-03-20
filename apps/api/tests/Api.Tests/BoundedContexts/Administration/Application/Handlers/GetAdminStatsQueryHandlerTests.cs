@@ -1,9 +1,11 @@
-using Api.BoundedContexts.Administration.Application.Handlers;
+using Api.BoundedContexts.Administration.Application.Commands;
+using Api.BoundedContexts.Administration.Application.Queries;
 using Api.BoundedContexts.Administration.Application.Queries;
 using Api.Models;
 using Api.Services;
 using Moq;
 using Xunit;
+using FluentAssertions;
 using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.Administration.Application.Handlers;
@@ -80,11 +82,11 @@ public class GetAdminStatsQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal(150, result.Metrics.TotalUsers);
-        Assert.Equal(75, result.Metrics.TotalPdfDocuments);
-        Assert.Equal(320, result.Metrics.TotalRagRequests);
-        Assert.Equal(1250, result.Metrics.TotalChatMessages);
+        result.Should().NotBeNull();
+        result.Metrics.TotalUsers.Should().Be(150);
+        result.Metrics.TotalPdfDocuments.Should().Be(75);
+        result.Metrics.TotalRagRequests.Should().Be(320);
+        result.Metrics.TotalChatMessages.Should().Be(1250);
         _mockAdminStatsService.Verify(
             s => s.GetDashboardStatsAsync(
                 It.IsAny<AnalyticsQueryParams>(),
@@ -143,7 +145,7 @@ public class GetAdminStatsQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         _mockAdminStatsService.Verify(
             s => s.GetDashboardStatsAsync(
                 It.Is<AnalyticsQueryParams>(p => p.Days == 30),
@@ -203,8 +205,8 @@ public class GetAdminStatsQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal(45, result.Metrics.TotalRagRequests);
+        result.Should().NotBeNull();
+        result.Metrics.TotalRagRequests.Should().Be(45);
         _mockAdminStatsService.Verify(
             s => s.GetDashboardStatsAsync(
                 It.Is<AnalyticsQueryParams>(p => p.GameId == gameId),
@@ -264,8 +266,8 @@ public class GetAdminStatsQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal(5, result.Metrics.TotalUsers);
+        result.Should().NotBeNull();
+        result.Metrics.TotalUsers.Should().Be(5);
         _mockAdminStatsService.Verify(
             s => s.GetDashboardStatsAsync(
                 It.Is<AnalyticsQueryParams>(p => p.RoleFilter == roleFilter),
@@ -333,8 +335,8 @@ public class GetAdminStatsQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal(125, result.Metrics.TotalUsers);
+        result.Should().NotBeNull();
+        result.Metrics.TotalUsers.Should().Be(125);
         _mockAdminStatsService.Verify(
             s => s.GetDashboardStatsAsync(
                 It.Is<AnalyticsQueryParams>(p =>
@@ -422,10 +424,11 @@ public class GetAdminStatsQueryHandlerTests
             .ThrowsAsync(expectedException);
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
-            _handler.Handle(query, TestContext.Current.CancellationToken));
+        var act = () =>
+            _handler.Handle(query, TestContext.Current.CancellationToken);
+        var exception = (await act.Should().ThrowAsync<InvalidOperationException>()).Which;
 
-        Assert.Equal("Database connection failed", exception.Message);
+        exception.Message.Should().Be("Database connection failed");
         _mockAdminStatsService.Verify(
             s => s.GetDashboardStatsAsync(
                 It.IsAny<AnalyticsQueryParams>(),
@@ -447,10 +450,11 @@ public class GetAdminStatsQueryHandlerTests
             .ThrowsAsync(expectedException);
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<TimeoutException>(() =>
-            _handler.Handle(query, TestContext.Current.CancellationToken));
+        var act = () =>
+            _handler.Handle(query, TestContext.Current.CancellationToken);
+        var exception = (await act.Should().ThrowAsync<TimeoutException>()).Which;
 
-        Assert.Equal("Query timed out after 30 seconds", exception.Message);
+        exception.Message.Should().Be("Query timed out after 30 seconds");
     }
 
     [Fact]
@@ -468,8 +472,9 @@ public class GetAdminStatsQueryHandlerTests
             .ThrowsAsync(new OperationCanceledException());
 
         // Act & Assert
-        await Assert.ThrowsAsync<OperationCanceledException>(() =>
-            _handler.Handle(query, cancellationTokenSource.Token));
+        var act = () =>
+            _handler.Handle(query, cancellationTokenSource.Token);
+        await act.Should().ThrowAsync<OperationCanceledException>();
     }
 
     // Issue #2911: Null Parameter Validation Tests
@@ -477,18 +482,20 @@ public class GetAdminStatsQueryHandlerTests
     public void Constructor_WithNullService_ThrowsArgumentNullException()
     {
         // Act & Assert
-        var exception = Assert.Throws<ArgumentNullException>(() =>
-            new GetAdminStatsQueryHandler(null!));
+        var act = () =>
+            new GetAdminStatsQueryHandler(null!);
+        var exception = act.Should().Throw<ArgumentNullException>().Which;
 
-        Assert.Equal("adminStatsService", exception.ParamName);
+        exception.ParamName.Should().Be("adminStatsService");
     }
 
     [Fact]
     public async Task Handle_WithNullQuery_ThrowsArgumentNullException()
     {
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentNullException>(() =>
-            _handler.Handle(null!, TestContext.Current.CancellationToken));
+        var act = () =>
+            _handler.Handle(null!, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<ArgumentNullException>();
     }
 
     // Issue #2911: Metric Aggregation Logic Tests
@@ -554,30 +561,30 @@ public class GetAdminStatsQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert - Verify all metrics are properly aggregated
-        Assert.NotNull(result);
-        Assert.Equal(150, result.Metrics.TotalUsers);
-        Assert.Equal(42, result.Metrics.ActiveSessions);
-        Assert.Equal(1250, result.Metrics.ApiRequestsToday);
-        Assert.Equal(75, result.Metrics.TotalPdfDocuments);
-        Assert.Equal(3500, result.Metrics.TotalChatMessages);
-        Assert.Equal(0.92, result.Metrics.AverageConfidenceScore);
-        Assert.Equal(820, result.Metrics.TotalRagRequests);
-        Assert.Equal(150000, result.Metrics.TotalTokensUsed);
-        Assert.Equal(45, result.Metrics.TotalGames);
-        Assert.Equal(8750, result.Metrics.ApiRequests7d);
-        Assert.Equal(35000, result.Metrics.ApiRequests30d);
-        Assert.Equal(185.5, result.Metrics.AverageLatency24h);
-        Assert.Equal(195.7, result.Metrics.AverageLatency7d);
-        Assert.Equal(0.015, result.Metrics.ErrorRate24h);
-        Assert.Equal(3, result.Metrics.ActiveAlerts);
-        Assert.Equal(25, result.Metrics.ResolvedAlerts);
+        result.Should().NotBeNull();
+        result.Metrics.TotalUsers.Should().Be(150);
+        result.Metrics.ActiveSessions.Should().Be(42);
+        result.Metrics.ApiRequestsToday.Should().Be(1250);
+        result.Metrics.TotalPdfDocuments.Should().Be(75);
+        result.Metrics.TotalChatMessages.Should().Be(3500);
+        result.Metrics.AverageConfidenceScore.Should().Be(0.92);
+        result.Metrics.TotalRagRequests.Should().Be(820);
+        result.Metrics.TotalTokensUsed.Should().Be(150000);
+        result.Metrics.TotalGames.Should().Be(45);
+        result.Metrics.ApiRequests7d.Should().Be(8750);
+        result.Metrics.ApiRequests30d.Should().Be(35000);
+        result.Metrics.AverageLatency24h.Should().Be(185.5);
+        result.Metrics.AverageLatency7d.Should().Be(195.7);
+        result.Metrics.ErrorRate24h.Should().Be(0.015);
+        result.Metrics.ActiveAlerts.Should().Be(3);
+        result.Metrics.ResolvedAlerts.Should().Be(25);
 
         // Verify time series data
-        Assert.Equal(7, result.UserTrend.Count);
-        Assert.Equal(7, result.SessionTrend.Count);
-        Assert.Equal(7, result.ApiRequestTrend.Count);
-        Assert.Equal(7, result.PdfUploadTrend.Count);
-        Assert.Equal(7, result.ChatMessageTrend.Count);
+        result.UserTrend.Count.Should().Be(7);
+        result.SessionTrend.Count.Should().Be(7);
+        result.ApiRequestTrend.Count.Should().Be(7);
+        result.PdfUploadTrend.Count.Should().Be(7);
+        result.ChatMessageTrend.Count.Should().Be(7);
     }
 
     [Fact]
@@ -631,12 +638,12 @@ public class GetAdminStatsQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal(0, result.Metrics.TotalUsers);
-        Assert.Equal(0, result.Metrics.ActiveSessions);
-        Assert.Equal(0.0, result.Metrics.AverageConfidenceScore);
-        Assert.Equal(0.0, result.Metrics.ErrorRate24h);
-        Assert.Empty(result.UserTrend);
-        Assert.Empty(result.SessionTrend);
+        result.Should().NotBeNull();
+        result.Metrics.TotalUsers.Should().Be(0);
+        result.Metrics.ActiveSessions.Should().Be(0);
+        result.Metrics.AverageConfidenceScore.Should().Be(0.0);
+        result.Metrics.ErrorRate24h.Should().Be(0.0);
+        result.UserTrend.Should().BeEmpty();
+        result.SessionTrend.Should().BeEmpty();
     }
 }

@@ -46,6 +46,7 @@ import {
   InboxIcon,
   FileSearchIcon,
   ShieldCheckIcon,
+  SproutIcon,
 } from 'lucide-react';
 
 /**
@@ -168,6 +169,11 @@ export const ADMIN_NAVIGATION: AdminNavSection[] = [
         href: '/admin/shared-games/import',
         label: 'Bulk Import',
         icon: InboxIcon,
+      },
+      {
+        href: '/admin/shared-games/seeding',
+        label: 'Seeding & Enrichment',
+        icon: SproutIcon,
       },
       {
         href: '/admin/shared-games/pending-approvals',
@@ -422,15 +428,15 @@ export const ADMIN_NAVIGATION: AdminNavSection[] = [
  * Flat list of all admin navigation items for search/lookup
  */
 export const ADMIN_NAV_ITEMS_FLAT: AdminNavItem[] = ADMIN_NAVIGATION.flatMap(
-  (section) => section.items
+  section => section.items
 );
 
 /**
  * Get section containing a specific href
  */
 export function getSectionForHref(href: string): AdminNavSection | undefined {
-  return ADMIN_NAVIGATION.find((section) =>
-    section.items.some((item) => {
+  return ADMIN_NAVIGATION.find(section =>
+    section.items.some(item => {
       if (item.activePattern) {
         return item.activePattern.test(href);
       }
@@ -466,9 +472,7 @@ export function getExpandedSections(pathname: string): string[] {
     }
 
     // Expand section containing current route
-    const hasActiveItem = section.items.some((item) =>
-      isAdminNavItemActive(item, pathname)
-    );
+    const hasActiveItem = section.items.some(item => isAdminNavItemActive(item, pathname));
     if (hasActiveItem && !expanded.includes(section.id)) {
       expanded.push(section.id);
     }

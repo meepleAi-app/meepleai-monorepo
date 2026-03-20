@@ -1,6 +1,7 @@
 using Api.BoundedContexts.Authentication.Domain.Entities;
 using Api.BoundedContexts.Authentication.Domain.ValueObjects;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.Unit.Authentication;
 
@@ -28,9 +29,9 @@ public sealed class SessionDeviceFingerprintTests
         );
 
         // Assert
-        Assert.NotNull(session.DeviceFingerprint);
-        Assert.NotEmpty(session.DeviceFingerprint);
-        Assert.Equal(44, session.DeviceFingerprint.Length); // Base64 SHA256 (32 bytes = 44 chars)
+        session.DeviceFingerprint.Should().NotBeNull();
+        session.DeviceFingerprint.Should().NotBeEmpty();
+        session.DeviceFingerprint.Length.Should().Be(44); // Base64 SHA256 (32 bytes = 44 chars)
     }
 
     [Fact]
@@ -48,7 +49,7 @@ public sealed class SessionDeviceFingerprintTests
         );
 
         // Assert
-        Assert.Null(session.DeviceFingerprint);
+        session.DeviceFingerprint.Should().BeNull();
     }
 
     [Fact]
@@ -64,7 +65,7 @@ public sealed class SessionDeviceFingerprintTests
         var session2 = new Session(Guid.NewGuid(), Guid.NewGuid(), token2, userAgent: userAgent);
 
         // Assert
-        Assert.Equal(session1.DeviceFingerprint, session2.DeviceFingerprint);
+        session2.DeviceFingerprint.Should().Be(session1.DeviceFingerprint);
     }
 
     [Fact]
@@ -81,7 +82,7 @@ public sealed class SessionDeviceFingerprintTests
         var session2 = new Session(Guid.NewGuid(), Guid.NewGuid(), token2, userAgent: userAgent2);
 
         // Assert
-        Assert.NotEqual(session1.DeviceFingerprint, session2.DeviceFingerprint);
+        session2.DeviceFingerprint.Should().NotBe(session1.DeviceFingerprint);
     }
 
     [Fact]
@@ -98,7 +99,7 @@ public sealed class SessionDeviceFingerprintTests
         var session2 = new Session(Guid.NewGuid(), Guid.NewGuid(), token2, userAgent: userAgent2);
 
         // Assert
-        Assert.Equal(session1.DeviceFingerprint, session2.DeviceFingerprint); // Normalized to lowercase
+        session2.DeviceFingerprint.Should().Be(session1.DeviceFingerprint); // Normalized to lowercase
     }
 
     [Fact]
@@ -115,6 +116,6 @@ public sealed class SessionDeviceFingerprintTests
         var session2 = new Session(Guid.NewGuid(), Guid.NewGuid(), token2, userAgent: userAgent2);
 
         // Assert
-        Assert.Equal(session1.DeviceFingerprint, session2.DeviceFingerprint); // Trimmed before hash
+        session2.DeviceFingerprint.Should().Be(session1.DeviceFingerprint); // Trimmed before hash
     }
 }

@@ -5,6 +5,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Moq;
+using FluentAssertions;
 using Xunit;
 using Api.Tests.Constants;
 
@@ -52,14 +53,14 @@ public class SecurityHeadersMiddlewareTests
         await middleware.InvokeAsync(context);
 
         // Assert - All 6 security headers should be present
-        Assert.True(context.Response.Headers.ContainsKey("Content-Security-Policy"));
-        Assert.True(context.Response.Headers.ContainsKey("X-Frame-Options"));
-        Assert.True(context.Response.Headers.ContainsKey("X-Content-Type-Options"));
-        Assert.True(context.Response.Headers.ContainsKey("Referrer-Policy"));
-        Assert.True(context.Response.Headers.ContainsKey("Permissions-Policy"));
+        context.Response.Headers.ContainsKey("Content-Security-Policy").Should().BeTrue();
+        context.Response.Headers.ContainsKey("X-Frame-Options").Should().BeTrue();
+        context.Response.Headers.ContainsKey("X-Content-Type-Options").Should().BeTrue();
+        context.Response.Headers.ContainsKey("Referrer-Policy").Should().BeTrue();
+        context.Response.Headers.ContainsKey("Permissions-Policy").Should().BeTrue();
 
         // HSTS should be skipped in development
-        Assert.False(context.Response.Headers.ContainsKey("Strict-Transport-Security"));
+        context.Response.Headers.ContainsKey("Strict-Transport-Security").Should().BeFalse();
     }
 
     [Fact]
@@ -73,14 +74,14 @@ public class SecurityHeadersMiddlewareTests
         await middleware.InvokeAsync(context);
 
         // Assert
-        Assert.True(context.Response.Headers.ContainsKey("Content-Security-Policy"));
+        context.Response.Headers.ContainsKey("Content-Security-Policy").Should().BeTrue();
         var cspValue = context.Response.Headers["Content-Security-Policy"].ToString();
 
         // Verify key CSP directives
-        Assert.Contains("default-src 'self'", cspValue, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("script-src", cspValue, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("style-src", cspValue, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("frame-ancestors 'none'", cspValue, StringComparison.OrdinalIgnoreCase);
+        cspValue.Should().ContainEquivalentOf("default-src 'self'");
+        cspValue.Should().ContainEquivalentOf("script-src");
+        cspValue.Should().ContainEquivalentOf("style-src");
+        cspValue.Should().ContainEquivalentOf("frame-ancestors 'none'");
     }
 
     [Fact]
@@ -94,8 +95,8 @@ public class SecurityHeadersMiddlewareTests
         await middleware.InvokeAsync(context);
 
         // Assert
-        Assert.True(context.Response.Headers.ContainsKey("X-Frame-Options"));
-        Assert.Equal("DENY", context.Response.Headers["X-Frame-Options"].ToString());
+        context.Response.Headers.ContainsKey("X-Frame-Options").Should().BeTrue();
+        context.Response.Headers["X-Frame-Options"].ToString().Should().Be("DENY");
     }
 
     [Fact]
@@ -109,8 +110,8 @@ public class SecurityHeadersMiddlewareTests
         await middleware.InvokeAsync(context);
 
         // Assert
-        Assert.True(context.Response.Headers.ContainsKey("X-Content-Type-Options"));
-        Assert.Equal("nosniff", context.Response.Headers["X-Content-Type-Options"].ToString());
+        context.Response.Headers.ContainsKey("X-Content-Type-Options").Should().BeTrue();
+        context.Response.Headers["X-Content-Type-Options"].ToString().Should().Be("nosniff");
     }
 
     [Fact]
@@ -124,8 +125,8 @@ public class SecurityHeadersMiddlewareTests
         await middleware.InvokeAsync(context);
 
         // Assert
-        Assert.True(context.Response.Headers.ContainsKey("Referrer-Policy"));
-        Assert.Equal("strict-origin-when-cross-origin", context.Response.Headers["Referrer-Policy"].ToString());
+        context.Response.Headers.ContainsKey("Referrer-Policy").Should().BeTrue();
+        context.Response.Headers["Referrer-Policy"].ToString().Should().Be("strict-origin-when-cross-origin");
     }
 
     [Fact]
@@ -139,13 +140,13 @@ public class SecurityHeadersMiddlewareTests
         await middleware.InvokeAsync(context);
 
         // Assert
-        Assert.True(context.Response.Headers.ContainsKey("Permissions-Policy"));
+        context.Response.Headers.ContainsKey("Permissions-Policy").Should().BeTrue();
         var permissionsPolicy = context.Response.Headers["Permissions-Policy"].ToString();
 
         // Verify dangerous features are restricted
-        Assert.Contains("camera=()", permissionsPolicy);
-        Assert.Contains("microphone=()", permissionsPolicy);
-        Assert.Contains("geolocation=()", permissionsPolicy);
+        permissionsPolicy.Should().Contain("camera=()");
+        permissionsPolicy.Should().Contain("microphone=()");
+        permissionsPolicy.Should().Contain("geolocation=()");
     }
 
     [Fact]
@@ -160,7 +161,7 @@ public class SecurityHeadersMiddlewareTests
         await middleware.InvokeAsync(context);
 
         // Assert - HSTS should NOT be present in development
-        Assert.False(context.Response.Headers.ContainsKey("Strict-Transport-Security"));
+        context.Response.Headers.ContainsKey("Strict-Transport-Security").Should().BeFalse();
     }
 
     [Fact]
@@ -175,7 +176,7 @@ public class SecurityHeadersMiddlewareTests
         await middleware.InvokeAsync(context);
 
         // Assert - HSTS should NOT be present for localhost
-        Assert.False(context.Response.Headers.ContainsKey("Strict-Transport-Security"));
+        context.Response.Headers.ContainsKey("Strict-Transport-Security").Should().BeFalse();
     }
 
     [Fact]
@@ -190,7 +191,7 @@ public class SecurityHeadersMiddlewareTests
         await middleware.InvokeAsync(context);
 
         // Assert - HSTS should NOT be present for 127.0.0.1
-        Assert.False(context.Response.Headers.ContainsKey("Strict-Transport-Security"));
+        context.Response.Headers.ContainsKey("Strict-Transport-Security").Should().BeFalse();
     }
 
     [Fact]
@@ -205,10 +206,10 @@ public class SecurityHeadersMiddlewareTests
         await middleware.InvokeAsync(context);
 
         // Assert - HSTS should be present for HTTPS in production
-        Assert.True(context.Response.Headers.ContainsKey("Strict-Transport-Security"));
+        context.Response.Headers.ContainsKey("Strict-Transport-Security").Should().BeTrue();
         var hstsValue = context.Response.Headers["Strict-Transport-Security"].ToString();
-        Assert.Contains("max-age=31536000", hstsValue);
-        Assert.Contains("includeSubDomains", hstsValue);
+        hstsValue.Should().Contain("max-age=31536000");
+        hstsValue.Should().Contain("includeSubDomains");
     }
 
     [Fact]
@@ -223,7 +224,7 @@ public class SecurityHeadersMiddlewareTests
         await middleware.InvokeAsync(context);
 
         // Assert - HSTS should NOT be present for HTTP requests
-        Assert.False(context.Response.Headers.ContainsKey("Strict-Transport-Security"));
+        context.Response.Headers.ContainsKey("Strict-Transport-Security").Should().BeFalse();
     }
 
     [Fact]
@@ -238,7 +239,7 @@ public class SecurityHeadersMiddlewareTests
         await middleware.InvokeAsync(context);
 
         // Assert - Should not overwrite existing header
-        Assert.Equal("SAMEORIGIN", context.Response.Headers["X-Frame-Options"].ToString());
+        context.Response.Headers["X-Frame-Options"].ToString().Should().Be("SAMEORIGIN");
     }
 
     [Fact]
@@ -262,11 +263,11 @@ public class SecurityHeadersMiddlewareTests
         await middleware.InvokeAsync(context);
 
         // Assert - Disabled headers should not be present
-        Assert.False(context.Response.Headers.ContainsKey("Content-Security-Policy"));
-        Assert.False(context.Response.Headers.ContainsKey("X-Frame-Options"));
+        context.Response.Headers.ContainsKey("Content-Security-Policy").Should().BeFalse();
+        context.Response.Headers.ContainsKey("X-Frame-Options").Should().BeFalse();
 
         // Enabled headers should be present
-        Assert.True(context.Response.Headers.ContainsKey("X-Content-Type-Options"));
+        context.Response.Headers.ContainsKey("X-Content-Type-Options").Should().BeTrue();
     }
 
     [Fact]
@@ -291,11 +292,11 @@ public class SecurityHeadersMiddlewareTests
         await middleware.InvokeAsync(context);
 
         // Assert - Next middleware should be called
-        Assert.True(nextCalled);
+        nextCalled.Should().BeTrue();
 
         // Security headers should still be added
-        Assert.True(context.Response.Headers.ContainsKey("Content-Security-Policy"));
-        Assert.True(context.Response.Headers.ContainsKey("X-Frame-Options"));
+        context.Response.Headers.ContainsKey("Content-Security-Policy").Should().BeTrue();
+        context.Response.Headers.ContainsKey("X-Frame-Options").Should().BeTrue();
     }
 
     [Fact]
@@ -317,9 +318,9 @@ public class SecurityHeadersMiddlewareTests
         await middleware.InvokeAsync(context);
 
         // Assert - Custom policies should be used
-        Assert.Equal("default-src 'none'", context.Response.Headers["Content-Security-Policy"].ToString());
-        Assert.Equal("SAMEORIGIN", context.Response.Headers["X-Frame-Options"].ToString());
-        Assert.Equal("no-referrer", context.Response.Headers["Referrer-Policy"].ToString());
+        context.Response.Headers["Content-Security-Policy"].ToString().Should().Be("default-src 'none'");
+        context.Response.Headers["X-Frame-Options"].ToString().Should().Be("SAMEORIGIN");
+        context.Response.Headers["Referrer-Policy"].ToString().Should().Be("no-referrer");
     }
 
     [Fact]
@@ -343,7 +344,7 @@ public class SecurityHeadersMiddlewareTests
         };
 
         var presentHeaders = securityHeaders.Count(h => context.Response.Headers.ContainsKey(h));
-        Assert.Equal(5, presentHeaders); // 5 headers in development (HSTS skipped)
+        presentHeaders.Should().Be(5);
     }
 
     [Fact]
@@ -363,7 +364,7 @@ public class SecurityHeadersMiddlewareTests
         await middleware.InvokeAsync(context);
 
         // Header should not be added if policy is null
-        Assert.False(context.Response.Headers.ContainsKey("Content-Security-Policy"));
+        context.Response.Headers.ContainsKey("Content-Security-Policy").Should().BeFalse();
     }
 
     [Fact]
@@ -383,16 +384,16 @@ public class SecurityHeadersMiddlewareTests
         await middleware.InvokeAsync(context);
 
         // Assert
-        Assert.True(context.Response.Headers.ContainsKey("Permissions-Policy"));
+        context.Response.Headers.ContainsKey("Permissions-Policy").Should().BeTrue();
         var permissionsPolicy = context.Response.Headers["Permissions-Policy"].ToString();
 
         // Verify extended features are present
-        Assert.Contains("fullscreen=()", permissionsPolicy);
-        Assert.Contains("picture-in-picture=()", permissionsPolicy);
-        Assert.Contains("accelerometer=()", permissionsPolicy);
-        Assert.Contains("gyroscope=()", permissionsPolicy);
-        Assert.Contains("magnetometer=()", permissionsPolicy);
-        Assert.Contains("web-share=()", permissionsPolicy);
+        permissionsPolicy.Should().Contain("fullscreen=()");
+        permissionsPolicy.Should().Contain("picture-in-picture=()");
+        permissionsPolicy.Should().Contain("accelerometer=()");
+        permissionsPolicy.Should().Contain("gyroscope=()");
+        permissionsPolicy.Should().Contain("magnetometer=()");
+        permissionsPolicy.Should().Contain("web-share=()");
     }
 
     [Fact]
@@ -413,7 +414,7 @@ public class SecurityHeadersMiddlewareTests
         await middleware.InvokeAsync(context);
 
         // Assert - Middleware completed successfully
-        Assert.NotNull(context.Response);
+        context.Response.Should().NotBeNull();
     }
 
     // Helper methods

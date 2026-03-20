@@ -5,7 +5,8 @@ using Api.BoundedContexts.KnowledgeBase.Domain.Entities;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 using Api.BoundedContexts.UserLibrary.Application.Commands;
-using Api.BoundedContexts.UserLibrary.Application.Handlers;
+using Api.BoundedContexts.UserLibrary.Application.Commands;
+using Api.BoundedContexts.UserLibrary.Application.Queries;
 using Api.BoundedContexts.UserLibrary.Domain.Entities;
 using Api.BoundedContexts.UserLibrary.Domain.Repositories;
 using Api.Middleware.Exceptions;
@@ -119,9 +120,9 @@ public sealed class SaveAgentConfigCommandHandlerTests
             .ReturnsAsync((AgentTypology?)null);
 
         // Act & Assert
-        await Assert.ThrowsAsync<NotFoundException>(() =>
-            _handler.Handle(command, TestContext.Current.CancellationToken)
-        );
+        var act = () =>
+            _handler.Handle(command, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<NotFoundException>();
     }
 
     [Fact]
@@ -152,9 +153,9 @@ public sealed class SaveAgentConfigCommandHandlerTests
         );
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<ConflictException>(() =>
-            _handler.Handle(command, TestContext.Current.CancellationToken)
-        );
+        var act2 = () =>
+            _handler.Handle(command, TestContext.Current.CancellationToken);
+        var exception = (await act2.Should().ThrowAsync<ConflictException>()).Which;
 
         exception.Message.Should().Contain("not approved");
     }

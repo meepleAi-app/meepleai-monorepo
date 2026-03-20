@@ -7,6 +7,7 @@ using Api.Tests.Constants;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.SharedGameCatalog.Application.Handlers;
 
@@ -64,7 +65,7 @@ public class CreateSharedGameCommandHandlerTests
         var gameId = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotEqual(Guid.Empty, gameId);
+        gameId.Should().NotBe(Guid.Empty);
 
         _repositoryMock.Verify(
             r => r.AddAsync(It.IsAny<SharedGame>(), It.IsAny<CancellationToken>()),
@@ -73,11 +74,11 @@ public class CreateSharedGameCommandHandlerTests
             u => u.SaveChangesAsync(It.IsAny<CancellationToken>()),
             Times.Once);
 
-        Assert.NotNull(capturedGame);
-        Assert.Equal("Catan", capturedGame.Title);
-        Assert.Equal(1995, capturedGame.YearPublished);
-        Assert.Equal(13, capturedGame.BggId);
-        Assert.Single(capturedGame.DomainEvents);
+        capturedGame.Should().NotBeNull();
+        capturedGame.Title.Should().Be("Catan");
+        capturedGame.YearPublished.Should().Be(1995);
+        capturedGame.BggId.Should().Be(13);
+        capturedGame.DomainEvents.Should().ContainSingle();
     }
 
     [Fact]
@@ -105,8 +106,9 @@ public class CreateSharedGameCommandHandlerTests
             .ReturnsAsync(true);
 
         // Act & Assert
-        await Assert.ThrowsAsync<InvalidOperationException>(() =>
-            _handler.Handle(command, TestContext.Current.CancellationToken));
+        var act = () =>
+            _handler.Handle(command, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<InvalidOperationException>();
 
         _repositoryMock.Verify(
             r => r.AddAsync(It.IsAny<SharedGame>(), It.IsAny<CancellationToken>()),
@@ -143,8 +145,8 @@ public class CreateSharedGameCommandHandlerTests
         await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(capturedGame);
-        Assert.Null(capturedGame.Rules);
+        capturedGame.Should().NotBeNull();
+        capturedGame.Rules.Should().BeNull();
     }
 
     [Fact]
@@ -179,10 +181,10 @@ public class CreateSharedGameCommandHandlerTests
         await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(capturedGame);
-        Assert.Equal(2, capturedGame.Categories.Count);
-        Assert.Contains(capturedGame.Categories, c => c.Name == "Strategy");
-        Assert.Contains(capturedGame.Categories, c => c.Name == "Family");
+        capturedGame.Should().NotBeNull();
+        capturedGame.Categories.Count.Should().Be(2);
+        capturedGame.Categories.Should().Contain(c => c.Name == "Strategy");
+        capturedGame.Categories.Should().Contain(c => c.Name == "Family");
     }
 
     [Fact]
@@ -218,12 +220,12 @@ public class CreateSharedGameCommandHandlerTests
         await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(capturedGame);
-        Assert.Single(capturedGame.Designers);
-        Assert.Equal("Matt Leacock", capturedGame.Designers.First().Name);
-        Assert.Equal(2, capturedGame.Publishers.Count);
-        Assert.Contains(capturedGame.Publishers, p => p.Name == "Z-Man Games");
-        Assert.Contains(capturedGame.Publishers, p => p.Name == "Asmodee");
+        capturedGame.Should().NotBeNull();
+        capturedGame.Designers.Should().ContainSingle();
+        capturedGame.Designers.First().Name.Should().Be("Matt Leacock");
+        capturedGame.Publishers.Count.Should().Be(2);
+        capturedGame.Publishers.Should().Contain(p => p.Name == "Z-Man Games");
+        capturedGame.Publishers.Should().Contain(p => p.Name == "Asmodee");
     }
 
     [Fact]
@@ -261,10 +263,10 @@ public class CreateSharedGameCommandHandlerTests
         await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(capturedGame);
-        Assert.Empty(capturedGame.Categories);
-        Assert.Empty(capturedGame.Mechanics);
-        Assert.Empty(capturedGame.Designers);
-        Assert.Empty(capturedGame.Publishers);
+        capturedGame.Should().NotBeNull();
+        capturedGame.Categories.Should().BeEmpty();
+        capturedGame.Mechanics.Should().BeEmpty();
+        capturedGame.Designers.Should().BeEmpty();
+        capturedGame.Publishers.Should().BeEmpty();
     }
 }

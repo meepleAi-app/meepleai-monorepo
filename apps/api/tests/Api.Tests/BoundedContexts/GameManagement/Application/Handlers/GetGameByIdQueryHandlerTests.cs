@@ -1,10 +1,12 @@
-using Api.BoundedContexts.GameManagement.Application.Handlers;
+using Api.BoundedContexts.GameManagement.Application.Commands;
+using Api.BoundedContexts.GameManagement.Application.Queries;
 using Api.BoundedContexts.GameManagement.Application.Queries;
 using Api.BoundedContexts.GameManagement.Domain.Entities;
 using Api.BoundedContexts.GameManagement.Domain.Repositories;
 using Api.Tests.BoundedContexts.GameManagement.TestHelpers;
 using Moq;
 using Xunit;
+using FluentAssertions;
 using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.GameManagement.Application.Handlers;
@@ -48,15 +50,15 @@ public class GetGameByIdQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal(gameId, result.Id);
-        Assert.Equal("Catan", result.Title);
-        Assert.Equal("Kosmos", result.Publisher);
-        Assert.Equal(1995, result.YearPublished);
-        Assert.Equal(3, result.MinPlayers);
-        Assert.Equal(4, result.MaxPlayers);
-        Assert.Equal(60, result.MinPlayTimeMinutes);
-        Assert.Equal(120, result.MaxPlayTimeMinutes);
+        result.Should().NotBeNull();
+        result.Id.Should().Be(gameId);
+        result.Title.Should().Be("Catan");
+        result.Publisher.Should().Be("Kosmos");
+        result.YearPublished.Should().Be(1995);
+        result.MinPlayers.Should().Be(3);
+        result.MaxPlayers.Should().Be(4);
+        result.MinPlayTimeMinutes.Should().Be(60);
+        result.MaxPlayTimeMinutes.Should().Be(120);
 
         _gameRepositoryMock.Verify(
             r => r.GetByIdAsync(gameId, It.IsAny<CancellationToken>()),
@@ -83,16 +85,16 @@ public class GetGameByIdQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal(gameId, result.Id);
-        Assert.Equal("Chess", result.Title);
-        Assert.Null(result.Publisher);
-        Assert.Null(result.YearPublished);
-        Assert.Null(result.MinPlayers);
-        Assert.Null(result.MaxPlayers);
-        Assert.Null(result.MinPlayTimeMinutes);
-        Assert.Null(result.MaxPlayTimeMinutes);
-        Assert.Null(result.BggId);
+        result.Should().NotBeNull();
+        result.Id.Should().Be(gameId);
+        result.Title.Should().Be("Chess");
+        result.Publisher.Should().BeNull();
+        result.YearPublished.Should().BeNull();
+        result.MinPlayers.Should().BeNull();
+        result.MaxPlayers.Should().BeNull();
+        result.MinPlayTimeMinutes.Should().BeNull();
+        result.MaxPlayTimeMinutes.Should().BeNull();
+        result.BggId.Should().BeNull();
     }
 
     [Fact]
@@ -116,8 +118,8 @@ public class GetGameByIdQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal(30549, result.BggId);
+        result.Should().NotBeNull();
+        result.BggId.Should().Be(30549);
     }
 
     [Fact]
@@ -142,14 +144,14 @@ public class GetGameByIdQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.NotNull(result.Publisher);
-        Assert.NotNull(result.YearPublished);
-        Assert.NotNull(result.MinPlayers);
-        Assert.NotNull(result.MaxPlayers);
-        Assert.NotNull(result.MinPlayTimeMinutes);
-        Assert.NotNull(result.MaxPlayTimeMinutes);
-        Assert.NotNull(result.BggId);
+        result.Should().NotBeNull();
+        result.Publisher.Should().NotBeNull();
+        result.YearPublished.Should().NotBeNull();
+        result.MinPlayers.Should().NotBeNull();
+        result.MaxPlayers.Should().NotBeNull();
+        result.MinPlayTimeMinutes.Should().NotBeNull();
+        result.MaxPlayTimeMinutes.Should().NotBeNull();
+        result.BggId.Should().NotBeNull();
     }
     [Fact]
     public async Task Handle_NonExistentGame_ReturnsNull()
@@ -167,7 +169,7 @@ public class GetGameByIdQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.Null(result);
+        result.Should().BeNull();
 
         _gameRepositoryMock.Verify(
             r => r.GetByIdAsync(gameId, It.IsAny<CancellationToken>()),
@@ -190,7 +192,7 @@ public class GetGameByIdQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.Null(result);
+        result.Should().BeNull();
     }
     [Fact]
     public async Task Handle_WithCancellationToken_PassesToRepository()
@@ -215,7 +217,7 @@ public class GetGameByIdQueryHandlerTests
         var result = await _handler.Handle(query, cancellationToken);
 
         // Assert
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         _gameRepositoryMock.Verify(
             r => r.GetByIdAsync(gameId, cancellationToken),
             Times.Once);
@@ -241,9 +243,9 @@ public class GetGameByIdQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.NotEqual(default(DateTime), result.CreatedAt);
-        Assert.Equal(game.CreatedAt, result.CreatedAt);
+        result.Should().NotBeNull();
+        result.CreatedAt.Should().NotBe(default(DateTime));
+        result.CreatedAt.Should().Be(game.CreatedAt);
     }
 }
 

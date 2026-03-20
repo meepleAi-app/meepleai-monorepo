@@ -154,7 +154,11 @@ internal static class SecretsHelper
             return null;
         }
 
-        var connectionString = $"Host={host};Port={port};Database={database};Username={username};Password={password}";
+        var sslMode = Environment.GetEnvironmentVariable("POSTGRES_SSL_MODE")
+            ?? config["POSTGRES_SSL_MODE"];
+        var connectionString = string.IsNullOrWhiteSpace(sslMode)
+            ? $"Host={host};Port={port};Database={database};Username={username};Password={password}"
+            : $"Host={host};Port={port};Database={database};Username={username};Password={password};SSL Mode={sslMode}";
 
         logger?.LogInformation(
             "Built PostgreSQL connection string: Host={Host}, Database={Database}, User={User}",

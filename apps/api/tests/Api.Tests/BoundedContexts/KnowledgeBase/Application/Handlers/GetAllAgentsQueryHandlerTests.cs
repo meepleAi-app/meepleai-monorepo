@@ -1,4 +1,5 @@
-using Api.BoundedContexts.KnowledgeBase.Application.Handlers;
+using Api.BoundedContexts.KnowledgeBase.Application.Commands;
+using Api.BoundedContexts.KnowledgeBase.Application.Queries;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries;
 using Api.BoundedContexts.KnowledgeBase.Domain.Entities;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
@@ -7,6 +8,7 @@ using Api.Tests.Constants;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Handlers;
 
@@ -47,8 +49,8 @@ public class GetAllAgentsQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal(2, result.Count);
+        result.Should().NotBeNull();
+        result.Count.Should().Be(2);
     }
 
     [Fact]
@@ -70,9 +72,9 @@ public class GetAllAgentsQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Single(result);
-        Assert.True(result[0].IsActive);
+        result.Should().NotBeNull();
+        result.Should().ContainSingle();
+        result[0].IsActive.Should().BeTrue();
     }
 
     [Fact]
@@ -94,9 +96,9 @@ public class GetAllAgentsQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Single(result);
-        Assert.Equal("RAG", result[0].Type);
+        result.Should().NotBeNull();
+        result.Should().ContainSingle();
+        result[0].Type.Should().Be("RAG");
     }
 
     private static Agent CreateAgent(string name, string type, bool isActive)

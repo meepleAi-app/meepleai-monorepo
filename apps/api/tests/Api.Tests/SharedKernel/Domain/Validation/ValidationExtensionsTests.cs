@@ -1,5 +1,6 @@
 using Api.SharedKernel.Domain.Results;
 using Api.SharedKernel.Domain.Validation;
+using FluentAssertions;
 using Xunit;
 using Api.Tests.Constants;
 
@@ -19,8 +20,8 @@ public class ValidationExtensionsTests
         var result = value.NotNullOrWhiteSpace("param");
 
         // Assert
-        Assert.True(result.IsSuccess);
-        Assert.Equal(value, result.Value);
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Should().Be(value);
     }
 
     [Theory]
@@ -33,9 +34,9 @@ public class ValidationExtensionsTests
         var result = value.NotNullOrWhiteSpace("param");
 
         // Assert
-        Assert.True(result.IsFailure);
-        Assert.NotNull(result.Error);
-        Assert.Contains("param", result.Error.Message);
+        result.IsFailure.Should().BeTrue();
+        result.Error.Should().NotBeNull();
+        result.Error.Message.Should().Contain("param");
     }
 
     [Fact]
@@ -48,8 +49,8 @@ public class ValidationExtensionsTests
         var result = value.MinLength(3, "param");
 
         // Assert
-        Assert.True(result.IsSuccess);
-        Assert.Equal(value, result.Value);
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Should().Be(value);
     }
 
     [Fact]
@@ -62,9 +63,9 @@ public class ValidationExtensionsTests
         var result = value.MinLength(3, "param");
 
         // Assert
-        Assert.True(result.IsFailure);
-        Assert.NotNull(result.Error);
-        Assert.Contains("at least 3", result.Error.Message);
+        result.IsFailure.Should().BeTrue();
+        result.Error.Should().NotBeNull();
+        result.Error.Message.Should().Contain("at least 3");
     }
 
     [Fact]
@@ -77,8 +78,8 @@ public class ValidationExtensionsTests
         var result = value.MaxLength(10, "param");
 
         // Assert
-        Assert.True(result.IsSuccess);
-        Assert.Equal(value, result.Value);
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Should().Be(value);
     }
 
     [Fact]
@@ -91,9 +92,9 @@ public class ValidationExtensionsTests
         var result = value.MaxLength(5, "param");
 
         // Assert
-        Assert.True(result.IsFailure);
-        Assert.NotNull(result.Error);
-        Assert.Contains("not exceed 5", result.Error.Message);
+        result.IsFailure.Should().BeTrue();
+        result.Error.Should().NotBeNull();
+        result.Error.Message.Should().Contain("not exceed 5");
     }
 
     [Fact]
@@ -106,8 +107,8 @@ public class ValidationExtensionsTests
         var result = value.MatchesPattern(@"^[a-z0-9]+$", "param");
 
         // Assert
-        Assert.True(result.IsSuccess);
-        Assert.Equal(value, result.Value);
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Should().Be(value);
     }
 
     [Fact]
@@ -120,9 +121,9 @@ public class ValidationExtensionsTests
         var result = value.MatchesPattern(@"^[a-z0-9]+$", "param");
 
         // Assert
-        Assert.True(result.IsFailure);
-        Assert.NotNull(result.Error);
-        Assert.Contains("does not match", result.Error.Message);
+        result.IsFailure.Should().BeTrue();
+        result.Error.Should().NotBeNull();
+        result.Error.Message.Should().Contain("does not match");
     }
     [Fact]
     public void NotEmpty_WithValidGuid_ReturnsSuccess()
@@ -134,8 +135,8 @@ public class ValidationExtensionsTests
         var result = value.NotEmpty("param");
 
         // Assert
-        Assert.True(result.IsSuccess);
-        Assert.Equal(value, result.Value);
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Should().Be(value);
     }
 
     [Fact]
@@ -148,9 +149,9 @@ public class ValidationExtensionsTests
         var result = value.NotEmpty("param");
 
         // Assert
-        Assert.True(result.IsFailure);
-        Assert.NotNull(result.Error);
-        Assert.Contains("param", result.Error.Message);
+        result.IsFailure.Should().BeTrue();
+        result.Error.Should().NotBeNull();
+        result.Error.Message.Should().Contain("param");
     }
 
     [Fact]
@@ -163,8 +164,8 @@ public class ValidationExtensionsTests
         var result = value.NotNullOrEmpty("param");
 
         // Assert
-        Assert.True(result.IsSuccess);
-        Assert.Equal(value.Value, result.Value);
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Should().Be(value.Value);
     }
 
     [Theory]
@@ -175,8 +176,8 @@ public class ValidationExtensionsTests
         var result = value.NotNullOrEmpty("param");
 
         // Assert
-        Assert.True(result.IsFailure);
-        Assert.NotNull(result.Error);
+        result.IsFailure.Should().BeTrue();
+        result.Error.Should().NotBeNull();
     }
     [Fact]
     public void GreaterThan_WithValidValue_ReturnsSuccess()
@@ -188,8 +189,8 @@ public class ValidationExtensionsTests
         var result = value.GreaterThan(5, "param");
 
         // Assert
-        Assert.True(result.IsSuccess);
-        Assert.Equal(value, result.Value);
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Should().Be(value);
     }
 
     [Fact]
@@ -202,9 +203,9 @@ public class ValidationExtensionsTests
         var result = value.GreaterThan(5, "param");
 
         // Assert
-        Assert.True(result.IsFailure);
-        Assert.NotNull(result.Error);
-        Assert.Contains("greater than 5", result.Error.Message);
+        result.IsFailure.Should().BeTrue();
+        result.Error.Should().NotBeNull();
+        result.Error.Message.Should().Contain("greater than 5");
     }
 
     [Fact]
@@ -217,8 +218,8 @@ public class ValidationExtensionsTests
         var result = value.InRange(1, 10, "param");
 
         // Assert
-        Assert.True(result.IsSuccess);
-        Assert.Equal(value, result.Value);
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Should().Be(value);
     }
 
     [Fact]
@@ -231,9 +232,9 @@ public class ValidationExtensionsTests
         var result = value.InRange(1, 10, "param");
 
         // Assert
-        Assert.True(result.IsFailure);
-        Assert.NotNull(result.Error);
-        Assert.Contains("between 1 and 10", result.Error.Message);
+        result.IsFailure.Should().BeTrue();
+        result.Error.Should().NotBeNull();
+        result.Error.Message.Should().Contain("between 1 and 10");
     }
     [Fact]
     public void NotNullOrEmpty_Collection_WithValidCollection_ReturnsSuccess()
@@ -245,8 +246,8 @@ public class ValidationExtensionsTests
         var result = value.NotNullOrEmpty("param");
 
         // Assert
-        Assert.True(result.IsSuccess);
-        Assert.Equal(value, result.Value);
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Should().BeEquivalentTo(value);
     }
 
     [Fact]
@@ -259,8 +260,8 @@ public class ValidationExtensionsTests
         var result = value.NotNullOrEmpty("param");
 
         // Assert
-        Assert.True(result.IsFailure);
-        Assert.NotNull(result.Error);
+        result.IsFailure.Should().BeTrue();
+        result.Error.Should().NotBeNull();
     }
 
     [Fact]
@@ -273,7 +274,7 @@ public class ValidationExtensionsTests
         var result = value.HasCount(3, "param");
 
         // Assert
-        Assert.True(result.IsSuccess);
+        result.IsSuccess.Should().BeTrue();
     }
 
     [Fact]
@@ -286,9 +287,9 @@ public class ValidationExtensionsTests
         var result = value.HasCount(5, "param");
 
         // Assert
-        Assert.True(result.IsFailure);
-        Assert.NotNull(result.Error);
-        Assert.Contains("exactly 5", result.Error.Message);
+        result.IsFailure.Should().BeTrue();
+        result.Error.Should().NotBeNull();
+        result.Error.Message.Should().Contain("exactly 5");
     }
     [Fact]
     public void NotNull_WithValidObject_ReturnsSuccess()
@@ -300,8 +301,8 @@ public class ValidationExtensionsTests
         var result = value.NotNull("param");
 
         // Assert
-        Assert.True(result.IsSuccess);
-        Assert.Equal(value, result.Value);
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Should().Be(value);
     }
 
     [Fact]
@@ -314,8 +315,8 @@ public class ValidationExtensionsTests
         var result = value.NotNull("param");
 
         // Assert
-        Assert.True(result.IsFailure);
-        Assert.NotNull(result.Error);
+        result.IsFailure.Should().BeTrue();
+        result.Error.Should().NotBeNull();
     }
     [Fact]
     public void Then_WithSuccessfulValidations_ReturnsSuccess()
@@ -330,8 +331,8 @@ public class ValidationExtensionsTests
             .Then(v => v.MaxLength(10, "param"));
 
         // Assert
-        Assert.True(result.IsSuccess);
-        Assert.Equal(value, result.Value);
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Should().Be(value);
     }
 
     [Fact]
@@ -347,9 +348,9 @@ public class ValidationExtensionsTests
             .Then(v => v.MaxLength(10, "param"));
 
         // Assert
-        Assert.True(result.IsFailure);
-        Assert.NotNull(result.Error);
-        Assert.Contains("at least 5", result.Error.Message);
+        result.IsFailure.Should().BeTrue();
+        result.Error.Should().NotBeNull();
+        result.Error.Message.Should().Contain("at least 5");
     }
 
     [Fact]
@@ -362,7 +363,7 @@ public class ValidationExtensionsTests
         var result = value.Must(v => v.Contains("es"), "Must contain 'es'");
 
         // Assert
-        Assert.True(result.IsSuccess);
+        result.IsSuccess.Should().BeTrue();
     }
 
     [Fact]
@@ -375,9 +376,9 @@ public class ValidationExtensionsTests
         var result = value.Must(v => v.Contains("xyz"), "Must contain 'xyz'");
 
         // Assert
-        Assert.True(result.IsFailure);
-        Assert.NotNull(result.Error);
-        Assert.Contains("Must contain 'xyz'", result.Error.Message);
+        result.IsFailure.Should().BeTrue();
+        result.Error.Should().NotBeNull();
+        result.Error.Message.Should().Contain("Must contain 'xyz'");
     }
 }
 

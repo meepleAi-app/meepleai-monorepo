@@ -1,10 +1,12 @@
 using Api.BoundedContexts.GameManagement.Application.Commands;
 using Api.BoundedContexts.GameManagement.Application.DTOs;
-using Api.BoundedContexts.GameManagement.Application.Handlers;
+using Api.BoundedContexts.GameManagement.Application.Commands;
+using Api.BoundedContexts.GameManagement.Application.Queries;
 using Api.Services.Pdf;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using FluentAssertions;
 using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.GameManagement.Application.Handlers;
@@ -54,10 +56,10 @@ public class UploadGameImageCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.True(result.Success);
-        Assert.Equal(fileId, result.FileId);
-        Assert.NotNull(result.FileUrl);
-        Assert.Null(result.ErrorMessage);
+        (result.Success).Should().BeTrue();
+        result.FileId.Should().Be(fileId);
+        result.FileUrl.Should().NotBeNull();
+        result.ErrorMessage.Should().BeNull();
     }
 
     [Fact]
@@ -75,8 +77,8 @@ public class UploadGameImageCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.False(result.Success);
-        Assert.Contains("Invalid file stream", result.ErrorMessage);
+        (result.Success).Should().BeFalse();
+        result.ErrorMessage.Should().Contain("Invalid file stream");
     }
 
     [Fact]
@@ -96,8 +98,8 @@ public class UploadGameImageCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.False(result.Success);
-        Assert.Contains("exceeds maximum", result.ErrorMessage);
+        (result.Success).Should().BeFalse();
+        result.ErrorMessage.Should().Contain("exceeds maximum");
     }
 
     [Fact]
@@ -117,8 +119,8 @@ public class UploadGameImageCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.False(result.Success);
-        Assert.Contains("exceeds maximum", result.ErrorMessage);
+        (result.Success).Should().BeFalse();
+        result.ErrorMessage.Should().Contain("exceeds maximum");
     }
 
     [Fact]
@@ -137,16 +139,17 @@ public class UploadGameImageCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.False(result.Success);
-        Assert.Contains("Invalid file type", result.ErrorMessage);
+        (result.Success).Should().BeFalse();
+        result.ErrorMessage.Should().Contain("Invalid file type");
     }
 
     [Fact]
     public async Task Handle_WithNullCommand_ThrowsArgumentNullException()
     {
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentNullException>(
-            () => _handler.Handle(null!, TestContext.Current.CancellationToken));
+        var act = 
+            () => _handler.Handle(null!, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<ArgumentNullException>();
     }
 
     [Fact]
@@ -174,8 +177,8 @@ public class UploadGameImageCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.False(result.Success);
-        Assert.Contains("Storage unavailable", result.ErrorMessage);
+        (result.Success).Should().BeFalse();
+        result.ErrorMessage.Should().Contain("Storage unavailable");
     }
 
     private static MemoryStream CreateValidPngStream()

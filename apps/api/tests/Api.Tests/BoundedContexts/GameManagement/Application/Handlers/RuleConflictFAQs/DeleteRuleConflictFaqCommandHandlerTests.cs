@@ -1,11 +1,12 @@
 using Api.BoundedContexts.GameManagement.Application.Commands.RuleConflictFAQs;
-using Api.BoundedContexts.GameManagement.Application.Handlers.RuleConflictFAQs;
+using Api.BoundedContexts.GameManagement.Application.Commands.RuleConflictFAQs;
 using Api.BoundedContexts.GameManagement.Domain.Repositories;
 using Api.Middleware.Exceptions;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Api.Tests.Constants;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.GameManagement.Application.Handlers.RuleConflictFAQs;
 
@@ -62,8 +63,9 @@ public sealed class DeleteRuleConflictFaqCommandHandlerTests
             .ThrowsAsync(new NotFoundException("RuleConflictFAQ", faqId.ToString()));
 
         // Act & Assert
-        await Assert.ThrowsAsync<NotFoundException>(() =>
-            _handler.Handle(command, CancellationToken.None));
+        var act = () =>
+            _handler.Handle(command, CancellationToken.None);
+        await act.Should().ThrowAsync<NotFoundException>();
 
         _unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
     }

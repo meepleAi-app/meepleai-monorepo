@@ -1,5 +1,5 @@
 using Api.BoundedContexts.GameManagement.Application.Commands.RuleConflictFAQs;
-using Api.BoundedContexts.GameManagement.Application.Handlers.RuleConflictFAQs;
+using Api.BoundedContexts.GameManagement.Application.Commands.RuleConflictFAQs;
 using Api.BoundedContexts.GameManagement.Domain.Entities;
 using Api.BoundedContexts.GameManagement.Domain.Repositories;
 using Api.BoundedContexts.GameManagement.Domain.ValueObjects;
@@ -8,6 +8,7 @@ using Api.SharedKernel.Infrastructure.Persistence;
 using Api.Tests.Constants;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.GameManagement.Application.Handlers.RuleConflictFAQs;
 
@@ -71,7 +72,7 @@ public sealed class UpdateRuleConflictFaqResolutionCommandHandlerTests
         await _handler.Handle(command, CancellationToken.None);
 
         // Assert
-        Assert.Equal("Updated resolution text", existingFaq.Resolution);
+        existingFaq.Resolution.Should().Be("Updated resolution text");
         _faqRepositoryMock.Verify(r => r.GetByIdAsync(faqId, It.IsAny<CancellationToken>()), Times.Once);
         _faqRepositoryMock.Verify(r => r.UpdateAsync(
             It.Is<RuleConflictFAQ>(f => f.Resolution == "Updated resolution text"),
@@ -93,11 +94,12 @@ public sealed class UpdateRuleConflictFaqResolutionCommandHandlerTests
             .ReturnsAsync((RuleConflictFAQ?)null);
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<NotFoundException>(() =>
-            _handler.Handle(command, CancellationToken.None));
+        var act = () =>
+            _handler.Handle(command, CancellationToken.None);
+        var exception = (await act.Should().ThrowAsync<NotFoundException>()).Which;
 
-        Assert.Contains("RuleConflictFAQ", exception.Message);
-        Assert.Contains(faqId.ToString(), exception.Message);
+        exception.Message.Should().Contain("RuleConflictFAQ");
+        exception.Message.Should().Contain(faqId.ToString());
         _faqRepositoryMock.Verify(r => r.UpdateAsync(
             It.IsAny<RuleConflictFAQ>(),
             It.IsAny<CancellationToken>()), Times.Never);
@@ -108,40 +110,44 @@ public sealed class UpdateRuleConflictFaqResolutionCommandHandlerTests
     public async Task Handle_WithNullCommand_ThrowsArgumentNullException()
     {
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentNullException>(() =>
-            _handler.Handle(null!, CancellationToken.None));
+        var act = () =>
+            _handler.Handle(null!, CancellationToken.None);
+        await act.Should().ThrowAsync<ArgumentNullException>();
     }
 
     [Fact]
     public void Constructor_WithNullRepository_ThrowsArgumentNullException()
     {
         // Act & Assert
-        Assert.Throws<ArgumentNullException>(() =>
+        var act = () =>
             new UpdateRuleConflictFaqResolutionCommandHandler(
                 null!,
                 _unitOfWorkMock.Object,
-                _timeProviderMock.Object));
+                _timeProviderMock.Object);
+        act.Should().Throw<ArgumentNullException>();
     }
 
     [Fact]
     public void Constructor_WithNullUnitOfWork_ThrowsArgumentNullException()
     {
         // Act & Assert
-        Assert.Throws<ArgumentNullException>(() =>
+        var act = () =>
             new UpdateRuleConflictFaqResolutionCommandHandler(
                 _faqRepositoryMock.Object,
                 null!,
-                _timeProviderMock.Object));
+                _timeProviderMock.Object);
+        act.Should().Throw<ArgumentNullException>();
     }
 
     [Fact]
     public void Constructor_WithNullTimeProvider_ThrowsArgumentNullException()
     {
         // Act & Assert
-        Assert.Throws<ArgumentNullException>(() =>
+        var act = () =>
             new UpdateRuleConflictFaqResolutionCommandHandler(
                 _faqRepositoryMock.Object,
                 _unitOfWorkMock.Object,
-                null!));
+                null!);
+        act.Should().Throw<ArgumentNullException>();
     }
 }

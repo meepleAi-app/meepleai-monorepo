@@ -146,8 +146,9 @@ public class AnalyzeRulebookCommandHandlerTests
             .ReturnsAsync((SharedGame?)null);
 
         // Act & Assert
-        await Assert.ThrowsAsync<InvalidOperationException>(() =>
-            _handler.Handle(command, TestContext.Current.CancellationToken));
+        var act = () =>
+            _handler.Handle(command, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<InvalidOperationException>();
 
         _analysisRepositoryMock.Verify(
             r => r.AddAsync(It.IsAny<RulebookAnalysis>(), It.IsAny<CancellationToken>()),
@@ -313,8 +314,9 @@ public class AnalyzeRulebookCommandHandlerTests
             .ReturnsAsync(category);
 
         // Act & Assert
-        var ex = await Assert.ThrowsAsync<ConflictException>(() =>
-            _handler.Handle(command, TestContext.Current.CancellationToken));
+        var act = () =>
+            _handler.Handle(command, TestContext.Current.CancellationToken);
+        var ex = (await act.Should().ThrowAsync<ConflictException>()).Which;
 
         ex.Message.Should().Contain("not eligible for rulebook analysis");
         ex.Message.Should().Contain(category);

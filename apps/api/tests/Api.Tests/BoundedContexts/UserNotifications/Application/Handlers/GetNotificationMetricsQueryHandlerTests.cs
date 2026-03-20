@@ -1,10 +1,12 @@
-using Api.BoundedContexts.UserNotifications.Application.Handlers;
+using Api.BoundedContexts.UserNotifications.Application.Commands;
+using Api.BoundedContexts.UserNotifications.Application.Queries;
 using Api.BoundedContexts.UserNotifications.Application.Queries;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities.UserNotifications;
 using Api.Tests.Constants;
 using Api.Tests.TestHelpers;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.UserNotifications.Application.Handlers;
 
@@ -43,11 +45,11 @@ public class GetNotificationMetricsQueryHandlerTests : IDisposable
         var result = await _handler.Handle(query, CancellationToken.None);
 
         // Assert
-        Assert.Equal(0, result.TotalPending);
-        Assert.Equal(0, result.TotalSent);
-        Assert.Equal(0, result.TotalFailed);
-        Assert.Equal(0, result.TotalDeadLetter);
-        Assert.Empty(result.PendingByChannel);
+        result.TotalPending.Should().Be(0);
+        result.TotalSent.Should().Be(0);
+        result.TotalFailed.Should().Be(0);
+        result.TotalDeadLetter.Should().Be(0);
+        result.PendingByChannel.Should().BeEmpty();
     }
 
     [Fact]
@@ -67,12 +69,12 @@ public class GetNotificationMetricsQueryHandlerTests : IDisposable
         var result = await _handler.Handle(query, CancellationToken.None);
 
         // Assert
-        Assert.Equal(3, result.TotalPending);
-        Assert.Equal(1, result.TotalSent);
-        Assert.Equal(1, result.TotalFailed);
-        Assert.Equal(1, result.TotalDeadLetter);
-        Assert.Equal(2, result.PendingByChannel["email"]);
-        Assert.Equal(1, result.PendingByChannel["slack_user"]);
+        result.TotalPending.Should().Be(3);
+        result.TotalSent.Should().Be(1);
+        result.TotalFailed.Should().Be(1);
+        result.TotalDeadLetter.Should().Be(1);
+        result.PendingByChannel["email"].Should().Be(2);
+        result.PendingByChannel["slack_user"].Should().Be(1);
     }
 
     private async Task SeedItem(string channelType, string status)

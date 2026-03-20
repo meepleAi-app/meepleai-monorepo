@@ -1,10 +1,12 @@
 using Api.BoundedContexts.Administration.Application.Commands;
-using Api.BoundedContexts.Administration.Application.Handlers;
+using Api.BoundedContexts.Administration.Application.Commands;
+using Api.BoundedContexts.Administration.Application.Queries;
 using Api.BoundedContexts.Administration.Domain.ValueObjects;
 using Api.Models;
 using Api.Services;
 using Moq;
 using Xunit;
+using FluentAssertions;
 using Api.Tests.Constants;
 using System.Globalization;
 
@@ -62,9 +64,9 @@ public class SendAlertCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal(expectedAlert.AlertType, result.AlertType);
-        Assert.Equal(expectedAlert.Message, result.Message);
+        result.Should().NotBeNull();
+        result.AlertType.Should().Be(expectedAlert.AlertType);
+        result.Message.Should().Be(expectedAlert.Message);
         _mockAlertingService.Verify(
             s => s.SendAlertAsync(
                 command.AlertType,
@@ -111,7 +113,7 @@ public class SendAlertCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.Equal("Critical", result.Severity);
+        result.Severity.Should().Be("Critical");
         _mockAlertingService.Verify(
             s => s.SendAlertAsync(
                 command.AlertType,
@@ -167,13 +169,13 @@ public class SendAlertCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.Equal("QualityEvaluation", result.AlertType);
-        Assert.Equal("Warning", result.Severity);
-        Assert.NotNull(result.Metadata);
-        Assert.Equal(2, result.Metadata["IssueCount"]);
-        Assert.NotNull(result.ChannelSent);
-        Assert.True(result.ChannelSent["Email"]);
-        Assert.True(result.ChannelSent["Slack"]);
+        result.AlertType.Should().Be("QualityEvaluation");
+        result.Severity.Should().Be("Warning");
+        result.Metadata.Should().NotBeNull();
+        result.Metadata["IssueCount"].Should().Be(2);
+        result.ChannelSent.Should().NotBeNull();
+        result.ChannelSent["Email"].Should().BeTrue();
+        result.ChannelSent["Slack"].Should().BeTrue();
 
         _mockAlertingService.Verify(
             s => s.SendAlertAsync(
@@ -224,9 +226,9 @@ public class SendAlertCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Null(result.Metadata);
-        Assert.Equal("Info", result.Severity);
+        result.Should().NotBeNull();
+        result.Metadata.Should().BeNull();
+        result.Severity.Should().Be("Info");
     }
 
     [Fact]
@@ -250,8 +252,9 @@ public class SendAlertCommandHandlerTests
             .ThrowsAsync(new InvalidOperationException("Alerting system is disabled"));
 
         // Act & Assert
-        await Assert.ThrowsAsync<InvalidOperationException>(async () =>
-            await _handler.Handle(command, TestContext.Current.CancellationToken));
+        var act = async () =>
+            await _handler.Handle(command, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<InvalidOperationException>();
 
         _mockAlertingService.Verify(
             s => s.SendAlertAsync(
@@ -267,8 +270,9 @@ public class SendAlertCommandHandlerTests
     public void Constructor_WithNullAlertingService_ThrowsArgumentNullException()
     {
         // Act & Assert
-        Assert.Throws<ArgumentNullException>(() =>
-            new SendAlertCommandHandler(null!));
+        var act = () =>
+            new SendAlertCommandHandler(null!);
+act.Should().Throw<ArgumentNullException>();
     }
 
     [Theory]
@@ -311,7 +315,7 @@ public class SendAlertCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.Equal(severity, result.Severity);
+        result.Severity.Should().Be(severity);
         _mockAlertingService.Verify(
             s => s.SendAlertAsync(
                 "TestAlert",

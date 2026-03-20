@@ -12,6 +12,7 @@ using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
 using Api.Tests.Constants;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Services;
 
@@ -73,7 +74,7 @@ public class LlmBudgetMonitoringServiceTests
             _loggerMock.Object);
 
         // Assert
-        Assert.NotNull(sut);
+        sut.Should().NotBeNull();
     }
 
     [Fact]

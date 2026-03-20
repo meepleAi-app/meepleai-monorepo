@@ -7,6 +7,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Http;
 using Microsoft.Extensions.Logging;
+using FluentAssertions;
 using Xunit;
 
 namespace Api.Tests.Integration;
@@ -116,12 +117,11 @@ public class UnstructuredPdfExtractionIntegrationTests : IAsyncLifetime
         var result = await _extractor!.ExtractTextAsync(pdfStream, cancellationToken: TestCancellationToken);
 
         // Assert
-        Assert.True(result.Success, $"Extraction failed: {result.ErrorMessage}");
-        Assert.NotEmpty(result.ExtractedText);
-        Assert.True(result.PageCount > 0, "Page count should be greater than 0");
-        Assert.True(result.CharacterCount > 1000, "Should extract substantial text");
-        Assert.True(result.Quality >= ExtractionQuality.Medium,
-            $"Quality should be at least Medium, got: {result.Quality}");
+        (result.Success).Should().BeTrue($"Extraction failed: {result.ErrorMessage}");
+        result.ExtractedText.Should().NotBeEmpty();
+        (result.PageCount > 0).Should().BeTrue("Page count should be greater than 0");
+        (result.CharacterCount > 1000).Should().BeTrue("Should extract substantial text");
+        (result.Quality >= ExtractionQuality.Medium).Should().BeTrue($"Quality should be at least Medium, got: {result.Quality}");
 
         _output($"Extraction successful: {result.PageCount} pages, {result.CharacterCount} chars, Quality: {result.Quality}");
     }
@@ -140,13 +140,13 @@ public class UnstructuredPdfExtractionIntegrationTests : IAsyncLifetime
         var result = await _extractor!.ExtractTextAsync(pdfStream, cancellationToken: TestCancellationToken);
 
         // Assert
-        Assert.True(result.Success, $"Extraction failed: {result.ErrorMessage}");
-        Assert.NotEmpty(result.ExtractedText);
-        Assert.True(result.PageCount > 10, "TM rulebook should have 10+ pages");
-        Assert.True(result.CharacterCount > 5000, "Complex PDF should have substantial text");
+        (result.Success).Should().BeTrue($"Extraction failed: {result.ErrorMessage}");
+        result.ExtractedText.Should().NotBeEmpty();
+        (result.PageCount > 10).Should().BeTrue("TM rulebook should have 10+ pages");
+        (result.CharacterCount > 5000).Should().BeTrue("Complex PDF should have substantial text");
 
         // Verify Italian content detected
-        Assert.Contains("gioco", result.ExtractedText, StringComparison.OrdinalIgnoreCase);
+        result.ExtractedText.Should().ContainEquivalentOf("gioco");
 
         _output($"Complex PDF extraction successful: {result.PageCount} pages, {result.CharacterCount} chars");
     }
@@ -164,15 +164,14 @@ public class UnstructuredPdfExtractionIntegrationTests : IAsyncLifetime
         var result = await _extractor!.ExtractTextAsync(pdfStream, cancellationToken: TestCancellationToken);
 
         // Assert
-        Assert.True(result.Success);
+        result.Success.Should().BeTrue();
 
         // Verify Italian-specific characters and words are preserved
         var italianWords = new[] { "gioco", "regole", "giocatori", "turno", "carta" };
         var foundItalianWords = italianWords.Count(word =>
             result.ExtractedText.Contains(word, StringComparison.OrdinalIgnoreCase));
 
-        Assert.True(foundItalianWords >= 2,
-            $"Should detect Italian words. Found: {foundItalianWords} of {italianWords.Length}");
+        (foundItalianWords >= 2).Should().BeTrue($"Should detect Italian words. Found: {foundItalianWords} of {italianWords.Length}");
 
         _output($"Italian language validation: {foundItalianWords}/{italianWords.Length} keywords detected");
     }
@@ -190,13 +189,12 @@ public class UnstructuredPdfExtractionIntegrationTests : IAsyncLifetime
         var result = await _extractor!.ExtractTextAsync(pdfStream, cancellationToken: TestCancellationToken);
 
         // Assert
-        Assert.True(result.Success);
-        Assert.NotEmpty(result.ExtractedText);
+        result.Success.Should().BeTrue();
+        result.ExtractedText.Should().NotBeEmpty();
 
         // Table detection is implicit in quality score
         // High-quality extraction indicates successful table handling
-        Assert.True(result.Quality >= ExtractionQuality.Low,
-            "Tables should be handled without causing very low quality");
+        (result.Quality >= ExtractionQuality.Low).Should().BeTrue("Tables should be handled without causing very low quality");
 
         _output($"Table handling validated via quality score: {result.Quality}");
     }
@@ -214,7 +212,7 @@ public class UnstructuredPdfExtractionIntegrationTests : IAsyncLifetime
         var result = await _extractor!.ExtractTextAsync(pdfStream, cancellationToken: TestCancellationToken);
 
         // Assert
-        Assert.True(result.Success);
+        result.Success.Should().BeTrue();
 
         // Quality should meet ≥0.70 threshold (from ADR-003)
         // Map enum back to approximate score
@@ -227,8 +225,7 @@ public class UnstructuredPdfExtractionIntegrationTests : IAsyncLifetime
             _ => 0.0
         };
 
-        Assert.True(approximateScore >= 0.40,
-            $"Quality score should be ≥0.40 (fallback threshold), got: {approximateScore} ({result.Quality})");
+        (approximateScore >= 0.40).Should().BeTrue($"Quality score should be ≥0.40 (fallback threshold), got: {approximateScore} ({result.Quality})");
 
         _output($"Quality validation passed: {result.Quality} (approx {approximateScore:F2})");
     }
@@ -254,7 +251,7 @@ public class UnstructuredPdfExtractionIntegrationTests : IAsyncLifetime
         var result = await _extractor!.ExtractTextAsync(pdfStream, cancellationToken: linkedCts.Token);
 
         // Assert - should complete successfully (not timeout)
-        Assert.True(result.Success, "Normal PDFs should complete within timeout");
+        (result.Success).Should().BeTrue("Normal PDFs should complete within timeout");
 
         _output("Timeout handling validated - service responds within limits");
     }
@@ -267,11 +264,10 @@ public class UnstructuredPdfExtractionIntegrationTests : IAsyncLifetime
         var response = await _httpClient!.GetAsync("/health", TestCancellationToken);
 
         // Assert
-        Assert.True(response.IsSuccessStatusCode,
-            $"Health check failed: {response.StatusCode}");
+        response.IsSuccessStatusCode.Should().BeTrue($"Health check failed: {response.StatusCode}");
 
         var healthData = await response.Content.ReadAsStringAsync(TestCancellationToken);
-        Assert.Contains("healthy", healthData, StringComparison.OrdinalIgnoreCase);
+        healthData.Should().ContainEquivalentOf("healthy");
 
         _output($"Health check passed: {response.StatusCode}");
     }
@@ -290,14 +286,13 @@ public class UnstructuredPdfExtractionIntegrationTests : IAsyncLifetime
         // Assert - Service may either fail or return empty/low-quality extraction
         if (!result.Success)
         {
-            Assert.NotNull(result.ErrorMessage);
+            result.ErrorMessage.Should().NotBeNull();
             _output($"Invalid PDF failed as expected: {result.ErrorMessage}");
         }
         else
         {
             // If service processes it, quality should be very low
-            Assert.True(result.Quality == ExtractionQuality.VeryLow || string.IsNullOrEmpty(result.ExtractedText),
-                "Invalid PDF should have very low quality or empty text");
+            (result.Quality == ExtractionQuality.VeryLow || string.IsNullOrEmpty(result.ExtractedText)).Should().BeTrue("Invalid PDF should have very low quality or empty text");
             _output($"Invalid PDF processed with low quality: {result.Quality}, chars: {result.CharacterCount}");
         }
     }
@@ -317,9 +312,9 @@ public class UnstructuredPdfExtractionIntegrationTests : IAsyncLifetime
         var result = await _extractor!.ExtractTextAsync(pdfStream, cancellationToken: TestCancellationToken);
 
         // Assert
-        Assert.True(result.Success, $"Large PDF extraction failed: {result.ErrorMessage}");
-        Assert.True(result.PageCount >= 15, $"Expected 15+ pages, got: {result.PageCount}");
-        Assert.True(result.CharacterCount > 10000, "Large PDF should have 10K+ characters");
+        (result.Success).Should().BeTrue($"Large PDF extraction failed: {result.ErrorMessage}");
+        (result.PageCount >= 15).Should().BeTrue($"Expected 15+ pages, got: {result.PageCount}");
+        (result.CharacterCount > 10000).Should().BeTrue("Large PDF should have 10K+ characters");
 
         _output($"Large PDF processed: {result.PageCount} pages, {result.CharacterCount:N0} chars");
     }
@@ -337,16 +332,16 @@ public class UnstructuredPdfExtractionIntegrationTests : IAsyncLifetime
         var result = await _extractor!.ExtractPagedTextAsync(pdfStream, cancellationToken: TestCancellationToken);
 
         // Assert
-        Assert.True(result.Success, $"Paged extraction failed: {result.ErrorMessage}");
-        Assert.NotEmpty(result.PageChunks);
-        Assert.Equal(result.TotalPages, result.PageChunks.Count);
+        (result.Success).Should().BeTrue($"Paged extraction failed: {result.ErrorMessage}");
+        result.PageChunks.Should().NotBeEmpty();
+        result.PageChunks.Count.Should().Be(result.TotalPages);
 
         // Verify chunks have proper structure
         foreach (var chunk in result.PageChunks)
         {
-            Assert.True(chunk.PageNumber > 0, "Page numbers should be 1-indexed");
-            Assert.True(chunk.CharStartIndex >= 0, "Start index should be non-negative");
-            Assert.True(chunk.CharEndIndex >= chunk.CharStartIndex, "End index should be >= start");
+            (chunk.PageNumber > 0).Should().BeTrue("Page numbers should be 1-indexed");
+            (chunk.CharStartIndex >= 0).Should().BeTrue("Start index should be non-negative");
+            (chunk.CharEndIndex >= chunk.CharStartIndex).Should().BeTrue("End index should be >= start");
         }
 
         _output($"Semantic chunking validated: {result.PageChunks.Count} chunks");
@@ -365,20 +360,19 @@ public class UnstructuredPdfExtractionIntegrationTests : IAsyncLifetime
         var result = await _extractor!.ExtractPagedTextAsync(pdfStream, cancellationToken: TestCancellationToken);
 
         // Assert
-        Assert.True(result.Success);
-        Assert.NotEmpty(result.PageChunks);
+        result.Success.Should().BeTrue();
+        result.PageChunks.Should().NotBeEmpty();
 
         // Verify page numbers are sequential and valid
         var pageNumbers = result.PageChunks.Select(c => c.PageNumber).OrderBy(p => p).ToList();
-        Assert.Equal(1, pageNumbers[0]);
-        Assert.True(pageNumbers.Count > 0, "Should have page numbers");
+        pageNumbers[0].Should().Be(1);
+        (pageNumbers.Count > 0).Should().BeTrue("Should have page numbers");
 
         // Verify character indices are sequential
         var sortedChunks = result.PageChunks.OrderBy(c => c.CharStartIndex).ToList();
         for (int i = 0; i < sortedChunks.Count - 1; i++)
         {
-            Assert.True(sortedChunks[i].CharEndIndex < sortedChunks[i + 1].CharStartIndex,
-                $"Chunks should not overlap: chunk {i} end={sortedChunks[i].CharEndIndex}, chunk {i + 1} start={sortedChunks[i + 1].CharStartIndex}");
+            (sortedChunks[i].CharEndIndex < sortedChunks[i + 1].CharStartIndex).Should().BeTrue($"Chunks should not overlap: chunk {i} end={sortedChunks[i].CharEndIndex}, chunk {i + 1} start={sortedChunks[i + 1].CharStartIndex}");
         }
 
         _output($"Metadata validation passed: {pageNumbers.Count} pages with valid indices");
@@ -397,23 +391,23 @@ public class UnstructuredPdfExtractionIntegrationTests : IAsyncLifetime
         await using var pdfStream = File.OpenRead(TerraformingMarsPdfPath);
         var extractionResult = await _extractor!.ExtractTextAsync(pdfStream, cancellationToken: TestCancellationToken);
 
-        Assert.True(extractionResult.Success, "Step 1: Extraction should succeed");
+        (extractionResult.Success).Should().BeTrue("Step 1: Extraction should succeed");
         _output($"✓ Step 1: Extracted {extractionResult.CharacterCount:N0} chars from {extractionResult.PageCount} pages");
 
         // Step 2: Verify quality meets RAG threshold (≥0.40 for usability)
         var qualityMet = extractionResult.Quality >= ExtractionQuality.Low;
-        Assert.True(qualityMet, $"Step 2: Quality should meet minimum threshold, got: {extractionResult.Quality}");
+        (qualityMet).Should().BeTrue($"Step 2: Quality should meet minimum threshold, got: {extractionResult.Quality}");
         _output($"✓ Step 2: Quality check passed - {extractionResult.Quality}");
 
         // Step 3: Verify Italian content
         var hasItalianContent = extractionResult.ExtractedText.Contains("gioc", StringComparison.OrdinalIgnoreCase) ||
                                 extractionResult.ExtractedText.Contains("regol", StringComparison.OrdinalIgnoreCase);
-        Assert.True(hasItalianContent, "Step 3: Should contain Italian text");
+        (hasItalianContent).Should().BeTrue("Step 3: Should contain Italian text");
         _output($"✓ Step 3: Italian content validated");
 
         // Step 4: Verify text is normalized (no excessive whitespace)
         var hasExcessiveWhitespace = extractionResult.ExtractedText.Contains("    "); // 4+ spaces
-        Assert.False(hasExcessiveWhitespace, "Step 4: Text should be normalized (no excessive whitespace)");
+        (hasExcessiveWhitespace).Should().BeFalse("Step 4: Text should be normalized (no excessive whitespace)");
         _output($"✓ Step 4: Text normalization verified");
 
         // Step 5: Verify paged extraction produces chunks (use Barrage PDF so CPU-only execution finishes faster)
@@ -424,8 +418,8 @@ public class UnstructuredPdfExtractionIntegrationTests : IAsyncLifetime
         {
             _output($"Paged extraction failed: {pagedResult.ErrorMessage}");
         }
-        Assert.True(pagedResult.Success, $"Step 5: Paged extraction should succeed ({pagedResult.ErrorMessage})");
-        Assert.NotEmpty(pagedResult.PageChunks);
+        (pagedResult.Success).Should().BeTrue($"Step 5: Paged extraction should succeed ({pagedResult.ErrorMessage})");
+        pagedResult.PageChunks.Should().NotBeEmpty();
         _output($"✓ Step 5: Paged extraction produced {pagedResult.PageChunks.Count} chunks");
 
         _output("=== E2E Pipeline Complete ===");

@@ -244,13 +244,9 @@ public sealed class ChatThreadRepositoryIntegrationTests : IAsyncLifetime
 
     #region FindByGameIdAsync Tests
 
-    [Fact]
+    [Fact(Skip = "Requires Game entity seeding (FK constraint) — covered by application-layer tests")]
     public async Task FindByGameIdAsync_MultipleThreadsForGame_ShouldReturnAll()
     {
-        // Arrange - SKIP test to avoid FK complexity
-        // Finding by GameId requires Game entities to exist (FK constraint)
-        // This test would need full Game seeding infrastructure
-        // Covered by application-layer tests with full context
         await Task.CompletedTask;
     }
 

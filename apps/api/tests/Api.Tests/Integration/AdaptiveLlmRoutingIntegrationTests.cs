@@ -17,6 +17,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Moq;
+using FluentAssertions;
 using Xunit;
 using Api.Tests.Constants;
 
@@ -110,10 +111,10 @@ public class AdaptiveLlmRoutingIntegrationTests : IAsyncLifetime
             cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.True(result.Success, $"Expected success but got failure: {result.ErrorMessage}");
-        Assert.NotEmpty(result.Response);
-        Assert.Equal("Ollama", result.Cost.Provider);
-        Assert.Equal(0m, result.Cost.TotalCost); // Ollama is free
+        (result.Success).Should().BeTrue($"Expected success but got failure: {result.ErrorMessage}");
+        result.Response.Should().NotBeEmpty();
+        result.Cost.Provider.Should().Be("Ollama");
+        result.Cost.TotalCost.Should().Be(0m); // Ollama is free
 
         // Verify Ollama was called exactly once (deterministic)
         mockOllamaClient.Verify(
@@ -171,8 +172,8 @@ public class AdaptiveLlmRoutingIntegrationTests : IAsyncLifetime
             cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.True(result.Success, $"Expected success but got failure: {result.ErrorMessage}");
-        Assert.NotEmpty(result.Response);
+        (result.Success).Should().BeTrue($"Expected success but got failure: {result.ErrorMessage}");
+        result.Response.Should().NotBeEmpty();
 
         // Verify OpenRouter was called for fallback
         mockOpenRouterClient.Verify(
@@ -218,9 +219,9 @@ public class AdaptiveLlmRoutingIntegrationTests : IAsyncLifetime
             cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.False(result.Success, "Expected failure when all providers are down");
-        Assert.NotNull(result.ErrorMessage);
-        Assert.Contains("error", result.ErrorMessage, StringComparison.OrdinalIgnoreCase);
+        (result.Success).Should().BeFalse("Expected failure when all providers are down");
+        result.ErrorMessage.Should().NotBeNull();
+        result.ErrorMessage.Should().ContainEquivalentOf("error");
     }
     [Fact]
     public async Task FeatureFlag_DisableOllama_FallsBackToOpenRouter()
@@ -245,8 +246,8 @@ public class AdaptiveLlmRoutingIntegrationTests : IAsyncLifetime
             cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.True(result.Success, $"Expected success but got failure: {result.ErrorMessage}");
-        Assert.Equal("OpenRouter", result.Cost.Provider);
+        (result.Success).Should().BeTrue($"Expected success but got failure: {result.ErrorMessage}");
+        result.Cost.Provider.Should().Be("OpenRouter");
 
         // Verify Ollama was NOT called (disabled)
         mockOllamaClient.Verify(
@@ -294,8 +295,8 @@ public class AdaptiveLlmRoutingIntegrationTests : IAsyncLifetime
             cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.True(result.Success, $"Expected success but got failure: {result.ErrorMessage}");
-        Assert.Equal("OpenRouter", result.Cost.Provider);
+        (result.Success).Should().BeTrue($"Expected success but got failure: {result.ErrorMessage}");
+        result.Cost.Provider.Should().Be("OpenRouter");
 
         // Verify OpenRouter was called (preferred provider)
         mockOpenRouterClient.Verify(
@@ -331,11 +332,11 @@ public class AdaptiveLlmRoutingIntegrationTests : IAsyncLifetime
             cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.True(result.Success);
-        Assert.Equal("Ollama", result.Cost.Provider);
-        Assert.Equal(0m, result.Cost.InputCost);
-        Assert.Equal(0m, result.Cost.OutputCost);
-        Assert.Equal(0m, result.Cost.TotalCost);
+        result.Success.Should().BeTrue();
+        result.Cost.Provider.Should().Be("Ollama");
+        result.Cost.InputCost.Should().Be(0m);
+        result.Cost.OutputCost.Should().Be(0m);
+        result.Cost.TotalCost.Should().Be(0m);
 
         // Verify cost was logged via ILlmCostService
         _mockCostService.Verify(
@@ -371,9 +372,9 @@ public class AdaptiveLlmRoutingIntegrationTests : IAsyncLifetime
             cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.True(result.Success);
-        Assert.Equal("OpenRouter", result.Cost.Provider);
-        Assert.True(result.Cost.TotalCost > 0m, "OpenRouter should have non-zero cost");
+        result.Success.Should().BeTrue();
+        result.Cost.Provider.Should().Be("OpenRouter");
+        (result.Cost.TotalCost > 0m).Should().BeTrue("OpenRouter should have non-zero cost");
 
         // Verify cost was logged via ILlmCostService with non-zero cost
         _mockCostService.Verify(
@@ -410,11 +411,11 @@ public class AdaptiveLlmRoutingIntegrationTests : IAsyncLifetime
         stopwatch.Stop();
 
         // Assert
-        Assert.True(result.Success);
-        Assert.True(result.Metadata.ContainsKey("latency_ms"));
+        result.Success.Should().BeTrue();
+        (result.Metadata.ContainsKey("latency_ms")).Should().BeTrue();
 
         var latency = long.Parse(result.Metadata["latency_ms"]);
-        Assert.True(latency > 0, "Latency should be tracked");
+        (latency > 0).Should().BeTrue("Latency should be tracked");
 
         // Verify cost was logged via ILlmCostService with latency
         _mockCostService.Verify(
@@ -459,11 +460,11 @@ public class AdaptiveLlmRoutingIntegrationTests : IAsyncLifetime
         }
 
         // Assert
-        Assert.NotEmpty(latencies);
-        Assert.All(latencies, latency => Assert.True(latency > 0, "All latencies should be positive"));
+        latencies.Should().NotBeEmpty();
+        latencies.Should().OnlyContain(latency => latency > 0, "All latencies should be positive");
 
         var avgLatency = latencies.Average();
-        Assert.True(avgLatency > 0, "Average latency should be positive");
+        (avgLatency > 0).Should().BeTrue("Average latency should be positive");
     }
     /// <summary>
     /// Creates a configured HybridLlmService instance for testing.

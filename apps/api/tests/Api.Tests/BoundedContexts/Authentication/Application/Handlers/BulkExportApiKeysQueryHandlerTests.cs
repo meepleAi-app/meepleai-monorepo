@@ -1,10 +1,12 @@
-using Api.BoundedContexts.Authentication.Application.Handlers;
+using Api.BoundedContexts.Authentication.Application.Commands;
+using Api.BoundedContexts.Authentication.Application.Queries;
 using Api.BoundedContexts.Authentication.Application.Queries;
 using Api.BoundedContexts.Authentication.Domain.Entities;
 using Api.BoundedContexts.Authentication.Infrastructure.Persistence;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using FluentAssertions;
 using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.Authentication.Application.Handlers;
@@ -45,12 +47,12 @@ public class BulkExportApiKeysQueryHandlerTests
         var result = await _handler.Handle(query, CancellationToken.None);
 
         // Assert
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         var lines = result.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
-        Assert.Equal(3, lines.Length); // Header + 2 data rows
-        Assert.Equal("userId,keyName,scopes,expiresAt,metadata", lines[0]);
-        Assert.Contains(apiKey1.KeyName, lines[1]);
-        Assert.Contains(apiKey2.KeyName, lines[2]);
+        lines.Length.Should().Be(3); // Header + 2 data rows
+        lines[0].Should().Be("userId,keyName,scopes,expiresAt,metadata");
+        lines[1].Should().Contain(apiKey1.KeyName);
+        lines[2].Should().Contain(apiKey2.KeyName);
     }
 
     [Fact]
@@ -72,11 +74,11 @@ public class BulkExportApiKeysQueryHandlerTests
         var result = await _handler.Handle(query, CancellationToken.None);
 
         // Assert
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         var lines = result.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
-        Assert.Equal(2, lines.Length); // Header + 1 data row (filtered)
-        Assert.Contains("User1 Key", result);
-        Assert.DoesNotContain("User2 Key", result);
+        lines.Length.Should().Be(2); // Header + 1 data row (filtered)
+        result.Should().Contain("User1 Key");
+        result.Should().NotContain("User2 Key");
     }
 
     [Fact]
@@ -98,11 +100,11 @@ public class BulkExportApiKeysQueryHandlerTests
         var result = await _handler.Handle(query, CancellationToken.None);
 
         // Assert
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         var lines = result.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
-        Assert.Equal(2, lines.Length); // Header + 1 data row (active only)
-        Assert.Contains("Active Key", result);
-        Assert.DoesNotContain("Revoked Key", result);
+        lines.Length.Should().Be(2); // Header + 1 data row (active only)
+        result.Should().Contain("Active Key");
+        result.Should().NotContain("Revoked Key");
     }
 
     [Fact]
@@ -124,12 +126,12 @@ public class BulkExportApiKeysQueryHandlerTests
         var result = await _handler.Handle(query, CancellationToken.None);
 
         // Assert
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         var lines = result.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
-        Assert.Equal(3, lines.Length); // Header + 2 data rows (matching "api")
-        Assert.Contains("Production API", result);
-        Assert.Contains("Development API", result);
-        Assert.DoesNotContain("Test Key", result);
+        lines.Length.Should().Be(3); // Header + 2 data rows (matching "api")
+        result.Should().Contain("Production API");
+        result.Should().Contain("Development API");
+        result.Should().NotContain("Test Key");
     }
 
     [Fact]
@@ -155,10 +157,10 @@ public class BulkExportApiKeysQueryHandlerTests
         var result = await _handler.Handle(query, CancellationToken.None);
 
         // Assert
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         // Fields with commas or quotes should be wrapped in quotes
-        Assert.Contains("\"Key with, comma\"", result);
-        Assert.Contains("\"description\"\"", result); // Escaped quotes
+        result.Should().Contain("\"Key with, comma\"");
+        result.Should().Contain("\"description\"\""); // Escaped quotes
     }
 
     [Fact]
@@ -175,10 +177,10 @@ public class BulkExportApiKeysQueryHandlerTests
         var result = await _handler.Handle(query, CancellationToken.None);
 
         // Assert
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         var lines = result.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
-        Assert.Single(lines); // Only header
-        Assert.Equal("userId,keyName,scopes,expiresAt,metadata", lines[0]);
+        lines.Should().ContainSingle(); // Only header
+        lines[0].Should().Be("userId,keyName,scopes,expiresAt,metadata");
     }
 
     [Fact]
@@ -198,16 +200,16 @@ public class BulkExportApiKeysQueryHandlerTests
         var result = await _handler.Handle(query, CancellationToken.None);
 
         // Assert
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         var lines = result.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
-        Assert.Equal(2, lines.Length);
+        lines.Length.Should().Be(2);
 
         // Check that null values are represented as empty strings
         var dataLine = lines[1];
         var fields = dataLine.Split(',');
-        Assert.Equal(5, fields.Length);
-        Assert.Empty(fields[3]); // expiresAt is null
-        Assert.Empty(fields[4]); // metadata is null
+        fields.Length.Should().Be(5);
+        fields[3].Should().BeEmpty(); // expiresAt is null
+        fields[4].Should().BeEmpty(); // metadata is null
     }
 
     [Fact]
@@ -231,11 +233,11 @@ public class BulkExportApiKeysQueryHandlerTests
         var result = await _handler.Handle(query, CancellationToken.None);
 
         // Assert
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         var lines = result.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
-        Assert.Equal(2, lines.Length); // Header + 1 matching row
-        Assert.Contains("Prod API Active", result);
-        Assert.DoesNotContain("Prod API Revoked", result);
-        Assert.DoesNotContain("Other User API", result);
+        lines.Length.Should().Be(2); // Header + 1 matching row
+        result.Should().Contain("Prod API Active");
+        result.Should().NotContain("Prod API Revoked");
+        result.Should().NotContain("Other User API");
     }
 }

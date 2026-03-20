@@ -157,14 +157,3 @@ jobs:
               --body-file /tmp/alert-body.md \
               --label "runner-alert,area/infra" || echo "Failed to create issue (label may not exist)"
           fi
-
-      - name: Slack Notification (if configured)
-        if: vars.SLACK_WEBHOOK_URL != ''
-        env:
-          SLACK_URL: "${{ secrets.SLACK_WEBHOOK_URL }}"
-          RUN_URL: "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-        run: |
-          curl -sf -X POST "$SLACK_URL" \
-            -H 'Content-Type: application/json' \
-            -d "{\"text\": \"Self-hosted runner health check failed! Check: $RUN_URL\"}" \
-            || echo "Slack notification failed"

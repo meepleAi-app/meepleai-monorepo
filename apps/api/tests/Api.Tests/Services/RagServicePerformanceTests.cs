@@ -12,6 +12,7 @@ using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Moq;
+using FluentAssertions;
 using Xunit;
 using Api.Tests.Constants;
 
@@ -85,8 +86,8 @@ public sealed class RagServicePerformanceTests : IDisposable
 
             latencies.Add(sw.ElapsedMilliseconds);
 
-            Assert.NotNull(result);
-            Assert.NotEmpty(result.answer);
+            result.Should().NotBeNull();
+            result.answer.Should().NotBeEmpty();
 
             if (i % 5 == 0)
             {
@@ -108,8 +109,7 @@ public sealed class RagServicePerformanceTests : IDisposable
         _output($"  Max:     {stats.Max}ms");
         _output("---");
 
-        Assert.True(stats.P95 < p95TargetMs,
-            $"P95 latency ({stats.P95}ms) should be <{p95TargetMs}ms");
+        (stats.P95 < p95TargetMs).Should().BeTrue($"P95 latency ({stats.P95}ms) should be <{p95TargetMs}ms");
 
         _output($"✓ Test01 PASSED: P95={stats.P95}ms < {p95TargetMs}ms target");
     }
@@ -144,8 +144,8 @@ public sealed class RagServicePerformanceTests : IDisposable
 
             latencies.Add(sw.ElapsedMilliseconds);
 
-            Assert.NotNull(result);
-            Assert.NotEmpty(result.script);
+            result.Should().NotBeNull();
+            result.script.Should().NotBeEmpty();
 
             if (i % 5 == 0)
             {
@@ -167,8 +167,7 @@ public sealed class RagServicePerformanceTests : IDisposable
         _output($"  Max:     {stats.Max}ms");
         _output("---");
 
-        Assert.True(stats.P95 < p95TargetMs,
-            $"P95 latency ({stats.P95}ms) should be <{p95TargetMs}ms");
+        (stats.P95 < p95TargetMs).Should().BeTrue($"P95 latency ({stats.P95}ms) should be <{p95TargetMs}ms");
 
         _output($"✓ Test02 PASSED: P95={stats.P95}ms < {p95TargetMs}ms target");
     }
@@ -207,8 +206,8 @@ public sealed class RagServicePerformanceTests : IDisposable
 
             latencies.Add(sw.ElapsedMilliseconds);
 
-            Assert.NotNull(result);
-            Assert.NotEmpty(result.answer);
+            result.Should().NotBeNull();
+            result.answer.Should().NotBeEmpty();
 
             if (i % 5 == 0)
             {
@@ -230,8 +229,7 @@ public sealed class RagServicePerformanceTests : IDisposable
         _output($"  Max:     {stats.Max}ms");
         _output("---");
 
-        Assert.True(stats.P95 < p95TargetMs,
-            $"P95 latency ({stats.P95}ms) should be <{p95TargetMs}ms");
+        (stats.P95 < p95TargetMs).Should().BeTrue($"P95 latency ({stats.P95}ms) should be <{p95TargetMs}ms");
 
         _output($"✓ Test03 PASSED: P95={stats.P95}ms < {p95TargetMs}ms target");
     }

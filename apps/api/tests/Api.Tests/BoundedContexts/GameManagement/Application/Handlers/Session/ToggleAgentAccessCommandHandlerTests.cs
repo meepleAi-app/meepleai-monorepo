@@ -1,5 +1,5 @@
 using Api.BoundedContexts.GameManagement.Application.Commands.Session;
-using Api.BoundedContexts.GameManagement.Application.Handlers.Session;
+using Api.BoundedContexts.GameManagement.Application.Commands.Session;
 using Api.Hubs;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities.GameManagement;
@@ -13,6 +13,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.GameManagement.Application.Handlers.Session;
 
@@ -38,11 +39,11 @@ public class ToggleAgentAccessCommandHandlerTests : IDisposable
         _hubContextMock = new Mock<IHubContext<GameStateHub>>();
         _loggerMock = new Mock<ILogger<ToggleAgentAccessCommandHandler>>();
 
-        // Setup SignalR mock chain
+        // Setup SignalR mock chain — handler broadcasts to Group, not User
         var mockClients = new Mock<IHubClients>();
-        var mockClientProxy = new Mock<ISingleClientProxy>();
+        var mockClientProxy = new Mock<IClientProxy>();
         _hubContextMock.Setup(h => h.Clients).Returns(mockClients.Object);
-        mockClients.Setup(c => c.User(It.IsAny<string>())).Returns(mockClientProxy.Object);
+        mockClients.Setup(c => c.Group(It.IsAny<string>())).Returns(mockClientProxy.Object);
         mockClientProxy
             .Setup(p => p.SendCoreAsync(It.IsAny<string>(), It.IsAny<object?[]>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
@@ -70,11 +71,11 @@ public class ToggleAgentAccessCommandHandlerTests : IDisposable
 
         // Assert
         var participant = await _dbContext.SessionParticipants.FindAsync(participantId);
-        Assert.NotNull(participant);
-        Assert.True(participant.AgentAccessEnabled);
+        participant.Should().NotBeNull();
+        (participant.AgentAccessEnabled).Should().BeTrue();
 
         _hubContextMock.Verify(h =>
-            h.Clients.User(participantId.ToString()), Times.Once);
+            h.Clients.Group($"session:{sessionId}"), Times.Once);
     }
 
     [Fact]
@@ -94,11 +95,11 @@ public class ToggleAgentAccessCommandHandlerTests : IDisposable
 
         // Assert
         var participant = await _dbContext.SessionParticipants.FindAsync(participantId);
-        Assert.NotNull(participant);
-        Assert.False(participant.AgentAccessEnabled);
+        participant.Should().NotBeNull();
+        (participant.AgentAccessEnabled).Should().BeFalse();
 
         _hubContextMock.Verify(h =>
-            h.Clients.User(participantId.ToString()), Times.Once);
+            h.Clients.Group($"session:{sessionId}"), Times.Once);
     }
 
     [Fact]
@@ -115,8 +116,9 @@ public class ToggleAgentAccessCommandHandlerTests : IDisposable
         var command = new ToggleAgentAccessCommand(sessionId, participantId, nonHostUserId, Enabled: true);
 
         // Act & Assert
-        await Assert.ThrowsAsync<ForbiddenException>(() =>
-            _handler.Handle(command, CancellationToken.None));
+        var act = () =>
+            _handler.Handle(command, CancellationToken.None);
+        await act.Should().ThrowAsync<ForbiddenException>();
     }
 
     [Fact]
@@ -130,8 +132,9 @@ public class ToggleAgentAccessCommandHandlerTests : IDisposable
             Enabled: true);
 
         // Act & Assert
-        await Assert.ThrowsAsync<NotFoundException>(() =>
-            _handler.Handle(command, CancellationToken.None));
+        var act = () =>
+            _handler.Handle(command, CancellationToken.None);
+        await act.Should().ThrowAsync<NotFoundException>();
     }
 
     [Fact]
@@ -163,8 +166,9 @@ public class ToggleAgentAccessCommandHandlerTests : IDisposable
             Enabled: true);
 
         // Act & Assert
-        await Assert.ThrowsAsync<NotFoundException>(() =>
-            _handler.Handle(command, CancellationToken.None));
+        var act = () =>
+            _handler.Handle(command, CancellationToken.None);
+        await act.Should().ThrowAsync<NotFoundException>();
     }
 
     private async Task SeedSessionAndParticipant(

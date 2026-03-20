@@ -3,6 +3,7 @@ using Api.BoundedContexts.KnowledgeBase.Domain.Evaluation;
 using Api.BoundedContexts.KnowledgeBase.Domain.GridSearch;
 using Api.BoundedContexts.KnowledgeBase.Domain.Reports;
 using Xunit;
+using FluentAssertions;
 using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Reports.Services;
@@ -31,7 +32,7 @@ public class ReportGeneratorServiceTests
         var markdown = _service.GenerateMarkdownReport(report);
 
         // Assert
-        Assert.Contains("# RAG Pipeline Evaluation Report", markdown);
+        markdown.Should().Contain("# RAG Pipeline Evaluation Report");
     }
 
     [Fact]
@@ -44,7 +45,7 @@ public class ReportGeneratorServiceTests
         var markdown = _service.GenerateMarkdownReport(report);
 
         // Assert
-        Assert.Contains("**Generated**:", markdown);
+        markdown.Should().Contain("**Generated**:");
     }
 
     [Fact]
@@ -57,7 +58,7 @@ public class ReportGeneratorServiceTests
         var markdown = _service.GenerateMarkdownReport(report);
 
         // Assert
-        Assert.Contains("**Dataset**: test-dataset", markdown);
+        markdown.Should().Contain("**Dataset**: test-dataset");
     }
 
     [Fact]
@@ -70,7 +71,7 @@ public class ReportGeneratorServiceTests
         var markdown = _service.GenerateMarkdownReport(report);
 
         // Assert
-        Assert.Contains("**Samples**:", markdown);
+        markdown.Should().Contain("**Samples**:");
     }
 
     [Fact]
@@ -83,10 +84,10 @@ public class ReportGeneratorServiceTests
         var markdown = _service.GenerateMarkdownReport(report);
 
         // Assert
-        Assert.Contains("## Executive Summary", markdown);
-        Assert.Contains("**Configurations Evaluated**:", markdown);
-        Assert.Contains("**Successful Evaluations**:", markdown);
-        Assert.Contains("**Meeting Phase 5 Target**:", markdown);
+        markdown.Should().Contain("## Executive Summary");
+        markdown.Should().Contain("**Configurations Evaluated**:");
+        markdown.Should().Contain("**Successful Evaluations**:");
+        markdown.Should().Contain("**Meeting Phase 5 Target**:");
     }
 
     [Fact]
@@ -99,11 +100,11 @@ public class ReportGeneratorServiceTests
         var markdown = _service.GenerateMarkdownReport(report);
 
         // Assert
-        Assert.Contains("### Best Metrics Achieved", markdown, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("| Metric | Value |", markdown, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("Best Recall@10", markdown, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("Best nDCG@10", markdown, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("Best P95 Latency", markdown, StringComparison.OrdinalIgnoreCase);
+        markdown.Should().ContainEquivalentOf("### Best Metrics Achieved");
+        markdown.Should().ContainEquivalentOf("| Metric | Value |");
+        markdown.Should().ContainEquivalentOf("Best Recall@10");
+        markdown.Should().ContainEquivalentOf("Best nDCG@10");
+        markdown.Should().ContainEquivalentOf("Best P95 Latency");
     }
 
     [Fact]
@@ -116,10 +117,10 @@ public class ReportGeneratorServiceTests
         var markdown = _service.GenerateMarkdownReport(report);
 
         // Assert
-        Assert.Contains("## Phase 5 Target Status", markdown, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("| Target | Required | Achieved | Status |", markdown, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("Recall@10", markdown, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("P95 Latency", markdown, StringComparison.OrdinalIgnoreCase);
+        markdown.Should().ContainEquivalentOf("## Phase 5 Target Status");
+        markdown.Should().ContainEquivalentOf("| Target | Required | Achieved | Status |");
+        markdown.Should().ContainEquivalentOf("Recall@10");
+        markdown.Should().ContainEquivalentOf("P95 Latency");
     }
 
     [Fact]
@@ -132,8 +133,8 @@ public class ReportGeneratorServiceTests
         var markdown = _service.GenerateMarkdownReport(report);
 
         // Assert
-        Assert.Contains("## Configuration Comparison", markdown, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("| Configuration | Chunking | Quantization | Reranking |", markdown, StringComparison.OrdinalIgnoreCase);
+        markdown.Should().ContainEquivalentOf("## Configuration Comparison");
+        markdown.Should().ContainEquivalentOf("| Configuration | Chunking | Quantization | Reranking |");
     }
 
     [Fact]
@@ -146,8 +147,8 @@ public class ReportGeneratorServiceTests
         var markdown = _service.GenerateMarkdownReport(report);
 
         // Assert
-        Assert.Contains("## Best Configurations", markdown, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("### Best by Recall@10", markdown, StringComparison.OrdinalIgnoreCase);
+        markdown.Should().ContainEquivalentOf("## Best Configurations");
+        markdown.Should().ContainEquivalentOf("### Best by Recall@10");
     }
 
     [Fact]
@@ -160,7 +161,7 @@ public class ReportGeneratorServiceTests
         var markdown = _service.GenerateMarkdownReport(report);
 
         // Assert
-        Assert.Contains("## Recommendations", markdown, StringComparison.OrdinalIgnoreCase);
+        markdown.Should().ContainEquivalentOf("## Recommendations");
     }
 
     [Fact]
@@ -173,9 +174,9 @@ public class ReportGeneratorServiceTests
         var markdown = _service.GenerateMarkdownReport(report);
 
         // Assert
-        Assert.Contains("ADR-016 Phase 5 Evaluation Framework", markdown, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("Grid Search ID:", markdown, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("Total Duration:", markdown, StringComparison.OrdinalIgnoreCase);
+        markdown.Should().ContainEquivalentOf("ADR-016 Phase 5 Evaluation Framework");
+        markdown.Should().ContainEquivalentOf("Grid Search ID:");
+        markdown.Should().ContainEquivalentOf("Total Duration:");
     }
 
     [Fact]
@@ -188,7 +189,7 @@ public class ReportGeneratorServiceTests
         var markdown = _service.GenerateMarkdownReport(report);
 
         // Assert
-        Assert.Contains("**PASSED**", markdown, StringComparison.OrdinalIgnoreCase);
+        markdown.Should().ContainEquivalentOf("**PASSED**");
     }
 
     [Fact]
@@ -201,7 +202,7 @@ public class ReportGeneratorServiceTests
         var markdown = _service.GenerateMarkdownReport(report);
 
         // Assert
-        Assert.Contains("**NOT MET**", markdown, StringComparison.OrdinalIgnoreCase);
+        markdown.Should().ContainEquivalentOf("**NOT MET**");
     }
 
     [Fact]
@@ -214,8 +215,8 @@ public class ReportGeneratorServiceTests
         var markdown = _service.GenerateMarkdownReport(report);
 
         // Assert
-        Assert.Contains("### Phase 5 Target Met", markdown, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("**Next Steps**:", markdown, StringComparison.OrdinalIgnoreCase);
+        markdown.Should().ContainEquivalentOf("### Phase 5 Target Met");
+        markdown.Should().ContainEquivalentOf("**Next Steps**:");
     }
 
     [Fact]
@@ -228,8 +229,8 @@ public class ReportGeneratorServiceTests
         var markdown = _service.GenerateMarkdownReport(report);
 
         // Assert
-        Assert.Contains("### Phase 5 Target Not Met", markdown, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("**Improvement Suggestions**:", markdown, StringComparison.OrdinalIgnoreCase);
+        markdown.Should().ContainEquivalentOf("### Phase 5 Target Not Met");
+        markdown.Should().ContainEquivalentOf("**Improvement Suggestions**:");
     }
 
     [Fact]
@@ -242,14 +243,14 @@ public class ReportGeneratorServiceTests
         var table = _service.GenerateComparisonTable(gridSearchResult);
 
         // Assert
-        Assert.Contains("## Configuration Comparison", table, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("| Configuration | Chunking | Quantization | Reranking |", table, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("Recall@5", table, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("Recall@10", table, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("nDCG@10", table, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("MRR", table, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("P95 (ms)", table, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("Status", table, StringComparison.OrdinalIgnoreCase);
+        table.Should().ContainEquivalentOf("## Configuration Comparison");
+        table.Should().ContainEquivalentOf("| Configuration | Chunking | Quantization | Reranking |");
+        table.Should().ContainEquivalentOf("Recall@5");
+        table.Should().ContainEquivalentOf("Recall@10");
+        table.Should().ContainEquivalentOf("nDCG@10");
+        table.Should().ContainEquivalentOf("MRR");
+        table.Should().ContainEquivalentOf("P95 (ms)");
+        table.Should().ContainEquivalentOf("Status");
     }
 
     [Fact]
@@ -264,8 +265,8 @@ public class ReportGeneratorServiceTests
         // Assert
         // Should contain the configuration IDs
         var configs = GridSearchConfiguration.GetAllConfigurations();
-        Assert.Contains(configs[0].ConfigurationId, table);
-        Assert.Contains(configs[1].ConfigurationId, table);
+        table.Should().Contain(configs[0].ConfigurationId);
+        table.Should().Contain(configs[1].ConfigurationId);
     }
 
     [Fact]
@@ -279,7 +280,7 @@ public class ReportGeneratorServiceTests
 
         // Assert
         // Should contain status emojis (checkmark for meets target, warning for doesn't)
-        Assert.True(table.Contains("✅") || table.Contains("⚠️"));
+        (table.Contains("✅") || table.Contains("⚠️")).Should().BeTrue();
     }
 
     [Fact]
@@ -308,7 +309,7 @@ public class ReportGeneratorServiceTests
         var table = _service.GenerateComparisonTable(gridSearchResult);
 
         // Assert
-        Assert.Contains("❌ Failed", table);
+        table.Should().Contain("❌ Failed");
     }
 
     [Fact]
@@ -321,9 +322,9 @@ public class ReportGeneratorServiceTests
         var markdown = _service.GenerateMarkdownReport(report);
 
         // Assert
-        Assert.NotNull(markdown);
-        Assert.NotEmpty(markdown);
-        Assert.True(markdown.Length > 100); // Should be a substantial report
+        markdown.Should().NotBeNull();
+        markdown.Should().NotBeEmpty();
+        (markdown.Length > 100).Should().BeTrue(); // Should be a substantial report
     }
 
     private static BenchmarkReport CreateSampleReport()

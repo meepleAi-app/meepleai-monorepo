@@ -9911,13 +9911,13 @@ namespace Api.Infrastructure.Migrations
 
                             t.HasCheckConstraint("chk_shared_games_min_age", "min_age >= 0");
 
-                            t.HasCheckConstraint("chk_shared_games_players", "min_players > 0 AND max_players >= min_players");
+                            t.HasCheckConstraint("chk_shared_games_players", "(min_players = 0 AND max_players = 0) OR (min_players > 0 AND max_players >= min_players)");
 
-                            t.HasCheckConstraint("chk_shared_games_playing_time", "playing_time_minutes > 0");
+                            t.HasCheckConstraint("chk_shared_games_playing_time", "playing_time_minutes >= 0");
 
                             t.HasCheckConstraint("chk_shared_games_rating", "average_rating IS NULL OR (average_rating >= 1.0 AND average_rating <= 10.0)");
 
-                            t.HasCheckConstraint("chk_shared_games_year_published", "year_published > 1900 AND year_published <= 2100");
+                            t.HasCheckConstraint("chk_shared_games_year_published", "year_published = 0 OR (year_published > 1900 AND year_published <= 2100)");
                         });
                 });
 

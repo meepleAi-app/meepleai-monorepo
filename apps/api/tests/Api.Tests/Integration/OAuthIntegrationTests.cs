@@ -16,6 +16,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Npgsql;
 using Xunit;
+using FluentAssertions;
 using Api.Tests.Constants;
 
 namespace Api.Tests.Integration;
@@ -202,14 +203,14 @@ public class OAuthIntegrationTests : IAsyncLifetime
         var linkedAccounts = await oauthAccountRepository.GetByUserIdAsync(userId, TestCancellationToken);
 
         // Assert - Verify user was created with linked OAuth account
-        Assert.NotNull(userInDb);
-        Assert.Equal(NewUserEmail, userInDb.Email.Value);
-        Assert.NotEmpty(linkedAccounts);
+        userInDb.Should().NotBeNull();
+        userInDb.Email.Value.Should().Be(NewUserEmail);
+        linkedAccounts.Should().NotBeEmpty();
 
         var linkedAccount = linkedAccounts[0];
-        Assert.Equal(GoogleProvider, linkedAccount.Provider);
-        Assert.Equal(GoogleUserId, linkedAccount.ProviderUserId);
-        Assert.Equal(AccessToken, linkedAccount.AccessTokenEncrypted);
+        linkedAccount.Provider.Should().Be(GoogleProvider);
+        linkedAccount.ProviderUserId.Should().Be(GoogleUserId);
+        linkedAccount.AccessTokenEncrypted.Should().Be(AccessToken);
 
         _output("✓ Test 1 passed: OAuth callback created new user with linked account");
     }
@@ -256,14 +257,14 @@ public class OAuthIntegrationTests : IAsyncLifetime
         var userCountAfter = await _dbContext!.Users.CountAsync(TestCancellationToken);
 
         // No new user created
-        Assert.Equal(userCountBefore, userCountAfter);
+        userCountAfter.Should().Be(userCountBefore);
 
         // OAuth account linked to existing user
         var linkedAccounts = await oauthAccountRepository.GetByUserIdAsync(userId, TestCancellationToken);
 
-        Assert.NotEmpty(linkedAccounts);
-        Assert.Single(linkedAccounts);
-        Assert.Equal(DiscordProvider, linkedAccounts[0].Provider);
+        linkedAccounts.Should().NotBeEmpty();
+        linkedAccounts.Should().ContainSingle();
+        linkedAccounts[0].Provider.Should().Be(DiscordProvider);
 
         _output("✓ Test 2 passed: OAuth callback linked account to existing user");
     }
@@ -315,7 +316,7 @@ public class OAuthIntegrationTests : IAsyncLifetime
 
         // Verify setup
         var accountsBeforeUnlink = await oauthAccountRepository.GetByUserIdAsync(userId, TestCancellationToken);
-        Assert.Equal(2, accountsBeforeUnlink.Count);
+        accountsBeforeUnlink.Count.Should().Be(2);
 
         // Act - Unlink Discord account (user still has password + Google)
         var command = new UnlinkOAuthAccountCommand
@@ -328,16 +329,16 @@ public class OAuthIntegrationTests : IAsyncLifetime
         var result = await mediator.Send(command, TestCancellationToken);
 
         // Assert
-        Assert.True(result.Success, $"Unlink failed: {result.ErrorMessage}");
+        result.Success.Should().BeTrue($"Unlink failed: {result.ErrorMessage}");
 
         var accountsAfterUnlink = await oauthAccountRepository.GetByUserIdAsync(userId, TestCancellationToken);
 
-        Assert.Single(accountsAfterUnlink);
-        Assert.Equal(GoogleProvider, accountsAfterUnlink[0].Provider);
+        accountsAfterUnlink.Should().ContainSingle();
+        accountsAfterUnlink[0].Provider.Should().Be(GoogleProvider);
 
         // Discord account deleted
         var discordAccountInDb = await oauthAccountRepository.GetByIdAsync(discordAccountId, TestCancellationToken);
-        Assert.Null(discordAccountInDb);
+        discordAccountInDb.Should().BeNull();
 
         _output("✓ Test 3 passed: OAuth account successfully unlinked");
     }
@@ -389,11 +390,11 @@ public class OAuthIntegrationTests : IAsyncLifetime
         var result = await mediator.Send(command, TestCancellationToken);
 
         // Assert - Should succeed because user has password as fallback auth method
-        Assert.True(result.Success, "Should succeed when user has password as fallback");
+        result.Success.Should().BeTrue("Should succeed when user has password as fallback");
 
         // Verify OAuth account WAS deleted (user still has password auth)
         var oauthAccountInDb = await oauthAccountRepository.GetByIdAsync(oauthAccountId, TestCancellationToken);
-        Assert.Null(oauthAccountInDb);
+        oauthAccountInDb.Should().BeNull();
 
         _output("✓ Test 4 passed: OAuth account can be unlinked when user has password as fallback");
     }
@@ -464,30 +465,30 @@ public class OAuthIntegrationTests : IAsyncLifetime
         var result = await mediator.Send(query, TestCancellationToken);
 
         // Assert - All 3 accounts returned with correct metadata
-        Assert.NotNull(result);
-        Assert.Equal(3, result.Accounts.Count);
+        result.Should().NotBeNull();
+        result.Accounts.Count.Should().Be(3);
 
         // Verify Google
         var googleDto = result.Accounts.FirstOrDefault(a => a.Provider == GoogleProvider);
-        Assert.NotNull(googleDto);
-        Assert.Equal(googleAccountId, googleDto.Id);
-        Assert.Equal("google-123", googleDto.ProviderUserId);
-        Assert.False(googleDto.IsTokenExpired);
-        Assert.True(googleDto.SupportsRefresh);
+        googleDto.Should().NotBeNull();
+        googleDto.Id.Should().Be(googleAccountId);
+        googleDto.ProviderUserId.Should().Be("google-123");
+        googleDto.IsTokenExpired.Should().BeFalse();
+        googleDto.SupportsRefresh.Should().BeTrue();
 
         // Verify Discord
         var discordDto = result.Accounts.FirstOrDefault(a => a.Provider == DiscordProvider);
-        Assert.NotNull(discordDto);
-        Assert.Equal(discordAccountId, discordDto.Id);
-        Assert.False(discordDto.IsTokenExpired);
-        Assert.False(discordDto.SupportsRefresh); // No refresh token
+        discordDto.Should().NotBeNull();
+        discordDto.Id.Should().Be(discordAccountId);
+        discordDto.IsTokenExpired.Should().BeFalse();
+        discordDto.SupportsRefresh.Should().BeFalse(); // No refresh token
 
         // Verify GitHub (expired)
         var githubDto = result.Accounts.FirstOrDefault(a => a.Provider == GitHubProvider);
-        Assert.NotNull(githubDto);
-        Assert.Equal(githubAccountId, githubDto.Id);
-        Assert.True(githubDto.IsTokenExpired); // Token is expired
-        Assert.True(githubDto.SupportsRefresh);
+        githubDto.Should().NotBeNull();
+        githubDto.Id.Should().Be(githubAccountId);
+        githubDto.IsTokenExpired.Should().BeTrue(); // Token is expired
+        githubDto.SupportsRefresh.Should().BeTrue();
 
         _output("✓ Test 5 passed: Retrieved all linked OAuth accounts with correct metadata");
     }
@@ -529,7 +530,7 @@ public class OAuthIntegrationTests : IAsyncLifetime
         var query = new GetLinkedOAuthAccountsQuery { UserId = userId };
         var mediator = _serviceProvider!.GetRequiredService<IMediator>();
         var result1 = await mediator.Send(query, TestCancellationToken);
-        Assert.Single(result1.Accounts);
+        result1.Accounts.Should().ContainSingle();
 
         // Step 2: Link second account (Discord)
         var discordAccount = new OAuthAccount(
@@ -545,7 +546,7 @@ public class OAuthIntegrationTests : IAsyncLifetime
         await unitOfWork.SaveChangesAsync(TestCancellationToken);
 
         var result2 = await mediator.Send(query, TestCancellationToken);
-        Assert.Equal(2, result2.Accounts.Count);
+        result2.Accounts.Count.Should().Be(2);
 
         // Step 3: Unlink first account (Google) - still has Discord
         var unlinkCommand = new UnlinkOAuthAccountCommand
@@ -555,12 +556,12 @@ public class OAuthIntegrationTests : IAsyncLifetime
         };
 
         var unlinkResult = await mediator.Send(unlinkCommand, TestCancellationToken);
-        Assert.True(unlinkResult.Success);
+        unlinkResult.Success.Should().BeTrue();
 
         // Step 4: Verify only Discord remains
         var result3 = await mediator.Send(query, TestCancellationToken);
-        Assert.Single(result3.Accounts);
-        Assert.Equal(DiscordProvider, result3.Accounts[0].Provider);
+        result3.Accounts.Should().ContainSingle();
+        result3.Accounts[0].Provider.Should().Be(DiscordProvider);
 
         _output("✓ Test 6 passed: Progressive OAuth account management");
     }
@@ -572,7 +573,7 @@ public class OAuthIntegrationTests : IAsyncLifetime
 
         // Act & Assert - Invalid provider should throw during account creation
         var invalidProvider = "invalid-provider";
-        var exception = Assert.Throws<ValidationException>(() =>
+        var act = () =>
         {
             var invalidAccount = new OAuthAccount(
                 Guid.NewGuid(),
@@ -582,9 +583,10 @@ public class OAuthIntegrationTests : IAsyncLifetime
                 AccessToken,
                 null,
                 null);
-        });
+        };
+        var exception = act.Should().Throw<ValidationException>().Which;
 
-        Assert.Contains("Unsupported", exception.Message);
+        exception.Message.Should().Contain("Unsupported");
 
         _output("✓ Test 7 passed: OAuth provider validation enforced");
     }

@@ -1,5 +1,6 @@
 using Api.BoundedContexts.GameManagement.Application.Commands;
-using Api.BoundedContexts.GameManagement.Application.Handlers;
+using Api.BoundedContexts.GameManagement.Application.Commands;
+using Api.BoundedContexts.GameManagement.Application.Queries;
 using Api.BoundedContexts.UserLibrary.Domain.Entities;
 using Api.BoundedContexts.UserLibrary.Domain.Repositories;
 using Api.Infrastructure.ExternalServices.BoardGameGeek;
@@ -12,6 +13,7 @@ using Api.Tests.Constants;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.GameManagement.Application.Handlers;
 
@@ -69,11 +71,11 @@ public sealed class ImportBggGameCommandHandlerTests
         var result = await _sut.Handle(command, CancellationToken.None);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.NotEqual(Guid.Empty, result.PrivateGameId);
-        Assert.NotEqual(Guid.Empty, result.LibraryEntryId);
-        Assert.Equal("Ticket to Ride", result.Title);
-        Assert.Equal("https://example.com/image.jpg", result.ImageUrl);
+        result.Should().NotBeNull();
+        result.PrivateGameId.Should().NotBe(Guid.Empty);
+        result.LibraryEntryId.Should().NotBe(Guid.Empty);
+        result.Title.Should().Be("Ticket to Ride");
+        result.ImageUrl.Should().Be("https://example.com/image.jpg");
     }
 
     [Fact]
@@ -170,7 +172,7 @@ public sealed class ImportBggGameCommandHandlerTests
         await _sut.Handle(command, CancellationToken.None);
 
         // Assert
-        Assert.Equal(new[] { "save", "record" }, callOrder);
+        callOrder.Should().BeEquivalentTo(new[] { "save", "record" });
     }
 
     [Fact]
@@ -202,8 +204,8 @@ public sealed class ImportBggGameCommandHandlerTests
         await _sut.Handle(command, CancellationToken.None);
 
         // Assert
-        Assert.NotNull(capturedEntry);
-        Assert.Equal(TestUserId, capturedEntry!.UserId);
+        capturedEntry.Should().NotBeNull();
+        capturedEntry!.UserId.Should().Be(TestUserId);
     }
 
     #endregion
@@ -221,10 +223,11 @@ public sealed class ImportBggGameCommandHandlerTests
         var command = CreateCommand();
 
         // Act & Assert
-        var ex = await Assert.ThrowsAsync<QuotaExceededException>(
-            () => _sut.Handle(command, CancellationToken.None));
+        var act = 
+            () => _sut.Handle(command, CancellationToken.None);
+        var ex = (await act.Should().ThrowAsync<QuotaExceededException>()).Which;
 
-        Assert.Equal("PrivateGameQuota", ex.QuotaType);
+        ex.QuotaType.Should().Be("PrivateGameQuota");
     }
 
     [Fact]
@@ -238,8 +241,9 @@ public sealed class ImportBggGameCommandHandlerTests
         var command = CreateCommand();
 
         // Act
-        await Assert.ThrowsAsync<QuotaExceededException>(
-            () => _sut.Handle(command, CancellationToken.None));
+        var act = 
+            () => _sut.Handle(command, CancellationToken.None);
+        await act.Should().ThrowAsync<QuotaExceededException>();
 
         // Assert
         _bggApiClientMock.Verify(
@@ -263,8 +267,9 @@ public sealed class ImportBggGameCommandHandlerTests
         var command = CreateCommand();
 
         // Act & Assert
-        await Assert.ThrowsAsync<ConflictException>(
-            () => _sut.Handle(command, CancellationToken.None));
+        var act = 
+            () => _sut.Handle(command, CancellationToken.None);
+        await act.Should().ThrowAsync<ConflictException>();
     }
 
     [Fact]
@@ -279,8 +284,9 @@ public sealed class ImportBggGameCommandHandlerTests
         var command = CreateCommand();
 
         // Act
-        await Assert.ThrowsAsync<ConflictException>(
-            () => _sut.Handle(command, CancellationToken.None));
+        var act = 
+            () => _sut.Handle(command, CancellationToken.None);
+        await act.Should().ThrowAsync<ConflictException>();
 
         // Assert
         _bggApiClientMock.Verify(
@@ -305,8 +311,9 @@ public sealed class ImportBggGameCommandHandlerTests
         var command = CreateCommand();
 
         // Act & Assert
-        await Assert.ThrowsAsync<NotFoundException>(
-            () => _sut.Handle(command, CancellationToken.None));
+        var act = 
+            () => _sut.Handle(command, CancellationToken.None);
+        await act.Should().ThrowAsync<NotFoundException>();
     }
 
     [Fact]
@@ -322,8 +329,9 @@ public sealed class ImportBggGameCommandHandlerTests
         var command = CreateCommand();
 
         // Act
-        await Assert.ThrowsAsync<NotFoundException>(
-            () => _sut.Handle(command, CancellationToken.None));
+        var act = 
+            () => _sut.Handle(command, CancellationToken.None);
+        await act.Should().ThrowAsync<NotFoundException>();
 
         // Assert
         _privateGameRepoMock.Verify(
@@ -341,49 +349,55 @@ public sealed class ImportBggGameCommandHandlerTests
     [Fact]
     public void Constructor_WithNullTierEnforcement_ThrowsArgumentNullException()
     {
-        Assert.Throws<ArgumentNullException>(() => new ImportBggGameCommandHandler(
+        var act = () => new ImportBggGameCommandHandler(
             null!, _bggApiClientMock.Object, _privateGameRepoMock.Object,
-            _userLibraryRepoMock.Object, _unitOfWorkMock.Object, _loggerMock.Object));
+            _userLibraryRepoMock.Object, _unitOfWorkMock.Object, _loggerMock.Object);
+        act.Should().Throw<ArgumentNullException>();
     }
 
     [Fact]
     public void Constructor_WithNullBggApiClient_ThrowsArgumentNullException()
     {
-        Assert.Throws<ArgumentNullException>(() => new ImportBggGameCommandHandler(
+        var act = () => new ImportBggGameCommandHandler(
             _tierEnforcementMock.Object, null!, _privateGameRepoMock.Object,
-            _userLibraryRepoMock.Object, _unitOfWorkMock.Object, _loggerMock.Object));
+            _userLibraryRepoMock.Object, _unitOfWorkMock.Object, _loggerMock.Object);
+        act.Should().Throw<ArgumentNullException>();
     }
 
     [Fact]
     public void Constructor_WithNullPrivateGameRepo_ThrowsArgumentNullException()
     {
-        Assert.Throws<ArgumentNullException>(() => new ImportBggGameCommandHandler(
+        var act = () => new ImportBggGameCommandHandler(
             _tierEnforcementMock.Object, _bggApiClientMock.Object, null!,
-            _userLibraryRepoMock.Object, _unitOfWorkMock.Object, _loggerMock.Object));
+            _userLibraryRepoMock.Object, _unitOfWorkMock.Object, _loggerMock.Object);
+        act.Should().Throw<ArgumentNullException>();
     }
 
     [Fact]
     public void Constructor_WithNullUserLibraryRepo_ThrowsArgumentNullException()
     {
-        Assert.Throws<ArgumentNullException>(() => new ImportBggGameCommandHandler(
+        var act = () => new ImportBggGameCommandHandler(
             _tierEnforcementMock.Object, _bggApiClientMock.Object, _privateGameRepoMock.Object,
-            null!, _unitOfWorkMock.Object, _loggerMock.Object));
+            null!, _unitOfWorkMock.Object, _loggerMock.Object);
+        act.Should().Throw<ArgumentNullException>();
     }
 
     [Fact]
     public void Constructor_WithNullUnitOfWork_ThrowsArgumentNullException()
     {
-        Assert.Throws<ArgumentNullException>(() => new ImportBggGameCommandHandler(
+        var act = () => new ImportBggGameCommandHandler(
             _tierEnforcementMock.Object, _bggApiClientMock.Object, _privateGameRepoMock.Object,
-            _userLibraryRepoMock.Object, null!, _loggerMock.Object));
+            _userLibraryRepoMock.Object, null!, _loggerMock.Object);
+        act.Should().Throw<ArgumentNullException>();
     }
 
     [Fact]
     public void Constructor_WithNullLogger_ThrowsArgumentNullException()
     {
-        Assert.Throws<ArgumentNullException>(() => new ImportBggGameCommandHandler(
+        var act = () => new ImportBggGameCommandHandler(
             _tierEnforcementMock.Object, _bggApiClientMock.Object, _privateGameRepoMock.Object,
-            _userLibraryRepoMock.Object, _unitOfWorkMock.Object, null!));
+            _userLibraryRepoMock.Object, _unitOfWorkMock.Object, null!);
+        act.Should().Throw<ArgumentNullException>();
     }
 
     #endregion

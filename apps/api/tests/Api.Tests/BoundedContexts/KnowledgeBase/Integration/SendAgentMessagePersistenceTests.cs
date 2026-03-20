@@ -4,7 +4,8 @@ using Api.BoundedContexts.KnowledgeBase.Application.Commands;
 using Api.BoundedContexts.KnowledgeBase.Application.Services;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services.LlmManagement;
-using Api.BoundedContexts.KnowledgeBase.Application.Handlers;
+using Api.BoundedContexts.KnowledgeBase.Application.Commands;
+using Api.BoundedContexts.KnowledgeBase.Application.Queries;
 using Api.BoundedContexts.KnowledgeBase.Domain.Entities;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
@@ -193,7 +194,7 @@ public sealed class SendAgentMessagePersistenceTests : IAsyncLifetime
         events.Should().Contain(e => e.Type == StreamingEventType.Complete);
 
         var completeEvent = events.Last();
-        var complete = completeEvent.Data.Should().BeOfType<StreamingComplete>().Subject;
+        var complete = completeEvent.Data.Should().BeOfType<StreamingComplete>().Which;
         complete.chatThreadId.Should().NotBeNull();
 
         // Verify persistence with fresh DbContext
@@ -266,7 +267,7 @@ public sealed class SendAgentMessagePersistenceTests : IAsyncLifetime
         var events = await ConsumeStream(command);
 
         // Assert
-        var complete = events.Last().Data.Should().BeOfType<StreamingComplete>().Subject;
+        var complete = events.Last().Data.Should().BeOfType<StreamingComplete>().Which;
         complete.chatThreadId.Should().NotBeNull();
 
         using var readCtx = CreateReadContext();
@@ -285,7 +286,7 @@ public sealed class SendAgentMessagePersistenceTests : IAsyncLifetime
         SetupLlmStream("First response.");
         var firstCommand = new SendAgentMessageCommand(_agentId, "First question", _userId);
         var firstEvents = await ConsumeStream(firstCommand);
-        var firstComplete = firstEvents.Last().Data.Should().BeOfType<StreamingComplete>().Subject;
+        var firstComplete = firstEvents.Last().Data.Should().BeOfType<StreamingComplete>().Which;
         var threadId = firstComplete.chatThreadId!.Value;
 
         // Detach all tracked entities for second pass
@@ -394,7 +395,7 @@ public sealed class SendAgentMessagePersistenceTests : IAsyncLifetime
 
         // Assert
         events.Should().HaveCount(1);
-        var error = events[0].Data.Should().BeOfType<StreamingError>().Subject;
+        var error = events[0].Data.Should().BeOfType<StreamingError>().Which;
         error.errorCode.Should().Be("AGENT_NOT_FOUND");
 
         // No thread created

@@ -26,12 +26,6 @@ services:
     ports: ["127.0.0.1:6379:6379"]
     command: ["sh", "-c", "redis-server /etc/redis/redis.conf --requirepass $$REDIS_PASSWORD"]
 
-  qdrant:
-    env_file: [./secrets/dev/qdrant.secret]
-    ports: ["127.0.0.1:6333:6333", "127.0.0.1:6334:6334"]
-    environment:
-      QDRANT__SERVICE__API_KEY: ${QDRANT_API_KEY:?QDRANT_API_KEY is required - see secrets/qdrant.secret.example}
-
   # ===========================================================================
   # Application Services
   # ===========================================================================
@@ -40,7 +34,6 @@ services:
     env_file:
       - ./secrets/dev/database.secret
       - ./secrets/dev/redis.secret
-      - ./secrets/dev/qdrant.secret
       - ./secrets/dev/jwt.secret
       - ./secrets/dev/openrouter.secret
       - ./secrets/dev/admin.secret
@@ -54,7 +47,6 @@ services:
       ASPNETCORE_URLS: http://+:8080
       POSTGRES_HOST: postgres
       REDIS_HOST: redis
-      QDRANT_URL: http://qdrant:6333
       OLLAMA_URL: http://ollama:11434
       EMBEDDING_PROVIDER: external
       Embedding__Provider: External
@@ -102,8 +94,6 @@ services:
       RERANKER_SERVICE_URL: http://reranker-service:8003
       UNSTRUCTURED_SERVICE_URL: http://unstructured-service:8001
       SMOLDOCLING_SERVICE_URL: http://smoldocling-service:8002
-      QDRANT_URL: http://qdrant:6333
-
   # ===========================================================================
   # Monitoring (profile: monitoring)
   # ===========================================================================

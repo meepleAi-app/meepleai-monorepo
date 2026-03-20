@@ -8,7 +8,7 @@ dev: ## Start full local development (all profiles)
 		--profile ai --profile monitoring --profile automation \
 		--profile proxy --profile storage up -d
 
-dev-core: ## Start core only (postgres, redis, qdrant, api, web)
+dev-core: ## Start core only (postgres, redis, api, web)
 	$(COMPOSE) -f compose.dev.yml up -d
 
 dev-down: ## Stop dev environment
@@ -26,10 +26,11 @@ tunnel-status: ## Check SSH tunnel status
 
 integration: ## Start local api+web with remote services (run 'make tunnel' first)
 	@echo "Ensure tunnels are open: make tunnel"
-	$(COMPOSE) -f compose.integration.yml up api web -d
+	bash scripts/integration-start.sh
 
-integration-down: ## Stop integration
-	$(COMPOSE) -f compose.integration.yml down
+integration-down: ## Stop integration (local processes + tunnels)
+	bash scripts/integration-start.sh stop
+	bash scripts/integration-tunnel.sh stop
 
 staging: ## Deploy staging on server (meepleai.app)
 	$(COMPOSE) -f compose.staging.yml -f compose.traefik.yml \

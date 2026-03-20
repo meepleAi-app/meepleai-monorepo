@@ -97,8 +97,9 @@ public class RequestDeleteSharedGameCommandHandlerTests
             .ReturnsAsync((SharedGame?)null);
 
         // Act & Assert
-        await Assert.ThrowsAsync<InvalidOperationException>(() =>
-            _handler.Handle(command, TestContext.Current.CancellationToken));
+        var act = () =>
+            _handler.Handle(command, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<InvalidOperationException>();
 
         _deleteRequestRepositoryMock.Verify(
             r => r.AddAsync(It.IsAny<SharedGameDeleteRequest>(), It.IsAny<CancellationToken>()),

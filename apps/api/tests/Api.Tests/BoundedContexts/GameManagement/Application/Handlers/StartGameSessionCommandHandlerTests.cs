@@ -1,7 +1,8 @@
 using Api.SharedKernel.Domain.ValueObjects;
 using Api.BoundedContexts.GameManagement.Application.Commands;
 using Api.BoundedContexts.GameManagement.Application.DTOs;
-using Api.BoundedContexts.GameManagement.Application.Handlers;
+using Api.BoundedContexts.GameManagement.Application.Commands;
+using Api.BoundedContexts.GameManagement.Application.Queries;
 using Api.BoundedContexts.GameManagement.Domain.Entities;
 using Api.BoundedContexts.GameManagement.Domain.Repositories;
 using Api.BoundedContexts.GameManagement.Domain.Services;
@@ -9,6 +10,7 @@ using Api.BoundedContexts.GameManagement.Domain.ValueObjects;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Moq;
 using Xunit;
+using FluentAssertions;
 using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.GameManagement.Application.Handlers;
@@ -77,15 +79,15 @@ public class StartGameSessionCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.NotEqual(Guid.Empty, result.Id);
-        Assert.Equal(gameId, result.GameId);
-        Assert.Equal("InProgress", result.Status); // Session is started immediately
-        Assert.Equal(2, result.Players.Count);
+        result.Should().NotBeNull();
+        result.Id.Should().NotBe(Guid.Empty);
+        result.GameId.Should().Be(gameId);
+        result.Status.Should().Be("InProgress"); // Session is started immediately
+        result.Players.Count.Should().Be(2);
 
         // Verify captured session
-        Assert.NotNull(capturedSession);
-        Assert.Equal(gameId, capturedSession.GameId);
+        capturedSession.Should().NotBeNull();
+        capturedSession.GameId.Should().Be(gameId);
 
         // Verify repository interactions
         _gameRepositoryMock.Verify(
@@ -123,12 +125,12 @@ public class StartGameSessionCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal(4, result.Players.Count);
-        Assert.Equal("Alice", result.Players[0].PlayerName);
-        Assert.Equal("Bob", result.Players[1].PlayerName);
-        Assert.Equal("Charlie", result.Players[2].PlayerName);
-        Assert.Equal("Diana", result.Players[3].PlayerName);
+        result.Should().NotBeNull();
+        result.Players.Count.Should().Be(4);
+        result.Players[0].PlayerName.Should().Be("Alice");
+        result.Players[1].PlayerName.Should().Be("Bob");
+        result.Players[2].PlayerName.Should().Be("Charlie");
+        result.Players[3].PlayerName.Should().Be("Diana");
     }
 
     [Fact]
@@ -153,9 +155,9 @@ public class StartGameSessionCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal("Red", result.Players[0].Color);
-        Assert.Equal("Blue", result.Players[1].Color);
+        result.Should().NotBeNull();
+        result.Players[0].Color.Should().Be("Red");
+        result.Players[1].Color.Should().Be("Blue");
     }
 
     [Fact]
@@ -180,8 +182,8 @@ public class StartGameSessionCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotEqual(Guid.Empty, result.Id);
-        Assert.NotEqual(gameId, result.Id); // Session ID should differ from Game ID
+        result.Id.Should().NotBe(Guid.Empty);
+        result.Id.Should().NotBe(gameId); // Session ID should differ from Game ID
     }
 
     // ===== VALIDATION TESTS =====
@@ -198,9 +200,9 @@ public class StartGameSessionCommandHandlerTests
             });
 
         // Act & Assert
-        await Assert.ThrowsAsync<Api.SharedKernel.Domain.Exceptions.ValidationException>(
-            () => _handler.Handle(command, TestContext.Current.CancellationToken)
-        );
+        var act = 
+            () => _handler.Handle(command, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<Api.SharedKernel.Domain.Exceptions.ValidationException>();
 
         _sessionRepositoryMock.Verify(r => r.AddAsync(It.IsAny<GameSession>(), It.IsAny<CancellationToken>()), Times.Never);
     }
@@ -221,9 +223,9 @@ public class StartGameSessionCommandHandlerTests
             players: new List<SessionPlayerRequest>());
 
         // Act & Assert
-        await Assert.ThrowsAsync<Api.SharedKernel.Domain.Exceptions.ValidationException>(
-            () => _handler.Handle(command, TestContext.Current.CancellationToken)
-        );
+        var act = 
+            () => _handler.Handle(command, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<Api.SharedKernel.Domain.Exceptions.ValidationException>();
 
         _sessionRepositoryMock.Verify(r => r.AddAsync(It.IsAny<GameSession>(), It.IsAny<CancellationToken>()), Times.Never);
     }
@@ -252,9 +254,9 @@ public class StartGameSessionCommandHandlerTests
             });
 
         // Act & Assert
-        await Assert.ThrowsAsync<Api.SharedKernel.Domain.Exceptions.ValidationException>(
-            () => _handler.Handle(command, TestContext.Current.CancellationToken)
-        );
+        var act = 
+            () => _handler.Handle(command, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<Api.SharedKernel.Domain.Exceptions.ValidationException>();
 
         _sessionRepositoryMock.Verify(r => r.AddAsync(It.IsAny<GameSession>(), It.IsAny<CancellationToken>()), Times.Never);
     }
@@ -309,10 +311,11 @@ public class StartGameSessionCommandHandlerTests
             });
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
-            () => _handler.Handle(command, TestContext.Current.CancellationToken));
+        var act = 
+            () => _handler.Handle(command, TestContext.Current.CancellationToken);
+        var exception = (await act.Should().ThrowAsync<InvalidOperationException>()).Which;
 
-        Assert.Contains($"Game with ID {gameId} not found", exception.Message, StringComparison.OrdinalIgnoreCase);
+        exception.Message.Should().ContainEquivalentOf($"Game with ID {gameId} not found");
 
         // Verify session was NOT created
         _sessionRepositoryMock.Verify(
@@ -343,9 +346,9 @@ public class StartGameSessionCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert - Order should be preserved from input
-        Assert.Equal("Third", result.Players[0].PlayerName);
-        Assert.Equal("First", result.Players[1].PlayerName);
-        Assert.Equal("Second", result.Players[2].PlayerName);
+        result.Players[0].PlayerName.Should().Be("Third");
+        result.Players[1].PlayerName.Should().Be("First");
+        result.Players[2].PlayerName.Should().Be("Second");
     }
     [Fact]
     public async Task Handle_WithCancellationToken_PassesToRepositories()
@@ -404,7 +407,7 @@ public class StartGameSessionCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert - Session should be InProgress after Start() is called
-        Assert.Equal("InProgress", result.Status);
+        result.Status.Should().Be("InProgress");
     }
 }
 

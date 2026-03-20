@@ -1,9 +1,11 @@
-using Api.BoundedContexts.WorkflowIntegration.Application.Handlers;
+using Api.BoundedContexts.WorkflowIntegration.Application.Commands;
+using Api.BoundedContexts.WorkflowIntegration.Application.Queries;
 using Api.BoundedContexts.WorkflowIntegration.Application.Queries;
 using Api.BoundedContexts.WorkflowIntegration.Domain.Entities;
 using Api.BoundedContexts.WorkflowIntegration.Domain.Repositories;
 using Api.BoundedContexts.WorkflowIntegration.Domain.ValueObjects;
 using Moq;
+using FluentAssertions;
 using Xunit;
 using Api.Tests.Constants;
 
@@ -49,11 +51,11 @@ public class GetActiveN8NConfigQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal("Production N8N", result.Name);
-        Assert.Equal("https://n8n.production.com", result.BaseUrl);
-        Assert.Equal("https://webhook.production.com", result.WebhookUrl);
-        Assert.True(result.IsActive);
+        result.Should().NotBeNull();
+        result.Name.Should().Be("Production N8N");
+        result.BaseUrl.Should().Be("https://n8n.production.com");
+        result.WebhookUrl.Should().Be("https://webhook.production.com");
+        result.IsActive.Should().BeTrue();
     }
 
     [Fact]
@@ -70,7 +72,7 @@ public class GetActiveN8NConfigQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.Null(result);
+        result.Should().BeNull();
         _mockRepository.Verify(
             r => r.GetActiveConfigurationAsync(It.IsAny<CancellationToken>()),
             Times.Once);
@@ -102,10 +104,10 @@ public class GetActiveN8NConfigQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.NotNull(result.LastTestedAt);
-        Assert.NotNull(result.LastTestResult);
-        Assert.Contains("successful", result.LastTestResult);
+        result.Should().NotBeNull();
+        result.LastTestedAt.Should().NotBeNull();
+        result.LastTestResult.Should().NotBeNull();
+        result.LastTestResult.Should().Contain("successful");
     }
 
     [Fact]
@@ -131,9 +133,9 @@ public class GetActiveN8NConfigQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Null(result.LastTestedAt);
-        Assert.Null(result.LastTestResult);
+        result.Should().NotBeNull();
+        result.LastTestedAt.Should().BeNull();
+        result.LastTestResult.Should().BeNull();
     }
 
     [Fact]
@@ -160,8 +162,8 @@ public class GetActiveN8NConfigQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Null(result.WebhookUrl);
+        result.Should().NotBeNull();
+        result.WebhookUrl.Should().BeNull();
     }
 
     [Fact]
@@ -208,9 +210,9 @@ public class GetActiveN8NConfigQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.NotNull(result.CreatedAt);
-        Assert.True(result.CreatedAt <= DateTime.UtcNow);
+        result.Should().NotBeNull();
+        result.CreatedAt.Should().NotBe(default);
+        (result.CreatedAt <= DateTime.UtcNow).Should().BeTrue();
     }
 }
 

@@ -1,5 +1,6 @@
 using Api.BoundedContexts.SystemConfiguration.Application.Commands;
-using Api.BoundedContexts.SystemConfiguration.Application.Handlers;
+using Api.BoundedContexts.SystemConfiguration.Application.Commands;
+using Api.BoundedContexts.SystemConfiguration.Application.Queries;
 using Api.BoundedContexts.SystemConfiguration.Domain.Repositories;
 using Api.Tests.Constants;
 using MediatR;
@@ -7,6 +8,7 @@ using Microsoft.Extensions.Logging;
 using Moq;
 using SystemConfig = Api.BoundedContexts.SystemConfiguration.Domain.Entities.SystemConfiguration;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.SystemConfiguration.Application.Handlers;
 
@@ -76,11 +78,11 @@ public class UpdatePdfLimitsCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal("free", result.Tier);
-        Assert.Equal(10, result.MaxPerDay);
-        Assert.Equal(50, result.MaxPerWeek);
-        Assert.Equal(3, result.MaxPerGame);
+        result.Should().NotBeNull();
+        result.Tier.Should().Be("free");
+        result.MaxPerDay.Should().Be(10);
+        result.MaxPerWeek.Should().Be(50);
+        result.MaxPerGame.Should().Be(3);
 
         // Verify CreateConfigurationCommand was sent 3 times
         _mockMediator.Verify(
@@ -139,9 +141,9 @@ public class UpdatePdfLimitsCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal("premium", result.Tier);
-        Assert.Equal(200, result.MaxPerDay);
+        result.Should().NotBeNull();
+        result.Tier.Should().Be("premium");
+        result.MaxPerDay.Should().Be(200);
 
         // Verify UpdateConfigValueCommand was sent 3 times
         _mockMediator.Verify(

@@ -1,10 +1,12 @@
-using Api.BoundedContexts.KnowledgeBase.Application.Handlers;
+using Api.BoundedContexts.KnowledgeBase.Application.Commands;
+using Api.BoundedContexts.KnowledgeBase.Application.Queries;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.Tests.Constants;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Handlers.ChatSession;
 
@@ -47,11 +49,11 @@ public class GetChatSessionQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal(sessionId, result.Id);
-        Assert.Equal(userId, result.UserId);
-        Assert.Equal(gameId, result.GameId);
-        Assert.Equal("Test Session", result.Title);
+        result.Should().NotBeNull();
+        result.Id.Should().Be(sessionId);
+        result.UserId.Should().Be(userId);
+        result.GameId.Should().Be(gameId);
+        result.Title.Should().Be("Test Session");
     }
 
     [Fact]
@@ -69,7 +71,7 @@ public class GetChatSessionQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.Null(result);
+        result.Should().BeNull();
     }
 
     [Fact]
@@ -91,13 +93,13 @@ public class GetChatSessionQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal(2, result.MessageCount);
-        Assert.Equal(2, result.Messages.Count);
-        Assert.Equal("Hello", result.Messages[0].Content);
-        Assert.Equal("user", result.Messages[0].Role);
-        Assert.Equal("Hi there!", result.Messages[1].Content);
-        Assert.Equal("assistant", result.Messages[1].Role);
+        result.Should().NotBeNull();
+        result.MessageCount.Should().Be(2);
+        result.Messages.Count.Should().Be(2);
+        result.Messages[0].Content.Should().Be("Hello");
+        result.Messages[0].Role.Should().Be("user");
+        result.Messages[1].Content.Should().Be("Hi there!");
+        result.Messages[1].Role.Should().Be("assistant");
     }
 
     [Fact]
@@ -156,43 +158,46 @@ public class GetChatSessionQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal(sessionId, result.Id);
-        Assert.Equal(userId, result.UserId);
-        Assert.Equal(gameId, result.GameId);
-        Assert.Equal(userLibraryEntryId, result.UserLibraryEntryId);
-        Assert.Equal(agentSessionId, result.AgentSessionId);
-        Assert.Equal("Full Session", result.Title);
-        Assert.Equal(agentConfigJson, result.AgentConfigJson);
-        Assert.True(result.IsArchived);
+        result.Should().NotBeNull();
+        result.Id.Should().Be(sessionId);
+        result.UserId.Should().Be(userId);
+        result.GameId.Should().Be(gameId);
+        result.UserLibraryEntryId.Should().Be(userLibraryEntryId);
+        result.AgentSessionId.Should().Be(agentSessionId);
+        result.Title.Should().Be("Full Session");
+        result.AgentConfigJson.Should().Be(agentConfigJson);
+        result.IsArchived.Should().BeTrue();
     }
 
     [Fact]
     public async Task Handle_WithNullQuery_ThrowsArgumentNullException()
     {
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentNullException>(() =>
-            _handler.Handle(null!, TestContext.Current.CancellationToken));
+        Func<Task> act = () =>
+            _handler.Handle(null!, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<ArgumentNullException>();
     }
 
     [Fact]
     public void Constructor_WithNullRepository_ThrowsArgumentNullException()
     {
         // Act & Assert
-        Assert.Throws<ArgumentNullException>(() =>
+        Action act = () =>
             new GetChatSessionQueryHandler(
                 null!,
-                _mockLogger.Object));
+                _mockLogger.Object);
+        act.Should().Throw<ArgumentNullException>();
     }
 
     [Fact]
     public void Constructor_WithNullLogger_ThrowsArgumentNullException()
     {
         // Act & Assert
-        Assert.Throws<ArgumentNullException>(() =>
+        Action act = () =>
             new GetChatSessionQueryHandler(
                 _mockRepository.Object,
-                null!));
+                null!);
+        act.Should().Throw<ArgumentNullException>();
     }
 
     private static Api.BoundedContexts.KnowledgeBase.Domain.Entities.ChatSession CreateTestSession(

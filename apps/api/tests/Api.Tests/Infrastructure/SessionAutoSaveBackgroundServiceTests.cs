@@ -11,6 +11,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.Infrastructure;
 
@@ -152,10 +153,10 @@ public sealed class SessionAutoSaveBackgroundServiceTests : IDisposable
             r => r.AddAsync(It.IsAny<PauseSnapshot>(), It.IsAny<CancellationToken>()),
             Times.Once);
 
-        Assert.NotNull(capturedSnapshot);
-        Assert.True(capturedSnapshot!.IsAutoSave);
-        Assert.Equal(session.Id, capturedSnapshot.LiveGameSessionId);
-        Assert.Equal(SessionAutoSaveBackgroundService.SystemUserId, capturedSnapshot.SavedByUserId);
+        capturedSnapshot.Should().NotBeNull();
+        capturedSnapshot!.IsAutoSave.Should().BeTrue();
+        capturedSnapshot.LiveGameSessionId.Should().Be(session.Id);
+        capturedSnapshot.SavedByUserId.Should().Be(SessionAutoSaveBackgroundService.SystemUserId);
     }
 
     // ── Multiple active sessions ───────────────────────────────────────────────
@@ -210,7 +211,7 @@ public sealed class SessionAutoSaveBackgroundServiceTests : IDisposable
         await InvokeAutoSaveAsync();
 
         // Assert — both sessions were attempted; good one succeeded
-        Assert.Equal(2, callCount);
+        callCount.Should().Be(2);
     }
 
     // ── SystemUserId is not Guid.Empty ─────────────────────────────────────────
@@ -218,6 +219,6 @@ public sealed class SessionAutoSaveBackgroundServiceTests : IDisposable
     [Fact]
     public void SystemUserId_IsNotEmpty()
     {
-        Assert.NotEqual(Guid.Empty, SessionAutoSaveBackgroundService.SystemUserId);
+        SessionAutoSaveBackgroundService.SystemUserId.Should().NotBe(Guid.Empty);
     }
 }

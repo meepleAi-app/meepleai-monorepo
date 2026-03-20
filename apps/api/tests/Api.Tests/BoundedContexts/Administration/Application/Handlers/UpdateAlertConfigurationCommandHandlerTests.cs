@@ -246,7 +246,7 @@ public class UpdateAlertConfigurationCommandHandlerTests
         // Act & Assert
         var act = () =>
             new UpdateAlertConfigurationCommandHandler(null!, _mockLogger.Object);
-act.Should().Throw<ArgumentNullException>();
+        act.Should().Throw<ArgumentNullException>();
     }
 
     [Fact]
@@ -255,6 +255,6 @@ act.Should().Throw<ArgumentNullException>();
         // Act & Assert
         var act = () =>
             new UpdateAlertConfigurationCommandHandler(_mockRepository.Object, null!);
-act.Should().Throw<ArgumentNullException>();
+        act.Should().Throw<ArgumentNullException>();
     }
 }

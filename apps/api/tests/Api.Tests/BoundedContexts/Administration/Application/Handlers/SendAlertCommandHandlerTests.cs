@@ -272,7 +272,7 @@ public class SendAlertCommandHandlerTests
         // Act & Assert
         var act = () =>
             new SendAlertCommandHandler(null!);
-act.Should().Throw<ArgumentNullException>();
+        act.Should().Throw<ArgumentNullException>();
     }
 
     [Theory]

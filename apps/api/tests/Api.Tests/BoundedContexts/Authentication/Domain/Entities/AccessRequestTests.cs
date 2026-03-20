@@ -75,7 +75,7 @@ public class AccessRequestTests
         request.Approve(Guid.NewGuid());
 
         var act = () => request.Approve(Guid.NewGuid());
-act.Should().Throw<InvalidOperationException>();
+        act.Should().Throw<InvalidOperationException>();
     }
 
     [Fact]
@@ -85,7 +85,7 @@ act.Should().Throw<InvalidOperationException>();
         request.Reject(Guid.NewGuid());
 
         var act = () => request.Approve(Guid.NewGuid());
-act.Should().Throw<InvalidOperationException>();
+        act.Should().Throw<InvalidOperationException>();
     }
 
     [Fact]
@@ -95,7 +95,7 @@ act.Should().Throw<InvalidOperationException>();
         request.Reject(Guid.NewGuid());
 
         var act = () => request.Reject(Guid.NewGuid());
-act.Should().Throw<InvalidOperationException>();
+        act.Should().Throw<InvalidOperationException>();
     }
 
     [Fact]
@@ -105,7 +105,7 @@ act.Should().Throw<InvalidOperationException>();
         request.Approve(Guid.NewGuid());
 
         var act = () => request.Reject(Guid.NewGuid());
-act.Should().Throw<InvalidOperationException>();
+        act.Should().Throw<InvalidOperationException>();
     }
 
     [Fact]
@@ -157,6 +157,6 @@ act.Should().Throw<InvalidOperationException>();
         var longReason = new string('a', 501);
 
         var act = () => request.Reject(Guid.NewGuid(), longReason);
-act.Should().Throw<ArgumentException>();
+        act.Should().Throw<ArgumentException>();
     }
 }

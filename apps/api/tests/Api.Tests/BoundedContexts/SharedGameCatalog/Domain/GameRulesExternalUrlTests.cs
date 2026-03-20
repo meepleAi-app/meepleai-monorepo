@@ -23,28 +23,28 @@ public class GameRulesExternalUrlTests
     public void CreateFromUrl_WithEmptyUrl_ShouldThrow()
     {
         var act = () => GameRules.CreateFromUrl("");
-act.Should().Throw<ArgumentException>();
+        act.Should().Throw<ArgumentException>();
     }
 
     [Fact]
     public void CreateFromUrl_WithWhitespaceUrl_ShouldThrow()
     {
         var act = () => GameRules.CreateFromUrl("   ");
-act.Should().Throw<ArgumentException>();
+        act.Should().Throw<ArgumentException>();
     }
 
     [Fact]
     public void CreateFromUrl_WithHttpUrl_ShouldThrow()
     {
         var act = () => GameRules.CreateFromUrl("http://insecure.com/rules.pdf");
-act.Should().Throw<ArgumentException>();
+        act.Should().Throw<ArgumentException>();
     }
 
     [Fact]
     public void CreateFromUrl_WithInvalidUrl_ShouldThrow()
     {
         var act = () => GameRules.CreateFromUrl("not-a-url");
-act.Should().Throw<ArgumentException>();
+        act.Should().Throw<ArgumentException>();
     }
 
     [Fact]
@@ -71,7 +71,7 @@ act.Should().Throw<ArgumentException>();
     public void Create_WithInvalidExternalUrl_ShouldThrow()
     {
         var act = () => GameRules.Create("content", "en", "http://insecure.com");
-act.Should().Throw<ArgumentException>();
+        act.Should().Throw<ArgumentException>();
     }
 
     [Fact]

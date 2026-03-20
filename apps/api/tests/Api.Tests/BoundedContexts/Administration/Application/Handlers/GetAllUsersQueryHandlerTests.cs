@@ -47,7 +47,7 @@ public class GetAllUsersQueryHandlerTests
         // Act & Assert
         var act = () =>
             new GetAllUsersQueryHandler(null!);
-act.Should().Throw<ArgumentNullException>();
+        act.Should().Throw<ArgumentNullException>();
     }
     [Fact]
     public void Query_WithDefaultPagination_ConstructsCorrectly()

@@ -221,7 +221,7 @@ public class OAuthAccountEntityTests
                 "user123",
                 "access_token"
             );
-act.Should().Throw<ValidationException>();
+        act.Should().Throw<ValidationException>();
     }
     [Fact]
     public async Task UpdateTokens_WithValidTokens_UpdatesSuccessfully()
@@ -301,7 +301,7 @@ act.Should().Throw<ValidationException>();
         // Act & Assert
         var act = () =>
             account.UpdateTokens(null!);
-act.Should().Throw<ValidationException>();
+        act.Should().Throw<ValidationException>();
     }
 
     [Fact]

@@ -151,7 +151,7 @@ public class OpenStructuredDisputeCommandHandlerTests
             "Some claim");
 
         // Act & Assert
-        var act = 
+        var act =
             () => _openHandler.Handle(command, CancellationToken.None);
         var ex = (await act.Should().ThrowAsync<InvalidOperationException>()).Which;
 
@@ -171,7 +171,7 @@ public class OpenStructuredDisputeCommandHandlerTests
             "Some claim");
 
         // Act & Assert
-        var act = 
+        var act =
             () => _openHandler.Handle(command, CancellationToken.None);
         await act.Should().ThrowAsync<NotFoundException>();
     }
@@ -190,7 +190,7 @@ public class OpenStructuredDisputeCommandHandlerTests
             "Some claim");
 
         // Act & Assert
-        var act = 
+        var act =
             () => _openHandler.Handle(command, CancellationToken.None);
         var ex = (await act.Should().ThrowAsync<InvalidOperationException>()).Which;
 
@@ -278,7 +278,7 @@ public class OpenStructuredDisputeCommandHandlerTests
             "Some response");
 
         // Act & Assert
-        var act = 
+        var act =
             () => _respondHandler.Handle(command, CancellationToken.None);
         await act.Should().ThrowAsync<NotFoundException>();
     }
@@ -317,7 +317,7 @@ public class OpenStructuredDisputeCommandHandlerTests
         var command = new RespondentTimeoutCommand(disputeId);
 
         // Act & Assert
-        var act = 
+        var act =
             () => _timeoutHandler.Handle(command, CancellationToken.None);
         await act.Should().ThrowAsync<NotFoundException>();
     }

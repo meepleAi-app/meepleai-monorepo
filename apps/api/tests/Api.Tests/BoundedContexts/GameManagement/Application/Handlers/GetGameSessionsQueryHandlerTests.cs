@@ -117,7 +117,7 @@ public class GetGameSessionsQueryHandlerTests
         var query = new GetGameSessionsQuery(gameId, PageSize: 0);
 
         // Act & Assert
-        var act = 
+        var act =
             () => _handler.Handle(query, TestContext.Current.CancellationToken);
         var exception = (await act.Should().ThrowAsync<ArgumentException>()).Which;
 
@@ -132,7 +132,7 @@ public class GetGameSessionsQueryHandlerTests
         var query = new GetGameSessionsQuery(gameId, PageSize: 1001);
 
         // Act & Assert
-        var act = 
+        var act =
             () => _handler.Handle(query, TestContext.Current.CancellationToken);
         var exception = (await act.Should().ThrowAsync<ArgumentException>()).Which;
 
@@ -147,7 +147,7 @@ public class GetGameSessionsQueryHandlerTests
         var query = new GetGameSessionsQuery(gameId, PageNumber: 0);
 
         // Act & Assert
-        var act = 
+        var act =
             () => _handler.Handle(query, TestContext.Current.CancellationToken);
         var exception = (await act.Should().ThrowAsync<ArgumentException>()).Which;
 

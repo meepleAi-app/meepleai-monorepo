@@ -248,7 +248,7 @@ public sealed class AdminReportEmailRecipientsTests
                     scheduleExpression: "0 0 * * *",
                     createdBy: "admin@test.com",
                     emailRecipients: recipients);
-act.Should().Throw<ArgumentException>();
+            act.Should().Throw<ArgumentException>();
         }
     }
 }

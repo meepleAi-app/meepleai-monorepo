@@ -179,7 +179,7 @@ public class TallyDisputeVotesCommandHandlerTests
         var command = new TallyDisputeVotesCommand(disputeId);
 
         // Act & Assert
-        var act = 
+        var act =
             () => _handler.Handle(command, CancellationToken.None);
         await act.Should().ThrowAsync<NotFoundException>();
     }

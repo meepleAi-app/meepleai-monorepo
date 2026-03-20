@@ -117,7 +117,7 @@ public class CastVoteOnDisputeCommandHandlerTests
             AcceptsVerdict: true);
 
         // Act & Assert
-        var act = 
+        var act =
             () => _handler.Handle(command, CancellationToken.None);
         var ex = (await act.Should().ThrowAsync<InvalidOperationException>()).Which;
 
@@ -138,7 +138,7 @@ public class CastVoteOnDisputeCommandHandlerTests
             AcceptsVerdict: true);
 
         // Act & Assert
-        var act = 
+        var act =
             () => _handler.Handle(command, CancellationToken.None);
         await act.Should().ThrowAsync<NotFoundException>();
     }
@@ -162,7 +162,7 @@ public class CastVoteOnDisputeCommandHandlerTests
             AcceptsVerdict: false);
 
         // Act & Assert
-        var act = 
+        var act =
             () => _handler.Handle(command, CancellationToken.None);
         var ex = (await act.Should().ThrowAsync<InvalidOperationException>()).Which;
 

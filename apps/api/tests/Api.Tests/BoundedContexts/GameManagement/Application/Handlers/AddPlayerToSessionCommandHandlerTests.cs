@@ -238,7 +238,7 @@ public class AddPlayerToSessionCommandHandlerTests
             PlayerOrder: 1);
 
         // Act & Assert
-        var act = 
+        var act =
             () => _handler.Handle(command, TestContext.Current.CancellationToken);
         var exception = (await act.Should().ThrowAsync<InvalidOperationException>()).Which;
 
@@ -270,7 +270,7 @@ public class AddPlayerToSessionCommandHandlerTests
             PlayerOrder: 5);
 
         // Act & Assert
-        var act = 
+        var act =
             () => _handler.Handle(command, TestContext.Current.CancellationToken);
         var exception = (await act.Should().ThrowAsync<InvalidOperationException>()).Which;
 
@@ -299,7 +299,7 @@ public class AddPlayerToSessionCommandHandlerTests
             PlayerOrder: 5);
 
         // Act & Assert
-        var act = 
+        var act =
             () => _handler.Handle(command, TestContext.Current.CancellationToken);
         var exception = (await act.Should().ThrowAsync<InvalidOperationException>()).Which;
 
@@ -326,7 +326,7 @@ public class AddPlayerToSessionCommandHandlerTests
             PlayerOrder: 3);
 
         // Act & Assert
-        var act = 
+        var act =
             () => _handler.Handle(command, TestContext.Current.CancellationToken);
         var exception = (await act.Should().ThrowAsync<InvalidOperationException>()).Which;
 
@@ -353,7 +353,7 @@ public class AddPlayerToSessionCommandHandlerTests
             PlayerOrder: 3);
 
         // Act & Assert
-        var act = 
+        var act =
             () => _handler.Handle(command, TestContext.Current.CancellationToken);
         var exception = (await act.Should().ThrowAsync<InvalidOperationException>()).Which;
 
@@ -413,7 +413,7 @@ public class AddPlayerToSessionCommandHandlerTests
             PlayerOrder: 101);
 
         // Act & Assert - Domain validation throws ValidationException for player order > 100
-        var act = 
+        var act =
             () => _handler.Handle(command, TestContext.Current.CancellationToken);
         var exception = (await act.Should().ThrowAsync<Api.SharedKernel.Domain.Exceptions.ValidationException>()).Which;
 

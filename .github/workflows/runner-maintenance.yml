@@ -16,22 +16,6 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  notify-start:
-    uses: ./.github/workflows/notify-slack.yml
-    with:
-      event: started
-      workflow_name: "Self-Hosted Runner Maintenance"
-      environment: infra
-      branch: ${{ github.head_ref || github.ref_name }}
-      actor: ${{ github.actor }}
-      commit_sha: ${{ github.sha }}
-      commit_message: ${{ github.event.head_commit.message || 'Scheduled maintenance' }}
-      run_url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-      job_list: '["cleanup"]'
-      caller_workflow_id: ${{ github.workflow_id }}
-    secrets:
-      SLACK_GITNOTIFY_WEBHOOK_URL: ${{ secrets.SLACK_GITNOTIFY_WEBHOOK_URL }}
-
   cleanup:
     name: Runner Disk Cleanup
     # Only run on self-hosted runner (skip if using GitHub-hosted)
@@ -104,19 +88,3 @@ jobs:
           else
             echo "Disk usage is healthy at ${USAGE}%"
           fi
-
-  notify-end:
-    if: always()
-    needs: [cleanup]
-    uses: ./.github/workflows/notify-slack.yml
-    with:
-      event: ${{ contains(toJSON(needs), '"result":"failure"') && 'failed' || contains(toJSON(needs), '"result":"cancelled"') && 'cancelled' || 'completed' }}
-      workflow_name: "Self-Hosted Runner Maintenance"
-      environment: infra
-      branch: ${{ github.head_ref || github.ref_name }}
-      actor: ${{ github.actor }}
-      commit_sha: ${{ github.sha }}
-      commit_message: ${{ github.event.head_commit.message || 'Scheduled maintenance' }}
-      run_url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-    secrets:
-      SLACK_GITNOTIFY_WEBHOOK_URL: ${{ secrets.SLACK_GITNOTIFY_WEBHOOK_URL }}

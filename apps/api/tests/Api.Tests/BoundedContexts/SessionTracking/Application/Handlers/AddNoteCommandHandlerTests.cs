@@ -6,6 +6,8 @@ using Api.Infrastructure;
 using Api.Middleware.Exceptions;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Api.Tests.Constants;
+using MediatR;
+using Microsoft.EntityFrameworkCore;
 using Moq;
 using Xunit;
 
@@ -22,7 +24,13 @@ public class AddNoteCommandHandlerTests
 
     public AddNoteCommandHandlerTests()
     {
-        _contextMock = new Mock<MeepleAiDbContext>(MockBehavior.Loose);
+        var options = new DbContextOptionsBuilder<MeepleAiDbContext>()
+            .UseInMemoryDatabase(databaseName: $"AddNoteTest_{Guid.NewGuid()}")
+            .Options;
+        var mediatorMock = new Mock<IMediator>();
+        var eventCollectorMock = new Mock<Api.SharedKernel.Application.Services.IDomainEventCollector>();
+        _contextMock = new Mock<MeepleAiDbContext>(
+            MockBehavior.Loose, options, mediatorMock.Object, eventCollectorMock.Object, null);
     }
 
     [Fact]

@@ -26,6 +26,7 @@ public class GetGroupMemoryQueryHandlerTests
         var groupId = Guid.NewGuid();
         var creatorId = Guid.NewGuid();
         var group = GroupMemory.Create(creatorId, "Weekend Warriors");
+        group.AddMember(creatorId);
 
         _groupRepoMock
             .Setup(r => r.GetByIdAsync(groupId, It.IsAny<CancellationToken>()))

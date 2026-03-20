@@ -7,7 +7,7 @@
 
 import { z } from 'zod';
 
-import { type HttpClient } from '../core/httpClient';
+import { type HttpClient, downloadFile, getApiBase } from '../core/httpClient';
 import {
   agentDefinitionDtoSchema,
   kbCardDtoSchema,
@@ -15,6 +15,7 @@ import {
   type KbCardDto,
 } from '../schemas/agent-definitions.schemas';
 import { GameRagReadinessSchema, type GameRagReadiness } from '../schemas/rag-setup.schemas';
+import { SeedingGameListSchema, type SeedingGameList } from '../schemas/seeding.schemas';
 import {
   SharedGameDetailSchema,
   PagedSharedGamesSchema,
@@ -924,6 +925,65 @@ export function createSharedGamesClient({ httpClient }: CreateSharedGamesClientP
         z.array(RecentlyProcessedDocumentSchema)
       );
       return result ?? [];
+    },
+
+    // ========== Seeding & Enrichment (BGG queue) ==========
+
+    /**
+     * Get seeding status for all shared games (ADMIN ONLY)
+     * GET /api/v1/shared-game-catalog/admin/shared-games/seeding-status
+     *
+     * Returns all games with their GameDataStatus for seeding progress tracking.
+     *
+     * @returns List of games with seeding status
+     */
+    async getSeedingStatus(): Promise<SeedingGameList> {
+      const result = await httpClient.get(
+        '/api/v1/shared-game-catalog/admin/shared-games/seeding-status',
+        SeedingGameListSchema
+      );
+      return result ?? [];
+    },
+
+    /**
+     * Enqueue a batch of BGG IDs for enrichment (ADMIN ONLY)
+     * POST /api/v1/admin/bgg-queue/batch
+     *
+     * @param bggIds - Array of BoardGameGeek IDs to enqueue
+     */
+    async enqueueBggEnrichment(bggIds: number[]): Promise<void> {
+      await httpClient.post('/api/v1/admin/bgg-queue/batch', { bggIds });
+    },
+
+    /**
+     * Download the seeding tracking export as an Excel file (ADMIN ONLY)
+     * GET /api/v1/shared-game-catalog/admin/shared-games/seeding-status/export
+     *
+     * Uses raw fetch because httpClient.get() parses JSON; blob download requires
+     * the raw response body.
+     */
+    async downloadTrackingExport(): Promise<void> {
+      const path = '/api/v1/shared-game-catalog/admin/shared-games/seeding-status/export';
+      const response = await fetch(`${getApiBase()}${path}`, {
+        method: 'GET',
+        credentials: 'include',
+      });
+      if (!response.ok) {
+        throw new Error(`Export failed: ${response.status} ${response.statusText}`);
+      }
+
+      // Extract filename from Content-Disposition header
+      const contentDisposition = response.headers.get('Content-Disposition');
+      let filename = `seeding-tracking-${Date.now()}.xlsx`;
+      if (contentDisposition) {
+        const match = contentDisposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
+        if (match?.[1]) {
+          filename = match[1].replace(/['"]/g, '');
+        }
+      }
+
+      const blob = await response.blob();
+      downloadFile(blob, filename);
     },
   };
 }

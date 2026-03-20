@@ -9,13 +9,21 @@ internal sealed class GetSeedingStatusQueryHandler
 {
     private static readonly Dictionary<int, string> DataStatusNames = new()
     {
-        [0] = "Skeleton", [1] = "EnrichmentQueued", [2] = "Enriching",
-        [3] = "Enriched", [4] = "PdfDownloading", [5] = "Complete", [6] = "Failed"
+        [0] = "Skeleton",
+        [1] = "EnrichmentQueued",
+        [2] = "Enriching",
+        [3] = "Enriched",
+        [4] = "PdfDownloading",
+        [5] = "Complete",
+        [6] = "Failed"
     };
 
     private static readonly Dictionary<int, string> GameStatusNames = new()
     {
-        [0] = "Draft", [1] = "PendingApproval", [2] = "Published", [3] = "Archived"
+        [0] = "Draft",
+        [1] = "PendingApproval",
+        [2] = "Published",
+        [3] = "Archived"
     };
 
     private readonly MeepleAiDbContext _context;
@@ -34,8 +42,13 @@ internal sealed class GetSeedingStatusQueryHandler
             .OrderBy(g => g.Title)
             .Select(g => new
             {
-                g.Id, g.BggId, g.Title, g.GameDataStatus,
-                g.Status, g.HasUploadedPdf, g.CreatedAt
+                g.Id,
+                g.BggId,
+                g.Title,
+                g.GameDataStatus,
+                g.Status,
+                g.HasUploadedPdf,
+                g.CreatedAt
             })
             .ToListAsync(cancellationToken)
             .ConfigureAwait(false);

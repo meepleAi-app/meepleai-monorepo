@@ -428,7 +428,7 @@ export default function BoardGameAI() {
               >
                 GitHub
               </a>
-              <Link href="/docs" className="text-slate-300 hover:text-white transition-colors">
+              <Link href="/rag" className="text-slate-300 hover:text-white transition-colors">
                 Documentation
               </Link>
               <Link

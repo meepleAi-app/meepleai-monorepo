@@ -13,7 +13,9 @@ internal class UserPreferencesConfiguration : IEntityTypeConfiguration<UserPrefe
 {
     public void Configure(EntityTypeBuilder<UserPreferences> builder)
     {
-        builder.ToTable("users", t => t.ExcludeFromMigrations());
+        // Each read-only projection needs its own unique view name.
+        // The view "vw_user_preferences" is created at startup via EnsureUserProjectionViews.
+        builder.ToView("vw_user_preferences");
         builder.HasKey(u => u.Id);
 
         builder.Property(u => u.Language).HasMaxLength(10);

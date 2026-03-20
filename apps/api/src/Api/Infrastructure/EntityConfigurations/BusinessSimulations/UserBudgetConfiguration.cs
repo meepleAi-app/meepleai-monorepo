@@ -13,11 +13,10 @@ internal class UserBudgetConfiguration : IEntityTypeConfiguration<UserBudget>
 {
     public void Configure(EntityTypeBuilder<UserBudget> builder)
     {
-        // ToTable with ExcludeFromMigrations instead of ToView to avoid
-        // EF Core conflict when multiple entities map to the same view.
-        // All three projections (UserProfile, UserBudget, UserPreferences)
-        // share the "users" table with the same PK (Id).
-        builder.ToTable("users", t => t.ExcludeFromMigrations());
+        // Each read-only projection needs its own unique view name to avoid
+        // EF Core conflicts when multiple entities map to the same underlying data.
+        // The view "vw_user_budgets" is created at startup via EnsureUserProjectionViews.
+        builder.ToView("vw_user_budgets");
         builder.HasKey(u => u.Id);
 
         builder.Property(u => u.Tier);

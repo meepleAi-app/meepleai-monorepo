@@ -2,6 +2,8 @@ using Api.BoundedContexts.KnowledgeBase.Domain.Enums;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities.KnowledgeBase;
+using Api.SharedKernel.Application.Services;
+using Api.SharedKernel.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
@@ -11,16 +13,16 @@ namespace Api.BoundedContexts.KnowledgeBase.Infrastructure.Persistence;
 /// Repository for strategy-to-model mapping records.
 /// Issue #3435: Part of tier-strategy-model architecture.
 /// </summary>
-internal sealed class StrategyModelMappingRepository : IStrategyModelMappingRepository
+internal sealed class StrategyModelMappingRepository : RepositoryBase, IStrategyModelMappingRepository
 {
-    private readonly MeepleAiDbContext _dbContext;
     private readonly ILogger<StrategyModelMappingRepository> _logger;
 
     public StrategyModelMappingRepository(
         MeepleAiDbContext dbContext,
+        IDomainEventCollector eventCollector,
         ILogger<StrategyModelMappingRepository> logger)
+        : base(dbContext, eventCollector)
     {
-        _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -31,7 +33,7 @@ internal sealed class StrategyModelMappingRepository : IStrategyModelMappingRepo
     {
         var strategyName = strategy.GetDisplayName();
 
-        var entity = await _dbContext.Set<StrategyModelMappingEntity>()
+        var entity = await DbContext.Set<StrategyModelMappingEntity>()
             .AsNoTracking()
             .FirstOrDefaultAsync(
                 e => e.Strategy == strategyName,
@@ -64,7 +66,7 @@ internal sealed class StrategyModelMappingRepository : IStrategyModelMappingRepo
     public async Task<IReadOnlyList<StrategyModelMappingEntry>> GetAllAsync(
         CancellationToken cancellationToken = default)
     {
-        var entries = await _dbContext.Set<StrategyModelMappingEntity>()
+        var entries = await DbContext.Set<StrategyModelMappingEntity>()
             .AsNoTracking()
             .Select(e => new StrategyModelMappingEntry(
                 e.Strategy,
@@ -87,7 +89,7 @@ internal sealed class StrategyModelMappingRepository : IStrategyModelMappingRepo
     {
         var strategyName = strategy.GetDisplayName();
 
-        var exists = await _dbContext.Set<StrategyModelMappingEntity>()
+        var exists = await DbContext.Set<StrategyModelMappingEntity>()
             .AsNoTracking()
             .AnyAsync(e => e.Strategy == strategyName, cancellationToken)
             .ConfigureAwait(false);

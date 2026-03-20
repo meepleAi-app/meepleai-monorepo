@@ -1,6 +1,7 @@
 using Api.BoundedContexts.Administration.Domain.Entities;
 using Api.BoundedContexts.Administration.Domain.Enums;
 using Xunit;
+using Api.Tests.Constants;
 using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.Administration.Domain.Entities;
@@ -8,6 +9,8 @@ namespace Api.Tests.BoundedContexts.Administration.Domain.Entities;
 /// <summary>
 /// Unit tests for BatchJob aggregate (Issue #3693 - Task 4)
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
+[Trait("BoundedContext", "Administration")]
 public sealed class BatchJobTests
 {
     [Fact]

@@ -108,7 +108,7 @@ public class GetAllConfigsQueryHandlerTests
         // Assert
         result.Should().NotBeNull();
         result.Total.Should().Be(2);
-        Assert.All(result.Items, item => item.Category.Should().Be("Database"));
+        result.Items.Should().AllSatisfy(item => item.Category.Should().Be("Database"));
         _mockConfigRepository.Verify(
             r => r.GetByCategoryAsync("Database", It.IsAny<CancellationToken>()),
             Times.Once);
@@ -223,7 +223,7 @@ public class GetAllConfigsQueryHandlerTests
         // Assert
         result.Should().NotBeNull();
         result.Items.Count.Should().Be(2);
-        Assert.All(result.Items, item => item.Category.Should().Be("Cache"));
+        result.Items.Should().AllSatisfy(item => item.Category.Should().Be("Cache"));
     }
 
     [Fact]

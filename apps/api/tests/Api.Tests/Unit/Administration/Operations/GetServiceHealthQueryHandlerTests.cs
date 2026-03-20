@@ -46,7 +46,7 @@ public sealed class GetServiceHealthQueryHandlerTests
         // Assert
         result.OverallStatus.Should().Be("Healthy");
         result.Services.Count.Should().Be(3);
-        Assert.All(result.Services, s => s.Status.Should().Be("Healthy"));
+        result.Services.Should().AllSatisfy(s => s.Status.Should().Be("Healthy"));
     }
 
     [Fact]

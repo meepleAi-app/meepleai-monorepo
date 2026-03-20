@@ -100,7 +100,7 @@ public class RaptorIndexerTests
         level2.Should().ContainSingle();
 
         // Each level-1 summary covers 5 source chunks
-        Assert.All(level1, s => s.SourceChunkCount.Should().Be(5));
+        level1.Should().AllSatisfy(s => s.SourceChunkCount.Should().Be(5));
 
         // Level-2 summary covers 3 level-1 summaries
         level2[0].SourceChunkCount.Should().Be(3);
@@ -164,7 +164,7 @@ public class RaptorIndexerTests
 
         result.Levels.Should().Be(1);
         result.TotalNodes.Should().Be(3); // 3 clusters at level 1
-        Assert.All(result.Summaries, s => s.TreeLevel.Should().Be(1));
+        result.Summaries.Should().AllSatisfy(s => s.TreeLevel.Should().Be(1));
     }
 
     [Fact]

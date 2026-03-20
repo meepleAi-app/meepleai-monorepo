@@ -60,7 +60,7 @@ public class GetEvaluationResultsQueryHandlerTests
 
         // Assert
         result.Should().NotBeNull();
-        Assert.All(result, r => r.DatasetName.Should().BeEquivalentTo("test-dataset"));
+        result.Should().AllSatisfy(r => r.DatasetName.Should().BeEquivalentTo("test-dataset"));
     }
 
     [Fact]
@@ -79,6 +79,6 @@ public class GetEvaluationResultsQueryHandlerTests
 
         // Assert
         result.Should().NotBeNull();
-        Assert.All(result, r => r.Configuration.Should().BeEquivalentTo("baseline"));
+        result.Should().AllSatisfy(r => r.Configuration.Should().BeEquivalentTo("baseline"));
     }
 }

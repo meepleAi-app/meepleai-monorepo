@@ -314,7 +314,7 @@ public class SmolDoclingIntegrationTests : IAsyncLifetime
         var results = await Task.WhenAll(tasks);
 
         // Assert - All requests should succeed
-        Assert.All(results, result =>
+        results.Should().AllSatisfy(result =>
         {
             (result.Success).Should().BeTrue($"Concurrent request failed: {result.ErrorMessage}");
             (result.PageCount > 0).Should().BeTrue("Should extract pages");

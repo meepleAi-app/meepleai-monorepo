@@ -1,5 +1,6 @@
 using Api.BoundedContexts.Administration.Domain.ValueObjects;
 using Xunit;
+using Api.Tests.Constants;
 using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.Administration.Domain.ValueObjects;
@@ -8,6 +9,8 @@ namespace Api.Tests.BoundedContexts.Administration.Domain.ValueObjects;
 /// Unit tests for TierLimits value object (Issue #3692)
 /// Extended with credit-based budget tracking tests
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
+[Trait("BoundedContext", "Administration")]
 public sealed class TierLimitsTests
 {
     [Fact]

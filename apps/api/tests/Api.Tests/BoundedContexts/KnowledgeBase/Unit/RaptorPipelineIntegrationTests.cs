@@ -105,7 +105,7 @@ public class RaptorPipelineIntegrationTests : IDisposable
         // Verify summaries were saved
         var savedSummaries = await _db.RaptorSummaries.ToListAsync();
         savedSummaries.Count.Should().Be(2);
-        Assert.All(savedSummaries, s =>
+        savedSummaries.Should().AllSatisfy(s =>
         {
             s.PdfDocumentId.Should().Be(_pdfDocumentId);
             s.GameId.Should().Be(_gameId);

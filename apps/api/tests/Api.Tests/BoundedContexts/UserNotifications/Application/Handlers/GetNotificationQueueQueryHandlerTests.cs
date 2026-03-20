@@ -80,7 +80,7 @@ public class GetNotificationQueueQueryHandlerTests : IDisposable
 
         // Assert
         result.Items.Count.Should().Be(2);
-        Assert.All(result.Items, item => item.ChannelType.Should().Be("slack_user"));
+        result.Items.Should().AllSatisfy(item => item.ChannelType.Should().Be("slack_user"));
     }
 
     [Fact]
@@ -96,7 +96,7 @@ public class GetNotificationQueueQueryHandlerTests : IDisposable
 
         // Assert
         result.Items.Count.Should().Be(2);
-        Assert.All(result.Items, item => item.Status.Should().Be("sent"));
+        result.Items.Should().AllSatisfy(item => item.Status.Should().Be("sent"));
     }
 
     [Fact]

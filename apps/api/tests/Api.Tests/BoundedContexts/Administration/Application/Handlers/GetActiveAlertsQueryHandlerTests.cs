@@ -67,7 +67,7 @@ public class GetActiveAlertsQueryHandlerTests
         // Assert
         result.Should().NotBeNull();
         result.Count.Should().Be(2);
-        Assert.All(result, alert => alert.IsActive.Should().BeTrue());
+        result.Should().AllSatisfy(alert => alert.IsActive.Should().BeTrue());
         _mockAlertingService.Verify(
             s => s.GetActiveAlertsAsync(It.IsAny<CancellationToken>()),
             Times.Once);

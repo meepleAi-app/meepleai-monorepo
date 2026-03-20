@@ -174,7 +174,7 @@ public class MoveValidationDomainServiceTests
         // Assert
         (result.IsValid).Should().BeTrue();
         result.ApplicableRules.Count.Should().Be(2); // Should find rules about dice
-        Assert.All(result.ApplicableRules, rule =>
+        result.ApplicableRules.Should().AllSatisfy(rule =>
             rule.text.ToLowerInvariant().Should().Contain("dice"));
 
 

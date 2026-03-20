@@ -138,7 +138,7 @@ public class EvaluationDatasetTests
 
         // Assert
         easySamples.Count.Should().Be(2);
-        Assert.All(easySamples, s => s.Difficulty.Should().Be("easy"));
+        easySamples.Should().AllSatisfy(s => s.Difficulty.Should().Be("easy"));
     }
 
     [Fact]
@@ -170,7 +170,7 @@ public class EvaluationDatasetTests
 
         // Assert
         setupSamples.Count.Should().Be(2);
-        Assert.All(setupSamples, s => s.Category.Should().Be("setup"));
+        setupSamples.Should().AllSatisfy(s => s.Category.Should().Be("setup"));
     }
 
     [Fact]
@@ -187,7 +187,7 @@ public class EvaluationDatasetTests
 
         // Assert
         azulSamples.Count.Should().Be(2);
-        Assert.All(azulSamples, s => s.GameId.Should().Be("azul"));
+        azulSamples.Should().AllSatisfy(s => s.GameId.Should().Be("azul"));
     }
 
     [Fact]

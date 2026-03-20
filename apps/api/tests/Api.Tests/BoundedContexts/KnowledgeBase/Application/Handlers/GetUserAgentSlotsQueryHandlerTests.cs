@@ -51,7 +51,7 @@ public class GetUserAgentSlotsQueryHandlerTests
         result.Used.Should().Be(0);
         result.Available.Should().Be(3);
         result.Slots.Count.Should().Be(3);
-        Assert.All(result.Slots, slot => slot.Status.Should().Be("available"));
+        result.Slots.Should().AllSatisfy(slot => slot.Status.Should().Be("available"));
     }
 
     [Fact]
@@ -116,7 +116,7 @@ public class GetUserAgentSlotsQueryHandlerTests
         result.Total.Should().Be(3);
         result.Used.Should().Be(3);
         result.Available.Should().Be(0);
-        Assert.All(result.Slots, slot => slot.Status.Should().Be("active"));
+        result.Slots.Should().AllSatisfy(slot => slot.Status.Should().Be("active"));
     }
 
     [Theory]

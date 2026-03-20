@@ -33,7 +33,7 @@ public class PerformanceBudgetStatusTests
 
         // Assert
         actualMembers.Length.Should().Be(expectedMembers.Length);
-        Assert.All(expectedMembers, expected => actualMembers.Should().Contain(expected));
+        expectedMembers.Should().AllSatisfy(expected => actualMembers.Should().Contain(expected));
     }
 
     [Theory]

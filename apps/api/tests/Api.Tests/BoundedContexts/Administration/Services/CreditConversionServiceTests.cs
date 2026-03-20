@@ -3,6 +3,7 @@ using Api.BoundedContexts.KnowledgeBase.Domain.Models;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services;
 using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
+using Api.Tests.Constants;
 using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.Administration.Services;
@@ -10,6 +11,8 @@ namespace Api.Tests.BoundedContexts.Administration.Services;
 /// <summary>
 /// Unit tests for CreditConversionService (Budget Display System)
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
+[Trait("BoundedContext", "Administration")]
 public sealed class CreditConversionServiceTests
 {
     private readonly ICreditConversionService _sut;

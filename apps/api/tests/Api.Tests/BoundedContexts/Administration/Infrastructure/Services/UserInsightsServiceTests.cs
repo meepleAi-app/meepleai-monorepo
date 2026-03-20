@@ -4,6 +4,7 @@ using Api.BoundedContexts.Administration.Domain.ValueObjects;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using Api.Tests.Constants;
 using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.Administration.Infrastructure.Services;
@@ -12,6 +13,8 @@ namespace Api.Tests.BoundedContexts.Administration.Infrastructure.Services;
 /// Unit tests for UserInsightsService (Issue #4308).
 /// Tests parallel analyzer execution and result aggregation.
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
+[Trait("BoundedContext", "Administration")]
 public sealed class UserInsightsServiceTests
 {
     private readonly Mock<IBacklogAnalyzer> _mockBacklogAnalyzer;

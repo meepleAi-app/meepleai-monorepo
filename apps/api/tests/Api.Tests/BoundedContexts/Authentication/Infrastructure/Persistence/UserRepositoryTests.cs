@@ -473,7 +473,7 @@ public class UserRepositoryTests : SharedDatabaseTestBase<UserRepository>
         var results = await Task.WhenAll(tasks);
 
         // Assert
-        Assert.All(results, result =>
+        results.Should().AllSatisfy(result =>
         {
             result.Should().NotBeNull();
             result.Id.Should().Be(user.Id);
@@ -502,7 +502,7 @@ public class UserRepositoryTests : SharedDatabaseTestBase<UserRepository>
         var results = await Task.WhenAll(tasks);
 
         // Assert
-        Assert.All(results, result =>
+        results.Should().AllSatisfy(result =>
         {
             result.Should().NotBeNull();
             result.Id.Should().Be(user.Id);

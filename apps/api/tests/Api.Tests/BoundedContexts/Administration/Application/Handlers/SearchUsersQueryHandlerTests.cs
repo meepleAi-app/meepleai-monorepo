@@ -95,7 +95,7 @@ public class SearchUsersQueryHandlerTests
 
         // Assert
         result.Count.Should().Be(3);
-        Assert.All(result, r => r.DisplayName.Should().Contain("Admin"));
+        result.Should().AllSatisfy(r => r.DisplayName.Should().Contain("Admin"));
     }
 
     [Fact]

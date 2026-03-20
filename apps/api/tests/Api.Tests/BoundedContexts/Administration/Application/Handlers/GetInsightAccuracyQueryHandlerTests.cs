@@ -9,6 +9,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Time.Testing;
 using Moq;
 using Xunit;
+using Api.Tests.Constants;
 using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.Administration.Application.Handlers;
@@ -17,6 +18,8 @@ namespace Api.Tests.BoundedContexts.Administration.Application.Handlers;
 /// Unit tests for GetInsightAccuracyQueryHandler.
 /// Issue #4124: AI Insights Runtime Validation (Performance + Accuracy).
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
+[Trait("BoundedContext", "Administration")]
 public sealed class GetInsightAccuracyQueryHandlerTests : IDisposable
 {
     private readonly MeepleAiDbContext _dbContext;

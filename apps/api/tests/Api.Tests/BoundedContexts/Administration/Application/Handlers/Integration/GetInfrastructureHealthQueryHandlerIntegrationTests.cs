@@ -184,7 +184,7 @@ public sealed class GetInfrastructureHealthQueryHandlerIntegrationTests : IAsync
         // Assert
         result.Should().NotBeNull();
         result.Overall.State.Should().Be(HealthState.Healthy);
-        Assert.All(result.Services, service =>
+        result.Services.Should().AllSatisfy(service =>
         {
             service.State.Should().Be("Healthy");
             service.ErrorMessage.Should().BeNull();
@@ -274,7 +274,7 @@ public sealed class GetInfrastructureHealthQueryHandlerIntegrationTests : IAsync
 
         // Assert
         result.Should().NotBeNull();
-        Assert.All(result.Services, service =>
+        result.Services.Should().AllSatisfy(service =>
         {
             (service.ResponseTimeMs >= 0).Should().BeTrue();
             (service.CheckedAt <= DateTime.UtcNow).Should().BeTrue();

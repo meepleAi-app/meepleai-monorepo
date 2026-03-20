@@ -478,7 +478,7 @@ public class ApiKeyRepositoryTests : SharedDatabaseTestBase<ApiKeyRepository>
         var results = await Task.WhenAll(tasks);
 
         // Assert
-        Assert.All(results, result =>
+        results.Should().AllSatisfy(result =>
         {
             result.Should().NotBeNull();
             result.Id.Should().Be(apiKey.Id);

@@ -153,7 +153,7 @@ public sealed class AdminReportEmailRecipientsTests
 
         // Assert
         report.EmailRecipients.Count.Should().Be(2);
-        Assert.All(report.EmailRecipients, email =>
+        report.EmailRecipients.Should().AllSatisfy(email =>
         {
             email.Should().NotContain(" ");
             email.Should().NotContain("\t");

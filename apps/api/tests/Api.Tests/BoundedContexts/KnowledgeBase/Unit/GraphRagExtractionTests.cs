@@ -102,7 +102,7 @@ public class GraphRagExtractionTests : IDisposable
 
         var savedRelations = await _db.GameEntityRelations.ToListAsync();
         savedRelations.Count.Should().Be(2);
-        Assert.All(savedRelations, r =>
+        savedRelations.Should().AllSatisfy(r =>
         {
             r.GameId.Should().Be(_gameId);
             r.Id.Should().NotBe(Guid.Empty);

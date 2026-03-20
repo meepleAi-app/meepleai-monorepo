@@ -1456,7 +1456,7 @@ public class LiveGameSessionTests
         session.DomainEvents.First().Should().BeOfType<LiveSessionCompletedEvent>();
         var evt = (LiveSessionCompletedEvent)session.DomainEvents.First();
         evt.Scores.Count.Should().Be(2);
-        Assert.All(evt.Scores, s =>
+        evt.Scores.Should().AllSatisfy(s =>
         {
             s.PlayerId.Should().Be(player.Id);
             s.Dimension.Should().Be("points");

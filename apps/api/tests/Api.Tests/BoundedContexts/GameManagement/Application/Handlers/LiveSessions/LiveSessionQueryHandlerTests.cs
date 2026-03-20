@@ -244,7 +244,7 @@ public class LiveSessionQueryHandlerTests
         // Assert
         result.Should().NotBeNull();
         result.RoundScores.Count.Should().Be(3);
-        Assert.All(result.RoundScores, score =>
+        result.RoundScores.Should().AllSatisfy(score =>
         {
             score.Dimension.Should().Be("points");
             (score.Round >= 1).Should().BeTrue();
@@ -491,7 +491,7 @@ public class LiveSessionQueryHandlerTests
         result.Should().Contain(s => s.Value == 15 && s.Round == 1);
         result.Should().Contain(s => s.Value == 20 && s.Round == 2);
 
-        Assert.All(result, score =>
+        result.Should().AllSatisfy(score =>
         {
             score.Dimension.Should().Be("points");
             score.PlayerId.Should().NotBe(Guid.Empty);

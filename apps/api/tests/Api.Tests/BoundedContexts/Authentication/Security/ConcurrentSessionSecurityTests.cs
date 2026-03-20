@@ -347,7 +347,7 @@ public class ConcurrentSessionSecurityTests : IDisposable
 
         // Assert - All validations should succeed consistently
         validationResults.Count.Should().Be(10);
-        Assert.All(validationResults, r => r.Should().BeTrue());
+        validationResults.Should().AllSatisfy(r => r.Should().BeTrue());
     }
 
     /// <summary>

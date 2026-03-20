@@ -57,7 +57,7 @@ public sealed class EvaluateAbTestCommandHandlerTests
         result.WinnerModelId.Should().NotBeNull();
 
         // Revealed mode — model info visible
-        Assert.All(result.Variants, v =>
+        result.Variants.Should().AllSatisfy(v =>
         {
             v.Provider.Should().NotBeEmpty();
             v.ModelId.Should().NotBeEmpty();

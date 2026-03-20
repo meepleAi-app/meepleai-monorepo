@@ -158,7 +158,7 @@ public class GetAvailableModelsQueryHandlerTests
         var result = await _handler.Handle(query, CancellationToken.None);
 
         // Assert
-        Assert.All(result.Models, m =>
+        result.Models.Should().AllSatisfy(m =>
         {
             m.Tier.ToLowerInvariant().Should().Be(m.Tier);
         });

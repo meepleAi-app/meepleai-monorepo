@@ -459,7 +459,7 @@ public class GetInfrastructureHealthQueryHandlerTests
         result.Overall.HealthyServices.Should().Be(4);
         result.Overall.DegradedServices.Should().Be(0);
         result.Overall.UnhealthyServices.Should().Be(0);
-        Assert.All(result.Services, service =>
+        result.Services.Should().AllSatisfy(service =>
         {
             service.State.Should().Be("Healthy");
             service.ErrorMessage.Should().BeNull();

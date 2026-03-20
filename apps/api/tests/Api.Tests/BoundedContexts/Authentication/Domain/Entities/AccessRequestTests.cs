@@ -2,10 +2,13 @@ using Api.BoundedContexts.Authentication.Domain.Entities;
 using Api.BoundedContexts.Authentication.Domain.Enums;
 using Api.BoundedContexts.Authentication.Domain.Events;
 using Xunit;
+using Api.Tests.Constants;
 using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.Authentication.Domain.Entities;
 
+[Trait("Category", TestCategories.Unit)]
+[Trait("BoundedContext", "Authentication")]
 public class AccessRequestTests
 {
     [Fact]

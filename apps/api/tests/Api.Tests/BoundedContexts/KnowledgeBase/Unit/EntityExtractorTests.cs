@@ -140,7 +140,7 @@ public class EntityExtractorTests
             Guid.NewGuid(), "Catan", "Catan rules text.",
             CancellationToken.None);
 
-        Assert.All(result.Relations, r => r.Confidence.Should().Be(0.8f));
+        result.Relations.Should().AllSatisfy(r => r.Confidence.Should().Be(0.8f));
     }
 
     [Fact]

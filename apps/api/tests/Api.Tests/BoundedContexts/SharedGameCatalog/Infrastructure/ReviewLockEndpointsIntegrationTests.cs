@@ -479,7 +479,7 @@ public sealed class ReviewLockEndpointsIntegrationTests : IAsyncLifetime
         var result = await response.Content.ReadFromJsonAsync<IReadOnlyCollection<ActiveReviewDto>>(JsonOptions);
         result.Should().NotBeNull();
         result.Should().ContainSingle();
-        Assert.All(result, r => r.Status.Should().Be(ShareRequestStatus.InReview));
+        result.Should().AllSatisfy(r => r.Status.Should().Be(ShareRequestStatus.InReview));
     }
 
     [Fact]

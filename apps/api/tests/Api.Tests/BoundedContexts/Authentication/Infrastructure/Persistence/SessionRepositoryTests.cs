@@ -329,7 +329,7 @@ public class SessionRepositoryTests : SharedDatabaseTestBase<SessionRepository>
         // Assert
         var allSessions = await DbContext.UserSessions.Where(s => s.UserId == userId).ToListAsync(TestCancellationToken);
         allSessions.Count.Should().Be(3);
-        Assert.All(allSessions, s => s.RevokedAt.Should().NotBeNull());
+        allSessions.Should().AllSatisfy(s => s.RevokedAt.Should().NotBeNull());
     }
 
     [Fact]
@@ -386,8 +386,8 @@ public class SessionRepositoryTests : SharedDatabaseTestBase<SessionRepository>
         var user1Sessions = await DbContext.UserSessions.Where(s => s.UserId == user1Id).ToListAsync(TestCancellationToken);
         var user2Sessions = await DbContext.UserSessions.Where(s => s.UserId == user2Id).ToListAsync(TestCancellationToken);
 
-        Assert.All(user1Sessions, s => s.RevokedAt.Should().NotBeNull());
-        Assert.All(user2Sessions, s => s.RevokedAt.Should().BeNull());
+        user1Sessions.Should().AllSatisfy(s => s.RevokedAt.Should().NotBeNull());
+        user2Sessions.Should().AllSatisfy(s => s.RevokedAt.Should().BeNull());
     }
     [Fact]
     public async Task Mapping_DomainToPersistence_AllFieldsCorrect()
@@ -499,7 +499,7 @@ public class SessionRepositoryTests : SharedDatabaseTestBase<SessionRepository>
         var results = await Task.WhenAll(tasks);
 
         // Assert
-        Assert.All(results, result =>
+        results.Should().AllSatisfy(result =>
         {
             result.Should().NotBeNull();
             result.Id.Should().Be(session.Id);

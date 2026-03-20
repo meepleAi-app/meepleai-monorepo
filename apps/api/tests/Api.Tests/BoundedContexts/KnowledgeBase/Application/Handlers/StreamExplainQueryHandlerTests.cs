@@ -76,7 +76,7 @@ public class StreamExplainQueryHandlerTests
         error.errorCode.Should().Be("NO_RESULTS");
 
         // Verify all events have timestamps
-        Assert.All(events, evt => evt.Timestamp.Should().Be(_fakeTimeProvider.GetUtcNow().UtcDateTime));
+        events.Should().AllSatisfy(evt => evt.Timestamp.Should().Be(_fakeTimeProvider.GetUtcNow().UtcDateTime));
     }
 
     [Fact]

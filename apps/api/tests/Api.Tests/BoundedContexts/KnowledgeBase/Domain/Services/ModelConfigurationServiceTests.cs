@@ -78,7 +78,7 @@ public class ModelConfigurationServiceTests
 
         // Assert
         models.Should().NotBeEmpty();
-        Assert.All(models, m => m.Tier.Should().Be(ModelTier.Free));
+        models.Should().AllSatisfy(m => m.Tier.Should().Be(ModelTier.Free));
     }
 
     [Fact]
@@ -89,7 +89,7 @@ public class ModelConfigurationServiceTests
 
         // Assert
         models.Should().NotBeEmpty();
-        Assert.All(models, m => (m.Tier <= ModelTier.Normal).Should().BeTrue());
+        models.Should().AllSatisfy(m => (m.Tier <= ModelTier.Normal).Should().BeTrue());
         models.Should().Contain(m => m.Tier == ModelTier.Free);
         models.Should().Contain(m => m.Tier == ModelTier.Normal);
     }
@@ -102,7 +102,7 @@ public class ModelConfigurationServiceTests
 
         // Assert
         models.Should().NotBeEmpty();
-        Assert.All(models, m => (m.Tier <= ModelTier.Premium).Should().BeTrue());
+        models.Should().AllSatisfy(m => (m.Tier <= ModelTier.Premium).Should().BeTrue());
         models.Should().NotContain(m => m.Tier == ModelTier.Custom);
     }
 
@@ -288,7 +288,7 @@ public class ModelConfigurationServiceTests
             .Where(m => m.Tier == ModelTier.Free);
 
         // Assert
-        Assert.All(freeModels, m =>
+        freeModels.Should().AllSatisfy(m =>
         {
             m.CostPer1kInputTokens.Should().Be(0m);
             m.CostPer1kOutputTokens.Should().Be(0m);
@@ -304,7 +304,7 @@ public class ModelConfigurationServiceTests
             .Where(m => m.Tier > ModelTier.Free && m.Provider != "ollama");
 
         // Assert
-        Assert.All(paidModels, m =>
+        paidModels.Should().AllSatisfy(m =>
         {
             (m.CostPer1kInputTokens > 0 || m.CostPer1kOutputTokens > 0).Should().BeTrue($"Paid model {m.Id} should have positive cost");
         });

@@ -171,7 +171,7 @@ public class EnqueueBggBatchFromJsonIntegrationTests : IAsyncLifetime
         result.Errors.Count.Should().Be(50);  // 50 duplicate errors
 
         // Verify all duplicate errors are correct type
-        Assert.All(result.Errors, error => error.ErrorType.Should().Be("Duplicate"));
+        result.Errors.Should().AllSatisfy(error => error.ErrorType.Should().Be("Duplicate"));
 
         // Verify queue has 50 new items
         var queuedItems = await _dbContext.BggImportQueue.ToListAsync();

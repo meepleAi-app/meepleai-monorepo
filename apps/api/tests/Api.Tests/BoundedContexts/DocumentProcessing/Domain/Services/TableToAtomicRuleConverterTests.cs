@@ -390,10 +390,10 @@ public class TableToAtomicRuleConverterTests
 
         // Assert: Verify business logic preservation
         rules.Count.Should().Be(3);
-        Assert.All(rules, rule => rule.Should().Contain("[Table on page 7]"));
-        Assert.All(rules, rule => rule.Should().Contain("Phase:"));
-        Assert.All(rules, rule => rule.Should().Contain("Actions Available:"));
-        Assert.All(rules, rule => rule.Should().Contain("Player Count: 2-4"));
+        rules.Should().AllSatisfy(rule => rule.Should().Contain("[Table on page 7]"));
+        rules.Should().AllSatisfy(rule => rule.Should().Contain("Phase:"));
+        rules.Should().AllSatisfy(rule => rule.Should().Contain("Actions Available:"));
+        rules.Should().AllSatisfy(rule => rule.Should().Contain("Player Count: 2-4"));
     }
 
     [Fact]

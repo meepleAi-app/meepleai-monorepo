@@ -10,6 +10,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Time.Testing;
 using Moq;
 using Xunit;
+using Api.Tests.Constants;
 using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.Administration.Application.Handlers;
@@ -18,6 +19,8 @@ namespace Api.Tests.BoundedContexts.Administration.Application.Handlers;
 /// Integration tests for SubmitInsightFeedbackCommandHandler.
 /// Issue #4124: AI Insights Runtime Validation (Performance + Accuracy).
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
+[Trait("BoundedContext", "Administration")]
 public sealed class SubmitInsightFeedbackCommandHandlerTests : IDisposable
 {
     private readonly MeepleAiDbContext _dbContext;

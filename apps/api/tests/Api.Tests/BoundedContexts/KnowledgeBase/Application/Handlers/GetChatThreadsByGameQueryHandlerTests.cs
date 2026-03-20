@@ -48,7 +48,7 @@ public class GetChatThreadsByGameQueryHandlerTests
         // Assert
         result.Should().NotBeNull();
         result.Count.Should().Be(2);
-        Assert.All(result, t => t.GameId.Should().Be(gameId));
+        result.Should().AllSatisfy(t => t.GameId.Should().Be(gameId));
         result.Should().Contain(t => t.Title == "Thread 1");
         result.Should().Contain(t => t.Title == "Thread 2");
 

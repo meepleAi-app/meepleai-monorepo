@@ -128,9 +128,12 @@ public sealed class WeeklyEvaluationServiceE2ETests
         await Task.Delay(TestConstants.Timing.SmallDelay, cts.Token); // Wait briefly
         await service.StopAsync(CancellationToken.None);
 
-        // Assert
+        // Assert — when disabled, the mediator should never be invoked
+        mockMediator.Verify(
+            m => m.Send(It.IsAny<object>(), It.IsAny<CancellationToken>()),
+            Times.Never,
+            "Disabled service should not send any mediator requests");
         _output("✓ Service stopped immediately (disabled via config)");
-        // Service should not execute any queries when disabled (verified by logs)
     }
 
     /// <summary>

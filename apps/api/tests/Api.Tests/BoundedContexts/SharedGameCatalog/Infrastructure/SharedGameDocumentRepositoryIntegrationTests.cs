@@ -122,7 +122,7 @@ public sealed class SharedGameDocumentRepositoryIntegrationTests : IAsyncLifetim
 
         // Assert - Should return doc1 and doc3 (both have speed-mode)
         results.Count.Should().Be(2);
-        Assert.All(results, r => r.Tags.Should().Contain("speed-mode"));
+        results.Should().AllSatisfy(r => r.Tags.Should().Contain("speed-mode"));
     }
 
     [Fact]

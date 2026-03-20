@@ -70,8 +70,8 @@ public class GetAlertHistoryQueryHandlerTests
         // Assert
         result.Should().NotBeNull();
         result.Count.Should().Be(2);
-        Assert.All(result, alert => alert.IsActive.Should().BeFalse());
-        Assert.All(result, alert => alert.ResolvedAt.Should().NotBeNull());
+        result.Should().AllSatisfy(alert => alert.IsActive.Should().BeFalse());
+        result.Should().AllSatisfy(alert => alert.ResolvedAt.Should().NotBeNull());
         _mockAlertingService.Verify(
             s => s.GetAlertHistoryAsync(fromDate, toDate, It.IsAny<CancellationToken>()),
             Times.Once);

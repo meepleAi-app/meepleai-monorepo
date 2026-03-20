@@ -154,7 +154,7 @@ public sealed class CreateAbTestCommandHandlerTests
 
         // AbTestSessionDto (blind) should NOT have Provider/ModelId properties
         // This is enforced by the DTO type itself — AbTestVariantDto has no Provider/ModelId
-        Assert.All(result.Variants, v =>
+        result.Variants.Should().AllSatisfy(v =>
         {
             v.Label.Should().NotBeNull();
             v.Response.Should().NotBeNull();

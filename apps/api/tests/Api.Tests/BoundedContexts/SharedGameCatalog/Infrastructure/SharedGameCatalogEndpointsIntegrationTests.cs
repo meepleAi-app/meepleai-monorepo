@@ -317,7 +317,7 @@ public sealed class SharedGameCatalogEndpointsIntegrationTests : IAsyncLifetime
         var result = await response.Content.ReadFromJsonAsync<PagedResult<SharedGameDto>>();
         result.Should().NotBeNull();
         result.Total.Should().Be(2);
-        Assert.All(result.Items, g => g.Status.Should().Be(GameStatus.PendingApproval));
+        result.Items.Should().AllSatisfy(g => g.Status.Should().Be(GameStatus.PendingApproval));
     }
 
     // ========================================

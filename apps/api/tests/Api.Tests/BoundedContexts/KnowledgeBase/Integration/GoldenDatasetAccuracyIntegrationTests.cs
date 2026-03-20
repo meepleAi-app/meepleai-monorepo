@@ -224,7 +224,7 @@ public class GoldenDatasetAccuracyIntegrationTests
 
         (easyCount + mediumCount + hardCount == results.Count).Should().BeTrue();
         // All should be correct (perfect simulation)
-        Assert.All(results, r => r.IsCorrect.Should().BeTrue());
+        results.Should().AllSatisfy(r => r.IsCorrect.Should().BeTrue());
     }
 
     /// <summary>

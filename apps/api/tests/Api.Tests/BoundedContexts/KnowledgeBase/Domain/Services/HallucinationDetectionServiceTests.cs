@@ -284,7 +284,7 @@ public class HallucinationDetectionServiceTests
         var counts = languages.Select(lang => _service.GetForbiddenKeywordCount(lang)).ToList();
 
         // Assert - All languages have keywords defined
-        Assert.All(counts, count => (count > 0).Should().BeTrue());
+        counts.Should().AllSatisfy(count => (count > 0).Should().BeTrue());
     }
 
     [Fact]

@@ -7,6 +7,7 @@ using Api.Models;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using Xunit;
+using Api.Tests.Constants;
 using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.GameManagement.QueryHandlers;
@@ -15,6 +16,8 @@ namespace Api.Tests.BoundedContexts.GameManagement.QueryHandlers;
 /// Unit tests for GetGameStrategiesQueryHandler.
 /// Issue #4903: Game strategies API endpoint.
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
+[Trait("BoundedContext", "GameManagement")]
 public sealed class GetGameStrategiesQueryHandlerTests
 {
     private readonly Mock<IGameStrategyRepository> _repositoryMock;

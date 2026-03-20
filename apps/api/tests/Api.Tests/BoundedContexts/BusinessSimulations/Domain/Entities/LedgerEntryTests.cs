@@ -2,6 +2,7 @@ using Api.BoundedContexts.BusinessSimulations.Domain.Entities;
 using Api.BoundedContexts.BusinessSimulations.Domain.Enums;
 using Api.BoundedContexts.BusinessSimulations.Domain.ValueObjects;
 using Xunit;
+using Api.Tests.Constants;
 using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.BusinessSimulations.Domain.Entities;
@@ -9,6 +10,8 @@ namespace Api.Tests.BoundedContexts.BusinessSimulations.Domain.Entities;
 /// <summary>
 /// Unit tests for LedgerEntry entity (Issue #4539 - Epic #3688)
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
+[Trait("BoundedContext", "BusinessSimulations")]
 public class LedgerEntryTests
 {
     #region Factory Method Tests
@@ -377,7 +380,7 @@ public class LedgerEntryTests
 
         // Assert
         entries.Count.Should().Be(categories.Length);
-        Assert.All(entries, e => e.Source.Should().Be(LedgerEntrySource.Auto));
+        entries.Should().AllSatisfy(e => e.Source.Should().Be(LedgerEntrySource.Auto));
     }
 
     #endregion

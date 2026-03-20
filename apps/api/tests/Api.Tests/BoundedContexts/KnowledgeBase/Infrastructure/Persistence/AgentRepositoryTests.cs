@@ -99,7 +99,7 @@ internal class AgentRepositoryTests : SharedDatabaseTestBase<AgentRepository>
 
         // Assert
         activeAgents.Count.Should().Be(2);
-        Assert.All(activeAgents, a => a.IsActive.Should().BeTrue());
+        activeAgents.Should().AllSatisfy(a => a.IsActive.Should().BeTrue());
     }
 
     [Fact]
@@ -119,7 +119,7 @@ internal class AgentRepositoryTests : SharedDatabaseTestBase<AgentRepository>
 
         // Assert
         ragAgents.Count.Should().Be(2);
-        Assert.All(ragAgents, a => a.Type.Value.Should().Be("RAG"));
+        ragAgents.Should().AllSatisfy(a => a.Type.Value.Should().Be("RAG"));
     }
 
     [Fact]

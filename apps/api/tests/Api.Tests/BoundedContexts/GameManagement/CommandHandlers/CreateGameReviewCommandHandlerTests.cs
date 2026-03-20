@@ -7,6 +7,7 @@ using Api.SharedKernel.Infrastructure.Persistence;
 using Microsoft.Extensions.Time.Testing;
 using Moq;
 using Xunit;
+using Api.Tests.Constants;
 using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.GameManagement.CommandHandlers;
@@ -15,6 +16,8 @@ namespace Api.Tests.BoundedContexts.GameManagement.CommandHandlers;
 /// Unit tests for CreateGameReviewCommandHandler.
 /// Issue #4904: Game reviews API endpoint.
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
+[Trait("BoundedContext", "GameManagement")]
 public sealed class CreateGameReviewCommandHandlerTests
 {
     private readonly Mock<IGameReviewRepository> _repositoryMock;

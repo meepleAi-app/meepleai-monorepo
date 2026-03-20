@@ -199,7 +199,7 @@ public class HybridAdaptiveRoutingStrategyTests
 
         // Assert - All should succeed
         decisions.Count.Should().Be(strategies.Length);
-        Assert.All(decisions, d => d.Reason.Should().Contain("Tier: Admin"));
+        decisions.Should().AllSatisfy(d => d.Reason.Should().Contain("Tier: Admin"));
     }
 
     [Fact]

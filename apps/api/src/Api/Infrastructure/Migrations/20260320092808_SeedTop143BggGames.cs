@@ -38,16 +38,18 @@ namespace Api.Infrastructure.Migrations
                 sql: "year_published = 0 OR (year_published > 1900 AND year_published <= 2100)");
 
             // Step 2: Create system seed admin user (idempotent)
+            // Note: users table uses PascalCase columns (EF default convention, no HasColumnName)
             migrationBuilder.Sql("""
-                INSERT INTO users (id, email, display_name, password_hash, role, tier, created_at, email_verified, status)
+                INSERT INTO users ("Id", "Email", "DisplayName", "PasswordHash", "Role", "Tier", "CreatedAt", "EmailVerified", "Status")
                 VALUES (gen_random_uuid(), 'system-seed@meepleai.app', 'System Seed Admin', NULL, 'admin', 'free', NOW(), true, 'Active')
-                ON CONFLICT (email) DO NOTHING;
+                ON CONFLICT ("Email") DO NOTHING;
                 """);
 
             // Step 3: Seed 143 top BGG games as skeleton entries using CTE + CROSS JOIN
+            // Note: shared_games uses snake_case (HasColumnName) except GameDataStatus/HasUploadedPdf (PascalCase)
             migrationBuilder.Sql("""
                 WITH seed_admin AS (
-                    SELECT id FROM users WHERE email = 'system-seed@meepleai.app'
+                    SELECT "Id" FROM users WHERE "Email" = 'system-seed@meepleai.app'
                 ),
                 game_data(bgg_id, title) AS (VALUES
                     (178900, 'Codenames'), (266192, 'Wingspan'), (167791, 'Terraforming Mars'),
@@ -119,7 +121,7 @@ namespace Api.Infrastructure.Migrations
                     id, bgg_id, title, year_published, description,
                     min_players, max_players, playing_time_minutes, min_age,
                     complexity_rating, average_rating, image_url, thumbnail_url,
-                    status, game_data_status, has_uploaded_pdf, is_deleted,
+                    status, "GameDataStatus", "HasUploadedPdf", is_deleted,
                     is_rag_public, created_by, created_at, modified_at
                 )
                 SELECT
@@ -127,7 +129,7 @@ namespace Api.Infrastructure.Migrations
                     0, 0, 0, 0,
                     NULL, NULL, '', '',
                     0, 0, false, false,
-                    false, sa.id, NOW(), NOW()
+                    false, sa."Id", NOW(), NOW()
                 FROM game_data gd CROSS JOIN seed_admin sa
                 ON CONFLICT (bgg_id) WHERE bgg_id IS NOT NULL DO NOTHING;
                 """);
@@ -139,9 +141,9 @@ namespace Api.Infrastructure.Migrations
             // Remove all seeded games (regardless of enrichment status) then the seed admin user
             migrationBuilder.Sql("""
                 DELETE FROM shared_games
-                WHERE created_by = (SELECT id FROM users WHERE email = 'system-seed@meepleai.app');
+                WHERE created_by = (SELECT "Id" FROM users WHERE "Email" = 'system-seed@meepleai.app');
 
-                DELETE FROM users WHERE email = 'system-seed@meepleai.app';
+                DELETE FROM users WHERE "Email" = 'system-seed@meepleai.app';
                 """);
 
             migrationBuilder.DropCheckConstraint(

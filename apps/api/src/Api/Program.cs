@@ -105,13 +105,15 @@ if (!builder.Environment.IsEnvironment("Testing") && !builder.Environment.IsEnvi
     var secretLoader = new Api.Infrastructure.Configuration.SecretLoader(builder.Configuration, tempLogger);
     var secretValidationResult = secretLoader.LoadAndValidate();
 
-    // Add loaded secret values to IConfiguration so they're available via config["KEY"]
+    // Add ONLY NEW secret values to IConfiguration (values not already set by env_file or environment).
     // Environment.SetEnvironmentVariable() alone is not enough - the EnvironmentVariables
-    // configuration provider already captured its snapshot at CreateBuilder() time
-    var loadedSecrets = secretLoader.GetLoadedValues();
-    if (loadedSecrets.Count > 0)
+    // configuration provider already captured its snapshot at CreateBuilder() time.
+    // CRITICAL: Using GetNewValues() instead of GetLoadedValues() to avoid overriding
+    // environment-specific values (e.g., staging Redis password) with root-level dev secrets.
+    var newSecrets = secretLoader.GetNewValues(builder.Configuration);
+    if (newSecrets.Count > 0)
     {
-        builder.Configuration.AddInMemoryCollection(loadedSecrets.Select(kv => new KeyValuePair<string, string?>(kv.Key, kv.Value)));
+        builder.Configuration.AddInMemoryCollection(newSecrets.Select(kv => new KeyValuePair<string, string?>(kv.Key, kv.Value)));
     }
 
     if (!secretValidationResult.IsValid)

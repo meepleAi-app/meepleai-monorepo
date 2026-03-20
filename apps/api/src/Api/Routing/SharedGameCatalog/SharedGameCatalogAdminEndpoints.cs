@@ -5,6 +5,7 @@ using Api.BoundedContexts.SharedGameCatalog.Application.Commands.RemoveRagFromSh
 using Api.BoundedContexts.SharedGameCatalog.Application.DTOs;
 using Api.BoundedContexts.SharedGameCatalog.Application.Queries;
 using Api.BoundedContexts.SharedGameCatalog.Application.Queries.GetGameRagReadiness;
+using Api.BoundedContexts.SharedGameCatalog.Application.Queries.ExportSharedGamesTracking;
 using Api.BoundedContexts.SharedGameCatalog.Application.Queries.GetSharedGameDocuments;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Entities;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Enums;
@@ -401,6 +402,16 @@ internal static class SharedGameCatalogAdminEndpoints
             .WithSummary("Get document overview for a shared game with PDF status (Admin/Editor)")
             .WithDescription("Returns all documents associated with a shared game, enriched with PDF processing status from the document processing context.")
             .Produces<GetSharedGameDocumentsResult>(StatusCodes.Status200OK);
+
+        // Export tracking spreadsheet (all shared games with progress status)
+        group.MapGet("/admin/shared-games/tracking-export", HandleTrackingExport)
+            .RequireAuthorization("AdminOrEditorPolicy")
+            .WithName("ExportSharedGamesTracking")
+            .WithSummary("Export shared games tracking spreadsheet (Admin/Editor)")
+            .WithDescription("Downloads an Excel file with all shared games and their progress status (enrichment, PDF, RAG).")
+            .Produces(StatusCodes.Status200OK, contentType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+            .Produces(StatusCodes.Status401Unauthorized)
+            .Produces(StatusCodes.Status403Forbidden);
     }
 #pragma warning restore MA0051
 
@@ -1396,4 +1407,23 @@ internal static class SharedGameCatalogAdminEndpoints
         }
     }
 #pragma warning restore S1172
+
+    // ========================================
+    // TRACKING EXPORT HANDLER
+    // ========================================
+
+    private static async Task<IResult> HandleTrackingExport(
+        IMediator mediator,
+        CancellationToken cancellationToken)
+    {
+        var bytes = await mediator.Send(
+            new ExportSharedGamesTrackingQuery(),
+            cancellationToken).ConfigureAwait(false);
+
+        var filename = $"SharedGames_Tracking_{DateTime.UtcNow:yyyy-MM-dd}.xlsx";
+        return Results.File(
+            bytes,
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            filename);
+    }
 }

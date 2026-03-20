@@ -1,20 +1,36 @@
-# Integration: Local API + frontend → staging services (meepleai.app)
+# Integration: Local API + Web → staging services via SSH tunnel
 #
-# Two modes:
-#   A) SSH tunnel: Postgres/Redis via SSH tunnel to staging server
-#      Prerequisites: ssh -L 15432:localhost:5432 -L 16379:localhost:6379 deploy@204.168.135.69
+# RECOMMENDED: Use local dotnet run + pnpm dev (not Docker containers)
+#   1. bash infra/scripts/integration-tunnel.sh start
+#   2. bash infra/scripts/integration-start.sh
 #
-#   B) Full remote: ALL services via meepleai.app
-#      No SSH tunnel needed — everything goes through HTTPS + basic auth
+# Docker mode is NOT recommended for Windows (host.docker.internal cannot reach
+# SSH tunnels bound to localhost). Use it only on Linux or with extra_hosts workaround.
 #
-# Usage:
-#   docker compose -f docker-compose.yml -f compose.integration.yml up api web -d
-#
-# Secrets: cp -r infra/secrets/integration.example/ infra/secrets/integration/
+# Secrets: infra/secrets/integration/*.secret (synced from staging)
 #   Required: database.secret, redis.secret, jwt.secret,
 #             openrouter.secret, admin.secret, services-auth.secret
 
 services:
+  # Dummy postgres/redis — integration uses remote via SSH tunnel
+  postgres:
+    entrypoint: ["sh", "-c", "sleep infinity"]
+    restart: "no"
+    healthcheck:
+      test: ["CMD-SHELL", "exit 0"]
+      interval: 2s
+      retries: 1
+      start_period: 0s
+  redis:
+    entrypoint: ["sh", "-c", "sleep infinity"]
+    command: []
+    restart: "no"
+    healthcheck:
+      test: ["CMD-SHELL", "exit 0"]
+      interval: 2s
+      retries: 1
+      start_period: 0s
+
   api:
     ports: ["127.0.0.1:8080:8080"]
     extra_hosts: ["host.docker.internal:host-gateway"]
@@ -28,12 +44,13 @@ services:
     environment:
       ASPNETCORE_ENVIRONMENT: Integration
       ASPNETCORE_URLS: http://+:8080
-      # Mode A: SSH tunnel (default)
+      SkipMigrations: "true"
       POSTGRES_HOST: host.docker.internal
       POSTGRES_PORT: "15432"
+      POSTGRES_SSL_MODE: Disable
       REDIS_HOST: host.docker.internal
       REDIS_PORT: "16379"
-      # AI services via meepleai.app (both modes)
+      # AI services via meepleai.app
       EMBEDDING_PROVIDER: external
       Embedding__Provider: External
       EMBEDDING_MODEL: intfloat/multilingual-e5-base
@@ -44,9 +61,6 @@ services:
       RERANKER_URL: https://meepleai.app/services/reranker
       EMBEDDING_FALLBACK_ENABLED: "false"
       Embedding__FallbackEnabled: "false"
-      # Mode B overrides (uncomment to use full remote without SSH tunnel):
-      # POSTGRES_HOST: meepleai.app  # Requires Traefik TCP route (not yet configured)
-      # REDIS_HOST: meepleai.app     # Requires Traefik TCP route (not yet configured)
     volumes:
       - ./secrets/integration:/app/infra/secrets:ro
 

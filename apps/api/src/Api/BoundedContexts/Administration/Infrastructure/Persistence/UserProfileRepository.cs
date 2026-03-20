@@ -30,15 +30,17 @@ internal sealed class UserProfileRepository : IUserProfileRepository
             .ConfigureAwait(false);
     }
 
-    public async Task<IReadOnlyList<UserProfile>> SearchAsync(string searchTerm, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<UserProfile>> SearchAsync(string searchTerm, int? maxResults = null, CancellationToken cancellationToken = default)
     {
-        var term = searchTerm.ToUpperInvariant();
-        return await _dbContext.Set<UserProfile>()
+        var query = _dbContext.Set<UserProfile>()
             .AsNoTracking()
-            .Where(u => EF.Functions.ILike(u.Email, $"%{term}%") ||
-                        (u.DisplayName != null && EF.Functions.ILike(u.DisplayName, $"%{term}%")))
-            .ToListAsync(cancellationToken)
-            .ConfigureAwait(false);
+            .Where(u => EF.Functions.ILike(u.Email, $"%{searchTerm}%") ||
+                        (u.DisplayName != null && EF.Functions.ILike(u.DisplayName, $"%{searchTerm}%")));
+
+        if (maxResults.HasValue)
+            query = query.Take(maxResults.Value);
+
+        return await query.ToListAsync(cancellationToken).ConfigureAwait(false);
     }
 
     public async Task<IReadOnlyList<UserProfile>> GetByIdsAsync(IEnumerable<Guid> ids, CancellationToken cancellationToken = default)

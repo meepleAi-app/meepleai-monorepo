@@ -8,7 +8,6 @@ namespace Api.BoundedContexts.Administration.Application.Queries;
 /// <summary>
 /// Handler for SearchUsersQuery.
 /// Uses IUserProfileRepository to search users for autocomplete scenarios.
-/// API-01: Authentication endpoints (versioned)
 /// </summary>
 internal class SearchUsersQueryHandler : IQueryHandler<SearchUsersQuery, IReadOnlyList<UserSearchResultDto>>
 {
@@ -33,10 +32,9 @@ internal class SearchUsersQueryHandler : IQueryHandler<SearchUsersQuery, IReadOn
 
         try
         {
-            var users = await _userProfileRepository.SearchAsync(query.SearchQuery, cancellationToken).ConfigureAwait(false);
+            var users = await _userProfileRepository.SearchAsync(query.SearchQuery, query.MaxResults, cancellationToken).ConfigureAwait(false);
 
             var results = users
-                .Take(query.MaxResults)
                 .Select(u => new UserSearchResultDto(
                     Id: u.Id.ToString(),
                     DisplayName: u.DisplayName ?? string.Empty,

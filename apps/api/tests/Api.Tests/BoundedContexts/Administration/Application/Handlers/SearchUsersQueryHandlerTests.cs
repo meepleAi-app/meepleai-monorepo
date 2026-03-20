@@ -42,7 +42,7 @@ public class SearchUsersQueryHandlerTests
         };
 
         _userProfileRepositoryMock
-            .Setup(r => r.SearchAsync("john", It.IsAny<CancellationToken>()))
+            .Setup(r => r.SearchAsync("john", It.IsAny<int?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(users.Where(u => u.DisplayName!.Contains("John", StringComparison.OrdinalIgnoreCase)).ToList());
 
         var query = new SearchUsersQuery(
@@ -59,7 +59,7 @@ public class SearchUsersQueryHandlerTests
         result[0].Email.Should().Be("john@example.com");
 
         _userProfileRepositoryMock.Verify(
-            r => r.SearchAsync("john", It.IsAny<CancellationToken>()),
+            r => r.SearchAsync("john", It.IsAny<int?>(), It.IsAny<CancellationToken>()),
             Times.Once);
     }
 
@@ -75,7 +75,7 @@ public class SearchUsersQueryHandlerTests
         };
 
         _userProfileRepositoryMock
-            .Setup(r => r.SearchAsync("admin", It.IsAny<CancellationToken>()))
+            .Setup(r => r.SearchAsync("admin", It.IsAny<int?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(users);
 
         var query = new SearchUsersQuery(
@@ -102,7 +102,7 @@ public class SearchUsersQueryHandlerTests
         };
 
         _userProfileRepositoryMock
-            .Setup(r => r.SearchAsync("user", It.IsAny<CancellationToken>()))
+            .Setup(r => r.SearchAsync("user", It.IsAny<int?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(users);
 
         var query = new SearchUsersQuery(
@@ -133,7 +133,7 @@ public class SearchUsersQueryHandlerTests
 
         // Verify repository was NOT called
         _userProfileRepositoryMock.Verify(
-            r => r.SearchAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            r => r.SearchAsync(It.IsAny<string>(), It.IsAny<int?>(), It.IsAny<CancellationToken>()),
             Times.Never);
     }
 
@@ -154,7 +154,7 @@ public class SearchUsersQueryHandlerTests
 
         // Verify repository was NOT called
         _userProfileRepositoryMock.Verify(
-            r => r.SearchAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            r => r.SearchAsync(It.IsAny<string>(), It.IsAny<int?>(), It.IsAny<CancellationToken>()),
             Times.Never);
     }
 
@@ -175,7 +175,7 @@ public class SearchUsersQueryHandlerTests
 
         // Verify repository was NOT called (query too short)
         _userProfileRepositoryMock.Verify(
-            r => r.SearchAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            r => r.SearchAsync(It.IsAny<string>(), It.IsAny<int?>(), It.IsAny<CancellationToken>()),
             Times.Never);
     }
 
@@ -184,7 +184,7 @@ public class SearchUsersQueryHandlerTests
     {
         // Arrange - Minimum valid query length
         _userProfileRepositoryMock
-            .Setup(r => r.SearchAsync("ab", It.IsAny<CancellationToken>()))
+            .Setup(r => r.SearchAsync("ab", It.IsAny<int?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<UserProfile>());
 
         var query = new SearchUsersQuery(
@@ -199,7 +199,7 @@ public class SearchUsersQueryHandlerTests
 
         // Verify repository WAS called (query meets minimum length)
         _userProfileRepositoryMock.Verify(
-            r => r.SearchAsync("ab", It.IsAny<CancellationToken>()),
+            r => r.SearchAsync("ab", It.IsAny<int?>(), It.IsAny<CancellationToken>()),
             Times.Once);
     }
 
@@ -208,7 +208,7 @@ public class SearchUsersQueryHandlerTests
     {
         // Arrange
         _userProfileRepositoryMock
-            .Setup(r => r.SearchAsync("nonexistent", It.IsAny<CancellationToken>()))
+            .Setup(r => r.SearchAsync("nonexistent", It.IsAny<int?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<UserProfile>());
 
         var query = new SearchUsersQuery(
@@ -230,7 +230,7 @@ public class SearchUsersQueryHandlerTests
         var exception = new Exception("Database error");
 
         _userProfileRepositoryMock
-            .Setup(r => r.SearchAsync("error", It.IsAny<CancellationToken>()))
+            .Setup(r => r.SearchAsync("error", It.IsAny<int?>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(exception);
 
         var query = new SearchUsersQuery(
@@ -260,7 +260,7 @@ public class SearchUsersQueryHandlerTests
     {
         // Arrange
         _userProfileRepositoryMock
-            .Setup(r => r.SearchAsync("test", It.IsAny<CancellationToken>()))
+            .Setup(r => r.SearchAsync("test", It.IsAny<int?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<UserProfile>());
 
         var query = new SearchUsersQuery(
@@ -275,7 +275,7 @@ public class SearchUsersQueryHandlerTests
 
         // Assert
         _userProfileRepositoryMock.Verify(
-            r => r.SearchAsync("test", cancellationToken),
+            r => r.SearchAsync("test", It.IsAny<int?>(), cancellationToken),
             Times.Once);
     }
 
@@ -290,7 +290,7 @@ public class SearchUsersQueryHandlerTests
         };
 
         _userProfileRepositoryMock
-            .Setup(r => r.SearchAsync("test", It.IsAny<CancellationToken>()))
+            .Setup(r => r.SearchAsync("test", It.IsAny<int?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(users);
 
         var query = new SearchUsersQuery(

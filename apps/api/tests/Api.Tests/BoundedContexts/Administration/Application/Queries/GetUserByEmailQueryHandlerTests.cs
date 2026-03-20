@@ -66,6 +66,7 @@ public class GetUserByEmailQueryHandlerTests
     public async Task Handle_WithNonExistentEmail_ReturnsNull()
     {
         // Arrange - fresh context per test
+        using var context = CreateFreshDbContext();
         var handler = CreateHandler(context);
 
         var query = new GetUserByEmailQuery("nonexistent@example.com");
@@ -81,6 +82,7 @@ public class GetUserByEmailQueryHandlerTests
     public async Task Handle_WithNullQuery_ThrowsArgumentNullException()
     {
         // Arrange - fresh context per test
+        using var context = CreateFreshDbContext();
         var handler = CreateHandler(context);
 
         // Act & Assert
@@ -92,6 +94,7 @@ public class GetUserByEmailQueryHandlerTests
     public async Task Handle_WithUserHavingActiveSessions_ReturnsLastSeenAt()
     {
         // Arrange - fresh context per test
+        using var context = CreateFreshDbContext();
         var handler = CreateHandler(context);
 
         var userId = Guid.NewGuid();
@@ -138,6 +141,7 @@ public class GetUserByEmailQueryHandlerTests
     public async Task Handle_WithMultipleSessions_ReturnsLatestLastSeenAt()
     {
         // Arrange - fresh context per test
+        using var context = CreateFreshDbContext();
         var handler = CreateHandler(context);
 
         var userId = Guid.NewGuid();
@@ -197,6 +201,7 @@ public class GetUserByEmailQueryHandlerTests
     public async Task Handle_IgnoresRevokedSessions_WhenCalculatingLastSeen()
     {
         // Arrange - fresh context per test
+        using var context = CreateFreshDbContext();
         var handler = CreateHandler(context);
 
         var userId = Guid.NewGuid();
@@ -241,6 +246,7 @@ public class GetUserByEmailQueryHandlerTests
     public async Task Handle_WithExactEmailMatch_ReturnsUser()
     {
         // Arrange - fresh context per test
+        using var context = CreateFreshDbContext();
         var handler = CreateHandler(context);
 
         var user = new UserEntity

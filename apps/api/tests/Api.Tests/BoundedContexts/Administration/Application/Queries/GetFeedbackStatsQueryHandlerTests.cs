@@ -60,6 +60,9 @@ public class GetFeedbackStatsQueryHandlerTests
     {
         // Arrange
 
+        // Arrange
+        using var context = CreateFreshDbContext();
+
         // Act & Assert
         Assert.Throws<ArgumentNullException>(() =>
             new GetFeedbackStatsQueryHandler(context, null!));
@@ -104,6 +107,7 @@ public class GetFeedbackStatsQueryHandlerTests
     public async Task Handle_WithNoFeedback_ReturnsEmptyStats()
     {
         // Arrange - fresh context with no data
+        using var context = CreateFreshDbContext();
         var handler = new GetFeedbackStatsQueryHandler(context, _mockLogger.Object);
         var query = new GetFeedbackStatsQuery();
 
@@ -124,6 +128,7 @@ public class GetFeedbackStatsQueryHandlerTests
     public async Task Handle_WithMixedFeedback_ReturnsCorrectAggregations()
     {
         // Arrange - fresh context with test data
+        using var context = CreateFreshDbContext();
         var userId = Guid.NewGuid();
         var messageId1 = Guid.NewGuid();
         var messageId2 = Guid.NewGuid();
@@ -188,6 +193,7 @@ public class GetFeedbackStatsQueryHandlerTests
     public async Task Handle_WithDateRangeFilter_ReturnsFilteredStats()
     {
         // Arrange - fresh context with test data
+        using var context = CreateFreshDbContext();
         var userId = Guid.NewGuid();
         var startDate = new DateTime(2025, 1, 1, 0, 0, 0, DateTimeKind.Utc);
         var endDate = new DateTime(2025, 1, 31, 23, 59, 59, DateTimeKind.Utc);
@@ -245,6 +251,7 @@ public class GetFeedbackStatsQueryHandlerTests
     public async Task Handle_WithEndpointFilter_ReturnsFilteredStats()
     {
         // Arrange - fresh context with test data
+        using var context = CreateFreshDbContext();
         var userId = Guid.NewGuid();
 
         // Add feedback for 2 different endpoints
@@ -302,6 +309,7 @@ public class GetFeedbackStatsQueryHandlerTests
     public async Task Handle_WithAllFilters_ReturnsCorrectlyFilteredStats()
     {
         // Arrange - fresh context with test data
+        using var context = CreateFreshDbContext();
         var userId = Guid.NewGuid();
         var startDate = new DateTime(2025, 1, 1, 0, 0, 0, DateTimeKind.Utc);
         var endDate = new DateTime(2025, 1, 31, 23, 59, 59, DateTimeKind.Utc);
@@ -362,6 +370,7 @@ public class GetFeedbackStatsQueryHandlerTests
     public async Task Handle_WithCancellationToken_UsesCancellationToken()
     {
         // Arrange - fresh context
+        using var context = CreateFreshDbContext();
         var handler = new GetFeedbackStatsQueryHandler(context, _mockLogger.Object);
         var query = new GetFeedbackStatsQuery();
         using var cts = new CancellationTokenSource();

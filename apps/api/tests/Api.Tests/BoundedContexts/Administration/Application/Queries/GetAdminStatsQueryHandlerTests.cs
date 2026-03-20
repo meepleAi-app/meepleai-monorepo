@@ -457,6 +457,7 @@ public class GetAdminStatsQueryHandlerTests
     {
         // Arrange
         var query = new GetAdminStatsQuery(Days: 7);
+        using var cancellationTokenSource = new CancellationTokenSource();
         cancellationTokenSource.Cancel();
 
         _mockAdminStatsService

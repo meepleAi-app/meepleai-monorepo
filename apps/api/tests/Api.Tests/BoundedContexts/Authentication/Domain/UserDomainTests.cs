@@ -85,7 +85,7 @@ public class UserDomainTests
     }
 
     [Fact]
-    public void User_AssignRole_ByAdmin_UpdatesRole()
+    public void User_AssignRole_BySuperAdmin_UpdatesRole()
     {
         // Arrange
         var user = CreateTestUser(role: Role.User);
@@ -109,9 +109,9 @@ public class UserDomainTests
     }
 
     [Fact]
-    public void User_AssignRole_AdminToAdmin_ThrowsException()
+    public void User_AssignRole_ByAdmin_ThrowsException()
     {
-        // Arrange
+        // Arrange — Only SuperAdmin can assign roles; Admin is not sufficient
         var user = CreateTestUser(role: Role.Admin);
 
         // Act & Assert — Only SuperAdmin can assign roles, so Admin requester is rejected

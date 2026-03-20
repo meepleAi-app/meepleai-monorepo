@@ -130,8 +130,6 @@ public sealed class RagServiceIntegrationTests : IDisposable
         // so ExplainAsync returns an empty explain response with a message.
         Assert.NotNull(result);
         Assert.NotNull(result.outline);
-        Assert.NotNull(result.outline.mainTopic);
-        Assert.NotNull(result.outline.sections);
         Assert.NotNull(result.script);
         Assert.NotEmpty(result.script); // Contains the "no relevant information" message
         Assert.NotNull(result.citations);

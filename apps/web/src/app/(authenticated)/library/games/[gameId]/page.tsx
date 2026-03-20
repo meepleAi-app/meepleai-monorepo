@@ -174,7 +174,7 @@ export default function LibraryGameDetailPage() {
         />
       }
       toolsZone={<GameTableZoneTools gameDetail={gameDetail} gameId={gameId} />}
-      knowledgeZone={<GameTableZoneKnowledge gameId={gameId} agentId={gameId} />}
+      knowledgeZone={<GameTableZoneKnowledge gameId={gameId} />}
       sessionsZone={<GameTableZoneSessions gameDetail={gameDetail} gameId={gameId} />}
       drawer={
         drawer.content ? (

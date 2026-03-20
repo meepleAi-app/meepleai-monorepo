@@ -20,8 +20,11 @@ using Xunit;
 namespace Api.Tests.BoundedContexts.SharedGameCatalog.Application.Handlers;
 
 /// <summary>
-/// Tests for AddDocumentToSharedGameCommandHandler.
-/// DocumentVersioningService methods are now virtual (fixed post-#2430).
+/// NOTE: These tests currently fail because DocumentVersioningService methods are not virtual.
+/// This is a pre-existing issue not related to #2430. To fix:
+/// 1. Make DocumentVersioningService methods virtual, OR
+/// 2. Extract IDocumentVersioningService interface, OR
+/// 3. Use concrete DocumentVersioningService instead of mock
 /// </summary>
 [Trait("Category", TestCategories.Unit)]
 public class AddDocumentToSharedGameCommandHandlerTests
@@ -83,9 +86,7 @@ public class AddDocumentToSharedGameCommandHandlerTests
             FileName = "test.pdf",
             FilePath = "/uploads/test.pdf",
             FileSizeBytes = 1024,
-            ContentType = "application/pdf",
-            UploadedByUserId = createdBy,
-            UploadedAt = DateTime.UtcNow
+            UploadedByUserId = createdBy
         });
         await _context.SaveChangesAsync();
 
@@ -188,9 +189,7 @@ public class AddDocumentToSharedGameCommandHandlerTests
             FileName = "test.pdf",
             FilePath = "/uploads/test.pdf",
             FileSizeBytes = 1024,
-            ContentType = "application/pdf",
-            UploadedByUserId = createdBy,
-            UploadedAt = DateTime.UtcNow
+            UploadedByUserId = createdBy
         });
         await _context.SaveChangesAsync();
 

@@ -10,6 +10,7 @@ import { useActiveSessions } from '@/hooks/queries/useActiveSessions';
 import { useDashboardSearchStore } from '@/stores/useDashboardSearchStore';
 
 import { AddToLibraryModal } from './AddToLibraryModal';
+import { OnboardingFlow } from './OnboardingFlow';
 import { TavoloZone } from './TavoloZone';
 import { useDashboardMode } from './useDashboardMode';
 import {
@@ -39,6 +40,8 @@ function ExplorationView() {
 
   return (
     <>
+      <OnboardingFlow />
+
       <Suspense fallback={<ZoneSkeleton testId="hero-skeleton" />}>
         <HeroZone />
       </Suspense>

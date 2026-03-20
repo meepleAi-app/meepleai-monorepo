@@ -1,4 +1,4 @@
-using Api.BoundedContexts.GameManagement.Application.Handlers.GameNight;
+using Api.BoundedContexts.GameManagement.Application.Commands.GameNight;
 using Api.BoundedContexts.GameManagement.Application.Queries.GameNight;
 using Api.Infrastructure.ExternalServices.BoardGameGeek;
 using Api.Infrastructure.ExternalServices.BoardGameGeek.Models;

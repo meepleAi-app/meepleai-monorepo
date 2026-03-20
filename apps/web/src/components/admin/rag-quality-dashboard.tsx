@@ -29,7 +29,7 @@ import { fetchRagQualityReport } from '@/lib/api/rag-quality';
 
 /** Format a number with comma thousands separator (locale-independent) */
 function formatNumber(n: number): string {
-  return n.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  return n.toLocaleString('en-US');
 }
 
 // ============================================================================

@@ -20,11 +20,8 @@ using Xunit;
 namespace Api.Tests.BoundedContexts.SharedGameCatalog.Application.Handlers;
 
 /// <summary>
-/// NOTE: These tests currently fail because DocumentVersioningService methods are not virtual.
-/// This is a pre-existing issue not related to #2430. To fix:
-/// 1. Make DocumentVersioningService methods virtual, OR
-/// 2. Extract IDocumentVersioningService interface, OR
-/// 3. Use concrete DocumentVersioningService instead of mock
+/// Tests for AddDocumentToSharedGameCommandHandler.
+/// DocumentVersioningService methods are now virtual (fixed post-#2430).
 /// </summary>
 [Trait("Category", TestCategories.Unit)]
 public class AddDocumentToSharedGameCommandHandlerTests
@@ -80,6 +77,16 @@ public class AddDocumentToSharedGameCommandHandlerTests
             CreatedBy: createdBy);
 
         // Add PDF document to context so existence check passes
+        _context.PdfDocuments.Add(new PdfDocumentEntity
+        {
+            Id = pdfId,
+            FileName = "test.pdf",
+            FilePath = "/uploads/test.pdf",
+            FileSizeBytes = 1024,
+            ContentType = "application/pdf",
+            UploadedByUserId = createdBy,
+            UploadedAt = DateTime.UtcNow
+        });
         await _context.SaveChangesAsync();
 
         // Mock game exists
@@ -175,6 +182,16 @@ public class AddDocumentToSharedGameCommandHandlerTests
             CreatedBy: createdBy);
 
         // Add PDF document to context so existence check passes
+        _context.PdfDocuments.Add(new PdfDocumentEntity
+        {
+            Id = pdfId,
+            FileName = "test.pdf",
+            FilePath = "/uploads/test.pdf",
+            FileSizeBytes = 1024,
+            ContentType = "application/pdf",
+            UploadedByUserId = createdBy,
+            UploadedAt = DateTime.UtcNow
+        });
         await _context.SaveChangesAsync();
 
         var game = CreateTestGame(gameId);

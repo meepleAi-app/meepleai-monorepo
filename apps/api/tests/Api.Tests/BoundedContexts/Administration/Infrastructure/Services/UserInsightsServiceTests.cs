@@ -92,8 +92,9 @@ public sealed class UserInsightsServiceTests
     {
         // Arrange
         var userId = Guid.NewGuid();
+        // Create 15 insights with priorities cycling in 1-10 range (valid range)
         var manyInsights = Enumerable.Range(1, 15)
-            .Select(i => AIInsight.Create(InsightType.Recommendation, $"Game {i}", "desc", "action", "/url", i))
+            .Select(i => AIInsight.Create(InsightType.Recommendation, $"Game {i}", "desc", "action", "/url", ((i - 1) % 10) + 1))
             .ToList();
 
         _mockBacklogAnalyzer.Setup(x => x.AnalyzeBacklogAsync(userId, It.IsAny<CancellationToken>()))
@@ -110,6 +111,6 @@ public sealed class UserInsightsServiceTests
 
         // Assert
         Assert.Equal(10, result.Count); // MaxInsightsToReturn = 10
-        Assert.Equal(15, result[0].Priority); // Highest priority first
+        Assert.Equal(10, result[0].Priority); // Highest priority first (max valid priority is 10)
     }
 }

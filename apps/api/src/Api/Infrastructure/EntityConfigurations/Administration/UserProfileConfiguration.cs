@@ -6,14 +6,14 @@ namespace Api.Infrastructure.EntityConfigurations.Administration;
 
 /// <summary>
 /// EF Core configuration for UserProfile read-only projection.
-/// Uses ToView("users") to map to the existing users table without generating migrations.
+/// Uses ToTable("users") with ExcludeFromMigrations to read from the users table.
 /// Phase 6: Entity Decomposition — Administration BC profile projection.
 /// </summary>
 internal class UserProfileConfiguration : IEntityTypeConfiguration<UserProfile>
 {
     public void Configure(EntityTypeBuilder<UserProfile> builder)
     {
-        builder.ToView("users");
+        builder.ToTable("users", t => t.ExcludeFromMigrations());
         builder.HasKey(u => u.Id);
 
         builder.Property(u => u.Email).HasMaxLength(256);

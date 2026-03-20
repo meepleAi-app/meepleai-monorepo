@@ -126,19 +126,30 @@ See individual workflow files for environment-specific configuration.
 
 ## Notification Architecture
 
-All workflows use the centralized `notify-slack.yml` reusable workflow for Slack notifications.
+Slack notifications use a 3-tier system via the centralized `notify-slack.yml` reusable workflow.
 
-**How it works:**
-- Every workflow adds `notify-start` (runs in parallel) and `notify-end` (runs after all jobs)
-- `notify-start` sends a "Started" notification to the main channel
-- `notify-end` sends "Success", "Failed", or "Cancelled" to the main channel
-- Critical workflows (deploy, security, runner-health) also send failures to the critical channel
+### Slack Notification Tiers
+
+| Tier | Workflows | Behavior |
+|------|-----------|----------|
+| **CRITICAL** | deploy-staging, rollback | Start + End (both channels) |
+| **IMPORTANT** | ci (main-staging/main PRs), backend-e2e, security-scan | Failures only |
+| **SILENT** | All others (12 workflows) | GitHub Actions UI only |
+
+**Estimated messages/day:** 2-5 (down from ~150)
 
 **Channels:**
-- Main channel (`SLACK_GITNOTIFY_WEBHOOK_URL`): All events from all workflows
-- Critical channel (`SLACK_CRITICAL_WEBHOOK_URL`): Only failures from deploy, security, and runner-health workflows
+- Main channel (`SLACK_GITNOTIFY_WEBHOOK_URL`): Failures from Tier 1+2 workflows, start/end from Tier 1
+- Critical channel (`SLACK_CRITICAL_WEBHOOK_URL`): Failures from deploy-staging, rollback, security-scan
 
-**Adding notifications to a new workflow:** Add `notify-start` and `notify-end` jobs following the pattern in any existing workflow.
+### Deploy Preview
+
+PRs targeting `main-staging` receive an automated comment showing:
+- Services affected (API/Web/Infra)
+- CI status
+- Link to staging environment
+
+**Adding notifications to a new workflow:** Follow the pattern in `deploy-staging.yml` (Tier 1) or `security-scan.yml` (Tier 2). Most workflows should stay in Tier 3 (silent).
 
 ## Self-Hosted ARM64 Runner
 
@@ -263,4 +274,4 @@ act -W .github/workflows/ci.yml --dryrun
 
 ---
 
-**Last Updated**: 2026-03-19
+**Last Updated**: 2026-03-20

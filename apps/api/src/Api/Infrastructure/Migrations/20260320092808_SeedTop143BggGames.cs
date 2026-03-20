@@ -38,15 +38,25 @@ namespace Api.Infrastructure.Migrations
                 sql: "year_published = 0 OR (year_published > 1900 AND year_published <= 2100)");
 
             // Step 2: Create system seed admin user (idempotent)
-            // Note: users table uses PascalCase columns (EF default convention, no HasColumnName)
             migrationBuilder.Sql("""
-                INSERT INTO users ("Id", "Email", "DisplayName", "PasswordHash", "Role", "Tier", "CreatedAt", "EmailVerified", "Status")
-                VALUES (gen_random_uuid(), 'system-seed@meepleai.app', 'System Seed Admin', NULL, 'admin', 'free', NOW(), true, 'Active')
+                INSERT INTO users (
+                    "Id", "Email", "DisplayName", "PasswordHash", "Role", "Tier",
+                    "CreatedAt", "IsDemoAccount", "Language", "EmailNotifications",
+                    "Theme", "DataRetentionDays", "IsTwoFactorEnabled", "EmailVerified",
+                    "IsSuspended", "Status", "Level", "ExperiencePoints",
+                    "FailedLoginAttempts", "IsContributor", "OnboardingCompleted", "OnboardingSkipped"
+                )
+                VALUES (
+                    gen_random_uuid(), 'system-seed@meepleai.app', 'System Seed Admin', NULL, 'system', 'free',
+                    NOW(), false, 'en', false,
+                    'system', 90, false, true,
+                    false, 'Active', 1, 0,
+                    0, false, true, false
+                )
                 ON CONFLICT ("Email") DO NOTHING;
                 """);
 
             // Step 3: Seed 143 top BGG games as skeleton entries using CTE + CROSS JOIN
-            // Note: shared_games uses snake_case (HasColumnName) except GameDataStatus/HasUploadedPdf (PascalCase)
             migrationBuilder.Sql("""
                 WITH seed_admin AS (
                     SELECT "Id" FROM users WHERE "Email" = 'system-seed@meepleai.app'

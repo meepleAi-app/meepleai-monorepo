@@ -54,7 +54,7 @@ public sealed class ExcelImportIntegrationTests : IAsyncLifetime
         _dbContext = new MeepleAiDbContext(options, mockMediator.Object, eventCollectorMock.Object);
         await _dbContext.Database.MigrateAsync();
 
-        var repository = new Api.BoundedContexts.SharedGameCatalog.Infrastructure.Repositories.SharedGameRepository(_dbContext);
+        var repository = new Api.BoundedContexts.SharedGameCatalog.Infrastructure.Repositories.SharedGameRepository(_dbContext, eventCollectorMock.Object);
         var unitOfWork = new Api.SharedKernel.Infrastructure.Persistence.UnitOfWork(_dbContext);
 
         _handler = new ImportGamesFromExcelCommandHandler(

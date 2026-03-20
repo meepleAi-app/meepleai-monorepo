@@ -3,6 +3,8 @@ using Api.BoundedContexts.SharedGameCatalog.Domain.Entities;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
 using Api.BoundedContexts.SharedGameCatalog.Domain.ValueObjects;
 using Api.Infrastructure;
+using Api.SharedKernel.Application.Services;
+using Api.SharedKernel.Infrastructure;
 using Api.Infrastructure.Entities.SharedGameCatalog;
 using Microsoft.EntityFrameworkCore;
 
@@ -12,18 +14,17 @@ namespace Api.BoundedContexts.SharedGameCatalog.Infrastructure.Repositories;
 /// Repository implementation for GameStateTemplate entities.
 /// Issue #2400: GameStateTemplate Entity + AI Generation
 /// </summary>
-internal sealed class GameStateTemplateRepository : IGameStateTemplateRepository
+internal sealed class GameStateTemplateRepository : RepositoryBase, IGameStateTemplateRepository
 {
-    private readonly MeepleAiDbContext _context;
 
-    public GameStateTemplateRepository(MeepleAiDbContext context)
+    public GameStateTemplateRepository(MeepleAiDbContext dbContext, IDomainEventCollector eventCollector)
+        : base(dbContext, eventCollector)
     {
-        _context = context;
     }
 
     public async Task<GameStateTemplate?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        var entity = await _context.GameStateTemplates
+        var entity = await DbContext.GameStateTemplates
             .AsNoTracking()
             .FirstOrDefaultAsync(t => t.Id == id, cancellationToken)
             .ConfigureAwait(false);
@@ -35,7 +36,7 @@ internal sealed class GameStateTemplateRepository : IGameStateTemplateRepository
         Guid sharedGameId,
         CancellationToken cancellationToken = default)
     {
-        var entities = await _context.GameStateTemplates
+        var entities = await DbContext.GameStateTemplates
             .AsNoTracking()
             .Where(t => t.SharedGameId == sharedGameId)
             .OrderByDescending(t => t.IsActive)
@@ -50,7 +51,7 @@ internal sealed class GameStateTemplateRepository : IGameStateTemplateRepository
         Guid sharedGameId,
         CancellationToken cancellationToken = default)
     {
-        var entity = await _context.GameStateTemplates
+        var entity = await DbContext.GameStateTemplates
             .AsNoTracking()
             .FirstOrDefaultAsync(
                 t => t.SharedGameId == sharedGameId && t.IsActive,
@@ -65,7 +66,7 @@ internal sealed class GameStateTemplateRepository : IGameStateTemplateRepository
         string version,
         CancellationToken cancellationToken = default)
     {
-        return await _context.GameStateTemplates
+        return await DbContext.GameStateTemplates
             .AsNoTracking()
             .AnyAsync(
                 t => t.SharedGameId == sharedGameId && t.Version == version,
@@ -76,19 +77,19 @@ internal sealed class GameStateTemplateRepository : IGameStateTemplateRepository
     public async Task AddAsync(GameStateTemplate stateTemplate, CancellationToken cancellationToken = default)
     {
         var entity = MapToEntity(stateTemplate);
-        await _context.GameStateTemplates.AddAsync(entity, cancellationToken).ConfigureAwait(false);
+        await DbContext.GameStateTemplates.AddAsync(entity, cancellationToken).ConfigureAwait(false);
     }
 
     public void Update(GameStateTemplate stateTemplate)
     {
         var entity = MapToEntity(stateTemplate);
-        _context.GameStateTemplates.Update(entity);
+        DbContext.GameStateTemplates.Update(entity);
     }
 
     public void Remove(GameStateTemplate stateTemplate)
     {
         var entity = MapToEntity(stateTemplate);
-        _context.GameStateTemplates.Remove(entity);
+        DbContext.GameStateTemplates.Remove(entity);
     }
 
     public async Task DeactivateOtherVersionsAsync(
@@ -96,7 +97,7 @@ internal sealed class GameStateTemplateRepository : IGameStateTemplateRepository
         Guid exceptTemplateId,
         CancellationToken cancellationToken = default)
     {
-        await _context.GameStateTemplates
+        await DbContext.GameStateTemplates
             .Where(t => t.SharedGameId == sharedGameId
                 && t.Id != exceptTemplateId
                 && t.IsActive)

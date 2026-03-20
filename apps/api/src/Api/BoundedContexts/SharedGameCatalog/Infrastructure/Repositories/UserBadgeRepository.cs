@@ -3,6 +3,8 @@ using Api.BoundedContexts.SharedGameCatalog.Domain.Entities;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
 using Api.BoundedContexts.SharedGameCatalog.Domain.ValueObjects;
 using Api.Infrastructure;
+using Api.SharedKernel.Application.Services;
+using Api.SharedKernel.Infrastructure;
 using Api.Infrastructure.Entities.SharedGameCatalog;
 using Microsoft.EntityFrameworkCore;
 
@@ -12,27 +14,26 @@ namespace Api.BoundedContexts.SharedGameCatalog.Infrastructure.Repositories;
 /// Repository implementation for UserBadge entity.
 /// ISSUE-2731: Infrastructure - EF Core Migrations e Repository
 /// </summary>
-internal sealed class UserBadgeRepository : IUserBadgeRepository
+internal sealed class UserBadgeRepository : RepositoryBase, IUserBadgeRepository
 {
-    private readonly MeepleAiDbContext _context;
 
-    public UserBadgeRepository(MeepleAiDbContext context)
+    public UserBadgeRepository(MeepleAiDbContext dbContext, IDomainEventCollector eventCollector)
+        : base(dbContext, eventCollector)
     {
-        _context = context ?? throw new ArgumentNullException(nameof(context));
     }
 
     public async Task AddAsync(UserBadge userBadge, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(userBadge);
         var entity = MapToEntity(userBadge);
-        await _context.Set<UserBadgeEntity>().AddAsync(entity, cancellationToken).ConfigureAwait(false);
+        await DbContext.Set<UserBadgeEntity>().AddAsync(entity, cancellationToken).ConfigureAwait(false);
     }
 
     public async Task<HashSet<Guid>> GetBadgeIdsByUserAsync(
         Guid userId,
         CancellationToken cancellationToken = default)
     {
-        var badgeIds = await _context.Set<UserBadgeEntity>()
+        var badgeIds = await DbContext.Set<UserBadgeEntity>()
             .AsNoTracking()
             .Where(e => e.UserId == userId && e.RevokedAt == null)
             .Select(e => e.BadgeId)
@@ -47,7 +48,7 @@ internal sealed class UserBadgeRepository : IUserBadgeRepository
         bool includeHidden = false,
         CancellationToken cancellationToken = default)
     {
-        var query = _context.Set<UserBadgeEntity>()
+        var query = DbContext.Set<UserBadgeEntity>()
             .AsNoTracking()
             .Include(e => e.Badge)
             .Where(e => e.UserId == userId && e.RevokedAt == null);
@@ -72,7 +73,7 @@ internal sealed class UserBadgeRepository : IUserBadgeRepository
 
         var normalizedCode = badgeCode.ToUpperInvariant();
 
-        var entities = await _context.Set<UserBadgeEntity>()
+        var entities = await DbContext.Set<UserBadgeEntity>()
             .AsNoTracking()
             .Include(e => e.Badge)
             .Where(e => e.Badge != null && e.Badge.Code == normalizedCode && e.RevokedAt == null)
@@ -88,7 +89,7 @@ internal sealed class UserBadgeRepository : IUserBadgeRepository
         Guid badgeId,
         CancellationToken cancellationToken = default)
     {
-        var entity = await _context.Set<UserBadgeEntity>()
+        var entity = await DbContext.Set<UserBadgeEntity>()
             .AsNoTracking()
             .Include(e => e.Badge)
             .FirstOrDefaultAsync(
@@ -107,7 +108,7 @@ internal sealed class UserBadgeRepository : IUserBadgeRepository
         if (count <= 0)
             return new List<UserBadge>();
 
-        var entities = await _context.Set<UserBadgeEntity>()
+        var entities = await DbContext.Set<UserBadgeEntity>()
             .AsNoTracking()
             .Include(e => e.Badge)
             .Where(e => e.UserId == userId && e.RevokedAt == null && e.IsDisplayed)
@@ -122,7 +123,7 @@ internal sealed class UserBadgeRepository : IUserBadgeRepository
 
     public async Task<List<Guid>> GetAllDistinctUserIdsAsync(CancellationToken cancellationToken = default)
     {
-        return await _context.Set<UserBadgeEntity>()
+        return await DbContext.Set<UserBadgeEntity>()
             .AsNoTracking()
             .Where(e => e.RevokedAt == null)
             .Select(e => e.UserId)

@@ -1,6 +1,8 @@
 using Api.BoundedContexts.Administration.Domain.Aggregates.RagPipelineStrategy;
 using Api.BoundedContexts.Administration.Domain.Repositories;
 using Api.Infrastructure;
+using Api.SharedKernel.Application.Services;
+using Api.SharedKernel.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 
 namespace Api.BoundedContexts.Administration.Infrastructure.Persistence;
@@ -9,25 +11,24 @@ namespace Api.BoundedContexts.Administration.Infrastructure.Persistence;
 /// EF Core repository for RagPipelineStrategy aggregate.
 /// Issue #3464: Save/load/export for custom strategies.
 /// </summary>
-internal sealed class RagPipelineStrategyRepository : IRagPipelineStrategyRepository
+internal sealed class RagPipelineStrategyRepository : RepositoryBase, IRagPipelineStrategyRepository
 {
-    private readonly MeepleAiDbContext _dbContext;
 
-    public RagPipelineStrategyRepository(MeepleAiDbContext dbContext)
+    public RagPipelineStrategyRepository(MeepleAiDbContext dbContext, IDomainEventCollector eventCollector)
+        : base(dbContext, eventCollector)
     {
-        _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
     }
 
     public async Task<RagPipelineStrategy?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        return await _dbContext.Set<RagPipelineStrategy>()
+        return await DbContext.Set<RagPipelineStrategy>()
             .FirstOrDefaultAsync(s => s.Id == id, cancellationToken)
             .ConfigureAwait(false);
     }
 
     public async Task<IReadOnlyList<RagPipelineStrategy>> GetByUserIdAsync(Guid userId, CancellationToken cancellationToken = default)
     {
-        return await _dbContext.Set<RagPipelineStrategy>()
+        return await DbContext.Set<RagPipelineStrategy>()
             .Where(s => s.CreatedByUserId == userId)
             .OrderByDescending(s => s.UpdatedAt)
             .ToListAsync(cancellationToken)
@@ -36,7 +37,7 @@ internal sealed class RagPipelineStrategyRepository : IRagPipelineStrategyReposi
 
     public async Task<IReadOnlyList<RagPipelineStrategy>> GetTemplatesAsync(string? category = null, CancellationToken cancellationToken = default)
     {
-        var query = _dbContext.Set<RagPipelineStrategy>()
+        var query = DbContext.Set<RagPipelineStrategy>()
             .Where(s => s.IsTemplate);
 
         if (!string.IsNullOrWhiteSpace(category))
@@ -57,7 +58,7 @@ internal sealed class RagPipelineStrategyRepository : IRagPipelineStrategyReposi
         bool includeTemplates = true,
         CancellationToken cancellationToken = default)
     {
-        var query = _dbContext.Set<RagPipelineStrategy>().AsQueryable();
+        var query = DbContext.Set<RagPipelineStrategy>().AsQueryable();
 
         if (userId.HasValue)
         {
@@ -86,28 +87,28 @@ internal sealed class RagPipelineStrategyRepository : IRagPipelineStrategyReposi
 
     public async Task<RagPipelineStrategy> AddAsync(RagPipelineStrategy strategy, CancellationToken cancellationToken = default)
     {
-        await _dbContext.Set<RagPipelineStrategy>()
+        await DbContext.Set<RagPipelineStrategy>()
             .AddAsync(strategy, cancellationToken)
             .ConfigureAwait(false);
-        await _dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        await DbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
         return strategy;
     }
 
     public async Task UpdateAsync(RagPipelineStrategy strategy, CancellationToken cancellationToken = default)
     {
-        _dbContext.Set<RagPipelineStrategy>().Update(strategy);
-        await _dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        DbContext.Set<RagPipelineStrategy>().Update(strategy);
+        await DbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
     }
 
     public async Task DeleteAsync(RagPipelineStrategy strategy, CancellationToken cancellationToken = default)
     {
         strategy.Delete();
-        await _dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        await DbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
     }
 
     public async Task<bool> ExistsByNameAsync(string name, Guid userId, Guid? excludeId = null, CancellationToken cancellationToken = default)
     {
-        var query = _dbContext.Set<RagPipelineStrategy>()
+        var query = DbContext.Set<RagPipelineStrategy>()
             .Where(s => s.Name == name && s.CreatedByUserId == userId);
 
         if (excludeId.HasValue)

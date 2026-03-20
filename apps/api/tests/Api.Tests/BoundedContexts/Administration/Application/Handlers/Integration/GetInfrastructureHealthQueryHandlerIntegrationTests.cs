@@ -11,6 +11,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Moq;
 using StackExchange.Redis;
+using FluentAssertions;
 using Xunit;
 
 namespace Api.Tests.BoundedContexts.Administration.Application.Handlers.Integration;
@@ -106,11 +107,11 @@ public sealed class GetInfrastructureHealthQueryHandlerIntegrationTests : IAsync
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.NotNull(result.Services);
-        Assert.Equal(2, result.Services.Count);
-        Assert.Contains(result.Services, s => s.ServiceName == "PostgreSQL");
-        Assert.Contains(result.Services, s => s.ServiceName == "Redis");
+        result.Should().NotBeNull();
+        result.Services.Should().NotBeNull();
+        result.Services.Count.Should().Be(2);
+        result.Services.Should().Contain(s => s.ServiceName == "PostgreSQL");
+        result.Services.Should().Contain(s => s.ServiceName == "Redis");
     }
 
     [Fact]
@@ -145,10 +146,10 @@ public sealed class GetInfrastructureHealthQueryHandlerIntegrationTests : IAsync
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.NotNull(result.Services);
-        Assert.Single(result.Services);
-        Assert.Equal("PostgreSQL", result.Services.First().ServiceName);
+        result.Should().NotBeNull();
+        result.Services.Should().NotBeNull();
+        result.Services.Should().ContainSingle();
+        result.Services.First().ServiceName.Should().Be("PostgreSQL");
     }
 
     [Fact]
@@ -181,8 +182,8 @@ public sealed class GetInfrastructureHealthQueryHandlerIntegrationTests : IAsync
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal(HealthState.Healthy, result.Overall.State);
+        result.Should().NotBeNull();
+        result.Overall.State.Should().Be(HealthState.Healthy);
         Assert.All(result.Services, service =>
         {
             Assert.Equal("Healthy", service.State);
@@ -203,9 +204,8 @@ public sealed class GetInfrastructureHealthQueryHandlerIntegrationTests : IAsync
             .ThrowsAsync(new OperationCanceledException());
 
         // Act & Assert
-        await Assert.ThrowsAsync<OperationCanceledException>(
-            async () => await _handler.Handle(query, cts.Token)
-        );
+        var act = async () => await _handler.Handle(query, cts.Token);
+        await act.Should().ThrowAsync<OperationCanceledException>();
     }
 
     [Fact]
@@ -238,9 +238,9 @@ public sealed class GetInfrastructureHealthQueryHandlerIntegrationTests : IAsync
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal(HealthState.Degraded, result.Overall.State);
-        Assert.Contains(result.Services, s => s.ServiceName == "Redis" && s.State == "Degraded");
+        result.Should().NotBeNull();
+        result.Overall.State.Should().Be(HealthState.Degraded);
+        result.Services.Should().Contain(s => s.ServiceName == "Redis" && s.State == "Degraded");
     }
 
     [Fact]
@@ -273,7 +273,7 @@ public sealed class GetInfrastructureHealthQueryHandlerIntegrationTests : IAsync
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         Assert.All(result.Services, service =>
         {
             Assert.True(service.ResponseTimeMs >= 0);

@@ -62,7 +62,7 @@ public class GameSessionContextQueryHandlerTests
         var result = await handler.Handle(query, CancellationToken.None);
 
         // Assert
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         result.SessionId.Should().Be(sessionId);
         _orchestratorMock.Verify(x => x.BuildContextAsync(sessionId, It.IsAny<CancellationToken>()), Times.Once);
     }
@@ -112,7 +112,7 @@ public class GameSessionContextQueryHandlerTests
         var result = await handler.Handle(query, CancellationToken.None);
 
         // Assert
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         result.SessionId.Should().Be(sessionId);
         _orchestratorMock.Verify(x => x.RefreshContextAsync(sessionId, It.IsAny<CancellationToken>()), Times.Once);
     }

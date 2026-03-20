@@ -55,8 +55,9 @@ public class TimerToolConfigTests
     [Fact]
     public void Constructor_ChessTimerNotPerPlayer_ThrowsArgumentException()
     {
-        Assert.Throws<ArgumentException>(() =>
-            new TimerToolConfig("Chess", 300, TimerType.Chess, isPerPlayer: false));
+        var act = () =>
+            new TimerToolConfig("Chess", 300, TimerType.Chess, isPerPlayer: false);
+        act.Should().Throw<ArgumentException>();
     }
 
     [Fact]
@@ -88,22 +89,25 @@ public class TimerToolConfigTests
     [Fact]
     public void Constructor_WithWarningThresholdZero_ThrowsArgumentException()
     {
-        Assert.Throws<ArgumentException>(() =>
-            new TimerToolConfig("Timer", 60, warningThresholdSeconds: 0));
+        var act2 = () =>
+            new TimerToolConfig("Timer", 60, warningThresholdSeconds: 0);
+        act2.Should().Throw<ArgumentException>();
     }
 
     [Fact]
     public void Constructor_WithWarningThresholdEqualToDuration_ThrowsArgumentException()
     {
-        Assert.Throws<ArgumentException>(() =>
-            new TimerToolConfig("Timer", 60, warningThresholdSeconds: 60));
+        var act3 = () =>
+            new TimerToolConfig("Timer", 60, warningThresholdSeconds: 60);
+        act3.Should().Throw<ArgumentException>();
     }
 
     [Fact]
     public void Constructor_WithWarningThresholdAboveDuration_ThrowsArgumentException()
     {
-        Assert.Throws<ArgumentException>(() =>
-            new TimerToolConfig("Timer", 60, warningThresholdSeconds: 90));
+        var act4 = () =>
+            new TimerToolConfig("Timer", 60, warningThresholdSeconds: 90);
+        act4.Should().Throw<ArgumentException>();
     }
 
     [Fact]

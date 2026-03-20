@@ -293,8 +293,9 @@ public class GetNotificationsQueryHandlerTests
     public async Task Constructor_WithNullRepository_ThrowsArgumentNullException()
     {
         // Act & Assert
-        var exception = Assert.Throws<ArgumentNullException>(() =>
-            new GetNotificationsQueryHandler(null!, _configServiceMock.Object));
+        var act = () =>
+            new GetNotificationsQueryHandler(null!, _configServiceMock.Object);
+        var exception = act.Should().Throw<ArgumentNullException>().Which;
 
         exception.ParamName.Should().Be("notificationRepository");
     }
@@ -303,8 +304,9 @@ public class GetNotificationsQueryHandlerTests
     public async Task Constructor_WithNullConfigService_ThrowsArgumentNullException()
     {
         // Act & Assert
-        var exception = Assert.Throws<ArgumentNullException>(() =>
-            new GetNotificationsQueryHandler(_notificationRepositoryMock.Object, null!));
+        var act2 = () =>
+            new GetNotificationsQueryHandler(_notificationRepositoryMock.Object, null!);
+        var exception = act2.Should().Throw<ArgumentNullException>().Which;
 
         exception.ParamName.Should().Be("configService");
     }
@@ -317,8 +319,8 @@ public class GetNotificationsQueryHandlerTests
         var query = new GetNotificationsQuery(userId, Limit: -1);
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<ArgumentException>(
-            () => _handler.Handle(query, CancellationToken.None));
+        var act3 = () => _handler.Handle(query, CancellationToken.None);
+        var exception = (await act3.Should().ThrowAsync<ArgumentException>()).Which;
 
         exception.Message.Should().Contain("non-negative");
         exception.ParamName.Should().Be("query");

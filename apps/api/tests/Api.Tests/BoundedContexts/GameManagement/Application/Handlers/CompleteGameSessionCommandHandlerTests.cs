@@ -48,7 +48,7 @@ public class CompleteGameSessionCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         result.Id.Should().Be(session.Id);
         result.WinnerName.Should().Be("Player 1");
         result.Status.Should().Be(SessionStatus.Completed.ToString());
@@ -74,8 +74,8 @@ public class CompleteGameSessionCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Null(result.WinnerName);
+        result.Should().NotBeNull();
+        result.WinnerName.Should().BeNull();
         result.Status.Should().Be(SessionStatus.Completed.ToString());
     }
 
@@ -91,8 +91,9 @@ public class CompleteGameSessionCommandHandlerTests
             .ReturnsAsync((GameSession?)null);
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
-            () => _handler.Handle(command, TestContext.Current.CancellationToken));
+        var act = 
+            () => _handler.Handle(command, TestContext.Current.CancellationToken);
+        var exception = (await act.Should().ThrowAsync<InvalidOperationException>()).Which;
 
         exception.Message.Should().Contain(sessionId.ToString());
         _unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
@@ -127,8 +128,9 @@ public class CompleteGameSessionCommandHandlerTests
     public async Task Handle_WithNullCommand_ThrowsArgumentNullException()
     {
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentNullException>(
-            () => _handler.Handle(null!, TestContext.Current.CancellationToken));
+        var act = 
+            () => _handler.Handle(null!, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<ArgumentNullException>();
     }
 
     private static GameSession CreateActiveSession(Guid gameId)

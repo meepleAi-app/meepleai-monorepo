@@ -65,8 +65,9 @@ public class RedisOAuthStateStoreTests
         var expiration = TimeSpan.FromMinutes(10);
 
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentException>(() =>
-            _stateStore.StoreStateAsync(null!, expiration));
+        var act = () =>
+            _stateStore.StoreStateAsync(null!, expiration);
+        await act.Should().ThrowAsync<ArgumentException>();
     }
 
     [Fact]
@@ -76,8 +77,9 @@ public class RedisOAuthStateStoreTests
         var expiration = TimeSpan.FromMinutes(10);
 
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentException>(() =>
-            _stateStore.StoreStateAsync(string.Empty, expiration));
+        var act2 = () =>
+            _stateStore.StoreStateAsync(string.Empty, expiration);
+        await act2.Should().ThrowAsync<ArgumentException>();
     }
 
     [Fact]
@@ -88,8 +90,9 @@ public class RedisOAuthStateStoreTests
         var expiration = TimeSpan.FromMinutes(-1);
 
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentException>(() =>
-            _stateStore.StoreStateAsync(state, expiration));
+        var act3 = () =>
+            _stateStore.StoreStateAsync(state, expiration);
+        await act3.Should().ThrowAsync<ArgumentException>();
     }
 
     [Fact]
@@ -306,8 +309,9 @@ public class RedisOAuthStateStoreTests
             new RedisException("NOAUTH Authentication required")));
 
         // Act & Assert
-        await Assert.ThrowsAsync<RedisException>(() =>
-            _stateStore.StoreStateAsync(state, expiration));
+        var act4 = () =>
+            _stateStore.StoreStateAsync(state, expiration);
+        await act4.Should().ThrowAsync<RedisException>();
     }
 
     [Fact]
@@ -322,8 +326,9 @@ public class RedisOAuthStateStoreTests
 
         // Act & Assert - QUAL-02: Non-transient errors (auth failures) are now re-thrown
         // Only RedisConnectionException and RedisTimeoutException are treated as transient
-        await Assert.ThrowsAsync<RedisException>(() =>
-            _stateStore.ValidateAndRemoveStateAsync(state));
+        var act5 = () =>
+            _stateStore.ValidateAndRemoveStateAsync(state);
+        await act5.Should().ThrowAsync<RedisException>();
     }
 
     #endregion

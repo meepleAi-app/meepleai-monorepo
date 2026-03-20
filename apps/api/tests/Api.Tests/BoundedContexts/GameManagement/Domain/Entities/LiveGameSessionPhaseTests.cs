@@ -82,8 +82,9 @@ public class LiveGameSessionPhaseTests
         var session = CreateStartedSession();
         session.Complete(_timeProvider);
 
-        Assert.Throws<ConflictException>(() =>
-            session.ConfigurePhases(new[] { "Draw" }, _timeProvider));
+        var act = () =>
+            session.ConfigurePhases(new[] { "Draw" }, _timeProvider);
+        act.Should().Throw<ConflictException>();
     }
 
     [Fact]
@@ -91,8 +92,9 @@ public class LiveGameSessionPhaseTests
     {
         var session = CreateStartedSession();
 
-        Assert.Throws<ArgumentNullException>(() =>
-            session.ConfigurePhases(null!, _timeProvider));
+        var act = () =>
+            session.ConfigurePhases(null!, _timeProvider);
+        act.Should().Throw<ArgumentNullException>();
     }
 
     #endregion
@@ -143,8 +145,9 @@ public class LiveGameSessionPhaseTests
     {
         var session = CreateStartedSession();
 
-        var ex = Assert.Throws<DomainException>(() =>
-            session.AdvancePhase(_timeProvider));
+        var act = () =>
+            session.AdvancePhase(_timeProvider);
+        var ex = act.Should().Throw<DomainException>().Which;
 
         ex.Message.Should().Contain("No phases configured");
     }
@@ -158,8 +161,9 @@ public class LiveGameSessionPhaseTests
         session.ConfigurePhases(new[] { "Draw" }, _timeProvider);
         // Session is Created, not InProgress
 
-        Assert.Throws<ConflictException>(() =>
-            session.AdvancePhase(_timeProvider));
+        var act = () =>
+            session.AdvancePhase(_timeProvider);
+        act.Should().Throw<ConflictException>();
     }
 
     [Fact]
@@ -189,7 +193,7 @@ public class LiveGameSessionPhaseTests
         session.AdvancePhase(_timeProvider);
 
         var lastRecord = session.TurnRecords.LastOrDefault();
-        Assert.NotNull(lastRecord);
+        lastRecord.Should().NotBeNull();
         lastRecord.PhaseIndex.Should().Be(1);
         lastRecord.PhaseName.Should().Be("Action");
     }
@@ -237,7 +241,7 @@ public class LiveGameSessionPhaseTests
 
         session.SetSnapshotTriggerConfig(config, _timeProvider);
 
-        Assert.NotNull(session.SnapshotTriggerConfig);
+        session.SnapshotTriggerConfig.Should().NotBeNull();
         session.SnapshotTriggerConfig.Should().Be(config);
     }
 
@@ -248,8 +252,9 @@ public class LiveGameSessionPhaseTests
         session.Complete(_timeProvider);
         var config = SnapshotTriggerConfig.CreateDefault();
 
-        Assert.Throws<ConflictException>(() =>
-            session.SetSnapshotTriggerConfig(config, _timeProvider));
+        var act = () =>
+            session.SetSnapshotTriggerConfig(config, _timeProvider);
+        act.Should().Throw<ConflictException>();
     }
 
     [Fact]
@@ -257,8 +262,9 @@ public class LiveGameSessionPhaseTests
     {
         var session = CreateStartedSession();
 
-        Assert.Throws<ArgumentNullException>(() =>
-            session.SetSnapshotTriggerConfig(null!, _timeProvider));
+        var act = () =>
+            session.SetSnapshotTriggerConfig(null!, _timeProvider);
+        act.Should().Throw<ArgumentNullException>();
     }
 
     [Fact]
@@ -290,7 +296,7 @@ public class LiveGameSessionPhaseTests
     {
         var session = CreateStartedSession();
 
-        Assert.Null(session.GetCurrentPhaseName());
+        session.GetCurrentPhaseName().Should().BeNull();
     }
 
     #endregion

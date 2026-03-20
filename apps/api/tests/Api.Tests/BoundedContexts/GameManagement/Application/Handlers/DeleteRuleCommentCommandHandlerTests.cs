@@ -41,7 +41,7 @@ public class DeleteRuleCommentCommandHandlerTests
             loggerMock.Object);
 
         // Assert
-        Assert.NotNull(handler);
+        handler.Should().NotBeNull();
     }
 
     [Fact]
@@ -51,10 +51,11 @@ public class DeleteRuleCommentCommandHandlerTests
         var loggerMock = new Mock<ILogger<DeleteRuleCommentCommandHandler>>();
 
         // Act & Assert
-        Assert.Throws<ArgumentNullException>(() =>
+        var act = () =>
             new DeleteRuleCommentCommandHandler(
                 null!,
-                loggerMock.Object));
+                loggerMock.Object);
+        act.Should().Throw<ArgumentNullException>();
     }
 
     [Fact]
@@ -64,10 +65,11 @@ public class DeleteRuleCommentCommandHandlerTests
         using var context = CreateFreshDbContext();
 
         // Act & Assert
-        Assert.Throws<ArgumentNullException>(() =>
+        var act = () =>
             new DeleteRuleCommentCommandHandler(
                 context,
-                null!));
+                null!);
+        act.Should().Throw<ArgumentNullException>();
     }
     [Fact]
     public void Command_AsOwner_ConstructsCorrectly()
@@ -84,7 +86,7 @@ public class DeleteRuleCommentCommandHandlerTests
         // Assert
         command.CommentId.Should().Be(commentId);
         command.UserId.Should().Be(userId);
-        Assert.False(command.IsAdmin);
+        (command.IsAdmin).Should().BeFalse();
     }
 
     [Fact]
@@ -102,7 +104,7 @@ public class DeleteRuleCommentCommandHandlerTests
         // Assert
         command.CommentId.Should().Be(commentId);
         command.UserId.Should().Be(adminUserId);
-        Assert.True(command.IsAdmin);
+        (command.IsAdmin).Should().BeTrue();
     }
 
     [Fact]

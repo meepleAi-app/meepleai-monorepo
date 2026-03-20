@@ -58,13 +58,13 @@ public sealed class CreateSessionInviteCommandHandlerTests
         var command = new CreateSessionInviteCommand(SessionId, HostUserId, MaxUses: 10, ExpiryMinutes: 30);
         var result = await _sut.Handle(command, CancellationToken.None);
 
-        Assert.NotNull(result);
-        Assert.NotNull(result.Pin);
+        result.Should().NotBeNull();
+        result.Pin.Should().NotBeNull();
         result.Pin.Length.Should().Be(6);
-        Assert.NotNull(result.LinkToken);
+        result.LinkToken.Should().NotBeNull();
         result.LinkToken.Length.Should().Be(32);
         result.MaxUses.Should().Be(10);
-        Assert.True(result.ExpiresAt > DateTime.UtcNow);
+        (result.ExpiresAt > DateTime.UtcNow).Should().BeTrue();
     }
 
     [Fact]
@@ -75,8 +75,9 @@ public sealed class CreateSessionInviteCommandHandlerTests
         var otherUserId = Guid.NewGuid();
         var command = new CreateSessionInviteCommand(SessionId, otherUserId, MaxUses: 10, ExpiryMinutes: 30);
 
-        await Assert.ThrowsAsync<ForbiddenException>(() =>
-            _sut.Handle(command, CancellationToken.None));
+        var act = () =>
+            _sut.Handle(command, CancellationToken.None);
+        await act.Should().ThrowAsync<ForbiddenException>();
     }
 
     [Fact]
@@ -84,8 +85,9 @@ public sealed class CreateSessionInviteCommandHandlerTests
     {
         var command = new CreateSessionInviteCommand(Guid.NewGuid(), HostUserId, MaxUses: 10, ExpiryMinutes: 30);
 
-        await Assert.ThrowsAsync<NotFoundException>(() =>
-            _sut.Handle(command, CancellationToken.None));
+        var act = () =>
+            _sut.Handle(command, CancellationToken.None);
+        await act.Should().ThrowAsync<NotFoundException>();
     }
 
     [Fact]
@@ -98,11 +100,11 @@ public sealed class CreateSessionInviteCommandHandlerTests
 
         var saved = await _dbContext.SessionInvites.FindAsync(
             _dbContext.SessionInvites.First().Id);
-        Assert.NotNull(saved);
+        saved.Should().NotBeNull();
         saved.Pin.Should().Be(result.Pin);
         saved.LinkToken.Should().Be(result.LinkToken);
         saved.MaxUses.Should().Be(5);
         saved.CurrentUses.Should().Be(0);
-        Assert.False(saved.IsRevoked);
+        (saved.IsRevoked).Should().BeFalse();
     }
 }

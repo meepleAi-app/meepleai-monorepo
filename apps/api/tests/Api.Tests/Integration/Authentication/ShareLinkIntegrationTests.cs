@@ -241,9 +241,8 @@ public sealed class ShareLinkIntegrationTests : IAsyncLifetime
         );
 
         // Act & Assert
-        await Assert.ThrowsAsync<InvalidOperationException>(
-            () => mediator.Send(command, TestCancellationToken)
-        );
+        var act = () => mediator.Send(command, TestCancellationToken);
+        await act.Should().ThrowAsync<InvalidOperationException>();
     }
 
     #endregion

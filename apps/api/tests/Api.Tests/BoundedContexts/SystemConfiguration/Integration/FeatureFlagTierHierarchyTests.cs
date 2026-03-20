@@ -199,24 +199,24 @@ public class FeatureFlagTierHierarchyTests
     [Fact]
     public async Task CanAccessFeature_WithNullUser_ThrowsArgumentNullException()
     {
-        await Assert.ThrowsAsync<ArgumentNullException>(
-            () => _service.CanAccessFeatureAsync(null!, "feature"));
+        var act = () => _service.CanAccessFeatureAsync(null!, "feature");
+        await act.Should().ThrowAsync<ArgumentNullException>();
     }
 
     [Fact]
     public async Task CanAccessFeature_WithEmptyFeatureName_ThrowsArgumentException()
     {
         var user = CreateUser(UserTier.Free, Role.User);
-        await Assert.ThrowsAsync<ArgumentException>(
-            () => _service.CanAccessFeatureAsync(user, ""));
+        var act2 = () => _service.CanAccessFeatureAsync(user, "");
+        await act2.Should().ThrowAsync<ArgumentException>();
     }
 
     [Fact]
     public async Task CanAccessFeature_WithWhitespaceFeatureName_ThrowsArgumentException()
     {
         var user = CreateUser(UserTier.Free, Role.User);
-        await Assert.ThrowsAsync<ArgumentException>(
-            () => _service.CanAccessFeatureAsync(user, "   "));
+        var act3 = () => _service.CanAccessFeatureAsync(user, "   ");
+        await act3.Should().ThrowAsync<ArgumentException>();
     }
 
     #endregion

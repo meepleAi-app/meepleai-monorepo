@@ -69,8 +69,8 @@ public class PauseSnapshotTests
             ValidSessionId, 1, null, scores, ValidUserId, false);
 
         snapshot.PlayerScores.Count.Should().Be(2);
-        Assert.Contains(snapshot.PlayerScores, s => s.PlayerName == "Alice" && s.Score == 42m);
-        Assert.Contains(snapshot.PlayerScores, s => s.PlayerName == "Bob" && s.Score == 37m);
+        snapshot.PlayerScores.Should().Contain(s => s.PlayerName == "Alice" && s.Score == 42m);
+        snapshot.PlayerScores.Should().Contain(s => s.PlayerName == "Bob" && s.Score == 37m);
     }
 
     [Fact]
@@ -88,7 +88,7 @@ public class PauseSnapshotTests
         var snapshot = PauseSnapshot.Create(
             ValidSessionId, 1, null, SampleScores(), ValidUserId, true);
 
-        Assert.True(snapshot.IsAutoSave);
+        (snapshot.IsAutoSave).Should().BeTrue();
     }
 
     [Fact]
@@ -97,7 +97,7 @@ public class PauseSnapshotTests
         var snapshot = PauseSnapshot.Create(
             ValidSessionId, 1, null, SampleScores(), ValidUserId, false);
 
-        Assert.False(snapshot.IsAutoSave);
+        (snapshot.IsAutoSave).Should().BeFalse();
     }
 
     [Fact]
@@ -155,7 +155,7 @@ public class PauseSnapshotTests
             ValidSessionId, 1, null, SampleScores(), ValidUserId, false);
         var after = DateTime.UtcNow.AddSeconds(1);
 
-        Assert.InRange(snapshot.SavedAt, before, after);
+        snapshot.SavedAt.Should().BeOnOrAfter(before).And.BeOnOrBefore(after);
     }
 
     // ─── Null optional parameters ─────────────────────────────────────────────
@@ -166,8 +166,8 @@ public class PauseSnapshotTests
         var snapshot = PauseSnapshot.Create(
             ValidSessionId, 1, null, null!, ValidUserId, false);
 
-        Assert.NotNull(snapshot.PlayerScores);
-        Assert.Empty(snapshot.PlayerScores);
+        snapshot.PlayerScores.Should().NotBeNull();
+        snapshot.PlayerScores.Should().BeEmpty();
     }
 
     [Fact]
@@ -177,8 +177,8 @@ public class PauseSnapshotTests
             ValidSessionId, 1, null, SampleScores(), ValidUserId, false,
             attachmentIds: null);
 
-        Assert.NotNull(snapshot.AttachmentIds);
-        Assert.Empty(snapshot.AttachmentIds);
+        snapshot.AttachmentIds.Should().NotBeNull();
+        snapshot.AttachmentIds.Should().BeEmpty();
     }
 
     [Fact]
@@ -188,8 +188,8 @@ public class PauseSnapshotTests
             ValidSessionId, 1, null, SampleScores(), ValidUserId, false,
             disputes: null);
 
-        Assert.NotNull(snapshot.Disputes);
-        Assert.Empty(snapshot.Disputes);
+        snapshot.Disputes.Should().NotBeNull();
+        snapshot.Disputes.Should().BeEmpty();
     }
 
     [Fact]
@@ -198,7 +198,7 @@ public class PauseSnapshotTests
         var snapshot = PauseSnapshot.Create(
             ValidSessionId, 1, null, SampleScores(), ValidUserId, false);
 
-        Assert.Null(snapshot.CurrentPhase);
+        snapshot.CurrentPhase.Should().BeNull();
     }
 
     // ─── AgentConversationSummary initially null ────────────────────────────
@@ -209,7 +209,7 @@ public class PauseSnapshotTests
         var snapshot = PauseSnapshot.Create(
             ValidSessionId, 1, null, SampleScores(), ValidUserId, false);
 
-        Assert.Null(snapshot.AgentConversationSummary);
+        snapshot.AgentConversationSummary.Should().BeNull();
     }
 
     // ─── UpdateSummary ───────────────────────────────────────────────────────
@@ -263,7 +263,7 @@ public class PauseSnapshotTests
         var snapshot = PauseSnapshot.Create(
             ValidSessionId, 1, null, SampleScores(), ValidUserId, isAutoSave: true);
 
-        Assert.True(snapshot.IsAutoSave);
+        (snapshot.IsAutoSave).Should().BeTrue();
     }
 
     [Fact]
@@ -272,7 +272,7 @@ public class PauseSnapshotTests
         var snapshot = PauseSnapshot.Create(
             ValidSessionId, 1, null, SampleScores(), ValidUserId, isAutoSave: false);
 
-        Assert.False(snapshot.IsAutoSave);
+        (snapshot.IsAutoSave).Should().BeFalse();
     }
 
     // ─── Guard clauses ───────────────────────────────────────────────────────
@@ -280,22 +280,25 @@ public class PauseSnapshotTests
     [Fact]
     public void Create_WithEmptySessionId_Throws()
     {
-        Assert.Throws<ArgumentException>(() =>
-            PauseSnapshot.Create(Guid.Empty, 1, null, SampleScores(), ValidUserId, false));
+        var act = () =>
+            PauseSnapshot.Create(Guid.Empty, 1, null, SampleScores(), ValidUserId, false);
+        act.Should().Throw<ArgumentException>();
     }
 
     [Fact]
     public void Create_WithEmptyUserId_Throws()
     {
-        Assert.Throws<ArgumentException>(() =>
-            PauseSnapshot.Create(ValidSessionId, 1, null, SampleScores(), Guid.Empty, false));
+        var act = () =>
+            PauseSnapshot.Create(ValidSessionId, 1, null, SampleScores(), Guid.Empty, false);
+        act.Should().Throw<ArgumentException>();
     }
 
     [Fact]
     public void Create_WithNegativeTurn_Throws()
     {
-        Assert.Throws<ArgumentOutOfRangeException>(() =>
-            PauseSnapshot.Create(ValidSessionId, -1, null, SampleScores(), ValidUserId, false));
+        var act = () =>
+            PauseSnapshot.Create(ValidSessionId, -1, null, SampleScores(), ValidUserId, false);
+        act.Should().Throw<ArgumentOutOfRangeException>();
     }
 
     [Fact]
@@ -326,6 +329,6 @@ public class PauseSnapshotTests
         var record = new PlayerScoreSnapshot("Guest", 10m);
 
         record.PlayerName.Should().Be("Guest");
-        Assert.Null(record.PlayerId);
+        record.PlayerId.Should().BeNull();
     }
 }

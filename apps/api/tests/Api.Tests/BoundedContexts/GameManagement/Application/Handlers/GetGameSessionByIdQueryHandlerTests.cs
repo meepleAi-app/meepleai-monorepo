@@ -42,11 +42,11 @@ public class GetGameSessionByIdQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         result.Id.Should().Be(session.Id);
         result.GameId.Should().Be(gameId);
         result.Status.Should().Be("Setup");
-        Assert.NotNull(result.Players);
+        result.Players.Should().NotBeNull();
         result.Players.Should().ContainSingle();
     }
 
@@ -65,7 +65,7 @@ public class GetGameSessionByIdQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.Null(result);
+        result.Should().BeNull();
     }
 
     [Fact]
@@ -96,7 +96,7 @@ public class GetGameSessionByIdQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         result.Players.Count.Should().Be(3);
         result.Players[0].PlayerName.Should().Be("Player 1");
         result.Players[0].PlayerOrder.Should().Be(1);
@@ -127,8 +127,9 @@ public class GetGameSessionByIdQueryHandlerTests
     public async Task Handle_WithNullQuery_ThrowsArgumentNullException()
     {
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentNullException>(
-            () => _handler.Handle(null!, TestContext.Current.CancellationToken));
+        var act = 
+            () => _handler.Handle(null!, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<ArgumentNullException>();
     }
 
     [Fact]
@@ -149,10 +150,10 @@ public class GetGameSessionByIdQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         result.Status.Should().Be("Completed");
         result.WinnerName.Should().Be("Player 1");
-        Assert.NotNull(result.CompletedAt);
+        result.CompletedAt.Should().NotBeNull();
     }
 
     private static GameSession CreateSession(Guid gameId)

@@ -134,8 +134,9 @@ public class GenerateSetupChecklistCommandHandlerTests
         var command = new GenerateSetupChecklistCommand(DefaultSessionId, 4);
 
         // Act & Assert
-        var ex = await Assert.ThrowsAsync<InvalidOperationException>(
-            () => _handler.Handle(command, CancellationToken.None));
+        var act = 
+            () => _handler.Handle(command, CancellationToken.None);
+        var ex = (await act.Should().ThrowAsync<InvalidOperationException>()).Which;
 
         ex.Message.Should().Be("Feature SetupWizard.Enabled is disabled");
     }
@@ -151,8 +152,9 @@ public class GenerateSetupChecklistCommandHandlerTests
         var command = new GenerateSetupChecklistCommand(DefaultSessionId, 4);
 
         // Act & Assert
-        await Assert.ThrowsAsync<NotFoundException>(
-            () => _handler.Handle(command, CancellationToken.None));
+        var act = 
+            () => _handler.Handle(command, CancellationToken.None);
+        await act.Should().ThrowAsync<NotFoundException>();
     }
 
     // === Session without GameId ===
@@ -167,8 +169,9 @@ public class GenerateSetupChecklistCommandHandlerTests
         var command = new GenerateSetupChecklistCommand(DefaultSessionId, 4);
 
         // Act & Assert
-        var ex = await Assert.ThrowsAsync<InvalidOperationException>(
-            () => _handler.Handle(command, CancellationToken.None));
+        var act = 
+            () => _handler.Handle(command, CancellationToken.None);
+        var ex = (await act.Should().ThrowAsync<InvalidOperationException>()).Which;
 
         ex.Message.Should().Be("Session has no associated game");
     }
@@ -189,9 +192,9 @@ public class GenerateSetupChecklistCommandHandlerTests
         var result = await _handler.Handle(command, CancellationToken.None);
 
         // Assert
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         result.PlayerCount.Should().Be(4);
-        Assert.NotEmpty(result.SetupSteps);
+        result.SetupSteps.Should().NotBeEmpty();
     }
 
     [Fact]
@@ -208,7 +211,7 @@ public class GenerateSetupChecklistCommandHandlerTests
         await _handler.Handle(command, CancellationToken.None);
 
         // Assert - checklist should be set on the session
-        Assert.NotNull(session.SetupChecklist);
+        session.SetupChecklist.Should().NotBeNull();
         session.SetupChecklist!.PlayerCount.Should().Be(4);
     }
 

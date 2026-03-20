@@ -66,34 +66,37 @@ public class NotificationQueueItemTests
     [Fact]
     public void Create_ThrowsOnNullChannelType()
     {
-        Assert.Throws<ArgumentNullException>(() =>
+        var act = () =>
             NotificationQueueItem.Create(
                 null!,
                 Guid.NewGuid(),
                 NotificationType.PdfUploadCompleted,
-                new GenericPayload("Test", "Body")));
+                new GenericPayload("Test", "Body"));
+        act.Should().Throw<ArgumentNullException>();
     }
 
     [Fact]
     public void Create_ThrowsOnNullNotificationType()
     {
-        Assert.Throws<ArgumentNullException>(() =>
+        var act2 = () =>
             NotificationQueueItem.Create(
                 NotificationChannelType.SlackUser,
                 Guid.NewGuid(),
                 null!,
-                new GenericPayload("Test", "Body")));
+                new GenericPayload("Test", "Body"));
+        act2.Should().Throw<ArgumentNullException>();
     }
 
     [Fact]
     public void Create_ThrowsOnNullPayload()
     {
-        Assert.Throws<ArgumentNullException>(() =>
+        var act3 = () =>
             NotificationQueueItem.Create(
                 NotificationChannelType.SlackUser,
                 Guid.NewGuid(),
                 NotificationType.PdfUploadCompleted,
-                null!));
+                null!);
+        act3.Should().Throw<ArgumentNullException>();
     }
 
     [Fact]
@@ -160,8 +163,9 @@ public class NotificationQueueItemTests
         var item = CreateDefaultItem();
 
         // Act & Assert
-        Assert.Throws<InvalidOperationException>(() =>
-            item.MarkAsSent(DateTime.UtcNow));
+        var act4 = () =>
+            item.MarkAsSent(DateTime.UtcNow);
+        act4.Should().Throw<InvalidOperationException>();
     }
 
     [Fact]
@@ -271,8 +275,9 @@ public class NotificationQueueItemTests
         var item = CreateDefaultItem();
 
         // Act & Assert
-        Assert.Throws<InvalidOperationException>(() =>
-            item.MarkAsFailed("error"));
+        var act5 = () =>
+            item.MarkAsFailed("error");
+        act5.Should().Throw<InvalidOperationException>();
     }
 
     [Fact]

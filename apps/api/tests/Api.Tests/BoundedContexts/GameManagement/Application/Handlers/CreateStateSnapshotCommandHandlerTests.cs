@@ -51,7 +51,7 @@ public class CreateStateSnapshotCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         result.TurnNumber.Should().Be(5);
         result.Description.Should().Be("After turn 5");
 
@@ -74,8 +74,9 @@ public class CreateStateSnapshotCommandHandlerTests
             .ReturnsAsync((GameSessionState?)null);
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<NotFoundException>(
-            () => _handler.Handle(command, TestContext.Current.CancellationToken));
+        var act = 
+            () => _handler.Handle(command, TestContext.Current.CancellationToken);
+        var exception = (await act.Should().ThrowAsync<NotFoundException>()).Which;
 
         exception.Message.Should().Contain("GameSessionState");
         _unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
@@ -111,8 +112,9 @@ public class CreateStateSnapshotCommandHandlerTests
     public async Task Handle_WithNullCommand_ThrowsArgumentNullException()
     {
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentNullException>(
-            () => _handler.Handle(null!, TestContext.Current.CancellationToken));
+        var act = 
+            () => _handler.Handle(null!, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<ArgumentNullException>();
     }
 
     [Fact]
@@ -131,8 +133,9 @@ public class CreateStateSnapshotCommandHandlerTests
 
         // Act & Assert
         // Domain validation rejects empty descriptions
-        await Assert.ThrowsAsync<ArgumentException>(
-            () => _handler.Handle(command, TestContext.Current.CancellationToken));
+        var act = 
+            () => _handler.Handle(command, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<ArgumentException>();
     }
 
     private static GameSessionState CreateGameSessionState()

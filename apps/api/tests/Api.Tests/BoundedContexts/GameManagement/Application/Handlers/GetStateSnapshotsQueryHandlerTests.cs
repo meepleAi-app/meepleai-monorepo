@@ -43,7 +43,7 @@ public class GetStateSnapshotsQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         result.Count.Should().Be(3);
         result[0].TurnNumber.Should().Be(1);
         result[1].TurnNumber.Should().Be(2);
@@ -65,8 +65,8 @@ public class GetStateSnapshotsQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Empty(result);
+        result.Should().NotBeNull();
+        result.Should().BeEmpty();
     }
 
     [Fact]
@@ -81,8 +81,9 @@ public class GetStateSnapshotsQueryHandlerTests
             .ReturnsAsync((GameSessionState?)null);
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<NotFoundException>(
-            () => _handler.Handle(query, TestContext.Current.CancellationToken));
+        var act = 
+            () => _handler.Handle(query, TestContext.Current.CancellationToken);
+        var exception = (await act.Should().ThrowAsync<NotFoundException>()).Which;
 
         exception.Message.Should().Contain("GameSessionState");
     }
@@ -112,8 +113,9 @@ public class GetStateSnapshotsQueryHandlerTests
     public async Task Handle_WithNullQuery_ThrowsArgumentNullException()
     {
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentNullException>(
-            () => _handler.Handle(null!, TestContext.Current.CancellationToken));
+        var act = 
+            () => _handler.Handle(null!, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<ArgumentNullException>();
     }
 
     [Fact]
@@ -131,12 +133,12 @@ public class GetStateSnapshotsQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         var firstSnapshot = result.First();
         firstSnapshot.Id.Should().NotBe(Guid.Empty);
         firstSnapshot.TurnNumber.Should().Be(1);
         firstSnapshot.Description.Should().Be("Turn 1 snapshot");
-        Assert.NotNull(firstSnapshot.CreatedAt);
+        firstSnapshot.CreatedAt.Should().NotBe(default(DateTime));
     }
 
     private static GameSessionState CreateGameSessionState()

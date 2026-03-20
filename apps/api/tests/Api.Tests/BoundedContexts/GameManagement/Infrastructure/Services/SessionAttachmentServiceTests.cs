@@ -39,8 +39,8 @@ public sealed class SessionAttachmentServiceTests
             "file.gif", "image/gif", 100,
             AttachmentType.BoardState, null, null);
 
-        Assert.False(result.Success);
-        Assert.Contains("content type", result.ErrorMessage, StringComparison.OrdinalIgnoreCase);
+        (result.Success).Should().BeFalse();
+        result.ErrorMessage.Should().ContainEquivalentOf("content type");
     }
 
     [Fact]
@@ -55,8 +55,8 @@ public sealed class SessionAttachmentServiceTests
             "photo.jpg", "image/jpeg", fakeData.Length,
             AttachmentType.BoardState, null, null);
 
-        Assert.False(result.Success);
-        Assert.Contains("content type", result.ErrorMessage, StringComparison.OrdinalIgnoreCase);
+        (result.Success).Should().BeFalse();
+        result.ErrorMessage.Should().ContainEquivalentOf("content type");
     }
 
     [Fact]
@@ -73,7 +73,7 @@ public sealed class SessionAttachmentServiceTests
             "photo.jpg", "image/jpeg", stream.Length,
             AttachmentType.BoardState, null, null);
 
-        Assert.False(result.Success);
+        (result.Success).Should().BeFalse();
         result.ErrorMessage.Should().Be("S3 error");
     }
 
@@ -93,7 +93,7 @@ public sealed class SessionAttachmentServiceTests
             "photo.jpg", "image/jpeg", stream.Length,
             AttachmentType.BoardState, "A caption", 1);
 
-        Assert.True(result.Success);
+        (result.Success).Should().BeTrue();
         result.BlobUrl.Should().Be(storagePath);
         result.FileSizeBytes.Should().Be(5000);
     }
@@ -135,9 +135,9 @@ public sealed class SessionAttachmentServiceTests
             "photo.jpg", "image/jpeg", stream.Length,
             AttachmentType.BoardState, null, null);
 
-        Assert.NotNull(capturedFileName);
-        Assert.StartsWith(playerId.ToString("N"), capturedFileName);
-        Assert.EndsWith(".jpg", capturedFileName);
+        capturedFileName.Should().NotBeNull();
+        capturedFileName.Should().StartWith(playerId.ToString("N"));
+        capturedFileName.Should().EndWith(".jpg");
     }
 
     [Fact]
@@ -161,8 +161,8 @@ public sealed class SessionAttachmentServiceTests
             "photo.png", "image/png", stream.Length,
             AttachmentType.BoardState, null, null);
 
-        Assert.NotNull(capturedFileName);
-        Assert.EndsWith(".png", capturedFileName);
+        capturedFileName.Should().NotBeNull();
+        capturedFileName.Should().EndWith(".png");
     }
 
     [Fact]
@@ -187,8 +187,8 @@ public sealed class SessionAttachmentServiceTests
             "photo.jpg", "image/jpeg", stream.Length,
             AttachmentType.BoardState, null, null);
 
-        Assert.True(result.Success);
-        Assert.Null(result.ThumbnailUrl);
+        (result.Success).Should().BeTrue();
+        result.ThumbnailUrl.Should().BeNull();
     }
 
     #endregion
@@ -224,8 +224,9 @@ public sealed class SessionAttachmentServiceTests
     [Fact]
     public async Task GetDownloadUrlAsync_WithEmptyUrl_ThrowsArgumentException()
     {
-        await Assert.ThrowsAsync<ArgumentException>(
-            () => _sut.GetDownloadUrlAsync(""));
+        var act = 
+            () => _sut.GetDownloadUrlAsync("");
+        await act.Should().ThrowAsync<ArgumentException>();
     }
 
     #endregion
@@ -307,15 +308,17 @@ public sealed class SessionAttachmentServiceTests
     [Fact]
     public void Constructor_WithNullBlobStorage_ThrowsArgumentNullException()
     {
-        Assert.Throws<ArgumentNullException>(() =>
-            new SessionAttachmentService(null!, _loggerMock.Object));
+        var act = () =>
+            new SessionAttachmentService(null!, _loggerMock.Object);
+        act.Should().Throw<ArgumentNullException>();
     }
 
     [Fact]
     public void Constructor_WithNullLogger_ThrowsArgumentNullException()
     {
-        Assert.Throws<ArgumentNullException>(() =>
-            new SessionAttachmentService(_blobStorageMock.Object, null!));
+        var act = () =>
+            new SessionAttachmentService(_blobStorageMock.Object, null!);
+        act.Should().Throw<ArgumentNullException>();
     }
 
     #endregion
@@ -328,8 +331,8 @@ public sealed class SessionAttachmentServiceTests
         using var source = CreateMinimalJpegImage(600, 400);
         var result = await SessionAttachmentService.GenerateThumbnailAsync(source);
 
-        Assert.NotNull(result);
-        Assert.True(result!.Length > 0);
+        result.Should().NotBeNull();
+        (result!.Length > 0).Should().BeTrue();
         result.Dispose();
     }
 
@@ -339,7 +342,7 @@ public sealed class SessionAttachmentServiceTests
         using var source = CreateMinimalJpegImage(1200, 800);
         using var result = await SessionAttachmentService.GenerateThumbnailAsync(source);
 
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         // Verify the output is a valid JPEG by checking magic bytes
         result!.Position = 0;
         var header = new byte[2];

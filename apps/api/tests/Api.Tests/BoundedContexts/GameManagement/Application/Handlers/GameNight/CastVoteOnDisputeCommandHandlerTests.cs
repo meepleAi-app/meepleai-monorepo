@@ -98,7 +98,7 @@ public class CastVoteOnDisputeCommandHandlerTests
         // Assert
         dispute.Votes.Should().ContainSingle();
         dispute.Votes[0].PlayerId.Should().Be(DefaultVoterPlayerId);
-        Assert.True(dispute.Votes[0].AcceptsVerdict);
+        (dispute.Votes[0].AcceptsVerdict).Should().BeTrue();
 
         _disputeRepositoryMock.Verify(
             x => x.UpdateAsync(dispute, It.IsAny<CancellationToken>()),
@@ -117,8 +117,9 @@ public class CastVoteOnDisputeCommandHandlerTests
             AcceptsVerdict: true);
 
         // Act & Assert
-        var ex = await Assert.ThrowsAsync<InvalidOperationException>(
-            () => _handler.Handle(command, CancellationToken.None));
+        var act = 
+            () => _handler.Handle(command, CancellationToken.None);
+        var ex = (await act.Should().ThrowAsync<InvalidOperationException>()).Which;
 
         ex.Message.Should().Contain("disabled");
     }
@@ -137,8 +138,9 @@ public class CastVoteOnDisputeCommandHandlerTests
             AcceptsVerdict: true);
 
         // Act & Assert
-        await Assert.ThrowsAsync<NotFoundException>(
-            () => _handler.Handle(command, CancellationToken.None));
+        var act = 
+            () => _handler.Handle(command, CancellationToken.None);
+        await act.Should().ThrowAsync<NotFoundException>();
     }
 
     [Fact]
@@ -160,8 +162,9 @@ public class CastVoteOnDisputeCommandHandlerTests
             AcceptsVerdict: false);
 
         // Act & Assert
-        var ex = await Assert.ThrowsAsync<InvalidOperationException>(
-            () => _handler.Handle(command, CancellationToken.None));
+        var act = 
+            () => _handler.Handle(command, CancellationToken.None);
+        var ex = (await act.Should().ThrowAsync<InvalidOperationException>()).Which;
 
         ex.Message.Should().Contain("already voted");
     }

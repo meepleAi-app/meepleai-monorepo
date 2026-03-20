@@ -127,8 +127,9 @@ public class VersionLabelAndReclassifyTests
             new FileSize(1024),
             Guid.NewGuid());
 
-        Assert.Throws<ArgumentException>(() =>
-            document.Reclassify(DocumentCategory.Expansion, docId, "v1"));
+        var act = () =>
+            document.Reclassify(DocumentCategory.Expansion, docId, "v1");
+        act.Should().Throw<ArgumentException>();
     }
 
     [Fact]

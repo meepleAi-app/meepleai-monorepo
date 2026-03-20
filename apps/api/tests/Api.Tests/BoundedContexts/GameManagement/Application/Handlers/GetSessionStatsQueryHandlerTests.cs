@@ -63,11 +63,11 @@ public class GetSessionStatsQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         result.TotalSessions.Should().Be(3);
         result.CompletedSessions.Should().Be(2);
         result.AbandonedSessions.Should().Be(1);
-        Assert.Equal(60, result.AverageDurationMinutes); // (60 + 90 + 30) / 3 = 60
+        result.AverageDurationMinutes.Should().Be(60); // (60 + 90 + 30) / 3 = 60
         result.TopPlayers.Count.Should().Be(2);
     }
 
@@ -94,17 +94,17 @@ public class GetSessionStatsQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         result.CompletedSessions.Should().Be(4);
         result.TopPlayers.Count.Should().Be(3);
 
         var alice = result.TopPlayers.First(p => p.PlayerName == "Alice");
         alice.WinCount.Should().Be(2);
-        Assert.Equal(50.00m, alice.WinRate); // 2/4 * 100 = 50%
+        alice.WinRate.Should().Be(50.00m); // 2/4 * 100 = 50%
 
         var bob = result.TopPlayers.First(p => p.PlayerName == "Bob");
         bob.WinCount.Should().Be(1);
-        Assert.Equal(25.00m, bob.WinRate); // 1/4 * 100 = 25%
+        bob.WinRate.Should().Be(25.00m); // 1/4 * 100 = 25%
     }
 
     [Fact]
@@ -132,7 +132,7 @@ public class GetSessionStatsQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         result.TopPlayers.Count.Should().Be(3);
     }
 
@@ -161,7 +161,7 @@ public class GetSessionStatsQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         result.TopPlayers.Count.Should().Be(3);
         result.TopPlayers[0].PlayerName.Should().Be("Alice");
         result.TopPlayers[0].WinCount.Should().Be(3);
@@ -185,12 +185,12 @@ public class GetSessionStatsQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         result.TotalSessions.Should().Be(0);
         result.CompletedSessions.Should().Be(0);
         result.AbandonedSessions.Should().Be(0);
         result.AverageDurationMinutes.Should().Be(0);
-        Assert.Empty(result.TopPlayers);
+        result.TopPlayers.Should().BeEmpty();
     }
 
     [Fact]
@@ -214,12 +214,12 @@ public class GetSessionStatsQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         result.TotalSessions.Should().Be(2);
         result.CompletedSessions.Should().Be(0);
         result.AbandonedSessions.Should().Be(2);
-        Assert.Equal(38, result.AverageDurationMinutes); // (30 + 45) / 2 = 37.5 rounded to 38
-        Assert.Empty(result.TopPlayers); // No winners in abandoned sessions
+        result.AverageDurationMinutes.Should().Be(38); // (30 + 45) / 2 = 37.5 rounded to 38
+        result.TopPlayers.Should().BeEmpty(); // No winners in abandoned sessions
     }
 
     [Fact]
@@ -244,9 +244,9 @@ public class GetSessionStatsQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         result.CompletedSessions.Should().Be(3);
-        Assert.Equal(2, result.TopPlayers.Count); // Only Alice and Bob
+        result.TopPlayers.Count.Should().Be(2); // Only Alice and Bob
         result.TopPlayers[0].PlayerName.Should().Be("Alice");
         result.TopPlayers[1].PlayerName.Should().Be("Bob");
     }
@@ -273,13 +273,13 @@ public class GetSessionStatsQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         result.CompletedSessions.Should().Be(3);
         // Case-insensitive aggregation: "Alice", "alice", and " Alice " should be treated as the same player
         result.TopPlayers.Should().ContainSingle();
-        Assert.Equal("Alice", result.TopPlayers[0].PlayerName); // First occurrence casing preserved
+        result.TopPlayers[0].PlayerName.Should().Be("Alice"); // First occurrence casing preserved
         result.TopPlayers[0].WinCount.Should().Be(3);
-        Assert.Equal(100.00m, result.TopPlayers[0].WinRate); // 3/3 * 100 = 100%
+        result.TopPlayers[0].WinRate.Should().Be(100.00m); // 3/3 * 100 = 100%
     }
     [Fact]
     public async Task Handle_WithGameIdFilter_PassesFilterToRepository()
@@ -305,7 +305,7 @@ public class GetSessionStatsQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         result.TotalSessions.Should().Be(1);
         _sessionRepositoryMock.Verify(
             r => r.FindHistoryAsync(gameId, null, null, null, null, It.IsAny<CancellationToken>()),
@@ -336,7 +336,7 @@ public class GetSessionStatsQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         result.TotalSessions.Should().Be(1);
         _sessionRepositoryMock.Verify(
             r => r.FindHistoryAsync(null, startDate, endDate, null, null, It.IsAny<CancellationToken>()),
@@ -365,7 +365,7 @@ public class GetSessionStatsQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         result.AverageDurationMinutes.Should().Be(75);
     }
 
@@ -391,8 +391,8 @@ public class GetSessionStatsQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal(62, result.AverageDurationMinutes); // (61 + 62 + 63) / 3 = 62
+        result.Should().NotBeNull();
+        result.AverageDurationMinutes.Should().Be(62); // (61 + 62 + 63) / 3 = 62
     }
     [Fact]
     public async Task Handle_RoundsWinRatesToTwoDecimalPlaces()
@@ -416,9 +416,9 @@ public class GetSessionStatsQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         var alice = result.TopPlayers.First(p => p.PlayerName == "Alice");
-        Assert.Equal(33.33m, alice.WinRate); // 1/3 * 100 = 33.33%
+        alice.WinRate.Should().Be(33.33m); // 1/3 * 100 = 33.33%
     }
 }
 

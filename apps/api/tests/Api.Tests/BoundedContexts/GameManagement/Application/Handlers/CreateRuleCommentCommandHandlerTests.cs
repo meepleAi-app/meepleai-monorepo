@@ -52,7 +52,7 @@ public class CreateRuleCommentCommandHandlerTests
             loggerMock.Object);
 
         // Assert
-        Assert.NotNull(handler);
+        handler.Should().NotBeNull();
     }
 
     [Fact]
@@ -63,11 +63,12 @@ public class CreateRuleCommentCommandHandlerTests
         var loggerMock = new Mock<ILogger<CreateRuleCommentCommandHandler>>();
 
         // Act & Assert
-        Assert.Throws<ArgumentNullException>(() =>
+        var act = () =>
             new CreateRuleCommentCommandHandler(
                 null!,
                 timeProviderMock.Object,
-                loggerMock.Object));
+                loggerMock.Object);
+        act.Should().Throw<ArgumentNullException>();
     }
 
     [Fact]
@@ -78,11 +79,12 @@ public class CreateRuleCommentCommandHandlerTests
         var loggerMock = new Mock<ILogger<CreateRuleCommentCommandHandler>>();
 
         // Act & Assert
-        Assert.Throws<ArgumentNullException>(() =>
+        var act = () =>
             new CreateRuleCommentCommandHandler(
                 context,
                 null!,
-                loggerMock.Object));
+                loggerMock.Object);
+        act.Should().Throw<ArgumentNullException>();
     }
 
     [Fact]
@@ -93,11 +95,12 @@ public class CreateRuleCommentCommandHandlerTests
         var timeProviderMock = CreateTimeProviderMock();
 
         // Act & Assert
-        Assert.Throws<ArgumentNullException>(() =>
+        var act = () =>
             new CreateRuleCommentCommandHandler(
                 context,
                 timeProviderMock.Object,
-                null!));
+                null!);
+        act.Should().Throw<ArgumentNullException>();
     }
     [Fact]
     public void Command_WithAllProperties_ConstructsCorrectly()
@@ -133,7 +136,7 @@ public class CreateRuleCommentCommandHandlerTests
             UserId: Guid.NewGuid());
 
         // Assert
-        Assert.Null(command.LineNumber);
+        command.LineNumber.Should().BeNull();
     }
 
     [Fact]
@@ -148,8 +151,8 @@ public class CreateRuleCommentCommandHandlerTests
             UserId: Guid.NewGuid());
 
         // Assert
-        Assert.Contains("@alice", command.CommentText, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("@bob", command.CommentText, StringComparison.OrdinalIgnoreCase);
+        command.CommentText.Should().ContainEquivalentOf("@alice");
+        command.CommentText.Should().ContainEquivalentOf("@bob");
     }
 
     [Fact]

@@ -55,8 +55,9 @@ public class GameToolkitDomainTests
     [InlineData("   ")]
     public void Constructor_WithEmptyName_ThrowsArgumentException(string name)
     {
-        Assert.Throws<ArgumentException>(() =>
-            new Api.BoundedContexts.GameToolkit.Domain.Entities.GameToolkit(Guid.NewGuid(), GameId, name, UserId));
+        var act = () =>
+            new Api.BoundedContexts.GameToolkit.Domain.Entities.GameToolkit(Guid.NewGuid(), GameId, name, UserId);
+        act.Should().Throw<ArgumentException>();
     }
 
     // ========================================================================
@@ -94,17 +95,19 @@ public class GameToolkitDomainTests
     {
         var privateGameId = Guid.NewGuid();
 
-        Assert.Throws<ArgumentException>(() =>
+        var act2 = () =>
             new Api.BoundedContexts.GameToolkit.Domain.Entities.GameToolkit(
-                Guid.NewGuid(), GameId, "Bad Toolkit", UserId, privateGameId));
+                Guid.NewGuid(), GameId, "Bad Toolkit", UserId, privateGameId);
+        act2.Should().Throw<ArgumentException>();
     }
 
     [Fact]
     public void Constructor_WithNeitherGameIdNorPrivateGameId_ThrowsArgumentException()
     {
-        Assert.Throws<ArgumentException>(() =>
+        var act3 = () =>
             new Api.BoundedContexts.GameToolkit.Domain.Entities.GameToolkit(
-                Guid.NewGuid(), null, "Bad Toolkit", UserId, null));
+                Guid.NewGuid(), null, "Bad Toolkit", UserId, null);
+        act3.Should().Throw<ArgumentException>();
     }
 
     [Fact]
@@ -229,8 +232,9 @@ public class GameToolkitDomainTests
         for (int i = 0; i < 20; i++)
             toolkit.AddDiceTool(new DiceToolConfig($"Dice_{i}", DiceType.D6, 1, null, true, null));
 
-        var ex = Assert.Throws<InvalidOperationException>(() =>
-            toolkit.AddDiceTool(new DiceToolConfig("TooMany", DiceType.D6, 1, null, true, null)));
+        var act4 = () =>
+            toolkit.AddDiceTool(new DiceToolConfig("TooMany", DiceType.D6, 1, null, true, null));
+        var ex = act4.Should().Throw<InvalidOperationException>().Which;
 
         ex.Message.Should().Contain("20");
     }
@@ -290,8 +294,9 @@ public class GameToolkitDomainTests
         for (int i = 0; i < 20; i++)
             toolkit.AddCounterTool(new CounterToolConfig($"Counter_{i}", 0, 100, 0, false, null, null));
 
-        var ex = Assert.Throws<InvalidOperationException>(() =>
-            toolkit.AddCounterTool(new CounterToolConfig("TooMany", 0, 100, 0, false, null, null)));
+        var act5 = () =>
+            toolkit.AddCounterTool(new CounterToolConfig("TooMany", 0, 100, 0, false, null, null));
+        var ex = act5.Should().Throw<InvalidOperationException>().Which;
 
         ex.Message.Should().Contain("20");
     }
@@ -376,8 +381,9 @@ public class GameToolkitDomainTests
         for (int i = 0; i < 20; i++)
             toolkit.AddCardTool(new CardToolConfig($"Deck_{i}", "standard"));
 
-        var ex = Assert.Throws<InvalidOperationException>(() =>
-            toolkit.AddCardTool(new CardToolConfig("TooMany", "standard")));
+        var act6 = () =>
+            toolkit.AddCardTool(new CardToolConfig("TooMany", "standard"));
+        var ex = act6.Should().Throw<InvalidOperationException>().Which;
 
         ex.Message.Should().Contain("20");
     }
@@ -451,8 +457,9 @@ public class GameToolkitDomainTests
         for (int i = 0; i < 20; i++)
             toolkit.AddTimerTool(new TimerToolConfig($"Timer_{i}", 60));
 
-        var ex = Assert.Throws<InvalidOperationException>(() =>
-            toolkit.AddTimerTool(new TimerToolConfig("TooMany", 60)));
+        var act7 = () =>
+            toolkit.AddTimerTool(new TimerToolConfig("TooMany", 60));
+        var ex = act7.Should().Throw<InvalidOperationException>().Which;
 
         ex.Message.Should().Contain("20");
     }

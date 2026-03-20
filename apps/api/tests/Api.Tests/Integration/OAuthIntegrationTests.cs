@@ -329,7 +329,7 @@ public class OAuthIntegrationTests : IAsyncLifetime
         var result = await mediator.Send(command, TestCancellationToken);
 
         // Assert
-        Assert.True(result.Success, $"Unlink failed: {result.ErrorMessage}");
+        result.Success.Should().BeTrue($"Unlink failed: {result.ErrorMessage}");
 
         var accountsAfterUnlink = await oauthAccountRepository.GetByUserIdAsync(userId, TestCancellationToken);
 
@@ -573,7 +573,7 @@ public class OAuthIntegrationTests : IAsyncLifetime
 
         // Act & Assert - Invalid provider should throw during account creation
         var invalidProvider = "invalid-provider";
-        var exception = Assert.Throws<ValidationException>(() =>
+        var act = () =>
         {
             var invalidAccount = new OAuthAccount(
                 Guid.NewGuid(),
@@ -583,7 +583,8 @@ public class OAuthIntegrationTests : IAsyncLifetime
                 AccessToken,
                 null,
                 null);
-        });
+        };
+        var exception = act.Should().Throw<ValidationException>().Which;
 
         exception.Message.Should().Contain("Unsupported");
 

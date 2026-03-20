@@ -61,7 +61,7 @@ public class GetAllGamesQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         result.Total.Should().Be(3);
         result.Games.Count.Should().Be(3);
 
@@ -101,7 +101,7 @@ public class GetAllGamesQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         result.Games.Should().ContainSingle();
         result.Games[0].Title.Should().Be("Chess");
     }
@@ -122,8 +122,8 @@ public class GetAllGamesQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Empty(result.Games);
+        result.Should().NotBeNull();
+        result.Games.Should().BeEmpty();
         result.Total.Should().Be(0);
     }
 
@@ -165,8 +165,8 @@ public class GetAllGamesQueryHandlerTests
 
         // Minimal game
         result.Games[0].Title.Should().Be("Simple Game");
-        Assert.Null(result.Games[0].Publisher);
-        Assert.Null(result.Games[0].YearPublished);
+        result.Games[0].Publisher.Should().BeNull();
+        result.Games[0].YearPublished.Should().BeNull();
 
         // Game with publisher
         result.Games[1].Title.Should().Be("Published Game");
@@ -174,9 +174,9 @@ public class GetAllGamesQueryHandlerTests
 
         // Complete game
         result.Games[2].Title.Should().Be("Complete Game");
-        Assert.NotNull(result.Games[2].Publisher);
-        Assert.NotNull(result.Games[2].YearPublished);
-        Assert.NotNull(result.Games[2].MinPlayers);
+        result.Games[2].Publisher.Should().NotBeNull();
+        result.Games[2].YearPublished.Should().NotBeNull();
+        result.Games[2].MinPlayers.Should().NotBeNull();
     }
 
     [Fact]
@@ -211,7 +211,7 @@ public class GetAllGamesQueryHandlerTests
         result.Games.Count.Should().Be(3);
         result.Games[0].BggId.Should().Be(13);
         result.Games[1].BggId.Should().Be(30549);
-        Assert.Null(result.Games[2].BggId);
+        result.Games[2].BggId.Should().BeNull();
     }
     [Fact]
     public async Task Handle_WithCancellationToken_PassesToRepository()
@@ -235,7 +235,7 @@ public class GetAllGamesQueryHandlerTests
         var result = await _handler.Handle(query, cancellationToken);
 
         // Assert
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         result.Games.Should().ContainSingle();
 
         _gameRepositoryMock.Verify(

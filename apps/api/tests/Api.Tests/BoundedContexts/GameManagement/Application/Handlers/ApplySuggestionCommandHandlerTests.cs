@@ -62,7 +62,7 @@ public class ApplySuggestionCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         result.Id.Should().Be(sessionState.Id);
 
         _sessionStateRepositoryMock.Verify(
@@ -89,8 +89,9 @@ public class ApplySuggestionCommandHandlerTests
             .ReturnsAsync((GameSessionState?)null);
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<NotFoundException>(
-            () => _handler.Handle(command, TestContext.Current.CancellationToken));
+        var act = 
+            () => _handler.Handle(command, TestContext.Current.CancellationToken);
+        var exception = (await act.Should().ThrowAsync<NotFoundException>()).Which;
 
         exception.Message.Should().Contain(sessionId.ToString());
         _unitOfWorkMock.Verify(
@@ -174,7 +175,7 @@ public class ApplySuggestionCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert - version should be incremented (state update + snapshot both increment)
-        Assert.True(sessionState.Version > initialVersion);
+        (sessionState.Version > initialVersion).Should().BeTrue();
     }
 
     private static GameSessionState CreateGameSessionState()

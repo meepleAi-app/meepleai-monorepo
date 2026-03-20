@@ -34,8 +34,9 @@ public class WhiteboardQueryHandlerTests
 
         var handler = new GetWhiteboardStateQueryHandler(_whiteboardRepoMock.Object);
 
-        await Assert.ThrowsAsync<NotFoundException>(() =>
-            handler.Handle(new GetWhiteboardStateQuery(sessionId), TestContext.Current.CancellationToken));
+        var act = () =>
+            handler.Handle(new GetWhiteboardStateQuery(sessionId), TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<NotFoundException>();
     }
 
     [Fact]
@@ -63,8 +64,9 @@ public class WhiteboardQueryHandlerTests
     [Fact]
     public void Constructor_WithNullRepository_ThrowsArgumentNullException()
     {
-        Assert.Throws<ArgumentNullException>(() =>
-            new GetWhiteboardStateQueryHandler(null!));
+        var act = () =>
+            new GetWhiteboardStateQueryHandler(null!);
+        act.Should().Throw<ArgumentNullException>();
     }
 
     [Fact]
@@ -72,7 +74,8 @@ public class WhiteboardQueryHandlerTests
     {
         var handler = new GetWhiteboardStateQueryHandler(_whiteboardRepoMock.Object);
 
-        await Assert.ThrowsAsync<ArgumentNullException>(() =>
-            handler.Handle(null!, TestContext.Current.CancellationToken));
+        var act = () =>
+            handler.Handle(null!, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<ArgumentNullException>();
     }
 }

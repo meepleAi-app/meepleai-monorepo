@@ -24,8 +24,9 @@ public class SessionCheckpointHandlerTests
 
         var handler = new ListSessionCheckpointsQueryHandler(mockSessionRepo.Object, mockCheckpointRepo.Object);
 
-        await Assert.ThrowsAsync<NotFoundException>(() =>
-            handler.Handle(new ListSessionCheckpointsQuery(Guid.NewGuid(), Guid.NewGuid()), CancellationToken.None));
+        var act = () =>
+            handler.Handle(new ListSessionCheckpointsQuery(Guid.NewGuid(), Guid.NewGuid()), CancellationToken.None);
+        await act.Should().ThrowAsync<NotFoundException>();
     }
 
     [Fact]

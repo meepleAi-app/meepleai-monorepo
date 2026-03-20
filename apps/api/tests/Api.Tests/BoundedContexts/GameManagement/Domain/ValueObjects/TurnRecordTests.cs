@@ -20,9 +20,9 @@ public class TurnRecordTests
         record.TurnIndex.Should().Be(1);
         record.PlayerId.Should().Be(playerId);
         record.StartedAt.Should().Be(start);
-        Assert.Null(record.EndedAt);
-        Assert.Null(record.Duration);
-        Assert.False(record.IsCompleted);
+        record.EndedAt.Should().BeNull();
+        record.Duration.Should().BeNull();
+        (record.IsCompleted).Should().BeFalse();
     }
 
     [Fact]
@@ -34,7 +34,7 @@ public class TurnRecordTests
 
         record.EndedAt.Should().Be(end);
         record.Duration.Should().Be(TimeSpan.FromMinutes(5));
-        Assert.True(record.IsCompleted);
+        (record.IsCompleted).Should().BeTrue();
     }
 
     [Fact]
@@ -48,30 +48,34 @@ public class TurnRecordTests
     [Fact]
     public void Constructor_NegativeTurnIndex_ThrowsValidationException()
     {
-        Assert.Throws<ValidationException>(() =>
-            new TurnRecord(-1, Guid.NewGuid(), DateTime.UtcNow));
+        var act = () =>
+            new TurnRecord(-1, Guid.NewGuid(), DateTime.UtcNow);
+        act.Should().Throw<ValidationException>();
     }
 
     [Fact]
     public void Constructor_EmptyPlayerId_ThrowsValidationException()
     {
-        Assert.Throws<ValidationException>(() =>
-            new TurnRecord(1, Guid.Empty, DateTime.UtcNow));
+        var act = () =>
+            new TurnRecord(1, Guid.Empty, DateTime.UtcNow);
+        act.Should().Throw<ValidationException>();
     }
 
     [Fact]
     public void Constructor_EndBeforeStart_ThrowsValidationException()
     {
         var start = DateTime.UtcNow;
-        Assert.Throws<ValidationException>(() =>
-            new TurnRecord(1, Guid.NewGuid(), start, endedAt: start.AddMinutes(-1)));
+        var act = () =>
+            new TurnRecord(1, Guid.NewGuid(), start, endedAt: start.AddMinutes(-1));
+        act.Should().Throw<ValidationException>();
     }
 
     [Fact]
     public void Constructor_PhaseNameTooLong_ThrowsValidationException()
     {
-        Assert.Throws<ValidationException>(() =>
-            new TurnRecord(1, Guid.NewGuid(), DateTime.UtcNow, 0, new string('x', 101)));
+        var act = () =>
+            new TurnRecord(1, Guid.NewGuid(), DateTime.UtcNow, 0, new string('x', 101));
+        act.Should().Throw<ValidationException>();
     }
 
     [Fact]

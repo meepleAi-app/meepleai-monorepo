@@ -77,8 +77,9 @@ public class GetTurnSummaryCommandHandlerTests
             .Setup(r => r.GetByIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((Session?)null);
 
-        await Assert.ThrowsAsync<NotFoundException>(() =>
-            _handler.Handle(command, CancellationToken.None));
+        var act = () =>
+            _handler.Handle(command, CancellationToken.None);
+        await act.Should().ThrowAsync<NotFoundException>();
     }
 
     [Fact]
@@ -93,7 +94,7 @@ public class GetTurnSummaryCommandHandlerTests
         _eventRepoMock.Setup(r => r.GetBySessionIdAsync(sessionId, null, 10, 0, It.IsAny<CancellationToken>())).ReturnsAsync(new List<SessionEvent>());
 
         var ex = (await ((Func<Task>)(() => _handler.Handle(command, CancellationToken.None))).Should().ThrowAsync<ConflictException>()).Which;
-        Assert.Contains("No events found", ex.Message, StringComparison.OrdinalIgnoreCase);
+        ex.Message.Should().ContainEquivalentOf("No events found");
     }
 
     [Fact]
@@ -116,7 +117,7 @@ public class GetTurnSummaryCommandHandlerTests
             .ReturnsAsync(LlmCompletionResult.CreateFailure("Service unavailable"));
 
         var ex = (await ((Func<Task>)(() => _handler.Handle(command, CancellationToken.None))).Should().ThrowAsync<ConflictException>()).Which;
-        Assert.Contains("AI summary generation failed", ex.Message, StringComparison.OrdinalIgnoreCase);
+        ex.Message.Should().ContainEquivalentOf("AI summary generation failed");
     }
 
     [Fact]
@@ -147,13 +148,17 @@ public class GetTurnSummaryCommandHandlerTests
     [Fact]
     public void Constructor_NullDependencies_ThrowsArgumentNullException()
     {
-        Assert.Throws<ArgumentNullException>(() =>
-            new GetTurnSummaryCommandHandler(null!, _eventRepoMock.Object, _unitOfWorkMock.Object, _llmServiceMock.Object));
-        Assert.Throws<ArgumentNullException>(() =>
-            new GetTurnSummaryCommandHandler(_sessionRepoMock.Object, null!, _unitOfWorkMock.Object, _llmServiceMock.Object));
-        Assert.Throws<ArgumentNullException>(() =>
-            new GetTurnSummaryCommandHandler(_sessionRepoMock.Object, _eventRepoMock.Object, null!, _llmServiceMock.Object));
-        Assert.Throws<ArgumentNullException>(() =>
-            new GetTurnSummaryCommandHandler(_sessionRepoMock.Object, _eventRepoMock.Object, _unitOfWorkMock.Object, null!));
+        var act2 = () =>
+            new GetTurnSummaryCommandHandler(null!, _eventRepoMock.Object, _unitOfWorkMock.Object, _llmServiceMock.Object);
+        act2.Should().Throw<ArgumentNullException>();
+        var act3 = () =>
+            new GetTurnSummaryCommandHandler(_sessionRepoMock.Object, null!, _unitOfWorkMock.Object, _llmServiceMock.Object);
+        act3.Should().Throw<ArgumentNullException>();
+        var act4 = () =>
+            new GetTurnSummaryCommandHandler(_sessionRepoMock.Object, _eventRepoMock.Object, null!, _llmServiceMock.Object);
+        act4.Should().Throw<ArgumentNullException>();
+        var act5 = () =>
+            new GetTurnSummaryCommandHandler(_sessionRepoMock.Object, _eventRepoMock.Object, _unitOfWorkMock.Object, null!);
+        act5.Should().Throw<ArgumentNullException>();
     }
 }

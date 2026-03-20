@@ -68,18 +68,18 @@ public class LiveGameSessionTests
         session.GameName.Should().Be("Catan");
         session.GameId.Should().Be(gameId);
         session.Status.Should().Be(LiveSessionStatus.Created);
-        Assert.NotNull(session.SessionCode);
+        session.SessionCode.Should().NotBeNull();
         session.SessionCode.Length.Should().Be(6);
         session.CreatedAt.Should().Be(_now);
         session.UpdatedAt.Should().Be(_now);
         session.CurrentTurnIndex.Should().Be(0);
-        Assert.NotNull(session.ScoringConfig);
+        session.ScoringConfig.Should().NotBeNull();
         session.AgentMode.Should().Be(AgentSessionMode.None);
-        Assert.Null(session.StartedAt);
-        Assert.Null(session.PausedAt);
-        Assert.Null(session.CompletedAt);
-        Assert.Empty(session.Players);
-        Assert.Empty(session.Teams);
+        session.StartedAt.Should().BeNull();
+        session.PausedAt.Should().BeNull();
+        session.CompletedAt.Should().BeNull();
+        session.Players.Should().BeEmpty();
+        session.Teams.Should().BeEmpty();
     }
 
     [Fact]
@@ -90,7 +90,8 @@ public class LiveGameSessionTests
 
         // Assert
         session.DomainEvents.Should().ContainSingle();
-        var evt = Assert.IsType<LiveSessionCreatedEvent>(session.DomainEvents.First());
+        session.DomainEvents.First().Should().BeOfType<LiveSessionCreatedEvent>();
+        var evt = (LiveSessionCreatedEvent)session.DomainEvents.First();
         evt.SessionId.Should().Be(session.Id);
         evt.CreatedByUserId.Should().Be(session.CreatedByUserId);
         evt.GameName.Should().Be("Catan");
@@ -100,14 +101,15 @@ public class LiveGameSessionTests
     public void Create_WithGroupVisibility_RequiresGroupId()
     {
         // Act & Assert
-        Assert.Throws<ValidationException>(() =>
+        var act = () =>
             LiveGameSession.Create(
                 Guid.NewGuid(),
                 Guid.NewGuid(),
                 "Catan",
                 _timeProvider,
                 visibility: PlayRecordVisibility.Group,
-                groupId: null));
+                groupId: null);
+        act.Should().Throw<ValidationException>();
     }
 
     [Fact]
@@ -133,30 +135,34 @@ public class LiveGameSessionTests
     [Fact]
     public void Create_EmptyId_ThrowsValidationException()
     {
-        Assert.Throws<ValidationException>(() =>
-            LiveGameSession.Create(Guid.Empty, Guid.NewGuid(), "Catan", _timeProvider));
+        var act = () =>
+            LiveGameSession.Create(Guid.Empty, Guid.NewGuid(), "Catan", _timeProvider);
+        act.Should().Throw<ValidationException>();
     }
 
     [Fact]
     public void Create_EmptyUserId_ThrowsValidationException()
     {
-        Assert.Throws<ValidationException>(() =>
-            LiveGameSession.Create(Guid.NewGuid(), Guid.Empty, "Catan", _timeProvider));
+        var act = () =>
+            LiveGameSession.Create(Guid.NewGuid(), Guid.Empty, "Catan", _timeProvider);
+        act.Should().Throw<ValidationException>();
     }
 
     [Fact]
     public void Create_EmptyGameName_ThrowsValidationException()
     {
-        Assert.Throws<ValidationException>(() =>
-            LiveGameSession.Create(Guid.NewGuid(), Guid.NewGuid(), "", _timeProvider));
+        var act = () =>
+            LiveGameSession.Create(Guid.NewGuid(), Guid.NewGuid(), "", _timeProvider);
+        act.Should().Throw<ValidationException>();
     }
 
     [Fact]
     public void Create_GameNameTooLong_ThrowsValidationException()
     {
         var longName = new string('a', 256);
-        Assert.Throws<ValidationException>(() =>
-            LiveGameSession.Create(Guid.NewGuid(), Guid.NewGuid(), longName, _timeProvider));
+        var act = () =>
+            LiveGameSession.Create(Guid.NewGuid(), Guid.NewGuid(), longName, _timeProvider);
+        act.Should().Throw<ValidationException>();
     }
 
     [Fact]
@@ -193,7 +199,7 @@ public class LiveGameSessionTests
         for (var i = 0; i < 10; i++)
         {
             var session = CreateDefaultSession();
-            Assert.Matches("^[A-Z2-9]{6}$", session.SessionCode);
+            session.SessionCode.Should().MatchRegex("^[A-Z2-9]{6}$");
             // Should not contain I, O, 0, 1 (confusing characters)
             session.SessionCode.Should().NotContain("I");
             session.SessionCode.Should().NotContain("O");
@@ -218,7 +224,7 @@ public class LiveGameSessionTests
         // Assert
         player.Role.Should().Be(PlayerRole.Host);
         session.Players.Should().ContainSingle();
-        Assert.True(session.HasPlayers);
+        (session.HasPlayers).Should().BeTrue();
         session.PlayerCount.Should().Be(1);
     }
 
@@ -262,7 +268,7 @@ public class LiveGameSessionTests
 
         // Assert
         session.DomainEvents.Should().ContainSingle();
-        Assert.IsType<LiveSessionPlayerAddedEvent>(session.DomainEvents.First());
+        session.DomainEvents.First().Should().BeOfType<LiveSessionPlayerAddedEvent>();
     }
 
     [Fact]
@@ -274,8 +280,9 @@ public class LiveGameSessionTests
         AddDefaultPlayer(session, "Player 1", PlayerColor.Red, userId);
 
         // Act & Assert
-        Assert.Throws<DomainException>(() =>
-            AddDefaultPlayer(session, "Player 2", PlayerColor.Blue, userId));
+        var act = () =>
+            AddDefaultPlayer(session, "Player 2", PlayerColor.Blue, userId);
+        act.Should().Throw<DomainException>();
     }
 
     [Fact]
@@ -286,8 +293,9 @@ public class LiveGameSessionTests
         AddDefaultPlayer(session, "Marco", PlayerColor.Red);
 
         // Act & Assert
-        Assert.Throws<DomainException>(() =>
-            AddDefaultPlayer(session, "Marco", PlayerColor.Blue));
+        var act = () =>
+            AddDefaultPlayer(session, "Marco", PlayerColor.Blue);
+        act.Should().Throw<DomainException>();
     }
 
     [Fact]
@@ -298,8 +306,9 @@ public class LiveGameSessionTests
         AddDefaultPlayer(session, "Player 1", PlayerColor.Red);
 
         // Act & Assert
-        Assert.Throws<DomainException>(() =>
-            AddDefaultPlayer(session, "Player 2", PlayerColor.Red));
+        var act = () =>
+            AddDefaultPlayer(session, "Player 2", PlayerColor.Red);
+        act.Should().Throw<DomainException>();
     }
 
     [Fact]
@@ -312,8 +321,9 @@ public class LiveGameSessionTests
         session.Complete(_timeProvider);
 
         // Act & Assert
-        Assert.Throws<ConflictException>(() =>
-            AddDefaultPlayer(session, "New Player", PlayerColor.Blue));
+        var act = () =>
+            AddDefaultPlayer(session, "New Player", PlayerColor.Blue);
+        act.Should().Throw<ConflictException>();
     }
 
     [Fact]
@@ -341,7 +351,7 @@ public class LiveGameSessionTests
         session.RemovePlayer(player.Id, _timeProvider);
 
         // Assert
-        Assert.False(player.IsActive);
+        (player.IsActive).Should().BeFalse();
         session.PlayerCount.Should().Be(0);
     }
 
@@ -354,8 +364,9 @@ public class LiveGameSessionTests
         AddDefaultPlayer(session, "Player 2", PlayerColor.Blue);
 
         // Act & Assert
-        Assert.Throws<ConflictException>(() =>
-            session.RemovePlayer(host.Id, _timeProvider));
+        var act = () =>
+            session.RemovePlayer(host.Id, _timeProvider);
+        act.Should().Throw<ConflictException>();
     }
 
     [Fact]
@@ -371,7 +382,7 @@ public class LiveGameSessionTests
 
         // Assert
         session.DomainEvents.Should().ContainSingle();
-        Assert.IsType<LiveSessionPlayerRemovedEvent>(session.DomainEvents.First());
+        session.DomainEvents.First().Should().BeOfType<LiveSessionPlayerRemovedEvent>();
     }
 
     [Fact]
@@ -382,8 +393,9 @@ public class LiveGameSessionTests
         AddDefaultPlayer(session);
 
         // Act & Assert
-        Assert.Throws<DomainException>(() =>
-            session.RemovePlayer(Guid.NewGuid(), _timeProvider));
+        var act = () =>
+            session.RemovePlayer(Guid.NewGuid(), _timeProvider);
+        act.Should().Throw<DomainException>();
     }
 
     [Fact]
@@ -412,8 +424,9 @@ public class LiveGameSessionTests
         AddDefaultPlayer(session);
 
         // Act & Assert
-        Assert.Throws<DomainException>(() =>
-            session.SetTurnOrder(new List<Guid> { Guid.NewGuid() }, _timeProvider));
+        var act = () =>
+            session.SetTurnOrder(new List<Guid> { Guid.NewGuid() }, _timeProvider);
+        act.Should().Throw<DomainException>();
     }
 
     #endregion
@@ -430,7 +443,7 @@ public class LiveGameSessionTests
         var team = session.CreateTeam("Alpha", "#FF0000", _timeProvider);
 
         // Assert
-        Assert.NotNull(team);
+        team.Should().NotBeNull();
         team.Name.Should().Be("Alpha");
         team.Color.Should().Be("#FF0000");
         session.Teams.Should().ContainSingle();
@@ -444,8 +457,9 @@ public class LiveGameSessionTests
         session.CreateTeam("Alpha", "#FF0000", _timeProvider);
 
         // Act & Assert
-        Assert.Throws<DomainException>(() =>
-            session.CreateTeam("Alpha", "#0000FF", _timeProvider));
+        var act = () =>
+            session.CreateTeam("Alpha", "#0000FF", _timeProvider);
+        act.Should().Throw<DomainException>();
     }
 
     [Fact]
@@ -480,7 +494,7 @@ public class LiveGameSessionTests
 
         // Assert
         player.TeamId.Should().Be(team2.Id);
-        Assert.Empty(team1.PlayerIds);
+        team1.PlayerIds.Should().BeEmpty();
         team2.PlayerIds.Should().ContainSingle();
     }
 
@@ -580,7 +594,8 @@ public class LiveGameSessionTests
 
         // Assert
         session.DomainEvents.Should().ContainSingle();
-        var evt = Assert.IsType<LiveSessionStartedEvent>(session.DomainEvents.First());
+        session.DomainEvents.First().Should().BeOfType<LiveSessionStartedEvent>();
+        var evt = (LiveSessionStartedEvent)session.DomainEvents.First();
         evt.SessionId.Should().Be(session.Id);
     }
 
@@ -600,7 +615,7 @@ public class LiveGameSessionTests
         session.Status.Should().Be(LiveSessionStatus.Paused);
         session.PausedAt.Should().Be(_now);
         session.DomainEvents.Should().ContainSingle();
-        Assert.IsType<LiveSessionPausedEvent>(session.DomainEvents.First());
+        session.DomainEvents.First().Should().BeOfType<LiveSessionPausedEvent>();
     }
 
     [Fact]
@@ -629,9 +644,9 @@ public class LiveGameSessionTests
 
         // Assert
         session.Status.Should().Be(LiveSessionStatus.InProgress);
-        Assert.Null(session.PausedAt);
+        session.PausedAt.Should().BeNull();
         session.DomainEvents.Should().ContainSingle();
-        Assert.IsType<LiveSessionResumedEvent>(session.DomainEvents.First());
+        session.DomainEvents.First().Should().BeOfType<LiveSessionResumedEvent>();
     }
 
     [Fact]
@@ -662,7 +677,8 @@ public class LiveGameSessionTests
         session.Status.Should().Be(LiveSessionStatus.Completed);
         session.CompletedAt.Should().Be(_now);
         session.DomainEvents.Should().ContainSingle();
-        var evt = Assert.IsType<LiveSessionCompletedEvent>(session.DomainEvents.First());
+        session.DomainEvents.First().Should().BeOfType<LiveSessionCompletedEvent>();
+        var evt = (LiveSessionCompletedEvent)session.DomainEvents.First();
         evt.TotalTurns.Should().Be(1);
     }
 
@@ -699,20 +715,20 @@ public class LiveGameSessionTests
         var session = CreateDefaultSession();
 
         // Created is not "active" (no setup yet)
-        Assert.False(session.IsActive);
+        (session.IsActive).Should().BeFalse();
 
         session.MoveToSetup(_timeProvider);
-        Assert.True(session.IsActive);
+        (session.IsActive).Should().BeTrue();
 
         AddDefaultPlayer(session);
         session.Start(_timeProvider);
-        Assert.True(session.IsActive);
+        (session.IsActive).Should().BeTrue();
 
         session.Pause(_timeProvider);
-        Assert.True(session.IsActive);
+        (session.IsActive).Should().BeTrue();
 
         session.Complete(_timeProvider);
-        Assert.False(session.IsActive);
+        (session.IsActive).Should().BeFalse();
     }
 
     #endregion
@@ -818,8 +834,9 @@ public class LiveGameSessionTests
         session.Start(_timeProvider);
 
         // Act & Assert
-        Assert.Throws<DomainException>(() =>
-            session.RecordScore(player.Id, 1, "nonexistent", 10, _timeProvider));
+        var act = () =>
+            session.RecordScore(player.Id, 1, "nonexistent", 10, _timeProvider);
+        act.Should().Throw<DomainException>();
     }
 
     [Fact]
@@ -831,8 +848,9 @@ public class LiveGameSessionTests
         session.Start(_timeProvider);
 
         // Act & Assert
-        Assert.Throws<DomainException>(() =>
-            session.RecordScore(Guid.NewGuid(), 1, "points", 10, _timeProvider));
+        var act = () =>
+            session.RecordScore(Guid.NewGuid(), 1, "points", 10, _timeProvider);
+        act.Should().Throw<DomainException>();
     }
 
     [Fact]
@@ -843,8 +861,9 @@ public class LiveGameSessionTests
         var player = AddDefaultPlayer(session);
 
         // Act & Assert
-        Assert.Throws<ConflictException>(() =>
-            session.RecordScore(player.Id, 1, "points", 10, _timeProvider));
+        var act = () =>
+            session.RecordScore(player.Id, 1, "points", 10, _timeProvider);
+        act.Should().Throw<ConflictException>();
     }
 
     [Fact]
@@ -861,7 +880,8 @@ public class LiveGameSessionTests
 
         // Assert
         session.DomainEvents.Should().ContainSingle();
-        var evt = Assert.IsType<LiveSessionScoreRecordedEvent>(session.DomainEvents.First());
+        session.DomainEvents.First().Should().BeOfType<LiveSessionScoreRecordedEvent>();
+        var evt = (LiveSessionScoreRecordedEvent)session.DomainEvents.First();
         evt.PlayerId.Should().Be(player.Id);
         evt.Round.Should().Be(1);
         evt.Dimension.Should().Be("points");
@@ -901,7 +921,7 @@ public class LiveGameSessionTests
 
         // Assert
         session.DomainEvents.Should().ContainSingle();
-        Assert.IsType<LiveSessionTurnAdvancedEvent>(session.DomainEvents.First());
+        session.DomainEvents.First().Should().BeOfType<LiveSessionTurnAdvancedEvent>();
     }
 
     [Fact]
@@ -927,7 +947,7 @@ public class LiveGameSessionTests
         session.AdvanceTurn(_timeProvider);
 
         // Assert
-        Assert.True(session.TurnRecords.Count >= 1);
+        (session.TurnRecords.Count >= 1).Should().BeTrue();
     }
 
     [Fact]
@@ -982,7 +1002,7 @@ public class LiveGameSessionTests
         session.UpdateNotes(null, _timeProvider);
 
         // Assert
-        Assert.Null(session.Notes);
+        session.Notes.Should().BeNull();
     }
 
     [Fact]
@@ -993,8 +1013,9 @@ public class LiveGameSessionTests
         var longNotes = new string('x', 2001);
 
         // Act & Assert
-        Assert.Throws<ValidationException>(() =>
-            session.UpdateNotes(longNotes, _timeProvider));
+        var act = () =>
+            session.UpdateNotes(longNotes, _timeProvider);
+        act.Should().Throw<ValidationException>();
     }
 
     [Fact]
@@ -1018,8 +1039,9 @@ public class LiveGameSessionTests
         var session = CreateDefaultSession();
 
         // Act & Assert
-        Assert.Throws<ValidationException>(() =>
-            session.LinkToolkit(Guid.Empty, _timeProvider));
+        var act = () =>
+            session.LinkToolkit(Guid.Empty, _timeProvider);
+        act.Should().Throw<ValidationException>();
     }
 
     [Fact]
@@ -1049,7 +1071,7 @@ public class LiveGameSessionTests
 
         // Assert
         session.AgentMode.Should().Be(AgentSessionMode.None);
-        Assert.Null(session.ChatSessionId);
+        session.ChatSessionId.Should().BeNull();
     }
 
     [Fact]
@@ -1059,8 +1081,9 @@ public class LiveGameSessionTests
         var session = CreateDefaultSession();
 
         // Act & Assert
-        Assert.Throws<ValidationException>(() =>
-            session.SetAgentMode(AgentSessionMode.GameMaster, null, _timeProvider));
+        var act = () =>
+            session.SetAgentMode(AgentSessionMode.GameMaster, null, _timeProvider);
+        act.Should().Throw<ValidationException>();
     }
 
     #endregion
@@ -1082,7 +1105,8 @@ public class LiveGameSessionTests
         session.LastSavedAt.Should().Be(_now);
         session.UpdatedAt.Should().Be(_now);
         session.DomainEvents.Should().ContainSingle();
-        var evt = Assert.IsType<LiveSessionSavedEvent>(session.DomainEvents.First());
+        session.DomainEvents.First().Should().BeOfType<LiveSessionSavedEvent>();
+        var evt = (LiveSessionSavedEvent)session.DomainEvents.First();
         evt.SessionId.Should().Be(session.Id);
         evt.SavedAt.Should().Be(_now);
     }
@@ -1102,7 +1126,7 @@ public class LiveGameSessionTests
         // Assert
         session.LastSavedAt.Should().Be(_now);
         session.DomainEvents.Should().ContainSingle();
-        Assert.IsType<LiveSessionSavedEvent>(session.DomainEvents.First());
+        session.DomainEvents.First().Should().BeOfType<LiveSessionSavedEvent>();
     }
 
     [Fact]
@@ -1121,7 +1145,7 @@ public class LiveGameSessionTests
         // Assert
         session.LastSavedAt.Should().Be(_now);
         session.DomainEvents.Should().ContainSingle();
-        Assert.IsType<LiveSessionSavedEvent>(session.DomainEvents.First());
+        session.DomainEvents.First().Should().BeOfType<LiveSessionSavedEvent>();
     }
 
     [Fact]
@@ -1181,8 +1205,9 @@ public class LiveGameSessionTests
         session.Complete(_timeProvider);
 
         // Act & Assert
-        Assert.Throws<ConflictException>(() =>
-            session.RemovePlayer(player.Id, _timeProvider));
+        var act = () =>
+            session.RemovePlayer(player.Id, _timeProvider);
+        act.Should().Throw<ConflictException>();
     }
 
     [Fact]
@@ -1195,8 +1220,9 @@ public class LiveGameSessionTests
         session.Complete(_timeProvider);
 
         // Act & Assert
-        Assert.Throws<ConflictException>(() =>
-            session.SetTurnOrder(new List<Guid> { player.Id }, _timeProvider));
+        var act = () =>
+            session.SetTurnOrder(new List<Guid> { player.Id }, _timeProvider);
+        act.Should().Throw<ConflictException>();
     }
 
     [Fact]
@@ -1209,8 +1235,9 @@ public class LiveGameSessionTests
         session.Complete(_timeProvider);
 
         // Act & Assert
-        Assert.Throws<ConflictException>(() =>
-            session.CreateTeam("Alpha", "#FF0000", _timeProvider));
+        var act = () =>
+            session.CreateTeam("Alpha", "#FF0000", _timeProvider);
+        act.Should().Throw<ConflictException>();
     }
 
     [Fact]
@@ -1224,8 +1251,9 @@ public class LiveGameSessionTests
         session.Complete(_timeProvider);
 
         // Act & Assert
-        Assert.Throws<ConflictException>(() =>
-            session.AssignPlayerToTeam(player.Id, team.Id, _timeProvider));
+        var act = () =>
+            session.AssignPlayerToTeam(player.Id, team.Id, _timeProvider);
+        act.Should().Throw<ConflictException>();
     }
 
     [Fact]
@@ -1238,8 +1266,9 @@ public class LiveGameSessionTests
         session.Complete(_timeProvider);
 
         // Act & Assert
-        Assert.Throws<ConflictException>(() =>
-            session.UpdateNotes("New notes", _timeProvider));
+        var act = () =>
+            session.UpdateNotes("New notes", _timeProvider);
+        act.Should().Throw<ConflictException>();
     }
 
     [Fact]
@@ -1252,8 +1281,9 @@ public class LiveGameSessionTests
         session.Complete(_timeProvider);
 
         // Act & Assert
-        Assert.Throws<ConflictException>(() =>
-            session.UpdateGameState(null, _timeProvider));
+        var act = () =>
+            session.UpdateGameState(null, _timeProvider);
+        act.Should().Throw<ConflictException>();
     }
 
     [Fact]
@@ -1266,8 +1296,9 @@ public class LiveGameSessionTests
         session.Complete(_timeProvider);
 
         // Act & Assert
-        Assert.Throws<ConflictException>(() =>
-            session.LinkToolkit(Guid.NewGuid(), _timeProvider));
+        var act = () =>
+            session.LinkToolkit(Guid.NewGuid(), _timeProvider);
+        act.Should().Throw<ConflictException>();
     }
 
     [Fact]
@@ -1280,8 +1311,9 @@ public class LiveGameSessionTests
         session.Complete(_timeProvider);
 
         // Act & Assert
-        Assert.Throws<ConflictException>(() =>
-            session.SetAgentMode(AgentSessionMode.Assistant, Guid.NewGuid(), _timeProvider));
+        var act = () =>
+            session.SetAgentMode(AgentSessionMode.Assistant, Guid.NewGuid(), _timeProvider);
+        act.Should().Throw<ConflictException>();
     }
 
     #endregion
@@ -1300,7 +1332,8 @@ public class LiveGameSessionTests
 
         // Assert
         session.DomainEvents.Should().ContainSingle();
-        var evt = Assert.IsType<LiveSessionTeamCreatedEvent>(session.DomainEvents.First());
+        session.DomainEvents.First().Should().BeOfType<LiveSessionTeamCreatedEvent>();
+        var evt = (LiveSessionTeamCreatedEvent)session.DomainEvents.First();
         evt.SessionId.Should().Be(session.Id);
         evt.TeamId.Should().Be(team.Id);
         evt.TeamName.Should().Be("Alpha");
@@ -1320,7 +1353,8 @@ public class LiveGameSessionTests
 
         // Assert
         session.DomainEvents.Should().ContainSingle();
-        var evt = Assert.IsType<LiveSessionPlayerAssignedToTeamEvent>(session.DomainEvents.First());
+        session.DomainEvents.First().Should().BeOfType<LiveSessionPlayerAssignedToTeamEvent>();
+        var evt = (LiveSessionPlayerAssignedToTeamEvent)session.DomainEvents.First();
         evt.SessionId.Should().Be(session.Id);
         evt.PlayerId.Should().Be(player.Id);
         evt.TeamId.Should().Be(team.Id);
@@ -1340,7 +1374,8 @@ public class LiveGameSessionTests
 
         // Assert
         session.DomainEvents.Should().ContainSingle();
-        var evt = Assert.IsType<LiveSessionTurnOrderChangedEvent>(session.DomainEvents.First());
+        session.DomainEvents.First().Should().BeOfType<LiveSessionTurnOrderChangedEvent>();
+        var evt = (LiveSessionTurnOrderChangedEvent)session.DomainEvents.First();
         evt.SessionId.Should().Be(session.Id);
         evt.NewTurnOrder.Count.Should().Be(2);
         evt.NewTurnOrder[0].Should().Be(p2.Id);
@@ -1368,7 +1403,8 @@ public class LiveGameSessionTests
         session.Complete(_timeProvider);
 
         // Assert
-        var evt = Assert.IsType<LiveSessionCompletedEvent>(session.DomainEvents.First());
+        session.DomainEvents.First().Should().BeOfType<LiveSessionCompletedEvent>();
+        var evt = (LiveSessionCompletedEvent)session.DomainEvents.First();
         evt.Players.Count.Should().Be(2);
 
         var aliceSnapshot = evt.Players.First(p => p.DisplayName == "Alice");
@@ -1396,7 +1432,8 @@ public class LiveGameSessionTests
         session.Complete(_timeProvider);
 
         // Assert
-        var evt = Assert.IsType<LiveSessionCompletedEvent>(session.DomainEvents.First());
+        session.DomainEvents.First().Should().BeOfType<LiveSessionCompletedEvent>();
+        var evt = (LiveSessionCompletedEvent)session.DomainEvents.First();
         evt.Players.Should().ContainSingle();
         evt.Players[0].DisplayName.Should().Be("Player");
     }
@@ -1416,7 +1453,8 @@ public class LiveGameSessionTests
         session.Complete(_timeProvider);
 
         // Assert
-        var evt = Assert.IsType<LiveSessionCompletedEvent>(session.DomainEvents.First());
+        session.DomainEvents.First().Should().BeOfType<LiveSessionCompletedEvent>();
+        var evt = (LiveSessionCompletedEvent)session.DomainEvents.First();
         evt.Scores.Count.Should().Be(2);
         Assert.All(evt.Scores, s =>
         {
@@ -1446,14 +1484,15 @@ public class LiveGameSessionTests
         session.Complete(_timeProvider);
 
         // Assert
-        var evt = Assert.IsType<LiveSessionCompletedEvent>(session.DomainEvents.First());
+        session.DomainEvents.First().Should().BeOfType<LiveSessionCompletedEvent>();
+        var evt = (LiveSessionCompletedEvent)session.DomainEvents.First();
         evt.GameId.Should().Be(gameId);
         evt.GameName.Should().Be("Catan");
         evt.CreatedByUserId.Should().Be(session.CreatedByUserId);
         evt.Visibility.Should().Be(PlayRecordVisibility.Group);
         evt.GroupId.Should().Be(groupId);
         evt.Notes.Should().Be("Game notes");
-        Assert.NotNull(evt.StartedAt);
+        evt.StartedAt.Should().NotBeNull();
         // SessionDate should reflect when game was played (StartedAt), not entity creation
         evt.SessionDate.Should().Be(session.StartedAt);
     }
@@ -1473,7 +1512,8 @@ public class LiveGameSessionTests
         session.Complete(_timeProvider);
 
         // Assert
-        var evt = Assert.IsType<LiveSessionCompletedEvent>(session.DomainEvents.First());
+        session.DomainEvents.First().Should().BeOfType<LiveSessionCompletedEvent>();
+        var evt = (LiveSessionCompletedEvent)session.DomainEvents.First();
         evt.SessionDate.Should().NotBe(session.CreatedAt);
         evt.SessionDate.Should().Be(session.StartedAt);
     }
@@ -1491,8 +1531,9 @@ public class LiveGameSessionTests
         session.Complete(_timeProvider);
 
         // Assert
-        var evt = Assert.IsType<LiveSessionCompletedEvent>(session.DomainEvents.First());
-        Assert.Empty(evt.Scores);
+        session.DomainEvents.First().Should().BeOfType<LiveSessionCompletedEvent>();
+        var evt = (LiveSessionCompletedEvent)session.DomainEvents.First();
+        evt.Scores.Should().BeEmpty();
         evt.Players.Should().ContainSingle();
     }
 
@@ -1511,7 +1552,7 @@ public class LiveGameSessionTests
         var found = session.GetPlayer(player.Id);
 
         // Assert
-        Assert.NotNull(found);
+        found.Should().NotBeNull();
         found.Id.Should().Be(player.Id);
     }
 
@@ -1525,7 +1566,7 @@ public class LiveGameSessionTests
         var found = session.GetPlayer(Guid.NewGuid());
 
         // Assert
-        Assert.Null(found);
+        found.Should().BeNull();
     }
 
     [Fact]
@@ -1537,7 +1578,7 @@ public class LiveGameSessionTests
         AddDefaultPlayer(session, "Player 2", PlayerColor.Blue);
 
         // Assert
-        Assert.NotNull(session.Host);
+        session.Host.Should().NotBeNull();
         session.Host.Id.Should().Be(host.Id);
     }
 
@@ -1548,7 +1589,7 @@ public class LiveGameSessionTests
         var session = CreateDefaultSession();
 
         // Assert
-        Assert.Null(session.Host);
+        session.Host.Should().BeNull();
     }
 
     #endregion

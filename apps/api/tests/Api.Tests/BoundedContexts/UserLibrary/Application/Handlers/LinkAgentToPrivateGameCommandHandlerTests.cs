@@ -181,8 +181,8 @@ public sealed class LinkAgentToPrivateGameCommandHandlerTests
             .ReturnsAsync((PrivateGame?)null);
 
         // Act & Assert
-        await Assert.ThrowsAsync<NotFoundException>(
-            () => _handler.Handle(command, TestContext.Current.CancellationToken));
+        var act = () => _handler.Handle(command, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<NotFoundException>();
 
         _repositoryMock.Verify(
             r => r.UpdateAsync(It.IsAny<PrivateGame>(), It.IsAny<CancellationToken>()),
@@ -226,8 +226,8 @@ public sealed class LinkAgentToPrivateGameCommandHandlerTests
             .ReturnsAsync(game);
 
         // Act & Assert — handler must surface 409 Conflict, not 500 InvalidOperationException
-        await Assert.ThrowsAsync<ConflictException>(
-            () => _handler.Handle(command, TestContext.Current.CancellationToken));
+        var act2 = () => _handler.Handle(command, TestContext.Current.CancellationToken);
+        await act2.Should().ThrowAsync<ConflictException>();
 
         _repositoryMock.Verify(
             r => r.UpdateAsync(It.IsAny<PrivateGame>(), It.IsAny<CancellationToken>()),

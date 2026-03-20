@@ -65,7 +65,7 @@ public class UpdateGameCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         result.Id.Should().Be(gameId);
         result.Title.Should().Be("New Title");
         result.Publisher.Should().Be("New Publisher");
@@ -135,7 +135,7 @@ public class UpdateGameCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.Equal("Catan", result.Title); // Unchanged
+        result.Title.Should().Be("Catan"); // Unchanged
         result.Publisher.Should().Be("New Publisher");
     }
 
@@ -241,9 +241,9 @@ public class UpdateGameCommandHandlerTests
             Title: invalidTitle);
 
         // Act & Assert
-        await Assert.ThrowsAsync<Api.SharedKernel.Domain.Exceptions.ValidationException>(
-            () => _handler.Handle(command, TestContext.Current.CancellationToken)
-        );
+        var act = 
+            () => _handler.Handle(command, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<Api.SharedKernel.Domain.Exceptions.ValidationException>();
 
         _unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
     }
@@ -265,9 +265,9 @@ public class UpdateGameCommandHandlerTests
             Title: longTitle);
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<Api.SharedKernel.Domain.Exceptions.ValidationException>(
-            () => _handler.Handle(command, TestContext.Current.CancellationToken)
-        );
+        var act = 
+            () => _handler.Handle(command, TestContext.Current.CancellationToken);
+        var exception = (await act.Should().ThrowAsync<Api.SharedKernel.Domain.Exceptions.ValidationException>()).Which;
 
         exception.Message.Should().Contain("cannot exceed 200 characters");
         _unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
@@ -292,9 +292,9 @@ public class UpdateGameCommandHandlerTests
             MaxPlayers: maxPlayers);
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<Api.SharedKernel.Domain.Exceptions.ValidationException>(
-            () => _handler.Handle(command, TestContext.Current.CancellationToken)
-        );
+        var act = 
+            () => _handler.Handle(command, TestContext.Current.CancellationToken);
+        var exception = (await act.Should().ThrowAsync<Api.SharedKernel.Domain.Exceptions.ValidationException>()).Which;
 
         exception.Message.Should().Contain("Minimum player count cannot be less than 1");
         _unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
@@ -319,9 +319,9 @@ public class UpdateGameCommandHandlerTests
             MaxPlayers: maxPlayers);
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<Api.SharedKernel.Domain.Exceptions.ValidationException>(
-            () => _handler.Handle(command, TestContext.Current.CancellationToken)
-        );
+        var act = 
+            () => _handler.Handle(command, TestContext.Current.CancellationToken);
+        var exception = (await act.Should().ThrowAsync<Api.SharedKernel.Domain.Exceptions.ValidationException>()).Which;
 
         exception.Message.Should().Contain("Maximum player count cannot exceed 100");
         _unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
@@ -355,10 +355,11 @@ public class UpdateGameCommandHandlerTests
             Title: "Updated Title");
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
-            () => _handler.Handle(command, TestContext.Current.CancellationToken));
+        var act = 
+            () => _handler.Handle(command, TestContext.Current.CancellationToken);
+        var exception = (await act.Should().ThrowAsync<InvalidOperationException>()).Which;
 
-        Assert.Contains($"Game with ID {gameId} not found", exception.Message, StringComparison.OrdinalIgnoreCase);
+        exception.Message.Should().ContainEquivalentOf($"Game with ID {gameId} not found");
 
         // Verify update was NOT called
         _gameRepositoryMock.Verify(
@@ -386,7 +387,7 @@ public class UpdateGameCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert - Should still persist (UpdateDetails called with all nulls)
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         _gameRepositoryMock.Verify(
             r => r.UpdateAsync(existingGame, It.IsAny<CancellationToken>()),
             Times.Once);

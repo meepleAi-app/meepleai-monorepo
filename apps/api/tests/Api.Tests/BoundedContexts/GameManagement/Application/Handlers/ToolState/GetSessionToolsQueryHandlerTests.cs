@@ -45,8 +45,9 @@ public class GetSessionToolsQueryHandlerTests
 
         var query = new GetSessionToolsQuery(sessionId);
 
-        await Assert.ThrowsAsync<NotFoundException>(() =>
-            _sut.Handle(query, TestContext.Current.CancellationToken));
+        var act = () =>
+            _sut.Handle(query, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<NotFoundException>();
     }
 
     // ========================================================================
@@ -83,10 +84,10 @@ public class GetSessionToolsQueryHandlerTests
 
         var result = await _sut.Handle(new GetSessionToolsQuery(sessionId), TestContext.Current.CancellationToken);
 
-        Assert.True(result.BaseTools.TurnOrder.IsAvailable);
-        Assert.True(result.BaseTools.DiceSet.IsAvailable);
-        Assert.True(result.BaseTools.Whiteboard.IsAvailable);
-        Assert.True(result.BaseTools.Scoreboard.IsAvailable);
+        (result.BaseTools.TurnOrder.IsAvailable).Should().BeTrue();
+        (result.BaseTools.DiceSet.IsAvailable).Should().BeTrue();
+        (result.BaseTools.Whiteboard.IsAvailable).Should().BeTrue();
+        (result.BaseTools.Scoreboard.IsAvailable).Should().BeTrue();
     }
 
     [Fact]
@@ -123,7 +124,7 @@ public class GetSessionToolsQueryHandlerTests
 
         var result = await _sut.Handle(new GetSessionToolsQuery(sessionId), TestContext.Current.CancellationToken);
 
-        Assert.Empty(result.CustomTools);
+        result.CustomTools.Should().BeEmpty();
     }
 
     [Fact]
@@ -146,8 +147,8 @@ public class GetSessionToolsQueryHandlerTests
         var result = await _sut.Handle(new GetSessionToolsQuery(sessionId), TestContext.Current.CancellationToken);
 
         result.CustomTools.Count.Should().Be(2);
-        Assert.Contains(result.CustomTools, t => t.ToolName == "Battle Dice");
-        Assert.Contains(result.CustomTools, t => t.ToolName == "HP Counter");
+        result.CustomTools.Should().Contain(t => t.ToolName == "Battle Dice");
+        result.CustomTools.Should().Contain(t => t.ToolName == "HP Counter");
     }
 
     // ========================================================================
@@ -166,7 +167,7 @@ public class GetSessionToolsQueryHandlerTests
 
         var result = await _sut.Handle(new GetSessionToolsQuery(sessionId), TestContext.Current.CancellationToken);
 
-        Assert.Null(result.ToolkitId);
+        result.ToolkitId.Should().BeNull();
         result.SessionId.Should().Be(sessionId);
     }
 
@@ -193,22 +194,25 @@ public class GetSessionToolsQueryHandlerTests
     [Fact]
     public async Task Handle_WithNullQuery_ThrowsArgumentNullException()
     {
-        await Assert.ThrowsAsync<ArgumentNullException>(() =>
-            _sut.Handle(null!, TestContext.Current.CancellationToken));
+        var act = () =>
+            _sut.Handle(null!, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<ArgumentNullException>();
     }
 
     [Fact]
     public void Constructor_WithNullSessionRepository_ThrowsArgumentNullException()
     {
-        Assert.Throws<ArgumentNullException>(() =>
-            new GetSessionToolsQueryHandler(null!, _toolStateRepoMock.Object));
+        var act = () =>
+            new GetSessionToolsQueryHandler(null!, _toolStateRepoMock.Object);
+        act.Should().Throw<ArgumentNullException>();
     }
 
     [Fact]
     public void Constructor_WithNullToolStateRepository_ThrowsArgumentNullException()
     {
-        Assert.Throws<ArgumentNullException>(() =>
-            new GetSessionToolsQueryHandler(_sessionRepoMock.Object, null!));
+        var act = () =>
+            new GetSessionToolsQueryHandler(_sessionRepoMock.Object, null!);
+        act.Should().Throw<ArgumentNullException>();
     }
 
     // ========================================================================

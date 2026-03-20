@@ -169,7 +169,7 @@ public sealed class AdminDisable2FAIntegrationTests : IAsyncLifetime
         // Assert
         _output("Verifying results...");
         result.Should().NotBeNull();
-        Assert.True(result.Success, $"Expected Success=true, got: {result.ErrorMessage}");
+        result.Success.Should().BeTrue($"Expected Success=true, got: {result.ErrorMessage}");
         result.ErrorMessage.Should().BeNull();
 
         // Verify 2FA is disabled in database

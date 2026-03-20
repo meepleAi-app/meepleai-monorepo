@@ -13,7 +13,6 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
-using FluentAssertions;
 using Api.Tests.Constants;
 
 namespace Api.Tests.Services;
@@ -86,8 +85,8 @@ public sealed class RagServicePerformanceTests : IDisposable
 
             latencies.Add(sw.ElapsedMilliseconds);
 
-            result.Should().NotBeNull();
-            result.answer.Should().NotBeEmpty();
+            Assert.NotNull(result);
+            Assert.NotEmpty(result.answer);
 
             if (i % 5 == 0)
             {
@@ -145,8 +144,8 @@ public sealed class RagServicePerformanceTests : IDisposable
 
             latencies.Add(sw.ElapsedMilliseconds);
 
-            result.Should().NotBeNull();
-            result.script.Should().NotBeEmpty();
+            Assert.NotNull(result);
+            Assert.NotEmpty(result.script);
 
             if (i % 5 == 0)
             {
@@ -208,8 +207,8 @@ public sealed class RagServicePerformanceTests : IDisposable
 
             latencies.Add(sw.ElapsedMilliseconds);
 
-            result.Should().NotBeNull();
-            result.answer.Should().NotBeEmpty();
+            Assert.NotNull(result);
+            Assert.NotEmpty(result.answer);
 
             if (i % 5 == 0)
             {

@@ -10,6 +10,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Moq;
 using System.Text.Json;
+using FluentAssertions;
 using Xunit;
 
 namespace Api.Tests.Middleware;
@@ -55,7 +56,7 @@ public class BggRateLimitMiddlewareTests
         await middleware.InvokeAsync(context, _rateLimitServiceMock.Object);
 
         // Assert
-        Assert.True(_nextCalled, "Next middleware should be called");
+        _nextCalled.Should().BeTrue("Next middleware should be called");
         _rateLimitServiceMock.Verify(
             x => x.CheckRateLimitAsync(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<double>(), It.IsAny<CancellationToken>()),
             Times.Never,
@@ -75,8 +76,8 @@ public class BggRateLimitMiddlewareTests
         await middleware.InvokeAsync(context, _rateLimitServiceMock.Object);
 
         // Assert
-        Assert.Equal(401, context.Response.StatusCode);
-        Assert.False(_nextCalled, "Next middleware should NOT be called for unauthenticated requests");
+        context.Response.StatusCode.Should().Be(401);
+        _nextCalled.Should().BeFalse("Next middleware should NOT be called for unauthenticated requests");
     }
 
     [Fact]
@@ -104,11 +105,11 @@ public class BggRateLimitMiddlewareTests
         await middleware.InvokeAsync(context, _rateLimitServiceMock.Object);
 
         // Assert
-        Assert.Equal(200, context.Response.StatusCode);
-        Assert.True(_nextCalled);
-        Assert.True(context.Response.Headers.ContainsKey("X-RateLimit-Limit"));
-        Assert.Equal("5", context.Response.Headers["X-RateLimit-Limit"].ToString());
-        Assert.Equal("3", context.Response.Headers["X-RateLimit-Remaining"].ToString());
+        context.Response.StatusCode.Should().Be(200);
+        _nextCalled.Should().BeTrue();
+        context.Response.Headers.ContainsKey("X-RateLimit-Limit").Should().BeTrue();
+        context.Response.Headers["X-RateLimit-Limit"].ToString().Should().Be("5");
+        context.Response.Headers["X-RateLimit-Remaining"].ToString().Should().Be("3");
     }
 
     [Fact]
@@ -136,10 +137,10 @@ public class BggRateLimitMiddlewareTests
         await middleware.InvokeAsync(context, _rateLimitServiceMock.Object);
 
         // Assert
-        Assert.Equal(200, context.Response.StatusCode);
-        Assert.True(_nextCalled);
-        Assert.Equal("10", context.Response.Headers["X-RateLimit-Limit"].ToString());
-        Assert.Equal("8", context.Response.Headers["X-RateLimit-Remaining"].ToString());
+        context.Response.StatusCode.Should().Be(200);
+        _nextCalled.Should().BeTrue();
+        context.Response.Headers["X-RateLimit-Limit"].ToString().Should().Be("10");
+        context.Response.Headers["X-RateLimit-Remaining"].ToString().Should().Be("8");
     }
 
     [Fact]
@@ -164,8 +165,8 @@ public class BggRateLimitMiddlewareTests
         await middleware.InvokeAsync(context, _rateLimitServiceMock.Object);
 
         // Assert
-        Assert.Equal("20", context.Response.Headers["X-RateLimit-Limit"].ToString());
-        Assert.Equal("15", context.Response.Headers["X-RateLimit-Remaining"].ToString());
+        context.Response.Headers["X-RateLimit-Limit"].ToString().Should().Be("20");
+        context.Response.Headers["X-RateLimit-Remaining"].ToString().Should().Be("15");
     }
 
     [Fact]
@@ -190,8 +191,8 @@ public class BggRateLimitMiddlewareTests
         await middleware.InvokeAsync(context, _rateLimitServiceMock.Object);
 
         // Assert
-        Assert.Equal("15", context.Response.Headers["X-RateLimit-Limit"].ToString());
-        Assert.Equal("12", context.Response.Headers["X-RateLimit-Remaining"].ToString());
+        context.Response.Headers["X-RateLimit-Limit"].ToString().Should().Be("15");
+        context.Response.Headers["X-RateLimit-Remaining"].ToString().Should().Be("12");
     }
 
     [Fact]
@@ -207,10 +208,10 @@ public class BggRateLimitMiddlewareTests
         await middleware.InvokeAsync(context, _rateLimitServiceMock.Object);
 
         // Assert
-        Assert.Equal(200, context.Response.StatusCode);
-        Assert.True(_nextCalled);
-        Assert.Equal("unlimited", context.Response.Headers["X-RateLimit-Limit"].ToString());
-        Assert.Equal("unlimited", context.Response.Headers["X-RateLimit-Remaining"].ToString());
+        context.Response.StatusCode.Should().Be(200);
+        _nextCalled.Should().BeTrue();
+        context.Response.Headers["X-RateLimit-Limit"].ToString().Should().Be("unlimited");
+        context.Response.Headers["X-RateLimit-Remaining"].ToString().Should().Be("unlimited");
 
         // Rate limit service should NOT be called for admin
         _rateLimitServiceMock.Verify(
@@ -243,20 +244,20 @@ public class BggRateLimitMiddlewareTests
         await middleware.InvokeAsync(context, _rateLimitServiceMock.Object);
 
         // Assert
-        Assert.Equal(429, context.Response.StatusCode);
-        Assert.False(_nextCalled, "Next middleware should NOT be called when rate limited");
-        Assert.Equal("45", context.Response.Headers["Retry-After"].ToString());
-        Assert.Equal("5", context.Response.Headers["X-RateLimit-Limit"].ToString());
-        Assert.Equal("0", context.Response.Headers["X-RateLimit-Remaining"].ToString());
+        context.Response.StatusCode.Should().Be(429);
+        _nextCalled.Should().BeFalse("Next middleware should NOT be called when rate limited");
+        context.Response.Headers["Retry-After"].ToString().Should().Be("45");
+        context.Response.Headers["X-RateLimit-Limit"].ToString().Should().Be("5");
+        context.Response.Headers["X-RateLimit-Remaining"].ToString().Should().Be("0");
 
         // Verify JSON response body
         context.Response.Body.Seek(0, SeekOrigin.Begin);
         var responseBody = await new StreamReader(context.Response.Body).ReadToEndAsync();
         var errorResponse = JsonSerializer.Deserialize<JsonElement>(responseBody);
 
-        Assert.Equal("Rate limit exceeded", errorResponse.GetProperty("error").GetString());
-        Assert.Contains("5 requests per minute", errorResponse.GetProperty("message").GetString());
-        Assert.Equal(45, errorResponse.GetProperty("retryAfter").GetInt32());
+        errorResponse.GetProperty("error").GetString().Should().Be("Rate limit exceeded");
+        errorResponse.GetProperty("message").GetString().Should().Contain("5 requests per minute");
+        errorResponse.GetProperty("retryAfter").GetInt32().Should().Be(45);
     }
 
     [Fact]
@@ -281,7 +282,7 @@ public class BggRateLimitMiddlewareTests
         var resetHeader = context.Response.Headers["X-RateLimit-Reset"].ToString();
         var resetTimestamp = long.Parse(resetHeader);
 
-        Assert.InRange(resetTimestamp, beforeTimestamp, afterTimestamp);
+        resetTimestamp.Should().BeInRange(beforeTimestamp, afterTimestamp);
     }
 
     [Fact]
@@ -301,9 +302,9 @@ public class BggRateLimitMiddlewareTests
         await middleware.InvokeAsync(context, _rateLimitServiceMock.Object);
 
         // Assert
-        Assert.Equal(200, context.Response.StatusCode);
-        Assert.True(_nextCalled, "Request should be allowed on Redis failure (fail-open)");
-        Assert.Equal("Error", context.Response.Headers["X-RateLimit-Status"].ToString());
+        context.Response.StatusCode.Should().Be(200);
+        _nextCalled.Should().BeTrue("Request should be allowed on Redis failure (fail-open)");
+        context.Response.Headers["X-RateLimit-Status"].ToString().Should().Be("Error");
 
         // Verify error was logged
         _loggerMock.Verify(
@@ -330,9 +331,9 @@ public class BggRateLimitMiddlewareTests
         await middleware.InvokeAsync(context, _rateLimitServiceMock.Object);
 
         // Assert - fail-open: request is allowed with Error status header
-        Assert.Equal(200, context.Response.StatusCode);
-        Assert.True(_nextCalled, "Request should be allowed on tier parse failure (fail-open)");
-        Assert.Equal("Error", context.Response.Headers["X-RateLimit-Status"].ToString());
+        context.Response.StatusCode.Should().Be(200);
+        _nextCalled.Should().BeTrue("Request should be allowed on tier parse failure (fail-open)");
+        context.Response.Headers["X-RateLimit-Status"].ToString().Should().Be("Error");
     }
 
     [Fact]
@@ -367,7 +368,7 @@ public class BggRateLimitMiddlewareTests
         var user2Called = _nextCalled;
 
         // Assert
-        Assert.True(user1Called && user2Called);
+        (user1Called && user2Called).Should().BeTrue();
         _rateLimitServiceMock.Verify(x => x.CheckRateLimitAsync($"bgg:{userId1}", It.IsAny<int>(), It.IsAny<double>(), It.IsAny<CancellationToken>()), Times.Once);
         _rateLimitServiceMock.Verify(x => x.CheckRateLimitAsync($"bgg:{userId2}", It.IsAny<int>(), It.IsAny<double>(), It.IsAny<CancellationToken>()), Times.Once);
     }

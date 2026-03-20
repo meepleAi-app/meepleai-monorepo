@@ -158,8 +158,9 @@ public class GameSessionOrchestratorServiceTests
         SetupSessionRepository(sessionId, null);
 
         // Act & Assert
-        await Assert.ThrowsAsync<NotFoundException>(
-            () => _service.BuildContextAsync(sessionId));
+        var act = 
+            () => _service.BuildContextAsync(sessionId);
+        await act.Should().ThrowAsync<NotFoundException>();
     }
 
     [Fact]
@@ -175,10 +176,10 @@ public class GameSessionOrchestratorServiceTests
 
         // Assert
         result.SessionId.Should().Be(sessionId);
-        Assert.Null(result.PrimaryGameId);
-        Assert.Empty(result.ExpansionGameIds);
-        Assert.Empty(result.AllGameIds);
-        Assert.Empty(result.KbCardIds);
+        result.PrimaryGameId.Should().BeNull();
+        result.ExpansionGameIds.Should().BeEmpty();
+        result.AllGameIds.Should().BeEmpty();
+        result.KbCardIds.Should().BeEmpty();
         result.DegradationLevel.Should().Be(SessionDegradationLevel.NoAI);
     }
 
@@ -208,12 +209,12 @@ public class GameSessionOrchestratorServiceTests
         // Assert
         result.SessionId.Should().Be(sessionId);
         result.PrimaryGameId.Should().Be(gameId);
-        Assert.Empty(result.ExpansionGameIds);
+        result.ExpansionGameIds.Should().BeEmpty();
         result.AllGameIds.Should().ContainSingle();
         result.KbCardIds.Should().ContainSingle();
-        Assert.NotNull(result.PrimaryRules);
+        result.PrimaryRules.Should().NotBeNull();
         result.PrimaryRules.GameTitle.Should().Be("Test Game");
-        Assert.Empty(result.GamesWithoutPdf);
+        result.GamesWithoutPdf.Should().BeEmpty();
         result.DegradationLevel.Should().Be(SessionDegradationLevel.Full);
     }
 
@@ -357,7 +358,7 @@ public class GameSessionOrchestratorServiceTests
 
         // Assert — should succeed with empty expansions
         result.SessionId.Should().Be(sessionId);
-        Assert.Empty(result.ExpansionGameIds);
+        result.ExpansionGameIds.Should().BeEmpty();
     }
 
     [Fact]
@@ -380,7 +381,7 @@ public class GameSessionOrchestratorServiceTests
 
         // Assert — should succeed with no KB cards and NoAI degradation
         result.SessionId.Should().Be(sessionId);
-        Assert.Empty(result.KbCardIds);
+        result.KbCardIds.Should().BeEmpty();
         result.DegradationLevel.Should().Be(SessionDegradationLevel.NoAI);
     }
 
@@ -407,7 +408,7 @@ public class GameSessionOrchestratorServiceTests
 
         // Assert — should succeed with null primary rules
         result.SessionId.Should().Be(sessionId);
-        Assert.Null(result.PrimaryRules);
+        result.PrimaryRules.Should().BeNull();
         result.DegradationLevel.Should().Be(SessionDegradationLevel.Full);
     }
 
@@ -531,7 +532,7 @@ public class GameSessionOrchestratorServiceTests
         var result = await _service.BuildContextAsync(sessionId);
 
         // Assert
-        Assert.NotNull(result.PrimaryRules);
+        result.PrimaryRules.Should().NotBeNull();
         result.PrimaryRules.GameId.Should().Be(gameId);
         result.PrimaryRules.GameTitle.Should().Be("Catan");
         result.PrimaryRules.KeyMechanics.Should().Contain("Worker Placement");
@@ -555,7 +556,7 @@ public class GameSessionOrchestratorServiceTests
         var result = await _service.BuildContextAsync(sessionId);
 
         // Assert
-        Assert.Null(result.PrimaryRules);
+        result.PrimaryRules.Should().BeNull();
     }
 
     // ========================================================================
@@ -565,72 +566,78 @@ public class GameSessionOrchestratorServiceTests
     [Fact]
     public void Constructor_NullLiveSessionRepo_ThrowsArgumentNullException()
     {
-        Assert.Throws<ArgumentNullException>(() => new GameSessionOrchestratorService(
+        var act = () => new GameSessionOrchestratorService(
             null!,
             _entityLinkRepoMock.Object,
             _rulebookRepoMock.Object,
             _vectorDocRepoMock.Object,
             _sharedGameRepoMock.Object,
-            _loggerMock.Object));
+            _loggerMock.Object);
+        act.Should().Throw<ArgumentNullException>();
     }
 
     [Fact]
     public void Constructor_NullEntityLinkRepo_ThrowsArgumentNullException()
     {
-        Assert.Throws<ArgumentNullException>(() => new GameSessionOrchestratorService(
+        var act = () => new GameSessionOrchestratorService(
             _liveSessionRepoMock.Object,
             null!,
             _rulebookRepoMock.Object,
             _vectorDocRepoMock.Object,
             _sharedGameRepoMock.Object,
-            _loggerMock.Object));
+            _loggerMock.Object);
+        act.Should().Throw<ArgumentNullException>();
     }
 
     [Fact]
     public void Constructor_NullRulebookRepo_ThrowsArgumentNullException()
     {
-        Assert.Throws<ArgumentNullException>(() => new GameSessionOrchestratorService(
+        var act = () => new GameSessionOrchestratorService(
             _liveSessionRepoMock.Object,
             _entityLinkRepoMock.Object,
             null!,
             _vectorDocRepoMock.Object,
             _sharedGameRepoMock.Object,
-            _loggerMock.Object));
+            _loggerMock.Object);
+        act.Should().Throw<ArgumentNullException>();
     }
 
     [Fact]
     public void Constructor_NullVectorDocRepo_ThrowsArgumentNullException()
     {
-        Assert.Throws<ArgumentNullException>(() => new GameSessionOrchestratorService(
+        var act = () => new GameSessionOrchestratorService(
             _liveSessionRepoMock.Object,
             _entityLinkRepoMock.Object,
             _rulebookRepoMock.Object,
             null!,
             _sharedGameRepoMock.Object,
-            _loggerMock.Object));
+            _loggerMock.Object);
+        act.Should().Throw<ArgumentNullException>();
     }
 
     [Fact]
     public void Constructor_NullSharedGameRepo_ThrowsArgumentNullException()
     {
-        Assert.Throws<ArgumentNullException>(() => new GameSessionOrchestratorService(
+        var act = () => new GameSessionOrchestratorService(
             _liveSessionRepoMock.Object,
             _entityLinkRepoMock.Object,
             _rulebookRepoMock.Object,
             _vectorDocRepoMock.Object,
             null!,
-            _loggerMock.Object));
+            _loggerMock.Object);
+        act.Should().Throw<ArgumentNullException>();
     }
 
     [Fact]
     public void Constructor_NullLogger_ThrowsArgumentNullException()
     {
-        Assert.Throws<ArgumentNullException>(() => new GameSessionOrchestratorService(
+        var act = () => new GameSessionOrchestratorService(
             _liveSessionRepoMock.Object,
             _entityLinkRepoMock.Object,
             _rulebookRepoMock.Object,
             _vectorDocRepoMock.Object,
             _sharedGameRepoMock.Object,
-            null!));
+            null!);
+        act.Should().Throw<ArgumentNullException>();
     }
 }

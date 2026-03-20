@@ -33,8 +33,9 @@ public class GenerateToolkitFromKbHandlerTests
     [Fact]
     public async Task Handle_WithNullCommand_ThrowsArgumentNullException()
     {
-        await Assert.ThrowsAsync<ArgumentNullException>(() =>
-            _handler.Handle(null!, TestContext.Current.CancellationToken));
+        var act = () =>
+            _handler.Handle(null!, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<ArgumentNullException>();
     }
 
     [Fact]

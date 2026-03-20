@@ -121,8 +121,8 @@ public class FeatureFlagServiceTests
     public async Task IsEnabledForTierAsync_WithNullTier_ThrowsArgumentNullException()
     {
         // Arrange & Act & Assert
-        await Assert.ThrowsAsync<ArgumentNullException>(
-            () => _service.IsEnabledForTierAsync("Features.Test", null!));
+        var act = () => _service.IsEnabledForTierAsync("Features.Test", null!);
+        await act.Should().ThrowAsync<ArgumentNullException>();
     }
 
     [Theory]
@@ -206,8 +206,8 @@ public class FeatureFlagServiceTests
     public async Task EnableFeatureForTierAsync_WithNullTier_ThrowsArgumentNullException()
     {
         // Arrange & Act & Assert
-        await Assert.ThrowsAsync<ArgumentNullException>(
-            () => _service.EnableFeatureForTierAsync("Features.Test", null!, "user-id"));
+        var act2 = () => _service.EnableFeatureForTierAsync("Features.Test", null!, "user-id");
+        await act2.Should().ThrowAsync<ArgumentNullException>();
     }
 
     #endregion

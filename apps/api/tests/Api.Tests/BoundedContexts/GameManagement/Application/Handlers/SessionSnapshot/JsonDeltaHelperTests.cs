@@ -231,15 +231,9 @@ public class JsonDeltaHelperTests
         var expected = System.Text.Json.JsonDocument.Parse(current);
         var actual = System.Text.Json.JsonDocument.Parse(reconstructed);
 
-        Assert.Equal(
-            expected.RootElement.GetProperty("a").GetInt32(),
-            actual.RootElement.GetProperty("a").GetInt32());
-        Assert.Equal(
-            expected.RootElement.GetProperty("b").GetString(),
-            actual.RootElement.GetProperty("b").GetString());
-        Assert.Equal(
-            expected.RootElement.GetProperty("c").GetBoolean(),
-            actual.RootElement.GetProperty("c").GetBoolean());
+        actual.RootElement.GetProperty("a").GetInt32().Should().Be(expected.RootElement.GetProperty("a").GetInt32());
+        actual.RootElement.GetProperty("b").GetString().Should().Be(expected.RootElement.GetProperty("b").GetString());
+        actual.RootElement.GetProperty("c").GetBoolean().Should().Be(expected.RootElement.GetProperty("c").GetBoolean());
     }
 
     [Fact]

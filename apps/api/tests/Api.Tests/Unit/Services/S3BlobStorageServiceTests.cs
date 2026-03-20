@@ -304,8 +304,9 @@ public sealed class S3BlobStorageServiceTests : IDisposable
         var fileName = "test.pdf";
 
         // Act & Assert
-        Assert.Throws<ArgumentException>(() =>
-            _sut.GetStoragePath(fileId, invalidGameId, fileName));
+        var act = () =>
+            _sut.GetStoragePath(fileId, invalidGameId, fileName);
+        act.Should().Throw<ArgumentException>();
     }
 
     [Fact]

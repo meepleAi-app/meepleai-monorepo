@@ -1,7 +1,6 @@
 using Api.SharedKernel.Utilities.StringSimilarity;
 using Api.Tests.Constants;
 using Xunit;
-using FluentAssertions;
 
 namespace Api.Tests.SharedKernel.Utilities.StringSimilarity;
 
@@ -33,7 +32,7 @@ public class LevenshteinDistanceTests
         var actualDistance = LevenshteinDistance.CalculateDistance(source, target);
 
         // Assert
-        actualDistance.Should().Be(expectedDistance);
+        Assert.Equal(expectedDistance, actualDistance);
     }
 
     [Theory]
@@ -55,7 +54,7 @@ public class LevenshteinDistanceTests
         var actualSimilarity = LevenshteinDistance.CalculateSimilarityScore(source, target);
 
         // Assert
-        actualSimilarity.Should().BeApproximately(expectedSimilarity, precision: 1);
+        Assert.Equal(expectedSimilarity, actualSimilarity, precision: 1);
     }
 
     [Fact]
@@ -68,7 +67,7 @@ public class LevenshteinDistanceTests
         var similarity = LevenshteinDistance.CalculateSimilarityScore(text, text);
 
         // Assert
-        similarity.Should().Be(100.0);
+        Assert.Equal(100.0, similarity);
     }
 
     [Fact]
@@ -96,7 +95,7 @@ public class LevenshteinDistanceTests
         var actualSimilarity = LevenshteinDistance.CalculateSimilarityScore(source, target);
 
         // Assert
-        actualSimilarity.Should().BeApproximately(expectedSimilarity, precision: 1);
+        Assert.Equal(expectedSimilarity, actualSimilarity, precision: 1);
     }
 
     [Fact]
@@ -111,7 +110,7 @@ public class LevenshteinDistanceTests
         var distance2 = LevenshteinDistance.CalculateDistance(s2, s1);
 
         // Assert
-        distance2.Should().Be(distance1);
+        Assert.Equal(distance1, distance2);
     }
 
     [Theory]
@@ -127,6 +126,6 @@ public class LevenshteinDistanceTests
         var actualSimilarity = LevenshteinDistance.CalculateSimilarityScore(source, target);
 
         // Assert
-        actualSimilarity.Should().BeApproximately(expectedSimilarity, precision: 1);
+        Assert.Equal(expectedSimilarity, actualSimilarity, precision: 1);
     }
 }

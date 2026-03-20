@@ -72,7 +72,7 @@ public sealed class RedisRateLimitingHealthCheckTests
             new HealthCheckContext(), CancellationToken.None);
 
         result.Status.Should().Be(HealthStatus.Degraded);
-        Assert.Contains("rate limiting is disabled", result.Description, StringComparison.OrdinalIgnoreCase);
+        result.Description.Should().ContainEquivalentOf("rate limiting is disabled");
     }
 
     [Fact]

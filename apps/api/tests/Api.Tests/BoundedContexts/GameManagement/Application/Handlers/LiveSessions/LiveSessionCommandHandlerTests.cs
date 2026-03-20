@@ -143,8 +143,9 @@ public class LiveSessionCommandHandlerTests
         var handler = new CreateLiveSessionCommandHandler(_repositoryMock.Object, _timeProvider);
 
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentNullException>(
-            () => handler.Handle(null!, TestContext.Current.CancellationToken));
+        var act = 
+            () => handler.Handle(null!, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<ArgumentNullException>();
     }
 
     [Fact]
@@ -164,7 +165,7 @@ public class LiveSessionCommandHandlerTests
         var result = await handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(capturedSession);
+        capturedSession.Should().NotBeNull();
         capturedSession.Id.Should().Be(result);
         capturedSession.GameName.Should().Be("Ticket to Ride");
         capturedSession.CreatedByUserId.Should().Be(DefaultUserId);
@@ -195,7 +196,7 @@ public class LiveSessionCommandHandlerTests
         await handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(capturedSession);
+        capturedSession.Should().NotBeNull();
         capturedSession.GameId.Should().Be(gameId);
         capturedSession.Visibility.Should().Be(PlayRecordVisibility.Group);
         capturedSession.GroupId.Should().Be(groupId);
@@ -242,8 +243,9 @@ public class LiveSessionCommandHandlerTests
         var command = new StartLiveSessionCommand(sessionId);
 
         // Act & Assert
-        var ex = await Assert.ThrowsAsync<NotFoundException>(
-            () => handler.Handle(command, TestContext.Current.CancellationToken));
+        var act = 
+            () => handler.Handle(command, TestContext.Current.CancellationToken);
+        var ex = (await act.Should().ThrowAsync<NotFoundException>()).Which;
         ex.ResourceType.Should().Be("LiveGameSession");
     }
 
@@ -254,8 +256,9 @@ public class LiveSessionCommandHandlerTests
         var handler = new StartLiveSessionCommandHandler(_repositoryMock.Object, _timeProvider);
 
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentNullException>(
-            () => handler.Handle(null!, TestContext.Current.CancellationToken));
+        var act = 
+            () => handler.Handle(null!, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<ArgumentNullException>();
     }
 
     #endregion
@@ -298,8 +301,9 @@ public class LiveSessionCommandHandlerTests
         var command = new PauseLiveSessionCommand(sessionId);
 
         // Act & Assert
-        var ex = await Assert.ThrowsAsync<NotFoundException>(
-            () => handler.Handle(command, TestContext.Current.CancellationToken));
+        var act = 
+            () => handler.Handle(command, TestContext.Current.CancellationToken);
+        var ex = (await act.Should().ThrowAsync<NotFoundException>()).Which;
         ex.ResourceType.Should().Be("LiveGameSession");
     }
 
@@ -310,8 +314,9 @@ public class LiveSessionCommandHandlerTests
         var handler = new PauseLiveSessionCommandHandler(_repositoryMock.Object, _timeProvider);
 
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentNullException>(
-            () => handler.Handle(null!, TestContext.Current.CancellationToken));
+        var act = 
+            () => handler.Handle(null!, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<ArgumentNullException>();
     }
 
     #endregion
@@ -354,8 +359,9 @@ public class LiveSessionCommandHandlerTests
         var command = new ResumeLiveSessionCommand(sessionId);
 
         // Act & Assert
-        var ex = await Assert.ThrowsAsync<NotFoundException>(
-            () => handler.Handle(command, TestContext.Current.CancellationToken));
+        var act = 
+            () => handler.Handle(command, TestContext.Current.CancellationToken);
+        var ex = (await act.Should().ThrowAsync<NotFoundException>()).Which;
         ex.ResourceType.Should().Be("LiveGameSession");
     }
 
@@ -366,8 +372,9 @@ public class LiveSessionCommandHandlerTests
         var handler = new ResumeLiveSessionCommandHandler(_repositoryMock.Object, _timeProvider);
 
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentNullException>(
-            () => handler.Handle(null!, TestContext.Current.CancellationToken));
+        var act = 
+            () => handler.Handle(null!, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<ArgumentNullException>();
     }
 
     #endregion
@@ -394,7 +401,7 @@ public class LiveSessionCommandHandlerTests
 
         // Assert
         session.Status.Should().Be(LiveSessionStatus.Completed);
-        Assert.NotNull(session.CompletedAt);
+        session.CompletedAt.Should().NotBeNull();
         _repositoryMock.Verify(
             r => r.UpdateAsync(session, It.IsAny<CancellationToken>()),
             Times.Once);
@@ -411,8 +418,9 @@ public class LiveSessionCommandHandlerTests
         var command = new CompleteLiveSessionCommand(sessionId);
 
         // Act & Assert
-        var ex = await Assert.ThrowsAsync<NotFoundException>(
-            () => handler.Handle(command, TestContext.Current.CancellationToken));
+        var act = 
+            () => handler.Handle(command, TestContext.Current.CancellationToken);
+        var ex = (await act.Should().ThrowAsync<NotFoundException>()).Which;
         ex.ResourceType.Should().Be("LiveGameSession");
     }
 
@@ -423,8 +431,9 @@ public class LiveSessionCommandHandlerTests
         var handler = new CompleteLiveSessionCommandHandler(_repositoryMock.Object, _timeProvider);
 
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentNullException>(
-            () => handler.Handle(null!, TestContext.Current.CancellationToken));
+        var act = 
+            () => handler.Handle(null!, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<ArgumentNullException>();
     }
 
     #endregion
@@ -450,7 +459,7 @@ public class LiveSessionCommandHandlerTests
         await handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(session.LastSavedAt);
+        session.LastSavedAt.Should().NotBeNull();
         _repositoryMock.Verify(
             r => r.UpdateAsync(session, It.IsAny<CancellationToken>()),
             Times.Once);
@@ -471,7 +480,7 @@ public class LiveSessionCommandHandlerTests
         await handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(session.LastSavedAt);
+        session.LastSavedAt.Should().NotBeNull();
         _repositoryMock.Verify(
             r => r.UpdateAsync(session, It.IsAny<CancellationToken>()),
             Times.Once);
@@ -488,8 +497,9 @@ public class LiveSessionCommandHandlerTests
         var command = new SaveLiveSessionCommand(sessionId);
 
         // Act & Assert
-        var ex = await Assert.ThrowsAsync<NotFoundException>(
-            () => handler.Handle(command, TestContext.Current.CancellationToken));
+        var act = 
+            () => handler.Handle(command, TestContext.Current.CancellationToken);
+        var ex = (await act.Should().ThrowAsync<NotFoundException>()).Which;
         ex.ResourceType.Should().Be("LiveGameSession");
     }
 
@@ -500,8 +510,9 @@ public class LiveSessionCommandHandlerTests
         var handler = new SaveLiveSessionCommandHandler(_repositoryMock.Object, _timeProvider);
 
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentNullException>(
-            () => handler.Handle(null!, TestContext.Current.CancellationToken));
+        var act = 
+            () => handler.Handle(null!, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<ArgumentNullException>();
     }
 
     #endregion
@@ -582,8 +593,9 @@ public class LiveSessionCommandHandlerTests
         var command = new AddPlayerToLiveSessionCommand(sessionId, "Alice", PlayerColor.Red);
 
         // Act & Assert
-        var ex = await Assert.ThrowsAsync<NotFoundException>(
-            () => handler.Handle(command, TestContext.Current.CancellationToken));
+        var act = 
+            () => handler.Handle(command, TestContext.Current.CancellationToken);
+        var ex = (await act.Should().ThrowAsync<NotFoundException>()).Which;
         ex.ResourceType.Should().Be("LiveGameSession");
     }
 
@@ -594,8 +606,9 @@ public class LiveSessionCommandHandlerTests
         var handler = new AddPlayerToLiveSessionCommandHandler(_repositoryMock.Object, _timeProvider);
 
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentNullException>(
-            () => handler.Handle(null!, TestContext.Current.CancellationToken));
+        var act = 
+            () => handler.Handle(null!, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<ArgumentNullException>();
     }
 
     #endregion
@@ -622,7 +635,7 @@ public class LiveSessionCommandHandlerTests
         await handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.False(session.HasPlayers);
+        (session.HasPlayers).Should().BeFalse();
         _repositoryMock.Verify(
             r => r.UpdateAsync(session, It.IsAny<CancellationToken>()),
             Times.Once);
@@ -639,8 +652,9 @@ public class LiveSessionCommandHandlerTests
         var command = new RemovePlayerFromLiveSessionCommand(sessionId, Guid.NewGuid());
 
         // Act & Assert
-        var ex = await Assert.ThrowsAsync<NotFoundException>(
-            () => handler.Handle(command, TestContext.Current.CancellationToken));
+        var act = 
+            () => handler.Handle(command, TestContext.Current.CancellationToken);
+        var ex = (await act.Should().ThrowAsync<NotFoundException>()).Which;
         ex.ResourceType.Should().Be("LiveGameSession");
     }
 
@@ -651,8 +665,9 @@ public class LiveSessionCommandHandlerTests
         var handler = new RemovePlayerFromLiveSessionCommandHandler(_repositoryMock.Object, _timeProvider);
 
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentNullException>(
-            () => handler.Handle(null!, TestContext.Current.CancellationToken));
+        var act = 
+            () => handler.Handle(null!, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<ArgumentNullException>();
     }
 
     #endregion
@@ -699,8 +714,9 @@ public class LiveSessionCommandHandlerTests
         var command = new UpdatePlayerOrderCommand(sessionId, new List<Guid> { Guid.NewGuid() });
 
         // Act & Assert
-        var ex = await Assert.ThrowsAsync<NotFoundException>(
-            () => handler.Handle(command, TestContext.Current.CancellationToken));
+        var act = 
+            () => handler.Handle(command, TestContext.Current.CancellationToken);
+        var ex = (await act.Should().ThrowAsync<NotFoundException>()).Which;
         ex.ResourceType.Should().Be("LiveGameSession");
     }
 
@@ -711,8 +727,9 @@ public class LiveSessionCommandHandlerTests
         var handler = new UpdatePlayerOrderCommandHandler(_repositoryMock.Object, _timeProvider);
 
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentNullException>(
-            () => handler.Handle(null!, TestContext.Current.CancellationToken));
+        var act = 
+            () => handler.Handle(null!, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<ArgumentNullException>();
     }
 
     #endregion
@@ -757,8 +774,9 @@ public class LiveSessionCommandHandlerTests
         var command = new CreateLiveSessionTeamCommand(sessionId, "Team A", "#00FF00");
 
         // Act & Assert
-        var ex = await Assert.ThrowsAsync<NotFoundException>(
-            () => handler.Handle(command, TestContext.Current.CancellationToken));
+        var act = 
+            () => handler.Handle(command, TestContext.Current.CancellationToken);
+        var ex = (await act.Should().ThrowAsync<NotFoundException>()).Which;
         ex.ResourceType.Should().Be("LiveGameSession");
     }
 
@@ -769,8 +787,9 @@ public class LiveSessionCommandHandlerTests
         var handler = new CreateLiveSessionTeamCommandHandler(_repositoryMock.Object, _timeProvider);
 
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentNullException>(
-            () => handler.Handle(null!, TestContext.Current.CancellationToken));
+        var act = 
+            () => handler.Handle(null!, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<ArgumentNullException>();
     }
 
     #endregion
@@ -815,8 +834,9 @@ public class LiveSessionCommandHandlerTests
         var command = new AssignPlayerToTeamCommand(sessionId, Guid.NewGuid(), Guid.NewGuid());
 
         // Act & Assert
-        var ex = await Assert.ThrowsAsync<NotFoundException>(
-            () => handler.Handle(command, TestContext.Current.CancellationToken));
+        var act = 
+            () => handler.Handle(command, TestContext.Current.CancellationToken);
+        var ex = (await act.Should().ThrowAsync<NotFoundException>()).Which;
         ex.ResourceType.Should().Be("LiveGameSession");
     }
 
@@ -827,8 +847,9 @@ public class LiveSessionCommandHandlerTests
         var handler = new AssignPlayerToTeamCommandHandler(_repositoryMock.Object, _timeProvider);
 
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentNullException>(
-            () => handler.Handle(null!, TestContext.Current.CancellationToken));
+        var act = 
+            () => handler.Handle(null!, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<ArgumentNullException>();
     }
 
     #endregion
@@ -894,8 +915,9 @@ public class LiveSessionCommandHandlerTests
         var command = new RecordLiveSessionScoreCommand(sessionId, Guid.NewGuid(), 1, "Points", 10);
 
         // Act & Assert
-        var ex = await Assert.ThrowsAsync<NotFoundException>(
-            () => handler.Handle(command, TestContext.Current.CancellationToken));
+        var act = 
+            () => handler.Handle(command, TestContext.Current.CancellationToken);
+        var ex = (await act.Should().ThrowAsync<NotFoundException>()).Which;
         ex.ResourceType.Should().Be("LiveGameSession");
     }
 
@@ -906,8 +928,9 @@ public class LiveSessionCommandHandlerTests
         var handler = new RecordLiveSessionScoreCommandHandler(_repositoryMock.Object, _timeProvider);
 
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentNullException>(
-            () => handler.Handle(null!, TestContext.Current.CancellationToken));
+        var act = 
+            () => handler.Handle(null!, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<ArgumentNullException>();
     }
 
     #endregion
@@ -936,7 +959,8 @@ public class LiveSessionCommandHandlerTests
         await handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert - should replace the existing score (upsert)
-        var updatedScore = Assert.Single(session.RoundScores, s => s.Round == 1 && s.Dimension == "Points");
+        session.RoundScores.Where(s => s.Round == 1 && s.Dimension == "Points").Should().ContainSingle();
+        var updatedScore = session.RoundScores.Single(s => s.Round == 1 && s.Dimension == "Points");
         updatedScore.Value.Should().Be(20);
         _repositoryMock.Verify(
             r => r.UpdateAsync(session, It.IsAny<CancellationToken>()),
@@ -954,8 +978,9 @@ public class LiveSessionCommandHandlerTests
         var command = new EditLiveSessionScoreCommand(sessionId, Guid.NewGuid(), 1, "Points", 10);
 
         // Act & Assert
-        var ex = await Assert.ThrowsAsync<NotFoundException>(
-            () => handler.Handle(command, TestContext.Current.CancellationToken));
+        var act = 
+            () => handler.Handle(command, TestContext.Current.CancellationToken);
+        var ex = (await act.Should().ThrowAsync<NotFoundException>()).Which;
         ex.ResourceType.Should().Be("LiveGameSession");
     }
 
@@ -966,8 +991,9 @@ public class LiveSessionCommandHandlerTests
         var handler = new EditLiveSessionScoreCommandHandler(_repositoryMock.Object, _timeProvider);
 
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentNullException>(
-            () => handler.Handle(null!, TestContext.Current.CancellationToken));
+        var act = 
+            () => handler.Handle(null!, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<ArgumentNullException>();
     }
 
     #endregion
@@ -1011,8 +1037,9 @@ public class LiveSessionCommandHandlerTests
         var command = new AdvanceLiveSessionTurnCommand(sessionId);
 
         // Act & Assert
-        var ex = await Assert.ThrowsAsync<NotFoundException>(
-            () => handler.Handle(command, TestContext.Current.CancellationToken));
+        var act = 
+            () => handler.Handle(command, TestContext.Current.CancellationToken);
+        var ex = (await act.Should().ThrowAsync<NotFoundException>()).Which;
         ex.ResourceType.Should().Be("LiveGameSession");
     }
 
@@ -1023,8 +1050,9 @@ public class LiveSessionCommandHandlerTests
         var handler = new AdvanceLiveSessionTurnCommandHandler(_repositoryMock.Object, _timeProvider);
 
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentNullException>(
-            () => handler.Handle(null!, TestContext.Current.CancellationToken));
+        var act = 
+            () => handler.Handle(null!, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<ArgumentNullException>();
     }
 
     #endregion
@@ -1072,7 +1100,7 @@ public class LiveSessionCommandHandlerTests
         await handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.Null(session.Notes);
+        session.Notes.Should().BeNull();
     }
 
     [Fact]
@@ -1086,8 +1114,9 @@ public class LiveSessionCommandHandlerTests
         var command = new UpdateLiveSessionNotesCommand(sessionId, "Notes");
 
         // Act & Assert
-        var ex = await Assert.ThrowsAsync<NotFoundException>(
-            () => handler.Handle(command, TestContext.Current.CancellationToken));
+        var act = 
+            () => handler.Handle(command, TestContext.Current.CancellationToken);
+        var ex = (await act.Should().ThrowAsync<NotFoundException>()).Which;
         ex.ResourceType.Should().Be("LiveGameSession");
     }
 
@@ -1098,8 +1127,9 @@ public class LiveSessionCommandHandlerTests
         var handler = new UpdateLiveSessionNotesCommandHandler(_repositoryMock.Object, _timeProvider);
 
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentNullException>(
-            () => handler.Handle(null!, TestContext.Current.CancellationToken));
+        var act = 
+            () => handler.Handle(null!, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<ArgumentNullException>();
     }
 
     #endregion

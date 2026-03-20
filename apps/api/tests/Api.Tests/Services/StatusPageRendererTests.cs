@@ -30,8 +30,8 @@ public class StatusPageRendererTests
 
         // Assert
         html.Should().StartWithEquivalentOf("<!DOCTYPE html>");
-        Assert.Contains("charset=\"UTF-8\"", html, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("</html>", html, StringComparison.Ordinal);
+        html.Should().ContainEquivalentOf("charset=\"UTF-8\"");
+        html.Should().ContainEquivalentOf("</html>");
     }
 
     [Fact]
@@ -61,8 +61,8 @@ public class StatusPageRendererTests
         var html = StatusPageRenderer.RenderHtml(report);
 
         // Assert
-        Assert.Contains("#22c55e", html, StringComparison.Ordinal);
-        Assert.Contains("All Systems Operational", html, StringComparison.Ordinal);
+        html.Should().ContainEquivalentOf("#22c55e");
+        html.Should().ContainEquivalentOf("All Systems Operational");
     }
 
     [Fact]
@@ -92,8 +92,8 @@ public class StatusPageRendererTests
         var html = StatusPageRenderer.RenderHtml(report);
 
         // Assert
-        Assert.Contains("#eab308", html, StringComparison.Ordinal);
-        Assert.Contains("Partial Degradation", html, StringComparison.Ordinal);
+        html.Should().ContainEquivalentOf("#eab308");
+        html.Should().ContainEquivalentOf("Partial Degradation");
     }
 
     [Fact]
@@ -123,8 +123,8 @@ public class StatusPageRendererTests
         var html = StatusPageRenderer.RenderHtml(report);
 
         // Assert
-        Assert.Contains("#ef4444", html, StringComparison.Ordinal);
-        Assert.Contains("Service Disruption", html, StringComparison.Ordinal);
+        html.Should().ContainEquivalentOf("#ef4444");
+        html.Should().ContainEquivalentOf("Service Disruption");
     }
 
     [Fact]
@@ -161,9 +161,9 @@ public class StatusPageRendererTests
         var html = StatusPageRenderer.RenderHtml(report);
 
         // Assert
-        Assert.Contains("Core Services", html, StringComparison.Ordinal);
-        Assert.Contains("AI Services", html, StringComparison.Ordinal);
-        Assert.Contains("External Services", html, StringComparison.Ordinal);
+        html.Should().ContainEquivalentOf("Core Services");
+        html.Should().ContainEquivalentOf("AI Services");
+        html.Should().ContainEquivalentOf("External Services");
     }
 
     [Fact]
@@ -186,7 +186,7 @@ public class StatusPageRendererTests
         var html = StatusPageRenderer.RenderHtml(report);
 
         // Assert
-        Assert.Contains("<meta http-equiv=\"refresh\" content=\"30\">", html, StringComparison.OrdinalIgnoreCase);
+        html.Should().ContainEquivalentOf("<meta http-equiv=\"refresh\" content=\"30\">");
     }
 
     [Fact]
@@ -209,8 +209,8 @@ public class StatusPageRendererTests
         var html = StatusPageRenderer.RenderHtml(report);
 
         // Assert
-        Assert.Contains("14", html, StringComparison.Ordinal);
-        Assert.Contains("ms", html, StringComparison.Ordinal);
+        html.Should().ContainEquivalentOf("14");
+        html.Should().ContainEquivalentOf("ms");
     }
 
     [Fact]
@@ -233,6 +233,6 @@ public class StatusPageRendererTests
         var html = StatusPageRenderer.RenderHtml(report);
 
         // Assert
-        Assert.Contains("PostgreSQL is accessible and responding", html, StringComparison.Ordinal);
+        html.Should().ContainEquivalentOf("PostgreSQL is accessible and responding");
     }
 }

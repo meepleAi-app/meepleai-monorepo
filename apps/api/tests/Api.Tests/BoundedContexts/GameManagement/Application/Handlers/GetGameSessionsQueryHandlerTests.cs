@@ -46,7 +46,7 @@ public class GetGameSessionsQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         result.Count.Should().Be(2);
     }
 
@@ -65,8 +65,8 @@ public class GetGameSessionsQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Empty(result);
+        result.Should().NotBeNull();
+        result.Should().BeEmpty();
     }
 
     [Fact]
@@ -85,8 +85,8 @@ public class GetGameSessionsQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal(3, result.Count); // Page 2 with size 3 should return 3 items (items 4-6)
+        result.Should().NotBeNull();
+        result.Count.Should().Be(3); // Page 2 with size 3 should return 3 items (items 4-6)
     }
 
     [Fact]
@@ -105,7 +105,7 @@ public class GetGameSessionsQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         result.Count.Should().Be(5);
     }
 
@@ -117,8 +117,9 @@ public class GetGameSessionsQueryHandlerTests
         var query = new GetGameSessionsQuery(gameId, PageSize: 0);
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<ArgumentException>(
-            () => _handler.Handle(query, TestContext.Current.CancellationToken));
+        var act = 
+            () => _handler.Handle(query, TestContext.Current.CancellationToken);
+        var exception = (await act.Should().ThrowAsync<ArgumentException>()).Which;
 
         exception.Message.Should().Contain("positive");
     }
@@ -131,8 +132,9 @@ public class GetGameSessionsQueryHandlerTests
         var query = new GetGameSessionsQuery(gameId, PageSize: 1001);
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<ArgumentException>(
-            () => _handler.Handle(query, TestContext.Current.CancellationToken));
+        var act = 
+            () => _handler.Handle(query, TestContext.Current.CancellationToken);
+        var exception = (await act.Should().ThrowAsync<ArgumentException>()).Which;
 
         exception.Message.Should().Contain("1000");
     }
@@ -145,8 +147,9 @@ public class GetGameSessionsQueryHandlerTests
         var query = new GetGameSessionsQuery(gameId, PageNumber: 0);
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<ArgumentException>(
-            () => _handler.Handle(query, TestContext.Current.CancellationToken));
+        var act = 
+            () => _handler.Handle(query, TestContext.Current.CancellationToken);
+        var exception = (await act.Should().ThrowAsync<ArgumentException>()).Which;
 
         exception.Message.Should().Contain("1-based");
     }
@@ -187,8 +190,8 @@ public class GetGameSessionsQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Single(result); // Page 4 with size 3 should return 1 item (item 10)
+        result.Should().NotBeNull();
+        result.Should().ContainSingle(); // Page 4 with size 3 should return 1 item (item 10)
     }
 
     private static GameSession CreateSession(Guid gameId)

@@ -43,8 +43,8 @@ public class ToolStateQueryHandlerTests
         var result = await handler.Handle(query, TestContext.Current.CancellationToken);
 
         result.Count.Should().Be(2);
-        Assert.Contains(result, r => r.ToolName == "Dice");
-        Assert.Contains(result, r => r.ToolName == "HP");
+        result.Should().Contain(r => r.ToolName == "Dice");
+        result.Should().Contain(r => r.ToolName == "HP");
     }
 
     [Fact]
@@ -59,7 +59,7 @@ public class ToolStateQueryHandlerTests
 
         var result = await handler.Handle(query, TestContext.Current.CancellationToken);
 
-        Assert.Empty(result);
+        result.Should().BeEmpty();
     }
 
     [Fact]
@@ -67,8 +67,9 @@ public class ToolStateQueryHandlerTests
     {
         var handler = new GetToolStatesQueryHandler(_repoMock.Object);
 
-        await Assert.ThrowsAsync<ArgumentNullException>(() =>
-            handler.Handle(null!, TestContext.Current.CancellationToken));
+        var act = () =>
+            handler.Handle(null!, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<ArgumentNullException>();
     }
 
     // ========================================================================
@@ -90,7 +91,7 @@ public class ToolStateQueryHandlerTests
 
         var result = await handler.Handle(query, TestContext.Current.CancellationToken);
 
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         result.ToolName.Should().Be("Battle Dice");
         result.ToolType.Should().Be(ToolType.Dice);
     }
@@ -106,7 +107,7 @@ public class ToolStateQueryHandlerTests
 
         var result = await handler.Handle(query, TestContext.Current.CancellationToken);
 
-        Assert.Null(result);
+        result.Should().BeNull();
     }
 
     [Fact]
@@ -114,7 +115,8 @@ public class ToolStateQueryHandlerTests
     {
         var handler = new GetToolStateQueryHandler(_repoMock.Object);
 
-        await Assert.ThrowsAsync<ArgumentNullException>(() =>
-            handler.Handle(null!, TestContext.Current.CancellationToken));
+        var act = () =>
+            handler.Handle(null!, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<ArgumentNullException>();
     }
 }

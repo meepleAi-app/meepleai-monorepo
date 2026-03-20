@@ -53,10 +53,10 @@ public class AbandonGameSessionCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         result.Status.Should().Be("Abandoned");
         result.Id.ToString().Should().Be(sessionId.ToString());
-        Assert.NotNull(result.CompletedAt);
+        result.CompletedAt.Should().NotBeNull();
 
         _sessionRepositoryMock.Verify(
             r => r.UpdateAsync(session, It.IsAny<CancellationToken>()),
@@ -116,7 +116,7 @@ public class AbandonGameSessionCommandHandlerTests
         // Assert
         result.Status.Should().Be("Abandoned");
         // Notes should be null or not contain "Abandoned:" prefix
-        Assert.True(string.IsNullOrEmpty(result.Notes) || !result.Notes.Contains("Abandoned:"));
+        (string.IsNullOrEmpty(result.Notes) || !result.Notes.Contains("Abandoned:")).Should().BeTrue();
     }
 
     [Fact]
@@ -240,10 +240,11 @@ public class AbandonGameSessionCommandHandlerTests
             Reason: "Test");
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
-            () => _handler.Handle(command, TestContext.Current.CancellationToken));
+        var act = 
+            () => _handler.Handle(command, TestContext.Current.CancellationToken);
+        var exception = (await act.Should().ThrowAsync<InvalidOperationException>()).Which;
 
-        Assert.Contains($"Session with ID {sessionId} not found", exception.Message, StringComparison.OrdinalIgnoreCase);
+        exception.Message.Should().ContainEquivalentOf($"Session with ID {sessionId} not found");
 
         // Verify save was NOT called
         _unitOfWorkMock.Verify(
@@ -270,10 +271,11 @@ public class AbandonGameSessionCommandHandlerTests
             Reason: "Too late");
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
-            () => _handler.Handle(command, TestContext.Current.CancellationToken));
+        var act = 
+            () => _handler.Handle(command, TestContext.Current.CancellationToken);
+        var exception = (await act.Should().ThrowAsync<InvalidOperationException>()).Which;
 
-        Assert.Contains("Cannot abandon finished session", exception.Message, StringComparison.OrdinalIgnoreCase);
+        exception.Message.Should().ContainEquivalentOf("Cannot abandon finished session");
     }
 
     [Fact]
@@ -297,10 +299,11 @@ public class AbandonGameSessionCommandHandlerTests
             Reason: "Second reason");
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
-            () => _handler.Handle(command, TestContext.Current.CancellationToken));
+        var act = 
+            () => _handler.Handle(command, TestContext.Current.CancellationToken);
+        var exception = (await act.Should().ThrowAsync<InvalidOperationException>()).Which;
 
-        Assert.Contains("Cannot abandon finished session", exception.Message, StringComparison.OrdinalIgnoreCase);
+        exception.Message.Should().ContainEquivalentOf("Cannot abandon finished session");
     }
 
     [Fact]
@@ -327,7 +330,7 @@ public class AbandonGameSessionCommandHandlerTests
         // Assert
         result.Status.Should().Be("Abandoned");
         // Empty string reason should not be added to notes
-        Assert.True(string.IsNullOrEmpty(result.Notes) || !result.Notes.Contains("Abandoned:"));
+        (string.IsNullOrEmpty(result.Notes) || !result.Notes.Contains("Abandoned:")).Should().BeTrue();
     }
     [Fact]
     public async Task Handle_PreservesSessionMetadata()
@@ -360,8 +363,8 @@ public class AbandonGameSessionCommandHandlerTests
         result.GameId.ToString().Should().Be(gameId.ToString());
         result.StartedAt.Should().Be(originalStartedAt);
         result.Players.Count.Should().Be(originalPlayerCount);
-        Assert.NotNull(result.CompletedAt); // Now completed
-        Assert.Null(result.WinnerName); // No winner for abandoned session
+        result.CompletedAt.Should().NotBeNull(); // Now completed
+        result.WinnerName.Should().BeNull(); // No winner for abandoned session
     }
 
     [Fact]
@@ -390,9 +393,9 @@ public class AbandonGameSessionCommandHandlerTests
         var afterAbandon = DateTime.UtcNow;
 
         // Assert
-        Assert.NotNull(result.CompletedAt);
-        Assert.True(result.CompletedAt >= beforeAbandon);
-        Assert.True(result.CompletedAt <= afterAbandon);
+        result.CompletedAt.Should().NotBeNull();
+        (result.CompletedAt >= beforeAbandon).Should().BeTrue();
+        (result.CompletedAt <= afterAbandon).Should().BeTrue();
     }
     [Fact]
     public async Task Handle_WithCancellationToken_PassesToRepository()

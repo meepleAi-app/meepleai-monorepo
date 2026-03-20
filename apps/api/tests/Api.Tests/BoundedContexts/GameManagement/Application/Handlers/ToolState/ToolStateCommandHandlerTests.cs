@@ -70,8 +70,9 @@ public class ToolStateCommandHandlerTests
             _toolStateRepoMock.Object, _toolkitRepoMock.Object, _uowMock.Object);
         var command = new InitializeToolStatesCommand(Guid.NewGuid(), Guid.NewGuid());
 
-        await Assert.ThrowsAsync<NotFoundException>(() =>
-            handler.Handle(command, TestContext.Current.CancellationToken));
+        var act = () =>
+            handler.Handle(command, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<NotFoundException>();
     }
 
     [Fact]
@@ -92,8 +93,9 @@ public class ToolStateCommandHandlerTests
             _toolStateRepoMock.Object, _toolkitRepoMock.Object, _uowMock.Object);
         var command = new InitializeToolStatesCommand(sessionId, toolkit.Id);
 
-        await Assert.ThrowsAsync<ConflictException>(() =>
-            handler.Handle(command, TestContext.Current.CancellationToken));
+        var act = () =>
+            handler.Handle(command, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<ConflictException>();
     }
 
     [Fact]
@@ -102,8 +104,9 @@ public class ToolStateCommandHandlerTests
         var handler = new InitializeToolStatesCommandHandler(
             _toolStateRepoMock.Object, _toolkitRepoMock.Object, _uowMock.Object);
 
-        await Assert.ThrowsAsync<ArgumentNullException>(() =>
-            handler.Handle(null!, TestContext.Current.CancellationToken));
+        var act = () =>
+            handler.Handle(null!, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<ArgumentNullException>();
     }
 
     [Fact]
@@ -151,20 +154,20 @@ public class ToolStateCommandHandlerTests
 
         var result = await handler.Handle(command, TestContext.Current.CancellationToken);
 
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         result.ToolName.Should().Be(toolName);
 
         // Verify state was updated with roll values
         var stateDoc = result.StateData;
-        Assert.True(stateDoc.TryGetProperty("lastRoll", out var lastRoll));
+        (stateDoc.TryGetProperty("lastRoll", out var lastRoll)).Should().BeTrue();
         lastRoll.ValueKind.Should().Be(JsonValueKind.Array);
-        Assert.Equal(2, lastRoll.GetArrayLength()); // 2 dice
+        lastRoll.GetArrayLength().Should().Be(2); // 2 dice
 
         // Each roll should be between 1 and 6 (D6)
         foreach (var roll in lastRoll.EnumerateArray())
         {
             var value = roll.GetInt32();
-            Assert.InRange(value, 1, 6);
+            value.Should().BeInRange(1, 6);
         }
 
         _toolStateRepoMock.Verify(r => r.UpdateAsync(It.IsAny<Api.BoundedContexts.GameManagement.Domain.Entities.ToolState.ToolState>(), It.IsAny<CancellationToken>()), Times.Once);
@@ -180,8 +183,9 @@ public class ToolStateCommandHandlerTests
         var handler = new RollDiceCommandHandler(_toolStateRepoMock.Object, _uowMock.Object);
         var command = new RollDiceCommand(Guid.NewGuid(), "Missing", null);
 
-        await Assert.ThrowsAsync<NotFoundException>(() =>
-            handler.Handle(command, TestContext.Current.CancellationToken));
+        var act = () =>
+            handler.Handle(command, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<NotFoundException>();
     }
 
     [Fact]
@@ -197,8 +201,9 @@ public class ToolStateCommandHandlerTests
         var handler = new RollDiceCommandHandler(_toolStateRepoMock.Object, _uowMock.Object);
         var command = new RollDiceCommand(sessionId, "HP Counter", null);
 
-        await Assert.ThrowsAsync<BadRequestException>(() =>
-            handler.Handle(command, TestContext.Current.CancellationToken));
+        var act = () =>
+            handler.Handle(command, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<BadRequestException>();
     }
 
     // ========================================================================
@@ -220,7 +225,7 @@ public class ToolStateCommandHandlerTests
 
         var result = await handler.Handle(command, TestContext.Current.CancellationToken);
 
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         result.ToolName.Should().Be(toolName);
 
         _toolStateRepoMock.Verify(r => r.UpdateAsync(It.IsAny<Api.BoundedContexts.GameManagement.Domain.Entities.ToolState.ToolState>(), It.IsAny<CancellationToken>()), Times.Once);
@@ -236,8 +241,9 @@ public class ToolStateCommandHandlerTests
         var handler = new UpdateCounterCommandHandler(_toolStateRepoMock.Object, _uowMock.Object);
         var command = new UpdateCounterCommand(Guid.NewGuid(), "Missing", "player1", 1);
 
-        await Assert.ThrowsAsync<NotFoundException>(() =>
-            handler.Handle(command, TestContext.Current.CancellationToken));
+        var act = () =>
+            handler.Handle(command, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<NotFoundException>();
     }
 
     [Fact]
@@ -254,8 +260,9 @@ public class ToolStateCommandHandlerTests
         var handler = new UpdateCounterCommandHandler(_toolStateRepoMock.Object, _uowMock.Object);
         var command = new UpdateCounterCommand(sessionId, "Dice", "player1", 1);
 
-        await Assert.ThrowsAsync<BadRequestException>(() =>
-            handler.Handle(command, TestContext.Current.CancellationToken));
+        var act = () =>
+            handler.Handle(command, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<BadRequestException>();
     }
 
     [Fact]
@@ -274,7 +281,7 @@ public class ToolStateCommandHandlerTests
         var result = await handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Should clamp to 100
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
     }
 
     // ========================================================================

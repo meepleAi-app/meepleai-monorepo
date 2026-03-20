@@ -107,13 +107,14 @@ public class LedgerEntryTests
         var amount = Money.Create(100m, "EUR");
 
         // Act & Assert
-        var ex = Assert.Throws<ArgumentException>(() =>
+        var act = () =>
             LedgerEntry.Create(
                 futureDate,
                 LedgerEntryType.Income,
                 LedgerCategory.Subscription,
                 amount,
-                LedgerEntrySource.Auto));
+                LedgerEntrySource.Auto);
+        var ex = act.Should().Throw<ArgumentException>().Which;
 
         ex.Message.Should().Contain("cannot be in the future");
     }
@@ -126,13 +127,14 @@ public class LedgerEntryTests
         var zeroAmount = Money.Create(0m, "EUR");
 
         // Act & Assert
-        var ex = Assert.Throws<ArgumentException>(() =>
+        var act2 = () =>
             LedgerEntry.Create(
                 date,
                 LedgerEntryType.Income,
                 LedgerCategory.Subscription,
                 zeroAmount,
-                LedgerEntrySource.Auto));
+                LedgerEntrySource.Auto);
+        var ex = act2.Should().Throw<ArgumentException>().Which;
 
         ex.Message.Should().Contain("must be greater than zero");
     }
@@ -144,13 +146,14 @@ public class LedgerEntryTests
         var date = DateTime.UtcNow;
 
         // Act & Assert
-        Assert.Throws<ArgumentNullException>(() =>
+        var act3 = () =>
             LedgerEntry.Create(
                 date,
                 LedgerEntryType.Income,
                 LedgerCategory.Subscription,
                 null!,
-                LedgerEntrySource.Auto));
+                LedgerEntrySource.Auto);
+        act3.Should().Throw<ArgumentNullException>();
     }
 
     [Fact]
@@ -162,14 +165,15 @@ public class LedgerEntryTests
         var longDescription = new string('x', 501);
 
         // Act & Assert
-        var ex = Assert.Throws<ArgumentException>(() =>
+        var act4 = () =>
             LedgerEntry.Create(
                 date,
                 LedgerEntryType.Income,
                 LedgerCategory.Subscription,
                 amount,
                 LedgerEntrySource.Auto,
-                longDescription));
+                longDescription);
+        var ex = act4.Should().Throw<ArgumentException>().Which;
 
         ex.Message.Should().Contain("cannot exceed 500 characters");
     }
@@ -183,14 +187,15 @@ public class LedgerEntryTests
         var longMetadata = new string('x', 4001);
 
         // Act & Assert
-        var ex = Assert.Throws<ArgumentException>(() =>
+        var act5 = () =>
             LedgerEntry.Create(
                 date,
                 LedgerEntryType.Income,
                 LedgerCategory.Subscription,
                 amount,
                 LedgerEntrySource.Auto,
-                metadata: longMetadata));
+                metadata: longMetadata);
+        var ex = act5.Should().Throw<ArgumentException>().Which;
 
         ex.Message.Should().Contain("cannot exceed 4000 characters");
     }
@@ -203,14 +208,15 @@ public class LedgerEntryTests
         var amount = Money.Create(100m, "EUR");
 
         // Act & Assert
-        var ex = Assert.Throws<ArgumentException>(() =>
+        var act6 = () =>
             LedgerEntry.Create(
                 date,
                 LedgerEntryType.Income,
                 LedgerCategory.Subscription,
                 amount,
                 LedgerEntrySource.Manual,
-                createdByUserId: null));
+                createdByUserId: null);
+        var ex = act6.Should().Throw<ArgumentException>().Which;
 
         ex.Message.Should().Contain("Manual entries must have a CreatedByUserId");
     }
@@ -223,14 +229,15 @@ public class LedgerEntryTests
         var amount = Money.Create(100m, "EUR");
 
         // Act & Assert
-        var ex = Assert.Throws<ArgumentException>(() =>
+        var act7 = () =>
             LedgerEntry.Create(
                 date,
                 LedgerEntryType.Income,
                 LedgerCategory.Subscription,
                 amount,
                 LedgerEntrySource.Manual,
-                createdByUserId: Guid.Empty));
+                createdByUserId: Guid.Empty);
+        var ex = act7.Should().Throw<ArgumentException>().Which;
 
         ex.Message.Should().Contain("cannot be empty");
     }
@@ -269,8 +276,9 @@ public class LedgerEntryTests
         var longDescription = new string('x', 501);
 
         // Act & Assert
-        var ex = Assert.Throws<ArgumentException>(() =>
-            entry.UpdateDescription(longDescription));
+        var act8 = () =>
+            entry.UpdateDescription(longDescription);
+        var ex = act8.Should().Throw<ArgumentException>().Which;
 
         ex.Message.Should().Contain("cannot exceed 500 characters");
     }

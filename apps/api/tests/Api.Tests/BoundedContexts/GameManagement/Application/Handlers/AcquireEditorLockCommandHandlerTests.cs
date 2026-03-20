@@ -56,11 +56,11 @@ public class AcquireEditorLockCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.True(result.Success);
-        Assert.NotNull(result.LockStatus);
+        result.Should().NotBeNull();
+        (result.Success).Should().BeTrue();
+        result.LockStatus.Should().NotBeNull();
         result.LockStatus.GameId.Should().Be(gameId);
-        Assert.True(result.LockStatus.IsCurrentUserLock);
+        (result.LockStatus.IsCurrentUserLock).Should().BeTrue();
 
         _lockServiceMock.Verify(
             s => s.AcquireLockAsync(gameId, userId, userEmail, It.IsAny<CancellationToken>()),
@@ -98,12 +98,12 @@ public class AcquireEditorLockCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.False(result.Success);
-        Assert.NotNull(result.LockStatus);
-        Assert.True(result.LockStatus.IsLocked);
-        Assert.False(result.LockStatus.IsCurrentUserLock);
-        Assert.NotNull(result.Message);
+        result.Should().NotBeNull();
+        (result.Success).Should().BeFalse();
+        result.LockStatus.Should().NotBeNull();
+        (result.LockStatus.IsLocked).Should().BeTrue();
+        (result.LockStatus.IsCurrentUserLock).Should().BeFalse();
+        result.Message.Should().NotBeNull();
     }
 
     [Fact]
@@ -146,8 +146,9 @@ public class AcquireEditorLockCommandHandlerTests
     public async Task Handle_WithNullCommand_ThrowsArgumentNullException()
     {
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentNullException>(
-            () => _handler.Handle(null!, TestContext.Current.CancellationToken));
+        var act = 
+            () => _handler.Handle(null!, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<ArgumentNullException>();
     }
 
     [Fact]
@@ -180,8 +181,8 @@ public class AcquireEditorLockCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.True(result.Success);
+        result.Should().NotBeNull();
+        (result.Success).Should().BeTrue();
         result.Message.Should().Be("Lock refreshed");
     }
 }

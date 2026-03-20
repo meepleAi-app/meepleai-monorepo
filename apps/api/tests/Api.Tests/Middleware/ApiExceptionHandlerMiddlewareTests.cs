@@ -408,7 +408,7 @@ public class ApiExceptionHandlerMiddlewareTests
         var responseBody = await reader.ReadToEndAsync(TestCancellationToken);
         var errorResponse = JsonSerializer.Deserialize<JsonDocument>(responseBody);
 
-        Assert.True(errorResponse!.RootElement.TryGetProperty("stackTrace", out var stackTrace));
+        errorResponse!.RootElement.TryGetProperty("stackTrace", out var stackTrace).Should().BeTrue();
         stackTrace.GetString().Should().NotBeNull();
     }
 

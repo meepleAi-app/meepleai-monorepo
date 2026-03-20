@@ -47,7 +47,7 @@ public class UpdateRuleCommentCommandHandlerTests
             loggerMock.Object);
 
         // Assert
-        Assert.NotNull(handler);
+        handler.Should().NotBeNull();
     }
 
     [Fact]
@@ -58,11 +58,12 @@ public class UpdateRuleCommentCommandHandlerTests
         var loggerMock = new Mock<ILogger<UpdateRuleCommentCommandHandler>>();
 
         // Act & Assert
-        Assert.Throws<ArgumentNullException>(() =>
+        var act = () =>
             new UpdateRuleCommentCommandHandler(
                 null!,
                 timeProviderMock.Object,
-                loggerMock.Object));
+                loggerMock.Object);
+        act.Should().Throw<ArgumentNullException>();
     }
 
     [Fact]
@@ -73,11 +74,12 @@ public class UpdateRuleCommentCommandHandlerTests
         var loggerMock = new Mock<ILogger<UpdateRuleCommentCommandHandler>>();
 
         // Act & Assert
-        Assert.Throws<ArgumentNullException>(() =>
+        var act = () =>
             new UpdateRuleCommentCommandHandler(
                 context,
                 null!,
-                loggerMock.Object));
+                loggerMock.Object);
+        act.Should().Throw<ArgumentNullException>();
     }
 
     [Fact]
@@ -88,11 +90,12 @@ public class UpdateRuleCommentCommandHandlerTests
         var timeProviderMock = CreateTimeProviderMock();
 
         // Act & Assert
-        Assert.Throws<ArgumentNullException>(() =>
+        var act = () =>
             new UpdateRuleCommentCommandHandler(
                 context,
                 timeProviderMock.Object,
-                null!));
+                null!);
+        act.Should().Throw<ArgumentNullException>();
     }
     [Fact]
     public void Command_WithValidProperties_ConstructsCorrectly()

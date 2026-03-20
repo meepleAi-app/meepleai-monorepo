@@ -1,5 +1,6 @@
 using Api.BoundedContexts.SessionTracking.Domain.Entities;
 using Api.Tests.Constants;
+using FluentAssertions;
 using Xunit;
 
 namespace Api.Tests.BoundedContexts.SessionTracking.Domain;
@@ -21,15 +22,15 @@ public class DiceRollTests
         var diceRoll = DiceRoll.Create(_sessionId, _participantId, "2d6+3");
 
         // Assert
-        Assert.NotEqual(Guid.Empty, diceRoll.Id);
-        Assert.Equal(_sessionId, diceRoll.SessionId);
-        Assert.Equal(_participantId, diceRoll.ParticipantId);
-        Assert.Equal("2D6+3", diceRoll.Formula);
-        Assert.Null(diceRoll.Label);
-        Assert.Equal(3, diceRoll.Modifier);
-        Assert.Equal(2, diceRoll.GetRolls().Length);
+        diceRoll.Id.Should().NotBe(Guid.Empty);
+        diceRoll.SessionId.Should().Be(_sessionId);
+        diceRoll.ParticipantId.Should().Be(_participantId);
+        diceRoll.Formula.Should().Be("2D6+3");
+        diceRoll.Label.Should().BeNull();
+        diceRoll.Modifier.Should().Be(3);
+        diceRoll.GetRolls().Length.Should().Be(2);
         Assert.All(diceRoll.GetRolls(), r => Assert.InRange(r, 1, 6));
-        Assert.False(diceRoll.IsDeleted);
+        diceRoll.IsDeleted.Should().BeFalse();
     }
 
     [Fact]
@@ -39,7 +40,7 @@ public class DiceRollTests
         var diceRoll = DiceRoll.Create(_sessionId, _participantId, "1d20", "Attack roll");
 
         // Assert
-        Assert.Equal("Attack roll", diceRoll.Label);
+        diceRoll.Label.Should().Be("Attack roll");
     }
 
     [Fact]
@@ -50,8 +51,8 @@ public class DiceRollTests
 
         // Assert
         var rolls = diceRoll.GetRolls();
-        Assert.Single(rolls);
-        Assert.Equal(rolls[0], diceRoll.Total); // No modifier
+        rolls.Should().ContainSingle();
+        diceRoll.Total.Should().Be(rolls[0]);
     }
 
     [Fact]
@@ -62,8 +63,8 @@ public class DiceRollTests
 
         // Assert
         var rolls = diceRoll.GetRolls();
-        Assert.Single(rolls);
-        Assert.Equal(rolls[0] + 5, diceRoll.Total);
+        rolls.Should().ContainSingle();
+        diceRoll.Total.Should().Be(rolls[0] + 5);
     }
 
     [Fact]
@@ -74,24 +75,26 @@ public class DiceRollTests
 
         // Assert
         var rolls = diceRoll.GetRolls();
-        Assert.Single(rolls);
-        Assert.Equal(rolls[0] - 2, diceRoll.Total);
+        rolls.Should().ContainSingle();
+        diceRoll.Total.Should().Be(rolls[0] - 2);
     }
 
     [Fact]
     public void Create_EmptySessionId_ThrowsArgumentException()
     {
         // Act & Assert
-        Assert.Throws<ArgumentException>(() =>
-            DiceRoll.Create(Guid.Empty, _participantId, "1d20"));
+        var act = () =>
+            DiceRoll.Create(Guid.Empty, _participantId, "1d20");
+        act.Should().Throw<ArgumentException>();
     }
 
     [Fact]
     public void Create_EmptyParticipantId_ThrowsArgumentException()
     {
         // Act & Assert
-        Assert.Throws<ArgumentException>(() =>
-            DiceRoll.Create(_sessionId, Guid.Empty, "1d20"));
+        var act2 = () =>
+            DiceRoll.Create(_sessionId, Guid.Empty, "1d20");
+        act2.Should().Throw<ArgumentException>();
     }
 
     [Theory]
@@ -101,16 +104,18 @@ public class DiceRollTests
     public void Create_EmptyFormula_ThrowsArgumentException(string? formula)
     {
         // Act & Assert
-        Assert.Throws<ArgumentException>(() =>
-            DiceRoll.Create(_sessionId, _participantId, formula!));
+        var act3 = () =>
+            DiceRoll.Create(_sessionId, _participantId, formula!);
+        act3.Should().Throw<ArgumentException>();
     }
 
     [Fact]
     public void Create_InvalidFormula_ThrowsArgumentException()
     {
         // Act & Assert
-        Assert.Throws<ArgumentException>(() =>
-            DiceRoll.Create(_sessionId, _participantId, "invalid"));
+        var act4 = () =>
+            DiceRoll.Create(_sessionId, _participantId, "invalid");
+        act4.Should().Throw<ArgumentException>();
     }
 
     [Fact]
@@ -121,7 +126,7 @@ public class DiceRollTests
 
         // Assert
         var rolls = diceRoll.GetRolls();
-        Assert.Equal(5, rolls.Length);
+        rolls.Length.Should().Be(5);
         Assert.All(rolls, r => Assert.InRange(r, 1, 6));
     }
 
@@ -133,8 +138,8 @@ public class DiceRollTests
 
         // Assert
         var rolls = diceRoll.GetRolls();
-        Assert.Single(rolls);
-        Assert.InRange(rolls[0], 1, 20);
+        rolls.Should().ContainSingle();
+        rolls[0].Should().BeInRange(1, 20);
     }
 
     [Fact]
@@ -145,8 +150,8 @@ public class DiceRollTests
 
         // Assert
         var rolls = diceRoll.GetRolls();
-        Assert.Single(rolls);
-        Assert.InRange(rolls[0], 1, 100);
+        rolls.Should().ContainSingle();
+        rolls[0].Should().BeInRange(1, 100);
     }
 
     [Fact]
@@ -160,7 +165,7 @@ public class DiceRollTests
 
         // Assert
         var after = DateTime.UtcNow;
-        Assert.InRange(diceRoll.Timestamp, before, after);
+        diceRoll.Timestamp.Should().BeOnOrAfter(before).And.BeOnOrBefore(after);
     }
 
     [Fact]
@@ -170,7 +175,7 @@ public class DiceRollTests
         var diceRoll = DiceRoll.Create(_sessionId, _participantId, "2d6+3");
 
         // Assert
-        Assert.Equal("2D6+3", diceRoll.Formula);
+        diceRoll.Formula.Should().Be("2D6+3");
     }
 
     [Fact]
@@ -181,7 +186,7 @@ public class DiceRollTests
 
         // Assert
         var rolls = diceRoll.GetRolls();
-        Assert.Equal(3, rolls.Length);
+        rolls.Length.Should().Be(3);
     }
 
     [Fact]
@@ -194,8 +199,8 @@ public class DiceRollTests
         diceRoll.SoftDelete();
 
         // Assert
-        Assert.True(diceRoll.IsDeleted);
-        Assert.NotNull(diceRoll.DeletedAt);
+        diceRoll.IsDeleted.Should().BeTrue();
+        diceRoll.DeletedAt.Should().NotBeNull();
     }
 
     [Fact]
@@ -209,7 +214,7 @@ public class DiceRollTests
 
             // Assert
             var rolls = diceRoll.GetRolls();
-            Assert.Equal(rolls.Sum() + 3, diceRoll.Total);
+            diceRoll.Total.Should().Be(rolls.Sum() + 3);
         }
     }
 }

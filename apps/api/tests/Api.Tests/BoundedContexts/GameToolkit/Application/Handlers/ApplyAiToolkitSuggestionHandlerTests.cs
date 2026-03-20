@@ -35,8 +35,9 @@ public class ApplyAiToolkitSuggestionHandlerTests
     [Fact]
     public async Task Handle_WithNullCommand_ThrowsArgumentNullException()
     {
-        await Assert.ThrowsAsync<ArgumentNullException>(() =>
-            _handler.Handle(null!, TestContext.Current.CancellationToken));
+        var act = () =>
+            _handler.Handle(null!, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<ArgumentNullException>();
     }
 
     // ========================================================================
@@ -101,8 +102,9 @@ public class ApplyAiToolkitSuggestionHandlerTests
         _repoMock.Setup(r => r.GetByIdAsync(toolkitId, It.IsAny<CancellationToken>()))
             .ReturnsAsync((Api.BoundedContexts.GameToolkit.Domain.Entities.GameToolkit?)null);
 
-        await Assert.ThrowsAsync<NotFoundException>(() =>
-            _handler.Handle(command, TestContext.Current.CancellationToken));
+        var act2 = () =>
+            _handler.Handle(command, TestContext.Current.CancellationToken);
+        await act2.Should().ThrowAsync<NotFoundException>();
     }
 
     // ========================================================================

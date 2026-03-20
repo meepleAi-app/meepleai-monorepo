@@ -59,7 +59,7 @@ public class GetTurnPhasesQueryHandlerTests
         result.CurrentPhaseName.Should().Be("Draw");
         result.PhaseNames.Length.Should().Be(3);
         result.TotalPhases.Should().Be(3);
-        Assert.True(result.HasPhases);
+        (result.HasPhases).Should().BeTrue();
     }
 
     [Fact]
@@ -76,10 +76,10 @@ public class GetTurnPhasesQueryHandlerTests
             new GetTurnPhasesQuery(sessionId), TestContext.Current.CancellationToken);
 
         result.CurrentPhaseIndex.Should().Be(0);
-        Assert.Null(result.CurrentPhaseName);
-        Assert.Empty(result.PhaseNames);
+        result.CurrentPhaseName.Should().BeNull();
+        result.PhaseNames.Should().BeEmpty();
         result.TotalPhases.Should().Be(0);
-        Assert.False(result.HasPhases);
+        (result.HasPhases).Should().BeFalse();
     }
 
     [Fact]
@@ -117,7 +117,7 @@ public class GetTurnPhasesQueryHandlerTests
             new GetTurnPhasesQuery(sessionId), TestContext.Current.CancellationToken);
 
         result.CurrentTurnIndex.Should().Be(2);
-        Assert.Equal(0, result.CurrentPhaseIndex); // Reset after turn advance
+        result.CurrentPhaseIndex.Should().Be(0); // Reset after turn advance
     }
 
     [Fact]
@@ -129,9 +129,10 @@ public class GetTurnPhasesQueryHandlerTests
 
         var handler = CreateHandler();
 
-        await Assert.ThrowsAsync<NotFoundException>(() =>
+        var act = () =>
             handler.Handle(
-                new GetTurnPhasesQuery(sessionId), TestContext.Current.CancellationToken));
+                new GetTurnPhasesQuery(sessionId), TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<NotFoundException>();
     }
 
     [Fact]
@@ -139,8 +140,9 @@ public class GetTurnPhasesQueryHandlerTests
     {
         var handler = CreateHandler();
 
-        await Assert.ThrowsAsync<ArgumentNullException>(() =>
-            handler.Handle(null!, TestContext.Current.CancellationToken));
+        var act = () =>
+            handler.Handle(null!, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<ArgumentNullException>();
     }
 
     [Fact]

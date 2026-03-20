@@ -47,7 +47,7 @@ public class ReplyToRuleCommentCommandHandlerTests
             loggerMock.Object);
 
         // Assert
-        Assert.NotNull(handler);
+        handler.Should().NotBeNull();
     }
 
     [Fact]
@@ -58,11 +58,12 @@ public class ReplyToRuleCommentCommandHandlerTests
         var loggerMock = new Mock<ILogger<ReplyToRuleCommentCommandHandler>>();
 
         // Act & Assert
-        Assert.Throws<ArgumentNullException>(() =>
+        var act = () =>
             new ReplyToRuleCommentCommandHandler(
                 null!,
                 timeProviderMock.Object,
-                loggerMock.Object));
+                loggerMock.Object);
+        act.Should().Throw<ArgumentNullException>();
     }
 
     [Fact]
@@ -73,11 +74,12 @@ public class ReplyToRuleCommentCommandHandlerTests
         var loggerMock = new Mock<ILogger<ReplyToRuleCommentCommandHandler>>();
 
         // Act & Assert
-        Assert.Throws<ArgumentNullException>(() =>
+        var act = () =>
             new ReplyToRuleCommentCommandHandler(
                 context,
                 null!,
-                loggerMock.Object));
+                loggerMock.Object);
+        act.Should().Throw<ArgumentNullException>();
     }
 
     [Fact]
@@ -88,11 +90,12 @@ public class ReplyToRuleCommentCommandHandlerTests
         var timeProviderMock = CreateTimeProviderMock();
 
         // Act & Assert
-        Assert.Throws<ArgumentNullException>(() =>
+        var act = () =>
             new ReplyToRuleCommentCommandHandler(
                 context,
                 timeProviderMock.Object,
-                null!));
+                null!);
+        act.Should().Throw<ArgumentNullException>();
     }
     [Fact]
     public void Command_WithSimpleReply_ConstructsCorrectly()

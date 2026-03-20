@@ -56,10 +56,10 @@ public class UploadGameImageCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.True(result.Success);
+        (result.Success).Should().BeTrue();
         result.FileId.Should().Be(fileId);
-        Assert.NotNull(result.FileUrl);
-        Assert.Null(result.ErrorMessage);
+        result.FileUrl.Should().NotBeNull();
+        result.ErrorMessage.Should().BeNull();
     }
 
     [Fact]
@@ -77,7 +77,7 @@ public class UploadGameImageCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.False(result.Success);
+        (result.Success).Should().BeFalse();
         result.ErrorMessage.Should().Contain("Invalid file stream");
     }
 
@@ -98,7 +98,7 @@ public class UploadGameImageCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.False(result.Success);
+        (result.Success).Should().BeFalse();
         result.ErrorMessage.Should().Contain("exceeds maximum");
     }
 
@@ -119,7 +119,7 @@ public class UploadGameImageCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.False(result.Success);
+        (result.Success).Should().BeFalse();
         result.ErrorMessage.Should().Contain("exceeds maximum");
     }
 
@@ -139,7 +139,7 @@ public class UploadGameImageCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.False(result.Success);
+        (result.Success).Should().BeFalse();
         result.ErrorMessage.Should().Contain("Invalid file type");
     }
 
@@ -147,8 +147,9 @@ public class UploadGameImageCommandHandlerTests
     public async Task Handle_WithNullCommand_ThrowsArgumentNullException()
     {
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentNullException>(
-            () => _handler.Handle(null!, TestContext.Current.CancellationToken));
+        var act = 
+            () => _handler.Handle(null!, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<ArgumentNullException>();
     }
 
     [Fact]
@@ -176,7 +177,7 @@ public class UploadGameImageCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.False(result.Success);
+        (result.Success).Should().BeFalse();
         result.ErrorMessage.Should().Contain("Storage unavailable");
     }
 

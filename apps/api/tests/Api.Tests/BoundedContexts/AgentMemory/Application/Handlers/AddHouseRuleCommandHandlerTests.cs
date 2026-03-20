@@ -115,7 +115,7 @@ public class AddHouseRuleCommandHandlerTests
         var command = new AddHouseRuleCommand(Guid.NewGuid(), Guid.NewGuid(), "Some rule");
 
         // Act & Assert
-        await Assert.ThrowsAsync<InvalidOperationException>(
-            () => _handler.Handle(command, CancellationToken.None));
+        var act = () => _handler.Handle(command, CancellationToken.None);
+        await act.Should().ThrowAsync<InvalidOperationException>();
     }
 }

@@ -90,8 +90,8 @@ public class PdfDocumentLanguageTests
         var document = CreateTestDocument();
 
         // Act & Assert
-        Assert.Throws<ArgumentOutOfRangeException>(
-            () => document.SetDetectedLanguage("de", -0.1));
+        var act = () => document.SetDetectedLanguage("de", -0.1);
+        act.Should().Throw<ArgumentOutOfRangeException>();
     }
 
     [Fact]
@@ -101,8 +101,8 @@ public class PdfDocumentLanguageTests
         var document = CreateTestDocument();
 
         // Act & Assert
-        Assert.Throws<ArgumentOutOfRangeException>(
-            () => document.SetDetectedLanguage("de", 1.1));
+        var act2 = () => document.SetDetectedLanguage("de", 1.1);
+        act2.Should().Throw<ArgumentOutOfRangeException>();
     }
 
     [Theory]

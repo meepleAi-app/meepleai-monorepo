@@ -119,7 +119,7 @@ public class PlayTimeTests
         var playTime = new PlayTime(30, 60);
 
         // Assert
-        Assert.Equal(45, playTime.AverageMinutes); // (30 + 60) / 2
+        playTime.AverageMinutes.Should().Be(45); // (30 + 60) / 2
     }
 
     [Fact]
@@ -153,7 +153,7 @@ public class PlayTimeTests
         var playTime = new PlayTime(10, 25);
 
         // Assert
-        Assert.True(playTime.IsQuick);
+        (playTime.IsQuick).Should().BeTrue();
     }
 
     [Fact]
@@ -163,7 +163,7 @@ public class PlayTimeTests
         var playTime = new PlayTime(15, 30);
 
         // Assert
-        Assert.True(playTime.IsQuick);
+        (playTime.IsQuick).Should().BeTrue();
     }
 
     [Fact]
@@ -173,7 +173,7 @@ public class PlayTimeTests
         var playTime = new PlayTime(15, 31);
 
         // Assert
-        Assert.False(playTime.IsQuick);
+        (playTime.IsQuick).Should().BeFalse();
     }
 
     [Fact]
@@ -183,7 +183,7 @@ public class PlayTimeTests
         var playTime = new PlayTime(45, 60);
 
         // Assert
-        Assert.True(playTime.IsMedium);
+        (playTime.IsMedium).Should().BeTrue();
     }
 
     [Fact]
@@ -193,7 +193,7 @@ public class PlayTimeTests
         var playTime = new PlayTime(30, 90);
 
         // Assert
-        Assert.True(playTime.IsMedium);
+        (playTime.IsMedium).Should().BeTrue();
     }
 
     [Fact]
@@ -203,7 +203,7 @@ public class PlayTimeTests
         var playTime = new PlayTime(25, 60);
 
         // Assert
-        Assert.False(playTime.IsMedium);
+        (playTime.IsMedium).Should().BeFalse();
     }
 
     [Fact]
@@ -213,7 +213,7 @@ public class PlayTimeTests
         var playTime = new PlayTime(30, 100);
 
         // Assert
-        Assert.False(playTime.IsMedium);
+        (playTime.IsMedium).Should().BeFalse();
     }
 
     [Fact]
@@ -223,7 +223,7 @@ public class PlayTimeTests
         var playTime = new PlayTime(120, 180);
 
         // Assert
-        Assert.True(playTime.IsLong);
+        (playTime.IsLong).Should().BeTrue();
     }
 
     [Fact]
@@ -233,7 +233,7 @@ public class PlayTimeTests
         var playTime = new PlayTime(90, 120);
 
         // Assert
-        Assert.False(playTime.IsLong);
+        (playTime.IsLong).Should().BeFalse();
     }
 
     [Fact]
@@ -243,7 +243,7 @@ public class PlayTimeTests
         var playTime = new PlayTime(91, 120);
 
         // Assert
-        Assert.True(playTime.IsLong);
+        (playTime.IsLong).Should().BeTrue();
     }
 
     #endregion
@@ -259,7 +259,7 @@ public class PlayTimeTests
         // Assert
         quick.MinMinutes.Should().Be(15);
         quick.MaxMinutes.Should().Be(30);
-        Assert.True(quick.IsQuick);
+        (quick.IsQuick).Should().BeTrue();
     }
 
     [Fact]
@@ -271,7 +271,7 @@ public class PlayTimeTests
         // Assert
         standard.MinMinutes.Should().Be(45);
         standard.MaxMinutes.Should().Be(60);
-        Assert.True(standard.IsMedium);
+        (standard.IsMedium).Should().BeTrue();
     }
 
     [Fact]
@@ -283,7 +283,7 @@ public class PlayTimeTests
         // Assert
         longGame.MinMinutes.Should().Be(120);
         longGame.MaxMinutes.Should().Be(180);
-        Assert.True(longGame.IsLong);
+        (longGame.IsLong).Should().BeTrue();
     }
 
     #endregion
@@ -323,8 +323,8 @@ public class PlayTimeTests
 
         // Assert
         playTime2.Should().Be(playTime1);
-        Assert.True(playTime1 == playTime2);
-        Assert.False(playTime1 != playTime2);
+        (playTime1 == playTime2).Should().BeTrue();
+        (playTime1 != playTime2).Should().BeFalse();
     }
 
     [Fact]

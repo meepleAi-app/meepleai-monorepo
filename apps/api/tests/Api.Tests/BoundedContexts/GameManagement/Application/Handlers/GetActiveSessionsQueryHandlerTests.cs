@@ -50,7 +50,7 @@ public class GetActiveSessionsQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         result.Sessions.Count.Should().Be(2);
         result.Total.Should().Be(2);
     }
@@ -72,8 +72,8 @@ public class GetActiveSessionsQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Empty(result.Sessions);
+        result.Should().NotBeNull();
+        result.Sessions.Should().BeEmpty();
         result.Total.Should().Be(0);
     }
 
@@ -144,8 +144,9 @@ public class GetActiveSessionsQueryHandlerTests
         var query = new GetActiveSessionsQuery(Limit: -1);
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<ArgumentException>(
-            () => _handler.Handle(query, TestContext.Current.CancellationToken));
+        var act = 
+            () => _handler.Handle(query, TestContext.Current.CancellationToken);
+        var exception = (await act.Should().ThrowAsync<ArgumentException>()).Which;
 
         exception.Message.Should().Contain("non-negative");
     }
@@ -157,8 +158,9 @@ public class GetActiveSessionsQueryHandlerTests
         var query = new GetActiveSessionsQuery(Limit: 1001);
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<ArgumentException>(
-            () => _handler.Handle(query, TestContext.Current.CancellationToken));
+        var act = 
+            () => _handler.Handle(query, TestContext.Current.CancellationToken);
+        var exception = (await act.Should().ThrowAsync<ArgumentException>()).Which;
 
         exception.Message.Should().Contain("1000");
     }
@@ -170,8 +172,9 @@ public class GetActiveSessionsQueryHandlerTests
         var query = new GetActiveSessionsQuery(Offset: -1);
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<ArgumentException>(
-            () => _handler.Handle(query, TestContext.Current.CancellationToken));
+        var act = 
+            () => _handler.Handle(query, TestContext.Current.CancellationToken);
+        var exception = (await act.Should().ThrowAsync<ArgumentException>()).Which;
 
         exception.Message.Should().Contain("non-negative");
     }

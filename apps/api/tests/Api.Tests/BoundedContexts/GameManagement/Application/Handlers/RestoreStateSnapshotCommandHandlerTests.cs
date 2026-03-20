@@ -51,7 +51,7 @@ public class RestoreStateSnapshotCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         result.Id.Should().Be(state.Id);
 
         _stateRepositoryMock.Verify(r => r.UpdateAsync(state, It.IsAny<CancellationToken>()), Times.Once);
@@ -73,8 +73,9 @@ public class RestoreStateSnapshotCommandHandlerTests
             .ReturnsAsync((GameSessionState?)null);
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<NotFoundException>(
-            () => _handler.Handle(command, TestContext.Current.CancellationToken));
+        var act = 
+            () => _handler.Handle(command, TestContext.Current.CancellationToken);
+        var exception = (await act.Should().ThrowAsync<NotFoundException>()).Which;
 
         exception.Message.Should().Contain("GameSessionState");
         _unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
@@ -110,8 +111,9 @@ public class RestoreStateSnapshotCommandHandlerTests
     public async Task Handle_WithNullCommand_ThrowsArgumentNullException()
     {
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentNullException>(
-            () => _handler.Handle(null!, TestContext.Current.CancellationToken));
+        var act = 
+            () => _handler.Handle(null!, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<ArgumentNullException>();
     }
 
     [Fact]
@@ -129,8 +131,9 @@ public class RestoreStateSnapshotCommandHandlerTests
             .ReturnsAsync(state);
 
         // Act & Assert - Domain should throw when snapshot not found
-        await Assert.ThrowsAnyAsync<Exception>(
-            () => _handler.Handle(command, TestContext.Current.CancellationToken));
+        var act = 
+            () => _handler.Handle(command, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<Exception>();
     }
 
     private static GameSessionState CreateGameSessionStateWithSnapshot()

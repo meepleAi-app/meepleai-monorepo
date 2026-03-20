@@ -149,8 +149,8 @@ public class BggExpansionImporterTests
         var importer = CreateImporterWithXml("");
 
         // Act & Assert
-        await Assert.ThrowsAsync<NotFoundException>(
-            () => importer.ImportExpansionsAsync(_baseGame.Id, _adminUserId));
+        var act = () => importer.ImportExpansionsAsync(_baseGame.Id, _adminUserId);
+        await act.Should().ThrowAsync<NotFoundException>();
         _entityLinkRepoMock.Verify(r => r.AddAsync(It.IsAny<EntityLink>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 

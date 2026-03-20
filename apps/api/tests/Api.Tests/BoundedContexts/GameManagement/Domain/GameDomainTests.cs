@@ -23,10 +23,10 @@ public class GameDomainTests
         // Assert
         game.Id.Should().Be(gameId);
         game.Title.Value.Should().Be("Catan");
-        Assert.Null(game.Publisher);
-        Assert.Null(game.YearPublished);
-        Assert.Null(game.PlayerCount);
-        Assert.Null(game.PlayTime);
+        game.Publisher.Should().BeNull();
+        game.YearPublished.Should().BeNull();
+        game.PlayerCount.Should().BeNull();
+        game.PlayTime.Should().BeNull();
     }
 
     [Fact]
@@ -65,7 +65,7 @@ public class GameDomainTests
         // Assert
         game.Publisher?.Name.Should().Be("KOSMOS");
         game.YearPublished?.Value.Should().Be(1995);
-        Assert.Equal("Catan", game.Title.Value); // Unchanged
+        game.Title.Value.Should().Be("Catan"); // Unchanged
     }
 
     [Fact]
@@ -106,7 +106,7 @@ public class GameDomainTests
 
         // Act & Assert
         var exception = ((Action)(() => game.LinkToBgg(0))).Should().Throw<ArgumentException>().Which;
-        Assert.Contains("BGG ID must be positive", exception.Message, StringComparison.OrdinalIgnoreCase);
+        exception.Message.Should().ContainEquivalentOf("BGG ID must be positive");
     }
 
     [Fact]
@@ -117,11 +117,11 @@ public class GameDomainTests
         var game = new Game(Guid.NewGuid(), new GameTitle("Catan"), playerCount: playerCount);
 
         // Act & Assert
-        Assert.True(game.SupportsPlayerCount(2));
-        Assert.True(game.SupportsPlayerCount(3));
-        Assert.True(game.SupportsPlayerCount(4));
-        Assert.False(game.SupportsPlayerCount(1));
-        Assert.False(game.SupportsPlayerCount(5));
+        (game.SupportsPlayerCount(2)).Should().BeTrue();
+        (game.SupportsPlayerCount(3)).Should().BeTrue();
+        (game.SupportsPlayerCount(4)).Should().BeTrue();
+        (game.SupportsPlayerCount(1)).Should().BeFalse();
+        (game.SupportsPlayerCount(5)).Should().BeFalse();
     }
 
     [Fact]
@@ -131,8 +131,8 @@ public class GameDomainTests
         var game = new Game(Guid.NewGuid(), new GameTitle("Generic Game"));
 
         // Act & Assert
-        Assert.True(game.SupportsPlayerCount(1));
-        Assert.True(game.SupportsPlayerCount(100));
+        (game.SupportsPlayerCount(1)).Should().BeTrue();
+        (game.SupportsPlayerCount(100)).Should().BeTrue();
     }
 
     [Fact]
@@ -145,8 +145,8 @@ public class GameDomainTests
         var multiGame = new Game(Guid.NewGuid(), new GameTitle("Multi Game"), playerCount: multiplayerCount);
 
         // Act & Assert
-        Assert.True(soloGame.SupportsSolo);
-        Assert.False(multiGame.SupportsSolo);
+        (soloGame.SupportsSolo).Should().BeTrue();
+        (multiGame.SupportsSolo).Should().BeFalse();
     }
 
     [Fact]
@@ -156,7 +156,7 @@ public class GameDomainTests
         var game = new Game(Guid.NewGuid(), new GameTitle("Generic Game"));
 
         // Act & Assert
-        Assert.False(game.SupportsSolo);
+        (game.SupportsSolo).Should().BeFalse();
     }
 
     [Fact]
@@ -170,7 +170,7 @@ public class GameDomainTests
 
         // Assert
         var after = DateTime.UtcNow;
-        Assert.InRange(game.CreatedAt, before, after);
+        game.CreatedAt.Should().BeOnOrAfter(before).And.BeOnOrBefore(after);
     }
 }
 

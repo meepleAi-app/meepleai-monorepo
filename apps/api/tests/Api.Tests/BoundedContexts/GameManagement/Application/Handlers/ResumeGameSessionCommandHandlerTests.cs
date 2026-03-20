@@ -54,7 +54,7 @@ public class ResumeGameSessionCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         result.Status.Should().Be("InProgress");
         result.Id.ToString().Should().Be(sessionId.ToString());
 
@@ -191,10 +191,11 @@ public class ResumeGameSessionCommandHandlerTests
         var command = new ResumeGameSessionCommand(SessionId: sessionId);
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
-            () => _handler.Handle(command, TestContext.Current.CancellationToken));
+        var act = 
+            () => _handler.Handle(command, TestContext.Current.CancellationToken);
+        var exception = (await act.Should().ThrowAsync<InvalidOperationException>()).Which;
 
-        Assert.Contains($"Session with ID {sessionId} not found", exception.Message, StringComparison.OrdinalIgnoreCase);
+        exception.Message.Should().ContainEquivalentOf($"Session with ID {sessionId} not found");
 
         // Verify save was NOT called
         _unitOfWorkMock.Verify(
@@ -218,10 +219,11 @@ public class ResumeGameSessionCommandHandlerTests
         var command = new ResumeGameSessionCommand(SessionId: sessionId);
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
-            () => _handler.Handle(command, TestContext.Current.CancellationToken));
+        var act = 
+            () => _handler.Handle(command, TestContext.Current.CancellationToken);
+        var exception = (await act.Should().ThrowAsync<InvalidOperationException>()).Which;
 
-        Assert.Contains("Cannot resume session in Setup status", exception.Message, StringComparison.OrdinalIgnoreCase);
+        exception.Message.Should().ContainEquivalentOf("Cannot resume session in Setup status");
 
         // Verify save was NOT called
         _unitOfWorkMock.Verify(
@@ -246,10 +248,11 @@ public class ResumeGameSessionCommandHandlerTests
         var command = new ResumeGameSessionCommand(SessionId: sessionId);
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
-            () => _handler.Handle(command, TestContext.Current.CancellationToken));
+        var act = 
+            () => _handler.Handle(command, TestContext.Current.CancellationToken);
+        var exception = (await act.Should().ThrowAsync<InvalidOperationException>()).Which;
 
-        Assert.Contains("Cannot resume session in InProgress status", exception.Message, StringComparison.OrdinalIgnoreCase);
+        exception.Message.Should().ContainEquivalentOf("Cannot resume session in InProgress status");
     }
 
     [Fact]
@@ -269,10 +272,11 @@ public class ResumeGameSessionCommandHandlerTests
         var command = new ResumeGameSessionCommand(SessionId: sessionId);
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
-            () => _handler.Handle(command, TestContext.Current.CancellationToken));
+        var act = 
+            () => _handler.Handle(command, TestContext.Current.CancellationToken);
+        var exception = (await act.Should().ThrowAsync<InvalidOperationException>()).Which;
 
-        Assert.Contains("Cannot resume session in Completed status", exception.Message, StringComparison.OrdinalIgnoreCase);
+        exception.Message.Should().ContainEquivalentOf("Cannot resume session in Completed status");
     }
     [Fact]
     public async Task Handle_PreservesSessionMetadata()
@@ -305,8 +309,8 @@ public class ResumeGameSessionCommandHandlerTests
         result.GameId.ToString().Should().Be(gameId.ToString());
         result.StartedAt.Should().Be(originalStartedAt);
         result.Players.Count.Should().Be(originalPlayerCount);
-        Assert.Null(result.CompletedAt); // Still not completed
-        Assert.Null(result.WinnerName);
+        result.CompletedAt.Should().BeNull(); // Still not completed
+        result.WinnerName.Should().BeNull();
     }
     [Fact]
     public async Task Handle_WithCancellationToken_PassesToRepository()

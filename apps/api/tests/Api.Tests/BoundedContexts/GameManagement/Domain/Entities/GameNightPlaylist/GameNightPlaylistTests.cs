@@ -22,12 +22,12 @@ public class GameNightPlaylistTests
         playlist.Id.Should().NotBe(Guid.Empty);
         playlist.Name.Should().Be("Friday Night Games");
         playlist.CreatorUserId.Should().Be(_userId);
-        Assert.Null(playlist.ScheduledDate);
-        Assert.False(playlist.IsShared);
-        Assert.Null(playlist.ShareToken);
-        Assert.Empty(playlist.Games);
-        Assert.False(playlist.IsDeleted);
-        Assert.Null(playlist.DeletedAt);
+        playlist.ScheduledDate.Should().BeNull();
+        (playlist.IsShared).Should().BeFalse();
+        playlist.ShareToken.Should().BeNull();
+        playlist.Games.Should().BeEmpty();
+        (playlist.IsDeleted).Should().BeFalse();
+        playlist.DeletedAt.Should().BeNull();
     }
 
     [Fact]
@@ -43,26 +43,29 @@ public class GameNightPlaylistTests
     [Fact]
     public void Create_WithEmptyName_ThrowsArgumentException()
     {
-        Assert.Throws<ArgumentException>(() =>
+        var act = () =>
             Api.BoundedContexts.GameManagement.Domain.Entities.GameNightPlaylist.GameNightPlaylist
-                .Create("", _userId));
+                .Create("", _userId);
+        act.Should().Throw<ArgumentException>();
     }
 
     [Fact]
     public void Create_WithNameExceeding200Chars_ThrowsArgumentException()
     {
         var longName = new string('A', 201);
-        Assert.Throws<ArgumentException>(() =>
+        var act = () =>
             Api.BoundedContexts.GameManagement.Domain.Entities.GameNightPlaylist.GameNightPlaylist
-                .Create(longName, _userId));
+                .Create(longName, _userId);
+        act.Should().Throw<ArgumentException>();
     }
 
     [Fact]
     public void Create_WithEmptyUserId_ThrowsArgumentException()
     {
-        Assert.Throws<ArgumentException>(() =>
+        var act = () =>
             Api.BoundedContexts.GameManagement.Domain.Entities.GameNightPlaylist.GameNightPlaylist
-                .Create("Test", Guid.Empty));
+                .Create("Test", Guid.Empty);
+        act.Should().Throw<ArgumentException>();
     }
 
     [Fact]
@@ -131,7 +134,7 @@ public class GameNightPlaylistTests
         playlist.UpdateScheduledDate(DateTime.UtcNow);
         playlist.UpdateScheduledDate(null);
 
-        Assert.Null(playlist.ScheduledDate);
+        playlist.ScheduledDate.Should().BeNull();
     }
 
     #endregion
@@ -179,8 +182,8 @@ public class GameNightPlaylistTests
         var game1 = playlist.Games.First(g => g.SharedGameId == gameId1);
         var game2 = playlist.Games.First(g => g.SharedGameId == gameId2);
 
-        Assert.Equal(2, game1.Position); // Shifted
-        Assert.Equal(1, game2.Position); // New game at 1
+        game1.Position.Should().Be(2); // Shifted
+        game2.Position.Should().Be(1); // New game at 1
     }
 
     [Fact]
@@ -228,7 +231,7 @@ public class GameNightPlaylistTests
 
         playlist.Games.Count.Should().Be(2);
         var game3 = playlist.Games.First(g => g.SharedGameId == gameId3);
-        Assert.Equal(2, game3.Position); // Shifted down
+        game3.Position.Should().Be(2); // Shifted down
     }
 
     [Fact]
@@ -279,8 +282,9 @@ public class GameNightPlaylistTests
         playlist.AddGame(Guid.NewGuid(), 1);
         playlist.AddGame(Guid.NewGuid(), 2);
 
-        Assert.Throws<ArgumentException>(() =>
-            playlist.ReorderGames(new List<Guid> { Guid.NewGuid() }));
+        var act = () =>
+            playlist.ReorderGames(new List<Guid> { Guid.NewGuid() });
+        act.Should().Throw<ArgumentException>();
     }
 
     [Fact]
@@ -290,8 +294,9 @@ public class GameNightPlaylistTests
         var gameId1 = Guid.NewGuid();
         playlist.AddGame(gameId1, 1);
 
-        Assert.Throws<ArgumentException>(() =>
-            playlist.ReorderGames(new List<Guid> { Guid.NewGuid() }));
+        var act = () =>
+            playlist.ReorderGames(new List<Guid> { Guid.NewGuid() });
+        act.Should().Throw<ArgumentException>();
     }
 
     [Fact]
@@ -311,10 +316,10 @@ public class GameNightPlaylistTests
         var playlist = CreatePlaylist();
         var token = playlist.GenerateShareToken();
 
-        Assert.NotNull(token);
-        Assert.NotEmpty(token);
+        token.Should().NotBeNull();
+        token.Should().NotBeEmpty();
         playlist.ShareToken.Should().Be(token);
-        Assert.True(playlist.IsShared);
+        (playlist.IsShared).Should().BeTrue();
     }
 
     [Fact]
@@ -335,8 +340,8 @@ public class GameNightPlaylistTests
         playlist.GenerateShareToken();
         playlist.RevokeShareToken();
 
-        Assert.Null(playlist.ShareToken);
-        Assert.False(playlist.IsShared);
+        playlist.ShareToken.Should().BeNull();
+        (playlist.IsShared).Should().BeFalse();
     }
 
     #endregion
@@ -349,8 +354,8 @@ public class GameNightPlaylistTests
         var playlist = CreatePlaylist();
         playlist.SoftDelete();
 
-        Assert.True(playlist.IsDeleted);
-        Assert.NotNull(playlist.DeletedAt);
+        (playlist.IsDeleted).Should().BeTrue();
+        playlist.DeletedAt.Should().NotBeNull();
     }
 
     [Fact]

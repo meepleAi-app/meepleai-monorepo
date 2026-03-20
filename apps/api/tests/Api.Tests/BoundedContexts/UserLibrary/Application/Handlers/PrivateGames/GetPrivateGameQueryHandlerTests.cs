@@ -40,10 +40,11 @@ public sealed class GetPrivateGameQueryHandlerTests
     public void Constructor_NullRepository_ThrowsArgumentNullException()
     {
         // Act & Assert
-        var exception = Assert.Throws<ArgumentNullException>(() =>
+        var act = () =>
             new GetPrivateGameQueryHandler(
                 null!,
-                _loggerMock.Object));
+                _loggerMock.Object);
+        var exception = act.Should().Throw<ArgumentNullException>().Which;
 
         exception.ParamName.Should().Be("repository");
     }
@@ -52,10 +53,11 @@ public sealed class GetPrivateGameQueryHandlerTests
     public void Constructor_NullLogger_ThrowsArgumentNullException()
     {
         // Act & Assert
-        var exception = Assert.Throws<ArgumentNullException>(() =>
+        var act2 = () =>
             new GetPrivateGameQueryHandler(
                 _repositoryMock.Object,
-                null!));
+                null!);
+        var exception = act2.Should().Throw<ArgumentNullException>().Which;
 
         exception.ParamName.Should().Be("logger");
     }
@@ -163,8 +165,9 @@ public sealed class GetPrivateGameQueryHandlerTests
             .ReturnsAsync((PrivateGame?)null);
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<NotFoundException>(() =>
-            _handler.Handle(query, CancellationToken.None));
+        var act3 = () =>
+            _handler.Handle(query, CancellationToken.None);
+        var exception = (await act3.Should().ThrowAsync<NotFoundException>()).Which;
 
         exception.Message.Should().Contain(gameId.ToString());
     }
@@ -196,8 +199,9 @@ public sealed class GetPrivateGameQueryHandlerTests
             .ReturnsAsync(existingGame);
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<ForbiddenException>(() =>
-            _handler.Handle(query, CancellationToken.None));
+        var act4 = () =>
+            _handler.Handle(query, CancellationToken.None);
+        var exception = (await act4.Should().ThrowAsync<ForbiddenException>()).Which;
 
         exception.Message.Should().Contain("only view your own");
     }
@@ -239,8 +243,9 @@ public sealed class GetPrivateGameQueryHandlerTests
     public async Task Handle_NullQuery_ThrowsArgumentNullException()
     {
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentNullException>(() =>
-            _handler.Handle(null!, CancellationToken.None));
+        var act5 = () =>
+            _handler.Handle(null!, CancellationToken.None);
+        await act5.Should().ThrowAsync<ArgumentNullException>();
     }
 
     #endregion

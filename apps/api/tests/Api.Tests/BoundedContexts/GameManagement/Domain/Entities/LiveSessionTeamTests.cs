@@ -26,21 +26,23 @@ public class LiveSessionTeamTests
         team.Color.Should().Be("#FF0000");
         team.TeamScore.Should().Be(0);
         team.CurrentRank.Should().Be(0);
-        Assert.Empty(team.PlayerIds);
+        team.PlayerIds.Should().BeEmpty();
     }
 
     [Fact]
     public void Constructor_EmptyTeamId_ThrowsValidationException()
     {
-        Assert.Throws<ValidationException>(() =>
-            new LiveSessionTeam(Guid.Empty, Guid.NewGuid(), "Alpha", "#FF0000"));
+        var act = () =>
+            new LiveSessionTeam(Guid.Empty, Guid.NewGuid(), "Alpha", "#FF0000");
+        act.Should().Throw<ValidationException>();
     }
 
     [Fact]
     public void Constructor_EmptySessionId_ThrowsValidationException()
     {
-        Assert.Throws<ValidationException>(() =>
-            new LiveSessionTeam(Guid.NewGuid(), Guid.Empty, "Alpha", "#FF0000"));
+        var act = () =>
+            new LiveSessionTeam(Guid.NewGuid(), Guid.Empty, "Alpha", "#FF0000");
+        act.Should().Throw<ValidationException>();
     }
 
     [Fact]
@@ -107,7 +109,7 @@ public class LiveSessionTeamTests
 
         team.RemovePlayer(playerId);
 
-        Assert.Empty(team.PlayerIds);
+        team.PlayerIds.Should().BeEmpty();
     }
 
     [Fact]

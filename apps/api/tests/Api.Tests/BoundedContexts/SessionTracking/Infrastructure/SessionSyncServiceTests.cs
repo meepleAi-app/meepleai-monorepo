@@ -29,13 +29,14 @@ public class SessionSyncServiceTests
 
         // Assert
         subscription.Should().NotBeNull();
-        await Assert.ThrowsAsync<OperationCanceledException>(async () =>
+        var act = async () =>
         {
             await foreach (var _ in subscription)
             {
                 // Should timeout waiting for events
             }
-        });
+        };
+        await act.Should().ThrowAsync<OperationCanceledException>();
     }
 
     [Fact]

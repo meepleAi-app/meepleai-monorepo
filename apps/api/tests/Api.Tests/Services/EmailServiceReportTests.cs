@@ -74,7 +74,7 @@ public sealed class EmailServiceReportTests
         var largeContent = new byte[11 * 1024 * 1024]; // 11 MB
 
         // Act & Assert
-        var ex = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+        var act = () =>
             service.SendReportEmailAsync(
                 recipients,
                 "Test Report",
@@ -82,7 +82,8 @@ public sealed class EmailServiceReportTests
                 largeContent,
                 "report.pdf",
                 largeContent.Length,
-                CancellationToken.None));
+                CancellationToken.None);
+        var ex = (await act.Should().ThrowAsync<InvalidOperationException>()).Which;
 
         ex.Message.Should().Contain("exceeds email attachment limit");
     }

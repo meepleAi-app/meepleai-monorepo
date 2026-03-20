@@ -41,49 +41,54 @@ public class RuleDisputeTests
         dispute.GameId.Should().Be(GameId);
         dispute.InitiatorPlayerId.Should().Be(InitiatorId);
         dispute.InitiatorClaim.Should().Be("I can play 2 cards per turn");
-        Assert.Null(dispute.RespondentPlayerId);
-        Assert.Null(dispute.RespondentClaim);
-        Assert.Null(dispute.Verdict);
-        Assert.Empty(dispute.Votes);
+        dispute.RespondentPlayerId.Should().BeNull();
+        dispute.RespondentClaim.Should().BeNull();
+        dispute.Verdict.Should().BeNull();
+        dispute.Votes.Should().BeEmpty();
         dispute.FinalOutcome.Should().Be(DisputeOutcome.Pending);
-        Assert.Null(dispute.OverrideRule);
-        Assert.True(dispute.CreatedAt <= DateTime.UtcNow);
-        Assert.Empty(dispute.RelatedDisputeIds);
+        dispute.OverrideRule.Should().BeNull();
+        (dispute.CreatedAt <= DateTime.UtcNow).Should().BeTrue();
+        dispute.RelatedDisputeIds.Should().BeEmpty();
     }
 
     [Fact]
     public void Open_EmptySessionId_ShouldThrow()
     {
-        Assert.Throws<ArgumentException>(() =>
-            RuleDispute.Open(Guid.Empty, GameId, InitiatorId, "claim"));
+        var act = () =>
+            RuleDispute.Open(Guid.Empty, GameId, InitiatorId, "claim");
+        act.Should().Throw<ArgumentException>();
     }
 
     [Fact]
     public void Open_EmptyGameId_ShouldThrow()
     {
-        Assert.Throws<ArgumentException>(() =>
-            RuleDispute.Open(SessionId, Guid.Empty, InitiatorId, "claim"));
+        var act = () =>
+            RuleDispute.Open(SessionId, Guid.Empty, InitiatorId, "claim");
+        act.Should().Throw<ArgumentException>();
     }
 
     [Fact]
     public void Open_EmptyInitiatorPlayerId_ShouldThrow()
     {
-        Assert.Throws<ArgumentException>(() =>
-            RuleDispute.Open(SessionId, GameId, Guid.Empty, "claim"));
+        var act = () =>
+            RuleDispute.Open(SessionId, GameId, Guid.Empty, "claim");
+        act.Should().Throw<ArgumentException>();
     }
 
     [Fact]
     public void Open_NullClaim_ShouldThrow()
     {
-        Assert.Throws<ArgumentException>(() =>
-            RuleDispute.Open(SessionId, GameId, InitiatorId, null!));
+        var act = () =>
+            RuleDispute.Open(SessionId, GameId, InitiatorId, null!);
+        act.Should().Throw<ArgumentException>();
     }
 
     [Fact]
     public void Open_WhitespaceClaim_ShouldThrow()
     {
-        Assert.Throws<ArgumentException>(() =>
-            RuleDispute.Open(SessionId, GameId, InitiatorId, "   "));
+        var act = () =>
+            RuleDispute.Open(SessionId, GameId, InitiatorId, "   ");
+        act.Should().Throw<ArgumentException>();
     }
 
     #endregion
@@ -101,23 +106,25 @@ public class RuleDisputeTests
 
         // Assert
         dispute.RespondentPlayerId.Should().Be(RespondentId);
-        Assert.Equal("No, only 1 card per turn", dispute.RespondentClaim);
+        dispute.RespondentClaim.Should().Be("No, only 1 card per turn");
     }
 
     [Fact]
     public void AddRespondentClaim_NullClaim_ShouldThrow()
     {
         var dispute = CreateDispute();
-        Assert.Throws<ArgumentException>(() =>
-            dispute.AddRespondentClaim(RespondentId, null!));
+        var act = () =>
+            dispute.AddRespondentClaim(RespondentId, null!);
+        act.Should().Throw<ArgumentException>();
     }
 
     [Fact]
     public void AddRespondentClaim_EmptyPlayerId_ShouldThrow()
     {
         var dispute = CreateDispute();
-        Assert.Throws<ArgumentException>(() =>
-            dispute.AddRespondentClaim(Guid.Empty, "counter claim"));
+        var act = () =>
+            dispute.AddRespondentClaim(Guid.Empty, "counter claim");
+        act.Should().Throw<ArgumentException>();
     }
 
     #endregion
@@ -135,7 +142,7 @@ public class RuleDisputeTests
         dispute.SetVerdict(verdict);
 
         // Assert
-        Assert.NotNull(dispute.Verdict);
+        dispute.Verdict.Should().NotBeNull();
         dispute.Verdict.RulingFor.Should().Be(RulingFor.Initiator);
         dispute.Verdict.Reasoning.Should().Be("Rule 3.1 allows 2 cards");
         dispute.FinalOutcome.Should().Be(DisputeOutcome.Pending);
@@ -165,7 +172,7 @@ public class RuleDisputeTests
         // Assert
         dispute.Votes.Should().ContainSingle();
         dispute.Votes[0].PlayerId.Should().Be(playerId);
-        Assert.True(dispute.Votes[0].AcceptsVerdict);
+        (dispute.Votes[0].AcceptsVerdict).Should().BeTrue();
     }
 
     [Fact]
@@ -177,16 +184,18 @@ public class RuleDisputeTests
         dispute.CastVote(playerId, true);
 
         // Act & Assert
-        Assert.Throws<InvalidOperationException>(() =>
-            dispute.CastVote(playerId, false));
+        var act = () =>
+            dispute.CastVote(playerId, false);
+        act.Should().Throw<InvalidOperationException>();
     }
 
     [Fact]
     public void CastVote_EmptyPlayerId_ShouldThrow()
     {
         var dispute = CreateDispute();
-        Assert.Throws<ArgumentException>(() =>
-            dispute.CastVote(Guid.Empty, true));
+        var act = () =>
+            dispute.CastVote(Guid.Empty, true);
+        act.Should().Throw<ArgumentException>();
     }
 
     #endregion
@@ -257,11 +266,12 @@ public class RuleDisputeTests
 
         // Assert
         var domainEvent = dispute.DomainEvents.Should().ContainSingle().Subject;
-        var resolvedEvent = Assert.IsType<StructuredDisputeResolvedEvent>(domainEvent);
+        domainEvent.Should().BeOfType<StructuredDisputeResolvedEvent>();
+        var resolvedEvent = (StructuredDisputeResolvedEvent)domainEvent;
         resolvedEvent.DisputeId.Should().Be(dispute.Id);
         resolvedEvent.SessionId.Should().Be(SessionId);
         resolvedEvent.GameId.Should().Be(GameId);
-        Assert.NotNull(resolvedEvent.Verdict);
+        resolvedEvent.Verdict.Should().NotBeNull();
         resolvedEvent.FinalOutcome.Should().Be(DisputeOutcome.VerdictAccepted);
     }
 
@@ -308,8 +318,9 @@ public class RuleDisputeTests
     {
         var dispute = CreateDispute();
 
-        Assert.Throws<InvalidOperationException>(() =>
-            dispute.SetOverrideRule("some rule"));
+        var act = () =>
+            dispute.SetOverrideRule("some rule");
+        act.Should().Throw<InvalidOperationException>();
     }
 
     [Fact]
@@ -320,8 +331,9 @@ public class RuleDisputeTests
         dispute.CastVote(Guid.NewGuid(), true);
         dispute.TallyVotes();
 
-        Assert.Throws<InvalidOperationException>(() =>
-            dispute.SetOverrideRule("some rule"));
+        var act = () =>
+            dispute.SetOverrideRule("some rule");
+        act.Should().Throw<InvalidOperationException>();
     }
 
     [Fact]
@@ -332,8 +344,9 @@ public class RuleDisputeTests
         dispute.CastVote(Guid.NewGuid(), false);
         dispute.TallyVotes();
 
-        Assert.Throws<ArgumentException>(() =>
-            dispute.SetOverrideRule("   "));
+        var act = () =>
+            dispute.SetOverrideRule("   ");
+        act.Should().Throw<ArgumentException>();
     }
 
     #endregion
@@ -358,7 +371,7 @@ public class RuleDisputeTests
         // Assert
         entry.Id.Should().Be(dispute.Id);
         entry.Description.Should().Be("Can I play 2 cards?");
-        Assert.Equal("Yes, rule 3.1 allows it", entry.Verdict);
+        entry.Verdict.Should().Be("Yes, rule 3.1 allows it");
         entry.RuleReferences.Should().ContainSingle();
         entry.RuleReferences.Should().Contain("Page 5");
         entry.RaisedByPlayerName.Should().Be(InitiatorId.ToString());
@@ -387,7 +400,7 @@ public class RuleDisputeTests
         var entry = dispute.ToLegacyEntry();
 
         // Assert
-        Assert.Empty(entry.RuleReferences);
+        entry.RuleReferences.Should().BeEmpty();
     }
 
     #endregion
@@ -430,15 +443,17 @@ public class RuleDisputeTests
     [Fact]
     public void DisputeVerdict_EmptyReasoning_ShouldThrow()
     {
-        Assert.Throws<ArgumentException>(() =>
-            new DisputeVerdict(RulingFor.Initiator, "", null, VerdictConfidence.High));
+        var act = () =>
+            new DisputeVerdict(RulingFor.Initiator, "", null, VerdictConfidence.High);
+        act.Should().Throw<ArgumentException>();
     }
 
     [Fact]
     public void DisputeVerdict_WhitespaceReasoning_ShouldThrow()
     {
-        Assert.Throws<ArgumentException>(() =>
-            new DisputeVerdict(RulingFor.Initiator, "   ", null, VerdictConfidence.High));
+        var act = () =>
+            new DisputeVerdict(RulingFor.Initiator, "   ", null, VerdictConfidence.High);
+        act.Should().Throw<ArgumentException>();
     }
 
     [Fact]

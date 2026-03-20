@@ -53,10 +53,10 @@ public class GetEditorLockStatusQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         result.GameId.Should().Be(gameId);
-        Assert.True(result.IsLocked);
-        Assert.False(result.IsCurrentUserLock);
+        (result.IsLocked).Should().BeTrue();
+        (result.IsCurrentUserLock).Should().BeFalse();
         result.LockedByUserId.Should().Be(lockHolderId);
     }
 
@@ -86,10 +86,10 @@ public class GetEditorLockStatusQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         result.GameId.Should().Be(gameId);
-        Assert.False(result.IsLocked);
-        Assert.Null(result.LockedByUserId);
+        (result.IsLocked).Should().BeFalse();
+        result.LockedByUserId.Should().BeNull();
     }
 
     [Fact]
@@ -118,9 +118,9 @@ public class GetEditorLockStatusQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.True(result.IsLocked);
-        Assert.True(result.IsCurrentUserLock);
+        result.Should().NotBeNull();
+        (result.IsLocked).Should().BeTrue();
+        (result.IsCurrentUserLock).Should().BeTrue();
         result.LockedByUserId.Should().Be(currentUserId);
     }
 
@@ -160,7 +160,8 @@ public class GetEditorLockStatusQueryHandlerTests
     public async Task Handle_WithNullQuery_ThrowsArgumentNullException()
     {
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentNullException>(
-            () => _handler.Handle(null!, TestContext.Current.CancellationToken));
+        var act = 
+            () => _handler.Handle(null!, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<ArgumentNullException>();
     }
 }

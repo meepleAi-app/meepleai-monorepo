@@ -39,29 +39,31 @@ public class LiveSessionPlayerTests
         player.UserId.Should().Be(userId);
         player.TotalScore.Should().Be(0);
         player.CurrentRank.Should().Be(0);
-        Assert.True(player.IsActive);
-        Assert.Null(player.TeamId);
+        (player.IsActive).Should().BeTrue();
+        player.TeamId.Should().BeNull();
     }
 
     [Fact]
     public void Constructor_GuestPlayer_NoUserId()
     {
         var player = CreatePlayer(userId: null);
-        Assert.Null(player.UserId);
+        player.UserId.Should().BeNull();
     }
 
     [Fact]
     public void Constructor_EmptyPlayerId_ThrowsValidationException()
     {
-        Assert.Throws<ValidationException>(() =>
-            new LiveSessionPlayer(Guid.Empty, Guid.NewGuid(), null, "Test", PlayerColor.Red, PlayerRole.Player, DateTime.UtcNow));
+        var act = () =>
+            new LiveSessionPlayer(Guid.Empty, Guid.NewGuid(), null, "Test", PlayerColor.Red, PlayerRole.Player, DateTime.UtcNow);
+        act.Should().Throw<ValidationException>();
     }
 
     [Fact]
     public void Constructor_EmptySessionId_ThrowsValidationException()
     {
-        Assert.Throws<ValidationException>(() =>
-            new LiveSessionPlayer(Guid.NewGuid(), Guid.Empty, null, "Test", PlayerColor.Red, PlayerRole.Player, DateTime.UtcNow));
+        var act = () =>
+            new LiveSessionPlayer(Guid.NewGuid(), Guid.Empty, null, "Test", PlayerColor.Red, PlayerRole.Player, DateTime.UtcNow);
+        act.Should().Throw<ValidationException>();
     }
 
     [Fact]
@@ -111,7 +113,7 @@ public class LiveSessionPlayerTests
         player.AssignToTeam(Guid.NewGuid());
         player.AssignToTeam(null);
 
-        Assert.Null(player.TeamId);
+        player.TeamId.Should().BeNull();
     }
 
     [Fact]
@@ -129,7 +131,7 @@ public class LiveSessionPlayerTests
         var player = CreatePlayer();
         player.Deactivate();
 
-        Assert.False(player.IsActive);
+        (player.IsActive).Should().BeFalse();
     }
 
     [Fact]
@@ -139,7 +141,7 @@ public class LiveSessionPlayerTests
         player.Deactivate();
         player.Activate();
 
-        Assert.True(player.IsActive);
+        (player.IsActive).Should().BeTrue();
     }
 
     [Fact]

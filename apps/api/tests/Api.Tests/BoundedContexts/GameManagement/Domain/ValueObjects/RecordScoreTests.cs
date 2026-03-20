@@ -25,8 +25,9 @@ public class RecordScoreTests
     public void RecordScore_EmptyDimension_ThrowsValidationException()
     {
         // Act & Assert
-        Assert.Throws<ValidationException>(() =>
-            new RecordScore("", 10));
+        var act = () =>
+            new RecordScore("", 10);
+        act.Should().Throw<ValidationException>();
     }
 
     [Fact]
@@ -36,20 +37,22 @@ public class RecordScoreTests
         var longDimension = new string('x', 51);
 
         // Act & Assert
-        var exception = Assert.Throws<ValidationException>(() =>
-            new RecordScore(longDimension, 10));
+        var act = () =>
+            new RecordScore(longDimension, 10);
+        var exception = act.Should().Throw<ValidationException>().Which;
 
-        Assert.Contains("cannot exceed 50", exception.Message, StringComparison.OrdinalIgnoreCase);
+        exception.Message.Should().ContainEquivalentOf("cannot exceed 50");
     }
 
     [Fact]
     public void RecordScore_NegativeValue_ThrowsValidationException()
     {
         // Act & Assert
-        var exception = Assert.Throws<ValidationException>(() =>
-            new RecordScore("points", -1));
+        var act = () =>
+            new RecordScore("points", -1);
+        var exception = act.Should().Throw<ValidationException>().Which;
 
-        Assert.Contains("cannot be negative", exception.Message, StringComparison.OrdinalIgnoreCase);
+        exception.Message.Should().ContainEquivalentOf("cannot be negative");
     }
 
     [Fact]

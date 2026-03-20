@@ -23,8 +23,8 @@ public class ToolStateDomainTests
         ts.ToolName.Should().Be("Main Dice");
         ts.ToolType.Should().Be(ToolType.Dice);
         ts.StateDataJson.Should().Be("{\"diceType\":\"D6\"}");
-        Assert.True(ts.CreatedAt <= DateTime.UtcNow);
-        Assert.True(ts.LastUpdatedAt <= DateTime.UtcNow);
+        (ts.CreatedAt <= DateTime.UtcNow).Should().BeTrue();
+        (ts.LastUpdatedAt <= DateTime.UtcNow).Should().BeTrue();
     }
 
     [Fact]
@@ -39,33 +39,37 @@ public class ToolStateDomainTests
     [Fact]
     public void Constructor_WithEmptySessionId_ThrowsArgumentException()
     {
-        Assert.Throws<ArgumentException>(() =>
+        var act = () =>
             new Api.BoundedContexts.GameManagement.Domain.Entities.ToolState.ToolState(
-                Guid.NewGuid(), Guid.Empty, _toolkitId, "Dice", ToolType.Dice, "{}"));
+                Guid.NewGuid(), Guid.Empty, _toolkitId, "Dice", ToolType.Dice, "{}");
+        act.Should().Throw<ArgumentException>();
     }
 
     [Fact]
     public void Constructor_WithEmptyToolkitId_ThrowsArgumentException()
     {
-        Assert.Throws<ArgumentException>(() =>
+        var act = () =>
             new Api.BoundedContexts.GameManagement.Domain.Entities.ToolState.ToolState(
-                Guid.NewGuid(), _sessionId, Guid.Empty, "Dice", ToolType.Dice, "{}"));
+                Guid.NewGuid(), _sessionId, Guid.Empty, "Dice", ToolType.Dice, "{}");
+        act.Should().Throw<ArgumentException>();
     }
 
     [Fact]
     public void Constructor_WithEmptyToolName_ThrowsArgumentException()
     {
-        Assert.Throws<ArgumentException>(() =>
+        var act = () =>
             new Api.BoundedContexts.GameManagement.Domain.Entities.ToolState.ToolState(
-                Guid.NewGuid(), _sessionId, _toolkitId, "", ToolType.Dice, "{}"));
+                Guid.NewGuid(), _sessionId, _toolkitId, "", ToolType.Dice, "{}");
+        act.Should().Throw<ArgumentException>();
     }
 
     [Fact]
     public void Constructor_WithWhitespaceToolName_ThrowsArgumentException()
     {
-        Assert.Throws<ArgumentException>(() =>
+        var act = () =>
             new Api.BoundedContexts.GameManagement.Domain.Entities.ToolState.ToolState(
-                Guid.NewGuid(), _sessionId, _toolkitId, "   ", ToolType.Dice, "{}"));
+                Guid.NewGuid(), _sessionId, _toolkitId, "   ", ToolType.Dice, "{}");
+        act.Should().Throw<ArgumentException>();
     }
 
     [Fact]
@@ -90,7 +94,7 @@ public class ToolStateDomainTests
         ts.UpdateState("{\"lastRoll\":[3,5]}");
 
         ts.StateDataJson.Should().Be("{\"lastRoll\":[3,5]}");
-        Assert.True(ts.LastUpdatedAt >= originalTimestamp);
+        (ts.LastUpdatedAt >= originalTimestamp).Should().BeTrue();
     }
 
     [Fact]

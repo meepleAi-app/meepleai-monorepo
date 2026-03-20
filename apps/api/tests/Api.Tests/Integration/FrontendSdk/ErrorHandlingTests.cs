@@ -407,10 +407,11 @@ public class ErrorHandlingTests : IAsyncLifetime
         await cts.CancelAsync();
 
         // Assert
-        await Assert.ThrowsAnyAsync<OperationCanceledException>(async () =>
+        var act = async () =>
         {
             await _client.SendAsync(request, cts.Token);
-        });
+        };
+        await act.Should().ThrowAsync<OperationCanceledException>();
 
         // Frontend SDK should handle request cancellation
         // (e.g., when user navigates away during request)

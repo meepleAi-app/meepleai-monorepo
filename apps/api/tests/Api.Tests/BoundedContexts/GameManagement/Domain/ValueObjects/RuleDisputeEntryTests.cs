@@ -28,49 +28,53 @@ public class RuleDisputeEntryTests
     [Fact]
     public void Create_WithEmptyDescription_ShouldThrow()
     {
-        Assert.Throws<ArgumentException>(() => new RuleDisputeEntry(
+        var act = () => new RuleDisputeEntry(
             id: Guid.NewGuid(),
             description: "",
             verdict: "verdict",
             ruleReferences: new List<string>(),
             raisedByPlayerName: "Marco",
-            timestamp: DateTime.UtcNow));
+            timestamp: DateTime.UtcNow);
+        act.Should().Throw<ArgumentException>();
     }
 
     [Fact]
     public void Create_WithWhitespaceDescription_ShouldThrow()
     {
-        Assert.Throws<ArgumentException>(() => new RuleDisputeEntry(
+        var act = () => new RuleDisputeEntry(
             id: Guid.NewGuid(),
             description: "   ",
             verdict: "verdict",
             ruleReferences: new List<string>(),
             raisedByPlayerName: "Marco",
-            timestamp: DateTime.UtcNow));
+            timestamp: DateTime.UtcNow);
+        act.Should().Throw<ArgumentException>();
     }
 
     [Fact]
     public void Create_WithEmptyVerdict_ShouldThrow()
     {
-        Assert.Throws<ArgumentException>(() => new RuleDisputeEntry(
+        var act = () => new RuleDisputeEntry(
             id: Guid.NewGuid(),
             description: "Some dispute",
             verdict: "",
             ruleReferences: new List<string>(),
             raisedByPlayerName: "Marco",
-            timestamp: DateTime.UtcNow));
+            timestamp: DateTime.UtcNow);
+        act.Should().Throw<ArgumentException>();
     }
 
     [Fact]
     public void Create_WithEmptyPlayerName_ShouldThrow()
     {
-        Assert.Throws<ArgumentException>(() => new RuleDisputeEntry(
+        var act = () => new RuleDisputeEntry(
             id: Guid.NewGuid(),
             description: "Some dispute",
             verdict: "Some verdict",
             ruleReferences: new List<string>(),
             raisedByPlayerName: "",
-            timestamp: DateTime.UtcNow));
+            timestamp: DateTime.UtcNow);
+        act.Should().Throw<ArgumentException>();
     }
 
     [Fact]
@@ -98,8 +102,8 @@ public class RuleDisputeEntryTests
             raisedByPlayerName: "Marco",
             timestamp: DateTime.UtcNow);
 
-        Assert.NotNull(entry.RuleReferences);
-        Assert.Empty(entry.RuleReferences);
+        entry.RuleReferences.Should().NotBeNull();
+        entry.RuleReferences.Should().BeEmpty();
     }
 
     [Fact]

@@ -39,23 +39,26 @@ public class StateTemplateDefinitionTests
     [Fact]
     public void Constructor_WithEmptyName_ThrowsArgumentException()
     {
-        Assert.Throws<ArgumentException>(() =>
-            new StateTemplateDefinition("", TemplateCategory.Strategy, "{}"));
+        var act = () =>
+            new StateTemplateDefinition("", TemplateCategory.Strategy, "{}");
+        act.Should().Throw<ArgumentException>();
     }
 
     [Fact]
     public void Constructor_WithWhitespaceName_ThrowsArgumentException()
     {
-        Assert.Throws<ArgumentException>(() =>
-            new StateTemplateDefinition("   ", TemplateCategory.Strategy, "{}"));
+        var act2 = () =>
+            new StateTemplateDefinition("   ", TemplateCategory.Strategy, "{}");
+        act2.Should().Throw<ArgumentException>();
     }
 
     [Fact]
     public void Constructor_WithLongName_ThrowsArgumentException()
     {
         var longName = new string('A', 201);
-        Assert.Throws<ArgumentException>(() =>
-            new StateTemplateDefinition(longName, TemplateCategory.Strategy, "{}"));
+        var act3 = () =>
+            new StateTemplateDefinition(longName, TemplateCategory.Strategy, "{}");
+        act3.Should().Throw<ArgumentException>();
     }
 
     [Fact]
@@ -69,22 +72,25 @@ public class StateTemplateDefinitionTests
     [Fact]
     public void Constructor_WithEmptySchema_ThrowsArgumentException()
     {
-        Assert.Throws<ArgumentException>(() =>
-            new StateTemplateDefinition("Test", TemplateCategory.Strategy, ""));
+        var act4 = () =>
+            new StateTemplateDefinition("Test", TemplateCategory.Strategy, "");
+        act4.Should().Throw<ArgumentException>();
     }
 
     [Fact]
     public void Constructor_WithWhitespaceSchema_ThrowsArgumentException()
     {
-        Assert.Throws<ArgumentException>(() =>
-            new StateTemplateDefinition("Test", TemplateCategory.Strategy, "   "));
+        var act5 = () =>
+            new StateTemplateDefinition("Test", TemplateCategory.Strategy, "   ");
+        act5.Should().Throw<ArgumentException>();
     }
 
     [Fact]
     public void Constructor_WithInvalidJson_ThrowsArgumentException()
     {
-        Assert.Throws<ArgumentException>(() =>
-            new StateTemplateDefinition("Test", TemplateCategory.Strategy, "not valid json"));
+        var act6 = () =>
+            new StateTemplateDefinition("Test", TemplateCategory.Strategy, "not valid json");
+        act6.Should().Throw<ArgumentException>();
     }
 
     [Fact]

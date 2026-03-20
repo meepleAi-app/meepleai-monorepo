@@ -3,6 +3,7 @@ using Api.Services.Rag;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Moq;
+using FluentAssertions;
 using Xunit;
 using Api.Tests.Constants;
 
@@ -38,7 +39,7 @@ public class RagConfigurationProviderTests
         var topK = await provider.GetRagConfigAsync("TopK", 5);
 
         // Assert
-        Assert.Equal(10, topK);
+        topK.Should().Be(10);
     }
 
     [Fact]
@@ -66,7 +67,7 @@ public class RagConfigurationProviderTests
         var topK = await provider.GetRagConfigAsync("TopK", 5);
 
         // Assert
-        Assert.Equal(15, topK); // Database value, not appsettings
+        topK.Should().Be(15);
     }
 
     [Fact]
@@ -89,7 +90,7 @@ public class RagConfigurationProviderTests
         var topK = await provider.GetRagConfigAsync("TopK", 5);
 
         // Assert
-        Assert.Equal(12, topK);
+        topK.Should().Be(12);
     }
 
     [Fact]
@@ -103,8 +104,8 @@ public class RagConfigurationProviderTests
         var minScore = await provider.GetRagConfigAsync("MinScore", 0.7);
 
         // Assert
-        Assert.Equal(5, topK); // Hardcoded default
-        Assert.Equal(0.7, minScore); // Hardcoded default
+        topK.Should().Be(5);
+        minScore.Should().Be(0.7);
     }
 
     [Fact]
@@ -123,8 +124,8 @@ public class RagConfigurationProviderTests
         var topK = await provider.GetRagConfigAsync("TopK", 5);
 
         // Assert
-        Assert.Equal(50, topK); // Clamped to max
-        Assert.True(topK >= 1 && topK <= 50);
+        topK.Should().Be(50);
+        (topK >= 1 && topK <= 50).Should().BeTrue();
     }
 
     [Fact]
@@ -143,8 +144,8 @@ public class RagConfigurationProviderTests
         var topK = await provider.GetRagConfigAsync("TopK", 5);
 
         // Assert
-        Assert.Equal(1, topK); // Clamped to min
-        Assert.True(topK >= 1 && topK <= 50);
+        topK.Should().Be(1);
+        (topK >= 1 && topK <= 50).Should().BeTrue();
     }
 
     [Fact]
@@ -163,8 +164,8 @@ public class RagConfigurationProviderTests
         var minScore = await provider.GetRagConfigAsync("MinScore", 0.7);
 
         // Assert
-        Assert.Equal(1.0, minScore); // Clamped to max
-        Assert.True(minScore >= 0.0 && minScore <= 1.0);
+        minScore.Should().Be(1.0);
+        (minScore >= 0.0 && minScore <= 1.0).Should().BeTrue();
     }
 
     [Fact]
@@ -183,8 +184,8 @@ public class RagConfigurationProviderTests
         var minScore = await provider.GetRagConfigAsync("MinScore", 0.7);
 
         // Assert
-        Assert.Equal(0.0, minScore); // Clamped to min
-        Assert.True(minScore >= 0.0 && minScore <= 1.0);
+        minScore.Should().Be(0.0);
+        (minScore >= 0.0 && minScore <= 1.0).Should().BeTrue();
     }
 
     [Fact]
@@ -212,7 +213,7 @@ public class RagConfigurationProviderTests
         var topK = await provider.GetRagConfigAsync("TopK", 5);
 
         // Assert
-        Assert.Equal(7, topK); // Appsettings value
+        topK.Should().Be(7);
     }
 
     [Fact]
@@ -235,7 +236,7 @@ public class RagConfigurationProviderTests
         var topK = await provider.GetRagConfigAsync("TopK", 5);
 
         // Assert
-        Assert.Equal(5, topK); // Default value
+        topK.Should().Be(5);
     }
 
     [Fact]
@@ -254,8 +255,8 @@ public class RagConfigurationProviderTests
         var rrfK = await provider.GetRagConfigAsync("RrfK", 60);
 
         // Assert
-        Assert.Equal(60, rrfK);
-        Assert.True(rrfK >= 1 && rrfK <= 100);
+        rrfK.Should().Be(60);
+        (rrfK >= 1 && rrfK <= 100).Should().BeTrue();
     }
 
     [Fact]
@@ -274,7 +275,7 @@ public class RagConfigurationProviderTests
         var rrfK = await provider.GetRagConfigAsync("RrfK", 60);
 
         // Assert
-        Assert.Equal(100, rrfK); // Clamped to max
+        rrfK.Should().Be(100);
     }
 
     [Fact]
@@ -293,8 +294,8 @@ public class RagConfigurationProviderTests
         var maxVariations = await provider.GetRagConfigAsync("MaxQueryVariations", 3);
 
         // Assert
-        Assert.Equal(5, maxVariations);
-        Assert.True(maxVariations >= 1 && maxVariations <= 10);
+        maxVariations.Should().Be(5);
+        (maxVariations >= 1 && maxVariations <= 10).Should().BeTrue();
     }
 
     [Fact]
@@ -313,7 +314,7 @@ public class RagConfigurationProviderTests
         var maxVariations = await provider.GetRagConfigAsync("MaxQueryVariations", 3);
 
         // Assert
-        Assert.Equal(10, maxVariations); // Clamped to max
+        maxVariations.Should().Be(10);
     }
 
     [Fact]
@@ -332,7 +333,7 @@ public class RagConfigurationProviderTests
         var value = await provider.GetRagConfigAsync("UnknownKey", 100);
 
         // Assert
-        Assert.Equal(999, value); // No clamping for unknown keys
+        value.Should().Be(999);
     }
 }
 

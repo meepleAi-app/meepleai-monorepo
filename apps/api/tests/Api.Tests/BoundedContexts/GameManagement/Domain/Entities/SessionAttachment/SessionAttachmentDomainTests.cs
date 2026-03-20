@@ -39,9 +39,9 @@ public class SessionAttachmentDomainTests
         attachment.ContentType.Should().Be(ValidContentTypeJpeg);
         attachment.FileSizeBytes.Should().Be(ValidFileSize);
         attachment.SnapshotIndex.Should().Be(5);
-        Assert.False(attachment.IsDeleted);
-        Assert.Null(attachment.DeletedAt);
-        Assert.True(attachment.CreatedAt <= DateTime.UtcNow);
+        (attachment.IsDeleted).Should().BeFalse();
+        attachment.DeletedAt.Should().BeNull();
+        (attachment.CreatedAt <= DateTime.UtcNow).Should().BeTrue();
     }
 
     [Fact]
@@ -51,9 +51,9 @@ public class SessionAttachmentDomainTests
             _sessionId, _playerId, AttachmentType.PlayerArea,
             ValidBlobUrl, ValidContentTypeJpeg, ValidFileSize);
 
-        Assert.Null(attachment.ThumbnailUrl);
-        Assert.Null(attachment.Caption);
-        Assert.Null(attachment.SnapshotIndex);
+        attachment.ThumbnailUrl.Should().BeNull();
+        attachment.Caption.Should().BeNull();
+        attachment.SnapshotIndex.Should().BeNull();
     }
 
     [Theory]
@@ -115,10 +115,11 @@ public class SessionAttachmentDomainTests
     [Fact]
     public void Create_WithEmptySessionId_Throws()
     {
-        var ex = Assert.Throws<ArgumentException>(() =>
+        var act = () =>
             Api.BoundedContexts.GameManagement.Domain.Entities.SessionAttachment.SessionAttachment.Create(
                 Guid.Empty, _playerId, AttachmentType.BoardState,
-                ValidBlobUrl, ValidContentTypeJpeg, ValidFileSize));
+                ValidBlobUrl, ValidContentTypeJpeg, ValidFileSize);
+        var ex = act.Should().Throw<ArgumentException>().Which;
 
         ex.Message.Should().Contain("Session ID");
     }
@@ -126,10 +127,11 @@ public class SessionAttachmentDomainTests
     [Fact]
     public void Create_WithEmptyPlayerId_Throws()
     {
-        var ex = Assert.Throws<ArgumentException>(() =>
+        var act = () =>
             Api.BoundedContexts.GameManagement.Domain.Entities.SessionAttachment.SessionAttachment.Create(
                 _sessionId, Guid.Empty, AttachmentType.BoardState,
-                ValidBlobUrl, ValidContentTypeJpeg, ValidFileSize));
+                ValidBlobUrl, ValidContentTypeJpeg, ValidFileSize);
+        var ex = act.Should().Throw<ArgumentException>().Which;
 
         ex.Message.Should().Contain("Player ID");
     }
@@ -140,20 +142,22 @@ public class SessionAttachmentDomainTests
     [InlineData(null)]
     public void Create_WithInvalidBlobUrl_Throws(string? blobUrl)
     {
-        Assert.Throws<ArgumentException>(() =>
+        var act = () =>
             Api.BoundedContexts.GameManagement.Domain.Entities.SessionAttachment.SessionAttachment.Create(
                 _sessionId, _playerId, AttachmentType.BoardState,
-                blobUrl!, ValidContentTypeJpeg, ValidFileSize));
+                blobUrl!, ValidContentTypeJpeg, ValidFileSize);
+        act.Should().Throw<ArgumentException>();
     }
 
     [Fact]
     public void Create_WithBlobUrlTooLong_Throws()
     {
         var longUrl = new string('x', 2049);
-        var ex = Assert.Throws<ArgumentException>(() =>
+        var act = () =>
             Api.BoundedContexts.GameManagement.Domain.Entities.SessionAttachment.SessionAttachment.Create(
                 _sessionId, _playerId, AttachmentType.BoardState,
-                longUrl, ValidContentTypeJpeg, ValidFileSize));
+                longUrl, ValidContentTypeJpeg, ValidFileSize);
+        var ex = act.Should().Throw<ArgumentException>().Which;
 
         ex.Message.Should().Contain("2048");
     }
@@ -165,10 +169,11 @@ public class SessionAttachmentDomainTests
     [InlineData("text/plain")]
     public void Create_WithInvalidContentType_Throws(string contentType)
     {
-        Assert.Throws<ArgumentException>(() =>
+        var act = () =>
             Api.BoundedContexts.GameManagement.Domain.Entities.SessionAttachment.SessionAttachment.Create(
                 _sessionId, _playerId, AttachmentType.BoardState,
-                ValidBlobUrl, contentType, ValidFileSize));
+                ValidBlobUrl, contentType, ValidFileSize);
+        act.Should().Throw<ArgumentException>();
     }
 
     [Theory]
@@ -177,39 +182,43 @@ public class SessionAttachmentDomainTests
     [InlineData(-1)]
     public void Create_WithFileSizeTooSmall_Throws(long fileSize)
     {
-        Assert.Throws<ArgumentException>(() =>
+        var act = () =>
             Api.BoundedContexts.GameManagement.Domain.Entities.SessionAttachment.SessionAttachment.Create(
                 _sessionId, _playerId, AttachmentType.BoardState,
-                ValidBlobUrl, ValidContentTypeJpeg, fileSize));
+                ValidBlobUrl, ValidContentTypeJpeg, fileSize);
+        act.Should().Throw<ArgumentException>();
     }
 
     [Fact]
     public void Create_WithFileSizeTooLarge_Throws()
     {
-        Assert.Throws<ArgumentException>(() =>
+        var act = () =>
             Api.BoundedContexts.GameManagement.Domain.Entities.SessionAttachment.SessionAttachment.Create(
                 _sessionId, _playerId, AttachmentType.BoardState,
-                ValidBlobUrl, ValidContentTypeJpeg, MaxFileSize + 1));
+                ValidBlobUrl, ValidContentTypeJpeg, MaxFileSize + 1);
+        act.Should().Throw<ArgumentException>();
     }
 
     [Fact]
     public void Create_WithCaptionTooLong_Throws()
     {
         var longCaption = new string('x', 201);
-        Assert.Throws<ArgumentException>(() =>
+        var act = () =>
             Api.BoundedContexts.GameManagement.Domain.Entities.SessionAttachment.SessionAttachment.Create(
                 _sessionId, _playerId, AttachmentType.BoardState,
                 ValidBlobUrl, ValidContentTypeJpeg, ValidFileSize,
-                caption: longCaption));
+                caption: longCaption);
+        act.Should().Throw<ArgumentException>();
     }
 
     [Fact]
     public void Create_WithInvalidAttachmentType_Throws()
     {
-        Assert.Throws<ArgumentException>(() =>
+        var act = () =>
             Api.BoundedContexts.GameManagement.Domain.Entities.SessionAttachment.SessionAttachment.Create(
                 _sessionId, _playerId, (AttachmentType)99,
-                ValidBlobUrl, ValidContentTypeJpeg, ValidFileSize));
+                ValidBlobUrl, ValidContentTypeJpeg, ValidFileSize);
+        act.Should().Throw<ArgumentException>();
     }
 
     #endregion
@@ -257,7 +266,7 @@ public class SessionAttachmentDomainTests
         var attachment = CreateValidAttachment();
         attachment.UpdateCaption(null);
 
-        Assert.Null(attachment.Caption);
+        attachment.Caption.Should().BeNull();
     }
 
     [Fact]
@@ -298,9 +307,9 @@ public class SessionAttachmentDomainTests
         var attachment = CreateValidAttachment();
         attachment.MarkAsDeleted();
 
-        Assert.True(attachment.IsDeleted);
-        Assert.NotNull(attachment.DeletedAt);
-        Assert.True(attachment.DeletedAt <= DateTime.UtcNow);
+        (attachment.IsDeleted).Should().BeTrue();
+        attachment.DeletedAt.Should().NotBeNull();
+        (attachment.DeletedAt <= DateTime.UtcNow).Should().BeTrue();
     }
 
     [Fact]

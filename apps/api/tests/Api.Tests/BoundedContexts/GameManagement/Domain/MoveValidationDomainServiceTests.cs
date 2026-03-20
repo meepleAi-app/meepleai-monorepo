@@ -11,6 +11,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using FluentAssertions;
 using Api.Tests.Constants;
 using Api.Tests.TestHelpers;
 
@@ -46,8 +47,9 @@ public class MoveValidationDomainServiceTests
         var loggerMock = new Mock<ILogger<MoveValidationDomainService>>();
 
         // Act & Assert
-        Assert.Throws<ArgumentNullException>(() =>
-            new MoveValidationDomainService(null!, loggerMock.Object));
+        var act = () =>
+            new MoveValidationDomainService(null!, loggerMock.Object);
+        act.Should().Throw<ArgumentNullException>();
     }
 
     [Fact]
@@ -57,8 +59,9 @@ public class MoveValidationDomainServiceTests
         using var context = CreateFreshDbContext();
 
         // Act & Assert
-        Assert.Throws<ArgumentNullException>(() =>
-            new MoveValidationDomainService(context, null!));
+        var act = () =>
+            new MoveValidationDomainService(context, null!);
+        act.Should().Throw<ArgumentNullException>();
     }
     [Fact]
     public async Task ValidateMoveAsync_WithNullSession_ThrowsArgumentNullException()
@@ -69,8 +72,9 @@ public class MoveValidationDomainServiceTests
         var move = new Move("Alice", "roll dice");
 
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentNullException>(() =>
-            service.ValidateMoveAsync(null!, move));
+        var act = () =>
+            service.ValidateMoveAsync(null!, move);
+        await act.Should().ThrowAsync<ArgumentNullException>();
     }
 
     [Fact]
@@ -82,8 +86,9 @@ public class MoveValidationDomainServiceTests
         var session = CreateDefaultSession();
 
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentNullException>(() =>
-            service.ValidateMoveAsync(session, null!));
+        var act = () =>
+            service.ValidateMoveAsync(session, null!);
+        await act.Should().ThrowAsync<ArgumentNullException>();
     }
 
     [Fact]
@@ -101,9 +106,9 @@ public class MoveValidationDomainServiceTests
         var result = await service.ValidateMoveAsync(session, move);
 
         // Assert
-        Assert.False(result.IsValid);
-        Assert.Contains("session is Completed", result.Errors[0]);
-        Assert.Equal(1.0, result.ConfidenceScore);
+        (result.IsValid).Should().BeFalse();
+        result.Errors[0].Should().Contain("session is Completed");
+        result.ConfidenceScore.Should().Be(1.0);
     }
 
     [Fact]
@@ -120,9 +125,9 @@ public class MoveValidationDomainServiceTests
         var result = await service.ValidateMoveAsync(session, move);
 
         // Assert
-        Assert.False(result.IsValid);
-        Assert.Contains("not in this session", result.Errors[0]);
-        Assert.Equal(1.0, result.ConfidenceScore);
+        (result.IsValid).Should().BeFalse();
+        result.Errors[0].Should().Contain("not in this session");
+        result.ConfidenceScore.Should().Be(1.0);
     }
     [Fact]
     public async Task ValidateMoveAsync_WithNoRuleSpec_ReturnsUncertain()
@@ -138,10 +143,10 @@ public class MoveValidationDomainServiceTests
         var result = await service.ValidateMoveAsync(session, move);
 
         // Assert
-        Assert.False(result.IsValid);
-        Assert.Contains("No rule specification available", result.Errors[0]);
-        Assert.Equal(0.0, result.ConfidenceScore);
-        Assert.Empty(result.ApplicableRules);
+        (result.IsValid).Should().BeFalse();
+        result.Errors[0].Should().Contain("No rule specification available");
+        result.ConfidenceScore.Should().Be(0.0);
+        result.ApplicableRules.Should().BeEmpty();
     }
 
     [Fact]
@@ -167,10 +172,12 @@ public class MoveValidationDomainServiceTests
         var result = await service.ValidateMoveAsync(session, move);
 
         // Assert
-        Assert.True(result.IsValid);
-        Assert.Equal(2, result.ApplicableRules.Count); // Should find rules about dice
+        (result.IsValid).Should().BeTrue();
+        result.ApplicableRules.Count.Should().Be(2); // Should find rules about dice
         Assert.All(result.ApplicableRules, rule =>
-            Assert.Contains("dice", rule.text.ToLowerInvariant()));
+            rule.text.ToLowerInvariant().Should().Contain("dice"));
+
+
     }
 
     [Fact]
@@ -199,9 +206,9 @@ public class MoveValidationDomainServiceTests
         var result = await service.ValidateMoveAsync(session, move, ruleSpecVersion: "v1");
 
         // Assert
-        Assert.True(result.IsValid);
-        Assert.Single(result.ApplicableRules);
-        Assert.Contains("Old dice rule", result.ApplicableRules[0].text);
+        (result.IsValid).Should().BeTrue();
+        result.ApplicableRules.Should().ContainSingle();
+        result.ApplicableRules[0].text.Should().Contain("Old dice rule");
     }
     [Fact]
     public async Task ValidateMoveAsync_WithComplexAction_FindsRelevantRules()
@@ -230,8 +237,8 @@ public class MoveValidationDomainServiceTests
         var result = await service.ValidateMoveAsync(session, move);
 
         // Assert
-        Assert.True(result.IsValid);
-        Assert.True(result.ApplicableRules.Count >= 2); // Should find trading and resources rules
+        (result.IsValid).Should().BeTrue();
+        (result.ApplicableRules.Count >= 2).Should().BeTrue(); // Should find trading and resources rules
     }
 
     [Fact]
@@ -256,8 +263,8 @@ public class MoveValidationDomainServiceTests
         var result = await service.ValidateMoveAsync(session, move);
 
         // Assert
-        Assert.True(result.IsValid);
-        Assert.Contains(result.ApplicableRules, r => r.text.Contains("center"));
+        (result.IsValid).Should().BeTrue();
+        result.ApplicableRules.Should().Contain(r => r.text.Contains("center"));
     }
     [Fact]
     public async Task ValidateMoveAsync_WithNoApplicableRules_ReturnsLowConfidence()
@@ -280,9 +287,9 @@ public class MoveValidationDomainServiceTests
         var result = await service.ValidateMoveAsync(session, move);
 
         // Assert
-        Assert.False(result.IsValid);
-        Assert.Contains("No specific rules found", result.Errors[0]);
-        Assert.True(result.ConfidenceScore < 0.5);
+        (result.IsValid).Should().BeFalse();
+        result.Errors[0].Should().Contain("No specific rules found");
+        (result.ConfidenceScore < 0.5).Should().BeTrue();
     }
 
     [Fact]
@@ -309,8 +316,8 @@ public class MoveValidationDomainServiceTests
         var result = await service.ValidateMoveAsync(session, move);
 
         // Assert
-        Assert.True(result.IsValid);
-        Assert.True(result.ConfidenceScore >= 0.7); // High confidence with multiple specific rules
+        (result.IsValid).Should().BeTrue();
+        (result.ConfidenceScore >= 0.7).Should().BeTrue(); // High confidence with multiple specific rules
     }
     [Fact]
     public async Task ValidateMoveAsync_DuringSetup_ProvidesSuggestions()
@@ -332,10 +339,10 @@ public class MoveValidationDomainServiceTests
         var result = await service.ValidateMoveAsync(session, move);
 
         // Assert
-        Assert.True(result.IsValid);
+        (result.IsValid).Should().BeTrue();
         if (result.Suggestions != null)
         {
-            Assert.Contains(result.Suggestions, s => s.Contains("setup"));
+            result.Suggestions.Should().Contain(s => s.Contains("setup"));
         }
     }
     [Fact]
@@ -360,10 +367,10 @@ public class MoveValidationDomainServiceTests
         var result = await service.ValidateMoveAsync(session, move);
 
         // Assert
-        Assert.True(result.IsValid || !result.IsValid); // Result depends on heuristics
+        (result.IsValid || !result.IsValid).Should().BeTrue(); // Result depends on heuristics
         if (result.Suggestions != null)
         {
-            Assert.Contains(result.Suggestions, s =>
+            result.Suggestions.Should().Contain(s =>
                 s.Contains("restriction", StringComparison.OrdinalIgnoreCase));
         }
     }

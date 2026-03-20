@@ -85,8 +85,7 @@ public class DocumentCollectionUserRestrictionTests : IAsyncLifetime
         }
 
         exception.Should().NotBeNull();
-        Assert.True(exception is DbUpdateException or InvalidOperationException,
-            $"Expected DbUpdateException or InvalidOperationException but got {exception.GetType().Name}: {exception.Message}");
+        (exception is DbUpdateException or InvalidOperationException).Should().BeTrue($"Expected DbUpdateException or InvalidOperationException but got {exception.GetType().Name}: {exception.Message}");
     }
 
     /// <summary>
@@ -130,8 +129,7 @@ public class DocumentCollectionUserRestrictionTests : IAsyncLifetime
         }
 
         exception.Should().NotBeNull();
-        Assert.True(exception is DbUpdateException or InvalidOperationException,
-            $"Expected DbUpdateException or InvalidOperationException but got {exception.GetType().Name}: {exception.Message}");
+        (exception is DbUpdateException or InvalidOperationException).Should().BeTrue($"Expected DbUpdateException or InvalidOperationException but got {exception.GetType().Name}: {exception.Message}");
     }
 
     [Fact]

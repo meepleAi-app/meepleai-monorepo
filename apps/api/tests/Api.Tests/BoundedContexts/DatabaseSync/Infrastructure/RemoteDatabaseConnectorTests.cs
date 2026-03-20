@@ -30,8 +30,8 @@ public class RemoteDatabaseConnectorTests
             "Host=localhost;Port=15432;Database=test;Username=test;Password=test",
             NullLogger<RemoteDatabaseConnector>.Instance);
 
-        await Assert.ThrowsAsync<InvalidOperationException>(
-            () => connector.OpenConnectionAsync());
+        var act = () => connector.OpenConnectionAsync();
+        await act.Should().ThrowAsync<InvalidOperationException>();
     }
 
     [Fact]
@@ -46,8 +46,8 @@ public class RemoteDatabaseConnectorTests
             "Host=localhost;Port=15432;Database=test;Username=test;Password=test",
             NullLogger<RemoteDatabaseConnector>.Instance);
 
-        var ex = await Assert.ThrowsAsync<InvalidOperationException>(
-            () => connector.OpenConnectionAsync());
+        var act2 = () => connector.OpenConnectionAsync();
+        var ex = (await act2.Should().ThrowAsync<InvalidOperationException>()).Which;
         ex.Message.Should().Contain("Error");
     }
 
@@ -63,18 +63,19 @@ public class RemoteDatabaseConnectorTests
             "Host=localhost;Port=15432;Database=test;Username=test;Password=test",
             NullLogger<RemoteDatabaseConnector>.Instance);
 
-        var ex = await Assert.ThrowsAsync<InvalidOperationException>(
-            () => connector.OpenConnectionAsync());
+        var act3 = () => connector.OpenConnectionAsync();
+        var ex = (await act3.Should().ThrowAsync<InvalidOperationException>()).Which;
         ex.Message.Should().Contain("Opening");
     }
 
     [Fact]
     public void Constructor_ThrowsArgumentNull_WhenTunnelClientIsNull()
     {
-        Assert.Throws<ArgumentNullException>(() => new RemoteDatabaseConnector(
+        var act4 = () => new RemoteDatabaseConnector(
             null!,
             "Host=localhost;Port=15432;Database=test;Username=test;Password=test",
-            NullLogger<RemoteDatabaseConnector>.Instance));
+            NullLogger<RemoteDatabaseConnector>.Instance);
+        act4.Should().Throw<ArgumentNullException>();
     }
 
     [Fact]
@@ -82,10 +83,11 @@ public class RemoteDatabaseConnectorTests
     {
         var tunnelClient = new Mock<ISshTunnelClient>();
 
-        Assert.Throws<ArgumentNullException>(() => new RemoteDatabaseConnector(
+        var act5 = () => new RemoteDatabaseConnector(
             tunnelClient.Object,
             null!,
-            NullLogger<RemoteDatabaseConnector>.Instance));
+            NullLogger<RemoteDatabaseConnector>.Instance);
+        act5.Should().Throw<ArgumentNullException>();
     }
 
     [Fact]
@@ -93,9 +95,10 @@ public class RemoteDatabaseConnectorTests
     {
         var tunnelClient = new Mock<ISshTunnelClient>();
 
-        Assert.Throws<ArgumentNullException>(() => new RemoteDatabaseConnector(
+        var act6 = () => new RemoteDatabaseConnector(
             tunnelClient.Object,
             "Host=localhost;Port=15432;Database=test;Username=test;Password=test",
-            null!));
+            null!);
+        act6.Should().Throw<ArgumentNullException>();
     }
 }

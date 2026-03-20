@@ -333,12 +333,12 @@ public class PdfUploadQuotaServiceTests
         // Verify TTL values (25 hours = 90000 seconds for daily)
         capturedDailyValues.Should().NotBeNull();
         capturedDailyValues.Should().ContainSingle();
-        Assert.Equal(90000, (int)capturedDailyValues[0]); // 25 * 3600
+        ((int)capturedDailyValues[0]).Should().Be(90000);
 
         // Verify TTL values (8 days = 691200 seconds for weekly)
         capturedWeeklyValues.Should().NotBeNull();
         capturedWeeklyValues.Should().ContainSingle();
-        Assert.Equal(691200, (int)capturedWeeklyValues[0]); // 8 * 24 * 3600
+        ((int)capturedWeeklyValues[0]).Should().Be(691200);
     }
 
     [Fact]
@@ -504,8 +504,9 @@ public class PdfUploadQuotaServiceTests
             .ThrowsAsync(new RedisConnectionException(ConnectionFailureType.UnableToConnect, "Connection failed"));
 
         // Act & Assert - Should throw (unlike CheckQuotaAsync which fails open)
-        await Assert.ThrowsAsync<RedisConnectionException>(() =>
-            _service.GetQuotaInfoAsync(userId, userTier, userRole));
+        var act = () =>
+            _service.GetQuotaInfoAsync(userId, userTier, userRole);
+        await act.Should().ThrowAsync<RedisConnectionException>();
     }
     [Theory]
     [InlineData("2024-12-29", "2024-W52")] // Sunday Dec 29, 2024 - Week 52 of 2024
@@ -1022,8 +1023,9 @@ public class PdfUploadQuotaServiceTests
             .ThrowsAsync(new RedisConnectionException(ConnectionFailureType.UnableToConnect, "Connection failed"));
 
         // Act & Assert - Should throw (unlike CheckPerGameQuotaAsync which fails open)
-        await Assert.ThrowsAsync<RedisConnectionException>(() =>
-            _service.GetPerGameQuotaInfoAsync(userId, gameId, userTier, userRole));
+        var act2 = () =>
+            _service.GetPerGameQuotaInfoAsync(userId, gameId, userTier, userRole);
+        await act2.Should().ThrowAsync<RedisConnectionException>();
     }
 
     [Fact]

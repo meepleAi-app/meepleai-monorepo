@@ -51,32 +51,37 @@ public class SessionChatMessageTests
     [Fact]
     public void CreateTextMessage_EmptySessionId_ThrowsArgumentException()
     {
-        Assert.Throws<ArgumentException>(() =>
-            SessionChatMessage.CreateTextMessage(Guid.Empty, _senderId, "content", 1));
+        var act = () =>
+            SessionChatMessage.CreateTextMessage(Guid.Empty, _senderId, "content", 1);
+        act.Should().Throw<ArgumentException>();
     }
 
     [Fact]
     public void CreateTextMessage_EmptySenderId_ThrowsArgumentException()
     {
-        Assert.Throws<ArgumentException>(() =>
-            SessionChatMessage.CreateTextMessage(_sessionId, Guid.Empty, "content", 1));
+        var act2 = () =>
+            SessionChatMessage.CreateTextMessage(_sessionId, Guid.Empty, "content", 1);
+        act2.Should().Throw<ArgumentException>();
     }
 
     [Fact]
     public void CreateTextMessage_EmptyContent_ThrowsArgumentException()
     {
-        Assert.Throws<ArgumentException>(() =>
-            SessionChatMessage.CreateTextMessage(_sessionId, _senderId, "", 1));
-        Assert.Throws<ArgumentException>(() =>
-            SessionChatMessage.CreateTextMessage(_sessionId, _senderId, "   ", 1));
+        var act3 = () =>
+            SessionChatMessage.CreateTextMessage(_sessionId, _senderId, "", 1);
+        act3.Should().Throw<ArgumentException>();
+        var act4 = () =>
+            SessionChatMessage.CreateTextMessage(_sessionId, _senderId, "   ", 1);
+        act4.Should().Throw<ArgumentException>();
     }
 
     [Fact]
     public void CreateTextMessage_ContentExceeds5000Chars_ThrowsArgumentException()
     {
         var longContent = new string('A', 5001);
-        Assert.Throws<ArgumentException>(() =>
-            SessionChatMessage.CreateTextMessage(_sessionId, _senderId, longContent, 1));
+        var act5 = () =>
+            SessionChatMessage.CreateTextMessage(_sessionId, _senderId, longContent, 1);
+        act5.Should().Throw<ArgumentException>();
     }
 
     [Fact]
@@ -106,15 +111,17 @@ public class SessionChatMessageTests
     [Fact]
     public void CreateSystemEvent_EmptySessionId_ThrowsArgumentException()
     {
-        Assert.Throws<ArgumentException>(() =>
-            SessionChatMessage.CreateSystemEvent(Guid.Empty, "content", 1));
+        var act6 = () =>
+            SessionChatMessage.CreateSystemEvent(Guid.Empty, "content", 1);
+        act6.Should().Throw<ArgumentException>();
     }
 
     [Fact]
     public void CreateSystemEvent_EmptyContent_ThrowsArgumentException()
     {
-        Assert.Throws<ArgumentException>(() =>
-            SessionChatMessage.CreateSystemEvent(_sessionId, "", 1));
+        var act7 = () =>
+            SessionChatMessage.CreateSystemEvent(_sessionId, "", 1);
+        act7.Should().Throw<ArgumentException>();
     }
 
     [Fact]
@@ -145,24 +152,28 @@ public class SessionChatMessageTests
     [Fact]
     public void CreateAgentResponse_EmptySessionId_ThrowsArgumentException()
     {
-        Assert.Throws<ArgumentException>(() =>
-            SessionChatMessage.CreateAgentResponse(Guid.Empty, "content", 1, "tutor"));
+        var act8 = () =>
+            SessionChatMessage.CreateAgentResponse(Guid.Empty, "content", 1, "tutor");
+        act8.Should().Throw<ArgumentException>();
     }
 
     [Fact]
     public void CreateAgentResponse_EmptyContent_ThrowsArgumentException()
     {
-        Assert.Throws<ArgumentException>(() =>
-            SessionChatMessage.CreateAgentResponse(_sessionId, "", 1, "tutor"));
+        var act9 = () =>
+            SessionChatMessage.CreateAgentResponse(_sessionId, "", 1, "tutor");
+        act9.Should().Throw<ArgumentException>();
     }
 
     [Fact]
     public void CreateAgentResponse_EmptyAgentType_ThrowsArgumentException()
     {
-        Assert.Throws<ArgumentException>(() =>
-            SessionChatMessage.CreateAgentResponse(_sessionId, "content", 1, ""));
-        Assert.Throws<ArgumentException>(() =>
-            SessionChatMessage.CreateAgentResponse(_sessionId, "content", 1, "   "));
+        var act10 = () =>
+            SessionChatMessage.CreateAgentResponse(_sessionId, "content", 1, "");
+        act10.Should().Throw<ArgumentException>();
+        var act11 = () =>
+            SessionChatMessage.CreateAgentResponse(_sessionId, "content", 1, "   ");
+        act11.Should().Throw<ArgumentException>();
     }
 
     [Fact]

@@ -82,8 +82,8 @@ public class ClaimGuestPlayerCommandHandlerTests
             .ReturnsAsync(guestMemory);
 
         // Act & Assert
-        await Assert.ThrowsAsync<InvalidOperationException>(
-            () => _handler.Handle(command, CancellationToken.None));
+        var act = () => _handler.Handle(command, CancellationToken.None);
+        await act.Should().ThrowAsync<InvalidOperationException>();
     }
 
     [Fact]
@@ -98,8 +98,8 @@ public class ClaimGuestPlayerCommandHandlerTests
             .ReturnsAsync((PlayerMemory?)null);
 
         // Act & Assert
-        await Assert.ThrowsAsync<NotFoundException>(
-            () => _handler.Handle(command, CancellationToken.None));
+        var act2 = () => _handler.Handle(command, CancellationToken.None);
+        await act2.Should().ThrowAsync<NotFoundException>();
     }
 
     [Fact]
@@ -113,7 +113,7 @@ public class ClaimGuestPlayerCommandHandlerTests
         var command = new ClaimGuestPlayerCommand(Guid.NewGuid(), Guid.NewGuid());
 
         // Act & Assert
-        await Assert.ThrowsAsync<InvalidOperationException>(
-            () => _handler.Handle(command, CancellationToken.None));
+        var act3 = () => _handler.Handle(command, CancellationToken.None);
+        await act3.Should().ThrowAsync<InvalidOperationException>();
     }
 }

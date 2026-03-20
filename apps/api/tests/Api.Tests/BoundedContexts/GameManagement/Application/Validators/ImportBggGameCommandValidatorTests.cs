@@ -28,7 +28,7 @@ public sealed class ImportBggGameCommandValidatorTests
         var result = await _sut.ValidateAsync(command);
 
         // Assert
-        Assert.True(result.IsValid);
+        (result.IsValid).Should().BeTrue();
     }
 
     [Fact]
@@ -43,8 +43,8 @@ public sealed class ImportBggGameCommandValidatorTests
         var result = await _sut.ValidateAsync(command);
 
         // Assert
-        Assert.False(result.IsValid);
-        Assert.Contains(result.Errors, e => e.PropertyName == nameof(ImportBggGameCommand.UserId));
+        (result.IsValid).Should().BeFalse();
+        result.Errors.Should().Contain(e => e.PropertyName == nameof(ImportBggGameCommand.UserId));
     }
 
     [Theory]
@@ -62,8 +62,8 @@ public sealed class ImportBggGameCommandValidatorTests
         var result = await _sut.ValidateAsync(command);
 
         // Assert
-        Assert.False(result.IsValid);
-        Assert.Contains(result.Errors, e => e.PropertyName == nameof(ImportBggGameCommand.BggId));
+        (result.IsValid).Should().BeFalse();
+        result.Errors.Should().Contain(e => e.PropertyName == nameof(ImportBggGameCommand.BggId));
     }
 
     [Theory]
@@ -81,7 +81,7 @@ public sealed class ImportBggGameCommandValidatorTests
         var result = await _sut.ValidateAsync(command);
 
         // Assert
-        Assert.True(result.IsValid);
+        (result.IsValid).Should().BeTrue();
     }
 
     [Fact]
@@ -96,7 +96,7 @@ public sealed class ImportBggGameCommandValidatorTests
         var result = await _sut.ValidateAsync(command);
 
         // Assert
-        Assert.False(result.IsValid);
+        (result.IsValid).Should().BeFalse();
         result.Errors.Count.Should().Be(2);
     }
 }

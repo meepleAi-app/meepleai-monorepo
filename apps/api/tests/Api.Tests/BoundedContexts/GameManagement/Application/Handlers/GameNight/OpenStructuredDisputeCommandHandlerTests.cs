@@ -151,8 +151,9 @@ public class OpenStructuredDisputeCommandHandlerTests
             "Some claim");
 
         // Act & Assert
-        var ex = await Assert.ThrowsAsync<InvalidOperationException>(
-            () => _openHandler.Handle(command, CancellationToken.None));
+        var act = 
+            () => _openHandler.Handle(command, CancellationToken.None);
+        var ex = (await act.Should().ThrowAsync<InvalidOperationException>()).Which;
 
         ex.Message.Should().Contain("disabled");
     }
@@ -170,8 +171,9 @@ public class OpenStructuredDisputeCommandHandlerTests
             "Some claim");
 
         // Act & Assert
-        await Assert.ThrowsAsync<NotFoundException>(
-            () => _openHandler.Handle(command, CancellationToken.None));
+        var act = 
+            () => _openHandler.Handle(command, CancellationToken.None);
+        await act.Should().ThrowAsync<NotFoundException>();
     }
 
     [Fact]
@@ -188,8 +190,9 @@ public class OpenStructuredDisputeCommandHandlerTests
             "Some claim");
 
         // Act & Assert
-        var ex = await Assert.ThrowsAsync<InvalidOperationException>(
-            () => _openHandler.Handle(command, CancellationToken.None));
+        var act = 
+            () => _openHandler.Handle(command, CancellationToken.None);
+        var ex = (await act.Should().ThrowAsync<InvalidOperationException>()).Which;
 
         ex.Message.Should().Contain("no associated game");
     }
@@ -255,7 +258,7 @@ public class OpenStructuredDisputeCommandHandlerTests
 
         // Assert
         dispute.RespondentPlayerId.Should().Be(DefaultRespondentPlayerId);
-        Assert.Equal("I disagree, the rule says otherwise", dispute.RespondentClaim);
+        dispute.RespondentClaim.Should().Be("I disagree, the rule says otherwise");
 
         _disputeRepositoryMock.Verify(
             x => x.UpdateAsync(dispute, It.IsAny<CancellationToken>()),
@@ -275,8 +278,9 @@ public class OpenStructuredDisputeCommandHandlerTests
             "Some response");
 
         // Act & Assert
-        await Assert.ThrowsAsync<NotFoundException>(
-            () => _respondHandler.Handle(command, CancellationToken.None));
+        var act = 
+            () => _respondHandler.Handle(command, CancellationToken.None);
+        await act.Should().ThrowAsync<NotFoundException>();
     }
 
     // =============================================
@@ -299,8 +303,8 @@ public class OpenStructuredDisputeCommandHandlerTests
         await _timeoutHandler.Handle(command, CancellationToken.None);
 
         // Assert — respondent should remain null
-        Assert.Null(dispute.RespondentPlayerId);
-        Assert.Null(dispute.RespondentClaim);
+        dispute.RespondentPlayerId.Should().BeNull();
+        dispute.RespondentClaim.Should().BeNull();
     }
 
     [Fact]
@@ -313,7 +317,8 @@ public class OpenStructuredDisputeCommandHandlerTests
         var command = new RespondentTimeoutCommand(disputeId);
 
         // Act & Assert
-        await Assert.ThrowsAsync<NotFoundException>(
-            () => _timeoutHandler.Handle(command, CancellationToken.None));
+        var act = 
+            () => _timeoutHandler.Handle(command, CancellationToken.None);
+        await act.Should().ThrowAsync<NotFoundException>();
     }
 }

@@ -8,6 +8,7 @@ using Moq.Protected;
 using System.Net;
 using System.Text;
 using System.Text.Json;
+using FluentAssertions;
 using Xunit;
 using Api.Tests.Constants;
 
@@ -28,9 +29,9 @@ public class OpenRouterLlmClientTests
         var client = CreateClient();
 
         // Act & Assert
-        Assert.True(client.SupportsModel("openai/gpt-4o-mini"));
-        Assert.True(client.SupportsModel("anthropic/claude-3.5-haiku"));
-        Assert.True(client.SupportsModel("meta-llama/llama-3.3-70b-instruct:free"));
+        client.SupportsModel("openai/gpt-4o-mini").Should().BeTrue();
+        client.SupportsModel("anthropic/claude-3.5-haiku").Should().BeTrue();
+        client.SupportsModel("meta-llama/llama-3.3-70b-instruct:free").Should().BeTrue();
     }
 
     [Fact]
@@ -40,8 +41,8 @@ public class OpenRouterLlmClientTests
         var client = CreateClient();
 
         // Act & Assert
-        Assert.False(client.SupportsModel("llama3:8b"));
-        Assert.False(client.SupportsModel("mistral"));
+        client.SupportsModel("llama3:8b").Should().BeFalse();
+        client.SupportsModel("mistral").Should().BeFalse();
     }
 
     [Fact]
@@ -51,7 +52,7 @@ public class OpenRouterLlmClientTests
         var client = CreateClient();
 
         // Assert
-        Assert.Equal("OpenRouter", client.ProviderName);
+        client.ProviderName.Should().Be("OpenRouter");
     }
 
     [Fact]
@@ -97,11 +98,11 @@ public class OpenRouterLlmClientTests
             TestCancellationToken);
 
         // Assert
-        Assert.True(result.Success);
-        Assert.Equal("Test response", result.Response);
-        Assert.Equal(15, result.Usage.TotalTokens);
-        Assert.Equal(10, result.Usage.PromptTokens);
-        Assert.Equal(5, result.Usage.CompletionTokens);
+        result.Success.Should().BeTrue();
+        result.Response.Should().Be("Test response");
+        result.Usage.TotalTokens.Should().Be(15);
+        result.Usage.PromptTokens.Should().Be(10);
+        result.Usage.CompletionTokens.Should().Be(5);
     }
 
     [Fact]
@@ -128,8 +129,8 @@ public class OpenRouterLlmClientTests
             "openai/gpt-4o-mini", "system", "prompt", 0.7, 100, TestCancellationToken);
 
         // Assert
-        Assert.False(result.Success);
-        Assert.Contains("401", result.ErrorMessage);
+        result.Success.Should().BeFalse();
+        result.ErrorMessage.Should().Contain("401");
     }
 
     [Fact]
@@ -151,8 +152,8 @@ public class OpenRouterLlmClientTests
             "openai/gpt-4o-mini", "system", "prompt", 0.7, 100, TestCancellationToken);
 
         // Assert
-        Assert.False(result.Success);
-        Assert.Contains("timed out", result.ErrorMessage, StringComparison.OrdinalIgnoreCase);
+        result.Success.Should().BeFalse();
+        result.ErrorMessage.Should().ContainEquivalentOf("timed out");
     }
 
     [Fact]
@@ -191,9 +192,9 @@ public class OpenRouterLlmClientTests
 
         // Assert - verify content chunks (usage chunk may follow)
         var contentChunks = chunks.Where(c => !string.IsNullOrEmpty(c.Content)).ToList();
-        Assert.Equal(2, contentChunks.Count);
-        Assert.Equal("Hello ", contentChunks[0].Content);
-        Assert.Equal("world", contentChunks[1].Content);
+        contentChunks.Count.Should().Be(2);
+        contentChunks[0].Content.Should().Be("Hello ");
+        contentChunks[1].Content.Should().Be("world");
     }
 
     [Fact]
@@ -242,8 +243,8 @@ public class OpenRouterLlmClientTests
             TestCancellationToken);
 
         // Assert
-        Assert.True(result.Success);
-        Assert.Contains("forma di L", result.Response);
+        result.Success.Should().BeTrue();
+        result.Response.Should().Contain("forma di L");
     }
 
     [Fact]
@@ -275,7 +276,7 @@ public class OpenRouterLlmClientTests
         var results = await Task.WhenAll(tasks);
 
         // Assert
-        Assert.Equal(5, results.Length);
+        results.Length.Should().Be(5);
         Assert.All(results, r => Assert.True(r.Success));
     }
 

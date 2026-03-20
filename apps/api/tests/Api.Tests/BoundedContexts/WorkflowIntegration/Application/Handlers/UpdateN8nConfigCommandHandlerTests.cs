@@ -96,8 +96,8 @@ public class UpdateN8NConfigCommandHandlerTests
             .ReturnsAsync((N8NConfiguration?)null);
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<DomainException>(
-            () => _handler.Handle(command, TestContext.Current.CancellationToken));
+        var act = () => _handler.Handle(command, TestContext.Current.CancellationToken);
+        var exception = (await act.Should().ThrowAsync<DomainException>()).Which;
         exception.Message.Should().Contain("not found");
         exception.Message.Should().Contain(configId.ToString());
 

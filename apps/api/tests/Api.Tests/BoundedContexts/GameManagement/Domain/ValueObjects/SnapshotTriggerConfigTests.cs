@@ -59,29 +59,33 @@ public class SnapshotTriggerConfigTests
     [Fact]
     public void Constructor_DebounceTooLow_ThrowsValidation()
     {
-        Assert.Throws<ValidationException>(() =>
-            new SnapshotTriggerConfig(debounceDurationSeconds: 0));
+        var act = () =>
+            new SnapshotTriggerConfig(debounceDurationSeconds: 0);
+        act.Should().Throw<ValidationException>();
     }
 
     [Fact]
     public void Constructor_DebounceTooHigh_ThrowsValidation()
     {
-        Assert.Throws<ValidationException>(() =>
-            new SnapshotTriggerConfig(debounceDurationSeconds: 301));
+        var act = () =>
+            new SnapshotTriggerConfig(debounceDurationSeconds: 301);
+        act.Should().Throw<ValidationException>();
     }
 
     [Fact]
     public void Constructor_MaxSnapshotsTooLow_ThrowsValidation()
     {
-        Assert.Throws<ValidationException>(() =>
-            new SnapshotTriggerConfig(maxSnapshotsPerMinute: 0));
+        var act = () =>
+            new SnapshotTriggerConfig(maxSnapshotsPerMinute: 0);
+        act.Should().Throw<ValidationException>();
     }
 
     [Fact]
     public void Constructor_MaxSnapshotsTooHigh_ThrowsValidation()
     {
-        Assert.Throws<ValidationException>(() =>
-            new SnapshotTriggerConfig(maxSnapshotsPerMinute: 61));
+        var act = () =>
+            new SnapshotTriggerConfig(maxSnapshotsPerMinute: 61);
+        act.Should().Throw<ValidationException>();
     }
 
     #endregion
@@ -93,8 +97,8 @@ public class SnapshotTriggerConfigTests
     {
         var config = SnapshotTriggerConfig.CreateDefault();
 
-        Assert.True(config.IsTriggerEnabled(SnapshotTrigger.TurnAdvanced));
-        Assert.True(config.IsTriggerEnabled(SnapshotTrigger.PhaseAdvanced));
+        (config.IsTriggerEnabled(SnapshotTrigger.TurnAdvanced)).Should().BeTrue();
+        (config.IsTriggerEnabled(SnapshotTrigger.PhaseAdvanced)).Should().BeTrue();
     }
 
     [Fact]
@@ -102,8 +106,8 @@ public class SnapshotTriggerConfigTests
     {
         var config = SnapshotTriggerConfig.CreateDefault();
 
-        Assert.False(config.IsTriggerEnabled(SnapshotTrigger.ScoreChanged));
-        Assert.False(config.IsTriggerEnabled(SnapshotTrigger.TimerExpired));
+        (config.IsTriggerEnabled(SnapshotTrigger.ScoreChanged)).Should().BeFalse();
+        (config.IsTriggerEnabled(SnapshotTrigger.TimerExpired)).Should().BeFalse();
     }
 
     #endregion
@@ -116,7 +120,7 @@ public class SnapshotTriggerConfigTests
         var config = new SnapshotTriggerConfig(debounceDurationSeconds: 5);
         var now = DateTime.UtcNow;
 
-        Assert.True(config.ShouldCreateSnapshot(null, now));
+        (config.ShouldCreateSnapshot(null, now)).Should().BeTrue();
     }
 
     [Fact]
@@ -126,7 +130,7 @@ public class SnapshotTriggerConfigTests
         var lastSnapshot = new DateTime(2026, 2, 19, 14, 0, 0, DateTimeKind.Utc);
         var now = lastSnapshot.AddSeconds(3); // Only 3 seconds, debounce is 5
 
-        Assert.False(config.ShouldCreateSnapshot(lastSnapshot, now));
+        (config.ShouldCreateSnapshot(lastSnapshot, now)).Should().BeFalse();
     }
 
     [Fact]
@@ -136,7 +140,7 @@ public class SnapshotTriggerConfigTests
         var lastSnapshot = new DateTime(2026, 2, 19, 14, 0, 0, DateTimeKind.Utc);
         var now = lastSnapshot.AddSeconds(6); // 6 seconds, debounce is 5
 
-        Assert.True(config.ShouldCreateSnapshot(lastSnapshot, now));
+        (config.ShouldCreateSnapshot(lastSnapshot, now)).Should().BeTrue();
     }
 
     [Fact]
@@ -146,7 +150,7 @@ public class SnapshotTriggerConfigTests
         var lastSnapshot = new DateTime(2026, 2, 19, 14, 0, 0, DateTimeKind.Utc);
         var now = lastSnapshot.AddSeconds(5); // Exactly 5 seconds
 
-        Assert.True(config.ShouldCreateSnapshot(lastSnapshot, now));
+        (config.ShouldCreateSnapshot(lastSnapshot, now)).Should().BeTrue();
     }
 
     #endregion

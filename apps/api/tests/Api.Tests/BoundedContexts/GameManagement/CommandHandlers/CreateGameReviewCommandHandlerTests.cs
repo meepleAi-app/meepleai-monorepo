@@ -51,7 +51,7 @@ public sealed class CreateGameReviewCommandHandlerTests
         var result = await _sut.Handle(command, CancellationToken.None);
 
         // Assert
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         result.GameId.Should().Be(gameId);
         result.AuthorName.Should().Be("Alice");
         result.Rating.Should().Be(8);
@@ -82,8 +82,9 @@ public sealed class CreateGameReviewCommandHandlerTests
         var command = new CreateGameReviewCommand(gameId, userId, "Alice", 9, "Updated thoughts");
 
         // Act & Assert
-        await Assert.ThrowsAsync<ConflictException>(() =>
-            _sut.Handle(command, CancellationToken.None));
+        var act = () =>
+            _sut.Handle(command, CancellationToken.None);
+        await act.Should().ThrowAsync<ConflictException>();
 
         _repositoryMock.Verify(r => r.AddAsync(It.IsAny<GameReview>(), It.IsAny<CancellationToken>()), Times.Never);
         _unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
@@ -93,8 +94,9 @@ public sealed class CreateGameReviewCommandHandlerTests
     public async Task Handle_ThrowsArgumentNullException_WhenCommandIsNull()
     {
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentNullException>(() =>
-            _sut.Handle(null!, CancellationToken.None));
+        var act = () =>
+            _sut.Handle(null!, CancellationToken.None);
+        await act.Should().ThrowAsync<ArgumentNullException>();
     }
 
     [Theory]

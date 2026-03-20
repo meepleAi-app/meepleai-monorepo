@@ -49,7 +49,7 @@ public sealed class GetGameStrategiesQueryHandlerTests
         var result = await _sut.Handle(query, CancellationToken.None);
 
         // Assert
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         result.Total.Should().Be(2);
         result.Items.Count.Should().Be(2);
         result.Page.Should().Be(1);
@@ -80,17 +80,18 @@ public sealed class GetGameStrategiesQueryHandlerTests
         var result = await _sut.Handle(query, CancellationToken.None);
 
         // Assert
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         result.Total.Should().Be(0);
-        Assert.Empty(result.Items);
+        result.Items.Should().BeEmpty();
     }
 
     [Fact]
     public async Task Handle_ThrowsArgumentNullException_WhenQueryIsNull()
     {
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentNullException>(() =>
-            _sut.Handle(null!, CancellationToken.None));
+        var act = () =>
+            _sut.Handle(null!, CancellationToken.None);
+        await act.Should().ThrowAsync<ArgumentNullException>();
     }
 
     [Theory]

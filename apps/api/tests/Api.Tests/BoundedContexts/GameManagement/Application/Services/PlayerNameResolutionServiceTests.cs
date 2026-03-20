@@ -28,10 +28,10 @@ public class PlayerNameResolutionServiceTests
         var result = _sut.ResolvePlayer("Marco Rossi", players);
 
         // Assert
-        Assert.True(result.IsResolved);
+        (result.IsResolved).Should().BeTrue();
         result.PlayerId.Should().Be(playerId);
         result.ResolvedName.Should().Be("Marco Rossi");
-        Assert.False(result.IsAmbiguous);
+        (result.IsAmbiguous).Should().BeFalse();
     }
 
     [Fact]
@@ -49,7 +49,7 @@ public class PlayerNameResolutionServiceTests
         var result = _sut.ResolvePlayer("Marco", players);
 
         // Assert
-        Assert.True(result.IsResolved);
+        (result.IsResolved).Should().BeTrue();
         result.PlayerId.Should().Be(playerId);
         result.ResolvedName.Should().Be("Marco Rossi");
     }
@@ -69,7 +69,7 @@ public class PlayerNameResolutionServiceTests
         var result = _sut.ResolvePlayer("marco rossi", players);
 
         // Assert
-        Assert.True(result.IsResolved);
+        (result.IsResolved).Should().BeTrue();
         result.PlayerId.Should().Be(playerId);
         result.ResolvedName.Should().Be("Marco Rossi");
     }
@@ -90,8 +90,8 @@ public class PlayerNameResolutionServiceTests
         var result = _sut.ResolvePlayer("Marco", players);
 
         // Assert
-        Assert.True(result.IsAmbiguous);
-        Assert.False(result.IsResolved);
+        (result.IsAmbiguous).Should().BeTrue();
+        (result.IsResolved).Should().BeFalse();
         result.Candidates.Count.Should().Be(2);
     }
 
@@ -109,8 +109,8 @@ public class PlayerNameResolutionServiceTests
         var result = _sut.ResolvePlayer("Giovanni", players);
 
         // Assert
-        Assert.False(result.IsResolved);
-        Assert.False(result.IsAmbiguous);
-        Assert.Null(result.PlayerId);
+        (result.IsResolved).Should().BeFalse();
+        (result.IsAmbiguous).Should().BeFalse();
+        result.PlayerId.Should().BeNull();
     }
 }

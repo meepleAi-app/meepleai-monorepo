@@ -56,8 +56,9 @@ public class ToolkitCommandHandlerTests
     {
         var handler = new CreateToolkitCommandHandler(_repoMock.Object, _uowMock.Object);
 
-        await Assert.ThrowsAsync<ArgumentNullException>(() =>
-            handler.Handle(null!, TestContext.Current.CancellationToken));
+        var act = () =>
+            handler.Handle(null!, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<ArgumentNullException>();
     }
 
     // ========================================================================
@@ -90,8 +91,9 @@ public class ToolkitCommandHandlerTests
         var handler = new UpdateToolkitCommandHandler(_repoMock.Object, _uowMock.Object);
         var command = new UpdateToolkitCommand(Guid.NewGuid(), "Name");
 
-        await Assert.ThrowsAsync<NotFoundException>(() =>
-            handler.Handle(command, TestContext.Current.CancellationToken));
+        var act2 = () =>
+            handler.Handle(command, TestContext.Current.CancellationToken);
+        await act2.Should().ThrowAsync<NotFoundException>();
     }
 
     // ========================================================================
@@ -123,8 +125,9 @@ public class ToolkitCommandHandlerTests
 
         var handler = new PublishToolkitCommandHandler(_repoMock.Object, _uowMock.Object);
 
-        await Assert.ThrowsAsync<NotFoundException>(() =>
-            handler.Handle(new PublishToolkitCommand(Guid.NewGuid()), TestContext.Current.CancellationToken));
+        var act3 = () =>
+            handler.Handle(new PublishToolkitCommand(Guid.NewGuid()), TestContext.Current.CancellationToken);
+        await act3.Should().ThrowAsync<NotFoundException>();
     }
 
     // ========================================================================
@@ -157,8 +160,9 @@ public class ToolkitCommandHandlerTests
         var handler = new AddDiceToolCommandHandler(_repoMock.Object, _uowMock.Object);
         var command = new AddDiceToolCommand(Guid.NewGuid(), "Dice", DiceType.D6, 1, null, true, null);
 
-        await Assert.ThrowsAsync<NotFoundException>(() =>
-            handler.Handle(command, TestContext.Current.CancellationToken));
+        var act4 = () =>
+            handler.Handle(command, TestContext.Current.CancellationToken);
+        await act4.Should().ThrowAsync<NotFoundException>();
     }
 
     // ========================================================================
@@ -191,8 +195,9 @@ public class ToolkitCommandHandlerTests
         var handler = new AddCounterToolCommandHandler(_repoMock.Object, _uowMock.Object);
         var command = new AddCounterToolCommand(Guid.NewGuid(), "HP", 0, 100, 0, false, null, null);
 
-        await Assert.ThrowsAsync<NotFoundException>(() =>
-            handler.Handle(command, TestContext.Current.CancellationToken));
+        var act5 = () =>
+            handler.Handle(command, TestContext.Current.CancellationToken);
+        await act5.Should().ThrowAsync<NotFoundException>();
     }
 
     // ========================================================================
@@ -225,8 +230,9 @@ public class ToolkitCommandHandlerTests
         var handler = new RemoveDiceToolCommandHandler(_repoMock.Object, _uowMock.Object);
         var command = new RemoveDiceToolCommand(toolkit.Id, "NonExistent");
 
-        await Assert.ThrowsAsync<NotFoundException>(() =>
-            handler.Handle(command, TestContext.Current.CancellationToken));
+        var act6 = () =>
+            handler.Handle(command, TestContext.Current.CancellationToken);
+        await act6.Should().ThrowAsync<NotFoundException>();
     }
 
     [Fact]
@@ -237,8 +243,9 @@ public class ToolkitCommandHandlerTests
 
         var handler = new RemoveDiceToolCommandHandler(_repoMock.Object, _uowMock.Object);
 
-        await Assert.ThrowsAsync<NotFoundException>(() =>
-            handler.Handle(new RemoveDiceToolCommand(Guid.NewGuid(), "X"), TestContext.Current.CancellationToken));
+        var act7 = () =>
+            handler.Handle(new RemoveDiceToolCommand(Guid.NewGuid(), "X"), TestContext.Current.CancellationToken);
+        await act7.Should().ThrowAsync<NotFoundException>();
     }
 
     // ========================================================================
@@ -271,8 +278,9 @@ public class ToolkitCommandHandlerTests
         var handler = new RemoveCounterToolCommandHandler(_repoMock.Object, _uowMock.Object);
         var command = new RemoveCounterToolCommand(toolkit.Id, "NonExistent");
 
-        await Assert.ThrowsAsync<NotFoundException>(() =>
-            handler.Handle(command, TestContext.Current.CancellationToken));
+        var act8 = () =>
+            handler.Handle(command, TestContext.Current.CancellationToken);
+        await act8.Should().ThrowAsync<NotFoundException>();
     }
 
     // ========================================================================
@@ -304,8 +312,9 @@ public class ToolkitCommandHandlerTests
 
         var handler = new SetScoringTemplateCommandHandler(_repoMock.Object, _uowMock.Object);
 
-        await Assert.ThrowsAsync<NotFoundException>(() =>
-            handler.Handle(new SetScoringTemplateCommand(Guid.NewGuid(), ["VP"], "VP", ScoreType.Points), TestContext.Current.CancellationToken));
+        var act9 = () =>
+            handler.Handle(new SetScoringTemplateCommand(Guid.NewGuid(), ["VP"], "VP", ScoreType.Points), TestContext.Current.CancellationToken);
+        await act9.Should().ThrowAsync<NotFoundException>();
     }
 
     // ========================================================================
@@ -337,8 +346,9 @@ public class ToolkitCommandHandlerTests
 
         var handler = new SetTurnTemplateCommandHandler(_repoMock.Object, _uowMock.Object);
 
-        await Assert.ThrowsAsync<NotFoundException>(() =>
-            handler.Handle(new SetTurnTemplateCommand(Guid.NewGuid(), TurnOrderType.Free, null), TestContext.Current.CancellationToken));
+        var act10 = () =>
+            handler.Handle(new SetTurnTemplateCommand(Guid.NewGuid(), TurnOrderType.Free, null), TestContext.Current.CancellationToken);
+        await act10.Should().ThrowAsync<NotFoundException>();
     }
 
     // ========================================================================

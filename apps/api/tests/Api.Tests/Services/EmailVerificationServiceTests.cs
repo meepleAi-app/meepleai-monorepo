@@ -367,8 +367,8 @@ public class EmailVerificationServiceTests
         var service = CreateService(dbContext);
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
-            () => service.ResendVerificationEmailAsync("test@example.com", TestCancellationToken));
+        var act = () => service.ResendVerificationEmailAsync("test@example.com", TestCancellationToken);
+        var exception = (await act.Should().ThrowAsync<InvalidOperationException>()).Which;
 
         exception.Message.Should().Contain("Too many");
     }

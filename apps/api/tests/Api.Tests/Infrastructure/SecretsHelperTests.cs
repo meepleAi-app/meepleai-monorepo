@@ -73,8 +73,9 @@ public class SecretsHelperTests
             .Build();
 
         // Act & Assert
-        Assert.Throws<FileNotFoundException>(() =>
-            SecretsHelper.GetSecretOrValue(config, "MY_SECRET", NullLogger.Instance));
+        var act = () =>
+            SecretsHelper.GetSecretOrValue(config, "MY_SECRET", NullLogger.Instance);
+        act.Should().Throw<FileNotFoundException>();
     }
 
     [Fact]
@@ -94,8 +95,9 @@ public class SecretsHelperTests
                 .Build();
 
             // Act & Assert - IOException wraps InvalidOperationException
-            Assert.Throws<IOException>(() =>
-                SecretsHelper.GetSecretOrValue(config, "MY_SECRET", NullLogger.Instance));
+            var act2 = () =>
+                SecretsHelper.GetSecretOrValue(config, "MY_SECRET", NullLogger.Instance);
+            act2.Should().Throw<IOException>();
         }
         finally
         {
@@ -110,8 +112,9 @@ public class SecretsHelperTests
         var config = new ConfigurationBuilder().Build();
 
         // Act & Assert
-        Assert.Throws<InvalidOperationException>(() =>
-            SecretsHelper.GetSecretOrValue(config, "MY_SECRET", NullLogger.Instance, required: true));
+        var act3 = () =>
+            SecretsHelper.GetSecretOrValue(config, "MY_SECRET", NullLogger.Instance, required: true);
+        act3.Should().Throw<InvalidOperationException>();
     }
 
     [Fact]

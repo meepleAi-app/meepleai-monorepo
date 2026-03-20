@@ -50,8 +50,9 @@ public class SessionSnapshotCommandHandlerTests
             _snapshotRepoMock.Object, _sessionRepoMock.Object, _attachmentRepoMock.Object, _uowMock.Object);
         var command = new CreateSnapshotCommand(Guid.NewGuid(), SnapshotTrigger.ManualSave, "Save", null);
 
-        await Assert.ThrowsAsync<NotFoundException>(() =>
-            handler.Handle(command, TestContext.Current.CancellationToken));
+        var act = () =>
+            handler.Handle(command, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<NotFoundException>();
     }
 
     [Fact]
@@ -72,7 +73,7 @@ public class SessionSnapshotCommandHandlerTests
         var result = await handler.Handle(command, TestContext.Current.CancellationToken);
 
         result.SnapshotIndex.Should().Be(0);
-        Assert.True(result.IsCheckpoint);
+        (result.IsCheckpoint).Should().BeTrue();
         result.SessionId.Should().Be(sessionId);
         result.TriggerType.Should().Be(SnapshotTrigger.ManualSave);
         result.TriggerDescription.Should().Be("Initial");
@@ -108,7 +109,7 @@ public class SessionSnapshotCommandHandlerTests
         var result = await handler.Handle(command, TestContext.Current.CancellationToken);
 
         result.SnapshotIndex.Should().Be(1);
-        Assert.False(result.IsCheckpoint);
+        (result.IsCheckpoint).Should().BeFalse();
     }
 
     [Fact]
@@ -135,7 +136,7 @@ public class SessionSnapshotCommandHandlerTests
 
         // Index 10 is a checkpoint (every 10)
         result.SnapshotIndex.Should().Be(10);
-        Assert.True(result.IsCheckpoint);
+        (result.IsCheckpoint).Should().BeTrue();
     }
 
     [Fact]
@@ -156,7 +157,7 @@ public class SessionSnapshotCommandHandlerTests
         var result = await handler.Handle(command, TestContext.Current.CancellationToken);
 
         result.SnapshotIndex.Should().Be(0);
-        Assert.True(result.IsCheckpoint);
+        (result.IsCheckpoint).Should().BeTrue();
 
         // Verify the snapshot was saved with empty JSON
         _snapshotRepoMock.Verify(r => r.AddAsync(

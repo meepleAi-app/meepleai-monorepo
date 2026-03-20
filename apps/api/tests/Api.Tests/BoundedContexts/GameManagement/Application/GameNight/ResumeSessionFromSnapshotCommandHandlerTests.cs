@@ -163,11 +163,11 @@ public sealed class ResumeSessionFromSnapshotCommandHandlerTests
 
         // Assert
         result.SessionId.Should().Be(TestSessionId);
-        Assert.NotNull(result.InviteCode);
+        result.InviteCode.Should().NotBeNull();
         result.InviteCode.Length.Should().Be(6);
-        Assert.StartsWith("/join/", result.ShareLink);
-        Assert.NotNull(result.AgentRecap);
-        Assert.Contains("Alice", result.AgentRecap, StringComparison.Ordinal);
+        result.ShareLink.Should().StartWith("/join/");
+        result.AgentRecap.Should().NotBeNull();
+        result.AgentRecap.Should().Contain("Alice");
     }
 
     [Fact]
@@ -188,9 +188,9 @@ public sealed class ResumeSessionFromSnapshotCommandHandlerTests
         await _sut.Handle(command, CancellationToken.None);
 
         // Assert
-        Assert.NotNull(capturedSession);
+        capturedSession.Should().NotBeNull();
         capturedSession!.Status.Should().Be(LiveSessionStatus.InProgress);
-        Assert.Null(capturedSession.PausedAt);
+        capturedSession.PausedAt.Should().BeNull();
     }
 
     [Fact]
@@ -211,7 +211,7 @@ public sealed class ResumeSessionFromSnapshotCommandHandlerTests
 
         invites.Should().ContainSingle();
         invites[0].CreatedByUserId.Should().Be(TestUserId);
-        Assert.False(invites[0].IsRevoked);
+        (invites[0].IsRevoked).Should().BeFalse();
         invites[0].CurrentUses.Should().Be(0);
     }
 
@@ -263,8 +263,8 @@ public sealed class ResumeSessionFromSnapshotCommandHandlerTests
         var result = await _sut.Handle(command, CancellationToken.None);
 
         // Assert — fallback message contains turn number
-        Assert.NotNull(result.AgentRecap);
-        Assert.Contains("5", result.AgentRecap, StringComparison.Ordinal);
+        result.AgentRecap.Should().NotBeNull();
+        result.AgentRecap.Should().Contain("5");
     }
 
     // ─── Error cases ──────────────────────────────────────────────────────────
@@ -284,8 +284,9 @@ public sealed class ResumeSessionFromSnapshotCommandHandlerTests
         var command = BuildCommand();
 
         // Act & Assert
-        await Assert.ThrowsAsync<NotFoundException>(() =>
-            _sut.Handle(command, CancellationToken.None));
+        var act = () =>
+            _sut.Handle(command, CancellationToken.None);
+        await act.Should().ThrowAsync<NotFoundException>();
     }
 
     [Fact]
@@ -301,8 +302,9 @@ public sealed class ResumeSessionFromSnapshotCommandHandlerTests
         var command = BuildCommand();
 
         // Act & Assert
-        await Assert.ThrowsAsync<NotFoundException>(() =>
-            _sut.Handle(command, CancellationToken.None));
+        var act = () =>
+            _sut.Handle(command, CancellationToken.None);
+        await act.Should().ThrowAsync<NotFoundException>();
     }
 
     [Fact]
@@ -328,8 +330,9 @@ public sealed class ResumeSessionFromSnapshotCommandHandlerTests
         var command = BuildCommand();
 
         // Act & Assert
-        await Assert.ThrowsAsync<ConflictException>(() =>
-            _sut.Handle(command, CancellationToken.None));
+        var act = () =>
+            _sut.Handle(command, CancellationToken.None);
+        await act.Should().ThrowAsync<ConflictException>();
     }
 
     [Fact]
@@ -351,8 +354,9 @@ public sealed class ResumeSessionFromSnapshotCommandHandlerTests
         var command = BuildCommand();
 
         // Act & Assert
-        await Assert.ThrowsAsync<ConflictException>(() =>
-            _sut.Handle(command, CancellationToken.None));
+        var act = () =>
+            _sut.Handle(command, CancellationToken.None);
+        await act.Should().ThrowAsync<ConflictException>();
     }
 
     [Fact]

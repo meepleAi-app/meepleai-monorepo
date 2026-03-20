@@ -165,8 +165,8 @@ public class PdfDocumentTests
         var document = CreateTestDocument(LanguageCode.English);
 
         // Act & Assert
-        var exception = Assert.Throws<ArgumentException>(
-            () => document.LinkToGame(Guid.Empty));
+        var act = () => document.LinkToGame(Guid.Empty);
+        var exception = act.Should().Throw<ArgumentException>().Which;
 
         exception.Message.Should().Contain("Game ID cannot be empty");
         exception.ParamName.Should().Be("gameId");
@@ -459,8 +459,9 @@ public class PdfDocumentTests
     {
         var document = CreateDefaultDocument();
 
-        Assert.Throws<ArgumentException>(() =>
-            document.LinkToBaseDocument(Guid.Empty));
+        var act2 = () =>
+            document.LinkToBaseDocument(Guid.Empty);
+        act2.Should().Throw<ArgumentException>();
     }
 
     [Fact]
@@ -468,8 +469,9 @@ public class PdfDocumentTests
     {
         var document = CreateDefaultDocument();
 
-        Assert.Throws<ArgumentException>(() =>
-            document.LinkToBaseDocument(document.Id));
+        var act3 = () =>
+            document.LinkToBaseDocument(document.Id);
+        act3.Should().Throw<ArgumentException>();
     }
 
     [Fact]

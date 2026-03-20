@@ -23,36 +23,41 @@ public class RoundScoreTests
     [Fact]
     public void Constructor_EmptyPlayerId_ThrowsValidationException()
     {
-        Assert.Throws<ValidationException>(() =>
-            new RoundScore(Guid.Empty, 1, "points", 10, DateTime.UtcNow));
+        var act = () =>
+            new RoundScore(Guid.Empty, 1, "points", 10, DateTime.UtcNow);
+        act.Should().Throw<ValidationException>();
     }
 
     [Fact]
     public void Constructor_ZeroRound_ThrowsValidationException()
     {
-        Assert.Throws<ValidationException>(() =>
-            new RoundScore(Guid.NewGuid(), 0, "points", 10, DateTime.UtcNow));
+        var act = () =>
+            new RoundScore(Guid.NewGuid(), 0, "points", 10, DateTime.UtcNow);
+        act.Should().Throw<ValidationException>();
     }
 
     [Fact]
     public void Constructor_EmptyDimension_ThrowsValidationException()
     {
-        Assert.Throws<ValidationException>(() =>
-            new RoundScore(Guid.NewGuid(), 1, "", 10, DateTime.UtcNow));
+        var act = () =>
+            new RoundScore(Guid.NewGuid(), 1, "", 10, DateTime.UtcNow);
+        act.Should().Throw<ValidationException>();
     }
 
     [Fact]
     public void Constructor_DimensionTooLong_ThrowsValidationException()
     {
-        Assert.Throws<ValidationException>(() =>
-            new RoundScore(Guid.NewGuid(), 1, new string('a', 51), 10, DateTime.UtcNow));
+        var act = () =>
+            new RoundScore(Guid.NewGuid(), 1, new string('a', 51), 10, DateTime.UtcNow);
+        act.Should().Throw<ValidationException>();
     }
 
     [Fact]
     public void Constructor_UnitTooLong_ThrowsValidationException()
     {
-        Assert.Throws<ValidationException>(() =>
-            new RoundScore(Guid.NewGuid(), 1, "points", 10, DateTime.UtcNow, new string('u', 21)));
+        var act = () =>
+            new RoundScore(Guid.NewGuid(), 1, "points", 10, DateTime.UtcNow, new string('u', 21));
+        act.Should().Throw<ValidationException>();
     }
 
     [Fact]

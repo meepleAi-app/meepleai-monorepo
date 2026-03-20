@@ -112,7 +112,7 @@ public class TallyDisputeVotesCommandHandlerTests
 
         // Assert
         dispute.FinalOutcome.Should().Be(DisputeOutcome.VerdictAccepted);
-        Assert.Null(dispute.OverrideRule);
+        dispute.OverrideRule.Should().BeNull();
 
         _disputeRepositoryMock.Verify(
             x => x.UpdateAsync(dispute, It.IsAny<CancellationToken>()),
@@ -179,7 +179,8 @@ public class TallyDisputeVotesCommandHandlerTests
         var command = new TallyDisputeVotesCommand(disputeId);
 
         // Act & Assert
-        await Assert.ThrowsAsync<NotFoundException>(
-            () => _handler.Handle(command, CancellationToken.None));
+        var act = 
+            () => _handler.Handle(command, CancellationToken.None);
+        await act.Should().ThrowAsync<NotFoundException>();
     }
 }

@@ -123,8 +123,8 @@ public class ValidatePlayerRoleBehaviorTests
             Task.FromResult(new KickParticipantResult(Guid.NewGuid(), "Should not reach"));
 
         // Act & Assert
-        var ex = await Assert.ThrowsAsync<ForbiddenException>(
-            () => _hostBehavior.Handle(command, next, TestContext.Current.CancellationToken));
+        var act = () => _hostBehavior.Handle(command, next, TestContext.Current.CancellationToken);
+        var ex = (await act.Should().ThrowAsync<ForbiddenException>()).Which;
         ex.Message.Should().Contain("Insufficient role");
         ex.Message.Should().Contain("Host");
         ex.Message.Should().Contain("Player");
@@ -146,8 +146,8 @@ public class ValidatePlayerRoleBehaviorTests
             Task.FromResult(new MarkPlayerReadyResult(true, 1, 1));
 
         // Act & Assert
-        var ex = await Assert.ThrowsAsync<ForbiddenException>(
-            () => _playerBehavior.Handle(command, next, TestContext.Current.CancellationToken));
+        var act2 = () => _playerBehavior.Handle(command, next, TestContext.Current.CancellationToken);
+        var ex = (await act2.Should().ThrowAsync<ForbiddenException>()).Which;
         ex.Message.Should().Contain("Insufficient role");
     }
 
@@ -164,8 +164,8 @@ public class ValidatePlayerRoleBehaviorTests
             Task.FromResult(new MarkPlayerReadyResult(true, 1, 1));
 
         // Act & Assert
-        await Assert.ThrowsAsync<NotFoundException>(
-            () => _playerBehavior.Handle(command, next, TestContext.Current.CancellationToken));
+        var act3 = () => _playerBehavior.Handle(command, next, TestContext.Current.CancellationToken);
+        await act3.Should().ThrowAsync<NotFoundException>();
     }
 
     [Fact]
@@ -185,8 +185,8 @@ public class ValidatePlayerRoleBehaviorTests
             Task.FromResult(new MarkPlayerReadyResult(true, 1, 1));
 
         // Act & Assert
-        var ex = await Assert.ThrowsAsync<NotFoundException>(
-            () => _playerBehavior.Handle(command, next, TestContext.Current.CancellationToken));
+        var act4 = () => _playerBehavior.Handle(command, next, TestContext.Current.CancellationToken);
+        var ex = (await act4.Should().ThrowAsync<NotFoundException>()).Which;
         ex.Message.Should().Contain("not a participant");
     }
 

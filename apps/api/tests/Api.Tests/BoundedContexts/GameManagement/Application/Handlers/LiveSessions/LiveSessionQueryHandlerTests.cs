@@ -110,18 +110,18 @@ public class LiveSessionQueryHandlerTests
         var result = await handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         result.Id.Should().Be(sessionId);
         result.GameName.Should().Be("Catan");
         result.CreatedByUserId.Should().Be(userId);
         result.Status.Should().Be(LiveSessionStatus.Created);
-        Assert.NotNull(result.SessionCode);
+        result.SessionCode.Should().NotBeNull();
         result.SessionCode.Length.Should().Be(6);
         result.CurrentTurnIndex.Should().Be(0);
-        Assert.Empty(result.Players);
-        Assert.Empty(result.Teams);
-        Assert.Empty(result.RoundScores);
-        Assert.NotNull(result.ScoringConfig);
+        result.Players.Should().BeEmpty();
+        result.Teams.Should().BeEmpty();
+        result.RoundScores.Should().BeEmpty();
+        result.ScoringConfig.Should().NotBeNull();
         result.ScoringConfig.EnabledDimensions.Should().Contain("points");
 
         _sessionRepositoryMock.Verify(
@@ -148,19 +148,19 @@ public class LiveSessionQueryHandlerTests
         var result = await handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         result.Players.Count.Should().Be(2);
 
         var player1 = result.Players.First(p => p.DisplayName == "Player 1");
         player1.Color.Should().Be(PlayerColor.Red);
         player1.Role.Should().Be(PlayerRole.Host);
-        Assert.True(player1.IsActive);
-        Assert.Null(player1.UserId);
+        (player1.IsActive).Should().BeTrue();
+        player1.UserId.Should().BeNull();
 
         var player2 = result.Players.First(p => p.DisplayName == "Player 2");
         player2.Color.Should().Be(PlayerColor.Blue);
         player2.Role.Should().Be(PlayerRole.Player);
-        Assert.True(player2.IsActive);
+        (player2.IsActive).Should().BeTrue();
     }
 
     [Fact]
@@ -177,8 +177,9 @@ public class LiveSessionQueryHandlerTests
         var query = new GetLiveSessionQuery(sessionId);
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<NotFoundException>(
-            () => handler.Handle(query, TestContext.Current.CancellationToken));
+        var act = 
+            () => handler.Handle(query, TestContext.Current.CancellationToken);
+        var exception = (await act.Should().ThrowAsync<NotFoundException>()).Which;
 
         exception.ResourceType.Should().Be("LiveGameSession");
         exception.ResourceId.Should().Be(sessionId.ToString());
@@ -191,8 +192,9 @@ public class LiveSessionQueryHandlerTests
         var handler = new GetLiveSessionQueryHandler(_sessionRepositoryMock.Object);
 
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentNullException>(
-            () => handler.Handle(null!, TestContext.Current.CancellationToken));
+        var act = 
+            () => handler.Handle(null!, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<ArgumentNullException>();
     }
 
     [Fact]
@@ -216,7 +218,7 @@ public class LiveSessionQueryHandlerTests
         var result = await handler.Handle(query, cancellationToken);
 
         // Assert
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         _sessionRepositoryMock.Verify(
             r => r.GetByIdAsync(sessionId, cancellationToken),
             Times.Once);
@@ -240,12 +242,12 @@ public class LiveSessionQueryHandlerTests
         var result = await handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         result.RoundScores.Count.Should().Be(3);
         Assert.All(result.RoundScores, score =>
         {
             score.Dimension.Should().Be("points");
-            Assert.True(score.Round >= 1);
+            (score.Round >= 1).Should().BeTrue();
         });
     }
 
@@ -271,7 +273,7 @@ public class LiveSessionQueryHandlerTests
         var result = await handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         result.Id.Should().Be(session.Id);
         result.SessionCode.Should().Be(sessionCode);
         result.GameName.Should().Be("Ticket to Ride");
@@ -296,8 +298,9 @@ public class LiveSessionQueryHandlerTests
         var query = new GetLiveSessionByCodeQuery(sessionCode);
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<NotFoundException>(
-            () => handler.Handle(query, TestContext.Current.CancellationToken));
+        var act = 
+            () => handler.Handle(query, TestContext.Current.CancellationToken);
+        var exception = (await act.Should().ThrowAsync<NotFoundException>()).Which;
 
         exception.ResourceType.Should().Be("LiveGameSession");
         exception.ResourceId.Should().Be($"code:{sessionCode}");
@@ -310,8 +313,9 @@ public class LiveSessionQueryHandlerTests
         var handler = new GetLiveSessionByCodeQueryHandler(_sessionRepositoryMock.Object);
 
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentNullException>(
-            () => handler.Handle(null!, TestContext.Current.CancellationToken));
+        var act = 
+            () => handler.Handle(null!, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<ArgumentNullException>();
     }
 
     [Fact]
@@ -333,7 +337,7 @@ public class LiveSessionQueryHandlerTests
         var result = await handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         result.Players.Count.Should().Be(3);
     }
 
@@ -360,7 +364,7 @@ public class LiveSessionQueryHandlerTests
         var result = await handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         result.Count.Should().Be(2);
 
         var summary1 = result.First(s => s.GameName == "Catan");
@@ -395,8 +399,8 @@ public class LiveSessionQueryHandlerTests
         var result = await handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Empty(result);
+        result.Should().NotBeNull();
+        result.Should().BeEmpty();
     }
 
     [Fact]
@@ -406,8 +410,9 @@ public class LiveSessionQueryHandlerTests
         var handler = new GetUserActiveSessionsQueryHandler(_sessionRepositoryMock.Object);
 
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentNullException>(
-            () => handler.Handle(null!, TestContext.Current.CancellationToken));
+        var act = 
+            () => handler.Handle(null!, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<ArgumentNullException>();
     }
 
     [Fact]
@@ -478,13 +483,13 @@ public class LiveSessionQueryHandlerTests
         var result = await handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         result.Count.Should().Be(3);
 
         // Verify score values are mapped correctly
-        Assert.Contains(result, s => s.Value == 10 && s.Round == 1);
-        Assert.Contains(result, s => s.Value == 15 && s.Round == 1);
-        Assert.Contains(result, s => s.Value == 20 && s.Round == 2);
+        result.Should().Contain(s => s.Value == 10 && s.Round == 1);
+        result.Should().Contain(s => s.Value == 15 && s.Round == 1);
+        result.Should().Contain(s => s.Value == 20 && s.Round == 2);
 
         Assert.All(result, score =>
         {
@@ -516,8 +521,8 @@ public class LiveSessionQueryHandlerTests
         var result = await handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Empty(result);
+        result.Should().NotBeNull();
+        result.Should().BeEmpty();
     }
 
     [Fact]
@@ -534,8 +539,9 @@ public class LiveSessionQueryHandlerTests
         var query = new GetSessionScoresQuery(sessionId);
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<NotFoundException>(
-            () => handler.Handle(query, TestContext.Current.CancellationToken));
+        var act = 
+            () => handler.Handle(query, TestContext.Current.CancellationToken);
+        var exception = (await act.Should().ThrowAsync<NotFoundException>()).Which;
 
         exception.ResourceType.Should().Be("LiveGameSession");
         exception.ResourceId.Should().Be(sessionId.ToString());
@@ -548,8 +554,9 @@ public class LiveSessionQueryHandlerTests
         var handler = new GetSessionScoresQueryHandler(_sessionRepositoryMock.Object);
 
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentNullException>(
-            () => handler.Handle(null!, TestContext.Current.CancellationToken));
+        var act = 
+            () => handler.Handle(null!, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<ArgumentNullException>();
     }
 
     // ========================================================================
@@ -574,15 +581,15 @@ public class LiveSessionQueryHandlerTests
         var result = await handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         result.Count.Should().Be(3);
 
         // First player should be Host (auto-assigned)
         var host = result.First(p => p.DisplayName == "Player 1");
         host.Role.Should().Be(PlayerRole.Host);
         host.Color.Should().Be(PlayerColor.Red);
-        Assert.True(host.IsActive);
-        Assert.Null(host.UserId);
+        (host.IsActive).Should().BeTrue();
+        host.UserId.Should().BeNull();
         host.Id.Should().NotBe(Guid.Empty);
         host.JoinedAt.Should().NotBe(default);
 
@@ -618,8 +625,8 @@ public class LiveSessionQueryHandlerTests
         var result = await handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Empty(result);
+        result.Should().NotBeNull();
+        result.Should().BeEmpty();
     }
 
     [Fact]
@@ -636,8 +643,9 @@ public class LiveSessionQueryHandlerTests
         var query = new GetSessionPlayersQuery(sessionId);
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<NotFoundException>(
-            () => handler.Handle(query, TestContext.Current.CancellationToken));
+        var act = 
+            () => handler.Handle(query, TestContext.Current.CancellationToken);
+        var exception = (await act.Should().ThrowAsync<NotFoundException>()).Which;
 
         exception.ResourceType.Should().Be("LiveGameSession");
         exception.ResourceId.Should().Be(sessionId.ToString());
@@ -650,8 +658,9 @@ public class LiveSessionQueryHandlerTests
         var handler = new GetSessionPlayersQueryHandler(_sessionRepositoryMock.Object);
 
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentNullException>(
-            () => handler.Handle(null!, TestContext.Current.CancellationToken));
+        var act = 
+            () => handler.Handle(null!, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<ArgumentNullException>();
     }
 
     [Fact]
@@ -687,39 +696,44 @@ public class LiveSessionQueryHandlerTests
     public void GetLiveSessionQueryHandler_NullRepository_ThrowsArgumentNullException()
     {
         // Act & Assert
-        Assert.Throws<ArgumentNullException>(
-            () => new GetLiveSessionQueryHandler(null!));
+        var act = 
+            () => new GetLiveSessionQueryHandler(null!);
+        act.Should().Throw<ArgumentNullException>();
     }
 
     [Fact]
     public void GetLiveSessionByCodeQueryHandler_NullRepository_ThrowsArgumentNullException()
     {
         // Act & Assert
-        Assert.Throws<ArgumentNullException>(
-            () => new GetLiveSessionByCodeQueryHandler(null!));
+        var act = 
+            () => new GetLiveSessionByCodeQueryHandler(null!);
+        act.Should().Throw<ArgumentNullException>();
     }
 
     [Fact]
     public void GetUserActiveSessionsQueryHandler_NullRepository_ThrowsArgumentNullException()
     {
         // Act & Assert
-        Assert.Throws<ArgumentNullException>(
-            () => new GetUserActiveSessionsQueryHandler(null!));
+        var act = 
+            () => new GetUserActiveSessionsQueryHandler(null!);
+        act.Should().Throw<ArgumentNullException>();
     }
 
     [Fact]
     public void GetSessionScoresQueryHandler_NullRepository_ThrowsArgumentNullException()
     {
         // Act & Assert
-        Assert.Throws<ArgumentNullException>(
-            () => new GetSessionScoresQueryHandler(null!));
+        var act = 
+            () => new GetSessionScoresQueryHandler(null!);
+        act.Should().Throw<ArgumentNullException>();
     }
 
     [Fact]
     public void GetSessionPlayersQueryHandler_NullRepository_ThrowsArgumentNullException()
     {
         // Act & Assert
-        Assert.Throws<ArgumentNullException>(
-            () => new GetSessionPlayersQueryHandler(null!));
+        var act = 
+            () => new GetSessionPlayersQueryHandler(null!);
+        act.Should().Throw<ArgumentNullException>();
     }
 }

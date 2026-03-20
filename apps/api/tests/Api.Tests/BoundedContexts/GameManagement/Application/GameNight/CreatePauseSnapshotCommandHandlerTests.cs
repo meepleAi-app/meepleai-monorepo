@@ -16,6 +16,7 @@ using MediatR;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.GameManagement.Application.GameNight;
 
@@ -145,7 +146,7 @@ public sealed class CreatePauseSnapshotCommandHandlerTests
         var snapshotId = await _sut.Handle(command, CancellationToken.None);
 
         // Assert
-        Assert.NotEqual(Guid.Empty, snapshotId);
+        snapshotId.Should().NotBe(Guid.Empty);
     }
 
     [Fact]
@@ -166,11 +167,11 @@ public sealed class CreatePauseSnapshotCommandHandlerTests
         await _sut.Handle(command, CancellationToken.None);
 
         // Assert
-        Assert.NotNull(capturedSnapshot);
-        Assert.Equal(TestSessionId, capturedSnapshot!.LiveGameSessionId);
-        Assert.Equal(TestUserId, capturedSnapshot.SavedByUserId);
-        Assert.False(capturedSnapshot.IsAutoSave);
-        Assert.True(capturedSnapshot.CurrentTurn >= 1, "CurrentTurn should be at least 1 after Start()");
+        capturedSnapshot.Should().NotBeNull();
+        capturedSnapshot!.LiveGameSessionId.Should().Be(TestSessionId);
+        capturedSnapshot.SavedByUserId.Should().Be(TestUserId);
+        (capturedSnapshot.IsAutoSave).Should().BeFalse();
+        (capturedSnapshot.CurrentTurn >= 1).Should().BeTrue("CurrentTurn should be at least 1 after Start()");
     }
 
     [Fact]
@@ -190,8 +191,8 @@ public sealed class CreatePauseSnapshotCommandHandlerTests
         await _sut.Handle(command, CancellationToken.None);
 
         // Assert
-        Assert.NotNull(capturedSession);
-        Assert.Equal(LiveSessionStatus.Paused, capturedSession!.Status);
+        capturedSession.Should().NotBeNull();
+        capturedSession!.Status.Should().Be(LiveSessionStatus.Paused);
     }
 
     [Fact]
@@ -214,9 +215,9 @@ public sealed class CreatePauseSnapshotCommandHandlerTests
         await _sut.Handle(command, CancellationToken.None);
 
         // Assert
-        Assert.NotNull(capturedSnapshot);
-        Assert.Single(capturedSnapshot!.PlayerScores);
-        Assert.Equal("Alice", capturedSnapshot.PlayerScores[0].PlayerName);
+        capturedSnapshot.Should().NotBeNull();
+        capturedSnapshot!.PlayerScores.Should().ContainSingle();
+        capturedSnapshot.PlayerScores[0].PlayerName.Should().Be("Alice");
     }
 
     [Fact]
@@ -238,8 +239,8 @@ public sealed class CreatePauseSnapshotCommandHandlerTests
         await _sut.Handle(command, CancellationToken.None);
 
         // Assert
-        Assert.NotNull(capturedSnapshot);
-        Assert.Equal(2, capturedSnapshot!.AttachmentIds.Count);
+        capturedSnapshot.Should().NotBeNull();
+        capturedSnapshot!.AttachmentIds.Count.Should().Be(2);
         Assert.All(photoIds, id => Assert.Contains(id, capturedSnapshot.AttachmentIds));
     }
 
@@ -328,8 +329,9 @@ public sealed class CreatePauseSnapshotCommandHandlerTests
         var command = BuildCommand();
 
         // Act & Assert
-        await Assert.ThrowsAsync<NotFoundException>(() =>
-            _sut.Handle(command, CancellationToken.None));
+        var act = () =>
+            _sut.Handle(command, CancellationToken.None);
+        await act.Should().ThrowAsync<NotFoundException>();
     }
 
     [Fact]
@@ -349,8 +351,9 @@ public sealed class CreatePauseSnapshotCommandHandlerTests
         var command = BuildCommand();
 
         // Act & Assert
-        await Assert.ThrowsAsync<ConflictException>(() =>
-            _sut.Handle(command, CancellationToken.None));
+        var act = () =>
+            _sut.Handle(command, CancellationToken.None);
+        await act.Should().ThrowAsync<ConflictException>();
     }
 
     [Fact]
@@ -375,8 +378,9 @@ public sealed class CreatePauseSnapshotCommandHandlerTests
         var command = BuildCommand();
 
         // Act & Assert
-        await Assert.ThrowsAsync<ConflictException>(() =>
-            _sut.Handle(command, CancellationToken.None));
+        var act = () =>
+            _sut.Handle(command, CancellationToken.None);
+        await act.Should().ThrowAsync<ConflictException>();
     }
 
     [Fact]
@@ -411,11 +415,12 @@ public sealed class CreatePauseSnapshotCommandHandlerTests
         var command = BuildCommand();
 
         // Act & Assert
-        var ex = await Assert.ThrowsAsync<ConflictException>(() =>
-            _sut.Handle(command, CancellationToken.None));
+        var act = () =>
+            _sut.Handle(command, CancellationToken.None);
+        var ex = (await act.Should().ThrowAsync<ConflictException>()).Which;
 
-        Assert.Contains("salvataggio della sessione", ex.Message, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("Premium", ex.Message, StringComparison.OrdinalIgnoreCase);
+        ex.Message.Should().ContainEquivalentOf("salvataggio della sessione");
+        ex.Message.Should().ContainEquivalentOf("Premium");
 
         // Snapshot repository must not be called when tier blocks the save
         _snapshotRepoMock.Verify(
@@ -434,7 +439,7 @@ public sealed class CreatePauseSnapshotCommandHandlerTests
         var snapshotId = await _sut.Handle(command, CancellationToken.None);
 
         // Assert — snapshot was created successfully
-        Assert.NotEqual(Guid.Empty, snapshotId);
+        snapshotId.Should().NotBe(Guid.Empty);
         _snapshotRepoMock.Verify(
             r => r.AddAsync(It.IsAny<PauseSnapshot>(), It.IsAny<CancellationToken>()),
             Times.Once);

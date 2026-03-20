@@ -339,6 +339,6 @@ public class EmailVerificationIntegrationTests : IAsyncLifetime
         // Should have 3 tokens total, 2 invalidated, 1 active
         allTokens.Count.Should().Be(3);
         allTokens.Count(t => t.InvalidatedAt != null).Should().Be(2);
-        Assert.Equal(0, allTokens.Count(t => t.VerifiedAt != null)); // None verified yet
+        allTokens.Count(t => t.VerifiedAt != null).Should().Be(0);
     }
 }

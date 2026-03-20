@@ -89,7 +89,7 @@ public class HandleSlackInteractionCommandHandlerTests
 
         // Assert
         result.Success.Should().BeFalse();
-        Assert.Contains("expired", result.ResponseMessage, StringComparison.OrdinalIgnoreCase);
+        result.ResponseMessage.Should().ContainEquivalentOf("expired");
     }
 
     [Fact]
@@ -155,7 +155,7 @@ public class HandleSlackInteractionCommandHandlerTests
 
         // Assert
         result.Success.Should().BeTrue();
-        Assert.Contains("approved", result.ResponseMessage!, StringComparison.OrdinalIgnoreCase);
+        result.ResponseMessage!.Should().ContainEquivalentOf("approved");
 
         var dispatched = capturedCommand.Should().BeOfType<ApproveShareRequestCommand>().Subject;
         dispatched.ShareRequestId.Should().Be(resourceId);

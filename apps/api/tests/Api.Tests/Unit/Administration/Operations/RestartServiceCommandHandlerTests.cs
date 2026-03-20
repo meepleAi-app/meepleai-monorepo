@@ -98,8 +98,8 @@ public sealed class RestartServiceCommandHandlerTests
             .ReturnsAsync(regularAdmin);
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<ConflictException>(
-            () => _handler.Handle(command, CancellationToken.None));
+        var act = () => _handler.Handle(command, CancellationToken.None);
+        var exception = (await act.Should().ThrowAsync<ConflictException>()).Which;
 
         exception.Message.Should().Be("Only SuperAdmin can restart services");
 
@@ -122,10 +122,10 @@ public sealed class RestartServiceCommandHandlerTests
             .ReturnsAsync((User?)null);
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<NotFoundException>(
-            () => _handler.Handle(command, CancellationToken.None));
+        var act2 = () => _handler.Handle(command, CancellationToken.None);
+        var exception = (await act2.Should().ThrowAsync<NotFoundException>()).Which;
 
-        Assert.Contains(adminId.ToString(), exception.Message, StringComparison.Ordinal);
+        exception.Message.Should().ContainEquivalentOf(adminId.ToString());
     }
 
     private static User CreateSuperAdminUser(Guid id)

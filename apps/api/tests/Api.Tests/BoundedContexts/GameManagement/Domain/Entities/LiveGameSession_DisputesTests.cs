@@ -64,7 +64,7 @@ public class LiveGameSession_DisputesTests
         session.Disputes.Should().ContainSingle();
         session.Disputes[0].RaisedByPlayerName.Should().Be("Marco");
         session.Disputes[0].Description.Should().Be("Can I play 2 cards per turn?");
-        Assert.Equal("No, rule says 1 card per turn.", session.Disputes[0].Verdict);
+        session.Disputes[0].Verdict.Should().Be("No, rule says 1 card per turn.");
     }
 
     [Fact]
@@ -81,8 +81,8 @@ public class LiveGameSession_DisputesTests
 
         // Assert
         session.Disputes.Count.Should().Be(2);
-        Assert.Contains(session.Disputes, d => d.RaisedByPlayerName == "Marco");
-        Assert.Contains(session.Disputes, d => d.RaisedByPlayerName == "Luca");
+        session.Disputes.Should().Contain(d => d.RaisedByPlayerName == "Marco");
+        session.Disputes.Should().Contain(d => d.RaisedByPlayerName == "Luca");
     }
 
     [Fact]
@@ -102,7 +102,7 @@ public class LiveGameSession_DisputesTests
         var session = CreateInProgressSession();
 
         // Act & Assert
-        Assert.IsAssignableFrom<IReadOnlyList<RuleDisputeEntry>>(session.Disputes);
+        session.Disputes.Should().BeAssignableTo<IReadOnlyList<RuleDisputeEntry>>();
     }
 
     [Fact]
@@ -112,7 +112,7 @@ public class LiveGameSession_DisputesTests
         var session = CreateInProgressSession();
 
         // Assert
-        Assert.Empty(session.Disputes);
+        session.Disputes.Should().BeEmpty();
     }
 
     [Fact]
@@ -230,7 +230,7 @@ public class LiveGameSession_DisputesTests
         session.Resume(_timeProvider);
 
         // Assert
-        Assert.Null(session.PausedAt);
+        session.PausedAt.Should().BeNull();
     }
 
     [Fact]
@@ -274,11 +274,11 @@ public class LiveGameSession_DisputesTests
         // Act & Assert - full cycle
         session.Pause(_timeProvider);
         session.Status.Should().Be(LiveSessionStatus.Paused);
-        Assert.NotNull(session.PausedAt);
+        session.PausedAt.Should().NotBeNull();
 
         session.Resume(_timeProvider);
         session.Status.Should().Be(LiveSessionStatus.InProgress);
-        Assert.Null(session.PausedAt);
+        session.PausedAt.Should().BeNull();
 
         // Can pause again
         session.Pause(_timeProvider);

@@ -47,7 +47,7 @@ public class ResolveRuleCommentCommandHandlerTests
             loggerMock.Object);
 
         // Assert
-        Assert.NotNull(handler);
+        handler.Should().NotBeNull();
     }
 
     [Fact]
@@ -58,11 +58,12 @@ public class ResolveRuleCommentCommandHandlerTests
         var loggerMock = new Mock<ILogger<ResolveRuleCommentCommandHandler>>();
 
         // Act & Assert
-        Assert.Throws<ArgumentNullException>(() =>
+        var act = () =>
             new ResolveRuleCommentCommandHandler(
                 null!,
                 timeProviderMock.Object,
-                loggerMock.Object));
+                loggerMock.Object);
+        act.Should().Throw<ArgumentNullException>();
     }
 
     [Fact]
@@ -73,11 +74,12 @@ public class ResolveRuleCommentCommandHandlerTests
         var loggerMock = new Mock<ILogger<ResolveRuleCommentCommandHandler>>();
 
         // Act & Assert
-        Assert.Throws<ArgumentNullException>(() =>
+        var act = () =>
             new ResolveRuleCommentCommandHandler(
                 context,
                 null!,
-                loggerMock.Object));
+                loggerMock.Object);
+        act.Should().Throw<ArgumentNullException>();
     }
 
     [Fact]
@@ -88,11 +90,12 @@ public class ResolveRuleCommentCommandHandlerTests
         var timeProviderMock = CreateTimeProviderMock();
 
         // Act & Assert
-        Assert.Throws<ArgumentNullException>(() =>
+        var act = () =>
             new ResolveRuleCommentCommandHandler(
                 context,
                 timeProviderMock.Object,
-                null!));
+                null!);
+        act.Should().Throw<ArgumentNullException>();
     }
     [Fact]
     public void Command_AsOwner_ConstructsCorrectly()
@@ -110,8 +113,8 @@ public class ResolveRuleCommentCommandHandlerTests
         // Assert
         command.CommentId.Should().Be(commentId);
         command.ResolvedByUserId.Should().Be(userId);
-        Assert.False(command.IsAdmin);
-        Assert.False(command.ResolveReplies);
+        (command.IsAdmin).Should().BeFalse();
+        (command.ResolveReplies).Should().BeFalse();
     }
 
     [Fact]
@@ -130,7 +133,7 @@ public class ResolveRuleCommentCommandHandlerTests
         // Assert
         command.CommentId.Should().Be(commentId);
         command.ResolvedByUserId.Should().Be(adminUserId);
-        Assert.True(command.IsAdmin);
+        (command.IsAdmin).Should().BeTrue();
     }
 
     [Fact]
@@ -144,7 +147,7 @@ public class ResolveRuleCommentCommandHandlerTests
             ResolveReplies: true);
 
         // Assert
-        Assert.True(command.ResolveReplies);
+        (command.ResolveReplies).Should().BeTrue();
     }
 
     [Fact]
@@ -159,8 +162,8 @@ public class ResolveRuleCommentCommandHandlerTests
             ResolvedByUserId: userId);
 
         // Assert - Both default to false
-        Assert.False(command.IsAdmin);
-        Assert.False(command.ResolveReplies);
+        (command.IsAdmin).Should().BeFalse();
+        (command.ResolveReplies).Should().BeFalse();
     }
 
     [Fact]
@@ -174,8 +177,8 @@ public class ResolveRuleCommentCommandHandlerTests
             ResolveReplies: true);
 
         // Assert
-        Assert.True(command.IsAdmin);
-        Assert.True(command.ResolveReplies);
+        (command.IsAdmin).Should().BeTrue();
+        (command.ResolveReplies).Should().BeTrue();
     }
 
     [Fact]

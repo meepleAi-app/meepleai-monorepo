@@ -46,7 +46,7 @@ public class GetActiveSessionsByGameQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         result.Count.Should().Be(2);
         Assert.All(result, dto => Assert.Equal(gameId, dto.GameId));
     }
@@ -66,8 +66,8 @@ public class GetActiveSessionsByGameQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Empty(result);
+        result.Should().NotBeNull();
+        result.Should().BeEmpty();
     }
 
     [Fact]
@@ -98,7 +98,7 @@ public class GetActiveSessionsByGameQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         result.Should().ContainSingle();
         result[0].Players.Count.Should().Be(2);
         result[0].Players[0].PlayerName.Should().Be("Alice");
@@ -142,7 +142,7 @@ public class GetActiveSessionsByGameQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         result.Should().ContainSingle();
         result[0].GameId.Should().Be(gameId1);
     }

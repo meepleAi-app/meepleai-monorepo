@@ -170,14 +170,14 @@ public class UpdatePdfUploadLimitsCommandHandlerTests
 
         // Assert
         capturedCommand.Should().NotBeNull();
-        Assert.Equal("application/pdf,application/x-pdf", capturedCommand.Value);
+        capturedCommand.Value.Should().Be("application/pdf,application/x-pdf");
     }
 
     [Fact]
     public async Task Handle_NullCommand_ThrowsArgumentNullException()
     {
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentNullException>(
-            () => _handler.Handle(null!, CancellationToken.None));
+        var act = () => _handler.Handle(null!, CancellationToken.None);
+        await act.Should().ThrowAsync<ArgumentNullException>();
     }
 }

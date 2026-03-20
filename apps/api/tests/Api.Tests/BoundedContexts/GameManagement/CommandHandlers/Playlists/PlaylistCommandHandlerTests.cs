@@ -33,12 +33,12 @@ public class PlaylistCommandHandlerTests
 
         var result = await handler.Handle(command, CancellationToken.None);
 
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         result.Name.Should().Be("Friday Night Games");
         result.CreatorUserId.Should().Be(_userId);
         result.Id.Should().NotBe(Guid.Empty);
-        Assert.False(result.IsShared);
-        Assert.Empty(result.Games);
+        (result.IsShared).Should().BeFalse();
+        result.Games.Should().BeEmpty();
 
         _repositoryMock.Verify(r => r.AddAsync(It.IsAny<GameNightPlaylist>(), It.IsAny<CancellationToken>()), Times.Once);
         _unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
@@ -173,7 +173,7 @@ public class PlaylistCommandHandlerTests
 
         var result = await handler.Handle(command, CancellationToken.None);
 
-        Assert.Empty(result.Games);
+        result.Games.Should().BeEmpty();
     }
 
     #endregion
@@ -198,8 +198,8 @@ public class PlaylistCommandHandlerTests
         var result = await handler.Handle(command, CancellationToken.None);
 
         result.Games.Count.Should().Be(2);
-        Assert.Equal(gameId2, result.Games[0].SharedGameId); // First by position
-        Assert.Equal(gameId1, result.Games[1].SharedGameId); // Second by position
+        result.Games[0].SharedGameId.Should().Be(gameId2); // First by position
+        result.Games[1].SharedGameId.Should().Be(gameId1); // Second by position
     }
 
     #endregion
@@ -218,8 +218,8 @@ public class PlaylistCommandHandlerTests
 
         var result = await handler.Handle(command, CancellationToken.None);
 
-        Assert.NotNull(result.ShareToken);
-        Assert.NotEmpty(result.ShareToken);
+        result.ShareToken.Should().NotBeNull();
+        result.ShareToken.Should().NotBeEmpty();
         result.ShareUrl.Should().Contain(result.ShareToken);
     }
 

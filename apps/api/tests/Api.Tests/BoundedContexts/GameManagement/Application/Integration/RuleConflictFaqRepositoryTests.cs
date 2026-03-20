@@ -117,7 +117,7 @@ public sealed class RuleConflictFaqRepositoryTests : IAsyncLifetime
 
         // Assert
         var entity = await _context.RuleConflictFAQs.FindAsync(faq.Id);
-        Assert.NotNull(entity);
+        entity.Should().NotBeNull();
         entity.Pattern.Should().Be("test_pattern");
         entity.Priority.Should().Be(5);
     }
@@ -176,7 +176,7 @@ public sealed class RuleConflictFaqRepositoryTests : IAsyncLifetime
 
         // Assert
         var faqEntity = await _context.RuleConflictFAQs.FindAsync(faq.Id);
-        Assert.Null(faqEntity); // FAQ deleted via CASCADE
+        faqEntity.Should().BeNull(); // FAQ deleted via CASCADE
     }
 
     [Fact]
@@ -203,7 +203,7 @@ public sealed class RuleConflictFaqRepositoryTests : IAsyncLifetime
             TestCancellationToken);
 
         // Assert
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         result.Id.Should().Be(faq.Id);
     }
 
@@ -227,7 +227,7 @@ public sealed class RuleConflictFaqRepositoryTests : IAsyncLifetime
 
         // Assert
         results.Count.Should().Be(3);
-        Assert.Equal(50, results[0].UsageCount); // Highest first
+        results[0].UsageCount.Should().Be(50); // Highest first
         results[1].UsageCount.Should().Be(25);
         results[2].UsageCount.Should().Be(10);
     }

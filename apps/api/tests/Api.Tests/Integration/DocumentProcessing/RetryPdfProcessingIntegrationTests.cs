@@ -198,7 +198,7 @@ public sealed class RetryPdfProcessingIntegrationTests : IAsyncLifetime
         var result = await mediator.Send(command, TestCancellationToken);
 
         // Assert
-        Assert.True(result.Success, $"Expected success but got: {result.Message}");
+        result.Success.Should().BeTrue($"Expected success but got: {result.Message}");
         result.RetryCount.Should().Be(1);
         result.CurrentState.Should().Be(PdfProcessingState.Extracting.ToString());
 
@@ -347,8 +347,8 @@ public sealed class RetryPdfProcessingIntegrationTests : IAsyncLifetime
         // Act & Assert
         var mediator = _serviceProvider!.GetRequiredService<IMediator>();
         var command = new RetryPdfProcessingCommand(pdfId, otherUserId);
-        var ex = await Assert.ThrowsAsync<ForbiddenException>(
-            () => mediator.Send(command, TestCancellationToken));
+        var act = () => mediator.Send(command, TestCancellationToken);
+        var ex = (await act.Should().ThrowAsync<ForbiddenException>()).Which;
         ex.Message.Should().Contain("not authorized");
     }
 
@@ -362,9 +362,9 @@ public sealed class RetryPdfProcessingIntegrationTests : IAsyncLifetime
         // Act & Assert
         var mediator = _serviceProvider!.GetRequiredService<IMediator>();
         var command = new RetryPdfProcessingCommand(pdfId, userId);
-        var ex = await Assert.ThrowsAsync<NotFoundException>(
-            () => mediator.Send(command, TestCancellationToken));
-        Assert.Contains("not found", ex.Message, StringComparison.OrdinalIgnoreCase);
+        var act2 = () => mediator.Send(command, TestCancellationToken);
+        var ex = (await act2.Should().ThrowAsync<NotFoundException>()).Which;
+        ex.Message.Should().ContainEquivalentOf("not found");
     }
 
     [Fact]

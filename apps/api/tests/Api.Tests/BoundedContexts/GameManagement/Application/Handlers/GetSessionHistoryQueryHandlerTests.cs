@@ -54,7 +54,7 @@ public class GetSessionHistoryQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         result.Count.Should().Be(2);
         _sessionRepositoryMock.Verify(
             r => r.FindHistoryAsync(null, null, null, null, null, It.IsAny<CancellationToken>()),
@@ -85,7 +85,7 @@ public class GetSessionHistoryQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         result.Should().ContainSingle();
         result[0].GameId.Should().Be(gameId);
         _sessionRepositoryMock.Verify(
@@ -119,7 +119,7 @@ public class GetSessionHistoryQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         result.Should().ContainSingle();
         _sessionRepositoryMock.Verify(
             r => r.FindHistoryAsync(null, startDate, endDate, null, null, It.IsAny<CancellationToken>()),
@@ -151,7 +151,7 @@ public class GetSessionHistoryQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         result.Count.Should().Be(2);
         _sessionRepositoryMock.Verify(
             r => r.FindHistoryAsync(null, null, null, limit, offset, It.IsAny<CancellationToken>()),
@@ -192,7 +192,7 @@ public class GetSessionHistoryQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         result.Should().ContainSingle();
         result[0].GameId.Should().Be(gameId);
         _sessionRepositoryMock.Verify(
@@ -214,8 +214,8 @@ public class GetSessionHistoryQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Empty(result);
+        result.Should().NotBeNull();
+        result.Should().BeEmpty();
     }
     [Fact]
     public async Task Handle_WithNegativeLimit_ThrowsArgumentException()
@@ -224,10 +224,11 @@ public class GetSessionHistoryQueryHandlerTests
         var query = new GetSessionHistoryQuery(Limit: -1);
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<ArgumentException>(
-            () => _handler.Handle(query, TestContext.Current.CancellationToken));
+        var act = 
+            () => _handler.Handle(query, TestContext.Current.CancellationToken);
+        var exception = (await act.Should().ThrowAsync<ArgumentException>()).Which;
 
-        Assert.Contains("Limit must be non-negative", exception.Message, StringComparison.OrdinalIgnoreCase);
+        exception.Message.Should().ContainEquivalentOf("Limit must be non-negative");
     }
 
     [Fact]
@@ -237,10 +238,11 @@ public class GetSessionHistoryQueryHandlerTests
         var query = new GetSessionHistoryQuery(Limit: 1001);
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<ArgumentException>(
-            () => _handler.Handle(query, TestContext.Current.CancellationToken));
+        var act = 
+            () => _handler.Handle(query, TestContext.Current.CancellationToken);
+        var exception = (await act.Should().ThrowAsync<ArgumentException>()).Which;
 
-        Assert.Contains("Limit cannot exceed 1000", exception.Message, StringComparison.OrdinalIgnoreCase);
+        exception.Message.Should().ContainEquivalentOf("Limit cannot exceed 1000");
     }
 
     [Fact]
@@ -250,10 +252,11 @@ public class GetSessionHistoryQueryHandlerTests
         var query = new GetSessionHistoryQuery(Offset: -1);
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<ArgumentException>(
-            () => _handler.Handle(query, TestContext.Current.CancellationToken));
+        var act = 
+            () => _handler.Handle(query, TestContext.Current.CancellationToken);
+        var exception = (await act.Should().ThrowAsync<ArgumentException>()).Which;
 
-        Assert.Contains("Offset must be non-negative", exception.Message, StringComparison.OrdinalIgnoreCase);
+        exception.Message.Should().ContainEquivalentOf("Offset must be non-negative");
     }
 
     [Fact]
@@ -276,7 +279,7 @@ public class GetSessionHistoryQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         result.Should().ContainSingle();
     }
 
@@ -300,7 +303,7 @@ public class GetSessionHistoryQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         result.Should().ContainSingle();
     }
     [Fact]
@@ -328,7 +331,7 @@ public class GetSessionHistoryQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         result.Should().ContainSingle();
 
         var dto = result[0];

@@ -106,7 +106,7 @@ public class UpdateSetupChecklistCommandHandlerTests
         await _handler.Handle(command, CancellationToken.None);
 
         // Assert
-        Assert.NotNull(session.SetupChecklist);
+        session.SetupChecklist.Should().NotBeNull();
         session.SetupChecklist!.PlayerCount.Should().Be(3);
         session.SetupChecklist.SetupSteps.Should().ContainSingle();
         session.SetupChecklist.SetupSteps[0].Instruction.Should().Be("Place board in center");
@@ -120,8 +120,9 @@ public class UpdateSetupChecklistCommandHandlerTests
         var command = new UpdateSetupChecklistCommand(DefaultSessionId, CreateChecklist());
 
         // Act & Assert
-        await Assert.ThrowsAsync<NotFoundException>(
-            () => _handler.Handle(command, CancellationToken.None));
+        var act = 
+            () => _handler.Handle(command, CancellationToken.None);
+        await act.Should().ThrowAsync<NotFoundException>();
     }
 
     [Fact]

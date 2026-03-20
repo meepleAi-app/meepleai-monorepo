@@ -51,22 +51,25 @@ public sealed class GameSuggestionTests
     [Fact]
     public void Create_EmptyUserId_ThrowsArgumentException()
     {
-        Assert.Throws<ArgumentException>(() =>
-            GameSuggestion.Create(Guid.Empty, Guid.NewGuid(), Guid.NewGuid(), "invitation", _timeProvider));
+        var act = () =>
+            GameSuggestion.Create(Guid.Empty, Guid.NewGuid(), Guid.NewGuid(), "invitation", _timeProvider);
+        act.Should().Throw<ArgumentException>();
     }
 
     [Fact]
     public void Create_EmptyGameId_ThrowsArgumentException()
     {
-        Assert.Throws<ArgumentException>(() =>
-            GameSuggestion.Create(Guid.NewGuid(), Guid.Empty, Guid.NewGuid(), "invitation", _timeProvider));
+        var act2 = () =>
+            GameSuggestion.Create(Guid.NewGuid(), Guid.Empty, Guid.NewGuid(), "invitation", _timeProvider);
+        act2.Should().Throw<ArgumentException>();
     }
 
     [Fact]
     public void Create_EmptySuggestedByUserId_ThrowsArgumentException()
     {
-        Assert.Throws<ArgumentException>(() =>
-            GameSuggestion.Create(Guid.NewGuid(), Guid.NewGuid(), Guid.Empty, "invitation", _timeProvider));
+        var act3 = () =>
+            GameSuggestion.Create(Guid.NewGuid(), Guid.NewGuid(), Guid.Empty, "invitation", _timeProvider);
+        act3.Should().Throw<ArgumentException>();
     }
 
     [Fact]

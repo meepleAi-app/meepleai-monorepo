@@ -116,8 +116,8 @@ public class MarkNotificationReadCommandHandlerTests
         var command = new MarkNotificationReadCommand(notificationId, differentUserId);
 
         // Act & Assert
-        await Assert.ThrowsAsync<UnauthorizedAccessException>(
-            () => _handler.Handle(command, CancellationToken.None));
+        var act = () => _handler.Handle(command, CancellationToken.None);
+        await act.Should().ThrowAsync<UnauthorizedAccessException>();
 
         _notificationRepositoryMock.Verify(
             r => r.UpdateAsync(It.IsAny<Notification>(), It.IsAny<CancellationToken>()),

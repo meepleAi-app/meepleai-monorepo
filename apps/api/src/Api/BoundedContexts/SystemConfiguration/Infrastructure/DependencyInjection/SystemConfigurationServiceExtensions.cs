@@ -43,6 +43,9 @@ internal static class SystemConfigurationServiceExtensions
         // Game Night Improvvisata: Tier enforcement with Redis atomic counters
         services.AddScoped<ITierEnforcementService, TierEnforcementService>();
 
+        // Phase 6: Read-only user projection for BC isolation (avoids cross-BC IUserRepository dependency)
+        services.AddScoped<IUserProfileReadService, UserProfileReadService>();
+
         // MediatR handlers are auto-registered via assembly scanning in Program.cs
 
         return services;

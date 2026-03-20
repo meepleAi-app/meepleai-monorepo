@@ -35,9 +35,17 @@ internal sealed class ExportSharedGamesTrackingQueryHandler
             .OrderBy(g => g.Title)
             .Select(g => new
             {
-                g.Id, g.Title, g.BggId, g.GameDataStatus, g.Status,
-                g.HasUploadedPdf, g.YearPublished, g.MinPlayers,
-                g.MaxPlayers, g.ComplexityRating, g.CreatedAt
+                g.Id,
+                g.Title,
+                g.BggId,
+                g.GameDataStatus,
+                g.Status,
+                g.HasUploadedPdf,
+                g.YearPublished,
+                g.MinPlayers,
+                g.MaxPlayers,
+                g.ComplexityRating,
+                g.CreatedAt
             })
             .ToListAsync(cancellationToken).ConfigureAwait(false);
 
@@ -60,13 +68,21 @@ internal sealed class ExportSharedGamesTrackingQueryHandler
 
         var dataStatusNames = new Dictionary<int, string>
         {
-            [0] = "Skeleton", [1] = "EnrichmentQueued", [2] = "Enriching",
-            [3] = "Enriched", [4] = "PdfDownloading", [5] = "Complete", [6] = "Failed"
+            [0] = "Skeleton",
+            [1] = "EnrichmentQueued",
+            [2] = "Enriching",
+            [3] = "Enriched",
+            [4] = "PdfDownloading",
+            [5] = "Complete",
+            [6] = "Failed"
         };
 
         var gameStatusNames = new Dictionary<int, string>
         {
-            [0] = "Draft", [1] = "PendingApproval", [2] = "Published", [3] = "Archived"
+            [0] = "Draft",
+            [1] = "PendingApproval",
+            [2] = "Published",
+            [3] = "Archived"
         };
 
         for (var row = 0; row < games.Count; row++)

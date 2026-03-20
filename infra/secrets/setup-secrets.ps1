@@ -155,10 +155,6 @@ switch ($Environment) {
         $generatedValues['REDIS_PASSWORD'] = New-SecurePassword -Length 20
         Write-Host "  [OK] REDIS_PASSWORD:           $(Mask-Secret $generatedValues['REDIS_PASSWORD'])" -ForegroundColor Green
 
-        # Qdrant API Key
-        $generatedValues['QDRANT_API_KEY'] = New-SecureApiKey -ByteLength 32
-        Write-Host "  [OK] QDRANT_API_KEY:           $(Mask-Secret $generatedValues['QDRANT_API_KEY'])" -ForegroundColor Green
-
         # Embedding Service API Key
         $generatedValues['EMBEDDING_SERVICE_API_KEY'] = New-SecureApiKey -ByteLength 32
         Write-Host "  [OK] EMBEDDING_SERVICE_API_KEY: $(Mask-Secret $generatedValues['EMBEDDING_SERVICE_API_KEY'])" -ForegroundColor Green
@@ -314,7 +310,7 @@ switch ($Environment) {
     # -----------------------------------------------------------------------
     "integration" {
         Write-Host "[INFO] Integration environment uses SSH tunnels to staging services." -ForegroundColor Cyan
-        Write-Host "       Local API/Web connect to tunneled Postgres, Redis, Qdrant." -ForegroundColor Cyan
+        Write-Host "       Local API/Web connect to tunneled Postgres, Redis." -ForegroundColor Cyan
         Write-Host ""
 
         $stagingDir = Join-Path $secretsDir "staging"
@@ -344,7 +340,7 @@ switch ($Environment) {
             Write-Host ""
         }
 
-        # Override database/redis/qdrant connection settings for tunnel
+        # Override database/redis connection settings for tunnel
         Write-Host "[STEP] Configuring tunnel connection overrides..." -ForegroundColor Yellow
 
         $dbSecretPath = Join-Path $envDir "database.secret"
@@ -380,23 +376,6 @@ switch ($Environment) {
             }
             Set-Content -Path $redisSecretPath -Value $content -NoNewline
             Write-Host "  [OK] redis.secret: REDIS_HOST=host.docker.internal, REDIS_PORT=16379" -ForegroundColor Green
-        }
-
-        $qdrantSecretPath = Join-Path $envDir "qdrant.secret"
-        if (Test-Path $qdrantSecretPath) {
-            $content = Get-Content $qdrantSecretPath -Raw
-            if ($content -notmatch 'QDRANT_HOST=') {
-                $content += "`nQDRANT_HOST=host.docker.internal"
-            } else {
-                $content = $content -replace 'QDRANT_HOST=[^\r\n]*', 'QDRANT_HOST=host.docker.internal'
-            }
-            if ($content -notmatch 'QDRANT_PORT=') {
-                $content += "`nQDRANT_PORT=16333"
-            } else {
-                $content = $content -replace 'QDRANT_PORT=[^\r\n]*', 'QDRANT_PORT=16333'
-            }
-            Set-Content -Path $qdrantSecretPath -Value $content -NoNewline
-            Write-Host "  [OK] qdrant.secret: QDRANT_HOST=host.docker.internal, QDRANT_PORT=16333" -ForegroundColor Green
         }
 
         # Generate services-auth.secret for basic auth credentials (used by integration to access staging AI services)
@@ -580,7 +559,7 @@ Write-Host "   Validation Status ($Environment)" -ForegroundColor Cyan
 Write-Host "=======================================" -ForegroundColor Cyan
 Write-Host ""
 
-$criticalFiles = @('admin.secret', 'database.secret', 'jwt.secret', 'qdrant.secret', 'redis.secret', 'embedding-service.secret')
+$criticalFiles = @('admin.secret', 'database.secret', 'jwt.secret', 'redis.secret', 'embedding-service.secret')
 $allCriticalExist = $true
 
 foreach ($criticalFile in $criticalFiles) {

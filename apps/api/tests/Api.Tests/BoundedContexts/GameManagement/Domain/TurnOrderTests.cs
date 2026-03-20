@@ -1,6 +1,7 @@
 using Api.BoundedContexts.GameManagement.Domain.Entities.TurnOrder;
 using Api.Tests.Constants;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.GameManagement.Domain;
 
@@ -19,22 +20,25 @@ public class TurnOrderTests
     [Fact]
     public void Constructor_WithEmptySessionId_ThrowsArgumentException()
     {
-        Assert.Throws<ArgumentException>(() =>
-            new TurnOrder(Guid.NewGuid(), Guid.Empty, new[] { "Alice" }));
+        var act = () =>
+            new TurnOrder(Guid.NewGuid(), Guid.Empty, new[] { "Alice" });
+        act.Should().Throw<ArgumentException>();
     }
 
     [Fact]
     public void Constructor_WithNullPlayerOrder_ThrowsArgumentException()
     {
-        Assert.Throws<ArgumentException>(() =>
-            new TurnOrder(Guid.NewGuid(), Guid.NewGuid(), null!));
+        var act = () =>
+            new TurnOrder(Guid.NewGuid(), Guid.NewGuid(), null!);
+        act.Should().Throw<ArgumentException>();
     }
 
     [Fact]
     public void Constructor_WithEmptyPlayerOrder_ThrowsArgumentException()
     {
-        Assert.Throws<ArgumentException>(() =>
-            new TurnOrder(Guid.NewGuid(), Guid.NewGuid(), Array.Empty<string>()));
+        var act = () =>
+            new TurnOrder(Guid.NewGuid(), Guid.NewGuid(), Array.Empty<string>());
+        act.Should().Throw<ArgumentException>();
     }
 
     [Fact]
@@ -45,12 +49,12 @@ public class TurnOrderTests
 
         var turnOrder = new TurnOrder(Guid.NewGuid(), sessionId, players);
 
-        Assert.Equal(sessionId, turnOrder.SessionId);
-        Assert.Equal(players, turnOrder.PlayerOrder);
-        Assert.Equal(0, turnOrder.CurrentIndex);
-        Assert.Equal(1, turnOrder.RoundNumber);
-        Assert.Equal("Alice", turnOrder.CurrentPlayer);
-        Assert.Equal("Bob", turnOrder.NextPlayer);
+        turnOrder.SessionId.Should().Be(sessionId);
+        turnOrder.PlayerOrder.Should().Equal(players);
+        turnOrder.CurrentIndex.Should().Be(0);
+        turnOrder.RoundNumber.Should().Be(1);
+        turnOrder.CurrentPlayer.Should().Be("Alice");
+        turnOrder.NextPlayer.Should().Be("Bob");
     }
 
     // ========================================================================
@@ -64,10 +68,10 @@ public class TurnOrderTests
 
         var previous = turnOrder.Advance();
 
-        Assert.Equal("Alice", previous);
-        Assert.Equal(1, turnOrder.CurrentIndex);
-        Assert.Equal("Bob", turnOrder.CurrentPlayer);
-        Assert.Equal(1, turnOrder.RoundNumber);
+        previous.Should().Be("Alice");
+        turnOrder.CurrentIndex.Should().Be(1);
+        turnOrder.CurrentPlayer.Should().Be("Bob");
+        turnOrder.RoundNumber.Should().Be(1);
     }
 
     [Fact]
@@ -78,10 +82,10 @@ public class TurnOrderTests
 
         var previous = turnOrder.Advance(); // Wrap
 
-        Assert.Equal("Bob", previous);
-        Assert.Equal(0, turnOrder.CurrentIndex);
-        Assert.Equal("Alice", turnOrder.CurrentPlayer);
-        Assert.Equal(2, turnOrder.RoundNumber);
+        previous.Should().Be("Bob");
+        turnOrder.CurrentIndex.Should().Be(0);
+        turnOrder.CurrentPlayer.Should().Be("Alice");
+        turnOrder.RoundNumber.Should().Be(2);
     }
 
     [Fact]
@@ -94,8 +98,8 @@ public class TurnOrderTests
         turnOrder.Advance(); // Alice→Bob (round 2)
         turnOrder.Advance(); // Bob→Alice wrap (round 3)
 
-        Assert.Equal(3, turnOrder.RoundNumber);
-        Assert.Equal("Alice", turnOrder.CurrentPlayer);
+        turnOrder.RoundNumber.Should().Be(3);
+        turnOrder.CurrentPlayer.Should().Be("Alice");
     }
 
     [Fact]
@@ -105,9 +109,9 @@ public class TurnOrderTests
 
         turnOrder.Advance();
 
-        Assert.Equal(0, turnOrder.CurrentIndex);
-        Assert.Equal(2, turnOrder.RoundNumber);
-        Assert.Equal("Alice", turnOrder.CurrentPlayer);
+        turnOrder.CurrentIndex.Should().Be(0);
+        turnOrder.RoundNumber.Should().Be(2);
+        turnOrder.CurrentPlayer.Should().Be("Alice");
     }
 
     // ========================================================================
@@ -121,7 +125,7 @@ public class TurnOrderTests
         turnOrder.Advance(); // Bob
         turnOrder.Advance(); // Charlie is current
 
-        Assert.Equal("Alice", turnOrder.NextPlayer);
+        turnOrder.NextPlayer.Should().Be("Alice");
     }
 
     // ========================================================================
@@ -135,7 +139,7 @@ public class TurnOrderTests
 
         turnOrder.Reorder(new[] { "Bob", "Charlie", "Alice" });
 
-        Assert.Equal(new[] { "Bob", "Charlie", "Alice" }, turnOrder.PlayerOrder);
+        turnOrder.PlayerOrder.Should().BeEquivalentTo(new[] { "Bob", "Charlie", "Alice" });
     }
 
     [Fact]
@@ -147,8 +151,8 @@ public class TurnOrderTests
 
         turnOrder.Reorder(new[] { "Alice", "Bob" }); // shorter: max index 1
 
-        Assert.Equal(1, turnOrder.CurrentIndex);
-        Assert.Equal("Bob", turnOrder.CurrentPlayer);
+        turnOrder.CurrentIndex.Should().Be(1);
+        turnOrder.CurrentPlayer.Should().Be("Bob");
     }
 
     [Fact]
@@ -156,7 +160,8 @@ public class TurnOrderTests
     {
         var turnOrder = new TurnOrder(Guid.NewGuid(), Guid.NewGuid(), new[] { "Alice" });
 
-        Assert.Throws<ArgumentException>(() => turnOrder.Reorder(null!));
+        var act = () => turnOrder.Reorder(null!);
+        act.Should().Throw<ArgumentException>();
     }
 
     [Fact]
@@ -164,7 +169,8 @@ public class TurnOrderTests
     {
         var turnOrder = new TurnOrder(Guid.NewGuid(), Guid.NewGuid(), new[] { "Alice" });
 
-        Assert.Throws<ArgumentException>(() => turnOrder.Reorder(Array.Empty<string>()));
+        var act = () => turnOrder.Reorder(Array.Empty<string>());
+        act.Should().Throw<ArgumentException>();
     }
 
     // ========================================================================
@@ -181,9 +187,9 @@ public class TurnOrderTests
 
         turnOrder.Reset();
 
-        Assert.Equal(0, turnOrder.CurrentIndex);
-        Assert.Equal(1, turnOrder.RoundNumber);
-        Assert.Equal("Alice", turnOrder.CurrentPlayer);
+        turnOrder.CurrentIndex.Should().Be(0);
+        turnOrder.RoundNumber.Should().Be(1);
+        turnOrder.CurrentPlayer.Should().Be("Alice");
     }
 
     // ========================================================================
@@ -200,10 +206,10 @@ public class TurnOrderTests
 
         var turnOrder = TurnOrder.Restore(id, sessionId, players, 2, 3, now, now);
 
-        Assert.Equal(id, turnOrder.Id);
-        Assert.Equal(sessionId, turnOrder.SessionId);
-        Assert.Equal(2, turnOrder.CurrentIndex);
-        Assert.Equal(3, turnOrder.RoundNumber);
-        Assert.Equal("Charlie", turnOrder.CurrentPlayer);
+        turnOrder.Id.Should().Be(id);
+        turnOrder.SessionId.Should().Be(sessionId);
+        turnOrder.CurrentIndex.Should().Be(2);
+        turnOrder.RoundNumber.Should().Be(3);
+        turnOrder.CurrentPlayer.Should().Be("Charlie");
     }
 }

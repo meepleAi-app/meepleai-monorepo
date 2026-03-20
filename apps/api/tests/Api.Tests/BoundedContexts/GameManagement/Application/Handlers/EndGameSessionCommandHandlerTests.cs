@@ -1,11 +1,13 @@
 using Api.BoundedContexts.GameManagement.Application.Commands;
-using Api.BoundedContexts.GameManagement.Application.Handlers;
+using Api.BoundedContexts.GameManagement.Application.Commands;
+using Api.BoundedContexts.GameManagement.Application.Queries;
 using Api.BoundedContexts.GameManagement.Domain.Entities;
 using Api.BoundedContexts.GameManagement.Domain.Repositories;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Api.Tests.BoundedContexts.GameManagement.TestHelpers;
 using Moq;
 using Xunit;
+using FluentAssertions;
 using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.GameManagement.Application.Handlers;
@@ -52,11 +54,11 @@ public class EndGameSessionCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal(sessionId, result.Id);
-        Assert.Equal("Completed", result.Status);
-        Assert.Equal("Alice", result.WinnerName);
-        Assert.NotNull(result.CompletedAt);
+        result.Should().NotBeNull();
+        result.Id.Should().Be(sessionId);
+        result.Status.Should().Be("Completed");
+        result.WinnerName.Should().Be("Alice");
+        result.CompletedAt.Should().NotBeNull();
 
         // Verify repository interactions
         _sessionRepositoryMock.Verify(
@@ -93,10 +95,10 @@ public class EndGameSessionCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal("Completed", result.Status);
-        Assert.Null(result.WinnerName); // No winner specified (e.g., cooperative game)
-        Assert.NotNull(result.CompletedAt);
+        result.Should().NotBeNull();
+        result.Status.Should().Be("Completed");
+        result.WinnerName.Should().BeNull(); // No winner specified (e.g., cooperative game)
+        result.CompletedAt.Should().NotBeNull();
     }
 
     [Fact]
@@ -122,8 +124,8 @@ public class EndGameSessionCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.Equal("Charlie", result.WinnerName);
-        Assert.Equal(4, result.Players.Count);
+        result.WinnerName.Should().Be("Charlie");
+        result.Players.Count.Should().Be(4);
     }
 
     [Fact]
@@ -151,9 +153,9 @@ public class EndGameSessionCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.Equal(startedAt, result.StartedAt); // StartedAt should be preserved
-        Assert.NotNull(result.CompletedAt);
-        Assert.True(result.CompletedAt >= result.StartedAt); // EndedAt should be after StartedAt
+        result.StartedAt.Should().Be(startedAt); // StartedAt should be preserved
+        result.CompletedAt.Should().NotBeNull();
+        (result.CompletedAt >= result.StartedAt).Should().BeTrue(); // EndedAt should be after StartedAt
     }
     [Fact]
     public async Task Handle_NonExistentSession_ThrowsInvalidOperationException()
@@ -170,10 +172,11 @@ public class EndGameSessionCommandHandlerTests
             WinnerName: "Player 1");
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
-            () => _handler.Handle(command, TestContext.Current.CancellationToken));
+        var act = 
+            () => _handler.Handle(command, TestContext.Current.CancellationToken);
+        var exception = (await act.Should().ThrowAsync<InvalidOperationException>()).Which;
 
-        Assert.Contains($"Session with ID {sessionId} not found", exception.Message, StringComparison.OrdinalIgnoreCase);
+        exception.Message.Should().ContainEquivalentOf($"Session with ID {sessionId} not found");
 
         // Verify update was NOT called
         _sessionRepositoryMock.Verify(
@@ -241,7 +244,7 @@ public class EndGameSessionCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.Equal(gameId, result.GameId);
+        result.GameId.Should().Be(gameId);
     }
 
     [Fact]
@@ -267,10 +270,10 @@ public class EndGameSessionCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.Equal(3, result.Players.Count);
-        Assert.Equal("Alice", result.Players[0].PlayerName);
-        Assert.Equal("Bob", result.Players[1].PlayerName);
-        Assert.Equal("Charlie", result.Players[2].PlayerName);
+        result.Players.Count.Should().Be(3);
+        result.Players[0].PlayerName.Should().Be("Alice");
+        result.Players[1].PlayerName.Should().Be("Bob");
+        result.Players[2].PlayerName.Should().Be("Charlie");
     }
 }
 

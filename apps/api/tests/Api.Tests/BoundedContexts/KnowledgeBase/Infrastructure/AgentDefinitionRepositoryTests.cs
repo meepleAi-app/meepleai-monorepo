@@ -1,9 +1,11 @@
 using Api.BoundedContexts.KnowledgeBase.Domain.Entities;
 using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 using Api.BoundedContexts.KnowledgeBase.Infrastructure.Persistence;
+using Api.SharedKernel.Application.Services;
 using Api.Tests.Constants;
 using Api.Tests.Infrastructure;
 using FluentAssertions;
+using Moq;
 using Xunit;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Infrastructure;
@@ -19,6 +21,7 @@ namespace Api.Tests.BoundedContexts.KnowledgeBase.Infrastructure;
 public sealed class AgentDefinitionRepositoryTests : IClassFixture<SharedTestcontainersFixture>, IAsyncLifetime
 {
     private readonly SharedTestcontainersFixture _fixture;
+    private readonly Mock<IDomainEventCollector> _eventCollectorMock = new();
     private readonly string _databaseName;
     private string? _connectionString;
 
@@ -49,7 +52,7 @@ public sealed class AgentDefinitionRepositoryTests : IClassFixture<SharedTestcon
     {
         // Arrange
         using var dbContext = _fixture.CreateDbContext(_connectionString!);
-        var repository = new AgentDefinitionRepository(dbContext);
+        var repository = new AgentDefinitionRepository(dbContext, _eventCollectorMock.Object);
         var agent = AgentDefinition.Create(
             "TestAgent",
             "Test description",
@@ -71,7 +74,7 @@ public sealed class AgentDefinitionRepositoryTests : IClassFixture<SharedTestcon
     {
         // Arrange
         using var dbContext = _fixture.CreateDbContext(_connectionString!);
-        var repository = new AgentDefinitionRepository(dbContext);
+        var repository = new AgentDefinitionRepository(dbContext, _eventCollectorMock.Object);
         var agent = AgentDefinition.Create("UniqueAgent", "Desc", AgentType.RagAgent, AgentDefinitionConfig.Default());
         await repository.AddAsync(agent);
 
@@ -88,7 +91,7 @@ public sealed class AgentDefinitionRepositoryTests : IClassFixture<SharedTestcon
     {
         // Arrange
         using var dbContext = _fixture.CreateDbContext(_connectionString!);
-        var repository = new AgentDefinitionRepository(dbContext);
+        var repository = new AgentDefinitionRepository(dbContext, _eventCollectorMock.Object);
         await repository.AddAsync(AgentDefinition.Create("Agent1", "Desc1", AgentType.RagAgent, AgentDefinitionConfig.Default()));
         await repository.AddAsync(AgentDefinition.Create("Agent2", "Desc2", AgentType.RagAgent, AgentDefinitionConfig.Default()));
 
@@ -104,7 +107,7 @@ public sealed class AgentDefinitionRepositoryTests : IClassFixture<SharedTestcon
     {
         // Arrange
         using var dbContext = _fixture.CreateDbContext(_connectionString!);
-        var repository = new AgentDefinitionRepository(dbContext);
+        var repository = new AgentDefinitionRepository(dbContext, _eventCollectorMock.Object);
         var activeAgent = AgentDefinition.Create("ActiveAgent", "Desc", AgentType.RagAgent, AgentDefinitionConfig.Default());
         var inactiveAgent = AgentDefinition.Create("InactiveAgent", "Desc", AgentType.RagAgent, AgentDefinitionConfig.Default());
         inactiveAgent.Deactivate();
@@ -125,7 +128,7 @@ public sealed class AgentDefinitionRepositoryTests : IClassFixture<SharedTestcon
     {
         // Arrange
         using var dbContext = _fixture.CreateDbContext(_connectionString!);
-        var repository = new AgentDefinitionRepository(dbContext);
+        var repository = new AgentDefinitionRepository(dbContext, _eventCollectorMock.Object);
         await repository.AddAsync(AgentDefinition.Create("SearchableAgent", "Desc", AgentType.RagAgent, AgentDefinitionConfig.Default()));
         await repository.AddAsync(AgentDefinition.Create("OtherAgent", "Desc", AgentType.RagAgent, AgentDefinitionConfig.Default()));
 
@@ -142,7 +145,7 @@ public sealed class AgentDefinitionRepositoryTests : IClassFixture<SharedTestcon
     {
         // Arrange
         using var dbContext = _fixture.CreateDbContext(_connectionString!);
-        var repository = new AgentDefinitionRepository(dbContext);
+        var repository = new AgentDefinitionRepository(dbContext, _eventCollectorMock.Object);
         var agent = AgentDefinition.Create("OriginalName", "Desc", AgentType.RagAgent, AgentDefinitionConfig.Default());
         await repository.AddAsync(agent);
 
@@ -161,7 +164,7 @@ public sealed class AgentDefinitionRepositoryTests : IClassFixture<SharedTestcon
     {
         // Arrange
         using var dbContext = _fixture.CreateDbContext(_connectionString!);
-        var repository = new AgentDefinitionRepository(dbContext);
+        var repository = new AgentDefinitionRepository(dbContext, _eventCollectorMock.Object);
         var agent = AgentDefinition.Create("ToDelete", "Desc", AgentType.RagAgent, AgentDefinitionConfig.Default());
         await repository.AddAsync(agent);
 
@@ -178,7 +181,7 @@ public sealed class AgentDefinitionRepositoryTests : IClassFixture<SharedTestcon
     {
         // Arrange
         using var dbContext = _fixture.CreateDbContext(_connectionString!);
-        var repository = new AgentDefinitionRepository(dbContext);
+        var repository = new AgentDefinitionRepository(dbContext, _eventCollectorMock.Object);
         await repository.AddAsync(AgentDefinition.Create("ExistingAgent", "Desc", AgentType.RagAgent, AgentDefinitionConfig.Default()));
 
         // Act
@@ -193,7 +196,7 @@ public sealed class AgentDefinitionRepositoryTests : IClassFixture<SharedTestcon
     {
         // Arrange
         using var dbContext = _fixture.CreateDbContext(_connectionString!);
-        var repository = new AgentDefinitionRepository(dbContext);
+        var repository = new AgentDefinitionRepository(dbContext, _eventCollectorMock.Object);
 
         // Act
         var exists = await repository.ExistsAsync("NonExistentAgent");
@@ -207,7 +210,7 @@ public sealed class AgentDefinitionRepositoryTests : IClassFixture<SharedTestcon
     {
         // Arrange
         using var dbContext = _fixture.CreateDbContext(_connectionString!);
-        var repository = new AgentDefinitionRepository(dbContext);
+        var repository = new AgentDefinitionRepository(dbContext, _eventCollectorMock.Object);
         var prompts = new List<AgentPromptTemplate>
         {
             AgentPromptTemplate.Create("system", "System prompt")

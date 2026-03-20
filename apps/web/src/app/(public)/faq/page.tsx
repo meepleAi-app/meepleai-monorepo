@@ -27,7 +27,7 @@ import { useTranslation } from '@/hooks/useTranslation';
 // FAQ category keys
 const CATEGORY_KEYS = ['general', 'usage', 'technical', 'account'] as const;
 
-// Questions per category
+// Questions per category (must match i18n keys q1/q2/q3)
 const QUESTIONS_PER_CATEGORY = ['q1', 'q2', 'q3'] as const;
 
 // Icons for each category
@@ -47,10 +47,7 @@ export default function FaqPage() {
       <div className="max-w-4xl mx-auto">
         {/* Header */}
         <div className="mb-8 text-center">
-          <h1
-            className="text-3xl font-bold text-foreground"
-            data-testid="faq-heading"
-          >
+          <h1 className="text-3xl font-bold text-foreground" data-testid="faq-heading">
             {t('pages.faq.title')}
           </h1>
           <p className="text-slate-600 dark:text-slate-400 mt-2 max-w-2xl mx-auto">
@@ -60,7 +57,7 @@ export default function FaqPage() {
 
         {/* FAQ Categories */}
         <div className="space-y-8">
-          {CATEGORY_KEYS.map((categoryKey) => (
+          {CATEGORY_KEYS.map(categoryKey => (
             <Card key={categoryKey} className="overflow-hidden">
               <CardHeader className="bg-muted dark:bg-card">
                 <CardTitle className="text-lg flex items-center gap-2">
@@ -71,7 +68,7 @@ export default function FaqPage() {
               </CardHeader>
               <CardContent className="p-0">
                 <Accordion type="single" collapsible className="w-full">
-                  {QUESTIONS_PER_CATEGORY.map((questionKey) => (
+                  {QUESTIONS_PER_CATEGORY.map(questionKey => (
                     <AccordionItem
                       key={`${categoryKey}-${questionKey}`}
                       value={`${categoryKey}-${questionKey}`}

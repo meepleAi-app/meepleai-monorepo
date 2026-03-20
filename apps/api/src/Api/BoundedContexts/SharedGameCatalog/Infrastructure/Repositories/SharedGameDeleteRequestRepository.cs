@@ -1,6 +1,8 @@
 using Api.BoundedContexts.SharedGameCatalog.Domain.Entities;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
 using Api.Infrastructure;
+using Api.SharedKernel.Application.Services;
+using Api.SharedKernel.Infrastructure;
 using Api.Infrastructure.Entities.SharedGameCatalog;
 using Microsoft.EntityFrameworkCore;
 
@@ -9,13 +11,12 @@ namespace Api.BoundedContexts.SharedGameCatalog.Infrastructure.Repositories;
 /// <summary>
 /// Repository for SharedGameDeleteRequest entity.
 /// </summary>
-internal sealed class SharedGameDeleteRequestRepository : ISharedGameDeleteRequestRepository
+internal sealed class SharedGameDeleteRequestRepository : RepositoryBase, ISharedGameDeleteRequestRepository
 {
-    private readonly MeepleAiDbContext _context;
 
-    public SharedGameDeleteRequestRepository(MeepleAiDbContext context)
+    public SharedGameDeleteRequestRepository(MeepleAiDbContext dbContext, IDomainEventCollector eventCollector)
+        : base(dbContext, eventCollector)
     {
-        _context = context ?? throw new ArgumentNullException(nameof(context));
     }
 
     public async Task AddAsync(SharedGameDeleteRequest request, CancellationToken cancellationToken = default)
@@ -35,12 +36,12 @@ internal sealed class SharedGameDeleteRequestRepository : ISharedGameDeleteReque
             ReviewedAt = request.ReviewedAt
         };
 
-        await _context.SharedGameDeleteRequests.AddAsync(entity, cancellationToken).ConfigureAwait(false);
+        await DbContext.SharedGameDeleteRequests.AddAsync(entity, cancellationToken).ConfigureAwait(false);
     }
 
     public async Task<SharedGameDeleteRequest?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        var entity = await _context.SharedGameDeleteRequests
+        var entity = await DbContext.SharedGameDeleteRequests
             .AsNoTracking()
             .FirstOrDefaultAsync(r => r.Id == id, cancellationToken)
             .ConfigureAwait(false);
@@ -65,7 +66,7 @@ internal sealed class SharedGameDeleteRequestRepository : ISharedGameDeleteReque
             ReviewedAt = request.ReviewedAt
         };
 
-        _context.SharedGameDeleteRequests.Update(entity);
+        DbContext.SharedGameDeleteRequests.Update(entity);
     }
 
     private static SharedGameDeleteRequest MapToDomain(SharedGameDeleteRequestEntity entity)

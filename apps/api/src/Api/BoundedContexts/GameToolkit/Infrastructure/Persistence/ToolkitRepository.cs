@@ -1,6 +1,8 @@
 using Api.BoundedContexts.GameToolkit.Domain.Entities;
 using Api.BoundedContexts.GameToolkit.Domain.Repositories;
 using Api.Infrastructure;
+using Api.SharedKernel.Application.Services;
+using Api.SharedKernel.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 
 namespace Api.BoundedContexts.GameToolkit.Infrastructure.Persistence;
@@ -9,13 +11,12 @@ namespace Api.BoundedContexts.GameToolkit.Infrastructure.Persistence;
 /// EF Core implementation of IToolkitRepository.
 /// Issue #5145 — Epic B2.
 /// </summary>
-internal sealed class ToolkitRepository : IToolkitRepository
+internal sealed class ToolkitRepository : RepositoryBase, IToolkitRepository
 {
-    private readonly MeepleAiDbContext _db;
 
-    public ToolkitRepository(MeepleAiDbContext db)
+    public ToolkitRepository(MeepleAiDbContext dbContext, IDomainEventCollector eventCollector)
+        : base(dbContext, eventCollector)
     {
-        _db = db;
     }
 
     public async Task<Toolkit?> GetActiveAsync(
@@ -24,7 +25,7 @@ internal sealed class ToolkitRepository : IToolkitRepository
         // User-specific override takes precedence over the default
         if (userId.HasValue)
         {
-            var userToolkit = await _db.Toolkits
+            var userToolkit = await DbContext.Toolkits
                 .Include(t => t.Widgets)
                 .FirstOrDefaultAsync(t => t.GameId == gameId && t.OwnerUserId == userId.Value, cancellationToken)
                 .ConfigureAwait(false);
@@ -34,7 +35,7 @@ internal sealed class ToolkitRepository : IToolkitRepository
         }
 
         // Fall back to the default (game-level) toolkit
-        return await _db.Toolkits
+        return await DbContext.Toolkits
             .Include(t => t.Widgets)
             .FirstOrDefaultAsync(t => t.GameId == gameId && t.IsDefault, cancellationToken)
             .ConfigureAwait(false);
@@ -43,7 +44,7 @@ internal sealed class ToolkitRepository : IToolkitRepository
     public async Task<Toolkit?> GetDefaultAsync(
         Guid gameId, CancellationToken cancellationToken = default)
     {
-        return await _db.Toolkits
+        return await DbContext.Toolkits
             .Include(t => t.Widgets)
             .FirstOrDefaultAsync(t => t.GameId == gameId && t.IsDefault, cancellationToken)
             .ConfigureAwait(false);
@@ -51,13 +52,13 @@ internal sealed class ToolkitRepository : IToolkitRepository
 
     public async Task AddAsync(Toolkit toolkit, CancellationToken cancellationToken = default)
     {
-        await _db.Toolkits.AddAsync(toolkit, cancellationToken).ConfigureAwait(false);
+        await DbContext.Toolkits.AddAsync(toolkit, cancellationToken).ConfigureAwait(false);
     }
 
     public async Task<bool> ExistsDefaultAsync(
         Guid gameId, CancellationToken cancellationToken = default)
     {
-        return await _db.Toolkits
+        return await DbContext.Toolkits
             .AnyAsync(t => t.GameId == gameId && t.IsDefault, cancellationToken)
             .ConfigureAwait(false);
     }

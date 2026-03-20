@@ -6,6 +6,7 @@ using Api.Tests.Constants;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.SystemConfiguration.Application.Handlers;
 
@@ -42,11 +43,11 @@ public sealed class UpdateLlmSystemConfigCommandHandlerTests
         var handler = CreateHandler();
         var result = await handler.Handle(command, CancellationToken.None);
 
-        Assert.Equal(8, result.CircuitBreakerFailureThreshold);
-        Assert.Equal(45, result.CircuitBreakerOpenDurationSeconds);
-        Assert.Equal(20.00m, result.DailyBudgetUsd);
-        Assert.Equal("database", result.Source);
-        Assert.Equal(adminId, result.LastUpdatedByUserId);
+        result.CircuitBreakerFailureThreshold.Should().Be(8);
+        result.CircuitBreakerOpenDurationSeconds.Should().Be(45);
+        result.DailyBudgetUsd.Should().Be(20.00m);
+        result.Source.Should().Be("database");
+        result.LastUpdatedByUserId.Should().Be(adminId);
 
         _repoMock.Verify(r => r.UpsertAsync(It.IsAny<LlmSystemConfig>(), It.IsAny<CancellationToken>()), Times.Once);
         _providerMock.Verify(p => p.InvalidateCache(), Times.Once);
@@ -70,8 +71,8 @@ public sealed class UpdateLlmSystemConfigCommandHandlerTests
         var handler = CreateHandler();
         var result = await handler.Handle(command, CancellationToken.None);
 
-        Assert.Equal(10, result.CircuitBreakerFailureThreshold);
-        Assert.Equal(50.00m, result.DailyBudgetUsd);
+        result.CircuitBreakerFailureThreshold.Should().Be(10);
+        result.DailyBudgetUsd.Should().Be(50.00m);
         _providerMock.Verify(p => p.InvalidateCache(), Times.Once);
     }
 }

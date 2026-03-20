@@ -5,6 +5,7 @@ using Api.SharedKernel.Domain.Enums;
 using Api.SharedKernel.Domain.ValueObjects;
 using Microsoft.Extensions.Time.Testing;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.Authentication.Domain.Entities;
 
@@ -43,17 +44,17 @@ public sealed class UserPendingStateTests
             timeProvider);
 
         // Assert
-        Assert.Equal(UserAccountStatus.Pending, user.Status);
-        Assert.Equal(TestEmail, user.Email);
-        Assert.Equal(TestDisplayName, user.DisplayName);
-        Assert.Null(user.PasswordHash);
-        Assert.Equal(TestAdminId, user.InvitedByUserId);
-        Assert.Equal(expiresAt, user.InvitationExpiresAt);
-        Assert.False(user.EmailVerified);
-        Assert.Equal(TestRole, user.Role);
-        Assert.Equal(TestTier, user.Tier);
-        Assert.Equal(now, user.CreatedAt);
-        Assert.NotEqual(Guid.Empty, user.Id);
+        user.Status.Should().Be(UserAccountStatus.Pending);
+        user.Email.Should().Be(TestEmail);
+        user.DisplayName.Should().Be(TestDisplayName);
+        user.PasswordHash.Should().BeNull();
+        user.InvitedByUserId.Should().Be(TestAdminId);
+        user.InvitationExpiresAt.Should().Be(expiresAt);
+        user.EmailVerified.Should().BeFalse();
+        user.Role.Should().Be(TestRole);
+        user.Tier.Should().Be(TestTier);
+        user.CreatedAt.Should().Be(now);
+        user.Id.Should().NotBe(Guid.Empty);
     }
 
     [Fact]
@@ -74,7 +75,7 @@ public sealed class UserPendingStateTests
             timeProvider);
 
         // Assert
-        Assert.False(user.CanAuthenticate());
+        user.CanAuthenticate().Should().BeFalse();
     }
 
     [Fact]
@@ -95,14 +96,14 @@ public sealed class UserPendingStateTests
             timeProvider);
 
         // Assert
-        Assert.Single(user.DomainEvents);
-        var domainEvent = Assert.IsType<UserProvisionedEvent>(user.DomainEvents.First());
-        Assert.Equal(user.Id, domainEvent.UserId);
-        Assert.Equal(TestEmail.Value, domainEvent.Email);
-        Assert.Equal(TestDisplayName, domainEvent.DisplayName);
-        Assert.Equal(TestRole.Value, domainEvent.Role);
-        Assert.Equal(TestTier.Value, domainEvent.Tier);
-        Assert.Equal(TestAdminId, domainEvent.InvitedByUserId);
+        user.DomainEvents.Should().ContainSingle();
+        var domainEvent = user.DomainEvents.First().Should().BeOfType<UserProvisionedEvent>().Subject;
+        domainEvent.UserId.Should().Be(user.Id);
+        domainEvent.Email.Should().Be(TestEmail.Value);
+        domainEvent.DisplayName.Should().Be(TestDisplayName);
+        domainEvent.Role.Should().Be(TestRole.Value);
+        domainEvent.Tier.Should().Be(TestTier.Value);
+        domainEvent.InvitedByUserId.Should().Be(TestAdminId);
     }
 
     #endregion
@@ -131,11 +132,11 @@ public sealed class UserPendingStateTests
         user.ActivateFromInvitation(passwordHash, timeProvider);
 
         // Assert
-        Assert.Equal(UserAccountStatus.Active, user.Status);
-        Assert.Equal(passwordHash, user.PasswordHash);
-        Assert.True(user.EmailVerified);
-        Assert.Equal(now, user.EmailVerifiedAt);
-        Assert.True(user.CanAuthenticate());
+        user.Status.Should().Be(UserAccountStatus.Active);
+        user.PasswordHash.Should().Be(passwordHash);
+        user.EmailVerified.Should().BeTrue();
+        user.EmailVerifiedAt.Should().Be(now);
+        user.CanAuthenticate().Should().BeTrue();
     }
 
     [Fact]
@@ -154,9 +155,9 @@ public sealed class UserPendingStateTests
         var timeProvider = new FakeTimeProvider();
 
         // Act & Assert
-        var exception = Assert.Throws<InvalidOperationException>(
-            () => activeUser.ActivateFromInvitation(passwordHash, timeProvider));
-        Assert.Contains("Pending", exception.Message, StringComparison.OrdinalIgnoreCase);
+        var act = () => activeUser.ActivateFromInvitation(passwordHash, timeProvider);
+        var exception = act.Should().Throw<InvalidOperationException>().Which;
+        exception.Message.Should().ContainEquivalentOf("Pending");
     }
 
     [Fact]
@@ -181,13 +182,13 @@ public sealed class UserPendingStateTests
         user.ActivateFromInvitation(passwordHash, timeProvider);
 
         // Assert
-        Assert.Single(user.DomainEvents);
-        var domainEvent = Assert.IsType<UserActivatedFromInvitationEvent>(user.DomainEvents.First());
-        Assert.Equal(user.Id, domainEvent.UserId);
-        Assert.Equal(TestEmail.Value, domainEvent.Email);
-        Assert.Equal(TestRole.Value, domainEvent.Role);
-        Assert.Equal(TestTier.Value, domainEvent.Tier);
-        Assert.Equal(TestAdminId, domainEvent.InvitedByUserId);
+        user.DomainEvents.Should().ContainSingle();
+        var domainEvent = user.DomainEvents.First().Should().BeOfType<UserActivatedFromInvitationEvent>().Subject;
+        domainEvent.UserId.Should().Be(user.Id);
+        domainEvent.Email.Should().Be(TestEmail.Value);
+        domainEvent.Role.Should().Be(TestRole.Value);
+        domainEvent.Tier.Should().Be(TestTier.Value);
+        domainEvent.InvitedByUserId.Should().Be(TestAdminId);
     }
 
     #endregion

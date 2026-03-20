@@ -1,5 +1,6 @@
 using Api.BoundedContexts.Administration.Application.Commands;
-using Api.BoundedContexts.Administration.Application.Handlers;
+using Api.BoundedContexts.Administration.Application.Commands;
+using Api.BoundedContexts.Administration.Application.Queries;
 using Api.BoundedContexts.Administration.Application.Queries;
 using Api.BoundedContexts.Administration.Domain.Entities;
 using Api.BoundedContexts.Administration.Domain.Repositories;
@@ -8,6 +9,7 @@ using Api.BoundedContexts.Administration.Domain.ValueObjects;
 using Api.BoundedContexts.Administration.Infrastructure.Scheduling;
 using Microsoft.Extensions.Logging;
 using Moq;
+using FluentAssertions;
 using Xunit;
 using Api.Tests.Constants;
 
@@ -77,11 +79,11 @@ public sealed class ReportingHandlersTests
         var result = await handler.Handle(command, CancellationToken.None);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal(3, result.Content.Length);
-        Assert.Equal("test.json", result.FileName);
-        Assert.Equal(3, result.FileSizeBytes);
-        Assert.NotEqual(Guid.Empty, result.ExecutionId);
+        result.Should().NotBeNull();
+        result.Content.Length.Should().Be(3);
+        result.FileName.Should().Be("test.json");
+        result.FileSizeBytes.Should().Be(3);
+        result.ExecutionId.Should().NotBe(Guid.Empty);
 
         _mockGeneratorService.Verify(
             x => x.GenerateAsync(
@@ -133,8 +135,9 @@ public sealed class ReportingHandlersTests
             .Returns(Task.CompletedTask);
 
         // Act & Assert
-        await Assert.ThrowsAsync<InvalidOperationException>(() =>
-            handler.Handle(command, CancellationToken.None));
+        var act = () =>
+            handler.Handle(command, CancellationToken.None);
+        await act.Should().ThrowAsync<InvalidOperationException>();
 
         // Verify execution was created and updated with failure
         _mockExecutionRepository.Verify(
@@ -204,7 +207,7 @@ public sealed class ReportingHandlersTests
             };
 
             var result = await handler.Handle(command, CancellationToken.None);
-            Assert.NotNull(result);
+            result.Should().NotBeNull();
         }
     }
 
@@ -245,7 +248,7 @@ public sealed class ReportingHandlersTests
         var reportId = await handler.Handle(command, CancellationToken.None);
 
         // Assert
-        Assert.NotEqual(Guid.Empty, reportId);
+        reportId.Should().NotBe(Guid.Empty);
 
         _mockReportRepository.Verify(
             x => x.AddAsync(
@@ -363,7 +366,7 @@ public sealed class ReportingHandlersTests
         var success = await handler.Handle(command, CancellationToken.None);
 
         // Assert
-        Assert.True(success);
+        success.Should().BeTrue();
 
         _mockSchedulerService.Verify(
             x => x.UnscheduleReportAsync(reportId, It.IsAny<CancellationToken>()),
@@ -398,7 +401,7 @@ public sealed class ReportingHandlersTests
         var success = await handler.Handle(command, CancellationToken.None);
 
         // Assert
-        Assert.False(success);
+        success.Should().BeFalse();
     }
 
     [Fact]
@@ -450,7 +453,7 @@ public sealed class ReportingHandlersTests
         var success = await handler.Handle(command, CancellationToken.None);
 
         // Assert
-        Assert.True(success);
+        success.Should().BeTrue();
 
         _mockSchedulerService.Verify(
             x => x.UnscheduleReportAsync(reportId, It.IsAny<CancellationToken>()),
@@ -515,10 +518,10 @@ public sealed class ReportingHandlersTests
         var result = await handler.Handle(new GetScheduledReportsQuery(), CancellationToken.None);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal(2, result.Count);
-        Assert.Contains(result, r => r.Name == "Report 1");
-        Assert.Contains(result, r => r.Name == "Report 2");
+        result.Should().NotBeNull();
+        result.Count.Should().Be(2);
+        result.Should().Contain(r => r.Name == "Report 1");
+        result.Should().Contain(r => r.Name == "Report 2");
     }
 
     [Fact]
@@ -537,8 +540,8 @@ public sealed class ReportingHandlersTests
         var result = await handler.Handle(new GetScheduledReportsQuery(), CancellationToken.None);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Empty(result);
+        result.Should().NotBeNull();
+        result.Should().BeEmpty();
     }
 
     #endregion
@@ -585,9 +588,9 @@ public sealed class ReportingHandlersTests
         var result = await handler.Handle(query, CancellationToken.None);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Single(result);
-        Assert.Equal(reportId, result[0].ReportId);
+        result.Should().NotBeNull();
+        result.Should().ContainSingle();
+        result[0].ReportId.Should().Be(reportId);
     }
 
     [Fact]
@@ -642,8 +645,8 @@ public sealed class ReportingHandlersTests
         var result = await handler.Handle(query, CancellationToken.None);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal(2, result.Count);
+        result.Should().NotBeNull();
+        result.Count.Should().Be(2);
     }
 
     #endregion

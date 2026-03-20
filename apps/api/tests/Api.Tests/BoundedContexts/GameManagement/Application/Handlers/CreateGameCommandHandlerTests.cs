@@ -1,12 +1,14 @@
 using Api.BoundedContexts.DocumentProcessing.Domain.Repositories;
 using Api.BoundedContexts.GameManagement.Application.Commands;
-using Api.BoundedContexts.GameManagement.Application.Handlers;
+using Api.BoundedContexts.GameManagement.Application.Commands;
+using Api.BoundedContexts.GameManagement.Application.Queries;
 using Api.BoundedContexts.GameManagement.Domain.Entities;
 using Api.BoundedContexts.GameManagement.Domain.Repositories;
 using Api.Middleware.Exceptions;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Moq;
 using Xunit;
+using FluentAssertions;
 using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.GameManagement.Application.Handlers;
@@ -57,17 +59,17 @@ public class CreateGameCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.NotEqual(Guid.Empty, result.Id);
-        Assert.Equal("Ticket to Ride", result.Title);
-        Assert.Equal("Days of Wonder", result.Publisher);
-        Assert.Equal(2004, result.YearPublished);
-        Assert.Equal(2, result.MinPlayers);
-        Assert.Equal(5, result.MaxPlayers);
-        Assert.Equal(45, result.MinPlayTimeMinutes);
-        Assert.Equal(60, result.MaxPlayTimeMinutes);
-        Assert.Null(result.BggId);
-        Assert.NotEqual(default(DateTime), result.CreatedAt);
+        result.Should().NotBeNull();
+        result.Id.Should().NotBe(Guid.Empty);
+        result.Title.Should().Be("Ticket to Ride");
+        result.Publisher.Should().Be("Days of Wonder");
+        result.YearPublished.Should().Be(2004);
+        result.MinPlayers.Should().Be(2);
+        result.MaxPlayers.Should().Be(5);
+        result.MinPlayTimeMinutes.Should().Be(45);
+        result.MaxPlayTimeMinutes.Should().Be(60);
+        result.BggId.Should().BeNull();
+        result.CreatedAt.Should().NotBe(default(DateTime));
 
         // Verify repository interactions
         _gameRepositoryMock.Verify(
@@ -78,9 +80,9 @@ public class CreateGameCommandHandlerTests
             Times.Once);
 
         // Verify captured game
-        Assert.NotNull(capturedGame);
-        Assert.Equal("Ticket to Ride", capturedGame.Title.Value);
-        Assert.Equal("Days of Wonder", capturedGame.Publisher?.Name);
+        capturedGame.Should().NotBeNull();
+        capturedGame.Title.Value.Should().Be("Ticket to Ride");
+        capturedGame.Publisher?.Name.Should().Be("Days of Wonder");
     }
 
     [Fact]
@@ -94,15 +96,15 @@ public class CreateGameCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal("Chess", result.Title);
-        Assert.Null(result.Publisher);
-        Assert.Null(result.YearPublished);
-        Assert.Null(result.MinPlayers);
-        Assert.Null(result.MaxPlayers);
-        Assert.Null(result.MinPlayTimeMinutes);
-        Assert.Null(result.MaxPlayTimeMinutes);
-        Assert.Null(result.BggId);
+        result.Should().NotBeNull();
+        result.Title.Should().Be("Chess");
+        result.Publisher.Should().BeNull();
+        result.YearPublished.Should().BeNull();
+        result.MinPlayers.Should().BeNull();
+        result.MaxPlayers.Should().BeNull();
+        result.MinPlayTimeMinutes.Should().BeNull();
+        result.MaxPlayTimeMinutes.Should().BeNull();
+        result.BggId.Should().BeNull();
 
         _gameRepositoryMock.Verify(
             r => r.AddAsync(It.IsAny<Game>(), It.IsAny<CancellationToken>()),
@@ -121,10 +123,10 @@ public class CreateGameCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal("Solitaire", result.Title);
-        Assert.Null(result.MinPlayers); // Not created because MaxPlayers is missing
-        Assert.Null(result.MaxPlayers);
+        result.Should().NotBeNull();
+        result.Title.Should().Be("Solitaire");
+        result.MinPlayers.Should().BeNull(); // Not created because MaxPlayers is missing
+        result.MaxPlayers.Should().BeNull();
     }
 
     [Fact]
@@ -139,10 +141,10 @@ public class CreateGameCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal("Quick Game", result.Title);
-        Assert.Null(result.MinPlayTimeMinutes); // Not created because MaxPlayTimeMinutes is missing
-        Assert.Null(result.MaxPlayTimeMinutes);
+        result.Should().NotBeNull();
+        result.Title.Should().Be("Quick Game");
+        result.MinPlayTimeMinutes.Should().BeNull(); // Not created because MaxPlayTimeMinutes is missing
+        result.MaxPlayTimeMinutes.Should().BeNull();
     }
 
     [Fact]
@@ -158,12 +160,12 @@ public class CreateGameCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal("Pandemic", result.Title);
-        Assert.Equal(2, result.MinPlayers);
-        Assert.Equal(4, result.MaxPlayers);
-        Assert.Null(result.Publisher);
-        Assert.Null(result.YearPublished);
+        result.Should().NotBeNull();
+        result.Title.Should().Be("Pandemic");
+        result.MinPlayers.Should().Be(2);
+        result.MaxPlayers.Should().Be(4);
+        result.Publisher.Should().BeNull();
+        result.YearPublished.Should().BeNull();
     }
 
     [Fact]
@@ -179,12 +181,12 @@ public class CreateGameCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal("7 Wonders", result.Title);
-        Assert.Equal(30, result.MinPlayTimeMinutes);
-        Assert.Equal(45, result.MaxPlayTimeMinutes);
-        Assert.Null(result.Publisher);
-        Assert.Null(result.MinPlayers);
+        result.Should().NotBeNull();
+        result.Title.Should().Be("7 Wonders");
+        result.MinPlayTimeMinutes.Should().Be(30);
+        result.MaxPlayTimeMinutes.Should().Be(45);
+        result.Publisher.Should().BeNull();
+        result.MinPlayers.Should().BeNull();
     }
 
     [Fact]
@@ -200,12 +202,12 @@ public class CreateGameCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal("Azul", result.Title);
-        Assert.Equal("Plan B Games", result.Publisher);
-        Assert.Equal(2017, result.YearPublished);
-        Assert.Null(result.MinPlayers);
-        Assert.Null(result.MinPlayTimeMinutes);
+        result.Should().NotBeNull();
+        result.Title.Should().Be("Azul");
+        result.Publisher.Should().Be("Plan B Games");
+        result.YearPublished.Should().Be(2017);
+        result.MinPlayers.Should().BeNull();
+        result.MinPlayTimeMinutes.Should().BeNull();
     }
     [Fact]
     public async Task Handle_WithVeryLongTitle_CreatesGame()
@@ -218,8 +220,8 @@ public class CreateGameCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal(longTitle, result.Title);
+        result.Should().NotBeNull();
+        result.Title.Should().Be(longTitle);
     }
 
     [Fact]
@@ -235,9 +237,9 @@ public class CreateGameCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal(1, result.MinPlayers);
-        Assert.Equal(1, result.MaxPlayers);
+        result.Should().NotBeNull();
+        result.MinPlayers.Should().Be(1);
+        result.MaxPlayers.Should().Be(1);
     }
 
     [Fact]
@@ -253,9 +255,9 @@ public class CreateGameCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal(5, result.MinPlayers);
-        Assert.Equal(20, result.MaxPlayers);
+        result.Should().NotBeNull();
+        result.MinPlayers.Should().Be(5);
+        result.MaxPlayers.Should().Be(20);
     }
 
     [Fact]
@@ -270,8 +272,8 @@ public class CreateGameCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal(1475, result.YearPublished);
+        result.Should().NotBeNull();
+        result.YearPublished.Should().Be(1475);
     }
 
     [Fact]
@@ -287,8 +289,8 @@ public class CreateGameCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal(currentYear, result.YearPublished);
+        result.Should().NotBeNull();
+        result.YearPublished.Should().Be(currentYear);
     }
     [Fact]
     public async Task Handle_WithCancellationToken_PassesToRepository()
@@ -321,7 +323,7 @@ public class CreateGameCommandHandlerTests
         var result2 = await _handler.Handle(command2, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotEqual(result1.Id, result2.Id);
+        result2.Id.Should().NotBe(result1.Id);
     }
     [Fact]
     public async Task Handle_MapsAllPropertiesToDto()
@@ -340,17 +342,17 @@ public class CreateGameCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert - DTO should have all properties mapped
-        Assert.NotEqual(Guid.Empty, result.Id);
-        Assert.Equal("Wingspan", result.Title);
-        Assert.Equal("Stonemaier Games", result.Publisher);
-        Assert.Equal(2019, result.YearPublished);
-        Assert.Equal(1, result.MinPlayers);
-        Assert.Equal(5, result.MaxPlayers);
-        Assert.Equal(40, result.MinPlayTimeMinutes);
-        Assert.Equal(70, result.MaxPlayTimeMinutes);
-        Assert.Null(result.BggId); // Not set during creation
-        Assert.True(result.CreatedAt <= DateTime.UtcNow);
-        Assert.True(result.CreatedAt >= DateTime.UtcNow.AddSeconds(-5)); // Created within last 5 seconds
+        result.Id.Should().NotBe(Guid.Empty);
+        result.Title.Should().Be("Wingspan");
+        result.Publisher.Should().Be("Stonemaier Games");
+        result.YearPublished.Should().Be(2019);
+        result.MinPlayers.Should().Be(1);
+        result.MaxPlayers.Should().Be(5);
+        result.MinPlayTimeMinutes.Should().Be(40);
+        result.MaxPlayTimeMinutes.Should().Be(70);
+        result.BggId.Should().BeNull(); // Not set during creation
+        (result.CreatedAt <= DateTime.UtcNow).Should().BeTrue();
+        (result.CreatedAt >= DateTime.UtcNow.AddSeconds(-5)).Should().BeTrue(); // Created within last 5 seconds
     }
 
     // ===== VALIDATION TESTS =====
@@ -364,9 +366,9 @@ public class CreateGameCommandHandlerTests
         var command = new CreateGameCommand(Title: invalidTitle);
 
         // Act & Assert
-        await Assert.ThrowsAsync<Api.SharedKernel.Domain.Exceptions.ValidationException>(
-            () => _handler.Handle(command, TestContext.Current.CancellationToken)
-        );
+        var act = 
+            () => _handler.Handle(command, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<Api.SharedKernel.Domain.Exceptions.ValidationException>();
 
         _gameRepositoryMock.Verify(r => r.AddAsync(It.IsAny<Game>(), It.IsAny<CancellationToken>()), Times.Never);
     }
@@ -379,11 +381,11 @@ public class CreateGameCommandHandlerTests
         var command = new CreateGameCommand(Title: longTitle);
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<Api.SharedKernel.Domain.Exceptions.ValidationException>(
-            () => _handler.Handle(command, TestContext.Current.CancellationToken)
-        );
+        var act = 
+            () => _handler.Handle(command, TestContext.Current.CancellationToken);
+        var exception = (await act.Should().ThrowAsync<Api.SharedKernel.Domain.Exceptions.ValidationException>()).Which;
 
-        Assert.Contains("cannot exceed 200 characters", exception.Message);
+        exception.Message.Should().Contain("cannot exceed 200 characters");
         _gameRepositoryMock.Verify(r => r.AddAsync(It.IsAny<Game>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
@@ -399,11 +401,11 @@ public class CreateGameCommandHandlerTests
             MaxPlayers: maxPlayers);
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<Api.SharedKernel.Domain.Exceptions.ValidationException>(
-            () => _handler.Handle(command, TestContext.Current.CancellationToken)
-        );
+        var act = 
+            () => _handler.Handle(command, TestContext.Current.CancellationToken);
+        var exception = (await act.Should().ThrowAsync<Api.SharedKernel.Domain.Exceptions.ValidationException>()).Which;
 
-        Assert.Contains("Minimum player count cannot be less than 1", exception.Message);
+        exception.Message.Should().Contain("Minimum player count cannot be less than 1");
         _gameRepositoryMock.Verify(r => r.AddAsync(It.IsAny<Game>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
@@ -419,11 +421,11 @@ public class CreateGameCommandHandlerTests
             MaxPlayers: maxPlayers);
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<Api.SharedKernel.Domain.Exceptions.ValidationException>(
-            () => _handler.Handle(command, TestContext.Current.CancellationToken)
-        );
+        var act = 
+            () => _handler.Handle(command, TestContext.Current.CancellationToken);
+        var exception = (await act.Should().ThrowAsync<Api.SharedKernel.Domain.Exceptions.ValidationException>()).Which;
 
-        Assert.Contains("Maximum player count cannot exceed 100", exception.Message);
+        exception.Message.Should().Contain("Maximum player count cannot exceed 100");
         _gameRepositoryMock.Verify(r => r.AddAsync(It.IsAny<Game>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
@@ -437,11 +439,11 @@ public class CreateGameCommandHandlerTests
             MaxPlayers: 2); // Min > Max
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<Api.SharedKernel.Domain.Exceptions.ValidationException>(
-            () => _handler.Handle(command, TestContext.Current.CancellationToken)
-        );
+        var act = 
+            () => _handler.Handle(command, TestContext.Current.CancellationToken);
+        var exception = (await act.Should().ThrowAsync<Api.SharedKernel.Domain.Exceptions.ValidationException>()).Which;
 
-        Assert.Contains("Minimum player count cannot exceed maximum", exception.Message);
+        exception.Message.Should().Contain("Minimum player count cannot exceed maximum");
         _gameRepositoryMock.Verify(r => r.AddAsync(It.IsAny<Game>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
@@ -455,11 +457,11 @@ public class CreateGameCommandHandlerTests
             MaxPlayTimeMinutes: 60); // Min > Max
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<Api.SharedKernel.Domain.Exceptions.ValidationException>(
-            () => _handler.Handle(command, TestContext.Current.CancellationToken)
-        );
+        var act = 
+            () => _handler.Handle(command, TestContext.Current.CancellationToken);
+        var exception = (await act.Should().ThrowAsync<Api.SharedKernel.Domain.Exceptions.ValidationException>()).Which;
 
-        Assert.Contains("cannot exceed", exception.Message, StringComparison.OrdinalIgnoreCase);
+        exception.Message.Should().ContainEquivalentOf("cannot exceed");
         _gameRepositoryMock.Verify(r => r.AddAsync(It.IsAny<Game>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
@@ -481,12 +483,12 @@ public class CreateGameCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal("Scythe", result.Title);
-        Assert.Equal(169786, result.BggId);
+        result.Should().NotBeNull();
+        result.Title.Should().Be("Scythe");
+        result.BggId.Should().Be(169786);
 
-        Assert.NotNull(capturedGame);
-        Assert.Equal(169786, capturedGame.BggId);
+        capturedGame.Should().NotBeNull();
+        capturedGame.BggId.Should().Be(169786);
     }
 
     // ===== PDF LINKING TESTS (Issue #3372) =====
@@ -528,8 +530,8 @@ public class CreateGameCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.NotNull(capturedGame);
+        result.Should().NotBeNull();
+        capturedGame.Should().NotBeNull();
 
         // Verify PDF was fetched
         _pdfDocumentRepositoryMock.Verify(
@@ -542,7 +544,7 @@ public class CreateGameCommandHandlerTests
             Times.Exactly(2));
 
         // Verify PDF GameId was updated
-        Assert.Equal(capturedGame.Id, pdfDocument.GameId);
+        pdfDocument.GameId.Should().Be(capturedGame.Id);
     }
 
     [Fact]
@@ -560,12 +562,13 @@ public class CreateGameCommandHandlerTests
             .ReturnsAsync((Api.BoundedContexts.DocumentProcessing.Domain.Entities.PdfDocument?)null);
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<NotFoundException>(
-            () => _handler.Handle(command, TestContext.Current.CancellationToken));
+        var act = 
+            () => _handler.Handle(command, TestContext.Current.CancellationToken);
+        var exception = (await act.Should().ThrowAsync<NotFoundException>()).Which;
 
         // Verify exception contains correct info
-        Assert.Equal("PdfDocument", exception.ResourceType);
-        Assert.Equal(pdfId.ToString(), exception.ResourceId);
+        exception.ResourceType.Should().Be("PdfDocument");
+        exception.ResourceId.Should().Be(pdfId.ToString());
 
         // Verify PDF was searched
         _pdfDocumentRepositoryMock.Verify(

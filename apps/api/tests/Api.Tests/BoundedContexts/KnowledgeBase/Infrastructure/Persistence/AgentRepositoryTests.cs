@@ -4,6 +4,7 @@ using Api.BoundedContexts.KnowledgeBase.Infrastructure.Persistence;
 using Api.Infrastructure;
 using Api.Tests.Infrastructure;
 using Xunit;
+using FluentAssertions;
 using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Infrastructure.Persistence;
@@ -35,9 +36,9 @@ internal class AgentRepositoryTests : SharedDatabaseTestBase<AgentRepository>
 
         // Assert
         var retrieved = await Repository.GetByIdAsync(agent.Id, CancellationToken.None);
-        Assert.NotNull(retrieved);
-        Assert.Equal(agent.Name, retrieved.Name);
-        Assert.Equal(agent.Type.Value, retrieved.Type.Value);
+        retrieved.Should().NotBeNull();
+        retrieved.Name.Should().Be(agent.Name);
+        retrieved.Type.Value.Should().Be(agent.Type.Value);
     }
 
     [Fact]
@@ -51,9 +52,9 @@ internal class AgentRepositoryTests : SharedDatabaseTestBase<AgentRepository>
         var retrieved = await Repository.GetByIdAsync(agent.Id, CancellationToken.None);
 
         // Assert
-        Assert.NotNull(retrieved);
-        Assert.Equal(agent.Id, retrieved.Id);
-        Assert.Equal(agent.Name, retrieved.Name);
+        retrieved.Should().NotBeNull();
+        retrieved.Id.Should().Be(agent.Id);
+        retrieved.Name.Should().Be(agent.Name);
     }
 
     [Fact]
@@ -63,7 +64,7 @@ internal class AgentRepositoryTests : SharedDatabaseTestBase<AgentRepository>
         var retrieved = await Repository.GetByIdAsync(Guid.NewGuid(), CancellationToken.None);
 
         // Assert
-        Assert.Null(retrieved);
+        retrieved.Should().BeNull();
     }
 
     [Fact]
@@ -77,8 +78,8 @@ internal class AgentRepositoryTests : SharedDatabaseTestBase<AgentRepository>
         var retrieved = await Repository.GetByNameAsync("Unique Agent", CancellationToken.None);
 
         // Assert
-        Assert.NotNull(retrieved);
-        Assert.Equal(agent.Id, retrieved.Id);
+        retrieved.Should().NotBeNull();
+        retrieved.Id.Should().Be(agent.Id);
     }
 
     [Fact]
@@ -97,8 +98,8 @@ internal class AgentRepositoryTests : SharedDatabaseTestBase<AgentRepository>
         var activeAgents = await Repository.GetAllActiveAsync(CancellationToken.None);
 
         // Assert
-        Assert.Equal(2, activeAgents.Count);
-        Assert.All(activeAgents, a => Assert.True(a.IsActive));
+        activeAgents.Count.Should().Be(2);
+        activeAgents.Should().AllSatisfy(a => a.IsActive.Should().BeTrue());
     }
 
     [Fact]
@@ -117,8 +118,8 @@ internal class AgentRepositoryTests : SharedDatabaseTestBase<AgentRepository>
         var ragAgents = await Repository.GetByTypeAsync(AgentType.RagAgent, CancellationToken.None);
 
         // Assert
-        Assert.Equal(2, ragAgents.Count);
-        Assert.All(ragAgents, a => Assert.Equal("RAG", a.Type.Value));
+        ragAgents.Count.Should().Be(2);
+        ragAgents.Should().AllSatisfy(a => a.Type.Value.Should().Be("RAG"));
     }
 
     [Fact]
@@ -136,8 +137,8 @@ internal class AgentRepositoryTests : SharedDatabaseTestBase<AgentRepository>
 
         // Assert
         var retrieved = await Repository.GetByIdAsync(agent.Id, CancellationToken.None);
-        Assert.Equal("Updated Name", retrieved!.Name);
-        Assert.Equal("VectorOnly", retrieved.Strategy.Name);
+        retrieved!.Name.Should().Be("Updated Name");
+        retrieved.Strategy.Name.Should().Be("VectorOnly");
     }
 
     [Fact]
@@ -152,7 +153,7 @@ internal class AgentRepositoryTests : SharedDatabaseTestBase<AgentRepository>
 
         // Assert
         var retrieved = await Repository.GetByIdAsync(agent.Id, CancellationToken.None);
-        Assert.Null(retrieved);
+        retrieved.Should().BeNull();
     }
 
     [Fact]
@@ -166,7 +167,7 @@ internal class AgentRepositoryTests : SharedDatabaseTestBase<AgentRepository>
         var exists = await Repository.ExistsAsync("Exists", CancellationToken.None);
 
         // Assert
-        Assert.True(exists);
+        exists.Should().BeTrue();
     }
 
     [Fact]
@@ -176,7 +177,7 @@ internal class AgentRepositoryTests : SharedDatabaseTestBase<AgentRepository>
         var exists = await Repository.ExistsAsync("Does Not Exist", CancellationToken.None);
 
         // Assert
-        Assert.False(exists);
+        exists.Should().BeFalse();
     }
 
     // Helper methods

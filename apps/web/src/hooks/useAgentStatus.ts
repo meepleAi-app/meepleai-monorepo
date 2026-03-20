@@ -47,6 +47,11 @@ export function useAgentStatus(agentId: string): UseAgentStatusResult {
   };
 
   useEffect(() => {
+    if (!agentId) {
+      setIsLoading(false);
+      setStatus(null);
+      return;
+    }
     void fetchStatus();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [agentId]);

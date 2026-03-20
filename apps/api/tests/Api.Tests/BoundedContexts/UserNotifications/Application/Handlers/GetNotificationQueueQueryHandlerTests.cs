@@ -1,10 +1,12 @@
-using Api.BoundedContexts.UserNotifications.Application.Handlers;
+using Api.BoundedContexts.UserNotifications.Application.Commands;
+using Api.BoundedContexts.UserNotifications.Application.Queries;
 using Api.BoundedContexts.UserNotifications.Application.Queries;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities.UserNotifications;
 using Api.Tests.Constants;
 using Api.Tests.TestHelpers;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.UserNotifications.Application.Handlers;
 
@@ -43,9 +45,9 @@ public class GetNotificationQueueQueryHandlerTests : IDisposable
         var result = await _handler.Handle(query, CancellationToken.None);
 
         // Assert
-        Assert.Empty(result.Items);
-        Assert.Equal(0, result.TotalCount);
-        Assert.Equal(1, result.Page);
+        result.Items.Should().BeEmpty();
+        result.TotalCount.Should().Be(0);
+        result.Page.Should().Be(1);
     }
 
     [Fact]
@@ -59,10 +61,10 @@ public class GetNotificationQueueQueryHandlerTests : IDisposable
         var result = await _handler.Handle(query, CancellationToken.None);
 
         // Assert
-        Assert.Equal(2, result.Items.Count);
-        Assert.Equal(5, result.TotalCount);
-        Assert.Equal(1, result.Page);
-        Assert.Equal(2, result.PageSize);
+        result.Items.Count.Should().Be(2);
+        result.TotalCount.Should().Be(5);
+        result.Page.Should().Be(1);
+        result.PageSize.Should().Be(2);
     }
 
     [Fact]
@@ -77,8 +79,8 @@ public class GetNotificationQueueQueryHandlerTests : IDisposable
         var result = await _handler.Handle(query, CancellationToken.None);
 
         // Assert
-        Assert.Equal(2, result.Items.Count);
-        Assert.All(result.Items, item => Assert.Equal("slack_user", item.ChannelType));
+        result.Items.Count.Should().Be(2);
+        result.Items.Should().AllSatisfy(item => item.ChannelType.Should().Be("slack_user"));
     }
 
     [Fact]
@@ -93,8 +95,8 @@ public class GetNotificationQueueQueryHandlerTests : IDisposable
         var result = await _handler.Handle(query, CancellationToken.None);
 
         // Assert
-        Assert.Equal(2, result.Items.Count);
-        Assert.All(result.Items, item => Assert.Equal("sent", item.Status));
+        result.Items.Count.Should().Be(2);
+        result.Items.Should().AllSatisfy(item => item.Status.Should().Be("sent"));
     }
 
     [Fact]
@@ -108,9 +110,9 @@ public class GetNotificationQueueQueryHandlerTests : IDisposable
         var result = await _handler.Handle(query, CancellationToken.None);
 
         // Assert
-        Assert.Equal(2, result.Items.Count);
-        Assert.Equal(5, result.TotalCount);
-        Assert.Equal(2, result.Page);
+        result.Items.Count.Should().Be(2);
+        result.TotalCount.Should().Be(5);
+        result.Page.Should().Be(2);
     }
 
     private async Task SeedItems(int count, string channelType = "email", string status = "pending")

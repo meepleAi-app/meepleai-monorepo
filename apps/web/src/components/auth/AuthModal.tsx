@@ -22,6 +22,7 @@ import { Button } from '@/components/ui/primitives/button';
 import { useAuth, type AuthUser } from '@/hooks/useAuth';
 import { api } from '@/lib/api';
 import { logger } from '@/lib/logger';
+import { isAdminRole } from '@/lib/utils/roles';
 
 import { LoginForm, LoginFormData } from './LoginForm';
 import OAuthButtons from './OAuthButtons';
@@ -104,7 +105,7 @@ export function AuthModal({
           onSuccess?.(response.user);
           onClose();
           // Redirect admins to admin dashboard, others to specified redirect or default dashboard
-          const targetUrl = response.user.role?.toLowerCase() === 'admin' ? '/admin' : redirectTo;
+          const targetUrl = isAdminRole(response.user.role) ? '/admin' : redirectTo;
 
           // Small delay to ensure session cookie is persisted before navigation
           // This prevents race condition with middleware session validation
@@ -152,7 +153,7 @@ export function AuthModal({
         onSuccess?.(user);
         onClose();
         // Redirect admins to admin dashboard, others to specified redirect or default dashboard
-        const targetUrl = user.role?.toLowerCase() === 'admin' ? '/admin' : redirectTo;
+        const targetUrl = isAdminRole(user.role) ? '/admin' : redirectTo;
 
         // Small delay to ensure session cookie is persisted before navigation
         await new Promise(resolve => setTimeout(resolve, 100));

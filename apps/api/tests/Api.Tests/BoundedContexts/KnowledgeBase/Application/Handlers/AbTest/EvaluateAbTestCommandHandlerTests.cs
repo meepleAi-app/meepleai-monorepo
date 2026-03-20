@@ -1,11 +1,12 @@
 using Api.BoundedContexts.KnowledgeBase.Application.Commands.AbTest;
-using Api.BoundedContexts.KnowledgeBase.Application.Handlers.AbTest;
+using Api.BoundedContexts.KnowledgeBase.Application.Commands.AbTest;
 using Api.BoundedContexts.KnowledgeBase.Domain.Entities;
 using Api.BoundedContexts.KnowledgeBase.Domain.Enums;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.Tests.Constants;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Handlers.AbTest;
 
@@ -50,17 +51,17 @@ public sealed class EvaluateAbTestCommandHandlerTests
 
         var result = await sut.Handle(command, CancellationToken.None);
 
-        Assert.NotNull(result);
-        Assert.Equal("Evaluated", result.Status);
-        Assert.NotNull(result.WinnerLabel);
-        Assert.NotNull(result.WinnerModelId);
+        result.Should().NotBeNull();
+        result.Status.Should().Be("Evaluated");
+        result.WinnerLabel.Should().NotBeNull();
+        result.WinnerModelId.Should().NotBeNull();
 
         // Revealed mode — model info visible
-        Assert.All(result.Variants, v =>
+        result.Variants.Should().AllSatisfy(v =>
         {
-            Assert.NotEmpty(v.Provider);
-            Assert.NotEmpty(v.ModelId);
-            Assert.NotNull(v.Evaluation);
+            v.Provider.Should().NotBeEmpty();
+            v.ModelId.Should().NotBeEmpty();
+            v.Evaluation.Should().NotBeNull();
         });
 
         _repoMock.Verify(r => r.UpdateAsync(session, It.IsAny<CancellationToken>()), Times.Once);
@@ -77,8 +78,9 @@ public sealed class EvaluateAbTestCommandHandlerTests
             new VariantEvaluationInput("A", 5, 5, 5, 5)
         ]);
 
-        await Assert.ThrowsAsync<InvalidOperationException>(() =>
-            sut.Handle(command, CancellationToken.None));
+        Func<Task> act = () =>
+            sut.Handle(command, CancellationToken.None);
+        await act.Should().ThrowAsync<InvalidOperationException>();
     }
 
     [Fact]
@@ -96,8 +98,8 @@ public sealed class EvaluateAbTestCommandHandlerTests
 
         var result = await sut.Handle(command, CancellationToken.None);
 
-        Assert.Equal("InProgress", result.Status);
-        Assert.Null(result.WinnerLabel);
+        result.Status.Should().Be("InProgress");
+        result.WinnerLabel.Should().BeNull();
     }
 
     [Fact]
@@ -115,7 +117,7 @@ public sealed class EvaluateAbTestCommandHandlerTests
 
         var result = await sut.Handle(command, CancellationToken.None);
 
-        Assert.Equal("B", result.WinnerLabel);
-        Assert.Equal("claude-3-haiku", result.WinnerModelId);
+        result.WinnerLabel.Should().Be("B");
+        result.WinnerModelId.Should().Be("claude-3-haiku");
     }
 }

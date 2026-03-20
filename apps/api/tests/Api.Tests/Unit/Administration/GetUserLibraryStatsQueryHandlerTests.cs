@@ -1,5 +1,7 @@
-using Api.BoundedContexts.Administration.Application.Handlers;
+using Api.BoundedContexts.Administration.Application.Commands;
+using Api.BoundedContexts.Administration.Application.Queries;
 using Api.Tests.Constants;
+using FluentAssertions;
 using Xunit;
 
 namespace Api.Tests.Unit.Administration;
@@ -17,7 +19,8 @@ public sealed class GetUserLibraryStatsQueryHandlerTests
     public void Constructor_WithNullDbContext_ThrowsArgumentNullException()
     {
         // Act & Assert
-        Assert.Throws<ArgumentNullException>(() =>
-            new GetUserLibraryStatsQueryHandler(null!));
+        var act = () =>
+            new GetUserLibraryStatsQueryHandler(null!);
+        act.Should().Throw<ArgumentNullException>();
     }
 }

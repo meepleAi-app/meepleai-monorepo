@@ -13,6 +13,7 @@ using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.SharedGameCatalog.Infrastructure;
 
@@ -59,7 +60,7 @@ public sealed class UserBadgeRepositoryIntegrationTests : IAsyncLifetime
         _dbContext = new MeepleAiDbContext(options, mockMediator.Object, eventCollectorMock.Object);
         await _dbContext.Database.MigrateAsync();
 
-        _repository = new UserBadgeRepository(_dbContext);
+        _repository = new UserBadgeRepository(_dbContext, eventCollectorMock.Object);
 
         // Seed test badge
         _testBadge = Badge.Create(
@@ -92,11 +93,11 @@ public sealed class UserBadgeRepositoryIntegrationTests : IAsyncLifetime
 
         // Assert
         var entity = await _dbContext.UserBadges.FirstOrDefaultAsync(e => e.Id == userBadge.Id);
-        Assert.NotNull(entity);
-        Assert.Equal(TestUserId1, entity.UserId);
-        Assert.Equal(_testBadge.Id, entity.BadgeId);
-        Assert.True(entity.IsDisplayed);
-        Assert.Null(entity.RevokedAt);
+        entity.Should().NotBeNull();
+        entity.UserId.Should().Be(TestUserId1);
+        entity.BadgeId.Should().Be(_testBadge.Id);
+        entity.IsDisplayed.Should().BeTrue();
+        entity.RevokedAt.Should().BeNull();
     }
 
     #endregion
@@ -121,9 +122,9 @@ public sealed class UserBadgeRepositoryIntegrationTests : IAsyncLifetime
         var result = await _repository.GetBadgeIdsByUserAsync(TestUserId1);
 
         // Assert
-        Assert.Single(result);
-        Assert.Contains(badge1.Id, result);
-        Assert.DoesNotContain(badge2.Id, result);
+        result.Should().ContainSingle();
+        result.Should().Contain(badge1.Id);
+        result.Should().NotContain(badge2.Id);
     }
 
     [Fact]
@@ -133,7 +134,7 @@ public sealed class UserBadgeRepositoryIntegrationTests : IAsyncLifetime
         var result = await _repository.GetBadgeIdsByUserAsync(Guid.NewGuid());
 
         // Assert
-        Assert.Empty(result);
+        result.Should().BeEmpty();
     }
 
     #endregion
@@ -158,9 +159,9 @@ public sealed class UserBadgeRepositoryIntegrationTests : IAsyncLifetime
         var result = await _repository.GetByUserIdAsync(TestUserId1);
 
         // Assert
-        Assert.Equal(2, result.Count);
-        Assert.Equal(badge2.Id, result[0].BadgeId); // Most recent first
-        Assert.Equal(badge1.Id, result[1].BadgeId);
+        result.Count.Should().Be(2);
+        result[0].BadgeId.Should().Be(badge2.Id); // Most recent first
+        result[1].BadgeId.Should().Be(badge1.Id);
     }
 
     [Fact]
@@ -176,7 +177,7 @@ public sealed class UserBadgeRepositoryIntegrationTests : IAsyncLifetime
         var result = await _repository.GetByUserIdAsync(TestUserId1, includeHidden: false);
 
         // Assert
-        Assert.Empty(result);
+        result.Should().BeEmpty();
     }
 
     [Fact]
@@ -192,8 +193,8 @@ public sealed class UserBadgeRepositoryIntegrationTests : IAsyncLifetime
         var result = await _repository.GetByUserIdAsync(TestUserId1, includeHidden: true);
 
         // Assert
-        Assert.Single(result);
-        Assert.False(result[0].IsDisplayed);
+        result.Should().ContainSingle();
+        result[0].IsDisplayed.Should().BeFalse();
     }
 
     #endregion
@@ -214,9 +215,9 @@ public sealed class UserBadgeRepositoryIntegrationTests : IAsyncLifetime
         var result = await _repository.GetUsersByBadgeCodeAsync("TEST_BADGE");
 
         // Assert
-        Assert.Equal(2, result.Count);
-        Assert.Contains(result, ub => ub.UserId == TestUserId1);
-        Assert.Contains(result, ub => ub.UserId == TestUserId2);
+        result.Count.Should().Be(2);
+        result.Should().Contain(ub => ub.UserId == TestUserId1);
+        result.Should().Contain(ub => ub.UserId == TestUserId2);
     }
 
     [Fact]
@@ -232,7 +233,7 @@ public sealed class UserBadgeRepositoryIntegrationTests : IAsyncLifetime
         var result = await _repository.GetUsersByBadgeCodeAsync("TEST_BADGE");
 
         // Assert
-        Assert.Empty(result);
+        result.Should().BeEmpty();
     }
 
     #endregion
@@ -250,9 +251,9 @@ public sealed class UserBadgeRepositoryIntegrationTests : IAsyncLifetime
         var result = await _repository.GetByUserAndBadgeAsync(TestUserId1, _testBadge.Id);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal(TestUserId1, result.UserId);
-        Assert.Equal(_testBadge.Id, result.BadgeId);
+        result.Should().NotBeNull();
+        result.UserId.Should().Be(TestUserId1);
+        result.BadgeId.Should().Be(_testBadge.Id);
     }
 
     [Fact]
@@ -262,7 +263,7 @@ public sealed class UserBadgeRepositoryIntegrationTests : IAsyncLifetime
         var result = await _repository.GetByUserAndBadgeAsync(Guid.NewGuid(), _testBadge.Id);
 
         // Assert
-        Assert.Null(result);
+        result.Should().BeNull();
     }
 
     #endregion

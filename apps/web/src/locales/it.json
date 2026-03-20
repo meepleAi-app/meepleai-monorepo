@@ -900,21 +900,21 @@
       },
       "values": {
         "title": "I Nostri Valori",
-        "accuracy": {
-          "title": "Precisione",
-          "content": "Ogni risposta è basata sui regolamenti ufficiali con citazione della fonte"
-        },
         "accessibility": {
           "title": "Accessibilità",
-          "content": "Regole complesse spiegate in modo semplice e comprensibile"
+          "description": "Regole complesse spiegate in modo semplice e comprensibile"
+        },
+        "precision": {
+          "title": "Precisione",
+          "description": "Ogni risposta è basata sui regolamenti ufficiali con citazione della fonte"
         },
         "community": {
           "title": "Community",
-          "content": "Un catalogo condiviso costruito insieme agli appassionati"
+          "description": "Un catalogo condiviso costruito insieme agli appassionati"
         },
         "innovation": {
           "title": "Innovazione",
-          "content": "Tecnologia AI all'avanguardia al servizio del divertimento"
+          "description": "Tecnologia AI all'avanguardia al servizio del divertimento"
         }
       },
       "team": {
@@ -1031,15 +1031,15 @@
         "general": {
           "title": "Generale",
           "questions": {
-            "whatIs": {
+            "q1": {
               "question": "Cos'è MeepleAI?",
               "answer": "MeepleAI è un assistente basato su intelligenza artificiale che ti aiuta a comprendere le regole dei giochi da tavolo. Puoi caricare i PDF dei regolamenti e fare domande in linguaggio naturale, ricevendo risposte precise con citazione della fonte."
             },
-            "free": {
+            "q2": {
               "question": "MeepleAI è gratuito?",
               "answer": "MeepleAI offre un piano gratuito con funzionalità base, incluso un numero limitato di query giornaliere. Per funzionalità avanzate e query illimitate, sono disponibili piani premium."
             },
-            "languages": {
+            "q3": {
               "question": "Quali lingue sono supportate?",
               "answer": "Puoi caricare regolamenti in qualsiasi lingua e fare domande in italiano o inglese. L'interfaccia è disponibile in italiano e inglese."
             }
@@ -1048,15 +1048,15 @@
         "usage": {
           "title": "Utilizzo",
           "questions": {
-            "howToUpload": {
+            "q1": {
               "question": "Come carico un regolamento?",
               "answer": "Dalla sezione 'Carica' puoi trascinare o selezionare un file PDF del regolamento. Il sistema lo elaborerà automaticamente e sarà disponibile per le tue domande in pochi minuti."
             },
-            "accuracy": {
+            "q2": {
               "question": "Quanto sono accurate le risposte?",
               "answer": "Le risposte sono generate analizzando il regolamento ufficiale e includono sempre il riferimento alla fonte. Tuttavia, consigliamo sempre di verificare con il regolamento originale per decisioni importanti durante le partite."
             },
-            "limits": {
+            "q3": {
               "question": "Ci sono limiti alle domande?",
               "answer": "Il piano gratuito ha un limite giornaliero di query. I piani premium offrono query illimitate e funzionalità aggiuntive."
             }
@@ -1065,15 +1065,15 @@
         "technical": {
           "title": "Tecnico",
           "questions": {
-            "pdfFormat": {
+            "q1": {
               "question": "Quali formati PDF sono supportati?",
               "answer": "Supportiamo PDF con testo selezionabile (non scansioni di immagini). Per risultati ottimali, usa PDF di alta qualità con testo nativo."
             },
-            "dataPrivacy": {
+            "q2": {
               "question": "I miei dati sono al sicuro?",
               "answer": "Sì, la sicurezza dei tuoi dati è la nostra priorità. I PDF caricati vengono elaborati e non condivisi con altri utenti. Consulta la nostra Privacy Policy per maggiori dettagli."
             },
-            "offline": {
+            "q3": {
               "question": "Posso usare MeepleAI offline?",
               "answer": "MeepleAI richiede una connessione internet per funzionare, poiché l'elaborazione avviene sui nostri server cloud."
             }
@@ -1082,15 +1082,15 @@
         "account": {
           "title": "Account",
           "questions": {
-            "deleteAccount": {
+            "q1": {
               "question": "Come cancello il mio account?",
               "answer": "Puoi richiedere la cancellazione del tuo account dalle Impostazioni > Avanzate > Elimina Account, oppure contattando il supporto."
             },
-            "changeEmail": {
+            "q2": {
               "question": "Posso cambiare la mia email?",
               "answer": "Al momento il cambio email non è supportato direttamente. Contatta il supporto per assistenza."
             },
-            "twoFactor": {
+            "q3": {
               "question": "Come attivo l'autenticazione a due fattori?",
               "answer": "Vai in Impostazioni > Privacy e Sicurezza > Autenticazione a due fattori e segui le istruzioni per configurare la 2FA con un'app authenticator."
             }

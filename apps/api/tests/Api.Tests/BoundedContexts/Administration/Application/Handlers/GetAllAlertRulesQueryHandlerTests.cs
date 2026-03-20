@@ -1,4 +1,4 @@
-using Api.BoundedContexts.Administration.Application.Handlers.AlertRules;
+using Api.BoundedContexts.Administration.Application.Commands.AlertRules;
 using Api.BoundedContexts.Administration.Application.Queries.AlertRules;
 using Api.BoundedContexts.Administration.Domain.Aggregates.AlertRules;
 using Api.BoundedContexts.Administration.Domain.Repositories;
@@ -241,6 +241,7 @@ public class GetAllAlertRulesQueryHandlerTests
     public void Constructor_WithNullRepository_ThrowsArgumentNullException()
     {
         // Act & Assert
-        Assert.Throws<ArgumentNullException>(() => new GetAllAlertRulesQueryHandler(null!));
+        var act = () => new GetAllAlertRulesQueryHandler(null!);
+act.Should().Throw<ArgumentNullException>();
     }
 }

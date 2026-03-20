@@ -9,6 +9,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Moq;
+using FluentAssertions;
 using Xunit;
 using Api.Tests.Constants;
 
@@ -90,16 +91,16 @@ public class ThreeStagePdfPipelineE2ETests : IAsyncLifetime
         var result = await orchestrator.ExtractTextWithFallbackAsync(pdfStream, cancellationToken: TestCancellationToken);
 
         // Assert
-        Assert.True(result.Success, "Happy path should succeed");
-        Assert.Equal(1, result.StageUsed);
-        Assert.Equal("Unstructured", result.StageName);
-        Assert.Equal(ExtractionQuality.High, result.Quality);
-        Assert.True(result.TotalDurationMs >= 0);
+        result.Success.Should().BeTrue("Happy path should succeed");
+        result.StageUsed.Should().Be(1);
+        result.StageName.Should().Be("Unstructured");
+        result.Quality.Should().Be(ExtractionQuality.High);
+        (result.TotalDurationMs >= 0).Should().BeTrue();
 
         // Only Stage 1 should be called
-        Assert.Equal(1, stage1.CallCount);
-        Assert.Equal(0, stage2.CallCount);
-        Assert.Equal(0, stage3.CallCount);
+        stage1.CallCount.Should().Be(1);
+        stage2.CallCount.Should().Be(0);
+        stage3.CallCount.Should().Be(0);
 
         _output($"✓ Test 1 passed: Stage {result.StageUsed} ({result.StageName}), Quality: {result.Quality}, Duration: {result.TotalDurationMs}ms");
     }
@@ -121,15 +122,15 @@ public class ThreeStagePdfPipelineE2ETests : IAsyncLifetime
         var result = await orchestrator.ExtractTextWithFallbackAsync(pdfStream, cancellationToken: TestCancellationToken);
 
         // Assert
-        Assert.True(result.Success);
-        Assert.Equal(2, result.StageUsed);
-        Assert.Equal("SmolDocling", result.StageName);
-        Assert.Equal(ExtractionQuality.High, result.Quality);
+        result.Success.Should().BeTrue();
+        result.StageUsed.Should().Be(2);
+        result.StageName.Should().Be("SmolDocling");
+        result.Quality.Should().Be(ExtractionQuality.High);
 
         // Stage 1 and 2 called, Stage 3 NOT called
-        Assert.Equal(1, stage1.CallCount);
-        Assert.Equal(1, stage2.CallCount);
-        Assert.Equal(0, stage3.CallCount);
+        stage1.CallCount.Should().Be(1);
+        stage2.CallCount.Should().Be(1);
+        stage3.CallCount.Should().Be(0);
 
         _output($"✓ Test 2 passed: Fallback to Stage {result.StageUsed}, Quality improved from Low to {result.Quality}");
     }
@@ -151,14 +152,14 @@ public class ThreeStagePdfPipelineE2ETests : IAsyncLifetime
         var result = await orchestrator.ExtractTextWithFallbackAsync(pdfStream, cancellationToken: TestCancellationToken);
 
         // Assert
-        Assert.True(result.Success);
-        Assert.Equal(3, result.StageUsed);
-        Assert.Equal("Docnet", result.StageName);
+        result.Success.Should().BeTrue();
+        result.StageUsed.Should().Be(3);
+        result.StageName.Should().Be("Docnet");
 
         // All 3 stages attempted
-        Assert.Equal(1, stage1.CallCount);
-        Assert.Equal(1, stage2.CallCount);
-        Assert.Equal(1, stage3.CallCount);
+        stage1.CallCount.Should().Be(1);
+        stage2.CallCount.Should().Be(1);
+        stage3.CallCount.Should().Be(1);
 
         _output($"✓ Test 3 passed: All stages attempted, Stage 3 succeeded as fallback");
     }
@@ -180,14 +181,14 @@ public class ThreeStagePdfPipelineE2ETests : IAsyncLifetime
         var result = await orchestrator.ExtractTextWithFallbackAsync(pdfStream, cancellationToken: TestCancellationToken);
 
         // Assert - Quality gate should trigger fallback
-        Assert.True(result.Success);
-        Assert.Equal(2, result.StageUsed); // Stage 2 accepted (0.85 ≥ 0.70)
-        Assert.Equal(ExtractionQuality.High, result.Quality);
+        result.Success.Should().BeTrue();
+        result.StageUsed.Should().Be(2);
+        result.Quality.Should().Be(ExtractionQuality.High);
 
         // Verify quality gate triggered fallback
-        Assert.Equal(1, stage1.CallCount); // Stage 1 tried but rejected
-        Assert.Equal(1, stage2.CallCount); // Stage 2 accepted
-        Assert.Equal(0, stage3.CallCount); // Stage 3 not needed
+        stage1.CallCount.Should().Be(1);
+        stage2.CallCount.Should().Be(1);
+        stage3.CallCount.Should().Be(0);
 
         _output($"✓ Test 4 passed: Quality gate enforced, Stage 2 quality ({result.Quality}) meets threshold");
     }
@@ -209,15 +210,15 @@ public class ThreeStagePdfPipelineE2ETests : IAsyncLifetime
         var result = await orchestrator.ExtractTextWithFallbackAsync(pdfStream, cancellationToken: TestCancellationToken);
 
         // Assert - Returns Stage 3 result (even if failed)
-        Assert.False(result.Success);
-        Assert.Equal(3, result.StageUsed);
-        Assert.NotNull(result.ErrorMessage);
-        Assert.Contains("Corrupted PDF", result.ErrorMessage);
+        result.Success.Should().BeFalse();
+        result.StageUsed.Should().Be(3);
+        result.ErrorMessage.Should().NotBeNull();
+        result.ErrorMessage.Should().Contain("Corrupted PDF");
 
         // All 3 stages attempted
-        Assert.Equal(1, stage1.CallCount);
-        Assert.Equal(1, stage2.CallCount);
-        Assert.Equal(1, stage3.CallCount);
+        stage1.CallCount.Should().Be(1);
+        stage2.CallCount.Should().Be(1);
+        stage3.CallCount.Should().Be(1);
 
         _output($"✓ Test 5 passed: All stages failed gracefully, error: {result.ErrorMessage}");
     }
@@ -281,7 +282,7 @@ public class ThreeStagePdfPipelineE2ETests : IAsyncLifetime
             sw.Stop();
             latencies.Add(sw.ElapsedMilliseconds);
 
-            Assert.True(result.Success, $"Iteration {i + 1} should succeed");
+            result.Success.Should().BeTrue($"Iteration {i + 1} should succeed");
             _output($"  Iteration {i + 1}: {sw.ElapsedMilliseconds}ms (Stage {result.StageUsed})");
         }
 
@@ -294,9 +295,7 @@ public class ThreeStagePdfPipelineE2ETests : IAsyncLifetime
         _output($"Performance Results: Avg={avgLatency:F0}ms, P95={p95Latency}ms (target {RealServiceTargetP95LatencyMs}ms for CPU-only Docker stack)");
 
         // Assert - Allow higher P95 on CPU-bound test nodes; GPU-backed CI can tighten this later
-        Assert.True(
-            p95Latency < RealServiceTargetP95LatencyMs,
-            $"P95 latency ({p95Latency}ms) should be < {RealServiceTargetP95LatencyMs}ms (CPU-only Testcontainers)");
+        (p95Latency < RealServiceTargetP95LatencyMs).Should().BeTrue($"P95 latency ({p95Latency}ms) should be < {RealServiceTargetP95LatencyMs}ms (CPU-only Testcontainers)");
 
         _output($"✓ Test 6 passed: P95={p95Latency}ms < {RealServiceTargetP95LatencyMs}ms target");
 

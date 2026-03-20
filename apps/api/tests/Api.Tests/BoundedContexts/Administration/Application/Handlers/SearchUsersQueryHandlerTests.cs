@@ -1,4 +1,5 @@
-using Api.BoundedContexts.Administration.Application.Handlers;
+using Api.BoundedContexts.Administration.Application.Commands;
+using Api.BoundedContexts.Administration.Application.Queries;
 using Api.BoundedContexts.Administration.Application.Queries;
 using Api.BoundedContexts.Authentication.Domain.Entities;
 using Api.SharedKernel.Domain.ValueObjects;
@@ -8,6 +9,7 @@ using Api.Tests.TestHelpers;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using FluentAssertions;
 using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.Administration.Application.Handlers;
@@ -59,10 +61,10 @@ public class SearchUsersQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Single(result);
-        Assert.Equal("John Doe", result[0].DisplayName);
-        Assert.Equal("john@example.com", result[0].Email);
+        result.Should().NotBeNull();
+        result.Should().ContainSingle();
+        result[0].DisplayName.Should().Be("John Doe");
+        result[0].Email.Should().Be("john@example.com");
 
         _userRepositoryMock.Verify(
             r => r.SearchAsync("john", 10, It.IsAny<CancellationToken>()),
@@ -92,8 +94,8 @@ public class SearchUsersQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.Equal(3, result.Count);
-        Assert.All(result, r => Assert.Contains("Admin", r.DisplayName));
+        result.Count.Should().Be(3);
+        result.Should().AllSatisfy(r => r.DisplayName.Should().Contain("Admin"));
     }
 
     [Fact]
@@ -119,7 +121,7 @@ public class SearchUsersQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.Equal(2, result.Count);
+        result.Count.Should().Be(2);
         _userRepositoryMock.Verify(
             r => r.SearchAsync(Role.User.Value, 2, It.IsAny<CancellationToken>()),
             Times.Once);
@@ -136,8 +138,8 @@ public class SearchUsersQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Empty(result);
+        result.Should().NotBeNull();
+        result.Should().BeEmpty();
 
         // Verify repository was NOT called
         _userRepositoryMock.Verify(
@@ -157,8 +159,8 @@ public class SearchUsersQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Empty(result);
+        result.Should().NotBeNull();
+        result.Should().BeEmpty();
 
         // Verify repository was NOT called
         _userRepositoryMock.Verify(
@@ -178,8 +180,8 @@ public class SearchUsersQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Empty(result);
+        result.Should().NotBeNull();
+        result.Should().BeEmpty();
 
         // Verify repository was NOT called (query too short)
         _userRepositoryMock.Verify(
@@ -203,7 +205,7 @@ public class SearchUsersQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
 
         // Verify repository WAS called (query meets minimum length)
         _userRepositoryMock.Verify(
@@ -227,8 +229,8 @@ public class SearchUsersQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Empty(result);
+        result.Should().NotBeNull();
+        result.Should().BeEmpty();
     }
     [Fact]
     public async Task Handle_RepositoryThrowsException_ReturnsEmptyListAndLogsError()
@@ -248,8 +250,8 @@ public class SearchUsersQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Empty(result); // Handler catches exception and returns empty list
+        result.Should().NotBeNull();
+        result.Should().BeEmpty(); // Handler catches exception and returns empty list
 
         // Verify error was logged
         _loggerMock.Verify(
@@ -316,4 +318,3 @@ public class SearchUsersQueryHandlerTests
             Times.Once);
     }
 }
-

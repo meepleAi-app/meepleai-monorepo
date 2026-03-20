@@ -1,9 +1,11 @@
-using Api.BoundedContexts.GameToolkit.Application.Handlers;
+using Api.BoundedContexts.GameToolkit.Application.Commands;
+using Api.BoundedContexts.GameToolkit.Application.Queries;
 using Api.BoundedContexts.GameToolkit.Application.Queries;
 using Api.BoundedContexts.GameToolkit.Domain.Repositories;
 using Api.Tests.Constants;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.GameToolkit.Application.Handlers;
 
@@ -34,9 +36,9 @@ public class ToolkitQueryHandlerTests
 
         var result = await handler.Handle(query, TestContext.Current.CancellationToken);
 
-        Assert.NotNull(result);
-        Assert.Equal(toolkit.Id, result.Id);
-        Assert.Equal("Test Toolkit", result.Name);
+        result.Should().NotBeNull();
+        result.Id.Should().Be(toolkit.Id);
+        result.Name.Should().Be("Test Toolkit");
     }
 
     [Fact]
@@ -50,7 +52,7 @@ public class ToolkitQueryHandlerTests
 
         var result = await handler.Handle(query, TestContext.Current.CancellationToken);
 
-        Assert.Null(result);
+        result.Should().BeNull();
     }
 
     [Fact]
@@ -58,8 +60,9 @@ public class ToolkitQueryHandlerTests
     {
         var handler = new GetToolkitQueryHandler(_repoMock.Object);
 
-        await Assert.ThrowsAsync<ArgumentNullException>(() =>
-            handler.Handle(null!, TestContext.Current.CancellationToken));
+        var act = () =>
+            handler.Handle(null!, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<ArgumentNullException>();
     }
 
     // ========================================================================
@@ -84,9 +87,9 @@ public class ToolkitQueryHandlerTests
 
         var result = await handler.Handle(query, TestContext.Current.CancellationToken);
 
-        Assert.Equal(2, result.Count);
-        Assert.Equal("Toolkit 1", result[0].Name);
-        Assert.Equal("Toolkit 2", result[1].Name);
+        result.Count.Should().Be(2);
+        result[0].Name.Should().Be("Toolkit 1");
+        result[1].Name.Should().Be("Toolkit 2");
     }
 
     [Fact]
@@ -99,7 +102,7 @@ public class ToolkitQueryHandlerTests
 
         var result = await handler.Handle(new GetToolkitsByGameQuery(Guid.NewGuid()), TestContext.Current.CancellationToken);
 
-        Assert.Empty(result);
+        result.Should().BeEmpty();
     }
 
     // ========================================================================
@@ -119,8 +122,8 @@ public class ToolkitQueryHandlerTests
 
         var result = await handler.Handle(new GetPublishedToolkitsQuery(), TestContext.Current.CancellationToken);
 
-        Assert.Single(result);
-        Assert.True(result[0].IsPublished);
+        result.Should().ContainSingle();
+        result[0].IsPublished.Should().BeTrue();
     }
 
     [Fact]
@@ -133,7 +136,7 @@ public class ToolkitQueryHandlerTests
 
         var result = await handler.Handle(new GetPublishedToolkitsQuery(), TestContext.Current.CancellationToken);
 
-        Assert.Empty(result);
+        result.Should().BeEmpty();
     }
 
     // ========================================================================

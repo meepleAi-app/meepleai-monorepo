@@ -1,5 +1,6 @@
 using Api.BoundedContexts.Administration.Application.Commands;
-using Api.BoundedContexts.Administration.Application.Handlers;
+using Api.BoundedContexts.Administration.Application.Commands;
+using Api.BoundedContexts.Administration.Application.Queries;
 using Api.Models;
 using Api.Services;
 using Api.Tests.Constants;
@@ -95,8 +96,9 @@ public class ExportStatsCommandHandlerTests
         ExportStatsCommand? command = null;
 
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentNullException>(() =>
-            _handler.Handle(command!, CancellationToken.None));
+        var act = () =>
+            _handler.Handle(command!, CancellationToken.None);
+        await act.Should().ThrowAsync<ArgumentNullException>();
 
         _mockAdminStatsService.Verify(
             s => s.ExportDashboardDataAsync(It.IsAny<ExportDataRequest>(), It.IsAny<CancellationToken>()),

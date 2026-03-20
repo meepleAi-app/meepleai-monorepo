@@ -70,9 +70,6 @@ env:
   POSTGRES_DB: 'meepleai_test'
 
 jobs:
-  # ============================================
-  # CHANGE DETECTION
-  # ============================================
   changes:
     name: Detect Changes
     runs-on: ${{ vars.RUNNER || 'ubuntu-latest' }}

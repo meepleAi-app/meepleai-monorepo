@@ -1,5 +1,6 @@
 using Api.BoundedContexts.SessionTracking.Application.Commands;
-using Api.BoundedContexts.SessionTracking.Application.Handlers;
+using Api.BoundedContexts.SessionTracking.Application.Commands;
+using Api.BoundedContexts.SessionTracking.Application.Queries;
 using Api.BoundedContexts.SessionTracking.Domain.Entities;
 using Api.BoundedContexts.SessionTracking.Domain.Enums;
 using Api.BoundedContexts.SessionTracking.Domain.Repositories;
@@ -11,6 +12,7 @@ using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Moq;
+using FluentAssertions;
 using Xunit;
 
 namespace Api.Tests.BoundedContexts.SessionTracking.Application.Handlers;
@@ -85,7 +87,7 @@ public class MarkPlayerReadyCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.True(result.IsReady);
+        result.IsReady.Should().BeTrue();
         _mockSessionRepo.Verify(r => r.UpdateAsync(session, It.IsAny<CancellationToken>()), Times.Once);
         _mockUnitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
         _mockSyncService.Verify(s => s.PublishEventAsync(
@@ -103,8 +105,8 @@ public class MarkPlayerReadyCommandHandlerTests
         var command = new MarkPlayerReadyCommand(sessionId, Guid.NewGuid(), Guid.NewGuid());
 
         // Act & Assert
-        await Assert.ThrowsAsync<NotFoundException>(
-            () => _handler.Handle(command, TestContext.Current.CancellationToken));
+        var act = () => _handler.Handle(command, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<NotFoundException>();
     }
 
     [Fact]
@@ -124,8 +126,8 @@ public class MarkPlayerReadyCommandHandlerTests
         var command = new MarkPlayerReadyCommand(sessionId, participantId, Guid.NewGuid());
 
         // Act & Assert
-        await Assert.ThrowsAsync<ConflictException>(
-            () => _handler.Handle(command, TestContext.Current.CancellationToken));
+        var act2 = () => _handler.Handle(command, TestContext.Current.CancellationToken);
+        await act2.Should().ThrowAsync<ConflictException>();
     }
 
     [Fact]
@@ -142,8 +144,8 @@ public class MarkPlayerReadyCommandHandlerTests
         var command = new MarkPlayerReadyCommand(sessionId, Guid.NewGuid(), Guid.NewGuid());
 
         // Act & Assert
-        await Assert.ThrowsAsync<NotFoundException>(
-            () => _handler.Handle(command, TestContext.Current.CancellationToken));
+        var act3 = () => _handler.Handle(command, TestContext.Current.CancellationToken);
+        await act3.Should().ThrowAsync<NotFoundException>();
     }
 }
 
@@ -220,8 +222,8 @@ public class KickParticipantCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.Equal(playerId, result.ParticipantId);
-        Assert.Equal("Player", result.DisplayName);
+        result.ParticipantId.Should().Be(playerId);
+        result.DisplayName.Should().Be("Player");
         _mockSessionRepo.Verify(r => r.UpdateAsync(session, It.IsAny<CancellationToken>()), Times.Once);
         _mockUnitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
         _mockSyncService.Verify(s => s.PublishEventAsync(
@@ -239,8 +241,8 @@ public class KickParticipantCommandHandlerTests
         var command = new KickParticipantCommand(sessionId, Guid.NewGuid(), Guid.NewGuid());
 
         // Act & Assert
-        await Assert.ThrowsAsync<NotFoundException>(
-            () => _handler.Handle(command, TestContext.Current.CancellationToken));
+        var act4 = () => _handler.Handle(command, TestContext.Current.CancellationToken);
+        await act4.Should().ThrowAsync<NotFoundException>();
     }
 
     [Fact]
@@ -257,8 +259,8 @@ public class KickParticipantCommandHandlerTests
         var command = new KickParticipantCommand(sessionId, Guid.NewGuid(), ownerId);
 
         // Act & Assert
-        await Assert.ThrowsAsync<NotFoundException>(
-            () => _handler.Handle(command, TestContext.Current.CancellationToken));
+        var act5 = () => _handler.Handle(command, TestContext.Current.CancellationToken);
+        await act5.Should().ThrowAsync<NotFoundException>();
     }
 
     [Fact]
@@ -277,8 +279,8 @@ public class KickParticipantCommandHandlerTests
         var command = new KickParticipantCommand(sessionId, ownerId, ownerId);
 
         // Act & Assert
-        await Assert.ThrowsAsync<ConflictException>(
-            () => _handler.Handle(command, TestContext.Current.CancellationToken));
+        var act6 = () => _handler.Handle(command, TestContext.Current.CancellationToken);
+        await act6.Should().ThrowAsync<ConflictException>();
     }
 
     [Fact]
@@ -299,8 +301,8 @@ public class KickParticipantCommandHandlerTests
         var command = new KickParticipantCommand(sessionId, playerId, ownerId);
 
         // Act & Assert
-        await Assert.ThrowsAsync<ConflictException>(
-            () => _handler.Handle(command, TestContext.Current.CancellationToken));
+        var act7 = () => _handler.Handle(command, TestContext.Current.CancellationToken);
+        await act7.Should().ThrowAsync<ConflictException>();
     }
 }
 
@@ -357,7 +359,7 @@ public class UpdatePlayerScoreCommandHandlerTests
         var command = new UpdatePlayerScoreCommand(sessionId, participantId, participantId, 10m, RoundNumber: 1);
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
-        Assert.NotEqual(Guid.Empty, result.ScoreEntryId);
+        result.ScoreEntryId.Should().NotBe(Guid.Empty);
         _mockScoreRepo.Verify(r => r.AddAsync(It.IsAny<ScoreEntry>(), It.IsAny<CancellationToken>()), Times.Once);
         _mockUnitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
         _mockSyncService.Verify(s => s.PublishEventAsync(sessionId, It.IsAny<INotification>(), It.IsAny<CancellationToken>()), Times.Once);
@@ -379,7 +381,8 @@ public class UpdatePlayerScoreCommandHandlerTests
         _mockSessionRepo.Setup(r => r.GetByIdAsync(sessionId, It.IsAny<CancellationToken>())).ReturnsAsync(session);
 
         var command = new UpdatePlayerScoreCommand(sessionId, participantId, requesterId, 5m, RoundNumber: 1);
-        await Assert.ThrowsAsync<ForbiddenException>(() => _handler.Handle(command, TestContext.Current.CancellationToken));
+        var act8 = () => _handler.Handle(command, TestContext.Current.CancellationToken);
+        await act8.Should().ThrowAsync<ForbiddenException>();
     }
 
     [Fact]
@@ -388,7 +391,8 @@ public class UpdatePlayerScoreCommandHandlerTests
         _mockSessionRepo.Setup(r => r.GetByIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((Session?)null);
         var command = new UpdatePlayerScoreCommand(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), 5m);
-        await Assert.ThrowsAsync<NotFoundException>(() => _handler.Handle(command, TestContext.Current.CancellationToken));
+        var act9 = () => _handler.Handle(command, TestContext.Current.CancellationToken);
+        await act9.Should().ThrowAsync<NotFoundException>();
     }
 
     [Fact]
@@ -400,7 +404,8 @@ public class UpdatePlayerScoreCommandHandlerTests
         session.Finalize();
         _mockSessionRepo.Setup(r => r.GetByIdAsync(sessionId, It.IsAny<CancellationToken>())).ReturnsAsync(session);
         var command = new UpdatePlayerScoreCommand(sessionId, participantId, Guid.NewGuid(), 5m);
-        await Assert.ThrowsAsync<ConflictException>(() => _handler.Handle(command, TestContext.Current.CancellationToken));
+        var act10 = () => _handler.Handle(command, TestContext.Current.CancellationToken);
+        await act10.Should().ThrowAsync<ConflictException>();
     }
 
     [Fact]
@@ -410,7 +415,8 @@ public class UpdatePlayerScoreCommandHandlerTests
         var session = CreateActiveSession(sessionId, Guid.NewGuid());
         _mockSessionRepo.Setup(r => r.GetByIdAsync(sessionId, It.IsAny<CancellationToken>())).ReturnsAsync(session);
         var command = new UpdatePlayerScoreCommand(sessionId, Guid.NewGuid(), Guid.NewGuid(), 5m);
-        await Assert.ThrowsAsync<NotFoundException>(() => _handler.Handle(command, TestContext.Current.CancellationToken));
+        var act11 = () => _handler.Handle(command, TestContext.Current.CancellationToken);
+        await act11.Should().ThrowAsync<NotFoundException>();
     }
 
     [Fact]
@@ -426,7 +432,8 @@ public class UpdatePlayerScoreCommandHandlerTests
             .ThrowsAsync(new DbUpdateConcurrencyException("Conflict"));
 
         var command = new UpdatePlayerScoreCommand(sessionId, participantId, participantId, 5m, RoundNumber: 1);
-        await Assert.ThrowsAsync<ConflictException>(() => _handler.Handle(command, TestContext.Current.CancellationToken));
+        var act12 = () => _handler.Handle(command, TestContext.Current.CancellationToken);
+        await act12.Should().ThrowAsync<ConflictException>();
 
         _mockBroadcast.Verify(b => b.PublishAsync(
             sessionId,
@@ -478,8 +485,8 @@ public class RollSessionDiceCommandHandlerTests
         var command = new RollSessionDiceCommand(sessionId, participantId, Guid.NewGuid(), "2d6");
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
-        Assert.Equal("2D6", result.Formula); // formula is normalized to uppercase by domain
-        Assert.NotNull(result.Rolls);
+        result.Formula.Should().Be("2D6");
+        result.Rolls.Should().NotBeNull();
         _mockDiceRepo.Verify(r => r.AddAsync(It.IsAny<DiceRoll>(), It.IsAny<CancellationToken>()), Times.Once);
         _mockUnitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
         _mockSyncService.Verify(s => s.PublishEventAsync(sessionId, It.IsAny<INotification>(), It.IsAny<CancellationToken>()), Times.Once);
@@ -491,7 +498,8 @@ public class RollSessionDiceCommandHandlerTests
         _mockSessionRepo.Setup(r => r.GetByIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((Session?)null);
         var command = new RollSessionDiceCommand(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), "1d6");
-        await Assert.ThrowsAsync<NotFoundException>(() => _handler.Handle(command, TestContext.Current.CancellationToken));
+        var act13 = () => _handler.Handle(command, TestContext.Current.CancellationToken);
+        await act13.Should().ThrowAsync<NotFoundException>();
     }
 
     [Fact]
@@ -503,7 +511,8 @@ public class RollSessionDiceCommandHandlerTests
         session.Finalize();
         _mockSessionRepo.Setup(r => r.GetByIdAsync(sessionId, It.IsAny<CancellationToken>())).ReturnsAsync(session);
         var command = new RollSessionDiceCommand(sessionId, participantId, Guid.NewGuid(), "1d6");
-        await Assert.ThrowsAsync<ConflictException>(() => _handler.Handle(command, TestContext.Current.CancellationToken));
+        var act14 = () => _handler.Handle(command, TestContext.Current.CancellationToken);
+        await act14.Should().ThrowAsync<ConflictException>();
     }
 
     [Fact]
@@ -513,7 +522,8 @@ public class RollSessionDiceCommandHandlerTests
         var session = CreateActiveSession(sessionId, Guid.NewGuid());
         _mockSessionRepo.Setup(r => r.GetByIdAsync(sessionId, It.IsAny<CancellationToken>())).ReturnsAsync(session);
         var command = new RollSessionDiceCommand(sessionId, Guid.NewGuid(), Guid.NewGuid(), "1d6");
-        await Assert.ThrowsAsync<NotFoundException>(() => _handler.Handle(command, TestContext.Current.CancellationToken));
+        var act15 = () => _handler.Handle(command, TestContext.Current.CancellationToken);
+        await act15.Should().ThrowAsync<NotFoundException>();
     }
 }
 
@@ -551,7 +561,8 @@ public class DrawSessionCardCommandHandlerTests
         _mockDeckRepo.Setup(r => r.GetByIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((SessionDeck?)null);
         var command = new DrawSessionCardCommand(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid());
-        await Assert.ThrowsAsync<NotFoundException>(() => _handler.Handle(command, TestContext.Current.CancellationToken));
+        var act16 = () => _handler.Handle(command, TestContext.Current.CancellationToken);
+        await act16.Should().ThrowAsync<NotFoundException>();
     }
 
     [Fact]
@@ -565,7 +576,8 @@ public class DrawSessionCardCommandHandlerTests
         _mockDeckRepo.Setup(r => r.GetByIdAsync(deckId, It.IsAny<CancellationToken>())).ReturnsAsync(deck);
 
         var command = new DrawSessionCardCommand(sessionId, deckId, Guid.NewGuid(), Guid.NewGuid());
-        await Assert.ThrowsAsync<ForbiddenException>(() => _handler.Handle(command, TestContext.Current.CancellationToken));
+        var act17 = () => _handler.Handle(command, TestContext.Current.CancellationToken);
+        await act17.Should().ThrowAsync<ForbiddenException>();
     }
 
     [Fact]
@@ -580,7 +592,8 @@ public class DrawSessionCardCommandHandlerTests
         _mockSessionRepo.Setup(r => r.GetByIdAsync(sessionId, It.IsAny<CancellationToken>())).ReturnsAsync((Session?)null);
 
         var command = new DrawSessionCardCommand(sessionId, deckId, Guid.NewGuid(), Guid.NewGuid());
-        await Assert.ThrowsAsync<NotFoundException>(() => _handler.Handle(command, TestContext.Current.CancellationToken));
+        var act18 = () => _handler.Handle(command, TestContext.Current.CancellationToken);
+        await act18.Should().ThrowAsync<NotFoundException>();
     }
 
     [Fact]
@@ -596,7 +609,8 @@ public class DrawSessionCardCommandHandlerTests
         _mockSessionRepo.Setup(r => r.GetByIdAsync(sessionId, It.IsAny<CancellationToken>())).ReturnsAsync(session);
 
         var command = new DrawSessionCardCommand(sessionId, deckId, Guid.NewGuid(), Guid.NewGuid());
-        await Assert.ThrowsAsync<NotFoundException>(() => _handler.Handle(command, TestContext.Current.CancellationToken));
+        var act19 = () => _handler.Handle(command, TestContext.Current.CancellationToken);
+        await act19.Should().ThrowAsync<NotFoundException>();
     }
 
     [Fact]
@@ -614,7 +628,8 @@ public class DrawSessionCardCommandHandlerTests
         _mockSessionRepo.Setup(r => r.GetByIdAsync(sessionId, It.IsAny<CancellationToken>())).ReturnsAsync(session);
 
         var command = new DrawSessionCardCommand(sessionId, deckId, participantId, Guid.NewGuid());
-        await Assert.ThrowsAsync<ConflictException>(() => _handler.Handle(command, TestContext.Current.CancellationToken));
+        var act20 = () => _handler.Handle(command, TestContext.Current.CancellationToken);
+        await act20.Should().ThrowAsync<ConflictException>();
     }
 }
 
@@ -637,9 +652,9 @@ public class SessionTimerActionCommandHandlerTests
         var sessionId = Guid.NewGuid();
         var command = new SessionTimerActionCommand(sessionId, Guid.NewGuid(), Guid.NewGuid(), TimerAction.Start, "Player1", 60);
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
-        Assert.Equal(TimerAction.Start, result.Action);
-        Assert.Equal("running", result.Status);
-        Assert.Equal(60, result.RemainingSeconds);
+        result.Action.Should().Be(TimerAction.Start);
+        result.Status.Should().Be("running");
+        result.RemainingSeconds.Should().Be(60);
     }
 
     [Fact]
@@ -649,15 +664,16 @@ public class SessionTimerActionCommandHandlerTests
         _timerManager.CreateTimer(sessionId, 60, Guid.NewGuid(), "Player1");
         var command = new SessionTimerActionCommand(sessionId, Guid.NewGuid(), Guid.NewGuid(), TimerAction.Pause);
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
-        Assert.Equal(TimerAction.Pause, result.Action);
-        Assert.Equal("paused", result.Status);
+        result.Action.Should().Be(TimerAction.Pause);
+        result.Status.Should().Be("paused");
     }
 
     [Fact]
     public async Task Handle_PauseAction_NoRunningTimer_ThrowsConflictException()
     {
         var command = new SessionTimerActionCommand(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), TimerAction.Pause);
-        await Assert.ThrowsAsync<ConflictException>(() => _handler.Handle(command, TestContext.Current.CancellationToken));
+        var act21 = () => _handler.Handle(command, TestContext.Current.CancellationToken);
+        await act21.Should().ThrowAsync<ConflictException>();
     }
 
     [Fact]
@@ -668,15 +684,16 @@ public class SessionTimerActionCommandHandlerTests
         timer.Status = "paused";
         var command = new SessionTimerActionCommand(sessionId, Guid.NewGuid(), Guid.NewGuid(), TimerAction.Resume);
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
-        Assert.Equal(TimerAction.Resume, result.Action);
-        Assert.Equal("running", result.Status);
+        result.Action.Should().Be(TimerAction.Resume);
+        result.Status.Should().Be("running");
     }
 
     [Fact]
     public async Task Handle_ResumeAction_NoPausedTimer_ThrowsConflictException()
     {
         var command = new SessionTimerActionCommand(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), TimerAction.Resume);
-        await Assert.ThrowsAsync<ConflictException>(() => _handler.Handle(command, TestContext.Current.CancellationToken));
+        var act22 = () => _handler.Handle(command, TestContext.Current.CancellationToken);
+        await act22.Should().ThrowAsync<ConflictException>();
     }
 
     [Fact]
@@ -686,9 +703,9 @@ public class SessionTimerActionCommandHandlerTests
         _timerManager.CreateTimer(sessionId, 60, Guid.NewGuid(), "Player1");
         var command = new SessionTimerActionCommand(sessionId, Guid.NewGuid(), Guid.NewGuid(), TimerAction.Reset);
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
-        Assert.Equal(TimerAction.Reset, result.Action);
-        Assert.Equal("idle", result.Status);
-        Assert.Null(_timerManager.GetTimer(sessionId));
+        result.Action.Should().Be(TimerAction.Reset);
+        result.Status.Should().Be("idle");
+        _timerManager.GetTimer(sessionId).Should().BeNull();
     }
 }
 
@@ -733,7 +750,7 @@ public class SendChatActionCommandHandlerTests
         var command = new SendChatActionCommand(sessionId, senderId, Guid.NewGuid(), "Hello World");
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
-        Assert.Equal(1, result.SequenceNumber);
+        result.SequenceNumber.Should().Be(1);
         _mockChatRepo.Verify(r => r.AddAsync(It.IsAny<SessionChatMessage>(), It.IsAny<CancellationToken>()), Times.Once);
         _mockChatRepo.Verify(r => r.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
         _mockSyncService.Verify(s => s.PublishEventAsync(sessionId, It.IsAny<INotification>(), It.IsAny<CancellationToken>()), Times.Once);
@@ -745,7 +762,8 @@ public class SendChatActionCommandHandlerTests
         _mockSessionRepo.Setup(r => r.GetByIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((Session?)null);
         var command = new SendChatActionCommand(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), "Hi");
-        await Assert.ThrowsAsync<NotFoundException>(() => _handler.Handle(command, TestContext.Current.CancellationToken));
+        var act23 = () => _handler.Handle(command, TestContext.Current.CancellationToken);
+        await act23.Should().ThrowAsync<NotFoundException>();
     }
 
     [Fact]
@@ -755,6 +773,7 @@ public class SendChatActionCommandHandlerTests
         var session = CreateActiveSession(sessionId, Guid.NewGuid());
         _mockSessionRepo.Setup(r => r.GetByIdAsync(sessionId, It.IsAny<CancellationToken>())).ReturnsAsync(session);
         var command = new SendChatActionCommand(sessionId, Guid.NewGuid(), Guid.NewGuid(), "Hi");
-        await Assert.ThrowsAsync<NotFoundException>(() => _handler.Handle(command, TestContext.Current.CancellationToken));
+        var act24 = () => _handler.Handle(command, TestContext.Current.CancellationToken);
+        await act24.Should().ThrowAsync<NotFoundException>();
     }
 }

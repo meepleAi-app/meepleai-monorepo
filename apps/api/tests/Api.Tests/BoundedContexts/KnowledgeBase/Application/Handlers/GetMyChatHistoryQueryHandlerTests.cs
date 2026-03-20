@@ -1,11 +1,13 @@
 using Api.BoundedContexts.KnowledgeBase.Application.DTOs;
-using Api.BoundedContexts.KnowledgeBase.Application.Handlers;
+using Api.BoundedContexts.KnowledgeBase.Application.Commands;
+using Api.BoundedContexts.KnowledgeBase.Application.Queries;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries;
 using Api.BoundedContexts.KnowledgeBase.Domain.Entities;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.Tests.Constants;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Handlers;
 
@@ -51,10 +53,10 @@ public class GetMyChatHistoryQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal(3, result.TotalCount);
-        Assert.Equal(3, result.Chats.Count);
-        Assert.Equal("Thread 1", result.Chats[0].Title);
+        result.Should().NotBeNull();
+        result.TotalCount.Should().Be(3);
+        result.Chats.Count.Should().Be(3);
+        result.Chats[0].Title.Should().Be("Thread 1");
     }
 
     [Fact]
@@ -73,9 +75,9 @@ public class GetMyChatHistoryQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal(0, result.TotalCount);
-        Assert.Empty(result.Chats);
+        result.Should().NotBeNull();
+        result.TotalCount.Should().Be(0);
+        result.Chats.Should().BeEmpty();
     }
 
     [Fact]
@@ -107,19 +109,19 @@ public class GetMyChatHistoryQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal(5, result.TotalCount);
-        Assert.Equal(2, result.Chats.Count);
-        Assert.Equal("Thread 3", result.Chats[0].Title);
-        Assert.Equal("Thread 4", result.Chats[1].Title);
+        result.Should().NotBeNull();
+        result.TotalCount.Should().Be(5);
+        result.Chats.Count.Should().Be(2);
+        result.Chats[0].Title.Should().Be("Thread 3");
+        result.Chats[1].Title.Should().Be("Thread 4");
     }
 
     [Fact]
     public async Task Handle_WithNullQuery_ThrowsArgumentNullException()
     {
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentNullException>(
-            () => _handler.Handle(null!, TestContext.Current.CancellationToken));
+        Func<Task> act = () => _handler.Handle(null!, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<ArgumentNullException>();
     }
 
     private static ChatThread CreateThread(Guid userId, Guid? gameId, string title)

@@ -1,5 +1,6 @@
 using Api.BoundedContexts.GameManagement.Application.Commands;
-using Api.BoundedContexts.GameManagement.Application.Handlers;
+using Api.BoundedContexts.GameManagement.Application.Commands;
+using Api.BoundedContexts.GameManagement.Application.Queries;
 using Api.BoundedContexts.GameManagement.Domain.Entities;
 using Api.BoundedContexts.GameManagement.Domain.Repositories;
 using Api.BoundedContexts.GameManagement.Domain.ValueObjects;
@@ -7,6 +8,7 @@ using Api.SharedKernel.Infrastructure.Persistence;
 using Api.Tests.BoundedContexts.GameManagement.TestHelpers;
 using Moq;
 using Xunit;
+using FluentAssertions;
 using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.GameManagement.Application.Handlers;
@@ -54,10 +56,10 @@ public class AddPlayerToSessionCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal(3, result.Players.Count);
-        Assert.Contains(result.Players, p => p.PlayerName == "Charlie");
-        Assert.Contains(result.Players, p => p.Color == "Green");
+        result.Should().NotBeNull();
+        result.Players.Count.Should().Be(3);
+        result.Players.Should().Contain(p => p.PlayerName == "Charlie");
+        result.Players.Should().Contain(p => p.Color == "Green");
 
         _sessionRepositoryMock.Verify(
             r => r.UpdateAsync(session, It.IsAny<CancellationToken>()),
@@ -92,9 +94,9 @@ public class AddPlayerToSessionCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.Equal(3, result.Players.Count);
-        Assert.Contains(result.Players, p => p.PlayerName == "Diana");
-        Assert.Equal("InProgress", result.Status);
+        result.Players.Count.Should().Be(3);
+        result.Players.Should().Contain(p => p.PlayerName == "Diana");
+        result.Status.Should().Be("InProgress");
     }
 
     [Fact]
@@ -123,8 +125,8 @@ public class AddPlayerToSessionCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.Equal(3, result.Players.Count);
-        Assert.Equal("Paused", result.Status);
+        result.Players.Count.Should().Be(3);
+        result.Status.Should().Be("Paused");
     }
 
     [Fact]
@@ -152,9 +154,9 @@ public class AddPlayerToSessionCommandHandlerTests
 
         // Assert
         var newPlayer = result.Players.FirstOrDefault(p => p.PlayerName == "Charlie");
-        Assert.NotNull(newPlayer);
-        Assert.Equal("Purple", newPlayer.Color);
-        Assert.Equal(3, newPlayer.PlayerOrder);
+        newPlayer.Should().NotBeNull();
+        newPlayer.Color.Should().Be("Purple");
+        newPlayer.PlayerOrder.Should().Be(3);
     }
 
     [Fact]
@@ -182,8 +184,8 @@ public class AddPlayerToSessionCommandHandlerTests
 
         // Assert
         var newPlayer = result.Players.FirstOrDefault(p => p.PlayerName == "Frank");
-        Assert.NotNull(newPlayer);
-        Assert.Null(newPlayer.Color);
+        newPlayer.Should().NotBeNull();
+        newPlayer.Color.Should().BeNull();
     }
 
     [Fact]
@@ -218,7 +220,7 @@ public class AddPlayerToSessionCommandHandlerTests
         var result = await _handler.Handle(command2, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.Equal(4, result.Players.Count);
+        result.Players.Count.Should().Be(4);
     }
     [Fact]
     public async Task Handle_NonExistentSession_ThrowsInvalidOperationException()
@@ -236,10 +238,11 @@ public class AddPlayerToSessionCommandHandlerTests
             PlayerOrder: 1);
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
-            () => _handler.Handle(command, TestContext.Current.CancellationToken));
+        var act = 
+            () => _handler.Handle(command, TestContext.Current.CancellationToken);
+        var exception = (await act.Should().ThrowAsync<InvalidOperationException>()).Which;
 
-        Assert.Contains($"Session with ID {sessionId} not found", exception.Message, StringComparison.OrdinalIgnoreCase);
+        exception.Message.Should().ContainEquivalentOf($"Session with ID {sessionId} not found");
 
         // Verify save was NOT called
         _unitOfWorkMock.Verify(
@@ -267,10 +270,11 @@ public class AddPlayerToSessionCommandHandlerTests
             PlayerOrder: 5);
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
-            () => _handler.Handle(command, TestContext.Current.CancellationToken));
+        var act = 
+            () => _handler.Handle(command, TestContext.Current.CancellationToken);
+        var exception = (await act.Should().ThrowAsync<InvalidOperationException>()).Which;
 
-        Assert.Contains("Cannot add player to finished session", exception.Message, StringComparison.OrdinalIgnoreCase);
+        exception.Message.Should().ContainEquivalentOf("Cannot add player to finished session");
     }
 
     [Fact]
@@ -295,10 +299,11 @@ public class AddPlayerToSessionCommandHandlerTests
             PlayerOrder: 5);
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
-            () => _handler.Handle(command, TestContext.Current.CancellationToken));
+        var act = 
+            () => _handler.Handle(command, TestContext.Current.CancellationToken);
+        var exception = (await act.Should().ThrowAsync<InvalidOperationException>()).Which;
 
-        Assert.Contains("Cannot add player to finished session", exception.Message, StringComparison.OrdinalIgnoreCase);
+        exception.Message.Should().ContainEquivalentOf("Cannot add player to finished session");
     }
 
     [Fact]
@@ -321,10 +326,11 @@ public class AddPlayerToSessionCommandHandlerTests
             PlayerOrder: 3);
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
-            () => _handler.Handle(command, TestContext.Current.CancellationToken));
+        var act = 
+            () => _handler.Handle(command, TestContext.Current.CancellationToken);
+        var exception = (await act.Should().ThrowAsync<InvalidOperationException>()).Which;
 
-        Assert.Contains("Player 'Alice' is already in this session", exception.Message, StringComparison.OrdinalIgnoreCase);
+        exception.Message.Should().ContainEquivalentOf("Player 'Alice' is already in this session");
     }
 
     [Fact]
@@ -347,10 +353,11 @@ public class AddPlayerToSessionCommandHandlerTests
             PlayerOrder: 3);
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
-            () => _handler.Handle(command, TestContext.Current.CancellationToken));
+        var act = 
+            () => _handler.Handle(command, TestContext.Current.CancellationToken);
+        var exception = (await act.Should().ThrowAsync<InvalidOperationException>()).Which;
 
-        Assert.Contains("already in this session", exception.Message, StringComparison.OrdinalIgnoreCase);
+        exception.Message.Should().ContainEquivalentOf("already in this session");
     }
     [Fact]
     public async Task Handle_SessionWith99Players_CanAddOneMore()
@@ -379,7 +386,7 @@ public class AddPlayerToSessionCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.Equal(100, result.Players.Count);
+        result.Players.Count.Should().Be(100);
     }
 
     [Fact]
@@ -406,10 +413,11 @@ public class AddPlayerToSessionCommandHandlerTests
             PlayerOrder: 101);
 
         // Act & Assert - Domain validation throws ValidationException for player order > 100
-        var exception = await Assert.ThrowsAsync<Api.SharedKernel.Domain.Exceptions.ValidationException>(
-            () => _handler.Handle(command, TestContext.Current.CancellationToken));
+        var act = 
+            () => _handler.Handle(command, TestContext.Current.CancellationToken);
+        var exception = (await act.Should().ThrowAsync<Api.SharedKernel.Domain.Exceptions.ValidationException>()).Which;
 
-        Assert.Contains("Player order cannot exceed 100", exception.Message, StringComparison.OrdinalIgnoreCase);
+        exception.Message.Should().ContainEquivalentOf("Player order cannot exceed 100");
     }
     [Fact]
     public async Task Handle_PreservesSessionMetadata()
@@ -439,10 +447,10 @@ public class AddPlayerToSessionCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert - All metadata should be preserved
-        Assert.Equal(sessionId.ToString(), result.Id.ToString());
-        Assert.Equal(gameId.ToString(), result.GameId.ToString());
-        Assert.Equal(originalStartedAt, result.StartedAt);
-        Assert.Equal(originalStatus, result.Status);
+        result.Id.ToString().Should().Be(sessionId.ToString());
+        result.GameId.ToString().Should().Be(gameId.ToString());
+        result.StartedAt.Should().Be(originalStartedAt);
+        result.Status.Should().Be(originalStatus);
     }
     [Fact]
     public async Task Handle_WithCancellationToken_PassesToRepository()

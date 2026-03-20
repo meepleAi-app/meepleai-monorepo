@@ -76,7 +76,7 @@ public sealed class PgVectorStoreAdapterTests
 
         // Assert
         adapter.Should().NotBeNull();
-        adapter.Should().BeAssignableTo<IQdrantVectorStoreAdapter>();
+        adapter.Should().BeAssignableTo<IVectorStoreAdapter>();
     }
 
     #endregion
@@ -197,11 +197,11 @@ public sealed class PgVectorStoreAdapterTests
     #region Interface Contract Tests
 
     [Fact]
-    public void PgVectorStoreAdapter_ImplementsIQdrantVectorStoreAdapter()
+    public void PgVectorStoreAdapter_ImplementsIVectorStoreAdapter()
     {
         // Verify the adapter properly implements the interface
         var adapter = CreateAdapter();
-        adapter.Should().BeAssignableTo<IQdrantVectorStoreAdapter>();
+        adapter.Should().BeAssignableTo<IVectorStoreAdapter>();
     }
 
     [Fact]

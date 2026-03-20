@@ -2,7 +2,8 @@ using System.Text.Json;
 using Api.BoundedContexts.GameManagement.Domain.Entities;
 using Api.BoundedContexts.GameManagement.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Application.Commands;
-using Api.BoundedContexts.KnowledgeBase.Application.Handlers;
+using Api.BoundedContexts.KnowledgeBase.Application.Commands;
+using Api.BoundedContexts.KnowledgeBase.Application.Queries;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Api.Tests.Constants;
 using FluentAssertions;
@@ -44,8 +45,8 @@ public class ConfirmStateChangeCommandHandlerTests
     public async Task Handle_WithNullCommand_ThrowsArgumentNullException()
     {
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentNullException>(
-            async () => await _handler.Handle(null!, TestCancellationToken));
+        Func<Task> act = async () => await _handler.Handle(null!, TestCancellationToken);
+        await act.Should().ThrowAsync<ArgumentNullException>();
     }
 
     [Fact]
@@ -62,8 +63,8 @@ public class ConfirmStateChangeCommandHandlerTests
             Guid.NewGuid());
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
-            async () => await _handler.Handle(command, TestCancellationToken));
+        Func<Task> act = async () => await _handler.Handle(command, TestCancellationToken);
+        var exception = (await act.Should().ThrowAsync<InvalidOperationException>()).Which;
 
         exception.Message.Should().Contain(sessionId.ToString());
     }
@@ -284,8 +285,8 @@ public class ConfirmStateChangeCommandHandlerTests
         var command = new ConfirmStateChangeCommand(sessionId, stateChanges, userId);
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
-            async () => await _handler.Handle(command, TestCancellationToken));
+        Func<Task> act = async () => await _handler.Handle(command, TestCancellationToken);
+        var exception = (await act.Should().ThrowAsync<InvalidOperationException>()).Which;
 
         exception.Message.Should().Contain("modified by another user");
         exception.InnerException.Should().BeOfType<DbUpdateConcurrencyException>();

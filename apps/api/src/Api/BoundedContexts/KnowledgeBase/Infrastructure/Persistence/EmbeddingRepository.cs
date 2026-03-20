@@ -14,11 +14,11 @@ namespace Api.BoundedContexts.KnowledgeBase.Infrastructure.Persistence;
 internal class EmbeddingRepository : IEmbeddingRepository
 {
     private readonly MeepleAiDbContext _context;
-    private readonly IQdrantVectorStoreAdapter _qdrantAdapter;
+    private readonly IVectorStoreAdapter _qdrantAdapter;
 
     public EmbeddingRepository(
         MeepleAiDbContext context,
-        IQdrantVectorStoreAdapter qdrantAdapter)
+        IVectorStoreAdapter qdrantAdapter)
     {
         _context = context ?? throw new ArgumentNullException(nameof(context));
         _qdrantAdapter = qdrantAdapter ?? throw new ArgumentNullException(nameof(qdrantAdapter));

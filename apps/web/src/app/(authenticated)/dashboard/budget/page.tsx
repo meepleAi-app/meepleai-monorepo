@@ -95,7 +95,7 @@ export default function BudgetDashboardPage() {
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold">Budget Dashboard</h1>
         <Button variant="outline" size="sm" asChild>
-          <a href="/dashboard/settings/billing" className="flex items-center">
+          <a href="/pricing" className="flex items-center">
             <ExternalLink className="mr-2 h-4 w-4" />
             Upgrade Tier
           </a>
@@ -116,7 +116,7 @@ export default function BudgetDashboardPage() {
           </CardHeader>
           <CardContent>
             <Button variant="default" size="sm" asChild>
-              <a href="/dashboard/settings/billing">Upgrade to Pro for More Credits</a>
+              <a href="/pricing">Upgrade to Pro for More Credits</a>
             </Button>
           </CardContent>
         </Card>
@@ -287,7 +287,7 @@ export default function BudgetDashboardPage() {
               </div>
             </div>
             <Button className="w-full" asChild>
-              <a href="/dashboard/settings/billing">View Upgrade Options</a>
+              <a href="/pricing">View Upgrade Options</a>
             </Button>
           </div>
         </CardContent>

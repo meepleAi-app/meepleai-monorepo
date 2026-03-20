@@ -1,7 +1,8 @@
 using Api.SharedKernel.Domain.ValueObjects;
 using Api.BoundedContexts.Administration.Application.Commands;
 using Api.BoundedContexts.Authentication.Application.Commands.ApiKeys;
-using Api.BoundedContexts.Authentication.Application.Handlers;
+using Api.BoundedContexts.Authentication.Application.Commands;
+using Api.BoundedContexts.Authentication.Application.Queries;
 using Api.BoundedContexts.Authentication.Application.Queries;
 using Api.BoundedContexts.Authentication.Domain.Entities;
 using Api.BoundedContexts.Authentication.Domain.ValueObjects;
@@ -380,8 +381,8 @@ public sealed class BulkApiKeyOperationsE2ETests : IAsyncLifetime
         var command = new BulkImportApiKeysCommand(csvContent, adminId);
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<Api.SharedKernel.Domain.Exceptions.DomainException>(
-            () => handler.Handle(command, TestCancellationToken));
+        var act = () => handler.Handle(command, TestCancellationToken);
+        var exception = (await act.Should().ThrowAsync<Api.SharedKernel.Domain.Exceptions.DomainException>()).Which;
 
         exception.Message.Should().Contain("do not exist");
     }
@@ -415,8 +416,8 @@ public sealed class BulkApiKeyOperationsE2ETests : IAsyncLifetime
         var command = new BulkImportApiKeysCommand(csvContent, adminId);
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<Api.SharedKernel.Domain.Exceptions.DomainException>(
-            () => handler.Handle(command, TestCancellationToken));
+        var act2 = () => handler.Handle(command, TestCancellationToken);
+        var exception = (await act2.Should().ThrowAsync<Api.SharedKernel.Domain.Exceptions.DomainException>()).Which;
 
         exception.Message.Should().Contain("already exist");
     }

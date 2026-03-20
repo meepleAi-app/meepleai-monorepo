@@ -9,6 +9,7 @@ using Api.Tests.Constants;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.SharedGameCatalog.Application.Handlers;
 
@@ -80,16 +81,16 @@ public class ArchiveSharedGameCommandHandlerTests
             u => u.SaveChangesAsync(It.IsAny<CancellationToken>()),
             Times.Once);
 
-        Assert.NotNull(capturedGame);
-        Assert.Equal(GameStatus.Archived, capturedGame.Status);
-        Assert.Equal(archiverId, capturedGame.ModifiedBy);
-        Assert.NotNull(capturedGame.ModifiedAt);
+        capturedGame.Should().NotBeNull();
+        capturedGame.Status.Should().Be(GameStatus.Archived);
+        capturedGame.ModifiedBy.Should().Be(archiverId);
+        capturedGame.ModifiedAt.Should().NotBeNull();
 
         // Verify domain event raised (CreatedEvent + SubmittedForApprovalEvent + PublicationApprovedEvent + ArchivedEvent)
-        Assert.Equal(4, capturedGame.DomainEvents.Count);
-        var archivedEvent = Assert.IsType<SharedGameArchivedEvent>(capturedGame.DomainEvents.Last());
-        Assert.Equal(game.Id, archivedEvent.GameId);
-        Assert.Equal(archiverId, archivedEvent.ArchivedBy);
+        capturedGame.DomainEvents.Count.Should().Be(4);
+        var archivedEvent = capturedGame.DomainEvents.Last().Should().BeOfType<SharedGameArchivedEvent>().Subject;
+        archivedEvent.GameId.Should().Be(game.Id);
+        archivedEvent.ArchivedBy.Should().Be(archiverId);
     }
 
     [Fact]
@@ -103,8 +104,8 @@ public class ArchiveSharedGameCommandHandlerTests
             .ReturnsAsync((SharedGame?)null);
 
         // Act & Assert
-        await Assert.ThrowsAsync<InvalidOperationException>(
-            () => _handler.Handle(command, TestContext.Current.CancellationToken));
+        var act = () => _handler.Handle(command, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<InvalidOperationException>();
     }
 
     [Fact]
@@ -119,8 +120,8 @@ public class ArchiveSharedGameCommandHandlerTests
             .ReturnsAsync(game);
 
         // Act & Assert
-        await Assert.ThrowsAsync<InvalidOperationException>(
-            () => _handler.Handle(command, TestContext.Current.CancellationToken));
+        var act = () => _handler.Handle(command, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<InvalidOperationException>();
     }
 
     private static SharedGame CreateArchivedGame()

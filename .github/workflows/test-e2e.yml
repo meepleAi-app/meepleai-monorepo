@@ -34,7 +34,6 @@ permissions:
   checks: write
 
 jobs:
-  # Quick path filtering
   changes:
     name: Detect Changes
     runs-on: ${{ vars.RUNNER || 'ubuntu-latest' }}

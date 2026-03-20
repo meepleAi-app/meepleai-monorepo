@@ -1,6 +1,7 @@
 using Api.BoundedContexts.UserNotifications.Domain.Aggregates;
 using Api.BoundedContexts.UserNotifications.Domain.ValueObjects;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.UserNotifications.Domain.Aggregates;
 
@@ -35,14 +36,14 @@ public class NotificationQueueItemTests
         var item = CreateDefaultItem();
 
         // Assert
-        Assert.Equal(NotificationQueueStatus.Pending, item.Status);
-        Assert.Equal(0, item.RetryCount);
-        Assert.Equal(3, item.MaxRetries);
-        Assert.Null(item.NextRetryAt);
-        Assert.Null(item.LastError);
-        Assert.Null(item.ProcessedAt);
-        Assert.NotEqual(Guid.Empty, item.Id);
-        Assert.NotEqual(Guid.Empty, item.CorrelationId);
+        item.Status.Should().Be(NotificationQueueStatus.Pending);
+        item.RetryCount.Should().Be(0);
+        item.MaxRetries.Should().Be(3);
+        item.NextRetryAt.Should().BeNull();
+        item.LastError.Should().BeNull();
+        item.ProcessedAt.Should().BeNull();
+        item.Id.Should().NotBe(Guid.Empty);
+        item.CorrelationId.Should().NotBe(Guid.Empty);
     }
 
     [Fact]
@@ -56,43 +57,46 @@ public class NotificationQueueItemTests
             slackTeamId: "T12345");
 
         // Assert
-        Assert.Equal(NotificationChannelType.SlackTeam, item.ChannelType);
-        Assert.Null(item.RecipientUserId);
-        Assert.Equal("https://hooks.slack.com/services/xxx", item.SlackChannelTarget);
-        Assert.Equal("T12345", item.SlackTeamId);
+        item.ChannelType.Should().Be(NotificationChannelType.SlackTeam);
+        item.RecipientUserId.Should().BeNull();
+        item.SlackChannelTarget.Should().Be("https://hooks.slack.com/services/xxx");
+        item.SlackTeamId.Should().Be("T12345");
     }
 
     [Fact]
     public void Create_ThrowsOnNullChannelType()
     {
-        Assert.Throws<ArgumentNullException>(() =>
+        var act = () =>
             NotificationQueueItem.Create(
                 null!,
                 Guid.NewGuid(),
                 NotificationType.PdfUploadCompleted,
-                new GenericPayload("Test", "Body")));
+                new GenericPayload("Test", "Body"));
+        act.Should().Throw<ArgumentNullException>();
     }
 
     [Fact]
     public void Create_ThrowsOnNullNotificationType()
     {
-        Assert.Throws<ArgumentNullException>(() =>
+        var act2 = () =>
             NotificationQueueItem.Create(
                 NotificationChannelType.SlackUser,
                 Guid.NewGuid(),
                 null!,
-                new GenericPayload("Test", "Body")));
+                new GenericPayload("Test", "Body"));
+        act2.Should().Throw<ArgumentNullException>();
     }
 
     [Fact]
     public void Create_ThrowsOnNullPayload()
     {
-        Assert.Throws<ArgumentNullException>(() =>
+        var act3 = () =>
             NotificationQueueItem.Create(
                 NotificationChannelType.SlackUser,
                 Guid.NewGuid(),
                 NotificationType.PdfUploadCompleted,
-                null!));
+                null!);
+        act3.Should().Throw<ArgumentNullException>();
     }
 
     [Fact]
@@ -105,7 +109,7 @@ public class NotificationQueueItemTests
         item.MarkAsProcessing();
 
         // Assert
-        Assert.Equal(NotificationQueueStatus.Processing, item.Status);
+        item.Status.Should().Be(NotificationQueueStatus.Processing);
     }
 
     [Fact]
@@ -120,7 +124,7 @@ public class NotificationQueueItemTests
         item.MarkAsProcessing();
 
         // Assert
-        Assert.Equal(NotificationQueueStatus.Processing, item.Status);
+        item.Status.Should().Be(NotificationQueueStatus.Processing);
     }
 
     [Fact]
@@ -132,7 +136,7 @@ public class NotificationQueueItemTests
         item.MarkAsSent(DateTime.UtcNow);
 
         // Act & Assert
-        Assert.Throws<InvalidOperationException>(() => item.MarkAsProcessing());
+        ((Action)(() => item.MarkAsProcessing())).Should().Throw<InvalidOperationException>();
     }
 
     [Fact]
@@ -147,9 +151,9 @@ public class NotificationQueueItemTests
         item.MarkAsSent(processedAt);
 
         // Assert
-        Assert.Equal(NotificationQueueStatus.Sent, item.Status);
-        Assert.Equal(processedAt, item.ProcessedAt);
-        Assert.Null(item.LastError);
+        item.Status.Should().Be(NotificationQueueStatus.Sent);
+        item.ProcessedAt.Should().Be(processedAt);
+        item.LastError.Should().BeNull();
     }
 
     [Fact]
@@ -159,8 +163,9 @@ public class NotificationQueueItemTests
         var item = CreateDefaultItem();
 
         // Act & Assert
-        Assert.Throws<InvalidOperationException>(() =>
-            item.MarkAsSent(DateTime.UtcNow));
+        var act4 = () =>
+            item.MarkAsSent(DateTime.UtcNow);
+        act4.Should().Throw<InvalidOperationException>();
     }
 
     [Fact]
@@ -175,11 +180,11 @@ public class NotificationQueueItemTests
         item.MarkAsFailed("connection refused", now);
 
         // Assert
-        Assert.Equal(1, item.RetryCount);
-        Assert.Equal(NotificationQueueStatus.Failed, item.Status);
-        Assert.Equal("connection refused", item.LastError);
+        item.RetryCount.Should().Be(1);
+        item.Status.Should().Be(NotificationQueueStatus.Failed);
+        item.LastError.Should().Be("connection refused");
         // First failure: +1 minute
-        Assert.Equal(now.AddMinutes(1), item.NextRetryAt);
+        item.NextRetryAt.Should().Be(now.AddMinutes(1));
     }
 
     [Fact]
@@ -199,10 +204,10 @@ public class NotificationQueueItemTests
         item.MarkAsFailed("error 2", now2);
 
         // Assert
-        Assert.Equal(2, item.RetryCount);
-        Assert.Equal(NotificationQueueStatus.Failed, item.Status);
+        item.RetryCount.Should().Be(2);
+        item.Status.Should().Be(NotificationQueueStatus.Failed);
         // Second failure: +5 minutes
-        Assert.Equal(now2.AddMinutes(5), item.NextRetryAt);
+        item.NextRetryAt.Should().Be(now2.AddMinutes(5));
     }
 
     [Fact]
@@ -226,11 +231,11 @@ public class NotificationQueueItemTests
         item.MarkAsFailed("error 3", now3);
 
         // Assert — still retrying (4 total attempts: initial + 3 retries matching [1m, 5m, 30m] delays)
-        Assert.Equal(3, item.RetryCount);
-        Assert.Equal(NotificationQueueStatus.Failed, item.Status);
+        item.RetryCount.Should().Be(3);
+        item.Status.Should().Be(NotificationQueueStatus.Failed);
         // Third failure uses last delay (30 minutes)
-        Assert.Equal(now3.AddMinutes(30), item.NextRetryAt);
-        Assert.Equal("error 3", item.LastError);
+        item.NextRetryAt.Should().Be(now3.AddMinutes(30));
+        item.LastError.Should().Be("error 3");
     }
 
     [Fact]
@@ -257,10 +262,10 @@ public class NotificationQueueItemTests
         item.MarkAsFailed("error 4", now.AddMinutes(40));
 
         // Assert
-        Assert.Equal(4, item.RetryCount);
-        Assert.Equal(NotificationQueueStatus.DeadLetter, item.Status);
-        Assert.Null(item.NextRetryAt);
-        Assert.Equal("error 4", item.LastError);
+        item.RetryCount.Should().Be(4);
+        item.Status.Should().Be(NotificationQueueStatus.DeadLetter);
+        item.NextRetryAt.Should().BeNull();
+        item.LastError.Should().Be("error 4");
     }
 
     [Fact]
@@ -270,8 +275,9 @@ public class NotificationQueueItemTests
         var item = CreateDefaultItem();
 
         // Act & Assert
-        Assert.Throws<InvalidOperationException>(() =>
-            item.MarkAsFailed("error"));
+        var act5 = () =>
+            item.MarkAsFailed("error");
+        act5.Should().Throw<InvalidOperationException>();
     }
 
     [Fact]
@@ -285,9 +291,9 @@ public class NotificationQueueItemTests
         item.MarkAsDeadLetter("permanently undeliverable");
 
         // Assert
-        Assert.Equal(NotificationQueueStatus.DeadLetter, item.Status);
-        Assert.Equal("permanently undeliverable", item.LastError);
-        Assert.Null(item.NextRetryAt);
+        item.Status.Should().Be(NotificationQueueStatus.DeadLetter);
+        item.LastError.Should().Be("permanently undeliverable");
+        item.NextRetryAt.Should().BeNull();
     }
 
     [Fact]
@@ -301,7 +307,7 @@ public class NotificationQueueItemTests
         item.SetNextRetryAt(retryAt);
 
         // Assert
-        Assert.Equal(retryAt, item.NextRetryAt);
+        item.NextRetryAt.Should().Be(retryAt);
     }
 
     [Fact]
@@ -317,8 +323,8 @@ public class NotificationQueueItemTests
             payload: payload);
 
         // Assert
-        Assert.Equal(NotificationChannelType.SlackUser, item.ChannelType);
-        Assert.Equal(NotificationType.PdfUploadCompleted, item.NotificationType);
-        Assert.IsType<PdfProcessingPayload>(item.Payload);
+        item.ChannelType.Should().Be(NotificationChannelType.SlackUser);
+        item.NotificationType.Should().Be(NotificationType.PdfUploadCompleted);
+        item.Payload.Should().BeOfType<PdfProcessingPayload>();
     }
 }

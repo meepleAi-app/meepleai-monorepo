@@ -4,6 +4,7 @@ using Api.BoundedContexts.KnowledgeBase.Domain.Services;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Domain.Services;
 
@@ -35,22 +36,25 @@ public class AgentStateCoordinatorTests
     [Fact]
     public void Constructor_NullConversationRepo_ThrowsArgumentNullException()
     {
-        Assert.Throws<ArgumentNullException>(() =>
-            new AgentStateCoordinator(null!, _mockGameStateRepo.Object, _mockLogger.Object));
+        Action act = () =>
+            new AgentStateCoordinator(null!, _mockGameStateRepo.Object, _mockLogger.Object);
+        act.Should().Throw<ArgumentNullException>();
     }
 
     [Fact]
     public void Constructor_NullGameStateRepo_ThrowsArgumentNullException()
     {
-        Assert.Throws<ArgumentNullException>(() =>
-            new AgentStateCoordinator(_mockConversationRepo.Object, null!, _mockLogger.Object));
+        Action act = () =>
+            new AgentStateCoordinator(_mockConversationRepo.Object, null!, _mockLogger.Object);
+        act.Should().Throw<ArgumentNullException>();
     }
 
     [Fact]
     public void Constructor_NullLogger_ThrowsArgumentNullException()
     {
-        Assert.Throws<ArgumentNullException>(() =>
-            new AgentStateCoordinator(_mockConversationRepo.Object, _mockGameStateRepo.Object, null!));
+        Action act = () =>
+            new AgentStateCoordinator(_mockConversationRepo.Object, _mockGameStateRepo.Object, null!);
+        act.Should().Throw<ArgumentNullException>();
     }
 
     #endregion
@@ -87,14 +91,14 @@ public class AgentStateCoordinatorTests
         var context = await _coordinator.GetSharedContextAsync(sessionId, gameId);
 
         // Assert
-        Assert.Equal(sessionId, context.SessionId);
-        Assert.Equal(gameId, context.GameId);
-        Assert.Equal(3, context.ConversationHistory.Count);
-        Assert.Contains("[user] Hello", context.ConversationHistory);
-        Assert.Contains("[assistant] Hi there", context.ConversationHistory);
-        Assert.Equal("{\"board\":\"state\"}", context.CurrentGameState);
-        Assert.Equal(5, context.StateVersion);
-        Assert.Null(context.LastAgentUsed);
+        context.SessionId.Should().Be(sessionId);
+        context.GameId.Should().Be(gameId);
+        context.ConversationHistory.Count.Should().Be(3);
+        context.ConversationHistory.Should().Contain("[user] Hello");
+        context.ConversationHistory.Should().Contain("[assistant] Hi there");
+        context.CurrentGameState.Should().Be("{\"board\":\"state\"}");
+        context.StateVersion.Should().Be(5);
+        context.LastAgentUsed.Should().BeNull();
     }
 
     [Fact]
@@ -116,9 +120,9 @@ public class AgentStateCoordinatorTests
         var context = await _coordinator.GetSharedContextAsync(sessionId, gameId);
 
         // Assert
-        Assert.Empty(context.ConversationHistory);
-        Assert.Null(context.CurrentGameState);
-        Assert.Equal(1, context.StateVersion); // Default version
+        context.ConversationHistory.Should().BeEmpty();
+        context.CurrentGameState.Should().BeNull();
+        context.StateVersion.Should().Be(1); // Default version
     }
 
     [Fact]
@@ -146,9 +150,9 @@ public class AgentStateCoordinatorTests
         var context = await _coordinator.GetSharedContextAsync(sessionId, gameId);
 
         // Assert
-        Assert.Single(context.ConversationHistory);
-        Assert.Null(context.CurrentGameState);
-        Assert.Equal(1, context.StateVersion);
+        context.ConversationHistory.Should().ContainSingle();
+        context.CurrentGameState.Should().BeNull();
+        context.StateVersion.Should().Be(1);
     }
 
     [Fact]
@@ -170,8 +174,8 @@ public class AgentStateCoordinatorTests
         var context = await _coordinator.GetSharedContextAsync(sessionId, gameId);
 
         // Assert - graceful degradation
-        Assert.Empty(context.ConversationHistory);
-        Assert.Null(context.CurrentGameState);
+        context.ConversationHistory.Should().BeEmpty();
+        context.CurrentGameState.Should().BeNull();
     }
 
     [Fact]
@@ -193,8 +197,8 @@ public class AgentStateCoordinatorTests
         var context = await _coordinator.GetSharedContextAsync(sessionId, gameId);
 
         // Assert - graceful degradation
-        Assert.Null(context.CurrentGameState);
-        Assert.Equal(1, context.StateVersion);
+        context.CurrentGameState.Should().BeNull();
+        context.StateVersion.Should().Be(1);
     }
 
     [Fact]
@@ -223,8 +227,8 @@ public class AgentStateCoordinatorTests
         var context = await _coordinator.GetSharedContextAsync(sessionId, gameId);
 
         // Assert
-        Assert.Equal("[user] What are the rules?", context.ConversationHistory[0]);
-        Assert.Equal("[assistant] Here are the rules...", context.ConversationHistory[1]);
+        context.ConversationHistory[0].Should().Be("[user] What are the rules?");
+        context.ConversationHistory[1].Should().Be("[assistant] Here are the rules...");
     }
 
     [Fact]
@@ -249,8 +253,8 @@ public class AgentStateCoordinatorTests
         var context = await _coordinator.GetSharedContextAsync(sessionId, gameId);
 
         // Assert
-        Assert.Equal(42, context.StateVersion);
-        Assert.Equal("{\"turn\":42}", context.CurrentGameState);
+        context.StateVersion.Should().Be(42);
+        context.CurrentGameState.Should().Be("{\"turn\":42}");
     }
 
     #endregion
@@ -274,12 +278,12 @@ public class AgentStateCoordinatorTests
         var result = _coordinator.HandoffContext("TutorAgent", "ArbitroAgent", context);
 
         // Assert
-        Assert.Equal("TutorAgent", result.LastAgentUsed);
-        Assert.Equal(2, result.StateVersion);
-        Assert.Equal(context.SessionId, result.SessionId);
-        Assert.Equal(context.GameId, result.GameId);
-        Assert.Equal(context.ConversationHistory, result.ConversationHistory);
-        Assert.Equal(context.CurrentGameState, result.CurrentGameState);
+        result.LastAgentUsed.Should().Be("TutorAgent");
+        result.StateVersion.Should().Be(2);
+        result.SessionId.Should().Be(context.SessionId);
+        result.GameId.Should().Be(context.GameId);
+        result.ConversationHistory.Should().BeEquivalentTo(context.ConversationHistory);
+        result.CurrentGameState.Should().Be(context.CurrentGameState);
     }
 
     [Fact]
@@ -301,12 +305,12 @@ public class AgentStateCoordinatorTests
         var after3 = _coordinator.HandoffContext("DecisoreAgent", "TutorAgent", after2);
 
         // Assert
-        Assert.Equal(2, after1.StateVersion);
-        Assert.Equal(3, after2.StateVersion);
-        Assert.Equal(4, after3.StateVersion);
-        Assert.Equal("TutorAgent", after1.LastAgentUsed);
-        Assert.Equal("ArbitroAgent", after2.LastAgentUsed);
-        Assert.Equal("DecisoreAgent", after3.LastAgentUsed);
+        after1.StateVersion.Should().Be(2);
+        after2.StateVersion.Should().Be(3);
+        after3.StateVersion.Should().Be(4);
+        after1.LastAgentUsed.Should().Be("TutorAgent");
+        after2.LastAgentUsed.Should().Be("ArbitroAgent");
+        after3.LastAgentUsed.Should().Be("DecisoreAgent");
     }
 
     [Fact]
@@ -326,11 +330,11 @@ public class AgentStateCoordinatorTests
         var result = _coordinator.HandoffContext("Agent1", "Agent2", context);
 
         // Assert - original unchanged
-        Assert.Null(context.LastAgentUsed);
-        Assert.Equal(5, context.StateVersion);
+        context.LastAgentUsed.Should().BeNull();
+        context.StateVersion.Should().Be(5);
         // Result is new
-        Assert.Equal("Agent1", result.LastAgentUsed);
-        Assert.Equal(6, result.StateVersion);
+        result.LastAgentUsed.Should().Be("Agent1");
+        result.StateVersion.Should().Be(6);
     }
 
     [Theory]
@@ -342,8 +346,9 @@ public class AgentStateCoordinatorTests
         var context = new SharedAgentContext(
             Guid.NewGuid(), Guid.NewGuid(), new List<string>(), null, null, 1);
 
-        Assert.Throws<ArgumentException>(() =>
-            _coordinator.HandoffContext(fromAgent!, "TargetAgent", context));
+        Action act = () =>
+            _coordinator.HandoffContext(fromAgent!, "TargetAgent", context);
+        act.Should().Throw<ArgumentException>();
     }
 
     [Theory]
@@ -355,15 +360,17 @@ public class AgentStateCoordinatorTests
         var context = new SharedAgentContext(
             Guid.NewGuid(), Guid.NewGuid(), new List<string>(), null, null, 1);
 
-        Assert.Throws<ArgumentException>(() =>
-            _coordinator.HandoffContext("SourceAgent", toAgent!, context));
+        Action act = () =>
+            _coordinator.HandoffContext("SourceAgent", toAgent!, context);
+        act.Should().Throw<ArgumentException>();
     }
 
     [Fact]
     public void HandoffContext_NullContext_ThrowsArgumentNullException()
     {
-        Assert.Throws<ArgumentNullException>(() =>
-            _coordinator.HandoffContext("Agent1", "Agent2", null!));
+        Action act = () =>
+            _coordinator.HandoffContext("Agent1", "Agent2", null!);
+        act.Should().Throw<ArgumentNullException>();
     }
 
     #endregion
@@ -376,7 +383,7 @@ public class AgentStateCoordinatorTests
         var context = new SharedAgentContext(
             Guid.NewGuid(), Guid.NewGuid(), new List<string>(), null, null, 5);
 
-        Assert.True(_coordinator.ValidateStateVersion(context, 5));
+        _coordinator.ValidateStateVersion(context, 5).Should().BeTrue();
     }
 
     [Fact]
@@ -385,7 +392,7 @@ public class AgentStateCoordinatorTests
         var context = new SharedAgentContext(
             Guid.NewGuid(), Guid.NewGuid(), new List<string>(), null, null, 5);
 
-        Assert.False(_coordinator.ValidateStateVersion(context, 3));
+        _coordinator.ValidateStateVersion(context, 3).Should().BeFalse();
     }
 
     [Fact]
@@ -394,8 +401,8 @@ public class AgentStateCoordinatorTests
         var context = new SharedAgentContext(
             Guid.NewGuid(), Guid.NewGuid(), new List<string>(), null, null, 0);
 
-        Assert.True(_coordinator.ValidateStateVersion(context, 0));
-        Assert.False(_coordinator.ValidateStateVersion(context, 1));
+        _coordinator.ValidateStateVersion(context, 0).Should().BeTrue();
+        _coordinator.ValidateStateVersion(context, 1).Should().BeFalse();
     }
 
     [Fact]
@@ -406,8 +413,8 @@ public class AgentStateCoordinatorTests
 
         var afterHandoff = _coordinator.HandoffContext("A", "B", context);
 
-        Assert.False(_coordinator.ValidateStateVersion(afterHandoff, 1));
-        Assert.True(_coordinator.ValidateStateVersion(afterHandoff, 2));
+        _coordinator.ValidateStateVersion(afterHandoff, 1).Should().BeFalse();
+        _coordinator.ValidateStateVersion(afterHandoff, 2).Should().BeTrue();
     }
 
     #endregion
@@ -428,11 +435,11 @@ public class AgentStateCoordinatorTests
 
         var modified = original with { StateVersion = 4, LastAgentUsed = "Agent2" };
 
-        Assert.Equal(3, original.StateVersion);
-        Assert.Equal("Agent1", original.LastAgentUsed);
-        Assert.Equal(4, modified.StateVersion);
-        Assert.Equal("Agent2", modified.LastAgentUsed);
-        Assert.Equal(original.SessionId, modified.SessionId);
+        original.StateVersion.Should().Be(3);
+        original.LastAgentUsed.Should().Be("Agent1");
+        modified.StateVersion.Should().Be(4);
+        modified.LastAgentUsed.Should().Be("Agent2");
+        modified.SessionId.Should().Be(original.SessionId);
     }
 
     [Fact]
@@ -445,7 +452,7 @@ public class AgentStateCoordinatorTests
         var a = new SharedAgentContext(sessionId, gameId, history, null, null, 1);
         var b = new SharedAgentContext(sessionId, gameId, history, null, null, 1);
 
-        Assert.Equal(a, b);
+        b.Should().Be(a);
     }
 
     #endregion
@@ -478,26 +485,26 @@ public class AgentStateCoordinatorTests
 
         // Act - Load context
         var context = await _coordinator.GetSharedContextAsync(sessionId, gameId);
-        Assert.Equal(1, context.StateVersion);
-        Assert.True(_coordinator.ValidateStateVersion(context, 1));
+        context.StateVersion.Should().Be(1);
+        _coordinator.ValidateStateVersion(context, 1).Should().BeTrue();
 
         // Act - Handoff from Tutor to Arbitro
         var afterHandoff = _coordinator.HandoffContext("TutorAgent", "ArbitroAgent", context);
-        Assert.Equal(2, afterHandoff.StateVersion);
-        Assert.Equal("TutorAgent", afterHandoff.LastAgentUsed);
+        afterHandoff.StateVersion.Should().Be(2);
+        afterHandoff.LastAgentUsed.Should().Be("TutorAgent");
 
         // Act - Validate with old version fails
-        Assert.False(_coordinator.ValidateStateVersion(afterHandoff, 1));
-        Assert.True(_coordinator.ValidateStateVersion(afterHandoff, 2));
+        _coordinator.ValidateStateVersion(afterHandoff, 1).Should().BeFalse();
+        _coordinator.ValidateStateVersion(afterHandoff, 2).Should().BeTrue();
 
         // Act - Second handoff
         var afterSecondHandoff = _coordinator.HandoffContext("ArbitroAgent", "DecisoreAgent", afterHandoff);
-        Assert.Equal(3, afterSecondHandoff.StateVersion);
-        Assert.Equal("ArbitroAgent", afterSecondHandoff.LastAgentUsed);
+        afterSecondHandoff.StateVersion.Should().Be(3);
+        afterSecondHandoff.LastAgentUsed.Should().Be("ArbitroAgent");
 
         // Assert - all original data preserved through handoffs
-        Assert.Single(afterSecondHandoff.ConversationHistory);
-        Assert.Equal("{\"board\":\"initial\"}", afterSecondHandoff.CurrentGameState);
+        afterSecondHandoff.ConversationHistory.Should().ContainSingle();
+        afterSecondHandoff.CurrentGameState.Should().Be("{\"board\":\"initial\"}");
     }
 
     #endregion

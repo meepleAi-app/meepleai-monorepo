@@ -6,6 +6,7 @@ using Api.SharedKernel.Domain.Exceptions;
 using Api.Tests.Constants;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.Authentication.Domain;
 
@@ -37,7 +38,7 @@ public class UserLockoutTests
         var user = CreateTestUser();
 
         // Act & Assert
-        Assert.False(user.IsLockedOut());
+        user.IsLockedOut().Should().BeFalse();
     }
 
     [Fact]
@@ -53,7 +54,7 @@ public class UserLockoutTests
         }
 
         // Act & Assert
-        Assert.True(user.IsLockedOut());
+        user.IsLockedOut().Should().BeTrue();
     }
 
     [Fact]
@@ -72,14 +73,14 @@ public class UserLockoutTests
             user.RecordFailedLogin(timeProvider: mockTimeProvider.Object);
         }
 
-        Assert.True(user.IsLockedOut(mockTimeProvider.Object));
+        user.IsLockedOut(mockTimeProvider.Object).Should().BeTrue();
 
         // Move time forward past the lockout duration (15 minutes)
         var afterLockout = lockTime.AddMinutes(16);
         mockTimeProvider.Setup(t => t.GetUtcNow()).Returns(afterLockout);
 
         // Act & Assert
-        Assert.False(user.IsLockedOut(mockTimeProvider.Object));
+        user.IsLockedOut(mockTimeProvider.Object).Should().BeFalse();
     }
 
     #endregion
@@ -91,13 +92,13 @@ public class UserLockoutTests
     {
         // Arrange
         var user = CreateTestUser();
-        Assert.Equal(0, user.FailedLoginAttempts);
+        user.FailedLoginAttempts.Should().Be(0);
 
         // Act
         user.RecordFailedLogin();
 
         // Assert
-        Assert.Equal(1, user.FailedLoginAttempts);
+        user.FailedLoginAttempts.Should().Be(1);
     }
 
     [Fact]
@@ -113,9 +114,9 @@ public class UserLockoutTests
         }
 
         // Assert
-        Assert.Equal(4, user.FailedLoginAttempts);
-        Assert.False(user.IsLockedOut());
-        Assert.Null(user.LockedUntil);
+        user.FailedLoginAttempts.Should().Be(4);
+        user.IsLockedOut().Should().BeFalse();
+        user.LockedUntil.Should().BeNull();
     }
 
     [Fact]
@@ -132,10 +133,10 @@ public class UserLockoutTests
         }
 
         // Assert
-        Assert.True(wasLocked);
-        Assert.Equal(5, user.FailedLoginAttempts);
-        Assert.True(user.IsLockedOut());
-        Assert.NotNull(user.LockedUntil);
+        wasLocked.Should().BeTrue();
+        user.FailedLoginAttempts.Should().Be(5);
+        user.IsLockedOut().Should().BeTrue();
+        user.LockedUntil.Should().NotBeNull();
     }
 
     [Fact]
@@ -152,8 +153,8 @@ public class UserLockoutTests
         }
 
         // Assert
-        Assert.True(wasLocked);
-        Assert.True(user.IsLockedOut());
+        wasLocked.Should().BeTrue();
+        user.IsLockedOut().Should().BeTrue();
     }
 
     [Fact]
@@ -167,13 +168,13 @@ public class UserLockoutTests
         {
             user.RecordFailedLogin();
         }
-        Assert.Equal(5, user.FailedLoginAttempts);
+        user.FailedLoginAttempts.Should().Be(5);
 
         // Act - Try to record another failed login while locked
         user.RecordFailedLogin();
 
         // Assert - Counter should not increment
-        Assert.Equal(5, user.FailedLoginAttempts);
+        user.FailedLoginAttempts.Should().Be(5);
     }
 
     [Fact]
@@ -190,12 +191,12 @@ public class UserLockoutTests
 
         // Assert - Check domain events
         var domainEvents = user.DomainEvents;
-        Assert.Contains(domainEvents, e => e is AccountLockedEvent);
+        domainEvents.Should().Contain(e => e is AccountLockedEvent);
 
         var lockEvent = domainEvents.OfType<AccountLockedEvent>().First();
-        Assert.Equal(user.Id, lockEvent.UserId);
-        Assert.Equal(5, lockEvent.FailedAttempts);
-        Assert.Equal("192.168.1.1", lockEvent.IpAddress);
+        lockEvent.UserId.Should().Be(user.Id);
+        lockEvent.FailedAttempts.Should().Be(5);
+        lockEvent.IpAddress.Should().Be("192.168.1.1");
     }
 
     #endregion
@@ -211,13 +212,13 @@ public class UserLockoutTests
         {
             user.RecordFailedLogin();
         }
-        Assert.Equal(3, user.FailedLoginAttempts);
+        user.FailedLoginAttempts.Should().Be(3);
 
         // Act
         user.RecordSuccessfulLogin();
 
         // Assert
-        Assert.Equal(0, user.FailedLoginAttempts);
+        user.FailedLoginAttempts.Should().Be(0);
     }
 
     [Fact]
@@ -232,14 +233,14 @@ public class UserLockoutTests
         {
             user.RecordFailedLogin();
         }
-        Assert.NotNull(user.LockedUntil);
+        user.LockedUntil.Should().NotBeNull();
 
         // Act
         user.RecordSuccessfulLogin();
 
         // Assert
-        Assert.Null(user.LockedUntil);
-        Assert.Equal(0, user.FailedLoginAttempts);
+        user.LockedUntil.Should().BeNull();
+        user.FailedLoginAttempts.Should().Be(0);
     }
 
     [Fact]
@@ -247,14 +248,14 @@ public class UserLockoutTests
     {
         // Arrange
         var user = CreateTestUser();
-        Assert.Equal(0, user.FailedLoginAttempts);
+        user.FailedLoginAttempts.Should().Be(0);
 
         // Act
         user.RecordSuccessfulLogin();
 
         // Assert - No exception, no change
-        Assert.Equal(0, user.FailedLoginAttempts);
-        Assert.Null(user.LockedUntil);
+        user.FailedLoginAttempts.Should().Be(0);
+        user.LockedUntil.Should().BeNull();
     }
 
     #endregion
@@ -273,15 +274,15 @@ public class UserLockoutTests
         {
             user.RecordFailedLogin();
         }
-        Assert.True(user.IsLockedOut());
+        user.IsLockedOut().Should().BeTrue();
 
         // Act
         user.Unlock(adminId);
 
         // Assert
-        Assert.False(user.IsLockedOut());
-        Assert.Equal(0, user.FailedLoginAttempts);
-        Assert.Null(user.LockedUntil);
+        user.IsLockedOut().Should().BeFalse();
+        user.FailedLoginAttempts.Should().Be(0);
+        user.LockedUntil.Should().BeNull();
     }
 
     [Fact]
@@ -292,8 +293,9 @@ public class UserLockoutTests
         var adminId = Guid.NewGuid();
 
         // Act & Assert
-        var exception = Assert.Throws<DomainException>(() => user.Unlock(adminId));
-        Assert.Contains("not locked", exception.Message, StringComparison.OrdinalIgnoreCase);
+        var act = () => user.Unlock(adminId);
+        var exception = act.Should().Throw<DomainException>().Which;
+        exception.Message.Should().ContainEquivalentOf("not locked");
     }
 
     [Fact]
@@ -308,14 +310,14 @@ public class UserLockoutTests
         {
             user.RecordFailedLogin();
         }
-        Assert.Equal(3, user.FailedLoginAttempts);
-        Assert.False(user.IsLockedOut());
+        user.FailedLoginAttempts.Should().Be(3);
+        user.IsLockedOut().Should().BeFalse();
 
         // Act - Admin can still reset the counter
         user.Unlock(adminId);
 
         // Assert
-        Assert.Equal(0, user.FailedLoginAttempts);
+        user.FailedLoginAttempts.Should().Be(0);
     }
 
     [Fact]
@@ -339,12 +341,12 @@ public class UserLockoutTests
 
         // Assert
         var domainEvents = user.DomainEvents;
-        Assert.Contains(domainEvents, e => e is AccountUnlockedEvent);
+        domainEvents.Should().Contain(e => e is AccountUnlockedEvent);
 
         var unlockEvent = domainEvents.OfType<AccountUnlockedEvent>().First();
-        Assert.Equal(user.Id, unlockEvent.UserId);
-        Assert.True(unlockEvent.WasManualUnlock);
-        Assert.Equal(adminId, unlockEvent.UnlockedByAdminId);
+        unlockEvent.UserId.Should().Be(user.Id);
+        unlockEvent.WasManualUnlock.Should().BeTrue();
+        unlockEvent.UnlockedByAdminId.Should().Be(adminId);
     }
 
     #endregion
@@ -361,7 +363,7 @@ public class UserLockoutTests
         var duration = user.GetRemainingLockoutDuration();
 
         // Assert
-        Assert.Equal(TimeSpan.Zero, duration);
+        duration.Should().Be(TimeSpan.Zero);
     }
 
     [Fact]
@@ -387,8 +389,8 @@ public class UserLockoutTests
         var duration = user.GetRemainingLockoutDuration(mockTimeProvider.Object);
 
         // Assert - Should be approximately 10 minutes remaining
-        Assert.True(duration > TimeSpan.Zero);
-        Assert.True(duration <= TimeSpan.FromMinutes(10));
+        (duration > TimeSpan.Zero).Should().BeTrue();
+        (duration <= TimeSpan.FromMinutes(10)).Should().BeTrue();
     }
 
     #endregion
@@ -406,8 +408,8 @@ public class UserLockoutTests
         user.RestoreLockoutState(failedLoginAttempts: 3, lockedUntil: lockedUntil);
 
         // Assert
-        Assert.Equal(3, user.FailedLoginAttempts);
-        Assert.Equal(lockedUntil, user.LockedUntil);
+        user.FailedLoginAttempts.Should().Be(3);
+        user.LockedUntil.Should().Be(lockedUntil);
     }
 
     #endregion

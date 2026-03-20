@@ -6,6 +6,7 @@ using Api.Tests.TestHelpers;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using FluentAssertions;
 using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.Administration.Application.Handlers;
@@ -44,15 +45,16 @@ public class GetFeedbackStatsQueryHandlerTests
         var handler = new GetFeedbackStatsQueryHandler(context, _mockLogger.Object);
 
         // Assert
-        Assert.NotNull(handler);
+        handler.Should().NotBeNull();
     }
 
     [Fact]
     public void Constructor_WithNullDbContext_ThrowsArgumentNullException()
     {
         // Act & Assert
-        Assert.Throws<ArgumentNullException>(() =>
-            new GetFeedbackStatsQueryHandler(null!, _mockLogger.Object));
+        var act = () =>
+            new GetFeedbackStatsQueryHandler(null!, _mockLogger.Object);
+act.Should().Throw<ArgumentNullException>();
     }
 
     [Fact]
@@ -62,8 +64,9 @@ public class GetFeedbackStatsQueryHandlerTests
         using var context = CreateFreshDbContext();
 
         // Act & Assert
-        Assert.Throws<ArgumentNullException>(() =>
-            new GetFeedbackStatsQueryHandler(context, null!));
+        var act = () =>
+            new GetFeedbackStatsQueryHandler(context, null!);
+act.Should().Throw<ArgumentNullException>();
     }
     [Fact]
     public void Query_WithDefaultParameters_ConstructsCorrectly()
@@ -72,9 +75,9 @@ public class GetFeedbackStatsQueryHandlerTests
         var query = new GetFeedbackStatsQuery();
 
         // Assert
-        Assert.Null(query.StartDate);
-        Assert.Null(query.EndDate);
-        Assert.Null(query.Endpoint);
+        query.StartDate.Should().BeNull();
+        query.EndDate.Should().BeNull();
+        query.Endpoint.Should().BeNull();
     }
 
     [Fact]
@@ -88,8 +91,8 @@ public class GetFeedbackStatsQueryHandlerTests
         var query = new GetFeedbackStatsQuery(startDate, endDate);
 
         // Assert
-        Assert.Equal(startDate, query.StartDate);
-        Assert.Equal(endDate, query.EndDate);
+        query.StartDate.Should().Be(startDate);
+        query.EndDate.Should().Be(endDate);
     }
 
     [Fact]
@@ -99,7 +102,7 @@ public class GetFeedbackStatsQueryHandlerTests
         var query = new GetFeedbackStatsQuery(Endpoint: "/api/v1/chat");
 
         // Assert
-        Assert.Equal("/api/v1/chat", query.Endpoint);
+        query.Endpoint.Should().Be("/api/v1/chat");
     }
     [Fact]
     public async Task Handle_WithNoFeedback_ReturnsEmptyStats()
@@ -113,13 +116,13 @@ public class GetFeedbackStatsQueryHandlerTests
         var result = await handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal(0, result.TotalFeedbacks);
-        Assert.Equal(0, result.HelpfulCount);
-        Assert.Equal(0, result.NotHelpfulCount);
-        Assert.Equal(0.0, result.HelpfulRate);
-        Assert.Empty(result.FeedbackByEndpoint);
-        Assert.Empty(result.FeedbackByOutcome);
+        result.Should().NotBeNull();
+        result.TotalFeedbacks.Should().Be(0);
+        result.HelpfulCount.Should().Be(0);
+        result.NotHelpfulCount.Should().Be(0);
+        result.HelpfulRate.Should().Be(0.0);
+        result.FeedbackByEndpoint.Should().BeEmpty();
+        result.FeedbackByOutcome.Should().BeEmpty();
     }
 
     [Fact]
@@ -174,17 +177,17 @@ public class GetFeedbackStatsQueryHandlerTests
         var result = await handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal(3, result.TotalFeedbacks);
-        Assert.Equal(2, result.HelpfulCount);
-        Assert.Equal(1, result.NotHelpfulCount);
-        Assert.Equal(2.0 / 3.0, result.HelpfulRate, precision: 2);
-        Assert.Equal(2, result.FeedbackByEndpoint.Count);
-        Assert.Equal(2, result.FeedbackByEndpoint["/api/v1/chat"]);
-        Assert.Equal(1, result.FeedbackByEndpoint["/api/v1/search"]);
-        Assert.Equal(2, result.FeedbackByOutcome.Count);
-        Assert.Equal(2, result.FeedbackByOutcome["helpful"]);
-        Assert.Equal(1, result.FeedbackByOutcome["not-helpful"]);
+        result.Should().NotBeNull();
+        result.TotalFeedbacks.Should().Be(3);
+        result.HelpfulCount.Should().Be(2);
+        result.NotHelpfulCount.Should().Be(1);
+        result.HelpfulRate.Should().BeApproximately(2.0 / 3.0, 0.01);
+        result.FeedbackByEndpoint.Count.Should().Be(2);
+        result.FeedbackByEndpoint["/api/v1/chat"].Should().Be(2);
+        result.FeedbackByEndpoint["/api/v1/search"].Should().Be(1);
+        result.FeedbackByOutcome.Count.Should().Be(2);
+        result.FeedbackByOutcome["helpful"].Should().Be(2);
+        result.FeedbackByOutcome["not-helpful"].Should().Be(1);
     }
 
     [Fact]
@@ -238,11 +241,11 @@ public class GetFeedbackStatsQueryHandlerTests
         var result = await handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert - Should only include 2 feedbacks within date range
-        Assert.NotNull(result);
-        Assert.Equal(2, result.TotalFeedbacks);
-        Assert.Equal(2, result.HelpfulCount);
-        Assert.Equal(0, result.NotHelpfulCount);
-        Assert.Equal(1.0, result.HelpfulRate);
+        result.Should().NotBeNull();
+        result.TotalFeedbacks.Should().Be(2);
+        result.HelpfulCount.Should().Be(2);
+        result.NotHelpfulCount.Should().Be(0);
+        result.HelpfulRate.Should().Be(1.0);
     }
 
     [Fact]
@@ -294,13 +297,13 @@ public class GetFeedbackStatsQueryHandlerTests
         var result = await handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert - Should only include /api/v1/chat feedback
-        Assert.NotNull(result);
-        Assert.Equal(2, result.TotalFeedbacks);
-        Assert.Equal(1, result.HelpfulCount);
-        Assert.Equal(1, result.NotHelpfulCount);
-        Assert.Equal(0.5, result.HelpfulRate);
-        Assert.Single(result.FeedbackByEndpoint);
-        Assert.Equal(2, result.FeedbackByEndpoint["/api/v1/chat"]);
+        result.Should().NotBeNull();
+        result.TotalFeedbacks.Should().Be(2);
+        result.HelpfulCount.Should().Be(1);
+        result.NotHelpfulCount.Should().Be(1);
+        result.HelpfulRate.Should().Be(0.5);
+        result.FeedbackByEndpoint.Should().ContainSingle();
+        result.FeedbackByEndpoint["/api/v1/chat"].Should().Be(2);
     }
 
     [Fact]
@@ -357,11 +360,11 @@ public class GetFeedbackStatsQueryHandlerTests
         var result = await handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert - Should only include 1 feedback matching all filters
-        Assert.NotNull(result);
-        Assert.Equal(1, result.TotalFeedbacks);
-        Assert.Equal(1, result.HelpfulCount);
-        Assert.Equal(0, result.NotHelpfulCount);
-        Assert.Equal(1.0, result.HelpfulRate);
+        result.Should().NotBeNull();
+        result.TotalFeedbacks.Should().Be(1);
+        result.HelpfulCount.Should().Be(1);
+        result.NotHelpfulCount.Should().Be(0);
+        result.HelpfulRate.Should().Be(1.0);
     }
 
     [Fact]
@@ -375,6 +378,6 @@ public class GetFeedbackStatsQueryHandlerTests
 
         // Act & Assert - Should not throw with valid cancellation token
         var result = await handler.Handle(query, cts.Token);
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
     }
 }

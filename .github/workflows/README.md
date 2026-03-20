@@ -25,6 +25,9 @@ Workflows are organized by category with consistent naming prefixes:
 ├── auto-branch-policy.yml    # Branch protection rules
 ├── auto-dependabot.yml       # Dependabot auto-merge
 ├── auto-validate.yml         # Workflow validation
+│
+├── # Reusable Workflows
+├── notify-slack.yml              # Reusable: centralized Slack notifications
 ```
 
 ## Core CI/CD
@@ -114,10 +117,39 @@ Workflows are organized by category with consistent naming prefixes:
 ### Required Secrets
 - `CODECOV_TOKEN` - Code coverage uploads
 - `LHCI_GITHUB_APP_TOKEN` - Lighthouse CI (optional, falls back to GITHUB_TOKEN)
-- `SLACK_WEBHOOK_URL` - Failure notifications (optional)
+- `SLACK_WEBHOOK_URL` - Generic Slack notifications (existing, optional)
+- `SLACK_GITNOTIFY_WEBHOOK_URL` - GitHub Actions main channel notifications (optional)
+- `SLACK_CRITICAL_WEBHOOK_URL` - Critical failure notifications for deploy/security/runner (optional)
 
 ### Environment Variables
 See individual workflow files for environment-specific configuration.
+
+## Notification Architecture
+
+Slack notifications use a 3-tier system via the centralized `notify-slack.yml` reusable workflow.
+
+### Slack Notification Tiers
+
+| Tier | Workflows | Behavior |
+|------|-----------|----------|
+| **CRITICAL** | deploy-staging, rollback | Start + End (both channels) |
+| **IMPORTANT** | ci (main-staging/main PRs), backend-e2e, security-scan | Failures only |
+| **SILENT** | All others (12 workflows) | GitHub Actions UI only |
+
+**Estimated messages/day:** 2-5 (down from ~150)
+
+**Channels:**
+- Main channel (`SLACK_GITNOTIFY_WEBHOOK_URL`): Failures from Tier 1+2 workflows, start/end from Tier 1
+- Critical channel (`SLACK_CRITICAL_WEBHOOK_URL`): Failures from deploy-staging, rollback, security-scan
+
+### Deploy Preview
+
+PRs targeting `main-staging` receive an automated comment showing:
+- Services affected (API/Web/Infra)
+- CI status
+- Link to staging environment
+
+**Adding notifications to a new workflow:** Follow the pattern in `deploy-staging.yml` (Tier 1) or `security-scan.yml` (Tier 2). Most workflows should stay in Tier 3 (silent).
 
 ## Self-Hosted ARM64 Runner
 
@@ -242,4 +274,4 @@ act -W .github/workflows/ci.yml --dryrun
 
 ---
 
-**Last Updated**: 2026-03-09
+**Last Updated**: 2026-03-20

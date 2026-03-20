@@ -1,11 +1,12 @@
 using Api.BoundedContexts.GameManagement.Application.Commands.Session;
-using Api.BoundedContexts.GameManagement.Application.Handlers.Session;
+using Api.BoundedContexts.GameManagement.Application.Commands.Session;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities.GameManagement;
 using Api.Middleware.Exceptions;
 using Api.Tests.Constants;
 using Api.Tests.TestHelpers;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.GameManagement.Application.Handlers.Session;
 
@@ -57,13 +58,13 @@ public sealed class CreateSessionInviteCommandHandlerTests
         var command = new CreateSessionInviteCommand(SessionId, HostUserId, MaxUses: 10, ExpiryMinutes: 30);
         var result = await _sut.Handle(command, CancellationToken.None);
 
-        Assert.NotNull(result);
-        Assert.NotNull(result.Pin);
-        Assert.Equal(6, result.Pin.Length);
-        Assert.NotNull(result.LinkToken);
-        Assert.Equal(32, result.LinkToken.Length);
-        Assert.Equal(10, result.MaxUses);
-        Assert.True(result.ExpiresAt > DateTime.UtcNow);
+        result.Should().NotBeNull();
+        result.Pin.Should().NotBeNull();
+        result.Pin.Length.Should().Be(6);
+        result.LinkToken.Should().NotBeNull();
+        result.LinkToken.Length.Should().Be(32);
+        result.MaxUses.Should().Be(10);
+        (result.ExpiresAt > DateTime.UtcNow).Should().BeTrue();
     }
 
     [Fact]
@@ -74,8 +75,9 @@ public sealed class CreateSessionInviteCommandHandlerTests
         var otherUserId = Guid.NewGuid();
         var command = new CreateSessionInviteCommand(SessionId, otherUserId, MaxUses: 10, ExpiryMinutes: 30);
 
-        await Assert.ThrowsAsync<ForbiddenException>(() =>
-            _sut.Handle(command, CancellationToken.None));
+        var act = () =>
+            _sut.Handle(command, CancellationToken.None);
+        await act.Should().ThrowAsync<ForbiddenException>();
     }
 
     [Fact]
@@ -83,8 +85,9 @@ public sealed class CreateSessionInviteCommandHandlerTests
     {
         var command = new CreateSessionInviteCommand(Guid.NewGuid(), HostUserId, MaxUses: 10, ExpiryMinutes: 30);
 
-        await Assert.ThrowsAsync<NotFoundException>(() =>
-            _sut.Handle(command, CancellationToken.None));
+        var act = () =>
+            _sut.Handle(command, CancellationToken.None);
+        await act.Should().ThrowAsync<NotFoundException>();
     }
 
     [Fact]
@@ -97,11 +100,11 @@ public sealed class CreateSessionInviteCommandHandlerTests
 
         var saved = await _dbContext.SessionInvites.FindAsync(
             _dbContext.SessionInvites.First().Id);
-        Assert.NotNull(saved);
-        Assert.Equal(result.Pin, saved.Pin);
-        Assert.Equal(result.LinkToken, saved.LinkToken);
-        Assert.Equal(5, saved.MaxUses);
-        Assert.Equal(0, saved.CurrentUses);
-        Assert.False(saved.IsRevoked);
+        saved.Should().NotBeNull();
+        saved.Pin.Should().Be(result.Pin);
+        saved.LinkToken.Should().Be(result.LinkToken);
+        saved.MaxUses.Should().Be(5);
+        saved.CurrentUses.Should().Be(0);
+        (saved.IsRevoked).Should().BeFalse();
     }
 }

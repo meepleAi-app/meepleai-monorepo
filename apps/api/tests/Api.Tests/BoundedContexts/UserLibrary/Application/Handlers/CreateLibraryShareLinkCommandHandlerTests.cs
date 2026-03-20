@@ -1,5 +1,6 @@
 using Api.BoundedContexts.UserLibrary.Application.Commands;
-using Api.BoundedContexts.UserLibrary.Application.Handlers;
+using Api.BoundedContexts.UserLibrary.Application.Commands;
+using Api.BoundedContexts.UserLibrary.Application.Queries;
 using Api.BoundedContexts.UserLibrary.Domain.Entities;
 using Api.BoundedContexts.UserLibrary.Domain.Repositories;
 using Api.BoundedContexts.UserLibrary.Domain.ValueObjects;
@@ -290,8 +291,8 @@ public class CreateLibraryShareLinkCommandHandlerTests
             .ReturnsAsync(recentCount);
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<DomainException>(
-            () => _handler.Handle(command, TestContext.Current.CancellationToken));
+        var act = () => _handler.Handle(command, TestContext.Current.CancellationToken);
+        var exception = (await act.Should().ThrowAsync<DomainException>()).Which;
 
         exception.Message.Should().Contain("10");
         exception.Message.Should().Contain("share links per day");
@@ -328,8 +329,8 @@ public class CreateLibraryShareLinkCommandHandlerTests
             .ReturnsAsync((LibraryShareLink?)null);
 
         // Act & Assert
-        await Assert.ThrowsAsync<InvalidOperationException>(
-            () => _handler.Handle(command, TestContext.Current.CancellationToken));
+        var act2 = () => _handler.Handle(command, TestContext.Current.CancellationToken);
+        await act2.Should().ThrowAsync<InvalidOperationException>();
     }
 
     #endregion
@@ -340,8 +341,8 @@ public class CreateLibraryShareLinkCommandHandlerTests
     public async Task Handle_WithNullCommand_ThrowsArgumentNullException()
     {
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentNullException>(
-            () => _handler.Handle(null!, TestContext.Current.CancellationToken));
+        var act3 = () => _handler.Handle(null!, TestContext.Current.CancellationToken);
+        await act3.Should().ThrowAsync<ArgumentNullException>();
     }
 
     #endregion

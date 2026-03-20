@@ -137,7 +137,7 @@ public class SharedGameDomainTests
                 null,
                 TestUserId,
                 null);
-act.Should().Throw<ArgumentException>();
+        act.Should().Throw<ArgumentException>();
     }
 
     [Theory]
@@ -162,7 +162,7 @@ act.Should().Throw<ArgumentException>();
                 null,
                 TestUserId,
                 null);
-act.Should().Throw<ArgumentException>();
+        act.Should().Throw<ArgumentException>();
     }
 
     [Theory]
@@ -187,7 +187,7 @@ act.Should().Throw<ArgumentException>();
                 null,
                 TestUserId,
                 null);
-act.Should().Throw<ArgumentException>();
+        act.Should().Throw<ArgumentException>();
     }
 
     [Theory]
@@ -213,7 +213,7 @@ act.Should().Throw<ArgumentException>();
                 null,
                 TestUserId,
                 null);
-act.Should().Throw<ArgumentException>();
+        act.Should().Throw<ArgumentException>();
     }
 
     [Fact]
@@ -236,7 +236,7 @@ act.Should().Throw<ArgumentException>();
                 null,
                 Guid.Empty,
                 null);
-act.Should().Throw<ArgumentException>();
+        act.Should().Throw<ArgumentException>();
     }
 
     #region GameDesigner Tests
@@ -261,7 +261,7 @@ act.Should().Throw<ArgumentException>();
     {
         // Act & Assert
         var act = () => GameDesigner.Create(invalidName);
-act.Should().Throw<ArgumentException>();
+        act.Should().Throw<ArgumentException>();
     }
 
     [Fact]
@@ -272,7 +272,7 @@ act.Should().Throw<ArgumentException>();
 
         // Act & Assert
         var act = () => GameDesigner.Create(longName);
-act.Should().Throw<ArgumentException>();
+        act.Should().Throw<ArgumentException>();
     }
 
     #endregion
@@ -299,7 +299,7 @@ act.Should().Throw<ArgumentException>();
     {
         // Act & Assert
         var act = () => GamePublisher.Create(invalidName);
-act.Should().Throw<ArgumentException>();
+        act.Should().Throw<ArgumentException>();
     }
 
     [Fact]
@@ -310,7 +310,7 @@ act.Should().Throw<ArgumentException>();
 
         // Act & Assert
         var act = () => GamePublisher.Create(longName);
-act.Should().Throw<ArgumentException>();
+        act.Should().Throw<ArgumentException>();
     }
 
     #endregion

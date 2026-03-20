@@ -237,7 +237,7 @@ public class EvaluatePromptCommandHandlerTests
         // Act & Assert
         var act = () =>
             new EvaluatePromptCommandHandler(null!, _mockLogger.Object);
-act.Should().Throw<ArgumentNullException>();
+        act.Should().Throw<ArgumentNullException>();
     }
 
     [Fact]
@@ -246,6 +246,6 @@ act.Should().Throw<ArgumentNullException>();
         // Act & Assert
         var act = () =>
             new EvaluatePromptCommandHandler(_mockEvaluationService.Object, null!);
-act.Should().Throw<ArgumentNullException>();
+        act.Should().Throw<ArgumentNullException>();
     }
 }

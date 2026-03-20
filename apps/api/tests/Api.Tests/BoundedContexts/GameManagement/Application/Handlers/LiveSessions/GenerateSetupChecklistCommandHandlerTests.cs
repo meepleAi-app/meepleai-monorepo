@@ -134,7 +134,7 @@ public class GenerateSetupChecklistCommandHandlerTests
         var command = new GenerateSetupChecklistCommand(DefaultSessionId, 4);
 
         // Act & Assert
-        var act = 
+        var act =
             () => _handler.Handle(command, CancellationToken.None);
         var ex = (await act.Should().ThrowAsync<InvalidOperationException>()).Which;
 
@@ -152,7 +152,7 @@ public class GenerateSetupChecklistCommandHandlerTests
         var command = new GenerateSetupChecklistCommand(DefaultSessionId, 4);
 
         // Act & Assert
-        var act = 
+        var act =
             () => _handler.Handle(command, CancellationToken.None);
         await act.Should().ThrowAsync<NotFoundException>();
     }
@@ -169,7 +169,7 @@ public class GenerateSetupChecklistCommandHandlerTests
         var command = new GenerateSetupChecklistCommand(DefaultSessionId, 4);
 
         // Act & Assert
-        var act = 
+        var act =
             () => _handler.Handle(command, CancellationToken.None);
         var ex = (await act.Should().ThrowAsync<InvalidOperationException>()).Which;
 

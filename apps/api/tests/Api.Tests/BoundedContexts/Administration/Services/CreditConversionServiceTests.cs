@@ -57,7 +57,7 @@ public sealed class CreditConversionServiceTests
     {
         // Act & Assert
         var act = () => _sut.UsdToCredits(-0.01m);
-act.Should().Throw<ArgumentException>();
+        act.Should().Throw<ArgumentException>();
     }
 
     [Theory]
@@ -79,7 +79,7 @@ act.Should().Throw<ArgumentException>();
     {
         // Act & Assert
         var act = () => _sut.CreditsToUsd(-10m);
-act.Should().Throw<ArgumentException>();
+        act.Should().Throw<ArgumentException>();
     }
 
     [Fact]
@@ -134,7 +134,7 @@ act.Should().Throw<ArgumentException>();
         // Act & Assert
         var act = () =>
             _sut.EstimateQueryCredits(-100, "deepseek/deepseek-chat");
-act.Should().Throw<ArgumentException>();
+        act.Should().Throw<ArgumentException>();
     }
 
     [Theory]
@@ -146,7 +146,7 @@ act.Should().Throw<ArgumentException>();
         // Act & Assert
         var act = () =>
             _sut.EstimateQueryCredits(1000, modelId!);
-act.Should().Throw<ArgumentException>();
+        act.Should().Throw<ArgumentException>();
     }
 
     /// <summary>

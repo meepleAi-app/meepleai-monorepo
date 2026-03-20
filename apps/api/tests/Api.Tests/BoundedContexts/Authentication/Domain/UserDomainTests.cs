@@ -114,7 +114,7 @@ public class UserDomainTests
         // Arrange — Only SuperAdmin can assign roles; Admin is not sufficient
         var user = CreateTestUser(role: Role.Admin);
 
-        // Act & Assert
+        // Act & Assert — Only SuperAdmin can assign roles, so Admin requester is rejected
         var exception = Assert.Throws<DomainException>(() =>
             user.AssignRole(Role.Admin, Role.Admin));
         Assert.Contains("Only the SuperAdmin can assign roles", exception.Message);

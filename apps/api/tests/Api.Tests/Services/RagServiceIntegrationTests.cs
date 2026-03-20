@@ -106,8 +106,9 @@ public sealed class RagServiceIntegrationTests : IDisposable
     }
 
     /// <summary>
-    /// Test02: Verify ExplainAsync returns valid ExplainResponse with HybridLlmService
-    /// This tests the structured explanation generation flow.
+    /// Test02: Verify ExplainAsync returns empty response after Qdrant removal
+    /// Vector retrieval was removed (Qdrant decommissioned), so ExplainAsync now
+    /// returns an empty explain response indicating no relevant information found.
     /// </summary>
     [Fact]
     public async Task ExplainAsync_WithHybridLlmService_ReturnsValidExplainResponse()
@@ -125,14 +126,15 @@ public sealed class RagServiceIntegrationTests : IDisposable
         // Act
         var result = await ragService.ExplainAsync(gameId, topic, cancellationToken: TestCancellationToken);
 
-        // Assert - ExplainResponse is a record with lowercase parameters
-        // Note: Vector retrieval (Qdrant) has been removed, so ExplainAsync returns
-        // an empty response with a message indicating no results were found.
+        // Assert - After Qdrant removal, vector retrieval returns empty results,
+        // so ExplainAsync returns an empty explain response with a message.
         Assert.NotNull(result);
         Assert.NotNull(result.outline);
         Assert.NotNull(result.script);
+        Assert.NotEmpty(result.script); // Contains the "no relevant information" message
         Assert.NotNull(result.citations);
-        Assert.True(result.estimatedReadingTimeMinutes >= 0);
+        Assert.Empty(result.citations); // No citations when no vector results
+        Assert.Equal(0, result.estimatedReadingTimeMinutes); // No reading time for empty response
     }
 
     /// <summary>

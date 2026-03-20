@@ -73,6 +73,15 @@ const mockAgent: AgentDetailData = {
   gameName: 'Pandemic',
 };
 
+// ── Wrapper ─────────────────────────────────────────────────────────────────
+
+const createQueryClient = () => new QueryClient({ defaultOptions: { queries: { retry: false } } });
+
+function renderWithProviders(ui: React.ReactElement) {
+  const queryClient = createQueryClient();
+  return render(<QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>);
+}
+
 // ── Tests ──────────────────────────────────────────────────────────────────
 
 describe('AgentCharacterSheet', () => {

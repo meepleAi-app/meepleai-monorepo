@@ -250,7 +250,7 @@ public class RuleDisputeTests
         dispute.SetVerdict(CreateVerdict());
         dispute.CastVote(Guid.NewGuid(), true);
 
-        // Act
+        // Act — TallyVotes no longer raises the event; RaiseResolvedEvent is a separate step
         dispute.TallyVotes();
         dispute.RaiseResolvedEvent();
 

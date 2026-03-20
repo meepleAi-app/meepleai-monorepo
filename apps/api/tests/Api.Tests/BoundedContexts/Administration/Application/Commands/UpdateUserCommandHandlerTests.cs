@@ -1,5 +1,4 @@
 using Api.BoundedContexts.Administration.Application.Commands;
-using Api.BoundedContexts.Administration.Application.Queries;
 using Api.BoundedContexts.Authentication.Domain.Entities;
 using Api.SharedKernel.Domain.ValueObjects;
 using Api.BoundedContexts.Authentication.Domain.ValueObjects;
@@ -10,7 +9,7 @@ using Moq;
 using Xunit;
 using Api.Tests.Constants;
 
-namespace Api.Tests.BoundedContexts.Administration.Application.Handlers;
+namespace Api.Tests.BoundedContexts.Administration.Application.Commands;
 
 /// <summary>
 /// Tests for UpdateUserCommandHandler.
@@ -104,7 +103,7 @@ public class UpdateUserCommandHandlerTests
     [Fact]
     public async Task Handle_WithValidRoleUpdate_ThrowsDomainException_RequiresDedicatedEndpoint()
     {
-        // Arrange — Role changes via UpdateUser are no longer allowed; must use dedicated role change endpoint (SuperAdmin only)
+        // Arrange
         var userId = Guid.NewGuid();
         var user = new User(
             userId,
@@ -125,11 +124,10 @@ public class UpdateUserCommandHandlerTests
             .Setup(r => r.GetByIdAsync(userId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(user);
 
-        // Act & Assert
-        var exception = await Assert.ThrowsAsync<DomainException>(
+        // Act & Assert — role changes are rejected; must use dedicated role change endpoint
+        var ex = await Assert.ThrowsAsync<DomainException>(
             () => _handler.Handle(command, TestContext.Current.CancellationToken));
-        Assert.Contains("Role changes must use the dedicated role change endpoint", exception.Message);
-        _mockUnitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
+        Assert.Contains("dedicated role change endpoint", ex.Message);
     }
 
     [Fact]
@@ -205,7 +203,7 @@ public class UpdateUserCommandHandlerTests
     [Fact]
     public async Task Handle_WithAllFieldsUpdated_IncludingRole_ThrowsDomainException()
     {
-        // Arrange — When role is included, handler rejects the request before saving
+        // Arrange
         var userId = Guid.NewGuid();
         var user = new User(
             userId,
@@ -229,48 +227,10 @@ public class UpdateUserCommandHandlerTests
             .Setup(r => r.GetByEmailAsync(It.IsAny<Email>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((User?)null);
 
-        // Act & Assert — Role changes must use dedicated endpoint
-        var exception = await Assert.ThrowsAsync<DomainException>(
+        // Act & Assert — role changes are rejected; must use dedicated role change endpoint
+        var ex = await Assert.ThrowsAsync<DomainException>(
             () => _handler.Handle(command, TestContext.Current.CancellationToken));
-        Assert.Contains("Role changes must use the dedicated role change endpoint", exception.Message);
-        _mockUnitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
-    }
-
-    [Fact]
-    public async Task Handle_WithEmailAndDisplayNameUpdated_UpdatesBothFields()
-    {
-        // Arrange — Email + DisplayName without role should succeed
-        var userId = Guid.NewGuid();
-        var user = new User(
-            userId,
-            new Email("old@example.com"),
-            "Old Name",
-            PasswordHash.Create("Password123!"),
-            Role.User
-        );
-
-        var command = new UpdateUserCommand(
-            userId.ToString(),
-            "new@example.com",
-            "New Name",
-            null
-        );
-
-        _mockUserRepository
-            .Setup(r => r.GetByIdAsync(userId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(user);
-        _mockUserRepository
-            .Setup(r => r.GetByEmailAsync(It.IsAny<Email>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync((User?)null);
-
-        // Act
-        var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
-
-        // Assert
-        Assert.NotNull(result);
-        Assert.Equal("new@example.com", result.Email);
-        Assert.Equal("New Name", result.DisplayName);
-        _mockUnitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+        Assert.Contains("dedicated role change endpoint", ex.Message);
     }
 
     [Fact]

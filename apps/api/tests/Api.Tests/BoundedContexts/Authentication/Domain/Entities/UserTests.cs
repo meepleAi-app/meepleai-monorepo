@@ -368,7 +368,7 @@ public sealed class UserTests
         // Arrange — Only SuperAdmin can assign roles; Admin is not sufficient
         var admin = CreateAdminUser();
 
-        // Act
+        // Act — Admin requester is rejected because only SuperAdmin can assign roles
         var action = () => admin.AssignRole(Role.Admin, Role.Admin);
 
         // Assert

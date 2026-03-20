@@ -176,7 +176,7 @@ public class GameStateHubTests
     // ── UpdateAgentAccess ──
 
     [Fact]
-    public async Task UpdateAgentAccess_BroadcastsToSessionGroup()
+    public async Task UpdateAgentAccess_SendsToSessionGroup()
     {
         // Arrange — hub broadcasts to Group, not User (SignalR identity != participant DB GUID)
         _mockClients
@@ -230,7 +230,7 @@ public class GameStateHubTests
         // Act
         await _hub.UpdateAgentAccess(TestSessionId, TestParticipantId, true);
 
-        // Assert — never sends to a specific user
+        // Assert — never sends to a specific user (broadcasts to group instead)
         _mockClients.Verify(c => c.User(It.IsAny<string>()), Times.Never);
     }
 }

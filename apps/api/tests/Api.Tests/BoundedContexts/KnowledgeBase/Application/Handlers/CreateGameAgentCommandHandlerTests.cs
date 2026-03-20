@@ -1,5 +1,4 @@
 using Api.BoundedContexts.KnowledgeBase.Application.Commands;
-using Api.BoundedContexts.KnowledgeBase.Application.Commands;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries;
 using Api.BoundedContexts.KnowledgeBase.Domain.Entities;
 using Api.BoundedContexts.KnowledgeBase.Domain.Enums;
@@ -56,10 +55,10 @@ public sealed class CreateGameAgentCommandHandlerTests
             _unitOfWorkMock.Object,
             _loggerMock.Object);
 
-        // Default: game and approved typology found, knowledge base completed
+        // Default: game found, KB indexed, and approved typology found
         SetupGameFound();
+        SetupCompletedKnowledgeBase();
         SetupApprovedTypology();
-        SetupKnowledgeBaseCompleted();
     }
 
     // ──────────────────────────────────────────────────
@@ -234,7 +233,7 @@ public sealed class CreateGameAgentCommandHandlerTests
             .ReturnsAsync(game);
     }
 
-    private void SetupKnowledgeBaseCompleted()
+    private void SetupCompletedKnowledgeBase()
     {
         var indexingInfo = new VectorDocumentIndexingInfo(
             VectorDocumentIndexingStatus.Completed,

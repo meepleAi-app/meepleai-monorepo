@@ -28,7 +28,7 @@ public class DeleteConfigurationCommandHandlerTests
     {
         // Arrange
         var configId = Guid.NewGuid();
-        var config = new SystemConfig(Guid.NewGuid(), 
+        var config = new SystemConfig(Guid.NewGuid(),
             new ConfigKey("test.key"), "value", "string",
             Guid.NewGuid(), "Test", "General");
 

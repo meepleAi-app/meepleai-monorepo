@@ -29,7 +29,7 @@ public class GameRulesTests
     {
         // Act & Assert
         var act = () => GameRules.Create(content, language);
-act.Should().Throw<ArgumentException>();
+        act.Should().Throw<ArgumentException>();
     }
 
     [Theory]
@@ -40,7 +40,7 @@ act.Should().Throw<ArgumentException>();
     {
         // Act & Assert
         var act = () => GameRules.Create("Content", language);
-act.Should().Throw<ArgumentException>();
+        act.Should().Throw<ArgumentException>();
     }
 
     [Fact]

@@ -177,7 +177,7 @@ public class LiveSessionQueryHandlerTests
         var query = new GetLiveSessionQuery(sessionId);
 
         // Act & Assert
-        var act = 
+        var act =
             () => handler.Handle(query, TestContext.Current.CancellationToken);
         var exception = (await act.Should().ThrowAsync<NotFoundException>()).Which;
 
@@ -192,7 +192,7 @@ public class LiveSessionQueryHandlerTests
         var handler = new GetLiveSessionQueryHandler(_sessionRepositoryMock.Object);
 
         // Act & Assert
-        var act = 
+        var act =
             () => handler.Handle(null!, TestContext.Current.CancellationToken);
         await act.Should().ThrowAsync<ArgumentNullException>();
     }
@@ -298,7 +298,7 @@ public class LiveSessionQueryHandlerTests
         var query = new GetLiveSessionByCodeQuery(sessionCode);
 
         // Act & Assert
-        var act = 
+        var act =
             () => handler.Handle(query, TestContext.Current.CancellationToken);
         var exception = (await act.Should().ThrowAsync<NotFoundException>()).Which;
 
@@ -313,7 +313,7 @@ public class LiveSessionQueryHandlerTests
         var handler = new GetLiveSessionByCodeQueryHandler(_sessionRepositoryMock.Object);
 
         // Act & Assert
-        var act = 
+        var act =
             () => handler.Handle(null!, TestContext.Current.CancellationToken);
         await act.Should().ThrowAsync<ArgumentNullException>();
     }
@@ -410,7 +410,7 @@ public class LiveSessionQueryHandlerTests
         var handler = new GetUserActiveSessionsQueryHandler(_sessionRepositoryMock.Object);
 
         // Act & Assert
-        var act = 
+        var act =
             () => handler.Handle(null!, TestContext.Current.CancellationToken);
         await act.Should().ThrowAsync<ArgumentNullException>();
     }
@@ -539,7 +539,7 @@ public class LiveSessionQueryHandlerTests
         var query = new GetSessionScoresQuery(sessionId);
 
         // Act & Assert
-        var act = 
+        var act =
             () => handler.Handle(query, TestContext.Current.CancellationToken);
         var exception = (await act.Should().ThrowAsync<NotFoundException>()).Which;
 
@@ -554,7 +554,7 @@ public class LiveSessionQueryHandlerTests
         var handler = new GetSessionScoresQueryHandler(_sessionRepositoryMock.Object);
 
         // Act & Assert
-        var act = 
+        var act =
             () => handler.Handle(null!, TestContext.Current.CancellationToken);
         await act.Should().ThrowAsync<ArgumentNullException>();
     }
@@ -643,7 +643,7 @@ public class LiveSessionQueryHandlerTests
         var query = new GetSessionPlayersQuery(sessionId);
 
         // Act & Assert
-        var act = 
+        var act =
             () => handler.Handle(query, TestContext.Current.CancellationToken);
         var exception = (await act.Should().ThrowAsync<NotFoundException>()).Which;
 
@@ -658,7 +658,7 @@ public class LiveSessionQueryHandlerTests
         var handler = new GetSessionPlayersQueryHandler(_sessionRepositoryMock.Object);
 
         // Act & Assert
-        var act = 
+        var act =
             () => handler.Handle(null!, TestContext.Current.CancellationToken);
         await act.Should().ThrowAsync<ArgumentNullException>();
     }
@@ -696,7 +696,7 @@ public class LiveSessionQueryHandlerTests
     public void GetLiveSessionQueryHandler_NullRepository_ThrowsArgumentNullException()
     {
         // Act & Assert
-        var act = 
+        var act =
             () => new GetLiveSessionQueryHandler(null!);
         act.Should().Throw<ArgumentNullException>();
     }
@@ -705,7 +705,7 @@ public class LiveSessionQueryHandlerTests
     public void GetLiveSessionByCodeQueryHandler_NullRepository_ThrowsArgumentNullException()
     {
         // Act & Assert
-        var act = 
+        var act =
             () => new GetLiveSessionByCodeQueryHandler(null!);
         act.Should().Throw<ArgumentNullException>();
     }
@@ -714,7 +714,7 @@ public class LiveSessionQueryHandlerTests
     public void GetUserActiveSessionsQueryHandler_NullRepository_ThrowsArgumentNullException()
     {
         // Act & Assert
-        var act = 
+        var act =
             () => new GetUserActiveSessionsQueryHandler(null!);
         act.Should().Throw<ArgumentNullException>();
     }
@@ -723,7 +723,7 @@ public class LiveSessionQueryHandlerTests
     public void GetSessionScoresQueryHandler_NullRepository_ThrowsArgumentNullException()
     {
         // Act & Assert
-        var act = 
+        var act =
             () => new GetSessionScoresQueryHandler(null!);
         act.Should().Throw<ArgumentNullException>();
     }
@@ -732,7 +732,7 @@ public class LiveSessionQueryHandlerTests
     public void GetSessionPlayersQueryHandler_NullRepository_ThrowsArgumentNullException()
     {
         // Act & Assert
-        var act = 
+        var act =
             () => new GetSessionPlayersQueryHandler(null!);
         act.Should().Throw<ArgumentNullException>();
     }

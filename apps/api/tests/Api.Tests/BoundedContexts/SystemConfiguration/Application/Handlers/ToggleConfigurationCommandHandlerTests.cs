@@ -29,7 +29,7 @@ public class ToggleConfigurationCommandHandlerTests
     {
         // Arrange
         var configId = Guid.NewGuid();
-        var config = new SystemConfig(Guid.NewGuid(), 
+        var config = new SystemConfig(Guid.NewGuid(),
             new ConfigKey("feature.enabled"), "true", "boolean",
             Guid.NewGuid(), "Feature toggle", "Features");
 

@@ -13,3 +13,16 @@ export const SessionBar = lazy(() => import('./SessionBar').then(m => ({ default
 export const ScoreboardZone = lazy(() =>
   import('./ScoreboardZone').then(m => ({ default: m.ScoreboardZone }))
 );
+
+// Live / contextual zones
+export const ActiveSessionZone = lazy(() =>
+  import('./ActiveSessionZone').then(m => ({ default: m.ActiveSessionZone }))
+);
+export const GameNightZone = lazy(() =>
+  import('./GameNightZone').then(m => ({ default: m.GameNightZone }))
+);
+export const AgentZone = lazy(() => import('./AgentZone').then(m => ({ default: m.AgentZone })));
+export const FeedZone = lazy(() => import('./FeedZone').then(m => ({ default: m.FeedZone })));
+export const SuggestedZone = lazy(() =>
+  import('./SuggestedZone').then(m => ({ default: m.SuggestedZone }))
+);

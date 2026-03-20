@@ -13,7 +13,9 @@ internal class UserProfileConfiguration : IEntityTypeConfiguration<UserProfile>
 {
     public void Configure(EntityTypeBuilder<UserProfile> builder)
     {
-        builder.ToTable("users", t => t.ExcludeFromMigrations());
+        // Each read-only projection needs its own unique view name.
+        // The view "vw_user_profiles" is created at startup via EnsureUserProjectionViews.
+        builder.ToView("vw_user_profiles");
         builder.HasKey(u => u.Id);
 
         builder.Property(u => u.Email).HasMaxLength(256);

@@ -6,6 +6,7 @@ using Api.BoundedContexts.SharedGameCatalog.Application.DTOs;
 using Api.BoundedContexts.SharedGameCatalog.Application.Queries;
 using Api.BoundedContexts.SharedGameCatalog.Application.Queries.GetGameRagReadiness;
 using Api.BoundedContexts.SharedGameCatalog.Application.Queries.ExportSharedGamesTracking;
+using Api.BoundedContexts.SharedGameCatalog.Application.Queries.GetSeedingStatus;
 using Api.BoundedContexts.SharedGameCatalog.Application.Queries.GetSharedGameDocuments;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Entities;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Enums;
@@ -402,6 +403,13 @@ internal static class SharedGameCatalogAdminEndpoints
             .WithSummary("Get document overview for a shared game with PDF status (Admin/Editor)")
             .WithDescription("Returns all documents associated with a shared game, enriched with PDF processing status from the document processing context.")
             .Produces<GetSharedGameDocumentsResult>(StatusCodes.Status200OK);
+
+        // Get seeding status for all games (lightweight DTO for admin seeding page)
+        group.MapGet("/admin/shared-games/seeding-status", HandleGetSeedingStatus)
+            .RequireAuthorization("AdminOrEditorPolicy")
+            .WithName("GetSeedingStatus")
+            .WithSummary("Get seeding/enrichment status for all games (Admin/Editor)")
+            .Produces<List<SeedingGameDto>>();
 
         // Export tracking spreadsheet (all shared games with progress status)
         group.MapGet("/admin/shared-games/tracking-export", HandleTrackingExport)
@@ -1407,6 +1415,20 @@ internal static class SharedGameCatalogAdminEndpoints
         }
     }
 #pragma warning restore S1172
+
+    // ========================================
+    // SEEDING STATUS HANDLER
+    // ========================================
+
+    private static async Task<IResult> HandleGetSeedingStatus(
+        IMediator mediator,
+        CancellationToken cancellationToken)
+    {
+        var result = await mediator.Send(
+            new GetSeedingStatusQuery(),
+            cancellationToken).ConfigureAwait(false);
+        return Results.Ok(result);
+    }
 
     // ========================================
     // TRACKING EXPORT HANDLER

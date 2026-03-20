@@ -485,6 +485,27 @@ using (var scope = app.Services.CreateScope())
             provider, model, embeddingDimensions);
     }
 
+    // Create read-only projection views for bounded context entity decomposition.
+    // Each BC gets its own view of the "users" table to avoid EF Core conflicts
+    // when multiple entities map to the same underlying table/view.
+    // Runs regardless of SkipMigrations since views are idempotent (CREATE OR REPLACE).
+    if (db != null)
+    {
+        try
+        {
+            await db.Database.ExecuteSqlRawAsync("""
+                CREATE OR REPLACE VIEW vw_user_profiles AS SELECT * FROM users;
+                CREATE OR REPLACE VIEW vw_user_budgets AS SELECT * FROM users;
+                CREATE OR REPLACE VIEW vw_user_preferences AS SELECT * FROM users;
+                """).ConfigureAwait(false);
+            app.Logger.LogInformation("✓ User projection views created/verified");
+        }
+        catch (Exception ex)
+        {
+            app.Logger.LogWarning(ex, "Could not create user projection views (non-fatal)");
+        }
+    }
+
     // Epic #318: Layered seeding pipeline with advisory lock (runs independently of migrations)
     if (db != null)
     {

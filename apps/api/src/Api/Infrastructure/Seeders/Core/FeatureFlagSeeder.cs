@@ -40,6 +40,9 @@ internal static class FeatureFlagSeeder
         new("Features:AgentMemory.Enabled", "Enable persistent agent memory system", true, true, true, true),
         new("Features:AgentMemory.GuestClaim", "Enable guest account claiming for player history", true, true, true, true),
 
+        // Admin tools
+        new("Features.DatabaseSync", "Enable Database Sync admin tool", false, false, false, false),
+
         // RAG Enhancement flags
         new("rag.enhancement.adaptive-routing", "Adaptive RAG: skip retrieval for simple queries", true, false, true, true),
         new("rag.enhancement.crag-evaluation", "CRAG: evaluate retrieval quality before generation", true, false, false, true),

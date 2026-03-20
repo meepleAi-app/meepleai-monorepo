@@ -112,12 +112,24 @@ public sealed class SeedAdminUserCommandHandlerTests
 
         _configurationMock.Setup(x => x["INITIAL_ADMIN_EMAIL"]).Returns((string?)null);
 
+        // Clear env var fallback so handler sees null from both sources
+        var previousValue = Environment.GetEnvironmentVariable("INITIAL_ADMIN_EMAIL");
+        Environment.SetEnvironmentVariable("INITIAL_ADMIN_EMAIL", null);
+
         var command = new SeedAdminUserCommand();
 
-        // Act & Assert
-        await Assert.ThrowsAsync<InvalidOperationException>(
-            async () => await _handler.Handle(command, CancellationToken.None)
-        );
+        try
+        {
+            // Act & Assert
+            await Assert.ThrowsAsync<InvalidOperationException>(
+                async () => await _handler.Handle(command, CancellationToken.None)
+            );
+        }
+        finally
+        {
+            // Restore
+            Environment.SetEnvironmentVariable("INITIAL_ADMIN_EMAIL", previousValue);
+        }
     }
 
     [Fact]

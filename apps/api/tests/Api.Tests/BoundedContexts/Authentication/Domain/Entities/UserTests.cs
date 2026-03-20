@@ -340,7 +340,7 @@ public sealed class UserTests
         user.ClearDomainEvents();
 
         // Act
-        user.AssignRole(newRole, Role.Admin);
+        user.AssignRole(newRole, Role.SuperAdmin);
 
         // Assert
         user.Role.Should().Be(newRole);
@@ -359,7 +359,7 @@ public sealed class UserTests
 
         // Assert
         action.Should().Throw<DomainException>()
-            .WithMessage("*Only administrators can assign roles*");
+            .WithMessage("*Only the SuperAdmin can assign roles*");
     }
 
     [Fact]
@@ -368,12 +368,12 @@ public sealed class UserTests
         // Arrange
         var admin = CreateAdminUser();
 
-        // Act
+        // Act — Admin requester is rejected because only SuperAdmin can assign roles
         var action = () => admin.AssignRole(Role.Admin, Role.Admin);
 
         // Assert
         action.Should().Throw<DomainException>()
-            .WithMessage("*Cannot modify admin role through self-service*");
+            .WithMessage("*Only the SuperAdmin can assign roles*");
     }
 
     [Fact]

@@ -47,7 +47,7 @@ namespace Api.Infrastructure.Migrations
                     "FailedLoginAttempts", "IsContributor", "OnboardingCompleted", "OnboardingSkipped"
                 )
                 VALUES (
-                    gen_random_uuid(), 'system-seed@meepleai.app', 'System Seed Admin', NULL, 'admin', 'free',
+                    gen_random_uuid(), 'system-seed@meepleai.app', 'System Seed Admin', NULL, 'system', 'free',
                     NOW(), false, 'en', false,
                     'system', 90, false, true,
                     false, 'Active', 1, 0,

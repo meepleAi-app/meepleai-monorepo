@@ -313,7 +313,7 @@ export function useDashboardMetrics(period: MetricsPeriod = '24h') {
   });
 }
 
-// ── Chunk Preview (Task 7) ────────────────────────────────────────────
+// ── Chunk Preview ─────────────────────────────────────────────────────
 
 export interface ChunkPreviewDto {
   embeddingId: string;

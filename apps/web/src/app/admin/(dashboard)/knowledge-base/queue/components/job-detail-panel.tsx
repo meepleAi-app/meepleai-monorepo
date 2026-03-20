@@ -215,6 +215,8 @@ export function JobDetailPanel({ job, isLoading }: JobDetailPanelProps) {
         <>
           <Separator />
           <div className="flex flex-wrap gap-2">
+            {/* Note: "Testa Agent" only appears during embedding flow navigation (requires gameId in URL params).
+                For standalone queue access, gameId would need to come from the job DTO (future enhancement). */}
             {job.status === 'Completed' && flowGameId && (
               <Link
                 href={`/admin/games/${flowGameId}/agent/test?flow=embedding&gameName=${encodeURIComponent(flowGameName ?? '')}`}

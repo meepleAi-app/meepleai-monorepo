@@ -27,9 +27,12 @@ import type { QueueFilters } from '../lib/queue-api';
 export function QueueDashboardClient({
   gameId,
   highlightJobId,
+  documentId,
 }: {
   gameId?: string;
   highlightJobId?: string;
+  /** Fallback document ID from upload flow when no jobId is available */
+  documentId?: string;
 }) {
   const queryClient = useQueryClient();
   const [filters, setFilters] = useState<QueueFilters>({
@@ -43,6 +46,14 @@ export function QueueDashboardClient({
       setSelectedJobId(highlightJobId);
     }
   }, [highlightJobId]);
+
+  // When no jobId is available but a documentId was passed from the upload flow,
+  // pre-populate the search filter so the queue shows the relevant job.
+  useEffect(() => {
+    if (!highlightJobId && documentId) {
+      setFilters(prev => ({ ...prev, search: documentId }));
+    }
+  }, [highlightJobId, documentId]);
 
   // SSE connections
   const { connectionState: queueSSEState, reconnect: reconnectQueueSSE } = useQueueSSE(true);

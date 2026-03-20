@@ -585,7 +585,7 @@ export function UploadClient({
             {/* Admin-only: link to queue dashboard */}
             {isAdminOrAbove && confirmedGameId && (
               <Link
-                href={`/admin/knowledge-base/queue?flow=embedding&gameId=${confirmedGameId}&gameName=${encodeURIComponent(confirmedGame?.title ?? '')}`}
+                href={`/admin/knowledge-base/queue?flow=embedding&gameId=${confirmedGameId}&gameName=${encodeURIComponent(confirmedGame?.title ?? '')}&documentId=${wizardState.documentId ?? ''}`}
                 className="mt-4 inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
               >
                 Vai alla Queue →

@@ -40,7 +40,7 @@ function ChunkItem({ chunk }: ChunkItemProps) {
           type="button"
           onClick={() => setExpanded(v => !v)}
           className="ml-1 rounded p-0.5 text-muted-foreground hover:text-foreground focus:outline-none"
-          aria-label={expanded ? 'Collapse chunk' : 'Expand chunk'}
+          aria-label={expanded ? 'Comprimi chunk' : 'Espandi chunk'}
         >
           {expanded ? (
             <ChevronUp className="h-3.5 w-3.5" />
@@ -115,32 +115,34 @@ export function ChunkPreviewTab({ pdfDocumentId, className }: ChunkPreviewTabPro
             value={searchInput}
             onChange={e => setSearchInput(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Search chunks…"
+            placeholder="Cerca nei chunk…"
             className="pl-8 text-sm"
           />
         </div>
         <Button variant="secondary" size="sm" onClick={commitSearch}>
-          Search
+          Cerca
         </Button>
       </div>
 
       {/* Content */}
       {isLoading && (
         <div className="flex items-center justify-center py-8 text-sm text-muted-foreground">
-          Loading chunks…
+          Caricamento chunk…
         </div>
       )}
 
       {isError && (
         <div className="rounded-md border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
-          Failed to load chunk previews.
+          Errore nel caricamento dei chunk.
         </div>
       )}
 
       {!isLoading && !isError && data && (
         <>
           {data.chunks.length === 0 ? (
-            <div className="py-8 text-center text-sm text-muted-foreground">No chunks found.</div>
+            <div className="py-8 text-center text-sm text-muted-foreground">
+              Nessun chunk trovato.
+            </div>
           ) : (
             <div className="flex flex-col gap-2">
               {data.chunks.map(chunk => (

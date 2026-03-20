@@ -43,7 +43,7 @@ export class QueueDashboardPage extends BasePage {
     if (params?.jobId) searchParams.set('jobId', params.jobId);
 
     const query = searchParams.toString();
-    const url = query ? `/admin/queue?${query}` : '/admin/queue';
+    const url = query ? `/admin/knowledge-base/queue?${query}` : '/admin/knowledge-base/queue';
 
     await this.page.goto(url);
     await this.waitForLoad();

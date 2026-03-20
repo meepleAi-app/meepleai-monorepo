@@ -10,8 +10,8 @@ export const metadata: Metadata = {
 export default async function ProcessingQueuePage({
   searchParams,
 }: {
-  searchParams: Promise<{ gameId?: string; jobId?: string }>;
+  searchParams: Promise<{ gameId?: string; jobId?: string; documentId?: string }>;
 }) {
-  const { gameId, jobId } = await searchParams;
-  return <QueueDashboardClient gameId={gameId} highlightJobId={jobId} />;
+  const { gameId, jobId, documentId } = await searchParams;
+  return <QueueDashboardClient gameId={gameId} highlightJobId={jobId} documentId={documentId} />;
 }

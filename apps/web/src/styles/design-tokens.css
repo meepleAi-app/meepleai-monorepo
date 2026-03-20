@@ -353,6 +353,19 @@
     --e-event: 350 89% 60%;
 
     /* ============================================================================
+     * ENVIRONMENT THEMES — Defaults (Hub style)
+     * Overridden by .env-tavolo / .env-hub utility classes below
+     * MeepleCard reads these vars for shadow/lift without conditional logic
+     * ============================================================================ */
+    --env-bg: hsl(0, 0%, 98%);
+    --env-bg-dark: hsl(0, 0%, 8%);
+    --env-shadow-offset: 2px;
+    --env-shadow-color: hsl(0 0% 0% / 0.08);
+    --env-card-lift: -2px;
+    --env-texture: none;
+    --env-texture-opacity: 0;
+
+    /* ============================================================================
      * SEMANTIC COLORS (Game-specific)
      * Extended palette for game badges and categorization
      * ============================================================================ */
@@ -797,4 +810,29 @@
       transparent
     );
   }
+}
+
+/* ============================================================================
+ * ENVIRONMENT THEME UTILITIES
+ * .env-tavolo: Warm game-table aesthetic (game sessions, game nights)
+ * .env-hub: Clean neutral style (library, discovery, admin)
+ * ============================================================================ */
+.env-tavolo {
+  --env-bg: hsl(25, 30%, 15%);
+  --env-bg-dark: hsl(25, 20%, 10%);
+  --env-shadow-offset: 6px;
+  --env-shadow-color: hsl(25 40% 8% / 0.4);
+  --env-card-lift: -4px;
+  --env-texture: url('/textures/felt-subtle.webp');
+  --env-texture-opacity: 0.04;
+}
+
+.env-hub {
+  --env-bg: hsl(0, 0%, 98%);
+  --env-bg-dark: hsl(0, 0%, 8%);
+  --env-shadow-offset: 2px;
+  --env-shadow-color: hsl(0 0% 0% / 0.08);
+  --env-card-lift: -2px;
+  --env-texture: none;
+  --env-texture-opacity: 0;
 }

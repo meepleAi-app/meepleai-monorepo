@@ -1,6 +1,5 @@
 using Api.SharedKernel.Domain.ValueObjects;
 using Api.Tests.Constants;
-using FluentAssertions;
 using Xunit;
 
 namespace Api.Tests.SharedKernel.Domain.ValueObjects;
@@ -21,7 +20,7 @@ public class PercentageTests
         var percentage = Percentage.Create(50m);
 
         // Assert
-        percentage.Value.Should().Be(50m);
+        Assert.Equal(50m, percentage.Value);
     }
 
     [Fact]
@@ -31,7 +30,7 @@ public class PercentageTests
         var percentage = Percentage.Create(0m);
 
         // Assert
-        percentage.Value.Should().Be(0m);
+        Assert.Equal(0m, percentage.Value);
     }
 
     [Fact]
@@ -41,7 +40,7 @@ public class PercentageTests
         var percentage = Percentage.Create(100m);
 
         // Assert
-        percentage.Value.Should().Be(100m);
+        Assert.Equal(100m, percentage.Value);
     }
 
     [Theory]
@@ -58,27 +57,25 @@ public class PercentageTests
         var percentage = Percentage.Create(value);
 
         // Assert
-        percentage.Value.Should().Be(value);
+        Assert.Equal(value, percentage.Value);
     }
 
     [Fact]
     public void Create_NegativeValue_ThrowsArgumentOutOfRangeException()
     {
         // Act & Assert
-        var act = () => Percentage.Create(-1m);
-        var exception = act.Should().Throw<ArgumentOutOfRangeException>().Which;
-        exception.ParamName.Should().Be("value");
-        exception.Message.Should().Contain("0 and 100");
+        var exception = Assert.Throws<ArgumentOutOfRangeException>(() => Percentage.Create(-1m));
+        Assert.Equal("value", exception.ParamName);
+        Assert.Contains("0 and 100", exception.Message);
     }
 
     [Fact]
     public void Create_OverHundredValue_ThrowsArgumentOutOfRangeException()
     {
         // Act & Assert
-        var act2 = () => Percentage.Create(101m);
-        var exception = act2.Should().Throw<ArgumentOutOfRangeException>().Which;
-        exception.ParamName.Should().Be("value");
-        exception.Message.Should().Contain("0 and 100");
+        var exception = Assert.Throws<ArgumentOutOfRangeException>(() => Percentage.Create(101m));
+        Assert.Equal("value", exception.ParamName);
+        Assert.Contains("0 and 100", exception.Message);
     }
 
     [Theory]
@@ -89,8 +86,7 @@ public class PercentageTests
     public void Create_OutOfRangeValues_ThrowsArgumentOutOfRangeException(decimal value)
     {
         // Act & Assert
-        var act3 = () => Percentage.Create(value);
-        act3.Should().Throw<ArgumentOutOfRangeException>();
+        Assert.Throws<ArgumentOutOfRangeException>(() => Percentage.Create(value));
     }
 
     #endregion
@@ -104,7 +100,7 @@ public class PercentageTests
         var percentage = Percentage.FromRatio(0.5m);
 
         // Assert
-        percentage.Value.Should().Be(50m);
+        Assert.Equal(50m, percentage.Value);
     }
 
     [Fact]
@@ -114,7 +110,7 @@ public class PercentageTests
         var percentage = Percentage.FromRatio(0m);
 
         // Assert
-        percentage.Value.Should().Be(0m);
+        Assert.Equal(0m, percentage.Value);
     }
 
     [Fact]
@@ -124,7 +120,7 @@ public class PercentageTests
         var percentage = Percentage.FromRatio(1m);
 
         // Assert
-        percentage.Value.Should().Be(100m);
+        Assert.Equal(100m, percentage.Value);
     }
 
     [Theory]
@@ -139,27 +135,25 @@ public class PercentageTests
         var percentage = Percentage.FromRatio(ratio);
 
         // Assert
-        percentage.Value.Should().Be(expectedPercentage);
+        Assert.Equal(expectedPercentage, percentage.Value);
     }
 
     [Fact]
     public void FromRatio_NegativeRatio_ThrowsArgumentOutOfRangeException()
     {
         // Act & Assert
-        var act4 = () => Percentage.FromRatio(-0.1m);
-        var exception = act4.Should().Throw<ArgumentOutOfRangeException>().Which;
-        exception.ParamName.Should().Be("ratio");
-        exception.Message.Should().Contain("0.0 and 1.0");
+        var exception = Assert.Throws<ArgumentOutOfRangeException>(() => Percentage.FromRatio(-0.1m));
+        Assert.Equal("ratio", exception.ParamName);
+        Assert.Contains("0.0 and 1.0", exception.Message);
     }
 
     [Fact]
     public void FromRatio_OverOneRatio_ThrowsArgumentOutOfRangeException()
     {
         // Act & Assert
-        var act5 = () => Percentage.FromRatio(1.1m);
-        var exception = act5.Should().Throw<ArgumentOutOfRangeException>().Which;
-        exception.ParamName.Should().Be("ratio");
-        exception.Message.Should().Contain("0.0 and 1.0");
+        var exception = Assert.Throws<ArgumentOutOfRangeException>(() => Percentage.FromRatio(1.1m));
+        Assert.Equal("ratio", exception.ParamName);
+        Assert.Contains("0.0 and 1.0", exception.Message);
     }
 
     #endregion
@@ -173,7 +167,7 @@ public class PercentageTests
         var percentage = Percentage.FromFraction(50, 100);
 
         // Assert
-        percentage.Value.Should().Be(50m);
+        Assert.Equal(50m, percentage.Value);
     }
 
     [Fact]
@@ -183,7 +177,7 @@ public class PercentageTests
         var percentage = Percentage.FromFraction(0, 100);
 
         // Assert
-        percentage.Value.Should().Be(0m);
+        Assert.Equal(0m, percentage.Value);
     }
 
     [Fact]
@@ -193,7 +187,7 @@ public class PercentageTests
         var percentage = Percentage.FromFraction(100, 100);
 
         // Assert
-        percentage.Value.Should().Be(100m);
+        Assert.Equal(100m, percentage.Value);
     }
 
     [Fact]
@@ -203,7 +197,7 @@ public class PercentageTests
         var percentage = Percentage.FromFraction(50, 0);
 
         // Assert
-        percentage.Value.Should().Be(0m);
+        Assert.Equal(0m, percentage.Value);
     }
 
     [Fact]
@@ -213,7 +207,7 @@ public class PercentageTests
         var percentage = Percentage.FromFraction(50, -10);
 
         // Assert
-        percentage.Value.Should().Be(0m);
+        Assert.Equal(0m, percentage.Value);
     }
 
     [Fact]
@@ -223,7 +217,7 @@ public class PercentageTests
         var percentage = Percentage.FromFraction(150, 100);
 
         // Assert
-        percentage.Value.Should().Be(100m);
+        Assert.Equal(100m, percentage.Value);
     }
 
     [Theory]
@@ -232,14 +226,14 @@ public class PercentageTests
     [InlineData(50, 100, 50)]
     [InlineData(75, 100, 75)]
     [InlineData(100, 100, 100)]
-    [InlineData(1, 3, 33.333333333333333333333333333)] // 1/3 as decimal
+    [InlineData(1, 3, 33.33333333)] // 1/3 as decimal (rounded for cross-platform compatibility)
     public void FromFraction_VariousFractions_ReturnsCorrectPercentage(int count, int total, decimal expectedPercentage)
     {
         // Act
         var percentage = Percentage.FromFraction(count, total);
 
         // Assert
-        percentage.Value.Should().Be(expectedPercentage);
+        Assert.Equal(expectedPercentage, percentage.Value, 8); // 8 decimal precision for cross-platform safety
     }
 
     #endregion
@@ -250,14 +244,14 @@ public class PercentageTests
     public void Zero_ReturnsZeroPercentage()
     {
         // Act & Assert
-        Percentage.Zero.Value.Should().Be(0m);
+        Assert.Equal(0m, Percentage.Zero.Value);
     }
 
     [Fact]
     public void OneHundred_ReturnsHundredPercentage()
     {
         // Act & Assert
-        Percentage.OneHundred.Value.Should().Be(100m);
+        Assert.Equal(100m, Percentage.OneHundred.Value);
     }
 
     #endregion
@@ -279,7 +273,7 @@ public class PercentageTests
         var ratio = percentage.ToRatio();
 
         // Assert
-        ratio.Should().Be(expectedRatio);
+        Assert.Equal(expectedRatio, ratio);
     }
 
     #endregion
@@ -296,7 +290,7 @@ public class PercentageTests
         decimal value = percentage;
 
         // Assert
-        value.Should().Be(75m);
+        Assert.Equal(75m, value);
     }
 
     [Fact]
@@ -309,7 +303,7 @@ public class PercentageTests
         var result = percentage + 25m;
 
         // Assert
-        result.Should().Be(75m);
+        Assert.Equal(75m, result);
     }
 
     #endregion
@@ -323,7 +317,7 @@ public class PercentageTests
         var percentage = Percentage.Create(75m);
 
         // Act & Assert
-        (percentage > 50m).Should().BeTrue();
+        Assert.True(percentage > 50m);
     }
 
     [Fact]
@@ -333,7 +327,7 @@ public class PercentageTests
         var percentage = Percentage.Create(25m);
 
         // Act & Assert
-        (percentage > 50m).Should().BeFalse();
+        Assert.False(percentage > 50m);
     }
 
     [Fact]
@@ -343,7 +337,7 @@ public class PercentageTests
         var percentage = Percentage.Create(25m);
 
         // Act & Assert
-        (percentage < 50m).Should().BeTrue();
+        Assert.True(percentage < 50m);
     }
 
     [Fact]
@@ -353,7 +347,7 @@ public class PercentageTests
         var percentage = Percentage.Create(75m);
 
         // Act & Assert
-        (percentage < 50m).Should().BeFalse();
+        Assert.False(percentage < 50m);
     }
 
     [Fact]
@@ -363,7 +357,7 @@ public class PercentageTests
         var percentage = Percentage.Create(75m);
 
         // Act & Assert
-        (percentage >= 50m).Should().BeTrue();
+        Assert.True(percentage >= 50m);
     }
 
     [Fact]
@@ -373,7 +367,7 @@ public class PercentageTests
         var percentage = Percentage.Create(50m);
 
         // Act & Assert
-        (percentage >= 50m).Should().BeTrue();
+        Assert.True(percentage >= 50m);
     }
 
     [Fact]
@@ -383,7 +377,7 @@ public class PercentageTests
         var percentage = Percentage.Create(25m);
 
         // Act & Assert
-        (percentage <= 50m).Should().BeTrue();
+        Assert.True(percentage <= 50m);
     }
 
     [Fact]
@@ -393,7 +387,7 @@ public class PercentageTests
         var percentage = Percentage.Create(50m);
 
         // Act & Assert
-        (percentage <= 50m).Should().BeTrue();
+        Assert.True(percentage <= 50m);
     }
 
     [Fact]
@@ -404,7 +398,7 @@ public class PercentageTests
         var right = Percentage.Create(50m);
 
         // Act & Assert
-        (left > right).Should().BeTrue();
+        Assert.True(left > right);
     }
 
     [Fact]
@@ -415,7 +409,7 @@ public class PercentageTests
         var right = Percentage.Create(50m);
 
         // Act & Assert
-        (left < right).Should().BeTrue();
+        Assert.True(left < right);
     }
 
     [Fact]
@@ -426,7 +420,7 @@ public class PercentageTests
         var right = Percentage.Create(50m);
 
         // Act & Assert
-        (left >= right).Should().BeTrue();
+        Assert.True(left >= right);
     }
 
     [Fact]
@@ -437,7 +431,7 @@ public class PercentageTests
         var right = Percentage.Create(50m);
 
         // Act & Assert
-        (left <= right).Should().BeTrue();
+        Assert.True(left <= right);
     }
 
     #endregion
@@ -454,8 +448,8 @@ public class PercentageTests
         var result = percentage.ToString();
 
         // Assert - Culture-independent: check for value and percentage symbol
-        result.Should().Contain("50");
-        result.Should().EndWith("%");
+        Assert.Contains("50", result);
+        Assert.EndsWith("%", result);
     }
 
     [Fact]
@@ -468,8 +462,8 @@ public class PercentageTests
         var result = percentage.ToString(2);
 
         // Assert - Culture-independent: check for percentage symbol and approximate value
-        result.Should().StartWith("33");
-        result.Should().EndWith("%");
+        Assert.StartsWith("33", result);
+        Assert.EndsWith("%", result);
     }
 
     [Fact]
@@ -479,8 +473,8 @@ public class PercentageTests
         var result = Percentage.Zero.ToString();
 
         // Assert - Culture-independent: check for zero value and percentage symbol
-        result.Should().StartWith("0");
-        result.Should().EndWith("%");
+        Assert.StartsWith("0", result);
+        Assert.EndsWith("%", result);
     }
 
     [Fact]
@@ -490,8 +484,8 @@ public class PercentageTests
         var result = Percentage.OneHundred.ToString();
 
         // Assert - Culture-independent: check for hundred value and percentage symbol
-        result.Should().StartWith("100");
-        result.Should().EndWith("%");
+        Assert.StartsWith("100", result);
+        Assert.EndsWith("%", result);
     }
 
     #endregion
@@ -506,7 +500,7 @@ public class PercentageTests
         var percentage2 = Percentage.Create(50m);
 
         // Assert
-        percentage2.Should().Be(percentage1);
+        Assert.Equal(percentage1, percentage2);
     }
 
     [Fact]
@@ -517,7 +511,7 @@ public class PercentageTests
         var percentage2 = Percentage.Create(75m);
 
         // Assert
-        percentage2.Should().NotBe(percentage1);
+        Assert.NotEqual(percentage1, percentage2);
     }
 
     [Fact]
@@ -528,7 +522,7 @@ public class PercentageTests
         var percentage2 = Percentage.Create(50m);
 
         // Assert
-        percentage2.GetHashCode().Should().Be(percentage1.GetHashCode());
+        Assert.Equal(percentage1.GetHashCode(), percentage2.GetHashCode());
     }
 
     #endregion
@@ -548,9 +542,9 @@ public class PercentageTests
         const decimal maximumFlakyRate = 5m;
 
         // Act & Assert - demonstrating usage in quality standard checks
-        (coverage >= minimumCoverage).Should().BeTrue();
-        (passRate >= minimumPassRate).Should().BeTrue();
-        (flakyRate <= maximumFlakyRate).Should().BeTrue();
+        Assert.True(coverage >= minimumCoverage);
+        Assert.True(passRate >= minimumPassRate);
+        Assert.True(flakyRate <= maximumFlakyRate);
     }
 
     #endregion

@@ -13,6 +13,7 @@ using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using FluentAssertions;
 using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Handlers;
@@ -72,11 +73,11 @@ public class CreateAgentCommandHandlerTests
 
         // Assert
         Assert.NotNull(result);
-        Assert.Equal("Test Agent", result.Name);
-        Assert.Equal("RAG", result.Type);
-        Assert.Equal("CustomStrategy", result.StrategyName);
+        result.Name.Should().Be("Test Agent");
+        result.Type.Should().Be("RAG");
+        result.StrategyName.Should().Be("CustomStrategy");
         Assert.True(result.IsActive);
-        Assert.NotEqual(Guid.Empty, result.Id);
+        result.Id.Should().NotBe(Guid.Empty);
 
         _mockAgentRepo.Verify(r => r.ExistsAsync(command.Name, It.IsAny<CancellationToken>()), Times.Once);
         _mockAgentRepo.Verify(r => r.AddAsync(It.IsAny<Agent>(), It.IsAny<CancellationToken>()), Times.Once);
@@ -156,7 +157,7 @@ public class CreateAgentCommandHandlerTests
 
         // Assert
         Assert.NotNull(result);
-        Assert.Equal(agentType.ToUpperInvariant(), result.Type.ToUpperInvariant());
+        result.Type.ToUpperInvariant().Should().Be(agentType.ToUpperInvariant());
     }
 
     [Fact]
@@ -220,9 +221,9 @@ public class CreateAgentCommandHandlerTests
 
         // Assert
         Assert.NotNull(result);
-        Assert.Equal("CustomRAG", result.StrategyName);
+        result.StrategyName.Should().Be("CustomRAG");
         Assert.NotNull(capturedAgent);
-        Assert.Equal(3, capturedAgent.Strategy.Parameters.Count);
+        capturedAgent.Strategy.Parameters.Count.Should().Be(3);
     }
 
     [Fact]
@@ -287,7 +288,7 @@ public class CreateAgentCommandHandlerTests
 
         // Assert
         Assert.NotNull(result);
-        Assert.Equal(0, result.InvocationCount);
+        result.InvocationCount.Should().Be(0);
         Assert.Null(result.LastInvokedAt);
     }
 
@@ -315,7 +316,7 @@ public class CreateAgentCommandHandlerTests
 
         // Assert
         Assert.NotNull(result);
-        Assert.Equal("BasicStrategy", result.StrategyName);
+        result.StrategyName.Should().Be("BasicStrategy");
         Assert.Empty(result.StrategyParameters);
     }
 
@@ -359,7 +360,7 @@ public class CreateAgentCommandHandlerTests
         var ex = Assert.Throws<ArgumentNullException>(() =>
             new CreateAgentCommandHandler(null!, _db, _mockLogger.Object));
 
-        Assert.Equal("agentRepository", ex.ParamName);
+        ex.ParamName.Should().Be("agentRepository");
     }
 
     [Fact]
@@ -369,7 +370,7 @@ public class CreateAgentCommandHandlerTests
         var ex = Assert.Throws<ArgumentNullException>(() =>
             new CreateAgentCommandHandler(_mockAgentRepo.Object, null!, _mockLogger.Object));
 
-        Assert.Equal("db", ex.ParamName);
+        ex.ParamName.Should().Be("db");
     }
 
     [Fact]
@@ -379,7 +380,7 @@ public class CreateAgentCommandHandlerTests
         var ex = Assert.Throws<ArgumentNullException>(() =>
             new CreateAgentCommandHandler(_mockAgentRepo.Object, _db, null!));
 
-        Assert.Equal("logger", ex.ParamName);
+        ex.ParamName.Should().Be("logger");
     }
 
     [Theory]
@@ -409,7 +410,7 @@ public class CreateAgentCommandHandlerTests
 
         // Assert
         Assert.NotNull(result);
-        Assert.Equal("RAG", result.Type);
+        result.Type.Should().Be("RAG");
     }
 
     [Fact]

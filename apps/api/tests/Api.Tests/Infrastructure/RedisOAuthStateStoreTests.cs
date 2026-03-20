@@ -5,6 +5,7 @@ using Microsoft.Extensions.Logging;
 using Moq;
 using StackExchange.Redis;
 using Xunit;
+using FluentAssertions;
 using Api.Tests.Constants;
 
 namespace Api.Tests.Infrastructure;
@@ -54,7 +55,7 @@ public class RedisOAuthStateStoreTests
         // Assert - No exceptions thrown means the implementation worked
         // Note: Detailed verification skipped due to platform-specific Redis client signature variations
         // Integration tests verify actual Redis interactions
-        Assert.True(true, "StoreStateAsync completed without throwing");
+        true.Should().BeTrue("StoreStateAsync completed without throwing");
     }
 
     [Fact]
@@ -105,7 +106,7 @@ public class RedisOAuthStateStoreTests
         var result = await _stateStore.ValidateAndRemoveStateAsync(state);
 
         // Assert
-        Assert.True(result);
+        result.Should().BeTrue();
         _mockDatabase.Verify(db => db.KeyDeleteAsync(expectedKey, It.IsAny<CommandFlags>()), Times.Once);
     }
 
@@ -123,7 +124,7 @@ public class RedisOAuthStateStoreTests
         var result = await _stateStore.ValidateAndRemoveStateAsync(state);
 
         // Assert
-        Assert.False(result);
+        result.Should().BeFalse();
         _mockDatabase.Verify(db => db.KeyDeleteAsync(expectedKey, It.IsAny<CommandFlags>()), Times.Once);
     }
 
@@ -134,7 +135,7 @@ public class RedisOAuthStateStoreTests
         var result = await _stateStore.ValidateAndRemoveStateAsync(null!);
 
         // Assert
-        Assert.False(result);
+        result.Should().BeFalse();
         _mockDatabase.Verify(db => db.KeyDeleteAsync(It.IsAny<RedisKey>(), It.IsAny<CommandFlags>()), Times.Never);
     }
 
@@ -145,7 +146,7 @@ public class RedisOAuthStateStoreTests
         var result = await _stateStore.ValidateAndRemoveStateAsync(string.Empty);
 
         // Assert
-        Assert.False(result);
+        result.Should().BeFalse();
         _mockDatabase.Verify(db => db.KeyDeleteAsync(It.IsAny<RedisKey>(), It.IsAny<CommandFlags>()), Times.Never);
     }
 
@@ -163,7 +164,7 @@ public class RedisOAuthStateStoreTests
         var result = await _stateStore.ExistsAsync(state);
 
         // Assert
-        Assert.True(result);
+        result.Should().BeTrue();
         _mockDatabase.Verify(db => db.KeyExistsAsync(expectedKey, It.IsAny<CommandFlags>()), Times.Once);
     }
 
@@ -181,7 +182,7 @@ public class RedisOAuthStateStoreTests
         var result = await _stateStore.ExistsAsync(state);
 
         // Assert
-        Assert.False(result);
+        result.Should().BeFalse();
         _mockDatabase.Verify(db => db.KeyExistsAsync(expectedKey, It.IsAny<CommandFlags>()), Times.Once);
     }
 
@@ -192,7 +193,7 @@ public class RedisOAuthStateStoreTests
         var result = await _stateStore.ExistsAsync(null!);
 
         // Assert
-        Assert.False(result);
+        result.Should().BeFalse();
         _mockDatabase.Verify(db => db.KeyExistsAsync(It.IsAny<RedisKey>(), It.IsAny<CommandFlags>()), Times.Never);
     }
 
@@ -203,7 +204,7 @@ public class RedisOAuthStateStoreTests
         var result = await _stateStore.CleanupExpiredStatesAsync();
 
         // Assert
-        Assert.Equal(0, result);
+        result.Should().Be(0);
         // No Redis operations should be called (TTL handles cleanup)
         _mockDatabase.Verify(db => db.KeyDeleteAsync(It.IsAny<RedisKey>(), It.IsAny<CommandFlags>()), Times.Never);
     }
@@ -222,7 +223,7 @@ public class RedisOAuthStateStoreTests
         var result = await _stateStore.ValidateAndRemoveStateAsync(state);
 
         // Assert - QUAL-02: transient Redis errors return false
-        Assert.False(result);
+        result.Should().BeFalse();
     }
 
     [Fact]
@@ -239,7 +240,7 @@ public class RedisOAuthStateStoreTests
         var result = await _stateStore.ExistsAsync(state);
 
         // Assert - QUAL-02: transient Redis errors return false
-        Assert.False(result);
+        result.Should().BeFalse();
     }
 
     #region Issue #2648: Base64 State Character Tests
@@ -267,7 +268,7 @@ public class RedisOAuthStateStoreTests
         var result = await _stateStore.ValidateAndRemoveStateAsync(state);
 
         // Assert
-        Assert.True(result);
+        result.Should().BeTrue();
         _mockDatabase.Verify(db => db.KeyDeleteAsync(expectedKey, It.IsAny<CommandFlags>()), Times.Once);
     }
 
@@ -286,7 +287,7 @@ public class RedisOAuthStateStoreTests
         var result = await _stateStore.ExistsAsync(state);
 
         // Assert
-        Assert.True(result);
+        result.Should().BeTrue();
         _mockDatabase.Verify(db => db.KeyExistsAsync(expectedKey, It.IsAny<CommandFlags>()), Times.Once);
     }
 

@@ -1,6 +1,7 @@
 using Api.BoundedContexts.GameManagement.Domain.Entities;
 using Api.BoundedContexts.GameManagement.Domain.ValueObjects;
 using Xunit;
+using FluentAssertions;
 using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.GameManagement.Domain;
@@ -20,8 +21,8 @@ public class GameDomainTests
         var game = new Game(gameId, title);
 
         // Assert
-        Assert.Equal(gameId, game.Id);
-        Assert.Equal("Catan", game.Title.Value);
+        game.Id.Should().Be(gameId);
+        game.Title.Value.Should().Be("Catan");
         Assert.Null(game.Publisher);
         Assert.Null(game.YearPublished);
         Assert.Null(game.PlayerCount);
@@ -43,11 +44,11 @@ public class GameDomainTests
         var game = new Game(gameId, title, publisher, year, playerCount, playTime);
 
         // Assert
-        Assert.Equal("Ticket to Ride", game.Title.Value);
-        Assert.Equal("Days of Wonder", game.Publisher?.Name);
-        Assert.Equal(2004, game.YearPublished?.Value);
-        Assert.Equal(2, game.PlayerCount?.Min);
-        Assert.Equal(45, game.PlayTime?.MinMinutes);
+        game.Title.Value.Should().Be("Ticket to Ride");
+        game.Publisher?.Name.Should().Be("Days of Wonder");
+        game.YearPublished?.Value.Should().Be(2004);
+        game.PlayerCount?.Min.Should().Be(2);
+        game.PlayTime?.MinMinutes.Should().Be(45);
     }
 
     [Fact]
@@ -62,8 +63,8 @@ public class GameDomainTests
         game.UpdateDetails(publisher: newPublisher, yearPublished: newYear);
 
         // Assert
-        Assert.Equal("KOSMOS", game.Publisher?.Name);
-        Assert.Equal(1995, game.YearPublished?.Value);
+        game.Publisher?.Name.Should().Be("KOSMOS");
+        game.YearPublished?.Value.Should().Be(1995);
         Assert.Equal("Catan", game.Title.Value); // Unchanged
     }
 
@@ -78,7 +79,7 @@ public class GameDomainTests
         game.UpdateDetails(title: newTitle);
 
         // Assert
-        Assert.Equal("Settlers of Catan", game.Title.Value);
+        game.Title.Value.Should().Be("Settlers of Catan");
     }
 
     [Fact]
@@ -93,8 +94,8 @@ public class GameDomainTests
         game.LinkToBgg(bggId, metadata);
 
         // Assert
-        Assert.Equal(13, game.BggId);
-        Assert.Equal("{\"rating\": 7.2}", game.BggMetadata);
+        game.BggId.Should().Be(13);
+        game.BggMetadata.Should().Be("{\"rating\": 7.2}");
     }
 
     [Fact]
@@ -104,7 +105,7 @@ public class GameDomainTests
         var game = new Game(Guid.NewGuid(), new GameTitle("Catan"));
 
         // Act & Assert
-        var exception = Assert.Throws<ArgumentException>(() => game.LinkToBgg(0));
+        var exception = ((Action)(() => game.LinkToBgg(0))).Should().Throw<ArgumentException>().Which;
         Assert.Contains("BGG ID must be positive", exception.Message, StringComparison.OrdinalIgnoreCase);
     }
 

@@ -10,6 +10,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Time.Testing;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.Administration.Application.Handlers;
 
@@ -55,18 +56,18 @@ public sealed class SubmitInsightFeedbackCommandHandlerTests : IDisposable
         var feedbackId = await _handler.Handle(command, CancellationToken.None);
 
         // Assert
-        Assert.NotEqual(Guid.Empty, feedbackId);
+        feedbackId.Should().NotBe(Guid.Empty);
 
         var entity = await _dbContext.Set<InsightFeedbackEntity>()
             .FirstOrDefaultAsync(f => f.Id == feedbackId);
 
-        Assert.NotNull(entity);
-        Assert.Equal(userId, entity.UserId);
-        Assert.Equal("backlog-user-20260216", entity.InsightId);
-        Assert.Equal("Backlog", entity.InsightType);
-        Assert.True(entity.IsRelevant);
-        Assert.Equal("Very helpful insight", entity.Comment);
-        Assert.Equal(_timeProvider.GetUtcNow().UtcDateTime, entity.SubmittedAt);
+        entity.Should().NotBeNull();
+        entity.UserId.Should().Be(userId);
+        entity.InsightId.Should().Be("backlog-user-20260216");
+        entity.InsightType.Should().Be("Backlog");
+        entity.IsRelevant.Should().BeTrue();
+        entity.Comment.Should().Be("Very helpful insight");
+        entity.SubmittedAt.Should().Be(_timeProvider.GetUtcNow().UtcDateTime);
     }
 
     [Fact]
@@ -89,9 +90,9 @@ public sealed class SubmitInsightFeedbackCommandHandlerTests : IDisposable
         var entity = await _dbContext.Set<InsightFeedbackEntity>()
             .FirstOrDefaultAsync(f => f.Id == feedbackId);
 
-        Assert.NotNull(entity);
-        Assert.Null(entity.Comment);
-        Assert.False(entity.IsRelevant);
+        entity.Should().NotBeNull();
+        entity.Comment.Should().BeNull();
+        entity.IsRelevant.Should().BeFalse();
     }
 
     [Fact]
@@ -114,8 +115,8 @@ public sealed class SubmitInsightFeedbackCommandHandlerTests : IDisposable
         var entity = await _dbContext.Set<InsightFeedbackEntity>()
             .FirstOrDefaultAsync(f => f.Id == feedbackId);
 
-        Assert.NotNull(entity);
-        Assert.Equal("Good recommendation", entity.Comment);
+        entity.Should().NotBeNull();
+        entity.Comment.Should().Be("Good recommendation");
     }
 
     [Fact]
@@ -159,15 +160,15 @@ public sealed class SubmitInsightFeedbackCommandHandlerTests : IDisposable
             .Where(f => f.UserId == userId)
             .ToListAsync();
 
-        Assert.Equal(3, feedbacks.Count);
-        Assert.Equal(2, feedbacks.Count(f => f.IsRelevant));
+        feedbacks.Count.Should().Be(3);
+        feedbacks.Count(f => f.IsRelevant).Should().Be(2);
     }
 
     [Fact]
     public async Task Handle_NullRequest_ThrowsArgumentNullException()
     {
-        await Assert.ThrowsAsync<ArgumentNullException>(
-            () => _handler.Handle(null!, CancellationToken.None));
+        var act = () => _handler.Handle(null!, CancellationToken.None);
+        await act.Should().ThrowAsync<ArgumentNullException>();
     }
 
     [Fact]
@@ -192,8 +193,8 @@ public sealed class SubmitInsightFeedbackCommandHandlerTests : IDisposable
         var entity = await _dbContext.Set<InsightFeedbackEntity>()
             .FirstOrDefaultAsync(f => f.Id == feedbackId);
 
-        Assert.NotNull(entity);
-        Assert.Equal(specificTime.UtcDateTime, entity.SubmittedAt);
+        entity.Should().NotBeNull();
+        entity.SubmittedAt.Should().Be(specificTime.UtcDateTime);
     }
 
     [Fact]
@@ -221,8 +222,8 @@ public sealed class SubmitInsightFeedbackCommandHandlerTests : IDisposable
             IsRelevant = false
         };
 
-        await Assert.ThrowsAsync<Api.Middleware.Exceptions.ConflictException>(
-            () => _handler.Handle(duplicateCommand, CancellationToken.None));
+        var act = () => _handler.Handle(duplicateCommand, CancellationToken.None);
+        await act.Should().ThrowAsync<Api.Middleware.Exceptions.ConflictException>();
     }
 
     [Fact]
@@ -250,9 +251,9 @@ public sealed class SubmitInsightFeedbackCommandHandlerTests : IDisposable
         var id2 = await _handler.Handle(command2, CancellationToken.None);
 
         // Assert
-        Assert.NotEqual(Guid.Empty, id1);
-        Assert.NotEqual(Guid.Empty, id2);
-        Assert.NotEqual(id1, id2);
+        id1.Should().NotBe(Guid.Empty);
+        id2.Should().NotBe(Guid.Empty);
+        id2.Should().NotBe(id1);
     }
 
     public void Dispose()

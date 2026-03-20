@@ -13,6 +13,7 @@ using Microsoft.Extensions.Logging;
 using Moq;
 using Moq.Protected;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.EntityRelationships.Infrastructure;
 
@@ -168,7 +169,7 @@ public class BggExpansionImporterTests
         var result = await importer.ImportExpansionsAsync(gameWithoutBgg.Id, _adminUserId);
 
         // Assert
-        Assert.Equal(0, result);
+        result.Should().Be(0);
     }
 
     [Fact]
@@ -196,7 +197,7 @@ public class BggExpansionImporterTests
         var result = await importer.ImportExpansionsAsync(_baseGame.Id, _adminUserId);
 
         // Assert
-        Assert.Equal(1, result);
+        result.Should().Be(1);
         _entityLinkRepoMock.Verify(r => r.AddAsync(
             It.Is<EntityLink>(el =>
                 el.LinkType == EntityLinkType.ExpansionOf &&
@@ -234,7 +235,7 @@ public class BggExpansionImporterTests
         var result = await importer.ImportExpansionsAsync(_baseGame.Id, _adminUserId);
 
         // Assert
-        Assert.Equal(1, result);
+        result.Should().Be(1);
         _entityLinkRepoMock.Verify(r => r.AddAsync(
             It.Is<EntityLink>(el =>
                 el.LinkType == EntityLinkType.ExpansionOf &&
@@ -269,7 +270,7 @@ public class BggExpansionImporterTests
         var result = await importer.ImportExpansionsAsync(_baseGame.Id, _adminUserId);
 
         // Assert
-        Assert.Equal(1, result);
+        result.Should().Be(1);
         _entityLinkRepoMock.Verify(r => r.AddAsync(
             It.Is<EntityLink>(el =>
                 el.LinkType == EntityLinkType.Reimplements &&
@@ -304,7 +305,7 @@ public class BggExpansionImporterTests
         var result = await importer.ImportExpansionsAsync(_baseGame.Id, _adminUserId);
 
         // Assert
-        Assert.Equal(0, result);
+        result.Should().Be(0);
         _entityLinkRepoMock.Verify(r => r.AddAsync(It.IsAny<EntityLink>(), It.IsAny<CancellationToken>()), Times.Never);
         _unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
     }
@@ -329,7 +330,7 @@ public class BggExpansionImporterTests
         var result = await importer.ImportExpansionsAsync(_baseGame.Id, _adminUserId);
 
         // Assert
-        Assert.Equal(0, result);
+        result.Should().Be(0);
         _entityLinkRepoMock.Verify(r => r.AddAsync(It.IsAny<EntityLink>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
@@ -349,7 +350,7 @@ public class BggExpansionImporterTests
         var result = await importer.ImportExpansionsAsync(_baseGame.Id, _adminUserId);
 
         // Assert
-        Assert.Equal(0, result);
+        result.Should().Be(0);
     }
 
     [Fact]
@@ -368,7 +369,7 @@ public class BggExpansionImporterTests
         var result = await importer.ImportExpansionsAsync(_baseGame.Id, _adminUserId);
 
         // Assert
-        Assert.Equal(0, result);
+        result.Should().Be(0);
         _entityLinkRepoMock.Verify(r => r.AddAsync(It.IsAny<EntityLink>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
@@ -389,7 +390,7 @@ public class BggExpansionImporterTests
         var result = await importer.ImportExpansionsAsync(_baseGame.Id, _adminUserId);
 
         // Assert — BGG API failures degrade gracefully, no links created
-        Assert.Equal(0, result);
+        result.Should().Be(0);
         _entityLinkRepoMock.Verify(r => r.AddAsync(It.IsAny<EntityLink>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 }

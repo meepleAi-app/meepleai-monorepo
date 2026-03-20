@@ -8,6 +8,7 @@ using Api.Tests.Constants;
 using Microsoft.Extensions.Options;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.SystemConfiguration.Application.Handlers;
 
@@ -46,13 +47,13 @@ public sealed class GetLlmSystemConfigQueryHandlerTests
         var handler = new GetLlmSystemConfigQueryHandler(_repoMock.Object, _aiSettings);
         var result = await handler.Handle(new GetLlmSystemConfigQuery(), CancellationToken.None);
 
-        Assert.Equal(10, result.CircuitBreakerFailureThreshold);
-        Assert.Equal(60, result.CircuitBreakerOpenDurationSeconds);
-        Assert.Equal(5, result.CircuitBreakerSuccessThreshold);
-        Assert.Equal(50.00m, result.DailyBudgetUsd);
-        Assert.Equal(500.00m, result.MonthlyBudgetUsd);
-        Assert.Equal("database", result.Source);
-        Assert.NotNull(result.LastUpdatedAt);
+        result.CircuitBreakerFailureThreshold.Should().Be(10);
+        result.CircuitBreakerOpenDurationSeconds.Should().Be(60);
+        result.CircuitBreakerSuccessThreshold.Should().Be(5);
+        result.DailyBudgetUsd.Should().Be(50.00m);
+        result.MonthlyBudgetUsd.Should().Be(500.00m);
+        result.Source.Should().Be("database");
+        result.LastUpdatedAt.Should().NotBeNull();
     }
 
     [Fact]
@@ -63,13 +64,13 @@ public sealed class GetLlmSystemConfigQueryHandlerTests
         var handler = new GetLlmSystemConfigQueryHandler(_repoMock.Object, _aiSettings);
         var result = await handler.Handle(new GetLlmSystemConfigQuery(), CancellationToken.None);
 
-        Assert.Equal(7, result.CircuitBreakerFailureThreshold);
-        Assert.Equal(45, result.CircuitBreakerOpenDurationSeconds);
-        Assert.Equal(4, result.CircuitBreakerSuccessThreshold);
-        Assert.Equal(10.00m, result.DailyBudgetUsd);
-        Assert.Equal(100.00m, result.MonthlyBudgetUsd);
-        Assert.Equal("appsettings", result.Source);
-        Assert.Null(result.LastUpdatedAt);
-        Assert.Null(result.LastUpdatedByUserId);
+        result.CircuitBreakerFailureThreshold.Should().Be(7);
+        result.CircuitBreakerOpenDurationSeconds.Should().Be(45);
+        result.CircuitBreakerSuccessThreshold.Should().Be(4);
+        result.DailyBudgetUsd.Should().Be(10.00m);
+        result.MonthlyBudgetUsd.Should().Be(100.00m);
+        result.Source.Should().Be("appsettings");
+        result.LastUpdatedAt.Should().BeNull();
+        result.LastUpdatedByUserId.Should().BeNull();
     }
 }

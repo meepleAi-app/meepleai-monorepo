@@ -6,6 +6,7 @@ using Api.Tests.Constants;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Handlers;
 
@@ -55,7 +56,7 @@ public class InvalidateCacheByTagCommandHandlerTests
         var exception = await Assert.ThrowsAsync<ArgumentException>(
             () => _handler.Handle(command, TestContext.Current.CancellationToken));
 
-        Assert.Contains("Tag cannot be empty", exception.Message);
+        exception.Message.Should().Contain("Tag cannot be empty");
 
         _mockHybridCache.Verify(c => c.RemoveByTagAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
     }
@@ -70,7 +71,7 @@ public class InvalidateCacheByTagCommandHandlerTests
         var exception = await Assert.ThrowsAsync<ArgumentException>(
             () => _handler.Handle(command, TestContext.Current.CancellationToken));
 
-        Assert.Contains("Tag cannot be empty", exception.Message);
+        exception.Message.Should().Contain("Tag cannot be empty");
 
         _mockHybridCache.Verify(c => c.RemoveByTagAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
     }

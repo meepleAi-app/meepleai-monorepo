@@ -5,6 +5,7 @@ using Api.Models;
 using Api.Services;
 using Moq;
 using Xunit;
+using FluentAssertions;
 using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.Administration.Application.Handlers;
@@ -64,9 +65,9 @@ public class GetActiveAlertsQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal(2, result.Count);
-        Assert.All(result, alert => Assert.True(alert.IsActive));
+        result.Should().NotBeNull();
+        result.Count.Should().Be(2);
+        Assert.All(result, alert => alert.IsActive.Should().BeTrue());
         _mockAlertingService.Verify(
             s => s.GetActiveAlertsAsync(It.IsAny<CancellationToken>()),
             Times.Once);
@@ -85,7 +86,7 @@ public class GetActiveAlertsQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Empty(result);
+        result.Should().NotBeNull();
+        result.Should().BeEmpty();
     }
 }

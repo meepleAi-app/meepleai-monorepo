@@ -9,6 +9,7 @@ using Microsoft.Extensions.Logging;
 using Moq;
 using Moq.Protected;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Handlers;
 
@@ -83,12 +84,12 @@ public class TutorQueryCommandHandlerTests
 
         // Assert
         Assert.NotNull(result);
-        Assert.Equal("tutor", result.AgentType);
+        result.AgentType.Should().Be("tutor");
         Assert.Equal("To set up the game, follow these steps...", result.Response);
-        Assert.Equal(0.95, result.Confidence);
-        Assert.Single(result.Citations);
-        Assert.Equal("setup_guide.pdf:p1", result.Citations[0]);
-        Assert.Equal(250.0, result.ExecutionTimeMs);
+        result.Confidence.Should().Be(0.95);
+        result.Citations.Should().ContainSingle();
+        result.Citations[0].Should().Be("setup_guide.pdf:p1");
+        result.ExecutionTimeMs.Should().Be(250.0);
     }
 
     [Fact]
@@ -113,7 +114,7 @@ public class TutorQueryCommandHandlerTests
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(
             () => _handler.Handle(command, CancellationToken.None));
 
-        Assert.Equal("Tutor agent service unavailable", exception.Message);
+        exception.Message.Should().Be("Tutor agent service unavailable");
         Assert.IsType<HttpRequestException>(exception.InnerException);
     }
 
@@ -174,7 +175,7 @@ public class TutorQueryCommandHandlerTests
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(
             () => _handler.Handle(command, CancellationToken.None));
 
-        Assert.Equal("Tutor agent service unavailable", exception.Message);
+        exception.Message.Should().Be("Tutor agent service unavailable");
         Assert.IsType<HttpRequestException>(exception.InnerException);
     }
 
@@ -221,8 +222,8 @@ public class TutorQueryCommandHandlerTests
         var result = await _handler.Handle(command, CancellationToken.None);
 
         // Assert
-        Assert.Equal(confidence, result.Confidence);
-        Assert.Equal(response, result.Response);
+        result.Confidence.Should().Be(confidence);
+        result.Response.Should().Be(response);
     }
 
     [Fact]
@@ -311,10 +312,10 @@ public class TutorQueryCommandHandlerTests
         var result = await _handler.Handle(command, CancellationToken.None);
 
         // Assert
-        Assert.Equal(3, result.Citations.Count);
-        Assert.Contains("rulebook.pdf:p12", result.Citations);
-        Assert.Contains("faq.pdf:p3", result.Citations);
-        Assert.Contains("errata.pdf:p1", result.Citations);
+        result.Citations.Count.Should().Be(3);
+        result.Citations.Should().Contain("rulebook.pdf:p12");
+        result.Citations.Should().Contain("faq.pdf:p3");
+        result.Citations.Should().Contain("errata.pdf:p1");
     }
 
     [Fact]

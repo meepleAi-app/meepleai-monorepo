@@ -13,6 +13,7 @@ using MediatR;
 using Microsoft.Extensions.Time.Testing;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.GameManagement.Application.Handlers.LiveSessions;
 
@@ -62,7 +63,7 @@ public class AdvanceLiveSessionPhaseCommandHandlerTests
         var handler = CreateHandler();
         await handler.Handle(new AdvanceLiveSessionPhaseCommand(sessionId), TestContext.Current.CancellationToken);
 
-        Assert.Equal(1, session.CurrentPhaseIndex);
+        session.CurrentPhaseIndex.Should().Be(1);
         _repositoryMock.Verify(r => r.UpdateAsync(session, It.IsAny<CancellationToken>()), Times.Once);
     }
 
@@ -214,8 +215,8 @@ public class ConfigureLiveSessionPhasesCommandHandlerTests
             new ConfigureLiveSessionPhasesCommand(sessionId, phases),
             TestContext.Current.CancellationToken);
 
-        Assert.Equal(3, session.PhaseNames.Length);
-        Assert.Equal("Draw", session.PhaseNames[0]);
+        session.PhaseNames.Length.Should().Be(3);
+        session.PhaseNames[0].Should().Be("Draw");
         _repositoryMock.Verify(r => r.UpdateAsync(session, It.IsAny<CancellationToken>()), Times.Once);
     }
 
@@ -322,7 +323,7 @@ public class TriggerEventSnapshotCommandHandlerTests
             TestContext.Current.CancellationToken);
 
         Assert.NotNull(result);
-        Assert.Equal(expectedDto.Id, result!.Id);
+        result!.Id.Should().Be(expectedDto.Id);
         _mediatorMock.Verify(m => m.Send(
             It.Is<CreateSnapshotCommand>(c =>
                 c.SessionId == sessionId &&

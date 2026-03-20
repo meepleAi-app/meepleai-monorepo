@@ -10,6 +10,7 @@ using Api.Tests.Constants;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.AgentMemory.Application.Handlers;
 
@@ -59,8 +60,8 @@ public class ClaimGuestPlayerCommandHandlerTests
         await _handler.Handle(command, CancellationToken.None);
 
         // Assert
-        Assert.Equal(userId, guestMemory.UserId);
-        Assert.NotNull(guestMemory.ClaimedAt);
+        guestMemory.UserId.Should().Be(userId);
+        guestMemory.ClaimedAt.Should().NotBeNull();
 
         _playerRepoMock.Verify(r => r.UpdateAsync(guestMemory, It.IsAny<CancellationToken>()), Times.Once);
         _unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);

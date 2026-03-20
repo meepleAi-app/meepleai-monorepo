@@ -13,6 +13,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Services;
 
@@ -137,8 +138,8 @@ public sealed class LlmResilienceChaosTests
         for (int i = 0; i < 5; i++)
             breaker.RecordFailure();
 
-        Assert.Equal(CircuitState.Open, breaker.State);
-        Assert.Equal(5, breaker.ConsecutiveFailures);
+        breaker.State.Should().Be(CircuitState.Open);
+        breaker.ConsecutiveFailures.Should().Be(5);
         Assert.False(breaker.AllowsRequests());
     }
 
@@ -155,11 +156,11 @@ public sealed class LlmResilienceChaosTests
         for (int i = 0; i < 4; i++)
             breaker.RecordFailure();
 
-        Assert.Equal(CircuitState.Closed, breaker.State);
+        breaker.State.Should().Be(CircuitState.Closed);
         Assert.True(breaker.AllowsRequests());
 
         breaker.RecordSuccess(); // Reset
-        Assert.Equal(0, breaker.ConsecutiveFailures);
+        breaker.ConsecutiveFailures.Should().Be(0);
     }
 
     // ─── Scenario 2: OpenRouter 429 burst → verify fallback to Ollama ──────────
@@ -249,7 +250,7 @@ public sealed class LlmResilienceChaosTests
         for (int i = 0; i < 5; i++)
             breaker.RecordFailure();
 
-        Assert.Equal(CircuitState.Open, breaker.State);
+        breaker.State.Should().Be(CircuitState.Open);
 
         // Simulate timeout expiry by using reflection to set OpenedAt in the past
         var openedAtProp = typeof(CircuitBreakerState)
@@ -259,14 +260,14 @@ public sealed class LlmResilienceChaosTests
 
         // AllowsRequests transitions to HalfOpen
         Assert.True(breaker.AllowsRequests());
-        Assert.Equal(CircuitState.HalfOpen, breaker.State);
+        breaker.State.Should().Be(CircuitState.HalfOpen);
 
         // 3 consecutive successes → close
         breaker.RecordSuccess();
         breaker.RecordSuccess();
         breaker.RecordSuccess();
 
-        Assert.Equal(CircuitState.Closed, breaker.State);
+        breaker.State.Should().Be(CircuitState.Closed);
         Assert.True(breaker.AllowsRequests());
 
         // Verify transition chain: Closed→Open→HalfOpen→Closed
@@ -298,12 +299,12 @@ public sealed class LlmResilienceChaosTests
         openedAtProp!.SetValue(breaker, DateTime.UtcNow.AddSeconds(-31));
         breaker.AllowsRequests(); // Transition to HalfOpen
 
-        Assert.Equal(CircuitState.HalfOpen, breaker.State);
+        breaker.State.Should().Be(CircuitState.HalfOpen);
 
         // Probe failure → reopen
         breaker.RecordFailure();
 
-        Assert.Equal(CircuitState.Open, breaker.State);
+        breaker.State.Should().Be(CircuitState.Open);
         Assert.False(breaker.AllowsRequests());
     }
 
@@ -342,7 +343,7 @@ public sealed class LlmResilienceChaosTests
             new Microsoft.Extensions.Diagnostics.HealthChecks.HealthCheckContext(),
             CancellationToken.None);
 
-        Assert.Equal(Microsoft.Extensions.Diagnostics.HealthChecks.HealthStatus.Degraded, result.Status);
+        result.Status.Should().Be(Microsoft.Extensions.Diagnostics.HealthChecks.HealthStatus.Degraded);
         Assert.Contains("rate limiting is disabled", result.Description, StringComparison.OrdinalIgnoreCase);
     }
 

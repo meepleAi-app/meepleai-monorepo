@@ -7,6 +7,7 @@ using Api.BoundedContexts.GameManagement.Domain.ValueObjects;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Moq;
 using Xunit;
+using FluentAssertions;
 using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.GameManagement.Application.Handlers;
@@ -48,9 +49,9 @@ public class CompleteGameSessionCommandHandlerTests
 
         // Assert
         Assert.NotNull(result);
-        Assert.Equal(session.Id, result.Id);
-        Assert.Equal("Player 1", result.WinnerName);
-        Assert.Equal(SessionStatus.Completed.ToString(), result.Status);
+        result.Id.Should().Be(session.Id);
+        result.WinnerName.Should().Be("Player 1");
+        result.Status.Should().Be(SessionStatus.Completed.ToString());
 
         _sessionRepositoryMock.Verify(r => r.UpdateAsync(session, It.IsAny<CancellationToken>()), Times.Once);
         _unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
@@ -75,7 +76,7 @@ public class CompleteGameSessionCommandHandlerTests
         // Assert
         Assert.NotNull(result);
         Assert.Null(result.WinnerName);
-        Assert.Equal(SessionStatus.Completed.ToString(), result.Status);
+        result.Status.Should().Be(SessionStatus.Completed.ToString());
     }
 
     [Fact]
@@ -93,7 +94,7 @@ public class CompleteGameSessionCommandHandlerTests
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(
             () => _handler.Handle(command, TestContext.Current.CancellationToken));
 
-        Assert.Contains(sessionId.ToString(), exception.Message);
+        exception.Message.Should().Contain(sessionId.ToString());
         _unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
     }
 

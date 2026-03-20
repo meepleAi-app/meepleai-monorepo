@@ -8,6 +8,7 @@ using Moq;
 using Moq.Protected;
 using StackExchange.Redis;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Services;
 
@@ -101,13 +102,13 @@ public sealed class OpenRouterUsageServiceTests
 
         // Assert
         Assert.NotNull(result);
-        Assert.Equal(4.50m, result.BalanceUsd);
-        Assert.Equal(5.00m, result.LimitUsd);
-        Assert.Equal(0.50m, result.UsageUsd);
+        result.BalanceUsd.Should().Be(4.50m);
+        result.LimitUsd.Should().Be(5.00m);
+        result.UsageUsd.Should().Be(0.50m);
         Assert.False(result.IsFreeTier);
-        Assert.Equal(200, result.RateLimitRequests);
-        Assert.Equal("minute", result.RateLimitInterval);
-        Assert.Equal(new DateTime(2026, 2, 22, 10, 0, 0, DateTimeKind.Utc), result.LastUpdated);
+        result.RateLimitRequests.Should().Be(200);
+        result.RateLimitInterval.Should().Be("minute");
+        result.LastUpdated.Should().Be(new DateTime(2026, 2, 22, 10, 0, 0, DateTimeKind.Utc));
     }
 
     [Fact]
@@ -160,7 +161,7 @@ public sealed class OpenRouterUsageServiceTests
         var result = await sut.GetDailySpendAsync();
 
         // Assert
-        Assert.Equal(2.3456m, result);
+        result.Should().Be(2.3456m);
     }
 
     [Fact]
@@ -177,7 +178,7 @@ public sealed class OpenRouterUsageServiceTests
         var result = await sut.GetDailySpendAsync();
 
         // Assert
-        Assert.Equal(0m, result);
+        result.Should().Be(0m);
     }
 
     [Fact]
@@ -194,7 +195,7 @@ public sealed class OpenRouterUsageServiceTests
         var result = await sut.GetDailySpendAsync();
 
         // Assert
-        Assert.Equal(0m, result);
+        result.Should().Be(0m);
     }
 
     // ─── RecordRequestCostAsync ──────────────────────────────────────────────

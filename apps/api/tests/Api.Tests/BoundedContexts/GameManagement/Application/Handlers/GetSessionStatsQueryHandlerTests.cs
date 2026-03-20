@@ -6,6 +6,7 @@ using Api.BoundedContexts.GameManagement.Domain.Repositories;
 using Api.Tests.BoundedContexts.GameManagement.TestHelpers;
 using Moq;
 using Xunit;
+using FluentAssertions;
 using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.GameManagement.Application.Handlers;
@@ -63,11 +64,11 @@ public class GetSessionStatsQueryHandlerTests
 
         // Assert
         Assert.NotNull(result);
-        Assert.Equal(3, result.TotalSessions);
-        Assert.Equal(2, result.CompletedSessions);
-        Assert.Equal(1, result.AbandonedSessions);
+        result.TotalSessions.Should().Be(3);
+        result.CompletedSessions.Should().Be(2);
+        result.AbandonedSessions.Should().Be(1);
         Assert.Equal(60, result.AverageDurationMinutes); // (60 + 90 + 30) / 3 = 60
-        Assert.Equal(2, result.TopPlayers.Count);
+        result.TopPlayers.Count.Should().Be(2);
     }
 
     [Fact]
@@ -94,15 +95,15 @@ public class GetSessionStatsQueryHandlerTests
 
         // Assert
         Assert.NotNull(result);
-        Assert.Equal(4, result.CompletedSessions);
-        Assert.Equal(3, result.TopPlayers.Count);
+        result.CompletedSessions.Should().Be(4);
+        result.TopPlayers.Count.Should().Be(3);
 
         var alice = result.TopPlayers.First(p => p.PlayerName == "Alice");
-        Assert.Equal(2, alice.WinCount);
+        alice.WinCount.Should().Be(2);
         Assert.Equal(50.00m, alice.WinRate); // 2/4 * 100 = 50%
 
         var bob = result.TopPlayers.First(p => p.PlayerName == "Bob");
-        Assert.Equal(1, bob.WinCount);
+        bob.WinCount.Should().Be(1);
         Assert.Equal(25.00m, bob.WinRate); // 1/4 * 100 = 25%
     }
 
@@ -132,7 +133,7 @@ public class GetSessionStatsQueryHandlerTests
 
         // Assert
         Assert.NotNull(result);
-        Assert.Equal(3, result.TopPlayers.Count);
+        result.TopPlayers.Count.Should().Be(3);
     }
 
     [Fact]
@@ -161,13 +162,13 @@ public class GetSessionStatsQueryHandlerTests
 
         // Assert
         Assert.NotNull(result);
-        Assert.Equal(3, result.TopPlayers.Count);
-        Assert.Equal("Alice", result.TopPlayers[0].PlayerName);
-        Assert.Equal(3, result.TopPlayers[0].WinCount);
-        Assert.Equal("Bob", result.TopPlayers[1].PlayerName);
-        Assert.Equal(2, result.TopPlayers[1].WinCount);
-        Assert.Equal("Charlie", result.TopPlayers[2].PlayerName);
-        Assert.Equal(1, result.TopPlayers[2].WinCount);
+        result.TopPlayers.Count.Should().Be(3);
+        result.TopPlayers[0].PlayerName.Should().Be("Alice");
+        result.TopPlayers[0].WinCount.Should().Be(3);
+        result.TopPlayers[1].PlayerName.Should().Be("Bob");
+        result.TopPlayers[1].WinCount.Should().Be(2);
+        result.TopPlayers[2].PlayerName.Should().Be("Charlie");
+        result.TopPlayers[2].WinCount.Should().Be(1);
     }
     [Fact]
     public async Task Handle_WithNoSessions_ReturnsZeroStatistics()
@@ -185,10 +186,10 @@ public class GetSessionStatsQueryHandlerTests
 
         // Assert
         Assert.NotNull(result);
-        Assert.Equal(0, result.TotalSessions);
-        Assert.Equal(0, result.CompletedSessions);
-        Assert.Equal(0, result.AbandonedSessions);
-        Assert.Equal(0, result.AverageDurationMinutes);
+        result.TotalSessions.Should().Be(0);
+        result.CompletedSessions.Should().Be(0);
+        result.AbandonedSessions.Should().Be(0);
+        result.AverageDurationMinutes.Should().Be(0);
         Assert.Empty(result.TopPlayers);
     }
 
@@ -214,9 +215,9 @@ public class GetSessionStatsQueryHandlerTests
 
         // Assert
         Assert.NotNull(result);
-        Assert.Equal(2, result.TotalSessions);
-        Assert.Equal(0, result.CompletedSessions);
-        Assert.Equal(2, result.AbandonedSessions);
+        result.TotalSessions.Should().Be(2);
+        result.CompletedSessions.Should().Be(0);
+        result.AbandonedSessions.Should().Be(2);
         Assert.Equal(38, result.AverageDurationMinutes); // (30 + 45) / 2 = 37.5 rounded to 38
         Assert.Empty(result.TopPlayers); // No winners in abandoned sessions
     }
@@ -244,10 +245,10 @@ public class GetSessionStatsQueryHandlerTests
 
         // Assert
         Assert.NotNull(result);
-        Assert.Equal(3, result.CompletedSessions);
+        result.CompletedSessions.Should().Be(3);
         Assert.Equal(2, result.TopPlayers.Count); // Only Alice and Bob
-        Assert.Equal("Alice", result.TopPlayers[0].PlayerName);
-        Assert.Equal("Bob", result.TopPlayers[1].PlayerName);
+        result.TopPlayers[0].PlayerName.Should().Be("Alice");
+        result.TopPlayers[1].PlayerName.Should().Be("Bob");
     }
 
     [Fact]
@@ -273,11 +274,11 @@ public class GetSessionStatsQueryHandlerTests
 
         // Assert
         Assert.NotNull(result);
-        Assert.Equal(3, result.CompletedSessions);
+        result.CompletedSessions.Should().Be(3);
         // Case-insensitive aggregation: "Alice", "alice", and " Alice " should be treated as the same player
-        Assert.Single(result.TopPlayers);
+        result.TopPlayers.Should().ContainSingle();
         Assert.Equal("Alice", result.TopPlayers[0].PlayerName); // First occurrence casing preserved
-        Assert.Equal(3, result.TopPlayers[0].WinCount);
+        result.TopPlayers[0].WinCount.Should().Be(3);
         Assert.Equal(100.00m, result.TopPlayers[0].WinRate); // 3/3 * 100 = 100%
     }
     [Fact]
@@ -305,7 +306,7 @@ public class GetSessionStatsQueryHandlerTests
 
         // Assert
         Assert.NotNull(result);
-        Assert.Equal(1, result.TotalSessions);
+        result.TotalSessions.Should().Be(1);
         _sessionRepositoryMock.Verify(
             r => r.FindHistoryAsync(gameId, null, null, null, null, It.IsAny<CancellationToken>()),
             Times.Once);
@@ -336,7 +337,7 @@ public class GetSessionStatsQueryHandlerTests
 
         // Assert
         Assert.NotNull(result);
-        Assert.Equal(1, result.TotalSessions);
+        result.TotalSessions.Should().Be(1);
         _sessionRepositoryMock.Verify(
             r => r.FindHistoryAsync(null, startDate, endDate, null, null, It.IsAny<CancellationToken>()),
             Times.Once);
@@ -365,7 +366,7 @@ public class GetSessionStatsQueryHandlerTests
 
         // Assert
         Assert.NotNull(result);
-        Assert.Equal(75, result.AverageDurationMinutes);
+        result.AverageDurationMinutes.Should().Be(75);
     }
 
     [Fact]

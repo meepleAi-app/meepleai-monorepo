@@ -70,7 +70,7 @@ public class RemovePrivatePdfCommandHandlerTests
         var act = () => _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        var exception = await Assert.ThrowsAsync<NotFoundException>(act);
+        var exception = (await ((Func<Task>)(act)).Should().ThrowAsync<NotFoundException>()).Which;
         exception.Message.Should().Contain(entryId.ToString());
 
         _mockUnitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
@@ -101,7 +101,7 @@ public class RemovePrivatePdfCommandHandlerTests
         var act = () => _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        var exception = await Assert.ThrowsAsync<ForbiddenException>(act);
+        var exception = (await ((Func<Task>)(act)).Should().ThrowAsync<ForbiddenException>()).Which;
         exception.Message.Should().Contain("permission");
 
         _mockUnitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
@@ -135,7 +135,7 @@ public class RemovePrivatePdfCommandHandlerTests
         var act = () => _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        var exception = await Assert.ThrowsAsync<NotFoundException>(act);
+        var exception = (await ((Func<Task>)(act)).Should().ThrowAsync<NotFoundException>()).Which;
         exception.Message.Should().Contain(gameId.ToString());
 
         _mockUnitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);

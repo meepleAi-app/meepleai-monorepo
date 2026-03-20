@@ -2,6 +2,7 @@ using Api.BoundedContexts.KnowledgeBase.Domain.Entities;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services;
 using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Domain.Services;
 
@@ -51,7 +52,7 @@ public class AgentOrchestrationServiceTests
         var selected = _sut.SelectAgentForQuery(query, agents);
 
         Assert.NotNull(selected);
-        Assert.Equal(AgentType.RulesInterpreter.Value, selected.Type.Value);
+        selected.Type.Value.Should().Be(AgentType.RulesInterpreter.Value);
     }
 
     [Theory]
@@ -65,7 +66,7 @@ public class AgentOrchestrationServiceTests
         var selected = _sut.SelectAgentForQuery(query, agents);
 
         Assert.NotNull(selected);
-        Assert.Equal(AgentType.CitationAgent.Value, selected.Type.Value);
+        selected.Type.Value.Should().Be(AgentType.CitationAgent.Value);
     }
 
     [Theory]
@@ -79,7 +80,7 @@ public class AgentOrchestrationServiceTests
         var selected = _sut.SelectAgentForQuery(query, agents);
 
         Assert.NotNull(selected);
-        Assert.Equal(AgentType.ConfidenceAgent.Value, selected.Type.Value);
+        selected.Type.Value.Should().Be(AgentType.ConfidenceAgent.Value);
     }
 
     [Theory]
@@ -92,7 +93,7 @@ public class AgentOrchestrationServiceTests
         var selected = _sut.SelectAgentForQuery(query, agents);
 
         Assert.NotNull(selected);
-        Assert.Equal(AgentType.ConversationAgent.Value, selected.Type.Value);
+        selected.Type.Value.Should().Be(AgentType.ConversationAgent.Value);
     }
 
     [Theory]
@@ -105,7 +106,7 @@ public class AgentOrchestrationServiceTests
         var selected = _sut.SelectAgentForQuery(query, agents);
 
         Assert.NotNull(selected);
-        Assert.Equal(AgentType.RagAgent.Value, selected.Type.Value);
+        selected.Type.Value.Should().Be(AgentType.RagAgent.Value);
     }
 
     // ============================================================================
@@ -124,7 +125,7 @@ public class AgentOrchestrationServiceTests
         var selected = _sut.SelectAgentForQuery("What are the rules?", agents);
 
         Assert.NotNull(selected);
-        Assert.Equal(AgentType.RagAgent.Value, selected.Type.Value);
+        selected.Type.Value.Should().Be(AgentType.RagAgent.Value);
     }
 
     [Fact]
@@ -138,7 +139,7 @@ public class AgentOrchestrationServiceTests
         var selected = _sut.SelectAgentForQuery("Tell me about Catan", agents);
 
         Assert.NotNull(selected);
-        Assert.Equal(AgentType.CitationAgent.Value, selected.Type.Value);
+        selected.Type.Value.Should().Be(AgentType.CitationAgent.Value);
     }
 
     [Fact]
@@ -164,7 +165,7 @@ public class AgentOrchestrationServiceTests
     public void SelectAgentForQuery_EmptyQuery_ThrowsArgumentException()
     {
         var agents = CreateAllAgents();
-        Assert.Throws<ArgumentException>(() => _sut.SelectAgentForQuery("", agents));
-        Assert.Throws<ArgumentException>(() => _sut.SelectAgentForQuery("  ", agents));
+        ((Action)(() => _sut.SelectAgentForQuery("", agents))).Should().Throw<ArgumentException>();
+        ((Action)(() => _sut.SelectAgentForQuery("  ", agents))).Should().Throw<ArgumentException>();
     }
 }

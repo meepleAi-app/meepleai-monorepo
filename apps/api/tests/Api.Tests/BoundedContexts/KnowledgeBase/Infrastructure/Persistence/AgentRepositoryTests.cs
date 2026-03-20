@@ -4,6 +4,7 @@ using Api.BoundedContexts.KnowledgeBase.Infrastructure.Persistence;
 using Api.Infrastructure;
 using Api.Tests.Infrastructure;
 using Xunit;
+using FluentAssertions;
 using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Infrastructure.Persistence;
@@ -36,8 +37,8 @@ internal class AgentRepositoryTests : SharedDatabaseTestBase<AgentRepository>
         // Assert
         var retrieved = await Repository.GetByIdAsync(agent.Id, CancellationToken.None);
         Assert.NotNull(retrieved);
-        Assert.Equal(agent.Name, retrieved.Name);
-        Assert.Equal(agent.Type.Value, retrieved.Type.Value);
+        retrieved.Name.Should().Be(agent.Name);
+        retrieved.Type.Value.Should().Be(agent.Type.Value);
     }
 
     [Fact]
@@ -52,8 +53,8 @@ internal class AgentRepositoryTests : SharedDatabaseTestBase<AgentRepository>
 
         // Assert
         Assert.NotNull(retrieved);
-        Assert.Equal(agent.Id, retrieved.Id);
-        Assert.Equal(agent.Name, retrieved.Name);
+        retrieved.Id.Should().Be(agent.Id);
+        retrieved.Name.Should().Be(agent.Name);
     }
 
     [Fact]
@@ -78,7 +79,7 @@ internal class AgentRepositoryTests : SharedDatabaseTestBase<AgentRepository>
 
         // Assert
         Assert.NotNull(retrieved);
-        Assert.Equal(agent.Id, retrieved.Id);
+        retrieved.Id.Should().Be(agent.Id);
     }
 
     [Fact]
@@ -97,7 +98,7 @@ internal class AgentRepositoryTests : SharedDatabaseTestBase<AgentRepository>
         var activeAgents = await Repository.GetAllActiveAsync(CancellationToken.None);
 
         // Assert
-        Assert.Equal(2, activeAgents.Count);
+        activeAgents.Count.Should().Be(2);
         Assert.All(activeAgents, a => Assert.True(a.IsActive));
     }
 
@@ -117,7 +118,7 @@ internal class AgentRepositoryTests : SharedDatabaseTestBase<AgentRepository>
         var ragAgents = await Repository.GetByTypeAsync(AgentType.RagAgent, CancellationToken.None);
 
         // Assert
-        Assert.Equal(2, ragAgents.Count);
+        ragAgents.Count.Should().Be(2);
         Assert.All(ragAgents, a => Assert.Equal("RAG", a.Type.Value));
     }
 
@@ -136,8 +137,8 @@ internal class AgentRepositoryTests : SharedDatabaseTestBase<AgentRepository>
 
         // Assert
         var retrieved = await Repository.GetByIdAsync(agent.Id, CancellationToken.None);
-        Assert.Equal("Updated Name", retrieved!.Name);
-        Assert.Equal("VectorOnly", retrieved.Strategy.Name);
+        retrieved!.Name.Should().Be("Updated Name");
+        retrieved.Strategy.Name.Should().Be("VectorOnly");
     }
 
     [Fact]

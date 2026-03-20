@@ -7,6 +7,7 @@ using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.Tests.Constants;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Handlers;
 
@@ -53,9 +54,9 @@ public class GetMyChatHistoryQueryHandlerTests
 
         // Assert
         Assert.NotNull(result);
-        Assert.Equal(3, result.TotalCount);
-        Assert.Equal(3, result.Chats.Count);
-        Assert.Equal("Thread 1", result.Chats[0].Title);
+        result.TotalCount.Should().Be(3);
+        result.Chats.Count.Should().Be(3);
+        result.Chats[0].Title.Should().Be("Thread 1");
     }
 
     [Fact]
@@ -75,7 +76,7 @@ public class GetMyChatHistoryQueryHandlerTests
 
         // Assert
         Assert.NotNull(result);
-        Assert.Equal(0, result.TotalCount);
+        result.TotalCount.Should().Be(0);
         Assert.Empty(result.Chats);
     }
 
@@ -109,10 +110,10 @@ public class GetMyChatHistoryQueryHandlerTests
 
         // Assert
         Assert.NotNull(result);
-        Assert.Equal(5, result.TotalCount);
-        Assert.Equal(2, result.Chats.Count);
-        Assert.Equal("Thread 3", result.Chats[0].Title);
-        Assert.Equal("Thread 4", result.Chats[1].Title);
+        result.TotalCount.Should().Be(5);
+        result.Chats.Count.Should().Be(2);
+        result.Chats[0].Title.Should().Be("Thread 3");
+        result.Chats[1].Title.Should().Be("Thread 4");
     }
 
     [Fact]

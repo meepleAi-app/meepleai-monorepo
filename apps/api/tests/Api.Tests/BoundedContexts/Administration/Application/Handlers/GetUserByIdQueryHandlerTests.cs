@@ -8,6 +8,7 @@ using Api.Infrastructure.Entities;
 using Api.Tests.TestHelpers;
 using Microsoft.EntityFrameworkCore;
 using Xunit;
+using FluentAssertions;
 using Api.Tests.Constants;
 using System.Threading;
 
@@ -62,11 +63,11 @@ public class GetUserByIdQueryHandlerTests
         var result = await handler.Handle(query, TestCancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal(userId.ToString(), result.Id);
-        Assert.Equal("test@example.com", result.Email);
-        Assert.Equal("Test User", result.DisplayName);
-        Assert.Equal("User", result.Role);
+        result.Should().NotBeNull();
+        result.Id.Should().Be(userId.ToString());
+        result.Email.Should().Be("test@example.com");
+        result.DisplayName.Should().Be("Test User");
+        result.Role.Should().Be("User");
     }
 
     [Fact]
@@ -83,7 +84,7 @@ public class GetUserByIdQueryHandlerTests
         var result = await handler.Handle(query, TestCancellationToken);
 
         // Assert
-        Assert.Null(result);
+        result.Should().BeNull();
     }
 
     [Fact]
@@ -128,9 +129,9 @@ public class GetUserByIdQueryHandlerTests
         var result = await handler.Handle(query, TestCancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.NotNull(result.LastSeenAt);
-        Assert.Equal(lastSeenDate, result.LastSeenAt.Value, TestConstants.Timing.VeryShortTimeout);
+        result.Should().NotBeNull();
+        result.LastSeenAt.Should().NotBeNull();
+        result.LastSeenAt.Value.Should().BeCloseTo(lastSeenDate, TestConstants.Timing.VeryShortTimeout);
     }
 
     [Fact]
@@ -188,9 +189,9 @@ public class GetUserByIdQueryHandlerTests
         var result = await handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.NotNull(result.LastSeenAt);
-        Assert.Equal(recentLastSeen, result.LastSeenAt.Value, TestConstants.Timing.VeryShortTimeout);
+        result.Should().NotBeNull();
+        result.LastSeenAt.Should().NotBeNull();
+        result.LastSeenAt.Value.Should().BeCloseTo(recentLastSeen, TestConstants.Timing.VeryShortTimeout);
     }
 
     [Fact]
@@ -235,8 +236,8 @@ public class GetUserByIdQueryHandlerTests
         var result = await handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Null(result.LastSeenAt); // Should ignore revoked sessions
+        result.Should().NotBeNull();
+        result.LastSeenAt.Should().BeNull(); // Should ignore revoked sessions
     }
 
     [Fact]
@@ -265,7 +266,7 @@ public class GetUserByIdQueryHandlerTests
         var result = await handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal(string.Empty, result.DisplayName);
+        result.Should().NotBeNull();
+        result.DisplayName.Should().Be(string.Empty);
     }
 }

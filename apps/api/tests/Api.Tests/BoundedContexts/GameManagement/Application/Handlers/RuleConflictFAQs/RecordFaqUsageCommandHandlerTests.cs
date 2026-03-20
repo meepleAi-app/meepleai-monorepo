@@ -9,6 +9,7 @@ using Api.SharedKernel.Infrastructure.Persistence;
 using Api.Tests.Constants;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.GameManagement.Application.Handlers.RuleConflictFAQs;
 
@@ -71,7 +72,7 @@ public sealed class RecordFaqUsageCommandHandlerTests
         await _handler.Handle(command, CancellationToken.None);
 
         // Assert
-        Assert.Equal(initialUsageCount + 1, existingFaq.UsageCount);
+        existingFaq.UsageCount.Should().Be(initialUsageCount + 1);
         _faqRepositoryMock.Verify(r => r.GetByIdAsync(faqId, It.IsAny<CancellationToken>()), Times.Once);
         _faqRepositoryMock.Verify(r => r.UpdateAsync(
             It.Is<RuleConflictFAQ>(f => f.UsageCount == initialUsageCount + 1),
@@ -93,8 +94,8 @@ public sealed class RecordFaqUsageCommandHandlerTests
         var exception = await Assert.ThrowsAsync<NotFoundException>(() =>
             _handler.Handle(command, CancellationToken.None));
 
-        Assert.Contains("RuleConflictFAQ", exception.Message);
-        Assert.Contains(faqId.ToString(), exception.Message);
+        exception.Message.Should().Contain("RuleConflictFAQ");
+        exception.Message.Should().Contain(faqId.ToString());
         _faqRepositoryMock.Verify(r => r.UpdateAsync(
             It.IsAny<RuleConflictFAQ>(),
             It.IsAny<CancellationToken>()), Times.Never);
@@ -135,10 +136,10 @@ public sealed class RecordFaqUsageCommandHandlerTests
 
         // Assert
         var domainEvents = existingFaq.DomainEvents;
-        Assert.Single(domainEvents);
+        domainEvents.Should().ContainSingle();
         var usedEvent = Assert.IsType<RuleConflictFAQUsedEvent>(domainEvents.First());
-        Assert.Equal(faqId, usedEvent.FAQId);
-        Assert.Equal(gameId, usedEvent.GameId);
+        usedEvent.FAQId.Should().Be(faqId);
+        usedEvent.GameId.Should().Be(gameId);
         Assert.Equal(1, usedEvent.TotalUsageCount); // First usage after creation
     }
 

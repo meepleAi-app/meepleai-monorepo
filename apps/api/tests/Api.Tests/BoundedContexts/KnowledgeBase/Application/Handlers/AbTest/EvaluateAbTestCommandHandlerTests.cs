@@ -6,6 +6,7 @@ using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.Tests.Constants;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Handlers.AbTest;
 
@@ -51,7 +52,7 @@ public sealed class EvaluateAbTestCommandHandlerTests
         var result = await sut.Handle(command, CancellationToken.None);
 
         Assert.NotNull(result);
-        Assert.Equal("Evaluated", result.Status);
+        result.Status.Should().Be("Evaluated");
         Assert.NotNull(result.WinnerLabel);
         Assert.NotNull(result.WinnerModelId);
 
@@ -96,7 +97,7 @@ public sealed class EvaluateAbTestCommandHandlerTests
 
         var result = await sut.Handle(command, CancellationToken.None);
 
-        Assert.Equal("InProgress", result.Status);
+        result.Status.Should().Be("InProgress");
         Assert.Null(result.WinnerLabel);
     }
 
@@ -115,7 +116,7 @@ public sealed class EvaluateAbTestCommandHandlerTests
 
         var result = await sut.Handle(command, CancellationToken.None);
 
-        Assert.Equal("B", result.WinnerLabel);
-        Assert.Equal("claude-3-haiku", result.WinnerModelId);
+        result.WinnerLabel.Should().Be("B");
+        result.WinnerModelId.Should().Be("claude-3-haiku");
     }
 }

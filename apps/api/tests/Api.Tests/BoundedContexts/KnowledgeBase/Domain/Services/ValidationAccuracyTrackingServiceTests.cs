@@ -2,6 +2,7 @@ using Api.BoundedContexts.KnowledgeBase.Domain.Services;
 using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 using Api.Models;
 using Xunit;
+using FluentAssertions;
 using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Domain.Services;
@@ -77,13 +78,13 @@ public class ValidationAccuracyTrackingServiceTests
         var metrics = _service.CalculateAccuracyMetrics(evaluationResult, expectedValidCount);
 
         // Assert
-        Assert.Equal(80, metrics.TruePositives);
-        Assert.Equal(20, metrics.TrueNegatives);
-        Assert.Equal(0, metrics.FalsePositives);
-        Assert.Equal(0, metrics.FalseNegatives);
-        Assert.Equal(1.0, metrics.Accuracy);
-        Assert.Equal(1.0, metrics.Precision);
-        Assert.Equal(1.0, metrics.Recall);
+        metrics.TruePositives.Should().Be(80);
+        metrics.TrueNegatives.Should().Be(20);
+        metrics.FalsePositives.Should().Be(0);
+        metrics.FalseNegatives.Should().Be(0);
+        metrics.Accuracy.Should().Be(1.0);
+        metrics.Precision.Should().Be(1.0);
+        metrics.Recall.Should().Be(1.0);
         Assert.True(metrics.MeetsBaselineThreshold);
     }
 
@@ -167,10 +168,10 @@ public class ValidationAccuracyTrackingServiceTests
             r => r.IsAccurate);
 
         // Assert
-        Assert.Equal(80, metrics.TruePositives);
-        Assert.Equal(15, metrics.TrueNegatives);
-        Assert.Equal(5, metrics.FalsePositives);
-        Assert.Equal(0, metrics.FalseNegatives);
+        metrics.TruePositives.Should().Be(80);
+        metrics.TrueNegatives.Should().Be(15);
+        metrics.FalsePositives.Should().Be(5);
+        metrics.FalseNegatives.Should().Be(0);
     }
 
     [Fact]
@@ -204,13 +205,13 @@ public class ValidationAccuracyTrackingServiceTests
         // Eval 2: TP=40, TN=5, FP=5, FN=0
         // Eval 3: TP=60, TN=10, FP=0, FN=5
         // Total: TP=180, TN=30, FP=10, FN=5
-        Assert.Equal(180, metrics.TruePositives);
-        Assert.Equal(30, metrics.TrueNegatives);
-        Assert.Equal(10, metrics.FalsePositives);
-        Assert.Equal(5, metrics.FalseNegatives);
-        Assert.Equal(225, metrics.Total);
+        metrics.TruePositives.Should().Be(180);
+        metrics.TrueNegatives.Should().Be(30);
+        metrics.FalsePositives.Should().Be(10);
+        metrics.FalseNegatives.Should().Be(5);
+        metrics.Total.Should().Be(225);
         // Accuracy = (180 + 30) / 225 = 210 / 225 = 0.9333
-        Assert.Equal(0.9333, metrics.Accuracy, precision: 4);
+        metrics.Accuracy.Should().BeApproximately(0.9333, precision: 4);
     }
 
     [Fact]
@@ -254,10 +255,10 @@ public class ValidationAccuracyTrackingServiceTests
         var report = _service.GenerateAccuracyReport(metrics, "Overall Validation");
 
         // Assert
-        Assert.Equal("Overall Validation", report.Context);
+        report.Context.Should().Be("Overall Validation");
         Assert.True(report.MeetsBaseline);
-        Assert.Equal(ValidationAccuracyLevel.Excellent, report.QualityLevel);
-        Assert.Contains("Overall Validation", report.Summary);
+        report.QualityLevel.Should().Be(ValidationAccuracyLevel.Excellent);
+        report.Summary.Should().Contain("Overall Validation");
         Assert.Contains("95", report.Summary); // Accuracy percentage (locale-independent check)
         Assert.NotEmpty(report.Recommendations);
     }
@@ -276,9 +277,9 @@ public class ValidationAccuracyTrackingServiceTests
         var report = _service.GenerateAccuracyReport(metrics, "Layer 1: Confidence");
 
         // Assert
-        Assert.Equal("Layer 1: Confidence", report.Context);
+        report.Context.Should().Be("Layer 1: Confidence");
         Assert.False(report.MeetsBaseline); // Accuracy = 70%, below 80%
-        Assert.Equal(ValidationAccuracyLevel.Fair, report.QualityLevel);
+        report.QualityLevel.Should().Be(ValidationAccuracyLevel.Fair);
         Assert.Contains("⚠️", report.Summary); // Warning emoji
         Assert.NotEmpty(report.Recommendations);
         Assert.Contains(report.Recommendations, r => r.Contains("below baseline threshold"));
@@ -335,7 +336,7 @@ public class ValidationAccuracyTrackingServiceTests
 
         // Assert
         Assert.True(report.MeetsBaseline);
-        Assert.Equal(ValidationAccuracyLevel.Excellent, report.QualityLevel);
+        report.QualityLevel.Should().Be(ValidationAccuracyLevel.Excellent);
         Assert.Contains(report.Recommendations, r => r.Contains("performing well"));
     }
 
@@ -373,7 +374,7 @@ public class ValidationAccuracyTrackingServiceTests
     public void MinimumAccuracyThreshold_IsPointEight()
     {
         // Assert
-        Assert.Equal(0.80, ValidationAccuracyTrackingService.MinimumAccuracyThreshold);
+        ValidationAccuracyTrackingService.MinimumAccuracyThreshold.Should().Be(0.80);
     }
 
     [Fact]
@@ -408,7 +409,7 @@ public class ValidationAccuracyTrackingServiceTests
         var report = _service.GenerateAccuracyReport(metrics, "Test Context");
 
         // Assert
-        Assert.Equal(expectedLevel, report.QualityLevel);
+        report.QualityLevel.Should().Be(expectedLevel);
     }
 }
 

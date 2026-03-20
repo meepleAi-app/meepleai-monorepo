@@ -7,6 +7,7 @@ using Api.Tests.Constants;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.UserLibrary.Application.Handlers;
 
@@ -79,8 +80,8 @@ public class UnlinkAgentFromPrivateGameCommandHandlerTests
             u => u.SaveChangesAsync(It.IsAny<CancellationToken>()),
             Times.Once);
 
-        Assert.NotNull(capturedGame);
-        Assert.Null(capturedGame.AgentDefinitionId);
+        capturedGame.Should().NotBeNull();
+        capturedGame.AgentDefinitionId.Should().BeNull();
     }
 
     [Fact]

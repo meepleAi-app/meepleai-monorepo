@@ -8,6 +8,7 @@ using Api.Tests.Constants;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Handlers;
 
@@ -49,7 +50,7 @@ public class GetAllAgentsQueryHandlerTests
 
         // Assert
         Assert.NotNull(result);
-        Assert.Equal(2, result.Count);
+        result.Count.Should().Be(2);
     }
 
     [Fact]
@@ -72,7 +73,7 @@ public class GetAllAgentsQueryHandlerTests
 
         // Assert
         Assert.NotNull(result);
-        Assert.Single(result);
+        result.Should().ContainSingle();
         Assert.True(result[0].IsActive);
     }
 
@@ -96,8 +97,8 @@ public class GetAllAgentsQueryHandlerTests
 
         // Assert
         Assert.NotNull(result);
-        Assert.Single(result);
-        Assert.Equal("RAG", result[0].Type);
+        result.Should().ContainSingle();
+        result[0].Type.Should().Be("RAG");
     }
 
     private static Agent CreateAgent(string name, string type, bool isActive)

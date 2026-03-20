@@ -10,6 +10,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.SharedGameCatalog.Integration;
 
@@ -103,22 +104,22 @@ public class EnqueueBggBatchFromJsonIntegrationTests : IAsyncLifetime
         var result = await handler.Handle(command, CancellationToken.None);
 
         // Assert
-        Assert.Equal(3, result.Total);
-        Assert.Equal(2, result.Enqueued);   // Wingspan + Azul
-        Assert.Equal(1, result.Skipped);    // Catan (duplicate)
-        Assert.Equal(0, result.Failed);
-        Assert.Single(result.Errors);
+        result.Total.Should().Be(3);
+        result.Enqueued.Should().Be(2);   // Wingspan + Azul
+        result.Skipped.Should().Be(1);    // Catan (duplicate)
+        result.Failed.Should().Be(0);
+        result.Errors.Should().ContainSingle();
 
         var duplicateError = result.Errors[0];
-        Assert.Equal("Duplicate", duplicateError.ErrorType);
-        Assert.Equal(13, duplicateError.BggId);
-        Assert.Equal("Catan", duplicateError.GameName);
+        duplicateError.ErrorType.Should().Be("Duplicate");
+        duplicateError.BggId.Should().Be(13);
+        duplicateError.GameName.Should().Be("Catan");
 
         // Verify queue entities created
         var queuedItems = await _dbContext.BggImportQueue.ToListAsync();
-        Assert.Equal(2, queuedItems.Count);
-        Assert.Contains(queuedItems, q => q.BggId == 266192); // Wingspan
-        Assert.Contains(queuedItems, q => q.BggId == 230802); // Azul
+        queuedItems.Count.Should().Be(2);
+        queuedItems.Should().Contain(q => q.BggId == 266192); // Wingspan
+        queuedItems.Should().Contain(q => q.BggId == 230802); // Azul
     }
 
     [Fact]
@@ -163,18 +164,18 @@ public class EnqueueBggBatchFromJsonIntegrationTests : IAsyncLifetime
         var result = await handler.Handle(command, CancellationToken.None);
 
         // Assert
-        Assert.Equal(100, result.Total);
-        Assert.Equal(50, result.Enqueued);  // Games 51-100
-        Assert.Equal(50, result.Skipped);   // Games 1-50 (duplicates)
-        Assert.Equal(0, result.Failed);
-        Assert.Equal(50, result.Errors.Count);  // 50 duplicate errors
+        result.Total.Should().Be(100);
+        result.Enqueued.Should().Be(50);  // Games 51-100
+        result.Skipped.Should().Be(50);   // Games 1-50 (duplicates)
+        result.Failed.Should().Be(0);
+        result.Errors.Count.Should().Be(50);  // 50 duplicate errors
 
         // Verify all duplicate errors are correct type
-        Assert.All(result.Errors, error => Assert.Equal("Duplicate", error.ErrorType));
+        Assert.All(result.Errors, error => error.ErrorType.Should().Be("Duplicate"));
 
         // Verify queue has 50 new items
         var queuedItems = await _dbContext.BggImportQueue.ToListAsync();
-        Assert.Equal(50, queuedItems.Count);
+        queuedItems.Count.Should().Be(50);
     }
 
     [Fact]
@@ -196,10 +197,10 @@ public class EnqueueBggBatchFromJsonIntegrationTests : IAsyncLifetime
         var result = await handler.Handle(command, CancellationToken.None);
 
         // Assert
-        Assert.Equal(0, result.Total);
-        Assert.Equal(0, result.Enqueued);
-        Assert.Equal(0, result.Skipped);
-        Assert.Equal(0, result.Failed);
-        Assert.Empty(result.Errors);
+        result.Total.Should().Be(0);
+        result.Enqueued.Should().Be(0);
+        result.Skipped.Should().Be(0);
+        result.Failed.Should().Be(0);
+        result.Errors.Should().BeEmpty();
     }
 }

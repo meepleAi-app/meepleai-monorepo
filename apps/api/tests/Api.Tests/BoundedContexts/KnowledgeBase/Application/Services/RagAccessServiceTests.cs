@@ -6,6 +6,7 @@ using Api.Infrastructure.Entities.UserLibrary;
 using Api.Tests.Constants;
 using Api.Tests.TestHelpers;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Services;
 
@@ -131,9 +132,9 @@ public class RagAccessServiceTests
         var result = await service.GetAccessibleKbCardsAsync(UserId, GameId, UserRole.User);
 
         // Assert
-        Assert.Single(result);
-        Assert.Contains(completedDocId, result);
-        Assert.DoesNotContain(pendingDocId, result);
+        result.Should().ContainSingle();
+        result.Should().Contain(completedDocId);
+        result.Should().NotContain(pendingDocId);
     }
 
     [Fact]

@@ -6,6 +6,7 @@ using Api.Infrastructure;
 using Api.Tests.TestHelpers;
 using Moq;
 using Xunit;
+using FluentAssertions;
 using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.GameManagement.Application.Handlers;
@@ -107,8 +108,8 @@ public class UnresolveRuleCommentCommandHandlerTests
             UnresolveParent: false);
 
         // Assert
-        Assert.Equal(commentId, command.CommentId);
-        Assert.Equal(userId, command.UserId);
+        command.CommentId.Should().Be(commentId);
+        command.UserId.Should().Be(userId);
         Assert.False(command.IsAdmin);
         Assert.False(command.UnresolveParent);
     }
@@ -127,8 +128,8 @@ public class UnresolveRuleCommentCommandHandlerTests
             UnresolveParent: false);
 
         // Assert
-        Assert.Equal(commentId, command.CommentId);
-        Assert.Equal(adminUserId, command.UserId);
+        command.CommentId.Should().Be(commentId);
+        command.UserId.Should().Be(adminUserId);
         Assert.True(command.IsAdmin);
     }
 
@@ -209,8 +210,8 @@ public class UnresolveRuleCommentCommandHandlerTests
             UserId: user2Id);
 
         // Assert
-        Assert.NotEqual(command1.CommentId, command2.CommentId);
-        Assert.NotEqual(command1.UserId, command2.UserId);
+        command2.CommentId.Should().NotBe(command1.CommentId);
+        command2.UserId.Should().NotBe(command1.UserId);
     }
     // NOTE: Full integration tests for Handle method (comment unresolve, parent unresolve cascading,
     // authorization, navigation property loading) should be in integration test suite

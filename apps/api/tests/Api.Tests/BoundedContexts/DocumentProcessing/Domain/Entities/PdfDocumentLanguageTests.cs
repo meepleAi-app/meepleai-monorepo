@@ -2,6 +2,7 @@ using Api.BoundedContexts.DocumentProcessing.Domain.Entities;
 using Api.BoundedContexts.DocumentProcessing.Domain.ValueObjects;
 using Api.Tests.Constants;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.DocumentProcessing.Domain.Entities;
 
@@ -23,8 +24,8 @@ public class PdfDocumentLanguageTests
         document.SetDetectedLanguage("de", 0.94);
 
         // Assert
-        Assert.Equal("de", document.Language.Value);
-        Assert.Equal(0.94, document.LanguageConfidence);
+        document.Language.Value.Should().Be("de");
+        document.LanguageConfidence.Should().Be(0.94);
     }
 
     [Fact]
@@ -37,7 +38,7 @@ public class PdfDocumentLanguageTests
         document.OverrideLanguage("it");
 
         // Assert
-        Assert.Equal("it", document.LanguageOverride);
+        document.LanguageOverride.Should().Be("it");
     }
 
     [Fact]
@@ -52,7 +53,7 @@ public class PdfDocumentLanguageTests
         var effective = document.EffectiveLanguage;
 
         // Assert
-        Assert.Equal("it", effective);
+        effective.Should().Be("it");
     }
 
     [Fact]
@@ -66,7 +67,7 @@ public class PdfDocumentLanguageTests
         var effective = document.EffectiveLanguage;
 
         // Assert
-        Assert.Equal("de", effective);
+        effective.Should().Be("de");
     }
 
     [Fact]
@@ -79,7 +80,7 @@ public class PdfDocumentLanguageTests
         var effective = document.EffectiveLanguage;
 
         // Assert — defaults to English from constructor
-        Assert.Equal("en", effective);
+        effective.Should().Be("en");
     }
 
     [Fact]
@@ -117,7 +118,7 @@ public class PdfDocumentLanguageTests
         document.SetDetectedLanguage("fr", confidence);
 
         // Assert
-        Assert.Equal(confidence, document.LanguageConfidence);
+        document.LanguageConfidence.Should().Be(confidence);
     }
 
     [Fact]
@@ -126,13 +127,13 @@ public class PdfDocumentLanguageTests
         // Arrange
         var document = CreateTestDocument();
         document.OverrideLanguage("it");
-        Assert.Equal("it", document.LanguageOverride);
+        document.LanguageOverride.Should().Be("it");
 
         // Act
         document.OverrideLanguage("");
 
         // Assert
-        Assert.Null(document.LanguageOverride);
+        document.LanguageOverride.Should().BeNull();
     }
 
     [Fact]
@@ -141,13 +142,13 @@ public class PdfDocumentLanguageTests
         // Arrange
         var document = CreateTestDocument();
         document.OverrideLanguage("it");
-        Assert.Equal("it", document.LanguageOverride);
+        document.LanguageOverride.Should().Be("it");
 
         // Act
         document.OverrideLanguage(null);
 
         // Assert
-        Assert.Null(document.LanguageOverride);
+        document.LanguageOverride.Should().BeNull();
     }
 
     [Fact]
@@ -161,7 +162,7 @@ public class PdfDocumentLanguageTests
         document.OverrideLanguage("   ");
 
         // Assert
-        Assert.Null(document.LanguageOverride);
+        document.LanguageOverride.Should().BeNull();
     }
 
     [Fact]
@@ -171,13 +172,13 @@ public class PdfDocumentLanguageTests
         var document = CreateTestDocument();
         document.SetDetectedLanguage("de", 0.9);
         document.OverrideLanguage("it");
-        Assert.Equal("it", document.EffectiveLanguage);
+        document.EffectiveLanguage.Should().Be("it");
 
         // Act
         document.OverrideLanguage(null);
 
         // Assert
-        Assert.Equal("de", document.EffectiveLanguage);
+        document.EffectiveLanguage.Should().Be("de");
     }
 
     [Fact]
@@ -187,7 +188,7 @@ public class PdfDocumentLanguageTests
         var document = CreateTestDocument();
 
         // Assert
-        Assert.Null(document.LanguageConfidence);
+        document.LanguageConfidence.Should().BeNull();
     }
 
     [Fact]
@@ -197,7 +198,7 @@ public class PdfDocumentLanguageTests
         var document = CreateTestDocument();
 
         // Assert
-        Assert.Null(document.LanguageOverride);
+        document.LanguageOverride.Should().BeNull();
     }
 
     private static PdfDocument CreateTestDocument()

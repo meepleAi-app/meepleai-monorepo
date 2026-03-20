@@ -15,6 +15,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Moq;
 using StackExchange.Redis;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.Integration.GameManagement;
 
@@ -245,7 +246,7 @@ public sealed class GameEndpointsIntegrationTests : IAsyncLifetime
         });
 
         // Assert
-        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
     [Fact]
@@ -290,7 +291,7 @@ public sealed class GameEndpointsIntegrationTests : IAsyncLifetime
         });
 
         // Assert
-        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
     // ========================================
@@ -307,7 +308,7 @@ public sealed class GameEndpointsIntegrationTests : IAsyncLifetime
         var response = await _client.GetAsync($"/api/v1/games/{gameId}/rules");
 
         // Assert
-        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
     // ========================================
@@ -453,7 +454,7 @@ public sealed class GameEndpointsIntegrationTests : IAsyncLifetime
         var response = await _client.GetAsync($"/api/v1/games/{gameId}/sessions");
 
         // Assert
-        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
     [Fact]
@@ -665,7 +666,7 @@ public sealed class GameEndpointsIntegrationTests : IAsyncLifetime
         var response = await _client.GetAsync($"/api/v1/games/{gameId}/agents");
 
         // Assert
-        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
     // ========================================
@@ -682,7 +683,7 @@ public sealed class GameEndpointsIntegrationTests : IAsyncLifetime
         var response = await _client.GetAsync($"/api/v1/games/{gameId}/details");
 
         // Assert
-        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
     // ========================================
@@ -722,7 +723,7 @@ public sealed class GameEndpointsIntegrationTests : IAsyncLifetime
         var response = await _client.PutAsJsonAsync($"/api/v1/games/{gameId}/publish", publishRequest);
 
         // Assert
-        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
     [Fact]

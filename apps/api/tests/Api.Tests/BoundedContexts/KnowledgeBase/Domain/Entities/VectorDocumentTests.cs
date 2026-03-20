@@ -1,5 +1,6 @@
 using Api.BoundedContexts.KnowledgeBase.Domain.Entities;
 using Xunit;
+using FluentAssertions;
 using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Domain.Entities;
@@ -25,12 +26,12 @@ public class VectorDocumentTests
         var document = new VectorDocument(id, gameId, pdfDocumentId, language, totalChunks);
 
         // Assert
-        Assert.Equal(id, document.Id);
-        Assert.Equal(gameId, document.GameId);
-        Assert.Equal(pdfDocumentId, document.PdfDocumentId);
-        Assert.Equal("en", document.Language);
-        Assert.Equal(10, document.TotalChunks);
-        Assert.Equal(0, document.SearchCount);
+        document.Id.Should().Be(id);
+        document.GameId.Should().Be(gameId);
+        document.PdfDocumentId.Should().Be(pdfDocumentId);
+        document.Language.Should().Be("en");
+        document.TotalChunks.Should().Be(10);
+        document.SearchCount.Should().Be(0);
         Assert.Null(document.LastSearchedAt);
         Assert.Null(document.Metadata);
     }
@@ -47,7 +48,7 @@ public class VectorDocumentTests
         var document = new VectorDocument(id, gameId, pdfDocumentId, "EN-US", 5);
 
         // Assert
-        Assert.Equal("en-us", document.Language);
+        document.Language.Should().Be("en-us");
     }
 
     [Fact]
@@ -61,7 +62,7 @@ public class VectorDocumentTests
         // Act & Assert
         var exception = Assert.Throws<ArgumentException>(() =>
             new VectorDocument(id, gameId, pdfDocumentId, "", 10));
-        Assert.Contains("Language cannot be empty", exception.Message);
+        exception.Message.Should().Contain("Language cannot be empty");
     }
 
     [Fact]
@@ -88,7 +89,7 @@ public class VectorDocumentTests
         // Act & Assert
         var exception = Assert.Throws<ArgumentException>(() =>
             new VectorDocument(id, gameId, pdfDocumentId, "en", 0));
-        Assert.Contains("Total chunks must be positive", exception.Message);
+        exception.Message.Should().Contain("Total chunks must be positive");
     }
 
     [Fact]
@@ -115,7 +116,7 @@ public class VectorDocumentTests
         document.RecordSearch("test query");
 
         // Assert
-        Assert.Equal(1, document.SearchCount);
+        document.SearchCount.Should().Be(1);
         Assert.NotNull(document.LastSearchedAt);
         Assert.True(document.LastSearchedAt >= beforeSearch);
         Assert.True(document.LastSearchedAt <= DateTime.UtcNow);
@@ -133,7 +134,7 @@ public class VectorDocumentTests
         document.RecordSearch("query 3");
 
         // Assert
-        Assert.Equal(3, document.SearchCount);
+        document.SearchCount.Should().Be(3);
     }
 
     [Fact]
@@ -147,7 +148,7 @@ public class VectorDocumentTests
         document.UpdateMetadata(metadata);
 
         // Assert
-        Assert.Equal(metadata, document.Metadata);
+        document.Metadata.Should().Be(metadata);
     }
 
     [Fact]
@@ -161,7 +162,7 @@ public class VectorDocumentTests
         document.UpdateMetadata("{\"version\": 2}");
 
         // Assert
-        Assert.Equal("{\"version\": 2}", document.Metadata);
+        document.Metadata.Should().Be("{\"version\": 2}");
     }
 
     [Fact]
@@ -215,7 +216,7 @@ public class VectorDocumentTests
             totalChunks: 10,
             sharedGameId: sharedGameId);
 
-        Assert.Equal(sharedGameId, document.SharedGameId);
+        document.SharedGameId.Should().Be(sharedGameId);
     }
 
     [Fact]
@@ -226,7 +227,7 @@ public class VectorDocumentTests
 
         document.SetSharedGameId(sharedGameId);
 
-        Assert.Equal(sharedGameId, document.SharedGameId);
+        document.SharedGameId.Should().Be(sharedGameId);
     }
 
     [Fact]

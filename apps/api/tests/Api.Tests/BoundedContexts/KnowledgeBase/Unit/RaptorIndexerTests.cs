@@ -4,6 +4,7 @@ using Api.Tests.Constants;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Unit;
 
@@ -29,8 +30,8 @@ public class RaptorIndexerTests
             Array.Empty<string>(), maxLevels: 3,
             CancellationToken.None);
 
-        Assert.Equal(0, result.TotalNodes);
-        Assert.Equal(0, result.Levels);
+        result.TotalNodes.Should().Be(0);
+        result.Levels.Should().Be(0);
         Assert.Empty(result.Summaries);
     }
 
@@ -43,8 +44,8 @@ public class RaptorIndexerTests
             new[] { "Only one chunk." }, maxLevels: 3,
             CancellationToken.None);
 
-        Assert.Equal(0, result.TotalNodes);
-        Assert.Equal(0, result.Levels);
+        result.TotalNodes.Should().Be(0);
+        result.Levels.Should().Be(0);
         Assert.Empty(result.Summaries);
     }
 
@@ -61,15 +62,15 @@ public class RaptorIndexerTests
             chunks, maxLevels: 3,
             CancellationToken.None);
 
-        Assert.Equal(1, result.TotalNodes);
-        Assert.Equal(1, result.Levels);
-        Assert.Single(result.Summaries);
+        result.TotalNodes.Should().Be(1);
+        result.Levels.Should().Be(1);
+        result.Summaries.Should().ContainSingle();
 
         var summary = result.Summaries[0];
-        Assert.Equal(1, summary.TreeLevel);
-        Assert.Equal(0, summary.ClusterIndex);
-        Assert.Equal(3, summary.SourceChunkCount);
-        Assert.Equal("Summary of 3 chunks", summary.SummaryText);
+        summary.TreeLevel.Should().Be(1);
+        summary.ClusterIndex.Should().Be(0);
+        summary.SourceChunkCount.Should().Be(3);
+        summary.SummaryText.Should().Be("Summary of 3 chunks");
     }
 
     [Fact]
@@ -89,20 +90,20 @@ public class RaptorIndexerTests
 
         // Level 1: 3 summaries (3 clusters of 5)
         // Level 2: 1 summary (1 cluster of 3)
-        Assert.Equal(4, result.TotalNodes);
-        Assert.Equal(2, result.Levels);
+        result.TotalNodes.Should().Be(4);
+        result.Levels.Should().Be(2);
 
         var level1 = result.Summaries.Where(s => s.TreeLevel == 1).ToList();
         var level2 = result.Summaries.Where(s => s.TreeLevel == 2).ToList();
 
-        Assert.Equal(3, level1.Count);
-        Assert.Single(level2);
+        level1.Count.Should().Be(3);
+        level2.Should().ContainSingle();
 
         // Each level-1 summary covers 5 source chunks
         Assert.All(level1, s => Assert.Equal(5, s.SourceChunkCount));
 
         // Level-2 summary covers 3 level-1 summaries
-        Assert.Equal(3, level2[0].SourceChunkCount);
+        level2[0].SourceChunkCount.Should().Be(3);
     }
 
     [Fact]
@@ -121,10 +122,10 @@ public class RaptorIndexerTests
             chunks, maxLevels: 3,
             CancellationToken.None);
 
-        Assert.Equal(1, result.TotalNodes);
+        result.TotalNodes.Should().Be(1);
         // Fallback summary should contain the concatenated text (within 200 chars)
-        Assert.Contains("Short A.", result.Summaries[0].SummaryText);
-        Assert.Contains("Short B.", result.Summaries[0].SummaryText);
+        result.Summaries[0].SummaryText.Should().Contain("Short A.");
+        result.Summaries[0].SummaryText.Should().Contain("Short B.");
     }
 
     [Fact]
@@ -143,8 +144,8 @@ public class RaptorIndexerTests
             chunks, maxLevels: 3,
             CancellationToken.None);
 
-        Assert.Equal(1, result.TotalNodes);
-        Assert.Contains("Alpha.", result.Summaries[0].SummaryText);
+        result.TotalNodes.Should().Be(1);
+        result.Summaries[0].SummaryText.Should().Contain("Alpha.");
     }
 
     [Fact]
@@ -161,7 +162,7 @@ public class RaptorIndexerTests
             chunks, maxLevels: 1,
             CancellationToken.None);
 
-        Assert.Equal(1, result.Levels);
+        result.Levels.Should().Be(1);
         Assert.Equal(3, result.TotalNodes); // 3 clusters at level 1
         Assert.All(result.Summaries, s => Assert.Equal(1, s.TreeLevel));
     }
@@ -214,13 +215,13 @@ public class RaptorIndexerTests
             CancellationToken.None);
 
         var level1 = result.Summaries.Where(s => s.TreeLevel == 1).ToList();
-        Assert.Equal(3, level1.Count);
-        Assert.Equal(0, level1[0].ClusterIndex);
-        Assert.Equal(1, level1[1].ClusterIndex);
-        Assert.Equal(2, level1[2].ClusterIndex);
+        level1.Count.Should().Be(3);
+        level1[0].ClusterIndex.Should().Be(0);
+        level1[1].ClusterIndex.Should().Be(1);
+        level1[2].ClusterIndex.Should().Be(2);
 
         // Last cluster has 2 chunks (remainder)
-        Assert.Equal(2, level1[2].SourceChunkCount);
+        level1[2].SourceChunkCount.Should().Be(2);
     }
 
     [Fact]
@@ -241,7 +242,7 @@ public class RaptorIndexerTests
             chunks, maxLevels: 3,
             CancellationToken.None);
 
-        Assert.Equal(200, result.Summaries[0].SummaryText.Length);
+        result.Summaries[0].SummaryText.Length.Should().Be(200);
     }
 
     private void SetupLlmSuccess(string response)

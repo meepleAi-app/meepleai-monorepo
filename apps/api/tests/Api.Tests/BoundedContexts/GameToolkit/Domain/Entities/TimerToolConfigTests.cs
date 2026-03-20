@@ -2,6 +2,7 @@ using Api.BoundedContexts.GameToolkit.Domain.Entities;
 using Api.BoundedContexts.GameToolkit.Domain.Enums;
 using Api.Tests.Constants;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.GameToolkit.Domain.Entities;
 
@@ -14,13 +15,13 @@ public class TimerToolConfigTests
     {
         var config = new TimerToolConfig("Round Timer", 60);
 
-        Assert.Equal("Round Timer", config.Name);
-        Assert.Equal(60, config.DurationSeconds);
-        Assert.Equal(TimerType.CountDown, config.TimerType);
-        Assert.False(config.AutoStart);
-        Assert.Null(config.Color);
-        Assert.False(config.IsPerPlayer);
-        Assert.Null(config.WarningThresholdSeconds);
+        config.Name.Should().Be("Round Timer");
+        config.DurationSeconds.Should().Be(60);
+        config.TimerType.Should().Be(TimerType.CountDown);
+        config.AutoStart.Should().BeFalse();
+        config.Color.Should().BeNull();
+        config.IsPerPlayer.Should().BeFalse();
+        config.WarningThresholdSeconds.Should().BeNull();
     }
 
     [Fact]
@@ -35,20 +36,20 @@ public class TimerToolConfigTests
             isPerPlayer: true,
             warningThresholdSeconds: 30);
 
-        Assert.Equal("Chess Clock", config.Name);
-        Assert.Equal(300, config.DurationSeconds);
-        Assert.Equal(TimerType.Chess, config.TimerType);
-        Assert.True(config.AutoStart);
-        Assert.Equal("#FF0000", config.Color);
-        Assert.True(config.IsPerPlayer);
-        Assert.Equal(30, config.WarningThresholdSeconds);
+        config.Name.Should().Be("Chess Clock");
+        config.DurationSeconds.Should().Be(300);
+        config.TimerType.Should().Be(TimerType.Chess);
+        config.AutoStart.Should().BeTrue();
+        config.Color.Should().Be("#FF0000");
+        config.IsPerPlayer.Should().BeTrue();
+        config.WarningThresholdSeconds.Should().Be(30);
     }
 
     [Fact]
     public void Constructor_CountUpTimer_Succeeds()
     {
         var config = new TimerToolConfig("Stopwatch", 3600, TimerType.CountUp);
-        Assert.Equal(TimerType.CountUp, config.TimerType);
+        config.TimerType.Should().Be(TimerType.CountUp);
     }
 
     [Fact]
@@ -62,26 +63,26 @@ public class TimerToolConfigTests
     public void Constructor_ChessTimerPerPlayer_Succeeds()
     {
         var config = new TimerToolConfig("Chess", 300, TimerType.Chess, isPerPlayer: true);
-        Assert.Equal(TimerType.Chess, config.TimerType);
-        Assert.True(config.IsPerPlayer);
+        config.TimerType.Should().Be(TimerType.Chess);
+        config.IsPerPlayer.Should().BeTrue();
     }
 
     [Fact]
     public void Constructor_WithEmptyName_ThrowsArgumentException()
     {
-        Assert.Throws<ArgumentException>(() => new TimerToolConfig("", 60));
+        ((Action)(() => new TimerToolConfig("", 60))).Should().Throw<ArgumentException>();
     }
 
     [Fact]
     public void Constructor_WithDurationBelowMin_ThrowsArgumentException()
     {
-        Assert.Throws<ArgumentException>(() => new TimerToolConfig("Timer", 0));
+        ((Action)(() => new TimerToolConfig("Timer", 0))).Should().Throw<ArgumentException>();
     }
 
     [Fact]
     public void Constructor_WithDurationAboveMax_ThrowsArgumentException()
     {
-        Assert.Throws<ArgumentException>(() => new TimerToolConfig("Timer", 86401));
+        ((Action)(() => new TimerToolConfig("Timer", 86401))).Should().Throw<ArgumentException>();
     }
 
     [Fact]
@@ -109,21 +110,21 @@ public class TimerToolConfigTests
     public void Constructor_WithValidWarningThreshold_Succeeds()
     {
         var config = new TimerToolConfig("Timer", 60, warningThresholdSeconds: 10);
-        Assert.Equal(10, config.WarningThresholdSeconds);
+        config.WarningThresholdSeconds.Should().Be(10);
     }
 
     [Fact]
     public void Constructor_TrimsName()
     {
         var config = new TimerToolConfig("  Round Timer  ", 60);
-        Assert.Equal("Round Timer", config.Name);
+        config.Name.Should().Be("Round Timer");
     }
 
     [Fact]
     public void Constructor_PerPlayerCountdownTimer_Succeeds()
     {
         var config = new TimerToolConfig("Turn Timer", 120, TimerType.CountDown, isPerPlayer: true);
-        Assert.True(config.IsPerPlayer);
-        Assert.Equal(TimerType.CountDown, config.TimerType);
+        config.IsPerPlayer.Should().BeTrue();
+        config.TimerType.Should().Be(TimerType.CountDown);
     }
 }

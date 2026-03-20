@@ -1,5 +1,6 @@
 using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 using Xunit;
+using FluentAssertions;
 using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
@@ -24,11 +25,11 @@ public class ValidationAccuracyMetricsTests
         var metrics = ValidationAccuracyMetrics.Create(tp, tn, fp, fn);
 
         // Assert
-        Assert.Equal(80, metrics.TruePositives);
-        Assert.Equal(15, metrics.TrueNegatives);
-        Assert.Equal(3, metrics.FalsePositives);
-        Assert.Equal(2, metrics.FalseNegatives);
-        Assert.Equal(100, metrics.Total);
+        metrics.TruePositives.Should().Be(80);
+        metrics.TrueNegatives.Should().Be(15);
+        metrics.FalsePositives.Should().Be(3);
+        metrics.FalseNegatives.Should().Be(2);
+        metrics.Total.Should().Be(100);
     }
 
     [Theory]
@@ -39,7 +40,7 @@ public class ValidationAccuracyMetricsTests
     public void Create_WithNegativeValues_ThrowsArgumentException(int tp, int tn, int fp, int fn)
     {
         // Act & Assert
-        Assert.Throws<ArgumentException>(() => ValidationAccuracyMetrics.Create(tp, tn, fp, fn));
+        ((Action)(() => ValidationAccuracyMetrics.Create(tp, tn, fp, fn))).Should().Throw<ArgumentException>();
     }
 
     [Fact]
@@ -57,7 +58,7 @@ public class ValidationAccuracyMetricsTests
 
         // Assert
         // Precision = TP / (TP + FP) = 80 / (80 + 5) = 80 / 85 = 0.9412
-        Assert.Equal(0.9412, precision, precision: 4);
+        precision.Should().BeApproximately(0.9412, precision: 4);
     }
 
     [Fact]
@@ -70,7 +71,7 @@ public class ValidationAccuracyMetricsTests
         var precision = metrics.Precision;
 
         // Assert
-        Assert.Equal(0.0, precision);
+        precision.Should().Be(0.0);
     }
 
     [Fact]
@@ -88,7 +89,7 @@ public class ValidationAccuracyMetricsTests
 
         // Assert
         // Recall = TP / (TP + FN) = 80 / (80 + 10) = 80 / 90 = 0.8889
-        Assert.Equal(0.8889, recall, precision: 4);
+        recall.Should().BeApproximately(0.8889, precision: 4);
     }
 
     [Fact]
@@ -101,7 +102,7 @@ public class ValidationAccuracyMetricsTests
         var recall = metrics.Recall;
 
         // Assert
-        Assert.Equal(0.0, recall);
+        recall.Should().Be(0.0);
     }
 
     [Fact]
@@ -121,7 +122,7 @@ public class ValidationAccuracyMetricsTests
         // Precision = 80 / 85 = 0.9412
         // Recall = 80 / 90 = 0.8889
         // F1 = 2 * (0.9412 * 0.8889) / (0.9412 + 0.8889) = 0.9143
-        Assert.Equal(0.9143, f1, precision: 4);
+        f1.Should().BeApproximately(0.9143, precision: 4);
     }
 
     [Fact]
@@ -134,7 +135,7 @@ public class ValidationAccuracyMetricsTests
         var f1 = metrics.F1Score;
 
         // Assert
-        Assert.Equal(0.0, f1);
+        f1.Should().Be(0.0);
     }
 
     [Fact]
@@ -152,7 +153,7 @@ public class ValidationAccuracyMetricsTests
 
         // Assert
         // Accuracy = (TP + TN) / Total = (85 + 10) / 100 = 95 / 100 = 0.95
-        Assert.Equal(0.95, accuracy);
+        accuracy.Should().Be(0.95);
     }
 
     [Fact]
@@ -165,7 +166,7 @@ public class ValidationAccuracyMetricsTests
         var accuracy = metrics.Accuracy;
 
         // Assert
-        Assert.Equal(0.0, accuracy);
+        accuracy.Should().Be(0.0);
     }
 
     [Fact]
@@ -183,7 +184,7 @@ public class ValidationAccuracyMetricsTests
 
         // Assert
         // Specificity = TN / (TN + FP) = 15 / (15 + 5) = 15 / 20 = 0.75
-        Assert.Equal(0.75, specificity);
+        specificity.Should().Be(0.75);
     }
 
     [Fact]
@@ -216,7 +217,7 @@ public class ValidationAccuracyMetricsTests
         var mcc = metrics.MatthewsCorrelationCoefficient;
 
         // Assert
-        Assert.Equal(0.0, mcc);
+        mcc.Should().Be(0.0);
     }
 
     [Theory]
@@ -241,7 +242,7 @@ public class ValidationAccuracyMetricsTests
         var meetsBaseline = metrics.MeetsBaselineThreshold;
 
         // Assert
-        Assert.Equal(expectedMeets, meetsBaseline);
+        meetsBaseline.Should().Be(expectedMeets);
     }
 
     [Theory]
@@ -268,7 +269,7 @@ public class ValidationAccuracyMetricsTests
         var level = metrics.QualityLevel;
 
         // Assert
-        Assert.Equal(expectedLevel, level);
+        level.Should().Be(expectedLevel);
     }
 
     [Fact]
@@ -278,15 +279,15 @@ public class ValidationAccuracyMetricsTests
         var metrics = ValidationAccuracyMetrics.Empty;
 
         // Assert
-        Assert.Equal(0, metrics.TruePositives);
-        Assert.Equal(0, metrics.TrueNegatives);
-        Assert.Equal(0, metrics.FalsePositives);
-        Assert.Equal(0, metrics.FalseNegatives);
-        Assert.Equal(0, metrics.Total);
-        Assert.Equal(0.0, metrics.Precision);
-        Assert.Equal(0.0, metrics.Recall);
-        Assert.Equal(0.0, metrics.F1Score);
-        Assert.Equal(0.0, metrics.Accuracy);
+        metrics.TruePositives.Should().Be(0);
+        metrics.TrueNegatives.Should().Be(0);
+        metrics.FalsePositives.Should().Be(0);
+        metrics.FalseNegatives.Should().Be(0);
+        metrics.Total.Should().Be(0);
+        metrics.Precision.Should().Be(0.0);
+        metrics.Recall.Should().Be(0.0);
+        metrics.F1Score.Should().Be(0.0);
+        metrics.Accuracy.Should().Be(0.0);
     }
 
     [Fact]
@@ -300,13 +301,13 @@ public class ValidationAccuracyMetricsTests
             falseNegatives: 0);
 
         // Act & Assert
-        Assert.Equal(1.0, metrics.Precision);
-        Assert.Equal(1.0, metrics.Recall);
-        Assert.Equal(1.0, metrics.F1Score);
-        Assert.Equal(1.0, metrics.Accuracy);
-        Assert.Equal(1.0, metrics.Specificity);
+        metrics.Precision.Should().Be(1.0);
+        metrics.Recall.Should().Be(1.0);
+        metrics.F1Score.Should().Be(1.0);
+        metrics.Accuracy.Should().Be(1.0);
+        metrics.Specificity.Should().Be(1.0);
         Assert.True(metrics.MeetsBaselineThreshold);
-        Assert.Equal(ValidationAccuracyLevel.Excellent, metrics.QualityLevel);
+        metrics.QualityLevel.Should().Be(ValidationAccuracyLevel.Excellent);
     }
 
     [Fact]
@@ -320,13 +321,13 @@ public class ValidationAccuracyMetricsTests
             falseNegatives: 90);
 
         // Act & Assert
-        Assert.Equal(0.0, metrics.Precision);
-        Assert.Equal(0.0, metrics.Recall);
-        Assert.Equal(0.0, metrics.F1Score);
-        Assert.Equal(0.0, metrics.Accuracy);
-        Assert.Equal(0.0, metrics.Specificity);
+        metrics.Precision.Should().Be(0.0);
+        metrics.Recall.Should().Be(0.0);
+        metrics.F1Score.Should().Be(0.0);
+        metrics.Accuracy.Should().Be(0.0);
+        metrics.Specificity.Should().Be(0.0);
         Assert.False(metrics.MeetsBaselineThreshold);
-        Assert.Equal(ValidationAccuracyLevel.Critical, metrics.QualityLevel);
+        metrics.QualityLevel.Should().Be(ValidationAccuracyLevel.Critical);
     }
 
     [Fact]
@@ -340,9 +341,9 @@ public class ValidationAccuracyMetricsTests
             falseNegatives: 0);
 
         // Act & Assert
-        Assert.Equal(0.80, metrics.Accuracy);
+        metrics.Accuracy.Should().Be(0.80);
         Assert.True(metrics.MeetsBaselineThreshold);
-        Assert.Equal(ValidationAccuracyLevel.Good, metrics.QualityLevel);
+        metrics.QualityLevel.Should().Be(ValidationAccuracyLevel.Good);
     }
 }
 

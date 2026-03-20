@@ -9,6 +9,7 @@ using Api.Tests.BoundedContexts.GameManagement.TestHelpers;
 using Api.Tests.TestHelpers;
 using Moq;
 using Xunit;
+using FluentAssertions;
 using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.GameManagement.Application.Handlers;
@@ -65,14 +66,14 @@ public class UpdateGameCommandHandlerTests
 
         // Assert
         Assert.NotNull(result);
-        Assert.Equal(gameId, result.Id);
-        Assert.Equal("New Title", result.Title);
-        Assert.Equal("New Publisher", result.Publisher);
-        Assert.Equal(2020, result.YearPublished);
-        Assert.Equal(1, result.MinPlayers);
-        Assert.Equal(6, result.MaxPlayers);
-        Assert.Equal(45, result.MinPlayTimeMinutes);
-        Assert.Equal(90, result.MaxPlayTimeMinutes);
+        result.Id.Should().Be(gameId);
+        result.Title.Should().Be("New Title");
+        result.Publisher.Should().Be("New Publisher");
+        result.YearPublished.Should().Be(2020);
+        result.MinPlayers.Should().Be(1);
+        result.MaxPlayers.Should().Be(6);
+        result.MinPlayTimeMinutes.Should().Be(45);
+        result.MaxPlayTimeMinutes.Should().Be(90);
 
         // Verify repository interactions
         _gameRepositoryMock.Verify(
@@ -108,7 +109,7 @@ public class UpdateGameCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.Equal("Updated Title", result.Title);
+        result.Title.Should().Be("Updated Title");
     }
 
     [Fact]
@@ -135,7 +136,7 @@ public class UpdateGameCommandHandlerTests
 
         // Assert
         Assert.Equal("Catan", result.Title); // Unchanged
-        Assert.Equal("New Publisher", result.Publisher);
+        result.Publisher.Should().Be("New Publisher");
     }
 
     [Fact]
@@ -162,8 +163,8 @@ public class UpdateGameCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.Equal(1, result.MinPlayers);
-        Assert.Equal(5, result.MaxPlayers);
+        result.MinPlayers.Should().Be(1);
+        result.MaxPlayers.Should().Be(5);
     }
 
     [Fact]
@@ -190,8 +191,8 @@ public class UpdateGameCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.Equal(60, result.MinPlayTimeMinutes);
-        Assert.Equal(120, result.MaxPlayTimeMinutes);
+        result.MinPlayTimeMinutes.Should().Be(60);
+        result.MaxPlayTimeMinutes.Should().Be(120);
     }
 
     [Fact]
@@ -217,7 +218,7 @@ public class UpdateGameCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.Equal(2025, result.YearPublished);
+        result.YearPublished.Should().Be(2025);
     }
 
     // ===== VALIDATION TESTS =====
@@ -268,7 +269,7 @@ public class UpdateGameCommandHandlerTests
             () => _handler.Handle(command, TestContext.Current.CancellationToken)
         );
 
-        Assert.Contains("cannot exceed 200 characters", exception.Message);
+        exception.Message.Should().Contain("cannot exceed 200 characters");
         _unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
     }
 
@@ -295,7 +296,7 @@ public class UpdateGameCommandHandlerTests
             () => _handler.Handle(command, TestContext.Current.CancellationToken)
         );
 
-        Assert.Contains("Minimum player count cannot be less than 1", exception.Message);
+        exception.Message.Should().Contain("Minimum player count cannot be less than 1");
         _unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
     }
 
@@ -322,7 +323,7 @@ public class UpdateGameCommandHandlerTests
             () => _handler.Handle(command, TestContext.Current.CancellationToken)
         );
 
-        Assert.Contains("Maximum player count cannot exceed 100", exception.Message);
+        exception.Message.Should().Contain("Maximum player count cannot exceed 100");
         _unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
     }
 
@@ -417,8 +418,8 @@ public class UpdateGameCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert - PlayerCount should remain unchanged (2-4)
-        Assert.Equal(2, result.MinPlayers);
-        Assert.Equal(4, result.MaxPlayers);
+        result.MinPlayers.Should().Be(2);
+        result.MaxPlayers.Should().Be(4);
     }
 
     [Fact]
@@ -444,8 +445,8 @@ public class UpdateGameCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert - PlayTime should remain unchanged (30-45)
-        Assert.Equal(30, result.MinPlayTimeMinutes);
-        Assert.Equal(45, result.MaxPlayTimeMinutes);
+        result.MinPlayTimeMinutes.Should().Be(30);
+        result.MaxPlayTimeMinutes.Should().Be(45);
     }
     [Fact]
     public async Task Handle_WithCancellationToken_PassesToRepository()
@@ -505,8 +506,8 @@ public class UpdateGameCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert - CreatedAt should be preserved
-        Assert.NotEqual(default(DateTime), result.CreatedAt);
-        Assert.Equal(existingGame.CreatedAt, result.CreatedAt);
+        result.CreatedAt.Should().NotBe(default(DateTime));
+        result.CreatedAt.Should().Be(existingGame.CreatedAt);
     }
 
     [Fact]
@@ -532,8 +533,8 @@ public class UpdateGameCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert - BGG ID should be preserved
-        Assert.Equal(13, result.BggId);
-        Assert.Equal("Settlers of Catan", result.Title);
+        result.BggId.Should().Be(13);
+        result.Title.Should().Be("Settlers of Catan");
     }
 }
 

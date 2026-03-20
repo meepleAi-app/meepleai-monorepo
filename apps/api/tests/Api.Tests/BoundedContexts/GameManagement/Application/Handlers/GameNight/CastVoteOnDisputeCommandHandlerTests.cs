@@ -10,6 +10,7 @@ using Api.SharedKernel.Infrastructure.Persistence;
 using Api.Tests.Constants;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.GameManagement.Application.Handlers.GameNight;
 
@@ -95,8 +96,8 @@ public class CastVoteOnDisputeCommandHandlerTests
         await _handler.Handle(command, CancellationToken.None);
 
         // Assert
-        Assert.Single(dispute.Votes);
-        Assert.Equal(DefaultVoterPlayerId, dispute.Votes[0].PlayerId);
+        dispute.Votes.Should().ContainSingle();
+        dispute.Votes[0].PlayerId.Should().Be(DefaultVoterPlayerId);
         Assert.True(dispute.Votes[0].AcceptsVerdict);
 
         _disputeRepositoryMock.Verify(
@@ -119,7 +120,7 @@ public class CastVoteOnDisputeCommandHandlerTests
         var ex = await Assert.ThrowsAsync<InvalidOperationException>(
             () => _handler.Handle(command, CancellationToken.None));
 
-        Assert.Contains("disabled", ex.Message);
+        ex.Message.Should().Contain("disabled");
     }
 
     [Fact]
@@ -162,6 +163,6 @@ public class CastVoteOnDisputeCommandHandlerTests
         var ex = await Assert.ThrowsAsync<InvalidOperationException>(
             () => _handler.Handle(command, CancellationToken.None));
 
-        Assert.Contains("already voted", ex.Message);
+        ex.Message.Should().Contain("already voted");
     }
 }

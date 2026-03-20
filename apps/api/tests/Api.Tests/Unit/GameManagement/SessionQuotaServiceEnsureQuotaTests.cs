@@ -9,6 +9,7 @@ using Api.SharedKernel.Infrastructure.Persistence;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.Unit.GameManagement;
 
@@ -66,9 +67,9 @@ public sealed class SessionQuotaServiceEnsureQuotaTests : IDisposable
         var result = await _sut.EnsureQuotaAsync(userId, userTier, userRole);
 
         // Assert
-        Assert.True(result.QuotaAvailable);
-        Assert.Empty(result.TerminatedSessionIds);
-        Assert.Null(result.Message);
+        result.QuotaAvailable.Should().BeTrue();
+        result.TerminatedSessionIds.Should().BeEmpty();
+        result.Message.Should().BeNull();
 
         _mockRepository.Verify(x => x.FindOldestActiveByUserIdAsync(It.IsAny<Guid>(), It.IsAny<int>(), It.IsAny<CancellationToken>()), Times.Never);
         _mockRepository.Verify(x => x.UpdateAsync(It.IsAny<GameSession>(), It.IsAny<CancellationToken>()), Times.Never);
@@ -100,11 +101,11 @@ public sealed class SessionQuotaServiceEnsureQuotaTests : IDisposable
         var result = await _sut.EnsureQuotaAsync(userId, userTier, userRole);
 
         // Assert
-        Assert.True(result.QuotaAvailable);
-        Assert.Single(result.TerminatedSessionIds);
-        Assert.Contains(oldestSession.Id, result.TerminatedSessionIds);
-        Assert.NotNull(result.Message);
-        Assert.Contains("Terminated 1", result.Message);
+        result.QuotaAvailable.Should().BeTrue();
+        result.TerminatedSessionIds.Should().ContainSingle();
+        result.TerminatedSessionIds.Should().Contain(oldestSession.Id);
+        result.Message.Should().NotBeNull();
+        result.Message.Should().Contain("Terminated 1");
 
         _mockRepository.Verify(x => x.FindOldestActiveByUserIdAsync(userId, 1, default), Times.Once);
         _mockRepository.Verify(x => x.UpdateAsync(It.Is<GameSession>(s => s.Id == oldestSession.Id), default), Times.Once);
@@ -136,11 +137,11 @@ public sealed class SessionQuotaServiceEnsureQuotaTests : IDisposable
         var result = await _sut.EnsureQuotaAsync(userId, userTier, userRole);
 
         // Assert
-        Assert.True(result.QuotaAvailable);
-        Assert.Equal(3, result.TerminatedSessionIds.Count);
-        Assert.Contains(session1.Id, result.TerminatedSessionIds);
-        Assert.Contains(session2.Id, result.TerminatedSessionIds);
-        Assert.Contains(session3.Id, result.TerminatedSessionIds);
+        result.QuotaAvailable.Should().BeTrue();
+        result.TerminatedSessionIds.Count.Should().Be(3);
+        result.TerminatedSessionIds.Should().Contain(session1.Id);
+        result.TerminatedSessionIds.Should().Contain(session2.Id);
+        result.TerminatedSessionIds.Should().Contain(session3.Id);
 
         _mockRepository.Verify(x => x.UpdateAsync(It.IsAny<GameSession>(), default), Times.Exactly(3));
     }
@@ -157,8 +158,8 @@ public sealed class SessionQuotaServiceEnsureQuotaTests : IDisposable
         var result = await _sut.EnsureQuotaAsync(userId, userTier, userRole);
 
         // Assert
-        Assert.True(result.QuotaAvailable);
-        Assert.Empty(result.TerminatedSessionIds);
+        result.QuotaAvailable.Should().BeTrue();
+        result.TerminatedSessionIds.Should().BeEmpty();
 
         // Should not count or find sessions for admin
         _mockRepository.Verify(x => x.CountActiveByUserIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Never);
@@ -177,8 +178,8 @@ public sealed class SessionQuotaServiceEnsureQuotaTests : IDisposable
         var result = await _sut.EnsureQuotaAsync(userId, userTier, userRole);
 
         // Assert
-        Assert.True(result.QuotaAvailable);
-        Assert.Empty(result.TerminatedSessionIds);
+        result.QuotaAvailable.Should().BeTrue();
+        result.TerminatedSessionIds.Should().BeEmpty();
 
         _mockRepository.Verify(x => x.CountActiveByUserIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Never);
     }
@@ -198,8 +199,8 @@ public sealed class SessionQuotaServiceEnsureQuotaTests : IDisposable
         var result = await _sut.EnsureQuotaAsync(userId, userTier, userRole);
 
         // Assert
-        Assert.True(result.QuotaAvailable);
-        Assert.Empty(result.TerminatedSessionIds);
+        result.QuotaAvailable.Should().BeTrue();
+        result.TerminatedSessionIds.Should().BeEmpty();
 
         _mockRepository.Verify(x => x.FindOldestActiveByUserIdAsync(It.IsAny<Guid>(), It.IsAny<int>(), It.IsAny<CancellationToken>()), Times.Never);
     }
@@ -227,9 +228,9 @@ public sealed class SessionQuotaServiceEnsureQuotaTests : IDisposable
         var result = await _sut.EnsureQuotaAsync(userId, userTier, userRole);
 
         // Assert
-        Assert.True(result.QuotaAvailable);
-        Assert.Single(result.TerminatedSessionIds);
-        Assert.Equal(oldestSession.Id, result.TerminatedSessionIds[0]);
+        result.QuotaAvailable.Should().BeTrue();
+        result.TerminatedSessionIds.Should().ContainSingle();
+        result.TerminatedSessionIds[0].Should().Be(oldestSession.Id);
     }
 
     [Fact]
@@ -251,8 +252,8 @@ public sealed class SessionQuotaServiceEnsureQuotaTests : IDisposable
         var result = await _sut.EnsureQuotaAsync(userId, userTier, userRole);
 
         // Assert
-        Assert.True(result.QuotaAvailable);
-        Assert.Empty(result.TerminatedSessionIds);
+        result.QuotaAvailable.Should().BeTrue();
+        result.TerminatedSessionIds.Should().BeEmpty();
     }
 
     /// <summary>

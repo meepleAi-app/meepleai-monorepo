@@ -5,6 +5,7 @@ using Api.Models;
 using Api.Services;
 using Moq;
 using Xunit;
+using FluentAssertions;
 using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.Administration.Application.Handlers;
@@ -67,10 +68,10 @@ public class GetAlertHistoryQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal(2, result.Count);
-        Assert.All(result, alert => Assert.False(alert.IsActive));
-        Assert.All(result, alert => Assert.NotNull(alert.ResolvedAt));
+        result.Should().NotBeNull();
+        result.Count.Should().Be(2);
+        Assert.All(result, alert => alert.IsActive.Should().BeFalse());
+        Assert.All(result, alert => alert.ResolvedAt.Should().NotBeNull());
         _mockAlertingService.Verify(
             s => s.GetAlertHistoryAsync(fromDate, toDate, It.IsAny<CancellationToken>()),
             Times.Once);
@@ -92,8 +93,8 @@ public class GetAlertHistoryQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Empty(result);
+        result.Should().NotBeNull();
+        result.Should().BeEmpty();
     }
 
     [Fact]
@@ -129,7 +130,7 @@ public class GetAlertHistoryQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.Single(result);
-        Assert.Equal("CriticalError", result[0].AlertType);
+        result.Should().ContainSingle();
+        result[0].AlertType.Should().Be("CriticalError");
     }
 }

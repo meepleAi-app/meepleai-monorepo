@@ -5,6 +5,7 @@ using Api.Middleware.Exceptions;
 using Api.Tests.Constants;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.GameManagement.Application.Handlers.Whiteboard;
 
@@ -53,10 +54,10 @@ public class WhiteboardQueryHandlerTests
         var result = await handler.Handle(
             new GetWhiteboardStateQuery(sessionId), TestContext.Current.CancellationToken);
 
-        Assert.Equal(sessionId, result.SessionId);
-        Assert.Single(result.Strokes);
-        Assert.Equal("s1", result.Strokes[0].Id);
-        Assert.Equal("{\"tokens\":[]}", result.StructuredJson);
+        result.SessionId.Should().Be(sessionId);
+        result.Strokes.Should().ContainSingle();
+        result.Strokes[0].Id.Should().Be("s1");
+        result.StructuredJson.Should().Be("{\"tokens\":[]}");
     }
 
     [Fact]

@@ -257,7 +257,7 @@ public class UploadPrivatePdfCommandHandlerTests
         var act = () => _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        var exception = await Assert.ThrowsAsync<NotFoundException>(act);
+        var exception = (await ((Func<Task>)(act)).Should().ThrowAsync<NotFoundException>()).Which;
         exception.Message.Should().Contain(entryId.ToString());
 
         _mockUnitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
@@ -284,7 +284,7 @@ public class UploadPrivatePdfCommandHandlerTests
         var act = () => _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        var exception = await Assert.ThrowsAsync<ForbiddenException>(act);
+        var exception = (await ((Func<Task>)(act)).Should().ThrowAsync<ForbiddenException>()).Which;
         exception.Message.Should().Contain("permission");
 
         _mockUnitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
@@ -316,7 +316,7 @@ public class UploadPrivatePdfCommandHandlerTests
         var act = () => _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        var exception = await Assert.ThrowsAsync<ValidationException>(act);
+        var exception = (await ((Func<Task>)(act)).Should().ThrowAsync<ValidationException>()).Which;
         exception.Message.Should().Contain("PDF");
 
         _mockUnitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
@@ -344,7 +344,7 @@ public class UploadPrivatePdfCommandHandlerTests
         var act = () => _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        var exception = await Assert.ThrowsAsync<ValidationException>(act);
+        var exception = (await ((Func<Task>)(act)).Should().ThrowAsync<ValidationException>()).Which;
         exception.Message.Should().Contain("too small");
 
         _mockUnitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
@@ -377,7 +377,7 @@ public class UploadPrivatePdfCommandHandlerTests
         var act = () => _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(act);
+        var exception = (await ((Func<Task>)(act)).Should().ThrowAsync<InvalidOperationException>()).Which;
         exception.Message.Should().Contain("Failed to store");
 
         _mockUnitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);

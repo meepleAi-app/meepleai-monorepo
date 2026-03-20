@@ -6,6 +6,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Unit;
 
@@ -36,7 +37,7 @@ public class QueryComplexityClassifierTests
     {
         var result = await _sut.ClassifyAsync(query);
 
-        Assert.Equal(QueryComplexityLevel.Simple, result.Level);
+        result.Level.Should().Be(QueryComplexityLevel.Simple);
         Assert.True(result.Confidence >= 0.9f);
         _llmServiceMock.VerifyNoOtherCalls();
     }
@@ -51,7 +52,7 @@ public class QueryComplexityClassifierTests
     {
         var result = await _sut.ClassifyAsync(query);
 
-        Assert.Equal(QueryComplexityLevel.Complex, result.Level);
+        result.Level.Should().Be(QueryComplexityLevel.Complex);
         Assert.True(result.Confidence >= 0.8f);
         _llmServiceMock.VerifyNoOtherCalls();
     }
@@ -68,9 +69,9 @@ public class QueryComplexityClassifierTests
 
         var result = await _sut.ClassifyAsync("How does scoring work in Wingspan?");
 
-        Assert.Equal(QueryComplexityLevel.Moderate, result.Level);
-        Assert.Equal(0.75f, result.Confidence);
-        Assert.Equal("Needs rules context", result.Reason);
+        result.Level.Should().Be(QueryComplexityLevel.Moderate);
+        result.Confidence.Should().Be(0.75f);
+        result.Reason.Should().Be("Needs rules context");
         _llmServiceMock.Verify(
             x => x.GenerateJsonAsync<ComplexityClassification>(
                 It.IsAny<string>(), It.IsAny<string>(), RequestSource.RagClassification, It.IsAny<CancellationToken>()),
@@ -87,7 +88,7 @@ public class QueryComplexityClassifierTests
 
         var result = await _sut.ClassifyAsync("How does scoring work in Wingspan?");
 
-        Assert.Equal(QueryComplexityLevel.Simple, result.Level);
+        result.Level.Should().Be(QueryComplexityLevel.Simple);
     }
 
     [Fact]
@@ -100,7 +101,7 @@ public class QueryComplexityClassifierTests
 
         var result = await _sut.ClassifyAsync("How does scoring work in Wingspan?");
 
-        Assert.Equal(QueryComplexityLevel.Complex, result.Level);
+        result.Level.Should().Be(QueryComplexityLevel.Complex);
     }
 
     // --- Error fallback ---
@@ -115,8 +116,8 @@ public class QueryComplexityClassifierTests
 
         var result = await _sut.ClassifyAsync("How does scoring work in Wingspan?");
 
-        Assert.Equal(QueryComplexityLevel.Moderate, result.Level);
-        Assert.Equal(0.5f, result.Confidence);
+        result.Level.Should().Be(QueryComplexityLevel.Moderate);
+        result.Confidence.Should().Be(0.5f);
     }
 
     [Fact]
@@ -129,7 +130,7 @@ public class QueryComplexityClassifierTests
 
         var result = await _sut.ClassifyAsync("How does scoring work in Wingspan?");
 
-        Assert.Equal(QueryComplexityLevel.Moderate, result.Level);
+        result.Level.Should().Be(QueryComplexityLevel.Moderate);
     }
 
     // --- Edge cases ---
@@ -142,8 +143,8 @@ public class QueryComplexityClassifierTests
     {
         var result = await _sut.ClassifyAsync(query!);
 
-        Assert.Equal(QueryComplexityLevel.Simple, result.Level);
-        Assert.Equal(1.0f, result.Confidence);
+        result.Level.Should().Be(QueryComplexityLevel.Simple);
+        result.Confidence.Should().Be(1.0f);
         _llmServiceMock.VerifyNoOtherCalls();
     }
 
@@ -157,7 +158,7 @@ public class QueryComplexityClassifierTests
 
         var result = await _sut.ClassifyAsync("How does scoring work in Wingspan?");
 
-        Assert.Equal(QueryComplexityLevel.Moderate, result.Level);
+        result.Level.Should().Be(QueryComplexityLevel.Moderate);
     }
 
     [Fact]
@@ -170,7 +171,7 @@ public class QueryComplexityClassifierTests
 
         var result = await _sut.ClassifyAsync("How does scoring work in Wingspan?");
 
-        Assert.Equal(1.0f, result.Confidence);
+        result.Confidence.Should().Be(1.0f);
     }
 
     // --- Heuristic unit tests (static method) ---

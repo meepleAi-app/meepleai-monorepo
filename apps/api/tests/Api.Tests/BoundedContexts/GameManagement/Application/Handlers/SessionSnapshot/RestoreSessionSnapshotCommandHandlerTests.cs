@@ -12,6 +12,7 @@ using MediatR;
 using Microsoft.Extensions.Time.Testing;
 using Moq;
 using Xunit;
+using FluentAssertions;
 using DomainSessionSnapshot = Api.BoundedContexts.GameManagement.Domain.Entities.SessionSnapshot.SessionSnapshot;
 
 namespace Api.Tests.BoundedContexts.GameManagement.Application.Handlers.SessionSnapshot;
@@ -104,7 +105,7 @@ public class RestoreSessionSnapshotCommandHandlerTests
         _sessionRepositoryMock.Verify(r => r.UpdateAsync(session, It.IsAny<CancellationToken>()), Times.Once);
 
         Assert.NotNull(result);
-        Assert.Equal(preRestoreDto.Id, result.Id);
+        result.Id.Should().Be(preRestoreDto.Id);
     }
 
     [Fact]

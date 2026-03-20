@@ -12,6 +12,7 @@ using Microsoft.Extensions.Options;
 using Moq;
 using Moq.Protected;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.UserNotifications.Application.Handlers;
 
@@ -77,9 +78,9 @@ public class DisconnectSlackCommandHandlerTests
         var result = await _handler.Handle(command, CancellationToken.None);
 
         // Assert
-        Assert.True(result);
-        Assert.False(connection.IsActive);
-        Assert.NotNull(connection.DisconnectedAt);
+        result.Should().BeTrue();
+        connection.IsActive.Should().BeFalse();
+        connection.DisconnectedAt.Should().NotBeNull();
         _connectionRepoMock.Verify(r => r.UpdateAsync(connection, It.IsAny<CancellationToken>()), Times.Once);
         _unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
@@ -99,7 +100,7 @@ public class DisconnectSlackCommandHandlerTests
         var result = await _handler.Handle(command, CancellationToken.None);
 
         // Assert
-        Assert.False(result);
+        result.Should().BeFalse();
         _unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
     }
 
@@ -126,8 +127,8 @@ public class DisconnectSlackCommandHandlerTests
         var result = await _handler.Handle(command, CancellationToken.None);
 
         // Assert - disconnect still succeeds even if revocation fails
-        Assert.True(result);
-        Assert.False(connection.IsActive);
+        result.Should().BeTrue();
+        connection.IsActive.Should().BeFalse();
         _unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
 }

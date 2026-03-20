@@ -8,6 +8,7 @@ using Api.Middleware.Exceptions;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Moq;
 using Xunit;
+using FluentAssertions;
 using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.GameManagement.Application.Handlers;
@@ -51,8 +52,8 @@ public class CreateStateSnapshotCommandHandlerTests
 
         // Assert
         Assert.NotNull(result);
-        Assert.Equal(5, result.TurnNumber);
-        Assert.Equal("After turn 5", result.Description);
+        result.TurnNumber.Should().Be(5);
+        result.Description.Should().Be("After turn 5");
 
         _stateRepositoryMock.Verify(r => r.UpdateAsync(state, It.IsAny<CancellationToken>()), Times.Once);
         _unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
@@ -76,7 +77,7 @@ public class CreateStateSnapshotCommandHandlerTests
         var exception = await Assert.ThrowsAsync<NotFoundException>(
             () => _handler.Handle(command, TestContext.Current.CancellationToken));
 
-        Assert.Contains("GameSessionState", exception.Message);
+        exception.Message.Should().Contain("GameSessionState");
         _unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
     }
 

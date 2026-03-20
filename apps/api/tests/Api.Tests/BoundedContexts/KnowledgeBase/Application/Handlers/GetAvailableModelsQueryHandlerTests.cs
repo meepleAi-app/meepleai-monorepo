@@ -8,6 +8,7 @@ using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using FluentAssertions;
 using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Handlers;
@@ -45,7 +46,7 @@ public class GetAvailableModelsQueryHandlerTests
         // Assert
         _mockService.Verify(s => s.GetAllModels(), Times.Once);
         _mockService.Verify(s => s.GetModelsByTier(It.IsAny<ModelTier>()), Times.Never);
-        Assert.Equal(models.Count, result.Models.Count);
+        result.Models.Count.Should().Be(models.Count);
     }
 
     [Theory]
@@ -102,7 +103,7 @@ public class GetAvailableModelsQueryHandlerTests
         var result = await _handler.Handle(query, CancellationToken.None);
 
         // Assert
-        Assert.Equal(models.Count, result.Models.Count);
+        result.Models.Count.Should().Be(models.Count);
         _mockService.Verify(s => s.GetAllModels(), Times.Once);
     }
 
@@ -131,17 +132,17 @@ public class GetAvailableModelsQueryHandlerTests
         var result = await _handler.Handle(query, CancellationToken.None);
 
         // Assert
-        Assert.Single(result.Models);
+        result.Models.Should().ContainSingle();
         var dto = result.Models[0];
-        Assert.Equal("test/model", dto.Id);
-        Assert.Equal("Test Model", dto.Name);
-        Assert.Equal("test", dto.Provider);
-        Assert.Equal("premium", dto.Tier);
-        Assert.Equal(0.001m, dto.CostPer1kInputTokens);
-        Assert.Equal(0.002m, dto.CostPer1kOutputTokens);
-        Assert.Equal(8192, dto.MaxTokens);
+        dto.Id.Should().Be("test/model");
+        dto.Name.Should().Be("Test Model");
+        dto.Provider.Should().Be("test");
+        dto.Tier.Should().Be("premium");
+        dto.CostPer1kInputTokens.Should().Be(0.001m);
+        dto.CostPer1kOutputTokens.Should().Be(0.002m);
+        dto.MaxTokens.Should().Be(8192);
         Assert.True(dto.SupportsStreaming);
-        Assert.Equal("Test description", dto.Description);
+        dto.Description.Should().Be("Test description");
     }
 
     [Fact]
@@ -159,7 +160,7 @@ public class GetAvailableModelsQueryHandlerTests
         // Assert
         Assert.All(result.Models, m =>
         {
-            Assert.Equal(m.Tier, m.Tier.ToLowerInvariant());
+            m.Tier.ToLowerInvariant().Should().Be(m.Tier);
         });
     }
 
@@ -176,7 +177,7 @@ public class GetAvailableModelsQueryHandlerTests
         var result = await _handler.Handle(query, CancellationToken.None);
 
         // Assert
-        Assert.Equal(models.Count, result.Models.Count);
+        result.Models.Count.Should().Be(models.Count);
         _mockService.Verify(s => s.GetAllModels(), Times.Once);
     }
 

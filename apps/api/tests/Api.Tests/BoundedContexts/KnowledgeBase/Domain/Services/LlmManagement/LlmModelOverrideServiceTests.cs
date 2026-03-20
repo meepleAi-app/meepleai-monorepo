@@ -4,6 +4,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Domain.Services.LlmManagement;
 
@@ -79,7 +80,7 @@ public class LlmModelOverrideServiceTests
         var result = _sut.GetOverrideModel(originalModel);
 
         // Assert
-        Assert.Equal(originalModel, result);
+        result.Should().Be(originalModel);
     }
 
     [Fact]
@@ -93,7 +94,7 @@ public class LlmModelOverrideServiceTests
         var result = _sut.GetOverrideModel(expensiveModel);
 
         // Assert
-        Assert.NotEqual(expensiveModel, result);
+        result.Should().NotBe(expensiveModel);
         Assert.Equal("openai/gpt-4o-mini", result); // Default mapping
     }
 
@@ -128,7 +129,7 @@ public class LlmModelOverrideServiceTests
         var result = _sut.GetOverrideModel(expensiveModel);
 
         // Assert
-        Assert.Equal(expectedCheaper, result);
+        result.Should().Be(expectedCheaper);
     }
 
     [Fact]
@@ -170,7 +171,7 @@ public class LlmModelOverrideServiceTests
         var secondStatus = _sut.GetBudgetModeStatus();
 
         // Assert
-        Assert.NotEqual(firstStatus, secondStatus);
+        secondStatus.Should().NotBe(firstStatus);
         Assert.Contains("Second reason", secondStatus, StringComparison.OrdinalIgnoreCase);
     }
 
@@ -192,6 +193,6 @@ public class LlmModelOverrideServiceTests
         var result = service.GetOverrideModel("custom/model-a");
 
         // Assert
-        Assert.Equal("custom/model-b", result);
+        result.Should().Be("custom/model-b");
     }
 }

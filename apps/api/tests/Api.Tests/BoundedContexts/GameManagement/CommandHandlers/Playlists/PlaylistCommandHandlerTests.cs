@@ -6,6 +6,7 @@ using Api.SharedKernel.Infrastructure.Persistence;
 using Api.Tests.Constants;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.GameManagement.CommandHandlers.Playlists;
 
@@ -33,9 +34,9 @@ public class PlaylistCommandHandlerTests
         var result = await handler.Handle(command, CancellationToken.None);
 
         Assert.NotNull(result);
-        Assert.Equal("Friday Night Games", result.Name);
-        Assert.Equal(_userId, result.CreatorUserId);
-        Assert.NotEqual(Guid.Empty, result.Id);
+        result.Name.Should().Be("Friday Night Games");
+        result.CreatorUserId.Should().Be(_userId);
+        result.Id.Should().NotBe(Guid.Empty);
         Assert.False(result.IsShared);
         Assert.Empty(result.Games);
 
@@ -52,7 +53,7 @@ public class PlaylistCommandHandlerTests
 
         var result = await handler.Handle(command, CancellationToken.None);
 
-        Assert.Equal(date, result.ScheduledDate);
+        result.ScheduledDate.Should().Be(date);
     }
 
     #endregion
@@ -71,7 +72,7 @@ public class PlaylistCommandHandlerTests
 
         var result = await handler.Handle(command, CancellationToken.None);
 
-        Assert.Equal("New Name", result.Name);
+        result.Name.Should().Be("New Name");
         _repositoryMock.Verify(r => r.UpdateAsync(It.IsAny<GameNightPlaylist>(), It.IsAny<CancellationToken>()), Times.Once);
     }
 
@@ -84,7 +85,7 @@ public class PlaylistCommandHandlerTests
         var handler = new UpdatePlaylistCommandHandler(_repositoryMock.Object, _unitOfWorkMock.Object);
         var command = new UpdatePlaylistCommand(Guid.NewGuid(), _userId, "Name");
 
-        await Assert.ThrowsAsync<NotFoundException>(() => handler.Handle(command, CancellationToken.None));
+        await ((Func<Task>)(() => handler.Handle(command, CancellationToken.None))).Should().ThrowAsync<NotFoundException>();
     }
 
     [Fact]
@@ -97,7 +98,7 @@ public class PlaylistCommandHandlerTests
         var handler = new UpdatePlaylistCommandHandler(_repositoryMock.Object, _unitOfWorkMock.Object);
         var command = new UpdatePlaylistCommand(playlist.Id, _userId, "Name");
 
-        await Assert.ThrowsAsync<UnauthorizedAccessException>(() => handler.Handle(command, CancellationToken.None));
+        await ((Func<Task>)(() => handler.Handle(command, CancellationToken.None))).Should().ThrowAsync<UnauthorizedAccessException>();
     }
 
     #endregion
@@ -129,7 +130,7 @@ public class PlaylistCommandHandlerTests
         var handler = new DeletePlaylistCommandHandler(_repositoryMock.Object, _unitOfWorkMock.Object);
         var command = new DeletePlaylistCommand(Guid.NewGuid(), _userId);
 
-        await Assert.ThrowsAsync<NotFoundException>(() => handler.Handle(command, CancellationToken.None));
+        await ((Func<Task>)(() => handler.Handle(command, CancellationToken.None))).Should().ThrowAsync<NotFoundException>();
     }
 
     #endregion
@@ -149,8 +150,8 @@ public class PlaylistCommandHandlerTests
 
         var result = await handler.Handle(command, CancellationToken.None);
 
-        Assert.Single(result.Games);
-        Assert.Equal(gameId, result.Games[0].SharedGameId);
+        result.Games.Should().ContainSingle();
+        result.Games[0].SharedGameId.Should().Be(gameId);
     }
 
     #endregion
@@ -196,7 +197,7 @@ public class PlaylistCommandHandlerTests
 
         var result = await handler.Handle(command, CancellationToken.None);
 
-        Assert.Equal(2, result.Games.Count);
+        result.Games.Count.Should().Be(2);
         Assert.Equal(gameId2, result.Games[0].SharedGameId); // First by position
         Assert.Equal(gameId1, result.Games[1].SharedGameId); // Second by position
     }
@@ -219,7 +220,7 @@ public class PlaylistCommandHandlerTests
 
         Assert.NotNull(result.ShareToken);
         Assert.NotEmpty(result.ShareToken);
-        Assert.Contains(result.ShareToken, result.ShareUrl);
+        result.ShareUrl.Should().Contain(result.ShareToken);
     }
 
     #endregion

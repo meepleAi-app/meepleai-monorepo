@@ -3,6 +3,7 @@ using Api.BoundedContexts.GameManagement.Domain.Entities;
 using Api.Middleware.Exceptions;
 using Api.Tests.Constants;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.GameManagement.Domain;
 
@@ -22,11 +23,11 @@ public class GameSessionStateDomainTests
         var state = GameSessionState.Create(stateId, sessionId, templateId, initialState, "testuser");
 
         // Assert
-        Assert.Equal(stateId, state.Id);
-        Assert.Equal(sessionId, state.GameSessionId);
-        Assert.Equal(templateId, state.TemplateId);
-        Assert.Equal(1, state.Version);
-        Assert.Equal("testuser", state.LastUpdatedBy);
+        state.Id.Should().Be(stateId);
+        state.GameSessionId.Should().Be(sessionId);
+        state.TemplateId.Should().Be(templateId);
+        state.Version.Should().Be(1);
+        state.LastUpdatedBy.Should().Be("testuser");
         Assert.NotNull(state.CurrentState);
         Assert.Empty(state.Snapshots);
     }
@@ -87,7 +88,7 @@ public class GameSessionStateDomainTests
 
         // Assert
         Assert.Equal(2, state.Version); // Version incremented
-        Assert.Equal("updater", state.LastUpdatedBy);
+        state.LastUpdatedBy.Should().Be("updater");
         Assert.NotNull(state.CurrentState);
     }
 
@@ -102,9 +103,9 @@ public class GameSessionStateDomainTests
 
         // Assert
         Assert.NotNull(snapshot);
-        Assert.Equal(1, snapshot.TurnNumber);
-        Assert.Equal("Turn 1 end", snapshot.Description);
-        Assert.Single(state.Snapshots);
+        snapshot.TurnNumber.Should().Be(1);
+        snapshot.Description.Should().Be("Turn 1 end");
+        state.Snapshots.Should().ContainSingle();
     }
 
     [Fact]
@@ -149,7 +150,7 @@ public class GameSessionStateDomainTests
 
         // Assert
         Assert.Equal(4, state.Version); // Version incremented (initial=1, update=2, update=3, restore=4)
-        Assert.Equal("restorer", state.LastUpdatedBy);
+        state.LastUpdatedBy.Should().Be("restorer");
         Assert.Equal(2, state.Snapshots.Count); // Original + backup snapshot
     }
 
@@ -176,7 +177,7 @@ public class GameSessionStateDomainTests
 
         // Assert
         Assert.NotNull(snapshot);
-        Assert.Equal(1, snapshot.TurnNumber);
+        snapshot.TurnNumber.Should().Be(1);
     }
 
     [Fact]
@@ -206,8 +207,8 @@ public class GameSessionStateDomainTests
 
         // Assert
         Assert.NotNull(latest);
-        Assert.Equal(2, latest.TurnNumber);
-        Assert.Equal("Second", latest.Description);
+        latest.TurnNumber.Should().Be(2);
+        latest.Description.Should().Be("Second");
     }
 
     [Fact]
@@ -235,8 +236,8 @@ public class GameSessionStateDomainTests
 
         // Assert
         Assert.NotNull(jsonString);
-        Assert.Contains("Alice", jsonString);
-        Assert.Contains("42", jsonString);
+        jsonString.Should().Contain("Alice");
+        jsonString.Should().Contain("42");
     }
 
     // Helper method

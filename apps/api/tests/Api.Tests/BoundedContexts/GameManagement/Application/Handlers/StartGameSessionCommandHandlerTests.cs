@@ -10,6 +10,7 @@ using Api.BoundedContexts.GameManagement.Domain.ValueObjects;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Moq;
 using Xunit;
+using FluentAssertions;
 using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.GameManagement.Application.Handlers;
@@ -79,14 +80,14 @@ public class StartGameSessionCommandHandlerTests
 
         // Assert
         Assert.NotNull(result);
-        Assert.NotEqual(Guid.Empty, result.Id);
-        Assert.Equal(gameId, result.GameId);
+        result.Id.Should().NotBe(Guid.Empty);
+        result.GameId.Should().Be(gameId);
         Assert.Equal("InProgress", result.Status); // Session is started immediately
-        Assert.Equal(2, result.Players.Count);
+        result.Players.Count.Should().Be(2);
 
         // Verify captured session
         Assert.NotNull(capturedSession);
-        Assert.Equal(gameId, capturedSession.GameId);
+        capturedSession.GameId.Should().Be(gameId);
 
         // Verify repository interactions
         _gameRepositoryMock.Verify(
@@ -125,11 +126,11 @@ public class StartGameSessionCommandHandlerTests
 
         // Assert
         Assert.NotNull(result);
-        Assert.Equal(4, result.Players.Count);
-        Assert.Equal("Alice", result.Players[0].PlayerName);
-        Assert.Equal("Bob", result.Players[1].PlayerName);
-        Assert.Equal("Charlie", result.Players[2].PlayerName);
-        Assert.Equal("Diana", result.Players[3].PlayerName);
+        result.Players.Count.Should().Be(4);
+        result.Players[0].PlayerName.Should().Be("Alice");
+        result.Players[1].PlayerName.Should().Be("Bob");
+        result.Players[2].PlayerName.Should().Be("Charlie");
+        result.Players[3].PlayerName.Should().Be("Diana");
     }
 
     [Fact]
@@ -155,8 +156,8 @@ public class StartGameSessionCommandHandlerTests
 
         // Assert
         Assert.NotNull(result);
-        Assert.Equal("Red", result.Players[0].Color);
-        Assert.Equal("Blue", result.Players[1].Color);
+        result.Players[0].Color.Should().Be("Red");
+        result.Players[1].Color.Should().Be("Blue");
     }
 
     [Fact]
@@ -181,7 +182,7 @@ public class StartGameSessionCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotEqual(Guid.Empty, result.Id);
+        result.Id.Should().NotBe(Guid.Empty);
         Assert.NotEqual(gameId, result.Id); // Session ID should differ from Game ID
     }
 
@@ -344,9 +345,9 @@ public class StartGameSessionCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert - Order should be preserved from input
-        Assert.Equal("Third", result.Players[0].PlayerName);
-        Assert.Equal("First", result.Players[1].PlayerName);
-        Assert.Equal("Second", result.Players[2].PlayerName);
+        result.Players[0].PlayerName.Should().Be("Third");
+        result.Players[1].PlayerName.Should().Be("First");
+        result.Players[2].PlayerName.Should().Be("Second");
     }
     [Fact]
     public async Task Handle_WithCancellationToken_PassesToRepositories()
@@ -405,7 +406,7 @@ public class StartGameSessionCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert - Session should be InProgress after Start() is called
-        Assert.Equal("InProgress", result.Status);
+        result.Status.Should().Be("InProgress");
     }
 }
 

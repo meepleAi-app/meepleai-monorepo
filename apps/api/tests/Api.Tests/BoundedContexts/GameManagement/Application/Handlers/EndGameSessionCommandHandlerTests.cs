@@ -7,6 +7,7 @@ using Api.SharedKernel.Infrastructure.Persistence;
 using Api.Tests.BoundedContexts.GameManagement.TestHelpers;
 using Moq;
 using Xunit;
+using FluentAssertions;
 using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.GameManagement.Application.Handlers;
@@ -54,9 +55,9 @@ public class EndGameSessionCommandHandlerTests
 
         // Assert
         Assert.NotNull(result);
-        Assert.Equal(sessionId, result.Id);
-        Assert.Equal("Completed", result.Status);
-        Assert.Equal("Alice", result.WinnerName);
+        result.Id.Should().Be(sessionId);
+        result.Status.Should().Be("Completed");
+        result.WinnerName.Should().Be("Alice");
         Assert.NotNull(result.CompletedAt);
 
         // Verify repository interactions
@@ -95,7 +96,7 @@ public class EndGameSessionCommandHandlerTests
 
         // Assert
         Assert.NotNull(result);
-        Assert.Equal("Completed", result.Status);
+        result.Status.Should().Be("Completed");
         Assert.Null(result.WinnerName); // No winner specified (e.g., cooperative game)
         Assert.NotNull(result.CompletedAt);
     }
@@ -123,8 +124,8 @@ public class EndGameSessionCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.Equal("Charlie", result.WinnerName);
-        Assert.Equal(4, result.Players.Count);
+        result.WinnerName.Should().Be("Charlie");
+        result.Players.Count.Should().Be(4);
     }
 
     [Fact]
@@ -242,7 +243,7 @@ public class EndGameSessionCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.Equal(gameId, result.GameId);
+        result.GameId.Should().Be(gameId);
     }
 
     [Fact]
@@ -268,10 +269,10 @@ public class EndGameSessionCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.Equal(3, result.Players.Count);
-        Assert.Equal("Alice", result.Players[0].PlayerName);
-        Assert.Equal("Bob", result.Players[1].PlayerName);
-        Assert.Equal("Charlie", result.Players[2].PlayerName);
+        result.Players.Count.Should().Be(3);
+        result.Players[0].PlayerName.Should().Be("Alice");
+        result.Players[1].PlayerName.Should().Be("Bob");
+        result.Players[2].PlayerName.Should().Be("Charlie");
     }
 }
 

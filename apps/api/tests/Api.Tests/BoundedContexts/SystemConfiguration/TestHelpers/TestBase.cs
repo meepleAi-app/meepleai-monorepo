@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
+using FluentAssertions;
 using Xunit.Abstractions;
 
 namespace Api.Tests.BoundedContexts.SystemConfiguration.TestHelpers;
@@ -65,8 +66,8 @@ public abstract class TestBase : IDisposable
     /// </summary>
     protected static void AssertDomainException(Action action, string expectedMessagePart)
     {
-        var ex = Xunit.Assert.Throws<Api.SharedKernel.Domain.Exceptions.DomainException>(action);
-        Xunit.Assert.Contains(expectedMessagePart, ex.Message, StringComparison.OrdinalIgnoreCase);
+        var ex = FluentActions.Invoking(action).Should().Throw<Api.SharedKernel.Domain.Exceptions.DomainException>().Which;
+        ex.Message.Should().Contain(expectedMessagePart);
     }
 
     /// <summary>
@@ -74,8 +75,8 @@ public abstract class TestBase : IDisposable
     /// </summary>
     protected static void AssertValidationException(Action action, string expectedMessagePart)
     {
-        var ex = Xunit.Assert.Throws<Api.SharedKernel.Domain.Exceptions.ValidationException>(action);
-        Xunit.Assert.Contains(expectedMessagePart, ex.Message, StringComparison.OrdinalIgnoreCase);
+        var ex = FluentActions.Invoking(action).Should().Throw<Api.SharedKernel.Domain.Exceptions.ValidationException>().Which;
+        ex.Message.Should().Contain(expectedMessagePart);
     }
 
     /// <summary>
@@ -85,7 +86,7 @@ public abstract class TestBase : IDisposable
     {
         var allowedDifference = tolerance ?? TestConstants.Timing.VeryShortTimeout;
         var difference = Math.Abs((expected - actual).TotalSeconds);
-        Xunit.Assert.True(difference <= allowedDifference.TotalSeconds,
+        (difference <= allowedDifference.TotalSeconds).Should().BeTrue(
             $"Expected {expected:O}, but got {actual:O} (difference: {difference}s)");
     }
 

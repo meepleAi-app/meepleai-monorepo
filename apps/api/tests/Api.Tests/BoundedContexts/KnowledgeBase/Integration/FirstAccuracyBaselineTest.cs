@@ -6,6 +6,7 @@ using Moq;
 using System.Net.Http.Json;
 using System.Text.Json;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Integration;
 
@@ -441,7 +442,7 @@ public class FirstAccuracyBaselineTest
         _output.WriteLine($"Loaded {testCases.Count} expert-annotated test cases");
 
         // Verify we have exactly 50 expert-annotated cases
-        Assert.Equal(50, testCases.Count);
+        testCases.Count.Should().Be(50);
 
         // Group by game for reporting
         var byGame = testCases.GroupBy(tc => tc.GameId).ToDictionary(g => g.Key, g => g.Count());

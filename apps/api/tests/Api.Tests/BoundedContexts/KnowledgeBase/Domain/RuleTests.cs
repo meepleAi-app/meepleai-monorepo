@@ -1,6 +1,7 @@
 using Api.BoundedContexts.KnowledgeBase.Domain.Entities;
 using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Domain;
 
@@ -29,12 +30,12 @@ public class RuleTests
         );
 
         // Assert
-        Assert.Equal(id, rule.Id);
-        Assert.Equal(gameId, rule.GameId);
-        Assert.Equal(ruleName, rule.RuleName);
-        Assert.Equal(description, rule.Description);
-        Assert.Equal(ruleType, rule.Type);
-        Assert.Equal(10, rule.PrecedenceLevel);
+        rule.Id.Should().Be(id);
+        rule.GameId.Should().Be(gameId);
+        rule.RuleName.Should().Be(ruleName);
+        rule.Description.Should().Be(description);
+        rule.Type.Should().Be(ruleType);
+        rule.PrecedenceLevel.Should().Be(10);
         Assert.True(rule.IsActive);
     }
 
@@ -63,9 +64,9 @@ public class RuleTests
         rule.Update("Updated description", "new pattern", 20);
 
         // Assert
-        Assert.Equal("Updated description", rule.Description);
-        Assert.Equal("new pattern", rule.ValidationPattern);
-        Assert.Equal(20, rule.PrecedenceLevel);
+        rule.Description.Should().Be("Updated description");
+        rule.ValidationPattern.Should().Be("new pattern");
+        rule.PrecedenceLevel.Should().Be(20);
         Assert.NotNull(rule.UpdatedAt);
     }
 

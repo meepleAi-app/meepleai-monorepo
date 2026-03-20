@@ -4,6 +4,7 @@ using Api.BoundedContexts.EntityRelationships.Domain.Repositories;
 using Api.Tests.Constants;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.EntityRelationships.Application;
 
@@ -35,7 +36,7 @@ public class GetEntityLinkCountQueryHandlerTests
         var query = new GetEntityLinkCountQuery(MeepleEntityType.Game, _gameId);
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
-        Assert.Equal(5, result);
+        result.Should().Be(5);
     }
 
     [Fact]
@@ -49,7 +50,7 @@ public class GetEntityLinkCountQueryHandlerTests
         var query = new GetEntityLinkCountQuery(MeepleEntityType.Game, _gameId);
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
-        Assert.Equal(0, result);
+        result.Should().Be(0);
     }
 
     [Fact]

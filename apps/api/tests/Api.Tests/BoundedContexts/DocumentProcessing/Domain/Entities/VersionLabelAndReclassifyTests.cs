@@ -3,6 +3,7 @@ using Api.BoundedContexts.DocumentProcessing.Domain.Enums;
 using Api.BoundedContexts.DocumentProcessing.Domain.ValueObjects;
 using Api.Tests.Constants;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.DocumentProcessing.Domain.Entities;
 
@@ -21,7 +22,7 @@ public class VersionLabelAndReclassifyTests
 
         document.SetVersionLabel("2nd Edition");
 
-        Assert.Equal("2nd Edition", document.VersionLabel);
+        document.VersionLabel.Should().Be("2nd Edition");
     }
 
     [Fact]
@@ -32,7 +33,7 @@ public class VersionLabelAndReclassifyTests
 
         document.SetVersionLabel(null);
 
-        Assert.Null(document.VersionLabel);
+        document.VersionLabel.Should().BeNull();
     }
 
     [Fact]
@@ -42,7 +43,7 @@ public class VersionLabelAndReclassifyTests
 
         document.SetVersionLabel("  v1.3 Errata  ");
 
-        Assert.Equal("v1.3 Errata", document.VersionLabel);
+        document.VersionLabel.Should().Be("v1.3 Errata");
     }
 
     [Fact]
@@ -51,7 +52,7 @@ public class VersionLabelAndReclassifyTests
         var document = CreateDocument();
         var longLabel = new string('x', 101);
 
-        Assert.Throws<ArgumentException>(() => document.SetVersionLabel(longLabel));
+        ((Action)(() => document.SetVersionLabel(longLabel))).Should().Throw<ArgumentException>();
     }
 
     [Fact]
@@ -62,7 +63,7 @@ public class VersionLabelAndReclassifyTests
 
         document.SetVersionLabel(label);
 
-        Assert.Equal(label, document.VersionLabel);
+        document.VersionLabel.Should().Be(label);
     }
 
     [Fact]
@@ -70,7 +71,7 @@ public class VersionLabelAndReclassifyTests
     {
         var document = CreateDocument();
 
-        Assert.Null(document.VersionLabel);
+        document.VersionLabel.Should().BeNull();
     }
 
     #endregion
@@ -85,9 +86,9 @@ public class VersionLabelAndReclassifyTests
 
         document.Reclassify(DocumentCategory.Expansion, baseDocId, "Expansion v2");
 
-        Assert.Equal(DocumentCategory.Expansion, document.DocumentCategory);
-        Assert.Equal(baseDocId, document.BaseDocumentId);
-        Assert.Equal("Expansion v2", document.VersionLabel);
+        document.DocumentCategory.Should().Be(DocumentCategory.Expansion);
+        document.BaseDocumentId.Should().Be(baseDocId);
+        document.VersionLabel.Should().Be("Expansion v2");
     }
 
     [Fact]
@@ -98,8 +99,8 @@ public class VersionLabelAndReclassifyTests
 
         document.Reclassify(DocumentCategory.Rulebook, null, "v1.0");
 
-        Assert.Null(document.BaseDocumentId);
-        Assert.Equal("v1.0", document.VersionLabel);
+        document.BaseDocumentId.Should().BeNull();
+        document.VersionLabel.Should().Be("v1.0");
     }
 
     [Fact]
@@ -110,8 +111,8 @@ public class VersionLabelAndReclassifyTests
 
         document.Reclassify(DocumentCategory.QuickStart, null, null);
 
-        Assert.Equal(DocumentCategory.QuickStart, document.DocumentCategory);
-        Assert.Null(document.VersionLabel);
+        document.DocumentCategory.Should().Be(DocumentCategory.QuickStart);
+        document.VersionLabel.Should().BeNull();
     }
 
     [Fact]
@@ -140,9 +141,9 @@ public class VersionLabelAndReclassifyTests
         document.Reclassify(DocumentCategory.Expansion, baseDocId1, "v1");
         document.Reclassify(DocumentCategory.Errata, baseDocId2, "v2 Errata");
 
-        Assert.Equal(DocumentCategory.Errata, document.DocumentCategory);
-        Assert.Equal(baseDocId2, document.BaseDocumentId);
-        Assert.Equal("v2 Errata", document.VersionLabel);
+        document.DocumentCategory.Should().Be(DocumentCategory.Errata);
+        document.BaseDocumentId.Should().Be(baseDocId2);
+        document.VersionLabel.Should().Be("v2 Errata");
     }
 
     #endregion
@@ -166,7 +167,7 @@ public class VersionLabelAndReclassifyTests
             language: LanguageCode.English,
             versionLabel: "3rd Edition");
 
-        Assert.Equal("3rd Edition", document.VersionLabel);
+        document.VersionLabel.Should().Be("3rd Edition");
     }
 
     [Fact]
@@ -185,7 +186,7 @@ public class VersionLabelAndReclassifyTests
             processingError: null,
             language: LanguageCode.English);
 
-        Assert.Null(document.VersionLabel);
+        document.VersionLabel.Should().BeNull();
     }
 
     #endregion

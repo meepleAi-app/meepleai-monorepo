@@ -1,6 +1,7 @@
 using Api.BoundedContexts.KnowledgeBase.Domain.Entities;
 using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 using Xunit;
+using FluentAssertions;
 using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Domain.Entities;
@@ -25,12 +26,12 @@ public class AgentTests
         var agent = new Agent(id, name, type, strategy);
 
         // Assert
-        Assert.Equal(id, agent.Id);
-        Assert.Equal(name, agent.Name);
-        Assert.Equal(type, agent.Type);
-        Assert.Equal(strategy, agent.Strategy);
+        agent.Id.Should().Be(id);
+        agent.Name.Should().Be(name);
+        agent.Type.Should().Be(type);
+        agent.Strategy.Should().Be(strategy);
         Assert.True(agent.IsActive);
-        Assert.Equal(0, agent.InvocationCount);
+        agent.InvocationCount.Should().Be(0);
         Assert.Null(agent.LastInvokedAt);
     }
 
@@ -43,8 +44,8 @@ public class AgentTests
         var strategy = AgentStrategy.HybridSearch();
 
         // Act & Assert
-        Assert.Throws<ArgumentException>(() => new Agent(id, "", type, strategy));
-        Assert.Throws<ArgumentException>(() => new Agent(id, "   ", type, strategy));
+        ((Action)(() => new Agent(id, "", type, strategy))).Should().Throw<ArgumentException>();
+        ((Action)(() => new Agent(id, "   ", type, strategy))).Should().Throw<ArgumentException>();
     }
 
     [Fact]
@@ -56,7 +57,7 @@ public class AgentTests
         var strategy = AgentStrategy.HybridSearch();
 
         // Act & Assert
-        Assert.Throws<ArgumentNullException>(() => new Agent(id, name, null!, strategy));
+        ((Action)(() => new Agent(id, name, null!, strategy))).Should().Throw<ArgumentNullException>();
     }
 
     [Fact]
@@ -68,7 +69,7 @@ public class AgentTests
         var type = AgentType.RagAgent;
 
         // Act & Assert
-        Assert.Throws<ArgumentNullException>(() => new Agent(id, name, type, null!));
+        ((Action)(() => new Agent(id, name, type, null!))).Should().Throw<ArgumentNullException>();
     }
 
     [Fact]
@@ -82,8 +83,8 @@ public class AgentTests
         agent.Configure(newStrategy);
 
         // Assert
-        Assert.Equal(newStrategy, agent.Strategy);
-        Assert.Equal("VectorOnly", agent.Strategy.Name);
+        agent.Strategy.Should().Be(newStrategy);
+        agent.Strategy.Name.Should().Be("VectorOnly");
     }
 
     [Fact]
@@ -93,7 +94,7 @@ public class AgentTests
         var agent = CreateTestAgent();
 
         // Act & Assert
-        Assert.Throws<ArgumentNullException>(() => agent.Configure(null!));
+        ((Action)(() => agent.Configure(null!))).Should().Throw<ArgumentNullException>();
     }
 
     [Fact]
@@ -159,7 +160,7 @@ public class AgentTests
         agent.RecordInvocation("test query", TokenUsage.Empty);
 
         // Assert
-        Assert.Equal(1, agent.InvocationCount);
+        agent.InvocationCount.Should().Be(1);
         Assert.NotNull(agent.LastInvokedAt);
         Assert.True(agent.LastInvokedAt >= beforeInvocation);
         Assert.True(agent.LastInvokedAt <= DateTime.UtcNow);
@@ -177,7 +178,7 @@ public class AgentTests
         agent.RecordInvocation("test query 3", TokenUsage.Empty);
 
         // Assert
-        Assert.Equal(3, agent.InvocationCount);
+        agent.InvocationCount.Should().Be(3);
     }
 
     [Fact]
@@ -187,8 +188,8 @@ public class AgentTests
         var agent = CreateTestAgent(isActive: false);
 
         // Act & Assert
-        var exception = Assert.Throws<InvalidOperationException>(() => agent.RecordInvocation("test query", TokenUsage.Empty));
-        Assert.Contains("inactive agent", exception.Message.ToLower());
+        var exception = ((Action)(() => agent.RecordInvocation("test query", TokenUsage.Empty))).Should().Throw<InvalidOperationException>().Which;
+        exception.Message.ToLower().Should().Contain("inactive agent");
     }
 
     [Fact]
@@ -202,7 +203,7 @@ public class AgentTests
         agent.Rename(newName);
 
         // Assert
-        Assert.Equal(newName, agent.Name);
+        agent.Name.Should().Be(newName);
     }
 
     [Fact]
@@ -212,8 +213,8 @@ public class AgentTests
         var agent = CreateTestAgent();
 
         // Act & Assert
-        Assert.Throws<ArgumentException>(() => agent.Rename(""));
-        Assert.Throws<ArgumentException>(() => agent.Rename("   "));
+        ((Action)(() => agent.Rename(""))).Should().Throw<ArgumentException>();
+        ((Action)(() => agent.Rename("   "))).Should().Throw<ArgumentException>();
     }
 
     [Fact]
@@ -224,7 +225,7 @@ public class AgentTests
         var longName = new string('A', 101); // Max is 100
 
         // Act & Assert
-        Assert.Throws<ArgumentException>(() => agent.Rename(longName));
+        ((Action)(() => agent.Rename(longName))).Should().Throw<ArgumentException>();
     }
 
     [Fact]
@@ -238,7 +239,7 @@ public class AgentTests
         agent.Rename(nameWithWhitespace);
 
         // Assert
-        Assert.Equal("Test Agent", agent.Name);
+        agent.Name.Should().Be("Test Agent");
     }
 
     [Fact]
@@ -316,8 +317,8 @@ public class AgentTests
         );
 
         // Assert
-        Assert.Equal(gameId, agent.GameId);
-        Assert.Equal(userId, agent.CreatedByUserId);
+        agent.GameId.Should().Be(gameId);
+        agent.CreatedByUserId.Should().Be(userId);
     }
 
     [Fact]
@@ -352,7 +353,7 @@ public class AgentTests
         );
 
         // Assert
-        Assert.Equal(gameId, agent.GameId);
+        agent.GameId.Should().Be(gameId);
         Assert.Null(agent.CreatedByUserId);
     }
 
@@ -369,7 +370,7 @@ public class AgentTests
         agent.SetGameId(gameId);
 
         // Assert
-        Assert.Equal(gameId, agent.GameId);
+        agent.GameId.Should().Be(gameId);
     }
 
     [Fact]
@@ -379,7 +380,7 @@ public class AgentTests
         var agent = CreateTestAgent();
 
         // Act & Assert
-        Assert.Throws<ArgumentException>(() => agent.SetGameId(Guid.Empty));
+        ((Action)(() => agent.SetGameId(Guid.Empty))).Should().Throw<ArgumentException>();
     }
 
     [Fact]
@@ -395,7 +396,7 @@ public class AgentTests
         agent.SetGameId(secondGameId);
 
         // Assert
-        Assert.Equal(secondGameId, agent.GameId);
+        agent.GameId.Should().Be(secondGameId);
     }
 
     [Fact]

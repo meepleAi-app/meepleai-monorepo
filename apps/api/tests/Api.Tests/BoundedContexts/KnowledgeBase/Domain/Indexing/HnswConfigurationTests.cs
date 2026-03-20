@@ -1,5 +1,6 @@
 using Api.BoundedContexts.KnowledgeBase.Domain.Indexing;
 using Xunit;
+using FluentAssertions;
 using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Domain.Indexing;
@@ -17,9 +18,9 @@ public class HnswConfigurationTests
         var config = HnswConfiguration.Default();
 
         // Assert - ADR-016 Phase 3 specified values
-        Assert.Equal(16, config.M);
-        Assert.Equal(100, config.EfConstruct);
-        Assert.Equal(10000, config.FullScanThreshold);
+        config.M.Should().Be(16);
+        config.EfConstruct.Should().Be(100);
+        config.FullScanThreshold.Should().Be(10000);
         Assert.False(config.OnDisk);
     }
 
@@ -30,9 +31,9 @@ public class HnswConfigurationTests
         var config = HnswConfiguration.Create(m: 32, efConstruct: 200, fullScanThreshold: 5000, onDisk: true);
 
         // Assert
-        Assert.Equal(32, config.M);
-        Assert.Equal(200, config.EfConstruct);
-        Assert.Equal(5000, config.FullScanThreshold);
+        config.M.Should().Be(32);
+        config.EfConstruct.Should().Be(200);
+        config.FullScanThreshold.Should().Be(5000);
         Assert.True(config.OnDisk);
     }
 
@@ -83,8 +84,8 @@ public class HnswConfigurationTests
         var config = HnswConfiguration.HighAccuracy();
 
         // Assert
-        Assert.Equal(24, config.M);
-        Assert.Equal(200, config.EfConstruct);
+        config.M.Should().Be(24);
+        config.EfConstruct.Should().Be(200);
         Assert.False(config.OnDisk);
     }
 
@@ -95,8 +96,8 @@ public class HnswConfigurationTests
         var config = HnswConfiguration.MemoryOptimized();
 
         // Assert
-        Assert.Equal(12, config.M);
-        Assert.Equal(64, config.EfConstruct);
+        config.M.Should().Be(12);
+        config.EfConstruct.Should().Be(64);
         Assert.True(config.OnDisk);
     }
 
@@ -108,7 +109,7 @@ public class HnswConfigurationTests
         var config2 = HnswConfiguration.Create(16, 100, 10000, false);
 
         // Act & Assert
-        Assert.Equal(config1, config2);
+        config2.Should().Be(config1);
         Assert.True(config1.Equals(config2));
     }
 
@@ -120,7 +121,7 @@ public class HnswConfigurationTests
         var config2 = HnswConfiguration.Create(32, 100);
 
         // Act & Assert
-        Assert.NotEqual(config1, config2);
+        config2.Should().NotBe(config1);
     }
 
     [Fact]
@@ -131,7 +132,7 @@ public class HnswConfigurationTests
         var config2 = HnswConfiguration.Default();
 
         // Act & Assert
-        Assert.Equal(config1.GetHashCode(), config2.GetHashCode());
+        config2.GetHashCode().Should().Be(config1.GetHashCode());
     }
 
     [Fact]

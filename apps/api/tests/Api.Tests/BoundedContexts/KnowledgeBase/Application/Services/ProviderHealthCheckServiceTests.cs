@@ -8,6 +8,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using FluentAssertions;
 using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Services;
@@ -124,9 +125,9 @@ public class ProviderHealthCheckServiceTests
 
         // Assert
         Assert.NotNull(allHealth);
-        Assert.Equal(2, allHealth.Count);
-        Assert.Contains("Ollama", allHealth.Keys);
-        Assert.Contains("OpenRouter", allHealth.Keys);
+        allHealth.Count.Should().Be(2);
+        allHealth.Keys.Should().Contain("Ollama");
+        allHealth.Keys.Should().Contain("OpenRouter");
 
         // Cleanup
         await service.StopAsync(TestCancellationToken);

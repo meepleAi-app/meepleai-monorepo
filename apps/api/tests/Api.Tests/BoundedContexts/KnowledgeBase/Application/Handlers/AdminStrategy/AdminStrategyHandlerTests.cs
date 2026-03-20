@@ -7,6 +7,7 @@ using Api.Tests.Constants;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Handlers.AdminStrategy;
 
@@ -28,9 +29,9 @@ public class ListAdminStrategiesHandlerTests
         var handler = new ListAdminStrategiesHandler(_mockRepo.Object);
         var result = await handler.Handle(new ListAdminStrategiesQuery(), TestContext.Current.CancellationToken);
 
-        Assert.Equal(2, result.Count);
-        Assert.Equal("Strategy A", result[0].Name);
-        Assert.Equal("Strategy B", result[1].Name);
+        result.Count.Should().Be(2);
+        result[0].Name.Should().Be("Strategy A");
+        result[1].Name.Should().Be("Strategy B");
     }
 
     [Fact]
@@ -63,7 +64,7 @@ public class GetAdminStrategyByIdHandlerTests
         var result = await handler.Handle(new GetAdminStrategyByIdQuery(strategy.Id), TestContext.Current.CancellationToken);
 
         Assert.NotNull(result);
-        Assert.Equal("Test", result.Name);
+        result.Name.Should().Be("Test");
     }
 
     [Fact]
@@ -95,9 +96,9 @@ public class CreateAdminStrategyHandlerTests
         var handler = new CreateAdminStrategyHandler(_mockRepo.Object, _mockLogger.Object);
         var result = await handler.Handle(command, TestContext.Current.CancellationToken);
 
-        Assert.NotEqual(Guid.Empty, result.Id);
-        Assert.Equal("New Strategy", result.Name);
-        Assert.Equal("Description", result.Description);
+        result.Id.Should().NotBe(Guid.Empty);
+        result.Name.Should().Be("New Strategy");
+        result.Description.Should().Be("Description");
         _mockRepo.Verify(r => r.AddAsync(It.IsAny<AdminRagStrategy>(), It.IsAny<CancellationToken>()), Times.Once);
     }
 }
@@ -121,8 +122,8 @@ public class UpdateAdminStrategyHandlerTests
         var handler = new UpdateAdminStrategyHandler(_mockRepo.Object, _mockLogger.Object);
         var result = await handler.Handle(command, TestContext.Current.CancellationToken);
 
-        Assert.Equal("Updated", result.Name);
-        Assert.Equal("New desc", result.Description);
+        result.Name.Should().Be("Updated");
+        result.Description.Should().Be("New desc");
         _mockRepo.Verify(r => r.UpdateAsync(It.IsAny<AdminRagStrategy>(), It.IsAny<CancellationToken>()), Times.Once);
     }
 

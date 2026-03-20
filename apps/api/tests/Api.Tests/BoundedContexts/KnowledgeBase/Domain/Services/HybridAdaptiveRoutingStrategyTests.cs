@@ -11,6 +11,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Moq;
 using Xunit;
+using FluentAssertions;
 using Api.Tests.Constants;
 using AuthUser = Api.BoundedContexts.Authentication.Domain.Entities.User;
 
@@ -120,9 +121,9 @@ public class HybridAdaptiveRoutingStrategyTests
         var decision = sut.SelectProvider(user, strategy);
 
         // Assert
-        Assert.Equal(expectedProvider, decision.ProviderName);
-        Assert.Equal(expectedModel, decision.ModelId);
-        Assert.Contains("Strategy:", decision.Reason);
+        decision.ProviderName.Should().Be(expectedProvider);
+        decision.ModelId.Should().Be(expectedModel);
+        decision.Reason.Should().Contain("Strategy:");
     }
 
     [Fact]
@@ -135,9 +136,9 @@ public class HybridAdaptiveRoutingStrategyTests
         var decision = sut.SelectProvider(user: null, RagStrategy.Balanced);
 
         // Assert
-        Assert.Equal("DeepSeek", decision.ProviderName);
-        Assert.Equal("deepseek-chat", decision.ModelId);
-        Assert.Contains("Tier: User", decision.Reason);
+        decision.ProviderName.Should().Be("DeepSeek");
+        decision.ModelId.Should().Be("deepseek-chat");
+        decision.Reason.Should().Contain("Tier: User");
     }
 
     [Theory]
@@ -154,7 +155,7 @@ public class HybridAdaptiveRoutingStrategyTests
         var decision = sut.SelectProvider(user, RagStrategy.Balanced);
 
         // Assert
-        Assert.Contains($"Tier: {expectedTier}", decision.Reason);
+        decision.Reason.Should().Contain($"Tier: {expectedTier}");
     }
 
     #endregion
@@ -180,9 +181,9 @@ public class HybridAdaptiveRoutingStrategyTests
         var exception = Assert.Throws<UnauthorizedAccessException>(
             () => sut.SelectProvider(user, RagStrategy.Expert));
 
-        Assert.Contains("User", exception.Message);
-        Assert.Contains("EXPERT", exception.Message);
-        Assert.Contains("Available strategies:", exception.Message);
+        exception.Message.Should().Contain("User");
+        exception.Message.Should().Contain("EXPERT");
+        exception.Message.Should().Contain("Available strategies:");
     }
 
     [Fact]
@@ -197,7 +198,7 @@ public class HybridAdaptiveRoutingStrategyTests
         var decisions = strategies.Select(s => sut.SelectProvider(admin, s)).ToList();
 
         // Assert - All should succeed
-        Assert.Equal(strategies.Length, decisions.Count);
+        decisions.Count.Should().Be(strategies.Length);
         Assert.All(decisions, d => Assert.Contains("Tier: Admin", d.Reason));
     }
 
@@ -247,9 +248,9 @@ public class HybridAdaptiveRoutingStrategyTests
         var decision = sut.SelectProvider(user, RagStrategy.Expert);
 
         // Assert - Should use PreferredProvider instead of strategy routing
-        Assert.Equal("Ollama", decision.ProviderName);
-        Assert.Equal("mistral", decision.ModelId);
-        Assert.Contains("PreferredProvider override", decision.Reason);
+        decision.ProviderName.Should().Be("Ollama");
+        decision.ModelId.Should().Be("mistral");
+        decision.Reason.Should().Contain("PreferredProvider override");
     }
 
     [Fact]
@@ -263,8 +264,8 @@ public class HybridAdaptiveRoutingStrategyTests
         var decision = sut.SelectProvider(user, RagStrategy.Expert);
 
         // Assert - Should use strategy routing
-        Assert.DoesNotContain("PreferredProvider", decision.Reason);
-        Assert.Contains("Strategy:", decision.Reason);
+        decision.Reason.Should().NotContain("PreferredProvider");
+        decision.Reason.Should().Contain("Strategy:");
     }
 
     [Fact]
@@ -293,7 +294,7 @@ public class HybridAdaptiveRoutingStrategyTests
         var decision = sut.SelectProvider(user, RagStrategy.Expert);
 
         // Assert - Should use strategy routing (preferred is disabled)
-        Assert.DoesNotContain("PreferredProvider", decision.Reason);
+        decision.Reason.Should().NotContain("PreferredProvider");
     }
 
     #endregion
@@ -330,8 +331,8 @@ public class HybridAdaptiveRoutingStrategyTests
         var decision = sut.SelectProvider(user, RagStrategy.Balanced);
 
         // Assert - Should fallback to Ollama (hardcoded fallback behavior)
-        Assert.Equal("Ollama", decision.ProviderName);
-        Assert.Contains("Fallback from DeepSeek", decision.Reason);
+        decision.ProviderName.Should().Be("Ollama");
+        decision.Reason.Should().Contain("Fallback from DeepSeek");
     }
 
     [Fact]
@@ -361,7 +362,7 @@ public class HybridAdaptiveRoutingStrategyTests
         var exception = Assert.Throws<InvalidOperationException>(
             () => sut.SelectProvider(user, RagStrategy.Balanced));
 
-        Assert.Contains("AI providers are disabled", exception.Message);
+        exception.Message.Should().Contain("AI providers are disabled");
     }
 
     #endregion
@@ -384,8 +385,8 @@ public class HybridAdaptiveRoutingStrategyTests
         var decision = sut.SelectProvider(user, RagStrategy.Expert);
 
         // Assert
-        Assert.Equal("meta-llama/llama-3.3-70b-instruct:free", decision.ModelId);
-        Assert.Contains("Budget mode", decision.Reason);
+        decision.ModelId.Should().Be("meta-llama/llama-3.3-70b-instruct:free");
+        decision.Reason.Should().Contain("Budget mode");
         mockOverride.Verify(s => s.IsInBudgetMode(), Times.Once);
         mockOverride.Verify(s => s.GetOverrideModel("anthropic/claude-sonnet-4.5"), Times.Once);
     }
@@ -404,8 +405,8 @@ public class HybridAdaptiveRoutingStrategyTests
         var decision = sut.SelectProvider(user, RagStrategy.Expert);
 
         // Assert
-        Assert.Equal("anthropic/claude-sonnet-4.5", decision.ModelId);
-        Assert.DoesNotContain("Budget mode", decision.Reason);
+        decision.ModelId.Should().Be("anthropic/claude-sonnet-4.5");
+        decision.Reason.Should().NotContain("Budget mode");
         mockOverride.Verify(s => s.GetOverrideModel(It.IsAny<string>()), Times.Never);
     }
 
@@ -425,7 +426,7 @@ public class HybridAdaptiveRoutingStrategyTests
         var decision = sut.SelectProvider(user, RagStrategy.Fast);
 
         // Assert - Original model kept when no mapping exists
-        Assert.Equal("meta-llama/llama-3.3-70b-instruct:free", decision.ModelId);
+        decision.ModelId.Should().Be("meta-llama/llama-3.3-70b-instruct:free");
         Assert.DoesNotContain("Budget mode:", decision.Reason); // No downgrade occurred
     }
 
@@ -448,8 +449,8 @@ public class HybridAdaptiveRoutingStrategyTests
         var decision = sut.SelectProvider(user, RagStrategy.Balanced);
 
         // Assert
-        Assert.Equal("Ollama", decision.ProviderName);
-        Assert.Equal("custom-local-model:latest", decision.ModelId);
+        decision.ProviderName.Should().Be("Ollama");
+        decision.ModelId.Should().Be("custom-local-model:latest");
     }
 
     [Fact]
@@ -467,8 +468,8 @@ public class HybridAdaptiveRoutingStrategyTests
         var decision = sut.SelectProvider(user, RagStrategy.Balanced);
 
         // Assert - Should fall back to default
-        Assert.Equal("DeepSeek", decision.ProviderName);
-        Assert.Equal("deepseek-chat", decision.ModelId);
+        decision.ProviderName.Should().Be("DeepSeek");
+        decision.ModelId.Should().Be("deepseek-chat");
     }
 
     #endregion
@@ -487,8 +488,8 @@ public class HybridAdaptiveRoutingStrategyTests
 
         // Assert
         Assert.NotNull(decision.Reason);
-        Assert.Contains("Strategy: PRECISE", decision.Reason);
-        Assert.Contains("Tier: Editor", decision.Reason);
+        decision.Reason.Should().Contain("Strategy: PRECISE");
+        decision.Reason.Should().Contain("Tier: Editor");
     }
 
     [Fact]
@@ -501,7 +502,7 @@ public class HybridAdaptiveRoutingStrategyTests
         var decision = sut.SelectProvider(user: null, RagStrategy.Fast);
 
         // Assert — internal pipeline calls default to User tier
-        Assert.Contains("Tier: User", decision.Reason);
+        decision.Reason.Should().Contain("Tier: User");
     }
 
     #endregion
@@ -519,7 +520,7 @@ public class HybridAdaptiveRoutingStrategyTests
         var decision = sut.SelectProvider(user, RagStrategy.Balanced, region: "eu-west-1");
 
         // Assert
-        Assert.Equal("eu-west-1", decision.UserRegion);
+        decision.UserRegion.Should().Be("eu-west-1");
     }
 
     [Fact]

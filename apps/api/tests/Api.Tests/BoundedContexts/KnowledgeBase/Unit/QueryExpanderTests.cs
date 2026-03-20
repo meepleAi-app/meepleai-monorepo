@@ -4,6 +4,7 @@ using Api.Tests.Constants;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Unit;
 
@@ -31,11 +32,11 @@ public class QueryExpanderTests
 
         var result = await _sut.ExpandAsync("How many players in Catan?", CancellationToken.None);
 
-        Assert.Equal(4, result.Count);
-        Assert.Equal("How many players in Catan?", result[0]);
-        Assert.Contains("v1", result);
-        Assert.Contains("v2", result);
-        Assert.Contains("v3", result);
+        result.Count.Should().Be(4);
+        result[0].Should().Be("How many players in Catan?");
+        result.Should().Contain("v1");
+        result.Should().Contain("v2");
+        result.Should().Contain("v3");
     }
 
     [Fact]
@@ -48,7 +49,7 @@ public class QueryExpanderTests
 
         var result = await _sut.ExpandAsync("What are the rules?", CancellationToken.None);
 
-        Assert.Equal("What are the rules?", result[0]);
+        result[0].Should().Be("What are the rules?");
     }
 
     [Fact]
@@ -61,8 +62,8 @@ public class QueryExpanderTests
 
         var result = await _sut.ExpandAsync("How to win?", CancellationToken.None);
 
-        Assert.Single(result);
-        Assert.Equal("How to win?", result[0]);
+        result.Should().ContainSingle();
+        result[0].Should().Be("How to win?");
     }
 
     [Fact]
@@ -75,8 +76,8 @@ public class QueryExpanderTests
 
         var result = await _sut.ExpandAsync("Setup guide?", CancellationToken.None);
 
-        Assert.Single(result);
-        Assert.Equal("Setup guide?", result[0]);
+        result.Should().ContainSingle();
+        result[0].Should().Be("Setup guide?");
     }
 
     [Fact]
@@ -89,8 +90,8 @@ public class QueryExpanderTests
 
         var result = await _sut.ExpandAsync("Best strategy?", CancellationToken.None);
 
-        Assert.Single(result);
-        Assert.Equal("Best strategy?", result[0]);
+        result.Should().ContainSingle();
+        result[0].Should().Be("Best strategy?");
     }
 
     [Fact]
@@ -119,7 +120,7 @@ public class QueryExpanderTests
         var result = await _sut.ExpandAsync("original", CancellationToken.None);
 
         Assert.Equal(5, result.Count); // original + 4 max
-        Assert.Equal("original", result[0]);
+        result[0].Should().Be("original");
     }
 
     [Fact]

@@ -1,5 +1,6 @@
 using Api.SharedKernel.Enums;
 using Xunit;
+using FluentAssertions;
 using Api.Tests.Constants;
 
 namespace Api.Tests.SharedKernel.Enums;
@@ -15,10 +16,10 @@ public class PerformanceBudgetStatusTests
     public void PerformanceBudgetStatus_ShouldHaveCorrectValues()
     {
         // Assert - Verify enum values match specification
-        Assert.Equal(0, (int)PerformanceBudgetStatus.Pass);
-        Assert.Equal(1, (int)PerformanceBudgetStatus.Warning);
-        Assert.Equal(2, (int)PerformanceBudgetStatus.Fail);
-        Assert.Equal(3, (int)PerformanceBudgetStatus.NoData);
+        ((int)PerformanceBudgetStatus.Pass).Should().Be(0);
+        ((int)PerformanceBudgetStatus.Warning).Should().Be(1);
+        ((int)PerformanceBudgetStatus.Fail).Should().Be(2);
+        ((int)PerformanceBudgetStatus.NoData).Should().Be(3);
     }
 
     [Fact]
@@ -31,8 +32,8 @@ public class PerformanceBudgetStatusTests
         var actualMembers = Enum.GetNames(typeof(PerformanceBudgetStatus));
 
         // Assert
-        Assert.Equal(expectedMembers.Length, actualMembers.Length);
-        Assert.All(expectedMembers, expected => Assert.Contains(expected, actualMembers));
+        actualMembers.Length.Should().Be(expectedMembers.Length);
+        Assert.All(expectedMembers, expected => actualMembers.Should().Contain(expected));
     }
 
     [Theory]
@@ -46,7 +47,7 @@ public class PerformanceBudgetStatusTests
         var result = status.ToString();
 
         // Assert
-        Assert.Equal(expectedName, result);
+        result.Should().Be(expectedName);
     }
 
     [Theory]
@@ -60,14 +61,14 @@ public class PerformanceBudgetStatusTests
         var result = Enum.Parse<PerformanceBudgetStatus>(input);
 
         // Assert
-        Assert.Equal(expected, result);
+        result.Should().Be(expected);
     }
 
     [Fact]
     public void PerformanceBudgetStatus_Parse_WithInvalidValue_ShouldThrowException()
     {
         // Act & Assert
-        Assert.Throws<ArgumentException>(() => Enum.Parse<PerformanceBudgetStatus>("Invalid"));
+        ((Action)(() => Enum.Parse<PerformanceBudgetStatus>("Invalid"))).Should().Throw<ArgumentException>();
     }
 
     [Theory]
@@ -81,24 +82,24 @@ public class PerformanceBudgetStatusTests
         var result = (PerformanceBudgetStatus)value;
 
         // Assert
-        Assert.Equal(expected, result);
+        result.Should().Be(expected);
     }
 
     [Fact]
     public void PerformanceBudgetStatus_ShouldSupportComparison()
     {
         // Assert - Verify logical ordering: Pass < Warning < Fail < NoData
-        Assert.True(PerformanceBudgetStatus.Pass < PerformanceBudgetStatus.Warning);
-        Assert.True(PerformanceBudgetStatus.Warning < PerformanceBudgetStatus.Fail);
-        Assert.True(PerformanceBudgetStatus.Fail < PerformanceBudgetStatus.NoData);
+        (PerformanceBudgetStatus.Pass < PerformanceBudgetStatus.Warning).Should().BeTrue();
+        (PerformanceBudgetStatus.Warning < PerformanceBudgetStatus.Fail).Should().BeTrue();
+        (PerformanceBudgetStatus.Fail < PerformanceBudgetStatus.NoData).Should().BeTrue();
     }
 
     [Fact]
     public void PerformanceBudgetStatus_ShouldBeValueTypeEnum()
     {
         // Assert
-        Assert.True(typeof(PerformanceBudgetStatus).IsEnum);
-        Assert.True(typeof(PerformanceBudgetStatus).IsValueType);
-        Assert.Equal(typeof(int), Enum.GetUnderlyingType(typeof(PerformanceBudgetStatus)));
+        typeof(PerformanceBudgetStatus).IsEnum.Should().BeTrue();
+        typeof(PerformanceBudgetStatus).IsValueType.Should().BeTrue();
+        Enum.GetUnderlyingType(typeof(PerformanceBudgetStatus)).Should().Be(typeof(int));
     }
 }

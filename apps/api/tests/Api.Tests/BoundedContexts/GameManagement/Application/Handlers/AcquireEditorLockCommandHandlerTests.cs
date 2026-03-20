@@ -5,6 +5,7 @@ using Api.BoundedContexts.GameManagement.Application.Queries;
 using Api.BoundedContexts.GameManagement.Application.Services;
 using Moq;
 using Xunit;
+using FluentAssertions;
 using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.GameManagement.Application.Handlers;
@@ -58,7 +59,7 @@ public class AcquireEditorLockCommandHandlerTests
         Assert.NotNull(result);
         Assert.True(result.Success);
         Assert.NotNull(result.LockStatus);
-        Assert.Equal(gameId, result.LockStatus.GameId);
+        result.LockStatus.GameId.Should().Be(gameId);
         Assert.True(result.LockStatus.IsCurrentUserLock);
 
         _lockServiceMock.Verify(
@@ -181,6 +182,6 @@ public class AcquireEditorLockCommandHandlerTests
         // Assert
         Assert.NotNull(result);
         Assert.True(result.Success);
-        Assert.Equal("Lock refreshed", result.Message);
+        result.Message.Should().Be("Lock refreshed");
     }
 }

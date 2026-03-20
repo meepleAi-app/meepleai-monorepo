@@ -10,6 +10,7 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using System.Text;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Quality;
 
@@ -76,7 +77,7 @@ public class RagQualityValidationTests : IAsyncLifetime
     {
         // Arrange
         var questions = LoadQuestionsFromFixture();
-        Assert.Equal(20, questions.Count);
+        questions.Count.Should().Be(20);
 
         var results = new List<(GoldenDatasetTestCase TestCase, QaResponse Response, AccuracyEvaluationResult Result, double Latency)>();
 

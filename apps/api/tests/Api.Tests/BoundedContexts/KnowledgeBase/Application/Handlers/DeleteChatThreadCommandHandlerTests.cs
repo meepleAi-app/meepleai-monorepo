@@ -8,6 +8,7 @@ using Api.Tests.Constants;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Handlers;
 
@@ -96,8 +97,8 @@ public class DeleteChatThreadCommandHandlerTests
         var exception = await Assert.ThrowsAsync<UnauthorizedAccessException>(
             () => _handler.Handle(command, TestContext.Current.CancellationToken));
 
-        Assert.Contains(differentUserId.ToString(), exception.Message);
-        Assert.Contains(threadId.ToString(), exception.Message);
+        exception.Message.Should().Contain(differentUserId.ToString());
+        exception.Message.Should().Contain(threadId.ToString());
 
         _mockRepository.Verify(r => r.DeleteAsync(It.IsAny<ChatThread>(), It.IsAny<CancellationToken>()), Times.Never);
         _mockUnitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);

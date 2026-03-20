@@ -2,6 +2,7 @@ using Api.BoundedContexts.BusinessSimulations.Domain.Entities;
 using Api.BoundedContexts.BusinessSimulations.Domain.Enums;
 using Api.BoundedContexts.BusinessSimulations.Domain.ValueObjects;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.BusinessSimulations.Domain.Entities;
 
@@ -32,15 +33,15 @@ public class LedgerEntryTests
             userId);
 
         // Assert
-        Assert.NotEqual(Guid.Empty, entry.Id);
-        Assert.Equal(date, entry.Date);
-        Assert.Equal(LedgerEntryType.Income, entry.Type);
-        Assert.Equal(LedgerCategory.Subscription, entry.Category);
-        Assert.Equal(amount, entry.Amount);
-        Assert.Equal(LedgerEntrySource.Manual, entry.Source);
-        Assert.Equal("Monthly subscription payment", entry.Description);
-        Assert.Equal(userId, entry.CreatedByUserId);
-        Assert.NotEqual(default, entry.CreatedAt);
+        entry.Id.Should().NotBe(Guid.Empty);
+        entry.Date.Should().Be(date);
+        entry.Type.Should().Be(LedgerEntryType.Income);
+        entry.Category.Should().Be(LedgerCategory.Subscription);
+        entry.Amount.Should().Be(amount);
+        entry.Source.Should().Be(LedgerEntrySource.Manual);
+        entry.Description.Should().Be("Monthly subscription payment");
+        entry.CreatedByUserId.Should().Be(userId);
+        entry.CreatedAt.Should().NotBe(default);
     }
 
     [Fact]
@@ -60,12 +61,12 @@ public class LedgerEntryTests
             "OpenRouter API costs");
 
         // Assert
-        Assert.Equal(LedgerEntryType.Expense, entry.Type);
-        Assert.Equal(LedgerCategory.TokenUsage, entry.Category);
-        Assert.Equal(amount, entry.Amount.Amount);
-        Assert.Equal("EUR", entry.Amount.Currency);
-        Assert.Equal(LedgerEntrySource.Auto, entry.Source);
-        Assert.Null(entry.CreatedByUserId);
+        entry.Type.Should().Be(LedgerEntryType.Expense);
+        entry.Category.Should().Be(LedgerCategory.TokenUsage);
+        entry.Amount.Amount.Should().Be(amount);
+        entry.Amount.Currency.Should().Be("EUR");
+        entry.Source.Should().Be(LedgerEntrySource.Auto);
+        entry.CreatedByUserId.Should().BeNull();
     }
 
     [Fact]
@@ -87,11 +88,11 @@ public class LedgerEntryTests
             "Server hosting costs");
 
         // Assert
-        Assert.Equal(LedgerEntryType.Expense, entry.Type);
-        Assert.Equal(LedgerCategory.Infrastructure, entry.Category);
-        Assert.Equal(LedgerEntrySource.Manual, entry.Source);
-        Assert.Equal(userId, entry.CreatedByUserId);
-        Assert.Equal("Server hosting costs", entry.Description);
+        entry.Type.Should().Be(LedgerEntryType.Expense);
+        entry.Category.Should().Be(LedgerCategory.Infrastructure);
+        entry.Source.Should().Be(LedgerEntrySource.Manual);
+        entry.CreatedByUserId.Should().Be(userId);
+        entry.Description.Should().Be("Server hosting costs");
     }
 
     #endregion
@@ -114,7 +115,7 @@ public class LedgerEntryTests
                 amount,
                 LedgerEntrySource.Auto));
 
-        Assert.Contains("cannot be in the future", ex.Message);
+        ex.Message.Should().Contain("cannot be in the future");
     }
 
     [Fact]
@@ -133,7 +134,7 @@ public class LedgerEntryTests
                 zeroAmount,
                 LedgerEntrySource.Auto));
 
-        Assert.Contains("must be greater than zero", ex.Message);
+        ex.Message.Should().Contain("must be greater than zero");
     }
 
     [Fact]
@@ -170,7 +171,7 @@ public class LedgerEntryTests
                 LedgerEntrySource.Auto,
                 longDescription));
 
-        Assert.Contains("cannot exceed 500 characters", ex.Message);
+        ex.Message.Should().Contain("cannot exceed 500 characters");
     }
 
     [Fact]
@@ -191,7 +192,7 @@ public class LedgerEntryTests
                 LedgerEntrySource.Auto,
                 metadata: longMetadata));
 
-        Assert.Contains("cannot exceed 4000 characters", ex.Message);
+        ex.Message.Should().Contain("cannot exceed 4000 characters");
     }
 
     [Fact]
@@ -211,7 +212,7 @@ public class LedgerEntryTests
                 LedgerEntrySource.Manual,
                 createdByUserId: null));
 
-        Assert.Contains("Manual entries must have a CreatedByUserId", ex.Message);
+        ex.Message.Should().Contain("Manual entries must have a CreatedByUserId");
     }
 
     [Fact]
@@ -231,7 +232,7 @@ public class LedgerEntryTests
                 LedgerEntrySource.Manual,
                 createdByUserId: Guid.Empty));
 
-        Assert.Contains("cannot be empty", ex.Message);
+        ex.Message.Should().Contain("cannot be empty");
     }
 
     #endregion
@@ -252,8 +253,8 @@ public class LedgerEntryTests
         entry.UpdateDescription("Updated description");
 
         // Assert
-        Assert.Equal("Updated description", entry.Description);
-        Assert.NotNull(entry.UpdatedAt);
+        entry.Description.Should().Be("Updated description");
+        entry.UpdatedAt.Should().NotBeNull();
     }
 
     [Fact]
@@ -271,7 +272,7 @@ public class LedgerEntryTests
         var ex = Assert.Throws<ArgumentException>(() =>
             entry.UpdateDescription(longDescription));
 
-        Assert.Contains("cannot exceed 500 characters", ex.Message);
+        ex.Message.Should().Contain("cannot exceed 500 characters");
     }
 
     [Fact]
@@ -289,7 +290,7 @@ public class LedgerEntryTests
         entry.UpdateMetadata(metadata);
 
         // Assert
-        Assert.Equal(metadata, entry.Metadata);
+        entry.Metadata.Should().Be(metadata);
     }
 
     [Fact]
@@ -306,7 +307,7 @@ public class LedgerEntryTests
         entry.UpdateCategory(LedgerCategory.Infrastructure);
 
         // Assert
-        Assert.Equal(LedgerCategory.Infrastructure, entry.Category);
+        entry.Category.Should().Be(LedgerCategory.Infrastructure);
     }
 
     #endregion
@@ -331,7 +332,7 @@ public class LedgerEntryTests
             description);
 
         // Assert
-        Assert.Equal("Test description", entry.Description);
+        entry.Description.Should().Be("Test description");
     }
 
     [Fact]
@@ -351,7 +352,7 @@ public class LedgerEntryTests
             description: null);
 
         // Assert
-        Assert.Null(entry.Description);
+        entry.Description.Should().BeNull();
     }
 
     [Fact]
@@ -367,8 +368,8 @@ public class LedgerEntryTests
                 100m)).ToList();
 
         // Assert
-        Assert.Equal(categories.Length, entries.Count);
-        Assert.All(entries, e => Assert.Equal(LedgerEntrySource.Auto, e.Source));
+        entries.Count.Should().Be(categories.Length);
+        Assert.All(entries, e => e.Source.Should().Be(LedgerEntrySource.Auto));
     }
 
     #endregion

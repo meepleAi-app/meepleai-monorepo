@@ -2,6 +2,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using Xunit.Abstractions;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.Authentication.TestHelpers;
 
@@ -65,8 +66,9 @@ public abstract class TestBase : IDisposable
     /// </summary>
     protected static void AssertDomainException(Action action, string expectedMessagePart)
     {
-        var ex = Xunit.Assert.Throws<Api.SharedKernel.Domain.Exceptions.DomainException>(action);
-        Xunit.Assert.Contains(expectedMessagePart, ex.Message, StringComparison.OrdinalIgnoreCase);
+        var act = action;
+        var ex = act.Should().Throw<Api.SharedKernel.Domain.Exceptions.DomainException>().Which;
+        ex.Message.Should().ContainEquivalentOf(expectedMessagePart);
     }
 
     /// <summary>
@@ -74,8 +76,9 @@ public abstract class TestBase : IDisposable
     /// </summary>
     protected static void AssertValidationException(Action action, string expectedMessagePart)
     {
-        var ex = Xunit.Assert.Throws<Api.SharedKernel.Domain.Exceptions.ValidationException>(action);
-        Xunit.Assert.Contains(expectedMessagePart, ex.Message, StringComparison.OrdinalIgnoreCase);
+        var act = action;
+        var ex = act.Should().Throw<Api.SharedKernel.Domain.Exceptions.ValidationException>().Which;
+        ex.Message.Should().ContainEquivalentOf(expectedMessagePart);
     }
 
     /// <summary>
@@ -85,8 +88,7 @@ public abstract class TestBase : IDisposable
     {
         var allowedDifference = tolerance ?? TestConstants.Timing.VeryShortTimeout;
         var difference = Math.Abs((expected - actual).TotalSeconds);
-        Xunit.Assert.True(difference <= allowedDifference.TotalSeconds,
-            $"Expected {expected:O}, but got {actual:O} (difference: {difference}s)");
+        (difference <= allowedDifference.TotalSeconds).Should().BeTrue($"Expected {expected:O}, but got {actual:O} (difference: {difference}s)");
     }
 
     public void Dispose()
@@ -146,4 +148,3 @@ public abstract class TestBase : IDisposable
         }
     }
 }
-

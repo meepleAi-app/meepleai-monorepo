@@ -4,6 +4,7 @@ using Api.BoundedContexts.GameManagement.Domain.Entities.SessionSnapshot;
 using Api.Tests.Constants;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.GameManagement.Application.Handlers.SessionSnapshot;
 
@@ -56,12 +57,12 @@ public class SessionSnapshotQueryHandlerTests
 
         var result = await handler.Handle(query, TestContext.Current.CancellationToken);
 
-        Assert.Equal(3, result.Count);
-        Assert.Equal(0, result[0].SnapshotIndex);
+        result.Count.Should().Be(3);
+        result[0].SnapshotIndex.Should().Be(0);
         Assert.True(result[0].IsCheckpoint);
-        Assert.Equal(1, result[1].SnapshotIndex);
+        result[1].SnapshotIndex.Should().Be(1);
         Assert.False(result[1].IsCheckpoint);
-        Assert.Equal(2, result[2].SnapshotIndex);
+        result[2].SnapshotIndex.Should().Be(2);
     }
 
     [Fact]
@@ -79,8 +80,8 @@ public class SessionSnapshotQueryHandlerTests
         var handler = new GetSnapshotsQueryHandler(_snapshotRepoMock.Object);
         var result = await handler.Handle(new GetSnapshotsQuery(sessionId), TestContext.Current.CancellationToken);
 
-        Assert.Equal(SnapshotTrigger.ManualSave, result[0].TriggerType);
-        Assert.Equal("Manual save", result[0].TriggerDescription);
+        result[0].TriggerType.Should().Be(SnapshotTrigger.ManualSave);
+        result[0].TriggerDescription.Should().Be("Manual save");
     }
 
     // ========================================================================
@@ -118,9 +119,9 @@ public class SessionSnapshotQueryHandlerTests
         var result = await handler.Handle(query, TestContext.Current.CancellationToken);
 
         Assert.NotNull(result);
-        Assert.Equal(0, result.SnapshotIndex);
-        Assert.Equal(0, result.State.GetProperty("turn").GetInt32());
-        Assert.Equal(0, result.State.GetProperty("score").GetInt32());
+        result.SnapshotIndex.Should().Be(0);
+        result.State.GetProperty("turn").GetInt32().Should().Be(0);
+        result.State.GetProperty("score").GetInt32().Should().Be(0);
     }
 
     [Fact]
@@ -148,9 +149,9 @@ public class SessionSnapshotQueryHandlerTests
         var result = await handler.Handle(query, TestContext.Current.CancellationToken);
 
         Assert.NotNull(result);
-        Assert.Equal(2, result.SnapshotIndex);
-        Assert.Equal(2, result.State.GetProperty("turn").GetInt32());
-        Assert.Equal(25, result.State.GetProperty("score").GetInt32());
+        result.SnapshotIndex.Should().Be(2);
+        result.State.GetProperty("turn").GetInt32().Should().Be(2);
+        result.State.GetProperty("score").GetInt32().Should().Be(25);
     }
 
     [Fact]
@@ -207,9 +208,9 @@ public class SessionSnapshotQueryHandlerTests
         var result = await handler.Handle(new GetSnapshotStateQuery(sessionId, 0), TestContext.Current.CancellationToken);
 
         Assert.NotNull(result);
-        Assert.Equal(0, result.SnapshotIndex);
-        Assert.Equal(3, result.TurnIndex);
-        Assert.Equal(2, result.PhaseIndex);
+        result.SnapshotIndex.Should().Be(0);
+        result.TurnIndex.Should().Be(3);
+        result.PhaseIndex.Should().Be(2);
     }
 
     // ========================================================================

@@ -21,6 +21,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Handlers;
 
@@ -84,11 +85,11 @@ public class CreateUserAgentCommandHandlerTests
 
         // Assert
         Assert.NotNull(result);
-        Assert.Equal("My Agent", result.Name);
-        Assert.Equal("RAG", result.Type);
-        Assert.Equal("HybridSearch", result.StrategyName);
-        Assert.Equal(gameId, result.GameId);
-        Assert.Equal(userId, result.CreatedByUserId);
+        result.Name.Should().Be("My Agent");
+        result.Type.Should().Be("RAG");
+        result.StrategyName.Should().Be("HybridSearch");
+        result.GameId.Should().Be(gameId);
+        result.CreatedByUserId.Should().Be(userId);
 
         _repository.Verify(r => r.AddAsync(
             It.Is<Agent>(a => a.GameId == gameId && a.CreatedByUserId == userId),
@@ -120,7 +121,7 @@ public class CreateUserAgentCommandHandlerTests
         var result = await _handler.Handle(command, CancellationToken.None);
 
         // Assert
-        Assert.Equal("SingleModel", result.StrategyName);
+        result.StrategyName.Should().Be("SingleModel");
     }
 
     [Fact]
@@ -149,7 +150,7 @@ public class CreateUserAgentCommandHandlerTests
         var result = await _handler.Handle(command, CancellationToken.None);
 
         // Assert
-        Assert.Equal("IterativeRAG", result.StrategyName);
+        result.StrategyName.Should().Be("IterativeRAG");
         Assert.True(result.StrategyParameters.Count > 0);
     }
 
@@ -187,9 +188,9 @@ public class CreateUserAgentCommandHandlerTests
         // Act & Assert
         var ex = await Assert.ThrowsAsync<TierLimitExceededException>(
             () => _handler.Handle(command, CancellationToken.None));
-        Assert.Equal("CreateAgent", ex.LimitType);
-        Assert.Equal(1, ex.Current);
-        Assert.Equal(1, ex.Max);
+        ex.LimitType.Should().Be("CreateAgent");
+        ex.Current.Should().Be(1);
+        ex.Max.Should().Be(1);
     }
 
     [Fact]
@@ -248,7 +249,7 @@ public class CreateUserAgentCommandHandlerTests
         var result = await _handler.Handle(command, CancellationToken.None);
 
         // Assert
-        Assert.Equal("My Agent-1", result.Name);
+        result.Name.Should().Be("My Agent-1");
     }
 
     [Fact]
@@ -307,7 +308,7 @@ public class CreateUserAgentCommandHandlerTests
         // Act & Assert
         var ex = await Assert.ThrowsAsync<ConflictException>(
             () => _handler.Handle(command, CancellationToken.None));
-        Assert.Contains("Could not generate unique name", ex.Message);
+        ex.Message.Should().Contain("Could not generate unique name");
     }
 
     private static Agent CreateTestAgent(Guid userId)

@@ -5,6 +5,7 @@ using Microsoft.Extensions.Logging;
 using Moq;
 using StackExchange.Redis;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Services;
 
@@ -48,7 +49,7 @@ public sealed class FreeModelQuotaTrackerTests
 
         // Should set rpd_exhausted, rpd_reset_at, and last_error (3 keys)
         var writeCount = _dbMock.Invocations.Count(i => i.Method.Name == "StringSetAsync");
-        Assert.Equal(3, writeCount);
+        writeCount.Should().Be(3);
     }
 
     [Fact]
@@ -63,7 +64,7 @@ public sealed class FreeModelQuotaTrackerTests
 
         // RPD without reset: rpd_exhausted + last_error = 2 keys
         var writeCount = _dbMock.Invocations.Count(i => i.Method.Name == "StringSetAsync");
-        Assert.Equal(2, writeCount);
+        writeCount.Should().Be(2);
     }
 
     [Fact]
@@ -78,7 +79,7 @@ public sealed class FreeModelQuotaTrackerTests
 
         // RPM: only last_error key (no rpd_exhausted, no rpd_reset_at)
         var writeCount = _dbMock.Invocations.Count(i => i.Method.Name == "StringSetAsync");
-        Assert.Equal(1, writeCount);
+        writeCount.Should().Be(1);
     }
 
     [Fact]
@@ -158,7 +159,7 @@ public sealed class FreeModelQuotaTrackerTests
 
         var result = await _sut.GetLastErrorTypeAsync();
 
-        Assert.Equal(expected, result);
+        result.Should().Be(expected);
     }
 
     [Fact]
@@ -211,7 +212,7 @@ public sealed class FreeModelQuotaTrackerTests
 
         var result = await _sut.GetRpdResetTimeAsync();
 
-        Assert.Equal(expectedUtc, result);
+        result.Should().Be(expectedUtc);
     }
 
     [Fact]

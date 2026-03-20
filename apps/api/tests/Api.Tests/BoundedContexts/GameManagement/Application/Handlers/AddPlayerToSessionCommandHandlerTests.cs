@@ -8,6 +8,7 @@ using Api.SharedKernel.Infrastructure.Persistence;
 using Api.Tests.BoundedContexts.GameManagement.TestHelpers;
 using Moq;
 using Xunit;
+using FluentAssertions;
 using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.GameManagement.Application.Handlers;
@@ -56,7 +57,7 @@ public class AddPlayerToSessionCommandHandlerTests
 
         // Assert
         Assert.NotNull(result);
-        Assert.Equal(3, result.Players.Count);
+        result.Players.Count.Should().Be(3);
         Assert.Contains(result.Players, p => p.PlayerName == "Charlie");
         Assert.Contains(result.Players, p => p.Color == "Green");
 
@@ -93,9 +94,9 @@ public class AddPlayerToSessionCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.Equal(3, result.Players.Count);
+        result.Players.Count.Should().Be(3);
         Assert.Contains(result.Players, p => p.PlayerName == "Diana");
-        Assert.Equal("InProgress", result.Status);
+        result.Status.Should().Be("InProgress");
     }
 
     [Fact]
@@ -124,8 +125,8 @@ public class AddPlayerToSessionCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.Equal(3, result.Players.Count);
-        Assert.Equal("Paused", result.Status);
+        result.Players.Count.Should().Be(3);
+        result.Status.Should().Be("Paused");
     }
 
     [Fact]
@@ -154,8 +155,8 @@ public class AddPlayerToSessionCommandHandlerTests
         // Assert
         var newPlayer = result.Players.FirstOrDefault(p => p.PlayerName == "Charlie");
         Assert.NotNull(newPlayer);
-        Assert.Equal("Purple", newPlayer.Color);
-        Assert.Equal(3, newPlayer.PlayerOrder);
+        newPlayer.Color.Should().Be("Purple");
+        newPlayer.PlayerOrder.Should().Be(3);
     }
 
     [Fact]
@@ -219,7 +220,7 @@ public class AddPlayerToSessionCommandHandlerTests
         var result = await _handler.Handle(command2, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.Equal(4, result.Players.Count);
+        result.Players.Count.Should().Be(4);
     }
     [Fact]
     public async Task Handle_NonExistentSession_ThrowsInvalidOperationException()
@@ -380,7 +381,7 @@ public class AddPlayerToSessionCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.Equal(100, result.Players.Count);
+        result.Players.Count.Should().Be(100);
     }
 
     [Fact]
@@ -440,10 +441,10 @@ public class AddPlayerToSessionCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert - All metadata should be preserved
-        Assert.Equal(sessionId.ToString(), result.Id.ToString());
-        Assert.Equal(gameId.ToString(), result.GameId.ToString());
-        Assert.Equal(originalStartedAt, result.StartedAt);
-        Assert.Equal(originalStatus, result.Status);
+        result.Id.ToString().Should().Be(sessionId.ToString());
+        result.GameId.ToString().Should().Be(gameId.ToString());
+        result.StartedAt.Should().Be(originalStartedAt);
+        result.Status.Should().Be(originalStatus);
     }
     [Fact]
     public async Task Handle_WithCancellationToken_PassesToRepository()

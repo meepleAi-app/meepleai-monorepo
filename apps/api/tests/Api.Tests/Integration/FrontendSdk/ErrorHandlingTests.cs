@@ -434,7 +434,7 @@ public class ErrorHandlingTests : IAsyncLifetime
         {
             // Expected if timeout is too short
             // Frontend SDK should handle timeout errors
-            Assert.True(true, "Request timed out as expected");
+            true.Should().BeTrue("Request timed out as expected");
         }
     }
 }

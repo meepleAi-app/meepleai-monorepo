@@ -7,6 +7,7 @@ using Api.SharedKernel.Infrastructure.Persistence;
 using Api.Tests.BoundedContexts.GameManagement.TestHelpers;
 using Moq;
 using Xunit;
+using FluentAssertions;
 using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.GameManagement.Application.Handlers;
@@ -53,8 +54,8 @@ public class AbandonGameSessionCommandHandlerTests
 
         // Assert
         Assert.NotNull(result);
-        Assert.Equal("Abandoned", result.Status);
-        Assert.Equal(sessionId.ToString(), result.Id.ToString());
+        result.Status.Should().Be("Abandoned");
+        result.Id.ToString().Should().Be(sessionId.ToString());
         Assert.NotNull(result.CompletedAt);
 
         _sessionRepositoryMock.Verify(
@@ -87,8 +88,8 @@ public class AbandonGameSessionCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.Equal("Abandoned", result.Status);
-        Assert.Contains("Abandoned: Emergency came up", result.Notes);
+        result.Status.Should().Be("Abandoned");
+        result.Notes.Should().Contain("Abandoned: Emergency came up");
     }
 
     [Fact]
@@ -113,7 +114,7 @@ public class AbandonGameSessionCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.Equal("Abandoned", result.Status);
+        result.Status.Should().Be("Abandoned");
         // Notes should be null or not contain "Abandoned:" prefix
         Assert.True(string.IsNullOrEmpty(result.Notes) || !result.Notes.Contains("Abandoned:"));
     }
@@ -141,9 +142,9 @@ public class AbandonGameSessionCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.Equal("Abandoned", result.Status);
-        Assert.Contains("Started well", result.Notes);
-        Assert.Contains("Abandoned: Power outage", result.Notes);
+        result.Status.Should().Be("Abandoned");
+        result.Notes.Should().Contain("Started well");
+        result.Notes.Should().Contain("Abandoned: Power outage");
     }
 
     [Fact]
@@ -170,7 +171,7 @@ public class AbandonGameSessionCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.Equal("Abandoned", result.Status);
+        result.Status.Should().Be("Abandoned");
     }
 
     [Fact]
@@ -194,8 +195,8 @@ public class AbandonGameSessionCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.Equal("Abandoned", result.Status);
-        Assert.Contains("Not enough players showed up", result.Notes);
+        result.Status.Should().Be("Abandoned");
+        result.Notes.Should().Contain("Not enough players showed up");
     }
 
     [Fact]
@@ -221,8 +222,8 @@ public class AbandonGameSessionCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.Equal("Abandoned", result.Status);
-        Assert.Equal(4, result.Players.Count);
+        result.Status.Should().Be("Abandoned");
+        result.Players.Count.Should().Be(4);
     }
     [Fact]
     public async Task Handle_NonExistentSession_ThrowsInvalidOperationException()
@@ -324,7 +325,7 @@ public class AbandonGameSessionCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.Equal("Abandoned", result.Status);
+        result.Status.Should().Be("Abandoned");
         // Empty string reason should not be added to notes
         Assert.True(string.IsNullOrEmpty(result.Notes) || !result.Notes.Contains("Abandoned:"));
     }
@@ -355,10 +356,10 @@ public class AbandonGameSessionCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert - All metadata should be preserved
-        Assert.Equal(sessionId.ToString(), result.Id.ToString());
-        Assert.Equal(gameId.ToString(), result.GameId.ToString());
-        Assert.Equal(originalStartedAt, result.StartedAt);
-        Assert.Equal(originalPlayerCount, result.Players.Count);
+        result.Id.ToString().Should().Be(sessionId.ToString());
+        result.GameId.ToString().Should().Be(gameId.ToString());
+        result.StartedAt.Should().Be(originalStartedAt);
+        result.Players.Count.Should().Be(originalPlayerCount);
         Assert.NotNull(result.CompletedAt); // Now completed
         Assert.Null(result.WinnerName); // No winner for abandoned session
     }

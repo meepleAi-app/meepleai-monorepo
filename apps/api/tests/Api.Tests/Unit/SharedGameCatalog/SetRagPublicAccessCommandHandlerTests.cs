@@ -8,6 +8,7 @@ using Api.Tests.Constants;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.Unit.SharedGameCatalog;
 
@@ -49,7 +50,7 @@ public sealed class SetRagPublicAccessCommandHandlerTests
         await handler.Handle(command, CancellationToken.None);
 
         // Assert
-        Assert.Equal(isRagPublic, game.IsRagPublic);
+        game.IsRagPublic.Should().Be(isRagPublic);
         _mockRepo.Verify(r => r.Update(game), Times.Once);
         _mockUow.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
@@ -66,7 +67,7 @@ public sealed class SetRagPublicAccessCommandHandlerTests
         var command = new SetRagPublicAccessCommand(gameId, true);
 
         // Act & Assert
-        await Assert.ThrowsAsync<NotFoundException>(() => handler.Handle(command, CancellationToken.None));
+        await ((Func<Task>)(() => handler.Handle(command, CancellationToken.None))).Should().ThrowAsync<NotFoundException>();
     }
 
     [Fact]
@@ -75,7 +76,7 @@ public sealed class SetRagPublicAccessCommandHandlerTests
         // Arrange — game starts with IsRagPublic = true
         var game = CreateTestSharedGame();
         game.SetRagPublicAccess(true);
-        Assert.True(game.IsRagPublic);
+        game.IsRagPublic.Should().BeTrue();
 
         _mockRepo.Setup(r => r.GetByIdAsync(game.Id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(game);
@@ -88,7 +89,7 @@ public sealed class SetRagPublicAccessCommandHandlerTests
         await handler.Handle(command, CancellationToken.None);
 
         // Assert
-        Assert.False(game.IsRagPublic);
+        game.IsRagPublic.Should().BeFalse();
     }
 
     #region Helpers

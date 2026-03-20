@@ -6,6 +6,7 @@ using Microsoft.Extensions.Logging;
 using Moq;
 using StackExchange.Redis;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Services;
 
@@ -60,7 +61,7 @@ public sealed class RedisRateLimitingHealthMonitorTests
     {
         var monitor = CreateMonitor();
 
-        Assert.Equal(5, monitor.CheckInterval.TotalSeconds);
+        monitor.CheckInterval.TotalSeconds.Should().Be(5);
     }
 
     [Fact]
@@ -68,7 +69,7 @@ public sealed class RedisRateLimitingHealthMonitorTests
     {
         var monitor = CreateMonitor();
 
-        Assert.Equal("soft", monitor.FailureMode);
+        monitor.FailureMode.Should().Be("soft");
     }
 
     [Fact]
@@ -78,7 +79,7 @@ public sealed class RedisRateLimitingHealthMonitorTests
         var monitor = new RedisRateLimitingHealthMonitor(
             _redisMock.Object, _scopeFactoryMock.Object, emptyConfig, _loggerMock.Object);
 
-        Assert.Equal("soft", monitor.FailureMode);
+        monitor.FailureMode.Should().Be("soft");
     }
 
     [Fact]
@@ -88,7 +89,7 @@ public sealed class RedisRateLimitingHealthMonitorTests
         var monitor = new RedisRateLimitingHealthMonitor(
             _redisMock.Object, _scopeFactoryMock.Object, emptyConfig, _loggerMock.Object);
 
-        Assert.Equal(30, monitor.CheckInterval.TotalSeconds);
+        monitor.CheckInterval.TotalSeconds.Should().Be(30);
     }
 
     [Fact]

@@ -6,6 +6,7 @@ using Microsoft.Extensions.Logging;
 using Moq;
 using StackExchange.Redis;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Services;
 
@@ -206,9 +207,9 @@ public sealed class OpenRouterRateLimitTrackerTests
         var status = await sut.GetCurrentStatusAsync("openrouter");
 
         // Assert
-        Assert.Equal(80, status.CurrentRpm);
-        Assert.Equal(200, status.LimitRpm);
-        Assert.Equal(1000, status.CurrentTpm);
+        status.CurrentRpm.Should().Be(80);
+        status.LimitRpm.Should().Be(200);
+        status.CurrentTpm.Should().Be(1000);
         Assert.Equal(0.4, status.UtilizationPercent, precision: 5); // 80/200 = 0.4
         Assert.False(status.IsThrottled);
     }
@@ -244,7 +245,7 @@ public sealed class OpenRouterRateLimitTrackerTests
 
         // Assert
         Assert.True(status.IsThrottled);
-        Assert.Equal(1.0, status.UtilizationPercent, precision: 5);
+        status.UtilizationPercent.Should().BeApproximately(1.0, precision: 5);
     }
 
     [Fact]
@@ -271,7 +272,7 @@ public sealed class OpenRouterRateLimitTrackerTests
         var status = await sut.GetCurrentStatusAsync("openrouter");
 
         // Assert — limit unknown → utilization = 0, not throttled
-        Assert.Equal(0.0, status.UtilizationPercent);
+        status.UtilizationPercent.Should().Be(0.0);
         Assert.False(status.IsThrottled);
     }
 
@@ -289,9 +290,9 @@ public sealed class OpenRouterRateLimitTrackerTests
         var status = await sut.GetCurrentStatusAsync("openrouter");
 
         // Assert — graceful degradation returns zero-valued status
-        Assert.Equal(0, status.CurrentRpm);
-        Assert.Equal(0, status.LimitRpm);
-        Assert.Equal(0.0, status.UtilizationPercent);
+        status.CurrentRpm.Should().Be(0);
+        status.LimitRpm.Should().Be(0);
+        status.UtilizationPercent.Should().Be(0.0);
         Assert.False(status.IsThrottled);
     }
 
@@ -327,7 +328,7 @@ public sealed class OpenRouterRateLimitTrackerTests
         var result = await sut.IsApproachingLimitAsync("openrouter", thresholdPercent);
 
         // Assert
-        Assert.Equal(expectedApproaching, result);
+        result.Should().Be(expectedApproaching);
     }
 
     [Fact]

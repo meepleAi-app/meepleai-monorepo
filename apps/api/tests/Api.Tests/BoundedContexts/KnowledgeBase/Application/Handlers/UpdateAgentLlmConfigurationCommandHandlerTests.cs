@@ -16,6 +16,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Handlers;
 
@@ -93,9 +94,9 @@ public class UpdateAgentLlmConfigurationCommandHandlerTests
 
         // Assert
         Assert.NotNull(result);
-        Assert.Equal("meta-llama/llama-3.1-70b-instruct:free", result.LlmModel);
-        Assert.Equal(0.7m, result.Temperature);
-        Assert.Equal(4096, result.MaxTokens);
+        result.LlmModel.Should().Be("meta-llama/llama-3.1-70b-instruct:free");
+        result.Temperature.Should().Be(0.7m);
+        result.MaxTokens.Should().Be(4096);
         Assert.True(result.IsCurrent);
 
         // Old config should be deactivated
@@ -151,7 +152,7 @@ public class UpdateAgentLlmConfigurationCommandHandlerTests
         var result = await _handler.Handle(command, CancellationToken.None);
 
         // Assert
-        Assert.Equal("meta-llama/llama-3.3-70b-instruct:free", result.LlmModel);
+        result.LlmModel.Should().Be("meta-llama/llama-3.3-70b-instruct:free");
     }
 
     [Fact]
@@ -199,9 +200,9 @@ public class UpdateAgentLlmConfigurationCommandHandlerTests
         var result = await _handler.Handle(command, CancellationToken.None);
 
         // Assert
-        Assert.Equal("anthropic/claude-3.5-sonnet", result.LlmModel);
-        Assert.Equal(1.5m, result.Temperature);
-        Assert.Equal(4096, result.MaxTokens);
+        result.LlmModel.Should().Be("anthropic/claude-3.5-sonnet");
+        result.Temperature.Should().Be(1.5m);
+        result.MaxTokens.Should().Be(4096);
     }
 
     [Fact]
@@ -242,9 +243,9 @@ public class UpdateAgentLlmConfigurationCommandHandlerTests
         var result = await _handler.Handle(command, CancellationToken.None);
 
         // Assert — temperature changed, others kept defaults
-        Assert.Equal(1.2m, result.Temperature);
-        Assert.Equal("meta-llama/llama-3.3-70b-instruct:free", result.LlmModel);
-        Assert.Equal(2048, result.MaxTokens);
+        result.Temperature.Should().Be(1.2m);
+        result.LlmModel.Should().Be("meta-llama/llama-3.3-70b-instruct:free");
+        result.MaxTokens.Should().Be(2048);
     }
 
     [Fact]

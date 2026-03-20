@@ -7,6 +7,7 @@ using Api.SharedKernel.Infrastructure.Persistence;
 using Api.Tests.Constants;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Handlers;
 
@@ -47,8 +48,8 @@ public class UpdateChatThreadTitleCommandHandlerTests
 
         // Assert
         Assert.NotNull(result);
-        Assert.Equal(threadId, result.Id);
-        Assert.Equal(newTitle, result.Title);
+        result.Id.Should().Be(threadId);
+        result.Title.Should().Be(newTitle);
 
         _mockRepository.Verify(r => r.UpdateAsync(thread, It.IsAny<CancellationToken>()), Times.Once);
         _mockUnitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
@@ -68,7 +69,7 @@ public class UpdateChatThreadTitleCommandHandlerTests
         // Act & Assert
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(
             () => _handler.Handle(command, TestContext.Current.CancellationToken));
-        Assert.Contains("not found", exception.Message);
+        exception.Message.Should().Contain("not found");
     }
 
     [Fact]

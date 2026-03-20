@@ -73,11 +73,11 @@ public class ParseLedgerMessageCommandHandlerTests
         var result = await _handler.Handle(command, TestCancellationToken);
 
         // Assert
-        Assert.Equal("ScoreChange", result.ChangeType);
-        Assert.Equal(message, result.OriginalMessage);
-        Assert.Equal(0.9f, result.Confidence);
-        Assert.Contains("score", result.ExtractedState.Keys);
-        Assert.Equal(5, result.ExtractedState["score"]);
+        result.ChangeType.Should().Be("ScoreChange");
+        result.OriginalMessage.Should().Be(message);
+        result.Confidence.Should().Be(0.9f);
+        result.ExtractedState.Keys.Should().Contain("score");
+        result.ExtractedState["score"].Should().Be(5);
         Assert.Empty(result.Conflicts);
     }
 
@@ -122,9 +122,9 @@ public class ParseLedgerMessageCommandHandlerTests
 
         // Assert
         Assert.NotEmpty(result.Conflicts);
-        Assert.Single(result.Conflicts);
-        Assert.Equal("score", result.Conflicts[0].PropertyName);
-        Assert.Equal("High", result.Conflicts[0].Severity);
+        result.Conflicts.Should().ContainSingle();
+        result.Conflicts[0].PropertyName.Should().Be("score");
+        result.Conflicts[0].Severity.Should().Be("High");
     }
 
     [Fact]

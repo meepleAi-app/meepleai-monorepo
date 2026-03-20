@@ -4,6 +4,7 @@ using Api.BoundedContexts.Administration.Application.Queries.Operations;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.Unit.Administration.Operations;
 
@@ -43,9 +44,9 @@ public sealed class GetServiceHealthQueryHandlerTests
         var result = await _handler.Handle(query, CancellationToken.None);
 
         // Assert
-        Assert.Equal("Healthy", result.OverallStatus);
-        Assert.Equal(3, result.Services.Count);
-        Assert.All(result.Services, s => Assert.Equal("Healthy", s.Status));
+        result.OverallStatus.Should().Be("Healthy");
+        result.Services.Count.Should().Be(3);
+        Assert.All(result.Services, s => s.Status.Should().Be("Healthy"));
     }
 
     [Fact]
@@ -68,10 +69,10 @@ public sealed class GetServiceHealthQueryHandlerTests
         var result = await _handler.Handle(query, CancellationToken.None);
 
         // Assert
-        Assert.Equal("Unhealthy", result.OverallStatus);
+        result.OverallStatus.Should().Be("Unhealthy");
         var postgresService = result.Services.First(s => s.ServiceName == "PostgreSQL");
-        Assert.Equal("Unhealthy", postgresService.Status);
-        Assert.True(postgresService.IsCritical);
+        postgresService.Status.Should().Be("Unhealthy");
+        postgresService.IsCritical.Should().BeTrue();
     }
 
     [Fact]
@@ -94,7 +95,7 @@ public sealed class GetServiceHealthQueryHandlerTests
         var result = await _handler.Handle(query, CancellationToken.None);
 
         // Assert
-        Assert.Equal("Degraded", result.OverallStatus);
+        result.OverallStatus.Should().Be("Degraded");
     }
 
     [Fact]
@@ -116,8 +117,8 @@ public sealed class GetServiceHealthQueryHandlerTests
         var result = await _handler.Handle(query, CancellationToken.None);
 
         // Assert
-        Assert.Single(result.Services);
-        Assert.Equal("Database connection successful", result.Services[0].Description);
+        result.Services.Should().ContainSingle();
+        result.Services[0].Description.Should().Be("Database connection successful");
     }
 
     private static HealthReport CreateHealthReport(

@@ -2,6 +2,7 @@ using Api.BoundedContexts.GameManagement.Domain.ValueObjects;
 using Api.SharedKernel.Domain.Exceptions;
 using Api.Tests.Constants;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.GameManagement.Domain.ValueObjects;
 
@@ -13,10 +14,10 @@ public class RoundScoreTests
     public void Constructor_ValidParameters_CreatesSuccessfully()
     {
         var score = new RoundScore(Guid.NewGuid(), 1, "points", 10, DateTime.UtcNow, "pts");
-        Assert.Equal(1, score.Round);
-        Assert.Equal("points", score.Dimension);
-        Assert.Equal(10, score.Value);
-        Assert.Equal("pts", score.Unit);
+        score.Round.Should().Be(1);
+        score.Dimension.Should().Be("points");
+        score.Value.Should().Be(10);
+        score.Unit.Should().Be("pts");
     }
 
     [Fact]
@@ -58,8 +59,8 @@ public class RoundScoreTests
     public void Constructor_TrimsDimensionAndUnit()
     {
         var score = new RoundScore(Guid.NewGuid(), 1, "  points  ", 10, DateTime.UtcNow, "  pts  ");
-        Assert.Equal("points", score.Dimension);
-        Assert.Equal("pts", score.Unit);
+        score.Dimension.Should().Be("points");
+        score.Unit.Should().Be("pts");
     }
 
     [Fact]
@@ -69,14 +70,14 @@ public class RoundScoreTests
         var now = DateTime.UtcNow;
         var s1 = new RoundScore(playerId, 1, "points", 10, now);
         var s2 = new RoundScore(playerId, 1, "points", 10, now);
-        Assert.Equal(s1, s2);
+        s2.Should().Be(s1);
     }
 
     [Fact]
     public void ToString_WithUnit_FormatsCorrectly()
     {
         var score = new RoundScore(Guid.NewGuid(), 1, "points", 10, DateTime.UtcNow, "pts");
-        Assert.Contains("10 pts", score.ToString());
+        score.ToString().Should().Contain("10 pts");
     }
 
     [Fact]
@@ -84,7 +85,7 @@ public class RoundScoreTests
     {
         var score = new RoundScore(Guid.NewGuid(), 1, "points", 10, DateTime.UtcNow);
         var str = score.ToString();
-        Assert.Contains("10", str);
-        Assert.DoesNotContain("pts", str);
+        str.Should().Contain("10");
+        str.Should().NotContain("pts");
     }
 }

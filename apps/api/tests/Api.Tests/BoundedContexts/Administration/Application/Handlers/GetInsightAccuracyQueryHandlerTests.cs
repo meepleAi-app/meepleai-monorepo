@@ -9,6 +9,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Time.Testing;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.Administration.Application.Handlers;
 
@@ -40,11 +41,11 @@ public sealed class GetInsightAccuracyQueryHandlerTests : IDisposable
         var result = await _handler.Handle(new GetInsightAccuracyQuery(), CancellationToken.None);
 
         // Assert
-        Assert.Equal(0, result.TotalFeedback);
-        Assert.Equal(0, result.RelevantCount);
-        Assert.Equal(0, result.AccuracyPercentage);
-        Assert.Empty(result.ByType);
-        Assert.Equal(_timeProvider.GetUtcNow().UtcDateTime, result.CalculatedAt);
+        result.TotalFeedback.Should().Be(0);
+        result.RelevantCount.Should().Be(0);
+        result.AccuracyPercentage.Should().Be(0);
+        result.ByType.Should().BeEmpty();
+        result.CalculatedAt.Should().Be(_timeProvider.GetUtcNow().UtcDateTime);
     }
 
     [Fact]
@@ -57,9 +58,9 @@ public sealed class GetInsightAccuracyQueryHandlerTests : IDisposable
         var result = await _handler.Handle(new GetInsightAccuracyQuery(), CancellationToken.None);
 
         // Assert
-        Assert.Equal(5, result.TotalFeedback);
-        Assert.Equal(5, result.RelevantCount);
-        Assert.Equal(100.0, result.AccuracyPercentage);
+        result.TotalFeedback.Should().Be(5);
+        result.RelevantCount.Should().Be(5);
+        result.AccuracyPercentage.Should().Be(100.0);
     }
 
     [Fact]
@@ -72,9 +73,9 @@ public sealed class GetInsightAccuracyQueryHandlerTests : IDisposable
         var result = await _handler.Handle(new GetInsightAccuracyQuery(), CancellationToken.None);
 
         // Assert
-        Assert.Equal(4, result.TotalFeedback);
-        Assert.Equal(0, result.RelevantCount);
-        Assert.Equal(0, result.AccuracyPercentage);
+        result.TotalFeedback.Should().Be(4);
+        result.RelevantCount.Should().Be(0);
+        result.AccuracyPercentage.Should().Be(0);
     }
 
     [Fact]
@@ -88,9 +89,9 @@ public sealed class GetInsightAccuracyQueryHandlerTests : IDisposable
         var result = await _handler.Handle(new GetInsightAccuracyQuery(), CancellationToken.None);
 
         // Assert
-        Assert.Equal(4, result.TotalFeedback);
-        Assert.Equal(3, result.RelevantCount);
-        Assert.Equal(75.0, result.AccuracyPercentage);
+        result.TotalFeedback.Should().Be(4);
+        result.RelevantCount.Should().Be(3);
+        result.AccuracyPercentage.Should().Be(75.0);
     }
 
     [Fact]
@@ -106,25 +107,25 @@ public sealed class GetInsightAccuracyQueryHandlerTests : IDisposable
         var result = await _handler.Handle(new GetInsightAccuracyQuery(), CancellationToken.None);
 
         // Assert
-        Assert.Equal(7, result.TotalFeedback);
-        Assert.Equal(5, result.RelevantCount);
-        Assert.Equal(3, result.ByType.Count);
+        result.TotalFeedback.Should().Be(7);
+        result.RelevantCount.Should().Be(5);
+        result.ByType.Count.Should().Be(3);
 
         // Ordered by total descending
         var backlog = result.ByType.First(t => t.Type == "Backlog");
-        Assert.Equal(4, backlog.Total);
-        Assert.Equal(3, backlog.Relevant);
-        Assert.Equal(75.0, backlog.AccuracyPercentage);
+        backlog.Total.Should().Be(4);
+        backlog.Relevant.Should().Be(3);
+        backlog.AccuracyPercentage.Should().Be(75.0);
 
         var streak = result.ByType.First(t => t.Type == "Streak");
-        Assert.Equal(2, streak.Total);
-        Assert.Equal(2, streak.Relevant);
-        Assert.Equal(100.0, streak.AccuracyPercentage);
+        streak.Total.Should().Be(2);
+        streak.Relevant.Should().Be(2);
+        streak.AccuracyPercentage.Should().Be(100.0);
 
         var recommendation = result.ByType.First(t => t.Type == "Recommendation");
-        Assert.Equal(1, recommendation.Total);
-        Assert.Equal(0, recommendation.Relevant);
-        Assert.Equal(0, recommendation.AccuracyPercentage);
+        recommendation.Total.Should().Be(1);
+        recommendation.Relevant.Should().Be(0);
+        recommendation.AccuracyPercentage.Should().Be(0);
     }
 
     [Fact]
@@ -139,10 +140,10 @@ public sealed class GetInsightAccuracyQueryHandlerTests : IDisposable
         var result = await _handler.Handle(new GetInsightAccuracyQuery(), CancellationToken.None);
 
         // Assert: Ordered by total count descending
-        Assert.Equal(3, result.ByType.Count);
-        Assert.Equal("Backlog", result.ByType[0].Type);
-        Assert.Equal("Streak", result.ByType[1].Type);
-        Assert.Equal("Achievement", result.ByType[2].Type);
+        result.ByType.Count.Should().Be(3);
+        result.ByType[0].Type.Should().Be("Backlog");
+        result.ByType[1].Type.Should().Be("Streak");
+        result.ByType[2].Type.Should().Be("Achievement");
     }
 
     [Fact]
@@ -156,7 +157,7 @@ public sealed class GetInsightAccuracyQueryHandlerTests : IDisposable
         var result = await _handler.Handle(new GetInsightAccuracyQuery(), CancellationToken.None);
 
         // Assert: Rounded to 1 decimal
-        Assert.Equal(33.3, result.AccuracyPercentage);
+        result.AccuracyPercentage.Should().Be(33.3);
     }
 
     [Fact]
@@ -170,7 +171,7 @@ public sealed class GetInsightAccuracyQueryHandlerTests : IDisposable
         var result = await _handler.Handle(new GetInsightAccuracyQuery(), CancellationToken.None);
 
         // Assert
-        Assert.Equal(specificTime.UtcDateTime, result.CalculatedAt);
+        result.CalculatedAt.Should().Be(specificTime.UtcDateTime);
     }
 
     [Fact]
@@ -184,10 +185,10 @@ public sealed class GetInsightAccuracyQueryHandlerTests : IDisposable
         var result = await _handler.Handle(new GetInsightAccuracyQuery(), CancellationToken.None);
 
         // Assert: Single group for consistent casing
-        Assert.Single(result.ByType);
-        Assert.Equal("Backlog", result.ByType[0].Type);
-        Assert.Equal(3, result.ByType[0].Total);
-        Assert.Equal(3, result.TotalFeedback);
+        result.ByType.Should().ContainSingle();
+        result.ByType[0].Type.Should().Be("Backlog");
+        result.ByType[0].Total.Should().Be(3);
+        result.TotalFeedback.Should().Be(3);
     }
 
     private async Task SeedFeedbackAsync(string insightType, bool isRelevant, int count)

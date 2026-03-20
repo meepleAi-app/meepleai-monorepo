@@ -4,6 +4,7 @@ using Api.Infrastructure;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
+using FluentAssertions;
 using Api.Tests.Constants;
 
 namespace Api.Tests.Infrastructure;
@@ -34,7 +35,7 @@ public class SecretsHelperTests
             var result = SecretsHelper.GetSecretOrValue(config, "MY_SECRET", NullLogger.Instance);
 
             // Assert
-            Assert.Equal("test-secret-value", result);
+            result.Should().Be("test-secret-value");
         }
         finally
         {
@@ -57,7 +58,7 @@ public class SecretsHelperTests
         var result = SecretsHelper.GetSecretOrValue(config, "MY_SECRET", NullLogger.Instance);
 
         // Assert
-        Assert.Equal("direct-value", result);
+        result.Should().Be("direct-value");
     }
 
     [Fact]
@@ -123,7 +124,7 @@ public class SecretsHelperTests
         var result = SecretsHelper.GetSecretOrValue(config, "MY_SECRET", NullLogger.Instance, required: false);
 
         // Assert
-        Assert.Null(result);
+        result.Should().BeNull();
     }
 
     [Fact]
@@ -147,7 +148,7 @@ public class SecretsHelperTests
             var result = SecretsHelper.GetSecretOrValue(config, "MY_SECRET", NullLogger.Instance);
 
             // Assert - should use file value, not direct
-            Assert.Equal("file-value", result);
+            result.Should().Be("file-value");
         }
         finally
         {
@@ -189,11 +190,11 @@ public class SecretsHelperTests
             var connectionString = SecretsHelper.BuildPostgresConnectionString(config, NullLogger.Instance);
 
             // Assert
-            Assert.Contains("Host=testhost", connectionString);
-            Assert.Contains("Port=5433", connectionString);
-            Assert.Contains("Database=testdb", connectionString);
-            Assert.Contains("Username=testuser", connectionString);
-            Assert.Contains("Password=secure-db-password", connectionString);
+            connectionString.Should().Contain("Host=testhost");
+            connectionString.Should().Contain("Port=5433");
+            connectionString.Should().Contain("Database=testdb");
+            connectionString.Should().Contain("Username=testuser");
+            connectionString.Should().Contain("Password=secure-db-password");
         }
         finally
         {
@@ -237,11 +238,11 @@ public class SecretsHelperTests
 
             // Assert - should use defaults (Issue #2152: default username is now 'postgres')
             // Note: Default host is 'localhost' for local development; Docker sets POSTGRES_HOST=postgres
-            Assert.Contains("Host=localhost", connectionString);
-            Assert.Contains("Port=5432", connectionString);
-            Assert.Contains("Database=meepleai", connectionString);
-            Assert.Contains("Username=postgres", connectionString);
-            Assert.Contains("Password=password", connectionString);
+            connectionString.Should().Contain("Host=localhost");
+            connectionString.Should().Contain("Port=5432");
+            connectionString.Should().Contain("Database=meepleai");
+            connectionString.Should().Contain("Username=postgres");
+            connectionString.Should().Contain("Password=password");
         }
         finally
         {
@@ -269,7 +270,7 @@ public class SecretsHelperTests
             var result = SecretsHelper.BuildPostgresConnectionString(config, NullLogger.Instance);
 
             // Assert - should return null when no password configured (line 140 in SecretsHelper.cs)
-            Assert.Null(result);
+            result.Should().BeNull();
         }
         finally
         {

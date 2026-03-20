@@ -2,6 +2,7 @@ using Api.BoundedContexts.GameManagement.Domain.Entities.GameNightPlaylist;
 using Api.Middleware.Exceptions;
 using Api.Tests.Constants;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.GameManagement.Domain.Entities.GameNightPlaylist;
 
@@ -18,9 +19,9 @@ public class GameNightPlaylistTests
         var playlist = Api.BoundedContexts.GameManagement.Domain.Entities.GameNightPlaylist.GameNightPlaylist
             .Create("Friday Night Games", _userId);
 
-        Assert.NotEqual(Guid.Empty, playlist.Id);
-        Assert.Equal("Friday Night Games", playlist.Name);
-        Assert.Equal(_userId, playlist.CreatorUserId);
+        playlist.Id.Should().NotBe(Guid.Empty);
+        playlist.Name.Should().Be("Friday Night Games");
+        playlist.CreatorUserId.Should().Be(_userId);
         Assert.Null(playlist.ScheduledDate);
         Assert.False(playlist.IsShared);
         Assert.Null(playlist.ShareToken);
@@ -36,7 +37,7 @@ public class GameNightPlaylistTests
         var playlist = Api.BoundedContexts.GameManagement.Domain.Entities.GameNightPlaylist.GameNightPlaylist
             .Create("Game Night", _userId, date);
 
-        Assert.Equal(date, playlist.ScheduledDate);
+        playlist.ScheduledDate.Should().Be(date);
     }
 
     [Fact]
@@ -70,7 +71,7 @@ public class GameNightPlaylistTests
         var playlist = Api.BoundedContexts.GameManagement.Domain.Entities.GameNightPlaylist.GameNightPlaylist
             .Create("  Trimmed Name  ", _userId);
 
-        Assert.Equal("Trimmed Name", playlist.Name);
+        playlist.Name.Should().Be("Trimmed Name");
     }
 
     [Fact]
@@ -79,7 +80,7 @@ public class GameNightPlaylistTests
         var playlist = Api.BoundedContexts.GameManagement.Domain.Entities.GameNightPlaylist.GameNightPlaylist
             .Create("Test", _userId);
 
-        Assert.Single(playlist.DomainEvents);
+        playlist.DomainEvents.Should().ContainSingle();
     }
 
     #endregion
@@ -92,21 +93,21 @@ public class GameNightPlaylistTests
         var playlist = CreatePlaylist();
         playlist.UpdateName("New Name");
 
-        Assert.Equal("New Name", playlist.Name);
+        playlist.Name.Should().Be("New Name");
     }
 
     [Fact]
     public void UpdateName_WithEmptyName_ThrowsArgumentException()
     {
         var playlist = CreatePlaylist();
-        Assert.Throws<ArgumentException>(() => playlist.UpdateName(""));
+        ((Action)(() => playlist.UpdateName(""))).Should().Throw<ArgumentException>();
     }
 
     [Fact]
     public void UpdateName_WithLongName_ThrowsArgumentException()
     {
         var playlist = CreatePlaylist();
-        Assert.Throws<ArgumentException>(() => playlist.UpdateName(new string('A', 201)));
+        ((Action)(() => playlist.UpdateName(new string('A', 201)))).Should().Throw<ArgumentException>();
     }
 
     #endregion
@@ -120,7 +121,7 @@ public class GameNightPlaylistTests
         var date = DateTime.UtcNow.AddDays(7);
         playlist.UpdateScheduledDate(date);
 
-        Assert.Equal(date, playlist.ScheduledDate);
+        playlist.ScheduledDate.Should().Be(date);
     }
 
     [Fact]
@@ -145,9 +146,9 @@ public class GameNightPlaylistTests
 
         playlist.AddGame(gameId, 1);
 
-        Assert.Single(playlist.Games);
-        Assert.Equal(gameId, playlist.Games[0].SharedGameId);
-        Assert.Equal(1, playlist.Games[0].Position);
+        playlist.Games.Should().ContainSingle();
+        playlist.Games[0].SharedGameId.Should().Be(gameId);
+        playlist.Games[0].Position.Should().Be(1);
     }
 
     [Fact]
@@ -162,7 +163,7 @@ public class GameNightPlaylistTests
         playlist.AddGame(gameId2, 2);
         playlist.AddGame(gameId3, 3);
 
-        Assert.Equal(3, playlist.Games.Count);
+        playlist.Games.Count.Should().Be(3);
     }
 
     [Fact]
@@ -190,21 +191,21 @@ public class GameNightPlaylistTests
 
         playlist.AddGame(gameId, 1);
 
-        Assert.Throws<ConflictException>(() => playlist.AddGame(gameId, 2));
+        ((Action)(() => playlist.AddGame(gameId, 2))).Should().Throw<ConflictException>();
     }
 
     [Fact]
     public void AddGame_EmptyGameId_ThrowsArgumentException()
     {
         var playlist = CreatePlaylist();
-        Assert.Throws<ArgumentException>(() => playlist.AddGame(Guid.Empty, 1));
+        ((Action)(() => playlist.AddGame(Guid.Empty, 1))).Should().Throw<ArgumentException>();
     }
 
     [Fact]
     public void AddGame_ZeroPosition_ThrowsArgumentException()
     {
         var playlist = CreatePlaylist();
-        Assert.Throws<ArgumentException>(() => playlist.AddGame(Guid.NewGuid(), 0));
+        ((Action)(() => playlist.AddGame(Guid.NewGuid(), 0))).Should().Throw<ArgumentException>();
     }
 
     #endregion
@@ -225,7 +226,7 @@ public class GameNightPlaylistTests
 
         playlist.RemoveGame(gameId2);
 
-        Assert.Equal(2, playlist.Games.Count);
+        playlist.Games.Count.Should().Be(2);
         var game3 = playlist.Games.First(g => g.SharedGameId == gameId3);
         Assert.Equal(2, game3.Position); // Shifted down
     }
@@ -234,14 +235,14 @@ public class GameNightPlaylistTests
     public void RemoveGame_NonExistent_ThrowsNotFoundException()
     {
         var playlist = CreatePlaylist();
-        Assert.Throws<NotFoundException>(() => playlist.RemoveGame(Guid.NewGuid()));
+        ((Action)(() => playlist.RemoveGame(Guid.NewGuid()))).Should().Throw<NotFoundException>();
     }
 
     [Fact]
     public void RemoveGame_EmptyId_ThrowsArgumentException()
     {
         var playlist = CreatePlaylist();
-        Assert.Throws<ArgumentException>(() => playlist.RemoveGame(Guid.Empty));
+        ((Action)(() => playlist.RemoveGame(Guid.Empty))).Should().Throw<ArgumentException>();
     }
 
     #endregion
@@ -266,9 +267,9 @@ public class GameNightPlaylistTests
         var g2 = playlist.Games.First(g => g.SharedGameId == gameId2);
         var g3 = playlist.Games.First(g => g.SharedGameId == gameId3);
 
-        Assert.Equal(2, g1.Position);
-        Assert.Equal(3, g2.Position);
-        Assert.Equal(1, g3.Position);
+        g1.Position.Should().Be(2);
+        g2.Position.Should().Be(3);
+        g3.Position.Should().Be(1);
     }
 
     [Fact]
@@ -297,7 +298,7 @@ public class GameNightPlaylistTests
     public void ReorderGames_Null_ThrowsArgumentNullException()
     {
         var playlist = CreatePlaylist();
-        Assert.Throws<ArgumentNullException>(() => playlist.ReorderGames(null!));
+        ((Action)(() => playlist.ReorderGames(null!))).Should().Throw<ArgumentNullException>();
     }
 
     #endregion
@@ -312,7 +313,7 @@ public class GameNightPlaylistTests
 
         Assert.NotNull(token);
         Assert.NotEmpty(token);
-        Assert.Equal(token, playlist.ShareToken);
+        playlist.ShareToken.Should().Be(token);
         Assert.True(playlist.IsShared);
     }
 
@@ -323,8 +324,8 @@ public class GameNightPlaylistTests
         var token1 = playlist.GenerateShareToken();
         var token2 = playlist.GenerateShareToken();
 
-        Assert.NotEqual(token1, token2);
-        Assert.Equal(token2, playlist.ShareToken);
+        token2.Should().NotBe(token1);
+        playlist.ShareToken.Should().Be(token2);
     }
 
     [Fact]
@@ -358,7 +359,7 @@ public class GameNightPlaylistTests
         var playlist = CreatePlaylist();
         playlist.SoftDelete();
 
-        Assert.Throws<ConflictException>(() => playlist.SoftDelete());
+        ((Action)(() => playlist.SoftDelete())).Should().Throw<ConflictException>();
     }
 
     #endregion
@@ -377,7 +378,7 @@ public class GameNightPlaylistTests
 
         playlist.RestoreGames(games);
 
-        Assert.Equal(2, playlist.Games.Count);
+        playlist.Games.Count.Should().Be(2);
     }
 
     #endregion

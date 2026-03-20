@@ -4,6 +4,7 @@ using Api.BoundedContexts.GameManagement.Domain.Entities.ToolState;
 using Api.Tests.Constants;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.GameManagement.Application.Handlers.ToolState;
 
@@ -41,7 +42,7 @@ public class ToolStateQueryHandlerTests
 
         var result = await handler.Handle(query, TestContext.Current.CancellationToken);
 
-        Assert.Equal(2, result.Count);
+        result.Count.Should().Be(2);
         Assert.Contains(result, r => r.ToolName == "Dice");
         Assert.Contains(result, r => r.ToolName == "HP");
     }
@@ -90,8 +91,8 @@ public class ToolStateQueryHandlerTests
         var result = await handler.Handle(query, TestContext.Current.CancellationToken);
 
         Assert.NotNull(result);
-        Assert.Equal("Battle Dice", result.ToolName);
-        Assert.Equal(ToolType.Dice, result.ToolType);
+        result.ToolName.Should().Be("Battle Dice");
+        result.ToolType.Should().Be(ToolType.Dice);
     }
 
     [Fact]

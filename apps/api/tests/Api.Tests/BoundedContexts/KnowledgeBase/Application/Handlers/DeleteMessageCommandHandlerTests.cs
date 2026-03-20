@@ -10,6 +10,7 @@ using Api.Tests.Constants;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Handlers;
 
@@ -62,8 +63,8 @@ public class DeleteMessageCommandHandlerTests
 
         // Assert
         Assert.NotNull(result);
-        Assert.Equal(threadId, result.Id);
-        Assert.Single(result.Messages);
+        result.Id.Should().Be(threadId);
+        result.Messages.Should().ContainSingle();
         Assert.True(result.Messages[0].IsDeleted);
 
         _mockRepository.Verify(r => r.UpdateAsync(thread, It.IsAny<CancellationToken>()), Times.Once);
@@ -87,7 +88,7 @@ public class DeleteMessageCommandHandlerTests
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(
             () => _handler.Handle(command, TestContext.Current.CancellationToken));
 
-        Assert.Contains(threadId.ToString(), exception.Message);
+        exception.Message.Should().Contain(threadId.ToString());
 
         _mockRepository.Verify(r => r.UpdateAsync(It.IsAny<ChatThread>(), It.IsAny<CancellationToken>()), Times.Never);
         _mockUnitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
@@ -140,7 +141,7 @@ public class DeleteMessageCommandHandlerTests
 
         // Assert
         Assert.NotNull(result);
-        Assert.Single(result.Messages);
+        result.Messages.Should().ContainSingle();
         Assert.True(result.Messages[0].IsDeleted);
 
         _mockRepository.Verify(r => r.UpdateAsync(thread, It.IsAny<CancellationToken>()), Times.Once);
@@ -166,8 +167,8 @@ public class DeleteMessageCommandHandlerTests
         var exception = await Assert.ThrowsAsync<KeyNotFoundException>(
             () => _handler.Handle(command, TestContext.Current.CancellationToken));
 
-        Assert.Contains(nonExistentMessageId.ToString(), exception.Message);
-        Assert.Contains(threadId.ToString(), exception.Message);
+        exception.Message.Should().Contain(nonExistentMessageId.ToString());
+        exception.Message.Should().Contain(threadId.ToString());
 
         _mockRepository.Verify(r => r.UpdateAsync(It.IsAny<ChatThread>(), It.IsAny<CancellationToken>()), Times.Never);
         _mockUnitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
@@ -197,7 +198,7 @@ public class DeleteMessageCommandHandlerTests
 
         // Assert
         Assert.NotNull(result);
-        Assert.Single(result.Messages);
+        result.Messages.Should().ContainSingle();
         Assert.True(result.Messages[0].IsDeleted);
 
         // Should not update or save since already deleted

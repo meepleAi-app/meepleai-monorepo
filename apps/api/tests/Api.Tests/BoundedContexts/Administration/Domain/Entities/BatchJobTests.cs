@@ -1,6 +1,7 @@
 using Api.BoundedContexts.Administration.Domain.Entities;
 using Api.BoundedContexts.Administration.Domain.Enums;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.Administration.Domain.Entities;
 
@@ -21,12 +22,12 @@ public sealed class BatchJobTests
         var job = BatchJob.Create(type, parameters, createdBy);
 
         // Assert
-        Assert.NotEqual(Guid.Empty, job.Id);
-        Assert.Equal(type, job.Type);
-        Assert.Equal(JobStatus.Queued, job.Status);
-        Assert.Equal(parameters, job.Parameters);
-        Assert.Equal(0, job.Progress);
-        Assert.Equal(createdBy, job.CreatedBy);
+        job.Id.Should().NotBe(Guid.Empty);
+        job.Type.Should().Be(type);
+        job.Status.Should().Be(JobStatus.Queued);
+        job.Parameters.Should().Be(parameters);
+        job.Progress.Should().Be(0);
+        job.CreatedBy.Should().Be(createdBy);
     }
 
     [Fact]
@@ -39,9 +40,9 @@ public sealed class BatchJobTests
         job.Start();
 
         // Assert
-        Assert.Equal(JobStatus.Running, job.Status);
-        Assert.NotNull(job.StartedAt);
-        Assert.Equal(0, job.Progress);
+        job.Status.Should().Be(JobStatus.Running);
+        job.StartedAt.Should().NotBeNull();
+        job.Progress.Should().Be(0);
     }
 
     [Fact]
@@ -55,10 +56,10 @@ public sealed class BatchJobTests
         job.Complete(resultData: "{\"cleaned\": 100}", resultSummary: "Done", outputFileUrl: null);
 
         // Assert
-        Assert.Equal(JobStatus.Completed, job.Status);
-        Assert.Equal(100, job.Progress);
-        Assert.NotNull(job.CompletedAt);
-        Assert.Equal("Done", job.ResultSummary);
+        job.Status.Should().Be(JobStatus.Completed);
+        job.Progress.Should().Be(100);
+        job.CompletedAt.Should().NotBeNull();
+        job.ResultSummary.Should().Be("Done");
     }
 
     [Fact]
@@ -72,10 +73,10 @@ public sealed class BatchJobTests
         job.Fail("Connection timeout", "stack trace");
 
         // Assert
-        Assert.Equal(JobStatus.Failed, job.Status);
-        Assert.Equal("Connection timeout", job.ErrorMessage);
-        Assert.Equal(1, job.RetryCount);
-        Assert.NotNull(job.CompletedAt);
+        job.Status.Should().Be(JobStatus.Failed);
+        job.ErrorMessage.Should().Be("Connection timeout");
+        job.RetryCount.Should().Be(1);
+        job.CompletedAt.Should().NotBeNull();
     }
 
     [Fact]
@@ -90,10 +91,10 @@ public sealed class BatchJobTests
         job.Retry();
 
         // Assert
-        Assert.Equal(JobStatus.Queued, job.Status);
-        Assert.Equal(0, job.Progress);
-        Assert.Null(job.StartedAt);
-        Assert.Null(job.ErrorMessage);
+        job.Status.Should().Be(JobStatus.Queued);
+        job.Progress.Should().Be(0);
+        job.StartedAt.Should().BeNull();
+        job.ErrorMessage.Should().BeNull();
     }
 
     [Fact]
@@ -106,7 +107,7 @@ public sealed class BatchJobTests
         job.Cancel();
 
         // Assert
-        Assert.Equal(JobStatus.Cancelled, job.Status);
-        Assert.NotNull(job.CompletedAt);
+        job.Status.Should().Be(JobStatus.Cancelled);
+        job.CompletedAt.Should().NotBeNull();
     }
 }

@@ -4,6 +4,7 @@ using Api.Models;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using FluentAssertions;
 using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Domain.Services;
@@ -71,7 +72,7 @@ public class RagAccuracyEvaluatorTests
 
         // Assert
         Assert.True(result.KeywordsMatch);
-        Assert.Equal(1.0, result.KeywordMatchRate);
+        result.KeywordMatchRate.Should().Be(1.0);
     }
 
     [Fact]
@@ -101,7 +102,7 @@ public class RagAccuracyEvaluatorTests
 
         // Assert
         Assert.True(result.KeywordsMatch);
-        Assert.Equal(1.0, result.KeywordMatchRate);
+        result.KeywordMatchRate.Should().Be(1.0);
     }
 
     [Fact]
@@ -128,7 +129,7 @@ public class RagAccuracyEvaluatorTests
 
         // Assert
         Assert.True(result.CitationsValid);
-        Assert.Equal(1.0, result.CitationValidityRate);
+        result.CitationValidityRate.Should().Be(1.0);
     }
 
     [Fact]
@@ -155,7 +156,7 @@ public class RagAccuracyEvaluatorTests
 
         // Assert
         Assert.False(result.CitationsValid);
-        Assert.Equal(0.0, result.CitationValidityRate);
+        result.CitationValidityRate.Should().Be(0.0);
     }
 
     [Fact]
@@ -182,7 +183,7 @@ public class RagAccuracyEvaluatorTests
 
         // Assert
         Assert.False(result.CitationsValid);
-        Assert.Equal(0.0, result.CitationValidityRate);
+        result.CitationValidityRate.Should().Be(0.0);
     }
 
     [Fact]
@@ -197,7 +198,7 @@ public class RagAccuracyEvaluatorTests
 
         // Assert
         Assert.True(result.CitationsValid);
-        Assert.Equal(1.0, result.CitationValidityRate);
+        result.CitationValidityRate.Should().Be(1.0);
     }
 
     [Fact]
@@ -292,7 +293,7 @@ public class RagAccuracyEvaluatorTests
         var result = await _evaluator.EvaluateTestCaseAsync(testCase, response, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.Equal(expectedConfidence, result.ConfidenceScore);
+        result.ConfidenceScore.Should().Be(expectedConfidence);
     }
 
     [Fact]
@@ -306,9 +307,9 @@ public class RagAccuracyEvaluatorTests
         var result = await _evaluator.EvaluateTestCaseAsync(testCase, response, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.Equal("hard", result.Difficulty);
-        Assert.Equal("edge_cases", result.Category);
-        Assert.Equal("test-game", result.GameId);
+        result.Difficulty.Should().Be("hard");
+        result.Category.Should().Be("edge_cases");
+        result.GameId.Should().Be("test-game");
     }
 
     [Fact]
@@ -348,8 +349,8 @@ public class RagAccuracyEvaluatorTests
         var metrics = _evaluator.CalculateAggregatedMetrics(results);
 
         // Assert
-        Assert.Equal(3, metrics.TruePositives);
-        Assert.Equal(0, metrics.FalseNegatives);
+        metrics.TruePositives.Should().Be(3);
+        metrics.FalseNegatives.Should().Be(0);
         Assert.Equal(1.0, metrics.Accuracy); // 100% correct
         Assert.True(metrics.MeetsBaselineThreshold);
     }
@@ -386,8 +387,8 @@ public class RagAccuracyEvaluatorTests
         var metrics = _evaluator.CalculateAggregatedMetrics(results);
 
         // Assert
-        Assert.Equal(0, metrics.Total);
-        Assert.Equal(0.0, metrics.Accuracy);
+        metrics.Total.Should().Be(0);
+        metrics.Accuracy.Should().Be(0.0);
     }
 
     [Fact]
@@ -411,12 +412,12 @@ public class RagAccuracyEvaluatorTests
 
         var easyMetrics = metricsByDifficulty["easy"];
         Assert.Equal(2, easyMetrics.TruePositives); // Both easy cases correct
-        Assert.Equal(1.0, easyMetrics.Accuracy);
+        easyMetrics.Accuracy.Should().Be(1.0);
 
         var hardMetrics = metricsByDifficulty["hard"];
         Assert.Equal(0, hardMetrics.TruePositives); // Hard case incorrect
-        Assert.Equal(1, hardMetrics.FalseNegatives);
-        Assert.Equal(0.0, hardMetrics.Accuracy);
+        hardMetrics.FalseNegatives.Should().Be(1);
+        hardMetrics.Accuracy.Should().Be(0.0);
     }
 
     [Fact]
@@ -439,8 +440,8 @@ public class RagAccuracyEvaluatorTests
         Assert.True(metricsByCategory.ContainsKey("setup"));
 
         var gameplayMetrics = metricsByCategory["gameplay"];
-        Assert.Equal(2, gameplayMetrics.TruePositives);
-        Assert.Equal(1.0, gameplayMetrics.Accuracy);
+        gameplayMetrics.TruePositives.Should().Be(2);
+        gameplayMetrics.Accuracy.Should().Be(1.0);
     }
 
     [Fact]
@@ -463,14 +464,14 @@ public class RagAccuracyEvaluatorTests
         Assert.True(metricsByGame.ContainsKey("game2"));
 
         var game1Metrics = metricsByGame["game1"];
-        Assert.Equal(2, game1Metrics.TruePositives);
-        Assert.Equal(1.0, game1Metrics.Accuracy);
+        game1Metrics.TruePositives.Should().Be(2);
+        game1Metrics.Accuracy.Should().Be(1.0);
     }
 
     [Fact]
     public void Constructor_WithNullLogger_ThrowsArgumentNullException()
     {
         // Act & Assert
-        Assert.Throws<ArgumentNullException>(() => new RagAccuracyEvaluator(null!));
+        ((Action)(() => new RagAccuracyEvaluator(null!))).Should().Throw<ArgumentNullException>();
     }
 }

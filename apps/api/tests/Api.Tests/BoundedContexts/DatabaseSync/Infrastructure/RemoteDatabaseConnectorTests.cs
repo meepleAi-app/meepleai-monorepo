@@ -6,6 +6,7 @@ using Api.Tests.Constants;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.DatabaseSync.Infrastructure;
 
@@ -47,7 +48,7 @@ public class RemoteDatabaseConnectorTests
 
         var ex = await Assert.ThrowsAsync<InvalidOperationException>(
             () => connector.OpenConnectionAsync());
-        Assert.Contains("Error", ex.Message);
+        ex.Message.Should().Contain("Error");
     }
 
     [Fact]
@@ -64,7 +65,7 @@ public class RemoteDatabaseConnectorTests
 
         var ex = await Assert.ThrowsAsync<InvalidOperationException>(
             () => connector.OpenConnectionAsync());
-        Assert.Contains("Opening", ex.Message);
+        ex.Message.Should().Contain("Opening");
     }
 
     [Fact]

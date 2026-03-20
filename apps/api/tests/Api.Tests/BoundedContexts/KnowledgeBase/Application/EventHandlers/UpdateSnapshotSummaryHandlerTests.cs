@@ -6,6 +6,7 @@ using Api.Tests.Constants;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.EventHandlers;
 
@@ -94,7 +95,7 @@ public sealed class UpdateSnapshotSummaryHandlerTests
 
         // Assert
         Assert.NotNull(capturedSnapshot);
-        Assert.Equal(TestSummary, capturedSnapshot!.AgentConversationSummary);
+        capturedSnapshot!.AgentConversationSummary.Should().Be(TestSummary);
     }
 
     [Fact]

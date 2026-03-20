@@ -6,6 +6,7 @@ using Api.BoundedContexts.GameManagement.Domain.Repositories;
 using Api.Tests.BoundedContexts.GameManagement.TestHelpers;
 using Moq;
 using Xunit;
+using FluentAssertions;
 using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.GameManagement.Application.Handlers;
@@ -61,18 +62,18 @@ public class GetAllGamesQueryHandlerTests
 
         // Assert
         Assert.NotNull(result);
-        Assert.Equal(3, result.Total);
-        Assert.Equal(3, result.Games.Count);
+        result.Total.Should().Be(3);
+        result.Games.Count.Should().Be(3);
 
-        Assert.Equal("Catan", result.Games[0].Title);
-        Assert.Equal("Kosmos", result.Games[0].Publisher);
-        Assert.Equal(1995, result.Games[0].YearPublished);
+        result.Games[0].Title.Should().Be("Catan");
+        result.Games[0].Publisher.Should().Be("Kosmos");
+        result.Games[0].YearPublished.Should().Be(1995);
 
-        Assert.Equal("Pandemic", result.Games[1].Title);
-        Assert.Equal(2, result.Games[1].MinPlayers);
-        Assert.Equal(4, result.Games[1].MaxPlayers);
+        result.Games[1].Title.Should().Be("Pandemic");
+        result.Games[1].MinPlayers.Should().Be(2);
+        result.Games[1].MaxPlayers.Should().Be(4);
 
-        Assert.Equal("Ticket to Ride", result.Games[2].Title);
+        result.Games[2].Title.Should().Be("Ticket to Ride");
 
         _gameRepositoryMock.Verify(
             r => r.GetPaginatedAsync(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>(), It.IsAny<CancellationToken>()),
@@ -101,8 +102,8 @@ public class GetAllGamesQueryHandlerTests
 
         // Assert
         Assert.NotNull(result);
-        Assert.Single(result.Games);
-        Assert.Equal("Chess", result.Games[0].Title);
+        result.Games.Should().ContainSingle();
+        result.Games[0].Title.Should().Be("Chess");
     }
 
     [Fact]
@@ -123,7 +124,7 @@ public class GetAllGamesQueryHandlerTests
         // Assert
         Assert.NotNull(result);
         Assert.Empty(result.Games);
-        Assert.Equal(0, result.Total);
+        result.Total.Should().Be(0);
     }
 
     [Fact]
@@ -160,19 +161,19 @@ public class GetAllGamesQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.Equal(3, result.Games.Count);
+        result.Games.Count.Should().Be(3);
 
         // Minimal game
-        Assert.Equal("Simple Game", result.Games[0].Title);
+        result.Games[0].Title.Should().Be("Simple Game");
         Assert.Null(result.Games[0].Publisher);
         Assert.Null(result.Games[0].YearPublished);
 
         // Game with publisher
-        Assert.Equal("Published Game", result.Games[1].Title);
-        Assert.Equal("Publisher", result.Games[1].Publisher);
+        result.Games[1].Title.Should().Be("Published Game");
+        result.Games[1].Publisher.Should().Be("Publisher");
 
         // Complete game
-        Assert.Equal("Complete Game", result.Games[2].Title);
+        result.Games[2].Title.Should().Be("Complete Game");
         Assert.NotNull(result.Games[2].Publisher);
         Assert.NotNull(result.Games[2].YearPublished);
         Assert.NotNull(result.Games[2].MinPlayers);
@@ -207,9 +208,9 @@ public class GetAllGamesQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.Equal(3, result.Games.Count);
-        Assert.Equal(13, result.Games[0].BggId);
-        Assert.Equal(30549, result.Games[1].BggId);
+        result.Games.Count.Should().Be(3);
+        result.Games[0].BggId.Should().Be(13);
+        result.Games[1].BggId.Should().Be(30549);
         Assert.Null(result.Games[2].BggId);
     }
     [Fact]
@@ -235,7 +236,7 @@ public class GetAllGamesQueryHandlerTests
 
         // Assert
         Assert.NotNull(result);
-        Assert.Single(result.Games);
+        result.Games.Should().ContainSingle();
 
         _gameRepositoryMock.Verify(
             r => r.GetPaginatedAsync(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>(), cancellationToken),
@@ -272,16 +273,16 @@ public class GetAllGamesQueryHandlerTests
 
         // Assert
         var dto = result.Games[0];
-        Assert.Equal(gameId, dto.Id);
-        Assert.Equal("Wingspan", dto.Title);
-        Assert.Equal("Stonemaier Games", dto.Publisher);
-        Assert.Equal(2019, dto.YearPublished);
-        Assert.Equal(1, dto.MinPlayers);
-        Assert.Equal(5, dto.MaxPlayers);
-        Assert.Equal(40, dto.MinPlayTimeMinutes);
-        Assert.Equal(70, dto.MaxPlayTimeMinutes);
-        Assert.Equal(266192, dto.BggId);
-        Assert.NotEqual(default(DateTime), dto.CreatedAt);
+        dto.Id.Should().Be(gameId);
+        dto.Title.Should().Be("Wingspan");
+        dto.Publisher.Should().Be("Stonemaier Games");
+        dto.YearPublished.Should().Be(2019);
+        dto.MinPlayers.Should().Be(1);
+        dto.MaxPlayers.Should().Be(5);
+        dto.MinPlayTimeMinutes.Should().Be(40);
+        dto.MaxPlayTimeMinutes.Should().Be(70);
+        dto.BggId.Should().Be(266192);
+        dto.CreatedAt.Should().NotBe(default(DateTime));
     }
 }
 

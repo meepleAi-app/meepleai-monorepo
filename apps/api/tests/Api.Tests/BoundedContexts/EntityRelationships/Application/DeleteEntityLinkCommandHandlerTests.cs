@@ -8,6 +8,7 @@ using Api.Tests.Constants;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.EntityRelationships.Application;
 
@@ -57,8 +58,8 @@ public class DeleteEntityLinkCommandHandlerTests
         var command = new DeleteEntityLinkCommand(link.Id, _ownerId, IsAdmin: false);
         await _handler.Handle(command, TestContext.Current.CancellationToken);
 
-        Assert.True(link.IsDeleted);
-        Assert.NotNull(link.DeletedAt);
+        link.IsDeleted.Should().BeTrue();
+        link.DeletedAt.Should().NotBeNull();
         _unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
 
@@ -72,7 +73,7 @@ public class DeleteEntityLinkCommandHandlerTests
         var command = new DeleteEntityLinkCommand(link.Id, _ownerId, IsAdmin: true);
         await _handler.Handle(command, TestContext.Current.CancellationToken);
 
-        Assert.True(link.IsDeleted);
+        link.IsDeleted.Should().BeTrue();
         _unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
 
@@ -86,7 +87,7 @@ public class DeleteEntityLinkCommandHandlerTests
         var command = new DeleteEntityLinkCommand(link.Id, _ownerId, IsAdmin: true);
         await _handler.Handle(command, TestContext.Current.CancellationToken);
 
-        Assert.True(link.IsDeleted);
+        link.IsDeleted.Should().BeTrue();
     }
 
     // ── Not found ─────────────────────────────────────────────────────────────
@@ -118,7 +119,7 @@ public class DeleteEntityLinkCommandHandlerTests
         await Assert.ThrowsAsync<UnauthorizedEntityLinkAccessException>(() =>
             _handler.Handle(command, TestContext.Current.CancellationToken));
 
-        Assert.False(link.IsDeleted);
+        link.IsDeleted.Should().BeFalse();
         _unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
     }
 
@@ -133,7 +134,7 @@ public class DeleteEntityLinkCommandHandlerTests
         await Assert.ThrowsAsync<UnauthorizedEntityLinkAccessException>(() =>
             _handler.Handle(command, TestContext.Current.CancellationToken));
 
-        Assert.False(link.IsDeleted);
+        link.IsDeleted.Should().BeFalse();
     }
 
     // ── Null guard ────────────────────────────────────────────────────────────

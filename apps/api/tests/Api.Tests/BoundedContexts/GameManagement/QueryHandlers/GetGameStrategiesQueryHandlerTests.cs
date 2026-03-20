@@ -7,6 +7,7 @@ using Api.Models;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.GameManagement.QueryHandlers;
 
@@ -49,19 +50,19 @@ public sealed class GetGameStrategiesQueryHandlerTests
 
         // Assert
         Assert.NotNull(result);
-        Assert.Equal(2, result.Total);
-        Assert.Equal(2, result.Items.Count);
-        Assert.Equal(1, result.Page);
-        Assert.Equal(10, result.PageSize);
+        result.Total.Should().Be(2);
+        result.Items.Count.Should().Be(2);
+        result.Page.Should().Be(1);
+        result.PageSize.Should().Be(10);
 
         var first = result.Items[0];
-        Assert.Equal("Opening Moves", first.Title);
-        Assert.Equal("Control the center early.", first.Content);
-        Assert.Equal("Alice", first.Author);
-        Assert.Equal(42, first.Upvotes);
-        Assert.Equal(gameId, first.GameId);
-        Assert.Contains("opening", first.Tags);
-        Assert.Contains("tactics", first.Tags);
+        first.Title.Should().Be("Opening Moves");
+        first.Content.Should().Be("Control the center early.");
+        first.Author.Should().Be("Alice");
+        first.Upvotes.Should().Be(42);
+        first.GameId.Should().Be(gameId);
+        first.Tags.Should().Contain("opening");
+        first.Tags.Should().Contain("tactics");
     }
 
     [Fact]
@@ -80,7 +81,7 @@ public sealed class GetGameStrategiesQueryHandlerTests
 
         // Assert
         Assert.NotNull(result);
-        Assert.Equal(0, result.Total);
+        result.Total.Should().Be(0);
         Assert.Empty(result.Items);
     }
 
@@ -112,8 +113,8 @@ public sealed class GetGameStrategiesQueryHandlerTests
         var result = await _sut.Handle(query, CancellationToken.None);
 
         // Assert
-        Assert.Equal(expectedPage, result.Page);
-        Assert.Equal(expectedSize, result.PageSize);
+        result.Page.Should().Be(expectedPage);
+        result.PageSize.Should().Be(expectedSize);
         _repositoryMock.Verify(
             r => r.GetBySharedGameIdAsync(gameId, expectedPage, expectedSize, It.IsAny<CancellationToken>()),
             Times.Once);

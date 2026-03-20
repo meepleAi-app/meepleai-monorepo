@@ -6,6 +6,7 @@ using Api.Tests.Constants;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Handlers.RagDashboard;
 
@@ -66,7 +67,7 @@ public class GetStrategyMetricsQueryHandlerTests
 
         // Assert
         Assert.NotNull(result);
-        Assert.Equal(strategyId, result.StrategyId);
+        result.StrategyId.Should().Be(strategyId);
     }
 
     [Fact]

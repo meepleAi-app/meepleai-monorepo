@@ -8,6 +8,7 @@ using Api.Tests.Constants;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Handlers.AbTest;
 
@@ -56,11 +57,11 @@ public sealed class CreateAbTestCommandHandlerTests
         var result = await sut.Handle(command, CancellationToken.None);
 
         Assert.NotNull(result);
-        Assert.Equal("What are the rules?", result.Query);
-        Assert.Equal("InProgress", result.Status);
-        Assert.Equal(2, result.Variants.Count);
-        Assert.Equal("A", result.Variants[0].Label);
-        Assert.Equal("B", result.Variants[1].Label);
+        result.Query.Should().Be("What are the rules?");
+        result.Status.Should().Be("InProgress");
+        result.Variants.Count.Should().Be(2);
+        result.Variants[0].Label.Should().Be("A");
+        result.Variants[1].Label.Should().Be("B");
 
         _repoMock.Verify(r => r.AddAsync(It.IsAny<AbTestSession>(), It.IsAny<CancellationToken>()), Times.Once);
     }
@@ -170,7 +171,7 @@ public sealed class CreateAbTestCommandHandlerTests
 
         var result = await sut.Handle(command, CancellationToken.None);
 
-        Assert.Equal("Cached response", result.Variants[0].Response);
+        result.Variants[0].Response.Should().Be("Cached response");
 
         // m1 should NOT call LLM (used cache), m2 should call LLM
         _llmServiceMock.Verify(l => l.GenerateCompletionWithModelAsync(

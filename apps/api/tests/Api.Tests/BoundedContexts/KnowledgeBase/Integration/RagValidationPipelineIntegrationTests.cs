@@ -12,6 +12,7 @@ using Microsoft.Extensions.Logging;
 using Moq;
 using Npgsql;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Integration;
 
@@ -284,7 +285,7 @@ public class RagValidationPipelineIntegrationTests : IAsyncLifetime
         // Assert
         _output("Validating result...");
         Assert.NotNull(result);
-        Assert.Equal(3, result.TotalLayers);
+        result.TotalLayers.Should().Be(3);
         // Citation validation may fail if VectorDocument not found in repo query
         Assert.True(result.LayersPassed >= 1, $"At least 1 layer should pass, got {result.LayersPassed}");
 
@@ -322,7 +323,7 @@ public class RagValidationPipelineIntegrationTests : IAsyncLifetime
 
         // Assert
         Assert.False(result.IsValid);
-        Assert.Equal(RagValidationSeverity.Critical, result.Severity);
+        result.Severity.Should().Be(RagValidationSeverity.Critical);
 
         _output($"✓ Test 3 passed: Low confidence rejected");
     }

@@ -11,6 +11,7 @@ using Api.Tests.Constants;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.GameManagement.Application.Handlers;
 
@@ -62,10 +63,10 @@ public sealed class UploadSessionAttachmentCommandHandlerTests : IDisposable
         var command = CreateCommand(sessionId, playerId);
         var result = await _sut.Handle(command, CancellationToken.None);
 
-        Assert.Equal(sessionId, result.SessionId);
-        Assert.Equal(playerId, result.PlayerId);
-        Assert.Equal(AttachmentType.BoardState, result.AttachmentType);
-        Assert.Equal("image/jpeg", result.ContentType);
+        result.SessionId.Should().Be(sessionId);
+        result.PlayerId.Should().Be(playerId);
+        result.AttachmentType.Should().Be(AttachmentType.BoardState);
+        result.ContentType.Should().Be("image/jpeg");
     }
 
     [Fact]
@@ -235,7 +236,7 @@ public sealed class UploadSessionAttachmentCommandHandlerTests : IDisposable
 
         var ex = await Assert.ThrowsAsync<InvalidOperationException>(
             () => _sut.Handle(command, CancellationToken.None));
-        Assert.Contains("S3 down", ex.Message);
+        ex.Message.Should().Contain("S3 down");
     }
 
     #endregion

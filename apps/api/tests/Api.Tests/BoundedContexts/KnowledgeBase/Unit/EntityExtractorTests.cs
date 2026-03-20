@@ -4,6 +4,7 @@ using Api.Tests.Constants;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Unit;
 
@@ -41,15 +42,15 @@ public class EntityExtractorTests
             Guid.NewGuid(), "Catan", "Catan is a game about trading resources.",
             CancellationToken.None);
 
-        Assert.Equal(3, result.Relations.Count);
+        result.Relations.Count.Should().Be(3);
         Assert.Equal(4, result.TotalEntities); // Catan, Trading, Hex Tiles, Resource Collection
 
         var first = result.Relations[0];
-        Assert.Equal("Catan", first.SourceEntity);
-        Assert.Equal("Game", first.SourceType);
-        Assert.Equal("HasMechanic", first.Relation);
-        Assert.Equal("Trading", first.TargetEntity);
-        Assert.Equal("Mechanic", first.TargetType);
+        first.SourceEntity.Should().Be("Catan");
+        first.SourceType.Should().Be("Game");
+        first.Relation.Should().Be("HasMechanic");
+        first.TargetEntity.Should().Be("Trading");
+        first.TargetType.Should().Be("Mechanic");
     }
 
     [Fact]
@@ -66,7 +67,7 @@ public class EntityExtractorTests
             CancellationToken.None);
 
         Assert.Empty(result.Relations);
-        Assert.Equal(0, result.TotalEntities);
+        result.TotalEntities.Should().Be(0);
     }
 
     [Fact]
@@ -83,7 +84,7 @@ public class EntityExtractorTests
             CancellationToken.None);
 
         Assert.Empty(result.Relations);
-        Assert.Equal(0, result.TotalEntities);
+        result.TotalEntities.Should().Be(0);
     }
 
     [Fact]
@@ -94,7 +95,7 @@ public class EntityExtractorTests
             CancellationToken.None);
 
         Assert.Empty(result.Relations);
-        Assert.Equal(0, result.TotalEntities);
+        result.TotalEntities.Should().Be(0);
 
         _llmServiceMock.Verify(
             x => x.GenerateJsonAsync<EntityExtractionResponse>(
@@ -111,7 +112,7 @@ public class EntityExtractorTests
             CancellationToken.None);
 
         Assert.Empty(result.Relations);
-        Assert.Equal(0, result.TotalEntities);
+        result.TotalEntities.Should().Be(0);
 
         _llmServiceMock.Verify(
             x => x.GenerateJsonAsync<EntityExtractionResponse>(
@@ -195,6 +196,6 @@ public class EntityExtractorTests
             CancellationToken.None);
 
         Assert.Empty(result.Relations);
-        Assert.Equal(0, result.TotalEntities);
+        result.TotalEntities.Should().Be(0);
     }
 }

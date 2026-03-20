@@ -2,6 +2,7 @@ using Api.BoundedContexts.KnowledgeBase.Domain.Evaluation;
 using Api.BoundedContexts.KnowledgeBase.Domain.GridSearch;
 using Api.BoundedContexts.KnowledgeBase.Domain.Reports;
 using Xunit;
+using FluentAssertions;
 using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Domain.Reports;
@@ -24,8 +25,8 @@ public class BenchmarkReportTests
 
         // Assert
         Assert.NotNull(report);
-        Assert.Contains("test-dataset", report.Title);
-        Assert.Equal("test-dataset", report.DatasetName);
+        report.Title.Should().Contain("test-dataset");
+        report.DatasetName.Should().Be("test-dataset");
         Assert.NotNull(report.GridSearchResult);
     }
 
@@ -54,8 +55,8 @@ public class BenchmarkReportTests
         var report = BenchmarkReport.FromGridSearchResult(gridSearchResult);
 
         // Assert
-        Assert.Equal(0.70, report.Targets.MinRecallAt10);
-        Assert.Equal(1500.0, report.Targets.MaxP95LatencyMs);
+        report.Targets.MinRecallAt10.Should().Be(0.70);
+        report.Targets.MaxP95LatencyMs.Should().Be(1500.0);
     }
 
     [Fact]
@@ -68,7 +69,7 @@ public class BenchmarkReportTests
         var report = BenchmarkReport.FromGridSearchResult(gridSearchResult);
 
         // Assert
-        Assert.Equal(gridSearchResult.ConfigurationCount, report.Summary.TotalConfigurations);
+        report.Summary.TotalConfigurations.Should().Be(gridSearchResult.ConfigurationCount);
     }
 
     [Fact]
@@ -81,7 +82,7 @@ public class BenchmarkReportTests
         var report = BenchmarkReport.FromGridSearchResult(gridSearchResult);
 
         // Assert
-        Assert.Equal(gridSearchResult.SuccessfulCount, report.Summary.SuccessfulConfigurations);
+        report.Summary.SuccessfulConfigurations.Should().Be(gridSearchResult.SuccessfulCount);
     }
 
     [Fact]
@@ -111,7 +112,7 @@ public class BenchmarkReportTests
         var report = BenchmarkReport.FromGridSearchResult(gridSearchResult);
 
         // Assert
-        Assert.Equal(0.85, report.Summary.BestRecallAt10);
+        report.Summary.BestRecallAt10.Should().Be(0.85);
     }
 
     [Fact]
@@ -141,7 +142,7 @@ public class BenchmarkReportTests
         var report = BenchmarkReport.FromGridSearchResult(gridSearchResult);
 
         // Assert
-        Assert.Equal(0.90, report.Summary.BestNdcgAt10);
+        report.Summary.BestNdcgAt10.Should().Be(0.90);
     }
 
     [Fact]
@@ -171,7 +172,7 @@ public class BenchmarkReportTests
         var report = BenchmarkReport.FromGridSearchResult(gridSearchResult);
 
         // Assert
-        Assert.Equal(900, report.Summary.BestP95LatencyMs);
+        report.Summary.BestP95LatencyMs.Should().Be(900);
     }
 
     [Fact]
@@ -207,7 +208,7 @@ public class BenchmarkReportTests
         var report = BenchmarkReport.FromGridSearchResult(gridSearchResult);
 
         // Assert
-        Assert.Equal(2, report.Summary.ConfigurationsMeetingTarget);
+        report.Summary.ConfigurationsMeetingTarget.Should().Be(2);
     }
 
     [Fact]
@@ -265,7 +266,7 @@ public class BenchmarkReportTests
         var report = BenchmarkReport.FromGridSearchResult(gridSearchResult);
 
         // Assert
-        Assert.Equal(config2.ConfigurationId, report.Summary.RecommendedConfiguration);
+        report.Summary.RecommendedConfiguration.Should().Be(config2.ConfigurationId);
     }
 
     [Fact]
@@ -291,7 +292,7 @@ public class BenchmarkReportTests
 
         // Assert - When no successful configs, Max() and Min() on empty sequences throw
         // The report should handle this gracefully
-        Assert.Equal(0, report.Summary.SuccessfulConfigurations);
+        report.Summary.SuccessfulConfigurations.Should().Be(0);
         Assert.Null(report.Summary.RecommendedConfiguration);
         Assert.False(report.Summary.MeetsPhase5Target);
     }
@@ -303,8 +304,8 @@ public class BenchmarkReportTests
         var targets = Phase5Targets.Default;
 
         // Assert
-        Assert.Equal(0.70, targets.MinRecallAt10);
-        Assert.Equal(1500.0, targets.MaxP95LatencyMs);
+        targets.MinRecallAt10.Should().Be(0.70);
+        targets.MaxP95LatencyMs.Should().Be(1500.0);
     }
 
     [Fact]
@@ -318,8 +319,8 @@ public class BenchmarkReportTests
         };
 
         // Assert
-        Assert.Equal(0.80, targets.MinRecallAt10);
-        Assert.Equal(1000.0, targets.MaxP95LatencyMs);
+        targets.MinRecallAt10.Should().Be(0.80);
+        targets.MaxP95LatencyMs.Should().Be(1000.0);
     }
 
     private static GridSearchResult CreateSampleGridSearchResult()

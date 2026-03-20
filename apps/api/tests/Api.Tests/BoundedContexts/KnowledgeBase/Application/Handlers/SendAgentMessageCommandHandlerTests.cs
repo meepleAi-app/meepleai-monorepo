@@ -20,6 +20,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Handlers;
 
@@ -155,13 +156,13 @@ public sealed class SendAgentMessageCommandHandlerTests
         }
 
         // Assert
-        Assert.Single(events);
+        events.Should().ContainSingle();
         var errorEvent = events[0];
-        Assert.Equal(StreamingEventType.Error, errorEvent.Type);
+        errorEvent.Type.Should().Be(StreamingEventType.Error);
 
         var error = Assert.IsType<StreamingError>(errorEvent.Data);
         Assert.Contains(agentId.ToString(), error.errorMessage, StringComparison.OrdinalIgnoreCase);
-        Assert.Equal("AGENT_NOT_FOUND", error.errorCode);
+        error.errorCode.Should().Be("AGENT_NOT_FOUND");
     }
 
     [Fact]
@@ -228,7 +229,7 @@ public sealed class SendAgentMessageCommandHandlerTests
 
         // Assert
         var completeEvent = events.Last();
-        Assert.Equal(StreamingEventType.Complete, completeEvent.Type);
+        completeEvent.Type.Should().Be(StreamingEventType.Complete);
 
         var complete = Assert.IsType<StreamingComplete>(completeEvent.Data);
         // No vector results returned → retrievalConfidence is null
@@ -266,7 +267,7 @@ public sealed class SendAgentMessageCommandHandlerTests
 
         // Assert - handler emits single token (non-streaming), but skips persistence for empty response
         var tokenEvents = events.Where(e => e.Type == StreamingEventType.Token).ToList();
-        Assert.Single(tokenEvents);
+        tokenEvents.Should().ContainSingle();
         // Only user message update (no assistant persistence for empty response)
         _mockChatThreadRepository.Verify(
             r => r.UpdateAsync(It.IsAny<ChatThread>(), It.IsAny<CancellationToken>()),
@@ -384,9 +385,9 @@ public sealed class SendAgentMessageCommandHandlerTests
         }
 
         // Assert
-        Assert.Single(events);
+        events.Should().ContainSingle();
         var error = Assert.IsType<StreamingError>(events[0].Data);
-        Assert.Equal("THREAD_NOT_FOUND", error.errorCode);
+        error.errorCode.Should().Be("THREAD_NOT_FOUND");
     }
 
     [Fact]
@@ -418,7 +419,7 @@ public sealed class SendAgentMessageCommandHandlerTests
         var completeEvent = events.Last();
         var complete = Assert.IsType<StreamingComplete>(completeEvent.Data);
         Assert.NotNull(complete.chatThreadId);
-        Assert.NotEqual(Guid.Empty, complete.chatThreadId!.Value);
+        complete.chatThreadId!.Value.Should().NotBe(Guid.Empty);
     }
 
     [Fact]

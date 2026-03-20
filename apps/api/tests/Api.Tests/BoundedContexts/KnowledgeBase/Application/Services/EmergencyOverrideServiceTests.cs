@@ -6,6 +6,7 @@ using Microsoft.Extensions.Logging;
 using Moq;
 using StackExchange.Redis;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Services;
 
@@ -59,7 +60,7 @@ public sealed class EmergencyOverrideServiceTests : IDisposable
         // Verify StringSetAsync was called (key + payload)
         var stringSetCalls = _dbMock.Invocations
             .Count(i => i.Method.Name == "StringSetAsync");
-        Assert.Equal(1, stringSetCalls);
+        stringSetCalls.Should().Be(1);
 
         // Verify the key contains the action name
         var call = _dbMock.Invocations

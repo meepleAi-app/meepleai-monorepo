@@ -3,6 +3,7 @@ using Api.SharedKernel.Constants;
 using Api.SharedKernel.Domain.Exceptions;
 using Api.Tests.Constants;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.GameManagement.Domain.ValueObjects;
 
@@ -22,8 +23,8 @@ public class PlayTimeTests
         var playTime = new PlayTime(30, 60);
 
         // Assert
-        Assert.Equal(30, playTime.MinMinutes);
-        Assert.Equal(60, playTime.MaxMinutes);
+        playTime.MinMinutes.Should().Be(30);
+        playTime.MaxMinutes.Should().Be(60);
     }
 
     [Fact]
@@ -33,8 +34,8 @@ public class PlayTimeTests
         var playTime = new PlayTime(45, 45);
 
         // Assert
-        Assert.Equal(45, playTime.MinMinutes);
-        Assert.Equal(45, playTime.MaxMinutes);
+        playTime.MinMinutes.Should().Be(45);
+        playTime.MaxMinutes.Should().Be(45);
     }
 
     [Fact]
@@ -44,8 +45,8 @@ public class PlayTimeTests
         var playTime = new PlayTime(1, 1);
 
         // Assert
-        Assert.Equal(1, playTime.MinMinutes);
-        Assert.Equal(1, playTime.MaxMinutes);
+        playTime.MinMinutes.Should().Be(1);
+        playTime.MaxMinutes.Should().Be(1);
     }
 
     [Fact]
@@ -55,56 +56,56 @@ public class PlayTimeTests
         var playTime = new PlayTime(1440, 1440);
 
         // Assert
-        Assert.Equal(1440, playTime.MinMinutes);
-        Assert.Equal(1440, playTime.MaxMinutes);
+        playTime.MinMinutes.Should().Be(1440);
+        playTime.MaxMinutes.Should().Be(1440);
     }
 
     [Fact]
     public void Constructor_ZeroMinMinutes_ThrowsValidationException()
     {
         // Act & Assert
-        var exception = Assert.Throws<ValidationException>(() => new PlayTime(0, 60));
-        Assert.Contains("minMinutes", exception.Message);
+        var exception = ((Action)(() => new PlayTime(0, 60))).Should().Throw<ValidationException>().Which;
+        exception.Message.Should().Contain("minMinutes");
     }
 
     [Fact]
     public void Constructor_NegativeMinMinutes_ThrowsValidationException()
     {
         // Act & Assert
-        var exception = Assert.Throws<ValidationException>(() => new PlayTime(-1, 60));
-        Assert.Contains("minMinutes", exception.Message);
+        var exception = ((Action)(() => new PlayTime(-1, 60))).Should().Throw<ValidationException>().Which;
+        exception.Message.Should().Contain("minMinutes");
     }
 
     [Fact]
     public void Constructor_ZeroMaxMinutes_ThrowsValidationException()
     {
         // Act & Assert
-        var exception = Assert.Throws<ValidationException>(() => new PlayTime(30, 0));
-        Assert.Contains("maxMinutes", exception.Message);
+        var exception = ((Action)(() => new PlayTime(30, 0))).Should().Throw<ValidationException>().Which;
+        exception.Message.Should().Contain("maxMinutes");
     }
 
     [Fact]
     public void Constructor_NegativeMaxMinutes_ThrowsValidationException()
     {
         // Act & Assert
-        var exception = Assert.Throws<ValidationException>(() => new PlayTime(30, -1));
-        Assert.Contains("maxMinutes", exception.Message);
+        var exception = ((Action)(() => new PlayTime(30, -1))).Should().Throw<ValidationException>().Which;
+        exception.Message.Should().Contain("maxMinutes");
     }
 
     [Fact]
     public void Constructor_MinMinutesExceedsMax_ThrowsValidationException()
     {
         // Act & Assert - MaxMinutes > 1440 (24 hours)
-        var exception = Assert.Throws<ValidationException>(() => new PlayTime(30, 1441));
-        Assert.Contains("maxMinutes", exception.Message);
+        var exception = ((Action)(() => new PlayTime(30, 1441))).Should().Throw<ValidationException>().Which;
+        exception.Message.Should().Contain("maxMinutes");
     }
 
     [Fact]
     public void Constructor_MinMinutesGreaterThanMaxMinutes_ThrowsValidationException()
     {
         // Act & Assert - Invalid range: min > max
-        var exception = Assert.Throws<ValidationException>(() => new PlayTime(60, 30));
-        Assert.Contains("minminutes", exception.Message.ToLower());
+        var exception = ((Action)(() => new PlayTime(60, 30))).Should().Throw<ValidationException>().Which;
+        exception.Message.ToLower().Should().Contain("minminutes");
     }
 
     #endregion
@@ -128,7 +129,7 @@ public class PlayTimeTests
         var playTime = new PlayTime(45, 45);
 
         // Assert
-        Assert.Equal(45, playTime.AverageMinutes);
+        playTime.AverageMinutes.Should().Be(45);
     }
 
     [Fact]
@@ -138,7 +139,7 @@ public class PlayTimeTests
         var playTime = new PlayTime(15, 30);
 
         // Assert
-        Assert.Equal(22, playTime.AverageMinutes);
+        playTime.AverageMinutes.Should().Be(22);
     }
 
     #endregion
@@ -256,8 +257,8 @@ public class PlayTimeTests
         var quick = PlayTime.Quick;
 
         // Assert
-        Assert.Equal(15, quick.MinMinutes);
-        Assert.Equal(30, quick.MaxMinutes);
+        quick.MinMinutes.Should().Be(15);
+        quick.MaxMinutes.Should().Be(30);
         Assert.True(quick.IsQuick);
     }
 
@@ -268,8 +269,8 @@ public class PlayTimeTests
         var standard = PlayTime.Standard;
 
         // Assert
-        Assert.Equal(45, standard.MinMinutes);
-        Assert.Equal(60, standard.MaxMinutes);
+        standard.MinMinutes.Should().Be(45);
+        standard.MaxMinutes.Should().Be(60);
         Assert.True(standard.IsMedium);
     }
 
@@ -280,8 +281,8 @@ public class PlayTimeTests
         var longGame = PlayTime.Long;
 
         // Assert
-        Assert.Equal(120, longGame.MinMinutes);
-        Assert.Equal(180, longGame.MaxMinutes);
+        longGame.MinMinutes.Should().Be(120);
+        longGame.MaxMinutes.Should().Be(180);
         Assert.True(longGame.IsLong);
     }
 
@@ -296,7 +297,7 @@ public class PlayTimeTests
         var playTime = new PlayTime(30, 60);
 
         // Act & Assert
-        Assert.Equal("30-60 min", playTime.ToString());
+        playTime.ToString().Should().Be("30-60 min");
     }
 
     [Fact]
@@ -306,7 +307,7 @@ public class PlayTimeTests
         var playTime = new PlayTime(45, 45);
 
         // Act & Assert
-        Assert.Equal("45 min", playTime.ToString());
+        playTime.ToString().Should().Be("45 min");
     }
 
     #endregion
@@ -321,7 +322,7 @@ public class PlayTimeTests
         var playTime2 = new PlayTime(30, 60);
 
         // Assert
-        Assert.Equal(playTime1, playTime2);
+        playTime2.Should().Be(playTime1);
         Assert.True(playTime1 == playTime2);
         Assert.False(playTime1 != playTime2);
     }
@@ -334,7 +335,7 @@ public class PlayTimeTests
         var playTime2 = new PlayTime(45, 60);
 
         // Assert
-        Assert.NotEqual(playTime1, playTime2);
+        playTime2.Should().NotBe(playTime1);
     }
 
     [Fact]
@@ -345,7 +346,7 @@ public class PlayTimeTests
         var playTime2 = new PlayTime(30, 90);
 
         // Assert
-        Assert.NotEqual(playTime1, playTime2);
+        playTime2.Should().NotBe(playTime1);
     }
 
     #endregion
@@ -365,8 +366,8 @@ public class PlayTimeTests
         var playTime = new PlayTime(min, max);
 
         // Assert
-        Assert.Equal(min, playTime.MinMinutes);
-        Assert.Equal(max, playTime.MaxMinutes);
+        playTime.MinMinutes.Should().Be(min);
+        playTime.MaxMinutes.Should().Be(max);
     }
 
     #endregion

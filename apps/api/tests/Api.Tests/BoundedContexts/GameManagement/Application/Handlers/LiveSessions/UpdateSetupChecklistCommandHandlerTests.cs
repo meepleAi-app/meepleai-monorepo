@@ -10,6 +10,7 @@ using Api.Tests.Constants;
 using FluentValidation.TestHelper;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.GameManagement.Application.Handlers.LiveSessions;
 
@@ -106,9 +107,9 @@ public class UpdateSetupChecklistCommandHandlerTests
 
         // Assert
         Assert.NotNull(session.SetupChecklist);
-        Assert.Equal(3, session.SetupChecklist!.PlayerCount);
-        Assert.Single(session.SetupChecklist.SetupSteps);
-        Assert.Equal("Place board in center", session.SetupChecklist.SetupSteps[0].Instruction);
+        session.SetupChecklist!.PlayerCount.Should().Be(3);
+        session.SetupChecklist.SetupSteps.Should().ContainSingle();
+        session.SetupChecklist.SetupSteps[0].Instruction.Should().Be("Place board in center");
     }
 
     [Fact]
@@ -148,9 +149,9 @@ public class UpdateSetupChecklistCommandHandlerTests
         await _handler.Handle(command, CancellationToken.None);
 
         // Assert - should have replaced entirely
-        Assert.Equal(5, session.SetupChecklist!.PlayerCount);
-        Assert.Equal(2, session.SetupChecklist.SetupSteps.Count);
-        Assert.Equal("New step 1", session.SetupChecklist.SetupSteps[0].Instruction);
-        Assert.Single(session.SetupChecklist.Components);
+        session.SetupChecklist!.PlayerCount.Should().Be(5);
+        session.SetupChecklist.SetupSteps.Count.Should().Be(2);
+        session.SetupChecklist.SetupSteps[0].Instruction.Should().Be("New step 1");
+        session.SetupChecklist.Components.Should().ContainSingle();
     }
 }

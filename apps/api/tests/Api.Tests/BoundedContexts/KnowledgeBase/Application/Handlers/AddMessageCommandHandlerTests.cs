@@ -8,6 +8,7 @@ using Api.SharedKernel.Infrastructure.Persistence;
 using Api.Tests.Constants;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Handlers;
 
@@ -48,11 +49,11 @@ public class AddMessageCommandHandlerTests
 
         // Assert
         Assert.NotNull(result);
-        Assert.Equal(threadId, result.Id);
-        Assert.Equal(1, result.MessageCount);
-        Assert.Single(result.Messages);
-        Assert.Equal(content, result.Messages[0].Content);
-        Assert.Equal(ChatMessage.UserRole, result.Messages[0].Role);
+        result.Id.Should().Be(threadId);
+        result.MessageCount.Should().Be(1);
+        result.Messages.Should().ContainSingle();
+        result.Messages[0].Content.Should().Be(content);
+        result.Messages[0].Role.Should().Be(ChatMessage.UserRole);
 
         _mockRepository.Verify(r => r.UpdateAsync(thread, It.IsAny<CancellationToken>()), Times.Once);
         _mockUnitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
@@ -79,11 +80,11 @@ public class AddMessageCommandHandlerTests
 
         // Assert
         Assert.NotNull(result);
-        Assert.Equal(threadId, result.Id);
-        Assert.Equal(2, result.MessageCount);
-        Assert.Equal(2, result.Messages.Count);
-        Assert.Equal(content, result.Messages[1].Content);
-        Assert.Equal(ChatMessage.AssistantRole, result.Messages[1].Role);
+        result.Id.Should().Be(threadId);
+        result.MessageCount.Should().Be(2);
+        result.Messages.Count.Should().Be(2);
+        result.Messages[1].Content.Should().Be(content);
+        result.Messages[1].Role.Should().Be(ChatMessage.AssistantRole);
 
         _mockRepository.Verify(r => r.UpdateAsync(thread, It.IsAny<CancellationToken>()), Times.Once);
         _mockUnitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
@@ -103,7 +104,7 @@ public class AddMessageCommandHandlerTests
         // Act & Assert
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(
             () => _handler.Handle(command, TestContext.Current.CancellationToken));
-        Assert.Contains("not found", exception.Message);
+        exception.Message.Should().Contain("not found");
     }
 
     [Fact]
@@ -123,7 +124,7 @@ public class AddMessageCommandHandlerTests
         // Act & Assert
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(
             () => _handler.Handle(command, TestContext.Current.CancellationToken));
-        Assert.Contains("Unknown role", exception.Message);
+        exception.Message.Should().Contain("Unknown role");
     }
 
     [Fact]

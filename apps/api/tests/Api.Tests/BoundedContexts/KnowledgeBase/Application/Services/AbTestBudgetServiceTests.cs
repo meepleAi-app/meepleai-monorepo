@@ -5,6 +5,7 @@ using Microsoft.Extensions.Logging;
 using Moq;
 using StackExchange.Redis;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Services;
 
@@ -121,7 +122,7 @@ public sealed class AbTestBudgetServiceTests
 
         var result = await _sut.GetDailySpendAsync();
 
-        Assert.Equal(2.75m, result);
+        result.Should().Be(2.75m);
     }
 
     [Fact]
@@ -132,7 +133,7 @@ public sealed class AbTestBudgetServiceTests
 
         var result = await _sut.GetDailySpendAsync();
 
-        Assert.Equal(0m, result);
+        result.Should().Be(0m);
     }
 
     // ─── Rate Limiting ───────────────────────────────────────────────────────
@@ -223,7 +224,7 @@ public sealed class AbTestBudgetServiceTests
 
         var result = await _sut.GetUserTestCountTodayAsync(userId);
 
-        Assert.Equal(15, result);
+        result.Should().Be(15);
     }
 
     [Fact]
@@ -235,7 +236,7 @@ public sealed class AbTestBudgetServiceTests
 
         var result = await _sut.GetUserTestCountTodayAsync(userId);
 
-        Assert.Equal(0, result);
+        result.Should().Be(0);
     }
 
     // ─── Response Caching ────────────────────────────────────────────────────
@@ -248,7 +249,7 @@ public sealed class AbTestBudgetServiceTests
 
         var result = await _sut.GetCachedResponseAsync("What is bluffing?", "gpt-4o-mini");
 
-        Assert.Equal("Cached LLM response text", result);
+        result.Should().Be("Cached LLM response text");
     }
 
     [Fact]
@@ -272,7 +273,7 @@ public sealed class AbTestBudgetServiceTests
         await _sut.CacheResponseAsync("What is bluffing?", "gpt-4o-mini", "Response text");
 
         var setCount = _dbMock.Invocations.Count(i => i.Method.Name == "StringSetAsync");
-        Assert.Equal(1, setCount);
+        setCount.Should().Be(1);
     }
 
     [Fact]
@@ -288,8 +289,8 @@ public sealed class AbTestBudgetServiceTests
             .Select(i => i.Arguments[0].ToString()!)
             .ToList();
 
-        Assert.Equal(2, setInvocations.Count);
-        Assert.NotEqual(setInvocations[0], setInvocations[1]);
+        setInvocations.Count.Should().Be(2);
+        setInvocations[1].Should().NotBe(setInvocations[0]);
     }
 
     [Fact]
@@ -305,8 +306,8 @@ public sealed class AbTestBudgetServiceTests
             .Select(i => i.Arguments[0].ToString()!)
             .ToList();
 
-        Assert.Equal(2, setInvocations.Count);
-        Assert.Equal(setInvocations[0], setInvocations[1]);
+        setInvocations.Count.Should().Be(2);
+        setInvocations[1].Should().Be(setInvocations[0]);
     }
 
     [Fact]
@@ -322,8 +323,8 @@ public sealed class AbTestBudgetServiceTests
             .Select(i => i.Arguments[0].ToString()!)
             .ToList();
 
-        Assert.Equal(2, setInvocations.Count);
-        Assert.Equal(setInvocations[0], setInvocations[1]);
+        setInvocations.Count.Should().Be(2);
+        setInvocations[1].Should().Be(setInvocations[0]);
     }
 
     // ─── Configuration ───────────────────────────────────────────────────────

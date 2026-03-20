@@ -65,7 +65,7 @@ public class MultiModelEvaluatorTests
         Assert.NotNull(result);
         Assert.InRange(result.Score, 0.83, 0.85);  // Weighted average within range
         Assert.True(result.Confidence >= 0.75, $"Expected confidence ≥0.75, got {result.Confidence}");
-        Assert.Equal("high", result.Agreement);
+        result.Agreement.Should().Be("high");
         Assert.True(result.Variance < 0.01, $"Expected low variance, got {result.Variance}");
     }
 
@@ -97,7 +97,7 @@ public class MultiModelEvaluatorTests
         // Assert
         Assert.NotNull(result);
         Assert.True(result.Variance > 0.04, $"Expected high variance, got {result.Variance}");
-        Assert.Equal("low", result.Agreement);
+        result.Agreement.Should().Be("low");
         Assert.True(result.Confidence <= 0.50, $"Expected low confidence, got {result.Confidence}");
     }
 
@@ -165,8 +165,8 @@ public class MultiModelEvaluatorTests
         // Assert
         Assert.NotNull(result);
         Assert.Equal(0.3, result.Confidence);  // Fallback confidence
-        Assert.Equal("none", result.Agreement);
-        Assert.Contains("Ensemble unavailable", result.Reasoning);
+        result.Agreement.Should().Be("none");
+        result.Reasoning.Should().Contain("Ensemble unavailable");
     }
 
     [Fact]
@@ -201,8 +201,8 @@ public class MultiModelEvaluatorTests
         var result = await _evaluator.EvaluateWithEnsembleAsync(move, state, "white", TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.Equal(cachedResult, result);
-        Assert.Equal("Cached evaluation", result.Reasoning);
+        result.Should().Be(cachedResult);
+        result.Reasoning.Should().Be("Cached evaluation");
 
         // Verify LLM service was NOT called (cache hit)
         _mockLlmService.Verify(

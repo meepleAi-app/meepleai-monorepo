@@ -6,6 +6,7 @@ using Api.Services;
 using Api.Tests.Constants;
 using MediatR;
 using Microsoft.Extensions.Logging.Abstractions;
+using FluentAssertions;
 using Moq;
 using Xunit;
 
@@ -160,8 +161,8 @@ public sealed class GenerateAgentSummaryHandlerTests
         Assert.NotNull(capturedUserPrompt);
         Assert.Contains("Messaggio 75", capturedUserPrompt, StringComparison.Ordinal);
         Assert.Contains("Messaggio 26", capturedUserPrompt, StringComparison.Ordinal);
-        Assert.DoesNotContain("Messaggio 25", capturedUserPrompt, StringComparison.Ordinal);
-        Assert.DoesNotContain("Messaggio 1", capturedUserPrompt, StringComparison.Ordinal);
+        capturedUserPrompt.Should().NotContain("Messaggio 25");
+        capturedUserPrompt.Should().NotContain("Messaggio 1");
     }
 
     // ─── Failure cases ────────────────────────────────────────────────────────

@@ -8,6 +8,7 @@ using Api.Middleware.Exceptions;
 using Api.Tests.Constants;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.GameManagement.Application.Handlers.ToolState;
 
@@ -64,10 +65,10 @@ public class GetSessionToolsQueryHandlerTests
 
         var result = await _sut.Handle(new GetSessionToolsQuery(sessionId), TestContext.Current.CancellationToken);
 
-        Assert.Equal(BaseToolType.TurnOrder, result.BaseTools.TurnOrder.ToolType);
-        Assert.Equal(BaseToolType.DiceSet, result.BaseTools.DiceSet.ToolType);
-        Assert.Equal(BaseToolType.Whiteboard, result.BaseTools.Whiteboard.ToolType);
-        Assert.Equal(BaseToolType.Scoreboard, result.BaseTools.Scoreboard.ToolType);
+        result.BaseTools.TurnOrder.ToolType.Should().Be(BaseToolType.TurnOrder);
+        result.BaseTools.DiceSet.ToolType.Should().Be(BaseToolType.DiceSet);
+        result.BaseTools.Whiteboard.ToolType.Should().Be(BaseToolType.Whiteboard);
+        result.BaseTools.Scoreboard.ToolType.Should().Be(BaseToolType.Scoreboard);
     }
 
     [Fact]
@@ -100,10 +101,10 @@ public class GetSessionToolsQueryHandlerTests
 
         var result = await _sut.Handle(new GetSessionToolsQuery(sessionId), TestContext.Current.CancellationToken);
 
-        Assert.Equal("turn-order", result.BaseTools.TurnOrder.ToolId);
-        Assert.Equal("dice-set", result.BaseTools.DiceSet.ToolId);
-        Assert.Equal("whiteboard", result.BaseTools.Whiteboard.ToolId);
-        Assert.Equal("scoreboard", result.BaseTools.Scoreboard.ToolId);
+        result.BaseTools.TurnOrder.ToolId.Should().Be("turn-order");
+        result.BaseTools.DiceSet.ToolId.Should().Be("dice-set");
+        result.BaseTools.Whiteboard.ToolId.Should().Be("whiteboard");
+        result.BaseTools.Scoreboard.ToolId.Should().Be("scoreboard");
     }
 
     // ========================================================================
@@ -144,7 +145,7 @@ public class GetSessionToolsQueryHandlerTests
 
         var result = await _sut.Handle(new GetSessionToolsQuery(sessionId), TestContext.Current.CancellationToken);
 
-        Assert.Equal(2, result.CustomTools.Count);
+        result.CustomTools.Count.Should().Be(2);
         Assert.Contains(result.CustomTools, t => t.ToolName == "Battle Dice");
         Assert.Contains(result.CustomTools, t => t.ToolName == "HP Counter");
     }
@@ -166,7 +167,7 @@ public class GetSessionToolsQueryHandlerTests
         var result = await _sut.Handle(new GetSessionToolsQuery(sessionId), TestContext.Current.CancellationToken);
 
         Assert.Null(result.ToolkitId);
-        Assert.Equal(sessionId, result.SessionId);
+        result.SessionId.Should().Be(sessionId);
     }
 
     [Fact]
@@ -182,7 +183,7 @@ public class GetSessionToolsQueryHandlerTests
 
         var result = await _sut.Handle(new GetSessionToolsQuery(sessionId), TestContext.Current.CancellationToken);
 
-        Assert.Equal(toolkitId, result.ToolkitId);
+        result.ToolkitId.Should().Be(toolkitId);
     }
 
     // ========================================================================

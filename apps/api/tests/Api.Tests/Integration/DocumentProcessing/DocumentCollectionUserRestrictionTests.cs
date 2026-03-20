@@ -84,7 +84,7 @@ public class DocumentCollectionUserRestrictionTests : IAsyncLifetime
             exception = ex;
         }
 
-        Assert.NotNull(exception);
+        exception.Should().NotBeNull();
         Assert.True(exception is DbUpdateException or InvalidOperationException,
             $"Expected DbUpdateException or InvalidOperationException but got {exception.GetType().Name}: {exception.Message}");
     }
@@ -129,7 +129,7 @@ public class DocumentCollectionUserRestrictionTests : IAsyncLifetime
             exception = ex;
         }
 
-        Assert.NotNull(exception);
+        exception.Should().NotBeNull();
         Assert.True(exception is DbUpdateException or InvalidOperationException,
             $"Expected DbUpdateException or InvalidOperationException but got {exception.GetType().Name}: {exception.Message}");
     }

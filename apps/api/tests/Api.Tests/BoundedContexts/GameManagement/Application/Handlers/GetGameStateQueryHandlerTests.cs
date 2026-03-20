@@ -6,6 +6,7 @@ using Api.BoundedContexts.GameManagement.Domain.Entities;
 using Api.BoundedContexts.GameManagement.Domain.Repositories;
 using Moq;
 using Xunit;
+using FluentAssertions;
 using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.GameManagement.Application.Handlers;
@@ -42,10 +43,10 @@ public class GetGameStateQueryHandlerTests
 
         // Assert
         Assert.NotNull(result);
-        Assert.Equal(state.Id, result.Id);
-        Assert.Equal(state.GameSessionId, result.GameSessionId);
-        Assert.Equal(state.TemplateId, result.TemplateId);
-        Assert.Equal(state.Version, result.Version);
+        result.Id.Should().Be(state.Id);
+        result.GameSessionId.Should().Be(state.GameSessionId);
+        result.TemplateId.Should().Be(state.TemplateId);
+        result.Version.Should().Be(state.Version);
     }
 
     [Fact]

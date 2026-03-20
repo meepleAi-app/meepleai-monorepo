@@ -1,6 +1,7 @@
 using Api.BoundedContexts.GameManagement.Domain.Entities.SessionAttachment;
 using Api.Tests.Constants;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.GameManagement.Domain.Entities.SessionAttachment;
 
@@ -28,16 +29,16 @@ public class SessionAttachmentDomainTests
             ValidBlobUrl, ValidContentTypeJpeg, ValidFileSize,
             ValidThumbnailUrl, "Board after round 3", 5);
 
-        Assert.NotEqual(Guid.Empty, attachment.Id);
-        Assert.Equal(_sessionId, attachment.SessionId);
-        Assert.Equal(_playerId, attachment.PlayerId);
-        Assert.Equal(AttachmentType.BoardState, attachment.AttachmentType);
-        Assert.Equal(ValidBlobUrl, attachment.BlobUrl);
-        Assert.Equal(ValidThumbnailUrl, attachment.ThumbnailUrl);
-        Assert.Equal("Board after round 3", attachment.Caption);
-        Assert.Equal(ValidContentTypeJpeg, attachment.ContentType);
-        Assert.Equal(ValidFileSize, attachment.FileSizeBytes);
-        Assert.Equal(5, attachment.SnapshotIndex);
+        attachment.Id.Should().NotBe(Guid.Empty);
+        attachment.SessionId.Should().Be(_sessionId);
+        attachment.PlayerId.Should().Be(_playerId);
+        attachment.AttachmentType.Should().Be(AttachmentType.BoardState);
+        attachment.BlobUrl.Should().Be(ValidBlobUrl);
+        attachment.ThumbnailUrl.Should().Be(ValidThumbnailUrl);
+        attachment.Caption.Should().Be("Board after round 3");
+        attachment.ContentType.Should().Be(ValidContentTypeJpeg);
+        attachment.FileSizeBytes.Should().Be(ValidFileSize);
+        attachment.SnapshotIndex.Should().Be(5);
         Assert.False(attachment.IsDeleted);
         Assert.Null(attachment.DeletedAt);
         Assert.True(attachment.CreatedAt <= DateTime.UtcNow);
@@ -64,7 +65,7 @@ public class SessionAttachmentDomainTests
             _sessionId, _playerId, AttachmentType.Custom,
             ValidBlobUrl, contentType, ValidFileSize);
 
-        Assert.Equal(contentType, attachment.ContentType);
+        attachment.ContentType.Should().Be(contentType);
     }
 
     [Theory]
@@ -79,7 +80,7 @@ public class SessionAttachmentDomainTests
             _sessionId, _playerId, type,
             ValidBlobUrl, ValidContentTypeJpeg, ValidFileSize);
 
-        Assert.Equal(type, attachment.AttachmentType);
+        attachment.AttachmentType.Should().Be(type);
     }
 
     [Fact]
@@ -88,12 +89,12 @@ public class SessionAttachmentDomainTests
         var minAttachment = Api.BoundedContexts.GameManagement.Domain.Entities.SessionAttachment.SessionAttachment.Create(
             _sessionId, _playerId, AttachmentType.BoardState,
             ValidBlobUrl, ValidContentTypeJpeg, MinFileSize);
-        Assert.Equal(MinFileSize, minAttachment.FileSizeBytes);
+        minAttachment.FileSizeBytes.Should().Be(MinFileSize);
 
         var maxAttachment = Api.BoundedContexts.GameManagement.Domain.Entities.SessionAttachment.SessionAttachment.Create(
             _sessionId, _playerId, AttachmentType.BoardState,
             ValidBlobUrl, ValidContentTypeJpeg, MaxFileSize);
-        Assert.Equal(MaxFileSize, maxAttachment.FileSizeBytes);
+        maxAttachment.FileSizeBytes.Should().Be(MaxFileSize);
     }
 
     [Fact]
@@ -104,7 +105,7 @@ public class SessionAttachmentDomainTests
             ValidBlobUrl, ValidContentTypeJpeg, ValidFileSize,
             caption: "  Board state  ");
 
-        Assert.Equal("Board state", attachment.Caption);
+        attachment.Caption.Should().Be("Board state");
     }
 
     #endregion
@@ -119,7 +120,7 @@ public class SessionAttachmentDomainTests
                 Guid.Empty, _playerId, AttachmentType.BoardState,
                 ValidBlobUrl, ValidContentTypeJpeg, ValidFileSize));
 
-        Assert.Contains("Session ID", ex.Message);
+        ex.Message.Should().Contain("Session ID");
     }
 
     [Fact]
@@ -130,7 +131,7 @@ public class SessionAttachmentDomainTests
                 _sessionId, Guid.Empty, AttachmentType.BoardState,
                 ValidBlobUrl, ValidContentTypeJpeg, ValidFileSize));
 
-        Assert.Contains("Player ID", ex.Message);
+        ex.Message.Should().Contain("Player ID");
     }
 
     [Theory]
@@ -154,7 +155,7 @@ public class SessionAttachmentDomainTests
                 _sessionId, _playerId, AttachmentType.BoardState,
                 longUrl, ValidContentTypeJpeg, ValidFileSize));
 
-        Assert.Contains("2048", ex.Message);
+        ex.Message.Should().Contain("2048");
     }
 
     [Theory]
@@ -221,7 +222,7 @@ public class SessionAttachmentDomainTests
         var attachment = CreateValidAttachment();
         attachment.SetThumbnail(ValidThumbnailUrl);
 
-        Assert.Equal(ValidThumbnailUrl, attachment.ThumbnailUrl);
+        attachment.ThumbnailUrl.Should().Be(ValidThumbnailUrl);
     }
 
     [Theory]
@@ -231,14 +232,14 @@ public class SessionAttachmentDomainTests
     public void SetThumbnail_WithInvalidUrl_Throws(string? url)
     {
         var attachment = CreateValidAttachment();
-        Assert.Throws<ArgumentException>(() => attachment.SetThumbnail(url!));
+        ((Action)(() => attachment.SetThumbnail(url!))).Should().Throw<ArgumentException>();
     }
 
     [Fact]
     public void SetThumbnail_WithUrlTooLong_Throws()
     {
         var attachment = CreateValidAttachment();
-        Assert.Throws<ArgumentException>(() => attachment.SetThumbnail(new string('x', 2049)));
+        ((Action)(() => attachment.SetThumbnail(new string('x', 2049)))).Should().Throw<ArgumentException>();
     }
 
     [Fact]
@@ -247,7 +248,7 @@ public class SessionAttachmentDomainTests
         var attachment = CreateValidAttachment();
         attachment.UpdateCaption("Updated caption");
 
-        Assert.Equal("Updated caption", attachment.Caption);
+        attachment.Caption.Should().Be("Updated caption");
     }
 
     [Fact]
@@ -265,14 +266,14 @@ public class SessionAttachmentDomainTests
         var attachment = CreateValidAttachment();
         attachment.UpdateCaption("  Trimmed  ");
 
-        Assert.Equal("Trimmed", attachment.Caption);
+        attachment.Caption.Should().Be("Trimmed");
     }
 
     [Fact]
     public void UpdateCaption_WithCaptionTooLong_Throws()
     {
         var attachment = CreateValidAttachment();
-        Assert.Throws<ArgumentException>(() => attachment.UpdateCaption(new string('x', 201)));
+        ((Action)(() => attachment.UpdateCaption(new string('x', 201)))).Should().Throw<ArgumentException>();
     }
 
     [Fact]
@@ -281,14 +282,14 @@ public class SessionAttachmentDomainTests
         var attachment = CreateValidAttachment();
         attachment.LinkToSnapshot(3);
 
-        Assert.Equal(3, attachment.SnapshotIndex);
+        attachment.SnapshotIndex.Should().Be(3);
     }
 
     [Fact]
     public void LinkToSnapshot_WithNegativeIndex_Throws()
     {
         var attachment = CreateValidAttachment();
-        Assert.Throws<ArgumentException>(() => attachment.LinkToSnapshot(-1));
+        ((Action)(() => attachment.LinkToSnapshot(-1))).Should().Throw<ArgumentException>();
     }
 
     [Fact]
@@ -311,7 +312,7 @@ public class SessionAttachmentDomainTests
 
         attachment.MarkAsDeleted();
 
-        Assert.Equal(firstDeletedAt, attachment.DeletedAt);
+        attachment.DeletedAt.Should().Be(firstDeletedAt);
     }
 
     #endregion

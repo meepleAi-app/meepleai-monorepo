@@ -2,6 +2,7 @@ using Api.BoundedContexts.GameManagement.Domain.Entities.PauseSnapshot;
 using Api.BoundedContexts.GameManagement.Domain.ValueObjects;
 using Api.Tests.Constants;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.GameManagement.Domain;
 
@@ -39,7 +40,7 @@ public class PauseSnapshotTests
         var snapshot = PauseSnapshot.Create(
             ValidSessionId, 3, "Round 3", SampleScores(), ValidUserId, false);
 
-        Assert.Equal(ValidSessionId, snapshot.LiveGameSessionId);
+        snapshot.LiveGameSessionId.Should().Be(ValidSessionId);
     }
 
     [Fact]
@@ -48,7 +49,7 @@ public class PauseSnapshotTests
         var snapshot = PauseSnapshot.Create(
             ValidSessionId, 5, null, SampleScores(), ValidUserId, false);
 
-        Assert.Equal(5, snapshot.CurrentTurn);
+        snapshot.CurrentTurn.Should().Be(5);
     }
 
     [Fact]
@@ -57,7 +58,7 @@ public class PauseSnapshotTests
         var snapshot = PauseSnapshot.Create(
             ValidSessionId, 1, "Setup", SampleScores(), ValidUserId, false);
 
-        Assert.Equal("Setup", snapshot.CurrentPhase);
+        snapshot.CurrentPhase.Should().Be("Setup");
     }
 
     [Fact]
@@ -67,7 +68,7 @@ public class PauseSnapshotTests
         var snapshot = PauseSnapshot.Create(
             ValidSessionId, 1, null, scores, ValidUserId, false);
 
-        Assert.Equal(2, snapshot.PlayerScores.Count);
+        snapshot.PlayerScores.Count.Should().Be(2);
         Assert.Contains(snapshot.PlayerScores, s => s.PlayerName == "Alice" && s.Score == 42m);
         Assert.Contains(snapshot.PlayerScores, s => s.PlayerName == "Bob" && s.Score == 37m);
     }
@@ -78,7 +79,7 @@ public class PauseSnapshotTests
         var snapshot = PauseSnapshot.Create(
             ValidSessionId, 1, null, SampleScores(), ValidUserId, false);
 
-        Assert.Equal(ValidUserId, snapshot.SavedByUserId);
+        snapshot.SavedByUserId.Should().Be(ValidUserId);
     }
 
     [Fact]
@@ -107,9 +108,9 @@ public class PauseSnapshotTests
             ValidSessionId, 1, null, SampleScores(), ValidUserId, false,
             attachmentIds: ids);
 
-        Assert.Equal(2, snapshot.AttachmentIds.Count);
-        Assert.Equal(ids[0], snapshot.AttachmentIds[0]);
-        Assert.Equal(ids[1], snapshot.AttachmentIds[1]);
+        snapshot.AttachmentIds.Count.Should().Be(2);
+        snapshot.AttachmentIds[0].Should().Be(ids[0]);
+        snapshot.AttachmentIds[1].Should().Be(ids[1]);
     }
 
     [Fact]
@@ -120,8 +121,8 @@ public class PauseSnapshotTests
             ValidSessionId, 1, null, SampleScores(), ValidUserId, false,
             disputes: new List<RuleDisputeEntry> { dispute });
 
-        Assert.Single(snapshot.Disputes);
-        Assert.Equal(dispute.Description, snapshot.Disputes[0].Description);
+        snapshot.Disputes.Should().ContainSingle();
+        snapshot.Disputes[0].Description.Should().Be(dispute.Description);
     }
 
     [Fact]
@@ -132,7 +133,7 @@ public class PauseSnapshotTests
             ValidSessionId, 1, null, SampleScores(), ValidUserId, false,
             gameStateJson: json);
 
-        Assert.Equal(json, snapshot.GameStateJson);
+        snapshot.GameStateJson.Should().Be(json);
     }
 
     [Fact]
@@ -141,7 +142,7 @@ public class PauseSnapshotTests
         var snapshot = PauseSnapshot.Create(
             ValidSessionId, 1, null, SampleScores(), ValidUserId, false);
 
-        Assert.NotEqual(Guid.Empty, snapshot.Id);
+        snapshot.Id.Should().NotBe(Guid.Empty);
     }
 
     // ─── SavedAt ────────────────────────────────────────────────────────────
@@ -221,7 +222,7 @@ public class PauseSnapshotTests
 
         snapshot.UpdateSummary("Players are winning. Board state: round 3.");
 
-        Assert.Equal("Players are winning. Board state: round 3.", snapshot.AgentConversationSummary);
+        snapshot.AgentConversationSummary.Should().Be("Players are winning. Board state: round 3.");
     }
 
     [Fact]
@@ -233,7 +234,7 @@ public class PauseSnapshotTests
         snapshot.UpdateSummary("First summary.");
         snapshot.UpdateSummary("Updated summary.");
 
-        Assert.Equal("Updated summary.", snapshot.AgentConversationSummary);
+        snapshot.AgentConversationSummary.Should().Be("Updated summary.");
     }
 
     [Fact]
@@ -242,7 +243,7 @@ public class PauseSnapshotTests
         var snapshot = PauseSnapshot.Create(
             ValidSessionId, 1, null, SampleScores(), ValidUserId, false);
 
-        Assert.Throws<ArgumentException>(() => snapshot.UpdateSummary(string.Empty));
+        ((Action)(() => snapshot.UpdateSummary(string.Empty))).Should().Throw<ArgumentException>();
     }
 
     [Fact]
@@ -251,7 +252,7 @@ public class PauseSnapshotTests
         var snapshot = PauseSnapshot.Create(
             ValidSessionId, 1, null, SampleScores(), ValidUserId, false);
 
-        Assert.Throws<ArgumentException>(() => snapshot.UpdateSummary("   "));
+        ((Action)(() => snapshot.UpdateSummary("   "))).Should().Throw<ArgumentException>();
     }
 
     // ─── IsAutoSave flag ─────────────────────────────────────────────────────
@@ -304,7 +305,7 @@ public class PauseSnapshotTests
         var snapshot = PauseSnapshot.Create(
             ValidSessionId, 0, null, SampleScores(), ValidUserId, false);
 
-        Assert.Equal(0, snapshot.CurrentTurn);
+        snapshot.CurrentTurn.Should().Be(0);
     }
 
     // ─── PlayerScoreSnapshot record ──────────────────────────────────────────
@@ -314,9 +315,9 @@ public class PauseSnapshotTests
     {
         var record = new PlayerScoreSnapshot("Marco", 99.5m, 42);
 
-        Assert.Equal("Marco", record.PlayerName);
-        Assert.Equal(99.5m, record.Score);
-        Assert.Equal(42, record.PlayerId);
+        record.PlayerName.Should().Be("Marco");
+        record.Score.Should().Be(99.5m);
+        record.PlayerId.Should().Be(42);
     }
 
     [Fact]
@@ -324,7 +325,7 @@ public class PauseSnapshotTests
     {
         var record = new PlayerScoreSnapshot("Guest", 10m);
 
-        Assert.Equal("Guest", record.PlayerName);
+        record.PlayerName.Should().Be("Guest");
         Assert.Null(record.PlayerId);
     }
 }

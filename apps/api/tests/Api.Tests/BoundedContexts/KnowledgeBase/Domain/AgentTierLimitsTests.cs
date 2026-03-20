@@ -1,6 +1,7 @@
 using Api.BoundedContexts.KnowledgeBase.Domain;
 using Api.Tests.Constants;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Domain;
 
@@ -23,7 +24,7 @@ public class AgentTierLimitsTests
     public void GetMaxAgents_RegularUser_ReturnsCorrectLimit(string tier, int expected)
     {
         var result = AgentTierLimits.GetMaxAgents(tier, "user");
-        Assert.Equal(expected, result);
+        result.Should().Be(expected);
     }
 
     [Theory]
@@ -34,7 +35,7 @@ public class AgentTierLimitsTests
     public void GetMaxAgents_AdminRole_ReturnsMaxValue(string role)
     {
         var result = AgentTierLimits.GetMaxAgents("free", role);
-        Assert.Equal(int.MaxValue, result);
+        result.Should().Be(int.MaxValue);
     }
 
     [Theory]
@@ -45,7 +46,7 @@ public class AgentTierLimitsTests
     public void GetMaxAgents_UnknownTier_ReturnsDefault(string? tier)
     {
         var result = AgentTierLimits.GetMaxAgents(tier, "user");
-        Assert.Equal(AgentTierLimits.DefaultMaxAgents, result);
+        result.Should().Be(AgentTierLimits.DefaultMaxAgents);
     }
 
     [Theory]
@@ -60,7 +61,7 @@ public class AgentTierLimitsTests
     public void IsAdminOrEditor_ReturnsCorrectly(string? role, bool expected)
     {
         var result = AgentTierLimits.IsAdminOrEditor(role);
-        Assert.Equal(expected, result);
+        result.Should().Be(expected);
     }
 
     [Fact]

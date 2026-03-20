@@ -7,6 +7,7 @@ using Api.Tests.Constants;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Handlers.RagDashboard;
 
@@ -127,7 +128,7 @@ public class GetRagConfigQueryHandlerTests
 
         // Assert
         Assert.NotNull(result);
-        Assert.Equal("Semantic", result.ActiveStrategy);
+        result.ActiveStrategy.Should().Be("Semantic");
     }
 
     [Fact]
@@ -144,7 +145,7 @@ public class GetRagConfigQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.Equal("Hybrid", result.ActiveStrategy);
+        result.ActiveStrategy.Should().Be("Hybrid");
     }
 
     [Fact]

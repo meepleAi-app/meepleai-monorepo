@@ -34,10 +34,10 @@ public class NaturalLanguageStateParserTests
     {
         var result = await _parser.ParseAsync("ho 5 punti", null, TestCancellationToken);
 
-        Assert.Equal(StateChangeType.ScoreChange, result.ChangeType);
+        result.ChangeType.Should().Be(StateChangeType.ScoreChange);
         Assert.True(result.HasStateChanges);
-        Assert.Contains("score", result.ExtractedState.Keys);
-        Assert.Equal(5, result.ExtractedState["score"]);
+        result.ExtractedState.Keys.Should().Contain("score");
+        result.ExtractedState["score"].Should().Be(5);
         Assert.True(result.Confidence > 0.8f);
     }
 
@@ -46,8 +46,8 @@ public class NaturalLanguageStateParserTests
     {
         var result = await _parser.ParseAsync("sono a 10 punti", null, TestCancellationToken);
 
-        Assert.Equal(StateChangeType.ScoreChange, result.ChangeType);
-        Assert.Equal(10, result.ExtractedState["score"]);
+        result.ChangeType.Should().Be(StateChangeType.ScoreChange);
+        result.ExtractedState["score"].Should().Be(10);
     }
 
     [Fact]
@@ -55,8 +55,8 @@ public class NaturalLanguageStateParserTests
     {
         var result = await _parser.ParseAsync("passo da 3 a 8 punti", null, TestCancellationToken);
 
-        Assert.Equal(StateChangeType.ScoreChange, result.ChangeType);
-        Assert.Equal(8, result.ExtractedState["score"]);
+        result.ChangeType.Should().Be(StateChangeType.ScoreChange);
+        result.ExtractedState["score"].Should().Be(8);
     }
 
     #endregion
@@ -68,9 +68,9 @@ public class NaturalLanguageStateParserTests
     {
         var result = await _parser.ParseAsync("ho guadagnato 3 legno", null, TestCancellationToken);
 
-        Assert.Equal(StateChangeType.ResourceChange, result.ChangeType);
-        Assert.Contains("resources.wood", result.ExtractedState.Keys);
-        Assert.Equal(3, result.ExtractedState["resources.wood"]);
+        result.ChangeType.Should().Be(StateChangeType.ResourceChange);
+        result.ExtractedState.Keys.Should().Contain("resources.wood");
+        result.ExtractedState["resources.wood"].Should().Be(3);
     }
 
     [Fact]
@@ -94,7 +94,7 @@ public class NaturalLanguageStateParserTests
             // At least stone should be extracted based on common resource pattern
             if (result.ExtractedState.ContainsKey("resources.stone"))
             {
-                Assert.Equal(2, result.ExtractedState["resources.stone"]);
+                result.ExtractedState["resources.stone"].Should().Be(2);
             }
         }
     }
@@ -108,9 +108,9 @@ public class NaturalLanguageStateParserTests
     {
         var result = await _parser.ParseAsync("ho costruito una strada", null, TestCancellationToken);
 
-        Assert.Equal(StateChangeType.PlayerAction, result.ChangeType);
-        Assert.Contains("buildings.roads", result.ExtractedState.Keys);
-        Assert.Equal(1, result.ExtractedState["buildings.roads"]);
+        result.ChangeType.Should().Be(StateChangeType.PlayerAction);
+        result.ExtractedState.Keys.Should().Contain("buildings.roads");
+        result.ExtractedState["buildings.roads"].Should().Be(1);
     }
 
     [Fact]
@@ -118,8 +118,8 @@ public class NaturalLanguageStateParserTests
     {
         var result = await _parser.ParseAsync("ho costruito una città", null, TestCancellationToken);
 
-        Assert.Equal(StateChangeType.PlayerAction, result.ChangeType);
-        Assert.Contains("buildings.cities", result.ExtractedState.Keys);
+        result.ChangeType.Should().Be(StateChangeType.PlayerAction);
+        result.ExtractedState.Keys.Should().Contain("buildings.cities");
     }
 
     #endregion
@@ -131,9 +131,9 @@ public class NaturalLanguageStateParserTests
     {
         var result = await _parser.ParseAsync("tocca a Marco", null, TestCancellationToken);
 
-        Assert.Equal(StateChangeType.TurnChange, result.ChangeType);
-        Assert.Contains("currentPlayer", result.ExtractedState.Keys);
-        Assert.Equal("Marco", result.ExtractedState["currentPlayer"]);
+        result.ChangeType.Should().Be(StateChangeType.TurnChange);
+        result.ExtractedState.Keys.Should().Contain("currentPlayer");
+        result.ExtractedState["currentPlayer"].Should().Be("Marco");
         Assert.True(result.Confidence > 0.9f);
     }
 
@@ -142,8 +142,8 @@ public class NaturalLanguageStateParserTests
     {
         var result = await _parser.ParseAsync("è il turno di Luca", null, TestCancellationToken);
 
-        Assert.Equal(StateChangeType.TurnChange, result.ChangeType);
-        Assert.Equal("Luca", result.ExtractedState["currentPlayer"]);
+        result.ChangeType.Should().Be(StateChangeType.TurnChange);
+        result.ExtractedState["currentPlayer"].Should().Be("Luca");
     }
 
     #endregion
@@ -155,9 +155,9 @@ public class NaturalLanguageStateParserTests
     {
         var result = await _parser.ParseAsync("fase di costruzione", null, TestCancellationToken);
 
-        Assert.Equal(StateChangeType.PhaseChange, result.ChangeType);
-        Assert.Contains("phase", result.ExtractedState.Keys);
-        Assert.Equal("costruzione", result.ExtractedState["phase"]);
+        result.ChangeType.Should().Be(StateChangeType.PhaseChange);
+        result.ExtractedState.Keys.Should().Contain("phase");
+        result.ExtractedState["phase"].Should().Be("costruzione");
     }
 
     [Fact]
@@ -165,8 +165,8 @@ public class NaturalLanguageStateParserTests
     {
         var result = await _parser.ParseAsync("inizia il round 3", null, TestCancellationToken);
 
-        Assert.Equal(StateChangeType.PhaseChange, result.ChangeType);
-        Assert.Equal("3", result.ExtractedState["phase"]);
+        result.ChangeType.Should().Be(StateChangeType.PhaseChange);
+        result.ExtractedState["phase"].Should().Be("3");
     }
 
     #endregion
@@ -181,9 +181,9 @@ public class NaturalLanguageStateParserTests
             null,
             TestCancellationToken);
 
-        Assert.Equal(StateChangeType.Composite, result.ChangeType);
-        Assert.Contains("buildings.roads", result.ExtractedState.Keys);
-        Assert.Contains("score", result.ExtractedState.Keys);
+        result.ChangeType.Should().Be(StateChangeType.Composite);
+        result.ExtractedState.Keys.Should().Contain("buildings.roads");
+        result.ExtractedState.Keys.Should().Contain("score");
         Assert.True(result.RequiresConfirmation);
         // Check exact warning message
         Assert.Contains(result.Warnings, w => w.Contains("Rilevate modifiche multiple"));
@@ -198,11 +198,11 @@ public class NaturalLanguageStateParserTests
     {
         var result = await _parser.ParseAsync("Marco ha 5 punti", null, TestCancellationToken);
 
-        Assert.Equal("Marco", result.PlayerName);
+        result.PlayerName.Should().Be("Marco");
         // Score should be extracted if pattern matches
         if (result.HasStateChanges && result.ExtractedState.ContainsKey("score"))
         {
-            Assert.Equal(5, result.ExtractedState["score"]);
+            result.ExtractedState["score"].Should().Be(5);
         }
     }
 
@@ -218,7 +218,7 @@ public class NaturalLanguageStateParserTests
             null,
             TestCancellationToken);
 
-        Assert.Equal(StateChangeType.NoChange, result.ChangeType);
+        result.ChangeType.Should().Be(StateChangeType.NoChange);
         Assert.False(result.HasStateChanges);
         Assert.Empty(result.ExtractedState);
     }
@@ -233,7 +233,7 @@ public class NaturalLanguageStateParserTests
             var result = await _parser.ParseAsync(string.Empty, null, TestCancellationToken);
 
             // If no exception, should return NoChange
-            Assert.Equal(StateChangeType.NoChange, result.ChangeType);
+            result.ChangeType.Should().Be(StateChangeType.NoChange);
             Assert.False(result.HasStateChanges);
         }
         catch (ArgumentException)
@@ -274,7 +274,7 @@ public class NaturalLanguageStateParserTests
 
         // Parser doesn't sanitize - that's responsibility of input validation
         Assert.NotNull(result);
-        Assert.Equal("ho 5 punti <script>alert('xss')</script>", result.OriginalMessage);
+        result.OriginalMessage.Should().Be("ho 5 punti <script>alert('xss')</script>");
     }
 
     #endregion

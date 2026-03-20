@@ -5,6 +5,7 @@ using Api.Middleware.Exceptions;
 using Api.Tests.Constants;
 using Microsoft.Extensions.Time.Testing;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.GameManagement.Domain.Entities;
 
@@ -60,9 +61,9 @@ public class LiveGameSession_DisputesTests
         session.AddDispute(dispute);
 
         // Assert
-        Assert.Single(session.Disputes);
-        Assert.Equal("Marco", session.Disputes[0].RaisedByPlayerName);
-        Assert.Equal("Can I play 2 cards per turn?", session.Disputes[0].Description);
+        session.Disputes.Should().ContainSingle();
+        session.Disputes[0].RaisedByPlayerName.Should().Be("Marco");
+        session.Disputes[0].Description.Should().Be("Can I play 2 cards per turn?");
         Assert.Equal("No, rule says 1 card per turn.", session.Disputes[0].Verdict);
     }
 
@@ -79,7 +80,7 @@ public class LiveGameSession_DisputesTests
         session.AddDispute(dispute2);
 
         // Assert
-        Assert.Equal(2, session.Disputes.Count);
+        session.Disputes.Count.Should().Be(2);
         Assert.Contains(session.Disputes, d => d.RaisedByPlayerName == "Marco");
         Assert.Contains(session.Disputes, d => d.RaisedByPlayerName == "Luca");
     }
@@ -91,7 +92,7 @@ public class LiveGameSession_DisputesTests
         var session = CreateInProgressSession();
 
         // Act & Assert
-        Assert.Throws<ArgumentNullException>(() => session.AddDispute(null!));
+        ((Action)(() => session.AddDispute(null!))).Should().Throw<ArgumentNullException>();
     }
 
     [Fact]
@@ -132,9 +133,9 @@ public class LiveGameSession_DisputesTests
         session.AddDispute(dispute);
 
         // Assert
-        Assert.Equal(2, session.Disputes[0].RuleReferences.Count);
-        Assert.Contains("Page 5", session.Disputes[0].RuleReferences);
-        Assert.Contains("Section 3.2", session.Disputes[0].RuleReferences);
+        session.Disputes[0].RuleReferences.Count.Should().Be(2);
+        session.Disputes[0].RuleReferences.Should().Contain("Page 5");
+        session.Disputes[0].RuleReferences.Should().Contain("Section 3.2");
     }
 
     #endregion
@@ -151,7 +152,7 @@ public class LiveGameSession_DisputesTests
         session.Pause(_timeProvider);
 
         // Assert
-        Assert.Equal(LiveSessionStatus.Paused, session.Status);
+        session.Status.Should().Be(LiveSessionStatus.Paused);
     }
 
     [Fact]
@@ -164,7 +165,7 @@ public class LiveGameSession_DisputesTests
         session.Pause(_timeProvider);
 
         // Assert
-        Assert.Equal(_now, session.PausedAt);
+        session.PausedAt.Should().Be(_now);
     }
 
     [Fact]
@@ -175,7 +176,7 @@ public class LiveGameSession_DisputesTests
         session.Pause(_timeProvider); // now Paused
 
         // Act & Assert
-        Assert.Throws<ConflictException>(() => session.Pause(_timeProvider));
+        ((Action)(() => session.Pause(_timeProvider))).Should().Throw<ConflictException>();
     }
 
     [Fact]
@@ -186,7 +187,7 @@ public class LiveGameSession_DisputesTests
             Guid.NewGuid(), Guid.NewGuid(), "Catan", _timeProvider);
 
         // Act & Assert
-        Assert.Throws<ConflictException>(() => session.Pause(_timeProvider));
+        ((Action)(() => session.Pause(_timeProvider))).Should().Throw<ConflictException>();
     }
 
     [Fact]
@@ -197,7 +198,7 @@ public class LiveGameSession_DisputesTests
         session.Complete(_timeProvider);
 
         // Act & Assert
-        Assert.Throws<ConflictException>(() => session.Pause(_timeProvider));
+        ((Action)(() => session.Pause(_timeProvider))).Should().Throw<ConflictException>();
     }
 
     #endregion
@@ -215,7 +216,7 @@ public class LiveGameSession_DisputesTests
         session.Resume(_timeProvider);
 
         // Assert
-        Assert.Equal(LiveSessionStatus.InProgress, session.Status);
+        session.Status.Should().Be(LiveSessionStatus.InProgress);
     }
 
     [Fact]
@@ -239,7 +240,7 @@ public class LiveGameSession_DisputesTests
         var session = CreateInProgressSession(); // InProgress, not Paused
 
         // Act & Assert
-        Assert.Throws<ConflictException>(() => session.Resume(_timeProvider));
+        ((Action)(() => session.Resume(_timeProvider))).Should().Throw<ConflictException>();
     }
 
     [Fact]
@@ -250,7 +251,7 @@ public class LiveGameSession_DisputesTests
             Guid.NewGuid(), Guid.NewGuid(), "Catan", _timeProvider);
 
         // Act & Assert
-        Assert.Throws<ConflictException>(() => session.Resume(_timeProvider));
+        ((Action)(() => session.Resume(_timeProvider))).Should().Throw<ConflictException>();
     }
 
     [Fact]
@@ -261,7 +262,7 @@ public class LiveGameSession_DisputesTests
         session.Complete(_timeProvider);
 
         // Act & Assert
-        Assert.Throws<ConflictException>(() => session.Resume(_timeProvider));
+        ((Action)(() => session.Resume(_timeProvider))).Should().Throw<ConflictException>();
     }
 
     [Fact]
@@ -272,16 +273,16 @@ public class LiveGameSession_DisputesTests
 
         // Act & Assert - full cycle
         session.Pause(_timeProvider);
-        Assert.Equal(LiveSessionStatus.Paused, session.Status);
+        session.Status.Should().Be(LiveSessionStatus.Paused);
         Assert.NotNull(session.PausedAt);
 
         session.Resume(_timeProvider);
-        Assert.Equal(LiveSessionStatus.InProgress, session.Status);
+        session.Status.Should().Be(LiveSessionStatus.InProgress);
         Assert.Null(session.PausedAt);
 
         // Can pause again
         session.Pause(_timeProvider);
-        Assert.Equal(LiveSessionStatus.Paused, session.Status);
+        session.Status.Should().Be(LiveSessionStatus.Paused);
     }
 
     #endregion

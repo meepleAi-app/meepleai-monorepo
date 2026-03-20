@@ -4,6 +4,7 @@ using Api.BoundedContexts.GameManagement.Domain.Events;
 using Api.BoundedContexts.GameManagement.Domain.ValueObjects;
 using Api.Tests.Constants;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.GameManagement.Domain.Entities;
 
@@ -35,16 +36,16 @@ public class RuleDisputeTests
         var dispute = CreateDispute();
 
         // Assert
-        Assert.NotEqual(Guid.Empty, dispute.Id);
-        Assert.Equal(SessionId, dispute.SessionId);
-        Assert.Equal(GameId, dispute.GameId);
-        Assert.Equal(InitiatorId, dispute.InitiatorPlayerId);
-        Assert.Equal("I can play 2 cards per turn", dispute.InitiatorClaim);
+        dispute.Id.Should().NotBe(Guid.Empty);
+        dispute.SessionId.Should().Be(SessionId);
+        dispute.GameId.Should().Be(GameId);
+        dispute.InitiatorPlayerId.Should().Be(InitiatorId);
+        dispute.InitiatorClaim.Should().Be("I can play 2 cards per turn");
         Assert.Null(dispute.RespondentPlayerId);
         Assert.Null(dispute.RespondentClaim);
         Assert.Null(dispute.Verdict);
         Assert.Empty(dispute.Votes);
-        Assert.Equal(DisputeOutcome.Pending, dispute.FinalOutcome);
+        dispute.FinalOutcome.Should().Be(DisputeOutcome.Pending);
         Assert.Null(dispute.OverrideRule);
         Assert.True(dispute.CreatedAt <= DateTime.UtcNow);
         Assert.Empty(dispute.RelatedDisputeIds);
@@ -99,7 +100,7 @@ public class RuleDisputeTests
         dispute.AddRespondentClaim(RespondentId, "No, only 1 card per turn");
 
         // Assert
-        Assert.Equal(RespondentId, dispute.RespondentPlayerId);
+        dispute.RespondentPlayerId.Should().Be(RespondentId);
         Assert.Equal("No, only 1 card per turn", dispute.RespondentClaim);
     }
 
@@ -135,16 +136,16 @@ public class RuleDisputeTests
 
         // Assert
         Assert.NotNull(dispute.Verdict);
-        Assert.Equal(RulingFor.Initiator, dispute.Verdict.RulingFor);
-        Assert.Equal("Rule 3.1 allows 2 cards", dispute.Verdict.Reasoning);
-        Assert.Equal(DisputeOutcome.Pending, dispute.FinalOutcome);
+        dispute.Verdict.RulingFor.Should().Be(RulingFor.Initiator);
+        dispute.Verdict.Reasoning.Should().Be("Rule 3.1 allows 2 cards");
+        dispute.FinalOutcome.Should().Be(DisputeOutcome.Pending);
     }
 
     [Fact]
     public void SetVerdict_Null_ShouldThrow()
     {
         var dispute = CreateDispute();
-        Assert.Throws<ArgumentNullException>(() => dispute.SetVerdict(null!));
+        ((Action)(() => dispute.SetVerdict(null!))).Should().Throw<ArgumentNullException>();
     }
 
     #endregion
@@ -162,8 +163,8 @@ public class RuleDisputeTests
         dispute.CastVote(playerId, true);
 
         // Assert
-        Assert.Single(dispute.Votes);
-        Assert.Equal(playerId, dispute.Votes[0].PlayerId);
+        dispute.Votes.Should().ContainSingle();
+        dispute.Votes[0].PlayerId.Should().Be(playerId);
         Assert.True(dispute.Votes[0].AcceptsVerdict);
     }
 
@@ -206,7 +207,7 @@ public class RuleDisputeTests
         dispute.TallyVotes();
 
         // Assert
-        Assert.Equal(DisputeOutcome.VerdictAccepted, dispute.FinalOutcome);
+        dispute.FinalOutcome.Should().Be(DisputeOutcome.VerdictAccepted);
     }
 
     [Fact]
@@ -223,7 +224,7 @@ public class RuleDisputeTests
         dispute.TallyVotes();
 
         // Assert
-        Assert.Equal(DisputeOutcome.VerdictOverridden, dispute.FinalOutcome);
+        dispute.FinalOutcome.Should().Be(DisputeOutcome.VerdictOverridden);
     }
 
     [Fact]
@@ -239,7 +240,7 @@ public class RuleDisputeTests
         dispute.TallyVotes();
 
         // Assert
-        Assert.Equal(DisputeOutcome.VerdictOverridden, dispute.FinalOutcome);
+        dispute.FinalOutcome.Should().Be(DisputeOutcome.VerdictOverridden);
     }
 
     [Fact]
@@ -255,13 +256,13 @@ public class RuleDisputeTests
         dispute.RaiseResolvedEvent();
 
         // Assert
-        var domainEvent = Assert.Single(dispute.DomainEvents);
+        var domainEvent = dispute.DomainEvents.Should().ContainSingle().Subject;
         var resolvedEvent = Assert.IsType<StructuredDisputeResolvedEvent>(domainEvent);
-        Assert.Equal(dispute.Id, resolvedEvent.DisputeId);
-        Assert.Equal(SessionId, resolvedEvent.SessionId);
-        Assert.Equal(GameId, resolvedEvent.GameId);
+        resolvedEvent.DisputeId.Should().Be(dispute.Id);
+        resolvedEvent.SessionId.Should().Be(SessionId);
+        resolvedEvent.GameId.Should().Be(GameId);
         Assert.NotNull(resolvedEvent.Verdict);
-        Assert.Equal(DisputeOutcome.VerdictAccepted, resolvedEvent.FinalOutcome);
+        resolvedEvent.FinalOutcome.Should().Be(DisputeOutcome.VerdictAccepted);
     }
 
     [Fact]
@@ -270,7 +271,7 @@ public class RuleDisputeTests
         var dispute = CreateDispute();
         dispute.CastVote(Guid.NewGuid(), true);
 
-        Assert.Throws<InvalidOperationException>(() => dispute.TallyVotes());
+        ((Action)(() => dispute.TallyVotes())).Should().Throw<InvalidOperationException>();
     }
 
     [Fact]
@@ -279,7 +280,7 @@ public class RuleDisputeTests
         var dispute = CreateDispute();
         dispute.SetVerdict(CreateVerdict());
 
-        Assert.Throws<InvalidOperationException>(() => dispute.TallyVotes());
+        ((Action)(() => dispute.TallyVotes())).Should().Throw<InvalidOperationException>();
     }
 
     #endregion
@@ -299,7 +300,7 @@ public class RuleDisputeTests
         dispute.SetOverrideRule("House rule: 2 cards allowed on first turn only");
 
         // Assert
-        Assert.Equal("House rule: 2 cards allowed on first turn only", dispute.OverrideRule);
+        dispute.OverrideRule.Should().Be("House rule: 2 cards allowed on first turn only");
     }
 
     [Fact]
@@ -355,13 +356,13 @@ public class RuleDisputeTests
         var entry = dispute.ToLegacyEntry();
 
         // Assert
-        Assert.Equal(dispute.Id, entry.Id);
-        Assert.Equal("Can I play 2 cards?", entry.Description);
+        entry.Id.Should().Be(dispute.Id);
+        entry.Description.Should().Be("Can I play 2 cards?");
         Assert.Equal("Yes, rule 3.1 allows it", entry.Verdict);
-        Assert.Single(entry.RuleReferences);
-        Assert.Contains("Page 5", entry.RuleReferences);
-        Assert.Equal(InitiatorId.ToString(), entry.RaisedByPlayerName);
-        Assert.Equal(dispute.CreatedAt, entry.Timestamp);
+        entry.RuleReferences.Should().ContainSingle();
+        entry.RuleReferences.Should().Contain("Page 5");
+        entry.RaisedByPlayerName.Should().Be(InitiatorId.ToString());
+        entry.Timestamp.Should().Be(dispute.CreatedAt);
     }
 
     [Fact]
@@ -372,7 +373,7 @@ public class RuleDisputeTests
         var dispute = CreateDispute("Some claim");
 
         // Act & Assert
-        Assert.Throws<InvalidOperationException>(() => dispute.ToLegacyEntry());
+        ((Action)(() => dispute.ToLegacyEntry())).Should().Throw<InvalidOperationException>();
     }
 
     [Fact]
@@ -404,7 +405,7 @@ public class RuleDisputeTests
         dispute.SetRelatedDisputeIds(ids);
 
         // Assert
-        Assert.Equal(2, dispute.RelatedDisputeIds.Count);
+        dispute.RelatedDisputeIds.Count.Should().Be(2);
     }
 
     [Fact]
@@ -419,7 +420,7 @@ public class RuleDisputeTests
         dispute.SetRelatedDisputeIds(newIds);
 
         // Assert
-        Assert.Equal(3, dispute.RelatedDisputeIds.Count);
+        dispute.RelatedDisputeIds.Count.Should().Be(3);
     }
 
     #endregion
@@ -445,10 +446,10 @@ public class RuleDisputeTests
     {
         var verdict = new DisputeVerdict(RulingFor.Respondent, "Rule says no", "p.3", VerdictConfidence.Medium);
 
-        Assert.Equal(RulingFor.Respondent, verdict.RulingFor);
-        Assert.Equal("Rule says no", verdict.Reasoning);
-        Assert.Equal("p.3", verdict.Citation);
-        Assert.Equal(VerdictConfidence.Medium, verdict.Confidence);
+        verdict.RulingFor.Should().Be(RulingFor.Respondent);
+        verdict.Reasoning.Should().Be("Rule says no");
+        verdict.Citation.Should().Be("p.3");
+        verdict.Confidence.Should().Be(VerdictConfidence.Medium);
     }
 
     #endregion

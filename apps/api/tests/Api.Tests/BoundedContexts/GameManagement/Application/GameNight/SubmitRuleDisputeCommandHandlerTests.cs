@@ -16,6 +16,7 @@ using MediatR;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.GameManagement.Application.GameNight;
 
@@ -155,7 +156,7 @@ public sealed class SubmitRuleDisputeCommandHandlerTests
         var result = await _sut.Handle(command, CancellationToken.None);
 
         // Assert
-        Assert.NotEqual(Guid.Empty, result.Id);
+        result.Id.Should().NotBe(Guid.Empty);
         Assert.False(string.IsNullOrWhiteSpace(result.Verdict));
         Assert.NotNull(result.RuleReferences);
         Assert.NotEmpty(result.RuleReferences);
@@ -180,9 +181,9 @@ public sealed class SubmitRuleDisputeCommandHandlerTests
 
         // Assert
         Assert.NotNull(updatedSession);
-        Assert.Single(updatedSession!.Disputes);
-        Assert.Equal(command.Description, updatedSession.Disputes[0].Description);
-        Assert.Equal(command.RaisedByPlayerName, updatedSession.Disputes[0].RaisedByPlayerName);
+        updatedSession!.Disputes.Should().ContainSingle();
+        updatedSession.Disputes[0].Description.Should().Be(command.Description);
+        updatedSession.Disputes[0].RaisedByPlayerName.Should().Be(command.RaisedByPlayerName);
     }
 
     [Fact]
@@ -453,7 +454,7 @@ public sealed class SubmitRuleDisputeCommandHandlerTests
         var result = await _sut.Handle(command, CancellationToken.None);
 
         // Assert — verdict returned and usage recorded
-        Assert.NotEqual(Guid.Empty, result.Id);
+        result.Id.Should().NotBe(Guid.Empty);
         _tierEnforcementMock.Verify(
             t => t.RecordUsageAsync(TestUserId, TierAction.SessionAgentQuery, It.IsAny<CancellationToken>()),
             Times.Once);
@@ -491,7 +492,7 @@ public sealed class SubmitRuleDisputeCommandHandlerTests
         var (verdict, refs, note) = SubmitRuleDisputeCommandHandler.ParseArbitrationResponse(response);
 
         // Assert — fallback: full response as verdict
-        Assert.Equal(response, verdict);
+        verdict.Should().Be(response);
         Assert.Empty(refs);
         Assert.Null(note);
     }

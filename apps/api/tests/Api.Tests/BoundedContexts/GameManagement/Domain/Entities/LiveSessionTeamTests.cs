@@ -2,6 +2,7 @@ using Api.BoundedContexts.GameManagement.Domain.Entities;
 using Api.SharedKernel.Domain.Exceptions;
 using Api.Tests.Constants;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.GameManagement.Domain.Entities;
 
@@ -21,10 +22,10 @@ public class LiveSessionTeamTests
     {
         var team = CreateTeam();
 
-        Assert.Equal("Alpha", team.Name);
-        Assert.Equal("#FF0000", team.Color);
-        Assert.Equal(0, team.TeamScore);
-        Assert.Equal(0, team.CurrentRank);
+        team.Name.Should().Be("Alpha");
+        team.Color.Should().Be("#FF0000");
+        team.TeamScore.Should().Be(0);
+        team.CurrentRank.Should().Be(0);
         Assert.Empty(team.PlayerIds);
     }
 
@@ -45,27 +46,27 @@ public class LiveSessionTeamTests
     [Fact]
     public void Constructor_EmptyName_ThrowsValidationException()
     {
-        Assert.Throws<ValidationException>(() => CreateTeam(name: ""));
+        ((Action)(() => CreateTeam(name: ""))).Should().Throw<ValidationException>();
     }
 
     [Fact]
     public void Constructor_NameTooLong_ThrowsValidationException()
     {
-        Assert.Throws<ValidationException>(() => CreateTeam(name: new string('x', 51)));
+        ((Action)(() => CreateTeam(name: new string('x', 51)))).Should().Throw<ValidationException>();
     }
 
     [Fact]
     public void Constructor_EmptyColor_ThrowsValidationException()
     {
-        Assert.Throws<ValidationException>(() => CreateTeam(color: ""));
+        ((Action)(() => CreateTeam(color: ""))).Should().Throw<ValidationException>();
     }
 
     [Fact]
     public void Constructor_TrimsNameAndColor()
     {
         var team = CreateTeam(name: "  Alpha  ", color: "  #FF0000  ");
-        Assert.Equal("Alpha", team.Name);
-        Assert.Equal("#FF0000", team.Color);
+        team.Name.Should().Be("Alpha");
+        team.Color.Should().Be("#FF0000");
     }
 
     [Fact]
@@ -76,15 +77,15 @@ public class LiveSessionTeamTests
 
         team.AddPlayer(playerId);
 
-        Assert.Single(team.PlayerIds);
-        Assert.Equal(playerId, team.PlayerIds[0]);
+        team.PlayerIds.Should().ContainSingle();
+        team.PlayerIds[0].Should().Be(playerId);
     }
 
     [Fact]
     public void AddPlayer_EmptyId_ThrowsValidationException()
     {
         var team = CreateTeam();
-        Assert.Throws<ValidationException>(() => team.AddPlayer(Guid.Empty));
+        ((Action)(() => team.AddPlayer(Guid.Empty))).Should().Throw<ValidationException>();
     }
 
     [Fact]
@@ -94,7 +95,7 @@ public class LiveSessionTeamTests
         var playerId = Guid.NewGuid();
         team.AddPlayer(playerId);
 
-        Assert.Throws<DomainException>(() => team.AddPlayer(playerId));
+        ((Action)(() => team.AddPlayer(playerId))).Should().Throw<DomainException>();
     }
 
     [Fact]
@@ -113,7 +114,7 @@ public class LiveSessionTeamTests
     public void RemovePlayer_NonExistentId_ThrowsDomainException()
     {
         var team = CreateTeam();
-        Assert.Throws<DomainException>(() => team.RemovePlayer(Guid.NewGuid()));
+        ((Action)(() => team.RemovePlayer(Guid.NewGuid()))).Should().Throw<DomainException>();
     }
 
     [Fact]
@@ -122,8 +123,8 @@ public class LiveSessionTeamTests
         var team = CreateTeam();
         team.UpdateScore(100, 1);
 
-        Assert.Equal(100, team.TeamScore);
-        Assert.Equal(1, team.CurrentRank);
+        team.TeamScore.Should().Be(100);
+        team.CurrentRank.Should().Be(1);
     }
 
     [Fact]
@@ -132,20 +133,20 @@ public class LiveSessionTeamTests
         var team = CreateTeam();
         team.UpdateName("Beta");
 
-        Assert.Equal("Beta", team.Name);
+        team.Name.Should().Be("Beta");
     }
 
     [Fact]
     public void UpdateName_Empty_ThrowsValidationException()
     {
         var team = CreateTeam();
-        Assert.Throws<ValidationException>(() => team.UpdateName(""));
+        ((Action)(() => team.UpdateName(""))).Should().Throw<ValidationException>();
     }
 
     [Fact]
     public void UpdateName_TooLong_ThrowsValidationException()
     {
         var team = CreateTeam();
-        Assert.Throws<ValidationException>(() => team.UpdateName(new string('x', 51)));
+        ((Action)(() => team.UpdateName(new string('x', 51)))).Should().Throw<ValidationException>();
     }
 }

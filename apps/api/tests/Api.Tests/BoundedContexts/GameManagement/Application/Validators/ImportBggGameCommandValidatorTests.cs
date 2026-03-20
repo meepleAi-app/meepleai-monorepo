@@ -2,6 +2,7 @@ using Api.BoundedContexts.GameManagement.Application.Commands;
 using Api.BoundedContexts.GameManagement.Application.Validators;
 using Api.Tests.Constants;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.GameManagement.Application.Validators;
 
@@ -96,6 +97,6 @@ public sealed class ImportBggGameCommandValidatorTests
 
         // Assert
         Assert.False(result.IsValid);
-        Assert.Equal(2, result.Errors.Count);
+        result.Errors.Count.Should().Be(2);
     }
 }

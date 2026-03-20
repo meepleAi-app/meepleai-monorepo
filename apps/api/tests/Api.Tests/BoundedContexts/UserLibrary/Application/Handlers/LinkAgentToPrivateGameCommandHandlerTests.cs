@@ -9,6 +9,7 @@ using MediatR;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.UserLibrary.Application.Handlers;
 
@@ -88,8 +89,8 @@ public sealed class LinkAgentToPrivateGameCommandHandlerTests
             u => u.SaveChangesAsync(It.IsAny<CancellationToken>()),
             Times.Once);
 
-        Assert.NotNull(capturedGame);
-        Assert.Equal(agentId, capturedGame.AgentDefinitionId);
+        capturedGame.Should().NotBeNull();
+        capturedGame.AgentDefinitionId.Should().Be(agentId);
     }
 
     [Fact]
@@ -160,7 +161,7 @@ public sealed class LinkAgentToPrivateGameCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert: agent link succeeded, auto-link failure was swallowed
-        Assert.Equal(MediatR.Unit.Value, result);
+        result.Should().Be(MediatR.Unit.Value);
         _unitOfWorkMock.Verify(
             u => u.SaveChangesAsync(It.IsAny<CancellationToken>()),
             Times.Once);

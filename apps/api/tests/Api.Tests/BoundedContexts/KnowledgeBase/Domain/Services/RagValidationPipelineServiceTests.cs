@@ -5,6 +5,7 @@ using Api.Services;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using FluentAssertions;
 using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Domain.Services;
@@ -55,9 +56,9 @@ public class RagValidationPipelineServiceTests
 
         // Assert
         Assert.True(result.IsValid);
-        Assert.Equal(3, result.LayersPassed);
-        Assert.Equal(3, result.TotalLayers);
-        Assert.Equal(RagValidationSeverity.Pass, result.Severity);
+        result.LayersPassed.Should().Be(3);
+        result.TotalLayers.Should().Be(3);
+        result.Severity.Should().Be(RagValidationSeverity.Pass);
         Assert.Contains("All validations passed", result.Message, StringComparison.OrdinalIgnoreCase);
         Assert.Null(result.MultiModelConsensus);
         Assert.Null(result.ValidationAccuracyMetrics);
@@ -110,8 +111,8 @@ public class RagValidationPipelineServiceTests
         // Assert
         Assert.False(result.IsValid);
         Assert.Equal(2, result.LayersPassed); // Citation and Hallucination pass
-        Assert.Equal(3, result.TotalLayers);
-        Assert.Equal(RagValidationSeverity.Critical, result.Severity);
+        result.TotalLayers.Should().Be(3);
+        result.Severity.Should().Be(RagValidationSeverity.Critical);
         Assert.Contains("2/3 validations passed", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
@@ -170,9 +171,9 @@ public class RagValidationPipelineServiceTests
 
         // Assert
         Assert.False(result.IsValid);
-        Assert.Equal(2, result.LayersPassed);
-        Assert.Equal(3, result.TotalLayers);
-        Assert.Equal(RagValidationSeverity.Warning, result.Severity);
+        result.LayersPassed.Should().Be(2);
+        result.TotalLayers.Should().Be(3);
+        result.Severity.Should().Be(RagValidationSeverity.Warning);
     }
 
     [Fact]
@@ -221,11 +222,11 @@ public class RagValidationPipelineServiceTests
 
         // Assert
         Assert.False(result.IsValid);
-        Assert.Equal(2, result.LayersPassed);
-        Assert.Equal(3, result.TotalLayers);
-        Assert.Equal(RagValidationSeverity.Warning, result.Severity);
+        result.LayersPassed.Should().Be(2);
+        result.TotalLayers.Should().Be(3);
+        result.Severity.Should().Be(RagValidationSeverity.Warning);
         Assert.False(result.HallucinationDetection.IsValid);
-        Assert.Equal(2, result.HallucinationDetection.DetectedKeywords.Count);
+        result.HallucinationDetection.DetectedKeywords.Count.Should().Be(2);
     }
 
     [Fact]
@@ -282,14 +283,14 @@ public class RagValidationPipelineServiceTests
 
         // Assert
         Assert.True(result.IsValid);
-        Assert.Equal(4, result.LayersPassed);
-        Assert.Equal(4, result.TotalLayers);
-        Assert.Equal(RagValidationSeverity.Pass, result.Severity);
-        Assert.Contains("All validations passed", result.Message);
+        result.LayersPassed.Should().Be(4);
+        result.TotalLayers.Should().Be(4);
+        result.Severity.Should().Be(RagValidationSeverity.Pass);
+        result.Message.Should().Contain("All validations passed");
         Assert.NotNull(result.MultiModelConsensus);
         Assert.True(result.MultiModelConsensus.HasConsensus);
         Assert.NotNull(result.ValidationAccuracyMetrics);
-        Assert.Contains("Validation accuracy tracking enabled", result.ValidationAccuracyMetrics);
+        result.ValidationAccuracyMetrics.Should().Contain("Validation accuracy tracking enabled");
     }
 
     [Fact]
@@ -358,8 +359,8 @@ public class RagValidationPipelineServiceTests
         // Assert
         Assert.False(result.IsValid);
         Assert.Equal(3, result.LayersPassed); // Confidence, Citation, Hallucination pass
-        Assert.Equal(4, result.TotalLayers);
-        Assert.Equal(RagValidationSeverity.Warning, result.Severity);
+        result.TotalLayers.Should().Be(4);
+        result.Severity.Should().Be(RagValidationSeverity.Warning);
         Assert.NotNull(result.MultiModelConsensus);
         Assert.False(result.MultiModelConsensus.HasConsensus);
     }
@@ -548,8 +549,8 @@ public class RagValidationPipelineServiceTests
 
         // Assert
         Assert.False(result.IsValid);
-        Assert.Equal(RagValidationSeverity.Critical, result.Severity);
-        Assert.Equal(HallucinationSeverity.High, result.HallucinationDetection.Severity);
+        result.Severity.Should().Be(RagValidationSeverity.Critical);
+        result.HallucinationDetection.Severity.Should().Be(HallucinationSeverity.High);
     }
     private QaResponse CreateQaResponse(double confidence)
     {

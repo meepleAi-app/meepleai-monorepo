@@ -1,6 +1,7 @@
 using Api.BoundedContexts.GameManagement.Domain.Entities;
 using Api.BoundedContexts.GameManagement.Domain.ValueObjects;
 using Xunit;
+using FluentAssertions;
 using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.GameManagement.Domain;
@@ -25,11 +26,11 @@ public class GameSessionDomainTests
         var session = new GameSession(sessionId, gameId, players);
 
         // Assert
-        Assert.Equal(sessionId, session.Id);
-        Assert.Equal(gameId, session.GameId);
-        Assert.Equal(SessionStatus.Setup, session.Status);
-        Assert.Equal(2, session.PlayerCount);
-        Assert.Equal(2, session.Players.Count);
+        session.Id.Should().Be(sessionId);
+        session.GameId.Should().Be(gameId);
+        session.Status.Should().Be(SessionStatus.Setup);
+        session.PlayerCount.Should().Be(2);
+        session.Players.Count.Should().Be(2);
     }
 
     [Fact]
@@ -88,7 +89,7 @@ public class GameSessionDomainTests
         session.Start();
 
         // Assert
-        Assert.Equal(SessionStatus.InProgress, session.Status);
+        session.Status.Should().Be(SessionStatus.InProgress);
     }
 
     [Fact]
@@ -99,7 +100,7 @@ public class GameSessionDomainTests
         session.Start();
 
         // Act & Assert
-        var exception = Assert.Throws<InvalidOperationException>(() => session.Start());
+        var exception = ((Action)(() => session.Start())).Should().Throw<InvalidOperationException>().Which;
         Assert.Contains("must be in Setup", exception.Message, StringComparison.OrdinalIgnoreCase);
     }
 
@@ -116,8 +117,8 @@ public class GameSessionDomainTests
 
         // Assert
         var afterComplete = DateTime.UtcNow;
-        Assert.Equal(SessionStatus.Completed, session.Status);
-        Assert.Equal("Alice", session.WinnerName);
+        session.Status.Should().Be(SessionStatus.Completed);
+        session.WinnerName.Should().Be("Alice");
         Assert.NotNull(session.CompletedAt);
         Assert.InRange(session.CompletedAt.Value, beforeComplete, afterComplete);
     }
@@ -133,7 +134,7 @@ public class GameSessionDomainTests
         session.Complete();
 
         // Assert
-        Assert.Equal(SessionStatus.Completed, session.Status);
+        session.Status.Should().Be(SessionStatus.Completed);
         Assert.Null(session.WinnerName);
         Assert.NotNull(session.CompletedAt);
     }
@@ -145,7 +146,7 @@ public class GameSessionDomainTests
         var session = CreateDefaultSession(); // Status = Setup
 
         // Act & Assert
-        var exception = Assert.Throws<InvalidOperationException>(() => session.Complete());
+        var exception = ((Action)(() => session.Complete())).Should().Throw<InvalidOperationException>().Which;
         Assert.Contains("must be InProgress", exception.Message, StringComparison.OrdinalIgnoreCase);
     }
 
@@ -175,8 +176,8 @@ public class GameSessionDomainTests
         session.Complete(maxLengthName);
 
         // Assert
-        Assert.Equal(SessionStatus.Completed, session.Status);
-        Assert.Equal(maxLengthName, session.WinnerName);
+        session.Status.Should().Be(SessionStatus.Completed);
+        session.WinnerName.Should().Be(maxLengthName);
     }
 
     [Fact]
@@ -190,7 +191,7 @@ public class GameSessionDomainTests
         session.Abandon("Players had to leave");
 
         // Assert
-        Assert.Equal(SessionStatus.Abandoned, session.Status);
+        session.Status.Should().Be(SessionStatus.Abandoned);
         Assert.NotNull(session.CompletedAt);
         Assert.Contains("Abandoned: Players had to leave", session.Notes, StringComparison.OrdinalIgnoreCase);
     }
@@ -204,7 +205,7 @@ public class GameSessionDomainTests
         session.Complete();
 
         // Act & Assert
-        var exception = Assert.Throws<InvalidOperationException>(() => session.Abandon());
+        var exception = ((Action)(() => session.Abandon())).Should().Throw<InvalidOperationException>().Which;
         Assert.Contains("Cannot abandon finished session", exception.Message, StringComparison.OrdinalIgnoreCase);
     }
 
@@ -219,7 +220,7 @@ public class GameSessionDomainTests
         session.AddNotes("Second note");
 
         // Assert
-        Assert.Equal("First note\nSecond note", session.Notes);
+        session.Notes.Should().Be("First note\nSecond note");
     }
 
     [Fact]
@@ -293,7 +294,7 @@ public class GameSessionDomainTests
         session.AddPlayer(newPlayer);
 
         // Assert
-        Assert.Equal(3, session.PlayerCount);
+        session.PlayerCount.Should().Be(3);
         Assert.True(session.HasPlayer("Charlie"));
         Assert.Contains(session.Players, p => p.PlayerName == "Charlie");
     }
@@ -310,7 +311,7 @@ public class GameSessionDomainTests
         session.AddPlayer(newPlayer);
 
         // Assert
-        Assert.Equal(3, session.PlayerCount);
+        session.PlayerCount.Should().Be(3);
         Assert.True(session.HasPlayer("Charlie"));
     }
 
@@ -321,7 +322,7 @@ public class GameSessionDomainTests
         var session = CreateDefaultSession();
 
         // Act & Assert
-        Assert.Throws<ArgumentNullException>(() => session.AddPlayer(null!));
+        ((Action)(() => session.AddPlayer(null!))).Should().Throw<ArgumentNullException>();
     }
 
     [Fact]
@@ -334,7 +335,7 @@ public class GameSessionDomainTests
         var newPlayer = new SessionPlayer("Charlie", 3);
 
         // Act & Assert
-        var exception = Assert.Throws<InvalidOperationException>(() => session.AddPlayer(newPlayer));
+        var exception = ((Action)(() => session.AddPlayer(newPlayer))).Should().Throw<InvalidOperationException>().Which;
         Assert.Contains("Cannot add player to finished session", exception.Message, StringComparison.OrdinalIgnoreCase);
     }
 
@@ -348,8 +349,8 @@ public class GameSessionDomainTests
         var newPlayer = new SessionPlayer("Charlie", 3);
 
         // Act & Assert
-        var exception = Assert.Throws<InvalidOperationException>(() => session.AddPlayer(newPlayer));
-        Assert.Contains("Cannot add player to finished session", exception.Message);
+        var exception = ((Action)(() => session.AddPlayer(newPlayer))).Should().Throw<InvalidOperationException>().Which;
+        exception.Message.Should().Contain("Cannot add player to finished session");
     }
 
     [Fact]
@@ -360,7 +361,7 @@ public class GameSessionDomainTests
         var duplicatePlayer = new SessionPlayer("Alice", 3); // Same name as existing
 
         // Act & Assert
-        var exception = Assert.Throws<InvalidOperationException>(() => session.AddPlayer(duplicatePlayer));
+        var exception = ((Action)(() => session.AddPlayer(duplicatePlayer))).Should().Throw<InvalidOperationException>().Which;
         Assert.Contains("already in this session", exception.Message, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("Alice", exception.Message, StringComparison.OrdinalIgnoreCase);
     }
@@ -373,7 +374,7 @@ public class GameSessionDomainTests
         var duplicatePlayer = new SessionPlayer("ALICE", 3); // Different case
 
         // Act & Assert
-        var exception = Assert.Throws<InvalidOperationException>(() => session.AddPlayer(duplicatePlayer));
+        var exception = ((Action)(() => session.AddPlayer(duplicatePlayer))).Should().Throw<InvalidOperationException>().Which;
         Assert.Contains("already in this session", exception.Message, StringComparison.OrdinalIgnoreCase);
     }
 
@@ -389,7 +390,7 @@ public class GameSessionDomainTests
         var oneMorePlayer = new SessionPlayer("Player101", 1);
 
         // Act & Assert
-        var exception = Assert.Throws<InvalidOperationException>(() => session.AddPlayer(oneMorePlayer));
+        var exception = ((Action)(() => session.AddPlayer(oneMorePlayer))).Should().Throw<InvalidOperationException>().Which;
         Assert.Contains("cannot have more than 100 players", exception.Message, StringComparison.OrdinalIgnoreCase);
     }
 
@@ -405,7 +406,7 @@ public class GameSessionDomainTests
         session.AddPlayer(new SessionPlayer("Eve", 5, "Purple"));
 
         // Assert
-        Assert.Equal(5, session.PlayerCount);
+        session.PlayerCount.Should().Be(5);
         Assert.True(session.HasPlayer("Charlie"));
         Assert.True(session.HasPlayer("Diana"));
         Assert.True(session.HasPlayer("Eve"));
@@ -424,7 +425,7 @@ public class GameSessionDomainTests
         session.AddPlayer(newPlayer);
 
         // Assert
-        Assert.Equal(3, session.PlayerCount);
+        session.PlayerCount.Should().Be(3);
         Assert.True(session.HasPlayer("Charlie"));
     }
 

@@ -8,6 +8,7 @@ using Api.Tests.Constants;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Handlers.ChatSession;
 
@@ -74,7 +75,7 @@ public class DeleteChatSessionCommandHandlerTests
         // Act & Assert
         var ex = await Assert.ThrowsAsync<NotFoundException>(() =>
             _handler.Handle(command, TestContext.Current.CancellationToken));
-        Assert.Contains("ChatSession", ex.Message);
+        ex.Message.Should().Contain("ChatSession");
     }
 
     [Fact]
@@ -101,9 +102,9 @@ public class DeleteChatSessionCommandHandlerTests
         await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.Equal(2, callOrder.Count);
-        Assert.Equal("Repository.DeleteAsync", callOrder[0]);
-        Assert.Equal("UnitOfWork.SaveChangesAsync", callOrder[1]);
+        callOrder.Count.Should().Be(2);
+        callOrder[0].Should().Be("Repository.DeleteAsync");
+        callOrder[1].Should().Be("UnitOfWork.SaveChangesAsync");
     }
 
     [Fact]

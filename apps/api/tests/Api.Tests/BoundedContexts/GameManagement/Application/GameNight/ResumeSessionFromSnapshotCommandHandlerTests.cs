@@ -14,6 +14,7 @@ using MediatR;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.GameManagement.Application.GameNight;
 
@@ -161,9 +162,9 @@ public sealed class ResumeSessionFromSnapshotCommandHandlerTests
         var result = await _sut.Handle(command, CancellationToken.None);
 
         // Assert
-        Assert.Equal(TestSessionId, result.SessionId);
+        result.SessionId.Should().Be(TestSessionId);
         Assert.NotNull(result.InviteCode);
-        Assert.Equal(6, result.InviteCode.Length);
+        result.InviteCode.Length.Should().Be(6);
         Assert.StartsWith("/join/", result.ShareLink);
         Assert.NotNull(result.AgentRecap);
         Assert.Contains("Alice", result.AgentRecap, StringComparison.Ordinal);
@@ -188,7 +189,7 @@ public sealed class ResumeSessionFromSnapshotCommandHandlerTests
 
         // Assert
         Assert.NotNull(capturedSession);
-        Assert.Equal(LiveSessionStatus.InProgress, capturedSession!.Status);
+        capturedSession!.Status.Should().Be(LiveSessionStatus.InProgress);
         Assert.Null(capturedSession.PausedAt);
     }
 
@@ -208,10 +209,10 @@ public sealed class ResumeSessionFromSnapshotCommandHandlerTests
             .Where(i => i.SessionId == TestSessionId)
             .ToList();
 
-        Assert.Single(invites);
-        Assert.Equal(TestUserId, invites[0].CreatedByUserId);
+        invites.Should().ContainSingle();
+        invites[0].CreatedByUserId.Should().Be(TestUserId);
         Assert.False(invites[0].IsRevoked);
-        Assert.Equal(0, invites[0].CurrentUses);
+        invites[0].CurrentUses.Should().Be(0);
     }
 
     [Fact]
@@ -367,7 +368,7 @@ public sealed class ResumeSessionFromSnapshotCommandHandlerTests
         var result = await _sut.Handle(command, CancellationToken.None);
 
         // Assert
-        Assert.Equal(summary, result.AgentRecap);
+        result.AgentRecap.Should().Be(summary);
     }
 }
 

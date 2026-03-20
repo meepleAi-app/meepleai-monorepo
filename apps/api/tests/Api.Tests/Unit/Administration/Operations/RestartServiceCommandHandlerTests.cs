@@ -11,6 +11,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.Unit.Administration.Operations;
 
@@ -69,8 +70,8 @@ public sealed class RestartServiceCommandHandlerTests
         var result = await _handler.Handle(command, CancellationToken.None);
 
         // Assert
-        Assert.Equal("Service restart initiated. Application shutting down gracefully.", result.Message);
-        Assert.Equal("30-60 seconds", result.EstimatedDowntime);
+        result.Message.Should().Be("Service restart initiated. Application shutting down gracefully.");
+        result.EstimatedDowntime.Should().Be("30-60 seconds");
 
         _mockAuditLogRepository.Verify(
             x => x.AddAsync(It.IsAny<Api.BoundedContexts.Administration.Domain.Entities.AuditLog>(), It.IsAny<CancellationToken>()),
@@ -100,7 +101,7 @@ public sealed class RestartServiceCommandHandlerTests
         var exception = await Assert.ThrowsAsync<ConflictException>(
             () => _handler.Handle(command, CancellationToken.None));
 
-        Assert.Equal("Only SuperAdmin can restart services", exception.Message);
+        exception.Message.Should().Be("Only SuperAdmin can restart services");
 
         _mockAuditLogRepository.Verify(
             x => x.AddAsync(It.IsAny<Api.BoundedContexts.Administration.Domain.Entities.AuditLog>(), It.IsAny<CancellationToken>()),

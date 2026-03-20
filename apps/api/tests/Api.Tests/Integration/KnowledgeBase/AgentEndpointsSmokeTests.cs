@@ -13,6 +13,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Moq;
 using StackExchange.Redis;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.Integration.KnowledgeBase;
 
@@ -147,7 +148,7 @@ public sealed class AgentEndpointsSmokeTests : IAsyncLifetime
             Password = "User123!",
             DisplayName = "Regular User"
         });
-        Assert.Equal(HttpStatusCode.OK, userRegisterResponse.StatusCode);
+        userRegisterResponse.StatusCode.Should().Be(HttpStatusCode.OK);
         // Extract only name=value part from Set-Cookie (correct Cookie header format)
         var userSetCookie = userRegisterResponse.Headers.GetValues("Set-Cookie")
             .First(c => c.StartsWith("meepleai_session=", StringComparison.Ordinal));
@@ -161,7 +162,7 @@ public sealed class AgentEndpointsSmokeTests : IAsyncLifetime
             Password = "AdminPass123!",
             DisplayName = "Admin User"
         });
-        Assert.Equal(HttpStatusCode.OK, registerAdminResponse.StatusCode);
+        registerAdminResponse.StatusCode.Should().Be(HttpStatusCode.OK);
         // Extract only name=value part from Set-Cookie (correct Cookie header format)
         var adminSetCookie = registerAdminResponse.Headers.GetValues("Set-Cookie")
             .First(c => c.StartsWith("meepleai_session=", StringComparison.Ordinal));
@@ -239,14 +240,14 @@ public sealed class AgentEndpointsSmokeTests : IAsyncLifetime
         }
 
         // Assert
-        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Created);
 
         var result = await response.Content.ReadFromJsonAsync<AgentResponse>();
-        Assert.NotNull(result);
-        Assert.Equal("Chess Rules Expert", result.Name);
-        Assert.Equal("RulesInterpreter", result.Type);
-        Assert.Equal("HybridSearch", result.StrategyName);
-        Assert.NotEqual(Guid.Empty, result.Id);
+        result.Should().NotBeNull();
+        result.Name.Should().Be("Chess Rules Expert");
+        result.Type.Should().Be("RulesInterpreter");
+        result.StrategyName.Should().Be("HybridSearch");
+        result.Id.Should().NotBe(Guid.Empty);
 
         // Store agent ID for subsequent tests
         _agentId = result.Id;
@@ -268,13 +269,13 @@ public sealed class AgentEndpointsSmokeTests : IAsyncLifetime
         var response = await _client.GetAsync("/api/v1/agents");
 
         // Assert
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var result = await response.Content.ReadFromJsonAsync<AgentsListResponse>();
-        Assert.NotNull(result);
-        Assert.True(result.Success);
-        Assert.NotNull(result.Agents);
-        Assert.True(result.Count > 0);
+        result.Should().NotBeNull();
+        result.Success.Should().BeTrue();
+        result.Agents.Should().NotBeNull();
+        result.Count.Should().BeGreaterThan(0);
     }
 
     // ========================================
@@ -293,12 +294,12 @@ public sealed class AgentEndpointsSmokeTests : IAsyncLifetime
         var response = await _client.GetAsync($"/api/v1/agents/{_agentId}");
 
         // Assert
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var result = await response.Content.ReadFromJsonAsync<AgentResponse>();
-        Assert.NotNull(result);
-        Assert.Equal(_agentId, result.Id);
-        Assert.Equal("Chess Rules Expert", result.Name);
+        result.Should().NotBeNull();
+        result.Id.Should().Be(_agentId);
+        result.Name.Should().Be("Chess Rules Expert");
     }
 
     // ========================================
@@ -327,11 +328,11 @@ public sealed class AgentEndpointsSmokeTests : IAsyncLifetime
         var response = await _client.PutAsJsonAsync($"/api/v1/agents/{_agentId}/configure", request);
 
         // Assert
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var result = await response.Content.ReadFromJsonAsync<ConfigureAgentResponse>();
-        Assert.NotNull(result);
-        Assert.True(result.Success);
+        result.Should().NotBeNull();
+        result.Success.Should().BeTrue();
     }
 
     // ========================================
@@ -356,7 +357,7 @@ public sealed class AgentEndpointsSmokeTests : IAsyncLifetime
         var response = await _client.PostAsJsonAsync($"/api/v1/agents/{_agentId}/invoke", request);
 
         // Assert
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         // Verify response can be parsed and has valid invocation data
         var responseBody = await response.Content.ReadAsStringAsync();
@@ -364,9 +365,9 @@ public sealed class AgentEndpointsSmokeTests : IAsyncLifetime
         var root = jsonDoc.RootElement;
 
         // Check that InvocationId is present and valid (AgentResponseDto structure)
-        Assert.True(root.TryGetProperty("invocationId", out var invocationIdProp), "Response should have invocationId");
-        Assert.True(Guid.TryParse(invocationIdProp.GetString(), out var invocationId), "InvocationId should be a valid GUID");
-        Assert.NotEqual(Guid.Empty, invocationId);
+        root.TryGetProperty("invocationId", out var invocationIdProp).Should().BeTrue("Response should have invocationId");
+        Guid.TryParse(invocationIdProp.GetString(), out var invocationId).Should().BeTrue("InvocationId should be a valid GUID");
+        invocationId.Should().NotBe(Guid.Empty);
     }
 
     // ========================================

@@ -9,6 +9,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using FluentAssertions;
 using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Handlers;
@@ -58,7 +59,7 @@ public class ProvideAgentFeedbackCommandHandlerTests
         // Assert
         var feedback = await context.AgentFeedbacks.FirstOrDefaultAsync(TestCancellationToken);
         Assert.NotNull(feedback);
-        Assert.Equal("helpful", feedback.Outcome);
+        feedback.Outcome.Should().Be("helpful");
     }
 
     [Fact]
@@ -82,7 +83,7 @@ public class ProvideAgentFeedbackCommandHandlerTests
         // Assert
         var feedback = await context.AgentFeedbacks.FirstOrDefaultAsync(TestCancellationToken);
         Assert.NotNull(feedback);
-        Assert.Equal("not-helpful", feedback.Outcome);
+        feedback.Outcome.Should().Be("not-helpful");
     }
 
     [Fact]
@@ -106,7 +107,7 @@ public class ProvideAgentFeedbackCommandHandlerTests
         // Assert
         var feedback = await context.AgentFeedbacks.FirstOrDefaultAsync(TestCancellationToken);
         Assert.NotNull(feedback);
-        Assert.Equal("incorrect", feedback.Outcome);
+        feedback.Outcome.Should().Be("incorrect");
     }
 
     [Theory]
@@ -325,8 +326,8 @@ public class ProvideAgentFeedbackCommandHandlerTests
         // Assert
         var feedback = await context.AgentFeedbacks.FirstOrDefaultAsync(TestContext.Current.CancellationToken);
         Assert.NotNull(feedback);
-        Assert.Equal("not-helpful", feedback.Outcome);
-        Assert.Equal("/api/v1/search", feedback.Endpoint);
+        feedback.Outcome.Should().Be("not-helpful");
+        feedback.Endpoint.Should().Be("/api/v1/search");
     }
 
     // Issue #3352: Tests for Comment field support
@@ -353,8 +354,8 @@ public class ProvideAgentFeedbackCommandHandlerTests
         // Assert
         var feedback = await context.AgentFeedbacks.FirstOrDefaultAsync(TestCancellationToken);
         Assert.NotNull(feedback);
-        Assert.Equal("not-helpful", feedback.Outcome);
-        Assert.Equal("The response was unclear about game setup rules", feedback.Comment);
+        feedback.Outcome.Should().Be("not-helpful");
+        feedback.Comment.Should().Be("The response was unclear about game setup rules");
     }
 
     [Fact]
@@ -379,7 +380,7 @@ public class ProvideAgentFeedbackCommandHandlerTests
         // Assert
         var feedback = await context.AgentFeedbacks.FirstOrDefaultAsync(TestCancellationToken);
         Assert.NotNull(feedback);
-        Assert.Equal("helpful", feedback.Outcome);
+        feedback.Outcome.Should().Be("helpful");
         Assert.Null(feedback.Comment);
     }
 
@@ -445,7 +446,7 @@ public class ProvideAgentFeedbackCommandHandlerTests
         // Assert
         var feedback = await context.AgentFeedbacks.FirstOrDefaultAsync(TestCancellationToken);
         Assert.NotNull(feedback);
-        Assert.Equal("Adding a comment to existing feedback", feedback.Comment);
+        feedback.Comment.Should().Be("Adding a comment to existing feedback");
     }
 
     [Fact]
@@ -469,8 +470,8 @@ public class ProvideAgentFeedbackCommandHandlerTests
         // Assert
         var feedback = await context.AgentFeedbacks.FirstOrDefaultAsync(TestCancellationToken);
         Assert.NotNull(feedback);
-        Assert.Equal("helpful", feedback.Outcome);
-        Assert.Equal("Great explanation of the rules!", feedback.Comment);
+        feedback.Outcome.Should().Be("helpful");
+        feedback.Comment.Should().Be("Great explanation of the rules!");
     }
 
     [Fact]
@@ -494,7 +495,7 @@ public class ProvideAgentFeedbackCommandHandlerTests
         // Assert
         var feedback = await context.AgentFeedbacks.FirstOrDefaultAsync(TestCancellationToken);
         Assert.NotNull(feedback);
-        Assert.Equal("Comment with extra spaces", feedback.Comment);
+        feedback.Comment.Should().Be("Comment with extra spaces");
     }
 }
 

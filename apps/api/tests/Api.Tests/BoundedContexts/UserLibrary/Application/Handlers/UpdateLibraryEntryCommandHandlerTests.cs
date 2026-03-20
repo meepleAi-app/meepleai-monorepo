@@ -70,7 +70,7 @@ public class UpdateLibraryEntryCommandHandlerTests
         var act = () => _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        var exception = await Assert.ThrowsAsync<DomainException>(act);
+        var exception = (await ((Func<Task>)(act)).Should().ThrowAsync<DomainException>()).Which;
         exception.Message.Should().Contain("not in your library");
 
         _mockUnitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
@@ -103,7 +103,7 @@ public class UpdateLibraryEntryCommandHandlerTests
         var act = () => _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        var exception = await Assert.ThrowsAsync<DomainException>(act);
+        var exception = (await ((Func<Task>)(act)).Should().ThrowAsync<DomainException>()).Which;
         exception.Message.Should().Contain("not found in catalog");
 
         _mockUnitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);

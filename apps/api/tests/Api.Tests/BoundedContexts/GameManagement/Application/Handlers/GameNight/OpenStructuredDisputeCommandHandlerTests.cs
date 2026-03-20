@@ -8,6 +8,7 @@ using Api.SharedKernel.Infrastructure.Persistence;
 using Api.Tests.Constants;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.GameManagement.Application.Handlers.GameNight;
 
@@ -126,7 +127,7 @@ public class OpenStructuredDisputeCommandHandlerTests
         var disputeId = await _openHandler.Handle(command, CancellationToken.None);
 
         // Assert
-        Assert.NotEqual(Guid.Empty, disputeId);
+        disputeId.Should().NotBe(Guid.Empty);
 
         _disputeRepositoryMock.Verify(
             x => x.AddAsync(It.Is<RuleDispute>(d =>
@@ -153,7 +154,7 @@ public class OpenStructuredDisputeCommandHandlerTests
         var ex = await Assert.ThrowsAsync<InvalidOperationException>(
             () => _openHandler.Handle(command, CancellationToken.None));
 
-        Assert.Contains("disabled", ex.Message);
+        ex.Message.Should().Contain("disabled");
     }
 
     [Fact]
@@ -190,7 +191,7 @@ public class OpenStructuredDisputeCommandHandlerTests
         var ex = await Assert.ThrowsAsync<InvalidOperationException>(
             () => _openHandler.Handle(command, CancellationToken.None));
 
-        Assert.Contains("no associated game", ex.Message);
+        ex.Message.Should().Contain("no associated game");
     }
 
     [Fact]
@@ -221,7 +222,7 @@ public class OpenStructuredDisputeCommandHandlerTests
         var disputeId = await _openHandler.Handle(command, CancellationToken.None);
 
         // Assert
-        Assert.NotEqual(Guid.Empty, disputeId);
+        disputeId.Should().NotBe(Guid.Empty);
 
         _disputeRepositoryMock.Verify(
             x => x.AddAsync(It.Is<RuleDispute>(d =>
@@ -253,7 +254,7 @@ public class OpenStructuredDisputeCommandHandlerTests
         await _respondHandler.Handle(command, CancellationToken.None);
 
         // Assert
-        Assert.Equal(DefaultRespondentPlayerId, dispute.RespondentPlayerId);
+        dispute.RespondentPlayerId.Should().Be(DefaultRespondentPlayerId);
         Assert.Equal("I disagree, the rule says otherwise", dispute.RespondentClaim);
 
         _disputeRepositoryMock.Verify(

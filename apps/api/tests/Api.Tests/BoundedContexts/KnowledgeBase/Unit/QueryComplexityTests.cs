@@ -1,6 +1,7 @@
 using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 using Api.Tests.Constants;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Unit;
 
@@ -83,9 +84,9 @@ public class QueryComplexityTests
     [Fact]
     public void FactoryMethods_ShouldSetCorrectLevel()
     {
-        Assert.Equal(QueryComplexityLevel.Simple, QueryComplexity.Simple("r", 0.5f).Level);
-        Assert.Equal(QueryComplexityLevel.Moderate, QueryComplexity.Moderate("r", 0.5f).Level);
-        Assert.Equal(QueryComplexityLevel.Complex, QueryComplexity.Complex("r", 0.5f).Level);
+        QueryComplexity.Simple("r", 0.5f).Level.Should().Be(QueryComplexityLevel.Simple);
+        QueryComplexity.Moderate("r", 0.5f).Level.Should().Be(QueryComplexityLevel.Moderate);
+        QueryComplexity.Complex("r", 0.5f).Level.Should().Be(QueryComplexityLevel.Complex);
     }
 
     [Fact]
@@ -93,8 +94,8 @@ public class QueryComplexityTests
     {
         var sut = QueryComplexity.Moderate("scoring rules needed", 0.87f);
 
-        Assert.Equal(0.87f, sut.Confidence);
-        Assert.Equal("scoring rules needed", sut.Reason);
+        sut.Confidence.Should().Be(0.87f);
+        sut.Reason.Should().Be("scoring rules needed");
     }
 
     [Fact]
@@ -103,7 +104,7 @@ public class QueryComplexityTests
         var a = QueryComplexity.Simple("test", 0.9f);
         var b = QueryComplexity.Simple("test", 0.9f);
 
-        Assert.Equal(a, b);
+        b.Should().Be(a);
     }
 
     [Fact]
@@ -112,6 +113,6 @@ public class QueryComplexityTests
         var a = QueryComplexity.Simple("test", 0.9f);
         var b = QueryComplexity.Moderate("test", 0.9f);
 
-        Assert.NotEqual(a, b);
+        b.Should().NotBe(a);
     }
 }

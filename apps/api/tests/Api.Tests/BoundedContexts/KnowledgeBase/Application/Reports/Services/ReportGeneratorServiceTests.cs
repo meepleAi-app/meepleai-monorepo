@@ -3,6 +3,7 @@ using Api.BoundedContexts.KnowledgeBase.Domain.Evaluation;
 using Api.BoundedContexts.KnowledgeBase.Domain.GridSearch;
 using Api.BoundedContexts.KnowledgeBase.Domain.Reports;
 using Xunit;
+using FluentAssertions;
 using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Reports.Services;
@@ -31,7 +32,7 @@ public class ReportGeneratorServiceTests
         var markdown = _service.GenerateMarkdownReport(report);
 
         // Assert
-        Assert.Contains("# RAG Pipeline Evaluation Report", markdown);
+        markdown.Should().Contain("# RAG Pipeline Evaluation Report");
     }
 
     [Fact]
@@ -44,7 +45,7 @@ public class ReportGeneratorServiceTests
         var markdown = _service.GenerateMarkdownReport(report);
 
         // Assert
-        Assert.Contains("**Generated**:", markdown);
+        markdown.Should().Contain("**Generated**:");
     }
 
     [Fact]
@@ -57,7 +58,7 @@ public class ReportGeneratorServiceTests
         var markdown = _service.GenerateMarkdownReport(report);
 
         // Assert
-        Assert.Contains("**Dataset**: test-dataset", markdown);
+        markdown.Should().Contain("**Dataset**: test-dataset");
     }
 
     [Fact]
@@ -70,7 +71,7 @@ public class ReportGeneratorServiceTests
         var markdown = _service.GenerateMarkdownReport(report);
 
         // Assert
-        Assert.Contains("**Samples**:", markdown);
+        markdown.Should().Contain("**Samples**:");
     }
 
     [Fact]
@@ -83,10 +84,10 @@ public class ReportGeneratorServiceTests
         var markdown = _service.GenerateMarkdownReport(report);
 
         // Assert
-        Assert.Contains("## Executive Summary", markdown);
-        Assert.Contains("**Configurations Evaluated**:", markdown);
-        Assert.Contains("**Successful Evaluations**:", markdown);
-        Assert.Contains("**Meeting Phase 5 Target**:", markdown);
+        markdown.Should().Contain("## Executive Summary");
+        markdown.Should().Contain("**Configurations Evaluated**:");
+        markdown.Should().Contain("**Successful Evaluations**:");
+        markdown.Should().Contain("**Meeting Phase 5 Target**:");
     }
 
     [Fact]
@@ -264,8 +265,8 @@ public class ReportGeneratorServiceTests
         // Assert
         // Should contain the configuration IDs
         var configs = GridSearchConfiguration.GetAllConfigurations();
-        Assert.Contains(configs[0].ConfigurationId, table);
-        Assert.Contains(configs[1].ConfigurationId, table);
+        table.Should().Contain(configs[0].ConfigurationId);
+        table.Should().Contain(configs[1].ConfigurationId);
     }
 
     [Fact]
@@ -308,7 +309,7 @@ public class ReportGeneratorServiceTests
         var table = _service.GenerateComparisonTable(gridSearchResult);
 
         // Assert
-        Assert.Contains("❌ Failed", table);
+        table.Should().Contain("❌ Failed");
     }
 
     [Fact]

@@ -6,6 +6,7 @@ using Api.Tests.Constants;
 using MediatR;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.EntityRelationships.Application;
 
@@ -58,7 +59,7 @@ public class GetEntityLinksQueryHandlerTests
         var query = new GetEntityLinksQuery(MeepleEntityType.Game, _gameId);
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
-        Assert.Equal(2, result.Count);
+        result.Count.Should().Be(2);
     }
 
     [Fact]
@@ -80,8 +81,8 @@ public class GetEntityLinksQueryHandlerTests
         var myDto = result.Single(d => d.OwnerUserId == _ownerId);
         var otherDto = result.Single(d => d.OwnerUserId == otherUserId);
 
-        Assert.True(myDto.IsOwner, "Link owned by requesting user should have IsOwner=true");
-        Assert.False(otherDto.IsOwner, "Link owned by another user should have IsOwner=false");
+        myDto.IsOwner.Should().BeTrue("Link owned by requesting user should have IsOwner=true");
+        otherDto.IsOwner.Should().BeFalse("Link owned by another user should have IsOwner=false");
     }
 
     [Fact]
@@ -98,7 +99,7 @@ public class GetEntityLinksQueryHandlerTests
         var query = new GetEntityLinksQuery(MeepleEntityType.Game, _gameId);
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
-        Assert.False(result[0].IsOwner, "No requesting user — IsOwner should default false");
+        result[0].IsOwner.Should().BeFalse("No requesting user — IsOwner should default false");
     }
 
     [Fact]
@@ -165,7 +166,7 @@ public class GetEntityLinksQueryHandlerTests
         var query = new GetEntityLinksQuery(MeepleEntityType.Game, _gameId);
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
-        Assert.Empty(result);
+        result.Should().BeEmpty();
     }
 
     // ── Null guard ────────────────────────────────────────────────────────────

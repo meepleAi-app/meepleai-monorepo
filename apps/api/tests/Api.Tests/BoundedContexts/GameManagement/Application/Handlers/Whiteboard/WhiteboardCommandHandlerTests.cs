@@ -10,6 +10,7 @@ using Api.SharedKernel.Infrastructure.Persistence;
 using Api.Tests.Constants;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.GameManagement.Application.Handlers.Whiteboard;
 
@@ -92,9 +93,9 @@ public class WhiteboardCommandHandlerTests
             new InitializeWhiteboardCommand(sessionId, UserId),
             TestContext.Current.CancellationToken);
 
-        Assert.Equal(sessionId, result.SessionId);
+        result.SessionId.Should().Be(sessionId);
         Assert.Empty(result.Strokes);
-        Assert.Equal("{}", result.StructuredJson);
+        result.StructuredJson.Should().Be("{}");
         _whiteboardRepoMock.Verify(r => r.AddAsync(It.IsAny<WhiteboardState>(), It.IsAny<CancellationToken>()), Times.Once);
         _uowMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
@@ -141,8 +142,8 @@ public class WhiteboardCommandHandlerTests
             new AddStrokeCommand(sessionId, "stroke-1", "{\"path\":[]}", UserId),
             TestContext.Current.CancellationToken);
 
-        Assert.Single(result.Strokes);
-        Assert.Equal("stroke-1", result.Strokes[0].Id);
+        result.Strokes.Should().ContainSingle();
+        result.Strokes[0].Id.Should().Be("stroke-1");
         _whiteboardRepoMock.Verify(r => r.UpdateAsync(It.IsAny<WhiteboardState>(), It.IsAny<CancellationToken>()), Times.Once);
         _uowMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
@@ -207,7 +208,7 @@ public class WhiteboardCommandHandlerTests
             new RemoveStrokeCommand(sessionId, "stroke-1", UserId),
             TestContext.Current.CancellationToken);
 
-        Assert.Single(result.Strokes);
+        result.Strokes.Should().ContainSingle();
         _broadcastMock.Verify(b => b.PublishAsync(
             sessionId,
             It.Is<StrokeRemovedEvent>(e => e.StrokeId == "stroke-1"),
@@ -251,7 +252,7 @@ public class WhiteboardCommandHandlerTests
             new UpdateStructuredCommand(sessionId, newJson, UserId),
             TestContext.Current.CancellationToken);
 
-        Assert.Equal(newJson, result.StructuredJson);
+        result.StructuredJson.Should().Be(newJson);
         _broadcastMock.Verify(b => b.PublishAsync(
             sessionId,
             It.Is<StructuredUpdatedEvent>(e => e.StructuredJson == newJson),
@@ -298,7 +299,7 @@ public class WhiteboardCommandHandlerTests
             TestContext.Current.CancellationToken);
 
         Assert.Empty(result.Strokes);
-        Assert.Equal("{}", result.StructuredJson);
+        result.StructuredJson.Should().Be("{}");
         _broadcastMock.Verify(b => b.PublishAsync(
             sessionId,
             It.Is<WhiteboardClearedEvent>(e => e.ClearedBy == UserId),

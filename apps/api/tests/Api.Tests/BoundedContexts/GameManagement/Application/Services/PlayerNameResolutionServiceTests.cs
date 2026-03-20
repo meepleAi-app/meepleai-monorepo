@@ -1,6 +1,7 @@
 using Api.BoundedContexts.GameManagement.Application.Services;
 using Api.Tests.Constants;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.GameManagement.Application.Services;
 
@@ -28,8 +29,8 @@ public class PlayerNameResolutionServiceTests
 
         // Assert
         Assert.True(result.IsResolved);
-        Assert.Equal(playerId, result.PlayerId);
-        Assert.Equal("Marco Rossi", result.ResolvedName);
+        result.PlayerId.Should().Be(playerId);
+        result.ResolvedName.Should().Be("Marco Rossi");
         Assert.False(result.IsAmbiguous);
     }
 
@@ -49,8 +50,8 @@ public class PlayerNameResolutionServiceTests
 
         // Assert
         Assert.True(result.IsResolved);
-        Assert.Equal(playerId, result.PlayerId);
-        Assert.Equal("Marco Rossi", result.ResolvedName);
+        result.PlayerId.Should().Be(playerId);
+        result.ResolvedName.Should().Be("Marco Rossi");
     }
 
     [Fact]
@@ -69,8 +70,8 @@ public class PlayerNameResolutionServiceTests
 
         // Assert
         Assert.True(result.IsResolved);
-        Assert.Equal(playerId, result.PlayerId);
-        Assert.Equal("Marco Rossi", result.ResolvedName);
+        result.PlayerId.Should().Be(playerId);
+        result.ResolvedName.Should().Be("Marco Rossi");
     }
 
     [Fact]
@@ -91,7 +92,7 @@ public class PlayerNameResolutionServiceTests
         // Assert
         Assert.True(result.IsAmbiguous);
         Assert.False(result.IsResolved);
-        Assert.Equal(2, result.Candidates.Count);
+        result.Candidates.Count.Should().Be(2);
     }
 
     [Fact]

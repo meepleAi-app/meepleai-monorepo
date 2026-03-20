@@ -14,6 +14,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Unit;
 
@@ -103,11 +104,11 @@ public class RaptorPipelineIntegrationTests : IDisposable
 
         // Verify summaries were saved
         var savedSummaries = await _db.RaptorSummaries.ToListAsync();
-        Assert.Equal(2, savedSummaries.Count);
+        savedSummaries.Count.Should().Be(2);
         Assert.All(savedSummaries, s =>
         {
-            Assert.Equal(_pdfDocumentId, s.PdfDocumentId);
-            Assert.Equal(_gameId, s.GameId);
+            s.PdfDocumentId.Should().Be(_pdfDocumentId);
+            s.GameId.Should().Be(_gameId);
         });
     }
 
@@ -128,7 +129,7 @@ public class RaptorPipelineIntegrationTests : IDisposable
 
         // Assert: PDF should reach Ready state
         var doc = await _db.PdfDocuments.FindAsync(_pdfDocumentId);
-        Assert.Equal("Ready", doc!.ProcessingState);
+        doc!.ProcessingState.Should().Be("Ready");
 
         // No RAPTOR summaries saved
         var summaries = await _db.RaptorSummaries.ToListAsync();
@@ -160,7 +161,7 @@ public class RaptorPipelineIntegrationTests : IDisposable
 
         // Assert: PDF should still reach Ready state despite RAPTOR failure
         var doc = await _db.PdfDocuments.FindAsync(_pdfDocumentId);
-        Assert.Equal("Ready", doc!.ProcessingState);
+        doc!.ProcessingState.Should().Be("Ready");
     }
 
     [Fact]

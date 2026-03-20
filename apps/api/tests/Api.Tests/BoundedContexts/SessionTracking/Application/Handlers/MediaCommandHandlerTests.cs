@@ -8,6 +8,7 @@ using Api.Tests.Constants;
 using MediatR;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.SessionTracking.Application.Handlers;
 
@@ -72,7 +73,7 @@ public class UploadSessionMediaCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotEqual(Guid.Empty, result.MediaId);
+        result.MediaId.Should().NotBe(Guid.Empty);
         _mockMediaRepo.Verify(r => r.AddAsync(It.IsAny<SessionMedia>(), It.IsAny<CancellationToken>()), Times.Once);
         _mockMediaRepo.Verify(r => r.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
         _mockMediator.Verify(m => m.Publish(It.IsAny<INotification>(), It.IsAny<CancellationToken>()), Times.Once);
@@ -149,7 +150,7 @@ public class UpdateMediaCaptionCommandHandlerTests
         await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.Equal("new caption", media.Caption);
+        media.Caption.Should().Be("new caption");
         _mockMediaRepo.Verify(r => r.UpdateAsync(media, It.IsAny<CancellationToken>()), Times.Once);
         _mockMediaRepo.Verify(r => r.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
@@ -218,7 +219,7 @@ public class DeleteSessionMediaCommandHandlerTests
         await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.True(media.IsDeleted);
+        media.IsDeleted.Should().BeTrue();
         _mockMediaRepo.Verify(r => r.UpdateAsync(media, It.IsAny<CancellationToken>()), Times.Once);
         _mockMediaRepo.Verify(r => r.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
         _mockMediator.Verify(m => m.Publish(It.IsAny<INotification>(), It.IsAny<CancellationToken>()), Times.Once);

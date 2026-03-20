@@ -6,6 +6,7 @@ using Api.BoundedContexts.GameManagement.Domain.Repositories;
 using Api.BoundedContexts.GameManagement.Domain.ValueObjects;
 using Moq;
 using Xunit;
+using FluentAssertions;
 using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.GameManagement.Application.Handlers;
@@ -46,7 +47,7 @@ public class GetGameSessionsQueryHandlerTests
 
         // Assert
         Assert.NotNull(result);
-        Assert.Equal(2, result.Count);
+        result.Count.Should().Be(2);
     }
 
     [Fact]
@@ -105,7 +106,7 @@ public class GetGameSessionsQueryHandlerTests
 
         // Assert
         Assert.NotNull(result);
-        Assert.Equal(5, result.Count);
+        result.Count.Should().Be(5);
     }
 
     [Fact]
@@ -119,7 +120,7 @@ public class GetGameSessionsQueryHandlerTests
         var exception = await Assert.ThrowsAsync<ArgumentException>(
             () => _handler.Handle(query, TestContext.Current.CancellationToken));
 
-        Assert.Contains("positive", exception.Message);
+        exception.Message.Should().Contain("positive");
     }
 
     [Fact]
@@ -133,7 +134,7 @@ public class GetGameSessionsQueryHandlerTests
         var exception = await Assert.ThrowsAsync<ArgumentException>(
             () => _handler.Handle(query, TestContext.Current.CancellationToken));
 
-        Assert.Contains("1000", exception.Message);
+        exception.Message.Should().Contain("1000");
     }
 
     [Fact]
@@ -147,7 +148,7 @@ public class GetGameSessionsQueryHandlerTests
         var exception = await Assert.ThrowsAsync<ArgumentException>(
             () => _handler.Handle(query, TestContext.Current.CancellationToken));
 
-        Assert.Contains("1-based", exception.Message);
+        exception.Message.Should().Contain("1-based");
     }
 
     [Fact]

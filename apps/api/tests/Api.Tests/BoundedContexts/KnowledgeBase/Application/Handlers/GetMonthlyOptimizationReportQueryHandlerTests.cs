@@ -6,6 +6,7 @@ using Api.Tests.Constants;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Handlers;
 
@@ -67,10 +68,10 @@ public class GetMonthlyOptimizationReportQueryHandlerTests
 
         // Assert
         Assert.NotNull(result);
-        Assert.Equal(year, result.Year);
-        Assert.Equal(month, result.Month);
-        Assert.Equal(150.50m, result.EfficiencyAnalysis.TotalCost);
-        Assert.Equal(25.75m, result.TotalSavingsOpportunity);
+        result.Year.Should().Be(year);
+        result.Month.Should().Be(month);
+        result.EfficiencyAnalysis.TotalCost.Should().Be(150.50m);
+        result.TotalSavingsOpportunity.Should().Be(25.75m);
 
         _mockReportService.Verify(s => s.GenerateReportAsync(year, month, It.IsAny<CancellationToken>()), Times.Once);
     }
@@ -91,7 +92,7 @@ public class GetMonthlyOptimizationReportQueryHandlerTests
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(
             () => _handler.Handle(query, TestContext.Current.CancellationToken));
 
-        Assert.Equal("Report generation failed", exception.Message);
+        exception.Message.Should().Be("Report generation failed");
 
         _mockReportService.Verify(s => s.GenerateReportAsync(year, month, It.IsAny<CancellationToken>()), Times.Once);
     }

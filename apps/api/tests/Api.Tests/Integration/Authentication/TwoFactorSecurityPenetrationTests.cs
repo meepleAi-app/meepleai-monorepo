@@ -16,6 +16,7 @@ using Npgsql;
 using OtpNet;
 using System.Diagnostics;
 using Xunit;
+using FluentAssertions;
 using Api.Tests.Constants;
 
 namespace Api.Tests.Integration.Authentication;
@@ -314,7 +315,7 @@ public class TwoFactorSecurityPenetrationTests : IAsyncLifetime
         _output($"Failed backup code attempts: {failedAttempts}");
 
         // CURRENT IMPLEMENTATION: No lockout mechanism
-        Assert.Equal(maxAttempts, failedAttempts);
+        failedAttempts.Should().Be(maxAttempts);
         _output("❌ VULNERABILITY: No account lockout after 50 failed backup code attempts");
         _output("📋 RECOMMENDATION: Lock account after 5 failed backup code attempts");
     }
@@ -421,7 +422,7 @@ public class TwoFactorSecurityPenetrationTests : IAsyncLifetime
 
         // EXPECTED: System should detect pattern (100 attempts on same account)
         // CURRENT: No cross-session attack detection
-        Assert.Equal(attackSessions * attemptsPerSession, totalAttempts);
+        totalAttempts.Should().Be(attackSessions * attemptsPerSession);
         _output("❌ VULNERABILITY: No detection of distributed brute force attacks");
         _output("📋 RECOMMENDATION: Track failed attempts per user across all sessions");
     }
@@ -459,7 +460,7 @@ public class TwoFactorSecurityPenetrationTests : IAsyncLifetime
         _output("📋 INFO: Proper validation requires E2E test with Redis Testcontainer");
 
         // Verify the API doesn't crash under repeated failures
-        Assert.True(true, "Brute force attack handled gracefully - alert verification requires E2E test");
+        true.Should().BeTrue("Brute force attack handled gracefully - alert verification requires E2E test");
     }
     /// <summary>
     /// SECURITY TEST: Valid TOTP code should not be reusable within time window.
@@ -479,7 +480,7 @@ public class TwoFactorSecurityPenetrationTests : IAsyncLifetime
         var secondAttempt = await _totpService!.VerifyCodeAsync(user.Id, validCode, TestCancellationToken);
 
         // Assert
-        Assert.True(firstAttempt, "First attempt with valid code should succeed");
+        firstAttempt.Should().BeTrue("First attempt with valid code should succeed");
 
         // EXPECTED (OWASP): Second attempt should fail (code already used)
         // SECURITY FIX: Replay prevention implemented via UsedTotpCodes table
@@ -536,8 +537,8 @@ public class TwoFactorSecurityPenetrationTests : IAsyncLifetime
         var secondAttempt = await _totpService!.VerifyBackupCodeAsync(user.Id, validBackupCode, TestCancellationToken);
 
         // Assert
-        Assert.True(firstAttempt, "First attempt with valid backup code should succeed");
-        Assert.False(secondAttempt, "Second attempt should fail - backup code already used");
+        firstAttempt.Should().BeTrue("First attempt with valid backup code should succeed");
+        secondAttempt.Should().BeFalse("Second attempt should fail - backup code already used");
 
         _output("✅ PASS: Backup code correctly marked as single-use (Serializable transaction)");
     }
@@ -590,7 +591,7 @@ public class TwoFactorSecurityPenetrationTests : IAsyncLifetime
 
         // Assert - Only ONE should succeed (Serializable transaction prevents race)
         var successCount = results.Count(r => r);
-        Assert.Equal(1, successCount);
+        successCount.Should().Be(1);
 
         _output($"✅ PASS: Race condition prevented - only 1/2 concurrent attempts succeeded");
     }
@@ -613,7 +614,7 @@ public class TwoFactorSecurityPenetrationTests : IAsyncLifetime
         _output("Current implementation: Time-based expiry only (5 minutes)");
 
         // Assert - Document current behavior
-        Assert.True(true, "Session token replay prevention requires nonce implementation");
+        true.Should().BeTrue("Session token replay prevention requires nonce implementation");
     }
     /// <summary>
     /// SECURITY TEST: TOTP verification should use constant-time comparison.

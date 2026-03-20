@@ -6,6 +6,7 @@ using Api.Tests.Constants;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Handlers.ChatSession;
 
@@ -49,10 +50,10 @@ public class GetChatSessionQueryHandlerTests
 
         // Assert
         Assert.NotNull(result);
-        Assert.Equal(sessionId, result.Id);
-        Assert.Equal(userId, result.UserId);
-        Assert.Equal(gameId, result.GameId);
-        Assert.Equal("Test Session", result.Title);
+        result.Id.Should().Be(sessionId);
+        result.UserId.Should().Be(userId);
+        result.GameId.Should().Be(gameId);
+        result.Title.Should().Be("Test Session");
     }
 
     [Fact]
@@ -93,12 +94,12 @@ public class GetChatSessionQueryHandlerTests
 
         // Assert
         Assert.NotNull(result);
-        Assert.Equal(2, result.MessageCount);
-        Assert.Equal(2, result.Messages.Count);
-        Assert.Equal("Hello", result.Messages[0].Content);
-        Assert.Equal("user", result.Messages[0].Role);
-        Assert.Equal("Hi there!", result.Messages[1].Content);
-        Assert.Equal("assistant", result.Messages[1].Role);
+        result.MessageCount.Should().Be(2);
+        result.Messages.Count.Should().Be(2);
+        result.Messages[0].Content.Should().Be("Hello");
+        result.Messages[0].Role.Should().Be("user");
+        result.Messages[1].Content.Should().Be("Hi there!");
+        result.Messages[1].Role.Should().Be("assistant");
     }
 
     [Fact]
@@ -158,13 +159,13 @@ public class GetChatSessionQueryHandlerTests
 
         // Assert
         Assert.NotNull(result);
-        Assert.Equal(sessionId, result.Id);
-        Assert.Equal(userId, result.UserId);
-        Assert.Equal(gameId, result.GameId);
-        Assert.Equal(userLibraryEntryId, result.UserLibraryEntryId);
-        Assert.Equal(agentSessionId, result.AgentSessionId);
-        Assert.Equal("Full Session", result.Title);
-        Assert.Equal(agentConfigJson, result.AgentConfigJson);
+        result.Id.Should().Be(sessionId);
+        result.UserId.Should().Be(userId);
+        result.GameId.Should().Be(gameId);
+        result.UserLibraryEntryId.Should().Be(userLibraryEntryId);
+        result.AgentSessionId.Should().Be(agentSessionId);
+        result.Title.Should().Be("Full Session");
+        result.AgentConfigJson.Should().Be(agentConfigJson);
         Assert.True(result.IsArchived);
     }
 

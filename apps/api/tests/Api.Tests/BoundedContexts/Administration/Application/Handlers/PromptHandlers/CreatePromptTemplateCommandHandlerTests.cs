@@ -124,8 +124,9 @@ public class CreatePromptTemplateCommandHandlerTests : IDisposable
         );
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
-            _handler.Handle(command, CancellationToken.None));
+        var act = () =>
+            _handler.Handle(command, CancellationToken.None);
+        var exception = (await act.Should().ThrowAsync<InvalidOperationException>()).Which;
 
         exception.Message.Should().Contain("already exists");
 
@@ -150,8 +151,9 @@ public class CreatePromptTemplateCommandHandlerTests : IDisposable
         );
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
-            _handler.Handle(command, CancellationToken.None));
+        var act = () =>
+            _handler.Handle(command, CancellationToken.None);
+        var exception = (await act.Should().ThrowAsync<InvalidOperationException>()).Which;
 
         exception.Message.Should().Contain("not found");
 

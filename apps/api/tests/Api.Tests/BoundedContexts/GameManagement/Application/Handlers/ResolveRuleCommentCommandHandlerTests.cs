@@ -6,6 +6,7 @@ using Api.Infrastructure;
 using Api.Tests.TestHelpers;
 using Moq;
 using Xunit;
+using FluentAssertions;
 using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.GameManagement.Application.Handlers;
@@ -107,8 +108,8 @@ public class ResolveRuleCommentCommandHandlerTests
             ResolveReplies: false);
 
         // Assert
-        Assert.Equal(commentId, command.CommentId);
-        Assert.Equal(userId, command.ResolvedByUserId);
+        command.CommentId.Should().Be(commentId);
+        command.ResolvedByUserId.Should().Be(userId);
         Assert.False(command.IsAdmin);
         Assert.False(command.ResolveReplies);
     }
@@ -127,8 +128,8 @@ public class ResolveRuleCommentCommandHandlerTests
             ResolveReplies: false);
 
         // Assert
-        Assert.Equal(commentId, command.CommentId);
-        Assert.Equal(adminUserId, command.ResolvedByUserId);
+        command.CommentId.Should().Be(commentId);
+        command.ResolvedByUserId.Should().Be(adminUserId);
         Assert.True(command.IsAdmin);
     }
 
@@ -195,8 +196,8 @@ public class ResolveRuleCommentCommandHandlerTests
             ResolvedByUserId: user2Id);
 
         // Assert
-        Assert.NotEqual(command1.CommentId, command2.CommentId);
-        Assert.NotEqual(command1.ResolvedByUserId, command2.ResolvedByUserId);
+        command2.CommentId.Should().NotBe(command1.CommentId);
+        command2.ResolvedByUserId.Should().NotBe(command1.ResolvedByUserId);
     }
     // NOTE: Full integration tests for Handle method (comment resolution, recursive reply resolution,
     // authorization, circular reference detection, max depth limit) should be in integration test suite

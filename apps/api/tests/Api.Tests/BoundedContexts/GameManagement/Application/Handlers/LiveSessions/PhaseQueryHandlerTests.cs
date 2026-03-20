@@ -8,6 +8,7 @@ using Api.Tests.Constants;
 using Microsoft.Extensions.Time.Testing;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.GameManagement.Application.Handlers.LiveSessions;
 
@@ -54,10 +55,10 @@ public class GetTurnPhasesQueryHandlerTests
         var result = await handler.Handle(
             new GetTurnPhasesQuery(sessionId), TestContext.Current.CancellationToken);
 
-        Assert.Equal(0, result.CurrentPhaseIndex);
-        Assert.Equal("Draw", result.CurrentPhaseName);
-        Assert.Equal(3, result.PhaseNames.Length);
-        Assert.Equal(3, result.TotalPhases);
+        result.CurrentPhaseIndex.Should().Be(0);
+        result.CurrentPhaseName.Should().Be("Draw");
+        result.PhaseNames.Length.Should().Be(3);
+        result.TotalPhases.Should().Be(3);
         Assert.True(result.HasPhases);
     }
 
@@ -74,10 +75,10 @@ public class GetTurnPhasesQueryHandlerTests
         var result = await handler.Handle(
             new GetTurnPhasesQuery(sessionId), TestContext.Current.CancellationToken);
 
-        Assert.Equal(0, result.CurrentPhaseIndex);
+        result.CurrentPhaseIndex.Should().Be(0);
         Assert.Null(result.CurrentPhaseName);
         Assert.Empty(result.PhaseNames);
-        Assert.Equal(0, result.TotalPhases);
+        result.TotalPhases.Should().Be(0);
         Assert.False(result.HasPhases);
     }
 
@@ -96,8 +97,8 @@ public class GetTurnPhasesQueryHandlerTests
         var result = await handler.Handle(
             new GetTurnPhasesQuery(sessionId), TestContext.Current.CancellationToken);
 
-        Assert.Equal(1, result.CurrentPhaseIndex);
-        Assert.Equal("Action", result.CurrentPhaseName);
+        result.CurrentPhaseIndex.Should().Be(1);
+        result.CurrentPhaseName.Should().Be("Action");
     }
 
     [Fact]
@@ -115,7 +116,7 @@ public class GetTurnPhasesQueryHandlerTests
         var result = await handler.Handle(
             new GetTurnPhasesQuery(sessionId), TestContext.Current.CancellationToken);
 
-        Assert.Equal(2, result.CurrentTurnIndex);
+        result.CurrentTurnIndex.Should().Be(2);
         Assert.Equal(0, result.CurrentPhaseIndex); // Reset after turn advance
     }
 

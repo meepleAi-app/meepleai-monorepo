@@ -11,6 +11,7 @@ using Api.Tests.TestHelpers;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.EventHandlers;
 
@@ -109,9 +110,9 @@ public sealed class CircuitBreakerStateChangedEventHandlerTests : IDisposable
         await _handler.Handle(evt, CancellationToken.None);
 
         Assert.NotNull(captured);
-        Assert.Equal(expectedSeverity, captured!.Severity);
-        Assert.Equal(NotificationType.AdminCircuitBreakerStateChanged, captured.Type);
-        Assert.Equal("/admin/agents/usage", captured.Link);
+        captured!.Severity.Should().Be(expectedSeverity);
+        captured.Type.Should().Be(NotificationType.AdminCircuitBreakerStateChanged);
+        captured.Link.Should().Be("/admin/agents/usage");
     }
 
     [Fact]
@@ -190,7 +191,7 @@ public sealed class CircuitBreakerStateChangedEventHandlerTests : IDisposable
         await _handler.Handle(evt, CancellationToken.None);
 
         // Assert
-        Assert.Equal(reason, captured!.Message);
+        captured!.Message.Should().Be(reason);
     }
 
     // ── Multiple admins ────────────────────────────────────────────────────────
@@ -234,8 +235,8 @@ public sealed class CircuitBreakerStateChangedEventHandlerTests : IDisposable
         await _handler.Handle(evt, CancellationToken.None);
 
         // Assert
-        Assert.Contains(AdminId, capturedUserIds);
-        Assert.Contains(adminId2, capturedUserIds);
+        capturedUserIds.Should().Contain(AdminId);
+        capturedUserIds.Should().Contain(adminId2);
     }
 
     // ── Exception swallowing ──────────────────────────────────────────────────

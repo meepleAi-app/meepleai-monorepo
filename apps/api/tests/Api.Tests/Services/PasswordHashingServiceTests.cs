@@ -1,6 +1,7 @@
 using Api.Services;
 using System;
 using Xunit;
+using FluentAssertions;
 using Api.Tests.Constants;
 
 namespace Api.Tests.Services;
@@ -18,8 +19,8 @@ public class PasswordHashingServiceTests
         var hash = _service.HashSecret("Secret123!");
 
         // Assert
-        Assert.StartsWith("v1.", hash, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains('.', hash);
+        hash.Should().StartWithEquivalentOf("v1.");
+        hash.Should().Contain(".");
     }
 
     [Fact]
@@ -32,7 +33,7 @@ public class PasswordHashingServiceTests
         var result = _service.VerifySecret("Secret123!", hash);
 
         // Assert
-        Assert.True(result);
+        result.Should().BeTrue();
     }
 
 }

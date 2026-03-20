@@ -15,6 +15,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Moq;
 using StackExchange.Redis;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.Integration.UserLibrary;
 
@@ -110,7 +111,7 @@ public sealed class UserLibraryEndpointsIntegrationTests : IAsyncLifetime
         var response = await _client.GetAsync("/api/v1/library");
 
         // Assert
-        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
     [Fact]
@@ -198,7 +199,7 @@ public sealed class UserLibraryEndpointsIntegrationTests : IAsyncLifetime
             new { Notes = "Test notes", IsFavorite = false });
 
         // Assert
-        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
     [Fact]
@@ -241,7 +242,7 @@ public sealed class UserLibraryEndpointsIntegrationTests : IAsyncLifetime
         var response = await _client.DeleteAsync($"/api/v1/library/games/{gameId}");
 
         // Assert
-        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
     [Fact]
@@ -302,7 +303,7 @@ public sealed class UserLibraryEndpointsIntegrationTests : IAsyncLifetime
         var response = await _client.GetAsync("/api/v1/library/stats");
 
         // Assert
-        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
     [Fact]
@@ -339,7 +340,7 @@ public sealed class UserLibraryEndpointsIntegrationTests : IAsyncLifetime
         var response = await _client.GetAsync("/api/v1/library/quota");
 
         // Assert
-        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
     [Fact]
@@ -379,7 +380,7 @@ public sealed class UserLibraryEndpointsIntegrationTests : IAsyncLifetime
         var response = await _client.GetAsync($"/api/v1/library/games/{gameId}/status");
 
         // Assert
-        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
     // ========================================
@@ -395,7 +396,7 @@ public sealed class UserLibraryEndpointsIntegrationTests : IAsyncLifetime
             new { PrivacyLevel = "basic" });
 
         // Assert
-        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
     [Fact]
@@ -405,7 +406,7 @@ public sealed class UserLibraryEndpointsIntegrationTests : IAsyncLifetime
         var response = await _client.GetAsync("/api/v1/library/share");
 
         // Assert
-        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
     [Fact]
@@ -437,7 +438,7 @@ public sealed class UserLibraryEndpointsIntegrationTests : IAsyncLifetime
             new { PlayedAt = DateTime.UtcNow, DurationMinutes = 60 });
 
         // Assert
-        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
     // ========================================
@@ -456,7 +457,7 @@ public sealed class UserLibraryEndpointsIntegrationTests : IAsyncLifetime
             new { NewState = "playing" });
 
         // Assert
-        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
     // ========================================
@@ -473,7 +474,7 @@ public sealed class UserLibraryEndpointsIntegrationTests : IAsyncLifetime
         var response = await _client.GetAsync($"/api/v1/library/games/{gameId}");
 
         // Assert
-        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
     // ========================================
@@ -535,7 +536,7 @@ public sealed class UserLibraryEndpointsIntegrationTests : IAsyncLifetime
             new { PdfUrl = "https://example.com/rules.pdf", OriginalFileName = "rules.pdf", FileSizeBytes = 1000 });
 
         // Assert
-        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
     // ========================================

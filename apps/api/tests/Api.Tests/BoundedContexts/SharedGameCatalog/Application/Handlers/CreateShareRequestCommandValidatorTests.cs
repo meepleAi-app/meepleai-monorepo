@@ -9,6 +9,7 @@ using Api.Tests.Constants;
 using FluentValidation.TestHelper;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.SharedGameCatalog.Application.Handlers;
 
@@ -125,7 +126,7 @@ public class CreateShareRequestCommandValidatorTests
         var result = await _validator.TestValidateAsync(command);
 
         // Assert
-        Assert.Contains(result.Errors, e => e.ErrorMessage == "You can only share games from your library");
+        result.Errors.Should().Contain(e => e.ErrorMessage == "You can only share games from your library");
     }
 
     [Fact]
@@ -144,7 +145,7 @@ public class CreateShareRequestCommandValidatorTests
         var result = await _validator.TestValidateAsync(command);
 
         // Assert
-        Assert.Contains(result.Errors, e => e.ErrorMessage == "You already have a pending share request for this game");
+        result.Errors.Should().Contain(e => e.ErrorMessage == "You already have a pending share request for this game");
     }
 
     [Fact]
@@ -163,7 +164,7 @@ public class CreateShareRequestCommandValidatorTests
         var result = await _validator.TestValidateAsync(command);
 
         // Assert
-        Assert.Contains(result.Errors, e => e.ErrorMessage == "Rate limit exceeded. Please wait before submitting new requests.");
+        result.Errors.Should().Contain(e => e.ErrorMessage == "Rate limit exceeded. Please wait before submitting new requests.");
     }
 
     [Fact]

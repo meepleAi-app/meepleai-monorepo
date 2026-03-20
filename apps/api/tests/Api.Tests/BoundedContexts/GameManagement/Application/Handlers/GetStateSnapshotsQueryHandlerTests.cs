@@ -7,6 +7,7 @@ using Api.BoundedContexts.GameManagement.Domain.Repositories;
 using Api.Middleware.Exceptions;
 using Moq;
 using Xunit;
+using FluentAssertions;
 using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.GameManagement.Application.Handlers;
@@ -43,10 +44,10 @@ public class GetStateSnapshotsQueryHandlerTests
 
         // Assert
         Assert.NotNull(result);
-        Assert.Equal(3, result.Count);
-        Assert.Equal(1, result[0].TurnNumber);
-        Assert.Equal(2, result[1].TurnNumber);
-        Assert.Equal(3, result[2].TurnNumber);
+        result.Count.Should().Be(3);
+        result[0].TurnNumber.Should().Be(1);
+        result[1].TurnNumber.Should().Be(2);
+        result[2].TurnNumber.Should().Be(3);
     }
 
     [Fact]
@@ -83,7 +84,7 @@ public class GetStateSnapshotsQueryHandlerTests
         var exception = await Assert.ThrowsAsync<NotFoundException>(
             () => _handler.Handle(query, TestContext.Current.CancellationToken));
 
-        Assert.Contains("GameSessionState", exception.Message);
+        exception.Message.Should().Contain("GameSessionState");
     }
 
     [Fact]
@@ -132,9 +133,9 @@ public class GetStateSnapshotsQueryHandlerTests
         // Assert
         Assert.NotNull(result);
         var firstSnapshot = result.First();
-        Assert.NotEqual(Guid.Empty, firstSnapshot.Id);
-        Assert.Equal(1, firstSnapshot.TurnNumber);
-        Assert.Equal("Turn 1 snapshot", firstSnapshot.Description);
+        firstSnapshot.Id.Should().NotBe(Guid.Empty);
+        firstSnapshot.TurnNumber.Should().Be(1);
+        firstSnapshot.Description.Should().Be("Turn 1 snapshot");
         Assert.NotNull(firstSnapshot.CreatedAt);
     }
 

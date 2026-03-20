@@ -6,6 +6,7 @@ using Api.BoundedContexts.Authentication.Infrastructure.Persistence;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using FluentAssertions;
 using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.Authentication.Application.Handlers.OAuth;
@@ -45,9 +46,9 @@ public class GetLinkedOAuthAccountsQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.NotNull(result.Accounts);
-        Assert.Empty(result.Accounts);
+        result.Should().NotBeNull();
+        result.Accounts.Should().NotBeNull();
+        result.Accounts.Should().BeEmpty();
     }
 
     [Fact]
@@ -72,12 +73,12 @@ public class GetLinkedOAuthAccountsQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.NotNull(result.Accounts);
-        Assert.Equal(3, result.Accounts.Count);
-        Assert.Contains(result.Accounts, a => a.Provider == "google");
-        Assert.Contains(result.Accounts, a => a.Provider == "discord");
-        Assert.Contains(result.Accounts, a => a.Provider == "github");
+        result.Should().NotBeNull();
+        result.Accounts.Should().NotBeNull();
+        result.Accounts.Count.Should().Be(3);
+        result.Accounts.Should().Contain(a => a.Provider == "google");
+        result.Accounts.Should().Contain(a => a.Provider == "discord");
+        result.Accounts.Should().Contain(a => a.Provider == "github");
     }
 
     [Fact]
@@ -107,14 +108,14 @@ public class GetLinkedOAuthAccountsQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Single(result.Accounts);
+        result.Should().NotBeNull();
+        result.Accounts.Should().ContainSingle();
 
         var dto = result.Accounts[0];
-        Assert.Equal(accountId, dto.Id);
-        Assert.Equal("google", dto.Provider);
-        Assert.Equal("google_user_123", dto.ProviderUserId);
-        Assert.Equal(account.CreatedAt, dto.CreatedAt);
+        dto.Id.Should().Be(accountId);
+        dto.Provider.Should().Be("google");
+        dto.ProviderUserId.Should().Be("google_user_123");
+        dto.CreatedAt.Should().Be(account.CreatedAt);
     }
 
     [Fact]
@@ -152,13 +153,13 @@ public class GetLinkedOAuthAccountsQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.Equal(2, result.Accounts.Count);
+        result.Accounts.Count.Should().Be(2);
 
         var expiredDto = result.Accounts.First(a => a.Provider == "google");
-        Assert.True(expiredDto.IsTokenExpired);
+        expiredDto.IsTokenExpired.Should().BeTrue();
 
         var validDto = result.Accounts.First(a => a.Provider == "discord");
-        Assert.False(validDto.IsTokenExpired);
+        validDto.IsTokenExpired.Should().BeFalse();
     }
 
     [Fact]
@@ -196,13 +197,13 @@ public class GetLinkedOAuthAccountsQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.Equal(2, result.Accounts.Count);
+        result.Accounts.Count.Should().Be(2);
 
         var googleDto = result.Accounts.First(a => a.Provider == "google");
-        Assert.True(googleDto.SupportsRefresh);
+        googleDto.SupportsRefresh.Should().BeTrue();
 
         var githubDto = result.Accounts.First(a => a.Provider == "github");
-        Assert.False(githubDto.SupportsRefresh);
+        githubDto.SupportsRefresh.Should().BeFalse();
     }
     [Fact]
     public async Task Handle_ExceptionThrown_ReturnsEmptyList()
@@ -219,9 +220,9 @@ public class GetLinkedOAuthAccountsQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.NotNull(result.Accounts);
-        Assert.Empty(result.Accounts);
+        result.Should().NotBeNull();
+        result.Accounts.Should().NotBeNull();
+        result.Accounts.Should().BeEmpty();
     }
 
     [Fact]

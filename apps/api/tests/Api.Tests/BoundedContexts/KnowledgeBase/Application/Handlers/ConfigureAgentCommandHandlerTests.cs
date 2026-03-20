@@ -8,6 +8,7 @@ using Api.Tests.Constants;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Handlers;
 
@@ -52,8 +53,8 @@ public class ConfigureAgentCommandHandlerTests
         // Assert
         Assert.NotNull(result);
         Assert.True(result.Success);
-        Assert.Equal(agentId, result.AgentId);
-        Assert.Contains("configured successfully", result.Message);
+        result.AgentId.Should().Be(agentId);
+        result.Message.Should().Contain("configured successfully");
 
         _mockRepository.Verify(r => r.UpdateAsync(agent, It.IsAny<CancellationToken>()), Times.Once);
     }
@@ -75,7 +76,7 @@ public class ConfigureAgentCommandHandlerTests
         // Assert
         Assert.NotNull(result);
         Assert.False(result.Success);
-        Assert.Equal("AGENT_NOT_FOUND", result.ErrorCode);
+        result.ErrorCode.Should().Be("AGENT_NOT_FOUND");
     }
 
     [Fact]

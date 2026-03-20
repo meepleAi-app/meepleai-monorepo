@@ -19,6 +19,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Handlers;
 
@@ -92,9 +93,9 @@ public class CreateAgentWithSetupCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotEqual(Guid.Empty, result.AgentId);
-        Assert.NotEqual(Guid.Empty, result.ThreadId);
-        Assert.Equal(1, result.SlotUsed);
+        result.AgentId.Should().NotBe(Guid.Empty);
+        result.ThreadId.Should().NotBe(Guid.Empty);
+        result.SlotUsed.Should().Be(1);
         Assert.False(result.GameAddedToCollection);
 
         _mockAgentRepo.Verify(r => r.AddAsync(It.IsAny<Agent>(), It.IsAny<CancellationToken>()), Times.Once);
@@ -196,7 +197,7 @@ public class CreateAgentWithSetupCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.Equal(3, result.SlotUsed);
+        result.SlotUsed.Should().Be(3);
     }
 
     [Fact]
@@ -220,7 +221,7 @@ public class CreateAgentWithSetupCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert - should succeed (2 active + 1 new = 3 = max for free)
-        Assert.Equal(3, result.SlotUsed);
+        result.SlotUsed.Should().Be(3);
     }
 
     [Fact]
@@ -233,7 +234,7 @@ public class CreateAgentWithSetupCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.Equal("MyCustomAgent", result.AgentName);
+        result.AgentName.Should().Be("MyCustomAgent");
     }
 
     [Fact]
@@ -264,7 +265,7 @@ public class CreateAgentWithSetupCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.Equal("MyAgent-1", result.AgentName);
+        result.AgentName.Should().Be("MyAgent-1");
     }
 
     [Fact]
@@ -310,7 +311,7 @@ public class CreateAgentWithSetupCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert - should succeed (admin bypasses limits)
-        Assert.Equal(201, result.SlotUsed);
+        result.SlotUsed.Should().Be(201);
     }
 
     [Fact]

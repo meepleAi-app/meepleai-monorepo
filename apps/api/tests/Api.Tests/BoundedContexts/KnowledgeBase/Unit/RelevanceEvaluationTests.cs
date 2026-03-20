@@ -1,6 +1,7 @@
 using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 using Api.Tests.Constants;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Unit;
 
@@ -61,9 +62,9 @@ public class RelevanceEvaluationTests
     {
         var sut = new RelevanceEvaluation(RelevanceVerdict.Ambiguous, 0.72f, "borderline");
 
-        Assert.Equal(RelevanceVerdict.Ambiguous, sut.Verdict);
-        Assert.Equal(0.72f, sut.Confidence);
-        Assert.Equal("borderline", sut.Reason);
+        sut.Verdict.Should().Be(RelevanceVerdict.Ambiguous);
+        sut.Confidence.Should().Be(0.72f);
+        sut.Reason.Should().Be("borderline");
     }
 
     [Fact]
@@ -72,7 +73,7 @@ public class RelevanceEvaluationTests
         var a = new RelevanceEvaluation(RelevanceVerdict.Correct, 0.9f, "test");
         var b = new RelevanceEvaluation(RelevanceVerdict.Correct, 0.9f, "test");
 
-        Assert.Equal(a, b);
+        b.Should().Be(a);
     }
 
     [Fact]
@@ -81,6 +82,6 @@ public class RelevanceEvaluationTests
         var a = new RelevanceEvaluation(RelevanceVerdict.Correct, 0.9f, "test");
         var b = new RelevanceEvaluation(RelevanceVerdict.Incorrect, 0.9f, "test");
 
-        Assert.NotEqual(a, b);
+        b.Should().NotBe(a);
     }
 }

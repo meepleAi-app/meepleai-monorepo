@@ -1,5 +1,6 @@
 using Api.BoundedContexts.KnowledgeBase.Domain.Services.MultiAgentRouter;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Domain.Services.MultiAgentRouter;
 
@@ -25,7 +26,7 @@ public class IntentClassifierTests
     {
         var result = _classifier.ClassifyQuery(query);
 
-        Assert.Equal(AgentIntent.MoveValidation, result.Intent);
+        result.Intent.Should().Be(AgentIntent.MoveValidation);
         Assert.True(result.Confidence >= 0.70,
             $"Expected confidence >= 0.70, got {result.Confidence:F3} for query: '{query}'");
     }
@@ -38,7 +39,7 @@ public class IntentClassifierTests
     {
         var result = _classifier.ClassifyQuery(query);
 
-        Assert.Equal(AgentIntent.MoveValidation, result.Intent);
+        result.Intent.Should().Be(AgentIntent.MoveValidation);
         Assert.True(result.Confidence >= 0.85,
             $"Expected high confidence >= 0.85 for clear query, got {result.Confidence:F3}");
     }
@@ -59,7 +60,7 @@ public class IntentClassifierTests
     {
         var result = _classifier.ClassifyQuery(query);
 
-        Assert.Equal(AgentIntent.StrategicAnalysis, result.Intent);
+        result.Intent.Should().Be(AgentIntent.StrategicAnalysis);
         Assert.True(result.Confidence >= 0.70,
             $"Expected confidence >= 0.70, got {result.Confidence:F3} for query: '{query}'");
     }
@@ -71,7 +72,7 @@ public class IntentClassifierTests
     {
         var result = _classifier.ClassifyQuery(query);
 
-        Assert.Equal(AgentIntent.StrategicAnalysis, result.Intent);
+        result.Intent.Should().Be(AgentIntent.StrategicAnalysis);
         Assert.True(result.Confidence >= 0.85,
             $"Expected high confidence >= 0.85 for clear query, got {result.Confidence:F3}");
     }
@@ -89,7 +90,7 @@ public class IntentClassifierTests
     {
         var result = _classifier.ClassifyQuery(query);
 
-        Assert.Equal(AgentIntent.RulesQuestion, result.Intent);
+        result.Intent.Should().Be(AgentIntent.RulesQuestion);
         Assert.True(result.Confidence >= 0.60,
             $"Expected confidence >= 0.60, got {result.Confidence:F3} for query: '{query}'");
     }
@@ -110,7 +111,7 @@ public class IntentClassifierTests
     {
         var result = _classifier.ClassifyQuery(query);
 
-        Assert.Equal(AgentIntent.Tutorial, result.Intent);
+        result.Intent.Should().Be(AgentIntent.Tutorial);
         Assert.True(result.Confidence >= 0.70,
             $"Expected confidence >= 0.70, got {result.Confidence:F3} for query: '{query}'");
     }
@@ -122,7 +123,7 @@ public class IntentClassifierTests
     {
         var result = _classifier.ClassifyQuery(query);
 
-        Assert.Equal(AgentIntent.Tutorial, result.Intent);
+        result.Intent.Should().Be(AgentIntent.Tutorial);
         Assert.True(result.Confidence >= 0.85,
             $"Expected high confidence >= 0.85 for clear query, got {result.Confidence:F3}");
     }
@@ -140,7 +141,7 @@ public class IntentClassifierTests
     {
         var result = _classifier.ClassifyQuery(query);
 
-        Assert.Equal(AgentIntent.Unknown, result.Intent);
+        result.Intent.Should().Be(AgentIntent.Unknown);
     }
 
     [Fact]
@@ -148,8 +149,8 @@ public class IntentClassifierTests
     {
         var result = _classifier.ClassifyQuery("");
 
-        Assert.Equal(AgentIntent.Unknown, result.Intent);
-        Assert.Equal(0.0, result.Confidence);
+        result.Intent.Should().Be(AgentIntent.Unknown);
+        result.Confidence.Should().Be(0.0);
     }
 
     [Fact]
@@ -157,8 +158,8 @@ public class IntentClassifierTests
     {
         var result = _classifier.ClassifyQuery(null!);
 
-        Assert.Equal(AgentIntent.Unknown, result.Intent);
-        Assert.Equal(0.0, result.Confidence);
+        result.Intent.Should().Be(AgentIntent.Unknown);
+        result.Confidence.Should().Be(0.0);
     }
 
     [Fact]
@@ -166,7 +167,7 @@ public class IntentClassifierTests
     {
         var result = _classifier.ClassifyQuery("   ");
 
-        Assert.Equal(AgentIntent.Unknown, result.Intent);
+        result.Intent.Should().Be(AgentIntent.Unknown);
     }
 
     #endregion
@@ -258,7 +259,7 @@ public class IntentClassifierTests
         var expectedIntent = Enum.Parse<AgentIntent>(expectedIntentName);
         var result = _classifier.ClassifyQuery(query);
 
-        Assert.Equal(expectedIntent, result.Intent);
+        result.Intent.Should().Be(expectedIntent);
     }
 
     #endregion

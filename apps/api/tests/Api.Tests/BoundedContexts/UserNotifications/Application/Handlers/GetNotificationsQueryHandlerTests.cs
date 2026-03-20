@@ -8,6 +8,7 @@ using Api.Tests.BoundedContexts.UserNotifications.TestHelpers;
 using Api.Tests.Constants;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.UserNotifications.Application.Handlers;
 
@@ -60,9 +61,9 @@ public class GetNotificationsQueryHandlerTests
         var result = await _handler.Handle(query, CancellationToken.None);
 
         // Assert
-        Assert.Equal(2, result.Count);
-        Assert.Equal("Notification 1", result[0].Title);
-        Assert.Equal("Notification 2", result[1].Title);
+        result.Count.Should().Be(2);
+        result[0].Title.Should().Be("Notification 1");
+        result[1].Title.Should().Be("Notification 2");
     }
 
     [Fact]
@@ -85,7 +86,7 @@ public class GetNotificationsQueryHandlerTests
         var result = await _handler.Handle(query, CancellationToken.None);
 
         // Assert
-        Assert.Single(result);
+        result.Should().ContainSingle();
         _notificationRepositoryMock.Verify(
             r => r.GetByUserIdAsync(userId, true, DefaultMaxPageSize, It.IsAny<CancellationToken>()),
             Times.Once);
@@ -210,14 +211,14 @@ public class GetNotificationsQueryHandlerTests
         var result = await _handler.Handle(query, CancellationToken.None);
 
         // Assert
-        Assert.Single(result);
+        result.Should().ContainSingle();
         var dto = result.First();
-        Assert.Equal(notificationId, dto.Id);
-        Assert.Equal(userId, dto.UserId);
-        Assert.Equal("Test Title", dto.Title);
-        Assert.Equal("Test Message", dto.Message);
-        Assert.Equal("https://example.com", dto.Link);
-        Assert.False(dto.IsRead);
+        dto.Id.Should().Be(notificationId);
+        dto.UserId.Should().Be(userId);
+        dto.Title.Should().Be("Test Title");
+        dto.Message.Should().Be("Test Message");
+        dto.Link.Should().Be("https://example.com");
+        dto.IsRead.Should().BeFalse();
     }
 
     [Fact]
@@ -236,7 +237,7 @@ public class GetNotificationsQueryHandlerTests
         var result = await _handler.Handle(query, CancellationToken.None);
 
         // Assert
-        Assert.Empty(result);
+        result.Should().BeEmpty();
     }
 
     [Fact]
@@ -295,7 +296,7 @@ public class GetNotificationsQueryHandlerTests
         var exception = Assert.Throws<ArgumentNullException>(() =>
             new GetNotificationsQueryHandler(null!, _configServiceMock.Object));
 
-        Assert.Equal("notificationRepository", exception.ParamName);
+        exception.ParamName.Should().Be("notificationRepository");
     }
 
     [Fact]
@@ -305,7 +306,7 @@ public class GetNotificationsQueryHandlerTests
         var exception = Assert.Throws<ArgumentNullException>(() =>
             new GetNotificationsQueryHandler(_notificationRepositoryMock.Object, null!));
 
-        Assert.Equal("configService", exception.ParamName);
+        exception.ParamName.Should().Be("configService");
     }
 
     [Fact]
@@ -319,8 +320,8 @@ public class GetNotificationsQueryHandlerTests
         var exception = await Assert.ThrowsAsync<ArgumentException>(
             () => _handler.Handle(query, CancellationToken.None));
 
-        Assert.Contains("non-negative", exception.Message);
-        Assert.Equal("query", exception.ParamName);
+        exception.Message.Should().Contain("non-negative");
+        exception.ParamName.Should().Be("query");
     }
 
     [Fact]
@@ -339,7 +340,7 @@ public class GetNotificationsQueryHandlerTests
         var result = await _handler.Handle(query, CancellationToken.None);
 
         // Assert - Zero limit is valid and returns empty list
-        Assert.Empty(result);
+        result.Should().BeEmpty();
         _notificationRepositoryMock.Verify(
             r => r.GetByUserIdAsync(userId, false, 0, It.IsAny<CancellationToken>()),
             Times.Once);

@@ -6,6 +6,7 @@ using Api.Infrastructure;
 using Api.Tests.TestHelpers;
 using Moq;
 using Xunit;
+using FluentAssertions;
 using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.GameManagement.Application.Handlers;
@@ -81,8 +82,8 @@ public class DeleteRuleCommentCommandHandlerTests
             IsAdmin: false);
 
         // Assert
-        Assert.Equal(commentId, command.CommentId);
-        Assert.Equal(userId, command.UserId);
+        command.CommentId.Should().Be(commentId);
+        command.UserId.Should().Be(userId);
         Assert.False(command.IsAdmin);
     }
 
@@ -99,8 +100,8 @@ public class DeleteRuleCommentCommandHandlerTests
             IsAdmin: true);
 
         // Assert
-        Assert.Equal(commentId, command.CommentId);
-        Assert.Equal(adminUserId, command.UserId);
+        command.CommentId.Should().Be(commentId);
+        command.UserId.Should().Be(adminUserId);
         Assert.True(command.IsAdmin);
     }
 
@@ -124,9 +125,9 @@ public class DeleteRuleCommentCommandHandlerTests
             IsAdmin: true);
 
         // Assert
-        Assert.NotEqual(command1.CommentId, command2.CommentId);
-        Assert.NotEqual(command1.UserId, command2.UserId);
-        Assert.NotEqual(command1.IsAdmin, command2.IsAdmin);
+        command2.CommentId.Should().NotBe(command1.CommentId);
+        command2.UserId.Should().NotBe(command1.UserId);
+        command2.IsAdmin.Should().NotBe(command1.IsAdmin);
     }
     // NOTE: Full integration tests for Handle method (comment deletion, ownership validation,
     // admin authorization, cascade deletion of replies) should be in integration test suite

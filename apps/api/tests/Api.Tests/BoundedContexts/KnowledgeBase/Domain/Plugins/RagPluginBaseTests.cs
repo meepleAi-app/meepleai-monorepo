@@ -112,7 +112,7 @@ public class RagPluginBaseTests
         await cts.CancelAsync();
 
         // Assert - TaskCanceledException derives from OperationCanceledException
-        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => executeTask);
+        await ((Func<Task>)(() => executeTask)).Should().ThrowAsync<OperationCanceledException>();
     }
 
     [Fact]

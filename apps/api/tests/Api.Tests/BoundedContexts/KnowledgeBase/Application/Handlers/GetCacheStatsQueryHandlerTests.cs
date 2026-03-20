@@ -6,6 +6,7 @@ using Api.Tests.Constants;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Handlers;
 
@@ -48,11 +49,11 @@ public class GetCacheStatsQueryHandlerTests
 
         // Assert
         Assert.NotNull(result);
-        Assert.Equal(100, result.TotalHits);
-        Assert.Equal(50, result.TotalMisses);
+        result.TotalHits.Should().Be(100);
+        result.TotalMisses.Should().Be(50);
         Assert.Equal(100.0 / 150.0, result.HitRate, 3); // 100 / 150
-        Assert.Equal(200, result.TotalKeys);
-        Assert.Equal(1024 * 1024, result.CacheSizeBytes);
+        result.TotalKeys.Should().Be(200);
+        result.CacheSizeBytes.Should().Be(1024 * 1024);
 
         _mockHybridCache.Verify(c => c.GetStatsAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
@@ -79,11 +80,11 @@ public class GetCacheStatsQueryHandlerTests
 
         // Assert
         Assert.NotNull(result);
-        Assert.Equal(0, result.TotalHits);
-        Assert.Equal(0, result.TotalMisses);
+        result.TotalHits.Should().Be(0);
+        result.TotalMisses.Should().Be(0);
         Assert.Equal(0, result.HitRate); // Avoid division by zero
-        Assert.Equal(0, result.TotalKeys);
-        Assert.Equal(0, result.CacheSizeBytes);
+        result.TotalKeys.Should().Be(0);
+        result.CacheSizeBytes.Should().Be(0);
     }
 
     [Fact]
@@ -109,8 +110,8 @@ public class GetCacheStatsQueryHandlerTests
 
         // Assert
         Assert.NotNull(result);
-        Assert.Equal(50, result.TotalHits);
-        Assert.Equal(25, result.TotalMisses);
+        result.TotalHits.Should().Be(50);
+        result.TotalMisses.Should().Be(25);
         Assert.Equal(50.0 / 75.0, result.HitRate, 3); // 50 / 75
     }
 

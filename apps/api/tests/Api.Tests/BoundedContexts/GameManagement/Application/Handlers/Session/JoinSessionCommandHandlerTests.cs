@@ -9,6 +9,7 @@ using Api.Tests.Constants;
 using Api.Tests.TestHelpers;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.GameManagement.Application.Handlers.Session;
 
@@ -94,11 +95,11 @@ public sealed class JoinSessionCommandHandlerTests
         var result = await _sut.Handle(command, CancellationToken.None);
 
         Assert.NotNull(result);
-        Assert.Equal(SessionId, result.SessionId);
-        Assert.Equal("Alice", result.DisplayName);
-        Assert.Equal("Player", result.Role);
+        result.SessionId.Should().Be(SessionId);
+        result.DisplayName.Should().Be("Alice");
+        result.Role.Should().Be("Player");
         Assert.NotNull(result.ConnectionToken);
-        Assert.Equal(6, result.ConnectionToken.Length);
+        result.ConnectionToken.Length.Should().Be(6);
     }
 
     [Fact]
@@ -111,8 +112,8 @@ public sealed class JoinSessionCommandHandlerTests
         var result = await _sut.Handle(command, CancellationToken.None);
 
         Assert.NotNull(result);
-        Assert.Equal(SessionId, result.SessionId);
-        Assert.Equal("Player", result.Role);
+        result.SessionId.Should().Be(SessionId);
+        result.Role.Should().Be("Player");
     }
 
     [Fact]
@@ -217,7 +218,7 @@ public sealed class JoinSessionCommandHandlerTests
         await _sut.Handle(command, CancellationToken.None);
 
         var invite = _dbContext.SessionInvites.First();
-        Assert.Equal(1, invite.CurrentUses);
+        invite.CurrentUses.Should().Be(1);
     }
 
     [Fact]

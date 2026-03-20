@@ -1,5 +1,6 @@
 using Api.BoundedContexts.Administration.Domain.ValueObjects;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.Administration.Domain.ValueObjects;
 
@@ -24,15 +25,15 @@ public sealed class TierLimitsTests
             weeklyCreditsLimit: 10_000m);
 
         // Assert
-        Assert.NotNull(limits);
-        Assert.Equal(10_000, limits.TokensPerMonth);
-        Assert.Equal(500, limits.TokensPerDay);
-        Assert.Equal(10, limits.MessagesPerDay);
-        Assert.Equal(20, limits.MaxCollectionSize);
-        Assert.Equal(5, limits.MaxPdfUploadsPerMonth);
-        Assert.Equal(1, limits.MaxAgentsCreated);
-        Assert.Equal(100m, limits.DailyCreditsLimit);
-        Assert.Equal(10_000m, limits.WeeklyCreditsLimit);
+        limits.Should().NotBeNull();
+        limits.TokensPerMonth.Should().Be(10_000);
+        limits.TokensPerDay.Should().Be(500);
+        limits.MessagesPerDay.Should().Be(10);
+        limits.MaxCollectionSize.Should().Be(20);
+        limits.MaxPdfUploadsPerMonth.Should().Be(5);
+        limits.MaxAgentsCreated.Should().Be(1);
+        limits.DailyCreditsLimit.Should().Be(100m);
+        limits.WeeklyCreditsLimit.Should().Be(10_000m);
     }
 
     [Theory]
@@ -42,7 +43,7 @@ public sealed class TierLimitsTests
     public void Create_WithNegativeTokensPerMonth_ShouldThrow(int tokensPerMonth)
     {
         // Act & Assert
-        var exception = Assert.Throws<ArgumentException>(() =>
+        var act = () =>
             TierLimits.Create(
                 tokensPerMonth: tokensPerMonth,
                 tokensPerDay: 500,
@@ -51,10 +52,11 @@ public sealed class TierLimitsTests
                 maxPdfUploadsPerMonth: 5,
                 maxAgentsCreated: 1,
                 dailyCreditsLimit: 100m,
-                weeklyCreditsLimit: 10_000m));
+                weeklyCreditsLimit: 10_000m);
+        var exception = act.Should().Throw<ArgumentException>().Which;
 
-        Assert.Equal("tokensPerMonth", exception.ParamName);
-        Assert.Contains("cannot be negative", exception.Message);
+        exception.ParamName.Should().Be("tokensPerMonth");
+        exception.Message.Should().Contain("cannot be negative");
     }
 
     [Theory]
@@ -63,7 +65,7 @@ public sealed class TierLimitsTests
     public void Create_WithNegativeTokensPerDay_ShouldThrow(int tokensPerDay)
     {
         // Act & Assert
-        var exception = Assert.Throws<ArgumentException>(() =>
+        var act = () =>
             TierLimits.Create(
                 tokensPerMonth: 10_000,
                 tokensPerDay: tokensPerDay,
@@ -72,10 +74,11 @@ public sealed class TierLimitsTests
                 maxPdfUploadsPerMonth: 5,
                 maxAgentsCreated: 1,
                 dailyCreditsLimit: 100m,
-                weeklyCreditsLimit: 10_000m));
+                weeklyCreditsLimit: 10_000m);
+        var exception = act.Should().Throw<ArgumentException>().Which;
 
-        Assert.Equal("tokensPerDay", exception.ParamName);
-        Assert.Contains("cannot be negative", exception.Message);
+        exception.ParamName.Should().Be("tokensPerDay");
+        exception.Message.Should().Contain("cannot be negative");
     }
 
     [Theory]
@@ -84,7 +87,7 @@ public sealed class TierLimitsTests
     public void Create_WithNegativeMessagesPerDay_ShouldThrow(int messagesPerDay)
     {
         // Act & Assert
-        var exception = Assert.Throws<ArgumentException>(() =>
+        var act = () =>
             TierLimits.Create(
                 tokensPerMonth: 10_000,
                 tokensPerDay: 500,
@@ -93,10 +96,11 @@ public sealed class TierLimitsTests
                 maxPdfUploadsPerMonth: 5,
                 maxAgentsCreated: 1,
                 dailyCreditsLimit: 100m,
-                weeklyCreditsLimit: 10_000m));
+                weeklyCreditsLimit: 10_000m);
+        var exception = act.Should().Throw<ArgumentException>().Which;
 
-        Assert.Equal("messagesPerDay", exception.ParamName);
-        Assert.Contains("cannot be negative", exception.Message);
+        exception.ParamName.Should().Be("messagesPerDay");
+        exception.Message.Should().Contain("cannot be negative");
     }
 
     [Theory]
@@ -105,7 +109,7 @@ public sealed class TierLimitsTests
     public void Create_WithNegativeMaxCollectionSize_ShouldThrow(int maxCollectionSize)
     {
         // Act & Assert
-        var exception = Assert.Throws<ArgumentException>(() =>
+        var act = () =>
             TierLimits.Create(
                 tokensPerMonth: 10_000,
                 tokensPerDay: 500,
@@ -114,10 +118,11 @@ public sealed class TierLimitsTests
                 maxPdfUploadsPerMonth: 5,
                 maxAgentsCreated: 1,
                 dailyCreditsLimit: 100m,
-                weeklyCreditsLimit: 10_000m));
+                weeklyCreditsLimit: 10_000m);
+        var exception = act.Should().Throw<ArgumentException>().Which;
 
-        Assert.Equal("maxCollectionSize", exception.ParamName);
-        Assert.Contains("cannot be negative", exception.Message);
+        exception.ParamName.Should().Be("maxCollectionSize");
+        exception.Message.Should().Contain("cannot be negative");
     }
 
     [Theory]
@@ -126,7 +131,7 @@ public sealed class TierLimitsTests
     public void Create_WithNegativeMaxPdfUploadsPerMonth_ShouldThrow(int maxPdfUploadsPerMonth)
     {
         // Act & Assert
-        var exception = Assert.Throws<ArgumentException>(() =>
+        var act = () =>
             TierLimits.Create(
                 tokensPerMonth: 10_000,
                 tokensPerDay: 500,
@@ -135,10 +140,11 @@ public sealed class TierLimitsTests
                 maxPdfUploadsPerMonth: maxPdfUploadsPerMonth,
                 maxAgentsCreated: 1,
                 dailyCreditsLimit: 100m,
-                weeklyCreditsLimit: 10_000m));
+                weeklyCreditsLimit: 10_000m);
+        var exception = act.Should().Throw<ArgumentException>().Which;
 
-        Assert.Equal("maxPdfUploadsPerMonth", exception.ParamName);
-        Assert.Contains("cannot be negative", exception.Message);
+        exception.ParamName.Should().Be("maxPdfUploadsPerMonth");
+        exception.Message.Should().Contain("cannot be negative");
     }
 
     [Theory]
@@ -147,7 +153,7 @@ public sealed class TierLimitsTests
     public void Create_WithNegativeMaxAgentsCreated_ShouldThrow(int maxAgentsCreated)
     {
         // Act & Assert
-        var exception = Assert.Throws<ArgumentException>(() =>
+        var act = () =>
             TierLimits.Create(
                 tokensPerMonth: 10_000,
                 tokensPerDay: 500,
@@ -156,10 +162,11 @@ public sealed class TierLimitsTests
                 maxPdfUploadsPerMonth: 5,
                 maxAgentsCreated: maxAgentsCreated,
                 dailyCreditsLimit: 100m,
-                weeklyCreditsLimit: 10_000m));
+                weeklyCreditsLimit: 10_000m);
+        var exception = act.Should().Throw<ArgumentException>().Which;
 
-        Assert.Equal("maxAgentsCreated", exception.ParamName);
-        Assert.Contains("cannot be negative", exception.Message);
+        exception.ParamName.Should().Be("maxAgentsCreated");
+        exception.Message.Should().Contain("cannot be negative");
     }
 
     [Theory]
@@ -169,7 +176,7 @@ public sealed class TierLimitsTests
     public void Create_WithNegativeDailyCreditsLimit_ShouldThrow(decimal dailyCreditsLimit)
     {
         // Act & Assert
-        var exception = Assert.Throws<ArgumentException>(() =>
+        var act = () =>
             TierLimits.Create(
                 tokensPerMonth: 10_000,
                 tokensPerDay: 500,
@@ -178,10 +185,11 @@ public sealed class TierLimitsTests
                 maxPdfUploadsPerMonth: 5,
                 maxAgentsCreated: 1,
                 dailyCreditsLimit: dailyCreditsLimit,
-                weeklyCreditsLimit: 10_000m));
+                weeklyCreditsLimit: 10_000m);
+        var exception = act.Should().Throw<ArgumentException>().Which;
 
-        Assert.Equal("dailyCreditsLimit", exception.ParamName);
-        Assert.Contains("cannot be negative", exception.Message);
+        exception.ParamName.Should().Be("dailyCreditsLimit");
+        exception.Message.Should().Contain("cannot be negative");
     }
 
     [Theory]
@@ -191,7 +199,7 @@ public sealed class TierLimitsTests
     public void Create_WithNegativeWeeklyCreditsLimit_ShouldThrow(decimal weeklyCreditsLimit)
     {
         // Act & Assert
-        var exception = Assert.Throws<ArgumentException>(() =>
+        var act = () =>
             TierLimits.Create(
                 tokensPerMonth: 10_000,
                 tokensPerDay: 500,
@@ -200,10 +208,11 @@ public sealed class TierLimitsTests
                 maxPdfUploadsPerMonth: 5,
                 maxAgentsCreated: 1,
                 dailyCreditsLimit: 100m,
-                weeklyCreditsLimit: weeklyCreditsLimit));
+                weeklyCreditsLimit: weeklyCreditsLimit);
+        var exception = act.Should().Throw<ArgumentException>().Which;
 
-        Assert.Equal("weeklyCreditsLimit", exception.ParamName);
-        Assert.Contains("cannot be negative", exception.Message);
+        exception.ParamName.Should().Be("weeklyCreditsLimit");
+        exception.Message.Should().Contain("cannot be negative");
     }
 
     [Fact]
@@ -213,16 +222,16 @@ public sealed class TierLimitsTests
         var limits = TierLimits.FreeTier();
 
         // Assert - Credits: 100/day, 10,000/week (= $0.001/day, $0.10/week)
-        Assert.Equal(100m, limits.DailyCreditsLimit);
-        Assert.Equal(10_000m, limits.WeeklyCreditsLimit);
+        limits.DailyCreditsLimit.Should().Be(100m);
+        limits.WeeklyCreditsLimit.Should().Be(10_000m);
 
         // Verify other limits
-        Assert.Equal(10_000, limits.TokensPerMonth);
-        Assert.Equal(500, limits.TokensPerDay);
-        Assert.Equal(10, limits.MessagesPerDay);
-        Assert.Equal(20, limits.MaxCollectionSize);
-        Assert.Equal(5, limits.MaxPdfUploadsPerMonth);
-        Assert.Equal(1, limits.MaxAgentsCreated);
+        limits.TokensPerMonth.Should().Be(10_000);
+        limits.TokensPerDay.Should().Be(500);
+        limits.MessagesPerDay.Should().Be(10);
+        limits.MaxCollectionSize.Should().Be(20);
+        limits.MaxPdfUploadsPerMonth.Should().Be(5);
+        limits.MaxAgentsCreated.Should().Be(1);
     }
 
     [Fact]
@@ -232,16 +241,16 @@ public sealed class TierLimitsTests
         var limits = TierLimits.BasicTier();
 
         // Assert - Credits: 1,000/day, 5,000/week (= $0.01/day, $0.05/week)
-        Assert.Equal(1_000m, limits.DailyCreditsLimit);
-        Assert.Equal(5_000m, limits.WeeklyCreditsLimit);
+        limits.DailyCreditsLimit.Should().Be(1_000m);
+        limits.WeeklyCreditsLimit.Should().Be(5_000m);
 
         // Verify other limits
-        Assert.Equal(50_000, limits.TokensPerMonth);
-        Assert.Equal(2_000, limits.TokensPerDay);
-        Assert.Equal(50, limits.MessagesPerDay);
-        Assert.Equal(50, limits.MaxCollectionSize);
-        Assert.Equal(20, limits.MaxPdfUploadsPerMonth);
-        Assert.Equal(3, limits.MaxAgentsCreated);
+        limits.TokensPerMonth.Should().Be(50_000);
+        limits.TokensPerDay.Should().Be(2_000);
+        limits.MessagesPerDay.Should().Be(50);
+        limits.MaxCollectionSize.Should().Be(50);
+        limits.MaxPdfUploadsPerMonth.Should().Be(20);
+        limits.MaxAgentsCreated.Should().Be(3);
     }
 
     [Fact]
@@ -251,16 +260,16 @@ public sealed class TierLimitsTests
         var limits = TierLimits.ProTier();
 
         // Assert - Credits: 5,000/day, 25,000/week (= $0.05/day, $0.25/week)
-        Assert.Equal(5_000m, limits.DailyCreditsLimit);
-        Assert.Equal(25_000m, limits.WeeklyCreditsLimit);
+        limits.DailyCreditsLimit.Should().Be(5_000m);
+        limits.WeeklyCreditsLimit.Should().Be(25_000m);
 
         // Verify other limits
-        Assert.Equal(200_000, limits.TokensPerMonth);
-        Assert.Equal(10_000, limits.TokensPerDay);
-        Assert.Equal(200, limits.MessagesPerDay);
-        Assert.Equal(200, limits.MaxCollectionSize);
-        Assert.Equal(100, limits.MaxPdfUploadsPerMonth);
-        Assert.Equal(10, limits.MaxAgentsCreated);
+        limits.TokensPerMonth.Should().Be(200_000);
+        limits.TokensPerDay.Should().Be(10_000);
+        limits.MessagesPerDay.Should().Be(200);
+        limits.MaxCollectionSize.Should().Be(200);
+        limits.MaxPdfUploadsPerMonth.Should().Be(100);
+        limits.MaxAgentsCreated.Should().Be(10);
     }
 
     [Fact]
@@ -270,16 +279,16 @@ public sealed class TierLimitsTests
         var limits = TierLimits.EnterpriseTier();
 
         // Assert - Unlimited (decimal.MaxValue)
-        Assert.Equal(decimal.MaxValue, limits.DailyCreditsLimit);
-        Assert.Equal(decimal.MaxValue, limits.WeeklyCreditsLimit);
+        limits.DailyCreditsLimit.Should().Be(decimal.MaxValue);
+        limits.WeeklyCreditsLimit.Should().Be(decimal.MaxValue);
 
         // Verify other unlimited limits
-        Assert.Equal(int.MaxValue, limits.TokensPerMonth);
-        Assert.Equal(int.MaxValue, limits.TokensPerDay);
-        Assert.Equal(int.MaxValue, limits.MessagesPerDay);
-        Assert.Equal(int.MaxValue, limits.MaxCollectionSize);
-        Assert.Equal(int.MaxValue, limits.MaxPdfUploadsPerMonth);
-        Assert.Equal(int.MaxValue, limits.MaxAgentsCreated);
+        limits.TokensPerMonth.Should().Be(int.MaxValue);
+        limits.TokensPerDay.Should().Be(int.MaxValue);
+        limits.MessagesPerDay.Should().Be(int.MaxValue);
+        limits.MaxCollectionSize.Should().Be(int.MaxValue);
+        limits.MaxPdfUploadsPerMonth.Should().Be(int.MaxValue);
+        limits.MaxAgentsCreated.Should().Be(int.MaxValue);
     }
 
     [Fact]
@@ -290,7 +299,7 @@ public sealed class TierLimitsTests
 
         // Assert - All properties should have init-only setters
         // This is enforced by the record type, but verify key properties
-        Assert.Equal(100m, limits.DailyCreditsLimit);
+        limits.DailyCreditsLimit.Should().Be(100m);
 
         // Attempting to modify would cause compilation error (record type)
         // var newLimits = limits with { DailyCreditsLimit = 200m }; // Creates new instance
@@ -311,10 +320,10 @@ public sealed class TierLimitsTests
             weeklyCreditsLimit: 0m);
 
         // Assert
-        Assert.NotNull(limits);
-        Assert.Equal(0, limits.TokensPerMonth);
-        Assert.Equal(0m, limits.DailyCreditsLimit);
-        Assert.Equal(0m, limits.WeeklyCreditsLimit);
+        limits.Should().NotBeNull();
+        limits.TokensPerMonth.Should().Be(0);
+        limits.DailyCreditsLimit.Should().Be(0m);
+        limits.WeeklyCreditsLimit.Should().Be(0m);
     }
 
     [Fact]
@@ -332,10 +341,10 @@ public sealed class TierLimitsTests
             weeklyCreditsLimit: decimal.MaxValue);
 
         // Assert
-        Assert.NotNull(limits);
-        Assert.Equal(int.MaxValue, limits.TokensPerMonth);
-        Assert.Equal(decimal.MaxValue, limits.DailyCreditsLimit);
-        Assert.Equal(decimal.MaxValue, limits.WeeklyCreditsLimit);
+        limits.Should().NotBeNull();
+        limits.TokensPerMonth.Should().Be(int.MaxValue);
+        limits.DailyCreditsLimit.Should().Be(decimal.MaxValue);
+        limits.WeeklyCreditsLimit.Should().Be(decimal.MaxValue);
     }
 
     [Fact]
@@ -347,16 +356,16 @@ public sealed class TierLimitsTests
         var pro = TierLimits.ProTier();
 
         // Assert - Credit limits should scale proportionally with tier
-        Assert.True(free.DailyCreditsLimit < basic.DailyCreditsLimit);
-        Assert.True(basic.DailyCreditsLimit < pro.DailyCreditsLimit);
+        (free.DailyCreditsLimit < basic.DailyCreditsLimit).Should().BeTrue();
+        (basic.DailyCreditsLimit < pro.DailyCreditsLimit).Should().BeTrue();
 
-        Assert.True(free.WeeklyCreditsLimit < basic.WeeklyCreditsLimit);
-        Assert.True(basic.WeeklyCreditsLimit < pro.WeeklyCreditsLimit);
+        (free.WeeklyCreditsLimit < basic.WeeklyCreditsLimit).Should().BeTrue();
+        (basic.WeeklyCreditsLimit < pro.WeeklyCreditsLimit).Should().BeTrue();
 
         // Verify weekly >= daily (sanity check)
-        Assert.True(free.WeeklyCreditsLimit >= free.DailyCreditsLimit);
-        Assert.True(basic.WeeklyCreditsLimit >= basic.DailyCreditsLimit);
-        Assert.True(pro.WeeklyCreditsLimit >= pro.DailyCreditsLimit);
+        (free.WeeklyCreditsLimit >= free.DailyCreditsLimit).Should().BeTrue();
+        (basic.WeeklyCreditsLimit >= basic.DailyCreditsLimit).Should().BeTrue();
+        (pro.WeeklyCreditsLimit >= pro.DailyCreditsLimit).Should().BeTrue();
     }
 
     [Fact]
@@ -366,7 +375,7 @@ public sealed class TierLimitsTests
         var limits = TierLimits.FreeTier();
 
         // Assert - 100 credits/day = $0.001/day
-        Assert.Equal(100m, limits.DailyCreditsLimit);
+        limits.DailyCreditsLimit.Should().Be(100m);
     }
 
     [Fact]
@@ -376,7 +385,7 @@ public sealed class TierLimitsTests
         var limits = TierLimits.FreeTier();
 
         // Assert - 10,000 credits/week = $0.10/week
-        Assert.Equal(10_000m, limits.WeeklyCreditsLimit);
+        limits.WeeklyCreditsLimit.Should().Be(10_000m);
     }
 
     [Fact]
@@ -386,7 +395,7 @@ public sealed class TierLimitsTests
         var limits = TierLimits.BasicTier();
 
         // Assert - 1,000 credits/day = $0.01/day
-        Assert.Equal(1_000m, limits.DailyCreditsLimit);
+        limits.DailyCreditsLimit.Should().Be(1_000m);
     }
 
     [Fact]
@@ -396,7 +405,7 @@ public sealed class TierLimitsTests
         var limits = TierLimits.BasicTier();
 
         // Assert - 5,000 credits/week = $0.05/week
-        Assert.Equal(5_000m, limits.WeeklyCreditsLimit);
+        limits.WeeklyCreditsLimit.Should().Be(5_000m);
     }
 
     [Fact]
@@ -406,7 +415,7 @@ public sealed class TierLimitsTests
         var limits = TierLimits.ProTier();
 
         // Assert - 5,000 credits/day = $0.05/day
-        Assert.Equal(5_000m, limits.DailyCreditsLimit);
+        limits.DailyCreditsLimit.Should().Be(5_000m);
     }
 
     [Fact]
@@ -416,7 +425,7 @@ public sealed class TierLimitsTests
         var limits = TierLimits.ProTier();
 
         // Assert - 25,000 credits/week = $0.25/week
-        Assert.Equal(25_000m, limits.WeeklyCreditsLimit);
+        limits.WeeklyCreditsLimit.Should().Be(25_000m);
     }
 
     [Fact]
@@ -426,7 +435,7 @@ public sealed class TierLimitsTests
         var limits = TierLimits.EnterpriseTier();
 
         // Assert - decimal.MaxValue = unlimited
-        Assert.Equal(decimal.MaxValue, limits.DailyCreditsLimit);
+        limits.DailyCreditsLimit.Should().Be(decimal.MaxValue);
     }
 
     [Fact]
@@ -436,7 +445,7 @@ public sealed class TierLimitsTests
         var limits = TierLimits.EnterpriseTier();
 
         // Assert - decimal.MaxValue = unlimited
-        Assert.Equal(decimal.MaxValue, limits.WeeklyCreditsLimit);
+        limits.WeeklyCreditsLimit.Should().Be(decimal.MaxValue);
     }
 
     [Theory]
@@ -457,7 +466,6 @@ public sealed class TierLimitsTests
             weeklyCreditsLimit: weekly);
 
         // Assert - Weekly should always be >= Daily
-        Assert.True(limits.WeeklyCreditsLimit >= limits.DailyCreditsLimit,
-            $"Weekly ({limits.WeeklyCreditsLimit}) should be >= Daily ({limits.DailyCreditsLimit})");
+        (limits.WeeklyCreditsLimit >= limits.DailyCreditsLimit).Should().BeTrue($"Weekly ({limits.WeeklyCreditsLimit}) should be >= Daily ({limits.DailyCreditsLimit})");
     }
 }

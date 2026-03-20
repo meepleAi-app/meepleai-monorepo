@@ -3,6 +3,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using FluentAssertions;
 using Api.Tests.Constants;
 
 namespace Api.Tests.Services;
@@ -83,7 +84,7 @@ public sealed class EmailServiceReportTests
                 largeContent.Length,
                 CancellationToken.None));
 
-        Assert.Contains("exceeds email attachment limit", ex.Message);
+        ex.Message.Should().Contain("exceeds email attachment limit");
     }
 
     [Fact]
@@ -121,7 +122,7 @@ public sealed class EmailServiceReportTests
         // Integration test with real SMTP server would be in E2E tests
 
         // Assert
-        Assert.NotNull(service);
+        service.Should().NotBeNull();
     }
 
     [Theory]
@@ -134,6 +135,6 @@ public sealed class EmailServiceReportTests
         var fileSizeMB = bytes / (1024.0 * 1024.0);
 
         // Assert
-        Assert.Equal(expectedMB, fileSizeMB, precision: 2);
+        fileSizeMB.Should().BeApproximately(expectedMB, precision: 2);
     }
 }

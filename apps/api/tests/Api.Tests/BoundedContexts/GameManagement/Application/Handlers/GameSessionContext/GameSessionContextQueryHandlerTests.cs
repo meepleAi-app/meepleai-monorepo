@@ -6,6 +6,7 @@ using Api.Middleware.Exceptions;
 using Api.Tests.Constants;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.GameManagement.Application.Handlers.GameSessionContext;
 
@@ -62,7 +63,7 @@ public class GameSessionContextQueryHandlerTests
 
         // Assert
         Assert.NotNull(result);
-        Assert.Equal(sessionId, result.SessionId);
+        result.SessionId.Should().Be(sessionId);
         _orchestratorMock.Verify(x => x.BuildContextAsync(sessionId, It.IsAny<CancellationToken>()), Times.Once);
     }
 
@@ -79,14 +80,14 @@ public class GameSessionContextQueryHandlerTests
         var query = new GetGameSessionContextQuery(sessionId);
 
         // Act & Assert
-        await Assert.ThrowsAsync<NotFoundException>(() => handler.Handle(query, CancellationToken.None));
+        await ((Func<Task>)(() => handler.Handle(query, CancellationToken.None))).Should().ThrowAsync<NotFoundException>();
     }
 
     [Fact]
     public async Task GetHandler_ThrowsOnNullQuery()
     {
         var handler = new GetGameSessionContextQueryHandler(_orchestratorMock.Object);
-        await Assert.ThrowsAsync<ArgumentNullException>(() => handler.Handle(null!, CancellationToken.None));
+        await ((Func<Task>)(() => handler.Handle(null!, CancellationToken.None))).Should().ThrowAsync<ArgumentNullException>();
     }
 
     // ========================================================================
@@ -112,7 +113,7 @@ public class GameSessionContextQueryHandlerTests
 
         // Assert
         Assert.NotNull(result);
-        Assert.Equal(sessionId, result.SessionId);
+        result.SessionId.Should().Be(sessionId);
         _orchestratorMock.Verify(x => x.RefreshContextAsync(sessionId, It.IsAny<CancellationToken>()), Times.Once);
     }
 
@@ -129,6 +130,6 @@ public class GameSessionContextQueryHandlerTests
         var query = new RefreshGameSessionContextQuery(sessionId);
 
         // Act & Assert
-        await Assert.ThrowsAsync<NotFoundException>(() => handler.Handle(query, CancellationToken.None));
+        await ((Func<Task>)(() => handler.Handle(query, CancellationToken.None))).Should().ThrowAsync<NotFoundException>();
     }
 }

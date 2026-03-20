@@ -2,6 +2,7 @@ using Api.BoundedContexts.GameManagement.Domain.ValueObjects;
 using Api.SharedKernel.Domain.Exceptions;
 using Api.Tests.Constants;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.GameManagement.Domain.ValueObjects;
 
@@ -19,11 +20,11 @@ public class SessionScoringConfigTests
         var config = new SessionScoringConfig(dimensions, units);
 
         // Assert
-        Assert.Equal(2, config.EnabledDimensions.Count);
-        Assert.Contains("points", config.EnabledDimensions);
-        Assert.Contains("ranking", config.EnabledDimensions);
-        Assert.Equal("pts", config.DimensionUnits["points"]);
-        Assert.Equal("#", config.DimensionUnits["ranking"]);
+        config.EnabledDimensions.Count.Should().Be(2);
+        config.EnabledDimensions.Should().Contain("points");
+        config.EnabledDimensions.Should().Contain("ranking");
+        config.DimensionUnits["points"].Should().Be("pts");
+        config.DimensionUnits["ranking"].Should().Be("#");
     }
 
     [Fact]
@@ -89,9 +90,9 @@ public class SessionScoringConfigTests
         var config = SessionScoringConfig.CreateDefault();
 
         // Assert
-        Assert.Single(config.EnabledDimensions);
-        Assert.Contains("points", config.EnabledDimensions);
-        Assert.Equal("pts", config.DimensionUnits["points"]);
+        config.EnabledDimensions.Should().ContainSingle();
+        config.EnabledDimensions.Should().Contain("points");
+        config.DimensionUnits["points"].Should().Be("pts");
     }
 
     [Fact]

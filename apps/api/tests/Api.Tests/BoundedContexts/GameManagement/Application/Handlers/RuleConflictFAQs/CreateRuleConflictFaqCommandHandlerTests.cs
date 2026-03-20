@@ -8,6 +8,7 @@ using Api.SharedKernel.Infrastructure.Persistence;
 using Api.Tests.Constants;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.GameManagement.Application.Handlers.RuleConflictFAQs;
 
@@ -64,7 +65,7 @@ public sealed class CreateRuleConflictFaqCommandHandlerTests
         var result = await _handler.Handle(command, CancellationToken.None);
 
         // Assert
-        Assert.NotEqual(Guid.Empty, result);
+        result.Should().NotBe(Guid.Empty);
         _faqRepositoryMock.Verify(r => r.AddAsync(
             It.Is<RuleConflictFAQ>(f =>
                 f.GameId == gameId &&
@@ -106,7 +107,7 @@ public sealed class CreateRuleConflictFaqCommandHandlerTests
         var exception = await Assert.ThrowsAsync<ConflictException>(() =>
             _handler.Handle(command, CancellationToken.None));
 
-        Assert.Contains("already exists", exception.Message);
+        exception.Message.Should().Contain("already exists");
         _faqRepositoryMock.Verify(r => r.AddAsync(
             It.IsAny<RuleConflictFAQ>(),
             It.IsAny<CancellationToken>()), Times.Never);

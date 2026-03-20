@@ -6,6 +6,7 @@ using Api.BoundedContexts.GameManagement.Domain.Repositories;
 using Api.Tests.BoundedContexts.GameManagement.TestHelpers;
 using Moq;
 using Xunit;
+using FluentAssertions;
 using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.GameManagement.Application.Handlers;
@@ -54,7 +55,7 @@ public class GetSessionHistoryQueryHandlerTests
 
         // Assert
         Assert.NotNull(result);
-        Assert.Equal(2, result.Count);
+        result.Count.Should().Be(2);
         _sessionRepositoryMock.Verify(
             r => r.FindHistoryAsync(null, null, null, null, null, It.IsAny<CancellationToken>()),
             Times.Once);
@@ -85,8 +86,8 @@ public class GetSessionHistoryQueryHandlerTests
 
         // Assert
         Assert.NotNull(result);
-        Assert.Single(result);
-        Assert.Equal(gameId, result[0].GameId);
+        result.Should().ContainSingle();
+        result[0].GameId.Should().Be(gameId);
         _sessionRepositoryMock.Verify(
             r => r.FindHistoryAsync(gameId, null, null, null, null, It.IsAny<CancellationToken>()),
             Times.Once);
@@ -119,7 +120,7 @@ public class GetSessionHistoryQueryHandlerTests
 
         // Assert
         Assert.NotNull(result);
-        Assert.Single(result);
+        result.Should().ContainSingle();
         _sessionRepositoryMock.Verify(
             r => r.FindHistoryAsync(null, startDate, endDate, null, null, It.IsAny<CancellationToken>()),
             Times.Once);
@@ -151,7 +152,7 @@ public class GetSessionHistoryQueryHandlerTests
 
         // Assert
         Assert.NotNull(result);
-        Assert.Equal(2, result.Count);
+        result.Count.Should().Be(2);
         _sessionRepositoryMock.Verify(
             r => r.FindHistoryAsync(null, null, null, limit, offset, It.IsAny<CancellationToken>()),
             Times.Once);
@@ -192,8 +193,8 @@ public class GetSessionHistoryQueryHandlerTests
 
         // Assert
         Assert.NotNull(result);
-        Assert.Single(result);
-        Assert.Equal(gameId, result[0].GameId);
+        result.Should().ContainSingle();
+        result[0].GameId.Should().Be(gameId);
         _sessionRepositoryMock.Verify(
             r => r.FindHistoryAsync(gameId, startDate, endDate, limit, offset, It.IsAny<CancellationToken>()),
             Times.Once);
@@ -276,7 +277,7 @@ public class GetSessionHistoryQueryHandlerTests
 
         // Assert
         Assert.NotNull(result);
-        Assert.Single(result);
+        result.Should().ContainSingle();
     }
 
     [Fact]
@@ -300,7 +301,7 @@ public class GetSessionHistoryQueryHandlerTests
 
         // Assert
         Assert.NotNull(result);
-        Assert.Single(result);
+        result.Should().ContainSingle();
     }
     [Fact]
     public async Task Handle_MapsSessionsToDtosCorrectly()
@@ -328,15 +329,15 @@ public class GetSessionHistoryQueryHandlerTests
 
         // Assert
         Assert.NotNull(result);
-        Assert.Single(result);
+        result.Should().ContainSingle();
 
         var dto = result[0];
-        Assert.Equal(session.Id, dto.Id);
-        Assert.Equal(gameId, dto.GameId);
-        Assert.Equal("Completed", dto.Status);
-        Assert.Equal("Alice", dto.WinnerName);
-        Assert.Equal(session.Players.Count, dto.PlayerCount);
-        Assert.Equal(session.Players.Count, dto.Players.Count);
+        dto.Id.Should().Be(session.Id);
+        dto.GameId.Should().Be(gameId);
+        dto.Status.Should().Be("Completed");
+        dto.WinnerName.Should().Be("Alice");
+        dto.PlayerCount.Should().Be(session.Players.Count);
+        dto.Players.Count.Should().Be(session.Players.Count);
     }
 }
 

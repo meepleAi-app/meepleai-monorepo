@@ -19,6 +19,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.Unit.KnowledgeBase;
 
@@ -58,7 +59,7 @@ public sealed class RagAccessEnforcementTests
         // Act & Assert
         var ex = await Assert.ThrowsAsync<ForbiddenException>(
             () => handler.Handle(command, CancellationToken.None));
-        Assert.Contains("possedere il gioco", ex.Message);
+        ex.Message.Should().Contain("possedere il gioco");
     }
 
     [Fact]
@@ -92,8 +93,8 @@ public sealed class RagAccessEnforcementTests
         var result = await handler.Handle(command, CancellationToken.None);
 
         // Assert — did not throw, handler proceeded
-        Assert.NotNull(result);
-        Assert.Equal("Test", result.Name);
+        result.Should().NotBeNull();
+        result.Name.Should().Be("Test");
     }
 
     [Fact]
@@ -127,7 +128,7 @@ public sealed class RagAccessEnforcementTests
         var result = await handler.Handle(command, CancellationToken.None);
 
         // Assert
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
     }
 
     // ========================================================================
@@ -159,7 +160,7 @@ public sealed class RagAccessEnforcementTests
         // Act & Assert
         var ex = await Assert.ThrowsAsync<ForbiddenException>(
             () => handler.Handle(command, CancellationToken.None));
-        Assert.Contains("possedere il gioco", ex.Message);
+        ex.Message.Should().Contain("possedere il gioco");
     }
 
     [Fact]
@@ -194,8 +195,8 @@ public sealed class RagAccessEnforcementTests
         var result = await handler.Handle(command, CancellationToken.None);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.NotEqual(Guid.Empty, result.AgentId);
+        result.Should().NotBeNull();
+        result.AgentId.Should().NotBe(Guid.Empty);
     }
 
     [Fact]
@@ -230,8 +231,8 @@ public sealed class RagAccessEnforcementTests
         var result = await handler.Handle(command, CancellationToken.None);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal("Public Game Agent", result.AgentName);
+        result.Should().NotBeNull();
+        result.AgentName.Should().Be("Public Game Agent");
     }
 
     // ========================================================================

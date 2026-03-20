@@ -6,6 +6,7 @@ using Api.BoundedContexts.UserNotifications.Domain.Repositories;
 using Api.Tests.Constants;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.UserNotifications.Application.Handlers;
 
@@ -37,11 +38,11 @@ public class GetSlackConnectionStatusQueryHandlerTests
         var result = await _handler.Handle(query, CancellationToken.None);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.True(result.IsConnected);
-        Assert.Equal("Test Team", result.SlackTeamName);
-        Assert.Equal("U123", result.SlackUserId);
-        Assert.NotNull(result.ConnectedAt);
+        result.Should().NotBeNull();
+        result.IsConnected.Should().BeTrue();
+        result.SlackTeamName.Should().Be("Test Team");
+        result.SlackUserId.Should().Be("U123");
+        result.ConnectedAt.Should().NotBeNull();
     }
 
     [Fact]
@@ -61,9 +62,9 @@ public class GetSlackConnectionStatusQueryHandlerTests
         var result = await _handler.Handle(query, CancellationToken.None);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.False(result.IsConnected);
-        Assert.Equal("Test Team", result.SlackTeamName);
+        result.Should().NotBeNull();
+        result.IsConnected.Should().BeFalse();
+        result.SlackTeamName.Should().Be("Test Team");
     }
 
     [Fact]
@@ -81,6 +82,6 @@ public class GetSlackConnectionStatusQueryHandlerTests
         var result = await _handler.Handle(query, CancellationToken.None);
 
         // Assert
-        Assert.Null(result);
+        result.Should().BeNull();
     }
 }

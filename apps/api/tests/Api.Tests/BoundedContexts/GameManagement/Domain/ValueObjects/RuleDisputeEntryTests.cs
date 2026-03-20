@@ -1,6 +1,7 @@
 using Api.BoundedContexts.GameManagement.Domain.ValueObjects;
 using Api.Tests.Constants;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.GameManagement.Domain.ValueObjects;
 
@@ -19,9 +20,9 @@ public class RuleDisputeEntryTests
             raisedByPlayerName: "Marco",
             timestamp: DateTime.UtcNow);
 
-        Assert.Equal("Marco", entry.RaisedByPlayerName);
-        Assert.Single(entry.RuleReferences);
-        Assert.NotEqual(Guid.Empty, entry.Id);
+        entry.RaisedByPlayerName.Should().Be("Marco");
+        entry.RuleReferences.Should().ContainSingle();
+        entry.Id.Should().NotBe(Guid.Empty);
     }
 
     [Fact]
@@ -83,7 +84,7 @@ public class RuleDisputeEntryTests
             raisedByPlayerName: "Marco",
             timestamp: DateTime.UtcNow);
 
-        Assert.NotEqual(Guid.Empty, entry.Id);
+        entry.Id.Should().NotBe(Guid.Empty);
     }
 
     [Fact]
@@ -114,9 +115,9 @@ public class RuleDisputeEntryTests
             raisedByPlayerName: "Anna",
             timestamp: DateTime.UtcNow);
 
-        Assert.Equal(3, entry.RuleReferences.Count);
-        Assert.Contains("Page 5", entry.RuleReferences);
-        Assert.Contains("Section 2.1", entry.RuleReferences);
+        entry.RuleReferences.Count.Should().Be(3);
+        entry.RuleReferences.Should().Contain("Page 5");
+        entry.RuleReferences.Should().Contain("Section 2.1");
     }
 
     [Fact]
@@ -132,6 +133,6 @@ public class RuleDisputeEntryTests
             raisedByPlayerName: "Luca",
             timestamp: timestamp);
 
-        Assert.Equal(timestamp, entry.Timestamp);
+        entry.Timestamp.Should().Be(timestamp);
     }
 }

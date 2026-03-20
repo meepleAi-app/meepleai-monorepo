@@ -10,6 +10,7 @@ using Api.Tests.Constants;
 using Api.Tests.TestHelpers;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.GameManagement.Application.Handlers;
 
@@ -59,9 +60,9 @@ public class PublishGameCommandHandlerTests
 
         // Assert
         Assert.NotNull(result);
-        Assert.Equal(gameId, result.Id);
+        result.Id.Should().Be(gameId);
         Assert.True(result.IsPublished);
-        Assert.Equal(ApprovalStatus.Approved.ToString(), result.ApprovalStatus);
+        result.ApprovalStatus.Should().Be(ApprovalStatus.Approved.ToString());
         Assert.NotNull(result.PublishedAt);
 
         // Verify repository interactions
@@ -99,7 +100,7 @@ public class PublishGameCommandHandlerTests
 
         // Assert
         Assert.False(result.IsPublished);
-        Assert.Equal(ApprovalStatus.PendingReview.ToString(), result.ApprovalStatus);
+        result.ApprovalStatus.Should().Be(ApprovalStatus.PendingReview.ToString());
         Assert.Null(result.PublishedAt);
     }
 
@@ -126,7 +127,7 @@ public class PublishGameCommandHandlerTests
 
         // Assert
         Assert.False(result.IsPublished);
-        Assert.Equal(ApprovalStatus.Rejected.ToString(), result.ApprovalStatus);
+        result.ApprovalStatus.Should().Be(ApprovalStatus.Rejected.ToString());
         Assert.Null(result.PublishedAt);
     }
 
@@ -182,7 +183,7 @@ public class PublishGameCommandHandlerTests
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(
             () => _handler.Handle(command, TestContext.Current.CancellationToken));
 
-        Assert.Contains("Cannot approve game without linking to SharedGameCatalog first", exception.Message);
+        exception.Message.Should().Contain("Cannot approve game without linking to SharedGameCatalog first");
 
         // Verify changes were NOT saved
         _unitOfWorkMock.Verify(
@@ -213,7 +214,7 @@ public class PublishGameCommandHandlerTests
 
         // Assert
         Assert.False(result.IsPublished);
-        Assert.Equal(ApprovalStatus.Draft.ToString(), result.ApprovalStatus);
+        result.ApprovalStatus.Should().Be(ApprovalStatus.Draft.ToString());
         Assert.Null(result.PublishedAt);
     }
 

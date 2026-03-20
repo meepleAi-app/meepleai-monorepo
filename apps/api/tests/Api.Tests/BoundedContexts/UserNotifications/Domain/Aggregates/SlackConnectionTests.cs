@@ -1,5 +1,6 @@
 using Api.BoundedContexts.UserNotifications.Domain.Aggregates;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.UserNotifications.Domain.Aggregates;
 
@@ -33,15 +34,15 @@ public class SlackConnectionTests
         var connection = CreateDefault();
 
         // Assert
-        Assert.NotEqual(Guid.Empty, connection.Id);
-        Assert.Equal(DefaultUserId, connection.UserId);
-        Assert.Equal("U01ABCDEF", connection.SlackUserId);
-        Assert.Equal("T01ABCDEF", connection.SlackTeamId);
-        Assert.Equal("Test Workspace", connection.SlackTeamName);
-        Assert.Equal("xoxb-test-token", connection.BotAccessToken);
-        Assert.Equal("D01ABCDEF", connection.DmChannelId);
-        Assert.True(connection.IsActive);
-        Assert.Null(connection.DisconnectedAt);
+        connection.Id.Should().NotBe(Guid.Empty);
+        connection.UserId.Should().Be(DefaultUserId);
+        connection.SlackUserId.Should().Be("U01ABCDEF");
+        connection.SlackTeamId.Should().Be("T01ABCDEF");
+        connection.SlackTeamName.Should().Be("Test Workspace");
+        connection.BotAccessToken.Should().Be("xoxb-test-token");
+        connection.DmChannelId.Should().Be("D01ABCDEF");
+        connection.IsActive.Should().BeTrue();
+        connection.DisconnectedAt.Should().BeNull();
     }
 
     [Fact]
@@ -55,8 +56,8 @@ public class SlackConnectionTests
         connection.Disconnect(disconnectedAt);
 
         // Assert
-        Assert.False(connection.IsActive);
-        Assert.Equal(disconnectedAt, connection.DisconnectedAt);
+        connection.IsActive.Should().BeFalse();
+        connection.DisconnectedAt.Should().Be(disconnectedAt);
     }
 
     [Fact]
@@ -70,10 +71,10 @@ public class SlackConnectionTests
         connection.Reconnect("xoxb-new-token", "D99NEWCHAN");
 
         // Assert
-        Assert.True(connection.IsActive);
-        Assert.Equal("xoxb-new-token", connection.BotAccessToken);
-        Assert.Equal("D99NEWCHAN", connection.DmChannelId);
-        Assert.Null(connection.DisconnectedAt);
+        connection.IsActive.Should().BeTrue();
+        connection.BotAccessToken.Should().Be("xoxb-new-token");
+        connection.DmChannelId.Should().Be("D99NEWCHAN");
+        connection.DisconnectedAt.Should().BeNull();
     }
 
     [Fact]
@@ -86,7 +87,7 @@ public class SlackConnectionTests
         connection.Deactivate();
 
         // Assert
-        Assert.False(connection.IsActive);
-        Assert.Null(connection.DisconnectedAt);
+        connection.IsActive.Should().BeFalse();
+        connection.DisconnectedAt.Should().BeNull();
     }
 }

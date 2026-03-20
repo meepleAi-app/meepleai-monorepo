@@ -177,7 +177,7 @@ public class SessionSyncServiceTests
         await cts.CancelAsync();
 
         // Assert
-        await Assert.ThrowsAsync<OperationCanceledException>(async () => await subscriptionTask);
+        await ((Func<Task>)(async () => await subscriptionTask)).Should().ThrowAsync<OperationCanceledException>();
         receivedCount.Should().Be(0);
     }
 

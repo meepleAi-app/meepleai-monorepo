@@ -7,6 +7,7 @@ using Api.SharedKernel.Infrastructure.Persistence;
 using Api.Tests.BoundedContexts.GameManagement.TestHelpers;
 using Moq;
 using Xunit;
+using FluentAssertions;
 using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.GameManagement.Application.Handlers;
@@ -51,8 +52,8 @@ public class PauseGameSessionCommandHandlerTests
 
         // Assert
         Assert.NotNull(result);
-        Assert.Equal("Paused", result.Status);
-        Assert.Equal(sessionId.ToString(), result.Id.ToString());
+        result.Status.Should().Be("Paused");
+        result.Id.ToString().Should().Be(sessionId.ToString());
 
         _sessionRepositoryMock.Verify(
             r => r.UpdateAsync(session, It.IsAny<CancellationToken>()),
@@ -83,10 +84,10 @@ public class PauseGameSessionCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.Equal("Paused", result.Status);
-        Assert.Equal(2, result.Players.Count);
-        Assert.Equal("Player 1", result.Players[0].PlayerName);
-        Assert.Equal("Player 2", result.Players[1].PlayerName);
+        result.Status.Should().Be("Paused");
+        result.Players.Count.Should().Be(2);
+        result.Players[0].PlayerName.Should().Be("Player 1");
+        result.Players[1].PlayerName.Should().Be("Player 2");
     }
 
     [Fact]
@@ -110,8 +111,8 @@ public class PauseGameSessionCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.Equal("Paused", result.Status);
-        Assert.Equal(4, result.Players.Count);
+        result.Status.Should().Be("Paused");
+        result.Players.Count.Should().Be(4);
     }
 
     [Fact]
@@ -135,8 +136,8 @@ public class PauseGameSessionCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.Equal("Paused", result.Status);
-        Assert.Contains("Game is going well!", result.Notes);
+        result.Status.Should().Be("Paused");
+        result.Notes.Should().Contain("Game is going well!");
     }
     [Fact]
     public async Task Handle_NonExistentSession_ThrowsInvalidOperationException()
@@ -262,10 +263,10 @@ public class PauseGameSessionCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert - All metadata except status should be unchanged
-        Assert.Equal(sessionId.ToString(), result.Id.ToString());
-        Assert.Equal(gameId.ToString(), result.GameId.ToString());
-        Assert.Equal(originalStartedAt, result.StartedAt);
-        Assert.Equal(originalPlayerCount, result.Players.Count);
+        result.Id.ToString().Should().Be(sessionId.ToString());
+        result.GameId.ToString().Should().Be(gameId.ToString());
+        result.StartedAt.Should().Be(originalStartedAt);
+        result.Players.Count.Should().Be(originalPlayerCount);
         Assert.Null(result.CompletedAt); // Still not completed
         Assert.Null(result.WinnerName);
     }

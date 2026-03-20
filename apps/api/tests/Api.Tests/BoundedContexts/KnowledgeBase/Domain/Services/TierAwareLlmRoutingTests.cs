@@ -11,6 +11,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Moq;
 using Xunit;
+using FluentAssertions;
 using Api.Tests.Constants;
 using AuthUser = Api.BoundedContexts.Authentication.Domain.Entities.User;
 
@@ -109,7 +110,7 @@ public sealed class TierAwareLlmRoutingTests
         var result = HybridAdaptiveRoutingStrategy.MapUserToLlmTier(user);
 
         // Assert
-        Assert.Equal(LlmUserTier.User, result);
+        result.Should().Be(LlmUserTier.User);
     }
 
     [Fact]
@@ -122,7 +123,7 @@ public sealed class TierAwareLlmRoutingTests
         var result = HybridAdaptiveRoutingStrategy.MapUserToLlmTier(user);
 
         // Assert
-        Assert.Equal(LlmUserTier.Premium, result);
+        result.Should().Be(LlmUserTier.Premium);
     }
 
     [Fact]
@@ -135,7 +136,7 @@ public sealed class TierAwareLlmRoutingTests
         var result = HybridAdaptiveRoutingStrategy.MapUserToLlmTier(user);
 
         // Assert
-        Assert.Equal(LlmUserTier.Premium, result);
+        result.Should().Be(LlmUserTier.Premium);
     }
 
     [Fact]
@@ -148,7 +149,7 @@ public sealed class TierAwareLlmRoutingTests
         var result = HybridAdaptiveRoutingStrategy.MapUserToLlmTier(user);
 
         // Assert
-        Assert.Equal(LlmUserTier.Premium, result);
+        result.Should().Be(LlmUserTier.Premium);
     }
 
     [Fact]
@@ -161,7 +162,7 @@ public sealed class TierAwareLlmRoutingTests
         var result = HybridAdaptiveRoutingStrategy.MapUserToLlmTier(user);
 
         // Assert
-        Assert.Equal(LlmUserTier.Admin, result);
+        result.Should().Be(LlmUserTier.Admin);
     }
 
     [Fact]
@@ -174,7 +175,7 @@ public sealed class TierAwareLlmRoutingTests
         var result = HybridAdaptiveRoutingStrategy.MapUserToLlmTier(user);
 
         // Assert
-        Assert.Equal(LlmUserTier.Editor, result);
+        result.Should().Be(LlmUserTier.Editor);
     }
 
     [Fact]
@@ -184,7 +185,7 @@ public sealed class TierAwareLlmRoutingTests
         var result = HybridAdaptiveRoutingStrategy.MapUserToLlmTier(null);
 
         // Assert
-        Assert.Equal(LlmUserTier.User, result);
+        result.Should().Be(LlmUserTier.User);
     }
 
     [Fact]
@@ -197,7 +198,7 @@ public sealed class TierAwareLlmRoutingTests
         var result = HybridAdaptiveRoutingStrategy.MapUserToLlmTier(user);
 
         // Assert
-        Assert.Equal(LlmUserTier.User, result);
+        result.Should().Be(LlmUserTier.User);
     }
 
     // ─── Integration via SelectProvider ──────────────────────────────────────
@@ -213,7 +214,7 @@ public sealed class TierAwareLlmRoutingTests
         var decision = sut.SelectProvider(user, RagStrategy.Balanced);
 
         // Assert
-        Assert.Contains("Tier: User", decision.Reason);
+        decision.Reason.Should().Contain("Tier: User");
     }
 
     [Fact]
@@ -227,7 +228,7 @@ public sealed class TierAwareLlmRoutingTests
         var decision = sut.SelectProvider(user, RagStrategy.Balanced);
 
         // Assert
-        Assert.Contains("Tier: Premium", decision.Reason);
+        decision.Reason.Should().Contain("Tier: Premium");
     }
 
     [Fact]
@@ -241,7 +242,7 @@ public sealed class TierAwareLlmRoutingTests
         var decision = sut.SelectProvider(admin, RagStrategy.Expert);
 
         // Assert
-        Assert.Contains("Tier: Admin", decision.Reason);
+        decision.Reason.Should().Contain("Tier: Admin");
     }
 
     [Fact]
@@ -263,8 +264,8 @@ public sealed class TierAwareLlmRoutingTests
         var exception = Assert.Throws<UnauthorizedAccessException>(
             () => sut.SelectProvider(user, RagStrategy.Expert));
 
-        Assert.Contains("Premium", exception.Message);
-        Assert.Contains("EXPERT", exception.Message);
+        exception.Message.Should().Contain("Premium");
+        exception.Message.Should().Contain("EXPERT");
     }
 
     // ─── Helper ─────────────────────────────────────────────────────────────

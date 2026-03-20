@@ -1,6 +1,7 @@
 using Api.Helpers;
 using Api.SharedKernel.Domain.Exceptions;
 using Xunit;
+using FluentAssertions;
 using Api.Tests.Constants;
 
 namespace Api.Tests.Infrastructure;
@@ -22,7 +23,7 @@ public class QueryValidatorTests
         var result = QueryValidator.ValidateQuery(validQuery);
 
         // Assert
-        Assert.Null(result);
+        result.Should().BeNull();
     }
 
     [Fact]
@@ -35,7 +36,7 @@ public class QueryValidatorTests
         var result = QueryValidator.ValidateQuery(nullQuery);
 
         // Assert
-        Assert.Equal(QueryValidator.QueryRequiredMessage, result);
+        result.Should().Be(QueryValidator.QueryRequiredMessage);
     }
 
     [Fact]
@@ -48,7 +49,7 @@ public class QueryValidatorTests
         var result = QueryValidator.ValidateQuery(emptyQuery);
 
         // Assert
-        Assert.Equal(QueryValidator.QueryRequiredMessage, result);
+        result.Should().Be(QueryValidator.QueryRequiredMessage);
     }
 
     [Fact]
@@ -61,7 +62,7 @@ public class QueryValidatorTests
         var result = QueryValidator.ValidateQuery(whitespaceQuery);
 
         // Assert
-        Assert.Equal(QueryValidator.QueryRequiredMessage, result);
+        result.Should().Be(QueryValidator.QueryRequiredMessage);
     }
 
     [Fact]
@@ -74,7 +75,7 @@ public class QueryValidatorTests
         var result = QueryValidator.ValidateQuery(tooShort);
 
         // Assert
-        Assert.Equal(QueryValidator.QueryRequiredMessage, result);
+        result.Should().Be(QueryValidator.QueryRequiredMessage);
     }
 
     [Fact]
@@ -87,7 +88,7 @@ public class QueryValidatorTests
         var result = QueryValidator.ValidateQuery(minQuery);
 
         // Assert
-        Assert.Null(result);
+        result.Should().BeNull();
     }
 
     [Fact]
@@ -100,7 +101,7 @@ public class QueryValidatorTests
         var result = QueryValidator.ValidateQuery(maxQuery);
 
         // Assert
-        Assert.Null(result);
+        result.Should().BeNull();
     }
 
     [Fact]
@@ -113,9 +114,9 @@ public class QueryValidatorTests
         var result = QueryValidator.ValidateQuery(tooLong);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Contains("exceeds maximum length", result);
-        Assert.Contains(QueryValidator.MaxQueryLength.ToString(), result);
+        result.Should().NotBeNull();
+        result.Should().Contain("exceeds maximum length");
+        result.Should().Contain(QueryValidator.MaxQueryLength.ToString());
     }
 
     [Fact]
@@ -128,7 +129,7 @@ public class QueryValidatorTests
         var result = QueryValidator.ValidateQuery(queryWithWhitespace);
 
         // Assert
-        Assert.Null(result); // Should be valid after trimming
+        result.Should().BeNull(); // Should be valid after trimming
     }
 
     [Fact]
@@ -141,7 +142,7 @@ public class QueryValidatorTests
         var result = QueryValidator.ValidateQuery(query);
 
         // Assert
-        Assert.Equal(QueryValidator.QueryRequiredMessage, result);
+        result.Should().Be(QueryValidator.QueryRequiredMessage);
     }
     [Fact]
     public void ValidateQueryOrThrow_ValidQuery_DoesNotThrow()
@@ -151,7 +152,7 @@ public class QueryValidatorTests
 
         // Act & Assert
         var exception = Record.Exception(() => QueryValidator.ValidateQueryOrThrow(validQuery));
-        Assert.Null(exception);
+        exception.Should().BeNull();
     }
 
     [Fact]
@@ -164,7 +165,7 @@ public class QueryValidatorTests
         var exception = Assert.Throws<ValidationException>(() =>
             QueryValidator.ValidateQueryOrThrow(nullQuery));
 
-        Assert.Contains("query", exception.Message.ToLower());
+        exception.Message.ToLower().Should().Contain("query");
         Assert.Contains(QueryValidator.QueryRequiredMessage, exception.Errors.Values.SelectMany(x => x));
     }
 
@@ -218,7 +219,7 @@ public class QueryValidatorTests
         var exception = Assert.Throws<ValidationException>(() =>
             QueryValidator.ValidateQueryOrThrow(nullQuery, customParamName));
 
-        Assert.Contains(customParamName.ToLower(), exception.Message.ToLower());
+        exception.Message.ToLower().Should().Contain(customParamName.ToLower());
     }
     [Fact]
     public void TryValidateQuery_ValidQuery_ReturnsTrue()
@@ -230,8 +231,8 @@ public class QueryValidatorTests
         var (isValid, errorMessage) = QueryValidator.TryValidateQuery(validQuery);
 
         // Assert
-        Assert.True(isValid);
-        Assert.Null(errorMessage);
+        isValid.Should().BeTrue();
+        errorMessage.Should().BeNull();
     }
 
     [Fact]
@@ -244,8 +245,8 @@ public class QueryValidatorTests
         var (isValid, errorMessage) = QueryValidator.TryValidateQuery(nullQuery);
 
         // Assert
-        Assert.False(isValid);
-        Assert.Equal(QueryValidator.QueryRequiredMessage, errorMessage);
+        isValid.Should().BeFalse();
+        errorMessage.Should().Be(QueryValidator.QueryRequiredMessage);
     }
 
     [Fact]
@@ -258,8 +259,8 @@ public class QueryValidatorTests
         var (isValid, errorMessage) = QueryValidator.TryValidateQuery(emptyQuery);
 
         // Assert
-        Assert.False(isValid);
-        Assert.Equal(QueryValidator.QueryRequiredMessage, errorMessage);
+        isValid.Should().BeFalse();
+        errorMessage.Should().Be(QueryValidator.QueryRequiredMessage);
     }
 
     [Fact]
@@ -272,8 +273,8 @@ public class QueryValidatorTests
         var (isValid, errorMessage) = QueryValidator.TryValidateQuery(tooShort);
 
         // Assert
-        Assert.False(isValid);
-        Assert.Equal(QueryValidator.QueryRequiredMessage, errorMessage);
+        isValid.Should().BeFalse();
+        errorMessage.Should().Be(QueryValidator.QueryRequiredMessage);
     }
 
     [Fact]
@@ -286,9 +287,9 @@ public class QueryValidatorTests
         var (isValid, errorMessage) = QueryValidator.TryValidateQuery(tooLong);
 
         // Assert
-        Assert.False(isValid);
-        Assert.NotNull(errorMessage);
-        Assert.Contains("exceeds maximum length", errorMessage);
+        isValid.Should().BeFalse();
+        errorMessage.Should().NotBeNull();
+        errorMessage.Should().Contain("exceeds maximum length");
     }
 
     [Fact]
@@ -301,8 +302,8 @@ public class QueryValidatorTests
         var (isValid, errorMessage) = QueryValidator.TryValidateQuery(minQuery);
 
         // Assert
-        Assert.True(isValid);
-        Assert.Null(errorMessage);
+        isValid.Should().BeTrue();
+        errorMessage.Should().BeNull();
     }
 
     [Fact]
@@ -315,28 +316,28 @@ public class QueryValidatorTests
         var (isValid, errorMessage) = QueryValidator.TryValidateQuery(maxQuery);
 
         // Assert
-        Assert.True(isValid);
-        Assert.Null(errorMessage);
+        isValid.Should().BeTrue();
+        errorMessage.Should().BeNull();
     }
     [Fact]
     public void Constants_MinQueryLength_Is3()
     {
         // Assert
-        Assert.Equal(3, QueryValidator.MinQueryLength);
+        QueryValidator.MinQueryLength.Should().Be(3);
     }
 
     [Fact]
     public void Constants_MaxQueryLength_Is1000()
     {
         // Assert
-        Assert.Equal(1000, QueryValidator.MaxQueryLength);
+        QueryValidator.MaxQueryLength.Should().Be(1000);
     }
 
     [Fact]
     public void Constants_QueryRequiredMessage_IsConsistent()
     {
         // Assert
-        Assert.Equal("Please provide a question", QueryValidator.QueryRequiredMessage);
+        QueryValidator.QueryRequiredMessage.Should().Be("Please provide a question");
     }
     [Theory]
     [InlineData("How do I win?")]
@@ -352,7 +353,7 @@ public class QueryValidatorTests
         var result = QueryValidator.ValidateQuery(query);
 
         // Assert
-        Assert.Null(result);
+        result.Should().BeNull();
     }
 
     [Theory]
@@ -368,6 +369,6 @@ public class QueryValidatorTests
         var result = QueryValidator.ValidateQuery(query);
 
         // Assert
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
     }
 }

@@ -1,5 +1,6 @@
 using Api.BoundedContexts.KnowledgeBase.Domain.Services;
 using Xunit;
+using FluentAssertions;
 using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Domain.Services;
@@ -28,7 +29,7 @@ public class CosineSimilarityCalculatorTests
         var similarity = _calculator.CalculateCosineSimilarity(text, text);
 
         // Assert
-        Assert.Equal(1.0, similarity, precision: 3);
+        similarity.Should().BeApproximately(1.0, precision: 3);
     }
 
     [Fact]
@@ -98,7 +99,7 @@ public class CosineSimilarityCalculatorTests
         var similarity = _calculator.CalculateCosineSimilarity("", text);
 
         // Assert
-        Assert.Equal(0.0, similarity);
+        similarity.Should().Be(0.0);
     }
 
     [Fact]
@@ -111,7 +112,7 @@ public class CosineSimilarityCalculatorTests
         var similarity = _calculator.CalculateCosineSimilarity(text, "");
 
         // Assert
-        Assert.Equal(0.0, similarity);
+        similarity.Should().Be(0.0);
     }
 
     [Fact]
@@ -121,7 +122,7 @@ public class CosineSimilarityCalculatorTests
         var similarity = _calculator.CalculateCosineSimilarity("", "");
 
         // Assert
-        Assert.Equal(0.0, similarity);
+        similarity.Should().Be(0.0);
     }
 
     [Fact]
@@ -131,7 +132,7 @@ public class CosineSimilarityCalculatorTests
         var similarity = _calculator.CalculateCosineSimilarity("   ", "\t\n");
 
         // Assert
-        Assert.Equal(0.0, similarity);
+        similarity.Should().Be(0.0);
     }
 
     [Fact]
@@ -281,7 +282,7 @@ public class CosineSimilarityCalculatorTests
         var similarity2 = _calculator.CalculateCosineSimilarity(text2, text1);
 
         // Assert - Cosine similarity should be symmetric
-        Assert.Equal(similarity1, similarity2, precision: 6);
+        similarity2.Should().BeApproximately(similarity1, precision: 6);
     }
 
     [Fact]
@@ -315,9 +316,9 @@ public class CosineSimilarityCalculatorTests
         var similarity2 = _calculator.CalculateCosineSimilarity("text", null!);
         var similarity3 = _calculator.CalculateCosineSimilarity(null!, null!);
 
-        Assert.Equal(0.0, similarity1);
-        Assert.Equal(0.0, similarity2);
-        Assert.Equal(0.0, similarity3);
+        similarity1.Should().Be(0.0);
+        similarity2.Should().Be(0.0);
+        similarity3.Should().Be(0.0);
     }
 }
 

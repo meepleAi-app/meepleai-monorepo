@@ -11,6 +11,7 @@ using Api.Services;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using FluentAssertions;
 using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Handlers;
@@ -83,10 +84,10 @@ public class InvokeAgentCommandHandlerTests
 
         // Assert
         Assert.NotNull(result);
-        Assert.Equal(agentId, result.AgentId);
-        Assert.Equal("Test Agent", result.AgentName);
-        Assert.Equal(AgentType.RagAgent.Value, result.AgentType);
-        Assert.Equal("What are the rules for Catan?", result.Query);
+        result.AgentId.Should().Be(agentId);
+        result.AgentName.Should().Be("Test Agent");
+        result.AgentType.Should().Be(AgentType.RagAgent.Value);
+        result.Query.Should().Be("What are the rules for Catan?");
         Assert.True(result.Confidence >= 0.0 && result.Confidence <= 1.0);
         Assert.NotEmpty(result.Results);
 
@@ -132,7 +133,7 @@ public class InvokeAgentCommandHandlerTests
         // Act & Assert
         var ex = await Assert.ThrowsAsync<InvalidOperationException>(async () =>
             await _handler.Handle(command, TestContext.Current.CancellationToken));
-        Assert.Contains("not active", ex.Message.ToLower());
+        ex.Message.ToLower().Should().Contain("not active");
     }
 
     [Fact]
@@ -155,7 +156,7 @@ public class InvokeAgentCommandHandlerTests
         // Act & Assert
         var ex = await Assert.ThrowsAsync<InvalidOperationException>(async () =>
             await _handler.Handle(command, TestContext.Current.CancellationToken));
-        Assert.Contains("embedding", ex.Message.ToLower());
+        ex.Message.ToLower().Should().Contain("embedding");
     }
 
     [Fact]
@@ -191,9 +192,9 @@ public class InvokeAgentCommandHandlerTests
 
         // Assert
         Assert.NotNull(result);
-        Assert.Equal(0, result.ResultCount);
-        Assert.Equal(0.0, result.Confidence);
-        Assert.Equal("Low", result.QualityLevel);
+        result.ResultCount.Should().Be(0);
+        result.Confidence.Should().Be(0.0);
+        result.QualityLevel.Should().Be("Low");
         Assert.Empty(result.Results);
     }
 
@@ -221,8 +222,8 @@ public class InvokeAgentCommandHandlerTests
 
         // Assert
         Assert.NotNull(result);
-        Assert.Equal(0, result.ResultCount);
-        Assert.Equal("Low", result.QualityLevel);
+        result.ResultCount.Should().Be(0);
+        result.QualityLevel.Should().Be("Low");
     }
 
     [Fact]
@@ -261,7 +262,7 @@ public class InvokeAgentCommandHandlerTests
         await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.Equal(initialCount + 1, agent.InvocationCount);
+        agent.InvocationCount.Should().Be(initialCount + 1);
         Assert.NotNull(agent.LastInvokedAt);
     }
 

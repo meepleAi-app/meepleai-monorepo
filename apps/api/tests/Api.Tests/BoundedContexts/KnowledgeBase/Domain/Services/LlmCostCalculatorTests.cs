@@ -3,6 +3,7 @@ using Api.BoundedContexts.KnowledgeBase.Domain.Services;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using FluentAssertions;
 using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Domain.Services;
@@ -34,16 +35,16 @@ public class LlmCostCalculatorTests
         var result = _calculator.CalculateCost(modelId, "OpenRouter", promptTokens, completionTokens);
 
         // Assert
-        Assert.Equal(modelId, result.ModelId);
-        Assert.Equal("OpenRouter", result.Provider);
-        Assert.Equal(promptTokens, result.PromptTokens);
-        Assert.Equal(completionTokens, result.CompletionTokens);
+        result.ModelId.Should().Be(modelId);
+        result.Provider.Should().Be("OpenRouter");
+        result.PromptTokens.Should().Be(promptTokens);
+        result.CompletionTokens.Should().Be(completionTokens);
 
         // Cost calculation: (1000/1M * $0.27) + (500/1M * $1.10)
         //                 = $0.00027 + $0.00055 = $0.00082
-        Assert.Equal(0.00027m, result.InputCost);
-        Assert.Equal(0.00055m, result.OutputCost);
-        Assert.Equal(0.00082m, result.TotalCost);
+        result.InputCost.Should().Be(0.00027m);
+        result.OutputCost.Should().Be(0.00055m);
+        result.TotalCost.Should().Be(0.00082m);
         Assert.False(result.IsFree);
     }
 
@@ -61,9 +62,9 @@ public class LlmCostCalculatorTests
         // Assert
         // Cost calculation: (10000/1M * $0.125) + (2000/1M * $0.375)
         //                 = $0.00125 + $0.00075 = $0.002
-        Assert.Equal(0.00125m, result.InputCost);
-        Assert.Equal(0.00075m, result.OutputCost);
-        Assert.Equal(0.002m, result.TotalCost);
+        result.InputCost.Should().Be(0.00125m);
+        result.OutputCost.Should().Be(0.00075m);
+        result.TotalCost.Should().Be(0.002m);
         Assert.False(result.IsFree);
     }
 
@@ -79,9 +80,9 @@ public class LlmCostCalculatorTests
         var result = _calculator.CalculateCost(modelId, "OpenRouter", promptTokens, completionTokens);
 
         // Assert
-        Assert.Equal(0m, result.InputCost);
-        Assert.Equal(0m, result.OutputCost);
-        Assert.Equal(0m, result.TotalCost);
+        result.InputCost.Should().Be(0m);
+        result.OutputCost.Should().Be(0m);
+        result.TotalCost.Should().Be(0m);
         Assert.True(result.IsFree);
     }
 
@@ -97,9 +98,9 @@ public class LlmCostCalculatorTests
         var result = _calculator.CalculateCost(modelId, "Ollama", promptTokens, completionTokens);
 
         // Assert
-        Assert.Equal(0m, result.InputCost);
-        Assert.Equal(0m, result.OutputCost);
-        Assert.Equal(0m, result.TotalCost);
+        result.InputCost.Should().Be(0m);
+        result.OutputCost.Should().Be(0m);
+        result.TotalCost.Should().Be(0m);
         Assert.True(result.IsFree);
     }
 
@@ -115,8 +116,8 @@ public class LlmCostCalculatorTests
         var result = _calculator.CalculateCost(modelId, "Unknown", promptTokens, completionTokens);
 
         // Assert - Should treat as free
-        Assert.Equal(modelId, result.ModelId);
-        Assert.Equal(0m, result.TotalCost);
+        result.ModelId.Should().Be(modelId);
+        result.TotalCost.Should().Be(0m);
         Assert.True(result.IsFree);
     }
 
@@ -130,10 +131,10 @@ public class LlmCostCalculatorTests
         var result = _calculator.CalculateCost(modelId, "OpenRouter", -100, 500);
 
         // Assert - Should return empty calculation
-        Assert.Equal("unknown", result.ModelId);
-        Assert.Equal(0, result.PromptTokens);
-        Assert.Equal(0, result.CompletionTokens);
-        Assert.Equal(0m, result.TotalCost);
+        result.ModelId.Should().Be("unknown");
+        result.PromptTokens.Should().Be(0);
+        result.CompletionTokens.Should().Be(0);
+        result.TotalCost.Should().Be(0m);
     }
 
     [Fact]
@@ -146,7 +147,7 @@ public class LlmCostCalculatorTests
         var result = _calculator.CalculateCost(modelId, "OpenRouter", 0, 0);
 
         // Assert
-        Assert.Equal(0m, result.TotalCost);
+        result.TotalCost.Should().Be(0m);
         Assert.True(result.IsFree);
     }
 
@@ -163,9 +164,9 @@ public class LlmCostCalculatorTests
 
         // Assert
         // Cost: (1M/1M * $0.27) + (0.5M/1M * $1.10) = $0.27 + $0.55 = $0.82
-        Assert.Equal(0.27m, result.InputCost);
-        Assert.Equal(0.55m, result.OutputCost);
-        Assert.Equal(0.82m, result.TotalCost);
+        result.InputCost.Should().Be(0.27m);
+        result.OutputCost.Should().Be(0.55m);
+        result.TotalCost.Should().Be(0.82m);
     }
 
     [Fact]
@@ -176,10 +177,10 @@ public class LlmCostCalculatorTests
 
         // Assert
         Assert.NotNull(pricing);
-        Assert.Equal("deepseek/deepseek-chat", pricing.ModelId);
-        Assert.Equal("OpenRouter", pricing.Provider);
-        Assert.Equal(0.27m, pricing.InputCostPer1M);
-        Assert.Equal(1.10m, pricing.OutputCostPer1M);
+        pricing.ModelId.Should().Be("deepseek/deepseek-chat");
+        pricing.Provider.Should().Be("OpenRouter");
+        pricing.InputCostPer1M.Should().Be(0.27m);
+        pricing.OutputCostPer1M.Should().Be(1.10m);
         Assert.False(pricing.IsFree);
     }
 
@@ -207,9 +208,9 @@ public class LlmCostCalculatorTests
         // Assert - Should round to 6 decimal places (micro-dollars)
         // Input: 123/1M * $0.27 = $0.00003321 → $0.000033
         // Output: 456/1M * $1.10 = $0.0005016 → $0.000502
-        Assert.Equal(0.000033m, result.InputCost);
-        Assert.Equal(0.000502m, result.OutputCost);
-        Assert.Equal(0.000535m, result.TotalCost);
+        result.InputCost.Should().Be(0.000033m);
+        result.OutputCost.Should().Be(0.000502m);
+        result.TotalCost.Should().Be(0.000535m);
     }
 
     [Fact]
@@ -233,13 +234,13 @@ public class LlmCostCalculatorTests
         {
             var pricing = _calculator.GetModelPricing(modelId);
             Assert.NotNull(pricing);
-            Assert.Equal(modelId, pricing.ModelId);
-            Assert.Equal(provider, pricing.Provider);
+            pricing.ModelId.Should().Be(modelId);
+            pricing.Provider.Should().Be(provider);
 
             // Verify calculation works
             var cost = _calculator.CalculateCost(modelId, provider, 1000, 500);
             Assert.NotNull(cost);
-            Assert.Equal(modelId, cost.ModelId);
+            cost.ModelId.Should().Be(modelId);
         }
     }
 }

@@ -9,6 +9,7 @@ using Api.Tests.Constants;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Handlers.ChatSession;
 
@@ -55,7 +56,7 @@ public class AddChatSessionMessageCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotEqual(Guid.Empty, result);
+        result.Should().NotBe(Guid.Empty);
         _mockRepository.Verify(
             r => r.UpdateAsync(
                 It.Is<Api.BoundedContexts.KnowledgeBase.Domain.Entities.ChatSession>(
@@ -85,8 +86,8 @@ public class AddChatSessionMessageCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotEqual(Guid.Empty, result);
-        Assert.Equal(1, session.MessageCount);
+        result.Should().NotBe(Guid.Empty);
+        session.MessageCount.Should().Be(1);
         Assert.True(session.LastMessage!.IsAssistantMessage);
     }
 
@@ -110,7 +111,7 @@ public class AddChatSessionMessageCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotEqual(Guid.Empty, result);
+        result.Should().NotBe(Guid.Empty);
         Assert.True(session.LastMessage!.IsSystemMessage);
     }
 
@@ -161,7 +162,7 @@ public class AddChatSessionMessageCommandHandlerTests
         // Act & Assert
         var ex = await Assert.ThrowsAsync<NotFoundException>(() =>
             _handler.Handle(command, TestContext.Current.CancellationToken));
-        Assert.Contains("ChatSession", ex.Message);
+        ex.Message.Should().Contain("ChatSession");
     }
 
     [Fact]
@@ -186,10 +187,10 @@ public class AddChatSessionMessageCommandHandlerTests
             TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.Equal(2, session.MessageCount);
+        session.MessageCount.Should().Be(2);
         var messages = session.Messages.ToList();
-        Assert.Equal(0, messages[0].SequenceNumber);
-        Assert.Equal(1, messages[1].SequenceNumber);
+        messages[0].SequenceNumber.Should().Be(0);
+        messages[1].SequenceNumber.Should().Be(1);
     }
 
     [Fact]
@@ -219,9 +220,9 @@ public class AddChatSessionMessageCommandHandlerTests
         await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.Equal(2, callOrder.Count);
-        Assert.Equal("Repository.UpdateAsync", callOrder[0]);
-        Assert.Equal("UnitOfWork.SaveChangesAsync", callOrder[1]);
+        callOrder.Count.Should().Be(2);
+        callOrder[0].Should().Be("Repository.UpdateAsync");
+        callOrder[1].Should().Be("UnitOfWork.SaveChangesAsync");
     }
 
     [Fact]

@@ -1,5 +1,6 @@
 using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Domain;
 
@@ -27,11 +28,11 @@ public class MoveValidationResultTests
 
         // Assert
         Assert.True(result.IsValid);
-        Assert.Equal("Move is legal per Knight rules", result.Reason);
-        Assert.Equal(0.95, result.ConfidenceScore);
-        Assert.Equal(42.5, result.ExecutionTimeMs);
-        Assert.Single(result.AppliedRuleIds);
-        Assert.Single(result.Citations);
+        result.Reason.Should().Be("Move is legal per Knight rules");
+        result.ConfidenceScore.Should().Be(0.95);
+        result.ExecutionTimeMs.Should().Be(42.5);
+        result.AppliedRuleIds.Should().ContainSingle();
+        result.Citations.Should().ContainSingle();
         Assert.Null(result.ErrorMessage);
     }
 
@@ -52,7 +53,7 @@ public class MoveValidationResultTests
 
         // Assert
         Assert.False(result.IsValid);
-        Assert.Contains("violates", result.Reason);
+        result.Reason.Should().Contain("violates");
         Assert.Null(result.ErrorMessage);
     }
 
@@ -64,9 +65,9 @@ public class MoveValidationResultTests
 
         // Assert
         Assert.False(result.IsValid);
-        Assert.Equal("Validation error occurred", result.Reason);
-        Assert.Equal("Network timeout", result.ErrorMessage);
-        Assert.Equal(0, result.ConfidenceScore);
+        result.Reason.Should().Be("Validation error occurred");
+        result.ErrorMessage.Should().Be("Network timeout");
+        result.ConfidenceScore.Should().Be(0);
         Assert.Empty(result.AppliedRuleIds);
         Assert.Empty(result.Citations);
     }

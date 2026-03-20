@@ -9,6 +9,7 @@ using Api.Middleware.Exceptions;
 using Api.Tests.Constants;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.GameManagement.Application.QueryHandlers;
 
@@ -38,7 +39,7 @@ public sealed class SessionAttachmentQueryHandlerTests
         var result = await handler.Handle(
             new GetSessionAttachmentsQuery(sessionId), CancellationToken.None);
 
-        Assert.Equal(2, result.Count);
+        result.Count.Should().Be(2);
     }
 
     [Fact]
@@ -58,8 +59,8 @@ public sealed class SessionAttachmentQueryHandlerTests
         var result = await handler.Handle(
             new GetSessionAttachmentsQuery(sessionId, PlayerId: playerId), CancellationToken.None);
 
-        Assert.Single(result);
-        Assert.Equal(playerId, result[0].PlayerId);
+        result.Should().ContainSingle();
+        result[0].PlayerId.Should().Be(playerId);
     }
 
     [Fact]
@@ -78,8 +79,8 @@ public sealed class SessionAttachmentQueryHandlerTests
         var result = await handler.Handle(
             new GetSessionAttachmentsQuery(sessionId, Type: AttachmentType.BoardState), CancellationToken.None);
 
-        Assert.Single(result);
-        Assert.Equal(AttachmentType.BoardState, result[0].AttachmentType);
+        result.Should().ContainSingle();
+        result[0].AttachmentType.Should().Be(AttachmentType.BoardState);
     }
 
     [Fact]
@@ -97,7 +98,7 @@ public sealed class SessionAttachmentQueryHandlerTests
         var result = await handler.Handle(
             new GetSessionAttachmentsQuery(sessionId, SnapshotIndex: 1), CancellationToken.None);
 
-        Assert.Single(result);
+        result.Should().ContainSingle();
         _repoMock.Verify(x => x.GetBySnapshotAsync(sessionId, 1, It.IsAny<CancellationToken>()), Times.Once);
     }
 
@@ -142,9 +143,9 @@ public sealed class SessionAttachmentQueryHandlerTests
         var result = await handler.Handle(
             new GetSessionAttachmentByIdQuery(sessionId, attachment.Id), CancellationToken.None);
 
-        Assert.Equal("https://s3.example.com/download", result.DownloadUrl);
-        Assert.Equal("Alice", result.PlayerDisplayName);
-        Assert.Equal(attachment.Id, result.Id);
+        result.DownloadUrl.Should().Be("https://s3.example.com/download");
+        result.PlayerDisplayName.Should().Be("Alice");
+        result.Id.Should().Be(attachment.Id);
     }
 
     [Fact]
@@ -195,7 +196,7 @@ public sealed class SessionAttachmentQueryHandlerTests
         var result = await handler.Handle(
             new GetSessionAttachmentByIdQuery(sessionId, attachment.Id), CancellationToken.None);
 
-        Assert.Equal("Unknown Player", result.PlayerDisplayName);
+        result.PlayerDisplayName.Should().Be("Unknown Player");
     }
 
     #endregion
@@ -218,7 +219,7 @@ public sealed class SessionAttachmentQueryHandlerTests
         var result = await handler.Handle(
             new GetSnapshotPhotosQuery(sessionId, 2), CancellationToken.None);
 
-        Assert.Equal(2, result.Count);
+        result.Count.Should().Be(2);
     }
 
     [Fact]

@@ -32,9 +32,9 @@ public class ChatContextDomainServiceTests
 
         var result = _service.BuildChatHistoryContext(thread);
 
-        Assert.Contains("Previous conversation:", result);
-        Assert.Contains("user: First question", result);
-        Assert.Contains("assistant: First answer", result);
+        result.Should().Contain("Previous conversation:");
+        result.Should().Contain("user: First question");
+        result.Should().Contain("assistant: First answer");
     }
 
     [Fact]

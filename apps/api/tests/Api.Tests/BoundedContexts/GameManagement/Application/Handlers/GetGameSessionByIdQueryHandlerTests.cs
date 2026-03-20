@@ -6,6 +6,7 @@ using Api.BoundedContexts.GameManagement.Domain.Repositories;
 using Api.BoundedContexts.GameManagement.Domain.ValueObjects;
 using Moq;
 using Xunit;
+using FluentAssertions;
 using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.GameManagement.Application.Handlers;
@@ -42,11 +43,11 @@ public class GetGameSessionByIdQueryHandlerTests
 
         // Assert
         Assert.NotNull(result);
-        Assert.Equal(session.Id, result.Id);
-        Assert.Equal(gameId, result.GameId);
-        Assert.Equal("Setup", result.Status);
+        result.Id.Should().Be(session.Id);
+        result.GameId.Should().Be(gameId);
+        result.Status.Should().Be("Setup");
         Assert.NotNull(result.Players);
-        Assert.Single(result.Players);
+        result.Players.Should().ContainSingle();
     }
 
     [Fact]
@@ -96,10 +97,10 @@ public class GetGameSessionByIdQueryHandlerTests
 
         // Assert
         Assert.NotNull(result);
-        Assert.Equal(3, result.Players.Count);
-        Assert.Equal("Player 1", result.Players[0].PlayerName);
-        Assert.Equal(1, result.Players[0].PlayerOrder);
-        Assert.Equal("Red", result.Players[0].Color);
+        result.Players.Count.Should().Be(3);
+        result.Players[0].PlayerName.Should().Be("Player 1");
+        result.Players[0].PlayerOrder.Should().Be(1);
+        result.Players[0].Color.Should().Be("Red");
     }
 
     [Fact]
@@ -149,8 +150,8 @@ public class GetGameSessionByIdQueryHandlerTests
 
         // Assert
         Assert.NotNull(result);
-        Assert.Equal("Completed", result.Status);
-        Assert.Equal("Player 1", result.WinnerName);
+        result.Status.Should().Be("Completed");
+        result.WinnerName.Should().Be("Player 1");
         Assert.NotNull(result.CompletedAt);
     }
 

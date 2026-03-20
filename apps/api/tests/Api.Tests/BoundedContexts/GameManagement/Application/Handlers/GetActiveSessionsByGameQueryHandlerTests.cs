@@ -6,6 +6,7 @@ using Api.BoundedContexts.GameManagement.Domain.Repositories;
 using Api.BoundedContexts.GameManagement.Domain.ValueObjects;
 using Moq;
 using Xunit;
+using FluentAssertions;
 using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.GameManagement.Application.Handlers;
@@ -46,7 +47,7 @@ public class GetActiveSessionsByGameQueryHandlerTests
 
         // Assert
         Assert.NotNull(result);
-        Assert.Equal(2, result.Count);
+        result.Count.Should().Be(2);
         Assert.All(result, dto => Assert.Equal(gameId, dto.GameId));
     }
 
@@ -98,10 +99,10 @@ public class GetActiveSessionsByGameQueryHandlerTests
 
         // Assert
         Assert.NotNull(result);
-        Assert.Single(result);
-        Assert.Equal(2, result[0].Players.Count);
-        Assert.Equal("Alice", result[0].Players[0].PlayerName);
-        Assert.Equal("Bob", result[0].Players[1].PlayerName);
+        result.Should().ContainSingle();
+        result[0].Players.Count.Should().Be(2);
+        result[0].Players[0].PlayerName.Should().Be("Alice");
+        result[0].Players[1].PlayerName.Should().Be("Bob");
     }
 
     [Fact]
@@ -142,8 +143,8 @@ public class GetActiveSessionsByGameQueryHandlerTests
 
         // Assert
         Assert.NotNull(result);
-        Assert.Single(result);
-        Assert.Equal(gameId1, result[0].GameId);
+        result.Should().ContainSingle();
+        result[0].GameId.Should().Be(gameId1);
     }
 
     private static GameSession CreateActiveSession(Guid gameId)

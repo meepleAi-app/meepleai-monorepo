@@ -6,6 +6,7 @@ using Api.Services.Pdf;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using FluentAssertions;
 using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.GameManagement.Application.Handlers;
@@ -56,7 +57,7 @@ public class UploadGameImageCommandHandlerTests
 
         // Assert
         Assert.True(result.Success);
-        Assert.Equal(fileId, result.FileId);
+        result.FileId.Should().Be(fileId);
         Assert.NotNull(result.FileUrl);
         Assert.Null(result.ErrorMessage);
     }
@@ -77,7 +78,7 @@ public class UploadGameImageCommandHandlerTests
 
         // Assert
         Assert.False(result.Success);
-        Assert.Contains("Invalid file stream", result.ErrorMessage);
+        result.ErrorMessage.Should().Contain("Invalid file stream");
     }
 
     [Fact]
@@ -98,7 +99,7 @@ public class UploadGameImageCommandHandlerTests
 
         // Assert
         Assert.False(result.Success);
-        Assert.Contains("exceeds maximum", result.ErrorMessage);
+        result.ErrorMessage.Should().Contain("exceeds maximum");
     }
 
     [Fact]
@@ -119,7 +120,7 @@ public class UploadGameImageCommandHandlerTests
 
         // Assert
         Assert.False(result.Success);
-        Assert.Contains("exceeds maximum", result.ErrorMessage);
+        result.ErrorMessage.Should().Contain("exceeds maximum");
     }
 
     [Fact]
@@ -139,7 +140,7 @@ public class UploadGameImageCommandHandlerTests
 
         // Assert
         Assert.False(result.Success);
-        Assert.Contains("Invalid file type", result.ErrorMessage);
+        result.ErrorMessage.Should().Contain("Invalid file type");
     }
 
     [Fact]
@@ -176,7 +177,7 @@ public class UploadGameImageCommandHandlerTests
 
         // Assert
         Assert.False(result.Success);
-        Assert.Contains("Storage unavailable", result.ErrorMessage);
+        result.ErrorMessage.Should().Contain("Storage unavailable");
     }
 
     private static MemoryStream CreateValidPngStream()

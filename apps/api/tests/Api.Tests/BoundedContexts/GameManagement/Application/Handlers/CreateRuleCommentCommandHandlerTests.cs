@@ -8,6 +8,7 @@ using Api.Tests.TestHelpers;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using FluentAssertions;
 using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.GameManagement.Application.Handlers;
@@ -113,11 +114,11 @@ public class CreateRuleCommentCommandHandlerTests
             UserId: userId);
 
         // Assert
-        Assert.Equal(gameId, command.GameId);
-        Assert.Equal("1.0", command.Version);
-        Assert.Equal(42, command.LineNumber);
-        Assert.Equal("This rule is unclear", command.CommentText);
-        Assert.Equal(userId, command.UserId);
+        command.GameId.Should().Be(gameId);
+        command.Version.Should().Be("1.0");
+        command.LineNumber.Should().Be(42);
+        command.CommentText.Should().Be("This rule is unclear");
+        command.UserId.Should().Be(userId);
     }
 
     [Fact]
@@ -164,7 +165,7 @@ public class CreateRuleCommentCommandHandlerTests
             UserId: Guid.NewGuid());
 
         // Assert
-        Assert.Equal(2000, command.CommentText.Length);
+        command.CommentText.Length.Should().Be(2000);
     }
     // NOTE: Full integration tests for Handle method (comment creation, @mention extraction,
     // navigation property loading, authorization) should be in integration test suite

@@ -6,6 +6,7 @@ using Api.Tests.Constants;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Handlers.RagDashboard;
 
@@ -79,7 +80,7 @@ public class GetStrategyComparisonQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.Equal(2, result.Strategies.Count);
+        result.Strategies.Count.Should().Be(2);
         Assert.Contains(result.Strategies, s => s.StrategyId == "Hybrid");
         Assert.Contains(result.Strategies, s => s.StrategyId == "Semantic");
     }

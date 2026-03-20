@@ -2,6 +2,7 @@ using Api.Services;
 using Api.Tests.Constants;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.Services;
 
@@ -28,7 +29,7 @@ public class StatusPageRendererTests
         var html = StatusPageRenderer.RenderHtml(report);
 
         // Assert
-        Assert.StartsWith("<!DOCTYPE html>", html, StringComparison.OrdinalIgnoreCase);
+        html.Should().StartWithEquivalentOf("<!DOCTYPE html>");
         Assert.Contains("charset=\"UTF-8\"", html, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("</html>", html, StringComparison.Ordinal);
     }

@@ -2,6 +2,7 @@ using Api.BoundedContexts.GameManagement.Domain.ValueObjects;
 using Api.SharedKernel.Domain.Exceptions;
 using Api.Tests.Constants;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.GameManagement.Domain.ValueObjects;
 
@@ -15,9 +16,9 @@ public class RecordScoreTests
         var score = new RecordScore("points", 42, "pts");
 
         // Assert
-        Assert.Equal("points", score.Dimension);
-        Assert.Equal(42, score.Value);
-        Assert.Equal("pts", score.Unit);
+        score.Dimension.Should().Be("points");
+        score.Value.Should().Be(42);
+        score.Unit.Should().Be("pts");
     }
 
     [Fact]
@@ -58,9 +59,9 @@ public class RecordScoreTests
         var score = RecordScore.Points(42);
 
         // Assert
-        Assert.Equal("points", score.Dimension);
-        Assert.Equal(42, score.Value);
-        Assert.Equal("pts", score.Unit);
+        score.Dimension.Should().Be("points");
+        score.Value.Should().Be(42);
+        score.Unit.Should().Be("pts");
     }
 
     [Fact]
@@ -70,9 +71,9 @@ public class RecordScoreTests
         var score = RecordScore.Ranking(1);
 
         // Assert
-        Assert.Equal("ranking", score.Dimension);
-        Assert.Equal(1, score.Value);
-        Assert.Equal("1º", score.Unit);
+        score.Dimension.Should().Be("ranking");
+        score.Value.Should().Be(1);
+        score.Unit.Should().Be("1º");
     }
 
     [Fact]
@@ -82,9 +83,9 @@ public class RecordScoreTests
         var score = RecordScore.Wins(3);
 
         // Assert
-        Assert.Equal("wins", score.Dimension);
-        Assert.Equal(3, score.Value);
-        Assert.Equal("W", score.Unit);
+        score.Dimension.Should().Be("wins");
+        score.Value.Should().Be(3);
+        score.Unit.Should().Be("W");
     }
 
     [Fact]
@@ -96,8 +97,8 @@ public class RecordScoreTests
         var score3 = RecordScore.Points(10);
 
         // Assert
-        Assert.Equal(score1, score2);
-        Assert.NotEqual(score1, score3);
+        score2.Should().Be(score1);
+        score3.Should().NotBe(score1);
     }
 
     [Fact]
@@ -108,7 +109,7 @@ public class RecordScoreTests
         var scoreWithoutUnit = new RecordScore("custom", 100);
 
         // Assert
-        Assert.Equal("42 pts", scoreWithUnit.ToString());
-        Assert.Equal("100", scoreWithoutUnit.ToString());
+        scoreWithUnit.ToString().Should().Be("42 pts");
+        scoreWithoutUnit.ToString().Should().Be("100");
     }
 }

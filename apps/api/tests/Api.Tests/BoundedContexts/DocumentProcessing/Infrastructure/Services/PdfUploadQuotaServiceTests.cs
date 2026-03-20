@@ -123,9 +123,9 @@ public class PdfUploadQuotaServiceTests
         // Assert
         result.Allowed.Should().BeFalse();
         result.ErrorMessage.Should().NotBeNull();
-        Assert.Contains("Daily upload limit reached", result.ErrorMessage);
-        Assert.Contains("5 PDF/day", result.ErrorMessage);
-        Assert.Contains("free tier", result.ErrorMessage);
+        result.ErrorMessage.Should().Contain("Daily upload limit reached");
+        result.ErrorMessage.Should().Contain("5 PDF/day");
+        result.ErrorMessage.Should().Contain("free tier");
         result.DailyUploadsUsed.Should().Be(5);
         result.DailyLimit.Should().Be(5);
         result.WeeklyUploadsUsed.Should().Be(10);
@@ -163,9 +163,9 @@ public class PdfUploadQuotaServiceTests
         // Assert
         result.Allowed.Should().BeFalse();
         result.ErrorMessage.Should().NotBeNull();
-        Assert.Contains("Weekly upload limit reached", result.ErrorMessage);
-        Assert.Contains("20 PDF/week", result.ErrorMessage);
-        Assert.Contains("free tier", result.ErrorMessage);
+        result.ErrorMessage.Should().Contain("Weekly upload limit reached");
+        result.ErrorMessage.Should().Contain("20 PDF/week");
+        result.ErrorMessage.Should().Contain("free tier");
         result.DailyUploadsUsed.Should().Be(3);
         result.WeeklyUploadsUsed.Should().Be(20);
     }
@@ -205,9 +205,9 @@ public class PdfUploadQuotaServiceTests
         result.DailyLimit.Should().Be(20);
         result.WeeklyUploadsUsed.Should().Be(50);
         result.WeeklyLimit.Should().Be(100);
-        Assert.Equal(new DateTime(2025, 11, 23, 0, 0, 0, DateTimeKind.Utc), result.DailyResetAt);
+        result.DailyResetAt.Should().Be(new DateTime(2025, 11, 23, 0, 0, 0, DateTimeKind.Utc));
         // Weekly reset should be next Monday (Nov 24, 2025 - Saturday + 2 days)
-        Assert.Equal(new DateTime(2025, 11, 24, 0, 0, 0, DateTimeKind.Utc), result.WeeklyResetAt);
+        result.WeeklyResetAt.Should().Be(new DateTime(2025, 11, 24, 0, 0, 0, DateTimeKind.Utc));
     }
 
     [Fact]
@@ -266,9 +266,9 @@ public class PdfUploadQuotaServiceTests
         // Assert - Should use custom limits, not defaults
         result.Allowed.Should().BeTrue();
         result.DailyUploadsUsed.Should().Be(150);
-        Assert.Equal(200, result.DailyLimit); // Custom limit
+        result.DailyLimit.Should().Be(200); // Custom limit
         result.WeeklyUploadsUsed.Should().Be(800);
-        Assert.Equal(1000, result.WeeklyLimit); // Custom limit
+        result.WeeklyLimit.Should().Be(1000); // Custom limit
     }
     [Fact]
     public async Task IncrementUploadCountAsync_ExecutesLuaScriptAtomically()
@@ -318,26 +318,26 @@ public class PdfUploadQuotaServiceTests
 
         // Verify daily key format: pdf:upload:daily:{userId}:2025-11-22
         capturedDailyKeys.Should().NotBeNull();
-        Assert.Single(capturedDailyKeys);
-        Assert.Contains("pdf:upload:daily", capturedDailyKeys[0].ToString());
-        Assert.Contains(userId.ToString(), capturedDailyKeys[0].ToString());
-        Assert.Contains("2025-11-22", capturedDailyKeys[0].ToString());
+        capturedDailyKeys.Should().ContainSingle();
+        capturedDailyKeys[0].ToString().Should().Contain("pdf:upload:daily");
+        capturedDailyKeys[0].ToString().Should().Contain(userId.ToString());
+        capturedDailyKeys[0].ToString().Should().Contain("2025-11-22");
 
         // Verify weekly key format: pdf:upload:weekly:{userId}:2025-W47
         capturedWeeklyKeys.Should().NotBeNull();
-        Assert.Single(capturedWeeklyKeys);
-        Assert.Contains("pdf:upload:weekly", capturedWeeklyKeys[0].ToString());
-        Assert.Contains(userId.ToString(), capturedWeeklyKeys[0].ToString());
-        Assert.Contains("2025-W47", capturedWeeklyKeys[0].ToString());
+        capturedWeeklyKeys.Should().ContainSingle();
+        capturedWeeklyKeys[0].ToString().Should().Contain("pdf:upload:weekly");
+        capturedWeeklyKeys[0].ToString().Should().Contain(userId.ToString());
+        capturedWeeklyKeys[0].ToString().Should().Contain("2025-W47");
 
         // Verify TTL values (25 hours = 90000 seconds for daily)
         capturedDailyValues.Should().NotBeNull();
-        Assert.Single(capturedDailyValues);
+        capturedDailyValues.Should().ContainSingle();
         Assert.Equal(90000, (int)capturedDailyValues[0]); // 25 * 3600
 
         // Verify TTL values (8 days = 691200 seconds for weekly)
         capturedWeeklyValues.Should().NotBeNull();
-        Assert.Single(capturedWeeklyValues);
+        capturedWeeklyValues.Should().ContainSingle();
         Assert.Equal(691200, (int)capturedWeeklyValues[0]); // 8 * 24 * 3600
     }
 
@@ -445,12 +445,12 @@ public class PdfUploadQuotaServiceTests
         info.IsUnlimited.Should().BeFalse();
         info.DailyUploadsUsed.Should().Be(12);
         info.DailyLimit.Should().Be(20);
-        Assert.Equal(8, info.DailyRemaining); // 20 - 12
+        info.DailyRemaining.Should().Be(8); // 20 - 12
         info.WeeklyUploadsUsed.Should().Be(45);
         info.WeeklyLimit.Should().Be(100);
-        Assert.Equal(55, info.WeeklyRemaining); // 100 - 45
-        Assert.Equal(new DateTime(2025, 11, 23, 0, 0, 0, DateTimeKind.Utc), info.DailyResetAt);
-        Assert.Equal(new DateTime(2025, 11, 24, 0, 0, 0, DateTimeKind.Utc), info.WeeklyResetAt);
+        info.WeeklyRemaining.Should().Be(55); // 100 - 45
+        info.DailyResetAt.Should().Be(new DateTime(2025, 11, 23, 0, 0, 0, DateTimeKind.Utc));
+        info.WeeklyResetAt.Should().Be(new DateTime(2025, 11, 24, 0, 0, 0, DateTimeKind.Utc));
     }
 
     [Fact]
@@ -486,10 +486,10 @@ public class PdfUploadQuotaServiceTests
         // Assert
         info.DailyUploadsUsed.Should().Be(7);
         info.DailyLimit.Should().Be(5);
-        Assert.Equal(0, info.DailyRemaining); // Math.Max(0, 5 - 7) = 0
+        info.DailyRemaining.Should().Be(0); // Math.Max(0, 5 - 7) = 0
         info.WeeklyUploadsUsed.Should().Be(22);
         info.WeeklyLimit.Should().Be(20);
-        Assert.Equal(0, info.WeeklyRemaining); // Math.Max(0, 20 - 22) = 0
+        info.WeeklyRemaining.Should().Be(0); // Math.Max(0, 20 - 22) = 0
     }
 
     [Fact]
@@ -566,10 +566,10 @@ public class PdfUploadQuotaServiceTests
         _redisMock.Verify(r => r.GetDatabase(It.IsAny<int>(), It.IsAny<object>()), Times.AtLeastOnce(), "GetDatabase should be called");
 
         // Debug: Check if ScriptEvaluateAsync was called at all
-        Assert.Equal(2, callCount); // Should be 2 (daily + weekly)
+        callCount.Should().Be(2); // Should be 2 (daily + weekly)
 
         capturedWeeklyKeys.Should().NotBeNull();
-        Assert.Single(capturedWeeklyKeys);
+        capturedWeeklyKeys.Should().ContainSingle();
         var weeklyKeyString = capturedWeeklyKeys[0].ToString();
 
         // Debug: Show actual vs expected
@@ -579,7 +579,7 @@ public class PdfUploadQuotaServiceTests
             throw new Xunit.Sdk.XunitException($"Week key mismatch for {dateString}: expected {expectedWeekKey}, got {actualWeek}");
         }
 
-        Assert.Contains(expectedWeekKey, weeklyKeyString);
+        weeklyKeyString.Should().Contain(expectedWeekKey);
     }
     [Fact]
     public async Task CheckQuotaAsync_DailyReset_CalculatesNextMidnight()
@@ -603,7 +603,7 @@ public class PdfUploadQuotaServiceTests
         var result = await _service.CheckQuotaAsync(userId, userTier, userRole);
 
         // Assert - Daily reset should be next midnight (Nov 23 00:00)
-        Assert.Equal(new DateTime(2025, 11, 23, 0, 0, 0, DateTimeKind.Utc), result.DailyResetAt);
+        result.DailyResetAt.Should().Be(new DateTime(2025, 11, 23, 0, 0, 0, DateTimeKind.Utc));
     }
 
     [Theory]
@@ -714,8 +714,8 @@ public class PdfUploadQuotaServiceTests
         // Assert
         result.Allowed.Should().BeFalse();
         result.ErrorMessage.Should().NotBeNull();
-        Assert.Contains("Per-game private PDF limit reached", result.ErrorMessage);
-        Assert.Contains($"{expectedLimit} PDF/game", result.ErrorMessage);
+        result.ErrorMessage.Should().Contain("Per-game private PDF limit reached");
+        result.ErrorMessage.Should().Contain($"{expectedLimit} PDF/game");
         result.PerGameUsed.Should().Be(expectedLimit);
         result.PerGameLimit.Should().Be(expectedLimit);
         result.PerGameRemaining.Should().Be(0);

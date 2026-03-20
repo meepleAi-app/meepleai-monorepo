@@ -7,6 +7,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Time.Testing;
 using Moq;
 using Xunit;
+using FluentAssertions;
 using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Handlers;
@@ -60,19 +61,19 @@ public class StreamExplainQueryHandlerTests
         Assert.NotEmpty(events);
 
         // Verify initial state updates
-        Assert.Equal(StreamingEventType.StateUpdate, events[0].Type);
+        events[0].Type.Should().Be(StreamingEventType.StateUpdate);
         var stateUpdate1 = Assert.IsType<StreamingStateUpdate>(events[0].Data);
-        Assert.Equal("Generating embeddings for topic...", stateUpdate1.message);
+        stateUpdate1.message.Should().Be("Generating embeddings for topic...");
 
-        Assert.Equal(StreamingEventType.StateUpdate, events[1].Type);
+        events[1].Type.Should().Be(StreamingEventType.StateUpdate);
         var stateUpdate2 = Assert.IsType<StreamingStateUpdate>(events[1].Data);
-        Assert.Equal("Searching vector database for relevant content...", stateUpdate2.message);
+        stateUpdate2.message.Should().Be("Searching vector database for relevant content...");
 
         // NO_RESULTS error (Qdrant removed)
         var errorEvent = events.FirstOrDefault(e => e.Type == StreamingEventType.Error);
         Assert.NotNull(errorEvent);
         var error = Assert.IsType<StreamingError>(errorEvent.Data);
-        Assert.Equal("NO_RESULTS", error.errorCode);
+        error.errorCode.Should().Be("NO_RESULTS");
 
         // Verify all events have timestamps
         Assert.All(events, evt => Assert.Equal(_fakeTimeProvider.GetUtcNow().UtcDateTime, evt.Timestamp));
@@ -92,11 +93,11 @@ public class StreamExplainQueryHandlerTests
         }
 
         // Assert
-        Assert.Single(events);
-        Assert.Equal(StreamingEventType.Error, events[0].Type);
+        events.Should().ContainSingle();
+        events[0].Type.Should().Be(StreamingEventType.Error);
         var error = Assert.IsType<StreamingError>(events[0].Data);
-        Assert.Equal("Please provide a topic to explain.", error.errorMessage);
-        Assert.Equal("EMPTY_TOPIC", error.errorCode);
+        error.errorMessage.Should().Be("Please provide a topic to explain.");
+        error.errorCode.Should().Be("EMPTY_TOPIC");
     }
 
     [Fact]
@@ -113,8 +114,8 @@ public class StreamExplainQueryHandlerTests
         }
 
         // Assert
-        Assert.Single(events);
-        Assert.Equal(StreamingEventType.Error, events[0].Type);
+        events.Should().ContainSingle();
+        events[0].Type.Should().Be(StreamingEventType.Error);
     }
 
     [Fact]
@@ -131,8 +132,8 @@ public class StreamExplainQueryHandlerTests
         }
 
         // Assert
-        Assert.Single(events);
-        Assert.Equal(StreamingEventType.Error, events[0].Type);
+        events.Should().ContainSingle();
+        events[0].Type.Should().Be(StreamingEventType.Error);
     }
 
     [Fact]
@@ -160,8 +161,8 @@ public class StreamExplainQueryHandlerTests
         var errorEvent = events.FirstOrDefault(e => e.Type == StreamingEventType.Error);
         Assert.NotNull(errorEvent);
         var error = Assert.IsType<StreamingError>(errorEvent.Data);
-        Assert.Equal("Unable to process topic.", error.errorMessage);
-        Assert.Equal("EMBEDDING_FAILED", error.errorCode);
+        error.errorMessage.Should().Be("Unable to process topic.");
+        error.errorCode.Should().Be("EMBEDDING_FAILED");
     }
 
     [Fact]
@@ -189,7 +190,7 @@ public class StreamExplainQueryHandlerTests
         var errorEvent = events.FirstOrDefault(e => e.Type == StreamingEventType.Error);
         Assert.NotNull(errorEvent);
         var error = Assert.IsType<StreamingError>(errorEvent.Data);
-        Assert.Equal("EMBEDDING_FAILED", error.errorCode);
+        error.errorCode.Should().Be("EMBEDDING_FAILED");
     }
 
     [Fact]
@@ -210,7 +211,7 @@ public class StreamExplainQueryHandlerTests
         var errorEvent = events.FirstOrDefault(e => e.Type == StreamingEventType.Error);
         Assert.NotNull(errorEvent);
         var error = Assert.IsType<StreamingError>(errorEvent.Data);
-        Assert.Equal("NO_RESULTS", error.errorCode);
+        error.errorCode.Should().Be("NO_RESULTS");
     }
 
     private void SetupEmbeddingMock()

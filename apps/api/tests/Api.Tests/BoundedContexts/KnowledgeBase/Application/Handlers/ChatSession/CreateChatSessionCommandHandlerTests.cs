@@ -10,6 +10,7 @@ using Api.Tests.Constants;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Handlers.ChatSession;
 
@@ -52,7 +53,7 @@ public class CreateChatSessionCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotEqual(Guid.Empty, result);
+        result.Should().NotBe(Guid.Empty);
         _mockRepository.Verify(
             r => r.AddAsync(It.Is<Api.BoundedContexts.KnowledgeBase.Domain.Entities.ChatSession>(
                 s => s.UserId == userId && s.GameId == gameId && s.Title == "Test Session"),
@@ -83,7 +84,7 @@ public class CreateChatSessionCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotEqual(Guid.Empty, result);
+        result.Should().NotBe(Guid.Empty);
         _mockRepository.Verify(
             r => r.AddAsync(It.Is<Api.BoundedContexts.KnowledgeBase.Domain.Entities.ChatSession>(
                 s => s.UserLibraryEntryId == userLibraryEntryId &&
@@ -107,7 +108,7 @@ public class CreateChatSessionCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotEqual(Guid.Empty, result);
+        result.Should().NotBe(Guid.Empty);
         _mockRepository.Verify(
             r => r.AddAsync(It.Is<Api.BoundedContexts.KnowledgeBase.Domain.Entities.ChatSession>(
                 s => s.Title == null),
@@ -157,9 +158,9 @@ public class CreateChatSessionCommandHandlerTests
         await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.Equal(2, callOrder.Count);
-        Assert.Equal("Repository.AddAsync", callOrder[0]);
-        Assert.Equal("UnitOfWork.SaveChangesAsync", callOrder[1]);
+        callOrder.Count.Should().Be(2);
+        callOrder[0].Should().Be("Repository.AddAsync");
+        callOrder[1].Should().Be("UnitOfWork.SaveChangesAsync");
     }
 
     [Fact]

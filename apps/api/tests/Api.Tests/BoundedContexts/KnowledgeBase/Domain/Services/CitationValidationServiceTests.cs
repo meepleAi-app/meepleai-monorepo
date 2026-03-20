@@ -10,6 +10,7 @@ using Microsoft.Extensions.Logging;
 using Moq;
 using System.Linq;
 using Xunit;
+using FluentAssertions;
 using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Domain.Services;
@@ -96,11 +97,11 @@ public class CitationValidationServiceTests
 
         // Assert
         Assert.True(result.IsValid);
-        Assert.Equal(3, result.TotalCitations);
-        Assert.Equal(3, result.ValidCitations);
-        Assert.Equal(0, result.InvalidCitations);
+        result.TotalCitations.Should().Be(3);
+        result.ValidCitations.Should().Be(3);
+        result.InvalidCitations.Should().Be(0);
         Assert.Empty(result.Errors);
-        Assert.Equal(1.0, result.ValidationAccuracy);
+        result.ValidationAccuracy.Should().Be(1.0);
         Assert.Contains("All 3 citations valid", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
@@ -119,10 +120,10 @@ public class CitationValidationServiceTests
 
         // Assert
         Assert.True(result.IsValid);
-        Assert.Equal(0, result.TotalCitations);
-        Assert.Equal(0, result.ValidCitations);
+        result.TotalCitations.Should().Be(0);
+        result.ValidCitations.Should().Be(0);
         Assert.Empty(result.Errors);
-        Assert.Equal("No citations to validate", result.Message);
+        result.Message.Should().Be("No citations to validate");
     }
 
     [Fact]
@@ -144,10 +145,10 @@ public class CitationValidationServiceTests
 
         // Assert
         Assert.False(result.IsValid);
-        Assert.Equal(1, result.TotalCitations);
-        Assert.Equal(0, result.ValidCitations);
-        Assert.Single(result.Errors);
-        Assert.Equal(CitationErrorType.DocumentNotFound, result.Errors[0].ErrorType);
+        result.TotalCitations.Should().Be(1);
+        result.ValidCitations.Should().Be(0);
+        result.Errors.Should().ContainSingle();
+        result.Errors[0].ErrorType.Should().Be(CitationErrorType.DocumentNotFound);
         Assert.Contains("not found", result.Errors[0].ErrorMessage, StringComparison.OrdinalIgnoreCase);
     }
 
@@ -169,10 +170,10 @@ public class CitationValidationServiceTests
 
         // Assert
         Assert.False(result.IsValid);
-        Assert.Equal(1, result.TotalCitations);
-        Assert.Equal(0, result.ValidCitations);
-        Assert.Single(result.Errors);
-        Assert.Equal(CitationErrorType.InvalidPageNumber, result.Errors[0].ErrorType);
+        result.TotalCitations.Should().Be(1);
+        result.ValidCitations.Should().Be(0);
+        result.Errors.Should().ContainSingle();
+        result.Errors[0].ErrorType.Should().Be(CitationErrorType.InvalidPageNumber);
         Assert.Contains("Invalid page number", result.Errors[0].ErrorMessage, StringComparison.OrdinalIgnoreCase);
     }
 
@@ -191,8 +192,8 @@ public class CitationValidationServiceTests
 
         // Assert
         Assert.False(result.IsValid);
-        Assert.Single(result.Errors);
-        Assert.Equal(CitationErrorType.InvalidPageNumber, result.Errors[0].ErrorType);
+        result.Errors.Should().ContainSingle();
+        result.Errors[0].ErrorType.Should().Be(CitationErrorType.InvalidPageNumber);
     }
 
     [Fact]
@@ -213,8 +214,8 @@ public class CitationValidationServiceTests
 
         // Assert
         Assert.False(result.IsValid);
-        Assert.Single(result.Errors);
-        Assert.Equal(CitationErrorType.MalformedSource, result.Errors[0].ErrorType);
+        result.Errors.Should().ContainSingle();
+        result.Errors[0].ErrorType.Should().Be(CitationErrorType.MalformedSource);
         Assert.Contains("Invalid source format", result.Errors[0].ErrorMessage, StringComparison.OrdinalIgnoreCase);
     }
 
@@ -236,8 +237,8 @@ public class CitationValidationServiceTests
 
         // Assert
         Assert.False(result.IsValid);
-        Assert.Single(result.Errors);
-        Assert.Equal(CitationErrorType.MalformedSource, result.Errors[0].ErrorType);
+        result.Errors.Should().ContainSingle();
+        result.Errors[0].ErrorType.Should().Be(CitationErrorType.MalformedSource);
     }
 
     [Fact]
@@ -261,12 +262,12 @@ public class CitationValidationServiceTests
 
         // Assert
         Assert.False(result.IsValid); // Not all valid
-        Assert.Equal(3, result.TotalCitations);
-        Assert.Equal(2, result.ValidCitations);
-        Assert.Equal(1, result.InvalidCitations);
-        Assert.Single(result.Errors);
-        Assert.Equal(2.0 / 3.0, result.ValidationAccuracy, precision: 2);
-        Assert.Contains("2/3 citations valid", result.Message);
+        result.TotalCitations.Should().Be(3);
+        result.ValidCitations.Should().Be(2);
+        result.InvalidCitations.Should().Be(1);
+        result.Errors.Should().ContainSingle();
+        result.ValidationAccuracy.Should().BeApproximately(2.0 / 3.0, precision: 2);
+        result.Message.Should().Contain("2/3 citations valid");
     }
 
     [Fact]
@@ -290,7 +291,7 @@ public class CitationValidationServiceTests
 
         // Assert
         Assert.True(result.IsValid);
-        Assert.Equal(4, result.ValidCitations);
+        result.ValidCitations.Should().Be(4);
         Assert.Empty(result.Errors);
     }
 
@@ -347,9 +348,9 @@ public class CitationValidationServiceTests
 
         // Assert
         Assert.False(result.IsValid);
-        Assert.Single(result.Errors);
-        Assert.Equal(CitationErrorType.MalformedSource, result.Errors[0].ErrorType);
-        Assert.Contains("Invalid game ID", result.Errors[0].ErrorMessage);
+        result.Errors.Should().ContainSingle();
+        result.Errors[0].ErrorType.Should().Be(CitationErrorType.MalformedSource);
+        result.Errors[0].ErrorMessage.Should().Contain("Invalid game ID");
     }
 
     // ========== Additional Comprehensive Tests (BGAI-031) ==========
@@ -372,8 +373,8 @@ public class CitationValidationServiceTests
 
         // Assert
         Assert.False(result.IsValid);
-        Assert.Single(result.Errors);
-        Assert.Equal(CitationErrorType.InvalidPageNumber, result.Errors[0].ErrorType);
+        result.Errors.Should().ContainSingle();
+        result.Errors[0].ErrorType.Should().Be(CitationErrorType.InvalidPageNumber);
     }
 
     [Fact]
@@ -396,9 +397,9 @@ public class CitationValidationServiceTests
 
         // Assert
         Assert.True(result.IsValid);
-        Assert.Equal(100, result.TotalCitations);
-        Assert.Equal(100, result.ValidCitations);
-        Assert.Equal(1.0, result.ValidationAccuracy);
+        result.TotalCitations.Should().Be(100);
+        result.ValidCitations.Should().Be(100);
+        result.ValidationAccuracy.Should().Be(1.0);
         Assert.Empty(result.Errors);
     }
 
@@ -430,10 +431,10 @@ public class CitationValidationServiceTests
 
         // Assert
         Assert.False(result.IsValid);
-        Assert.Equal(10, result.TotalCitations);
-        Assert.Equal(7, result.ValidCitations);
-        Assert.Equal(3, result.InvalidCitations);
-        Assert.Equal(0.7, result.ValidationAccuracy);
+        result.TotalCitations.Should().Be(10);
+        result.ValidCitations.Should().Be(7);
+        result.InvalidCitations.Should().Be(3);
+        result.ValidationAccuracy.Should().Be(0.7);
     }
 
     [Fact]
@@ -456,8 +457,8 @@ public class CitationValidationServiceTests
 
         // Assert
         Assert.True(result.IsValid);
-        Assert.Equal(3, result.TotalCitations);
-        Assert.Equal(3, result.ValidCitations);
+        result.TotalCitations.Should().Be(3);
+        result.ValidCitations.Should().Be(3);
     }
 
     [Fact]
@@ -478,8 +479,8 @@ public class CitationValidationServiceTests
 
         // Assert
         Assert.False(result.IsValid);
-        Assert.Single(result.Errors);
-        Assert.Equal(CitationErrorType.MalformedSource, result.Errors[0].ErrorType);
+        result.Errors.Should().ContainSingle();
+        result.Errors[0].ErrorType.Should().Be(CitationErrorType.MalformedSource);
     }
 
     [Fact]
@@ -500,8 +501,8 @@ public class CitationValidationServiceTests
 
         // Assert
         Assert.False(result.IsValid);
-        Assert.Single(result.Errors);
-        Assert.Equal(CitationErrorType.MalformedSource, result.Errors[0].ErrorType);
+        result.Errors.Should().ContainSingle();
+        result.Errors[0].ErrorType.Should().Be(CitationErrorType.MalformedSource);
     }
 
     [Fact]
@@ -522,8 +523,8 @@ public class CitationValidationServiceTests
 
         // Assert
         Assert.False(result.IsValid);
-        Assert.Single(result.Errors);
-        Assert.Equal(CitationErrorType.DocumentNotFound, result.Errors[0].ErrorType);
+        result.Errors.Should().ContainSingle();
+        result.Errors[0].ErrorType.Should().Be(CitationErrorType.DocumentNotFound);
     }
 
     [Fact]
@@ -548,8 +549,8 @@ public class CitationValidationServiceTests
 
         // Assert
         Assert.True(result.IsValid);
-        Assert.Equal(5, result.TotalCitations);
-        Assert.Equal(5, result.ValidCitations);
+        result.TotalCitations.Should().Be(5);
+        result.ValidCitations.Should().Be(5);
     }
 
     [Fact]
@@ -570,8 +571,8 @@ public class CitationValidationServiceTests
 
         // Assert
         Assert.False(result.IsValid);
-        Assert.Single(result.Errors);
-        Assert.Equal(CitationErrorType.MalformedSource, result.Errors[0].ErrorType);
+        result.Errors.Should().ContainSingle();
+        result.Errors[0].ErrorType.Should().Be(CitationErrorType.MalformedSource);
     }
 
     [Fact]
@@ -592,8 +593,8 @@ public class CitationValidationServiceTests
 
         // Assert
         Assert.False(result.IsValid);
-        Assert.Single(result.Errors);
-        Assert.Equal(CitationErrorType.MalformedSource, result.Errors[0].ErrorType);
+        result.Errors.Should().ContainSingle();
+        result.Errors[0].ErrorType.Should().Be(CitationErrorType.MalformedSource);
     }
 
     [Fact]
@@ -634,14 +635,14 @@ public class CitationValidationServiceTests
 
         // Assert
         Assert.False(result.IsValid);
-        Assert.Equal(3, result.TotalCitations);
-        Assert.Equal(0, result.ValidCitations);
-        Assert.Equal(3, result.Errors.Count);
+        result.TotalCitations.Should().Be(3);
+        result.ValidCitations.Should().Be(0);
+        result.Errors.Count.Should().Be(3);
 
         // Verify we have different error types
         var errorTypes = result.Errors.Select(e => e.ErrorType).ToHashSet();
-        Assert.Contains(CitationErrorType.DocumentNotFound, errorTypes);
-        Assert.Contains(CitationErrorType.InvalidPageNumber, errorTypes);
-        Assert.Contains(CitationErrorType.MalformedSource, errorTypes);
+        errorTypes.Should().Contain(CitationErrorType.DocumentNotFound);
+        errorTypes.Should().Contain(CitationErrorType.InvalidPageNumber);
+        errorTypes.Should().Contain(CitationErrorType.MalformedSource);
     }
 }

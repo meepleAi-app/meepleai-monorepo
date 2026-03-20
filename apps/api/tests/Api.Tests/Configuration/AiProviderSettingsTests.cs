@@ -1,6 +1,7 @@
 using Api.Configuration;
 using Microsoft.Extensions.Options;
 using Xunit;
+using FluentAssertions;
 using Api.Tests.Constants;
 
 namespace Api.Tests.Configuration;
@@ -58,7 +59,7 @@ public class AiProviderSettingsTests
         var result = _validator.Validate(null, settings);
 
         // Assert
-        Assert.False(result.Succeeded);
+        result.Succeeded.Should().BeFalse();
         Assert.Contains(result.Failures!, f => f.Contains("At least one AI provider must be enabled"));
     }
 
@@ -79,7 +80,7 @@ public class AiProviderSettingsTests
         var result = _validator.Validate(null, settings);
 
         // Assert
-        Assert.False(result.Succeeded);
+        result.Succeeded.Should().BeFalse();
         Assert.Contains(result.Failures!, f => f.Contains("PreferredProvider 'NonExistent' not found"));
     }
 
@@ -101,7 +102,7 @@ public class AiProviderSettingsTests
         var result = _validator.Validate(null, settings);
 
         // Assert
-        Assert.False(result.Succeeded);
+        result.Succeeded.Should().BeFalse();
         Assert.Contains(result.Failures!, f => f.Contains("PreferredProvider 'Ollama' is disabled"));
     }
 
@@ -122,7 +123,7 @@ public class AiProviderSettingsTests
         var result = _validator.Validate(null, settings);
 
         // Assert
-        Assert.False(result.Succeeded);
+        result.Succeeded.Should().BeFalse();
         Assert.Contains(result.Failures!, f => f.Contains("FallbackChain provider 'NonExistent' not found"));
     }
 
@@ -144,7 +145,7 @@ public class AiProviderSettingsTests
         var result = _validator.Validate(null, settings);
 
         // Assert
-        Assert.False(result.Succeeded);
+        result.Succeeded.Should().BeFalse();
         Assert.Contains(result.Failures!, f => f.Contains("FallbackChain provider 'OpenRouter' is disabled"));
     }
 
@@ -165,7 +166,7 @@ public class AiProviderSettingsTests
         var result = _validator.Validate(null, settings);
 
         // Assert
-        Assert.False(result.Succeeded);
+        result.Succeeded.Should().BeFalse();
         Assert.Contains(result.Failures!, f => f.Contains("FallbackChain contains duplicate providers"));
     }
 
@@ -185,7 +186,7 @@ public class AiProviderSettingsTests
         var result = _validator.Validate(null, settings);
 
         // Assert
-        Assert.False(result.Succeeded);
+        result.Succeeded.Should().BeFalse();
         Assert.Contains(result.Failures!, f => f.Contains("Provider 'Ollama' is enabled but BaseUrl is empty"));
     }
 
@@ -206,7 +207,7 @@ public class AiProviderSettingsTests
         var result = _validator.Validate(null, settings);
 
         // Assert
-        Assert.False(result.Succeeded);
+        result.Succeeded.Should().BeFalse();
         Assert.Contains(result.Failures!, f => f.Contains("Circuit breaker FailureThreshold must be positive"));
     }
 
@@ -227,7 +228,7 @@ public class AiProviderSettingsTests
         var result = _validator.Validate(null, settings);
 
         // Assert
-        Assert.False(result.Succeeded);
+        result.Succeeded.Should().BeFalse();
         Assert.Contains(result.Failures!, f => f.Contains("Circuit breaker OpenDurationSeconds must be positive"));
     }
 
@@ -248,7 +249,7 @@ public class AiProviderSettingsTests
         var result = _validator.Validate(null, settings);
 
         // Assert
-        Assert.False(result.Succeeded);
+        result.Succeeded.Should().BeFalse();
         Assert.Contains(result.Failures!, f => f.Contains("Circuit breaker SuccessThreshold must be positive"));
     }
 
@@ -268,7 +269,7 @@ public class AiProviderSettingsTests
         var result = _validator.Validate(null, settings);
 
         // Assert
-        Assert.False(result.Succeeded);
+        result.Succeeded.Should().BeFalse();
         Assert.Contains(result.Failures!, f => f.Contains("Provider 'Ollama' has invalid HealthCheckIntervalSeconds"));
     }
 
@@ -289,7 +290,7 @@ public class AiProviderSettingsTests
         var result = _validator.Validate(null, settings);
 
         // Assert
-        Assert.True(result.Succeeded);
+        result.Succeeded.Should().BeTrue();
     }
 
     [Fact]
@@ -305,7 +306,7 @@ public class AiProviderSettingsTests
         var result = _validator.Validate(null, settings);
 
         // Assert
-        Assert.True(result.Succeeded, "Missing AI section should not fail validation for backward compatibility");
+        result.Succeeded.Should().BeTrue("Missing AI section should not fail validation for backward compatibility");
     }
 
     [Fact]
@@ -321,7 +322,7 @@ public class AiProviderSettingsTests
         var result = _validator.Validate(null, settings);
 
         // Assert
-        Assert.True(result.Succeeded, "Null Providers should not fail validation for backward compatibility");
+        result.Succeeded.Should().BeTrue("Null Providers should not fail validation for backward compatibility");
     }
 
     [Fact]
@@ -341,7 +342,7 @@ public class AiProviderSettingsTests
         var result = _validator.Validate(null, settings);
 
         // Assert
-        Assert.True(result.Succeeded);
+        result.Succeeded.Should().BeTrue();
     }
 
     [Fact]
@@ -364,8 +365,8 @@ public class AiProviderSettingsTests
         var result = _validator.Validate(null, settings);
 
         // Assert
-        Assert.False(result.Succeeded);
-        Assert.True(result.Failures!.Count() >= 5, $"Expected at least 5 validation errors, got {result.Failures!.Count()}");
+        result.Succeeded.Should().BeFalse();
+        result.Failures!.Count().Should().BeGreaterThanOrEqualTo(5);
         Assert.Contains(result.Failures!, f => f.Contains("PreferredProvider 'NonExistent' not found"));
         Assert.Contains(result.Failures!, f => f.Contains("BaseUrl is empty"));
         Assert.Contains(result.Failures!, f => f.Contains("FallbackChain provider 'OpenRouter' is disabled"));

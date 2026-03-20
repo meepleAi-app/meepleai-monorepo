@@ -16,6 +16,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.Integration.DocumentProcessing;
 
@@ -198,17 +199,17 @@ public sealed class RetryPdfProcessingIntegrationTests : IAsyncLifetime
 
         // Assert
         Assert.True(result.Success, $"Expected success but got: {result.Message}");
-        Assert.Equal(1, result.RetryCount);
-        Assert.Equal(PdfProcessingState.Extracting.ToString(), result.CurrentState);
+        result.RetryCount.Should().Be(1);
+        result.CurrentState.Should().Be(PdfProcessingState.Extracting.ToString());
 
         // Verify database was updated
         var updatedPdf = await _dbContext.PdfDocuments
             .FirstOrDefaultAsync(p => p.Id == pdfId, TestCancellationToken);
 
-        Assert.NotNull(updatedPdf);
-        Assert.Equal(1, updatedPdf.RetryCount);
-        Assert.Equal(PdfProcessingState.Extracting.ToString(), updatedPdf.ProcessingState);
-        Assert.Null(updatedPdf.ProcessingError);
+        updatedPdf.Should().NotBeNull();
+        updatedPdf.RetryCount.Should().Be(1);
+        updatedPdf.ProcessingState.Should().Be(PdfProcessingState.Extracting.ToString());
+        updatedPdf.ProcessingError.Should().BeNull();
     }
 
     [Fact]
@@ -248,18 +249,18 @@ public sealed class RetryPdfProcessingIntegrationTests : IAsyncLifetime
         var result = await mediator.Send(command, TestCancellationToken);
 
         // Assert
-        Assert.False(result.Success);
-        Assert.Contains("Cannot retry", result.Message); // Domain exception message
-        Assert.Contains("MaxRetries=3", result.Message);
-        Assert.Equal(3, result.RetryCount);
+        result.Success.Should().BeFalse();
+        result.Message.Should().Contain("Cannot retry"); // Domain exception message
+        result.Message.Should().Contain("MaxRetries=3");
+        result.RetryCount.Should().Be(3);
 
         // Verify database was NOT modified
         var unchangedPdf = await _dbContext.PdfDocuments
             .FirstOrDefaultAsync(p => p.Id == pdfId, TestCancellationToken);
 
-        Assert.NotNull(unchangedPdf);
-        Assert.Equal(3, unchangedPdf.RetryCount);
-        Assert.Equal(PdfProcessingState.Failed.ToString(), unchangedPdf.ProcessingState);
+        unchangedPdf.Should().NotBeNull();
+        unchangedPdf.RetryCount.Should().Be(3);
+        unchangedPdf.ProcessingState.Should().Be(PdfProcessingState.Failed.ToString());
     }
 
     [Fact]
@@ -296,9 +297,9 @@ public sealed class RetryPdfProcessingIntegrationTests : IAsyncLifetime
         var result = await mediator.Send(command, TestCancellationToken);
 
         // Assert
-        Assert.False(result.Success);
-        Assert.Contains("Cannot retry", result.Message); // Domain exception message
-        Assert.Equal(0, result.RetryCount);
+        result.Success.Should().BeFalse();
+        result.Message.Should().Contain("Cannot retry"); // Domain exception message
+        result.RetryCount.Should().Be(0);
     }
 
     [Fact]
@@ -348,7 +349,7 @@ public sealed class RetryPdfProcessingIntegrationTests : IAsyncLifetime
         var command = new RetryPdfProcessingCommand(pdfId, otherUserId);
         var ex = await Assert.ThrowsAsync<ForbiddenException>(
             () => mediator.Send(command, TestCancellationToken));
-        Assert.Contains("not authorized", ex.Message);
+        ex.Message.Should().Contain("not authorized");
     }
 
     [Fact]
@@ -416,15 +417,15 @@ public sealed class RetryPdfProcessingIntegrationTests : IAsyncLifetime
         var result2 = await mediator.Send(command2, TestCancellationToken);
 
         // Assert
-        Assert.True(result1.Success);
-        Assert.Equal(1, result1.RetryCount);
+        result1.Success.Should().BeTrue();
+        result1.RetryCount.Should().Be(1);
 
-        Assert.True(result2.Success);
-        Assert.Equal(2, result2.RetryCount);
+        result2.Success.Should().BeTrue();
+        result2.RetryCount.Should().Be(2);
 
         // Verify final state
         var finalPdf = await _dbContext.PdfDocuments.FindAsync(new object[] { pdfId }, TestCancellationToken);
-        Assert.Equal(2, finalPdf!.RetryCount);
-        Assert.Equal(PdfProcessingState.Chunking.ToString(), finalPdf.ProcessingState);
+        finalPdf!.RetryCount.Should().Be(2);
+        finalPdf.ProcessingState.Should().Be(PdfProcessingState.Chunking.ToString());
     }
 }

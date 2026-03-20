@@ -14,6 +14,7 @@ using Api.Tests.Constants;
 using MediatR;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.GameManagement.Application.Handlers.LiveSessions;
 
@@ -136,7 +137,7 @@ public class GenerateSetupChecklistCommandHandlerTests
         var ex = await Assert.ThrowsAsync<InvalidOperationException>(
             () => _handler.Handle(command, CancellationToken.None));
 
-        Assert.Equal("Feature SetupWizard.Enabled is disabled", ex.Message);
+        ex.Message.Should().Be("Feature SetupWizard.Enabled is disabled");
     }
 
     // === Session not found ===
@@ -169,7 +170,7 @@ public class GenerateSetupChecklistCommandHandlerTests
         var ex = await Assert.ThrowsAsync<InvalidOperationException>(
             () => _handler.Handle(command, CancellationToken.None));
 
-        Assert.Equal("Session has no associated game", ex.Message);
+        ex.Message.Should().Be("Session has no associated game");
     }
 
     // === Valid flow ===
@@ -189,7 +190,7 @@ public class GenerateSetupChecklistCommandHandlerTests
 
         // Assert
         Assert.NotNull(result);
-        Assert.Equal(4, result.PlayerCount);
+        result.PlayerCount.Should().Be(4);
         Assert.NotEmpty(result.SetupSteps);
     }
 
@@ -208,7 +209,7 @@ public class GenerateSetupChecklistCommandHandlerTests
 
         // Assert - checklist should be set on the session
         Assert.NotNull(session.SetupChecklist);
-        Assert.Equal(4, session.SetupChecklist!.PlayerCount);
+        session.SetupChecklist!.PlayerCount.Should().Be(4);
     }
 
     [Fact]
@@ -250,9 +251,9 @@ public class GenerateSetupChecklistCommandHandlerTests
         var result = await _handler.Handle(command, CancellationToken.None);
 
         // Assert - should have 3 steps from the streaming response
-        Assert.Equal(3, result.SetupSteps.Count);
-        Assert.Equal("Place the board in the center", result.SetupSteps[0].Instruction);
-        Assert.Equal("Deal 7 cards to each player", result.SetupSteps[1].Instruction);
-        Assert.Equal("Each player takes their tokens", result.SetupSteps[2].Instruction);
+        result.SetupSteps.Count.Should().Be(3);
+        result.SetupSteps[0].Instruction.Should().Be("Place the board in the center");
+        result.SetupSteps[1].Instruction.Should().Be("Deal 7 cards to each player");
+        result.SetupSteps[2].Instruction.Should().Be("Each player takes their tokens");
     }
 }

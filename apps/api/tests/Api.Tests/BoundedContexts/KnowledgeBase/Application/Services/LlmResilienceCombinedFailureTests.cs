@@ -13,6 +13,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Services;
 
@@ -221,20 +222,20 @@ public sealed class LlmResilienceCombinedFailureTests
         for (int i = 0; i < 4; i++)
             breaker.RecordFailure();
 
-        Assert.Equal(CircuitState.Closed, breaker.State);
-        Assert.Equal(4, breaker.ConsecutiveFailures);
+        breaker.State.Should().Be(CircuitState.Closed);
+        breaker.ConsecutiveFailures.Should().Be(4);
 
         // 1 success resets the consecutive failure counter to 0
         breaker.RecordSuccess();
-        Assert.Equal(0, breaker.ConsecutiveFailures);
-        Assert.Equal(CircuitState.Closed, breaker.State);
+        breaker.ConsecutiveFailures.Should().Be(0);
+        breaker.State.Should().Be(CircuitState.Closed);
 
         // 4 more failures — total historical failures = 8, but consecutive = 4 (below threshold)
         for (int i = 0; i < 4; i++)
             breaker.RecordFailure();
 
-        Assert.Equal(CircuitState.Closed, breaker.State);
-        Assert.Equal(4, breaker.ConsecutiveFailures);
+        breaker.State.Should().Be(CircuitState.Closed);
+        breaker.ConsecutiveFailures.Should().Be(4);
         Assert.True(breaker.AllowsRequests());
     }
 

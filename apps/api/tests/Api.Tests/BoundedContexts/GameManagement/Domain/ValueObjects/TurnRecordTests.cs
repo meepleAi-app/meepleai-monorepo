@@ -2,6 +2,7 @@ using Api.BoundedContexts.GameManagement.Domain.ValueObjects;
 using Api.SharedKernel.Domain.Exceptions;
 using Api.Tests.Constants;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.GameManagement.Domain.ValueObjects;
 
@@ -16,9 +17,9 @@ public class TurnRecordTests
         var start = DateTime.UtcNow;
         var record = new TurnRecord(1, playerId, start);
 
-        Assert.Equal(1, record.TurnIndex);
-        Assert.Equal(playerId, record.PlayerId);
-        Assert.Equal(start, record.StartedAt);
+        record.TurnIndex.Should().Be(1);
+        record.PlayerId.Should().Be(playerId);
+        record.StartedAt.Should().Be(start);
         Assert.Null(record.EndedAt);
         Assert.Null(record.Duration);
         Assert.False(record.IsCompleted);
@@ -31,8 +32,8 @@ public class TurnRecordTests
         var end = start.AddMinutes(5);
         var record = new TurnRecord(1, Guid.NewGuid(), start, endedAt: end);
 
-        Assert.Equal(end, record.EndedAt);
-        Assert.Equal(TimeSpan.FromMinutes(5), record.Duration);
+        record.EndedAt.Should().Be(end);
+        record.Duration.Should().Be(TimeSpan.FromMinutes(5));
         Assert.True(record.IsCompleted);
     }
 
@@ -40,8 +41,8 @@ public class TurnRecordTests
     public void Constructor_WithPhaseInfo_StoresPhase()
     {
         var record = new TurnRecord(1, Guid.NewGuid(), DateTime.UtcNow, 0, "Draw Phase");
-        Assert.Equal(0, record.PhaseIndex);
-        Assert.Equal("Draw Phase", record.PhaseName);
+        record.PhaseIndex.Should().Be(0);
+        record.PhaseName.Should().Be("Draw Phase");
     }
 
     [Fact]
@@ -80,14 +81,14 @@ public class TurnRecordTests
         var start = DateTime.UtcNow;
         var r1 = new TurnRecord(1, playerId, start);
         var r2 = new TurnRecord(1, playerId, start);
-        Assert.Equal(r1, r2);
+        r2.Should().Be(r1);
     }
 
     [Fact]
     public void ToString_InProgress_ShowsInProgress()
     {
         var record = new TurnRecord(1, Guid.NewGuid(), DateTime.UtcNow);
-        Assert.Contains("In Progress", record.ToString());
+        record.ToString().Should().Contain("In Progress");
     }
 
     [Fact]
@@ -95,6 +96,6 @@ public class TurnRecordTests
     {
         var start = DateTime.UtcNow;
         var record = new TurnRecord(1, Guid.NewGuid(), start, endedAt: start.AddMinutes(3));
-        Assert.Contains("Duration", record.ToString());
+        record.ToString().Should().Contain("Duration");
     }
 }

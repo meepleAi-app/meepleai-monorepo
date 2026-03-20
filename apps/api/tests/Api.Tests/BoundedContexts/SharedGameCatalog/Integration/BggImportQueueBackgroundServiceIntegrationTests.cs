@@ -15,6 +15,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.SharedGameCatalog.Integration;
 
@@ -112,10 +113,10 @@ public sealed class BggImportQueueBackgroundServiceIntegrationTests : IAsyncLife
 
         // Assert
         var processed = await _dbContext.BggImportQueue.FirstOrDefaultAsync(q => q.Id == queueEntity.Id);
-        Assert.NotNull(processed);
-        Assert.Equal(BggImportStatus.Completed, processed.Status);
-        Assert.Equal(createdGameId, processed.CreatedGameId);
-        Assert.NotNull(processed.ProcessedAt);
+        processed.Should().NotBeNull();
+        processed.Status.Should().Be(BggImportStatus.Completed);
+        processed.CreatedGameId.Should().Be(createdGameId);
+        processed.ProcessedAt.Should().NotBeNull();
 
         // Verify ImportGameFromBggCommand was sent
         _mockMediator.Verify(
@@ -168,11 +169,11 @@ public sealed class BggImportQueueBackgroundServiceIntegrationTests : IAsyncLife
 
         // Assert
         var failed = await _dbContext.BggImportQueue.FirstOrDefaultAsync(q => q.Id == queueEntity.Id);
-        Assert.NotNull(failed);
-        Assert.Equal(BggImportStatus.Queued, failed.Status); // Back to queued for retry
-        Assert.Equal(1, failed.RetryCount);
-        Assert.Contains("HttpRequestException", failed.ErrorMessage!);
-        Assert.Contains("BGG API timeout", failed.ErrorMessage!);
+        failed.Should().NotBeNull();
+        failed.Status.Should().Be(BggImportStatus.Queued); // Back to queued for retry
+        failed.RetryCount.Should().Be(1);
+        failed.ErrorMessage!.Should().Contain("HttpRequestException");
+        failed.ErrorMessage!.Should().Contain("BGG API timeout");
     }
 
     [Fact]
@@ -204,10 +205,10 @@ public sealed class BggImportQueueBackgroundServiceIntegrationTests : IAsyncLife
 
         // Assert
         var permanentlyFailed = await _dbContext.BggImportQueue.FirstOrDefaultAsync(q => q.Id == queueEntity.Id);
-        Assert.NotNull(permanentlyFailed);
-        Assert.Equal(BggImportStatus.Failed, permanentlyFailed.Status); // Permanently failed
-        Assert.Equal(3, permanentlyFailed.RetryCount);
-        Assert.NotNull(permanentlyFailed.ProcessedAt);
+        permanentlyFailed.Should().NotBeNull();
+        permanentlyFailed.Status.Should().Be(BggImportStatus.Failed); // Permanently failed
+        permanentlyFailed.RetryCount.Should().Be(3);
+        permanentlyFailed.ProcessedAt.Should().NotBeNull();
     }
 
     #endregion
@@ -227,7 +228,7 @@ public sealed class BggImportQueueBackgroundServiceIntegrationTests : IAsyncLife
         var configValue = config.Value;
 
         // Assert
-        Assert.Equal(2, configValue.ProcessingIntervalSeconds);
+        configValue.ProcessingIntervalSeconds.Should().Be(2);
     }
 
     [Fact]
@@ -267,7 +268,7 @@ public sealed class BggImportQueueBackgroundServiceIntegrationTests : IAsyncLife
 
         // Update ProcessedAt to 40 days ago
         var dbEntry = await _dbContext.BggImportQueue.FirstOrDefaultAsync(q => q.Id == oldEntity.Id);
-        Assert.NotNull(dbEntry);
+        dbEntry.Should().NotBeNull();
         dbEntry.ProcessedAt = DateTime.UtcNow.AddDays(-40);
         await _dbContext.SaveChangesAsync();
 
@@ -283,7 +284,7 @@ public sealed class BggImportQueueBackgroundServiceIntegrationTests : IAsyncLife
 
         // Assert - Old entry should be cleaned up
         var cleaned = await _dbContext.BggImportQueue.FirstOrDefaultAsync(q => q.Id == oldEntity.Id);
-        Assert.Null(cleaned);
+        cleaned.Should().BeNull();
     }
 
     [Fact]
@@ -295,7 +296,7 @@ public sealed class BggImportQueueBackgroundServiceIntegrationTests : IAsyncLife
         await _queueService.MarkAsCompletedAsync(oldEntity.Id, Guid.NewGuid());
 
         var dbEntry = await _dbContext.BggImportQueue.FirstOrDefaultAsync(q => q.Id == oldEntity.Id);
-        Assert.NotNull(dbEntry);
+        dbEntry.Should().NotBeNull();
         dbEntry.ProcessedAt = DateTime.UtcNow.AddDays(-40);
         await _dbContext.SaveChangesAsync();
 
@@ -311,7 +312,7 @@ public sealed class BggImportQueueBackgroundServiceIntegrationTests : IAsyncLife
 
         // Assert - Old entry should NOT be cleaned up
         var notCleaned = await _dbContext.BggImportQueue.FirstOrDefaultAsync(q => q.Id == oldEntity.Id);
-        Assert.NotNull(notCleaned);
+        notCleaned.Should().NotBeNull();
     }
 
     #endregion
@@ -368,8 +369,8 @@ public sealed class BggImportQueueBackgroundServiceIntegrationTests : IAsyncLife
 
         // Assert - Verify status after processing (should be Completed)
         var entity = await _dbContext.BggImportQueue.FirstOrDefaultAsync(q => q.Id == queueEntity.Id);
-        Assert.NotNull(entity);
-        Assert.Equal(BggImportStatus.Completed, entity.Status);
+        entity.Should().NotBeNull();
+        entity.Status.Should().Be(BggImportStatus.Completed);
 
         // Verify mediator was called
         _mockMediator.Verify(
@@ -412,7 +413,7 @@ public sealed class BggImportQueueBackgroundServiceIntegrationTests : IAsyncLife
         await task;
 
         // Assert - Should process entity1 (position 1) first
-        Assert.Equal(1, processedBggId);
+        processedBggId.Should().Be(1);
     }
 
     [Fact]
@@ -437,8 +438,8 @@ public sealed class BggImportQueueBackgroundServiceIntegrationTests : IAsyncLife
 
         // Assert - entity2 should now be position 1
         var entity2Updated = await _dbContext.BggImportQueue.FirstOrDefaultAsync(q => q.Id == entity2.Id);
-        Assert.NotNull(entity2Updated);
-        Assert.Equal(1, entity2Updated.Position);
+        entity2Updated.Should().NotBeNull();
+        entity2Updated.Position.Should().Be(1);
     }
 
     #endregion
@@ -454,7 +455,7 @@ public sealed class BggImportQueueBackgroundServiceIntegrationTests : IAsyncLife
 
         // Act & Assert - Service should validate and not process
         var service = new BggImportQueueBackgroundService(_mockScopeFactory.Object, mockLogger.Object, config);
-        Assert.NotNull(service);
+        service.Should().NotBeNull();
     }
 
     [Fact]
@@ -467,7 +468,7 @@ public sealed class BggImportQueueBackgroundServiceIntegrationTests : IAsyncLife
         var configValue = config.Value;
 
         // Assert
-        Assert.Equal(5, configValue.InitialDelayMinutes);
+        configValue.InitialDelayMinutes.Should().Be(5);
     }
 
     #endregion

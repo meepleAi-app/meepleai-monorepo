@@ -8,6 +8,7 @@ using Moq;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.GameManagement.Infrastructure.Services;
 
@@ -73,7 +74,7 @@ public sealed class SessionAttachmentServiceTests
             AttachmentType.BoardState, null, null);
 
         Assert.False(result.Success);
-        Assert.Equal("S3 error", result.ErrorMessage);
+        result.ErrorMessage.Should().Be("S3 error");
     }
 
     [Fact]
@@ -93,8 +94,8 @@ public sealed class SessionAttachmentServiceTests
             AttachmentType.BoardState, "A caption", 1);
 
         Assert.True(result.Success);
-        Assert.Equal(storagePath, result.BlobUrl);
-        Assert.Equal(5000, result.FileSizeBytes);
+        result.BlobUrl.Should().Be(storagePath);
+        result.FileSizeBytes.Should().Be(5000);
     }
 
     [Fact]
@@ -114,7 +115,7 @@ public sealed class SessionAttachmentServiceTests
             "photo.jpg", "image/jpeg", stream.Length,
             AttachmentType.BoardState, null, null);
 
-        Assert.Equal($"session-photos-{sessionId:N}", capturedFolder);
+        capturedFolder.Should().Be($"session-photos-{sessionId:N}");
     }
 
     [Fact]
@@ -204,7 +205,7 @@ public sealed class SessionAttachmentServiceTests
 
         var result = await _sut.GetDownloadUrlAsync(blobUrl);
 
-        Assert.Equal("https://s3.example.com/signed-url", result);
+        result.Should().Be("https://s3.example.com/signed-url");
     }
 
     [Fact]
@@ -217,7 +218,7 @@ public sealed class SessionAttachmentServiceTests
 
         var result = await _sut.GetDownloadUrlAsync(blobUrl);
 
-        Assert.Equal(blobUrl, result);
+        result.Should().Be(blobUrl);
     }
 
     [Fact]
@@ -242,9 +243,9 @@ public sealed class SessionAttachmentServiceTests
 
         await _sut.DeleteBlobsAsync("folder/abc_photo.jpg", "folder/def_thumb.jpg");
 
-        Assert.Equal(2, deletedIds.Count);
-        Assert.Contains("abc", deletedIds);
-        Assert.Contains("def", deletedIds);
+        deletedIds.Count.Should().Be(2);
+        deletedIds.Should().Contain("abc");
+        deletedIds.Should().Contain("def");
     }
 
     [Fact]
@@ -258,7 +259,7 @@ public sealed class SessionAttachmentServiceTests
 
         await _sut.DeleteBlobsAsync("folder/abc_photo.jpg", null);
 
-        Assert.Equal(1, deleteCount);
+        deleteCount.Should().Be(1);
     }
 
     #endregion
@@ -277,8 +278,8 @@ public sealed class SessionAttachmentServiceTests
     {
         var (width, height) = SessionAttachmentService.CalculateThumbnailDimensions(inputWidth, inputHeight);
 
-        Assert.Equal(expectedWidth, width);
-        Assert.Equal(expectedHeight, height);
+        width.Should().Be(expectedWidth);
+        height.Should().Be(expectedHeight);
     }
 
     [Fact]
@@ -286,8 +287,8 @@ public sealed class SessionAttachmentServiceTests
     {
         var (width, height) = SessionAttachmentService.CalculateThumbnailDimensions(100, 50);
 
-        Assert.Equal(100, width);
-        Assert.Equal(50, height);
+        width.Should().Be(100);
+        height.Should().Be(50);
     }
 
     [Fact]
@@ -295,8 +296,8 @@ public sealed class SessionAttachmentServiceTests
     {
         var (width, height) = SessionAttachmentService.CalculateThumbnailDimensions(300, 300);
 
-        Assert.Equal(300, width);
-        Assert.Equal(300, height);
+        width.Should().Be(300);
+        height.Should().Be(300);
     }
 
     #endregion
@@ -343,8 +344,8 @@ public sealed class SessionAttachmentServiceTests
         result!.Position = 0;
         var header = new byte[2];
         _ = await result.ReadAsync(header.AsMemory(0, 2));
-        Assert.Equal(0xFF, header[0]);
-        Assert.Equal(0xD8, header[1]);
+        header[0].Should().Be(0xFF);
+        header[1].Should().Be(0xD8);
     }
 
     #endregion

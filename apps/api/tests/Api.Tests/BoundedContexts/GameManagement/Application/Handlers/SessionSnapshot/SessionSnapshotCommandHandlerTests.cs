@@ -10,6 +10,7 @@ using Api.SharedKernel.Infrastructure.Persistence;
 using Api.Tests.Constants;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.GameManagement.Application.Handlers.SessionSnapshot;
 
@@ -70,11 +71,11 @@ public class SessionSnapshotCommandHandlerTests
 
         var result = await handler.Handle(command, TestContext.Current.CancellationToken);
 
-        Assert.Equal(0, result.SnapshotIndex);
+        result.SnapshotIndex.Should().Be(0);
         Assert.True(result.IsCheckpoint);
-        Assert.Equal(sessionId, result.SessionId);
-        Assert.Equal(SnapshotTrigger.ManualSave, result.TriggerType);
-        Assert.Equal("Initial", result.TriggerDescription);
+        result.SessionId.Should().Be(sessionId);
+        result.TriggerType.Should().Be(SnapshotTrigger.ManualSave);
+        result.TriggerDescription.Should().Be("Initial");
 
         _snapshotRepoMock.Verify(r => r.AddAsync(
             It.Is<Api.BoundedContexts.GameManagement.Domain.Entities.SessionSnapshot.SessionSnapshot>(
@@ -106,7 +107,7 @@ public class SessionSnapshotCommandHandlerTests
 
         var result = await handler.Handle(command, TestContext.Current.CancellationToken);
 
-        Assert.Equal(1, result.SnapshotIndex);
+        result.SnapshotIndex.Should().Be(1);
         Assert.False(result.IsCheckpoint);
     }
 
@@ -133,7 +134,7 @@ public class SessionSnapshotCommandHandlerTests
         var result = await handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Index 10 is a checkpoint (every 10)
-        Assert.Equal(10, result.SnapshotIndex);
+        result.SnapshotIndex.Should().Be(10);
         Assert.True(result.IsCheckpoint);
     }
 
@@ -154,7 +155,7 @@ public class SessionSnapshotCommandHandlerTests
 
         var result = await handler.Handle(command, TestContext.Current.CancellationToken);
 
-        Assert.Equal(0, result.SnapshotIndex);
+        result.SnapshotIndex.Should().Be(0);
         Assert.True(result.IsCheckpoint);
 
         // Verify the snapshot was saved with empty JSON
@@ -182,7 +183,7 @@ public class SessionSnapshotCommandHandlerTests
 
         var result = await handler.Handle(command, TestContext.Current.CancellationToken);
 
-        Assert.Equal(playerId, result.CreatedByPlayerId);
+        result.CreatedByPlayerId.Should().Be(playerId);
     }
 
     [Fact]
@@ -209,7 +210,7 @@ public class SessionSnapshotCommandHandlerTests
 
         var result = await handler.Handle(command, TestContext.Current.CancellationToken);
 
-        Assert.Equal(1, result.AttachmentCount);
+        result.AttachmentCount.Should().Be(1);
 
         // Verify delta JSON contains _attachments
         _snapshotRepoMock.Verify(r => r.AddAsync(
@@ -235,7 +236,7 @@ public class SessionSnapshotCommandHandlerTests
 
         var result = await handler.Handle(command, TestContext.Current.CancellationToken);
 
-        Assert.Equal(0, result.AttachmentCount);
+        result.AttachmentCount.Should().Be(0);
 
         // Verify delta JSON does NOT contain _attachments
         _snapshotRepoMock.Verify(r => r.AddAsync(

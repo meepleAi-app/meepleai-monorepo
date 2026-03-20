@@ -8,6 +8,7 @@ using Api.Tests.Constants;
 using MediatR;
 using Moq;
 using Xunit;
+using FluentAssertions;
 using SystemConfigurationEntity = Api.BoundedContexts.SystemConfiguration.Domain.Entities.SystemConfiguration;
 
 namespace Api.Tests.BoundedContexts.SystemConfiguration.Application.Handlers;
@@ -63,14 +64,14 @@ public class UpdatePdfUploadLimitsCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal(209715200, result.MaxFileSizeBytes);
-        Assert.Equal(1000, result.MaxPagesPerDocument);
-        Assert.Equal(20, result.MaxDocumentsPerGame);
-        Assert.Equal(2, result.AllowedMimeTypes.Length);
-        Assert.Contains("application/pdf", result.AllowedMimeTypes);
-        Assert.Contains("application/x-pdf", result.AllowedMimeTypes);
-        Assert.Equal(adminUserId.ToString(), result.LastUpdatedByUserId);
+        result.Should().NotBeNull();
+        result.MaxFileSizeBytes.Should().Be(209715200);
+        result.MaxPagesPerDocument.Should().Be(1000);
+        result.MaxDocumentsPerGame.Should().Be(20);
+        result.AllowedMimeTypes.Length.Should().Be(2);
+        result.AllowedMimeTypes.Should().Contain("application/pdf");
+        result.AllowedMimeTypes.Should().Contain("application/x-pdf");
+        result.LastUpdatedByUserId.Should().Be(adminUserId.ToString());
 
         // Verify mediator was called 4 times (one for each config key)
         _mockMediator.Verify(
@@ -120,8 +121,8 @@ public class UpdatePdfUploadLimitsCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal(52428800, result.MaxFileSizeBytes);
+        result.Should().NotBeNull();
+        result.MaxFileSizeBytes.Should().Be(52428800);
 
         // Verify Update commands were sent, not Create
         _mockMediator.Verify(
@@ -168,7 +169,7 @@ public class UpdatePdfUploadLimitsCommandHandlerTests
         await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(capturedCommand);
+        capturedCommand.Should().NotBeNull();
         Assert.Equal("application/pdf,application/x-pdf", capturedCommand.Value);
     }
 

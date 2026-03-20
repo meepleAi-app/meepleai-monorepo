@@ -9,6 +9,7 @@ using Api.SharedKernel.Infrastructure.Persistence;
 using Api.Tests.Constants;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.SessionTracking.Application.Handlers;
 
@@ -60,10 +61,10 @@ public class GetTurnSummaryCommandHandlerTests
 
         var result = await _handler.Handle(command, CancellationToken.None);
 
-        Assert.NotNull(result);
-        Assert.Equal("A great game was had by all.", result.Summary);
-        Assert.Equal(2, result.EventsAnalyzed);
-        Assert.NotEqual(Guid.Empty, result.SummaryEventId);
+        result.Should().NotBeNull();
+        result.Summary.Should().Be("A great game was had by all.");
+        result.EventsAnalyzed.Should().Be(2);
+        result.SummaryEventId.Should().NotBe(Guid.Empty);
         _eventRepoMock.Verify(r => r.AddAsync(It.IsAny<SessionEvent>(), It.IsAny<CancellationToken>()), Times.Once);
         _unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
@@ -91,7 +92,7 @@ public class GetTurnSummaryCommandHandlerTests
         _sessionRepoMock.Setup(r => r.GetByIdAsync(sessionId, It.IsAny<CancellationToken>())).ReturnsAsync(session);
         _eventRepoMock.Setup(r => r.GetBySessionIdAsync(sessionId, null, 10, 0, It.IsAny<CancellationToken>())).ReturnsAsync(new List<SessionEvent>());
 
-        var ex = await Assert.ThrowsAsync<ConflictException>(() => _handler.Handle(command, CancellationToken.None));
+        var ex = (await ((Func<Task>)(() => _handler.Handle(command, CancellationToken.None))).Should().ThrowAsync<ConflictException>()).Which;
         Assert.Contains("No events found", ex.Message, StringComparison.OrdinalIgnoreCase);
     }
 
@@ -114,7 +115,7 @@ public class GetTurnSummaryCommandHandlerTests
             .Setup(s => s.GenerateCompletionAsync(It.IsAny<string>(), It.IsAny<string>(), RequestSource.AgentTask, It.IsAny<CancellationToken>()))
             .ReturnsAsync(LlmCompletionResult.CreateFailure("Service unavailable"));
 
-        var ex = await Assert.ThrowsAsync<ConflictException>(() => _handler.Handle(command, CancellationToken.None));
+        var ex = (await ((Func<Task>)(() => _handler.Handle(command, CancellationToken.None))).Should().ThrowAsync<ConflictException>()).Which;
         Assert.Contains("AI summary generation failed", ex.Message, StringComparison.OrdinalIgnoreCase);
     }
 
@@ -140,7 +141,7 @@ public class GetTurnSummaryCommandHandlerTests
             .ReturnsAsync(LlmCompletionResult.CreateSuccess("Phases 1-3 summary."));
 
         var result = await _handler.Handle(command, CancellationToken.None);
-        Assert.Equal(2, result.EventsAnalyzed);
+        result.EventsAnalyzed.Should().Be(2);
     }
 
     [Fact]

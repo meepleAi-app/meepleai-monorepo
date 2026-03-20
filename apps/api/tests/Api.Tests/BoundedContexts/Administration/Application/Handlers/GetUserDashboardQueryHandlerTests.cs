@@ -5,6 +5,7 @@ using Api.Services;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.Administration.Application.Handlers;
 
@@ -45,8 +46,8 @@ public class GetUserDashboardQueryHandlerTests
         var result = await _handler.Handle(query, CancellationToken.None);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal(expectedDashboard, result);
+        result.Should().NotBeNull();
+        result.Should().Be(expectedDashboard);
         _mockUserDashboardService.Verify(
             s => s.GetUserDashboardAsync(userId, It.IsAny<CancellationToken>()),
             Times.Once);

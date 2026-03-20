@@ -6,6 +6,7 @@ using Api.BoundedContexts.SessionTracking.Domain.Repositories;
 using Api.Middleware.Exceptions;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.SessionTracking.Application.Handlers;
 
@@ -29,17 +30,17 @@ public class SessionCheckpointHandlerTests
 
     [Fact]
     public void ListHandler_NullSessionRepo_Throws() =>
-        Assert.Throws<ArgumentNullException>(() => new ListSessionCheckpointsQueryHandler(null!, new Mock<ISessionCheckpointRepository>().Object));
+        ((Action)(() => new ListSessionCheckpointsQueryHandler(null!, new Mock<ISessionCheckpointRepository>().Object))).Should().Throw<ArgumentNullException>();
 
     [Fact]
     public void ListHandler_NullCheckpointRepo_Throws() =>
-        Assert.Throws<ArgumentNullException>(() => new ListSessionCheckpointsQueryHandler(new Mock<ISessionRepository>().Object, null!));
+        ((Action)(() => new ListSessionCheckpointsQueryHandler(new Mock<ISessionRepository>().Object, null!))).Should().Throw<ArgumentNullException>();
 
     [Fact]
     public void CreateHandler_NullSessionRepo_Throws() =>
-        Assert.Throws<ArgumentNullException>(() => new CreateSessionCheckpointCommandHandler(null!, null!, null!, null!, null!));
+        ((Action)(() => new CreateSessionCheckpointCommandHandler(null!, null!, null!, null!, null!))).Should().Throw<ArgumentNullException>();
 
     [Fact]
     public void RestoreHandler_NullSessionRepo_Throws() =>
-        Assert.Throws<ArgumentNullException>(() => new RestoreSessionCheckpointCommandHandler(null!, null!, null!, null!));
+        ((Action)(() => new RestoreSessionCheckpointCommandHandler(null!, null!, null!, null!))).Should().Throw<ArgumentNullException>();
 }

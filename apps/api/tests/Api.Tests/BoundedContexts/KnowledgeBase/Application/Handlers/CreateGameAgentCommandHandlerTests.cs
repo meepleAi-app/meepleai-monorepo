@@ -13,6 +13,7 @@ using Api.SharedKernel.Infrastructure.Persistence;
 using Api.Tests.Constants;
 using LibraryAgentConfiguration = Api.BoundedContexts.UserLibrary.Domain.ValueObjects.AgentConfiguration;
 using Microsoft.Extensions.Logging;
+using FluentAssertions;
 using Moq;
 using Xunit;
 
@@ -123,7 +124,7 @@ public sealed class CreateGameAgentCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         Assert.NotNull(result);
-        Assert.Equal("ready", result.Status);
+        result.Status.Should().Be("ready");
     }
 
     [Fact]
@@ -149,7 +150,7 @@ public sealed class CreateGameAgentCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         Assert.NotNull(result);
-        Assert.Equal("ready", result.Status);
+        result.Status.Should().Be("ready");
     }
 
     [Fact]
@@ -172,7 +173,7 @@ public sealed class CreateGameAgentCommandHandlerTests
         var ex = await Assert.ThrowsAsync<ConflictException>(
             () => _handler.Handle(command, TestContext.Current.CancellationToken));
 
-        Assert.DoesNotContain("Agent limit reached", ex.Message, StringComparison.OrdinalIgnoreCase);
+        ex.Message.Should().NotContainEquivalentOf("Agent limit reached");
     }
 
     [Fact]
@@ -194,7 +195,7 @@ public sealed class CreateGameAgentCommandHandlerTests
         var ex = await Assert.ThrowsAsync<ConflictException>(
             () => _handler.Handle(command, TestContext.Current.CancellationToken));
 
-        Assert.DoesNotContain("Agent limit reached", ex.Message, StringComparison.OrdinalIgnoreCase);
+        ex.Message.Should().NotContainEquivalentOf("Agent limit reached");
     }
 
     // ──────────────────────────────────────────────────

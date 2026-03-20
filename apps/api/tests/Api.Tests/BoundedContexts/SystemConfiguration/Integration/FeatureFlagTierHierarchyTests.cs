@@ -7,6 +7,7 @@ using MediatR;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.SystemConfiguration.Integration;
 
@@ -56,7 +57,7 @@ public class FeatureFlagTierHierarchyTests
         var result = await _service.IsEnabledForTierAsync(featureName, tier);
 
         // Assert
-        Assert.Equal(expected, result);
+        result.Should().Be(expected);
     }
 
     [Theory]
@@ -77,7 +78,7 @@ public class FeatureFlagTierHierarchyTests
         var result = await _service.IsEnabledForTierAsync(featureName, tier);
 
         // Assert
-        Assert.Equal(expected, result);
+        result.Should().Be(expected);
     }
 
     [Theory]
@@ -98,7 +99,7 @@ public class FeatureFlagTierHierarchyTests
         var result = await _service.IsEnabledForTierAsync(featureName, tier);
 
         // Assert
-        Assert.Equal(expected, result);
+        result.Should().Be(expected);
     }
 
     #endregion
@@ -120,7 +121,7 @@ public class FeatureFlagTierHierarchyTests
         var result = await _service.CanAccessFeatureAsync(user, feature);
 
         // Assert
-        Assert.False(result);
+        result.Should().BeFalse();
     }
 
     [Fact]
@@ -144,7 +145,7 @@ public class FeatureFlagTierHierarchyTests
         var result = await _service.CanAccessFeatureAsync(user, feature);
 
         // Assert
-        Assert.False(result);
+        result.Should().BeFalse();
     }
 
     [Fact]
@@ -168,7 +169,7 @@ public class FeatureFlagTierHierarchyTests
         var result = await _service.CanAccessFeatureAsync(user, feature);
 
         // Assert
-        Assert.True(result);
+        result.Should().BeTrue();
     }
 
     [Fact]
@@ -192,7 +193,7 @@ public class FeatureFlagTierHierarchyTests
         var result = await _service.CanAccessFeatureAsync(user, feature);
 
         // Assert
-        Assert.True(result);
+        result.Should().BeTrue();
     }
 
     [Fact]
@@ -238,7 +239,7 @@ public class FeatureFlagTierHierarchyTests
         var result = await _service.IsEnabledForTierAsync(featureName, tier);
 
         // Assert
-        Assert.False(result);
+        result.Should().BeFalse();
     }
 
     [Fact]
@@ -258,7 +259,7 @@ public class FeatureFlagTierHierarchyTests
         var result = await _service.IsEnabledForTierAsync(featureName, tier);
 
         // Assert
-        Assert.False(result, "Tier-specific flag should override global flag");
+        result.Should().BeFalse("Tier-specific flag should override global flag");
     }
 
     #endregion

@@ -8,6 +8,7 @@ using Api.SharedKernel.Infrastructure.Persistence;
 using Api.Tests.Constants;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.GameManagement.Application.Handlers.RuleConflictFAQs;
 
@@ -71,7 +72,7 @@ public sealed class UpdateRuleConflictFaqResolutionCommandHandlerTests
         await _handler.Handle(command, CancellationToken.None);
 
         // Assert
-        Assert.Equal("Updated resolution text", existingFaq.Resolution);
+        existingFaq.Resolution.Should().Be("Updated resolution text");
         _faqRepositoryMock.Verify(r => r.GetByIdAsync(faqId, It.IsAny<CancellationToken>()), Times.Once);
         _faqRepositoryMock.Verify(r => r.UpdateAsync(
             It.Is<RuleConflictFAQ>(f => f.Resolution == "Updated resolution text"),
@@ -96,8 +97,8 @@ public sealed class UpdateRuleConflictFaqResolutionCommandHandlerTests
         var exception = await Assert.ThrowsAsync<NotFoundException>(() =>
             _handler.Handle(command, CancellationToken.None));
 
-        Assert.Contains("RuleConflictFAQ", exception.Message);
-        Assert.Contains(faqId.ToString(), exception.Message);
+        exception.Message.Should().Contain("RuleConflictFAQ");
+        exception.Message.Should().Contain(faqId.ToString());
         _faqRepositoryMock.Verify(r => r.UpdateAsync(
             It.IsAny<RuleConflictFAQ>(),
             It.IsAny<CancellationToken>()), Times.Never);

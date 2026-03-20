@@ -16,6 +16,7 @@ using Api.Tests.Constants;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.GameManagement.Infrastructure.Services;
 
@@ -173,12 +174,12 @@ public class GameSessionOrchestratorServiceTests
         var result = await _service.BuildContextAsync(sessionId);
 
         // Assert
-        Assert.Equal(sessionId, result.SessionId);
+        result.SessionId.Should().Be(sessionId);
         Assert.Null(result.PrimaryGameId);
         Assert.Empty(result.ExpansionGameIds);
         Assert.Empty(result.AllGameIds);
         Assert.Empty(result.KbCardIds);
-        Assert.Equal(SessionDegradationLevel.NoAI, result.DegradationLevel);
+        result.DegradationLevel.Should().Be(SessionDegradationLevel.NoAI);
     }
 
     [Fact]
@@ -205,15 +206,15 @@ public class GameSessionOrchestratorServiceTests
         var result = await _service.BuildContextAsync(sessionId);
 
         // Assert
-        Assert.Equal(sessionId, result.SessionId);
-        Assert.Equal(gameId, result.PrimaryGameId);
+        result.SessionId.Should().Be(sessionId);
+        result.PrimaryGameId.Should().Be(gameId);
         Assert.Empty(result.ExpansionGameIds);
-        Assert.Single(result.AllGameIds);
-        Assert.Single(result.KbCardIds);
+        result.AllGameIds.Should().ContainSingle();
+        result.KbCardIds.Should().ContainSingle();
         Assert.NotNull(result.PrimaryRules);
-        Assert.Equal("Test Game", result.PrimaryRules.GameTitle);
+        result.PrimaryRules.GameTitle.Should().Be("Test Game");
         Assert.Empty(result.GamesWithoutPdf);
-        Assert.Equal(SessionDegradationLevel.Full, result.DegradationLevel);
+        result.DegradationLevel.Should().Be(SessionDegradationLevel.Full);
     }
 
     [Fact]
@@ -233,8 +234,8 @@ public class GameSessionOrchestratorServiceTests
         var result = await _service.BuildContextAsync(sessionId);
 
         // Assert
-        Assert.Equal(SessionDegradationLevel.NoAI, result.DegradationLevel);
-        Assert.Contains(gameId, result.GamesWithoutPdf);
+        result.DegradationLevel.Should().Be(SessionDegradationLevel.NoAI);
+        result.GamesWithoutPdf.Should().Contain(gameId);
     }
 
     [Fact]
@@ -272,9 +273,9 @@ public class GameSessionOrchestratorServiceTests
         var result = await _service.BuildContextAsync(sessionId);
 
         // Assert
-        Assert.Equal(SessionDegradationLevel.BasicOnly, result.DegradationLevel);
-        Assert.Contains(primaryGameId, result.GamesWithoutPdf);
-        Assert.DoesNotContain(expansionId, result.GamesWithoutPdf);
+        result.DegradationLevel.Should().Be(SessionDegradationLevel.BasicOnly);
+        result.GamesWithoutPdf.Should().Contain(primaryGameId);
+        result.GamesWithoutPdf.Should().NotContain(expansionId);
     }
 
     [Fact]
@@ -319,11 +320,11 @@ public class GameSessionOrchestratorServiceTests
         var result = await _service.BuildContextAsync(sessionId);
 
         // Assert
-        Assert.Equal(SessionDegradationLevel.Partial, result.DegradationLevel);
-        Assert.Single(result.ExpansionGameIds);
-        Assert.Equal(expansionId, result.ExpansionGameIds[0]);
-        Assert.Contains(expansionId, result.GamesWithoutPdf);
-        Assert.DoesNotContain(primaryGameId, result.GamesWithoutPdf);
+        result.DegradationLevel.Should().Be(SessionDegradationLevel.Partial);
+        result.ExpansionGameIds.Should().ContainSingle();
+        result.ExpansionGameIds[0].Should().Be(expansionId);
+        result.GamesWithoutPdf.Should().Contain(expansionId);
+        result.GamesWithoutPdf.Should().NotContain(primaryGameId);
     }
 
     // ========================================================================
@@ -355,7 +356,7 @@ public class GameSessionOrchestratorServiceTests
         var result = await _service.BuildContextAsync(sessionId);
 
         // Assert — should succeed with empty expansions
-        Assert.Equal(sessionId, result.SessionId);
+        result.SessionId.Should().Be(sessionId);
         Assert.Empty(result.ExpansionGameIds);
     }
 
@@ -378,9 +379,9 @@ public class GameSessionOrchestratorServiceTests
         var result = await _service.BuildContextAsync(sessionId);
 
         // Assert — should succeed with no KB cards and NoAI degradation
-        Assert.Equal(sessionId, result.SessionId);
+        result.SessionId.Should().Be(sessionId);
         Assert.Empty(result.KbCardIds);
-        Assert.Equal(SessionDegradationLevel.NoAI, result.DegradationLevel);
+        result.DegradationLevel.Should().Be(SessionDegradationLevel.NoAI);
     }
 
     [Fact]
@@ -405,9 +406,9 @@ public class GameSessionOrchestratorServiceTests
         var result = await _service.BuildContextAsync(sessionId);
 
         // Assert — should succeed with null primary rules
-        Assert.Equal(sessionId, result.SessionId);
+        result.SessionId.Should().Be(sessionId);
         Assert.Null(result.PrimaryRules);
-        Assert.Equal(SessionDegradationLevel.Full, result.DegradationLevel);
+        result.DegradationLevel.Should().Be(SessionDegradationLevel.Full);
     }
 
     // ========================================================================
@@ -423,7 +424,7 @@ public class GameSessionOrchestratorServiceTests
             expansionGameIds: new List<Guid>(),
             gamesWithoutPdf: new List<Guid> { Guid.NewGuid() });
 
-        Assert.Equal(SessionDegradationLevel.NoAI, result);
+        result.Should().Be(SessionDegradationLevel.NoAI);
     }
 
     [Fact]
@@ -438,7 +439,7 @@ public class GameSessionOrchestratorServiceTests
             expansionGameIds: new List<Guid> { expansionId },
             gamesWithoutPdf: new List<Guid> { primaryId });
 
-        Assert.Equal(SessionDegradationLevel.BasicOnly, result);
+        result.Should().Be(SessionDegradationLevel.BasicOnly);
     }
 
     [Fact]
@@ -453,7 +454,7 @@ public class GameSessionOrchestratorServiceTests
             expansionGameIds: new List<Guid> { expansionId },
             gamesWithoutPdf: new List<Guid> { expansionId });
 
-        Assert.Equal(SessionDegradationLevel.Partial, result);
+        result.Should().Be(SessionDegradationLevel.Partial);
     }
 
     [Fact]
@@ -468,7 +469,7 @@ public class GameSessionOrchestratorServiceTests
             expansionGameIds: new List<Guid> { expansionId },
             gamesWithoutPdf: new List<Guid>());
 
-        Assert.Equal(SessionDegradationLevel.Full, result);
+        result.Should().Be(SessionDegradationLevel.Full);
     }
 
     [Fact]
@@ -481,7 +482,7 @@ public class GameSessionOrchestratorServiceTests
             expansionGameIds: new List<Guid>(),
             gamesWithoutPdf: new List<Guid>());
 
-        Assert.Equal(SessionDegradationLevel.Full, result);
+        result.Should().Be(SessionDegradationLevel.Full);
     }
 
     // ========================================================================
@@ -500,7 +501,7 @@ public class GameSessionOrchestratorServiceTests
         var result = await _service.RefreshContextAsync(sessionId);
 
         // Assert
-        Assert.Equal(sessionId, result.SessionId);
+        result.SessionId.Should().Be(sessionId);
         _liveSessionRepoMock.Verify(
             x => x.GetByIdAsync(sessionId, It.IsAny<CancellationToken>()), Times.Once);
     }
@@ -531,10 +532,10 @@ public class GameSessionOrchestratorServiceTests
 
         // Assert
         Assert.NotNull(result.PrimaryRules);
-        Assert.Equal(gameId, result.PrimaryRules.GameId);
-        Assert.Equal("Catan", result.PrimaryRules.GameTitle);
-        Assert.Contains("Worker Placement", result.PrimaryRules.KeyMechanics);
-        Assert.Contains("Resource Management", result.PrimaryRules.KeyMechanics);
+        result.PrimaryRules.GameId.Should().Be(gameId);
+        result.PrimaryRules.GameTitle.Should().Be("Catan");
+        result.PrimaryRules.KeyMechanics.Should().Contain("Worker Placement");
+        result.PrimaryRules.KeyMechanics.Should().Contain("Resource Management");
     }
 
     [Fact]

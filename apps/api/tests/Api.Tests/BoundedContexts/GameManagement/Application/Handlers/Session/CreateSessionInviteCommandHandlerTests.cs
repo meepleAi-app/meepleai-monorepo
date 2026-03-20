@@ -6,6 +6,7 @@ using Api.Middleware.Exceptions;
 using Api.Tests.Constants;
 using Api.Tests.TestHelpers;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.GameManagement.Application.Handlers.Session;
 
@@ -59,10 +60,10 @@ public sealed class CreateSessionInviteCommandHandlerTests
 
         Assert.NotNull(result);
         Assert.NotNull(result.Pin);
-        Assert.Equal(6, result.Pin.Length);
+        result.Pin.Length.Should().Be(6);
         Assert.NotNull(result.LinkToken);
-        Assert.Equal(32, result.LinkToken.Length);
-        Assert.Equal(10, result.MaxUses);
+        result.LinkToken.Length.Should().Be(32);
+        result.MaxUses.Should().Be(10);
         Assert.True(result.ExpiresAt > DateTime.UtcNow);
     }
 
@@ -98,10 +99,10 @@ public sealed class CreateSessionInviteCommandHandlerTests
         var saved = await _dbContext.SessionInvites.FindAsync(
             _dbContext.SessionInvites.First().Id);
         Assert.NotNull(saved);
-        Assert.Equal(result.Pin, saved.Pin);
-        Assert.Equal(result.LinkToken, saved.LinkToken);
-        Assert.Equal(5, saved.MaxUses);
-        Assert.Equal(0, saved.CurrentUses);
+        saved.Pin.Should().Be(result.Pin);
+        saved.LinkToken.Should().Be(result.LinkToken);
+        saved.MaxUses.Should().Be(5);
+        saved.CurrentUses.Should().Be(0);
         Assert.False(saved.IsRevoked);
     }
 }

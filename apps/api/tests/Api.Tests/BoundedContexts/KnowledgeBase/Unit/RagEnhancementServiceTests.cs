@@ -6,6 +6,7 @@ using Microsoft.Extensions.Logging;
 using Moq;
 using Api.Tests.Constants;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Unit;
 
@@ -50,7 +51,7 @@ public class RagEnhancementServiceTests
 
         var result = await _sut.GetActiveEnhancementsAsync(tier);
 
-        Assert.Equal(RagEnhancement.None, result);
+        result.Should().Be(RagEnhancement.None);
     }
 
     [Fact]
@@ -126,7 +127,7 @@ public class RagEnhancementServiceTests
         var enhancements = RagEnhancement.CragEvaluation | RagEnhancement.RagFusionQueries;
         var credits = await _sut.EstimateExtraCreditsAsync(enhancements);
 
-        Assert.Equal(0, credits);
+        credits.Should().Be(0);
     }
 
     [Fact]
@@ -138,7 +139,7 @@ public class RagEnhancementServiceTests
 
         var credits = await _sut.EstimateExtraCreditsAsync(RagEnhancement.None);
 
-        Assert.Equal(0, credits);
+        credits.Should().Be(0);
     }
 
     [Fact]

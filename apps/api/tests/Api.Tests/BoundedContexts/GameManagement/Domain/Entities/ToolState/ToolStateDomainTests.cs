@@ -1,6 +1,7 @@
 using Api.BoundedContexts.GameManagement.Domain.Entities.ToolState;
 using Api.Tests.Constants;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.GameManagement.Domain.Entities.ToolState;
 
@@ -17,11 +18,11 @@ public class ToolStateDomainTests
         var ts = new Api.BoundedContexts.GameManagement.Domain.Entities.ToolState.ToolState(
             Guid.NewGuid(), _sessionId, _toolkitId, "Main Dice", ToolType.Dice, "{\"diceType\":\"D6\"}");
 
-        Assert.Equal(_sessionId, ts.SessionId);
-        Assert.Equal(_toolkitId, ts.ToolkitId);
-        Assert.Equal("Main Dice", ts.ToolName);
-        Assert.Equal(ToolType.Dice, ts.ToolType);
-        Assert.Equal("{\"diceType\":\"D6\"}", ts.StateDataJson);
+        ts.SessionId.Should().Be(_sessionId);
+        ts.ToolkitId.Should().Be(_toolkitId);
+        ts.ToolName.Should().Be("Main Dice");
+        ts.ToolType.Should().Be(ToolType.Dice);
+        ts.StateDataJson.Should().Be("{\"diceType\":\"D6\"}");
         Assert.True(ts.CreatedAt <= DateTime.UtcNow);
         Assert.True(ts.LastUpdatedAt <= DateTime.UtcNow);
     }
@@ -32,7 +33,7 @@ public class ToolStateDomainTests
         var ts = new Api.BoundedContexts.GameManagement.Domain.Entities.ToolState.ToolState(
             Guid.NewGuid(), _sessionId, _toolkitId, "Counter", ToolType.Counter, null!);
 
-        Assert.Equal("{}", ts.StateDataJson);
+        ts.StateDataJson.Should().Be("{}");
     }
 
     [Fact]
@@ -73,7 +74,7 @@ public class ToolStateDomainTests
         var ts = new Api.BoundedContexts.GameManagement.Domain.Entities.ToolState.ToolState(
             Guid.NewGuid(), _sessionId, _toolkitId, "  My Dice  ", ToolType.Dice, "{}");
 
-        Assert.Equal("My Dice", ts.ToolName);
+        ts.ToolName.Should().Be("My Dice");
     }
 
     [Fact]
@@ -88,7 +89,7 @@ public class ToolStateDomainTests
 
         ts.UpdateState("{\"lastRoll\":[3,5]}");
 
-        Assert.Equal("{\"lastRoll\":[3,5]}", ts.StateDataJson);
+        ts.StateDataJson.Should().Be("{\"lastRoll\":[3,5]}");
         Assert.True(ts.LastUpdatedAt >= originalTimestamp);
     }
 
@@ -98,7 +99,7 @@ public class ToolStateDomainTests
         var ts = new Api.BoundedContexts.GameManagement.Domain.Entities.ToolState.ToolState(
             Guid.NewGuid(), _sessionId, _toolkitId, "Dice", ToolType.Dice, "{}");
 
-        Assert.Throws<ArgumentNullException>(() => ts.UpdateState(null!));
+        ((Action)(() => ts.UpdateState(null!))).Should().Throw<ArgumentNullException>();
     }
 
     [Fact]
@@ -106,7 +107,7 @@ public class ToolStateDomainTests
     {
         var ts = new Api.BoundedContexts.GameManagement.Domain.Entities.ToolState.ToolState(
             Guid.NewGuid(), _sessionId, _toolkitId, "Tool", ToolType.Dice, "{}");
-        Assert.Equal(ToolType.Dice, ts.ToolType);
+        ts.ToolType.Should().Be(ToolType.Dice);
     }
 
     [Fact]
@@ -114,7 +115,7 @@ public class ToolStateDomainTests
     {
         var ts = new Api.BoundedContexts.GameManagement.Domain.Entities.ToolState.ToolState(
             Guid.NewGuid(), _sessionId, _toolkitId, "Tool", ToolType.Counter, "{}");
-        Assert.Equal(ToolType.Counter, ts.ToolType);
+        ts.ToolType.Should().Be(ToolType.Counter);
     }
 
     [Fact]
@@ -122,7 +123,7 @@ public class ToolStateDomainTests
     {
         var ts = new Api.BoundedContexts.GameManagement.Domain.Entities.ToolState.ToolState(
             Guid.NewGuid(), _sessionId, _toolkitId, "Tool", ToolType.Card, "{}");
-        Assert.Equal(ToolType.Card, ts.ToolType);
+        ts.ToolType.Should().Be(ToolType.Card);
     }
 
     [Fact]
@@ -130,6 +131,6 @@ public class ToolStateDomainTests
     {
         var ts = new Api.BoundedContexts.GameManagement.Domain.Entities.ToolState.ToolState(
             Guid.NewGuid(), _sessionId, _toolkitId, "Tool", ToolType.Timer, "{}");
-        Assert.Equal(ToolType.Timer, ts.ToolType);
+        ts.ToolType.Should().Be(ToolType.Timer);
     }
 }

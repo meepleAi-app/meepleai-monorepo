@@ -9,6 +9,7 @@ using Api.SharedKernel.Infrastructure.Persistence;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using FluentAssertions;
 using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.GameManagement.Application.Handlers;
@@ -62,7 +63,7 @@ public class ApplySuggestionCommandHandlerTests
 
         // Assert
         Assert.NotNull(result);
-        Assert.Equal(sessionState.Id, result.Id);
+        result.Id.Should().Be(sessionState.Id);
 
         _sessionStateRepositoryMock.Verify(
             r => r.UpdateAsync(sessionState, It.IsAny<CancellationToken>()),
@@ -91,7 +92,7 @@ public class ApplySuggestionCommandHandlerTests
         var exception = await Assert.ThrowsAsync<NotFoundException>(
             () => _handler.Handle(command, TestContext.Current.CancellationToken));
 
-        Assert.Contains(sessionId.ToString(), exception.Message);
+        exception.Message.Should().Contain(sessionId.ToString());
         _unitOfWorkMock.Verify(
             u => u.SaveChangesAsync(It.IsAny<CancellationToken>()),
             Times.Never);
@@ -150,7 +151,7 @@ public class ApplySuggestionCommandHandlerTests
         await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert - snapshot should be created
-        Assert.Equal(initialSnapshotCount + 1, sessionState.Snapshots.Count);
+        sessionState.Snapshots.Count.Should().Be(initialSnapshotCount + 1);
     }
 
     [Fact]

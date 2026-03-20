@@ -9,6 +9,7 @@ using Api.SharedKernel.Infrastructure.Persistence;
 using Api.Tests.Constants;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.GameToolkit.Application.Handlers;
 
@@ -43,9 +44,9 @@ public class ToolkitCommandHandlerTests
 
         var result = await handler.Handle(command, TestContext.Current.CancellationToken);
 
-        Assert.NotNull(result);
-        Assert.Equal("Catan Toolkit", result.Name);
-        Assert.Equal(command.GameId, result.GameId);
+        result.Should().NotBeNull();
+        result.Name.Should().Be("Catan Toolkit");
+        result.GameId.Should().Be(command.GameId);
         _repoMock.Verify(r => r.AddAsync(It.IsAny<Api.BoundedContexts.GameToolkit.Domain.Entities.GameToolkit>(), It.IsAny<CancellationToken>()), Times.Once);
         _uowMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
@@ -75,7 +76,7 @@ public class ToolkitCommandHandlerTests
 
         var result = await handler.Handle(command, TestContext.Current.CancellationToken);
 
-        Assert.Equal("New Name", result.Name);
+        result.Name.Should().Be("New Name");
         _repoMock.Verify(r => r.UpdateAsync(It.IsAny<Api.BoundedContexts.GameToolkit.Domain.Entities.GameToolkit>(), It.IsAny<CancellationToken>()), Times.Once);
         _uowMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
@@ -109,8 +110,8 @@ public class ToolkitCommandHandlerTests
 
         var result = await handler.Handle(command, TestContext.Current.CancellationToken);
 
-        Assert.True(result.IsPublished);
-        Assert.Equal(2, result.Version);
+        result.IsPublished.Should().BeTrue();
+        result.Version.Should().Be(2);
         _uowMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
 
@@ -142,9 +143,9 @@ public class ToolkitCommandHandlerTests
 
         var result = await handler.Handle(command, TestContext.Current.CancellationToken);
 
-        Assert.Single(result.DiceTools);
-        Assert.Equal("Attack", result.DiceTools[0].Name);
-        Assert.Equal(DiceType.D20, result.DiceTools[0].DiceType);
+        result.DiceTools.Should().ContainSingle();
+        result.DiceTools[0].Name.Should().Be("Attack");
+        result.DiceTools[0].DiceType.Should().Be(DiceType.D20);
     }
 
     [Fact]
@@ -176,9 +177,9 @@ public class ToolkitCommandHandlerTests
 
         var result = await handler.Handle(command, TestContext.Current.CancellationToken);
 
-        Assert.Single(result.CounterTools);
-        Assert.Equal("Health", result.CounterTools[0].Name);
-        Assert.Equal(50, result.CounterTools[0].DefaultValue);
+        result.CounterTools.Should().ContainSingle();
+        result.CounterTools[0].Name.Should().Be("Health");
+        result.CounterTools[0].DefaultValue.Should().Be(50);
     }
 
     [Fact]
@@ -211,7 +212,7 @@ public class ToolkitCommandHandlerTests
 
         var result = await handler.Handle(command, TestContext.Current.CancellationToken);
 
-        Assert.Empty(result.DiceTools);
+        result.DiceTools.Should().BeEmpty();
     }
 
     [Fact]
@@ -257,7 +258,7 @@ public class ToolkitCommandHandlerTests
 
         var result = await handler.Handle(command, TestContext.Current.CancellationToken);
 
-        Assert.Empty(result.CounterTools);
+        result.CounterTools.Should().BeEmpty();
     }
 
     [Fact]
@@ -290,9 +291,9 @@ public class ToolkitCommandHandlerTests
 
         var result = await handler.Handle(command, TestContext.Current.CancellationToken);
 
-        Assert.NotNull(result.ScoringTemplate);
-        Assert.Equal(2, result.ScoringTemplate.Dimensions.Length);
-        Assert.Equal(ScoreType.Points, result.ScoringTemplate.ScoreType);
+        result.ScoringTemplate.Should().NotBeNull();
+        result.ScoringTemplate.Dimensions.Length.Should().Be(2);
+        result.ScoringTemplate.ScoreType.Should().Be(ScoreType.Points);
     }
 
     [Fact]
@@ -323,9 +324,9 @@ public class ToolkitCommandHandlerTests
 
         var result = await handler.Handle(command, TestContext.Current.CancellationToken);
 
-        Assert.NotNull(result.TurnTemplate);
-        Assert.Equal(TurnOrderType.RoundRobin, result.TurnTemplate.TurnOrderType);
-        Assert.Equal(3, result.TurnTemplate.Phases.Length);
+        result.TurnTemplate.Should().NotBeNull();
+        result.TurnTemplate.TurnOrderType.Should().Be(TurnOrderType.RoundRobin);
+        result.TurnTemplate.Phases.Length.Should().Be(3);
     }
 
     [Fact]

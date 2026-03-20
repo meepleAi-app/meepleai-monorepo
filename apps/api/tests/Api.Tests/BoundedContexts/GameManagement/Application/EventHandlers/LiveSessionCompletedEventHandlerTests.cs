@@ -9,6 +9,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Time.Testing;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.GameManagement.Application.EventHandlers;
 
@@ -95,7 +96,7 @@ public sealed class LiveSessionCompletedEventHandlerTests
         var auditLog = dbContext.AuditLogs.FirstOrDefault(a =>
             a.Action.Contains("LiveSessionCompletedEvent"));
         Assert.NotNull(auditLog);
-        Assert.Contains("LiveSessionCompleted_PlayRecordGenerated", auditLog.Details);
+        auditLog.Details.Should().Contain("LiveSessionCompleted_PlayRecordGenerated");
     }
 
     [Fact]
@@ -158,9 +159,9 @@ public sealed class LiveSessionCompletedEventHandlerTests
         var auditLog = dbContext.AuditLogs.FirstOrDefault(a =>
             a.Action.Contains("LiveSessionCompletedEvent"));
         Assert.NotNull(auditLog);
-        Assert.Contains(sessionId.ToString(), auditLog.Details);
-        Assert.Contains("\"PlayerCount\":3", auditLog.Details);
-        Assert.Contains("\"TotalTurns\":5", auditLog.Details);
+        auditLog.Details.Should().Contain(sessionId.ToString());
+        auditLog.Details.Should().Contain("\"PlayerCount\":3");
+        auditLog.Details.Should().Contain("\"TotalTurns\":5");
     }
 
     [Fact]

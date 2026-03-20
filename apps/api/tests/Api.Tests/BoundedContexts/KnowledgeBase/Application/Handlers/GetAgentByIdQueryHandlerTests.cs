@@ -8,6 +8,7 @@ using Api.Tests.Constants;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Handlers;
 
@@ -48,9 +49,9 @@ public class GetAgentByIdQueryHandlerTests
 
         // Assert
         Assert.NotNull(result);
-        Assert.Equal(agentId, result.Id);
-        Assert.Equal("TestAgent", result.Name);
-        Assert.Equal("RAG", result.Type);
+        result.Id.Should().Be(agentId);
+        result.Name.Should().Be("TestAgent");
+        result.Type.Should().Be("RAG");
         Assert.True(result.IsActive);
     }
 

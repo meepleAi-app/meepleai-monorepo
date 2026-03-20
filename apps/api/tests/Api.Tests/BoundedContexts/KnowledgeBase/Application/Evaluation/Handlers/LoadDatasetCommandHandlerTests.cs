@@ -5,6 +5,7 @@ using Api.Tests.Constants;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Evaluation.Handlers;
 
@@ -53,9 +54,9 @@ public class LoadDatasetCommandHandlerTests
 
             // Assert
             Assert.NotNull(result);
-            Assert.Equal("test-dataset", result.Name);
-            Assert.Equal("1.0", result.Version);
-            Assert.Equal(1, result.Count);
+            result.Name.Should().Be("test-dataset");
+            result.Version.Should().Be("1.0");
+            result.Count.Should().Be(1);
         }
         finally
         {

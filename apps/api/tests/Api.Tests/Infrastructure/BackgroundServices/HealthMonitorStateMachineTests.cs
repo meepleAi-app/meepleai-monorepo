@@ -3,6 +3,7 @@ using Api.Infrastructure.Configuration;
 using Api.Tests.Constants;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.Infrastructure.BackgroundServices;
 
@@ -32,10 +33,10 @@ public class HealthMonitorStateMachineTests
         var result = HealthStateMachine.Evaluate(state, HealthStatus.Unhealthy, DefaultOptions);
 
         // Assert
-        Assert.Equal("Degraded", result.CurrentStatus);
-        Assert.Equal("Healthy", result.PreviousStatus);
-        Assert.Equal(1, result.ConsecutiveFailures);
-        Assert.Equal(0, result.ConsecutiveSuccesses);
+        result.CurrentStatus.Should().Be("Degraded");
+        result.PreviousStatus.Should().Be("Healthy");
+        result.ConsecutiveFailures.Should().Be(1);
+        result.ConsecutiveSuccesses.Should().Be(0);
     }
 
     [Fact]
@@ -48,9 +49,9 @@ public class HealthMonitorStateMachineTests
         var result = HealthStateMachine.Evaluate(state, HealthStatus.Unhealthy, DefaultOptions);
 
         // Assert
-        Assert.Equal("Unhealthy", result.CurrentStatus);
-        Assert.Equal("Degraded", result.PreviousStatus);
-        Assert.Equal(3, result.ConsecutiveFailures);
+        result.CurrentStatus.Should().Be("Unhealthy");
+        result.PreviousStatus.Should().Be("Degraded");
+        result.ConsecutiveFailures.Should().Be(3);
     }
 
     [Fact]
@@ -63,8 +64,8 @@ public class HealthMonitorStateMachineTests
         var result = HealthStateMachine.Evaluate(state, HealthStatus.Unhealthy, DefaultOptions);
 
         // Assert
-        Assert.Equal("Degraded", result.CurrentStatus);
-        Assert.Equal(2, result.ConsecutiveFailures);
+        result.CurrentStatus.Should().Be("Degraded");
+        result.ConsecutiveFailures.Should().Be(2);
     }
 
     [Fact]
@@ -77,10 +78,10 @@ public class HealthMonitorStateMachineTests
         var result = HealthStateMachine.Evaluate(state, HealthStatus.Healthy, DefaultOptions);
 
         // Assert
-        Assert.Equal("Healthy", result.CurrentStatus);
-        Assert.Equal("Unhealthy", result.PreviousStatus);
-        Assert.Equal(2, result.ConsecutiveSuccesses);
-        Assert.Equal(0, result.ConsecutiveFailures);
+        result.CurrentStatus.Should().Be("Healthy");
+        result.PreviousStatus.Should().Be("Unhealthy");
+        result.ConsecutiveSuccesses.Should().Be(2);
+        result.ConsecutiveFailures.Should().Be(0);
     }
 
     [Fact]
@@ -93,8 +94,8 @@ public class HealthMonitorStateMachineTests
         var result = HealthStateMachine.Evaluate(state, HealthStatus.Healthy, DefaultOptions);
 
         // Assert
-        Assert.Equal("Unhealthy", result.CurrentStatus);
-        Assert.Equal(1, result.ConsecutiveSuccesses);
+        result.CurrentStatus.Should().Be("Unhealthy");
+        result.ConsecutiveSuccesses.Should().Be(1);
     }
 
     [Fact]
@@ -107,8 +108,8 @@ public class HealthMonitorStateMachineTests
         var result = HealthStateMachine.Evaluate(state, HealthStatus.Unhealthy, DefaultOptions);
 
         // Assert
-        Assert.Equal("Unhealthy", result.CurrentStatus);
-        Assert.Equal(0, result.ConsecutiveSuccesses);
+        result.CurrentStatus.Should().Be("Unhealthy");
+        result.ConsecutiveSuccesses.Should().Be(0);
     }
 
     [Fact]
@@ -121,9 +122,9 @@ public class HealthMonitorStateMachineTests
         var result = HealthStateMachine.Evaluate(state, HealthStatus.Healthy, DefaultOptions);
 
         // Assert
-        Assert.Equal("Healthy", result.CurrentStatus);
-        Assert.Equal("Degraded", result.PreviousStatus);
-        Assert.Equal(0, result.ConsecutiveFailures);
+        result.CurrentStatus.Should().Be("Healthy");
+        result.PreviousStatus.Should().Be("Degraded");
+        result.ConsecutiveFailures.Should().Be(0);
     }
 
     [Fact]
@@ -136,8 +137,8 @@ public class HealthMonitorStateMachineTests
         var result = HealthStateMachine.Evaluate(state, HealthStatus.Healthy, DefaultOptions);
 
         // Assert
-        Assert.Equal("Healthy", result.CurrentStatus);
-        Assert.Equal("Healthy", result.PreviousStatus);
+        result.CurrentStatus.Should().Be("Healthy");
+        result.PreviousStatus.Should().Be("Healthy");
     }
 
     [Fact]
@@ -151,7 +152,7 @@ public class HealthMonitorStateMachineTests
         var result = HealthStateMachine.HasTransitioned(before, after);
 
         // Assert
-        Assert.True(result);
+        result.Should().BeTrue();
     }
 
     [Fact]
@@ -165,7 +166,7 @@ public class HealthMonitorStateMachineTests
         var result = HealthStateMachine.HasTransitioned(before, after);
 
         // Assert
-        Assert.False(result);
+        result.Should().BeFalse();
     }
 
     [Fact]
@@ -179,7 +180,7 @@ public class HealthMonitorStateMachineTests
         var result = HealthStateMachine.NeedsReminder(state, DefaultOptions);
 
         // Assert
-        Assert.True(result);
+        result.Should().BeTrue();
     }
 
     [Fact]
@@ -193,7 +194,7 @@ public class HealthMonitorStateMachineTests
         var result = HealthStateMachine.NeedsReminder(state, DefaultOptions);
 
         // Assert
-        Assert.False(result);
+        result.Should().BeFalse();
     }
 
     private static ServiceHealthState CreateState(

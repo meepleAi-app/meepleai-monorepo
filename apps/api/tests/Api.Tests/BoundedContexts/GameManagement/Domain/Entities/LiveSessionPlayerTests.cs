@@ -3,6 +3,7 @@ using Api.BoundedContexts.GameManagement.Domain.Enums;
 using Api.SharedKernel.Domain.Exceptions;
 using Api.Tests.Constants;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.GameManagement.Domain.Entities;
 
@@ -32,12 +33,12 @@ public class LiveSessionPlayerTests
         var userId = Guid.NewGuid();
         var player = CreatePlayer(userId: userId);
 
-        Assert.Equal("Marco", player.DisplayName);
-        Assert.Equal(PlayerColor.Red, player.Color);
-        Assert.Equal(PlayerRole.Player, player.Role);
-        Assert.Equal(userId, player.UserId);
-        Assert.Equal(0, player.TotalScore);
-        Assert.Equal(0, player.CurrentRank);
+        player.DisplayName.Should().Be("Marco");
+        player.Color.Should().Be(PlayerColor.Red);
+        player.Role.Should().Be(PlayerRole.Player);
+        player.UserId.Should().Be(userId);
+        player.TotalScore.Should().Be(0);
+        player.CurrentRank.Should().Be(0);
         Assert.True(player.IsActive);
         Assert.Null(player.TeamId);
     }
@@ -66,20 +67,20 @@ public class LiveSessionPlayerTests
     [Fact]
     public void Constructor_EmptyDisplayName_ThrowsValidationException()
     {
-        Assert.Throws<ValidationException>(() => CreatePlayer(displayName: ""));
+        ((Action)(() => CreatePlayer(displayName: ""))).Should().Throw<ValidationException>();
     }
 
     [Fact]
     public void Constructor_DisplayNameTooLong_ThrowsValidationException()
     {
-        Assert.Throws<ValidationException>(() => CreatePlayer(displayName: new string('x', 101)));
+        ((Action)(() => CreatePlayer(displayName: new string('x', 101)))).Should().Throw<ValidationException>();
     }
 
     [Fact]
     public void Constructor_TrimsDisplayName()
     {
         var player = CreatePlayer(displayName: "  Marco  ");
-        Assert.Equal("Marco", player.DisplayName);
+        player.DisplayName.Should().Be("Marco");
     }
 
     [Fact]
@@ -88,8 +89,8 @@ public class LiveSessionPlayerTests
         var player = CreatePlayer();
         player.UpdateScore(42, 1);
 
-        Assert.Equal(42, player.TotalScore);
-        Assert.Equal(1, player.CurrentRank);
+        player.TotalScore.Should().Be(42);
+        player.CurrentRank.Should().Be(1);
     }
 
     [Fact]
@@ -100,7 +101,7 @@ public class LiveSessionPlayerTests
 
         player.AssignToTeam(teamId);
 
-        Assert.Equal(teamId, player.TeamId);
+        player.TeamId.Should().Be(teamId);
     }
 
     [Fact]
@@ -119,7 +120,7 @@ public class LiveSessionPlayerTests
         var player = CreatePlayer(role: PlayerRole.Player);
         player.ChangeRole(PlayerRole.Host);
 
-        Assert.Equal(PlayerRole.Host, player.Role);
+        player.Role.Should().Be(PlayerRole.Host);
     }
 
     [Fact]
@@ -147,14 +148,14 @@ public class LiveSessionPlayerTests
         var player = CreatePlayer();
         player.UpdateDisplayName("Luca");
 
-        Assert.Equal("Luca", player.DisplayName);
+        player.DisplayName.Should().Be("Luca");
     }
 
     [Fact]
     public void UpdateDisplayName_Empty_ThrowsValidationException()
     {
         var player = CreatePlayer();
-        Assert.Throws<ValidationException>(() => player.UpdateDisplayName(""));
+        ((Action)(() => player.UpdateDisplayName(""))).Should().Throw<ValidationException>();
     }
 
     [Fact]
@@ -163,6 +164,6 @@ public class LiveSessionPlayerTests
         var player = CreatePlayer(color: PlayerColor.Red);
         player.UpdateColor(PlayerColor.Blue);
 
-        Assert.Equal(PlayerColor.Blue, player.Color);
+        player.Color.Should().Be(PlayerColor.Blue);
     }
 }

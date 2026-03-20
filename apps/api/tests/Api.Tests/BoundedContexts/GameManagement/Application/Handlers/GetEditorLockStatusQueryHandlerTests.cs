@@ -5,6 +5,7 @@ using Api.BoundedContexts.GameManagement.Application.Queries;
 using Api.BoundedContexts.GameManagement.Application.Services;
 using Moq;
 using Xunit;
+using FluentAssertions;
 using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.GameManagement.Application.Handlers;
@@ -53,10 +54,10 @@ public class GetEditorLockStatusQueryHandlerTests
 
         // Assert
         Assert.NotNull(result);
-        Assert.Equal(gameId, result.GameId);
+        result.GameId.Should().Be(gameId);
         Assert.True(result.IsLocked);
         Assert.False(result.IsCurrentUserLock);
-        Assert.Equal(lockHolderId, result.LockedByUserId);
+        result.LockedByUserId.Should().Be(lockHolderId);
     }
 
     [Fact]
@@ -86,7 +87,7 @@ public class GetEditorLockStatusQueryHandlerTests
 
         // Assert
         Assert.NotNull(result);
-        Assert.Equal(gameId, result.GameId);
+        result.GameId.Should().Be(gameId);
         Assert.False(result.IsLocked);
         Assert.Null(result.LockedByUserId);
     }
@@ -120,7 +121,7 @@ public class GetEditorLockStatusQueryHandlerTests
         Assert.NotNull(result);
         Assert.True(result.IsLocked);
         Assert.True(result.IsCurrentUserLock);
-        Assert.Equal(currentUserId, result.LockedByUserId);
+        result.LockedByUserId.Should().Be(currentUserId);
     }
 
     [Fact]

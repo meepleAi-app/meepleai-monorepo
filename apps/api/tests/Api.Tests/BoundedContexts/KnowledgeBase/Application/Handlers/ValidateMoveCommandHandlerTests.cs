@@ -11,6 +11,7 @@ using Api.Tests.Constants;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Handlers;
 
@@ -76,7 +77,7 @@ public class ValidateMoveCommandHandlerTests
 
         // Assert
         Assert.NotNull(result);
-        Assert.Equal("VALID", result.Decision);
+        result.Decision.Should().Be("VALID");
         Assert.True(result.Confidence > 0.7);
 
         _mockArbitroService.Verify(
@@ -206,11 +207,11 @@ public class ValidateMoveCommandHandlerTests
 
         // Assert
         Assert.NotNull(capturedMove);
-        Assert.Equal("Diana", capturedMove.PlayerName);
-        Assert.Equal("draw card", capturedMove.Action);
-        Assert.Equal("top of deck", capturedMove.Position);
+        capturedMove.PlayerName.Should().Be("Diana");
+        capturedMove.Action.Should().Be("draw card");
+        capturedMove.Position.Should().Be("top of deck");
         Assert.NotNull(capturedMove.AdditionalContext);
-        Assert.Equal("main", capturedMove.AdditionalContext["deck"]);
+        capturedMove.AdditionalContext["deck"].Should().Be("main");
     }
 
     private static GameSession CreateMockGameSession(Guid sessionId, Guid gameId, string playerName)

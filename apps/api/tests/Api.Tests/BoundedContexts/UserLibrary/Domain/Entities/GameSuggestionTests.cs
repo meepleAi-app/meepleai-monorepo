@@ -2,6 +2,7 @@ using Api.BoundedContexts.UserLibrary.Domain.Entities;
 using Api.BoundedContexts.UserLibrary.Domain.Events;
 using Microsoft.Extensions.Time.Testing;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.UserLibrary.Domain.Entities;
 
@@ -26,14 +27,14 @@ public sealed class GameSuggestionTests
         var suggestion = GameSuggestion.Create(userId, gameId, adminId, source, _timeProvider);
 
         // Assert
-        Assert.NotEqual(Guid.Empty, suggestion.Id);
-        Assert.Equal(userId, suggestion.UserId);
-        Assert.Equal(gameId, suggestion.GameId);
-        Assert.Equal(adminId, suggestion.SuggestedByUserId);
-        Assert.Equal(source, suggestion.Source);
-        Assert.Equal(_timeProvider.GetUtcNow().UtcDateTime, suggestion.CreatedAt);
-        Assert.False(suggestion.IsDismissed);
-        Assert.False(suggestion.IsAccepted);
+        suggestion.Id.Should().NotBe(Guid.Empty);
+        suggestion.UserId.Should().Be(userId);
+        suggestion.GameId.Should().Be(gameId);
+        suggestion.SuggestedByUserId.Should().Be(adminId);
+        suggestion.Source.Should().Be(source);
+        suggestion.CreatedAt.Should().Be(_timeProvider.GetUtcNow().UtcDateTime);
+        suggestion.IsDismissed.Should().BeFalse();
+        suggestion.IsAccepted.Should().BeFalse();
     }
 
     [Fact]
@@ -44,7 +45,7 @@ public sealed class GameSuggestionTests
             Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), null, _timeProvider);
 
         // Assert
-        Assert.Null(suggestion.Source);
+        suggestion.Source.Should().BeNull();
     }
 
     [Fact]
@@ -79,7 +80,7 @@ public sealed class GameSuggestionTests
         suggestion.Accept();
 
         // Assert
-        Assert.True(suggestion.IsAccepted);
+        suggestion.IsAccepted.Should().BeTrue();
     }
 
     [Fact]
@@ -95,11 +96,11 @@ public sealed class GameSuggestionTests
         suggestion.Accept();
 
         // Assert
-        var domainEvent = Assert.Single(suggestion.DomainEvents);
-        var acceptedEvent = Assert.IsType<GameSuggestionAcceptedEvent>(domainEvent);
-        Assert.Equal(suggestion.Id, acceptedEvent.SuggestionId);
-        Assert.Equal(userId, acceptedEvent.UserId);
-        Assert.Equal(gameId, acceptedEvent.GameId);
+        var domainEvent = suggestion.DomainEvents.Should().ContainSingle().Subject;
+        var acceptedEvent = domainEvent.Should().BeOfType<GameSuggestionAcceptedEvent>().Subject;
+        acceptedEvent.SuggestionId.Should().Be(suggestion.Id);
+        acceptedEvent.UserId.Should().Be(userId);
+        acceptedEvent.GameId.Should().Be(gameId);
     }
 
     [Fact]
@@ -113,7 +114,7 @@ public sealed class GameSuggestionTests
         suggestion.Dismiss();
 
         // Assert
-        Assert.True(suggestion.IsDismissed);
+        suggestion.IsDismissed.Should().BeTrue();
     }
 
     [Fact]
@@ -127,6 +128,6 @@ public sealed class GameSuggestionTests
         suggestion.Dismiss();
 
         // Assert
-        Assert.Empty(suggestion.DomainEvents);
+        suggestion.DomainEvents.Should().BeEmpty();
     }
 }

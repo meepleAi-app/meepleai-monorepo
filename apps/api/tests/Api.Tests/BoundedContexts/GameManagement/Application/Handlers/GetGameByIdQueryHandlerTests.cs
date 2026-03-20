@@ -6,6 +6,7 @@ using Api.BoundedContexts.GameManagement.Domain.Repositories;
 using Api.Tests.BoundedContexts.GameManagement.TestHelpers;
 using Moq;
 using Xunit;
+using FluentAssertions;
 using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.GameManagement.Application.Handlers;
@@ -50,14 +51,14 @@ public class GetGameByIdQueryHandlerTests
 
         // Assert
         Assert.NotNull(result);
-        Assert.Equal(gameId, result.Id);
-        Assert.Equal("Catan", result.Title);
-        Assert.Equal("Kosmos", result.Publisher);
-        Assert.Equal(1995, result.YearPublished);
-        Assert.Equal(3, result.MinPlayers);
-        Assert.Equal(4, result.MaxPlayers);
-        Assert.Equal(60, result.MinPlayTimeMinutes);
-        Assert.Equal(120, result.MaxPlayTimeMinutes);
+        result.Id.Should().Be(gameId);
+        result.Title.Should().Be("Catan");
+        result.Publisher.Should().Be("Kosmos");
+        result.YearPublished.Should().Be(1995);
+        result.MinPlayers.Should().Be(3);
+        result.MaxPlayers.Should().Be(4);
+        result.MinPlayTimeMinutes.Should().Be(60);
+        result.MaxPlayTimeMinutes.Should().Be(120);
 
         _gameRepositoryMock.Verify(
             r => r.GetByIdAsync(gameId, It.IsAny<CancellationToken>()),
@@ -85,8 +86,8 @@ public class GetGameByIdQueryHandlerTests
 
         // Assert
         Assert.NotNull(result);
-        Assert.Equal(gameId, result.Id);
-        Assert.Equal("Chess", result.Title);
+        result.Id.Should().Be(gameId);
+        result.Title.Should().Be("Chess");
         Assert.Null(result.Publisher);
         Assert.Null(result.YearPublished);
         Assert.Null(result.MinPlayers);
@@ -118,7 +119,7 @@ public class GetGameByIdQueryHandlerTests
 
         // Assert
         Assert.NotNull(result);
-        Assert.Equal(30549, result.BggId);
+        result.BggId.Should().Be(30549);
     }
 
     [Fact]
@@ -243,8 +244,8 @@ public class GetGameByIdQueryHandlerTests
 
         // Assert
         Assert.NotNull(result);
-        Assert.NotEqual(default(DateTime), result.CreatedAt);
-        Assert.Equal(game.CreatedAt, result.CreatedAt);
+        result.CreatedAt.Should().NotBe(default(DateTime));
+        result.CreatedAt.Should().Be(game.CreatedAt);
     }
 }
 

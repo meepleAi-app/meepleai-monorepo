@@ -1,5 +1,6 @@
 using Api.BoundedContexts.KnowledgeBase.Domain.Indexing;
 using Xunit;
+using FluentAssertions;
 using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Domain.Indexing;
@@ -20,9 +21,9 @@ public class ChunkPayloadTests
         var payload = ChunkPayload.Empty();
 
         // Assert
-        Assert.Equal(string.Empty, payload.GameId);
-        Assert.Equal(string.Empty, payload.PdfId);
-        Assert.Equal(0, payload.Level);
+        payload.GameId.Should().Be(string.Empty);
+        payload.PdfId.Should().Be(string.Empty);
+        payload.Level.Should().Be(0);
         Assert.True(payload.IsRoot);
         Assert.False(payload.HasChildren);
     }
@@ -45,17 +46,17 @@ public class ChunkPayloadTests
             tokenCount: 250);
 
         // Assert
-        Assert.Equal(TestGameId.ToString(), payload.GameId);
-        Assert.Equal(TestPdfId.ToString(), payload.PdfId);
-        Assert.Equal(5, payload.PageNumber);
-        Assert.Equal(3, payload.ChunkIndex);
-        Assert.Equal(1, payload.Level);
-        Assert.Equal("parent-123", payload.ParentChunkId);
-        Assert.Equal("rules", payload.Category);
-        Assert.Equal("it", payload.Language);
-        Assert.Equal("Game Setup", payload.Heading);
-        Assert.Equal("NarrativeText", payload.ElementType);
-        Assert.Equal(250, payload.TokenCount);
+        payload.GameId.Should().Be(TestGameId.ToString());
+        payload.PdfId.Should().Be(TestPdfId.ToString());
+        payload.PageNumber.Should().Be(5);
+        payload.ChunkIndex.Should().Be(3);
+        payload.Level.Should().Be(1);
+        payload.ParentChunkId.Should().Be("parent-123");
+        payload.Category.Should().Be("rules");
+        payload.Language.Should().Be("it");
+        payload.Heading.Should().Be("Game Setup");
+        payload.ElementType.Should().Be("NarrativeText");
+        payload.TokenCount.Should().Be(250);
         Assert.False(payload.IsRoot);
     }
 
@@ -72,7 +73,7 @@ public class ChunkPayloadTests
             elementType: "Title");
 
         // Assert
-        Assert.Equal(0, payload.Level);
+        payload.Level.Should().Be(0);
         Assert.Null(payload.ParentChunkId);
         Assert.True(payload.IsRoot);
     }
@@ -91,8 +92,8 @@ public class ChunkPayloadTests
             heading: "Subsection");
 
         // Assert
-        Assert.Equal(2, payload.Level);
-        Assert.Equal("section-001", payload.ParentChunkId);
+        payload.Level.Should().Be(2);
+        payload.ParentChunkId.Should().Be("section-001");
         Assert.False(payload.IsRoot);
     }
 
@@ -140,11 +141,11 @@ public class ChunkPayloadTests
         var updated = original.WithChildren(childIds);
 
         // Assert
-        Assert.Equal(3, updated.ChildChunkIds.Count);
+        updated.ChildChunkIds.Count.Should().Be(3);
         Assert.True(updated.HasChildren);
-        Assert.Contains("child-1", updated.ChildChunkIds);
-        Assert.Contains("child-2", updated.ChildChunkIds);
-        Assert.Contains("child-3", updated.ChildChunkIds);
+        updated.ChildChunkIds.Should().Contain("child-1");
+        updated.ChildChunkIds.Should().Contain("child-2");
+        updated.ChildChunkIds.Should().Contain("child-3");
     }
 
     [Fact]
@@ -159,7 +160,7 @@ public class ChunkPayloadTests
             level: 0);
 
         // Assert - Default language should be Italian per ADR-016 Phase 3
-        Assert.Equal("it", payload.Language);
+        payload.Language.Should().Be("it");
     }
 
     [Fact]
@@ -181,7 +182,7 @@ public class ChunkPayloadTests
             level: 0);
 
         // Act & Assert
-        Assert.Equal(payload1, payload2);
+        payload2.Should().Be(payload1);
     }
 
     [Fact]
@@ -203,7 +204,7 @@ public class ChunkPayloadTests
             level: 0);
 
         // Act & Assert
-        Assert.NotEqual(payload1, payload2);
+        payload2.Should().NotBe(payload1);
     }
 
     [Fact]

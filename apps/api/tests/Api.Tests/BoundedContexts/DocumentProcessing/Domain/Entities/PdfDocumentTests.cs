@@ -3,6 +3,7 @@ using Api.BoundedContexts.DocumentProcessing.Domain.Enums;
 using Api.BoundedContexts.DocumentProcessing.Domain.ValueObjects;
 using Api.Tests.Constants;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.DocumentProcessing.Domain.Entities;
 
@@ -34,7 +35,7 @@ public class PdfDocumentTests
         );
 
         // Assert
-        Assert.Equal(LanguageCode.English.Value, document.Language.Value);
+        document.Language.Value.Should().Be(LanguageCode.English.Value);
     }
 
     [Theory]
@@ -64,7 +65,7 @@ public class PdfDocumentTests
         );
 
         // Assert
-        Assert.Equal(languageCode, document.Language.Value);
+        document.Language.Value.Should().Be(languageCode);
     }
 
     [Fact]
@@ -78,7 +79,7 @@ public class PdfDocumentTests
         document.UpdateLanguage(newLanguage);
 
         // Assert
-        Assert.Equal("it", document.Language.Value);
+        document.Language.Value.Should().Be("it");
     }
 
     [Theory]
@@ -96,7 +97,7 @@ public class PdfDocumentTests
         document.UpdateLanguage(newLanguage);
 
         // Assert
-        Assert.Equal(updated, document.Language.Value);
+        document.Language.Value.Should().Be(updated);
     }
 
     [Fact]
@@ -106,7 +107,7 @@ public class PdfDocumentTests
         var document = CreateTestDocument(LanguageCode.English);
 
         // Act & Assert
-        Assert.Throws<ArgumentNullException>(() => document.UpdateLanguage(null!));
+        ((Action)(() => document.UpdateLanguage(null!))).Should().Throw<ArgumentNullException>();
     }
 
     [Fact]
@@ -121,7 +122,7 @@ public class PdfDocumentTests
         document.UpdateLanguage(LanguageCode.French);
 
         // Assert
-        Assert.Equal("fr", document.Language.Value);
+        document.Language.Value.Should().Be("fr");
     }
 
     [Fact]
@@ -136,8 +137,8 @@ public class PdfDocumentTests
         document.UpdateLanguage(LanguageCode.Italian);
 
         // Assert
-        Assert.Equal("it", document.Language.Value);
-        Assert.Equal(PdfProcessingState.Ready, document.ProcessingState);
+        document.Language.Value.Should().Be("it");
+        document.ProcessingState.Should().Be(PdfProcessingState.Ready);
     }
 
     // ===== LinkToGame Tests (Issue #3372) =====
@@ -154,7 +155,7 @@ public class PdfDocumentTests
         document.LinkToGame(newGameId);
 
         // Assert
-        Assert.Equal(newGameId, document.GameId);
+        document.GameId.Should().Be(newGameId);
     }
 
     [Fact]
@@ -167,8 +168,8 @@ public class PdfDocumentTests
         var exception = Assert.Throws<ArgumentException>(
             () => document.LinkToGame(Guid.Empty));
 
-        Assert.Contains("Game ID cannot be empty", exception.Message);
-        Assert.Equal("gameId", exception.ParamName);
+        exception.Message.Should().Contain("Game ID cannot be empty");
+        exception.ParamName.Should().Be("gameId");
     }
 
     [Fact]
@@ -180,14 +181,14 @@ public class PdfDocumentTests
         var document = CreateTestDocumentWithGameId(firstGameId);
 
         // Verify initial state
-        Assert.Equal(firstGameId, document.GameId);
+        document.GameId.Should().Be(firstGameId);
 
         // Act - Link to second game
         document.LinkToGame(secondGameId);
 
         // Assert - GameId should be overwritten
-        Assert.Equal(secondGameId, document.GameId);
-        Assert.NotEqual(firstGameId, document.GameId);
+        document.GameId.Should().Be(secondGameId);
+        document.GameId.Should().NotBe(firstGameId);
     }
 
     [Fact]
@@ -201,7 +202,7 @@ public class PdfDocumentTests
         document.LinkToGame(gameId);
 
         // Assert
-        Assert.Equal(gameId, document.GameId);
+        document.GameId.Should().Be(gameId);
     }
 
     private static PdfDocument CreateTestDocument(LanguageCode language)
@@ -243,9 +244,9 @@ public class PdfDocumentTests
         var canRetry = document.CanRetry();
 
         // Assert
-        Assert.True(canRetry);
-        Assert.Equal(0, document.RetryCount);
-        Assert.Equal(PdfProcessingState.Failed, document.ProcessingState);
+        canRetry.Should().BeTrue();
+        document.RetryCount.Should().Be(0);
+        document.ProcessingState.Should().Be(PdfProcessingState.Failed);
     }
 
     [Fact]
@@ -265,9 +266,9 @@ public class PdfDocumentTests
         var canRetry = document.CanRetry();
 
         // Assert
-        Assert.False(canRetry);
-        Assert.Equal(3, document.RetryCount);
-        Assert.Equal(document.MaxRetries, document.RetryCount);
+        canRetry.Should().BeFalse();
+        document.RetryCount.Should().Be(3);
+        document.RetryCount.Should().Be(document.MaxRetries);
     }
 
     [Fact]
@@ -280,8 +281,8 @@ public class PdfDocumentTests
         var canRetry = document.CanRetry();
 
         // Assert
-        Assert.False(canRetry);
-        Assert.Equal(PdfProcessingState.Pending, document.ProcessingState);
+        canRetry.Should().BeFalse();
+        document.ProcessingState.Should().Be(PdfProcessingState.Pending);
     }
 
     [Fact]
@@ -295,10 +296,10 @@ public class PdfDocumentTests
         document.Retry();
 
         // Assert
-        Assert.Equal(1, document.RetryCount);
-        Assert.Equal(PdfProcessingState.Extracting, document.ProcessingState);
-        Assert.Null(document.ProcessingError);
-        Assert.Null(document.ProcessedAt);
+        document.RetryCount.Should().Be(1);
+        document.ProcessingState.Should().Be(PdfProcessingState.Extracting);
+        document.ProcessingError.Should().BeNull();
+        document.ProcessedAt.Should().BeNull();
     }
 
     [Fact]
@@ -318,9 +319,9 @@ public class PdfDocumentTests
         document.MarkAsFailed("Final error", ErrorCategory.Unknown, PdfProcessingState.Indexing);
 
         // Act & Assert
-        var exception = Assert.Throws<InvalidOperationException>(() => document.Retry());
-        Assert.Contains("Cannot retry", exception.Message);
-        Assert.Contains("RetryCount=3", exception.Message);
+        var exception = ((Action)(() => document.Retry())).Should().Throw<InvalidOperationException>().Which;
+        exception.Message.Should().Contain("Cannot retry");
+        exception.Message.Should().Contain("RetryCount=3");
     }
 
     [Fact]
@@ -330,9 +331,9 @@ public class PdfDocumentTests
         var document = CreateTestDocument(LanguageCode.English);
 
         // Act & Assert
-        var exception = Assert.Throws<InvalidOperationException>(() => document.Retry());
-        Assert.Contains("Cannot retry", exception.Message);
-        Assert.Contains("State=Pending", exception.Message);
+        var exception = ((Action)(() => document.Retry())).Should().Throw<InvalidOperationException>().Which;
+        exception.Message.Should().Contain("Cannot retry");
+        exception.Message.Should().Contain("State=Pending");
     }
 
     [Fact]
@@ -346,7 +347,7 @@ public class PdfDocumentTests
         document.Retry();
 
         // Assert - Should resume from Chunking, not restart from beginning
-        Assert.Equal(PdfProcessingState.Chunking, document.ProcessingState);
+        document.ProcessingState.Should().Be(PdfProcessingState.Chunking);
     }
 
     [Fact]
@@ -362,11 +363,11 @@ public class PdfDocumentTests
         document.MarkAsFailed(errorMessage, category, failedState);
 
         // Assert
-        Assert.Equal(PdfProcessingState.Failed, document.ProcessingState);
-        Assert.Equal(errorMessage, document.ProcessingError);
-        Assert.Equal(category, document.ErrorCategory);
-        Assert.Equal(failedState, document.FailedAtState);
-        Assert.NotNull(document.ProcessedAt);
+        document.ProcessingState.Should().Be(PdfProcessingState.Failed);
+        document.ProcessingError.Should().Be(errorMessage);
+        document.ErrorCategory.Should().Be(category);
+        document.FailedAtState.Should().Be(failedState);
+        document.ProcessedAt.Should().NotBeNull();
     }
 
     [Theory]
@@ -384,7 +385,7 @@ public class PdfDocumentTests
         document.MarkAsFailed("Test error", category, PdfProcessingState.Embedding);
 
         // Assert
-        Assert.Equal(category, document.ErrorCategory);
+        document.ErrorCategory.Should().Be(category);
     }
 
     [Fact]
@@ -394,7 +395,7 @@ public class PdfDocumentTests
         var document = CreateTestDocument(LanguageCode.English);
 
         // Act & Assert
-        Assert.Equal(3, document.MaxRetries);
+        document.MaxRetries.Should().Be(3);
     }
 
     [Fact]
@@ -407,30 +408,30 @@ public class PdfDocumentTests
 
         // First failure
         document.MarkAsFailed("Network error", ErrorCategory.Network, PdfProcessingState.Extracting);
-        Assert.True(document.CanRetry());
-        Assert.Equal(0, document.RetryCount);
+        document.CanRetry().Should().BeTrue();
+        document.RetryCount.Should().Be(0);
 
         // First retry
         document.Retry();
-        Assert.Equal(1, document.RetryCount);
-        Assert.Equal(PdfProcessingState.Extracting, document.ProcessingState);
-        Assert.Null(document.ProcessingError);
+        document.RetryCount.Should().Be(1);
+        document.ProcessingState.Should().Be(PdfProcessingState.Extracting);
+        document.ProcessingError.Should().BeNull();
 
         // Second failure
         document.MarkAsFailed("Parsing error", ErrorCategory.Parsing, PdfProcessingState.Chunking);
-        Assert.True(document.CanRetry());
+        document.CanRetry().Should().BeTrue();
 
         // Second retry
         document.Retry();
-        Assert.Equal(2, document.RetryCount);
-        Assert.Equal(PdfProcessingState.Chunking, document.ProcessingState);
+        document.RetryCount.Should().Be(2);
+        document.ProcessingState.Should().Be(PdfProcessingState.Chunking);
 
         // Success path - complete processing through state machine
         document.TransitionTo(PdfProcessingState.Embedding);
         document.TransitionTo(PdfProcessingState.Indexing);
         document.MarkAsCompleted(10);
-        Assert.Equal(PdfProcessingState.Ready, document.ProcessingState);
-        Assert.False(document.CanRetry()); // Can't retry completed document
+        document.ProcessingState.Should().Be(PdfProcessingState.Ready);
+        document.CanRetry().Should().BeFalse(); // Can't retry completed document
     }
 
     #region BaseDocumentId Tests (Issue #5444)
@@ -439,7 +440,7 @@ public class PdfDocumentTests
     public void Constructor_DefaultBaseDocumentId_IsNull()
     {
         var document = CreateDefaultDocument();
-        Assert.Null(document.BaseDocumentId);
+        document.BaseDocumentId.Should().BeNull();
     }
 
     [Fact]
@@ -450,7 +451,7 @@ public class PdfDocumentTests
 
         document.LinkToBaseDocument(baseDocId);
 
-        Assert.Equal(baseDocId, document.BaseDocumentId);
+        document.BaseDocumentId.Should().Be(baseDocId);
     }
 
     [Fact]
@@ -480,7 +481,7 @@ public class PdfDocumentTests
 
         document.UnlinkBaseDocument();
 
-        Assert.Null(document.BaseDocumentId);
+        document.BaseDocumentId.Should().BeNull();
     }
 
     [Fact]
@@ -501,7 +502,7 @@ public class PdfDocumentTests
             language: LanguageCode.English,
             baseDocumentId: baseDocId);
 
-        Assert.Equal(baseDocId, document.BaseDocumentId);
+        document.BaseDocumentId.Should().Be(baseDocId);
     }
 
     [Fact]
@@ -520,7 +521,7 @@ public class PdfDocumentTests
             processingError: null,
             language: LanguageCode.English);
 
-        Assert.Null(document.BaseDocumentId);
+        document.BaseDocumentId.Should().BeNull();
     }
 
     private static PdfDocument CreateDefaultDocument()

@@ -1,6 +1,7 @@
 using Api.BoundedContexts.KnowledgeBase.Domain.Entities;
 using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 using Xunit;
+using FluentAssertions;
 using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Domain.Entities;
@@ -29,19 +30,19 @@ public class ChatThreadExportTests
 
         // Assert
         Assert.NotNull(exported);
-        Assert.Equal(ExportFormat.Json, exported.Format);
-        Assert.Equal("application/json", exported.ContentType);
-        Assert.Equal("json", exported.FileExtension);
+        exported.Format.Should().Be(ExportFormat.Json);
+        exported.ContentType.Should().Be("application/json");
+        exported.FileExtension.Should().Be("json");
         Assert.False(string.IsNullOrWhiteSpace(exported.Content));
 
         // Verify JSON structure
-        Assert.Contains("\"id\":", exported.Content);
-        Assert.Contains("\"userId\":", exported.Content);
-        Assert.Contains("\"gameId\":", exported.Content);
-        Assert.Contains("\"title\": \"Test Chat\"", exported.Content);
-        Assert.Contains("\"messages\":", exported.Content);
-        Assert.Contains("\"role\": \"user\"", exported.Content);
-        Assert.Contains("\"role\": \"assistant\"", exported.Content);
+        exported.Content.Should().Contain("\"id\":");
+        exported.Content.Should().Contain("\"userId\":");
+        exported.Content.Should().Contain("\"gameId\":");
+        exported.Content.Should().Contain("\"title\": \"Test Chat\"");
+        exported.Content.Should().Contain("\"messages\":");
+        exported.Content.Should().Contain("\"role\": \"user\"");
+        exported.Content.Should().Contain("\"role\": \"assistant\"");
     }
 
     [Fact]
@@ -61,19 +62,19 @@ public class ChatThreadExportTests
 
         // Assert
         Assert.NotNull(exported);
-        Assert.Equal(ExportFormat.Markdown, exported.Format);
-        Assert.Equal("text/markdown", exported.ContentType);
-        Assert.Equal("md", exported.FileExtension);
+        exported.Format.Should().Be(ExportFormat.Markdown);
+        exported.ContentType.Should().Be("text/markdown");
+        exported.FileExtension.Should().Be("md");
         Assert.False(string.IsNullOrWhiteSpace(exported.Content));
 
         // Verify Markdown structure
-        Assert.Contains("# Epic Battle", exported.Content);
-        Assert.Contains("**Created:**", exported.Content);
-        Assert.Contains("**Messages:**", exported.Content);
-        Assert.Contains("## 👤 User", exported.Content);
-        Assert.Contains("## 🤖 Assistant", exported.Content);
-        Assert.Contains("What are the combat rules?", exported.Content);
-        Assert.Contains("Combat uses dice rolls...", exported.Content);
+        exported.Content.Should().Contain("# Epic Battle");
+        exported.Content.Should().Contain("**Created:**");
+        exported.Content.Should().Contain("**Messages:**");
+        exported.Content.Should().Contain("## 👤 User");
+        exported.Content.Should().Contain("## 🤖 Assistant");
+        exported.Content.Should().Contain("What are the combat rules?");
+        exported.Content.Should().Contain("Combat uses dice rolls...");
     }
 
     [Fact]
@@ -89,8 +90,8 @@ public class ChatThreadExportTests
         var exportedMd = thread.Export(ExportFormat.Markdown);
 
         // Assert
-        Assert.Contains("\"messages\": []", exportedJson.Content);
-        Assert.Contains("*No messages in this conversation.*", exportedMd.Content);
+        exportedJson.Content.Should().Contain("\"messages\": []");
+        exportedMd.Content.Should().Contain("*No messages in this conversation.*");
     }
 
     [Fact]
@@ -106,8 +107,8 @@ public class ChatThreadExportTests
         var exportedMd = thread.Export(ExportFormat.Markdown);
 
         // Assert
-        Assert.Contains("\"title\": \"Untitled Chat\"", exportedJson.Content);
-        Assert.Contains("# Untitled Chat", exportedMd.Content);
+        exportedJson.Content.Should().Contain("\"title\": \"Untitled Chat\"");
+        exportedMd.Content.Should().Contain("# Untitled Chat");
     }
 
     [Fact]
@@ -125,7 +126,7 @@ public class ChatThreadExportTests
 
         // Assert
         Assert.NotNull(exported);
-        Assert.Contains("\"status\": \"closed\"", exported.Content);
+        exported.Content.Should().Contain("\"status\": \"closed\"");
     }
 
     [Fact]

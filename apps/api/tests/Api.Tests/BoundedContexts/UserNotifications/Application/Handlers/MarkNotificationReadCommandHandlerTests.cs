@@ -9,6 +9,7 @@ using Api.Tests.Constants;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.UserNotifications.Application.Handlers;
 
@@ -56,9 +57,9 @@ public class MarkNotificationReadCommandHandlerTests
         var result = await _handler.Handle(command, CancellationToken.None);
 
         // Assert
-        Assert.True(result);
-        Assert.True(notification.IsRead);
-        Assert.NotNull(notification.ReadAt);
+        result.Should().BeTrue();
+        notification.IsRead.Should().BeTrue();
+        notification.ReadAt.Should().NotBeNull();
 
         _notificationRepositoryMock.Verify(
             r => r.UpdateAsync(notification, It.IsAny<CancellationToken>()),
@@ -85,7 +86,7 @@ public class MarkNotificationReadCommandHandlerTests
         var result = await _handler.Handle(command, CancellationToken.None);
 
         // Assert
-        Assert.False(result);
+        result.Should().BeFalse();
 
         _notificationRepositoryMock.Verify(
             r => r.UpdateAsync(It.IsAny<Notification>(), It.IsAny<CancellationToken>()),
@@ -148,8 +149,8 @@ public class MarkNotificationReadCommandHandlerTests
         var result = await _handler.Handle(command, CancellationToken.None);
 
         // Assert
-        Assert.True(result);
-        Assert.True(notification.IsRead);
+        result.Should().BeTrue();
+        notification.IsRead.Should().BeTrue();
 
         // Still calls update even if already read (idempotent behavior)
         _notificationRepositoryMock.Verify(

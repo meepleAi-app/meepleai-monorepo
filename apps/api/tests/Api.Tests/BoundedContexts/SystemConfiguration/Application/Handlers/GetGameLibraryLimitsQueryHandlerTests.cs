@@ -6,6 +6,7 @@ using Api.Services;
 using Api.Tests.Constants;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.SystemConfiguration.Application.Handlers;
 
@@ -59,11 +60,11 @@ public class GetGameLibraryLimitsQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal(10, result.FreeTierLimit);
-        Assert.Equal(25, result.NormalTierLimit);
-        Assert.Equal(100, result.PremiumTierLimit);
-        Assert.Equal("admin-user-1", result.LastUpdatedByUserId);
+        result.Should().NotBeNull();
+        result.FreeTierLimit.Should().Be(10);
+        result.NormalTierLimit.Should().Be(25);
+        result.PremiumTierLimit.Should().Be(100);
+        result.LastUpdatedByUserId.Should().Be("admin-user-1");
     }
 
     [Fact]
@@ -80,10 +81,10 @@ public class GetGameLibraryLimitsQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal(5, result.FreeTierLimit);    // Default for Free
-        Assert.Equal(20, result.NormalTierLimit);  // Default for Normal
-        Assert.Equal(50, result.PremiumTierLimit); // Default for Premium
-        Assert.Null(result.LastUpdatedByUserId);
+        result.Should().NotBeNull();
+        result.FreeTierLimit.Should().Be(5);    // Default for Free
+        result.NormalTierLimit.Should().Be(20);  // Default for Normal
+        result.PremiumTierLimit.Should().Be(50); // Default for Premium
+        result.LastUpdatedByUserId.Should().BeNull();
     }
 }

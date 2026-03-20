@@ -7,6 +7,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using FluentAssertions;
 using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Infrastructure.Persistence;
@@ -74,22 +75,22 @@ public class LlmCostLogRepositoryTests : SharedDatabaseTestBase<LlmCostLogReposi
 
         // Assert
         var logs = await DbContext.LlmCostLogs.ToListAsync(TestCancellationToken);
-        Assert.Single(logs);
+        logs.Should().ContainSingle();
 
         var log = logs[0];
-        Assert.Equal(userId, log.UserId);
-        Assert.Equal("User", log.UserRole);
-        Assert.Equal("openai/gpt-4o-mini", log.ModelId);
-        Assert.Equal("OpenRouter", log.Provider);
-        Assert.Equal(1000, log.PromptTokens);
-        Assert.Equal(500, log.CompletionTokens);
-        Assert.Equal(1500, log.TotalTokens);
-        Assert.Equal(0.00015m, log.InputCost);
-        Assert.Equal(0.0003m, log.OutputCost);
-        Assert.Equal(0.00045m, log.TotalCost);
-        Assert.True(log.Success);
-        Assert.Null(log.ErrorMessage);
-        Assert.Equal(1500, log.LatencyMs);
+        log.UserId.Should().Be(userId);
+        log.UserRole.Should().Be("User");
+        log.ModelId.Should().Be("openai/gpt-4o-mini");
+        log.Provider.Should().Be("OpenRouter");
+        log.PromptTokens.Should().Be(1000);
+        log.CompletionTokens.Should().Be(500);
+        log.TotalTokens.Should().Be(1500);
+        log.InputCost.Should().Be(0.00015m);
+        log.OutputCost.Should().Be(0.0003m);
+        log.TotalCost.Should().Be(0.00045m);
+        log.Success.Should().BeTrue();
+        log.ErrorMessage.Should().BeNull();
+        log.LatencyMs.Should().Be(1500);
     }
 
     [Fact]
@@ -108,7 +109,7 @@ public class LlmCostLogRepositoryTests : SharedDatabaseTestBase<LlmCostLogReposi
         var totalCost = await Repository.GetTotalCostAsync(today, today, cancellationToken: TestCancellationToken);
 
         // Assert
-        Assert.Equal(0.006m, totalCost);
+        totalCost.Should().Be(0.006m);
     }
 
     [Fact]
@@ -127,9 +128,9 @@ public class LlmCostLogRepositoryTests : SharedDatabaseTestBase<LlmCostLogReposi
         var costsByProvider = await Repository.GetCostsByProviderAsync(today, today, cancellationToken: TestCancellationToken);
 
         // Assert
-        Assert.Equal(2, costsByProvider.Count);
-        Assert.Equal(0.003m, costsByProvider["OpenRouter"]);
-        Assert.Equal(0m, costsByProvider["Ollama"]);
+        costsByProvider.Count.Should().Be(2);
+        costsByProvider["OpenRouter"].Should().Be(0.003m);
+        costsByProvider["Ollama"].Should().Be(0m);
     }
 
     [Fact]
@@ -149,10 +150,10 @@ public class LlmCostLogRepositoryTests : SharedDatabaseTestBase<LlmCostLogReposi
         var costsByRole = await Repository.GetCostsByRoleAsync(today, today, cancellationToken: TestCancellationToken);
 
         // Assert
-        Assert.Equal(3, costsByRole.Count);
-        Assert.Equal(0.001m, costsByRole["Anonymous"]);
-        Assert.Equal(0.003m, costsByRole["User"]);
-        Assert.Equal(0.005m, costsByRole["Admin"]);
+        costsByRole.Count.Should().Be(3);
+        costsByRole["Anonymous"].Should().Be(0.001m);
+        costsByRole["User"].Should().Be(0.003m);
+        costsByRole["Admin"].Should().Be(0.005m);
     }
 
     [Fact]
@@ -198,8 +199,8 @@ public class LlmCostLogRepositoryTests : SharedDatabaseTestBase<LlmCostLogReposi
         var user2Cost = await Repository.GetUserCostAsync(user2, today, today, cancellationToken: TestCancellationToken);
 
         // Assert
-        Assert.Equal(0.003m, user1Cost);
-        Assert.Equal(0.005m, user2Cost);
+        user1Cost.Should().Be(0.003m);
+        user2Cost.Should().Be(0.005m);
     }
 
     [Fact]
@@ -218,7 +219,7 @@ public class LlmCostLogRepositoryTests : SharedDatabaseTestBase<LlmCostLogReposi
         var dailyCost = await Repository.GetDailyCostAsync(today, cancellationToken: TestCancellationToken);
 
         // Assert
-        Assert.Equal(0.050m, dailyCost);
+        dailyCost.Should().Be(0.050m);
     }
 
     [Fact]
@@ -236,7 +237,7 @@ public class LlmCostLogRepositoryTests : SharedDatabaseTestBase<LlmCostLogReposi
         var totalCost = await Repository.GetTotalCostAsync(today, today, cancellationToken: TestCancellationToken);
 
         // Assert
-        Assert.Equal(0.003m, totalCost);
+        totalCost.Should().Be(0.003m);
     }
 
     private static LlmCostCalculation CreateCost(decimal totalCost, string provider = "OpenRouter")

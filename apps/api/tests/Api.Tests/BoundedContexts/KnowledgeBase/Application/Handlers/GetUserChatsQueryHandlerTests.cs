@@ -6,6 +6,7 @@ using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.Tests.Constants;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Handlers;
 
@@ -46,10 +47,10 @@ public class GetUserChatsQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal(2, result.Count);
-        Assert.Contains(result, t => t.Title == "Thread 1");
-        Assert.Contains(result, t => t.Title == "Thread 2");
+        result.Should().NotBeNull();
+        result.Count.Should().Be(2);
+        result.Should().Contain(t => t.Title == "Thread 1");
+        result.Should().Contain(t => t.Title == "Thread 2");
 
         _mockRepository.Verify(r => r.FindByUserIdAsync(userId, It.IsAny<CancellationToken>()), Times.Once);
     }
@@ -69,8 +70,8 @@ public class GetUserChatsQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Empty(result);
+        result.Should().NotBeNull();
+        result.Should().BeEmpty();
 
         _mockRepository.Verify(r => r.FindByUserIdAsync(userId, It.IsAny<CancellationToken>()), Times.Once);
     }
@@ -100,12 +101,12 @@ public class GetUserChatsQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal(5, result.Count);
-        Assert.Contains(result, t => t.Title == "Thread 6");
-        Assert.Contains(result, t => t.Title == "Thread 10");
-        Assert.DoesNotContain(result, t => t.Title == "Thread 1");
-        Assert.DoesNotContain(result, t => t.Title == "Thread 11");
+        result.Should().NotBeNull();
+        result.Count.Should().Be(5);
+        result.Should().Contain(t => t.Title == "Thread 6");
+        result.Should().Contain(t => t.Title == "Thread 10");
+        result.Should().NotContain(t => t.Title == "Thread 1");
+        result.Should().NotContain(t => t.Title == "Thread 11");
 
         _mockRepository.Verify(r => r.FindByUserIdAsync(userId, It.IsAny<CancellationToken>()), Times.Once);
     }
@@ -135,8 +136,8 @@ public class GetUserChatsQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Empty(result);
+        result.Should().NotBeNull();
+        result.Should().BeEmpty();
 
         _mockRepository.Verify(r => r.FindByUserIdAsync(userId, It.IsAny<CancellationToken>()), Times.Once);
     }
@@ -166,8 +167,8 @@ public class GetUserChatsQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal(3, result.Count);
+        result.Should().NotBeNull();
+        result.Count.Should().Be(3);
 
         _mockRepository.Verify(r => r.FindByUserIdAsync(userId, It.IsAny<CancellationToken>()), Times.Once);
     }

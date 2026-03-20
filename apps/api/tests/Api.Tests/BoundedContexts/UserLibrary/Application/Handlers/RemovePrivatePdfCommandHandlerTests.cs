@@ -46,8 +46,8 @@ public class RemovePrivatePdfCommandHandlerTests
     public async Task Handle_WithNullCommand_ThrowsArgumentNullException()
     {
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentNullException>(
-            () => _handler.Handle(null!, TestContext.Current.CancellationToken));
+        var act = () => _handler.Handle(null!, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<ArgumentNullException>();
     }
 
     #endregion
@@ -70,7 +70,7 @@ public class RemovePrivatePdfCommandHandlerTests
         var act = () => _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        var exception = await Assert.ThrowsAsync<NotFoundException>(act);
+        var exception = (await ((Func<Task>)(act)).Should().ThrowAsync<NotFoundException>()).Which;
         exception.Message.Should().Contain(entryId.ToString());
 
         _mockUnitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
@@ -101,7 +101,7 @@ public class RemovePrivatePdfCommandHandlerTests
         var act = () => _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        var exception = await Assert.ThrowsAsync<ForbiddenException>(act);
+        var exception = (await ((Func<Task>)(act)).Should().ThrowAsync<ForbiddenException>()).Which;
         exception.Message.Should().Contain("permission");
 
         _mockUnitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
@@ -135,7 +135,7 @@ public class RemovePrivatePdfCommandHandlerTests
         var act = () => _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        var exception = await Assert.ThrowsAsync<NotFoundException>(act);
+        var exception = (await ((Func<Task>)(act)).Should().ThrowAsync<NotFoundException>()).Which;
         exception.Message.Should().Contain(gameId.ToString());
 
         _mockUnitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);

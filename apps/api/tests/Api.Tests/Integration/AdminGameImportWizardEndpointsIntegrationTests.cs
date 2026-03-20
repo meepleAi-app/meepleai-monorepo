@@ -16,6 +16,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Moq;
 using StackExchange.Redis;
+using FluentAssertions;
 using Xunit;
 
 namespace Api.Tests.Integration;
@@ -127,11 +128,11 @@ public sealed class AdminGameImportWizardEndpointsIntegrationTests : IAsyncLifet
             throw new Xunit.Sdk.XunitException($"Expected 200 OK but got {response.StatusCode}. Response: {errorBody}");
         }
 
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
         var result = await response.Content.ReadFromJsonAsync<TempPdfUploadResult>();
-        Assert.NotNull(result);
-        Assert.True(result.Success);
-        Assert.NotEmpty(result.FilePath);
+        result.Should().NotBeNull();
+        result.Success.Should().BeTrue();
+        result.FilePath.Should().NotBeEmpty();
     }
 
     [Fact]
@@ -151,9 +152,9 @@ public sealed class AdminGameImportWizardEndpointsIntegrationTests : IAsyncLifet
         var response = await _client.SendAsync(request);
 
         // Assert
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
         var errorBody = await response.Content.ReadAsStringAsync();
-        Assert.Contains("empty", errorBody.ToLowerInvariant());
+        errorBody.ToLowerInvariant().Should().Contain("empty");
     }
 
     [Fact]
@@ -170,7 +171,7 @@ public sealed class AdminGameImportWizardEndpointsIntegrationTests : IAsyncLifet
         var response = await _client.SendAsync(request);
 
         // Assert
-        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
     [Fact]
@@ -189,7 +190,7 @@ public sealed class AdminGameImportWizardEndpointsIntegrationTests : IAsyncLifet
         var response = await _client.SendAsync(request);
 
         // Assert
-        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
     }
 
     [Fact]
@@ -208,7 +209,7 @@ public sealed class AdminGameImportWizardEndpointsIntegrationTests : IAsyncLifet
         var response = await _client.SendAsync(request);
 
         // Assert
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
     }
 
     // ========================================
@@ -232,9 +233,7 @@ public sealed class AdminGameImportWizardEndpointsIntegrationTests : IAsyncLifet
 
         // Assert
         // May return 200 OK or 404 NotFound (file doesn't exist in test), both acceptable
-        Assert.True(
-            response.StatusCode == HttpStatusCode.OK || response.StatusCode == HttpStatusCode.NotFound,
-            $"Expected 200 OK or 404 NotFound, got {response.StatusCode}");
+        (response.StatusCode == HttpStatusCode.OK || response.StatusCode == HttpStatusCode.NotFound).Should().BeTrue($"Expected 200 OK or 404 NotFound, got {response.StatusCode}");
     }
 
     [Fact]
@@ -253,7 +252,7 @@ public sealed class AdminGameImportWizardEndpointsIntegrationTests : IAsyncLifet
         var response = await _client.SendAsync(request);
 
         // Assert
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
 
     [Fact]
@@ -270,7 +269,7 @@ public sealed class AdminGameImportWizardEndpointsIntegrationTests : IAsyncLifet
         var response = await _client.SendAsync(request);
 
         // Assert
-        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
     // ========================================
@@ -305,7 +304,7 @@ public sealed class AdminGameImportWizardEndpointsIntegrationTests : IAsyncLifet
 
         // Assert
         // May succeed or fail depending on BGG service mock
-        Assert.True(response.StatusCode == HttpStatusCode.OK || response.IsSuccessStatusCode || !response.IsSuccessStatusCode);
+        (response.StatusCode == HttpStatusCode.OK || response.IsSuccessStatusCode || !response.IsSuccessStatusCode).Should().BeTrue();
     }
 
     [Fact]
@@ -325,7 +324,7 @@ public sealed class AdminGameImportWizardEndpointsIntegrationTests : IAsyncLifet
         var response = await _client.SendAsync(request);
 
         // Assert
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
 
     [Fact]
@@ -343,7 +342,7 @@ public sealed class AdminGameImportWizardEndpointsIntegrationTests : IAsyncLifet
         var response = await _client.SendAsync(request);
 
         // Assert
-        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
     // ========================================
@@ -367,9 +366,7 @@ public sealed class AdminGameImportWizardEndpointsIntegrationTests : IAsyncLifet
 
         // Assert
         // May return 201 Created or fail depending on BGG service mock
-        Assert.True(
-            response.StatusCode == HttpStatusCode.Created || !response.IsSuccessStatusCode,
-            $"Expected 201 Created or failure, got {response.StatusCode}");
+        (response.StatusCode == HttpStatusCode.Created || !response.IsSuccessStatusCode).Should().BeTrue($"Expected 201 Created or failure, got {response.StatusCode}");
     }
 
     [Fact]
@@ -388,7 +385,7 @@ public sealed class AdminGameImportWizardEndpointsIntegrationTests : IAsyncLifet
         var response = await _client.SendAsync(request);
 
         // Assert
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
 
     [Fact]
@@ -405,7 +402,7 @@ public sealed class AdminGameImportWizardEndpointsIntegrationTests : IAsyncLifet
         var response = await _client.SendAsync(request);
 
         // Assert
-        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
     // ========================================
@@ -419,7 +416,7 @@ public sealed class AdminGameImportWizardEndpointsIntegrationTests : IAsyncLifet
         var response = await _client.GetAsync("/swagger/v1/swagger.json");
 
         // Assert
-        Assert.True(response.IsSuccessStatusCode || response.StatusCode == HttpStatusCode.NotFound);
+        (response.IsSuccessStatusCode || response.StatusCode == HttpStatusCode.NotFound).Should().BeTrue();
     }
 
     // ========================================

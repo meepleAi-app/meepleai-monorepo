@@ -18,6 +18,7 @@ using System.Diagnostics;
 using Api.Tests.TestHelpers;
 using Api.Tests.Constants;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.Authentication.Security;
 
@@ -116,15 +117,15 @@ public sealed class ApiKeySecurityAuditTests : IDisposable
             .AsNoTracking()
             .FirstOrDefaultAsync(k => k.Id == result.Id);
 
-        Assert.NotNull(storedKey);
-        Assert.NotEqual(plaintextKey, storedKey.KeyHash); // Hash should be different
-        Assert.DoesNotContain(plaintextKey, storedKey.KeyHash); // Key should not be substring of hash
+        storedKey.Should().NotBeNull();
+        storedKey.KeyHash.Should().NotBe(plaintextKey); // Hash should be different
+        storedKey.KeyHash.Should().NotContain(plaintextKey); // Key should not be substring of hash
 
         // Verify only hash and prefix are stored
-        Assert.NotNull(storedKey.KeyHash);
-        Assert.NotNull(storedKey.KeyPrefix);
-        Assert.Equal(8, storedKey.KeyPrefix.Length);
-        Assert.True(storedKey.KeyHash.Length > 40); // SHA256 Base64 hash length
+        storedKey.KeyHash.Should().NotBeNull();
+        storedKey.KeyPrefix.Should().NotBeNull();
+        storedKey.KeyPrefix.Length.Should().Be(8);
+        (storedKey.KeyHash.Length > 40).Should().BeTrue(); // SHA256 Base64 hash length
     }
 
     [Fact]
@@ -165,10 +166,10 @@ public sealed class ApiKeySecurityAuditTests : IDisposable
         // Assert - Should complete but with rate limit consideration
         // NOTE: Current implementation allows all 10, but in production with rate limiting middleware,
         // this would be throttled at API endpoint level (not handler level)
-        Assert.NotEmpty(createdKeys);
+        createdKeys.Should().NotBeEmpty();
 
         // Verify keys are unique (no generation collision under rapid creation)
-        Assert.Equal(createdKeys.Count, createdKeys.Distinct().Count());
+        createdKeys.Distinct().Count().Should().Be(createdKeys.Count);
     }
 
     [Fact]
@@ -189,7 +190,7 @@ public sealed class ApiKeySecurityAuditTests : IDisposable
         );
 
         // Assert - Malicious content stored as-is (sanitization happens at presentation layer)
-        Assert.Equal(maliciousKeyName, apiKey.KeyName);
+        apiKey.KeyName.Should().Be(maliciousKeyName);
 
         // NOTE: XSS prevention is responsibility of UI layer (React escapes by default)
         // This test verifies domain layer doesn't reject valid input
@@ -208,7 +209,7 @@ public sealed class ApiKeySecurityAuditTests : IDisposable
             .FirstOrDefaultAsync(k => k.KeyPrefix == invalidKey.Substring(0, Math.Min(8, invalidKey.Length)));
 
         // Result should be null without exposing the attempted key in any error
-        Assert.Null(key);
+        key.Should().BeNull();
 
         // NOTE: Exception messages from ValidateApiKeyQueryHandler should be generic:
         // ✅ "Invalid API key"
@@ -236,11 +237,11 @@ public sealed class ApiKeySecurityAuditTests : IDisposable
             .AsNoTracking()
             .FirstOrDefaultAsync(k => k.Id == result.Id);
 
-        Assert.NotNull(storedKey);
+        storedKey.Should().NotBeNull();
 
         // Verify key prefix is safe to log (first 8 chars only)
-        Assert.Equal(8, storedKey.KeyPrefix.Length);
-        Assert.StartsWith(storedKey.KeyPrefix, result.PlaintextKey);
+        storedKey.KeyPrefix.Length.Should().Be(8);
+        result.PlaintextKey.Should().StartWith(storedKey.KeyPrefix);
 
         // NOTE: This test verifies API key structure is safe for audit logging
         // Actual usage logging is tested in ApiKeyUsageLogRepository and event handlers
@@ -267,11 +268,10 @@ public sealed class ApiKeySecurityAuditTests : IDisposable
             RequesterId: Guid.NewGuid()
         );
 
-        var exception = await Assert.ThrowsAsync<DomainException>(
-            () => bulkHandler.Handle(command, CancellationToken.None)
-        );
+        var act = () => bulkHandler.Handle(command, CancellationToken.None);
+        var exception = (await act.Should().ThrowAsync<DomainException>()).Which;
 
-        Assert.Contains("cannot be null or empty", exception.Message);
+        exception.Message.Should().Contain("cannot be null or empty");
 
         // NOTE: CSRF protection is enforced at HTTP middleware level (anti-forgery tokens)
         // This test verifies handler validates input and requires authenticated RequesterId
@@ -302,12 +302,12 @@ public sealed class ApiKeySecurityAuditTests : IDisposable
         }
 
         // Assert - All keys must be unique (no collisions)
-        Assert.Equal(100, keys.Count);
-        Assert.Equal(100, keys.Distinct().Count());
+        keys.Count.Should().Be(100);
+        keys.Distinct().Count().Should().Be(100);
 
         // Verify high entropy (keys should not have predictable patterns)
         var uniquePrefixes = keys.Select(k => k.Substring(0, Math.Min(8, k.Length))).Distinct().Count();
-        Assert.True(uniquePrefixes > 95, "Key prefixes should be highly diverse");
+        (uniquePrefixes > 95).Should().BeTrue("Key prefixes should be highly diverse");
     }
 
     public void Dispose()

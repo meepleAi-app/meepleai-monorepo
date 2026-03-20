@@ -1,5 +1,6 @@
 using Api.Tests.Constants;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.Infrastructure.Seeders.LivedIn;
 
@@ -12,6 +13,6 @@ public sealed class LivedInSeederTests
         // LivedIn layer is only invoked when SeedProfile == Staging
         // This is enforced in SeedOrchestrator.ExecuteAsync()
         // Stub seeders log + return immediately
-        Assert.True(true, "Integration test validates full flow");
+        true.Should().BeTrue("Integration test validates full flow");
     }
 }

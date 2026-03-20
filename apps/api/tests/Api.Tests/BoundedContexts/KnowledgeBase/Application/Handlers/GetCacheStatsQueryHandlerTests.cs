@@ -6,6 +6,7 @@ using Api.Tests.Constants;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Handlers;
 
@@ -47,12 +48,12 @@ public class GetCacheStatsQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal(100, result.TotalHits);
-        Assert.Equal(50, result.TotalMisses);
-        Assert.Equal(100.0 / 150.0, result.HitRate, 3); // 100 / 150
-        Assert.Equal(200, result.TotalKeys);
-        Assert.Equal(1024 * 1024, result.CacheSizeBytes);
+        result.Should().NotBeNull();
+        result.TotalHits.Should().Be(100);
+        result.TotalMisses.Should().Be(50);
+        result.HitRate.Should().BeApproximately(100.0 / 150.0, 0.001); // 100 / 150
+        result.TotalKeys.Should().Be(200);
+        result.CacheSizeBytes.Should().Be(1024 * 1024);
 
         _mockHybridCache.Verify(c => c.GetStatsAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
@@ -78,12 +79,12 @@ public class GetCacheStatsQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal(0, result.TotalHits);
-        Assert.Equal(0, result.TotalMisses);
-        Assert.Equal(0, result.HitRate); // Avoid division by zero
-        Assert.Equal(0, result.TotalKeys);
-        Assert.Equal(0, result.CacheSizeBytes);
+        result.Should().NotBeNull();
+        result.TotalHits.Should().Be(0);
+        result.TotalMisses.Should().Be(0);
+        result.HitRate.Should().Be(0); // Avoid division by zero
+        result.TotalKeys.Should().Be(0);
+        result.CacheSizeBytes.Should().Be(0);
     }
 
     [Fact]
@@ -108,17 +109,17 @@ public class GetCacheStatsQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal(50, result.TotalHits);
-        Assert.Equal(25, result.TotalMisses);
-        Assert.Equal(50.0 / 75.0, result.HitRate, 3); // 50 / 75
+        result.Should().NotBeNull();
+        result.TotalHits.Should().Be(50);
+        result.TotalMisses.Should().Be(25);
+        result.HitRate.Should().BeApproximately(50.0 / 75.0, 0.001); // 50 / 75
     }
 
     [Fact]
     public async Task Handle_NullQuery_ThrowsArgumentNullException()
     {
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentNullException>(
-            () => _handler.Handle(null!, TestContext.Current.CancellationToken));
+        Func<Task> act = () => _handler.Handle(null!, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<ArgumentNullException>();
     }
 }

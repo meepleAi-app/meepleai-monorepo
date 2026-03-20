@@ -1,5 +1,6 @@
 using Api.BoundedContexts.SessionTracking.Domain.Entities;
 using Api.Tests.Constants;
+using FluentAssertions;
 using Xunit;
 
 namespace Api.Tests.BoundedContexts.SessionTracking.Domain;
@@ -24,13 +25,13 @@ public class SessionNoteTests
         var note = SessionNote.Create(_sessionId, _participantId, content);
 
         // Assert
-        Assert.NotEqual(Guid.Empty, note.Id);
-        Assert.Equal(_sessionId, note.SessionId);
-        Assert.Equal(_participantId, note.ParticipantId);
-        Assert.False(note.IsRevealed);
-        Assert.False(note.IsDeleted);
-        Assert.NotEmpty(note.EncryptedContent);
-        Assert.NotEqual(content, note.EncryptedContent); // Should be encrypted
+        note.Id.Should().NotBe(Guid.Empty);
+        note.SessionId.Should().Be(_sessionId);
+        note.ParticipantId.Should().Be(_participantId);
+        note.IsRevealed.Should().BeFalse();
+        note.IsDeleted.Should().BeFalse();
+        note.EncryptedContent.Should().NotBeEmpty();
+        note.EncryptedContent.Should().NotBeEquivalentTo(content);
     }
 
     [Fact]
@@ -44,33 +45,37 @@ public class SessionNoteTests
         var note = SessionNote.Create(_sessionId, _participantId, content, obscuredText);
 
         // Assert
-        Assert.Equal(obscuredText, note.ObscuredText);
+        note.ObscuredText.Should().Be(obscuredText);
     }
 
     [Fact]
     public void Create_EmptySessionId_ThrowsArgumentException()
     {
         // Act & Assert
-        Assert.Throws<ArgumentException>(() =>
-            SessionNote.Create(Guid.Empty, _participantId, "content"));
+        var act = () =>
+            SessionNote.Create(Guid.Empty, _participantId, "content");
+        act.Should().Throw<ArgumentException>();
     }
 
     [Fact]
     public void Create_EmptyParticipantId_ThrowsArgumentException()
     {
         // Act & Assert
-        Assert.Throws<ArgumentException>(() =>
-            SessionNote.Create(_sessionId, Guid.Empty, "content"));
+        var act2 = () =>
+            SessionNote.Create(_sessionId, Guid.Empty, "content");
+        act2.Should().Throw<ArgumentException>();
     }
 
     [Fact]
     public void Create_EmptyContent_ThrowsArgumentException()
     {
         // Act & Assert
-        Assert.Throws<ArgumentException>(() =>
-            SessionNote.Create(_sessionId, _participantId, ""));
-        Assert.Throws<ArgumentException>(() =>
-            SessionNote.Create(_sessionId, _participantId, "   "));
+        var act3 = () =>
+            SessionNote.Create(_sessionId, _participantId, "");
+        act3.Should().Throw<ArgumentException>();
+        var act4 = () =>
+            SessionNote.Create(_sessionId, _participantId, "   ");
+        act4.Should().Throw<ArgumentException>();
     }
 
     [Fact]
@@ -84,7 +89,7 @@ public class SessionNoteTests
         var decrypted = note.GetDecryptedContent();
 
         // Assert
-        Assert.Equal(content, decrypted);
+        decrypted.Should().BeEquivalentTo(content);
     }
 
     [Fact]
@@ -98,7 +103,7 @@ public class SessionNoteTests
         var result = note.GetContent(_participantId); // Owner requesting
 
         // Assert
-        Assert.Equal(content, result);
+        result.Should().BeEquivalentTo(content);
     }
 
     [Fact]
@@ -114,7 +119,7 @@ public class SessionNoteTests
         var result = note.GetContent(otherParticipant);
 
         // Assert
-        Assert.Equal(obscuredText, result);
+        result.Should().Be(obscuredText);
     }
 
     [Fact]
@@ -128,7 +133,7 @@ public class SessionNoteTests
         var result = note.GetContent(otherParticipant);
 
         // Assert
-        Assert.Equal("***", result);
+        result.Should().Be("***");
     }
 
     [Fact]
@@ -144,7 +149,7 @@ public class SessionNoteTests
         var result = note.GetContent(otherParticipant);
 
         // Assert
-        Assert.Equal(content, result);
+        result.Should().BeEquivalentTo(content);
     }
 
     [Fact]
@@ -159,8 +164,8 @@ public class SessionNoteTests
         note.Reveal();
 
         // Assert
-        Assert.True(note.IsRevealed);
-        Assert.True(note.UpdatedAt > originalUpdatedAt);
+        note.IsRevealed.Should().BeTrue();
+        (note.UpdatedAt > originalUpdatedAt).Should().BeTrue();
     }
 
     [Fact]
@@ -174,7 +179,7 @@ public class SessionNoteTests
         note.Hide();
 
         // Assert
-        Assert.False(note.IsRevealed);
+        note.IsRevealed.Should().BeFalse();
     }
 
     [Fact]
@@ -188,8 +193,8 @@ public class SessionNoteTests
         note.UpdateContent("updated content");
 
         // Assert
-        Assert.NotEqual(originalEncrypted, note.EncryptedContent);
-        Assert.Equal("updated content", note.GetDecryptedContent());
+        note.EncryptedContent.Should().NotBe(originalEncrypted);
+        note.GetDecryptedContent().Should().Be("updated content");
     }
 
     [Fact]
@@ -199,7 +204,8 @@ public class SessionNoteTests
         var note = SessionNote.Create(_sessionId, _participantId, "content");
 
         // Act & Assert
-        Assert.Throws<ArgumentException>(() => note.UpdateContent(""));
+        var act5 = () => note.UpdateContent("");
+        act5.Should().Throw<ArgumentException>();
     }
 
     [Fact]
@@ -212,7 +218,7 @@ public class SessionNoteTests
         note.UpdateObscuredText("new hint");
 
         // Assert
-        Assert.Equal("new hint", note.ObscuredText);
+        note.ObscuredText.Should().Be("new hint");
     }
 
     [Fact]
@@ -225,7 +231,7 @@ public class SessionNoteTests
         note.UpdateObscuredText(null);
 
         // Assert
-        Assert.Null(note.ObscuredText);
+        note.ObscuredText.Should().BeNull();
     }
 
     [Fact]
@@ -235,7 +241,7 @@ public class SessionNoteTests
         var note = SessionNote.Create(_sessionId, _participantId, "content");
 
         // Act & Assert
-        Assert.True(note.CanView(_participantId));
+        note.CanView(_participantId).Should().BeTrue();
     }
 
     [Fact]
@@ -246,7 +252,7 @@ public class SessionNoteTests
         var otherParticipant = Guid.NewGuid();
 
         // Act & Assert
-        Assert.False(note.CanView(otherParticipant));
+        note.CanView(otherParticipant).Should().BeFalse();
     }
 
     [Fact]
@@ -258,7 +264,7 @@ public class SessionNoteTests
         var otherParticipant = Guid.NewGuid();
 
         // Act & Assert
-        Assert.True(note.CanView(otherParticipant));
+        note.CanView(otherParticipant).Should().BeTrue();
     }
 
     [Fact]
@@ -271,8 +277,8 @@ public class SessionNoteTests
         note.SoftDelete();
 
         // Assert
-        Assert.True(note.IsDeleted);
-        Assert.NotNull(note.DeletedAt);
+        note.IsDeleted.Should().BeTrue();
+        note.DeletedAt.Should().NotBeNull();
     }
 
     [Fact]
@@ -298,15 +304,15 @@ public class SessionNoteTests
             deletedAt: null);
 
         // Assert
-        Assert.Equal(id, note.Id);
-        Assert.Equal(_sessionId, note.SessionId);
-        Assert.Equal(_participantId, note.ParticipantId);
-        Assert.Equal(encryptedContent, note.EncryptedContent);
-        Assert.True(note.IsRevealed);
-        Assert.Equal("hint", note.ObscuredText);
-        Assert.Equal(createdAt, note.CreatedAt);
-        Assert.Equal(updatedAt, note.UpdatedAt);
-        Assert.False(note.IsDeleted);
+        note.Id.Should().Be(id);
+        note.SessionId.Should().Be(_sessionId);
+        note.ParticipantId.Should().Be(_participantId);
+        note.EncryptedContent.Should().Be(encryptedContent);
+        note.IsRevealed.Should().BeTrue();
+        note.ObscuredText.Should().Be("hint");
+        note.CreatedAt.Should().Be(createdAt);
+        note.UpdatedAt.Should().Be(updatedAt);
+        note.IsDeleted.Should().BeFalse();
     }
 
     [Fact]
@@ -321,9 +327,9 @@ public class SessionNoteTests
         var note2 = SessionNote.Create(_sessionId, _participantId, content2);
 
         // Assert
-        Assert.Equal(content1, note1.GetDecryptedContent());
-        Assert.Equal(content2, note2.GetDecryptedContent());
-        Assert.NotEqual(note1.EncryptedContent, note2.EncryptedContent);
+        note1.GetDecryptedContent().Should().Be(content1);
+        note2.GetDecryptedContent().Should().Be(content2);
+        note2.EncryptedContent.Should().NotBe(note1.EncryptedContent);
     }
 
     [Fact]
@@ -337,7 +343,7 @@ public class SessionNoteTests
         var decrypted = note.GetDecryptedContent();
 
         // Assert
-        Assert.Equal(content, decrypted);
+        decrypted.Should().BeEquivalentTo(content);
     }
 
     [Fact]
@@ -351,6 +357,6 @@ public class SessionNoteTests
         var decrypted = note.GetDecryptedContent();
 
         // Assert
-        Assert.Equal(content, decrypted);
+        decrypted.Should().BeEquivalentTo(content);
     }
 }

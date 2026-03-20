@@ -9,6 +9,7 @@ using Api.SharedKernel.Domain.Exceptions;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Moq;
 using Xunit;
+using FluentAssertions;
 using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.Administration.Application.Handlers;
@@ -52,10 +53,10 @@ public class CreateUserCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal("newuser@example.com", result.Email);
-        Assert.Equal("Test User", result.DisplayName);
-        Assert.Equal(Role.User.Value, result.Role);
+        result.Should().NotBeNull();
+        result.Email.Should().Be("newuser@example.com");
+        result.DisplayName.Should().Be("Test User");
+        result.Role.Should().Be(Role.User.Value);
         _mockUserRepository.Verify(
             r => r.AddAsync(It.IsAny<User>(), It.IsAny<CancellationToken>()),
             Times.Once);
@@ -83,8 +84,8 @@ public class CreateUserCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal(Role.Admin.Value, result.Role);
+        result.Should().NotBeNull();
+        result.Role.Should().Be(Role.Admin.Value);
         _mockUserRepository.Verify(
             r => r.AddAsync(It.Is<User>(u => u.Role.Value == Role.Admin.Value), It.IsAny<CancellationToken>()),
             Times.Once);
@@ -114,10 +115,10 @@ public class CreateUserCommandHandlerTests
             .ReturnsAsync(existingUser);
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<DomainException>(
-            () => _handler.Handle(command, TestContext.Current.CancellationToken));
-        Assert.Contains("existing@example.com", exception.Message);
-        Assert.Contains("already exists", exception.Message);
+        var act = () => _handler.Handle(command, TestContext.Current.CancellationToken);
+        var exception = (await act.Should().ThrowAsync<DomainException>()).Which;
+        exception.Message.Should().Contain("existing@example.com");
+        exception.Message.Should().Contain("already exists");
 
         _mockUserRepository.Verify(
             r => r.AddAsync(It.IsAny<User>(), It.IsAny<CancellationToken>()),
@@ -146,8 +147,8 @@ public class CreateUserCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.Equal(Role.Editor.Value, result.Role);
-        Assert.Null(result.LastSeenAt); // New users have no sessions yet
+        result.Role.Should().Be(Role.Editor.Value);
+        result.LastSeenAt.Should().BeNull(); // New users have no sessions yet
     }
 
     [Fact]
@@ -174,9 +175,9 @@ public class CreateUserCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(capturedUser);
-        Assert.Equal("Test User", capturedUser.DisplayName); // No whitespace
-        Assert.Equal("Test User", result.DisplayName);
+        capturedUser.Should().NotBeNull();
+        capturedUser.DisplayName.Should().Be("Test User"); // No whitespace
+        result.DisplayName.Should().Be("Test User");
     }
 
     // === VALIDATION FAILURE TESTS (Week 10-11 Part 1) ===
@@ -190,8 +191,8 @@ public class CreateUserCommandHandlerTests
         var command = new CreateUserCommand(emptyEmail, "Password123!", "Test User", "User");
 
         // Act & Assert
-        await Assert.ThrowsAsync<Api.SharedKernel.Domain.Exceptions.ValidationException>(
-            () => _handler.Handle(command, TestContext.Current.CancellationToken));
+        var act = () => _handler.Handle(command, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<Api.SharedKernel.Domain.Exceptions.ValidationException>();
 
         _mockUserRepository.Verify(r => r.AddAsync(It.IsAny<User>(), It.IsAny<CancellationToken>()), Times.Never);
     }
@@ -205,8 +206,8 @@ public class CreateUserCommandHandlerTests
         var command = new CreateUserCommand(longEmail, "TestPassword123!", "Test User", "User");
 
         // Act & Assert
-        await Assert.ThrowsAsync<Api.SharedKernel.Domain.Exceptions.ValidationException>(
-            () => _handler.Handle(command, TestContext.Current.CancellationToken));
+        var act = () => _handler.Handle(command, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<Api.SharedKernel.Domain.Exceptions.ValidationException>();
 
         _mockUserRepository.Verify(r => r.AddAsync(It.IsAny<User>(), It.IsAny<CancellationToken>()), Times.Never);
     }
@@ -223,8 +224,8 @@ public class CreateUserCommandHandlerTests
         var command = new CreateUserCommand(invalidEmail, "TestPassword123!", "Test User", "User");
 
         // Act & Assert
-        await Assert.ThrowsAsync<Api.SharedKernel.Domain.Exceptions.ValidationException>(
-            () => _handler.Handle(command, TestContext.Current.CancellationToken));
+        var act = () => _handler.Handle(command, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<Api.SharedKernel.Domain.Exceptions.ValidationException>();
 
         _mockUserRepository.Verify(r => r.GetByEmailAsync(It.IsAny<Email>(), It.IsAny<CancellationToken>()), Times.Never);
     }
@@ -236,8 +237,8 @@ public class CreateUserCommandHandlerTests
         var command = new CreateUserCommand("user@example.com", "TestPassword123!", "Test User", "InvalidRole");
 
         // Act & Assert
-        await Assert.ThrowsAsync<Api.SharedKernel.Domain.Exceptions.ValidationException>(
-            () => _handler.Handle(command, TestContext.Current.CancellationToken));
+        var act = () => _handler.Handle(command, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<Api.SharedKernel.Domain.Exceptions.ValidationException>();
 
         _mockUserRepository.Verify(r => r.AddAsync(It.IsAny<User>(), It.IsAny<CancellationToken>()), Times.Never);
     }
@@ -255,8 +256,8 @@ public class CreateUserCommandHandlerTests
             .ReturnsAsync((User?)null);
 
         // Act & Assert
-        await Assert.ThrowsAsync<Api.SharedKernel.Domain.Exceptions.ValidationException>(
-            () => _handler.Handle(command, TestContext.Current.CancellationToken));
+        var act = () => _handler.Handle(command, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<Api.SharedKernel.Domain.Exceptions.ValidationException>();
 
         // Email validation happens before password, so GetByEmailAsync IS called
         _mockUserRepository.Verify(r => r.AddAsync(It.IsAny<User>(), It.IsAny<CancellationToken>()), Times.Never);
@@ -275,8 +276,8 @@ public class CreateUserCommandHandlerTests
             .ReturnsAsync((User?)null);
 
         // Act & Assert
-        await Assert.ThrowsAsync<Api.SharedKernel.Domain.Exceptions.ValidationException>(
-            () => _handler.Handle(command, TestContext.Current.CancellationToken));
+        var act = () => _handler.Handle(command, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<Api.SharedKernel.Domain.Exceptions.ValidationException>();
 
         // Email validation happens before password, so GetByEmailAsync IS called
         _mockUserRepository.Verify(r => r.AddAsync(It.IsAny<User>(), It.IsAny<CancellationToken>()), Times.Never);

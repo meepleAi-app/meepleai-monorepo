@@ -11,6 +11,7 @@ using Api.Tests.Constants;
 using LibraryAgentConfig = Api.BoundedContexts.UserLibrary.Domain.ValueObjects.AgentConfiguration;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Handlers;
 
@@ -42,15 +43,15 @@ public class GetRecentAgentsQueryHandlerTests
     [Fact]
     public void Constructor_WithNullAgentRepository_ThrowsArgumentNullException()
     {
-        var act = () => new GetRecentAgentsQueryHandler(null!, _libraryRepo.Object);
-        Assert.Throws<ArgumentNullException>(act);
+        Action act = () => new GetRecentAgentsQueryHandler(null!, _libraryRepo.Object);
+        act.Should().Throw<ArgumentNullException>();
     }
 
     [Fact]
     public void Constructor_WithNullLibraryRepository_ThrowsArgumentNullException()
     {
-        var act = () => new GetRecentAgentsQueryHandler(_agentRepo.Object, null!);
-        Assert.Throws<ArgumentNullException>(act);
+        Action act = () => new GetRecentAgentsQueryHandler(_agentRepo.Object, null!);
+        act.Should().Throw<ArgumentNullException>();
     }
 
     // ── No UserId ─────────────────────────────────────────────────────────────
@@ -62,7 +63,7 @@ public class GetRecentAgentsQueryHandlerTests
 
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
-        Assert.Empty(result);
+        result.Should().BeEmpty();
         _agentRepo.Verify(r => r.GetByUserIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Never);
         _libraryRepo.Verify(r => r.GetUserGamesAsync(It.IsAny<Guid>(), It.IsAny<GameStateType?>(), It.IsAny<CancellationToken>()), Times.Never);
     }
@@ -81,8 +82,8 @@ public class GetRecentAgentsQueryHandlerTests
 
         var result = await _handler.Handle(new GetRecentAgentsQuery(Limit: 10, UserId: UserId), TestContext.Current.CancellationToken);
 
-        Assert.Single(result);
-        Assert.Equal("Catan Agent", result[0].Name);
+        result.Should().ContainSingle();
+        result[0].Name.Should().Be("Catan Agent");
     }
 
     [Fact]
@@ -97,7 +98,7 @@ public class GetRecentAgentsQueryHandlerTests
 
         var result = await _handler.Handle(new GetRecentAgentsQuery(Limit: 10, UserId: UserId), TestContext.Current.CancellationToken);
 
-        Assert.Empty(result);
+        result.Should().BeEmpty();
     }
 
     // ── Agents from library CustomAgentConfig ─────────────────────────────────
@@ -115,10 +116,10 @@ public class GetRecentAgentsQueryHandlerTests
 
         var result = await _handler.Handle(new GetRecentAgentsQuery(Limit: 10, UserId: UserId), TestContext.Current.CancellationToken);
 
-        Assert.Single(result);
-        Assert.Equal("Esperto", result[0].Name);
-        Assert.Equal("Custom", result[0].Type);
-        Assert.Equal(GameId, result[0].GameId);
+        result.Should().ContainSingle();
+        result[0].Name.Should().Be("Esperto");
+        result[0].Type.Should().Be("Custom");
+        result[0].GameId.Should().Be(GameId);
     }
 
     [Fact]
@@ -135,7 +136,7 @@ public class GetRecentAgentsQueryHandlerTests
 
         var result = await _handler.Handle(new GetRecentAgentsQuery(Limit: 10, UserId: UserId), TestContext.Current.CancellationToken);
 
-        Assert.Empty(result);
+        result.Should().BeEmpty();
     }
 
     // ── Merge & dedup ─────────────────────────────────────────────────────────
@@ -158,9 +159,9 @@ public class GetRecentAgentsQueryHandlerTests
         var result = await _handler.Handle(new GetRecentAgentsQuery(Limit: 10, UserId: UserId), TestContext.Current.CancellationToken);
 
         // sharedId deduped → agent table wins; distinctEntry kept
-        Assert.Equal(2, result.Count);
-        Assert.Contains(result, a => a.Id == sharedId && a.Name == "Agent A");
-        Assert.Contains(result, a => a.Name == "Coach");
+        result.Count.Should().Be(2);
+        result.Should().Contain(a => a.Id == sharedId && a.Name == "Agent A");
+        result.Should().Contain(a => a.Name == "Coach");
     }
 
     [Fact]
@@ -178,7 +179,7 @@ public class GetRecentAgentsQueryHandlerTests
 
         var result = await _handler.Handle(new GetRecentAgentsQuery(Limit: 3, UserId: UserId), TestContext.Current.CancellationToken);
 
-        Assert.Equal(3, result.Count);
+        result.Count.Should().Be(3);
     }
 
     // ── Personality parsing ───────────────────────────────────────────────────
@@ -199,8 +200,8 @@ public class GetRecentAgentsQueryHandlerTests
 
         var result = await _handler.Handle(new GetRecentAgentsQuery(Limit: 10, UserId: UserId), TestContext.Current.CancellationToken);
 
-        Assert.Single(result);
-        Assert.Equal(expectedName, result[0].Name);
+        result.Should().ContainSingle();
+        result[0].Name.Should().Be(expectedName);
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────

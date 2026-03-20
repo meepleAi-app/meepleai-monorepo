@@ -6,6 +6,7 @@ using Api.BoundedContexts.Administration.Domain.Services;
 using Api.Tests.Constants;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.Administration.Application.Handlers;
 
@@ -70,32 +71,32 @@ public class GetActivityTimelineQueryHandlerTests
         var result = await _handler.Handle(query, CancellationToken.None);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal(3, result.TotalCount);
-        Assert.Equal(3, result.Activities.Count);
+        result.Should().NotBeNull();
+        result.TotalCount.Should().Be(3);
+        result.Activities.Count.Should().Be(3);
 
         // Verify game_added mapping
         var gameActivity = result.Activities[0];
-        Assert.Equal("game_added", gameActivity.Type);
-        Assert.NotNull(gameActivity.GameName);
-        Assert.Equal("Catan", gameActivity.GameName);
-        Assert.NotNull(gameActivity.CoverUrl);
-        Assert.Null(gameActivity.SessionId);
-        Assert.Null(gameActivity.ChatId);
+        gameActivity.Type.Should().Be("game_added");
+        gameActivity.GameName.Should().NotBeNull();
+        gameActivity.GameName.Should().Be("Catan");
+        gameActivity.CoverUrl.Should().NotBeNull();
+        gameActivity.SessionId.Should().BeNull();
+        gameActivity.ChatId.Should().BeNull();
 
         // Verify session_completed mapping
         var sessionActivity = result.Activities[1];
-        Assert.Equal("session_completed", sessionActivity.Type);
-        Assert.NotNull(sessionActivity.SessionId);
-        Assert.Equal(90, sessionActivity.Duration);
-        Assert.Null(sessionActivity.GameId);
+        sessionActivity.Type.Should().Be("session_completed");
+        sessionActivity.SessionId.Should().NotBeNull();
+        sessionActivity.Duration.Should().Be(90);
+        sessionActivity.GameId.Should().BeNull();
 
         // Verify chat_saved mapping
         var chatActivity = result.Activities[2];
-        Assert.Equal("chat_saved", chatActivity.Type);
-        Assert.NotNull(chatActivity.ChatId);
-        Assert.Equal("Rules clarification", chatActivity.Topic);
-        Assert.Null(chatActivity.GameId);
+        chatActivity.Type.Should().Be("chat_saved");
+        chatActivity.ChatId.Should().NotBeNull();
+        chatActivity.Topic.Should().Be("Rules clarification");
+        chatActivity.GameId.Should().BeNull();
     }
 
     [Fact]
@@ -115,9 +116,9 @@ public class GetActivityTimelineQueryHandlerTests
         var result = await _handler.Handle(query, CancellationToken.None);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Empty(result.Activities);
-        Assert.Equal(0, result.TotalCount);
+        result.Should().NotBeNull();
+        result.Activities.Should().BeEmpty();
+        result.TotalCount.Should().Be(0);
     }
 
     [Fact]
@@ -179,13 +180,13 @@ public class GetActivityTimelineQueryHandlerTests
         var result = await _handler.Handle(query, CancellationToken.None);
 
         // Assert
-        Assert.Single(result.Activities);
+        result.Activities.Should().ContainSingle();
         var dto = result.Activities[0];
-        Assert.Equal("wishlist_added", dto.Type);
-        Assert.NotNull(dto.GameId);
-        Assert.Equal("Terraforming Mars", dto.GameName);
-        Assert.Null(dto.SessionId);
-        Assert.Null(dto.ChatId);
+        dto.Type.Should().Be("wishlist_added");
+        dto.GameId.Should().NotBeNull();
+        dto.GameName.Should().Be("Terraforming Mars");
+        dto.SessionId.Should().BeNull();
+        dto.ChatId.Should().BeNull();
     }
 
     [Fact]
@@ -225,8 +226,8 @@ public class GetActivityTimelineQueryHandlerTests
         var result = await _handler.Handle(query, CancellationToken.None);
 
         // Assert
-        Assert.Equal(2, result.Activities.Count);
-        Assert.Equal(10, result.TotalCount);
+        result.Activities.Count.Should().Be(2);
+        result.TotalCount.Should().Be(10);
     }
 
     [Fact]
@@ -308,9 +309,9 @@ public class GetActivityTimelineQueryHandlerTests
         var result = await _handler.Handle(query, CancellationToken.None);
 
         // Assert
-        Assert.Equal(3, result.Page); // skip=20, take=10 → page 3
-        Assert.Equal(10, result.PageSize);
-        Assert.True(result.HasMore); // 20+10=30 < 50
+        result.Page.Should().Be(3); // skip=20, take=10 → page 3
+        result.PageSize.Should().Be(10);
+        result.HasMore.Should().BeTrue(); // 20+10=30 < 50
     }
 
     [Fact]
@@ -330,6 +331,6 @@ public class GetActivityTimelineQueryHandlerTests
         var result = await _handler.Handle(query, CancellationToken.None);
 
         // Assert
-        Assert.False(result.HasMore); // 8+5=13 >= 10
+        result.HasMore.Should().BeFalse(); // 8+5=13 >= 10
     }
 }

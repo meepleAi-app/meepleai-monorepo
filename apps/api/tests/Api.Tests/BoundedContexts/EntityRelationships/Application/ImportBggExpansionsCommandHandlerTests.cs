@@ -4,6 +4,7 @@ using Api.Tests.Constants;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.EntityRelationships.Application;
 
@@ -39,7 +40,7 @@ public class ImportBggExpansionsCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.Equal(5, result);
+        result.Should().Be(5);
         _importerMock.Verify(
             i => i.ImportExpansionsAsync(_sharedGameId, _adminUserId, It.IsAny<CancellationToken>()),
             Times.Once);
@@ -59,7 +60,7 @@ public class ImportBggExpansionsCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.Equal(0, result);
+        result.Should().Be(0);
     }
 
     [Fact]

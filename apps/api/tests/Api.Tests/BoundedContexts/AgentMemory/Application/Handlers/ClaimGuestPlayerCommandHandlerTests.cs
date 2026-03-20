@@ -10,6 +10,7 @@ using Api.Tests.Constants;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.AgentMemory.Application.Handlers;
 
@@ -59,8 +60,8 @@ public class ClaimGuestPlayerCommandHandlerTests
         await _handler.Handle(command, CancellationToken.None);
 
         // Assert
-        Assert.Equal(userId, guestMemory.UserId);
-        Assert.NotNull(guestMemory.ClaimedAt);
+        guestMemory.UserId.Should().Be(userId);
+        guestMemory.ClaimedAt.Should().NotBeNull();
 
         _playerRepoMock.Verify(r => r.UpdateAsync(guestMemory, It.IsAny<CancellationToken>()), Times.Once);
         _unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
@@ -81,8 +82,8 @@ public class ClaimGuestPlayerCommandHandlerTests
             .ReturnsAsync(guestMemory);
 
         // Act & Assert
-        await Assert.ThrowsAsync<InvalidOperationException>(
-            () => _handler.Handle(command, CancellationToken.None));
+        var act = () => _handler.Handle(command, CancellationToken.None);
+        await act.Should().ThrowAsync<InvalidOperationException>();
     }
 
     [Fact]
@@ -97,8 +98,8 @@ public class ClaimGuestPlayerCommandHandlerTests
             .ReturnsAsync((PlayerMemory?)null);
 
         // Act & Assert
-        await Assert.ThrowsAsync<NotFoundException>(
-            () => _handler.Handle(command, CancellationToken.None));
+        var act2 = () => _handler.Handle(command, CancellationToken.None);
+        await act2.Should().ThrowAsync<NotFoundException>();
     }
 
     [Fact]
@@ -112,7 +113,7 @@ public class ClaimGuestPlayerCommandHandlerTests
         var command = new ClaimGuestPlayerCommand(Guid.NewGuid(), Guid.NewGuid());
 
         // Act & Assert
-        await Assert.ThrowsAsync<InvalidOperationException>(
-            () => _handler.Handle(command, CancellationToken.None));
+        var act3 = () => _handler.Handle(command, CancellationToken.None);
+        await act3.Should().ThrowAsync<InvalidOperationException>();
     }
 }

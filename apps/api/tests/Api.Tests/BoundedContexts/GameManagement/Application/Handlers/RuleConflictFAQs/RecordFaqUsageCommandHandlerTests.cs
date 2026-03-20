@@ -9,6 +9,7 @@ using Api.SharedKernel.Infrastructure.Persistence;
 using Api.Tests.Constants;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.GameManagement.Application.Handlers.RuleConflictFAQs;
 
@@ -71,7 +72,7 @@ public sealed class RecordFaqUsageCommandHandlerTests
         await _handler.Handle(command, CancellationToken.None);
 
         // Assert
-        Assert.Equal(initialUsageCount + 1, existingFaq.UsageCount);
+        existingFaq.UsageCount.Should().Be(initialUsageCount + 1);
         _faqRepositoryMock.Verify(r => r.GetByIdAsync(faqId, It.IsAny<CancellationToken>()), Times.Once);
         _faqRepositoryMock.Verify(r => r.UpdateAsync(
             It.Is<RuleConflictFAQ>(f => f.UsageCount == initialUsageCount + 1),
@@ -90,11 +91,12 @@ public sealed class RecordFaqUsageCommandHandlerTests
             .ReturnsAsync((RuleConflictFAQ?)null);
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<NotFoundException>(() =>
-            _handler.Handle(command, CancellationToken.None));
+        var act = () =>
+            _handler.Handle(command, CancellationToken.None);
+        var exception = (await act.Should().ThrowAsync<NotFoundException>()).Which;
 
-        Assert.Contains("RuleConflictFAQ", exception.Message);
-        Assert.Contains(faqId.ToString(), exception.Message);
+        exception.Message.Should().Contain("RuleConflictFAQ");
+        exception.Message.Should().Contain(faqId.ToString());
         _faqRepositoryMock.Verify(r => r.UpdateAsync(
             It.IsAny<RuleConflictFAQ>(),
             It.IsAny<CancellationToken>()), Times.Never);
@@ -135,51 +137,56 @@ public sealed class RecordFaqUsageCommandHandlerTests
 
         // Assert
         var domainEvents = existingFaq.DomainEvents;
-        Assert.Single(domainEvents);
-        var usedEvent = Assert.IsType<RuleConflictFAQUsedEvent>(domainEvents.First());
-        Assert.Equal(faqId, usedEvent.FAQId);
-        Assert.Equal(gameId, usedEvent.GameId);
-        Assert.Equal(1, usedEvent.TotalUsageCount); // First usage after creation
+        domainEvents.Should().ContainSingle();
+        domainEvents.First().Should().BeOfType<RuleConflictFAQUsedEvent>();
+        var usedEvent = (RuleConflictFAQUsedEvent)domainEvents.First();
+        usedEvent.FAQId.Should().Be(faqId);
+        usedEvent.GameId.Should().Be(gameId);
+        usedEvent.TotalUsageCount.Should().Be(1); // First usage after creation
     }
 
     [Fact]
     public async Task Handle_WithNullCommand_ThrowsArgumentNullException()
     {
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentNullException>(() =>
-            _handler.Handle(null!, CancellationToken.None));
+        var act = () =>
+            _handler.Handle(null!, CancellationToken.None);
+        await act.Should().ThrowAsync<ArgumentNullException>();
     }
 
     [Fact]
     public void Constructor_WithNullRepository_ThrowsArgumentNullException()
     {
         // Act & Assert
-        Assert.Throws<ArgumentNullException>(() =>
+        var act = () =>
             new RecordFaqUsageCommandHandler(
                 null!,
                 _unitOfWorkMock.Object,
-                _timeProviderMock.Object));
+                _timeProviderMock.Object);
+        act.Should().Throw<ArgumentNullException>();
     }
 
     [Fact]
     public void Constructor_WithNullUnitOfWork_ThrowsArgumentNullException()
     {
         // Act & Assert
-        Assert.Throws<ArgumentNullException>(() =>
+        var act = () =>
             new RecordFaqUsageCommandHandler(
                 _faqRepositoryMock.Object,
                 null!,
-                _timeProviderMock.Object));
+                _timeProviderMock.Object);
+        act.Should().Throw<ArgumentNullException>();
     }
 
     [Fact]
     public void Constructor_WithNullTimeProvider_ThrowsArgumentNullException()
     {
         // Act & Assert
-        Assert.Throws<ArgumentNullException>(() =>
+        var act = () =>
             new RecordFaqUsageCommandHandler(
                 _faqRepositoryMock.Object,
                 _unitOfWorkMock.Object,
-                null!));
+                null!);
+        act.Should().Throw<ArgumentNullException>();
     }
 }

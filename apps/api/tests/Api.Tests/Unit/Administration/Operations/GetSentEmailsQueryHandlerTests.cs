@@ -6,6 +6,7 @@ using Api.BoundedContexts.Administration.Domain.Repositories;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.Unit.Administration.Operations;
 
@@ -64,11 +65,11 @@ public sealed class GetSentEmailsQueryHandlerTests
         var result = await _handler.Handle(query, CancellationToken.None);
 
         // Assert
-        Assert.Equal(2, result.Emails.Count);
-        Assert.Equal(2, result.Total);
-        Assert.Equal("user@test.com", result.Emails[0].To);
-        Assert.Equal("Welcome Email", result.Emails[0].Subject);
-        Assert.Equal("success", result.Emails[0].Status);
+        result.Emails.Count.Should().Be(2);
+        result.Total.Should().Be(2);
+        result.Emails[0].To.Should().Be("user@test.com");
+        result.Emails[0].Subject.Should().Be("Welcome Email");
+        result.Emails[0].Status.Should().Be("success");
     }
 
     [Fact]
@@ -100,9 +101,9 @@ public sealed class GetSentEmailsQueryHandlerTests
         var result = await _handler.Handle(query, CancellationToken.None);
 
         // Assert
-        Assert.Single(result.Emails);
-        Assert.Equal("failed", result.Emails[0].Status);
-        Assert.Equal("SMTP connection timeout", result.Emails[0].ErrorMessage);
+        result.Emails.Should().ContainSingle();
+        result.Emails[0].Status.Should().Be("failed");
+        result.Emails[0].ErrorMessage.Should().Be("SMTP connection timeout");
     }
 
     [Fact]
@@ -125,9 +126,9 @@ public sealed class GetSentEmailsQueryHandlerTests
         var result = await _handler.Handle(query, CancellationToken.None);
 
         // Assert
-        Assert.Equal(150, result.Total);
-        Assert.Equal(25, result.Limit);
-        Assert.Equal(50, result.Offset);
+        result.Total.Should().Be(150);
+        result.Limit.Should().Be(25);
+        result.Offset.Should().Be(50);
     }
 
     private static AuditLog CreateEmailLog(

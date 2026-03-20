@@ -1,5 +1,6 @@
 using Api.BoundedContexts.KnowledgeBase.Domain.GridSearch;
 using Xunit;
+using FluentAssertions;
 using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Domain.GridSearch;
@@ -19,7 +20,7 @@ public class GridSearchConfigurationTests
 
         // Assert
         // 3 chunking x 2 quantization x 2 reranking = 12
-        Assert.Equal(12, configs.Count);
+        configs.Count.Should().Be(12);
     }
 
     [Fact]
@@ -30,7 +31,7 @@ public class GridSearchConfigurationTests
         var configIds = configs.Select(c => c.ConfigurationId).ToList();
 
         // Assert
-        Assert.Equal(configs.Count, configIds.Distinct().Count());
+        configIds.Distinct().Count().Should().Be(configs.Count);
     }
 
     [Fact]
@@ -40,7 +41,7 @@ public class GridSearchConfigurationTests
         var configs = GridSearchConfiguration.GetQuickConfigurations();
 
         // Assert
-        Assert.Equal(3, configs.Count);
+        configs.Count.Should().Be(3);
     }
 
     [Fact]
@@ -51,9 +52,9 @@ public class GridSearchConfigurationTests
         var configIds = configs.Select(c => c.ConfigurationId).ToList();
 
         // Assert
-        Assert.Contains("baseline_none_no_rerank", configIds);
-        Assert.Contains("baseline_none_bge_rerank", configIds);
-        Assert.Contains("dense_scalar_int8_bge_rerank", configIds);
+        configIds.Should().Contain("baseline_none_no_rerank");
+        configIds.Should().Contain("baseline_none_bge_rerank");
+        configIds.Should().Contain("dense_scalar_int8_bge_rerank");
     }
 
     [Fact]
@@ -63,9 +64,9 @@ public class GridSearchConfigurationTests
         var configs = GridSearchConfiguration.GetAllConfigurations();
 
         // Assert - Should contain dense, baseline, and sparse chunking
-        Assert.True(configs.Any(c => c.Chunking.Name == "dense"));
-        Assert.True(configs.Any(c => c.Chunking.Name == "baseline"));
-        Assert.True(configs.Any(c => c.Chunking.Name == "sparse"));
+        configs.Any(c => c.Chunking.Name == "dense").Should().BeTrue();
+        configs.Any(c => c.Chunking.Name == "baseline").Should().BeTrue();
+        configs.Any(c => c.Chunking.Name == "sparse").Should().BeTrue();
     }
 
     [Fact]
@@ -75,8 +76,8 @@ public class GridSearchConfigurationTests
         var configs = GridSearchConfiguration.GetAllConfigurations();
 
         // Assert - Should contain none and scalar_int8
-        Assert.True(configs.Any(c => c.Quantization.Type == QuantizationType.None));
-        Assert.True(configs.Any(c => c.Quantization.Type == QuantizationType.ScalarInt8));
+        configs.Any(c => c.Quantization.Type == QuantizationType.None).Should().BeTrue();
+        configs.Any(c => c.Quantization.Type == QuantizationType.ScalarInt8).Should().BeTrue();
     }
 
     [Fact]
@@ -86,8 +87,8 @@ public class GridSearchConfigurationTests
         var configs = GridSearchConfiguration.GetAllConfigurations();
 
         // Assert - Should contain no_rerank and bge_rerank
-        Assert.True(configs.Any(c => !c.Reranking.Enabled));
-        Assert.True(configs.Any(c => c.Reranking.Enabled));
+        configs.Any(c => !c.Reranking.Enabled).Should().BeTrue();
+        configs.Any(c => c.Reranking.Enabled).Should().BeTrue();
     }
 }
 
@@ -103,7 +104,7 @@ public class ChunkingConfigTests
         var configs = ChunkingConfig.GetAll();
 
         // Assert
-        Assert.Equal(3, configs.Count);
+        configs.Count.Should().Be(3);
     }
 
     [Fact]
@@ -114,9 +115,9 @@ public class ChunkingConfigTests
         var dense = configs.First(c => c.Name == "dense");
 
         // Assert
-        Assert.Equal("Dense (200/20%)", dense.DisplayName);
-        Assert.Equal(200, dense.SizeTokens);
-        Assert.Equal(0.20, dense.OverlapPercent);
+        dense.DisplayName.Should().Be("Dense (200/20%)");
+        dense.SizeTokens.Should().Be(200);
+        dense.OverlapPercent.Should().Be(0.20);
     }
 
     [Fact]
@@ -127,9 +128,9 @@ public class ChunkingConfigTests
         var baseline = configs.First(c => c.Name == "baseline");
 
         // Assert
-        Assert.Equal("Baseline (350/15%)", baseline.DisplayName);
-        Assert.Equal(350, baseline.SizeTokens);
-        Assert.Equal(0.15, baseline.OverlapPercent);
+        baseline.DisplayName.Should().Be("Baseline (350/15%)");
+        baseline.SizeTokens.Should().Be(350);
+        baseline.OverlapPercent.Should().Be(0.15);
     }
 
     [Fact]
@@ -140,9 +141,9 @@ public class ChunkingConfigTests
         var sparse = configs.First(c => c.Name == "sparse");
 
         // Assert
-        Assert.Equal("Sparse (500/10%)", sparse.DisplayName);
-        Assert.Equal(500, sparse.SizeTokens);
-        Assert.Equal(0.10, sparse.OverlapPercent);
+        sparse.DisplayName.Should().Be("Sparse (500/10%)");
+        sparse.SizeTokens.Should().Be(500);
+        sparse.OverlapPercent.Should().Be(0.10);
     }
 }
 
@@ -158,7 +159,7 @@ public class QuantizationConfigTests
         var configs = QuantizationConfig.GetAll();
 
         // Assert
-        Assert.Equal(2, configs.Count);
+        configs.Count.Should().Be(2);
     }
 
     [Fact]
@@ -169,8 +170,8 @@ public class QuantizationConfigTests
         var none = configs.First(c => c.Name == "none");
 
         // Assert
-        Assert.Equal("Full Precision", none.DisplayName);
-        Assert.Equal(QuantizationType.None, none.Type);
+        none.DisplayName.Should().Be("Full Precision");
+        none.Type.Should().Be(QuantizationType.None);
     }
 
     [Fact]
@@ -181,8 +182,8 @@ public class QuantizationConfigTests
         var scalar = configs.First(c => c.Name == "scalar_int8");
 
         // Assert
-        Assert.Equal("Scalar INT8", scalar.DisplayName);
-        Assert.Equal(QuantizationType.ScalarInt8, scalar.Type);
+        scalar.DisplayName.Should().Be("Scalar INT8");
+        scalar.Type.Should().Be(QuantizationType.ScalarInt8);
     }
 }
 
@@ -198,7 +199,7 @@ public class RerankingConfigTests
         var configs = RerankingConfig.GetAll();
 
         // Assert
-        Assert.Equal(2, configs.Count);
+        configs.Count.Should().Be(2);
     }
 
     [Fact]
@@ -209,9 +210,9 @@ public class RerankingConfigTests
         var noRerank = configs.First(c => c.Name == "no_rerank");
 
         // Assert
-        Assert.Equal("No Reranking", noRerank.DisplayName);
-        Assert.False(noRerank.Enabled);
-        Assert.Null(noRerank.ModelName);
+        noRerank.DisplayName.Should().Be("No Reranking");
+        noRerank.Enabled.Should().BeFalse();
+        noRerank.ModelName.Should().BeNull();
     }
 
     [Fact]
@@ -222,8 +223,8 @@ public class RerankingConfigTests
         var bge = configs.First(c => c.Name == "bge_rerank");
 
         // Assert
-        Assert.Equal("BGE Reranker v2-m3", bge.DisplayName);
-        Assert.True(bge.Enabled);
-        Assert.Equal("BAAI/bge-reranker-v2-m3", bge.ModelName);
+        bge.DisplayName.Should().Be("BGE Reranker v2-m3");
+        bge.Enabled.Should().BeTrue();
+        bge.ModelName.Should().Be("BAAI/bge-reranker-v2-m3");
     }
 }

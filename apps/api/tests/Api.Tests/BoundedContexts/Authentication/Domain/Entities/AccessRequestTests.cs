@@ -2,9 +2,13 @@ using Api.BoundedContexts.Authentication.Domain.Entities;
 using Api.BoundedContexts.Authentication.Domain.Enums;
 using Api.BoundedContexts.Authentication.Domain.Events;
 using Xunit;
+using Api.Tests.Constants;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.Authentication.Domain.Entities;
 
+[Trait("Category", TestCategories.Unit)]
+[Trait("BoundedContext", "Authentication")]
 public class AccessRequestTests
 {
     [Fact]
@@ -12,21 +16,21 @@ public class AccessRequestTests
     {
         var request = AccessRequest.Create("test@example.com");
 
-        Assert.NotEqual(Guid.Empty, request.Id);
-        Assert.Equal("test@example.com", request.Email);
-        Assert.Equal(AccessRequestStatus.Pending, request.Status);
-        Assert.True(request.RequestedAt <= DateTime.UtcNow);
-        Assert.Null(request.ReviewedAt);
-        Assert.Null(request.ReviewedBy);
-        Assert.Null(request.RejectionReason);
-        Assert.Null(request.InvitationId);
+        request.Id.Should().NotBe(Guid.Empty);
+        request.Email.Should().Be("test@example.com");
+        request.Status.Should().Be(AccessRequestStatus.Pending);
+        (request.RequestedAt <= DateTime.UtcNow).Should().BeTrue();
+        request.ReviewedAt.Should().BeNull();
+        request.ReviewedBy.Should().BeNull();
+        request.RejectionReason.Should().BeNull();
+        request.InvitationId.Should().BeNull();
     }
 
     [Fact]
     public void Create_NormalizesEmailToLowercase()
     {
         var request = AccessRequest.Create("Test@EXAMPLE.com");
-        Assert.Equal("test@example.com", request.Email);
+        request.Email.Should().Be("test@example.com");
     }
 
     [Fact]
@@ -37,9 +41,9 @@ public class AccessRequestTests
 
         request.Approve(adminId);
 
-        Assert.Equal(AccessRequestStatus.Approved, request.Status);
-        Assert.NotNull(request.ReviewedAt);
-        Assert.Equal(adminId, request.ReviewedBy);
+        request.Status.Should().Be(AccessRequestStatus.Approved);
+        request.ReviewedAt.Should().NotBeNull();
+        request.ReviewedBy.Should().Be(adminId);
     }
 
     [Fact]
@@ -50,10 +54,10 @@ public class AccessRequestTests
 
         request.Reject(adminId, "Not in beta group");
 
-        Assert.Equal(AccessRequestStatus.Rejected, request.Status);
-        Assert.NotNull(request.ReviewedAt);
-        Assert.Equal(adminId, request.ReviewedBy);
-        Assert.Equal("Not in beta group", request.RejectionReason);
+        request.Status.Should().Be(AccessRequestStatus.Rejected);
+        request.ReviewedAt.Should().NotBeNull();
+        request.ReviewedBy.Should().Be(adminId);
+        request.RejectionReason.Should().Be("Not in beta group");
     }
 
     [Fact]
@@ -61,7 +65,7 @@ public class AccessRequestTests
     {
         var request = AccessRequest.Create("test@example.com");
         request.Reject(Guid.NewGuid());
-        Assert.Null(request.RejectionReason);
+        request.RejectionReason.Should().BeNull();
     }
 
     [Fact]
@@ -70,7 +74,8 @@ public class AccessRequestTests
         var request = AccessRequest.Create("test@example.com");
         request.Approve(Guid.NewGuid());
 
-        Assert.Throws<InvalidOperationException>(() => request.Approve(Guid.NewGuid()));
+        var act = () => request.Approve(Guid.NewGuid());
+act.Should().Throw<InvalidOperationException>();
     }
 
     [Fact]
@@ -79,7 +84,8 @@ public class AccessRequestTests
         var request = AccessRequest.Create("test@example.com");
         request.Reject(Guid.NewGuid());
 
-        Assert.Throws<InvalidOperationException>(() => request.Approve(Guid.NewGuid()));
+        var act = () => request.Approve(Guid.NewGuid());
+act.Should().Throw<InvalidOperationException>();
     }
 
     [Fact]
@@ -88,7 +94,8 @@ public class AccessRequestTests
         var request = AccessRequest.Create("test@example.com");
         request.Reject(Guid.NewGuid());
 
-        Assert.Throws<InvalidOperationException>(() => request.Reject(Guid.NewGuid()));
+        var act = () => request.Reject(Guid.NewGuid());
+act.Should().Throw<InvalidOperationException>();
     }
 
     [Fact]
@@ -97,7 +104,8 @@ public class AccessRequestTests
         var request = AccessRequest.Create("test@example.com");
         request.Approve(Guid.NewGuid());
 
-        Assert.Throws<InvalidOperationException>(() => request.Reject(Guid.NewGuid()));
+        var act = () => request.Reject(Guid.NewGuid());
+act.Should().Throw<InvalidOperationException>();
     }
 
     [Fact]
@@ -111,10 +119,10 @@ public class AccessRequestTests
         var domainEvent = request.DomainEvents
             .OfType<AccessRequestApprovedEvent>()
             .SingleOrDefault();
-        Assert.NotNull(domainEvent);
-        Assert.Equal(request.Id, domainEvent.AccessRequestId);
-        Assert.Equal("test@example.com", domainEvent.Email);
-        Assert.Equal(adminId, domainEvent.ApprovedByUserId);
+        domainEvent.Should().NotBeNull();
+        domainEvent.AccessRequestId.Should().Be(request.Id);
+        domainEvent.Email.Should().Be("test@example.com");
+        domainEvent.ApprovedByUserId.Should().Be(adminId);
     }
 
     [Fact]
@@ -125,9 +133,9 @@ public class AccessRequestTests
         var domainEvent = request.DomainEvents
             .OfType<AccessRequestCreatedEvent>()
             .SingleOrDefault();
-        Assert.NotNull(domainEvent);
-        Assert.Equal(request.Id, domainEvent.AccessRequestId);
-        Assert.Equal("test@example.com", domainEvent.Email);
+        domainEvent.Should().NotBeNull();
+        domainEvent.AccessRequestId.Should().Be(request.Id);
+        domainEvent.Email.Should().Be("test@example.com");
     }
 
     [Fact]
@@ -139,7 +147,7 @@ public class AccessRequestTests
 
         request.SetInvitationId(invitationId);
 
-        Assert.Equal(invitationId, request.InvitationId);
+        request.InvitationId.Should().Be(invitationId);
     }
 
     [Fact]
@@ -148,6 +156,7 @@ public class AccessRequestTests
         var request = AccessRequest.Create("test@example.com");
         var longReason = new string('a', 501);
 
-        Assert.Throws<ArgumentException>(() => request.Reject(Guid.NewGuid(), longReason));
+        var act = () => request.Reject(Guid.NewGuid(), longReason);
+act.Should().Throw<ArgumentException>();
     }
 }

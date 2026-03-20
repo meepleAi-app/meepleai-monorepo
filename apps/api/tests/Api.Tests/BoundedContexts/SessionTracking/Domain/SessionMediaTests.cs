@@ -1,5 +1,6 @@
 using Api.BoundedContexts.SessionTracking.Domain.Entities;
 using Api.Tests.Constants;
+using FluentAssertions;
 using Xunit;
 
 namespace Api.Tests.BoundedContexts.SessionTracking.Domain;
@@ -40,19 +41,19 @@ public class SessionMediaTests
         var media = CreateValidMedia(caption: "Turn 3 board state");
 
         // Assert
-        Assert.NotEqual(Guid.Empty, media.Id);
-        Assert.Equal(_sessionId, media.SessionId);
-        Assert.Equal(_participantId, media.ParticipantId);
-        Assert.Equal("file-abc-123", media.FileId);
-        Assert.Equal("board-photo.jpg", media.FileName);
-        Assert.Equal("image/jpeg", media.ContentType);
-        Assert.Equal(1024 * 100, media.FileSizeBytes);
-        Assert.Equal(SessionMediaType.Photo, media.MediaType);
-        Assert.Equal("Turn 3 board state", media.Caption);
-        Assert.True(media.IsSharedWithSession);
-        Assert.False(media.IsDeleted);
-        Assert.Null(media.DeletedAt);
-        Assert.Null(media.ThumbnailFileId);
+        media.Id.Should().NotBe(Guid.Empty);
+        media.SessionId.Should().Be(_sessionId);
+        media.ParticipantId.Should().Be(_participantId);
+        media.FileId.Should().Be("file-abc-123");
+        media.FileName.Should().Be("board-photo.jpg");
+        media.ContentType.Should().Be("image/jpeg");
+        media.FileSizeBytes.Should().Be(1024 * 100);
+        media.MediaType.Should().Be(SessionMediaType.Photo);
+        media.Caption.Should().Be("Turn 3 board state");
+        media.IsSharedWithSession.Should().BeTrue();
+        media.IsDeleted.Should().BeFalse();
+        media.DeletedAt.Should().BeNull();
+        media.ThumbnailFileId.Should().BeNull();
     }
 
     [Fact]
@@ -65,8 +66,8 @@ public class SessionMediaTests
         var media = CreateValidMedia(snapshotId: snapshotId, turnNumber: 5);
 
         // Assert
-        Assert.Equal(snapshotId, media.SnapshotId);
-        Assert.Equal(5, media.TurnNumber);
+        media.SnapshotId.Should().Be(snapshotId);
+        media.TurnNumber.Should().Be(5);
     }
 
     [Fact]
@@ -76,58 +77,66 @@ public class SessionMediaTests
         var media = CreateValidMedia(caption: "  trimmed  ");
 
         // Assert
-        Assert.Equal("trimmed", media.Caption);
+        media.Caption.Should().Be("trimmed");
     }
 
     [Fact]
     public void Create_EmptySessionId_ThrowsArgumentException()
     {
-        Assert.Throws<ArgumentException>(() =>
-            SessionMedia.Create(Guid.Empty, _participantId, "f", "f.jpg", "image/jpeg", 100, SessionMediaType.Photo));
+        var act = () =>
+            SessionMedia.Create(Guid.Empty, _participantId, "f", "f.jpg", "image/jpeg", 100, SessionMediaType.Photo);
+        act.Should().Throw<ArgumentException>();
     }
 
     [Fact]
     public void Create_EmptyParticipantId_ThrowsArgumentException()
     {
-        Assert.Throws<ArgumentException>(() =>
-            SessionMedia.Create(_sessionId, Guid.Empty, "f", "f.jpg", "image/jpeg", 100, SessionMediaType.Photo));
+        var act2 = () =>
+            SessionMedia.Create(_sessionId, Guid.Empty, "f", "f.jpg", "image/jpeg", 100, SessionMediaType.Photo);
+        act2.Should().Throw<ArgumentException>();
     }
 
     [Fact]
     public void Create_EmptyFileId_ThrowsArgumentException()
     {
-        Assert.Throws<ArgumentException>(() =>
-            SessionMedia.Create(_sessionId, _participantId, "", "f.jpg", "image/jpeg", 100, SessionMediaType.Photo));
-        Assert.Throws<ArgumentException>(() =>
-            SessionMedia.Create(_sessionId, _participantId, "   ", "f.jpg", "image/jpeg", 100, SessionMediaType.Photo));
+        var act3 = () =>
+            SessionMedia.Create(_sessionId, _participantId, "", "f.jpg", "image/jpeg", 100, SessionMediaType.Photo);
+        act3.Should().Throw<ArgumentException>();
+        var act4 = () =>
+            SessionMedia.Create(_sessionId, _participantId, "   ", "f.jpg", "image/jpeg", 100, SessionMediaType.Photo);
+        act4.Should().Throw<ArgumentException>();
     }
 
     [Fact]
     public void Create_EmptyFileName_ThrowsArgumentException()
     {
-        Assert.Throws<ArgumentException>(() =>
-            SessionMedia.Create(_sessionId, _participantId, "f", "", "image/jpeg", 100, SessionMediaType.Photo));
+        var act5 = () =>
+            SessionMedia.Create(_sessionId, _participantId, "f", "", "image/jpeg", 100, SessionMediaType.Photo);
+        act5.Should().Throw<ArgumentException>();
     }
 
     [Fact]
     public void Create_EmptyContentType_ThrowsArgumentException()
     {
-        Assert.Throws<ArgumentException>(() =>
-            SessionMedia.Create(_sessionId, _participantId, "f", "f.jpg", "", 100, SessionMediaType.Photo));
+        var act6 = () =>
+            SessionMedia.Create(_sessionId, _participantId, "f", "f.jpg", "", 100, SessionMediaType.Photo);
+        act6.Should().Throw<ArgumentException>();
     }
 
     [Fact]
     public void Create_ZeroFileSize_ThrowsArgumentException()
     {
-        Assert.Throws<ArgumentException>(() =>
-            SessionMedia.Create(_sessionId, _participantId, "f", "f.jpg", "image/jpeg", 0, SessionMediaType.Photo));
+        var act7 = () =>
+            SessionMedia.Create(_sessionId, _participantId, "f", "f.jpg", "image/jpeg", 0, SessionMediaType.Photo);
+        act7.Should().Throw<ArgumentException>();
     }
 
     [Fact]
     public void Create_NegativeFileSize_ThrowsArgumentException()
     {
-        Assert.Throws<ArgumentException>(() =>
-            SessionMedia.Create(_sessionId, _participantId, "f", "f.jpg", "image/jpeg", -1, SessionMediaType.Photo));
+        var act8 = () =>
+            SessionMedia.Create(_sessionId, _participantId, "f", "f.jpg", "image/jpeg", -1, SessionMediaType.Photo);
+        act8.Should().Throw<ArgumentException>();
     }
 
     [Fact]
@@ -142,8 +151,8 @@ public class SessionMediaTests
         media.UpdateCaption("new caption");
 
         // Assert
-        Assert.Equal("new caption", media.Caption);
-        Assert.True(media.UpdatedAt > originalUpdatedAt);
+        media.Caption.Should().Be("new caption");
+        (media.UpdatedAt > originalUpdatedAt).Should().BeTrue();
     }
 
     [Fact]
@@ -156,7 +165,7 @@ public class SessionMediaTests
         media.UpdateCaption(null);
 
         // Assert
-        Assert.Null(media.Caption);
+        media.Caption.Should().BeNull();
     }
 
     [Fact]
@@ -169,7 +178,7 @@ public class SessionMediaTests
         media.UpdateCaption("  spaced  ");
 
         // Assert
-        Assert.Equal("spaced", media.Caption);
+        media.Caption.Should().Be("spaced");
     }
 
     [Fact]
@@ -184,16 +193,18 @@ public class SessionMediaTests
         media.SetThumbnail("thumb-xyz");
 
         // Assert
-        Assert.Equal("thumb-xyz", media.ThumbnailFileId);
-        Assert.True(media.UpdatedAt > originalUpdatedAt);
+        media.ThumbnailFileId.Should().Be("thumb-xyz");
+        (media.UpdatedAt > originalUpdatedAt).Should().BeTrue();
     }
 
     [Fact]
     public void SetThumbnail_EmptyId_ThrowsArgumentException()
     {
         var media = CreateValidMedia();
-        Assert.Throws<ArgumentException>(() => media.SetThumbnail(""));
-        Assert.Throws<ArgumentException>(() => media.SetThumbnail("   "));
+        var act9 = () => media.SetThumbnail("");
+        act9.Should().Throw<ArgumentException>();
+        var act10 = () => media.SetThumbnail("   ");
+        act10.Should().Throw<ArgumentException>();
     }
 
     [Fact]
@@ -209,16 +220,17 @@ public class SessionMediaTests
         media.LinkToSnapshot(snapshotId, turnNumber: 7);
 
         // Assert
-        Assert.Equal(snapshotId, media.SnapshotId);
-        Assert.Equal(7, media.TurnNumber);
-        Assert.True(media.UpdatedAt > originalUpdatedAt);
+        media.SnapshotId.Should().Be(snapshotId);
+        media.TurnNumber.Should().Be(7);
+        (media.UpdatedAt > originalUpdatedAt).Should().BeTrue();
     }
 
     [Fact]
     public void LinkToSnapshot_EmptySnapshotId_ThrowsArgumentException()
     {
         var media = CreateValidMedia();
-        Assert.Throws<ArgumentException>(() => media.LinkToSnapshot(Guid.Empty));
+        var act11 = () => media.LinkToSnapshot(Guid.Empty);
+        act11.Should().Throw<ArgumentException>();
     }
 
     [Fact]
@@ -226,17 +238,17 @@ public class SessionMediaTests
     {
         // Arrange
         var media = CreateValidMedia();
-        Assert.True(media.IsSharedWithSession); // default true
+        media.IsSharedWithSession.Should().BeTrue();
 
         // Act
         media.SetSharedWithSession(false);
 
         // Assert
-        Assert.False(media.IsSharedWithSession);
+        media.IsSharedWithSession.Should().BeFalse();
 
         // Toggle back
         media.SetSharedWithSession(true);
-        Assert.True(media.IsSharedWithSession);
+        media.IsSharedWithSession.Should().BeTrue();
     }
 
     [Fact]
@@ -249,8 +261,8 @@ public class SessionMediaTests
         media.SoftDelete();
 
         // Assert
-        Assert.True(media.IsDeleted);
-        Assert.NotNull(media.DeletedAt);
+        media.IsDeleted.Should().BeTrue();
+        media.DeletedAt.Should().NotBeNull();
     }
 
     [Theory]
@@ -267,6 +279,6 @@ public class SessionMediaTests
             _sessionId, _participantId, "f", "f.bin", "application/octet-stream", 100, mediaType);
 
         // Assert
-        Assert.Equal(mediaType, media.MediaType);
+        media.MediaType.Should().Be(mediaType);
     }
 }

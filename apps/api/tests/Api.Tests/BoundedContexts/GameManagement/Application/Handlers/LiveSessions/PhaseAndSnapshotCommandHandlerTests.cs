@@ -13,6 +13,7 @@ using MediatR;
 using Microsoft.Extensions.Time.Testing;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.GameManagement.Application.Handlers.LiveSessions;
 
@@ -62,7 +63,7 @@ public class AdvanceLiveSessionPhaseCommandHandlerTests
         var handler = CreateHandler();
         await handler.Handle(new AdvanceLiveSessionPhaseCommand(sessionId), TestContext.Current.CancellationToken);
 
-        Assert.Equal(1, session.CurrentPhaseIndex);
+        session.CurrentPhaseIndex.Should().Be(1);
         _repositoryMock.Verify(r => r.UpdateAsync(session, It.IsAny<CancellationToken>()), Times.Once);
     }
 
@@ -75,8 +76,9 @@ public class AdvanceLiveSessionPhaseCommandHandlerTests
 
         var handler = CreateHandler();
 
-        await Assert.ThrowsAsync<NotFoundException>(() =>
-            handler.Handle(new AdvanceLiveSessionPhaseCommand(sessionId), TestContext.Current.CancellationToken));
+        var act = () =>
+            handler.Handle(new AdvanceLiveSessionPhaseCommand(sessionId), TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<NotFoundException>();
     }
 
     [Fact]
@@ -84,8 +86,9 @@ public class AdvanceLiveSessionPhaseCommandHandlerTests
     {
         var handler = CreateHandler();
 
-        await Assert.ThrowsAsync<ArgumentNullException>(() =>
-            handler.Handle(null!, TestContext.Current.CancellationToken));
+        var act = () =>
+            handler.Handle(null!, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<ArgumentNullException>();
     }
 
     [Fact]
@@ -214,8 +217,8 @@ public class ConfigureLiveSessionPhasesCommandHandlerTests
             new ConfigureLiveSessionPhasesCommand(sessionId, phases),
             TestContext.Current.CancellationToken);
 
-        Assert.Equal(3, session.PhaseNames.Length);
-        Assert.Equal("Draw", session.PhaseNames[0]);
+        session.PhaseNames.Length.Should().Be(3);
+        session.PhaseNames[0].Should().Be("Draw");
         _repositoryMock.Verify(r => r.UpdateAsync(session, It.IsAny<CancellationToken>()), Times.Once);
     }
 
@@ -228,10 +231,11 @@ public class ConfigureLiveSessionPhasesCommandHandlerTests
 
         var handler = CreateHandler();
 
-        await Assert.ThrowsAsync<NotFoundException>(() =>
+        var act = () =>
             handler.Handle(
                 new ConfigureLiveSessionPhasesCommand(sessionId, new[] { "Draw" }),
-                TestContext.Current.CancellationToken));
+                TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<NotFoundException>();
     }
 
     [Fact]
@@ -239,8 +243,9 @@ public class ConfigureLiveSessionPhasesCommandHandlerTests
     {
         var handler = CreateHandler();
 
-        await Assert.ThrowsAsync<ArgumentNullException>(() =>
-            handler.Handle(null!, TestContext.Current.CancellationToken));
+        var act = () =>
+            handler.Handle(null!, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<ArgumentNullException>();
     }
 
     [Fact]
@@ -321,8 +326,8 @@ public class TriggerEventSnapshotCommandHandlerTests
             new TriggerEventSnapshotCommand(sessionId, SnapshotTrigger.PhaseAdvanced, "Test", null),
             TestContext.Current.CancellationToken);
 
-        Assert.NotNull(result);
-        Assert.Equal(expectedDto.Id, result!.Id);
+        result.Should().NotBeNull();
+        result!.Id.Should().Be(expectedDto.Id);
         _mediatorMock.Verify(m => m.Send(
             It.Is<CreateSnapshotCommand>(c =>
                 c.SessionId == sessionId &&
@@ -346,7 +351,7 @@ public class TriggerEventSnapshotCommandHandlerTests
             new TriggerEventSnapshotCommand(sessionId, SnapshotTrigger.PhaseAdvanced, "Test", null),
             TestContext.Current.CancellationToken);
 
-        Assert.Null(result);
+        result.Should().BeNull();
         _mediatorMock.Verify(m => m.Send(
             It.IsAny<CreateSnapshotCommand>(), It.IsAny<CancellationToken>()), Times.Never);
     }
@@ -370,7 +375,7 @@ public class TriggerEventSnapshotCommandHandlerTests
             new TriggerEventSnapshotCommand(sessionId, SnapshotTrigger.PhaseAdvanced, "Test", null),
             TestContext.Current.CancellationToken);
 
-        Assert.Null(result);
+        result.Should().BeNull();
         _mediatorMock.Verify(m => m.Send(
             It.IsAny<CreateSnapshotCommand>(), It.IsAny<CancellationToken>()), Times.Never);
     }
@@ -398,7 +403,7 @@ public class TriggerEventSnapshotCommandHandlerTests
             new TriggerEventSnapshotCommand(sessionId, SnapshotTrigger.PhaseAdvanced, "Test", null),
             TestContext.Current.CancellationToken);
 
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         _mediatorMock.Verify(m => m.Send(
             It.IsAny<CreateSnapshotCommand>(), It.IsAny<CancellationToken>()), Times.Once);
     }
@@ -420,7 +425,7 @@ public class TriggerEventSnapshotCommandHandlerTests
             new TriggerEventSnapshotCommand(sessionId, SnapshotTrigger.PhaseAdvanced, "Test", null),
             TestContext.Current.CancellationToken);
 
-        Assert.NotNull(session.LastSnapshotTimestamp);
+        session.LastSnapshotTimestamp.Should().NotBeNull();
         _repositoryMock.Verify(r => r.UpdateAsync(session, It.IsAny<CancellationToken>()), Times.Once);
     }
 
@@ -433,10 +438,11 @@ public class TriggerEventSnapshotCommandHandlerTests
 
         var handler = CreateHandler();
 
-        await Assert.ThrowsAsync<NotFoundException>(() =>
+        var act = () =>
             handler.Handle(
                 new TriggerEventSnapshotCommand(sessionId, SnapshotTrigger.PhaseAdvanced, "Test", null),
-                TestContext.Current.CancellationToken));
+                TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<NotFoundException>();
     }
 
     [Fact]
@@ -444,8 +450,9 @@ public class TriggerEventSnapshotCommandHandlerTests
     {
         var handler = CreateHandler();
 
-        await Assert.ThrowsAsync<ArgumentNullException>(() =>
-            handler.Handle(null!, TestContext.Current.CancellationToken));
+        var act = () =>
+            handler.Handle(null!, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<ArgumentNullException>();
     }
 
     [Fact]

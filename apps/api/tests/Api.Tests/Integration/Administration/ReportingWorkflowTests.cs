@@ -15,6 +15,7 @@ using Microsoft.Extensions.Logging;
 using Moq;
 using Quartz;
 using Quartz.Impl;
+using FluentAssertions;
 using Xunit;
 using Api.Tests.Constants;
 
@@ -73,15 +74,15 @@ public sealed class ReportingWorkflowTests : IDisposable
         var result = await handler.Handle(command, CancellationToken.None);
 
         // Assert
-        Assert.NotEqual(Guid.Empty, result.ExecutionId);
-        Assert.NotNull(result.Content);
-        Assert.NotEmpty(result.FileName);
-        Assert.True(result.FileSizeBytes > 0);
+        result.ExecutionId.Should().NotBe(Guid.Empty);
+        result.Content.Should().NotBeNull();
+        result.FileName.Should().NotBeEmpty();
+        (result.FileSizeBytes > 0).Should().BeTrue();
 
         // Verify execution was saved
         var execution = await _executionRepository.GetByIdAsync(result.ExecutionId);
-        Assert.NotNull(execution);
-        Assert.Equal(ReportExecutionStatus.Completed, execution.Status);
+        execution.Should().NotBeNull();
+        execution.Status.Should().Be(ReportExecutionStatus.Completed);
     }
 
     [Fact]
@@ -112,14 +113,14 @@ public sealed class ReportingWorkflowTests : IDisposable
         var reportId = await handler.Handle(command, CancellationToken.None);
 
         // Assert
-        Assert.NotEqual(Guid.Empty, reportId);
+        reportId.Should().NotBe(Guid.Empty);
 
         // Verify report was saved
         var report = await _reportRepository.GetByIdAsync(reportId);
-        Assert.NotNull(report);
-        Assert.Equal("Daily System Health", report.Name);
-        Assert.True(report.IsActive);
-        Assert.Equal("0 0 6 * * ?", report.ScheduleExpression);
+        report.Should().NotBeNull();
+        report.Name.Should().Be("Daily System Health");
+        report.IsActive.Should().BeTrue();
+        report.ScheduleExpression.Should().Be("0 0 6 * * ?");
     }
 
     [Fact]
@@ -170,10 +171,10 @@ public sealed class ReportingWorkflowTests : IDisposable
         var reports = await queryHandler.Handle(new GetScheduledReportsQuery(), CancellationToken.None);
 
         // Assert
-        Assert.NotNull(reports);
-        Assert.Equal(2, reports.Count);
-        Assert.Contains(reports, r => r.Name == "Report 1");
-        Assert.Contains(reports, r => r.Name == "Report 2");
+        reports.Should().NotBeNull();
+        reports.Count.Should().Be(2);
+        reports.Should().Contain(r => r.Name == "Report 1");
+        reports.Should().Contain(r => r.Name == "Report 2");
     }
 
     public void Dispose()

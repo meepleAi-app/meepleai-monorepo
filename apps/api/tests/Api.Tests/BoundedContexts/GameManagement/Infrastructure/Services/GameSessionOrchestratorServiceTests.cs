@@ -158,7 +158,7 @@ public class GameSessionOrchestratorServiceTests
         SetupSessionRepository(sessionId, null);
 
         // Act & Assert
-        var act = 
+        var act =
             () => _service.BuildContextAsync(sessionId);
         await act.Should().ThrowAsync<NotFoundException>();
     }

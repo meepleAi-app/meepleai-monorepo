@@ -7,8 +7,17 @@
 
 import { type ReactNode } from 'react';
 
+import { ChatContextBar } from '@/components/chat/ChatContextBar';
+import { ContextBarRegistrar } from '@/components/layout/ContextBar';
 import { UserShell } from '@/components/layout/UserShell';
 
 export default function ChatLayout({ children }: { children: ReactNode }) {
-  return <UserShell>{children}</UserShell>;
+  return (
+    <UserShell>
+      <ContextBarRegistrar>
+        <ChatContextBar />
+      </ContextBarRegistrar>
+      {children}
+    </UserShell>
+  );
 }

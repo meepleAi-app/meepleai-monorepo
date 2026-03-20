@@ -14,7 +14,7 @@
 
 'use client';
 
-import { useState, useMemo, useCallback, useRef } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 
 import { Search, Loader2 } from 'lucide-react';
 
@@ -95,21 +95,21 @@ export function PublicLibraryPage({ className }: PublicLibraryPageProps) {
     true
   );
 
-  // Accumulate items across pages using a ref (avoids stale closure issues)
-  const accumulatedRef = useRef<SharedGame[]>([]);
+  // Accumulate items across pages using state (avoids ref mutation in render)
+  const [accumulatedItems, setAccumulatedItems] = useState<SharedGame[]>([]);
 
-  // Merge incoming page into the accumulated list (deduped by id)
-  const currentItems = useMemo(() => {
-    const incoming = catalogData?.items ?? [];
+  useEffect(() => {
+    if (!catalogData?.items) return;
     if (page === 1) {
-      accumulatedRef.current = incoming;
-      return incoming;
+      setAccumulatedItems(catalogData.items);
+    } else {
+      setAccumulatedItems(prev => {
+        const existingIds = new Set(prev.map(i => i.id));
+        const newItems = catalogData.items.filter(i => !existingIds.has(i.id));
+        return [...prev, ...newItems];
+      });
     }
-    const existingIds = new Set(accumulatedRef.current.map(g => g.id));
-    const merged = [...accumulatedRef.current, ...incoming.filter(g => !existingIds.has(g.id))];
-    accumulatedRef.current = merged;
-    return merged;
-  }, [catalogData, page]);
+  }, [catalogData?.items, page]);
 
   // User's library — for "inLibrary" badge
   const { data: libraryData } = useLibrary({ pageSize: 100 });
@@ -136,7 +136,7 @@ export function PublicLibraryPage({ className }: PublicLibraryPageProps) {
 
   const handleSearchChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     setSearch(e.target.value);
-    accumulatedRef.current = [];
+    setAccumulatedItems([]);
     setPage(1);
   }, []);
 
@@ -144,7 +144,7 @@ export function PublicLibraryPage({ className }: PublicLibraryPageProps) {
     setSelectedMechanics(prev =>
       prev.includes(mechanic) ? prev.filter(m => m !== mechanic) : [...prev, mechanic]
     );
-    accumulatedRef.current = [];
+    setAccumulatedItems([]);
     setPage(1);
   }, []);
 
@@ -158,7 +158,7 @@ export function PublicLibraryPage({ className }: PublicLibraryPageProps) {
 
   const hasMore = catalogData ? page * PAGE_SIZE < catalogData.total : false;
 
-  const displayItems = page === 1 ? (catalogData?.items ?? []) : currentItems;
+  const displayItems = accumulatedItems;
 
   // ------------------------------------------------------------------
   // Render

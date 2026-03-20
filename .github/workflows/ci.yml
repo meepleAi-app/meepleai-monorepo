@@ -537,10 +537,11 @@ jobs:
       - name: Start Backend API
         working-directory: apps/api/src/Api
         run: |
-          dotnet run --no-build --configuration Release --no-launch-profile &
+          dotnet run --no-build --configuration Release --no-launch-profile > /tmp/api.log 2>&1 &
           echo $! > api.pid
+          echo "API started with PID $(cat api.pid)"
         env:
-          ASPNETCORE_ENVIRONMENT: Testing
+          ASPNETCORE_ENVIRONMENT: CI
           ASPNETCORE_URLS: "http://localhost:8080"
           POSTGRES_HOST: localhost
           POSTGRES_PORT: "5432"
@@ -557,18 +558,31 @@ jobs:
         timeout-minutes: 2
         run: |
           echo "⏳ Waiting for API to be healthy..."
-          # Use /health/live (liveness check) instead of /health (full check)
-          # /health includes embedding service which isn't available in CI
           for i in {1..40}; do
             if curl -sf http://localhost:8080/health/live > /dev/null 2>&1; then
               echo "✅ API live after ~$((i*3))s"
-              # Also verify core services are ready
               curl -sf http://localhost:8080/health/ready > /dev/null 2>&1 && echo "✅ Core services ready" || echo "⚠️ Some core services degraded (non-blocking)"
               exit 0
+            fi
+            if [ $((i % 5)) -eq 0 ]; then
+              echo "  Still waiting... (attempt $i/40)"
+              if [ -f apps/api/src/Api/api.pid ] && ! kill -0 $(cat apps/api/src/Api/api.pid) 2>/dev/null; then
+                echo "❌ API process died. Last 30 lines of log:"
+                tail -30 /tmp/api.log 2>/dev/null || echo "(no log file)"
+                exit 1
+              fi
             fi
             sleep 3
           done
           echo "❌ API failed to start within 2 minutes"
+          echo "=== Last 50 lines of API log ==="
+          tail -50 /tmp/api.log 2>/dev/null || echo "(no log file)"
+          echo "=== Checking if process is alive ==="
+          if [ -f apps/api/src/Api/api.pid ]; then
+            kill -0 $(cat apps/api/src/Api/api.pid) 2>/dev/null && echo "Process alive but not responding" || echo "Process dead"
+          fi
+          echo "=== Checking port 8080 ==="
+          ss -tlnp | grep 8080 || echo "Nothing listening on 8080"
           exit 1
 
       # ===== Frontend Setup =====

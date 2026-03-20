@@ -28,7 +28,7 @@ public sealed class LlmRequestLogRepositoryTests : SharedDatabaseTestBase<LlmReq
     }
 
     protected override LlmRequestLogRepository CreateRepository(MeepleAiDbContext dbContext)
-        => new(dbContext, Mock.Of<ILogger<LlmRequestLogRepository>>());
+        => new(dbContext, MockEventCollector.Object, Mock.Of<ILogger<LlmRequestLogRepository>>());
 
     // ─── LogRequestAsync ─────────────────────────────────────────────────────
 

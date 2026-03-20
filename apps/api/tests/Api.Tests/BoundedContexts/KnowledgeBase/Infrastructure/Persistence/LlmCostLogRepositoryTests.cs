@@ -28,7 +28,7 @@ public class LlmCostLogRepositoryTests : SharedDatabaseTestBase<LlmCostLogReposi
     }
 
     protected override LlmCostLogRepository CreateRepository(MeepleAiDbContext dbContext)
-        => new LlmCostLogRepository(dbContext, Mock.Of<ILogger<LlmCostLogRepository>>());
+        => new LlmCostLogRepository(dbContext, MockEventCollector.Object, Mock.Of<ILogger<LlmCostLogRepository>>());
 
     [Fact]
     public async Task LogCost_SuccessfulRequest_StoresCorrectly()

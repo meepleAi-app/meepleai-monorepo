@@ -200,7 +200,7 @@ public class StartGameSessionCommandHandlerTests
             });
 
         // Act & Assert
-        var act = 
+        var act =
             () => _handler.Handle(command, TestContext.Current.CancellationToken);
         await act.Should().ThrowAsync<Api.SharedKernel.Domain.Exceptions.ValidationException>();
 
@@ -223,7 +223,7 @@ public class StartGameSessionCommandHandlerTests
             players: new List<SessionPlayerRequest>());
 
         // Act & Assert
-        var act = 
+        var act =
             () => _handler.Handle(command, TestContext.Current.CancellationToken);
         await act.Should().ThrowAsync<Api.SharedKernel.Domain.Exceptions.ValidationException>();
 
@@ -254,7 +254,7 @@ public class StartGameSessionCommandHandlerTests
             });
 
         // Act & Assert
-        var act = 
+        var act =
             () => _handler.Handle(command, TestContext.Current.CancellationToken);
         await act.Should().ThrowAsync<Api.SharedKernel.Domain.Exceptions.ValidationException>();
 
@@ -311,7 +311,7 @@ public class StartGameSessionCommandHandlerTests
             });
 
         // Act & Assert
-        var act = 
+        var act =
             () => _handler.Handle(command, TestContext.Current.CancellationToken);
         var exception = (await act.Should().ThrowAsync<InvalidOperationException>()).Which;
 

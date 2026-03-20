@@ -74,7 +74,7 @@ public class CreateStateSnapshotCommandHandlerTests
             .ReturnsAsync((GameSessionState?)null);
 
         // Act & Assert
-        var act = 
+        var act =
             () => _handler.Handle(command, TestContext.Current.CancellationToken);
         var exception = (await act.Should().ThrowAsync<NotFoundException>()).Which;
 
@@ -112,7 +112,7 @@ public class CreateStateSnapshotCommandHandlerTests
     public async Task Handle_WithNullCommand_ThrowsArgumentNullException()
     {
         // Act & Assert
-        var act = 
+        var act =
             () => _handler.Handle(null!, TestContext.Current.CancellationToken);
         await act.Should().ThrowAsync<ArgumentNullException>();
     }
@@ -133,7 +133,7 @@ public class CreateStateSnapshotCommandHandlerTests
 
         // Act & Assert
         // Domain validation rejects empty descriptions
-        var act = 
+        var act =
             () => _handler.Handle(command, TestContext.Current.CancellationToken);
         await act.Should().ThrowAsync<ArgumentException>();
     }

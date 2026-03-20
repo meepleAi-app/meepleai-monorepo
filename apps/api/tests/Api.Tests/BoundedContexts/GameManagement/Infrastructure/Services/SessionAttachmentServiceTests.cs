@@ -224,7 +224,7 @@ public sealed class SessionAttachmentServiceTests
     [Fact]
     public async Task GetDownloadUrlAsync_WithEmptyUrl_ThrowsArgumentException()
     {
-        var act = 
+        var act =
             () => _sut.GetDownloadUrlAsync("");
         await act.Should().ThrowAsync<ArgumentException>();
     }

@@ -44,9 +44,10 @@ public sealed class ReportingWorkflowTests : IDisposable
         var eventCollectorMock = new Mock<Api.SharedKernel.Application.Services.IDomainEventCollector>();
         eventCollectorMock.Setup(e => e.GetAndClearEvents()).Returns(new List<Api.SharedKernel.Domain.Interfaces.IDomainEvent>());
 
+        var eventCollector = TestDbContextFactory.CreateMockEventCollector();
         _dbContext = TestDbContextFactory.CreateInMemoryDbContext();
-        _reportRepository = new AdminReportRepository(_dbContext);
-        _executionRepository = new ReportExecutionRepository(_dbContext);
+        _reportRepository = new AdminReportRepository(_dbContext, eventCollector.Object);
+        _executionRepository = new ReportExecutionRepository(_dbContext, eventCollector.Object);
 
         var loggerMock = new Mock<ILogger<ReportGeneratorService>>();
         _reportGenerator = new ReportGeneratorService(_dbContext, loggerMock.Object);

@@ -1,6 +1,8 @@
 using Api.BoundedContexts.SessionTracking.Domain.Entities;
 using Api.BoundedContexts.SessionTracking.Domain.Repositories;
 using Api.Infrastructure;
+using Api.SharedKernel.Application.Services;
+using Api.SharedKernel.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 
 namespace Api.BoundedContexts.SessionTracking.Infrastructure.Persistence;
@@ -10,13 +12,11 @@ namespace Api.BoundedContexts.SessionTracking.Infrastructure.Persistence;
 /// Uses MeepleAiDbContext with persistence entities, maps to/from domain entities.
 /// Issue #276 - Session Diary / Timeline
 /// </summary>
-public class SessionEventRepository : ISessionEventRepository
+public class SessionEventRepository : RepositoryBase, ISessionEventRepository
 {
-    private readonly MeepleAiDbContext _context;
-
-    public SessionEventRepository(MeepleAiDbContext context)
+    public SessionEventRepository(MeepleAiDbContext dbContext, IDomainEventCollector eventCollector)
+        : base(dbContext, eventCollector)
     {
-        _context = context ?? throw new ArgumentNullException(nameof(context));
     }
 
     /// <inheritdoc />
@@ -27,7 +27,7 @@ public class SessionEventRepository : ISessionEventRepository
         int offset = 0,
         CancellationToken ct = default)
     {
-        var query = _context.SessionEvents
+        var query = DbContext.SessionEvents
             .AsNoTracking()
             .Where(e => e.SessionId == sessionId && !e.IsDeleted);
 
@@ -49,7 +49,7 @@ public class SessionEventRepository : ISessionEventRepository
     /// <inheritdoc />
     public async Task<SessionEvent?> GetByIdAsync(Guid id, CancellationToken ct = default)
     {
-        var entity = await _context.SessionEvents
+        var entity = await DbContext.SessionEvents
             .AsNoTracking()
             .FirstOrDefaultAsync(e => e.Id == id && !e.IsDeleted, ct)
             .ConfigureAwait(false);
@@ -60,7 +60,7 @@ public class SessionEventRepository : ISessionEventRepository
     /// <inheritdoc />
     public async Task<int> CountBySessionIdAsync(Guid sessionId, string? eventType = null, CancellationToken ct = default)
     {
-        var query = _context.SessionEvents
+        var query = DbContext.SessionEvents
             .AsNoTracking()
             .Where(e => e.SessionId == sessionId && !e.IsDeleted);
 
@@ -78,6 +78,6 @@ public class SessionEventRepository : ISessionEventRepository
         ArgumentNullException.ThrowIfNull(sessionEvent);
 
         var entity = SessionEventMapper.ToEntity(sessionEvent);
-        await _context.SessionEvents.AddAsync(entity, ct).ConfigureAwait(false);
+        await DbContext.SessionEvents.AddAsync(entity, ct).ConfigureAwait(false);
     }
 }

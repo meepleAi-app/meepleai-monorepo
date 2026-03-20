@@ -63,8 +63,8 @@ public sealed class SharedGameRepositoryIntegrationTests : IAsyncLifetime
         _dbContext = new MeepleAiDbContext(options, mockMediator.Object, eventCollectorMock.Object);
         await _dbContext.Database.MigrateAsync();
 
-        // Initialize repository (only needs DbContext)
-        _repository = new SharedGameRepository(_dbContext);
+        // Initialize repository
+        _repository = new SharedGameRepository(_dbContext, eventCollectorMock.Object);
     }
 
     public async ValueTask DisposeAsync()

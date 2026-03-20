@@ -44,7 +44,7 @@ public sealed class ProposalMigrationFlowIntegrationTests : IAsyncLifetime
     {
         // Create unique database for test isolation
         _dbContext = TestDbContextFactory.CreateInMemoryDbContext($"ProposalMigrationFlowTest_{Guid.NewGuid()}");
-        _migrationRepo = new ProposalMigrationRepository(_dbContext);
+        _migrationRepo = new ProposalMigrationRepository(_dbContext, _eventCollector.Object);
         _privateGameRepo = new PrivateGameRepository(_dbContext, _eventCollector.Object);
 
         // Seed test data

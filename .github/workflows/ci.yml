@@ -19,23 +19,6 @@ permissions:
 
   actions: read
 jobs:
-  notify-start:
-    if: github.event_name != 'workflow_call'
-    uses: ./.github/workflows/notify-slack.yml
-    with:
-      event: started
-      workflow_name: "CI"
-      environment: ci
-      branch: ${{ github.head_ref || github.ref_name }}
-      actor: ${{ github.actor }}
-      commit_sha: ${{ github.sha }}
-      commit_message: ${{ github.event.head_commit.message || 'Manual trigger' }}
-      run_url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-      job_list: '["changes", "frontend", "backend-unit", "backend-integration", "python-tests", "e2e", "ci-success"]'
-      caller_workflow_id: ${{ github.workflow_id }}
-    secrets:
-      SLACK_GITNOTIFY_WEBHOOK_URL: ${{ secrets.SLACK_GITNOTIFY_WEBHOOK_URL }}
-
   # Quick path filtering to skip unchanged areas
   changes:
     name: Detect Changes
@@ -642,11 +625,19 @@ jobs:
           echo "✅ CI Passed"
 
   notify-end:
-    if: always() && github.event_name != 'workflow_call'
+    if: >-
+      always()
+      && github.event_name != 'workflow_call'
+      && contains(join(needs.*.result, ','), 'failure')
+      && (
+        github.event_name == 'workflow_dispatch'
+        || github.base_ref == 'main-staging'
+        || github.base_ref == 'main'
+      )
     needs: [changes, frontend, backend-unit, backend-integration, python-tests, e2e, ci-success]
     uses: ./.github/workflows/notify-slack.yml
     with:
-      event: ${{ contains(join(needs.*.result, ','), 'failure') && 'failed' || contains(join(needs.*.result, ','), 'cancelled') && 'cancelled' || 'completed' }}
+      event: failed
       workflow_name: "CI"
       environment: ci
       is_critical: false

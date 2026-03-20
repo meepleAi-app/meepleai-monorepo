@@ -34,7 +34,7 @@ public sealed class AccessRequestIntegrationTests : IDisposable
     public AccessRequestIntegrationTests()
     {
         _dbContext = TestDbContextFactory.CreateInMemoryDbContext();
-        _repository = new AccessRequestRepository(_dbContext);
+        _repository = new AccessRequestRepository(_dbContext, TestDbContextFactory.CreateMockEventCollector().Object);
         _unitOfWork = new EfCoreUnitOfWork(_dbContext);
     }
 

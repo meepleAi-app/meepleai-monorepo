@@ -209,7 +209,6 @@ public sealed class RetryPdfProcessingIntegrationTests : IAsyncLifetime
         Assert.Equal(1, updatedPdf.RetryCount);
         Assert.Equal(PdfProcessingState.Extracting.ToString(), updatedPdf.ProcessingState);
         Assert.Null(updatedPdf.ProcessingError);
-        Assert.Equal("Uploading", updatedPdf.ProcessingState);
     }
 
     [Fact]

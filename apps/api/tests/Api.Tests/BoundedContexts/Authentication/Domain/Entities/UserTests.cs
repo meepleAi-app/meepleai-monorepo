@@ -332,7 +332,7 @@ public sealed class UserTests
     #region AssignRole Tests
 
     [Fact]
-    public void AssignRole_WithAdminRequester_UpdatesRole()
+    public void AssignRole_WithSuperAdminRequester_UpdatesRole()
     {
         // Arrange
         var user = CreateValidUser();
@@ -340,7 +340,7 @@ public sealed class UserTests
         user.ClearDomainEvents();
 
         // Act
-        user.AssignRole(newRole, Role.Admin);
+        user.AssignRole(newRole, Role.SuperAdmin);
 
         // Assert
         user.Role.Should().Be(newRole);
@@ -349,7 +349,7 @@ public sealed class UserTests
     }
 
     [Fact]
-    public void AssignRole_WithNonAdminRequester_ThrowsDomainException()
+    public void AssignRole_WithNonSuperAdminRequester_ThrowsDomainException()
     {
         // Arrange
         var user = CreateValidUser();
@@ -359,21 +359,21 @@ public sealed class UserTests
 
         // Assert
         action.Should().Throw<DomainException>()
-            .WithMessage("*Only administrators can assign roles*");
+            .WithMessage("*Only the SuperAdmin can assign roles*");
     }
 
     [Fact]
-    public void AssignRole_AdminAssigningAdminToAdmin_ThrowsDomainException()
+    public void AssignRole_AdminRequester_ThrowsDomainException()
     {
-        // Arrange
+        // Arrange — Only SuperAdmin can assign roles; Admin is not sufficient
         var admin = CreateAdminUser();
 
-        // Act
+        // Act — Admin requester is rejected because only SuperAdmin can assign roles
         var action = () => admin.AssignRole(Role.Admin, Role.Admin);
 
         // Assert
         action.Should().Throw<DomainException>()
-            .WithMessage("*Cannot modify admin role through self-service*");
+            .WithMessage("*Only the SuperAdmin can assign roles*");
     }
 
     [Fact]
@@ -383,7 +383,7 @@ public sealed class UserTests
         var user = CreateValidUser();
 
         // Act
-        var action = () => user.AssignRole(null!, Role.Admin);
+        var action = () => user.AssignRole(null!, Role.SuperAdmin);
 
         // Assert
         action.Should().Throw<ArgumentNullException>();

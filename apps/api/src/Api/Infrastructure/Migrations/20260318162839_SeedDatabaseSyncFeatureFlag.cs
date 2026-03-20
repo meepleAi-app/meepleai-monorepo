@@ -10,18 +10,8 @@ namespace Api.Infrastructure.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.Sql($"""
-                INSERT INTO "system_configurations"
-                    ("Id", "Key", "Value", "ValueType", "Description", "Category",
-                     "IsActive", "RequiresRestart", "Environment", "Version",
-                     "CreatedAt", "UpdatedAt", "CreatedByUserId")
-                SELECT gen_random_uuid(), 'Features.DatabaseSync', 'false', 'bool',
-                       'Enable Database Sync admin tool', 'Features', true, false, 'All', 1,
-                       NOW() AT TIME ZONE 'UTC', NOW() AT TIME ZONE 'UTC',
-                       (SELECT "Id" FROM "users" ORDER BY "CreatedAt" LIMIT 1)
-                WHERE NOT EXISTS (SELECT 1 FROM "system_configurations" WHERE "Key" = 'Features.DatabaseSync')
-                  AND EXISTS (SELECT 1 FROM "users");
-            """);
+            // No-op: feature flags are seeded at runtime by FeatureFlagSeeder
+            // (which runs after admin user creation, avoiding FK constraint violations on fresh DBs).
         }
 
         /// <inheritdoc />

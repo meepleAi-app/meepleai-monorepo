@@ -18,10 +18,9 @@ namespace Api.Infrastructure.Migrations
                 SELECT gen_random_uuid(), 'Features.DatabaseSync', 'false', 'bool',
                        'Enable Database Sync admin tool', 'Features', true, false, 'All', 1,
                        NOW() AT TIME ZONE 'UTC', NOW() AT TIME ZONE 'UTC',
-                       COALESCE(
-                           (SELECT "Id" FROM "users" WHERE "Role" = 'Admin' ORDER BY "CreatedAt" LIMIT 1),
-                           '00000000-0000-0000-0000-000000000000'::uuid)
-                WHERE NOT EXISTS (SELECT 1 FROM "system_configurations" WHERE "Key" = 'Features.DatabaseSync');
+                       (SELECT "Id" FROM "users" ORDER BY "CreatedAt" LIMIT 1)
+                WHERE NOT EXISTS (SELECT 1 FROM "system_configurations" WHERE "Key" = 'Features.DatabaseSync')
+                  AND EXISTS (SELECT 1 FROM "users");
             """);
         }
 

@@ -8,6 +8,7 @@ using Api.SharedKernel.Infrastructure.Persistence;
 using Api.Tests.Constants;
 using Microsoft.Extensions.Logging;
 using Moq;
+using FluentAssertions;
 using Xunit;
 
 namespace Api.Tests.BoundedContexts.AgentMemory.Application.Handlers;
@@ -59,12 +60,12 @@ public class CreateGroupMemoryCommandHandlerTests
         var result = await _handler.Handle(command, CancellationToken.None);
 
         // Assert
-        Assert.NotEqual(Guid.Empty, result);
-        Assert.NotNull(capturedGroup);
-        Assert.Equal("Friday Night Gamers", capturedGroup!.Name);
-        Assert.Equal(creatorId, capturedGroup.CreatorId);
-        Assert.Single(capturedGroup.Members); // Creator only
-        Assert.Equal(creatorId, capturedGroup.Members[0].UserId);
+        result.Should().NotBe(Guid.Empty);
+        capturedGroup.Should().NotBeNull();
+        capturedGroup!.Name.Should().Be("Friday Night Gamers");
+        capturedGroup.CreatorId.Should().Be(creatorId);
+        capturedGroup.Members.Should().ContainSingle();
+        capturedGroup.Members[0].UserId.Should().Be(creatorId);
 
         _unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
@@ -91,8 +92,8 @@ public class CreateGroupMemoryCommandHandlerTests
         await _handler.Handle(command, CancellationToken.None);
 
         // Assert
-        Assert.NotNull(capturedGroup);
-        Assert.Equal(3, capturedGroup!.Members.Count); // Creator + 2 members
+        capturedGroup.Should().NotBeNull();
+        capturedGroup!.Members.Count.Should().Be(3);
     }
 
     [Fact]
@@ -115,10 +116,10 @@ public class CreateGroupMemoryCommandHandlerTests
         await _handler.Handle(command, CancellationToken.None);
 
         // Assert
-        Assert.NotNull(capturedGroup);
-        Assert.Equal(3, capturedGroup!.Members.Count); // Creator + 2 guests
-        Assert.Contains(capturedGroup.Members, m => m.GuestName == "Uncle Bob");
-        Assert.Contains(capturedGroup.Members, m => m.GuestName == "Cousin Alice");
+        capturedGroup.Should().NotBeNull();
+        capturedGroup!.Members.Count.Should().Be(3);
+        capturedGroup.Members.Should().Contain(m => m.GuestName == "Uncle Bob");
+        capturedGroup.Members.Should().Contain(m => m.GuestName == "Cousin Alice");
     }
 
     [Fact]
@@ -141,8 +142,8 @@ public class CreateGroupMemoryCommandHandlerTests
         await _handler.Handle(command, CancellationToken.None);
 
         // Assert
-        Assert.NotNull(capturedGroup);
-        Assert.Single(capturedGroup!.Members); // Only creator, no duplicate
+        capturedGroup.Should().NotBeNull();
+        capturedGroup!.Members.Should().ContainSingle();
     }
 
     [Fact]
@@ -156,7 +157,7 @@ public class CreateGroupMemoryCommandHandlerTests
         var command = new CreateGroupMemoryCommand(Guid.NewGuid(), "Test Group");
 
         // Act & Assert
-        await Assert.ThrowsAsync<InvalidOperationException>(
-            () => _handler.Handle(command, CancellationToken.None));
+        var act = () => _handler.Handle(command, CancellationToken.None);
+        await act.Should().ThrowAsync<InvalidOperationException>();
     }
 }

@@ -15,6 +15,7 @@ using Npgsql;
 using Api.Tests.TestHelpers;
 using Api.Tests.Constants;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.SharedGameCatalog.Infrastructure;
 
@@ -62,8 +63,8 @@ public sealed class SharedGameRepositoryIntegrationTests : IAsyncLifetime
         _dbContext = new MeepleAiDbContext(options, mockMediator.Object, eventCollectorMock.Object);
         await _dbContext.Database.MigrateAsync();
 
-        // Initialize repository (only needs DbContext)
-        _repository = new SharedGameRepository(_dbContext);
+        // Initialize repository
+        _repository = new SharedGameRepository(_dbContext, eventCollectorMock.Object);
     }
 
     public async ValueTask DisposeAsync()
@@ -100,10 +101,10 @@ public sealed class SharedGameRepositoryIntegrationTests : IAsyncLifetime
 
         // Assert
         var retrieved = await _repository.GetByIdAsync(game.Id);
-        Assert.NotNull(retrieved);
-        Assert.Equal("Catan", retrieved.Title);
-        Assert.Equal(1995, retrieved.YearPublished);
-        Assert.Equal(GameStatus.Draft, retrieved.Status);
+        retrieved.Should().NotBeNull();
+        retrieved.Title.Should().Be("Catan");
+        retrieved.YearPublished.Should().Be(1995);
+        retrieved.Status.Should().Be(GameStatus.Draft);
     }
 
     #endregion
@@ -123,9 +124,9 @@ public sealed class SharedGameRepositoryIntegrationTests : IAsyncLifetime
         var result = await _repository.GetByIdAsync(game.Id);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal(game.Id, result.Id);
-        Assert.Equal("Pandemic", result.Title);
+        result.Should().NotBeNull();
+        result.Id.Should().Be(game.Id);
+        result.Title.Should().Be("Pandemic");
     }
 
     [Fact]
@@ -135,7 +136,7 @@ public sealed class SharedGameRepositoryIntegrationTests : IAsyncLifetime
         var result = await _repository.GetByIdAsync(Guid.NewGuid());
 
         // Assert
-        Assert.Null(result);
+        result.Should().BeNull();
     }
 
     #endregion
@@ -173,8 +174,8 @@ public sealed class SharedGameRepositoryIntegrationTests : IAsyncLifetime
 
         // Assert
         var retrieved = await _repository.GetByIdAsync(game.Id);
-        Assert.NotNull(retrieved);
-        Assert.Contains("Updated description", retrieved.Description);
+        retrieved.Should().NotBeNull();
+        retrieved.Description.Should().Contain("Updated description");
     }
 
     #endregion
@@ -194,9 +195,9 @@ public sealed class SharedGameRepositoryIntegrationTests : IAsyncLifetime
         var result = await _repository.GetByBggIdAsync(68448);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal(game.Id, result.Id);
-        Assert.Equal(68448, result.BggId);
+        result.Should().NotBeNull();
+        result.Id.Should().Be(game.Id);
+        result.BggId.Should().Be(68448);
     }
 
     [Fact]
@@ -212,7 +213,7 @@ public sealed class SharedGameRepositoryIntegrationTests : IAsyncLifetime
         var exists = await _repository.ExistsByBggIdAsync(266192);
 
         // Assert
-        Assert.True(exists);
+        exists.Should().BeTrue();
     }
 
     [Fact]
@@ -222,7 +223,7 @@ public sealed class SharedGameRepositoryIntegrationTests : IAsyncLifetime
         var exists = await _repository.ExistsByBggIdAsync(999999);
 
         // Assert
-        Assert.False(exists);
+        exists.Should().BeFalse();
     }
 
     #endregion
@@ -249,8 +250,8 @@ public sealed class SharedGameRepositoryIntegrationTests : IAsyncLifetime
             .ToListAsync();
 
         // Assert
-        Assert.Single(games);
-        Assert.Equal("Catan", games.First().Title);
+        games.Should().ContainSingle();
+        games.First().Title.Should().Be("Catan");
     }
 
     [Fact]
@@ -273,9 +274,9 @@ public sealed class SharedGameRepositoryIntegrationTests : IAsyncLifetime
             .ToListAsync();
 
         // Assert
-        Assert.Single(games);
-        Assert.Equal("Gioco A", games.First().Title);
-        Assert.Contains("cavalieri", games.First().Description);
+        games.Should().ContainSingle();
+        games.First().Title.Should().Be("Gioco A");
+        games.First().Description.Should().Contain("cavalieri");
     }
 
     #endregion

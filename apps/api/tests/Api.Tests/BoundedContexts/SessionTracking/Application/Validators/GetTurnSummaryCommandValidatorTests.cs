@@ -1,6 +1,7 @@
 using Api.BoundedContexts.SessionTracking.Application.Commands;
 using Api.Tests.Constants;
 using FluentValidation.TestHelper;
+using FluentAssertions;
 using Xunit;
 
 namespace Api.Tests.BoundedContexts.SessionTracking.Application.Validators;
@@ -56,9 +57,8 @@ public class GetTurnSummaryCommandValidatorTests
     {
         var command = new GetTurnSummaryCommand(Guid.NewGuid(), Guid.NewGuid());
         var result = _validator.TestValidate(command);
-        Assert.False(result.IsValid);
-        Assert.Contains(result.Errors,
-            e => e.ErrorMessage == "At least one of LastNEvents, FromPhase, or ToPhase must be provided.");
+        result.IsValid.Should().BeFalse();
+        result.Errors.Should().Contain(e => e.ErrorMessage == "At least one of LastNEvents, FromPhase, or ToPhase must be provided.");
     }
 
     [Theory]
@@ -105,8 +105,7 @@ public class GetTurnSummaryCommandValidatorTests
     {
         var command = new GetTurnSummaryCommand(Guid.NewGuid(), Guid.NewGuid(), FromPhase: 5, ToPhase: 2);
         var result = _validator.TestValidate(command);
-        Assert.False(result.IsValid);
-        Assert.Contains(result.Errors,
-            e => e.ErrorMessage == "ToPhase must be greater than or equal to FromPhase.");
+        result.IsValid.Should().BeFalse();
+        result.Errors.Should().Contain(e => e.ErrorMessage == "ToPhase must be greater than or equal to FromPhase.");
     }
 }

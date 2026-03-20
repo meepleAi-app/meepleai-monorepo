@@ -9,6 +9,7 @@ using MediatR;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.SessionTracking.Application.Behaviors;
 
@@ -81,7 +82,7 @@ public class ValidatePlayerRoleBehaviorTests
         var result = await _playerBehavior.Handle(command, next, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.Equal(expectedResult, result);
+        result.Should().Be(expectedResult);
     }
 
     [Fact]
@@ -103,7 +104,7 @@ public class ValidatePlayerRoleBehaviorTests
         var result = await _hostBehavior.Handle(command, next, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.Equal(expectedResult, result);
+        result.Should().Be(expectedResult);
     }
 
     [Fact]
@@ -122,11 +123,11 @@ public class ValidatePlayerRoleBehaviorTests
             Task.FromResult(new KickParticipantResult(Guid.NewGuid(), "Should not reach"));
 
         // Act & Assert
-        var ex = await Assert.ThrowsAsync<ForbiddenException>(
-            () => _hostBehavior.Handle(command, next, TestContext.Current.CancellationToken));
-        Assert.Contains("Insufficient role", ex.Message);
-        Assert.Contains("Host", ex.Message);
-        Assert.Contains("Player", ex.Message);
+        var act = () => _hostBehavior.Handle(command, next, TestContext.Current.CancellationToken);
+        var ex = (await act.Should().ThrowAsync<ForbiddenException>()).Which;
+        ex.Message.Should().Contain("Insufficient role");
+        ex.Message.Should().Contain("Host");
+        ex.Message.Should().Contain("Player");
     }
 
     [Fact]
@@ -145,9 +146,9 @@ public class ValidatePlayerRoleBehaviorTests
             Task.FromResult(new MarkPlayerReadyResult(true, 1, 1));
 
         // Act & Assert
-        var ex = await Assert.ThrowsAsync<ForbiddenException>(
-            () => _playerBehavior.Handle(command, next, TestContext.Current.CancellationToken));
-        Assert.Contains("Insufficient role", ex.Message);
+        var act2 = () => _playerBehavior.Handle(command, next, TestContext.Current.CancellationToken);
+        var ex = (await act2.Should().ThrowAsync<ForbiddenException>()).Which;
+        ex.Message.Should().Contain("Insufficient role");
     }
 
     [Fact]
@@ -163,8 +164,8 @@ public class ValidatePlayerRoleBehaviorTests
             Task.FromResult(new MarkPlayerReadyResult(true, 1, 1));
 
         // Act & Assert
-        await Assert.ThrowsAsync<NotFoundException>(
-            () => _playerBehavior.Handle(command, next, TestContext.Current.CancellationToken));
+        var act3 = () => _playerBehavior.Handle(command, next, TestContext.Current.CancellationToken);
+        await act3.Should().ThrowAsync<NotFoundException>();
     }
 
     [Fact]
@@ -184,9 +185,9 @@ public class ValidatePlayerRoleBehaviorTests
             Task.FromResult(new MarkPlayerReadyResult(true, 1, 1));
 
         // Act & Assert
-        var ex = await Assert.ThrowsAsync<NotFoundException>(
-            () => _playerBehavior.Handle(command, next, TestContext.Current.CancellationToken));
-        Assert.Contains("not a participant", ex.Message);
+        var act4 = () => _playerBehavior.Handle(command, next, TestContext.Current.CancellationToken);
+        var ex = (await act4.Should().ThrowAsync<NotFoundException>()).Which;
+        ex.Message.Should().Contain("not a participant");
     }
 
     [Fact]
@@ -208,6 +209,6 @@ public class ValidatePlayerRoleBehaviorTests
         var result = await _playerBehavior.Handle(command, next, TestContext.Current.CancellationToken);
 
         // Assert - Host passes Player-level check
-        Assert.Equal(expectedResult, result);
+        result.Should().Be(expectedResult);
     }
 }

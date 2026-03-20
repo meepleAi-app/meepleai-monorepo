@@ -1,49 +1,53 @@
 using Api.BoundedContexts.Administration.Domain.Aggregates.AlertRules;
 using Api.BoundedContexts.Administration.Domain.Repositories;
 using Api.Infrastructure;
+using Api.SharedKernel.Application.Services;
+using Api.SharedKernel.Infrastructure;
 using Api.Infrastructure.Entities.Administration;
 using Microsoft.EntityFrameworkCore;
 
 namespace Api.BoundedContexts.Administration.Infrastructure.Repositories;
 
-internal class AlertRuleRepository : IAlertRuleRepository
+internal class AlertRuleRepository : RepositoryBase, IAlertRuleRepository
 {
-    private readonly MeepleAiDbContext _context;
-    public AlertRuleRepository(MeepleAiDbContext context) => _context = context;
+    public AlertRuleRepository(MeepleAiDbContext dbContext, IDomainEventCollector eventCollector)
+        : base(dbContext, eventCollector)
+    {
+    }
 
     public async Task<AlertRule?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        var entity = await _context.AlertRules.FindAsync(new object[] { id }, cancellationToken).ConfigureAwait(false);
+        var entity = await DbContext.AlertRules.FindAsync(new object[] { id }, cancellationToken).ConfigureAwait(false);
         return entity == null ? null : MapToDomain(entity);
     }
 
     public async Task<AlertRule?> GetByNameAsync(string name, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(name);
-        var entity = await _context.AlertRules.FirstOrDefaultAsync(r => r.Name == name, cancellationToken).ConfigureAwait(false);
+        var entity = await DbContext.AlertRules.FirstOrDefaultAsync(r => r.Name == name, cancellationToken).ConfigureAwait(false);
         return entity == null ? null : MapToDomain(entity);
     }
 
     public async Task<List<AlertRule>> GetAllAsync(CancellationToken cancellationToken = default) =>
-        (await _context.AlertRules.ToListAsync(cancellationToken).ConfigureAwait(false)).Select(MapToDomain).ToList();
+        (await DbContext.AlertRules.ToListAsync(cancellationToken).ConfigureAwait(false)).Select(MapToDomain).ToList();
 
     public async Task<List<AlertRule>> GetEnabledAsync(CancellationToken cancellationToken = default) =>
-        (await _context.AlertRules.Where(r => r.IsEnabled).ToListAsync(cancellationToken).ConfigureAwait(false)).Select(MapToDomain).ToList();
+        (await DbContext.AlertRules.Where(r => r.IsEnabled).ToListAsync(cancellationToken).ConfigureAwait(false)).Select(MapToDomain).ToList();
 
     public async Task<List<AlertRule>> GetByAlertTypeAsync(string alertType, CancellationToken cancellationToken = default) =>
-        (await _context.AlertRules.Where(r => r.AlertType == alertType).ToListAsync(cancellationToken).ConfigureAwait(false)).Select(MapToDomain).ToList();
+        (await DbContext.AlertRules.Where(r => r.AlertType == alertType).ToListAsync(cancellationToken).ConfigureAwait(false)).Select(MapToDomain).ToList();
 
     public async Task AddAsync(AlertRule alertRule, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(alertRule);
-        await _context.AlertRules.AddAsync(MapToEntity(alertRule), cancellationToken).ConfigureAwait(false);
-        await _context.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        await DbContext.AlertRules.AddAsync(MapToEntity(alertRule), cancellationToken).ConfigureAwait(false);
+        await DbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
     }
 
     public async Task UpdateAsync(AlertRule alertRule, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(alertRule);
-        var entity = await _context.AlertRules.FindAsync(new object[] { alertRule.Id }, cancellationToken).ConfigureAwait(false);
+        var entity = await DbContext.AlertRules.FindAsync(new object[] { alertRule.Id }, cancellationToken).ConfigureAwait(false);
         if (entity == null) throw new InvalidOperationException($"AlertRule {alertRule.Id} not found");
         entity.Name = alertRule.Name;
         entity.Severity = alertRule.Severity.ToDisplayString();
@@ -55,13 +59,13 @@ internal class AlertRuleRepository : IAlertRuleRepository
         entity.Metadata = alertRule.Metadata;
         entity.UpdatedAt = alertRule.UpdatedAt;
         entity.UpdatedBy = alertRule.UpdatedBy;
-        await _context.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        await DbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
     }
 
     public async Task DeleteAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        var entity = await _context.AlertRules.FindAsync(new object[] { id }, cancellationToken).ConfigureAwait(false);
-        if (entity != null) { _context.AlertRules.Remove(entity); await _context.SaveChangesAsync(cancellationToken).ConfigureAwait(false); }
+        var entity = await DbContext.AlertRules.FindAsync(new object[] { id }, cancellationToken).ConfigureAwait(false);
+        if (entity != null) { DbContext.AlertRules.Remove(entity); await DbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false); }
     }
 
     private static AlertRule MapToDomain(AlertRuleEntity e) =>

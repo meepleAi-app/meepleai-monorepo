@@ -275,8 +275,8 @@ public class DagOrchestratorTests
         using var cts = new CancellationTokenSource(100);
 
         // Act & Assert
-        await Assert.ThrowsAnyAsync<OperationCanceledException>(
-            async () => await _orchestrator.ExecuteAsync(pipeline, input, cts.Token));
+        Func<Task> act = async () => await _orchestrator.ExecuteAsync(pipeline, input, cts.Token);
+        await act.Should().ThrowAsync<OperationCanceledException>();
     }
 
     #endregion

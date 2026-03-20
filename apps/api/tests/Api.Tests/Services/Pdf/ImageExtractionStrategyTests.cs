@@ -1,4 +1,5 @@
 using Xunit;
+using FluentAssertions;
 using Api.Services.Pdf;
 using iText.Kernel.Pdf.Canvas.Parser;
 using Api.Tests.Constants;
@@ -14,7 +15,7 @@ public class ImageExtractionStrategyTests
     {
         var strategy = new ImageExtractionStrategy();
         var ex = Record.Exception(() => strategy.EventOccurred(null!, EventType.RENDER_IMAGE));
-        Assert.Null(ex);
+        ex.Should().BeNull();
     }
 
     [Fact]
@@ -22,6 +23,6 @@ public class ImageExtractionStrategyTests
     {
         var strategy = new ImageExtractionStrategy();
         var events = strategy.GetSupportedEvents();
-        Assert.Contains(EventType.RENDER_IMAGE, events);
+        events.Should().Contain(EventType.RENDER_IMAGE);
     }
 }

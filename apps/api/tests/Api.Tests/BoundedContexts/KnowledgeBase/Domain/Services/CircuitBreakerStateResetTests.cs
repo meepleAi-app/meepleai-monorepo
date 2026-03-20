@@ -1,6 +1,7 @@
 using Api.BoundedContexts.KnowledgeBase.Domain.Services;
 using Api.Tests.Constants;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Domain.Services;
 
@@ -20,11 +21,11 @@ public sealed class CircuitBreakerStateResetTests
 
         cb.Reset();
 
-        Assert.Equal(CircuitState.Closed, cb.State);
-        Assert.Equal(0, cb.ConsecutiveFailures);
-        Assert.Equal(0, cb.ConsecutiveSuccesses);
-        Assert.Null(cb.OpenedAt);
-        Assert.NotNull(cb.LastAttemptAt);
+        cb.State.Should().Be(CircuitState.Closed);
+        cb.ConsecutiveFailures.Should().Be(0);
+        cb.ConsecutiveSuccesses.Should().Be(0);
+        cb.OpenedAt.Should().BeNull();
+        cb.LastAttemptAt.Should().NotBeNull();
     }
 
     [Fact]
@@ -36,13 +37,13 @@ public sealed class CircuitBreakerStateResetTests
         for (var i = 0; i < 5; i++)
             cb.RecordFailure();
 
-        Assert.Equal(CircuitState.Open, cb.State);
+        cb.State.Should().Be(CircuitState.Open);
 
         cb.Reset();
 
-        Assert.Equal(CircuitState.Closed, cb.State);
-        Assert.Equal(0, cb.ConsecutiveFailures);
-        Assert.Null(cb.OpenedAt);
+        cb.State.Should().Be(CircuitState.Closed);
+        cb.ConsecutiveFailures.Should().Be(0);
+        cb.OpenedAt.Should().BeNull();
     }
 
     [Fact]
@@ -64,8 +65,8 @@ public sealed class CircuitBreakerStateResetTests
 
         cb.Reset();
 
-        Assert.Equal(CircuitState.Open, fromState);
-        Assert.Equal(CircuitState.Closed, toState);
+        fromState.Should().Be(CircuitState.Open);
+        toState.Should().Be(CircuitState.Closed);
     }
 
     [Fact]
@@ -79,7 +80,7 @@ public sealed class CircuitBreakerStateResetTests
         cb.Reset();
 
         // No transition from Closed → Closed
-        Assert.False(callbackInvoked);
+        callbackInvoked.Should().BeFalse();
     }
 
     [Fact]
@@ -91,14 +92,14 @@ public sealed class CircuitBreakerStateResetTests
         for (var i = 0; i < 5; i++)
             cb.RecordFailure();
 
-        Assert.True(cb.ConsecutiveFailures > 0);
-        Assert.NotNull(cb.OpenedAt);
+        (cb.ConsecutiveFailures > 0).Should().BeTrue();
+        cb.OpenedAt.Should().NotBeNull();
 
         cb.Reset();
 
-        Assert.Equal(0, cb.ConsecutiveFailures);
-        Assert.Equal(0, cb.ConsecutiveSuccesses);
-        Assert.Null(cb.OpenedAt);
+        cb.ConsecutiveFailures.Should().Be(0);
+        cb.ConsecutiveSuccesses.Should().Be(0);
+        cb.OpenedAt.Should().BeNull();
     }
 
     [Fact]
@@ -109,8 +110,8 @@ public sealed class CircuitBreakerStateResetTests
 
         cb.Reset();
 
-        Assert.NotNull(cb.LastAttemptAt);
-        Assert.True(cb.LastAttemptAt >= before);
+        cb.LastAttemptAt.Should().NotBeNull();
+        (cb.LastAttemptAt >= before).Should().BeTrue();
     }
 
     [Fact]
@@ -122,10 +123,10 @@ public sealed class CircuitBreakerStateResetTests
         for (var i = 0; i < 5; i++)
             cb.RecordFailure();
 
-        Assert.False(cb.AllowsRequests());
+        cb.AllowsRequests().Should().BeFalse();
 
         cb.Reset();
 
-        Assert.True(cb.AllowsRequests());
+        cb.AllowsRequests().Should().BeTrue();
     }
 }

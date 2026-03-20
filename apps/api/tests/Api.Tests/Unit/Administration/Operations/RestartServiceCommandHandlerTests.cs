@@ -11,6 +11,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.Unit.Administration.Operations;
 
@@ -69,8 +70,8 @@ public sealed class RestartServiceCommandHandlerTests
         var result = await _handler.Handle(command, CancellationToken.None);
 
         // Assert
-        Assert.Equal("Service restart initiated. Application shutting down gracefully.", result.Message);
-        Assert.Equal("30-60 seconds", result.EstimatedDowntime);
+        result.Message.Should().Be("Service restart initiated. Application shutting down gracefully.");
+        result.EstimatedDowntime.Should().Be("30-60 seconds");
 
         _mockAuditLogRepository.Verify(
             x => x.AddAsync(It.IsAny<Api.BoundedContexts.Administration.Domain.Entities.AuditLog>(), It.IsAny<CancellationToken>()),
@@ -97,10 +98,10 @@ public sealed class RestartServiceCommandHandlerTests
             .ReturnsAsync(regularAdmin);
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<ConflictException>(
-            () => _handler.Handle(command, CancellationToken.None));
+        var act = () => _handler.Handle(command, CancellationToken.None);
+        var exception = (await act.Should().ThrowAsync<ConflictException>()).Which;
 
-        Assert.Equal("Only SuperAdmin can restart services", exception.Message);
+        exception.Message.Should().Be("Only SuperAdmin can restart services");
 
         _mockAuditLogRepository.Verify(
             x => x.AddAsync(It.IsAny<Api.BoundedContexts.Administration.Domain.Entities.AuditLog>(), It.IsAny<CancellationToken>()),
@@ -121,10 +122,10 @@ public sealed class RestartServiceCommandHandlerTests
             .ReturnsAsync((User?)null);
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<NotFoundException>(
-            () => _handler.Handle(command, CancellationToken.None));
+        var act2 = () => _handler.Handle(command, CancellationToken.None);
+        var exception = (await act2.Should().ThrowAsync<NotFoundException>()).Which;
 
-        Assert.Contains(adminId.ToString(), exception.Message, StringComparison.Ordinal);
+        exception.Message.Should().ContainEquivalentOf(adminId.ToString());
     }
 
     private static User CreateSuperAdminUser(Guid id)

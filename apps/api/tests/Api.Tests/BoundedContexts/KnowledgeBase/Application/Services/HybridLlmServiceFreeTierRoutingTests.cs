@@ -13,6 +13,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Services;
 
@@ -134,7 +135,7 @@ public sealed class HybridLlmServiceFreeTierRoutingTests
             "You are a helpful assistant.", "Say hello",
             source: RequestSource.AutomatedTest);
 
-        Assert.True(result.Success);
+        result.Success.Should().BeTrue();
 
         // Routing strategy must NOT be consulted for AutomatedTest requests
         _routingStrategyMock.Verify(
@@ -197,7 +198,7 @@ public sealed class HybridLlmServiceFreeTierRoutingTests
         var sut = CreateSut();
         var result = await sut.GenerateCompletionAsync("sys", "user");
 
-        Assert.True(result.Success);
+        result.Success.Should().BeTrue();
 
         // OpenRouter must never receive the request (proactively skipped)
         _openRouterMock.Verify(
@@ -231,7 +232,7 @@ public sealed class HybridLlmServiceFreeTierRoutingTests
         var sut = CreateSut();
         var result = await sut.GenerateCompletionAsync("sys", "user");
 
-        Assert.True(result.Success);
+        result.Success.Should().BeTrue();
 
         _openRouterMock.Verify(
             c => c.GenerateCompletionAsync(

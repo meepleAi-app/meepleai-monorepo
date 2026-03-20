@@ -6,6 +6,7 @@ using Api.Tests.Constants;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Handlers.RagDashboard;
 
@@ -46,7 +47,7 @@ public class GetStrategyMetricsQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
     }
 
     [Theory]
@@ -65,8 +66,8 @@ public class GetStrategyMetricsQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal(strategyId, result.StrategyId);
+        result.Should().NotBeNull();
+        result.StrategyId.Should().Be(strategyId);
     }
 
     [Fact]
@@ -79,10 +80,10 @@ public class GetStrategyMetricsQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.True(result.TotalQueries >= 0);
-        Assert.True(result.AverageLatencyMs >= 0);
-        Assert.True(result.P95LatencyMs >= 0);
-        Assert.True(result.P99LatencyMs >= 0);
+        (result.TotalQueries >= 0).Should().BeTrue();
+        (result.AverageLatencyMs >= 0).Should().BeTrue();
+        (result.P95LatencyMs >= 0).Should().BeTrue();
+        (result.P99LatencyMs >= 0).Should().BeTrue();
     }
 
     [Fact]
@@ -95,7 +96,7 @@ public class GetStrategyMetricsQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.InRange(result.AverageRelevanceScore, 0.0, 1.0);
+        result.AverageRelevanceScore.Should().BeInRange(0.0, 1.0);
     }
 
     [Fact]
@@ -108,8 +109,8 @@ public class GetStrategyMetricsQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.True(result.TotalCost >= 0);
-        Assert.True(result.AverageCostPerQuery >= 0);
+        (result.TotalCost >= 0).Should().BeTrue();
+        (result.AverageCostPerQuery >= 0).Should().BeTrue();
     }
 
     [Fact]
@@ -127,7 +128,7 @@ public class GetStrategyMetricsQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
     }
 
     [Fact]

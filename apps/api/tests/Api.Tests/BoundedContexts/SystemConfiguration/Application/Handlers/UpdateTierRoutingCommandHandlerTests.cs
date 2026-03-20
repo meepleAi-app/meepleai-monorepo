@@ -93,8 +93,8 @@ public sealed class UpdateTierRoutingCommandHandlerTests : IDisposable
             .ReturnsAsync((AiModelConfiguration?)null);
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<NotFoundException>(
-            async () => await _handler.Handle(command, CancellationToken.None));
+        var act = async () => await _handler.Handle(command, CancellationToken.None);
+        var exception = (await act.Should().ThrowAsync<NotFoundException>()).Which;
 
         exception.Message.Should().Contain("nonexistent-model");
     }
@@ -116,8 +116,8 @@ public sealed class UpdateTierRoutingCommandHandlerTests : IDisposable
             .ReturnsAsync((AiModelConfiguration?)null);
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<NotFoundException>(
-            async () => await _handler.Handle(command, CancellationToken.None));
+        var act2 = async () => await _handler.Handle(command, CancellationToken.None);
+        var exception = (await act2.Should().ThrowAsync<NotFoundException>()).Which;
 
         exception.Message.Should().Contain("nonexistent-test-model");
     }

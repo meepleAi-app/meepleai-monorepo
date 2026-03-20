@@ -8,6 +8,7 @@ using Api.SharedKernel.Domain.Exceptions;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Api.Tests.BoundedContexts.SystemConfiguration.TestHelpers;
 using Moq;
+using FluentAssertions;
 using Xunit;
 using Api.Tests.Constants;
 
@@ -61,10 +62,10 @@ public class UpdateConfigValueCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal("200", result.Value);
-        Assert.Equal(2, result.Version); // Version incremented
-        Assert.NotNull(result.UpdatedAt);
+        result.Should().NotBeNull();
+        result.Value.Should().Be("200");
+        result.Version.Should().Be(2);
+        result.UpdatedAt.Should().NotBe(default);
 
         _mockConfigRepository.Verify(
             r => r.UpdateAsync(existingConfig, It.IsAny<CancellationToken>()),
@@ -91,10 +92,10 @@ public class UpdateConfigValueCommandHandlerTests
             .ReturnsAsync((SystemConfig?)null);
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<DomainException>(
-            () => _handler.Handle(command, TestContext.Current.CancellationToken));
-        Assert.Contains("not found", exception.Message);
-        Assert.Contains(configId.ToString(), exception.Message);
+        var act = () => _handler.Handle(command, TestContext.Current.CancellationToken);
+        var exception = (await act.Should().ThrowAsync<DomainException>()).Which;
+        exception.Message.Should().Contain("not found");
+        exception.Message.Should().Contain(configId.ToString());
 
         _mockConfigRepository.Verify(
             r => r.UpdateAsync(It.IsAny<SystemConfig>(), It.IsAny<CancellationToken>()),
@@ -132,7 +133,7 @@ public class UpdateConfigValueCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.Equal(2, result.Version);
+        result.Version.Should().Be(2);
     }
 
     [Fact]
@@ -243,13 +244,13 @@ public class UpdateConfigValueCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal(configId, result.Id);
-        Assert.Equal("cache.ttl", result.Key);
-        Assert.Equal("600", result.Value);
-        Assert.Equal("int", result.ValueType);
-        Assert.Equal("Cache TTL", result.Description);
-        Assert.Equal("Cache", result.Category);
+        result.Should().NotBeNull();
+        result.Id.Should().Be(configId);
+        result.Key.Should().Be("cache.ttl");
+        result.Value.Should().Be("600");
+        result.ValueType.Should().Be("int");
+        result.Description.Should().Be("Cache TTL");
+        result.Category.Should().Be("Cache");
     }
 }
 

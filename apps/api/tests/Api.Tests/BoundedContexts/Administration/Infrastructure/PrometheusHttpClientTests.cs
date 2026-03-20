@@ -7,6 +7,7 @@ using Microsoft.Extensions.Options;
 using Moq;
 using Moq.Protected;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.Administration.Infrastructure;
 
@@ -82,14 +83,14 @@ public class PrometheusHttpClientTests
         var result = await _client.QueryRangeAsync(promqlQuery, start, end, step);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal("matrix", result.ResultType);
-        Assert.Single(result.TimeSeries);
+        result.Should().NotBeNull();
+        result.ResultType.Should().Be("matrix");
+        result.TimeSeries.Should().ContainSingle();
 
         var ts = result.TimeSeries.ElementAt(0);
-        Assert.Equal("gpt-4", ts.Metric["model_id"]);
-        Assert.Equal(2, ts.Values.Count);
-        Assert.Equal(10.5, ts.Values.ElementAt(0).Value);
+        ts.Metric["model_id"].Should().Be("gpt-4");
+        ts.Values.Count.Should().Be(2);
+        ts.Values.ElementAt(0).Value.Should().Be(10.5);
     }
 
     [Fact]
@@ -128,14 +129,14 @@ public class PrometheusHttpClientTests
         var result = await _client.QueryInstantAsync(promqlQuery, time);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal("vector", result.ResultType);
-        Assert.Single(result.TimeSeries);
+        result.Should().NotBeNull();
+        result.ResultType.Should().Be("vector");
+        result.TimeSeries.Should().ContainSingle();
 
         var ts = result.TimeSeries.ElementAt(0);
-        Assert.Equal("test_metric", ts.Metric["__name__"]);
-        Assert.Single(ts.Values);
-        Assert.Equal(1.0, ts.Values.ElementAt(0).Value);
+        ts.Metric["__name__"].Should().Be("test_metric");
+        ts.Values.Should().ContainSingle();
+        ts.Values.ElementAt(0).Value.Should().Be(1.0);
     }
 
     [Fact]
@@ -165,8 +166,9 @@ public class PrometheusHttpClientTests
             });
 
         // Act & Assert
-        await Assert.ThrowsAsync<InvalidOperationException>(() =>
-            _client.QueryRangeAsync(query, start, end, "5m"));
+        var act = () =>
+            _client.QueryRangeAsync(query, start, end, "5m");
+        await act.Should().ThrowAsync<InvalidOperationException>();
     }
 
     [Fact]
@@ -185,8 +187,9 @@ public class PrometheusHttpClientTests
             });
 
         // Act & Assert
-        await Assert.ThrowsAsync<InvalidOperationException>(() =>
-            _client.QueryRangeAsync("up", DateTime.UtcNow.AddHours(-1), DateTime.UtcNow, "5m"));
+        var act = () =>
+            _client.QueryRangeAsync("up", DateTime.UtcNow.AddHours(-1), DateTime.UtcNow, "5m");
+        await act.Should().ThrowAsync<InvalidOperationException>();
     }
 
     [Fact]
@@ -197,16 +200,18 @@ public class PrometheusHttpClientTests
         var end = DateTime.UtcNow.AddHours(-1); // End before start
 
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentException>(() =>
-            _client.QueryRangeAsync("up", start, end, "5m"));
+        var act = () =>
+            _client.QueryRangeAsync("up", start, end, "5m");
+        await act.Should().ThrowAsync<ArgumentException>();
     }
 
     [Fact]
     public async Task QueryRangeAsync_WithEmptyQuery_ThrowsArgumentException()
     {
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentException>(() =>
-            _client.QueryRangeAsync("", DateTime.UtcNow.AddHours(-1), DateTime.UtcNow, "5m"));
+        var act = () =>
+            _client.QueryRangeAsync("", DateTime.UtcNow.AddHours(-1), DateTime.UtcNow, "5m");
+        await act.Should().ThrowAsync<ArgumentException>();
     }
 
     [Theory]
@@ -222,8 +227,9 @@ public class PrometheusHttpClientTests
         var end = DateTime.UtcNow;
 
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentException>(() =>
-            _client.QueryRangeAsync("up", start, end, invalidStep));
+        var act = () =>
+            _client.QueryRangeAsync("up", start, end, invalidStep);
+        await act.Should().ThrowAsync<ArgumentException>();
     }
 
     [Theory]
@@ -260,7 +266,7 @@ public class PrometheusHttpClientTests
         var result = await _client.QueryRangeAsync("up", DateTime.UtcNow.AddHours(-1), DateTime.UtcNow, validStep);
 
         // Assert
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
     }
 
     [Fact]
@@ -291,7 +297,7 @@ public class PrometheusHttpClientTests
         var result = await _client.QueryInstantAsync("up");
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal("vector", result.ResultType);
+        result.Should().NotBeNull();
+        result.ResultType.Should().Be("vector");
     }
 }

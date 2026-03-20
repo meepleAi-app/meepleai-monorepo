@@ -10,6 +10,7 @@ using Api.SharedKernel.Infrastructure.Persistence;
 using Api.Tests.Constants;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.GameManagement.Application.Handlers.GameNight;
 
@@ -95,9 +96,9 @@ public class CastVoteOnDisputeCommandHandlerTests
         await _handler.Handle(command, CancellationToken.None);
 
         // Assert
-        Assert.Single(dispute.Votes);
-        Assert.Equal(DefaultVoterPlayerId, dispute.Votes[0].PlayerId);
-        Assert.True(dispute.Votes[0].AcceptsVerdict);
+        dispute.Votes.Should().ContainSingle();
+        dispute.Votes[0].PlayerId.Should().Be(DefaultVoterPlayerId);
+        (dispute.Votes[0].AcceptsVerdict).Should().BeTrue();
 
         _disputeRepositoryMock.Verify(
             x => x.UpdateAsync(dispute, It.IsAny<CancellationToken>()),
@@ -116,10 +117,11 @@ public class CastVoteOnDisputeCommandHandlerTests
             AcceptsVerdict: true);
 
         // Act & Assert
-        var ex = await Assert.ThrowsAsync<InvalidOperationException>(
-            () => _handler.Handle(command, CancellationToken.None));
+        var act = 
+            () => _handler.Handle(command, CancellationToken.None);
+        var ex = (await act.Should().ThrowAsync<InvalidOperationException>()).Which;
 
-        Assert.Contains("disabled", ex.Message);
+        ex.Message.Should().Contain("disabled");
     }
 
     [Fact]
@@ -136,8 +138,9 @@ public class CastVoteOnDisputeCommandHandlerTests
             AcceptsVerdict: true);
 
         // Act & Assert
-        await Assert.ThrowsAsync<NotFoundException>(
-            () => _handler.Handle(command, CancellationToken.None));
+        var act = 
+            () => _handler.Handle(command, CancellationToken.None);
+        await act.Should().ThrowAsync<NotFoundException>();
     }
 
     [Fact]
@@ -159,9 +162,10 @@ public class CastVoteOnDisputeCommandHandlerTests
             AcceptsVerdict: false);
 
         // Act & Assert
-        var ex = await Assert.ThrowsAsync<InvalidOperationException>(
-            () => _handler.Handle(command, CancellationToken.None));
+        var act = 
+            () => _handler.Handle(command, CancellationToken.None);
+        var ex = (await act.Should().ThrowAsync<InvalidOperationException>()).Which;
 
-        Assert.Contains("already voted", ex.Message);
+        ex.Message.Should().Contain("already voted");
     }
 }

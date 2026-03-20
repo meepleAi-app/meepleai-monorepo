@@ -8,6 +8,7 @@ using Api.Tests.Constants;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.UserNotifications.Application.Handlers;
 
@@ -56,15 +57,15 @@ public class UpdateSlackPreferencesCommandHandlerTests
         await _handler.Handle(command, CancellationToken.None);
 
         // Assert
-        Assert.True(existingPrefs.SlackEnabled);
-        Assert.False(existingPrefs.SlackOnDocumentReady);
-        Assert.True(existingPrefs.SlackOnDocumentFailed);
-        Assert.False(existingPrefs.SlackOnRetryAvailable);
-        Assert.True(existingPrefs.SlackOnGameNightInvitation);
-        Assert.False(existingPrefs.SlackOnGameNightReminder);
-        Assert.True(existingPrefs.SlackOnShareRequestCreated);
-        Assert.False(existingPrefs.SlackOnShareRequestApproved);
-        Assert.True(existingPrefs.SlackOnBadgeEarned);
+        existingPrefs.SlackEnabled.Should().BeTrue();
+        existingPrefs.SlackOnDocumentReady.Should().BeFalse();
+        existingPrefs.SlackOnDocumentFailed.Should().BeTrue();
+        existingPrefs.SlackOnRetryAvailable.Should().BeFalse();
+        existingPrefs.SlackOnGameNightInvitation.Should().BeTrue();
+        existingPrefs.SlackOnGameNightReminder.Should().BeFalse();
+        existingPrefs.SlackOnShareRequestCreated.Should().BeTrue();
+        existingPrefs.SlackOnShareRequestApproved.Should().BeFalse();
+        existingPrefs.SlackOnBadgeEarned.Should().BeTrue();
 
         _repositoryMock.Verify(r => r.UpdateAsync(existingPrefs, It.IsAny<CancellationToken>()), Times.Once);
         _unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);

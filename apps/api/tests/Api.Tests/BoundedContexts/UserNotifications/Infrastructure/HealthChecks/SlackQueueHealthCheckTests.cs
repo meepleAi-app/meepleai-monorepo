@@ -6,6 +6,7 @@ using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.UserNotifications.Infrastructure.HealthChecks;
 
@@ -47,8 +48,8 @@ public class SlackQueueHealthCheckTests
             new HealthCheckContext(), CancellationToken.None);
 
         // Assert
-        Assert.Equal(HealthStatus.Healthy, result.Status);
-        Assert.Contains("50", result.Description!);
+        result.Status.Should().Be(HealthStatus.Healthy);
+        result.Description!.Should().Contain("50");
     }
 
     [Fact]
@@ -63,9 +64,9 @@ public class SlackQueueHealthCheckTests
             new HealthCheckContext(), CancellationToken.None);
 
         // Assert
-        Assert.Equal(HealthStatus.Unhealthy, result.Status);
-        Assert.Contains("150", result.Description!);
-        Assert.Contains("backlog", result.Description!);
+        result.Status.Should().Be(HealthStatus.Unhealthy);
+        result.Description!.Should().Contain("150");
+        result.Description!.Should().Contain("backlog");
     }
 
     [Fact]
@@ -80,7 +81,7 @@ public class SlackQueueHealthCheckTests
             new HealthCheckContext(), CancellationToken.None);
 
         // Assert
-        Assert.Equal(HealthStatus.Healthy, result.Status);
+        result.Status.Should().Be(HealthStatus.Healthy);
     }
 
     [Fact]
@@ -95,8 +96,8 @@ public class SlackQueueHealthCheckTests
             new HealthCheckContext(), CancellationToken.None);
 
         // Assert
-        Assert.Equal(HealthStatus.Unhealthy, result.Status);
-        Assert.Contains("Failed to check", result.Description!);
+        result.Status.Should().Be(HealthStatus.Unhealthy);
+        result.Description!.Should().Contain("Failed to check");
     }
 
     [Fact]
@@ -111,7 +112,7 @@ public class SlackQueueHealthCheckTests
             new HealthCheckContext(), CancellationToken.None);
 
         // Assert
-        Assert.Equal(HealthStatus.Healthy, result.Status);
-        Assert.Contains("0", result.Description!);
+        result.Status.Should().Be(HealthStatus.Healthy);
+        result.Description!.Should().Contain("0");
     }
 }

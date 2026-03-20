@@ -3,6 +3,7 @@ using Api.Tests.Constants;
 using Moq;
 using System.Diagnostics;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.Authentication.Security;
 
@@ -86,9 +87,9 @@ public class RateLimitingSecurityTests
         }
 
         // Assert
-        Assert.Equal(MaxApiKeyUsagePerMinute, allowedCount);
-        Assert.Equal(50, blockedCount);
-        Assert.True(blockedCount > 0, "API key rate limiting should block excessive usage");
+        allowedCount.Should().Be(MaxApiKeyUsagePerMinute);
+        blockedCount.Should().Be(50);
+        (blockedCount > 0).Should().BeTrue("API key rate limiting should block excessive usage");
     }
 
     /// <summary>
@@ -137,7 +138,7 @@ public class RateLimitingSecurityTests
         var finalResult = await _mockRateLimitService.Object.CheckRateLimitAsync(
             $"user:{userId}", MaxApiKeyUsagePerMinute, 60.0, CancellationToken.None);
 
-        Assert.False(finalResult.Allowed, "User-level rate limit should be enforced across all API keys");
+        finalResult.Allowed.Should().BeFalse("User-level rate limit should be enforced across all API keys");
     }
 
     #endregion
@@ -188,9 +189,9 @@ public class RateLimitingSecurityTests
         var allowedAttempts = results.Count(r => r.Allowed);
         var blockedAttempts = results.Count(r => !r.Allowed);
 
-        Assert.Equal(MaxLoginAttemptsPerMinute, allowedAttempts);
-        Assert.Equal(5, blockedAttempts);
-        Assert.True(blockedAttempts > 0, "Login rate limiting should block brute force attacks");
+        allowedAttempts.Should().Be(MaxLoginAttemptsPerMinute);
+        blockedAttempts.Should().Be(5);
+        (blockedAttempts > 0).Should().BeTrue("Login rate limiting should block brute force attacks");
     }
 
     /// <summary>
@@ -242,11 +243,11 @@ public class RateLimitingSecurityTests
         }
 
         // Assert
-        Assert.True(results[0].Allowed, "First attempt should be allowed");
-        Assert.True(results[1].Allowed, "Second attempt should be allowed");
-        Assert.True(results[2].Allowed, "Third attempt should be allowed");
-        Assert.False(results[3].Allowed, "Fourth attempt should be blocked");
-        Assert.True(results[4].RetryAfterSeconds >= 30, "Penalty should increase with failures");
+        results[0].Allowed.Should().BeTrue("First attempt should be allowed");
+        results[1].Allowed.Should().BeTrue("Second attempt should be allowed");
+        results[2].Allowed.Should().BeTrue("Third attempt should be allowed");
+        results[3].Allowed.Should().BeFalse("Fourth attempt should be blocked");
+        (results[4].RetryAfterSeconds >= 30).Should().BeTrue("Penalty should increase with failures");
     }
 
     /// <summary>
@@ -295,7 +296,7 @@ public class RateLimitingSecurityTests
         }
 
         // Assert - Should be limited by account, not by IP
-        Assert.Equal(10, allowedCount); // Only 10 allowed total across all IPs
+        allowedCount.Should().Be(10); // Only 10 allowed total across all IPs
     }
 
     #endregion
@@ -345,9 +346,9 @@ public class RateLimitingSecurityTests
         var allowedResets = results.Count(r => r.Allowed);
         var blockedResets = results.Count(r => !r.Allowed);
 
-        Assert.Equal(MaxPasswordResetPerHour, allowedResets);
-        Assert.Equal(7, blockedResets);
-        Assert.True(blockedResets > 0, "Password reset rate limiting should prevent email flooding");
+        allowedResets.Should().Be(MaxPasswordResetPerHour);
+        blockedResets.Should().Be(7);
+        (blockedResets > 0).Should().BeTrue("Password reset rate limiting should prevent email flooding");
     }
 
     /// <summary>
@@ -388,8 +389,7 @@ public class RateLimitingSecurityTests
         var timingDifference = Math.Abs(existingAvg - nonExistentAvg) / Math.Max(existingAvg, nonExistentAvg);
 
         // Allow for reasonable variance (this is a conceptual test)
-        Assert.True(timingDifference < 0.5,
-            $"Password reset timing difference {timingDifference:P2} could leak account existence");
+        (timingDifference < 0.5).Should().BeTrue($"Password reset timing difference {timingDifference:P2} could leak account existence");
     }
 
     /// <summary>
@@ -411,8 +411,8 @@ public class RateLimitingSecurityTests
         var secondUseSuccess = !tokenUsed;
 
         // Assert
-        Assert.True(firstUseSuccess, "First token use should succeed");
-        Assert.False(secondUseSuccess, "Second token use should fail (replay prevention)");
+        firstUseSuccess.Should().BeTrue("First token use should succeed");
+        secondUseSuccess.Should().BeFalse("Second token use should fail (replay prevention)");
     }
 
     #endregion
@@ -465,8 +465,8 @@ public class RateLimitingSecurityTests
 
         // Assert
         var allowedCount = results.Count(r => r);
-        Assert.Equal(100, allowedCount); // Should stop at global limit
-        Assert.True(results.Count > 100, "Attack should have exceeded global limit");
+        allowedCount.Should().Be(100); // Should stop at global limit
+        (results.Count > 100).Should().BeTrue("Attack should have exceeded global limit");
     }
 
     #endregion

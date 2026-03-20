@@ -1,6 +1,7 @@
 using Api.BoundedContexts.SessionTracking.Domain.Entities;
 using Api.Tests.Constants;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.SessionTracking.Domain;
 
@@ -27,9 +28,9 @@ public class DiceFormulaParserTests
         var (count, sides, modifier) = DiceFormulaParser.Parse(formula);
 
         // Assert
-        Assert.Equal(expectedCount, count);
-        Assert.Equal(expectedSides, sides);
-        Assert.Equal(expectedModifier, modifier);
+        count.Should().Be(expectedCount);
+        sides.Should().Be(expectedSides);
+        modifier.Should().Be(expectedModifier);
     }
 
     [Theory]
@@ -44,9 +45,9 @@ public class DiceFormulaParserTests
         var (count, sides, modifier) = DiceFormulaParser.Parse(formula);
 
         // Assert
-        Assert.Equal(expectedCount, count);
-        Assert.Equal(expectedSides, sides);
-        Assert.Equal(expectedModifier, modifier);
+        count.Should().Be(expectedCount);
+        sides.Should().Be(expectedSides);
+        modifier.Should().Be(expectedModifier);
     }
 
     [Theory]
@@ -60,9 +61,9 @@ public class DiceFormulaParserTests
         var (count, sides, modifier) = DiceFormulaParser.Parse(formula);
 
         // Assert
-        Assert.Equal(expectedCount, count);
-        Assert.Equal(expectedSides, sides);
-        Assert.Equal(expectedModifier, modifier);
+        count.Should().Be(expectedCount);
+        sides.Should().Be(expectedSides);
+        modifier.Should().Be(expectedModifier);
     }
 
     [Theory]
@@ -76,9 +77,9 @@ public class DiceFormulaParserTests
         var (count, sides, modifier) = DiceFormulaParser.Parse(formula);
 
         // Assert
-        Assert.Equal(expectedCount, count);
-        Assert.Equal(expectedSides, sides);
-        Assert.Equal(expectedModifier, modifier);
+        count.Should().Be(expectedCount);
+        sides.Should().Be(expectedSides);
+        modifier.Should().Be(expectedModifier);
     }
 
     [Theory]
@@ -91,9 +92,9 @@ public class DiceFormulaParserTests
         var (count, sides, modifier) = DiceFormulaParser.Parse(formula);
 
         // Assert
-        Assert.Equal(2, count);
-        Assert.Equal(6, sides);
-        Assert.Equal(3, modifier);
+        count.Should().Be(2);
+        sides.Should().Be(6);
+        modifier.Should().Be(3);
     }
 
     [Theory]
@@ -103,7 +104,7 @@ public class DiceFormulaParserTests
     public void Parse_EmptyOrNull_ThrowsArgumentException(string? formula)
     {
         // Act & Assert
-        Assert.Throws<ArgumentException>(() => DiceFormulaParser.Parse(formula!));
+        ((Action)(() => DiceFormulaParser.Parse(formula!))).Should().Throw<ArgumentException>();
     }
 
     [Theory]
@@ -118,8 +119,8 @@ public class DiceFormulaParserTests
     public void Parse_InvalidFormat_ThrowsArgumentException(string formula)
     {
         // Act & Assert
-        var ex = Assert.Throws<ArgumentException>(() => DiceFormulaParser.Parse(formula));
-        Assert.Contains("Invalid dice formula", ex.Message);
+        var ex = ((Action)(() => DiceFormulaParser.Parse(formula))).Should().Throw<ArgumentException>().Which;
+        ex.Message.Should().Contain("Invalid dice formula");
     }
 
     [Theory]
@@ -133,8 +134,8 @@ public class DiceFormulaParserTests
     public void Parse_UnsupportedDiceType_ThrowsArgumentException(string formula)
     {
         // Act & Assert
-        var ex = Assert.Throws<ArgumentException>(() => DiceFormulaParser.Parse(formula));
-        Assert.Contains("Unsupported dice type", ex.Message);
+        var ex = ((Action)(() => DiceFormulaParser.Parse(formula))).Should().Throw<ArgumentException>().Which;
+        ex.Message.Should().Contain("Unsupported dice type");
     }
 
     [Theory]
@@ -144,7 +145,7 @@ public class DiceFormulaParserTests
     public void Parse_InvalidDiceCount_ThrowsArgumentException(string formula)
     {
         // Act & Assert
-        Assert.Throws<ArgumentException>(() => DiceFormulaParser.Parse(formula));
+        ((Action)(() => DiceFormulaParser.Parse(formula))).Should().Throw<ArgumentException>();
     }
 
     [Theory]
@@ -153,21 +154,21 @@ public class DiceFormulaParserTests
     public void Parse_InvalidModifier_ThrowsArgumentException(string formula)
     {
         // Act & Assert
-        var ex = Assert.Throws<ArgumentException>(() => DiceFormulaParser.Parse(formula));
-        Assert.Contains("Modifier must be between", ex.Message);
+        var ex = ((Action)(() => DiceFormulaParser.Parse(formula))).Should().Throw<ArgumentException>().Which;
+        ex.Message.Should().Contain("Modifier must be between");
     }
 
     [Fact]
     public void SupportedSides_ContainsAllStandardDice()
     {
         // Assert
-        Assert.Contains(4, DiceFormulaParser.SupportedSides);
-        Assert.Contains(6, DiceFormulaParser.SupportedSides);
-        Assert.Contains(8, DiceFormulaParser.SupportedSides);
-        Assert.Contains(10, DiceFormulaParser.SupportedSides);
-        Assert.Contains(12, DiceFormulaParser.SupportedSides);
-        Assert.Contains(20, DiceFormulaParser.SupportedSides);
-        Assert.Contains(100, DiceFormulaParser.SupportedSides);
-        Assert.Equal(7, DiceFormulaParser.SupportedSides.Length);
+        DiceFormulaParser.SupportedSides.Should().Contain(4);
+        DiceFormulaParser.SupportedSides.Should().Contain(6);
+        DiceFormulaParser.SupportedSides.Should().Contain(8);
+        DiceFormulaParser.SupportedSides.Should().Contain(10);
+        DiceFormulaParser.SupportedSides.Should().Contain(12);
+        DiceFormulaParser.SupportedSides.Should().Contain(20);
+        DiceFormulaParser.SupportedSides.Should().Contain(100);
+        DiceFormulaParser.SupportedSides.Length.Should().Be(7);
     }
 }

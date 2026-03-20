@@ -423,72 +423,78 @@ public sealed class AutoCreateAgentOnPdfReadyHandlerTests
     [Fact]
     public void Constructor_NullPrivateGameRepository_ThrowsArgumentNullException()
     {
-        Assert.Throws<ArgumentNullException>(() => new AutoCreateAgentOnPdfReadyHandler(
+        var act = () => new AutoCreateAgentOnPdfReadyHandler(
             null!,
             _agentDefinitionRepository.Object,
             _unitOfWork.Object,
             _tierEnforcementService.Object,
             _publisher.Object,
-            _logger.Object));
+            _logger.Object);
+        act.Should().Throw<ArgumentNullException>();
     }
 
     [Fact]
     public void Constructor_NullAgentDefinitionRepository_ThrowsArgumentNullException()
     {
-        Assert.Throws<ArgumentNullException>(() => new AutoCreateAgentOnPdfReadyHandler(
+        var act = () => new AutoCreateAgentOnPdfReadyHandler(
             _privateGameRepository.Object,
             null!,
             _unitOfWork.Object,
             _tierEnforcementService.Object,
             _publisher.Object,
-            _logger.Object));
+            _logger.Object);
+        act.Should().Throw<ArgumentNullException>();
     }
 
     [Fact]
     public void Constructor_NullUnitOfWork_ThrowsArgumentNullException()
     {
-        Assert.Throws<ArgumentNullException>(() => new AutoCreateAgentOnPdfReadyHandler(
+        var act = () => new AutoCreateAgentOnPdfReadyHandler(
             _privateGameRepository.Object,
             _agentDefinitionRepository.Object,
             null!,
             _tierEnforcementService.Object,
             _publisher.Object,
-            _logger.Object));
+            _logger.Object);
+        act.Should().Throw<ArgumentNullException>();
     }
 
     [Fact]
     public void Constructor_NullTierEnforcementService_ThrowsArgumentNullException()
     {
-        Assert.Throws<ArgumentNullException>(() => new AutoCreateAgentOnPdfReadyHandler(
+        var act = () => new AutoCreateAgentOnPdfReadyHandler(
             _privateGameRepository.Object,
             _agentDefinitionRepository.Object,
             _unitOfWork.Object,
             null!,
             _publisher.Object,
-            _logger.Object));
+            _logger.Object);
+        act.Should().Throw<ArgumentNullException>();
     }
 
     [Fact]
     public void Constructor_NullPublisher_ThrowsArgumentNullException()
     {
-        Assert.Throws<ArgumentNullException>(() => new AutoCreateAgentOnPdfReadyHandler(
+        var act = () => new AutoCreateAgentOnPdfReadyHandler(
             _privateGameRepository.Object,
             _agentDefinitionRepository.Object,
             _unitOfWork.Object,
             _tierEnforcementService.Object,
             null!,
-            _logger.Object));
+            _logger.Object);
+        act.Should().Throw<ArgumentNullException>();
     }
 
     [Fact]
     public void Constructor_NullLogger_ThrowsArgumentNullException()
     {
-        Assert.Throws<ArgumentNullException>(() => new AutoCreateAgentOnPdfReadyHandler(
+        var act = () => new AutoCreateAgentOnPdfReadyHandler(
             _privateGameRepository.Object,
             _agentDefinitionRepository.Object,
             _unitOfWork.Object,
             _tierEnforcementService.Object,
             _publisher.Object,
-            null!));
+            null!);
+        act.Should().Throw<ArgumentNullException>();
     }
 }

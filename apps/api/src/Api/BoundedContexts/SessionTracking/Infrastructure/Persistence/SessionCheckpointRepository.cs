@@ -1,22 +1,22 @@
 using Api.BoundedContexts.SessionTracking.Domain.Entities;
 using Api.BoundedContexts.SessionTracking.Domain.Repositories;
 using Api.Infrastructure;
+using Api.SharedKernel.Application.Services;
+using Api.SharedKernel.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 
 namespace Api.BoundedContexts.SessionTracking.Infrastructure.Persistence;
 
-internal class SessionCheckpointRepository : ISessionCheckpointRepository
+internal class SessionCheckpointRepository : RepositoryBase, ISessionCheckpointRepository
 {
-    private readonly MeepleAiDbContext _db;
-
-    public SessionCheckpointRepository(MeepleAiDbContext db)
+    public SessionCheckpointRepository(MeepleAiDbContext dbContext, IDomainEventCollector eventCollector)
+        : base(dbContext, eventCollector)
     {
-        _db = db ?? throw new ArgumentNullException(nameof(db));
     }
 
     public async Task<SessionCheckpoint?> GetByIdAsync(Guid id, CancellationToken ct = default)
     {
-        var entity = await _db.SessionCheckpoints
+        var entity = await DbContext.SessionCheckpoints
             .AsNoTracking()
             .FirstOrDefaultAsync(e => e.Id == id, ct).ConfigureAwait(false);
         return entity is null ? null : SessionCheckpointMapper.ToDomain(entity);
@@ -24,7 +24,7 @@ internal class SessionCheckpointRepository : ISessionCheckpointRepository
 
     public async Task<IEnumerable<SessionCheckpoint>> GetBySessionIdAsync(Guid sessionId, CancellationToken ct = default)
     {
-        var entities = await _db.SessionCheckpoints
+        var entities = await DbContext.SessionCheckpoints
             .AsNoTracking()
             .Where(e => e.SessionId == sessionId)
             .OrderByDescending(e => e.Timestamp)
@@ -35,13 +35,13 @@ internal class SessionCheckpointRepository : ISessionCheckpointRepository
     public async Task AddAsync(SessionCheckpoint checkpoint, CancellationToken ct = default)
     {
         var entity = SessionCheckpointMapper.ToEntity(checkpoint);
-        await _db.SessionCheckpoints.AddAsync(entity, ct).ConfigureAwait(false);
+        await DbContext.SessionCheckpoints.AddAsync(entity, ct).ConfigureAwait(false);
     }
 
     public async Task UpdateAsync(SessionCheckpoint checkpoint, CancellationToken ct = default)
     {
         var entity = SessionCheckpointMapper.ToEntity(checkpoint);
-        _db.SessionCheckpoints.Update(entity);
+        DbContext.SessionCheckpoints.Update(entity);
         await Task.CompletedTask.ConfigureAwait(false);
     }
 }

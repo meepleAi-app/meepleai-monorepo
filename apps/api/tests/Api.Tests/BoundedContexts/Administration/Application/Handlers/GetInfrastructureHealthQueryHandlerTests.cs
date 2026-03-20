@@ -6,6 +6,7 @@ using Api.Tests.Constants;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.Administration.Application.Handlers;
 
@@ -60,11 +61,11 @@ public class GetInfrastructureHealthQueryHandlerTests
         var result = await _handler.Handle(query, CancellationToken.None);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal("Healthy", result.Overall.State.ToString());
-        Assert.Single(result.Services);
-        Assert.Equal("postgres", result.Services.ElementAt(0).ServiceName);
-        Assert.Equal("Healthy", result.Services.ElementAt(0).State);
+        result.Should().NotBeNull();
+        result.Overall.State.ToString().Should().Be("Healthy");
+        result.Services.Should().ContainSingle();
+        result.Services.ElementAt(0).ServiceName.Should().Be("postgres");
+        result.Services.ElementAt(0).State.Should().Be("Healthy");
 
         _mockHealthService.Verify(s => s.GetServiceHealthAsync("postgres", It.IsAny<CancellationToken>()), Times.Once);
     }
@@ -103,13 +104,13 @@ public class GetInfrastructureHealthQueryHandlerTests
         var result = await _handler.Handle(query, CancellationToken.None);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal("Degraded", result.Overall.State.ToString());
-        Assert.Equal(4, result.Overall.TotalServices);
-        Assert.Equal(3, result.Overall.HealthyServices);
-        Assert.Equal(1, result.Overall.DegradedServices);
-        Assert.Equal(0, result.Overall.UnhealthyServices);
-        Assert.Equal(4, result.Services.Count);
+        result.Should().NotBeNull();
+        result.Overall.State.ToString().Should().Be("Degraded");
+        result.Overall.TotalServices.Should().Be(4);
+        result.Overall.HealthyServices.Should().Be(3);
+        result.Overall.DegradedServices.Should().Be(1);
+        result.Overall.UnhealthyServices.Should().Be(0);
+        result.Services.Count.Should().Be(4);
 
         _mockHealthService.Verify(s => s.GetAllServicesHealthAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
@@ -147,13 +148,13 @@ public class GetInfrastructureHealthQueryHandlerTests
         var result = await _handler.Handle(query, CancellationToken.None);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal("Unhealthy", result.Overall.State.ToString());
-        Assert.Equal(1, result.Overall.UnhealthyServices);
+        result.Should().NotBeNull();
+        result.Overall.State.ToString().Should().Be("Unhealthy");
+        result.Overall.UnhealthyServices.Should().Be(1);
 
         var unhealthyService = result.Services.First(s => s.State == "Unhealthy");
-        Assert.Equal("redis", unhealthyService.ServiceName);
-        Assert.Equal("Connection refused", unhealthyService.ErrorMessage);
+        unhealthyService.ServiceName.Should().Be("redis");
+        unhealthyService.ErrorMessage.Should().Be("Connection refused");
     }
 
     [Fact]
@@ -167,8 +168,9 @@ public class GetInfrastructureHealthQueryHandlerTests
             .ThrowsAsync(new InvalidOperationException("Service unavailable"));
 
         // Act & Assert
-        await Assert.ThrowsAsync<InvalidOperationException>(() =>
-            _handler.Handle(query, CancellationToken.None));
+        var act = () =>
+            _handler.Handle(query, CancellationToken.None);
+        await act.Should().ThrowAsync<InvalidOperationException>();
     }
 
     // Issue #2911: Timeout Scenario Tests
@@ -193,10 +195,11 @@ public class GetInfrastructureHealthQueryHandlerTests
             .ThrowsAsync(new TimeoutException("Health check timed out after 5 seconds"));
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<TimeoutException>(() =>
-            _handler.Handle(query, CancellationToken.None));
+        var act = () =>
+            _handler.Handle(query, CancellationToken.None);
+        var exception = (await act.Should().ThrowAsync<TimeoutException>()).Which;
 
-        Assert.Equal("Health check timed out after 5 seconds", exception.Message);
+        exception.Message.Should().Be("Health check timed out after 5 seconds");
     }
 
     [Fact]
@@ -210,10 +213,11 @@ public class GetInfrastructureHealthQueryHandlerTests
             .ThrowsAsync(new TimeoutException("Overall health check timed out"));
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<TimeoutException>(() =>
-            _handler.Handle(query, CancellationToken.None));
+        var act = () =>
+            _handler.Handle(query, CancellationToken.None);
+        var exception = (await act.Should().ThrowAsync<TimeoutException>()).Which;
 
-        Assert.Equal("Overall health check timed out", exception.Message);
+        exception.Message.Should().Be("Overall health check timed out");
     }
 
     [Fact]
@@ -249,13 +253,13 @@ public class GetInfrastructureHealthQueryHandlerTests
         var result = await _handler.Handle(query, CancellationToken.None);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Single(result.Services);
+        result.Should().NotBeNull();
+        result.Services.Should().ContainSingle();
         var service = result.Services.First();
-        Assert.Equal("slow-service", service.ServiceName);
-        Assert.Equal("Degraded", service.State);
-        Assert.Equal(4500.0, service.ResponseTimeMs);
-        Assert.Equal("Slow response", service.ErrorMessage);
+        service.ServiceName.Should().Be("slow-service");
+        service.State.Should().Be("Degraded");
+        service.ResponseTimeMs.Should().Be(4500.0);
+        service.ErrorMessage.Should().Be("Slow response");
     }
 
     // Issue #2911: Enhanced Error Handling Tests
@@ -280,10 +284,11 @@ public class GetInfrastructureHealthQueryHandlerTests
             .ThrowsAsync(new InvalidOperationException("Failed to retrieve service list"));
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
-            _handler.Handle(query, CancellationToken.None));
+        var act = () =>
+            _handler.Handle(query, CancellationToken.None);
+        var exception = (await act.Should().ThrowAsync<InvalidOperationException>()).Which;
 
-        Assert.Equal("Failed to retrieve service list", exception.Message);
+        exception.Message.Should().Be("Failed to retrieve service list");
     }
 
     [Fact]
@@ -307,10 +312,11 @@ public class GetInfrastructureHealthQueryHandlerTests
             .ThrowsAsync(new InvalidOperationException("Service postgres not found"));
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
-            _handler.Handle(query, CancellationToken.None));
+        var act = () =>
+            _handler.Handle(query, CancellationToken.None);
+        var exception = (await act.Should().ThrowAsync<InvalidOperationException>()).Which;
 
-        Assert.Equal("Service postgres not found", exception.Message);
+        exception.Message.Should().Be("Service postgres not found");
     }
 
     [Fact]
@@ -326,8 +332,9 @@ public class GetInfrastructureHealthQueryHandlerTests
             .ThrowsAsync(new OperationCanceledException());
 
         // Act & Assert
-        await Assert.ThrowsAsync<OperationCanceledException>(() =>
-            _handler.Handle(query, cancellationTokenSource.Token));
+        var act = () =>
+            _handler.Handle(query, cancellationTokenSource.Token);
+        await act.Should().ThrowAsync<OperationCanceledException>();
     }
 
     // Issue #2911: Null Parameter Validation Tests
@@ -335,28 +342,31 @@ public class GetInfrastructureHealthQueryHandlerTests
     public void Constructor_WithNullHealthService_ThrowsArgumentNullException()
     {
         // Act & Assert
-        var exception = Assert.Throws<ArgumentNullException>(() =>
-            new GetInfrastructureHealthQueryHandler(null!, _mockLogger.Object));
+        var act = () =>
+            new GetInfrastructureHealthQueryHandler(null!, _mockLogger.Object);
+        var exception = act.Should().Throw<ArgumentNullException>().Which;
 
-        Assert.Equal("healthService", exception.ParamName);
+        exception.ParamName.Should().Be("healthService");
     }
 
     [Fact]
     public void Constructor_WithNullLogger_ThrowsArgumentNullException()
     {
         // Act & Assert
-        var exception = Assert.Throws<ArgumentNullException>(() =>
-            new GetInfrastructureHealthQueryHandler(_mockHealthService.Object, null!));
+        var act = () =>
+            new GetInfrastructureHealthQueryHandler(_mockHealthService.Object, null!);
+        var exception = act.Should().Throw<ArgumentNullException>().Which;
 
-        Assert.Equal("logger", exception.ParamName);
+        exception.ParamName.Should().Be("logger");
     }
 
     [Fact]
     public async Task Handle_WithNullQuery_ThrowsArgumentNullException()
     {
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentNullException>(() =>
-            _handler.Handle(null!, CancellationToken.None));
+        var act = () =>
+            _handler.Handle(null!, CancellationToken.None);
+        await act.Should().ThrowAsync<ArgumentNullException>();
     }
 
     // Issue #2911: Service Status Mapping Tests
@@ -393,20 +403,20 @@ public class GetInfrastructureHealthQueryHandlerTests
         var result = await _handler.Handle(query, CancellationToken.None);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal(3, result.Services.Count);
+        result.Should().NotBeNull();
+        result.Services.Count.Should().Be(3);
 
         var healthyService = result.Services.First(s => s.ServiceName == "postgres");
-        Assert.Equal("Healthy", healthyService.State);
-        Assert.Null(healthyService.ErrorMessage);
+        healthyService.State.Should().Be("Healthy");
+        healthyService.ErrorMessage.Should().BeNull();
 
         var degradedService = result.Services.First(s => s.ServiceName == "redis");
-        Assert.Equal("Degraded", degradedService.State);
-        Assert.Equal("High memory usage", degradedService.ErrorMessage);
+        degradedService.State.Should().Be("Degraded");
+        degradedService.ErrorMessage.Should().Be("High memory usage");
 
         var unhealthyService = result.Services.First(s => s.ServiceName == "qdrant");
-        Assert.Equal("Unhealthy", unhealthyService.State);
-        Assert.Equal("Connection failed", unhealthyService.ErrorMessage);
+        unhealthyService.State.Should().Be("Unhealthy");
+        unhealthyService.ErrorMessage.Should().Be("Connection failed");
     }
 
     [Fact]
@@ -443,16 +453,16 @@ public class GetInfrastructureHealthQueryHandlerTests
         var result = await _handler.Handle(query, CancellationToken.None);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal("Healthy", result.Overall.State.ToString());
-        Assert.Equal(4, result.Overall.TotalServices);
-        Assert.Equal(4, result.Overall.HealthyServices);
-        Assert.Equal(0, result.Overall.DegradedServices);
-        Assert.Equal(0, result.Overall.UnhealthyServices);
-        Assert.All(result.Services, service =>
+        result.Should().NotBeNull();
+        result.Overall.State.ToString().Should().Be("Healthy");
+        result.Overall.TotalServices.Should().Be(4);
+        result.Overall.HealthyServices.Should().Be(4);
+        result.Overall.DegradedServices.Should().Be(0);
+        result.Overall.UnhealthyServices.Should().Be(0);
+        result.Services.Should().AllSatisfy(service =>
         {
-            Assert.Equal("Healthy", service.State);
-            Assert.Null(service.ErrorMessage);
+            service.State.Should().Be("Healthy");
+            service.ErrorMessage.Should().BeNull();
         });
     }
 
@@ -482,8 +492,8 @@ public class GetInfrastructureHealthQueryHandlerTests
         var result = await _handler.Handle(query, CancellationToken.None);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Empty(result.Services);
-        Assert.Equal(0, result.Overall.TotalServices);
+        result.Should().NotBeNull();
+        result.Services.Should().BeEmpty();
+        result.Overall.TotalServices.Should().Be(0);
     }
 }

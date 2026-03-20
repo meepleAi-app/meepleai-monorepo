@@ -6,6 +6,7 @@ using Api.Tests.Constants;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Handlers.RagDashboard;
 
@@ -47,9 +48,9 @@ public class GetRagDashboardOverviewQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.NotNull(result.Strategies);
-        Assert.NotNull(result.AggregatedMetrics);
+        result.Should().NotBeNull();
+        result.Strategies.Should().NotBeNull();
+        result.AggregatedMetrics.Should().NotBeNull();
     }
 
     [Fact]
@@ -62,7 +63,7 @@ public class GetRagDashboardOverviewQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotEmpty(result.Strategies);
+        result.Strategies.Should().NotBeEmpty();
     }
 
     [Fact]
@@ -77,11 +78,11 @@ public class GetRagDashboardOverviewQueryHandlerTests
         // Assert
         foreach (var strategy in result.Strategies)
         {
-            Assert.NotNull(strategy.StrategyId);
-            Assert.NotNull(strategy.StrategyName);
-            Assert.True(strategy.TotalQueries >= 0);
-            Assert.True(strategy.AverageLatencyMs >= 0);
-            Assert.InRange(strategy.AverageRelevanceScore, 0.0, 1.0);
+            strategy.StrategyId.Should().NotBeNull();
+            strategy.StrategyName.Should().NotBeNull();
+            (strategy.TotalQueries >= 0).Should().BeTrue();
+            (strategy.AverageLatencyMs >= 0).Should().BeTrue();
+            strategy.AverageRelevanceScore.Should().BeInRange(0.0, 1.0);
         }
     }
 
@@ -95,8 +96,8 @@ public class GetRagDashboardOverviewQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result.AggregatedMetrics);
-        Assert.True(result.AggregatedMetrics.TotalQueries >= 0);
+        result.AggregatedMetrics.Should().NotBeNull();
+        (result.AggregatedMetrics.TotalQueries >= 0).Should().BeTrue();
     }
 
     [Fact]
@@ -113,7 +114,7 @@ public class GetRagDashboardOverviewQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
     }
 
     [Fact]
@@ -165,7 +166,7 @@ public class GetRagDashboardOverviewQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.Contains(result.Strategies, s => s.StrategyId == strategyId);
+        result.Strategies.Should().Contain(s => s.StrategyId == strategyId);
     }
 
     [Fact]
@@ -178,7 +179,7 @@ public class GetRagDashboardOverviewQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result.BestPerformingStrategy);
+        result.BestPerformingStrategy.Should().NotBeNull();
     }
 
     [Fact]
@@ -191,6 +192,6 @@ public class GetRagDashboardOverviewQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result.MostCostEffectiveStrategy);
+        result.MostCostEffectiveStrategy.Should().NotBeNull();
     }
 }

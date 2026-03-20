@@ -7,6 +7,8 @@ using Api.Models;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using Xunit;
+using Api.Tests.Constants;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.GameManagement.QueryHandlers;
 
@@ -14,6 +16,8 @@ namespace Api.Tests.BoundedContexts.GameManagement.QueryHandlers;
 /// Unit tests for GetGameReviewsQueryHandler.
 /// Issue #4904: Game reviews API endpoint.
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
+[Trait("BoundedContext", "GameManagement")]
 public sealed class GetGameReviewsQueryHandlerTests
 {
     private readonly Mock<IGameReviewRepository> _repositoryMock;
@@ -48,17 +52,17 @@ public sealed class GetGameReviewsQueryHandlerTests
         var result = await _sut.Handle(query, CancellationToken.None);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal(2, result.Total);
-        Assert.Equal(2, result.Items.Count);
-        Assert.Equal(1, result.Page);
-        Assert.Equal(10, result.PageSize);
+        result.Should().NotBeNull();
+        result.Total.Should().Be(2);
+        result.Items.Count.Should().Be(2);
+        result.Page.Should().Be(1);
+        result.PageSize.Should().Be(10);
 
         var first = result.Items[0];
-        Assert.Equal("Alice", first.AuthorName);
-        Assert.Equal(9, first.Rating);
-        Assert.Equal("Amazing game!", first.Content);
-        Assert.Equal(gameId, first.GameId);
+        first.AuthorName.Should().Be("Alice");
+        first.Rating.Should().Be(9);
+        first.Content.Should().Be("Amazing game!");
+        first.GameId.Should().Be(gameId);
     }
 
     [Fact]
@@ -76,17 +80,18 @@ public sealed class GetGameReviewsQueryHandlerTests
         var result = await _sut.Handle(query, CancellationToken.None);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal(0, result.Total);
-        Assert.Empty(result.Items);
+        result.Should().NotBeNull();
+        result.Total.Should().Be(0);
+        result.Items.Should().BeEmpty();
     }
 
     [Fact]
     public async Task Handle_ThrowsArgumentNullException_WhenQueryIsNull()
     {
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentNullException>(() =>
-            _sut.Handle(null!, CancellationToken.None));
+        var act = () =>
+            _sut.Handle(null!, CancellationToken.None);
+        await act.Should().ThrowAsync<ArgumentNullException>();
     }
 
     [Theory]
@@ -109,8 +114,8 @@ public sealed class GetGameReviewsQueryHandlerTests
         var result = await _sut.Handle(query, CancellationToken.None);
 
         // Assert
-        Assert.Equal(expectedPage, result.Page);
-        Assert.Equal(expectedSize, result.PageSize);
+        result.Page.Should().Be(expectedPage);
+        result.PageSize.Should().Be(expectedSize);
         _repositoryMock.Verify(
             r => r.GetBySharedGameIdAsync(gameId, expectedPage, expectedSize, It.IsAny<CancellationToken>()),
             Times.Once);

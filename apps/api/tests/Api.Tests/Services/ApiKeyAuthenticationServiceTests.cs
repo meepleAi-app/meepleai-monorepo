@@ -10,6 +10,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using Xunit;
+using FluentAssertions;
 using Api.Tests.Constants;
 
 namespace Api.Tests.Services;
@@ -26,7 +27,7 @@ public class ApiKeyAuthenticationServiceTests
         await using var context = CreateDbContext();
         var service = CreateService(context);
 
-        await Assert.ThrowsAsync<ArgumentException>(() => service.GenerateApiKeyAsync("not-a-guid", "Test", new[] { "read" }, null, "live", TestCancellationToken));
+        await ((Func<Task>)(() => service.GenerateApiKeyAsync("not-a-guid", "Test", new[] { "read" }, null, "live", TestCancellationToken))).Should().ThrowAsync<ArgumentException>();
     }
 
     [Fact]
@@ -51,9 +52,9 @@ public class ApiKeyAuthenticationServiceTests
 
         var result = await service.ValidateApiKeyAsync(plaintext, TestCancellationToken);
 
-        Assert.True(result.IsValid);
-        Assert.Equal(userId.ToString(), result.UserId);
-        Assert.Equal("user@example.com", result.UserEmail);
+        result.IsValid.Should().BeTrue();
+        result.UserId.Should().Be(userId.ToString());
+        result.UserEmail.Should().Be("user@example.com");
     }
 
     [Fact]
@@ -64,7 +65,7 @@ public class ApiKeyAuthenticationServiceTests
 
         var success = await service.RevokeApiKeyAsync("not-a-guid", Guid.NewGuid().ToString(), TestCancellationToken);
 
-        Assert.False(success);
+        success.Should().BeFalse();
     }
 
     private static ApiKeyAuthenticationService CreateService(MeepleAiDbContext context)

@@ -4,10 +4,12 @@ using Api.BoundedContexts.Administration.Domain.Repositories;
 using Api.BoundedContexts.Administration.Domain.ValueObjects;
 using Api.BoundedContexts.Administration.Infrastructure.Persistence;
 using Api.Infrastructure;
+using Api.SharedKernel.Application.Services;
 using Api.Tests.Constants;
 using Api.Tests.Infrastructure;
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
+using Moq;
 using Xunit;
 
 namespace Api.Tests.BoundedContexts.Administration.Infrastructure;
@@ -22,6 +24,7 @@ namespace Api.Tests.BoundedContexts.Administration.Infrastructure;
 public sealed class TokenTierRepositoryTests : IClassFixture<SharedTestcontainersFixture>, IAsyncLifetime
 {
     private readonly SharedTestcontainersFixture _fixture;
+    private readonly Mock<IDomainEventCollector> _eventCollectorMock = new();
     private readonly string _databaseName;
     private string? _connectionString;
 
@@ -53,7 +56,7 @@ public sealed class TokenTierRepositoryTests : IClassFixture<SharedTestcontainer
     {
         // Arrange
         using var dbContext = _fixture.CreateDbContext(_connectionString!);
-        var repository = new TokenTierRepository(dbContext);
+        var repository = new TokenTierRepository(dbContext, _eventCollectorMock.Object);
         var tier = TokenTier.CreateFreeTier();
 
         // Act
@@ -71,7 +74,7 @@ public sealed class TokenTierRepositoryTests : IClassFixture<SharedTestcontainer
     {
         // Arrange
         using var dbContext = _fixture.CreateDbContext(_connectionString!);
-        var repository = new TokenTierRepository(dbContext);
+        var repository = new TokenTierRepository(dbContext, _eventCollectorMock.Object);
         await repository.AddAsync(TokenTier.CreateFreeTier());
         await repository.AddAsync(TokenTier.CreateBasicTier());
         await dbContext.SaveChangesAsync();
@@ -88,7 +91,7 @@ public sealed class TokenTierRepositoryTests : IClassFixture<SharedTestcontainer
     {
         // Arrange
         using var dbContext = _fixture.CreateDbContext(_connectionString!);
-        var repository = new TokenTierRepository(dbContext);
+        var repository = new TokenTierRepository(dbContext, _eventCollectorMock.Object);
         var activeTier = TokenTier.CreateFreeTier();
         var inactiveTier = TokenTier.CreateBasicTier();
         inactiveTier.Deactivate();
@@ -110,7 +113,7 @@ public sealed class TokenTierRepositoryTests : IClassFixture<SharedTestcontainer
     {
         // Arrange
         using var dbContext = _fixture.CreateDbContext(_connectionString!);
-        var repository = new TokenTierRepository(dbContext);
+        var repository = new TokenTierRepository(dbContext, _eventCollectorMock.Object);
         var tier = TokenTier.CreateFreeTier();
         await repository.AddAsync(tier);
         await dbContext.SaveChangesAsync();
@@ -132,7 +135,7 @@ public sealed class TokenTierRepositoryTests : IClassFixture<SharedTestcontainer
     {
         // Arrange
         using var dbContext = _fixture.CreateDbContext(_connectionString!);
-        var repository = new TokenTierRepository(dbContext);
+        var repository = new TokenTierRepository(dbContext, _eventCollectorMock.Object);
         var tier = TokenTier.CreateFreeTier();
         await repository.AddAsync(tier);
         await dbContext.SaveChangesAsync();

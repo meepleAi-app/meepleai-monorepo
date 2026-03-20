@@ -2,6 +2,7 @@ using Api.BoundedContexts.GameToolkit.Domain.Entities;
 using Api.BoundedContexts.GameToolkit.Domain.Enums;
 using Api.Tests.Constants;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.GameToolkit.Domain.Entities;
 
@@ -14,10 +15,10 @@ public class StateTemplateDefinitionTests
     {
         var template = new StateTemplateDefinition("Chess Setup", TemplateCategory.Strategy, "{\"tools\":[]}");
 
-        Assert.Equal("Chess Setup", template.Name);
-        Assert.Equal(TemplateCategory.Strategy, template.Category);
-        Assert.Equal("{\"tools\":[]}", template.SchemaJson);
-        Assert.Null(template.Description);
+        template.Name.Should().Be("Chess Setup");
+        template.Category.Should().Be(TemplateCategory.Strategy);
+        template.SchemaJson.Should().Be("{\"tools\":[]}");
+        template.Description.Should().BeNull();
     }
 
     [Fact]
@@ -29,32 +30,35 @@ public class StateTemplateDefinitionTests
             "{\"tools\":[{\"type\":\"timer\"}]}",
             "A fun party game template");
 
-        Assert.Equal("Party Game Setup", template.Name);
-        Assert.Equal(TemplateCategory.Party, template.Category);
-        Assert.Equal("{\"tools\":[{\"type\":\"timer\"}]}", template.SchemaJson);
-        Assert.Equal("A fun party game template", template.Description);
+        template.Name.Should().Be("Party Game Setup");
+        template.Category.Should().Be(TemplateCategory.Party);
+        template.SchemaJson.Should().Be("{\"tools\":[{\"type\":\"timer\"}]}");
+        template.Description.Should().Be("A fun party game template");
     }
 
     [Fact]
     public void Constructor_WithEmptyName_ThrowsArgumentException()
     {
-        Assert.Throws<ArgumentException>(() =>
-            new StateTemplateDefinition("", TemplateCategory.Strategy, "{}"));
+        var act = () =>
+            new StateTemplateDefinition("", TemplateCategory.Strategy, "{}");
+        act.Should().Throw<ArgumentException>();
     }
 
     [Fact]
     public void Constructor_WithWhitespaceName_ThrowsArgumentException()
     {
-        Assert.Throws<ArgumentException>(() =>
-            new StateTemplateDefinition("   ", TemplateCategory.Strategy, "{}"));
+        var act2 = () =>
+            new StateTemplateDefinition("   ", TemplateCategory.Strategy, "{}");
+        act2.Should().Throw<ArgumentException>();
     }
 
     [Fact]
     public void Constructor_WithLongName_ThrowsArgumentException()
     {
         var longName = new string('A', 201);
-        Assert.Throws<ArgumentException>(() =>
-            new StateTemplateDefinition(longName, TemplateCategory.Strategy, "{}"));
+        var act3 = () =>
+            new StateTemplateDefinition(longName, TemplateCategory.Strategy, "{}");
+        act3.Should().Throw<ArgumentException>();
     }
 
     [Fact]
@@ -62,28 +66,31 @@ public class StateTemplateDefinitionTests
     {
         var name = new string('A', 200);
         var template = new StateTemplateDefinition(name, TemplateCategory.Strategy, "{}");
-        Assert.Equal(200, template.Name.Length);
+        template.Name.Length.Should().Be(200);
     }
 
     [Fact]
     public void Constructor_WithEmptySchema_ThrowsArgumentException()
     {
-        Assert.Throws<ArgumentException>(() =>
-            new StateTemplateDefinition("Test", TemplateCategory.Strategy, ""));
+        var act4 = () =>
+            new StateTemplateDefinition("Test", TemplateCategory.Strategy, "");
+        act4.Should().Throw<ArgumentException>();
     }
 
     [Fact]
     public void Constructor_WithWhitespaceSchema_ThrowsArgumentException()
     {
-        Assert.Throws<ArgumentException>(() =>
-            new StateTemplateDefinition("Test", TemplateCategory.Strategy, "   "));
+        var act5 = () =>
+            new StateTemplateDefinition("Test", TemplateCategory.Strategy, "   ");
+        act5.Should().Throw<ArgumentException>();
     }
 
     [Fact]
     public void Constructor_WithInvalidJson_ThrowsArgumentException()
     {
-        Assert.Throws<ArgumentException>(() =>
-            new StateTemplateDefinition("Test", TemplateCategory.Strategy, "not valid json"));
+        var act6 = () =>
+            new StateTemplateDefinition("Test", TemplateCategory.Strategy, "not valid json");
+        act6.Should().Throw<ArgumentException>();
     }
 
     [Fact]
@@ -91,7 +98,7 @@ public class StateTemplateDefinitionTests
     {
         var json = "{\"tools\":[{\"type\":\"dice\",\"count\":2}],\"rules\":{\"maxPlayers\":4}}";
         var template = new StateTemplateDefinition("Test", TemplateCategory.Strategy, json);
-        Assert.Equal(json, template.SchemaJson);
+        template.SchemaJson.Should().Be(json);
     }
 
     [Fact]
@@ -100,15 +107,15 @@ public class StateTemplateDefinitionTests
         var template = new StateTemplateDefinition(
             "  My Template  ", TemplateCategory.CardGames, "{}", "  A description  ");
 
-        Assert.Equal("My Template", template.Name);
-        Assert.Equal("A description", template.Description);
+        template.Name.Should().Be("My Template");
+        template.Description.Should().Be("A description");
     }
 
     [Fact]
     public void Constructor_WithNullDescription_AllowsNull()
     {
         var template = new StateTemplateDefinition("Test", TemplateCategory.Cooperative, "{}");
-        Assert.Null(template.Description);
+        template.Description.Should().BeNull();
     }
 
     [Fact]
@@ -117,7 +124,7 @@ public class StateTemplateDefinitionTests
         foreach (var category in Enum.GetValues<TemplateCategory>())
         {
             var template = new StateTemplateDefinition("Test", category, "{}");
-            Assert.Equal(category, template.Category);
+            template.Category.Should().Be(category);
         }
     }
 }

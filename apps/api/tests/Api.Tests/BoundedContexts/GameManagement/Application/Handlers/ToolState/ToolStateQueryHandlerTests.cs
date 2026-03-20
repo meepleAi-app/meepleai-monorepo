@@ -4,6 +4,7 @@ using Api.BoundedContexts.GameManagement.Domain.Entities.ToolState;
 using Api.Tests.Constants;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.GameManagement.Application.Handlers.ToolState;
 
@@ -41,9 +42,9 @@ public class ToolStateQueryHandlerTests
 
         var result = await handler.Handle(query, TestContext.Current.CancellationToken);
 
-        Assert.Equal(2, result.Count);
-        Assert.Contains(result, r => r.ToolName == "Dice");
-        Assert.Contains(result, r => r.ToolName == "HP");
+        result.Count.Should().Be(2);
+        result.Should().Contain(r => r.ToolName == "Dice");
+        result.Should().Contain(r => r.ToolName == "HP");
     }
 
     [Fact]
@@ -58,7 +59,7 @@ public class ToolStateQueryHandlerTests
 
         var result = await handler.Handle(query, TestContext.Current.CancellationToken);
 
-        Assert.Empty(result);
+        result.Should().BeEmpty();
     }
 
     [Fact]
@@ -66,8 +67,9 @@ public class ToolStateQueryHandlerTests
     {
         var handler = new GetToolStatesQueryHandler(_repoMock.Object);
 
-        await Assert.ThrowsAsync<ArgumentNullException>(() =>
-            handler.Handle(null!, TestContext.Current.CancellationToken));
+        var act = () =>
+            handler.Handle(null!, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<ArgumentNullException>();
     }
 
     // ========================================================================
@@ -89,9 +91,9 @@ public class ToolStateQueryHandlerTests
 
         var result = await handler.Handle(query, TestContext.Current.CancellationToken);
 
-        Assert.NotNull(result);
-        Assert.Equal("Battle Dice", result.ToolName);
-        Assert.Equal(ToolType.Dice, result.ToolType);
+        result.Should().NotBeNull();
+        result.ToolName.Should().Be("Battle Dice");
+        result.ToolType.Should().Be(ToolType.Dice);
     }
 
     [Fact]
@@ -105,7 +107,7 @@ public class ToolStateQueryHandlerTests
 
         var result = await handler.Handle(query, TestContext.Current.CancellationToken);
 
-        Assert.Null(result);
+        result.Should().BeNull();
     }
 
     [Fact]
@@ -113,7 +115,8 @@ public class ToolStateQueryHandlerTests
     {
         var handler = new GetToolStateQueryHandler(_repoMock.Object);
 
-        await Assert.ThrowsAsync<ArgumentNullException>(() =>
-            handler.Handle(null!, TestContext.Current.CancellationToken));
+        var act = () =>
+            handler.Handle(null!, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<ArgumentNullException>();
     }
 }

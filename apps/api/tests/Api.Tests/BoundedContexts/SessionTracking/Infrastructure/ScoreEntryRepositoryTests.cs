@@ -23,8 +23,8 @@ public class ScoreEntryRepositoryTests : SharedDatabaseTestBase<ScoreEntryReposi
 
     protected override ScoreEntryRepository CreateRepository(MeepleAiDbContext dbContext)
     {
-        _sessionRepository = new SessionRepository(dbContext);
-        return new ScoreEntryRepository(dbContext);
+        _sessionRepository = new SessionRepository(dbContext, MockEventCollector.Object);
+        return new ScoreEntryRepository(dbContext, MockEventCollector.Object);
     }
 
     private async Task<Guid> CreateTestUserAsync(string email = "score-test@example.com")

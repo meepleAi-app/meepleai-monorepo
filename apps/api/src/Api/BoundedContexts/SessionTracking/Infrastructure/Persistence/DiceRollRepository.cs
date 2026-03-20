@@ -1,6 +1,8 @@
 using Api.BoundedContexts.SessionTracking.Domain.Entities;
 using Api.BoundedContexts.SessionTracking.Domain.Repositories;
 using Api.Infrastructure;
+using Api.SharedKernel.Application.Services;
+using Api.SharedKernel.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 
 namespace Api.BoundedContexts.SessionTracking.Infrastructure.Persistence;
@@ -9,19 +11,17 @@ namespace Api.BoundedContexts.SessionTracking.Infrastructure.Persistence;
 /// Repository implementation for DiceRoll aggregate.
 /// Uses MeepleAiDbContext with persistence entities, maps to/from domain entities.
 /// </summary>
-public class DiceRollRepository : IDiceRollRepository
+public class DiceRollRepository : RepositoryBase, IDiceRollRepository
 {
-    private readonly MeepleAiDbContext _context;
-
-    public DiceRollRepository(MeepleAiDbContext context)
+    public DiceRollRepository(MeepleAiDbContext dbContext, IDomainEventCollector eventCollector)
+        : base(dbContext, eventCollector)
     {
-        _context = context ?? throw new ArgumentNullException(nameof(context));
     }
 
     /// <inheritdoc />
     public async Task<DiceRoll?> GetByIdAsync(Guid id, CancellationToken ct = default)
     {
-        var entity = await _context.SessionTrackingDiceRolls
+        var entity = await DbContext.SessionTrackingDiceRolls
             .AsNoTracking()
             .FirstOrDefaultAsync(d => d.Id == id, ct)
             .ConfigureAwait(false);
@@ -32,7 +32,7 @@ public class DiceRollRepository : IDiceRollRepository
     /// <inheritdoc />
     public async Task<IEnumerable<DiceRoll>> GetBySessionIdAsync(Guid sessionId, CancellationToken ct = default)
     {
-        var entities = await _context.SessionTrackingDiceRolls
+        var entities = await DbContext.SessionTrackingDiceRolls
             .AsNoTracking()
             .Where(d => d.SessionId == sessionId)
             .OrderByDescending(d => d.Timestamp)
@@ -45,7 +45,7 @@ public class DiceRollRepository : IDiceRollRepository
     /// <inheritdoc />
     public async Task<IEnumerable<DiceRoll>> GetRecentBySessionIdAsync(Guid sessionId, int limit = 20, CancellationToken ct = default)
     {
-        var entities = await _context.SessionTrackingDiceRolls
+        var entities = await DbContext.SessionTrackingDiceRolls
             .AsNoTracking()
             .Where(d => d.SessionId == sessionId)
             .OrderByDescending(d => d.Timestamp)
@@ -59,7 +59,7 @@ public class DiceRollRepository : IDiceRollRepository
     /// <inheritdoc />
     public async Task<IEnumerable<DiceRoll>> GetByParticipantAsync(Guid sessionId, Guid participantId, CancellationToken ct = default)
     {
-        var entities = await _context.SessionTrackingDiceRolls
+        var entities = await DbContext.SessionTrackingDiceRolls
             .AsNoTracking()
             .Where(d => d.SessionId == sessionId && d.ParticipantId == participantId)
             .OrderByDescending(d => d.Timestamp)
@@ -75,6 +75,6 @@ public class DiceRollRepository : IDiceRollRepository
         ArgumentNullException.ThrowIfNull(diceRoll);
 
         var entity = DiceRollMapper.ToEntity(diceRoll);
-        await _context.SessionTrackingDiceRolls.AddAsync(entity, ct).ConfigureAwait(false);
+        await DbContext.SessionTrackingDiceRolls.AddAsync(entity, ct).ConfigureAwait(false);
     }
 }

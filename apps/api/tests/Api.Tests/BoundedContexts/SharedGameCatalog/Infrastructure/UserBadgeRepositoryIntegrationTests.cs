@@ -60,7 +60,7 @@ public sealed class UserBadgeRepositoryIntegrationTests : IAsyncLifetime
         _dbContext = new MeepleAiDbContext(options, mockMediator.Object, eventCollectorMock.Object);
         await _dbContext.Database.MigrateAsync();
 
-        _repository = new UserBadgeRepository(_dbContext);
+        _repository = new UserBadgeRepository(_dbContext, eventCollectorMock.Object);
 
         // Seed test badge
         _testBadge = Badge.Create(

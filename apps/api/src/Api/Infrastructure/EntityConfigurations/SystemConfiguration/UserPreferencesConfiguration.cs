@@ -6,14 +6,16 @@ namespace Api.Infrastructure.EntityConfigurations.SystemConfiguration;
 
 /// <summary>
 /// EF Core configuration for UserPreferences read-only projection.
-/// Uses ToView("users") to map to the existing users table without generating migrations.
+/// Uses ToTable("users") with ExcludeFromMigrations to read from the users table.
 /// Phase 6: Entity Decomposition — SystemConfiguration BC preferences projection.
 /// </summary>
 internal class UserPreferencesConfiguration : IEntityTypeConfiguration<UserPreferences>
 {
     public void Configure(EntityTypeBuilder<UserPreferences> builder)
     {
-        builder.ToView("users");
+        // Each read-only projection needs its own unique view name.
+        // The view "vw_user_preferences" is created at startup via EnsureUserProjectionViews.
+        builder.ToView("vw_user_preferences");
         builder.HasKey(u => u.Id);
 
         builder.Property(u => u.Language).HasMaxLength(10);

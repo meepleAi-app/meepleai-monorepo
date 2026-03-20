@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useCallback, type ReactNode } from 'react';
+import { useEffect, useCallback, useRef, type ReactNode } from 'react';
 
 import { useOverlayStore } from '@/lib/stores/overlay-store';
 import { cn } from '@/lib/utils';
@@ -33,14 +33,26 @@ export function OverlayHybrid({ children, enableDeepLink = false }: OverlayHybri
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, close]);
 
-  // Deep link: push/pop state
+  // Deep link: push on first open, replace on entity changes within same overlay
+  const wasOpenRef = useRef(false);
   useEffect(() => {
-    if (!enableDeepLink || !isOpen) return;
+    if (!enableDeepLink || !isOpen) {
+      wasOpenRef.current = false;
+      return;
+    }
     const param = toUrlParam();
     if (!param) return;
     const url = new URL(window.location.href);
     url.searchParams.set('overlay', param);
-    window.history.pushState({ overlay: true }, '', url.toString());
+
+    if (!wasOpenRef.current) {
+      // First open: push new history entry
+      window.history.pushState({ overlay: true }, '', url.toString());
+      wasOpenRef.current = true;
+    } else {
+      // Entity change while already open (e.g. deck navigation): replace, don't stack
+      window.history.replaceState({ overlay: true }, '', url.toString());
+    }
 
     const handlePopState = () => close();
     window.addEventListener('popstate', handlePopState);

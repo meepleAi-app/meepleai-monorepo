@@ -13,6 +13,10 @@ interface LiveSessionContextBarConnectedProps {
 export function LiveSessionContextBarConnected({ sessionId }: LiveSessionContextBarConnectedProps) {
   const open = useOverlayStore(s => s.open);
 
+  // TODO: Replace sessionId placeholders with real entity IDs from live session data
+  // - handleGameClick should pass gameId (from session's game reference)
+  // - handlePlayersClick should use openDeck with player items array
+  // - handleScoreClick correctly uses sessionId
   const handleGameClick = useCallback(() => {
     open('game', sessionId);
   }, [open, sessionId]);

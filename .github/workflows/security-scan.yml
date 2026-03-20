@@ -167,7 +167,7 @@ jobs:
     needs: [codeql, dependencies, secrets]
     uses: ./.github/workflows/notify-slack.yml
     with:
-      event: ${{ contains(toJSON(needs), '"result":"failure"') && 'failed' || contains(toJSON(needs), '"result":"cancelled"') && 'cancelled' || 'completed' }}
+      event: ${{ contains(join(needs.*.result, ','), 'failure') && 'failed' || contains(join(needs.*.result, ','), 'cancelled') && 'cancelled' || 'completed' }}
       workflow_name: "Security Scan"
       environment: security
       is_critical: true

@@ -646,7 +646,7 @@ jobs:
     needs: [changes, frontend, backend-unit, backend-integration, python-tests, e2e, ci-success]
     uses: ./.github/workflows/notify-slack.yml
     with:
-      event: ${{ contains(toJSON(needs), '"result":"failure"') && 'failed' || contains(toJSON(needs), '"result":"cancelled"') && 'cancelled' || 'completed' }}
+      event: ${{ contains(join(needs.*.result, ','), 'failure') && 'failed' || contains(join(needs.*.result, ','), 'cancelled') && 'cancelled' || 'completed' }}
       workflow_name: "CI"
       environment: ci
       is_critical: false

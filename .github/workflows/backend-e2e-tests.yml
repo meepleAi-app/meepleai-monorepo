@@ -174,7 +174,7 @@ jobs:
     needs: [changes, backend-e2e-tests, backend-e2e-quality-gate]
     uses: ./.github/workflows/notify-slack.yml
     with:
-      event: ${{ contains(toJSON(needs), '"result":"failure"') && 'failed' || contains(toJSON(needs), '"result":"cancelled"') && 'cancelled' || 'completed' }}
+      event: ${{ contains(join(needs.*.result, ','), 'failure') && 'failed' || contains(join(needs.*.result, ','), 'cancelled') && 'cancelled' || 'completed' }}
       workflow_name: "Backend E2E Tests"
       environment: test
       branch: ${{ github.head_ref || github.ref_name }}

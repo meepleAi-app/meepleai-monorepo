@@ -74,8 +74,8 @@ public sealed class SharedGameDocumentRepositoryIntegrationTests : IAsyncLifetim
         await _dbContext.SaveChangesAsync();
 
         // Initialize repositories
-        _repository = new SharedGameDocumentRepository(_dbContext);
-        _gameRepository = new SharedGameRepository(_dbContext);
+        _repository = new SharedGameDocumentRepository(_dbContext, eventCollectorMock.Object);
+        _gameRepository = new SharedGameRepository(_dbContext, eventCollectorMock.Object);
     }
 
     public async ValueTask DisposeAsync()

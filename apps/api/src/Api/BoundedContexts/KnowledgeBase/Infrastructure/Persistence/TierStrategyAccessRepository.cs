@@ -2,7 +2,10 @@ using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.BoundedContexts.SystemConfiguration.Domain.Enums;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities.KnowledgeBase;
+using Api.SharedKernel.Application.Services;
+using Api.SharedKernel.Infrastructure;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 namespace Api.BoundedContexts.KnowledgeBase.Infrastructure.Persistence;
 
@@ -10,15 +13,17 @@ namespace Api.BoundedContexts.KnowledgeBase.Infrastructure.Persistence;
 /// Repository for tier-strategy access records.
 /// Issue #3436: Part of tier-strategy-model architecture.
 /// </summary>
-internal sealed class TierStrategyAccessRepository : ITierStrategyAccessRepository
+internal sealed class TierStrategyAccessRepository : RepositoryBase, ITierStrategyAccessRepository
 {
     private const string WildcardStrategy = "*";
-    private readonly MeepleAiDbContext _dbContext;
     private readonly ILogger<TierStrategyAccessRepository> _logger;
 
-    public TierStrategyAccessRepository(MeepleAiDbContext dbContext, ILogger<TierStrategyAccessRepository> logger)
+    public TierStrategyAccessRepository(
+        MeepleAiDbContext dbContext,
+        IDomainEventCollector eventCollector,
+        ILogger<TierStrategyAccessRepository> logger)
+        : base(dbContext, eventCollector)
     {
-        _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -29,7 +34,7 @@ internal sealed class TierStrategyAccessRepository : ITierStrategyAccessReposito
     {
         var tierName = tier.ToString();
 
-        var strategies = await _dbContext.Set<TierStrategyAccessEntity>()
+        var strategies = await DbContext.Set<TierStrategyAccessEntity>()
             .AsNoTracking()
             .Where(e => e.Tier == tierName && e.IsEnabled)
             .Select(e => e.Strategy)
@@ -52,7 +57,7 @@ internal sealed class TierStrategyAccessRepository : ITierStrategyAccessReposito
         var tierName = tier.ToString();
 
         // Check for direct match or wildcard access
-        var hasAccess = await _dbContext.Set<TierStrategyAccessEntity>()
+        var hasAccess = await DbContext.Set<TierStrategyAccessEntity>()
             .AsNoTracking()
             .AnyAsync(
                 e => e.Tier == tierName &&
@@ -76,7 +81,7 @@ internal sealed class TierStrategyAccessRepository : ITierStrategyAccessReposito
     {
         var tierName = tier.ToString();
 
-        var entries = await _dbContext.Set<TierStrategyAccessEntity>()
+        var entries = await DbContext.Set<TierStrategyAccessEntity>()
             .AsNoTracking()
             .Where(e => e.Tier == tierName)
             .Select(e => new TierStrategyAccessEntry(e.Tier, e.Strategy, e.IsEnabled))

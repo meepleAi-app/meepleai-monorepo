@@ -10,6 +10,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using StackExchange.Redis;
+using FluentAssertions;
 using Xunit;
 
 namespace Api.Tests.BoundedContexts.Administration.Application.Handlers.Integration;
@@ -88,10 +89,10 @@ public sealed class GetUserActivityQueryHandlerIntegrationTests : IAsyncLifetime
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.NotNull(result.Activities);
-        Assert.True(result.Activities.Count > 0, "Should have at least one activity");
-        Assert.True(result.TotalCount > 0);
+        result.Should().NotBeNull();
+        result.Activities.Should().NotBeNull();
+        result.Activities.Count.Should().BeGreaterThan(0, "Should have at least one activity");
+        result.TotalCount.Should().BeGreaterThan(0);
     }
 
     [Fact]
@@ -110,9 +111,9 @@ public sealed class GetUserActivityQueryHandlerIntegrationTests : IAsyncLifetime
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.All(result.Activities, activity =>
-            Assert.True(activity.Action == "Login" || activity.Action == "Logout")
+        result.Should().NotBeNull();
+        result.Activities.Should().OnlyContain(activity =>
+            activity.Action == "Login" || activity.Action == "Logout"
         );
     }
 
@@ -132,9 +133,9 @@ public sealed class GetUserActivityQueryHandlerIntegrationTests : IAsyncLifetime
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.All(result.Activities, activity =>
-            Assert.Equal("User", activity.Resource)
+        result.Should().NotBeNull();
+        result.Activities.Should().OnlyContain(activity =>
+            activity.Resource == "User"
         );
     }
 
@@ -149,9 +150,9 @@ public sealed class GetUserActivityQueryHandlerIntegrationTests : IAsyncLifetime
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Empty(result.Activities);
-        Assert.Equal(0, result.TotalCount);
+        result.Should().NotBeNull();
+        result.Activities.Should().BeEmpty();
+        result.TotalCount.Should().Be(0);
     }
 
     [Fact]
@@ -167,9 +168,9 @@ public sealed class GetUserActivityQueryHandlerIntegrationTests : IAsyncLifetime
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.True(result.Activities.Count <= 10);
-        Assert.Equal(50, result.TotalCount); // Total should still be 50
+        result.Should().NotBeNull();
+        result.Activities.Count.Should().BeLessThanOrEqualTo(10);
+        result.TotalCount.Should().Be(50); // Total should still be 50
     }
 
     [Fact]
@@ -187,12 +188,10 @@ public sealed class GetUserActivityQueryHandlerIntegrationTests : IAsyncLifetime
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.All(result.Activities, activity =>
-        {
-            Assert.True(activity.CreatedAt >= fromDate);
-            Assert.True(activity.CreatedAt <= toDate);
-        });
+        result.Should().NotBeNull();
+        result.Activities.Should().OnlyContain(activity =>
+            activity.CreatedAt >= fromDate && activity.CreatedAt <= toDate
+        );
     }
 
     [Fact]
@@ -218,14 +217,13 @@ public sealed class GetUserActivityQueryHandlerIntegrationTests : IAsyncLifetime
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.All(result.Activities, activity =>
-        {
-            Assert.Equal("Login", activity.Action);
-            Assert.Equal("User", activity.Resource);
-            Assert.True(activity.CreatedAt >= fromDate);
-            Assert.True(activity.CreatedAt <= toDate);
-        });
+        result.Should().NotBeNull();
+        result.Activities.Should().OnlyContain(activity =>
+            activity.Action == "Login" &&
+            activity.Resource == "User" &&
+            activity.CreatedAt >= fromDate &&
+            activity.CreatedAt <= toDate
+        );
     }
 
     [Fact]
@@ -241,8 +239,8 @@ public sealed class GetUserActivityQueryHandlerIntegrationTests : IAsyncLifetime
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.True(result.Activities.Count <= 500, "Should respect max limit of 500");
+        result.Should().NotBeNull();
+        result.Activities.Count.Should().BeLessThanOrEqualTo(500, "Should respect max limit of 500");
     }
 
     [Fact]
@@ -255,9 +253,8 @@ public sealed class GetUserActivityQueryHandlerIntegrationTests : IAsyncLifetime
         cts.Cancel();
 
         // Act & Assert
-        await Assert.ThrowsAsync<OperationCanceledException>(
-            async () => await _handler.Handle(query, cts.Token)
-        );
+        var act = () => _handler.Handle(query, cts.Token);
+        await act.Should().ThrowAsync<OperationCanceledException>();
     }
 
     [Fact]
@@ -291,11 +288,11 @@ public sealed class GetUserActivityQueryHandlerIntegrationTests : IAsyncLifetime
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Single(result.Activities);
+        result.Should().NotBeNull();
+        result.Activities.Should().ContainSingle();
         var activity = result.Activities.First();
-        Assert.Equal(expectedAction, activity.Action);
-        Assert.Equal(expectedResource, activity.Resource);
+        activity.Action.Should().Be(expectedAction);
+        activity.Resource.Should().Be(expectedResource);
     }
 
     private async Task SeedTestUserActivityAsync(Guid userId, int activityCount = 10)

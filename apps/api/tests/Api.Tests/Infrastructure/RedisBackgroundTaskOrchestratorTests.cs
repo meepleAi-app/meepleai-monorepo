@@ -6,6 +6,7 @@ using Api.Infrastructure.BackgroundTasks;
 using Microsoft.Extensions.Logging;
 using Moq;
 using StackExchange.Redis;
+using FluentAssertions;
 using Xunit;
 using Api.Tests.Constants;
 
@@ -70,8 +71,8 @@ public class RedisBackgroundTaskOrchestratorTests
             Task.Delay(TestConstants.Timing.ShortTimeout, TestCancellationToken)) == taskCompletedTcs.Task;
 
         // Assert
-        Assert.True(completedInTime, "Task should complete within timeout");
-        Assert.True(taskExecuted);
+        completedInTime.Should().BeTrue("Task should complete within timeout");
+        taskExecuted.Should().BeTrue();
         // Note: Removed strict Redis call verification due to Moq expression tree limitations
         // with StackExchange.Redis 2.10+ optional parameters. The key behavior (task execution) is verified above.
     }
@@ -83,16 +84,18 @@ public class RedisBackgroundTaskOrchestratorTests
         Func<CancellationToken, Task> taskFactory = ct => Task.CompletedTask;
 
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentException>(() =>
-            _orchestrator.ScheduleAsync(null!, "Test", taskFactory, TestCancellationToken));
+        var act = () =>
+            _orchestrator.ScheduleAsync(null!, "Test", taskFactory, TestCancellationToken);
+        await act.Should().ThrowAsync<ArgumentException>();
     }
 
     [Fact]
     public async Task ScheduleAsync_NullTaskFactory_ThrowsArgumentNullException()
     {
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentNullException>(() =>
-            _orchestrator.ScheduleAsync("test-id", "Test", null!, TestCancellationToken));
+        var act = () =>
+            _orchestrator.ScheduleAsync("test-id", "Test", null!, TestCancellationToken);
+        await act.Should().ThrowAsync<ArgumentNullException>();
     }
 
     [Fact]
@@ -121,14 +124,14 @@ public class RedisBackgroundTaskOrchestratorTests
         await _orchestrator.ScheduleDelayedAsync(taskId, taskName, delay, taskFactory, TestCancellationToken);
 
         // Assert - task should not be executed immediately
-        Assert.False(taskExecuted);
+        taskExecuted.Should().BeFalse();
 
         // Wait for delay + execution time + generous overhead buffer to prevent race condition
         // Buffer increased from 50ms to 200ms to account for scheduler overhead and test host variability
         await Task.Delay(delay + TestConstants.Timing.TinyDelay + TimeSpan.FromMilliseconds(200), TestCancellationToken);
 
         // Assert - task should be executed after delay
-        Assert.True(taskExecuted);
+        taskExecuted.Should().BeTrue();
     }
 
     [Fact]
@@ -139,8 +142,9 @@ public class RedisBackgroundTaskOrchestratorTests
         Func<CancellationToken, Task> taskFactory = ct => Task.CompletedTask;
 
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentException>(() =>
-            _orchestrator.ScheduleDelayedAsync("test-id", "Test", delay, taskFactory, TestCancellationToken));
+        var act = () =>
+            _orchestrator.ScheduleDelayedAsync("test-id", "Test", delay, taskFactory, TestCancellationToken);
+        await act.Should().ThrowAsync<ArgumentException>();
     }
 
     [Fact]
@@ -181,8 +185,8 @@ public class RedisBackgroundTaskOrchestratorTests
         await Task.Delay(TestConstants.Timing.SmallDelay, TestCancellationToken);
 
         // Assert
-        Assert.True(cancelResult);
-        Assert.True(taskCancelled);
+        cancelResult.Should().BeTrue();
+        taskCancelled.Should().BeTrue();
     }
 
     [Fact]
@@ -192,7 +196,7 @@ public class RedisBackgroundTaskOrchestratorTests
         var result = await _orchestrator.CancelAsync("nonexistent-task");
 
         // Assert
-        Assert.False(result);
+        result.Should().BeFalse();
     }
 
     [Fact]
@@ -211,8 +215,8 @@ public class RedisBackgroundTaskOrchestratorTests
         var status = await _orchestrator.GetStatusAsync(taskId);
 
         // Assert
-        Assert.NotNull(status);
-        Assert.Equal(BackgroundTaskStatus.Running, status.Value);
+        status.Should().NotBeNull();
+        status.Value.Should().Be(BackgroundTaskStatus.Running);
     }
 
     [Fact]
@@ -230,7 +234,7 @@ public class RedisBackgroundTaskOrchestratorTests
         var status = await _orchestrator.GetStatusAsync(taskId);
 
         // Assert
-        Assert.Null(status);
+        status.Should().BeNull();
     }
 
     [Fact]
@@ -267,8 +271,8 @@ public class RedisBackgroundTaskOrchestratorTests
             lockKey, taskFactory, lockTimeout);
 
         // Assert
-        Assert.True(result);
-        Assert.True(taskExecuted);
+        result.Should().BeTrue();
+        taskExecuted.Should().BeTrue();
         // Note: Removed strict lock acquisition verification due to Moq expression tree limitations
         // The key behavior (task execution with successful lock acquisition) is verified above.
     }
@@ -300,8 +304,8 @@ public class RedisBackgroundTaskOrchestratorTests
             lockKey, taskFactory, lockTimeout);
 
         // Assert
-        Assert.False(result);
-        Assert.False(taskExecuted);
+        result.Should().BeFalse();
+        taskExecuted.Should().BeFalse();
     }
 
     [Fact]
@@ -312,8 +316,9 @@ public class RedisBackgroundTaskOrchestratorTests
         var lockTimeout = TimeSpan.FromMinutes(1);
 
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentException>(() =>
-            _orchestrator.ExecuteWithDistributedLockAsync(null!, taskFactory, lockTimeout, TestCancellationToken));
+        var act = () =>
+            _orchestrator.ExecuteWithDistributedLockAsync(null!, taskFactory, lockTimeout, TestCancellationToken);
+        await act.Should().ThrowAsync<ArgumentException>();
     }
 
     [Fact]
@@ -324,8 +329,9 @@ public class RedisBackgroundTaskOrchestratorTests
         var lockTimeout = TimeSpan.FromMinutes(-1);
 
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentException>(() =>
-            _orchestrator.ExecuteWithDistributedLockAsync("test-lock", taskFactory, lockTimeout, TestCancellationToken));
+        var act = () =>
+            _orchestrator.ExecuteWithDistributedLockAsync("test-lock", taskFactory, lockTimeout, TestCancellationToken);
+        await act.Should().ThrowAsync<ArgumentException>();
     }
 
     [Fact]
@@ -364,7 +370,7 @@ public class RedisBackgroundTaskOrchestratorTests
         await Task.Delay(TestConstants.Timing.LargeDelay, TestCancellationToken);
 
         // Assert
-        Assert.True(executionCount >= 2);
+        (executionCount >= 2).Should().BeTrue();
     }
 
     [Fact]
@@ -375,8 +381,9 @@ public class RedisBackgroundTaskOrchestratorTests
         Func<CancellationToken, Task> taskFactory = ct => Task.CompletedTask;
 
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentException>(() =>
-            _orchestrator.ScheduleRecurringAsync("test-id", "Test", interval, taskFactory, TestCancellationToken));
+        var act = () =>
+            _orchestrator.ScheduleRecurringAsync("test-id", "Test", interval, taskFactory, TestCancellationToken);
+        await act.Should().ThrowAsync<ArgumentException>();
     }
 
     [Fact]
@@ -411,8 +418,8 @@ public class RedisBackgroundTaskOrchestratorTests
         await Task.Delay(TestConstants.Timing.SmallDelay, TestCancellationToken);
 
         // Assert
-        Assert.True(cancelResult, "Cancel should return true for scheduled task");
-        Assert.False(taskExecuted, "Task should not execute after cancellation");
+        cancelResult.Should().BeTrue("Cancel should return true for scheduled task");
+        taskExecuted.Should().BeFalse("Task should not execute after cancellation");
 
         // Note: Removed strict Redis call verification due to Moq expression tree limitations
         // with StackExchange.Redis 2.10+ optional parameters. The key behavior (cancellation) is verified above.
@@ -450,9 +457,9 @@ public class RedisBackgroundTaskOrchestratorTests
         await Task.Delay(TestConstants.Timing.SmallDelay, TestCancellationToken);
 
         // Assert
-        Assert.True(cancelResult, "Cancel should return true for scheduled recurring task");
+        cancelResult.Should().BeTrue("Cancel should return true for scheduled recurring task");
         // Note: Due to timing/race conditions, task may execute 0 or 1 times before cancellation
-        Assert.InRange(executionCount, 0, 1); // Task should execute at most once
+        executionCount.Should().BeInRange(0, 1); // Task should execute at most once
 
         // Note: Removed strict Redis call verification due to Moq expression tree limitations
         // with StackExchange.Redis 2.10+ optional parameters. The key behavior (cancellation) is verified above.
@@ -487,7 +494,7 @@ public class RedisBackgroundTaskOrchestratorTests
         await Task.Delay(TestConstants.Timing.MediumDelay, TestCancellationToken);
 
         var initialCount = executionCount;
-        Assert.True(initialCount >= 1, "Task should have executed at least once");
+        (initialCount >= 1).Should().BeTrue("Task should have executed at least once");
 
         // Cancel after first execution
         var cancelResult = await _orchestrator.CancelAsync(taskId);
@@ -496,8 +503,8 @@ public class RedisBackgroundTaskOrchestratorTests
         await Task.Delay(TestConstants.Timing.LargeDelay, TestCancellationToken);
 
         // Assert
-        Assert.True(cancelResult, "Cancel should return true");
-        Assert.Equal(initialCount, executionCount); // No additional executions after cancellation
+        cancelResult.Should().BeTrue("Cancel should return true");
+        executionCount.Should().Be(initialCount); // No additional executions after cancellation
     }
 
     [Fact]
@@ -533,8 +540,8 @@ public class RedisBackgroundTaskOrchestratorTests
         await Task.Delay(TestConstants.Timing.SmallDelay, TestCancellationToken);
 
         // Assert
-        Assert.True(cancelResult, "Cancel should return true");
-        Assert.False(taskCompleted, "Task should not complete after cancellation");
+        cancelResult.Should().BeTrue("Cancel should return true");
+        taskCompleted.Should().BeFalse("Task should not complete after cancellation");
     }
 }
 

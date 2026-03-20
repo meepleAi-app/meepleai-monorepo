@@ -6,6 +6,7 @@ using Api.Middleware.Exceptions;
 using Api.SharedKernel.Domain.Exceptions;
 using Api.Tests.Constants;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.GameManagement.Domain;
 
@@ -33,46 +34,48 @@ public class PlayRecordTests
             PlayRecordVisibility.Private);
 
         // Assert
-        Assert.Equal(id, record.Id);
-        Assert.Equal(gameId, record.GameId);
-        Assert.Equal("Catan", record.GameName);
-        Assert.Equal(userId, record.CreatedByUserId);
-        Assert.Equal(sessionDate, record.SessionDate);
-        Assert.Equal(PlayRecordVisibility.Private, record.Visibility);
-        Assert.Equal(PlayRecordStatus.Planned, record.Status);
-        Assert.NotNull(record.ScoringConfig);
-        Assert.Single(record.DomainEvents);
-        Assert.IsType<PlayRecordCreatedEvent>(record.DomainEvents.First());
+        record.Id.Should().Be(id);
+        record.GameId.Should().Be(gameId);
+        record.GameName.Should().Be("Catan");
+        record.CreatedByUserId.Should().Be(userId);
+        record.SessionDate.Should().Be(sessionDate);
+        record.Visibility.Should().Be(PlayRecordVisibility.Private);
+        record.Status.Should().Be(PlayRecordStatus.Planned);
+        record.ScoringConfig.Should().NotBeNull();
+        record.DomainEvents.Should().ContainSingle();
+        record.DomainEvents.First().Should().BeOfType<PlayRecordCreatedEvent>();
     }
 
     [Fact]
     public void CreateWithGame_EmptyGameId_ThrowsArgumentException()
     {
         // Act & Assert
-        var exception = Assert.Throws<ArgumentException>(() =>
+        var act = () =>
             PlayRecord.CreateWithGame(
                 Guid.NewGuid(),
                 Guid.Empty,
                 "Catan",
                 Guid.NewGuid(),
                 DateTime.UtcNow,
-                PlayRecordVisibility.Private));
+                PlayRecordVisibility.Private);
+        var exception = act.Should().Throw<ArgumentException>().Which;
 
-        Assert.Contains("GameId cannot be empty", exception.Message, StringComparison.OrdinalIgnoreCase);
+        exception.Message.Should().ContainEquivalentOf("GameId cannot be empty");
     }
 
     [Fact]
     public void CreateWithGame_EmptyGameName_ThrowsValidationException()
     {
         // Act & Assert
-        Assert.Throws<ValidationException>(() =>
+        var act = () =>
             PlayRecord.CreateWithGame(
                 Guid.NewGuid(),
                 Guid.NewGuid(),
                 "",
                 Guid.NewGuid(),
                 DateTime.UtcNow,
-                PlayRecordVisibility.Private));
+                PlayRecordVisibility.Private);
+        act.Should().Throw<ValidationException>();
     }
 
     [Fact]
@@ -82,23 +85,24 @@ public class PlayRecordTests
         var futureDate = DateTime.UtcNow.AddDays(1);
 
         // Act & Assert
-        var exception = Assert.Throws<ValidationException>(() =>
+        var act = () =>
             PlayRecord.CreateWithGame(
                 Guid.NewGuid(),
                 Guid.NewGuid(),
                 "Catan",
                 Guid.NewGuid(),
                 futureDate,
-                PlayRecordVisibility.Private));
+                PlayRecordVisibility.Private);
+        var exception = act.Should().Throw<ValidationException>().Which;
 
-        Assert.Contains("cannot be in the future", exception.Message, StringComparison.OrdinalIgnoreCase);
+        exception.Message.Should().ContainEquivalentOf("cannot be in the future");
     }
 
     [Fact]
     public void CreateWithGame_GroupVisibilityWithoutGroupId_ThrowsValidationException()
     {
         // Act & Assert
-        var exception = Assert.Throws<ValidationException>(() =>
+        var act = () =>
             PlayRecord.CreateWithGame(
                 Guid.NewGuid(),
                 Guid.NewGuid(),
@@ -106,9 +110,10 @@ public class PlayRecordTests
                 Guid.NewGuid(),
                 DateTime.UtcNow,
                 PlayRecordVisibility.Group,
-                groupId: null));
+                groupId: null);
+        var exception = act.Should().Throw<ValidationException>().Which;
 
-        Assert.Contains("GroupId is required", exception.Message, StringComparison.OrdinalIgnoreCase);
+        exception.Message.Should().ContainEquivalentOf("GroupId is required");
     }
 
     [Fact]
@@ -130,27 +135,28 @@ public class PlayRecordTests
             scoringConfig);
 
         // Assert
-        Assert.Equal(id, record.Id);
-        Assert.Null(record.GameId);  // No catalog game
-        Assert.Equal("Poker", record.GameName);
-        Assert.Equal(userId, record.CreatedByUserId);
-        Assert.Equal(sessionDate, record.SessionDate);
-        Assert.Equal(scoringConfig, record.ScoringConfig);
-        Assert.Equal(PlayRecordStatus.Planned, record.Status);
+        record.Id.Should().Be(id);
+        record.GameId.Should().BeNull();  // No catalog game
+        record.GameName.Should().Be("Poker");
+        record.CreatedByUserId.Should().Be(userId);
+        record.SessionDate.Should().Be(sessionDate);
+        record.ScoringConfig.Should().Be(scoringConfig);
+        record.Status.Should().Be(PlayRecordStatus.Planned);
     }
 
     [Fact]
     public void CreateFreeForm_NullScoringConfig_ThrowsArgumentNullException()
     {
         // Act & Assert
-        Assert.Throws<ArgumentNullException>(() =>
+        var act = () =>
             PlayRecord.CreateFreeForm(
                 Guid.NewGuid(),
                 "Poker",
                 Guid.NewGuid(),
                 DateTime.UtcNow,
                 PlayRecordVisibility.Private,
-                null!));
+                null!);
+        act.Should().Throw<ArgumentNullException>();
     }
 
     #endregion
@@ -168,12 +174,12 @@ public class PlayRecordTests
         record.AddPlayer(userId, "Alice");
 
         // Assert
-        Assert.Single(record.Players);
+        record.Players.Should().ContainSingle();
         var player = record.Players.First();
-        Assert.Equal(userId, player.UserId);
-        Assert.Equal("Alice", player.DisplayName);
-        Assert.True(player.IsRegisteredUser);
-        Assert.False(player.IsGuest);
+        player.UserId.Should().Be(userId);
+        player.DisplayName.Should().Be("Alice");
+        (player.IsRegisteredUser).Should().BeTrue();
+        (player.IsGuest).Should().BeFalse();
     }
 
     [Fact]
@@ -186,12 +192,12 @@ public class PlayRecordTests
         record.AddPlayer(null, "Bob");
 
         // Assert
-        Assert.Single(record.Players);
+        record.Players.Should().ContainSingle();
         var player = record.Players.First();
-        Assert.Null(player.UserId);
-        Assert.Equal("Bob", player.DisplayName);
-        Assert.False(player.IsRegisteredUser);
-        Assert.True(player.IsGuest);
+        player.UserId.Should().BeNull();
+        player.DisplayName.Should().Be("Bob");
+        (player.IsRegisteredUser).Should().BeFalse();
+        (player.IsGuest).Should().BeTrue();
     }
 
     [Fact]
@@ -203,10 +209,11 @@ public class PlayRecordTests
         record.AddPlayer(userId, "Alice");
 
         // Act & Assert
-        var exception = Assert.Throws<DomainException>(() =>
-            record.AddPlayer(userId, "Alice Again"));
+        var act = () =>
+            record.AddPlayer(userId, "Alice Again");
+        var exception = act.Should().Throw<DomainException>().Which;
 
-        Assert.Contains("already a player", exception.Message, StringComparison.OrdinalIgnoreCase);
+        exception.Message.Should().ContainEquivalentOf("already a player");
     }
 
     [Fact]
@@ -217,10 +224,11 @@ public class PlayRecordTests
         record.AddPlayer(Guid.NewGuid(), "Alice");
 
         // Act & Assert
-        var exception = Assert.Throws<DomainException>(() =>
-            record.AddPlayer(Guid.NewGuid(), "Alice"));
+        var act = () =>
+            record.AddPlayer(Guid.NewGuid(), "Alice");
+        var exception = act.Should().Throw<DomainException>().Which;
 
-        Assert.Contains("already exists", exception.Message, StringComparison.OrdinalIgnoreCase);
+        exception.Message.Should().ContainEquivalentOf("already exists");
     }
 
     [Fact]
@@ -230,8 +238,9 @@ public class PlayRecordTests
         var record = CreateTestRecord();
 
         // Act & Assert
-        Assert.Throws<ValidationException>(() =>
-            record.AddPlayer(Guid.NewGuid(), ""));
+        var act = () =>
+            record.AddPlayer(Guid.NewGuid(), "");
+        act.Should().Throw<ValidationException>();
     }
 
     [Fact]
@@ -245,10 +254,11 @@ public class PlayRecordTests
         }
 
         // Act & Assert
-        var exception = Assert.Throws<DomainException>(() =>
-            record.AddPlayer(null, "Player101"));
+        var act = () =>
+            record.AddPlayer(null, "Player101");
+        var exception = act.Should().Throw<DomainException>().Which;
 
-        Assert.Contains("Cannot add more than 100 players", exception.Message, StringComparison.OrdinalIgnoreCase);
+        exception.Message.Should().ContainEquivalentOf("Cannot add more than 100 players");
     }
 
     #endregion
@@ -269,11 +279,11 @@ public class PlayRecordTests
 
         // Assert
         var player = record.GetPlayer(playerId);
-        Assert.NotNull(player);
-        Assert.Single(player.Scores);
+        player.Should().NotBeNull();
+        player.Scores.Should().ContainSingle();
         var recordedScore = player.GetScore("points");
-        Assert.NotNull(recordedScore);
-        Assert.Equal(42, recordedScore.Value);
+        recordedScore.Should().NotBeNull();
+        recordedScore.Value.Should().Be(42);
     }
 
     [Fact]
@@ -301,10 +311,10 @@ public class PlayRecordTests
 
         // Assert
         var player = record.GetPlayer(playerId);
-        Assert.NotNull(player);
-        Assert.Equal(2, player.Scores.Count);
-        Assert.Equal(42, player.GetScore("points")!.Value);
-        Assert.Equal(1, player.GetScore("ranking")!.Value);
+        player.Should().NotBeNull();
+        player.Scores.Count.Should().Be(2);
+        player.GetScore("points")!.Value.Should().Be(42);
+        player.GetScore("ranking")!.Value.Should().Be(1);
     }
 
     [Fact]
@@ -322,8 +332,8 @@ public class PlayRecordTests
 
         // Assert
         var player = record.GetPlayer(playerId);
-        Assert.Single(player!.Scores);  // Only one score per dimension
-        Assert.Equal(20, player.GetScore("points")!.Value);
+        player!.Scores.Should().ContainSingle();  // Only one score per dimension
+        player.GetScore("points")!.Value.Should().Be(20);
     }
 
     [Fact]
@@ -334,11 +344,12 @@ public class PlayRecordTests
         var invalidPlayerId = Guid.NewGuid();
 
         // Act & Assert
-        var exception = Assert.Throws<DomainException>(() =>
-            record.RecordScore(invalidPlayerId, RecordScore.Points(42)));
+        var act = () =>
+            record.RecordScore(invalidPlayerId, RecordScore.Points(42));
+        var exception = act.Should().Throw<DomainException>().Which;
 
-        Assert.Contains("Player", exception.Message);
-        Assert.Contains("not found", exception.Message);
+        exception.Message.Should().Contain("Player");
+        exception.Message.Should().Contain("not found");
     }
 
     [Fact]
@@ -350,10 +361,11 @@ public class PlayRecordTests
         var playerId = record.Players.First().Id;
 
         // Act & Assert
-        var exception = Assert.Throws<ValidationException>(() =>
-            record.RecordScore(playerId, RecordScore.Ranking(1)));
+        var act = () =>
+            record.RecordScore(playerId, RecordScore.Ranking(1));
+        var exception = act.Should().Throw<ValidationException>().Which;
 
-        Assert.Contains("not enabled", exception.Message, StringComparison.OrdinalIgnoreCase);
+        exception.Message.Should().ContainEquivalentOf("not enabled");
     }
 
     #endregion
@@ -370,9 +382,9 @@ public class PlayRecordTests
         record.Start();
 
         // Assert
-        Assert.Equal(PlayRecordStatus.InProgress, record.Status);
-        Assert.NotNull(record.StartTime);
-        Assert.True(record.DomainEvents.Any(e => e is PlayRecordStartedEvent));
+        record.Status.Should().Be(PlayRecordStatus.InProgress);
+        record.StartTime.Should().NotBeNull();
+        (record.DomainEvents.Any(e => e is PlayRecordStartedEvent)).Should().BeTrue();
     }
 
     [Fact]
@@ -383,10 +395,11 @@ public class PlayRecordTests
         record.Start();
 
         // Act & Assert
-        var exception = Assert.Throws<ConflictException>(() =>
-            record.Start());
+        var act = () =>
+            record.Start();
+        var exception = act.Should().Throw<ConflictException>().Which;
 
-        Assert.Contains("Must be Planned", exception.Message, StringComparison.OrdinalIgnoreCase);
+        exception.Message.Should().ContainEquivalentOf("Must be Planned");
     }
 
     [Fact]
@@ -400,10 +413,10 @@ public class PlayRecordTests
         record.Complete(manualDuration);
 
         // Assert
-        Assert.Equal(PlayRecordStatus.Completed, record.Status);
-        Assert.NotNull(record.EndTime);
-        Assert.Equal(manualDuration, record.Duration);
-        Assert.True(record.DomainEvents.Any(e => e is PlayRecordCompletedEvent));
+        record.Status.Should().Be(PlayRecordStatus.Completed);
+        record.EndTime.Should().NotBeNull();
+        record.Duration.Should().Be(manualDuration);
+        (record.DomainEvents.Any(e => e is PlayRecordCompletedEvent)).Should().BeTrue();
     }
 
     [Fact]
@@ -418,9 +431,9 @@ public class PlayRecordTests
         record.Complete();
 
         // Assert
-        Assert.Equal(PlayRecordStatus.Completed, record.Status);
-        Assert.NotNull(record.Duration);
-        Assert.True(record.Duration > TimeSpan.Zero);
+        record.Status.Should().Be(PlayRecordStatus.Completed);
+        record.Duration.Should().NotBeNull();
+        (record.Duration > TimeSpan.Zero).Should().BeTrue();
     }
 
     [Fact]
@@ -433,8 +446,8 @@ public class PlayRecordTests
         record.Complete();
 
         // Assert
-        Assert.Equal(PlayRecordStatus.Completed, record.Status);
-        Assert.Equal(TimeSpan.Zero, record.Duration);
+        record.Status.Should().Be(PlayRecordStatus.Completed);
+        record.Duration.Should().Be(TimeSpan.Zero);
     }
 
     [Fact]
@@ -444,10 +457,11 @@ public class PlayRecordTests
         var record = CreateTestRecord();
 
         // Act & Assert
-        var exception = Assert.Throws<ValidationException>(() =>
-            record.Complete(TimeSpan.FromHours(-1)));
+        var act = () =>
+            record.Complete(TimeSpan.FromHours(-1));
+        var exception = act.Should().Throw<ValidationException>().Which;
 
-        Assert.Contains("cannot be negative", exception.Message, StringComparison.OrdinalIgnoreCase);
+        exception.Message.Should().ContainEquivalentOf("cannot be negative");
     }
 
     [Fact]
@@ -457,10 +471,11 @@ public class PlayRecordTests
         var record = CreateTestRecord();
 
         // Act & Assert
-        var exception = Assert.Throws<ValidationException>(() =>
-            record.Complete(TimeSpan.FromDays(31)));
+        var act = () =>
+            record.Complete(TimeSpan.FromDays(31));
+        var exception = act.Should().Throw<ValidationException>().Which;
 
-        Assert.Contains("cannot exceed 30 days", exception.Message, StringComparison.OrdinalIgnoreCase);
+        exception.Message.Should().ContainEquivalentOf("cannot exceed 30 days");
     }
 
     [Fact]
@@ -471,10 +486,11 @@ public class PlayRecordTests
         record.Complete();
 
         // Act & Assert
-        var exception = Assert.Throws<ConflictException>(() =>
-            record.Complete());
+        var act = () =>
+            record.Complete();
+        var exception = act.Should().Throw<ConflictException>().Which;
 
-        Assert.Contains("already completed", exception.Message, StringComparison.OrdinalIgnoreCase);
+        exception.Message.Should().ContainEquivalentOf("already completed");
     }
 
     #endregion
@@ -495,10 +511,10 @@ public class PlayRecordTests
             location: "Home");
 
         // Assert
-        Assert.Equal(newDate, record.SessionDate);
-        Assert.Equal("Great game!", record.Notes);
-        Assert.Equal("Home", record.Location);
-        Assert.True(record.DomainEvents.Any(e => e is PlayRecordUpdatedEvent));
+        record.SessionDate.Should().Be(newDate);
+        record.Notes.Should().Be("Great game!");
+        record.Location.Should().Be("Home");
+        (record.DomainEvents.Any(e => e is PlayRecordUpdatedEvent)).Should().BeTrue();
     }
 
     [Fact]
@@ -512,7 +528,7 @@ public class PlayRecordTests
         record.UpdateDetails(notes: "Corrected notes");
 
         // Assert
-        Assert.Equal("Corrected notes", record.Notes);
+        record.Notes.Should().Be("Corrected notes");
     }
 
     [Fact]
@@ -523,10 +539,11 @@ public class PlayRecordTests
         var futureDate = DateTime.UtcNow.AddDays(1);
 
         // Act & Assert
-        var exception = Assert.Throws<ValidationException>(() =>
-            record.UpdateDetails(sessionDate: futureDate));
+        var act = () =>
+            record.UpdateDetails(sessionDate: futureDate);
+        var exception = act.Should().Throw<ValidationException>().Which;
 
-        Assert.Contains("cannot be in the future", exception.Message, StringComparison.OrdinalIgnoreCase);
+        exception.Message.Should().ContainEquivalentOf("cannot be in the future");
     }
 
     [Fact]
@@ -537,10 +554,11 @@ public class PlayRecordTests
         var longNotes = new string('x', 2001);
 
         // Act & Assert
-        var exception = Assert.Throws<ValidationException>(() =>
-            record.UpdateDetails(notes: longNotes));
+        var act = () =>
+            record.UpdateDetails(notes: longNotes);
+        var exception = act.Should().Throw<ValidationException>().Which;
 
-        Assert.Contains("cannot exceed 2000", exception.Message, StringComparison.OrdinalIgnoreCase);
+        exception.Message.Should().ContainEquivalentOf("cannot exceed 2000");
     }
 
     [Fact]
@@ -551,10 +569,11 @@ public class PlayRecordTests
         var longLocation = new string('x', 256);
 
         // Act & Assert
-        var exception = Assert.Throws<ValidationException>(() =>
-            record.UpdateDetails(location: longLocation));
+        var act = () =>
+            record.UpdateDetails(location: longLocation);
+        var exception = act.Should().Throw<ValidationException>().Which;
 
-        Assert.Contains("cannot exceed 255", exception.Message, StringComparison.OrdinalIgnoreCase);
+        exception.Message.Should().ContainEquivalentOf("cannot exceed 255");
     }
 
     #endregion
@@ -572,7 +591,7 @@ public class PlayRecordTests
         record.Archive();
 
         // Assert
-        Assert.Equal(PlayRecordStatus.Archived, record.Status);
+        record.Status.Should().Be(PlayRecordStatus.Archived);
     }
 
     [Fact]
@@ -582,10 +601,11 @@ public class PlayRecordTests
         var record = CreateTestRecord();
 
         // Act & Assert
-        var exception = Assert.Throws<ConflictException>(() =>
-            record.Archive());
+        var act = () =>
+            record.Archive();
+        var exception = act.Should().Throw<ConflictException>().Which;
 
-        Assert.Contains("Only completed records", exception.Message, StringComparison.OrdinalIgnoreCase);
+        exception.Message.Should().ContainEquivalentOf("Only completed records");
     }
 
     #endregion

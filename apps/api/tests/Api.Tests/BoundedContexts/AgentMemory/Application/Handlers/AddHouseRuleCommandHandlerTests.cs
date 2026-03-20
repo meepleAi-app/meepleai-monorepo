@@ -10,6 +10,7 @@ using Api.Tests.Constants;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.AgentMemory.Application.Handlers;
 
@@ -65,12 +66,12 @@ public class AddHouseRuleCommandHandlerTests
         await _handler.Handle(command, CancellationToken.None);
 
         // Assert
-        Assert.NotNull(capturedMemory);
-        Assert.Equal(gameId, capturedMemory!.GameId);
-        Assert.Equal(ownerId, capturedMemory.OwnerId);
-        Assert.Single(capturedMemory.HouseRules);
-        Assert.Equal("No table talk during combat", capturedMemory.HouseRules[0].Description);
-        Assert.Equal(HouseRuleSource.UserAdded, capturedMemory.HouseRules[0].Source);
+        capturedMemory.Should().NotBeNull();
+        capturedMemory!.GameId.Should().Be(gameId);
+        capturedMemory.OwnerId.Should().Be(ownerId);
+        capturedMemory.HouseRules.Should().ContainSingle();
+        capturedMemory.HouseRules[0].Description.Should().Be("No table talk during combat");
+        capturedMemory.HouseRules[0].Source.Should().Be(HouseRuleSource.UserAdded);
 
         _gameMemoryRepoMock.Verify(r => r.AddAsync(It.IsAny<GameMemory>(), It.IsAny<CancellationToken>()), Times.Once);
         _unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
@@ -95,8 +96,8 @@ public class AddHouseRuleCommandHandlerTests
         await _handler.Handle(command, CancellationToken.None);
 
         // Assert
-        Assert.Equal(2, existingMemory.HouseRules.Count);
-        Assert.Equal("New rule: shuffle twice", existingMemory.HouseRules[1].Description);
+        existingMemory.HouseRules.Count.Should().Be(2);
+        existingMemory.HouseRules[1].Description.Should().Be("New rule: shuffle twice");
 
         _gameMemoryRepoMock.Verify(r => r.UpdateAsync(existingMemory, It.IsAny<CancellationToken>()), Times.Once);
         _gameMemoryRepoMock.Verify(r => r.AddAsync(It.IsAny<GameMemory>(), It.IsAny<CancellationToken>()), Times.Never);
@@ -114,7 +115,7 @@ public class AddHouseRuleCommandHandlerTests
         var command = new AddHouseRuleCommand(Guid.NewGuid(), Guid.NewGuid(), "Some rule");
 
         // Act & Assert
-        await Assert.ThrowsAsync<InvalidOperationException>(
-            () => _handler.Handle(command, CancellationToken.None));
+        var act = () => _handler.Handle(command, CancellationToken.None);
+        await act.Should().ThrowAsync<InvalidOperationException>();
     }
 }

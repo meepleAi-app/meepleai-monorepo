@@ -8,6 +8,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.SystemConfiguration.Application.Services;
 
@@ -59,7 +60,7 @@ public sealed class LlmSystemConfigProviderTests
         var provider = CreateProvider();
         var result = await provider.GetCircuitBreakerFailureThresholdAsync();
 
-        Assert.Equal(10, result);
+        result.Should().Be(10);
     }
 
     [Fact]
@@ -70,7 +71,7 @@ public sealed class LlmSystemConfigProviderTests
         var provider = CreateProvider();
         var result = await provider.GetCircuitBreakerFailureThresholdAsync();
 
-        Assert.Equal(7, result); // From AiProviderSettings
+        result.Should().Be(7); // From AiProviderSettings
     }
 
     [Fact]
@@ -83,7 +84,7 @@ public sealed class LlmSystemConfigProviderTests
         var provider = CreateProvider();
         var result = await provider.GetDailyBudgetUsdAsync();
 
-        Assert.Equal(50.00m, result);
+        result.Should().Be(50.00m);
     }
 
     [Fact]
@@ -94,7 +95,7 @@ public sealed class LlmSystemConfigProviderTests
         var provider = CreateProvider();
         var result = await provider.GetDailyBudgetUsdAsync();
 
-        Assert.Equal(10.00m, result); // Hardcoded fallback
+        result.Should().Be(10.00m); // Hardcoded fallback
     }
 
     [Fact]
@@ -107,7 +108,7 @@ public sealed class LlmSystemConfigProviderTests
         var provider = CreateProvider();
         var result = await provider.GetMonthlyBudgetUsdAsync();
 
-        Assert.Equal(500.00m, result);
+        result.Should().Be(500.00m);
     }
 
     [Fact]
@@ -150,7 +151,7 @@ public sealed class LlmSystemConfigProviderTests
 
         // Should return fallback value despite DB error
         var result = await provider.GetCircuitBreakerFailureThresholdAsync();
-        Assert.Equal(7, result); // From AiProviderSettings
+        result.Should().Be(7); // From AiProviderSettings
 
         // Second call should NOT hit DB again (null cached to prevent hammering)
         await provider.GetCircuitBreakerOpenDurationSecondsAsync();
@@ -164,9 +165,9 @@ public sealed class LlmSystemConfigProviderTests
 
         var (failure, open, success) = provider.GetCircuitBreakerThresholdsSnapshot();
 
-        Assert.Equal(7, failure); // From AiProviderSettings
-        Assert.Equal(45, open);
-        Assert.Equal(4, success);
+        failure.Should().Be(7); // From AiProviderSettings
+        open.Should().Be(45);
+        success.Should().Be(4);
     }
 
     [Fact]
@@ -184,8 +185,8 @@ public sealed class LlmSystemConfigProviderTests
         // Synchronous snapshot should now return DB values
         var (failure, open, success) = provider.GetCircuitBreakerThresholdsSnapshot();
 
-        Assert.Equal(10, failure);
-        Assert.Equal(60, open);
-        Assert.Equal(5, success);
+        failure.Should().Be(10);
+        open.Should().Be(60);
+        success.Should().Be(5);
     }
 }

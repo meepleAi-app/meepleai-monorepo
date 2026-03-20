@@ -1,6 +1,8 @@
 using Api.BoundedContexts.KnowledgeBase.Domain.Entities;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.Infrastructure;
+using Api.SharedKernel.Application.Services;
+using Api.SharedKernel.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 
 namespace Api.BoundedContexts.KnowledgeBase.Infrastructure.Persistence;
@@ -9,24 +11,23 @@ namespace Api.BoundedContexts.KnowledgeBase.Infrastructure.Persistence;
 /// EF Core implementation of IRagExecutionRepository.
 /// Issue #4458: RAG Execution History
 /// </summary>
-internal sealed class RagExecutionRepository : IRagExecutionRepository
+internal sealed class RagExecutionRepository : RepositoryBase, IRagExecutionRepository
 {
-    private readonly MeepleAiDbContext _context;
 
-    public RagExecutionRepository(MeepleAiDbContext context)
+    public RagExecutionRepository(MeepleAiDbContext dbContext, IDomainEventCollector eventCollector)
+        : base(dbContext, eventCollector)
     {
-        _context = context ?? throw new ArgumentNullException(nameof(context));
     }
 
     public async Task AddAsync(RagExecution execution, CancellationToken cancellationToken = default)
     {
-        await _context.Set<RagExecution>().AddAsync(execution, cancellationToken).ConfigureAwait(false);
-        await _context.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        await DbContext.Set<RagExecution>().AddAsync(execution, cancellationToken).ConfigureAwait(false);
+        await DbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
     }
 
     public async Task<RagExecution?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        return await _context.Set<RagExecution>()
+        return await DbContext.Set<RagExecution>()
             .AsNoTracking()
             .FirstOrDefaultAsync(e => e.Id == id, cancellationToken)
             .ConfigureAwait(false);
@@ -44,7 +45,7 @@ internal sealed class RagExecutionRepository : IRagExecutionRepository
         DateTime? dateTo = null,
         CancellationToken cancellationToken = default)
     {
-        var query = _context.Set<RagExecution>().AsNoTracking().AsQueryable();
+        var query = DbContext.Set<RagExecution>().AsNoTracking().AsQueryable();
 
         if (!string.IsNullOrWhiteSpace(strategy))
             query = query.Where(e => e.Strategy == strategy);
@@ -84,7 +85,7 @@ internal sealed class RagExecutionRepository : IRagExecutionRepository
         DateTime? dateTo = null,
         CancellationToken cancellationToken = default)
     {
-        var query = _context.Set<RagExecution>().AsNoTracking().AsQueryable();
+        var query = DbContext.Set<RagExecution>().AsNoTracking().AsQueryable();
 
         if (dateFrom.HasValue)
             query = query.Where(e => e.CreatedAt >= dateFrom.Value);
@@ -119,7 +120,7 @@ internal sealed class RagExecutionRepository : IRagExecutionRepository
 
     public async Task<int> DeleteOlderThanAsync(DateTime cutoff, CancellationToken cancellationToken = default)
     {
-        return await _context.Set<RagExecution>()
+        return await DbContext.Set<RagExecution>()
             .Where(e => e.CreatedAt < cutoff)
             .ExecuteDeleteAsync(cancellationToken)
             .ConfigureAwait(false);
@@ -132,7 +133,7 @@ internal sealed class RagExecutionRepository : IRagExecutionRepository
         Guid? agentDefinitionId = null,
         CancellationToken cancellationToken = default)
     {
-        var query = _context.Set<RagExecution>()
+        var query = DbContext.Set<RagExecution>()
             .AsNoTracking()
             .Where(e => e.AgentDefinitionId != null)
             .Where(e => e.CreatedAt >= dateFrom && e.CreatedAt <= dateTo);
@@ -186,7 +187,7 @@ internal sealed class RagExecutionRepository : IRagExecutionRepository
         DateTime dateTo,
         CancellationToken cancellationToken = default)
     {
-        var rawResult = await _context.Set<RagExecution>()
+        var rawResult = await DbContext.Set<RagExecution>()
             .AsNoTracking()
             .Where(e => e.AgentDefinitionId == agentDefinitionId)
             .Where(e => e.CreatedAt >= dateFrom && e.CreatedAt <= dateTo)
@@ -223,7 +224,7 @@ internal sealed class RagExecutionRepository : IRagExecutionRepository
         if (agentDefinitionIds.Count == 0)
             return new Dictionary<Guid, List<AgentTimeSeriesPoint>>();
 
-        var rawResult = await _context.Set<RagExecution>()
+        var rawResult = await DbContext.Set<RagExecution>()
             .AsNoTracking()
             .Where(e => e.AgentDefinitionId != null && agentDefinitionIds.Contains(e.AgentDefinitionId.Value))
             .Where(e => e.CreatedAt >= dateFrom && e.CreatedAt <= dateTo)

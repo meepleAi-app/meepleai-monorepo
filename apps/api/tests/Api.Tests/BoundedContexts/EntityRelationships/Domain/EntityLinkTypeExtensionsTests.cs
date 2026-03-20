@@ -1,6 +1,7 @@
 using Api.BoundedContexts.EntityRelationships.Domain.Enums;
 using Api.Tests.Constants;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.EntityRelationships.Domain;
 
@@ -19,7 +20,7 @@ public class EntityLinkTypeExtensionsTests
     [InlineData(EntityLinkType.SpecializedBy, false)]
     public void IsBidirectional_ReturnsCorrectValue(EntityLinkType linkType, bool expected)
     {
-        Assert.Equal(expected, linkType.IsBidirectional());
+        linkType.IsBidirectional().Should().Be(expected);
     }
 
     [Theory]
@@ -33,14 +34,14 @@ public class EntityLinkTypeExtensionsTests
     [InlineData(EntityLinkType.SpecializedBy, "specialized_by")]
     public void ToSnakeCase_ReturnsCorrectString(EntityLinkType linkType, string expected)
     {
-        Assert.Equal(expected, linkType.ToSnakeCase());
+        linkType.ToSnakeCase().Should().Be(expected);
     }
 
     [Fact]
     public void ToSnakeCase_UnknownValue_ThrowsArgumentOutOfRangeException()
     {
         var unknown = (EntityLinkType)999;
-        Assert.Throws<ArgumentOutOfRangeException>(() => unknown.ToSnakeCase());
+        ((Action)(() => unknown.ToSnakeCase())).Should().Throw<ArgumentOutOfRangeException>();
     }
 
     [Fact]
@@ -48,6 +49,6 @@ public class EntityLinkTypeExtensionsTests
     {
         var allTypes = Enum.GetValues<EntityLinkType>();
         var bilateralCount = allTypes.Count(t => t.IsBidirectional());
-        Assert.Equal(3, bilateralCount);
+        bilateralCount.Should().Be(3);
     }
 }

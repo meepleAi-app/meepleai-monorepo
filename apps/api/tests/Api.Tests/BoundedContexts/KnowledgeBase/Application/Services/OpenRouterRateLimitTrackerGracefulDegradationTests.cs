@@ -6,6 +6,7 @@ using Microsoft.Extensions.Logging;
 using Moq;
 using StackExchange.Redis;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Services;
 
@@ -61,7 +62,7 @@ public sealed class OpenRouterRateLimitTrackerGracefulDegradationTests
             sut.RecordRequestAsync("openrouter", "gpt-4o", totalTokens: 500));
 
         // Assert
-        Assert.Null(exception);
+        exception.Should().BeNull();
     }
 
     [Fact]
@@ -80,7 +81,7 @@ public sealed class OpenRouterRateLimitTrackerGracefulDegradationTests
             sut.RecordRequestAsync("openrouter", "gpt-4o", totalTokens: 250));
 
         // Assert
-        Assert.Null(exception);
+        exception.Should().BeNull();
     }
 
     // ─── GetCurrentStatusAsync — Redis failure scenarios ───────────────────────
@@ -102,12 +103,12 @@ public sealed class OpenRouterRateLimitTrackerGracefulDegradationTests
         var status = await sut.GetCurrentStatusAsync("openrouter");
 
         // Assert — all fields should be zero/default (graceful degradation)
-        Assert.Equal(0, status.CurrentRpm);
-        Assert.Equal(0, status.LimitRpm);
-        Assert.Equal(0, status.CurrentTpm);
-        Assert.Equal(0, status.LimitTpm);
-        Assert.Equal(0.0, status.UtilizationPercent);
-        Assert.False(status.IsThrottled);
+        status.CurrentRpm.Should().Be(0);
+        status.LimitRpm.Should().Be(0);
+        status.CurrentTpm.Should().Be(0);
+        status.LimitTpm.Should().Be(0);
+        status.UtilizationPercent.Should().Be(0.0);
+        status.IsThrottled.Should().BeFalse();
     }
 
     [Fact]
@@ -132,9 +133,9 @@ public sealed class OpenRouterRateLimitTrackerGracefulDegradationTests
         var status = await sut.GetCurrentStatusAsync("openrouter");
 
         // Assert
-        Assert.Equal(0, status.CurrentRpm);
-        Assert.Equal(0, status.LimitRpm);
-        Assert.False(status.IsThrottled);
+        status.CurrentRpm.Should().Be(0);
+        status.LimitRpm.Should().Be(0);
+        status.IsThrottled.Should().BeFalse();
     }
 
     [Fact]
@@ -176,12 +177,12 @@ public sealed class OpenRouterRateLimitTrackerGracefulDegradationTests
         var status = await sut.GetCurrentStatusAsync("openrouter");
 
         // Assert — real data flows through when Redis is healthy
-        Assert.Equal(42, status.CurrentRpm);
-        Assert.True(status.CurrentRpm > 0);
-        Assert.Equal(200, status.LimitRpm);
-        Assert.Equal(1000, status.CurrentTpm); // 300 + 700
-        Assert.Equal(0.21, status.UtilizationPercent, precision: 5); // 42/200
-        Assert.False(status.IsThrottled);
+        status.CurrentRpm.Should().Be(42);
+        (status.CurrentRpm > 0).Should().BeTrue();
+        status.LimitRpm.Should().Be(200);
+        status.CurrentTpm.Should().Be(1000); // 300 + 700
+        status.UtilizationPercent.Should().BeApproximately(0.21, 0.00001); // 42/200
+        status.IsThrottled.Should().BeFalse();
     }
 
     // ─── IsApproachingLimitAsync — Redis failure scenarios ─────────────────────
@@ -203,7 +204,7 @@ public sealed class OpenRouterRateLimitTrackerGracefulDegradationTests
         var approaching = await sut.IsApproachingLimitAsync("openrouter", thresholdPercent: 80);
 
         // Assert — false is the safe default: we don't block requests when we can't measure
-        Assert.False(approaching);
+        approaching.Should().BeFalse();
     }
 
     [Fact]

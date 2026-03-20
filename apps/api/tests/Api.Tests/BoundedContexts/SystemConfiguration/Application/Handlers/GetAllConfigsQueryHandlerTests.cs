@@ -5,6 +5,7 @@ using Api.BoundedContexts.SystemConfiguration.Application.Queries;
 using Api.BoundedContexts.SystemConfiguration.Domain.Repositories;
 using Api.BoundedContexts.SystemConfiguration.Domain.ValueObjects;
 using Moq;
+using FluentAssertions;
 using Xunit;
 using Api.Tests.Constants;
 
@@ -48,11 +49,11 @@ public class GetAllConfigsQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal(3, result.Total);
-        Assert.Equal(3, result.Items.Count);
-        Assert.Equal(1, result.Page);
-        Assert.Equal(10, result.PageSize);
+        result.Should().NotBeNull();
+        result.Total.Should().Be(3);
+        result.Items.Count.Should().Be(3);
+        result.Page.Should().Be(1);
+        result.PageSize.Should().Be(10);
     }
 
     [Fact]
@@ -76,9 +77,9 @@ public class GetAllConfigsQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal(2, result.Total);
-        Assert.Equal(2, result.Items.Count);
+        result.Should().NotBeNull();
+        result.Total.Should().Be(2);
+        result.Items.Count.Should().Be(2);
         _mockConfigRepository.Verify(
             r => r.GetActiveConfigurationsAsync(It.IsAny<CancellationToken>()),
             Times.Once);
@@ -105,9 +106,9 @@ public class GetAllConfigsQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal(2, result.Total);
-        Assert.All(result.Items, item => Assert.Equal("Database", item.Category));
+        result.Should().NotBeNull();
+        result.Total.Should().Be(2);
+        result.Items.Should().AllSatisfy(item => item.Category.Should().Be("Database"));
         _mockConfigRepository.Verify(
             r => r.GetByCategoryAsync("Database", It.IsAny<CancellationToken>()),
             Times.Once);
@@ -135,10 +136,10 @@ public class GetAllConfigsQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal(2, result.Items.Count); // Production + All
-        Assert.Contains(result.Items, i => i.Environment == "Production");
-        Assert.Contains(result.Items, i => i.Environment == "All");
+        result.Should().NotBeNull();
+        result.Items.Count.Should().Be(2);
+        result.Items.Should().Contain(i => i.Environment == "Production");
+        result.Items.Should().Contain(i => i.Environment == "All");
     }
 
     [Fact]
@@ -167,11 +168,11 @@ public class GetAllConfigsQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal(25, result.Total);
-        Assert.Equal(10, result.Items.Count); // Page 2: items 11-20
-        Assert.Equal(2, result.Page);
-        Assert.Equal(10, result.PageSize);
+        result.Should().NotBeNull();
+        result.Total.Should().Be(25);
+        result.Items.Count.Should().Be(10);
+        result.Page.Should().Be(2);
+        result.PageSize.Should().Be(10);
     }
 
     [Fact]
@@ -188,9 +189,9 @@ public class GetAllConfigsQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal(0, result.Total);
-        Assert.Empty(result.Items);
+        result.Should().NotBeNull();
+        result.Total.Should().Be(0);
+        result.Items.Should().BeEmpty();
     }
 
     [Fact]
@@ -220,9 +221,9 @@ public class GetAllConfigsQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal(2, result.Items.Count); // Production + All
-        Assert.All(result.Items, item => Assert.Equal("Cache", item.Category));
+        result.Should().NotBeNull();
+        result.Items.Count.Should().Be(2);
+        result.Items.Should().AllSatisfy(item => item.Category.Should().Be("Cache"));
     }
 
     [Fact]

@@ -2,6 +2,7 @@ using Api.BoundedContexts.Authentication.Domain.ValueObjects;
 using Api.SharedKernel.Domain.ValueObjects;
 using Api.SharedKernel.Domain.Exceptions;
 using Xunit;
+using FluentAssertions;
 using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.Authentication.Domain.ValueObjects;
@@ -23,8 +24,8 @@ public class TotpSecretTests
         var secret = TotpSecret.FromEncrypted(encryptedValue);
 
         // Assert
-        Assert.NotNull(secret);
-        Assert.Equal(encryptedValue, secret.EncryptedValue);
+        secret.Should().NotBeNull();
+        secret.EncryptedValue.Should().Be(encryptedValue);
     }
 
     [Theory]
@@ -34,10 +35,11 @@ public class TotpSecretTests
     public void FromEncrypted_WithInvalidValue_ShouldThrowValidationException(string? invalidValue)
     {
         // Act & Assert
-        var exception = Assert.Throws<ValidationException>(() =>
-            TotpSecret.FromEncrypted(invalidValue!));
+        var act = () =>
+            TotpSecret.FromEncrypted(invalidValue!);
+        var exception = act.Should().Throw<ValidationException>().Which;
 
-        Assert.Contains("TOTP secret", exception.Message);
+        exception.Message.Should().Contain("TOTP secret");
     }
 
     [Fact]
@@ -50,8 +52,8 @@ public class TotpSecretTests
         var result = secret.ToString();
 
         // Assert
-        Assert.Equal("[TOTP_SECRET_REDACTED]", result);
-        Assert.DoesNotContain("encrypted_secret_base64", result);
+        result.Should().Be("[TOTP_SECRET_REDACTED]");
+        result.Should().NotContain("encrypted_secret_base64");
     }
 
     [Fact]
@@ -65,7 +67,7 @@ public class TotpSecretTests
         string result = secret; // Implicit conversion
 
         // Assert
-        Assert.Equal(encryptedValue, result);
+        result.Should().Be(encryptedValue);
     }
 
     [Fact]
@@ -77,9 +79,9 @@ public class TotpSecretTests
         var secret2 = TotpSecret.FromEncrypted(encryptedValue);
 
         // Act & Assert
-        Assert.Equal(secret1, secret2);
-        Assert.True(secret1 == secret2);
-        Assert.False(secret1 != secret2);
+        secret2.Should().Be(secret1);
+        (secret1 == secret2).Should().BeTrue();
+        (secret1 != secret2).Should().BeFalse();
     }
 
     [Fact]
@@ -90,8 +92,8 @@ public class TotpSecretTests
         var secret2 = TotpSecret.FromEncrypted("encrypted_secret_2");
 
         // Act & Assert
-        Assert.NotEqual(secret1, secret2);
-        Assert.False(secret1 == secret2);
-        Assert.True(secret1 != secret2);
+        secret2.Should().NotBe(secret1);
+        (secret1 == secret2).Should().BeFalse();
+        (secret1 != secret2).Should().BeTrue();
     }
 }

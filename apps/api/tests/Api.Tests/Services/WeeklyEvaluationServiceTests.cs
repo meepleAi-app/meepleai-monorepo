@@ -8,6 +8,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Time.Testing;
 using Moq;
+using FluentAssertions;
 using Xunit;
 using Api.Tests.Constants;
 
@@ -232,9 +233,9 @@ public sealed class WeeklyEvaluationServiceTests : IDisposable
         }
 
         // Compare dates only to tolerate time shift from FakeTimeProvider.Advance
-        Assert.Equal(new DateTime(2025, 2, 13, 0, 0, 0, DateTimeKind.Utc).Date, capturedQuery.StartDate.Date);
-        Assert.Equal(new DateTime(2025, 2, 20, 0, 0, 0, DateTimeKind.Utc).Date, capturedQuery.EndDate.Date);
-        Assert.Equal(7, capturedQuery.Days);
+        capturedQuery.StartDate.Date.Should().Be(new DateTime(2025, 2, 13, 0, 0, 0, DateTimeKind.Utc).Date);
+        capturedQuery.EndDate.Date.Should().Be(new DateTime(2025, 2, 20, 0, 0, 0, DateTimeKind.Utc).Date);
+        capturedQuery.Days.Should().Be(7);
     }
 
     [Fact]
@@ -346,36 +347,39 @@ public sealed class WeeklyEvaluationServiceTests : IDisposable
     public void Constructor_WithNullScopeFactory_ThrowsArgumentNullException()
     {
         // Arrange & Act & Assert
-        Assert.Throws<ArgumentNullException>(() =>
+        var act = () =>
             new WeeklyEvaluationService(
                 null!,
                 _loggerMock.Object,
                 Options.Create(_config),
-                _timeProvider));
+                _timeProvider);
+        act.Should().Throw<ArgumentNullException>();
     }
 
     [Fact]
     public void Constructor_WithNullLogger_ThrowsArgumentNullException()
     {
         // Arrange & Act & Assert
-        Assert.Throws<ArgumentNullException>(() =>
+        var act2 = () =>
             new WeeklyEvaluationService(
                 _scopeFactoryMock.Object,
                 null!,
                 Options.Create(_config),
-                _timeProvider));
+                _timeProvider);
+        act2.Should().Throw<ArgumentNullException>();
     }
 
     [Fact]
     public void Constructor_WithNullConfig_ThrowsArgumentNullException()
     {
         // Arrange & Act & Assert
-        Assert.Throws<ArgumentNullException>(() =>
+        var act3 = () =>
             new WeeklyEvaluationService(
                 _scopeFactoryMock.Object,
                 _loggerMock.Object,
                 null!,
-                _timeProvider));
+                _timeProvider);
+        act3.Should().Throw<ArgumentNullException>();
     }
 
     [Fact]
@@ -436,7 +440,7 @@ public sealed class WeeklyEvaluationServiceTests : IDisposable
         await service.StopAsync(_cts.Token);
 
         // Assert - verify summary was logged
-        Assert.Contains(loggedMessages, msg => msg.Contains("Weekly Evaluation Summary"));
+        loggedMessages.Should().Contain(msg => msg.Contains("Weekly Evaluation Summary"));
     }
 
     [Fact]
@@ -502,14 +506,14 @@ public sealed class WeeklyEvaluationServiceTests : IDisposable
             x => x.Send(It.IsAny<SendAlertCommand>(), It.IsAny<CancellationToken>()),
             Times.Once);
 
-        Assert.NotNull(capturedAlertCommand);
-        Assert.Equal("QualityEvaluation", capturedAlertCommand.AlertType);
-        Assert.Equal("Warning", capturedAlertCommand.Severity);
-        Assert.Contains("3 issue(s)", capturedAlertCommand.Message);
-        Assert.NotNull(capturedAlertCommand.Metadata);
-        Assert.True(capturedAlertCommand.Metadata.ContainsKey("Issues"));
-        Assert.True(capturedAlertCommand.Metadata.ContainsKey("IssueCount"));
-        Assert.Equal(3, capturedAlertCommand.Metadata["IssueCount"]);
+        capturedAlertCommand.Should().NotBeNull();
+        capturedAlertCommand.AlertType.Should().Be("QualityEvaluation");
+        capturedAlertCommand.Severity.Should().Be("Warning");
+        capturedAlertCommand.Message.Should().Contain("3 issue(s)");
+        capturedAlertCommand.Metadata.Should().NotBeNull();
+        capturedAlertCommand.Metadata.ContainsKey("Issues").Should().BeTrue();
+        capturedAlertCommand.Metadata.ContainsKey("IssueCount").Should().BeTrue();
+        capturedAlertCommand.Metadata["IssueCount"].Should().Be(3);
     }
 
     [Fact]
@@ -659,15 +663,15 @@ public sealed class WeeklyEvaluationServiceTests : IDisposable
             x => x.Send(It.IsAny<SendAlertCommand>(), It.IsAny<CancellationToken>()),
             Times.Once);
 
-        Assert.NotNull(capturedAlertCommand);
-        Assert.Equal("QualityEvaluation", capturedAlertCommand.AlertType);
-        Assert.Equal("Warning", capturedAlertCommand.Severity);
-        Assert.NotNull(capturedAlertCommand.Metadata);
-        Assert.True(capturedAlertCommand.Metadata.ContainsKey("Issues"));
+        capturedAlertCommand.Should().NotBeNull();
+        capturedAlertCommand.AlertType.Should().Be("QualityEvaluation");
+        capturedAlertCommand.Severity.Should().Be("Warning");
+        capturedAlertCommand.Metadata.Should().NotBeNull();
+        capturedAlertCommand.Metadata.ContainsKey("Issues").Should().BeTrue();
 
         // Metadata["Issues"] is a List<string>, so cast it properly
         var issuesList = capturedAlertCommand.Metadata["Issues"] as IEnumerable<string>;
-        Assert.NotNull(issuesList);
-        Assert.Contains(issuesList, issue => issue.Contains("RAG evaluation failed quality gates"));
+        issuesList.Should().NotBeNull();
+        issuesList.Should().Contain(issue => issue.Contains("RAG evaluation failed quality gates"));
     }
 }

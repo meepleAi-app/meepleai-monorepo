@@ -1,4 +1,5 @@
 using Api.BoundedContexts.SystemConfiguration.Domain.ValueObjects;
+using FluentAssertions;
 using Xunit;
 using Api.Tests.Constants;
 using SystemConfigEntity = Api.BoundedContexts.SystemConfiguration.Domain.Entities.SystemConfiguration;
@@ -26,12 +27,12 @@ public class SystemConfigurationTests
         var config = new SystemConfigEntity(id, key, value, valueType, userId);
 
         // Assert
-        Assert.Equal(id, config.Id);
-        Assert.Equal(key, config.Key);
-        Assert.Equal(value, config.Value);
-        Assert.Equal(valueType, config.ValueType);
-        Assert.True(config.IsActive);
-        Assert.Equal(1, config.Version);
+        config.Id.Should().Be(id);
+        config.Key.Should().Be(key);
+        config.Value.Should().Be(value);
+        config.ValueType.Should().Be(valueType);
+        config.IsActive.Should().BeTrue();
+        config.Version.Should().Be(1);
     }
 
     [Fact]
@@ -50,9 +51,9 @@ public class SystemConfigurationTests
         config.UpdateValue("200", userId);
 
         // Assert
-        Assert.Equal("200", config.Value);
-        Assert.Equal("100", config.PreviousValue);
-        Assert.Equal(2, config.Version);
+        config.Value.Should().Be("200");
+        config.PreviousValue.Should().Be("100");
+        config.Version.Should().Be(2);
     }
 
     [Fact]
@@ -67,9 +68,10 @@ public class SystemConfigurationTests
             Guid.NewGuid());
 
         // Act & Assert
-        var exception = Assert.Throws<ArgumentException>(() =>
-            config.UpdateValue("", Guid.NewGuid()));
-        Assert.NotNull(exception);
+        var act = () =>
+            config.UpdateValue("", Guid.NewGuid());
+        var exception = act.Should().Throw<ArgumentException>().Which;
+        exception.Should().NotBeNull();
     }
 
     [Fact]
@@ -90,9 +92,9 @@ public class SystemConfigurationTests
         config.Activate();
 
         // Assert
-        Assert.True(config.IsActive);
-        Assert.NotNull(config.LastToggledAt);
-        Assert.True(config.LastToggledAt >= beforeActivate);
+        config.IsActive.Should().BeTrue();
+        config.LastToggledAt.Should().NotBeNull();
+        (config.LastToggledAt >= beforeActivate).Should().BeTrue();
     }
 }
 

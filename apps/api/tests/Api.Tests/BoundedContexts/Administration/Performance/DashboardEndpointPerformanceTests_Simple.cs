@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using Api.Tests.Constants;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.Administration.Performance;
 
@@ -40,7 +41,7 @@ public class DashboardEndpointPerformanceTests_Simple
         var targetMs = CachedResponseTargetMs;
 
         // Act & Assert
-        Assert.Equal(500, targetMs);
+        targetMs.Should().Be(500);
 
         // Documentation: This test verifies the performance target is correctly defined.
         // Actual implementation validation requires:
@@ -54,7 +55,7 @@ public class DashboardEndpointPerformanceTests_Simple
         // var stopwatch = Stopwatch.StartNew();
         // var response = await client.GetAsync("/api/v1/dashboard");
         // stopwatch.Stop();
-        // Assert.True(stopwatch.ElapsedMilliseconds < 500);
+        // (stopwatch.ElapsedMilliseconds < 500).Should().BeTrue();
     }
 
     /// <summary>
@@ -68,7 +69,7 @@ public class DashboardEndpointPerformanceTests_Simple
         var targetMs = UncachedResponseTargetMs;
 
         // Act & Assert
-        Assert.Equal(2000, targetMs);
+        targetMs.Should().Be(2000);
 
         // Documentation: Uncached response includes database queries for:
         // - User library games (top 3 by play count)
@@ -91,7 +92,7 @@ public class DashboardEndpointPerformanceTests_Simple
         var targetPercent = CacheHitRateTargetPercent;
 
         // Act & Assert
-        Assert.Equal(80.0, targetPercent);
+        targetPercent.Should().Be(80.0);
 
         // Documentation: Cache hit rate measurement requires:
         // 1. Prometheus metrics: meepleai_cache_hits_total, meepleai_cache_misses_total
@@ -118,7 +119,7 @@ public class DashboardEndpointPerformanceTests_Simple
         stopwatch.Stop();
 
         // Assert: Measurement is reasonably accurate
-        Assert.InRange(stopwatch.ElapsedMilliseconds, 45, 100);
+        stopwatch.ElapsedMilliseconds.Should().BeInRange(45, 100);
     }
 
     /// <summary>
@@ -136,7 +137,7 @@ public class DashboardEndpointPerformanceTests_Simple
         var hitRate = (double)cacheHits / totalRequests * 100;
 
         // Assert
-        Assert.Equal(85.0, hitRate);
-        Assert.True(hitRate > CacheHitRateTargetPercent);
+        hitRate.Should().Be(85.0);
+        (hitRate > CacheHitRateTargetPercent).Should().BeTrue();
     }
 }

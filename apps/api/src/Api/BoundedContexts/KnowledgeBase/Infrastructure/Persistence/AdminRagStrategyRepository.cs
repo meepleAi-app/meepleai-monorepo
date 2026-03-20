@@ -1,6 +1,8 @@
 using Api.BoundedContexts.KnowledgeBase.Domain.Entities;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.Infrastructure;
+using Api.SharedKernel.Application.Services;
+using Api.SharedKernel.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 
 namespace Api.BoundedContexts.KnowledgeBase.Infrastructure.Persistence;
@@ -9,25 +11,24 @@ namespace Api.BoundedContexts.KnowledgeBase.Infrastructure.Persistence;
 /// EF Core repository for AdminRagStrategy.
 /// Issue #5314.
 /// </summary>
-public sealed class AdminRagStrategyRepository : IAdminRagStrategyRepository
+public sealed class AdminRagStrategyRepository : RepositoryBase, IAdminRagStrategyRepository
 {
-    private readonly MeepleAiDbContext _context;
 
-    public AdminRagStrategyRepository(MeepleAiDbContext context)
+    public AdminRagStrategyRepository(MeepleAiDbContext dbContext, IDomainEventCollector eventCollector)
+        : base(dbContext, eventCollector)
     {
-        _context = context ?? throw new ArgumentNullException(nameof(context));
     }
 
     public async Task<AdminRagStrategy?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        return await _context.Set<AdminRagStrategy>()
+        return await DbContext.Set<AdminRagStrategy>()
             .FirstOrDefaultAsync(s => s.Id == id && !s.IsDeleted, cancellationToken)
             .ConfigureAwait(false);
     }
 
     public async Task<IReadOnlyList<AdminRagStrategy>> GetAllAsync(CancellationToken cancellationToken = default)
     {
-        return await _context.Set<AdminRagStrategy>()
+        return await DbContext.Set<AdminRagStrategy>()
             .Where(s => !s.IsDeleted)
             .OrderBy(s => s.Name)
             .AsNoTracking()
@@ -37,13 +38,13 @@ public sealed class AdminRagStrategyRepository : IAdminRagStrategyRepository
 
     public async Task AddAsync(AdminRagStrategy strategy, CancellationToken cancellationToken = default)
     {
-        await _context.Set<AdminRagStrategy>().AddAsync(strategy, cancellationToken).ConfigureAwait(false);
-        await _context.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        await DbContext.Set<AdminRagStrategy>().AddAsync(strategy, cancellationToken).ConfigureAwait(false);
+        await DbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
     }
 
     public async Task UpdateAsync(AdminRagStrategy strategy, CancellationToken cancellationToken = default)
     {
-        _context.Set<AdminRagStrategy>().Update(strategy);
-        await _context.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        DbContext.Set<AdminRagStrategy>().Update(strategy);
+        await DbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
     }
 }

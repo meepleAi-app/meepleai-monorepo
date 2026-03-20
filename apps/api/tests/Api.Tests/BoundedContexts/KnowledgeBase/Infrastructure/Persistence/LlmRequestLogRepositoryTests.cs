@@ -7,6 +7,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Infrastructure.Persistence;
 
@@ -59,23 +60,23 @@ public sealed class LlmRequestLogRepositoryTests : SharedDatabaseTestBase<LlmReq
 
         // Assert
         var logs = await DbContext.LlmRequestLogs.ToListAsync(TestCancellationToken);
-        Assert.Single(logs);
+        logs.Should().ContainSingle();
 
         var log = logs[0];
-        Assert.Equal("openai/gpt-4o", log.ModelId);
-        Assert.Equal("openrouter", log.Provider);
-        Assert.Equal(nameof(RequestSource.RagPipeline), log.RequestSource);
-        Assert.Equal(500, log.PromptTokens);
-        Assert.Equal(200, log.CompletionTokens);
-        Assert.Equal(700, log.TotalTokens);
-        Assert.Equal(0.0025m, log.CostUsd);
-        Assert.Equal(480, log.LatencyMs);
-        Assert.True(log.Success);
-        Assert.Null(log.ErrorMessage);
-        Assert.False(log.IsStreaming);
-        Assert.False(log.IsFreeModel);
-        Assert.Equal("test-session", log.SessionId);
-        Assert.True(log.RequestedAt >= before && log.RequestedAt <= DateTime.UtcNow);
+        log.ModelId.Should().Be("openai/gpt-4o");
+        log.Provider.Should().Be("openrouter");
+        log.RequestSource.Should().Be(nameof(RequestSource.RagPipeline));
+        log.PromptTokens.Should().Be(500);
+        log.CompletionTokens.Should().Be(200);
+        log.TotalTokens.Should().Be(700);
+        log.CostUsd.Should().Be(0.0025m);
+        log.LatencyMs.Should().Be(480);
+        log.Success.Should().BeTrue();
+        log.ErrorMessage.Should().BeNull();
+        log.IsStreaming.Should().BeFalse();
+        log.IsFreeModel.Should().BeFalse();
+        log.SessionId.Should().Be("test-session");
+        (log.RequestedAt >= before && log.RequestedAt <= DateTime.UtcNow).Should().BeTrue();
     }
 
     [Fact]
@@ -93,8 +94,7 @@ public sealed class LlmRequestLogRepositoryTests : SharedDatabaseTestBase<LlmReq
         // Assert
         var log = await DbContext.LlmRequestLogs.SingleAsync(TestCancellationToken);
         var expectedExpiry = log.RequestedAt.AddDays(30);
-        Assert.True(Math.Abs((log.ExpiresAt - expectedExpiry).TotalSeconds) < 2,
-            $"ExpiresAt {log.ExpiresAt} should be ~30 days after RequestedAt {log.RequestedAt}");
+        (Math.Abs((log.ExpiresAt - expectedExpiry).TotalSeconds) < 2).Should().BeTrue($"ExpiresAt {log.ExpiresAt} should be ~30 days after RequestedAt {log.RequestedAt}");
     }
 
     [Fact]
@@ -113,8 +113,8 @@ public sealed class LlmRequestLogRepositoryTests : SharedDatabaseTestBase<LlmReq
 
         // Assert
         var log = await DbContext.LlmRequestLogs.SingleAsync(TestCancellationToken);
-        Assert.False(log.Success);
-        Assert.Equal("Rate limit exceeded", log.ErrorMessage);
+        log.Success.Should().BeFalse();
+        log.ErrorMessage.Should().Be("Rate limit exceeded");
     }
 
     [Theory]
@@ -136,7 +136,7 @@ public sealed class LlmRequestLogRepositoryTests : SharedDatabaseTestBase<LlmReq
 
         // Assert
         var log = await DbContext.LlmRequestLogs.SingleAsync(TestCancellationToken);
-        Assert.Equal(source.ToString(), log.RequestSource);
+        log.RequestSource.Should().Be(source.ToString());
     }
 
     // ─── DeleteExpiredAsync ───────────────────────────────────────────────────
@@ -177,9 +177,9 @@ public sealed class LlmRequestLogRepositoryTests : SharedDatabaseTestBase<LlmReq
         var deleted = await Repository.DeleteExpiredAsync(now, TestCancellationToken);
 
         // Assert
-        Assert.Equal(2, deleted);
+        deleted.Should().Be(2);
         var remaining = await DbContext.LlmRequestLogs.CountAsync(TestCancellationToken);
-        Assert.Equal(1, remaining);
+        remaining.Should().Be(1);
     }
 
     [Fact]
@@ -202,7 +202,7 @@ public sealed class LlmRequestLogRepositoryTests : SharedDatabaseTestBase<LlmReq
         var deleted = await Repository.DeleteExpiredAsync(now, TestCancellationToken);
 
         // Assert
-        Assert.Equal(0, deleted);
+        deleted.Should().Be(0);
     }
 
     [Fact]
@@ -215,7 +215,7 @@ public sealed class LlmRequestLogRepositoryTests : SharedDatabaseTestBase<LlmReq
         var deleted = await Repository.DeleteExpiredAsync(DateTime.UtcNow, TestCancellationToken);
 
         // Assert
-        Assert.Equal(0, deleted);
+        deleted.Should().Be(0);
     }
 
     // ─── GetActiveAiUserCountAsync ────────────────────────────────────────────
@@ -243,7 +243,7 @@ public sealed class LlmRequestLogRepositoryTests : SharedDatabaseTestBase<LlmReq
             DateTime.UtcNow.AddDays(-30), TestCancellationToken);
 
         // Assert — 2 distinct users (null userId excluded)
-        Assert.Equal(2, count);
+        count.Should().Be(2);
     }
 
     [Fact]
@@ -265,7 +265,7 @@ public sealed class LlmRequestLogRepositoryTests : SharedDatabaseTestBase<LlmReq
             DateTime.UtcNow.AddDays(-30), TestCancellationToken);
 
         // Assert — anonymized records excluded
-        Assert.Equal(0, count);
+        count.Should().Be(0);
     }
 
     [Fact]
@@ -279,7 +279,7 @@ public sealed class LlmRequestLogRepositoryTests : SharedDatabaseTestBase<LlmReq
             DateTime.UtcNow.AddDays(-30), TestCancellationToken);
 
         // Assert
-        Assert.Equal(0, count);
+        count.Should().Be(0);
     }
 
     [Fact]
@@ -297,6 +297,6 @@ public sealed class LlmRequestLogRepositoryTests : SharedDatabaseTestBase<LlmReq
             DateTime.UtcNow.AddMinutes(1), TestCancellationToken);
 
         // Assert
-        Assert.Equal(0, count);
+        count.Should().Be(0);
     }
 }

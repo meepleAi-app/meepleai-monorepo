@@ -7,6 +7,8 @@ using Api.SharedKernel.Infrastructure.Persistence;
 using Microsoft.Extensions.Time.Testing;
 using Moq;
 using Xunit;
+using Api.Tests.Constants;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.GameManagement.CommandHandlers;
 
@@ -14,6 +16,8 @@ namespace Api.Tests.BoundedContexts.GameManagement.CommandHandlers;
 /// Unit tests for CreateGameReviewCommandHandler.
 /// Issue #4904: Game reviews API endpoint.
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
+[Trait("BoundedContext", "GameManagement")]
 public sealed class CreateGameReviewCommandHandlerTests
 {
     private readonly Mock<IGameReviewRepository> _repositoryMock;
@@ -50,13 +54,13 @@ public sealed class CreateGameReviewCommandHandlerTests
         var result = await _sut.Handle(command, CancellationToken.None);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal(gameId, result.GameId);
-        Assert.Equal("Alice", result.AuthorName);
-        Assert.Equal(8, result.Rating);
-        Assert.Equal("Great game!", result.Content);
-        Assert.NotEqual(Guid.Empty, result.Id);
-        Assert.Equal(new DateTime(2025, 6, 15, 10, 0, 0, DateTimeKind.Utc), result.CreatedAt);
+        result.Should().NotBeNull();
+        result.GameId.Should().Be(gameId);
+        result.AuthorName.Should().Be("Alice");
+        result.Rating.Should().Be(8);
+        result.Content.Should().Be("Great game!");
+        result.Id.Should().NotBe(Guid.Empty);
+        result.CreatedAt.Should().Be(new DateTime(2025, 6, 15, 10, 0, 0, DateTimeKind.Utc));
 
         _repositoryMock.Verify(r => r.AddAsync(It.IsAny<GameReview>(), It.IsAny<CancellationToken>()), Times.Once);
         _unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
@@ -81,8 +85,9 @@ public sealed class CreateGameReviewCommandHandlerTests
         var command = new CreateGameReviewCommand(gameId, userId, "Alice", 9, "Updated thoughts");
 
         // Act & Assert
-        await Assert.ThrowsAsync<ConflictException>(() =>
-            _sut.Handle(command, CancellationToken.None));
+        var act = () =>
+            _sut.Handle(command, CancellationToken.None);
+        await act.Should().ThrowAsync<ConflictException>();
 
         _repositoryMock.Verify(r => r.AddAsync(It.IsAny<GameReview>(), It.IsAny<CancellationToken>()), Times.Never);
         _unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
@@ -92,8 +97,9 @@ public sealed class CreateGameReviewCommandHandlerTests
     public async Task Handle_ThrowsArgumentNullException_WhenCommandIsNull()
     {
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentNullException>(() =>
-            _sut.Handle(null!, CancellationToken.None));
+        var act = () =>
+            _sut.Handle(null!, CancellationToken.None);
+        await act.Should().ThrowAsync<ArgumentNullException>();
     }
 
     [Theory]
@@ -116,7 +122,7 @@ public sealed class CreateGameReviewCommandHandlerTests
         var result = await _sut.Handle(command, CancellationToken.None);
 
         // Assert
-        Assert.Equal(rating, result.Rating);
+        result.Rating.Should().Be(rating);
     }
 
     [Fact]

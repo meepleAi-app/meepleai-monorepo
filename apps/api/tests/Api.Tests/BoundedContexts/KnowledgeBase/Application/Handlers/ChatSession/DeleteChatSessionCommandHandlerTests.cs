@@ -8,6 +8,7 @@ using Api.Tests.Constants;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Handlers.ChatSession;
 
@@ -72,9 +73,10 @@ public class DeleteChatSessionCommandHandlerTests
         var command = new DeleteChatSessionCommand(SessionId: sessionId);
 
         // Act & Assert
-        var ex = await Assert.ThrowsAsync<NotFoundException>(() =>
-            _handler.Handle(command, TestContext.Current.CancellationToken));
-        Assert.Contains("ChatSession", ex.Message);
+        Func<Task> act = () =>
+            _handler.Handle(command, TestContext.Current.CancellationToken);
+        var ex = (await act.Should().ThrowAsync<NotFoundException>()).Which;
+        ex.Message.Should().Contain("ChatSession");
     }
 
     [Fact]
@@ -101,50 +103,54 @@ public class DeleteChatSessionCommandHandlerTests
         await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.Equal(2, callOrder.Count);
-        Assert.Equal("Repository.DeleteAsync", callOrder[0]);
-        Assert.Equal("UnitOfWork.SaveChangesAsync", callOrder[1]);
+        callOrder.Count.Should().Be(2);
+        callOrder[0].Should().Be("Repository.DeleteAsync");
+        callOrder[1].Should().Be("UnitOfWork.SaveChangesAsync");
     }
 
     [Fact]
     public async Task Handle_WithNullCommand_ThrowsArgumentNullException()
     {
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentNullException>(() =>
-            _handler.Handle(null!, TestContext.Current.CancellationToken));
+        Func<Task> act = () =>
+            _handler.Handle(null!, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<ArgumentNullException>();
     }
 
     [Fact]
     public void Constructor_WithNullRepository_ThrowsArgumentNullException()
     {
         // Act & Assert
-        Assert.Throws<ArgumentNullException>(() =>
+        Action act = () =>
             new DeleteChatSessionCommandHandler(
                 null!,
                 _mockUnitOfWork.Object,
-                _mockLogger.Object));
+                _mockLogger.Object);
+        act.Should().Throw<ArgumentNullException>();
     }
 
     [Fact]
     public void Constructor_WithNullUnitOfWork_ThrowsArgumentNullException()
     {
         // Act & Assert
-        Assert.Throws<ArgumentNullException>(() =>
+        Action act = () =>
             new DeleteChatSessionCommandHandler(
                 _mockRepository.Object,
                 null!,
-                _mockLogger.Object));
+                _mockLogger.Object);
+        act.Should().Throw<ArgumentNullException>();
     }
 
     [Fact]
     public void Constructor_WithNullLogger_ThrowsArgumentNullException()
     {
         // Act & Assert
-        Assert.Throws<ArgumentNullException>(() =>
+        Action act = () =>
             new DeleteChatSessionCommandHandler(
                 _mockRepository.Object,
                 _mockUnitOfWork.Object,
-                null!));
+                null!);
+        act.Should().Throw<ArgumentNullException>();
     }
 
     private static Api.BoundedContexts.KnowledgeBase.Domain.Entities.ChatSession CreateTestSession(Guid sessionId)

@@ -6,6 +6,7 @@ using Api.Infrastructure.Entities.SharedGameCatalog;
 using Api.Infrastructure.Entities.UserLibrary;
 using Api.Tests.Constants;
 using Api.Tests.TestHelpers;
+using FluentAssertions;
 using Xunit;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Unit;
@@ -44,16 +45,16 @@ public class DegradedAgentServiceTests
         var prompt = service.BuildDegradedSystemPrompt(context);
 
         // Assert
-        Assert.Contains("**Catan**", prompt);
-        Assert.Contains("3-4 players", prompt);
-        Assert.Contains("~90 minutes", prompt);
-        Assert.Contains("2.3/5", prompt);
-        Assert.Contains("1995", prompt);
-        Assert.Contains("Kosmos", prompt);
-        Assert.Contains("Klaus Teuber", prompt);
-        Assert.Contains("Strategy, Economic", prompt);
-        Assert.Contains("Dice Rolling, Trading", prompt);
-        Assert.Contains("Trade, build, and settle the island of Catan.", prompt);
+        prompt.Should().Contain("**Catan**");
+        prompt.Should().Contain("3-4 players");
+        prompt.Should().Contain("~90 minutes");
+        prompt.Should().Contain("2.3/5");
+        prompt.Should().Contain("1995");
+        prompt.Should().Contain("Kosmos");
+        prompt.Should().Contain("Klaus Teuber");
+        prompt.Should().Contain("Strategy, Economic");
+        prompt.Should().Contain("Dice Rolling, Trading");
+        prompt.Should().Contain("Trade, build, and settle the island of Catan.");
     }
 
     [Fact]
@@ -70,18 +71,18 @@ public class DegradedAgentServiceTests
         var prompt = service.BuildDegradedSystemPrompt(context);
 
         // Assert
-        Assert.Contains("**Unknown Game**", prompt);
-        Assert.Contains("What You Can Help With", prompt);
+        prompt.Should().Contain("**Unknown Game**");
+        prompt.Should().Contain("What You Can Help With");
         // Should not contain optional metadata fields that weren't set (check bold format from Game Information section)
-        Assert.DoesNotContain("**Players**", prompt);
-        Assert.DoesNotContain("**Play Time**", prompt);
-        Assert.DoesNotContain("**Complexity**", prompt);
-        Assert.DoesNotContain("**Year Published**", prompt);
-        Assert.DoesNotContain("**Publisher**", prompt);
-        Assert.DoesNotContain("**Designer**", prompt);
-        Assert.DoesNotContain("**Categories**", prompt);
-        Assert.DoesNotContain("**Mechanics**", prompt);
-        Assert.DoesNotContain("Game Description", prompt);
+        prompt.Should().NotContain("**Players**");
+        prompt.Should().NotContain("**Play Time**");
+        prompt.Should().NotContain("**Complexity**");
+        prompt.Should().NotContain("**Year Published**");
+        prompt.Should().NotContain("**Publisher**");
+        prompt.Should().NotContain("**Designer**");
+        prompt.Should().NotContain("**Categories**");
+        prompt.Should().NotContain("**Mechanics**");
+        prompt.Should().NotContain("Game Description");
     }
 
     [Fact]
@@ -95,9 +96,9 @@ public class DegradedAgentServiceTests
         var prompt = service.BuildDegradedSystemPrompt(context);
 
         // Assert
-        Assert.Contains("Important Limitations", prompt);
-        Assert.Contains("do NOT have access to the full rulebook", prompt);
-        Assert.Contains("upload the PDF", prompt);
+        prompt.Should().Contain("Important Limitations");
+        prompt.Should().Contain("do NOT have access to the full rulebook");
+        prompt.Should().Contain("upload the PDF");
     }
 
     [Fact]
@@ -116,10 +117,10 @@ public class DegradedAgentServiceTests
         var prompt = service.BuildDegradedSystemPrompt(context);
 
         // Assert — description should be truncated to 1000 chars + "..."
-        Assert.Contains("...", prompt);
-        Assert.DoesNotContain(longDescription, prompt);
+        prompt.Should().Contain("...");
+        prompt.Should().NotContain(longDescription);
         // The truncated description should be exactly 1003 chars (1000 + "...")
-        Assert.Contains(longDescription[..1000], prompt);
+        prompt.Should().Contain(longDescription[..1000]);
     }
 
     [Fact]
@@ -138,8 +139,8 @@ public class DegradedAgentServiceTests
         var prompt = service.BuildDegradedSystemPrompt(context);
 
         // Assert
-        Assert.Contains("1 players", prompt);
-        Assert.DoesNotContain("1-1", prompt);
+        prompt.Should().Contain("1 players");
+        prompt.Should().NotContain("1-1");
     }
 
     #endregion
@@ -168,9 +169,9 @@ public class DegradedAgentServiceTests
         var capability = await service.GetAgentCapabilityAsync(agentDef.Id);
 
         // Assert
-        Assert.Equal(AgentCapabilityLevel.Full, capability.Level);
-        Assert.True(capability.HasKbCards);
-        Assert.False(capability.HasRulebookAnalysis);
+        capability.Level.Should().Be(AgentCapabilityLevel.Full);
+        capability.HasKbCards.Should().BeTrue();
+        capability.HasRulebookAnalysis.Should().BeFalse();
     }
 
     [Fact]
@@ -220,9 +221,9 @@ public class DegradedAgentServiceTests
         var capability = await service.GetAgentCapabilityAsync(agentDef.Id);
 
         // Assert
-        Assert.Equal(AgentCapabilityLevel.Full, capability.Level);
-        Assert.True(capability.HasKbCards);
-        Assert.True(capability.HasRulebookAnalysis);
+        capability.Level.Should().Be(AgentCapabilityLevel.Full);
+        capability.HasKbCards.Should().BeTrue();
+        capability.HasRulebookAnalysis.Should().BeTrue();
     }
 
     [Fact]
@@ -259,9 +260,9 @@ public class DegradedAgentServiceTests
         var capability = await service.GetAgentCapabilityAsync(agentDef.Id);
 
         // Assert
-        Assert.Equal(AgentCapabilityLevel.Degraded, capability.Level);
-        Assert.False(capability.HasKbCards);
-        Assert.True(capability.HasBggMetadata);
+        capability.Level.Should().Be(AgentCapabilityLevel.Degraded);
+        capability.HasKbCards.Should().BeFalse();
+        capability.HasBggMetadata.Should().BeTrue();
     }
 
     [Fact]
@@ -296,9 +297,9 @@ public class DegradedAgentServiceTests
         var capability = await service.GetAgentCapabilityAsync(agentDef.Id);
 
         // Assert
-        Assert.Equal(AgentCapabilityLevel.Degraded, capability.Level);
-        Assert.False(capability.HasKbCards);
-        Assert.True(capability.HasBggMetadata);
+        capability.Level.Should().Be(AgentCapabilityLevel.Degraded);
+        capability.HasKbCards.Should().BeFalse();
+        capability.HasBggMetadata.Should().BeTrue();
     }
 
     [Fact]
@@ -312,10 +313,10 @@ public class DegradedAgentServiceTests
         var capability = await service.GetAgentCapabilityAsync(nonExistentAgentId);
 
         // Assert
-        Assert.Equal(AgentCapabilityLevel.None, capability.Level);
-        Assert.False(capability.HasKbCards);
-        Assert.False(capability.HasBggMetadata);
-        Assert.False(capability.HasRulebookAnalysis);
+        capability.Level.Should().Be(AgentCapabilityLevel.None);
+        capability.HasKbCards.Should().BeFalse();
+        capability.HasBggMetadata.Should().BeFalse();
+        capability.HasRulebookAnalysis.Should().BeFalse();
     }
 
     [Fact]
@@ -337,9 +338,9 @@ public class DegradedAgentServiceTests
         var capability = await service.GetAgentCapabilityAsync(agentDef.Id);
 
         // Assert
-        Assert.Equal(AgentCapabilityLevel.None, capability.Level);
-        Assert.False(capability.HasKbCards);
-        Assert.False(capability.HasBggMetadata);
+        capability.Level.Should().Be(AgentCapabilityLevel.None);
+        capability.HasKbCards.Should().BeFalse();
+        capability.HasBggMetadata.Should().BeFalse();
     }
 
     #endregion
@@ -350,41 +351,41 @@ public class DegradedAgentServiceTests
     public void AgentCapability_Full_ShouldHaveCorrectProperties()
     {
         var capability = AgentCapability.Full();
-        Assert.Equal(AgentCapabilityLevel.Full, capability.Level);
-        Assert.True(capability.HasKbCards);
-        Assert.True(capability.HasBggMetadata);
-        Assert.False(capability.HasRulebookAnalysis);
-        Assert.Contains("Full RAG", capability.Description);
+        capability.Level.Should().Be(AgentCapabilityLevel.Full);
+        capability.HasKbCards.Should().BeTrue();
+        capability.HasBggMetadata.Should().BeTrue();
+        capability.HasRulebookAnalysis.Should().BeFalse();
+        capability.Description.Should().Contain("Full RAG");
     }
 
     [Fact]
     public void AgentCapability_Full_WithRulebook_ShouldIncludeRulebookInDescription()
     {
         var capability = AgentCapability.Full(hasRulebookAnalysis: true);
-        Assert.True(capability.HasRulebookAnalysis);
-        Assert.Contains("rulebook analysis", capability.Description);
+        capability.HasRulebookAnalysis.Should().BeTrue();
+        capability.Description.Should().Contain("rulebook analysis");
     }
 
     [Fact]
     public void AgentCapability_Degraded_ShouldHaveCorrectProperties()
     {
         var capability = AgentCapability.Degraded();
-        Assert.Equal(AgentCapabilityLevel.Degraded, capability.Level);
-        Assert.False(capability.HasKbCards);
-        Assert.True(capability.HasBggMetadata);
-        Assert.False(capability.HasRulebookAnalysis);
-        Assert.Contains("BGG metadata only", capability.Description);
+        capability.Level.Should().Be(AgentCapabilityLevel.Degraded);
+        capability.HasKbCards.Should().BeFalse();
+        capability.HasBggMetadata.Should().BeTrue();
+        capability.HasRulebookAnalysis.Should().BeFalse();
+        capability.Description.Should().Contain("BGG metadata only");
     }
 
     [Fact]
     public void AgentCapability_None_ShouldHaveCorrectProperties()
     {
         var capability = AgentCapability.None();
-        Assert.Equal(AgentCapabilityLevel.None, capability.Level);
-        Assert.False(capability.HasKbCards);
-        Assert.False(capability.HasBggMetadata);
-        Assert.False(capability.HasRulebookAnalysis);
-        Assert.Contains("No knowledge sources", capability.Description);
+        capability.Level.Should().Be(AgentCapabilityLevel.None);
+        capability.HasKbCards.Should().BeFalse();
+        capability.HasBggMetadata.Should().BeFalse();
+        capability.HasRulebookAnalysis.Should().BeFalse();
+        capability.Description.Should().Contain("No knowledge sources");
     }
 
     #endregion

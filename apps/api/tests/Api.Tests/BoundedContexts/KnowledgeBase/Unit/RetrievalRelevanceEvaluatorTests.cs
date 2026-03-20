@@ -5,6 +5,7 @@ using Api.Tests.Constants;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Unit;
 
@@ -29,8 +30,8 @@ public class RetrievalRelevanceEvaluatorTests
     {
         var result = await _sut.EvaluateAsync("some query", Array.Empty<ScoredChunk>());
 
-        Assert.Equal(RelevanceVerdict.Incorrect, result.Verdict);
-        Assert.False(result.UseRetrievedDocuments);
+        result.Verdict.Should().Be(RelevanceVerdict.Incorrect);
+        result.UseRetrievedDocuments.Should().BeFalse();
         _llmServiceMock.VerifyNoOtherCalls();
     }
 
@@ -39,7 +40,7 @@ public class RetrievalRelevanceEvaluatorTests
     {
         var result = await _sut.EvaluateAsync("some query", null!);
 
-        Assert.Equal(RelevanceVerdict.Incorrect, result.Verdict);
+        result.Verdict.Should().Be(RelevanceVerdict.Incorrect);
         _llmServiceMock.VerifyNoOtherCalls();
     }
 
@@ -57,9 +58,9 @@ public class RetrievalRelevanceEvaluatorTests
 
         var result = await _sut.EvaluateAsync("How do you score in Catan?", chunks);
 
-        Assert.Equal(RelevanceVerdict.Correct, result.Verdict);
-        Assert.True(result.UseRetrievedDocuments);
-        Assert.False(result.ShouldRequery);
+        result.Verdict.Should().Be(RelevanceVerdict.Correct);
+        result.UseRetrievedDocuments.Should().BeTrue();
+        result.ShouldRequery.Should().BeFalse();
         _llmServiceMock.Verify(
             x => x.GenerateJsonAsync<RelevanceClassification>(
                 It.IsAny<string>(), It.IsAny<string>(), It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()),
@@ -80,9 +81,9 @@ public class RetrievalRelevanceEvaluatorTests
 
         var result = await _sut.EvaluateAsync("How do you score in Catan?", chunks);
 
-        Assert.Equal(RelevanceVerdict.Incorrect, result.Verdict);
-        Assert.False(result.UseRetrievedDocuments);
-        Assert.True(result.ShouldRequery);
+        result.Verdict.Should().Be(RelevanceVerdict.Incorrect);
+        result.UseRetrievedDocuments.Should().BeFalse();
+        result.ShouldRequery.Should().BeTrue();
         _llmServiceMock.Verify(
             x => x.GenerateJsonAsync<RelevanceClassification>(
                 It.IsAny<string>(), It.IsAny<string>(), It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()),
@@ -107,8 +108,8 @@ public class RetrievalRelevanceEvaluatorTests
 
         var result = await _sut.EvaluateAsync("How do you score in Catan?", chunks);
 
-        Assert.Equal(RelevanceVerdict.Correct, result.Verdict);
-        Assert.Equal(0.80f, result.Confidence);
+        result.Verdict.Should().Be(RelevanceVerdict.Correct);
+        result.Confidence.Should().Be(0.80f);
         _llmServiceMock.Verify(
             x => x.GenerateJsonAsync<RelevanceClassification>(
                 It.IsAny<string>(), It.IsAny<string>(), RequestSource.RagClassification, It.IsAny<CancellationToken>()),
@@ -131,9 +132,9 @@ public class RetrievalRelevanceEvaluatorTests
 
         var result = await _sut.EvaluateAsync("query", chunks);
 
-        Assert.Equal(RelevanceVerdict.Ambiguous, result.Verdict);
-        Assert.True(result.UseRetrievedDocuments);
-        Assert.True(result.ShouldRequery);
+        result.Verdict.Should().Be(RelevanceVerdict.Ambiguous);
+        result.UseRetrievedDocuments.Should().BeTrue();
+        result.ShouldRequery.Should().BeTrue();
     }
 
     // --- LLM error fallback ---
@@ -154,9 +155,9 @@ public class RetrievalRelevanceEvaluatorTests
 
         var result = await _sut.EvaluateAsync("query", chunks);
 
-        Assert.Equal(RelevanceVerdict.Correct, result.Verdict);
-        Assert.Equal(0.5f, result.Confidence);
-        Assert.True(result.UseRetrievedDocuments);
+        result.Verdict.Should().Be(RelevanceVerdict.Correct);
+        result.Confidence.Should().Be(0.5f);
+        result.UseRetrievedDocuments.Should().BeTrue();
     }
 
     [Fact]
@@ -175,8 +176,8 @@ public class RetrievalRelevanceEvaluatorTests
 
         var result = await _sut.EvaluateAsync("query", chunks);
 
-        Assert.Equal(RelevanceVerdict.Correct, result.Verdict);
-        Assert.Equal(0.5f, result.Confidence);
+        result.Verdict.Should().Be(RelevanceVerdict.Correct);
+        result.Confidence.Should().Be(0.5f);
     }
 
     // --- Edge: Exact threshold boundaries ---
@@ -188,7 +189,7 @@ public class RetrievalRelevanceEvaluatorTests
 
         var result = await _sut.EvaluateAsync("query", chunks);
 
-        Assert.Equal(RelevanceVerdict.Correct, result.Verdict);
+        result.Verdict.Should().Be(RelevanceVerdict.Correct);
         _llmServiceMock.VerifyNoOtherCalls();
     }
 
@@ -235,7 +236,7 @@ public class RetrievalRelevanceEvaluatorTests
 
         var result = await _sut.EvaluateAsync("query", chunks);
 
-        Assert.Equal(RelevanceVerdict.Incorrect, result.Verdict);
+        result.Verdict.Should().Be(RelevanceVerdict.Incorrect);
         _llmServiceMock.VerifyNoOtherCalls();
     }
 
@@ -253,7 +254,7 @@ public class RetrievalRelevanceEvaluatorTests
 
         var result = await _sut.EvaluateAsync("query", chunks);
 
-        Assert.Equal(RelevanceVerdict.Ambiguous, result.Verdict);
+        result.Verdict.Should().Be(RelevanceVerdict.Ambiguous);
     }
 
     // --- LLM: Confidence clamping ---
@@ -270,6 +271,6 @@ public class RetrievalRelevanceEvaluatorTests
 
         var result = await _sut.EvaluateAsync("query", chunks);
 
-        Assert.Equal(1.0f, result.Confidence);
+        result.Confidence.Should().Be(1.0f);
     }
 }

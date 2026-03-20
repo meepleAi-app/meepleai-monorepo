@@ -7,6 +7,7 @@ using Api.Tests.Constants;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.Administration.Application.Handlers;
 
@@ -43,12 +44,12 @@ public class GetServiceDashboardQueryHandlerTests
         var result = await _handler.Handle(new GetServiceDashboardQuery(), CancellationToken.None);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal("Healthy", result.Overall.State);
-        Assert.Equal(3, result.Overall.TotalServices);
-        Assert.Equal(2, result.Overall.HealthyServices);
-        Assert.Equal(1, result.Overall.DegradedServices);
-        Assert.Equal(0, result.Overall.UnhealthyServices);
+        result.Should().NotBeNull();
+        result.Overall.State.Should().Be("Healthy");
+        result.Overall.TotalServices.Should().Be(3);
+        result.Overall.HealthyServices.Should().Be(2);
+        result.Overall.DegradedServices.Should().Be(1);
+        result.Overall.UnhealthyServices.Should().Be(0);
     }
 
     [Fact]
@@ -65,9 +66,9 @@ public class GetServiceDashboardQueryHandlerTests
 
         // Assert
         var serviceNames = result.Services.Select(s => s.ServiceName).ToList();
-        Assert.Contains("PostgreSQL", serviceNames);
-        Assert.Contains("Redis", serviceNames);
-        Assert.Contains("Embedding Service", serviceNames);
+        serviceNames.Should().Contain("PostgreSQL");
+        serviceNames.Should().Contain("Redis");
+        serviceNames.Should().Contain("Embedding Service");
     }
 
     [Fact]
@@ -84,10 +85,10 @@ public class GetServiceDashboardQueryHandlerTests
 
         // Assert
         var postgres = result.Services.First(s => s.ServiceName == "PostgreSQL");
-        Assert.Equal("Core Infrastructure", postgres.Category);
+        postgres.Category.Should().Be("Core Infrastructure");
 
         var embedding = result.Services.First(s => s.ServiceName == "Embedding Service");
-        Assert.Equal("AI Services", embedding.Category);
+        embedding.Category.Should().Be("AI Services");
     }
 
     [Fact]
@@ -104,10 +105,10 @@ public class GetServiceDashboardQueryHandlerTests
 
         // Assert
         var postgres = result.Services.First(s => s.ServiceName == "PostgreSQL");
-        Assert.Equal(99.9, postgres.UptimePercent24h); // Healthy
+        postgres.UptimePercent24h.Should().Be(99.9); // Healthy
 
         var embedding = result.Services.First(s => s.ServiceName == "Embedding Service");
-        Assert.Equal(97.0, embedding.UptimePercent24h); // Degraded
+        embedding.UptimePercent24h.Should().Be(97.0); // Degraded
     }
 
     [Fact]
@@ -124,10 +125,10 @@ public class GetServiceDashboardQueryHandlerTests
 
         // Assert
         var postgres = result.Services.First(s => s.ServiceName == "PostgreSQL");
-        Assert.Null(postgres.LastIncidentAt); // Healthy → no incident
+        postgres.LastIncidentAt.Should().BeNull(); // Healthy → no incident
 
         var embedding = result.Services.First(s => s.ServiceName == "Embedding Service");
-        Assert.NotNull(embedding.LastIncidentAt); // Degraded → has incident
+        embedding.LastIncidentAt.Should().NotBeNull(); // Degraded → has incident
     }
 
     [Fact]
@@ -143,10 +144,10 @@ public class GetServiceDashboardQueryHandlerTests
         var result = await _handler.Handle(new GetServiceDashboardQuery(), CancellationToken.None);
 
         // Assert
-        Assert.Equal(15000, result.PrometheusMetrics.ApiRequestsLast24h);
-        Assert.Equal(45.0, result.PrometheusMetrics.AvgLatencyMs);
-        Assert.Equal(0.002, result.PrometheusMetrics.ErrorRate);
-        Assert.Equal(12.5, result.PrometheusMetrics.LlmCostLast24h);
+        result.PrometheusMetrics.ApiRequestsLast24h.Should().Be(15000);
+        result.PrometheusMetrics.AvgLatencyMs.Should().Be(45.0);
+        result.PrometheusMetrics.ErrorRate.Should().Be(0.002);
+        result.PrometheusMetrics.LlmCostLast24h.Should().Be(12.5);
     }
 
     [Fact]
@@ -163,7 +164,7 @@ public class GetServiceDashboardQueryHandlerTests
 
         // Assert
         var postgres = result.Services.First(s => s.ServiceName == "PostgreSQL");
-        Assert.Equal(15.0, postgres.ResponseTimeMs);
+        postgres.ResponseTimeMs.Should().Be(15.0);
     }
 
     [Fact]
@@ -181,16 +182,16 @@ public class GetServiceDashboardQueryHandlerTests
         // Assert
         foreach (var service in result.Services)
         {
-            Assert.Equal("stable", service.ResponseTimeTrend);
-            Assert.Null(service.PreviousResponseTimeMs);
+            service.ResponseTimeTrend.Should().Be("stable");
+            service.PreviousResponseTimeMs.Should().BeNull();
         }
     }
 
     [Fact]
     public async Task Handle_ThrowsArgumentNullException_ForNullRequest()
     {
-        await Assert.ThrowsAsync<ArgumentNullException>(
-            () => _handler.Handle(null!, CancellationToken.None));
+        var act = () => _handler.Handle(null!, CancellationToken.None);
+        await act.Should().ThrowAsync<ArgumentNullException>();
     }
 
     [Fact]
@@ -202,8 +203,8 @@ public class GetServiceDashboardQueryHandlerTests
             .ThrowsAsync(new InvalidOperationException("Service unavailable"));
 
         // Act & Assert
-        await Assert.ThrowsAsync<InvalidOperationException>(
-            () => _handler.Handle(new GetServiceDashboardQuery(), CancellationToken.None));
+        var act = () => _handler.Handle(new GetServiceDashboardQuery(), CancellationToken.None);
+        await act.Should().ThrowAsync<InvalidOperationException>();
     }
 
     [Fact]
@@ -228,8 +229,8 @@ public class GetServiceDashboardQueryHandlerTests
 
         // Assert
         var service = result.Services.First();
-        Assert.Equal("External APIs", service.Category);
-        Assert.Equal("unknown-service", service.ServiceName); // No display name mapping
+        service.Category.Should().Be("External APIs");
+        service.ServiceName.Should().Be("unknown-service"); // No display name mapping
     }
 
     private static InfrastructureDetails CreateMockInfrastructureDetails()

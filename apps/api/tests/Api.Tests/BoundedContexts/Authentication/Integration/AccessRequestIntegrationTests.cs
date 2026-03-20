@@ -152,8 +152,8 @@ public sealed class AccessRequestIntegrationTests : IDisposable
         var command = new ApproveAccessRequestCommand(Guid.NewGuid(), Guid.NewGuid());
 
         // Act & Assert
-        await Assert.ThrowsAsync<Api.Middleware.Exceptions.NotFoundException>(
-            () => handler.Handle(command, CancellationToken.None));
+        var act = () => handler.Handle(command, CancellationToken.None);
+        await act.Should().ThrowAsync<Api.Middleware.Exceptions.NotFoundException>();
     }
 
     [Fact]
@@ -209,8 +209,8 @@ public sealed class AccessRequestIntegrationTests : IDisposable
         var command = new RejectAccessRequestCommand(Guid.NewGuid(), Guid.NewGuid(), null);
 
         // Act & Assert
-        await Assert.ThrowsAsync<Api.Middleware.Exceptions.NotFoundException>(
-            () => handler.Handle(command, CancellationToken.None));
+        var act = () => handler.Handle(command, CancellationToken.None);
+        await act.Should().ThrowAsync<Api.Middleware.Exceptions.NotFoundException>();
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -285,7 +285,8 @@ public sealed class AccessRequestIntegrationTests : IDisposable
         var command = new BulkApproveAccessRequestsCommand(ids, Guid.NewGuid());
 
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentException>(() => handler.Handle(command, CancellationToken.None));
+        var act = () => handler.Handle(command, CancellationToken.None);
+        await act.Should().ThrowAsync<ArgumentException>();
     }
 
     // ─────────────────────────────────────────────────────────────────────────

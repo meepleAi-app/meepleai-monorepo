@@ -18,6 +18,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Moq;
 using StackExchange.Redis;
+using FluentAssertions;
 using Xunit;
 
 namespace Api.Tests.Integration.KnowledgeBase;
@@ -140,8 +141,8 @@ public sealed class AgentChatEndpointsIntegrationTests : IAsyncLifetime
         var response = await _client.PostAsJsonAsync($"/api/v1/agents/{_testAgentId}/chat", request);
 
         // Assert
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        Assert.Equal("text/event-stream", response.Content.Headers.ContentType?.MediaType);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        response.Content.Headers.ContentType?.MediaType.Should().Be("text/event-stream");
 
         // Validate SSE stream
         var stream = await response.Content.ReadAsStreamAsync();
@@ -155,15 +156,15 @@ public sealed class AgentChatEndpointsIntegrationTests : IAsyncLifetime
             {
                 var json = line["data: ".Length..];
                 var @event = JsonSerializer.Deserialize<RagStreamingEvent>(json);
-                Assert.NotNull(@event);
+                (@event).Should().NotBeNull();
                 events.Add(@event);
             }
         }
 
         // Verify at least one event was received (CI may not have LLM configured,
         // so we only verify the stream is functional and returns valid events)
-        Assert.NotEmpty(events);
-        Assert.Contains(events, e => e.Type == StreamingEventType.StateUpdate
+        events.Should().NotBeEmpty();
+        events.Should().Contain(e => e.Type == StreamingEventType.StateUpdate
                                   || e.Type == StreamingEventType.Token
                                   || e.Type == StreamingEventType.Complete
                                   || e.Type == StreamingEventType.Error);
@@ -179,7 +180,7 @@ public sealed class AgentChatEndpointsIntegrationTests : IAsyncLifetime
         var response = await _client.PostAsJsonAsync($"/api/v1/agents/{_testAgentId}/chat", request);
 
         // Assert
-        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
     [Fact]
@@ -196,7 +197,7 @@ public sealed class AgentChatEndpointsIntegrationTests : IAsyncLifetime
         var response = await _client.PostAsJsonAsync($"/api/v1/agents/{nonExistentAgentId}/chat", request);
 
         // Assert
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode); // SSE returns 200 even for errors
+        response.StatusCode.Should().Be(HttpStatusCode.OK); // SSE returns 200 even for errors
 
         // Validate error event in stream
         var stream = await response.Content.ReadAsStreamAsync();
@@ -210,17 +211,17 @@ public sealed class AgentChatEndpointsIntegrationTests : IAsyncLifetime
             {
                 var json = line["data: ".Length..];
                 var @event = JsonSerializer.Deserialize<RagStreamingEvent>(json);
-                Assert.NotNull(@event);
+                (@event).Should().NotBeNull();
                 events.Add(@event);
             }
         }
 
-        Assert.Single(events);
-        Assert.Equal(StreamingEventType.Error, events[0].Type);
+        events.Should().ContainSingle();
+        events[0].Type.Should().Be(StreamingEventType.Error);
 
         var error = JsonSerializer.Deserialize<StreamingError>(((JsonElement)events[0].Data!).GetRawText());
-        Assert.NotNull(error);
-        Assert.Equal("AGENT_NOT_FOUND", error.errorCode);
+        error.Should().NotBeNull();
+        error.errorCode.Should().Be("AGENT_NOT_FOUND");
     }
 
     [Fact]
@@ -238,9 +239,7 @@ public sealed class AgentChatEndpointsIntegrationTests : IAsyncLifetime
         // Assert — SSE endpoints return 200 with error events for validation failures
         // (validation runs inside the streaming handler, after HTTP 200 is sent)
         var statusCode = response.StatusCode;
-        Assert.True(
-            statusCode == HttpStatusCode.OK || statusCode == HttpStatusCode.BadRequest || statusCode == HttpStatusCode.UnprocessableEntity,
-            $"Expected OK (SSE error event), BadRequest, or UnprocessableEntity but got {statusCode}");
+        (statusCode == HttpStatusCode.OK || statusCode == HttpStatusCode.BadRequest || statusCode == HttpStatusCode.UnprocessableEntity).Should().BeTrue($"Expected OK (SSE error event), BadRequest, or UnprocessableEntity but got {statusCode}");
     }
 
     [Fact]
@@ -258,9 +257,7 @@ public sealed class AgentChatEndpointsIntegrationTests : IAsyncLifetime
 
         // Assert — SSE endpoints return 200 with error events for validation failures
         var statusCode = response.StatusCode;
-        Assert.True(
-            statusCode == HttpStatusCode.OK || statusCode == HttpStatusCode.BadRequest || statusCode == HttpStatusCode.UnprocessableEntity,
-            $"Expected OK (SSE error event), BadRequest, or UnprocessableEntity but got {statusCode}");
+        (statusCode == HttpStatusCode.OK || statusCode == HttpStatusCode.BadRequest || statusCode == HttpStatusCode.UnprocessableEntity).Should().BeTrue($"Expected OK (SSE error event), BadRequest, or UnprocessableEntity but got {statusCode}");
     }
 
     [Fact]
@@ -276,9 +273,9 @@ public sealed class AgentChatEndpointsIntegrationTests : IAsyncLifetime
         var response = await _client.PostAsJsonAsync($"/api/v1/agents/{_testAgentId}/chat", request);
 
         // Assert
-        Assert.Equal("text/event-stream", response.Content.Headers.ContentType?.MediaType);
-        Assert.True(response.Headers.CacheControl?.NoCache ?? false);
-        Assert.Contains(response.Headers.Connection, c => c == "keep-alive");
+        response.Content.Headers.ContentType?.MediaType.Should().Be("text/event-stream");
+        (response.Headers.CacheControl?.NoCache ?? false).Should().BeTrue();
+        response.Headers.Connection.Should().Contain("keep-alive");
     }
 
     private async Task<string> CreateAuthenticatedSessionAsync()
@@ -293,7 +290,7 @@ public sealed class AgentChatEndpointsIntegrationTests : IAsyncLifetime
         };
 
         var registerResponse = await _client.PostAsJsonAsync("/api/v1/auth/register", registerPayload);
-        Assert.Equal(HttpStatusCode.OK, registerResponse.StatusCode);
+        registerResponse.StatusCode.Should().Be(HttpStatusCode.OK);
 
         // Extract session token from Set-Cookie header
         var setCookieHeader = registerResponse.Headers.GetValues("Set-Cookie").First();

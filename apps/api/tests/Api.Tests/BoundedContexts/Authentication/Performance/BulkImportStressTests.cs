@@ -18,6 +18,7 @@ using Microsoft.Extensions.Logging;
 using Moq;
 using System.Diagnostics;
 using System.Text;
+using FluentAssertions;
 using Xunit;
 using Api.Tests.Constants;
 
@@ -151,18 +152,18 @@ public class BulkImportStressTests : IAsyncLifetime
         // Assert - Performance requirement: <30 seconds
         _output($"⏱️  Execution time: {sw.Elapsed.TotalSeconds:F2}s (target: <{MaxExecutionTimeSeconds}s)");
 
-        Assert.True(sw.Elapsed.TotalSeconds < MaxExecutionTimeSeconds,
+        sw.Elapsed.TotalSeconds.Should().BeLessThan(MaxExecutionTimeSeconds,
             $"Bulk import of {StressTestUserCount} users took {sw.Elapsed.TotalSeconds:F2}s, exceeding {MaxExecutionTimeSeconds}s limit");
 
         // Assert - All keys created successfully
-        Assert.Equal(StressTestUserCount, result.TotalRequested);
-        Assert.Equal(StressTestUserCount, result.SuccessCount);
-        Assert.Equal(0, result.FailedCount);
-        Assert.Empty(result.Errors);
+        result.TotalRequested.Should().Be(StressTestUserCount);
+        result.SuccessCount.Should().Be(StressTestUserCount);
+        result.FailedCount.Should().Be(0);
+        result.Errors.Should().BeEmpty();
 
         // Assert - All plaintext keys returned
-        Assert.Equal(StressTestUserCount, result.Data.Count);
-        Assert.All(result.Data, dto => Assert.False(string.IsNullOrWhiteSpace(dto.PlaintextKey)));
+        result.Data.Count.Should().Be(StressTestUserCount);
+        result.Data.Should().OnlyContain(dto => !string.IsNullOrWhiteSpace(dto.PlaintextKey));
 
         _output($"✅ Successfully imported {result.SuccessCount}/{result.TotalRequested} API keys");
         _output($"📊 Performance: {StressTestUserCount / sw.Elapsed.TotalSeconds:F0} keys/second");
@@ -191,11 +192,11 @@ public class BulkImportStressTests : IAsyncLifetime
         _output($"⏱️  Baseline execution time: {sw.Elapsed.TotalSeconds:F2}s");
         _output($"📊 Baseline performance: {BaselineUserCount / sw.Elapsed.TotalSeconds:F0} keys/second");
 
-        Assert.Equal(BaselineUserCount, result.SuccessCount);
-        Assert.Empty(result.Errors);
+        result.SuccessCount.Should().Be(BaselineUserCount);
+        result.Errors.Should().BeEmpty();
 
         // Baseline should be faster than stress test (linear scaling check)
-        Assert.True(sw.Elapsed.TotalSeconds < MaxExecutionTimeSeconds / 2,
+        sw.Elapsed.TotalSeconds.Should().BeLessThan(MaxExecutionTimeSeconds / 2,
             "Baseline should complete in less than half the stress test time limit");
     }
 
@@ -220,14 +221,14 @@ public class BulkImportStressTests : IAsyncLifetime
         var plaintextKeys = result.Data.Select(d => d.PlaintextKey).ToList();
         var uniqueKeys = plaintextKeys.Distinct().ToList();
 
-        Assert.Equal(StressTestUserCount, uniqueKeys.Count);
+        uniqueKeys.Count.Should().Be(StressTestUserCount);
         _output($"✅ All {StressTestUserCount} keys are unique");
 
         // Assert - All keys have valid format (Base64, minimum length)
-        Assert.All(plaintextKeys, key =>
+        plaintextKeys.Should().OnlyContain(key => key.Length >= 40, "Key should be at least 40 characters");
+        plaintextKeys.Should().AllSatisfy(key =>
         {
-            Assert.Matches(@"^[A-Za-z0-9+/=]+$", key); // Valid Base64
-            Assert.True(key.Length >= 40, "Key should be at least 40 characters");
+            key.Should().MatchRegex(@"^[A-Za-z0-9+/=]+$"); // Valid Base64
         });
 
         _output($"✅ All {StressTestUserCount} keys have valid format");
@@ -237,16 +238,16 @@ public class BulkImportStressTests : IAsyncLifetime
             .Where(k => userIds.Contains(k.UserId))
             .ToListAsync();
 
-        Assert.Equal(StressTestUserCount, storedKeys.Count);
+        storedKeys.Count.Should().Be(StressTestUserCount);
         _output($"✅ All {StressTestUserCount} keys persisted to database");
 
         // Assert - No plaintext keys in database (security check)
-        Assert.All(storedKeys, key =>
+        storedKeys.Should().AllSatisfy(key =>
         {
-            Assert.NotNull(key.KeyHash);
-            Assert.NotEqual(string.Empty, key.KeyHash);
+            key.KeyHash.Should().NotBeNull();
+            key.KeyHash.Should().NotBe(string.Empty);
             // Verify hash is different from any plaintext key (no storage of plaintext)
-            Assert.DoesNotContain(plaintextKeys, plaintextKey => plaintextKey == key.KeyHash);
+            plaintextKeys.Should().NotContain(plaintextKey => plaintextKey == key.KeyHash);
         });
 
         _output($"✅ Security verified: No plaintext keys in database");

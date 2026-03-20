@@ -6,6 +6,7 @@ using Api.Services;
 using Api.Tests.Constants;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.SystemConfiguration.Application.Handlers;
 
@@ -74,14 +75,14 @@ public class GetPdfUploadLimitsQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal(209715200, result.MaxFileSizeBytes); // 200MB
-        Assert.Equal(1000, result.MaxPagesPerDocument);
-        Assert.Equal(20, result.MaxDocumentsPerGame);
-        Assert.Equal(2, result.AllowedMimeTypes.Length);
-        Assert.Contains("application/pdf", result.AllowedMimeTypes);
-        Assert.Contains("application/x-pdf", result.AllowedMimeTypes);
-        Assert.Equal("admin-user-1", result.LastUpdatedByUserId);
+        result.Should().NotBeNull();
+        result.MaxFileSizeBytes.Should().Be(209715200); // 200MB
+        result.MaxPagesPerDocument.Should().Be(1000);
+        result.MaxDocumentsPerGame.Should().Be(20);
+        result.AllowedMimeTypes.Length.Should().Be(2);
+        result.AllowedMimeTypes.Should().Contain("application/pdf");
+        result.AllowedMimeTypes.Should().Contain("application/x-pdf");
+        result.LastUpdatedByUserId.Should().Be("admin-user-1");
     }
 
     [Fact]
@@ -98,13 +99,13 @@ public class GetPdfUploadLimitsQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal(104857600, result.MaxFileSizeBytes); // Default 100MB
-        Assert.Equal(500, result.MaxPagesPerDocument);    // Default 500 pages
-        Assert.Equal(10, result.MaxDocumentsPerGame);     // Default 10 documents
-        Assert.Single(result.AllowedMimeTypes);
-        Assert.Equal("application/pdf", result.AllowedMimeTypes[0]);
-        Assert.Null(result.LastUpdatedByUserId);
+        result.Should().NotBeNull();
+        result.MaxFileSizeBytes.Should().Be(104857600); // Default 100MB
+        result.MaxPagesPerDocument.Should().Be(500);    // Default 500 pages
+        result.MaxDocumentsPerGame.Should().Be(10);     // Default 10 documents
+        result.AllowedMimeTypes.Should().ContainSingle();
+        result.AllowedMimeTypes[0].Should().Be("application/pdf");
+        result.LastUpdatedByUserId.Should().BeNull();
     }
 
     [Fact]
@@ -139,12 +140,12 @@ public class GetPdfUploadLimitsQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal(52428800, result.MaxFileSizeBytes);  // Configured: 50MB
-        Assert.Equal(500, result.MaxPagesPerDocument);    // Default
-        Assert.Equal(10, result.MaxDocumentsPerGame);     // Default
-        Assert.Single(result.AllowedMimeTypes);           // Default
-        Assert.Equal("admin-user-1", result.LastUpdatedByUserId);
+        result.Should().NotBeNull();
+        result.MaxFileSizeBytes.Should().Be(52428800);  // Configured: 50MB
+        result.MaxPagesPerDocument.Should().Be(500);    // Default
+        result.MaxDocumentsPerGame.Should().Be(10);     // Default
+        result.AllowedMimeTypes.Should().ContainSingle();           // Default
+        result.LastUpdatedByUserId.Should().Be("admin-user-1");
     }
 
     [Fact]
@@ -181,16 +182,16 @@ public class GetPdfUploadLimitsQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal(104857600, result.MaxFileSizeBytes); // Default due to parse failure
-        Assert.Equal(500, result.MaxPagesPerDocument);    // Default due to parse failure
+        result.Should().NotBeNull();
+        result.MaxFileSizeBytes.Should().Be(104857600); // Default due to parse failure
+        result.MaxPagesPerDocument.Should().Be(500);    // Default due to parse failure
     }
 
     [Fact]
     public async Task Handle_NullQuery_ThrowsArgumentNullException()
     {
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentNullException>(
-            () => _handler.Handle(null!, CancellationToken.None));
+        var act = () => _handler.Handle(null!, CancellationToken.None);
+        await act.Should().ThrowAsync<ArgumentNullException>();
     }
 }

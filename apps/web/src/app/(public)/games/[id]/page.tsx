@@ -1,13 +1,11 @@
 /**
- * Game Detail Page (Issue #3522)
+ * Game Preview Page (public)
  *
- * Public game detail page with:
- * - TOP: MeepleCard (hero, flippable) + MeepleInfoCard (readOnly for public, KB+Social)
- * - BOTTOM: User-specific sections (visible only when authenticated)
+ * Minimal preview for unauthenticated visitors. Shows a read-only MeepleCard
+ * hero and context-sensitive CTA based on auth / library state.
  *
- * Data Sources:
- * - Public: SharedGameDetail from shared-games API
- * - Authenticated: Favorite toggle, notes (localStorage)
+ * Full game experience (zones, drawer, toolkit) is at /library/games/[gameId]
+ * for authenticated users.
  */
 
 'use client';
@@ -19,76 +17,48 @@ import {
   ArrowLeft,
   BookOpen,
   Clock,
+  ExternalLink,
   Gauge,
-  Heart,
   Loader2,
-  MessageCircle,
-  Trash2,
   Users,
 } from 'lucide-react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 
 import { useAuth } from '@/components/auth/AuthProvider';
+import { MechanicIcon } from '@/components/icons/mechanics/MechanicIcon';
 import { toast } from '@/components/layout/Toast';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/data-display/card';
 import { MeepleCard } from '@/components/ui/data-display/meeple-card';
-import { MeepleInfoCard } from '@/components/ui/data-display/meeple-info-card';
 import { Alert, AlertDescription } from '@/components/ui/feedback/alert';
 import { Skeleton } from '@/components/ui/feedback/skeleton';
 import { Button } from '@/components/ui/primitives/button';
-import { Textarea } from '@/components/ui/primitives/textarea';
-import {
-  useGameInLibraryStatus,
-  useAddGameToLibrary,
-  useRemoveGameFromLibrary,
-} from '@/hooks/queries';
-import { useEntityNavigation } from '@/hooks/useEntityNavigation';
+import { useGameInLibraryStatus, useAddGameToLibrary } from '@/hooks/queries';
 import { api, type SharedGameDetail } from '@/lib/api';
 import { createErrorContext } from '@/lib/errors';
 import { logger } from '@/lib/logger';
-import { cn } from '@/lib/utils';
-
-// ============================================================================
-// Types & Constants
-// ============================================================================
-
-const NOTES_STORAGE_KEY = 'meepleai_game_notes';
-
-interface GameNotes {
-  [gameId: string]: string;
-}
 
 // ============================================================================
 // Main Component
 // ============================================================================
 
-export default function GameDetailPage() {
+export default function GamePreviewPage() {
   const params = useParams();
   const gameId = params?.id as string | undefined;
   const { user } = useAuth();
   const isAuthenticated = !!user;
 
-  // Library status & mutations
+  // Library status & add mutation
   const { data: libraryStatus, isLoading: statusLoading } = useGameInLibraryStatus(
     gameId ?? '',
     isAuthenticated && !!gameId
   );
   const addToLibrary = useAddGameToLibrary();
-  const removeFromLibrary = useRemoveGameFromLibrary();
   const inLibrary = libraryStatus?.inLibrary ?? false;
 
-  // Core game data
+  // Game data
   const [gameDetail, setGameDetail] = useState<SharedGameDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
-  // User-specific state (authenticated users only)
-  const [notes, setNotes] = useState('');
-  const [isFavorite, setIsFavorite] = useState(false);
-
-  // Entity navigation links (KB, Agents, Chats, Sessions)
-  const navigationLinks = useEntityNavigation('game', { id: gameId });
 
   // Load game data from shared-games API
   useEffect(() => {
@@ -108,7 +78,7 @@ export default function GameDetailPage() {
         logger.error(
           'Failed to load game details',
           err instanceof Error ? err : new Error(String(err)),
-          createErrorContext('GameDetailPage', 'loadGame', { gameId })
+          createErrorContext('GamePreviewPage', 'loadGame', { gameId })
         );
       } finally {
         setLoading(false);
@@ -118,78 +88,26 @@ export default function GameDetailPage() {
     loadGame();
   }, [gameId]);
 
-  // Load notes from localStorage
-  useEffect(() => {
-    if (!gameId) return;
-
-    try {
-      const savedNotes = localStorage.getItem(NOTES_STORAGE_KEY);
-      if (savedNotes) {
-        const allNotes: GameNotes = JSON.parse(savedNotes);
-        // eslint-disable-next-line security/detect-object-injection
-        setNotes(allNotes[gameId] || '');
-      }
-    } catch (err) {
-      logger.error(
-        'Failed to load notes',
-        err instanceof Error ? err : new Error(String(err)),
-        createErrorContext('GameDetailPage', 'loadNotes', { gameId })
-      );
-    }
-  }, [gameId]);
-
-  // Handlers
-  const handleSaveNotes = useCallback(() => {
-    if (!gameId) return;
-
-    try {
-      const savedNotes = localStorage.getItem(NOTES_STORAGE_KEY);
-      const allNotes: GameNotes = savedNotes ? JSON.parse(savedNotes) : {};
-      // eslint-disable-next-line security/detect-object-injection
-      allNotes[gameId] = notes;
-      localStorage.setItem(NOTES_STORAGE_KEY, JSON.stringify(allNotes));
-    } catch (err) {
-      logger.error(
-        'Failed to save notes',
-        err instanceof Error ? err : new Error(String(err)),
-        createErrorContext('GameDetailPage', 'saveNotes', { gameId })
-      );
-    }
-  }, [gameId, notes]);
-
-  const toggleFavorite = useCallback(() => {
-    setIsFavorite((prev) => !prev);
-  }, []);
-
   const handleAddToLibrary = useCallback(async () => {
     if (!gameId) return;
     try {
       await addToLibrary.mutateAsync({ gameId });
       toast.success('Gioco aggiunto alla collezione!');
     } catch {
-      toast.error('Errore durante l\'aggiunta alla collezione');
+      toast.error("Errore durante l'aggiunta alla collezione");
     }
   }, [gameId, addToLibrary]);
 
-  const handleRemoveFromLibrary = useCallback(async () => {
-    if (!gameId) return;
-    try {
-      await removeFromLibrary.mutateAsync(gameId);
-      toast.success('Gioco rimosso dalla collezione');
-    } catch {
-      toast.error('Errore durante la rimozione dalla collezione');
-    }
-  }, [gameId, removeFromLibrary]);
-
-  // Build metadata for MeepleCard
+  // Metadata chips for MeepleCard
   const metadata = useMemo(() => {
     if (!gameDetail) return [];
     const items = [];
 
     if (gameDetail.minPlayers && gameDetail.maxPlayers) {
-      const players = gameDetail.minPlayers === gameDetail.maxPlayers
-        ? `${gameDetail.minPlayers}`
-        : `${gameDetail.minPlayers}-${gameDetail.maxPlayers}`;
+      const players =
+        gameDetail.minPlayers === gameDetail.maxPlayers
+          ? `${gameDetail.minPlayers}`
+          : `${gameDetail.minPlayers}-${gameDetail.maxPlayers}`;
       items.push({ icon: Users, value: players });
     }
 
@@ -204,16 +122,23 @@ export default function GameDetailPage() {
     return items;
   }, [gameDetail]);
 
+  // First mechanic icon for cover overlay
+  const mechanicIconNode = useMemo(() => {
+    if (!gameDetail?.mechanics || gameDetail.mechanics.length === 0) return undefined;
+    const firstMechanic = gameDetail.mechanics[0];
+    return <MechanicIcon mechanic={firstMechanic.slug} size={20} />;
+  }, [gameDetail]);
+
   // ============================================================================
   // Loading & Error States
   // ============================================================================
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background py-8 px-4">
-        <div className="container mx-auto max-w-7xl">
-          <Skeleton className="h-8 w-48 mb-6" />
-          <Skeleton className="h-[600px] w-full max-w-2xl mx-auto" />
+      <div className="min-h-screen bg-[#0d1117] py-8 px-4">
+        <div className="max-w-2xl mx-auto">
+          <Skeleton className="h-8 w-48 mb-6 bg-white/10" />
+          <Skeleton className="h-[520px] w-full bg-white/10 rounded-2xl" />
         </div>
       </div>
     );
@@ -221,13 +146,13 @@ export default function GameDetailPage() {
 
   if (error || !gameDetail) {
     return (
-      <div className="min-h-screen bg-background py-8 px-4">
-        <div className="container mx-auto max-w-7xl">
+      <div className="min-h-screen bg-[#0d1117] py-8 px-4">
+        <div className="max-w-2xl mx-auto">
           <Alert variant="destructive">
             <AlertCircle className="h-4 w-4" />
-            <AlertDescription>{error || 'Game not found'}</AlertDescription>
+            <AlertDescription>{error || 'Gioco non trovato'}</AlertDescription>
           </Alert>
-          <Button asChild className="mt-4">
+          <Button asChild variant="ghost" className="mt-4 text-white/70 hover:text-white">
             <Link href="/games">
               <ArrowLeft className="mr-2 h-4 w-4" /> Torna al Catalogo
             </Link>
@@ -241,156 +166,142 @@ export default function GameDetailPage() {
   // Main Render
   // ============================================================================
 
+  const subtitle = (() => {
+    const parts: string[] = [];
+    if (gameDetail.publishers && gameDetail.publishers.length > 0) {
+      parts.push(gameDetail.publishers[0].name);
+    }
+    if (gameDetail.yearPublished) {
+      parts.push(`(${gameDetail.yearPublished})`);
+    }
+    return parts.length > 0 ? parts.join(' ') : undefined;
+  })();
+
   return (
-    <div className="min-h-screen bg-background py-8 px-4">
-      <div className="container mx-auto max-w-7xl">
+    <div className="min-h-screen bg-[#0d1117] py-8 px-4">
+      <div className="max-w-2xl mx-auto">
         {/* Back Button */}
-        <Button asChild variant="ghost" className="mb-6 font-nunito">
+        <Button
+          asChild
+          variant="ghost"
+          className="mb-6 font-nunito text-white/70 hover:text-white hover:bg-white/10"
+        >
           <Link href="/games">
             <ArrowLeft className="mr-2 h-4 w-4" /> Torna al Catalogo
           </Link>
         </Button>
 
-        {/* Cards Section - MeepleCard (hero, flippable) + MeepleInfoCard */}
-        <section className="mb-12 flex flex-col items-center justify-center gap-6 lg:flex-row lg:items-start">
-          {/* Flippable Game Card */}
+        {/* Hero Card — read-only, not flippable, no action buttons */}
+        <div className="flex justify-center mb-8">
           <MeepleCard
             entity="game"
             variant="hero"
             title={gameDetail.title}
-            subtitle={
-              (gameDetail.publishers && gameDetail.publishers.length > 0
-                ? gameDetail.publishers[0].name
-                : '') +
-              (gameDetail.yearPublished ? ` (${gameDetail.yearPublished})` : '')
-            }
+            subtitle={subtitle}
             imageUrl={gameDetail.imageUrl || undefined}
             rating={gameDetail.averageRating ?? undefined}
             ratingMax={10}
             metadata={metadata}
-            navigateTo={navigationLinks}
-            flippable
-            flipData={{
-              description: gameDetail.description || undefined,
-              categories: gameDetail.categories,
-              mechanics: gameDetail.mechanics,
-              designers: gameDetail.designers,
-              publishers: gameDetail.publishers,
-              complexityRating: gameDetail.complexityRating,
-              minAge: gameDetail.minAge,
-            }}
+            mechanicIcon={mechanicIconNode}
+            stateLabel={{ text: 'Catalogo', variant: 'info' }}
           />
+        </div>
 
-          {/* Info Card - KB & Social (readOnly for public page) */}
-          <MeepleInfoCard
-            gameId={gameDetail.id}
-            gameTitle={gameDetail.title}
-            bggId={gameDetail.bggId}
-            readOnly={!isAuthenticated}
-          />
-        </section>
+        {/* Metadata section */}
+        <div className="mb-8 space-y-4">
+          {gameDetail.description && (
+            <p className="text-white/70 font-nunito text-sm leading-relaxed line-clamp-4">
+              {gameDetail.description}
+            </p>
+          )}
 
-        {/* ========== BOTTOM SECTION: User Info & Actions (authenticated only) ========== */}
-        {isAuthenticated && (
-          <>
-            <div className="grid md:grid-cols-2 gap-6 max-w-4xl mx-auto">
-              {/* Left Column: Collection Status & Actions */}
-              <Card className="border-l-4 border-l-[hsl(25,95%,38%)] shadow-lg">
-                <CardHeader>
-                  <CardTitle className="font-quicksand text-xl">Azioni Rapide</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <Button asChild className="w-full font-nunito bg-[hsl(25,95%,38%)] hover:bg-[hsl(25,95%,32%)]">
-                    <Link href={`/chat/new?game=${gameId}`}>
-                      <MessageCircle className="mr-2 h-4 w-4" />
-                      💬 Chat con AI
-                    </Link>
-                  </Button>
-
-                  <Button
-                    onClick={toggleFavorite}
-                    variant={isFavorite ? 'default' : 'outline'}
-                    className="w-full font-nunito"
-                  >
-                    <Heart
-                      className={cn(
-                        'mr-2 h-4 w-4',
-                        isFavorite && 'fill-white'
-                      )}
-                    />
-                    {isFavorite ? 'Rimuovi dai Preferiti' : 'Aggiungi ai Preferiti'}
-                  </Button>
-
-                  {!inLibrary ? (
-                    <Button
-                      variant="outline"
-                      className="w-full font-nunito"
-                      onClick={handleAddToLibrary}
-                      disabled={addToLibrary.isPending || statusLoading}
-                    >
-                      {addToLibrary.isPending ? (
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      ) : (
-                        <BookOpen className="mr-2 h-4 w-4" />
-                      )}
-                      Aggiungi alla Collezione
-                    </Button>
-                  ) : (
-                    <Button
-                      variant="destructive"
-                      className="w-full font-nunito"
-                      onClick={handleRemoveFromLibrary}
-                      disabled={removeFromLibrary.isPending || statusLoading}
-                    >
-                      {removeFromLibrary.isPending ? (
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      ) : (
-                        <Trash2 className="mr-2 h-4 w-4" />
-                      )}
-                      Rimuovi dalla Collezione
-                    </Button>
-                  )}
-                </CardContent>
-              </Card>
-
-              {/* Right Column: Notes */}
-              <Card className="border-l-4 border-l-[hsl(262,83%,62%)] shadow-lg">
-                <CardHeader>
-                  <CardTitle className="font-quicksand text-xl">Note Personali</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <Textarea
-                    placeholder="Scrivi strategie, regole custom, impressioni..."
-                    value={notes}
-                    onChange={(e) => setNotes(e.target.value)}
-                    rows={6}
-                    className="resize-none font-nunito"
-                  />
-                  <Button onClick={handleSaveNotes} className="w-full font-nunito">
-                    Salva Note
-                  </Button>
-                </CardContent>
-              </Card>
+          {gameDetail.categories && gameDetail.categories.length > 0 && (
+            <div className="flex flex-wrap gap-2">
+              {gameDetail.categories.map(cat => (
+                <span
+                  key={cat.id ?? cat.name}
+                  className="text-xs font-nunito px-2 py-1 rounded-full bg-white/10 text-white/60"
+                >
+                  {cat.name}
+                </span>
+              ))}
             </div>
+          )}
 
-            {/* Statistiche Partite - Placeholder */}
-            <div className="mt-6 max-w-4xl mx-auto">
-              <Card className="shadow-lg">
-                <CardHeader>
-                  <CardTitle className="font-quicksand text-xl">Statistiche Partite</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <Alert>
-                    <AlertCircle className="h-4 w-4" />
-                    <AlertDescription className="font-nunito">
-                      Le statistiche verranno visualizzate qui una volta registrate le prime partite.
-                    </AlertDescription>
-                  </Alert>
-                </CardContent>
-              </Card>
-            </div>
-          </>
-        )}
+          {gameDetail.designers && gameDetail.designers.length > 0 && (
+            <p className="text-white/50 font-nunito text-xs">
+              Design:{' '}
+              {gameDetail.designers
+                .slice(0, 3)
+                .map(d => d.name)
+                .join(', ')}
+            </p>
+          )}
+        </div>
+
+        {/* CTA Section */}
+        <div className="border border-white/10 rounded-2xl p-6 bg-white/5 backdrop-blur-sm space-y-3">
+          {!isAuthenticated && (
+            <>
+              <p className="text-white/70 font-nunito text-sm text-center mb-4">
+                Registrati per accedere al tavolo completo con note, sessioni e AI assistant.
+              </p>
+              <Button
+                asChild
+                className="w-full font-nunito bg-[hsl(25,95%,38%)] hover:bg-[hsl(25,95%,32%)] text-white"
+              >
+                <Link href="/register">
+                  <ExternalLink className="mr-2 h-4 w-4" />
+                  Registrati per il tavolo completo
+                </Link>
+              </Button>
+              <Button
+                asChild
+                variant="ghost"
+                className="w-full font-nunito text-white/60 hover:text-white hover:bg-white/10"
+              >
+                <Link href="/login">Accedi</Link>
+              </Button>
+            </>
+          )}
+
+          {isAuthenticated && !inLibrary && (
+            <>
+              <p className="text-white/70 font-nunito text-sm text-center mb-4">
+                Aggiungi questo gioco alla tua collezione per accedere al tavolo completo.
+              </p>
+              <Button
+                onClick={handleAddToLibrary}
+                disabled={addToLibrary.isPending || statusLoading}
+                className="w-full font-nunito bg-[hsl(25,95%,38%)] hover:bg-[hsl(25,95%,32%)] text-white"
+              >
+                {addToLibrary.isPending ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <BookOpen className="mr-2 h-4 w-4" />
+                )}
+                Aggiungi alla collezione
+              </Button>
+            </>
+          )}
+
+          {isAuthenticated && inLibrary && (
+            <>
+              <p className="text-white/70 font-nunito text-sm text-center mb-4">
+                Questo gioco &egrave; nella tua collezione. Apri il tavolo completo.
+              </p>
+              <Button
+                asChild
+                className="w-full font-nunito bg-[hsl(25,95%,38%)] hover:bg-[hsl(25,95%,32%)] text-white"
+              >
+                <Link href={`/library/games/${gameId}`}>
+                  <ExternalLink className="mr-2 h-4 w-4" />
+                  Vai al tavolo
+                </Link>
+              </Button>
+            </>
+          )}
+        </div>
       </div>
     </div>
   );

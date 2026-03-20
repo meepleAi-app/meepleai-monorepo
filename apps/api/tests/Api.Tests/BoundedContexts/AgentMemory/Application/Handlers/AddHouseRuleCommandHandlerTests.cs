@@ -1,5 +1,6 @@
 using Api.BoundedContexts.AgentMemory.Application.Commands;
-using Api.BoundedContexts.AgentMemory.Application.Handlers;
+using Api.BoundedContexts.AgentMemory.Application.Commands;
+using Api.BoundedContexts.AgentMemory.Application.Queries;
 using Api.BoundedContexts.AgentMemory.Domain.Entities;
 using Api.BoundedContexts.AgentMemory.Domain.Enums;
 using Api.BoundedContexts.AgentMemory.Domain.Repositories;

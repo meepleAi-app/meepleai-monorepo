@@ -1,5 +1,6 @@
 using Api.BoundedContexts.Administration.Application.Commands;
-using Api.BoundedContexts.Administration.Application.Handlers;
+using Api.BoundedContexts.Administration.Application.Commands;
+using Api.BoundedContexts.Administration.Application.Queries;
 using Api.BoundedContexts.Authentication.Domain.Entities;
 using Api.BoundedContexts.Authentication.Infrastructure.Persistence;
 using Api.SharedKernel.Domain.Exceptions;

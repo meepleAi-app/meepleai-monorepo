@@ -93,8 +93,8 @@ public sealed class FeatureFlagSeederTests : IAsyncLifetime
             .ToListAsync(TestCancellationToken);
 
         // Each feature has 1 global + 3 tier entries = 4 entries
-        // 10 features * 4 = 40 entries
-        flags.Should().HaveCount(40);
+        // 25 features * 4 = 100 entries
+        flags.Should().HaveCount(100);
     }
 
     [Fact]
@@ -114,7 +114,7 @@ public sealed class FeatureFlagSeederTests : IAsyncLifetime
             .Where(c => c.Category == "FeatureFlags")
             .ToListAsync(TestCancellationToken);
 
-        flags.Should().HaveCount(40);
+        flags.Should().HaveCount(100);
     }
 
     [Fact]

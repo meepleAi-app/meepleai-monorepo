@@ -3,6 +3,7 @@
 import { type ReactNode } from 'react';
 
 import { DashboardEngineProvider } from '@/components/dashboard-v2';
+import { BackToSessionFAB } from '@/components/session/BackToSessionFAB';
 
 import { ContextBar } from '../ContextBar';
 import { UserTopNav } from './UserTopNav';
@@ -19,6 +20,7 @@ export function UserShellClient({ children }: UserShellClientProps) {
       <main className="flex-1 overflow-y-auto">
         <DashboardEngineProvider>{children}</DashboardEngineProvider>
       </main>
+      <BackToSessionFAB />
     </div>
   );
 }

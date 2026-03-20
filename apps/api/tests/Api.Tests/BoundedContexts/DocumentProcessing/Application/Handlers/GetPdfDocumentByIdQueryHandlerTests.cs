@@ -1,4 +1,5 @@
-using Api.BoundedContexts.DocumentProcessing.Application.Handlers;
+using Api.BoundedContexts.DocumentProcessing.Application.Commands;
+using Api.BoundedContexts.DocumentProcessing.Application.Queries;
 using Api.BoundedContexts.DocumentProcessing.Application.Queries;
 using Api.BoundedContexts.DocumentProcessing.Domain.Entities;
 using Api.BoundedContexts.DocumentProcessing.Domain.Repositories;
@@ -115,7 +116,7 @@ public class GetPdfDocumentByIdQueryHandlerTests
 
         // Assert
         result.Should().NotBeNull();
-        result.ProcessingState.Should().Be("Uploading");
+        result.ProcessingState.Should().Be("Extracting");
         result.PageCount.Should().BeNull();
         result.ProcessedAt.Should().BeNull();
     }

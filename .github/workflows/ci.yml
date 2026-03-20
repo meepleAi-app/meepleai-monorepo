@@ -17,7 +17,25 @@ permissions:
   pull-requests: write
   checks: write
 
+  actions: read
 jobs:
+  notify-start:
+    if: github.event_name != 'workflow_call'
+    uses: ./.github/workflows/notify-slack.yml
+    with:
+      event: started
+      workflow_name: "CI"
+      environment: ci
+      branch: ${{ github.head_ref || github.ref_name }}
+      actor: ${{ github.actor }}
+      commit_sha: ${{ github.sha }}
+      commit_message: ${{ github.event.head_commit.message || 'Manual trigger' }}
+      run_url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+      job_list: '["changes", "frontend", "backend-unit", "backend-integration", "python-tests", "e2e", "ci-success"]'
+      caller_workflow_id: ${{ github.workflow_id }}
+    secrets:
+      SLACK_GITNOTIFY_WEBHOOK_URL: ${{ secrets.SLACK_GITNOTIFY_WEBHOOK_URL }}
+
   # Quick path filtering to skip unchanged areas
   changes:
     name: Detect Changes
@@ -278,9 +296,9 @@ jobs:
           echo "🔧 Creating CI secret files for integration tests..."
           mkdir -p infra/secrets
           printf 'POSTGRES_USER=postgres\nPOSTGRES_PASSWORD=testpass\nPOSTGRES_DB=meepleai_test\n' > infra/secrets/database.secret
-          printf 'REDIS_PASSWORD=\n' > infra/secrets/redis.secret
+          printf 'REDIS_PASSWORD=redis-ci-test\n' > infra/secrets/redis.secret
           printf 'JWT_SECRET_KEY=ci-test-jwt-secret-key-minimum-32-chars-long\nJWT_ISSUER=meepleai-ci-test\nJWT_AUDIENCE=meepleai-ci-test\n' > infra/secrets/jwt.secret
-          printf 'ADMIN_EMAIL=admin@test.local\nADMIN_PASSWORD=CiTestPassword123!\nADMIN_DISPLAY_NAME=CI Admin\n' > infra/secrets/admin.secret
+          printf 'ADMIN_EMAIL=admin@test.local\nADMIN_PASSWORD=CiTestPassword123!\nADMIN_DISPLAY_NAME=CI Admin\nINITIAL_ADMIN_EMAIL=admin@test.local\nINITIAL_ADMIN_DISPLAY_NAME=CI Admin\n' > infra/secrets/admin.secret
           printf 'QDRANT_URL=http://localhost:6333\n' > infra/secrets/qdrant.secret
           printf 'EMBEDDING_SERVICE_URL=http://localhost:8000\n' > infra/secrets/embedding-service.secret
           echo "✅ CI secret files created"
@@ -476,9 +494,9 @@ jobs:
         run: |
           mkdir -p infra/secrets
           printf 'POSTGRES_USER=postgres\nPOSTGRES_PASSWORD=postgres_test_password\nPOSTGRES_DB=meepleai_test\n' > infra/secrets/database.secret
-          printf 'REDIS_PASSWORD=\n' > infra/secrets/redis.secret
+          printf 'REDIS_PASSWORD=redis-ci-test\n' > infra/secrets/redis.secret
           printf 'JWT_SECRET_KEY=ci-test-jwt-secret-key-minimum-32-chars-long\nJWT_ISSUER=meepleai-ci-test\nJWT_AUDIENCE=meepleai-ci-test\n' > infra/secrets/jwt.secret
-          printf 'ADMIN_EMAIL=admin@test.local\nADMIN_PASSWORD=CiTestPassword123!\nADMIN_DISPLAY_NAME=CI Admin\n' > infra/secrets/admin.secret
+          printf 'ADMIN_EMAIL=admin@test.local\nADMIN_PASSWORD=CiTestPassword123!\nADMIN_DISPLAY_NAME=CI Admin\nINITIAL_ADMIN_EMAIL=admin@test.local\nINITIAL_ADMIN_DISPLAY_NAME=CI Admin\n' > infra/secrets/admin.secret
           printf 'QDRANT_URL=http://localhost:6333\n' > infra/secrets/qdrant.secret
           printf 'EMBEDDING_SERVICE_URL=http://localhost:8000\n' > infra/secrets/embedding-service.secret
 
@@ -608,3 +626,21 @@ jobs:
             fi
           done
           echo "✅ CI Passed"
+
+  notify-end:
+    if: always() && github.event_name != 'workflow_call'
+    needs: [changes, frontend, backend-unit, backend-integration, python-tests, e2e, ci-success]
+    uses: ./.github/workflows/notify-slack.yml
+    with:
+      event: ${{ contains(toJSON(needs), '"result":"failure"') && 'failed' || contains(toJSON(needs), '"result":"cancelled"') && 'cancelled' || 'completed' }}
+      workflow_name: "CI"
+      environment: ci
+      is_critical: false
+      branch: ${{ github.head_ref || github.ref_name }}
+      actor: ${{ github.actor }}
+      commit_sha: ${{ github.sha }}
+      commit_message: ${{ github.event.head_commit.message || 'Manual trigger' }}
+      run_url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+    secrets:
+      SLACK_GITNOTIFY_WEBHOOK_URL: ${{ secrets.SLACK_GITNOTIFY_WEBHOOK_URL }}
+      SLACK_CRITICAL_WEBHOOK_URL: ${{ secrets.SLACK_CRITICAL_WEBHOOK_URL }}

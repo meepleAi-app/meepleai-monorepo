@@ -1,4 +1,4 @@
-using Api.BoundedContexts.GameManagement.Application.Handlers.Whiteboard;
+using Api.BoundedContexts.GameManagement.Application.Commands.Whiteboard;
 using Api.BoundedContexts.GameManagement.Application.Queries.Whiteboard;
 using Api.BoundedContexts.GameManagement.Domain.Entities.WhiteboardState;
 using Api.Middleware.Exceptions;

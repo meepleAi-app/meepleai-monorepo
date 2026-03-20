@@ -1,4 +1,4 @@
-using Api.BoundedContexts.GameManagement.Application.Handlers.Playlists;
+using Api.BoundedContexts.GameManagement.Application.Commands.Playlists;
 using Api.BoundedContexts.GameManagement.Application.Queries.Playlists;
 using Api.BoundedContexts.GameManagement.Domain.Entities.GameNightPlaylist;
 using Api.Middleware.Exceptions;

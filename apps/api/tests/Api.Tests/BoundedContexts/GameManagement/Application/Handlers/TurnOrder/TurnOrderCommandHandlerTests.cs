@@ -1,6 +1,6 @@
 using Api.BoundedContexts.GameManagement.Application.Commands.TurnOrder;
 using Api.BoundedContexts.GameManagement.Application.Events;
-using Api.BoundedContexts.GameManagement.Application.Handlers.TurnOrder;
+using Api.BoundedContexts.GameManagement.Application.Commands.TurnOrder;
 using Api.BoundedContexts.GameManagement.Domain.Entities;
 using Api.BoundedContexts.GameManagement.Domain.Entities.TurnOrder;
 using Api.BoundedContexts.GameManagement.Domain.Repositories;

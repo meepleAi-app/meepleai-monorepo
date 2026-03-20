@@ -1,6 +1,6 @@
 using Api.BoundedContexts.GameManagement.Application.DTOs;
 using Api.BoundedContexts.GameManagement.Application.Queries.GameReviews;
-using Api.BoundedContexts.GameManagement.Application.QueryHandlers.GameReviews;
+using Api.BoundedContexts.GameManagement.Application.Queries.GameReviews;
 using Api.BoundedContexts.GameManagement.Domain.Entities;
 using Api.BoundedContexts.GameManagement.Domain.Repositories;
 using Api.Models;

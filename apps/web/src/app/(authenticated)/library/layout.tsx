@@ -5,6 +5,16 @@
 
 import { type ReactNode } from 'react';
 
+import { ContextBarRegistrar } from '@/components/layout/ContextBar';
+import { LibraryContextBar } from '@/components/library/LibraryContextBar';
+
 export default function LibraryLayout({ children }: { children: ReactNode }) {
-  return <>{children}</>;
+  return (
+    <>
+      <ContextBarRegistrar>
+        <LibraryContextBar />
+      </ContextBarRegistrar>
+      {children}
+    </>
+  );
 }

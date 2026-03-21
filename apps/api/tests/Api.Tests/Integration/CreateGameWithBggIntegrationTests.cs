@@ -1,5 +1,6 @@
 using Api.BoundedContexts.Authentication.Domain.Entities;
 using Api.BoundedContexts.Authentication.Infrastructure.Persistence;
+using Api.BoundedContexts.DocumentProcessing.Domain.Repositories;
 using Api.BoundedContexts.GameManagement.Application.Commands;
 using Api.BoundedContexts.GameManagement.Application.DTOs;
 using Api.BoundedContexts.GameManagement.Application.Commands;
@@ -58,6 +59,7 @@ public sealed class CreateGameWithBggIntegrationTests : IAsyncLifetime
 
         services.AddScoped<IGameRepository, GameRepository>();
         services.AddScoped<IUserRepository, UserRepository>();
+        services.AddScoped<IPdfDocumentRepository>(sp => Mock.Of<IPdfDocumentRepository>());
         services.AddScoped<IUnitOfWork, EfCoreUnitOfWork>();
         services.AddScoped<CreateGameCommandHandler>();
 

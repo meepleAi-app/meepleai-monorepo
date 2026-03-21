@@ -10,6 +10,8 @@
 
 import React from 'react';
 
+import { AlertTriangle, CheckCircle, HelpCircle } from 'lucide-react';
+
 import { cn } from '@/lib/utils';
 
 import { Badge } from './badge';
@@ -41,6 +43,7 @@ const CONFIDENCE_LEVELS = {
     description: 'High accuracy expected',
     colorClass: 'bg-green-500 hover:bg-green-600 text-white border-transparent',
     ariaLabel: 'High confidence',
+    Icon: CheckCircle,
   },
   medium: {
     threshold: 70,
@@ -48,6 +51,7 @@ const CONFIDENCE_LEVELS = {
     description: 'Moderate confidence',
     colorClass: 'bg-yellow-500 hover:bg-yellow-600 text-white border-transparent',
     ariaLabel: 'Medium confidence',
+    Icon: AlertTriangle,
   },
   low: {
     threshold: 0,
@@ -55,6 +59,7 @@ const CONFIDENCE_LEVELS = {
     description: 'Low confidence, verify manually',
     colorClass: 'bg-red-500 hover:bg-red-600 text-white border-transparent',
     ariaLabel: 'Low confidence',
+    Icon: HelpCircle,
   },
 } as const;
 
@@ -116,12 +121,18 @@ export const ConfidenceBadge = React.memo<ConfidenceBadgeProps>(
     const validatedConfidence = validateConfidence(confidence);
     const level = getConfidenceLevel(validatedConfidence);
     const config = getConfidenceConfig(level);
+    const Icon = config.Icon;
 
     const badgeContent = (
       <Badge
-        className={cn('text-xs font-medium', config.colorClass, className)}
+        className={cn(
+          'text-xs font-medium inline-flex items-center gap-1',
+          config.colorClass,
+          className
+        )}
         aria-label={`${config.ariaLabel}: ${validatedConfidence}%`}
       >
+        <Icon className="h-3 w-3" aria-hidden="true" />
         {validatedConfidence}%
       </Badge>
     );

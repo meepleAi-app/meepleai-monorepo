@@ -2,7 +2,7 @@
 
 import { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 
-import { AlertCircle, Check, CheckCircle2, Loader2, Lock, X } from 'lucide-react';
+import { Check, CheckCircle2, Loader2, Lock, X } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 
 import { Button } from '@/components/ui/button';
@@ -10,7 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 
-type PageState = 'loading' | 'valid' | 'invalid' | 'submitting' | 'success';
+type PageState = 'loading' | 'valid' | 'submitting' | 'success';
 
 interface PasswordRequirement {
   label: string;
@@ -58,16 +58,12 @@ function AcceptInviteContent() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [errorMessage, setErrorMessage] = useState('');
   const [submitError, setSubmitError] = useState('');
 
   // Validate token on mount
   useEffect(() => {
     if (!token) {
-      setErrorMessage(
-        'No invitation token provided. Please use the link from your invitation email.'
-      );
-      setState('invalid');
+      router.push('/invitation-expired');
       return;
     }
 
@@ -84,12 +80,8 @@ function AcceptInviteContent() {
         if (cancelled) return;
 
         if (!response.ok) {
-          const data = await response.json().catch(() => null);
-          setErrorMessage(
-            data?.message ??
-              'This invitation is invalid or has expired. Please contact your administrator.'
-          );
-          setState('invalid');
+          if (cancelled) return;
+          router.push('/invitation-expired');
           return;
         }
 
@@ -98,8 +90,7 @@ function AcceptInviteContent() {
         setState('valid');
       } catch {
         if (cancelled) return;
-        setErrorMessage('Unable to validate your invitation. Please try again later.');
-        setState('invalid');
+        router.push('/invitation-expired');
       }
     }
 
@@ -107,7 +98,7 @@ function AcceptInviteContent() {
     return () => {
       cancelled = true;
     };
-  }, [token]);
+  }, [token, router]);
 
   const strengthLevel = useMemo(() => getStrengthLevel(password), [password]);
   const passwordsMatch = confirmPassword.length > 0 && password === confirmPassword;
@@ -149,7 +140,6 @@ function AcceptInviteContent() {
   return (
     <div className="flex min-h-[60vh] items-center justify-center">
       {state === 'loading' && <LoadingCard />}
-      {state === 'invalid' && <InvalidCard message={errorMessage} />}
       {state === 'success' && <SuccessCard />}
       {(state === 'valid' || state === 'submitting') && (
         <PasswordFormCard
@@ -176,25 +166,6 @@ function LoadingCard() {
       <CardContent className="flex flex-col items-center gap-4 py-12">
         <Loader2 className="h-10 w-10 animate-spin text-amber-600" aria-label="Loading" />
         <p className="text-muted-foreground text-sm">Validating your invitation...</p>
-      </CardContent>
-    </Card>
-  );
-}
-
-function InvalidCard({ message }: { message: string }) {
-  return (
-    <Card className="w-full max-w-md">
-      <CardHeader className="items-center text-center">
-        <div className="mb-2 flex h-12 w-12 items-center justify-center rounded-full bg-red-100 dark:bg-red-900/30">
-          <AlertCircle className="h-6 w-6 text-red-600 dark:text-red-400" />
-        </div>
-        <CardTitle>Invalid Invitation</CardTitle>
-        <CardDescription>{message}</CardDescription>
-      </CardHeader>
-      <CardContent className="text-center">
-        <p className="text-muted-foreground text-sm">
-          Please contact your administrator for a new invitation.
-        </p>
       </CardContent>
     </Card>
   );

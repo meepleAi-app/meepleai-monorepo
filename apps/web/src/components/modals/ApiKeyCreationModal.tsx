@@ -46,7 +46,8 @@ import { Button } from '@/components/ui/primitives/button';
 import { Input } from '@/components/ui/primitives/input';
 import { Label } from '@/components/ui/primitives/label';
 import { Textarea } from '@/components/ui/primitives/textarea';
-import { api, CreateApiKeyResponse } from '@/lib/api';
+import { api } from '@/lib/api';
+import type { CreateApiKeyResponse } from '@/lib/api/schemas/auth.schemas';
 import { createErrorContext } from '@/lib/errors';
 import { logger } from '@/lib/logger';
 

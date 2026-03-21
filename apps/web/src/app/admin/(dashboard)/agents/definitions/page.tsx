@@ -32,6 +32,39 @@ export default function AgentDefinitionsPage() {
     },
   });
 
+  const startTestingMutation = useMutation({
+    mutationFn: (id: string) => agentDefinitionsApi.startTesting(id),
+    onSuccess: () => {
+      toast.success('Agent moved to Testing');
+      queryClient.invalidateQueries({ queryKey: ['admin', 'agent-definitions'] });
+    },
+    onError: () => {
+      toast.error('Failed to start testing');
+    },
+  });
+
+  const publishMutation = useMutation({
+    mutationFn: (id: string) => agentDefinitionsApi.publish(id),
+    onSuccess: () => {
+      toast.success('Agent published');
+      queryClient.invalidateQueries({ queryKey: ['admin', 'agent-definitions'] });
+    },
+    onError: () => {
+      toast.error('Failed to publish agent');
+    },
+  });
+
+  const unpublishMutation = useMutation({
+    mutationFn: (id: string) => agentDefinitionsApi.unpublish(id),
+    onSuccess: () => {
+      toast.success('Agent unpublished');
+      queryClient.invalidateQueries({ queryKey: ['admin', 'agent-definitions'] });
+    },
+    onError: () => {
+      toast.error('Failed to unpublish agent');
+    },
+  });
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -52,7 +85,13 @@ export default function AgentDefinitionsPage() {
       {isLoading ? (
         <div className="text-center py-12">Loading...</div>
       ) : (
-        <BuilderTable data={agents} onDelete={id => deleteMutation.mutate(id)} />
+        <BuilderTable
+          data={agents}
+          onDelete={id => deleteMutation.mutate(id)}
+          onStartTesting={id => startTestingMutation.mutate(id)}
+          onPublish={id => publishMutation.mutate(id)}
+          onUnpublish={id => unpublishMutation.mutate(id)}
+        />
       )}
     </div>
   );

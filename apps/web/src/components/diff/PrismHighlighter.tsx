@@ -1,4 +1,3 @@
-/* eslint-disable security/detect-object-injection -- Safe Prism.languages access */
 import { useMemo } from 'react';
 
 import Prism from 'prismjs';

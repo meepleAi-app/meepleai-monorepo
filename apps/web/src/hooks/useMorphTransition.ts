@@ -95,14 +95,11 @@ export type MorphType = keyof typeof MORPH_CONFIGS;
  * }
  * ```
  */
-export function useMorphTransition(
-  type: MorphType | MorphConfig = 'default'
-): MorphStyle {
+export function useMorphTransition(type: MorphType | MorphConfig = 'default'): MorphStyle {
   const prefersReducedMotion = usePrefersReducedMotion();
 
   const morphStyle = useMemo(() => {
     // Get configuration
-    // eslint-disable-next-line security/detect-object-injection -- type is from typed MorphType union
     const config = typeof type === 'string' ? MORPH_CONFIGS[type] : type;
     const {
       duration = ANIMATION_TIMING.base,
@@ -119,9 +116,7 @@ export function useMorphTransition(
     }
 
     // Build transition string
-    const transitionValue = properties
-      .map(prop => `${prop} ${duration}ms ${easing}`)
-      .join(', ');
+    const transitionValue = properties.map(prop => `${prop} ${duration}ms ${easing}`).join(', ');
 
     return {
       transition: transitionValue,
@@ -139,7 +134,6 @@ export function useMorphTransition(
  * @returns Tailwind class string
  */
 export function getMorphClass(type: MorphType = 'default'): string {
-  // eslint-disable-next-line security/detect-object-injection -- type is from typed MorphType union
   const config = MORPH_CONFIGS[type];
   const duration = Math.round(config.duration);
 

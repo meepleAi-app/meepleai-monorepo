@@ -1,4 +1,3 @@
-/* eslint-disable security/detect-object-injection -- Safe array index access */
 import { useReducer } from 'react';
 
 export type WizardStep = 'upload' | 'parse' | 'review' | 'publish';

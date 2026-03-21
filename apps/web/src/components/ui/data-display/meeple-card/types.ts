@@ -44,6 +44,28 @@ import type { VariantProps } from 'class-variance-authority';
 import type { LucideIcon } from 'lucide-react';
 
 // ============================================================================
+// Cover Overlay Types (4-corner system)
+// ============================================================================
+
+/** Label displayed in the cover overlay top-left slot */
+export interface CoverLabel {
+  /** Label text */
+  text: string;
+  /** HSL color string (defaults to entity color) */
+  color?: string;
+  /** Primary label uses larger font (default false) */
+  primary?: boolean;
+}
+
+/** Subtype icon displayed in the cover overlay bottom-left slot */
+export interface SubtypeIcon {
+  /** Icon content (emoji or React node) */
+  icon: React.ReactNode;
+  /** Tooltip text on hover */
+  tooltip: string;
+}
+
+// ============================================================================
 // Core Interfaces (defined in meeple-card.tsx)
 // ============================================================================
 
@@ -285,18 +307,20 @@ export interface MeepleCardProps extends VariantProps<typeof meepleCardVariants>
     status: DocumentIndexingStatus;
   }[];
 
-  // ========== MtG-INSPIRED COVER OVERLAY SLOTS ==========
+  // ========== COVER OVERLAY 4-CORNER SYSTEM ==========
+
+  /** Top-left label stack in cover overlay */
+  coverLabels?: CoverLabel[];
+  /** Bottom-left subtype classification icons in cover overlay */
+  subtypeIcons?: SubtypeIcon[];
 
   /**
-   * MtG-inspired cover overlay: classification icon shown bottom-left of the cover image.
-   * Rendered inside a frosted glass pill with backdrop-blur.
+   * @deprecated Use subtypeIcons instead. Kept for backward compatibility.
+   * Maps to subtypeIcons[0] internally.
    */
   mechanicIcon?: React.ReactNode;
 
-  /**
-   * MtG-inspired cover overlay: state badge shown bottom-right of the cover image.
-   * Semantic color variants: success (emerald), warning (amber), error (red), info (blue).
-   */
+  /** Bottom-right state badge in cover overlay */
   stateLabel?: {
     text: string;
     variant: 'success' | 'warning' | 'error' | 'info';

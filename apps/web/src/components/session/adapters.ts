@@ -31,7 +31,7 @@ const PLAYER_COLOR_HEX: Record<PlayerColor, string> = {
 
 /** Maps a PlayerColor enum value to its hex code. */
 export function playerColorToHex(color: PlayerColor): string {
-  return PLAYER_COLOR_HEX[color] ?? '#9ca3af'; // eslint-disable-line security/detect-object-injection -- typed enum key
+  return PLAYER_COLOR_HEX[color] ?? '#6b7280';
 }
 
 /** Maps a LiveSessionDto to the legacy Session interface used by SessionHeader. */

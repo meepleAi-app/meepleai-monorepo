@@ -165,12 +165,6 @@ import { ChatStatusBadge } from '@/components/ui/data-display/meeple-card-featur
 import { ChatUnreadBadge } from '@/components/ui/data-display/meeple-card-features/ChatUnreadBadge';
 import { DocumentStatusBadge } from '@/components/ui/data-display/meeple-card-features/DocumentStatusBadge';
 import { DragHandle } from '@/components/ui/data-display/meeple-card-features/DragHandle';
-import { StatCard } from '@/components/ui/data-display/stat-card';
-import { StatusCard } from '@/components/ui/data-display/status-card';
-import { Table } from '@/components/ui/data-display/table';
-import { Tooltip as TooltipDataDisplay } from '@/components/ui/data-display/tooltip';
-import { UserRoleBadge } from '@/components/ui/data-display/user-role-badge';
-import { UserStatusIndicator } from '@/components/ui/data-display/user-status-indicator';
 
 // ─── MeepleCard Features ──────────────────────────────────────────────────────
 
@@ -190,10 +184,16 @@ import { StatusBadge } from '@/components/ui/data-display/meeple-card-features/S
 import { TimeTravelOverlay } from '@/components/ui/data-display/meeple-card-features/TimeTravelOverlay';
 import { WishlistButton } from '@/components/ui/data-display/meeple-card-features/WishlistButton';
 import { MeepleCardInfoButton } from '@/components/ui/data-display/meeple-card-info-button';
-import { MeepleCardQuickActions } from '@/components/ui/data-display/meeple-card-quick-actions';
 import { MobileTagDisplay } from '@/components/ui/data-display/meeple-card-mobile-tags'; // registry name: MeepleCardMobileTags
+import { MeepleCardQuickActions } from '@/components/ui/data-display/meeple-card-quick-actions';
 import { MeepleInfoCard } from '@/components/ui/data-display/meeple-info-card';
 import { RatingStars } from '@/components/ui/data-display/rating-stars';
+import { StatCard } from '@/components/ui/data-display/stat-card';
+import { StatusCard } from '@/components/ui/data-display/status-card';
+import { Table } from '@/components/ui/data-display/table';
+import { Tooltip as TooltipDataDisplay } from '@/components/ui/data-display/tooltip';
+import { UserRoleBadge } from '@/components/ui/data-display/user-role-badge';
+import { UserStatusIndicator } from '@/components/ui/data-display/user-status-indicator';
 
 // ─── Feedback ─────────────────────────────────────────────────────────────────
 

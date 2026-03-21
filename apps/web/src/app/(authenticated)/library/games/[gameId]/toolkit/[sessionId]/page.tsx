@@ -68,7 +68,7 @@ export default function GameSpecificSessionPage() {
 
         if (gameResponse.ok) {
           const gameData = await gameResponse.json();
-          setGameName(gameData.name);
+          setGameName(gameData.title ?? gameData.name ?? '');
         }
       } catch (err) {
         toast.error(err instanceof Error ? err.message : 'Failed to load session');

@@ -1,4 +1,3 @@
-/* eslint-disable security/detect-object-injection -- Safe event type config access */
 // UI-04: Timeline filters sidebar component
 import { Button } from '@/components/ui/primitives/button';
 import { Input } from '@/components/ui/primitives/input';
@@ -106,7 +105,9 @@ export function TimelineFilters({
     >
       {/* Header */}
       <div className="p-4 border-b flex justify-between items-center">
-        <h3 className="m-0 text-base font-semibold" data-testid="filters-title">Filtri Timeline</h3>
+        <h3 className="m-0 text-base font-semibold" data-testid="filters-title">
+          Filtri Timeline
+        </h3>
         <Button
           onClick={onToggleCollapse}
           aria-label="Hide filters"

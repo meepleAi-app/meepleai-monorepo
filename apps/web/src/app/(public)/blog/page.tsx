@@ -39,10 +39,7 @@ export default function BlogPage() {
       <div className="max-w-4xl mx-auto">
         {/* Header */}
         <div className="mb-8 text-center">
-          <h1
-            className="text-3xl font-bold text-foreground"
-            data-testid="blog-heading"
-          >
+          <h1 className="text-3xl font-bold text-foreground" data-testid="blog-heading">
             {t('pages.blog.title')}
           </h1>
           <p className="text-slate-600 dark:text-slate-400 mt-2 max-w-2xl mx-auto">
@@ -72,15 +69,16 @@ export default function BlogPage() {
             {locale === 'it' ? 'Categorie in arrivo' : 'Coming Categories'}
           </h2>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {CATEGORY_KEYS.map((key) => (
+            {CATEGORY_KEYS.map(key => (
               <Card
                 key={key}
                 className="bg-card opacity-60 hover:opacity-100 transition-opacity cursor-not-allowed"
               >
                 <CardHeader className="pb-2 text-center">
-                  {/* eslint-disable-next-line security/detect-object-injection */}
                   <span className="text-3xl">{CATEGORY_ICONS[key]}</span>
-                  <CardTitle className="text-sm mt-2">{t(`pages.blog.categories.${key}`)}</CardTitle>
+                  <CardTitle className="text-sm mt-2">
+                    {t(`pages.blog.categories.${key}`)}
+                  </CardTitle>
                 </CardHeader>
               </Card>
             ))}

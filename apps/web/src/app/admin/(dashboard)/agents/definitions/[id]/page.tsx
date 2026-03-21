@@ -5,17 +5,27 @@
  * 1. Agent Info (header)
  * 2. Configuration (model, strategy, prompts)
  * 3. Channel Configuration (WebSocket)
- * 4. Chat Section (AdminAgentChat) ← NEW
+ * 4. Chat Section (AdminAgentChat)
  */
 
 'use client';
 
 import { useState } from 'react';
 
-import { useQuery } from '@tanstack/react-query';
-import { Bot, Settings, Radio, MessageCircle, Edit } from 'lucide-react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import {
+  ArchiveRestore,
+  Bot,
+  Edit,
+  FlaskConical,
+  MessageCircle,
+  Radio,
+  Rocket,
+  Settings,
+} from 'lucide-react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
+import { toast } from 'sonner';
 
 import { Badge } from '@/components/ui/data-display/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/data-display/card';
@@ -25,12 +35,39 @@ import { Button } from '@/components/ui/primitives/button';
 import { agentDefinitionsApi } from '@/lib/api/agent-definitions.api';
 
 // ============================================================================
+// Constants
+// ============================================================================
+
+const STATUS_LABELS = ['Draft', 'Testing', 'Published'] as const;
+
+function getStatusBadge(status: number) {
+  const label = STATUS_LABELS[status] ?? 'Draft';
+  switch (status) {
+    case 1:
+      return (
+        <Badge variant="outline" className="border-amber-500 text-amber-600">
+          {label}
+        </Badge>
+      );
+    case 2:
+      return (
+        <Badge variant="default" className="bg-green-600">
+          {label}
+        </Badge>
+      );
+    default:
+      return <Badge variant="secondary">{label}</Badge>;
+  }
+}
+
+// ============================================================================
 // Main Component
 // ============================================================================
 
 export default function AdminAgentViewPage() {
   const params = useParams();
   const agentId = params?.id as string;
+  const queryClient = useQueryClient();
 
   // Channel enabled state (from Channel Config section)
   const [channelEnabled, setChannelEnabled] = useState(false);
@@ -40,6 +77,40 @@ export default function AdminAgentViewPage() {
     queryKey: ['admin', 'agent-definitions', agentId],
     queryFn: () => agentDefinitionsApi.getById(agentId),
     enabled: !!agentId,
+  });
+
+  // Lifecycle mutations
+  const startTestingMutation = useMutation({
+    mutationFn: (id: string) => agentDefinitionsApi.startTesting(id),
+    onSuccess: () => {
+      toast.success('Agent moved to Testing');
+      queryClient.invalidateQueries({ queryKey: ['admin', 'agent-definitions'] });
+    },
+    onError: () => {
+      toast.error('Failed to start testing');
+    },
+  });
+
+  const publishMutation = useMutation({
+    mutationFn: (id: string) => agentDefinitionsApi.publish(id),
+    onSuccess: () => {
+      toast.success('Agent published');
+      queryClient.invalidateQueries({ queryKey: ['admin', 'agent-definitions'] });
+    },
+    onError: () => {
+      toast.error('Failed to publish agent');
+    },
+  });
+
+  const unpublishMutation = useMutation({
+    mutationFn: (id: string) => agentDefinitionsApi.unpublish(id),
+    onSuccess: () => {
+      toast.success('Agent unpublished');
+      queryClient.invalidateQueries({ queryKey: ['admin', 'agent-definitions'] });
+    },
+    onError: () => {
+      toast.error('Failed to unpublish agent');
+    },
   });
 
   // ============================================================================
@@ -70,6 +141,10 @@ export default function AdminAgentViewPage() {
     );
   }
 
+  const status = agent.status ?? 0;
+  const isLifecycleLoading =
+    startTestingMutation.isPending || publishMutation.isPending || unpublishMutation.isPending;
+
   // ============================================================================
   // Main Render
   // ============================================================================
@@ -88,9 +163,46 @@ export default function AdminAgentViewPage() {
           </div>
         </div>
         <div className="flex items-center gap-2">
+          {getStatusBadge(status)}
           <Badge variant={agent.isActive ? 'default' : 'secondary'}>
             {agent.isActive ? 'Active' : 'Inactive'}
           </Badge>
+
+          {/* Lifecycle action buttons */}
+          {status === 0 && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => startTestingMutation.mutate(agentId)}
+              disabled={isLifecycleLoading}
+            >
+              <FlaskConical className="h-4 w-4 mr-2" />
+              Start Testing
+            </Button>
+          )}
+          {status === 1 && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => publishMutation.mutate(agentId)}
+              disabled={isLifecycleLoading}
+            >
+              <Rocket className="h-4 w-4 mr-2" />
+              Publish
+            </Button>
+          )}
+          {status === 2 && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => unpublishMutation.mutate(agentId)}
+              disabled={isLifecycleLoading}
+            >
+              <ArchiveRestore className="h-4 w-4 mr-2" />
+              Unpublish
+            </Button>
+          )}
+
           <Button asChild variant="outline" size="sm">
             <Link href={`/admin/agents/definitions/${agentId}/edit`}>
               <Edit className="h-4 w-4 mr-2" />

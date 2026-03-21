@@ -1,7 +1,7 @@
 'use client';
 
 import { ColumnDef } from '@tanstack/react-table';
-import { MoreHorizontal, Pencil, Trash2 } from 'lucide-react';
+import { ArchiveRestore, FlaskConical, MoreHorizontal, Pencil, Rocket, Trash2 } from 'lucide-react';
 import Link from 'next/link';
 
 import {
@@ -11,6 +11,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui';
 import type { AgentDefinitionDto } from '@/lib/api/schemas/agent-definitions.schemas';
@@ -18,9 +19,40 @@ import type { AgentDefinitionDto } from '@/lib/api/schemas/agent-definitions.sch
 interface BuilderTableProps {
   data: AgentDefinitionDto[];
   onDelete: (id: string) => void;
+  onStartTesting?: (id: string) => void;
+  onPublish?: (id: string) => void;
+  onUnpublish?: (id: string) => void;
 }
 
-export function BuilderTable({ data, onDelete }: BuilderTableProps) {
+const STATUS_LABELS = ['Draft', 'Testing', 'Published'] as const;
+
+function getStatusBadge(status: number) {
+  const label = STATUS_LABELS[status] ?? 'Draft';
+  switch (status) {
+    case 1:
+      return (
+        <Badge variant="outline" className="border-amber-500 text-amber-600">
+          {label}
+        </Badge>
+      );
+    case 2:
+      return (
+        <Badge variant="default" className="bg-green-600">
+          {label}
+        </Badge>
+      );
+    default:
+      return <Badge variant="secondary">{label}</Badge>;
+  }
+}
+
+export function BuilderTable({
+  data,
+  onDelete,
+  onStartTesting,
+  onPublish,
+  onUnpublish,
+}: BuilderTableProps) {
   const columns: ColumnDef<AgentDefinitionDto>[] = [
     {
       accessorKey: 'name',
@@ -41,13 +73,19 @@ export function BuilderTable({ data, onDelete }: BuilderTableProps) {
       cell: ({ row }) => <Badge variant="secondary">{row.original.config.model}</Badge>,
     },
     {
-      accessorKey: 'isActive',
+      id: 'status',
       header: 'Status',
-      cell: ({ row }) => (
-        <Badge variant={row.original.isActive ? 'default' : 'outline'}>
-          {row.original.isActive ? 'Active' : 'Inactive'}
-        </Badge>
-      ),
+      cell: ({ row }) => {
+        const agent = row.original;
+        return (
+          <div className="flex items-center gap-2">
+            {getStatusBadge(agent.status ?? 0)}
+            <Badge variant={agent.isActive ? 'default' : 'outline'}>
+              {agent.isActive ? 'Active' : 'Inactive'}
+            </Badge>
+          </div>
+        );
+      },
     },
     {
       accessorKey: 'createdAt',
@@ -58,6 +96,7 @@ export function BuilderTable({ data, onDelete }: BuilderTableProps) {
       id: 'actions',
       cell: ({ row }) => {
         const agent = row.original;
+        const status = agent.status ?? 0;
 
         return (
           <DropdownMenu>
@@ -73,6 +112,28 @@ export function BuilderTable({ data, onDelete }: BuilderTableProps) {
                   Edit
                 </Link>
               </DropdownMenuItem>
+
+              {/* Lifecycle actions */}
+              {status === 0 && onStartTesting && (
+                <DropdownMenuItem onClick={() => onStartTesting(agent.id)}>
+                  <FlaskConical className="h-4 w-4 mr-2" />
+                  Start Testing
+                </DropdownMenuItem>
+              )}
+              {status === 1 && onPublish && (
+                <DropdownMenuItem onClick={() => onPublish(agent.id)}>
+                  <Rocket className="h-4 w-4 mr-2" />
+                  Publish
+                </DropdownMenuItem>
+              )}
+              {status === 2 && onUnpublish && (
+                <DropdownMenuItem onClick={() => onUnpublish(agent.id)}>
+                  <ArchiveRestore className="h-4 w-4 mr-2" />
+                  Unpublish
+                </DropdownMenuItem>
+              )}
+
+              <DropdownMenuSeparator />
               <DropdownMenuItem onClick={() => onDelete(agent.id)} className="text-destructive">
                 <Trash2 className="h-4 w-4 mr-2" />
                 Delete

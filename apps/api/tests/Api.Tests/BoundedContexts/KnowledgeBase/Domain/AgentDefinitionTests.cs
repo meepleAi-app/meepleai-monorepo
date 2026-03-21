@@ -1,4 +1,5 @@
 using Api.BoundedContexts.KnowledgeBase.Domain.Entities;
+using Api.BoundedContexts.KnowledgeBase.Domain.Enums;
 using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 using FluentAssertions;
 using Xunit;
@@ -28,7 +29,8 @@ public sealed class AgentDefinitionTests
         agent.Name.Should().Be("TestAgent");
         agent.Description.Should().Be("Test description");
         agent.Config.Should().Be(config);
-        agent.IsActive.Should().BeTrue();
+        agent.IsActive.Should().BeFalse();
+        agent.Status.Should().Be(AgentDefinitionStatus.Draft);
         agent.CreatedAt.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromSeconds(1));
         agent.UpdatedAt.Should().BeNull();
     }
@@ -208,7 +210,6 @@ public sealed class AgentDefinitionTests
     {
         // Arrange
         var agent = AgentDefinition.Create("TestAgent", "Desc", AgentType.RagAgent, AgentDefinitionConfig.Default());
-        agent.Deactivate();
 
         // Act
         agent.Activate();
@@ -223,6 +224,7 @@ public sealed class AgentDefinitionTests
     {
         // Arrange
         var agent = AgentDefinition.Create("TestAgent", "Desc", AgentType.RagAgent, AgentDefinitionConfig.Default());
+        agent.Activate(); // Agent starts inactive (Draft), activate first
 
         // Act
         agent.Deactivate();
@@ -237,9 +239,10 @@ public sealed class AgentDefinitionTests
     {
         // Arrange
         var agent = AgentDefinition.Create("TestAgent", "Desc", AgentType.RagAgent, AgentDefinitionConfig.Default());
+        agent.Activate(); // Agent starts inactive (Draft), activate first
 
         // Act
-        agent.Activate();
+        agent.Activate(); // Second call should be no-op
 
         // Assert
         agent.IsActive.Should().BeTrue();
@@ -385,5 +388,140 @@ public sealed class AgentDefinitionTests
         // Assert
         act.Should().Throw<ArgumentNullException>().WithParameterName("strategy");
     }
-}
 
+    // ===== LIFECYCLE STATE TRANSITION TESTS =====
+
+    [Fact]
+    public void Create_ShouldStartAsDraft()
+    {
+        // Arrange & Act
+        var agent = AgentDefinition.Create("TestAgent", "Desc", AgentType.RagAgent, AgentDefinitionConfig.Default());
+
+        // Assert
+        agent.Status.Should().Be(AgentDefinitionStatus.Draft);
+        agent.IsActive.Should().BeFalse();
+    }
+
+    [Fact]
+    public void StartTesting_FromDraft_ShouldTransitionToTesting()
+    {
+        // Arrange
+        var agent = AgentDefinition.Create("TestAgent", "Desc", AgentType.RagAgent, AgentDefinitionConfig.Default());
+
+        // Act
+        agent.StartTesting();
+
+        // Assert
+        agent.Status.Should().Be(AgentDefinitionStatus.Testing);
+        agent.UpdatedAt.Should().NotBeNull();
+    }
+
+    [Fact]
+    public void Publish_FromTesting_ShouldTransitionToPublished()
+    {
+        // Arrange
+        var agent = AgentDefinition.Create("TestAgent", "Desc", AgentType.RagAgent, AgentDefinitionConfig.Default());
+        agent.StartTesting();
+
+        // Act
+        agent.Publish();
+
+        // Assert
+        agent.Status.Should().Be(AgentDefinitionStatus.Published);
+        agent.IsActive.Should().BeTrue();
+        agent.UpdatedAt.Should().NotBeNull();
+    }
+
+    [Fact]
+    public void Publish_FromDraft_ShouldThrow()
+    {
+        // Arrange
+        var agent = AgentDefinition.Create("TestAgent", "Desc", AgentType.RagAgent, AgentDefinitionConfig.Default());
+
+        // Act
+        var act = () => agent.Publish();
+
+        // Assert
+        act.Should().Throw<InvalidOperationException>()
+            .WithMessage("*Draft*Testing*");
+    }
+
+    [Fact]
+    public void StartTesting_FromPublished_ShouldThrow()
+    {
+        // Arrange
+        var agent = AgentDefinition.Create("TestAgent", "Desc", AgentType.RagAgent, AgentDefinitionConfig.Default());
+        agent.StartTesting();
+        agent.Publish();
+
+        // Act
+        var act = () => agent.StartTesting();
+
+        // Assert
+        act.Should().Throw<InvalidOperationException>()
+            .WithMessage("*Published*Testing*");
+    }
+
+    [Fact]
+    public void Unpublish_FromPublished_ShouldReturnToDraft()
+    {
+        // Arrange
+        var agent = AgentDefinition.Create("TestAgent", "Desc", AgentType.RagAgent, AgentDefinitionConfig.Default());
+        agent.StartTesting();
+        agent.Publish();
+
+        // Act
+        agent.Unpublish();
+
+        // Assert
+        agent.Status.Should().Be(AgentDefinitionStatus.Draft);
+        agent.IsActive.Should().BeFalse();
+        agent.UpdatedAt.Should().NotBeNull();
+    }
+
+    [Fact]
+    public void Unpublish_FromTesting_ShouldReturnToDraft()
+    {
+        // Arrange
+        var agent = AgentDefinition.Create("TestAgent", "Desc", AgentType.RagAgent, AgentDefinitionConfig.Default());
+        agent.StartTesting();
+
+        // Act
+        agent.Unpublish();
+
+        // Assert
+        agent.Status.Should().Be(AgentDefinitionStatus.Draft);
+        agent.IsActive.Should().BeFalse();
+        agent.UpdatedAt.Should().NotBeNull();
+    }
+
+    [Fact]
+    public void FullLifecycle_DraftToTestingToPublishedToUnpublished()
+    {
+        // Arrange
+        var agent = AgentDefinition.Create("TestAgent", "Desc", AgentType.RagAgent, AgentDefinitionConfig.Default());
+
+        // Assert initial state
+        agent.Status.Should().Be(AgentDefinitionStatus.Draft);
+        agent.IsActive.Should().BeFalse();
+
+        // Act & Assert: Draft -> Testing
+        agent.StartTesting();
+        agent.Status.Should().Be(AgentDefinitionStatus.Testing);
+        agent.IsActive.Should().BeFalse();
+
+        // Act & Assert: Testing -> Published
+        agent.Publish();
+        agent.Status.Should().Be(AgentDefinitionStatus.Published);
+        agent.IsActive.Should().BeTrue();
+
+        // Act & Assert: Published -> Draft (Unpublish)
+        agent.Unpublish();
+        agent.Status.Should().Be(AgentDefinitionStatus.Draft);
+        agent.IsActive.Should().BeFalse();
+
+        // Act & Assert: Can restart the cycle
+        agent.StartTesting();
+        agent.Status.Should().Be(AgentDefinitionStatus.Testing);
+    }
+}

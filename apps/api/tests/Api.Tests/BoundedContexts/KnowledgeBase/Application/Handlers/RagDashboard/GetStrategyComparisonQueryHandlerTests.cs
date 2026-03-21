@@ -1,12 +1,11 @@
-using Api.BoundedContexts.KnowledgeBase.Application.Commands;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries;
-using Api.BoundedContexts.KnowledgeBase.Application.Queries;
-using Api.Services;
+using Api.BoundedContexts.KnowledgeBase.Domain.Models;
+using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.Tests.Constants;
+using FluentAssertions;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
-using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Handlers.RagDashboard;
 
@@ -18,29 +17,46 @@ namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Handlers.RagDashbo
 [Trait("Category", TestCategories.Unit)]
 [Trait("BoundedContext", "KnowledgeBase")]
 [Trait("Feature", "RagDashboard")]
-public class GetStrategyComparisonQueryHandlerTests
+public sealed class GetStrategyComparisonQueryHandlerTests
 {
-    private readonly Mock<ILogger<GetStrategyComparisonQueryHandler>> _mockLogger;
-    private readonly Mock<IHybridCacheService> _mockCacheService;
+    private readonly Mock<IRagExecutionRepository> _mockRepo = new();
+    private readonly Mock<ILogger<GetStrategyComparisonQueryHandler>> _mockLogger = new();
     private readonly GetStrategyComparisonQueryHandler _handler;
 
     public GetStrategyComparisonQueryHandlerTests()
     {
-        _mockLogger = new Mock<ILogger<GetStrategyComparisonQueryHandler>>();
-        _mockCacheService = new Mock<IHybridCacheService>();
-
-        _mockCacheService.Setup(c => c.GetStatsAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new HybridCacheStats { TotalHits = 80, TotalMisses = 20 });
-
-        _handler = new GetStrategyComparisonQueryHandler(
-            _mockCacheService.Object,
-            _mockLogger.Object);
+        _handler = new GetStrategyComparisonQueryHandler(_mockRepo.Object, _mockLogger.Object);
     }
 
+    private static StrategyAggregateMetrics CreateMetrics(
+        string strategy,
+        int queries = 100,
+        double confidence = 0.85,
+        decimal costPerQuery = 0.05m,
+        double avgLatencyMs = 150.0) =>
+        new(strategy, queries, avgLatencyMs, 300.0, 500.0, confidence,
+            80, 20, 50000, costPerQuery * queries, costPerQuery,
+            2, 0.02, 10, 1, 5, DateTimeOffset.UtcNow);
+
     [Fact]
-    public async Task Handle_ReturnsNonNullComparison()
+    public async Task Handle_MultipleStrategies_RanksCorrectly()
     {
         // Arrange
+        var metrics = new List<StrategyAggregateMetrics>
+        {
+            CreateMetrics("Hybrid", queries: 100, confidence: 0.85, avgLatencyMs: 150.0),
+            CreateMetrics("Semantic", queries: 80, confidence: 0.78, avgLatencyMs: 100.0),
+            CreateMetrics("Keyword", queries: 120, confidence: 0.70, avgLatencyMs: 80.0)
+        };
+
+        _mockRepo
+            .Setup(r => r.GetAggregatedMetricsAsync(
+                It.IsAny<DateOnly?>(),
+                It.IsAny<DateOnly?>(),
+                It.IsAny<string?>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(metrics);
+
         var query = new GetStrategyComparisonQuery();
 
         // Act
@@ -48,29 +64,101 @@ public class GetStrategyComparisonQueryHandlerTests
 
         // Assert
         result.Should().NotBeNull();
-        result.Strategies.Should().NotBeNull();
-        result.LatencyRanking.Should().NotBeNull();
-        result.QualityRanking.Should().NotBeNull();
-        result.CostEfficiencyRanking.Should().NotBeNull();
+        result.Strategies.Should().HaveCount(3);
+        result.LatencyRanking.Should().HaveCount(3);
+        result.QualityRanking.Should().HaveCount(3);
+        result.CostEfficiencyRanking.Should().HaveCount(3);
+
+        // Keyword has lowest latency → should rank highest in latency
+        result.LatencyRanking["Keyword"].Should().BeGreaterThan(result.LatencyRanking["Hybrid"]);
+
+        // Hybrid has highest confidence → should rank highest in quality
+        result.QualityRanking["Hybrid"].Should().BeGreaterThan(result.QualityRanking["Semantic"]);
+        result.QualityRanking["Hybrid"].Should().BeGreaterThan(result.QualityRanking["Keyword"]);
     }
 
     [Fact]
-    public async Task Handle_WithNoStrategyIds_ReturnsAllStrategies()
+    public async Task Handle_EmptyData_ReturnsNoRecommendation()
     {
         // Arrange
-        var query = new GetStrategyComparisonQuery { StrategyIds = null };
+        _mockRepo
+            .Setup(r => r.GetAggregatedMetricsAsync(
+                It.IsAny<DateOnly?>(),
+                It.IsAny<DateOnly?>(),
+                It.IsAny<string?>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<StrategyAggregateMetrics>());
+
+        var query = new GetStrategyComparisonQuery();
 
         // Act
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        (result.Strategies.Count >= 6).Should().BeTrue(); // All strategies
+        result.Should().NotBeNull();
+        result.Strategies.Should().BeEmpty();
+        result.LatencyRanking.Should().BeEmpty();
+        result.QualityRanking.Should().BeEmpty();
+        result.CostEfficiencyRanking.Should().BeEmpty();
+        result.RecommendedStrategy.Should().BeEmpty();
+        result.RecommendationReason.Should().BeEmpty();
     }
 
     [Fact]
-    public async Task Handle_WithSpecificStrategyIds_ReturnsFilteredStrategies()
+    public async Task Handle_WeightedScoring_RecommendsCorrectStrategy()
+    {
+        // Arrange — "Quality" strategy: highest confidence (0.95), moderate latency and cost
+        //           "Fast" strategy: lowest latency but low confidence (0.65)
+        //           "Cheap" strategy: lowest cost but low confidence (0.60), high latency
+        // Ordinal ranking (3 items: scores 1.0, 0.5, 0.0)
+        // Weights: quality 50%, latency 30%, cost 20%
+        // Quality: lat=0.5×0.3 + qual=1.0×0.5 + cost=0.5×0.2 = 0.75 ← wins
+        // Fast:    lat=1.0×0.3 + qual=0.5×0.5 + cost=0.0×0.2 = 0.55
+        // Cheap:   lat=0.0×0.3 + qual=0.0×0.5 + cost=1.0×0.2 = 0.20
+        var metrics = new List<StrategyAggregateMetrics>
+        {
+            CreateMetrics("Quality", queries: 100, confidence: 0.95, costPerQuery: 0.04m, avgLatencyMs: 120.0),
+            CreateMetrics("Fast", queries: 100, confidence: 0.65, costPerQuery: 0.06m, avgLatencyMs: 50.0),
+            CreateMetrics("Cheap", queries: 100, confidence: 0.60, costPerQuery: 0.02m, avgLatencyMs: 300.0)
+        };
+
+        _mockRepo
+            .Setup(r => r.GetAggregatedMetricsAsync(
+                It.IsAny<DateOnly?>(),
+                It.IsAny<DateOnly?>(),
+                It.IsAny<string?>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(metrics);
+
+        var query = new GetStrategyComparisonQuery();
+
+        // Act
+        var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
+
+        // Assert
+        result.RecommendedStrategy.Should().Be("Quality");
+        result.RecommendationReason.Should().NotBeNullOrEmpty();
+    }
+
+    [Fact]
+    public async Task Handle_WithStrategyIdFilter_ReturnsOnlyRequestedStrategies()
     {
         // Arrange
+        var metrics = new List<StrategyAggregateMetrics>
+        {
+            CreateMetrics("Hybrid"),
+            CreateMetrics("Semantic"),
+            CreateMetrics("Keyword")
+        };
+
+        _mockRepo
+            .Setup(r => r.GetAggregatedMetricsAsync(
+                It.IsAny<DateOnly?>(),
+                It.IsAny<DateOnly?>(),
+                It.IsAny<string?>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(metrics);
+
         var query = new GetStrategyComparisonQuery
         {
             StrategyIds = new[] { "Hybrid", "Semantic" }
@@ -80,94 +168,38 @@ public class GetStrategyComparisonQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        result.Strategies.Count.Should().Be(2);
+        result.Strategies.Should().HaveCount(2);
         result.Strategies.Should().Contain(s => s.StrategyId == "Hybrid");
         result.Strategies.Should().Contain(s => s.StrategyId == "Semantic");
+        result.Strategies.Should().NotContain(s => s.StrategyId == "Keyword");
     }
 
     [Fact]
-    public async Task Handle_ReturnsRankings()
+    public async Task Handle_SingleStrategy_ReturnsScoreOfOne()
     {
         // Arrange
-        var query = new GetStrategyComparisonQuery();
-
-        // Act
-        var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
-
-        // Assert
-        result.LatencyRanking.Should().NotBeEmpty();
-        result.QualityRanking.Should().NotBeEmpty();
-        result.CostEfficiencyRanking.Should().NotBeEmpty();
-    }
-
-    [Fact]
-    public async Task Handle_ReturnsRecommendation()
-    {
-        // Arrange
-        var query = new GetStrategyComparisonQuery();
-
-        // Act
-        var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
-
-        // Assert
-        result.RecommendedStrategy.Should().NotBeNull();
-        result.RecommendationReason.Should().NotBeNull();
-    }
-
-    [Fact]
-    public async Task Handle_StrategiesHaveValidMetrics()
-    {
-        // Arrange
-        var query = new GetStrategyComparisonQuery();
-
-        // Act
-        var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
-
-        // Assert
-        foreach (var strategy in result.Strategies)
+        var metrics = new List<StrategyAggregateMetrics>
         {
-            strategy.StrategyId.Should().NotBeNull();
-            (strategy.TotalQueries >= 0).Should().BeTrue();
-            (strategy.AverageLatencyMs >= 0).Should().BeTrue();
-            strategy.AverageRelevanceScore.Should().BeInRange(0.0, 1.0);
-            (strategy.TotalCost >= 0).Should().BeTrue();
-        }
-    }
-
-    [Fact]
-    public async Task Handle_WithDateRange_FiltersResults()
-    {
-        // Arrange
-        var query = new GetStrategyComparisonQuery
-        {
-            StartDate = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(-7)),
-            EndDate = DateOnly.FromDateTime(DateTime.UtcNow)
+            CreateMetrics("Hybrid")
         };
 
+        _mockRepo
+            .Setup(r => r.GetAggregatedMetricsAsync(
+                It.IsAny<DateOnly?>(),
+                It.IsAny<DateOnly?>(),
+                It.IsAny<string?>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(metrics);
+
+        var query = new GetStrategyComparisonQuery();
+
         // Act
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        result.Should().NotBeNull();
-    }
-
-    [Fact]
-    public async Task Handle_LogsInformation()
-    {
-        // Arrange
-        var query = new GetStrategyComparisonQuery();
-
-        // Act
-        await _handler.Handle(query, TestContext.Current.CancellationToken);
-
-        // Assert
-        _mockLogger.Verify(
-            x => x.Log(
-                LogLevel.Information,
-                It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("Comparing strategies")),
-                null,
-                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-            Times.Once);
+        result.RecommendedStrategy.Should().Be("Hybrid");
+        result.LatencyRanking["Hybrid"].Should().Be(1.0);
+        result.QualityRanking["Hybrid"].Should().Be(1.0);
+        result.CostEfficiencyRanking["Hybrid"].Should().Be(1.0);
     }
 }

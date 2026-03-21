@@ -81,8 +81,7 @@ public sealed class QuartzReportSchedulerServiceTests : IAsyncDisposable
         var report = CreateTestReport(scheduleExpression: null!);
 
         // Act & Assert
-        var act = async () =>() =>
-            _sut.ScheduleReportAsync(report);
+        var act = () => _sut.ScheduleReportAsync(report);
         await act.Should().ThrowAsync<ArgumentException>();
     }
 
@@ -93,8 +92,7 @@ public sealed class QuartzReportSchedulerServiceTests : IAsyncDisposable
         var report = CreateTestReport(scheduleExpression: "");
 
         // Act & Assert
-        var act = async () =>() =>
-            _sut.ScheduleReportAsync(report);
+        var act = () => _sut.ScheduleReportAsync(report);
         await act.Should().ThrowAsync<ArgumentException>();
     }
 
@@ -105,8 +103,7 @@ public sealed class QuartzReportSchedulerServiceTests : IAsyncDisposable
         var report = CreateTestReport(scheduleExpression: "   ");
 
         // Act & Assert
-        var act = async () =>() =>
-            _sut.ScheduleReportAsync(report);
+        var act = () => _sut.ScheduleReportAsync(report);
         await act.Should().ThrowAsync<ArgumentException>();
     }
 

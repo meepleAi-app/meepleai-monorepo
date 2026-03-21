@@ -42,7 +42,7 @@ public class CreateDeckCommandHandlerTests
         // Assert
         Assert.NotEqual(Guid.Empty, result.DeckId);
         Assert.Equal("Main Deck", result.Name);
-        Assert.Equal("Standard", result.DeckType);
+        Assert.Equal("Standard52", result.DeckType);
         Assert.Equal(52, result.CardCount); // Standard deck without jokers
         _deckRepoMock.Verify(r => r.AddAsync(It.IsAny<SessionDeck>(), It.IsAny<CancellationToken>()), Times.Once);
         _deckRepoMock.Verify(r => r.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);

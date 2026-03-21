@@ -490,11 +490,15 @@ public class RedisBackgroundTaskOrchestratorTests
         // Act
         await _orchestrator.ScheduleRecurringAsync(taskId, taskName, interval, taskFactory, TestCancellationToken);
 
-        // Wait for first execution to complete
-        await Task.Delay(TestConstants.Timing.MediumDelay, TestCancellationToken);
+        // Poll until first execution completes (CI may be slow)
+        var deadline = DateTime.UtcNow.AddSeconds(5);
+        while (executionCount < 1 && DateTime.UtcNow < deadline)
+        {
+            await Task.Delay(50, TestCancellationToken);
+        }
 
         var initialCount = executionCount;
-        (initialCount >= 1).Should().BeTrue("Task should have executed at least once");
+        (initialCount >= 1).Should().BeTrue("Task should have executed at least once within 5s");
 
         // Cancel after first execution
         var cancelResult = await _orchestrator.CancelAsync(taskId);

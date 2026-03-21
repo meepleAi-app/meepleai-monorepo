@@ -107,7 +107,7 @@ public class UserDomainTests
         // Act & Assert
         var act = () =>
             user.AssignRole(Role.Admin, Role.Editor);
-act.Should().Throw<DomainException>();
+        act.Should().Throw<DomainException>();
     }
 
     [Fact]
@@ -224,7 +224,7 @@ act.Should().Throw<DomainException>();
         // Act & Assert
         var act = () =>
             user.UpdateDisplayName(null!);
-act.Should().Throw<ValidationException>();
+        act.Should().Throw<ValidationException>();
     }
 
     [Fact]
@@ -236,7 +236,7 @@ act.Should().Throw<ValidationException>();
         // Act & Assert
         var act = () =>
             user.UpdateDisplayName(string.Empty);
-act.Should().Throw<ValidationException>();
+        act.Should().Throw<ValidationException>();
     }
 
     [Fact]
@@ -248,7 +248,7 @@ act.Should().Throw<ValidationException>();
         // Act & Assert
         var act = () =>
             user.UpdateDisplayName("   ");
-act.Should().Throw<ValidationException>();
+        act.Should().Throw<ValidationException>();
     }
 
     [Fact]
@@ -324,7 +324,7 @@ act.Should().Throw<ValidationException>();
         // Act & Assert - Domain throws ArgumentNullException for null aggregates
         var act = () =>
             user.Enable2FA(null!);
-act.Should().Throw<ArgumentNullException>();
+        act.Should().Throw<ArgumentNullException>();
     }
 
     [Fact]
@@ -336,7 +336,7 @@ act.Should().Throw<ArgumentNullException>();
         // Act & Assert
         var act = () =>
             user.Enable2FA(TotpSecret.FromEncrypted(string.Empty));
-act.Should().Throw<ValidationException>();
+        act.Should().Throw<ValidationException>();
     }
 
     [Fact]
@@ -348,7 +348,7 @@ act.Should().Throw<ValidationException>();
         // Act & Assert
         var act = () =>
             user.Enable2FA(TotpSecret.FromEncrypted("   "));
-act.Should().Throw<ValidationException>();
+        act.Should().Throw<ValidationException>();
     }
 
     [Fact]
@@ -420,7 +420,7 @@ act.Should().Throw<ValidationException>();
         // Act & Assert
         var act = () =>
             new User(id, null!, "Test User", passwordHash, Role.User);
-act.Should().Throw<ArgumentNullException>();
+        act.Should().Throw<ArgumentNullException>();
     }
 
     [Fact]
@@ -434,7 +434,7 @@ act.Should().Throw<ArgumentNullException>();
         // Act & Assert
         var act = () =>
             new User(id, email, null!, passwordHash, Role.User);
-act.Should().Throw<ArgumentNullException>();
+        act.Should().Throw<ArgumentNullException>();
     }
 
     [Fact]
@@ -447,7 +447,7 @@ act.Should().Throw<ArgumentNullException>();
         // Act & Assert
         var act = () =>
             new User(id, email, "Test User", null!, Role.User);
-act.Should().Throw<ArgumentNullException>();
+        act.Should().Throw<ArgumentNullException>();
     }
 
     [Fact]
@@ -461,7 +461,7 @@ act.Should().Throw<ArgumentNullException>();
         // Act & Assert
         var act = () =>
             new User(id, email, "Test User", passwordHash, null!);
-act.Should().Throw<ArgumentNullException>();
+        act.Should().Throw<ArgumentNullException>();
     }
 
     [Fact]
@@ -766,7 +766,7 @@ act.Should().Throw<ArgumentNullException>();
         // Act & Assert
         var act = () =>
             user.UpdateTier(null!, Role.Admin);
-act.Should().Throw<ArgumentNullException>();
+        act.Should().Throw<ArgumentNullException>();
     }
 
     [Fact]
@@ -778,7 +778,7 @@ act.Should().Throw<ArgumentNullException>();
         // Act & Assert
         var act = () =>
             user.UpdateTier(UserTier.Premium, null!);
-act.Should().Throw<ArgumentNullException>();
+        act.Should().Throw<ArgumentNullException>();
     }
 
     [Fact]

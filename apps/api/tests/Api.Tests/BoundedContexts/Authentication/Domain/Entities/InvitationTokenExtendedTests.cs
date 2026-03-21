@@ -131,7 +131,7 @@ public sealed class InvitationTokenExtendedTests
                 expiresInDays: 7,
                 _timeProvider,
                 tokenHash: "");
-act.Should().Throw<ArgumentException>();
+        act.Should().Throw<ArgumentException>();
     }
 
     [Fact]
@@ -147,7 +147,7 @@ act.Should().Throw<ArgumentException>();
                 expiresInDays: 7,
                 _timeProvider,
                 TestTokenHash);
-act.Should().Throw<ArgumentException>();
+        act.Should().Throw<ArgumentException>();
     }
 
     #endregion

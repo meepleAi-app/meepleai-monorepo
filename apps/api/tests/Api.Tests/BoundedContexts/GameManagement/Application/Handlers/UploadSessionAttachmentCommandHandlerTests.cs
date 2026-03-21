@@ -122,7 +122,7 @@ public sealed class UploadSessionAttachmentCommandHandlerTests : IDisposable
 
         var command = CreateCommand(Guid.NewGuid(), Guid.NewGuid());
 
-        var act = 
+        var act =
             () => _sut.Handle(command, CancellationToken.None);
         await act.Should().ThrowAsync<NotFoundException>();
     }
@@ -137,7 +137,7 @@ public sealed class UploadSessionAttachmentCommandHandlerTests : IDisposable
 
         var command = CreateCommand(sessionId, session.Players[0].Id);
 
-        var act = 
+        var act =
             () => _sut.Handle(command, CancellationToken.None);
         await act.Should().ThrowAsync<ConflictException>();
     }
@@ -153,7 +153,7 @@ public sealed class UploadSessionAttachmentCommandHandlerTests : IDisposable
 
         var command = CreateCommand(sessionId, Guid.NewGuid());
 
-        var act = 
+        var act =
             () => _sut.Handle(command, CancellationToken.None);
         await act.Should().ThrowAsync<ConflictException>();
     }
@@ -173,7 +173,7 @@ public sealed class UploadSessionAttachmentCommandHandlerTests : IDisposable
 
         var command = CreateCommand(sessionId, unknownPlayerId);
 
-        var act = 
+        var act =
             () => _sut.Handle(command, CancellationToken.None);
         await act.Should().ThrowAsync<NotFoundException>();
     }
@@ -194,7 +194,7 @@ public sealed class UploadSessionAttachmentCommandHandlerTests : IDisposable
 
         var command = CreateCommand(sessionId, playerId);
 
-        var act = 
+        var act =
             () => _sut.Handle(command, CancellationToken.None);
         await act.Should().ThrowAsync<ConflictException>();
     }
@@ -239,7 +239,7 @@ public sealed class UploadSessionAttachmentCommandHandlerTests : IDisposable
 
         var command = CreateCommand(sessionId, playerId);
 
-        var act = 
+        var act =
             () => _sut.Handle(command, CancellationToken.None);
         var ex = (await act.Should().ThrowAsync<InvalidOperationException>()).Which;
         ex.Message.Should().Contain("S3 down");

@@ -222,6 +222,32 @@ export default defineConfig({
       workers: 1,
       timeout: 180_000,
     },
+
+    // Admin Embedding Flow — local dev and integration environments
+    {
+      name: 'embedding-flow-local',
+      testDir: './e2e/flows',
+      testMatch: /admin-embedding-flow\.spec\.ts/,
+      use: {
+        ...devices['Desktop Chrome'],
+        baseURL: 'http://localhost:3000',
+      },
+      fullyParallel: false,
+      workers: 1,
+      timeout: 300_000, // 5 min — embedding jobs can be slow
+    },
+    {
+      name: 'embedding-flow-integration',
+      testDir: './e2e/flows',
+      testMatch: /admin-embedding-flow\.spec\.ts/,
+      use: {
+        ...devices['Desktop Chrome'],
+        baseURL: process.env.E2E_BASE_URL ?? 'http://localhost:3000',
+      },
+      fullyParallel: false,
+      workers: 1,
+      timeout: 300_000,
+    },
   ],
 
   // Issue #2008: Disable webServer in parallel mode to prevent port conflicts

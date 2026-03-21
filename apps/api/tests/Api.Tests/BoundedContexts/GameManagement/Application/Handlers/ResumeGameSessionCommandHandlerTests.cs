@@ -191,7 +191,7 @@ public class ResumeGameSessionCommandHandlerTests
         var command = new ResumeGameSessionCommand(SessionId: sessionId);
 
         // Act & Assert
-        var act = 
+        var act =
             () => _handler.Handle(command, TestContext.Current.CancellationToken);
         var exception = (await act.Should().ThrowAsync<InvalidOperationException>()).Which;
 
@@ -219,7 +219,7 @@ public class ResumeGameSessionCommandHandlerTests
         var command = new ResumeGameSessionCommand(SessionId: sessionId);
 
         // Act & Assert
-        var act = 
+        var act =
             () => _handler.Handle(command, TestContext.Current.CancellationToken);
         var exception = (await act.Should().ThrowAsync<InvalidOperationException>()).Which;
 
@@ -248,7 +248,7 @@ public class ResumeGameSessionCommandHandlerTests
         var command = new ResumeGameSessionCommand(SessionId: sessionId);
 
         // Act & Assert
-        var act = 
+        var act =
             () => _handler.Handle(command, TestContext.Current.CancellationToken);
         var exception = (await act.Should().ThrowAsync<InvalidOperationException>()).Which;
 
@@ -272,7 +272,7 @@ public class ResumeGameSessionCommandHandlerTests
         var command = new ResumeGameSessionCommand(SessionId: sessionId);
 
         // Act & Assert
-        var act = 
+        var act =
             () => _handler.Handle(command, TestContext.Current.CancellationToken);
         var exception = (await act.Should().ThrowAsync<InvalidOperationException>()).Which;
 

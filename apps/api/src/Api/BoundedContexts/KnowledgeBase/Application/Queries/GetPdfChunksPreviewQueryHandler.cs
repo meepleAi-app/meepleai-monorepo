@@ -7,12 +7,12 @@ using Api.SharedKernel.Application.Interfaces;
 namespace Api.BoundedContexts.KnowledgeBase.Application.Queries;
 
 /// <summary>
-/// Handles retrieving chunk previews for a PDF document.
+/// Handles retrieving paginated chunk previews for a PDF document.
 /// Traverses PdfDocument -> VectorDocument -> Embeddings to gather text chunks.
-/// RAG Sandbox: Chunk preview panel.
+/// RAG Sandbox: Chunk preview panel with pagination and search support.
 /// </summary>
 internal class GetPdfChunksPreviewQueryHandler
-    : IQueryHandler<GetPdfChunksPreviewQuery, IReadOnlyList<ChunkPreviewDto>>
+    : IQueryHandler<GetPdfChunksPreviewQuery, PaginatedChunksResult>
 {
     private readonly IPdfDocumentRepository _pdfDocumentRepository;
     private readonly IVectorDocumentRepository _vectorDocumentRepository;
@@ -28,15 +28,21 @@ internal class GetPdfChunksPreviewQueryHandler
         _embeddingRepository = embeddingRepository ?? throw new ArgumentNullException(nameof(embeddingRepository));
     }
 
-    public async Task<IReadOnlyList<ChunkPreviewDto>> Handle(
+    public async Task<PaginatedChunksResult> Handle(
         GetPdfChunksPreviewQuery query,
         CancellationToken cancellationToken)
     {
+        var emptyResult = new PaginatedChunksResult(
+            Chunks: Array.Empty<ChunkPreviewDto>(),
+            Total: 0,
+            Page: query.Page,
+            PageSize: query.PageSize);
+
         // 1. Get the PDF document to find its GameId
         var pdfDoc = await _pdfDocumentRepository.GetByIdAsync(query.PdfId, cancellationToken).ConfigureAwait(false);
         if (pdfDoc is null)
         {
-            return Array.Empty<ChunkPreviewDto>();
+            return emptyResult;
         }
 
         // 2. Find the VectorDocument linked to this PDF
@@ -47,20 +53,32 @@ internal class GetPdfChunksPreviewQueryHandler
 
         if (vectorDoc is null)
         {
-            return Array.Empty<ChunkPreviewDto>();
+            return emptyResult;
         }
 
-        // 3. Get embeddings (which contain the text chunks) for this VectorDocument
+        // 3. Get all embeddings (which contain the text chunks) for this VectorDocument
         var embeddings = await _embeddingRepository.GetByVectorDocumentIdAsync(
             vectorDoc.Id,
             cancellationToken).ConfigureAwait(false);
 
-        // 4. Map to DTOs, ordered by chunk index, limited by query parameter
-        var limit = Math.Clamp(query.Limit, 1, 100);
+        // 4. Apply optional search filter (case-insensitive)
+        var filtered = string.IsNullOrWhiteSpace(query.Search)
+            ? embeddings
+            : embeddings
+                .Where(e => e.TextContent.Contains(query.Search, StringComparison.OrdinalIgnoreCase))
+                .ToList();
 
-        return embeddings
-            .OrderBy(e => e.ChunkIndex)
-            .Take(limit)
+        // 5. Order by chunk index and count total before pagination
+        var ordered = filtered.OrderBy(e => e.ChunkIndex);
+        var total = filtered.Count;
+
+        // 6. Apply pagination
+        var page = Math.Max(1, query.Page);
+        var pageSize = Math.Clamp(query.PageSize, 1, 100);
+
+        var chunks = ordered
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
             .Select(e => new ChunkPreviewDto(
                 EmbeddingId: e.Id,
                 TextContent: e.TextContent,
@@ -70,5 +88,11 @@ internal class GetPdfChunksPreviewQueryHandler
                 CreatedAt: e.CreatedAt
             ))
             .ToList();
+
+        return new PaginatedChunksResult(
+            Chunks: chunks,
+            Total: total,
+            Page: page,
+            PageSize: pageSize);
     }
 }

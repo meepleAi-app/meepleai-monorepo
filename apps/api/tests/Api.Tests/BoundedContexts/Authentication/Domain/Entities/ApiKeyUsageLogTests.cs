@@ -86,7 +86,7 @@ public class ApiKeyUsageLogTests
         // Act & Assert
         var act = () =>
             ApiKeyUsageLog.Create(id, keyId, endpoint!);
-act.Should().Throw<ArgumentException>();
+        act.Should().Throw<ArgumentException>();
     }
 
     [Fact]

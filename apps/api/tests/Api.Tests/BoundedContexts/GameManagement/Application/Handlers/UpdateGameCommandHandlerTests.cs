@@ -241,7 +241,7 @@ public class UpdateGameCommandHandlerTests
             Title: invalidTitle);
 
         // Act & Assert
-        var act = 
+        var act =
             () => _handler.Handle(command, TestContext.Current.CancellationToken);
         await act.Should().ThrowAsync<Api.SharedKernel.Domain.Exceptions.ValidationException>();
 
@@ -265,7 +265,7 @@ public class UpdateGameCommandHandlerTests
             Title: longTitle);
 
         // Act & Assert
-        var act = 
+        var act =
             () => _handler.Handle(command, TestContext.Current.CancellationToken);
         var exception = (await act.Should().ThrowAsync<Api.SharedKernel.Domain.Exceptions.ValidationException>()).Which;
 
@@ -292,7 +292,7 @@ public class UpdateGameCommandHandlerTests
             MaxPlayers: maxPlayers);
 
         // Act & Assert
-        var act = 
+        var act =
             () => _handler.Handle(command, TestContext.Current.CancellationToken);
         var exception = (await act.Should().ThrowAsync<Api.SharedKernel.Domain.Exceptions.ValidationException>()).Which;
 
@@ -319,7 +319,7 @@ public class UpdateGameCommandHandlerTests
             MaxPlayers: maxPlayers);
 
         // Act & Assert
-        var act = 
+        var act =
             () => _handler.Handle(command, TestContext.Current.CancellationToken);
         var exception = (await act.Should().ThrowAsync<Api.SharedKernel.Domain.Exceptions.ValidationException>()).Which;
 
@@ -355,7 +355,7 @@ public class UpdateGameCommandHandlerTests
             Title: "Updated Title");
 
         // Act & Assert
-        var act = 
+        var act =
             () => _handler.Handle(command, TestContext.Current.CancellationToken);
         var exception = (await act.Should().ThrowAsync<InvalidOperationException>()).Which;
 

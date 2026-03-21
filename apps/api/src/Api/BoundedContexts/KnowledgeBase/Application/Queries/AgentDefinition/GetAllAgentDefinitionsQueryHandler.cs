@@ -25,9 +25,18 @@ internal sealed class GetAllAgentDefinitionsQueryHandler
     {
         ArgumentNullException.ThrowIfNull(request);
 
-        var agentDefinitions = request.ActiveOnly
-            ? await _repository.GetAllActiveAsync(cancellationToken).ConfigureAwait(false)
-            : await _repository.GetAllAsync(cancellationToken).ConfigureAwait(false);
+        List<Domain.Entities.AgentDefinition> agentDefinitions;
+
+        if (request.PublishedOnly)
+        {
+            agentDefinitions = await _repository.GetAllPublishedAsync(cancellationToken).ConfigureAwait(false);
+        }
+        else
+        {
+            agentDefinitions = request.ActiveOnly
+                ? await _repository.GetAllActiveAsync(cancellationToken).ConfigureAwait(false)
+                : await _repository.GetAllAsync(cancellationToken).ConfigureAwait(false);
+        }
 
         return agentDefinitions.Select(MapToDto).ToList();
     }

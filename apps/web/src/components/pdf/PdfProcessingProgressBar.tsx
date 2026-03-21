@@ -163,7 +163,6 @@ interface StepIndicatorProps {
 }
 
 function StepIndicator({ step, currentStep, index }: StepIndicatorProps) {
-  // eslint-disable-next-line security/detect-object-injection -- step is from typed ProcessingStepValue union
   const config = STEP_CONFIG[step];
   const Icon = config.icon;
 
@@ -359,10 +358,7 @@ export function PdfProcessingProgressBar({
       {/* Progress Bar */}
       <div className="mb-4">
         <div className="mb-2 flex items-center justify-between text-sm">
-          <span className="font-medium">
-            {/* eslint-disable-next-line security/detect-object-injection -- currentStep is from typed ProcessingStepValue union */}
-            {STEP_CONFIG[currentStep].description}
-          </span>
+          <span className="font-medium">{STEP_CONFIG[currentStep].description}</span>
           <span className="text-muted-foreground">{percentComplete}%</span>
         </div>
         <Progress

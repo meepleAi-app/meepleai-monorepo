@@ -55,9 +55,10 @@ export const BulkInviteResponseSchema = z.object({
 // ──────────────────────────────────────────────
 
 export const TokenValidationSchema = z.object({
-  valid: z.boolean(),
-  role: z.string().nullable(),
-  expiresAt: z.string().nullable(),
+  isValid: z.boolean(),
+  email: z.string().nullable(),
+  displayName: z.string().nullable(),
+  errorReason: z.string().nullable(),
 });
 
 // ──────────────────────────────────────────────

@@ -157,7 +157,6 @@ function BackContent({
   entityColor?: string;
   title?: string;
 }) {
-  // eslint-disable-next-line security/detect-object-injection
   const config = variantConfigs[variant];
   const isCompact = variant === 'compact' || variant === 'list';
 

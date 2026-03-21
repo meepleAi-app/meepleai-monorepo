@@ -65,7 +65,6 @@ export const GameCarousel = React.memo(function GameCarousel({
   // Issue #4040: Generate entity actions for current visible card
   // Only generate for center card to avoid unnecessary hook calls
   // Guard: Use first game's ID as fallback to prevent empty string (broken links)
-  // eslint-disable-next-line security/detect-object-injection -- currentIndex is controlled by useState, always valid array index
   const centerGame = games[currentIndex];
   const fallbackId =
     games.length > 0 ? centerGame?.id || games[0]?.id || 'placeholder' : 'placeholder';
@@ -347,7 +346,6 @@ export const GameCarousel = React.memo(function GameCarousel({
 
       {/* Screen Reader Announcements */}
       <div className="sr-only" aria-live="polite" aria-atomic="true">
-        {/* eslint-disable-next-line security/detect-object-injection -- currentIndex is controlled by useState, always a valid array index */}
         {`Showing ${games[currentIndex]?.title}, ${currentIndex + 1} of ${games.length}`}
       </div>
     </section>

@@ -1,4 +1,3 @@
-/* eslint-disable security/detect-object-injection */
 /**
  * SharedGameSearchFilters Component (Issue #2373: Phase 4, Updated Issue #2873)
  *

@@ -1,26 +1,23 @@
 'use client';
 
 /**
- * CardCover - Cover image wrapper with optional MtG-inspired overlay slots
+ * CardCover - Cover image wrapper with 4-corner overlay system
  *
- * Wraps the existing CoverImage component from meeple-card-parts with
- * variant-specific shimmer animation overlay and aspect ratio logic.
- *
- * Overlay slots (MtG anatomy):
- *   - mechanicIcon: bottom-left — classification icon (frosted glass pill)
- *   - stateLabel:   bottom-right — semantic state badge (success/warning/error/info)
+ * Wraps CoverImage with CoverOverlay for the 4-corner slot layout:
+ *   - top-left: label stack (coverLabels)
+ *   - top-right: entity type mana pip (showEntityType)
+ *   - bottom-left: subtype icons (subtypeIcons) or legacy mechanicIcon
+ *   - bottom-right: state badge (stateLabel)
  *
  * @module components/ui/data-display/meeple-card/parts/CardCover
  */
 
 import React from 'react';
 
-import { cn } from '@/lib/utils';
-
+import { CoverOverlay } from './CoverOverlay';
 import { CoverImage } from '../../meeple-card-parts';
-import { coverOverlayStyles } from '../../meeple-card-styles';
 
-import type { MeepleEntityType, MeepleCardVariant } from '../types';
+import type { CoverLabel, SubtypeIcon, MeepleEntityType, MeepleCardVariant } from '../types';
 
 export interface CardCoverProps {
   /** Image source URL */
@@ -37,17 +34,25 @@ export interface CardCoverProps {
   showShimmer?: boolean;
   /** Additional CSS class */
   className?: string;
-  /** MtG-inspired overlay: classification icon (bottom-left of cover image) */
+  /** Top-left: label stack */
+  coverLabels?: CoverLabel[];
+  /** Top-right: show entity type mana pip */
+  showEntityType?: boolean;
+  /** Bottom-left: subtype classification icons */
+  subtypeIcons?: SubtypeIcon[];
+  /** @deprecated Use subtypeIcons instead. Maps to subtypeIcons[0]. */
   mechanicIcon?: React.ReactNode;
-  /** MtG-inspired overlay: state badge (bottom-right of cover image) */
+  /** Bottom-right: state badge */
   stateLabel?: {
     text: string;
     variant: 'success' | 'warning' | 'error' | 'info';
   };
+  /** Action strip rendered inside cover's relative wrapper (cover-relative positioning) */
+  actionStrip?: React.ReactNode;
 }
 
 /**
- * Cover image section with optional MtG-inspired overlay slots.
+ * Cover image section with 4-corner overlay system.
  * Delegates actual image rendering to the existing CoverImage component.
  * Compact variant does not render a cover image.
  */
@@ -58,43 +63,28 @@ export function CardCover({
   entity,
   customColor,
   className: _className,
+  coverLabels,
+  showEntityType,
+  subtypeIcons,
   mechanicIcon,
   stateLabel,
+  actionStrip,
 }: CardCoverProps) {
   if (variant === 'compact') return null;
-
-  const hasOverlay = mechanicIcon || stateLabel;
 
   return (
     <div className="relative">
       <CoverImage src={src} alt={alt} variant={variant} entity={entity} customColor={customColor} />
-      {hasOverlay && (
-        <div className={coverOverlayStyles.container}>
-          {mechanicIcon ? (
-            <div
-              data-testid="mechanic-icon-slot"
-              data-slot="mechanic-icon"
-              className={coverOverlayStyles.mechanicIcon}
-            >
-              {mechanicIcon}
-            </div>
-          ) : (
-            <div />
-          )}
-          {stateLabel && (
-            <div
-              data-testid="state-label-slot"
-              data-slot="state-label"
-              className={cn(
-                coverOverlayStyles.stateLabel.base,
-                coverOverlayStyles.stateLabel[stateLabel.variant]
-              )}
-            >
-              {stateLabel.text}
-            </div>
-          )}
-        </div>
-      )}
+      <CoverOverlay
+        entity={entity}
+        customColor={customColor}
+        coverLabels={coverLabels}
+        showEntityType={showEntityType}
+        subtypeIcons={subtypeIcons}
+        mechanicIcon={mechanicIcon}
+        stateLabel={stateLabel}
+      />
+      {actionStrip}
     </div>
   );
 }

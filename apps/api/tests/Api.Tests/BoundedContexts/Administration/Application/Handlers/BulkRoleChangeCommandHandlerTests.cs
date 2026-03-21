@@ -115,7 +115,8 @@ public class BulkRoleChangeCommandHandlerTests
         );
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<DomainException>(() => _handler.Handle(command, CancellationToken.None));
+        var act = () => _handler.Handle(command, CancellationToken.None);
+        var exception = (await act.Should().ThrowAsync<DomainException>()).Which;
         exception.Message.Should().Contain("Invalid role");
     }
 
@@ -130,7 +131,8 @@ public class BulkRoleChangeCommandHandlerTests
         );
 
         // Act & Assert
-        await Assert.ThrowsAsync<DomainException>(() => _handler.Handle(command, CancellationToken.None));
+        var act = () => _handler.Handle(command, CancellationToken.None);
+        await act.Should().ThrowAsync<DomainException>();
     }
 
     [Fact]
@@ -145,7 +147,8 @@ public class BulkRoleChangeCommandHandlerTests
         );
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<DomainException>(() => _handler.Handle(command, CancellationToken.None));
+        var act = () => _handler.Handle(command, CancellationToken.None);
+        var exception = (await act.Should().ThrowAsync<DomainException>()).Which;
         exception.Message.Should().Contain("maximum limit of 1000");
     }
 

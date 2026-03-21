@@ -13,6 +13,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.GameManagement.Application.Handlers.Session;
 
@@ -70,8 +71,8 @@ public class ToggleAgentAccessCommandHandlerTests : IDisposable
 
         // Assert
         var participant = await _dbContext.SessionParticipants.FindAsync(participantId);
-        Assert.NotNull(participant);
-        Assert.True(participant.AgentAccessEnabled);
+        participant.Should().NotBeNull();
+        (participant.AgentAccessEnabled).Should().BeTrue();
 
         _hubContextMock.Verify(h =>
             h.Clients.Group($"session:{sessionId}"), Times.Once);
@@ -94,8 +95,8 @@ public class ToggleAgentAccessCommandHandlerTests : IDisposable
 
         // Assert
         var participant = await _dbContext.SessionParticipants.FindAsync(participantId);
-        Assert.NotNull(participant);
-        Assert.False(participant.AgentAccessEnabled);
+        participant.Should().NotBeNull();
+        (participant.AgentAccessEnabled).Should().BeFalse();
 
         _hubContextMock.Verify(h =>
             h.Clients.Group($"session:{sessionId}"), Times.Once);
@@ -115,8 +116,9 @@ public class ToggleAgentAccessCommandHandlerTests : IDisposable
         var command = new ToggleAgentAccessCommand(sessionId, participantId, nonHostUserId, Enabled: true);
 
         // Act & Assert
-        await Assert.ThrowsAsync<ForbiddenException>(() =>
-            _handler.Handle(command, CancellationToken.None));
+        var act = () =>
+            _handler.Handle(command, CancellationToken.None);
+        await act.Should().ThrowAsync<ForbiddenException>();
     }
 
     [Fact]
@@ -130,8 +132,9 @@ public class ToggleAgentAccessCommandHandlerTests : IDisposable
             Enabled: true);
 
         // Act & Assert
-        await Assert.ThrowsAsync<NotFoundException>(() =>
-            _handler.Handle(command, CancellationToken.None));
+        var act = () =>
+            _handler.Handle(command, CancellationToken.None);
+        await act.Should().ThrowAsync<NotFoundException>();
     }
 
     [Fact]
@@ -163,8 +166,9 @@ public class ToggleAgentAccessCommandHandlerTests : IDisposable
             Enabled: true);
 
         // Act & Assert
-        await Assert.ThrowsAsync<NotFoundException>(() =>
-            _handler.Handle(command, CancellationToken.None));
+        var act = () =>
+            _handler.Handle(command, CancellationToken.None);
+        await act.Should().ThrowAsync<NotFoundException>();
     }
 
     private async Task SeedSessionAndParticipant(

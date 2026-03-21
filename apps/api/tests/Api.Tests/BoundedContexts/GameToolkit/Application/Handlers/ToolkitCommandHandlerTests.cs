@@ -9,6 +9,7 @@ using Api.SharedKernel.Infrastructure.Persistence;
 using Api.Tests.Constants;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.GameToolkit.Application.Handlers;
 
@@ -43,9 +44,9 @@ public class ToolkitCommandHandlerTests
 
         var result = await handler.Handle(command, TestContext.Current.CancellationToken);
 
-        Assert.NotNull(result);
-        Assert.Equal("Catan Toolkit", result.Name);
-        Assert.Equal(command.GameId, result.GameId);
+        result.Should().NotBeNull();
+        result.Name.Should().Be("Catan Toolkit");
+        result.GameId.Should().Be(command.GameId);
         _repoMock.Verify(r => r.AddAsync(It.IsAny<Api.BoundedContexts.GameToolkit.Domain.Entities.GameToolkit>(), It.IsAny<CancellationToken>()), Times.Once);
         _uowMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
@@ -55,8 +56,9 @@ public class ToolkitCommandHandlerTests
     {
         var handler = new CreateToolkitCommandHandler(_repoMock.Object, _uowMock.Object);
 
-        await Assert.ThrowsAsync<ArgumentNullException>(() =>
-            handler.Handle(null!, TestContext.Current.CancellationToken));
+        var act = () =>
+            handler.Handle(null!, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<ArgumentNullException>();
     }
 
     // ========================================================================
@@ -75,7 +77,7 @@ public class ToolkitCommandHandlerTests
 
         var result = await handler.Handle(command, TestContext.Current.CancellationToken);
 
-        Assert.Equal("New Name", result.Name);
+        result.Name.Should().Be("New Name");
         _repoMock.Verify(r => r.UpdateAsync(It.IsAny<Api.BoundedContexts.GameToolkit.Domain.Entities.GameToolkit>(), It.IsAny<CancellationToken>()), Times.Once);
         _uowMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
@@ -89,8 +91,9 @@ public class ToolkitCommandHandlerTests
         var handler = new UpdateToolkitCommandHandler(_repoMock.Object, _uowMock.Object);
         var command = new UpdateToolkitCommand(Guid.NewGuid(), "Name");
 
-        await Assert.ThrowsAsync<NotFoundException>(() =>
-            handler.Handle(command, TestContext.Current.CancellationToken));
+        var act2 = () =>
+            handler.Handle(command, TestContext.Current.CancellationToken);
+        await act2.Should().ThrowAsync<NotFoundException>();
     }
 
     // ========================================================================
@@ -109,8 +112,8 @@ public class ToolkitCommandHandlerTests
 
         var result = await handler.Handle(command, TestContext.Current.CancellationToken);
 
-        Assert.True(result.IsPublished);
-        Assert.Equal(2, result.Version);
+        result.IsPublished.Should().BeTrue();
+        result.Version.Should().Be(2);
         _uowMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
 
@@ -122,8 +125,9 @@ public class ToolkitCommandHandlerTests
 
         var handler = new PublishToolkitCommandHandler(_repoMock.Object, _uowMock.Object);
 
-        await Assert.ThrowsAsync<NotFoundException>(() =>
-            handler.Handle(new PublishToolkitCommand(Guid.NewGuid()), TestContext.Current.CancellationToken));
+        var act3 = () =>
+            handler.Handle(new PublishToolkitCommand(Guid.NewGuid()), TestContext.Current.CancellationToken);
+        await act3.Should().ThrowAsync<NotFoundException>();
     }
 
     // ========================================================================
@@ -142,9 +146,9 @@ public class ToolkitCommandHandlerTests
 
         var result = await handler.Handle(command, TestContext.Current.CancellationToken);
 
-        Assert.Single(result.DiceTools);
-        Assert.Equal("Attack", result.DiceTools[0].Name);
-        Assert.Equal(DiceType.D20, result.DiceTools[0].DiceType);
+        result.DiceTools.Should().ContainSingle();
+        result.DiceTools[0].Name.Should().Be("Attack");
+        result.DiceTools[0].DiceType.Should().Be(DiceType.D20);
     }
 
     [Fact]
@@ -156,8 +160,9 @@ public class ToolkitCommandHandlerTests
         var handler = new AddDiceToolCommandHandler(_repoMock.Object, _uowMock.Object);
         var command = new AddDiceToolCommand(Guid.NewGuid(), "Dice", DiceType.D6, 1, null, true, null);
 
-        await Assert.ThrowsAsync<NotFoundException>(() =>
-            handler.Handle(command, TestContext.Current.CancellationToken));
+        var act4 = () =>
+            handler.Handle(command, TestContext.Current.CancellationToken);
+        await act4.Should().ThrowAsync<NotFoundException>();
     }
 
     // ========================================================================
@@ -176,9 +181,9 @@ public class ToolkitCommandHandlerTests
 
         var result = await handler.Handle(command, TestContext.Current.CancellationToken);
 
-        Assert.Single(result.CounterTools);
-        Assert.Equal("Health", result.CounterTools[0].Name);
-        Assert.Equal(50, result.CounterTools[0].DefaultValue);
+        result.CounterTools.Should().ContainSingle();
+        result.CounterTools[0].Name.Should().Be("Health");
+        result.CounterTools[0].DefaultValue.Should().Be(50);
     }
 
     [Fact]
@@ -190,8 +195,9 @@ public class ToolkitCommandHandlerTests
         var handler = new AddCounterToolCommandHandler(_repoMock.Object, _uowMock.Object);
         var command = new AddCounterToolCommand(Guid.NewGuid(), "HP", 0, 100, 0, false, null, null);
 
-        await Assert.ThrowsAsync<NotFoundException>(() =>
-            handler.Handle(command, TestContext.Current.CancellationToken));
+        var act5 = () =>
+            handler.Handle(command, TestContext.Current.CancellationToken);
+        await act5.Should().ThrowAsync<NotFoundException>();
     }
 
     // ========================================================================
@@ -211,7 +217,7 @@ public class ToolkitCommandHandlerTests
 
         var result = await handler.Handle(command, TestContext.Current.CancellationToken);
 
-        Assert.Empty(result.DiceTools);
+        result.DiceTools.Should().BeEmpty();
     }
 
     [Fact]
@@ -224,8 +230,9 @@ public class ToolkitCommandHandlerTests
         var handler = new RemoveDiceToolCommandHandler(_repoMock.Object, _uowMock.Object);
         var command = new RemoveDiceToolCommand(toolkit.Id, "NonExistent");
 
-        await Assert.ThrowsAsync<NotFoundException>(() =>
-            handler.Handle(command, TestContext.Current.CancellationToken));
+        var act6 = () =>
+            handler.Handle(command, TestContext.Current.CancellationToken);
+        await act6.Should().ThrowAsync<NotFoundException>();
     }
 
     [Fact]
@@ -236,8 +243,9 @@ public class ToolkitCommandHandlerTests
 
         var handler = new RemoveDiceToolCommandHandler(_repoMock.Object, _uowMock.Object);
 
-        await Assert.ThrowsAsync<NotFoundException>(() =>
-            handler.Handle(new RemoveDiceToolCommand(Guid.NewGuid(), "X"), TestContext.Current.CancellationToken));
+        var act7 = () =>
+            handler.Handle(new RemoveDiceToolCommand(Guid.NewGuid(), "X"), TestContext.Current.CancellationToken);
+        await act7.Should().ThrowAsync<NotFoundException>();
     }
 
     // ========================================================================
@@ -257,7 +265,7 @@ public class ToolkitCommandHandlerTests
 
         var result = await handler.Handle(command, TestContext.Current.CancellationToken);
 
-        Assert.Empty(result.CounterTools);
+        result.CounterTools.Should().BeEmpty();
     }
 
     [Fact]
@@ -270,8 +278,9 @@ public class ToolkitCommandHandlerTests
         var handler = new RemoveCounterToolCommandHandler(_repoMock.Object, _uowMock.Object);
         var command = new RemoveCounterToolCommand(toolkit.Id, "NonExistent");
 
-        await Assert.ThrowsAsync<NotFoundException>(() =>
-            handler.Handle(command, TestContext.Current.CancellationToken));
+        var act8 = () =>
+            handler.Handle(command, TestContext.Current.CancellationToken);
+        await act8.Should().ThrowAsync<NotFoundException>();
     }
 
     // ========================================================================
@@ -290,9 +299,9 @@ public class ToolkitCommandHandlerTests
 
         var result = await handler.Handle(command, TestContext.Current.CancellationToken);
 
-        Assert.NotNull(result.ScoringTemplate);
-        Assert.Equal(2, result.ScoringTemplate.Dimensions.Length);
-        Assert.Equal(ScoreType.Points, result.ScoringTemplate.ScoreType);
+        result.ScoringTemplate.Should().NotBeNull();
+        result.ScoringTemplate.Dimensions.Length.Should().Be(2);
+        result.ScoringTemplate.ScoreType.Should().Be(ScoreType.Points);
     }
 
     [Fact]
@@ -303,8 +312,9 @@ public class ToolkitCommandHandlerTests
 
         var handler = new SetScoringTemplateCommandHandler(_repoMock.Object, _uowMock.Object);
 
-        await Assert.ThrowsAsync<NotFoundException>(() =>
-            handler.Handle(new SetScoringTemplateCommand(Guid.NewGuid(), ["VP"], "VP", ScoreType.Points), TestContext.Current.CancellationToken));
+        var act9 = () =>
+            handler.Handle(new SetScoringTemplateCommand(Guid.NewGuid(), ["VP"], "VP", ScoreType.Points), TestContext.Current.CancellationToken);
+        await act9.Should().ThrowAsync<NotFoundException>();
     }
 
     // ========================================================================
@@ -323,9 +333,9 @@ public class ToolkitCommandHandlerTests
 
         var result = await handler.Handle(command, TestContext.Current.CancellationToken);
 
-        Assert.NotNull(result.TurnTemplate);
-        Assert.Equal(TurnOrderType.RoundRobin, result.TurnTemplate.TurnOrderType);
-        Assert.Equal(3, result.TurnTemplate.Phases.Length);
+        result.TurnTemplate.Should().NotBeNull();
+        result.TurnTemplate.TurnOrderType.Should().Be(TurnOrderType.RoundRobin);
+        result.TurnTemplate.Phases.Length.Should().Be(3);
     }
 
     [Fact]
@@ -336,8 +346,9 @@ public class ToolkitCommandHandlerTests
 
         var handler = new SetTurnTemplateCommandHandler(_repoMock.Object, _uowMock.Object);
 
-        await Assert.ThrowsAsync<NotFoundException>(() =>
-            handler.Handle(new SetTurnTemplateCommand(Guid.NewGuid(), TurnOrderType.Free, null), TestContext.Current.CancellationToken));
+        var act10 = () =>
+            handler.Handle(new SetTurnTemplateCommand(Guid.NewGuid(), TurnOrderType.Free, null), TestContext.Current.CancellationToken);
+        await act10.Should().ThrowAsync<NotFoundException>();
     }
 
     // ========================================================================

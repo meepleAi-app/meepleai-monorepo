@@ -2,6 +2,7 @@ using Api.BoundedContexts.Authentication.Domain.Entities;
 using Api.SharedKernel.Domain.Exceptions;
 using Api.Tests.BoundedContexts.Authentication.TestHelpers;
 using Xunit;
+using FluentAssertions;
 using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.Authentication.Domain.Entities;
@@ -26,16 +27,16 @@ public class ApiKeyEntityTests
         var (apiKey, plaintextKey) = ApiKey.Create(id, userId, keyName, scopes);
 
         // Assert
-        Assert.Equal(id, apiKey.Id);
-        Assert.Equal(userId, apiKey.UserId);
-        Assert.Equal(keyName, apiKey.KeyName);
-        Assert.Equal(scopes, apiKey.Scopes);
-        Assert.NotNull(apiKey.KeyHash);
-        Assert.NotNull(apiKey.KeyPrefix);
-        Assert.NotNull(plaintextKey);
-        Assert.True(apiKey.IsActive);
-        Assert.Null(apiKey.RevokedAt);
-        Assert.Null(apiKey.ExpiresAt);
+        apiKey.Id.Should().Be(id);
+        apiKey.UserId.Should().Be(userId);
+        apiKey.KeyName.Should().Be(keyName);
+        apiKey.Scopes.Should().Be(scopes);
+        apiKey.KeyHash.Should().NotBeNull();
+        apiKey.KeyPrefix.Should().NotBeNull();
+        plaintextKey.Should().NotBeNull();
+        apiKey.IsActive.Should().BeTrue();
+        apiKey.RevokedAt.Should().BeNull();
+        apiKey.ExpiresAt.Should().BeNull();
     }
 
     [Fact]
@@ -50,8 +51,8 @@ public class ApiKeyEntityTests
         );
 
         // Assert
-        Assert.NotNull(plaintextKey);
-        Assert.True(plaintextKey.Length > 40); // Base64 of 32 bytes is ~44 chars
+        plaintextKey.Should().NotBeNull();
+        (plaintextKey.Length > 40).Should().BeTrue(); // Base64 of 32 bytes is ~44 chars
     }
 
     [Fact]
@@ -66,8 +67,8 @@ public class ApiKeyEntityTests
         );
 
         // Assert
-        Assert.Equal(8, apiKey.KeyPrefix.Length);
-        Assert.Equal(plaintextKey[..8], apiKey.KeyPrefix);
+        apiKey.KeyPrefix.Length.Should().Be(8);
+        apiKey.KeyPrefix.Should().Be(plaintextKey[..8]);
     }
 
     [Fact]
@@ -82,9 +83,9 @@ public class ApiKeyEntityTests
         );
 
         // Assert
-        Assert.NotEqual(plaintextKey, apiKey.KeyHash);
-        Assert.NotNull(apiKey.KeyHash);
-        Assert.True(apiKey.KeyHash.Length > 0);
+        apiKey.KeyHash.Should().NotBe(plaintextKey);
+        apiKey.KeyHash.Should().NotBeNull();
+        (apiKey.KeyHash.Length > 0).Should().BeTrue();
     }
 
     [Fact]
@@ -103,7 +104,7 @@ public class ApiKeyEntityTests
         );
 
         // Assert
-        Assert.Equal(expiresAt, apiKey.ExpiresAt);
+        apiKey.ExpiresAt.Should().Be(expiresAt);
     }
 
     [Fact]
@@ -122,27 +123,29 @@ public class ApiKeyEntityTests
         );
 
         // Assert
-        Assert.Equal(metadata, apiKey.Metadata);
+        apiKey.Metadata.Should().Be(metadata);
     }
 
     [Fact]
     public void Create_WithEmptyName_ThrowsValidationException()
     {
         // Act & Assert
-        var exception = Assert.Throws<ValidationException>(() =>
-            ApiKey.Create(Guid.NewGuid(), Guid.NewGuid(), "", "read"));
+        var act = () =>
+            ApiKey.Create(Guid.NewGuid(), Guid.NewGuid(), "", "read");
+        var exception = act.Should().Throw<ValidationException>().Which;
 
-        Assert.Contains("name", exception.Message, StringComparison.OrdinalIgnoreCase);
+        exception.Message.Should().ContainEquivalentOf("name");
     }
 
     [Fact]
     public void Create_WithEmptyScopes_ThrowsValidationException()
     {
         // Act & Assert
-        var exception = Assert.Throws<ValidationException>(() =>
-            ApiKey.Create(Guid.NewGuid(), Guid.NewGuid(), "Test", ""));
+        var act = () =>
+            ApiKey.Create(Guid.NewGuid(), Guid.NewGuid(), "Test", "");
+        var exception = act.Should().Throw<ValidationException>().Which;
 
-        Assert.Contains("scopes", exception.Message, StringComparison.OrdinalIgnoreCase);
+        exception.Message.Should().ContainEquivalentOf("scopes");
     }
 
     [Fact]
@@ -153,7 +156,7 @@ public class ApiKeyEntityTests
         var (_, key2) = ApiKey.Create(Guid.NewGuid(), Guid.NewGuid(), "Key2", "read");
 
         // Assert
-        Assert.NotEqual(key1, key2);
+        key2.Should().NotBe(key1);
     }
     [Fact]
     public void VerifyKey_WithCorrectKey_ReturnsTrue()
@@ -170,7 +173,7 @@ public class ApiKeyEntityTests
         var isValid = apiKey.VerifyKey(plaintextKey);
 
         // Assert
-        Assert.True(isValid);
+        isValid.Should().BeTrue();
     }
 
     [Fact]
@@ -189,7 +192,7 @@ public class ApiKeyEntityTests
         var isValid = apiKey.VerifyKey(wrongKey);
 
         // Assert
-        Assert.False(isValid);
+        isValid.Should().BeFalse();
     }
 
     [Fact]
@@ -204,7 +207,7 @@ public class ApiKeyEntityTests
         var isValid = apiKey.VerifyKey(plaintextKey);
 
         // Assert
-        Assert.False(isValid);
+        isValid.Should().BeFalse();
     }
 
     [Fact]
@@ -219,7 +222,7 @@ public class ApiKeyEntityTests
         var isValid = apiKey.VerifyKey(plaintextKey);
 
         // Assert
-        Assert.False(isValid);
+        isValid.Should().BeFalse();
     }
 
     [Fact]
@@ -234,8 +237,8 @@ public class ApiKeyEntityTests
         var isValid = apiKey.VerifyKey(plaintextKey);
 
         // Assert
-        Assert.False(isValid);
-        Assert.False(apiKey.IsActive);
+        isValid.Should().BeFalse();
+        apiKey.IsActive.Should().BeFalse();
     }
 
     [Fact]
@@ -248,7 +251,7 @@ public class ApiKeyEntityTests
         var isValid = apiKey.VerifyKey(null!);
 
         // Assert
-        Assert.False(isValid);
+        isValid.Should().BeFalse();
     }
 
     [Fact]
@@ -261,7 +264,7 @@ public class ApiKeyEntityTests
         var isValid = apiKey.VerifyKey("");
 
         // Assert
-        Assert.False(isValid);
+        isValid.Should().BeFalse();
     }
 
     [Fact]
@@ -274,7 +277,7 @@ public class ApiKeyEntityTests
         var isValid = apiKey.VerifyKey("not-valid-base64!");
 
         // Assert
-        Assert.False(isValid);
+        isValid.Should().BeFalse();
     }
     [Fact]
     public void HasScope_WithSingleScope_ReturnsTrue()
@@ -288,7 +291,7 @@ public class ApiKeyEntityTests
         var hasScope = apiKey.HasScope("read");
 
         // Assert
-        Assert.True(hasScope);
+        hasScope.Should().BeTrue();
     }
 
     [Fact]
@@ -300,9 +303,9 @@ public class ApiKeyEntityTests
             .Build();
 
         // Act & Assert
-        Assert.True(apiKey.HasScope("read"));
-        Assert.True(apiKey.HasScope("write"));
-        Assert.True(apiKey.HasScope("delete"));
+        apiKey.HasScope("read").Should().BeTrue();
+        apiKey.HasScope("write").Should().BeTrue();
+        apiKey.HasScope("delete").Should().BeTrue();
     }
 
     [Fact]
@@ -317,7 +320,7 @@ public class ApiKeyEntityTests
         var hasScope = apiKey.HasScope("admin");
 
         // Assert
-        Assert.False(hasScope);
+        hasScope.Should().BeFalse();
     }
 
     [Fact]
@@ -329,9 +332,9 @@ public class ApiKeyEntityTests
             .Build();
 
         // Act & Assert
-        Assert.True(apiKey.HasScope("read"));
-        Assert.True(apiKey.HasScope("Write"));
-        Assert.True(apiKey.HasScope("READ"));
+        apiKey.HasScope("read").Should().BeTrue();
+        apiKey.HasScope("Write").Should().BeTrue();
+        apiKey.HasScope("READ").Should().BeTrue();
     }
 
     [Fact]
@@ -344,7 +347,7 @@ public class ApiKeyEntityTests
         var hasScope = apiKey.HasScope(null!);
 
         // Assert
-        Assert.False(hasScope);
+        hasScope.Should().BeFalse();
     }
 
     [Fact]
@@ -357,7 +360,7 @@ public class ApiKeyEntityTests
         var hasScope = apiKey.HasScope("");
 
         // Assert
-        Assert.False(hasScope);
+        hasScope.Should().BeFalse();
     }
 
     [Fact]
@@ -369,9 +372,9 @@ public class ApiKeyEntityTests
             .Build();
 
         // Act & Assert
-        Assert.True(apiKey.HasScope("read"));
-        Assert.True(apiKey.HasScope("write"));
-        Assert.True(apiKey.HasScope("delete"));
+        apiKey.HasScope("read").Should().BeTrue();
+        apiKey.HasScope("write").Should().BeTrue();
+        apiKey.HasScope("delete").Should().BeTrue();
     }
     [Fact]
     public void MarkAsUsed_UpdatesLastUsedTimestamp()
@@ -384,9 +387,9 @@ public class ApiKeyEntityTests
         apiKey.MarkAsUsed();
 
         // Assert
-        Assert.NotNull(apiKey.LastUsedAt);
-        Assert.True(apiKey.LastUsedAt >= beforeUpdate);
-        Assert.True(apiKey.LastUsedAt <= DateTime.UtcNow);
+        apiKey.LastUsedAt.Should().NotBeNull();
+        (apiKey.LastUsedAt >= beforeUpdate).Should().BeTrue();
+        (apiKey.LastUsedAt <= DateTime.UtcNow).Should().BeTrue();
     }
 
     [Fact]
@@ -403,8 +406,8 @@ public class ApiKeyEntityTests
         apiKey.MarkAsUsed();
 
         // Assert
-        Assert.NotNull(apiKey.LastUsedAt);
-        Assert.True(apiKey.LastUsedAt > firstUpdate);
+        apiKey.LastUsedAt.Should().NotBeNull();
+        (apiKey.LastUsedAt > firstUpdate).Should().BeTrue();
     }
     [Fact]
     public void Revoke_WithActiveKey_RevokesSuccessfully()
@@ -418,10 +421,10 @@ public class ApiKeyEntityTests
         apiKey.Revoke(revokedBy);
 
         // Assert
-        Assert.NotNull(apiKey.RevokedAt);
-        Assert.True(apiKey.RevokedAt >= beforeRevoke);
-        Assert.Equal(revokedBy, apiKey.RevokedBy);
-        Assert.False(apiKey.IsActive);
+        apiKey.RevokedAt.Should().NotBeNull();
+        (apiKey.RevokedAt >= beforeRevoke).Should().BeTrue();
+        apiKey.RevokedBy.Should().Be(revokedBy);
+        apiKey.IsActive.Should().BeFalse();
     }
 
     [Fact]
@@ -433,10 +436,11 @@ public class ApiKeyEntityTests
             .Build();
 
         // Act & Assert
-        var exception = Assert.Throws<DomainException>(() =>
-            apiKey.Revoke(Guid.NewGuid()));
+        var act = () =>
+            apiKey.Revoke(Guid.NewGuid());
+        var exception = act.Should().Throw<DomainException>().Which;
 
-        Assert.Contains("already revoked", exception.Message, StringComparison.OrdinalIgnoreCase);
+        exception.Message.Should().ContainEquivalentOf("already revoked");
     }
 
     [Fact]
@@ -450,9 +454,9 @@ public class ApiKeyEntityTests
         apiKey.Revoke(revokedBy);
 
         // Assert
-        Assert.NotNull(apiKey.RevokedAt);
-        Assert.Equal(revokedBy, apiKey.RevokedBy);
-        Assert.False(apiKey.IsActive);
+        apiKey.RevokedAt.Should().NotBeNull();
+        apiKey.RevokedBy.Should().Be(revokedBy);
+        apiKey.IsActive.Should().BeFalse();
     }
     [Fact]
     public void IsExpired_WithNoExpiration_ReturnsFalse()
@@ -464,8 +468,8 @@ public class ApiKeyEntityTests
         var isExpired = apiKey.IsExpired();
 
         // Assert
-        Assert.False(isExpired);
-        Assert.Null(apiKey.ExpiresAt);
+        isExpired.Should().BeFalse();
+        apiKey.ExpiresAt.Should().BeNull();
     }
 
     [Fact]
@@ -480,7 +484,7 @@ public class ApiKeyEntityTests
         var isExpired = apiKey.IsExpired();
 
         // Assert
-        Assert.False(isExpired);
+        isExpired.Should().BeFalse();
     }
 
     [Fact]
@@ -495,7 +499,7 @@ public class ApiKeyEntityTests
         var isExpired = apiKey.IsExpired();
 
         // Assert
-        Assert.True(isExpired);
+        isExpired.Should().BeTrue();
     }
 
     [Fact]
@@ -511,7 +515,7 @@ public class ApiKeyEntityTests
         var isExpired = apiKey.IsExpired();
 
         // Assert
-        Assert.True(isExpired);
+        isExpired.Should().BeTrue();
     }
     [Fact]
     public void IsValidKey_WithValidKey_ReturnsTrue()
@@ -523,10 +527,10 @@ public class ApiKeyEntityTests
         var isValid = apiKey.IsValidKey();
 
         // Assert
-        Assert.True(isValid);
-        Assert.True(apiKey.IsActive);
-        Assert.Null(apiKey.RevokedAt);
-        Assert.False(apiKey.IsExpired());
+        isValid.Should().BeTrue();
+        apiKey.IsActive.Should().BeTrue();
+        apiKey.RevokedAt.Should().BeNull();
+        apiKey.IsExpired().Should().BeFalse();
     }
 
     [Fact]
@@ -541,8 +545,8 @@ public class ApiKeyEntityTests
         var isValid = apiKey.IsValidKey();
 
         // Assert
-        Assert.False(isValid);
-        Assert.False(apiKey.IsActive);
+        isValid.Should().BeFalse();
+        apiKey.IsActive.Should().BeFalse();
     }
 
     [Fact]
@@ -557,8 +561,8 @@ public class ApiKeyEntityTests
         var isValid = apiKey.IsValidKey();
 
         // Assert
-        Assert.False(isValid);
-        Assert.NotNull(apiKey.RevokedAt);
+        isValid.Should().BeFalse();
+        apiKey.RevokedAt.Should().NotBeNull();
     }
 
     [Fact]
@@ -573,8 +577,8 @@ public class ApiKeyEntityTests
         var isValid = apiKey.IsValidKey();
 
         // Assert
-        Assert.False(isValid);
-        Assert.True(apiKey.IsExpired());
+        isValid.Should().BeFalse();
+        apiKey.IsExpired().Should().BeTrue();
     }
 
     [Fact]
@@ -588,11 +592,11 @@ public class ApiKeyEntityTests
             .Build();
 
         // Act & Assert - all conditions pass
-        Assert.True(validKey.IsValidKey());
+        validKey.IsValidKey().Should().BeTrue();
 
         // Revoke it - should fail
         validKey.Revoke(Guid.NewGuid());
-        Assert.False(validKey.IsValidKey());
+        validKey.IsValidKey().Should().BeFalse();
     }
     [Fact]
     public void Builder_CreateDefault_ProducesValidApiKey()
@@ -601,10 +605,10 @@ public class ApiKeyEntityTests
         var (apiKey, plaintextKey) = ApiKeyBuilder.CreateDefault();
 
         // Assert
-        Assert.NotEqual(Guid.Empty, apiKey.Id);
-        Assert.NotNull(plaintextKey);
-        Assert.True(apiKey.IsActive);
-        Assert.True(apiKey.IsValidKey());
+        apiKey.Id.Should().NotBe(Guid.Empty);
+        plaintextKey.Should().NotBeNull();
+        apiKey.IsActive.Should().BeTrue();
+        apiKey.IsValidKey().Should().BeTrue();
     }
 
     [Fact]
@@ -614,8 +618,8 @@ public class ApiKeyEntityTests
         var (apiKey, _) = ApiKeyBuilder.CreateExpired();
 
         // Assert
-        Assert.True(apiKey.IsExpired());
-        Assert.False(apiKey.IsValidKey());
+        apiKey.IsExpired().Should().BeTrue();
+        apiKey.IsValidKey().Should().BeFalse();
     }
 
     [Fact]
@@ -627,8 +631,8 @@ public class ApiKeyEntityTests
             .Build();
 
         // Assert
-        Assert.True(apiKey.HasScope("read"));
-        Assert.True(apiKey.HasScope("write"));
-        Assert.True(apiKey.HasScope("admin"));
+        apiKey.HasScope("read").Should().BeTrue();
+        apiKey.HasScope("write").Should().BeTrue();
+        apiKey.HasScope("admin").Should().BeTrue();
     }
 }

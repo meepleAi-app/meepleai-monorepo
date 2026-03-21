@@ -70,25 +70,6 @@ env:
   POSTGRES_DB: 'meepleai_test'
 
 jobs:
-  notify-start:
-    uses: ./.github/workflows/notify-slack.yml
-    with:
-      event: started
-      workflow_name: "Performance Tests"
-      environment: test
-      branch: ${{ github.head_ref || github.ref_name }}
-      actor: ${{ github.actor }}
-      commit_sha: ${{ github.sha }}
-      commit_message: ${{ github.event.head_commit.message || 'Manual trigger' }}
-      run_url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-      job_list: '["changes", "k6-tests", "lighthouse-build", "lighthouse-ci", "notify-failure"]'
-      caller_workflow_id: ${{ github.workflow_id }}
-    secrets:
-      SLACK_GITNOTIFY_WEBHOOK_URL: ${{ secrets.SLACK_GITNOTIFY_WEBHOOK_URL }}
-
-  # ============================================
-  # CHANGE DETECTION
-  # ============================================
   changes:
     name: Detect Changes
     runs-on: ${{ vars.RUNNER || 'ubuntu-latest' }}
@@ -686,19 +667,3 @@ jobs:
               });
               console.log(`Created new issue #${issue.data.number}`);
             }
-
-  notify-end:
-    if: always()
-    needs: [changes, k6-tests, lighthouse-build, lighthouse-ci, notify-failure]
-    uses: ./.github/workflows/notify-slack.yml
-    with:
-      event: ${{ contains(toJSON(needs), '"result":"failure"') && 'failed' || contains(toJSON(needs), '"result":"cancelled"') && 'cancelled' || 'completed' }}
-      workflow_name: "Performance Tests"
-      environment: test
-      branch: ${{ github.head_ref || github.ref_name }}
-      actor: ${{ github.actor }}
-      commit_sha: ${{ github.sha }}
-      commit_message: ${{ github.event.head_commit.message || 'Manual trigger' }}
-      run_url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-    secrets:
-      SLACK_GITNOTIFY_WEBHOOK_URL: ${{ secrets.SLACK_GITNOTIFY_WEBHOOK_URL }}

@@ -2,6 +2,7 @@ using Api.BoundedContexts.Authentication.Domain.Entities;
 using Api.BoundedContexts.Authentication.Domain.Events;
 using Api.Tests.Constants;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.Authentication.Domain.Entities;
 
@@ -29,7 +30,7 @@ public class ApiKeyUsageTests
         apiKey.RecordUsage(endpoint);
 
         // Assert
-        Assert.Equal(initialCount + 1, apiKey.UsageCount);
+        apiKey.UsageCount.Should().Be(initialCount + 1);
     }
 
     [Fact]
@@ -49,8 +50,8 @@ public class ApiKeyUsageTests
         apiKey.RecordUsage(endpoint);
 
         // Assert
-        Assert.NotNull(apiKey.LastUsedAt);
-        Assert.True(apiKey.LastUsedAt >= beforeUsage);
+        apiKey.LastUsedAt.Should().NotBeNull();
+        (apiKey.LastUsedAt >= beforeUsage).Should().BeTrue();
     }
 
     [Fact]
@@ -72,8 +73,8 @@ public class ApiKeyUsageTests
 
         // Assert - We can't directly access domain events from unit tests
         // But we can verify the side effects: UsageCount incremented and LastUsedAt updated
-        Assert.Equal(1, apiKey.UsageCount);
-        Assert.NotNull(apiKey.LastUsedAt);
+        apiKey.UsageCount.Should().Be(1);
+        apiKey.LastUsedAt.Should().NotBeNull();
     }
 
     [Fact]
@@ -94,7 +95,7 @@ public class ApiKeyUsageTests
         apiKey.RecordUsage(endpoint);
 
         // Assert
-        Assert.Equal(3, apiKey.UsageCount);
+        apiKey.UsageCount.Should().Be(3);
     }
 
     [Theory]
@@ -111,7 +112,8 @@ public class ApiKeyUsageTests
             "read");
 
         // Act & Assert
-        Assert.Throws<ArgumentException>(() => apiKey.RecordUsage(endpoint!));
+        var act = () => apiKey.RecordUsage(endpoint!);
+        act.Should().Throw<ArgumentException>();
     }
 
     [Fact]
@@ -131,7 +133,7 @@ public class ApiKeyUsageTests
         apiKey.RecordUsage(endpoint, usedAt: customTimestamp);
 
         // Assert
-        Assert.Equal(customTimestamp, apiKey.LastUsedAt);
+        apiKey.LastUsedAt.Should().Be(customTimestamp);
     }
 
     [Fact]
@@ -153,7 +155,7 @@ public class ApiKeyUsageTests
         apiKey.RecordUsage(endpoint, ipAddress, userAgent, timestamp);
 
         // Assert
-        Assert.Equal(1, apiKey.UsageCount);
-        Assert.Equal(timestamp, apiKey.LastUsedAt);
+        apiKey.UsageCount.Should().Be(1);
+        apiKey.LastUsedAt.Should().Be(timestamp);
     }
 }

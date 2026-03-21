@@ -92,8 +92,9 @@ public class DeleteAlertRuleCommandHandlerTests
         DeleteAlertRuleCommand? command = null;
 
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentNullException>(() =>
-            _handler.Handle(command!, CancellationToken.None));
+        var act = () =>
+            _handler.Handle(command!, CancellationToken.None);
+        await act.Should().ThrowAsync<ArgumentNullException>();
 
         _mockRepository.Verify(r => r.DeleteAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Never);
     }
@@ -107,8 +108,9 @@ public class DeleteAlertRuleCommandHandlerTests
         var command = new DeleteAlertRuleCommand(Guid.Empty);
 
         // Act & Assert
-        await Assert.ThrowsAsync<Api.SharedKernel.Domain.Exceptions.ValidationException>(() =>
-            _handler.Handle(command, CancellationToken.None));
+        var act = () =>
+            _handler.Handle(command, CancellationToken.None);
+        await act.Should().ThrowAsync<Api.SharedKernel.Domain.Exceptions.ValidationException>();
 
         _mockRepository.Verify(r => r.DeleteAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Never);
     }
@@ -125,8 +127,9 @@ public class DeleteAlertRuleCommandHandlerTests
             .ReturnsAsync((AlertRule?)null);
 
         // Act & Assert
-        await Assert.ThrowsAsync<DomainException>(() =>
-            _handler.Handle(command, CancellationToken.None));
+        var act = () =>
+            _handler.Handle(command, CancellationToken.None);
+        await act.Should().ThrowAsync<DomainException>();
 
         _mockRepository.Verify(r => r.DeleteAsync(ruleId, It.IsAny<CancellationToken>()), Times.Never);
     }

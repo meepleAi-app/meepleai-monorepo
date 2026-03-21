@@ -9,6 +9,7 @@ using Api.SharedKernel.Infrastructure.Persistence;
 using Api.Tests.Constants;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.GameManagement.Application.Handlers.GameNight;
 
@@ -110,8 +111,8 @@ public class TallyDisputeVotesCommandHandlerTests
         await _handler.Handle(command, CancellationToken.None);
 
         // Assert
-        Assert.Equal(DisputeOutcome.VerdictAccepted, dispute.FinalOutcome);
-        Assert.Null(dispute.OverrideRule);
+        dispute.FinalOutcome.Should().Be(DisputeOutcome.VerdictAccepted);
+        dispute.OverrideRule.Should().BeNull();
 
         _disputeRepositoryMock.Verify(
             x => x.UpdateAsync(dispute, It.IsAny<CancellationToken>()),
@@ -135,8 +136,8 @@ public class TallyDisputeVotesCommandHandlerTests
         await _handler.Handle(command, CancellationToken.None);
 
         // Assert
-        Assert.Equal(DisputeOutcome.VerdictOverridden, dispute.FinalOutcome);
-        Assert.Equal("House rule: two moves allowed", dispute.OverrideRule);
+        dispute.FinalOutcome.Should().Be(DisputeOutcome.VerdictOverridden);
+        dispute.OverrideRule.Should().Be("House rule: two moves allowed");
 
         _disputeRepositoryMock.Verify(
             x => x.UpdateAsync(dispute, It.IsAny<CancellationToken>()),
@@ -160,8 +161,8 @@ public class TallyDisputeVotesCommandHandlerTests
         await _handler.Handle(command, CancellationToken.None);
 
         // Assert — session should have the legacy dispute entry appended
-        Assert.Single(session.Disputes);
-        Assert.Equal(disputeId, session.Disputes[0].Id);
+        session.Disputes.Should().ContainSingle();
+        session.Disputes[0].Id.Should().Be(disputeId);
 
         _sessionRepositoryMock.Verify(
             x => x.UpdateAsync(session, It.IsAny<CancellationToken>()),
@@ -178,7 +179,8 @@ public class TallyDisputeVotesCommandHandlerTests
         var command = new TallyDisputeVotesCommand(disputeId);
 
         // Act & Assert
-        await Assert.ThrowsAsync<NotFoundException>(
-            () => _handler.Handle(command, CancellationToken.None));
+        var act =
+            () => _handler.Handle(command, CancellationToken.None);
+        await act.Should().ThrowAsync<NotFoundException>();
     }
 }

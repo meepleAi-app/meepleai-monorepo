@@ -203,14 +203,16 @@ public sealed class NotifyAgentReadyHandlerTests
     [Fact]
     public void Constructor_NullDispatcher_ThrowsArgumentNullException()
     {
-        Assert.Throws<ArgumentNullException>(() =>
-            new NotifyAgentReadyHandler(null!, _logger.Object));
+        var act = () =>
+            new NotifyAgentReadyHandler(null!, _logger.Object);
+        act.Should().Throw<ArgumentNullException>();
     }
 
     [Fact]
     public void Constructor_NullLogger_ThrowsArgumentNullException()
     {
-        Assert.Throws<ArgumentNullException>(() =>
-            new NotifyAgentReadyHandler(_dispatcher.Object, null!));
+        var act2 = () =>
+            new NotifyAgentReadyHandler(_dispatcher.Object, null!);
+        act2.Should().Throw<ArgumentNullException>();
     }
 }

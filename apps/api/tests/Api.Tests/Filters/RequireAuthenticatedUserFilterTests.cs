@@ -4,6 +4,7 @@ using Api.Infrastructure.Entities;
 using Microsoft.AspNetCore.Http;
 using Moq;
 using System.Security.Claims;
+using FluentAssertions;
 using Xunit;
 using Api.Tests.Constants;
 
@@ -34,7 +35,7 @@ public class RequireAuthenticatedUserFilterTests
         var result = await filter.InvokeAsync(context, _nextMock.Object);
 
         // Assert
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         _nextMock.Verify(next => next(It.IsAny<EndpointFilterInvocationContext>()), Times.Never);
     }
 
@@ -52,7 +53,7 @@ public class RequireAuthenticatedUserFilterTests
         var result = await filter.InvokeAsync(context, _nextMock.Object);
 
         // Assert
-        Assert.Equal(expectedResult, result);
+        result.Should().Be(expectedResult);
         _nextMock.Verify(next => next(It.IsAny<EndpointFilterInvocationContext>()), Times.Once);
     }
 
@@ -70,7 +71,7 @@ public class RequireAuthenticatedUserFilterTests
         var result = await filter.InvokeAsync(context, _nextMock.Object);
 
         // Assert
-        Assert.Equal(expectedResult, result);
+        result.Should().Be(expectedResult);
         _nextMock.Verify(next => next(It.IsAny<EndpointFilterInvocationContext>()), Times.Once);
     }
 
@@ -88,7 +89,7 @@ public class RequireAuthenticatedUserFilterTests
         var result = await filter.InvokeAsync(context, _nextMock.Object);
 
         // Assert
-        Assert.Equal(expectedResult, result);
+        result.Should().Be(expectedResult);
         _nextMock.Verify(next => next(It.IsAny<EndpointFilterInvocationContext>()), Times.Once);
     }
 
@@ -110,13 +111,13 @@ public class RequireAuthenticatedUserFilterTests
         var result = await filter.InvokeAsync(context, _nextMock.Object);
 
         // Assert
-        Assert.Equal(expectedResult, result);
+        result.Should().Be(expectedResult);
 
         // Verify session is in HttpContext.Items
-        Assert.True(context.HttpContext.Items.ContainsKey(nameof(SessionStatusDto)));
+        context.HttpContext.Items.ContainsKey(nameof(SessionStatusDto)).Should().BeTrue();
         var sessionInContext = context.HttpContext.Items[nameof(SessionStatusDto)] as SessionStatusDto;
-        Assert.NotNull(sessionInContext);
-        Assert.Equal(testSession!.User!.Id, sessionInContext!.User!.Id);
+        sessionInContext.Should().NotBeNull();
+        sessionInContext!.User!.Id.Should().Be(testSession!.User!.Id);
     }
 
     [Fact]
@@ -144,11 +145,11 @@ public class RequireAuthenticatedUserFilterTests
         var result = await filter.InvokeAsync(context, _nextMock.Object);
 
         // Assert
-        Assert.Equal(expectedResult, result);
+        result.Should().Be(expectedResult);
 
         // Verify user is authenticated
-        Assert.True(context.HttpContext.User.Identity?.IsAuthenticated);
-        Assert.Equal("api-user", context.HttpContext.User.Identity?.Name);
+        context.HttpContext.User.Identity?.IsAuthenticated.Should().BeTrue();
+        context.HttpContext.User.Identity?.Name.Should().Be("api-user");
     }
 
     private EndpointFilterInvocationContext CreateFilterContext(bool includeSession, bool includeApiKey)

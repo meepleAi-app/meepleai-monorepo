@@ -1,5 +1,4 @@
 using Api.BoundedContexts.Administration.Application.Commands;
-using Api.BoundedContexts.Administration.Application.Commands;
 using Api.BoundedContexts.Administration.Application.Queries;
 using Api.BoundedContexts.Administration.Domain.Repositories;
 using Api.BoundedContexts.Authentication.Domain.Entities;
@@ -121,9 +120,8 @@ public sealed class SeedAdminUserCommandHandlerTests
         try
         {
             // Act & Assert
-            await Assert.ThrowsAsync<InvalidOperationException>(
-                async () => await _handler.Handle(command, CancellationToken.None)
-            );
+            var act = async () => await _handler.Handle(command, CancellationToken.None);
+            await act.Should().ThrowAsync<InvalidOperationException>();
         }
         finally
         {
@@ -146,9 +144,8 @@ public sealed class SeedAdminUserCommandHandlerTests
         var command = new SeedAdminUserCommand();
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
-            async () => await _handler.Handle(command, CancellationToken.None)
-        );
+        var act2 = async () => await _handler.Handle(command, CancellationToken.None);
+        var exception = (await act2.Should().ThrowAsync<InvalidOperationException>()).Which;
 
         exception.Message.Should().Contain("at least 8 characters");
     }
@@ -167,9 +164,8 @@ public sealed class SeedAdminUserCommandHandlerTests
         var command = new SeedAdminUserCommand();
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
-            async () => await _handler.Handle(command, CancellationToken.None)
-        );
+        var act3 = async () => await _handler.Handle(command, CancellationToken.None);
+        var exception = (await act3.Should().ThrowAsync<InvalidOperationException>()).Which;
 
         exception.Message.Should().Contain("uppercase letter");
     }
@@ -188,9 +184,8 @@ public sealed class SeedAdminUserCommandHandlerTests
         var command = new SeedAdminUserCommand();
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
-            async () => await _handler.Handle(command, CancellationToken.None)
-        );
+        var act4 = async () => await _handler.Handle(command, CancellationToken.None);
+        var exception = (await act4.Should().ThrowAsync<InvalidOperationException>()).Which;
 
         exception.Message.Should().Contain("digit");
     }

@@ -11,6 +11,7 @@ using Api.Tests.Constants;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.GameManagement.Application.Handlers;
 
@@ -62,10 +63,10 @@ public sealed class UploadSessionAttachmentCommandHandlerTests : IDisposable
         var command = CreateCommand(sessionId, playerId);
         var result = await _sut.Handle(command, CancellationToken.None);
 
-        Assert.Equal(sessionId, result.SessionId);
-        Assert.Equal(playerId, result.PlayerId);
-        Assert.Equal(AttachmentType.BoardState, result.AttachmentType);
-        Assert.Equal("image/jpeg", result.ContentType);
+        result.SessionId.Should().Be(sessionId);
+        result.PlayerId.Should().Be(playerId);
+        result.AttachmentType.Should().Be(AttachmentType.BoardState);
+        result.ContentType.Should().Be("image/jpeg");
     }
 
     [Fact]
@@ -105,7 +106,7 @@ public sealed class UploadSessionAttachmentCommandHandlerTests : IDisposable
         var command = CreateCommand(sessionId, playerId);
         var result = await _sut.Handle(command, CancellationToken.None);
 
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
     }
 
     #endregion
@@ -121,8 +122,9 @@ public sealed class UploadSessionAttachmentCommandHandlerTests : IDisposable
 
         var command = CreateCommand(Guid.NewGuid(), Guid.NewGuid());
 
-        await Assert.ThrowsAsync<NotFoundException>(
-            () => _sut.Handle(command, CancellationToken.None));
+        var act =
+            () => _sut.Handle(command, CancellationToken.None);
+        await act.Should().ThrowAsync<NotFoundException>();
     }
 
     [Fact]
@@ -135,8 +137,9 @@ public sealed class UploadSessionAttachmentCommandHandlerTests : IDisposable
 
         var command = CreateCommand(sessionId, session.Players[0].Id);
 
-        await Assert.ThrowsAsync<ConflictException>(
-            () => _sut.Handle(command, CancellationToken.None));
+        var act =
+            () => _sut.Handle(command, CancellationToken.None);
+        await act.Should().ThrowAsync<ConflictException>();
     }
 
     [Fact]
@@ -150,8 +153,9 @@ public sealed class UploadSessionAttachmentCommandHandlerTests : IDisposable
 
         var command = CreateCommand(sessionId, Guid.NewGuid());
 
-        await Assert.ThrowsAsync<ConflictException>(
-            () => _sut.Handle(command, CancellationToken.None));
+        var act =
+            () => _sut.Handle(command, CancellationToken.None);
+        await act.Should().ThrowAsync<ConflictException>();
     }
 
     #endregion
@@ -169,8 +173,9 @@ public sealed class UploadSessionAttachmentCommandHandlerTests : IDisposable
 
         var command = CreateCommand(sessionId, unknownPlayerId);
 
-        await Assert.ThrowsAsync<NotFoundException>(
-            () => _sut.Handle(command, CancellationToken.None));
+        var act =
+            () => _sut.Handle(command, CancellationToken.None);
+        await act.Should().ThrowAsync<NotFoundException>();
     }
 
     #endregion
@@ -189,8 +194,9 @@ public sealed class UploadSessionAttachmentCommandHandlerTests : IDisposable
 
         var command = CreateCommand(sessionId, playerId);
 
-        await Assert.ThrowsAsync<ConflictException>(
-            () => _sut.Handle(command, CancellationToken.None));
+        var act =
+            () => _sut.Handle(command, CancellationToken.None);
+        await act.Should().ThrowAsync<ConflictException>();
     }
 
     [Fact]
@@ -207,7 +213,7 @@ public sealed class UploadSessionAttachmentCommandHandlerTests : IDisposable
         var command = CreateCommand(sessionId, playerId);
         var result = await _sut.Handle(command, CancellationToken.None);
 
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
     }
 
     #endregion
@@ -233,9 +239,10 @@ public sealed class UploadSessionAttachmentCommandHandlerTests : IDisposable
 
         var command = CreateCommand(sessionId, playerId);
 
-        var ex = await Assert.ThrowsAsync<InvalidOperationException>(
-            () => _sut.Handle(command, CancellationToken.None));
-        Assert.Contains("S3 down", ex.Message);
+        var act =
+            () => _sut.Handle(command, CancellationToken.None);
+        var ex = (await act.Should().ThrowAsync<InvalidOperationException>()).Which;
+        ex.Message.Should().Contain("S3 down");
     }
 
     #endregion
@@ -245,33 +252,37 @@ public sealed class UploadSessionAttachmentCommandHandlerTests : IDisposable
     [Fact]
     public void Constructor_WithNullSessionRepo_ThrowsArgumentNullException()
     {
-        Assert.Throws<ArgumentNullException>(() =>
+        var act = () =>
             new UploadSessionAttachmentCommandHandler(
-                null!, _attachmentRepoMock.Object, _attachmentServiceMock.Object, _loggerMock.Object));
+                null!, _attachmentRepoMock.Object, _attachmentServiceMock.Object, _loggerMock.Object);
+        act.Should().Throw<ArgumentNullException>();
     }
 
     [Fact]
     public void Constructor_WithNullAttachmentRepo_ThrowsArgumentNullException()
     {
-        Assert.Throws<ArgumentNullException>(() =>
+        var act = () =>
             new UploadSessionAttachmentCommandHandler(
-                _sessionRepoMock.Object, null!, _attachmentServiceMock.Object, _loggerMock.Object));
+                _sessionRepoMock.Object, null!, _attachmentServiceMock.Object, _loggerMock.Object);
+        act.Should().Throw<ArgumentNullException>();
     }
 
     [Fact]
     public void Constructor_WithNullAttachmentService_ThrowsArgumentNullException()
     {
-        Assert.Throws<ArgumentNullException>(() =>
+        var act = () =>
             new UploadSessionAttachmentCommandHandler(
-                _sessionRepoMock.Object, _attachmentRepoMock.Object, null!, _loggerMock.Object));
+                _sessionRepoMock.Object, _attachmentRepoMock.Object, null!, _loggerMock.Object);
+        act.Should().Throw<ArgumentNullException>();
     }
 
     [Fact]
     public void Constructor_WithNullLogger_ThrowsArgumentNullException()
     {
-        Assert.Throws<ArgumentNullException>(() =>
+        var act = () =>
             new UploadSessionAttachmentCommandHandler(
-                _sessionRepoMock.Object, _attachmentRepoMock.Object, _attachmentServiceMock.Object, null!));
+                _sessionRepoMock.Object, _attachmentRepoMock.Object, _attachmentServiceMock.Object, null!);
+        act.Should().Throw<ArgumentNullException>();
     }
 
     #endregion

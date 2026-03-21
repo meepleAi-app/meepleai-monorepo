@@ -12,6 +12,7 @@ using Api.Tests.Constants;
 using MediatR;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Handlers;
 
@@ -88,12 +89,12 @@ public class ParseAndRecordScoreCommandHandlerTests
         var result = await _handler.Handle(command, CancellationToken.None);
 
         // Assert
-        Assert.Equal("recorded", result.Status);
-        Assert.Equal("Marco Rossi", result.PlayerName);
-        Assert.Equal(_playerId, result.PlayerId);
-        Assert.Equal(5, result.Value);
-        Assert.Equal("points", result.Dimension);
-        Assert.False(result.RequiresConfirmation);
+        result.Status.Should().Be("recorded");
+        result.PlayerName.Should().Be("Marco Rossi");
+        result.PlayerId.Should().Be(_playerId);
+        result.Value.Should().Be(5);
+        result.Dimension.Should().Be("points");
+        result.RequiresConfirmation.Should().BeFalse();
 
         _mockMediator.Verify(m => m.Send(
             It.Is<RecordLiveSessionScoreCommand>(c =>
@@ -135,9 +136,9 @@ public class ParseAndRecordScoreCommandHandlerTests
         var result = await _handler.Handle(command, CancellationToken.None);
 
         // Assert
-        Assert.Equal("parsed", result.Status);
-        Assert.True(result.RequiresConfirmation);
-        Assert.Equal(_playerId, result.PlayerId);
+        result.Status.Should().Be("parsed");
+        result.RequiresConfirmation.Should().BeTrue();
+        result.PlayerId.Should().Be(_playerId);
 
         _mockMediator.Verify(m => m.Send(
             It.IsAny<RecordLiveSessionScoreCommand>(),
@@ -164,8 +165,8 @@ public class ParseAndRecordScoreCommandHandlerTests
         var result = await _handler.Handle(command, CancellationToken.None);
 
         // Assert
-        Assert.Equal("unrecognized", result.Status);
-        Assert.Contains("No score information", result.Message);
+        result.Status.Should().Be("unrecognized");
+        result.Message.Should().Contain("No score information");
     }
 
     [Fact]
@@ -205,11 +206,11 @@ public class ParseAndRecordScoreCommandHandlerTests
         var result = await _handler.Handle(command, CancellationToken.None);
 
         // Assert
-        Assert.Equal("ambiguous", result.Status);
-        Assert.True(result.RequiresConfirmation);
-        Assert.Equal(2, result.AmbiguousCandidates.Count);
-        Assert.Contains("Marco Rossi", result.AmbiguousCandidates);
-        Assert.Contains("Marco Bianchi", result.AmbiguousCandidates);
+        result.Status.Should().Be("ambiguous");
+        result.RequiresConfirmation.Should().BeTrue();
+        result.AmbiguousCandidates.Count.Should().Be(2);
+        result.AmbiguousCandidates.Should().Contain("Marco Rossi");
+        result.AmbiguousCandidates.Should().Contain("Marco Bianchi");
     }
 
     [Fact]
@@ -243,10 +244,10 @@ public class ParseAndRecordScoreCommandHandlerTests
         var result = await _handler.Handle(command, CancellationToken.None);
 
         // Assert
-        Assert.Equal("parsed", result.Status);
-        Assert.True(result.RequiresConfirmation);
-        Assert.Contains("Giovanni", result.Message);
-        Assert.Contains("not found", result.Message);
+        result.Status.Should().Be("parsed");
+        result.RequiresConfirmation.Should().BeTrue();
+        result.Message.Should().Contain("Giovanni");
+        result.Message.Should().Contain("not found");
     }
 
     private LiveSessionDto CreateLiveSessionDto(int currentTurnIndex = 1)

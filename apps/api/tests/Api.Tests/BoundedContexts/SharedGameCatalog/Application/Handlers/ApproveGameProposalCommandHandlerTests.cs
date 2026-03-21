@@ -20,6 +20,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.SharedGameCatalog.Application.Handlers;
 
@@ -73,11 +74,11 @@ public class ApproveGameProposalCommandHandlerTests
             AdminNotes: "Test notes");
 
         // Assert
-        Assert.NotEqual(Guid.Empty, command.ShareRequestId);
-        Assert.Equal(TestAdminId, command.AdminId);
-        Assert.Equal(ProposalApprovalAction.ApproveAsNew, command.ApprovalAction);
-        Assert.Null(command.TargetSharedGameId);
-        Assert.Equal("Test notes", command.AdminNotes);
+        command.ShareRequestId.Should().NotBe(Guid.Empty);
+        command.AdminId.Should().Be(TestAdminId);
+        command.ApprovalAction.Should().Be(ProposalApprovalAction.ApproveAsNew);
+        command.TargetSharedGameId.Should().BeNull();
+        command.AdminNotes.Should().Be("Test notes");
     }
 
     [Fact]
@@ -96,8 +97,8 @@ public class ApproveGameProposalCommandHandlerTests
             .ReturnsAsync((ShareRequest?)null);
 
         // Act & Assert
-        await Assert.ThrowsAsync<NotFoundException>(
-            () => _handler.Handle(command, TestContext.Current.CancellationToken));
+        var act = () => _handler.Handle(command, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<NotFoundException>();
     }
 
     [Fact]
@@ -123,8 +124,8 @@ public class ApproveGameProposalCommandHandlerTests
             .ReturnsAsync(shareRequest);
 
         // Act & Assert - Handler throws ConflictException (409) for non-proposal requests
-        await Assert.ThrowsAsync<ConflictException>(
-            () => _handler.Handle(command, TestContext.Current.CancellationToken));
+        var act = () => _handler.Handle(command, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<ConflictException>();
     }
 
     [Fact]
@@ -146,8 +147,8 @@ public class ApproveGameProposalCommandHandlerTests
         // No library entry seeded in DbContext
 
         // Act & Assert
-        await Assert.ThrowsAsync<NotFoundException>(
-            () => _handler.Handle(command, TestContext.Current.CancellationToken));
+        var act = () => _handler.Handle(command, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<NotFoundException>();
     }
 
     [Fact]
@@ -179,8 +180,8 @@ public class ApproveGameProposalCommandHandlerTests
             .ReturnsAsync(shareRequest);
 
         // Act & Assert - Handler throws ConflictException (409) for missing PrivateGameId
-        await Assert.ThrowsAsync<ConflictException>(
-            () => _handler.Handle(command, TestContext.Current.CancellationToken));
+        var act = () => _handler.Handle(command, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<ConflictException>();
     }
 
     [Fact]
@@ -216,8 +217,8 @@ public class ApproveGameProposalCommandHandlerTests
             .ReturnsAsync((PrivateGame?)null);
 
         // Act & Assert
-        await Assert.ThrowsAsync<NotFoundException>(
-            () => _handler.Handle(command, TestContext.Current.CancellationToken));
+        var act = () => _handler.Handle(command, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<NotFoundException>();
     }
 
     [Fact]
@@ -259,21 +260,21 @@ public class ApproveGameProposalCommandHandlerTests
         var response = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(response);
-        Assert.Equal(shareRequest.Id, response.ShareRequestId);
-        Assert.Equal(ShareRequestStatus.Approved, response.Status);
+        response.Should().NotBeNull();
+        response.ShareRequestId.Should().Be(shareRequest.Id);
+        response.Status.Should().Be(ShareRequestStatus.Approved);
 
         // Verify new SharedGame was created
         _sharedGameRepoMock.Verify(r => r.AddAsync(It.IsAny<SharedGame>(), It.IsAny<CancellationToken>()), Times.Once);
-        Assert.NotNull(capturedSharedGame);
-        Assert.Equal(privateGame.Title, capturedSharedGame.Title);
-        Assert.Equal(privateGame.BggId, capturedSharedGame.BggId);
+        capturedSharedGame.Should().NotBeNull();
+        capturedSharedGame.Title.Should().Be(privateGame.Title);
+        capturedSharedGame.BggId.Should().Be(privateGame.BggId);
 
         // Verify ShareRequest was approved
         _shareRequestRepoMock.Verify(r => r.Update(It.IsAny<ShareRequest>()), Times.Once);
-        Assert.NotNull(capturedRequest);
-        Assert.Equal(ShareRequestStatus.Approved, capturedRequest.Status);
-        Assert.Equal(capturedSharedGame.Id, capturedRequest.TargetSharedGameId);
+        capturedRequest.Should().NotBeNull();
+        capturedRequest.Status.Should().Be(ShareRequestStatus.Approved);
+        capturedRequest.TargetSharedGameId.Should().Be(capturedSharedGame.Id);
 
         _unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
@@ -316,16 +317,16 @@ public class ApproveGameProposalCommandHandlerTests
         var response = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(response);
-        Assert.Equal(existingGame.Id, response.TargetSharedGameId);
+        response.Should().NotBeNull();
+        response.TargetSharedGameId.Should().Be(existingGame.Id);
 
         // Verify NO new SharedGame was created
         _sharedGameRepoMock.Verify(r => r.AddAsync(It.IsAny<SharedGame>(), It.IsAny<CancellationToken>()), Times.Never);
 
         // Verify ShareRequest was approved with existing game ID
-        Assert.NotNull(capturedRequest);
-        Assert.Equal(ShareRequestStatus.Approved, capturedRequest.Status);
-        Assert.Equal(existingGame.Id, capturedRequest.TargetSharedGameId);
+        capturedRequest.Should().NotBeNull();
+        capturedRequest.Status.Should().Be(ShareRequestStatus.Approved);
+        capturedRequest.TargetSharedGameId.Should().Be(existingGame.Id);
     }
 
     [Fact]
@@ -357,8 +358,8 @@ public class ApproveGameProposalCommandHandlerTests
             .ReturnsAsync((SharedGame?)null);
 
         // Act & Assert
-        await Assert.ThrowsAsync<NotFoundException>(
-            () => _handler.Handle(command, TestContext.Current.CancellationToken));
+        var act = () => _handler.Handle(command, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<NotFoundException>();
     }
 
     [Fact]
@@ -400,10 +401,10 @@ public class ApproveGameProposalCommandHandlerTests
         var response = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(capturedSharedGame);
-        Assert.EndsWith(" (Variant)", capturedSharedGame.Title);
-        Assert.Equal($"{privateGame.Title} (Variant)", capturedSharedGame.Title);
-        Assert.Null(capturedSharedGame.BggId); // Variants don't use BGG ID
+        capturedSharedGame.Should().NotBeNull();
+        capturedSharedGame.Title.Should().EndWith(" (Variant)");
+        capturedSharedGame.Title.Should().Be($"{privateGame.Title} (Variant)");
+        capturedSharedGame.BggId.Should().BeNull(); // Variants don't use BGG ID
 
         _sharedGameRepoMock.Verify(r => r.AddAsync(It.IsAny<SharedGame>(), It.IsAny<CancellationToken>()), Times.Once);
     }
@@ -437,8 +438,8 @@ public class ApproveGameProposalCommandHandlerTests
             .ReturnsAsync((SharedGame?)null);
 
         // Act & Assert
-        await Assert.ThrowsAsync<NotFoundException>(
-            () => _handler.Handle(command, TestContext.Current.CancellationToken));
+        var act = () => _handler.Handle(command, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<NotFoundException>();
     }
 
     // Note: Document copying is tested in integration tests where we can properly seed the database

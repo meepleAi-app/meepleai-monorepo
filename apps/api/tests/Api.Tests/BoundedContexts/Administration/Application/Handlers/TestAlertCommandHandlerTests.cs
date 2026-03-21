@@ -147,8 +147,9 @@ public class TestAlertCommandHandlerTests
         TestAlertCommand? command = null;
 
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentNullException>(() =>
-            _handler.Handle(command!, CancellationToken.None));
+        var act = () =>
+            _handler.Handle(command!, CancellationToken.None);
+        await act.Should().ThrowAsync<ArgumentNullException>();
 
         _mockAlertingService.Verify(s => s.SendAlertAsync(
             It.IsAny<string>(),

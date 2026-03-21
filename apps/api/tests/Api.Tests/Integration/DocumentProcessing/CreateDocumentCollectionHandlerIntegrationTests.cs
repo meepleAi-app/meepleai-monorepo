@@ -215,8 +215,8 @@ public sealed class CreateDocumentCollectionHandlerIntegrationTests : IAsyncLife
             gameId, TestUserId, "Second", null, new List<InitialDocumentRequest>());
 
         // Act & Assert
-        await Assert.ThrowsAsync<DomainException>(
-            () => _mediator.Send(cmd2, TestCancellationToken));
+        var act = () => _mediator.Send(cmd2, TestCancellationToken);
+        await act.Should().ThrowAsync<DomainException>();
     }
 
     [Fact]
@@ -257,8 +257,8 @@ public sealed class CreateDocumentCollectionHandlerIntegrationTests : IAsyncLife
         var command = new CreateDocumentCollectionCommand(gameId, TestUserId, "TooMany", null, docs);
 
         // Act & Assert
-        await Assert.ThrowsAsync<DomainException>(
-            () => _mediator!.Send(command, TestCancellationToken));
+        var act2 = () => _mediator!.Send(command, TestCancellationToken);
+        await act2.Should().ThrowAsync<DomainException>();
     }
 
     [Fact]
@@ -274,8 +274,8 @@ public sealed class CreateDocumentCollectionHandlerIntegrationTests : IAsyncLife
             });
 
         // Act & Assert
-        await Assert.ThrowsAsync<DomainException>(
-            () => _mediator!.Send(command, TestCancellationToken));
+        var act3 = () => _mediator!.Send(command, TestCancellationToken);
+        await act3.Should().ThrowAsync<DomainException>();
     }
 
     [Fact]
@@ -287,8 +287,8 @@ public sealed class CreateDocumentCollectionHandlerIntegrationTests : IAsyncLife
             new List<InitialDocumentRequest> { new(Guid.NewGuid(), "base", 0) });
 
         // Act & Assert
-        await Assert.ThrowsAsync<DomainException>(
-            () => _mediator!.Send(command, TestCancellationToken));
+        var act4 = () => _mediator!.Send(command, TestCancellationToken);
+        await act4.Should().ThrowAsync<DomainException>();
     }
 
     [Fact]
@@ -320,8 +320,8 @@ public sealed class CreateDocumentCollectionHandlerIntegrationTests : IAsyncLife
             new List<InitialDocumentRequest> { new(pdfForOtherGame.Id, "base", 0) });
 
         // Act & Assert
-        await Assert.ThrowsAsync<DomainException>(
-            () => _mediator!.Send(command, TestCancellationToken));
+        var act5 = () => _mediator!.Send(command, TestCancellationToken);
+        await act5.Should().ThrowAsync<DomainException>();
     }
 
     [Fact]

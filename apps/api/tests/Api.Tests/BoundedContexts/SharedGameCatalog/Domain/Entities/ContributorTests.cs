@@ -361,8 +361,8 @@ public class ContributorTests
         // Assert
         documentAdditions.Should().HaveCount(2);
         metadataUpdates.Should().HaveCount(2);
-        documentAdditions.All(c => c.Type == ContributionRecordType.DocumentAddition).Should().BeTrue();
-        metadataUpdates.All(c => c.Type == ContributionRecordType.MetadataUpdate).Should().BeTrue();
+        (documentAdditions.All(c => c.Type == ContributionRecordType.DocumentAddition)).Should().BeTrue();
+        (metadataUpdates.All(c => c.Type == ContributionRecordType.MetadataUpdate)).Should().BeTrue();
     }
 
     [Fact]

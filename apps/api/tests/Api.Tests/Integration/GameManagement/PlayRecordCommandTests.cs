@@ -168,8 +168,9 @@ public sealed class PlayRecordCommandTests : IAsyncLifetime
         var mediator = ServiceProvider.GetRequiredService<IMediator>();
 
         // Act & Assert
-        await Assert.ThrowsAsync<NotFoundException>(() =>
-            mediator.Send(command, TestCancellationToken));
+        var act = async () => () =>
+            mediator.Send(command, TestCancellationToken);
+        await act.Should().ThrowAsync<NotFoundException>();
     }
 
     #endregion
@@ -279,8 +280,9 @@ public sealed class PlayRecordCommandTests : IAsyncLifetime
         await mediator.Send(startCommand, TestCancellationToken);
 
         // Act & Assert
-        await Assert.ThrowsAsync<ConflictException>(() =>
-            mediator.Send(startCommand, TestCancellationToken));
+        var act = async () => () =>
+            mediator.Send(startCommand, TestCancellationToken);
+        await act.Should().ThrowAsync<ConflictException>();
     }
 
     #endregion

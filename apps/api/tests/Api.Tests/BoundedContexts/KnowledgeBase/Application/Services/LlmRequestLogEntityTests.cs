@@ -2,6 +2,7 @@ using Api.Infrastructure.Entities;
 using Api.Services;
 using Api.Tests.Constants;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Services;
 
@@ -25,22 +26,22 @@ public sealed class LlmRequestLogEntityTests
         };
 
         // Assert
-        Assert.NotEqual(Guid.Empty, entity.Id);
-        Assert.True(entity.RequestedAt <= DateTime.UtcNow);
-        Assert.True(entity.RequestedAt > DateTime.UtcNow.AddSeconds(-5));
-        Assert.Equal("Manual", entity.RequestSource); // Default from enum name
-        Assert.Null(entity.UserId);
-        Assert.Null(entity.UserRole);
-        Assert.Equal(0, entity.PromptTokens);
-        Assert.Equal(0, entity.CompletionTokens);
-        Assert.Equal(0, entity.TotalTokens);
-        Assert.Equal(0m, entity.CostUsd);
-        Assert.Equal(0, entity.LatencyMs);
-        Assert.False(entity.Success);
-        Assert.Null(entity.ErrorMessage);
-        Assert.False(entity.IsStreaming);
-        Assert.False(entity.IsFreeModel);
-        Assert.Null(entity.SessionId);
+        entity.Id.Should().NotBe(Guid.Empty);
+        (entity.RequestedAt <= DateTime.UtcNow).Should().BeTrue();
+        (entity.RequestedAt > DateTime.UtcNow.AddSeconds(-5)).Should().BeTrue();
+        entity.RequestSource.Should().Be("Manual"); // Default from enum name
+        entity.UserId.Should().BeNull();
+        entity.UserRole.Should().BeNull();
+        entity.PromptTokens.Should().Be(0);
+        entity.CompletionTokens.Should().Be(0);
+        entity.TotalTokens.Should().Be(0);
+        entity.CostUsd.Should().Be(0m);
+        entity.LatencyMs.Should().Be(0);
+        entity.Success.Should().BeFalse();
+        entity.ErrorMessage.Should().BeNull();
+        entity.IsStreaming.Should().BeFalse();
+        entity.IsFreeModel.Should().BeFalse();
+        entity.SessionId.Should().BeNull();
     }
 
     [Fact]
@@ -54,7 +55,7 @@ public sealed class LlmRequestLogEntityTests
         };
 
         // Assert — Issue #27: UserRegion defaults to null
-        Assert.Null(entity.UserRegion);
+        entity.UserRegion.Should().BeNull();
     }
 
     [Theory]
@@ -73,7 +74,7 @@ public sealed class LlmRequestLogEntityTests
         };
 
         // Assert — Issue #27: UserRegion stores the assigned value
-        Assert.Equal(region, entity.UserRegion);
+        entity.UserRegion.Should().Be(region);
     }
 
     [Fact]
@@ -84,7 +85,7 @@ public sealed class LlmRequestLogEntityTests
         var b = new LlmRequestLogEntity { ModelId = "m", Provider = "p" };
 
         // Assert
-        Assert.NotEqual(a.Id, b.Id);
+        b.Id.Should().NotBe(a.Id);
     }
 
     [Fact]
@@ -98,7 +99,7 @@ public sealed class LlmRequestLogEntityTests
         entity.ExpiresAt = future;
 
         // Assert
-        Assert.Equal(future, entity.ExpiresAt);
+        entity.ExpiresAt.Should().Be(future);
     }
 
     [Theory]
@@ -119,7 +120,7 @@ public sealed class LlmRequestLogEntityTests
         };
 
         // Assert
-        Assert.Equal(sourceName, entity.RequestSource);
+        entity.RequestSource.Should().Be(sourceName);
     }
 
     [Theory]
@@ -150,17 +151,17 @@ public sealed class LlmRequestLogEntityTests
         };
 
         // Assert
-        Assert.Equal(modelId, entity.ModelId);
-        Assert.Equal(provider, entity.Provider);
-        Assert.Equal(success, entity.Success);
-        Assert.Equal(promptTokens, entity.PromptTokens);
-        Assert.Equal(completionTokens, entity.CompletionTokens);
-        Assert.Equal(totalTokens, entity.TotalTokens);
-        Assert.Equal(costUsd, entity.CostUsd);
-        Assert.Equal(latencyMs, entity.LatencyMs);
-        Assert.True(entity.IsStreaming);
-        Assert.NotNull(entity.UserId);
-        Assert.Equal("User", entity.UserRole);
-        Assert.Equal("sess-abc", entity.SessionId);
+        entity.ModelId.Should().Be(modelId);
+        entity.Provider.Should().Be(provider);
+        entity.Success.Should().Be(success);
+        entity.PromptTokens.Should().Be(promptTokens);
+        entity.CompletionTokens.Should().Be(completionTokens);
+        entity.TotalTokens.Should().Be(totalTokens);
+        entity.CostUsd.Should().Be(costUsd);
+        entity.LatencyMs.Should().Be(latencyMs);
+        entity.IsStreaming.Should().BeTrue();
+        entity.UserId.Should().NotBeNull();
+        entity.UserRole.Should().Be("User");
+        entity.SessionId.Should().Be("sess-abc");
     }
 }

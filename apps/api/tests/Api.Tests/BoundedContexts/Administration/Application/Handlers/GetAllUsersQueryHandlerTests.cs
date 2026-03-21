@@ -5,6 +5,7 @@ using Api.Infrastructure;
 using Api.Tests.TestHelpers;
 using Moq;
 using Xunit;
+using FluentAssertions;
 using Api.SharedKernel.Domain.ValueObjects;
 using Api.Tests.Constants;
 
@@ -37,15 +38,16 @@ public class GetAllUsersQueryHandlerTests
         var handler = new GetAllUsersQueryHandler(context);
 
         // Assert
-        Assert.NotNull(handler);
+        handler.Should().NotBeNull();
     }
 
     [Fact]
     public void Constructor_WithNullDbContext_ThrowsArgumentNullException()
     {
         // Act & Assert
-        Assert.Throws<ArgumentNullException>(() =>
-            new GetAllUsersQueryHandler(null!));
+        var act = () =>
+            new GetAllUsersQueryHandler(null!);
+        act.Should().Throw<ArgumentNullException>();
     }
     [Fact]
     public void Query_WithDefaultPagination_ConstructsCorrectly()
@@ -56,12 +58,12 @@ public class GetAllUsersQueryHandlerTests
             Limit: 20);
 
         // Assert
-        Assert.Equal(1, query.Page);
-        Assert.Equal(20, query.Limit);
-        Assert.Null(query.SearchTerm);
-        Assert.Null(query.RoleFilter);
-        Assert.Null(query.SortBy);
-        Assert.Equal("desc", query.SortOrder); // Default sort order
+        query.Page.Should().Be(1);
+        query.Limit.Should().Be(20);
+        query.SearchTerm.Should().BeNull();
+        query.RoleFilter.Should().BeNull();
+        query.SortBy.Should().BeNull();
+        query.SortOrder.Should().Be("desc"); // Default sort order
     }
 
     [Fact]
@@ -74,7 +76,7 @@ public class GetAllUsersQueryHandlerTests
             SearchTerm: "john");
 
         // Assert
-        Assert.Equal("john", query.SearchTerm);
+        query.SearchTerm.Should().Be("john");
     }
 
     [Fact]
@@ -87,7 +89,7 @@ public class GetAllUsersQueryHandlerTests
             RoleFilter: Role.Admin.Value);
 
         // Assert
-        Assert.Equal(Role.Admin.Value, query.RoleFilter);
+        query.RoleFilter.Should().Be(Role.Admin.Value);
     }
 
     [Fact]
@@ -101,8 +103,8 @@ public class GetAllUsersQueryHandlerTests
             SortOrder: "asc");
 
         // Assert
-        Assert.Equal("email", query.SortBy);
-        Assert.Equal("asc", query.SortOrder);
+        query.SortBy.Should().Be("email");
+        query.SortOrder.Should().Be("asc");
     }
 
     [Fact]
@@ -118,12 +120,12 @@ public class GetAllUsersQueryHandlerTests
             SortOrder: "asc");
 
         // Assert
-        Assert.Equal(2, query.Page);
-        Assert.Equal(50, query.Limit);
-        Assert.Equal("test", query.SearchTerm);
-        Assert.Equal(Role.Editor.Value, query.RoleFilter);
-        Assert.Equal("displayname", query.SortBy);
-        Assert.Equal("asc", query.SortOrder);
+        query.Page.Should().Be(2);
+        query.Limit.Should().Be(50);
+        query.SearchTerm.Should().Be("test");
+        query.RoleFilter.Should().Be(Role.Editor.Value);
+        query.SortBy.Should().Be("displayname");
+        query.SortOrder.Should().Be("asc");
     }
     // NOTE: Full integration tests for Handle method (pagination, filtering, sorting)
     // should be in integration test suite due to DbContext complexity.

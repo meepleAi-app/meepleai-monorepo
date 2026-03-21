@@ -3,6 +3,7 @@ using Api.BoundedContexts.DocumentProcessing.Domain.Enums;
 using Api.BoundedContexts.DocumentProcessing.Domain.ValueObjects;
 using Api.Tests.Constants;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.DocumentProcessing.Domain.Entities;
 
@@ -21,13 +22,13 @@ public class PdfDocumentStateTransitionTests
     {
         // Arrange
         var document = CreateTestDocument();
-        Assert.Equal(PdfProcessingState.Pending, document.ProcessingState);
+        document.ProcessingState.Should().Be(PdfProcessingState.Pending);
 
         // Act
         document.TransitionTo(PdfProcessingState.Uploading);
 
         // Assert
-        Assert.Equal(PdfProcessingState.Uploading, document.ProcessingState);
+        document.ProcessingState.Should().Be(PdfProcessingState.Uploading);
 
     }
 
@@ -41,7 +42,7 @@ public class PdfDocumentStateTransitionTests
         document.TransitionTo(PdfProcessingState.Failed);
 
         // Assert
-        Assert.Equal(PdfProcessingState.Failed, document.ProcessingState);
+        document.ProcessingState.Should().Be(PdfProcessingState.Failed);
 
     }
 
@@ -56,7 +57,7 @@ public class PdfDocumentStateTransitionTests
         document.TransitionTo(PdfProcessingState.Extracting);
 
         // Assert
-        Assert.Equal(PdfProcessingState.Extracting, document.ProcessingState);
+        document.ProcessingState.Should().Be(PdfProcessingState.Extracting);
 
     }
 
@@ -71,7 +72,7 @@ public class PdfDocumentStateTransitionTests
         document.TransitionTo(PdfProcessingState.Failed);
 
         // Assert
-        Assert.Equal(PdfProcessingState.Failed, document.ProcessingState);
+        document.ProcessingState.Should().Be(PdfProcessingState.Failed);
     }
 
     [Fact]
@@ -86,7 +87,7 @@ public class PdfDocumentStateTransitionTests
         document.TransitionTo(PdfProcessingState.Chunking);
 
         // Assert
-        Assert.Equal(PdfProcessingState.Chunking, document.ProcessingState);
+        document.ProcessingState.Should().Be(PdfProcessingState.Chunking);
     }
 
     [Fact]
@@ -101,7 +102,7 @@ public class PdfDocumentStateTransitionTests
         document.TransitionTo(PdfProcessingState.Failed);
 
         // Assert
-        Assert.Equal(PdfProcessingState.Failed, document.ProcessingState);
+        document.ProcessingState.Should().Be(PdfProcessingState.Failed);
     }
 
     [Fact]
@@ -115,7 +116,7 @@ public class PdfDocumentStateTransitionTests
         document.TransitionTo(PdfProcessingState.Embedding);
 
         // Assert
-        Assert.Equal(PdfProcessingState.Embedding, document.ProcessingState);
+        document.ProcessingState.Should().Be(PdfProcessingState.Embedding);
     }
 
     [Fact]
@@ -129,7 +130,7 @@ public class PdfDocumentStateTransitionTests
         document.TransitionTo(PdfProcessingState.Failed);
 
         // Assert
-        Assert.Equal(PdfProcessingState.Failed, document.ProcessingState);
+        document.ProcessingState.Should().Be(PdfProcessingState.Failed);
     }
 
     [Fact]
@@ -143,7 +144,7 @@ public class PdfDocumentStateTransitionTests
         document.TransitionTo(PdfProcessingState.Indexing);
 
         // Assert
-        Assert.Equal(PdfProcessingState.Indexing, document.ProcessingState);
+        document.ProcessingState.Should().Be(PdfProcessingState.Indexing);
     }
 
     [Fact]
@@ -157,7 +158,7 @@ public class PdfDocumentStateTransitionTests
         document.TransitionTo(PdfProcessingState.Failed);
 
         // Assert
-        Assert.Equal(PdfProcessingState.Failed, document.ProcessingState);
+        document.ProcessingState.Should().Be(PdfProcessingState.Failed);
     }
 
     [Fact]
@@ -171,7 +172,7 @@ public class PdfDocumentStateTransitionTests
         document.TransitionTo(PdfProcessingState.Ready);
 
         // Assert
-        Assert.Equal(PdfProcessingState.Ready, document.ProcessingState);
+        document.ProcessingState.Should().Be(PdfProcessingState.Ready);
 
     }
 
@@ -186,7 +187,7 @@ public class PdfDocumentStateTransitionTests
         document.TransitionTo(PdfProcessingState.Failed);
 
         // Assert
-        Assert.Equal(PdfProcessingState.Failed, document.ProcessingState);
+        document.ProcessingState.Should().Be(PdfProcessingState.Failed);
     }
 
     [Fact]
@@ -202,7 +203,7 @@ public class PdfDocumentStateTransitionTests
         document.Retry();
 
         // Assert
-        Assert.Equal(PdfProcessingState.Extracting, document.ProcessingState);
+        document.ProcessingState.Should().Be(PdfProcessingState.Extracting);
     }
 
     // ===== Invalid Transitions Tests =====
@@ -214,10 +215,10 @@ public class PdfDocumentStateTransitionTests
         var document = CreateTestDocument();
 
         // Act & Assert
-        var exception = Assert.Throws<InvalidOperationException>(
-            () => document.TransitionTo(PdfProcessingState.Extracting));
+        var act = () => document.TransitionTo(PdfProcessingState.Extracting);
+        var exception = act.Should().Throw<InvalidOperationException>().Which;
 
-        Assert.Contains("Invalid state transition: Pending → Extracting", exception.Message);
+        exception.Message.Should().Contain("Invalid state transition: Pending → Extracting");
     }
 
     [Fact]
@@ -227,10 +228,10 @@ public class PdfDocumentStateTransitionTests
         var document = CreateTestDocument();
 
         // Act & Assert
-        var exception = Assert.Throws<InvalidOperationException>(
-            () => document.TransitionTo(PdfProcessingState.Chunking));
+        var act2 = () => document.TransitionTo(PdfProcessingState.Chunking);
+        var exception = act2.Should().Throw<InvalidOperationException>().Which;
 
-        Assert.Contains("Invalid state transition: Pending → Chunking", exception.Message);
+        exception.Message.Should().Contain("Invalid state transition: Pending → Chunking");
     }
 
     [Fact]
@@ -240,10 +241,10 @@ public class PdfDocumentStateTransitionTests
         var document = CreateTestDocument();
 
         // Act & Assert
-        var exception = Assert.Throws<InvalidOperationException>(
-            () => document.TransitionTo(PdfProcessingState.Embedding));
+        var act3 = () => document.TransitionTo(PdfProcessingState.Embedding);
+        var exception = act3.Should().Throw<InvalidOperationException>().Which;
 
-        Assert.Contains("Invalid state transition: Pending → Embedding", exception.Message);
+        exception.Message.Should().Contain("Invalid state transition: Pending → Embedding");
     }
 
     [Fact]
@@ -253,10 +254,10 @@ public class PdfDocumentStateTransitionTests
         var document = CreateTestDocument();
 
         // Act & Assert
-        var exception = Assert.Throws<InvalidOperationException>(
-            () => document.TransitionTo(PdfProcessingState.Indexing));
+        var act4 = () => document.TransitionTo(PdfProcessingState.Indexing);
+        var exception = act4.Should().Throw<InvalidOperationException>().Which;
 
-        Assert.Contains("Invalid state transition: Pending → Indexing", exception.Message);
+        exception.Message.Should().Contain("Invalid state transition: Pending → Indexing");
     }
 
     [Fact]
@@ -266,10 +267,10 @@ public class PdfDocumentStateTransitionTests
         var document = CreateTestDocument();
 
         // Act & Assert
-        var exception = Assert.Throws<InvalidOperationException>(
-            () => document.TransitionTo(PdfProcessingState.Ready));
+        var act5 = () => document.TransitionTo(PdfProcessingState.Ready);
+        var exception = act5.Should().Throw<InvalidOperationException>().Which;
 
-        Assert.Contains("Invalid state transition: Pending → Ready", exception.Message);
+        exception.Message.Should().Contain("Invalid state transition: Pending → Ready");
     }
 
     [Fact]
@@ -280,10 +281,10 @@ public class PdfDocumentStateTransitionTests
         AdvanceToState(document, PdfProcessingState.Ready);
 
         // Act & Assert - Ready is terminal, cannot transition
-        var exception = Assert.Throws<InvalidOperationException>(
-            () => document.TransitionTo(PdfProcessingState.Uploading));
+        var act6 = () => document.TransitionTo(PdfProcessingState.Uploading);
+        var exception = act6.Should().Throw<InvalidOperationException>().Which;
 
-        Assert.Contains("Cannot transition from Ready state", exception.Message);
+        exception.Message.Should().Contain("Cannot transition from Ready state");
     }
 
     [Fact]
@@ -294,10 +295,10 @@ public class PdfDocumentStateTransitionTests
         document.TransitionTo(PdfProcessingState.Uploading);
 
         // Act & Assert - Must go through Extracting first
-        var exception = Assert.Throws<InvalidOperationException>(
-            () => document.TransitionTo(PdfProcessingState.Chunking));
+        var act7 = () => document.TransitionTo(PdfProcessingState.Chunking);
+        var exception = act7.Should().Throw<InvalidOperationException>().Which;
 
-        Assert.Contains("Invalid state transition: Uploading → Chunking", exception.Message);
+        exception.Message.Should().Contain("Invalid state transition: Uploading → Chunking");
     }
 
     [Fact]
@@ -309,10 +310,10 @@ public class PdfDocumentStateTransitionTests
         document.TransitionTo(PdfProcessingState.Extracting);
 
         // Act & Assert - Must go through Chunking first
-        var exception = Assert.Throws<InvalidOperationException>(
-            () => document.TransitionTo(PdfProcessingState.Embedding));
+        var act8 = () => document.TransitionTo(PdfProcessingState.Embedding);
+        var exception = act8.Should().Throw<InvalidOperationException>().Which;
 
-        Assert.Contains("Invalid state transition: Extracting → Embedding", exception.Message);
+        exception.Message.Should().Contain("Invalid state transition: Extracting → Embedding");
     }
 
     [Fact]
@@ -324,10 +325,10 @@ public class PdfDocumentStateTransitionTests
         document.TransitionTo(PdfProcessingState.Extracting);
 
         // Act & Assert - Cannot skip to Ready
-        var exception = Assert.Throws<InvalidOperationException>(
-            () => document.TransitionTo(PdfProcessingState.Ready));
+        var act9 = () => document.TransitionTo(PdfProcessingState.Ready);
+        var exception = act9.Should().Throw<InvalidOperationException>().Which;
 
-        Assert.Contains("Invalid state transition: Extracting → Ready", exception.Message);
+        exception.Message.Should().Contain("Invalid state transition: Extracting → Ready");
     }
 
     [Fact]
@@ -338,10 +339,10 @@ public class PdfDocumentStateTransitionTests
         AdvanceToState(document, PdfProcessingState.Chunking);
 
         // Act & Assert - Must go through Embedding first
-        var exception = Assert.Throws<InvalidOperationException>(
-            () => document.TransitionTo(PdfProcessingState.Indexing));
+        var act10 = () => document.TransitionTo(PdfProcessingState.Indexing);
+        var exception = act10.Should().Throw<InvalidOperationException>().Which;
 
-        Assert.Contains("Invalid state transition: Chunking → Indexing", exception.Message);
+        exception.Message.Should().Contain("Invalid state transition: Chunking → Indexing");
     }
 
     [Fact]
@@ -352,10 +353,10 @@ public class PdfDocumentStateTransitionTests
         AdvanceToState(document, PdfProcessingState.Embedding);
 
         // Act & Assert - Must go through Indexing first
-        var exception = Assert.Throws<InvalidOperationException>(
-            () => document.TransitionTo(PdfProcessingState.Ready));
+        var act11 = () => document.TransitionTo(PdfProcessingState.Ready);
+        var exception = act11.Should().Throw<InvalidOperationException>().Which;
 
-        Assert.Contains("Invalid state transition: Embedding → Ready", exception.Message);
+        exception.Message.Should().Contain("Invalid state transition: Embedding → Ready");
     }
 
     [Fact]
@@ -368,10 +369,10 @@ public class PdfDocumentStateTransitionTests
         document.TransitionTo(PdfProcessingState.Chunking);
 
         // Act & Assert - Cannot go backwards
-        var exception = Assert.Throws<InvalidOperationException>(
-            () => document.TransitionTo(PdfProcessingState.Extracting));
+        var act12 = () => document.TransitionTo(PdfProcessingState.Extracting);
+        var exception = act12.Should().Throw<InvalidOperationException>().Which;
 
-        Assert.Contains("Invalid state transition: Chunking → Extracting", exception.Message);
+        exception.Message.Should().Contain("Invalid state transition: Chunking → Extracting");
     }
 
     [Fact]
@@ -389,7 +390,7 @@ public class PdfDocumentStateTransitionTests
         document.TransitionTo(PdfProcessingState.Ready);
 
         // Assert
-        Assert.Equal(PdfProcessingState.Ready, document.ProcessingState);
+        document.ProcessingState.Should().Be(PdfProcessingState.Ready);
 
     }
 
@@ -414,7 +415,7 @@ public class PdfDocumentStateTransitionTests
 
             // Should be able to fail from this state
             document.TransitionTo(PdfProcessingState.Failed);
-            Assert.Equal(PdfProcessingState.Failed, document.ProcessingState);
+            document.ProcessingState.Should().Be(PdfProcessingState.Failed);
         }
     }
 

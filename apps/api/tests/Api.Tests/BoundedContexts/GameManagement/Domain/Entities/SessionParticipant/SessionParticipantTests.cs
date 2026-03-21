@@ -1,6 +1,7 @@
 using Api.BoundedContexts.GameManagement.Domain.Entities;
 using Api.Tests.Constants;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.GameManagement.Domain.Entities.SessionParticipant;
 
@@ -20,14 +21,14 @@ public class SessionParticipantTests
         var participant = Api.BoundedContexts.GameManagement.Domain.Entities.SessionParticipant.CreateGuest(
             _sessionId, ValidGuestName, ParticipantRole.Player);
 
-        Assert.NotEqual(Guid.Empty, participant.Id);
-        Assert.Equal(_sessionId, participant.SessionId);
-        Assert.Null(participant.UserId);
-        Assert.Equal(ValidGuestName, participant.GuestName);
-        Assert.Equal(ParticipantRole.Player, participant.Role);
-        Assert.False(participant.AgentAccessEnabled);
-        Assert.True(participant.JoinedAt <= DateTime.UtcNow);
-        Assert.Null(participant.LeftAt);
+        participant.Id.Should().NotBe(Guid.Empty);
+        participant.SessionId.Should().Be(_sessionId);
+        participant.UserId.Should().BeNull();
+        participant.GuestName.Should().Be(ValidGuestName);
+        participant.Role.Should().Be(ParticipantRole.Player);
+        (participant.AgentAccessEnabled).Should().BeFalse();
+        (participant.JoinedAt <= DateTime.UtcNow).Should().BeTrue();
+        participant.LeftAt.Should().BeNull();
     }
 
     [Theory]
@@ -36,9 +37,10 @@ public class SessionParticipantTests
     [InlineData(null)]
     public void CreateGuest_WithEmptyName_ShouldThrow(string? guestName)
     {
-        Assert.Throws<ArgumentException>(() =>
+        var act = () =>
             Api.BoundedContexts.GameManagement.Domain.Entities.SessionParticipant.CreateGuest(
-                _sessionId, guestName!, ParticipantRole.Player));
+                _sessionId, guestName!, ParticipantRole.Player);
+        act.Should().Throw<ArgumentException>();
     }
 
     [Fact]
@@ -47,7 +49,7 @@ public class SessionParticipantTests
         var participant = Api.BoundedContexts.GameManagement.Domain.Entities.SessionParticipant.CreateGuest(
             _sessionId, "  Alice  ", ParticipantRole.Player);
 
-        Assert.Equal("Alice", participant.GuestName);
+        participant.GuestName.Should().Be("Alice");
     }
 
     #endregion
@@ -60,13 +62,13 @@ public class SessionParticipantTests
         var participant = Api.BoundedContexts.GameManagement.Domain.Entities.SessionParticipant.CreateRegistered(
             _sessionId, _userId, ParticipantRole.Player);
 
-        Assert.NotEqual(Guid.Empty, participant.Id);
-        Assert.Equal(_sessionId, participant.SessionId);
-        Assert.Equal(_userId, participant.UserId);
-        Assert.Null(participant.GuestName);
-        Assert.Equal(ParticipantRole.Player, participant.Role);
-        Assert.True(participant.JoinedAt <= DateTime.UtcNow);
-        Assert.Null(participant.LeftAt);
+        participant.Id.Should().NotBe(Guid.Empty);
+        participant.SessionId.Should().Be(_sessionId);
+        participant.UserId.Should().Be(_userId);
+        participant.GuestName.Should().BeNull();
+        participant.Role.Should().Be(ParticipantRole.Player);
+        (participant.JoinedAt <= DateTime.UtcNow).Should().BeTrue();
+        participant.LeftAt.Should().BeNull();
     }
 
     [Fact]
@@ -75,7 +77,7 @@ public class SessionParticipantTests
         var participant = Api.BoundedContexts.GameManagement.Domain.Entities.SessionParticipant.CreateRegistered(
             _sessionId, _userId, ParticipantRole.Host);
 
-        Assert.True(participant.AgentAccessEnabled);
+        (participant.AgentAccessEnabled).Should().BeTrue();
     }
 
     [Fact]
@@ -84,7 +86,7 @@ public class SessionParticipantTests
         var participant = Api.BoundedContexts.GameManagement.Domain.Entities.SessionParticipant.CreateRegistered(
             _sessionId, _userId, ParticipantRole.Player);
 
-        Assert.False(participant.AgentAccessEnabled);
+        (participant.AgentAccessEnabled).Should().BeFalse();
     }
 
     [Fact]
@@ -93,7 +95,7 @@ public class SessionParticipantTests
         var participant = Api.BoundedContexts.GameManagement.Domain.Entities.SessionParticipant.CreateRegistered(
             _sessionId, _userId, ParticipantRole.Spectator);
 
-        Assert.False(participant.AgentAccessEnabled);
+        (participant.AgentAccessEnabled).Should().BeFalse();
     }
 
     #endregion
@@ -106,13 +108,13 @@ public class SessionParticipantTests
         var participant = Api.BoundedContexts.GameManagement.Domain.Entities.SessionParticipant.CreateGuest(
             _sessionId, ValidGuestName, ParticipantRole.Player);
 
-        Assert.False(participant.AgentAccessEnabled);
+        (participant.AgentAccessEnabled).Should().BeFalse();
 
         participant.EnableAgentAccess();
-        Assert.True(participant.AgentAccessEnabled);
+        (participant.AgentAccessEnabled).Should().BeTrue();
 
         participant.DisableAgentAccess();
-        Assert.False(participant.AgentAccessEnabled);
+        (participant.AgentAccessEnabled).Should().BeFalse();
     }
 
     #endregion
@@ -125,13 +127,13 @@ public class SessionParticipantTests
         var participant = Api.BoundedContexts.GameManagement.Domain.Entities.SessionParticipant.CreateGuest(
             _sessionId, ValidGuestName, ParticipantRole.Player);
 
-        Assert.True(participant.IsActive);
+        (participant.IsActive).Should().BeTrue();
 
         participant.Leave();
 
-        Assert.NotNull(participant.LeftAt);
-        Assert.True(participant.LeftAt <= DateTime.UtcNow);
-        Assert.False(participant.IsActive);
+        participant.LeftAt.Should().NotBeNull();
+        (participant.LeftAt <= DateTime.UtcNow).Should().BeTrue();
+        (participant.IsActive).Should().BeFalse();
     }
 
     #endregion
@@ -144,7 +146,7 @@ public class SessionParticipantTests
         var participant = Api.BoundedContexts.GameManagement.Domain.Entities.SessionParticipant.CreateGuest(
             _sessionId, ValidGuestName, ParticipantRole.Player);
 
-        Assert.Equal(6, participant.ConnectionToken.Length);
+        participant.ConnectionToken.Length.Should().Be(6);
     }
 
     [Fact]
@@ -156,11 +158,11 @@ public class SessionParticipantTests
             var participant = Api.BoundedContexts.GameManagement.Domain.Entities.SessionParticipant.CreateGuest(
                 _sessionId, ValidGuestName, ParticipantRole.Player);
 
-            Assert.DoesNotContain("O", participant.ConnectionToken);
-            Assert.DoesNotContain("0", participant.ConnectionToken);
-            Assert.DoesNotContain("I", participant.ConnectionToken);
-            Assert.DoesNotContain("1", participant.ConnectionToken);
-            Assert.DoesNotContain("l", participant.ConnectionToken);
+            participant.ConnectionToken.Should().NotContain("O");
+            participant.ConnectionToken.Should().NotContain("0");
+            participant.ConnectionToken.Should().NotContain("I");
+            participant.ConnectionToken.Should().NotContain("1");
+            participant.ConnectionToken.Should().NotContain("l");
         }
     }
 
@@ -173,7 +175,7 @@ public class SessionParticipantTests
             .ToHashSet();
 
         // With 6 chars from 32-char alphabet, collisions in 20 tokens are extremely unlikely
-        Assert.True(tokens.Count > 15, "Expected most connection tokens to be unique");
+        (tokens.Count > 15).Should().BeTrue("Expected most connection tokens to be unique");
     }
 
     #endregion
@@ -186,7 +188,7 @@ public class SessionParticipantTests
         var participant = Api.BoundedContexts.GameManagement.Domain.Entities.SessionParticipant.CreateGuest(
             _sessionId, ValidGuestName, ParticipantRole.Player);
 
-        Assert.Equal(ValidGuestName, participant.DisplayName);
+        participant.DisplayName.Should().Be(ValidGuestName);
     }
 
     [Fact]
@@ -195,7 +197,7 @@ public class SessionParticipantTests
         var participant = Api.BoundedContexts.GameManagement.Domain.Entities.SessionParticipant.CreateRegistered(
             _sessionId, _userId, ParticipantRole.Player);
 
-        Assert.Equal("User", participant.DisplayName);
+        participant.DisplayName.Should().Be("User");
     }
 
     #endregion
@@ -210,8 +212,8 @@ public class SessionParticipantTests
         var registered = Api.BoundedContexts.GameManagement.Domain.Entities.SessionParticipant.CreateRegistered(
             _sessionId, _userId, ParticipantRole.Player);
 
-        Assert.False(guest.IsRegisteredUser);
-        Assert.True(registered.IsRegisteredUser);
+        (guest.IsRegisteredUser).Should().BeFalse();
+        (registered.IsRegisteredUser).Should().BeTrue();
     }
 
     #endregion

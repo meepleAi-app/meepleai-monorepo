@@ -2,6 +2,8 @@ using Api.BoundedContexts.SessionTracking.Domain.Entities;
 using Api.BoundedContexts.SessionTracking.Domain.Repositories;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities.SessionTracking;
+using Api.SharedKernel.Application.Services;
+using Api.SharedKernel.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 
 namespace Api.BoundedContexts.SessionTracking.Infrastructure.Persistence;
@@ -9,19 +11,17 @@ namespace Api.BoundedContexts.SessionTracking.Infrastructure.Persistence;
 /// <summary>
 /// Repository implementation for SessionNote persistence operations.
 /// </summary>
-public class SessionNoteRepository : ISessionNoteRepository
+public class SessionNoteRepository : RepositoryBase, ISessionNoteRepository
 {
-    private readonly MeepleAiDbContext _context;
-
-    public SessionNoteRepository(MeepleAiDbContext context)
+    public SessionNoteRepository(MeepleAiDbContext dbContext, IDomainEventCollector eventCollector)
+        : base(dbContext, eventCollector)
     {
-        _context = context;
     }
 
     /// <inheritdoc />
     public async Task<SessionNote?> GetByIdAsync(Guid noteId, CancellationToken cancellationToken = default)
     {
-        var entity = await _context.SessionNotes
+        var entity = await DbContext.SessionNotes
             .FirstOrDefaultAsync(n => n.Id == noteId, cancellationToken)
             .ConfigureAwait(false);
 
@@ -33,7 +33,7 @@ public class SessionNoteRepository : ISessionNoteRepository
         Guid sessionId,
         CancellationToken cancellationToken = default)
     {
-        var entities = await _context.SessionNotes
+        var entities = await DbContext.SessionNotes
             .Where(n => n.SessionId == sessionId)
             .OrderByDescending(n => n.UpdatedAt)
             .ToListAsync(cancellationToken)
@@ -48,7 +48,7 @@ public class SessionNoteRepository : ISessionNoteRepository
         Guid participantId,
         CancellationToken cancellationToken = default)
     {
-        var entities = await _context.SessionNotes
+        var entities = await DbContext.SessionNotes
             .Where(n => n.SessionId == sessionId && n.ParticipantId == participantId)
             .OrderByDescending(n => n.UpdatedAt)
             .ToListAsync(cancellationToken)
@@ -63,7 +63,7 @@ public class SessionNoteRepository : ISessionNoteRepository
         Guid requesterId,
         CancellationToken cancellationToken = default)
     {
-        var entities = await _context.SessionNotes
+        var entities = await DbContext.SessionNotes
             .Where(n => n.SessionId == sessionId &&
                        (n.ParticipantId == requesterId || n.IsRevealed))
             .OrderByDescending(n => n.UpdatedAt)
@@ -77,20 +77,20 @@ public class SessionNoteRepository : ISessionNoteRepository
     public async Task AddAsync(SessionNote note, CancellationToken cancellationToken = default)
     {
         var entity = SessionNoteMapper.ToEntity(note);
-        await _context.SessionNotes.AddAsync(entity, cancellationToken).ConfigureAwait(false);
+        await DbContext.SessionNotes.AddAsync(entity, cancellationToken).ConfigureAwait(false);
     }
 
     /// <inheritdoc />
     public Task UpdateAsync(SessionNote note, CancellationToken cancellationToken = default)
     {
         var entity = SessionNoteMapper.ToEntity(note);
-        _context.SessionNotes.Update(entity);
+        DbContext.SessionNotes.Update(entity);
         return Task.CompletedTask;
     }
 
     /// <inheritdoc />
     public async Task SaveChangesAsync(CancellationToken cancellationToken = default)
     {
-        await _context.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        await DbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
     }
 }

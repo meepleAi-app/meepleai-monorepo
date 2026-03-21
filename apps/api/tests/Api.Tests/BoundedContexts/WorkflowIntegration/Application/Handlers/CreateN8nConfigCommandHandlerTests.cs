@@ -5,6 +5,7 @@ using Api.BoundedContexts.WorkflowIntegration.Application.Queries;
 using Api.BoundedContexts.WorkflowIntegration.Domain.Repositories;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Moq;
+using FluentAssertions;
 using Xunit;
 using Api.Tests.Constants;
 
@@ -47,12 +48,12 @@ public class CreateN8NConfigCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal("Production N8N", result.Name);
-        Assert.Equal("https://n8n.example.com", result.BaseUrl);
-        Assert.Equal("https://webhook.example.com/n8n", result.WebhookUrl);
-        Assert.True(result.IsActive);
-        Assert.Null(result.LastTestedAt);
+        result.Should().NotBeNull();
+        result.Name.Should().Be("Production N8N");
+        result.BaseUrl.Should().Be("https://n8n.example.com");
+        result.WebhookUrl.Should().Be("https://webhook.example.com/n8n");
+        result.IsActive.Should().BeTrue();
+        result.LastTestedAt.Should().BeNull();
 
         _mockConfigRepository.Verify(
             r => r.AddAsync(
@@ -81,10 +82,10 @@ public class CreateN8NConfigCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal("Development N8N", result.Name);
-        Assert.Equal("http://localhost:5678", result.BaseUrl);
-        Assert.Null(result.WebhookUrl);
+        result.Should().NotBeNull();
+        result.Name.Should().Be("Development N8N");
+        result.BaseUrl.Should().Be("http://localhost:5678");
+        result.WebhookUrl.Should().BeNull();
     }
 
     [Fact]
@@ -103,7 +104,7 @@ public class CreateN8NConfigCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotEqual(Guid.Empty, result.Id);
+        result.Id.Should().NotBe(Guid.Empty);
     }
 
     [Fact]
@@ -122,7 +123,7 @@ public class CreateN8NConfigCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.True(result.IsActive);
+        result.IsActive.Should().BeTrue();
     }
 
     [Fact]
@@ -141,8 +142,8 @@ public class CreateN8NConfigCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal("https://secure.n8n.com:443", result.BaseUrl);
+        result.Should().NotBeNull();
+        result.BaseUrl.Should().Be("https://secure.n8n.com:443");
     }
 
     [Fact]
@@ -190,9 +191,9 @@ public class CreateN8NConfigCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result.CreatedAt);
-        Assert.True(result.CreatedAt >= beforeCreate);
-        Assert.True(result.CreatedAt <= DateTime.UtcNow.AddSeconds(1));
+        result.CreatedAt.Should().NotBe(default);
+        (result.CreatedAt >= beforeCreate).Should().BeTrue();
+        (result.CreatedAt <= DateTime.UtcNow.AddSeconds(1)).Should().BeTrue();
     }
 }
 

@@ -70,7 +70,8 @@ user2@test.com,User Two,admin,Password456!";
         var command = new BulkImportUsersCommand("", Guid.NewGuid());
 
         // Act & Assert
-        await Assert.ThrowsAsync<DomainException>(() => _handler.Handle(command, CancellationToken.None));
+        var act = () => _handler.Handle(command, CancellationToken.None);
+        await act.Should().ThrowAsync<DomainException>();
     }
 
     [Fact]
@@ -83,7 +84,8 @@ user1@test.com,User One,user,Password123!";
         var command = new BulkImportUsersCommand(csvContent, Guid.NewGuid());
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<DomainException>(() => _handler.Handle(command, CancellationToken.None));
+        var act = () => _handler.Handle(command, CancellationToken.None);
+        var exception = (await act.Should().ThrowAsync<DomainException>()).Which;
         exception.Message.Should().Contain("Invalid CSV header");
     }
 
@@ -98,7 +100,8 @@ duplicate@test.com,User Two,user,Password456!";
         var command = new BulkImportUsersCommand(csvContent, Guid.NewGuid());
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<DomainException>(() => _handler.Handle(command, CancellationToken.None));
+        var act = () => _handler.Handle(command, CancellationToken.None);
+        var exception = (await act.Should().ThrowAsync<DomainException>()).Which;
         exception.Message.Should().Contain("duplicate emails");
     }
 
@@ -115,7 +118,8 @@ existing@test.com,User One,user,Password123!";
         var command = new BulkImportUsersCommand(csvContent, Guid.NewGuid());
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<DomainException>(() => _handler.Handle(command, CancellationToken.None));
+        var act = () => _handler.Handle(command, CancellationToken.None);
+        var exception = (await act.Should().ThrowAsync<DomainException>()).Which;
         exception.Message.Should().Contain("already exist");
     }
 
@@ -133,7 +137,8 @@ existing@test.com,User One,user,Password123!";
         var command = new BulkImportUsersCommand(csvContent, Guid.NewGuid());
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<DomainException>(() => _handler.Handle(command, CancellationToken.None));
+        var act = () => _handler.Handle(command, CancellationToken.None);
+        var exception = (await act.Should().ThrowAsync<DomainException>()).Which;
         exception.Message.Should().Contain("maximum limit of 1000");
     }
 

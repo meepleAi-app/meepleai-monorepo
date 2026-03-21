@@ -7,6 +7,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Time.Testing;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.Administration.Application.Handlers;
 
@@ -42,10 +43,10 @@ public class GetMetricsTimeSeriesQueryHandlerTests
         var result = await _handler.Handle(query, CancellationToken.None);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal(3, result.Cpu.Count);
-        Assert.Equal(3, result.Memory.Count);
-        Assert.Equal(3, result.Requests.Count);
+        result.Should().NotBeNull();
+        result.Cpu.Count.Should().Be(3);
+        result.Memory.Count.Should().Be(3);
+        result.Requests.Count.Should().Be(3);
 
         // Verify all 3 queries were executed
         _mockPrometheusService.Verify(
@@ -124,10 +125,10 @@ public class GetMetricsTimeSeriesQueryHandlerTests
         var result = await _handler.Handle(query, CancellationToken.None);
 
         // Assert - graceful degradation: CPU empty, others have data
-        Assert.NotNull(result);
-        Assert.Empty(result.Cpu);
-        Assert.Single(result.Memory);
-        Assert.Single(result.Requests);
+        result.Should().NotBeNull();
+        result.Cpu.Should().BeEmpty();
+        result.Memory.Should().ContainSingle();
+        result.Requests.Should().ContainSingle();
     }
 
     [Fact]
@@ -149,10 +150,10 @@ public class GetMetricsTimeSeriesQueryHandlerTests
         var result = await _handler.Handle(query, CancellationToken.None);
 
         // Assert - all empty, no exception thrown
-        Assert.NotNull(result);
-        Assert.Empty(result.Cpu);
-        Assert.Empty(result.Memory);
-        Assert.Empty(result.Requests);
+        result.Should().NotBeNull();
+        result.Cpu.Should().BeEmpty();
+        result.Memory.Should().BeEmpty();
+        result.Requests.Should().BeEmpty();
     }
 
     [Fact]
@@ -176,10 +177,10 @@ public class GetMetricsTimeSeriesQueryHandlerTests
         var result = await _handler.Handle(query, CancellationToken.None);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Empty(result.Cpu);
-        Assert.Empty(result.Memory);
-        Assert.Empty(result.Requests);
+        result.Should().NotBeNull();
+        result.Cpu.Should().BeEmpty();
+        result.Memory.Should().BeEmpty();
+        result.Requests.Should().BeEmpty();
     }
 
     [Fact]
@@ -215,10 +216,10 @@ public class GetMetricsTimeSeriesQueryHandlerTests
 
         // Assert - verify data points are ordered by timestamp
         var cpuPoints = result.Cpu.ToList();
-        Assert.Equal(3, cpuPoints.Count);
-        Assert.Equal(10.0, cpuPoints[0].Value);
-        Assert.Equal(20.0, cpuPoints[1].Value);
-        Assert.Equal(30.0, cpuPoints[2].Value);
+        cpuPoints.Count.Should().Be(3);
+        cpuPoints[0].Value.Should().Be(10.0);
+        cpuPoints[1].Value.Should().Be(20.0);
+        cpuPoints[2].Value.Should().Be(30.0);
     }
 
     [Fact]
@@ -249,8 +250,9 @@ public class GetMetricsTimeSeriesQueryHandlerTests
     public async Task Handle_WithNullRequest_ThrowsArgumentNullException()
     {
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentNullException>(() =>
-            _handler.Handle(null!, CancellationToken.None));
+        var act = () =>
+            _handler.Handle(null!, CancellationToken.None);
+        await act.Should().ThrowAsync<ArgumentNullException>();
     }
 
     private void SetupPrometheusServiceReturnsDataPoints(int count)

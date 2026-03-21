@@ -6,6 +6,7 @@ using Api.BoundedContexts.KnowledgeBase.Domain.Services;
 using Api.Tests.Constants;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.Administration.Application.Handlers;
 
@@ -40,27 +41,29 @@ public class GetLlmHealthQueryHandlerTests
             _circuitBreakerRegistryMock.Object);
 
         // Assert
-        Assert.NotNull(handler);
+        handler.Should().NotBeNull();
     }
 
     [Fact]
     public void Constructor_WithNullHealthCheckService_ThrowsArgumentNullException()
     {
         // Act & Assert
-        Assert.Throws<ArgumentNullException>(() =>
+        var act = () =>
             new GetLlmHealthQueryHandler(
                 null!,
-                _circuitBreakerRegistryMock.Object));
+                _circuitBreakerRegistryMock.Object);
+        act.Should().Throw<ArgumentNullException>();
     }
 
     [Fact]
     public void Constructor_WithNullCircuitBreakerRegistry_ThrowsArgumentNullException()
     {
         // Act & Assert
-        Assert.Throws<ArgumentNullException>(() =>
+        var act = () =>
             new GetLlmHealthQueryHandler(
                 _healthCheckServiceMock.Object,
-                null!));
+                null!);
+        act.Should().Throw<ArgumentNullException>();
     }
     [Fact]
     public void Query_ConstructsCorrectly()
@@ -69,7 +72,7 @@ public class GetLlmHealthQueryHandlerTests
         var query = new GetLlmHealthQuery();
 
         // Assert
-        Assert.NotNull(query);
+        query.Should().NotBeNull();
     }
     // NOTE: Full workflow tests (health check aggregation, circuit breaker status,
     // latency statistics, success rate calculation, history tracking)

@@ -22,6 +22,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Moq;
 using StackExchange.Redis;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.SharedGameCatalog.Integration;
 
@@ -160,13 +161,13 @@ public sealed class BggImportQueueEndpointsIntegrationTests : IAsyncLifetime
         var response = await _client.GetAsync("/api/v1/admin/bgg-queue/status");
 
         // Assert
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var result = await response.Content.ReadFromJsonAsync<BggQueueStatusResponse>();
-        Assert.NotNull(result);
-        Assert.Equal(2, result.TotalQueued);
-        Assert.Equal(1, result.TotalProcessing);
-        Assert.Equal(3, result.Items.Count);
+        result.Should().NotBeNull();
+        result.TotalQueued.Should().Be(2);
+        result.TotalProcessing.Should().Be(1);
+        result.Items.Count.Should().Be(3);
     }
 
     [Fact]
@@ -176,13 +177,13 @@ public sealed class BggImportQueueEndpointsIntegrationTests : IAsyncLifetime
         var response = await _client.GetAsync("/api/v1/admin/bgg-queue/status");
 
         // Assert
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var result = await response.Content.ReadFromJsonAsync<BggQueueStatusResponse>();
-        Assert.NotNull(result);
-        Assert.Equal(0, result.TotalQueued);
-        Assert.Equal(0, result.TotalProcessing);
-        Assert.Empty(result.Items);
+        result.Should().NotBeNull();
+        result.TotalQueued.Should().Be(0);
+        result.TotalProcessing.Should().Be(0);
+        result.Items.Should().BeEmpty();
     }
 
     [Fact]
@@ -202,9 +203,9 @@ public sealed class BggImportQueueEndpointsIntegrationTests : IAsyncLifetime
 
         // Assert
         var result = await response.Content.ReadFromJsonAsync<BggQueueStatusResponse>();
-        Assert.NotNull(result);
-        Assert.Equal(1, result.TotalQueued);
-        Assert.DoesNotContain(result.Items, i => i.Status == BggImportStatus.Completed);
+        result.Should().NotBeNull();
+        result.TotalQueued.Should().Be(1);
+        result.Items.Should().NotContain(i => i.Status == BggImportStatus.Completed);
     }
 
     #endregion
@@ -221,19 +222,19 @@ public sealed class BggImportQueueEndpointsIntegrationTests : IAsyncLifetime
         var response = await _client.PostAsJsonAsync("/api/v1/admin/bgg-queue/enqueue", request);
 
         // Assert
-        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Created);
 
         var result = await response.Content.ReadFromJsonAsync<BggImportQueueEntity>();
-        Assert.NotNull(result);
-        Assert.Equal(174430, result.BggId);
-        Assert.Equal("Gloomhaven", result.GameName);
-        Assert.Equal(BggImportStatus.Queued, result.Status);
+        result.Should().NotBeNull();
+        result.BggId.Should().Be(174430);
+        result.GameName.Should().Be("Gloomhaven");
+        result.Status.Should().Be(BggImportStatus.Queued);
 
         // Verify database persistence
         using var scope = _factory.Services.CreateScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
         var dbEntry = await dbContext.BggImportQueue.FirstOrDefaultAsync(q => q.BggId == 174430);
-        Assert.NotNull(dbEntry);
+        dbEntry.Should().NotBeNull();
     }
 
     [Fact]
@@ -250,12 +251,12 @@ public sealed class BggImportQueueEndpointsIntegrationTests : IAsyncLifetime
         var response = await _client.PostAsJsonAsync("/api/v1/admin/bgg-queue/enqueue", request);
 
         // Assert
-        Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Conflict);
 
         var problemDetails = await response.Content.ReadFromJsonAsync<Microsoft.AspNetCore.Mvc.ProblemDetails>();
-        Assert.NotNull(problemDetails);
-        Assert.Equal("Duplicate BGG ID", problemDetails.Title);
-        Assert.Contains("266192", problemDetails.Detail);
+        problemDetails.Should().NotBeNull();
+        problemDetails.Title.Should().Be("Duplicate BGG ID");
+        problemDetails.Detail.Should().Contain("266192");
     }
 
     [Fact]
@@ -268,7 +269,7 @@ public sealed class BggImportQueueEndpointsIntegrationTests : IAsyncLifetime
         var response = await _client.PostAsJsonAsync("/api/v1/admin/bgg-queue/enqueue", request);
 
         // Assert
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
 
     #endregion
@@ -285,16 +286,16 @@ public sealed class BggImportQueueEndpointsIntegrationTests : IAsyncLifetime
         var response = await _client.PostAsJsonAsync("/api/v1/admin/bgg-queue/batch", request);
 
         // Assert
-        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Created);
 
         var result = await response.Content.ReadFromJsonAsync<List<BggImportQueueEntity>>();
-        Assert.NotNull(result);
-        Assert.Equal(3, result.Count);
+        result.Should().NotBeNull();
+        result.Count.Should().Be(3);
 
         // Verify sequential positions
-        Assert.Equal(1, result[0].Position);
-        Assert.Equal(2, result[1].Position);
-        Assert.Equal(3, result[2].Position);
+        result[0].Position.Should().Be(1);
+        result[1].Position.Should().Be(2);
+        result[2].Position.Should().Be(3);
     }
 
     [Fact]
@@ -311,12 +312,12 @@ public sealed class BggImportQueueEndpointsIntegrationTests : IAsyncLifetime
         var response = await _client.PostAsJsonAsync("/api/v1/admin/bgg-queue/batch", request);
 
         // Assert
-        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Created);
 
         var result = await response.Content.ReadFromJsonAsync<List<BggImportQueueEntity>>();
-        Assert.NotNull(result);
-        Assert.Equal(2, result.Count); // Only 2 new entries
-        Assert.DoesNotContain(result, r => r.BggId == 174430);
+        result.Should().NotBeNull();
+        result.Count.Should().Be(2); // Only 2 new entries
+        result.Should().NotContain(r => r.BggId == 174430);
     }
 
     [Fact]
@@ -329,11 +330,11 @@ public sealed class BggImportQueueEndpointsIntegrationTests : IAsyncLifetime
         var response = await _client.PostAsJsonAsync("/api/v1/admin/bgg-queue/batch", request);
 
         // Assert
-        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Created);
 
         var result = await response.Content.ReadFromJsonAsync<List<BggImportQueueEntity>>();
-        Assert.NotNull(result);
-        Assert.Empty(result);
+        result.Should().NotBeNull();
+        result.Should().BeEmpty();
     }
 
     #endregion
@@ -352,12 +353,12 @@ public sealed class BggImportQueueEndpointsIntegrationTests : IAsyncLifetime
         var response = await _client.DeleteAsync($"/api/v1/admin/bgg-queue/{entity.Id}");
 
         // Assert
-        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.NoContent);
 
         // Verify removal from database
         var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
         var removed = await dbContext.BggImportQueue.FirstOrDefaultAsync(q => q.Id == entity.Id);
-        Assert.Null(removed);
+        removed.Should().BeNull();
     }
 
     [Fact]
@@ -373,11 +374,11 @@ public sealed class BggImportQueueEndpointsIntegrationTests : IAsyncLifetime
         var response = await _client.DeleteAsync($"/api/v1/admin/bgg-queue/{entity.Id}");
 
         // Assert
-        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
 
         var problemDetails = await response.Content.ReadFromJsonAsync<Microsoft.AspNetCore.Mvc.ProblemDetails>();
-        Assert.NotNull(problemDetails);
-        Assert.Contains("cannot be cancelled", problemDetails.Detail);
+        problemDetails.Should().NotBeNull();
+        problemDetails.Detail.Should().Contain("cannot be cancelled");
     }
 
     [Fact]
@@ -387,7 +388,7 @@ public sealed class BggImportQueueEndpointsIntegrationTests : IAsyncLifetime
         var response = await _client.DeleteAsync($"/api/v1/admin/bgg-queue/{Guid.NewGuid()}");
 
         // Assert
-        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
 
     #endregion
@@ -408,14 +409,14 @@ public sealed class BggImportQueueEndpointsIntegrationTests : IAsyncLifetime
         var response = await _client.PostAsync($"/api/v1/admin/bgg-queue/{entity.Id}/retry", null);
 
         // Assert
-        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.NoContent);
 
         // Verify status changed to Queued
         var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
         var retried = await dbContext.BggImportQueue.FirstOrDefaultAsync(q => q.Id == entity.Id);
-        Assert.NotNull(retried);
-        Assert.Equal(BggImportStatus.Queued, retried.Status);
-        Assert.Equal(0, retried.RetryCount);
+        retried.Should().NotBeNull();
+        retried.Status.Should().Be(BggImportStatus.Queued);
+        retried.RetryCount.Should().Be(0);
     }
 
     [Fact]
@@ -430,11 +431,11 @@ public sealed class BggImportQueueEndpointsIntegrationTests : IAsyncLifetime
         var response = await _client.PostAsync($"/api/v1/admin/bgg-queue/{entity.Id}/retry", null);
 
         // Assert
-        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
 
         var problemDetails = await response.Content.ReadFromJsonAsync<Microsoft.AspNetCore.Mvc.ProblemDetails>();
-        Assert.NotNull(problemDetails);
-        Assert.Contains("cannot be retried", problemDetails.Detail);
+        problemDetails.Should().NotBeNull();
+        problemDetails.Detail.Should().Contain("cannot be retried");
     }
 
     [Fact]
@@ -444,7 +445,7 @@ public sealed class BggImportQueueEndpointsIntegrationTests : IAsyncLifetime
         var response = await _client.PostAsync($"/api/v1/admin/bgg-queue/{Guid.NewGuid()}/retry", null);
 
         // Assert
-        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
 
     #endregion
@@ -463,11 +464,11 @@ public sealed class BggImportQueueEndpointsIntegrationTests : IAsyncLifetime
         var response = await _client.GetAsync("/api/v1/admin/bgg-queue/12345");
 
         // Assert
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var result = await response.Content.ReadFromJsonAsync<BggImportQueueEntity>();
-        Assert.NotNull(result);
-        Assert.Equal(12345, result.BggId);
+        result.Should().NotBeNull();
+        result.BggId.Should().Be(12345);
     }
 
     [Fact]
@@ -477,11 +478,11 @@ public sealed class BggImportQueueEndpointsIntegrationTests : IAsyncLifetime
         var response = await _client.GetAsync("/api/v1/admin/bgg-queue/99999");
 
         // Assert
-        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
 
         var problemDetails = await response.Content.ReadFromJsonAsync<Microsoft.AspNetCore.Mvc.ProblemDetails>();
-        Assert.NotNull(problemDetails);
-        Assert.Contains("99999", problemDetails.Detail);
+        problemDetails.Should().NotBeNull();
+        problemDetails.Detail.Should().Contain("99999");
     }
 
     #endregion
@@ -514,8 +515,8 @@ public sealed class BggImportQueueEndpointsIntegrationTests : IAsyncLifetime
         var response = await _client.GetAsync("/api/v1/admin/bgg-queue/stream", cts.Token);
 
         // Assert
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        Assert.Equal("text/event-stream", response.Content.Headers.ContentType?.MediaType);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        response.Content.Headers.ContentType?.MediaType.Should().Be("text/event-stream");
 
         // Read first SSE event
         var stream = await response.Content.ReadAsStreamAsync(cts.Token);
@@ -523,18 +524,18 @@ public sealed class BggImportQueueEndpointsIntegrationTests : IAsyncLifetime
 
         // Read data line (format: "data: {...}")
         var dataLine = await reader.ReadLineAsync(cts.Token);
-        Assert.NotNull(dataLine);
-        Assert.StartsWith("data: ", dataLine);
+        dataLine.Should().NotBeNull();
+        dataLine.Should().StartWith("data: ");
 
         var jsonData = dataLine.Substring(6); // Remove "data: " prefix
         var sseEvent = System.Text.Json.JsonSerializer.Deserialize<SseQueueEvent>(jsonData);
 
-        Assert.NotNull(sseEvent);
-        Assert.Equal(2, sseEvent.queued); // 2 queued items
-        Assert.Equal(1, sseEvent.processing); // 1 processing item
-        Assert.Equal(1, sseEvent.completed); // 1 completed item (Issue #3 fix)
-        Assert.Equal(1, sseEvent.failed); // 1 failed item (Issue #3 fix)
-        Assert.Equal(3, sseEvent.eta); // queued + processing
+        sseEvent.Should().NotBeNull();
+        sseEvent.queued.Should().Be(2); // 2 queued items
+        sseEvent.processing.Should().Be(1); // 1 processing item
+        sseEvent.completed.Should().Be(1); // 1 completed item (Issue #3 fix)
+        sseEvent.failed.Should().Be(1); // 1 failed item (Issue #3 fix)
+        sseEvent.eta.Should().Be(3); // queued + processing
     }
 
     [Fact]
@@ -550,7 +551,7 @@ public sealed class BggImportQueueEndpointsIntegrationTests : IAsyncLifetime
         var response = await _client.GetAsync("/api/v1/admin/bgg-queue/stream", cts.Token);
 
         // Assert
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var stream = await response.Content.ReadAsStreamAsync(cts.Token);
         using var reader = new StreamReader(stream);
@@ -573,7 +574,7 @@ public sealed class BggImportQueueEndpointsIntegrationTests : IAsyncLifetime
         }
 
         // Should receive at least 2 events (updates every 2 seconds)
-        Assert.True(eventCount >= 2, $"Expected at least 2 SSE events, got {eventCount}");
+        (eventCount >= 2).Should().BeTrue($"Expected at least 2 SSE events, got {eventCount}");
     }
 
     [Fact]
@@ -597,15 +598,15 @@ public sealed class BggImportQueueEndpointsIntegrationTests : IAsyncLifetime
         using var reader = new StreamReader(stream);
 
         var dataLine = await reader.ReadLineAsync(cts.Token);
-        Assert.NotNull(dataLine);
+        dataLine.Should().NotBeNull();
 
         var jsonData = dataLine.Substring(6);
         var sseEvent = System.Text.Json.JsonSerializer.Deserialize<SseQueueEvent>(jsonData);
 
         // Assert - Should return max 10 items in items array
-        Assert.NotNull(sseEvent);
-        Assert.Equal(15, sseEvent.queued);
-        Assert.True(sseEvent.items.Count <= 10, $"Expected max 10 items, got {sseEvent.items.Count}");
+        sseEvent.Should().NotBeNull();
+        sseEvent.queued.Should().Be(15);
+        (sseEvent.items.Count <= 10).Should().BeTrue($"Expected max 10 items, got {sseEvent.items.Count}");
     }
 
     #endregion
@@ -620,7 +621,7 @@ public sealed class BggImportQueueEndpointsIntegrationTests : IAsyncLifetime
     {
         // Verify endpoint routes are protected (auth bypassed in tests)
         var statusResponse = await _client.GetAsync("/api/v1/admin/bgg-queue/status");
-        Assert.Equal(HttpStatusCode.OK, statusResponse.StatusCode); // Auth bypassed
+        statusResponse.StatusCode.Should().Be(HttpStatusCode.OK); // Auth bypassed
 
         // In production: Would return 401/403 without admin role
     }

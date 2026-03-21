@@ -132,8 +132,8 @@ public sealed class InfrastructureDetailsEndpointTests
         var query = new GetInfrastructureDetailsQuery();
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
-            () => handler.Handle(query, CancellationToken.None));
+        var act = () => handler.Handle(query, CancellationToken.None);
+        var exception = (await act.Should().ThrowAsync<InvalidOperationException>()).Which;
 
         exception.Message.Should().Be("Service orchestration failed");
     }

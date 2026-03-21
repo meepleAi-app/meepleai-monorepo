@@ -40,8 +40,8 @@ public class GetLedgerHistoryQueryHandlerTests
     public async Task Handle_WithNullQuery_ThrowsArgumentNullException()
     {
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentNullException>(
-            async () => await _handler.Handle(null!, TestCancellationToken));
+        Func<Task> act = async () => await _handler.Handle(null!, TestCancellationToken);
+        await act.Should().ThrowAsync<ArgumentNullException>();
     }
 
     [Fact]
@@ -55,8 +55,8 @@ public class GetLedgerHistoryQueryHandlerTests
         var query = new GetLedgerHistoryQuery(sessionId, 50);
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
-            async () => await _handler.Handle(query, TestCancellationToken));
+        Func<Task> act = async () => await _handler.Handle(query, TestCancellationToken);
+        var exception = (await act.Should().ThrowAsync<InvalidOperationException>()).Which;
 
         exception.Message.Should().Contain(sessionId.ToString());
     }

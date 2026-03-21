@@ -8,6 +8,7 @@ using Api.Tests.Constants;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.SharedGameCatalog.Application.Handlers;
 
@@ -82,8 +83,8 @@ public class LinkAgentToSharedGameCommandHandlerTests
             u => u.SaveChangesAsync(It.IsAny<CancellationToken>()),
             Times.Once);
 
-        Assert.NotNull(capturedGame);
-        Assert.Equal(agentId, capturedGame.AgentDefinitionId);
+        capturedGame.Should().NotBeNull();
+        capturedGame.AgentDefinitionId.Should().Be(agentId);
     }
 
     [Fact]
@@ -99,8 +100,8 @@ public class LinkAgentToSharedGameCommandHandlerTests
             .ReturnsAsync((SharedGame?)null);
 
         // Act & Assert
-        await Assert.ThrowsAsync<NotFoundException>(
-            () => _handler.Handle(command, TestContext.Current.CancellationToken));
+        var act = () => _handler.Handle(command, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<NotFoundException>();
 
         _repositoryMock.Verify(
             r => r.Update(It.IsAny<SharedGame>()),
@@ -144,8 +145,8 @@ public class LinkAgentToSharedGameCommandHandlerTests
             .ReturnsAsync(game);
 
         // Act & Assert
-        await Assert.ThrowsAsync<InvalidOperationException>(
-            () => _handler.Handle(command, TestContext.Current.CancellationToken));
+        var act = () => _handler.Handle(command, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<InvalidOperationException>();
 
         _repositoryMock.Verify(
             r => r.Update(It.IsAny<SharedGame>()),

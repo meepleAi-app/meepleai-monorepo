@@ -6,6 +6,7 @@ using Microsoft.Extensions.Logging;
 using Moq;
 using Api.Tests.Constants;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Unit;
 
@@ -33,11 +34,11 @@ public class RagEnhancementServiceTests
 
         var result = await _sut.GetActiveEnhancementsAsync(tier);
 
-        Assert.True(result.HasFlag(RagEnhancement.AdaptiveRouting));
-        Assert.True(result.HasFlag(RagEnhancement.CragEvaluation));
-        Assert.True(result.HasFlag(RagEnhancement.RaptorRetrieval));
-        Assert.True(result.HasFlag(RagEnhancement.RagFusionQueries));
-        Assert.True(result.HasFlag(RagEnhancement.GraphTraversal));
+        result.HasFlag(RagEnhancement.AdaptiveRouting).Should().BeTrue();
+        result.HasFlag(RagEnhancement.CragEvaluation).Should().BeTrue();
+        result.HasFlag(RagEnhancement.RaptorRetrieval).Should().BeTrue();
+        result.HasFlag(RagEnhancement.RagFusionQueries).Should().BeTrue();
+        result.HasFlag(RagEnhancement.GraphTraversal).Should().BeTrue();
     }
 
     [Fact]
@@ -50,7 +51,7 @@ public class RagEnhancementServiceTests
 
         var result = await _sut.GetActiveEnhancementsAsync(tier);
 
-        Assert.Equal(RagEnhancement.None, result);
+        result.Should().Be(RagEnhancement.None);
     }
 
     [Fact]
@@ -75,18 +76,18 @@ public class RagEnhancementServiceTests
 
         var result = await _sut.GetActiveEnhancementsAsync(tier);
 
-        Assert.True(result.HasFlag(RagEnhancement.AdaptiveRouting));
-        Assert.True(result.HasFlag(RagEnhancement.RaptorRetrieval));
-        Assert.False(result.HasFlag(RagEnhancement.CragEvaluation));
-        Assert.False(result.HasFlag(RagEnhancement.RagFusionQueries));
-        Assert.False(result.HasFlag(RagEnhancement.GraphTraversal));
+        result.HasFlag(RagEnhancement.AdaptiveRouting).Should().BeTrue();
+        result.HasFlag(RagEnhancement.RaptorRetrieval).Should().BeTrue();
+        result.HasFlag(RagEnhancement.CragEvaluation).Should().BeFalse();
+        result.HasFlag(RagEnhancement.RagFusionQueries).Should().BeFalse();
+        result.HasFlag(RagEnhancement.GraphTraversal).Should().BeFalse();
     }
 
     [Fact]
     public async Task GetActiveEnhancementsAsync_NullTier_ShouldThrowArgumentNullException()
     {
-        await Assert.ThrowsAsync<ArgumentNullException>(
-            () => _sut.GetActiveEnhancementsAsync(null!));
+        Func<Task> act = () => _sut.GetActiveEnhancementsAsync(null!);
+        await act.Should().ThrowAsync<ArgumentNullException>();
     }
 
     [Fact]
@@ -113,7 +114,7 @@ public class RagEnhancementServiceTests
         var enhancements = RagEnhancement.CragEvaluation | RagEnhancement.RagFusionQueries;
         var credits = await _sut.EstimateExtraCreditsAsync(enhancements);
 
-        Assert.Equal(100, credits); // 40 + 60
+        credits.Should().Be(100); // 40 + 60
     }
 
     [Fact]
@@ -126,7 +127,7 @@ public class RagEnhancementServiceTests
         var enhancements = RagEnhancement.CragEvaluation | RagEnhancement.RagFusionQueries;
         var credits = await _sut.EstimateExtraCreditsAsync(enhancements);
 
-        Assert.Equal(0, credits);
+        credits.Should().Be(0);
     }
 
     [Fact]
@@ -138,7 +139,7 @@ public class RagEnhancementServiceTests
 
         var credits = await _sut.EstimateExtraCreditsAsync(RagEnhancement.None);
 
-        Assert.Equal(0, credits);
+        credits.Should().Be(0);
     }
 
     [Fact]
@@ -153,7 +154,7 @@ public class RagEnhancementServiceTests
                   | RagEnhancement.GraphTraversal;
         var credits = await _sut.EstimateExtraCreditsAsync(all);
 
-        Assert.Equal(100, credits); // 0+40+0+60+0
+        credits.Should().Be(100); // 0+40+0+60+0
     }
 
     [Fact]
@@ -165,7 +166,7 @@ public class RagEnhancementServiceTests
 
         var result = await _sut.UseBalancedAuxModelAsync();
 
-        Assert.True(result);
+        result.Should().BeTrue();
     }
 
     [Fact]
@@ -177,7 +178,7 @@ public class RagEnhancementServiceTests
 
         var result = await _sut.UseBalancedAuxModelAsync();
 
-        Assert.False(result);
+        result.Should().BeFalse();
     }
 
     [Fact]
@@ -199,7 +200,7 @@ public class RagEnhancementServiceTests
         var cts = new CancellationTokenSource();
         cts.Cancel();
 
-        await Assert.ThrowsAsync<OperationCanceledException>(
-            () => _sut.GetActiveEnhancementsAsync(UserTier.Premium, cts.Token));
+        Func<Task> act = () => _sut.GetActiveEnhancementsAsync(UserTier.Premium, cts.Token);
+        await act.Should().ThrowAsync<OperationCanceledException>();
     }
 }

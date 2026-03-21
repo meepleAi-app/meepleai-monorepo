@@ -2,6 +2,7 @@ using Api.BoundedContexts.GameManagement.Domain.ValueObjects;
 using Api.SharedKernel.Domain.Exceptions;
 using Api.Tests.Constants;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.GameManagement.Domain.ValueObjects;
 
@@ -19,29 +20,31 @@ public class SessionScoringConfigTests
         var config = new SessionScoringConfig(dimensions, units);
 
         // Assert
-        Assert.Equal(2, config.EnabledDimensions.Count);
-        Assert.Contains("points", config.EnabledDimensions);
-        Assert.Contains("ranking", config.EnabledDimensions);
-        Assert.Equal("pts", config.DimensionUnits["points"]);
-        Assert.Equal("#", config.DimensionUnits["ranking"]);
+        config.EnabledDimensions.Count.Should().Be(2);
+        config.EnabledDimensions.Should().Contain("points");
+        config.EnabledDimensions.Should().Contain("ranking");
+        config.DimensionUnits["points"].Should().Be("pts");
+        config.DimensionUnits["ranking"].Should().Be("#");
     }
 
     [Fact]
     public void SessionScoringConfig_NullDimensions_ThrowsArgumentNullException()
     {
         // Act & Assert
-        Assert.Throws<ArgumentNullException>(() =>
-            new SessionScoringConfig(null!));
+        var act = () =>
+            new SessionScoringConfig(null!);
+        act.Should().Throw<ArgumentNullException>();
     }
 
     [Fact]
     public void SessionScoringConfig_EmptyDimensions_ThrowsValidationException()
     {
         // Act & Assert
-        var exception = Assert.Throws<ValidationException>(() =>
-            new SessionScoringConfig(new List<string>()));
+        var act = () =>
+            new SessionScoringConfig(new List<string>());
+        var exception = act.Should().Throw<ValidationException>().Which;
 
-        Assert.Contains("At least one", exception.Message, StringComparison.OrdinalIgnoreCase);
+        exception.Message.Should().ContainEquivalentOf("At least one");
     }
 
     [Fact]
@@ -51,10 +54,11 @@ public class SessionScoringConfigTests
         var dimensions = Enumerable.Range(1, 11).Select(i => $"dim{i}").ToList();
 
         // Act & Assert
-        var exception = Assert.Throws<ValidationException>(() =>
-            new SessionScoringConfig(dimensions));
+        var act = () =>
+            new SessionScoringConfig(dimensions);
+        var exception = act.Should().Throw<ValidationException>().Which;
 
-        Assert.Contains("Maximum 10", exception.Message, StringComparison.OrdinalIgnoreCase);
+        exception.Message.Should().ContainEquivalentOf("Maximum 10");
     }
 
     [Fact]
@@ -64,8 +68,9 @@ public class SessionScoringConfigTests
         var dimensions = new List<string> { "points", "" };
 
         // Act & Assert
-        Assert.Throws<ValidationException>(() =>
-            new SessionScoringConfig(dimensions));
+        var act = () =>
+            new SessionScoringConfig(dimensions);
+        act.Should().Throw<ValidationException>();
     }
 
     [Fact]
@@ -76,10 +81,11 @@ public class SessionScoringConfigTests
         var dimensions = new List<string> { longDimension };
 
         // Act & Assert
-        var exception = Assert.Throws<ValidationException>(() =>
-            new SessionScoringConfig(dimensions));
+        var act = () =>
+            new SessionScoringConfig(dimensions);
+        var exception = act.Should().Throw<ValidationException>().Which;
 
-        Assert.Contains("cannot exceed 50", exception.Message, StringComparison.OrdinalIgnoreCase);
+        exception.Message.Should().ContainEquivalentOf("cannot exceed 50");
     }
 
     [Fact]
@@ -89,9 +95,9 @@ public class SessionScoringConfigTests
         var config = SessionScoringConfig.CreateDefault();
 
         // Assert
-        Assert.Single(config.EnabledDimensions);
-        Assert.Contains("points", config.EnabledDimensions);
-        Assert.Equal("pts", config.DimensionUnits["points"]);
+        config.EnabledDimensions.Should().ContainSingle();
+        config.EnabledDimensions.Should().Contain("points");
+        config.DimensionUnits["points"].Should().Be("pts");
     }
 
     [Fact]
@@ -102,9 +108,9 @@ public class SessionScoringConfigTests
             new List<string> { "points", "ranking" });
 
         // Act & Assert
-        Assert.True(config.HasDimension("points"));
-        Assert.True(config.HasDimension("ranking"));
-        Assert.True(config.HasDimension("POINTS"));  // Case-insensitive
+        (config.HasDimension("points")).Should().BeTrue();
+        (config.HasDimension("ranking")).Should().BeTrue();
+        (config.HasDimension("POINTS")).Should().BeTrue();  // Case-insensitive
     }
 
     [Fact]
@@ -114,8 +120,8 @@ public class SessionScoringConfigTests
         var config = SessionScoringConfig.CreateDefault();
 
         // Act & Assert
-        Assert.False(config.HasDimension("ranking"));
-        Assert.False(config.HasDimension("wins"));
+        (config.HasDimension("ranking")).Should().BeFalse();
+        (config.HasDimension("wins")).Should().BeFalse();
     }
 
     [Fact]
@@ -134,7 +140,7 @@ public class SessionScoringConfigTests
             new List<string> { "points" });
 
         // Assert
-        Assert.Equal(config1, config2);  // Order doesn't matter
-        Assert.NotEqual(config1, config3);  // Different dimensions
+        config2.Should().Be(config1);  // Order doesn't matter
+        config3.Should().NotBe(config1);  // Different dimensions
     }
 }

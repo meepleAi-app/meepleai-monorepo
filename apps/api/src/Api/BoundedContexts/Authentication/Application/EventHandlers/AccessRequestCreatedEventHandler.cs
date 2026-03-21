@@ -35,7 +35,8 @@ internal sealed class AccessRequestCreatedEventHandler : DomainEventHandlerBase<
                 new Dictionary<string, object>(StringComparer.Ordinal)
                 {
                     ["email"] = domainEvent.Email,
-                    ["requestId"] = domainEvent.AccessRequestId
+                    ["requestId"] = domainEvent.AccessRequestId,
+                    ["_slack_category"] = "access_request"
                 },
                 cancellationToken).ConfigureAwait(false);
         }

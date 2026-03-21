@@ -30,15 +30,29 @@ function getStatusBadge(status: number) {
   const label = STATUS_LABELS[status] ?? 'Draft';
   switch (status) {
     case 1:
-      return <Badge variant="outline" className="border-amber-500 text-amber-600">{label}</Badge>;
+      return (
+        <Badge variant="outline" className="border-amber-500 text-amber-600">
+          {label}
+        </Badge>
+      );
     case 2:
-      return <Badge variant="default" className="bg-green-600">{label}</Badge>;
+      return (
+        <Badge variant="default" className="bg-green-600">
+          {label}
+        </Badge>
+      );
     default:
       return <Badge variant="secondary">{label}</Badge>;
   }
 }
 
-export function BuilderTable({ data, onDelete, onStartTesting, onPublish, onUnpublish }: BuilderTableProps) {
+export function BuilderTable({
+  data,
+  onDelete,
+  onStartTesting,
+  onPublish,
+  onUnpublish,
+}: BuilderTableProps) {
   const columns: ColumnDef<AgentDefinitionDto>[] = [
     {
       accessorKey: 'name',

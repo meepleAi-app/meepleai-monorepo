@@ -267,6 +267,7 @@ export const MeepleCardList = React.memo(function MeepleCardList(props: MeepleCa
         variant={variant}
         entity={entity}
         customColor={customColor}
+        showEntityType
         mechanicIcon={mechanicIcon}
         stateLabel={stateLabel}
       />
@@ -278,21 +279,6 @@ export const MeepleCardList = React.memo(function MeepleCardList(props: MeepleCa
           entity={entity}
           customColor={customColor}
           actions={actions}
-          entityQuickActions={entityQuickActions}
-          quickActions={quickActions}
-          userRole={userRole}
-          showWishlistBtn={showWishlistBtn}
-          isWishlisted={isWishlisted}
-          onWishlistToggle={onWishlistToggle}
-          showInfoButton={showInfoButton}
-          entityId={entityId}
-          infoHref={infoHref}
-          infoTooltip={infoTooltip}
-          drawerEntityType={drawerEntityType}
-          onDrawerOpen={() => setDrawerOpen(true)}
-          testId={testId}
-          unreadCount={unreadCount}
-          hasQuickActions={hasQuickActions}
         />
 
         {/* Title */}

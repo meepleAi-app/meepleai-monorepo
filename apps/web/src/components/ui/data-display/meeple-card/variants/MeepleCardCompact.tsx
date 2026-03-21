@@ -169,21 +169,6 @@ export const MeepleCardCompact = React.memo(function MeepleCardCompact(
           entity={entity}
           customColor={customColor}
           actions={actions}
-          entityQuickActions={entityQuickActions}
-          quickActions={quickActions}
-          userRole={userRole}
-          showWishlistBtn={showWishlistBtn}
-          isWishlisted={isWishlisted}
-          onWishlistToggle={onWishlistToggle}
-          showInfoButton={showInfoButton}
-          entityId={entityId}
-          infoHref={infoHref}
-          infoTooltip={infoTooltip}
-          drawerEntityType={drawerEntityType}
-          onDrawerOpen={() => setDrawerOpen(true)}
-          testId={testId}
-          unreadCount={unreadCount}
-          hasQuickActions={hasQuickActions}
         />
 
         <h3 className="font-quicksand font-bold leading-tight text-sm text-card-foreground">

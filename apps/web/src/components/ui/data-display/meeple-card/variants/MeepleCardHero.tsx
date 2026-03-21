@@ -130,6 +130,8 @@ export const MeepleCardHero = React.memo(function MeepleCardHero(props: MeepleCa
     kbCards,
     mechanicIcon,
     stateLabel,
+    coverLabels,
+    subtypeIcons,
   } = props;
 
   const variant = 'hero' as const;
@@ -277,6 +279,9 @@ export const MeepleCardHero = React.memo(function MeepleCardHero(props: MeepleCa
         variant={variant}
         entity={entity}
         customColor={customColor}
+        coverLabels={coverLabels}
+        showEntityType
+        subtypeIcons={subtypeIcons}
         mechanicIcon={mechanicIcon}
         stateLabel={stateLabel}
       />
@@ -288,21 +293,6 @@ export const MeepleCardHero = React.memo(function MeepleCardHero(props: MeepleCa
           entity={entity}
           customColor={customColor}
           actions={actions}
-          entityQuickActions={entityQuickActions}
-          quickActions={quickActions}
-          userRole={userRole}
-          showWishlistBtn={showWishlistBtn}
-          isWishlisted={isWishlisted}
-          onWishlistToggle={onWishlistToggle}
-          showInfoButton={showInfoButton}
-          entityId={entityId}
-          infoHref={infoHref}
-          infoTooltip={infoTooltip}
-          drawerEntityType={drawerEntityType}
-          onDrawerOpen={() => setDrawerOpen(true)}
-          testId={testId}
-          unreadCount={unreadCount}
-          hasQuickActions={hasQuickActions}
         />
 
         <h3 className="font-quicksand font-bold leading-tight text-2xl text-white mb-1 [text-shadow:0_2px_8px_rgba(0,0,0,0.3)]">

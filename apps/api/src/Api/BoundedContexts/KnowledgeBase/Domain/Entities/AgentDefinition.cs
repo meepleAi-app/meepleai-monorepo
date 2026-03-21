@@ -433,6 +433,7 @@ public sealed class AgentDefinition : AggregateRoot<Guid>
     public void Unpublish()
     {
         _status = AgentDefinitionStatus.Draft;
+        _isActive = false;
         _updatedAt = DateTime.UtcNow;
 
         AddDomainEvent(new AgentDefinitionUpdatedEvent(Id, "Status changed to Draft"));

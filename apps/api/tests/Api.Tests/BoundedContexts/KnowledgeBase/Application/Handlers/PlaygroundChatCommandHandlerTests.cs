@@ -545,12 +545,14 @@ public sealed class PlaygroundChatCommandHandlerTests
             prompts.Add(AgentPromptTemplate.Create("system", systemPrompt));
         }
 
-        return AgentDefinitionEntity.Create(
+        var agent = AgentDefinitionEntity.Create(
             name: name,
             description: $"Test agent: {name}",
             type: AgentType.Custom("rag", "RAG-based assistant"),
             config: AgentDefinitionConfig.Create("gpt-4", 2048, 0.7f),
             prompts: prompts);
+        agent.Activate(); // Create() now defaults to inactive; activate for "active" helper
+        return agent;
     }
 
     private static AgentDefinitionEntity CreateInactiveAgentDefinition(Guid id, string name)

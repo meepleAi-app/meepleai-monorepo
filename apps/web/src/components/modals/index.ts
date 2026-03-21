@@ -1,5 +1,6 @@
 // Barrel exports for modals module
-export { ApiKeyCreationModal } from './ApiKeyCreationModal';
+// ApiKeyCreationModal temporarily excluded — Turbopack module resolution issue
+// export { ApiKeyCreationModal } from './ApiKeyCreationModal';
 export { BggSearchModal } from './BggSearchModal';
 export { ErrorModal } from './ErrorModal';
 export { SessionSetupModal } from './SessionSetupModal';

@@ -2,6 +2,7 @@ import { test, expect, ensureAdminAuth } from '../fixtures/onboarding-flow.fixtu
 import { type OnboardingFlowState } from '../fixtures/onboarding-flow.fixture';
 import { dismissCookieConsent } from '../helpers/dismiss-cookie';
 import { extractInvitation } from '../helpers/email-strategy';
+import { checkFlowPrerequisites, formatHealthResults } from '../helpers/flow-health-gate';
 import { cleanupOnboardingTest } from '../helpers/onboarding-cleanup';
 import { env } from '../helpers/onboarding-environment';
 import { AdminUsersPage } from '../pages/admin/AdminUsersPage';
@@ -24,6 +25,15 @@ test.describe.configure({ mode: 'serial' });
 test.describe('Admin-User Onboarding Flow @flow @critical @slow', () => {
   const state: Partial<OnboardingFlowState> = {};
 
+  test.beforeAll(async () => {
+    const health = await checkFlowPrerequisites(['api', 'frontend']);
+    const unhealthy = health.filter(h => !h.healthy);
+    if (unhealthy.length > 0) {
+      console.error('[HEALTH GATE] Services down:', formatHealthResults(health));
+      state.failureReason = `Health gate failed: ${formatHealthResults(health)}`;
+    }
+  });
+
   test.afterAll(async () => {
     if (state.adminPage) {
       try {
@@ -42,6 +52,7 @@ test.describe('Admin-User Onboarding Flow @flow @critical @slow', () => {
 
   // ── Test 1: Admin Login ──────────────────────────────────────
   test('1. Admin logs in', async ({ browser }) => {
+    if (state.failureReason) test.skip(true, state.failureReason);
     const adminContext = await browser.newContext();
     const adminPage = await adminContext.newPage();
 

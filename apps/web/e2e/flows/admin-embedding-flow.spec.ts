@@ -25,6 +25,7 @@ import * as path from 'path';
 
 import { test, expect, BrowserContext, Page } from '@playwright/test';
 
+import { checkFlowPrerequisites, formatHealthResults } from '../helpers/flow-health-gate';
 import { env } from '../helpers/onboarding-environment';
 import { QueueDashboardPage } from '../pages/admin/QueueDashboardPage';
 import { AgentChatPage } from '../pages/agent/AgentChatPage';
@@ -66,6 +67,15 @@ const state: Partial<EmbeddingFlowState> = {};
 test.describe.configure({ mode: 'serial' });
 
 test.describe('Admin Embedding Flow @flow @rag @slow', () => {
+  test.beforeAll(async () => {
+    const health = await checkFlowPrerequisites(['api', 'frontend', 'embedding']);
+    const unhealthy = health.filter(h => !h.healthy);
+    if (unhealthy.length > 0) {
+      console.error('[HEALTH GATE] Services down:', formatHealthResults(health));
+      state.failureReason = `Health gate failed: ${formatHealthResults(health)}`;
+    }
+  });
+
   test.afterAll(async () => {
     if (state.adminContext) {
       try {
@@ -78,6 +88,7 @@ test.describe('Admin Embedding Flow @flow @rag @slow', () => {
 
   // ── Test 1: Upload PDF for existing game ────────────────────────────────────
   test('1. Upload PDF for existing game', async ({ browser }) => {
+    if (state.failureReason) test.skip(true, state.failureReason);
     // Skip immediately if the fixture PDF is missing
     const pdfExists = fs.existsSync(PDF_FIXTURE_PATH);
     if (!pdfExists) {

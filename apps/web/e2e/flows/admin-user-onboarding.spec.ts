@@ -1,6 +1,8 @@
 import { test, expect, ensureAdminAuth } from '../fixtures/onboarding-flow.fixture';
 import { type OnboardingFlowState } from '../fixtures/onboarding-flow.fixture';
+import { dismissCookieConsent } from '../helpers/dismiss-cookie';
 import { extractInvitation } from '../helpers/email-strategy';
+import { checkFlowPrerequisites, formatHealthResults } from '../helpers/flow-health-gate';
 import { cleanupOnboardingTest } from '../helpers/onboarding-cleanup';
 import { env } from '../helpers/onboarding-environment';
 import { AdminUsersPage } from '../pages/admin/AdminUsersPage';
@@ -20,8 +22,17 @@ const testUserPassword = `E2eTest!${timestamp}`;
 
 test.describe.configure({ mode: 'serial' });
 
-test.describe('Admin-User Onboarding Flow', () => {
+test.describe('Admin-User Onboarding Flow @flow @critical @slow', () => {
   const state: Partial<OnboardingFlowState> = {};
+
+  test.beforeAll(async () => {
+    const health = await checkFlowPrerequisites(['api', 'frontend']);
+    const unhealthy = health.filter(h => !h.healthy);
+    if (unhealthy.length > 0) {
+      console.error('[HEALTH GATE] Services down:', formatHealthResults(health));
+      state.failureReason = `Health gate failed: ${formatHealthResults(health)}`;
+    }
+  });
 
   test.afterAll(async () => {
     if (state.adminPage) {
@@ -41,6 +52,7 @@ test.describe('Admin-User Onboarding Flow', () => {
 
   // ── Test 1: Admin Login ──────────────────────────────────────
   test('1. Admin logs in', async ({ browser }) => {
+    if (state.failureReason) test.skip(true, state.failureReason);
     const adminContext = await browser.newContext();
     const adminPage = await adminContext.newPage();
 
@@ -94,7 +106,7 @@ test.describe('Admin-User Onboarding Flow', () => {
 
   // ── Test 2: Admin Invites User ───────────────────────────────
   test('2. Admin invites user via email', async () => {
-    if (!state.adminPage) test.skip(true, 'Requires test 1 to pass');
+    if (!state.adminPage) test.skip(true, state.failureReason ?? 'Requires test 1 to pass');
     const page = state.adminPage!;
     const adminUsersPage = new AdminUsersPage(page);
 
@@ -105,9 +117,16 @@ test.describe('Admin-User Onboarding Flow', () => {
 
     await test.step('Fill and send invitation', async () => {
       await adminUsersPage.fillInvitationForm(testUserEmail, 'user');
+      // Set up response listener BEFORE triggering the action
+      const inviteResponsePromise = page.waitForResponse(
+        resp => resp.url().includes('invitation') && resp.status() < 400,
+        { timeout: 10_000 }
+      );
       await adminUsersPage.submitInvitation();
-      // Don't use waitForNetworkIdle — admin page has continuous health polling
-      await page.waitForTimeout(3000);
+      // Await the response (don't use waitForNetworkIdle — admin page has continuous health polling)
+      await inviteResponsePromise.catch((e: Error) => {
+        console.warn('[T2] Invitation API response not intercepted:', e.message);
+      });
     });
 
     await test.step('Extract invitation token/URL', async () => {
@@ -122,7 +141,7 @@ test.describe('Admin-User Onboarding Flow', () => {
 
   // ── Test 3: User Accepts Invitation ──────────────────────────
   test('3. User accepts invitation and sets password', async ({ browser }) => {
-    if (!state.invitationToken) test.skip(true, 'Requires test 2 to pass');
+    if (!state.invitationToken) test.skip(true, state.failureReason ?? 'Requires test 2 to pass');
     const userContext = await browser.newContext();
     const userPage = await userContext.newPage();
     const acceptPage = new AcceptInvitePage(userPage);
@@ -142,17 +161,15 @@ test.describe('Admin-User Onboarding Flow', () => {
 
     await test.step('Dismiss cookie and submit', async () => {
       // Cookie consent blocks the form — dismiss it first
-      const cookieBtn = userPage.getByRole('button', { name: /essential only|accept all/i });
-      await cookieBtn
-        .first()
-        .click({ timeout: 5_000 })
-        .catch(() => {});
-      await userPage.waitForTimeout(500);
+      await dismissCookieConsent(userPage, '[T3]');
 
       // Intercept accept-invitation API to verify it succeeds
       const acceptPromise = userPage
         .waitForResponse(resp => resp.url().includes('accept-invitation'))
-        .catch(() => null);
+        .catch((e: Error) => {
+          console.log('[T3] accept-invitation response not intercepted:', e.message);
+          return null;
+        });
 
       await acceptPage.submit();
 
@@ -178,7 +195,7 @@ test.describe('Admin-User Onboarding Flow', () => {
 
   // ── Test 4: User Logs In ─────────────────────────────────────
   test('4. User logs in with new password', async ({ browser }) => {
-    if (!state.userPassword) test.skip(true, 'Requires test 3 to pass');
+    if (!state.userPassword) test.skip(true, state.failureReason ?? 'Requires test 3 to pass');
 
     // Close old context (has admin session from accept-invite auto-login)
     if (state.userContext) await state.userContext.close();
@@ -195,12 +212,7 @@ test.describe('Admin-User Onboarding Flow', () => {
       await page.goto('/login', { waitUntil: 'domcontentloaded' });
 
       // Dismiss cookie consent (blocks form interaction)
-      await page
-        .getByRole('button', { name: /essential only|accept all/i })
-        .first()
-        .click({ timeout: 5_000 })
-        .catch(() => {});
-      await page.waitForTimeout(500);
+      await dismissCookieConsent(page, '[T4]');
 
       // Fill and submit login form
       await loginPage.login(testUserEmail, testUserPassword);
@@ -246,7 +258,7 @@ test.describe('Admin-User Onboarding Flow', () => {
   // ── Test 5: User Adds Game to Collection ─────────────────────
   test('5. User adds game to collection', async () => {
     test.setTimeout(150_000); // PDF upload + processing wait up to 90s
-    if (!state.userPage) test.skip(true, 'Requires test 4 to pass');
+    if (!state.userPage) test.skip(true, state.failureReason ?? 'Requires test 4 to pass');
     const page = state.userPage!;
     const libraryPage = new LibraryPage(page);
 
@@ -270,18 +282,12 @@ test.describe('Admin-User Onboarding Flow', () => {
       await page.goto('/library?tab=private', { waitUntil: 'networkidle' });
 
       // Cookie consent blocks interactions — dismiss then reload
-      const cookieBtn5 = page.getByRole('button', { name: /essential only|accept all/i });
-      if (
-        await cookieBtn5
-          .first()
-          .isVisible({ timeout: 2_000 })
-          .catch(() => false)
-      ) {
-        await cookieBtn5.first().click();
-        await page.waitForTimeout(500);
-        await page.reload({ waitUntil: 'networkidle' });
-      }
-      await page.waitForTimeout(1000);
+      await dismissCookieConsent(page, '[T5]');
+      // Keep the reload separate if page needs it after cookie dismiss
+      await page.reload({ waitUntil: 'networkidle' });
+      await page.waitForLoadState('networkidle').catch(() => {
+        console.log('[T5] networkidle timeout after reload (non-blocking)');
+      });
 
       // Debug: check cookies and admin toggle
       const cookies = await page.context().cookies();
@@ -339,20 +345,17 @@ test.describe('Admin-User Onboarding Flow', () => {
 
   // ── Test 6: User Creates Agent ───────────────────────────────
   test('6. User creates agent for the game', async () => {
-    if (!state.userPage || !state.gameTitle) test.skip(true, 'Requires test 5 to pass');
-    if (!state.pdfReady) test.skip(true, 'PDF not processed — agent creation requires KB');
+    if (!state.userPage || !state.gameTitle)
+      test.skip(true, state.failureReason ?? 'Requires test 5 to pass');
+    if (!state.pdfReady)
+      test.skip(true, state.failureReason ?? 'PDF not processed — agent creation requires KB');
     const page = state.userPage!;
     const agentPage = new AgentCreationPage(page);
 
     await test.step('Open agent creation', async () => {
       await agentPage.goto();
       // Dismiss cookie consent
-      await page
-        .getByRole('button', { name: /essential only|accept all/i })
-        .first()
-        .click({ timeout: 2_000 })
-        .catch(() => {});
-      await page.waitForTimeout(500);
+      await dismissCookieConsent(page, '[T6]');
       // Screenshot to debug
       await page.screenshot({ path: 'test-results/debug-t6-agents-page.png', fullPage: true });
       await agentPage.openCreationSheet();
@@ -379,7 +382,8 @@ test.describe('Admin-User Onboarding Flow', () => {
 
   // ── Test 7: User Chats with Agent ────────────────────────────
   test('7. User asks agent about game scope and turn', async () => {
-    if (!state.userPage || !state.agentId) test.skip(true, 'Requires test 6 to pass');
+    if (!state.userPage || !state.agentId)
+      test.skip(true, state.failureReason ?? 'Requires test 6 to pass');
     const page = state.userPage!;
     const chatPage = new AgentChatPage(page);
 
@@ -401,7 +405,8 @@ test.describe('Admin-User Onboarding Flow', () => {
 
   // ── Test 8: Admin Changes Role & Checks Audit Log ────────────
   test('8. Admin changes user role and verifies audit log', async () => {
-    if (!state.adminPage || !state.testUserEmail) test.skip(true, 'Requires tests 1-2 to pass');
+    if (!state.adminPage || !state.testUserEmail)
+      test.skip(true, state.failureReason ?? 'Requires tests 1-2 to pass');
     const page = state.adminPage!;
 
     await ensureAdminAuth(page, state.adminCredentials!);
@@ -412,11 +417,7 @@ test.describe('Admin-User Onboarding Flow', () => {
     await test.step('Re-authenticate admin and change role', async () => {
       // Re-login admin to refresh session (may have expired)
       await page.goto('/login', { waitUntil: 'domcontentloaded' });
-      await page
-        .getByRole('button', { name: /essential only|accept all/i })
-        .first()
-        .click({ timeout: 2_000 })
-        .catch(() => {});
+      await dismissCookieConsent(page, '[T8-reauth]');
       const loginPage = new LoginPage(page);
       await loginPage.login(env.admin.email, env.admin.password);
       await page.waitForURL(url => !url.pathname.includes('/login'), {
@@ -451,12 +452,7 @@ test.describe('Admin-User Onboarding Flow', () => {
     await test.step('Verify audit log entry', async () => {
       await auditLogPage.goto();
       // Dismiss cookie consent
-      await page
-        .getByRole('button', { name: /essential only|accept all/i })
-        .first()
-        .click({ timeout: 2_000 })
-        .catch(() => {});
-      await page.waitForTimeout(500);
+      await dismissCookieConsent(page, '[T8]');
       try {
         await auditLogPage.verifyRoleChangeEntry(testUserEmail, {
           newRole: 'editor',

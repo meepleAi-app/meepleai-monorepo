@@ -85,6 +85,10 @@ public class ConfigImportExportIntegrationTests : IAsyncLifetime
         services.AddScoped<Api.Services.IHybridCacheService>(_ =>
             Moq.Mock.Of<Api.Services.IHybridCacheService>());
 
+        // Mock IDashboardStreamService (required by DashboardStreamEventHandler resolved via MediatR assembly scan)
+        services.AddSingleton<Api.BoundedContexts.Administration.Domain.Services.IDashboardStreamService>(_ =>
+            Moq.Mock.Of<Api.BoundedContexts.Administration.Domain.Services.IDashboardStreamService>());
+
         // DbContext with enforced connection settings (Issue #2031 best practices)
         var enforcedBuilder = new NpgsqlConnectionStringBuilder(_isolatedDbConnectionString)
         {

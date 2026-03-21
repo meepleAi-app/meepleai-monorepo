@@ -79,10 +79,9 @@ test.describe('Improvvisata Disputes — Integration', () => {
       },
       headers: JSON_HEADERS,
     });
-    expect(openRes.ok(), `Open dispute failed: ${openRes.status()} ${await openRes.text()}`).toBe(
-      true
-    );
-    const disputeId = parseUuid(await openRes.text());
+    const openBody = await openRes.text();
+    expect(openRes.ok(), `Open dispute failed: ${openRes.status()} ${openBody}`).toBe(true);
+    const disputeId = parseUuid(openBody);
     expect(disputeId).toMatch(/^[0-9a-f-]{36}$/);
   });
 

@@ -18,6 +18,8 @@ const JSON_HEADERS = { 'Content-Type': 'application/json' };
 
 test.describe('Improvvisata Save/Resume — Integration', () => {
   test.describe.configure({ mode: 'serial' });
+  // Resume may invoke AI agent for recap generation
+  test.setTimeout(60_000);
 
   let api: APIRequestContext;
   let sessionId: string | null = null;

@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+
 import {
   loginAsAdmin,
   createGenericSession,
@@ -11,6 +12,7 @@ import {
   parseUuid,
   TEST_PLAYERS,
 } from './helpers/improvvisata-helpers';
+
 import type { APIRequestContext } from '@playwright/test';
 
 const JSON_HEADERS = { 'Content-Type': 'application/json' };
@@ -192,9 +194,9 @@ test.describe('Improvvisata Data Integrity — Integration', () => {
     expect(resumeRes.ok()).toBe(true);
     const resumeBody = await resumeRes.json();
 
-    // Fresh invite code should differ
+    // Fresh invite code should differ from original PIN
     expect(resumeBody.inviteCode).toBeTruthy();
-    // Note: inviteCode may or may not differ from original PIN depending on implementation
+    expect(resumeBody.inviteCode).not.toBe(invite.pin);
   });
 
   test('dispute resolution does not affect session state', async () => {

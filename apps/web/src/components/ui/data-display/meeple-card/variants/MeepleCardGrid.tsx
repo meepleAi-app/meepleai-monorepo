@@ -136,11 +136,9 @@ export const MeepleCardGrid = React.memo(function MeepleCardGrid(props: MeepleCa
 
   const variant = 'grid' as const;
   const coverSrc = entity === 'player' ? avatarUrl || imageUrl : imageUrl;
-  // eslint-disable-next-line security/detect-object-injection
   const color = customColor || entityColors[entity].hsl;
   const hasQuickActions = !!(quickActions && quickActions.length > 0);
   const showWishlistBtn = !!showWishlist && !hasQuickActions;
-  // eslint-disable-next-line security/detect-object-injection
   const drawerEntityType = DRAWER_ENTITY_TYPE_MAP[entity];
 
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -271,7 +269,6 @@ export const MeepleCardGrid = React.memo(function MeepleCardGrid(props: MeepleCa
             }
           : undefined
       }
-      // eslint-disable-next-line security/detect-object-injection
       aria-label={`${entityColors[entity].name}: ${title}`}
       data-testid={testId || 'meeple-card'}
       data-entity={entity}

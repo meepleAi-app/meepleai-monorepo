@@ -127,7 +127,6 @@ export function CardFlipWrapper({
       flipTrigger={flipTrigger}
       detailHref={detailHref}
       entityColor={entityColor}
-      // eslint-disable-next-line security/detect-object-injection
       entityName={entityColors[entity].name}
       title={title}
     >

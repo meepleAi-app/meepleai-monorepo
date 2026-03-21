@@ -82,9 +82,7 @@ export const MeepleCardExpanded = React.memo(function MeepleCardExpanded(
     return <MeepleCardSkeleton variant={variant} />;
   }
   const coverSrc = entity === 'player' ? avatarUrl || imageUrl : imageUrl;
-  // eslint-disable-next-line security/detect-object-injection
   const color = customColor || entityColors[entity].hsl;
-  // eslint-disable-next-line security/detect-object-injection
   const drawerEntityType = DRAWER_ENTITY_TYPE_MAP[entity];
 
   const hasQuickActions = !!(quickActions && quickActions.length > 0);

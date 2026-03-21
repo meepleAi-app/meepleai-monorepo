@@ -36,11 +36,8 @@ export function StatusBadge({ status }: StatusBadgeProps) {
     Rejected: '',
   };
 
-  // eslint-disable-next-line security/detect-object-injection
   const variant = variants[status];
-  // eslint-disable-next-line security/detect-object-injection
   const label = labels[status];
-  // eslint-disable-next-line security/detect-object-injection
   const customClass = customClasses[status];
 
   return (

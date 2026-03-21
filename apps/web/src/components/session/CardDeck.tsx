@@ -74,7 +74,6 @@ function getCardDisplayValue(value?: string): string {
     Queen: 'Q',
     King: 'K',
   };
-  // eslint-disable-next-line security/detect-object-injection
   return valueMap[value] || value;
 }
 
@@ -145,12 +144,22 @@ function PlayingCard({ card, isSelected, isFaceDown, onClick, className }: Playi
               </div>
 
               {/* Center */}
-              <div className={cn('flex-1 flex items-center justify-center text-2xl sm:text-3xl', suitInfo.color)}>
+              <div
+                className={cn(
+                  'flex-1 flex items-center justify-center text-2xl sm:text-3xl',
+                  suitInfo.color
+                )}
+              >
                 {suitInfo.symbol}
               </div>
 
               {/* Bottom-right corner (rotated) */}
-              <div className={cn('text-xs sm:text-sm font-bold leading-none self-end rotate-180', suitInfo.color)}>
+              <div
+                className={cn(
+                  'text-xs sm:text-sm font-bold leading-none self-end rotate-180',
+                  suitInfo.color
+                )}
+              >
                 <div>{displayValue}</div>
                 <div className="text-base">{suitInfo.symbol}</div>
               </div>
@@ -174,10 +183,7 @@ function DeckStack({ cardCount, onClick, label }: DeckStackProps) {
 
   return (
     <div className="relative">
-      <div
-        className="relative w-16 h-24 sm:w-20 sm:h-28 cursor-pointer"
-        onClick={onClick}
-      >
+      <div className="relative w-16 h-24 sm:w-20 sm:h-28 cursor-pointer" onClick={onClick}>
         {Array.from({ length: visibleCards }).map((_, index) => (
           <div
             key={index}
@@ -258,15 +264,18 @@ export function CardDeck({
     }
   }, [onDiscard, selectedCards, isDiscarding]);
 
-  const handleShuffle = useCallback(async (includeDiscard = false) => {
-    if (!onShuffle || isShuffling) return;
-    setIsShuffling(true);
-    try {
-      await onShuffle(includeDiscard);
-    } finally {
-      setIsShuffling(false);
-    }
-  }, [onShuffle, isShuffling]);
+  const handleShuffle = useCallback(
+    async (includeDiscard = false) => {
+      if (!onShuffle || isShuffling) return;
+      setIsShuffling(true);
+      try {
+        await onShuffle(includeDiscard);
+      } finally {
+        setIsShuffling(false);
+      }
+    },
+    [onShuffle, isShuffling]
+  );
 
   return (
     <div className={cn('space-y-6', className)}>
@@ -304,20 +313,18 @@ export function CardDeck({
       <div className="flex items-start justify-center gap-8 sm:gap-12">
         {/* Draw Pile */}
         <div className="flex flex-col items-center gap-3">
-          <DeckStack
-            cardCount={deck.cardsInDrawPile}
-            onClick={handleDraw}
-            label="Draw Pile"
-          />
+          <DeckStack cardCount={deck.cardsInDrawPile} onClick={handleDraw} label="Draw Pile" />
           <div className="flex items-center gap-2">
             <select
               value={drawCount}
-              onChange={(e) => setDrawCount(Number(e.target.value))}
+              onChange={e => setDrawCount(Number(e.target.value))}
               className="w-16 h-8 text-sm border rounded px-2"
               disabled={isLoading}
             >
               {[1, 2, 3, 4, 5, 7, 10].map(n => (
-                <option key={n} value={n}>{n}</option>
+                <option key={n} value={n}>
+                  {n}
+                </option>
               ))}
             </select>
             <Button
@@ -334,10 +341,7 @@ export function CardDeck({
         <div className="flex flex-col items-center">
           {discardPile.length > 0 ? (
             <div className="relative">
-              <PlayingCard
-                card={discardPile[0]}
-                className="opacity-100"
-              />
+              <PlayingCard card={discardPile[0]} className="opacity-100" />
               {discardPile.length > 1 && (
                 <div className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-primary text-primary-foreground text-xs flex items-center justify-center font-medium">
                   +{discardPile.length - 1}
@@ -372,7 +376,7 @@ export function CardDeck({
           </div>
           <div className="flex flex-wrap gap-2 sm:gap-3 p-4 bg-muted/50 rounded-lg min-h-[120px]">
             <AnimatePresence mode="popLayout">
-              {hand.map((card) => (
+              {hand.map(card => (
                 <PlayingCard
                   key={card.id}
                   card={card}

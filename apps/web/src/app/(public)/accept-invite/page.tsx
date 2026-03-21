@@ -94,6 +94,17 @@ function AcceptInviteContent() {
         }
 
         const data = await response.json();
+
+        if (!data.isValid) {
+          const reason =
+            data.errorReason === 'already_used'
+              ? 'This invitation has already been used. If you already have an account, please log in.'
+              : 'This invitation is invalid or has expired. Please contact your administrator.';
+          setErrorMessage(reason);
+          setState('invalid');
+          return;
+        }
+
         setEmail(data.email ?? '');
         setState('valid');
       } catch {

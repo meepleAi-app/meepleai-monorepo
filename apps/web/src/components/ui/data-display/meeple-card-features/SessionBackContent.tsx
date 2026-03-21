@@ -177,10 +177,7 @@ export const SessionBackContent = React.memo(function SessionBackContent({
         <h2 className="relative z-[1] font-quicksand text-lg font-bold text-white">
           {title || 'Sessione'}
         </h2>
-        <p className="relative z-[1] text-xs text-white/80 mt-0.5">
-          {/* eslint-disable-next-line security/detect-object-injection */}
-          {statusLabels[status]}
-        </p>
+        <p className="relative z-[1] text-xs text-white/80 mt-0.5">{statusLabels[status]}</p>
       </div>
 
       {/* Content area */}

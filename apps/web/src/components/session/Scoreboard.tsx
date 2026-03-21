@@ -193,7 +193,6 @@ export function Scoreboard({ data, isRealTime = false, variant = 'full' }: Score
                                 {participant.displayName}
                               </div>
                               <div className="flex items-center gap-1 text-xs text-slate-500 dark:text-slate-400">
-                                {/* eslint-disable-next-line security/detect-object-injection -- trend is typed TrendType from computed value */}
                                 {trendIcons[trend]}
                                 <span>Rank #{participant.rank}</span>
                               </div>

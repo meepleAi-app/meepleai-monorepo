@@ -1,4 +1,3 @@
-/* eslint-disable security/detect-object-injection -- Safe category/shortcut array access */
 /**
  * KeyboardShortcutsHelp Component
  * Modal displaying all available keyboard shortcuts (Issue #1100)

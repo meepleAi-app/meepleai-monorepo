@@ -56,6 +56,7 @@ interface EmbeddingFlowState {
   gameId: string;
   gameName: string;
   jobId: string;
+  failureReason?: string; // Propagates root cause to downstream test skip messages
 }
 
 const state: Partial<EmbeddingFlowState> = {};
@@ -176,7 +177,7 @@ test.describe('Admin Embedding Flow', () => {
 
   // ── Test 2: Monitor embedding in queue dashboard ─────────────────────────
   test('2. Monitor embedding in queue dashboard', async () => {
-    if (!state.adminPage) test.skip(true, 'Requires test 1 to pass');
+    if (!state.adminPage) test.skip(true, state.failureReason ?? 'Requires test 1 to pass');
     const page = state.adminPage!;
     const queuePage = new QueueDashboardPage(page);
 
@@ -246,7 +247,7 @@ test.describe('Admin Embedding Flow', () => {
 
   // ── Test 3: Test RAG agent with embedded KB ──────────────────────────────
   test('3. Test RAG agent with embedded knowledge base', async () => {
-    if (!state.adminPage) test.skip(true, 'Requires test 1 to pass');
+    if (!state.adminPage) test.skip(true, state.failureReason ?? 'Requires test 1 to pass');
     const page = state.adminPage!;
 
     // Check "Testa Agent" button is available before proceeding

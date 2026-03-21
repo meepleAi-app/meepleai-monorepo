@@ -19,6 +19,7 @@ export interface OnboardingFlowState {
   pdfReady: boolean;
   agentId: string;
   gameSessionId: string;
+  failureReason?: string; // Propagates root cause to downstream test skip messages
 }
 
 export async function ensureAdminAuth(

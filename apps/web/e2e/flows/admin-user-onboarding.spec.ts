@@ -95,7 +95,7 @@ test.describe('Admin-User Onboarding Flow', () => {
 
   // ── Test 2: Admin Invites User ───────────────────────────────
   test('2. Admin invites user via email', async () => {
-    if (!state.adminPage) test.skip(true, 'Requires test 1 to pass');
+    if (!state.adminPage) test.skip(true, state.failureReason ?? 'Requires test 1 to pass');
     const page = state.adminPage!;
     const adminUsersPage = new AdminUsersPage(page);
 
@@ -123,7 +123,7 @@ test.describe('Admin-User Onboarding Flow', () => {
 
   // ── Test 3: User Accepts Invitation ──────────────────────────
   test('3. User accepts invitation and sets password', async ({ browser }) => {
-    if (!state.invitationToken) test.skip(true, 'Requires test 2 to pass');
+    if (!state.invitationToken) test.skip(true, state.failureReason ?? 'Requires test 2 to pass');
     const userContext = await browser.newContext();
     const userPage = await userContext.newPage();
     const acceptPage = new AcceptInvitePage(userPage);
@@ -177,7 +177,7 @@ test.describe('Admin-User Onboarding Flow', () => {
 
   // ── Test 4: User Logs In ─────────────────────────────────────
   test('4. User logs in with new password', async ({ browser }) => {
-    if (!state.userPassword) test.skip(true, 'Requires test 3 to pass');
+    if (!state.userPassword) test.skip(true, state.failureReason ?? 'Requires test 3 to pass');
 
     // Close old context (has admin session from accept-invite auto-login)
     if (state.userContext) await state.userContext.close();
@@ -240,7 +240,7 @@ test.describe('Admin-User Onboarding Flow', () => {
   // ── Test 5: User Adds Game to Collection ─────────────────────
   test('5. User adds game to collection', async () => {
     test.setTimeout(150_000); // PDF upload + processing wait up to 90s
-    if (!state.userPage) test.skip(true, 'Requires test 4 to pass');
+    if (!state.userPage) test.skip(true, state.failureReason ?? 'Requires test 4 to pass');
     const page = state.userPage!;
     const libraryPage = new LibraryPage(page);
 
@@ -327,8 +327,10 @@ test.describe('Admin-User Onboarding Flow', () => {
 
   // ── Test 6: User Creates Agent ───────────────────────────────
   test('6. User creates agent for the game', async () => {
-    if (!state.userPage || !state.gameTitle) test.skip(true, 'Requires test 5 to pass');
-    if (!state.pdfReady) test.skip(true, 'PDF not processed — agent creation requires KB');
+    if (!state.userPage || !state.gameTitle)
+      test.skip(true, state.failureReason ?? 'Requires test 5 to pass');
+    if (!state.pdfReady)
+      test.skip(true, state.failureReason ?? 'PDF not processed — agent creation requires KB');
     const page = state.userPage!;
     const agentPage = new AgentCreationPage(page);
 
@@ -362,7 +364,8 @@ test.describe('Admin-User Onboarding Flow', () => {
 
   // ── Test 7: User Chats with Agent ────────────────────────────
   test('7. User asks agent about game scope and turn', async () => {
-    if (!state.userPage || !state.agentId) test.skip(true, 'Requires test 6 to pass');
+    if (!state.userPage || !state.agentId)
+      test.skip(true, state.failureReason ?? 'Requires test 6 to pass');
     const page = state.userPage!;
     const chatPage = new AgentChatPage(page);
 
@@ -384,7 +387,8 @@ test.describe('Admin-User Onboarding Flow', () => {
 
   // ── Test 8: Admin Changes Role & Checks Audit Log ────────────
   test('8. Admin changes user role and verifies audit log', async () => {
-    if (!state.adminPage || !state.testUserEmail) test.skip(true, 'Requires tests 1-2 to pass');
+    if (!state.adminPage || !state.testUserEmail)
+      test.skip(true, state.failureReason ?? 'Requires tests 1-2 to pass');
     const page = state.adminPage!;
 
     await ensureAdminAuth(page, state.adminCredentials!);

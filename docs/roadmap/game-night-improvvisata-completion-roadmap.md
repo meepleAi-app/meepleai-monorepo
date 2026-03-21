@@ -102,14 +102,18 @@ Full analysis: [`docs/testing/game-night-edge-cases-analysis.md`](../testing/gam
 | Roadmap | Phase 2 marked COMPLETED in PR #52 | ✅ Done |
 | API contracts | Clarified scope: scheduled events only, linked Improvvisata docs | ✅ Done |
 
-### Phase 5: Full Pipeline Test (5-7 giorni, opzionale)
+### Phase 5: Full Pipeline Test (5-7 giorni, opzionale) — COMPLETED 2026-03-21
 
-Test con stack completo (embedding service, Qdrant) per validare:
-- PDF upload → processing → embedding → vector indexing → agent auto-create
-- RAG query con contenuto reale del PDF
-- Agent recap generation con LLM reale
+Test con stack completo via integration tunnel a staging services.
 
-**Richiede**: Tutti i servizi attivi (API + PG + Qdrant + Redis + Embedding + LLM)
+| Flow | Test | Status |
+|------|------|--------|
+| PDF Pipeline | Upload → dedup/process → agent listing | ✅ |
+| RAG Query | Query KB about uploaded PDF content | ✅ |
+| Session Lifecycle | Create → scores → save → resume → complete | ✅ |
+
+**File**: `apps/web/e2e/integration/phase5-full-pipeline.spec.ts`
+**Richiede**: Integration tunnel (SSH) + `dotnet run --launch-profile Integration`
 
 ---
 
@@ -137,9 +141,9 @@ Funzionalità nel design spec classificate "Should Have" o "Nice to Have", inten
 | Phase 2: Integration E2E | 3-4 giorni | ✅ COMPLETED 2026-03-21 | Data integrity verified |
 | Phase 3: Edge cases | 1-2 giorni | ✅ VERIFIED 2026-03-16 | Edge cases hardened |
 | Phase 4: Docs update | 0.5 giorni | ✅ COMPLETED 2026-03-21 | Docs current |
-| Phase 5: Full pipeline | 5-7 giorni | ⏳ Optional | Complete validation |
+| Phase 5: Full pipeline | 5-7 giorni | ✅ COMPLETED 2026-03-21 | Complete validation |
 
-**MVP validation (Phase 1-4)**: ✅ **COMPLETE**
+**All validation (Phase 1-5)**: ✅ **COMPLETE**
 
 ---
 

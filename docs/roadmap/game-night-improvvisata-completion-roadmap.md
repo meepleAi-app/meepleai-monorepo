@@ -45,19 +45,19 @@ La user story "Game Night Improvvisata" è **100% implementata** a livello di co
 
 ## Roadmap: Validation & Quality
 
-### Phase 1: Mock E2E Journey (2-3 giorni)
+### Phase 1: Mock E2E Journey (2-3 giorni) — COMPLETED 2026-03-21
 
 Espandere i test E2E mock-based per coprire il journey completo UI.
 
-| Task | File da creare/aggiornare | Effort |
-|------|---------------------------|--------|
-| Complete UI journey test | `e2e/game-night-improvvisata-journey.spec.ts` | 1 giorno |
-| ScoreAssistant confidence flows | `e2e/sessions/score-assistant.spec.ts` | 0.5 giorni |
-| Arbitro verdict display | `e2e/sessions/rule-arbitration.spec.ts` | 0.5 giorni |
-| Resume + recap + photo review | `e2e/sessions/session-resume.spec.ts` | 0.5 giorni |
-| SSE notification mock | `e2e/notifications/pdf-ready.spec.ts` | 0.5 giorni |
+| Task | File | Status |
+|------|------|--------|
+| Complete UI journey test | `e2e/game-night-improvvisata-full-journey.spec.ts` (151 lines) | ✅ |
+| ScoreAssistant confidence flows | `e2e/sessions/score-assistant.spec.ts` (147 lines) | ✅ |
+| Arbitro verdict display | `e2e/sessions/rule-arbitration.spec.ts` (66 lines) | ✅ |
+| Resume + recap + photo review | `e2e/sessions/session-resume.spec.ts` (121 lines) | ✅ |
+| SSE notification | `e2e/notifications/in-app-notifications.spec.ts` (113 lines) | ✅ General |
 
-**Deliverable**: Copertura UI 100% del journey con mock
+**Deliverable**: Copertura UI del journey con mock — ✅ Complete
 
 ### Phase 2: Backend Integration E2E (3-4 giorni) — COMPLETED 2026-03-21
 
@@ -94,13 +94,13 @@ Full analysis: [`docs/testing/game-night-edge-cases-analysis.md`](../testing/gam
 
 **Result**: 7/8 fully handled, 1/8 is a design choice (no max pause duration). **No action required.**
 
-### Phase 4: Documentation Update (0.5 giorni)
+### Phase 4: Documentation Update (0.5 giorni) — COMPLETED 2026-03-21
 
-| Doc | Action |
-|-----|--------|
-| Vertical slice spec | Add "Implementation Status" section — all items ✅ |
-| Roadmap | Add Game Night Improvvisata to completed section |
-| API contracts | Clarify: `game-night-api-contracts.md` = scheduled events, NOT Improvvisata |
+| Doc | Action | Status |
+|-----|--------|--------|
+| Vertical slice spec | N/A — no separate file exists | ✅ Skip |
+| Roadmap | Phase 2 marked COMPLETED in PR #52 | ✅ Done |
+| API contracts | Clarified scope: scheduled events only, linked Improvvisata docs | ✅ Done |
 
 ### Phase 5: Full Pipeline Test (5-7 giorni, opzionale)
 
@@ -131,16 +131,15 @@ Funzionalità nel design spec classificate "Should Have" o "Nice to Have", inten
 
 ## Timeline Summary
 
-| Phase | Effort | Cumulativo | Deliverable |
-|-------|--------|------------|-------------|
-| Phase 1: Mock E2E | 2-3 giorni | 2-3 giorni | UI coverage 100% |
-| Phase 2: Integration E2E | 3-4 giorni | 5-7 giorni | Data integrity verified |
-| Phase 3: Edge cases | 1-2 giorni | 6-9 giorni | Edge cases hardened |
-| Phase 4: Docs update | 0.5 giorni | 6.5-9.5 giorni | Docs current |
-| Phase 5: Full pipeline | 5-7 giorni | 11.5-16.5 giorni | Complete validation |
+| Phase | Effort | Status | Deliverable |
+|-------|--------|--------|-------------|
+| Phase 1: Mock E2E | 2-3 giorni | ✅ COMPLETED 2026-03-21 | UI coverage 100% |
+| Phase 2: Integration E2E | 3-4 giorni | ✅ COMPLETED 2026-03-21 | Data integrity verified |
+| Phase 3: Edge cases | 1-2 giorni | ✅ VERIFIED 2026-03-16 | Edge cases hardened |
+| Phase 4: Docs update | 0.5 giorni | ✅ COMPLETED 2026-03-21 | Docs current |
+| Phase 5: Full pipeline | 5-7 giorni | ⏳ Optional | Complete validation |
 
-**MVP validation (Phase 1-4)**: 6.5-9.5 giorni
-**Complete validation (Phase 1-5)**: 11.5-16.5 giorni
+**MVP validation (Phase 1-4)**: ✅ **COMPLETE**
 
 ---
 

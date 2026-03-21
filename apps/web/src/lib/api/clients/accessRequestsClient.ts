@@ -38,6 +38,7 @@ export interface BulkApproveResult {
 
 export interface RegistrationMode {
   publicRegistrationEnabled: boolean;
+  oauthEnabled?: boolean;
 }
 
 export interface GetAccessRequestsParams {

@@ -14,6 +14,7 @@ using Api.Infrastructure.Entities;
 using Api.Services;
 using Api.Services.Pdf;
 using Api.SharedKernel.Application.Services;
+using Api.SharedKernel.Services;
 using System.Security.Cryptography;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Api.Tests.Constants;
@@ -255,6 +256,19 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
             services.AddSingleton<IConfigurationService>(configServiceMock.Object);
         }
 
+        // Register ITierEnforcementService mock (required by UploadPdfCommandHandler)
+        if (!services.Any(s => s.ServiceType == typeof(ITierEnforcementService)))
+        {
+            var tierMock = new Mock<ITierEnforcementService>();
+            tierMock.Setup(t => t.CanPerformAsync(It.IsAny<Guid>(), It.IsAny<TierAction>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync(true);
+            tierMock.Setup(t => t.GetLimitsAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync(Api.BoundedContexts.SystemConfiguration.Domain.ValueObjects.TierLimits.Unlimited);
+            tierMock.Setup(t => t.GetUsageAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync(new UsageSnapshot(0, 100, 0, 100, 0, 100, 0, 100, 0, 100, 0, 100, true, 0, 100));
+            services.AddSingleton<ITierEnforcementService>(tierMock.Object);
+        }
+
         // Use REAL PdfUploadQuotaService for Issue #1821 quota reservation tests
         if (!services.Any(s => s.ServiceType == typeof(IPdfUploadQuotaService)))
         {
@@ -325,6 +339,28 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
         var header = "%PDF-1.4\n"u8.ToArray();
         var trailer = "%%EOF\n"u8.ToArray();
         var padding = new byte[Math.Max(0, sizeInBytes - header.Length - trailer.Length)];
+
+        var pdf = new byte[header.Length + padding.Length + trailer.Length];
+        Buffer.BlockCopy(header, 0, pdf, 0, header.Length);
+        Buffer.BlockCopy(padding, 0, pdf, header.Length, padding.Length);
+        Buffer.BlockCopy(trailer, 0, pdf, header.Length + padding.Length, trailer.Length);
+
+        return pdf;
+    }
+
+    /// <summary>
+    /// Creates a valid PDF with unique content per seed to avoid content-hash deduplication.
+    /// </summary>
+    private byte[] CreateValidPdfBytesWithUniqueContent(int sizeInBytes, int seed)
+    {
+        var header = "%PDF-1.4\n"u8.ToArray();
+        var trailer = "%%EOF\n"u8.ToArray();
+        var paddingSize = Math.Max(0, sizeInBytes - header.Length - trailer.Length);
+        var padding = new byte[paddingSize];
+        // Fill with unique content based on seed (stamp seed bytes at start of padding)
+        var seedBytes = BitConverter.GetBytes(seed);
+        for (var j = 0; j < padding.Length; j++)
+            padding[j] = seedBytes[j % seedBytes.Length];
 
         var pdf = new byte[header.Length + padding.Length + trailer.Length];
         Buffer.BlockCopy(header, 0, pdf, 0, header.Length);
@@ -631,10 +667,10 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
         const int concurrentUploads = 5;
         var tasks = new List<Task<PdfUploadResult>>();
 
-        // Create multiple upload tasks, each with its own scoped handler to avoid DbContext concurrency issues
+        // Create multiple upload tasks, each with UNIQUE content to avoid content-hash dedup
         for (int i = 0; i < concurrentUploads; i++)
         {
-            var pdfBytes = CreateValidPdfBytes(1024 * 100); // 100KB each
+            var pdfBytes = CreateValidPdfBytesWithUniqueContent(1024 * 100, i); // 100KB each, unique content
             var formFile = CreateMockFormFile($"concurrent_{i}.pdf", pdfBytes);
 
             var command = new UploadPdfCommand(
@@ -688,7 +724,7 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
             var index = i;
             tasks.Add(Task.Run(async () =>
             {
-                var pdfBytes = CreateValidPdfBytes(1024 * 50); // 50KB
+                var pdfBytes = CreateValidPdfBytesWithUniqueContent(1024 * 50, index); // 50KB, unique content
                 var formFile = CreateMockFormFile($"race_condition_{index}.pdf", pdfBytes);
 
                 var command = new UploadPdfCommand(
@@ -1352,11 +1388,13 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
         firstResult.Success.Should().BeTrue();
         var pdfId = firstResult.Document!.Id;
 
-        // Mark as already processed
+        // Mark as already processed (simulate completed processing)
         var pdfDoc = await _dbContext!.PdfDocuments.FirstOrDefaultAsync(d => d.Id == pdfId, TestCancellationToken);
+        pdfDoc.Should().NotBeNull();
+        pdfDoc!.ProcessingState = "Ready";
         await _dbContext.SaveChangesAsync(TestCancellationToken);
 
-        // Act: Simulate duplicate background task
+        // Act: Simulate duplicate background task — should be skipped by idempotency check
         var processPdfMethod = typeof(UploadPdfCommandHandler)
             .GetMethod("ProcessPdfAsync", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
         var filePath = Path.Combine(_testDataDirectory!, pdfId.ToString() + ".pdf");
@@ -1365,9 +1403,9 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
         var task = processPdfMethod!.Invoke(handler, new object[] { pdfId.ToString(), filePath, testUser.Id, TestCancellationToken }) as Task;
         await task!;
 
-        // Assert
-        var finalDoc = await _dbContext.PdfDocuments.FirstOrDefaultAsync(d => d.Id == pdfId, TestCancellationToken);
-        finalDoc!.ProcessingState.ToString().Should().Be("Ready");
+        // Assert: State should still be "Ready" — duplicate processing was skipped
+        await _dbContext.Entry(pdfDoc).ReloadAsync(TestCancellationToken);
+        pdfDoc.ProcessingState.Should().Be("Ready", "duplicate processing should be skipped for already-processed documents");
 
         if (File.Exists(filePath)) File.Delete(filePath);
     }

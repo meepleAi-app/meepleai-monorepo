@@ -293,18 +293,23 @@ internal sealed class RagExecutionRepository : RepositoryBase, IRagExecutionRepo
             .ToListAsync(cancellationToken)
             .ConfigureAwait(false);
 
+        // Single query to fetch all latencies, then partition by strategy in memory (avoids N+1)
+        var allLatencies = await query
+            .OrderBy(e => e.TotalLatencyMs)
+            .Select(e => new { e.Strategy, Latency = (double)e.TotalLatencyMs })
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        var latenciesByStrategy = allLatencies
+            .GroupBy(x => x.Strategy, StringComparer.Ordinal)
+            .ToDictionary(g => g.Key, g => g.Select(x => x.Latency).ToList(), StringComparer.Ordinal);
+
         var results = new List<StrategyAggregateMetrics>();
         foreach (var g in groups)
         {
-            var latencies = await query
-                .Where(e => e.Strategy == g.Strategy)
-                .OrderBy(e => e.TotalLatencyMs)
-                .Select(e => (double)e.TotalLatencyMs)
-                .ToListAsync(cancellationToken)
-                .ConfigureAwait(false);
-
-            var p95 = latencies.Count > 0 ? latencies[Math.Min((int)(latencies.Count * 0.95), latencies.Count - 1)] : 0.0;
-            var p99 = latencies.Count > 0 ? latencies[Math.Min((int)(latencies.Count * 0.99), latencies.Count - 1)] : 0.0;
+            var latencies = latenciesByStrategy.GetValueOrDefault(g.Strategy) ?? [];
+            var p95 = latencies.Count > 0 ? latencies[Math.Min((int)((latencies.Count - 1) * 0.95), latencies.Count - 1)] : 0.0;
+            var p99 = latencies.Count > 0 ? latencies[Math.Min((int)((latencies.Count - 1) * 0.99), latencies.Count - 1)] : 0.0;
 
             results.Add(new StrategyAggregateMetrics(
                 Strategy: g.Strategy,

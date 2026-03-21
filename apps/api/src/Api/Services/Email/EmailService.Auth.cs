@@ -408,6 +408,54 @@ internal partial class EmailService
 #pragma warning restore CA1031
     }
 
+    // Access request rejection notification
+    public async Task SendAccessRequestRejectedEmailAsync(
+        string toEmail,
+        string? reason,
+        CancellationToken ct = default)
+    {
+        try
+        {
+            var subject = "MeepleAI — Access Request Update";
+            var body = BuildAccessRequestRejectedEmailBody(reason);
+
+            using var message = new MailMessage();
+            message.From = new MailAddress(_fromAddress, _fromName);
+            message.To.Add(new MailAddress(toEmail));
+            message.Subject = subject;
+            message.Body = body;
+            message.IsBodyHtml = true;
+
+            using var smtpClient = new SmtpClient(_smtpHost, _smtpPort);
+            smtpClient.EnableSsl = _enableSsl;
+
+            if (!string.IsNullOrEmpty(_smtpUsername) && !string.IsNullOrEmpty(_smtpPassword))
+            {
+                smtpClient.Credentials = new NetworkCredential(_smtpUsername, _smtpPassword);
+            }
+
+            await smtpClient.SendMailAsync(message, ct).ConfigureAwait(false);
+
+            _logger.LogInformation(
+                "Access request rejected email sent successfully to {Email}",
+                DataMasking.MaskEmail(toEmail));
+        }
+#pragma warning disable CA1031 // Do not catch general exception types
+#pragma warning disable S125 // Sections of code should not be commented out
+        // ADAPTER PATTERN: Wraps external SMTP service exceptions (authentication, network, timeout) into domain exception
+        // External service integration requires catching all SMTP exceptions to provide consistent error handling
+#pragma warning restore S125
+        catch (Exception ex)
+        {
+            _logger.LogError(
+                ex,
+                "Failed to send access request rejected email to {Email}",
+                DataMasking.MaskEmail(toEmail));
+            throw new InvalidOperationException("Failed to send access request rejected email", ex);
+        }
+#pragma warning restore CA1031
+    }
+
     // ===== Template builders =====
 
     private static string BuildVerificationEmailBody(string userName, string verifyUrl)
@@ -863,6 +911,52 @@ internal partial class EmailService
     <div style=""margin-top: 20px; text-align: center; font-size: 12px; color: #999;"">
         <p>Questo &egrave; un messaggio automatico, non rispondere a questa email.</p>
         <p>&copy; 2025 MeepleAI. Tutti i diritti riservati.</p>
+    </div>
+</body>
+</html>
+";
+    }
+
+    private static string BuildAccessRequestRejectedEmailBody(string? reason)
+    {
+        var reasonSection = !string.IsNullOrWhiteSpace(reason)
+            ? $@"
+        <div style=""margin: 20px 0; padding: 15px; background-color: #fff3cd; border-left: 4px solid #ffc107; border-radius: 3px;"">
+            <p style=""margin: 5px 0;""><strong>Reason:</strong></p>
+            <p style=""margin: 10px 0;"">{WebUtility.HtmlEncode(reason)}</p>
+        </div>"
+            : string.Empty;
+
+        return $@"
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset=""utf-8"">
+    <meta name=""viewport"" content=""width=device-width, initial-scale=1.0"">
+    <title>Access Request Update</title>
+</head>
+<body style=""font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;"">
+    <div style=""background-color: #f8f9fa; padding: 20px; border-radius: 5px; margin-bottom: 20px;"">
+        <h1 style=""color: #2c3e50; margin: 0;"">MeepleAI</h1>
+    </div>
+
+    <div style=""background-color: #ffffff; padding: 30px; border-radius: 5px; border: 1px solid #e0e0e0;"">
+        <h2 style=""color: #2c3e50; margin-top: 0;"">Access Request Update</h2>
+
+        <p>Thank you for your interest in MeepleAI.</p>
+
+        <p>Unfortunately, your access request could not be approved at this time.</p>
+{reasonSection}
+        <p>You may submit a new request in the future.</p>
+
+        <p style=""margin-top: 30px; padding-top: 20px; border-top: 1px solid #e0e0e0; font-size: 14px; color: #666;"">
+            If you have any questions, feel free to contact us.
+        </p>
+    </div>
+
+    <div style=""margin-top: 20px; text-align: center; font-size: 12px; color: #999;"">
+        <p>This is an automated message, please do not reply to this email.</p>
+        <p>&copy; 2025 MeepleAI. All rights reserved.</p>
     </div>
 </body>
 </html>

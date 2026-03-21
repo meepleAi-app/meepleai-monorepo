@@ -41,6 +41,8 @@ export interface AuthModalProps {
   sessionExpiredMessage?: boolean;
   /** URL to redirect to after successful authentication. Defaults to '/dashboard' */
   redirectTo?: string;
+  /** Hide OAuth buttons (e.g. during alpha invite-only mode) */
+  hideOAuth?: boolean;
 }
 
 // ============================================================================
@@ -54,6 +56,7 @@ export function AuthModal({
   onSuccess,
   sessionExpiredMessage = false,
   redirectTo = '/dashboard',
+  hideOAuth = false,
 }: AuthModalProps) {
   const router = useRouter();
   const { register, loadCurrentUser, clearError } = useAuth();
@@ -320,7 +323,7 @@ export function AuthModal({
             </Tabs>
 
             {/* OAuth Buttons (includes "Or continue with" separator) */}
-            <OAuthButtons />
+            <OAuthButtons hidden={hideOAuth} />
           </>
         )}
       </div>

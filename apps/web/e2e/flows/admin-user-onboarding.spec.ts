@@ -117,9 +117,16 @@ test.describe('Admin-User Onboarding Flow @flow @critical @slow', () => {
 
     await test.step('Fill and send invitation', async () => {
       await adminUsersPage.fillInvitationForm(testUserEmail, 'user');
+      // Set up response listener BEFORE triggering the action
+      const inviteResponsePromise = page.waitForResponse(
+        resp => resp.url().includes('invitation') && resp.status() < 400,
+        { timeout: 10_000 }
+      );
       await adminUsersPage.submitInvitation();
-      // Don't use waitForNetworkIdle — admin page has continuous health polling
-      await page.waitForTimeout(3000);
+      // Await the response (don't use waitForNetworkIdle — admin page has continuous health polling)
+      await inviteResponsePromise.catch((e: Error) => {
+        console.warn('[T2] Invitation API response not intercepted:', e.message);
+      });
     });
 
     await test.step('Extract invitation token/URL', async () => {

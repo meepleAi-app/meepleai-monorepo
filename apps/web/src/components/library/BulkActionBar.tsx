@@ -108,7 +108,7 @@ export function BulkActionBar({
       setOperationProgress({ done: 0, total });
 
       const results = await Promise.allSettled(
-        selectedIds.map(async (gameId, i) => {
+        selectedIds.map(async gameId => {
           const result = await updateEntry.mutateAsync({ gameId, request: { isFavorite: true } });
           setOperationProgress(prev => (prev ? { ...prev, done: prev.done + 1 } : null));
           return result;

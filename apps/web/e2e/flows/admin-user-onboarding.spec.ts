@@ -21,7 +21,7 @@ const testUserPassword = `E2eTest!${timestamp}`;
 
 test.describe.configure({ mode: 'serial' });
 
-test.describe('Admin-User Onboarding Flow', () => {
+test.describe('Admin-User Onboarding Flow @flow @critical @slow', () => {
   const state: Partial<OnboardingFlowState> = {};
 
   test.afterAll(async () => {

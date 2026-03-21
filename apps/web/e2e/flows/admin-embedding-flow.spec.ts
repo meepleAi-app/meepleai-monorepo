@@ -65,7 +65,7 @@ const state: Partial<EmbeddingFlowState> = {};
 
 test.describe.configure({ mode: 'serial' });
 
-test.describe('Admin Embedding Flow', () => {
+test.describe('Admin Embedding Flow @flow @rag @slow', () => {
   test.afterAll(async () => {
     if (state.adminContext) {
       try {

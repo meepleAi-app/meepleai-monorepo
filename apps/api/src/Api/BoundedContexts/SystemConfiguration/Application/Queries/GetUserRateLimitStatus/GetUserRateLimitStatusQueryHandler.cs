@@ -71,7 +71,7 @@ internal sealed class GetUserRateLimitStatusQueryHandler
         return new UserRateLimitStatusDto
         {
             UserId = query.UserId,
-            UserName = userProfile.DisplayName,
+            UserName = userProfile.DisplayName ?? "Unknown",
             Tier = status.Tier,
             CurrentPendingCount = status.CurrentPendingCount,
             CurrentMonthlyCount = status.CurrentMonthlyCount,

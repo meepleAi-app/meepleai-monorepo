@@ -3,7 +3,7 @@ using Api.SharedKernel.Application.Interfaces;
 
 namespace Api.BoundedContexts.Authentication.Application.Queries.AccessRequest;
 
-public record RegistrationModeDto(bool PublicRegistrationEnabled);
+public record RegistrationModeDto(bool PublicRegistrationEnabled, bool OauthEnabled);
 
 internal record GetRegistrationModeQuery : IQuery<RegistrationModeDto>;
 
@@ -30,6 +30,18 @@ internal class GetRegistrationModeQueryHandler : IQueryHandler<GetRegistrationMo
             enabled = false; // Fail closed
         }
 
-        return new RegistrationModeDto(enabled);
+        // OAuth login gate (fail closed for alpha)
+        bool oauthEnabled;
+        try
+        {
+            oauthEnabled = await _configService.GetValueAsync<bool?>(
+                "oauth_login", false).ConfigureAwait(false) ?? false;
+        }
+        catch
+        {
+            oauthEnabled = false; // Fail closed
+        }
+
+        return new RegistrationModeDto(enabled, oauthEnabled);
     }
 }

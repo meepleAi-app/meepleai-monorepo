@@ -38,6 +38,15 @@ internal static class OAuthEndpoints
             IConfigurationService configService,
             CancellationToken ct) =>
         {
+            // Alpha gate: check if OAuth login is enabled
+            var oauthEnabled = await configService.GetValueAsync<bool>("oauth_login", false).ConfigureAwait(false);
+
+            if (!oauthEnabled)
+            {
+                var frontendUrl = context.RequestServices.GetRequiredService<IConfiguration>()["FrontendUrl"] ?? "http://localhost:3000";
+                return Results.Redirect($"{frontendUrl}/register?oauth_disabled=true");
+            }
+
             // AUTH-06-P4: Rate limiting to prevent OAuth abuse (configurable via admin UI)
             var ipAddress = context.Connection.RemoteIpAddress?.ToString() ?? "unknown";
             var maxTokens = (await configService.GetValueAsync<int?>("RateLimit:OAuth:MaxTokens", 10).ConfigureAwait(false)) ?? 10;

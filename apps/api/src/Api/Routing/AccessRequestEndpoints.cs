@@ -54,7 +54,7 @@ internal static class AccessRequestEndpoints
                 message = "If this email is eligible, you will receive an invitation when approved."
             });
         }).WithName("RequestAccess")
-          .RequireRateLimiting("AuthRegister");
+          .RequireRateLimiting("AccessRequest");
     }
 
     // --- Admin Endpoints ---

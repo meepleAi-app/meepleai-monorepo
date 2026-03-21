@@ -374,12 +374,21 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
   // Handle key press in input
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
-      if (e.key === 'Enter' && !e.shiftKey) {
+      if (e.key === 'Enter' && (!e.shiftKey || e.ctrlKey || e.metaKey)) {
         e.preventDefault();
         void handleSendMessage();
       }
+      if (e.key === 'Escape') {
+        const target = e.target as HTMLTextAreaElement;
+        if (target.value) {
+          e.preventDefault();
+          target.value = '';
+          target.dispatchEvent(new Event('input', { bubbles: true }));
+          setInputValue('');
+        }
+      }
     },
-    [handleSendMessage]
+    [handleSendMessage, setInputValue]
   );
 
   // Loading state

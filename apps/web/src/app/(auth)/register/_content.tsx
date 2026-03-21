@@ -37,6 +37,7 @@ export function RegisterPageContent() {
   const [mounted, setMounted] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(true);
   const [registrationMode, setRegistrationMode] = useState<RegistrationMode>('loading');
+  const [oauthEnabled, setOauthEnabled] = useState(false);
 
   const api = useApiClient();
 
@@ -52,6 +53,7 @@ export function RegisterPageContent() {
       .getRegistrationMode()
       .then(result => {
         setRegistrationMode(result.publicRegistrationEnabled ? 'public' : 'invite-only');
+        setOauthEnabled(result.oauthEnabled ?? false);
       })
       .catch(() => {
         // Fail closed: default to invite-only if we cannot determine the mode
@@ -61,6 +63,7 @@ export function RegisterPageContent() {
 
   const router = useRouter();
   const searchParams = useSearchParams();
+  const oauthDisabled = searchParams?.get('oauth_disabled') === 'true';
   const finalDestination = searchParams?.get('from') ?? '/dashboard';
   // Redirect to welcome page first, which will then redirect to final destination
   const redirectTo = `/welcome?redirectTo=${encodeURIComponent(finalDestination)}`;
@@ -89,6 +92,14 @@ export function RegisterPageContent() {
         subtitle="Registration is currently by invitation only"
         data-testid="register-page"
       >
+        {oauthDisabled && (
+          <div
+            role="alert"
+            className="text-sm text-amber-600 bg-amber-50 dark:text-amber-400 dark:bg-amber-900/20 p-3 rounded-md mb-4"
+          >
+            OAuth login is not available during alpha. Please request access below.
+          </div>
+        )}
         <RequestAccessForm />
       </AuthLayout>
     );
@@ -107,6 +118,7 @@ export function RegisterPageContent() {
         onClose={handleClose}
         defaultMode="register"
         redirectTo={redirectTo}
+        hideOAuth={!oauthEnabled}
       />
     </AuthLayout>
   );

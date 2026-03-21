@@ -128,6 +128,16 @@ export function ChatInputArea({
           )}
         </button>
       </div>
+      <p className="text-[10px] text-muted-foreground/60 text-center mt-1 max-w-3xl mx-auto font-nunito">
+        <kbd className="px-1 py-0.5 rounded border border-border/30 text-[9px]">Enter</kbd> invia
+        {' · '}
+        <kbd className="px-1 py-0.5 rounded border border-border/30 text-[9px]">
+          Shift+Enter
+        </kbd>{' '}
+        nuova riga
+        {' · '}
+        <kbd className="px-1 py-0.5 rounded border border-border/30 text-[9px]">Esc</kbd> cancella
+      </p>
     </div>
   );
 }

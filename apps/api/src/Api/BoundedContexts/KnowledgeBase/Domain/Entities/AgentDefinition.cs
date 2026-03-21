@@ -1,4 +1,5 @@
 using System.Text.Json;
+using Api.BoundedContexts.KnowledgeBase.Domain.Enums;
 using Api.BoundedContexts.KnowledgeBase.Domain.Events;
 using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 using Api.SharedKernel.Domain.Entities;
@@ -25,6 +26,7 @@ public sealed class AgentDefinition : AggregateRoot<Guid>
     private string _strategyJson = "{}";
     private string _promptsJson = "[]";
     private string _toolsJson = "[]";
+    private AgentDefinitionStatus _status;
     private bool _isActive;
     private DateTime _createdAt;
     private DateTime? _updatedAt;
@@ -142,6 +144,11 @@ public sealed class AgentDefinition : AggregateRoot<Guid>
     }
 
     /// <summary>
+    /// Gets the lifecycle status (Draft, Testing, Published).
+    /// </summary>
+    public AgentDefinitionStatus Status => _status;
+
+    /// <summary>
     /// Gets whether the agent is active.
     /// </summary>
     public bool IsActive => _isActive;
@@ -179,6 +186,7 @@ public sealed class AgentDefinition : AggregateRoot<Guid>
         string promptsJson,
         string toolsJson,
         bool isActive,
+        AgentDefinitionStatus status,
         DateTime createdAt,
         DateTime? updatedAt) : base(id)
     {
@@ -191,6 +199,7 @@ public sealed class AgentDefinition : AggregateRoot<Guid>
         _promptsJson = promptsJson;
         _toolsJson = toolsJson;
         _isActive = isActive;
+        _status = status;
         _createdAt = createdAt;
         _updatedAt = updatedAt;
     }
@@ -237,7 +246,8 @@ public sealed class AgentDefinition : AggregateRoot<Guid>
             _strategyJson = JsonSerializer.Serialize(agentStrategy),
             _promptsJson = JsonSerializer.Serialize(promptsList),
             _toolsJson = JsonSerializer.Serialize(toolsList),
-            _isActive = true,
+            _isActive = false,
+            _status = AgentDefinitionStatus.Draft,
             _createdAt = DateTime.UtcNow
         };
 
@@ -384,5 +394,48 @@ public sealed class AgentDefinition : AggregateRoot<Guid>
         _updatedAt = DateTime.UtcNow;
 
         AddDomainEvent(new AgentDefinitionDeactivatedEvent(Id));
+    }
+
+    /// <summary>
+    /// Transitions the agent definition to Testing status.
+    /// Only allowed from Draft status.
+    /// </summary>
+    public void StartTesting()
+    {
+        if (_status == AgentDefinitionStatus.Published)
+            throw new InvalidOperationException("Cannot move Published definition back to Testing. Unpublish first.");
+
+        _status = AgentDefinitionStatus.Testing;
+        _updatedAt = DateTime.UtcNow;
+
+        AddDomainEvent(new AgentDefinitionUpdatedEvent(Id, "Status changed to Testing"));
+    }
+
+    /// <summary>
+    /// Publishes the agent definition, making it visible to regular users.
+    /// Only allowed from Testing status (not directly from Draft).
+    /// </summary>
+    public void Publish()
+    {
+        if (_status == AgentDefinitionStatus.Draft)
+            throw new InvalidOperationException("Cannot publish directly from Draft. Move to Testing first.");
+
+        _status = AgentDefinitionStatus.Published;
+        _isActive = true;
+        _updatedAt = DateTime.UtcNow;
+
+        AddDomainEvent(new AgentDefinitionUpdatedEvent(Id, "Status changed to Published"));
+    }
+
+    /// <summary>
+    /// Unpublishes the agent definition, returning it to Draft status.
+    /// </summary>
+    public void Unpublish()
+    {
+        _status = AgentDefinitionStatus.Draft;
+        _isActive = false;
+        _updatedAt = DateTime.UtcNow;
+
+        AddDomainEvent(new AgentDefinitionUpdatedEvent(Id, "Status changed to Draft"));
     }
 }

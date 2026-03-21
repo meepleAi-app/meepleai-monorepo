@@ -109,8 +109,9 @@ public sealed class AgentDefinitionRepositoryTests : IClassFixture<SharedTestcon
         using var dbContext = _fixture.CreateDbContext(_connectionString!);
         var repository = new AgentDefinitionRepository(dbContext, _eventCollectorMock.Object);
         var activeAgent = AgentDefinition.Create("ActiveAgent", "Desc", AgentType.RagAgent, AgentDefinitionConfig.Default());
+        activeAgent.Activate(); // Create() now defaults to inactive
         var inactiveAgent = AgentDefinition.Create("InactiveAgent", "Desc", AgentType.RagAgent, AgentDefinitionConfig.Default());
-        inactiveAgent.Deactivate();
+        // inactiveAgent stays inactive (Draft default)
 
         await repository.AddAsync(activeAgent);
         await repository.AddAsync(inactiveAgent);

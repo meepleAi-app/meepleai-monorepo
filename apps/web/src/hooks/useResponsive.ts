@@ -122,7 +122,6 @@ export function useResponsive(): ResponsiveState {
  * ```
  */
 export function useBreakpoint(breakpoint: keyof typeof BREAKPOINTS): boolean {
-  // eslint-disable-next-line security/detect-object-injection -- breakpoint is from typed BREAKPOINTS key union
   const query = `(min-width: ${BREAKPOINTS[breakpoint]}px)`;
   return useMediaQuery(query);
 }
@@ -138,10 +137,7 @@ export function useIsTouchDevice(): boolean {
 
   useEffect(() => {
     const checkTouch = () => {
-      setIsTouch(
-        'ontouchstart' in window ||
-        navigator.maxTouchPoints > 0
-      );
+      setIsTouch('ontouchstart' in window || navigator.maxTouchPoints > 0);
     };
 
     checkTouch();

@@ -76,10 +76,10 @@ export const MeepleCardList = React.memo(function MeepleCardList(props: MeepleCa
     className,
     'data-testid': testId,
     showWishlist,
-    isWishlisted,
-    onWishlistToggle,
+    isWishlisted: _isWishlisted,
+    onWishlistToggle: _onWishlistToggle,
     quickActions,
-    userRole,
+    userRole: _userRole,
     status,
     showStatusIcon,
     selectable,
@@ -94,7 +94,7 @@ export const MeepleCardList = React.memo(function MeepleCardList(props: MeepleCa
     showInfoButton,
     entityId,
     infoHref,
-    infoTooltip,
+    infoTooltip: _infoTooltip,
     tags,
     maxVisibleTags = 3,
     showTagStrip,
@@ -135,11 +135,9 @@ export const MeepleCardList = React.memo(function MeepleCardList(props: MeepleCa
 
   const variant = 'list' as const;
   const coverSrc = entity === 'player' ? avatarUrl || imageUrl : imageUrl;
-  // eslint-disable-next-line security/detect-object-injection
   const color = customColor || entityColors[entity].hsl;
   const hasQuickActions = !!(quickActions && quickActions.length > 0);
   const showWishlistBtn = !!showWishlist && !hasQuickActions;
-  // eslint-disable-next-line security/detect-object-injection
   const drawerEntityType = DRAWER_ENTITY_TYPE_MAP[entity];
 
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -223,7 +221,6 @@ export const MeepleCardList = React.memo(function MeepleCardList(props: MeepleCa
             }
           : undefined
       }
-      // eslint-disable-next-line security/detect-object-injection
       aria-label={`${entityColors[entity].name}: ${title}`}
       data-testid={testId || 'meeple-card'}
       data-entity={entity}
@@ -267,6 +264,7 @@ export const MeepleCardList = React.memo(function MeepleCardList(props: MeepleCa
         variant={variant}
         entity={entity}
         customColor={customColor}
+        showEntityType
         mechanicIcon={mechanicIcon}
         stateLabel={stateLabel}
       />
@@ -278,21 +276,6 @@ export const MeepleCardList = React.memo(function MeepleCardList(props: MeepleCa
           entity={entity}
           customColor={customColor}
           actions={actions}
-          entityQuickActions={entityQuickActions}
-          quickActions={quickActions}
-          userRole={userRole}
-          showWishlistBtn={showWishlistBtn}
-          isWishlisted={isWishlisted}
-          onWishlistToggle={onWishlistToggle}
-          showInfoButton={showInfoButton}
-          entityId={entityId}
-          infoHref={infoHref}
-          infoTooltip={infoTooltip}
-          drawerEntityType={drawerEntityType}
-          onDrawerOpen={() => setDrawerOpen(true)}
-          testId={testId}
-          unreadCount={unreadCount}
-          hasQuickActions={hasQuickActions}
         />
 
         {/* Title */}

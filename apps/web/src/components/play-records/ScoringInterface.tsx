@@ -49,9 +49,9 @@ export function ScoringInterface({
   const [scores, setScores] = useState<ScoreState>(() => {
     // Initialize with existing scores
     const initial: ScoreState = {};
-    players.forEach((player) => {
+    players.forEach(player => {
       initial[player.id] = {};
-      player.scores.forEach((score) => {
+      player.scores.forEach(score => {
         initial[player.id][score.dimension] = score.value;
       });
     });
@@ -65,10 +65,9 @@ export function ScoringInterface({
   const units = scoringConfig.dimensionUnits;
 
   const handleScoreChange = (playerId: string, dimension: string, value: string) => {
-    setScores((prev) => ({
+    setScores(prev => ({
       ...prev,
       [playerId]: {
-        // eslint-disable-next-line security/detect-object-injection
         ...prev[playerId],
         [dimension]: value === '' ? '' : parseInt(value, 10) || 0,
       },
@@ -76,11 +75,9 @@ export function ScoringInterface({
 
     // Clear error for this cell
     const errorKey = `${playerId}-${dimension}`;
-    // eslint-disable-next-line security/detect-object-injection
     if (errors[errorKey]) {
-      setErrors((prev) => {
+      setErrors(prev => {
         const newErrors = { ...prev };
-        // eslint-disable-next-line security/detect-object-injection
         delete newErrors[errorKey];
         return newErrors;
       });
@@ -88,7 +85,6 @@ export function ScoringInterface({
   };
 
   const handleSaveScore = async (playerId: string, dimension: string) => {
-    // eslint-disable-next-line security/detect-object-injection
     const value = scores[playerId]?.[dimension];
 
     if (value === '' || value === undefined) {
@@ -96,10 +92,9 @@ export function ScoringInterface({
     }
 
     const stateKey = `${playerId}-${dimension}`;
-    setSavingState((prev) => ({ ...prev, [stateKey]: true }));
-    setErrors((prev) => {
+    setSavingState(prev => ({ ...prev, [stateKey]: true }));
+    setErrors(prev => {
       const newErrors = { ...prev };
-      // eslint-disable-next-line security/detect-object-injection
       delete newErrors[stateKey];
       return newErrors;
     });
@@ -107,21 +102,20 @@ export function ScoringInterface({
     try {
       await onRecordScore(playerId, dimension, Number(value));
     } catch (error) {
-      setErrors((prev) => ({
+      setErrors(prev => ({
         ...prev,
         [stateKey]: error instanceof Error ? error.message : 'Failed to save',
       }));
     } finally {
-      setSavingState((prev) => ({ ...prev, [stateKey]: false }));
+      setSavingState(prev => ({ ...prev, [stateKey]: false }));
     }
   };
 
   const handleSaveAll = async () => {
     const promises: Promise<void>[] = [];
 
-    players.forEach((player) => {
-      dimensions.forEach((dimension) => {
-        // eslint-disable-next-line security/detect-object-injection
+    players.forEach(player => {
+      dimensions.forEach(dimension => {
         const value = scores[player.id]?.[dimension];
         if (value !== '' && value !== undefined) {
           promises.push(handleSaveScore(player.id, dimension));
@@ -150,11 +144,7 @@ export function ScoringInterface({
           <Trophy className="w-5 h-5 text-amber-500" />
           Record Scores
         </h3>
-        <Button
-          onClick={handleSaveAll}
-          disabled={isRecording}
-          size="sm"
-        >
+        <Button onClick={handleSaveAll} disabled={isRecording} size="sm">
           <Save className="w-4 h-4 mr-2" />
           Save All
         </Button>
@@ -166,14 +156,12 @@ export function ScoringInterface({
           <TableHeader>
             <TableRow>
               <TableHead className="w-[200px]">Player</TableHead>
-              {dimensions.map((dimension) => (
+              {dimensions.map(dimension => (
                 <TableHead key={dimension} className="text-center">
                   <div>
                     <div className="font-semibold">{dimension}</div>
-                    {/* eslint-disable-next-line security/detect-object-injection */}
                     {units[dimension] && (
                       <div className="text-xs text-muted-foreground font-normal">
-                        {/* eslint-disable-next-line security/detect-object-injection */}
                         ({units[dimension]})
                       </div>
                     )}
@@ -198,15 +186,12 @@ export function ScoringInterface({
                     )}
                   </div>
                 </TableCell>
-                {dimensions.map((dimension) => {
+                {dimensions.map(dimension => {
                   const stateKey = `${player.id}-${dimension}`;
-                  // eslint-disable-next-line security/detect-object-injection
                   const isSaving = savingState[stateKey];
-                  // eslint-disable-next-line security/detect-object-injection
                   const hasError = !!errors[stateKey];
-                  // eslint-disable-next-line security/detect-object-injection
                   const currentValue = scores[player.id]?.[dimension];
-                  const existingScore = player.scores.find((s) => s.dimension === dimension);
+                  const existingScore = player.scores.find(s => s.dimension === dimension);
 
                   return (
                     <TableCell key={dimension} className="text-center">
@@ -216,25 +201,18 @@ export function ScoringInterface({
                           min="0"
                           step="1"
                           value={currentValue === '' ? '' : currentValue}
-                          onChange={(e) =>
-                            handleScoreChange(player.id, dimension, e.target.value)
-                          }
+                          onChange={e => handleScoreChange(player.id, dimension, e.target.value)}
                           onBlur={() => handleSaveScore(player.id, dimension)}
                           disabled={isSaving}
-                          className={`w-24 text-center ${
-                            hasError ? 'border-destructive' : ''
-                          }`}
+                          className={`w-24 text-center ${hasError ? 'border-destructive' : ''}`}
                           aria-label={`${player.displayName} ${dimension} score`}
                         />
                         {isSaving && (
                           <span className="text-muted-foreground text-xs">Saving...</span>
                         )}
-                        {!isSaving && existingScore && (
-                          <Check className="w-4 h-4 text-green-500" />
-                        )}
+                        {!isSaving && existingScore && <Check className="w-4 h-4 text-green-500" />}
                       </div>
                       {hasError && (
-                        // eslint-disable-next-line security/detect-object-injection
                         <p className="text-xs text-destructive mt-1">{errors[stateKey]}</p>
                       )}
                     </TableCell>
@@ -249,9 +227,7 @@ export function ScoringInterface({
       {players.length === 0 && (
         <Alert>
           <AlertCircle className="h-4 w-4" />
-          <AlertDescription>
-            Add players first to enable score recording
-          </AlertDescription>
+          <AlertDescription>Add players first to enable score recording</AlertDescription>
         </Alert>
       )}
     </div>

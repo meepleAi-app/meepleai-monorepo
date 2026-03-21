@@ -61,7 +61,6 @@ export default function FaqPage() {
             <Card key={categoryKey} className="overflow-hidden">
               <CardHeader className="bg-muted dark:bg-card">
                 <CardTitle className="text-lg flex items-center gap-2">
-                  {/* eslint-disable-next-line security/detect-object-injection */}
                   <span className="text-xl">{CATEGORY_ICONS[categoryKey]}</span>
                   {t(`pages.faq.categories.${categoryKey}.title`)}
                 </CardTitle>

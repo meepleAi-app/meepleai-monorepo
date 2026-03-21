@@ -158,7 +158,6 @@ export function BulkActionBar({
       setOperationProgress(null);
 
       if (failCount === 0) {
-        // eslint-disable-next-line security/detect-object-injection -- safe: newState is typed enum
         toast.success(`${successCount} giochi aggiornati a "${stateLabels[newState]}"`);
       } else if (successCount > 0) {
         toast.warning(`${successCount} aggiornati, ${failCount} errori`);

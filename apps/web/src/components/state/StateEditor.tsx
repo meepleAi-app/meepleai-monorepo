@@ -1,4 +1,3 @@
-/* eslint-disable security/detect-object-injection */
 /**
  * State Editor Container - Issue #2420
  *
@@ -19,7 +18,13 @@ import { useState } from 'react';
 
 import { z } from 'zod';
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/data-display/card';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/data-display/card';
 import { Separator } from '@/components/ui/navigation/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/navigation/tabs';
 

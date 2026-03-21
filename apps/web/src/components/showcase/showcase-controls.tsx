@@ -8,7 +8,13 @@
  */
 
 import { Switch } from '@/components/ui/forms/switch';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/overlays/select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/overlays/select';
 import { Input } from '@/components/ui/primitives/input';
 import { Label } from '@/components/ui/primitives/label';
 import { Slider } from '@/components/ui/primitives/slider';
@@ -49,9 +55,8 @@ export function ShowcaseControls({ controls, values, onChange }: ShowcaseControl
             key={key}
             propKey={key}
             def={def}
-            // eslint-disable-next-line security/detect-object-injection
             value={values[key]}
-            onChange={(v) => onChange(key, v)}
+            onChange={v => onChange(key, v)}
           />
         ))}
       </div>
@@ -93,12 +98,12 @@ function ControlInput({ def, value, onChange, propKey }: ControlInputProps) {
     case 'select': {
       const strVal = String(value ?? def.default);
       return (
-        <Select value={strVal} onValueChange={(v) => onChange(v)}>
+        <Select value={strVal} onValueChange={v => onChange(v)}>
           <SelectTrigger className="h-8 text-xs">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            {def.options.map((opt) => (
+            {def.options.map(opt => (
               <SelectItem key={opt} value={opt} className="text-xs">
                 {opt}
               </SelectItem>
@@ -115,7 +120,7 @@ function ControlInput({ def, value, onChange, propKey }: ControlInputProps) {
           <Switch
             id={`control-${propKey}`}
             checked={boolVal}
-            onCheckedChange={(checked) => onChange(checked)}
+            onCheckedChange={checked => onChange(checked)}
           />
           <span className={cn('text-xs', boolVal ? 'text-foreground' : 'text-muted-foreground')}>
             {boolVal ? 'true' : 'false'}
@@ -146,11 +151,7 @@ function ControlInput({ def, value, onChange, propKey }: ControlInputProps) {
     case 'text': {
       const strVal = String(value ?? def.default);
       return (
-        <Input
-          value={strVal}
-          onChange={(e) => onChange(e.target.value)}
-          className="h-8 text-xs"
-        />
+        <Input value={strVal} onChange={e => onChange(e.target.value)} className="h-8 text-xs" />
       );
     }
 
@@ -162,7 +163,7 @@ function ControlInput({ def, value, onChange, propKey }: ControlInputProps) {
           value={numVal}
           min={def.min}
           max={def.max}
-          onChange={(e) => onChange(Number(e.target.value))}
+          onChange={e => onChange(Number(e.target.value))}
           className="h-8 text-xs"
         />
       );

@@ -70,7 +70,7 @@ public class UpdateGameStateCommandHandlerTests
             .ReturnsAsync((GameSessionState?)null);
 
         // Act & Assert
-        var act = 
+        var act =
             () => _handler.Handle(command, TestContext.Current.CancellationToken);
         var exception = (await act.Should().ThrowAsync<NotFoundException>()).Which;
 
@@ -106,7 +106,7 @@ public class UpdateGameStateCommandHandlerTests
     public async Task Handle_WithNullCommand_ThrowsArgumentNullException()
     {
         // Act & Assert
-        var act = 
+        var act =
             () => _handler.Handle(null!, TestContext.Current.CancellationToken);
         await act.Should().ThrowAsync<ArgumentNullException>();
     }

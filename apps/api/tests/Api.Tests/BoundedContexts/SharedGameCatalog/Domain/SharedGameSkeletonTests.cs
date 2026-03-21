@@ -52,7 +52,7 @@ public class SharedGameSkeletonTests
     {
         var act = () =>
             SharedGame.CreateSkeleton("", AdminUserId, TimeProvider);
-act.Should().Throw<ArgumentException>();
+        act.Should().Throw<ArgumentException>();
     }
 
     [Fact]
@@ -60,7 +60,7 @@ act.Should().Throw<ArgumentException>();
     {
         var act = () =>
             SharedGame.CreateSkeleton("   ", AdminUserId, TimeProvider);
-act.Should().Throw<ArgumentException>();
+        act.Should().Throw<ArgumentException>();
     }
 
     [Fact]
@@ -68,7 +68,7 @@ act.Should().Throw<ArgumentException>();
     {
         var act = () =>
             SharedGame.CreateSkeleton(new string('x', 501), AdminUserId, TimeProvider);
-act.Should().Throw<ArgumentException>();
+        act.Should().Throw<ArgumentException>();
     }
 
     [Fact]
@@ -76,7 +76,7 @@ act.Should().Throw<ArgumentException>();
     {
         var act = () =>
             SharedGame.CreateSkeleton("Catan", Guid.Empty, TimeProvider);
-act.Should().Throw<ArgumentException>();
+        act.Should().Throw<ArgumentException>();
     }
 
     [Fact]
@@ -138,7 +138,7 @@ act.Should().Throw<ArgumentException>();
 
         var act = () =>
             game.TransitionDataStatusTo(to);
-act.Should().Throw<InvalidOperationException>();
+        act.Should().Throw<InvalidOperationException>();
     }
 
     #endregion
@@ -226,7 +226,7 @@ act.Should().Throw<InvalidOperationException>();
                 imageUrl: "https://example.com/img.jpg",
                 thumbnailUrl: "https://example.com/thumb.jpg",
                 rulebookUrl: null);
-act.Should().Throw<InvalidOperationException>();
+        act.Should().Throw<InvalidOperationException>();
     }
 
     [Fact]
@@ -244,7 +244,7 @@ act.Should().Throw<InvalidOperationException>();
                 imageUrl: "https://example.com/img.jpg",
                 thumbnailUrl: "https://example.com/thumb.jpg",
                 rulebookUrl: null);
-act.Should().Throw<ArgumentException>();
+        act.Should().Throw<ArgumentException>();
     }
 
     #endregion
@@ -267,7 +267,7 @@ act.Should().Throw<ArgumentException>();
         var game = SharedGame.CreateSkeleton("Catan", AdminUserId, TimeProvider);
 
         var act = () => game.MarkDataComplete();
-act.Should().Throw<InvalidOperationException>();
+        act.Should().Throw<InvalidOperationException>();
     }
 
     #endregion
@@ -281,7 +281,7 @@ act.Should().Throw<InvalidOperationException>();
 
         var act = () =>
             game.SubmitForApproval(AdminUserId);
-act.Should().Throw<InvalidOperationException>();
+        act.Should().Throw<InvalidOperationException>();
     }
 
     [Fact]

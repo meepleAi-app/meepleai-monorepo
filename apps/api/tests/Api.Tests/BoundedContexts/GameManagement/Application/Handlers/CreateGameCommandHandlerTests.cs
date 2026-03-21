@@ -366,7 +366,7 @@ public class CreateGameCommandHandlerTests
         var command = new CreateGameCommand(Title: invalidTitle);
 
         // Act & Assert
-        var act = 
+        var act =
             () => _handler.Handle(command, TestContext.Current.CancellationToken);
         await act.Should().ThrowAsync<Api.SharedKernel.Domain.Exceptions.ValidationException>();
 
@@ -381,7 +381,7 @@ public class CreateGameCommandHandlerTests
         var command = new CreateGameCommand(Title: longTitle);
 
         // Act & Assert
-        var act = 
+        var act =
             () => _handler.Handle(command, TestContext.Current.CancellationToken);
         var exception = (await act.Should().ThrowAsync<Api.SharedKernel.Domain.Exceptions.ValidationException>()).Which;
 
@@ -401,7 +401,7 @@ public class CreateGameCommandHandlerTests
             MaxPlayers: maxPlayers);
 
         // Act & Assert
-        var act = 
+        var act =
             () => _handler.Handle(command, TestContext.Current.CancellationToken);
         var exception = (await act.Should().ThrowAsync<Api.SharedKernel.Domain.Exceptions.ValidationException>()).Which;
 
@@ -421,7 +421,7 @@ public class CreateGameCommandHandlerTests
             MaxPlayers: maxPlayers);
 
         // Act & Assert
-        var act = 
+        var act =
             () => _handler.Handle(command, TestContext.Current.CancellationToken);
         var exception = (await act.Should().ThrowAsync<Api.SharedKernel.Domain.Exceptions.ValidationException>()).Which;
 
@@ -439,7 +439,7 @@ public class CreateGameCommandHandlerTests
             MaxPlayers: 2); // Min > Max
 
         // Act & Assert
-        var act = 
+        var act =
             () => _handler.Handle(command, TestContext.Current.CancellationToken);
         var exception = (await act.Should().ThrowAsync<Api.SharedKernel.Domain.Exceptions.ValidationException>()).Which;
 
@@ -457,7 +457,7 @@ public class CreateGameCommandHandlerTests
             MaxPlayTimeMinutes: 60); // Min > Max
 
         // Act & Assert
-        var act = 
+        var act =
             () => _handler.Handle(command, TestContext.Current.CancellationToken);
         var exception = (await act.Should().ThrowAsync<Api.SharedKernel.Domain.Exceptions.ValidationException>()).Which;
 
@@ -562,7 +562,7 @@ public class CreateGameCommandHandlerTests
             .ReturnsAsync((Api.BoundedContexts.DocumentProcessing.Domain.Entities.PdfDocument?)null);
 
         // Act & Assert
-        var act = 
+        var act =
             () => _handler.Handle(command, TestContext.Current.CancellationToken);
         var exception = (await act.Should().ThrowAsync<NotFoundException>()).Which;
 

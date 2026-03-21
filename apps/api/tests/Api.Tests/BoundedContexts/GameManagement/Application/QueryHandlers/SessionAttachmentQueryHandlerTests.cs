@@ -157,7 +157,7 @@ public sealed class SessionAttachmentQueryHandlerTests
         var handler = new GetSessionAttachmentByIdQueryHandler(
             _repoMock.Object, _serviceMock.Object, _sessionRepoMock.Object);
 
-        var act = 
+        var act =
             () => handler.Handle(
                 new GetSessionAttachmentByIdQuery(Guid.NewGuid(), Guid.NewGuid()), CancellationToken.None);
         await act.Should().ThrowAsync<NotFoundException>();
@@ -174,7 +174,7 @@ public sealed class SessionAttachmentQueryHandlerTests
         var handler = new GetSessionAttachmentByIdQueryHandler(
             _repoMock.Object, _serviceMock.Object, _sessionRepoMock.Object);
 
-        var act = 
+        var act =
             () => handler.Handle(
                 new GetSessionAttachmentByIdQuery(Guid.NewGuid(), attachment.Id), CancellationToken.None);
         await act.Should().ThrowAsync<NotFoundException>();

@@ -1,12 +1,14 @@
-# Game Night API Contracts — Sprint 2
+# Game Night API Contracts — Sprint 2 (Scheduled Events)
 
 **Issue**: #211
 **Status**: Draft — Pending backend team review
 **Date**: 2026-03-13
 
+> **Scope**: This document covers **scheduled Game Night events** (create/join/RSVP). For **Improvvisata** (spontaneous sessions with save/resume, score parsing, disputes), see the [Improvvisata roadmap](../roadmap/game-night-improvvisata-completion-roadmap.md) and [Phase 2 spec](../superpowers/specs/2026-03-21-game-night-improvvisata-phase2-design.md).
+
 ## Overview
 
-JSON request/response schemas for Sprint 2 Game Night endpoints. All endpoints follow CQRS: `GET` → Query handlers, `POST/PATCH/DELETE` → Command handlers via MediatR.
+JSON request/response schemas for Sprint 2 Game Night endpoints (scheduled events). All endpoints follow CQRS: `GET` → Query handlers, `POST/PATCH/DELETE` → Command handlers via MediatR.
 
 ## Endpoints
 

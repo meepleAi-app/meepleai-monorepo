@@ -1,5 +1,5 @@
 using Api.BoundedContexts.Administration.Application.Queries;
-using Api.BoundedContexts.Authentication.Infrastructure.Persistence;
+using Api.BoundedContexts.Administration.Domain.Repositories;
 using Api.Models;
 using Api.SharedKernel.Application.Interfaces;
 
@@ -7,19 +7,18 @@ namespace Api.BoundedContexts.Administration.Application.Queries;
 
 /// <summary>
 /// Handler for SearchUsersQuery.
-/// Uses IUserRepository to search users for autocomplete scenarios.
-/// API-01: Authentication endpoints (versioned)
+/// Uses IUserProfileRepository to search users for autocomplete scenarios.
 /// </summary>
 internal class SearchUsersQueryHandler : IQueryHandler<SearchUsersQuery, IReadOnlyList<UserSearchResultDto>>
 {
-    private readonly IUserRepository _userRepository;
+    private readonly IUserProfileRepository _userProfileRepository;
     private readonly ILogger<SearchUsersQueryHandler> _logger;
 
     public SearchUsersQueryHandler(
-        IUserRepository userRepository,
+        IUserProfileRepository userProfileRepository,
         ILogger<SearchUsersQueryHandler> logger)
     {
-        _userRepository = userRepository ?? throw new ArgumentNullException(nameof(userRepository));
+        _userProfileRepository = userProfileRepository ?? throw new ArgumentNullException(nameof(userProfileRepository));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -33,13 +32,14 @@ internal class SearchUsersQueryHandler : IQueryHandler<SearchUsersQuery, IReadOn
 
         try
         {
-            var users = await _userRepository.SearchAsync(query.SearchQuery, query.MaxResults, cancellationToken).ConfigureAwait(false);
+            var users = await _userProfileRepository.SearchAsync(query.SearchQuery, query.MaxResults, cancellationToken).ConfigureAwait(false);
 
-            var results = users.Select(u => new UserSearchResultDto(
-                Id: u.Id.ToString(),
-                DisplayName: u.DisplayName,
-                Email: u.Email.Value
-            )).ToList();
+            var results = users
+                .Select(u => new UserSearchResultDto(
+                    Id: u.Id.ToString(),
+                    DisplayName: u.DisplayName ?? string.Empty,
+                    Email: u.Email
+                )).ToList();
 
             _logger.LogInformation("Found {Count} users matching query: {Query}", results.Count, query.SearchQuery);
             return results;

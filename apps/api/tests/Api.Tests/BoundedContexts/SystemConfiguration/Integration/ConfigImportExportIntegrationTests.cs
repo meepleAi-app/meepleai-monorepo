@@ -1,6 +1,4 @@
 using Api.BoundedContexts.SystemConfiguration.Application.Commands;
-using Api.BoundedContexts.SystemConfiguration.Application.Commands;
-using Api.BoundedContexts.SystemConfiguration.Application.Queries;
 using Api.BoundedContexts.SystemConfiguration.Application.Queries;
 using Api.BoundedContexts.SystemConfiguration.Domain.Entities;
 using Api.BoundedContexts.SystemConfiguration.Domain.Repositories;
@@ -84,6 +82,10 @@ public class ConfigImportExportIntegrationTests : IAsyncLifetime
         // Mock IHybridCacheService for testing (required by event handlers) - Issue #2620
         services.AddScoped<Api.Services.IHybridCacheService>(_ =>
             Moq.Mock.Of<Api.Services.IHybridCacheService>());
+
+        // Mock IDashboardStreamService (required by DashboardStreamEventHandler resolved via MediatR assembly scan)
+        services.AddSingleton<Api.BoundedContexts.Administration.Domain.Services.IDashboardStreamService>(_ =>
+            Moq.Mock.Of<Api.BoundedContexts.Administration.Domain.Services.IDashboardStreamService>());
 
         // DbContext with enforced connection settings (Issue #2031 best practices)
         var enforcedBuilder = new NpgsqlConnectionStringBuilder(_isolatedDbConnectionString)

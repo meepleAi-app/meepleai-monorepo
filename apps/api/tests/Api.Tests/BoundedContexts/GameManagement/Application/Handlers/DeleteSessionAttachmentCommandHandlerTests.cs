@@ -86,7 +86,7 @@ public sealed class DeleteSessionAttachmentCommandHandlerTests
 
         var command = new DeleteSessionAttachmentCommand(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid());
 
-        var act = 
+        var act =
             () => _sut.Handle(command, CancellationToken.None);
         await act.Should().ThrowAsync<NotFoundException>();
     }
@@ -108,7 +108,7 @@ public sealed class DeleteSessionAttachmentCommandHandlerTests
 
         var command = new DeleteSessionAttachmentCommand(sessionId, Guid.NewGuid(), session.Players[0].Id);
 
-        var act = 
+        var act =
             () => _sut.Handle(command, CancellationToken.None);
         await act.Should().ThrowAsync<NotFoundException>();
     }
@@ -127,7 +127,7 @@ public sealed class DeleteSessionAttachmentCommandHandlerTests
 
         var command = new DeleteSessionAttachmentCommand(sessionId, attachment.Id, session.Players[0].Id);
 
-        var act = 
+        var act =
             () => _sut.Handle(command, CancellationToken.None);
         await act.Should().ThrowAsync<NotFoundException>();
     }
@@ -151,7 +151,7 @@ public sealed class DeleteSessionAttachmentCommandHandlerTests
 
         var command = new DeleteSessionAttachmentCommand(sessionId, attachment.Id, nonHostPlayer.Id);
 
-        var act = 
+        var act =
             () => _sut.Handle(command, CancellationToken.None);
         await act.Should().ThrowAsync<ForbiddenException>();
     }
@@ -203,7 +203,7 @@ public sealed class DeleteSessionAttachmentCommandHandlerTests
     [Fact]
     public async Task Handle_NullCommand_ThrowsArgumentNullException()
     {
-        var act = 
+        var act =
             () => _sut.Handle(null!, CancellationToken.None);
         await act.Should().ThrowAsync<ArgumentNullException>();
     }

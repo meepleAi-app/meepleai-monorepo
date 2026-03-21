@@ -113,7 +113,7 @@ public class ApiKeyUsageTests
 
         // Act & Assert
         var act = () => apiKey.RecordUsage(endpoint!);
-act.Should().Throw<ArgumentException>();
+        act.Should().Throw<ArgumentException>();
     }
 
     [Fact]

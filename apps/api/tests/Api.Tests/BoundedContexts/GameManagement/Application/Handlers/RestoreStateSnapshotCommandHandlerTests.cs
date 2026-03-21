@@ -73,7 +73,7 @@ public class RestoreStateSnapshotCommandHandlerTests
             .ReturnsAsync((GameSessionState?)null);
 
         // Act & Assert
-        var act = 
+        var act =
             () => _handler.Handle(command, TestContext.Current.CancellationToken);
         var exception = (await act.Should().ThrowAsync<NotFoundException>()).Which;
 
@@ -111,7 +111,7 @@ public class RestoreStateSnapshotCommandHandlerTests
     public async Task Handle_WithNullCommand_ThrowsArgumentNullException()
     {
         // Act & Assert
-        var act = 
+        var act =
             () => _handler.Handle(null!, TestContext.Current.CancellationToken);
         await act.Should().ThrowAsync<ArgumentNullException>();
     }
@@ -131,7 +131,7 @@ public class RestoreStateSnapshotCommandHandlerTests
             .ReturnsAsync(state);
 
         // Act & Assert - Domain should throw when snapshot not found
-        var act = 
+        var act =
             () => _handler.Handle(command, TestContext.Current.CancellationToken);
         await act.Should().ThrowAsync<Exception>();
     }

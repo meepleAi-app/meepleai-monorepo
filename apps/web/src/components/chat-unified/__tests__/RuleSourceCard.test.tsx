@@ -20,6 +20,13 @@
  * 15. Accessibility: aria-expanded, role="tablist", role="tab"
  * 16. Empty citations: renders nothing
  * 17. Citation with empty snippet: graceful fallback
+ * 18. Full tier: shows "Citazione originale" label + verbatim + PDF btn
+ * 19. Protected tier: shows "Riformulazione AI" label + paraphrase + no PDF btn
+ * 20. Lock icon in header when any citation is protected
+ * 21. No lock icon when all citations are full
+ * 22. Upsell CTA for protected tier (private game)
+ * 23. Upsell CTA for protected tier (public game)
+ * 24. Protected citation without paraphrase shows page-only fallback
  */
 
 import { render, screen, fireEvent } from '@testing-library/react';
@@ -60,6 +67,7 @@ function makeCitation(overrides: Partial<Citation> = {}): Citation {
     pageNumber: 12,
     snippet: 'Quando un giocatore costruisce un insediamento, riceve la risorsa corrispondente.',
     relevanceScore: 0.92,
+    copyrightTier: 'full',
     ...overrides,
   };
 }
@@ -250,5 +258,97 @@ describe('RuleSourceCard', () => {
     render(<RuleSourceCard citations={[makeCitation()]} />);
     fireEvent.click(screen.getByTestId('rule-source-header'));
     expect(screen.getByRole('blockquote')).toBeInTheDocument();
+  });
+
+  // --- Copyright Tier: Full ---
+
+  it('renders Full tier with "Citazione originale" label and verbatim quote', () => {
+    const fullCitation = makeCitation({ copyrightTier: 'full', snippet: 'Original verbatim text' });
+    render(<RuleSourceCard citations={[fullCitation]} />);
+    fireEvent.click(screen.getByTestId('rule-source-header'));
+
+    expect(screen.getByText(/Citazione originale/i)).toBeInTheDocument();
+    expect(screen.getByText(/Original verbatim text/)).toBeInTheDocument();
+    expect(screen.getByTestId('view-pdf-btn')).toBeInTheDocument();
+  });
+
+  it('does not show lock icon when all citations are full tier', () => {
+    render(<RuleSourceCard citations={[makeCitation({ copyrightTier: 'full' })]} />);
+    expect(screen.queryByTestId('copyright-lock-icon')).not.toBeInTheDocument();
+  });
+
+  // --- Copyright Tier: Protected ---
+
+  it('renders Protected tier with "Riformulazione AI" label and paraphrased quote', () => {
+    const protectedCitation = makeCitation({
+      copyrightTier: 'protected',
+      paraphrasedSnippet: 'Reworded version of the rule',
+      isPublic: false,
+    });
+    render(<RuleSourceCard citations={[protectedCitation]} />);
+    fireEvent.click(screen.getByTestId('rule-source-header'));
+
+    expect(screen.getByText(/Riformulazione AI/i)).toBeInTheDocument();
+    expect(screen.getByText(/Reworded version/)).toBeInTheDocument();
+    expect(screen.queryByTestId('view-pdf-btn')).not.toBeInTheDocument();
+  });
+
+  it('shows lock icon in header when any citation is protected', () => {
+    const citations = [
+      makeCitation({ copyrightTier: 'full' }),
+      makeCitation({
+        documentId: 'doc-002',
+        copyrightTier: 'protected',
+        paraphrasedSnippet: 'Paraphrased',
+      }),
+    ];
+    render(<RuleSourceCard citations={citations} />);
+    expect(screen.getByTestId('copyright-lock-icon')).toBeInTheDocument();
+  });
+
+  it('shows upsell CTA for protected citation (private game)', () => {
+    const protectedCitation = makeCitation({
+      copyrightTier: 'protected',
+      paraphrasedSnippet: 'Reworded text',
+      isPublic: false,
+    });
+    render(<RuleSourceCard citations={[protectedCitation]} />);
+    fireEvent.click(screen.getByTestId('rule-source-header'));
+
+    const cta = screen.getByTestId('upsell-cta');
+    expect(cta).toBeInTheDocument();
+    expect(cta).toHaveTextContent(/Carica il regolamento per la versione completa/);
+  });
+
+  it('shows upsell CTA for protected citation (public game)', () => {
+    const protectedCitation = makeCitation({
+      copyrightTier: 'protected',
+      paraphrasedSnippet: 'Reworded text',
+      isPublic: true,
+    });
+    render(<RuleSourceCard citations={[protectedCitation]} />);
+    fireEvent.click(screen.getByTestId('rule-source-header'));
+
+    const cta = screen.getByTestId('upsell-cta');
+    expect(cta).toBeInTheDocument();
+    expect(cta).toHaveTextContent(/Dichiara possesso per accesso completo/);
+  });
+
+  it('protected citation without paraphrase shows page-only fallback', () => {
+    const noParaphrase = makeCitation({
+      copyrightTier: 'protected',
+      pageNumber: 22,
+      paraphrasedSnippet: undefined,
+    });
+    render(<RuleSourceCard citations={[noParaphrase]} />);
+    fireEvent.click(screen.getByTestId('rule-source-header'));
+
+    expect(screen.getByText(/Vedi pagina 22/)).toBeInTheDocument();
+  });
+
+  it('does not show upsell CTA for full tier citation', () => {
+    render(<RuleSourceCard citations={[makeCitation({ copyrightTier: 'full' })]} />);
+    fireEvent.click(screen.getByTestId('rule-source-header'));
+    expect(screen.queryByTestId('upsell-cta')).not.toBeInTheDocument();
   });
 });

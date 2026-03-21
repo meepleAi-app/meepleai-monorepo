@@ -117,8 +117,9 @@ internal sealed class RagPromptAssemblyService : IRagPromptAssemblyService
         // Step 1: Retrieve RAG context (includes expansion boost), passing pre-resolved expansion IDs
         var (ragContext, citations) = await RetrieveRagContextAsync(userQuestion, gameId, expansionGameIds, userTier, ct, debugCollector).ConfigureAwait(false);
 
-        // Step 2: Build system prompt (persona + RAG chunks + expansion priority)
-        var systemPrompt = BuildSystemPrompt(agentTypology, gameTitle, gameState, ragContext, hasExpansions);
+        // Step 2: Build system prompt (persona + RAG chunks + expansion priority + copyright instruction)
+        var hasProtectedCitations = citations.Any(c => c.CopyrightTier == CopyrightTier.Protected);
+        var systemPrompt = BuildSystemPrompt(agentTypology, gameTitle, gameState, ragContext, hasExpansions, hasProtectedCitations);
 
         // Step 3: Build user prompt (chat history + current question)
         var userPrompt = BuildUserPrompt(userQuestion, chatThread);
@@ -367,19 +368,18 @@ internal sealed class RagPromptAssemblyService : IRagPromptAssemblyService
             // Step 4: Sentence window expansion — include adjacent chunks for more context
             filteredChunks = await TrySentenceWindowExpansionAsync(filteredChunks, ct).ConfigureAwait(false);
 
-            // Format chunks and track citations
+            // Format chunks and track citations (with copyright annotation)
             var sb = new StringBuilder();
             foreach (var chunk in filteredChunks)
             {
-                sb.AppendLine(CultureInfo.InvariantCulture, $"[Source: Document {chunk.PdfId}, Page {chunk.Page}, Relevance: {chunk.Score:F2}]");
-                sb.AppendLine(chunk.Text);
-                sb.AppendLine("---");
-
-                citations.Add(new ChunkCitation(
+                var citation = new ChunkCitation(
                     DocumentId: chunk.PdfId,
                     PageNumber: chunk.Page,
                     RelevanceScore: chunk.Score,
-                    SnippetPreview: chunk.Text.Length > 120 ? string.Concat(chunk.Text.AsSpan(0, 117), "...") : chunk.Text));
+                    SnippetPreview: chunk.Text.Length > 120 ? string.Concat(chunk.Text.AsSpan(0, 117), "...") : chunk.Text);
+
+                sb.AppendLine(FormatChunkForPrompt(citation, chunk.Text));
+                citations.Add(citation);
             }
 
             var ragContext = sb.ToString().TrimEnd();
@@ -653,7 +653,7 @@ internal sealed class RagPromptAssemblyService : IRagPromptAssemblyService
 
     private static string BuildSystemPrompt(
         string agentTypology, string gameTitle, GameState? gameState, string ragContext,
-        bool hasExpansions = false)
+        bool hasExpansions = false, bool hasProtectedCitations = false)
     {
         var sb = new StringBuilder();
 
@@ -692,6 +692,14 @@ internal sealed class RagPromptAssemblyService : IRagPromptAssemblyService
         sb.AppendLine("3. Explain how the rule applies to the user's specific situation.");
         sb.AppendLine("4. State your conclusion clearly.");
         sb.AppendLine();
+
+        // Copyright paraphrase instruction (when Protected citations exist)
+        if (hasProtectedCitations)
+        {
+            sb.AppendLine("## Copyright Notice");
+            sb.AppendLine(GetCopyrightInstruction("it"));
+            sb.AppendLine();
+        }
 
         // RAG context
         if (!string.IsNullOrWhiteSpace(ragContext))
@@ -787,6 +795,21 @@ internal sealed class RagPromptAssemblyService : IRagPromptAssemblyService
         sb.AppendLine(userQuestion);
 
         return sb.ToString();
+    }
+
+    /// <summary>Formats a chunk with copyright annotation for the LLM system prompt.</summary>
+    public static string FormatChunkForPrompt(ChunkCitation citation, string chunkText)
+    {
+        var tierLabel = citation.CopyrightTier == CopyrightTier.Full ? "FULL" : "PROTECTED";
+        return $"[Source: Document {citation.DocumentId}, Page {citation.PageNumber}, Relevance: {citation.RelevanceScore:F2}, Copyright: {tierLabel}]\n{chunkText}\n---";
+    }
+
+    /// <summary>Returns the copyright paraphrase instruction localized to agent language.</summary>
+    public static string GetCopyrightInstruction(string language)
+    {
+        return language.StartsWith("it", StringComparison.OrdinalIgnoreCase)
+            ? "Per le fonti marcate PROTECTED, riformula il contenuto con parole tue senza citare verbatim. Usa il marker [ref:documentId:pageNum] prima di ogni riformulazione. Per le fonti FULL, puoi citare direttamente."
+            : "For sources marked PROTECTED, paraphrase in your own words without verbatim citation. Use the marker [ref:documentId:pageNum] before each paraphrase. For FULL sources, you may cite directly.";
     }
 
     private static int EstimateTokens(string text)

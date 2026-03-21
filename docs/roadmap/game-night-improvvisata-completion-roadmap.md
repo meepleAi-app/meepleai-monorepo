@@ -94,13 +94,13 @@ Full analysis: [`docs/testing/game-night-edge-cases-analysis.md`](../testing/gam
 
 **Result**: 7/8 fully handled, 1/8 is a design choice (no max pause duration). **No action required.**
 
-### Phase 4: Documentation Update (0.5 giorni)
+### Phase 4: Documentation Update (0.5 giorni) — COMPLETED 2026-03-21
 
-| Doc | Action |
-|-----|--------|
-| Vertical slice spec | Add "Implementation Status" section — all items ✅ |
-| Roadmap | Add Game Night Improvvisata to completed section |
-| API contracts | Clarify: `game-night-api-contracts.md` = scheduled events, NOT Improvvisata |
+| Doc | Action | Status |
+|-----|--------|--------|
+| Vertical slice spec | N/A — no separate file exists | ✅ Skip |
+| Roadmap | Phase 2 marked COMPLETED in PR #52 | ✅ Done |
+| API contracts | Clarified scope: scheduled events only, linked Improvvisata docs | ✅ Done |
 
 ### Phase 5: Full Pipeline Test (5-7 giorni, opzionale)
 

@@ -106,20 +106,24 @@ public sealed class AgentGameStateSnapshotRepositoryIntegrationTests : IAsyncLif
 
     private async Task SeedTestDataAsync()
     {
-        // Create minimal test data
+        _gameId = Guid.NewGuid();
+        _agentSessionId = Guid.NewGuid();
+
+        // Seed game (parent entity)
         var game = new Api.Infrastructure.Entities.GameEntity
         {
-            Id = Guid.NewGuid(),
+            Id = _gameId,
             Name = "Test Game",
             CreatedAt = DateTime.UtcNow
         };
-        _gameId = game.Id;
         _dbContext!.Games.Add(game);
-
-        // Create fake agent session ID (not actually creating AgentSession to simplify)
-        _agentSessionId = Guid.NewGuid();
-
         await _dbContext.SaveChangesAsync(TestCancellationToken);
+
+        // Seed minimal agent_session row for FK satisfaction (bypass full entity graph)
+        await _dbContext.Database.ExecuteSqlInterpolatedAsync(
+            $@"INSERT INTO agent_sessions (""Id"", ""GameId"", ""StartedAt"", ""IsActive"", ""CurrentGameStateJson"")
+               VALUES ({_agentSessionId}, {_gameId}, {DateTime.UtcNow}, true, '{{}}')",
+            TestCancellationToken);
     }
 
     #region AddAsync Tests

@@ -4,6 +4,7 @@ import { useTranslation } from '@/hooks/useTranslation';
 
 interface OAuthButtonsProps {
   onOAuthLogin?: (provider: string) => void;
+  hidden?: boolean;
 }
 
 /**
@@ -15,8 +16,10 @@ export function buildOAuthUrl(provider: 'google' | 'discord' | 'github'): string
   return `${apiBase}/api/v1/auth/oauth/${provider}/login`;
 }
 
-export default function OAuthButtons({ onOAuthLogin }: OAuthButtonsProps) {
+export default function OAuthButtons({ onOAuthLogin, hidden }: OAuthButtonsProps) {
   const { t } = useTranslation();
+
+  if (hidden) return null;
 
   const handleOAuthLogin = (provider: 'google' | 'discord' | 'github') => {
     if (onOAuthLogin) {

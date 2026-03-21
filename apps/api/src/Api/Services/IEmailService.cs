@@ -191,6 +191,15 @@ internal interface IEmailService
         DateTime expiresAt,
         CancellationToken ct = default);
 
+    // Access request rejection notification
+    /// <summary>
+    /// Sends rejection notification to access request submitter.
+    /// </summary>
+    Task SendAccessRequestRejectedEmailAsync(
+        string toEmail,
+        string? reason,
+        CancellationToken ct = default);
+
     // ISSUE-4417: Raw email sending for queue processor
     /// <summary>
     /// Sends a pre-rendered HTML email via SMTP.

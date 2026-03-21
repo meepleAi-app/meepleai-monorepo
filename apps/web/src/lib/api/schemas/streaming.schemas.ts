@@ -53,6 +53,9 @@ export const CitationSchema = z.object({
   snippet: z.string().optional().nullable(), // Alternative field name
   score: z.number().optional().nullable(),
   relevanceScore: z.number().optional().nullable(), // Alternative field name
+  copyrightTier: z.enum(['full', 'protected']).default('full'), // Default 'full' for backward compat
+  paraphrasedSnippet: z.string().optional().nullable(),
+  isPublic: z.boolean().optional().default(false),
 });
 
 export type Citation = z.infer<typeof CitationSchema>;
@@ -89,6 +92,7 @@ export const StreamingCompleteSchema = z.object({
   confidence: z.number().optional().nullable(), // 0.0 - 1.0
   estimatedReadingTimeMinutes: z.number().optional().nullable(),
   snippets: z.array(CitationSchema).optional().default([]), // Final citations
+  citations: z.array(CitationSchema).optional().default([]), // Copyright-aware citations
 });
 
 export type StreamingComplete = z.infer<typeof StreamingCompleteSchema>;

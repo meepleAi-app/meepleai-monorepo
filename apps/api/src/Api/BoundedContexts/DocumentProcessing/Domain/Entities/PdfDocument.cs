@@ -71,6 +71,9 @@ internal sealed class PdfDocument : AggregateRoot<Guid>
     public Guid? CopyrightDisclaimerAcceptedBy { get; private set; }
     public bool IsActiveForRag { get; private set; } = true;
 
+    // RAG Copyright KB Cards: license tier for citation rendering
+    public LicenseType LicenseType { get; private set; } = LicenseType.Copyrighted;
+
     // Issue #5447: User-editable version label (e.g., "2nd Edition", "v1.3 Errata")
     public string? VersionLabel { get; private set; }
 

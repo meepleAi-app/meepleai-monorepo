@@ -14,8 +14,8 @@ using Pgvector;
 namespace Api.Infrastructure.Migrations
 {
     [DbContext(typeof(MeepleAiDbContext))]
-    [Migration("20260320092808_SeedTop143BggGames")]
-    partial class SeedTop143BggGames
+    [Migration("20260321054041_AddCragVerdictAndDashboardIndex")]
+    partial class AddCragVerdictAndDashboardIndex
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -380,6 +380,72 @@ namespace Api.Infrastructure.Migrations
                         .IsUnique();
 
                     b.ToTable("user_ai_consents", (string)null);
+                });
+
+            modelBuilder.Entity("Api.BoundedContexts.Administration.Domain.Entities.UserProfile", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("AvatarUrl")
+                        .HasMaxLength(2048)
+                        .HasColumnType("character varying(2048)");
+
+                    b.Property<string>("Bio")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("DisplayName")
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.Property<string>("Email")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<bool>("EmailVerified")
+                        .HasColumnType("boolean");
+
+                    b.Property<int>("ExperiencePoints")
+                        .HasColumnType("integer");
+
+                    b.Property<bool>("IsContributor")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsDemoAccount")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsSuspended")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsTwoFactorEnabled")
+                        .HasColumnType("boolean");
+
+                    b.Property<int>("Level")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Role")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Tier")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.ToTable((string)null);
+
+                    b.ToView("vw_user_profiles", (string)null);
                 });
 
             modelBuilder.Entity("Api.BoundedContexts.Administration.Domain.Entities.UserTokenUsage", b =>
@@ -815,6 +881,31 @@ namespace Api.Infrastructure.Migrations
                         .HasDatabaseName("IX_ResourceForecasts_CreatedByUserId");
 
                     b.ToTable("resource_forecasts", (string)null);
+                });
+
+            modelBuilder.Entity("Api.BoundedContexts.BusinessSimulations.Domain.Entities.UserBudget", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("ExperiencePoints")
+                        .HasColumnType("integer");
+
+                    b.Property<bool>("IsContributor")
+                        .HasColumnType("boolean");
+
+                    b.Property<int>("Level")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Tier")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.ToTable((string)null);
+
+                    b.ToView("vw_user_budgets", (string)null);
                 });
 
             modelBuilder.Entity("Api.BoundedContexts.EntityRelationships.Domain.Aggregates.EntityLink", b =>
@@ -1588,6 +1679,11 @@ namespace Api.Infrastructure.Migrations
                         .HasColumnType("double precision")
                         .HasColumnName("confidence");
 
+                    b.Property<string>("CragVerdict")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("crag_verdict");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
@@ -1669,6 +1765,10 @@ namespace Api.Infrastructure.Migrations
 
                     b.HasIndex("Strategy")
                         .HasDatabaseName("IX_rag_executions_strategy");
+
+                    b.HasIndex("Strategy", "CreatedAt")
+                        .IsDescending(false, true)
+                        .HasDatabaseName("IX_rag_executions_strategy_created_at");
 
                     b.ToTable("rag_executions", "knowledge_base");
                 });
@@ -1757,6 +1857,34 @@ namespace Api.Infrastructure.Migrations
                         .IsUnique();
 
                     b.ToTable("tier_definitions", (string)null);
+                });
+
+            modelBuilder.Entity("Api.BoundedContexts.SystemConfiguration.Domain.Entities.UserPreferences", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("DataRetentionDays")
+                        .HasColumnType("integer");
+
+                    b.Property<bool>("EmailNotifications")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Language")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)");
+
+                    b.Property<string>("Theme")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable((string)null);
+
+                    b.ToView("vw_user_preferences", (string)null);
                 });
 
             modelBuilder.Entity("Api.Infrastructure.Entities.AdminReportEntity", b =>

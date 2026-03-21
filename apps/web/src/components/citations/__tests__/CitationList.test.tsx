@@ -26,18 +26,21 @@ const mockCitations: Citation[] = [
     pageNumber: 5,
     snippet: 'First citation text',
     relevanceScore: 0.95,
+    copyrightTier: 'full',
   },
   {
     documentId: 'doc-2',
     pageNumber: 12,
     snippet: 'Second citation text',
     relevanceScore: 0.88,
+    copyrightTier: 'full',
   },
   {
     documentId: 'doc-1',
     pageNumber: 7,
     snippet: 'Third citation from same doc',
     relevanceScore: 0.82,
+    copyrightTier: 'full',
   },
 ];
 

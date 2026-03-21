@@ -66,7 +66,6 @@ export const MeepleCard = React.memo(function MeepleCard(props: MeepleCardProps)
     gameBackActions,
   } = props;
 
-  // eslint-disable-next-line security/detect-object-injection
   const color = customColor || entityColors[entity].hsl;
 
   // Route to the correct variant renderer
@@ -133,7 +132,6 @@ export const MeepleCard = React.memo(function MeepleCard(props: MeepleCardProps)
         flipTrigger={flipTrigger}
         detailHref={detailHref}
         entityColor={color}
-        // eslint-disable-next-line security/detect-object-injection
         entityName={entityColors[entity].name}
         title={title}
       >

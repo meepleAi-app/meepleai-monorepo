@@ -284,7 +284,6 @@ export function filterNavItemsByRole(
  * Returns items sorted by priority, limited to max for breakpoint.
  */
 export function getNavItemsForBreakpoint(breakpoint: 'mobile' | 'tablet' | 'desktop'): NavItem[] {
-  // eslint-disable-next-line security/detect-object-injection -- breakpoint is typed union, not user input
   const max = MAX_NAV_ITEMS[breakpoint];
   return [...NAV_ITEMS].sort((a, b) => a.priority - b.priority).slice(0, max);
 }
@@ -293,7 +292,6 @@ export function getNavItemsForBreakpoint(breakpoint: 'mobile' | 'tablet' | 'desk
  * Get overflow navigation items for a specific breakpoint.
  */
 export function getOverflowNavItems(breakpoint: 'mobile' | 'tablet' | 'desktop'): NavItem[] {
-  // eslint-disable-next-line security/detect-object-injection -- breakpoint is typed union, not user input
   const max = MAX_NAV_ITEMS[breakpoint];
   return [...NAV_ITEMS].sort((a, b) => a.priority - b.priority).slice(max);
 }
@@ -328,7 +326,6 @@ export function isNavItemActive(item: NavItem, pathname: string): boolean {
  * Get context action slots available for a breakpoint.
  */
 export function getContextActionSlots(breakpoint: 'mobile' | 'tablet' | 'desktop'): number {
-  // eslint-disable-next-line security/detect-object-injection -- breakpoint is typed union, not user input
   return TOTAL_SLOTS[breakpoint] - MAX_NAV_ITEMS[breakpoint] - 1;
 }
 

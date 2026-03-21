@@ -72,9 +72,7 @@ export function ShowcaseCanvas({
           {title && (
             <span className="text-sm font-semibold font-quicksand text-foreground">{title}</span>
           )}
-          {description && (
-            <span className="text-xs text-muted-foreground">{description}</span>
-          )}
+          {description && <span className="text-xs text-muted-foreground">{description}</span>}
         </div>
 
         <div className="flex items-center gap-2">
@@ -150,7 +148,6 @@ export function ShowcaseCanvas({
       </div>
 
       {/* Preview area */}
-      {/* eslint-disable-next-line security/detect-object-injection */}
       <div className={cn('flex-1 overflow-auto p-8', BG_CLASSES[bgMode])}>
         <div
           className="flex min-h-full items-start justify-center"

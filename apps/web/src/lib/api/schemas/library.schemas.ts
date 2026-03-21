@@ -91,10 +91,23 @@ export const PaginatedLibraryResponseSchema = z.object({
 
 export type PaginatedLibraryResponse = z.infer<typeof PaginatedLibraryResponseSchema>;
 
+// Associated data that would be lost if a game is removed from library (Issue #4259)
+export const AssociatedDataSchema = z.object({
+  hasCustomAgent: z.boolean(),
+  hasPrivatePdf: z.boolean(),
+  chatSessionsCount: z.number().int(),
+  gameSessionsCount: z.number().int(),
+  checklistItemsCount: z.number().int(),
+  labelsCount: z.number().int(),
+});
+
+export type AssociatedData = z.infer<typeof AssociatedDataSchema>;
+
 // Game in library status
 export const GameInLibraryStatusSchema = z.object({
   inLibrary: z.boolean(),
   isFavorite: z.boolean(),
+  associatedData: AssociatedDataSchema.nullable().optional(),
 });
 
 export type GameInLibraryStatus = z.infer<typeof GameInLibraryStatusSchema>;

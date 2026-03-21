@@ -36,9 +36,8 @@ export function ShowcaseStoryPicker({ presets, activePreset, onChange }: Showcas
           <SelectValue placeholder="Preset…" />
         </SelectTrigger>
         <SelectContent align="end">
-          {keys.map((key) => (
+          {keys.map(key => (
             <SelectItem key={key} value={key} className="text-xs">
-              {/* eslint-disable-next-line security/detect-object-injection */}
               {presets[key].label}
             </SelectItem>
           ))}

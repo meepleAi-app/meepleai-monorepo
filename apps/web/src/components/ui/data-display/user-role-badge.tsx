@@ -30,7 +30,8 @@ const roleIconMap: Record<UserRole, React.ComponentType<{ className?: string }>>
 };
 
 export interface UserRoleBadgeProps
-  extends Omit<React.HTMLAttributes<HTMLSpanElement>, 'role'>,
+  extends
+    Omit<React.HTMLAttributes<HTMLSpanElement>, 'role'>,
     VariantProps<typeof userRoleBadgeVariants> {
   role: UserRole;
   showIcon?: boolean;
@@ -42,7 +43,6 @@ export const UserRoleBadge = React.memo(function UserRoleBadge({
   className,
   ...props
 }: UserRoleBadgeProps) {
-  // eslint-disable-next-line security/detect-object-injection -- role is typed UserRole, roleIconMap has UserRole keys
   const Icon = roleIconMap[role];
 
   return (

@@ -137,7 +137,6 @@ function getDiceColor(sides: number): string {
     20: '#8b5cf6', // violet
     100: '#ec4899', // pink
   };
-  // eslint-disable-next-line security/detect-object-injection
   return colors[sides] || '#f59e0b';
 }
 

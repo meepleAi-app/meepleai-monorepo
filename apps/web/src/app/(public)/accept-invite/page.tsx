@@ -86,6 +86,12 @@ function AcceptInviteContent() {
         }
 
         const data = await response.json();
+
+        if (!data.isValid) {
+          router.push(data.errorReason === 'already_used' ? '/login' : '/invitation-expired');
+          return;
+        }
+
         setEmail(data.email ?? '');
         setState('valid');
       } catch {

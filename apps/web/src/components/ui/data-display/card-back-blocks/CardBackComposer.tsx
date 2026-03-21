@@ -63,7 +63,6 @@ export const CardBackComposer = memo(function CardBackComposer({
   className,
 }: CardBackComposerProps) {
   const blockConfigs = getBlocksForEntity(entity);
-  // eslint-disable-next-line security/detect-object-injection
   const color = entityColors[entity].hsl;
 
   return (

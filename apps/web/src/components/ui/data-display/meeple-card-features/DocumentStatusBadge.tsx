@@ -96,7 +96,6 @@ export const KbStatusBadge = memo(function KbStatusBadge({
   size = 'sm',
   className,
 }: KbStatusBadgeProps) {
-  // eslint-disable-next-line security/detect-object-injection -- status is from typed union
   const config = statusConfig[status];
   const Icon = config.icon;
 

@@ -52,7 +52,6 @@ export const BREADCRUMB_LABELS: Record<string, string> = {
  * Falls back to title-casing the segment if not found in config.
  */
 export function getSegmentLabel(segment: string): string {
-  // eslint-disable-next-line security/detect-object-injection
   const label = BREADCRUMB_LABELS[segment];
   if (label) return label;
 

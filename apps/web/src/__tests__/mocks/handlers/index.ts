@@ -5,6 +5,7 @@
  *
  * Issue #2760: Extended with library, shared-games, and catalog handlers
  * Issue #2914: Extended with admin dashboard handlers
+ * Flow tests: Extended with sessions, game-nights, players, notifications, badges handlers
  */
 
 import { authHandlers } from './auth.handlers';
@@ -15,6 +16,11 @@ import { libraryHandlers } from './library.handlers';
 import { sharedGamesHandlers } from './shared-games.handlers';
 import { catalogHandlers } from './catalog.handlers';
 import { adminHandlers } from './admin.handlers';
+import { sessionsHandlers } from './sessions.handlers';
+import { gameNightsHandlers } from './game-nights.handlers';
+import { playersHandlers } from './players.handlers';
+import { notificationsHandlers } from './notifications.handlers';
+import { badgesHandlers } from './badges.handlers';
 
 /**
  * All MSW request handlers
@@ -32,6 +38,11 @@ export const handlers = [
   ...sharedGamesHandlers,
   ...catalogHandlers,
   ...adminHandlers,
+  ...sessionsHandlers,
+  ...gameNightsHandlers,
+  ...playersHandlers,
+  ...notificationsHandlers,
+  ...badgesHandlers,
 ];
 
 // Re-export individual handler groups for selective use
@@ -58,3 +69,16 @@ export {
   updateInfrastructureDetails,
   resetAdminState,
 } from './admin.handlers';
+export { sessionsHandlers, resetSessionsState, getSessionsState } from './sessions.handlers';
+export {
+  gameNightsHandlers,
+  resetGameNightsState,
+  getGameNightsState,
+} from './game-nights.handlers';
+export { playersHandlers, resetPlayersState, getPlayersState } from './players.handlers';
+export {
+  notificationsHandlers,
+  resetNotificationsState,
+  addNotification,
+} from './notifications.handlers';
+export { badgesHandlers, resetBadgesState } from './badges.handlers';

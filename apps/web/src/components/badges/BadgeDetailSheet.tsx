@@ -57,7 +57,6 @@ function getConfettiConfig(tier: BadgeTier) {
       colors: ['#d97706', '#f59e0b', '#b45309'],
     },
   };
-  // eslint-disable-next-line security/detect-object-injection -- Safe: tier is a BadgeTier enum value
   return configs[tier];
 }
 
@@ -74,7 +73,6 @@ function getTierGlow(tier: string): string {
     Silver: 'rgba(209, 213, 219, 0.5)',
     Bronze: 'rgba(217, 119, 6, 0.6)',
   };
-  // eslint-disable-next-line security/detect-object-injection -- Safe: tier is from known BadgeTier enum, with fallback
   return glows[tier] || 'rgba(0, 0, 0, 0.3)';
 }
 
@@ -96,7 +94,7 @@ export function BadgeDetailSheet({
   onClose,
   onToggleDisplay,
   onShare,
-}: BadgeDetailSheetProps){
+}: BadgeDetailSheetProps) {
   if (!badge) return <></>;
 
   const earnedDate = new Date(badge.earnedAt).toLocaleDateString('en-US', {
@@ -106,7 +104,7 @@ export function BadgeDetailSheet({
   });
 
   return (
-    <Dialog open={!!badge} onOpenChange={(open) => !open && onClose()}>
+    <Dialog open={!!badge} onOpenChange={open => !open && onClose()}>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>Badge Details</DialogTitle>
@@ -124,11 +122,7 @@ export function BadgeDetailSheet({
               <div className="flex h-full w-full items-center justify-center rounded-full bg-background">
                 {badge.iconUrl ? (
                   /* eslint-disable-next-line @next/next/no-img-element -- External user-provided URL, Next.js Image optimization not applicable */
-                  <img
-                    src={badge.iconUrl}
-                    alt={badge.name}
-                    className="h-16 w-16 object-contain"
-                  />
+                  <img src={badge.iconUrl} alt={badge.name} className="h-16 w-16 object-contain" />
                 ) : (
                   <span className="text-5xl">{getTierIcon(badge.tier)}</span>
                 )}
@@ -170,12 +164,10 @@ export function BadgeDetailSheet({
             {/* Visibility Toggle */}
             {onToggleDisplay && (
               <div className="flex items-center justify-between border-t pt-3">
-                <span className="text-foreground text-sm font-medium">
-                  Display on profile
-                </span>
+                <span className="text-foreground text-sm font-medium">Display on profile</span>
                 <Switch
                   checked={badge.isDisplayed}
-                  onCheckedChange={(checked) => onToggleDisplay(badge.id, checked)}
+                  onCheckedChange={checked => onToggleDisplay(badge.id, checked)}
                 />
               </div>
             )}

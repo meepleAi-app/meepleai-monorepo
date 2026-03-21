@@ -104,7 +104,9 @@ export default defineConfig({
   ],
   use: {
     baseURL: 'http://localhost:3000',
-    trace: 'on-first-retry',
+    trace: 'retain-on-failure',
+    screenshot: 'only-on-failure',
+    video: 'retain-on-failure',
     actionTimeout: 10000, // 10s for clicks/fills
     navigationTimeout: 60000, // 60s for page.goto (increased for dev server)
 

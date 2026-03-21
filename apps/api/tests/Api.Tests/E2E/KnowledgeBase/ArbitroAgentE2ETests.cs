@@ -82,10 +82,8 @@ public sealed class ArbitroAgentE2ETests : E2ETestBase
         // Act
         var response = await Client.PostAsJsonAsync("/api/v1/agents/arbitro/validate", validatePayload);
 
-        // Assert - May return 500 if orchestration service unavailable in test environment
-        response.StatusCode.Should().BeOneOf(
-            HttpStatusCode.OK,
-            HttpStatusCode.InternalServerError);
+        // Assert - Skip if orchestration service unavailable in test environment
+        await AssertSuccessOrSkipIfServiceUnavailable(response, "ValidateMove_ValidOpeningMove");
 
         if (response.IsSuccessStatusCode)
         {
@@ -120,9 +118,10 @@ public sealed class ArbitroAgentE2ETests : E2ETestBase
         var response = await Client.PostAsJsonAsync("/api/v1/agents/arbitro/validate", validatePayload);
 
         // Assert
+        if (response.StatusCode == HttpStatusCode.InternalServerError)
+            Assert.Skip("ValidateMove_InvalidMove returned 500 — service likely unavailable");
         response.StatusCode.Should().BeOneOf(
             HttpStatusCode.OK,
-            HttpStatusCode.InternalServerError,
             HttpStatusCode.BadRequest);
 
         if (response.IsSuccessStatusCode)
@@ -192,9 +191,7 @@ public sealed class ArbitroAgentE2ETests : E2ETestBase
 
         var tutorResponse = await Client.PostAsJsonAsync("/api/v1/agents/tutor/query", tutorPayload);
 
-        tutorResponse.StatusCode.Should().BeOneOf(
-            HttpStatusCode.OK,
-            HttpStatusCode.InternalServerError); // If orchestration unavailable
+        await AssertSuccessOrSkipIfServiceUnavailable(tutorResponse, "TutorToArbitroWorkflow tutor query");
 
         if (tutorResponse.IsSuccessStatusCode)
         {
@@ -215,9 +212,7 @@ public sealed class ArbitroAgentE2ETests : E2ETestBase
 
         var arbitroResponse = await Client.PostAsJsonAsync("/api/v1/agents/arbitro/validate", arbitroPayload);
 
-        arbitroResponse.StatusCode.Should().BeOneOf(
-            HttpStatusCode.OK,
-            HttpStatusCode.InternalServerError);
+        await AssertSuccessOrSkipIfServiceUnavailable(arbitroResponse, "TutorToArbitroWorkflow arbitro validate");
 
         if (arbitroResponse.IsSuccessStatusCode)
         {
@@ -365,10 +360,11 @@ public sealed class ArbitroAgentE2ETests : E2ETestBase
         var response = await Client.PostAsJsonAsync("/api/v1/agents/arbitro/validate", validatePayload);
 
         // Assert - Should handle invalid state gracefully
+        if (response.StatusCode == HttpStatusCode.InternalServerError)
+            Assert.Skip("ValidateMove_InvalidGameState returned 500 — service likely unavailable");
         response.StatusCode.Should().BeOneOf(
             HttpStatusCode.OK, // Returns validation result with error
-            HttpStatusCode.BadRequest, // Validation rejects invalid state
-            HttpStatusCode.InternalServerError); // Orchestration error
+            HttpStatusCode.BadRequest); // Validation rejects invalid state
 
         if (response.IsSuccessStatusCode)
         {
@@ -399,9 +395,10 @@ public sealed class ArbitroAgentE2ETests : E2ETestBase
 
         // Assert - If orchestration service is not available, expect error
         // Note: Testcontainers may have orchestration service running, so this tests graceful handling
+        if (response.StatusCode == HttpStatusCode.InternalServerError)
+            Assert.Skip("ValidateMove_OrchestrationServiceUnavailable returned 500 — service likely unavailable");
         response.StatusCode.Should().BeOneOf(
             HttpStatusCode.OK, // Service available
-            HttpStatusCode.InternalServerError, // Service unavailable
             HttpStatusCode.ServiceUnavailable,
             HttpStatusCode.BadGateway);
     }

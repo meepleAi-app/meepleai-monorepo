@@ -1,4 +1,5 @@
 using Api.BoundedContexts.KnowledgeBase.Domain.Entities;
+using Api.BoundedContexts.KnowledgeBase.Domain.Enums;
 using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 using FluentAssertions;
 using Xunit;
@@ -28,7 +29,8 @@ public sealed class AgentDefinitionTests
         agent.Name.Should().Be("TestAgent");
         agent.Description.Should().Be("Test description");
         agent.Config.Should().Be(config);
-        agent.IsActive.Should().BeTrue();
+        agent.IsActive.Should().BeFalse();
+        agent.Status.Should().Be(AgentDefinitionStatus.Draft);
         agent.CreatedAt.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromSeconds(1));
         agent.UpdatedAt.Should().BeNull();
     }
@@ -206,9 +208,8 @@ public sealed class AgentDefinitionTests
     [Fact]
     public void Activate_WhenInactive_ShouldActivate()
     {
-        // Arrange
+        // Arrange — Create() now defaults to inactive, no need to deactivate first
         var agent = AgentDefinition.Create("TestAgent", "Desc", AgentType.RagAgent, AgentDefinitionConfig.Default());
-        agent.Deactivate();
 
         // Act
         agent.Activate();
@@ -223,6 +224,7 @@ public sealed class AgentDefinitionTests
     {
         // Arrange
         var agent = AgentDefinition.Create("TestAgent", "Desc", AgentType.RagAgent, AgentDefinitionConfig.Default());
+        agent.Activate(); // Create() now defaults to inactive, so activate first
 
         // Act
         agent.Deactivate();
@@ -237,8 +239,9 @@ public sealed class AgentDefinitionTests
     {
         // Arrange
         var agent = AgentDefinition.Create("TestAgent", "Desc", AgentType.RagAgent, AgentDefinitionConfig.Default());
+        agent.Activate(); // Create() defaults to inactive, activate first
 
-        // Act
+        // Act — calling Activate() again should be a no-op
         agent.Activate();
 
         // Assert

@@ -46,7 +46,7 @@ import {
   contentVariants,
 } from '../../meeple-card-styles';
 import { useMobileInteraction } from '../hooks/useMobileInteraction';
-import { CardActions } from '../parts/CardActions';
+import { CardActions, CardActionStrip } from '../parts/CardActions';
 import { CardBadges } from '../parts/CardBadges';
 import { CardCover } from '../parts/CardCover';
 import { CardTagStrip } from '../parts/CardTagStrip';
@@ -194,6 +194,33 @@ export const MeepleCardFeatured = React.memo(function MeepleCardFeatured(
 
   const Component = isInteractive ? 'div' : 'article';
 
+  const hasStripActions =
+    !!entityQuickActions ||
+    !!(showInfoButton && (entityId || infoHref)) ||
+    showWishlistBtn ||
+    hasQuickActions;
+
+  const stripElement = hasStripActions ? (
+    <CardActionStrip
+      entity={entity}
+      customColor={customColor}
+      entityQuickActions={entityQuickActions}
+      quickActions={quickActions}
+      userRole={userRole}
+      showWishlistBtn={showWishlistBtn}
+      isWishlisted={isWishlisted}
+      onWishlistToggle={onWishlistToggle}
+      showInfoButton={showInfoButton}
+      entityId={entityId}
+      infoHref={infoHref}
+      infoTooltip={infoTooltip}
+      drawerEntityType={drawerEntityType}
+      onDrawerOpen={() => setDrawerOpen(true)}
+      testId={testId}
+      hasQuickActions={hasQuickActions}
+    />
+  ) : null;
+
   return (
     <Component
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -283,6 +310,7 @@ export const MeepleCardFeatured = React.memo(function MeepleCardFeatured(
         subtypeIcons={subtypeIcons}
         mechanicIcon={mechanicIcon}
         stateLabel={stateLabel}
+        actionStrip={stripElement}
       />
 
       {/* Content area */}

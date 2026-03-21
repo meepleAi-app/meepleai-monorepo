@@ -85,6 +85,8 @@ describe('useAgentChatStream', () => {
       modelDowngrade: null,
       strategyTier: null,
       executionId: null,
+      connectionStatus: 'idle',
+      retryCount: 0,
     });
   });
 
@@ -162,9 +164,10 @@ describe('useAgentChatStream', () => {
       await new Promise(resolve => setTimeout(resolve, 50));
     });
 
-    expect(result.current.state.error).toBe('HTTP 500');
-    expect(result.current.state.isStreaming).toBe(false);
-    expect(onError).toHaveBeenCalledWith('HTTP 500');
+    // First failure triggers retry — state shows disconnected, not final error
+    // The connection goes to 'disconnected' and schedules a retry
+    expect(result.current.state.connectionStatus).toBe('disconnected');
+    expect(result.current.state.isStreaming).toBe(true); // still trying
   });
 
   it('handles SSE error events', async () => {

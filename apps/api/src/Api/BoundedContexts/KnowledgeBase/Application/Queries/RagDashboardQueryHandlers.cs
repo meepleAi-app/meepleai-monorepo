@@ -229,7 +229,7 @@ internal sealed class GetRagDashboardOverviewQueryHandler : IQueryHandler<GetRag
             .GetAggregatedMetricsAsync(startDate, endDate, cancellationToken: cancellationToken)
             .ConfigureAwait(false);
 
-        var strategyMetrics = rawMetrics.Select(MapToStrategyMetricsDto).ToList();
+        var strategyMetrics = rawMetrics.Select(RagDashboardMapping.MapToStrategyMetricsDto).ToList();
 
         // Calculate aggregated metrics across all strategies
         var totalQueries = strategyMetrics.Sum(m => m.TotalQueries);
@@ -281,33 +281,6 @@ internal sealed class GetRagDashboardOverviewQueryHandler : IQueryHandler<GetRag
             MostCostEffectiveStrategy = mostCostEffective
         };
     }
-
-    private static StrategyMetricsDto MapToStrategyMetricsDto(StrategyAggregateMetrics m)
-    {
-        var strategyName = Enum.TryParse<RagStrategy>(m.Strategy, ignoreCase: true, out var parsed)
-            ? parsed.GetDisplayName() : m.Strategy;
-
-        return new StrategyMetricsDto
-        {
-            StrategyId = m.Strategy,
-            StrategyName = strategyName,
-            TotalQueries = m.TotalQueries,
-            AverageLatencyMs = m.AverageLatencyMs,
-            P95LatencyMs = m.P95LatencyMs,
-            P99LatencyMs = m.P99LatencyMs,
-            AverageRelevanceScore = m.AverageConfidence,
-            AverageConfidenceScore = m.AverageConfidence,
-            CacheHits = m.CacheHits,
-            CacheMisses = m.CacheMisses,
-            CacheHitRate = (m.CacheHits + m.CacheMisses) > 0 ? (double)m.CacheHits / (m.CacheHits + m.CacheMisses) : 0,
-            TotalTokensUsed = m.TotalTokensUsed,
-            TotalCost = m.TotalCost,
-            AverageCostPerQuery = (double)m.AverageCostPerQuery,
-            ErrorCount = m.ErrorCount,
-            ErrorRate = m.ErrorRate,
-            LastUpdated = m.LastUpdated
-        };
-    }
 }
 
 /// <summary>
@@ -328,12 +301,14 @@ internal sealed class GetStrategyMetricsQueryHandler : IQueryHandler<GetStrategy
 
     public async Task<StrategyMetricsDto> Handle(GetStrategyMetricsQuery query, CancellationToken cancellationToken)
     {
-        _logger.LogInformation(
-            "Getting metrics for strategy {StrategyId}",
-            query.StrategyId);
+        var endDate = query.EndDate ?? DateOnly.FromDateTime(DateTime.UtcNow);
+        var startDate = query.StartDate ?? endDate.AddDays(-30);
 
-        var endDate = DateOnly.FromDateTime(DateTime.UtcNow);
-        var startDate = endDate.AddDays(-30);
+        _logger.LogInformation(
+            "Getting metrics for strategy {StrategyId} from {Start} to {End}",
+            query.StrategyId,
+            startDate,
+            endDate);
 
         var results = await _ragExecutionRepository
             .GetAggregatedMetricsAsync(startDate, endDate, strategy: query.StrategyId, cancellationToken: cancellationToken)
@@ -363,34 +338,7 @@ internal sealed class GetStrategyMetricsQueryHandler : IQueryHandler<GetStrategy
             };
         }
 
-        return MapToStrategyMetricsDto(results[0]);
-    }
-
-    private static StrategyMetricsDto MapToStrategyMetricsDto(StrategyAggregateMetrics m)
-    {
-        var strategyName = Enum.TryParse<RagStrategy>(m.Strategy, ignoreCase: true, out var parsed)
-            ? parsed.GetDisplayName() : m.Strategy;
-
-        return new StrategyMetricsDto
-        {
-            StrategyId = m.Strategy,
-            StrategyName = strategyName,
-            TotalQueries = m.TotalQueries,
-            AverageLatencyMs = m.AverageLatencyMs,
-            P95LatencyMs = m.P95LatencyMs,
-            P99LatencyMs = m.P99LatencyMs,
-            AverageRelevanceScore = m.AverageConfidence,
-            AverageConfidenceScore = m.AverageConfidence,
-            CacheHits = m.CacheHits,
-            CacheMisses = m.CacheMisses,
-            CacheHitRate = (m.CacheHits + m.CacheMisses) > 0 ? (double)m.CacheHits / (m.CacheHits + m.CacheMisses) : 0,
-            TotalTokensUsed = m.TotalTokensUsed,
-            TotalCost = m.TotalCost,
-            AverageCostPerQuery = (double)m.AverageCostPerQuery,
-            ErrorCount = m.ErrorCount,
-            ErrorRate = m.ErrorRate,
-            LastUpdated = m.LastUpdated
-        };
+        return RagDashboardMapping.MapToStrategyMetricsDto(results[0]);
     }
 }
 
@@ -481,12 +429,14 @@ internal sealed class GetStrategyComparisonQueryHandler : IQueryHandler<GetStrat
 
     public async Task<StrategyComparisonDto> Handle(GetStrategyComparisonQuery query, CancellationToken cancellationToken)
     {
-        _logger.LogInformation(
-            "Comparing strategies: {Strategies}",
-            query.StrategyIds != null ? string.Join(", ", query.StrategyIds) : "all");
+        var endDate = query.EndDate ?? DateOnly.FromDateTime(DateTime.UtcNow);
+        var startDate = query.StartDate ?? endDate.AddDays(-30);
 
-        var endDate = DateOnly.FromDateTime(DateTime.UtcNow);
-        var startDate = endDate.AddDays(-30);
+        _logger.LogInformation(
+            "Comparing strategies: {Strategies} from {Start} to {End}",
+            query.StrategyIds != null ? string.Join(", ", query.StrategyIds) : "all",
+            startDate,
+            endDate);
 
         var rawMetrics = await _ragExecutionRepository
             .GetAggregatedMetricsAsync(startDate, endDate, cancellationToken: cancellationToken)
@@ -497,7 +447,7 @@ internal sealed class GetStrategyComparisonQueryHandler : IQueryHandler<GetStrat
             ? rawMetrics.Where(m => query.StrategyIds.Contains(m.Strategy, StringComparer.OrdinalIgnoreCase)).ToList()
             : rawMetrics.ToList();
 
-        var strategies = filtered.Select(MapToStrategyMetricsDto).ToList();
+        var strategies = filtered.Select(RagDashboardMapping.MapToStrategyMetricsDto).ToList();
 
         if (strategies.Count == 0)
         {
@@ -553,8 +503,16 @@ internal sealed class GetStrategyComparisonQueryHandler : IQueryHandler<GetStrat
             RecommendationReason = recommendationReason
         };
     }
+}
 
-    private static StrategyMetricsDto MapToStrategyMetricsDto(StrategyAggregateMetrics m)
+#endregion
+
+/// <summary>
+/// Shared mapping helper for dashboard handlers.
+/// </summary>
+internal static class RagDashboardMapping
+{
+    internal static StrategyMetricsDto MapToStrategyMetricsDto(StrategyAggregateMetrics m)
     {
         var strategyName = Enum.TryParse<RagStrategy>(m.Strategy, ignoreCase: true, out var parsed)
             ? parsed.GetDisplayName() : m.Strategy;
@@ -567,6 +525,7 @@ internal sealed class GetStrategyComparisonQueryHandler : IQueryHandler<GetStrat
             AverageLatencyMs = m.AverageLatencyMs,
             P95LatencyMs = m.P95LatencyMs,
             P99LatencyMs = m.P99LatencyMs,
+            // NOTE: AverageRelevanceScore uses AverageConfidence until separate relevance tracking is implemented
             AverageRelevanceScore = m.AverageConfidence,
             AverageConfidenceScore = m.AverageConfidence,
             CacheHits = m.CacheHits,
@@ -581,5 +540,3 @@ internal sealed class GetStrategyComparisonQueryHandler : IQueryHandler<GetStrat
         };
     }
 }
-
-#endregion

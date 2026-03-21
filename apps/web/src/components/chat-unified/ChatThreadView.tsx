@@ -15,6 +15,7 @@
 
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 
+import { Wifi, WifiOff } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 import { AgentSelector, type AgentType, AGENT_NAMES } from '@/components/agent/AgentSelector';
@@ -423,7 +424,7 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
         onDelete={handleDelete}
       />
 
-      {/* Agent Selector */}
+      {/* Agent Selector + Connection Status */}
       <div className="flex items-center gap-2 px-4 py-2 border-b border-border/30 bg-background/80">
         <AgentSelector
           value={(thread?.agentTypology as AgentType) ?? 'auto'}
@@ -431,6 +432,46 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
           disabled={isSending || streamState.isStreaming}
           className="flex-1"
         />
+        {streamState.connectionStatus !== 'idle' && (
+          <div
+            role="status"
+            aria-live="polite"
+            className={cn(
+              'inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-medium transition-opacity',
+              streamState.connectionStatus === 'connected' &&
+                'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-300',
+              streamState.connectionStatus === 'connecting' &&
+                'border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-300',
+              streamState.connectionStatus === 'reconnecting' &&
+                'border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-300',
+              streamState.connectionStatus === 'disconnected' &&
+                'border-gray-200 bg-gray-50 text-gray-500 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-400',
+              streamState.connectionStatus === 'error' &&
+                'border-red-200 bg-red-50 text-red-700 dark:border-red-800 dark:bg-red-950 dark:text-red-300'
+            )}
+          >
+            {streamState.connectionStatus === 'error' ||
+            streamState.connectionStatus === 'disconnected' ? (
+              <WifiOff className="h-2.5 w-2.5" />
+            ) : (
+              <Wifi
+                className={cn(
+                  'h-2.5 w-2.5',
+                  (streamState.connectionStatus === 'connecting' ||
+                    streamState.connectionStatus === 'reconnecting') &&
+                    'animate-pulse'
+                )}
+              />
+            )}
+            <span>
+              {streamState.connectionStatus === 'connected' && 'Connesso'}
+              {streamState.connectionStatus === 'connecting' && 'Connessione...'}
+              {streamState.connectionStatus === 'reconnecting' && 'Riconnessione...'}
+              {streamState.connectionStatus === 'disconnected' && 'Offline'}
+              {streamState.connectionStatus === 'error' && 'Errore connessione'}
+            </span>
+          </div>
+        )}
       </div>
 
       {/* Agent switch confirmation dialog */}

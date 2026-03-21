@@ -78,6 +78,11 @@ internal sealed class RagExecutionConfiguration : IEntityTypeConfiguration<RagEx
             .HasColumnName("cache_hit")
             .HasDefaultValue(false);
 
+        builder.Property(e => e.CragVerdict)
+            .HasColumnName("crag_verdict")
+            .HasMaxLength(20)
+            .IsRequired(false);
+
         // Status
         builder.Property(e => e.Status)
             .HasField("_status")
@@ -105,6 +110,10 @@ internal sealed class RagExecutionConfiguration : IEntityTypeConfiguration<RagEx
         builder.HasIndex(e => e.Strategy).HasDatabaseName("IX_rag_executions_strategy");
         builder.HasIndex(e => e.Status).HasDatabaseName("IX_rag_executions_status");
         builder.HasIndex(e => e.AgentDefinitionId).HasDatabaseName("IX_rag_executions_agent_definition_id");
+
+        builder.HasIndex(e => new { e.Strategy, e.CreatedAt })
+            .HasDatabaseName("IX_rag_executions_strategy_created_at")
+            .IsDescending(false, true);
 
         // Ignore DomainEvents from base class
         builder.Ignore(e => e.DomainEvents);

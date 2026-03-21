@@ -33,7 +33,8 @@ const dotVariants = cva('h-2 w-2 rounded-full', {
 });
 
 export interface UserStatusIndicatorProps
-  extends Omit<React.HTMLAttributes<HTMLSpanElement>, 'status'>,
+  extends
+    Omit<React.HTMLAttributes<HTMLSpanElement>, 'status'>,
     VariantProps<typeof userStatusIndicatorVariants> {
   status: UserStatus;
   showLabel?: boolean;
@@ -46,7 +47,11 @@ export const UserStatusIndicator = React.memo(function UserStatusIndicator({
   ...props
 }: UserStatusIndicatorProps) {
   return (
-    <span className={cn(userStatusIndicatorVariants({ status }), className)} {...props}>
+    <span
+      className={cn(userStatusIndicatorVariants({ status }), className)}
+      aria-label={!showLabel ? status : undefined}
+      {...props}
+    >
       <span className={dotVariants({ status })} aria-hidden="true" />
       {showLabel && <span>{status}</span>}
     </span>

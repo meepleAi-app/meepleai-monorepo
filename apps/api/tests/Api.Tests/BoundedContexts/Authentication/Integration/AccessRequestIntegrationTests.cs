@@ -185,7 +185,9 @@ public sealed class AccessRequestIntegrationTests : IDisposable
         await _repository.AddAsync(request);
         await _dbContext.SaveChangesAsync();
 
-        var handler = new RejectAccessRequestCommandHandler(_repository, _unitOfWork);
+        var handler = new RejectAccessRequestCommandHandler(
+            _repository, _unitOfWork, new NoOpEmailService(),
+            Microsoft.Extensions.Logging.Abstractions.NullLogger<RejectAccessRequestCommandHandler>.Instance);
         var adminId = Guid.NewGuid();
         var command = new RejectAccessRequestCommand(request.Id, adminId, "Not eligible at this time.");
 
@@ -205,7 +207,9 @@ public sealed class AccessRequestIntegrationTests : IDisposable
     public async Task RejectAccessRequest_WithNonExistentId_ThrowsNotFoundException()
     {
         // Arrange
-        var handler = new RejectAccessRequestCommandHandler(_repository, _unitOfWork);
+        var handler = new RejectAccessRequestCommandHandler(
+            _repository, _unitOfWork, new NoOpEmailService(),
+            Microsoft.Extensions.Logging.Abstractions.NullLogger<RejectAccessRequestCommandHandler>.Instance);
         var command = new RejectAccessRequestCommand(Guid.NewGuid(), Guid.NewGuid(), null);
 
         // Act & Assert

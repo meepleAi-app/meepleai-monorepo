@@ -29,6 +29,7 @@ namespace Api.Extensions;
 /// - AgentQuery:           30 req/min  — AI query (expensive, per user)
 /// - AgentCreation:        10 req/min  — AI agent creation (per user)
 /// - ContactForm:           5 req/hour — anonymous contact form spam prevention (IP-based)
+/// - AccessRequest:         5 req/hour — access request spam prevention (IP-based)
 /// </summary>
 internal static class RateLimitingServiceExtensions
 {
@@ -105,6 +106,9 @@ internal static class RateLimitingServiceExtensions
                     RateLimitPartition.GetNoLimiter<string>("unlimited"));
 
                 options.AddPolicy("ContactForm", _ =>
+                    RateLimitPartition.GetNoLimiter<string>("unlimited"));
+
+                options.AddPolicy("AccessRequest", _ =>
                     RateLimitPartition.GetNoLimiter<string>("unlimited"));
             });
 
@@ -403,6 +407,24 @@ internal static class RateLimitingServiceExtensions
 
                 return RateLimitPartition.GetSlidingWindowLimiter(
                     partitionKey: $"contact-form-{ipAddress}",
+                    factory: _ => new SlidingWindowRateLimiterOptions
+                    {
+                        Window = TimeSpan.FromHours(1),
+                        PermitLimit = 5,
+                        SegmentsPerWindow = 6,
+                        QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                        QueueLimit = 0,
+                    });
+            });
+
+            // Policy 18: AccessRequest - 5 req/hour per IP for access request submissions
+            // Prevents spam abuse on the public access request endpoint.
+            options.AddPolicy("AccessRequest", httpContext =>
+            {
+                var ipAddress = GetClientIpAddress(httpContext);
+
+                return RateLimitPartition.GetSlidingWindowLimiter(
+                    partitionKey: $"access-request-{ipAddress}",
                     factory: _ => new SlidingWindowRateLimiterOptions
                     {
                         Window = TimeSpan.FromHours(1),

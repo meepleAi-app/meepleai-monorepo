@@ -107,8 +107,17 @@ internal record StreamingComplete(
     string? routingIntent = null,
     double? routingLatencyMs = null,
     string? strategyTier = null,
-    Guid? executionId = null
-);
+    Guid? executionId = null,
+    IReadOnlyList<CitationDto>? Citations = null);
+
+internal record CitationDto(
+    string DocumentId,
+    int PageNumber,
+    float RelevanceScore,
+    string? SnippetPreview,
+    string CopyrightTier,
+    string? ParaphrasedSnippet = null,
+    bool IsPublic = false);
 internal record StreamingError(string errorMessage, string? errorCode = null);
 internal record StreamingHeartbeat(string message = "keep-alive");
 internal record StreamingToken(string token); // CHAT-01: Individual LLM token

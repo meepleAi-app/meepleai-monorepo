@@ -19,6 +19,19 @@ interface GameDetails {
   playerCount: { min: number; max: number };
 }
 
+/** Map backend GameDto (title, minPlayers, maxPlayers) to local GameDetails shape */
+function toGameDetails(dto: Record<string, unknown>): GameDetails {
+  return {
+    id: String(dto.id ?? ''),
+    name: String(dto.title ?? dto.name ?? ''),
+    imageUrl: dto.imageUrl as string | undefined,
+    playerCount: {
+      min: Number(dto.minPlayers ?? 1),
+      max: Number(dto.maxPlayers ?? 99),
+    },
+  };
+}
+
 /**
  * Game-Specific Toolkit Landing Page
  *
@@ -57,10 +70,11 @@ export default function GameToolkitLandingPage() {
         }
 
         const gameData = await response.json();
-        setGame(gameData);
+        const details = toGameDetails(gameData);
+        setGame(details);
 
         // Try to find template for this game
-        const gameTemplate = getGameTemplateByName(gameData.name);
+        const gameTemplate = getGameTemplateByName(details.name);
         setTemplate(gameTemplate ?? null);
       } catch (err) {
         toast.error(err instanceof Error ? err.message : 'Failed to load game');
@@ -133,7 +147,6 @@ export default function GameToolkitLandingPage() {
    */
   const updateParticipant = (index: number, value: string) => {
     const updated = [...participants];
-    // eslint-disable-next-line security/detect-object-injection -- index is validated function parameter for array update
     updated[index] = value;
     setParticipants(updated);
   };

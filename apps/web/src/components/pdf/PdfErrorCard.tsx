@@ -27,7 +27,6 @@ const CATEGORY_CONFIG = {
 };
 
 export function PdfErrorCard({ error, category, canRetry, onRetry, className }: PdfErrorCardProps) {
-  // eslint-disable-next-line security/detect-object-injection -- category is from typed union
   const config = CATEGORY_CONFIG[category];
   const Icon = config.icon;
 

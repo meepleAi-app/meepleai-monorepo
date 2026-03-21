@@ -58,7 +58,6 @@ function mapStateToFrontend(backendState: string): PdfState {
     Failed: 'failed',
   };
 
-  // eslint-disable-next-line security/detect-object-injection -- backendState is from typed API response
   return stateMap[backendState] ?? 'pending';
 }
 

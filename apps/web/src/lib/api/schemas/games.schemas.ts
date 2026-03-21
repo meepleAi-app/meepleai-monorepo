@@ -29,6 +29,10 @@ export const GameSchema = z.object({
   averageRating: z.number().nullable().optional(),
   // Issue #2373: SharedGameCatalog integration
   sharedGameId: z.string().uuid().nullable().optional(),
+  // Issue #3481: Publication workflow fields
+  isPublished: z.boolean().optional(),
+  approvalStatus: z.string().nullable().optional(),
+  publishedAt: z.string().nullable().optional(),
 });
 
 export type Game = z.infer<typeof GameSchema>;

@@ -37,7 +37,6 @@ export function PublicLayout({
   className,
   containerWidth = 'full',
 }: PublicLayoutProps) {
-  // eslint-disable-next-line security/detect-object-injection
   const containerClass = CONTAINER_WIDTHS[containerWidth] || CONTAINER_WIDTHS.full;
 
   return (

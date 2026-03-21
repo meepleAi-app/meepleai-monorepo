@@ -1,4 +1,3 @@
-/* eslint-disable security/detect-object-injection -- Safe mock game data array access */
 /**
  * Board Game AI Game Catalog Page Stories (Issue #1017: BGAI-078)
  *

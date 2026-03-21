@@ -136,7 +136,6 @@ export function BulkActionBar({
       const failCount = results.filter(r => r.status === 'rejected').length;
 
       if (failCount === 0) {
-        // eslint-disable-next-line security/detect-object-injection -- safe: newState is typed enum
         toast.success(`${successCount} giochi aggiornati a "${stateLabels[newState]}"`);
       } else if (successCount > 0) {
         toast.warning(`${successCount} aggiornati, ${failCount} errori`);

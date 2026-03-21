@@ -7,15 +7,17 @@
  */
 
 export { CardCover } from './CardCover';
+export { CoverOverlay } from './CoverOverlay';
 export { CardBadges } from './CardBadges';
 export { CardMetadata } from './CardMetadata';
-export { CardActions } from './CardActions';
+export { CardActions, CardActionStrip } from './CardActions';
 export { CardFlipWrapper } from './CardFlip';
 export { CardTagStrip } from './CardTagStrip';
 
 export type { CardCoverProps } from './CardCover';
+export type { CoverOverlayProps } from './CoverOverlay';
 export type { CardBadgesProps } from './CardBadges';
 export type { CardMetadataProps } from './CardMetadata';
-export type { CardActionsProps } from './CardActions';
+export type { CardActionsProps, CardActionStripProps } from './CardActions';
 export type { CardFlipProps } from './CardFlip';
 export type { CardTagStripProps } from './CardTagStrip';

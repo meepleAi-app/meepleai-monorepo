@@ -40,10 +40,11 @@ public sealed class NotificationsE2ETests : E2ETestBase
         var response = await Client.GetAsync("/api/v1/notifications");
 
         // Assert - API may return OK or other status depending on configuration
+        if (response.StatusCode == HttpStatusCode.InternalServerError)
+            Assert.Skip("GetNotifications returned 500 — service likely unavailable");
         response.StatusCode.Should().BeOneOf(
             HttpStatusCode.OK,
-            HttpStatusCode.BadRequest,
-            HttpStatusCode.InternalServerError);
+            HttpStatusCode.BadRequest);
 
         if (response.StatusCode == HttpStatusCode.OK)
         {
@@ -179,9 +180,9 @@ public sealed class NotificationsE2ETests : E2ETestBase
         // Skip if notifications endpoint not available
         if (!notificationsResponse.IsSuccessStatusCode)
         {
-            notificationsResponse.StatusCode.Should().BeOneOf(
-                HttpStatusCode.BadRequest,
-                HttpStatusCode.InternalServerError);
+            if (notificationsResponse.StatusCode == HttpStatusCode.InternalServerError)
+                Assert.Skip("MarkNotificationAsRead notifications fetch returned 500 — service likely unavailable");
+            notificationsResponse.StatusCode.Should().Be(HttpStatusCode.BadRequest);
             return;
         }
 

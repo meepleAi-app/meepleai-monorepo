@@ -1,4 +1,5 @@
 using Api.BoundedContexts.KnowledgeBase.Domain.Entities;
+using Api.BoundedContexts.KnowledgeBase.Domain.Enums;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.Infrastructure;
 using Api.SharedKernel.Application.Services;
@@ -46,6 +47,15 @@ public sealed class AgentDefinitionRepository : RepositoryBase, IAgentDefinition
         return await DbContext.Set<AgentDefinition>()
             .AsNoTracking()
             .Where(a => a.IsActive)
+            .OrderBy(a => a.Name)
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
+    }
+
+    public async Task<List<AgentDefinition>> GetAllPublishedAsync(CancellationToken cancellationToken = default)
+    {
+        return await DbContext.Set<AgentDefinition>()
+            .AsNoTracking()
+            .Where(a => a.Status == AgentDefinitionStatus.Published && a.IsActive)
             .OrderBy(a => a.Name)
             .ToListAsync(cancellationToken).ConfigureAwait(false);
     }

@@ -17,6 +17,7 @@ const singleCitation: Citation[] = [
     snippet:
       'Quando un giocatore costruisce un insediamento su un incrocio adiacente a un terreno con il numero uscito, riceve la risorsa corrispondente.',
     relevanceScore: 0.92,
+    copyrightTier: 'full',
   },
 ];
 
@@ -27,6 +28,7 @@ const multiCitations: Citation[] = [
     snippet:
       'Quando un giocatore costruisce un insediamento su un incrocio adiacente a un terreno con il numero uscito, riceve la risorsa corrispondente.',
     relevanceScore: 0.92,
+    copyrightTier: 'full',
   },
   {
     documentId: 'doc-catan-001',
@@ -34,6 +36,9 @@ const multiCitations: Citation[] = [
     snippet:
       'Il ladro viene spostato quando un giocatore tira un 7. Il giocatore sceglie un terreno e ruba una risorsa.',
     relevanceScore: 0.67,
+    copyrightTier: 'protected',
+    paraphrasedSnippet:
+      'Quando esce un 7, il giocatore sposta il ladro su un terreno e prende una risorsa da un avversario.',
   },
   {
     documentId: 'doc-catan-001',
@@ -41,6 +46,7 @@ const multiCitations: Citation[] = [
     snippet:
       'Per vincere la partita, un giocatore deve raggiungere 10 punti vittoria durante il proprio turno.',
     relevanceScore: 0.41,
+    copyrightTier: 'full',
   },
 ];
 
@@ -50,12 +56,14 @@ const highRelevanceCitations: Citation[] = [
     pageNumber: 5,
     snippet: "All'inizio del gioco, ogni giocatore piazza due insediamenti e due strade.",
     relevanceScore: 0.98,
+    copyrightTier: 'full',
   },
   {
     documentId: 'doc-catan-001',
     pageNumber: 8,
     snippet: 'Le risorse vengono distribuite a ogni lancio di dado, eccetto quando esce il 7.',
     relevanceScore: 0.88,
+    copyrightTier: 'full',
   },
 ];
 

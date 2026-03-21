@@ -17,7 +17,15 @@ import React from 'react';
 
 // Mock PdfPageModal to isolate CitationBadge
 vi.mock('../PdfPageModal', () => ({
-  PdfPageModal: ({ open, citation, onClose }: { open: boolean; citation: { pageNumber: number }; onClose: () => void }) =>
+  PdfPageModal: ({
+    open,
+    citation,
+    onClose,
+  }: {
+    open: boolean;
+    citation: { pageNumber: number };
+    onClose: () => void;
+  }) =>
     open ? (
       <div data-testid="pdf-modal" data-page={citation.pageNumber}>
         <button onClick={onClose}>Close</button>
@@ -36,6 +44,7 @@ function makeCitation(overrides: Partial<Citation> = {}): Citation {
     pageNumber: 42,
     snippet: 'This is a snippet from the rulebook.',
     relevanceScore: 0.95,
+    copyrightTier: 'full',
     ...overrides,
   };
 }

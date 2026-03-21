@@ -7324,6 +7324,9 @@ namespace Api.Infrastructure.Migrations
                         .HasColumnType("character varying(10)")
                         .HasColumnName("language_override");
 
+                    b.Property<int>("LicenseType")
+                        .HasColumnType("integer");
+
                     b.Property<string>("Metadata")
                         .HasMaxLength(2048)
                         .HasColumnType("character varying(2048)");

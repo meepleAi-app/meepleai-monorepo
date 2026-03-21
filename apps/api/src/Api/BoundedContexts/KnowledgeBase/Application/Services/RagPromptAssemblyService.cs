@@ -789,6 +789,21 @@ internal sealed class RagPromptAssemblyService : IRagPromptAssemblyService
         return sb.ToString();
     }
 
+    /// <summary>Formats a chunk with copyright annotation for the LLM system prompt.</summary>
+    public static string FormatChunkForPrompt(ChunkCitation citation, string chunkText)
+    {
+        var tierLabel = citation.CopyrightTier == CopyrightTier.Full ? "FULL" : "PROTECTED";
+        return $"[Source: Document {citation.DocumentId}, Page {citation.PageNumber}, Relevance: {citation.RelevanceScore:F2}, Copyright: {tierLabel}]\n{chunkText}\n---";
+    }
+
+    /// <summary>Returns the copyright paraphrase instruction localized to agent language.</summary>
+    public static string GetCopyrightInstruction(string language)
+    {
+        return language.StartsWith("it", StringComparison.OrdinalIgnoreCase)
+            ? "Per le fonti marcate PROTECTED, riformula il contenuto con parole tue senza citare verbatim. Usa il marker [ref:documentId:pageNum] prima di ogni riformulazione. Per le fonti FULL, puoi citare direttamente."
+            : "For sources marked PROTECTED, paraphrase in your own words without verbatim citation. Use the marker [ref:documentId:pageNum] before each paraphrase. For FULL sources, you may cite directly.";
+    }
+
     private static int EstimateTokens(string text)
     {
         // Rough estimate: ~4 characters per token (GPT-style)

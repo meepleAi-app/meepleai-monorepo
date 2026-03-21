@@ -84,6 +84,10 @@ export function BulkActionBar({
   const [isChangingState, setIsChangingState] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [showRemoveDialog, setShowRemoveDialog] = useState(false);
+  const [operationProgress, setOperationProgress] = useState<{
+    done: number;
+    total: number;
+  } | null>(null);
 
   const updateEntry = useUpdateLibraryEntry();
   const updateGameState = useUpdateGameState();
@@ -98,14 +102,22 @@ export function BulkActionBar({
 
     setIsFavoriting(true);
     try {
+      const total = selectedIds.length;
+      let successCount = 0;
+      let failCount = 0;
+      setOperationProgress({ done: 0, total });
+
       const results = await Promise.allSettled(
-        selectedIds.map(gameId =>
-          updateEntry.mutateAsync({ gameId, request: { isFavorite: true } })
-        )
+        selectedIds.map(async (gameId, i) => {
+          const result = await updateEntry.mutateAsync({ gameId, request: { isFavorite: true } });
+          setOperationProgress(prev => (prev ? { ...prev, done: prev.done + 1 } : null));
+          return result;
+        })
       );
 
-      const successCount = results.filter(r => r.status === 'fulfilled').length;
-      const failCount = results.filter(r => r.status === 'rejected').length;
+      successCount = results.filter(r => r.status === 'fulfilled').length;
+      failCount = results.filter(r => r.status === 'rejected').length;
+      setOperationProgress(null);
 
       if (failCount === 0) {
         toast.success(`${successCount} giochi segnati come preferiti`);
@@ -128,12 +140,22 @@ export function BulkActionBar({
 
     setIsChangingState(true);
     try {
+      const total = selectedIds.length;
+      let successCount = 0;
+      let failCount = 0;
+      setOperationProgress({ done: 0, total });
+
       const results = await Promise.allSettled(
-        selectedIds.map(gameId => updateGameState.mutateAsync({ gameId, request: { newState } }))
+        selectedIds.map(async gameId => {
+          const result = await updateGameState.mutateAsync({ gameId, request: { newState } });
+          setOperationProgress(prev => (prev ? { ...prev, done: prev.done + 1 } : null));
+          return result;
+        })
       );
 
-      const successCount = results.filter(r => r.status === 'fulfilled').length;
-      const failCount = results.filter(r => r.status === 'rejected').length;
+      successCount = results.filter(r => r.status === 'fulfilled').length;
+      failCount = results.filter(r => r.status === 'rejected').length;
+      setOperationProgress(null);
 
       if (failCount === 0) {
         // eslint-disable-next-line security/detect-object-injection -- safe: newState is typed enum
@@ -208,6 +230,21 @@ export function BulkActionBar({
               <span className="text-sm font-medium text-foreground font-nunito">
                 {selectedCount} selezionati
               </span>
+              {operationProgress && (
+                <div className="flex items-center gap-2 min-w-[120px]">
+                  <div className="flex-1 h-1.5 bg-border/50 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-amber-500 rounded-full transition-all duration-300"
+                      style={{
+                        width: `${Math.round((operationProgress.done / operationProgress.total) * 100)}%`,
+                      }}
+                    />
+                  </div>
+                  <span className="text-[10px] text-muted-foreground tabular-nums">
+                    {operationProgress.done}/{operationProgress.total}
+                  </span>
+                </div>
+              )}
               <Button
                 variant="ghost"
                 size="sm"

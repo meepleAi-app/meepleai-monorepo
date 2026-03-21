@@ -33,6 +33,7 @@ module.exports = {
         // MeepleCard v2 animations (Issue #4604)
         'mc-shimmer': 'mc-shimmer 0.8s ease-out forwards',
         'mc-float-up': 'mc-float-up 0.35s ease-out both',
+        'mc-slide-in-right': 'mc-slide-in-right 200ms cubic-bezier(0.4,0,0.2,1) both',
         'mc-badge-pulse': 'mc-badge-pulse 2s ease-in-out infinite',
         'mc-pulse-glow': 'mc-pulse-glow 2s ease-in-out infinite',
         'mc-unread-bounce': 'mc-unread-bounce 0.5s ease-out',
@@ -87,6 +88,10 @@ module.exports = {
         'mc-float-up': {
           '0%': { opacity: '0', transform: 'translateY(12px)' },
           '100%': { opacity: '1', transform: 'translateY(0)' },
+        },
+        'mc-slide-in-right': {
+          from: { opacity: '0', transform: 'translateX(20px)' },
+          to: { opacity: '1', transform: 'translateX(0)' },
         },
         'mc-badge-pulse': {
           '0%, 100%': { transform: 'scale(1)' },

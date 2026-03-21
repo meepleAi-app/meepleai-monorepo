@@ -113,7 +113,6 @@ export function getActivityCategory(eventType: string): ActivityCategory {
     AlertResolved: 'system',
   };
 
-  // eslint-disable-next-line security/detect-object-injection -- Safe: accessing known mapping with string key, fallback provided
   return eventToCategory[eventType] ?? 'system';
 }
 

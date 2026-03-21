@@ -13,14 +13,7 @@
 import { useState, useCallback } from 'react';
 
 import { motion, AnimatePresence } from 'framer-motion';
-import {
-  ArrowRight,
-  Clock,
-  Code2,
-  AlertCircle,
-  Check,
-  Zap,
-} from 'lucide-react';
+import { ArrowRight, Clock, Code2, AlertCircle, Check, Zap } from 'lucide-react';
 
 import { Badge } from '@/components/ui/data-display/badge';
 import { Input } from '@/components/ui/primitives/input';
@@ -54,7 +47,6 @@ interface PresetButtonProps {
 }
 
 function PresetButton({ preset, active, onClick }: PresetButtonProps) {
-  // eslint-disable-next-line security/detect-object-injection -- preset is a typed ConditionPreset enum
   const presetData = CONDITION_PRESETS[preset];
 
   return (
@@ -130,7 +122,7 @@ function ExpressionEditor({
       <div className="relative">
         <Textarea
           value={value}
-          onChange={(e) => onChange(e.target.value)}
+          onChange={e => onChange(e.target.value)}
           placeholder={placeholder}
           className={cn(
             'font-mono text-sm min-h-[60px] resize-none',
@@ -151,8 +143,7 @@ function ExpressionEditor({
             className="overflow-hidden"
           >
             <div className="p-2 bg-muted/50 rounded-md space-y-1">
-              {/* eslint-disable-next-line security/detect-object-injection -- syntax is typed enum */}
-              {syntaxHelp[syntax].map((item) => (
+              {syntaxHelp[syntax].map(item => (
                 <div key={item.example} className="flex items-start gap-2 text-xs">
                   <code className="px-1.5 py-0.5 bg-background rounded font-mono text-[10px]">
                     {item.example}
@@ -187,7 +178,6 @@ export function EdgeConfigPanel({ className }: EdgeConfigPanelProps) {
     (preset: ConditionPreset) => {
       if (!selectedEdge) return;
 
-      // eslint-disable-next-line security/detect-object-injection -- preset is typed ConditionPreset enum
       const presetData = CONDITION_PRESETS[preset];
       updateEdge(selectedEdge.id, {
         conditionPreset: preset,
@@ -246,8 +236,8 @@ export function EdgeConfigPanel({ className }: EdgeConfigPanelProps) {
   }
 
   // Find source and target nodes
-  const sourceNode = pipeline?.nodes.find((n) => n.id === selectedEdge.source);
-  const targetNode = pipeline?.nodes.find((n) => n.id === selectedEdge.target);
+  const sourceNode = pipeline?.nodes.find(n => n.id === selectedEdge.source);
+  const targetNode = pipeline?.nodes.find(n => n.id === selectedEdge.target);
 
   const edgeData = selectedEdge.data || {
     condition: 'always',
@@ -299,7 +289,7 @@ export function EdgeConfigPanel({ className }: EdgeConfigPanelProps) {
             <Label className="text-sm">Edge Label (optional)</Label>
             <Input
               value={edgeData.label || ''}
-              onChange={(e) => handleLabelChange(e.target.value)}
+              onChange={e => handleLabelChange(e.target.value)}
               placeholder="Custom label..."
               className="h-8"
             />
@@ -314,7 +304,7 @@ export function EdgeConfigPanel({ className }: EdgeConfigPanelProps) {
             <div className="grid grid-cols-2 gap-2">
               {(
                 ['always', 'never', 'high_confidence', 'medium_confidence'] as ConditionPreset[]
-              ).map((preset) => (
+              ).map(preset => (
                 <PresetButton
                   key={preset}
                   preset={preset}
@@ -324,7 +314,7 @@ export function EdgeConfigPanel({ className }: EdgeConfigPanelProps) {
               ))}
             </div>
             <div className="grid grid-cols-2 gap-2">
-              {(['rules_query', 'strategy_query'] as ConditionPreset[]).map((preset) => (
+              {(['rules_query', 'strategy_query'] as ConditionPreset[]).map(preset => (
                 <PresetButton
                   key={preset}
                   preset={preset}
@@ -378,9 +368,7 @@ export function EdgeConfigPanel({ className }: EdgeConfigPanelProps) {
             <div className="space-y-2">
               <div className="flex items-center justify-between text-xs">
                 <span className="text-muted-foreground">0ms (no timeout)</span>
-                <span className="font-mono text-foreground">
-                  {edgeData.timeout || 0}ms
-                </span>
+                <span className="font-mono text-foreground">{edgeData.timeout || 0}ms</span>
                 <span className="text-muted-foreground">5min</span>
               </div>
               <Slider
@@ -398,9 +386,7 @@ export function EdgeConfigPanel({ className }: EdgeConfigPanelProps) {
 
           {/* Current Configuration Summary */}
           <div className="p-3 bg-muted/50 rounded-md space-y-2">
-            <h4 className="text-xs font-medium text-muted-foreground">
-              Configuration Summary
-            </h4>
+            <h4 className="text-xs font-medium text-muted-foreground">Configuration Summary</h4>
             <div className="space-y-1 text-xs">
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Condition:</span>

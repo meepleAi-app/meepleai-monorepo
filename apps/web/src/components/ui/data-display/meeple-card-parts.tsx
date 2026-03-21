@@ -47,9 +47,7 @@ export function EntityIndicator({
   customColor?: string;
   className?: string;
 }) {
-  // eslint-disable-next-line security/detect-object-injection -- entity is from typed MeepleEntityType union
   const color = customColor || entityColors[entity].hsl;
-  // eslint-disable-next-line security/detect-object-injection -- entity is from typed MeepleEntityType union
   const name = entityColors[entity].name;
 
   // Hero/featured uses ribbon, others use left border
@@ -115,9 +113,7 @@ export function VerticalTagStack({
   showStatusIcon?: boolean;
   badge?: string;
 }) {
-  // eslint-disable-next-line security/detect-object-injection -- entity is from typed MeepleEntityType union
   const color = customColor || entityColors[entity].hsl;
-  // eslint-disable-next-line security/detect-object-injection -- entity is from typed MeepleEntityType union
   const name = entityColors[entity].name;
 
   return (
@@ -184,7 +180,6 @@ export function CoverImage({
   entity: MeepleEntityType;
   customColor?: string;
 }) {
-  // eslint-disable-next-line security/detect-object-injection -- entity is from typed MeepleEntityType union
   const color = customColor || entityColors[entity].hsl;
 
   // Treat placehold.co URLs as "no image" - they return SVGs that Next.js Image can't optimize
@@ -275,7 +270,6 @@ export function CoverImage({
         <div
           className="absolute inset-0 flex items-center justify-center"
           style={{
-            // eslint-disable-next-line security/detect-object-injection
             background: entityGradients[entity],
           }}
         >
@@ -402,7 +396,6 @@ export function ActionButtons({
   customColor?: string;
   className?: string;
 }) {
-  // eslint-disable-next-line security/detect-object-injection -- entity is from typed MeepleEntityType union
   const color = customColor || entityColors[entity].hsl;
 
   return (

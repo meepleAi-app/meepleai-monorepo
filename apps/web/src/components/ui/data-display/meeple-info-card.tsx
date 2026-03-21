@@ -204,7 +204,6 @@ export function MeepleInfoCard({
         {/* Tabs */}
         <div className="flex border-b border-[rgba(45,42,38,0.08)]">
           {availableTabs.map(tab => {
-            // eslint-disable-next-line security/detect-object-injection
             const config = tabConfig[tab];
             const Icon = config.icon;
             const isActive = activeTab === tab;

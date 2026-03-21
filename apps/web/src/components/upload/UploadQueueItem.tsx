@@ -1,4 +1,3 @@
-/* eslint-disable security/detect-object-injection -- Safe status label/style Record access */
 /**
  * PDF-05: Upload queue item component
  * Displays a single file in the upload queue with progress bar and actions

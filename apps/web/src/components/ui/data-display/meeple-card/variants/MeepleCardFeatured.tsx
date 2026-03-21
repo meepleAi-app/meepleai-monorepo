@@ -46,7 +46,7 @@ import {
   contentVariants,
 } from '../../meeple-card-styles';
 import { useMobileInteraction } from '../hooks/useMobileInteraction';
-import { CardActions } from '../parts/CardActions';
+import { CardActions, CardActionStrip } from '../parts/CardActions';
 import { CardBadges } from '../parts/CardBadges';
 import { CardCover } from '../parts/CardCover';
 import { CardTagStrip } from '../parts/CardTagStrip';
@@ -131,17 +131,17 @@ export const MeepleCardFeatured = React.memo(function MeepleCardFeatured(
     kbCards,
     mechanicIcon,
     stateLabel,
+    coverLabels,
+    subtypeIcons,
   } = props;
 
   const variant = 'featured' as const;
   const coverSrc = entity === 'player' ? avatarUrl || imageUrl : imageUrl;
-  // eslint-disable-next-line security/detect-object-injection
   const color = customColor || entityColors[entity].hsl;
   const hasQuickActions = !!(quickActions && quickActions.length > 0);
   const showWishlistBtn = !!showWishlist && !hasQuickActions;
   const showActionBtns = actions.length > 0;
   const isInteractive = !!onClick && !showActionBtns;
-  // eslint-disable-next-line security/detect-object-injection
   const drawerEntityType = DRAWER_ENTITY_TYPE_MAP[entity];
 
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -192,6 +192,33 @@ export const MeepleCardFeatured = React.memo(function MeepleCardFeatured(
 
   const Component = isInteractive ? 'div' : 'article';
 
+  const hasStripActions =
+    !!entityQuickActions ||
+    !!(showInfoButton && (entityId || infoHref)) ||
+    showWishlistBtn ||
+    hasQuickActions;
+
+  const stripElement = hasStripActions ? (
+    <CardActionStrip
+      entity={entity}
+      customColor={customColor}
+      entityQuickActions={entityQuickActions}
+      quickActions={quickActions}
+      userRole={userRole}
+      showWishlistBtn={showWishlistBtn}
+      isWishlisted={isWishlisted}
+      onWishlistToggle={onWishlistToggle}
+      showInfoButton={showInfoButton}
+      entityId={entityId}
+      infoHref={infoHref}
+      infoTooltip={infoTooltip}
+      drawerEntityType={drawerEntityType}
+      onDrawerOpen={() => setDrawerOpen(true)}
+      testId={testId}
+      hasQuickActions={hasQuickActions}
+    />
+  ) : null;
+
   return (
     <Component
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -225,7 +252,6 @@ export const MeepleCardFeatured = React.memo(function MeepleCardFeatured(
             }
           : undefined
       }
-      // eslint-disable-next-line security/detect-object-injection
       aria-label={`${entityColors[entity].name}: ${title}`}
       data-testid={testId || 'meeple-card'}
       data-entity={entity}
@@ -276,8 +302,12 @@ export const MeepleCardFeatured = React.memo(function MeepleCardFeatured(
         variant={variant}
         entity={entity}
         customColor={customColor}
+        coverLabels={coverLabels}
+        showEntityType
+        subtypeIcons={subtypeIcons}
         mechanicIcon={mechanicIcon}
         stateLabel={stateLabel}
+        actionStrip={stripElement}
       />
 
       {/* Content area */}
@@ -287,21 +317,6 @@ export const MeepleCardFeatured = React.memo(function MeepleCardFeatured(
           entity={entity}
           customColor={customColor}
           actions={actions}
-          entityQuickActions={entityQuickActions}
-          quickActions={quickActions}
-          userRole={userRole}
-          showWishlistBtn={showWishlistBtn}
-          isWishlisted={isWishlisted}
-          onWishlistToggle={onWishlistToggle}
-          showInfoButton={showInfoButton}
-          entityId={entityId}
-          infoHref={infoHref}
-          infoTooltip={infoTooltip}
-          drawerEntityType={drawerEntityType}
-          onDrawerOpen={() => setDrawerOpen(true)}
-          testId={testId}
-          unreadCount={unreadCount}
-          hasQuickActions={hasQuickActions}
         />
 
         <h3 className="font-quicksand font-bold leading-tight text-xl mb-1 text-card-foreground">

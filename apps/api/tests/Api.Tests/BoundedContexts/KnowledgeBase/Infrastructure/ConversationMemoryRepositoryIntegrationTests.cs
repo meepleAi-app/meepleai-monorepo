@@ -342,8 +342,8 @@ public sealed class ConversationMemoryRepositoryIntegrationTests : IAsyncLifetim
 
         // Act & Assert
         await _repository!.AddAsync(memory, TestCancellationToken);
-        await Assert.ThrowsAsync<DbUpdateException>(
-            () => _dbContext!.SaveChangesAsync(TestCancellationToken));
+        Func<Task> act = () => _dbContext!.SaveChangesAsync(TestCancellationToken);
+        await act.Should().ThrowAsync<DbUpdateException>();
     }
 
     [Fact]

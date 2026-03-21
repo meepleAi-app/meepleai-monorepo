@@ -16,6 +16,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.SharedGameCatalog.Application.Handlers;
 
@@ -122,7 +123,7 @@ public class AddDocumentToSharedGameCommandHandlerTests
         var documentId = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotEqual(Guid.Empty, documentId);
+        documentId.Should().NotBe(Guid.Empty);
 
         _documentRepositoryMock.Verify(
             r => r.AddAsync(It.IsAny<SharedGameDocument>(), It.IsAny<CancellationToken>()),
@@ -136,10 +137,10 @@ public class AddDocumentToSharedGameCommandHandlerTests
             m => m.Publish(It.IsAny<SharedGameDocumentAddedEvent>(), It.IsAny<CancellationToken>()),
             Times.Once);
 
-        Assert.NotNull(capturedDocument);
-        Assert.Equal(gameId, capturedDocument.SharedGameId);
-        Assert.Equal(pdfId, capturedDocument.PdfDocumentId);
-        Assert.Equal(SharedGameDocumentType.Rulebook, capturedDocument.DocumentType);
+        capturedDocument.Should().NotBeNull();
+        capturedDocument.SharedGameId.Should().Be(gameId);
+        capturedDocument.PdfDocumentId.Should().Be(pdfId);
+        capturedDocument.DocumentType.Should().Be(SharedGameDocumentType.Rulebook);
     }
 
     [Fact]
@@ -160,8 +161,8 @@ public class AddDocumentToSharedGameCommandHandlerTests
             .ReturnsAsync((SharedGame?)null);
 
         // Act & Assert
-        await Assert.ThrowsAsync<InvalidOperationException>(
-            () => _handler.Handle(command, TestContext.Current.CancellationToken));
+        var act = () => _handler.Handle(command, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<InvalidOperationException>();
     }
 
     [Fact]
@@ -216,10 +217,10 @@ public class AddDocumentToSharedGameCommandHandlerTests
         await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(capturedDocument);
-        Assert.Equal(2, capturedDocument.Tags.Count);
-        Assert.Contains("speed-mode", capturedDocument.Tags);
-        Assert.Contains("2-players", capturedDocument.Tags);
+        capturedDocument.Should().NotBeNull();
+        capturedDocument.Tags.Count.Should().Be(2);
+        capturedDocument.Tags.Should().Contain("speed-mode");
+        capturedDocument.Tags.Should().Contain("2-players");
     }
 
     private static SharedGame CreateTestGame(Guid gameId)

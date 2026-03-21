@@ -2,6 +2,8 @@ using System.Text.Json;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Entities;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
 using Api.Infrastructure;
+using Api.SharedKernel.Application.Services;
+using Api.SharedKernel.Infrastructure;
 using Api.Infrastructure.Entities.SharedGameCatalog;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
@@ -11,18 +13,17 @@ namespace Api.BoundedContexts.SharedGameCatalog.Infrastructure.Repositories;
 /// <summary>
 /// Repository implementation for SharedGameDocument entities.
 /// </summary>
-internal sealed class SharedGameDocumentRepository : ISharedGameDocumentRepository
+internal sealed class SharedGameDocumentRepository : RepositoryBase, ISharedGameDocumentRepository
 {
-    private readonly MeepleAiDbContext _context;
 
-    public SharedGameDocumentRepository(MeepleAiDbContext context)
+    public SharedGameDocumentRepository(MeepleAiDbContext dbContext, IDomainEventCollector eventCollector)
+        : base(dbContext, eventCollector)
     {
-        _context = context;
     }
 
     public async Task<SharedGameDocument?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        var entity = await _context.SharedGameDocuments
+        var entity = await DbContext.SharedGameDocuments
             .AsNoTracking()
             .FirstOrDefaultAsync(d => d.Id == id, cancellationToken)
             .ConfigureAwait(false);
@@ -34,7 +35,7 @@ internal sealed class SharedGameDocumentRepository : ISharedGameDocumentReposito
         Guid sharedGameId,
         CancellationToken cancellationToken = default)
     {
-        var entities = await _context.SharedGameDocuments
+        var entities = await DbContext.SharedGameDocuments
             .AsNoTracking()
             .Where(d => d.SharedGameId == sharedGameId)
             .OrderBy(d => d.DocumentType)
@@ -51,7 +52,7 @@ internal sealed class SharedGameDocumentRepository : ISharedGameDocumentReposito
         SharedGameDocumentType documentType,
         CancellationToken cancellationToken = default)
     {
-        var entities = await _context.SharedGameDocuments
+        var entities = await DbContext.SharedGameDocuments
             .AsNoTracking()
             .Where(d => d.SharedGameId == sharedGameId && d.DocumentType == (int)documentType)
             .OrderByDescending(d => d.IsActive)
@@ -67,7 +68,7 @@ internal sealed class SharedGameDocumentRepository : ISharedGameDocumentReposito
         SharedGameDocumentType documentType,
         CancellationToken cancellationToken = default)
     {
-        var entity = await _context.SharedGameDocuments
+        var entity = await DbContext.SharedGameDocuments
             .AsNoTracking()
             .FirstOrDefaultAsync(
                 d => d.SharedGameId == sharedGameId
@@ -83,7 +84,7 @@ internal sealed class SharedGameDocumentRepository : ISharedGameDocumentReposito
         Guid sharedGameId,
         CancellationToken cancellationToken = default)
     {
-        var entities = await _context.SharedGameDocuments
+        var entities = await DbContext.SharedGameDocuments
             .AsNoTracking()
             .Where(d => d.SharedGameId == sharedGameId && d.IsActive)
             .OrderBy(d => d.DocumentType)
@@ -140,7 +141,7 @@ internal sealed class SharedGameDocumentRepository : ISharedGameDocumentReposito
         };
 #pragma warning restore S3265
 
-        var entities = await _context.SharedGameDocuments
+        var entities = await DbContext.SharedGameDocuments
             .FromSqlRaw(sql, documentTypeParam, searchTagsParam)
             .AsNoTracking()
             .ToListAsync(cancellationToken)
@@ -155,7 +156,7 @@ internal sealed class SharedGameDocumentRepository : ISharedGameDocumentReposito
         string version,
         CancellationToken cancellationToken = default)
     {
-        return await _context.SharedGameDocuments
+        return await DbContext.SharedGameDocuments
             .AsNoTracking()
             .AnyAsync(
                 d => d.SharedGameId == sharedGameId
@@ -168,19 +169,19 @@ internal sealed class SharedGameDocumentRepository : ISharedGameDocumentReposito
     public async Task AddAsync(SharedGameDocument document, CancellationToken cancellationToken = default)
     {
         var entity = MapToEntity(document);
-        await _context.SharedGameDocuments.AddAsync(entity, cancellationToken).ConfigureAwait(false);
+        await DbContext.SharedGameDocuments.AddAsync(entity, cancellationToken).ConfigureAwait(false);
     }
 
     public void Update(SharedGameDocument document)
     {
         var entity = MapToEntity(document);
-        _context.SharedGameDocuments.Update(entity);
+        DbContext.SharedGameDocuments.Update(entity);
     }
 
     public void Remove(SharedGameDocument document)
     {
         var entity = MapToEntity(document);
-        _context.SharedGameDocuments.Remove(entity);
+        DbContext.SharedGameDocuments.Remove(entity);
     }
 
     public async Task DeactivateOtherVersionsAsync(
@@ -189,7 +190,7 @@ internal sealed class SharedGameDocumentRepository : ISharedGameDocumentReposito
         Guid exceptDocumentId,
         CancellationToken cancellationToken = default)
     {
-        await _context.SharedGameDocuments
+        await DbContext.SharedGameDocuments
             .Where(d => d.SharedGameId == sharedGameId
                 && d.DocumentType == (int)documentType
                 && d.Id != exceptDocumentId
@@ -202,7 +203,7 @@ internal sealed class SharedGameDocumentRepository : ISharedGameDocumentReposito
 
     public async Task<int> CountByUserAsync(Guid userId, CancellationToken cancellationToken = default)
     {
-        return await _context.SharedGameDocuments
+        return await DbContext.SharedGameDocuments
             .AsNoTracking()
             .CountAsync(d => d.CreatedBy == userId, cancellationToken)
             .ConfigureAwait(false);

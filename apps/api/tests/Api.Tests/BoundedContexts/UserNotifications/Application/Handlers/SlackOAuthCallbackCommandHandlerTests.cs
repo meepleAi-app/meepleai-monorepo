@@ -14,6 +14,7 @@ using Microsoft.Extensions.Options;
 using Moq;
 using Moq.Protected;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.UserNotifications.Application.Handlers;
 
@@ -82,7 +83,7 @@ public class SlackOAuthCallbackCommandHandlerTests
         var result = await _handler.Handle(command, CancellationToken.None);
 
         // Assert
-        Assert.True(result);
+        result.Should().BeTrue();
         _connectionRepoMock.Verify(
             r => r.AddAsync(It.Is<SlackConnection>(c =>
                 c.UserId == userId &&
@@ -113,8 +114,8 @@ public class SlackOAuthCallbackCommandHandlerTests
         var result = await _handler.Handle(command, CancellationToken.None);
 
         // Assert
-        Assert.True(result);
-        Assert.True(existing.IsActive);
+        result.Should().BeTrue();
+        existing.IsActive.Should().BeTrue();
         _connectionRepoMock.Verify(r => r.UpdateAsync(existing, It.IsAny<CancellationToken>()), Times.Once);
         _connectionRepoMock.Verify(r => r.AddAsync(It.IsAny<SlackConnection>(), It.IsAny<CancellationToken>()), Times.Never);
     }
@@ -129,7 +130,7 @@ public class SlackOAuthCallbackCommandHandlerTests
         var result = await _handler.Handle(command, CancellationToken.None);
 
         // Assert
-        Assert.False(result);
+        result.Should().BeFalse();
     }
 
     [Fact]
@@ -144,7 +145,7 @@ public class SlackOAuthCallbackCommandHandlerTests
         var result = await _handler.Handle(command, CancellationToken.None);
 
         // Assert
-        Assert.False(result);
+        result.Should().BeFalse();
         _connectionRepoMock.Verify(r => r.AddAsync(It.IsAny<SlackConnection>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 

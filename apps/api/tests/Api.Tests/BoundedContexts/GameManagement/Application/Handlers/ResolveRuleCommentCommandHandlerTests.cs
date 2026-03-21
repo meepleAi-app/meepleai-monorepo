@@ -6,6 +6,7 @@ using Api.Infrastructure;
 using Api.Tests.TestHelpers;
 using Moq;
 using Xunit;
+using FluentAssertions;
 using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.GameManagement.Application.Handlers;
@@ -46,7 +47,7 @@ public class ResolveRuleCommentCommandHandlerTests
             loggerMock.Object);
 
         // Assert
-        Assert.NotNull(handler);
+        handler.Should().NotBeNull();
     }
 
     [Fact]
@@ -57,11 +58,12 @@ public class ResolveRuleCommentCommandHandlerTests
         var loggerMock = new Mock<ILogger<ResolveRuleCommentCommandHandler>>();
 
         // Act & Assert
-        Assert.Throws<ArgumentNullException>(() =>
+        var act = () =>
             new ResolveRuleCommentCommandHandler(
                 null!,
                 timeProviderMock.Object,
-                loggerMock.Object));
+                loggerMock.Object);
+        act.Should().Throw<ArgumentNullException>();
     }
 
     [Fact]
@@ -72,11 +74,12 @@ public class ResolveRuleCommentCommandHandlerTests
         var loggerMock = new Mock<ILogger<ResolveRuleCommentCommandHandler>>();
 
         // Act & Assert
-        Assert.Throws<ArgumentNullException>(() =>
+        var act = () =>
             new ResolveRuleCommentCommandHandler(
                 context,
                 null!,
-                loggerMock.Object));
+                loggerMock.Object);
+        act.Should().Throw<ArgumentNullException>();
     }
 
     [Fact]
@@ -87,11 +90,12 @@ public class ResolveRuleCommentCommandHandlerTests
         var timeProviderMock = CreateTimeProviderMock();
 
         // Act & Assert
-        Assert.Throws<ArgumentNullException>(() =>
+        var act = () =>
             new ResolveRuleCommentCommandHandler(
                 context,
                 timeProviderMock.Object,
-                null!));
+                null!);
+        act.Should().Throw<ArgumentNullException>();
     }
     [Fact]
     public void Command_AsOwner_ConstructsCorrectly()
@@ -107,10 +111,10 @@ public class ResolveRuleCommentCommandHandlerTests
             ResolveReplies: false);
 
         // Assert
-        Assert.Equal(commentId, command.CommentId);
-        Assert.Equal(userId, command.ResolvedByUserId);
-        Assert.False(command.IsAdmin);
-        Assert.False(command.ResolveReplies);
+        command.CommentId.Should().Be(commentId);
+        command.ResolvedByUserId.Should().Be(userId);
+        (command.IsAdmin).Should().BeFalse();
+        (command.ResolveReplies).Should().BeFalse();
     }
 
     [Fact]
@@ -127,9 +131,9 @@ public class ResolveRuleCommentCommandHandlerTests
             ResolveReplies: false);
 
         // Assert
-        Assert.Equal(commentId, command.CommentId);
-        Assert.Equal(adminUserId, command.ResolvedByUserId);
-        Assert.True(command.IsAdmin);
+        command.CommentId.Should().Be(commentId);
+        command.ResolvedByUserId.Should().Be(adminUserId);
+        (command.IsAdmin).Should().BeTrue();
     }
 
     [Fact]
@@ -143,7 +147,7 @@ public class ResolveRuleCommentCommandHandlerTests
             ResolveReplies: true);
 
         // Assert
-        Assert.True(command.ResolveReplies);
+        (command.ResolveReplies).Should().BeTrue();
     }
 
     [Fact]
@@ -158,8 +162,8 @@ public class ResolveRuleCommentCommandHandlerTests
             ResolvedByUserId: userId);
 
         // Assert - Both default to false
-        Assert.False(command.IsAdmin);
-        Assert.False(command.ResolveReplies);
+        (command.IsAdmin).Should().BeFalse();
+        (command.ResolveReplies).Should().BeFalse();
     }
 
     [Fact]
@@ -173,8 +177,8 @@ public class ResolveRuleCommentCommandHandlerTests
             ResolveReplies: true);
 
         // Assert
-        Assert.True(command.IsAdmin);
-        Assert.True(command.ResolveReplies);
+        (command.IsAdmin).Should().BeTrue();
+        (command.ResolveReplies).Should().BeTrue();
     }
 
     [Fact]
@@ -195,8 +199,8 @@ public class ResolveRuleCommentCommandHandlerTests
             ResolvedByUserId: user2Id);
 
         // Assert
-        Assert.NotEqual(command1.CommentId, command2.CommentId);
-        Assert.NotEqual(command1.ResolvedByUserId, command2.ResolvedByUserId);
+        command2.CommentId.Should().NotBe(command1.CommentId);
+        command2.ResolvedByUserId.Should().NotBe(command1.ResolvedByUserId);
     }
     // NOTE: Full integration tests for Handle method (comment resolution, recursive reply resolution,
     // authorization, circular reference detection, max depth limit) should be in integration test suite

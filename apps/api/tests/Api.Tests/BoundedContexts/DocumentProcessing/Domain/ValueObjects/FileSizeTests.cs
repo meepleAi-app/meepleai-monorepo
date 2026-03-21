@@ -3,6 +3,7 @@ using Api.BoundedContexts.DocumentProcessing.Domain.ValueObjects;
 using Api.SharedKernel.Constants;
 using Api.SharedKernel.Domain.Exceptions;
 using Api.Tests.Constants;
+using FluentAssertions;
 using Xunit;
 
 namespace Api.Tests.BoundedContexts.DocumentProcessing.Domain.ValueObjects;
@@ -23,7 +24,7 @@ public class FileSizeTests
         var fileSize = new FileSize(1024);
 
         // Assert
-        Assert.Equal(1024, fileSize.Bytes);
+        fileSize.Bytes.Should().Be(1024);
     }
 
     [Fact]
@@ -33,23 +34,25 @@ public class FileSizeTests
         var fileSize = new FileSize(1);
 
         // Assert
-        Assert.Equal(1, fileSize.Bytes);
+        fileSize.Bytes.Should().Be(1);
     }
 
     [Fact]
     public void Constructor_ZeroBytes_ThrowsValidationException()
     {
         // Act & Assert
-        var exception = Assert.Throws<ValidationException>(() => new FileSize(0));
-        Assert.Contains("bytes", exception.Message);
+        var act = () => new FileSize(0);
+        var exception = act.Should().Throw<ValidationException>().Which;
+        exception.Message.Should().Contain("bytes");
     }
 
     [Fact]
     public void Constructor_NegativeBytes_ThrowsValidationException()
     {
         // Act & Assert
-        var exception = Assert.Throws<ValidationException>(() => new FileSize(-1));
-        Assert.Contains("bytes", exception.Message);
+        var act2 = () => new FileSize(-1);
+        var exception = act2.Should().Throw<ValidationException>().Which;
+        exception.Message.Should().Contain("bytes");
     }
 
     #endregion
@@ -63,7 +66,7 @@ public class FileSizeTests
         var fileSize = FileSize.FromMegabytes(5);
 
         // Assert
-        Assert.Equal(5 * 1024 * 1024, fileSize.Bytes);
+        fileSize.Bytes.Should().Be(5 * 1024 * 1024);
     }
 
     [Fact]
@@ -73,21 +76,23 @@ public class FileSizeTests
         var fileSize = FileSize.FromMegabytes(1.5);
 
         // Assert
-        Assert.Equal((long)(1.5 * 1024 * 1024), fileSize.Bytes);
+        fileSize.Bytes.Should().Be((long)(1.5 * 1024 * 1024));
     }
 
     [Fact]
     public void FromMegabytes_ZeroValue_ThrowsValidationException()
     {
         // Act & Assert
-        Assert.Throws<ValidationException>(() => FileSize.FromMegabytes(0));
+        var act3 = () => FileSize.FromMegabytes(0);
+        act3.Should().Throw<ValidationException>();
     }
 
     [Fact]
     public void FromMegabytes_NegativeValue_ThrowsValidationException()
     {
         // Act & Assert
-        Assert.Throws<ValidationException>(() => FileSize.FromMegabytes(-1));
+        var act4 = () => FileSize.FromMegabytes(-1);
+        act4.Should().Throw<ValidationException>();
     }
 
     [Fact]
@@ -97,21 +102,23 @@ public class FileSizeTests
         var fileSize = FileSize.FromKilobytes(500);
 
         // Assert
-        Assert.Equal(500 * 1024, fileSize.Bytes);
+        fileSize.Bytes.Should().Be(500 * 1024);
     }
 
     [Fact]
     public void FromKilobytes_ZeroValue_ThrowsValidationException()
     {
         // Act & Assert
-        Assert.Throws<ValidationException>(() => FileSize.FromKilobytes(0));
+        var act5 = () => FileSize.FromKilobytes(0);
+        act5.Should().Throw<ValidationException>();
     }
 
     [Fact]
     public void FromKilobytes_NegativeValue_ThrowsValidationException()
     {
         // Act & Assert
-        Assert.Throws<ValidationException>(() => FileSize.FromKilobytes(-1));
+        var act6 = () => FileSize.FromKilobytes(-1);
+        act6.Should().Throw<ValidationException>();
     }
 
     #endregion
@@ -125,7 +132,7 @@ public class FileSizeTests
         var fileSize = new FileSize(2048); // 2 KB
 
         // Assert
-        Assert.Equal(2.0, fileSize.Kilobytes);
+        fileSize.Kilobytes.Should().Be(2.0);
     }
 
     [Fact]
@@ -135,7 +142,7 @@ public class FileSizeTests
         var fileSize = new FileSize(2 * 1024 * 1024); // 2 MB
 
         // Assert
-        Assert.Equal(2.0, fileSize.Megabytes);
+        fileSize.Megabytes.Should().Be(2.0);
     }
 
     [Fact]
@@ -145,7 +152,7 @@ public class FileSizeTests
         var fileSize = new FileSize(2L * 1024 * 1024 * 1024); // 2 GB
 
         // Assert
-        Assert.Equal(2.0, fileSize.Gigabytes);
+        fileSize.Gigabytes.Should().Be(2.0);
     }
 
     #endregion
@@ -159,7 +166,7 @@ public class FileSizeTests
         var fileSize = new FileSize(512); // 512 bytes
 
         // Assert
-        Assert.True(fileSize.IsVerySmall);
+        fileSize.IsVerySmall.Should().BeTrue();
     }
 
     [Fact]
@@ -169,7 +176,7 @@ public class FileSizeTests
         var fileSize = new FileSize(1024); // 1 KB
 
         // Assert
-        Assert.False(fileSize.IsVerySmall);
+        fileSize.IsVerySmall.Should().BeFalse();
     }
 
     [Fact]
@@ -179,7 +186,7 @@ public class FileSizeTests
         var fileSize = new FileSize(500 * 1024); // 500 KB
 
         // Assert
-        Assert.True(fileSize.IsSmall);
+        fileSize.IsSmall.Should().BeTrue();
     }
 
     [Fact]
@@ -189,7 +196,7 @@ public class FileSizeTests
         var fileSize = new FileSize(1024 * 1024); // 1 MB
 
         // Assert
-        Assert.False(fileSize.IsSmall);
+        fileSize.IsSmall.Should().BeFalse();
     }
 
     [Fact]
@@ -199,7 +206,7 @@ public class FileSizeTests
         var fileSize = FileSize.FromMegabytes(5); // 5 MB
 
         // Assert
-        Assert.True(fileSize.IsMedium);
+        fileSize.IsMedium.Should().BeTrue();
     }
 
     [Fact]
@@ -209,7 +216,7 @@ public class FileSizeTests
         var fileSize = FileSize.FromMegabytes(1); // 1 MB
 
         // Assert
-        Assert.True(fileSize.IsMedium);
+        fileSize.IsMedium.Should().BeTrue();
     }
 
     [Fact]
@@ -219,7 +226,7 @@ public class FileSizeTests
         var fileSize = FileSize.FromMegabytes(10); // 10 MB
 
         // Assert
-        Assert.True(fileSize.IsMedium);
+        fileSize.IsMedium.Should().BeTrue();
     }
 
     [Fact]
@@ -229,7 +236,7 @@ public class FileSizeTests
         var fileSize = FileSize.FromMegabytes(15); // 15 MB
 
         // Assert
-        Assert.True(fileSize.IsLarge);
+        fileSize.IsLarge.Should().BeTrue();
     }
 
     [Fact]
@@ -239,7 +246,7 @@ public class FileSizeTests
         var fileSize = FileSize.FromMegabytes(10); // 10 MB
 
         // Assert
-        Assert.False(fileSize.IsLarge);
+        fileSize.IsLarge.Should().BeFalse();
     }
 
     #endregion
@@ -253,7 +260,7 @@ public class FileSizeTests
         var fileSize = new FileSize(1000);
 
         // Assert
-        Assert.True(fileSize.IsWithinLimit(2000));
+        fileSize.IsWithinLimit(2000).Should().BeTrue();
     }
 
     [Fact]
@@ -263,7 +270,7 @@ public class FileSizeTests
         var fileSize = new FileSize(1000);
 
         // Assert
-        Assert.True(fileSize.IsWithinLimit(1000));
+        fileSize.IsWithinLimit(1000).Should().BeTrue();
     }
 
     [Fact]
@@ -273,7 +280,7 @@ public class FileSizeTests
         var fileSize = new FileSize(2000);
 
         // Assert
-        Assert.False(fileSize.IsWithinLimit(1000));
+        fileSize.IsWithinLimit(1000).Should().BeFalse();
     }
 
     [Fact]
@@ -283,7 +290,8 @@ public class FileSizeTests
         var fileSize = new FileSize(1000);
 
         // Act & Assert
-        Assert.Throws<ValidationException>(() => fileSize.IsWithinLimit(0));
+        var act7 = () => fileSize.IsWithinLimit(0);
+        act7.Should().Throw<ValidationException>();
     }
 
     [Fact]
@@ -293,7 +301,8 @@ public class FileSizeTests
         var fileSize = new FileSize(1000);
 
         // Act & Assert
-        Assert.Throws<ValidationException>(() => fileSize.IsWithinLimit(-1));
+        var act8 = () => fileSize.IsWithinLimit(-1);
+        act8.Should().Throw<ValidationException>();
     }
 
     #endregion
@@ -307,7 +316,7 @@ public class FileSizeTests
         var fileSize = new FileSize(512);
 
         // Act & Assert
-        Assert.Equal("512 bytes", fileSize.ToString());
+        fileSize.ToString().Should().Be("512 bytes");
     }
 
     [Fact]
@@ -318,8 +327,8 @@ public class FileSizeTests
         var result = fileSize.ToString();
 
         // Assert - Culture-independent: check for KB suffix and value
-        Assert.Contains("KB", result);
-        Assert.StartsWith("5", result);
+        result.Should().Contain("KB");
+        result.Should().StartWith("5");
     }
 
     [Fact]
@@ -330,8 +339,8 @@ public class FileSizeTests
         var result = fileSize.ToString();
 
         // Assert - Culture-independent: check for MB suffix and value
-        Assert.Contains("MB", result);
-        Assert.StartsWith("5", result);
+        result.Should().Contain("MB");
+        result.Should().StartWith("5");
     }
 
     [Fact]
@@ -342,8 +351,8 @@ public class FileSizeTests
         var result = fileSize.ToString();
 
         // Assert - Culture-independent: check for GB suffix and value
-        Assert.Contains("GB", result);
-        Assert.StartsWith("2", result);
+        result.Should().Contain("GB");
+        result.Should().StartWith("2");
     }
 
     [Fact]
@@ -354,8 +363,8 @@ public class FileSizeTests
         var result = fileSize.ToMegabytesString();
 
         // Assert - Culture-independent: check for MB suffix and value
-        Assert.Contains("MB", result);
-        Assert.StartsWith("5", result);
+        result.Should().Contain("MB");
+        result.Should().StartWith("5");
     }
 
     #endregion
@@ -366,21 +375,21 @@ public class FileSizeTests
     public void OneByte_IsOneByte()
     {
         // Assert
-        Assert.Equal(1, FileSize.OneByte.Bytes);
+        FileSize.OneByte.Bytes.Should().Be(1);
     }
 
     [Fact]
     public void OneKilobyte_Is1024Bytes()
     {
         // Assert
-        Assert.Equal(1024, FileSize.OneKilobyte.Bytes);
+        FileSize.OneKilobyte.Bytes.Should().Be(1024);
     }
 
     [Fact]
     public void OneMegabyte_Is1048576Bytes()
     {
         // Assert
-        Assert.Equal(1024 * 1024, FileSize.OneMegabyte.Bytes);
+        FileSize.OneMegabyte.Bytes.Should().Be(1024 * 1024);
     }
 
     #endregion
@@ -397,7 +406,7 @@ public class FileSizeTests
         long value = fileSize;
 
         // Assert
-        Assert.Equal(2048, value);
+        value.Should().Be(2048);
     }
 
     [Fact]
@@ -407,10 +416,11 @@ public class FileSizeTests
         FileSize? fileSize = null;
 
         // Act & Assert
-        Assert.Throws<ArgumentNullException>(() =>
+        var act9 = () =>
         {
             long _ = fileSize!;
-        });
+        };
+        act9.Should().Throw<ArgumentNullException>();
     }
 
     #endregion
@@ -425,9 +435,9 @@ public class FileSizeTests
         var fileSize2 = new FileSize(1024);
 
         // Assert
-        Assert.Equal(fileSize1, fileSize2);
-        Assert.True(fileSize1 == fileSize2);
-        Assert.False(fileSize1 != fileSize2);
+        fileSize2.Should().Be(fileSize1);
+        (fileSize1 == fileSize2).Should().BeTrue();
+        (fileSize1 != fileSize2).Should().BeFalse();
     }
 
     [Fact]
@@ -438,9 +448,9 @@ public class FileSizeTests
         var fileSize2 = new FileSize(2048);
 
         // Assert
-        Assert.NotEqual(fileSize1, fileSize2);
-        Assert.False(fileSize1 == fileSize2);
-        Assert.True(fileSize1 != fileSize2);
+        fileSize2.Should().NotBe(fileSize1);
+        (fileSize1 == fileSize2).Should().BeFalse();
+        (fileSize1 != fileSize2).Should().BeTrue();
     }
 
     #endregion
@@ -461,7 +471,7 @@ public class FileSizeTests
         var fileSize = new FileSize(bytes);
 
         // Assert
-        Assert.Equal(bytes, fileSize.Bytes);
+        fileSize.Bytes.Should().Be(bytes);
     }
 
     #endregion

@@ -1,6 +1,8 @@
 using Api.BoundedContexts.DocumentProcessing.Domain.Entities;
 using Api.BoundedContexts.DocumentProcessing.Domain.Repositories;
 using Api.Infrastructure;
+using Api.SharedKernel.Application.Services;
+using Api.SharedKernel.Infrastructure;
 using Api.Infrastructure.Entities.DocumentProcessing;
 using Microsoft.EntityFrameworkCore;
 
@@ -11,18 +13,17 @@ namespace Api.BoundedContexts.DocumentProcessing.Infrastructure.Persistence;
 /// Auto-creates default config if none exists.
 /// Issue #5455: Queue configuration management.
 /// </summary>
-internal class ProcessingQueueConfigRepository : IProcessingQueueConfigRepository
+internal class ProcessingQueueConfigRepository : RepositoryBase, IProcessingQueueConfigRepository
 {
-    private readonly MeepleAiDbContext _dbContext;
 
-    public ProcessingQueueConfigRepository(MeepleAiDbContext dbContext)
+    public ProcessingQueueConfigRepository(MeepleAiDbContext dbContext, IDomainEventCollector eventCollector)
+        : base(dbContext, eventCollector)
     {
-        _dbContext = dbContext;
     }
 
     public async Task<ProcessingQueueConfig> GetOrCreateAsync(CancellationToken cancellationToken = default)
     {
-        var entity = await _dbContext.ProcessingQueueConfigs
+        var entity = await DbContext.ProcessingQueueConfigs
             .AsTracking()
             .FirstOrDefaultAsync(e => e.Id == ProcessingQueueConfig.SingletonId, cancellationToken)
             .ConfigureAwait(false);
@@ -48,15 +49,15 @@ internal class ProcessingQueueConfigRepository : IProcessingQueueConfigRepositor
             UpdatedBy = defaultConfig.UpdatedBy
         };
 
-        await _dbContext.ProcessingQueueConfigs.AddAsync(newEntity, cancellationToken).ConfigureAwait(false);
-        await _dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        await DbContext.ProcessingQueueConfigs.AddAsync(newEntity, cancellationToken).ConfigureAwait(false);
+        await DbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
         return defaultConfig;
     }
 
     public async Task UpdateAsync(ProcessingQueueConfig config, CancellationToken cancellationToken = default)
     {
-        var entity = await _dbContext.ProcessingQueueConfigs
+        var entity = await DbContext.ProcessingQueueConfigs
             .AsTracking()
             .FirstOrDefaultAsync(e => e.Id == config.Id, cancellationToken)
             .ConfigureAwait(false);
@@ -69,6 +70,6 @@ internal class ProcessingQueueConfigRepository : IProcessingQueueConfigRepositor
         entity.UpdatedAt = config.UpdatedAt;
         entity.UpdatedBy = config.UpdatedBy;
 
-        await _dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        await DbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
     }
 }

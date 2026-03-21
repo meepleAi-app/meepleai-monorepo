@@ -6,6 +6,7 @@ using Api.BoundedContexts.Administration.Infrastructure.Persistence;
 using Api.BoundedContexts.Administration.Infrastructure.Services;
 using Api.Infrastructure;
 using Api.Services;
+using Api.SharedKernel.Application.Services;
 using Api.Tests.Constants;
 using Api.Tests.Infrastructure;
 using FluentAssertions;
@@ -27,6 +28,7 @@ namespace Api.Tests.BoundedContexts.Administration.Infrastructure;
 public sealed class TokenTrackingServiceTests : IClassFixture<SharedTestcontainersFixture>, IAsyncLifetime
 {
     private readonly SharedTestcontainersFixture _fixture;
+    private readonly Mock<IDomainEventCollector> _eventCollectorMock = new();
     private readonly string _databaseName;
     private string? _connectionString;
 
@@ -58,8 +60,8 @@ public sealed class TokenTrackingServiceTests : IClassFixture<SharedTestcontaine
     {
         // Arrange
         using var dbContext = _fixture.CreateDbContext(_connectionString!);
-        var tierRepo = new TokenTierRepository(dbContext);
-        var usageRepo = new UserTokenUsageRepository(dbContext);
+        var tierRepo = new TokenTierRepository(dbContext, _eventCollectorMock.Object);
+        var usageRepo = new UserTokenUsageRepository(dbContext, _eventCollectorMock.Object);
         var mockCache = new Mock<IHybridCacheService>();
         var mockLogger = new Mock<ILogger<TokenTrackingService>>();
         var service = new TokenTrackingService(usageRepo, tierRepo, mockLogger.Object, mockCache.Object);
@@ -84,8 +86,8 @@ public sealed class TokenTrackingServiceTests : IClassFixture<SharedTestcontaine
     {
         // Arrange
         using var dbContext = _fixture.CreateDbContext(_connectionString!);
-        var tierRepo = new TokenTierRepository(dbContext);
-        var usageRepo = new UserTokenUsageRepository(dbContext);
+        var tierRepo = new TokenTierRepository(dbContext, _eventCollectorMock.Object);
+        var usageRepo = new UserTokenUsageRepository(dbContext, _eventCollectorMock.Object);
         var mockCache = new Mock<IHybridCacheService>();
         var mockLogger = new Mock<ILogger<TokenTrackingService>>();
         var service = new TokenTrackingService(usageRepo, tierRepo, mockLogger.Object, mockCache.Object);
@@ -113,8 +115,8 @@ public sealed class TokenTrackingServiceTests : IClassFixture<SharedTestcontaine
     {
         // Arrange
         using var dbContext = _fixture.CreateDbContext(_connectionString!);
-        var tierRepo = new TokenTierRepository(dbContext);
-        var usageRepo = new UserTokenUsageRepository(dbContext);
+        var tierRepo = new TokenTierRepository(dbContext, _eventCollectorMock.Object);
+        var usageRepo = new UserTokenUsageRepository(dbContext, _eventCollectorMock.Object);
         var mockCache = new Mock<IHybridCacheService>();
         var mockLogger = new Mock<ILogger<TokenTrackingService>>();
         var service = new TokenTrackingService(usageRepo, tierRepo, mockLogger.Object, mockCache.Object);
@@ -144,8 +146,8 @@ public sealed class TokenTrackingServiceTests : IClassFixture<SharedTestcontaine
     {
         // Arrange
         using var dbContext = _fixture.CreateDbContext(_connectionString!);
-        var tierRepo = new TokenTierRepository(dbContext);
-        var usageRepo = new UserTokenUsageRepository(dbContext);
+        var tierRepo = new TokenTierRepository(dbContext, _eventCollectorMock.Object);
+        var usageRepo = new UserTokenUsageRepository(dbContext, _eventCollectorMock.Object);
         var mockCache = new Mock<IHybridCacheService>();
         var mockLogger = new Mock<ILogger<TokenTrackingService>>();
 
@@ -184,8 +186,8 @@ public sealed class TokenTrackingServiceTests : IClassFixture<SharedTestcontaine
     {
         // Arrange
         using var dbContext = _fixture.CreateDbContext(_connectionString!);
-        var tierRepo = new TokenTierRepository(dbContext);
-        var usageRepo = new UserTokenUsageRepository(dbContext);
+        var tierRepo = new TokenTierRepository(dbContext, _eventCollectorMock.Object);
+        var usageRepo = new UserTokenUsageRepository(dbContext, _eventCollectorMock.Object);
         var mockCache = new Mock<IHybridCacheService>();
         var mockLogger = new Mock<ILogger<TokenTrackingService>>();
         var service = new TokenTrackingService(usageRepo, tierRepo, mockLogger.Object, mockCache.Object);

@@ -5,6 +5,7 @@ using Api.BoundedContexts.KnowledgeBase.Application.Queries;
 using Api.BoundedContexts.KnowledgeBase.Domain.Entities;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
+using FluentAssertions;
 using Moq;
 using Xunit;
 using Api.Tests.Constants;
@@ -33,10 +34,11 @@ public class ExportChatCommandHandlerTests
     public void Constructor_WithNullRepository_ThrowsArgumentNullException()
     {
         // Act & Assert
-        var ex = Assert.Throws<ArgumentNullException>(() =>
-            new ExportChatCommandHandler(null!));
+        Action act = () =>
+            new ExportChatCommandHandler(null!);
+        var ex = act.Should().Throw<ArgumentNullException>().Which;
 
-        Assert.Equal("threadRepository", ex.ParamName);
+        ex.ParamName.Should().Be("threadRepository");
     }
 
     #endregion
@@ -61,13 +63,13 @@ public class ExportChatCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal("Json", result.Format);
-        Assert.Equal("application/json", result.ContentType);
-        Assert.Equal("json", result.FileExtension);
-        Assert.Contains("\"messages\"", result.Content);
-        Assert.Contains("\"role\"", result.Content);
-        Assert.Contains("\"content\"", result.Content);
+        result.Should().NotBeNull();
+        result.Format.Should().Be("Json");
+        result.ContentType.Should().Be("application/json");
+        result.FileExtension.Should().Be("json");
+        result.Content.Should().Contain("\"messages\"");
+        result.Content.Should().Contain("\"role\"");
+        result.Content.Should().Contain("\"content\"");
 
         _mockThreadRepository.Verify(r => r.GetByIdAsync(threadId, It.IsAny<CancellationToken>()), Times.Once);
     }
@@ -91,9 +93,9 @@ public class ExportChatCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal("Json", result.Format);
-        Assert.Equal("application/json", result.ContentType);
+        result.Should().NotBeNull();
+        result.Format.Should().Be("Json");
+        result.ContentType.Should().Be("application/json");
     }
 
     #endregion
@@ -118,13 +120,13 @@ public class ExportChatCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal("Markdown", result.Format);
-        Assert.Equal("text/markdown", result.ContentType);
-        Assert.Equal("md", result.FileExtension);
-        Assert.Contains("# Test Chat", result.Content);
-        Assert.Contains("## ", result.Content); // Message headers
-        Assert.Contains("---", result.Content); // Separators
+        result.Should().NotBeNull();
+        result.Format.Should().Be("Markdown");
+        result.ContentType.Should().Be("text/markdown");
+        result.FileExtension.Should().Be("md");
+        result.Content.Should().Contain("# Test Chat");
+        result.Content.Should().Contain("## "); // Message headers
+        result.Content.Should().Contain("---"); // Separators
     }
 
     [Fact]
@@ -145,9 +147,9 @@ public class ExportChatCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal("Markdown", result.Format);
-        Assert.Equal("text/markdown", result.ContentType);
+        result.Should().NotBeNull();
+        result.Format.Should().Be("Markdown");
+        result.ContentType.Should().Be("text/markdown");
     }
 
     #endregion
@@ -166,11 +168,12 @@ public class ExportChatCommandHandlerTests
         var command = new ExportChatCommand(threadId, "json");
 
         // Act & Assert
-        var ex = await Assert.ThrowsAsync<InvalidOperationException>(async () =>
-            await _handler.Handle(command, TestContext.Current.CancellationToken));
+        Func<Task> act = async () =>
+            await _handler.Handle(command, TestContext.Current.CancellationToken);
+        var ex = (await act.Should().ThrowAsync<InvalidOperationException>()).Which;
 
-        Assert.Contains(threadId.ToString(), ex.Message);
-        Assert.Contains("not found", ex.Message);
+        ex.Message.Should().Contain(threadId.ToString());
+        ex.Message.Should().Contain("not found");
     }
 
     #endregion
@@ -197,11 +200,12 @@ public class ExportChatCommandHandlerTests
         var command = new ExportChatCommand(threadId, invalidFormat);
 
         // Act & Assert
-        var ex = await Assert.ThrowsAsync<ArgumentException>(async () =>
-            await _handler.Handle(command, TestContext.Current.CancellationToken));
+        Func<Task> act = async () =>
+            await _handler.Handle(command, TestContext.Current.CancellationToken);
+        var ex = (await act.Should().ThrowAsync<ArgumentException>()).Which;
 
-        Assert.Contains("Invalid export format", ex.Message);
-        Assert.Contains("Supported formats: json, markdown", ex.Message);
+        ex.Message.Should().Contain("Invalid export format");
+        ex.Message.Should().Contain("Supported formats: json, markdown");
     }
 
     #endregion
@@ -226,11 +230,11 @@ public class ExportChatCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         // Verify all messages are included by checking for message patterns
         for (int i = 0; i < 5; i++)
         {
-            Assert.Contains($"Message {i}", result.Content);
+            result.Content.Should().Contain($"Message {i}");
         }
     }
 
@@ -256,9 +260,9 @@ public class ExportChatCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Contains("\"messages\"", result.Content);
-        Assert.Contains("\"messageCount\":0", result.Content.Replace(" ", ""));
+        result.Should().NotBeNull();
+        result.Content.Should().Contain("\"messages\"");
+        result.Content.Replace(" ", "").Should().Contain("\"messageCount\":0");
     }
 
     [Fact]
@@ -279,8 +283,8 @@ public class ExportChatCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Contains("No messages", result.Content);
+        result.Should().NotBeNull();
+        result.Content.Should().Contain("No messages");
     }
 
     #endregion
@@ -308,15 +312,15 @@ public class ExportChatCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Contains("\"id\"", result.Content);
-        Assert.Contains("\"userId\"", result.Content);
-        Assert.Contains("\"gameId\"", result.Content);
-        Assert.Contains("\"title\"", result.Content);
-        Assert.Contains("\"status\"", result.Content);
-        Assert.Contains("\"createdAt\"", result.Content);
-        Assert.Contains("\"lastMessageAt\"", result.Content);
-        Assert.Contains("\"messageCount\"", result.Content);
+        result.Should().NotBeNull();
+        result.Content.Should().Contain("\"id\"");
+        result.Content.Should().Contain("\"userId\"");
+        result.Content.Should().Contain("\"gameId\"");
+        result.Content.Should().Contain("\"title\"");
+        result.Content.Should().Contain("\"status\"");
+        result.Content.Should().Contain("\"createdAt\"");
+        result.Content.Should().Contain("\"lastMessageAt\"");
+        result.Content.Should().Contain("\"messageCount\"");
     }
 
     [Fact]
@@ -337,12 +341,12 @@ public class ExportChatCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Contains("**Created:**", result.Content);
-        Assert.Contains("**Last Activity:**", result.Content);
-        Assert.Contains("**Status:**", result.Content);
-        Assert.Contains("**Messages:**", result.Content);
-        Assert.Contains("*Exported on", result.Content);
+        result.Should().NotBeNull();
+        result.Content.Should().Contain("**Created:**");
+        result.Content.Should().Contain("**Last Activity:**");
+        result.Content.Should().Contain("**Status:**");
+        result.Content.Should().Contain("**Messages:**");
+        result.Content.Should().Contain("*Exported on");
     }
 
     #endregion
@@ -370,8 +374,8 @@ public class ExportChatCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal("Json", result.Format);
+        result.Should().NotBeNull();
+        result.Format.Should().Be("Json");
     }
 
     [Theory]
@@ -398,8 +402,8 @@ public class ExportChatCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal("Markdown", result.Format);
+        result.Should().NotBeNull();
+        result.Format.Should().Be("Markdown");
     }
 
     #endregion
@@ -410,8 +414,9 @@ public class ExportChatCommandHandlerTests
     public async Task Handle_WithNullCommand_ThrowsArgumentNullException()
     {
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentNullException>(async () =>
-            await _handler.Handle(null!, TestContext.Current.CancellationToken));
+        Func<Task> act = async () =>
+            await _handler.Handle(null!, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<ArgumentNullException>();
     }
 
     #endregion
@@ -437,9 +442,9 @@ public class ExportChatCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.True(result.ExportedAt >= beforeExport);
-        Assert.True(result.ExportedAt <= DateTime.UtcNow.AddSeconds(1));
+        result.Should().NotBeNull();
+        (result.ExportedAt >= beforeExport).Should().BeTrue();
+        (result.ExportedAt <= DateTime.UtcNow.AddSeconds(1)).Should().BeTrue();
     }
 
     #endregion
@@ -465,8 +470,8 @@ public class ExportChatCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Contains("Untitled Chat", result.Content);
+        result.Should().NotBeNull();
+        result.Content.Should().Contain("Untitled Chat");
     }
 
     [Fact]
@@ -488,8 +493,8 @@ public class ExportChatCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Contains("# Untitled Chat", result.Content);
+        result.Should().NotBeNull();
+        result.Content.Should().Contain("# Untitled Chat");
     }
 
     #endregion
@@ -518,11 +523,11 @@ public class ExportChatCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Contains("\"role\":\"user\"", result.Content.Replace(" ", ""));
-        Assert.Contains("\"role\":\"assistant\"", result.Content.Replace(" ", ""));
-        Assert.Contains("User question", result.Content);
-        Assert.Contains("Assistant answer", result.Content);
+        result.Should().NotBeNull();
+        result.Content.Replace(" ", "").Should().Contain("\"role\":\"user\"");
+        result.Content.Replace(" ", "").Should().Contain("\"role\":\"assistant\"");
+        result.Content.Should().Contain("User question");
+        result.Content.Should().Contain("Assistant answer");
     }
 
     [Fact]
@@ -545,9 +550,9 @@ public class ExportChatCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Contains("User", result.Content);
-        Assert.Contains("Assistant", result.Content);
+        result.Should().NotBeNull();
+        result.Content.Should().Contain("User");
+        result.Content.Should().Contain("Assistant");
     }
 
     #endregion

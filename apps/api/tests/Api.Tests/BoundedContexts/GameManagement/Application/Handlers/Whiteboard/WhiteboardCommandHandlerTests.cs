@@ -10,6 +10,7 @@ using Api.SharedKernel.Infrastructure.Persistence;
 using Api.Tests.Constants;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.GameManagement.Application.Handlers.Whiteboard;
 
@@ -49,9 +50,10 @@ public class WhiteboardCommandHandlerTests
         var handler = new InitializeWhiteboardCommandHandler(
             _whiteboardRepoMock.Object, _sessionRepoMock.Object, _uowMock.Object);
 
-        await Assert.ThrowsAsync<NotFoundException>(() =>
+        var act = () =>
             handler.Handle(new InitializeWhiteboardCommand(sessionId, UserId),
-                TestContext.Current.CancellationToken));
+                TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<NotFoundException>();
     }
 
     [Fact]
@@ -69,9 +71,10 @@ public class WhiteboardCommandHandlerTests
         var handler = new InitializeWhiteboardCommandHandler(
             _whiteboardRepoMock.Object, _sessionRepoMock.Object, _uowMock.Object);
 
-        await Assert.ThrowsAsync<ConflictException>(() =>
+        var act = () =>
             handler.Handle(new InitializeWhiteboardCommand(sessionId, UserId),
-                TestContext.Current.CancellationToken));
+                TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<ConflictException>();
     }
 
     [Fact]
@@ -92,9 +95,9 @@ public class WhiteboardCommandHandlerTests
             new InitializeWhiteboardCommand(sessionId, UserId),
             TestContext.Current.CancellationToken);
 
-        Assert.Equal(sessionId, result.SessionId);
-        Assert.Empty(result.Strokes);
-        Assert.Equal("{}", result.StructuredJson);
+        result.SessionId.Should().Be(sessionId);
+        result.Strokes.Should().BeEmpty();
+        result.StructuredJson.Should().Be("{}");
         _whiteboardRepoMock.Verify(r => r.AddAsync(It.IsAny<WhiteboardState>(), It.IsAny<CancellationToken>()), Times.Once);
         _uowMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
@@ -102,8 +105,9 @@ public class WhiteboardCommandHandlerTests
     [Fact]
     public void Initialize_Constructor_WithNullRepo_ThrowsArgumentNullException()
     {
-        Assert.Throws<ArgumentNullException>(() =>
-            new InitializeWhiteboardCommandHandler(null!, _sessionRepoMock.Object, _uowMock.Object));
+        var act = () =>
+            new InitializeWhiteboardCommandHandler(null!, _sessionRepoMock.Object, _uowMock.Object);
+        act.Should().Throw<ArgumentNullException>();
     }
 
     // ========================================================================
@@ -120,9 +124,10 @@ public class WhiteboardCommandHandlerTests
         var handler = new AddStrokeCommandHandler(
             _whiteboardRepoMock.Object, _broadcastMock.Object, _uowMock.Object);
 
-        await Assert.ThrowsAsync<NotFoundException>(() =>
+        var act = () =>
             handler.Handle(new AddStrokeCommand(sessionId, "s1", "{}", UserId),
-                TestContext.Current.CancellationToken));
+                TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<NotFoundException>();
     }
 
     [Fact]
@@ -141,8 +146,8 @@ public class WhiteboardCommandHandlerTests
             new AddStrokeCommand(sessionId, "stroke-1", "{\"path\":[]}", UserId),
             TestContext.Current.CancellationToken);
 
-        Assert.Single(result.Strokes);
-        Assert.Equal("stroke-1", result.Strokes[0].Id);
+        result.Strokes.Should().ContainSingle();
+        result.Strokes[0].Id.Should().Be("stroke-1");
         _whiteboardRepoMock.Verify(r => r.UpdateAsync(It.IsAny<WhiteboardState>(), It.IsAny<CancellationToken>()), Times.Once);
         _uowMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
@@ -184,9 +189,10 @@ public class WhiteboardCommandHandlerTests
         var handler = new RemoveStrokeCommandHandler(
             _whiteboardRepoMock.Object, _broadcastMock.Object, _uowMock.Object);
 
-        await Assert.ThrowsAsync<NotFoundException>(() =>
+        var act = () =>
             handler.Handle(new RemoveStrokeCommand(sessionId, "stroke-1", UserId),
-                TestContext.Current.CancellationToken));
+                TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<NotFoundException>();
     }
 
     [Fact]
@@ -207,7 +213,7 @@ public class WhiteboardCommandHandlerTests
             new RemoveStrokeCommand(sessionId, "stroke-1", UserId),
             TestContext.Current.CancellationToken);
 
-        Assert.Single(result.Strokes);
+        result.Strokes.Should().ContainSingle();
         _broadcastMock.Verify(b => b.PublishAsync(
             sessionId,
             It.Is<StrokeRemovedEvent>(e => e.StrokeId == "stroke-1"),
@@ -229,9 +235,10 @@ public class WhiteboardCommandHandlerTests
         var handler = new UpdateStructuredCommandHandler(
             _whiteboardRepoMock.Object, _broadcastMock.Object, _uowMock.Object);
 
-        await Assert.ThrowsAsync<NotFoundException>(() =>
+        var act = () =>
             handler.Handle(new UpdateStructuredCommand(sessionId, "{}", UserId),
-                TestContext.Current.CancellationToken));
+                TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<NotFoundException>();
     }
 
     [Fact]
@@ -251,7 +258,7 @@ public class WhiteboardCommandHandlerTests
             new UpdateStructuredCommand(sessionId, newJson, UserId),
             TestContext.Current.CancellationToken);
 
-        Assert.Equal(newJson, result.StructuredJson);
+        result.StructuredJson.Should().Be(newJson);
         _broadcastMock.Verify(b => b.PublishAsync(
             sessionId,
             It.Is<StructuredUpdatedEvent>(e => e.StructuredJson == newJson),
@@ -273,9 +280,10 @@ public class WhiteboardCommandHandlerTests
         var handler = new ClearWhiteboardCommandHandler(
             _whiteboardRepoMock.Object, _broadcastMock.Object, _uowMock.Object);
 
-        await Assert.ThrowsAsync<NotFoundException>(() =>
+        var act = () =>
             handler.Handle(new ClearWhiteboardCommand(sessionId, UserId),
-                TestContext.Current.CancellationToken));
+                TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<NotFoundException>();
     }
 
     [Fact]
@@ -297,8 +305,8 @@ public class WhiteboardCommandHandlerTests
             new ClearWhiteboardCommand(sessionId, UserId),
             TestContext.Current.CancellationToken);
 
-        Assert.Empty(result.Strokes);
-        Assert.Equal("{}", result.StructuredJson);
+        result.Strokes.Should().BeEmpty();
+        result.StructuredJson.Should().Be("{}");
         _broadcastMock.Verify(b => b.PublishAsync(
             sessionId,
             It.Is<WhiteboardClearedEvent>(e => e.ClearedBy == UserId),

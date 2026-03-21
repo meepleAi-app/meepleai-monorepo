@@ -22,6 +22,7 @@ using Microsoft.Extensions.Hosting;
 using Moq;
 using StackExchange.Redis;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.SharedGameCatalog.Infrastructure;
 
@@ -243,13 +244,13 @@ public sealed class ReviewLockEndpointsIntegrationTests : IAsyncLifetime
         var response = await _client.SendAsync(request);
 
         // Assert
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var result = await response.Content.ReadFromJsonAsync<StartReviewResponse>(JsonOptions);
-        Assert.NotNull(result);
-        Assert.Equal(shareRequestId, result.ShareRequestId);
-        Assert.True(result.LockExpiresAt > DateTime.UtcNow);
-        Assert.True(result.LockExpiresAt <= DateTime.UtcNow.AddMinutes(31));
+        result.Should().NotBeNull();
+        result.ShareRequestId.Should().Be(shareRequestId);
+        (result.LockExpiresAt > DateTime.UtcNow).Should().BeTrue();
+        (result.LockExpiresAt <= DateTime.UtcNow.AddMinutes(31)).Should().BeTrue();
     }
 
     [Fact]
@@ -266,7 +267,7 @@ public sealed class ReviewLockEndpointsIntegrationTests : IAsyncLifetime
         var response = await _client.SendAsync(request);
 
         // Assert
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
     }
 
     [Fact]
@@ -283,7 +284,7 @@ public sealed class ReviewLockEndpointsIntegrationTests : IAsyncLifetime
         var response = await _client.SendAsync(request);
 
         // Assert
-        Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Conflict);
     }
 
     [Fact]
@@ -300,7 +301,7 @@ public sealed class ReviewLockEndpointsIntegrationTests : IAsyncLifetime
         var response = await _client.SendAsync(request);
 
         // Assert
-        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
 
     [Fact]
@@ -317,7 +318,7 @@ public sealed class ReviewLockEndpointsIntegrationTests : IAsyncLifetime
         var response = await _client.SendAsync(request);
 
         // Assert - InvalidShareRequestStateException is mapped to Conflict (409)
-        Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Conflict);
     }
 
     #endregion
@@ -338,7 +339,7 @@ public sealed class ReviewLockEndpointsIntegrationTests : IAsyncLifetime
         var response = await _client.SendAsync(request);
 
         // Assert
-        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.NoContent);
 
         // Verify lock was released
         using var scope = _factory.Services.CreateScope();
@@ -346,9 +347,9 @@ public sealed class ReviewLockEndpointsIntegrationTests : IAsyncLifetime
         var entity = await dbContext.Set<ShareRequestEntity>()
             .FirstOrDefaultAsync(sr => sr.Id == shareRequestId);
 
-        Assert.NotNull(entity);
-        Assert.NotEqual((int)ShareRequestStatus.InReview, entity.Status);
-        Assert.Null(entity.ReviewingAdminId);
+        entity.Should().NotBeNull();
+        entity.Status.Should().NotBe((int)ShareRequestStatus.InReview);
+        entity.ReviewingAdminId.Should().BeNull();
     }
 
     [Fact]
@@ -365,7 +366,7 @@ public sealed class ReviewLockEndpointsIntegrationTests : IAsyncLifetime
         var response = await _client.SendAsync(request);
 
         // Assert
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
 
     [Fact]
@@ -382,7 +383,7 @@ public sealed class ReviewLockEndpointsIntegrationTests : IAsyncLifetime
         var response = await _client.SendAsync(request);
 
         // Assert
-        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
 
     #endregion
@@ -402,11 +403,11 @@ public sealed class ReviewLockEndpointsIntegrationTests : IAsyncLifetime
         var response = await _client.SendAsync(request);
 
         // Assert
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var result = await response.Content.ReadFromJsonAsync<IReadOnlyCollection<ActiveReviewDto>>(JsonOptions);
-        Assert.NotNull(result);
-        Assert.Empty(result);
+        result.Should().NotBeNull();
+        result.Should().BeEmpty();
     }
 
     [Fact]
@@ -423,15 +424,15 @@ public sealed class ReviewLockEndpointsIntegrationTests : IAsyncLifetime
         var response = await _client.SendAsync(request);
 
         // Assert
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var result = await response.Content.ReadFromJsonAsync<IReadOnlyCollection<ActiveReviewDto>>(JsonOptions);
-        Assert.NotNull(result);
-        Assert.Single(result);
+        result.Should().NotBeNull();
+        result.Should().ContainSingle();
 
         var review = result.First();
-        Assert.Equal(shareRequestId, review.ShareRequestId);
-        Assert.Equal(ShareRequestStatus.InReview, review.Status);
+        review.ShareRequestId.Should().Be(shareRequestId);
+        review.Status.Should().Be(ShareRequestStatus.InReview);
     }
 
     [Fact]
@@ -450,11 +451,11 @@ public sealed class ReviewLockEndpointsIntegrationTests : IAsyncLifetime
         var response = await _client.SendAsync(request);
 
         // Assert
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var result = await response.Content.ReadFromJsonAsync<IReadOnlyCollection<ActiveReviewDto>>(JsonOptions);
-        Assert.NotNull(result);
-        Assert.Equal(3, result.Count);
+        result.Should().NotBeNull();
+        result.Count.Should().Be(3);
     }
 
     [Fact]
@@ -473,12 +474,12 @@ public sealed class ReviewLockEndpointsIntegrationTests : IAsyncLifetime
         var response = await _client.SendAsync(request);
 
         // Assert
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var result = await response.Content.ReadFromJsonAsync<IReadOnlyCollection<ActiveReviewDto>>(JsonOptions);
-        Assert.NotNull(result);
-        Assert.Single(result);
-        Assert.All(result, r => Assert.Equal(ShareRequestStatus.InReview, r.Status));
+        result.Should().NotBeNull();
+        result.Should().ContainSingle();
+        result.Should().AllSatisfy(r => r.Status.Should().Be(ShareRequestStatus.InReview));
     }
 
     [Fact]
@@ -495,17 +496,17 @@ public sealed class ReviewLockEndpointsIntegrationTests : IAsyncLifetime
         var response = await _client.SendAsync(request);
 
         // Assert
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var result = await response.Content.ReadFromJsonAsync<IReadOnlyCollection<ActiveReviewDto>>(JsonOptions);
-        Assert.NotNull(result);
-        Assert.Single(result);
+        result.Should().NotBeNull();
+        result.Should().ContainSingle();
 
         var review = result.First();
-        Assert.NotEqual(Guid.Empty, review.SourceGameId);
-        Assert.NotNull(review.GameTitle);
-        Assert.Equal(TestContributorId, review.ContributorId);
-        Assert.NotNull(review.ContributorName);
+        review.SourceGameId.Should().NotBe(Guid.Empty);
+        review.GameTitle.Should().NotBeNull();
+        review.ContributorId.Should().Be(TestContributorId);
+        review.ContributorName.Should().NotBeNull();
     }
 
     [Fact]
@@ -526,25 +527,22 @@ public sealed class ReviewLockEndpointsIntegrationTests : IAsyncLifetime
         var response = await _client.SendAsync(request);
 
         // Assert
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var result = await response.Content.ReadFromJsonAsync<IReadOnlyCollection<ActiveReviewDto>>(JsonOptions);
-        Assert.NotNull(result);
-        Assert.Single(result);
+        result.Should().NotBeNull();
+        result.Should().ContainSingle();
 
         var review = result.First();
 
         // ReviewStartedAt should be in the past (created as UtcNow - 10 minutes)
-        Assert.NotNull(review.ReviewStartedAt);
-        Assert.True(review.ReviewStartedAt < beforeCreation,
-            $"ReviewStartedAt ({review.ReviewStartedAt:O}) should be before creation time ({beforeCreation:O})");
-        Assert.True(review.ReviewStartedAt > beforeCreation.AddMinutes(-15),
-            "ReviewStartedAt should be within 15 minutes of test execution");
+        review.ReviewStartedAt.Should().NotBe(default);
+        (review.ReviewStartedAt < beforeCreation).Should().BeTrue($"ReviewStartedAt ({review.ReviewStartedAt:O}) should be before creation time ({beforeCreation:O})");
+        (review.ReviewStartedAt > beforeCreation.AddMinutes(-15)).Should().BeTrue("ReviewStartedAt should be within 15 minutes of test execution");
 
         // ReviewLockExpiresAt should be in the future (created as UtcNow + 20 minutes)
-        Assert.NotNull(review.ReviewLockExpiresAt);
-        Assert.True(review.ReviewLockExpiresAt > DateTime.UtcNow,
-            "ReviewLockExpiresAt should be in the future");
+        review.ReviewLockExpiresAt.Should().NotBe(default);
+        (review.ReviewLockExpiresAt > DateTime.UtcNow).Should().BeTrue("ReviewLockExpiresAt should be in the future");
     }
 
     #endregion

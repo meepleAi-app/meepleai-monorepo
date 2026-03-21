@@ -3,12 +3,16 @@ using Api.BoundedContexts.KnowledgeBase.Domain.Models;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services;
 using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
+using Api.Tests.Constants;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.Administration.Services;
 
 /// <summary>
 /// Unit tests for CreditConversionService (Budget Display System)
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
+[Trait("BoundedContext", "Administration")]
 public sealed class CreditConversionServiceTests
 {
     private readonly ICreditConversionService _sut;
@@ -32,7 +36,7 @@ public sealed class CreditConversionServiceTests
         var actualCredits = _sut.UsdToCredits(usd);
 
         // Assert
-        Assert.Equal(expectedCredits, actualCredits);
+        actualCredits.Should().Be(expectedCredits);
     }
 
     [Fact]
@@ -45,14 +49,15 @@ public sealed class CreditConversionServiceTests
         var credits = _sut.UsdToCredits(usd);
 
         // Assert
-        Assert.Equal(2m, credits); // Rounds up from 1.5
+        credits.Should().Be(2m); // Rounds up from 1.5
     }
 
     [Fact]
     public void UsdToCredits_NegativeThrows()
     {
         // Act & Assert
-        Assert.Throws<ArgumentException>(() => _sut.UsdToCredits(-0.01m));
+        var act = () => _sut.UsdToCredits(-0.01m);
+        act.Should().Throw<ArgumentException>();
     }
 
     [Theory]
@@ -66,14 +71,15 @@ public sealed class CreditConversionServiceTests
         var actualUsd = _sut.CreditsToUsd(credits);
 
         // Assert
-        Assert.Equal(expectedUsd, actualUsd);
+        actualUsd.Should().Be(expectedUsd);
     }
 
     [Fact]
     public void CreditsToUsd_NegativeThrows()
     {
         // Act & Assert
-        Assert.Throws<ArgumentException>(() => _sut.CreditsToUsd(-10m));
+        var act = () => _sut.CreditsToUsd(-10m);
+        act.Should().Throw<ArgumentException>();
     }
 
     [Fact]
@@ -86,7 +92,7 @@ public sealed class CreditConversionServiceTests
         var credits = _sut.EstimateQueryCredits(1000, "meta-llama/llama-3.3-70b-instruct:free");
 
         // Assert
-        Assert.Equal(0m, credits);
+        credits.Should().Be(0m);
     }
 
     [Fact]
@@ -107,7 +113,7 @@ public sealed class CreditConversionServiceTests
         // Credits: $0.00519 * 100,000 = 519 credits (rounded up)
 
         // Assert
-        Assert.InRange(credits, 500m, 550m); // Allow for rounding
+        credits.Should().BeInRange(500m, 550m); // Allow for rounding
     }
 
     [Fact]
@@ -119,15 +125,16 @@ public sealed class CreditConversionServiceTests
         var credits = _sut.EstimateQueryCredits(1000, "unknown/model");
 
         // Assert
-        Assert.Equal(0m, credits); // Treats as free
+        credits.Should().Be(0m); // Treats as free
     }
 
     [Fact]
     public void EstimateQueryCredits_NegativeTokensThrows()
     {
         // Act & Assert
-        Assert.Throws<ArgumentException>(() =>
-            _sut.EstimateQueryCredits(-100, "deepseek/deepseek-chat"));
+        var act = () =>
+            _sut.EstimateQueryCredits(-100, "deepseek/deepseek-chat");
+        act.Should().Throw<ArgumentException>();
     }
 
     [Theory]
@@ -137,8 +144,9 @@ public sealed class CreditConversionServiceTests
     public void EstimateQueryCredits_EmptyModelIdThrows(string? modelId)
     {
         // Act & Assert
-        Assert.Throws<ArgumentException>(() =>
-            _sut.EstimateQueryCredits(1000, modelId!));
+        var act = () =>
+            _sut.EstimateQueryCredits(1000, modelId!);
+        act.Should().Throw<ArgumentException>();
     }
 
     /// <summary>

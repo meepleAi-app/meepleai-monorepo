@@ -12,6 +12,7 @@ using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Moq;
 using Xunit;
+using FluentAssertions;
 using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.SharedGameCatalog.Infrastructure;
@@ -73,8 +74,8 @@ public sealed class SharedGameDocumentRepositoryIntegrationTests : IAsyncLifetim
         await _dbContext.SaveChangesAsync();
 
         // Initialize repositories
-        _repository = new SharedGameDocumentRepository(_dbContext);
-        _gameRepository = new SharedGameRepository(_dbContext);
+        _repository = new SharedGameDocumentRepository(_dbContext, eventCollectorMock.Object);
+        _gameRepository = new SharedGameRepository(_dbContext, eventCollectorMock.Object);
     }
 
     public async ValueTask DisposeAsync()
@@ -97,9 +98,9 @@ public sealed class SharedGameDocumentRepositoryIntegrationTests : IAsyncLifetim
         var results = await _repository.SearchByTagsAsync(["speed-mode"]);
 
         // Assert
-        Assert.Single(results);
-        Assert.Equal(document.Id, results[0].Id);
-        Assert.Contains("speed-mode", results[0].Tags);
+        results.Should().ContainSingle();
+        results[0].Id.Should().Be(document.Id);
+        results[0].Tags.Should().Contain("speed-mode");
     }
 
     [Fact]
@@ -120,8 +121,8 @@ public sealed class SharedGameDocumentRepositoryIntegrationTests : IAsyncLifetim
         var results = await _repository.SearchByTagsAsync(["speed-mode"]);
 
         // Assert - Should return doc1 and doc3 (both have speed-mode)
-        Assert.Equal(2, results.Count);
-        Assert.All(results, r => Assert.Contains("speed-mode", r.Tags));
+        results.Count.Should().Be(2);
+        results.Should().AllSatisfy(r => r.Tags.Should().Contain("speed-mode"));
     }
 
     [Fact]
@@ -137,7 +138,7 @@ public sealed class SharedGameDocumentRepositoryIntegrationTests : IAsyncLifetim
         var results = await _repository.SearchByTagsAsync(["non-existent-tag"]);
 
         // Assert
-        Assert.Empty(results);
+        results.Should().BeEmpty();
     }
 
     [Fact]
@@ -153,7 +154,7 @@ public sealed class SharedGameDocumentRepositoryIntegrationTests : IAsyncLifetim
         var results = await _repository.SearchByTagsAsync([]);
 
         // Assert
-        Assert.Empty(results);
+        results.Should().BeEmpty();
     }
 
     [Fact]
@@ -169,7 +170,7 @@ public sealed class SharedGameDocumentRepositoryIntegrationTests : IAsyncLifetim
         var results = await _repository.SearchByTagsAsync(["SPEED-MODE"]);
 
         // Assert - Should find the document (tags are normalized to lowercase)
-        Assert.Single(results);
+        results.Should().ContainSingle();
     }
 
     [Fact]
@@ -197,8 +198,8 @@ public sealed class SharedGameDocumentRepositoryIntegrationTests : IAsyncLifetim
         var results = await _repository.SearchByTagsAsync(["variant"]);
 
         // Assert
-        Assert.Single(results);
-        Assert.Equal(SharedGameDocumentType.Homerule, results[0].DocumentType);
+        results.Should().ContainSingle();
+        results[0].DocumentType.Should().Be(SharedGameDocumentType.Homerule);
     }
 
     [Fact]
@@ -219,9 +220,9 @@ public sealed class SharedGameDocumentRepositoryIntegrationTests : IAsyncLifetim
         var results = await _repository.SearchByTagsAsync(["solo-variant", "2-players"]);
 
         // Assert - Should return doc1 and doc2
-        Assert.Equal(2, results.Count);
-        Assert.Contains(results, r => r.Tags.Contains("solo-variant"));
-        Assert.Contains(results, r => r.Tags.Contains("2-players"));
+        results.Count.Should().Be(2);
+        results.Should().Contain(r => r.Tags.Contains("solo-variant"));
+        results.Should().Contain(r => r.Tags.Contains("2-players"));
     }
 
     #endregion

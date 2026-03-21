@@ -6,6 +6,7 @@ using Api.Infrastructure.Entities.UserNotifications;
 using Api.Tests.Constants;
 using Api.Tests.TestHelpers;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.UserNotifications.Application.Handlers;
 
@@ -61,14 +62,14 @@ public class RetryDeadLetterCommandHandlerTests : IDisposable
         var result = await _handler.Handle(command, CancellationToken.None);
 
         // Assert
-        Assert.True(result);
+        result.Should().BeTrue();
         var updated = await _dbContext.Set<NotificationQueueEntity>().FindAsync(itemId);
-        Assert.NotNull(updated);
-        Assert.Equal("pending", updated.Status);
-        Assert.Null(updated.LastError);
-        Assert.Equal(0, updated.RetryCount);
-        Assert.Null(updated.NextRetryAt);
-        Assert.Null(updated.ProcessedAt);
+        updated.Should().NotBeNull();
+        updated.Status.Should().Be("pending");
+        updated.LastError.Should().BeNull();
+        updated.RetryCount.Should().Be(0);
+        updated.NextRetryAt.Should().BeNull();
+        updated.ProcessedAt.Should().BeNull();
     }
 
     [Fact]
@@ -81,7 +82,7 @@ public class RetryDeadLetterCommandHandlerTests : IDisposable
         var result = await _handler.Handle(command, CancellationToken.None);
 
         // Assert
-        Assert.False(result);
+        result.Should().BeFalse();
     }
 
     [Fact]
@@ -110,6 +111,6 @@ public class RetryDeadLetterCommandHandlerTests : IDisposable
         var result = await _handler.Handle(command, CancellationToken.None);
 
         // Assert
-        Assert.False(result);
+        result.Should().BeFalse();
     }
 }

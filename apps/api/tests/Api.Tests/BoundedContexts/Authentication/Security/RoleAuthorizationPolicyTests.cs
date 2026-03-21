@@ -3,6 +3,7 @@ using Api.Tests.Constants;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.Authentication.Security;
 
@@ -63,7 +64,7 @@ public sealed class RoleAuthorizationPolicyTests : IDisposable
         var result = await _authorizationService.AuthorizeAsync(principal, null, "RequireSuperAdmin");
 
         // Assert
-        Assert.True(result.Succeeded, "SuperAdmin should have access to RequireSuperAdmin policy");
+        result.Succeeded.Should().BeTrue("SuperAdmin should have access to RequireSuperAdmin policy");
     }
 
     [Fact]
@@ -76,7 +77,7 @@ public sealed class RoleAuthorizationPolicyTests : IDisposable
         var result = await _authorizationService.AuthorizeAsync(principal, null, "RequireSuperAdmin");
 
         // Assert
-        Assert.False(result.Succeeded, "Admin should NOT have access to RequireSuperAdmin policy");
+        result.Succeeded.Should().BeFalse("Admin should NOT have access to RequireSuperAdmin policy");
     }
 
     [Fact]
@@ -89,7 +90,7 @@ public sealed class RoleAuthorizationPolicyTests : IDisposable
         var result = await _authorizationService.AuthorizeAsync(principal, null, "RequireSuperAdmin");
 
         // Assert
-        Assert.False(result.Succeeded, "Editor should NOT have access to RequireSuperAdmin policy");
+        result.Succeeded.Should().BeFalse("Editor should NOT have access to RequireSuperAdmin policy");
     }
 
     [Fact]
@@ -102,7 +103,7 @@ public sealed class RoleAuthorizationPolicyTests : IDisposable
         var result = await _authorizationService.AuthorizeAsync(principal, null, "RequireSuperAdmin");
 
         // Assert
-        Assert.False(result.Succeeded, "User should NOT have access to RequireSuperAdmin policy");
+        result.Succeeded.Should().BeFalse("User should NOT have access to RequireSuperAdmin policy");
     }
 
     [Fact]
@@ -115,7 +116,7 @@ public sealed class RoleAuthorizationPolicyTests : IDisposable
         var result = await _authorizationService.AuthorizeAsync(principal, null, "RequireSuperAdmin");
 
         // Assert
-        Assert.False(result.Succeeded, "Anonymous user should NOT have access to RequireSuperAdmin policy");
+        result.Succeeded.Should().BeFalse("Anonymous user should NOT have access to RequireSuperAdmin policy");
     }
 
     #endregion
@@ -132,7 +133,7 @@ public sealed class RoleAuthorizationPolicyTests : IDisposable
         var result = await _authorizationService.AuthorizeAsync(principal, null, "RequireAdminOrAbove");
 
         // Assert
-        Assert.True(result.Succeeded, "SuperAdmin should have access to RequireAdminOrAbove policy");
+        result.Succeeded.Should().BeTrue("SuperAdmin should have access to RequireAdminOrAbove policy");
     }
 
     [Fact]
@@ -145,7 +146,7 @@ public sealed class RoleAuthorizationPolicyTests : IDisposable
         var result = await _authorizationService.AuthorizeAsync(principal, null, "RequireAdminOrAbove");
 
         // Assert
-        Assert.True(result.Succeeded, "Admin should have access to RequireAdminOrAbove policy");
+        result.Succeeded.Should().BeTrue("Admin should have access to RequireAdminOrAbove policy");
     }
 
     [Fact]
@@ -158,7 +159,7 @@ public sealed class RoleAuthorizationPolicyTests : IDisposable
         var result = await _authorizationService.AuthorizeAsync(principal, null, "RequireAdminOrAbove");
 
         // Assert
-        Assert.False(result.Succeeded, "Editor should NOT have access to RequireAdminOrAbove policy");
+        result.Succeeded.Should().BeFalse("Editor should NOT have access to RequireAdminOrAbove policy");
     }
 
     [Fact]
@@ -171,7 +172,7 @@ public sealed class RoleAuthorizationPolicyTests : IDisposable
         var result = await _authorizationService.AuthorizeAsync(principal, null, "RequireAdminOrAbove");
 
         // Assert
-        Assert.False(result.Succeeded, "User should NOT have access to RequireAdminOrAbove policy");
+        result.Succeeded.Should().BeFalse("User should NOT have access to RequireAdminOrAbove policy");
     }
 
     [Fact]
@@ -184,7 +185,7 @@ public sealed class RoleAuthorizationPolicyTests : IDisposable
         var result = await _authorizationService.AuthorizeAsync(principal, null, "RequireAdminOrAbove");
 
         // Assert
-        Assert.False(result.Succeeded, "Anonymous user should NOT have access to RequireAdminOrAbove policy");
+        result.Succeeded.Should().BeFalse("Anonymous user should NOT have access to RequireAdminOrAbove policy");
     }
 
     #endregion
@@ -201,7 +202,7 @@ public sealed class RoleAuthorizationPolicyTests : IDisposable
         var result = await _authorizationService.AuthorizeAsync(principal, null, "RequireEditorOrAbove");
 
         // Assert
-        Assert.True(result.Succeeded, "SuperAdmin should have access to RequireEditorOrAbove policy");
+        result.Succeeded.Should().BeTrue("SuperAdmin should have access to RequireEditorOrAbove policy");
     }
 
     [Fact]
@@ -214,7 +215,7 @@ public sealed class RoleAuthorizationPolicyTests : IDisposable
         var result = await _authorizationService.AuthorizeAsync(principal, null, "RequireEditorOrAbove");
 
         // Assert
-        Assert.True(result.Succeeded, "Admin should have access to RequireEditorOrAbove policy");
+        result.Succeeded.Should().BeTrue("Admin should have access to RequireEditorOrAbove policy");
     }
 
     [Fact]
@@ -227,7 +228,7 @@ public sealed class RoleAuthorizationPolicyTests : IDisposable
         var result = await _authorizationService.AuthorizeAsync(principal, null, "RequireEditorOrAbove");
 
         // Assert
-        Assert.True(result.Succeeded, "Editor should have access to RequireEditorOrAbove policy");
+        result.Succeeded.Should().BeTrue("Editor should have access to RequireEditorOrAbove policy");
     }
 
     [Fact]
@@ -240,7 +241,7 @@ public sealed class RoleAuthorizationPolicyTests : IDisposable
         var result = await _authorizationService.AuthorizeAsync(principal, null, "RequireEditorOrAbove");
 
         // Assert
-        Assert.False(result.Succeeded, "User should NOT have access to RequireEditorOrAbove policy");
+        result.Succeeded.Should().BeFalse("User should NOT have access to RequireEditorOrAbove policy");
     }
 
     [Fact]
@@ -253,7 +254,7 @@ public sealed class RoleAuthorizationPolicyTests : IDisposable
         var result = await _authorizationService.AuthorizeAsync(principal, null, "RequireEditorOrAbove");
 
         // Assert
-        Assert.False(result.Succeeded, "Anonymous user should NOT have access to RequireEditorOrAbove policy");
+        result.Succeeded.Should().BeFalse("Anonymous user should NOT have access to RequireEditorOrAbove policy");
     }
 
     #endregion
@@ -274,7 +275,7 @@ public sealed class RoleAuthorizationPolicyTests : IDisposable
 
         // Assert - Only exact "SuperAdmin" should work
         // Note: This documents the expected behavior - roles are case-sensitive
-        Assert.False(result.Succeeded, $"Role '{roleName}' should not match 'SuperAdmin' (case-sensitive)");
+        result.Succeeded.Should().BeFalse($"Role '{roleName}' should not match 'SuperAdmin' (case-sensitive)");
     }
 
     #endregion

@@ -163,8 +163,8 @@ public class GetLibraryShareLinkQueryHandlerTests
             .ReturnsAsync(shareLink);
 
         // Act & Assert
-        await Assert.ThrowsAsync<InvalidOperationException>(
-            () => _handler.Handle(query, TestContext.Current.CancellationToken));
+        var act = () => _handler.Handle(query, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<InvalidOperationException>();
     }
 
     #endregion
@@ -175,8 +175,8 @@ public class GetLibraryShareLinkQueryHandlerTests
     public async Task Handle_WithNullQuery_ThrowsArgumentNullException()
     {
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentNullException>(
-            () => _handler.Handle(null!, TestContext.Current.CancellationToken));
+        var act2 = () => _handler.Handle(null!, TestContext.Current.CancellationToken);
+        await act2.Should().ThrowAsync<ArgumentNullException>();
     }
 
     #endregion

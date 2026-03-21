@@ -649,8 +649,8 @@ public sealed class UserTests
         user.UseBackupCode("hash1", usedAt);
 
         // Assert
-        user.BackupCodes.First(bc => bc.HashedValue == "hash1").IsUsed.Should().BeTrue();
-        user.BackupCodes.First(bc => bc.HashedValue == "hash2").IsUsed.Should().BeFalse();
+        (user.BackupCodes.First(bc => bc.HashedValue == "hash1").IsUsed).Should().BeTrue();
+        (user.BackupCodes.First(bc => bc.HashedValue == "hash2").IsUsed).Should().BeFalse();
     }
 
     [Fact]

@@ -2,6 +2,7 @@ using Api.BoundedContexts.Authentication.Domain.ValueObjects;
 using Api.SharedKernel.Domain.ValueObjects;
 using Api.Tests.Constants;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.Authentication.Domain.ValueObjects;
 
@@ -37,13 +38,13 @@ public class ShareLinkTokenTests
         );
 
         // Assert
-        Assert.NotNull(token);
-        Assert.NotEmpty(token.Value);
-        Assert.Equal(shareLinkId, token.ShareLinkId);
-        Assert.Equal(threadId, token.ThreadId);
-        Assert.Equal(creatorId, token.CreatorId);
-        Assert.Equal(ShareLinkRole.View, token.Role);
-        Assert.Equal(expiresAt, token.ExpiresAt);
+        token.Should().NotBeNull();
+        token.Value.Should().NotBeEmpty();
+        token.ShareLinkId.Should().Be(shareLinkId);
+        token.ThreadId.Should().Be(threadId);
+        token.CreatorId.Should().Be(creatorId);
+        token.Role.Should().Be(ShareLinkRole.View);
+        token.ExpiresAt.Should().Be(expiresAt);
     }
 
     [Fact]
@@ -60,7 +61,7 @@ public class ShareLinkTokenTests
         );
 
         // Assert
-        Assert.Equal(ShareLinkRole.Comment, token.Role);
+        token.Role.Should().Be(ShareLinkRole.Comment);
     }
 
     [Fact]
@@ -78,7 +79,7 @@ public class ShareLinkTokenTests
 
         // Assert - JWT has 3 parts separated by dots
         var parts = token.Value.Split('.');
-        Assert.Equal(3, parts.Length);
+        parts.Length.Should().Be(3);
     }
 
     [Theory]
@@ -88,7 +89,7 @@ public class ShareLinkTokenTests
     public void Generate_WithInvalidSecretKey_ThrowsArgumentException(string? secretKey)
     {
         // Arrange & Act & Assert
-        var exception = Assert.Throws<ArgumentException>(() =>
+        var act = () =>
             ShareLinkToken.Generate(
                 shareLinkId: Guid.NewGuid(),
                 threadId: Guid.NewGuid(),
@@ -96,17 +97,17 @@ public class ShareLinkTokenTests
                 creatorId: Guid.NewGuid(),
                 expiresAt: DateTime.UtcNow.AddDays(7),
                 secretKey: secretKey!
-            )
-        );
+            );
+        var exception = act.Should().Throw<ArgumentException>().Which;
 
-        Assert.Contains("Secret key", exception.Message);
+        exception.Message.Should().Contain("Secret key");
     }
 
     [Fact]
     public void Generate_WithPastExpiration_ThrowsArgumentException()
     {
         // Arrange & Act & Assert
-        var exception = Assert.Throws<ArgumentException>(() =>
+        var act = () =>
             ShareLinkToken.Generate(
                 shareLinkId: Guid.NewGuid(),
                 threadId: Guid.NewGuid(),
@@ -114,10 +115,10 @@ public class ShareLinkTokenTests
                 creatorId: Guid.NewGuid(),
                 expiresAt: DateTime.UtcNow.AddSeconds(-1),
                 secretKey: TestSecretKey
-            )
-        );
+            );
+        var exception = act.Should().Throw<ArgumentException>().Which;
 
-        Assert.Contains("future", exception.Message);
+        exception.Message.Should().Contain("future");
     }
 
     [Fact]
@@ -127,7 +128,7 @@ public class ShareLinkTokenTests
         var exactNow = DateTime.UtcNow;
 
         // Act & Assert - should fail since it's not in the future
-        var exception = Assert.Throws<ArgumentException>(() =>
+        var act = () =>
             ShareLinkToken.Generate(
                 shareLinkId: Guid.NewGuid(),
                 threadId: Guid.NewGuid(),
@@ -135,10 +136,10 @@ public class ShareLinkTokenTests
                 creatorId: Guid.NewGuid(),
                 expiresAt: exactNow,
                 secretKey: TestSecretKey
-            )
-        );
+            );
+        var exception = act.Should().Throw<ArgumentException>().Which;
 
-        Assert.Contains("future", exception.Message);
+        exception.Message.Should().Contain("future");
     }
 
     [Fact]
@@ -170,7 +171,7 @@ public class ShareLinkTokenTests
         );
 
         // Assert - tokens should be different due to unique JTI
-        Assert.NotEqual(token1.Value, token2.Value);
+        token2.Value.Should().NotBe(token1.Value);
     }
 
     #endregion
@@ -199,11 +200,11 @@ public class ShareLinkTokenTests
         var validatedToken = ShareLinkToken.Validate(originalToken.Value, TestSecretKey);
 
         // Assert
-        Assert.NotNull(validatedToken);
-        Assert.Equal(shareLinkId, validatedToken.ShareLinkId);
-        Assert.Equal(threadId, validatedToken.ThreadId);
-        Assert.Equal(creatorId, validatedToken.CreatorId);
-        Assert.Equal(ShareLinkRole.View, validatedToken.Role);
+        validatedToken.Should().NotBeNull();
+        validatedToken.ShareLinkId.Should().Be(shareLinkId);
+        validatedToken.ThreadId.Should().Be(threadId);
+        validatedToken.CreatorId.Should().Be(creatorId);
+        validatedToken.Role.Should().Be(ShareLinkRole.View);
     }
 
     [Fact]
@@ -223,8 +224,8 @@ public class ShareLinkTokenTests
         var validatedToken = ShareLinkToken.Validate(originalToken.Value, TestSecretKey);
 
         // Assert
-        Assert.NotNull(validatedToken);
-        Assert.Equal(ShareLinkRole.Comment, validatedToken.Role);
+        validatedToken.Should().NotBeNull();
+        validatedToken.Role.Should().Be(ShareLinkRole.Comment);
     }
 
     [Fact]
@@ -247,7 +248,7 @@ public class ShareLinkTokenTests
         var validatedToken = ShareLinkToken.Validate(originalToken.Value, TestSecretKey);
 
         // Assert
-        Assert.Null(validatedToken);
+        validatedToken.Should().BeNull();
     }
 
     [Fact]
@@ -267,7 +268,7 @@ public class ShareLinkTokenTests
         var validatedToken = ShareLinkToken.Validate(originalToken.Value, DifferentSecretKey);
 
         // Assert
-        Assert.Null(validatedToken);
+        validatedToken.Should().BeNull();
     }
 
     [Theory]
@@ -280,7 +281,7 @@ public class ShareLinkTokenTests
         var validatedToken = ShareLinkToken.Validate(tokenValue!, TestSecretKey);
 
         // Assert
-        Assert.Null(validatedToken);
+        validatedToken.Should().BeNull();
     }
 
     [Theory]
@@ -303,7 +304,7 @@ public class ShareLinkTokenTests
         var validatedToken = ShareLinkToken.Validate(originalToken.Value, secretKey!);
 
         // Assert
-        Assert.Null(validatedToken);
+        validatedToken.Should().BeNull();
     }
 
     [Fact]
@@ -313,7 +314,7 @@ public class ShareLinkTokenTests
         var validatedToken = ShareLinkToken.Validate("not-a-valid-jwt-token", TestSecretKey);
 
         // Assert
-        Assert.Null(validatedToken);
+        validatedToken.Should().BeNull();
     }
 
     [Fact]
@@ -336,7 +337,7 @@ public class ShareLinkTokenTests
         var validatedToken = ShareLinkToken.Validate(tamperedToken, TestSecretKey);
 
         // Assert
-        Assert.Null(validatedToken);
+        validatedToken.Should().BeNull();
     }
 
     [Fact]
@@ -349,7 +350,7 @@ public class ShareLinkTokenTests
         var validatedToken = ShareLinkToken.Validate(fakeJwt, TestSecretKey);
 
         // Assert - wrong issuer/audience/claims should fail
-        Assert.Null(validatedToken);
+        validatedToken.Should().BeNull();
     }
 
     [Fact]
@@ -370,9 +371,9 @@ public class ShareLinkTokenTests
         var validatedToken = ShareLinkToken.Validate(originalToken.Value, TestSecretKey);
 
         // Assert
-        Assert.NotNull(validatedToken);
+        validatedToken.Should().NotBeNull();
         // Allow for some time variance in JWT processing
-        Assert.InRange(validatedToken.ExpiresAt, expiresAt.AddSeconds(-2), expiresAt.AddSeconds(2));
+        validatedToken.ExpiresAt.Should().BeOnOrAfter(expiresAt.AddSeconds(-2)).And.BeOnOrBefore(expiresAt.AddSeconds(2));
     }
 
     #endregion
@@ -395,9 +396,9 @@ public class ShareLinkTokenTests
         var token2 = ShareLinkToken.Validate(token1.Value, TestSecretKey);
 
         // Assert
-        Assert.NotNull(token2);
-        Assert.Equal(token1, token2);
-        Assert.True(token1.Equals(token2));
+        token2.Should().NotBeNull();
+        token2.Should().Be(token1);
+        token1.Equals(token2).Should().BeTrue();
     }
 
     [Fact]
@@ -423,8 +424,8 @@ public class ShareLinkTokenTests
         );
 
         // Assert
-        Assert.NotEqual(token1, token2);
-        Assert.False(token1.Equals(token2));
+        token2.Should().NotBe(token1);
+        token1.Equals(token2).Should().BeFalse();
     }
 
     [Fact]
@@ -441,7 +442,7 @@ public class ShareLinkTokenTests
         );
 
         // Assert
-        Assert.False(token.Equals(null));
+        token.Equals(null).Should().BeFalse();
     }
 
     [Fact]
@@ -458,7 +459,7 @@ public class ShareLinkTokenTests
         );
 
         // Assert
-        Assert.False(token.Equals("not a token"));
+        token.Equals("not a token").Should().BeFalse();
     }
 
     [Fact]
@@ -477,8 +478,8 @@ public class ShareLinkTokenTests
         var token2 = ShareLinkToken.Validate(token1.Value, TestSecretKey);
 
         // Assert
-        Assert.NotNull(token2);
-        Assert.Equal(token1.GetHashCode(), token2.GetHashCode());
+        token2.Should().NotBeNull();
+        token2.GetHashCode().Should().Be(token1.GetHashCode());
     }
 
     [Fact]
@@ -504,7 +505,7 @@ public class ShareLinkTokenTests
         );
 
         // Assert
-        Assert.NotEqual(token1.GetHashCode(), token2.GetHashCode());
+        token2.GetHashCode().Should().NotBe(token1.GetHashCode());
     }
 
     #endregion
@@ -528,7 +529,7 @@ public class ShareLinkTokenTests
         var stringValue = token.ToString();
 
         // Assert
-        Assert.Equal(token.Value, stringValue);
+        stringValue.Should().Be(token.Value);
     }
 
     #endregion
@@ -558,12 +559,12 @@ public class ShareLinkTokenTests
         var validatedToken = ShareLinkToken.Validate(originalToken.Value, TestSecretKey);
 
         // Assert
-        Assert.NotNull(validatedToken);
-        Assert.Equal(shareLinkId, validatedToken.ShareLinkId);
-        Assert.Equal(threadId, validatedToken.ThreadId);
-        Assert.Equal(creatorId, validatedToken.CreatorId);
-        Assert.Equal(role, validatedToken.Role);
-        Assert.Equal(originalToken.Value, validatedToken.Value);
+        validatedToken.Should().NotBeNull();
+        validatedToken.ShareLinkId.Should().Be(shareLinkId);
+        validatedToken.ThreadId.Should().Be(threadId);
+        validatedToken.CreatorId.Should().Be(creatorId);
+        validatedToken.Role.Should().Be(role);
+        validatedToken.Value.Should().Be(originalToken.Value);
     }
 
     [Theory]
@@ -584,8 +585,8 @@ public class ShareLinkTokenTests
         var validatedToken = ShareLinkToken.Validate(originalToken.Value, TestSecretKey);
 
         // Assert
-        Assert.NotNull(validatedToken);
-        Assert.Equal(role, validatedToken.Role);
+        validatedToken.Should().NotBeNull();
+        validatedToken.Role.Should().Be(role);
     }
 
     [Theory]
@@ -611,8 +612,8 @@ public class ShareLinkTokenTests
         var validatedToken = ShareLinkToken.Validate(originalToken.Value, TestSecretKey);
 
         // Assert
-        Assert.NotNull(validatedToken);
-        Assert.InRange(validatedToken.ExpiresAt, expiresAt.AddSeconds(-2), expiresAt.AddSeconds(2));
+        validatedToken.Should().NotBeNull();
+        validatedToken.ExpiresAt.Should().BeOnOrAfter(expiresAt.AddSeconds(-2)).And.BeOnOrBefore(expiresAt.AddSeconds(2));
     }
 
     #endregion

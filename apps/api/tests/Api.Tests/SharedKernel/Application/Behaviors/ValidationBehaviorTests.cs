@@ -4,6 +4,7 @@ using FluentValidation;
 using FluentValidation.Results;
 using MediatR;
 using Moq;
+using FluentAssertions;
 using Xunit;
 using Api.Tests.Constants;
 
@@ -39,8 +40,8 @@ public sealed class ValidationBehaviorTests
         var result = await behavior.Handle(command, next, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.True(nextCalled);
+        result.Should().NotBeNull();
+        nextCalled.Should().BeTrue();
     }
 
     [Fact]
@@ -71,8 +72,8 @@ public sealed class ValidationBehaviorTests
         var result = await behavior.Handle(command, next, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.True(nextCalled);
+        result.Should().NotBeNull();
+        nextCalled.Should().BeTrue();
     }
 
     [Fact]
@@ -106,12 +107,11 @@ public sealed class ValidationBehaviorTests
         var behavior = new ValidationBehavior<LoginCommand, object>(validators);
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<ValidationException>(
-            () => behavior.Handle(command, next, TestContext.Current.CancellationToken)
-        );
+        var act = () => behavior.Handle(command, next, TestContext.Current.CancellationToken);
+        var exception = (await act.Should().ThrowAsync<ValidationException>()).Which;
 
-        Assert.Equal(2, exception.Errors.Count());
-        Assert.False(nextCalled);
+        exception.Errors.Count().Should().Be(2);
+        nextCalled.Should().BeFalse();
     }
 
     [Fact]
@@ -147,7 +147,7 @@ public sealed class ValidationBehaviorTests
         var result = await behavior.Handle(command, next, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         mockValidator1.Verify(
             x => x.ValidateAsync(It.IsAny<ValidationContext<LoginCommand>>(), default),
             Times.Once
@@ -156,7 +156,7 @@ public sealed class ValidationBehaviorTests
             x => x.ValidateAsync(It.IsAny<ValidationContext<LoginCommand>>(), default),
             Times.Once
         );
-        Assert.True(nextCalled);
+        nextCalled.Should().BeTrue();
     }
 
     [Fact]
@@ -199,14 +199,13 @@ public sealed class ValidationBehaviorTests
         var behavior = new ValidationBehavior<LoginCommand, object>(validators);
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<ValidationException>(
-            () => behavior.Handle(command, next, TestContext.Current.CancellationToken)
-        );
+        var act2 = () => behavior.Handle(command, next, TestContext.Current.CancellationToken);
+        var exception = (await act2.Should().ThrowAsync<ValidationException>()).Which;
 
-        Assert.Equal(2, exception.Errors.Count());
-        Assert.Contains(exception.Errors, e => e.PropertyName == "Email");
-        Assert.Contains(exception.Errors, e => e.PropertyName == "Password");
-        Assert.False(nextCalled);
+        exception.Errors.Count().Should().Be(2);
+        exception.Errors.Should().Contain(e => e.PropertyName == "Email");
+        exception.Errors.Should().Contain(e => e.PropertyName == "Password");
+        nextCalled.Should().BeFalse();
     }
 
     [Fact]
@@ -237,11 +236,10 @@ public sealed class ValidationBehaviorTests
         var behavior = new ValidationBehavior<LoginCommand, object>(validators);
 
         // Act & Assert
-        await Assert.ThrowsAsync<OperationCanceledException>(
-            () => behavior.Handle(command, next, cts.Token)
-        );
+        var act3 = () => behavior.Handle(command, next, cts.Token);
+        await act3.Should().ThrowAsync<OperationCanceledException>();
 
-        Assert.False(nextCalled);
+        nextCalled.Should().BeFalse();
     }
 }
 

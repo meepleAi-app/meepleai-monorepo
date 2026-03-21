@@ -262,4 +262,3 @@ public sealed class WizardEndpointsIntegrationTests : IAsyncLifetime
     // NOTE: Tests for POST /upload-pdf and GET /preview require multipart file upload
     // and blob storage mocking. Full integration coverage tracked in Epic #4136.
 }
-

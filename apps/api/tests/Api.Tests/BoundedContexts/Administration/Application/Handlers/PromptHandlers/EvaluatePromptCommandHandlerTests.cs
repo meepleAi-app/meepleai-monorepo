@@ -226,23 +226,26 @@ public class EvaluatePromptCommandHandlerTests
     public async Task Handle_WithNullCommand_ShouldThrowArgumentNullException()
     {
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentNullException>(() =>
-            _handler.Handle(null!, CancellationToken.None));
+        var act = () =>
+            _handler.Handle(null!, CancellationToken.None);
+        await act.Should().ThrowAsync<ArgumentNullException>();
     }
 
     [Fact]
     public void Constructor_WithNullEvaluationService_ShouldThrowArgumentNullException()
     {
         // Act & Assert
-        Assert.Throws<ArgumentNullException>(() =>
-            new EvaluatePromptCommandHandler(null!, _mockLogger.Object));
+        var act = () =>
+            new EvaluatePromptCommandHandler(null!, _mockLogger.Object);
+        act.Should().Throw<ArgumentNullException>();
     }
 
     [Fact]
     public void Constructor_WithNullLogger_ShouldThrowArgumentNullException()
     {
         // Act & Assert
-        Assert.Throws<ArgumentNullException>(() =>
-            new EvaluatePromptCommandHandler(_mockEvaluationService.Object, null!));
+        var act = () =>
+            new EvaluatePromptCommandHandler(_mockEvaluationService.Object, null!);
+        act.Should().Throw<ArgumentNullException>();
     }
 }

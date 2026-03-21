@@ -382,8 +382,8 @@ public sealed class UploadPdfMidPhaseCancellationTests : IAsyncLifetime
         using var cts = PdfUploadTestHelpers.CreateDelayedCancellation(100); // Cancel mid-write
 
         // Act & Assert
-        await Assert.ThrowsAsync<TaskCanceledException>(
-            async () => await handler.Handle(command, cts.Token));
+        var act = async () => await handler.Handle(command, cts.Token);
+        await act.Should().ThrowAsync<TaskCanceledException>();
 
         // Verify cleanup
         await PdfUploadTestHelpers.VerifyNoPdfDocumentsAsync(testDbContext);

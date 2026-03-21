@@ -28,6 +28,7 @@
 import { NextResponse } from 'next/server';
 
 import * as metrics from '@/lib/metrics/session-cache-metrics';
+import { isAdminRole } from '@/lib/utils/roles';
 
 import type { NextRequest } from 'next/server';
 
@@ -340,7 +341,7 @@ export async function proxy(request: NextRequest) {
   // Check user role (only trusted when we know the session is valid)
   const userRoleCookie = request.cookies.get(USER_ROLE_COOKIE);
   const userRole = isAuthenticated ? userRoleCookie?.value || 'user' : 'user';
-  const isAdmin = isAuthenticated && userRole === 'admin';
+  const isAdmin = isAuthenticated && isAdminRole(userRole);
 
   // Check if the current route is protected or public auth route
   const isProtectedRoute = PROTECTED_ROUTES.some(route => pathname.startsWith(route));

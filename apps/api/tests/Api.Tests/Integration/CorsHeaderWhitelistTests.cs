@@ -12,6 +12,7 @@ using StackExchange.Redis;
 using System.Net;
 using System.Threading;
 using Xunit;
+using FluentAssertions;
 using Api.Tests.Constants;
 
 namespace Api.Tests.Integration;
@@ -148,13 +149,13 @@ public class CorsHeaderWhitelistTests : IClassFixture<CorsTestFactory>
         var response = await _client.SendAsync(request, TestCancellationToken);
 
         // Assert
-        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
-        Assert.True(response.Headers.Contains("Access-Control-Allow-Headers"));
+        response.StatusCode.Should().Be(HttpStatusCode.NoContent);
+        response.Headers.Contains("Access-Control-Allow-Headers").Should().BeTrue();
 
         var allowedHeaders = response.Headers.GetValues("Access-Control-Allow-Headers");
         var allowedHeadersList = string.Join(",", allowedHeaders).Split(',', StringSplitOptions.TrimEntries);
 
-        Assert.Contains(headerName, allowedHeadersList, StringComparer.OrdinalIgnoreCase);
+        allowedHeadersList.Should().Contain(h => string.Equals(h, headerName, StringComparison.OrdinalIgnoreCase));
     }
 
     [Theory]
@@ -175,7 +176,7 @@ public class CorsHeaderWhitelistTests : IClassFixture<CorsTestFactory>
 
         // Assert
         // Preflight should succeed (NoContent), but the header should NOT be in allowed headers
-        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.NoContent);
 
         if (response.Headers.Contains("Access-Control-Allow-Headers"))
         {
@@ -183,7 +184,7 @@ public class CorsHeaderWhitelistTests : IClassFixture<CorsTestFactory>
             var allowedHeadersList = string.Join(",", allowedHeaders).Split(',', StringSplitOptions.TrimEntries);
 
             // The non-whitelisted header should NOT be in the allowed headers list
-            Assert.DoesNotContain(headerName, allowedHeadersList, StringComparer.OrdinalIgnoreCase);
+            allowedHeadersList.Should().NotContain(h => string.Equals(h, headerName, StringComparison.OrdinalIgnoreCase));
         }
     }
 
@@ -201,8 +202,8 @@ public class CorsHeaderWhitelistTests : IClassFixture<CorsTestFactory>
         var response = await _client.SendAsync(request, TestCancellationToken);
 
         // Assert
-        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
-        Assert.True(response.Headers.Contains("Access-Control-Allow-Headers"));
+        response.StatusCode.Should().Be(HttpStatusCode.NoContent);
+        response.Headers.Contains("Access-Control-Allow-Headers").Should().BeTrue();
 
         var allowedHeaders = response.Headers.GetValues("Access-Control-Allow-Headers");
         var allowedHeadersList = string.Join(",", allowedHeaders).Split(',', StringSplitOptions.TrimEntries);
@@ -210,7 +211,7 @@ public class CorsHeaderWhitelistTests : IClassFixture<CorsTestFactory>
         // All whitelisted headers should be present
         foreach (var header in WhitelistedHeaders)
         {
-            Assert.Contains(header, allowedHeadersList, StringComparer.OrdinalIgnoreCase);
+            allowedHeadersList.Should().Contain(h => string.Equals(h, header, StringComparison.OrdinalIgnoreCase));
         }
     }
 
@@ -230,7 +231,7 @@ public class CorsHeaderWhitelistTests : IClassFixture<CorsTestFactory>
         var response = await _client.SendAsync(request, TestCancellationToken);
 
         // Assert
-        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.NoContent);
 
         if (response.Headers.Contains("Access-Control-Allow-Headers"))
         {
@@ -238,12 +239,12 @@ public class CorsHeaderWhitelistTests : IClassFixture<CorsTestFactory>
             var allowedHeadersList = string.Join(",", allowedHeaders).Split(',', StringSplitOptions.TrimEntries);
 
             // Whitelisted headers should be present
-            Assert.Contains("Content-Type", allowedHeadersList, StringComparer.OrdinalIgnoreCase);
-            Assert.Contains("Authorization", allowedHeadersList, StringComparer.OrdinalIgnoreCase);
+            allowedHeadersList.Should().Contain(h => string.Equals(h, "Content-Type", StringComparison.OrdinalIgnoreCase));
+            allowedHeadersList.Should().Contain(h => string.Equals(h, "Authorization", StringComparison.OrdinalIgnoreCase));
 
             // Non-whitelisted headers should NOT be present
-            Assert.DoesNotContain("X-Custom-Header", allowedHeadersList, StringComparer.OrdinalIgnoreCase);
-            Assert.DoesNotContain("X-Malicious-Header", allowedHeadersList, StringComparer.OrdinalIgnoreCase);
+            allowedHeadersList.Should().NotContain(h => string.Equals(h, "X-Custom-Header", StringComparison.OrdinalIgnoreCase));
+            allowedHeadersList.Should().NotContain(h => string.Equals(h, "X-Malicious-Header", StringComparison.OrdinalIgnoreCase));
         }
     }
 
@@ -263,8 +264,8 @@ public class CorsHeaderWhitelistTests : IClassFixture<CorsTestFactory>
         var response = await _client.SendAsync(request, TestCancellationToken);
 
         // Assert
-        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
-        Assert.True(response.Headers.Contains("Access-Control-Allow-Headers"));
+        response.StatusCode.Should().Be(HttpStatusCode.NoContent);
+        response.Headers.Contains("Access-Control-Allow-Headers").Should().BeTrue();
     }
 
     [Fact]
@@ -280,11 +281,11 @@ public class CorsHeaderWhitelistTests : IClassFixture<CorsTestFactory>
         var response = await _client.SendAsync(request, TestCancellationToken);
 
         // Assert
-        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
-        Assert.True(response.Headers.Contains("Access-Control-Allow-Origin"));
-        Assert.True(response.Headers.Contains("Access-Control-Allow-Methods"));
-        Assert.True(response.Headers.Contains("Access-Control-Allow-Headers"));
-        Assert.True(response.Headers.Contains("Access-Control-Allow-Credentials"));
+        response.StatusCode.Should().Be(HttpStatusCode.NoContent);
+        response.Headers.Contains("Access-Control-Allow-Origin").Should().BeTrue();
+        response.Headers.Contains("Access-Control-Allow-Methods").Should().BeTrue();
+        response.Headers.Contains("Access-Control-Allow-Headers").Should().BeTrue();
+        response.Headers.Contains("Access-Control-Allow-Credentials").Should().BeTrue();
     }
 
     [Fact]
@@ -301,9 +302,9 @@ public class CorsHeaderWhitelistTests : IClassFixture<CorsTestFactory>
 
         // Assert
         // Should succeed (or return 401 if auth is required, but NOT a CORS error)
-        Assert.NotEqual(HttpStatusCode.Forbidden, response.StatusCode);
-        Assert.True(response.Headers.Contains("Access-Control-Allow-Origin") ||
-                    response.StatusCode == HttpStatusCode.Unauthorized);
+        response.StatusCode.Should().NotBe(HttpStatusCode.Forbidden);
+        (response.Headers.Contains("Access-Control-Allow-Origin") ||
+                    response.StatusCode == HttpStatusCode.Unauthorized).Should().BeTrue();
     }
 
     [Fact]
@@ -319,17 +320,17 @@ public class CorsHeaderWhitelistTests : IClassFixture<CorsTestFactory>
         var response = await _client.SendAsync(request, TestCancellationToken);
 
         // Assert
-        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
-        Assert.True(response.Headers.Contains("Access-Control-Allow-Headers"));
+        response.StatusCode.Should().Be(HttpStatusCode.NoContent);
+        response.Headers.Contains("Access-Control-Allow-Headers").Should().BeTrue();
 
         var allowedHeaders = response.Headers.GetValues("Access-Control-Allow-Headers");
         var allowedHeadersList = string.Join(",", allowedHeaders).Split(',', StringSplitOptions.TrimEntries);
 
         // Verify exactly 3 whitelisted headers
-        Assert.Equal(3, WhitelistedHeaders.Length);
+        WhitelistedHeaders.Length.Should().Be(3);
         foreach (var header in WhitelistedHeaders)
         {
-            Assert.Contains(header, allowedHeadersList, StringComparer.OrdinalIgnoreCase);
+            allowedHeadersList.Should().Contain(h => string.Equals(h, header, StringComparison.OrdinalIgnoreCase));
         }
     }
 }

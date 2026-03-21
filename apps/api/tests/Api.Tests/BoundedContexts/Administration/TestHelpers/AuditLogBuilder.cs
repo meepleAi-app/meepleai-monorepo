@@ -92,4 +92,3 @@ internal class AuditLogBuilder
 
     public static implicit operator AuditLog(AuditLogBuilder builder) => builder.Build();
 }
-

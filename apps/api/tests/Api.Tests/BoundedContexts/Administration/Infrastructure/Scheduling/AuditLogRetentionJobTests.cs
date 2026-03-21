@@ -9,6 +9,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using Quartz;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.Administration.Infrastructure.Scheduling;
 
@@ -46,7 +47,7 @@ public sealed class AuditLogRetentionJobTests : IDisposable
 
         // Assert
         var remaining = await _db.AuditLogs.CountAsync();
-        Assert.Equal(2, remaining);
+        remaining.Should().Be(2);
     }
 
     [Fact]
@@ -62,7 +63,7 @@ public sealed class AuditLogRetentionJobTests : IDisposable
 
         // Assert
         var remaining = await _db.AuditLogs.CountAsync();
-        Assert.Equal(5, remaining);
+        remaining.Should().Be(5);
     }
 
     [Fact]
@@ -76,13 +77,13 @@ public sealed class AuditLogRetentionJobTests : IDisposable
 
         // Assert
         var count = await _db.AuditLogs.CountAsync();
-        Assert.Equal(0, count);
+        count.Should().Be(0);
     }
 
     [Fact]
     public void DefaultRetentionDays_Should_Be_90()
     {
-        Assert.Equal(90, AuditLogRetentionJob.DefaultRetentionDays);
+        AuditLogRetentionJob.DefaultRetentionDays.Should().Be(90);
     }
 
     private void SeedAuditLogs(int count, DateTime createdAt)

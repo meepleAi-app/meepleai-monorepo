@@ -9,6 +9,7 @@ using Api.Tests.Constants;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Handlers;
 
@@ -46,11 +47,11 @@ public class GetUserAgentSlotsQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.Equal(3, result.Total);
-        Assert.Equal(0, result.Used);
-        Assert.Equal(3, result.Available);
-        Assert.Equal(3, result.Slots.Count);
-        Assert.All(result.Slots, slot => Assert.Equal("available", slot.Status));
+        result.Total.Should().Be(3);
+        result.Used.Should().Be(0);
+        result.Available.Should().Be(3);
+        result.Slots.Count.Should().Be(3);
+        result.Slots.Should().AllSatisfy(slot => slot.Status.Should().Be("available"));
     }
 
     [Fact]
@@ -75,22 +76,22 @@ public class GetUserAgentSlotsQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.Equal(3, result.Total);
-        Assert.Equal(2, result.Used);
-        Assert.Equal(1, result.Available);
-        Assert.Equal(3, result.Slots.Count);
+        result.Total.Should().Be(3);
+        result.Used.Should().Be(2);
+        result.Available.Should().Be(1);
+        result.Slots.Count.Should().Be(3);
 
         // First 2 slots should be active with agent details
-        Assert.Equal("active", result.Slots[0].Status);
-        Assert.NotNull(result.Slots[0].AgentId);
-        Assert.Equal("Agent1", result.Slots[0].AgentName);
+        result.Slots[0].Status.Should().Be("active");
+        result.Slots[0].AgentId.Should().NotBeNull();
+        result.Slots[0].AgentName.Should().Be("Agent1");
 
-        Assert.Equal("active", result.Slots[1].Status);
-        Assert.NotNull(result.Slots[1].AgentId);
+        result.Slots[1].Status.Should().Be("active");
+        result.Slots[1].AgentId.Should().NotBeNull();
 
         // Third slot should be available
-        Assert.Equal("available", result.Slots[2].Status);
-        Assert.Null(result.Slots[2].AgentId);
+        result.Slots[2].Status.Should().Be("available");
+        result.Slots[2].AgentId.Should().BeNull();
     }
 
     [Fact]
@@ -112,10 +113,10 @@ public class GetUserAgentSlotsQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.Equal(3, result.Total);
-        Assert.Equal(3, result.Used);
-        Assert.Equal(0, result.Available);
-        Assert.All(result.Slots, slot => Assert.Equal("active", slot.Status));
+        result.Total.Should().Be(3);
+        result.Used.Should().Be(3);
+        result.Available.Should().Be(0);
+        result.Slots.Should().AllSatisfy(slot => slot.Status.Should().Be("active"));
     }
 
     [Theory]
@@ -138,8 +139,8 @@ public class GetUserAgentSlotsQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.Equal(expectedTotal, result.Total);
-        Assert.Equal(expectedTotal, result.Available);
+        result.Total.Should().Be(expectedTotal);
+        result.Available.Should().Be(expectedTotal);
     }
 
     [Fact]
@@ -164,11 +165,11 @@ public class GetUserAgentSlotsQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.Equal(2, result.Used);
-        Assert.Equal(1, result.Available);
+        result.Used.Should().Be(2);
+        result.Available.Should().Be(1);
         // Only active agents appear in slots
         var activeSlots = result.Slots.Where(s => s.Status == "active").ToList();
-        Assert.Equal(2, activeSlots.Count);
+        activeSlots.Count.Should().Be(2);
     }
 
     [Theory]
@@ -193,10 +194,10 @@ public class GetUserAgentSlotsQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.Equal(int.MaxValue, result.Available);
-        Assert.Equal(1, result.Used);
+        result.Available.Should().Be(int.MaxValue);
+        result.Used.Should().Be(1);
         // For admins, only active agent slots are returned (no empty filler slots)
-        Assert.Single(result.Slots);
+        result.Slots.Should().ContainSingle();
     }
 
     [Fact]
@@ -214,7 +215,7 @@ public class GetUserAgentSlotsQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.Equal(AgentTierLimits.DefaultMaxAgents, result.Total);
+        result.Total.Should().Be(AgentTierLimits.DefaultMaxAgents);
     }
 
     [Fact]
@@ -232,7 +233,7 @@ public class GetUserAgentSlotsQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.Equal(AgentTierLimits.DefaultMaxAgents, result.Total);
+        result.Total.Should().Be(AgentTierLimits.DefaultMaxAgents);
     }
 
     [Fact]
@@ -257,7 +258,7 @@ public class GetUserAgentSlotsQueryHandlerTests
         // Assert
         for (var i = 0; i < result.Slots.Count; i++)
         {
-            Assert.Equal(i + 1, result.Slots[i].SlotIndex);
+            result.Slots[i].SlotIndex.Should().Be(i + 1);
         }
     }
 
@@ -282,15 +283,15 @@ public class GetUserAgentSlotsQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.Equal(gameId, result.Slots[0].GameId);
+        result.Slots[0].GameId.Should().Be(gameId);
     }
 
     [Fact]
     public async Task Handle_NullRequest_ThrowsArgumentNullException()
     {
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentNullException>(
-            () => _handler.Handle(null!, TestContext.Current.CancellationToken));
+        Func<Task> act = () => _handler.Handle(null!, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<ArgumentNullException>();
     }
 
     private static Agent CreateAgent(

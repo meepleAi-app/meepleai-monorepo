@@ -54,13 +54,14 @@ public sealed class AddPrivateGameCommandHandlerTests
     public void Constructor_NullPrivateGameRepository_ThrowsArgumentNullException()
     {
         // Act & Assert
-        var exception = Assert.Throws<ArgumentNullException>(() =>
+        var act = () =>
             new AddPrivateGameCommandHandler(
                 null!,
                 _userLibraryRepositoryMock.Object,
                 _sharedGameRepositoryMock.Object,
                 _unitOfWorkMock.Object,
-                _loggerMock.Object));
+                _loggerMock.Object);
+        var exception = act.Should().Throw<ArgumentNullException>().Which;
 
         exception.ParamName.Should().Be("privateGameRepository");
     }
@@ -69,13 +70,14 @@ public sealed class AddPrivateGameCommandHandlerTests
     public void Constructor_NullUserLibraryRepository_ThrowsArgumentNullException()
     {
         // Act & Assert
-        var exception = Assert.Throws<ArgumentNullException>(() =>
+        var act2 = () =>
             new AddPrivateGameCommandHandler(
                 _privateGameRepositoryMock.Object,
                 null!,
                 _sharedGameRepositoryMock.Object,
                 _unitOfWorkMock.Object,
-                _loggerMock.Object));
+                _loggerMock.Object);
+        var exception = act2.Should().Throw<ArgumentNullException>().Which;
 
         exception.ParamName.Should().Be("userLibraryRepository");
     }
@@ -84,13 +86,14 @@ public sealed class AddPrivateGameCommandHandlerTests
     public void Constructor_NullSharedGameRepository_ThrowsArgumentNullException()
     {
         // Act & Assert
-        var exception = Assert.Throws<ArgumentNullException>(() =>
+        var act3 = () =>
             new AddPrivateGameCommandHandler(
                 _privateGameRepositoryMock.Object,
                 _userLibraryRepositoryMock.Object,
                 null!,
                 _unitOfWorkMock.Object,
-                _loggerMock.Object));
+                _loggerMock.Object);
+        var exception = act3.Should().Throw<ArgumentNullException>().Which;
 
         exception.ParamName.Should().Be("sharedGameRepository");
     }
@@ -99,13 +102,14 @@ public sealed class AddPrivateGameCommandHandlerTests
     public void Constructor_NullUnitOfWork_ThrowsArgumentNullException()
     {
         // Act & Assert
-        var exception = Assert.Throws<ArgumentNullException>(() =>
+        var act4 = () =>
             new AddPrivateGameCommandHandler(
                 _privateGameRepositoryMock.Object,
                 _userLibraryRepositoryMock.Object,
                 _sharedGameRepositoryMock.Object,
                 null!,
-                _loggerMock.Object));
+                _loggerMock.Object);
+        var exception = act4.Should().Throw<ArgumentNullException>().Which;
 
         exception.ParamName.Should().Be("unitOfWork");
     }
@@ -114,13 +118,14 @@ public sealed class AddPrivateGameCommandHandlerTests
     public void Constructor_NullLogger_ThrowsArgumentNullException()
     {
         // Act & Assert
-        var exception = Assert.Throws<ArgumentNullException>(() =>
+        var act5 = () =>
             new AddPrivateGameCommandHandler(
                 _privateGameRepositoryMock.Object,
                 _userLibraryRepositoryMock.Object,
                 _sharedGameRepositoryMock.Object,
                 _unitOfWorkMock.Object,
-                null!));
+                null!);
+        var exception = act5.Should().Throw<ArgumentNullException>().Which;
 
         exception.ParamName.Should().Be("logger");
     }
@@ -367,8 +372,9 @@ public sealed class AddPrivateGameCommandHandlerTests
             .ReturnsAsync(existingSharedGame);
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<ConflictException>(() =>
-            _handler.Handle(command, CancellationToken.None));
+        var act6 = () =>
+            _handler.Handle(command, CancellationToken.None);
+        var exception = (await act6.Should().ThrowAsync<ConflictException>()).Which;
 
         exception.Message.Should().Contain("already exists in the shared catalog");
         exception.Message.Should().Contain("12345");
@@ -404,8 +410,9 @@ public sealed class AddPrivateGameCommandHandlerTests
             .ReturnsAsync(true); // Already exists
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<ConflictException>(() =>
-            _handler.Handle(command, CancellationToken.None));
+        var act7 = () =>
+            _handler.Handle(command, CancellationToken.None);
+        var exception = (await act7.Should().ThrowAsync<ConflictException>()).Which;
 
         exception.Message.Should().Contain("already have a private game");
         exception.Message.Should().Contain("12345");
@@ -471,8 +478,9 @@ public sealed class AddPrivateGameCommandHandlerTests
             MaxPlayers: 4);
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<DomainException>(() =>
-            _handler.Handle(command, CancellationToken.None));
+        var act8 = () =>
+            _handler.Handle(command, CancellationToken.None);
+        var exception = (await act8.Should().ThrowAsync<DomainException>()).Which;
 
         exception.Message.Should().Contain("Invalid source");
         exception.Message.Should().Contain("InvalidSource");
@@ -491,8 +499,9 @@ public sealed class AddPrivateGameCommandHandlerTests
             MaxPlayers: 4);
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<DomainException>(() =>
-            _handler.Handle(command, CancellationToken.None));
+        var act9 = () =>
+            _handler.Handle(command, CancellationToken.None);
+        var exception = (await act9.Should().ThrowAsync<DomainException>()).Which;
 
         exception.Message.Should().Contain("BoardGameGeek source requires BggId");
     }
@@ -501,8 +510,9 @@ public sealed class AddPrivateGameCommandHandlerTests
     public async Task Handle_NullCommand_ThrowsArgumentNullException()
     {
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentNullException>(() =>
-            _handler.Handle(null!, CancellationToken.None));
+        var act10 = () =>
+            _handler.Handle(null!, CancellationToken.None);
+        await act10.Should().ThrowAsync<ArgumentNullException>();
     }
 
     #endregion

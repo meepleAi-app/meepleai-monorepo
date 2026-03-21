@@ -1,5 +1,6 @@
 using Api.Tests.Constants;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.SharedGameCatalog.Application.Handlers;
 
@@ -18,6 +19,6 @@ public class BadgeEvaluationOnApprovalHandlerTests
         // BadgeEvaluationOnApprovalHandler inherits from DomainEventHandlerBase<T>
         // which requires MeepleAiDbContext in constructor (cannot be mocked easily).
         // Full testing is covered by integration tests with actual database.
-        Assert.True(true);
+        true.Should().BeTrue();
     }
 }

@@ -1,6 +1,7 @@
 using Api.BoundedContexts.KnowledgeBase.Domain.Evaluation;
 using Api.BoundedContexts.KnowledgeBase.Domain.GridSearch;
 using Xunit;
+using FluentAssertions;
 using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Domain.GridSearch;
@@ -28,11 +29,11 @@ public class GridSearchResultTests
             results);
 
         // Assert
-        Assert.NotNull(gridSearchResult);
-        Assert.Equal("test-dataset", gridSearchResult.DatasetName);
-        Assert.Equal(startedAt, gridSearchResult.StartedAt);
-        Assert.Equal(completedAt, gridSearchResult.CompletedAt);
-        Assert.Equal(3, gridSearchResult.ConfigurationCount);
+        gridSearchResult.Should().NotBeNull();
+        gridSearchResult.DatasetName.Should().Be("test-dataset");
+        gridSearchResult.StartedAt.Should().Be(startedAt);
+        gridSearchResult.CompletedAt.Should().Be(completedAt);
+        gridSearchResult.ConfigurationCount.Should().Be(3);
     }
 
     [Fact]
@@ -51,7 +52,7 @@ public class GridSearchResultTests
             results);
 
         // Assert
-        Assert.Equal(5000, gridSearchResult.TotalDurationMs, 1);
+        gridSearchResult.TotalDurationMs.Should().BeApproximately(5000, 1);
     }
 
     [Fact]
@@ -80,7 +81,7 @@ public class GridSearchResultTests
             results);
 
         // Assert
-        Assert.Equal(2, gridSearchResult.SuccessfulCount);
+        gridSearchResult.SuccessfulCount.Should().Be(2);
     }
 
     [Fact]
@@ -111,9 +112,9 @@ public class GridSearchResultTests
             results);
 
         // Assert
-        Assert.NotNull(gridSearchResult.BestByRecallAt10);
-        Assert.Equal(config2.ConfigurationId, gridSearchResult.BestByRecallAt10.Configuration.ConfigurationId);
-        Assert.Equal(0.85, gridSearchResult.BestByRecallAt10.Metrics.RecallAt10);
+        gridSearchResult.BestByRecallAt10.Should().NotBeNull();
+        gridSearchResult.BestByRecallAt10.Configuration.ConfigurationId.Should().Be(config2.ConfigurationId);
+        gridSearchResult.BestByRecallAt10.Metrics.RecallAt10.Should().Be(0.85);
     }
 
     [Fact]
@@ -141,9 +142,9 @@ public class GridSearchResultTests
             results);
 
         // Assert
-        Assert.NotNull(gridSearchResult.BestByNdcg);
-        Assert.Equal(config1.ConfigurationId, gridSearchResult.BestByNdcg.Configuration.ConfigurationId);
-        Assert.Equal(0.90, gridSearchResult.BestByNdcg.Metrics.NdcgAt10);
+        gridSearchResult.BestByNdcg.Should().NotBeNull();
+        gridSearchResult.BestByNdcg.Configuration.ConfigurationId.Should().Be(config1.ConfigurationId);
+        gridSearchResult.BestByNdcg.Metrics.NdcgAt10.Should().Be(0.90);
     }
 
     [Fact]
@@ -171,9 +172,9 @@ public class GridSearchResultTests
             results);
 
         // Assert
-        Assert.NotNull(gridSearchResult.BestByLatency);
-        Assert.Equal(config2.ConfigurationId, gridSearchResult.BestByLatency.Configuration.ConfigurationId);
-        Assert.Equal(800, gridSearchResult.BestByLatency.Metrics.P95LatencyMs);
+        gridSearchResult.BestByLatency.Should().NotBeNull();
+        gridSearchResult.BestByLatency.Configuration.ConfigurationId.Should().Be(config2.ConfigurationId);
+        gridSearchResult.BestByLatency.Metrics.P95LatencyMs.Should().Be(800);
     }
 
     [Fact]
@@ -199,7 +200,7 @@ public class GridSearchResultTests
             results);
 
         // Assert
-        Assert.True(gridSearchResult.MeetsPhase5Target);
+        gridSearchResult.MeetsPhase5Target.Should().BeTrue();
     }
 
     [Fact]
@@ -229,7 +230,7 @@ public class GridSearchResultTests
             results);
 
         // Assert
-        Assert.False(gridSearchResult.MeetsPhase5Target);
+        gridSearchResult.MeetsPhase5Target.Should().BeFalse();
     }
 
     [Fact]
@@ -246,7 +247,7 @@ public class GridSearchResultTests
             results);
 
         // Assert
-        Assert.True(Guid.TryParse(gridSearchResult.GridSearchId, out _));
+        Guid.TryParse(gridSearchResult.GridSearchId, out _).Should().BeTrue();
     }
 
     [Fact]
@@ -261,10 +262,10 @@ public class GridSearchResultTests
         var result = ConfigurationResult.Success(config, metrics, 50, 1500);
 
         // Assert
-        Assert.True(result.IsSuccess);
-        Assert.Null(result.ErrorMessage);
-        Assert.Equal(50, result.SampleCount);
-        Assert.Equal(1500, result.DurationMs);
+        result.IsSuccess.Should().BeTrue();
+        result.ErrorMessage.Should().BeNull();
+        result.SampleCount.Should().Be(50);
+        result.DurationMs.Should().Be(1500);
     }
 
     [Fact]
@@ -278,11 +279,11 @@ public class GridSearchResultTests
         var result = ConfigurationResult.Failure(config, "Connection timeout", 500);
 
         // Assert
-        Assert.False(result.IsSuccess);
-        Assert.Equal("Connection timeout", result.ErrorMessage);
-        Assert.Equal(EvaluationMetrics.Empty, result.Metrics);
-        Assert.Equal(0, result.SampleCount);
-        Assert.Equal(500, result.DurationMs);
+        result.IsSuccess.Should().BeFalse();
+        result.ErrorMessage.Should().Be("Connection timeout");
+        result.Metrics.Should().Be(EvaluationMetrics.Empty);
+        result.SampleCount.Should().Be(0);
+        result.DurationMs.Should().Be(500);
     }
 
     [Fact]
@@ -307,9 +308,9 @@ public class GridSearchResultTests
             results);
 
         // Assert
-        Assert.Null(gridSearchResult.BestByRecallAt10);
-        Assert.Null(gridSearchResult.BestByNdcg);
-        Assert.Null(gridSearchResult.BestByLatency);
+        gridSearchResult.BestByRecallAt10.Should().BeNull();
+        gridSearchResult.BestByNdcg.Should().BeNull();
+        gridSearchResult.BestByLatency.Should().BeNull();
     }
 
     private static IReadOnlyList<ConfigurationResult> CreateSampleResults()

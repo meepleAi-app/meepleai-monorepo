@@ -18,6 +18,7 @@ using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.Unit.UserLibrary;
 
@@ -124,13 +125,13 @@ public sealed class GetUserLibraryQueryHandlerTests : IDisposable
         var result = await _handler.Handle(query, CancellationToken.None);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Single(result.Items);
+        result.Should().NotBeNull();
+        result.Items.Should().ContainSingle();
         var item = result.Items.First();
-        Assert.True(item.HasKb, "Should have hasKb=true when a PDF is fully indexed (Ready)");
-        Assert.Equal(1, item.KbCardCount);
-        Assert.Equal(1, item.KbIndexedCount);
-        Assert.Equal(0, item.KbProcessingCount);
+        item.HasKb.Should().BeTrue("Should have hasKb=true when a PDF is fully indexed (Ready)");
+        item.KbCardCount.Should().Be(1);
+        item.KbIndexedCount.Should().Be(1);
+        item.KbProcessingCount.Should().Be(0);
     }
 
     [Fact]
@@ -187,12 +188,12 @@ public sealed class GetUserLibraryQueryHandlerTests : IDisposable
         var result = await _handler.Handle(query, CancellationToken.None);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Single(result.Items);
+        result.Should().NotBeNull();
+        result.Items.Should().ContainSingle();
         var item = result.Items.First();
-        Assert.False(item.HasKb, "Should have hasKb=false when no PDF exists");
-        Assert.Equal(0, item.KbCardCount);
-        Assert.Equal(0, item.KbIndexedCount);
+        item.HasKb.Should().BeFalse("Should have hasKb=false when no PDF exists");
+        item.KbCardCount.Should().Be(0);
+        item.KbIndexedCount.Should().Be(0);
     }
 
     [Fact]
@@ -270,14 +271,14 @@ public sealed class GetUserLibraryQueryHandlerTests : IDisposable
         var result = await _handler.Handle(query, CancellationToken.None);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Single(result.Items);
+        result.Should().NotBeNull();
+        result.Items.Should().ContainSingle();
         var item = result.Items.First();
-        Assert.Equal(privateGameId, item.GameId);
-        Assert.True(item.HasKb, "Private game with a Ready PDF should have hasKb=true");
-        Assert.Equal(1, item.KbCardCount);
-        Assert.Equal(1, item.KbIndexedCount);
-        Assert.Equal(0, item.KbProcessingCount);
+        item.GameId.Should().Be(privateGameId);
+        item.HasKb.Should().BeTrue("Private game with a Ready PDF should have hasKb=true");
+        item.KbCardCount.Should().Be(1);
+        item.KbIndexedCount.Should().Be(1);
+        item.KbProcessingCount.Should().Be(0);
     }
 
     public void Dispose()

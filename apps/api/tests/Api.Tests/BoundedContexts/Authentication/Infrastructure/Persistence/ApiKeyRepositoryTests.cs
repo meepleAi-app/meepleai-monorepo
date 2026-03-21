@@ -5,6 +5,7 @@ using Api.Infrastructure;
 using Api.Tests.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using Xunit;
+using FluentAssertions;
 using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.Authentication.Infrastructure.Persistence;
@@ -63,9 +64,9 @@ public class ApiKeyRepositoryTests : SharedDatabaseTestBase<ApiKeyRepository>
         var result = await Repository.GetByKeyPrefixAsync(apiKey.KeyPrefix, TestCancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal(apiKey.Id, result.Id);
-        Assert.Equal(apiKey.KeyPrefix, result.KeyPrefix);
+        result.Should().NotBeNull();
+        result.Id.Should().Be(apiKey.Id);
+        result.KeyPrefix.Should().Be(apiKey.KeyPrefix);
     }
 
     [Fact]
@@ -79,7 +80,7 @@ public class ApiKeyRepositoryTests : SharedDatabaseTestBase<ApiKeyRepository>
         var result = await Repository.GetByKeyPrefixAsync(nonExistentPrefix, TestCancellationToken);
 
         // Assert
-        Assert.Null(result);
+        result.Should().BeNull();
     }
     [Fact]
     public async Task GetByUserIdAsync_NoKeys_ReturnsEmptyList()
@@ -92,7 +93,7 @@ public class ApiKeyRepositoryTests : SharedDatabaseTestBase<ApiKeyRepository>
         var keys = await Repository.GetByUserIdAsync(userId, TestCancellationToken);
 
         // Assert
-        Assert.Empty(keys);
+        keys.Should().BeEmpty();
     }
 
     [Fact]
@@ -117,10 +118,10 @@ public class ApiKeyRepositoryTests : SharedDatabaseTestBase<ApiKeyRepository>
         var keys = await Repository.GetByUserIdAsync(userId, TestCancellationToken);
 
         // Assert
-        Assert.Equal(3, keys.Count);
+        keys.Count.Should().Be(3);
         // Should be ordered by CreatedAt descending
-        Assert.True(keys[0].CreatedAt >= keys[1].CreatedAt);
-        Assert.True(keys[1].CreatedAt >= keys[2].CreatedAt);
+        (keys[0].CreatedAt >= keys[1].CreatedAt).Should().BeTrue();
+        (keys[1].CreatedAt >= keys[2].CreatedAt).Should().BeTrue();
     }
 
     [Fact]
@@ -145,8 +146,8 @@ public class ApiKeyRepositoryTests : SharedDatabaseTestBase<ApiKeyRepository>
         var user2Keys = await Repository.GetByUserIdAsync(user2Id, TestCancellationToken);
 
         // Assert
-        Assert.Equal(2, user1Keys.Count);
-        Assert.Single(user2Keys);
+        user1Keys.Count.Should().Be(2);
+        user2Keys.Should().ContainSingle();
     }
     [Fact]
     public async Task GetActiveKeysByUserIdAsync_OnlyActiveKeys_ReturnsAll()
@@ -166,7 +167,7 @@ public class ApiKeyRepositoryTests : SharedDatabaseTestBase<ApiKeyRepository>
         var activeKeys = await Repository.GetActiveKeysByUserIdAsync(userId, TestCancellationToken);
 
         // Assert
-        Assert.Equal(2, activeKeys.Count);
+        activeKeys.Count.Should().Be(2);
     }
 
     [Fact]
@@ -189,8 +190,8 @@ public class ApiKeyRepositoryTests : SharedDatabaseTestBase<ApiKeyRepository>
         var activeKeys = await Repository.GetActiveKeysByUserIdAsync(userId, TestCancellationToken);
 
         // Assert
-        Assert.Single(activeKeys);
-        Assert.Equal(activeKey.Id, activeKeys[0].Id);
+        activeKeys.Should().ContainSingle();
+        activeKeys[0].Id.Should().Be(activeKey.Id);
     }
 
     [Fact]
@@ -211,8 +212,8 @@ public class ApiKeyRepositoryTests : SharedDatabaseTestBase<ApiKeyRepository>
         var activeKeys = await Repository.GetActiveKeysByUserIdAsync(userId, TestCancellationToken);
 
         // Assert
-        Assert.Single(activeKeys);
-        Assert.Equal(activeKey.Id, activeKeys[0].Id);
+        activeKeys.Should().ContainSingle();
+        activeKeys[0].Id.Should().Be(activeKey.Id);
     }
 
     [Fact]
@@ -235,8 +236,8 @@ public class ApiKeyRepositoryTests : SharedDatabaseTestBase<ApiKeyRepository>
         var activeKeys = await Repository.GetActiveKeysByUserIdAsync(userId, TestCancellationToken);
 
         // Assert
-        Assert.Single(activeKeys);
-        Assert.Equal(activeKey.Id, activeKeys[0].Id);
+        activeKeys.Should().ContainSingle();
+        activeKeys[0].Id.Should().Be(activeKey.Id);
     }
 
     [Fact]
@@ -263,9 +264,9 @@ public class ApiKeyRepositoryTests : SharedDatabaseTestBase<ApiKeyRepository>
         var activeKeys = await Repository.GetActiveKeysByUserIdAsync(userId, TestCancellationToken);
 
         // Assert
-        Assert.Equal(2, activeKeys.Count);
-        Assert.Contains(activeKeys, k => k.Id == active1.Id);
-        Assert.Contains(activeKeys, k => k.Id == active2.Id);
+        activeKeys.Count.Should().Be(2);
+        activeKeys.Should().Contain(k => k.Id == active1.Id);
+        activeKeys.Should().Contain(k => k.Id == active2.Id);
     }
     [Fact]
     public async Task AddAsync_NewApiKey_PersistsSuccessfully()
@@ -288,14 +289,14 @@ public class ApiKeyRepositoryTests : SharedDatabaseTestBase<ApiKeyRepository>
 
         // Assert
         var persisted = await DbContext.ApiKeys.FirstOrDefaultAsync(k => k.Id == apiKey.Id, TestContext.Current.CancellationToken);
-        Assert.NotNull(persisted);
-        Assert.Equal(userId, persisted.UserId);
-        Assert.Equal("Production Key", persisted.KeyName);
-        Assert.Equal("read,write,admin", persisted.Scopes);
-        Assert.NotNull(persisted.ExpiresAt);
-        Assert.Equal("{\"env\":\"production\"}", persisted.Metadata);
-        Assert.True(persisted.IsActive);
-        Assert.NotNull(plaintextKey); // Should receive plaintext key once
+        persisted.Should().NotBeNull();
+        persisted.UserId.Should().Be(userId);
+        persisted.KeyName.Should().Be("Production Key");
+        persisted.Scopes.Should().Be("read,write,admin");
+        persisted.ExpiresAt.Should().NotBeNull();
+        persisted.Metadata.Should().Be("{\"env\":\"production\"}");
+        persisted.IsActive.Should().BeTrue();
+        plaintextKey.Should().NotBeNull(); // Should receive plaintext key once
     }
 
     [Fact]
@@ -317,8 +318,8 @@ public class ApiKeyRepositoryTests : SharedDatabaseTestBase<ApiKeyRepository>
 
         // Assert
         var persisted = await DbContext.ApiKeys.FirstOrDefaultAsync(k => k.Id == apiKey.Id, TestContext.Current.CancellationToken);
-        Assert.NotNull(persisted);
-        Assert.Null(persisted.ExpiresAt);
+        persisted.Should().NotBeNull();
+        persisted.ExpiresAt.Should().BeNull();
     }
     [Fact]
     public async Task UpdateAsync_LastUsedAt_UpdatesCorrectly()
@@ -339,8 +340,8 @@ public class ApiKeyRepositoryTests : SharedDatabaseTestBase<ApiKeyRepository>
 
         // Assert
         var updated = await DbContext.ApiKeys.FirstOrDefaultAsync(k => k.Id == apiKey.Id, TestContext.Current.CancellationToken);
-        Assert.NotNull(updated);
-        Assert.NotNull(updated.LastUsedAt);
+        updated.Should().NotBeNull();
+        updated.LastUsedAt.Should().NotBeNull();
     }
 
     [Fact]
@@ -363,10 +364,10 @@ public class ApiKeyRepositoryTests : SharedDatabaseTestBase<ApiKeyRepository>
 
         // Assert
         var updated = await DbContext.ApiKeys.FirstOrDefaultAsync(k => k.Id == apiKey.Id, TestContext.Current.CancellationToken);
-        Assert.NotNull(updated);
-        Assert.NotNull(updated.RevokedAt);
-        Assert.Equal(revokerId, updated.RevokedBy);
-        Assert.False(updated.IsActive);
+        updated.Should().NotBeNull();
+        updated.RevokedAt.Should().NotBeNull();
+        updated.RevokedBy.Should().Be(revokerId);
+        updated.IsActive.Should().BeFalse();
     }
     [Fact]
     public async Task Mapping_DomainToPersistence_AllFieldsCorrect()
@@ -389,15 +390,15 @@ public class ApiKeyRepositoryTests : SharedDatabaseTestBase<ApiKeyRepository>
 
         // Assert
         var persisted = await DbContext.ApiKeys.FirstOrDefaultAsync(k => k.Id == apiKey.Id, TestContext.Current.CancellationToken);
-        Assert.NotNull(persisted);
-        Assert.Equal(apiKey.Id, persisted.Id);
-        Assert.Equal(apiKey.UserId, persisted.UserId);
-        Assert.Equal(apiKey.KeyName, persisted.KeyName);
-        Assert.Equal(apiKey.KeyHash, persisted.KeyHash);
-        Assert.Equal(apiKey.KeyPrefix, persisted.KeyPrefix);
-        Assert.Equal(apiKey.Scopes, persisted.Scopes);
-        Assert.Equal(apiKey.Metadata, persisted.Metadata);
-        Assert.Equal(apiKey.IsActive, persisted.IsActive);
+        persisted.Should().NotBeNull();
+        persisted.Id.Should().Be(apiKey.Id);
+        persisted.UserId.Should().Be(apiKey.UserId);
+        persisted.KeyName.Should().Be(apiKey.KeyName);
+        persisted.KeyHash.Should().Be(apiKey.KeyHash);
+        persisted.KeyPrefix.Should().Be(apiKey.KeyPrefix);
+        persisted.Scopes.Should().Be(apiKey.Scopes);
+        persisted.Metadata.Should().Be(apiKey.Metadata);
+        persisted.IsActive.Should().Be(apiKey.IsActive);
     }
 
     [Fact]
@@ -414,13 +415,13 @@ public class ApiKeyRepositoryTests : SharedDatabaseTestBase<ApiKeyRepository>
         var retrieved = await Repository.GetByKeyPrefixAsync(apiKey.KeyPrefix, TestCancellationToken);
 
         // Assert
-        Assert.NotNull(retrieved);
-        Assert.Equal(apiKey.Id, retrieved.Id);
-        Assert.Equal(apiKey.UserId, retrieved.UserId);
-        Assert.Equal(apiKey.KeyName, retrieved.KeyName);
-        Assert.Equal(apiKey.KeyPrefix, retrieved.KeyPrefix);
-        Assert.Equal(apiKey.Scopes, retrieved.Scopes);
-        Assert.Equal(apiKey.IsActive, retrieved.IsActive);
+        retrieved.Should().NotBeNull();
+        retrieved.Id.Should().Be(apiKey.Id);
+        retrieved.UserId.Should().Be(apiKey.UserId);
+        retrieved.KeyName.Should().Be(apiKey.KeyName);
+        retrieved.KeyPrefix.Should().Be(apiKey.KeyPrefix);
+        retrieved.Scopes.Should().Be(apiKey.Scopes);
+        retrieved.IsActive.Should().Be(apiKey.IsActive);
     }
     [Fact]
     public async Task ScopeSerialization_SingleScope_PersistsCorrectly()
@@ -436,8 +437,8 @@ public class ApiKeyRepositoryTests : SharedDatabaseTestBase<ApiKeyRepository>
 
         // Assert
         var persisted = await DbContext.ApiKeys.FirstOrDefaultAsync(k => k.Id == apiKey.Id, TestContext.Current.CancellationToken);
-        Assert.NotNull(persisted);
-        Assert.Equal("read", persisted.Scopes);
+        persisted.Should().NotBeNull();
+        persisted.Scopes.Should().Be("read");
     }
 
     [Fact]
@@ -454,8 +455,8 @@ public class ApiKeyRepositoryTests : SharedDatabaseTestBase<ApiKeyRepository>
 
         // Assert
         var persisted = await DbContext.ApiKeys.FirstOrDefaultAsync(k => k.Id == apiKey.Id, TestContext.Current.CancellationToken);
-        Assert.NotNull(persisted);
-        Assert.Equal("read,write,admin", persisted.Scopes);
+        persisted.Should().NotBeNull();
+        persisted.Scopes.Should().Be("read,write,admin");
     }
     [Fact]
     public async Task ConcurrentPrefixLookups_NoConflicts()
@@ -477,10 +478,10 @@ public class ApiKeyRepositoryTests : SharedDatabaseTestBase<ApiKeyRepository>
         var results = await Task.WhenAll(tasks);
 
         // Assert
-        Assert.All(results, result =>
+        results.Should().AllSatisfy(result =>
         {
-            Assert.NotNull(result);
-            Assert.Equal(apiKey.Id, result.Id);
+            result.Should().NotBeNull();
+            result.Id.Should().Be(apiKey.Id);
         });
     }
 
@@ -517,8 +518,8 @@ public class ApiKeyRepositoryTests : SharedDatabaseTestBase<ApiKeyRepository>
         // Assert - Should have LastUsedAt updated
         DbContext.ChangeTracker.Clear();
         var updated = await DbContext.ApiKeys.FirstOrDefaultAsync(k => k.Id == apiKey.Id, TestContext.Current.CancellationToken);
-        Assert.NotNull(updated);
-        Assert.NotNull(updated.LastUsedAt);
+        updated.Should().NotBeNull();
+        updated.LastUsedAt.Should().NotBeNull();
     }
     [Fact]
     public async Task NullableFields_Metadata_HandledCorrectly()
@@ -534,8 +535,8 @@ public class ApiKeyRepositoryTests : SharedDatabaseTestBase<ApiKeyRepository>
 
         // Assert
         var persisted = await DbContext.ApiKeys.FirstOrDefaultAsync(k => k.Id == apiKey.Id, TestContext.Current.CancellationToken);
-        Assert.NotNull(persisted);
-        Assert.Null(persisted.Metadata);
+        persisted.Should().NotBeNull();
+        persisted.Metadata.Should().BeNull();
     }
 
     [Fact]
@@ -559,7 +560,6 @@ public class ApiKeyRepositoryTests : SharedDatabaseTestBase<ApiKeyRepository>
 
         // Assert - Changes should NOT be persisted (AsNoTracking)
         var reloaded = await DbContext.ApiKeys.FirstOrDefaultAsync(k => k.Id == apiKey.Id, TestContext.Current.CancellationToken);
-        Assert.Null(reloaded!.LastUsedAt); // Should remain null
+        reloaded!.LastUsedAt.Should().BeNull(); // Should remain null
     }
 }
-

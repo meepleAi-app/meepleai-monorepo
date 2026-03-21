@@ -9,6 +9,7 @@ using Api.SharedKernel.Infrastructure.Persistence;
 using Api.Tests.Constants;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.GameToolkit.Application.Handlers;
 
@@ -34,8 +35,9 @@ public class ApplyAiToolkitSuggestionHandlerTests
     [Fact]
     public async Task Handle_WithNullCommand_ThrowsArgumentNullException()
     {
-        await Assert.ThrowsAsync<ArgumentNullException>(() =>
-            _handler.Handle(null!, TestContext.Current.CancellationToken));
+        var act = () =>
+            _handler.Handle(null!, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<ArgumentNullException>();
     }
 
     // ========================================================================
@@ -58,9 +60,9 @@ public class ApplyAiToolkitSuggestionHandlerTests
 
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
-        Assert.NotNull(result);
-        Assert.Equal("Catan Toolkit", result.Name);
-        Assert.Equal(gameId, result.GameId);
+        result.Should().NotBeNull();
+        result.Name.Should().Be("Catan Toolkit");
+        result.GameId.Should().Be(gameId);
         _repoMock.Verify(r => r.AddAsync(It.IsAny<Api.BoundedContexts.GameToolkit.Domain.Entities.GameToolkit>(), It.IsAny<CancellationToken>()), Times.Once);
         _repoMock.Verify(r => r.UpdateAsync(It.IsAny<Api.BoundedContexts.GameToolkit.Domain.Entities.GameToolkit>(), It.IsAny<CancellationToken>()), Times.Never);
         _uowMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
@@ -83,8 +85,8 @@ public class ApplyAiToolkitSuggestionHandlerTests
 
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
-        Assert.NotNull(result);
-        Assert.Equal("Catan Toolkit", result.Name);
+        result.Should().NotBeNull();
+        result.Name.Should().Be("Catan Toolkit");
         _repoMock.Verify(r => r.UpdateAsync(It.IsAny<Api.BoundedContexts.GameToolkit.Domain.Entities.GameToolkit>(), It.IsAny<CancellationToken>()), Times.Once);
         _repoMock.Verify(r => r.AddAsync(It.IsAny<Api.BoundedContexts.GameToolkit.Domain.Entities.GameToolkit>(), It.IsAny<CancellationToken>()), Times.Never);
         _uowMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
@@ -100,8 +102,9 @@ public class ApplyAiToolkitSuggestionHandlerTests
         _repoMock.Setup(r => r.GetByIdAsync(toolkitId, It.IsAny<CancellationToken>()))
             .ReturnsAsync((Api.BoundedContexts.GameToolkit.Domain.Entities.GameToolkit?)null);
 
-        await Assert.ThrowsAsync<NotFoundException>(() =>
-            _handler.Handle(command, TestContext.Current.CancellationToken));
+        var act2 = () =>
+            _handler.Handle(command, TestContext.Current.CancellationToken);
+        await act2.Should().ThrowAsync<NotFoundException>();
     }
 
     // ========================================================================
@@ -130,11 +133,11 @@ public class ApplyAiToolkitSuggestionHandlerTests
 
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
-        Assert.Equal(2, result.DiceTools.Count);
-        Assert.Equal("Attack Die", result.DiceTools[0].Name);
-        Assert.Equal(DiceType.D20, result.DiceTools[0].DiceType);
-        Assert.Equal("Custom Die", result.DiceTools[1].Name);
-        Assert.Equal(DiceType.Custom, result.DiceTools[1].DiceType);
+        result.DiceTools.Count.Should().Be(2);
+        result.DiceTools[0].Name.Should().Be("Attack Die");
+        result.DiceTools[0].DiceType.Should().Be(DiceType.D20);
+        result.DiceTools[1].Name.Should().Be("Custom Die");
+        result.DiceTools[1].DiceType.Should().Be(DiceType.Custom);
     }
 
     // ========================================================================
@@ -163,11 +166,11 @@ public class ApplyAiToolkitSuggestionHandlerTests
 
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
-        Assert.Equal(2, result.CounterTools.Count);
-        Assert.Equal("Wood", result.CounterTools[0].Name);
-        Assert.True(result.CounterTools[0].IsPerPlayer);
-        Assert.Equal("Gold", result.CounterTools[1].Name);
-        Assert.Equal(10, result.CounterTools[1].DefaultValue);
+        result.CounterTools.Count.Should().Be(2);
+        result.CounterTools[0].Name.Should().Be("Wood");
+        result.CounterTools[0].IsPerPlayer.Should().BeTrue();
+        result.CounterTools[1].Name.Should().Be("Gold");
+        result.CounterTools[1].DefaultValue.Should().Be(10);
     }
 
     // ========================================================================
@@ -196,13 +199,13 @@ public class ApplyAiToolkitSuggestionHandlerTests
 
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
-        Assert.Equal(2, result.TimerTools.Count);
-        Assert.Equal("Turn Timer", result.TimerTools[0].Name);
-        Assert.Equal(TimerType.CountDown, result.TimerTools[0].TimerType);
-        Assert.Equal(60, result.TimerTools[0].DurationSeconds);
-        Assert.Equal("Chess Clock", result.TimerTools[1].Name);
-        Assert.Equal(TimerType.Chess, result.TimerTools[1].TimerType);
-        Assert.True(result.TimerTools[1].IsPerPlayer);
+        result.TimerTools.Count.Should().Be(2);
+        result.TimerTools[0].Name.Should().Be("Turn Timer");
+        result.TimerTools[0].TimerType.Should().Be(TimerType.CountDown);
+        result.TimerTools[0].DurationSeconds.Should().Be(60);
+        result.TimerTools[1].Name.Should().Be("Chess Clock");
+        result.TimerTools[1].TimerType.Should().Be(TimerType.Chess);
+        result.TimerTools[1].IsPerPlayer.Should().BeTrue();
     }
 
     // ========================================================================
@@ -227,11 +230,11 @@ public class ApplyAiToolkitSuggestionHandlerTests
 
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
-        Assert.NotNull(result.ScoringTemplate);
-        Assert.Equal(3, result.ScoringTemplate.Dimensions.Length);
-        Assert.Contains("VP", result.ScoringTemplate.Dimensions);
-        Assert.Equal("VP", result.ScoringTemplate.DefaultUnit);
-        Assert.Equal(ScoreType.Points, result.ScoringTemplate.ScoreType);
+        result.ScoringTemplate.Should().NotBeNull();
+        result.ScoringTemplate.Dimensions.Length.Should().Be(3);
+        result.ScoringTemplate.Dimensions.Should().Contain("VP");
+        result.ScoringTemplate.DefaultUnit.Should().Be("VP");
+        result.ScoringTemplate.ScoreType.Should().Be(ScoreType.Points);
     }
 
     [Fact]
@@ -252,7 +255,7 @@ public class ApplyAiToolkitSuggestionHandlerTests
 
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
-        Assert.Null(result.ScoringTemplate);
+        result.ScoringTemplate.Should().BeNull();
     }
 
     // ========================================================================
@@ -277,10 +280,10 @@ public class ApplyAiToolkitSuggestionHandlerTests
 
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
-        Assert.NotNull(result.TurnTemplate);
-        Assert.Equal(TurnOrderType.RoundRobin, result.TurnTemplate.TurnOrderType);
-        Assert.Equal(3, result.TurnTemplate.Phases.Length);
-        Assert.Contains("Draw", result.TurnTemplate.Phases);
+        result.TurnTemplate.Should().NotBeNull();
+        result.TurnTemplate.TurnOrderType.Should().Be(TurnOrderType.RoundRobin);
+        result.TurnTemplate.Phases.Length.Should().Be(3);
+        result.TurnTemplate.Phases.Should().Contain("Draw");
     }
 
     // ========================================================================
@@ -306,7 +309,7 @@ public class ApplyAiToolkitSuggestionHandlerTests
 
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
-        Assert.Equal(reasoning, result.AgentConfig);
+        result.AgentConfig.Should().Be(reasoning);
     }
 
     // ========================================================================
@@ -331,9 +334,9 @@ public class ApplyAiToolkitSuggestionHandlerTests
 
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
-        Assert.True(result.OverridesTurnOrder);
-        Assert.True(result.OverridesScoreboard);
-        Assert.True(result.OverridesDiceSet);
+        result.OverridesTurnOrder.Should().BeTrue();
+        result.OverridesScoreboard.Should().BeTrue();
+        result.OverridesDiceSet.Should().BeTrue();
     }
 
     // ========================================================================

@@ -107,15 +107,19 @@ public sealed class GetStrategyComparisonQueryHandlerTests
     [Fact]
     public async Task Handle_WeightedScoring_RecommendsCorrectStrategy()
     {
-        // Arrange — "Quality" strategy: highest confidence (0.95), moderate latency, moderate cost
-        //           "Fast" strategy: low latency but low confidence (0.65)
-        //           "Cheap" strategy: lowest cost but low confidence (0.60)
-        // Weights: quality 50%, latency 30%, cost 20% → "Quality" should win
+        // Arrange — "Quality" strategy: highest confidence (0.95), moderate latency and cost
+        //           "Fast" strategy: lowest latency but low confidence (0.65)
+        //           "Cheap" strategy: lowest cost but low confidence (0.60), high latency
+        // Ordinal ranking (3 items: scores 1.0, 0.5, 0.0)
+        // Weights: quality 50%, latency 30%, cost 20%
+        // Quality: lat=0.5×0.3 + qual=1.0×0.5 + cost=0.5×0.2 = 0.75 ← wins
+        // Fast:    lat=1.0×0.3 + qual=0.5×0.5 + cost=0.0×0.2 = 0.55
+        // Cheap:   lat=0.0×0.3 + qual=0.0×0.5 + cost=1.0×0.2 = 0.20
         var metrics = new List<StrategyAggregateMetrics>
         {
-            CreateMetrics("Quality", queries: 100, confidence: 0.95, costPerQuery: 0.08m, avgLatencyMs: 200.0),
+            CreateMetrics("Quality", queries: 100, confidence: 0.95, costPerQuery: 0.04m, avgLatencyMs: 120.0),
             CreateMetrics("Fast", queries: 100, confidence: 0.65, costPerQuery: 0.06m, avgLatencyMs: 50.0),
-            CreateMetrics("Cheap", queries: 100, confidence: 0.60, costPerQuery: 0.02m, avgLatencyMs: 180.0)
+            CreateMetrics("Cheap", queries: 100, confidence: 0.60, costPerQuery: 0.02m, avgLatencyMs: 300.0)
         };
 
         _mockRepo

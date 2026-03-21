@@ -7325,7 +7325,9 @@ namespace Api.Infrastructure.Migrations
                         .HasColumnName("language_override");
 
                     b.Property<int>("LicenseType")
-                        .HasColumnType("integer");
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0)
+                        .HasColumnName("license_type");
 
                     b.Property<string>("Metadata")
                         .HasMaxLength(2048)

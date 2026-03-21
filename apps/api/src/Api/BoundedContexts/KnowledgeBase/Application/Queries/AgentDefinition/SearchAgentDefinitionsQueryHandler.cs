@@ -56,6 +56,7 @@ internal sealed class SearchAgentDefinitionsQueryHandler
                 Name = t.Name,
                 Settings = t.GetSettings() as Dictionary<string, object> ?? new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase)
             }).ToList(),
+            Status = agent.Status,
             IsActive = agent.IsActive,
             CreatedAt = agent.CreatedAt,
             UpdatedAt = agent.UpdatedAt

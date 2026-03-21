@@ -214,6 +214,12 @@ internal class NoOpEmailService : IEmailService
         CancellationToken ct = default)
         => Task.CompletedTask;
 
+    public Task SendAccessRequestRejectedEmailAsync(
+        string toEmail,
+        string? reason,
+        CancellationToken ct = default)
+        => Task.CompletedTask;
+
     // ISSUE-4417: Raw email sending for queue processor
     public Task SendRawEmailAsync(
         string toEmail,

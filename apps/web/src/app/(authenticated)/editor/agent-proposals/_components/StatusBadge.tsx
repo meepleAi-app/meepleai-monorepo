@@ -3,8 +3,10 @@
 /**
  * StatusBadge Component (Issue #3182)
  *
- * Visual badge for proposal status with appropriate colors.
+ * Visual badge for proposal status with appropriate colors and icons.
  */
+
+import { CheckCircle, Clock, FileEdit, XCircle } from 'lucide-react';
 
 import { Badge } from '@/components/ui/data-display/badge';
 
@@ -14,38 +16,51 @@ interface StatusBadgeProps {
   status: Status;
 }
 
+/* eslint-disable security/detect-object-injection -- Safe status config Record access */
+const statusConfig: Record<
+  Status,
+  {
+    variant: 'secondary' | 'default' | 'destructive';
+    label: string;
+    customClass: string;
+    Icon: typeof CheckCircle;
+  }
+> = {
+  Draft: {
+    variant: 'secondary',
+    label: 'Draft',
+    customClass: '',
+    Icon: FileEdit,
+  },
+  PendingReview: {
+    variant: 'default',
+    label: 'Pending Review',
+    customClass: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-950 dark:text-yellow-200',
+    Icon: Clock,
+  },
+  Approved: {
+    variant: 'default',
+    label: 'Approved',
+    customClass: 'bg-green-100 text-green-800 dark:bg-green-950 dark:text-green-200',
+    Icon: CheckCircle,
+  },
+  Rejected: {
+    variant: 'destructive',
+    label: 'Rejected',
+    customClass: '',
+    Icon: XCircle,
+  },
+};
+
 export function StatusBadge({ status }: StatusBadgeProps) {
-  const variants: Record<Status, 'secondary' | 'default' | 'destructive'> = {
-    Draft: 'secondary',
-    PendingReview: 'default',
-    Approved: 'default',
-    Rejected: 'destructive',
-  };
-
-  const labels: Record<Status, string> = {
-    Draft: 'Draft',
-    PendingReview: 'Pending Review',
-    Approved: 'Approved',
-    Rejected: 'Rejected',
-  };
-
-  const customClasses: Record<Status, string> = {
-    Draft: '',
-    PendingReview: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-950 dark:text-yellow-200',
-    Approved: 'bg-green-100 text-green-800 dark:bg-green-950 dark:text-green-200',
-    Rejected: '',
-  };
-
-  // eslint-disable-next-line security/detect-object-injection
-  const variant = variants[status];
-  // eslint-disable-next-line security/detect-object-injection
-  const label = labels[status];
-  // eslint-disable-next-line security/detect-object-injection
-  const customClass = customClasses[status];
+  const config = statusConfig[status];
+  const Icon = config.Icon;
 
   return (
-    <Badge variant={variant} className={customClass}>
-      {label}
+    <Badge variant={config.variant} className={config.customClass}>
+      <Icon className="h-3 w-3" aria-hidden="true" />
+      {config.label}
     </Badge>
   );
 }
+/* eslint-enable security/detect-object-injection */

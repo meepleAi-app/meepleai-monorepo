@@ -1,13 +1,10 @@
 'use client';
 
 /**
- * CardActions - Quick actions menu, wishlist button, action buttons
+ * CardActions - Action strip + featured/hero action buttons
  *
- * Composes QuickActionsMenu, WishlistButton, MeepleCardInfoButton,
- * MeepleCardQuickActions, and ActionButtons into a variant-aware
- * actions rendering layer.
- *
- * @module components/ui/data-display/meeple-card/parts/CardActions
+ * CardActionStrip: vertical right-edge strip with stagger slide-in (rendered inside CardCover)
+ * CardActions: featured/hero ActionButtons (rendered in content area)
  */
 
 import React from 'react';
@@ -29,56 +26,32 @@ import type {
   QuickAction,
 } from '../types';
 
-export interface CardActionsProps {
-  /** Card layout variant */
-  variant: MeepleCardVariant;
-  /** Entity type */
+// ============================================================================
+// CardActionStrip — vertical right-edge strip inside cover
+// ============================================================================
+
+export interface CardActionStripProps {
   entity: MeepleEntityType;
-  /** Custom entity color */
   customColor?: string;
-  /** Action buttons (featured/hero) */
-  actions: MeepleCardAction[];
-  /** Entity quick actions (hover-reveal) */
   entityQuickActions?: QuickAction[];
-  /** Legacy quick actions menu items */
   quickActions?: MeepleCardProps['quickActions'];
-  /** User role for legacy quick actions */
   userRole?: MeepleCardProps['userRole'];
-  /** Show wishlist button */
   showWishlistBtn: boolean;
-  /** Is currently wishlisted */
   isWishlisted?: boolean;
-  /** Wishlist toggle handler */
   onWishlistToggle?: (id: string, isWishlisted: boolean) => void;
-  /** Show info button */
   showInfoButton?: boolean;
-  /** Entity ID for drawer mode */
   entityId?: string;
-  /** Info href for link mode (deprecated) */
   infoHref?: string;
-  /** Info button tooltip */
   infoTooltip?: string;
-  /** Drawer entity type (derived from entity) */
   drawerEntityType?: DrawerEntityType;
-  /** Callback to open drawer */
   onDrawerOpen?: () => void;
-  /** Test ID for the card (used by wishlist) */
   testId?: string;
-  /** Entity type for chat session unread positioning */
-  unreadCount?: number;
-  /** Has legacy quick actions */
   hasQuickActions: boolean;
 }
 
-/**
- * Renders the top-right action buttons row (desktop: hover-reveal, mobile: hidden)
- * and the featured/hero action buttons.
- */
-export function CardActions({
-  variant,
+export function CardActionStrip({
   entity,
   customColor,
-  actions,
   entityQuickActions,
   quickActions,
   userRole,
@@ -92,78 +65,103 @@ export function CardActions({
   drawerEntityType,
   onDrawerOpen,
   testId,
-  unreadCount,
   hasQuickActions,
-}: CardActionsProps) {
-  const showActions = actions.length > 0 && (variant === 'featured' || variant === 'hero');
+}: CardActionStripProps) {
+  const items: React.ReactNode[] = [];
 
-  const hasTopRightActions =
-    entityQuickActions ||
-    (showInfoButton && (entityId || infoHref)) ||
-    showWishlistBtn ||
-    hasQuickActions;
+  if (entityQuickActions && entityQuickActions.length > 0) {
+    items.push(
+      <MeepleCardQuickActions
+        key="entity-qa"
+        actions={entityQuickActions}
+        entityType={entity}
+        customColor={customColor}
+        size="sm"
+      />
+    );
+  }
+
+  if (hasQuickActions && !entityQuickActions && quickActions) {
+    items.push(
+      <QuickActionsMenu key="legacy-qa" actions={quickActions} userRole={userRole} size="sm" />
+    );
+  }
+
+  if (showWishlistBtn && !entityQuickActions && onWishlistToggle) {
+    items.push(
+      <WishlistButton
+        key="wishlist"
+        gameId={testId || 'card'}
+        isWishlisted={!!isWishlisted}
+        onToggle={onWishlistToggle}
+        size="sm"
+      />
+    );
+  }
+
+  if (showInfoButton && entityId && drawerEntityType) {
+    items.push(
+      <MeepleCardInfoButton
+        key="info-drawer"
+        onClick={onDrawerOpen}
+        entityType={entity}
+        customColor={customColor}
+        tooltip={infoTooltip}
+        size="sm"
+      />
+    );
+  } else if (showInfoButton && infoHref && !entityId) {
+    items.push(
+      <MeepleCardInfoButton
+        key="info-link"
+        href={infoHref}
+        entityType={entity}
+        customColor={customColor}
+        tooltip={infoTooltip}
+        size="sm"
+      />
+    );
+  }
+
+  if (items.length === 0) return null;
 
   return (
-    <>
-      {/* Top-right actions row (desktop hover-reveal) */}
-      {hasTopRightActions && (
-        <div
-          className={cn(
-            'absolute right-2.5 flex items-center gap-1.5 z-15',
-            entity === 'chatSession' && unreadCount && unreadCount > 0 ? 'top-10' : 'top-2.5',
-            'hidden md:flex md:opacity-0 md:group-hover:opacity-100 md:transition-opacity md:duration-300'
-          )}
-        >
-          {/* New entity quick actions */}
-          {entityQuickActions && entityQuickActions.length > 0 && (
-            <MeepleCardQuickActions
-              actions={entityQuickActions}
-              entityType={entity}
-              customColor={customColor}
-              size="sm"
-            />
-          )}
-
-          {/* Legacy quick actions menu */}
-          {hasQuickActions && !entityQuickActions && quickActions && (
-            <QuickActionsMenu actions={quickActions} userRole={userRole} size="sm" />
-          )}
-
-          {/* Wishlist button */}
-          {showWishlistBtn && !entityQuickActions && onWishlistToggle && (
-            <WishlistButton
-              gameId={testId || 'card'}
-              isWishlisted={!!isWishlisted}
-              onToggle={onWishlistToggle}
-              size="sm"
-            />
-          )}
-
-          {/* Info button (drawer mode) */}
-          {showInfoButton && entityId && drawerEntityType && (
-            <MeepleCardInfoButton
-              onClick={onDrawerOpen}
-              entityType={entity}
-              customColor={customColor}
-              tooltip={infoTooltip}
-              size="sm"
-            />
-          )}
-          {/* Info button (link mode - backward compat) */}
-          {showInfoButton && infoHref && !entityId && (
-            <MeepleCardInfoButton
-              href={infoHref}
-              entityType={entity}
-              customColor={customColor}
-              tooltip={infoTooltip}
-              size="sm"
-            />
-          )}
-        </div>
+    <div
+      className={cn(
+        'absolute right-1.5 top-10 bottom-10',
+        'flex flex-col items-center justify-center gap-1.5',
+        'z-15 pointer-events-none',
+        'hidden md:flex'
       )}
-
-      {/* Action buttons (featured/hero only) */}
-      {showActions && <ActionButtons actions={actions} entity={entity} customColor={customColor} />}
-    </>
+      data-testid="card-action-strip"
+    >
+      {items.map((item, index) => (
+        <div
+          key={index}
+          className="pointer-events-auto opacity-0 group-hover:animate-mc-slide-in-right"
+          style={{ animationDelay: `${index * 50}ms` }}
+        >
+          {item}
+        </div>
+      ))}
+    </div>
   );
+}
+
+// ============================================================================
+// CardActions — featured/hero ActionButtons (content area)
+// ============================================================================
+
+export interface CardActionsProps {
+  variant: MeepleCardVariant;
+  entity: MeepleEntityType;
+  customColor?: string;
+  actions: MeepleCardAction[];
+}
+
+export function CardActions({ variant, entity, customColor, actions }: CardActionsProps) {
+  const showActions = actions.length > 0 && (variant === 'featured' || variant === 'hero');
+  if (!showActions) return null;
+
+  return <ActionButtons actions={actions} entity={entity} customColor={customColor} />;
 }

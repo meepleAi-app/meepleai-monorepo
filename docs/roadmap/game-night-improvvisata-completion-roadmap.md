@@ -59,17 +59,22 @@ Espandere i test E2E mock-based per coprire il journey completo UI.
 
 **Deliverable**: Copertura UI 100% del journey con mock
 
-### Phase 2: Backend Integration E2E (3-4 giorni)
+### Phase 2: Backend Integration E2E (3-4 giorni) — COMPLETED 2026-03-21
 
-Test con backend reale, servizi ML mockati.
+Test con backend reale, servizi AI reali (OpenRouter, embedding service).
 
-| Task | Scope | Effort |
+| Task | Scope | Status |
 |------|-------|--------|
-| Real session lifecycle | Create → invite → join → score → pause → resume | 2 giorni |
-| Data integrity checks | Verify DB state after each operation | 1 giorno |
-| Concurrent access | Two browser contexts, real SignalR | 1 giorno |
+| Save/Resume with PauseSnapshot | Save → snapshot → resume with recap | ✅ 3 tests |
+| Score parsing (NLP) | Parse → auto-record → confirm → fallback | ✅ 4 tests |
+| Disputes (AI Arbitro + v2) | AI verdict + structured dispute flow | ✅ 6 tests |
+| Data integrity checks | State transitions, score persistence, snapshots, soft-delete, invites | ✅ 6 tests |
+| Concurrent access | Simultaneous scores, proposals, voting, race conditions, concurrency | ✅ 6 tests |
 
-**Requires**: API + PostgreSQL + Redis running
+**Total**: 25 integration tests across 5 files + shared helper module
+**Spec**: `docs/superpowers/specs/2026-03-21-game-night-improvvisata-phase2-design.md`
+**Plan**: `docs/superpowers/plans/2026-03-21-game-night-improvvisata-phase2.md`
+**Requires**: API + PostgreSQL + Redis + Embedding Service + OpenRouter
 **Deliverable**: Integrità dati verificata end-to-end
 
 ### Phase 3: Edge Case Hardening (1-2 giorni) — VERIFIED 2026-03-16

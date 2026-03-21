@@ -1,5 +1,5 @@
-using Api.BoundedContexts.Authentication.Infrastructure.Persistence;
 using Api.BoundedContexts.SystemConfiguration.Application.DTOs;
+using Api.BoundedContexts.SystemConfiguration.Application.Services;
 using Api.BoundedContexts.SystemConfiguration.Domain.Repositories;
 using Api.BoundedContexts.SystemConfiguration.Domain.Services;
 using Api.Middleware.Exceptions;
@@ -15,16 +15,16 @@ internal sealed class GetUserRateLimitStatusQueryHandler
     : IRequestHandler<GetUserRateLimitStatusQuery, UserRateLimitStatusDto>
 {
     private readonly IRateLimitEvaluator _rateLimitEvaluator;
-    private readonly IUserRepository _userRepository;
+    private readonly IUserProfileReadService _userProfileReadService;
     private readonly IUserRateLimitOverrideRepository _overrideRepository;
 
     public GetUserRateLimitStatusQueryHandler(
         IRateLimitEvaluator rateLimitEvaluator,
-        IUserRepository userRepository,
+        IUserProfileReadService userProfileReadService,
         IUserRateLimitOverrideRepository overrideRepository)
     {
         _rateLimitEvaluator = rateLimitEvaluator ?? throw new ArgumentNullException(nameof(rateLimitEvaluator));
-        _userRepository = userRepository ?? throw new ArgumentNullException(nameof(userRepository));
+        _userProfileReadService = userProfileReadService ?? throw new ArgumentNullException(nameof(userProfileReadService));
         _overrideRepository = overrideRepository ?? throw new ArgumentNullException(nameof(overrideRepository));
     }
 
@@ -34,8 +34,8 @@ internal sealed class GetUserRateLimitStatusQueryHandler
     {
         ArgumentNullException.ThrowIfNull(query);
 
-        // Get user for display name
-        var user = await _userRepository.GetByIdAsync(query.UserId, cancellationToken).ConfigureAwait(false)
+        // Get user profile for display name
+        var userProfile = await _userProfileReadService.GetByIdAsync(query.UserId, cancellationToken).ConfigureAwait(false)
             ?? throw new NotFoundException("User", query.UserId.ToString());
 
         // Get rate limit status from evaluator
@@ -49,7 +49,7 @@ internal sealed class GetUserRateLimitStatusQueryHandler
             if (userOverride != null)
             {
                 // Get admin name for override
-                var admin = await _userRepository.GetByIdAsync(userOverride.CreatedByAdminId, cancellationToken).ConfigureAwait(false);
+                var admin = await _userProfileReadService.GetByIdAsync(userOverride.CreatedByAdminId, cancellationToken).ConfigureAwait(false);
 
                 overrideDto = new UserRateLimitOverrideDto
                 {
@@ -71,7 +71,7 @@ internal sealed class GetUserRateLimitStatusQueryHandler
         return new UserRateLimitStatusDto
         {
             UserId = query.UserId,
-            UserName = user.DisplayName,
+            UserName = userProfile.DisplayName,
             Tier = status.Tier,
             CurrentPendingCount = status.CurrentPendingCount,
             CurrentMonthlyCount = status.CurrentMonthlyCount,

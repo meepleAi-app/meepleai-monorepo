@@ -4,6 +4,8 @@ using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Api.Services;
+using Api.SharedKernel.Application.Services;
+using Api.SharedKernel.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
@@ -14,18 +16,18 @@ namespace Api.BoundedContexts.KnowledgeBase.Infrastructure.Persistence;
 /// Issue #5072: OpenRouter monitoring — request log with 30-day retention.
 /// Issues #5078-#5083: Analytics query methods for admin usage dashboard.
 /// </summary>
-public sealed class LlmRequestLogRepository : ILlmRequestLogRepository
+public sealed class LlmRequestLogRepository : RepositoryBase, ILlmRequestLogRepository
 {
     private static readonly TimeSpan RetentionPeriod = TimeSpan.FromDays(30);
 
-    private readonly MeepleAiDbContext _context;
     private readonly ILogger<LlmRequestLogRepository> _logger;
 
     public LlmRequestLogRepository(
         MeepleAiDbContext context,
+        IDomainEventCollector eventCollector,
         ILogger<LlmRequestLogRepository> logger)
+        : base(context, eventCollector)
     {
-        _context = context ?? throw new ArgumentNullException(nameof(context));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -70,8 +72,8 @@ public sealed class LlmRequestLogRepository : ILlmRequestLogRepository
             ExpiresAt = now.Add(RetentionPeriod)
         };
 
-        _context.LlmRequestLogs.Add(entity);
-        await _context.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        DbContext.LlmRequestLogs.Add(entity);
+        await DbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
         _logger.LogDebug(
             "Logged LLM request: {Provider}/{Model}, source={Source}, tokens={Tokens}, cost=${Cost:F6}, latency={Latency}ms",
@@ -80,7 +82,7 @@ public sealed class LlmRequestLogRepository : ILlmRequestLogRepository
 
     public async Task<int> GetActiveAiUserCountAsync(DateTime from, CancellationToken cancellationToken = default)
     {
-        return await _context.LlmRequestLogs
+        return await DbContext.LlmRequestLogs
             .AsNoTracking()
             .Where(x => x.RequestedAt >= from && x.UserId != null && !x.IsAnonymized)
             .Select(x => x.UserId)
@@ -94,14 +96,14 @@ public sealed class LlmRequestLogRepository : ILlmRequestLogRepository
         var startUtc = utcDate.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
         var endUtc = utcDate.ToDateTime(TimeOnly.MaxValue, DateTimeKind.Utc);
 
-        return await _context.LlmRequestLogs
+        return await DbContext.LlmRequestLogs
             .CountAsync(x => x.RequestedAt >= startUtc && x.RequestedAt <= endUtc, cancellationToken)
             .ConfigureAwait(false);
     }
 
     public async Task<int> DeleteExpiredAsync(DateTime cutoff, CancellationToken cancellationToken = default)
     {
-        var deleted = await _context.LlmRequestLogs
+        var deleted = await DbContext.LlmRequestLogs
             .Where(x => x.ExpiresAt < cutoff)
             .ExecuteDeleteAsync(cancellationToken)
             .ConfigureAwait(false);
@@ -118,7 +120,7 @@ public sealed class LlmRequestLogRepository : ILlmRequestLogRepository
 
     public async Task<int> DeleteByUserIdAsync(Guid userId, CancellationToken cancellationToken = default)
     {
-        var deleted = await _context.LlmRequestLogs
+        var deleted = await DbContext.LlmRequestLogs
             .Where(x => x.UserId == userId)
             .ExecuteDeleteAsync(cancellationToken)
             .ConfigureAwait(false);
@@ -139,7 +141,7 @@ public sealed class LlmRequestLogRepository : ILlmRequestLogRepository
         bool groupByHour,
         CancellationToken cancellationToken = default)
     {
-        var rows = await _context.LlmRequestLogs
+        var rows = await DbContext.LlmRequestLogs
             .AsNoTracking()
             .Where(x => x.RequestedAt >= from && x.RequestedAt <= until)
             .Select(x => new
@@ -185,7 +187,7 @@ public sealed class LlmRequestLogRepository : ILlmRequestLogRepository
         DateTime until,
         CancellationToken cancellationToken = default)
     {
-        var rows = await _context.LlmRequestLogs
+        var rows = await DbContext.LlmRequestLogs
             .AsNoTracking()
             .Where(x => x.RequestedAt >= from && x.RequestedAt <= until)
             .Select(x => new
@@ -243,7 +245,7 @@ public sealed class LlmRequestLogRepository : ILlmRequestLogRepository
         var startUtc = forDate.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
         var endUtc = forDate.ToDateTime(TimeOnly.MaxValue, DateTimeKind.Utc);
 
-        var rows = await _context.LlmRequestLogs
+        var rows = await DbContext.LlmRequestLogs
             .AsNoTracking()
             .Where(x => x.IsFreeModel
                      && x.RequestedAt >= startUtc
@@ -267,7 +269,7 @@ public sealed class LlmRequestLogRepository : ILlmRequestLogRepository
 
         while (true)
         {
-            var batch = await _context.LlmRequestLogs
+            var batch = await DbContext.LlmRequestLogs
                 .Where(x => x.RequestedAt < cutoff
                           && !x.IsAnonymized
                           && x.UserId != null)
@@ -287,7 +289,7 @@ public sealed class LlmRequestLogRepository : ILlmRequestLogRepository
                 log.IsAnonymized = true;
             }
 
-            await _context.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+            await DbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
             totalPseudonymized += batch.Count;
         }
 
@@ -311,7 +313,7 @@ public sealed class LlmRequestLogRepository : ILlmRequestLogRepository
         int pageSize,
         CancellationToken cancellationToken = default)
     {
-        var query = _context.LlmRequestLogs.AsNoTracking();
+        var query = DbContext.LlmRequestLogs.AsNoTracking();
 
         if (!string.IsNullOrEmpty(source))
             query = query.Where(x => x.RequestSource == source);

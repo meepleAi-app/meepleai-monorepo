@@ -9,6 +9,7 @@ using Api.BoundedContexts.KnowledgeBase.Application.Reports.Services;
 using Api.BoundedContexts.KnowledgeBase.Application.Services;
 using Api.BoundedContexts.KnowledgeBase.Application.Services.Chunking;
 using Api.BoundedContexts.KnowledgeBase.Application.Services.Reranking;
+using Api.BoundedContexts.KnowledgeBase.Domain.Projections;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services.AgentModes;
@@ -278,6 +279,9 @@ internal static class KnowledgeBaseServiceExtensions
         // Issue #3177: AGT-003 - Required by AgentTypology command handlers
         services.AddScoped<IUnitOfWork, EfCoreUnitOfWork>();
 
+        // RAG Copyright KB Cards: Cross-BC read-only projection for copyright tier resolution
+        services.AddScoped<ICopyrightDataProjection, Projections.CopyrightDataProjection>();
+
         // Infrastructure - Repositories (Scoped - tied to DbContext lifetime)
         services.AddScoped<IVectorDocumentRepository, VectorDocumentRepository>();
         services.AddScoped<IEmbeddingRepository, EmbeddingRepository>();
@@ -352,6 +356,9 @@ internal static class KnowledgeBaseServiceExtensions
 
         // Agent Memory context builder — injects house rules, group preferences into RAG prompts
         services.AddScoped<IAgentMemoryContextBuilder, AgentMemoryContextBuilder>();
+
+        // RAG Copyright KB Cards: per-chunk copyright tier resolution
+        services.AddScoped<ICopyrightTierResolver, CopyrightTierResolver>();
 
         // E4-3: Session query budget — Redis-backed per-session AI query tracking
         services.AddScoped<ISessionQueryBudgetService, SessionQueryBudgetService>();

@@ -6,6 +6,7 @@ using Api.BoundedContexts.GameManagement.Domain.Entities;
 using Api.BoundedContexts.GameManagement.Domain.Repositories;
 using Moq;
 using Xunit;
+using FluentAssertions;
 using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.GameManagement.Application.Handlers;
@@ -41,11 +42,11 @@ public class GetGameStateQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal(state.Id, result.Id);
-        Assert.Equal(state.GameSessionId, result.GameSessionId);
-        Assert.Equal(state.TemplateId, result.TemplateId);
-        Assert.Equal(state.Version, result.Version);
+        result.Should().NotBeNull();
+        result.Id.Should().Be(state.Id);
+        result.GameSessionId.Should().Be(state.GameSessionId);
+        result.TemplateId.Should().Be(state.TemplateId);
+        result.Version.Should().Be(state.Version);
     }
 
     [Fact]
@@ -63,7 +64,7 @@ public class GetGameStateQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.Null(result);
+        result.Should().BeNull();
     }
 
     [Fact]
@@ -90,8 +91,9 @@ public class GetGameStateQueryHandlerTests
     public async Task Handle_WithNullQuery_ThrowsArgumentNullException()
     {
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentNullException>(
-            () => _handler.Handle(null!, TestContext.Current.CancellationToken));
+        var act =
+            () => _handler.Handle(null!, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<ArgumentNullException>();
     }
 
     private static GameSessionState CreateGameSessionState()

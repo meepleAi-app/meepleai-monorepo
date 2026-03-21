@@ -8,6 +8,7 @@ using Api.Tests.TestHelpers;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using FluentAssertions;
 using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.GameManagement.Application.Handlers;
@@ -51,7 +52,7 @@ public class CreateRuleCommentCommandHandlerTests
             loggerMock.Object);
 
         // Assert
-        Assert.NotNull(handler);
+        handler.Should().NotBeNull();
     }
 
     [Fact]
@@ -62,11 +63,12 @@ public class CreateRuleCommentCommandHandlerTests
         var loggerMock = new Mock<ILogger<CreateRuleCommentCommandHandler>>();
 
         // Act & Assert
-        Assert.Throws<ArgumentNullException>(() =>
+        var act = () =>
             new CreateRuleCommentCommandHandler(
                 null!,
                 timeProviderMock.Object,
-                loggerMock.Object));
+                loggerMock.Object);
+        act.Should().Throw<ArgumentNullException>();
     }
 
     [Fact]
@@ -77,11 +79,12 @@ public class CreateRuleCommentCommandHandlerTests
         var loggerMock = new Mock<ILogger<CreateRuleCommentCommandHandler>>();
 
         // Act & Assert
-        Assert.Throws<ArgumentNullException>(() =>
+        var act = () =>
             new CreateRuleCommentCommandHandler(
                 context,
                 null!,
-                loggerMock.Object));
+                loggerMock.Object);
+        act.Should().Throw<ArgumentNullException>();
     }
 
     [Fact]
@@ -92,11 +95,12 @@ public class CreateRuleCommentCommandHandlerTests
         var timeProviderMock = CreateTimeProviderMock();
 
         // Act & Assert
-        Assert.Throws<ArgumentNullException>(() =>
+        var act = () =>
             new CreateRuleCommentCommandHandler(
                 context,
                 timeProviderMock.Object,
-                null!));
+                null!);
+        act.Should().Throw<ArgumentNullException>();
     }
     [Fact]
     public void Command_WithAllProperties_ConstructsCorrectly()
@@ -113,11 +117,11 @@ public class CreateRuleCommentCommandHandlerTests
             UserId: userId);
 
         // Assert
-        Assert.Equal(gameId, command.GameId);
-        Assert.Equal("1.0", command.Version);
-        Assert.Equal(42, command.LineNumber);
-        Assert.Equal("This rule is unclear", command.CommentText);
-        Assert.Equal(userId, command.UserId);
+        command.GameId.Should().Be(gameId);
+        command.Version.Should().Be("1.0");
+        command.LineNumber.Should().Be(42);
+        command.CommentText.Should().Be("This rule is unclear");
+        command.UserId.Should().Be(userId);
     }
 
     [Fact]
@@ -132,7 +136,7 @@ public class CreateRuleCommentCommandHandlerTests
             UserId: Guid.NewGuid());
 
         // Assert
-        Assert.Null(command.LineNumber);
+        command.LineNumber.Should().BeNull();
     }
 
     [Fact]
@@ -147,8 +151,8 @@ public class CreateRuleCommentCommandHandlerTests
             UserId: Guid.NewGuid());
 
         // Assert
-        Assert.Contains("@alice", command.CommentText, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("@bob", command.CommentText, StringComparison.OrdinalIgnoreCase);
+        command.CommentText.Should().ContainEquivalentOf("@alice");
+        command.CommentText.Should().ContainEquivalentOf("@bob");
     }
 
     [Fact]
@@ -164,7 +168,7 @@ public class CreateRuleCommentCommandHandlerTests
             UserId: Guid.NewGuid());
 
         // Assert
-        Assert.Equal(2000, command.CommentText.Length);
+        command.CommentText.Length.Should().Be(2000);
     }
     // NOTE: Full integration tests for Handle method (comment creation, @mention extraction,
     // navigation property loading, authorization) should be in integration test suite

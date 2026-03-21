@@ -13,6 +13,7 @@ using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.SharedGameCatalog.Infrastructure;
 
@@ -56,7 +57,7 @@ public sealed class BadgeRepositoryIntegrationTests : IAsyncLifetime
         _dbContext = new MeepleAiDbContext(options, mockMediator.Object, eventCollectorMock.Object);
         await _dbContext.Database.MigrateAsync();
 
-        _repository = new BadgeRepository(_dbContext);
+        _repository = new BadgeRepository(_dbContext, eventCollectorMock.Object);
     }
 
     public async ValueTask DisposeAsync()
@@ -96,9 +97,9 @@ public sealed class BadgeRepositoryIntegrationTests : IAsyncLifetime
         var result = await _repository.GetAllActiveAsync();
 
         // Assert
-        Assert.Single(result);
-        Assert.Equal("ACTIVE_BADGE", result[0].Code);
-        Assert.True(result[0].IsActive);
+        result.Should().ContainSingle();
+        result[0].Code.Should().Be("ACTIVE_BADGE");
+        result[0].IsActive.Should().BeTrue();
     }
 
     [Fact]
@@ -120,10 +121,10 @@ public sealed class BadgeRepositoryIntegrationTests : IAsyncLifetime
         var result = await _repository.GetAllActiveAsync();
 
         // Assert
-        Assert.Equal(3, result.Count);
-        Assert.Equal("BADGE_2", result[0].Code); // Display order 10, tier Bronze (0)
-        Assert.Equal("BADGE_3", result[1].Code); // Display order 10, tier Silver (1)
-        Assert.Equal("BADGE_1", result[2].Code); // Display order 20
+        result.Count.Should().Be(3);
+        result[0].Code.Should().Be("BADGE_2"); // Display order 10, tier Bronze (0)
+        result[1].Code.Should().Be("BADGE_3"); // Display order 10, tier Silver (1)
+        result[2].Code.Should().Be("BADGE_1"); // Display order 20
     }
 
     #endregion
@@ -149,10 +150,10 @@ public sealed class BadgeRepositoryIntegrationTests : IAsyncLifetime
         var result = await _repository.GetByCodeAsync("TEST_BADGE");
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal("TEST_BADGE", result.Code);
-        Assert.Equal("Test Badge", result.Name);
-        Assert.Equal(BadgeTier.Silver, result.Tier);
+        result.Should().NotBeNull();
+        result.Code.Should().Be("TEST_BADGE");
+        result.Name.Should().Be("Test Badge");
+        result.Tier.Should().Be(BadgeTier.Silver);
     }
 
     [Fact]
@@ -162,7 +163,7 @@ public sealed class BadgeRepositoryIntegrationTests : IAsyncLifetime
         var result = await _repository.GetByCodeAsync("NON_EXISTING");
 
         // Assert
-        Assert.Null(result);
+        result.Should().BeNull();
     }
 
     [Fact]
@@ -178,8 +179,8 @@ public sealed class BadgeRepositoryIntegrationTests : IAsyncLifetime
         var result = await _repository.GetByCodeAsync("test_badge");
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal("TEST_BADGE", result.Code);
+        result.Should().NotBeNull();
+        result.Code.Should().Be("TEST_BADGE");
     }
 
     #endregion
@@ -199,9 +200,9 @@ public sealed class BadgeRepositoryIntegrationTests : IAsyncLifetime
         var result = await _repository.GetByIdAsync(badge.Id);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal(badge.Id, result.Id);
-        Assert.Equal("BADGE_ID", result.Code);
+        result.Should().NotBeNull();
+        result.Id.Should().Be(badge.Id);
+        result.Code.Should().Be("BADGE_ID");
     }
 
     [Fact]
@@ -211,7 +212,7 @@ public sealed class BadgeRepositoryIntegrationTests : IAsyncLifetime
         var result = await _repository.GetByIdAsync(Guid.NewGuid());
 
         // Assert
-        Assert.Null(result);
+        result.Should().BeNull();
     }
 
     #endregion

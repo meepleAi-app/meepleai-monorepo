@@ -8,6 +8,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.UserNotifications.Application.Handlers;
 
@@ -46,11 +47,11 @@ public class ConnectSlackCommandHandlerTests
         var result = await _handler.Handle(command, CancellationToken.None);
 
         // Assert
-        Assert.Contains("https://slack.com/oauth/v2/authorize", result);
-        Assert.Contains("client_id=test-client-id", result);
-        Assert.Contains("scope=chat:write,im:write", result);
-        Assert.Contains("state=", result); // State is now encrypted, not raw userId
-        Assert.Contains("redirect_uri=", result);
+        result.Should().Contain("https://slack.com/oauth/v2/authorize");
+        result.Should().Contain("client_id=test-client-id");
+        result.Should().Contain("scope=chat:write,im:write");
+        result.Should().Contain("state="); // State is now encrypted, not raw userId
+        result.Should().Contain("redirect_uri=");
     }
 
     [Fact]
@@ -63,7 +64,7 @@ public class ConnectSlackCommandHandlerTests
         var result = await _handler.Handle(command, CancellationToken.None);
 
         // Assert - scope contains both required Slack scopes
-        Assert.Contains("scope=chat:write,im:write", result);
+        result.Should().Contain("scope=chat:write,im:write");
     }
 
     [Fact]
@@ -77,8 +78,8 @@ public class ConnectSlackCommandHandlerTests
         var result = await _handler.Handle(command, CancellationToken.None);
 
         // Assert — state is not the raw userId; it's an encrypted token
-        Assert.DoesNotContain($"state={userId}", result);
-        Assert.Contains("state=", result);
+        result.Should().NotContain($"state={userId}");
+        result.Should().Contain("state=");
 
         // Verify the state can be decrypted back to the userId
         var uri = new Uri(result);
@@ -87,6 +88,6 @@ public class ConnectSlackCommandHandlerTests
         var protector = _dataProtectionProvider.CreateProtector("MeepleAI.SlackOAuth");
         var timedProtector = protector.ToTimeLimitedDataProtector();
         var decryptedUserId = timedProtector.Unprotect(stateToken);
-        Assert.Equal(userId.ToString(), decryptedUserId);
+        decryptedUserId.Should().Be(userId.ToString());
     }
 }

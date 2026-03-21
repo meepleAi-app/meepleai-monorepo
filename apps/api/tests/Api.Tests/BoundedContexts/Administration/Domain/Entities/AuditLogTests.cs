@@ -1,6 +1,7 @@
 using Api.BoundedContexts.Administration.Domain.Entities;
 using Api.Tests.BoundedContexts.Administration.TestHelpers;
 using Xunit;
+using FluentAssertions;
 using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.Administration.Domain.Entities;
@@ -26,11 +27,11 @@ public class AuditLogTests
         var auditLog = new AuditLog(id, userId, action, resource, result);
 
         // Assert
-        Assert.Equal(id, auditLog.Id);
-        Assert.Equal(userId, auditLog.UserId);
-        Assert.Equal(action, auditLog.Action);
-        Assert.Equal(resource, auditLog.Resource);
-        Assert.Equal(result, auditLog.Result);
+        auditLog.Id.Should().Be(id);
+        auditLog.UserId.Should().Be(userId);
+        auditLog.Action.Should().Be(action);
+        auditLog.Resource.Should().Be(resource);
+        auditLog.Result.Should().Be(result);
     }
 
     [Fact]
@@ -40,8 +41,9 @@ public class AuditLogTests
         var id = Guid.NewGuid();
 
         // Act & Assert
-        Assert.Throws<ArgumentNullException>(() =>
-            new AuditLog(id, null, null!, "resource", "success"));
+        var act = () =>
+            new AuditLog(id, null, null!, "resource", "success");
+        act.Should().Throw<ArgumentNullException>();
     }
 
     [Fact]
@@ -57,9 +59,9 @@ public class AuditLogTests
         var auditLog = builder.Build();
 
         // Assert
-        Assert.Equal("{\"attempt\": 1}", auditLog.Details);
-        Assert.Equal("192.168.1.1", auditLog.IpAddress);
-        Assert.Equal("user.logout", auditLog.Action);
+        auditLog.Details.Should().Be("{\"attempt\": 1}");
+        auditLog.IpAddress.Should().Be("192.168.1.1");
+        auditLog.Action.Should().Be("user.logout");
     }
 
     [Fact]
@@ -71,9 +73,9 @@ public class AuditLogTests
             .Build();
 
         // Assert
-        Assert.Equal("user.login", auditLog.Action);
-        Assert.Equal("authentication", auditLog.Resource);
-        Assert.Equal("success", auditLog.Result);
+        auditLog.Action.Should().Be("user.login");
+        auditLog.Resource.Should().Be("authentication");
+        auditLog.Result.Should().Be("success");
     }
 
     [Fact]
@@ -85,9 +87,9 @@ public class AuditLogTests
             .Build();
 
         // Assert
-        Assert.Equal("user.login", auditLog.Action);
-        Assert.Equal("failure", auditLog.Result);
-        Assert.Contains("Invalid credentials", auditLog.Details);
+        auditLog.Action.Should().Be("user.login");
+        auditLog.Result.Should().Be("failure");
+        auditLog.Details.Should().Contain("Invalid credentials");
     }
 
     [Fact]
@@ -100,7 +102,7 @@ public class AuditLogTests
         var auditLog = new AuditLogBuilder().Build();
 
         // Assert
-        Assert.True(auditLog.CreatedAt >= beforeCreate);
-        Assert.True(auditLog.CreatedAt <= DateTime.UtcNow.AddSeconds(1));
+        (auditLog.CreatedAt >= beforeCreate).Should().BeTrue();
+        (auditLog.CreatedAt <= DateTime.UtcNow.AddSeconds(1)).Should().BeTrue();
     }
 }

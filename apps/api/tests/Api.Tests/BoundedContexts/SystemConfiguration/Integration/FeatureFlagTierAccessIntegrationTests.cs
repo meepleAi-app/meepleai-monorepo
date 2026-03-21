@@ -7,6 +7,7 @@ using MediatR;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.SystemConfiguration.Integration;
 
@@ -53,7 +54,7 @@ public class FeatureFlagTierAccessIntegrationTests
         var canAccess = await _featureFlagService.CanAccessFeatureAsync(freeUser, premiumFeature);
 
         // Assert
-        Assert.False(canAccess);
+        canAccess.Should().BeFalse();
     }
 
     [Fact]
@@ -83,7 +84,7 @@ public class FeatureFlagTierAccessIntegrationTests
         var canAccess = await _featureFlagService.CanAccessFeatureAsync(premiumUser, premiumFeature);
 
         // Assert
-        Assert.True(canAccess);
+        canAccess.Should().BeTrue();
     }
 
     [Fact]
@@ -105,7 +106,7 @@ public class FeatureFlagTierAccessIntegrationTests
         var canAccess = await _featureFlagService.CanAccessFeatureAsync(adminUser, premiumFeature);
 
         // Assert
-        Assert.True(canAccess); // Admin bypasses tier restrictions
+        canAccess.Should().BeTrue(); // Admin bypasses tier restrictions
     }
 
     [Fact]
@@ -120,7 +121,7 @@ public class FeatureFlagTierAccessIntegrationTests
         var isEnabled = await _featureFlagService.IsEnabledForTierAsync("Features.NewFeature", UserTier.Free);
 
         // Assert
-        Assert.True(isEnabled); // Default true for backward compatibility
+        isEnabled.Should().BeTrue(); // Default true for backward compatibility
     }
 
     [Fact]
@@ -142,7 +143,7 @@ public class FeatureFlagTierAccessIntegrationTests
         var isEnabled = await _featureFlagService.IsEnabledForTierAsync(feature, tier);
 
         // Assert
-        Assert.True(isEnabled);
+        isEnabled.Should().BeTrue();
     }
 
     [Fact]
@@ -166,7 +167,7 @@ public class FeatureFlagTierAccessIntegrationTests
         var canAccess = await _featureFlagService.CanAccessFeatureAsync(normalUser, feature);
 
         // Assert
-        Assert.False(canAccess); // Tier denial overrides role access
+        canAccess.Should().BeFalse(); // Tier denial overrides role access
     }
 
     private static User CreateUser(UserTier tier, Role role)

@@ -7,6 +7,7 @@ using Api.Tests.Constants;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Handlers.RagDashboard;
 
@@ -45,12 +46,12 @@ public class GetRagConfigQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.NotNull(result.Generation);
-        Assert.NotNull(result.Retrieval);
-        Assert.NotNull(result.Reranker);
-        Assert.NotNull(result.Models);
-        Assert.NotNull(result.StrategySpecific);
+        result.Should().NotBeNull();
+        result.Generation.Should().NotBeNull();
+        result.Retrieval.Should().NotBeNull();
+        result.Reranker.Should().NotBeNull();
+        result.Models.Should().NotBeNull();
+        result.StrategySpecific.Should().NotBeNull();
     }
 
     [Fact]
@@ -63,10 +64,10 @@ public class GetRagConfigQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.InRange(result.Generation.Temperature, 0.0, 2.0);
-        Assert.True(result.Generation.TopK > 0);
-        Assert.InRange(result.Generation.TopP, 0.0, 1.0);
-        Assert.True(result.Generation.MaxTokens > 0);
+        result.Generation.Temperature.Should().BeInRange(0.0, 2.0);
+        (result.Generation.TopK > 0).Should().BeTrue();
+        result.Generation.TopP.Should().BeInRange(0.0, 1.0);
+        (result.Generation.MaxTokens > 0).Should().BeTrue();
     }
 
     [Fact]
@@ -79,10 +80,10 @@ public class GetRagConfigQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.True(result.Retrieval.ChunkSize > 0);
-        Assert.InRange(result.Retrieval.ChunkOverlap, 0, 50);
-        Assert.True(result.Retrieval.TopResults > 0);
-        Assert.InRange(result.Retrieval.SimilarityThreshold, 0.0, 1.0);
+        (result.Retrieval.ChunkSize > 0).Should().BeTrue();
+        result.Retrieval.ChunkOverlap.Should().BeInRange(0, 50);
+        (result.Retrieval.TopResults > 0).Should().BeTrue();
+        result.Retrieval.SimilarityThreshold.Should().BeInRange(0.0, 1.0);
     }
 
     [Fact]
@@ -95,8 +96,8 @@ public class GetRagConfigQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result.Reranker.Model);
-        Assert.True(result.Reranker.TopN > 0);
+        result.Reranker.Model.Should().NotBeNull();
+        (result.Reranker.TopN > 0).Should().BeTrue();
     }
 
     [Fact]
@@ -109,7 +110,7 @@ public class GetRagConfigQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result.Models.PrimaryModel);
+        result.Models.PrimaryModel.Should().NotBeNull();
     }
 
     [Fact]
@@ -126,8 +127,8 @@ public class GetRagConfigQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal("Semantic", result.ActiveStrategy);
+        result.Should().NotBeNull();
+        result.ActiveStrategy.Should().Be("Semantic");
     }
 
     [Fact]
@@ -144,7 +145,7 @@ public class GetRagConfigQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.Equal("Hybrid", result.ActiveStrategy);
+        result.ActiveStrategy.Should().Be("Hybrid");
     }
 
     [Fact]

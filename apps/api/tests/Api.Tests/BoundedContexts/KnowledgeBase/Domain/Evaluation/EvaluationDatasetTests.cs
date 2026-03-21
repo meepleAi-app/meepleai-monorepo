@@ -1,6 +1,7 @@
 using Api.BoundedContexts.KnowledgeBase.Domain.Evaluation;
 using Xunit;
 using Api.Tests.Constants;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Domain.Evaluation;
 
@@ -40,12 +41,12 @@ public class EvaluationDatasetTests
             description: "A test dataset");
 
         // Assert
-        Assert.Equal("Test Dataset", dataset.Name);
-        Assert.Equal("A test dataset", dataset.Description);
-        Assert.Equal("meepleai_custom", dataset.SourceType);
-        Assert.Equal("1.0.0", dataset.Version);
-        Assert.Equal(0, dataset.Count);
-        Assert.Empty(dataset.Samples);
+        dataset.Name.Should().Be("Test Dataset");
+        dataset.Description.Should().Be("A test dataset");
+        dataset.SourceType.Should().Be("meepleai_custom");
+        dataset.Version.Should().Be("1.0.0");
+        dataset.Count.Should().Be(0);
+        dataset.Samples.Should().BeEmpty();
     }
 
     [Fact]
@@ -58,7 +59,7 @@ public class EvaluationDatasetTests
             sourceType: "mozilla");
 
         // Assert
-        Assert.Equal("mozilla", dataset.SourceType);
+        dataset.SourceType.Should().Be("mozilla");
     }
 
     [Fact]
@@ -72,8 +73,8 @@ public class EvaluationDatasetTests
         dataset.AddSample(sample);
 
         // Assert
-        Assert.Equal(1, dataset.Count);
-        Assert.Contains(sample, dataset.Samples);
+        dataset.Count.Should().Be(1);
+        dataset.Samples.Should().Contain(sample);
     }
 
     [Fact]
@@ -84,11 +85,12 @@ public class EvaluationDatasetTests
         dataset.AddSample(CreateSample("duplicate-id"));
 
         // Act & Assert
-        var ex = Assert.Throws<InvalidOperationException>(() =>
-            dataset.AddSample(CreateSample("duplicate-id")));
+        Action act = () =>
+            dataset.AddSample(CreateSample("duplicate-id"));
+        var ex = act.Should().Throw<InvalidOperationException>().Which;
 
-        Assert.Contains("duplicate-id", ex.Message);
-        Assert.Contains("already exists", ex.Message);
+        ex.Message.Should().Contain("duplicate-id");
+        ex.Message.Should().Contain("already exists");
     }
 
     [Fact]
@@ -98,7 +100,8 @@ public class EvaluationDatasetTests
         var dataset = EvaluationDataset.Create("Test", "Test dataset");
 
         // Act & Assert
-        Assert.Throws<ArgumentNullException>(() => dataset.AddSample(null!));
+        Action act = () => dataset.AddSample(null!);
+        act.Should().Throw<ArgumentNullException>();
     }
 
     [Fact]
@@ -117,7 +120,7 @@ public class EvaluationDatasetTests
         dataset.AddSamples(samples);
 
         // Assert
-        Assert.Equal(3, dataset.Count);
+        dataset.Count.Should().Be(3);
     }
 
     [Fact]
@@ -134,8 +137,8 @@ public class EvaluationDatasetTests
         var easySamples = dataset.GetByDifficulty("easy");
 
         // Assert
-        Assert.Equal(2, easySamples.Count);
-        Assert.All(easySamples, s => Assert.Equal("easy", s.Difficulty));
+        easySamples.Count.Should().Be(2);
+        easySamples.Should().AllSatisfy(s => s.Difficulty.Should().Be("easy"));
     }
 
     [Fact]
@@ -150,7 +153,7 @@ public class EvaluationDatasetTests
         var easySamples = dataset.GetByDifficulty("easy");
 
         // Assert
-        Assert.Equal(2, easySamples.Count);
+        easySamples.Count.Should().Be(2);
     }
 
     [Fact]
@@ -166,8 +169,8 @@ public class EvaluationDatasetTests
         var setupSamples = dataset.GetByCategory("setup");
 
         // Assert
-        Assert.Equal(2, setupSamples.Count);
-        Assert.All(setupSamples, s => Assert.Equal("setup", s.Category));
+        setupSamples.Count.Should().Be(2);
+        setupSamples.Should().AllSatisfy(s => s.Category.Should().Be("setup"));
     }
 
     [Fact]
@@ -183,8 +186,8 @@ public class EvaluationDatasetTests
         var azulSamples = dataset.GetByGameId("azul");
 
         // Assert
-        Assert.Equal(2, azulSamples.Count);
-        Assert.All(azulSamples, s => Assert.Equal("azul", s.GameId));
+        azulSamples.Count.Should().Be(2);
+        azulSamples.Should().AllSatisfy(s => s.GameId.Should().Be("azul"));
     }
 
     [Fact]
@@ -211,8 +214,8 @@ public class EvaluationDatasetTests
         var mozillaSamples = dataset.GetBySource("mozilla");
 
         // Assert
-        Assert.Single(mozillaSamples);
-        Assert.Equal("mozilla", mozillaSamples[0].DatasetSource);
+        mozillaSamples.Should().ContainSingle();
+        mozillaSamples[0].DatasetSource.Should().Be("mozilla");
     }
 
     [Fact]
@@ -229,8 +232,8 @@ public class EvaluationDatasetTests
         var (isValid, errors) = dataset.Validate();
 
         // Assert
-        Assert.True(isValid);
-        Assert.Empty(errors);
+        isValid.Should().BeTrue();
+        errors.Should().BeEmpty();
     }
 
     [Fact]
@@ -247,10 +250,10 @@ public class EvaluationDatasetTests
         var (isValid, errors) = dataset.Validate();
 
         // Assert
-        Assert.False(isValid);
-        Assert.Single(errors);
-        Assert.Contains("at least 30 samples", errors[0]);
-        Assert.Contains("29", errors[0]);
+        isValid.Should().BeFalse();
+        errors.Should().ContainSingle();
+        errors[0].Should().Contain("at least 30 samples");
+        errors[0].Should().Contain("29");
     }
 
     [Fact]
@@ -267,8 +270,8 @@ public class EvaluationDatasetTests
         var (isValid, errors) = dataset.Validate();
 
         // Assert
-        Assert.False(isValid);
-        Assert.Contains(errors, e => e.Contains("name is required"));
+        isValid.Should().BeFalse();
+        errors.Should().Contain(e => e.Contains("name is required"));
     }
 
     [Fact]
@@ -290,8 +293,8 @@ public class EvaluationDatasetTests
         var (isValid, errors) = dataset.Validate();
 
         // Assert
-        Assert.False(isValid);
-        Assert.Contains(errors, e => e.Contains("empty questions"));
+        isValid.Should().BeFalse();
+        errors.Should().Contain(e => e.Contains("empty questions"));
     }
 
     [Fact]
@@ -313,8 +316,8 @@ public class EvaluationDatasetTests
         var (isValid, errors) = dataset.Validate();
 
         // Assert
-        Assert.False(isValid);
-        Assert.Contains(errors, e => e.Contains("empty expected answers"));
+        isValid.Should().BeFalse();
+        errors.Should().Contain(e => e.Contains("empty expected answers"));
     }
 
     [Fact]
@@ -333,8 +336,8 @@ public class EvaluationDatasetTests
         dataset1.Merge(dataset2);
 
         // Assert
-        Assert.Equal(4, dataset1.Count);
-        Assert.Equal("combined", dataset1.SourceType);
+        dataset1.Count.Should().Be(4);
+        dataset1.SourceType.Should().Be("combined");
     }
 
     [Fact]
@@ -353,7 +356,7 @@ public class EvaluationDatasetTests
         dataset1.Merge(dataset2);
 
         // Assert
-        Assert.Equal(3, dataset1.Count); // Only 3, not 4
+        dataset1.Count.Should().Be(3); // Only 3, not 4
     }
 
     [Fact]
@@ -363,7 +366,8 @@ public class EvaluationDatasetTests
         var dataset = EvaluationDataset.Create("Test", "Test");
 
         // Act & Assert
-        Assert.Throws<ArgumentNullException>(() => dataset.Merge(null!));
+        Action act = () => dataset.Merge(null!);
+        act.Should().Throw<ArgumentNullException>();
     }
 
     [Fact]
@@ -389,22 +393,22 @@ public class EvaluationDatasetTests
         var restoredDataset = EvaluationDataset.FromJson(json);
 
         // Assert
-        Assert.Equal(dataset.Name, restoredDataset.Name);
-        Assert.Equal(dataset.Description, restoredDataset.Description);
-        Assert.Equal(dataset.SourceType, restoredDataset.SourceType);
-        Assert.Equal(dataset.Count, restoredDataset.Count);
+        restoredDataset.Name.Should().Be(dataset.Name);
+        restoredDataset.Description.Should().Be(dataset.Description);
+        restoredDataset.SourceType.Should().Be(dataset.SourceType);
+        restoredDataset.Count.Should().Be(dataset.Count);
 
         var originalSample = dataset.Samples[0];
         var restoredSample = restoredDataset.Samples[0];
 
-        Assert.Equal(originalSample.Id, restoredSample.Id);
-        Assert.Equal(originalSample.Question, restoredSample.Question);
-        Assert.Equal(originalSample.ExpectedAnswer, restoredSample.ExpectedAnswer);
-        Assert.Equal(originalSample.GameId, restoredSample.GameId);
-        Assert.Equal(originalSample.SourcePage, restoredSample.SourcePage);
-        Assert.Equal(originalSample.Difficulty, restoredSample.Difficulty);
-        Assert.Equal(originalSample.Category, restoredSample.Category);
-        Assert.Equal(originalSample.ExpectedKeywords, restoredSample.ExpectedKeywords);
+        restoredSample.Id.Should().Be(originalSample.Id);
+        restoredSample.Question.Should().Be(originalSample.Question);
+        restoredSample.ExpectedAnswer.Should().Be(originalSample.ExpectedAnswer);
+        restoredSample.GameId.Should().Be(originalSample.GameId);
+        restoredSample.SourcePage.Should().Be(originalSample.SourcePage);
+        restoredSample.Difficulty.Should().Be(originalSample.Difficulty);
+        restoredSample.Category.Should().Be(originalSample.Category);
+        restoredSample.ExpectedKeywords.Should().BeEquivalentTo(originalSample.ExpectedKeywords);
     }
 
     [Fact]
@@ -414,7 +418,8 @@ public class EvaluationDatasetTests
         var invalidJson = "{ invalid json }";
 
         // Act & Assert
-        Assert.ThrowsAny<Exception>(() => EvaluationDataset.FromJson(invalidJson));
+        Action act = () => EvaluationDataset.FromJson(invalidJson);
+        act.Should().Throw<Exception>();
     }
 
     [Fact]
@@ -437,11 +442,11 @@ public class EvaluationDatasetTests
         var dataset = EvaluationDataset.FromJson(json);
 
         // Assert
-        Assert.Single(dataset.Samples);
+        dataset.Samples.Should().ContainSingle();
         var sample = dataset.Samples[0];
-        Assert.Equal("medium", sample.Difficulty); // Default
-        Assert.Equal("gameplay", sample.Category); // Default
-        Assert.Equal("unknown", sample.DatasetSource); // Default when not specified
+        sample.Difficulty.Should().Be("medium"); // Default
+        sample.Category.Should().Be("gameplay"); // Default
+        sample.DatasetSource.Should().Be("unknown"); // Default when not specified
     }
 
     [Fact]
@@ -451,13 +456,13 @@ public class EvaluationDatasetTests
         var dataset = EvaluationDataset.Create("Test", "Test");
 
         // Act & Assert
-        Assert.Equal(0, dataset.Count);
+        dataset.Count.Should().Be(0);
 
         dataset.AddSample(CreateSample("sample-1"));
-        Assert.Equal(1, dataset.Count);
+        dataset.Count.Should().Be(1);
 
         dataset.AddSample(CreateSample("sample-2"));
-        Assert.Equal(2, dataset.Count);
+        dataset.Count.Should().Be(2);
     }
 
     [Fact]
@@ -471,6 +476,6 @@ public class EvaluationDatasetTests
         var samples = dataset.Samples;
 
         // Assert
-        Assert.IsAssignableFrom<IReadOnlyList<EvaluationSample>>(samples);
+        samples.Should().BeAssignableTo<IReadOnlyList<EvaluationSample>>();
     }
 }

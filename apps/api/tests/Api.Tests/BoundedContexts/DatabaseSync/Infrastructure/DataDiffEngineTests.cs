@@ -1,5 +1,6 @@
 using Api.BoundedContexts.DatabaseSync.Infrastructure;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.DatabaseSync.Infrastructure;
 
@@ -13,10 +14,10 @@ public class DataDiffEngineTests
         var local = new Dictionary<string, string> { ["id1"] = "hash1", ["id2"] = "hash2" };
         var staging = new Dictionary<string, string> { ["id1"] = "hash1", ["id2"] = "hash2" };
         var (identical, modified, localOnly, stagingOnly) = DataDiffEngine.ComputeHashDiff(local, staging);
-        Assert.Equal(2, identical);
-        Assert.Empty(modified);
-        Assert.Empty(localOnly);
-        Assert.Empty(stagingOnly);
+        identical.Should().Be(2);
+        modified.Should().BeEmpty();
+        localOnly.Should().BeEmpty();
+        stagingOnly.Should().BeEmpty();
     }
 
     [Fact]
@@ -25,9 +26,9 @@ public class DataDiffEngineTests
         var local = new Dictionary<string, string> { ["id1"] = "hashA" };
         var staging = new Dictionary<string, string> { ["id1"] = "hashB" };
         var (identical, modified, localOnly, stagingOnly) = DataDiffEngine.ComputeHashDiff(local, staging);
-        Assert.Equal(0, identical);
-        Assert.Single(modified);
-        Assert.Equal("id1", modified[0]);
+        identical.Should().Be(0);
+        modified.Should().ContainSingle();
+        modified[0].Should().Be("id1");
     }
 
     [Fact]
@@ -36,12 +37,12 @@ public class DataDiffEngineTests
         var local = new Dictionary<string, string> { ["id1"] = "hash1", ["id3"] = "hash3" };
         var staging = new Dictionary<string, string> { ["id1"] = "hash1", ["id2"] = "hash2" };
         var (identical, modified, localOnly, stagingOnly) = DataDiffEngine.ComputeHashDiff(local, staging);
-        Assert.Equal(1, identical);
-        Assert.Empty(modified);
-        Assert.Single(localOnly);
-        Assert.Equal("id3", localOnly[0]);
-        Assert.Single(stagingOnly);
-        Assert.Equal("id2", stagingOnly[0]);
+        identical.Should().Be(1);
+        modified.Should().BeEmpty();
+        localOnly.Should().ContainSingle();
+        localOnly[0].Should().Be("id3");
+        stagingOnly.Should().ContainSingle();
+        stagingOnly[0].Should().Be("id2");
     }
 
     [Fact]
@@ -53,13 +54,13 @@ public class DataDiffEngineTests
             ("data", "bytea"), ("config", "jsonb"), ("age", "int4")
         };
         var safe = DataDiffEngine.FilterSafeColumns(columns);
-        Assert.Equal(3, safe.Count);
-        Assert.Contains("id", safe);
-        Assert.Contains("name", safe);
-        Assert.Contains("age", safe);
-        Assert.DoesNotContain("embedding", safe);
-        Assert.DoesNotContain("data", safe);
-        Assert.DoesNotContain("config", safe);
+        safe.Count.Should().Be(3);
+        safe.Should().Contain("id");
+        safe.Should().Contain("name");
+        safe.Should().Contain("age");
+        safe.Should().NotContain("embedding");
+        safe.Should().NotContain("data");
+        safe.Should().NotContain("config");
     }
 
     [Fact]
@@ -67,9 +68,9 @@ public class DataDiffEngineTests
     {
         var (identical, modified, localOnly, stagingOnly) = DataDiffEngine.ComputeHashDiff(
             new Dictionary<string, string>(), new Dictionary<string, string>());
-        Assert.Equal(0, identical);
-        Assert.Empty(modified);
-        Assert.Empty(localOnly);
-        Assert.Empty(stagingOnly);
+        identical.Should().Be(0);
+        modified.Should().BeEmpty();
+        localOnly.Should().BeEmpty();
+        stagingOnly.Should().BeEmpty();
     }
 }

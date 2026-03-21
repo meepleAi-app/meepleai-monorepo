@@ -4,6 +4,7 @@ using Api.BoundedContexts.Administration.Infrastructure.External;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using FluentAssertions;
 using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.Administration.Infrastructure.External;
@@ -54,10 +55,10 @@ public class InfrastructureDetailsServiceTests
         var result = await _service.GetDetailsAsync(CancellationToken.None);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal(HealthState.Healthy, result.Overall.State);
-        Assert.Equal(2, result.Services.Count);
-        Assert.Equal(15430, result.Metrics.ApiRequestsLast24h);
+        result.Should().NotBeNull();
+        result.Overall.State.Should().Be(HealthState.Healthy);
+        result.Services.Count.Should().Be(2);
+        result.Metrics.ApiRequestsLast24h.Should().Be(15430);
     }
 
     [Fact]
@@ -118,11 +119,11 @@ public class InfrastructureDetailsServiceTests
         var result = await _service.GetDetailsAsync(CancellationToken.None);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal(0, result.Metrics.ApiRequestsLast24h);
-        Assert.Equal(0, result.Metrics.AvgLatencyMs);
-        Assert.Equal(0, result.Metrics.ErrorRate);
-        Assert.Equal(0, result.Metrics.LlmCostLast24h);
+        result.Should().NotBeNull();
+        result.Metrics.ApiRequestsLast24h.Should().Be(0);
+        result.Metrics.AvgLatencyMs.Should().Be(0);
+        result.Metrics.ErrorRate.Should().Be(0);
+        result.Metrics.LlmCostLast24h.Should().Be(0);
     }
 
     [Fact]
@@ -134,10 +135,10 @@ public class InfrastructureDetailsServiceTests
             .ThrowsAsync(new InvalidOperationException("Health service failure"));
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
-            () => _service.GetDetailsAsync(CancellationToken.None));
+        var act = () => _service.GetDetailsAsync(CancellationToken.None);
+        var exception = (await act.Should().ThrowAsync<InvalidOperationException>()).Which;
 
-        Assert.Equal("Health service failure", exception.Message);
+        exception.Message.Should().Be("Health service failure");
     }
 
     [Fact]
@@ -177,7 +178,7 @@ public class InfrastructureDetailsServiceTests
         await _service.GetDetailsAsync(CancellationToken.None);
 
         // Assert - all calls should happen before Task.WhenAll completes
-        Assert.True(callOrder.Count >= 6, "All 6 parallel calls should execute");
+        (callOrder.Count >= 6).Should().BeTrue("All 6 parallel calls should execute");
     }
 
     private void SetupSuccessfulMocks()

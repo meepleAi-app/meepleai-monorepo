@@ -11,6 +11,7 @@ using MediatR;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Handlers;
 
@@ -62,15 +63,15 @@ public class CreateChatThreadCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal(userId, result.UserId);
-        Assert.Equal(gameId, result.GameId);
-        Assert.Equal(title, result.Title);
-        Assert.Equal("active", result.Status);
-        Assert.Equal(1, result.MessageCount);
-        Assert.Single(result.Messages);
-        Assert.Equal(initialMessage, result.Messages[0].Content);
-        Assert.Equal("user", result.Messages[0].Role);
+        result.Should().NotBeNull();
+        result.UserId.Should().Be(userId);
+        result.GameId.Should().Be(gameId);
+        result.Title.Should().Be(title);
+        result.Status.Should().Be("active");
+        result.MessageCount.Should().Be(1);
+        result.Messages.Should().ContainSingle();
+        result.Messages[0].Content.Should().Be(initialMessage);
+        result.Messages[0].Role.Should().Be("user");
 
         _mockRepository.Verify(r => r.AddAsync(It.IsAny<ChatThread>(), It.IsAny<CancellationToken>()), Times.Once);
         _mockUnitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
@@ -89,13 +90,13 @@ public class CreateChatThreadCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal(userId, result.UserId);
-        Assert.Equal(gameId, result.GameId);
-        Assert.Equal(title, result.Title);
-        Assert.Equal("active", result.Status);
-        Assert.Equal(0, result.MessageCount);
-        Assert.Empty(result.Messages);
+        result.Should().NotBeNull();
+        result.UserId.Should().Be(userId);
+        result.GameId.Should().Be(gameId);
+        result.Title.Should().Be(title);
+        result.Status.Should().Be("active");
+        result.MessageCount.Should().Be(0);
+        result.Messages.Should().BeEmpty();
 
         _mockRepository.Verify(r => r.AddAsync(It.IsAny<ChatThread>(), It.IsAny<CancellationToken>()), Times.Once);
         _mockUnitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
@@ -113,11 +114,11 @@ public class CreateChatThreadCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal(userId, result.UserId);
-        Assert.Null(result.GameId);
-        Assert.Equal(title, result.Title);
-        Assert.Equal("active", result.Status);
+        result.Should().NotBeNull();
+        result.UserId.Should().Be(userId);
+        result.GameId.Should().BeNull();
+        result.Title.Should().Be(title);
+        result.Status.Should().Be("active");
 
         _mockRepository.Verify(r => r.AddAsync(It.IsAny<ChatThread>(), It.IsAny<CancellationToken>()), Times.Once);
         _mockUnitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
@@ -127,8 +128,8 @@ public class CreateChatThreadCommandHandlerTests
     public async Task Handle_WithNullCommand_ThrowsArgumentNullException()
     {
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentNullException>(
-            () => _handler.Handle(null!, TestContext.Current.CancellationToken));
+        Func<Task> act = () => _handler.Handle(null!, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<ArgumentNullException>();
     }
     private static IRagAccessService CreatePermissiveRagAccessServiceMock()
     {

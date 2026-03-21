@@ -1,6 +1,7 @@
 using Api.BoundedContexts.UserLibrary.Domain.Entities;
 using Api.BoundedContexts.UserLibrary.Domain.ValueObjects;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.UserLibrary.Domain.Entities;
 
@@ -14,12 +15,12 @@ public sealed class WishlistItemTests
 
         var item = WishlistItem.Create(userId, gameId, WishlistPriority.High, 49.99m, "Want this!");
 
-        Assert.NotEqual(Guid.Empty, item.Id);
-        Assert.Equal(userId, item.UserId);
-        Assert.Equal(gameId, item.GameId);
-        Assert.Equal(WishlistPriority.High, item.Priority);
-        Assert.Equal(49.99m, item.TargetPrice);
-        Assert.Equal("Want this!", item.Notes);
+        item.Id.Should().NotBe(Guid.Empty);
+        item.UserId.Should().Be(userId);
+        item.GameId.Should().Be(gameId);
+        item.Priority.Should().Be(WishlistPriority.High);
+        item.TargetPrice.Should().Be(49.99m);
+        item.Notes.Should().Be("Want this!");
     }
 
     [Fact]
@@ -29,9 +30,9 @@ public sealed class WishlistItemTests
 
         item.Update(WishlistPriority.High, 59.99m, clearTargetPrice: false, "Updated notes", clearNotes: false, WishlistVisibility.Public);
 
-        Assert.Equal(WishlistPriority.High, item.Priority);
-        Assert.Equal(59.99m, item.TargetPrice);
-        Assert.Equal("Updated notes", item.Notes);
-        Assert.NotNull(item.UpdatedAt);
+        item.Priority.Should().Be(WishlistPriority.High);
+        item.TargetPrice.Should().Be(59.99m);
+        item.Notes.Should().Be("Updated notes");
+        item.UpdatedAt.Should().NotBeNull();
     }
 }

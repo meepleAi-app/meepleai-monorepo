@@ -9,6 +9,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Polly;
+using FluentAssertions;
 using Xunit;
 
 namespace Api.Tests.Integration;
@@ -127,18 +128,17 @@ public class SmolDoclingIntegrationTests : IAsyncLifetime
         var result = await _extractor!.ExtractTextAsync(pdfStream, cancellationToken: TestCancellationToken);
 
         // Assert
-        Assert.True(result.Success, $"Extraction failed: {result.ErrorMessage}");
-        Assert.NotEmpty(result.ExtractedText);
-        Assert.True(result.PageCount > 0, "Page count should be greater than 0");
-        Assert.True(result.CharacterCount > 500, "Should extract substantial text (min 500 chars)");
-        Assert.True(result.Quality >= ExtractionQuality.Low,
-            $"Quality should be at least Low for SmolDocling VLM, got: {result.Quality}");
-        Assert.False(result.OcrTriggered, "SmolDocling is VLM-based, not OCR");
+        (result.Success).Should().BeTrue($"Extraction failed: {result.ErrorMessage}");
+        result.ExtractedText.Should().NotBeEmpty();
+        (result.PageCount > 0).Should().BeTrue("Page count should be greater than 0");
+        (result.CharacterCount > 500).Should().BeTrue("Should extract substantial text (min 500 chars)");
+        (result.Quality >= ExtractionQuality.Low).Should().BeTrue($"Quality should be at least Low for SmolDocling VLM, got: {result.Quality}");
+        (result.OcrTriggered).Should().BeFalse("SmolDocling is VLM-based, not OCR");
 
         // Verify Italian content
         var hasItalianKeywords = result.ExtractedText.Contains("gioco", StringComparison.OrdinalIgnoreCase) ||
                                   result.ExtractedText.Contains("giocatori", StringComparison.OrdinalIgnoreCase);
-        Assert.True(hasItalianKeywords, "Should contain Italian keywords");
+        (hasItalianKeywords).Should().BeTrue("Should contain Italian keywords");
 
         _output($"✓ Extraction successful: {result.PageCount} pages, {result.CharacterCount} chars, Quality: {result.Quality}");
     }
@@ -159,7 +159,7 @@ public class SmolDoclingIntegrationTests : IAsyncLifetime
         var result = await _extractor!.ExtractTextAsync(pdfStream, cancellationToken: linkedCts.Token);
 
         // Assert - should complete successfully (not timeout)
-        Assert.True(result.Success, "Normal PDFs should complete within timeout");
+        (result.Success).Should().BeTrue("Normal PDFs should complete within timeout");
 
         _output("✓ Timeout handling validated - service responds within limits");
     }
@@ -179,8 +179,9 @@ public class SmolDoclingIntegrationTests : IAsyncLifetime
 
         // Assert - should throw TaskCanceledException
         using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cts.Token, TestCancellationToken);
-        await Assert.ThrowsAsync<TaskCanceledException>(() =>
-            _extractor!.ExtractTextAsync(pdfStream, cancellationToken: linkedCts.Token));
+        var act = () =>
+            _extractor!.ExtractTextAsync(pdfStream, cancellationToken: linkedCts.Token);
+        await act.Should().ThrowAsync<TaskCanceledException>();
 
         _output("✓ User cancellation propagated correctly");
     }
@@ -218,9 +219,9 @@ public class SmolDoclingIntegrationTests : IAsyncLifetime
         var result = await unavailableExtractor.ExtractTextAsync(pdfStream, cancellationToken: TestCancellationToken);
 
         // Assert
-        Assert.False(result.Success, "Should fail when service unavailable");
-        Assert.NotNull(result.ErrorMessage);
-        Assert.Contains("unavailable", result.ErrorMessage, StringComparison.OrdinalIgnoreCase);
+        (result.Success).Should().BeFalse("Should fail when service unavailable");
+        result.ErrorMessage.Should().NotBeNull();
+        result.ErrorMessage.Should().ContainEquivalentOf("unavailable");
 
         _output($"✓ Service unavailable handled: {result.ErrorMessage}");
 
@@ -244,24 +245,20 @@ public class SmolDoclingIntegrationTests : IAsyncLifetime
         if (!result.Success)
         {
             // Service rejected the invalid PDF
-            Assert.NotNull(result.ErrorMessage);
-            Assert.True(
-                result.ErrorMessage.Contains("Invalid", StringComparison.OrdinalIgnoreCase) ||
+            result.ErrorMessage.Should().NotBeNull();
+            (result.ErrorMessage.Contains("Invalid", StringComparison.OrdinalIgnoreCase) ||
                 result.ErrorMessage.Contains("corrupted", StringComparison.OrdinalIgnoreCase) ||
                 result.ErrorMessage.Contains("error", StringComparison.OrdinalIgnoreCase) ||
                 result.ErrorMessage.Contains("bad", StringComparison.OrdinalIgnoreCase) ||
-                result.ErrorMessage.Length > 0, // Any error message is acceptable for invalid PDF
-                $"Error message should be present for failed extraction, got: '{result.ErrorMessage}'");
+                result.ErrorMessage.Length > 0).Should().BeTrue($"Error message should be present for failed extraction, got: '{result.ErrorMessage}'");
 
             _output($"✓ Invalid PDF rejected by service: {result.ErrorMessage}");
         }
         else
         {
             // Service processed it but should have very low quality or minimal text
-            Assert.True(
-                result.Quality == ExtractionQuality.VeryLow ||
-                result.CharacterCount < 50, // Minimal extracted text from garbage
-                $"Invalid PDF should have very low quality or minimal text, got Quality={result.Quality}, Chars={result.CharacterCount}");
+            (result.Quality == ExtractionQuality.VeryLow ||
+                result.CharacterCount < 50).Should().BeTrue($"Invalid PDF should have very low quality or minimal text, got Quality={result.Quality}, Chars={result.CharacterCount}");
 
             _output($"✓ Invalid PDF processed with degraded result: Quality={result.Quality}, Chars={result.CharacterCount}");
         }
@@ -282,14 +279,13 @@ public class SmolDoclingIntegrationTests : IAsyncLifetime
         var result = await _extractor!.ExtractTextAsync(pdfStream, cancellationToken: TestCancellationToken);
 
         // Assert
-        Assert.True(result.Success, $"Large PDF extraction failed: {result.ErrorMessage}");
-        Assert.True(result.PageCount >= 10, $"TM rulebook should have 10+ pages, got: {result.PageCount}");
-        Assert.True(result.CharacterCount > 5000, "Large PDF should have 5K+ characters");
-        Assert.True(result.Quality >= ExtractionQuality.Low,
-            $"Large PDF should have acceptable quality, got: {result.Quality}");
+        (result.Success).Should().BeTrue($"Large PDF extraction failed: {result.ErrorMessage}");
+        (result.PageCount >= 10).Should().BeTrue($"TM rulebook should have 10+ pages, got: {result.PageCount}");
+        (result.CharacterCount > 5000).Should().BeTrue("Large PDF should have 5K+ characters");
+        (result.Quality >= ExtractionQuality.Low).Should().BeTrue($"Large PDF should have acceptable quality, got: {result.Quality}");
 
         // Verify Italian content
-        Assert.Contains("gioco", result.ExtractedText, StringComparison.OrdinalIgnoreCase);
+        result.ExtractedText.Should().ContainEquivalentOf("gioco");
 
         _output($"✓ Large PDF processed: {result.PageCount} pages, {result.CharacterCount:N0} chars, Quality: {result.Quality}");
     }
@@ -318,11 +314,11 @@ public class SmolDoclingIntegrationTests : IAsyncLifetime
         var results = await Task.WhenAll(tasks);
 
         // Assert - All requests should succeed
-        Assert.All(results, result =>
+        results.Should().AllSatisfy(result =>
         {
-            Assert.True(result.Success, $"Concurrent request failed: {result.ErrorMessage}");
-            Assert.True(result.PageCount > 0, "Should extract pages");
-            Assert.NotEmpty(result.ExtractedText);
+            (result.Success).Should().BeTrue($"Concurrent request failed: {result.ErrorMessage}");
+            (result.PageCount > 0).Should().BeTrue("Should extract pages");
+            result.ExtractedText.Should().NotBeEmpty();
         });
 
         _output($"✓ All {concurrentRequests} concurrent requests completed successfully");

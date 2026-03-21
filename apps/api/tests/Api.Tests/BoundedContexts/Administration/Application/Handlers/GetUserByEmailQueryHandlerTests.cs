@@ -6,6 +6,7 @@ using Api.Infrastructure.Entities;
 using Api.Tests.TestHelpers;
 using Microsoft.EntityFrameworkCore;
 using Xunit;
+using FluentAssertions;
 using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.Administration.Application.Handlers;
@@ -58,10 +59,10 @@ public class GetUserByEmailQueryHandlerTests
         var result = await handler.Handle(query, TestCancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal("test@example.com", result.Email);
-        Assert.Equal("Test User", result.DisplayName);
-        Assert.Equal("User", result.Role);
+        result.Should().NotBeNull();
+        result.Email.Should().Be("test@example.com");
+        result.DisplayName.Should().Be("Test User");
+        result.Role.Should().Be("User");
     }
 
     [Fact]
@@ -77,7 +78,7 @@ public class GetUserByEmailQueryHandlerTests
         var result = await handler.Handle(query, TestCancellationToken);
 
         // Assert
-        Assert.Null(result);
+        result.Should().BeNull();
     }
 
     [Fact]
@@ -88,8 +89,8 @@ public class GetUserByEmailQueryHandlerTests
         var handler = CreateHandler(context);
 
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentNullException>(
-            () => handler.Handle(null!, TestCancellationToken));
+        var act = () => handler.Handle(null!, TestCancellationToken);
+        await act.Should().ThrowAsync<ArgumentNullException>();
     }
 
     [Fact]
@@ -134,9 +135,9 @@ public class GetUserByEmailQueryHandlerTests
         var result = await handler.Handle(query, TestCancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.NotNull(result.LastSeenAt);
-        Assert.Equal(lastSeenDate, result.LastSeenAt.Value, TestConstants.Timing.VeryShortTimeout);
+        result.Should().NotBeNull();
+        result.LastSeenAt.Should().NotBeNull();
+        result.LastSeenAt.Value.Should().BeCloseTo(lastSeenDate, TestConstants.Timing.VeryShortTimeout);
     }
 
     [Fact]
@@ -194,9 +195,9 @@ public class GetUserByEmailQueryHandlerTests
         var result = await handler.Handle(query, TestCancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.NotNull(result.LastSeenAt);
-        Assert.Equal(recentLastSeen, result.LastSeenAt.Value, TestConstants.Timing.VeryShortTimeout);
+        result.Should().NotBeNull();
+        result.LastSeenAt.Should().NotBeNull();
+        result.LastSeenAt.Value.Should().BeCloseTo(recentLastSeen, TestConstants.Timing.VeryShortTimeout);
     }
 
     [Fact]
@@ -240,8 +241,8 @@ public class GetUserByEmailQueryHandlerTests
         var result = await handler.Handle(query, TestCancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Null(result.LastSeenAt); // Should ignore revoked sessions
+        result.Should().NotBeNull();
+        result.LastSeenAt.Should().BeNull(); // Should ignore revoked sessions
     }
 
     [Fact]
@@ -271,7 +272,7 @@ public class GetUserByEmailQueryHandlerTests
         var result = await handler.Handle(query, TestCancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal("test@example.com", result.Email);
+        result.Should().NotBeNull();
+        result.Email.Should().Be("test@example.com");
     }
 }

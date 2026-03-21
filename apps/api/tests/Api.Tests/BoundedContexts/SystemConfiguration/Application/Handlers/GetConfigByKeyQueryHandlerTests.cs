@@ -5,6 +5,7 @@ using Api.BoundedContexts.SystemConfiguration.Domain.Repositories;
 using Api.BoundedContexts.SystemConfiguration.Domain.ValueObjects;
 using SystemConfig = Api.BoundedContexts.SystemConfiguration.Domain.Entities.SystemConfiguration;
 using Moq;
+using FluentAssertions;
 using Xunit;
 using Api.Tests.Constants;
 
@@ -51,12 +52,12 @@ public class GetConfigByKeyQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal("max.connections", result.Key);
-        Assert.Equal("100", result.Value);
-        Assert.Equal("int", result.ValueType);
-        Assert.Equal("Maximum connections", result.Description);
-        Assert.Equal("Database", result.Category);
+        result.Should().NotBeNull();
+        result.Key.Should().Be("max.connections");
+        result.Value.Should().Be("100");
+        result.ValueType.Should().Be("int");
+        result.Description.Should().Be("Maximum connections");
+        result.Category.Should().Be("Database");
     }
 
     [Fact]
@@ -73,7 +74,7 @@ public class GetConfigByKeyQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.Null(result);
+        result.Should().BeNull();
         _mockConfigRepository.Verify(
             r => r.GetByKeyAsync("non.existent.key", It.IsAny<string?>(), It.IsAny<bool>(), It.IsAny<CancellationToken>()),
             Times.Once);
@@ -102,9 +103,9 @@ public class GetConfigByKeyQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal("bool", result.ValueType);
-        Assert.Equal("true", result.Value);
+        result.Should().NotBeNull();
+        result.ValueType.Should().Be("bool");
+        result.Value.Should().Be("true");
     }
 
     [Fact]
@@ -131,10 +132,10 @@ public class GetConfigByKeyQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal(1, result.Version); // Initial version
-        Assert.NotNull(result.CreatedAt);
-        Assert.True(result.IsActive);
+        result.Should().NotBeNull();
+        result.Version.Should().Be(1);
+        result.CreatedAt.Should().NotBe(default);
+        result.IsActive.Should().BeTrue();
     }
 
     [Fact]
@@ -184,10 +185,10 @@ public class GetConfigByKeyQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal("600", result.Value);
-        Assert.Equal(2, result.Version); // Version incremented after update
-        Assert.NotNull(result.UpdatedAt);
+        result.Should().NotBeNull();
+        result.Value.Should().Be("600");
+        result.Version.Should().Be(2);
+        result.UpdatedAt.Should().NotBe(default);
     }
 
     [Fact]
@@ -215,9 +216,9 @@ public class GetConfigByKeyQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal("api.endpoint", result.Key);
-        Assert.Equal("https://prod.api.com", result.Value);
+        result.Should().NotBeNull();
+        result.Key.Should().Be("api.endpoint");
+        result.Value.Should().Be("https://prod.api.com");
         _mockConfigRepository.Verify(
             r => r.GetByKeyAsync("api.endpoint", "Production", true, It.IsAny<CancellationToken>()),
             Times.Once);
@@ -248,8 +249,8 @@ public class GetConfigByKeyQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.False(result.IsActive);
+        result.Should().NotBeNull();
+        result.IsActive.Should().BeFalse();
         _mockConfigRepository.Verify(
             r => r.GetByKeyAsync("feature.disabled", "Development", false, It.IsAny<CancellationToken>()),
             Times.Once);
@@ -279,7 +280,7 @@ public class GetConfigByKeyQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         _mockConfigRepository.Verify(
             r => r.GetByKeyAsync("global.setting", null, true, It.IsAny<CancellationToken>()),
             Times.Once);
@@ -310,9 +311,9 @@ public class GetConfigByKeyQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal("staging-db-url", result.Value);
-        Assert.Equal("Staging", result.Environment);
+        result.Should().NotBeNull();
+        result.Value.Should().Be("staging-db-url");
+        result.Environment.Should().Be("Staging");
         _mockConfigRepository.Verify(
             r => r.GetByKeyAsync("db.connection", "Staging", true, It.IsAny<CancellationToken>()),
             Times.Once);

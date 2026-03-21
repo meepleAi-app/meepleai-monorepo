@@ -6,6 +6,7 @@ using Api.Infrastructure;
 using Api.Tests.TestHelpers;
 using Moq;
 using Xunit;
+using FluentAssertions;
 using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.GameManagement.Application.Handlers;
@@ -46,7 +47,7 @@ public class ReplyToRuleCommentCommandHandlerTests
             loggerMock.Object);
 
         // Assert
-        Assert.NotNull(handler);
+        handler.Should().NotBeNull();
     }
 
     [Fact]
@@ -57,11 +58,12 @@ public class ReplyToRuleCommentCommandHandlerTests
         var loggerMock = new Mock<ILogger<ReplyToRuleCommentCommandHandler>>();
 
         // Act & Assert
-        Assert.Throws<ArgumentNullException>(() =>
+        var act = () =>
             new ReplyToRuleCommentCommandHandler(
                 null!,
                 timeProviderMock.Object,
-                loggerMock.Object));
+                loggerMock.Object);
+        act.Should().Throw<ArgumentNullException>();
     }
 
     [Fact]
@@ -72,11 +74,12 @@ public class ReplyToRuleCommentCommandHandlerTests
         var loggerMock = new Mock<ILogger<ReplyToRuleCommentCommandHandler>>();
 
         // Act & Assert
-        Assert.Throws<ArgumentNullException>(() =>
+        var act = () =>
             new ReplyToRuleCommentCommandHandler(
                 context,
                 null!,
-                loggerMock.Object));
+                loggerMock.Object);
+        act.Should().Throw<ArgumentNullException>();
     }
 
     [Fact]
@@ -87,11 +90,12 @@ public class ReplyToRuleCommentCommandHandlerTests
         var timeProviderMock = CreateTimeProviderMock();
 
         // Act & Assert
-        Assert.Throws<ArgumentNullException>(() =>
+        var act = () =>
             new ReplyToRuleCommentCommandHandler(
                 context,
                 timeProviderMock.Object,
-                null!));
+                null!);
+        act.Should().Throw<ArgumentNullException>();
     }
     [Fact]
     public void Command_WithSimpleReply_ConstructsCorrectly()
@@ -106,9 +110,9 @@ public class ReplyToRuleCommentCommandHandlerTests
             UserId: userId);
 
         // Assert
-        Assert.Equal(parentId, command.ParentCommentId);
-        Assert.Equal("Great point! I agree.", command.CommentText);
-        Assert.Equal(userId, command.UserId);
+        command.ParentCommentId.Should().Be(parentId);
+        command.CommentText.Should().Be("Great point! I agree.");
+        command.UserId.Should().Be(userId);
     }
 
     [Fact]
@@ -121,8 +125,8 @@ public class ReplyToRuleCommentCommandHandlerTests
             UserId: Guid.NewGuid());
 
         // Assert
-        Assert.Contains("@alice", command.CommentText);
-        Assert.Contains("@bob", command.CommentText);
+        command.CommentText.Should().Contain("@alice");
+        command.CommentText.Should().Contain("@bob");
     }
 
     [Fact]
@@ -136,7 +140,7 @@ public class ReplyToRuleCommentCommandHandlerTests
             UserId: Guid.NewGuid());
 
         // Assert
-        Assert.Equal(5000, command.CommentText.Length);
+        command.CommentText.Length.Should().Be(5000);
     }
 
     [Fact]
@@ -149,7 +153,7 @@ public class ReplyToRuleCommentCommandHandlerTests
             UserId: Guid.NewGuid());
 
         // Assert
-        Assert.Equal("OK", command.CommentText);
+        command.CommentText.Should().Be("OK");
     }
 
     [Fact]
@@ -162,8 +166,8 @@ public class ReplyToRuleCommentCommandHandlerTests
             UserId: Guid.NewGuid());
 
         // Assert
-        Assert.Contains("**Bold text**", command.CommentText);
-        Assert.Contains("`code`", command.CommentText);
+        command.CommentText.Should().Contain("**Bold text**");
+        command.CommentText.Should().Contain("`code`");
     }
 
     [Fact]
@@ -176,8 +180,8 @@ public class ReplyToRuleCommentCommandHandlerTests
             UserId: Guid.NewGuid());
 
         // Assert
-        Assert.Contains("😕", command.CommentText);
-        Assert.Contains("règle spéciale", command.CommentText);
+        command.CommentText.Should().Contain("😕");
+        command.CommentText.Should().Contain("règle spéciale");
     }
 
     [Fact]
@@ -191,7 +195,7 @@ public class ReplyToRuleCommentCommandHandlerTests
             UserId: Guid.NewGuid());
 
         // Assert
-        Assert.Equal(parentReplyId, command.ParentCommentId);
+        command.ParentCommentId.Should().Be(parentReplyId);
     }
 
     [Fact]
@@ -214,9 +218,9 @@ public class ReplyToRuleCommentCommandHandlerTests
             UserId: user2Id);
 
         // Assert
-        Assert.NotEqual(command1.ParentCommentId, command2.ParentCommentId);
-        Assert.NotEqual(command1.UserId, command2.UserId);
-        Assert.NotEqual(command1.CommentText, command2.CommentText);
+        command2.ParentCommentId.Should().NotBe(command1.ParentCommentId);
+        command2.UserId.Should().NotBe(command1.UserId);
+        command2.CommentText.Should().NotBe(command1.CommentText);
     }
     // NOTE: Full integration tests for Handle method (reply creation, thread depth validation,
     // @mention extraction, circular reference detection, context inheritance from parent)

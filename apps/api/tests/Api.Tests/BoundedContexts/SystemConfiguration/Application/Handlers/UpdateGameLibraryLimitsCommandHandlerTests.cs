@@ -7,6 +7,7 @@ using Api.Tests.Constants;
 using MediatR;
 using Moq;
 using Xunit;
+using FluentAssertions;
 using SystemConfigurationEntity = Api.BoundedContexts.SystemConfiguration.Domain.Entities.SystemConfiguration;
 
 namespace Api.Tests.BoundedContexts.SystemConfiguration.Application.Handlers;
@@ -60,11 +61,11 @@ public class UpdateGameLibraryLimitsCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal(10, result.FreeTierLimit);
-        Assert.Equal(30, result.NormalTierLimit);
-        Assert.Equal(100, result.PremiumTierLimit);
-        Assert.Equal(adminUserId.ToString(), result.LastUpdatedByUserId);
+        result.Should().NotBeNull();
+        result.FreeTierLimit.Should().Be(10);
+        result.NormalTierLimit.Should().Be(30);
+        result.PremiumTierLimit.Should().Be(100);
+        result.LastUpdatedByUserId.Should().Be(adminUserId.ToString());
 
         // Verify mediator was called 3 times (one for each tier)
         _mockMediator.Verify(

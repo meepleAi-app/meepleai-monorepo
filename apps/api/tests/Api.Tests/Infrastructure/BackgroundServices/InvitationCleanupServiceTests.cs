@@ -13,6 +13,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.Infrastructure.BackgroundServices;
 
@@ -175,7 +176,7 @@ public sealed class InvitationCleanupServiceTests : IDisposable
         _invitationRepoMock.Verify(
             r => r.GetByIdAsync(tokenId, It.IsAny<CancellationToken>()),
             Times.Once);
-        Assert.Equal(InvitationStatus.Expired, invitation.Status);
+        invitation.Status.Should().Be(InvitationStatus.Expired);
 
         // Assert: user was deleted
         _userRepoMock.Verify(
@@ -264,7 +265,7 @@ public sealed class InvitationCleanupServiceTests : IDisposable
         await _sut.CleanupExpiredInvitationsAsync(CancellationToken.None);
 
         // Assert — both users were attempted
-        Assert.Equal(2, callCount);
+        callCount.Should().Be(2);
     }
 
     // ── Multiple expired users are all cleaned up ───────────────────────────

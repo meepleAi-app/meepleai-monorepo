@@ -326,8 +326,8 @@ public sealed class AskArbiterCommandHandlerTests : IDisposable
         var command = CreateCommand();
 
         // Act & Assert
-        await Assert.ThrowsAsync<Api.Middleware.Exceptions.NotFoundException>(
-            () => _handler.Handle(command, CancellationToken.None));
+        Func<Task> act = () => _handler.Handle(command, CancellationToken.None);
+        await act.Should().ThrowAsync<Api.Middleware.Exceptions.NotFoundException>();
     }
 
     [Fact]

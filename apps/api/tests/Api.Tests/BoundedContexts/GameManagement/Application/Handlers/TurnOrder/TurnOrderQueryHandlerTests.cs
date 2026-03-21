@@ -5,6 +5,7 @@ using Api.Middleware.Exceptions;
 using Api.Tests.Constants;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.GameManagement.Application.Handlers.TurnOrderHandlers;
 
@@ -32,8 +33,9 @@ public class TurnOrderQueryHandlerTests
         _repoMock.Setup(r => r.GetBySessionIdAsync(sessionId, It.IsAny<CancellationToken>()))
             .ReturnsAsync((TurnOrder?)null);
 
-        await Assert.ThrowsAsync<NotFoundException>(() =>
-            _sut.Handle(new GetTurnOrderQuery(sessionId), TestContext.Current.CancellationToken));
+        var act = () =>
+            _sut.Handle(new GetTurnOrderQuery(sessionId), TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<NotFoundException>();
     }
 
     [Fact]
@@ -49,25 +51,27 @@ public class TurnOrderQueryHandlerTests
         var result = await _sut.Handle(
             new GetTurnOrderQuery(sessionId), TestContext.Current.CancellationToken);
 
-        Assert.Equal(sessionId, result.SessionId);
-        Assert.Equal(1, result.CurrentIndex);
-        Assert.Equal("Bob", result.CurrentPlayer);
-        Assert.Equal("Charlie", result.NextPlayer);
-        Assert.Equal(1, result.RoundNumber);
-        Assert.Equal(new[] { "Alice", "Bob", "Charlie" }, result.PlayerOrder);
+        result.SessionId.Should().Be(sessionId);
+        result.CurrentIndex.Should().Be(1);
+        result.CurrentPlayer.Should().Be("Bob");
+        result.NextPlayer.Should().Be("Charlie");
+        result.RoundNumber.Should().Be(1);
+        result.PlayerOrder.Should().BeEquivalentTo(new[] { "Alice", "Bob", "Charlie" });
     }
 
     [Fact]
     public async Task Handle_WithNullQuery_ThrowsArgumentNullException()
     {
-        await Assert.ThrowsAsync<ArgumentNullException>(() =>
-            _sut.Handle(null!, TestContext.Current.CancellationToken));
+        var act = () =>
+            _sut.Handle(null!, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<ArgumentNullException>();
     }
 
     [Fact]
     public void Constructor_WithNullRepository_ThrowsArgumentNullException()
     {
-        Assert.Throws<ArgumentNullException>(() =>
-            new GetTurnOrderQueryHandler(null!));
+        var act = () =>
+            new GetTurnOrderQueryHandler(null!);
+        act.Should().Throw<ArgumentNullException>();
     }
 }

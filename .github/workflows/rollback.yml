@@ -197,7 +197,7 @@ jobs:
     needs: [rollback-staging, rollback-production]
     uses: ./.github/workflows/notify-slack.yml
     with:
-      event: ${{ contains(toJSON(needs), '"result":"failure"') && 'failed' || contains(toJSON(needs), '"result":"cancelled"') && 'cancelled' || 'completed' }}
+      event: ${{ contains(join(needs.*.result, ','), 'failure') && 'failed' || contains(join(needs.*.result, ','), 'cancelled') && 'cancelled' || 'completed' }}
       workflow_name: "Manual Rollback"
       environment: infra
       is_critical: true

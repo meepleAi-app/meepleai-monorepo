@@ -99,8 +99,9 @@ public class GetDashboardStreamQueryHandlerTests
     public void Constructor_ThrowsOnNullStreamService()
     {
         // Act & Assert
-        Assert.Throws<ArgumentNullException>(() =>
-            new GetDashboardStreamQueryHandler(null!));
+        var act = () =>
+            new GetDashboardStreamQueryHandler(null!);
+        act.Should().Throw<ArgumentNullException>();
     }
 
     // Helper methods to create async enumerables

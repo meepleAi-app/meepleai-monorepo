@@ -2,6 +2,8 @@ using Api.BoundedContexts.Administration.Application.Commands;
 using Api.BoundedContexts.Administration.Application.Commands;
 using Api.BoundedContexts.Administration.Application.Queries;
 using Api.BoundedContexts.Administration.Application.Queries;
+using Api.BoundedContexts.Administration.Domain.Repositories;
+using Api.BoundedContexts.Administration.Infrastructure.Persistence;
 using Api.BoundedContexts.Authentication.Domain.Entities;
 using Api.SharedKernel.Domain.ValueObjects;
 using Api.BoundedContexts.Authentication.Domain.ValueObjects;
@@ -52,6 +54,7 @@ public sealed class BulkUserOperationsE2ETests : IAsyncLifetime
     private string _databaseName = string.Empty;
     private MeepleAiDbContext? _dbContext;
     private IUserRepository? _userRepository;
+    private IUserProfileRepository? _userProfileRepository;
     private IUnitOfWork? _unitOfWork;
     private readonly Action<string> _output;
 
@@ -95,6 +98,7 @@ public sealed class BulkUserOperationsE2ETests : IAsyncLifetime
 
         // Repositories and Unit of Work
         services.AddScoped<IUserRepository, UserRepository>();
+        services.AddScoped<IUserProfileRepository, UserProfileRepository>();
         services.AddScoped<IUnitOfWork, EfCoreUnitOfWork>();
         services.AddScoped<Api.SharedKernel.Application.Services.IDomainEventCollector,
             Api.SharedKernel.Application.Services.DomainEventCollector>();
@@ -105,6 +109,7 @@ public sealed class BulkUserOperationsE2ETests : IAsyncLifetime
         var serviceProvider = services.BuildServiceProvider();
         _dbContext = serviceProvider.GetRequiredService<MeepleAiDbContext>();
         _userRepository = serviceProvider.GetRequiredService<IUserRepository>();
+        _userProfileRepository = serviceProvider.GetRequiredService<IUserProfileRepository>();
         _unitOfWork = serviceProvider.GetRequiredService<IUnitOfWork>();
 
         // Run migrations
@@ -174,7 +179,7 @@ user3@e2etest.com,User Three,user,Password789!";
 
         // Act 3: Export
         var exportLogger = new Mock<ILogger<BulkExportUsersQueryHandler>>();
-        var exportHandler = new BulkExportUsersQueryHandler(_userRepository!, exportLogger.Object);
+        var exportHandler = new BulkExportUsersQueryHandler(_userProfileRepository!, exportLogger.Object);
         var exportQuery = new BulkExportUsersQuery(null, null);
         var exportResult = await exportHandler.Handle(exportQuery, TestCancellationToken);
 
@@ -366,8 +371,8 @@ duplicate@test.com,Duplicate User,user,Password123!";
         var command = new BulkImportUsersCommand(csvContent, adminId);
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<Api.SharedKernel.Domain.Exceptions.DomainException>(
-            () => handler.Handle(command, TestCancellationToken));
+        var act = () => handler.Handle(command, TestCancellationToken);
+        var exception = (await act.Should().ThrowAsync<Api.SharedKernel.Domain.Exceptions.DomainException>()).Which;
 
         exception.Message.Should().Contain("already exist");
     }
@@ -386,7 +391,7 @@ duplicate@test.com,Duplicate User,user,Password123!";
         await _unitOfWork!.SaveChangesAsync(TestCancellationToken);
 
         var logger = new Mock<ILogger<BulkExportUsersQueryHandler>>();
-        var handler = new BulkExportUsersQueryHandler(_userRepository!, logger.Object);
+        var handler = new BulkExportUsersQueryHandler(_userProfileRepository!, logger.Object);
         var query = new BulkExportUsersQuery("admin", null);
 
         // Act

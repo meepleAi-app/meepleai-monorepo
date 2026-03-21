@@ -6,6 +6,7 @@ using Api.Tests.Constants;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Handlers;
 
@@ -66,11 +67,11 @@ public class GetMonthlyOptimizationReportQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal(year, result.Year);
-        Assert.Equal(month, result.Month);
-        Assert.Equal(150.50m, result.EfficiencyAnalysis.TotalCost);
-        Assert.Equal(25.75m, result.TotalSavingsOpportunity);
+        result.Should().NotBeNull();
+        result.Year.Should().Be(year);
+        result.Month.Should().Be(month);
+        result.EfficiencyAnalysis.TotalCost.Should().Be(150.50m);
+        result.TotalSavingsOpportunity.Should().Be(25.75m);
 
         _mockReportService.Verify(s => s.GenerateReportAsync(year, month, It.IsAny<CancellationToken>()), Times.Once);
     }
@@ -88,10 +89,10 @@ public class GetMonthlyOptimizationReportQueryHandlerTests
         var query = new GetMonthlyOptimizationReportQuery { Year = year, Month = month };
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
-            () => _handler.Handle(query, TestContext.Current.CancellationToken));
+        Func<Task> act = () => _handler.Handle(query, TestContext.Current.CancellationToken);
+        var exception = (await act.Should().ThrowAsync<InvalidOperationException>()).Which;
 
-        Assert.Equal("Report generation failed", exception.Message);
+        exception.Message.Should().Be("Report generation failed");
 
         _mockReportService.Verify(s => s.GenerateReportAsync(year, month, It.IsAny<CancellationToken>()), Times.Once);
     }
@@ -100,7 +101,7 @@ public class GetMonthlyOptimizationReportQueryHandlerTests
     public async Task Handle_NullQuery_ThrowsArgumentNullException()
     {
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentNullException>(
-            () => _handler.Handle(null!, TestContext.Current.CancellationToken));
+        Func<Task> act = () => _handler.Handle(null!, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<ArgumentNullException>();
     }
 }

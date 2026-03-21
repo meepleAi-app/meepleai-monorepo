@@ -20,6 +20,7 @@ using Microsoft.Extensions.Logging;
 using Api.Tests.Constants;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.Integration;
 
@@ -106,17 +107,17 @@ public sealed class CreateGameWithBggIntegrationTests : IAsyncLifetime
         var result = await handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal("Terraforming Mars", result.Title);
-        Assert.Equal(167791, result.BggId);
+        result.Should().NotBeNull();
+        result.Title.Should().Be("Terraforming Mars");
+        result.BggId.Should().Be(167791);
 
         // Verify Database Persistence
         using var scope = _serviceProvider!.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
         var persistedGame = await db.Games.FirstOrDefaultAsync(g => g.Id == result.Id);
 
-        Assert.NotNull(persistedGame);
-        Assert.Equal("Terraforming Mars", persistedGame.Name); // GameEntity maps Title to Name
-        Assert.Equal(167791, persistedGame.BggId);
+        persistedGame.Should().NotBeNull();
+        persistedGame.Name.Should().Be("Terraforming Mars"); // GameEntity maps Title to Name
+        persistedGame.BggId.Should().Be(167791);
     }
 }

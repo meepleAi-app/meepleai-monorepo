@@ -11,6 +11,7 @@ using Api.Tests.Constants;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.GameManagement.Application.Handlers;
 
@@ -85,8 +86,9 @@ public sealed class DeleteSessionAttachmentCommandHandlerTests
 
         var command = new DeleteSessionAttachmentCommand(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid());
 
-        await Assert.ThrowsAsync<NotFoundException>(
-            () => _sut.Handle(command, CancellationToken.None));
+        var act =
+            () => _sut.Handle(command, CancellationToken.None);
+        await act.Should().ThrowAsync<NotFoundException>();
     }
 
     #endregion
@@ -106,8 +108,9 @@ public sealed class DeleteSessionAttachmentCommandHandlerTests
 
         var command = new DeleteSessionAttachmentCommand(sessionId, Guid.NewGuid(), session.Players[0].Id);
 
-        await Assert.ThrowsAsync<NotFoundException>(
-            () => _sut.Handle(command, CancellationToken.None));
+        var act =
+            () => _sut.Handle(command, CancellationToken.None);
+        await act.Should().ThrowAsync<NotFoundException>();
     }
 
     [Fact]
@@ -124,8 +127,9 @@ public sealed class DeleteSessionAttachmentCommandHandlerTests
 
         var command = new DeleteSessionAttachmentCommand(sessionId, attachment.Id, session.Players[0].Id);
 
-        await Assert.ThrowsAsync<NotFoundException>(
-            () => _sut.Handle(command, CancellationToken.None));
+        var act =
+            () => _sut.Handle(command, CancellationToken.None);
+        await act.Should().ThrowAsync<NotFoundException>();
     }
 
     #endregion
@@ -147,8 +151,9 @@ public sealed class DeleteSessionAttachmentCommandHandlerTests
 
         var command = new DeleteSessionAttachmentCommand(sessionId, attachment.Id, nonHostPlayer.Id);
 
-        await Assert.ThrowsAsync<ForbiddenException>(
-            () => _sut.Handle(command, CancellationToken.None));
+        var act =
+            () => _sut.Handle(command, CancellationToken.None);
+        await act.Should().ThrowAsync<ForbiddenException>();
     }
 
     #endregion
@@ -158,33 +163,37 @@ public sealed class DeleteSessionAttachmentCommandHandlerTests
     [Fact]
     public void Constructor_NullSessionRepo_Throws()
     {
-        Assert.Throws<ArgumentNullException>(() =>
+        var act = () =>
             new DeleteSessionAttachmentCommandHandler(
-                null!, _attachmentRepoMock.Object, _attachmentServiceMock.Object, _loggerMock.Object));
+                null!, _attachmentRepoMock.Object, _attachmentServiceMock.Object, _loggerMock.Object);
+        act.Should().Throw<ArgumentNullException>();
     }
 
     [Fact]
     public void Constructor_NullAttachmentRepo_Throws()
     {
-        Assert.Throws<ArgumentNullException>(() =>
+        var act = () =>
             new DeleteSessionAttachmentCommandHandler(
-                _sessionRepoMock.Object, null!, _attachmentServiceMock.Object, _loggerMock.Object));
+                _sessionRepoMock.Object, null!, _attachmentServiceMock.Object, _loggerMock.Object);
+        act.Should().Throw<ArgumentNullException>();
     }
 
     [Fact]
     public void Constructor_NullAttachmentService_Throws()
     {
-        Assert.Throws<ArgumentNullException>(() =>
+        var act = () =>
             new DeleteSessionAttachmentCommandHandler(
-                _sessionRepoMock.Object, _attachmentRepoMock.Object, null!, _loggerMock.Object));
+                _sessionRepoMock.Object, _attachmentRepoMock.Object, null!, _loggerMock.Object);
+        act.Should().Throw<ArgumentNullException>();
     }
 
     [Fact]
     public void Constructor_NullLogger_Throws()
     {
-        Assert.Throws<ArgumentNullException>(() =>
+        var act = () =>
             new DeleteSessionAttachmentCommandHandler(
-                _sessionRepoMock.Object, _attachmentRepoMock.Object, _attachmentServiceMock.Object, null!));
+                _sessionRepoMock.Object, _attachmentRepoMock.Object, _attachmentServiceMock.Object, null!);
+        act.Should().Throw<ArgumentNullException>();
     }
 
     #endregion
@@ -194,8 +203,9 @@ public sealed class DeleteSessionAttachmentCommandHandlerTests
     [Fact]
     public async Task Handle_NullCommand_ThrowsArgumentNullException()
     {
-        await Assert.ThrowsAsync<ArgumentNullException>(
-            () => _sut.Handle(null!, CancellationToken.None));
+        var act =
+            () => _sut.Handle(null!, CancellationToken.None);
+        await act.Should().ThrowAsync<ArgumentNullException>();
     }
 
     #endregion

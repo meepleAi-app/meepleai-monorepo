@@ -1,6 +1,7 @@
 using Api.BoundedContexts.KnowledgeBase.Domain.Indexing;
 using Xunit;
 using Api.Tests.Constants;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Domain.Indexing;
 
@@ -36,15 +37,15 @@ public class ChunkIndexEntryTests
             embeddingModel: "text-embedding-3-large");
 
         // Assert
-        Assert.NotNull(entry.Id);
-        Assert.Equal("chunk-001", entry.ChunkId);
-        Assert.Equal(TestGameId, entry.GameId);
-        Assert.Equal(TestPdfId, entry.PdfDocumentId);
-        Assert.Equal("Test content", entry.Content);
-        Assert.Equal(vector, entry.Vector);
-        Assert.Equal(payload, entry.Payload);
-        Assert.Equal("text-embedding-3-large", entry.EmbeddingModel);
-        Assert.True(entry.IndexedAt <= DateTime.UtcNow);
+        entry.Id.Should().NotBeNull();
+        entry.ChunkId.Should().Be("chunk-001");
+        entry.GameId.Should().Be(TestGameId);
+        entry.PdfDocumentId.Should().Be(TestPdfId);
+        entry.Content.Should().Be("Test content");
+        entry.Vector.Should().BeEquivalentTo(vector);
+        entry.Payload.Should().Be(payload);
+        entry.EmbeddingModel.Should().Be("text-embedding-3-large");
+        (entry.IndexedAt <= DateTime.UtcNow).Should().BeTrue();
     }
 
     [Fact]
@@ -72,7 +73,7 @@ public class ChunkIndexEntryTests
             payload: payload);
 
         // Assert
-        Assert.NotEqual(entry1.Id, entry2.Id);
+        entry2.Id.Should().NotBe(entry1.Id);
     }
 
     [Fact]
@@ -83,14 +84,15 @@ public class ChunkIndexEntryTests
         var payload = ChunkPayload.Empty();
 
         // Act & Assert
-        Assert.Throws<ArgumentException>(() =>
+        Action act = () =>
             ChunkIndexEntry.Create(
                 chunkId: "",
                 gameId: TestGameId,
                 pdfDocumentId: TestPdfId,
                 content: "Test",
                 vector: vector,
-                payload: payload));
+                payload: payload);
+        act.Should().Throw<ArgumentException>();
     }
 
     [Fact]
@@ -101,14 +103,15 @@ public class ChunkIndexEntryTests
         var payload = ChunkPayload.Empty();
 
         // Act & Assert
-        Assert.Throws<ArgumentException>(() =>
+        Action act = () =>
             ChunkIndexEntry.Create(
                 chunkId: "chunk-001",
                 gameId: TestGameId,
                 pdfDocumentId: TestPdfId,
                 content: "",
                 vector: vector,
-                payload: payload));
+                payload: payload);
+        act.Should().Throw<ArgumentException>();
     }
 
     [Fact]
@@ -118,14 +121,15 @@ public class ChunkIndexEntryTests
         var payload = ChunkPayload.Empty();
 
         // Act & Assert
-        Assert.Throws<ArgumentException>(() =>
+        Action act = () =>
             ChunkIndexEntry.Create(
                 chunkId: "chunk-001",
                 gameId: TestGameId,
                 pdfDocumentId: TestPdfId,
                 content: "Test",
                 vector: Array.Empty<float>(),
-                payload: payload));
+                payload: payload);
+        act.Should().Throw<ArgumentException>();
     }
 
     [Fact]
@@ -135,14 +139,15 @@ public class ChunkIndexEntryTests
         var vector = new float[] { 0.1f };
 
         // Act & Assert
-        Assert.Throws<ArgumentNullException>(() =>
+        Action act = () =>
             ChunkIndexEntry.Create(
                 chunkId: "chunk-001",
                 gameId: TestGameId,
                 pdfDocumentId: TestPdfId,
                 content: "Test",
                 vector: vector,
-                payload: null!));
+                payload: null!);
+        act.Should().Throw<ArgumentNullException>();
     }
 
     [Fact]
@@ -169,9 +174,9 @@ public class ChunkIndexEntryTests
         entry.UpdateVector(newVector, "text-embedding-3-small");
 
         // Assert
-        Assert.Equal(newVector, entry.Vector);
-        Assert.Equal("text-embedding-3-small", entry.EmbeddingModel);
-        Assert.True(entry.IndexedAt >= originalTimestamp);
+        entry.Vector.Should().BeEquivalentTo(newVector);
+        entry.EmbeddingModel.Should().Be("text-embedding-3-small");
+        (entry.IndexedAt >= originalTimestamp).Should().BeTrue();
     }
 
     [Fact]
@@ -192,7 +197,7 @@ public class ChunkIndexEntryTests
             payload: payload);
 
         // Assert
-        Assert.Equal(3072, entry.VectorDimensions);
+        entry.VectorDimensions.Should().Be(3072);
     }
 
     [Fact]
@@ -216,7 +221,7 @@ public class ChunkIndexEntryTests
             payload: payload);
 
         // Assert
-        Assert.True(entry.IsParent);
+        entry.IsParent.Should().BeTrue();
     }
 
     [Fact]
@@ -242,7 +247,7 @@ public class ChunkIndexEntryTests
             payload: payload);
 
         // Assert
-        Assert.False(entry.IsParent);
+        entry.IsParent.Should().BeFalse();
     }
 
     [Fact]
@@ -267,7 +272,7 @@ public class ChunkIndexEntryTests
             payload: payload);
 
         // Assert
-        Assert.True(entry.HasChildren);
+        entry.HasChildren.Should().BeTrue();
     }
 
     [Fact]
@@ -291,7 +296,7 @@ public class ChunkIndexEntryTests
             payload: payload);
 
         // Assert
-        Assert.False(entry.HasChildren);
+        entry.HasChildren.Should().BeFalse();
     }
 
     [Fact]
@@ -311,7 +316,7 @@ public class ChunkIndexEntryTests
             payload: payload);
 
         // Assert
-        Assert.Equal("text-embedding-3-large", entry.EmbeddingModel);
+        entry.EmbeddingModel.Should().Be("text-embedding-3-large");
     }
 
     [Fact]
@@ -333,7 +338,7 @@ public class ChunkIndexEntryTests
             payload: payload);
 
         // Assert
-        Assert.Equal(specificId, entry.Id);
+        entry.Id.Should().Be(specificId);
     }
 
     [Fact]
@@ -344,7 +349,7 @@ public class ChunkIndexEntryTests
         var payload = ChunkPayload.Empty();
 
         // Act & Assert
-        Assert.Throws<ArgumentException>(() =>
+        Action act = () =>
             ChunkIndexEntry.CreateWithId(
                 id: "",
                 chunkId: "chunk-001",
@@ -352,6 +357,7 @@ public class ChunkIndexEntryTests
                 pdfDocumentId: TestPdfId,
                 content: "Test",
                 vector: vector,
-                payload: payload));
+                payload: payload);
+        act.Should().Throw<ArgumentException>();
     }
 }

@@ -8,6 +8,7 @@ using Api.SharedKernel.Infrastructure.Persistence;
 using Api.Tests.BoundedContexts.Authentication.TestHelpers;
 using Moq;
 using Xunit;
+using FluentAssertions;
 using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.Administration.Application.Handlers;
@@ -130,10 +131,10 @@ public class ResetUserPasswordCommandHandlerTests
             NewPassword: "NewPassword123!");
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<DomainException>(
-            () => _handler.Handle(command, TestContext.Current.CancellationToken));
+        var act = () => _handler.Handle(command, TestContext.Current.CancellationToken);
+        var exception = (await act.Should().ThrowAsync<DomainException>()).Which;
 
-        Assert.Contains($"User {userId} not found", exception.Message);
+        exception.Message.Should().Contain($"User {userId} not found");
 
         // Verify save was NOT called
         _unitOfWorkMock.Verify(
@@ -197,10 +198,10 @@ public class ResetUserPasswordCommandHandlerTests
         await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert - All user properties except password should be unchanged
-        Assert.Equal(userId, user.Id);
-        Assert.Equal(originalEmail, user.Email.Value);
-        Assert.Equal(originalDisplayName, user.DisplayName);
-        Assert.Equal(originalRole, user.Role.Value);
+        user.Id.Should().Be(userId);
+        user.Email.Value.Should().Be(originalEmail);
+        user.DisplayName.Should().Be(originalDisplayName);
+        user.Role.Value.Should().Be(originalRole);
     }
     [Fact]
     public async Task Handle_WithCancellationToken_PassesToRepository()
@@ -247,8 +248,8 @@ public class ResetUserPasswordCommandHandlerTests
             NewPassword: "NewPassword123!");
 
         // Act & Assert
-        await Assert.ThrowsAsync<Api.SharedKernel.Domain.Exceptions.ValidationException>(
-            () => _handler.Handle(command, TestContext.Current.CancellationToken));
+        var act = () => _handler.Handle(command, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<Api.SharedKernel.Domain.Exceptions.ValidationException>();
 
         _userRepositoryMock.Verify(r => r.GetByIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Never);
     }
@@ -265,8 +266,8 @@ public class ResetUserPasswordCommandHandlerTests
             NewPassword: invalidPassword);
 
         // Act & Assert
-        await Assert.ThrowsAsync<Api.SharedKernel.Domain.Exceptions.ValidationException>(
-            () => _handler.Handle(command, TestContext.Current.CancellationToken));
+        var act = () => _handler.Handle(command, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<Api.SharedKernel.Domain.Exceptions.ValidationException>();
 
         _userRepositoryMock.Verify(r => r.GetByIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Never);
     }
@@ -280,8 +281,8 @@ public class ResetUserPasswordCommandHandlerTests
             NewPassword: "NewPassword123!");
 
         // Act & Assert
-        await Assert.ThrowsAsync<Api.SharedKernel.Domain.Exceptions.ValidationException>(
-            () => _handler.Handle(command, TestContext.Current.CancellationToken));
+        var act = () => _handler.Handle(command, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<Api.SharedKernel.Domain.Exceptions.ValidationException>();
 
         _userRepositoryMock.Verify(r => r.GetByIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Never);
     }
@@ -300,8 +301,8 @@ public class ResetUserPasswordCommandHandlerTests
             .ReturnsAsync((User?)null);
 
         // Act & Assert
-        await Assert.ThrowsAsync<DomainException>(
-            () => _handler.Handle(command, TestContext.Current.CancellationToken));
+        var act = () => _handler.Handle(command, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<DomainException>();
 
         _userRepositoryMock.Verify(r => r.UpdateAsync(It.IsAny<User>(), It.IsAny<CancellationToken>()), Times.Never);
     }

@@ -136,8 +136,8 @@ public class RevokeLibraryShareLinkCommandHandlerTests
             .ReturnsAsync((LibraryShareLink?)null);
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<NotFoundException>(
-            () => _handler.Handle(command, TestContext.Current.CancellationToken));
+        var act = () => _handler.Handle(command, TestContext.Current.CancellationToken);
+        var exception = (await act.Should().ThrowAsync<NotFoundException>()).Which;
 
         exception.Message.Should().Contain(shareToken);
 
@@ -172,8 +172,8 @@ public class RevokeLibraryShareLinkCommandHandlerTests
             .ReturnsAsync(shareLink);
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<NotFoundException>(
-            () => _handler.Handle(command, TestContext.Current.CancellationToken));
+        var act2 = () => _handler.Handle(command, TestContext.Current.CancellationToken);
+        var exception = (await act2.Should().ThrowAsync<NotFoundException>()).Which;
 
         // Should throw NotFoundException to hide existence from non-owners
         exception.Message.Should().Contain(shareToken);
@@ -191,8 +191,8 @@ public class RevokeLibraryShareLinkCommandHandlerTests
     public async Task Handle_WithNullCommand_ThrowsArgumentNullException()
     {
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentNullException>(
-            () => _handler.Handle(null!, TestContext.Current.CancellationToken));
+        var act3 = () => _handler.Handle(null!, TestContext.Current.CancellationToken);
+        await act3.Should().ThrowAsync<ArgumentNullException>();
     }
 
     #endregion

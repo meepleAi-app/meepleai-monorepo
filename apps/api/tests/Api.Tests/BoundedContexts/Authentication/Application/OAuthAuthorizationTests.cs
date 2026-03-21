@@ -229,7 +229,7 @@ public sealed class OAuthAuthorizationTests : IDisposable
         }
         catch (FormatException)
         {
-            Assert.Fail("State token should be valid Base64");
+            throw new Xunit.Sdk.XunitException("State token should be valid Base64");
         }
     }
 

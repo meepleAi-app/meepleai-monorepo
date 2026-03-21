@@ -1,6 +1,7 @@
 using Api.BoundedContexts.KnowledgeBase.Domain.Evaluation;
 using Xunit;
 using Api.Tests.Constants;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Domain.Evaluation;
 
@@ -23,12 +24,12 @@ public class EvaluationSampleTests
         };
 
         // Assert
-        Assert.Equal("test-001", sample.Id);
-        Assert.Equal("What is the setup?", sample.Question);
-        Assert.Equal("Set up the board", sample.ExpectedAnswer);
-        Assert.Equal("medium", sample.Difficulty); // Default
-        Assert.Equal("gameplay", sample.Category); // Default
-        Assert.Equal("meepleai_custom", sample.DatasetSource); // Default
+        sample.Id.Should().Be("test-001");
+        sample.Question.Should().Be("What is the setup?");
+        sample.ExpectedAnswer.Should().Be("Set up the board");
+        sample.Difficulty.Should().Be("medium"); // Default
+        sample.Category.Should().Be("gameplay"); // Default
+        sample.DatasetSource.Should().Be("meepleai_custom"); // Default
     }
 
     [Fact]
@@ -56,18 +57,18 @@ public class EvaluationSampleTests
         };
 
         // Assert
-        Assert.Equal("test-002", sample.Id);
-        Assert.Equal("How do you set up the game?", sample.Question);
-        Assert.Equal("Place tiles on the board", sample.ExpectedAnswer);
-        Assert.Equal("rulebook.pdf", sample.Source);
-        Assert.Equal(5, sample.SourcePage);
-        Assert.Equal("SETUP", sample.Section);
-        Assert.Equal("easy", sample.Difficulty);
-        Assert.Equal("setup", sample.Category);
-        Assert.Equal("azul", sample.GameId);
-        Assert.Equal(expectedKeywords, sample.ExpectedKeywords);
-        Assert.Equal(relevantChunkIds, sample.RelevantChunkIds);
-        Assert.Equal("meepleai_custom", sample.DatasetSource);
+        sample.Id.Should().Be("test-002");
+        sample.Question.Should().Be("How do you set up the game?");
+        sample.ExpectedAnswer.Should().Be("Place tiles on the board");
+        sample.Source.Should().Be("rulebook.pdf");
+        sample.SourcePage.Should().Be(5);
+        sample.Section.Should().Be("SETUP");
+        sample.Difficulty.Should().Be("easy");
+        sample.Category.Should().Be("setup");
+        sample.GameId.Should().Be("azul");
+        sample.ExpectedKeywords.Should().BeEquivalentTo(expectedKeywords);
+        sample.RelevantChunkIds.Should().BeEquivalentTo(relevantChunkIds);
+        sample.DatasetSource.Should().Be("meepleai_custom");
     }
 
     [Fact]
@@ -82,16 +83,16 @@ public class EvaluationSampleTests
             section: "OVERVIEW AND GOAL");
 
         // Assert
-        Assert.Equal("mozilla-001", sample.Id);
-        Assert.Equal("How many chapters does the game last?", sample.Question);
-        Assert.Equal("3", sample.ExpectedAnswer);
-        Assert.Equal("https://example.com/rules.pdf", sample.Source);
-        Assert.Equal("OVERVIEW AND GOAL", sample.Section);
-        Assert.Equal("mozilla", sample.DatasetSource);
-        Assert.Equal("medium", sample.Difficulty);
-        Assert.Equal("gameplay", sample.Category);
-        Assert.Null(sample.GameId);
-        Assert.Null(sample.SourcePage);
+        sample.Id.Should().Be("mozilla-001");
+        sample.Question.Should().Be("How many chapters does the game last?");
+        sample.ExpectedAnswer.Should().Be("3");
+        sample.Source.Should().Be("https://example.com/rules.pdf");
+        sample.Section.Should().Be("OVERVIEW AND GOAL");
+        sample.DatasetSource.Should().Be("mozilla");
+        sample.Difficulty.Should().Be("medium");
+        sample.Category.Should().Be("gameplay");
+        sample.GameId.Should().BeNull();
+        sample.SourcePage.Should().BeNull();
     }
 
     [Fact]
@@ -114,16 +115,16 @@ public class EvaluationSampleTests
             relevantChunkIds: chunkIds);
 
         // Assert
-        Assert.Equal("meepleai-001", sample.Id);
-        Assert.Equal("How many tiles are drawn from each factory?", sample.Question);
-        Assert.Equal("All tiles of one color", sample.ExpectedAnswer);
-        Assert.Equal("azul", sample.GameId);
-        Assert.Equal(3, sample.SourcePage);
-        Assert.Equal("easy", sample.Difficulty);
-        Assert.Equal("gameplay", sample.Category);
-        Assert.Equal("meepleai_custom", sample.DatasetSource);
-        Assert.Equal(keywords, sample.ExpectedKeywords);
-        Assert.Equal(chunkIds, sample.RelevantChunkIds);
+        sample.Id.Should().Be("meepleai-001");
+        sample.Question.Should().Be("How many tiles are drawn from each factory?");
+        sample.ExpectedAnswer.Should().Be("All tiles of one color");
+        sample.GameId.Should().Be("azul");
+        sample.SourcePage.Should().Be(3);
+        sample.Difficulty.Should().Be("easy");
+        sample.Category.Should().Be("gameplay");
+        sample.DatasetSource.Should().Be("meepleai_custom");
+        sample.ExpectedKeywords.Should().BeEquivalentTo(keywords);
+        sample.RelevantChunkIds.Should().BeEquivalentTo(chunkIds);
     }
 
     [Fact]
@@ -142,8 +143,8 @@ public class EvaluationSampleTests
             relevantChunkIds: null);
 
         // Assert
-        Assert.Empty(sample.ExpectedKeywords);
-        Assert.Empty(sample.RelevantChunkIds);
+        sample.ExpectedKeywords.Should().BeEmpty();
+        sample.RelevantChunkIds.Should().BeEmpty();
     }
 
     [Theory]
@@ -163,7 +164,7 @@ public class EvaluationSampleTests
         };
 
         // Assert
-        Assert.Equal(difficulty, sample.Difficulty);
+        sample.Difficulty.Should().Be(difficulty);
     }
 
     [Theory]
@@ -184,7 +185,7 @@ public class EvaluationSampleTests
         };
 
         // Assert
-        Assert.Equal(category, sample.Category);
+        sample.Category.Should().Be(category);
     }
 
     [Fact]
@@ -199,8 +200,8 @@ public class EvaluationSampleTests
         };
 
         // Assert
-        Assert.NotNull(sample.ExpectedKeywords);
-        Assert.Empty(sample.ExpectedKeywords);
+        sample.ExpectedKeywords.Should().NotBeNull();
+        sample.ExpectedKeywords.Should().BeEmpty();
     }
 
     [Fact]
@@ -215,8 +216,8 @@ public class EvaluationSampleTests
         };
 
         // Assert
-        Assert.NotNull(sample.RelevantChunkIds);
-        Assert.Empty(sample.RelevantChunkIds);
+        sample.RelevantChunkIds.Should().NotBeNull();
+        sample.RelevantChunkIds.Should().BeEmpty();
     }
 
     [Fact]
@@ -238,7 +239,7 @@ public class EvaluationSampleTests
         };
 
         // Assert (record equality)
-        Assert.Equal(sample1, sample2);
+        sample2.Should().Be(sample1);
     }
 
     [Fact]
@@ -260,6 +261,6 @@ public class EvaluationSampleTests
         };
 
         // Assert
-        Assert.NotEqual(sample1, sample2);
+        sample2.Should().NotBe(sample1);
     }
 }

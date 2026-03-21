@@ -6,6 +6,7 @@ using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.Tests.Constants;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Handlers;
 
@@ -45,14 +46,14 @@ public class GetChatThreadByIdQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal(threadId, result.Id);
-        Assert.Equal(userId, result.UserId);
-        Assert.Equal(gameId, result.GameId);
-        Assert.Equal(title, result.Title);
-        Assert.Equal("active", result.Status);
-        Assert.Equal(1, result.MessageCount);
-        Assert.Single(result.Messages);
+        result.Should().NotBeNull();
+        result.Id.Should().Be(threadId);
+        result.UserId.Should().Be(userId);
+        result.GameId.Should().Be(gameId);
+        result.Title.Should().Be(title);
+        result.Status.Should().Be("active");
+        result.MessageCount.Should().Be(1);
+        result.Messages.Should().ContainSingle();
     }
 
     [Fact]
@@ -70,14 +71,14 @@ public class GetChatThreadByIdQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.Null(result);
+        result.Should().BeNull();
     }
 
     [Fact]
     public async Task Handle_WithNullQuery_ThrowsArgumentNullException()
     {
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentNullException>(
-            () => _handler.Handle(null!, TestContext.Current.CancellationToken));
+        Func<Task> act = () => _handler.Handle(null!, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<ArgumentNullException>();
     }
 }

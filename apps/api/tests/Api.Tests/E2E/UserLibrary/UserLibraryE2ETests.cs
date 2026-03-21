@@ -166,13 +166,14 @@ public sealed class UserLibraryE2ETests : E2ETestBase
         var statusPayload = new { status = "Owned" };
         var response = await Client.PutAsJsonAsync($"/api/v1/library/games/{_testGameId}/state", statusPayload);
 
-        // Assert - May return 500 if endpoint has missing dependencies in test environment
+        // Assert - Skip if endpoint has missing dependencies in test environment
+        if (response.StatusCode == HttpStatusCode.InternalServerError)
+            Assert.Skip("UpdateGameStatus returned 500 — service likely unavailable");
         response.StatusCode.Should().BeOneOf(
             HttpStatusCode.OK,
             HttpStatusCode.NoContent,
             HttpStatusCode.BadRequest,
-            HttpStatusCode.NotFound,
-            HttpStatusCode.InternalServerError);
+            HttpStatusCode.NotFound);
     }
 
     #endregion

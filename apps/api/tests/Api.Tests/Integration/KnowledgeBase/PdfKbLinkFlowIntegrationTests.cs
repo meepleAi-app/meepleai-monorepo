@@ -87,6 +87,22 @@ public sealed class PdfKbLinkFlowIntegrationTests : IAsyncLifetime
                 await Task.Delay(TestConstants.Timing.RetryDelay, TestCancellationToken);
             }
         }
+
+        // Seed required parent entities for FK constraints
+        _dbContext.Users.Add(new Api.Infrastructure.Entities.UserEntity
+        {
+            Id = TestUserId,
+            Email = "test-pdfkb@example.com",
+            PasswordHash = "test-hash",
+            CreatedAt = DateTime.UtcNow
+        });
+        _dbContext.Games.Add(new Api.Infrastructure.Entities.GameEntity
+        {
+            Id = TestGameId,
+            Name = "Test Game for KB Link",
+            CreatedAt = DateTime.UtcNow
+        });
+        await _dbContext.SaveChangesAsync();
     }
 
     public async ValueTask DisposeAsync()

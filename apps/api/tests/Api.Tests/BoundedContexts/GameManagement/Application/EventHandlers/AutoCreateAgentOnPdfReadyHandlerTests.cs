@@ -136,7 +136,7 @@ public sealed class AutoCreateAgentOnPdfReadyHandlerTests
         savedAgent.Should().NotBeNull();
         savedAgent!.Name.Should().StartWith("Agent - Catan");
         savedAgent.KbCardIds.Should().Contain(_documentId);
-        savedAgent.IsActive.Should().BeTrue();
+        savedAgent.IsActive.Should().BeFalse(); // Create() now defaults to inactive (Draft status)
 
         // Assert — game was updated to link agent
         _privateGameRepository.Verify(

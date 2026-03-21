@@ -25,6 +25,7 @@ import * as path from 'path';
 
 import { test, expect, BrowserContext, Page } from '@playwright/test';
 
+import { checkFlowPrerequisites, formatHealthResults } from '../helpers/flow-health-gate';
 import { env } from '../helpers/onboarding-environment';
 import { QueueDashboardPage } from '../pages/admin/QueueDashboardPage';
 import { AgentChatPage } from '../pages/agent/AgentChatPage';
@@ -56,6 +57,7 @@ interface EmbeddingFlowState {
   gameId: string;
   gameName: string;
   jobId: string;
+  failureReason?: string; // Propagates root cause to downstream test skip messages
 }
 
 const state: Partial<EmbeddingFlowState> = {};
@@ -64,7 +66,16 @@ const state: Partial<EmbeddingFlowState> = {};
 
 test.describe.configure({ mode: 'serial' });
 
-test.describe('Admin Embedding Flow', () => {
+test.describe('Admin Embedding Flow @flow @rag @slow', () => {
+  test.beforeAll(async () => {
+    const health = await checkFlowPrerequisites(['api', 'frontend', 'embedding']);
+    const unhealthy = health.filter(h => !h.healthy);
+    if (unhealthy.length > 0) {
+      console.error('[HEALTH GATE] Services down:', formatHealthResults(health));
+      state.failureReason = `Health gate failed: ${formatHealthResults(health)}`;
+    }
+  });
+
   test.afterAll(async () => {
     if (state.adminContext) {
       try {
@@ -77,6 +88,7 @@ test.describe('Admin Embedding Flow', () => {
 
   // ── Test 1: Upload PDF for existing game ────────────────────────────────────
   test('1. Upload PDF for existing game', async ({ browser }) => {
+    if (state.failureReason) test.skip(true, state.failureReason);
     // Skip immediately if the fixture PDF is missing
     const pdfExists = fs.existsSync(PDF_FIXTURE_PATH);
     if (!pdfExists) {
@@ -176,7 +188,7 @@ test.describe('Admin Embedding Flow', () => {
 
   // ── Test 2: Monitor embedding in queue dashboard ─────────────────────────
   test('2. Monitor embedding in queue dashboard', async () => {
-    if (!state.adminPage) test.skip(true, 'Requires test 1 to pass');
+    if (!state.adminPage) test.skip(true, state.failureReason ?? 'Requires test 1 to pass');
     const page = state.adminPage!;
     const queuePage = new QueueDashboardPage(page);
 
@@ -246,7 +258,7 @@ test.describe('Admin Embedding Flow', () => {
 
   // ── Test 3: Test RAG agent with embedded KB ──────────────────────────────
   test('3. Test RAG agent with embedded knowledge base', async () => {
-    if (!state.adminPage) test.skip(true, 'Requires test 1 to pass');
+    if (!state.adminPage) test.skip(true, state.failureReason ?? 'Requires test 1 to pass');
     const page = state.adminPage!;
 
     // Check "Testa Agent" button is available before proceeding

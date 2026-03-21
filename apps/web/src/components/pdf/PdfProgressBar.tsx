@@ -75,7 +75,6 @@ function getProgressValue(state: PdfState, progress?: number): number {
     failed: 0,
   };
 
-  // eslint-disable-next-line security/detect-object-injection -- state is from typed PdfState union
   return stateProgress[state];
 }
 

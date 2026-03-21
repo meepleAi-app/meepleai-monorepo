@@ -1,4 +1,3 @@
-/* eslint-disable security/detect-object-injection -- Safe version data array access */
 import React, { useEffect, useState } from 'react';
 
 import { useRouter } from 'next/navigation';

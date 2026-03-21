@@ -72,7 +72,6 @@ describe('Legal i18n key validation', () => {
     ).legal.privacy.sections;
 
     it.each(PRIVACY_SECTIONS)('IT: privacy section "%s" exists with title and content', key => {
-      // eslint-disable-next-line security/detect-object-injection -- Test code with typed keys
       const section = itSections[key];
       expect(section).toBeDefined();
       expect(section?.title).toBeTruthy();
@@ -80,7 +79,6 @@ describe('Legal i18n key validation', () => {
     });
 
     it.each(PRIVACY_SECTIONS)('EN: privacy section "%s" exists with title and content', key => {
-      // eslint-disable-next-line security/detect-object-injection -- Test code with typed keys
       const section = enSections[key];
       expect(section).toBeDefined();
       expect(section?.title).toBeTruthy();
@@ -97,7 +95,6 @@ describe('Legal i18n key validation', () => {
     ).legal.terms.sections;
 
     it.each(TERMS_SECTIONS)('IT: terms section "%s" exists with title and content', key => {
-      // eslint-disable-next-line security/detect-object-injection -- Test code with typed keys
       const section = itSections[key];
       expect(section).toBeDefined();
       expect(section?.title).toBeTruthy();
@@ -105,7 +102,6 @@ describe('Legal i18n key validation', () => {
     });
 
     it.each(TERMS_SECTIONS)('EN: terms section "%s" exists with title and content', key => {
-      // eslint-disable-next-line security/detect-object-injection -- Test code with typed keys
       const section = enSections[key];
       expect(section).toBeDefined();
       expect(section?.title).toBeTruthy();
@@ -122,7 +118,6 @@ describe('Legal i18n key validation', () => {
     ).legal.cookies.sections;
 
     it.each(COOKIE_SECTIONS)('IT: cookie section "%s" exists with title and content', key => {
-      // eslint-disable-next-line security/detect-object-injection -- Test code with typed keys
       const section = itSections[key];
       expect(section).toBeDefined();
       expect(section?.title).toBeTruthy();
@@ -130,7 +125,6 @@ describe('Legal i18n key validation', () => {
     });
 
     it.each(COOKIE_SECTIONS)('EN: cookie section "%s" exists with title and content', key => {
-      // eslint-disable-next-line security/detect-object-injection -- Test code with typed keys
       const section = enSections[key];
       expect(section).toBeDefined();
       expect(section?.title).toBeTruthy();
@@ -172,7 +166,6 @@ describe('Legal i18n key validation', () => {
     const pages = ['privacy', 'terms', 'cookies'] as const;
 
     it.each(pages)('IT: "%s" has title and description', page => {
-      // eslint-disable-next-line security/detect-object-injection -- Test code with typed keys
       const legal = (
         itMessages as Record<string, unknown> & {
           legal: Record<string, { title: string; description: string }>;
@@ -183,7 +176,6 @@ describe('Legal i18n key validation', () => {
     });
 
     it.each(pages)('EN: "%s" has title and description', page => {
-      // eslint-disable-next-line security/detect-object-injection -- Test code with typed keys
       const legal = (
         enMessages as Record<string, unknown> & {
           legal: Record<string, { title: string; description: string }>;

@@ -238,7 +238,6 @@ export function getNavigationLinks(
   entity: MeepleEntityType,
   entityData: EntityIdBag
 ): ResolvedNavigationLink[] {
-  // eslint-disable-next-line security/detect-object-injection -- entity comes from typed union
   const targets = ENTITY_NAVIGATION_GRAPH[entity];
   if (!targets) return [];
 
@@ -246,7 +245,6 @@ export function getNavigationLinks(
 
   for (const target of targets) {
     const key = target.idKey ?? 'id';
-    // eslint-disable-next-line security/detect-object-injection -- key is from config
     const value = entityData[key];
     if (!value) continue;
 

@@ -19,14 +19,7 @@ import { ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
 import { Button } from '@/components/ui/primitives/button';
 import { Checkbox } from '@/components/ui/primitives/checkbox';
 
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from './table';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './table';
 
 // Re-export types for convenience
 export type { ColumnDef, SortingState, VisibilityState, RowSelectionState };
@@ -98,94 +91,106 @@ export function DataTable<TData, TValue>({
   });
 
   // Shift+click handler for range selection
-  const handleShiftClick = React.useCallback((row: Row<TData>, event: React.MouseEvent) => {
-    if (!enableShiftSelection || !event.shiftKey || lastSelectedIndex === null) {
-      // Normal click - just toggle selection
-      row.toggleSelected();
+  const handleShiftClick = React.useCallback(
+    (row: Row<TData>, event: React.MouseEvent) => {
+      if (!enableShiftSelection || !event.shiftKey || lastSelectedIndex === null) {
+        // Normal click - just toggle selection
+        row.toggleSelected();
+        const rows = table.getRowModel().rows;
+        const currentIndex = rows.findIndex(r => r.id === row.id);
+        setLastSelectedIndex(currentIndex);
+        return;
+      }
+
+      // Shift+click - range selection
+      event.preventDefault(); // Prevent text selection
       const rows = table.getRowModel().rows;
       const currentIndex = rows.findIndex(r => r.id === row.id);
+      const start = Math.min(lastSelectedIndex, currentIndex);
+      const end = Math.max(lastSelectedIndex, currentIndex);
+
+      // Select all rows in range
+      const newSelection: RowSelectionState = { ...(rowSelection ?? internalRowSelection) };
+      for (let i = start; i <= end; i++) {
+        newSelection[rows[i].id] = true;
+      }
+
+      // Update selection
+      const handler = onRowSelectionChange ?? setInternalRowSelection;
+      if (typeof handler === 'function') {
+        handler(newSelection);
+      }
+
       setLastSelectedIndex(currentIndex);
-      return;
-    }
-
-    // Shift+click - range selection
-    event.preventDefault(); // Prevent text selection
-    const rows = table.getRowModel().rows;
-    const currentIndex = rows.findIndex(r => r.id === row.id);
-    const start = Math.min(lastSelectedIndex, currentIndex);
-    const end = Math.max(lastSelectedIndex, currentIndex);
-
-    // Select all rows in range
-    const newSelection: RowSelectionState = { ...(rowSelection ?? internalRowSelection) };
-    for (let i = start; i <= end; i++) {
-      // eslint-disable-next-line security/detect-object-injection -- i is loop index within validated range
-      newSelection[rows[i].id] = true;
-    }
-
-    // Update selection
-    const handler = onRowSelectionChange ?? setInternalRowSelection;
-    if (typeof handler === 'function') {
-      handler(newSelection);
-    }
-
-    setLastSelectedIndex(currentIndex);
-  }, [enableShiftSelection, lastSelectedIndex, table, rowSelection, internalRowSelection, onRowSelectionChange]);
+    },
+    [
+      enableShiftSelection,
+      lastSelectedIndex,
+      table,
+      rowSelection,
+      internalRowSelection,
+      onRowSelectionChange,
+    ]
+  );
 
   // Shift selection context value
-  const shiftSelectionValue = React.useMemo<ShiftSelectionContextValue<TData>>(() => ({
-    enabled: enableShiftSelection,
-    handleRowClick: enableShiftSelection ? handleShiftClick : undefined,
-  }), [enableShiftSelection, handleShiftClick]);
+  const shiftSelectionValue = React.useMemo<ShiftSelectionContextValue<TData>>(
+    () => ({
+      enabled: enableShiftSelection,
+      handleRowClick: enableShiftSelection ? handleShiftClick : undefined,
+    }),
+    [enableShiftSelection, handleShiftClick]
+  );
 
   return (
     <ShiftSelectionContext.Provider value={shiftSelectionValue}>
-    <div className="rounded-md border">
-      <Table>
-        <TableHeader>
-          {table.getHeaderGroups().map(headerGroup => (
-            <TableRow key={headerGroup.id}>
-              {headerGroup.headers.map(header => (
-                <TableHead key={header.id}>
-                  {header.isPlaceholder
-                    ? null
-                    : flexRender(header.column.columnDef.header, header.getContext())}
-                </TableHead>
-              ))}
-            </TableRow>
-          ))}
-        </TableHeader>
-        <TableBody>
-          {isLoading ? (
-            <TableRow>
-              <TableCell colSpan={columns.length} className="h-24 text-center">
-                Loading...
-              </TableCell>
-            </TableRow>
-          ) : table.getRowModel().rows?.length ? (
-            table.getRowModel().rows.map(row => (
-              <TableRow
-                key={row.id}
-                data-state={row.getIsSelected() && 'selected'}
-                onClick={() => onRowClick?.(row.original)}
-                className={onRowClick ? 'cursor-pointer' : undefined}
-              >
-                {row.getVisibleCells().map(cell => (
-                  <TableCell key={cell.id}>
-                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                  </TableCell>
+      <div className="rounded-md border">
+        <Table>
+          <TableHeader>
+            {table.getHeaderGroups().map(headerGroup => (
+              <TableRow key={headerGroup.id}>
+                {headerGroup.headers.map(header => (
+                  <TableHead key={header.id}>
+                    {header.isPlaceholder
+                      ? null
+                      : flexRender(header.column.columnDef.header, header.getContext())}
+                  </TableHead>
                 ))}
               </TableRow>
-            ))
-          ) : (
-            <TableRow>
-              <TableCell colSpan={columns.length} className="h-24 text-center">
-                {emptyMessage}
-              </TableCell>
-            </TableRow>
-          )}
-        </TableBody>
-      </Table>
-    </div>
+            ))}
+          </TableHeader>
+          <TableBody>
+            {isLoading ? (
+              <TableRow>
+                <TableCell colSpan={columns.length} className="h-24 text-center">
+                  Loading...
+                </TableCell>
+              </TableRow>
+            ) : table.getRowModel().rows?.length ? (
+              table.getRowModel().rows.map(row => (
+                <TableRow
+                  key={row.id}
+                  data-state={row.getIsSelected() && 'selected'}
+                  onClick={() => onRowClick?.(row.original)}
+                  className={onRowClick ? 'cursor-pointer' : undefined}
+                >
+                  {row.getVisibleCells().map(cell => (
+                    <TableCell key={cell.id}>
+                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                    </TableCell>
+                  ))}
+                </TableRow>
+              ))
+            ) : (
+              <TableRow>
+                <TableCell colSpan={columns.length} className="h-24 text-center">
+                  {emptyMessage}
+                </TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
+      </div>
     </ShiftSelectionContext.Provider>
   );
 }
@@ -254,8 +259,7 @@ export function createSelectColumn<TData>(): ColumnDef<TData> {
     header: ({ table }) => (
       <Checkbox
         checked={
-          table.getIsAllPageRowsSelected() ||
-          (table.getIsSomePageRowsSelected() && 'indeterminate')
+          table.getIsAllPageRowsSelected() || (table.getIsSomePageRowsSelected() && 'indeterminate')
         }
         onCheckedChange={value => table.toggleAllPageRowsSelected(!!value)}
         aria-label="Select all"

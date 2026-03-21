@@ -78,12 +78,8 @@ public sealed class ChatE2ETests : E2ETestBase
         // Act
         var response = await Client.PostAsJsonAsync("/api/v1/chat-threads", createPayload);
 
-        // Assert - May return 500 if dependencies not configured in test environment
-        response.StatusCode.Should().BeOneOf(
-            HttpStatusCode.OK,
-            HttpStatusCode.Created,
-            HttpStatusCode.InternalServerError,
-            HttpStatusCode.BadRequest);
+        // Assert - Skip if service unavailable (500), fail on non-2xx
+        await AssertSuccessOrSkipIfServiceUnavailable(response, "CreateChatThread");
 
         if (response.IsSuccessStatusCode)
         {
@@ -130,11 +126,12 @@ public sealed class ChatE2ETests : E2ETestBase
         // Act
         var response = await Client.PostAsJsonAsync("/api/v1/chat-threads", createPayload);
 
-        // Assert - May return 500 if dependencies not configured in test environment
+        // Assert - Skip if service unavailable, otherwise expect NotFound or BadRequest
+        if (response.StatusCode == HttpStatusCode.InternalServerError)
+            Assert.Skip("CreateChatThread (invalid game) returned 500 — service likely unavailable");
         response.StatusCode.Should().BeOneOf(
             HttpStatusCode.NotFound,
-            HttpStatusCode.BadRequest,
-            HttpStatusCode.InternalServerError);
+            HttpStatusCode.BadRequest);
     }
 
     #endregion
@@ -182,8 +179,9 @@ public sealed class ChatE2ETests : E2ETestBase
         // Skip if thread creation failed (dependencies not configured in test environment)
         if (!createResponse.IsSuccessStatusCode)
         {
+            if (createResponse.StatusCode == HttpStatusCode.InternalServerError)
+                Assert.Skip("Chat thread creation returned 500 — service likely unavailable");
             createResponse.StatusCode.Should().BeOneOf(
-                HttpStatusCode.InternalServerError,
                 HttpStatusCode.BadRequest,
                 HttpStatusCode.NotFound);
             return;
@@ -236,8 +234,9 @@ public sealed class ChatE2ETests : E2ETestBase
         // Skip if thread creation failed (dependencies not configured in test environment)
         if (!createResponse.IsSuccessStatusCode)
         {
+            if (createResponse.StatusCode == HttpStatusCode.InternalServerError)
+                Assert.Skip("Chat thread creation returned 500 — service likely unavailable");
             createResponse.StatusCode.Should().BeOneOf(
-                HttpStatusCode.InternalServerError,
                 HttpStatusCode.BadRequest,
                 HttpStatusCode.NotFound);
             return;
@@ -276,8 +275,9 @@ public sealed class ChatE2ETests : E2ETestBase
         // Skip if thread creation failed (dependencies not configured in test environment)
         if (!createResponse.IsSuccessStatusCode)
         {
+            if (createResponse.StatusCode == HttpStatusCode.InternalServerError)
+                Assert.Skip("Chat thread creation returned 500 — service likely unavailable");
             createResponse.StatusCode.Should().BeOneOf(
-                HttpStatusCode.InternalServerError,
                 HttpStatusCode.BadRequest,
                 HttpStatusCode.NotFound);
             return;
@@ -315,8 +315,9 @@ public sealed class ChatE2ETests : E2ETestBase
         // Skip if thread creation failed (dependencies not configured in test environment)
         if (!createResponse.IsSuccessStatusCode)
         {
+            if (createResponse.StatusCode == HttpStatusCode.InternalServerError)
+                Assert.Skip("Chat thread creation returned 500 — service likely unavailable");
             createResponse.StatusCode.Should().BeOneOf(
-                HttpStatusCode.InternalServerError,
                 HttpStatusCode.BadRequest,
                 HttpStatusCode.NotFound);
             return;
@@ -356,8 +357,9 @@ public sealed class ChatE2ETests : E2ETestBase
         // Skip if thread creation failed
         if (!createResponse.IsSuccessStatusCode)
         {
+            if (createResponse.StatusCode == HttpStatusCode.InternalServerError)
+                Assert.Skip("Chat thread creation returned 500 — service likely unavailable");
             createResponse.StatusCode.Should().BeOneOf(
-                HttpStatusCode.InternalServerError,
                 HttpStatusCode.BadRequest,
                 HttpStatusCode.NotFound);
             return;
@@ -387,8 +389,9 @@ public sealed class ChatE2ETests : E2ETestBase
         // Skip if thread creation failed (dependencies not configured in test environment)
         if (!createResponse.IsSuccessStatusCode)
         {
+            if (createResponse.StatusCode == HttpStatusCode.InternalServerError)
+                Assert.Skip("Chat thread creation returned 500 — service likely unavailable");
             createResponse.StatusCode.Should().BeOneOf(
-                HttpStatusCode.InternalServerError,
                 HttpStatusCode.BadRequest,
                 HttpStatusCode.NotFound);
             return;
@@ -423,8 +426,9 @@ public sealed class ChatE2ETests : E2ETestBase
         // Skip if thread creation failed (dependencies not configured in test environment)
         if (!createResponse.IsSuccessStatusCode)
         {
+            if (createResponse.StatusCode == HttpStatusCode.InternalServerError)
+                Assert.Skip("Chat thread creation returned 500 — service likely unavailable");
             createResponse.StatusCode.Should().BeOneOf(
-                HttpStatusCode.InternalServerError,
                 HttpStatusCode.BadRequest,
                 HttpStatusCode.NotFound);
             return;
@@ -477,8 +481,9 @@ public sealed class ChatE2ETests : E2ETestBase
         // Skip if thread creation failed (dependencies not configured in test environment)
         if (!createResponse.IsSuccessStatusCode)
         {
+            if (createResponse.StatusCode == HttpStatusCode.InternalServerError)
+                Assert.Skip("Chat thread creation returned 500 — service likely unavailable");
             createResponse.StatusCode.Should().BeOneOf(
-                HttpStatusCode.InternalServerError,
                 HttpStatusCode.BadRequest,
                 HttpStatusCode.NotFound);
             return;

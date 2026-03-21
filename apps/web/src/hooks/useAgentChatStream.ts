@@ -152,6 +152,7 @@ export function useAgentChatStream(callbacks?: AgentChatStreamCallbacks) {
   const abortControllerRef = useRef<AbortController | null>(null);
   const callbacksRef = useRef(callbacks);
   const activeRequestIdRef = useRef<number>(0);
+  const retryCountRef = useRef(0);
   callbacksRef.current = callbacks;
 
   const stopStreaming = useCallback(() => {
@@ -159,6 +160,7 @@ export function useAgentChatStream(callbacks?: AgentChatStreamCallbacks) {
       abortControllerRef.current.abort();
       abortControllerRef.current = null;
     }
+    retryCountRef.current = 0;
     setState(prev => ({
       ...prev,
       isStreaming: false,
@@ -186,14 +188,15 @@ export function useAgentChatStream(callbacks?: AgentChatStreamCallbacks) {
       // Track request ID to ignore stale completions after agent switch
       const requestId = Date.now();
       activeRequestIdRef.current = requestId;
+      retryCountRef.current = 0;
 
-      setState(prev => ({
+      setState({
         ...INITIAL_STATE,
         isStreaming: true,
         statusMessage: 'Connecting...',
-        connectionStatus: 'connecting' as ConnectionStatus,
-        retryCount: prev.retryCount,
-      }));
+        connectionStatus: 'connecting',
+        retryCount: 0,
+      });
 
       const abortController = new AbortController();
       abortControllerRef.current = abortController;
@@ -435,36 +438,47 @@ export function useAgentChatStream(callbacks?: AgentChatStreamCallbacks) {
             return;
           }
 
-          setState(prev => {
-            // Auto-retry on network errors (max MAX_RETRIES attempts)
-            if (prev.retryCount < MAX_RETRIES && !prev.currentAnswer) {
+          // Use ref for retry decision to avoid side effects inside setState updaters
+          if (retryCountRef.current < MAX_RETRIES) {
+            // Check if we have partial answer — don't retry mid-response
+            let hasAnswer = false;
+            setState(prev => {
+              hasAnswer = !!prev.currentAnswer;
+              if (!hasAnswer) {
+                return {
+                  ...prev,
+                  connectionStatus: 'disconnected' as ConnectionStatus,
+                  statusMessage: 'Connessione persa, riprovo...',
+                };
+              }
+              return prev;
+            });
+
+            if (!hasAnswer) {
+              retryCountRef.current++;
+              const currentRetry = retryCountRef.current;
               setTimeout(() => {
-                setState(p => ({
-                  ...p,
-                  connectionStatus: 'reconnecting',
-                  statusMessage: `Riconnessione... (tentativo ${p.retryCount + 1}/${MAX_RETRIES})`,
-                  retryCount: p.retryCount + 1,
+                setState(prev => ({
+                  ...prev,
+                  connectionStatus: 'reconnecting' as ConnectionStatus,
+                  statusMessage: `Riconnessione... (tentativo ${currentRetry}/${MAX_RETRIES})`,
+                  retryCount: currentRetry,
                 }));
-                // Re-invoke sendMessage with same params
                 sendMessage(agentId, message, chatThreadId, proxyGameContext, gameSessionId);
               }, RETRY_DELAY_MS);
-              return {
-                ...prev,
-                connectionStatus: 'disconnected' as ConnectionStatus,
-                statusMessage: 'Connessione persa, riprovo...',
-              };
+              return;
             }
+          }
 
-            const errorMsg = catchError instanceof Error ? catchError.message : 'Stream failed';
-            callbacksRef.current?.onError?.(errorMsg);
-            return {
-              ...prev,
-              error: errorMsg,
-              isStreaming: false,
-              statusMessage: null,
-              connectionStatus: 'error' as ConnectionStatus,
-            };
-          });
+          const errorMsg = catchError instanceof Error ? catchError.message : 'Stream failed';
+          setState(prev => ({
+            ...prev,
+            error: errorMsg,
+            isStreaming: false,
+            statusMessage: null,
+            connectionStatus: 'error' as ConnectionStatus,
+          }));
+          callbacksRef.current?.onError?.(errorMsg);
         });
     },
     [stopStreaming]

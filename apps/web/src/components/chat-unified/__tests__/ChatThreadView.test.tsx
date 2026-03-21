@@ -159,7 +159,13 @@ const mockThread = {
       content: 'Hi there!',
       timestamp: '2024-01-01T00:01:00Z',
       citations: [
-        { documentId: 'doc-1', pageNumber: 5, snippet: 'Rule text', relevanceScore: 0.9 },
+        {
+          documentId: 'doc-1',
+          pageNumber: 5,
+          snippet: 'Rule text',
+          relevanceScore: 0.9,
+          copyrightTier: 'full' as const,
+        },
       ],
       followUpQuestions: ['What else?', 'How about this?'],
     },

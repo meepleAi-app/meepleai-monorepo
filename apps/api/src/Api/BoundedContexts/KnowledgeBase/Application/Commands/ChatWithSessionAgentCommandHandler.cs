@@ -1,7 +1,9 @@
 using System.Text;
+using System.Text.Json;
 using Api.BoundedContexts.KnowledgeBase.Application.Commands;
 using Api.BoundedContexts.KnowledgeBase.Application.Services;
 using Api.BoundedContexts.KnowledgeBase.Domain.Entities;
+using Api.BoundedContexts.KnowledgeBase.Domain.Enums;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services;
 using Api.BoundedContexts.GameManagement.Domain.Repositories;
@@ -33,6 +35,7 @@ internal sealed class ChatWithSessionAgentCommandHandler : IStreamingQueryHandle
     private readonly ILiveSessionRepository _liveSessionRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IRagPromptAssemblyService _ragPromptService;
+    private readonly ICopyrightTierResolver _copyrightTierResolver;
     private readonly IAgentMemoryContextBuilder _agentMemoryContextBuilder;
     private readonly ILlmService _llmService;
     private readonly IServiceScopeFactory _scopeFactory;
@@ -50,6 +53,7 @@ internal sealed class ChatWithSessionAgentCommandHandler : IStreamingQueryHandle
         ILiveSessionRepository liveSessionRepository,
         IUnitOfWork unitOfWork,
         IRagPromptAssemblyService ragPromptService,
+        ICopyrightTierResolver copyrightTierResolver,
         IAgentMemoryContextBuilder agentMemoryContextBuilder,
         ILlmService llmService,
         IServiceScopeFactory scopeFactory,
@@ -62,6 +66,7 @@ internal sealed class ChatWithSessionAgentCommandHandler : IStreamingQueryHandle
         _liveSessionRepository = liveSessionRepository ?? throw new ArgumentNullException(nameof(liveSessionRepository));
         _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
         _ragPromptService = ragPromptService ?? throw new ArgumentNullException(nameof(ragPromptService));
+        _copyrightTierResolver = copyrightTierResolver ?? throw new ArgumentNullException(nameof(copyrightTierResolver));
         _agentMemoryContextBuilder = agentMemoryContextBuilder ?? throw new ArgumentNullException(nameof(agentMemoryContextBuilder));
         _llmService = llmService ?? throw new ArgumentNullException(nameof(llmService));
         _scopeFactory = scopeFactory ?? throw new ArgumentNullException(nameof(scopeFactory));
@@ -184,6 +189,10 @@ internal sealed class ChatWithSessionAgentCommandHandler : IStreamingQueryHandle
             "Prompt assembled: {EstimatedTokens} tokens, {CitationCount} citations",
             assembled.EstimatedTokens, assembled.Citations.Count);
 
+        // Resolve copyright tiers for citations
+        var resolvedCitations = await _copyrightTierResolver.ResolveAsync(
+            assembled.Citations, command.UserId, cancellationToken).ConfigureAwait(false);
+
         // Inject AgentMemory context (house rules, group preferences, notes) into system prompt
         var systemPrompt = assembled.SystemPrompt;
         var liveSession = await _liveSessionRepository
@@ -263,10 +272,25 @@ internal sealed class ChatWithSessionAgentCommandHandler : IStreamingQueryHandle
         var responseText = fullResponse.ToString();
         var totalTokens = finalUsage?.TotalTokens ?? 0;
 
-        // Persist assistant response
+        // Extract paraphrased snippets for Protected-tier citations
+        var finalCitations = resolvedCitations.Select(c =>
+        {
+            if (c.CopyrightTier == CopyrightTier.Protected)
+            {
+                var paraphrase = ParaphraseExtractor.Extract(
+                    responseText, c.DocumentId, c.PageNumber,
+                    c.SnippetPreview, command.UserQuestion);
+                return c with { ParaphrasedSnippet = paraphrase };
+            }
+            return c;
+        }).ToList();
+
+        // Persist assistant response with citations
+        var citationsJson = JsonSerializer.Serialize(finalCitations);
         thread.AddAssistantMessageWithMetadata(
             content: responseText,
             agentType: typology.Name,
+            citationsJson: citationsJson,
             tokenCount: totalTokens);
 
         await _chatThreadRepository.UpdateAsync(thread, cancellationToken).ConfigureAwait(false);
@@ -284,6 +308,16 @@ internal sealed class ChatWithSessionAgentCommandHandler : IStreamingQueryHandle
             _ = GenerateConversationSummaryAsync(thread.Id);
         }
 
+        // Build citation DTOs for SSE response
+        var citationDtos = finalCitations.Select(c => new CitationDto(
+            c.DocumentId,
+            c.PageNumber,
+            c.RelevanceScore,
+            c.CopyrightTier == CopyrightTier.Full ? c.SnippetPreview : null,
+            c.CopyrightTier.ToString().ToLowerInvariant(),
+            c.ParaphrasedSnippet,
+            c.IsPublic)).ToList();
+
         yield return CreateEvent(
             StreamingEventType.Complete,
             new StreamingComplete(
@@ -292,7 +326,8 @@ internal sealed class ChatWithSessionAgentCommandHandler : IStreamingQueryHandle
                 completionTokens: finalUsage?.CompletionTokens ?? 0,
                 totalTokens: totalTokens,
                 confidence: RagPromptAssemblyService.ComputeConfidence(assembled.Citations, responseText),
-                chatThreadId: thread.Id));
+                chatThreadId: thread.Id,
+                Citations: citationDtos));
     }
 
     private async Task GenerateConversationSummaryAsync(Guid threadId)

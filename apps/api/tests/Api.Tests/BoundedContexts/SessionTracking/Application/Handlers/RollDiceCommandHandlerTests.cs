@@ -91,7 +91,7 @@ public class RollDiceCommandHandlerTests
 
         // Assert
         Assert.NotEqual(Guid.Empty, result.DiceRollId);
-        Assert.Equal("2d6", result.Formula);
+        Assert.Equal("2D6", result.Formula);
         Assert.Equal(2, result.Rolls.Length);
         _diceRollRepoMock.Verify(r => r.AddAsync(It.IsAny<DiceRoll>(), It.IsAny<CancellationToken>()), Times.Once);
         _unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);

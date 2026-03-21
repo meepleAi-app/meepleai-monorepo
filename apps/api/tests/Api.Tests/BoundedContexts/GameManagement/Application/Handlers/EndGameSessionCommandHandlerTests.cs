@@ -172,7 +172,7 @@ public class EndGameSessionCommandHandlerTests
             WinnerName: "Player 1");
 
         // Act & Assert
-        var act = 
+        var act =
             () => _handler.Handle(command, TestContext.Current.CancellationToken);
         var exception = (await act.Should().ThrowAsync<InvalidOperationException>()).Which;
 

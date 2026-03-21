@@ -224,7 +224,7 @@ public class GetSessionHistoryQueryHandlerTests
         var query = new GetSessionHistoryQuery(Limit: -1);
 
         // Act & Assert
-        var act = 
+        var act =
             () => _handler.Handle(query, TestContext.Current.CancellationToken);
         var exception = (await act.Should().ThrowAsync<ArgumentException>()).Which;
 
@@ -238,7 +238,7 @@ public class GetSessionHistoryQueryHandlerTests
         var query = new GetSessionHistoryQuery(Limit: 1001);
 
         // Act & Assert
-        var act = 
+        var act =
             () => _handler.Handle(query, TestContext.Current.CancellationToken);
         var exception = (await act.Should().ThrowAsync<ArgumentException>()).Which;
 
@@ -252,7 +252,7 @@ public class GetSessionHistoryQueryHandlerTests
         var query = new GetSessionHistoryQuery(Offset: -1);
 
         // Act & Assert
-        var act = 
+        var act =
             () => _handler.Handle(query, TestContext.Current.CancellationToken);
         var exception = (await act.Should().ThrowAsync<ArgumentException>()).Which;
 

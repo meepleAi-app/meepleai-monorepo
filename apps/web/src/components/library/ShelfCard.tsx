@@ -54,6 +54,8 @@ export interface ShelfCardProps {
   stateLabel?: { text: string; variant: 'success' | 'warning' | 'error' | 'info' };
   /** Additional CSS classes for the root element */
   className?: string;
+  /** Optional test ID for the root element */
+  'data-testid'?: string;
 }
 
 // ============================================================================
@@ -112,6 +114,7 @@ export function ShelfCard({
   mechanicIcon,
   stateLabel,
   className,
+  'data-testid': dataTestId,
 }: ShelfCardProps) {
   // ------------------------------------------------------------------
   // Cover background style
@@ -137,7 +140,7 @@ export function ShelfCard({
         className
       )}
       onClick={onClick}
-      data-testid="shelf-card"
+      data-testid={dataTestId ?? 'shelf-card'}
       role={onClick ? 'button' : undefined}
       tabIndex={onClick ? 0 : undefined}
       onKeyDown={

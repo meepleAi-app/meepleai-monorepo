@@ -227,6 +227,6 @@ public class GetAlertConfigurationQueryHandlerTests
     {
         // Act & Assert
         var act = () => new GetAlertConfigurationQueryHandler(null!);
-act.Should().Throw<ArgumentNullException>();
+        act.Should().Throw<ArgumentNullException>();
     }
 }

@@ -73,7 +73,7 @@ public class UserOAuthTests
 
         // Act & Assert
         var act = () => user.LinkOAuthAccount(null!);
-act.Should().Throw<ArgumentNullException>();
+        act.Should().Throw<ArgumentNullException>();
     }
 
     [Fact]

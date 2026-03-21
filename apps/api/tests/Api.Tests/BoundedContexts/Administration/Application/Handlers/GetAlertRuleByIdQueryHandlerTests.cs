@@ -154,6 +154,6 @@ public class GetAlertRuleByIdQueryHandlerTests
     {
         // Act & Assert
         var act = () => new GetAlertRuleByIdQueryHandler(null!);
-act.Should().Throw<ArgumentNullException>();
+        act.Should().Throw<ArgumentNullException>();
     }
 }

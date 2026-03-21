@@ -4,8 +4,6 @@ using Api.BoundedContexts.Administration.Domain.ValueObjects;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
-using Api.Tests.Constants;
-using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.Administration.Infrastructure.Services;
 
@@ -13,8 +11,6 @@ namespace Api.Tests.BoundedContexts.Administration.Infrastructure.Services;
 /// Unit tests for UserInsightsService (Issue #4308).
 /// Tests parallel analyzer execution and result aggregation.
 /// </summary>
-[Trait("Category", TestCategories.Unit)]
-[Trait("BoundedContext", "Administration")]
 public sealed class UserInsightsServiceTests
 {
     private readonly Mock<IBacklogAnalyzer> _mockBacklogAnalyzer;
@@ -63,10 +59,10 @@ public sealed class UserInsightsServiceTests
         var result = await _sut.GenerateInsightsAsync(userId, CancellationToken.None);
 
         // Assert
-        result.Count.Should().Be(3);
-        result[0].Priority.Should().Be(9); // Streak (highest)
-        result[1].Priority.Should().Be(7); // Rules
-        result[2].Priority.Should().Be(5); // Backlog (lowest)
+        Assert.Equal(3, result.Count);
+        Assert.Equal(9, result[0].Priority); // Streak (highest)
+        Assert.Equal(7, result[1].Priority); // Rules
+        Assert.Equal(5, result[2].Priority); // Backlog (lowest)
     }
 
     [Fact]
@@ -88,7 +84,7 @@ public sealed class UserInsightsServiceTests
         var result = await _sut.GenerateInsightsAsync(userId, CancellationToken.None);
 
         // Assert
-        result.Should().BeEmpty();
+        Assert.Empty(result);
     }
 
     [Fact]
@@ -96,8 +92,9 @@ public sealed class UserInsightsServiceTests
     {
         // Arrange
         var userId = Guid.NewGuid();
+        // Create 15 insights with priorities cycling in 1-10 range (valid range)
         var manyInsights = Enumerable.Range(1, 15)
-            .Select(i => AIInsight.Create(InsightType.Recommendation, $"Game {i}", "desc", "action", "/url", i))
+            .Select(i => AIInsight.Create(InsightType.Recommendation, $"Game {i}", "desc", "action", "/url", ((i - 1) % 10) + 1))
             .ToList();
 
         _mockBacklogAnalyzer.Setup(x => x.AnalyzeBacklogAsync(userId, It.IsAny<CancellationToken>()))
@@ -113,7 +110,7 @@ public sealed class UserInsightsServiceTests
         var result = await _sut.GenerateInsightsAsync(userId, CancellationToken.None);
 
         // Assert
-        result.Count.Should().Be(10); // MaxInsightsToReturn = 10
-        result[0].Priority.Should().Be(15); // Highest priority first
+        Assert.Equal(10, result.Count); // MaxInsightsToReturn = 10
+        Assert.Equal(10, result[0].Priority); // Highest priority first (max valid priority is 10)
     }
 }

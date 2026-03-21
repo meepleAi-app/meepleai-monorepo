@@ -37,7 +37,9 @@ public sealed class GetAgentDefinitionStatsQueryHandlerTests
             AgentDefinitionEntity.Create("Agent2", "Desc2", AgentType.CitationAgent, AgentDefinitionConfig.Default()),
             AgentDefinitionEntity.Create("Agent3", "Desc3", AgentType.RagAgent, AgentDefinitionConfig.Default())
         };
-        definitions[2].Deactivate(); // One inactive
+        definitions[0].Activate(); // Create() now defaults to inactive
+        definitions[1].Activate();
+        // definitions[2] stays inactive (Draft default)
 
         _mockRepository
             .Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
@@ -62,8 +64,9 @@ public sealed class GetAgentDefinitionStatsQueryHandlerTests
     {
         // Arrange
         var activeAgent = AgentDefinitionEntity.Create("Active", "Desc", AgentType.RagAgent, AgentDefinitionConfig.Default());
+        activeAgent.Activate(); // Create() now defaults to inactive
         var inactiveAgent = AgentDefinitionEntity.Create("Inactive", "Desc", AgentType.RagAgent, AgentDefinitionConfig.Default());
-        inactiveAgent.Deactivate();
+        // inactiveAgent stays inactive (Draft default)
 
         _mockRepository
             .Setup(r => r.GetAllActiveAsync(It.IsAny<CancellationToken>()))

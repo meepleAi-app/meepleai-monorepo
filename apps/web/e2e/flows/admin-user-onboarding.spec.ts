@@ -1,5 +1,6 @@
 import { test, expect, ensureAdminAuth } from '../fixtures/onboarding-flow.fixture';
 import { type OnboardingFlowState } from '../fixtures/onboarding-flow.fixture';
+import { dismissCookieConsent } from '../helpers/dismiss-cookie';
 import { extractInvitation } from '../helpers/email-strategy';
 import { cleanupOnboardingTest } from '../helpers/onboarding-cleanup';
 import { env } from '../helpers/onboarding-environment';
@@ -142,17 +143,15 @@ test.describe('Admin-User Onboarding Flow', () => {
 
     await test.step('Dismiss cookie and submit', async () => {
       // Cookie consent blocks the form — dismiss it first
-      const cookieBtn = userPage.getByRole('button', { name: /essential only|accept all/i });
-      await cookieBtn
-        .first()
-        .click({ timeout: 5_000 })
-        .catch(() => {});
-      await userPage.waitForTimeout(500);
+      await dismissCookieConsent(userPage, '[T3]');
 
       // Intercept accept-invitation API to verify it succeeds
       const acceptPromise = userPage
         .waitForResponse(resp => resp.url().includes('accept-invitation'))
-        .catch(() => null);
+        .catch((e: Error) => {
+          console.log('[T3] accept-invitation response not intercepted:', e.message);
+          return null;
+        });
 
       await acceptPage.submit();
 
@@ -195,12 +194,7 @@ test.describe('Admin-User Onboarding Flow', () => {
       await page.goto('/login', { waitUntil: 'domcontentloaded' });
 
       // Dismiss cookie consent (blocks form interaction)
-      await page
-        .getByRole('button', { name: /essential only|accept all/i })
-        .first()
-        .click({ timeout: 5_000 })
-        .catch(() => {});
-      await page.waitForTimeout(500);
+      await dismissCookieConsent(page, '[T4]');
 
       // Fill and submit login form
       await loginPage.login(testUserEmail, testUserPassword);
@@ -270,18 +264,12 @@ test.describe('Admin-User Onboarding Flow', () => {
       await page.goto('/library?tab=private', { waitUntil: 'networkidle' });
 
       // Cookie consent blocks interactions — dismiss then reload
-      const cookieBtn5 = page.getByRole('button', { name: /essential only|accept all/i });
-      if (
-        await cookieBtn5
-          .first()
-          .isVisible({ timeout: 2_000 })
-          .catch(() => false)
-      ) {
-        await cookieBtn5.first().click();
-        await page.waitForTimeout(500);
-        await page.reload({ waitUntil: 'networkidle' });
-      }
-      await page.waitForTimeout(1000);
+      await dismissCookieConsent(page, '[T5]');
+      // Keep the reload separate if page needs it after cookie dismiss
+      await page.reload({ waitUntil: 'networkidle' });
+      await page.waitForLoadState('networkidle').catch(() => {
+        console.log('[T5] networkidle timeout after reload (non-blocking)');
+      });
 
       // Debug: check cookies and admin toggle
       const cookies = await page.context().cookies();
@@ -347,12 +335,7 @@ test.describe('Admin-User Onboarding Flow', () => {
     await test.step('Open agent creation', async () => {
       await agentPage.goto();
       // Dismiss cookie consent
-      await page
-        .getByRole('button', { name: /essential only|accept all/i })
-        .first()
-        .click({ timeout: 2_000 })
-        .catch(() => {});
-      await page.waitForTimeout(500);
+      await dismissCookieConsent(page, '[T6]');
       // Screenshot to debug
       await page.screenshot({ path: 'test-results/debug-t6-agents-page.png', fullPage: true });
       await agentPage.openCreationSheet();
@@ -412,11 +395,7 @@ test.describe('Admin-User Onboarding Flow', () => {
     await test.step('Re-authenticate admin and change role', async () => {
       // Re-login admin to refresh session (may have expired)
       await page.goto('/login', { waitUntil: 'domcontentloaded' });
-      await page
-        .getByRole('button', { name: /essential only|accept all/i })
-        .first()
-        .click({ timeout: 2_000 })
-        .catch(() => {});
+      await dismissCookieConsent(page, '[T8-reauth]');
       const loginPage = new LoginPage(page);
       await loginPage.login(env.admin.email, env.admin.password);
       await page.waitForURL(url => !url.pathname.includes('/login'), {
@@ -451,12 +430,7 @@ test.describe('Admin-User Onboarding Flow', () => {
     await test.step('Verify audit log entry', async () => {
       await auditLogPage.goto();
       // Dismiss cookie consent
-      await page
-        .getByRole('button', { name: /essential only|accept all/i })
-        .first()
-        .click({ timeout: 2_000 })
-        .catch(() => {});
-      await page.waitForTimeout(500);
+      await dismissCookieConsent(page, '[T8]');
       try {
         await auditLogPage.verifyRoleChangeEntry(testUserEmail, {
           newRole: 'editor',

@@ -1,8 +1,10 @@
 using System.Text.Json;
 using Api.BoundedContexts.KnowledgeBase.Application.DTOs;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries;
+using Api.BoundedContexts.KnowledgeBase.Domain.Enums;
+using Api.BoundedContexts.KnowledgeBase.Domain.Models;
+using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Infrastructure.Repositories;
-using Api.Services;
 using Api.SharedKernel.Application.Interfaces;
 
 namespace Api.BoundedContexts.KnowledgeBase.Application.Queries;
@@ -202,14 +204,14 @@ internal sealed class GetRagDashboardOptionsQueryHandler : IQueryHandler<GetRagD
 /// </summary>
 internal sealed class GetRagDashboardOverviewQueryHandler : IQueryHandler<GetRagDashboardOverviewQuery, RagDashboardOverviewDto>
 {
-    private readonly IHybridCacheService _cacheService;
+    private readonly IRagExecutionRepository _ragExecutionRepository;
     private readonly ILogger<GetRagDashboardOverviewQueryHandler> _logger;
 
     public GetRagDashboardOverviewQueryHandler(
-        IHybridCacheService cacheService,
+        IRagExecutionRepository ragExecutionRepository,
         ILogger<GetRagDashboardOverviewQueryHandler> logger)
     {
-        _cacheService = cacheService ?? throw new ArgumentNullException(nameof(cacheService));
+        _ragExecutionRepository = ragExecutionRepository ?? throw new ArgumentNullException(nameof(ragExecutionRepository));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -223,49 +225,51 @@ internal sealed class GetRagDashboardOverviewQueryHandler : IQueryHandler<GetRag
             startDate,
             endDate);
 
-        // Get cache stats for metrics
-        var cacheStats = await _cacheService.GetStatsAsync(cancellationToken).ConfigureAwait(false);
-        var totalCacheOps = cacheStats.TotalHits + cacheStats.TotalMisses;
-        var cacheHitRate = totalCacheOps > 0 ? (double)cacheStats.TotalHits / totalCacheOps : 0;
+        var rawMetrics = await _ragExecutionRepository
+            .GetAggregatedMetricsAsync(startDate, endDate, cancellationToken: cancellationToken)
+            .ConfigureAwait(false);
 
-        // FUTURE: Replace with actual metrics from database when implemented
-        var strategies = new[] { "Hybrid", "Semantic", "Keyword", "Contextual", "MultiQuery", "Agentic" };
-        var strategyMetrics = strategies.Select((s, i) => CreateMockMetrics(s, i, cacheHitRate)).ToList();
+        var strategyMetrics = rawMetrics.Select(RagDashboardMapping.MapToStrategyMetricsDto).ToList();
 
-        // Calculate aggregated metrics
+        // Calculate aggregated metrics across all strategies
+        var totalQueries = strategyMetrics.Sum(m => m.TotalQueries);
         var aggregated = new StrategyMetricsDto
         {
             StrategyId = "all",
             StrategyName = "All Strategies",
-            TotalQueries = strategyMetrics.Sum(m => m.TotalQueries),
-            AverageLatencyMs = strategyMetrics.Average(m => m.AverageLatencyMs),
-            P95LatencyMs = strategyMetrics.Max(m => m.P95LatencyMs),
-            P99LatencyMs = strategyMetrics.Max(m => m.P99LatencyMs),
-            AverageRelevanceScore = strategyMetrics.Average(m => m.AverageRelevanceScore),
-            AverageConfidenceScore = strategyMetrics.Average(m => m.AverageConfidenceScore),
-            CacheHits = (int)cacheStats.TotalHits,
-            CacheMisses = (int)cacheStats.TotalMisses,
-            CacheHitRate = cacheHitRate,
+            TotalQueries = totalQueries,
+            AverageLatencyMs = strategyMetrics.Count > 0 ? strategyMetrics.Average(m => m.AverageLatencyMs) : 0,
+            P95LatencyMs = strategyMetrics.Count > 0 ? strategyMetrics.Max(m => m.P95LatencyMs) : 0,
+            P99LatencyMs = strategyMetrics.Count > 0 ? strategyMetrics.Max(m => m.P99LatencyMs) : 0,
+            AverageRelevanceScore = strategyMetrics.Count > 0 ? strategyMetrics.Average(m => m.AverageRelevanceScore) : 0,
+            AverageConfidenceScore = strategyMetrics.Count > 0 ? strategyMetrics.Average(m => m.AverageConfidenceScore) : 0,
+            CacheHits = strategyMetrics.Sum(m => m.CacheHits),
+            CacheMisses = strategyMetrics.Sum(m => m.CacheMisses),
+            CacheHitRate = strategyMetrics.Count > 0 ? strategyMetrics.Average(m => m.CacheHitRate) : 0,
             TotalTokensUsed = strategyMetrics.Sum(m => m.TotalTokensUsed),
             TotalCost = strategyMetrics.Sum(m => m.TotalCost),
-            AverageCostPerQuery = strategyMetrics.Average(m => m.AverageCostPerQuery),
+            AverageCostPerQuery = strategyMetrics.Count > 0 ? strategyMetrics.Average(m => m.AverageCostPerQuery) : 0,
             ErrorCount = strategyMetrics.Sum(m => m.ErrorCount),
-            ErrorRate = strategyMetrics.Average(m => m.ErrorRate),
+            ErrorRate = strategyMetrics.Count > 0 ? strategyMetrics.Average(m => m.ErrorRate) : 0,
             LastUpdated = DateTimeOffset.UtcNow
         };
 
-        // Determine best performing strategies
+        // Best performing: highest confidence score
         var bestPerforming = strategyMetrics
-            .OrderByDescending(m => m.AverageRelevanceScore)
+            .OrderByDescending(m => m.AverageConfidenceScore)
             .ThenBy(m => m.AverageLatencyMs)
-            .First()
-            .StrategyId;
+            .Select(m => m.StrategyId)
+            .FirstOrDefault() ?? string.Empty;
 
+        // Most cost effective: lowest cost/query among strategies with >10 queries
         var mostCostEffective = strategyMetrics
+            .Where(m => m.TotalQueries > 10)
             .OrderBy(m => m.AverageCostPerQuery)
-            .ThenByDescending(m => m.AverageRelevanceScore)
-            .First()
-            .StrategyId;
+            .ThenByDescending(m => m.AverageConfidenceScore)
+            .Select(m => m.StrategyId)
+            .FirstOrDefault()
+            ?? strategyMetrics.OrderBy(m => m.AverageCostPerQuery).Select(m => m.StrategyId).FirstOrDefault()
+            ?? string.Empty;
 
         return new RagDashboardOverviewDto
         {
@@ -277,46 +281,6 @@ internal sealed class GetRagDashboardOverviewQueryHandler : IQueryHandler<GetRag
             MostCostEffectiveStrategy = mostCostEffective
         };
     }
-
-    private static StrategyMetricsDto CreateMockMetrics(string strategyId, int seed, double cacheHitRate)
-    {
-        // Generate deterministic but varied metrics based on strategy
-        var random = new Random(seed * 42);
-        var baseLatency = strategyId switch
-        {
-            "Hybrid" => 150,
-            "Semantic" => 120,
-            "Keyword" => 80,
-            "Contextual" => 200,
-            "MultiQuery" => 300,
-            "Agentic" => 500,
-            _ => 150
-        };
-
-        var queryCount = random.Next(500, 2000);
-        var errorCount = random.Next(0, queryCount / 50);
-
-        return new StrategyMetricsDto
-        {
-            StrategyId = strategyId,
-            StrategyName = $"{strategyId} Search",
-            TotalQueries = queryCount,
-            AverageLatencyMs = baseLatency + random.Next(-20, 50),
-            P95LatencyMs = baseLatency * 1.5 + random.Next(0, 100),
-            P99LatencyMs = baseLatency * 2 + random.Next(0, 150),
-            AverageRelevanceScore = 0.7 + random.NextDouble() * 0.25,
-            AverageConfidenceScore = 0.65 + random.NextDouble() * 0.3,
-            CacheHits = (int)(queryCount * cacheHitRate),
-            CacheMisses = (int)(queryCount * (1 - cacheHitRate)),
-            CacheHitRate = cacheHitRate,
-            TotalTokensUsed = queryCount * random.Next(200, 800),
-            TotalCost = queryCount * (decimal)(random.NextDouble() * 0.05 + 0.01),
-            AverageCostPerQuery = random.NextDouble() * 0.05 + 0.01,
-            ErrorCount = errorCount,
-            ErrorRate = (double)errorCount / queryCount,
-            LastUpdated = DateTimeOffset.UtcNow
-        };
-    }
 }
 
 /// <summary>
@@ -324,72 +288,57 @@ internal sealed class GetRagDashboardOverviewQueryHandler : IQueryHandler<GetRag
 /// </summary>
 internal sealed class GetStrategyMetricsQueryHandler : IQueryHandler<GetStrategyMetricsQuery, StrategyMetricsDto>
 {
-    private readonly IHybridCacheService _cacheService;
+    private readonly IRagExecutionRepository _ragExecutionRepository;
     private readonly ILogger<GetStrategyMetricsQueryHandler> _logger;
 
     public GetStrategyMetricsQueryHandler(
-        IHybridCacheService cacheService,
+        IRagExecutionRepository ragExecutionRepository,
         ILogger<GetStrategyMetricsQueryHandler> logger)
     {
-        _cacheService = cacheService ?? throw new ArgumentNullException(nameof(cacheService));
+        _ragExecutionRepository = ragExecutionRepository ?? throw new ArgumentNullException(nameof(ragExecutionRepository));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
     public async Task<StrategyMetricsDto> Handle(GetStrategyMetricsQuery query, CancellationToken cancellationToken)
     {
+        var endDate = query.EndDate ?? DateOnly.FromDateTime(DateTime.UtcNow);
+        var startDate = query.StartDate ?? endDate.AddDays(-30);
+
         _logger.LogInformation(
-            "Getting metrics for strategy {StrategyId}",
-            query.StrategyId);
+            "Getting metrics for strategy {StrategyId} from {Start} to {End}",
+            query.StrategyId,
+            startDate,
+            endDate);
 
-        var cacheStats = await _cacheService.GetStatsAsync(cancellationToken).ConfigureAwait(false);
-        var totalCacheOps = cacheStats.TotalHits + cacheStats.TotalMisses;
-        var cacheHitRate = totalCacheOps > 0 ? (double)cacheStats.TotalHits / totalCacheOps : 0;
+        var results = await _ragExecutionRepository
+            .GetAggregatedMetricsAsync(startDate, endDate, strategy: query.StrategyId, cancellationToken: cancellationToken)
+            .ConfigureAwait(false);
 
-        // FUTURE: Replace with actual metrics from database
-        var strategies = new[] { "Hybrid", "Semantic", "Keyword", "Contextual", "MultiQuery", "Agentic" };
-        var index = Array.IndexOf(strategies, query.StrategyId);
-        if (index < 0) index = 0;
-
-        return CreateMockMetrics(query.StrategyId, index, cacheHitRate);
-    }
-
-    private static StrategyMetricsDto CreateMockMetrics(string strategyId, int seed, double cacheHitRate)
-    {
-        var random = new Random(seed * 42);
-        var baseLatency = strategyId switch
+        if (results.Count == 0)
         {
-            "Hybrid" => 150,
-            "Semantic" => 120,
-            "Keyword" => 80,
-            "Contextual" => 200,
-            "MultiQuery" => 300,
-            "Agentic" => 500,
-            _ => 150
-        };
+            return new StrategyMetricsDto
+            {
+                StrategyId = query.StrategyId,
+                StrategyName = query.StrategyId,
+                TotalQueries = 0,
+                AverageLatencyMs = 0,
+                P95LatencyMs = 0,
+                P99LatencyMs = 0,
+                AverageRelevanceScore = 0,
+                AverageConfidenceScore = 0,
+                CacheHits = 0,
+                CacheMisses = 0,
+                CacheHitRate = 0,
+                TotalTokensUsed = 0,
+                TotalCost = 0,
+                AverageCostPerQuery = 0,
+                ErrorCount = 0,
+                ErrorRate = 0,
+                LastUpdated = DateTimeOffset.UtcNow
+            };
+        }
 
-        var queryCount = random.Next(500, 2000);
-        var errorCount = random.Next(0, queryCount / 50);
-
-        return new StrategyMetricsDto
-        {
-            StrategyId = strategyId,
-            StrategyName = $"{strategyId} Search",
-            TotalQueries = queryCount,
-            AverageLatencyMs = baseLatency + random.Next(-20, 50),
-            P95LatencyMs = baseLatency * 1.5 + random.Next(0, 100),
-            P99LatencyMs = baseLatency * 2 + random.Next(0, 150),
-            AverageRelevanceScore = 0.7 + random.NextDouble() * 0.25,
-            AverageConfidenceScore = 0.65 + random.NextDouble() * 0.3,
-            CacheHits = (int)(queryCount * cacheHitRate),
-            CacheMisses = (int)(queryCount * (1 - cacheHitRate)),
-            CacheHitRate = cacheHitRate,
-            TotalTokensUsed = queryCount * random.Next(200, 800),
-            TotalCost = queryCount * (decimal)(random.NextDouble() * 0.05 + 0.01),
-            AverageCostPerQuery = random.NextDouble() * 0.05 + 0.01,
-            ErrorCount = errorCount,
-            ErrorRate = (double)errorCount / queryCount,
-            LastUpdated = DateTimeOffset.UtcNow
-        };
+        return RagDashboardMapping.MapToStrategyMetricsDto(results[0]);
     }
 }
 
@@ -398,14 +347,18 @@ internal sealed class GetStrategyMetricsQueryHandler : IQueryHandler<GetStrategy
 /// </summary>
 internal sealed class GetStrategyTimeSeriesQueryHandler : IQueryHandler<GetStrategyTimeSeriesQuery, StrategyTimeSeriesMetricsDto>
 {
+    private readonly IRagExecutionRepository _ragExecutionRepository;
     private readonly ILogger<GetStrategyTimeSeriesQueryHandler> _logger;
 
-    public GetStrategyTimeSeriesQueryHandler(ILogger<GetStrategyTimeSeriesQueryHandler> logger)
+    public GetStrategyTimeSeriesQueryHandler(
+        IRagExecutionRepository ragExecutionRepository,
+        ILogger<GetStrategyTimeSeriesQueryHandler> logger)
     {
+        _ragExecutionRepository = ragExecutionRepository ?? throw new ArgumentNullException(nameof(ragExecutionRepository));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
-    public Task<StrategyTimeSeriesMetricsDto> Handle(GetStrategyTimeSeriesQuery query, CancellationToken cancellationToken)
+    public async Task<StrategyTimeSeriesMetricsDto> Handle(GetStrategyTimeSeriesQuery query, CancellationToken cancellationToken)
     {
         var endDate = query.EndDate ?? DateOnly.FromDateTime(DateTime.UtcNow);
         var startDate = query.StartDate ?? endDate.AddDays(-7);
@@ -415,85 +368,46 @@ internal sealed class GetStrategyTimeSeriesQueryHandler : IQueryHandler<GetStrat
             query.StrategyId,
             query.Granularity);
 
-        // FUTURE: Replace with actual metrics from database
-        var points = GenerateTimeSeriesPoints(startDate, endDate, query.Granularity, query.StrategyId);
+        var granularity = Enum.TryParse<TimeSeriesGranularity>(query.Granularity, ignoreCase: true, out var parsed)
+            ? parsed
+            : TimeSeriesGranularity.Day;
 
-        return Task.FromResult(new StrategyTimeSeriesMetricsDto
+        var points = await _ragExecutionRepository
+            .GetTimeSeriesMetricsAsync(query.StrategyId, startDate, endDate, granularity, cancellationToken)
+            .ConfigureAwait(false);
+
+        var latencyTrend = points.Select(p => new MetricsTimeSeriesPointDto
+        {
+            Timestamp = p.Bucket,
+            Value = p.AverageLatencyMs
+        }).ToList();
+
+        var relevanceTrend = points.Select(p => new MetricsTimeSeriesPointDto
+        {
+            Timestamp = p.Bucket,
+            Value = p.AverageConfidence
+        }).ToList();
+
+        var queryCountTrend = points.Select(p => new MetricsTimeSeriesPointDto
+        {
+            Timestamp = p.Bucket,
+            Value = p.QueryCount
+        }).ToList();
+
+        var costTrend = points.Select(p => new MetricsTimeSeriesPointDto
+        {
+            Timestamp = p.Bucket,
+            Value = (double)p.TotalCost
+        }).ToList();
+
+        return new StrategyTimeSeriesMetricsDto
         {
             StrategyId = query.StrategyId,
-            LatencyTrend = points.latency,
-            RelevanceTrend = points.relevance,
-            QueryCountTrend = points.queries,
-            CostTrend = points.cost
-        });
-    }
-
-    private static (List<MetricsTimeSeriesPointDto> latency, List<MetricsTimeSeriesPointDto> relevance,
-        List<MetricsTimeSeriesPointDto> queries, List<MetricsTimeSeriesPointDto> cost)
-        GenerateTimeSeriesPoints(DateOnly start, DateOnly end, string granularity, string strategyId)
-    {
-        var latency = new List<MetricsTimeSeriesPointDto>();
-        var relevance = new List<MetricsTimeSeriesPointDto>();
-        var queries = new List<MetricsTimeSeriesPointDto>();
-        var cost = new List<MetricsTimeSeriesPointDto>();
-
-        var interval = granularity.ToUpperInvariant() switch
-        {
-            "HOUR" => TimeSpan.FromHours(1),
-            "DAY" => TimeSpan.FromDays(1),
-            "WEEK" => TimeSpan.FromDays(7),
-            _ => TimeSpan.FromHours(1)
+            LatencyTrend = latencyTrend,
+            RelevanceTrend = relevanceTrend,
+            QueryCountTrend = queryCountTrend,
+            CostTrend = costTrend
         };
-
-        var seed = StringComparer.Ordinal.GetHashCode(strategyId);
-        var random = new Random(seed);
-
-        var baseLatency = strategyId switch
-        {
-            "Hybrid" => 150.0,
-            "Semantic" => 120.0,
-            "Keyword" => 80.0,
-            "Contextual" => 200.0,
-            "MultiQuery" => 300.0,
-            "Agentic" => 500.0,
-            _ => 150.0
-        };
-
-        var current = start.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
-        var endDateTime = end.ToDateTime(TimeOnly.MaxValue, DateTimeKind.Utc);
-
-        while (current <= endDateTime)
-        {
-            var timestamp = new DateTimeOffset(current, TimeSpan.Zero);
-
-            latency.Add(new MetricsTimeSeriesPointDto
-            {
-                Timestamp = timestamp,
-                Value = baseLatency + random.NextDouble() * 50 - 25
-            });
-
-            relevance.Add(new MetricsTimeSeriesPointDto
-            {
-                Timestamp = timestamp,
-                Value = 0.75 + random.NextDouble() * 0.2 - 0.1
-            });
-
-            queries.Add(new MetricsTimeSeriesPointDto
-            {
-                Timestamp = timestamp,
-                Value = random.Next(10, 100)
-            });
-
-            cost.Add(new MetricsTimeSeriesPointDto
-            {
-                Timestamp = timestamp,
-                Value = random.NextDouble() * 2 + 0.5
-            });
-
-            current = current.Add(interval);
-        }
-
-        return (latency, relevance, queries, cost);
     }
 }
 
@@ -502,108 +416,127 @@ internal sealed class GetStrategyTimeSeriesQueryHandler : IQueryHandler<GetStrat
 /// </summary>
 internal sealed class GetStrategyComparisonQueryHandler : IQueryHandler<GetStrategyComparisonQuery, StrategyComparisonDto>
 {
-    private readonly IHybridCacheService _cacheService;
+    private readonly IRagExecutionRepository _ragExecutionRepository;
     private readonly ILogger<GetStrategyComparisonQueryHandler> _logger;
 
     public GetStrategyComparisonQueryHandler(
-        IHybridCacheService cacheService,
+        IRagExecutionRepository ragExecutionRepository,
         ILogger<GetStrategyComparisonQueryHandler> logger)
     {
-        _cacheService = cacheService ?? throw new ArgumentNullException(nameof(cacheService));
+        _ragExecutionRepository = ragExecutionRepository ?? throw new ArgumentNullException(nameof(ragExecutionRepository));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
     public async Task<StrategyComparisonDto> Handle(GetStrategyComparisonQuery query, CancellationToken cancellationToken)
     {
+        var endDate = query.EndDate ?? DateOnly.FromDateTime(DateTime.UtcNow);
+        var startDate = query.StartDate ?? endDate.AddDays(-30);
+
         _logger.LogInformation(
-            "Comparing strategies: {Strategies}",
-            query.StrategyIds != null ? string.Join(", ", query.StrategyIds) : "all");
+            "Comparing strategies: {Strategies} from {Start} to {End}",
+            query.StrategyIds != null ? string.Join(", ", query.StrategyIds) : "all",
+            startDate,
+            endDate);
 
-        var cacheStats = await _cacheService.GetStatsAsync(cancellationToken).ConfigureAwait(false);
-        var totalCacheOps = cacheStats.TotalHits + cacheStats.TotalMisses;
-        var cacheHitRate = totalCacheOps > 0 ? (double)cacheStats.TotalHits / totalCacheOps : 0;
+        var rawMetrics = await _ragExecutionRepository
+            .GetAggregatedMetricsAsync(startDate, endDate, cancellationToken: cancellationToken)
+            .ConfigureAwait(false);
 
-        var allStrategies = new[] { "Hybrid", "Semantic", "Keyword", "Contextual", "MultiQuery", "Agentic" };
-        var strategiesToCompare = query.StrategyIds?.ToArray() ?? allStrategies;
+        // Filter by requested strategy IDs if provided
+        var filtered = query.StrategyIds?.Any() == true
+            ? rawMetrics.Where(m => query.StrategyIds.Contains(m.Strategy, StringComparer.OrdinalIgnoreCase)).ToList()
+            : rawMetrics.ToList();
 
-        var metrics = strategiesToCompare
-            .Select((s, i) => CreateMockMetrics(s, Array.IndexOf(allStrategies, s), cacheHitRate))
-            .ToList();
+        var strategies = filtered.Select(RagDashboardMapping.MapToStrategyMetricsDto).ToList();
 
-        // Calculate rankings
-        var latencyRanking = metrics
-            .OrderBy(m => m.AverageLatencyMs)
-            .Select((m, i) => (m.StrategyId, Rank: (double)(i + 1)))
-            .ToDictionary(x => x.StrategyId, x => x.Rank, StringComparer.Ordinal);
+        if (strategies.Count == 0)
+        {
+            return new StrategyComparisonDto
+            {
+                Strategies = strategies,
+                LatencyRanking = new Dictionary<string, double>(StringComparer.Ordinal),
+                QualityRanking = new Dictionary<string, double>(StringComparer.Ordinal),
+                CostEfficiencyRanking = new Dictionary<string, double>(StringComparer.Ordinal),
+                RecommendedStrategy = string.Empty,
+                RecommendationReason = string.Empty
+            };
+        }
 
-        var qualityRanking = metrics
-            .OrderByDescending(m => m.AverageRelevanceScore)
-            .Select((m, i) => (m.StrategyId, Rank: (double)(i + 1)))
-            .ToDictionary(x => x.StrategyId, x => x.Rank, StringComparer.Ordinal);
+        var count = (double)strategies.Count;
 
-        var costRanking = metrics
-            .OrderBy(m => m.AverageCostPerQuery)
-            .Select((m, i) => (m.StrategyId, Rank: (double)(i + 1)))
-            .ToDictionary(x => x.StrategyId, x => x.Rank, StringComparer.Ordinal);
+        // Rankings: normalized score 0-1, higher = better
+        var latencyRanking = strategies
+            .OrderBy(s => s.AverageLatencyMs)
+            .Select((s, i) => (s.StrategyId, Score: count > 1 ? 1.0 - i / (count - 1) : 1.0))
+            .ToDictionary(x => x.StrategyId, x => x.Score, StringComparer.Ordinal);
 
-        // Determine recommended strategy (balanced score)
-        var recommended = metrics
-            .OrderBy(m => latencyRanking[m.StrategyId] * 0.3 +
-                          qualityRanking[m.StrategyId] * 0.5 +
-                          costRanking[m.StrategyId] * 0.2)
+        var qualityRanking = strategies
+            .OrderByDescending(s => s.AverageConfidenceScore)
+            .Select((s, i) => (s.StrategyId, Score: count > 1 ? 1.0 - i / (count - 1) : 1.0))
+            .ToDictionary(x => x.StrategyId, x => x.Score, StringComparer.Ordinal);
+
+        var costEfficiencyRanking = strategies
+            .OrderBy(s => s.AverageCostPerQuery)
+            .Select((s, i) => (s.StrategyId, Score: count > 1 ? 1.0 - i / (count - 1) : 1.0))
+            .ToDictionary(x => x.StrategyId, x => x.Score, StringComparer.Ordinal);
+
+        // Weighted recommendation: quality 50%, latency 30%, cost 20%
+        var recommended = strategies
+            .OrderByDescending(s =>
+                qualityRanking[s.StrategyId] * 0.5 +
+                latencyRanking[s.StrategyId] * 0.3 +
+                costEfficiencyRanking[s.StrategyId] * 0.2)
             .First();
+
+        var recommendationReason =
+            $"Best weighted score: quality {qualityRanking[recommended.StrategyId]:P0}, " +
+            $"latency score {latencyRanking[recommended.StrategyId]:P0}, " +
+            $"cost efficiency {costEfficiencyRanking[recommended.StrategyId]:P0}";
 
         return new StrategyComparisonDto
         {
-            Strategies = metrics,
+            Strategies = strategies,
             LatencyRanking = latencyRanking,
             QualityRanking = qualityRanking,
-            CostEfficiencyRanking = costRanking,
+            CostEfficiencyRanking = costEfficiencyRanking,
             RecommendedStrategy = recommended.StrategyId,
-            RecommendationReason = $"Best balance of quality (rank {qualityRanking[recommended.StrategyId]}), " +
-                                   $"latency (rank {latencyRanking[recommended.StrategyId]}), and " +
-                                   $"cost (rank {costRanking[recommended.StrategyId]})"
-        };
-    }
-
-    private static StrategyMetricsDto CreateMockMetrics(string strategyId, int seed, double cacheHitRate)
-    {
-        var random = new Random(seed * 42);
-        var baseLatency = strategyId switch
-        {
-            "Hybrid" => 150,
-            "Semantic" => 120,
-            "Keyword" => 80,
-            "Contextual" => 200,
-            "MultiQuery" => 300,
-            "Agentic" => 500,
-            _ => 150
-        };
-
-        var queryCount = random.Next(500, 2000);
-        var errorCount = random.Next(0, queryCount / 50);
-
-        return new StrategyMetricsDto
-        {
-            StrategyId = strategyId,
-            StrategyName = $"{strategyId} Search",
-            TotalQueries = queryCount,
-            AverageLatencyMs = baseLatency + random.Next(-20, 50),
-            P95LatencyMs = baseLatency * 1.5 + random.Next(0, 100),
-            P99LatencyMs = baseLatency * 2 + random.Next(0, 150),
-            AverageRelevanceScore = 0.7 + random.NextDouble() * 0.25,
-            AverageConfidenceScore = 0.65 + random.NextDouble() * 0.3,
-            CacheHits = (int)(queryCount * cacheHitRate),
-            CacheMisses = (int)(queryCount * (1 - cacheHitRate)),
-            CacheHitRate = cacheHitRate,
-            TotalTokensUsed = queryCount * random.Next(200, 800),
-            TotalCost = queryCount * (decimal)(random.NextDouble() * 0.05 + 0.01),
-            AverageCostPerQuery = random.NextDouble() * 0.05 + 0.01,
-            ErrorCount = errorCount,
-            ErrorRate = (double)errorCount / queryCount,
-            LastUpdated = DateTimeOffset.UtcNow
+            RecommendationReason = recommendationReason
         };
     }
 }
 
 #endregion
+
+/// <summary>
+/// Shared mapping helper for dashboard handlers.
+/// </summary>
+internal static class RagDashboardMapping
+{
+    internal static StrategyMetricsDto MapToStrategyMetricsDto(StrategyAggregateMetrics m)
+    {
+        var strategyName = Enum.TryParse<RagStrategy>(m.Strategy, ignoreCase: true, out var parsed)
+            ? parsed.GetDisplayName() : m.Strategy;
+
+        return new StrategyMetricsDto
+        {
+            StrategyId = m.Strategy,
+            StrategyName = strategyName,
+            TotalQueries = m.TotalQueries,
+            AverageLatencyMs = m.AverageLatencyMs,
+            P95LatencyMs = m.P95LatencyMs,
+            P99LatencyMs = m.P99LatencyMs,
+            // NOTE: AverageRelevanceScore uses AverageConfidence until separate relevance tracking is implemented
+            AverageRelevanceScore = m.AverageConfidence,
+            AverageConfidenceScore = m.AverageConfidence,
+            CacheHits = m.CacheHits,
+            CacheMisses = m.CacheMisses,
+            CacheHitRate = (m.CacheHits + m.CacheMisses) > 0 ? (double)m.CacheHits / (m.CacheHits + m.CacheMisses) : 0,
+            TotalTokensUsed = m.TotalTokensUsed,
+            TotalCost = m.TotalCost,
+            AverageCostPerQuery = (double)m.AverageCostPerQuery,
+            ErrorCount = m.ErrorCount,
+            ErrorRate = m.ErrorRate,
+            LastUpdated = m.LastUpdated
+        };
+    }
+}

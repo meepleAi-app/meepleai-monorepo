@@ -83,13 +83,14 @@ public sealed class ShareRequestE2ETests : E2ETestBase
 
         var response = await Client.PostAsJsonAsync("/api/v1/share-requests", shareRequestPayload);
 
-        // Assert - 500 may occur if share request service dependencies not configured
+        // Assert - Skip if share request service dependencies not configured
         // 404 may occur if rate limiting policies not registered in CI environment
+        if (response.StatusCode == HttpStatusCode.InternalServerError)
+            Assert.Skip("CreateShareRequest returned 500 — service likely unavailable");
         response.StatusCode.Should().BeOneOf(
             HttpStatusCode.Created,
             HttpStatusCode.BadRequest,
-            HttpStatusCode.NotFound,
-            HttpStatusCode.InternalServerError);
+            HttpStatusCode.NotFound);
 
         if (response.StatusCode == HttpStatusCode.Created)
         {
@@ -129,11 +130,12 @@ public sealed class ShareRequestE2ETests : E2ETestBase
         // Act
         var response = await Client.GetAsync("/api/v1/share-requests");
 
-        // Assert - 500 may occur if share request service dependencies not configured
+        // Assert - Skip if share request service dependencies not configured
+        if (response.StatusCode == HttpStatusCode.InternalServerError)
+            Assert.Skip("GetUserShareRequests returned 500 — service likely unavailable");
         response.StatusCode.Should().BeOneOf(
             HttpStatusCode.OK,
-            HttpStatusCode.BadRequest,
-            HttpStatusCode.InternalServerError);
+            HttpStatusCode.BadRequest);
 
         if (response.StatusCode == HttpStatusCode.OK)
         {

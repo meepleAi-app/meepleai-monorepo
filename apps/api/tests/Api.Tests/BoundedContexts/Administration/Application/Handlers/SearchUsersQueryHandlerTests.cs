@@ -102,8 +102,8 @@ public class SearchUsersQueryHandlerTests
         };
 
         _userProfileRepositoryMock
-            .Setup(r => r.SearchAsync("user", It.IsAny<int?>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(users);
+            .Setup(r => r.SearchAsync("user", 2, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(users.Take(2).ToList());
 
         var query = new SearchUsersQuery(
             SearchQuery: "user",
@@ -112,7 +112,7 @@ public class SearchUsersQueryHandlerTests
         // Act
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
-        // Assert — handler applies .Take(MaxResults) in memory
+        // Assert — repository applies MaxResults limit
         result.Count.Should().Be(2);
     }
 

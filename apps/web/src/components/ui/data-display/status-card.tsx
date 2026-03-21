@@ -1,4 +1,3 @@
-/* eslint-disable security/detect-object-injection -- Safe health state config Record access */
 /**
  * StatusCard Component - Generic Health/Status Display Card
  *
@@ -86,16 +85,19 @@ export interface StatusCardProps {
 /**
  * Status configuration with colors and icons
  */
-const statusConfig: Record<StatusState, {
-  icon: typeof CheckCircleIcon;
-  bgColor: string;
-  borderColor: string;
-  badgeBg: string;
-  badgeText: string;
-  iconColor: string;
-  dotColor: string;
-  label: string;
-}> = {
+const statusConfig: Record<
+  StatusState,
+  {
+    icon: typeof CheckCircleIcon;
+    bgColor: string;
+    borderColor: string;
+    badgeBg: string;
+    badgeText: string;
+    iconColor: string;
+    dotColor: string;
+    label: string;
+  }
+> = {
   healthy: {
     icon: CheckCircleIcon,
     bgColor: 'bg-green-50/50 dark:bg-green-950/30',
@@ -232,9 +234,7 @@ export function StatusCard({
           <div className="flex-1 min-w-0">
             {/* Name + Pulsating Dot + Badge */}
             <div className="flex items-center gap-2 mb-2">
-              <h3 className="text-sm font-semibold text-foreground truncate">
-                {name}
-              </h3>
+              <h3 className="text-sm font-semibold text-foreground truncate">{name}</h3>
               {/* Pulsating Status Dot */}
               <span className="relative flex h-3 w-3" aria-hidden="true">
                 <span

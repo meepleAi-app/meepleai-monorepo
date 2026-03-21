@@ -1,4 +1,3 @@
-/* eslint-disable security/detect-object-injection -- Safe typed Record access patterns */
 // UI-04: Timeline types for RAG conversation events
 
 export type TimelineEventType =

@@ -1,4 +1,3 @@
-/* eslint-disable security/detect-object-injection -- Safe typed Record access with ProcessingStep enum keys */
 /**
  * PDF Processing Types (PDF-08)
  * Type definitions for PDF processing progress tracking

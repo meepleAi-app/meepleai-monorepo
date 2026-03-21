@@ -64,6 +64,7 @@ export const agentDefinitionDtoSchema = z.object({
   kbCardIds: z.array(z.string().uuid()).optional().default([]),
   chatLanguage: z.string().optional().default('auto'),
   isActive: z.boolean(),
+  status: z.number().optional().default(0),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime().nullable(),
 });

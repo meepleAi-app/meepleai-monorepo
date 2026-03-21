@@ -231,7 +231,6 @@ function mergeQueueState(otherState: UploadQueueState): void {
       state.items.push(otherItem);
     } else if (!activeIds.has(otherItem.id)) {
       // Update if not currently uploading
-      // eslint-disable-next-line security/detect-object-injection
       state.items[existingIndex] = otherItem;
     }
   });

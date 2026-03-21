@@ -166,11 +166,7 @@ export function SessionScoreModal({
                 )}
               >
                 {dim}
-                {/* eslint-disable-next-line security/detect-object-injection */}
-                {scoringConfig.dimensionUnits[dim]
-                  ? // eslint-disable-next-line security/detect-object-injection
-                    ` (${scoringConfig.dimensionUnits[dim]})`
-                  : ''}
+                {scoringConfig.dimensionUnits[dim] ? ` (${scoringConfig.dimensionUnits[dim]})` : ''}
               </button>
             ))}
           </div>

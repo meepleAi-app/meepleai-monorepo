@@ -1,4 +1,3 @@
-/* eslint-disable security/detect-object-injection -- Safe confidence level config Record access */
 /**
  * ConfidenceBadge Component - AI Confidence Level Indicator
  *

@@ -10,21 +10,24 @@
  * @module components/ui/data-display/meeple-card/variants/MeepleCardExpanded
  */
 
-import React from 'react';
+import React, { useState } from 'react';
 
 import { ArrowRight } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
 
+import { ExtraMeepleCardDrawer } from '../../extra-meeple-card/ExtraMeepleCardDrawer';
 import { StatusBadge } from '../../meeple-card-features/StatusBadge';
 import { WishlistButton } from '../../meeple-card-features/WishlistButton';
 import { CoverImage, MeepleCardSkeleton } from '../../meeple-card-parts';
 import {
   entityColors,
+  DRAWER_ENTITY_TYPE_MAP,
   meepleCardVariants,
   contentVariants,
-  coverOverlayStyles,
 } from '../../meeple-card-styles';
+import { CardActionStrip } from '../parts/CardActions';
+import { CoverOverlay } from '../parts/CoverOverlay';
 
 import type { MeepleCardProps } from '../types';
 
@@ -56,20 +59,61 @@ export const MeepleCardExpanded = React.memo(function MeepleCardExpanded(
     showWishlist,
     isWishlisted,
     onWishlistToggle,
+    quickActions,
+    userRole,
+    entityQuickActions,
+    showInfoButton,
+    entityId,
+    infoHref,
+    infoTooltip,
     id,
     mechanicIcon,
     stateLabel,
+    coverLabels,
+    subtypeIcons,
     loading = false,
   } = props;
 
   const variant = 'expanded' as const;
 
+  const [drawerOpen, setDrawerOpen] = useState(false);
+
   if (loading) {
     return <MeepleCardSkeleton variant={variant} />;
   }
   const coverSrc = entity === 'player' ? avatarUrl || imageUrl : imageUrl;
-  // eslint-disable-next-line security/detect-object-injection
   const color = customColor || entityColors[entity].hsl;
+  const drawerEntityType = DRAWER_ENTITY_TYPE_MAP[entity];
+
+  const hasQuickActions = !!(quickActions && quickActions.length > 0);
+  const showWishlistBtn = !!showWishlist && !hasQuickActions;
+
+  const hasStripActions =
+    !!entityQuickActions ||
+    !!(showInfoButton && (entityId || infoHref)) ||
+    showWishlistBtn ||
+    hasQuickActions;
+
+  const stripElement = hasStripActions ? (
+    <CardActionStrip
+      entity={entity}
+      customColor={customColor}
+      entityQuickActions={entityQuickActions}
+      quickActions={quickActions}
+      userRole={userRole}
+      showWishlistBtn={showWishlistBtn}
+      isWishlisted={isWishlisted}
+      onWishlistToggle={onWishlistToggle}
+      showInfoButton={showInfoButton}
+      entityId={entityId}
+      infoHref={infoHref}
+      infoTooltip={infoTooltip}
+      drawerEntityType={drawerEntityType}
+      onDrawerOpen={() => setDrawerOpen(true)}
+      testId={testId}
+      hasQuickActions={hasQuickActions}
+    />
+  ) : null;
 
   // Limit metadata to 4 items
   const visibleMetadata = metadata.slice(0, 4);
@@ -117,34 +161,18 @@ export const MeepleCardExpanded = React.memo(function MeepleCardExpanded(
           </div>
         )}
 
-        {/* MtG-inspired cover overlay slots */}
-        {(mechanicIcon || stateLabel) && (
-          <div className={coverOverlayStyles.container}>
-            {mechanicIcon ? (
-              <div
-                data-testid="mechanic-icon-slot"
-                data-slot="mechanic-icon"
-                className={coverOverlayStyles.mechanicIcon}
-              >
-                {mechanicIcon}
-              </div>
-            ) : (
-              <div />
-            )}
-            {stateLabel && (
-              <div
-                data-testid="state-label-slot"
-                data-slot="state-label"
-                className={cn(
-                  coverOverlayStyles.stateLabel.base,
-                  coverOverlayStyles.stateLabel[stateLabel.variant]
-                )}
-              >
-                {stateLabel.text}
-              </div>
-            )}
-          </div>
-        )}
+        {/* 4-corner cover overlay */}
+        <CoverOverlay
+          entity={entity}
+          customColor={customColor}
+          coverLabels={coverLabels}
+          showEntityType
+          subtypeIcons={subtypeIcons}
+          mechanicIcon={mechanicIcon}
+          stateLabel={stateLabel}
+        />
+
+        {stripElement}
       </div>
 
       {/* Content area */}
@@ -224,6 +252,15 @@ export const MeepleCardExpanded = React.memo(function MeepleCardExpanded(
           )}
         </div>
       </div>
+
+      {entityId && drawerEntityType && (
+        <ExtraMeepleCardDrawer
+          entityType={drawerEntityType}
+          entityId={entityId}
+          open={drawerOpen}
+          onClose={() => setDrawerOpen(false)}
+        />
+      )}
     </article>
   );
 });

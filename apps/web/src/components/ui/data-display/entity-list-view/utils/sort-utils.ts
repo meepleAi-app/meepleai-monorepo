@@ -79,7 +79,6 @@ export function createComparator<T>(
     if (valueB === null || valueB === undefined) return -1;
 
     // Apply comparator with type assertion
-    // eslint-disable-next-line security/detect-object-injection
     return (sortComparators[type] as (a: unknown, b: unknown) => number)(valueA, valueB);
   };
 }

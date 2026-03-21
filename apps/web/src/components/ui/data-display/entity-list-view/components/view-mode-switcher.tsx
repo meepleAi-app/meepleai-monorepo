@@ -59,29 +59,28 @@ export interface ViewModeSwitcherProps {
 /**
  * Configuration for each view mode
  */
-const MODE_CONFIG: Record<ViewMode, { icon: typeof Grid3x3; label: string; ariaLabel: string }> =
-  {
-    grid: {
-      icon: Grid3x3,
-      label: 'Grid',
-      ariaLabel: 'Grid view',
-    },
-    list: {
-      icon: ListIcon,
-      label: 'List',
-      ariaLabel: 'List view',
-    },
-    carousel: {
-      icon: GalleryHorizontal,
-      label: 'Carousel',
-      ariaLabel: 'Carousel view',
-    },
-    table: {
-      icon: Table2,
-      label: 'Table',
-      ariaLabel: 'Table view',
-    },
-  };
+const MODE_CONFIG: Record<ViewMode, { icon: typeof Grid3x3; label: string; ariaLabel: string }> = {
+  grid: {
+    icon: Grid3x3,
+    label: 'Grid',
+    ariaLabel: 'Grid view',
+  },
+  list: {
+    icon: ListIcon,
+    label: 'List',
+    ariaLabel: 'List view',
+  },
+  carousel: {
+    icon: GalleryHorizontal,
+    label: 'Carousel',
+    ariaLabel: 'Carousel view',
+  },
+  table: {
+    icon: Table2,
+    label: 'Table',
+    ariaLabel: 'Table view',
+  },
+};
 
 // ============================================================================
 // Main Component
@@ -108,12 +107,10 @@ export const ViewModeSwitcher = React.memo(function ViewModeSwitcher({
     if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
       e.preventDefault();
       const nextIdx = (currentIdx + 1) % availableModes.length;
-      // eslint-disable-next-line security/detect-object-injection
       onChange(availableModes[nextIdx]);
     } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
       e.preventDefault();
       const prevIdx = (currentIdx - 1 + availableModes.length) % availableModes.length;
-      // eslint-disable-next-line security/detect-object-injection
       onChange(availableModes[prevIdx]);
     }
   };
@@ -131,8 +128,7 @@ export const ViewModeSwitcher = React.memo(function ViewModeSwitcher({
       onKeyDown={handleKeyDown}
       data-testid={testId || 'view-mode-switcher'}
     >
-      {availableModes.map((mode) => {
-        // eslint-disable-next-line security/detect-object-injection
+      {availableModes.map(mode => {
         const config = MODE_CONFIG[mode];
         const Icon = config.icon;
         const isActive = value === mode;

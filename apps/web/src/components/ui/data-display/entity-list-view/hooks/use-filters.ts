@@ -115,7 +115,6 @@ export function useFilters<T>(
   const removeFilter = useCallback((filterId: string) => {
     setInternalState(prev => {
       const newState = { ...prev };
-      // eslint-disable-next-line security/detect-object-injection
       delete newState[filterId];
       return newState;
     });

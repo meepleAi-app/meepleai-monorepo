@@ -100,44 +100,51 @@ export const PARAM_RESOLVERS: Record<string, {
     endpoint: '/api/v1/shared-games?pageSize=1',
     extract: (data) => data?.items?.[0]?.id || data?.[0]?.id || null,
   },
+  'discover': {
+    endpoint: '/api/v1/shared-games?pageSize=1',
+    extract: (data) => data?.items?.[0]?.id || data?.[0]?.id || null,
+  },
   'agents': {
     endpoint: '/api/v1/agents?pageSize=1',
-    extract: (data) => data?.items?.[0]?.id || data?.[0]?.id || null,
+    extract: (data) => data?.agents?.[0]?.id || data?.items?.[0]?.id || null,
   },
   'players': {
-    endpoint: '/api/v1/players?pageSize=1',
-    extract: (data) => data?.items?.[0]?.id || data?.[0]?.id || null,
+    // No list endpoint — uses admin users as fallback
+    endpoint: '/api/v1/admin/users?pageSize=1',
+    extract: (data) => data?.items?.[0]?.id || null,
   },
   'sessions': {
-    endpoint: '/api/v1/sessions?pageSize=1',
-    extract: (data) => data?.items?.[0]?.id || data?.[0]?.id || null,
+    endpoint: '/api/v1/admin/sessions?pageSize=1',
+    extract: (data) => data?.items?.[0]?.id || data?.[0]?.id || data?.[0]?.sessionId || null,
   },
   'game-nights': {
     endpoint: '/api/v1/game-nights?pageSize=1',
     extract: (data) => data?.items?.[0]?.id || data?.[0]?.id || null,
   },
   'chat': {
-    endpoint: '/api/v1/chat-threads?pageSize=1',
-    extract: (data) => data?.items?.[0]?.id || data?.[0]?.id || null,
+    // chat-threads requires gameId — use knowledge-base/my-chats as fallback
+    endpoint: '/api/v1/knowledge-base/my-chats?skip=0&take=1',
+    extract: (data) => data?.threads?.[0]?.id || null,
   },
   'playlists': {
-    endpoint: '/api/v1/playlists?pageSize=1',
-    extract: (data) => data?.items?.[0]?.id || data?.[0]?.id || null,
+    endpoint: '/api/v1/playlists?page=1&pageSize=1',
+    extract: (data) => data?.playlists?.[0]?.id || data?.items?.[0]?.id || null,
   },
   'knowledge-base': {
-    endpoint: '/api/v1/knowledge-base?pageSize=1',
-    extract: (data) => data?.items?.[0]?.id || data?.[0]?.id || null,
+    // No generic list — use shared-games as fallback (KB is per-game)
+    endpoint: '/api/v1/shared-games?pageSize=1',
+    extract: (data) => data?.items?.[0]?.id || null,
   },
   'play-records': {
-    endpoint: '/api/v1/play-records?pageSize=1',
-    extract: (data) => data?.items?.[0]?.id || data?.[0]?.id || null,
+    endpoint: '/api/v1/play-records/history?pageSize=1',
+    extract: (data) => data?.records?.[0]?.id || data?.items?.[0]?.id || null,
   },
   'users': {
     endpoint: '/api/v1/admin/users?pageSize=1',
-    extract: (data) => data?.items?.[0]?.id || data?.[0]?.id || null,
+    extract: (data) => data?.items?.[0]?.id || null,
   },
   'definitions': {
-    endpoint: '/api/v1/admin/agents/definitions?pageSize=1',
+    endpoint: '/api/v1/admin/agent-definitions?pageSize=1',
     extract: (data) => data?.items?.[0]?.id || data?.[0]?.id || null,
   },
   'library': {
@@ -145,31 +152,33 @@ export const PARAM_RESOLVERS: Record<string, {
     extract: (data) => data?.items?.[0]?.gameId || data?.[0]?.gameId || null,
   },
   'private': {
-    endpoint: '/api/v1/library/private?pageSize=1',
-    extract: (data) => data?.items?.[0]?.id || data?.[0]?.id || null,
+    endpoint: '/api/v1/library?pageSize=1&stateFilter=private',
+    extract: (data) => data?.items?.[0]?.gameId || null,
   },
   'ab-testing': {
-    endpoint: '/api/v1/admin/agents/ab-testing?pageSize=1',
+    endpoint: '/api/v1/admin/ab-tests?pageSize=1',
     extract: (data) => data?.items?.[0]?.id || data?.[0]?.id || null,
   },
   'ui-library': {
-    endpoint: '/api/v1/admin/ui-library?pageSize=1',
-    extract: (data) => data?.items?.[0]?.id || data?.[0]?.id || null,
+    // No endpoint exists — skip
+    endpoint: '/api/v1/admin/users?pageSize=1',
+    extract: () => null,
   },
   'compositions': {
-    endpoint: '/api/v1/admin/ui-library/compositions?pageSize=1',
-    extract: (data) => data?.items?.[0]?.id || data?.[0]?.id || null,
+    // No endpoint exists — skip
+    endpoint: '/api/v1/admin/users?pageSize=1',
+    extract: () => null,
   },
   'toolkit': {
-    endpoint: '/api/v1/sessions?pageSize=1',
-    extract: (data) => data?.items?.[0]?.id || data?.[0]?.id || null,
+    endpoint: '/api/v1/admin/sessions?pageSize=1',
+    extract: (data) => data?.items?.[0]?.id || data?.[0]?.id || data?.[0]?.sessionId || null,
   },
   'live': {
-    endpoint: '/api/v1/sessions?pageSize=1',
-    extract: (data) => data?.items?.[0]?.id || data?.[0]?.id || null,
+    endpoint: '/api/v1/admin/sessions?pageSize=1',
+    extract: (data) => data?.items?.[0]?.id || data?.[0]?.id || data?.[0]?.sessionId || null,
   },
   'agent-proposals': {
-    endpoint: '/api/v1/editor/agent-proposals?pageSize=1',
+    endpoint: '/api/v1/migrations/pending?pageSize=1',
     extract: (data) => data?.items?.[0]?.id || data?.[0]?.id || null,
   },
 };

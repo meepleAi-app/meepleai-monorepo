@@ -56,12 +56,12 @@ public sealed class ContextEngineeringMigrationRollbackTests : IAsyncLifetime
     /// The migration that creates Context Engineering tables.
     /// All 3 tables are part of the initial schema creation.
     /// </summary>
-    private const string InitialCreateMigration = "20260208111903_InitialCreate";
+    private const string InitialCreateMigration = "20260316055120_Beta0";
 
     /// <summary>
-    /// A migration after InitialCreate, used for partial rollback testing.
+    /// A migration after Beta0, used for partial rollback testing.
     /// </summary>
-    private const string PostInitialMigration = "20260208162522_AddPlayRecords";
+    private const string PostInitialMigration = "20260316105334_AddServiceHealthStates";
 
     public ContextEngineeringMigrationRollbackTests(SharedTestcontainersFixture fixture)
     {

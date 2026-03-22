@@ -30,7 +30,7 @@ export const ONBOARDING_STEPS: OnboardingStep[] = [
     id: 'hasVisitedDiscover',
     title: 'Esplora il catalogo',
     description: 'Scopri giochi dalla community',
-    href: '/discover',
+    href: '/games',
     icon: Compass,
     source: 'localStorage',
   },

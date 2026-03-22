@@ -91,9 +91,7 @@ function createTestQueryClient() {
 
 function renderWithProviders(ui: React.ReactElement) {
   const client = createTestQueryClient();
-  return render(
-    <QueryClientProvider client={client}>{ui}</QueryClientProvider>
-  );
+  return render(<QueryClientProvider client={client}>{ui}</QueryClientProvider>);
 }
 
 // ============================================================================
@@ -141,9 +139,7 @@ describe('GameCollectionGrid', () => {
     });
 
     it('does not render game cards when loading', () => {
-      renderWithProviders(
-        <GameCollectionGrid games={mockGames} isLoading={true} />
-      );
+      renderWithProviders(<GameCollectionGrid games={mockGames} isLoading={true} />);
       // While loading, game titles should not be shown
       expect(screen.queryByText('Wingspan')).not.toBeInTheDocument();
     });
@@ -166,9 +162,7 @@ describe('GameCollectionGrid', () => {
 
   describe('Grid Layout', () => {
     it('renders games in a grid container', () => {
-      const { container } = renderWithProviders(
-        <GameCollectionGrid games={mockGames} />
-      );
+      const { container } = renderWithProviders(<GameCollectionGrid games={mockGames} />);
       const grid = container.querySelector('.grid');
       expect(grid).toBeInTheDocument();
     });

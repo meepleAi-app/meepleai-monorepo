@@ -56,9 +56,7 @@ describe('RecentChatsDashboardSection', () => {
 
     render(<RecentChatsDashboardSection />);
     expect(screen.getByText('Nessuna chat recente')).toBeInTheDocument();
-    expect(
-      screen.getByRole('link', { name: /Inizia una conversazione/ })
-    ).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /Inizia una conversazione/ })).toBeInTheDocument();
   });
 
   it('renders up to 2 chats', () => {

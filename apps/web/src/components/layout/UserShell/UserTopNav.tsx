@@ -4,8 +4,8 @@ import { useEffect, useRef } from 'react';
 
 import Link from 'next/link';
 
-import { SessionNavBar } from '@/components/dashboard-v2/session-nav/SessionNavBar';
-import { useDashboardMode } from '@/components/dashboard-v2/useDashboardMode';
+import { SessionNavBar } from '@/components/dashboard/session-nav/SessionNavBar';
+import { useDashboardMode } from '@/components/dashboard/useDashboardMode';
 import { NotificationBell } from '@/components/notifications';
 import { useNavigation } from '@/hooks/useNavigation';
 import { useSessionStore } from '@/lib/stores/sessionStore';

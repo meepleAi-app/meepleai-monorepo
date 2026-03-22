@@ -217,7 +217,7 @@ A: Override in consuming component:
 
 ## Support
 
-**Issues**: Create GitHub issue with `area/ui` + `meeple-card-v2` labels
+**Issues**: Create GitHub issue with `area/ui` + `meeple-card` labels
 **PR**: #4619
 **Epic**: #4604
-**Design Reference**: `apps/web/src/components/ui/meeple-card-v2-mockup.html`
+**Design Reference**: `apps/web/src/components/ui/meeple-card-mockup.html`

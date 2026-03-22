@@ -12,7 +12,7 @@ import {
   RecentChatsDashboardSection,
   RecentGamesSection,
   SessionModeDashboard,
-} from '@/components/dashboard-v2';
+} from '@/components/dashboard';
 import { useAddGameWizard } from '@/components/library/add-game-sheet/AddGameWizardProvider';
 import { useOnboardingStatus } from '@/components/onboarding/use-onboarding-status';
 import { WelcomeChecklist } from '@/components/onboarding/WelcomeChecklist';

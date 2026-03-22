@@ -37,7 +37,7 @@ internal sealed class TestRagPipelineCommandValidator : AbstractValidator<TestRa
 
         try
         {
-            System.Text.Json.JsonDocument.Parse(json);
+            using var doc = System.Text.Json.JsonDocument.Parse(json);
             return true;
         }
         catch

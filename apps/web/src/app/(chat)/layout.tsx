@@ -7,7 +7,7 @@
 
 import { type ReactNode } from 'react';
 
-import { ChatContextBar } from '@/components/chat/ChatContextBar';
+import { ChatContextBar } from '@/components/chat-unified/ChatContextBar';
 import { ContextBarRegistrar } from '@/components/layout/ContextBar';
 import { UserShell } from '@/components/layout/UserShell';
 

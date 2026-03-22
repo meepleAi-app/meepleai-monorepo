@@ -7,7 +7,7 @@ import type { ComponentType } from 'react';
 // ─── Data Display ─────────────────────────────────────────────────────────────
 
 import { ActivityFeed } from '@/components/admin/ActivityFeed';
-import { ActivityTimeline } from '@/components/admin/ActivityTimeline';
+import { ActivityFeed as ActivityTimeline } from '@/components/admin/ActivityFeed';
 import { AgentBuilderHeader } from '@/components/admin/agent-builder/AgentBuilderHeader';
 import { AgentBuilderSteps } from '@/components/admin/agent-builder/AgentBuilderSteps';
 import { AgentPreviewPanel } from '@/components/admin/agent-builder/AgentPreviewPanel';
@@ -163,7 +163,7 @@ import { ChatGameContext } from '@/components/ui/data-display/meeple-card-featur
 import { ChatStatsDisplay } from '@/components/ui/data-display/meeple-card-features/ChatStatsDisplay';
 import { ChatStatusBadge } from '@/components/ui/data-display/meeple-card-features/ChatStatusBadge';
 import { ChatUnreadBadge } from '@/components/ui/data-display/meeple-card-features/ChatUnreadBadge';
-import { DocumentStatusBadge } from '@/components/ui/data-display/meeple-card-features/DocumentStatusBadge';
+import { KbStatusBadge } from '@/components/ui/data-display/meeple-card-features/DocumentStatusBadge';
 import { DragHandle } from '@/components/ui/data-display/meeple-card-features/DragHandle';
 
 // ─── MeepleCard Features ──────────────────────────────────────────────────────
@@ -357,7 +357,7 @@ export const COMPONENT_MAP: Record<string, AnyComponent> = {
   'bulk-select-checkbox': BulkSelectCheckbox,
   'card-agent-action': CardAgentAction,
   'card-navigation-footer': CardNavigationFooter,
-  'document-status-badge': DocumentStatusBadge,
+  'document-status-badge': KbStatusBadge,
   'drag-handle': DragHandle,
   'flip-card': FlipCard,
   'game-back-content': GameBackContent,

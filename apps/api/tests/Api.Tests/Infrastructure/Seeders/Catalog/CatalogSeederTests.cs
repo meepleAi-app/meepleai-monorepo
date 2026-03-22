@@ -58,6 +58,39 @@ public sealed class CatalogSeederTests
     }
 
     [Fact]
+    public void LoadManifest_DevProfile_EnhancedGamesHaveBggEnhancedFlag()
+    {
+        var manifest = CatalogSeeder.LoadManifest(SeedProfile.Dev);
+
+        manifest.Catalog.Games.Should().Contain(g => g.BggEnhanced,
+            "at least some games should have been enhanced by bgg-fetcher");
+    }
+
+    [Fact]
+    public void LoadManifest_DevProfile_EnhancedGamesHaveCategories()
+    {
+        var manifest = CatalogSeeder.LoadManifest(SeedProfile.Dev);
+
+        var enhancedGames = manifest.Catalog.Games.Where(g => g.BggEnhanced).ToList();
+        enhancedGames.Should().NotBeEmpty();
+        enhancedGames.Should().Contain(g => g.Categories != null && g.Categories.Count > 0,
+            "enhanced games should have categories from BGG");
+    }
+
+    [Fact]
+    public void LoadManifest_DevProfile_EnhancedGamesHaveDescriptions()
+    {
+        var manifest = CatalogSeeder.LoadManifest(SeedProfile.Dev);
+
+        var enhancedGames = manifest.Catalog.Games.Where(g => g.BggEnhanced).ToList();
+        enhancedGames.Should().AllSatisfy(g =>
+        {
+            g.Description.Should().NotBeNullOrWhiteSpace(
+                $"enhanced game '{g.Title}' should have a description");
+        });
+    }
+
+    [Fact]
     public void LoadManifest_NoneProfile_ThrowsFileNotFound()
     {
         var act = () => CatalogSeeder.LoadManifest(SeedProfile.None);

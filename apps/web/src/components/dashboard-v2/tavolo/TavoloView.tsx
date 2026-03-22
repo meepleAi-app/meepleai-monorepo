@@ -10,7 +10,7 @@ import type { EventLogItem } from './EventLog';
 import type { ScoreboardPlayer } from './ScoreboardCompact';
 
 interface TavoloViewProps {
-  sessionId: string;
+  sessionId: string | null;
 }
 
 // Placeholder data — will be replaced by SSE session stream integration

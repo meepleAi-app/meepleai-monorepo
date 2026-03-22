@@ -12,7 +12,7 @@ interface ActiveSession {
 }
 
 interface ExplorationViewProps {
-  userName: string;
+  userName?: string;
   activeSession?: ActiveSession | null;
   /** Stats shown in HeroCompact inline summary */
   gamesThisWeek?: number;
@@ -24,7 +24,7 @@ interface ExplorationViewProps {
 }
 
 export function ExplorationView({
-  userName,
+  userName = '',
   activeSession,
   gamesThisWeek = 0,
   hoursPlayed = 0,

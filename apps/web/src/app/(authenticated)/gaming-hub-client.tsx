@@ -55,7 +55,7 @@ export function GamingHubClient() {
   }, [fetchStats, fetchRecentSessions, fetchGames]);
 
   useEffect(() => {
-    drawCard({ id: 'section-dashboard', entity: 'custom', title: 'Dashboard', href: '/dashboard' });
+    drawCard({ id: 'section-dashboard', entity: 'custom', title: 'Dashboard', href: '/library' });
   }, [drawCard]);
 
   // Upcoming game night

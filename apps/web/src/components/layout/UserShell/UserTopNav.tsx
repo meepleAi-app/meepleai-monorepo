@@ -68,7 +68,7 @@ export function UserTopNav({ isAdmin, onMenuToggle, isMenuOpen }: UserTopNavProp
         </button>
       )}
 
-      <Link href="/dashboard" className="flex items-center gap-2 shrink-0">
+      <Link href="/library" className="flex items-center gap-2 shrink-0">
         <span className="text-lg font-bold font-quicksand">MeepleAI</span>
       </Link>
 

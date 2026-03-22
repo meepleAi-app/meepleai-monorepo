@@ -66,6 +66,9 @@ internal static class IntegrationServiceCollectionBuilder
         services.AddScoped(_ =>
             Mock.Of<Api.Services.IEmailService>());
 
+        // TimeProvider — required by handlers like SubmitValidationFeedbackCommandHandler
+        services.AddSingleton(TimeProvider.System);
+
         return services;
     }
 }

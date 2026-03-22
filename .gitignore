@@ -224,3 +224,8 @@ infra/seed-dumps/
 .worktrees/
 infra/.env
 apps/api/src/Api/Properties/launchSettings.json
+
+# Page catalog (generated screenshots and static site)
+docs/pages/screenshots/
+docs/pages/dist/
+docs/pages/manifest.json

@@ -58,7 +58,7 @@ public class ConfigImportExportIntegrationTests : IAsyncLifetime
         _isolatedDbConnectionString = await _fixture.CreateIsolatedDatabaseAsync(_databaseName);
 
         // Setup dependency injection
-        var services = new ServiceCollection();
+        var services = IntegrationServiceCollectionBuilder.CreateBase(_isolatedDbConnectionString);
 
         // Configuration
         var configBuilder = new ConfigurationBuilder();
@@ -69,47 +69,16 @@ public class ConfigImportExportIntegrationTests : IAsyncLifetime
         var configuration = configBuilder.Build();
         services.AddSingleton<IConfiguration>(configuration);
 
-        // MediatR (required by DbContext)
-        services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(Program).Assembly));
-
-        // Domain event infrastructure (required by DbContext)
-        services.AddScoped<Api.SharedKernel.Application.Services.IDomainEventCollector, Api.SharedKernel.Application.Services.DomainEventCollector>();
         services.AddSingleton<TimeProvider>(TimeProvider.System);
 
         // HybridCache (required by event handlers) - Issue #2620
         services.AddHybridCache();
-
-        // Mock IHybridCacheService for testing (required by event handlers) - Issue #2620
-        services.AddScoped<Api.Services.IHybridCacheService>(_ =>
-            Moq.Mock.Of<Api.Services.IHybridCacheService>());
-
-        // Mock IDashboardStreamService (required by DashboardStreamEventHandler resolved via MediatR assembly scan)
-        services.AddSingleton<Api.BoundedContexts.Administration.Domain.Services.IDashboardStreamService>(_ =>
-            Moq.Mock.Of<Api.BoundedContexts.Administration.Domain.Services.IDashboardStreamService>());
-
-        // DbContext with enforced connection settings (Issue #2031 best practices)
-        var enforcedBuilder = new NpgsqlConnectionStringBuilder(_isolatedDbConnectionString)
-        {
-            SslMode = SslMode.Disable,
-            KeepAlive = 30,
-            Pooling = false,
-            Timeout = 15,
-            CommandTimeout = 30
-        };
-
-        services.AddDbContext<MeepleAiDbContext>(options =>
-            options.UseNpgsql(enforcedBuilder.ConnectionString, o => o.UseVector()) // Issue #3547
-                .ConfigureWarnings(warnings =>
-                    warnings.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning)));
 
         // Register repositories and handlers
         services.AddScoped<IConfigurationRepository, ConfigurationRepository>();
         services.AddScoped<IUnitOfWork, UnitOfWork>();
         services.AddScoped<ImportConfigsCommandHandler>();
         services.AddScoped<ExportConfigsQueryHandler>();
-
-        // Logging infrastructure (required by MediatR)
-        services.AddLogging(builder => builder.AddConsole().SetMinimumLevel(LogLevel.Information));
 
         _serviceProvider = services.BuildServiceProvider();
 

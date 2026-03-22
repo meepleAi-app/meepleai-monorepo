@@ -1,9 +1,14 @@
 'use client';
 
+import { useEffect, useRef } from 'react';
+
 import Link from 'next/link';
 
+import { SessionNavBar } from '@/components/dashboard-v2/session-nav/SessionNavBar';
+import { useDashboardMode } from '@/components/dashboard-v2/useDashboardMode';
 import { NotificationBell } from '@/components/notifications';
 import { useNavigation } from '@/hooks/useNavigation';
+import { useSessionStore } from '@/lib/stores/sessionStore';
 import { cn } from '@/lib/utils';
 
 import { UserMenuDropdown } from '../UserMenuDropdown';
@@ -16,6 +21,16 @@ interface UserTopNavProps {
 
 export function UserTopNav({ isAdmin, onMenuToggle, isMenuOpen }: UserTopNavProps) {
   const { sectionTitle, breadcrumbs, showBreadcrumb } = useNavigation();
+  const { isGameMode, activeSheet, openSheet, send } = useDashboardMode();
+  const activeSession = useSessionStore(s => s.activeSession);
+
+  // Stable session start time — reset when entering game mode, never on re-render
+  const sessionStartRef = useRef(new Date());
+  useEffect(() => {
+    if (isGameMode) sessionStartRef.current = new Date();
+  }, [isGameMode]);
+
+  const gameName = activeSession?.gameName ?? 'Game Session';
 
   return (
     <header
@@ -57,33 +72,44 @@ export function UserTopNav({ isAdmin, onMenuToggle, isMenuOpen }: UserTopNavProp
         <span className="text-lg font-bold font-quicksand">MeepleAI</span>
       </Link>
 
-      <div className="flex-1 flex items-center justify-center min-w-0 mx-4">
-        {showBreadcrumb ? (
-          <nav aria-label="Breadcrumb" className="flex items-center gap-1 text-sm truncate">
-            {breadcrumbs.map((crumb, i) => (
-              <span key={crumb.href} className="flex items-center gap-1">
-                {i > 0 && <span className="text-muted-foreground/50">/</span>}
-                {i === breadcrumbs.length - 1 ? (
-                  <span className="font-medium text-foreground truncate">{crumb.label}</span>
-                ) : (
-                  <Link
-                    href={crumb.href}
-                    className="text-muted-foreground hover:text-foreground transition-colors truncate"
-                  >
-                    {crumb.label}
-                  </Link>
-                )}
-              </span>
-            ))}
-          </nav>
-        ) : (
-          <span className="text-sm font-medium text-muted-foreground font-quicksand truncate">
-            {sectionTitle}
-          </span>
-        )}
-      </div>
+      {isGameMode ? (
+        <SessionNavBar
+          gameName={gameName}
+          sessionStartedAt={sessionStartRef.current}
+          isPaused={false}
+          activeSheet={activeSheet}
+          onOpenSheet={openSheet}
+          onExit={() => send({ type: 'SESSION_DISMISSED' })}
+        />
+      ) : (
+        <div className="flex-1 flex items-center justify-center min-w-0 mx-4">
+          {showBreadcrumb ? (
+            <nav aria-label="Breadcrumb" className="flex items-center gap-1 text-sm truncate">
+              {breadcrumbs.map((crumb, i) => (
+                <span key={crumb.href} className="flex items-center gap-1">
+                  {i > 0 && <span className="text-muted-foreground/50">/</span>}
+                  {i === breadcrumbs.length - 1 ? (
+                    <span className="font-medium text-foreground truncate">{crumb.label}</span>
+                  ) : (
+                    <Link
+                      href={crumb.href}
+                      className="text-muted-foreground hover:text-foreground transition-colors truncate"
+                    >
+                      {crumb.label}
+                    </Link>
+                  )}
+                </span>
+              ))}
+            </nav>
+          ) : (
+            <span className="text-sm font-medium text-muted-foreground font-quicksand truncate">
+              {sectionTitle}
+            </span>
+          )}
+        </div>
+      )}
 
-      <div className="flex items-center gap-2 shrink-0">
+      <div className={`flex items-center gap-2 shrink-0 ${isGameMode ? 'hidden sm:flex' : 'flex'}`}>
         <NotificationBell />
         <UserMenuDropdown />
       </div>

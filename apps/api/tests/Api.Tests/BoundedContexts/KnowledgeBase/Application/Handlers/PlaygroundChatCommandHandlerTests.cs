@@ -545,12 +545,15 @@ public sealed class PlaygroundChatCommandHandlerTests
             prompts.Add(AgentPromptTemplate.Create("system", systemPrompt));
         }
 
-        return AgentDefinitionEntity.Create(
+        var agent = AgentDefinitionEntity.Create(
             name: name,
             description: $"Test agent: {name}",
             type: AgentType.Custom("rag", "RAG-based assistant"),
             config: AgentDefinitionConfig.Create("gpt-4", 2048, 0.7f),
             prompts: prompts);
+
+        agent.Activate();
+        return agent;
     }
 
     private static AgentDefinitionEntity CreateInactiveAgentDefinition(Guid id, string name)
@@ -561,6 +564,9 @@ public sealed class PlaygroundChatCommandHandlerTests
             type: AgentType.Custom("rag", "RAG-based assistant"),
             config: AgentDefinitionConfig.Create("gpt-4", 2048, 0.7f));
 
+        // Create() sets IsActive=false by default, so agent is already inactive.
+        // Activate then Deactivate to ensure the domain event fires correctly.
+        agentDef.Activate();
         agentDef.Deactivate();
         return agentDef;
     }

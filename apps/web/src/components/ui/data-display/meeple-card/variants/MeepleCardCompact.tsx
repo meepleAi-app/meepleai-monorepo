@@ -68,7 +68,6 @@ export const MeepleCardCompact = React.memo(function MeepleCardCompact(
     agentId,
     onCreateAgent,
     navigateTo,
-    mechanicIcon: _mechanicIcon,
     stateLabel: _stateLabel,
   } = props;
 

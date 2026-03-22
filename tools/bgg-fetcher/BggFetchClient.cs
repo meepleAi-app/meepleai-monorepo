@@ -8,10 +8,34 @@ public sealed class BggFetchClient : IDisposable
     private readonly HttpClient _http;
     private readonly TimeSpan _rateDelay = TimeSpan.FromMilliseconds(550);
 
-    public BggFetchClient()
+    public BggFetchClient(string? apiToken = null)
     {
         _http = new HttpClient { BaseAddress = new Uri("https://boardgamegeek.com/xmlapi2/"), Timeout = TimeSpan.FromSeconds(30) };
         _http.DefaultRequestHeaders.UserAgent.ParseAdd("MeepleAI-BggFetcher/1.0");
+
+        // BGG requires Bearer token auth as of Jan 2026
+        var token = apiToken ?? LoadTokenFromSecrets();
+        if (!string.IsNullOrEmpty(token))
+            _http.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+    }
+
+    private static string? LoadTokenFromSecrets()
+    {
+        // Walk up to repo root, look for infra/secrets/dev/bgg.secret
+        var dir = new DirectoryInfo(AppContext.BaseDirectory);
+        while (dir != null && !Directory.Exists(Path.Combine(dir.FullName, ".git")))
+            dir = dir.Parent;
+        if (dir == null) return null;
+
+        var secretFile = Path.Combine(dir.FullName, "infra", "secrets", "dev", "bgg.secret");
+        if (!File.Exists(secretFile)) return null;
+
+        foreach (var line in File.ReadAllLines(secretFile))
+        {
+            if (line.StartsWith("BGG_API_TOKEN=", StringComparison.Ordinal))
+                return line["BGG_API_TOKEN=".Length..].Trim();
+        }
+        return null;
     }
 
     public async Task<BggFetchResult?> FetchGameAsync(int bggId, CancellationToken ct)

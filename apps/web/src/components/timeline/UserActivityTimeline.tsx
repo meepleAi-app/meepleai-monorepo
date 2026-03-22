@@ -15,7 +15,7 @@ import { useState, useEffect, useCallback } from 'react';
 
 import { Loader2, RefreshCw, Filter, X } from 'lucide-react';
 
-import { ActivityTimeline, type ActivityEvent } from '@/components/admin/ActivityTimeline';
+import { ActivityFeed, type ActivityEvent } from '@/components/admin/ActivityFeed';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/data-display/card';
 import { Alert, AlertDescription } from '@/components/ui/feedback/alert';
 import {
@@ -277,11 +277,14 @@ export function UserActivityTimeline({
       )}
 
       {/* Activity Feed */}
-      <ActivityTimeline
+      <ActivityFeed
         events={events}
         maxEvents={maxEvents}
         viewAllHref={viewAllHref}
         showViewAll={showViewAll}
+        iconMode="category"
+        animated
+        locale="it"
       />
     </div>
   );

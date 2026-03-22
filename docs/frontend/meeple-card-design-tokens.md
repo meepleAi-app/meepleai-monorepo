@@ -300,7 +300,7 @@ Dark mode automatically adjusts:
 
 ## References
 
-- **Mockup**: `apps/web/src/components/ui/meeple-card-v2-mockup.html`
+- **Mockup**: `apps/web/src/components/ui/meeple-card-mockup.html`
 - **PR**: #4619
 - **Epic**: #4604
 - **Design System**: `apps/web/src/styles/design-tokens.css`

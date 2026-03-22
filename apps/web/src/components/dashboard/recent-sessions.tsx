@@ -61,7 +61,7 @@ export function RecentSessions({
           <EmptyState variant="no-sessions" />
         ) : (
           <div className="space-y-1">
-            {sessions.map((session) => (
+            {sessions.map(session => (
               <SessionRow key={session.id} session={session} />
             ))}
           </div>

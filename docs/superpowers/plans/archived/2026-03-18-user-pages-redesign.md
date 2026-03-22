@@ -43,7 +43,7 @@ apps/web/src/
 │   │   ├── index.ts
 │   │   └── EntityTypeIcon.tsx                    # Maps entity + subtype to icon
 │   │
-│   ├── dashboard-v2/
+│   ├── dashboard/
 │   │   ├── tavolo/                               # New "Il Tavolo" layout
 │   │   │   ├── TavoloLayout.tsx                  # 2-col grid (main + feed)
 │   │   │   ├── TavoloSection.tsx                 # Section with title + card grid
@@ -85,7 +85,7 @@ apps/web/src/
 │   ├── meeple-card/variants/MeepleCardExpanded.tsx  # Also needs new props
 │   └── meeple-card-styles.ts                    # NOTE: at data-display/ level, not inside meeple-card/
 │
-├── components/dashboard-v2/
+├── components/dashboard/
 │   ├── DashboardRenderer.tsx                     # Replace zones with TavoloLayout
 │   └── empty-states.tsx                          # Update empty state messages
 │
@@ -517,15 +517,15 @@ git commit -m "feat(ui): add EntityTypeIcon for classification across all entity
 ## Task 4: ActivityFeed Component
 
 **Files:**
-- Create: `apps/web/src/components/dashboard-v2/tavolo/ActivityFeed.tsx`
-- Test: `apps/web/__tests__/components/dashboard-v2/tavolo/ActivityFeed.test.tsx`
+- Create: `apps/web/src/components/dashboard/tavolo/ActivityFeed.tsx`
+- Test: `apps/web/__tests__/components/dashboard/tavolo/ActivityFeed.test.tsx`
 
 - [ ] **Step 1: Write failing test**
 
 ```tsx
-// apps/web/__tests__/components/dashboard-v2/tavolo/ActivityFeed.test.tsx
+// apps/web/__tests__/components/dashboard/tavolo/ActivityFeed.test.tsx
 import { render, screen } from '@testing-library/react';
-import { ActivityFeed } from '@/components/dashboard-v2/tavolo/ActivityFeed';
+import { ActivityFeed } from '@/components/dashboard/tavolo/ActivityFeed';
 
 // Mock useActivityTimeline
 vi.mock('@/hooks/useActivityTimeline', () => ({
@@ -575,13 +575,13 @@ describe('ActivityFeed', () => {
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `cd apps/web && pnpm vitest run __tests__/components/dashboard-v2/tavolo/ActivityFeed.test.tsx`
+Run: `cd apps/web && pnpm vitest run __tests__/components/dashboard/tavolo/ActivityFeed.test.tsx`
 Expected: FAIL
 
 - [ ] **Step 3: Implement ActivityFeed**
 
 ```tsx
-// apps/web/src/components/dashboard-v2/tavolo/ActivityFeed.tsx
+// apps/web/src/components/dashboard/tavolo/ActivityFeed.tsx
 'use client';
 
 import { useActivityTimeline } from '@/hooks/useActivityTimeline';
@@ -656,13 +656,13 @@ export function ActivityFeed() {
 
 - [ ] **Step 4: Run tests to verify they pass**
 
-Run: `cd apps/web && pnpm vitest run __tests__/components/dashboard-v2/tavolo/ActivityFeed.test.tsx`
+Run: `cd apps/web && pnpm vitest run __tests__/components/dashboard/tavolo/ActivityFeed.test.tsx`
 Expected: PASS (3 tests)
 
 - [ ] **Step 5: Commit**
 
 ```bash
-git add apps/web/src/components/dashboard-v2/tavolo/ActivityFeed.tsx apps/web/__tests__/components/dashboard-v2/tavolo/
+git add apps/web/src/components/dashboard/tavolo/ActivityFeed.tsx apps/web/__tests__/components/dashboard/tavolo/
 git commit -m "feat(dashboard): add ActivityFeed component with real API data"
 ```
 
@@ -671,21 +671,21 @@ git commit -m "feat(dashboard): add ActivityFeed component with real API data"
 ## Task 5: TavoloLayout — Dashboard Main Layout
 
 **Files:**
-- Create: `apps/web/src/components/dashboard-v2/tavolo/TavoloLayout.tsx`
-- Create: `apps/web/src/components/dashboard-v2/tavolo/TavoloSection.tsx`
-- Create: `apps/web/src/components/dashboard-v2/tavolo/ActiveSessionCard.tsx`
-- Create: `apps/web/src/components/dashboard-v2/tavolo/index.ts`
-- Test: `apps/web/__tests__/components/dashboard-v2/tavolo/TavoloLayout.test.tsx`
+- Create: `apps/web/src/components/dashboard/tavolo/TavoloLayout.tsx`
+- Create: `apps/web/src/components/dashboard/tavolo/TavoloSection.tsx`
+- Create: `apps/web/src/components/dashboard/tavolo/ActiveSessionCard.tsx`
+- Create: `apps/web/src/components/dashboard/tavolo/index.ts`
+- Test: `apps/web/__tests__/components/dashboard/tavolo/TavoloLayout.test.tsx`
 
 - [ ] **Step 1: Write failing test for TavoloLayout**
 
 ```tsx
-// apps/web/__tests__/components/dashboard-v2/tavolo/TavoloLayout.test.tsx
+// apps/web/__tests__/components/dashboard/tavolo/TavoloLayout.test.tsx
 import { render, screen } from '@testing-library/react';
-import { TavoloLayout } from '@/components/dashboard-v2/tavolo';
+import { TavoloLayout } from '@/components/dashboard/tavolo';
 
 // Mock child components
-vi.mock('@/components/dashboard-v2/tavolo/ActivityFeed', () => ({
+vi.mock('@/components/dashboard/tavolo/ActivityFeed', () => ({
   ActivityFeed: () => <div data-testid="activity-feed">Feed</div>,
 }));
 
@@ -714,13 +714,13 @@ describe('TavoloLayout', () => {
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `cd apps/web && pnpm vitest run __tests__/components/dashboard-v2/tavolo/TavoloLayout.test.tsx`
+Run: `cd apps/web && pnpm vitest run __tests__/components/dashboard/tavolo/TavoloLayout.test.tsx`
 Expected: FAIL
 
 - [ ] **Step 3: Implement TavoloLayout**
 
 ```tsx
-// apps/web/src/components/dashboard-v2/tavolo/TavoloLayout.tsx
+// apps/web/src/components/dashboard/tavolo/TavoloLayout.tsx
 'use client';
 
 import { type ReactNode } from 'react';
@@ -755,7 +755,7 @@ export function TavoloLayout({ children }: TavoloLayoutProps) {
 - [ ] **Step 4: Implement TavoloSection**
 
 ```tsx
-// apps/web/src/components/dashboard-v2/tavolo/TavoloSection.tsx
+// apps/web/src/components/dashboard/tavolo/TavoloSection.tsx
 'use client';
 
 import { type ReactNode } from 'react';
@@ -785,7 +785,7 @@ export function TavoloSection({ icon, title, children }: TavoloSectionProps) {
 - [ ] **Step 5: Implement ActiveSessionCard**
 
 ```tsx
-// apps/web/src/components/dashboard-v2/tavolo/ActiveSessionCard.tsx
+// apps/web/src/components/dashboard/tavolo/ActiveSessionCard.tsx
 'use client';
 
 import { MeepleCard } from '@/components/ui/data-display/meeple-card';
@@ -821,7 +821,7 @@ export function ActiveSessionCard({ session }: ActiveSessionCardProps) {
 - [ ] **Step 6: Create barrel export**
 
 ```tsx
-// apps/web/src/components/dashboard-v2/tavolo/index.ts
+// apps/web/src/components/dashboard/tavolo/index.ts
 export { TavoloLayout } from './TavoloLayout';
 export { TavoloSection } from './TavoloSection';
 export { ActiveSessionCard } from './ActiveSessionCard';
@@ -830,13 +830,13 @@ export { ActivityFeed } from './ActivityFeed';
 
 - [ ] **Step 7: Run tests to verify they pass**
 
-Run: `cd apps/web && pnpm vitest run __tests__/components/dashboard-v2/tavolo/TavoloLayout.test.tsx`
+Run: `cd apps/web && pnpm vitest run __tests__/components/dashboard/tavolo/TavoloLayout.test.tsx`
 Expected: PASS (2 tests)
 
 - [ ] **Step 8: Commit**
 
 ```bash
-git add apps/web/src/components/dashboard-v2/tavolo/ apps/web/__tests__/components/dashboard-v2/tavolo/
+git add apps/web/src/components/dashboard/tavolo/ apps/web/__tests__/components/dashboard/tavolo/
 git commit -m "feat(dashboard): add TavoloLayout, TavoloSection, and ActiveSessionCard components"
 ```
 
@@ -845,12 +845,12 @@ git commit -m "feat(dashboard): add TavoloLayout, TavoloSection, and ActiveSessi
 ## Task 6: Dashboard — Wire Up DashboardRenderer with Tavolo
 
 **Files:**
-- Modify: `apps/web/src/components/dashboard-v2/DashboardRenderer.tsx`
-- Modify: `apps/web/src/components/dashboard-v2/empty-states.tsx`
+- Modify: `apps/web/src/components/dashboard/DashboardRenderer.tsx`
+- Modify: `apps/web/src/components/dashboard/empty-states.tsx`
 
 - [ ] **Step 1: Read current DashboardRenderer**
 
-Read `apps/web/src/components/dashboard-v2/DashboardRenderer.tsx` completely to understand current zone structure.
+Read `apps/web/src/components/dashboard/DashboardRenderer.tsx` completely to understand current zone structure.
 
 - [ ] **Step 2: Replace zone layout with TavoloLayout**
 
@@ -877,7 +877,7 @@ Expected: Build succeeds. No type errors.
 - [ ] **Step 5: Commit**
 
 ```bash
-git add apps/web/src/components/dashboard-v2/
+git add apps/web/src/components/dashboard/
 git commit -m "feat(dashboard): integrate TavoloLayout into DashboardRenderer"
 ```
 
@@ -1369,7 +1369,7 @@ git commit -m "feat(agent): replace tabbed layout with RPG character sheet"
 
 - [ ] **Step 1: Grep for mock/placeholder data in dashboard-v2**
 
-Run: `cd apps/web && grep -rn "mock\|placeholder\|fake\|dummy\|sample\|hardcoded" src/components/dashboard-v2/ --include="*.tsx" --include="*.ts"`
+Run: `cd apps/web && grep -rn "mock\|placeholder\|fake\|dummy\|sample\|hardcoded" src/components/dashboard/ --include="*.tsx" --include="*.ts"`
 
 Remove any hardcoded mock arrays, fake data generators, or placeholder content found.
 

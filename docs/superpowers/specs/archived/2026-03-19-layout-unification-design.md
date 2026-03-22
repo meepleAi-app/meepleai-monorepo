@@ -214,7 +214,7 @@ Note: `isAdmin` prop removed from UserShell — UserShell is always user context
 
 ### Hooks/Stores to KEEP (used by 12+ page components)
 - `stores/use-card-hand.ts` — **KEPT**. Used by 12+ page/feature components (sessions, library, gaming-hub, agents, game-nights, profile, discover, knowledge-base, chat, dashboard-v2). These call `drawCard`, `protectCard`, etc. for navigation state. Removing would break all of them. The store stays as-is; consumer migration to the new navigation system is out of scope for this PR.
-- `config/entity-actions.ts` — **KEPT**. Used by `dashboard-v2/session-quick-actions.tsx` which imports `SESSION_QUICK_ACTIONS`. Removing would break the dashboard.
+- `config/entity-actions.ts` — **KEPT**. Used by `dashboard/session-quick-actions.tsx` which imports `SESSION_QUICK_ACTIONS`. Removing would break the dashboard.
 
 ### Renames
 - `hooks/useAlphaNav.ts` → `hooks/useNavigation.ts`

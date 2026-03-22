@@ -82,7 +82,7 @@ public sealed class Month4QualityMetricsE2ETests : IAsyncLifetime
         _output($"✓ Isolated database created: {_databaseName}");
 
         // Setup dependency injection
-        var services = new ServiceCollection();
+        var services = IntegrationServiceCollectionBuilder.CreateBase(_isolatedDbConnectionString);
 
         // Configuration
         var configBuilder = new ConfigurationBuilder();
@@ -94,30 +94,7 @@ public sealed class Month4QualityMetricsE2ETests : IAsyncLifetime
         var configuration = configBuilder.Build();
         services.AddSingleton<IConfiguration>(configuration);
 
-        // MediatR
-        services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(Program).Assembly));
-
-        // Domain event infrastructure
-        services.AddScoped<Api.SharedKernel.Application.Services.IDomainEventCollector, Api.SharedKernel.Application.Services.DomainEventCollector>();
         services.AddSingleton<TimeProvider>(TimeProvider.System);
-
-        // DbContext with enforced connection settings
-        var enforcedBuilder = new NpgsqlConnectionStringBuilder(_isolatedDbConnectionString)
-        {
-            SslMode = SslMode.Disable,
-            KeepAlive = 30,
-            Pooling = false,
-            Timeout = 15,
-            CommandTimeout = 30
-        };
-
-        services.AddDbContext<MeepleAiDbContext>(options =>
-            options.UseNpgsql(enforcedBuilder.ConnectionString, o => o.UseVector()) // Issue #3547
-                .ConfigureWarnings(warnings =>
-                    warnings.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning)));
-
-        // Logging
-        services.AddLogging(builder => builder.AddConsole().SetMinimumLevel(LogLevel.Information));
 
         // QualityMetrics (Month 4 - BGAI-043: Prometheus metrics)
         services.AddSingleton<IMeterFactory, TestMeterFactory>();

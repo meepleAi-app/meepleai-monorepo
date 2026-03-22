@@ -12,23 +12,14 @@ using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Api.Infrastructure.Entities.SharedGameCatalog;
 using Api.Models;
-using Api.SharedKernel.Application.Services;
 using Api.SharedKernel.Domain.Interfaces;
 using Api.Tests.Constants;
 using Api.Tests.Infrastructure;
 using Api.Tests.TestHelpers;
-using MediatR;
-using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.DependencyInjection.Extensions;
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
-using Moq;
-using StackExchange.Redis;
 using Xunit;
 using FluentAssertions;
 
@@ -63,45 +54,13 @@ public sealed class SharedGameCatalogEndpointsIntegrationTests : IAsyncLifetime
         // Create isolated test database
         var connectionString = await _fixture.CreateIsolatedDatabaseAsync(_testDbName);
 
-        // Create WebApplicationFactory
-        _factory = new WebApplicationFactory<Program>()
+        // Create WebApplicationFactory using shared factory + test-specific policies
+        _factory = IntegrationWebApplicationFactory.Create(connectionString)
             .WithWebHostBuilder(builder =>
             {
-                builder.UseEnvironment("Testing");
-
-                builder.ConfigureAppConfiguration((context, configBuilder) =>
-                {
-                    configBuilder.AddInMemoryCollection(new Dictionary<string, string?>
-                    {
-                        ["OPENROUTER_API_KEY"] = "test-key",
-                        ["ConnectionStrings:Postgres"] = connectionString
-                    });
-                });
-
                 builder.ConfigureTestServices(services =>
                 {
-                    // Replace DbContext with test database
-                    services.RemoveAll(typeof(DbContextOptions<MeepleAiDbContext>));
-                    services.AddDbContext<MeepleAiDbContext>(options =>
-                        options.UseNpgsql(connectionString, o => o.UseVector())); // Issue #3547
-
-                    // Mock Redis for HybridCache
-                    services.RemoveAll(typeof(IConnectionMultiplexer));
-                    var mockRedis = new Mock<IConnectionMultiplexer>();
-                    services.AddSingleton(mockRedis.Object);
-
-                    // Mock vector/embedding services
-                    services.RemoveAll(typeof(Api.Services.IEmbeddingService));
-                    services.AddScoped<Api.Services.IEmbeddingService>(_ => Mock.Of<Api.Services.IEmbeddingService>());
-
-                    // Ensure domain event collector is registered
-                    services.AddScoped<IDomainEventCollector, Api.SharedKernel.Application.Services.DomainEventCollector>();
-
-                    // Issue #2688: Mock IHybridCacheService (required for session validation)
-                    services.RemoveAll(typeof(Api.Services.IHybridCacheService));
-                    services.AddScoped<Api.Services.IHybridCacheService>(_ => Mock.Of<Api.Services.IHybridCacheService>());
-
-                    // Register authorization policies
+                    // Register authorization policies (test-specific)
                     services.AddSharedGameCatalogPolicies();
                 });
             });

@@ -67,7 +67,6 @@ export const MeepleCardExpanded = React.memo(function MeepleCardExpanded(
     infoHref,
     infoTooltip,
     id,
-    mechanicIcon,
     stateLabel,
     coverLabels,
     subtypeIcons,
@@ -168,7 +167,6 @@ export const MeepleCardExpanded = React.memo(function MeepleCardExpanded(
           coverLabels={coverLabels}
           showEntityType
           subtypeIcons={subtypeIcons}
-          mechanicIcon={mechanicIcon}
           stateLabel={stateLabel}
         />
 

@@ -695,7 +695,7 @@ export const COMPONENT_REGISTRY: ComponentEntry[] = [
   },
   {
     id: 'document-status-badge',
-    name: 'DocumentStatusBadge',
+    name: 'KbStatusBadge',
     importPath: '@/components/ui/data-display/meeple-card-features/DocumentStatusBadge',
     category: 'Data Display',
     areas: ['shared', 'admin'],
@@ -3641,8 +3641,8 @@ export const COMPONENT_REGISTRY: ComponentEntry[] = [
   },
   {
     id: 'activity-timeline',
-    name: 'ActivityTimeline',
-    importPath: '@/components/admin/ActivityTimeline',
+    name: 'ActivityFeed',
+    importPath: '@/components/admin/ActivityFeed',
     category: 'Data Display',
     areas: ['admin'],
     tier: 'static',

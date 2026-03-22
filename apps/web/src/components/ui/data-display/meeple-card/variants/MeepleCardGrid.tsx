@@ -25,7 +25,7 @@ import { CardNavigationFooter } from '../../meeple-card-features/CardNavigationF
 import { ChatStatsDisplay } from '../../meeple-card-features/ChatStatsDisplay';
 import { ChatStatusBadge } from '../../meeple-card-features/ChatStatusBadge';
 import { ChatUnreadBadge } from '../../meeple-card-features/ChatUnreadBadge';
-import { DocumentStatusBadge } from '../../meeple-card-features/DocumentStatusBadge';
+import { KbStatusBadge } from '../../meeple-card-features/DocumentStatusBadge';
 import { ManaLinkFooter } from '../../meeple-card-features/ManaLinkFooter';
 import { PrimaryActions } from '../../meeple-card-features/PrimaryActions';
 import { SessionActionButtons } from '../../meeple-card-features/SessionActionButtons';
@@ -128,7 +128,6 @@ export const MeepleCardGrid = React.memo(function MeepleCardGrid(props: MeepleCa
     onManaPipClick,
     primaryActions,
     glowState,
-    mechanicIcon,
     stateLabel,
     coverLabels,
     subtypeIcons,
@@ -324,7 +323,6 @@ export const MeepleCardGrid = React.memo(function MeepleCardGrid(props: MeepleCa
         coverLabels={coverLabels}
         showEntityType
         subtypeIcons={subtypeIcons}
-        mechanicIcon={mechanicIcon}
         stateLabel={stateLabel}
         actionStrip={stripElement}
       />
@@ -456,14 +454,14 @@ export const MeepleCardGrid = React.memo(function MeepleCardGrid(props: MeepleCa
         {/* Document-specific info */}
         {entity === 'kb' && documentStatus && (
           <div className="flex items-center gap-1.5 mb-2">
-            <DocumentStatusBadge status={documentStatus} size="sm" />
+            <KbStatusBadge status={documentStatus} size="sm" />
           </div>
         )}
 
         {/* KB Cards worst-status badge */}
         {entity === 'game' && worstKbStatus && (
           <div className="flex items-center gap-1.5 mb-2" data-testid="meeple-card-kb-badge">
-            <DocumentStatusBadge status={worstKbStatus} size="sm" />
+            <KbStatusBadge status={worstKbStatus} size="sm" />
             <span className="text-[10px] text-muted-foreground font-medium">
               {kbCards!.length} KB
             </span>

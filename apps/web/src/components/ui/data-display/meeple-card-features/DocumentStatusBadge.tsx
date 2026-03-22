@@ -27,9 +27,6 @@ import { cn } from '@/lib/utils';
 
 export type KbIndexingStatus = 'processing' | 'indexed' | 'failed' | 'none';
 
-/** @deprecated Use KbIndexingStatus instead */
-export type DocumentIndexingStatus = KbIndexingStatus;
-
 interface KbStatusBadgeProps {
   status: KbIndexingStatus;
   size?: 'sm' | 'md';
@@ -123,6 +120,3 @@ export const KbStatusBadge = memo(function KbStatusBadge({
     </span>
   );
 });
-
-/** @deprecated Use KbStatusBadge instead */
-export const DocumentStatusBadge = KbStatusBadge;

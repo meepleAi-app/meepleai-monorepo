@@ -134,10 +134,15 @@ export default function LibraryGameDetailPage() {
   }
 
   // --- Mechanic icon for cover overlay ---
-  const firstMechanicSlug = gameDetail.mechanics?.[0]?.slug;
-  const mechanicIcon = firstMechanicSlug ? (
-    <MechanicIcon mechanic={firstMechanicSlug} size={18} />
-  ) : undefined;
+  const firstMechanic = gameDetail.mechanics?.[0];
+  const subtypeIcons = firstMechanic
+    ? [
+        {
+          icon: <MechanicIcon mechanic={firstMechanic.slug} size={18} />,
+          tooltip: firstMechanic.name || firstMechanic.slug,
+        },
+      ]
+    : undefined;
 
   // --- State label for cover overlay ---
   const stateLabel = mapStateToLabel(gameDetail.currentState);
@@ -167,7 +172,7 @@ export default function LibraryGameDetailPage() {
           rating={gameDetail.averageRating ?? undefined}
           ratingMax={10}
           metadata={metadata}
-          mechanicIcon={mechanicIcon}
+          subtypeIcons={subtypeIcons}
           stateLabel={stateLabel}
           flipData={flipData}
           data-testid="game-hero-card"

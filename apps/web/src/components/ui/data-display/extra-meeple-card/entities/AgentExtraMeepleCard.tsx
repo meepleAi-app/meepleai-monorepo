@@ -32,7 +32,7 @@ import { ChatThreadView } from '@/components/chat-unified/ChatThreadView';
 import { AgentModelInfo } from '@/components/ui/data-display/meeple-card-features/AgentModelInfo';
 import { AgentStatsDisplay } from '@/components/ui/data-display/meeple-card-features/AgentStatsDisplay';
 import { AgentStatusBadge } from '@/components/ui/data-display/meeple-card-features/AgentStatusBadge';
-import { DocumentStatusBadge } from '@/components/ui/data-display/meeple-card-features/DocumentStatusBadge';
+import { KbStatusBadge } from '@/components/ui/data-display/meeple-card-features/DocumentStatusBadge';
 import { Tabs, TabsList, TabsContent } from '@/components/ui/navigation/tabs';
 import { Button } from '@/components/ui/primitives/button';
 import { useAgentKbDocs, useAgentThreads } from '@/hooks/queries/useAgentData';
@@ -592,7 +592,7 @@ function KbDocItem({ doc }: { doc: KbDocumentPreview }) {
         <p className="font-nunito text-xs font-medium text-slate-700 truncate">{doc.fileName}</p>
         <p className="font-nunito text-[10px] text-slate-400">{date}</p>
       </div>
-      <DocumentStatusBadge status={doc.status} size="sm" />
+      <KbStatusBadge status={doc.status} size="sm" />
     </div>
   );
 }

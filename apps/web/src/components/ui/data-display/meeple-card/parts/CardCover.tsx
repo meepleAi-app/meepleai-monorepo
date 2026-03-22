@@ -6,7 +6,7 @@
  * Wraps CoverImage with CoverOverlay for the 4-corner slot layout:
  *   - top-left: label stack (coverLabels)
  *   - top-right: entity type mana pip (showEntityType)
- *   - bottom-left: subtype icons (subtypeIcons) or legacy mechanicIcon
+ *   - bottom-left: subtype icons (subtypeIcons)
  *   - bottom-right: state badge (stateLabel)
  *
  * @module components/ui/data-display/meeple-card/parts/CardCover
@@ -40,8 +40,6 @@ export interface CardCoverProps {
   showEntityType?: boolean;
   /** Bottom-left: subtype classification icons */
   subtypeIcons?: SubtypeIcon[];
-  /** @deprecated Use subtypeIcons instead. Maps to subtypeIcons[0]. */
-  mechanicIcon?: React.ReactNode;
   /** Bottom-right: state badge */
   stateLabel?: {
     text: string;
@@ -66,7 +64,6 @@ export function CardCover({
   coverLabels,
   showEntityType,
   subtypeIcons,
-  mechanicIcon,
   stateLabel,
   actionStrip,
 }: CardCoverProps) {
@@ -81,7 +78,6 @@ export function CardCover({
         coverLabels={coverLabels}
         showEntityType={showEntityType}
         subtypeIcons={subtypeIcons}
-        mechanicIcon={mechanicIcon}
         stateLabel={stateLabel}
       />
       {actionStrip}

@@ -72,6 +72,26 @@ internal sealed class SeedManifestGame
     public bool SeedAgent { get; set; }
     public string? FallbackImageUrl { get; set; }
     public string? FallbackThumbnailUrl { get; set; }
+
+    // Enhancement gate — set by bgg-fetcher tool
+    public bool BggEnhanced { get; set; }
+
+    // Enhanced BGG fields (all optional, populated by bgg-fetcher)
+    public string? Description { get; set; }
+    public int? YearPublished { get; set; }
+    public int? MinPlayers { get; set; }
+    public int? MaxPlayers { get; set; }
+    public int? PlayingTime { get; set; }
+    public int? MinAge { get; set; }
+    public double? AverageRating { get; set; }
+    public double? AverageWeight { get; set; }
+    public string? ImageUrl { get; set; }
+    public string? ThumbnailUrl { get; set; }
+    public string? RulesUrl { get; set; }
+    public List<string>? Categories { get; set; }
+    public List<string>? Mechanics { get; set; }
+    public List<string>? Designers { get; set; }
+    public List<string>? Publishers { get; set; }
 }
 
 internal sealed class SeedManifestAgent

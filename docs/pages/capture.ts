@@ -70,8 +70,14 @@ async function login(browser: Browser, credentials: { email: string; password: s
   await page.fill('[data-testid="login-password"]', credentials.password);
   await page.click('[data-testid="login-submit"]');
 
-  // Wait for redirect (login success)
-  await page.waitForURL(url => !url.toString().includes('/login'), { timeout: 15000 });
+  // Wait for redirect (login success) or stay on same page if auth is client-side
+  try {
+    await page.waitForURL(url => !url.toString().includes('/login'), { timeout: 15000 });
+  } catch {
+    // If no redirect, wait for auth state to settle (client-side login)
+    await page.waitForTimeout(3000);
+  }
+  console.log(`   Current URL after login: ${page.url()}`);
 
   console.log('\u2705 Login successful');
 

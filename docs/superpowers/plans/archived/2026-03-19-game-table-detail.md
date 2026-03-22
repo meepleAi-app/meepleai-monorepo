@@ -361,7 +361,7 @@ git commit -m "feat(store): add useGameTableDrawer Zustand store with discrimina
 - Create: `apps/web/src/components/library/game-table/GameTableLayout.tsx`
 - Test: `apps/web/src/components/library/game-table/__tests__/GameTableLayout.test.tsx`
 
-**Reference:** Read `apps/web/src/components/dashboard-v2/tavolo/TavoloLayout.tsx` for dark theme patterns. Read `apps/web/src/components/dashboard-v2/tavolo/TavoloSection.tsx` for zone header pattern.
+**Reference:** Read `apps/web/src/components/dashboard/tavolo/TavoloLayout.tsx` for dark theme patterns. Read `apps/web/src/components/dashboard/tavolo/TavoloSection.tsx` for zone header pattern.
 
 - [ ] **Step 1: Write failing tests**
 
@@ -474,7 +474,7 @@ import { type ReactNode, useState, useEffect, useCallback } from 'react';
 
 import { AnimatePresence, motion } from 'framer-motion';
 
-import { TavoloSection } from '@/components/dashboard-v2/tavolo';
+import { TavoloSection } from '@/components/dashboard/tavolo';
 import { cn } from '@/lib/utils';
 
 // ============================================================================

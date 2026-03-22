@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import { TavoloZone } from '@/components/dashboard-v2/TavoloZone';
+import { TavoloZone } from '@/components/dashboard/TavoloZone';
 
 describe('TavoloZone', () => {
   it('renders children with env-tavolo class', () => {

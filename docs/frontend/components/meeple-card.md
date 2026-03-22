@@ -38,7 +38,7 @@ MeepleCard is MeepleAI's universal card component, designed to display games, pl
 
 ## v2 Visual Design (Epic #4604)
 
-**Approved Mockup**: `apps/web/src/components/ui/meeple-card-v2-mockup.html`
+**Approved Mockup**: `apps/web/src/components/ui/meeple-card-mockup.html`
 
 **Key Design Tokens**:
 ```css

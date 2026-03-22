@@ -88,13 +88,17 @@ internal sealed class BatchJobRepository : RepositoryBase, IBatchJobRepository
     {
         ArgumentNullException.ThrowIfNull(batchJob);
 
-        // Detach existing tracked entity if present to avoid tracking conflicts
-        var entry = DbContext.Entry(batchJob);
-        if (entry.State == EntityState.Detached)
+        // Detach any previously tracked entity with the same key to avoid conflicts.
+        // This happens when AddAsync tracked the original, then GetByIdAsync (AsNoTracking)
+        // returns a new detached instance, and we try to Update the new instance.
+        var existingTracked = DbContext.ChangeTracker.Entries<BatchJob>()
+            .FirstOrDefault(e => e.Entity.Id == batchJob.Id);
+        if (existingTracked != null)
         {
-            DbContext.BatchJobs.Update(batchJob);
+            existingTracked.State = EntityState.Detached;
         }
 
+        DbContext.BatchJobs.Update(batchJob);
         await DbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
     }
 

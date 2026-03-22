@@ -2,7 +2,7 @@
 
 import { type ReactNode, useState } from 'react';
 
-import { DashboardEngineProvider } from '@/components/dashboard-v2';
+import { DashboardEngineProvider } from '@/components/dashboard';
 
 import { AdminBreadcrumb } from './AdminBreadcrumb';
 import { AdminMobileDrawer } from './AdminMobileDrawer';

@@ -4,7 +4,7 @@ import { type ReactNode, useCallback, useEffect, useState } from 'react';
 
 import { AnimatePresence, motion } from 'framer-motion';
 
-import { TavoloSection } from '@/components/dashboard-v2/tavolo';
+import { TavoloSection } from '@/components/dashboard/tavolo';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { cn } from '@/lib/utils';
 

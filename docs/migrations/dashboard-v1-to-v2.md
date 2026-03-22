@@ -175,7 +175,7 @@ Will be created in Phase 1:
 ### New Tests (V2)
 
 Will be created in Phase 3:
-- `components/dashboard-v2/__tests__/*.test.tsx` - All v2 components
+- `components/dashboard/__tests__/*.test.tsx` - All v2 components
 - `lib/api/__tests__/dashboard-client.test.ts` - API client
 - `lib/stores/__tests__/dashboard-store.test.ts` - Zustand store
 - `apps/web/__tests__/e2e/gaming-hub.spec.ts` - E2E tests

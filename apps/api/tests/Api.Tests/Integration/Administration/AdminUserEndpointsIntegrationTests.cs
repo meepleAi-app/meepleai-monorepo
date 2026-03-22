@@ -44,20 +44,9 @@ public sealed class AdminUserEndpointsIntegrationTests : IAsyncLifetime
         _databaseName = $"test_adminusers_{Guid.NewGuid():N}";
         var connectionString = await _fixture.CreateIsolatedDatabaseAsync(_databaseName);
 
-        var services = new ServiceCollection();
-        services.AddLogging(builder => builder.AddConsole().SetMinimumLevel(LogLevel.Warning));
-        services.AddDbContext<MeepleAiDbContext>(options =>
-        {
-            options.UseNpgsql(connectionString, o => o.UseVector());
-            options.ConfigureWarnings(w =>
-                w.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning));
-        });
-
-        services.AddScoped<Api.SharedKernel.Application.Services.IDomainEventCollector, Api.SharedKernel.Application.Services.DomainEventCollector>();
-        services.AddScoped<IUnitOfWork, UnitOfWork>();
+        var services = IntegrationServiceCollectionBuilder.CreateBase(connectionString);
         services.AddScoped<Api.BoundedContexts.Authentication.Infrastructure.Persistence.IUserRepository,
             Api.BoundedContexts.Authentication.Infrastructure.Persistence.UserRepository>();
-        services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(Program).Assembly));
 
         var serviceProvider = services.BuildServiceProvider();
         _dbContext = serviceProvider.GetRequiredService<MeepleAiDbContext>();

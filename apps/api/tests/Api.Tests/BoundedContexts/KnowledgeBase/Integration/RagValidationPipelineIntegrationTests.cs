@@ -76,7 +76,7 @@ public class RagValidationPipelineIntegrationTests : IAsyncLifetime
         _output($"✓ Isolated database created: {_databaseName}");
 
         // Setup dependency injection
-        var services = new ServiceCollection();
+        var services = IntegrationServiceCollectionBuilder.CreateBase(_isolatedDbConnectionString);
 
         // Configuration
         var configBuilder = new ConfigurationBuilder();
@@ -91,27 +91,7 @@ public class RagValidationPipelineIntegrationTests : IAsyncLifetime
         var configuration = configBuilder.Build();
         services.AddSingleton<IConfiguration>(configuration);
 
-        // MediatR (required by MeepleAiDbContext)
-        services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(Program).Assembly));
-
-        // Domain event infrastructure (required by MeepleAiDbContext)
-        services.AddScoped<Api.SharedKernel.Application.Services.IDomainEventCollector, Api.SharedKernel.Application.Services.DomainEventCollector>();
         services.AddSingleton<TimeProvider>(TimeProvider.System);
-
-        // DbContext with enforced connection settings
-        var enforcedBuilder = new NpgsqlConnectionStringBuilder(_isolatedDbConnectionString)
-        {
-            SslMode = SslMode.Disable,
-            KeepAlive = 30,
-            Pooling = false,
-            Timeout = 15,  // Match working tests
-            CommandTimeout = 30
-        };
-
-        services.AddDbContext<MeepleAiDbContext>(options =>
-            options.UseNpgsql(enforcedBuilder.ConnectionString, o => o.UseVector()) // Issue #3547
-                .ConfigureWarnings(warnings =>
-                    warnings.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning)));
 
         // Validation Services - Real implementations
         services.AddScoped<IConfidenceValidationService, ConfidenceValidationService>();
@@ -153,9 +133,6 @@ public class RagValidationPipelineIntegrationTests : IAsyncLifetime
 
         services.AddSingleton<IMultiModelValidationService>(_mockMultiModel.Object);
         services.AddScoped<IRagValidationPipelineService, RagValidationPipelineService>();
-
-        // Logging
-        services.AddLogging(builder => builder.AddConsole().SetMinimumLevel(LogLevel.Information));
 
         _serviceProvider = services.BuildServiceProvider();
         _dbContext = _serviceProvider.GetRequiredService<MeepleAiDbContext>();

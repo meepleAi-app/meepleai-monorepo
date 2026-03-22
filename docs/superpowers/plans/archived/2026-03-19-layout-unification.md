@@ -390,7 +390,7 @@ import { ChatPanel } from '@/components/features/chat/ChatPanel';
 import { HomeFeed } from '@/components/features/home/HomeFeed';
 import { LibraryPanel } from '@/components/features/library/LibraryPanel';
 import { PlayPanel } from '@/components/features/play/PlayPanel';
-import { DashboardEngineProvider } from '@/components/dashboard-v2';
+import { DashboardEngineProvider } from '@/components/dashboard';
 
 import { UserDesktopSidebar } from './UserDesktopSidebar';
 import { UserTabBar } from './UserTabBar';
@@ -590,7 +590,7 @@ Copy these 3 files from `apps/web/src/components/layout/UnifiedShell/` to `apps/
 
 import { type ReactNode, useState } from 'react';
 
-import { DashboardEngineProvider } from '@/components/dashboard-v2';
+import { DashboardEngineProvider } from '@/components/dashboard';
 
 import { UserTopNav } from '../UserShell/UserTopNav';
 

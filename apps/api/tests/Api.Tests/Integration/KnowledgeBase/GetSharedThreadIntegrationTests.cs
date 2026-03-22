@@ -20,7 +20,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.StackExchangeRedis;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Moq;
 using Xunit;
 using FluentAssertions;
@@ -73,7 +73,7 @@ public sealed class GetSharedThreadIntegrationTests : IAsyncLifetime
             _isolatedDbConnectionString = await _fixture.CreateIsolatedDatabaseAsync(_databaseName);
 
             // Build service provider with all required dependencies
-            var services = new ServiceCollection();
+            var services = IntegrationServiceCollectionBuilder.CreateBase(_isolatedDbConnectionString);
 
             // Configuration
             var configuration = new ConfigurationBuilder()
@@ -85,15 +85,6 @@ public sealed class GetSharedThreadIntegrationTests : IAsyncLifetime
                 .Build();
             services.AddSingleton<IConfiguration>(configuration);
 
-            // Logging
-            services.AddLogging(builder => builder.AddConsole().SetMinimumLevel(LogLevel.Debug));
-
-            // DbContext with EF Core
-            services.AddDbContext<MeepleAiDbContext>(options =>
-                options.UseNpgsql(_isolatedDbConnectionString, o => o.UseVector()) // Issue #3547
-                    .ConfigureWarnings(warnings =>
-                        warnings.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning)));
-
             // Redis distributed cache
             services.AddStackExchangeRedisCache(options =>
             {
@@ -101,7 +92,8 @@ public sealed class GetSharedThreadIntegrationTests : IAsyncLifetime
                 options.InstanceName = $"test_getsharedthread_{Guid.NewGuid():N}:";
             });
 
-            // Domain event collector (required by repositories)
+            // Override domain event collector with mock (has Setup behavior)
+            services.RemoveAll<IDomainEventCollector>();
             var mockEventCollector = new Mock<IDomainEventCollector>();
             mockEventCollector.Setup(x => x.GetAndClearEvents()).Returns(new List<IDomainEvent>().AsReadOnly());
             services.AddScoped<IDomainEventCollector>(_ => mockEventCollector.Object);
@@ -109,9 +101,6 @@ public sealed class GetSharedThreadIntegrationTests : IAsyncLifetime
             // Repositories
             services.AddScoped<IShareLinkRepository, ShareLinkRepository>();
             services.AddScoped<IChatThreadRepository, ChatThreadRepository>();
-
-            // MediatR for handlers
-            services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(GetSharedThreadQueryHandler).Assembly));
 
             _serviceProvider = services.BuildServiceProvider();
 

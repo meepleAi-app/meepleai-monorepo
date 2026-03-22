@@ -47,23 +47,11 @@ public sealed class RetryPdfProcessingIntegrationTests : IAsyncLifetime
         _databaseName = $"test_retry_{Guid.NewGuid():N}";
         _isolatedDbConnectionString = await _fixture.CreateIsolatedDatabaseAsync(_databaseName);
 
-        var services = new ServiceCollection();
-        services.AddLogging(builder => builder.AddConsole().SetMinimumLevel(LogLevel.Warning));
-
-        services.AddDbContext<MeepleAiDbContext>(options =>
-        {
-            options.UseNpgsql(_isolatedDbConnectionString, o => o.UseVector());
-            options.ConfigureWarnings(w =>
-                w.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning));
-        });
+        var services = IntegrationServiceCollectionBuilder.CreateBase(_isolatedDbConnectionString);
 
         // Register repositories
         services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<IPdfDocumentRepository, PdfDocumentRepository>();
-        services.AddScoped<IUnitOfWork, EfCoreUnitOfWork>();
-
-        // Register domain event infrastructure
-        services.AddScoped<IDomainEventCollector, DomainEventCollector>();
 
         // Register IProcessingMetricsService (required by PdfStateChangedMetricsEventHandler picked up by MediatR assembly scan)
         var mockMetricsService = new Moq.Mock<Api.BoundedContexts.DocumentProcessing.Application.Services.IProcessingMetricsService>();
@@ -84,12 +72,6 @@ public sealed class RetryPdfProcessingIntegrationTests : IAsyncLifetime
         // Register KnowledgeBase dependencies (required by AutoCreateAgentOnPdfReadyHandler picked up by MediatR assembly scan)
         var mockTypologyRepo = new Moq.Mock<Api.BoundedContexts.KnowledgeBase.Domain.Repositories.IAgentTypologyRepository>();
         services.AddScoped(_ => mockTypologyRepo.Object);
-
-        // Register MediatR
-        services.AddMediatR(cfg =>
-        {
-            cfg.RegisterServicesFromAssembly(typeof(RetryPdfProcessingCommand).Assembly);
-        });
 
         // Register handler explicitly
         services.AddScoped<RetryPdfProcessingCommandHandler>();

@@ -83,15 +83,7 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
         // Use SharedTestcontainersFixture Redis (no separate container needed!)
         var redisConnectionString = _fixture.RedisConnectionString;
 
-        var services = new ServiceCollection();
-        services.AddLogging(builder => builder.AddConsole().SetMinimumLevel(LogLevel.Warning));
-
-        services.AddDbContext<MeepleAiDbContext>(options =>
-        {
-            options.UseNpgsql(_isolatedDbConnectionString, o => o.UseVector()); // Issue #3547: Enable pgvector
-            options.ConfigureWarnings(w =>
-                w.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning));
-        });
+        var services = IntegrationServiceCollectionBuilder.CreateBase(_isolatedDbConnectionString);
 
         // Register Redis
         _redis = await ConnectionMultiplexer.ConnectAsync(redisConnectionString);
@@ -100,14 +92,6 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
         // Register repositories
         services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<IPdfDocumentRepository, PdfDocumentRepository>();
-        services.AddScoped<IUnitOfWork, EfCoreUnitOfWork>();
-
-        // Register domain event infrastructure
-        services.AddScoped<IDomainEventCollector, DomainEventCollector>();
-
-        // Register MediatR
-        services.AddMediatR(config =>
-            config.RegisterServicesFromAssembly(typeof(UploadPdfCommandHandler).Assembly));
 
         // Register the handler explicitly for test access
         services.AddScoped<UploadPdfCommandHandler>();
@@ -769,16 +753,7 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
     {
         // Arrange - Use SharedTestcontainersFixture for PostgreSQL
 
-        var services = new ServiceCollection();
-        services.AddLogging(builder => builder.AddConsole().SetMinimumLevel(LogLevel.Warning));
-
-        // Real PostgreSQL from SharedTestcontainersFixture
-        services.AddDbContext<MeepleAiDbContext>(options =>
-        {
-            options.UseNpgsql(_isolatedDbConnectionString, o => o.UseVector()); // Issue #3547: Enable pgvector
-            options.ConfigureWarnings(w =>
-                w.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning));
-        });
+        var services = IntegrationServiceCollectionBuilder.CreateBase(_isolatedDbConnectionString);
 
         // Mock blob storage that always fails
         var failingBlobStorage = new Mock<IBlobStorageService>();
@@ -838,19 +813,10 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
     {
         // Arrange - Test foreign key constraint violation with SharedTestcontainersFixture
 
-        var services = new ServiceCollection();
-        services.AddLogging(builder => builder.AddConsole().SetMinimumLevel(LogLevel.Warning));
-
-        services.AddDbContext<MeepleAiDbContext>(options =>
-        {
-            options.UseNpgsql(_isolatedDbConnectionString, o => o.UseVector()); // Issue #3547: Enable pgvector
-            options.ConfigureWarnings(w =>
-                w.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning));
-        });
+        var services = IntegrationServiceCollectionBuilder.CreateBase(_isolatedDbConnectionString);
 
         RegisterMockServices(services);
         services.Configure<PdfProcessingOptions>(options => options.MaxFileSizeBytes = 104857600);
-        services.AddMediatR(config => config.RegisterServicesFromAssembly(typeof(UploadPdfCommandHandler).Assembly));
         services.AddScoped<UploadPdfCommandHandler>();
 
         var constraintServiceProvider = services.BuildServiceProvider();
@@ -896,19 +862,10 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
         };
         var connectionString = connectionBuilder.ConnectionString;
 
-        var services = new ServiceCollection();
-        services.AddLogging(builder => builder.AddConsole().SetMinimumLevel(LogLevel.Warning));
-
-        services.AddDbContext<MeepleAiDbContext>(options =>
-        {
-            options.UseNpgsql(connectionString, o => o.UseVector()); // Issue #3547: Enable pgvector
-            options.ConfigureWarnings(w =>
-                w.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning));
-        });
+        var services = IntegrationServiceCollectionBuilder.CreateBase(connectionString);
 
         RegisterMockServices(services);
         services.Configure<PdfProcessingOptions>(options => options.MaxFileSizeBytes = 104857600);
-        services.AddMediatR(config => config.RegisterServicesFromAssembly(typeof(UploadPdfCommandHandler).Assembly));
         services.AddScoped<UploadPdfCommandHandler>();
 
         var connectionServiceProvider = services.BuildServiceProvider();
@@ -948,30 +905,14 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
         // Arrange - Simulate deadlock scenario with concurrent transactions using SharedTestcontainersFixture
 
         // Create two service providers with separate DbContexts
-        var servicesA = new ServiceCollection();
-        servicesA.AddLogging(builder => builder.AddConsole().SetMinimumLevel(LogLevel.Warning));
-        servicesA.AddDbContext<MeepleAiDbContext>(options =>
-        {
-            options.UseNpgsql(_isolatedDbConnectionString, o => o.UseVector()); // Issue #3547: Enable pgvector
-            options.ConfigureWarnings(w =>
-                w.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning));
-        });
+        var servicesA = IntegrationServiceCollectionBuilder.CreateBase(_isolatedDbConnectionString);
         RegisterMockServices(servicesA);
         servicesA.Configure<PdfProcessingOptions>(options => options.MaxFileSizeBytes = 104857600);
-        servicesA.AddMediatR(config => config.RegisterServicesFromAssembly(typeof(UploadPdfCommandHandler).Assembly));
         servicesA.AddScoped<UploadPdfCommandHandler>();
 
-        var servicesB = new ServiceCollection();
-        servicesB.AddLogging(builder => builder.AddConsole().SetMinimumLevel(LogLevel.Warning));
-        servicesB.AddDbContext<MeepleAiDbContext>(options =>
-        {
-            options.UseNpgsql(_isolatedDbConnectionString, o => o.UseVector()); // Issue #3547: Enable pgvector
-            options.ConfigureWarnings(w =>
-                w.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning));
-        });
+        var servicesB = IntegrationServiceCollectionBuilder.CreateBase(_isolatedDbConnectionString);
         RegisterMockServices(servicesB);
         servicesB.Configure<PdfProcessingOptions>(options => options.MaxFileSizeBytes = 104857600);
-        servicesB.AddMediatR(config => config.RegisterServicesFromAssembly(typeof(UploadPdfCommandHandler).Assembly));
         servicesB.AddScoped<UploadPdfCommandHandler>();
 
         var providerA = servicesA.BuildServiceProvider();
@@ -1063,15 +1004,7 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
     {
         // Arrange - Use SharedTestcontainersFixture for permission denied test
 
-        var services = new ServiceCollection();
-        services.AddLogging(builder => builder.AddConsole().SetMinimumLevel(LogLevel.Warning));
-
-        services.AddDbContext<MeepleAiDbContext>(options =>
-        {
-            options.UseNpgsql(_isolatedDbConnectionString, o => o.UseVector()); // Issue #3547: Enable pgvector
-            options.ConfigureWarnings(w =>
-                w.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning));
-        });
+        var services = IntegrationServiceCollectionBuilder.CreateBase(_isolatedDbConnectionString);
 
         var permissionDeniedStorage = new Mock<IBlobStorageService>();
         permissionDeniedStorage.Setup(b => b.StoreAsync(It.IsAny<Stream>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
@@ -1080,7 +1013,6 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
 
         RegisterMockServices(services);
         services.Configure<PdfProcessingOptions>(options => options.MaxFileSizeBytes = 104857600);
-        services.AddMediatR(config => config.RegisterServicesFromAssembly(typeof(UploadPdfCommandHandler).Assembly));
         services.AddScoped<UploadPdfCommandHandler>();
 
         var permissionServiceProvider = services.BuildServiceProvider();

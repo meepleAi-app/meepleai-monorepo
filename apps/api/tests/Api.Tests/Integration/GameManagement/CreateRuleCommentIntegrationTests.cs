@@ -58,25 +58,7 @@ public sealed class CreateRuleCommentIntegrationTests : IAsyncLifetime
         _databaseName = $"test_createcomment_{Guid.NewGuid():N}";
         _isolatedDbConnectionString = await _fixture.CreateIsolatedDatabaseAsync(_databaseName);
 
-        var services = new ServiceCollection();
-        services.AddLogging(builder => builder.AddConsole().SetMinimumLevel(LogLevel.Warning));
-
-        services.AddDbContext<MeepleAiDbContext>(options =>
-        {
-            options.UseNpgsql(_isolatedDbConnectionString, o => o.UseVector()); // Issue #3547: Enable pgvector
-            options.ConfigureWarnings(w =>
-                w.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning));
-        });
-
-        // Register domain event infrastructure
-        services.AddScoped<IDomainEventCollector, DomainEventCollector>();
-
-        // Register MediatR
-        services.AddMediatR(config =>
-            config.RegisterServicesFromAssembly(typeof(CreateRuleCommentCommandHandler).Assembly));
-
-        // Register TimeProvider
-        services.AddSingleton(TimeProvider.System);
+        var services = IntegrationServiceCollectionBuilder.CreateBase(_isolatedDbConnectionString);
 
         // Register handler explicitly
         services.AddScoped<CreateRuleCommentCommandHandler>();

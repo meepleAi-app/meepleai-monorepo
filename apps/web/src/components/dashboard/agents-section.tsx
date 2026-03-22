@@ -13,6 +13,7 @@ import Link from 'next/link';
 
 import { Skeleton } from '@/components/ui/feedback/skeleton';
 import { useRecentAgents } from '@/hooks/queries/useRecentAgents';
+import { IS_ALPHA_MODE } from '@/lib/alpha-mode';
 import type { AgentDto } from '@/lib/api/schemas/agents.schemas';
 
 // ─── Section header ───────────────────────────────────────────────────────────
@@ -99,7 +100,9 @@ function AgentCardSkeleton() {
 // ─── Public component ─────────────────────────────────────────────────────────
 
 export function AgentsDashboardSection() {
-  const { data: agents = [], isLoading } = useRecentAgents(2);
+  const { data: agents = [], isLoading } = useRecentAgents(2, !IS_ALPHA_MODE);
+
+  if (IS_ALPHA_MODE) return null;
 
   return (
     <section>

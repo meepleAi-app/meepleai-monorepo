@@ -14,7 +14,7 @@ import { type ReactNode, useEffect } from 'react';
 import { BookOpen, FileText, Plus, Users } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
-import { DiscoveryContextBar } from '@/components/discovery/DiscoveryContextBar';
+import { DiscoveryContextBar } from '@/components/discover/DiscoveryContextBar';
 import { ContextBarRegistrar } from '@/components/layout/ContextBar';
 import { useSetNavConfig } from '@/context/NavigationContext';
 

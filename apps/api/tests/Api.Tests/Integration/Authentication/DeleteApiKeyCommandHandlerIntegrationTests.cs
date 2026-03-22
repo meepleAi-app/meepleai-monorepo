@@ -46,24 +46,7 @@ public sealed class DeleteApiKeyCommandHandlerIntegrationTests : IAsyncLifetime
         _databaseName = $"test_deleteapikey_{Guid.NewGuid():N}";
         _isolatedDbConnectionString = await _fixture.CreateIsolatedDatabaseAsync(_databaseName);
 
-        var services = new ServiceCollection();
-        services.AddLogging(builder => builder.AddConsole().SetMinimumLevel(LogLevel.Warning));
-        services.AddDbContext<MeepleAiDbContext>(options =>
-        {
-            options.UseNpgsql(_isolatedDbConnectionString, o => o.UseVector()); // Issue #3547: Enable pgvector
-            options.ConfigureWarnings(w =>
-                w.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning));
-        });
-
-        // Required services for MeepleAiDbContext
-        services.AddScoped<IDomainEventCollector, DomainEventCollector>();
-
-        // Mock IEmailService (required by event handlers)
-        var mockEmailService = new Mock<IEmailService>();
-        services.AddSingleton(mockEmailService.Object);
-
-        // MediatR (required by MeepleAiDbContext)
-        services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(Program).Assembly));
+        var services = IntegrationServiceCollectionBuilder.CreateBase(_isolatedDbConnectionString);
 
         var serviceProvider = services.BuildServiceProvider();
         _dbContext = serviceProvider.GetRequiredService<MeepleAiDbContext>();

@@ -21,6 +21,7 @@ using System.Text;
 using FluentAssertions;
 using Xunit;
 using Api.Tests.Constants;
+using Api.Tests.Infrastructure;
 
 namespace Api.Tests.BoundedContexts.Authentication.Performance;
 
@@ -95,23 +96,10 @@ public class BulkImportStressTests : IAsyncLifetime
         _output($"✅ PostgreSQL started at localhost:{containerPort} with pooling enabled");
 
         // Setup DI
-        var services = new ServiceCollection();
-
-        services.AddDbContext<MeepleAiDbContext>(options =>
-            options.UseNpgsql(connectionString, o => o.UseVector()) // Issue #3547
-                .ConfigureWarnings(warnings =>
-                    warnings.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning)));
-
-        // Add MediatR for DbContext dependency
-        services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(Program).Assembly));
-
+        var services = IntegrationServiceCollectionBuilder.CreateBase(connectionString);
         services.AddScoped<IApiKeyRepository, ApiKeyRepository>();
         services.AddScoped<IUserRepository, UserRepository>();
-        services.AddScoped<IUnitOfWork, EfCoreUnitOfWork>();
-        services.AddScoped<Api.SharedKernel.Application.Services.IDomainEventCollector,
-            Api.SharedKernel.Application.Services.DomainEventCollector>();
         services.AddSingleton(TimeProvider.System);
-        services.AddLogging(builder => builder.AddConsole().SetMinimumLevel(LogLevel.Warning));
 
         var serviceProvider = services.BuildServiceProvider();
         _dbContext = serviceProvider.GetRequiredService<MeepleAiDbContext>();

@@ -74,7 +74,7 @@ const LIBRARY_CHILDREN: UnifiedNavSubItem[] = LIBRARY_TABS.map(tab => ({
  * | agents    | Agenti    | 7        | authOnly    |                          |
  * | sessions  | Sessioni  | 8        | authOnly    |                          |
  */
-export const UNIFIED_NAV_ITEMS: UnifiedNavItem[] = [
+const _ALL_NAV_ITEMS: UnifiedNavItem[] = [
   {
     id: 'welcome',
     href: '/',
@@ -230,6 +230,25 @@ export const UNIFIED_NAV_ITEMS: UnifiedNavItem[] = [
     group: 'admin',
   },
 ];
+
+// ─── Alpha Mode Filtering ────────────────────────────────────────────────────
+
+const isAlphaMode = process.env.NEXT_PUBLIC_ALPHA_MODE === 'true';
+
+const ALPHA_NAV_IDS = new Set([
+  'welcome',
+  'dashboard',
+  'library',
+  'chat',
+  'catalog',
+  'profile',
+  'admin',
+]);
+
+/** Unified navigation items — filtered by ALPHA_MODE when active */
+export const UNIFIED_NAV_ITEMS: UnifiedNavItem[] = isAlphaMode
+  ? _ALL_NAV_ITEMS.filter(item => ALPHA_NAV_IDS.has(item.id))
+  : _ALL_NAV_ITEMS;
 
 // ---------------------------------------------------------------------------
 // Helper functions

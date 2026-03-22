@@ -25,7 +25,7 @@ const STEPS: OnboardingStep[] = [
     icon: <Search className="w-6 h-6 text-primary" />,
     title: 'Aggiungi il tuo primo gioco',
     description: 'Cerca nel catalogo e aggiungilo alla tua libreria',
-    href: '/discover',
+    href: '/games',
     ctaLabel: 'Cerca catalogo',
   },
   {

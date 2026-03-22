@@ -188,6 +188,34 @@ internal static class GameSeeder
         };
     }
 
+    internal static SharedGameEntity CreateFromEnhancedData(
+        SeedManifestGame entry,
+        Guid systemUserId)
+    {
+        return new SharedGameEntity
+        {
+            Id = Guid.NewGuid(),
+            BggId = entry.BggId is > 0 ? entry.BggId.Value : null,
+            Title = entry.Title,
+            YearPublished = entry.YearPublished ?? 2020,
+            Description = entry.Description ?? $"Classic board game: {entry.Title}",
+            MinPlayers = entry.MinPlayers ?? 2,
+            MaxPlayers = entry.MaxPlayers ?? 4,
+            PlayingTimeMinutes = entry.PlayingTime ?? 60,
+            MinAge = entry.MinAge ?? 10,
+            ComplexityRating = entry.AverageWeight.HasValue ? (decimal)entry.AverageWeight.Value : null,
+            AverageRating = entry.AverageRating.HasValue ? (decimal)entry.AverageRating.Value : null,
+            ImageUrl = entry.ImageUrl ?? entry.FallbackImageUrl ?? $"{PlaceholderImageBase}/400x300?text=" + Uri.EscapeDataString(entry.Title),
+            ThumbnailUrl = entry.ThumbnailUrl ?? entry.FallbackThumbnailUrl ?? $"{PlaceholderImageBase}/150x150?text=" + Uri.EscapeDataString(entry.Title),
+            RulesExternalUrl = entry.RulesUrl,
+            Status = (int)GameStatus.Published,
+            RulesLanguage = entry.Language,
+            CreatedBy = systemUserId,
+            CreatedAt = DateTime.UtcNow,
+            IsDeleted = false
+        };
+    }
+
     private static SharedGameEntity CreateMinimalGame(
         SeedManifestGame entry,
         Guid systemUserId)

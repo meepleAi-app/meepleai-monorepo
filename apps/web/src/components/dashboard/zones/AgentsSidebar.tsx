@@ -15,6 +15,7 @@ import { MeepleCard } from '@/components/ui/data-display/meeple-card';
 import type { AgentStatus } from '@/components/ui/data-display/meeple-card';
 import { Skeleton } from '@/components/ui/feedback/skeleton';
 import { useAgents } from '@/hooks/queries/useAgents';
+import { IS_ALPHA_MODE } from '@/lib/alpha-mode';
 import type { AgentDto } from '@/lib/api/schemas/agents.schemas';
 
 // ---------------------------------------------------------------------------
@@ -86,6 +87,8 @@ function EmptyState() {
 export function AgentsSidebar() {
   const router = useRouter();
   const { data: agents = [], isLoading } = useAgents();
+
+  if (IS_ALPHA_MODE) return null;
 
   return (
     <aside data-testid="agents-sidebar" className="w-full lg:w-[280px] shrink-0">

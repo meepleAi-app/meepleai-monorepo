@@ -4,6 +4,7 @@ import Link from 'next/link';
 
 import { MeepleCard } from '@/components/ui/data-display/meeple-card';
 import { useUpcomingGameNights } from '@/hooks/queries/useGameNights';
+import { IS_ALPHA_MODE } from '@/lib/alpha-mode';
 import type { GameNightDto } from '@/lib/api/schemas/game-nights.schemas';
 
 function formatScheduled(scheduledAt: string): string {
@@ -12,8 +13,10 @@ function formatScheduled(scheduledAt: string): string {
 }
 
 export function GameNightZone() {
-  const { data: nights, isLoading } = useUpcomingGameNights();
+  const { data: nights, isLoading } = useUpcomingGameNights(!IS_ALPHA_MODE);
   const upcoming: GameNightDto[] = nights ?? [];
+
+  if (IS_ALPHA_MODE) return null;
 
   if (isLoading) {
     return <div className="animate-pulse h-16 rounded-xl bg-muted/50" />;

@@ -5,6 +5,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { Dice5, Search, UserPlus, X } from 'lucide-react';
 import Link from 'next/link';
 
+import { IS_ALPHA_MODE } from '@/lib/alpha-mode';
 import { cn } from '@/lib/utils';
 
 const STORAGE_KEY = 'meepleai-onboarding-complete';
@@ -83,7 +84,7 @@ export function OnboardingFlow() {
       </div>
 
       <div className="grid gap-3 sm:grid-cols-3">
-        {STEPS.map(step => (
+        {(IS_ALPHA_MODE ? STEPS.filter(s => s.id === 'add-game') : STEPS).map(step => (
           <Link
             key={step.id}
             href={step.href}

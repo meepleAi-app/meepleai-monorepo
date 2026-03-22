@@ -28,7 +28,7 @@ export interface LibraryTab {
  * Default (/library, no tab param) renders Collection (shared catalog).
  * Proposals tab added for inline share request management.
  */
-export const LIBRARY_TABS: LibraryTab[] = [
+const _ALL_LIBRARY_TABS: LibraryTab[] = [
   {
     id: 'collection',
     label: 'Collection',
@@ -54,6 +54,17 @@ export const LIBRARY_TABS: LibraryTab[] = [
     href: '/library?tab=proposals',
   },
 ];
+
+// ─── Alpha Mode Filtering ────────────────────────────────────────────────────
+
+const isAlphaMode = process.env.NEXT_PUBLIC_ALPHA_MODE === 'true';
+
+const ALPHA_LIBRARY_TAB_IDS = new Set(['collection', 'private']);
+
+/** Library tabs — filtered by ALPHA_MODE when active */
+export const LIBRARY_TABS: LibraryTab[] = isAlphaMode
+  ? _ALL_LIBRARY_TABS.filter(tab => ALPHA_LIBRARY_TAB_IDS.has(tab.id))
+  : _ALL_LIBRARY_TABS;
 
 /**
  * Check if a pathname+search matches a library tab (Issue #5039)

@@ -18,7 +18,7 @@ import { cn } from '@/lib/utils';
 import { CardRackItem } from './CardRackItem';
 
 const NAV_ITEMS = [
-  { href: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
+  { href: '/library', icon: LayoutDashboard, label: 'Dashboard' },
   { href: '/library', icon: Library, label: 'Libreria' },
   { href: '/games', icon: Gamepad2, label: 'Scopri' },
   { href: '/chat', icon: MessageSquare, label: 'Chat AI' },
@@ -40,7 +40,7 @@ export function CardRack({ className }: CardRackProps) {
   const { isExpanded, onMouseEnter, onMouseLeave, rackRef } = useCardRackState();
 
   const isActive = (href: string) =>
-    href === '/dashboard' ? pathname === '/dashboard' : pathname?.startsWith(href);
+    href === '/library' ? pathname === '/library' : pathname?.startsWith(href);
 
   return (
     <nav

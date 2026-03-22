@@ -279,7 +279,7 @@ export function SetupAccountContent() {
       setActivationSuccess(true);
 
       // Redirect based on requiresOnboarding flag
-      const redirectTo = data.requiresOnboarding ? '/onboarding' : '/dashboard';
+      const redirectTo = data.requiresOnboarding ? '/onboarding' : '/library';
       setTimeout(() => {
         void router.push(redirectTo);
       }, 1500);

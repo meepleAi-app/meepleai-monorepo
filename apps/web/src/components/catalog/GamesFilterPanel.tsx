@@ -465,7 +465,7 @@ export function GamesFilterPanel({ isCollapsed }: GamesFilterPanelProps) {
     <nav className="flex flex-col gap-0.5 px-2 py-3" aria-label="Games catalog navigation">
       {/* Back to Dashboard */}
       <FilterLink
-        href="/dashboard"
+        href="/library"
         icon={LayoutDashboard}
         label="Dashboard"
         isActive={false}

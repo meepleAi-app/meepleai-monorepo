@@ -16,7 +16,7 @@ import { useRouter } from 'next/navigation';
 
 import { AgentStatusBadge } from '@/components/ui/data-display/meeple-card-features/AgentStatusBadge';
 import type { AgentStatus } from '@/components/ui/data-display/meeple-card-features/AgentStatusBadge';
-import { DocumentStatusBadge } from '@/components/ui/data-display/meeple-card-features/DocumentStatusBadge';
+import { KbStatusBadge } from '@/components/ui/data-display/meeple-card-features/DocumentStatusBadge';
 import { Button } from '@/components/ui/primitives/button';
 import { useAgentKbDocs, useAgentThreads } from '@/hooks/queries/useAgentData';
 import { useGameAgents } from '@/hooks/queries/useGameAgents';
@@ -106,7 +106,7 @@ export function GameTableZoneKnowledge({ gameId }: GameTableZoneKnowledgeProps):
                 data-testid="kb-doc-item"
               >
                 <span className="text-[#e6edf3] font-nunito truncate mr-2">{doc.fileName}</span>
-                <DocumentStatusBadge status={doc.status} size="sm" />
+                <KbStatusBadge status={doc.status} size="sm" />
               </li>
             ))}
           </ul>

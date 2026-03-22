@@ -24,7 +24,7 @@ import {
 import { KbCardStatusRow } from '@/components/documents/KbCardStatusRow';
 import { EntityLinkBadge } from '@/components/ui/data-display/entity-link-badge';
 import { AgentStatusBadge } from '@/components/ui/data-display/meeple-card-features/AgentStatusBadge';
-import { DocumentStatusBadge } from '@/components/ui/data-display/meeple-card-features/DocumentStatusBadge';
+import { KbStatusBadge } from '@/components/ui/data-display/meeple-card-features/DocumentStatusBadge';
 import { Tabs, TabsList, TabsContent } from '@/components/ui/navigation/tabs';
 import { cn } from '@/lib/utils';
 
@@ -311,7 +311,7 @@ export const GameExtraMeepleCard = React.memo(function GameExtraMeepleCard({
                               })}
                             </p>
                           </div>
-                          <DocumentStatusBadge status={doc.status} size="sm" />
+                          <KbStatusBadge status={doc.status} size="sm" />
                         </div>
                       ))}
                 </div>

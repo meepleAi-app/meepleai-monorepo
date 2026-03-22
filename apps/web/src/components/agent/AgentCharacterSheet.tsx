@@ -25,7 +25,7 @@ import { useRouter } from 'next/navigation';
 
 import { ChatThreadView } from '@/components/chat-unified/ChatThreadView';
 import { AgentStatusBadge } from '@/components/ui/data-display/meeple-card-features/AgentStatusBadge';
-import { DocumentStatusBadge } from '@/components/ui/data-display/meeple-card-features/DocumentStatusBadge';
+import { KbStatusBadge } from '@/components/ui/data-display/meeple-card-features/DocumentStatusBadge';
 import { Button } from '@/components/ui/primitives/button';
 import { useAgentKbDocs, useAgentThreads } from '@/hooks/queries/useAgentData';
 import { useAgentStatus } from '@/hooks/useAgentStatus';
@@ -562,7 +562,7 @@ function KbDocItem({ doc }: { doc: KbDocumentPreview }) {
         <p className="font-nunito text-xs font-medium text-[#e6edf3] truncate">{doc.fileName}</p>
         <p className="font-nunito text-[10px] text-[#8b949e]">{date}</p>
       </div>
-      <DocumentStatusBadge status={doc.status} size="sm" />
+      <KbStatusBadge status={doc.status} size="sm" />
     </li>
   );
 }

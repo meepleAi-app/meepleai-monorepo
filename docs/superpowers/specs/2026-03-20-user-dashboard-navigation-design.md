@@ -581,7 +581,7 @@ useEffect(() => {
 | `ContextBar` | `components/layout/ContextBar/` | Shell che legge da `useContextBarStore` |
 | `ContextBarRegistrar` | `components/layout/ContextBar/` | Client component per registrare content nello store |
 | `useContextBarStore` | `lib/stores/context-bar-store.ts` | Zustand store per content + options |
-| `DashboardContextBar` | `components/dashboard-v2/` | Content bar dashboard |
+| `DashboardContextBar` | `components/dashboard/` | Content bar dashboard |
 | `LiveSessionContextBar` | `components/session/` | Content bar sessione live |
 | `LibraryContextBar` | `components/library/` | Content bar libreria |
 | `DiscoveryContextBar` | `components/discovery/` | Content bar discovery |
@@ -591,8 +591,8 @@ useEffect(() => {
 | `useOverlayStore` | `lib/stores/overlay-store.ts` | Zustand store per overlay state + URL sync |
 | `CardDeck` | `components/ui/data-display/card-deck/` | Componente deck sfogliabile (nota: `DeckStack` esistente in `deck-stack/` resta invariato) |
 | `MiniCardDeck` | `components/ui/data-display/card-deck/` | Variante inline compatta |
-| `TavoloZone` | `components/dashboard-v2/` | Contenitore stile Tavolo |
-| `OnboardingFlow` | `components/dashboard-v2/` | Flusso primo accesso (SSR-safe) |
+| `TavoloZone` | `components/dashboard/` | Contenitore stile Tavolo |
+| `OnboardingFlow` | `components/dashboard/` | Flusso primo accesso (SSR-safe) |
 | `BackToSessionFAB` | `components/session/` | FAB "Torna alla partita" |
 
 ### Componenti da modificare

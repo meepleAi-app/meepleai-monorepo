@@ -22,7 +22,7 @@ Files requiring manual review decision: **Keep** or **Delete**
 - `docs/frontend/mocks/layout-mobile-mock.html` (24K)
 - `docs/frontend/mockups/chat-card-integrated.html` (40K)
 - `docs/frontend/mockups/chat-card-mockup.html` (56K)
-- `docs/components/ui/meeple-card-v2-mockup.html` (60K)
+- `docs/components/ui/meeple-card-mockup.html` (60K)
 
 **Recommendation**: DELETE - layouts implemented, keep only design-system docs
 

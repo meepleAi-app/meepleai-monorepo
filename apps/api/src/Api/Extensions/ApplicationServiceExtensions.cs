@@ -220,6 +220,18 @@ internal static class ApplicationServiceExtensions
         services.AddValidatorsFromAssemblyContaining<BoundedContexts.EntityRelationships.Application.Validators.CreateEntityLinkCommandValidator>(
             includeInternalTypes: true);
 
+        // Register validators from BusinessSimulations bounded context
+        services.AddValidatorsFromAssemblyContaining<BoundedContexts.BusinessSimulations.Application.Commands.CreateManualLedgerEntryCommandValidator>(
+            includeInternalTypes: true);
+
+        // Register validators from DatabaseSync bounded context
+        services.AddValidatorsFromAssemblyContaining<BoundedContexts.DatabaseSync.Application.Commands.ApplyMigrationsCommandValidator>(
+            includeInternalTypes: true);
+
+        // Register validators from WorkflowIntegration bounded context
+        services.AddValidatorsFromAssemblyContaining<BoundedContexts.WorkflowIntegration.Application.Validators.CreateN8NConfigCommandValidator>(
+            includeInternalTypes: true);
+
         return services;
     }
 }

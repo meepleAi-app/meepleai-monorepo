@@ -383,6 +383,56 @@ export async function proxy(request: NextRequest) {
     return addSecurityHeaders(response, requestOrigin);
   }
 
+  // ============================================================================
+  // Alpha Zero Route Guard
+  // ============================================================================
+  // When NEXT_PUBLIC_ALPHA_MODE=true, only alpha-allowed routes are accessible.
+  // Non-alpha routes redirect to /dashboard. This prevents users from reaching
+  // features that are not yet ready for alpha testing.
+  const IS_ALPHA_MODE = process.env.NEXT_PUBLIC_ALPHA_MODE === 'true';
+
+  if (IS_ALPHA_MODE && isAuthenticated) {
+    const ALPHA_ROUTE_PREFIXES = [
+      '/dashboard',
+      '/library',
+      '/chat',
+      '/discover',
+      '/games',
+      '/profile',
+      '/settings',
+      '/admin/overview',
+      '/admin/shared-games',
+      '/admin/knowledge-base',
+      '/admin/content',
+      '/admin/users',
+      '/onboarding',
+      '/upload',
+      '/setup',
+      '/join',
+    ];
+
+    const isAlphaRoute = ALPHA_ROUTE_PREFIXES.some(prefix => pathname.startsWith(prefix));
+    const isAuthRoute =
+      pathname.startsWith('/login') ||
+      pathname.startsWith('/register') ||
+      pathname.startsWith('/reset-password') ||
+      pathname.startsWith('/verify-email') ||
+      pathname.startsWith('/oauth-callback') ||
+      pathname.startsWith('/setup-account') ||
+      pathname.startsWith('/welcome');
+    const isPublicRoute =
+      pathname === '/' ||
+      pathname.startsWith('/api/') ||
+      pathname.startsWith('/health') ||
+      pathname.startsWith('/offline') ||
+      pathname.startsWith('/_next/');
+
+    if (!isAlphaRoute && !isAuthRoute && !isPublicRoute) {
+      const response = NextResponse.redirect(new URL('/dashboard', request.url));
+      return addSecurityHeaders(response, requestOrigin);
+    }
+  }
+
   // Allow the request to continue with security headers
   const response = NextResponse.next();
   return addSecurityHeaders(response, requestOrigin);

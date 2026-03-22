@@ -36,6 +36,7 @@ internal static class GameSeeder
         var gameMap = new Dictionary<int, Guid>();
         var seededCount = 0;
         var skippedCount = 0;
+        var caches = new RelationshipCaches();
 
         foreach (var entry in manifest.Catalog.Games)
         {
@@ -44,6 +45,10 @@ internal static class GameSeeder
                 // Check if already exists by title (case-insensitive) OR by BggId
                 var existing = await db.SharedGames
                     .AsTracking()
+                    .Include(g => g.Categories)
+                    .Include(g => g.Mechanics)
+                    .Include(g => g.Designers)
+                    .Include(g => g.Publishers)
                     .FirstOrDefaultAsync(g =>
                         (EF.Functions.ILike(g.Title, entry.Title) ||
                          (entry.BggId.HasValue && entry.BggId > 0 && g.BggId == entry.BggId.Value))
@@ -53,12 +58,26 @@ internal static class GameSeeder
                 if (existing != null)
                 {
                     // Update image URLs if they're still placeholders
-                    if (existing.ImageUrl.Contains("placehold.co") && entry.FallbackImageUrl != null)
+                    if (existing.ImageUrl.Contains("placehold.co"))
                     {
-                        existing.ImageUrl = entry.FallbackImageUrl;
-                        existing.ThumbnailUrl = entry.FallbackThumbnailUrl ?? existing.ThumbnailUrl;
+                        var newImage = entry.BggEnhanced ? (entry.ImageUrl ?? entry.FallbackImageUrl) : entry.FallbackImageUrl;
+                        var newThumb = entry.BggEnhanced ? (entry.ThumbnailUrl ?? entry.FallbackThumbnailUrl) : entry.FallbackThumbnailUrl;
+                        if (newImage != null)
+                        {
+                            existing.ImageUrl = newImage;
+                            existing.ThumbnailUrl = newThumb ?? existing.ThumbnailUrl;
+                            await db.SaveChangesAsync(ct).ConfigureAwait(false);
+                            logger.LogInformation("Updated placeholder images for '{GameName}'", entry.Title);
+                        }
+                    }
+
+                    if (entry.BggEnhanced &&
+                        existing.Categories.Count == 0 && existing.Mechanics.Count == 0 &&
+                        existing.Designers.Count == 0 && existing.Publishers.Count == 0)
+                    {
+                        await RelationshipSeeder.SeedRelationshipsAsync(db, existing, entry, caches, logger, ct).ConfigureAwait(false);
                         await db.SaveChangesAsync(ct).ConfigureAwait(false);
-                        logger.LogInformation("Updated placeholder images for '{GameName}' with manifest images", entry.Title);
+                        logger.LogInformation("Backfilled relationships for existing game '{GameName}'", entry.Title);
                     }
                     else
                     {
@@ -75,10 +94,15 @@ internal static class GameSeeder
                     continue;
                 }
 
-                // Fetch metadata from BGG if BGG ID provided
+                // Create game from best available data source
                 SharedGameEntity? sharedGame = null;
 
-                if (entry.BggId is > 0)
+                if (entry.BggEnhanced)
+                {
+                    sharedGame = CreateFromEnhancedData(entry, systemUserId);
+                    logger.LogInformation("Created SharedGame '{GameName}' from enhanced YAML data", entry.Title);
+                }
+                else if (entry.BggId is > 0)
                 {
                     var bggDetails = await bggService.GetGameDetailsAsync(entry.BggId.Value, ct)
                         .ConfigureAwait(false);
@@ -91,11 +115,16 @@ internal static class GameSeeder
                     }
                 }
 
-                // Fallback: Create with minimal data if BGG lookup failed or no valid BGG ID
                 sharedGame ??= CreateMinimalGame(entry, systemUserId);
 
                 db.SharedGames.Add(sharedGame);
                 await db.SaveChangesAsync(ct).ConfigureAwait(false);
+
+                if (entry.BggEnhanced)
+                {
+                    await RelationshipSeeder.SeedRelationshipsAsync(db, sharedGame, entry, caches, logger, ct).ConfigureAwait(false);
+                    await db.SaveChangesAsync(ct).ConfigureAwait(false);
+                }
 
                 // Create GameEntity bridge
                 var bridge = await EnsureGameEntityBridgeAsync(db, sharedGame, entry, systemUserId, ct)

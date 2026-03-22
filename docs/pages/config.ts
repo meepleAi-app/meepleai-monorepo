@@ -55,8 +55,8 @@ export const config = {
   distDir: path.join(__dirname, 'dist'),
   manifestPath: path.join(__dirname, 'manifest.json'),
   viewport: { width: 1440, height: 900 },
-  pageTimeout: 15000,
-  delayAfterLoad: 1000,
+  pageTimeout: 30000,
+  delayAfterLoad: 2000,
   concurrency: 3,
 } as const;
 

@@ -342,7 +342,7 @@ import { MeepleCard } from '@/components/ui/data-display/meeple-card';
 />
 ```
 
-**Docs**: [docs/frontend/meeple-card-v2-design-tokens.md](./docs/frontend/meeple-card-v2-design-tokens.md)
+**Docs**: [docs/frontend/meeple-card-design-tokens.md](./docs/frontend/meeple-card-design-tokens.md)
 
 ### Recent Learnings (Issues)
 

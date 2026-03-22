@@ -1,0 +1,22 @@
+# compose.alpha.yml — Alpha Zero configuration
+# Sets ALPHA_MODE for backend and frontend.
+#
+# Usage:
+#   make alpha          (with AI services)
+#   make alpha-core     (core only, no AI)
+#
+# NOTE: NEXT_PUBLIC_ALPHA_MODE is a BUILD-TIME variable in Next.js.
+# For Docker builds, it's passed as a build arg.
+# For local dev (pnpm dev), set it in apps/web/.env.local instead.
+
+services:
+  api:
+    environment:
+      - ALPHA_MODE=true
+
+  web:
+    build:
+      args:
+        - NEXT_PUBLIC_ALPHA_MODE=true
+    environment:
+      - NEXT_PUBLIC_ALPHA_MODE=true

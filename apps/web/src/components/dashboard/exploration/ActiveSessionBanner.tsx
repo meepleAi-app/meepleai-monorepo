@@ -2,6 +2,8 @@
 
 import Link from 'next/link';
 
+import { IS_ALPHA_MODE } from '@/lib/alpha-mode';
+
 interface ActiveSessionBannerProps {
   gameName: string;
   elapsed: string;
@@ -9,6 +11,8 @@ interface ActiveSessionBannerProps {
 }
 
 export function ActiveSessionBanner({ gameName, elapsed, sessionId }: ActiveSessionBannerProps) {
+  if (IS_ALPHA_MODE) return null;
+
   return (
     <div className="flex items-center justify-between gap-4 rounded-2xl px-5 py-3 bg-emerald-500/10 border border-emerald-500/25 dark:bg-emerald-900/20 dark:border-emerald-700/30">
       <div className="flex items-center gap-3 min-w-0">

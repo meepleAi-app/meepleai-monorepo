@@ -1,143 +1,1510 @@
 profile: prod
 catalog:
   games:
-    # --- Core games with AI agents ---
-    - title: "Catan"
-      bggId: 13
-      language: en
-      pdf: "catan_rulebook.pdf"
-      seedAgent: true
-      fallbackImageUrl: "https://cf.geekdo-images.com/W3Bsga_uLP9kO91gZ7H8yw__original/img/IwRwEpu1I6YfkyYjFIekCh80ntc=/0x0/filters:format(jpeg)/pic2419375.jpg"
-      fallbackThumbnailUrl: "https://cf.geekdo-images.com/W3Bsga_uLP9kO91gZ7H8yw__small/img/7a0LOL48K-2lC3IG0HyYT3XxJBs=/fit-in/200x150/filters:strip_icc()/pic2419375.jpg"
-    - title: "Carcassonne"
-      bggId: 822
-      language: en
-      pdf: "carcassone_rulebook.pdf"
-      seedAgent: true
-      fallbackImageUrl: "https://cf.geekdo-images.com/peUgu3A20LRmAXAMyDQfpQ__original/img/bP18m_PYjyFOv1IBGgMOteQUneA=/0x0/filters:format(jpeg)/pic8621446.jpg"
-      fallbackThumbnailUrl: "https://cf.geekdo-images.com/peUgu3A20LRmAXAMyDQfpQ__small/img/oEEslN-EGqh82sNI6Aj4_MFXYg0=/fit-in/200x150/filters:strip_icc()/pic8621446.jpg"
-    - title: "Pandemic"
-      bggId: 30549
-      language: en
-      pdf: "pandemic_rulebook.pdf"
-      seedAgent: true
-      fallbackImageUrl: "https://cf.geekdo-images.com/S3ybV1LAp-8SnHIXLLjVqA__original/img/IsrvRLpUV1TEyZsO5rC-btXaPz0=/0x0/filters:format(jpeg)/pic1534148.jpg"
-      fallbackThumbnailUrl: "https://cf.geekdo-images.com/S3ybV1LAp-8SnHIXLLjVqA__small/img/oqViRj6nVxK3m36NluTxU1PZkrk=/fit-in/200x150/filters:strip_icc()/pic1534148.jpg"
-    - title: "Ticket to Ride"
-      bggId: 9209
-      language: en
-      pdf: "ticket-to-ride_rulebook.pdf"
-      seedAgent: true
-      fallbackImageUrl: "https://cf.geekdo-images.com/kdWYkW-7AqG63HhqPL6ekA__original/img/rWF8r4JXXCQQ7QhiWHhmT-rQ3Pc=/0x0/filters:format(jpeg)/pic8937637.jpg"
-      fallbackThumbnailUrl: "https://cf.geekdo-images.com/kdWYkW-7AqG63HhqPL6ekA__small/img/5G46jv8MFh_BfX67iMSouTMhKxc=/fit-in/200x150/filters:strip_icc()/pic8937637.jpg"
-    - title: "Splendor"
-      bggId: 148228
-      language: en
-      pdf: "splendor_rulebook.pdf"
-      seedAgent: true
-      fallbackImageUrl: "https://cf.geekdo-images.com/vNFe4JkhKAERzi4T0Ntwpw__original/img/rqcUdtu_N4v-SpI96XVmpYHnJww=/0x0/filters:format(png)/pic8234167.png"
-      fallbackThumbnailUrl: "https://cf.geekdo-images.com/vNFe4JkhKAERzi4T0Ntwpw__small/img/KKU_42Uswt4tKCpf1zY5kTzgr-g=/fit-in/200x150/filters:strip_icc()/pic8234167.png"
+  - title: Catan
+    bggId: 13
+    language: en
+    pdf: catan_rulebook.pdf
+    seedAgent: true
+    fallbackImageUrl: https://cf.geekdo-images.com/W3Bsga_uLP9kO91gZ7H8yw__original/img/IwRwEpu1I6YfkyYjFIekCh80ntc=/0x0/filters:format(jpeg)/pic2419375.jpg
+    fallbackThumbnailUrl: https://cf.geekdo-images.com/W3Bsga_uLP9kO91gZ7H8yw__small/img/7a0LOL48K-2lC3IG0HyYT3XxJBs=/fit-in/200x150/filters:strip_icc()/pic2419375.jpg
+    bggEnhanced: true
+    description: >+
+      In CATAN (formerly The Settlers of Catan), players try to be the dominant force on the island of Catan by building settlements, cities and roads. On each turn dice are rolled to determine which resources the island produces. Players build structures by 'spending' resources (sheep, wheat, wood, brick and ore) which are represented by the relevant resource cards; each land type, with the exception of the unproductive desert, produces a specific resource: hills produce brick, forests produce wood, mountains produce ore, fields produce wheat, and pastures produce sheep.
 
-    # --- Games with PDF rulebooks ---
-    - title: "Wingspan"
-      bggId: 266192
-      language: en
-      pdf: "wingspan_en_rulebook.pdf"
-      seedAgent: false
-      fallbackImageUrl: "https://cf.geekdo-images.com/yLZJCVLlIx4c7eJEWUNJ7w__original/img/cI782Zis9cT66j2MjSHKJGnFPNw=/0x0/filters:format(jpeg)/pic4458123.jpg"
-      fallbackThumbnailUrl: "https://cf.geekdo-images.com/yLZJCVLlIx4c7eJEWUNJ7w__small/img/VNToqgS2-pOGU6MuvIkMPKn_y-s=/fit-in/200x150/filters:strip_icc()/pic4458123.jpg"
-    - title: "Azul"
-      bggId: 230802
-      language: en
-      pdf: "azul_rulebook.pdf"
-      seedAgent: false
-      fallbackImageUrl: "https://cf.geekdo-images.com/aPSHJO0d0XOpQR5X-wJonw__original/img/AkbtYVc6xXJF3c9EUrakklcclKw=/0x0/filters:format(png)/pic6973671.png"
-      fallbackThumbnailUrl: "https://cf.geekdo-images.com/aPSHJO0d0XOpQR5X-wJonw__small/img/ccsXKrdGJw-YSClWwzVUwk5Nh9Y=/fit-in/200x150/filters:strip_icc()/pic6973671.png"
-    - title: "7 Wonders"
-      bggId: 68448
-      language: en
-      pdf: "7-wonders_rulebook.pdf"
-      seedAgent: false
-      fallbackImageUrl: "https://cf.geekdo-images.com/35h9Za_JvMMMtx_92kT0Jg__original/img/jt70jJDZ1y1FWJs4ZQf5FI8APVY=/0x0/filters:format(jpeg)/pic7149798.jpg"
-      fallbackThumbnailUrl: "https://cf.geekdo-images.com/35h9Za_JvMMMtx_92kT0Jg__small/img/BUOso8b0M1aUOkU80FWlhE8uuxc=/fit-in/200x150/filters:strip_icc()/pic7149798.jpg"
-    - title: "Agricola"
-      bggId: 31260
-      language: en
-      pdf: "agricola_rulebook.pdf"
-      seedAgent: false
-      fallbackImageUrl: "https://cf.geekdo-images.com/3L6ZtOll9W5O6-3-EwSMyw__original/img/V37KuMJlCzpxAilzN39BzeLvc9Q=/0x0/filters:format(jpeg)/pic1899157.jpg"
-      fallbackThumbnailUrl: "https://cf.geekdo-images.com/3L6ZtOll9W5O6-3-EwSMyw__small/img/TpNF65wCIb1n3EGW18eJJ3MlRMo=/fit-in/200x150/filters:strip_icc()/pic1899157.jpg"
 
-    # --- Additional popular games ---
-    - title: "Terraforming Mars"
-      bggId: 167791
-      language: en
-      seedAgent: false
-      fallbackImageUrl: "https://cf.geekdo-images.com/wg9oOLcsKvDesSUdZQ4rxw__original/img/thIqWDnH9utKuYlp1gq2Fz-_30I=/0x0/filters:format(jpeg)/pic3536616.jpg"
-      fallbackThumbnailUrl: "https://cf.geekdo-images.com/wg9oOLcsKvDesSUdZQ4rxw__small/img/FS1RE4Sml9yrflVEMsyXWDFmCSY=/fit-in/200x150/filters:strip_icc()/pic3536616.jpg"
-    - title: "Gloomhaven"
-      bggId: 174430
-      language: en
-      seedAgent: false
-      fallbackImageUrl: "https://cf.geekdo-images.com/sZYp_3BTDGjh2unaZfZmuA__original/img/7d-lj5Gd1e8PFnD97LYFah2EPe0=/0x0/filters:format(jpeg)/pic2437871.jpg"
-      fallbackThumbnailUrl: "https://cf.geekdo-images.com/sZYp_3BTDGjh2unaZfZmuA__small/img/jHtLBLiDhtdIHxmmZQ_B0KBIWEI=/fit-in/200x150/filters:strip_icc()/pic2437871.jpg"
-    - title: "Spirit Island"
-      bggId: 162886
-      language: en
-      seedAgent: false
-      fallbackImageUrl: "https://cf.geekdo-images.com/kjCm4ZvPjIZxS-mYgSPMmg__original/img/vRG5wN1uUKWRJRhSO9pl1JXp6OY=/0x0/filters:format(jpeg)/pic7013651.jpg"
-      fallbackThumbnailUrl: "https://cf.geekdo-images.com/kjCm4ZvPjIZxS-mYgSPMmg__small/img/it5rGXR-Y5T12PUcbrPncVAiLOQ=/fit-in/200x150/filters:strip_icc()/pic7013651.jpg"
-    - title: "Scythe"
-      bggId: 169786
-      language: en
-      seedAgent: false
-      fallbackImageUrl: "https://cf.geekdo-images.com/7k_nOxpO9OGIjhLq2BUZdA__original/img/HlDb5T7dYjEqKRPpMESpSIBhE1c=/0x0/filters:format(jpeg)/pic3163924.jpg"
-      fallbackThumbnailUrl: "https://cf.geekdo-images.com/7k_nOxpO9OGIjhLq2BUZdA__small/img/1RPGq_aMm40Jf0gpe4yEbOFhZ5U=/fit-in/200x150/filters:strip_icc()/pic3163924.jpg"
-    - title: "Everdell"
-      bggId: 199792
-      language: en
-      seedAgent: false
-      fallbackImageUrl: "https://cf.geekdo-images.com/fjE7V5LNq31yVEW_yuqI-Q__original/img/IKeSgQgCnpYpeSNeSPGOTMhLuxw=/0x0/filters:format(jpeg)/pic3918905.jpg"
-      fallbackThumbnailUrl: "https://cf.geekdo-images.com/fjE7V5LNq31yVEW_yuqI-Q__small/img/s70ZH0lKRj0JwMMoSnZ7yvFijeA=/fit-in/200x150/filters:strip_icc()/pic3918905.jpg"
-    - title: "Root"
-      bggId: 237182
-      language: en
-      seedAgent: false
-      fallbackImageUrl: "https://cf.geekdo-images.com/JUAUWaVUzeBgzirhZNmHHw__original/img/ZF-dta5ffawuKczTBVdliFxiLIo=/0x0/filters:format(jpeg)/pic4254509.jpg"
-      fallbackThumbnailUrl: "https://cf.geekdo-images.com/JUAUWaVUzeBgzirhZNmHHw__small/img/7TnOfWj4xpOBUW1ZjBkn7-8cnaQ=/fit-in/200x150/filters:strip_icc()/pic4254509.jpg"
-    - title: "Brass: Birmingham"
-      bggId: 224517
-      language: en
-      seedAgent: false
-      fallbackImageUrl: "https://cf.geekdo-images.com/x3zxjr-Vw5iU4yDPg70Jgw__original/img/FpyxH41Y6_ROoePLilPNGrKBij0=/0x0/filters:format(jpeg)/pic3490053.jpg"
-      fallbackThumbnailUrl: "https://cf.geekdo-images.com/x3zxjr-Vw5iU4yDPg70Jgw__small/img/s7hAWotQA5yUXcQCroIBqWE3sO0=/fit-in/200x150/filters:strip_icc()/pic3490053.jpg"
-    - title: "Codenames"
-      bggId: 178900
-      language: en
-      seedAgent: false
-      fallbackImageUrl: "https://cf.geekdo-images.com/F_KDEu0GjdClml8N7c8Imw__original/img/nf3Ou3_G6B4F0mJpUxYnFhCdFPo=/0x0/filters:format(jpeg)/pic2582929.jpg"
-      fallbackThumbnailUrl: "https://cf.geekdo-images.com/F_KDEu0GjdClml8N7c8Imw__small/img/pxpnp7TvV-1siD7BELVQFET72so=/fit-in/200x150/filters:strip_icc()/pic2582929.jpg"
-    - title: "Dominion"
-      bggId: 36218
-      language: en
-      seedAgent: false
-      fallbackImageUrl: "https://cf.geekdo-images.com/j6iQpZ4HkVOHRCTbMdLCGg__original/img/FS3JOyNb8v7OJSoelwGJRFhZGZo=/0x0/filters:format(jpeg)/pic394356.jpg"
-      fallbackThumbnailUrl: "https://cf.geekdo-images.com/j6iQpZ4HkVOHRCTbMdLCGg__small/img/_5kmleGLOJdFHrvfLIBcbfED7_0=/fit-in/200x150/filters:strip_icc()/pic394356.jpg"
-    - title: "Viticulture"
-      bggId: 183394
-      language: en
-      seedAgent: false
-      fallbackImageUrl: "https://cf.geekdo-images.com/l_PRU2lVlX9seScRFcvFlA__original/img/K8CAyJ-30yDRfhaC7eFBF-hMjCU=/0x0/filters:format(jpeg)/pic2649952.jpg"
-      fallbackThumbnailUrl: "https://cf.geekdo-images.com/l_PRU2lVlX9seScRFcvFlA__small/img/rZzIHWRYnCl42zx5ZZPZHR8rccA=/fit-in/200x150/filters:strip_icc()/pic2649952.jpg"
-    - title: "Ark Nova"
-      bggId: 342942
-      language: en
-      seedAgent: false
-      fallbackImageUrl: "https://cf.geekdo-images.com/SoU8p28Sk1s8MSvoM4N8pQ__original/img/g4S18szTdrXCdIwVKzMKrZrYAcE=/0x0/filters:format(jpeg)/pic6293412.jpg"
-      fallbackThumbnailUrl: "https://cf.geekdo-images.com/SoU8p28Sk1s8MSvoM4N8pQ__small/img/ZHksKPEJkm0pWLCjWFHG7ygRgeQ=/fit-in/200x150/filters:strip_icc()/pic6293412.jpg"
+      Set-up includes randomly placing large hexagonal tiles (each depicting one of the five resource-producing terrain types--or the desert) in a honeycomb shape and surrounding them with water tiles, some of which contain ports of exchange. A number disk, the value of which will correspond to the roll of two 6-sided dice, are placed on each terrain tile. Each player is given two settlements (think: houses) and roads (sticks) which are placed on intersections and borders of the terrain tiles. Players collect a hand of resource cards based on which terrain tiles their last-placed settlement is adjacent to. A robber pawn is placed on the desert tile.
 
+
+      A turn consists of rolling the dice, collecting resource cards based on this dice roll and the position of settlements (or upgraded cities&mdash;think: hotels), turning in resource cards (if possible and desired) for improvements, trading cards at a port, possibly playing a development card, or trading resource cards with other players. If the dice roll is a 7, the active player moves the robber to a new terrain tile and steals a resource card from another player who has a settlement adjacent to that tile.
+
+
+      Points are accumulated by building settlements and cities, having the longest road or the largest army (from some of the development cards), and gathering certain development cards that simply award victory points. When a player has gathered 10 points (some of which may be held in secret), s/he announces this and claims the win.
+
+    yearPublished: 1995
+    minPlayers: 3
+    maxPlayers: 4
+    playingTime: 120
+    minAge: 10
+    averageRating: 7.09
+    averageWeight: 2.28
+    imageUrl: https://cf.geekdo-images.com/0XODRpReiZBFUffEcqT5-Q__original/img/oRc0AomWA9ZtFqQDZiZbIyKE1j0=/0x0/filters:format(png)/pic9156909.png
+    thumbnailUrl: https://cf.geekdo-images.com/0XODRpReiZBFUffEcqT5-Q__small/img/SNVfF23OQafv3u8xdFolJnMkBoM=/fit-in/200x150/filters:strip_icc()/pic9156909.png
+    categories:
+    - Economic
+    - Negotiation
+    mechanics:
+    - Chaining
+    - Dice Rolling
+    - Hand Management
+    - Hexagon Grid
+    - Hidden Victory Points
+    - Income
+    - Market
+    - Modular Board
+    - Network and Route Building
+    - Race
+    - Random Production
+    - Take That
+    - Trading
+    - Variable Set-up
+    designers:
+    - Klaus Teuber
+    publishers:
+    - KOSMOS
+    - 64 Ounce Games
+    - 999 Games
+    - Albi
+    - asmodee
+    - Astrel Games
+    - BGA Plus
+    - Brädspel.se
+    - Brain Games
+    - Broadway Toys LTD
+    - Capcom Co., Ltd.
+    - Catan Studio
+    - Competo / Marektoy
+    - danspil
+    - Descartes Editeur
+    - Devir
+    - Dexy Co
+    - Enigma (Bergsala Enigma)
+    - Eurogames
+    - Filosofia Éditions
+    - Galakta
+    - Giochi Uniti
+    - GP Games
+    - Grow Jogos e Brinquedos
+    - HaKubia
+    - Hanayama
+    - Hobby World
+    - Ideal Board Games
+    - Igroljub
+    - IntelliGames.BG
+    - Ísöld ehf.
+    - Kaissa Chess & Games
+    - Korea Boardgames
+    - L&M Games
+    - Laser plus
+    - Lautapelit.fi
+    - Logojogos
+    - Mayfair Games
+    - MIPL
+    - NeoTroy Games
+    - Ninive Games
+    - Paper Iyagi
+    - Piatnik Distribution
+    - Rozum
+    - Smart Ltd
+    - Spilbræt.dk
+    - Stupor Mundi
+    - Super Impulse
+    - SuperHeated Neurons
+    - Swan Panasia Co., Ltd.
+    - Tilsit
+    - Top Toys
+    - TRY SOFT
+    - Vennerød Forlag AS
+  - title: Carcassonne
+    bggId: 822
+    language: en
+    pdf: carcassone_rulebook.pdf
+    seedAgent: true
+    fallbackImageUrl: https://cf.geekdo-images.com/peUgu3A20LRmAXAMyDQfpQ__original/img/bP18m_PYjyFOv1IBGgMOteQUneA=/0x0/filters:format(jpeg)/pic8621446.jpg
+    fallbackThumbnailUrl: https://cf.geekdo-images.com/peUgu3A20LRmAXAMyDQfpQ__small/img/oEEslN-EGqh82sNI6Aj4_MFXYg0=/fit-in/200x150/filters:strip_icc()/pic8621446.jpg
+    bggEnhanced: true
+    description: >+
+      Carcassonne is a tile placement game in which the players draw and place a tile with a piece of southern French landscape represented on it. The tile might feature a city, a road, a cloister, grassland or some combination thereof, and it must be placed adjacent to tiles that have already been played, in such a way that cities are connected to cities, roads to roads, et cetera. Having placed a tile, the player can then decide to place one of their meeples in one of the areas on it: in the city as a knight, on the road as a robber, in the cloister as a monk, or in the field as a farmer. When that area is complete that meeple scores points for its owner.
+
+
+      During a game of Carcassonne, players are faced with decisions like: "Is it really worth putting my last meeple there?" or "Should I use this tile to expand my city, or should I place it near my opponent instead, thus making it a harder for them to complete it and score points?" Since players place only one tile and have the option to place one meeple on it, turns proceed quickly even if it is a game full of options and possibilities.
+
+
+      First game in the Carcassonne series.
+
+    yearPublished: 2000
+    minPlayers: 2
+    maxPlayers: 5
+    playingTime: 45
+    minAge: 7
+    averageRating: 7.42
+    averageWeight: 1.89
+    imageUrl: https://cf.geekdo-images.com/peUgu3A20LRmAXAMyDQfpQ__original/img/bP18m_PYjyFOv1IBGgMOteQUneA=/0x0/filters:format(jpeg)/pic8621446.jpg
+    thumbnailUrl: https://cf.geekdo-images.com/peUgu3A20LRmAXAMyDQfpQ__small/img/oEEslN-EGqh82sNI6Aj4_MFXYg0=/fit-in/200x150/filters:strip_icc()/pic8621446.jpg
+    categories:
+    - Medieval
+    - Territory Building
+    mechanics:
+    - Area Majority / Influence
+    - Enclosure
+    - Kill Steal
+    - Map Addition
+    - Pattern Building
+    - Square Grid
+    - Tile Placement
+    designers:
+    - Klaus-Jürgen Wrede
+    publishers:
+    - Hans im Glück
+    - 64 Ounce Games
+    - 999 Games
+    - Albi
+    - Astrel Games
+    - Bard Centrum Gier
+    - Brain Games
+    - cutia.ro
+    - Devir
+    - Enigma (Bergsala Enigma)
+    - Fantasmagoria
+    - Feelindigo
+    - Filosofia Éditions
+    - Games4you
+    - Giochi Uniti
+    - Grow Jogos e Brinquedos
+    - Hobby World
+    - Ísöld ehf.
+    - Kaissa Chess & Games
+    - Korea Boardgames
+    - Lanlalen
+    - Lautapelit.fi
+    - Midgaard Games
+    - MINDOK
+    - Möbius Games
+    - Monkey Time
+    - NeoTroy Games
+    - Nordic Games ehf
+    - Paper Iyagi
+    - Piatnik Distribution
+    - Ponva d.o.o.
+    - Rio Grande Games
+    - Schmidt Spiele
+    - Smart Ltd
+    - Stupor Mundi
+    - SuperHeated Neurons
+    - Swan Panasia Co., Ltd.
+    - Venice Connection
+    - Ventura Games
+    - Z-Man Games
+  - title: Pandemic
+    bggId: 30549
+    language: en
+    pdf: pandemic_rulebook.pdf
+    seedAgent: true
+    fallbackImageUrl: https://cf.geekdo-images.com/S3ybV1LAp-8SnHIXLLjVqA__original/img/IsrvRLpUV1TEyZsO5rC-btXaPz0=/0x0/filters:format(jpeg)/pic1534148.jpg
+    fallbackThumbnailUrl: https://cf.geekdo-images.com/S3ybV1LAp-8SnHIXLLjVqA__small/img/oqViRj6nVxK3m36NluTxU1PZkrk=/fit-in/200x150/filters:strip_icc()/pic1534148.jpg
+    bggEnhanced: true
+    description: >+
+      In Pandemic, several virulent diseases have broken out simultaneously all over the world! The players are disease-fighting specialists whose mission is to treat disease hotspots while researching cures for each of four plagues before they get out of hand.
+
+
+      The game board depicts several major population centers on Earth. On each turn, a player can use up to four actions to travel between cities, treat infected populaces, discover a cure, or build a research station. A deck of cards provides the players with these abilities, but sprinkled throughout this deck are Epidemic! cards that accelerate and intensify the diseases' activity. A second, separate deck of cards controls the "normal" spread of the infections.
+
+
+      Taking a unique role within the team, players must plan their strategy to mesh with their specialists' strengths in order to conquer the diseases. For example, the Operations Expert can build research stations which are needed to find cures for the diseases and which allow for greater mobility between cities; the Scientist needs only four cards of a particular disease to cure it instead of the normal five&mdash;but the diseases are spreading quickly and time is running out. If one or more diseases spreads beyond recovery or if too much time elapses, the players all lose. If they cure the four diseases, they all win!
+
+
+      The 2013 edition of Pandemic includes two new characters&mdash;the Contingency Planner and the Quarantine Specialist&mdash;not available in earlier editions of the game.
+
+
+      Pandemic is the first game in the Pandemic series.
+
+    yearPublished: 2008
+    minPlayers: 2
+    maxPlayers: 4
+    playingTime: 45
+    minAge: 8
+    averageRating: 7.51
+    averageWeight: 2.39
+    imageUrl: https://cf.geekdo-images.com/S3ybV1LAp-8SnHIXLLjVqA__original/img/IsrvRLpUV1TEyZsO5rC-btXaPz0=/0x0/filters:format(jpeg)/pic1534148.jpg
+    thumbnailUrl: https://cf.geekdo-images.com/S3ybV1LAp-8SnHIXLLjVqA__small/img/oqViRj6nVxK3m36NluTxU1PZkrk=/fit-in/200x150/filters:strip_icc()/pic1534148.jpg
+    categories:
+    - Medical
+    - Travel
+    mechanics:
+    - Action Points
+    - Chaining
+    - Contracts
+    - Cooperative Game
+    - Events
+    - Hand Management
+    - Multi-Use Cards
+    - Point to Point Movement
+    - Set Collection
+    - Simulation
+    - Solo / Solitaire Game
+    - Tags
+    - Trading
+    - Variable Player Powers
+    - Variable Set-up
+    designers:
+    - Matt Leacock
+    publishers:
+    - Z-Man Games
+    - (Unknown)
+    - ADC Blackfire Entertainment
+    - Albi
+    - Asterion Press
+    - Boardgame Space
+    - Brain Games
+    - CoolPlay
+    - Devir
+    - Enigma (Bergsala Enigma)
+    - Filosofia Éditions
+    - Galápagos Jogos
+    - Game Harbor
+    - Gém Klub Kft.
+    - HaKubia
+    - Hobby Japan
+    - HomoLudicus
+    - Jolly Thinkers
+    - Kaissa Chess & Games
+    - Korea Boardgames
+    - Lacerta
+    - Lautapelit.fi
+    - Lifestyle Boardgames Ltd
+    - MINDOK
+    - NeoTroy Games
+    - Nordic Games ehf
+    - Paladium Games
+    - Pegasus Spiele
+    - Quined White Goblin Games
+    - Rebel Sp. z o.o.
+    - Siam Board Games
+    - Stratelibri
+    - Wargames Club Publishing
+    - White Goblin Games
+    - Zhiyanjia
+    - Взрослые дети
+    - Ігромаг
+  - title: Ticket to Ride
+    bggId: 9209
+    language: en
+    pdf: ticket-to-ride_rulebook.pdf
+    seedAgent: true
+    fallbackImageUrl: https://cf.geekdo-images.com/kdWYkW-7AqG63HhqPL6ekA__original/img/rWF8r4JXXCQQ7QhiWHhmT-rQ3Pc=/0x0/filters:format(jpeg)/pic8937637.jpg
+    fallbackThumbnailUrl: https://cf.geekdo-images.com/kdWYkW-7AqG63HhqPL6ekA__small/img/5G46jv8MFh_BfX67iMSouTMhKxc=/fit-in/200x150/filters:strip_icc()/pic8937637.jpg
+    bggEnhanced: true
+    description: >+
+      With elegantly simple gameplay, Ticket to Ride can be learned in under 15 minutes. Players collect cards of various types of train cars they then use to claim railway routes in North America. The longer the routes, the more points they earn. Additional points come to those who fulfill Destination Tickets &ndash; goal cards that connect distant cities; and to the player who builds the longest continuous route.
+
+
+      "The rules are simple enough to write on a train ticket &ndash; each turn you either draw more cards, claim a route, or get additional Destination Tickets," says Ticket to Ride author, Alan R. Moon. "The tension comes from being forced to balance greed &ndash; adding more cards to your hand, and fear &ndash; losing a critical route to a competitor."
+
+
+      Ticket to Ride continues in the tradition of Days of Wonder's big format board games featuring high-quality illustrations and components including: an oversize board map of North America, 225 custom-molded train cars, 144 illustrated cards, and wooden scoring markers.
+
+
+      Since its introduction and numerous subsequent awards, Ticket to Ride has become the BoardGameGeek epitome of a "gateway game" -- simple enough to be taught in a few minutes, and with enough action and tension to keep new players involved and in the game for the duration.
+
+
+      Part of the Ticket to Ride series.
+
+    yearPublished: 2004
+    minPlayers: 2
+    maxPlayers: 5
+    playingTime: 60
+    minAge: 8
+    averageRating: 7.39
+    averageWeight: 1.82
+    imageUrl: https://cf.geekdo-images.com/kdWYkW-7AqG63HhqPL6ekA__original/img/rWF8r4JXXCQQ7QhiWHhmT-rQ3Pc=/0x0/filters:format(jpeg)/pic8937637.jpg
+    thumbnailUrl: https://cf.geekdo-images.com/kdWYkW-7AqG63HhqPL6ekA__small/img/5G46jv8MFh_BfX67iMSouTMhKxc=/fit-in/200x150/filters:strip_icc()/pic8937637.jpg
+    categories:
+    - Trains
+    mechanics:
+    - Connections
+    - Contracts
+    - End Game Bonuses
+    - Hand Management
+    - Network and Route Building
+    - Open Drafting
+    - Push Your Luck
+    - Set Collection
+    designers:
+    - Alan R. Moon
+    publishers:
+    - Days of Wonder
+    - ADC Blackfire Entertainment
+    - asmodee
+    - Asterion Press
+    - Bandai Co., Ltd.
+    - Boardgame Space
+    - Edge Entertainment
+    - Enigma (Bergsala Enigma)
+    - Galápagos Jogos
+    - Giochi Uniti
+    - Happy Baobab
+    - Hobby Japan
+    - Hobby World
+    - Kaissa Chess & Games
+    - Korea Boardgames
+    - Lautapelit.fi
+    - Rebel Sp. z o.o.
+    - Siam Board Games
+    - Swan Panasia Co., Ltd.
+  - title: Splendor
+    bggId: 148228
+    language: en
+    pdf: splendor_rulebook.pdf
+    seedAgent: true
+    fallbackImageUrl: https://cf.geekdo-images.com/vNFe4JkhKAERzi4T0Ntwpw__original/img/rqcUdtu_N4v-SpI96XVmpYHnJww=/0x0/filters:format(png)/pic8234167.png
+    fallbackThumbnailUrl: https://cf.geekdo-images.com/vNFe4JkhKAERzi4T0Ntwpw__small/img/KKU_42Uswt4tKCpf1zY5kTzgr-g=/fit-in/200x150/filters:strip_icc()/pic8234167.png
+    bggEnhanced: true
+    description: >+
+      Splendor is a game of chip-collecting and card development. Players are merchants of the Renaissance trying to buy gem mines, means of transportation, shops&mdash;all in order to acquire the most prestige points. If you're wealthy enough, you might even receive a visit from a noble at some point, which of course will further increase your prestige.
+
+
+      On your turn, you may (1) collect chips (gems), or (2) buy and build a card, or (3) reserve one card. If you collect chips, you take either three different kinds of chips or two chips of the same kind. If you buy a card, you pay its price in chips and add it to your playing area. To reserve a card&mdash;in order to make sure you get it, or, why not, your opponents don't get it&mdash;you place it in front of you face down for later building; this costs you a round, but you also get gold in the form of a joker chip, which you can use as any gem.
+
+
+      All of the cards you buy increase your wealth as they give you a permanent gem bonus for later buys; some of the cards also give you prestige points. In order to win the game, you must reach 15 prestige points before your opponents do.
+
+    yearPublished: 2014
+    minPlayers: 2
+    maxPlayers: 4
+    playingTime: 30
+    minAge: 10
+    averageRating: 7.42
+    averageWeight: 1.78
+    imageUrl: https://cf.geekdo-images.com/vNFe4JkhKAERzi4T0Ntwpw__original/img/rqcUdtu_N4v-SpI96XVmpYHnJww=/0x0/filters:format(png)/pic8234167.png
+    thumbnailUrl: https://cf.geekdo-images.com/vNFe4JkhKAERzi4T0Ntwpw__small/img/KKU_42Uswt4tKCpf1zY5kTzgr-g=/fit-in/200x150/filters:strip_icc()/pic8234167.png
+    categories:
+    - Card Game
+    - Economic
+    - Renaissance
+    mechanics:
+    - Contracts
+    - Open Drafting
+    - Race
+    - Set Collection
+    designers:
+    - Marc André
+    publishers:
+    - Space Cowboys
+    - Asterion Press
+    - Belleville (Бельвіль)
+    - Board Game VN
+    - Boardgame Space
+    - Brain Games
+    - Broadway Toys LTD
+    - CoolPlay
+    - Enigma (Bergsala Enigma)
+    - Filosofia Éditions
+    - Galápagos Jogos
+    - Gém Klub Kft.
+    - GoKids 玩樂小子
+    - Gutenberg ehf.
+    - HaKubia
+    - Hobby Japan
+    - JD Éditions
+    - Kaissa Chess & Games
+    - Korea Boardgames
+    - Lautapelit.fi
+    - Lex Games
+    - Lifestyle Boardgames Ltd
+    - Maldón
+    - Morapiaf
+    - NeoTroy Games
+    - Rebel Sp. z o.o.
+    - Siam Board Games
+    - Z-Man Games
+  - title: Wingspan
+    bggId: 266192
+    language: en
+    pdf: wingspan_en_rulebook.pdf
+    fallbackImageUrl: https://cf.geekdo-images.com/yLZJCVLlIx4c7eJEWUNJ7w__original/img/cI782Zis9cT66j2MjSHKJGnFPNw=/0x0/filters:format(jpeg)/pic4458123.jpg
+    fallbackThumbnailUrl: https://cf.geekdo-images.com/yLZJCVLlIx4c7eJEWUNJ7w__small/img/VNToqgS2-pOGU6MuvIkMPKn_y-s=/fit-in/200x150/filters:strip_icc()/pic4458123.jpg
+    bggEnhanced: true
+    description: >+
+      Wingspan is&nbsp;a competitive, medium-weight, card-driven, engine-building board game from Stonemaier Games. It's designed by Elizabeth Hargrave and features 180 birds illustrated by Natalia Rojas and Ana Maria Martinez.
+
+
+      You are bird enthusiasts&mdash;researchers, bird watchers, ornithologists, and collectors&mdash;seeking to discover and attract the best birds to your network of wildlife preserves. Each bird extends a chain of powerful combinations in one of your habitats (actions). These habitats  focus on several key aspects of growth:
+
+
+           Gain food tokens via custom dice in a birdfeeder dice tower
+           Lay eggs using egg miniatures in a variety of colors
+           Draw from hundreds of unique bird cards and play them
+
+
+      The winner is the player with the most points after 4 rounds.
+
+
+      &mdash;description from the publisher
+
+
+      From the 7th printing on, the base game box includes Wingspan: Swift-Start Promo Pack.
+
+    yearPublished: 2019
+    minPlayers: 1
+    maxPlayers: 5
+    playingTime: 70
+    minAge: 10
+    averageRating: 8
+    averageWeight: 2.48
+    imageUrl: https://cf.geekdo-images.com/yLZJCVLlIx4c7eJEWUNJ7w__original/img/cI782Zis9cT66j2MjSHKJGnFPNw=/0x0/filters:format(jpeg)/pic4458123.jpg
+    thumbnailUrl: https://cf.geekdo-images.com/yLZJCVLlIx4c7eJEWUNJ7w__small/img/VNToqgS2-pOGU6MuvIkMPKn_y-s=/fit-in/200x150/filters:strip_icc()/pic4458123.jpg
+    categories:
+    - Animals
+    - Card Game
+    - Educational
+    mechanics:
+    - Action Queue
+    - Dice Rolling
+    - End Game Bonuses
+    - Hand Management
+    - Once-Per-Game Abilities
+    - Open Drafting
+    - Set Collection
+    - Solo / Solitaire Game
+    - 'Turn Order: Progressive'
+    designers:
+    - Elizabeth Hargrave
+    publishers:
+    - Stonemaier Games
+    - 999 Games
+    - Angry Lion Games
+    - Arclight Games
+    - asmodee
+    - Automa Factory
+    - Bluebird Games
+    - Brain Games
+    - Delta Vision Publishing
+    - Divercentro
+    - Feuerland Spiele
+    - Ghenos Games
+    - Green Elephant Games
+    - Grok Games
+    - Kaissa Chess & Games
+    - Korea Boardgames
+    - Lautapelit.fi
+    - Lavka Games
+    - Ludofy Creative
+    - Maldito Games
+    - Matagot
+    - MINDOK
+    - MIPL
+    - NeoTroy Games
+    - Rebel Sp. z o.o.
+    - Regatul Jocurilor
+    - Siam Board Games
+    - Surfin' Meeple China
+    - Ігромаг
+  - title: Azul
+    bggId: 230802
+    language: en
+    pdf: azul_rulebook.pdf
+    fallbackImageUrl: https://cf.geekdo-images.com/aPSHJO0d0XOpQR5X-wJonw__original/img/AkbtYVc6xXJF3c9EUrakklcclKw=/0x0/filters:format(png)/pic6973671.png
+    fallbackThumbnailUrl: https://cf.geekdo-images.com/aPSHJO0d0XOpQR5X-wJonw__small/img/ccsXKrdGJw-YSClWwzVUwk5Nh9Y=/fit-in/200x150/filters:strip_icc()/pic6973671.png
+    bggEnhanced: true
+    description: >+
+      Introduced by the Moors, azulejos (originally white and blue ceramic tiles) were fully embraced by the Portuguese when their king Manuel I, on a visit to the Alhambra palace in Southern Spain, was mesmerized by the stunning beauty of the Moorish decorative tiles. The king, awestruck by the interior beauty of the Alhambra, immediately ordered that his own palace in Portugal be decorated with similar wall tiles. As a tile-laying artist, you have been challenged to embellish the walls of the Royal Palace of Evora.
+
+
+      In the game Azul, players take turns drafting colored tiles from suppliers to their player board. Later in the round, players score points based on how they've placed their tiles to decorate the palace. Extra points are scored for specific patterns and completing sets; wasted supplies harm the player's score. The player with the most points at the end of the game wins.
+
+    yearPublished: 2017
+    minPlayers: 2
+    maxPlayers: 4
+    playingTime: 45
+    minAge: 8
+    averageRating: 7.72
+    averageWeight: 1.77
+    imageUrl: https://cf.geekdo-images.com/aPSHJO0d0XOpQR5X-wJonw__original/img/AkbtYVc6xXJF3c9EUrakklcclKw=/0x0/filters:format(png)/pic6973671.png
+    thumbnailUrl: https://cf.geekdo-images.com/aPSHJO0d0XOpQR5X-wJonw__small/img/ccsXKrdGJw-YSClWwzVUwk5Nh9Y=/fit-in/200x150/filters:strip_icc()/pic6973671.png
+    categories:
+    - Abstract Strategy
+    - Renaissance
+    mechanics:
+    - Chaining
+    - End Game Bonuses
+    - Grid Coverage
+    - Open Drafting
+    - Pattern Building
+    - Set Collection
+    - Square Grid
+    - Tile Placement
+    - 'Turn Order: Claim Action'
+    designers:
+    - Michael Kiesling
+    publishers:
+    - Next Move Games
+    - Plan B Games
+    - asmodee
+    - Belleville (Бельвіль)
+    - Broadway Toys LTD
+    - Divercentro
+    - Galápagos Jogos
+    - Gém Klub Kft.
+    - Ghenos Games
+    - Green Elephant Games
+    - Hobby Japan
+    - KADABRA
+    - Kaissa Chess & Games
+    - Korea Boardgames
+    - Lacerta
+    - Maldón
+    - MINDOK
+    - MIPL
+    - Orangutan Games
+    - Pegasus Spiele
+    - Rebel Sp. z o.o.
+    - SuperHeated Neurons
+    - Tower Tactic Games
+    - TWOPLUS Games
+    - Zvezda
+  - title: 7 Wonders
+    bggId: 68448
+    language: en
+    pdf: 7-wonders_rulebook.pdf
+    fallbackImageUrl: https://cf.geekdo-images.com/35h9Za_JvMMMtx_92kT0Jg__original/img/jt70jJDZ1y1FWJs4ZQf5FI8APVY=/0x0/filters:format(jpeg)/pic7149798.jpg
+    fallbackThumbnailUrl: https://cf.geekdo-images.com/35h9Za_JvMMMtx_92kT0Jg__small/img/BUOso8b0M1aUOkU80FWlhE8uuxc=/fit-in/200x150/filters:strip_icc()/pic7149798.jpg
+    bggEnhanced: true
+    description: >+
+      You are the leader of one of the 7 great cities of the Ancient World. Gather resources, develop commercial routes, and affirm your military supremacy. Build your city and erect an architectural wonder which will transcend future times.
+
+
+      7 Wonders lasts three ages. In each age, players receive seven cards from a particular deck, choose one of those cards, then pass the remainder to an adjacent player. Players reveal their cards simultaneously, paying resources if needed or collecting resources or interacting with other players in various ways. (Players have individual boards with special powers on which to organize their cards, and the boards are double-sided). Each player then chooses another card from the deck they were passed, and the process repeats until players have six cards in play from that age. After three ages, the game ends.
+
+
+      In essence, 7 Wonders is a card development game. Some cards have immediate effects, while others provide bonuses or upgrades later in the game. Some cards provide discounts on future purchases. Some provide military strength to overpower your neighbors and others give nothing but victory points. Each card is played immediately after being drafted, so you'll know which cards your neighbor is receiving and how her choices might affect what you've already built up. Cards are passed left-right-left over the three ages, so you need to keep an eye on the neighbors in both directions.
+
+
+      Though the box of earlier editions is listed as being for 3&ndash;7 players, there is an official 2-player variant included in the instructions.
+
+    yearPublished: 2010
+    minPlayers: 2
+    maxPlayers: 7
+    playingTime: 30
+    minAge: 10
+    averageRating: 7.66
+    averageWeight: 2.31
+    imageUrl: https://cf.geekdo-images.com/35h9Za_JvMMMtx_92kT0Jg__original/img/jt70jJDZ1y1FWJs4ZQf5FI8APVY=/0x0/filters:format(jpeg)/pic7149798.jpg
+    thumbnailUrl: https://cf.geekdo-images.com/35h9Za_JvMMMtx_92kT0Jg__small/img/BUOso8b0M1aUOkU80FWlhE8uuxc=/fit-in/200x150/filters:strip_icc()/pic7149798.jpg
+    categories:
+    - Ancient
+    - Card Game
+    - City Building
+    - Civilization
+    - Economic
+    mechanics:
+    - Closed Drafting
+    - End Game Bonuses
+    - Hand Management
+    - Melding and Splaying
+    - Multi-Use Cards
+    - Neighbor Scope
+    - Once-Per-Game Abilities
+    - Score-and-Reset Game
+    - Set Collection
+    - Simultaneous Action Selection
+    - Tags
+    - Tech Trees / Tech Tracks
+    - Variable Player Powers
+    - Variable Set-up
+    designers:
+    - Antoine Bauza
+    publishers:
+    - Repos Production
+    - ADC Blackfire Entertainment
+    - Asterion Press
+    - Galápagos Jogos
+    - Gém Klub Kft.
+    - Hobby Japan
+    - Kaissa Chess & Games
+    - Korea Boardgames
+    - Lautapelit.fi
+    - Lifestyle Boardgames Ltd
+    - NeoTroy Games
+    - Rebel Sp. z o.o.
+    - Siam Board Games
+  - title: Agricola
+    bggId: 31260
+    language: en
+    pdf: agricola_rulebook.pdf
+    fallbackImageUrl: https://cf.geekdo-images.com/3L6ZtOll9W5O6-3-EwSMyw__original/img/V37KuMJlCzpxAilzN39BzeLvc9Q=/0x0/filters:format(jpeg)/pic1899157.jpg
+    fallbackThumbnailUrl: https://cf.geekdo-images.com/3L6ZtOll9W5O6-3-EwSMyw__small/img/TpNF65wCIb1n3EGW18eJJ3MlRMo=/fit-in/200x150/filters:strip_icc()/pic1899157.jpg
+    bggEnhanced: true
+    description: >+
+      In Agricola, you're a farmer in a wooden shack with your spouse and little else. At first, on a turn, your family gets to take only two actions, one for you and one for your spouse, as might be found among all the possibilities on a farm: plowing fields; collecting materials; building fences, and so on. There are numerous choices available, and while the game progresses you'll have more and more, as each round a new action card is flipped over, offering one more possible action. You might think about having kids in order to get more work accomplished but first you'll need to expand your house to make room - and what are you going to feed all the little rug rats?
+
+
+      The game supports many levels of complexity, mainly through the distribution of cards which represent Minor Improvements and Occupations. In the beginner's version (called the Family Variant in the U.S. release) these cards are not used at all. For advanced play, the U.S. release includes three levels of both types of cards; Basic (E-deck), Interactive (I-deck), and Complex (K-deck), and the rulebook encourages players to experiment with the various decks and mixtures thereof. Aftermarket decks such as the Z-Deck and the L-Deck also exist. Each player starts with a hand of 7 Occupation cards (of more than 160 total) and 7 Minor Improvement cards (of more than 140 total) that he/she may use during the game if they fit into his/her strategy.
+
+
+      Agricola is a turn-based game, and the problem to be overcome is that each available action can be taken by only one player each round so it's important to be careful about your choices.  There are countless strategies, some of which depend on your hand of cards.
+
+
+      The winner is the player with the most Victory Points from the Improvements made on his farm.
+
+
+      -description originally from BoardgameNews
+
+    yearPublished: 2007
+    minPlayers: 1
+    maxPlayers: 5
+    playingTime: 150
+    minAge: 12
+    averageRating: 7.86
+    averageWeight: 3.64
+    imageUrl: https://cf.geekdo-images.com/3L6ZtOll9W5O6-3-EwSMyw__original/img/V37KuMJlCzpxAilzN39BzeLvc9Q=/0x0/filters:format(jpeg)/pic1899157.jpg
+    thumbnailUrl: https://cf.geekdo-images.com/3L6ZtOll9W5O6-3-EwSMyw__small/img/TpNF65wCIb1n3EGW18eJJ3MlRMo=/fit-in/200x150/filters:strip_icc()/pic1899157.jpg
+    categories:
+    - Animals
+    - Economic
+    - Farming
+    mechanics:
+    - Automatic Resource Growth
+    - Closed Drafting
+    - Enclosure
+    - Increase Value of Unchosen Resources
+    - Solo / Solitaire Game
+    - 'Turn Order: Claim Action'
+    - Worker Placement
+    designers:
+    - Uwe Rosenberg
+    publishers:
+    - Lookout Games
+    - 999 Games
+    - Brain Games
+    - 'Compaya.hu: Gamer Café Kft.'
+    - Devir
+    - Filosofia Éditions
+    - Funforge
+    - Hobby Japan
+    - Hobby World
+    - HomoLudicus
+    - Korea Boardgames
+    - Lacerta
+    - MINDOK
+    - Smart Ltd
+    - Stratelibri
+    - Swan Panasia Co., Ltd.
+    - Ystari Games
+    - Z-Man Games
+  - title: Terraforming Mars
+    bggId: 167791
+    language: en
+    fallbackImageUrl: https://cf.geekdo-images.com/wg9oOLcsKvDesSUdZQ4rxw__original/img/thIqWDnH9utKuYlp1gq2Fz-_30I=/0x0/filters:format(jpeg)/pic3536616.jpg
+    fallbackThumbnailUrl: https://cf.geekdo-images.com/wg9oOLcsKvDesSUdZQ4rxw__small/img/FS1RE4Sml9yrflVEMsyXWDFmCSY=/fit-in/200x150/filters:strip_icc()/pic3536616.jpg
+    bggEnhanced: true
+    description: >+
+      In the 2400s, mankind begins to terraform the planet Mars. Giant corporations, sponsored by the World Government on Earth, initiate huge projects to raise the temperature, the oxygen level, and the ocean coverage until the environment is habitable. In Terraforming Mars, you play one of those corporations and work together in the terraforming process, but compete for getting victory points that are awarded not only for your contribution to the terraforming, but also for advancing human infrastructure throughout the solar system, and doing other commendable things.
+
+
+      As a player, you acquire unique project cards (from over two hundred different ones) by buying them to your hand. The cards can give you immediate bonuses, as well as increasing your production of different resources. Many cards also have requirements and they become playable when the temperature, oxygen, or ocean coverage increases enough. Buying cards is costly, so there is a balance between buying cards and actually playing them. Standard Projects are always available to complement your hand of cards. Your basic income, as well as your basic score, are based on your Terraform Rating. However, your income is boosted by your production, and VPs are also gained from many other sources.
+
+
+      You keep track of your production and resources on your player board.  The game uses six types of resources: MegaCredits, Steel, Titanium, Plants, Energy, and Heat. On the game board, you compete for the best places for your city tiles, ocean tiles, and greenery tiles. You also compete for different Milestones and Awards worth many VPs. Each round is called a generation and consists of the following phases:
+
+
+      1) Player order shifts clockwise.
+
+      2) Research phase: All players buy cards from four privately drawn.
+
+      3) Action phase: Players take turns doing 1-2 actions from these options: Playing a card, claiming a Milestone, funding an Award, using a Standard project, converting plant into greenery tiles (and raising oxygen), converting heat into a temperature raise, and using the action of a card in play. The turn continues around the table (sometimes several laps) until all players have passed.
+
+      4) Production phase: Players get resources according to their terraform rating and production parameters.
+
+
+      When the three global parameters (temperature, oxygen, ocean) have all reached their required levels, the terraforming is complete, and the game ends after that generation. Combine your Terraform Rating and other VPs to determine the winning corporation!
+
+    yearPublished: 2016
+    minPlayers: 1
+    maxPlayers: 5
+    playingTime: 120
+    minAge: 12
+    averageRating: 8.34
+    averageWeight: 3.27
+    imageUrl: https://cf.geekdo-images.com/wg9oOLcsKvDesSUdZQ4rxw__original/img/thIqWDnH9utKuoKVEUqveDixprI=/0x0/filters:format(jpeg)/pic3536616.jpg
+    thumbnailUrl: https://cf.geekdo-images.com/wg9oOLcsKvDesSUdZQ4rxw__small/img/BTxqxgYay5tHJfVoJ2NF5g43_gA=/fit-in/200x150/filters:strip_icc()/pic3536616.jpg
+    categories:
+    - Civilization
+    - Economic
+    - Environmental
+    - Industry / Manufacturing
+    - Science Fiction
+    - Space Exploration
+    - Territory Building
+    mechanics:
+    - Closed Drafting
+    - Contracts
+    - End Game Bonuses
+    - Hand Management
+    - Hexagon Grid
+    - Income
+    - Solo / Solitaire Game
+    - Tags
+    - Take That
+    - Tile Placement
+    - 'Turn Order: Progressive'
+    - Variable Player Powers
+    - Variable Set-up
+    designers:
+    - Jacob Fryxelius
+    publishers:
+    - FryxGames
+    - Arclight Games
+    - Brädspel.se
+    - Fantasmagoria
+    - Ghenos Games
+    - Golden Egg Games
+    - Green Elephant Games
+    - Intrafin Games
+    - Kaissa Chess & Games
+    - Kilogames
+    - Korea Boardgames
+    - Lautapelit.fi
+    - Lavka Games
+    - Lex Games
+    - Maldito Games
+    - MeepleBR
+    - MINDOK
+    - MIPL
+    - MYBG Co., Ltd.
+    - NeoTroy Games
+    - Rebel Sp. z o.o.
+    - Reflexshop
+    - Schwerkraft-Verlag
+    - Siam Board Games
+    - Stronghold Games
+    - SuperHeated Neurons
+    - Surfin' Meeple China
+  - title: Gloomhaven
+    bggId: 174430
+    language: en
+    fallbackImageUrl: https://cf.geekdo-images.com/sZYp_3BTDGjh2unaZfZmuA__original/img/7d-lj5Gd1e8PFnD97LYFah2EPe0=/0x0/filters:format(jpeg)/pic2437871.jpg
+    fallbackThumbnailUrl: https://cf.geekdo-images.com/sZYp_3BTDGjh2unaZfZmuA__small/img/jHtLBLiDhtdIHxmmZQ_B0KBIWEI=/fit-in/200x150/filters:strip_icc()/pic2437871.jpg
+    bggEnhanced: true
+    description: >+
+      Gloomhaven  is a game of Euro-inspired tactical combat in a persistent world of shifting motives. Players will take on the roles of wandering adventurers with their own special sets of skills and their own reasons for traveling to this dark corner of the world. Players must work together out of necessity to clear out menacing dungeons and forgotten ruins. In the process, they will enhance their abilities with experience and loot, discover new locations to explore and plunder, and expand an ever-branching story fueled by the decisions they make.
+       This is a game with a persistent and changing world that is ideally played over many game sessions. After a scenario, players will make decisions about what to do next, which will determine how the story continues, kind of like a &ldquo;Choose Your Own Adventure&rdquo; book. Playing through a scenario is a co-operative affair where players will fight against automated monsters using an innovative card system to determine the order of play and what a player does on their turn.
+
+      Each turn, a player chooses two cards to play out of their hand. The number on the top card determines their initiative for the round. Each card also has a top and bottom power, and when it is a player&rsquo;s turn in the initiative order, they determine whether to use the top power of one card and the bottom power of the other, or vice-versa. Players must be careful, though, because over time they will permanently lose cards from their hands. If they take too long to clear a dungeon, they may end u exhausted and be forced to retreat.
+
+    yearPublished: 2017
+    minPlayers: 1
+    maxPlayers: 4
+    playingTime: 120
+    minAge: 14
+    averageRating: 8.54
+    averageWeight: 3.92
+    imageUrl: https://cf.geekdo-images.com/sZYp_3BTDGjh2unaZfZmuA__original/img/7d-lj5Gd1e8PFnD97LYFah2c45M=/0x0/filters:format(jpeg)/pic2437871.jpg
+    thumbnailUrl: https://cf.geekdo-images.com/sZYp_3BTDGjh2unaZfZmuA__small/img/veqFeP4d_3zNhFc3GNBkV95rBEQ=/fit-in/200x150/filters:strip_icc()/pic2437871.jpg
+    categories:
+    - Adventure
+    - Exploration
+    - Fantasy
+    - Fighting
+    - Miniatures
+    mechanics:
+    - Action Queue
+    - Action Retrieval
+    - Campaign / Battle Card Driven
+    - Card Play Conflict Resolution
+    - Communication Limits
+    - Cooperative Game
+    - Critical Hits and Failures
+    - Deck Construction
+    - Grid Movement
+    - Hand Management
+    - Hexagon Grid
+    - Legacy Game
+    - Line of Sight
+    - Modular Board
+    - Multi-Use Cards
+    - Narrative Choice / Paragraph
+    - Once-Per-Game Abilities
+    - Role Playing
+    - Scenario / Mission / Campaign Game
+    - Simultaneous Action Selection
+    - Solo / Solitaire Game
+    - Storytelling
+    - Tags
+    - Variable Player Powers
+    designers:
+    - Isaac Childres
+    publishers:
+    - Cephalofair Games
+    - Albi
+    - Albi Polska
+    - Arclight Games
+    - Feuerland Spiele
+    - Galápagos Jogos
+    - Games Warehouse
+    - Gém Klub Kft.
+    - Hobby World
+    - Korea Boardgames
+    - MYBG Co., Ltd.
+  - title: Spirit Island
+    bggId: 162886
+    language: en
+    fallbackImageUrl: https://cf.geekdo-images.com/kjCm4ZvPjIZxS-mYgSPMmg__original/img/vRG5wN1uUKWRJRhSO9pl1JXp6OY=/0x0/filters:format(jpeg)/pic7013651.jpg
+    fallbackThumbnailUrl: https://cf.geekdo-images.com/kjCm4ZvPjIZxS-mYgSPMmg__small/img/it5rGXR-Y5T12PUcbrPncVAiLOQ=/fit-in/200x150/filters:strip_icc()/pic7013651.jpg
+    bggEnhanced: true
+    description: >+
+      In the most distant reaches of the world, magic still exists, embodied by spirits of the land, of the sky, and of every natural thing. As the great powers of Europe stretch their colonial empires further and further, they will inevitably lay claim to a place where spirits still hold power - and when they do, the land itself will fight back alongside the islanders who live there.
+
+
+      Spirit Island is a complex and thematic co-operative game about defending your island home from colonizing Invaders. Players are different spirits of the land, each with its own unique elemental powers. Every turn, players simultaneously choose which of their power cards to play, paying energy to do so. Using combinations of power cards that match a spirit's elemental affinities can grant free bonus effects. Faster powers take effect immediately, before the Invaders spread and ravage, but other magics are slower, requiring forethought and planning to use effectively. In the Spirit phase, spirits gain energy, and choose how / whether to Grow: to reclaim used power cards, to seek new power, or to spread their presence into new areas of the island.
+
+
+      The Invaders expand across the island map in a semi-predictable fashion. Each turn they explore into some lands (portions of the island); the next turn, they build in those lands, forming towns and cities. The turn after that, they ravage there, bringing blight to the land and attacking any native islanders present. The islanders fight back against the Invaders when attacked, and lend the spirits some other aid, but may not always do so exactly as you'd hoped. Some Powers work through the islanders, helping them, for example, to drive out the Invaders or clean the land of blight.
+
+
+      The game escalates as it progresses: spirits spread their presence to new parts of the island and seek out new and more potent powers, while the Invaders step up their colonization efforts. Each turn represents 1-3 years of alternate history. At game start, winning requires destroying every last explorer, town and city on the board - but as you frighten the Invaders more and more, victory becomes easier: they'll run away even if explorers or even towns and cities remain. Defeat comes if any spirit is destroyed, if the island is overrun by blight, or if the Invader deck is depleted before achieving victory.
+
+
+      The game includes different adversaries to fight against (eg., a Swedish Mining Colony, or a Remote British Colony). Each changes play in different ways, and offers a different path of difficulty boosts to keep the game challenging as you gain skill.
+
+    yearPublished: 2017
+    minPlayers: 1
+    maxPlayers: 4
+    playingTime: 120
+    minAge: 13
+    averageRating: 8.34
+    averageWeight: 4.08
+    imageUrl: https://cf.geekdo-images.com/kjCm4ZvPjIZxS-mYgSPy1g__original/img/9uLd9C3XAvInLCLhAoXqKVk56zs=/0x0/filters:format(jpeg)/pic7013651.jpg
+    thumbnailUrl: https://cf.geekdo-images.com/kjCm4ZvPjIZxS-mYgSPy1g__small/img/aUlIih2_R7P8IYKeyNl2heLQbu8=/fit-in/200x150/filters:strip_icc()/pic7013651.jpg
+    categories:
+    - Environmental
+    - Fantasy
+    - Mythology
+    - Territory Building
+    mechanics:
+    - Action Retrieval
+    - Area Majority / Influence
+    - Automatic Resource Growth
+    - Campaign / Battle Card Driven
+    - Cooperative Game
+    - Deck, Bag, and Pool Building
+    - Hand Management
+    - Modular Board
+    - Simultaneous Action Selection
+    - Solo / Solitaire Game
+    - Tags
+    - Variable Player Powers
+    - Variable Set-up
+    designers:
+    - R. Eric Reuss
+    publishers:
+    - Greater Than Games, LLC
+    - 999 Games
+    - Ace Studios
+    - Arrakis Games
+    - BoardM Factory
+    - Engames
+    - Fabled Nexus
+    - Fox in the Box
+    - Games7Days
+    - Gém Klub Kft.
+    - Ghenos Games
+    - Hobby World
+    - Intrafin Games
+    - Lacerta
+    - One Moment Games
+    - Pegasus Spiele
+    - Portal Games
+    - REXhry
+    - Siam Board Games
+  - title: Scythe
+    bggId: 169786
+    language: en
+    fallbackImageUrl: https://cf.geekdo-images.com/7k_nOxpO9OGIjhLq2BUZdA__original/img/HlDb5T7dYjEqKRPpMESpSIBhE1c=/0x0/filters:format(jpeg)/pic3163924.jpg
+    fallbackThumbnailUrl: https://cf.geekdo-images.com/7k_nOxpO9OGIjhLq2BUZdA__small/img/1RPGq_aMm40Jf0gpe4yEbOFhZ5U=/fit-in/200x150/filters:strip_icc()/pic3163924.jpg
+    bggEnhanced: true
+    description: >+
+      It is a time of unrest in 1920s Europa. The ashes from the first great war still darken the snow. The capitalistic city-state known simply as &ldquo;The Factory&rdquo;, which fueled the war with heavily armored mechs, has closed its doors, drawing the attention of several nearby countries.
+
+
+      Scythe is an engine-building game set in a 1920s era, alternate-history. It is a time of farming and war, broken hearts and rusted gears, innovation and valor. In Scythe, each player controls one of five factions of Eastern Europe, all of which are attempting to earn their fortunes and claim their stakes in the land around the mysterious Factory. Players conquer territory, enlist new recruits, reap resources, gain villagers, build structures, and activate monstrous mechs.
+
+
+      Each player begins the game with different resources (power, coins, combat acumen, and popularity), a different starting location, and a hidden goal. Starting positions are specially calibrated to contribute to each faction&rsquo;s uniqueness and the asymmetrical nature of the game (each faction always starts in the same place). Scythe uses a streamlined action-selection mechanism (no rounds or phases) to keep gameplay moving at a brisk pace and reduce downtime between turns. While there is plenty of direct conflict for players who seek it, there is no player elimination.
+
+
+      Scythe gives players almost complete control over their fate. Other than each player&rsquo;s individual hidden objective card, the only elements of luck or variability are &ldquo;encounter&rdquo; cards that players will draw as they interact with the citizens of newly explored lands. Each encounter card provides the player with several options, allowing them to mitigate the luck of the draw through their selection. Combat is also driven by choices, not luck or randomness. Every part of Scythe has an aspect of engine-building to it. Players can upgrade actions to become more efficient, build structures that improve their position on the map, enlist new recruits to enhance character abilities, activate mechs to deter opponents from invading, and expand their borders to reap greater types and quantities of resources. These engine-building aspects create a sense of momentum and progress throughout the game. The order in which players improve their engines adds to the unique feel of each game, even if having played one faction multiple times.
+
+    yearPublished: 2016
+    minPlayers: 1
+    maxPlayers: 5
+    playingTime: 115
+    minAge: 14
+    averageRating: 8.1
+    averageWeight: 3.45
+    imageUrl: https://cf.geekdo-images.com/7k_nOxpO9OGIjhLq2BUZdA__original/img/HlDb9F365w0tSP8uD1vf1pfniQE=/0x0/filters:format(jpeg)/pic3163924.jpg
+    thumbnailUrl: https://cf.geekdo-images.com/7k_nOxpO9OGIjhLq2BUZdA__small/img/eQ69OEDdjYjfKg6q5Navee87skU=/fit-in/200x150/filters:strip_icc()/pic3163924.jpg
+    categories:
+    - Economic
+    - Fighting
+    - Science Fiction
+    - Territory Building
+    mechanics:
+    - Area Majority / Influence
+    - Card Play Conflict Resolution
+    - Contracts
+    - End Game Bonuses
+    - Force Commitment
+    - Grid Movement
+    - Hexagon Grid
+    - King of the Hill
+    - Movement Points
+    - Narrative Choice / Paragraph
+    - Solo / Solitaire Game
+    - Take That
+    - Tech Trees / Tech Tracks
+    - Variable Player Powers
+    - Variable Set-up
+    - Victory Points as a Resource
+    - Zone of Control
+    designers:
+    - Jamey Stegmaier
+    publishers:
+    - Stonemaier Games
+    - Albi
+    - Angry Lion Games
+    - Arclight Games
+    - CrowD Games
+    - Delta Vision Publishing
+    - Feuerland Spiele
+    - Fire on Board Jogos
+    - Galápagos Jogos
+    - Geekach LLC
+    - Ghenos Games
+    - Korea Boardgames
+    - Ludofy Creative
+    - Maldito Games
+    - Matagot
+    - Morning
+    - PHALANX
+    - Planeta Igor
+    - Playfun Games
+    - Surfin' Meeple China
+  - title: Everdell
+    bggId: 199792
+    language: en
+    fallbackImageUrl: https://cf.geekdo-images.com/fjE7V5LNq31yVEW_yuqI-Q__original/img/IKeSgQgCnpYpeSNeSPGOTMhLuxw=/0x0/filters:format(jpeg)/pic3918905.jpg
+    fallbackThumbnailUrl: https://cf.geekdo-images.com/fjE7V5LNq31yVEW_yuqI-Q__small/img/s70ZH0lKRj0JwMMoSnZ7yvFijeA=/fit-in/200x150/filters:strip_icc()/pic3918905.jpg
+    bggEnhanced: true
+    description: >+
+      Within the charming valley of Everdell, beneath the boughs of towering trees, among meandering streams and mossy hollows, a civilization of forest critters is thriving and expanding. From Everfrost to Bellsong, many a year have come and gone, but the time has come for new territories to be settled and new cities established. You will be the leader of a group of critters intent on just such a task. There are buildings to construct, lively characters to meet, events to host&mdash;you have a busy year ahead of yourself. Will the sun shine brightest on your city before the winter moon rises?
+
+
+      Everdell is a game of dynamic tableau building and worker placement.
+
+
+      On their turn a player can take one of three actions:
+
+
+      a) Place a Worker: Each player has a collection of Worker pieces. These are placed on the board locations, events, and on Destination cards. Workers perform various actions to further the development of a player's tableau: gathering resources, drawing cards, and taking other special actions.
+
+
+      b) Play a Card: Each player is building and populating a city; a tableau of up to 15 Construction and Critter cards. There are five types of cards: Travelers, Production, Destination, Governance, and Prosperity. Cards generate resources (twigs, resin, pebbles, and berries), grant abilities, and ultimately score points. The interactions of the cards reveal numerous strategies and a near infinite variety of working cities.
+
+
+      c) Prepare for the next Season: Workers are returned to the players supply and new workers are added. The game is played from Winter through to the onset of the following winter, at which point the player with the city with the most points wins.
+
+    yearPublished: 2018
+    minPlayers: 1
+    maxPlayers: 4
+    playingTime: 80
+    minAge: 10
+    averageRating: 7.98
+    averageWeight: 2.83
+    imageUrl: https://cf.geekdo-images.com/fjE7V5LNq31yVEW_yuqI-Q__original/img/HQ1ti16wT9lqja5_h3gUfHUIcVI=/0x0/filters:format(png)/pic3918905.png
+    thumbnailUrl: https://cf.geekdo-images.com/fjE7V5LNq31yVEW_yuqI-Q__small/img/Cf_mYxR_VvdjTEPXseSurni2JNI=/fit-in/200x150/filters:strip_icc()/pic3918905.png
+    categories:
+    - Animals
+    - Card Game
+    - City Building
+    - Fantasy
+    mechanics:
+    - Contracts
+    - End Game Bonuses
+    - Hand Management
+    - Income
+    - Open Drafting
+    - Ownership
+    - Set Collection
+    - Solo / Solitaire Game
+    - Tags
+    - Variable Set-up
+    - Worker Placement
+    designers:
+    - James A. Wilson
+    publishers:
+    - Starling Games (II)
+    - Abraxas
+    - Arclight Games
+    - CMON Global Limited
+    - Fantasmagoria
+    - Galápagos Jogos
+    - Gameology (Gameology Romania)
+    - Gém Klub Kft.
+    - Hobby World
+    - Kaissa Chess & Games
+    - Maldito Games
+    - Matagot
+    - MIPL
+    - Pegasus Spiele
+    - Rebel Sp. z o.o.
+    - REXhry
+    - Spilbræt.dk
+    - Tabletop Tycoon Inc.
+    - Tycoon Games
+    - White Goblin Games
+    - YOKA Games
+    - Ігромаг
+  - title: Root
+    bggId: 237182
+    language: en
+    fallbackImageUrl: https://cf.geekdo-images.com/JUAUWaVUzeBgzirhZNmHHw__original/img/ZF-dta5ffawuKczTBVdliFxiLIo=/0x0/filters:format(jpeg)/pic4254509.jpg
+    fallbackThumbnailUrl: https://cf.geekdo-images.com/JUAUWaVUzeBgzirhZNmHHw__small/img/7TnOfWj4xpOBUW1ZjBkn7-8cnaQ=/fit-in/200x150/filters:strip_icc()/pic4254509.jpg
+    bggEnhanced: true
+    description: >+
+      Root is a game of adventure and war in which 2 to 4 (1 to 6 with the 'Riverfolk' expansion, 2-6 with the 'Underworld', or 'Marauder' expansions) players battle for control of a vast wilderness. Like Vast: The Crystal Caverns, each player in Root has unique capabilities and a different victory condition. Now, with the aid of gorgeous, multi-use cards, a truly asymmetric design has never been more accessible.
+
+
+      The nefarious Marquise de Cat has seized the great woodland, intent on harvesting its riches. Under her rule, the many creatures of the forest have banded together. This Alliance will seek to strengthen its resources and subvert the rule of Cats. In this effort, the Alliance may enlist the help of the wandering Vagabonds who are able to move through the more dangerous woodland paths. Though some may sympathize with the Alliance&rsquo;s hopes and dreams, these wanderers are old enough to remember the great birds of prey who once controlled the woods.
+
+
+      Meanwhile, at the edge of the region, the proud, squabbling Eyrie have found a new commander who they hope will lead their faction to resume their ancient birthright. The stage is set for a contest that will decide the fate of the great woodland. It is up to the players to decide which group will ultimately take root.
+
+
+      In Root, players drive the narrative, and the differences between each role create an unparalleled level of interaction and replayability. Leder Games invites you and your family to explore the fantastic world of Root!
+
+
+      &mdash;description from the publisher
+
+    yearPublished: 2018
+    minPlayers: 2
+    maxPlayers: 4
+    playingTime: 90
+    minAge: 14
+    averageRating: 8.07
+    averageWeight: 3.84
+    imageUrl: https://cf.geekdo-images.com/JUAUWaVUzeBgzirhZNmHHw__original/img/E0s2LvtFA1L5YKk-_44D4u2VD2s=/0x0/filters:format(jpeg)/pic4254509.jpg
+    thumbnailUrl: https://cf.geekdo-images.com/JUAUWaVUzeBgzirhZNmHHw__small/img/ACovMZzGGIsBRyEQXFnsT8282NM=/fit-in/200x150/filters:strip_icc()/pic4254509.jpg
+    categories:
+    - Animals
+    - Fantasy
+    - Negotiation
+    - Territory Building
+    - Wargame
+    mechanics:
+    - Action Points
+    - Action Queue
+    - Action Retrieval
+    - Area Majority / Influence
+    - Area Movement
+    - Dice Rolling
+    - Hand Management
+    - Multi-Use Cards
+    - Negotiation
+    - Point to Point Movement
+    - Race
+    - Sudden Death Ending
+    - Take That
+    - Variable Player Powers
+    - Variable Set-up
+    designers:
+    - Cole Wehrle
+    publishers:
+    - Leder Games
+    - 2Tomatoes Games
+    - Arclight Games
+    - CMON Global Limited
+    - CrowD Games
+    - Delta Vision Publishing
+    - Fox in the Box
+    - Kilogames
+    - Korea Boardgames
+    - MeepleBR
+    - MS Edizioni
+    - Portal Games
+    - Quality Beast
+    - Spielworxx
+    - Tower Tactic Games
+    - YOKA Games
+  - title: 'Brass: Birmingham'
+    bggId: 224517
+    language: en
+    fallbackImageUrl: https://cf.geekdo-images.com/x3zxjr-Vw5iU4yDPg70Jgw__original/img/FpyxH41Y6_ROoePLilPNGrKBij0=/0x0/filters:format(jpeg)/pic3490053.jpg
+    fallbackThumbnailUrl: https://cf.geekdo-images.com/x3zxjr-Vw5iU4yDPg70Jgw__small/img/s7hAWotQA5yUXcQCroIBqWE3sO0=/fit-in/200x150/filters:strip_icc()/pic3490053.jpg
+    bggEnhanced: true
+    description: >+
+      Brass: Birmingham is an economic strategy game sequel to Martin Wallace's 2007 masterpiece, Brass. Brass: Birmingham tells the story of competing entrepreneurs in Birmingham during the industrial revolution between the years of 1770 and 1870.
+
+
+      It offers a very different story arc and experience from its predecessor. As in its predecessor, you must develop, build and establish your industries and network in an effort to exploit low or high market demands. The game is played over two halves: the canal era (years 1770-1830) and the rail era (years 1830-1870). To win the game, score the most VPs. VPs are counted at the end of each half for the canals, rails and established (flipped) industry tiles.
+
+
+      Each round, players take turns according to the turn order track, receiving two actions to perform any of the following actions (found in the original game):
+
+
+      1) Build - Pay required resources and place an industry tile.
+
+      2) Network - Add a rail / canal link, expanding your network.
+
+      3) Develop - Increase the VP value of an industry.
+
+      4) Sell - Sell your cotton, manufactured goods and pottery.
+
+      5) Loan - Take a &pound;30 loan and reduce your income.
+
+
+      Brass: Birmingham also features a new sixth action:
+
+
+      6) Scout - Discard three cards and take a wild location and wild industry card. (This action replaces Double Action Build in original Brass.)
+
+    yearPublished: 2018
+    minPlayers: 2
+    maxPlayers: 4
+    playingTime: 120
+    minAge: 14
+    averageRating: 8.57
+    averageWeight: 3.86
+    imageUrl: https://cf.geekdo-images.com/x3zxjr-Vw5iU4yDPg70Jgw__original/img/FpyxH41Y6_ROoePAilPNEhXnzO8=/0x0/filters:format(jpeg)/pic3490053.jpg
+    thumbnailUrl: https://cf.geekdo-images.com/x3zxjr-Vw5iU4yDPg70Jgw__small/img/o18rjEemoWaVru9Y2TyPwuIaRfE=/fit-in/200x150/filters:strip_icc()/pic3490053.jpg
+    categories:
+    - Age of Reason
+    - Economic
+    - Industry / Manufacturing
+    - Post-Napoleonic
+    - Trains
+    - Transportation
+    mechanics:
+    - Chaining
+    - End Game Bonuses
+    - Hand Management
+    - Income
+    - Loans
+    - Market
+    - Multi-Use Cards
+    - Network and Route Building
+    - Ownership
+    - Tags
+    - Tech Trees / Tech Tracks
+    - Tile Placement
+    - 'Turn Order: Stat-Based'
+    - Variable Set-up
+    designers:
+    - Gavan Brown
+    - Matt Tolman
+    - Martin Wallace
+    publishers:
+    - Roxley
+    - Arclight Games
+    - Board Game Rookie
+    - BoardM Factory
+    - CMON Global Limited
+    - Conclave Editora
+    - CoolPlay
+    - CrowD Games
+    - Dexker Games
+    - Funforge
+    - Gém Klub Kft.
+    - Ghenos Games
+    - Giant Roc
+    - Lanlalen
+    - Lord of Boards
+    - Maldito Games
+    - PHALANX
+    - Rebel Sp. z o.o.
+    - TLAMA games
+    - White Goblin Games
+    - 盒拍工作室 Hepa Studio
+  - title: Codenames
+    bggId: 178900
+    language: en
+    fallbackImageUrl: https://cf.geekdo-images.com/F_KDEu0GjdClml8N7c8Imw__original/img/nf3Ou3_G6B4F0mJpUxYnFhCdFPo=/0x0/filters:format(jpeg)/pic2582929.jpg
+    fallbackThumbnailUrl: https://cf.geekdo-images.com/F_KDEu0GjdClml8N7c8Imw__small/img/pxpnp7TvV-1siD7BELVQFET72so=/fit-in/200x150/filters:strip_icc()/pic2582929.jpg
+    bggEnhanced: true
+    description: >+
+      Two rival spymasters know the secret identities of 25 agents. Their teammates know the agents only by their codenames &mdash; single-word labels like "disease", "Germany", and "carrot". Yes, carrot. It's a legitimate codename. Each spymaster wants their team to identify their agents first...without uncovering the assassin by mistake.
+
+
+      In Codenames, two teams compete to see who can make contact with all of their agents first. Lay out 25 cards, each bearing a single word. The spymasters look at a card showing the identity of each card, then take turns clueing their teammates. A clue consists of a single word and a number, with the number suggesting how many cards in play have some association to the given clue word. The teammates then identify one agent they think is on their team; if they're correct, they can keep guessing up to one more than the stated number of times; if the agent belongs to the opposing team or is an innocent bystander, the team's turn ends; and if they fingered the assassin, they lose the game.
+
+
+      Spymasters continue giving clues until one team has identified all of their agents or the assassin has removed one team from play.
+
+    yearPublished: 2015
+    minPlayers: 2
+    maxPlayers: 8
+    playingTime: 15
+    minAge: 10
+    averageRating: 7.53
+    averageWeight: 1.26
+    imageUrl: https://cf.geekdo-images.com/nC6ifPCDnAItwoKSKXVrnw__original/img/Id-jjIer_61ZbvI2_RVRCeBZFY4=/0x0/filters:format(jpeg)/pic8907965.jpg
+    thumbnailUrl: https://cf.geekdo-images.com/nC6ifPCDnAItwoKSKXVrnw__small/img/1iZav_8ZqurrDbvkZA9GcFhB5x0=/fit-in/200x150/filters:strip_icc()/pic8907965.jpg
+    categories:
+    - Card Game
+    - Deduction
+    - Party Game
+    - Spies / Secret Agents
+    - Word Game
+    mechanics:
+    - Communication Limits
+    - Deduction
+    - Memory
+    - Race
+    - Team-Based Game
+    designers:
+    - Vlaada Chvátil
+    publishers:
+    - Czech Games Edition (CGE)
+    - asmodee
+    - Boardgame Space
+    - Brädspel.se
+    - Brain Games
+    - Broadway Toys LTD
+    - Cranio Creations
+    - Cuaca Cerah Games
+    - Devir
+    - DiceTree Games
+    - Enigma (Bergsala Enigma)
+    - Fantasmagoria
+    - Feelindigo
+    - GaGa Games
+    - Gaming Library
+    - Gém Klub Kft.
+    - Goblin Gaming
+    - Golden Egg Games
+    - HeidelBÄR Games
+    - Heidelberger Spieleverlag
+    - Hobby Japan
+    - IELLO
+    - Kaissa Chess & Games
+    - Land of Beautiful Mind (سرزمین ذهن زیبا)
+    - Lautapelit.fi
+    - Lex Games
+    - Liam Games
+    - MINDOK
+    - MIPL
+    - More Fun Co., Ltd.
+    - Nordic Games ehf
+    - One Moment Games
+    - Ponva d.o.o.
+    - Pridemage Games
+    - Rebel Sp. z o.o.
+    - SuperHeated Neurons
+    - TWOPLUS Games
+    - White Goblin Games
+  - title: Dominion
+    bggId: 36218
+    language: en
+    fallbackImageUrl: https://cf.geekdo-images.com/j6iQpZ4HkVOHRCTbMdLCGg__original/img/FS3JOyNb8v7OJSoelwGJRFhZGZo=/0x0/filters:format(jpeg)/pic394356.jpg
+    fallbackThumbnailUrl: https://cf.geekdo-images.com/j6iQpZ4HkVOHRCTbMdLCGg__small/img/_5kmleGLOJdFHrvfLIBcbfED7_0=/fit-in/200x150/filters:strip_icc()/pic394356.jpg
+    bggEnhanced: true
+    description: >+
+      "You are a monarch, like your parents before you, a ruler of a small pleasant kingdom of rivers and evergreens. Unlike your parents, however, you have hopes and dreams! You want a bigger and more pleasant kingdom, with more rivers and a wider variety of trees. You want a Dominion! In all directions lie fiefs, freeholds, and feodums. All are small bits of land, controlled by petty lords and verging on anarchy. You will bring civilization to these people, uniting them under your banner.
+
+
+      But wait! It must be something in the air; several other monarchs have had the exact same idea. You must race to get as much of the unclaimed land as possible, fending them off along the way. To do this you will hire minions, construct buildings, spruce up your castle, and fill the coffers of your treasury. Your parents wouldn't be proud, but your grandparents, on your mother's side, would be delighted."
+
+
+      &mdash;description from the back of the box
+
+
+      In Dominion, each player starts with an identical, very small deck of cards.  In the center of the table is a selection of other cards the players can "buy" as they can afford them.  Through their selection of cards to buy, and how they play their hands as they draw them, the players construct their deck on the fly, striving for the most efficient path to the precious victory points by game end.
+
+
+      Dominion is not a Collectible Card Game (CCG), but the play of the game is similar to the construction and play of a CCG deck. The game comes with 500 cards. You select 10 of the 25 Kingdom card types to include in any given play&mdash;leading to immense variety.
+
+
+      &mdash;user summary
+
+
+      Part of the Dominion series.
+
+    yearPublished: 2008
+    minPlayers: 2
+    maxPlayers: 4
+    playingTime: 30
+    minAge: 13
+    averageRating: 7.6
+    averageWeight: 2.34
+    imageUrl: https://cf.geekdo-images.com/j6iQpZ4XkemZP07HNCODBA__original/img/96COuakNiLRrjDLc1sM4Zxsw4WE=/0x0/filters:format(jpeg)/pic394356.jpg
+    thumbnailUrl: https://cf.geekdo-images.com/j6iQpZ4XkemZP07HNCODBA__small/img/B2u2ghwlmI_qsUtCwuvcbnBcIqU=/fit-in/200x150/filters:strip_icc()/pic394356.jpg
+    categories:
+    - Card Game
+    - Medieval
+    mechanics:
+    - Deck, Bag, and Pool Building
+    - Delayed Purchase
+    - Hand Management
+    - Open Drafting
+    - Take That
+    - Variable Set-up
+    designers:
+    - Donald X. Vaccarino
+    publishers:
+    - Rio Grande Games
+    - 999 Games
+    - Albi
+    - Bard Centrum Gier
+    - Conclave Editora
+    - cutia.ro
+    - Devir
+    - Filosofia Éditions
+    - Games Factory Publishing
+    - Gém Klub Kft.
+    - Hans im Glück
+    - Hobby Japan
+    - Hobby World
+    - Kaissa Chess & Games
+    - Korea Boardgames
+    - Lautapelit.fi
+    - Martinex
+    - Runadrake
+    - Smart Ltd
+    - Stupor Mundi
+    - Swan Panasia Co., Ltd.
+    - Vennerød Forlag AS
+    - Ystari Games
+  - title: Viticulture
+    bggId: 183394
+    language: en
+    fallbackImageUrl: https://cf.geekdo-images.com/l_PRU2lVlX9seScRFcvFlA__original/img/K8CAyJ-30yDRfhaC7eFBF-hMjCU=/0x0/filters:format(jpeg)/pic2649952.jpg
+    fallbackThumbnailUrl: https://cf.geekdo-images.com/l_PRU2lVlX9seScRFcvFlA__small/img/rZzIHWRYnCl42zx5ZZPZHR8rccA=/fit-in/200x150/filters:strip_icc()/pic2649952.jpg
+    bggEnhanced: true
+    description: >+
+      In Viticulture, the players find themselves in the roles of people in rustic, pre-modern Tuscany who have inherited meagre vineyards. They have a few plots of land, an old crush pad, a tiny cellar, and three workers. They each have a dream of being the first to call their winery a true success.
+
+
+      The players are in the position of determining how they want to allocate their workers throughout the year. Every season is different on a vineyard, so the workers have different tasks they can take care of in the summer and winter. There's competition over those tasks, and often the first worker to get to the job has an advantage over subsequent workers.
+
+
+      Fortunately for the vineyard owners, people love to visit wineries, and it just so happens that many of those visitors are willing to help out around the vineyard when they visit as long as you assign a worker to take care of them. Their visits (in the form of cards) are brief but can be very helpful. Using those workers and visitors, the vineyard owners can expand their vineyards by building structures, planting vines, and filling wine orders, working towards the goal of running the most successful winery in Tuscany.
+
+
+      Viticulture Essential Edition includes the base game of Viticulture and a few of the most popular modules from the original Tuscany expansion, including Mamas & Papas, Fields (previously known as Properties), expanded and revised Visitors, and Automa cards for a solo variant, along with a few minor rule changes.
+
+    yearPublished: 2015
+    minPlayers: 1
+    maxPlayers: 6
+    playingTime: 90
+    minAge: 13
+    averageRating: 7.96
+    averageWeight: 2.9
+    imageUrl: https://cf.geekdo-images.com/l_PRU2lVlX9seScRFcvFlA__original/img/gDL7OZFlzoOFgU0VYlREs8P5hCQ=/0x0/filters:format(jpeg)/pic6500949.jpg
+    thumbnailUrl: https://cf.geekdo-images.com/l_PRU2lVlX9seScRFcvFlA__small/img/pULDtVd75QZgGfvSMhr6Rs07vK8=/fit-in/200x150/filters:strip_icc()/pic6500949.jpg
+    categories:
+    - Economic
+    - Farming
+    mechanics:
+    - Contracts
+    - Hand Management
+    - Race
+    - Solo / Solitaire Game
+    - 'Turn Order: Auction'
+    - Victory Points as a Resource
+    - Worker Placement
+    - Worker Placement, Different Worker Types
+    designers:
+    - Jamey Stegmaier
+    - Alan Stone
+    publishers:
+    - Stonemaier Games
+    - Albi
+    - Angry Lion Games
+    - Arclight Games
+    - Board Game Rookie
+    - Delta Vision Publishing
+    - Feuerland Spiele
+    - Ghenos Games
+    - Kilogames
+    - Korea Boardgames
+    - Lavka Games
+    - Ludofy Creative
+    - Maldito Games
+    - Matagot
+    - PHALANX
+    - Regatul Jocurilor
+    - Surfin' Meeple China
+    - Tower Tactic Games
+  - title: Ark Nova
+    bggId: 342942
+    language: en
+    fallbackImageUrl: https://cf.geekdo-images.com/SoU8p28Sk1s8MSvoM4N8pQ__original/img/g4S18szTdrXCdIwVKzMKrZrYAcE=/0x0/filters:format(jpeg)/pic6293412.jpg
+    fallbackThumbnailUrl: https://cf.geekdo-images.com/SoU8p28Sk1s8MSvoM4N8pQ__small/img/ZHksKPEJkm0pWLCjWFHG7ygRgeQ=/fit-in/200x150/filters:strip_icc()/pic6293412.jpg
+    bggEnhanced: true
+    description: >+
+      In Ark Nova, you will plan and design a modern, scientifically managed zoo. With the ultimate goal of owning the most successful zoological establishment, you will build enclosures, accommodate animals, and support conservation projects all over the world. Specialists and unique buildings will help you in achieving this goal.
+
+
+      Each player has a set of five action cards to manage their gameplay, and the power of an action is determined by the slot the card currently occupies. The cards in question are:
+
+
+          CARDS: Allows you to gain new zoo cards (animals, sponsors, and conservation project cards).
+          BUILD: Allows you to build standard or special enclosures, kiosks, and pavilions.
+          ANIMALS: Allows you to accommodate animals in your zoo.
+          ASSOCIATION: Allows your association workers to carry out different tasks.
+          SPONSORS: Allows you to play a sponsor card in your zoo or to raise money.
+
+
+      255 cards featuring animals, specialists, special enclosures, and conservation projects, each with a special ability, are at the heart of Ark Nova. Use them to increase the appeal and scientific reputation of your zoo and collect conservation points.
+
+
+      &mdash;description from the publisher
+
+    yearPublished: 2021
+    minPlayers: 1
+    maxPlayers: 4
+    playingTime: 150
+    minAge: 14
+    averageRating: 8.54
+    averageWeight: 3.8
+    imageUrl: https://cf.geekdo-images.com/SoU8p28Sk1s8MSvoM4N8pQ__original/img/g4S18szTdrXCdIwVKzMKrZrYAcM=/0x0/filters:format(jpeg)/pic6293412.jpg
+    thumbnailUrl: https://cf.geekdo-images.com/SoU8p28Sk1s8MSvoM4N8pQ__small/img/4KuHNTWSMPf8vTNDKSRMMI3oOv8=/fit-in/200x150/filters:strip_icc()/pic6293412.jpg
+    categories:
+    - Animals
+    - Card Game
+    - Environmental
+    mechanics:
+    - Contracts
+    - End Game Bonuses
+    - Events
+    - Grid Coverage
+    - Hand Management
+    - Hexagon Grid
+    - Income
+    - Increase Value of Unchosen Resources
+    - Open Drafting
+    - Race
+    - Set Collection
+    - Solo / Solitaire Game
+    - Tags
+    - Tile Placement
+    - Track Movement
+    - Variable Player Powers
+    - Variable Set-up
+    designers:
+    - Mathias Wigge
+    publishers:
+    - Feuerland Spiele
+    - Capstone Games
+    - CMON Global Limited
+    - Cranio Creations
+    - Game Harbor
+    - Gém Klub Kft.
+    - Grok Games
+    - IGAMES
+    - Korea Boardgames
+    - Lautapelit.fi
+    - Ludofy Creative
+    - Maldito Games
+    - MINDOK
+    - MIPL
+    - Portal Games
+    - Regatul Jocurilor
+    - Super Meeple
+    - テンデイズゲームズ (TendaysGames)
+    - Tower Tactic Games
+    - White Goblin Games
   defaultAgent:
-    name: "MeepleAssistant"
-    model: "anthropic/claude-3-haiku"
+    name: MeepleAssistant
+    model: anthropic/claude-3-haiku
     temperature: 0.3
     maxTokens: 2048

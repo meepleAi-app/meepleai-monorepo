@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { Dice5, Search, Moon } from 'lucide-react';
 import Link from 'next/link';
 
+import { IS_ALPHA_MODE } from '@/lib/alpha-mode';
 import { cn } from '@/lib/utils';
 
 export function DashboardContextBar() {
@@ -14,13 +15,15 @@ export function DashboardContextBar() {
     <div className="flex items-center gap-2 w-full">
       {!searchFocused && (
         <>
-          <Link
-            href="/sessions/new"
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary/10 text-primary text-sm font-medium hover:bg-primary/20 transition-colors whitespace-nowrap"
-          >
-            <Dice5 className="w-4 h-4" />
-            Nuova Partita
-          </Link>
+          {!IS_ALPHA_MODE && (
+            <Link
+              href="/sessions/new"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary/10 text-primary text-sm font-medium hover:bg-primary/20 transition-colors whitespace-nowrap"
+            >
+              <Dice5 className="w-4 h-4" />
+              Nuova Partita
+            </Link>
+          )}
           <Link
             href="/discover"
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-muted text-muted-foreground text-sm font-medium hover:bg-muted/80 transition-colors whitespace-nowrap"
@@ -28,13 +31,15 @@ export function DashboardContextBar() {
             <Search className="w-4 h-4" />
             Cerca Gioco
           </Link>
-          <Link
-            href="/game-nights/new"
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-muted text-muted-foreground text-sm font-medium hover:bg-muted/80 transition-colors whitespace-nowrap"
-          >
-            <Moon className="w-4 h-4" />
-            Game Night
-          </Link>
+          {!IS_ALPHA_MODE && (
+            <Link
+              href="/game-nights/new"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-muted text-muted-foreground text-sm font-medium hover:bg-muted/80 transition-colors whitespace-nowrap"
+            >
+              <Moon className="w-4 h-4" />
+              Game Night
+            </Link>
+          )}
         </>
       )}
       <div className={cn('relative', searchFocused ? 'flex-1' : 'ml-auto')}>

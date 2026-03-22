@@ -12,7 +12,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 
-import { chromium, type Browser, type BrowserContext } from '@playwright/test';
+import { chromium, type Browser, type BrowserContext } from 'playwright';
 
 import { config, PARAM_RESOLVERS, HARDCODED_PARAMS, type PageEntry, type Manifest } from './config';
 import { discoverRoutes } from './routes';
@@ -152,13 +152,14 @@ async function resolveParams(
       if (!resolverCache.has(cacheKey)) {
         try {
           const apiUrl = `${config.baseUrl}${resolver.endpoint}`;
-          const response = await page.evaluate(async (url: string) => {
-            const res = await fetch(url, { credentials: 'include' });
-            if (!res.ok) return null;
-            return res.json();
-          }, apiUrl);
-
-          resolverCache.set(cacheKey, resolver.extract(response));
+          const apiResponse = await context.request.get(apiUrl);
+          if (apiResponse.ok()) {
+            const responseData = await apiResponse.json();
+            resolverCache.set(cacheKey, resolver.extract(responseData));
+          } else {
+            console.warn(`  \u26A0\uFE0F API returned ${apiResponse.status()} for ${resolver.endpoint}`);
+            resolverCache.set(cacheKey, null);
+          }
         } catch (err) {
           console.warn(`  \u26A0\uFE0F API call failed for ${resolver.endpoint}: ${err}`);
           resolverCache.set(cacheKey, null);

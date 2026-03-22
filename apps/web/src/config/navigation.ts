@@ -17,7 +17,6 @@ import {
   Brain,
   Calendar,
   Clock,
-  Gamepad2,
   History,
   LayoutDashboard,
   ShieldIcon,
@@ -65,11 +64,8 @@ const LIBRARY_CHILDREN: UnifiedNavSubItem[] = LIBRARY_TABS.map(tab => ({
  * | id        | label     | priority | visibility   | note                     |
  * |-----------|-----------|----------|-------------|--------------------------|
  * | welcome   | Welcome   | 0        | anonOnly    | landing page only        |
- * | dashboard | Dashboard | 1        | authOnly    |                          |
  * | library   | Libreria  | 2        | authOnly    | children: tabs           |
  * | chat      | Chat      | 3        | authOnly    |                          |
- * | toolkit   | Toolkit   | 4        | authOnly    | (removed from header, kept for ActionBar) |
- * | catalog   | Catalogo  | 5        | (none)      | visible to all           |
  * | profile   | Profilo   | 6        | authOnly    |                          |
  * | agents    | Agenti    | 7        | authOnly    |                          |
  * | sessions  | Sessioni  | 8        | authOnly    |                          |
@@ -86,18 +82,6 @@ export const UNIFIED_NAV_ITEMS: UnifiedNavItem[] = [
     testId: 'nav-welcome',
     activePattern: /^\/$/,
     visibility: { anonOnly: true },
-  },
-  {
-    id: 'dashboard',
-    href: '/dashboard',
-    icon: LayoutDashboard,
-    iconName: 'home',
-    label: 'Dashboard',
-    ariaLabel: 'Navigate to dashboard',
-    priority: 1,
-    testId: 'nav-dashboard',
-    activePattern: /^\/dashboard$/,
-    visibility: { authOnly: true },
   },
   {
     id: 'library',
@@ -123,20 +107,6 @@ export const UNIFIED_NAV_ITEMS: UnifiedNavItem[] = [
     testId: 'nav-chat',
     activePattern: /^\/chat/,
     visibility: { authOnly: true },
-  },
-  {
-    id: 'catalog',
-    // Issue #5039: /games/* consolidated into /discover
-    href: '/discover',
-    icon: Gamepad2,
-    iconName: 'gamepad-2',
-    label: 'Scopri',
-    ariaLabel: 'Navigate to discover page',
-    priority: 5,
-    testId: 'nav-catalog',
-    // Match both /discover and legacy /games (while redirects drain)
-    activePattern: /^\/(discover|games)/,
-    // No visibility — visible to everyone
   },
   {
     id: 'profile',
@@ -303,7 +273,7 @@ export function isUnifiedNavItemActive(item: UnifiedNavItem, pathname: string): 
   if (item.activePattern) {
     return item.activePattern.test(pathname);
   }
-  if (item.href === '/' || item.href === '/dashboard') {
+  if (item.href === '/' || item.href === '/library') {
     return pathname === item.href;
   }
   return pathname.startsWith(item.href);
@@ -316,7 +286,7 @@ export function isNavItemActive(item: NavItem, pathname: string): boolean {
   if (item.activePattern) {
     return item.activePattern.test(pathname);
   }
-  if (item.href === '/' || item.href === '/dashboard') {
+  if (item.href === '/' || item.href === '/library') {
     return pathname === item.href;
   }
   return pathname.startsWith(item.href);

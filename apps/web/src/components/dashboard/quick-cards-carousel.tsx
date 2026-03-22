@@ -76,6 +76,6 @@ function getDefaultHref(item: QuickCardItem): string {
     case 'chatSession':
       return `/chat`;
     default:
-      return `/dashboard`;
+      return `/library`;
   }
 }

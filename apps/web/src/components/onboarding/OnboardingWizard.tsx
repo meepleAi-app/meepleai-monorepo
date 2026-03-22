@@ -95,7 +95,7 @@ export function OnboardingWizard({ token, role: _role, startStep = 1 }: Onboardi
     } catch {
       // Non-critical — proceed even if tracking fails
     }
-    router.push('/dashboard');
+    router.push('/library');
   }, [router]);
 
   const handleSkipWizard = useCallback(async () => {
@@ -105,7 +105,7 @@ export function OnboardingWizard({ token, role: _role, startStep = 1 }: Onboardi
       } catch {
         // Non-critical — proceed even if tracking fails
       }
-      router.push('/dashboard');
+      router.push('/library');
     }
   }, [router, state.passwordCompleted]);
 

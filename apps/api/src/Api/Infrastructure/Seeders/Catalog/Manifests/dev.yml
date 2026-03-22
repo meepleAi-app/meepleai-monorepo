@@ -1,37 +1,332 @@
 profile: dev
 catalog:
   games:
-    - title: "Catan"
-      bggId: 13
-      language: en
-      pdf: "catan_en_rulebook.pdf"
-      seedAgent: false
-      fallbackImageUrl: "https://cf.geekdo-images.com/W3Bsga_uLP9kO91gZ7H8yw__original/img/IwRwEpu1I6YfkyYjFIekCh80ntc=/0x0/filters:format(jpeg)/pic2419375.jpg"
-      fallbackThumbnailUrl: "https://cf.geekdo-images.com/W3Bsga_uLP9kO91gZ7H8yw__small/img/7a0LOL48K-2lC3IG0HyYT3XxJBs=/fit-in/200x150/filters:strip_icc()/pic2419375.jpg"
-    - title: "Wingspan"
-      bggId: 266192
-      language: en
-      pdf: "wingspan_en_rulebook.pdf"
-      seedAgent: false
-      fallbackImageUrl: "https://cf.geekdo-images.com/yLZJCVLlIx4c7eJEWUNJ7w__original/img/cI782Zis9cT66j2MjSHKJGnFPNw=/0x0/filters:format(jpeg)/pic4458123.jpg"
-      fallbackThumbnailUrl: "https://cf.geekdo-images.com/yLZJCVLlIx4c7eJEWUNJ7w__small/img/VNToqgS2-pOGU6MuvIkMPKn_y-s=/fit-in/200x150/filters:strip_icc()/pic4458123.jpg"
-    - title: "Azul"
-      bggId: 230802
-      language: en
-      pdf: "azul_rulebook.pdf"
-      seedAgent: false
-      fallbackImageUrl: "https://cf.geekdo-images.com/aPSHJO0d0XOpQR5X-wJonw__original/img/AkbtYVc6xXJF3c9EUrakklcclKw=/0x0/filters:format(png)/pic6973671.png"
-      fallbackThumbnailUrl: "https://cf.geekdo-images.com/aPSHJO0d0XOpQR5X-wJonw__small/img/ccsXKrdGJw-YSClWwzVUwk5Nh9Y=/fit-in/200x150/filters:strip_icc()/pic6973671.png"
-    - title: "Descent: Journeys in the Dark (Second Edition)"
-      bggId: 104162
-      language: en
-      pdf: "descent_rulebook.pdf"
-      seedAgent: false
-      fallbackImageUrl: "https://cf.geekdo-images.com/ZTkiJEPvz2O3vmMJWfjrbw__original/img/GZJIjJPJKk1a4Bx-rM-3KL6O4hk=/0x0/filters:format(jpeg)/pic1180640.jpg"
-      fallbackThumbnailUrl: "https://cf.geekdo-images.com/ZTkiJEPvz2O3vmMJWfjrbw__small/img/cO_2QvC_2BCb-Smd0xp4a5G2n-s=/fit-in/200x150/filters:strip_icc()/pic1180640.jpg"
+  - title: Catan
+    bggId: 13
+    language: en
+    pdf: catan_en_rulebook.pdf
+    fallbackImageUrl: https://cf.geekdo-images.com/W3Bsga_uLP9kO91gZ7H8yw__original/img/IwRwEpu1I6YfkyYjFIekCh80ntc=/0x0/filters:format(jpeg)/pic2419375.jpg
+    fallbackThumbnailUrl: https://cf.geekdo-images.com/W3Bsga_uLP9kO91gZ7H8yw__small/img/7a0LOL48K-2lC3IG0HyYT3XxJBs=/fit-in/200x150/filters:strip_icc()/pic2419375.jpg
+    bggEnhanced: true
+    description: >+
+      In CATAN (formerly The Settlers of Catan), players try to be the dominant force on the island of Catan by building settlements, cities and roads. On each turn dice are rolled to determine which resources the island produces. Players build structures by 'spending' resources (sheep, wheat, wood, brick and ore) which are represented by the relevant resource cards; each land type, with the exception of the unproductive desert, produces a specific resource: hills produce brick, forests produce wood, mountains produce ore, fields produce wheat, and pastures produce sheep.
 
+
+      Set-up includes randomly placing large hexagonal tiles (each depicting one of the five resource-producing terrain types--or the desert) in a honeycomb shape and surrounding them with water tiles, some of which contain ports of exchange. A number disk, the value of which will correspond to the roll of two 6-sided dice, are placed on each terrain tile. Each player is given two settlements (think: houses) and roads (sticks) which are placed on intersections and borders of the terrain tiles. Players collect a hand of resource cards based on which terrain tiles their last-placed settlement is adjacent to. A robber pawn is placed on the desert tile.
+
+
+      A turn consists of rolling the dice, collecting resource cards based on this dice roll and the position of settlements (or upgraded cities&mdash;think: hotels), turning in resource cards (if possible and desired) for improvements, trading cards at a port, possibly playing a development card, or trading resource cards with other players. If the dice roll is a 7, the active player moves the robber to a new terrain tile and steals a resource card from another player who has a settlement adjacent to that tile.
+
+
+      Points are accumulated by building settlements and cities, having the longest road or the largest army (from some of the development cards), and gathering certain development cards that simply award victory points. When a player has gathered 10 points (some of which may be held in secret), s/he announces this and claims the win.
+
+    yearPublished: 1995
+    minPlayers: 3
+    maxPlayers: 4
+    playingTime: 120
+    minAge: 10
+    averageRating: 7.09
+    averageWeight: 2.28
+    imageUrl: https://cf.geekdo-images.com/0XODRpReiZBFUffEcqT5-Q__original/img/oRc0AomWA9ZtFqQDZiZbIyKE1j0=/0x0/filters:format(png)/pic9156909.png
+    thumbnailUrl: https://cf.geekdo-images.com/0XODRpReiZBFUffEcqT5-Q__small/img/SNVfF23OQafv3u8xdFolJnMkBoM=/fit-in/200x150/filters:strip_icc()/pic9156909.png
+    categories:
+    - Economic
+    - Negotiation
+    mechanics:
+    - Chaining
+    - Dice Rolling
+    - Hand Management
+    - Hexagon Grid
+    - Hidden Victory Points
+    - Income
+    - Market
+    - Modular Board
+    - Network and Route Building
+    - Race
+    - Random Production
+    - Take That
+    - Trading
+    - Variable Set-up
+    designers:
+    - Klaus Teuber
+    publishers:
+    - KOSMOS
+    - 64 Ounce Games
+    - 999 Games
+    - Albi
+    - asmodee
+    - Astrel Games
+    - BGA Plus
+    - Brädspel.se
+    - Brain Games
+    - Broadway Toys LTD
+    - Capcom Co., Ltd.
+    - Catan Studio
+    - Competo / Marektoy
+    - danspil
+    - Descartes Editeur
+    - Devir
+    - Dexy Co
+    - Enigma (Bergsala Enigma)
+    - Eurogames
+    - Filosofia Éditions
+    - Galakta
+    - Giochi Uniti
+    - GP Games
+    - Grow Jogos e Brinquedos
+    - HaKubia
+    - Hanayama
+    - Hobby World
+    - Ideal Board Games
+    - Igroljub
+    - IntelliGames.BG
+    - Ísöld ehf.
+    - Kaissa Chess & Games
+    - Korea Boardgames
+    - L&M Games
+    - Laser plus
+    - Lautapelit.fi
+    - Logojogos
+    - Mayfair Games
+    - MIPL
+    - NeoTroy Games
+    - Ninive Games
+    - Paper Iyagi
+    - Piatnik Distribution
+    - Rozum
+    - Smart Ltd
+    - Spilbræt.dk
+    - Stupor Mundi
+    - Super Impulse
+    - SuperHeated Neurons
+    - Swan Panasia Co., Ltd.
+    - Tilsit
+    - Top Toys
+    - TRY SOFT
+    - Vennerød Forlag AS
+  - title: Wingspan
+    bggId: 266192
+    language: en
+    pdf: wingspan_en_rulebook.pdf
+    fallbackImageUrl: https://cf.geekdo-images.com/yLZJCVLlIx4c7eJEWUNJ7w__original/img/cI782Zis9cT66j2MjSHKJGnFPNw=/0x0/filters:format(jpeg)/pic4458123.jpg
+    fallbackThumbnailUrl: https://cf.geekdo-images.com/yLZJCVLlIx4c7eJEWUNJ7w__small/img/VNToqgS2-pOGU6MuvIkMPKn_y-s=/fit-in/200x150/filters:strip_icc()/pic4458123.jpg
+    bggEnhanced: true
+    description: >+
+      Wingspan is&nbsp;a competitive, medium-weight, card-driven, engine-building board game from Stonemaier Games. It's designed by Elizabeth Hargrave and features 180 birds illustrated by Natalia Rojas and Ana Maria Martinez.
+
+
+      You are bird enthusiasts&mdash;researchers, bird watchers, ornithologists, and collectors&mdash;seeking to discover and attract the best birds to your network of wildlife preserves. Each bird extends a chain of powerful combinations in one of your habitats (actions). These habitats  focus on several key aspects of growth:
+
+
+           Gain food tokens via custom dice in a birdfeeder dice tower
+           Lay eggs using egg miniatures in a variety of colors
+           Draw from hundreds of unique bird cards and play them
+
+
+      The winner is the player with the most points after 4 rounds.
+
+
+      &mdash;description from the publisher
+
+
+      From the 7th printing on, the base game box includes Wingspan: Swift-Start Promo Pack.
+
+    yearPublished: 2019
+    minPlayers: 1
+    maxPlayers: 5
+    playingTime: 70
+    minAge: 10
+    averageRating: 8
+    averageWeight: 2.48
+    imageUrl: https://cf.geekdo-images.com/yLZJCVLlIx4c7eJEWUNJ7w__original/img/cI782Zis9cT66j2MjSHKJGnFPNw=/0x0/filters:format(jpeg)/pic4458123.jpg
+    thumbnailUrl: https://cf.geekdo-images.com/yLZJCVLlIx4c7eJEWUNJ7w__small/img/VNToqgS2-pOGU6MuvIkMPKn_y-s=/fit-in/200x150/filters:strip_icc()/pic4458123.jpg
+    categories:
+    - Animals
+    - Card Game
+    - Educational
+    mechanics:
+    - Action Queue
+    - Dice Rolling
+    - End Game Bonuses
+    - Hand Management
+    - Once-Per-Game Abilities
+    - Open Drafting
+    - Set Collection
+    - Solo / Solitaire Game
+    - 'Turn Order: Progressive'
+    designers:
+    - Elizabeth Hargrave
+    publishers:
+    - Stonemaier Games
+    - 999 Games
+    - Angry Lion Games
+    - Arclight Games
+    - asmodee
+    - Automa Factory
+    - Bluebird Games
+    - Brain Games
+    - Delta Vision Publishing
+    - Divercentro
+    - Feuerland Spiele
+    - Ghenos Games
+    - Green Elephant Games
+    - Grok Games
+    - Kaissa Chess & Games
+    - Korea Boardgames
+    - Lautapelit.fi
+    - Lavka Games
+    - Ludofy Creative
+    - Maldito Games
+    - Matagot
+    - MINDOK
+    - MIPL
+    - NeoTroy Games
+    - Rebel Sp. z o.o.
+    - Regatul Jocurilor
+    - Siam Board Games
+    - Surfin' Meeple China
+    - Ігромаг
+  - title: Azul
+    bggId: 230802
+    language: en
+    pdf: azul_rulebook.pdf
+    fallbackImageUrl: https://cf.geekdo-images.com/aPSHJO0d0XOpQR5X-wJonw__original/img/AkbtYVc6xXJF3c9EUrakklcclKw=/0x0/filters:format(png)/pic6973671.png
+    fallbackThumbnailUrl: https://cf.geekdo-images.com/aPSHJO0d0XOpQR5X-wJonw__small/img/ccsXKrdGJw-YSClWwzVUwk5Nh9Y=/fit-in/200x150/filters:strip_icc()/pic6973671.png
+    bggEnhanced: true
+    description: >+
+      Introduced by the Moors, azulejos (originally white and blue ceramic tiles) were fully embraced by the Portuguese when their king Manuel I, on a visit to the Alhambra palace in Southern Spain, was mesmerized by the stunning beauty of the Moorish decorative tiles. The king, awestruck by the interior beauty of the Alhambra, immediately ordered that his own palace in Portugal be decorated with similar wall tiles. As a tile-laying artist, you have been challenged to embellish the walls of the Royal Palace of Evora.
+
+
+      In the game Azul, players take turns drafting colored tiles from suppliers to their player board. Later in the round, players score points based on how they've placed their tiles to decorate the palace. Extra points are scored for specific patterns and completing sets; wasted supplies harm the player's score. The player with the most points at the end of the game wins.
+
+    yearPublished: 2017
+    minPlayers: 2
+    maxPlayers: 4
+    playingTime: 45
+    minAge: 8
+    averageRating: 7.72
+    averageWeight: 1.77
+    imageUrl: https://cf.geekdo-images.com/aPSHJO0d0XOpQR5X-wJonw__original/img/AkbtYVc6xXJF3c9EUrakklcclKw=/0x0/filters:format(png)/pic6973671.png
+    thumbnailUrl: https://cf.geekdo-images.com/aPSHJO0d0XOpQR5X-wJonw__small/img/ccsXKrdGJw-YSClWwzVUwk5Nh9Y=/fit-in/200x150/filters:strip_icc()/pic6973671.png
+    categories:
+    - Abstract Strategy
+    - Renaissance
+    mechanics:
+    - Chaining
+    - End Game Bonuses
+    - Grid Coverage
+    - Open Drafting
+    - Pattern Building
+    - Set Collection
+    - Square Grid
+    - Tile Placement
+    - 'Turn Order: Claim Action'
+    designers:
+    - Michael Kiesling
+    publishers:
+    - Next Move Games
+    - Plan B Games
+    - asmodee
+    - Belleville (Бельвіль)
+    - Broadway Toys LTD
+    - Divercentro
+    - Galápagos Jogos
+    - Gém Klub Kft.
+    - Ghenos Games
+    - Green Elephant Games
+    - Hobby Japan
+    - KADABRA
+    - Kaissa Chess & Games
+    - Korea Boardgames
+    - Lacerta
+    - Maldón
+    - MINDOK
+    - MIPL
+    - Orangutan Games
+    - Pegasus Spiele
+    - Rebel Sp. z o.o.
+    - SuperHeated Neurons
+    - Tower Tactic Games
+    - TWOPLUS Games
+    - Zvezda
+  - title: 'Descent: Journeys in the Dark (Second Edition)'
+    bggId: 104162
+    language: en
+    pdf: descent_rulebook.pdf
+    fallbackImageUrl: https://cf.geekdo-images.com/ZTkiJEPvz2O3vmMJWfjrbw__original/img/GZJIjJPJKk1a4Bx-rM-3KL6O4hk=/0x0/filters:format(jpeg)/pic1180640.jpg
+    fallbackThumbnailUrl: https://cf.geekdo-images.com/ZTkiJEPvz2O3vmMJWfjrbw__small/img/cO_2QvC_2BCb-Smd0xp4a5G2n-s=/fit-in/200x150/filters:strip_icc()/pic1180640.jpg
+    bggEnhanced: true
+    description: >+
+      In Descent: Journeys in the Dark (Second Edition), one player takes on the role of the treacherous overlord, and up to four other players take on the roles of courageous heroes. During each game, the heroes embark on quests and venture into dangerous caves, ancient ruins, dark dungeons, and cursed forests to battle monsters, earn riches, and attempt to stop the overlord from carrying out his vile plot. Featuring double-sided modular board pieces, countless hero and skill combinations, and an immersive story-driven campaign, Descent: Journeys in the Dark (Second Edition) transports heroes to a vibrant fantasy realm where they must stand together against an ancient evil.
+
+
+      With danger lurking in every shadow, combat is a necessity. For such times, Descent: Journeys in the Dark (Second Edition) uses a unique dice-based system. Players build their dice pools according to their character's abilities and weapons, and each die in the pool contributes to an attack in different ways. Surges, special symbols that appear on most dice, also let you trigger special effects to make the most of your attacks. And with the horrors awaiting you beneath the surface, you'll need every advantage you can take...
+
+
+      Compared to the first edition of Descent: Journeys in the Dark, this game features:
+
+
+           Simpler rules for determining line of sight 
+           Faster setup of each encounter
+           Defense dice to mitigate the tendency to "math out" attacks
+           Shorter quests with plenty of natural stopping points
+           Cards that list necessary statistics, conditions, and effects
+           A new mechanism for controlling the overlord powers
+           Enhanced hero selection and creation process
+           Experience system to allow for hero growth and development
+           Out-of-the-box campaign system
+
+
+    yearPublished: 2012
+    minPlayers: 1
+    maxPlayers: 5
+    playingTime: 120
+    minAge: 14
+    averageRating: 7.6
+    averageWeight: 3.22
+    imageUrl: https://cf.geekdo-images.com/ZN2rpiJ19lg5DZk_iYMMkQ__original/img/E7OjZXGfe2Vfj2qis30aXetbQJQ=/0x0/filters:format(jpeg)/pic1180640.jpg
+    thumbnailUrl: https://cf.geekdo-images.com/ZN2rpiJ19lg5DZk_iYMMkQ__small/img/C6XETjkjDq3zebWc7-Rf_WKh2ak=/fit-in/200x150/filters:strip_icc()/pic1180640.jpg
+    categories:
+    - Adventure
+    - Exploration
+    - Fantasy
+    - Fighting
+    - Miniatures
+    mechanics:
+    - Action Points
+    - Dice Rolling
+    - Grid Movement
+    - Hand Management
+    - Line of Sight
+    - Map Addition
+    - Modular Board
+    - Movement Points
+    - Multiple Maps
+    - Once-Per-Game Abilities
+    - Role Playing
+    - Scenario / Mission / Campaign Game
+    - Solo / Solitaire Game
+    - Stat Check Resolution
+    - Team-Based Game
+    - Variable Player Powers
+    designers:
+    - Daniel Clark (I)
+    - Corey Konieczka
+    - Adam Sadler
+    - Kevin Wilson
+    publishers:
+    - Fantasy Flight Games
+    - ADC Blackfire Entertainment
+    - Arclight Games
+    - Delta Vision Publishing
+    - Edge Entertainment
+    - Galakta
+    - Giochi Uniti
+    - Heidelberger Spieleverlag
+    - Hobby World
+    - Wargames Club Publishing
   defaultAgent:
-    name: "MeepleAssistant POC"
-    model: "anthropic/claude-3-haiku"
+    name: MeepleAssistant POC
+    model: anthropic/claude-3-haiku
     temperature: 0.3
     maxTokens: 2048

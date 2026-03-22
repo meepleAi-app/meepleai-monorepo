@@ -2,7 +2,7 @@
 
 import { type ReactNode } from 'react';
 
-import { DashboardEngineProvider } from '@/components/dashboard-v2';
+import { DashboardEngineProvider } from '@/components/dashboard';
 import { BackToSessionFAB } from '@/components/session/BackToSessionFAB';
 
 import { ContextBar } from '../ContextBar';

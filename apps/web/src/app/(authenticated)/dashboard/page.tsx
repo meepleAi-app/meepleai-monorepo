@@ -8,7 +8,7 @@
  */
 
 import { RequireRole } from '@/components/auth/RequireRole';
-import { DashboardRenderer } from '@/components/dashboard-v2';
+import { DashboardRenderer } from '@/components/dashboard';
 
 import type { Metadata } from 'next';
 

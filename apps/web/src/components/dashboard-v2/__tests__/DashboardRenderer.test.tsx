@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import React from 'react';
-import { describe, it, expect, vi, type Mock } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 
 import { DashboardRenderer } from '../DashboardRenderer';
 
@@ -35,22 +35,6 @@ vi.mock('../AddToLibraryModal', () => ({
 }));
 
 // ---------------------------------------------------------------------------
-// Mock TavoloZone — avoids its internal dependencies
-// ---------------------------------------------------------------------------
-vi.mock('../TavoloZone', () => ({
-  TavoloZone: ({ children }: { children: React.ReactNode }) => (
-    <div data-testid="tavolo-layout">{children}</div>
-  ),
-}));
-
-// ---------------------------------------------------------------------------
-// Mock OnboardingFlow — avoids its internal dependencies
-// ---------------------------------------------------------------------------
-vi.mock('../OnboardingFlow', () => ({
-  OnboardingFlow: () => null,
-}));
-
-// ---------------------------------------------------------------------------
 // Mock OverlayHybrid — avoids its internal dependencies
 // ---------------------------------------------------------------------------
 vi.mock('@/components/ui/overlays', () => ({
@@ -58,20 +42,37 @@ vi.mock('@/components/ui/overlays', () => ({
 }));
 
 // ---------------------------------------------------------------------------
-// Mock zone components — avoids their internal dependencies
+// Mock new view components — thin stand-ins that expose key testids
 // ---------------------------------------------------------------------------
-vi.mock('../zones', () => ({
-  HeroZone: () => <div data-testid="hero-zone">HeroZone</div>,
-  SessionBar: () => <div data-testid="session-bar">SessionBar</div>,
-  ScoreboardZone: () => <div data-testid="scoreboard-zone">ScoreboardZone</div>,
-  ActiveSessionZone: () => <div data-testid="active-session-zone">ActiveSessionZone</div>,
-  GameNightZone: () => <div data-testid="game-night-zone">GameNightZone</div>,
-  AgentZone: () => <div data-testid="agent-zone">AgentZone</div>,
-  StatsZone: () => <div data-testid="stats-zone">StatsZone</div>,
-  FeedZone: () => <div data-testid="feed-zone">FeedZone</div>,
-  SuggestedZone: () => <div data-testid="suggested-zone">SuggestedZone</div>,
-  AgentsSidebar: () => <div data-testid="agents-sidebar">AgentsSidebar</div>,
-  CardsZone: () => <div data-testid="cards-zone">CardsZone</div>,
+vi.mock('../exploration/ExplorationView', () => ({
+  ExplorationView: () => (
+    <>
+      <div data-testid="hero-zone">HeroZone</div>
+      <div data-testid="tavolo-layout">TavoloLayout</div>
+    </>
+  ),
+}));
+
+vi.mock('../tavolo/TavoloView', () => ({
+  TavoloView: () => (
+    <>
+      <div data-testid="session-bar">SessionBar</div>
+      <div data-testid="scoreboard-zone">ScoreboardZone</div>
+    </>
+  ),
+}));
+
+vi.mock('../sheet/SessionSheet', () => ({
+  SessionSheet: ({ isOpen, children }: { isOpen: boolean; children: React.ReactNode }) =>
+    isOpen ? <div data-testid="session-sheet">{children}</div> : null,
+}));
+
+vi.mock('../sheet/SheetBreadcrumb', () => ({
+  SheetBreadcrumb: () => null,
+}));
+
+vi.mock('../sheet/SheetContent', () => ({
+  SheetContent: () => <div data-testid="sheet-content" />,
 }));
 
 // ---------------------------------------------------------------------------
@@ -90,21 +91,6 @@ vi.mock('next/navigation', () => ({
     replace: vi.fn(),
     back: vi.fn(),
   }),
-}));
-
-// ---------------------------------------------------------------------------
-// Mock data hooks — avoids API calls
-// ---------------------------------------------------------------------------
-vi.mock('@/hooks/queries/useActiveSessions', () => ({
-  useActiveSessions: () => ({ data: { sessions: [] }, isLoading: false }),
-}));
-
-vi.mock('@/hooks/queries/useAgents', () => ({
-  useAgents: () => ({ data: [], isLoading: false }),
-}));
-
-vi.mock('@/hooks/queries/useLibrary', () => ({
-  useRecentlyAddedGames: () => ({ data: { items: [] }, isLoading: false }),
 }));
 
 // ---------------------------------------------------------------------------
@@ -142,10 +128,15 @@ function mockExploration() {
     isExploration: true,
     isGameMode: false,
     isTransitioning: false,
-    isExpanded: false,
     activeSessionId: null,
     transitionTarget: null,
+    activeSheet: null,
+    breadcrumb: [],
     send: vi.fn(),
+    openSheet: vi.fn(),
+    closeSheet: vi.fn(),
+    navigateCardLink: vi.fn(),
+    backCardLink: vi.fn(),
   });
 }
 
@@ -155,10 +146,15 @@ function mockGameMode() {
     isExploration: false,
     isGameMode: true,
     isTransitioning: false,
-    isExpanded: false,
     activeSessionId: 'session-1',
     transitionTarget: null,
+    activeSheet: null,
+    breadcrumb: [],
     send: vi.fn(),
+    openSheet: vi.fn(),
+    closeSheet: vi.fn(),
+    navigateCardLink: vi.fn(),
+    backCardLink: vi.fn(),
   });
 }
 

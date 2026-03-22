@@ -11,7 +11,7 @@ services:
 
   postgres:
     restart: always
-    env_file: [./secrets/staging/database.secret]
+    env_file: [./secrets/database.secret]
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-meepleai_staging}
       POSTGRES_USER: ${POSTGRES_USER:-meepleai}
@@ -21,7 +21,7 @@ services:
 
   redis:
     restart: always
-    env_file: [./secrets/staging/redis.secret]
+    env_file: [./secrets/redis.secret]
     command: ["sh", "-c", "redis-server /etc/redis/redis.conf --requirepass $$REDIS_PASSWORD"]
     volumes:
       - redisdata-staging:/data
@@ -34,15 +34,15 @@ services:
   api:
     restart: always
     env_file:
-      - ./secrets/staging/database.secret
-      - ./secrets/staging/jwt.secret
-      - ./secrets/staging/admin.secret
-      - ./secrets/staging/openrouter.secret
-      - ./secrets/staging/oauth.secret
-      - ./secrets/staging/redis.secret
-      - ./secrets/staging/embedding-service.secret
-      - ./secrets/staging/email.secret
-      - ./secrets/staging/storage.secret
+      - ./secrets/database.secret
+      - ./secrets/jwt.secret
+      - ./secrets/admin.secret
+      - ./secrets/openrouter.secret
+      - ./secrets/oauth.secret
+      - ./secrets/redis.secret
+      - ./secrets/embedding-service.secret
+      - ./secrets/email.secret
+      - ./secrets/storage.secret
     environment:
       ASPNETCORE_ENVIRONMENT: Staging
       ASPNETCORE_URLS: http://+:8080
@@ -159,7 +159,7 @@ services:
 
   grafana:
     restart: always
-    env_file: [./secrets/staging/monitoring.secret]
+    env_file: [./secrets/monitoring.secret]
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.grafana.rule=Host(`meepleai.app`) && PathPrefix(`/grafana`)"

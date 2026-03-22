@@ -93,23 +93,9 @@ public class TwoFactorSecurityPenetrationTests : IAsyncLifetime
             CommandTimeout = 30
         };
 
-        var services = new ServiceCollection();
+        var services = IntegrationServiceCollectionBuilder.CreateBase(enforcedBuilder.ConnectionString);
 
-        // DbContext
-        services.AddDbContext<MeepleAiDbContext>(options =>
-            options.UseNpgsql(enforcedBuilder.ConnectionString, o => o.UseVector()) // Issue #3547
-                .ConfigureWarnings(warnings =>
-                    warnings.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning)));
-
-        // MediatR
-        services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(Program).Assembly));
-
-        // Repositories and Unit of Work
         services.AddScoped<IUserRepository, UserRepository>();
-        services.AddScoped<IUnitOfWork, EfCoreUnitOfWork>();
-
-        // Domain event infrastructure
-        services.AddScoped<Api.SharedKernel.Application.Services.IDomainEventCollector, Api.SharedKernel.Application.Services.DomainEventCollector>();
         services.AddSingleton<TimeProvider>(TimeProvider.System);
 
         // Data Protection (required by EncryptionService)

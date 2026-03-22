@@ -15,6 +15,7 @@ using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Hybrid;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
 using Xunit;
 
@@ -61,27 +62,15 @@ public sealed class TokenLimitEnforcementIntegrationTests : IAsyncLifetime
         _databaseName = $"test_tokenlimit_{Guid.NewGuid():N}";
         _isolatedDbConnectionString = await _fixture.CreateIsolatedDatabaseAsync(_databaseName);
 
-        var services = new ServiceCollection();
-        services.AddLogging(builder => builder.AddConsole().SetMinimumLevel(LogLevel.Warning));
-        services.AddDbContext<MeepleAiDbContext>(options =>
-        {
-            options.UseNpgsql(_isolatedDbConnectionString, o => o.UseVector());
-            options.ConfigureWarnings(w =>
-                w.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning));
-        });
-
+        var services = IntegrationServiceCollectionBuilder.CreateBase(_isolatedDbConnectionString);
         services.AddScoped<ITokenTierRepository, TokenTierRepository>();
         services.AddScoped<IUserTokenUsageRepository, UserTokenUsageRepository>();
-        services.AddScoped<IUnitOfWork, EfCoreUnitOfWork>();
-        services.AddScoped<IDomainEventCollector, DomainEventCollector>();
 
-        // HybridCache (in-memory for tests)
+        // HybridCache (in-memory for tests) — replace CreateBase stub with real implementation
+        services.RemoveAll(typeof(IHybridCacheService));
         services.AddHybridCache();
         services.AddScoped<IHybridCacheService, HybridCacheService>();
         services.AddScoped<ITokenTrackingService, TokenTrackingService>();
-
-        // MediatR
-        services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(Program).Assembly));
 
         _serviceProvider = services.BuildServiceProvider();
         _dbContext = _serviceProvider.GetRequiredService<MeepleAiDbContext>();

@@ -1,4 +1,4 @@
-// apps/web/src/components/dashboard-v2/__tests__/activity-feed.test.tsx
+// apps/web/src/components/dashboard/__tests__/activity-feed.test.tsx
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { ActivityFeed } from '../activity-feed';

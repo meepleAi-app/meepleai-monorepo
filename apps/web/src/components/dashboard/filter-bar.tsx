@@ -47,7 +47,7 @@ export function FilterBar({
     <div className="flex flex-col sm:flex-row gap-4 mb-6">
       {/* Category filters */}
       <div className="flex flex-wrap gap-2">
-        {categories.map((cat) => (
+        {categories.map(cat => (
           <Button
             key={cat}
             variant={currentCategory === cat ? 'default' : 'outline'}

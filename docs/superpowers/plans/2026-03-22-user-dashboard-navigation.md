@@ -18,63 +18,63 @@
 
 | File | Responsibility |
 |------|---------------|
-| `apps/web/src/components/dashboard-v2/session-nav/SessionNavBar.tsx` | Navbar content for gameMode (exit, game name, timer, sub-context icons) |
-| `apps/web/src/components/dashboard-v2/session-nav/SubContextIcon.tsx` | Individual sub-context icon button with active state |
-| `apps/web/src/components/dashboard-v2/session-nav/LiveTimer.tsx` | Real-time session timer display |
-| `apps/web/src/components/dashboard-v2/sheet/SessionSheet.tsx` | Bottom sheet container with drag, overlay, spring animations |
-| `apps/web/src/components/dashboard-v2/sheet/SheetBreadcrumb.tsx` | Breadcrumb navigation inside sheet |
-| `apps/web/src/components/dashboard-v2/sheet/CardLinkChip.tsx` | Clickable pill for contextual card link navigation |
-| `apps/web/src/components/dashboard-v2/sheet/SheetContent.tsx` | Router component dispatching to context-specific content |
-| `apps/web/src/components/dashboard-v2/sheet/contents/ScoresContent.tsx` | Sheet content: live scoreboard with categories |
-| `apps/web/src/components/dashboard-v2/sheet/contents/RulesAiContent.tsx` | Sheet content: AI chat with RAG |
-| `apps/web/src/components/dashboard-v2/sheet/contents/TimerContent.tsx` | Sheet content: turn timer, stopwatch, history |
-| `apps/web/src/components/dashboard-v2/sheet/contents/PhotosContent.tsx` | Sheet content: session photo grid |
-| `apps/web/src/components/dashboard-v2/sheet/contents/PlayersContent.tsx` | Sheet content: participant list, turn order |
-| `apps/web/src/components/dashboard-v2/tavolo/TavoloView.tsx` | Game mode main view: scoreboard, turn, actions, log |
-| `apps/web/src/components/dashboard-v2/tavolo/ScoreboardCompact.tsx` | Compact scoreboard with avatars and scores |
-| `apps/web/src/components/dashboard-v2/tavolo/TurnIndicator.tsx` | Current turn display with timer |
-| `apps/web/src/components/dashboard-v2/tavolo/QuickActions.tsx` | Quick action buttons (add score, ask AI) |
-| `apps/web/src/components/dashboard-v2/tavolo/EventLog.tsx` | Recent session events list |
-| `apps/web/src/components/dashboard-v2/exploration/ExplorationView.tsx` | Exploration layout: hero + banner + carousel sections |
-| `apps/web/src/components/dashboard-v2/exploration/HeroCompact.tsx` | Greeting + inline stats |
-| `apps/web/src/components/dashboard-v2/exploration/ActiveSessionBanner.tsx` | Resume active session banner |
-| `apps/web/src/components/dashboard-v2/exploration/CarouselSection.tsx` | Reusable carousel section with title + "See all" |
+| `apps/web/src/components/dashboard/session-nav/SessionNavBar.tsx` | Navbar content for gameMode (exit, game name, timer, sub-context icons) |
+| `apps/web/src/components/dashboard/session-nav/SubContextIcon.tsx` | Individual sub-context icon button with active state |
+| `apps/web/src/components/dashboard/session-nav/LiveTimer.tsx` | Real-time session timer display |
+| `apps/web/src/components/dashboard/sheet/SessionSheet.tsx` | Bottom sheet container with drag, overlay, spring animations |
+| `apps/web/src/components/dashboard/sheet/SheetBreadcrumb.tsx` | Breadcrumb navigation inside sheet |
+| `apps/web/src/components/dashboard/sheet/CardLinkChip.tsx` | Clickable pill for contextual card link navigation |
+| `apps/web/src/components/dashboard/sheet/SheetContent.tsx` | Router component dispatching to context-specific content |
+| `apps/web/src/components/dashboard/sheet/contents/ScoresContent.tsx` | Sheet content: live scoreboard with categories |
+| `apps/web/src/components/dashboard/sheet/contents/RulesAiContent.tsx` | Sheet content: AI chat with RAG |
+| `apps/web/src/components/dashboard/sheet/contents/TimerContent.tsx` | Sheet content: turn timer, stopwatch, history |
+| `apps/web/src/components/dashboard/sheet/contents/PhotosContent.tsx` | Sheet content: session photo grid |
+| `apps/web/src/components/dashboard/sheet/contents/PlayersContent.tsx` | Sheet content: participant list, turn order |
+| `apps/web/src/components/dashboard/tavolo/TavoloView.tsx` | Game mode main view: scoreboard, turn, actions, log |
+| `apps/web/src/components/dashboard/tavolo/ScoreboardCompact.tsx` | Compact scoreboard with avatars and scores |
+| `apps/web/src/components/dashboard/tavolo/TurnIndicator.tsx` | Current turn display with timer |
+| `apps/web/src/components/dashboard/tavolo/QuickActions.tsx` | Quick action buttons (add score, ask AI) |
+| `apps/web/src/components/dashboard/tavolo/EventLog.tsx` | Recent session events list |
+| `apps/web/src/components/dashboard/exploration/ExplorationView.tsx` | Exploration layout: hero + banner + carousel sections |
+| `apps/web/src/components/dashboard/exploration/HeroCompact.tsx` | Greeting + inline stats |
+| `apps/web/src/components/dashboard/exploration/ActiveSessionBanner.tsx` | Resume active session banner |
+| `apps/web/src/components/dashboard/exploration/CarouselSection.tsx` | Reusable carousel section with title + "See all" |
 
 ### Modified Files
 
 | File | Change |
 |------|--------|
-| `apps/web/src/components/dashboard-v2/DashboardEngine.ts` | Replace `default`/`expanded` sub-states with `tavolo`/`sheetOpen`, add sheet/cardlink events |
-| `apps/web/src/components/dashboard-v2/useDashboardMode.ts` | Replace `isExpanded` with `activeSheet`, `breadcrumb`, `openSheet()`, `closeSheet()`, `navigateCardLink()`, `backCardLink()` |
-| `apps/web/src/components/dashboard-v2/DashboardRenderer.tsx` | Render `ExplorationView` or `TavoloView` + `SessionSheet` based on state |
+| `apps/web/src/components/dashboard/DashboardEngine.ts` | Replace `default`/`expanded` sub-states with `tavolo`/`sheetOpen`, add sheet/cardlink events |
+| `apps/web/src/components/dashboard/useDashboardMode.ts` | Replace `isExpanded` with `activeSheet`, `breadcrumb`, `openSheet()`, `closeSheet()`, `navigateCardLink()`, `backCardLink()` |
+| `apps/web/src/components/dashboard/DashboardRenderer.tsx` | Render `ExplorationView` or `TavoloView` + `SessionSheet` based on state |
 | `apps/web/src/components/layout/UserShell/UserTopNav.tsx` | Conditional render: `SessionNavBar` when `isGameMode` |
-| `apps/web/src/components/dashboard-v2/__tests__/DashboardEngine.test.ts` | Update tests for new states/events |
-| `apps/web/src/components/dashboard-v2/__tests__/useDashboardMode.test.tsx` | Update tests for new hook API |
+| `apps/web/src/components/dashboard/__tests__/DashboardEngine.test.ts` | Update tests for new states/events |
+| `apps/web/src/components/dashboard/__tests__/useDashboardMode.test.tsx` | Update tests for new hook API |
 
 ### Test Files (New)
 
 | File | Tests For |
 |------|-----------|
-| `apps/web/src/components/dashboard-v2/__tests__/DashboardEngine.test.ts` | Extended xstate machine (existing file, new tests added) |
-| `apps/web/src/components/dashboard-v2/__tests__/useDashboardMode.test.tsx` | Extended hook API (existing file, new tests added) |
-| `apps/web/src/components/dashboard-v2/__tests__/SessionNavBar.test.tsx` | Navbar transformation |
-| `apps/web/src/components/dashboard-v2/__tests__/SessionSheet.test.tsx` | Sheet open/close/drag |
-| `apps/web/src/components/dashboard-v2/__tests__/CardLinkChip.test.tsx` | Card link navigation |
-| `apps/web/src/components/dashboard-v2/__tests__/SheetBreadcrumb.test.tsx` | Breadcrumb rendering and back navigation |
-| `apps/web/src/components/dashboard-v2/__tests__/TavoloView.test.tsx` | Tavolo layout rendering |
-| `apps/web/src/components/dashboard-v2/__tests__/ExplorationView.test.tsx` | Exploration layout with carousels |
+| `apps/web/src/components/dashboard/__tests__/DashboardEngine.test.ts` | Extended xstate machine (existing file, new tests added) |
+| `apps/web/src/components/dashboard/__tests__/useDashboardMode.test.tsx` | Extended hook API (existing file, new tests added) |
+| `apps/web/src/components/dashboard/__tests__/SessionNavBar.test.tsx` | Navbar transformation |
+| `apps/web/src/components/dashboard/__tests__/SessionSheet.test.tsx` | Sheet open/close/drag |
+| `apps/web/src/components/dashboard/__tests__/CardLinkChip.test.tsx` | Card link navigation |
+| `apps/web/src/components/dashboard/__tests__/SheetBreadcrumb.test.tsx` | Breadcrumb rendering and back navigation |
+| `apps/web/src/components/dashboard/__tests__/TavoloView.test.tsx` | Tavolo layout rendering |
+| `apps/web/src/components/dashboard/__tests__/ExplorationView.test.tsx` | Exploration layout with carousels |
 
 ---
 
 ## Task 1: Extend DashboardEngine xstate Machine
 
 **Files:**
-- Modify: `apps/web/src/components/dashboard-v2/DashboardEngine.ts` (lines 7-13 events, lines 138-162 gameMode states)
-- Modify: `apps/web/src/components/dashboard-v2/__tests__/DashboardEngine.test.ts`
+- Modify: `apps/web/src/components/dashboard/DashboardEngine.ts` (lines 7-13 events, lines 138-162 gameMode states)
+- Modify: `apps/web/src/components/dashboard/__tests__/DashboardEngine.test.ts`
 
 - [ ] **Step 1: Write failing tests for new events and states**
 
-Add to `apps/web/src/components/dashboard-v2/__tests__/DashboardEngine.test.ts`:
+Add to `apps/web/src/components/dashboard/__tests__/DashboardEngine.test.ts`:
 
 ```typescript
 import { createActor } from 'xstate';
@@ -187,12 +187,12 @@ describe('DashboardEngine — sheet navigation', () => {
 
 - [ ] **Step 2: Run tests to verify they fail**
 
-Run: `cd apps/web && pnpm vitest run src/components/dashboard-v2/__tests__/DashboardEngine.test.ts`
+Run: `cd apps/web && pnpm vitest run src/components/dashboard/__tests__/DashboardEngine.test.ts`
 Expected: FAIL — `OPEN_SHEET` event not recognized, `activeSheet`/`breadcrumb` not in context
 
 - [ ] **Step 3: Update DashboardEngine types and context**
 
-In `apps/web/src/components/dashboard-v2/DashboardEngine.ts`, update the event types (around line 7) and context (around line 15):
+In `apps/web/src/components/dashboard/DashboardEngine.ts`, update the event types (around line 7) and context (around line 15):
 
 ```typescript
 // --- Types ---
@@ -342,13 +342,13 @@ clearSession: assign({
 
 - [ ] **Step 6: Run tests to verify they pass**
 
-Run: `cd apps/web && pnpm vitest run src/components/dashboard-v2/__tests__/DashboardEngine.test.ts`
+Run: `cd apps/web && pnpm vitest run src/components/dashboard/__tests__/DashboardEngine.test.ts`
 Expected: ALL PASS
 
 - [ ] **Step 7: Commit**
 
 ```bash
-git add apps/web/src/components/dashboard-v2/DashboardEngine.ts apps/web/src/components/dashboard-v2/__tests__/DashboardEngine.test.ts
+git add apps/web/src/components/dashboard/DashboardEngine.ts apps/web/src/components/dashboard/__tests__/DashboardEngine.test.ts
 git commit -m "feat(dashboard): extend DashboardEngine with tavolo/sheetOpen states and card link navigation"
 ```
 
@@ -357,12 +357,12 @@ git commit -m "feat(dashboard): extend DashboardEngine with tavolo/sheetOpen sta
 ## Task 2: Update useDashboardMode Hook
 
 **Files:**
-- Modify: `apps/web/src/components/dashboard-v2/useDashboardMode.ts`
-- Modify: `apps/web/src/components/dashboard-v2/__tests__/useDashboardMode.test.tsx`
+- Modify: `apps/web/src/components/dashboard/useDashboardMode.ts`
+- Modify: `apps/web/src/components/dashboard/__tests__/useDashboardMode.test.tsx`
 
 - [ ] **Step 1: Write failing tests for new hook API**
 
-Add to `apps/web/src/components/dashboard-v2/__tests__/useDashboardMode.test.tsx`:
+Add to `apps/web/src/components/dashboard/__tests__/useDashboardMode.test.tsx`:
 
 ```typescript
 describe('useDashboardMode — sheet API', () => {
@@ -402,12 +402,12 @@ describe('useDashboardMode — sheet API', () => {
 
 - [ ] **Step 2: Run tests to verify they fail**
 
-Run: `cd apps/web && pnpm vitest run src/components/dashboard-v2/__tests__/useDashboardMode.test.tsx`
+Run: `cd apps/web && pnpm vitest run src/components/dashboard/__tests__/useDashboardMode.test.tsx`
 Expected: FAIL — `openSheet`, `closeSheet`, `activeSheet`, `breadcrumb` not in return value
 
 - [ ] **Step 3: Update hook implementation**
 
-Replace `apps/web/src/components/dashboard-v2/useDashboardMode.ts` content:
+Replace `apps/web/src/components/dashboard/useDashboardMode.ts` content:
 
 ```typescript
 'use client';
@@ -471,13 +471,13 @@ export function useDashboardMode() {
 
 - [ ] **Step 4: Run tests to verify they pass**
 
-Run: `cd apps/web && pnpm vitest run src/components/dashboard-v2/__tests__/useDashboardMode.test.tsx`
+Run: `cd apps/web && pnpm vitest run src/components/dashboard/__tests__/useDashboardMode.test.tsx`
 Expected: ALL PASS
 
 - [ ] **Step 5: Commit**
 
 ```bash
-git add apps/web/src/components/dashboard-v2/useDashboardMode.ts apps/web/src/components/dashboard-v2/__tests__/useDashboardMode.test.tsx
+git add apps/web/src/components/dashboard/useDashboardMode.ts apps/web/src/components/dashboard/__tests__/useDashboardMode.test.tsx
 git commit -m "feat(dashboard): update useDashboardMode with sheet navigation API"
 ```
 
@@ -486,16 +486,16 @@ git commit -m "feat(dashboard): update useDashboardMode with sheet navigation AP
 ## Task 3: ExplorationView Components
 
 **Files:**
-- Create: `apps/web/src/components/dashboard-v2/exploration/HeroCompact.tsx`
-- Create: `apps/web/src/components/dashboard-v2/exploration/ActiveSessionBanner.tsx`
-- Create: `apps/web/src/components/dashboard-v2/exploration/CarouselSection.tsx`
-- Create: `apps/web/src/components/dashboard-v2/exploration/QuickStats.tsx`
-- Create: `apps/web/src/components/dashboard-v2/exploration/ExplorationView.tsx`
-- Create: `apps/web/src/components/dashboard-v2/__tests__/ExplorationView.test.tsx`
+- Create: `apps/web/src/components/dashboard/exploration/HeroCompact.tsx`
+- Create: `apps/web/src/components/dashboard/exploration/ActiveSessionBanner.tsx`
+- Create: `apps/web/src/components/dashboard/exploration/CarouselSection.tsx`
+- Create: `apps/web/src/components/dashboard/exploration/QuickStats.tsx`
+- Create: `apps/web/src/components/dashboard/exploration/ExplorationView.tsx`
+- Create: `apps/web/src/components/dashboard/__tests__/ExplorationView.test.tsx`
 
 - [ ] **Step 1: Write failing test for ExplorationView**
 
-Create `apps/web/src/components/dashboard-v2/__tests__/ExplorationView.test.tsx`:
+Create `apps/web/src/components/dashboard/__tests__/ExplorationView.test.tsx`:
 
 ```typescript
 import { render, screen } from '@testing-library/react';
@@ -541,12 +541,12 @@ describe('ExplorationView', () => {
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `cd apps/web && pnpm vitest run src/components/dashboard-v2/__tests__/ExplorationView.test.tsx`
+Run: `cd apps/web && pnpm vitest run src/components/dashboard/__tests__/ExplorationView.test.tsx`
 Expected: FAIL — module not found
 
 - [ ] **Step 3: Create HeroCompact**
 
-Create `apps/web/src/components/dashboard-v2/exploration/HeroCompact.tsx`:
+Create `apps/web/src/components/dashboard/exploration/HeroCompact.tsx`:
 
 ```tsx
 'use client';
@@ -580,7 +580,7 @@ export function HeroCompact({
 
 - [ ] **Step 4: Create ActiveSessionBanner**
 
-Create `apps/web/src/components/dashboard-v2/exploration/ActiveSessionBanner.tsx`:
+Create `apps/web/src/components/dashboard/exploration/ActiveSessionBanner.tsx`:
 
 ```tsx
 'use client';
@@ -617,7 +617,7 @@ export function ActiveSessionBanner({ gameName, elapsed, sessionId }: ActiveSess
 
 - [ ] **Step 5: Create CarouselSection**
 
-Create `apps/web/src/components/dashboard-v2/exploration/CarouselSection.tsx`:
+Create `apps/web/src/components/dashboard/exploration/CarouselSection.tsx`:
 
 ```tsx
 'use client';
@@ -665,7 +665,7 @@ export function CarouselSection({
 
 - [ ] **Step 6: Create QuickStats**
 
-Create `apps/web/src/components/dashboard-v2/exploration/QuickStats.tsx`:
+Create `apps/web/src/components/dashboard/exploration/QuickStats.tsx`:
 
 ```tsx
 'use client';
@@ -701,7 +701,7 @@ export function QuickStats({ totalGames = 0, totalSessions = 0, avgRating = 0 }:
 
 - [ ] **Step 7: Create ExplorationView**
 
-Create `apps/web/src/components/dashboard-v2/exploration/ExplorationView.tsx`:
+Create `apps/web/src/components/dashboard/exploration/ExplorationView.tsx`:
 
 ```tsx
 'use client';
@@ -769,14 +769,14 @@ export function ExplorationView({ userName, activeSession = null }: ExplorationV
 
 - [ ] **Step 8: Run tests to verify they pass**
 
-Run: `cd apps/web && pnpm vitest run src/components/dashboard-v2/__tests__/ExplorationView.test.tsx`
+Run: `cd apps/web && pnpm vitest run src/components/dashboard/__tests__/ExplorationView.test.tsx`
 Expected: ALL PASS
 
 - [ ] **Step 9: Commit**
 
 ```bash
-git add apps/web/src/components/dashboard-v2/exploration/
-git add apps/web/src/components/dashboard-v2/__tests__/ExplorationView.test.tsx
+git add apps/web/src/components/dashboard/exploration/
+git add apps/web/src/components/dashboard/__tests__/ExplorationView.test.tsx
 git commit -m "feat(dashboard): add ExplorationView with HeroCompact, ActiveSessionBanner, CarouselSection, QuickStats"
 ```
 
@@ -785,15 +785,15 @@ git commit -m "feat(dashboard): add ExplorationView with HeroCompact, ActiveSess
 ## Task 4: SessionNavBar Component
 
 **Files:**
-- Create: `apps/web/src/components/dashboard-v2/session-nav/SessionNavBar.tsx`
-- Create: `apps/web/src/components/dashboard-v2/session-nav/SubContextIcon.tsx`
-- Create: `apps/web/src/components/dashboard-v2/session-nav/LiveTimer.tsx`
+- Create: `apps/web/src/components/dashboard/session-nav/SessionNavBar.tsx`
+- Create: `apps/web/src/components/dashboard/session-nav/SubContextIcon.tsx`
+- Create: `apps/web/src/components/dashboard/session-nav/LiveTimer.tsx`
 - Modify: `apps/web/src/components/layout/UserShell/UserTopNav.tsx`
-- Create: `apps/web/src/components/dashboard-v2/__tests__/SessionNavBar.test.tsx`
+- Create: `apps/web/src/components/dashboard/__tests__/SessionNavBar.test.tsx`
 
 - [ ] **Step 1: Write failing test for SessionNavBar**
 
-Create `apps/web/src/components/dashboard-v2/__tests__/SessionNavBar.test.tsx`:
+Create `apps/web/src/components/dashboard/__tests__/SessionNavBar.test.tsx`:
 
 ```typescript
 import { render, screen, fireEvent } from '@testing-library/react';
@@ -857,12 +857,12 @@ describe('SessionNavBar', () => {
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `cd apps/web && pnpm vitest run src/components/dashboard-v2/__tests__/SessionNavBar.test.tsx`
+Run: `cd apps/web && pnpm vitest run src/components/dashboard/__tests__/SessionNavBar.test.tsx`
 Expected: FAIL — module not found
 
 - [ ] **Step 3: Create SubContextIcon**
 
-Create `apps/web/src/components/dashboard-v2/session-nav/SubContextIcon.tsx`:
+Create `apps/web/src/components/dashboard/session-nav/SubContextIcon.tsx`:
 
 ```tsx
 'use client';
@@ -905,7 +905,7 @@ export function SubContextIcon({ context, isActive, onClick }: SubContextIconPro
 
 - [ ] **Step 4: Create LiveTimer**
 
-Create `apps/web/src/components/dashboard-v2/session-nav/LiveTimer.tsx`:
+Create `apps/web/src/components/dashboard/session-nav/LiveTimer.tsx`:
 
 ```tsx
 'use client';
@@ -957,7 +957,7 @@ export function LiveTimer({ startedAt, isPaused = false, onClick }: LiveTimerPro
 
 - [ ] **Step 5: Create SessionNavBar**
 
-Create `apps/web/src/components/dashboard-v2/session-nav/SessionNavBar.tsx`:
+Create `apps/web/src/components/dashboard/session-nav/SessionNavBar.tsx`:
 
 ```tsx
 'use client';
@@ -1026,7 +1026,7 @@ export function SessionNavBar({
 
 - [ ] **Step 6: Run tests to verify they pass**
 
-Run: `cd apps/web && pnpm vitest run src/components/dashboard-v2/__tests__/SessionNavBar.test.tsx`
+Run: `cd apps/web && pnpm vitest run src/components/dashboard/__tests__/SessionNavBar.test.tsx`
 Expected: ALL PASS
 
 - [ ] **Step 7: Modify UserTopNav for conditional rendering**
@@ -1035,8 +1035,8 @@ In `apps/web/src/components/layout/UserShell/UserTopNav.tsx`, add the conditiona
 
 ```tsx
 // Add imports at top:
-import { useDashboardMode } from '@/components/dashboard-v2/useDashboardMode';
-import { SessionNavBar } from '@/components/dashboard-v2/session-nav/SessionNavBar';
+import { useDashboardMode } from '@/components/dashboard/useDashboardMode';
+import { SessionNavBar } from '@/components/dashboard/session-nav/SessionNavBar';
 
 // Inside the header element, replace the content with:
 // const { isGameMode, activeSheet, openSheet } = useDashboardMode();
@@ -1058,8 +1058,8 @@ Refer to `UserTopNav.tsx` lines 21-90 for the existing content to wrap.
 - [ ] **Step 8: Commit**
 
 ```bash
-git add apps/web/src/components/dashboard-v2/session-nav/
-git add apps/web/src/components/dashboard-v2/__tests__/SessionNavBar.test.tsx
+git add apps/web/src/components/dashboard/session-nav/
+git add apps/web/src/components/dashboard/__tests__/SessionNavBar.test.tsx
 git add apps/web/src/components/layout/UserShell/UserTopNav.tsx
 git commit -m "feat(dashboard): add SessionNavBar with sub-context icons and navbar transformation"
 ```
@@ -1069,16 +1069,16 @@ git commit -m "feat(dashboard): add SessionNavBar with sub-context icons and nav
 ## Task 5: TavoloView Components
 
 **Files:**
-- Create: `apps/web/src/components/dashboard-v2/tavolo/ScoreboardCompact.tsx`
-- Create: `apps/web/src/components/dashboard-v2/tavolo/TurnIndicator.tsx`
-- Create: `apps/web/src/components/dashboard-v2/tavolo/QuickActions.tsx`
-- Create: `apps/web/src/components/dashboard-v2/tavolo/EventLog.tsx`
-- Create: `apps/web/src/components/dashboard-v2/tavolo/TavoloView.tsx`
-- Create: `apps/web/src/components/dashboard-v2/__tests__/TavoloView.test.tsx`
+- Create: `apps/web/src/components/dashboard/tavolo/ScoreboardCompact.tsx`
+- Create: `apps/web/src/components/dashboard/tavolo/TurnIndicator.tsx`
+- Create: `apps/web/src/components/dashboard/tavolo/QuickActions.tsx`
+- Create: `apps/web/src/components/dashboard/tavolo/EventLog.tsx`
+- Create: `apps/web/src/components/dashboard/tavolo/TavoloView.tsx`
+- Create: `apps/web/src/components/dashboard/__tests__/TavoloView.test.tsx`
 
 - [ ] **Step 1: Write failing test for TavoloView**
 
-Create `apps/web/src/components/dashboard-v2/__tests__/TavoloView.test.tsx`:
+Create `apps/web/src/components/dashboard/__tests__/TavoloView.test.tsx`:
 
 ```typescript
 import { render, screen } from '@testing-library/react';
@@ -1111,12 +1111,12 @@ describe('TavoloView', () => {
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `cd apps/web && pnpm vitest run src/components/dashboard-v2/__tests__/TavoloView.test.tsx`
+Run: `cd apps/web && pnpm vitest run src/components/dashboard/__tests__/TavoloView.test.tsx`
 Expected: FAIL
 
 - [ ] **Step 3: Create ScoreboardCompact**
 
-Create `apps/web/src/components/dashboard-v2/tavolo/ScoreboardCompact.tsx`:
+Create `apps/web/src/components/dashboard/tavolo/ScoreboardCompact.tsx`:
 
 ```tsx
 'use client';
@@ -1165,7 +1165,7 @@ export function ScoreboardCompact({ players = [] }: ScoreboardCompactProps) {
 
 - [ ] **Step 4: Create TurnIndicator, QuickActions, EventLog**
 
-Create `apps/web/src/components/dashboard-v2/tavolo/TurnIndicator.tsx`:
+Create `apps/web/src/components/dashboard/tavolo/TurnIndicator.tsx`:
 
 ```tsx
 'use client';
@@ -1201,7 +1201,7 @@ export function TurnIndicator({ playerName, playerColor, turnElapsed }: TurnIndi
 }
 ```
 
-Create `apps/web/src/components/dashboard-v2/tavolo/QuickActions.tsx`:
+Create `apps/web/src/components/dashboard/tavolo/QuickActions.tsx`:
 
 ```tsx
 'use client';
@@ -1232,7 +1232,7 @@ export function QuickActions({ onAddScore, onAskAi }: QuickActionsProps) {
 }
 ```
 
-Create `apps/web/src/components/dashboard-v2/tavolo/EventLog.tsx`:
+Create `apps/web/src/components/dashboard/tavolo/EventLog.tsx`:
 
 ```tsx
 'use client';
@@ -1273,7 +1273,7 @@ export function EventLog({ events = [] }: EventLogProps) {
 
 - [ ] **Step 5: Create TavoloView**
 
-Create `apps/web/src/components/dashboard-v2/tavolo/TavoloView.tsx`:
+Create `apps/web/src/components/dashboard/tavolo/TavoloView.tsx`:
 
 ```tsx
 'use client';
@@ -1307,14 +1307,14 @@ export function TavoloView({ sessionId }: TavoloViewProps) {
 
 - [ ] **Step 6: Run tests to verify they pass**
 
-Run: `cd apps/web && pnpm vitest run src/components/dashboard-v2/__tests__/TavoloView.test.tsx`
+Run: `cd apps/web && pnpm vitest run src/components/dashboard/__tests__/TavoloView.test.tsx`
 Expected: ALL PASS
 
 - [ ] **Step 7: Commit**
 
 ```bash
-git add apps/web/src/components/dashboard-v2/tavolo/
-git add apps/web/src/components/dashboard-v2/__tests__/TavoloView.test.tsx
+git add apps/web/src/components/dashboard/tavolo/
+git add apps/web/src/components/dashboard/__tests__/TavoloView.test.tsx
 git commit -m "feat(dashboard): add TavoloView with ScoreboardCompact, TurnIndicator, QuickActions, EventLog"
 ```
 
@@ -1323,16 +1323,16 @@ git commit -m "feat(dashboard): add TavoloView with ScoreboardCompact, TurnIndic
 ## Task 6: SessionSheet Component
 
 **Files:**
-- Create: `apps/web/src/components/dashboard-v2/sheet/SessionSheet.tsx`
-- Create: `apps/web/src/components/dashboard-v2/sheet/SheetBreadcrumb.tsx`
-- Create: `apps/web/src/components/dashboard-v2/sheet/CardLinkChip.tsx`
-- Create: `apps/web/src/components/dashboard-v2/__tests__/SessionSheet.test.tsx`
-- Create: `apps/web/src/components/dashboard-v2/__tests__/CardLinkChip.test.tsx`
-- Create: `apps/web/src/components/dashboard-v2/__tests__/SheetBreadcrumb.test.tsx`
+- Create: `apps/web/src/components/dashboard/sheet/SessionSheet.tsx`
+- Create: `apps/web/src/components/dashboard/sheet/SheetBreadcrumb.tsx`
+- Create: `apps/web/src/components/dashboard/sheet/CardLinkChip.tsx`
+- Create: `apps/web/src/components/dashboard/__tests__/SessionSheet.test.tsx`
+- Create: `apps/web/src/components/dashboard/__tests__/CardLinkChip.test.tsx`
+- Create: `apps/web/src/components/dashboard/__tests__/SheetBreadcrumb.test.tsx`
 
 - [ ] **Step 1: Write failing tests for SessionSheet**
 
-Create `apps/web/src/components/dashboard-v2/__tests__/SessionSheet.test.tsx`:
+Create `apps/web/src/components/dashboard/__tests__/SessionSheet.test.tsx`:
 
 ```typescript
 import { render, screen, fireEvent } from '@testing-library/react';
@@ -1394,7 +1394,7 @@ describe('SessionSheet', () => {
 
 - [ ] **Step 2: Write failing tests for CardLinkChip and SheetBreadcrumb**
 
-Create `apps/web/src/components/dashboard-v2/__tests__/CardLinkChip.test.tsx`:
+Create `apps/web/src/components/dashboard/__tests__/CardLinkChip.test.tsx`:
 
 ```typescript
 import { render, screen, fireEvent } from '@testing-library/react';
@@ -1424,7 +1424,7 @@ describe('CardLinkChip', () => {
 });
 ```
 
-Create `apps/web/src/components/dashboard-v2/__tests__/SheetBreadcrumb.test.tsx`:
+Create `apps/web/src/components/dashboard/__tests__/SheetBreadcrumb.test.tsx`:
 
 ```typescript
 import { render, screen, fireEvent } from '@testing-library/react';
@@ -1480,12 +1480,12 @@ describe('SheetBreadcrumb', () => {
 
 - [ ] **Step 3: Run tests to verify they fail**
 
-Run: `cd apps/web && pnpm vitest run src/components/dashboard-v2/__tests__/SessionSheet.test.tsx src/components/dashboard-v2/__tests__/CardLinkChip.test.tsx src/components/dashboard-v2/__tests__/SheetBreadcrumb.test.tsx`
+Run: `cd apps/web && pnpm vitest run src/components/dashboard/__tests__/SessionSheet.test.tsx src/components/dashboard/__tests__/CardLinkChip.test.tsx src/components/dashboard/__tests__/SheetBreadcrumb.test.tsx`
 Expected: FAIL — modules not found
 
 - [ ] **Step 4: Create CardLinkChip**
 
-Create `apps/web/src/components/dashboard-v2/sheet/CardLinkChip.tsx`:
+Create `apps/web/src/components/dashboard/sheet/CardLinkChip.tsx`:
 
 ```tsx
 'use client';
@@ -1534,7 +1534,7 @@ export function CardLinkChip({
 
 - [ ] **Step 5: Create SheetBreadcrumb**
 
-Create `apps/web/src/components/dashboard-v2/sheet/SheetBreadcrumb.tsx`:
+Create `apps/web/src/components/dashboard/sheet/SheetBreadcrumb.tsx`:
 
 ```tsx
 'use client';
@@ -1576,7 +1576,7 @@ export function SheetBreadcrumb({ entries, onNavigate }: SheetBreadcrumbProps) {
 
 - [ ] **Step 6: Create SessionSheet**
 
-Create `apps/web/src/components/dashboard-v2/sheet/SessionSheet.tsx`:
+Create `apps/web/src/components/dashboard/sheet/SessionSheet.tsx`:
 
 ```tsx
 'use client';
@@ -1637,16 +1637,16 @@ export function SessionSheet({ isOpen, onClose, children }: SessionSheetProps) {
 
 - [ ] **Step 7: Run tests to verify they pass**
 
-Run: `cd apps/web && pnpm vitest run src/components/dashboard-v2/__tests__/SessionSheet.test.tsx src/components/dashboard-v2/__tests__/CardLinkChip.test.tsx src/components/dashboard-v2/__tests__/SheetBreadcrumb.test.tsx`
+Run: `cd apps/web && pnpm vitest run src/components/dashboard/__tests__/SessionSheet.test.tsx src/components/dashboard/__tests__/CardLinkChip.test.tsx src/components/dashboard/__tests__/SheetBreadcrumb.test.tsx`
 Expected: ALL PASS
 
 - [ ] **Step 8: Commit**
 
 ```bash
-git add apps/web/src/components/dashboard-v2/sheet/
-git add apps/web/src/components/dashboard-v2/__tests__/SessionSheet.test.tsx
-git add apps/web/src/components/dashboard-v2/__tests__/CardLinkChip.test.tsx
-git add apps/web/src/components/dashboard-v2/__tests__/SheetBreadcrumb.test.tsx
+git add apps/web/src/components/dashboard/sheet/
+git add apps/web/src/components/dashboard/__tests__/SessionSheet.test.tsx
+git add apps/web/src/components/dashboard/__tests__/CardLinkChip.test.tsx
+git add apps/web/src/components/dashboard/__tests__/SheetBreadcrumb.test.tsx
 git commit -m "feat(dashboard): add SessionSheet with CardLinkChip and SheetBreadcrumb"
 ```
 
@@ -1655,16 +1655,16 @@ git commit -m "feat(dashboard): add SessionSheet with CardLinkChip and SheetBrea
 ## Task 7: SheetContent Router and Content Modules
 
 **Files:**
-- Create: `apps/web/src/components/dashboard-v2/sheet/SheetContent.tsx`
-- Create: `apps/web/src/components/dashboard-v2/sheet/contents/ScoresContent.tsx`
-- Create: `apps/web/src/components/dashboard-v2/sheet/contents/RulesAiContent.tsx`
-- Create: `apps/web/src/components/dashboard-v2/sheet/contents/TimerContent.tsx`
-- Create: `apps/web/src/components/dashboard-v2/sheet/contents/PhotosContent.tsx`
-- Create: `apps/web/src/components/dashboard-v2/sheet/contents/PlayersContent.tsx`
+- Create: `apps/web/src/components/dashboard/sheet/SheetContent.tsx`
+- Create: `apps/web/src/components/dashboard/sheet/contents/ScoresContent.tsx`
+- Create: `apps/web/src/components/dashboard/sheet/contents/RulesAiContent.tsx`
+- Create: `apps/web/src/components/dashboard/sheet/contents/TimerContent.tsx`
+- Create: `apps/web/src/components/dashboard/sheet/contents/PhotosContent.tsx`
+- Create: `apps/web/src/components/dashboard/sheet/contents/PlayersContent.tsx`
 
 - [ ] **Step 1: Create SheetContent router**
 
-Create `apps/web/src/components/dashboard-v2/sheet/SheetContent.tsx`:
+Create `apps/web/src/components/dashboard/sheet/SheetContent.tsx`:
 
 ```tsx
 'use client';
@@ -1700,7 +1700,7 @@ export function SheetContent({ context, sessionId }: SheetContentProps) {
 
 Each content module is a scaffold that will be populated with real data integration later. Create all 5 files:
 
-Create `apps/web/src/components/dashboard-v2/sheet/contents/ScoresContent.tsx`:
+Create `apps/web/src/components/dashboard/sheet/contents/ScoresContent.tsx`:
 
 ```tsx
 'use client';
@@ -1747,7 +1747,7 @@ export function ScoresContent({ sessionId }: ScoresContentProps) {
 }
 ```
 
-Create `apps/web/src/components/dashboard-v2/sheet/contents/RulesAiContent.tsx`:
+Create `apps/web/src/components/dashboard/sheet/contents/RulesAiContent.tsx`:
 
 ```tsx
 'use client';
@@ -1786,7 +1786,7 @@ export function RulesAiContent({ sessionId }: RulesAiContentProps) {
 }
 ```
 
-Create `apps/web/src/components/dashboard-v2/sheet/contents/TimerContent.tsx`:
+Create `apps/web/src/components/dashboard/sheet/contents/TimerContent.tsx`:
 
 ```tsx
 'use client';
@@ -1824,7 +1824,7 @@ export function TimerContent({ sessionId }: TimerContentProps) {
 }
 ```
 
-Create `apps/web/src/components/dashboard-v2/sheet/contents/PhotosContent.tsx`:
+Create `apps/web/src/components/dashboard/sheet/contents/PhotosContent.tsx`:
 
 ```tsx
 'use client';
@@ -1849,7 +1849,7 @@ export function PhotosContent({ sessionId }: PhotosContentProps) {
 }
 ```
 
-Create `apps/web/src/components/dashboard-v2/sheet/contents/PlayersContent.tsx`:
+Create `apps/web/src/components/dashboard/sheet/contents/PlayersContent.tsx`:
 
 ```tsx
 'use client';
@@ -1890,8 +1890,8 @@ export function PlayersContent({ sessionId }: PlayersContentProps) {
 - [ ] **Step 3: Commit**
 
 ```bash
-git add apps/web/src/components/dashboard-v2/sheet/SheetContent.tsx
-git add apps/web/src/components/dashboard-v2/sheet/contents/
+git add apps/web/src/components/dashboard/sheet/SheetContent.tsx
+git add apps/web/src/components/dashboard/sheet/contents/
 git commit -m "feat(dashboard): add SheetContent router and content modules with card links"
 ```
 
@@ -1900,11 +1900,11 @@ git commit -m "feat(dashboard): add SheetContent router and content modules with
 ## Task 8: Wire DashboardRenderer
 
 **Files:**
-- Modify: `apps/web/src/components/dashboard-v2/DashboardRenderer.tsx` (lines 37-69 ExplorationView, lines 105-136 AnimatePresence)
+- Modify: `apps/web/src/components/dashboard/DashboardRenderer.tsx` (lines 37-69 ExplorationView, lines 105-136 AnimatePresence)
 
 - [ ] **Step 1: Update DashboardRenderer imports and rendering**
 
-In `apps/web/src/components/dashboard-v2/DashboardRenderer.tsx`:
+In `apps/web/src/components/dashboard/DashboardRenderer.tsx`:
 
 Replace the existing zone imports (lines 16-26) and inline `ExplorationView` (lines 37-69) with imports of the new components:
 
@@ -1960,13 +1960,13 @@ The `SessionSheet` wraps `SheetBreadcrumb` + `SheetContent`:
 
 - [ ] **Step 2: Run existing DashboardRenderer tests**
 
-Run: `cd apps/web && pnpm vitest run src/components/dashboard-v2/__tests__/DashboardRenderer.test.tsx`
+Run: `cd apps/web && pnpm vitest run src/components/dashboard/__tests__/DashboardRenderer.test.tsx`
 Expected: May need mock updates for new imports. Fix any broken mocks.
 
 - [ ] **Step 3: Commit**
 
 ```bash
-git add apps/web/src/components/dashboard-v2/DashboardRenderer.tsx
+git add apps/web/src/components/dashboard/DashboardRenderer.tsx
 git commit -m "feat(dashboard): wire DashboardRenderer with ExplorationView, TavoloView, SessionSheet"
 ```
 
@@ -1975,7 +1975,7 @@ git commit -m "feat(dashboard): wire DashboardRenderer with ExplorationView, Tav
 ## Task 9: Mobile Responsive — Icon Overflow
 
 **Files:**
-- Modify: `apps/web/src/components/dashboard-v2/session-nav/SessionNavBar.tsx`
+- Modify: `apps/web/src/components/dashboard/session-nav/SessionNavBar.tsx`
 
 - [ ] **Step 1: Add icon overflow for mobile**
 
@@ -2029,7 +2029,7 @@ In `UserTopNav.tsx`, when in gameMode on mobile, hide the notification bell and 
 - [ ] **Step 3: Commit**
 
 ```bash
-git add apps/web/src/components/dashboard-v2/session-nav/SessionNavBar.tsx
+git add apps/web/src/components/dashboard/session-nav/SessionNavBar.tsx
 git add apps/web/src/components/layout/UserShell/UserTopNav.tsx
 git commit -m "feat(dashboard): add mobile responsive icon overflow and navbar adaptation"
 ```
@@ -2043,7 +2043,7 @@ git commit -m "feat(dashboard): add mobile responsive icon overflow and navbar a
 
 - [ ] **Step 1: Run all dashboard tests**
 
-Run: `cd apps/web && pnpm vitest run src/components/dashboard-v2/`
+Run: `cd apps/web && pnpm vitest run src/components/dashboard/`
 Expected: ALL PASS
 
 - [ ] **Step 2: Run full frontend test suite**

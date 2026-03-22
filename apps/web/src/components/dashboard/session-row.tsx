@@ -41,9 +41,7 @@ export function SessionRow({ session, onViewDetails }: SessionRowProps) {
 
       {/* Session info */}
       <div className="flex-1 min-w-0">
-        <h4 className="font-quicksand font-semibold text-base truncate">
-          {session.gameName}
-        </h4>
+        <h4 className="font-quicksand font-semibold text-base truncate">{session.gameName}</h4>
         <div className="flex items-center gap-3 text-sm text-muted-foreground font-nunito mt-1">
           <span>{relativeTime}</span>
           <span>•</span>
@@ -62,9 +60,7 @@ export function SessionRow({ session, onViewDetails }: SessionRowProps) {
           )}
         </div>
         {session.winnerName && (
-          <div className="text-xs text-muted-foreground mt-1">
-            Vittoria: {session.winnerName}
-          </div>
+          <div className="text-xs text-muted-foreground mt-1">Vittoria: {session.winnerName}</div>
         )}
       </div>
 

@@ -58,7 +58,7 @@ jobs:
   # Dependency scanning
   dependencies:
     name: Dependency Vulnerabilities
-    runs-on: ${{ vars.RUNNER || 'ubuntu-latest' }}
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -118,7 +118,7 @@ jobs:
   # Secrets scanning with Semgrep
   secrets:
     name: Secrets Detection
-    runs-on: ${{ vars.RUNNER || 'ubuntu-latest' }}
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v6

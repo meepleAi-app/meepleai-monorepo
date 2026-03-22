@@ -10,7 +10,7 @@ on:
 jobs:
   generate-svgs:
     name: Generate SVG Diagrams
-    runs-on: ${{ vars.RUNNER || 'ubuntu-latest' }}
+    runs-on: ubuntu-latest
 
     steps:
       - name: Checkout repository

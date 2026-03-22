@@ -100,7 +100,7 @@ function AgentCardSkeleton() {
 // ─── Public component ─────────────────────────────────────────────────────────
 
 export function AgentsDashboardSection() {
-  const { data: agents = [], isLoading } = useRecentAgents(2);
+  const { data: agents = [], isLoading } = useRecentAgents(2, !IS_ALPHA_MODE);
 
   if (IS_ALPHA_MODE) return null;
 

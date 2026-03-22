@@ -400,6 +400,7 @@ export async function proxy(request: NextRequest) {
       '/games',
       '/profile',
       '/settings',
+      '/admin', // admin root redirects to /admin/overview via page.tsx
       '/admin/overview',
       '/admin/shared-games',
       '/admin/knowledge-base',

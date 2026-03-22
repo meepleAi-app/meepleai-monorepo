@@ -13,7 +13,7 @@ function formatScheduled(scheduledAt: string): string {
 }
 
 export function GameNightZone() {
-  const { data: nights, isLoading } = useUpcomingGameNights();
+  const { data: nights, isLoading } = useUpcomingGameNights(!IS_ALPHA_MODE);
   const upcoming: GameNightDto[] = nights ?? [];
 
   if (IS_ALPHA_MODE) return null;

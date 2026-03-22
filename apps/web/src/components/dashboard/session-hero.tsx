@@ -178,7 +178,7 @@ interface DashboardSessionHeroProps {
 }
 
 export function DashboardSessionHero({ lastSession }: DashboardSessionHeroProps) {
-  const { data, isLoading } = useActiveSessions(1);
+  const { data, isLoading } = useActiveSessions(1, !IS_ALPHA_MODE);
 
   if (IS_ALPHA_MODE) return null;
 

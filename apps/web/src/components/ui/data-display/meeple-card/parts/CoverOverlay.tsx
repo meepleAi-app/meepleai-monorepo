@@ -18,8 +18,6 @@ export interface CoverOverlayProps {
   showEntityType?: boolean;
   /** Bottom-left: subtype classification icons */
   subtypeIcons?: SubtypeIcon[];
-  /** Bottom-left: legacy single icon (backward compat, maps to subtypeIcons[0]) */
-  mechanicIcon?: React.ReactNode;
   /** Bottom-right: state badge */
   stateLabel?: { text: string; variant: 'success' | 'warning' | 'error' | 'info' };
 }
@@ -37,19 +35,14 @@ export const CoverOverlay = memo(function CoverOverlay({
   coverLabels,
   showEntityType,
   subtypeIcons,
-  mechanicIcon,
   stateLabel,
 }: CoverOverlayProps) {
   const color = customColor ?? entityColors[entity].hsl;
 
-  // Backward compat: mechanicIcon → subtypeIcons[0]
-  const effectiveSubtypes =
-    subtypeIcons ?? (mechanicIcon ? [{ icon: mechanicIcon, tooltip: '' }] : undefined);
-
   const hasContent =
     (coverLabels && coverLabels.length > 0) ||
     showEntityType ||
-    (effectiveSubtypes && effectiveSubtypes.length > 0) ||
+    (subtypeIcons && subtypeIcons.length > 0) ||
     stateLabel;
   if (!hasContent) return null;
 
@@ -96,12 +89,12 @@ export const CoverOverlay = memo(function CoverOverlay({
       )}
 
       {/* Bottom-Left: Subtype Icons */}
-      {effectiveSubtypes && effectiveSubtypes.length > 0 && (
+      {subtypeIcons && subtypeIcons.length > 0 && (
         <div
           className="pointer-events-auto absolute bottom-2 left-2 flex gap-1"
           data-testid="cover-subtypes"
         >
-          {effectiveSubtypes.map((sub, i) => (
+          {subtypeIcons.map((sub, i) => (
             <span
               key={i}
               title={sub.tooltip}

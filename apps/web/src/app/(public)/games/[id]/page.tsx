@@ -91,10 +91,15 @@ export default function GamePreviewPage() {
   }, [gameDetail]);
 
   // First mechanic icon for cover overlay
-  const mechanicIconNode = useMemo(() => {
+  const subtypeIcons = useMemo(() => {
     if (!gameDetail?.mechanics || gameDetail.mechanics.length === 0) return undefined;
     const firstMechanic = gameDetail.mechanics[0];
-    return <MechanicIcon mechanic={firstMechanic.slug} size={20} />;
+    return [
+      {
+        icon: <MechanicIcon mechanic={firstMechanic.slug} size={20} />,
+        tooltip: firstMechanic.name || firstMechanic.slug,
+      },
+    ];
   }, [gameDetail]);
 
   // ============================================================================
@@ -170,7 +175,7 @@ export default function GamePreviewPage() {
             rating={gameDetail.averageRating ?? undefined}
             ratingMax={10}
             metadata={metadata}
-            mechanicIcon={mechanicIconNode}
+            subtypeIcons={subtypeIcons}
             stateLabel={{ text: 'Catalogo', variant: 'info' }}
           />
         </div>

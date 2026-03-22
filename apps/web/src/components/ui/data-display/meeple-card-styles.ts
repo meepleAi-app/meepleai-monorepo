@@ -190,13 +190,13 @@ export const contentVariants = cva('', {
 /**
  * Styles for the MtG-inspired cover overlay slots.
  * - container: absolute bar at bottom of cover image
- * - mechanicIcon: bottom-left classification icon slot
+ * - subtypeIcon: bottom-left classification icon slot
  * - stateLabel: bottom-right state badge slot with semantic color variants
  */
 export const coverOverlayStyles = {
   container:
     'absolute bottom-0 left-0 right-0 flex items-end justify-between p-1.5 pointer-events-none',
-  mechanicIcon: 'pointer-events-auto rounded-sm bg-black/60 p-0.5 backdrop-blur-sm',
+  subtypeIcon: 'pointer-events-auto rounded-sm bg-black/60 p-0.5 backdrop-blur-sm',
   stateLabel: {
     base: 'pointer-events-auto rounded-sm px-1.5 py-0.5 text-[10px] font-semibold backdrop-blur-sm',
     success: 'bg-emerald-500/80 text-white',

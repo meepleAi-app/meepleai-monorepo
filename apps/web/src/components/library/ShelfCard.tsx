@@ -173,7 +173,7 @@ export function ShelfCard({
             {/* Bottom-left: mechanic classification icon */}
             <div>
               {mechanicIcon && (
-                <span className={coverOverlayStyles.mechanicIcon} data-testid="mechanic-icon">
+                <span className={coverOverlayStyles.subtypeIcon} data-testid="mechanic-icon">
                   {mechanicIcon}
                 </span>
               )}

@@ -8,7 +8,7 @@
  * status before rendering pages.
  *
  * Protected Routes:
- * - /dashboard - Main dashboard (post-login default)
+ * - /library - Game library (post-login default)
  * - /chat - Main chat interface
  * - /upload - Document upload page
  * - /admin - Administration panel
@@ -42,7 +42,7 @@ import type { NextRequest } from 'next/server';
  * Protected routes that require authentication
  * Unauthenticated users will be redirected to /login
  */
-const PROTECTED_ROUTES = ['/dashboard', '/chat', '/upload', '/admin', '/editor', '/settings'];
+const PROTECTED_ROUTES = ['/library', '/chat', '/upload', '/admin', '/editor', '/settings'];
 
 /**
  * Admin-only routes that require admin role
@@ -372,14 +372,14 @@ export async function proxy(request: NextRequest) {
     const redirectUrl =
       fromParam && PROTECTED_ROUTES.some(route => fromParam.startsWith(route))
         ? new URL(fromParam, request.url)
-        : new URL('/dashboard', request.url);
+        : new URL('/library', request.url);
     const response = NextResponse.redirect(redirectUrl);
     return addSecurityHeaders(response, requestOrigin);
   }
 
   // Redirect authenticated users from homepage to dashboard
   if (isHomePage && isAuthenticated) {
-    const response = NextResponse.redirect(new URL('/dashboard', request.url));
+    const response = NextResponse.redirect(new URL('/library', request.url));
     return addSecurityHeaders(response, requestOrigin);
   }
 

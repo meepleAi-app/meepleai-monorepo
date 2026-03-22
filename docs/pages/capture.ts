@@ -10,7 +10,6 @@
  */
 
 import * as fs from 'fs';
-import * as os from 'os';
 import * as path from 'path';
 
 import { chromium, type Browser, type BrowserContext } from 'playwright';
@@ -71,13 +70,20 @@ async function login(browser: Browser, credentials: { email: string; password: s
   await page.fill('[data-testid="login-password"]', credentials.password);
   await page.click('[data-testid="login-submit"]');
 
-  // Wait for redirect (login success)
-  await page.waitForURL(url => !url.toString().includes('/login'), { timeout: 15000 });
+  // Wait for redirect (login success) or stay on same page if auth is client-side
+  try {
+    await page.waitForURL(url => !url.toString().includes('/login'), { timeout: 15000 });
+  } catch {
+    // If no redirect, wait for auth state to settle (client-side login)
+    await page.waitForTimeout(3000);
+  }
+  console.log(`   Current URL after login: ${page.url()}`);
 
   console.log('\u2705 Login successful');
 
   // Save session state
-  const storagePath = path.join(os.tmpdir(), '.meepleai-auth-state.json');
+  fs.mkdirSync(config.outputDir, { recursive: true });
+  const storagePath = path.join(config.outputDir, '.auth-state.json');
   await context.storageState({ path: storagePath });
   await context.close();
 
@@ -105,6 +111,9 @@ async function resolveParams(
     storageState: authStatePath,
   });
   const page = await context.newPage();
+
+  // Navigate to base URL so fetch() calls include auth cookies
+  await page.goto(`${config.baseUrl}/dashboard`, { waitUntil: 'domcontentloaded', timeout: 30000 });
 
   // Cache resolved values to avoid duplicate API calls
   const resolverCache = new Map<string, string | null>();
@@ -263,7 +272,7 @@ async function captureSinglePage(
     const url = `${config.baseUrl}${entry.route}`;
 
     await page.goto(url, {
-      waitUntil: entry.requiresAuth ? 'load' : 'networkidle',
+      waitUntil: 'domcontentloaded',
       timeout: config.pageTimeout,
     });
 
@@ -407,7 +416,7 @@ async function main(): Promise<void> {
     console.log(`   Skipped:  ${manifest.stats.skipped}`);
 
     // Clean up auth state
-    const authStateFile = path.join(os.tmpdir(), '.meepleai-auth-state.json');
+    const authStateFile = path.join(config.outputDir, '.auth-state.json');
     if (fs.existsSync(authStateFile)) fs.unlinkSync(authStateFile);
 
   } finally {

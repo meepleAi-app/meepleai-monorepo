@@ -40,6 +40,10 @@ internal sealed class SeedManifest
 
             if (string.IsNullOrWhiteSpace(game.Language))
                 game.Language = "en";
+
+            // Validate bggEnhanced entries have minimum required data
+            if (game.BggEnhanced && string.IsNullOrWhiteSpace(game.Description))
+                errors.Add($"Game '{game.Title}' has bggEnhanced=true but no description");
         }
 
         if (Catalog.Games.Any(g => g.SeedAgent) && Catalog.DefaultAgent is null)

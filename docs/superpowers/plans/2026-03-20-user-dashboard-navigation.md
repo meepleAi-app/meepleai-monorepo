@@ -37,7 +37,7 @@ apps/web/src/
 │   ├── MiniCardDeck.tsx              # Inline stacked cover preview
 │   ├── useCardDeckGestures.ts        # Touch/swipe gesture handler
 │   └── index.ts
-├── components/dashboard-v2/
+├── components/dashboard/
 │   ├── TavoloZone.tsx                # Warm Tavolo-styled container
 │   ├── zones/
 │   │   ├── ActiveSessionZone.tsx     # Zona 2: session cards
@@ -75,7 +75,7 @@ apps/web/src/
 ├── components/ui/data-display/meeple-card/
 │   ├── MeepleCard.tsx                # Add env-aware shadow/lift via CSS vars
 │   └── variants/                     # Add skeleton state to each variant
-├── components/dashboard-v2/
+├── components/dashboard/
 │   └── DashboardRenderer.tsx         # Complete rewrite with zone-based layout
 ├── app/(authenticated)/dashboard/layout.tsx     # Add ContextBarRegistrar
 ├── app/(authenticated)/library/layout.tsx       # Add ContextBarRegistrar
@@ -950,7 +950,7 @@ git commit -m "feat(card): implement skeleton loading state for all 6 MeepleCard
 ### Task 11: TavoloZone Container
 
 **Files:**
-- Create: `apps/web/src/components/dashboard-v2/TavoloZone.tsx`
+- Create: `apps/web/src/components/dashboard/TavoloZone.tsx`
 - Test: `apps/web/src/__tests__/components/TavoloZone.test.tsx`
 
 - [ ] **Step 1: Write failing test**
@@ -958,7 +958,7 @@ git commit -m "feat(card): implement skeleton loading state for all 6 MeepleCard
 ```tsx
 import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import { TavoloZone } from '@/components/dashboard-v2/TavoloZone';
+import { TavoloZone } from '@/components/dashboard/TavoloZone';
 
 describe('TavoloZone', () => {
   it('renders children with env-tavolo class', () => {
@@ -978,7 +978,7 @@ describe('TavoloZone', () => {
 - [ ] **Step 2: Implement TavoloZone**
 
 ```tsx
-// apps/web/src/components/dashboard-v2/TavoloZone.tsx
+// apps/web/src/components/dashboard/TavoloZone.tsx
 'use client';
 
 import { cn } from '@/lib/utils';
@@ -1022,7 +1022,7 @@ Run: `cd apps/web && pnpm vitest run src/__tests__/components/TavoloZone.test.ts
 - [ ] **Step 4: Commit**
 
 ```bash
-git add apps/web/src/components/dashboard-v2/TavoloZone.tsx
+git add apps/web/src/components/dashboard/TavoloZone.tsx
 git add apps/web/src/__tests__/components/TavoloZone.test.tsx
 git commit -m "feat(dashboard): add TavoloZone warm environment container"
 ```
@@ -1034,13 +1034,13 @@ git commit -m "feat(dashboard): add TavoloZone warm environment container"
 ### Task 12: DashboardContextBar + Route Registration
 
 **Files:**
-- Create: `apps/web/src/components/dashboard-v2/DashboardContextBar.tsx`
+- Create: `apps/web/src/components/dashboard/DashboardContextBar.tsx`
 - Modify: `apps/web/src/app/(authenticated)/dashboard/layout.tsx`
 
 - [ ] **Step 1: Create DashboardContextBar**
 
 ```tsx
-// apps/web/src/components/dashboard-v2/DashboardContextBar.tsx
+// apps/web/src/components/dashboard/DashboardContextBar.tsx
 'use client';
 
 import Link from 'next/link';
@@ -1102,7 +1102,7 @@ export function DashboardContextBar() {
 ```tsx
 // apps/web/src/app/(authenticated)/dashboard/layout.tsx
 import { ContextBarRegistrar } from '@/components/layout/ContextBar';
-import { DashboardContextBar } from '@/components/dashboard-v2/DashboardContextBar';
+import { DashboardContextBar } from '@/components/dashboard/DashboardContextBar';
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -1124,7 +1124,7 @@ Expected: Build succeeds. Dashboard route renders ContextBar with quick action p
 - [ ] **Step 4: Commit**
 
 ```bash
-git add apps/web/src/components/dashboard-v2/DashboardContextBar.tsx
+git add apps/web/src/components/dashboard/DashboardContextBar.tsx
 git add apps/web/src/app/\(authenticated\)/dashboard/layout.tsx
 git commit -m "feat(dashboard): add DashboardContextBar with quick actions and search"
 ```
@@ -1209,12 +1209,12 @@ git commit -m "feat(contextbar): add 5 context bars (library, discovery, game-ni
 ### Task 14: Dashboard Zone Components
 
 **Files:**
-- Create: `apps/web/src/components/dashboard-v2/zones/ActiveSessionZone.tsx`
-- Create: `apps/web/src/components/dashboard-v2/zones/GameNightZone.tsx`
-- Create: `apps/web/src/components/dashboard-v2/zones/AgentZone.tsx`
-- Create: `apps/web/src/components/dashboard-v2/zones/StatsZone.tsx`
-- Create: `apps/web/src/components/dashboard-v2/zones/FeedZone.tsx`
-- Create: `apps/web/src/components/dashboard-v2/zones/SuggestedZone.tsx`
+- Create: `apps/web/src/components/dashboard/zones/ActiveSessionZone.tsx`
+- Create: `apps/web/src/components/dashboard/zones/GameNightZone.tsx`
+- Create: `apps/web/src/components/dashboard/zones/AgentZone.tsx`
+- Create: `apps/web/src/components/dashboard/zones/StatsZone.tsx`
+- Create: `apps/web/src/components/dashboard/zones/FeedZone.tsx`
+- Create: `apps/web/src/components/dashboard/zones/SuggestedZone.tsx`
 
 Each zone is a self-contained component that:
 - Fetches its own data via React Query hooks
@@ -1249,7 +1249,7 @@ Uses `useRecentlyAddedGames()` or a suggestions hook. Horizontal `CardDeck` (sta
 - [ ] **Step 7: Commit**
 
 ```bash
-git add apps/web/src/components/dashboard-v2/zones/
+git add apps/web/src/components/dashboard/zones/
 git commit -m "feat(dashboard): add 6 dashboard zone components with card-based rendering"
 ```
 
@@ -1258,18 +1258,18 @@ git commit -m "feat(dashboard): add 6 dashboard zone components with card-based 
 ### Task 15: Rewrite DashboardRenderer
 
 **Files:**
-- Modify: `apps/web/src/components/dashboard-v2/DashboardRenderer.tsx`
+- Modify: `apps/web/src/components/dashboard/DashboardRenderer.tsx`
 - Test: `apps/web/src/__tests__/components/DashboardRenderer.test.tsx`
 
 - [ ] **Step 1: Read current DashboardRenderer**
 
-Read: `apps/web/src/components/dashboard-v2/DashboardRenderer.tsx`
+Read: `apps/web/src/components/dashboard/DashboardRenderer.tsx`
 Understand current structure and which imports/hooks to preserve vs replace.
 
 - [ ] **Step 2: Rewrite DashboardRenderer with zone layout**
 
 ```tsx
-// apps/web/src/components/dashboard-v2/DashboardRenderer.tsx
+// apps/web/src/components/dashboard/DashboardRenderer.tsx
 'use client';
 
 import { TavoloZone } from './TavoloZone';
@@ -1323,10 +1323,10 @@ export function DashboardRenderer() {
 ```tsx
 import { describe, it, expect } from 'vitest';
 import { render } from '@testing-library/react';
-import { DashboardRenderer } from '@/components/dashboard-v2/DashboardRenderer';
+import { DashboardRenderer } from '@/components/dashboard/DashboardRenderer';
 
 // Mock all zone components + hooks (use absolute import paths, not relative)
-vi.mock('@/components/dashboard-v2/zones/ActiveSessionZone', () => ({ ActiveSessionZone: () => <div>sessions</div> }));
+vi.mock('@/components/dashboard/zones/ActiveSessionZone', () => ({ ActiveSessionZone: () => <div>sessions</div> }));
 // ... mock other zones with @/ paths
 
 describe('DashboardRenderer', () => {
@@ -1344,7 +1344,7 @@ Run: `cd apps/web && pnpm build`
 - [ ] **Step 5: Commit**
 
 ```bash
-git add apps/web/src/components/dashboard-v2/DashboardRenderer.tsx
+git add apps/web/src/components/dashboard/DashboardRenderer.tsx
 git add apps/web/src/__tests__/components/DashboardRenderer.test.tsx
 git commit -m "refactor(dashboard): rewrite DashboardRenderer with zone-based card layout"
 ```
@@ -1446,7 +1446,7 @@ git commit -m "feat(session): wire live session context bar to overlay system"
 ### Task 18: OnboardingFlow Component
 
 **Files:**
-- Create: `apps/web/src/components/dashboard-v2/OnboardingFlow.tsx`
+- Create: `apps/web/src/components/dashboard/OnboardingFlow.tsx`
 - Test: `apps/web/src/__tests__/components/OnboardingFlow.test.tsx`
 
 - [ ] **Step 1: Write failing test**
@@ -1454,7 +1454,7 @@ git commit -m "feat(session): wire live session context bar to overlay system"
 ```tsx
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import { OnboardingFlow } from '@/components/dashboard-v2/OnboardingFlow';
+import { OnboardingFlow } from '@/components/dashboard/OnboardingFlow';
 
 // Mock localStorage
 const mockStorage: Record<string, string> = {};
@@ -1494,7 +1494,7 @@ Run: `cd apps/web && pnpm vitest run src/__tests__/components/OnboardingFlow.tes
 - [ ] **Step 4: Commit**
 
 ```bash
-git add apps/web/src/components/dashboard-v2/OnboardingFlow.tsx
+git add apps/web/src/components/dashboard/OnboardingFlow.tsx
 git add apps/web/src/__tests__/components/OnboardingFlow.test.tsx
 git commit -m "feat(dashboard): add SSR-safe onboarding flow for new users"
 ```

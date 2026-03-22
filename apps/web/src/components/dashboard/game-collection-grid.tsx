@@ -18,11 +18,7 @@ interface GameCollectionGridProps {
   onGameClick?: (gameId: string) => void;
 }
 
-export function GameCollectionGrid({
-  games,
-  isLoading,
-  onGameClick,
-}: GameCollectionGridProps) {
+export function GameCollectionGrid({ games, isLoading, onGameClick }: GameCollectionGridProps) {
   if (isLoading) {
     return (
       <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6">
@@ -44,13 +40,8 @@ export function GameCollectionGrid({
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-      {games.map((game) => (
-        <MeepleUserLibraryCard
-          key={game.id}
-          game={game}
-          variant="grid"
-          onClick={onGameClick}
-        />
+      {games.map(game => (
+        <MeepleUserLibraryCard key={game.id} game={game} variant="grid" onClick={onGameClick} />
       ))}
     </div>
   );

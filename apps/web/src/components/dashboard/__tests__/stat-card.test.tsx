@@ -16,14 +16,7 @@ describe('StatCard', () => {
   });
 
   it('renders optional sublabel', () => {
-    render(
-      <StatCard
-        icon="🎯"
-        value={12}
-        label="Partite"
-        sublabel="Questo Mese"
-      />
-    );
+    render(<StatCard icon="🎯" value={12} label="Partite" sublabel="Questo Mese" />);
 
     expect(screen.getByText('Questo Mese')).toBeInTheDocument();
   });

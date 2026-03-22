@@ -3,18 +3,14 @@ using System.Net.Http.Json;
 using Api.BoundedContexts.KnowledgeBase.Application.DTOs;
 using Api.Infrastructure;
 using Api.Services;
-using Api.SharedKernel.Application.Services;
 using Api.Tests.Constants;
 using Api.Tests.Infrastructure;
-using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Moq;
-using StackExchange.Redis;
 using FluentAssertions;
 using Xunit;
 
@@ -48,31 +44,14 @@ public sealed class AgentTypologyEndpointsSmokeTests : IAsyncLifetime
     {
         var connectionString = await _fixture.CreateIsolatedDatabaseAsync(_testDbName);
 
-        _factory = new WebApplicationFactory<Program>()
+        _factory = IntegrationWebApplicationFactory.Create(connectionString)
             .WithWebHostBuilder(builder =>
             {
-                builder.UseEnvironment("Testing");
-
-                builder.ConfigureAppConfiguration((context, configBuilder) =>
-                {
-                    configBuilder.AddInMemoryCollection(new Dictionary<string, string?>
-                    {
-                        ["OPENROUTER_API_KEY"] = "test-key",
-                        ["ConnectionStrings:Postgres"] = connectionString
-                    });
-                });
-
                 builder.ConfigureTestServices(services =>
                 {
-                    services.RemoveAll(typeof(DbContextOptions<MeepleAiDbContext>));
-                    services.AddDbContext<MeepleAiDbContext>(options =>
-                        options.UseNpgsql(connectionString, o => o.UseVector())); // Issue #3547
-
-                    services.RemoveAll(typeof(IConnectionMultiplexer));
-                    var mockRedis = new Mock<IConnectionMultiplexer>();
-                    services.AddSingleton(mockRedis.Object);
-
+                    // Custom embedding mock with 384-dim dummy embeddings
                     services.RemoveAll(typeof(IEmbeddingService));
+
                     var mockEmbedding = new Mock<IEmbeddingService>();
 
                     var dummyEmbedding = new float[384];
@@ -87,14 +66,6 @@ public sealed class AgentTypologyEndpointsSmokeTests : IAsyncLifetime
                         .ReturnsAsync(embeddingResult);
 
                     services.AddScoped<IEmbeddingService>(_ => mockEmbedding.Object);
-
-                    // Mock HybridCache infrastructure
-                    services.AddHybridCache();
-                    services.RemoveAll(typeof(Api.Services.IHybridCacheService));
-                    services.AddScoped<Api.Services.IHybridCacheService>(_ => Mock.Of<Api.Services.IHybridCacheService>());
-
-                    // Ensure domain event collector is registered
-                    services.AddScoped<IDomainEventCollector, Api.SharedKernel.Application.Services.DomainEventCollector>();
                 });
             });
 

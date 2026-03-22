@@ -17,7 +17,7 @@ import { useMemo, useState } from 'react';
 import { BookOpen, Plus } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
-import { TavoloSection } from '@/components/dashboard-v2/tavolo';
+import { TavoloSection } from '@/components/dashboard/tavolo';
 import { EmptyState } from '@/components/empty-state/EmptyState';
 import { ShelfCard, ShelfRow } from '@/components/library';
 import { useLibrary } from '@/hooks/queries/useLibrary';

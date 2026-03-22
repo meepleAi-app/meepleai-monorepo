@@ -40,7 +40,7 @@ import {
 } from 'lucide-react';
 
 import { EmbeddedChatView } from '@/components/chat-unified/EmbeddedChatView';
-import { useDashboardMode } from '@/components/dashboard-v2';
+import { useDashboardMode } from '@/components/dashboard';
 import { Sheet, SheetClose, SheetContent, SheetTitle } from '@/components/ui/navigation/sheet';
 import { cn } from '@/lib/utils';
 

@@ -11,6 +11,7 @@ using Api.Tests.Infrastructure;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Npgsql;
@@ -70,36 +71,12 @@ public sealed class AdminDisable2FAIntegrationTests : IAsyncLifetime
         _isolatedDbConnectionString = await _fixture.CreateIsolatedDatabaseAsync(_databaseName);
         _output($"Isolated database created: {_databaseName}");
 
-        // Setup dependency injection
-        var enforcedBuilder = new NpgsqlConnectionStringBuilder(_isolatedDbConnectionString)
-        {
-            SslMode = SslMode.Disable,
-            KeepAlive = 30,
-            Pooling = false,
-            Timeout = 15,
-            CommandTimeout = 30
-        };
+        var services = IntegrationServiceCollectionBuilder.CreateBase(_isolatedDbConnectionString);
 
-        var services = new ServiceCollection();
-
-        // DbContext
-        services.AddDbContext<MeepleAiDbContext>(options =>
-            options.UseNpgsql(enforcedBuilder.ConnectionString, o => o.UseVector()) // Issue #3547
-                .ConfigureWarnings(warnings =>
-                    warnings.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning)));
-
-        // MediatR
-        services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(Program).Assembly));
-
-        // Repositories and Unit of Work
         services.AddScoped<IUserRepository, UserRepository>();
-        services.AddScoped<IUnitOfWork, EfCoreUnitOfWork>();
-
-        // Domain event infrastructure
-        services.AddScoped<Api.SharedKernel.Application.Services.IDomainEventCollector, Api.SharedKernel.Application.Services.DomainEventCollector>();
         services.AddSingleton<TimeProvider>(TimeProvider.System);
 
-        // Mock Email Service
+        // Mock Email Service (with .Setup for verification in tests)
         _mockEmailService = new Mock<IEmailService>();
         _mockEmailService
             .Setup(x => x.SendTwoFactorDisabledEmailAsync(
@@ -108,10 +85,8 @@ public sealed class AdminDisable2FAIntegrationTests : IAsyncLifetime
                 It.IsAny<bool>(),
                 It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
+        services.RemoveAll(typeof(IEmailService));
         services.AddSingleton(_mockEmailService.Object);
-
-        // Logging
-        services.AddLogging(builder => builder.AddConsole().SetMinimumLevel(LogLevel.Information));
 
         _serviceProvider = services.BuildServiceProvider();
         _dbContext = _serviceProvider.GetRequiredService<MeepleAiDbContext>();

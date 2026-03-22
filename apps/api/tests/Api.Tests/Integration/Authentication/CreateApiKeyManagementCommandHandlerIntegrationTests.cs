@@ -40,23 +40,10 @@ public sealed class CreateApiKeyManagementCommandHandlerIntegrationTests : IAsyn
         _databaseName = $"test_createapikeymgmt_{Guid.NewGuid():N}";
         var connectionString = await _fixture.CreateIsolatedDatabaseAsync(_databaseName);
 
-        var services = new ServiceCollection();
-        services.AddLogging(builder => builder.AddConsole().SetMinimumLevel(LogLevel.Warning));
-        services.AddDbContext<MeepleAiDbContext>(options =>
-        {
-            options.UseNpgsql(connectionString, o => o.UseVector()); // Issue #3547: Enable pgvector
-            options.ConfigureWarnings(w =>
-                w.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning));
-        });
+        var services = IntegrationServiceCollectionBuilder.CreateBase(connectionString);
 
-        services.AddScoped<IDomainEventCollector, DomainEventCollector>();
         services.AddScoped<IPasswordHashingService, PasswordHashingService>();
         services.AddScoped<ApiKeyAuthenticationService>();
-
-        var mockEmailService = new Mock<IEmailService>();
-        services.AddSingleton(mockEmailService.Object);
-
-        services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(Program).Assembly));
 
         var serviceProvider = services.BuildServiceProvider();
         _dbContext = serviceProvider.GetRequiredService<MeepleAiDbContext>();

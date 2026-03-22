@@ -18,7 +18,7 @@ import { useState, useMemo, useCallback, useEffect } from 'react';
 
 import { Search, Loader2 } from 'lucide-react';
 
-import { TavoloSection } from '@/components/dashboard-v2/tavolo';
+import { TavoloSection } from '@/components/dashboard/tavolo';
 import { EmptyState } from '@/components/empty-state/EmptyState';
 import { MechanicFilter } from '@/components/library/MechanicFilter';
 import { ShelfCard } from '@/components/library/ShelfCard';

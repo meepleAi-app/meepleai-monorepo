@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 
-import { SearchExpander } from '@/components/dashboard-v2/SearchExpander';
-import type { SharedGameSearchResult } from '@/components/dashboard-v2/SearchExpander';
+import { SearchExpander } from '@/components/dashboard/SearchExpander';
+import type { SharedGameSearchResult } from '@/components/dashboard/SearchExpander';
 
 // Mock the api module (project pattern: import { api } from '@/lib/api')
 const mockSearch = vi.fn();

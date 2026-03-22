@@ -12,7 +12,7 @@
  * - Performance optimized (CSS-only, GPU accelerated)
  * - Responsive with subtle opacity adjustment
  *
- * Design Reference: docs/design-proposals/meepleai-style/admin-dashboard-v2.html (lines 24-44)
+ * Design Reference: docs/design-proposals/meepleai-style/admin-dashboard.html (lines 24-44)
  */
 
 export interface BackgroundTextureProps {

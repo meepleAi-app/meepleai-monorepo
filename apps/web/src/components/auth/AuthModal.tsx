@@ -39,7 +39,7 @@ export interface AuthModalProps {
   defaultMode?: 'login' | 'register';
   onSuccess?: (user: AuthUser) => void;
   sessionExpiredMessage?: boolean;
-  /** URL to redirect to after successful authentication. Defaults to '/dashboard' */
+  /** URL to redirect to after successful authentication. Defaults to '/library' */
   redirectTo?: string;
   /** Hide OAuth buttons (e.g. during alpha invite-only mode) */
   hideOAuth?: boolean;
@@ -55,7 +55,7 @@ export function AuthModal({
   defaultMode = 'login',
   onSuccess,
   sessionExpiredMessage = false,
-  redirectTo = '/dashboard',
+  redirectTo = '/library',
   hideOAuth = false,
 }: AuthModalProps) {
   const router = useRouter();

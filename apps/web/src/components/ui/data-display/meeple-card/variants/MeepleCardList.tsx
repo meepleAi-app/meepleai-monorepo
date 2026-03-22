@@ -26,7 +26,7 @@ import { ChatGameContext } from '../../meeple-card-features/ChatGameContext';
 import { ChatStatsDisplay } from '../../meeple-card-features/ChatStatsDisplay';
 import { ChatStatusBadge } from '../../meeple-card-features/ChatStatusBadge';
 import { ChatUnreadBadge } from '../../meeple-card-features/ChatUnreadBadge';
-import { DocumentStatusBadge } from '../../meeple-card-features/DocumentStatusBadge';
+import { KbStatusBadge } from '../../meeple-card-features/DocumentStatusBadge';
 import { DragHandle } from '../../meeple-card-features/DragHandle';
 import { SessionActionButtons } from '../../meeple-card-features/SessionActionButtons';
 import { SessionStatusBadge } from '../../meeple-card-features/SessionStatusBadge';
@@ -129,7 +129,6 @@ export const MeepleCardList = React.memo(function MeepleCardList(props: MeepleCa
     firstLinkPreview,
     onLinksClick,
     kbCards,
-    mechanicIcon,
     stateLabel,
   } = props;
 
@@ -265,7 +264,6 @@ export const MeepleCardList = React.memo(function MeepleCardList(props: MeepleCa
         entity={entity}
         customColor={customColor}
         showEntityType
-        mechanicIcon={mechanicIcon}
         stateLabel={stateLabel}
       />
 
@@ -387,13 +385,13 @@ export const MeepleCardList = React.memo(function MeepleCardList(props: MeepleCa
 
         {entity === 'kb' && documentStatus && (
           <div className="flex items-center gap-1.5 mb-2">
-            <DocumentStatusBadge status={documentStatus} size="sm" />
+            <KbStatusBadge status={documentStatus} size="sm" />
           </div>
         )}
 
         {entity === 'game' && worstKbStatus && (
           <div className="flex items-center gap-1.5 mb-2" data-testid="meeple-card-kb-badge">
-            <DocumentStatusBadge status={worstKbStatus} size="sm" />
+            <KbStatusBadge status={worstKbStatus} size="sm" />
             <span className="text-[10px] text-muted-foreground font-medium">
               {kbCards!.length} KB
             </span>

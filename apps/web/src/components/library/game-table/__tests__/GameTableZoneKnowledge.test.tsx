@@ -85,9 +85,6 @@ vi.mock('@/hooks/queries/useGameAgents', () => ({
 }));
 
 vi.mock('@/components/ui/data-display/meeple-card-features/DocumentStatusBadge', () => ({
-  DocumentStatusBadge: ({ status }: { status: string }) => (
-    <span data-testid="doc-status-badge">{status}</span>
-  ),
   KbStatusBadge: ({ status }: { status: string }) => (
     <span data-testid="doc-status-badge">{status}</span>
   ),

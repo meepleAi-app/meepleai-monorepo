@@ -20,7 +20,7 @@ import type { ChatAgent } from '../meeple-card-features/ChatAgentInfo';
 import type { ChatGame } from '../meeple-card-features/ChatGameContext';
 import type { ChatStats } from '../meeple-card-features/ChatStatsDisplay';
 import type { ChatStatus } from '../meeple-card-features/ChatStatusBadge';
-import type { DocumentIndexingStatus } from '../meeple-card-features/DocumentStatusBadge';
+import type { KbIndexingStatus } from '../meeple-card-features/DocumentStatusBadge';
 import type { DragData } from '../meeple-card-features/DragHandle';
 import type { MeepleCardFlipData } from '../meeple-card-features/FlipCard';
 import type { GameBackData, GameBackActions } from '../meeple-card-features/GameBackContent';
@@ -285,7 +285,7 @@ export interface MeepleCardProps extends VariantProps<typeof meepleCardVariants>
   // ========== DOCUMENT / KB ENTITY FEATURES (Issue #5001) ==========
 
   /** KB document indexing status (drives DocumentStatusBadge) */
-  documentStatus?: DocumentIndexingStatus;
+  documentStatus?: KbIndexingStatus;
 
   // ========== ENTITY LINKS (Issue #5129) ==========
 
@@ -304,7 +304,7 @@ export interface MeepleCardProps extends VariantProps<typeof meepleCardVariants>
    * Only rendered when entity='game' and kbCards.length > 0.
    */
   kbCards?: {
-    status: DocumentIndexingStatus;
+    status: KbIndexingStatus;
   }[];
 
   // ========== COVER OVERLAY 4-CORNER SYSTEM ==========
@@ -313,12 +313,6 @@ export interface MeepleCardProps extends VariantProps<typeof meepleCardVariants>
   coverLabels?: CoverLabel[];
   /** Bottom-left subtype classification icons in cover overlay */
   subtypeIcons?: SubtypeIcon[];
-
-  /**
-   * @deprecated Use subtypeIcons instead. Kept for backward compatibility.
-   * Maps to subtypeIcons[0] internally.
-   */
-  mechanicIcon?: React.ReactNode;
 
   /** Bottom-right state badge in cover overlay */
   stateLabel?: {
@@ -390,7 +384,7 @@ export type { ChatStats } from '../meeple-card-features/ChatStatsDisplay';
 export type { ChatGame } from '../meeple-card-features/ChatGameContext';
 export type { DragData } from '../meeple-card-features/DragHandle';
 export type { TagConfig, TagPresetKey } from '../meeple-card-features/tag-presets';
-export type { DocumentIndexingStatus } from '../meeple-card-features/DocumentStatusBadge';
+export type { KbIndexingStatus } from '../meeple-card-features/DocumentStatusBadge';
 export type {
   SessionStatus,
   SessionPlayerInfo,

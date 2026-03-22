@@ -10,9 +10,10 @@
  */
 
 import * as fs from 'fs';
+import * as os from 'os';
 import * as path from 'path';
 
-import { chromium, type Browser, type BrowserContext } from 'playwright';
+import { chromium, type Browser, type BrowserContext } from '@playwright/test';
 
 import { config, PARAM_RESOLVERS, HARDCODED_PARAMS, type PageEntry, type Manifest } from './config';
 import { discoverRoutes } from './routes';
@@ -76,8 +77,7 @@ async function login(browser: Browser, credentials: { email: string; password: s
   console.log('\u2705 Login successful');
 
   // Save session state
-  fs.mkdirSync(config.outputDir, { recursive: true });
-  const storagePath = path.join(config.outputDir, '.auth-state.json');
+  const storagePath = path.join(os.tmpdir(), '.meepleai-auth-state.json');
   await context.storageState({ path: storagePath });
   await context.close();
 
@@ -406,7 +406,7 @@ async function main(): Promise<void> {
     console.log(`   Skipped:  ${manifest.stats.skipped}`);
 
     // Clean up auth state
-    const authStateFile = path.join(config.outputDir, '.auth-state.json');
+    const authStateFile = path.join(os.tmpdir(), '.meepleai-auth-state.json');
     if (fs.existsSync(authStateFile)) fs.unlinkSync(authStateFile);
 
   } finally {

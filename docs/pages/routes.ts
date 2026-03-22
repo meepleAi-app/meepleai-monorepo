@@ -39,8 +39,11 @@ function scanDirectory(dir: string, relativePath: string, pages: PageEntry[]): v
 
   for (const entry of entries) {
     if (entry.isDirectory()) {
-      // Skip hidden dirs and node_modules
-      if (entry.name.startsWith('.') || entry.name === 'node_modules') continue;
+      // Skip non-route directories
+      if (entry.name.startsWith('.') || entry.name === 'node_modules' ||
+          entry.name === '__tests__' || entry.name === 'api' ||
+          entry.name === 'health' || entry.name === 'metrics' ||
+          entry.name === '_components' || entry.name === '_content') continue;
       scanDirectory(
         path.join(dir, entry.name),
         relativePath ? `${relativePath}/${entry.name}` : entry.name,
@@ -87,7 +90,8 @@ function buildPageEntry(relativePath: string): PageEntry | null {
 
   // Build ID
   const idSegments = routeSegments.map(s => s.replace(/\[.*?\]/g, 'param'));
-  const id = `${group}-${idSegments.join('-') || 'index'}`;
+  const idSuffix = idSegments.join('-');
+  const id = `${group}-${idSuffix || 'index'}`;
 
   // Derive title and description
   const title = deriveTitle(routeSegments);

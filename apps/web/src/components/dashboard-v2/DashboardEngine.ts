@@ -4,13 +4,22 @@ import { assign, setup } from 'xstate';
 // Types
 // ---------------------------------------------------------------------------
 
+export type SheetContext = 'scores' | 'rules-ai' | 'timer' | 'photos' | 'players';
+
+export interface BreadcrumbEntry {
+  context: SheetContext;
+  label: string;
+}
+
 export type DashboardEvent =
   | { type: 'SESSION_DETECTED'; sessionId: string }
   | { type: 'TRANSITION_COMPLETE' }
   | { type: 'SESSION_COMPLETED' }
   | { type: 'SESSION_DISMISSED' }
-  | { type: 'EXPAND' }
-  | { type: 'COLLAPSE' };
+  | { type: 'OPEN_SHEET'; context: SheetContext }
+  | { type: 'CLOSE_SHEET' }
+  | { type: 'NAVIGATE_CARD_LINK'; target: SheetContext }
+  | { type: 'BACK_CARD_LINK' };
 
 export interface DashboardEngineContext {
   activeSessionId: string | null;
@@ -18,7 +27,23 @@ export interface DashboardEngineContext {
   transitionTarget: 'exploration' | 'gameMode' | null;
   previousState: 'exploration' | 'gameMode' | null;
   bufferedEvents: DashboardEvent[];
+  activeSheet: SheetContext | null;
+  breadcrumb: BreadcrumbEntry[];
 }
+
+// ---------------------------------------------------------------------------
+// Constants
+// ---------------------------------------------------------------------------
+
+export const SHEET_LABELS: Record<SheetContext, string> = {
+  scores: 'Punteggi',
+  'rules-ai': 'Regole AI',
+  timer: 'Timer',
+  photos: 'Foto',
+  players: 'Giocatori',
+};
+
+export const MAX_BREADCRUMB_DEPTH = 3;
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -63,6 +88,8 @@ export const dashboardMachine = setup({
       transitionTarget: 'exploration' as const,
       previousState: 'gameMode' as const,
       transitionType: 'fade' as const,
+      activeSheet: null as SheetContext | null,
+      breadcrumb: [] as BreadcrumbEntry[],
     })),
     clearTransitionTarget: assign(() => ({
       transitionTarget: null as 'exploration' | 'gameMode' | null,
@@ -72,17 +99,50 @@ export const dashboardMachine = setup({
       transitionTarget: null as 'exploration' | 'gameMode' | null,
       previousState: null as 'exploration' | 'gameMode' | null,
       bufferedEvents: [] as DashboardEvent[],
+      activeSheet: null as SheetContext | null,
+      breadcrumb: [] as BreadcrumbEntry[],
     })),
     processBuffer: assign(({ context: _context }) => ({
       transitionTarget: 'exploration' as const,
       previousState: 'gameMode' as const,
       bufferedEvents: [] as DashboardEvent[],
     })),
+    setSheet: assign(({ event }) => {
+      if (event.type !== 'OPEN_SHEET') return {};
+      const ctx = event.context;
+      return {
+        activeSheet: ctx,
+        breadcrumb: [{ context: ctx, label: SHEET_LABELS[ctx] }] as BreadcrumbEntry[],
+      };
+    }),
+    clearSheet: assign(() => ({
+      activeSheet: null as SheetContext | null,
+      breadcrumb: [] as BreadcrumbEntry[],
+    })),
+    pushBreadcrumb: assign(({ context, event }) => {
+      if (event.type !== 'NAVIGATE_CARD_LINK') return {};
+      const target = event.target;
+      const newEntry: BreadcrumbEntry = { context: target, label: SHEET_LABELS[target] };
+      return {
+        activeSheet: target,
+        breadcrumb: [...context.breadcrumb, newEntry],
+      };
+    }),
+    popBreadcrumb: assign(({ context }) => {
+      const newBreadcrumb = context.breadcrumb.slice(0, -1);
+      const previous = newBreadcrumb[newBreadcrumb.length - 1];
+      return {
+        activeSheet: previous?.context ?? null,
+        breadcrumb: newBreadcrumb,
+      };
+    }),
   },
   guards: {
     targetIsGameMode: ({ context }) => context.transitionTarget === 'gameMode',
     targetIsExploration: ({ context }) => context.transitionTarget === 'exploration',
     hasBufferedTermination: ({ context }) => context.bufferedEvents.some(isTerminationEvent),
+    breadcrumbNotFull: ({ context }) => context.breadcrumb.length < MAX_BREADCRUMB_DEPTH,
+    hasBreadcrumbHistory: ({ context }) => context.breadcrumb.length > 1,
   },
 }).createMachine({
   id: 'dashboard',
@@ -93,6 +153,8 @@ export const dashboardMachine = setup({
     transitionTarget: null,
     previousState: null,
     bufferedEvents: [],
+    activeSheet: null,
+    breadcrumb: [],
   },
   states: {
     exploration: {
@@ -136,7 +198,7 @@ export const dashboardMachine = setup({
     },
 
     gameMode: {
-      initial: 'default',
+      initial: 'tavolo',
       on: {
         SESSION_COMPLETED: {
           target: 'transitioning',
@@ -148,14 +210,31 @@ export const dashboardMachine = setup({
         },
       },
       states: {
-        default: {
+        tavolo: {
+          entry: 'clearSheet',
           on: {
-            EXPAND: { target: 'expanded' },
+            OPEN_SHEET: {
+              target: 'sheetOpen',
+              actions: 'setSheet',
+            },
           },
         },
-        expanded: {
+        sheetOpen: {
           on: {
-            COLLAPSE: { target: 'default' },
+            CLOSE_SHEET: {
+              target: 'tavolo',
+            },
+            OPEN_SHEET: {
+              actions: 'setSheet',
+            },
+            NAVIGATE_CARD_LINK: {
+              guard: 'breadcrumbNotFull',
+              actions: 'pushBreadcrumb',
+            },
+            BACK_CARD_LINK: {
+              guard: 'hasBreadcrumbHistory',
+              actions: 'popBreadcrumb',
+            },
           },
         },
       },

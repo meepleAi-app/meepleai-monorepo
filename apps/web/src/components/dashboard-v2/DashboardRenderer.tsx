@@ -1,72 +1,21 @@
 'use client';
 
-import { Suspense, useCallback } from 'react';
+import { useCallback } from 'react';
 
 import { AnimatePresence, motion } from 'framer-motion';
 
 import { ExtraMeepleCardDrawer } from '@/components/ui/data-display/extra-meeple-card';
 import { OverlayHybrid } from '@/components/ui/overlays';
-import { useActiveSessions } from '@/hooks/queries/useActiveSessions';
 import { useDashboardSearchStore } from '@/stores/useDashboardSearchStore';
 
 import { AddToLibraryModal } from './AddToLibraryModal';
-import { OnboardingFlow } from './OnboardingFlow';
-import { TavoloZone } from './TavoloZone';
+import { ExplorationView } from './exploration/ExplorationView';
+import { SessionSheet } from './sheet/SessionSheet';
+import { SheetBreadcrumb } from './sheet/SheetBreadcrumb';
+import { SheetContent } from './sheet/SheetContent';
+import { TavoloView } from './tavolo/TavoloView';
 import { useDashboardMode } from './useDashboardMode';
-import {
-  HeroZone,
-  SessionBar,
-  ScoreboardZone,
-  ActiveSessionZone,
-  GameNightZone,
-  AgentZone,
-  StatsZone,
-  FeedZone,
-  SuggestedZone,
-} from './zones';
 import './dashboard-transitions.css';
-
-// ─── Skeleton fallback ────────────────────────────────────────────────────────
-
-function ZoneSkeleton({ testId }: { testId: string }) {
-  return <div data-testid={testId} className="animate-pulse rounded-2xl bg-muted h-32 w-full" />;
-}
-
-// ─── Exploration mode with zone components ────────────────────────────────────
-
-function ExplorationView() {
-  const { data: activeData } = useActiveSessions(5);
-  const hasActiveSessions = (activeData?.sessions?.length ?? 0) > 0;
-
-  return (
-    <>
-      <OnboardingFlow />
-
-      <Suspense fallback={<ZoneSkeleton testId="hero-skeleton" />}>
-        <HeroZone />
-      </Suspense>
-
-      <TavoloZone isEmpty={!hasActiveSessions}>
-        <div className="space-y-4 md:flex md:gap-4 md:space-y-0">
-          <div className="flex-1">
-            <ActiveSessionZone />
-          </div>
-          <div className="flex-1">
-            <GameNightZone />
-          </div>
-        </div>
-      </TavoloZone>
-
-      <AgentZone />
-      <StatsZone />
-
-      <div className="md:flex md:gap-6">
-        <FeedZone />
-        <SuggestedZone />
-      </div>
-    </>
-  );
-}
 
 // ─── DashboardRenderer ────────────────────────────────────────────────────────
 
@@ -74,11 +23,22 @@ function ExplorationView() {
  * Main dashboard layout renderer.
  *
  * Reads the current mode from `useDashboardMode()` and renders
- * either the zone-based exploration view or game-mode zones with
+ * either the zone-based exploration view or game-mode layout with
  * animated transitions via framer-motion `AnimatePresence`.
  */
 export function DashboardRenderer() {
-  const { state, isGameMode, isExploration } = useDashboardMode();
+  const {
+    state,
+    isGameMode,
+    isExploration,
+    activeSessionId,
+    activeSheet,
+    breadcrumb,
+    closeSheet,
+    backCardLink,
+    send,
+  } = useDashboardMode();
+
   const { selectedGame, setSelectedGame, openChatDrawer, drawerState, closeChatDrawer } =
     useDashboardSearchStore();
 
@@ -125,12 +85,19 @@ export function DashboardRenderer() {
             transition={{ duration: 0.2 }}
             className="flex flex-col gap-6 w-full"
           >
-            <Suspense fallback={<ZoneSkeleton testId="session-bar-skeleton" />}>
-              <SessionBar />
-            </Suspense>
-            <Suspense fallback={<ZoneSkeleton testId="scoreboard-skeleton" />}>
-              <ScoreboardZone />
-            </Suspense>
+            <TavoloView sessionId={activeSessionId} />
+            <SessionSheet isOpen={activeSheet !== null} onClose={closeSheet}>
+              <SheetBreadcrumb
+                entries={breadcrumb}
+                onNavigate={i => {
+                  const stepsBack = breadcrumb.length - 1 - i;
+                  for (let s = 0; s < stepsBack; s++) backCardLink();
+                }}
+              />
+              {activeSheet && (
+                <SheetContent context={activeSheet} sessionId={activeSessionId ?? ''} />
+              )}
+            </SessionSheet>
           </motion.div>
         )}
       </AnimatePresence>

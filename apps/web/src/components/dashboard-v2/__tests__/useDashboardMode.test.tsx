@@ -56,7 +56,6 @@ describe('useDashboardMode', () => {
       expect(result.current.isExploration).toBe(true);
       expect(result.current.isGameMode).toBe(false);
       expect(result.current.isTransitioning).toBe(false);
-      expect(result.current.isExpanded).toBe(false);
       expect(result.current.activeSessionId).toBeNull();
       expect(result.current.transitionTarget).toBeNull();
       expect(typeof result.current.send).toBe('function');
@@ -115,31 +114,6 @@ describe('useDashboardMode', () => {
       expect(result.current.activeSessionId).toBe('sess-42');
     });
 
-    it('tracks expanded sub-state', () => {
-      const { result } = renderHook(() => useDashboardMode(), { wrapper });
-
-      act(() => {
-        result.current.send({ type: 'SESSION_DETECTED', sessionId: 'sess-42' });
-      });
-      act(() => {
-        result.current.send({ type: 'TRANSITION_COMPLETE' });
-      });
-
-      expect(result.current.isExpanded).toBe(false);
-
-      act(() => {
-        result.current.send({ type: 'EXPAND' });
-      });
-
-      expect(result.current.isExpanded).toBe(true);
-
-      act(() => {
-        result.current.send({ type: 'COLLAPSE' });
-      });
-
-      expect(result.current.isExpanded).toBe(false);
-    });
-
     it('returns to exploration after SESSION_COMPLETED + TRANSITION_COMPLETE', () => {
       const { result } = renderHook(() => useDashboardMode(), { wrapper });
 
@@ -179,6 +153,45 @@ describe('useDashboardMode', () => {
       });
 
       expect(result.current.activeSessionId).toBe('my-session');
+    });
+  });
+
+  describe('useDashboardMode — sheet API', () => {
+    it('should expose openSheet function', () => {
+      const { result } = renderHook(() => useDashboardMode(), { wrapper });
+
+      expect(typeof result.current.openSheet).toBe('function');
+    });
+
+    it('should expose closeSheet function', () => {
+      const { result } = renderHook(() => useDashboardMode(), { wrapper });
+
+      expect(typeof result.current.closeSheet).toBe('function');
+    });
+
+    it('should return activeSheet as null initially', () => {
+      const { result } = renderHook(() => useDashboardMode(), { wrapper });
+
+      expect(result.current.activeSheet).toBeNull();
+    });
+
+    it('should return empty breadcrumb initially', () => {
+      const { result } = renderHook(() => useDashboardMode(), { wrapper });
+
+      expect(result.current.breadcrumb).toEqual([]);
+    });
+
+    it('should not expose isExpanded', () => {
+      const { result } = renderHook(() => useDashboardMode(), { wrapper });
+
+      expect('isExpanded' in result.current).toBe(false);
+    });
+
+    it('should expose navigateCardLink and backCardLink', () => {
+      const { result } = renderHook(() => useDashboardMode(), { wrapper });
+
+      expect(typeof result.current.navigateCardLink).toBe('function');
+      expect(typeof result.current.backCardLink).toBe('function');
     });
   });
 });

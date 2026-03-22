@@ -23,7 +23,12 @@ export function RulesAiContent({ sessionId: _sessionId }: RulesAiContentProps) {
       </div>
 
       <div className="flex flex-wrap gap-2 pt-2">
-        <CardLinkChip label="Vai ai punteggi" target="scores" onClick={navigateCardLink} />
+        <CardLinkChip
+          icon="🏆"
+          label="Vai ai punteggi"
+          accentColor="cyan"
+          onClick={() => navigateCardLink('scores')}
+        />
       </div>
     </div>
   );

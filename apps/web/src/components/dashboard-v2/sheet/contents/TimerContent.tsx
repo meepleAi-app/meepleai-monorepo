@@ -21,7 +21,12 @@ export function TimerContent({ sessionId: _sessionId }: TimerContentProps) {
       <p className="text-sm text-muted-foreground">Timer in arrivo…</p>
 
       <div className="flex flex-wrap gap-2 pt-2">
-        <CardLinkChip label="Di chi è il turno?" target="players" onClick={navigateCardLink} />
+        <CardLinkChip
+          icon="👥"
+          label="Di chi è il turno?"
+          accentColor="emerald"
+          onClick={() => navigateCardLink('players')}
+        />
       </div>
     </div>
   );

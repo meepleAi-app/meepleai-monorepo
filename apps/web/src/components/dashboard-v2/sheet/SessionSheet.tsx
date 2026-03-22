@@ -24,6 +24,7 @@ export function SessionSheet({ isOpen, onClose, children }: SessionSheetProps) {
     >
       {/* Backdrop (mobile only) */}
       <div
+        data-testid="sheet-overlay"
         className="absolute inset-0 bg-black/40 md:hidden"
         onClick={onClose}
         aria-hidden="true"
@@ -31,12 +32,20 @@ export function SessionSheet({ isOpen, onClose, children }: SessionSheetProps) {
 
       {/* Panel */}
       <div
+        data-testid="sheet-panel"
         className={[
           'relative ml-auto flex h-full w-full max-w-md flex-col',
           'bg-background shadow-xl',
           'md:static md:h-auto md:w-80 md:rounded-xl md:border md:border-border',
         ].join(' ')}
       >
+        {/* Drag handle (mobile) */}
+        <div
+          data-testid="sheet-drag-handle"
+          className="mx-auto mt-2 h-1 w-10 rounded-full bg-muted md:hidden"
+          aria-hidden="true"
+        />
+
         {/* Close button */}
         <button
           type="button"

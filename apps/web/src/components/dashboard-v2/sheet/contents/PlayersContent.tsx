@@ -21,7 +21,12 @@ export function PlayersContent({ sessionId: _sessionId }: PlayersContentProps) {
       <p className="text-sm text-muted-foreground">Elenco giocatori in caricamento…</p>
 
       <div className="flex flex-wrap gap-2 pt-2">
-        <CardLinkChip label="Punteggi giocatore" target="scores" onClick={navigateCardLink} />
+        <CardLinkChip
+          icon="🏆"
+          label="Punteggi giocatore"
+          accentColor="cyan"
+          onClick={() => navigateCardLink('scores')}
+        />
       </div>
     </div>
   );

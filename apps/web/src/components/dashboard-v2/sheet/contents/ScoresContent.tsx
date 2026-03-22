@@ -21,8 +21,18 @@ export function ScoresContent({ sessionId: _sessionId }: ScoresContentProps) {
       <p className="text-sm text-muted-foreground">Caricamento punteggi in corso…</p>
 
       <div className="flex flex-wrap gap-2 pt-2">
-        <CardLinkChip label="Come si punteggia?" target="rules-ai" onClick={navigateCardLink} />
-        <CardLinkChip label="Dettaglio per giocatore" target="players" onClick={navigateCardLink} />
+        <CardLinkChip
+          icon="🤖"
+          label="Come si punteggia?"
+          accentColor="violet"
+          onClick={() => navigateCardLink('rules-ai')}
+        />
+        <CardLinkChip
+          icon="👥"
+          label="Dettaglio per giocatore"
+          accentColor="emerald"
+          onClick={() => navigateCardLink('players')}
+        />
       </div>
     </div>
   );

@@ -1,11 +1,14 @@
 'use client';
 
+import { useEffect, useRef } from 'react';
+
 import Link from 'next/link';
 
 import { SessionNavBar } from '@/components/dashboard-v2/session-nav/SessionNavBar';
 import { useDashboardMode } from '@/components/dashboard-v2/useDashboardMode';
 import { NotificationBell } from '@/components/notifications';
 import { useNavigation } from '@/hooks/useNavigation';
+import { useSessionStore } from '@/lib/stores/sessionStore';
 import { cn } from '@/lib/utils';
 
 import { UserMenuDropdown } from '../UserMenuDropdown';
@@ -19,6 +22,15 @@ interface UserTopNavProps {
 export function UserTopNav({ isAdmin, onMenuToggle, isMenuOpen }: UserTopNavProps) {
   const { sectionTitle, breadcrumbs, showBreadcrumb } = useNavigation();
   const { isGameMode, activeSheet, openSheet, send } = useDashboardMode();
+  const activeSession = useSessionStore(s => s.activeSession);
+
+  // Stable session start time — reset when entering game mode, never on re-render
+  const sessionStartRef = useRef(new Date());
+  useEffect(() => {
+    if (isGameMode) sessionStartRef.current = new Date();
+  }, [isGameMode]);
+
+  const gameName = activeSession?.gameName ?? 'Game Session';
 
   return (
     <header
@@ -62,8 +74,8 @@ export function UserTopNav({ isAdmin, onMenuToggle, isMenuOpen }: UserTopNavProp
 
       {isGameMode ? (
         <SessionNavBar
-          gameName="Game Session"
-          sessionStartedAt={new Date()}
+          gameName={gameName}
+          sessionStartedAt={sessionStartRef.current}
           isPaused={false}
           activeSheet={activeSheet}
           onOpenSheet={openSheet}

@@ -18,14 +18,7 @@ const EMPTY_PLAYERS: ScoreboardPlayer[] = [];
 const EMPTY_EVENTS: EventLogItem[] = [];
 
 export function TavoloView({ sessionId: _sessionId }: TavoloViewProps) {
-  // send is used in openSheet; will be wired to OPEN_SHEET event in Task 6
-  const { send: _send } = useDashboardMode();
-
-  // openSheet will be wired to the SessionSheet in a later task.
-
-  function openSheet(_sheet: string) {
-    // TODO: wire to OPEN_SHEET event once SessionSheet is implemented (Task 6)
-  }
+  const { openSheet } = useDashboardMode();
 
   return (
     <div data-testid="tavolo-view" className="flex flex-col gap-4 px-4 py-3">
@@ -36,7 +29,7 @@ export function TavoloView({ sessionId: _sessionId }: TavoloViewProps) {
       <TurnIndicator playerName="—" playerColor="#888888" />
 
       {/* Quick actions */}
-      <QuickActions onAddScore={() => openSheet('add-score')} onAskAi={() => openSheet('ask-ai')} />
+      <QuickActions onAddScore={() => openSheet('scores')} onAskAi={() => openSheet('rules-ai')} />
 
       {/* Event log */}
       <EventLog events={EMPTY_EVENTS} />

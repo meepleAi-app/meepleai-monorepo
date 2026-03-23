@@ -99,7 +99,7 @@ describe('filterNavItemsByRole', () => {
     });
 
     const ids = result.map(item => item.id);
-    // While loading, only items with no visibility restrictions are shown
+    // Only items with no auth restrictions
     expect(ids).not.toContain('welcome');
     expect(ids).not.toContain('library');
   });
@@ -109,7 +109,7 @@ describe('filterNavItemsByRole', () => {
       ...UNIFIED_NAV_ITEMS,
       {
         id: 'admin-only',
-        href: '/admin-test',
+        href: '/admin',
         icon: UNIFIED_NAV_ITEMS[0].icon,
         iconName: 'shield',
         label: 'Admin',
@@ -185,7 +185,7 @@ describe('isUnifiedNavItemActive', () => {
   it('matches exact path for welcome', () => {
     const welcome = UNIFIED_NAV_ITEMS.find(item => item.id === 'welcome')!;
     expect(isUnifiedNavItemActive(welcome, '/')).toBe(true);
-    expect(isUnifiedNavItemActive(welcome, '/library')).toBe(false);
+    expect(isUnifiedNavItemActive(welcome, '/dashboard')).toBe(false);
   });
 
   it('matches prefix for library', () => {
@@ -205,6 +205,7 @@ describe('isUnifiedNavItemActive', () => {
 
 describe('Legacy NAV_ITEMS', () => {
   it('contains library item for ActionBar', () => {
+    expect(NAV_ITEMS.length).toBeGreaterThan(0);
     const ids = NAV_ITEMS.map(item => item.id);
     expect(ids).toContain('library');
   });
@@ -256,7 +257,8 @@ describe('isNavItemActive (legacy)', () => {
     const library = NAV_ITEMS.find(item => item.id === 'library');
     if (library) {
       expect(isNavItemActive(library, '/library')).toBe(true);
-      expect(isNavItemActive(library, '/library/sub')).toBe(true);
+      expect(isNavItemActive(library, '/library/private')).toBe(true);
+      expect(isNavItemActive(library, '/chat')).toBe(false);
     }
   });
 });

@@ -37,6 +37,7 @@ import { api } from '@/lib/api';
 import type { SeedingGameDto } from '@/lib/api/schemas/seeding.schemas';
 
 import { QueueStatusPanel } from './components/queue-status-panel';
+import { useSseQueue } from './hooks/use-sse-queue';
 
 // ============================================================================
 // Constants
@@ -136,7 +137,9 @@ export function SeedingPageClient() {
   const [sortField, setSortField] = useState<SortField>('title');
   const [sortDir, setSortDir] = useState<SortDir>('asc');
   const [search, setSearch] = useState('');
+  const [queueActive, setQueueActive] = useState(false);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const lastSseFetchRef = useRef(0);
 
   // ---- Data fetching ----
 
@@ -152,11 +155,27 @@ export function SeedingPageClient() {
     }
   }, []);
 
+  const { isConnected: sseConnected } = useSseQueue({
+    enabled: queueActive,
+    onUpdate: event => {
+      if (event.queued === 0 && event.processing === 0) {
+        setQueueActive(false);
+      }
+      const now = Date.now();
+      if (now - lastSseFetchRef.current > 3000) {
+        lastSseFetchRef.current = now;
+        void fetchGames();
+      }
+    },
+  });
+
+  const pollingInterval = sseConnected ? 15000 : POLLING_INTERVAL_MS;
+
   useEffect(() => {
     void fetchGames();
     intervalRef.current = setInterval(() => {
       void fetchGames();
-    }, POLLING_INTERVAL_MS);
+    }, pollingInterval);
 
     // Pause polling when tab is hidden to reduce backend load
     const handleVisibilityChange = () => {
@@ -166,7 +185,7 @@ export function SeedingPageClient() {
         void fetchGames();
         intervalRef.current = setInterval(() => {
           void fetchGames();
-        }, POLLING_INTERVAL_MS);
+        }, pollingInterval);
       }
     };
     document.addEventListener('visibilitychange', handleVisibilityChange);
@@ -175,7 +194,7 @@ export function SeedingPageClient() {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
-  }, [fetchGames]);
+  }, [fetchGames, pollingInterval]);
 
   // ---- Filtered games ----
 
@@ -295,6 +314,7 @@ export function SeedingPageClient() {
     try {
       const bggIds = enrichableGames.map(g => g.bggId as number);
       await api.sharedGames.enqueueBggEnrichment(bggIds);
+      setQueueActive(true);
       setEnrichMessage(`Queued ${bggIds.length} game(s) for enrichment.`);
       setSelectedIds(new Set());
       await fetchGames();
@@ -314,6 +334,7 @@ export function SeedingPageClient() {
     try {
       const bggIds = failedSelectedGames.map(g => g.bggId as number);
       await api.sharedGames.retryBggEnrichment(bggIds);
+      setQueueActive(true);
       setEnrichMessage(`Re-queued ${bggIds.length} failed game(s) for enrichment.`);
       setSelectedIds(new Set());
       await fetchGames();

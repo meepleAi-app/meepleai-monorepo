@@ -21,7 +21,7 @@ describe('CardRackItem', () => {
     render(<CardRackItem href="/library" icon={LayoutDashboard} label="Dashboard" />);
     const link = screen.getByRole('link', { name: 'Dashboard' });
     expect(link).toBeInTheDocument();
-    expect(link).toHaveAttribute('href', '/dashboard');
+    expect(link).toHaveAttribute('href', '/library');
   });
 
   it('shows label when isExpanded is true', () => {

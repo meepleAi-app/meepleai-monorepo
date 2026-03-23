@@ -74,10 +74,7 @@ describe('PublicFooter', () => {
 
       expect(screen.getByRole('link', { name: /giochi/i })).toHaveAttribute('href', '/games');
       expect(screen.getByRole('link', { name: /chat ai/i })).toHaveAttribute('href', '/chat/new');
-      expect(screen.getByRole('link', { name: /dashboard/i })).toHaveAttribute(
-        'href',
-        '/dashboard'
-      );
+      expect(screen.getByRole('link', { name: /dashboard/i })).toHaveAttribute('href', '/library');
       expect(screen.getByRole('link', { name: /faq/i })).toHaveAttribute('href', '/faq');
     });
   });

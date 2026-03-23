@@ -11,6 +11,7 @@
  */
 
 import { BookOpen, Dice5, House, MessageCircle } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 
 import { useNavigation, type NavTab } from '@/hooks/useNavigation';
 import { cn } from '@/lib/utils';
@@ -58,11 +59,15 @@ const SIDEBAR_TABS: SidebarTabConfig[] = [
 ];
 
 export function UserDesktopSidebar() {
+  const router = useRouter();
   const { activeTab, setActiveTab, setSectionTitle } = useNavigation();
 
   const handleTabClick = (tab: SidebarTabConfig) => {
     setActiveTab(tab.id);
     setSectionTitle(tab.sectionTitle);
+    if (tab.id === 'home') {
+      router.push('/dashboard');
+    }
   };
 
   return (

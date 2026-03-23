@@ -13,6 +13,7 @@
  */
 
 import { BookOpen, Dice5, House, MessageCircle } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 
 import { useNavigation, type NavTab } from '@/hooks/useNavigation';
 import { cn } from '@/lib/utils';
@@ -61,11 +62,15 @@ const TABS: TabConfig[] = [
 ];
 
 export function UserTabBar() {
+  const router = useRouter();
   const { activeTab, setActiveTab, setSectionTitle } = useNavigation();
 
   const handleTabChange = (tab: TabConfig) => {
     setActiveTab(tab.id);
     setSectionTitle(tab.sectionTitle);
+    if (tab.id === 'home') {
+      router.push('/dashboard');
+    }
   };
 
   return (

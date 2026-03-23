@@ -79,19 +79,27 @@ export class UploadPage extends BasePage implements IUploadPage {
 
   /**
    * Navigate to the upload page
+   * Uses domcontentloaded instead of networkidle because background SSE/polling
+   * connections keep the network active indefinitely.
    */
   async goto(): Promise<void> {
-    await this.page.goto('/upload');
-    await this.waitForLoad();
+    await this.page.goto('/upload', { waitUntil: 'domcontentloaded' });
+    // Wait for the game selector to be visible as a reliable load indicator
+    await this.waitForElement(this.gameSelect, { timeout: 30_000 });
   }
 
   /**
-   * Select an existing game from the dropdown
+   * Select an existing game from the dropdown (Radix Select combobox)
    * @param gameName - Name of the game to select
    */
   async selectGame(gameName: string): Promise<void> {
     await this.waitForElement(this.gameSelect);
-    await this.selectOption(this.gameSelect, gameName);
+    // Radix Select: click to open dropdown, then click option by text
+    await this.click(this.gameSelect);
+    const option = this.page
+      .getByRole('option', { name: new RegExp(gameName, 'i') })
+      .or(this.page.locator(`[role="option"]:has-text("${gameName}")`));
+    await option.first().click({ timeout: 10_000 });
 
     // Wait for confirmation if needed
     if (await this.isVisible(this.confirmGameButton)) {
@@ -159,8 +167,9 @@ export class UploadPage extends BasePage implements IUploadPage {
       await this.selectLanguage(language);
     }
 
-    // Upload file
-    await this.uploadFile(this.fileInput, filePath);
+    // Upload file — file inputs in drag-drop zones are often hidden,
+    // so we set files directly without waiting for visibility
+    await this.fileInput.setInputFiles(filePath);
 
     // Wait for upload to start (file input should trigger automatic upload)
     if (autoWait) {

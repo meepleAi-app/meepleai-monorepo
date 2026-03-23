@@ -115,14 +115,14 @@ public sealed class FeatureFlagTests
     #region Enable Tests
 
     [Fact]
-    public void Enable_WhenDisabled_SetsIsEnabledToTrue()
+    public async Task Enable_WhenDisabled_SetsIsEnabledToTrue()
     {
         // Arrange
         var featureFlag = CreateTestFeatureFlag(isEnabled: false);
         var originalUpdatedAt = featureFlag.UpdatedAt;
 
         // Small delay to ensure different timestamp
-        Thread.Sleep(10);
+        await Task.Delay(50);
 
         // Act
         featureFlag.Enable();
@@ -152,14 +152,14 @@ public sealed class FeatureFlagTests
     #region Disable Tests
 
     [Fact]
-    public void Disable_WhenEnabled_SetsIsEnabledToFalse()
+    public async Task Disable_WhenEnabled_SetsIsEnabledToFalse()
     {
         // Arrange
         var featureFlag = CreateTestFeatureFlag(isEnabled: true);
         var originalUpdatedAt = featureFlag.UpdatedAt;
 
         // Small delay to ensure different timestamp
-        Thread.Sleep(10);
+        await Task.Delay(50);
 
         // Act
         featureFlag.Disable();
@@ -189,14 +189,14 @@ public sealed class FeatureFlagTests
     #region Toggle Tests
 
     [Fact]
-    public void Toggle_WhenDisabled_EnablesFlag()
+    public async Task Toggle_WhenDisabled_EnablesFlag()
     {
         // Arrange
         var featureFlag = CreateTestFeatureFlag(isEnabled: false);
         var originalUpdatedAt = featureFlag.UpdatedAt;
 
         // Small delay to ensure different timestamp
-        Thread.Sleep(10);
+        await Task.Delay(50);
 
         // Act
         featureFlag.Toggle();
@@ -207,14 +207,14 @@ public sealed class FeatureFlagTests
     }
 
     [Fact]
-    public void Toggle_WhenEnabled_DisablesFlag()
+    public async Task Toggle_WhenEnabled_DisablesFlag()
     {
         // Arrange
         var featureFlag = CreateTestFeatureFlag(isEnabled: true);
         var originalUpdatedAt = featureFlag.UpdatedAt;
 
         // Small delay to ensure different timestamp
-        Thread.Sleep(10);
+        await Task.Delay(50);
 
         // Act
         featureFlag.Toggle();
@@ -239,18 +239,18 @@ public sealed class FeatureFlagTests
     }
 
     [Fact]
-    public void Toggle_AlwaysUpdatesTimestamp()
+    public async Task Toggle_AlwaysUpdatesTimestamp()
     {
         // Arrange
         var featureFlag = CreateTestFeatureFlag(isEnabled: false);
         var firstUpdatedAt = featureFlag.UpdatedAt;
 
         // Act - Toggle twice with delay
-        Thread.Sleep(10);
+        await Task.Delay(50);
         featureFlag.Toggle();
         var secondUpdatedAt = featureFlag.UpdatedAt;
 
-        Thread.Sleep(10);
+        await Task.Delay(50);
         featureFlag.Toggle();
         var thirdUpdatedAt = featureFlag.UpdatedAt;
 

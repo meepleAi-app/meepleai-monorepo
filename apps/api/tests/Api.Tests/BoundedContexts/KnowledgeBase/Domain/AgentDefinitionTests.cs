@@ -97,7 +97,7 @@ public sealed class AgentDefinitionTests
     }
 
     [Fact]
-    public void UpdateConfig_WithValidConfig_ShouldUpdateAndSetTimestamp()
+    public async Task UpdateConfig_WithValidConfig_ShouldUpdateAndSetTimestamp()
     {
         // Arrange
         var agent = AgentDefinition.Create("TestAgent", "Description", AgentType.RagAgent, AgentDefinitionConfig.Default());
@@ -106,7 +106,7 @@ public sealed class AgentDefinitionTests
 
         // Act
         var beforeUpdate = DateTime.UtcNow;
-        Thread.Sleep(10);
+        await Task.Delay(50);
         agent.UpdateConfig(newConfig);
 
         // Assert
@@ -295,7 +295,7 @@ public sealed class AgentDefinitionTests
     }
 
     [Fact]
-    public void UpdateType_WithValidType_ShouldUpdateAndSetTimestamp()
+    public async Task UpdateType_WithValidType_ShouldUpdateAndSetTimestamp()
     {
         // Arrange
         var agent = AgentDefinition.Create("TestAgent", "Desc", AgentType.RagAgent, AgentDefinitionConfig.Default());
@@ -303,7 +303,7 @@ public sealed class AgentDefinitionTests
 
         // Act
         var beforeUpdate = DateTime.UtcNow;
-        Thread.Sleep(10);
+        await Task.Delay(50);
         agent.UpdateType(newType);
 
         // Assert
@@ -359,7 +359,7 @@ public sealed class AgentDefinitionTests
     }
 
     [Fact]
-    public void UpdateStrategy_WithValidStrategy_ShouldUpdateAndSetTimestamp()
+    public async Task UpdateStrategy_WithValidStrategy_ShouldUpdateAndSetTimestamp()
     {
         // Arrange
         var agent = AgentDefinition.Create("TestAgent", "Desc", AgentType.RagAgent, AgentDefinitionConfig.Default());
@@ -367,7 +367,7 @@ public sealed class AgentDefinitionTests
 
         // Act
         var beforeUpdate = DateTime.UtcNow;
-        Thread.Sleep(10);
+        await Task.Delay(50);
         agent.UpdateStrategy(newStrategy);
 
         // Assert

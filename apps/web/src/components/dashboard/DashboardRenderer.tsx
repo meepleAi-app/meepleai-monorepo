@@ -36,7 +36,7 @@ export function DashboardRenderer() {
     breadcrumb,
     closeSheet,
     backCardLink,
-    send,
+    send: _send,
   } = useDashboardMode();
 
   const { selectedGame, setSelectedGame, openChatDrawer, drawerState, closeChatDrawer } =

@@ -1,6 +1,7 @@
 using Api.BoundedContexts.Authentication.Domain.Events;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
+using Api.Infrastructure.Security;
 using Api.Services;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -39,7 +40,7 @@ internal sealed class AccountLockedEventHandler : INotificationHandler<AccountLo
                 notification.UserId,
                 notification.FailedAttempts,
                 notification.LockedUntil,
-                notification.IpAddress ?? "unknown");
+                DataMasking.MaskIpAddress(notification.IpAddress));
 
             // Get user details for email
             var user = await _dbContext.Set<UserEntity>()

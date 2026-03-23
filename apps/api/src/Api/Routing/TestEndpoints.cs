@@ -1,5 +1,6 @@
 using Api.BoundedContexts.Administration.Application.Commands;
 using Api.Extensions;
+using Api.Middleware;
 using MediatR;
 
 #pragma warning disable MA0048 // File name must match type name - Contains Interface with supporting types
@@ -36,7 +37,7 @@ internal static class TestEndpoints
             var session = sessionResult.Session;
 
             logger.LogInformation("Admin {UserId} simulating error type: {ErrorType}",
-                session.User!.Id, request.ErrorType);
+                session.User!.Id, LogValueSanitizer.Sanitize(request.ErrorType));
 
             try
             {
@@ -59,13 +60,13 @@ internal static class TestEndpoints
             catch (ArgumentException ex)
             {
                 // Invalid error type
-                logger.LogWarning(ex, "Invalid error type: {ErrorType}", request.ErrorType);
+                logger.LogWarning(ex, "Invalid error type: {ErrorType}", LogValueSanitizer.Sanitize(request.ErrorType));
                 return Results.BadRequest(new { error = ex.Message });
             }
             catch (Exception ex)
             {
                 // Expected simulated errors - log for Prometheus
-                logger.LogError(ex, "Simulated error: {ErrorType}", request.ErrorType);
+                logger.LogError(ex, "Simulated error: {ErrorType}", LogValueSanitizer.Sanitize(request.ErrorType));
 
                 // Return appropriate status code
                 if (string.Equals(request.ErrorType, "500", StringComparison.OrdinalIgnoreCase))

@@ -1,5 +1,6 @@
 using Api.Configuration;
 using Api.Extensions;
+using Api.Middleware;
 using Api.Services;
 using MediatR;
 
@@ -117,7 +118,7 @@ Rate limited to 10 requests per minute per IP address.
             {
                 var logger = context.RequestServices.GetRequiredService<ILogger<Program>>();
                 logger.LogWarning("OAuth callback error from {Provider}: {Error} - {Description}",
-                    provider, error ?? "missing_code", error_description ?? "No authorization code received");
+                    LogValueSanitizer.Sanitize(provider), LogValueSanitizer.Sanitize(error ?? "missing_code"), LogValueSanitizer.Sanitize(error_description ?? "No authorization code received"));
 
                 var frontendUrl = config["Frontend:BaseUrl"] ?? "http://localhost:3000";
                 var errorParam = Uri.EscapeDataString(error ?? "missing_code");
@@ -221,12 +222,12 @@ Rate limited to 10 requests per minute per IP address.
             if (!result.Success)
             {
                 logger.LogWarning("Failed to unlink OAuth account for user {UserId}, provider {Provider}: {ErrorMessage}",
-                    userId, provider, result.ErrorMessage);
+                    userId, LogValueSanitizer.Sanitize(provider), LogValueSanitizer.Sanitize(result.ErrorMessage));
                 return Results.BadRequest(new { error = result.ErrorMessage });
             }
 
             logger.LogInformation("Successfully unlinked OAuth account for user {UserId}, provider {Provider}",
-                userId, provider);
+                userId, LogValueSanitizer.Sanitize(provider));
             return Results.NoContent();
         })
         .WithName("UnlinkOAuthAccount")

@@ -3,3 +3,6 @@
 export { HeroZone } from './HeroZone';
 export { QuickStats } from './QuickStats';
 export type { QuickStatsData, QuickStatsProps } from './QuickStats';
+
+export { YourAgents } from './YourAgents';
+export type { AgentItem, YourAgentsProps } from './YourAgents';

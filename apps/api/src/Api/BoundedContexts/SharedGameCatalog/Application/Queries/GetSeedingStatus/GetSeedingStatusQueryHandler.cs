@@ -1,4 +1,5 @@
 using Api.Infrastructure;
+using Api.Infrastructure.Entities.SharedGameCatalog;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
@@ -36,6 +37,15 @@ internal sealed class GetSeedingStatusQueryHandler
     public async Task<List<SeedingGameDto>> Handle(
         GetSeedingStatusQuery query, CancellationToken cancellationToken)
     {
+        var ragReadyGameIds = await (
+            from sgd in _context.Set<SharedGameDocumentEntity>()
+            join vd in _context.VectorDocuments on sgd.PdfDocumentId equals vd.PdfDocumentId
+            where vd.IndexingStatus == "completed"
+            select sgd.SharedGameId
+        ).Distinct().ToListAsync(cancellationToken).ConfigureAwait(false);
+
+        var ragReadySet = ragReadyGameIds.ToHashSet();
+
         var games = await _context.SharedGames
             .AsNoTracking()
             .Where(g => !g.IsDeleted)
@@ -57,7 +67,9 @@ internal sealed class GetSeedingStatusQueryHandler
             g.Id, g.BggId, g.Title, g.GameDataStatus,
             DataStatusNames.GetValueOrDefault(g.GameDataStatus, "Unknown"),
             g.Status, GameStatusNames.GetValueOrDefault(g.Status, "Unknown"),
-            g.HasUploadedPdf, g.CreatedAt
+            g.HasUploadedPdf,
+            ragReadySet.Contains(g.Id),
+            g.CreatedAt
         )).ToList();
     }
 }

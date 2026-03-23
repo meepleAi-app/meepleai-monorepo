@@ -9,6 +9,7 @@ export const SeedingGameDtoSchema = z.object({
   gameStatus: z.number().int(),
   gameStatusName: z.string(),
   hasUploadedPdf: z.boolean(),
+  isRagReady: z.boolean(),
   createdAt: z.string(),
 });
 

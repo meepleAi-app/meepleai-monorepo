@@ -353,6 +353,8 @@ export function SeedingPageClient() {
                   <TableHead className="w-32">BGG ID</TableHead>
                   <TableHead className="w-44">Data Status</TableHead>
                   <TableHead className="w-24 text-center">Has PDF</TableHead>
+                  <TableHead className="w-32">Game Status</TableHead>
+                  <TableHead className="w-24 text-center">RAG Ready</TableHead>
                   <TableHead className="w-40">Created</TableHead>
                 </TableRow>
               </TableHeader>
@@ -377,6 +379,18 @@ export function SeedingPageClient() {
                     </TableCell>
                     <TableCell className="text-center">
                       {game.hasUploadedPdf ? (
+                        <span className="text-emerald-600 font-semibold text-sm">Yes</span>
+                      ) : (
+                        <span className="text-muted-foreground text-sm">No</span>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="outline" className="text-xs">
+                        {game.gameStatusName}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-center">
+                      {game.isRagReady ? (
                         <span className="text-emerald-600 font-semibold text-sm">Yes</span>
                       ) : (
                         <span className="text-muted-foreground text-sm">No</span>

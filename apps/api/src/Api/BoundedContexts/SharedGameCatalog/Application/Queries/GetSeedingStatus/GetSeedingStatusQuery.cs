@@ -11,6 +11,7 @@ public sealed record SeedingGameDto(
     int GameStatus,
     string GameStatusName,
     bool HasUploadedPdf,
+    bool IsRagReady,
     DateTime CreatedAt);
 
 internal sealed record GetSeedingStatusQuery : IQuery<List<SeedingGameDto>>;

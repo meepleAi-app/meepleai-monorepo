@@ -26,6 +26,8 @@ import {
 import { api } from '@/lib/api';
 import type { SeedingGameDto } from '@/lib/api/schemas/seeding.schemas';
 
+import { QueueStatusPanel } from './components/queue-status-panel';
+
 // ============================================================================
 // Constants
 // ============================================================================
@@ -283,6 +285,9 @@ export function SeedingPageClient() {
           {enrichMessage}
         </div>
       )}
+
+      {/* Queue status panel — auto-hides when queue is empty */}
+      <QueueStatusPanel />
 
       {/* Card */}
       <Card>

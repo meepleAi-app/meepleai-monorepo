@@ -15,7 +15,12 @@ import {
   type KbCardDto,
 } from '../schemas/agent-definitions.schemas';
 import { GameRagReadinessSchema, type GameRagReadiness } from '../schemas/rag-setup.schemas';
-import { SeedingGameListSchema, type SeedingGameList } from '../schemas/seeding.schemas';
+import {
+  SeedingGameListSchema,
+  BggQueueStatusSchema,
+  type SeedingGameList,
+  type BggQueueStatus,
+} from '../schemas/seeding.schemas';
 import {
   SharedGameDetailSchema,
   PagedSharedGamesSchema,
@@ -943,6 +948,15 @@ export function createSharedGamesClient({ httpClient }: CreateSharedGamesClientP
         SeedingGameListSchema
       );
       return result ?? [];
+    },
+
+    /**
+     * Get BGG import queue status (ADMIN ONLY)
+     * GET /api/v1/admin/bgg-queue/status
+     */
+    async getBggQueueStatus(): Promise<BggQueueStatus> {
+      const result = await httpClient.get('/api/v1/admin/bgg-queue/status', BggQueueStatusSchema);
+      return result ?? { totalQueued: 0, totalProcessing: 0, items: [] };
     },
 
     /**

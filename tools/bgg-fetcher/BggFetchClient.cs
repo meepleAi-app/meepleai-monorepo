@@ -40,9 +40,18 @@ public sealed class BggFetchClient : IDisposable
 
     public async Task<BggFetchResult?> FetchGameAsync(int bggId, CancellationToken ct)
     {
-        await Task.Delay(_rateDelay, ct).ConfigureAwait(false);
-        var response = await _http.GetAsync($"thing?id={bggId}&type=boardgame&stats=1", ct).ConfigureAwait(false);
-        if (!response.IsSuccessStatusCode) return null;
+        const int maxRetries = 3;
+        HttpResponseMessage? response = null;
+        for (var attempt = 0; attempt < maxRetries; attempt++)
+        {
+            await Task.Delay(attempt == 0 ? _rateDelay : TimeSpan.FromSeconds(2 * attempt), ct).ConfigureAwait(false);
+            response = await _http.GetAsync($"thing?id={bggId}&type=boardgame,boardgameexpansion&stats=1", ct).ConfigureAwait(false);
+            if (response.IsSuccessStatusCode) break;
+            if ((int)response.StatusCode is 429 or 202 or 503)
+                continue; // retry on rate limit / retry-later / unavailable
+            return null; // non-retryable error
+        }
+        if (response == null || !response.IsSuccessStatusCode) return null;
         var xml = await response.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
         var doc = XDocument.Parse(xml);
         var item = doc.Root?.Element("item");

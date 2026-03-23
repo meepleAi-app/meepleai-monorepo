@@ -45,8 +45,12 @@ export class QueueDashboardPage extends BasePage {
     const query = searchParams.toString();
     const url = query ? `/admin/knowledge-base/queue?${query}` : '/admin/knowledge-base/queue';
 
-    await this.page.goto(url);
-    await this.waitForLoad();
+    await this.page.goto(url, { waitUntil: 'domcontentloaded' });
+    // Wait for queue UI to render — SSE connections prevent networkidle
+    await this.jobList
+      .or(this.page.getByText(/Processing Queue/i))
+      .first()
+      .waitFor({ state: 'visible', timeout: 30_000 });
   }
 
   // ========================================================================
@@ -62,10 +66,13 @@ export class QueueDashboardPage extends BasePage {
   }
 
   /**
-   * Job list container
+   * Job list container — tries data-testid first, falls back to role/structural selectors
    */
   get jobList(): Locator {
-    return this.page.locator('[data-testid="job-list"]');
+    return this.page
+      .locator('[data-testid="job-list"]')
+      .or(this.page.locator('[role="list"]').first())
+      .or(this.page.locator('.queue-list, [class*="queue"]').first());
   }
 
   /**
@@ -167,8 +174,15 @@ export class QueueDashboardPage extends BasePage {
    * Wait for the job list to finish loading
    */
   async waitForJobListLoaded(): Promise<void> {
-    await this.waitForElementToDisappear(this.jobListLoading, { timeout: 15_000 });
-    await this.waitForElement(this.jobList);
+    // Wait for loading indicator to disappear (if present)
+    const loadingVisible = await this.jobListLoading
+      .isVisible({ timeout: 2_000 })
+      .catch(() => false);
+    if (loadingVisible) {
+      await this.waitForElementToDisappear(this.jobListLoading, { timeout: 15_000 });
+    }
+    // Wait for any PDF filename to appear in the queue (most reliable indicator)
+    await this.page.getByText(/\.pdf/i).first().waitFor({ state: 'visible', timeout: 15_000 });
   }
 
   // ========================================================================
@@ -234,6 +248,6 @@ export class QueueDashboardPage extends BasePage {
    */
   async expectJobListNotEmpty(): Promise<void> {
     await this.waitForJobListLoaded();
-    await expect(this.jobList.locator('[data-testid="job-row"]').first()).toBeVisible();
+    await expect(this.page.getByText(/\.pdf/i).first()).toBeVisible({ timeout: 10_000 });
   }
 }

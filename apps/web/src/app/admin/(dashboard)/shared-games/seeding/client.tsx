@@ -2,7 +2,15 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
-import { AlertCircleIcon, DownloadIcon, RefreshCwIcon, SproutIcon } from 'lucide-react';
+import {
+  AlertCircleIcon,
+  DownloadIcon,
+  ExternalLinkIcon,
+  RefreshCwIcon,
+  SproutIcon,
+  UploadIcon,
+} from 'lucide-react';
+import Link from 'next/link';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -408,6 +416,7 @@ export function SeedingPageClient() {
                   <TableHead className="w-32">Game Status</TableHead>
                   <TableHead className="w-24 text-center">RAG Ready</TableHead>
                   <TableHead className="w-40">Created</TableHead>
+                  <TableHead className="w-28 text-right pr-6">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -460,6 +469,27 @@ export function SeedingPageClient() {
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground">
                       {new Date(game.createdAt).toLocaleDateString()}
+                    </TableCell>
+                    <TableCell className="text-right pr-6">
+                      <div className="flex items-center justify-end gap-1">
+                        <Link
+                          href={`/admin/shared-games/${game.id}`}
+                          className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                          title="View game details"
+                        >
+                          <ExternalLinkIcon className="h-3.5 w-3.5" />
+                        </Link>
+                        {!game.hasUploadedPdf &&
+                          game.gameDataStatus === GAME_DATA_STATUS.Complete && (
+                            <Link
+                              href={`/admin/knowledge-base/upload?gameId=${game.id}`}
+                              className="inline-flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800 transition-colors"
+                              title="Upload PDF for this game"
+                            >
+                              <UploadIcon className="h-3.5 w-3.5" />
+                            </Link>
+                          )}
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}

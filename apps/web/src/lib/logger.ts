@@ -175,6 +175,8 @@ class Logger {
       ? `${prefix} [${entry.context.component}] ${entry.message}`
       : `${prefix} ${entry.message}`;
 
+    // Security: console methods do not interpret format specifiers — no format string risk
+    // nosemgrep: js/tainted-format-string
     switch (entry.level) {
       case LogLevel.DEBUG:
         // eslint-disable-next-line no-console

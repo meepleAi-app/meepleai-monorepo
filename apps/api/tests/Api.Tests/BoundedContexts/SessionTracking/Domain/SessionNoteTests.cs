@@ -153,14 +153,14 @@ public class SessionNoteTests
     }
 
     [Fact]
-    public void Reveal_SetsIsRevealedToTrue()
+    public async Task Reveal_SetsIsRevealedToTrue()
     {
         // Arrange
         var note = SessionNote.Create(_sessionId, _participantId, "content");
         var originalUpdatedAt = note.UpdatedAt;
 
         // Act
-        Thread.Sleep(10); // Ensure different timestamp
+        await Task.Delay(50); // Ensure different timestamp
         note.Reveal();
 
         // Assert

@@ -6,14 +6,14 @@
 import { render, screen } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 
-import { TavoloLayout } from '@/components/dashboard-v2/tavolo/TavoloLayout';
-import { TavoloSection } from '@/components/dashboard-v2/tavolo/TavoloSection';
-import { ActiveSessionCard } from '@/components/dashboard-v2/tavolo/ActiveSessionCard';
+import { TavoloLayout } from '@/components/dashboard/tavolo/TavoloLayout';
+import { TavoloSection } from '@/components/dashboard/tavolo/TavoloSection';
+import { ActiveSessionCard } from '@/components/dashboard/tavolo/ActiveSessionCard';
 
 // ─── Mocks ───────────────────────────────────────────────────────────────────
 
 // Mock ActivityFeed to isolate TavoloLayout tests from its API hook
-vi.mock('@/components/dashboard-v2/tavolo/ActivityFeed', () => ({
+vi.mock('@/components/dashboard/tavolo/ActivityFeed', () => ({
   ActivityFeed: () => <div data-testid="activity-feed-mock">Activity Feed</div>,
 }));
 

@@ -14,8 +14,8 @@ using Pgvector;
 namespace Api.Infrastructure.Migrations
 {
     [DbContext(typeof(MeepleAiDbContext))]
-    [Migration("20260321082540_AddLicenseTypeToPdfDocuments")]
-    partial class AddLicenseTypeToPdfDocuments
+    [Migration("20260322121729_InitialCreate")]
+    partial class InitialCreate
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -1522,6 +1522,12 @@ namespace Api.Infrastructure.Migrations
                         .HasColumnType("character varying(100)")
                         .HasColumnName("name");
 
+                    b.Property<int>("Status")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0)
+                        .HasColumnName("status");
+
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("updated_at");
@@ -1568,6 +1574,9 @@ namespace Api.Infrastructure.Migrations
 
                     b.HasIndex("Name")
                         .IsUnique();
+
+                    b.HasIndex("Status")
+                        .HasDatabaseName("ix_agent_definitions_status");
 
                     b.HasIndex("_typeValue")
                         .HasDatabaseName("ix_agent_definitions_type_value");
@@ -7328,6 +7337,7 @@ namespace Api.Infrastructure.Migrations
                         .HasColumnName("language_override");
 
                     b.Property<int>("LicenseType")
+                        .ValueGeneratedOnAdd()
                         .HasColumnType("integer")
                         .HasDefaultValue(0)
                         .HasColumnName("license_type");

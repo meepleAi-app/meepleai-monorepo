@@ -53,11 +53,24 @@ Feature: Admin testa il pipeline completo PDF → Embedding → RAG Agent
 - **Agent**: Mock status (ready) + chat SSE con citazioni RAG
 - **Durata**: ~15s
 
-### E2E Integration Smoke (Infra reale — separato)
-- Richiede: PostgreSQL + Qdrant + embedding-service + API
-- PDF piccolo (1-2 pagine) per velocita'
-- Timeout esteso (2-5 min)
-- Non in CI standard — run manuale o scheduled
+### E2E Integration Smoke (`admin-embedding-flow.spec.ts`)
+- **File**: `apps/web/e2e/flows/admin-embedding-flow.spec.ts`
+- **Playwright project**: `embedding-flow-local` / `embedding-flow-integration`
+- **Richiede**: PostgreSQL + Redis + API + Web + embedding-service + Qdrant + LLM (Ollama)
+- **PDF fixture**: `data/rulebook/pandemic_rulebook.pdf` (fallback: `e2e/test-data/sample-rules.pdf`)
+- **Timeout**: 300s (5 min) — embedding pipeline puo' richiedere 30-120s
+- **Run**: `cd apps/web && npx playwright test --project=embedding-flow-local`
+- **Non in CI standard** — run manuale o scheduled
+
+**Acceptance Criteria tracciati nel test** (spec panel review 2026-03-22):
+| AC | Criterio | Test step |
+|----|----------|-----------|
+| AC1 | Upload PDF → document enters processing | T1: Upload PDF fixture |
+| AC2 | Job visible in queue with filename/status | T2: Verify job in list |
+| AC3 | SSE connection active for real-time updates | T2: Verify SSE indicator |
+| AC4 | Processing completes → Ready, chunks > 0 | T2: Wait for completion + chunk preview |
+| AC5 | Chat with RAG agent → streaming response | T3: Send question + verify response |
+| AC6 | Queue stats bar reflects completed count | T2: Verify stats bar |
 
 ## Pages coinvolte
 

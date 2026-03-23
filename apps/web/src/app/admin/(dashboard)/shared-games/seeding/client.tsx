@@ -7,6 +7,7 @@ import {
   DownloadIcon,
   ExternalLinkIcon,
   RefreshCwIcon,
+  SearchIcon,
   SproutIcon,
   UploadIcon,
 } from 'lucide-react';
@@ -23,6 +24,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/data-display/table';
+import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/primitives/checkbox';
 import {
   Select,
@@ -51,6 +53,8 @@ const GAME_DATA_STATUS = {
 } as const;
 
 type StatusFilter = 'all' | '0' | '1' | '2' | '3' | '5' | '6';
+type SortField = 'title' | 'bggId' | 'gameDataStatus' | 'createdAt';
+type SortDir = 'asc' | 'desc';
 
 const STATUS_FILTER_OPTIONS: { value: StatusFilter; label: string }[] = [
   { value: 'all', label: 'All Statuses' },
@@ -87,6 +91,35 @@ function getStatusBadgeClass(status: number): string {
   }
 }
 
+function SortableHeader({
+  field,
+  label,
+  currentField,
+  currentDir,
+  onSort,
+  className,
+}: {
+  field: SortField;
+  label: string;
+  currentField: SortField;
+  currentDir: SortDir;
+  onSort: (field: SortField) => void;
+  className?: string;
+}) {
+  const isActive = field === currentField;
+  return (
+    <TableHead
+      className={`cursor-pointer select-none hover:bg-muted/50 transition-colors ${className ?? ''}`}
+      onClick={() => onSort(field)}
+    >
+      <span className="flex items-center gap-1">
+        {label}
+        {isActive && <span className="text-xs">{currentDir === 'asc' ? '\u2191' : '\u2193'}</span>}
+      </span>
+    </TableHead>
+  );
+}
+
 // ============================================================================
 // Component
 // ============================================================================
@@ -100,6 +133,9 @@ export function SeedingPageClient() {
   const [enriching, setEnriching] = useState(false);
   const [downloading, setDownloading] = useState(false);
   const [enrichMessage, setEnrichMessage] = useState<string | null>(null);
+  const [sortField, setSortField] = useState<SortField>('title');
+  const [sortDir, setSortDir] = useState<SortDir>('asc');
+  const [search, setSearch] = useState('');
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // ---- Data fetching ----
@@ -144,10 +180,49 @@ export function SeedingPageClient() {
   // ---- Filtered games ----
 
   const filteredGames = useMemo<SeedingGameDto[]>(() => {
-    if (statusFilter === 'all') return games;
-    const targetStatus = parseInt(statusFilter, 10);
-    return games.filter(g => g.gameDataStatus === targetStatus);
-  }, [games, statusFilter]);
+    let result = games;
+    if (statusFilter !== 'all') {
+      const targetStatus = parseInt(statusFilter, 10);
+      result = result.filter(g => g.gameDataStatus === targetStatus);
+    }
+    if (search.trim()) {
+      const q = search.toLowerCase().trim();
+      result = result.filter(
+        g => g.title.toLowerCase().includes(q) || (g.bggId?.toString() ?? '').includes(q)
+      );
+    }
+    const sorted = [...result].sort((a, b) => {
+      let cmp = 0;
+      switch (sortField) {
+        case 'title':
+          cmp = a.title.localeCompare(b.title);
+          break;
+        case 'bggId':
+          cmp = (a.bggId ?? 0) - (b.bggId ?? 0);
+          break;
+        case 'gameDataStatus':
+          cmp = a.gameDataStatus - b.gameDataStatus;
+          break;
+        case 'createdAt':
+          cmp = a.createdAt.localeCompare(b.createdAt);
+          break;
+      }
+      return sortDir === 'asc' ? cmp : -cmp;
+    });
+    return sorted;
+  }, [games, statusFilter, search, sortField, sortDir]);
+
+  const handleSort = useCallback(
+    (field: SortField) => {
+      if (field === sortField) {
+        setSortDir(d => (d === 'asc' ? 'desc' : 'asc'));
+      } else {
+        setSortField(field);
+        setSortDir('asc');
+      }
+    },
+    [sortField]
+  );
 
   // ---- Selection ----
 
@@ -305,6 +380,17 @@ export function SeedingPageClient() {
           </CardTitle>
 
           <div className="flex items-center gap-2 flex-wrap">
+            {/* Search */}
+            <div className="relative">
+              <SearchIcon className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search games\u2026"
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                className="pl-8 w-[200px] h-9"
+              />
+            </div>
+
             {/* Status filter */}
             <Select
               value={statusFilter}
@@ -409,13 +495,40 @@ export function SeedingPageClient() {
                       aria-label="Select all"
                     />
                   </TableHead>
-                  <TableHead>Title</TableHead>
-                  <TableHead className="w-32">BGG ID</TableHead>
-                  <TableHead className="w-44">Data Status</TableHead>
+                  <SortableHeader
+                    field="title"
+                    label="Title"
+                    currentField={sortField}
+                    currentDir={sortDir}
+                    onSort={handleSort}
+                  />
+                  <SortableHeader
+                    field="bggId"
+                    label="BGG ID"
+                    currentField={sortField}
+                    currentDir={sortDir}
+                    onSort={handleSort}
+                    className="w-32"
+                  />
+                  <SortableHeader
+                    field="gameDataStatus"
+                    label="Data Status"
+                    currentField={sortField}
+                    currentDir={sortDir}
+                    onSort={handleSort}
+                    className="w-44"
+                  />
                   <TableHead className="w-24 text-center">Has PDF</TableHead>
                   <TableHead className="w-32">Game Status</TableHead>
                   <TableHead className="w-24 text-center">RAG Ready</TableHead>
-                  <TableHead className="w-40">Created</TableHead>
+                  <SortableHeader
+                    field="createdAt"
+                    label="Created"
+                    currentField={sortField}
+                    currentDir={sortDir}
+                    onSort={handleSort}
+                    className="w-40"
+                  />
                   <TableHead className="w-28 text-right pr-6">Actions</TableHead>
                 </TableRow>
               </TableHeader>

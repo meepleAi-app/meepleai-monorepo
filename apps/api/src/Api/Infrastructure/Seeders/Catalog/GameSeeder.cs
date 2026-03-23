@@ -141,6 +141,9 @@ internal static class GameSeeder
                 // Clear the change tracker so any failed "Added" entity does not
                 // leak into subsequent SaveChangesAsync calls.
                 db.ChangeTracker.Clear();
+                // Also clear relationship caches — detached entities cause identity conflicts
+                // when re-attached in subsequent iterations after ChangeTracker.Clear().
+                caches.Clear();
                 skippedCount++;
             }
         }
@@ -226,7 +229,7 @@ internal static class GameSeeder
             Id = Guid.NewGuid(),
             BggId = entry.BggId is > 0 ? entry.BggId.Value : null,
             Title = entry.Title,
-            YearPublished = entry.YearPublished ?? 2020,
+            YearPublished = Math.Clamp(entry.YearPublished ?? 2020, 1901, 2100),
             Description = entry.Description ?? $"Classic board game: {entry.Title}",
             MinPlayers = entry.MinPlayers ?? 2,
             MaxPlayers = entry.MaxPlayers ?? 4,

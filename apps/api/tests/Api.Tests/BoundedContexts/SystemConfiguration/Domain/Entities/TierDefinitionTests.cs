@@ -90,14 +90,14 @@ public sealed class TierDefinitionTests
     #region UpdateLimits Tests
 
     [Fact]
-    public void UpdateLimits_ReplacesLimitsAndUpdatesTimestamp()
+    public async Task UpdateLimits_ReplacesLimitsAndUpdatesTimestamp()
     {
         // Arrange
         var tier = TierDefinition.Create("free", "Free Tier", TierLimits.FreeTier, "free");
         var originalUpdatedAt = tier.UpdatedAt;
 
         // Tiny delay to ensure timestamp difference
-        Thread.Sleep(10);
+        await Task.Delay(50);
 
         // Act
         tier.UpdateLimits(TierLimits.PremiumTier);
@@ -112,13 +112,13 @@ public sealed class TierDefinitionTests
     #region UpdateLlmModelTier Tests
 
     [Fact]
-    public void UpdateLlmModelTier_ChangesValueAndUpdatesTimestamp()
+    public async Task UpdateLlmModelTier_ChangesValueAndUpdatesTimestamp()
     {
         // Arrange
         var tier = TierDefinition.Create("free", "Free Tier", TierLimits.FreeTier, "free");
         var originalUpdatedAt = tier.UpdatedAt;
 
-        Thread.Sleep(10);
+        await Task.Delay(50);
 
         // Act
         tier.UpdateLlmModelTier("standard");
@@ -133,12 +133,12 @@ public sealed class TierDefinitionTests
     #region SetDefault Tests
 
     [Fact]
-    public void SetDefault_ChangesIsDefaultAndUpdatesTimestamp()
+    public async Task SetDefault_ChangesIsDefaultAndUpdatesTimestamp()
     {
         // Arrange
         var tier = TierDefinition.Create("free", "Free Tier", TierLimits.FreeTier, "free");
 
-        Thread.Sleep(10);
+        await Task.Delay(50);
 
         // Act
         tier.SetDefault(true);

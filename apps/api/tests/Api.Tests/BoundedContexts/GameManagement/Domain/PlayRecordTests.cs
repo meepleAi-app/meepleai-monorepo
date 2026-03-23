@@ -420,12 +420,12 @@ public class PlayRecordTests
     }
 
     [Fact]
-    public void Complete_WithStartTime_CalculatesDuration()
+    public async Task Complete_WithStartTime_CalculatesDuration()
     {
         // Arrange
         var record = CreateTestRecord();
         record.Start();
-        Thread.Sleep(100);  // Small delay
+        await Task.Delay(100);  // Small delay
 
         // Act
         record.Complete();

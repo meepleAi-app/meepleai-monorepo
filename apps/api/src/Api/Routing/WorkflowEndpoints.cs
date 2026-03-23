@@ -2,6 +2,7 @@ using Api.BoundedContexts.WorkflowIntegration.Application.Commands;
 using Api.BoundedContexts.WorkflowIntegration.Application.Queries;
 using Api.BoundedContexts.Authentication.Application.DTOs;
 using Api.Extensions;
+using Api.Middleware;
 using Api.Models;
 using Api.Services;
 using MediatR;
@@ -87,7 +88,7 @@ internal static class WorkflowEndpoints
                 WebhookUrl: request.WebhookUrl
             );
 
-            logger.LogInformation("Admin {UserId} creating n8n config: {Name}", session.User.Id, request.Name);
+            logger.LogInformation("Admin {UserId} creating n8n config: {Name}", session.User.Id, LogValueSanitizer.Sanitize(request.Name));
             var config = await mediator.Send(command, ct).ConfigureAwait(false);
             logger.LogInformation("n8n config {ConfigId} created successfully", config.Id);
             return Results.Json(config);
@@ -229,7 +230,7 @@ internal static class WorkflowEndpoints
             // Session validated by RequireSessionFilter
             var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
 
-            logger.LogInformation("User {UserId} importing n8n template {TemplateId}", session!.User!.Id, id);
+            logger.LogInformation("User {UserId} importing n8n template {TemplateId}", session!.User!.Id, LogValueSanitizer.Sanitize(id));
 
             var command = new Api.BoundedContexts.WorkflowIntegration.Application.Commands.N8NTemplates.ImportN8NTemplateCommand
             {

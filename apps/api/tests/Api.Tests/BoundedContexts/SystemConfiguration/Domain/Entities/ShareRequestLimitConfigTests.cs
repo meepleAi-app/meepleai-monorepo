@@ -191,13 +191,13 @@ public class ShareRequestLimitConfigTests
     }
 
     [Fact]
-    public void Deactivate_WhenAlreadyInactive_DoesNotUpdateTimestamp()
+    public async Task Deactivate_WhenAlreadyInactive_DoesNotUpdateTimestamp()
     {
         // Arrange
         var config = CreateTestConfig();
         config.Deactivate();
         var firstUpdatedAt = config.UpdatedAt;
-        Thread.Sleep(10);
+        await Task.Delay(50);
 
         // Act
         config.Deactivate();

@@ -79,7 +79,7 @@ function isStreamingResponse(response: Response): boolean {
 async function proxyRequest(request: NextRequest, method: string) {
   try {
     const pathname = request.nextUrl.pathname;
-    const apiPath = pathname.replace('/api/v1/', '/api/v1/');
+    const apiPath = pathname;
     const targetUrl = `${API_BASE}${apiPath}${request.nextUrl.search}`;
     if (process.env.NODE_ENV !== 'production') {
       logger.debug(`[API Proxy] ${method} ${targetUrl}`);

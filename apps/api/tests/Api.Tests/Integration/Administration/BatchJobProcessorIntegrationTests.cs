@@ -140,10 +140,11 @@ public sealed class BatchJobProcessorIntegrationTests : IAsyncLifetime
         await _unitOfWork.SaveChangesAsync(TestCancellationToken);
 
         // Verify Failed state
+        // Note: BatchJob.Fail() increments RetryCount, so after first failure it's 1
         var failedJob = await _repository.GetByIdAsync(jobId, TestCancellationToken);
         failedJob.Should().NotBeNull();
         failedJob!.Status.Should().Be(JobStatus.Failed);
-        failedJob.RetryCount.Should().Be(0);
+        failedJob.RetryCount.Should().Be(1);
         failedJob.ErrorMessage.Should().Be("Simulated failure");
 
         // Act - Retry job

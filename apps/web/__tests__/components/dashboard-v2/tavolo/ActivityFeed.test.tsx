@@ -6,7 +6,7 @@
 import { render, screen } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-import { ActivityFeed } from '@/components/dashboard-v2/tavolo/ActivityFeed';
+import { ActivityFeed } from '@/components/dashboard/tavolo/ActivityFeed';
 import type { ActivityTimelineResponse } from '@/hooks/useActivityTimeline';
 
 // ─── Mocks ───────────────────────────────────────────────────────────────────

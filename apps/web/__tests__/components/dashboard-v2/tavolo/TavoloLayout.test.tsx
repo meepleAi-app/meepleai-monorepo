@@ -5,17 +5,25 @@
 
 import { render, screen } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
-import { TavoloLayout } from '@/components/dashboard-v2/tavolo/TavoloLayout';
-import { TavoloSection } from '@/components/dashboard-v2/tavolo/TavoloSection';
-import { ActiveSessionCard } from '@/components/dashboard-v2/tavolo/ActiveSessionCard';
+import { TavoloLayout } from '@/components/dashboard/tavolo/TavoloLayout';
+import { TavoloSection } from '@/components/dashboard/tavolo/TavoloSection';
+import { ActiveSessionCard } from '@/components/dashboard/tavolo/ActiveSessionCard';
 
 // ─── Mocks ───────────────────────────────────────────────────────────────────
 
 // Mock ActivityFeed to isolate TavoloLayout tests from its API hook
-vi.mock('@/components/dashboard-v2/tavolo/ActivityFeed', () => ({
+vi.mock('@/components/dashboard/tavolo/ActivityFeed', () => ({
   ActivityFeed: () => <div data-testid="activity-feed-mock">Activity Feed</div>,
 }));
+
+const createWrapper = () => {
+  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  return ({ children }: { children: React.ReactNode }) => (
+    <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+  );
+};
 
 // Mock MeepleCard to avoid complex rendering in unit tests
 vi.mock('@/components/ui/data-display/meeple-card', () => ({
@@ -43,7 +51,8 @@ describe('TavoloLayout', () => {
     render(
       <TavoloLayout>
         <div data-testid="child-content">Main Content</div>
-      </TavoloLayout>
+      </TavoloLayout>,
+      { wrapper: createWrapper() }
     );
 
     expect(screen.getByTestId('child-content')).toBeInTheDocument();
@@ -54,7 +63,8 @@ describe('TavoloLayout', () => {
     render(
       <TavoloLayout>
         <div>Content</div>
-      </TavoloLayout>
+      </TavoloLayout>,
+      { wrapper: createWrapper() }
     );
 
     expect(screen.getByTestId('activity-feed-mock')).toBeInTheDocument();
@@ -64,7 +74,8 @@ describe('TavoloLayout', () => {
     render(
       <TavoloLayout>
         <div>Content</div>
-      </TavoloLayout>
+      </TavoloLayout>,
+      { wrapper: createWrapper() }
     );
 
     expect(screen.getByText(/Feed Attività/i)).toBeInTheDocument();
@@ -74,7 +85,8 @@ describe('TavoloLayout', () => {
     const { container } = render(
       <TavoloLayout>
         <div>Content</div>
-      </TavoloLayout>
+      </TavoloLayout>,
+      { wrapper: createWrapper() }
     );
 
     const grid = container.firstChild as HTMLElement;
@@ -87,7 +99,8 @@ describe('TavoloLayout', () => {
       <TavoloLayout>
         <div data-testid="child-1">First</div>
         <div data-testid="child-2">Second</div>
-      </TavoloLayout>
+      </TavoloLayout>,
+      { wrapper: createWrapper() }
     );
 
     expect(screen.getByTestId('child-1')).toBeInTheDocument();

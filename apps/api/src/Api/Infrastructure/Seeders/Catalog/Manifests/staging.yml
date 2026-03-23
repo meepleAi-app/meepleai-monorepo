@@ -349,6 +349,8 @@ catalog:
     averageWeight: 1.26
     imageUrl: https://cf.geekdo-images.com/nC6ifPCDnAItwoKSKXVrnw__original/img/Id-jjIer_61ZbvI2_RVRCeBZFY4=/0x0/filters:format(jpeg)/pic8907965.jpg
     thumbnailUrl: https://cf.geekdo-images.com/nC6ifPCDnAItwoKSKXVrnw__small/img/1iZav_8ZqurrDbvkZA9GcFhB5x0=/fit-in/200x150/filters:strip_icc()/pic8907965.jpg
+    fallbackImageUrl: https://cf.geekdo-images.com/nC6ifPCDnAItwoKSKXVrnw__original/img/Id-jjIer_61ZbvI2_RVRCeBZFY4=/0x0/filters:format(jpeg)/pic8907965.jpg
+    fallbackThumbnailUrl: https://cf.geekdo-images.com/nC6ifPCDnAItwoKSKXVrnw__small/img/1iZav_8ZqurrDbvkZA9GcFhB5x0=/fit-in/200x150/filters:strip_icc()/pic8907965.jpg
     categories:
     - Card Game
     - Deduction
@@ -436,6 +438,8 @@ catalog:
     averageWeight: 3.27
     imageUrl: https://cf.geekdo-images.com/wg9oOLcsKvDesSUdZQ4rxw__original/img/thIqWDnH9utKuoKVEUqveDixprI=/0x0/filters:format(jpeg)/pic3536616.jpg
     thumbnailUrl: https://cf.geekdo-images.com/wg9oOLcsKvDesSUdZQ4rxw__small/img/BTxqxgYay5tHJfVoJ2NF5g43_gA=/fit-in/200x150/filters:strip_icc()/pic3536616.jpg
+    fallbackImageUrl: https://cf.geekdo-images.com/wg9oOLcsKvDesSUdZQ4rxw__original/img/thIqWDnH9utKuoKVEUqveDixprI=/0x0/filters:format(jpeg)/pic3536616.jpg
+    fallbackThumbnailUrl: https://cf.geekdo-images.com/wg9oOLcsKvDesSUdZQ4rxw__small/img/BTxqxgYay5tHJfVoJ2NF5g43_gA=/fit-in/200x150/filters:strip_icc()/pic3536616.jpg
     categories:
     - Civilization
     - Economic
@@ -514,6 +518,8 @@ catalog:
     averageWeight: 2.31
     imageUrl: https://cf.geekdo-images.com/35h9Za_JvMMMtx_92kT0Jg__original/img/jt70jJDZ1y1FWJs4ZQf5FI8APVY=/0x0/filters:format(jpeg)/pic7149798.jpg
     thumbnailUrl: https://cf.geekdo-images.com/35h9Za_JvMMMtx_92kT0Jg__small/img/BUOso8b0M1aUOkU80FWlhE8uuxc=/fit-in/200x150/filters:strip_icc()/pic7149798.jpg
+    fallbackImageUrl: https://cf.geekdo-images.com/35h9Za_JvMMMtx_92kT0Jg__original/img/jt70jJDZ1y1FWJs4ZQf5FI8APVY=/0x0/filters:format(jpeg)/pic7149798.jpg
+    fallbackThumbnailUrl: https://cf.geekdo-images.com/35h9Za_JvMMMtx_92kT0Jg__small/img/BUOso8b0M1aUOkU80FWlhE8uuxc=/fit-in/200x150/filters:strip_icc()/pic7149798.jpg
     categories:
     - Ancient
     - Card Game
@@ -581,6 +587,8 @@ catalog:
     averageWeight: 1.82
     imageUrl: https://cf.geekdo-images.com/kdWYkW-7AqG63HhqPL6ekA__original/img/rWF8r4JXXCQQ7QhiWHhmT-rQ3Pc=/0x0/filters:format(jpeg)/pic8937637.jpg
     thumbnailUrl: https://cf.geekdo-images.com/kdWYkW-7AqG63HhqPL6ekA__small/img/5G46jv8MFh_BfX67iMSouTMhKxc=/fit-in/200x150/filters:strip_icc()/pic8937637.jpg
+    fallbackImageUrl: https://cf.geekdo-images.com/kdWYkW-7AqG63HhqPL6ekA__original/img/rWF8r4JXXCQQ7QhiWHhmT-rQ3Pc=/0x0/filters:format(jpeg)/pic8937637.jpg
+    fallbackThumbnailUrl: https://cf.geekdo-images.com/kdWYkW-7AqG63HhqPL6ekA__small/img/5G46jv8MFh_BfX67iMSouTMhKxc=/fit-in/200x150/filters:strip_icc()/pic8937637.jpg
     categories:
     - Trains
     mechanics:
@@ -638,6 +646,8 @@ catalog:
     averageWeight: 1.78
     imageUrl: https://cf.geekdo-images.com/vNFe4JkhKAERzi4T0Ntwpw__original/img/rqcUdtu_N4v-SpI96XVmpYHnJww=/0x0/filters:format(png)/pic8234167.png
     thumbnailUrl: https://cf.geekdo-images.com/vNFe4JkhKAERzi4T0Ntwpw__small/img/KKU_42Uswt4tKCpf1zY5kTzgr-g=/fit-in/200x150/filters:strip_icc()/pic8234167.png
+    fallbackImageUrl: https://cf.geekdo-images.com/vNFe4JkhKAERzi4T0Ntwpw__original/img/rqcUdtu_N4v-SpI96XVmpYHnJww=/0x0/filters:format(png)/pic8234167.png
+    fallbackThumbnailUrl: https://cf.geekdo-images.com/vNFe4JkhKAERzi4T0Ntwpw__small/img/KKU_42Uswt4tKCpf1zY5kTzgr-g=/fit-in/200x150/filters:strip_icc()/pic8234167.png
     categories:
     - Card Game
     - Economic
@@ -706,6 +716,8 @@ catalog:
     averageWeight: 1.92
     imageUrl: https://cf.geekdo-images.com/0K1AOciqlMVUWFPLTJSiww__original/img/O37sCRSJLq4S8EpCxFDNVsNBuxE=/0x0/filters:format(jpeg)/pic66668.jpg
     thumbnailUrl: https://cf.geekdo-images.com/0K1AOciqlMVUWFPLTJSiww__small/img/RDvu2FvsYVVH8icp1VsilUlqUGI=/fit-in/200x150/filters:strip_icc()/pic66668.jpg
+    fallbackImageUrl: https://cf.geekdo-images.com/0K1AOciqlMVUWFPLTJSiww__original/img/O37sCRSJLq4S8EpCxFDNVsNBuxE=/0x0/filters:format(jpeg)/pic66668.jpg
+    fallbackThumbnailUrl: https://cf.geekdo-images.com/0K1AOciqlMVUWFPLTJSiww__small/img/RDvu2FvsYVVH8icp1VsilUlqUGI=/fit-in/200x150/filters:strip_icc()/pic66668.jpg
     categories:
     - Trains
     mechanics:
@@ -780,6 +792,8 @@ catalog:
     averageWeight: 2.34
     imageUrl: https://cf.geekdo-images.com/j6iQpZ4XkemZP07HNCODBA__original/img/96COuakNiLRrjDLc1sM4Zxsw4WE=/0x0/filters:format(jpeg)/pic394356.jpg
     thumbnailUrl: https://cf.geekdo-images.com/j6iQpZ4XkemZP07HNCODBA__small/img/B2u2ghwlmI_qsUtCwuvcbnBcIqU=/fit-in/200x150/filters:strip_icc()/pic394356.jpg
+    fallbackImageUrl: https://cf.geekdo-images.com/j6iQpZ4XkemZP07HNCODBA__original/img/96COuakNiLRrjDLc1sM4Zxsw4WE=/0x0/filters:format(jpeg)/pic394356.jpg
+    fallbackThumbnailUrl: https://cf.geekdo-images.com/j6iQpZ4XkemZP07HNCODBA__small/img/B2u2ghwlmI_qsUtCwuvcbnBcIqU=/fit-in/200x150/filters:strip_icc()/pic394356.jpg
     categories:
     - Card Game
     - Medieval
@@ -841,6 +855,8 @@ catalog:
     averageWeight: 3.45
     imageUrl: https://cf.geekdo-images.com/7k_nOxpO9OGIjhLq2BUZdA__original/img/HlDb9F365w0tSP8uD1vf1pfniQE=/0x0/filters:format(jpeg)/pic3163924.jpg
     thumbnailUrl: https://cf.geekdo-images.com/7k_nOxpO9OGIjhLq2BUZdA__small/img/eQ69OEDdjYjfKg6q5Navee87skU=/fit-in/200x150/filters:strip_icc()/pic3163924.jpg
+    fallbackImageUrl: https://cf.geekdo-images.com/7k_nOxpO9OGIjhLq2BUZdA__original/img/HlDb9F365w0tSP8uD1vf1pfniQE=/0x0/filters:format(jpeg)/pic3163924.jpg
+    fallbackThumbnailUrl: https://cf.geekdo-images.com/7k_nOxpO9OGIjhLq2BUZdA__small/img/eQ69OEDdjYjfKg6q5Navee87skU=/fit-in/200x150/filters:strip_icc()/pic3163924.jpg
     categories:
     - Economic
     - Fighting
@@ -918,6 +934,8 @@ catalog:
     averageWeight: 1.6
     imageUrl: https://cf.geekdo-images.com/xNSaIHCKr_cc7Q2rQSSJPQ__original/img/HJJdVosBV35kj8pQ6wmQMiJRhVA=/0x0/filters:format(jpeg)/pic9273518.jpg
     thumbnailUrl: https://cf.geekdo-images.com/xNSaIHCKr_cc7Q2rQSSJPQ__small/img/9Kf3YKiVIJxd_EbqJEJFdlGfj7I=/fit-in/200x150/filters:strip_icc()/pic9273518.jpg
+    fallbackImageUrl: https://cf.geekdo-images.com/xNSaIHCKr_cc7Q2rQSSJPQ__original/img/HJJdVosBV35kj8pQ6wmQMiJRhVA=/0x0/filters:format(jpeg)/pic9273518.jpg
+    fallbackThumbnailUrl: https://cf.geekdo-images.com/xNSaIHCKr_cc7Q2rQSSJPQ__small/img/9Kf3YKiVIJxd_EbqJEJFdlGfj7I=/fit-in/200x150/filters:strip_icc()/pic9273518.jpg
     categories:
     - Abstract Strategy
     - Economic
@@ -986,6 +1004,8 @@ catalog:
     averageWeight: 1.18
     imageUrl: https://cf.geekdo-images.com/T1ltXwapFUtghS9A7_tf4g__original/img/xIAzJY7rl-mtPStRZSqnTVsAr8Y=/0x0/filters:format(jpeg)/pic1401448.jpg
     thumbnailUrl: https://cf.geekdo-images.com/T1ltXwapFUtghS9A7_tf4g__small/img/GtNX7gCmGpw39Tr6JApWC3Aga5U=/fit-in/200x150/filters:strip_icc()/pic1401448.jpg
+    fallbackImageUrl: https://cf.geekdo-images.com/T1ltXwapFUtghS9A7_tf4g__original/img/xIAzJY7rl-mtPStRZSqnTVsAr8Y=/0x0/filters:format(jpeg)/pic1401448.jpg
+    fallbackThumbnailUrl: https://cf.geekdo-images.com/T1ltXwapFUtghS9A7_tf4g__small/img/GtNX7gCmGpw39Tr6JApWC3Aga5U=/fit-in/200x150/filters:strip_icc()/pic1401448.jpg
     categories:
     - Card Game
     - Deduction
@@ -1061,6 +1081,8 @@ catalog:
     averageWeight: 1.48
     imageUrl: https://cf.geekdo-images.com/m_RzXpHURC0_xLkvRSR_sw__original/img/hSvWgiRYJCTTuoLOWTW3c8sYtl8=/0x0/filters:format(jpeg)/pic3043734.jpg
     thumbnailUrl: https://cf.geekdo-images.com/m_RzXpHURC0_xLkvRSR_sw__small/img/OfgWmkGJj5BgOO0zFHEtP5CHfbU=/fit-in/200x150/filters:strip_icc()/pic3043734.jpg
+    fallbackImageUrl: https://cf.geekdo-images.com/m_RzXpHURC0_xLkvRSR_sw__original/img/hSvWgiRYJCTTuoLOWTW3c8sYtl8=/0x0/filters:format(jpeg)/pic3043734.jpg
+    fallbackThumbnailUrl: https://cf.geekdo-images.com/m_RzXpHURC0_xLkvRSR_sw__small/img/OfgWmkGJj5BgOO0zFHEtP5CHfbU=/fit-in/200x150/filters:strip_icc()/pic3043734.jpg
     categories:
     - Dice
     - Fighting
@@ -1139,6 +1161,8 @@ catalog:
     averageWeight: 1.19
     imageUrl: https://cf.geekdo-images.com/J0PlHArkZDJ57H-brXW2Fw__original/img/jt3kFCHJ3HJ2079dMLwipFZqdQg=/0x0/filters:format(jpeg)/pic6738336.jpg
     thumbnailUrl: https://cf.geekdo-images.com/J0PlHArkZDJ57H-brXW2Fw__small/img/QVwPXskFikQwBQlrdLJBAiRGgdg=/fit-in/200x150/filters:strip_icc()/pic6738336.jpg
+    fallbackImageUrl: https://cf.geekdo-images.com/J0PlHArkZDJ57H-brXW2Fw__original/img/jt3kFCHJ3HJ2079dMLwipFZqdQg=/0x0/filters:format(jpeg)/pic6738336.jpg
+    fallbackThumbnailUrl: https://cf.geekdo-images.com/J0PlHArkZDJ57H-brXW2Fw__small/img/QVwPXskFikQwBQlrdLJBAiRGgdg=/fit-in/200x150/filters:strip_icc()/pic6738336.jpg
     categories:
     - Card Game
     - Humor
@@ -1192,6 +1216,8 @@ catalog:
     averageWeight: 3.92
     imageUrl: https://cf.geekdo-images.com/sZYp_3BTDGjh2unaZfZmuA__original/img/7d-lj5Gd1e8PFnD97LYFah2c45M=/0x0/filters:format(jpeg)/pic2437871.jpg
     thumbnailUrl: https://cf.geekdo-images.com/sZYp_3BTDGjh2unaZfZmuA__small/img/veqFeP4d_3zNhFc3GNBkV95rBEQ=/fit-in/200x150/filters:strip_icc()/pic2437871.jpg
+    fallbackImageUrl: https://cf.geekdo-images.com/sZYp_3BTDGjh2unaZfZmuA__original/img/7d-lj5Gd1e8PFnD97LYFah2c45M=/0x0/filters:format(jpeg)/pic2437871.jpg
+    fallbackThumbnailUrl: https://cf.geekdo-images.com/sZYp_3BTDGjh2unaZfZmuA__small/img/veqFeP4d_3zNhFc3GNBkV95rBEQ=/fit-in/200x150/filters:strip_icc()/pic2437871.jpg
     categories:
     - Adventure
     - Exploration
@@ -1268,6 +1294,8 @@ catalog:
     averageWeight: 2.35
     imageUrl: https://cf.geekdo-images.com/aoPM07XzoceB-RydLh08zA__original/img/bYLzrwZO9u-3h2wyU-PHc8aTOY4=/0x0/filters:format(jpeg)/pic428828.jpg
     thumbnailUrl: https://cf.geekdo-images.com/aoPM07XzoceB-RydLh08zA__small/img/o3Bw9heVDJRgPYlI_PksCvLAgnM=/fit-in/200x150/filters:strip_icc()/pic428828.jpg
+    fallbackImageUrl: https://cf.geekdo-images.com/aoPM07XzoceB-RydLh08zA__original/img/bYLzrwZO9u-3h2wyU-PHc8aTOY4=/0x0/filters:format(jpeg)/pic428828.jpg
+    fallbackThumbnailUrl: https://cf.geekdo-images.com/aoPM07XzoceB-RydLh08zA__small/img/o3Bw9heVDJRgPYlI_PksCvLAgnM=/fit-in/200x150/filters:strip_icc()/pic428828.jpg
     categories:
     - Fantasy
     - Fighting
@@ -1329,6 +1357,8 @@ catalog:
     averageWeight: 2.83
     imageUrl: https://cf.geekdo-images.com/fjE7V5LNq31yVEW_yuqI-Q__original/img/HQ1ti16wT9lqja5_h3gUfHUIcVI=/0x0/filters:format(png)/pic3918905.png
     thumbnailUrl: https://cf.geekdo-images.com/fjE7V5LNq31yVEW_yuqI-Q__small/img/Cf_mYxR_VvdjTEPXseSurni2JNI=/fit-in/200x150/filters:strip_icc()/pic3918905.png
+    fallbackImageUrl: https://cf.geekdo-images.com/fjE7V5LNq31yVEW_yuqI-Q__original/img/HQ1ti16wT9lqja5_h3gUfHUIcVI=/0x0/filters:format(png)/pic3918905.png
+    fallbackThumbnailUrl: https://cf.geekdo-images.com/fjE7V5LNq31yVEW_yuqI-Q__small/img/Cf_mYxR_VvdjTEPXseSurni2JNI=/fit-in/200x150/filters:strip_icc()/pic3918905.png
     categories:
     - Animals
     - Card Game
@@ -1453,6 +1483,8 @@ catalog:
     averageWeight: 1.82
     imageUrl: https://cf.geekdo-images.com/J-ts3MW0UhDzs621TR6cog__original/img/FbqPPCilgZKND2xmhWJgkfjZiYE=/0x0/filters:format(jpeg)/pic1871016.jpg
     thumbnailUrl: https://cf.geekdo-images.com/J-ts3MW0UhDzs621TR6cog__small/img/8hVkpMC5pDLr6ARI_4gI4N3aF5M=/fit-in/200x150/filters:strip_icc()/pic1871016.jpg
+    fallbackImageUrl: https://cf.geekdo-images.com/J-ts3MW0UhDzs621TR6cog__original/img/FbqPPCilgZKND2xmhWJgkfjZiYE=/0x0/filters:format(jpeg)/pic1871016.jpg
+    fallbackThumbnailUrl: https://cf.geekdo-images.com/J-ts3MW0UhDzs621TR6cog__small/img/8hVkpMC5pDLr6ARI_4gI4N3aF5M=/fit-in/200x150/filters:strip_icc()/pic1871016.jpg
     categories:
     - Card Game
     - Fantasy
@@ -1524,6 +1556,8 @@ catalog:
     averageWeight: 1.74
     imageUrl: https://cf.geekdo-images.com/JgAkEBUaiHOsOS94iRMs2w__original/img/H5d4I5z_HSpPEu7EAl0DqLt9_pM=/0x0/filters:format(jpeg)/pic646458.jpg
     thumbnailUrl: https://cf.geekdo-images.com/JgAkEBUaiHOsOS94iRMs2w__small/img/5aPR8-KMbgucI_XkPE2PJaMQQsg=/fit-in/200x150/filters:strip_icc()/pic646458.jpg
+    fallbackImageUrl: https://cf.geekdo-images.com/JgAkEBUaiHOsOS94iRMs2w__original/img/H5d4I5z_HSpPEu7EAl0DqLt9_pM=/0x0/filters:format(jpeg)/pic646458.jpg
+    fallbackThumbnailUrl: https://cf.geekdo-images.com/JgAkEBUaiHOsOS94iRMs2w__small/img/5aPR8-KMbgucI_XkPE2PJaMQQsg=/fit-in/200x150/filters:strip_icc()/pic646458.jpg
     categories:
     - Adventure
     - Fantasy
@@ -1593,6 +1627,8 @@ catalog:
     averageWeight: 3.84
     imageUrl: https://cf.geekdo-images.com/JUAUWaVUzeBgzirhZNmHHw__original/img/E0s2LvtFA1L5YKk-_44D4u2VD2s=/0x0/filters:format(jpeg)/pic4254509.jpg
     thumbnailUrl: https://cf.geekdo-images.com/JUAUWaVUzeBgzirhZNmHHw__small/img/ACovMZzGGIsBRyEQXFnsT8282NM=/fit-in/200x150/filters:strip_icc()/pic4254509.jpg
+    fallbackImageUrl: https://cf.geekdo-images.com/JUAUWaVUzeBgzirhZNmHHw__original/img/E0s2LvtFA1L5YKk-_44D4u2VD2s=/0x0/filters:format(jpeg)/pic4254509.jpg
+    fallbackThumbnailUrl: https://cf.geekdo-images.com/JUAUWaVUzeBgzirhZNmHHw__small/img/ACovMZzGGIsBRyEQXFnsT8282NM=/fit-in/200x150/filters:strip_icc()/pic4254509.jpg
     categories:
     - Animals
     - Fantasy
@@ -1653,6 +1689,8 @@ catalog:
     averageWeight: 1.16
     imageUrl: https://cf.geekdo-images.com/Fn3PSPZVxa3YurlorITQ1Q__original/img/5vRsn2TT9eJmq27i9HtLWKpB_xs=/0x0/filters:format(jpeg)/pic1900075.jpg
     thumbnailUrl: https://cf.geekdo-images.com/Fn3PSPZVxa3YurlorITQ1Q__small/img/6XF493O0tSyLyZP5ArlcZrOTMXQ=/fit-in/200x150/filters:strip_icc()/pic1900075.jpg
+    fallbackImageUrl: https://cf.geekdo-images.com/Fn3PSPZVxa3YurlorITQ1Q__original/img/5vRsn2TT9eJmq27i9HtLWKpB_xs=/0x0/filters:format(jpeg)/pic1900075.jpg
+    fallbackThumbnailUrl: https://cf.geekdo-images.com/Fn3PSPZVxa3YurlorITQ1Q__small/img/6XF493O0tSyLyZP5ArlcZrOTMXQ=/fit-in/200x150/filters:strip_icc()/pic1900075.jpg
     categories:
     - Card Game
     - Party Game
@@ -1719,6 +1757,8 @@ catalog:
     averageWeight: 4.08
     imageUrl: https://cf.geekdo-images.com/kjCm4ZvPjIZxS-mYgSPy1g__original/img/9uLd9C3XAvInLCLhAoXqKVk56zs=/0x0/filters:format(jpeg)/pic7013651.jpg
     thumbnailUrl: https://cf.geekdo-images.com/kjCm4ZvPjIZxS-mYgSPy1g__small/img/aUlIih2_R7P8IYKeyNl2heLQbu8=/fit-in/200x150/filters:strip_icc()/pic7013651.jpg
+    fallbackImageUrl: https://cf.geekdo-images.com/kjCm4ZvPjIZxS-mYgSPy1g__original/img/9uLd9C3XAvInLCLhAoXqKVk56zs=/0x0/filters:format(jpeg)/pic7013651.jpg
+    fallbackThumbnailUrl: https://cf.geekdo-images.com/kjCm4ZvPjIZxS-mYgSPy1g__small/img/aUlIih2_R7P8IYKeyNl2heLQbu8=/fit-in/200x150/filters:strip_icc()/pic7013651.jpg
     categories:
     - Environmental
     - Fantasy
@@ -1785,6 +1825,8 @@ catalog:
     averageWeight: 1.46
     imageUrl: https://cf.geekdo-images.com/_LTujSe_o16nvjDC-J0seA__original/img/zUnAdsgt4dCxvtoRDc_9DHbic0M=/0x0/filters:format(jpeg)/pic5100947.jpg
     thumbnailUrl: https://cf.geekdo-images.com/_LTujSe_o16nvjDC-J0seA__small/img/82vhODfpxIT03BzW4NkisJ5Unzs=/fit-in/200x150/filters:strip_icc()/pic5100947.jpg
+    fallbackImageUrl: https://cf.geekdo-images.com/_LTujSe_o16nvjDC-J0seA__original/img/zUnAdsgt4dCxvtoRDc_9DHbic0M=/0x0/filters:format(jpeg)/pic5100947.jpg
+    fallbackThumbnailUrl: https://cf.geekdo-images.com/_LTujSe_o16nvjDC-J0seA__small/img/82vhODfpxIT03BzW4NkisJ5Unzs=/fit-in/200x150/filters:strip_icc()/pic5100947.jpg
     categories:
     - Arabian
     - Card Game
@@ -1842,6 +1884,8 @@ catalog:
     averageWeight: 1.94
     imageUrl: https://cf.geekdo-images.com/B1bLRWzTASZ-xx9NoAE79A__original/img/HulJk6gFzp_bxl0wzc2XEMq8NLM=/0x0/filters:format(png)/pic8780293.png
     thumbnailUrl: https://cf.geekdo-images.com/B1bLRWzTASZ-xx9NoAE79A__small/img/deG3pr-ORZ3JrGvQA-oQNrwh0l0=/fit-in/200x150/filters:strip_icc()/pic8780293.png
+    fallbackImageUrl: https://cf.geekdo-images.com/B1bLRWzTASZ-xx9NoAE79A__original/img/HulJk6gFzp_bxl0wzc2XEMq8NLM=/0x0/filters:format(png)/pic8780293.png
+    fallbackThumbnailUrl: https://cf.geekdo-images.com/B1bLRWzTASZ-xx9NoAE79A__small/img/deG3pr-ORZ3JrGvQA-oQNrwh0l0=/fit-in/200x150/filters:strip_icc()/pic8780293.png
     categories:
     - Fantasy
     - Medieval
@@ -1905,6 +1949,8 @@ catalog:
     averageWeight: 1.96
     imageUrl: https://cf.geekdo-images.com/98LnQShydr11OBKS46xY-Q__original/img/Q-ZkgnuBu9OTBr7J3qnqPjqamAE=/0x0/filters:format(jpeg)/pic5687013.jpg
     thumbnailUrl: https://cf.geekdo-images.com/98LnQShydr11OBKS46xY-Q__small/img/et-fnuozyOdBOVL-5kSS3_7I8fw=/fit-in/200x150/filters:strip_icc()/pic5687013.jpg
+    fallbackImageUrl: https://cf.geekdo-images.com/98LnQShydr11OBKS46xY-Q__original/img/Q-ZkgnuBu9OTBr7J3qnqPjqamAE=/0x0/filters:format(jpeg)/pic5687013.jpg
+    fallbackThumbnailUrl: https://cf.geekdo-images.com/98LnQShydr11OBKS46xY-Q__small/img/et-fnuozyOdBOVL-5kSS3_7I8fw=/fit-in/200x150/filters:strip_icc()/pic5687013.jpg
     categories:
     - Card Game
     - Science Fiction
@@ -1994,6 +2040,8 @@ catalog:
     averageWeight: 1.41
     imageUrl: https://cf.geekdo-images.com/MWhSY_GOe2-bmlQ2rntSVg__original/img/ayAAWBK1rAEumARNmROsOtvqW-4=/0x0/filters:format(jpeg)/pic2016054.jpg
     thumbnailUrl: https://cf.geekdo-images.com/MWhSY_GOe2-bmlQ2rntSVg__small/img/vuR_0PCX1w2EkjO_LbchOHZPOwU=/fit-in/200x150/filters:strip_icc()/pic2016054.jpg
+    fallbackImageUrl: https://cf.geekdo-images.com/MWhSY_GOe2-bmlQ2rntSVg__original/img/ayAAWBK1rAEumARNmROsOtvqW-4=/0x0/filters:format(jpeg)/pic2016054.jpg
+    fallbackThumbnailUrl: https://cf.geekdo-images.com/MWhSY_GOe2-bmlQ2rntSVg__small/img/vuR_0PCX1w2EkjO_LbchOHZPOwU=/fit-in/200x150/filters:strip_icc()/pic2016054.jpg
     categories:
     - Bluffing
     - Card Game
@@ -2059,6 +2107,8 @@ catalog:
     averageWeight: 1.08
     imageUrl: https://cf.geekdo-images.com/N8bL53-pRU7zaXDTrEaYrw__original/img/0ciN1VZYifUd0qIDO0e8cGXmiss=/0x0/filters:format(png)/pic2691976.png
     thumbnailUrl: https://cf.geekdo-images.com/N8bL53-pRU7zaXDTrEaYrw__small/img/3tH4pIc1Udzkd0tXc6MgVQ59BC0=/fit-in/200x150/filters:strip_icc()/pic2691976.png
+    fallbackImageUrl: https://cf.geekdo-images.com/N8bL53-pRU7zaXDTrEaYrw__original/img/0ciN1VZYifUd0qIDO0e8cGXmiss=/0x0/filters:format(png)/pic2691976.png
+    fallbackThumbnailUrl: https://cf.geekdo-images.com/N8bL53-pRU7zaXDTrEaYrw__small/img/3tH4pIc1Udzkd0tXc6MgVQ59BC0=/fit-in/200x150/filters:strip_icc()/pic2691976.png
     categories:
     - Animals
     - Card Game
@@ -2127,6 +2177,8 @@ catalog:
     averageWeight: 3.64
     imageUrl: https://cf.geekdo-images.com/3L6ZtOll9W5O6-3-EwSMyw__original/img/V37KuMJlCzpxAilzN39BzeLvc9Q=/0x0/filters:format(jpeg)/pic1899157.jpg
     thumbnailUrl: https://cf.geekdo-images.com/3L6ZtOll9W5O6-3-EwSMyw__small/img/TpNF65wCIb1n3EGW18eJJ3MlRMo=/fit-in/200x150/filters:strip_icc()/pic1899157.jpg
+    fallbackImageUrl: https://cf.geekdo-images.com/3L6ZtOll9W5O6-3-EwSMyw__original/img/V37KuMJlCzpxAilzN39BzeLvc9Q=/0x0/filters:format(jpeg)/pic1899157.jpg
+    fallbackThumbnailUrl: https://cf.geekdo-images.com/3L6ZtOll9W5O6-3-EwSMyw__small/img/TpNF65wCIb1n3EGW18eJJ3MlRMo=/fit-in/200x150/filters:strip_icc()/pic1899157.jpg
     categories:
     - Animals
     - Economic
@@ -2179,6 +2231,8 @@ catalog:
     averageWeight: 1.24
     imageUrl: https://cf.geekdo-images.com/c0m3gwZTcfKoLI63ASio8g__original/img/HT6NQPT0cSFcZXjSewtjTO_NBAE=/0x0/filters:format(png)/pic8443569.png
     thumbnailUrl: https://cf.geekdo-images.com/c0m3gwZTcfKoLI63ASio8g__small/img/4p4Xydg0tze9UFcd6oUbCnVyxCw=/fit-in/200x150/filters:strip_icc()/pic8443569.png
+    fallbackImageUrl: https://cf.geekdo-images.com/c0m3gwZTcfKoLI63ASio8g__original/img/HT6NQPT0cSFcZXjSewtjTO_NBAE=/0x0/filters:format(png)/pic8443569.png
+    fallbackThumbnailUrl: https://cf.geekdo-images.com/c0m3gwZTcfKoLI63ASio8g__small/img/4p4Xydg0tze9UFcd6oUbCnVyxCw=/fit-in/200x150/filters:strip_icc()/pic8443569.png
     categories:
     - Abstract Strategy
     - Medieval
@@ -2245,6 +2299,8 @@ catalog:
     averageWeight: 1.69
     imageUrl: https://cf.geekdo-images.com/JDVksMwfcqoem1k_xtZrOA__original/img/5vNHZiTEhK4aRDuGXv5KImp9cmQ=/0x0/filters:format(jpeg)/pic2007286.jpg
     thumbnailUrl: https://cf.geekdo-images.com/JDVksMwfcqoem1k_xtZrOA__small/img/amCeCcEKhYGbVtDvpvIMnu3qTg0=/fit-in/200x150/filters:strip_icc()/pic2007286.jpg
+    fallbackImageUrl: https://cf.geekdo-images.com/JDVksMwfcqoem1k_xtZrOA__original/img/5vNHZiTEhK4aRDuGXv5KImp9cmQ=/0x0/filters:format(jpeg)/pic2007286.jpg
+    fallbackThumbnailUrl: https://cf.geekdo-images.com/JDVksMwfcqoem1k_xtZrOA__small/img/amCeCcEKhYGbVtDvpvIMnu3qTg0=/fit-in/200x150/filters:strip_icc()/pic2007286.jpg
     categories:
     - Card Game
     - Deduction
@@ -2316,6 +2372,8 @@ catalog:
     averageWeight: 2.83
     imageUrl: https://cf.geekdo-images.com/-Qer2BBPG7qGGDu6KcVDIw__original/img/PlzAH7swN1nsFxOXbfUvE3TkE5w=/0x0/filters:format(png)/pic2452831.png
     thumbnailUrl: https://cf.geekdo-images.com/-Qer2BBPG7qGGDu6KcVDIw__small/img/NQQcjS31TO0DE246N9rpt0hd9eo=/fit-in/200x150/filters:strip_icc()/pic2452831.png
+    fallbackImageUrl: https://cf.geekdo-images.com/-Qer2BBPG7qGGDu6KcVDIw__original/img/PlzAH7swN1nsFxOXbfUvE3TkE5w=/0x0/filters:format(png)/pic2452831.png
+    fallbackThumbnailUrl: https://cf.geekdo-images.com/-Qer2BBPG7qGGDu6KcVDIw__small/img/NQQcjS31TO0DE246N9rpt0hd9eo=/fit-in/200x150/filters:strip_icc()/pic2452831.png
     categories:
     - Environmental
     - Medical
@@ -2369,6 +2427,8 @@ catalog:
     averageWeight: 1.84
     imageUrl: https://cf.geekdo-images.com/MjeJZfulbsM1DSV3DrGJYA__original/img/B374C04Eip7fmQBGJzgiOTp-jyQ=/0x0/filters:format(jpeg)/pic5100691.jpg
     thumbnailUrl: https://cf.geekdo-images.com/MjeJZfulbsM1DSV3DrGJYA__small/img/tVSFjSxYEcw7sKj3unIIQV8kxoc=/fit-in/200x150/filters:strip_icc()/pic5100691.jpg
+    fallbackImageUrl: https://cf.geekdo-images.com/MjeJZfulbsM1DSV3DrGJYA__original/img/B374C04Eip7fmQBGJzgiOTp-jyQ=/0x0/filters:format(jpeg)/pic5100691.jpg
+    fallbackThumbnailUrl: https://cf.geekdo-images.com/MjeJZfulbsM1DSV3DrGJYA__small/img/tVSFjSxYEcw7sKj3unIIQV8kxoc=/fit-in/200x150/filters:strip_icc()/pic5100691.jpg
     categories:
     - Animals
     - Environmental
@@ -2430,6 +2490,8 @@ catalog:
     averageWeight: 3.64
     imageUrl: https://cf.geekdo-images.com/_HhIdavYW-hid20Iq3hhmg__original/img/PBzsLRqNKQKJxGnzpb7o3qLWPQM=/0x0/filters:format(jpeg)/pic5055631.jpg
     thumbnailUrl: https://cf.geekdo-images.com/_HhIdavYW-hid20Iq3hhmg__small/img/OMkN_E5eyWrkID_cHCnQEbIixGM=/fit-in/200x150/filters:strip_icc()/pic5055631.jpg
+    fallbackImageUrl: https://cf.geekdo-images.com/_HhIdavYW-hid20Iq3hhmg__original/img/PBzsLRqNKQKJxGnzpb7o3qLWPQM=/0x0/filters:format(jpeg)/pic5055631.jpg
+    fallbackThumbnailUrl: https://cf.geekdo-images.com/_HhIdavYW-hid20Iq3hhmg__small/img/OMkN_E5eyWrkID_cHCnQEbIixGM=/fit-in/200x150/filters:strip_icc()/pic5055631.jpg
     categories:
     - Adventure
     - Exploration
@@ -2501,6 +2563,8 @@ catalog:
     averageWeight: 3.25
     imageUrl: https://cf.geekdo-images.com/yd6LuatytHRhcFCxCf-EEg__original/img/OS13C6W4i1XW__wWVVVaqF7BV0c=/0x0/filters:format(jpeg)/pic4459753.jpg
     thumbnailUrl: https://cf.geekdo-images.com/yd6LuatytHRhcFCxCf-EEg__small/img/jWTonZ5oYNlPzpELKHIJGWSS0Y8=/fit-in/200x150/filters:strip_icc()/pic4459753.jpg
+    fallbackImageUrl: https://cf.geekdo-images.com/yd6LuatytHRhcFCxCf-EEg__original/img/OS13C6W4i1XW__wWVVVaqF7BV0c=/0x0/filters:format(jpeg)/pic4459753.jpg
+    fallbackThumbnailUrl: https://cf.geekdo-images.com/yd6LuatytHRhcFCxCf-EEg__small/img/jWTonZ5oYNlPzpELKHIJGWSS0Y8=/fit-in/200x150/filters:strip_icc()/pic4459753.jpg
     categories:
     - Economic
     - Industry / Manufacturing
@@ -2568,6 +2632,8 @@ catalog:
     averageWeight: 2.4
     imageUrl: https://cf.geekdo-images.com/lqmt2Oti_qJS65XqHcB8AA__original/img/7R6yYk8A2eUMmSDaxGjae5SceGI=/0x0/filters:format(png)/pic5146864.png
     thumbnailUrl: https://cf.geekdo-images.com/lqmt2Oti_qJS65XqHcB8AA__small/img/EDOmDbRhLy4za2PHkJ5IbhNxZmk=/fit-in/200x150/filters:strip_icc()/pic5146864.png
+    fallbackImageUrl: https://cf.geekdo-images.com/lqmt2Oti_qJS65XqHcB8AA__original/img/7R6yYk8A2eUMmSDaxGjae5SceGI=/0x0/filters:format(png)/pic5146864.png
+    fallbackThumbnailUrl: https://cf.geekdo-images.com/lqmt2Oti_qJS65XqHcB8AA__small/img/EDOmDbRhLy4za2PHkJ5IbhNxZmk=/fit-in/200x150/filters:strip_icc()/pic5146864.png
     categories:
     - Adventure
     - Exploration
@@ -2625,6 +2691,8 @@ catalog:
     averageWeight: 3.8
     imageUrl: https://cf.geekdo-images.com/SoU8p28Sk1s8MSvoM4N8pQ__original/img/g4S18szTdrXCdIwVKzMKrZrYAcM=/0x0/filters:format(jpeg)/pic6293412.jpg
     thumbnailUrl: https://cf.geekdo-images.com/SoU8p28Sk1s8MSvoM4N8pQ__small/img/4KuHNTWSMPf8vTNDKSRMMI3oOv8=/fit-in/200x150/filters:strip_icc()/pic6293412.jpg
+    fallbackImageUrl: https://cf.geekdo-images.com/SoU8p28Sk1s8MSvoM4N8pQ__original/img/g4S18szTdrXCdIwVKzMKrZrYAcM=/0x0/filters:format(jpeg)/pic6293412.jpg
+    fallbackThumbnailUrl: https://cf.geekdo-images.com/SoU8p28Sk1s8MSvoM4N8pQ__small/img/4KuHNTWSMPf8vTNDKSRMMI3oOv8=/fit-in/200x150/filters:strip_icc()/pic6293412.jpg
     categories:
     - Animals
     - Card Game
@@ -2704,6 +2772,8 @@ catalog:
     averageWeight: 3.27
     imageUrl: https://cf.geekdo-images.com/QFiIRd2kimaMqTyWsX0aUg__original/img/DOgIp57F7tKZvxeITGAd3e_Q9as=/0x0/filters:format(jpeg)/pic158548.jpg
     thumbnailUrl: https://cf.geekdo-images.com/QFiIRd2kimaMqTyWsX0aUg__small/img/5fLo89ChZH6Wzukk36bhZ-EpBS0=/fit-in/200x150/filters:strip_icc()/pic158548.jpg
+    fallbackImageUrl: https://cf.geekdo-images.com/QFiIRd2kimaMqTyWsX0aUg__original/img/DOgIp57F7tKZvxeITGAd3e_Q9as=/0x0/filters:format(jpeg)/pic158548.jpg
+    fallbackThumbnailUrl: https://cf.geekdo-images.com/QFiIRd2kimaMqTyWsX0aUg__small/img/5fLo89ChZH6Wzukk36bhZ-EpBS0=/fit-in/200x150/filters:strip_icc()/pic158548.jpg
     categories:
     - City Building
     - Economic
@@ -2760,6 +2830,8 @@ catalog:
     averageWeight: 2.93
     imageUrl: https://cf.geekdo-images.com/6GqH14TJJhza86BX5HCLEQ__original/img/CXqwimJPonWy1oyXEMgPN_ZVmUI=/0x0/filters:format(jpeg)/pic5674958.jpg
     thumbnailUrl: https://cf.geekdo-images.com/6GqH14TJJhza86BX5HCLEQ__small/img/J8SVmGOJXZGxNjkT3xYNQU7Haxg=/fit-in/200x150/filters:strip_icc()/pic5674958.jpg
+    fallbackImageUrl: https://cf.geekdo-images.com/6GqH14TJJhza86BX5HCLEQ__original/img/CXqwimJPonWy1oyXEMgPN_ZVmUI=/0x0/filters:format(jpeg)/pic5674958.jpg
+    fallbackThumbnailUrl: https://cf.geekdo-images.com/6GqH14TJJhza86BX5HCLEQ__small/img/J8SVmGOJXZGxNjkT3xYNQU7Haxg=/fit-in/200x150/filters:strip_icc()/pic5674958.jpg
     categories:
     - Adventure
     - Card Game
@@ -2843,6 +2915,8 @@ catalog:
     averageWeight: 2.97
     imageUrl: https://cf.geekdo-images.com/sH2YTQ10dHj1ibfS-KKtGA__original/img/L_gsMsuhbAe0kyq1QLAmyeKOeSs=/0x0/filters:format(jpeg)/pic8745814.jpg
     thumbnailUrl: https://cf.geekdo-images.com/sH2YTQ10dHj1ibfS-KKtGA__small/img/f5zFXdTcH9RNY0iMNBppd8D-_r0=/fit-in/200x150/filters:strip_icc()/pic8745814.jpg
+    fallbackImageUrl: https://cf.geekdo-images.com/sH2YTQ10dHj1ibfS-KKtGA__original/img/L_gsMsuhbAe0kyq1QLAmyeKOeSs=/0x0/filters:format(jpeg)/pic8745814.jpg
+    fallbackThumbnailUrl: https://cf.geekdo-images.com/sH2YTQ10dHj1ibfS-KKtGA__small/img/f5zFXdTcH9RNY0iMNBppd8D-_r0=/fit-in/200x150/filters:strip_icc()/pic8745814.jpg
     categories:
     - Animals
     - Dice
@@ -2900,6 +2974,8 @@ catalog:
     averageWeight: 3.57
     imageUrl: https://cf.geekdo-images.com/B5F5ulz0UivNgrI9Ky0euA__original/img/guEKCewM_2e5ugltSN3dTSwdZJI=/0x0/filters:format(jpeg)/pic3122349.jpg
     thumbnailUrl: https://cf.geekdo-images.com/B5F5ulz0UivNgrI9Ky0euA__small/img/L8ouPl5jv2Ye9MC4R_Os2zSGigE=/fit-in/200x150/filters:strip_icc()/pic3122349.jpg
+    fallbackImageUrl: https://cf.geekdo-images.com/B5F5ulz0UivNgrI9Ky0euA__original/img/guEKCewM_2e5ugltSN3dTSwdZJI=/0x0/filters:format(jpeg)/pic3122349.jpg
+    fallbackThumbnailUrl: https://cf.geekdo-images.com/B5F5ulz0UivNgrI9Ky0euA__small/img/L8ouPl5jv2Ye9MC4R_Os2zSGigE=/fit-in/200x150/filters:strip_icc()/pic3122349.jpg
     categories:
     - Adventure
     - Card Game
@@ -2977,6 +3053,8 @@ catalog:
     averageWeight: 1.89
     imageUrl: https://cf.geekdo-images.com/1nQ3ZKudtDeAP7IiKE-kNg__original/img/6igmXolQesapNU9yEnexip6m9B8=/0x0/filters:format(jpeg)/pic8625343.jpg
     thumbnailUrl: https://cf.geekdo-images.com/1nQ3ZKudtDeAP7IiKE-kNg__small/img/sW38512N2r1ZuuPE2TUD2LNfoxM=/fit-in/200x150/filters:strip_icc()/pic8625343.jpg
+    fallbackImageUrl: https://cf.geekdo-images.com/1nQ3ZKudtDeAP7IiKE-kNg__original/img/6igmXolQesapNU9yEnexip6m9B8=/0x0/filters:format(jpeg)/pic8625343.jpg
+    fallbackThumbnailUrl: https://cf.geekdo-images.com/1nQ3ZKudtDeAP7IiKE-kNg__small/img/sW38512N2r1ZuuPE2TUD2LNfoxM=/fit-in/200x150/filters:strip_icc()/pic8625343.jpg
     categories:
     - Deduction
     - Murder / Mystery
@@ -3034,6 +3112,8 @@ catalog:
     averageWeight: 2.47
     imageUrl: https://cf.geekdo-images.com/fEawLvevkxPv9AQ3mSiwVQ__original/img/NhQI64z4i8MpZZyHPKiHVvbcKaA=/0x0/filters:format(jpeg)/pic1747320.jpg
     thumbnailUrl: https://cf.geekdo-images.com/fEawLvevkxPv9AQ3mSiwVQ__small/img/sjhU3XIXbxzrphkW5UGP2ZMuNMU=/fit-in/200x150/filters:strip_icc()/pic1747320.jpg
+    fallbackImageUrl: https://cf.geekdo-images.com/fEawLvevkxPv9AQ3mSiwVQ__original/img/NhQI64z4i8MpZZyHPKiHVvbcKaA=/0x0/filters:format(jpeg)/pic1747320.jpg
+    fallbackThumbnailUrl: https://cf.geekdo-images.com/fEawLvevkxPv9AQ3mSiwVQ__small/img/sjhU3XIXbxzrphkW5UGP2ZMuNMU=/fit-in/200x150/filters:strip_icc()/pic1747320.jpg
     categories:
     - Card Game
     - Expansion for Base-game
@@ -3084,6 +3164,8 @@ catalog:
     averageWeight: 1.8
     imageUrl: https://cf.geekdo-images.com/0_KEDk4lCvryf1Ju3YQJxA__original/img/zv58Iylm_N8nfVFgRkMVM0Q9Fh8=/0x0/filters:format(jpeg)/pic3339551.jpg
     thumbnailUrl: https://cf.geekdo-images.com/0_KEDk4lCvryf1Ju3YQJxA__small/img/FticvQmaT_qfdrX-hpSSK1ttRb0=/fit-in/200x150/filters:strip_icc()/pic3339551.jpg
+    fallbackImageUrl: https://cf.geekdo-images.com/0_KEDk4lCvryf1Ju3YQJxA__original/img/zv58Iylm_N8nfVFgRkMVM0Q9Fh8=/0x0/filters:format(jpeg)/pic3339551.jpg
+    fallbackThumbnailUrl: https://cf.geekdo-images.com/0_KEDk4lCvryf1Ju3YQJxA__small/img/FticvQmaT_qfdrX-hpSSK1ttRb0=/fit-in/200x150/filters:strip_icc()/pic3339551.jpg
     categories:
     - Card Game
     - Economic
@@ -3139,6 +3221,8 @@ catalog:
     averageWeight: 1.63
     imageUrl: https://cf.geekdo-images.com/jD7_Ir8gL_9AXC-wjnqjHg__original/img/RjeHGxYOUqBv7sUgcRF5VdDlhbs=/0x0/filters:format(jpeg)/pic2080481.jpg
     thumbnailUrl: https://cf.geekdo-images.com/jD7_Ir8gL_9AXC-wjnqjHg__small/img/wWqmoercFrbIFjS1FloZFTZddcE=/fit-in/200x150/filters:strip_icc()/pic2080481.jpg
+    fallbackImageUrl: https://cf.geekdo-images.com/jD7_Ir8gL_9AXC-wjnqjHg__original/img/RjeHGxYOUqBv7sUgcRF5VdDlhbs=/0x0/filters:format(jpeg)/pic2080481.jpg
+    fallbackThumbnailUrl: https://cf.geekdo-images.com/jD7_Ir8gL_9AXC-wjnqjHg__small/img/wWqmoercFrbIFjS1FloZFTZddcE=/fit-in/200x150/filters:strip_icc()/pic2080481.jpg
     categories:
     - Card Game
     - Horror
@@ -3176,6 +3260,8 @@ catalog:
     averageWeight: 2.21
     imageUrl: https://cf.geekdo-images.com/qxB2LU0536eKeByvNl3vcA__original/img/HxR4sVxK_YUaOSz89J_Y-o4qBcM=/0x0/filters:format(jpeg)/pic8229329.jpg
     thumbnailUrl: https://cf.geekdo-images.com/qxB2LU0536eKeByvNl3vcA__small/img/u-Mm0YOkr4MkmQqHLkh0uHTxHDI=/fit-in/200x150/filters:strip_icc()/pic8229329.jpg
+    fallbackImageUrl: https://cf.geekdo-images.com/qxB2LU0536eKeByvNl3vcA__original/img/HxR4sVxK_YUaOSz89J_Y-o4qBcM=/0x0/filters:format(jpeg)/pic8229329.jpg
+    fallbackThumbnailUrl: https://cf.geekdo-images.com/qxB2LU0536eKeByvNl3vcA__small/img/u-Mm0YOkr4MkmQqHLkh0uHTxHDI=/fit-in/200x150/filters:strip_icc()/pic8229329.jpg
     categories:
     - Abstract Strategy
     - Animals
@@ -3243,6 +3329,8 @@ catalog:
     averageWeight: 2.57
     imageUrl: https://cf.geekdo-images.com/hXdfAhgZ8OeyWLunt36wlw__original/img/f5wjooKB2dGPBlBzws5cDsuuJ-k=/0x0/filters:format(jpeg)/pic3578101.jpg
     thumbnailUrl: https://cf.geekdo-images.com/hXdfAhgZ8OeyWLunt36wlw__small/img/vh7ttK5C_kKf5YZNYOY4vfsgXHU=/fit-in/200x150/filters:strip_icc()/pic3578101.jpg
+    fallbackImageUrl: https://cf.geekdo-images.com/hXdfAhgZ8OeyWLunt36wlw__original/img/f5wjooKB2dGPBlBzws5cDsuuJ-k=/0x0/filters:format(jpeg)/pic3578101.jpg
+    fallbackThumbnailUrl: https://cf.geekdo-images.com/hXdfAhgZ8OeyWLunt36wlw__small/img/vh7ttK5C_kKf5YZNYOY4vfsgXHU=/fit-in/200x150/filters:strip_icc()/pic3578101.jpg
     categories:
     - Medieval
     - Nautical
@@ -3309,6 +3397,8 @@ catalog:
     averageWeight: 3.24
     imageUrl: https://cf.geekdo-images.com/Qtkb-UTvHa0-kxt_MK1nKw__original/img/wJiRr7lBmWSKcRS3lPpvKIPMgQQ=/0x0/filters:format(jpeg)/pic3763549.jpg
     thumbnailUrl: https://cf.geekdo-images.com/Qtkb-UTvHa0-kxt_MK1nKw__small/img/MfKsnJUTx9IQV-o12Fahxx5IaDQ=/fit-in/200x150/filters:strip_icc()/pic3763549.jpg
+    fallbackImageUrl: https://cf.geekdo-images.com/Qtkb-UTvHa0-kxt_MK1nKw__original/img/wJiRr7lBmWSKcRS3lPpvKIPMgQQ=/0x0/filters:format(jpeg)/pic3763549.jpg
+    fallbackThumbnailUrl: https://cf.geekdo-images.com/Qtkb-UTvHa0-kxt_MK1nKw__small/img/MfKsnJUTx9IQV-o12Fahxx5IaDQ=/fit-in/200x150/filters:strip_icc()/pic3763549.jpg
     categories:
     - Environmental
     - Exploration
@@ -3360,6 +3450,8 @@ catalog:
     averageWeight: 2.78
     imageUrl: https://cf.geekdo-images.com/pRwsvyfsRJ-lWWwVJCdXNg__original/img/Cw8O-7dOaO1sZRy95QGImdSm7p8=/0x0/filters:format(jpeg)/pic2871265.jpg
     thumbnailUrl: https://cf.geekdo-images.com/pRwsvyfsRJ-lWWwVJCdXNg__small/img/-b7sYBaUVxdZ_a33QRfvJY2ccAk=/fit-in/200x150/filters:strip_icc()/pic2871265.jpg
+    fallbackImageUrl: https://cf.geekdo-images.com/pRwsvyfsRJ-lWWwVJCdXNg__original/img/Cw8O-7dOaO1sZRy95QGImdSm7p8=/0x0/filters:format(jpeg)/pic2871265.jpg
+    fallbackThumbnailUrl: https://cf.geekdo-images.com/pRwsvyfsRJ-lWWwVJCdXNg__small/img/-b7sYBaUVxdZ_a33QRfvJY2ccAk=/fit-in/200x150/filters:strip_icc()/pic2871265.jpg
     categories:
     - Ancient
     - Card Game
@@ -3407,6 +3499,8 @@ catalog:
     averageWeight: 1.27
     imageUrl: https://cf.geekdo-images.com/9gdaUHNTcgv8RhFhG0kzBw__original/img/uJQubpcCxCE4G1pmM8akyrLAVRY=/0x0/filters:format(jpeg)/pic143139.jpg
     thumbnailUrl: https://cf.geekdo-images.com/9gdaUHNTcgv8RhFhG0kzBw__small/img/9KfEtRGEfW5Q7Mv_0JbyKQ-oox0=/fit-in/200x150/filters:strip_icc()/pic143139.jpg
+    fallbackImageUrl: https://cf.geekdo-images.com/9gdaUHNTcgv8RhFhG0kzBw__original/img/uJQubpcCxCE4G1pmM8akyrLAVRY=/0x0/filters:format(jpeg)/pic143139.jpg
+    fallbackThumbnailUrl: https://cf.geekdo-images.com/9gdaUHNTcgv8RhFhG0kzBw__small/img/9KfEtRGEfW5Q7Mv_0JbyKQ-oox0=/fit-in/200x150/filters:strip_icc()/pic143139.jpg
     categories:
     - Age of Reason
     - Card Game
@@ -3458,6 +3552,8 @@ catalog:
     averageWeight: 2.01
     imageUrl: https://cf.geekdo-images.com/A_XP2_VN3ugyqPhezowB_w__original/img/_Rv8lSr3fC1oDRkrQleQW2H2yCs=/0x0/filters:format(png)/pic8026369.png
     thumbnailUrl: https://cf.geekdo-images.com/A_XP2_VN3ugyqPhezowB_w__small/img/ln5eKAzhse2PIHvWn7bu-jiW_uk=/fit-in/200x150/filters:strip_icc()/pic8026369.png
+    fallbackImageUrl: https://cf.geekdo-images.com/A_XP2_VN3ugyqPhezowB_w__original/img/_Rv8lSr3fC1oDRkrQleQW2H2yCs=/0x0/filters:format(png)/pic8026369.png
+    fallbackThumbnailUrl: https://cf.geekdo-images.com/A_XP2_VN3ugyqPhezowB_w__small/img/ln5eKAzhse2PIHvWn7bu-jiW_uk=/fit-in/200x150/filters:strip_icc()/pic8026369.png
     categories:
     - Abstract Strategy
     - Animals
@@ -3516,6 +3612,8 @@ catalog:
     averageWeight: 1.16
     imageUrl: https://cf.geekdo-images.com/7b75ZZJQ4EEbDsKLi6kYSw__original/img/Oep0CGYNB5HiLBBOMmEo2qKgXaM=/0x0/filters:format(jpeg)/pic918568.jpg
     thumbnailUrl: https://cf.geekdo-images.com/7b75ZZJQ4EEbDsKLi6kYSw__small/img/N0ZKQJsEo6_hk2UxH2rvqKorh2g=/fit-in/200x150/filters:strip_icc()/pic918568.jpg
+    fallbackImageUrl: https://cf.geekdo-images.com/7b75ZZJQ4EEbDsKLi6kYSw__original/img/Oep0CGYNB5HiLBBOMmEo2qKgXaM=/0x0/filters:format(jpeg)/pic918568.jpg
+    fallbackThumbnailUrl: https://cf.geekdo-images.com/7b75ZZJQ4EEbDsKLi6kYSw__small/img/N0ZKQJsEo6_hk2UxH2rvqKorh2g=/fit-in/200x150/filters:strip_icc()/pic918568.jpg
     categories:
     - Card Game
     - Humor
@@ -3567,6 +3665,8 @@ catalog:
     averageWeight: 1.68
     imageUrl: https://cf.geekdo-images.com/uiVZ7QVfRFQx3EBG8eDU8w__original/img/tLBrF40IDpARzoiUor4wwUvWXgY=/0x0/filters:format(png)/pic6339446.png
     thumbnailUrl: https://cf.geekdo-images.com/uiVZ7QVfRFQx3EBG8eDU8w__small/img/SUy42NMiK5gx-kLqmV47drIxEU0=/fit-in/200x150/filters:strip_icc()/pic6339446.png
+    fallbackImageUrl: https://cf.geekdo-images.com/uiVZ7QVfRFQx3EBG8eDU8w__original/img/tLBrF40IDpARzoiUor4wwUvWXgY=/0x0/filters:format(png)/pic6339446.png
+    fallbackThumbnailUrl: https://cf.geekdo-images.com/uiVZ7QVfRFQx3EBG8eDU8w__small/img/SUy42NMiK5gx-kLqmV47drIxEU0=/fit-in/200x150/filters:strip_icc()/pic6339446.png
     categories:
     - Card Game
     - Medieval
@@ -3637,6 +3737,8 @@ catalog:
     averageWeight: 3.26
     imageUrl: https://cf.geekdo-images.com/Zdt8l4oTBpFICsMyNof7Jg__original/img/-okZ810RkA8fKKhIeZyX4cnqmbE=/0x0/filters:format(png)/pic5975244.png
     thumbnailUrl: https://cf.geekdo-images.com/Zdt8l4oTBpFICsMyNof7Jg__small/img/71w4Tt3xOnuDEDTCG8ni63QUhVE=/fit-in/200x150/filters:strip_icc()/pic5975244.png
+    fallbackImageUrl: https://cf.geekdo-images.com/Zdt8l4oTBpFICsMyNof7Jg__original/img/-okZ810RkA8fKKhIeZyX4cnqmbE=/0x0/filters:format(png)/pic5975244.png
+    fallbackThumbnailUrl: https://cf.geekdo-images.com/Zdt8l4oTBpFICsMyNof7Jg__small/img/71w4Tt3xOnuDEDTCG8ni63QUhVE=/fit-in/200x150/filters:strip_icc()/pic5975244.png
     categories:
     - Adventure
     - Exploration
@@ -3695,6 +3797,8 @@ catalog:
     averageWeight: 1.1
     imageUrl: https://cf.geekdo-images.com/YH5C06snaoJtDqKjwMROPw__original/img/gB1mfMGbSkXgYxU5FA4QWForCZk=/0x0/filters:format(jpeg)/pic5140451.jpg
     thumbnailUrl: https://cf.geekdo-images.com/YH5C06snaoJtDqKjwMROPw__small/img/cSHIiN_mZQEqKMI1G7qRbTMp4nk=/fit-in/200x150/filters:strip_icc()/pic5140451.jpg
+    fallbackImageUrl: https://cf.geekdo-images.com/YH5C06snaoJtDqKjwMROPw__original/img/gB1mfMGbSkXgYxU5FA4QWForCZk=/0x0/filters:format(jpeg)/pic5140451.jpg
+    fallbackThumbnailUrl: https://cf.geekdo-images.com/YH5C06snaoJtDqKjwMROPw__small/img/cSHIiN_mZQEqKMI1G7qRbTMp4nk=/fit-in/200x150/filters:strip_icc()/pic5140451.jpg
     categories:
     - Action / Dexterity
     - Party Game
@@ -3801,6 +3905,8 @@ catalog:
     averageWeight: 2.93
     imageUrl: https://cf.geekdo-images.com/RRKDHaYtFPHhczkUDcHOmg__original/img/E_QazS4f8ffj6oBcUl3C_VROCEw=/0x0/filters:format(jpeg)/pic7906240.jpg
     thumbnailUrl: https://cf.geekdo-images.com/RRKDHaYtFPHhczkUDcHOmg__small/img/XPcVtsZPITv5qe3IXpzMKa5RSYA=/fit-in/200x150/filters:strip_icc()/pic7906240.jpg
+    fallbackImageUrl: https://cf.geekdo-images.com/RRKDHaYtFPHhczkUDcHOmg__original/img/E_QazS4f8ffj6oBcUl3C_VROCEw=/0x0/filters:format(jpeg)/pic7906240.jpg
+    fallbackThumbnailUrl: https://cf.geekdo-images.com/RRKDHaYtFPHhczkUDcHOmg__small/img/XPcVtsZPITv5qe3IXpzMKa5RSYA=/fit-in/200x150/filters:strip_icc()/pic7906240.jpg
     categories:
     - Medieval
     mechanics:
@@ -3852,6 +3958,8 @@ catalog:
     averageWeight: 2.8
     imageUrl: https://cf.geekdo-images.com/d50LceHj6LIafa4S_qIsCg__original/img/4MsKNGm47PU9BGW4i2yamMlRSQ0=/0x0/filters:format(jpeg)/pic3189350.jpg
     thumbnailUrl: https://cf.geekdo-images.com/d50LceHj6LIafa4S_qIsCg__small/img/KMFA-gXm_LbZpyXSAHbIZm-eAcQ=/fit-in/200x150/filters:strip_icc()/pic3189350.jpg
+    fallbackImageUrl: https://cf.geekdo-images.com/d50LceHj6LIafa4S_qIsCg__original/img/4MsKNGm47PU9BGW4i2yamMlRSQ0=/0x0/filters:format(jpeg)/pic3189350.jpg
+    fallbackThumbnailUrl: https://cf.geekdo-images.com/d50LceHj6LIafa4S_qIsCg__small/img/KMFA-gXm_LbZpyXSAHbIZm-eAcQ=/fit-in/200x150/filters:strip_icc()/pic3189350.jpg
     categories:
     - Card Game
     - Fantasy
@@ -3921,6 +4029,8 @@ catalog:
     averageWeight: 2.65
     imageUrl: https://cf.geekdo-images.com/gcALy45JfcjyKUn6T3mBIQ__original/img/YLSAurBSWEGi3PHsuQWi8St_0Yg=/0x0/filters:format(jpeg)/pic4422847.jpg
     thumbnailUrl: https://cf.geekdo-images.com/gcALy45JfcjyKUn6T3mBIQ__small/img/5cPMxq_X6VIO8l2t1_6H7C_KqrU=/fit-in/200x150/filters:strip_icc()/pic4422847.jpg
+    fallbackImageUrl: https://cf.geekdo-images.com/gcALy45JfcjyKUn6T3mBIQ__original/img/YLSAurBSWEGi3PHsuQWi8St_0Yg=/0x0/filters:format(jpeg)/pic4422847.jpg
+    fallbackThumbnailUrl: https://cf.geekdo-images.com/gcALy45JfcjyKUn6T3mBIQ__small/img/5cPMxq_X6VIO8l2t1_6H7C_KqrU=/fit-in/200x150/filters:strip_icc()/pic4422847.jpg
     categories:
     - Card Game
     - Fantasy
@@ -3969,6 +4079,8 @@ catalog:
     averageWeight: 1.84
     imageUrl: https://cf.geekdo-images.com/6xc4TuJynN5o_ZF0fHOdAA__original/img/H5xSdHoOk1x5nR16LebPVRh88ZI=/0x0/filters:format(png)/pic6162556.png
     thumbnailUrl: https://cf.geekdo-images.com/6xc4TuJynN5o_ZF0fHOdAA__small/img/sMbWo--LyzJw_weK0h1ESSPqdtU=/fit-in/200x150/filters:strip_icc()/pic6162556.png
+    fallbackImageUrl: https://cf.geekdo-images.com/6xc4TuJynN5o_ZF0fHOdAA__original/img/H5xSdHoOk1x5nR16LebPVRh88ZI=/0x0/filters:format(png)/pic6162556.png
+    fallbackThumbnailUrl: https://cf.geekdo-images.com/6xc4TuJynN5o_ZF0fHOdAA__small/img/sMbWo--LyzJw_weK0h1ESSPqdtU=/fit-in/200x150/filters:strip_icc()/pic6162556.png
     categories:
     - Card Game
     - Fantasy
@@ -4015,6 +4127,8 @@ catalog:
     averageWeight: 2.43
     imageUrl: https://cf.geekdo-images.com/enmQAOQl99U6wiQvZoL5GQ__original/img/iiKhufERu8v8JpErc5kUoO8WiNw=/0x0/filters:format(jpeg)/pic2556921.jpg
     thumbnailUrl: https://cf.geekdo-images.com/enmQAOQl99U6wiQvZoL5GQ__small/img/zdtrILXRjphkt5HYP0tuxzlenG4=/fit-in/200x150/filters:strip_icc()/pic2556921.jpg
+    fallbackImageUrl: https://cf.geekdo-images.com/enmQAOQl99U6wiQvZoL5GQ__original/img/iiKhufERu8v8JpErc5kUoO8WiNw=/0x0/filters:format(jpeg)/pic2556921.jpg
+    fallbackThumbnailUrl: https://cf.geekdo-images.com/enmQAOQl99U6wiQvZoL5GQ__small/img/zdtrILXRjphkt5HYP0tuxzlenG4=/fit-in/200x150/filters:strip_icc()/pic2556921.jpg
     categories:
     - Dice
     - Fantasy
@@ -4066,6 +4180,8 @@ catalog:
     averageWeight: 1.17
     imageUrl: https://cf.geekdo-images.com/dp-pJkUemCjhrwi9QItrPA__original/img/eeYPdva8ti4Hi2PYxkTLRPrtfKk=/0x0/filters:format(jpeg)/pic378237.jpg
     thumbnailUrl: https://cf.geekdo-images.com/dp-pJkUemCjhrwi9QItrPA__small/img/jzdzVAjd75yiZkIoJ4JsindSmCs=/fit-in/200x150/filters:strip_icc()/pic378237.jpg
+    fallbackImageUrl: https://cf.geekdo-images.com/dp-pJkUemCjhrwi9QItrPA__original/img/eeYPdva8ti4Hi2PYxkTLRPrtfKk=/0x0/filters:format(jpeg)/pic378237.jpg
+    fallbackThumbnailUrl: https://cf.geekdo-images.com/dp-pJkUemCjhrwi9QItrPA__small/img/jzdzVAjd75yiZkIoJ4JsindSmCs=/fit-in/200x150/filters:strip_icc()/pic378237.jpg
     categories:
     - Children's Game
     - Comic Book / Strip
@@ -4171,6 +4287,8 @@ catalog:
     averageWeight: 1.1
     imageUrl: https://cf.geekdo-images.com/-DHiHBBSnvaLu0Do8CIykQ__original/img/fRfoyWezpQsumExNKVxf1cwtJfg=/0x0/filters:format(jpeg)/pic8204165.jpg
     thumbnailUrl: https://cf.geekdo-images.com/-DHiHBBSnvaLu0Do8CIykQ__small/img/AUkAjClJAk3BX1vEpk7EasSh_44=/fit-in/200x150/filters:strip_icc()/pic8204165.jpg
+    fallbackImageUrl: https://cf.geekdo-images.com/-DHiHBBSnvaLu0Do8CIykQ__original/img/fRfoyWezpQsumExNKVxf1cwtJfg=/0x0/filters:format(jpeg)/pic8204165.jpg
+    fallbackThumbnailUrl: https://cf.geekdo-images.com/-DHiHBBSnvaLu0Do8CIykQ__small/img/AUkAjClJAk3BX1vEpk7EasSh_44=/fit-in/200x150/filters:strip_icc()/pic8204165.jpg
     categories:
     - Card Game
     - Children's Game
@@ -4237,6 +4355,8 @@ catalog:
     averageWeight: 1.89
     imageUrl: https://cf.geekdo-images.com/peUgu3A20LRmAXAMyDQfpQ__original/img/bP18m_PYjyFOv1IBGgMOteQUneA=/0x0/filters:format(jpeg)/pic8621446.jpg
     thumbnailUrl: https://cf.geekdo-images.com/peUgu3A20LRmAXAMyDQfpQ__small/img/oEEslN-EGqh82sNI6Aj4_MFXYg0=/fit-in/200x150/filters:strip_icc()/pic8621446.jpg
+    fallbackImageUrl: https://cf.geekdo-images.com/peUgu3A20LRmAXAMyDQfpQ__original/img/bP18m_PYjyFOv1IBGgMOteQUneA=/0x0/filters:format(jpeg)/pic8621446.jpg
+    fallbackThumbnailUrl: https://cf.geekdo-images.com/peUgu3A20LRmAXAMyDQfpQ__small/img/oEEslN-EGqh82sNI6Aj4_MFXYg0=/fit-in/200x150/filters:strip_icc()/pic8621446.jpg
     categories:
     - Medieval
     - Territory Building
@@ -4316,6 +4436,8 @@ catalog:
     averageWeight: 2.06
     imageUrl: https://cf.geekdo-images.com/Oem1TTtSgxOghRFCoyWRPw__original/img/Nu3eXPyOkhtnR3hhpUrtgqRMAfs=/0x0/filters:format(jpeg)/pic4916782.jpg
     thumbnailUrl: https://cf.geekdo-images.com/Oem1TTtSgxOghRFCoyWRPw__small/img/5cltSV60oVvjL3Ag_KTJbmTdU6w=/fit-in/200x150/filters:strip_icc()/pic4916782.jpg
+    fallbackImageUrl: https://cf.geekdo-images.com/Oem1TTtSgxOghRFCoyWRPw__original/img/Nu3eXPyOkhtnR3hhpUrtgqRMAfs=/0x0/filters:format(jpeg)/pic4916782.jpg
+    fallbackThumbnailUrl: https://cf.geekdo-images.com/Oem1TTtSgxOghRFCoyWRPw__small/img/5cltSV60oVvjL3Ag_KTJbmTdU6w=/fit-in/200x150/filters:strip_icc()/pic4916782.jpg
     categories:
     - Territory Building
     - Wargame
@@ -4383,6 +4505,8 @@ catalog:
     averageWeight: 3.64
     imageUrl: https://cf.geekdo-images.com/0_RWFMNapgr5yCrdhvGi_Q__original/img/c4SiusUQuh7uc0k6HDwIXYsEc8M=/0x0/filters:format(jpeg)/pic8785991.jpg
     thumbnailUrl: https://cf.geekdo-images.com/0_RWFMNapgr5yCrdhvGi_Q__small/img/Ag-pVSHp3iBail0FsibR_iUMmQc=/fit-in/200x150/filters:strip_icc()/pic8785991.jpg
+    fallbackImageUrl: https://cf.geekdo-images.com/0_RWFMNapgr5yCrdhvGi_Q__original/img/c4SiusUQuh7uc0k6HDwIXYsEc8M=/0x0/filters:format(jpeg)/pic8785991.jpg
+    fallbackThumbnailUrl: https://cf.geekdo-images.com/0_RWFMNapgr5yCrdhvGi_Q__small/img/Ag-pVSHp3iBail0FsibR_iUMmQc=/fit-in/200x150/filters:strip_icc()/pic8785991.jpg
     categories:
     - Abstract Strategy
     mechanics:
@@ -4624,6 +4748,8 @@ catalog:
     averageWeight: 1.71
     imageUrl: https://cf.geekdo-images.com/S4IBcWYhlbn51_5f0EIR4g__original/img/jUJ1Ev4_WhCIT7aTvyvpIGG7cGI=/0x0/filters:format(jpeg)/pic113720.jpg
     thumbnailUrl: https://cf.geekdo-images.com/S4IBcWYhlbn51_5f0EIR4g__small/img/wxqQxa2--TclJY8n8hzMGXzk1sI=/fit-in/200x150/filters:strip_icc()/pic113720.jpg
+    fallbackImageUrl: https://cf.geekdo-images.com/S4IBcWYhlbn51_5f0EIR4g__original/img/jUJ1Ev4_WhCIT7aTvyvpIGG7cGI=/0x0/filters:format(jpeg)/pic113720.jpg
+    fallbackThumbnailUrl: https://cf.geekdo-images.com/S4IBcWYhlbn51_5f0EIR4g__small/img/wxqQxa2--TclJY8n8hzMGXzk1sI=/fit-in/200x150/filters:strip_icc()/pic113720.jpg
     categories:
     - Abstract Strategy
     - Comic Book / Strip
@@ -4821,6 +4947,8 @@ catalog:
     averageWeight: 2.39
     imageUrl: https://cf.geekdo-images.com/S3ybV1LAp-8SnHIXLLjVqA__original/img/IsrvRLpUV1TEyZsO5rC-btXaPz0=/0x0/filters:format(jpeg)/pic1534148.jpg
     thumbnailUrl: https://cf.geekdo-images.com/S3ybV1LAp-8SnHIXLLjVqA__small/img/oqViRj6nVxK3m36NluTxU1PZkrk=/fit-in/200x150/filters:strip_icc()/pic1534148.jpg
+    fallbackImageUrl: https://cf.geekdo-images.com/S3ybV1LAp-8SnHIXLLjVqA__original/img/IsrvRLpUV1TEyZsO5rC-btXaPz0=/0x0/filters:format(jpeg)/pic1534148.jpg
+    fallbackThumbnailUrl: https://cf.geekdo-images.com/S3ybV1LAp-8SnHIXLLjVqA__small/img/oqViRj6nVxK3m36NluTxU1PZkrk=/fit-in/200x150/filters:strip_icc()/pic1534148.jpg
     categories:
     - Medical
     - Travel
@@ -4913,6 +5041,8 @@ catalog:
     averageWeight: 1.62
     imageUrl: https://cf.geekdo-images.com/9nGoBZ0MRbi6rdH47sj2Qg__original/img/bA8irydTCNlE38QSzM9EhcUIuNU=/0x0/filters:format(jpeg)/pic5786795.jpg
     thumbnailUrl: https://cf.geekdo-images.com/9nGoBZ0MRbi6rdH47sj2Qg__small/img/ezXcyEsHhS9iRxmuGe8SmiLLXlM=/fit-in/200x150/filters:strip_icc()/pic5786795.jpg
+    fallbackImageUrl: https://cf.geekdo-images.com/9nGoBZ0MRbi6rdH47sj2Qg__original/img/bA8irydTCNlE38QSzM9EhcUIuNU=/0x0/filters:format(jpeg)/pic5786795.jpg
+    fallbackThumbnailUrl: https://cf.geekdo-images.com/9nGoBZ0MRbi6rdH47sj2Qg__small/img/ezXcyEsHhS9iRxmuGe8SmiLLXlM=/fit-in/200x150/filters:strip_icc()/pic5786795.jpg
     categories:
     - Economic
     mechanics:
@@ -5013,6 +5143,8 @@ catalog:
     averageWeight: 2.05
     imageUrl: https://cf.geekdo-images.com/mVmmntn2oQd0PfFrWBvwIQ__original/img/11jrKPiOVTNl5NwX83KGtTZEq40=/0x0/filters:format(jpeg)/pic404651.jpg
     thumbnailUrl: https://cf.geekdo-images.com/mVmmntn2oQd0PfFrWBvwIQ__small/img/RUmuGCB40FQH0en0R2nrcsSO7DE=/fit-in/200x150/filters:strip_icc()/pic404651.jpg
+    fallbackImageUrl: https://cf.geekdo-images.com/mVmmntn2oQd0PfFrWBvwIQ__original/img/11jrKPiOVTNl5NwX83KGtTZEq40=/0x0/filters:format(jpeg)/pic404651.jpg
+    fallbackThumbnailUrl: https://cf.geekdo-images.com/mVmmntn2oQd0PfFrWBvwIQ__small/img/RUmuGCB40FQH0en0R2nrcsSO7DE=/fit-in/200x150/filters:strip_icc()/pic404651.jpg
     categories:
     - Word Game
     mechanics:
@@ -5111,6 +5243,8 @@ catalog:
     averageWeight: 1.37
     imageUrl: https://cf.geekdo-images.com/7YdY99fgAanc04jyhqQ66w__original/img/kGD-mE3oqtGiFU4OVic7pCZk-QI=/0x0/filters:format(jpeg)/pic90585.jpg
     thumbnailUrl: https://cf.geekdo-images.com/7YdY99fgAanc04jyhqQ66w__small/img/AnLOv6xw_qtmOXh0koArhrO2kFU=/fit-in/200x150/filters:strip_icc()/pic90585.jpg
+    fallbackImageUrl: https://cf.geekdo-images.com/7YdY99fgAanc04jyhqQ66w__original/img/kGD-mE3oqtGiFU4OVic7pCZk-QI=/0x0/filters:format(jpeg)/pic90585.jpg
+    fallbackThumbnailUrl: https://cf.geekdo-images.com/7YdY99fgAanc04jyhqQ66w__small/img/AnLOv6xw_qtmOXh0koArhrO2kFU=/fit-in/200x150/filters:strip_icc()/pic90585.jpg
     categories:
     - Abstract Strategy
     - Game System
@@ -5318,6 +5452,8 @@ catalog:
     averageWeight: 3.91
     imageUrl: https://cf.geekdo-images.com/6qAiZwWxSSKP2kFcA80cZg__original/img/oClfNpLGqRwyqeq54Na_VoVAA3o=/0x0/filters:format(jpeg)/pic1728832.jpg
     thumbnailUrl: https://cf.geekdo-images.com/6qAiZwWxSSKP2kFcA80cZg__small/img/COT5I3D_0dKWrSRHChb-SnQl3Zc=/fit-in/200x150/filters:strip_icc()/pic1728832.jpg
+    fallbackImageUrl: https://cf.geekdo-images.com/6qAiZwWxSSKP2kFcA80cZg__original/img/oClfNpLGqRwyqeq54Na_VoVAA3o=/0x0/filters:format(jpeg)/pic1728832.jpg
+    fallbackThumbnailUrl: https://cf.geekdo-images.com/6qAiZwWxSSKP2kFcA80cZg__small/img/COT5I3D_0dKWrSRHChb-SnQl3Zc=/fit-in/200x150/filters:strip_icc()/pic1728832.jpg
     categories:
     - Abstract Strategy
     mechanics:
@@ -5433,6 +5569,8 @@ catalog:
     averageWeight: 2
     imageUrl: https://cf.geekdo-images.com/QQCaOWVN1uCcjCq-2dbXbw__original/img/Pubee4eifF0Pym4Gig55W6BZFcc=/0x0/filters:format(jpeg)/pic342451.jpg
     thumbnailUrl: https://cf.geekdo-images.com/QQCaOWVN1uCcjCq-2dbXbw__small/img/M9eUKiFrZfkRoPOavBsmJCBbyCU=/fit-in/200x150/filters:strip_icc()/pic342451.jpg
+    fallbackImageUrl: https://cf.geekdo-images.com/QQCaOWVN1uCcjCq-2dbXbw__original/img/Pubee4eifF0Pym4Gig55W6BZFcc=/0x0/filters:format(jpeg)/pic342451.jpg
+    fallbackThumbnailUrl: https://cf.geekdo-images.com/QQCaOWVN1uCcjCq-2dbXbw__small/img/M9eUKiFrZfkRoPOavBsmJCBbyCU=/fit-in/200x150/filters:strip_icc()/pic342451.jpg
     categories:
     - Abstract Strategy
     - Dice
@@ -5643,6 +5781,8 @@ catalog:
     averageWeight: 1.64
     imageUrl: https://cf.geekdo-images.com/wNcbhLJGGjakYjjm1gV_kQ__original/img/Ji1MKh8gogtczoDecOi5D5yo9hQ=/0x0/filters:format(png)/pic7563466.png
     thumbnailUrl: https://cf.geekdo-images.com/wNcbhLJGGjakYjjm1gV_kQ__small/img/yaeAeMVffkAZEjgYs0DvT4Zk2z0=/fit-in/200x150/filters:strip_icc()/pic7563466.png
+    fallbackImageUrl: https://cf.geekdo-images.com/wNcbhLJGGjakYjjm1gV_kQ__original/img/Ji1MKh8gogtczoDecOi5D5yo9hQ=/0x0/filters:format(png)/pic7563466.png
+    fallbackThumbnailUrl: https://cf.geekdo-images.com/wNcbhLJGGjakYjjm1gV_kQ__small/img/yaeAeMVffkAZEjgYs0DvT4Zk2z0=/fit-in/200x150/filters:strip_icc()/pic7563466.png
     categories:
     - Deduction
     - Movies / TV / Radio theme
@@ -5726,6 +5866,8 @@ catalog:
     averageWeight: 1.15
     imageUrl: https://cf.geekdo-images.com/S5GzB_f2Re3kEDoSxqG5Ew__original/img/K49MN0Ij_tZOgDK4znCUJGu6aU4=/0x0/filters:format(jpeg)/pic213515.jpg
     thumbnailUrl: https://cf.geekdo-images.com/S5GzB_f2Re3kEDoSxqG5Ew__small/img/kJ1JQ_d9xEZ00sJ1dLvwyQYiQUA=/fit-in/200x150/filters:strip_icc()/pic213515.jpg
+    fallbackImageUrl: https://cf.geekdo-images.com/S5GzB_f2Re3kEDoSxqG5Ew__original/img/K49MN0Ij_tZOgDK4znCUJGu6aU4=/0x0/filters:format(jpeg)/pic213515.jpg
+    fallbackThumbnailUrl: https://cf.geekdo-images.com/S5GzB_f2Re3kEDoSxqG5Ew__small/img/kJ1JQ_d9xEZ00sJ1dLvwyQYiQUA=/fit-in/200x150/filters:strip_icc()/pic213515.jpg
     categories:
     - Card Game
     - Humor
@@ -5785,6 +5927,8 @@ catalog:
     averageWeight: 1.39
     imageUrl: https://cf.geekdo-images.com/hXNqiCcLt9AJzcqBSsyKiQ__original/img/77EMP3lRlpwjMTGP1cHQqv7w5lk=/0x0/filters:format(jpeg)/pic5121000.jpg
     thumbnailUrl: https://cf.geekdo-images.com/hXNqiCcLt9AJzcqBSsyKiQ__small/img/z9TNjpF6z2JxYMWRDtsF958SX8A=/fit-in/200x150/filters:strip_icc()/pic5121000.jpg
+    fallbackImageUrl: https://cf.geekdo-images.com/hXNqiCcLt9AJzcqBSsyKiQ__original/img/77EMP3lRlpwjMTGP1cHQqv7w5lk=/0x0/filters:format(jpeg)/pic5121000.jpg
+    fallbackThumbnailUrl: https://cf.geekdo-images.com/hXNqiCcLt9AJzcqBSsyKiQ__small/img/z9TNjpF6z2JxYMWRDtsF958SX8A=/fit-in/200x150/filters:strip_icc()/pic5121000.jpg
     categories:
     - Bluffing
     - Party Game
@@ -5838,6 +5982,8 @@ catalog:
     averageWeight: 1.46
     imageUrl: https://cf.geekdo-images.com/dsI6-jUj8mzOuC6gL4e42w__original/img/xf5XFqvj3TZxf3B_z9xR6lyGxic=/0x0/filters:format(jpeg)/pic7024967.jpg
     thumbnailUrl: https://cf.geekdo-images.com/dsI6-jUj8mzOuC6gL4e42w__small/img/YEc1l4n4HKd5_L1s1yTsqHyLjSw=/fit-in/200x150/filters:strip_icc()/pic7024967.jpg
+    fallbackImageUrl: https://cf.geekdo-images.com/dsI6-jUj8mzOuC6gL4e42w__original/img/xf5XFqvj3TZxf3B_z9xR6lyGxic=/0x0/filters:format(jpeg)/pic7024967.jpg
+    fallbackThumbnailUrl: https://cf.geekdo-images.com/dsI6-jUj8mzOuC6gL4e42w__small/img/YEc1l4n4HKd5_L1s1yTsqHyLjSw=/fit-in/200x150/filters:strip_icc()/pic7024967.jpg
     categories:
     - Dice
     - Real-time
@@ -5894,6 +6040,8 @@ catalog:
     averageWeight: 1.36
     imageUrl: https://cf.geekdo-images.com/eIL4hvMb7ZPgizc7BZOh-g__original/img/ZjWZidMJYVPML2OXLGfvQqR8Hyw=/0x0/filters:format(jpeg)/pic4994410.jpg
     thumbnailUrl: https://cf.geekdo-images.com/eIL4hvMb7ZPgizc7BZOh-g__small/img/sx0XxYqv0FtsIp-RoW-5C42sLOc=/fit-in/200x150/filters:strip_icc()/pic4994410.jpg
+    fallbackImageUrl: https://cf.geekdo-images.com/eIL4hvMb7ZPgizc7BZOh-g__original/img/ZjWZidMJYVPML2OXLGfvQqR8Hyw=/0x0/filters:format(jpeg)/pic4994410.jpg
+    fallbackThumbnailUrl: https://cf.geekdo-images.com/eIL4hvMb7ZPgizc7BZOh-g__small/img/sx0XxYqv0FtsIp-RoW-5C42sLOc=/fit-in/200x150/filters:strip_icc()/pic4994410.jpg
     categories:
     - Party Game
     - Real-time
@@ -5937,6 +6085,8 @@ catalog:
     averageWeight: 1.29
     imageUrl: https://cf.geekdo-images.com/1QjYPI4bXx4OUMJPlrsNBA__original/img/WA2NRNJx83xq81H2dnnwEDV2Ork=/0x0/filters:format(jpeg)/pic2463443.jpg
     thumbnailUrl: https://cf.geekdo-images.com/1QjYPI4bXx4OUMJPlrsNBA__small/img/nC_gG-4CYy7VBfYez2qSfTkU2ik=/fit-in/200x150/filters:strip_icc()/pic2463443.jpg
+    fallbackImageUrl: https://cf.geekdo-images.com/1QjYPI4bXx4OUMJPlrsNBA__original/img/WA2NRNJx83xq81H2dnnwEDV2Ork=/0x0/filters:format(jpeg)/pic2463443.jpg
+    fallbackThumbnailUrl: https://cf.geekdo-images.com/1QjYPI4bXx4OUMJPlrsNBA__small/img/nC_gG-4CYy7VBfYez2qSfTkU2ik=/fit-in/200x150/filters:strip_icc()/pic2463443.jpg
     categories:
     - Real-time
     - Word Game
@@ -5993,6 +6143,8 @@ catalog:
     averageWeight: 1.69
     imageUrl: https://cf.geekdo-images.com/0M2ck50-GanxBWfOHUZ64A__original/img/5VKS6zuDQlHBQcTcDNRNFYu-7Bg=/0x0/filters:format(png)/pic1300182.png
     thumbnailUrl: https://cf.geekdo-images.com/0M2ck50-GanxBWfOHUZ64A__small/img/6ffKBS6bTCKgCmH7zdHJIxcU8ZA=/fit-in/200x150/filters:strip_icc()/pic1300182.png
+    fallbackImageUrl: https://cf.geekdo-images.com/0M2ck50-GanxBWfOHUZ64A__original/img/5VKS6zuDQlHBQcTcDNRNFYu-7Bg=/0x0/filters:format(png)/pic1300182.png
+    fallbackThumbnailUrl: https://cf.geekdo-images.com/0M2ck50-GanxBWfOHUZ64A__small/img/6ffKBS6bTCKgCmH7zdHJIxcU8ZA=/fit-in/200x150/filters:strip_icc()/pic1300182.png
     categories:
     - Adventure
     - Animals
@@ -6057,6 +6209,8 @@ catalog:
     averageWeight: 1.04
     imageUrl: https://cf.geekdo-images.com/hqDT4HbEb2eNCyMOeiGj-g__original/img/6w3wjI3YZOWa8XLxoKQqg3XnbN0=/0x0/filters:format(png)/pic6477003.png
     thumbnailUrl: https://cf.geekdo-images.com/hqDT4HbEb2eNCyMOeiGj-g__small/img/ZNgW2QhLjYpVltWHy3LyJqstnow=/fit-in/200x150/filters:strip_icc()/pic6477003.png
+    fallbackImageUrl: https://cf.geekdo-images.com/hqDT4HbEb2eNCyMOeiGj-g__original/img/6w3wjI3YZOWa8XLxoKQqg3XnbN0=/0x0/filters:format(png)/pic6477003.png
+    fallbackThumbnailUrl: https://cf.geekdo-images.com/hqDT4HbEb2eNCyMOeiGj-g__small/img/ZNgW2QhLjYpVltWHy3LyJqstnow=/fit-in/200x150/filters:strip_icc()/pic6477003.png
     categories:
     - Card Game
     - Children's Game
@@ -6136,6 +6290,8 @@ catalog:
     averageWeight: 1.18
     imageUrl: https://cf.geekdo-images.com/I_ZPIWEvFlrMa8caT4UD-w__original/img/w93rimjstxQr4BVmaZ_Tl5pQGOw=/0x0/filters:format(jpeg)/pic859430.jpg
     thumbnailUrl: https://cf.geekdo-images.com/I_ZPIWEvFlrMa8caT4UD-w__small/img/JR0u-AXmZpNrZpevcz3lrLPNDf4=/fit-in/200x150/filters:strip_icc()/pic859430.jpg
+    fallbackImageUrl: https://cf.geekdo-images.com/I_ZPIWEvFlrMa8caT4UD-w__original/img/w93rimjstxQr4BVmaZ_Tl5pQGOw=/0x0/filters:format(jpeg)/pic859430.jpg
+    fallbackThumbnailUrl: https://cf.geekdo-images.com/I_ZPIWEvFlrMa8caT4UD-w__small/img/JR0u-AXmZpNrZpevcz3lrLPNDf4=/fit-in/200x150/filters:strip_icc()/pic859430.jpg
     categories:
     - Abstract Strategy
     - Children's Game
@@ -6256,6 +6412,8 @@ catalog:
     averageWeight: 1.09
     imageUrl: https://cf.geekdo-images.com/9IzIcHIJVY08OYkXpTmUQA__original/img/q1l1MJ_QM6gRk4JaZVPs6Uzkrjk=/0x0/filters:format(jpeg)/pic335812.jpg
     thumbnailUrl: https://cf.geekdo-images.com/9IzIcHIJVY08OYkXpTmUQA__small/img/4-XAZlic1sExGnS8GJM-SPT-SuY=/fit-in/200x150/filters:strip_icc()/pic335812.jpg
+    fallbackImageUrl: https://cf.geekdo-images.com/9IzIcHIJVY08OYkXpTmUQA__original/img/q1l1MJ_QM6gRk4JaZVPs6Uzkrjk=/0x0/filters:format(jpeg)/pic335812.jpg
+    fallbackThumbnailUrl: https://cf.geekdo-images.com/9IzIcHIJVY08OYkXpTmUQA__small/img/4-XAZlic1sExGnS8GJM-SPT-SuY=/fit-in/200x150/filters:strip_icc()/pic335812.jpg
     categories:
     - Children's Game
     - Deduction
@@ -6323,6 +6481,8 @@ catalog:
     averageWeight: 1.07
     imageUrl: https://cf.geekdo-images.com/5V8_ghnJpj0X93ypXch1mQ__original/img/ihtVV2jzJLVs6NjaLtwnfxnqw9k=/0x0/filters:format(jpeg)/pic8203150.jpg
     thumbnailUrl: https://cf.geekdo-images.com/5V8_ghnJpj0X93ypXch1mQ__small/img/s3nJsf90cI8aO5I5HGswMMOZHHo=/fit-in/200x150/filters:strip_icc()/pic8203150.jpg
+    fallbackImageUrl: https://cf.geekdo-images.com/5V8_ghnJpj0X93ypXch1mQ__original/img/ihtVV2jzJLVs6NjaLtwnfxnqw9k=/0x0/filters:format(jpeg)/pic8203150.jpg
+    fallbackThumbnailUrl: https://cf.geekdo-images.com/5V8_ghnJpj0X93ypXch1mQ__small/img/s3nJsf90cI8aO5I5HGswMMOZHHo=/fit-in/200x150/filters:strip_icc()/pic8203150.jpg
     categories:
     - Animals
     - Children's Game
@@ -6510,6 +6670,8 @@ catalog:
     averageWeight: 1.16
     imageUrl: https://cf.geekdo-images.com/zV33y_kLzvOuGz1_r1DWNA__original/img/JnvWT9eND5TInSUeYovoDUG6Gto=/0x0/filters:format(jpeg)/pic8204421.jpg
     thumbnailUrl: https://cf.geekdo-images.com/zV33y_kLzvOuGz1_r1DWNA__small/img/BDEzpnC1LDvDFqLIIbe5qAz1W4Q=/fit-in/200x150/filters:strip_icc()/pic8204421.jpg
+    fallbackImageUrl: https://cf.geekdo-images.com/zV33y_kLzvOuGz1_r1DWNA__original/img/JnvWT9eND5TInSUeYovoDUG6Gto=/0x0/filters:format(jpeg)/pic8204421.jpg
+    fallbackThumbnailUrl: https://cf.geekdo-images.com/zV33y_kLzvOuGz1_r1DWNA__small/img/BDEzpnC1LDvDFqLIIbe5qAz1W4Q=/fit-in/200x150/filters:strip_icc()/pic8204421.jpg
     categories:
     - Children's Game
     mechanics:
@@ -6585,6 +6747,8 @@ catalog:
     averageWeight: 3.86
     imageUrl: https://cf.geekdo-images.com/x3zxjr-Vw5iU4yDPg70Jgw__original/img/FpyxH41Y6_ROoePAilPNEhXnzO8=/0x0/filters:format(jpeg)/pic3490053.jpg
     thumbnailUrl: https://cf.geekdo-images.com/x3zxjr-Vw5iU4yDPg70Jgw__small/img/o18rjEemoWaVru9Y2TyPwuIaRfE=/fit-in/200x150/filters:strip_icc()/pic3490053.jpg
+    fallbackImageUrl: https://cf.geekdo-images.com/x3zxjr-Vw5iU4yDPg70Jgw__original/img/FpyxH41Y6_ROoePAilPNEhXnzO8=/0x0/filters:format(jpeg)/pic3490053.jpg
+    fallbackThumbnailUrl: https://cf.geekdo-images.com/x3zxjr-Vw5iU4yDPg70Jgw__small/img/o18rjEemoWaVru9Y2TyPwuIaRfE=/fit-in/200x150/filters:strip_icc()/pic3490053.jpg
     categories:
     - Age of Reason
     - Economic
@@ -6664,6 +6828,8 @@ catalog:
     averageWeight: 3.08
     imageUrl: https://cf.geekdo-images.com/PhjygpWSo-0labGrPBMyyg__original/img/mZzaBAEEJpMlHWWmC0R6Su0OibQ=/0x0/filters:format(jpeg)/pic5666597.jpg
     thumbnailUrl: https://cf.geekdo-images.com/PhjygpWSo-0labGrPBMyyg__small/img/JGgY-nBmkyB8WRp8vcoBLlNMQ5U=/fit-in/200x150/filters:strip_icc()/pic5666597.jpg
+    fallbackImageUrl: https://cf.geekdo-images.com/PhjygpWSo-0labGrPBMyyg__original/img/mZzaBAEEJpMlHWWmC0R6Su0OibQ=/0x0/filters:format(jpeg)/pic5666597.jpg
+    fallbackThumbnailUrl: https://cf.geekdo-images.com/PhjygpWSo-0labGrPBMyyg__small/img/JGgY-nBmkyB8WRp8vcoBLlNMQ5U=/fit-in/200x150/filters:strip_icc()/pic5666597.jpg
     categories:
     - Movies / TV / Radio theme
     - Novel-based
@@ -6729,6 +6895,8 @@ catalog:
     averageWeight: 4.35
     imageUrl: https://cf.geekdo-images.com/_Ppn5lssO5OaildSE-FgFA__original/img/kVpZ0Maa_LeQGWxOqsYKP3N4KUY=/0x0/filters:format(jpeg)/pic3727516.jpg
     thumbnailUrl: https://cf.geekdo-images.com/_Ppn5lssO5OaildSE-FgFA__small/img/lfEukJE0JsoZZObaF9K9YnFp62E=/fit-in/200x150/filters:strip_icc()/pic3727516.jpg
+    fallbackImageUrl: https://cf.geekdo-images.com/_Ppn5lssO5OaildSE-FgFA__original/img/kVpZ0Maa_LeQGWxOqsYKP3N4KUY=/0x0/filters:format(jpeg)/pic3727516.jpg
+    fallbackThumbnailUrl: https://cf.geekdo-images.com/_Ppn5lssO5OaildSE-FgFA__small/img/lfEukJE0JsoZZObaF9K9YnFp62E=/fit-in/200x150/filters:strip_icc()/pic3727516.jpg
     categories:
     - Civilization
     - Economic
@@ -6799,6 +6967,8 @@ catalog:
     averageWeight: 3.52
     imageUrl: https://cf.geekdo-images.com/UVUkjMV_Q2paVUIUP30Vvw__original/img/BoUtCkd1NRO0bR1R5EwL51xIuXA=/0x0/filters:format(jpeg)/pic7664424.jpg
     thumbnailUrl: https://cf.geekdo-images.com/UVUkjMV_Q2paVUIUP30Vvw__small/img/H6qmxJrRFjtOAPZOfDoZ480-46I=/fit-in/200x150/filters:strip_icc()/pic7664424.jpg
+    fallbackImageUrl: https://cf.geekdo-images.com/UVUkjMV_Q2paVUIUP30Vvw__original/img/BoUtCkd1NRO0bR1R5EwL51xIuXA=/0x0/filters:format(jpeg)/pic7664424.jpg
+    fallbackThumbnailUrl: https://cf.geekdo-images.com/UVUkjMV_Q2paVUIUP30Vvw__small/img/H6qmxJrRFjtOAPZOfDoZ480-46I=/fit-in/200x150/filters:strip_icc()/pic7664424.jpg
     categories:
     - Movies / TV / Radio theme
     - Novel-based
@@ -6858,6 +7028,8 @@ catalog:
     averageWeight: 4.22
     imageUrl: https://cf.geekdo-images.com/ImPgGag98W6gpV1KV812aA__original/img/38jB7fN07DwlrGKYAf-J0vsNdgs=/0x0/filters:format(jpeg)/pic1215633.jpg
     thumbnailUrl: https://cf.geekdo-images.com/ImPgGag98W6gpV1KV812aA__small/img/X-lBBdG4uO6LT0y1vXxCN4jdR4M=/fit-in/200x150/filters:strip_icc()/pic1215633.jpg
+    fallbackImageUrl: https://cf.geekdo-images.com/ImPgGag98W6gpV1KV812aA__original/img/38jB7fN07DwlrGKYAf-J0vsNdgs=/0x0/filters:format(jpeg)/pic1215633.jpg
+    fallbackThumbnailUrl: https://cf.geekdo-images.com/ImPgGag98W6gpV1KV812aA__small/img/X-lBBdG4uO6LT0y1vXxCN4jdR4M=/fit-in/200x150/filters:strip_icc()/pic1215633.jpg
     categories:
     - Fantasy
     - Fighting
@@ -6923,6 +7095,8 @@ catalog:
     averageWeight: 3.75
     imageUrl: https://cf.geekdo-images.com/7SrPNGBKg9IIsP4UQpOi8g__original/img/GKueTbkCk2Ramf6ai8mDj-BP6cI=/0x0/filters:format(jpeg)/pic4325841.jpg
     thumbnailUrl: https://cf.geekdo-images.com/7SrPNGBKg9IIsP4UQpOi8g__small/img/gAxzddRVQiRdjZHYFUZ2xc5Jlbw=/fit-in/200x150/filters:strip_icc()/pic4325841.jpg
+    fallbackImageUrl: https://cf.geekdo-images.com/7SrPNGBKg9IIsP4UQpOi8g__original/img/GKueTbkCk2Ramf6ai8mDj-BP6cI=/0x0/filters:format(jpeg)/pic4325841.jpg
+    fallbackThumbnailUrl: https://cf.geekdo-images.com/7SrPNGBKg9IIsP4UQpOi8g__small/img/gAxzddRVQiRdjZHYFUZ2xc5Jlbw=/fit-in/200x150/filters:strip_icc()/pic4325841.jpg
     categories:
     - Civil War
     - Movies / TV / Radio theme
@@ -6988,6 +7162,8 @@ catalog:
     averageWeight: 4.4
     imageUrl: https://cf.geekdo-images.com/hGWFm3hbMlCDsfCsauOQ4g__original/img/tjlflQtUPFiTpLpwk1NCVCS29Ic=/0x0/filters:format(png)/pic5375625.png
     thumbnailUrl: https://cf.geekdo-images.com/hGWFm3hbMlCDsfCsauOQ4g__small/img/NNG7Ijyx4evp5gcVReis9i0koas=/fit-in/200x150/filters:strip_icc()/pic5375625.png
+    fallbackImageUrl: https://cf.geekdo-images.com/hGWFm3hbMlCDsfCsauOQ4g__original/img/tjlflQtUPFiTpLpwk1NCVCS29Ic=/0x0/filters:format(png)/pic5375625.png
+    fallbackThumbnailUrl: https://cf.geekdo-images.com/hGWFm3hbMlCDsfCsauOQ4g__small/img/NNG7Ijyx4evp5gcVReis9i0koas=/fit-in/200x150/filters:strip_icc()/pic5375625.png
     categories:
     - Civilization
     - Economic
@@ -7062,6 +7238,8 @@ catalog:
     averageWeight: 3.61
     imageUrl: https://cf.geekdo-images.com/pNCiUUphnoeWOYfsWq0kng__original/img/Iae47UtAd_RXVd5tJ3YzbDHOv4E=/0x0/filters:format(jpeg)/pic3530661.jpg
     thumbnailUrl: https://cf.geekdo-images.com/pNCiUUphnoeWOYfsWq0kng__small/img/p7alNkNy8Avm8UISmhYHCiMz5bE=/fit-in/200x150/filters:strip_icc()/pic3530661.jpg
+    fallbackImageUrl: https://cf.geekdo-images.com/pNCiUUphnoeWOYfsWq0kng__original/img/Iae47UtAd_RXVd5tJ3YzbDHOv4E=/0x0/filters:format(jpeg)/pic3530661.jpg
+    fallbackThumbnailUrl: https://cf.geekdo-images.com/pNCiUUphnoeWOYfsWq0kng__small/img/p7alNkNy8Avm8UISmhYHCiMz5bE=/fit-in/200x150/filters:strip_icc()/pic3530661.jpg
     categories:
     - Modern Warfare
     - Political
@@ -7122,6 +7300,8 @@ catalog:
     averageWeight: 4.44
     imageUrl: https://cf.geekdo-images.com/fVwPntkJKgaEo0rIC0RwpA__original/img/1jawNpljTXwnT4km_2CjGwoUPR8=/0x0/filters:format(jpeg)/pic2663291.jpg
     thumbnailUrl: https://cf.geekdo-images.com/fVwPntkJKgaEo0rIC0RwpA__small/img/31usGlzlBReEFf60bcgbvDTjwCg=/fit-in/200x150/filters:strip_icc()/pic2663291.jpg
+    fallbackImageUrl: https://cf.geekdo-images.com/fVwPntkJKgaEo0rIC0RwpA__original/img/1jawNpljTXwnT4km_2CjGwoUPR8=/0x0/filters:format(jpeg)/pic2663291.jpg
+    fallbackThumbnailUrl: https://cf.geekdo-images.com/fVwPntkJKgaEo0rIC0RwpA__small/img/31usGlzlBReEFf60bcgbvDTjwCg=/fit-in/200x150/filters:strip_icc()/pic2663291.jpg
     categories:
     - Card Game
     - Civilization
@@ -7177,6 +7357,8 @@ catalog:
     averageWeight: 3.69
     imageUrl: https://cf.geekdo-images.com/u1l0gH7sb_vnvDvoO_QHqA__original/img/2zv_XMQoPFWk9Dn0oS4JY1IeFzw=/0x0/filters:format(jpeg)/pic4887376.jpg
     thumbnailUrl: https://cf.geekdo-images.com/u1l0gH7sb_vnvDvoO_QHqA__small/img/9lxFidyDb8j6D1vobx4e3UwZ-FI=/fit-in/200x150/filters:strip_icc()/pic4887376.jpg
+    fallbackImageUrl: https://cf.geekdo-images.com/u1l0gH7sb_vnvDvoO_QHqA__original/img/2zv_XMQoPFWk9Dn0oS4JY1IeFzw=/0x0/filters:format(jpeg)/pic4887376.jpg
+    fallbackThumbnailUrl: https://cf.geekdo-images.com/u1l0gH7sb_vnvDvoO_QHqA__small/img/9lxFidyDb8j6D1vobx4e3UwZ-FI=/fit-in/200x150/filters:strip_icc()/pic4887376.jpg
     categories:
     - American West
     - Animals
@@ -7239,6 +7421,8 @@ catalog:
     averageWeight: 3.83
     imageUrl: https://cf.geekdo-images.com/_BUXOVRDU9g_eRwgpR5ZZw__original/img/28ob2JiASW8iX8XoVzp5Y25-h24=/0x0/filters:format(jpeg)/pic8160466.jpg
     thumbnailUrl: https://cf.geekdo-images.com/_BUXOVRDU9g_eRwgpR5ZZw__small/img/icamIZ4nP3HHH3vczZqTr1hQgKY=/fit-in/200x150/filters:strip_icc()/pic8160466.jpg
+    fallbackImageUrl: https://cf.geekdo-images.com/_BUXOVRDU9g_eRwgpR5ZZw__original/img/28ob2JiASW8iX8XoVzp5Y25-h24=/0x0/filters:format(jpeg)/pic8160466.jpg
+    fallbackThumbnailUrl: https://cf.geekdo-images.com/_BUXOVRDU9g_eRwgpR5ZZw__small/img/icamIZ4nP3HHH3vczZqTr1hQgKY=/fit-in/200x150/filters:strip_icc()/pic8160466.jpg
     categories:
     - Science Fiction
     - Space Exploration
@@ -7296,6 +7480,8 @@ catalog:
     averageWeight: 4.42
     imageUrl: https://cf.geekdo-images.com/cwUgf-f-qwri8UHBUnifuQ__original/img/Tk7wFDJuaU8RPjNkmyC3AWYOPpU=/0x0/filters:format(png)/pic5092291.png
     thumbnailUrl: https://cf.geekdo-images.com/cwUgf-f-qwri8UHBUnifuQ__small/img/3o2Hc_N5mmfpOt8s9kP0ap8Jti8=/fit-in/200x150/filters:strip_icc()/pic5092291.png
+    fallbackImageUrl: https://cf.geekdo-images.com/cwUgf-f-qwri8UHBUnifuQ__original/img/Tk7wFDJuaU8RPjNkmyC3AWYOPpU=/0x0/filters:format(png)/pic5092291.png
+    fallbackThumbnailUrl: https://cf.geekdo-images.com/cwUgf-f-qwri8UHBUnifuQ__small/img/3o2Hc_N5mmfpOt8s9kP0ap8Jti8=/fit-in/200x150/filters:strip_icc()/pic5092291.png
     categories:
     - Adventure
     - Exploration
@@ -7360,6 +7546,8 @@ catalog:
     averageWeight: 3.67
     imageUrl: https://cf.geekdo-images.com/Oh3kHw6lweg6ru71Q16h2Q__original/img/yW7d4RNfU1ndISCaPlfGYUyxnRU=/0x0/filters:format(jpeg)/pic5235277.jpg
     thumbnailUrl: https://cf.geekdo-images.com/Oh3kHw6lweg6ru71Q16h2Q__small/img/e9XZdQe1ZcPpaq4Gy31OoWBB_V0=/fit-in/200x150/filters:strip_icc()/pic5235277.jpg
+    fallbackImageUrl: https://cf.geekdo-images.com/Oh3kHw6lweg6ru71Q16h2Q__original/img/yW7d4RNfU1ndISCaPlfGYUyxnRU=/0x0/filters:format(jpeg)/pic5235277.jpg
+    fallbackThumbnailUrl: https://cf.geekdo-images.com/Oh3kHw6lweg6ru71Q16h2Q__small/img/e9XZdQe1ZcPpaq4Gy31OoWBB_V0=/fit-in/200x150/filters:strip_icc()/pic5235277.jpg
     categories:
     - Civilization
     - Exploration
@@ -7420,6 +7608,8 @@ catalog:
     averageWeight: 2.91
     imageUrl: https://cf.geekdo-images.com/PQzVclEoOQ_wr4e1V86kxA__original/img/KXOf1hP1cIJQLabKhZulWP-e9wI=/0x0/filters:format(png)/pic8157856.png
     thumbnailUrl: https://cf.geekdo-images.com/PQzVclEoOQ_wr4e1V86kxA__small/img/cpmsSDagE5RvQ1ERXl-fMJIaUUg=/fit-in/200x150/filters:strip_icc()/pic8157856.png
+    fallbackImageUrl: https://cf.geekdo-images.com/PQzVclEoOQ_wr4e1V86kxA__original/img/KXOf1hP1cIJQLabKhZulWP-e9wI=/0x0/filters:format(png)/pic8157856.png
+    fallbackThumbnailUrl: https://cf.geekdo-images.com/PQzVclEoOQ_wr4e1V86kxA__small/img/cpmsSDagE5RvQ1ERXl-fMJIaUUg=/fit-in/200x150/filters:strip_icc()/pic8157856.png
     categories:
     - Adventure
     - Card Game
@@ -7492,6 +7682,8 @@ catalog:
     averageWeight: 3.85
     imageUrl: https://cf.geekdo-images.com/tHVtPzu82mBpeQbbZkV6EA__original/img/3ffdJj5Pz6HQrg09Kh8ecTen-TY=/0x0/filters:format(jpeg)/pic3469216.jpg
     thumbnailUrl: https://cf.geekdo-images.com/tHVtPzu82mBpeQbbZkV6EA__small/img/AghH1bAEhqzvyRcP3cy5G-rz0So=/fit-in/200x150/filters:strip_icc()/pic3469216.jpg
+    fallbackImageUrl: https://cf.geekdo-images.com/tHVtPzu82mBpeQbbZkV6EA__original/img/3ffdJj5Pz6HQrg09Kh8ecTen-TY=/0x0/filters:format(jpeg)/pic3469216.jpg
+    fallbackThumbnailUrl: https://cf.geekdo-images.com/tHVtPzu82mBpeQbbZkV6EA__small/img/AghH1bAEhqzvyRcP3cy5G-rz0So=/fit-in/200x150/filters:strip_icc()/pic3469216.jpg
     categories:
     - Age of Reason
     - Economic
@@ -7560,6 +7752,8 @@ catalog:
     averageWeight: 2.23
     imageUrl: https://cf.geekdo-images.com/zdagMskTF7wJBPjX74XsRw__original/img/Ju836WNSaW7Mab9Vjq2TJ_FqhWQ=/0x0/filters:format(jpeg)/pic2576399.jpg
     thumbnailUrl: https://cf.geekdo-images.com/zdagMskTF7wJBPjX74XsRw__small/img/gV1-ckZSIC-dCxxpq1Y7GmPITzQ=/fit-in/200x150/filters:strip_icc()/pic2576399.jpg
+    fallbackImageUrl: https://cf.geekdo-images.com/zdagMskTF7wJBPjX74XsRw__original/img/Ju836WNSaW7Mab9Vjq2TJ_FqhWQ=/0x0/filters:format(jpeg)/pic2576399.jpg
+    fallbackThumbnailUrl: https://cf.geekdo-images.com/zdagMskTF7wJBPjX74XsRw__small/img/gV1-ckZSIC-dCxxpq1Y7GmPITzQ=/fit-in/200x150/filters:strip_icc()/pic2576399.jpg
     categories:
     - Ancient
     - Card Game
@@ -7629,6 +7823,8 @@ catalog:
     averageWeight: 3.49
     imageUrl: https://cf.geekdo-images.com/4KSmlm59w0GwLIlgDnJDAQ__original/img/f0VmAKrPrMRQOUcOJHekRvuysDE=/0x0/filters:format(png)/pic8211747.png
     thumbnailUrl: https://cf.geekdo-images.com/4KSmlm59w0GwLIlgDnJDAQ__small/img/P20AxSqNHOEM5qT_doqeeE7JAHQ=/fit-in/200x150/filters:strip_icc()/pic8211747.png
+    fallbackImageUrl: https://cf.geekdo-images.com/4KSmlm59w0GwLIlgDnJDAQ__original/img/f0VmAKrPrMRQOUcOJHekRvuysDE=/0x0/filters:format(png)/pic8211747.png
+    fallbackThumbnailUrl: https://cf.geekdo-images.com/4KSmlm59w0GwLIlgDnJDAQ__small/img/P20AxSqNHOEM5qT_doqeeE7JAHQ=/fit-in/200x150/filters:strip_icc()/pic8211747.png
     categories:
     - Adventure
     - Horror
@@ -7705,6 +7901,8 @@ catalog:
     averageWeight: 3.87
     imageUrl: https://cf.geekdo-images.com/s9oGMCo1fcfV4Dk3EnqLZw__original/img/N1X-0JB1GapFVhl98nP4tNFXMcM=/0x0/filters:format(png)/pic3146943.png
     thumbnailUrl: https://cf.geekdo-images.com/s9oGMCo1fcfV4Dk3EnqLZw__small/img/AKxMMz2DTbBrEynhDROla8fdjJ4=/fit-in/200x150/filters:strip_icc()/pic3146943.png
+    fallbackImageUrl: https://cf.geekdo-images.com/s9oGMCo1fcfV4Dk3EnqLZw__original/img/N1X-0JB1GapFVhl98nP4tNFXMcM=/0x0/filters:format(png)/pic3146943.png
+    fallbackThumbnailUrl: https://cf.geekdo-images.com/s9oGMCo1fcfV4Dk3EnqLZw__small/img/AKxMMz2DTbBrEynhDROla8fdjJ4=/fit-in/200x150/filters:strip_icc()/pic3146943.png
     categories:
     - Animals
     - Farming
@@ -7794,6 +7992,8 @@ catalog:
     averageWeight: 2.06
     imageUrl: https://cf.geekdo-images.com/EybxJlUc9rz7F7HVFLqsdw__original/img/Ts4M5eOW38r2oTvJmkx0uwNodv4=/0x0/filters:format(jpeg)/pic8378939.jpg
     thumbnailUrl: https://cf.geekdo-images.com/EybxJlUc9rz7F7HVFLqsdw__small/img/rojFW0-h-bteedVG4aJXG1x7V0o=/fit-in/200x150/filters:strip_icc()/pic8378939.jpg
+    fallbackImageUrl: https://cf.geekdo-images.com/EybxJlUc9rz7F7HVFLqsdw__original/img/Ts4M5eOW38r2oTvJmkx0uwNodv4=/0x0/filters:format(jpeg)/pic8378939.jpg
+    fallbackThumbnailUrl: https://cf.geekdo-images.com/EybxJlUc9rz7F7HVFLqsdw__small/img/rojFW0-h-bteedVG4aJXG1x7V0o=/fit-in/200x150/filters:strip_icc()/pic8378939.jpg
     categories:
     - Card Game
     - Fantasy
@@ -7853,6 +8053,8 @@ catalog:
     averageWeight: 2.74
     imageUrl: https://cf.geekdo-images.com/hc2NDafu5c24iLJh_IZmyg__original/img/1Fpyz7j7rTvMPRiDdPjn0Vf0m2k=/0x0/filters:format(png)/pic4885780.png
     thumbnailUrl: https://cf.geekdo-images.com/hc2NDafu5c24iLJh_IZmyg__small/img/8TA1Gn7jERN4yhtXD-xBCGk-QfM=/fit-in/200x150/filters:strip_icc()/pic4885780.png
+    fallbackImageUrl: https://cf.geekdo-images.com/hc2NDafu5c24iLJh_IZmyg__original/img/1Fpyz7j7rTvMPRiDdPjn0Vf0m2k=/0x0/filters:format(png)/pic4885780.png
+    fallbackThumbnailUrl: https://cf.geekdo-images.com/hc2NDafu5c24iLJh_IZmyg__small/img/8TA1Gn7jERN4yhtXD-xBCGk-QfM=/fit-in/200x150/filters:strip_icc()/pic4885780.png
     categories:
     - Adventure
     - Fantasy
@@ -7914,6 +8116,8 @@ catalog:
     averageWeight: 2.99
     imageUrl: https://cf.geekdo-images.com/CzwSm8i7tkLz6cBnrILZBg__original/img/BhJ3sB3uk-eSdR1iW4EP3cu0Wi0=/0x0/filters:format(jpeg)/pic3453267.jpg
     thumbnailUrl: https://cf.geekdo-images.com/CzwSm8i7tkLz6cBnrILZBg__small/img/ESPSltYYSFK-aJw6jOTdQrJGpOc=/fit-in/200x150/filters:strip_icc()/pic3453267.jpg
+    fallbackImageUrl: https://cf.geekdo-images.com/CzwSm8i7tkLz6cBnrILZBg__original/img/BhJ3sB3uk-eSdR1iW4EP3cu0Wi0=/0x0/filters:format(jpeg)/pic3453267.jpg
+    fallbackThumbnailUrl: https://cf.geekdo-images.com/CzwSm8i7tkLz6cBnrILZBg__small/img/ESPSltYYSFK-aJw6jOTdQrJGpOc=/fit-in/200x150/filters:strip_icc()/pic3453267.jpg
     categories:
     - Ancient
     - Economic
@@ -7996,6 +8200,8 @@ catalog:
     averageWeight: 3.7
     imageUrl: https://cf.geekdo-images.com/gDn7AhrDlmfCLSz9ZqoNFQ__original/img/yecB1xO32nnjBAyskVOTq9LBuLo=/0x0/filters:format(jpeg)/pic5988511.jpg
     thumbnailUrl: https://cf.geekdo-images.com/gDn7AhrDlmfCLSz9ZqoNFQ__small/img/0pt6XrFHTXpNetwMo9rdY7PdhfQ=/fit-in/200x150/filters:strip_icc()/pic5988511.jpg
+    fallbackImageUrl: https://cf.geekdo-images.com/gDn7AhrDlmfCLSz9ZqoNFQ__original/img/yecB1xO32nnjBAyskVOTq9LBuLo=/0x0/filters:format(jpeg)/pic5988511.jpg
+    fallbackThumbnailUrl: https://cf.geekdo-images.com/gDn7AhrDlmfCLSz9ZqoNFQ__small/img/0pt6XrFHTXpNetwMo9rdY7PdhfQ=/fit-in/200x150/filters:strip_icc()/pic5988511.jpg
     categories:
     - American West
     - Animals
@@ -8052,6 +8258,8 @@ catalog:
     averageWeight: 2.04
     imageUrl: https://cf.geekdo-images.com/uXMeQzNenHb3zK7Hoa6b2w__original/img/mWOQnkpyYBorh_Y1-0Y2o-ew17k=/0x0/filters:format(jpeg)/pic7398904.jpg
     thumbnailUrl: https://cf.geekdo-images.com/uXMeQzNenHb3zK7Hoa6b2w__small/img/WyPClajMWU9lV5BdCXiZnqdZgmU=/fit-in/200x150/filters:strip_icc()/pic7398904.jpg
+    fallbackImageUrl: https://cf.geekdo-images.com/uXMeQzNenHb3zK7Hoa6b2w__original/img/mWOQnkpyYBorh_Y1-0Y2o-ew17k=/0x0/filters:format(jpeg)/pic7398904.jpg
+    fallbackThumbnailUrl: https://cf.geekdo-images.com/uXMeQzNenHb3zK7Hoa6b2w__small/img/WyPClajMWU9lV5BdCXiZnqdZgmU=/fit-in/200x150/filters:strip_icc()/pic7398904.jpg
     categories:
     - Aviation / Flight
     - Dice
@@ -8125,6 +8333,8 @@ catalog:
     averageWeight: 3.97
     imageUrl: https://cf.geekdo-images.com/bre12I1YiXkZr7elvriz4A__original/img/_dZS7fVfdc4DhJPbqnDpwTT4uF0=/0x0/filters:format(jpeg)/pic5375624.jpg
     thumbnailUrl: https://cf.geekdo-images.com/bre12I1YiXkZr7elvriz4A__small/img/GW-ip0dfeAee7KQqJ04SRZxF1lg=/fit-in/200x150/filters:strip_icc()/pic5375624.jpg
+    fallbackImageUrl: https://cf.geekdo-images.com/bre12I1YiXkZr7elvriz4A__original/img/_dZS7fVfdc4DhJPbqnDpwTT4uF0=/0x0/filters:format(jpeg)/pic5375624.jpg
+    fallbackThumbnailUrl: https://cf.geekdo-images.com/bre12I1YiXkZr7elvriz4A__small/img/GW-ip0dfeAee7KQqJ04SRZxF1lg=/fit-in/200x150/filters:strip_icc()/pic5375624.jpg
     categories:
     - Civilization
     - Economic
@@ -8181,6 +8391,8 @@ catalog:
     averageWeight: 3.87
     imageUrl: https://cf.geekdo-images.com/wKwRk0wYBcrtLAfgn4PCdg__original/img/Wpp0vzsVe4HxXGUqiZ1hDvwAHZU=/0x0/filters:format(png)/pic6624445.png
     thumbnailUrl: https://cf.geekdo-images.com/wKwRk0wYBcrtLAfgn4PCdg__small/img/mJNzYNKvYWDlaaD12V32BJ453d0=/fit-in/200x150/filters:strip_icc()/pic6624445.png
+    fallbackImageUrl: https://cf.geekdo-images.com/wKwRk0wYBcrtLAfgn4PCdg__original/img/Wpp0vzsVe4HxXGUqiZ1hDvwAHZU=/0x0/filters:format(png)/pic6624445.png
+    fallbackThumbnailUrl: https://cf.geekdo-images.com/wKwRk0wYBcrtLAfgn4PCdg__small/img/mJNzYNKvYWDlaaD12V32BJ453d0=/fit-in/200x150/filters:strip_icc()/pic6624445.png
     categories:
     - Adventure
     - Dice
@@ -8238,6 +8450,8 @@ catalog:
     averageWeight: 3.01
     imageUrl: https://cf.geekdo-images.com/nagl1li6kYt9elV9jbfVQw__original/img/Qn6vlBaTUaHNFsqohIUjd0EA4z0=/0x0/filters:format(jpeg)/pic6228507.jpg
     thumbnailUrl: https://cf.geekdo-images.com/nagl1li6kYt9elV9jbfVQw__small/img/ykeqdM_Naz4IiqOgyB1arzteOiU=/fit-in/200x150/filters:strip_icc()/pic6228507.jpg
+    fallbackImageUrl: https://cf.geekdo-images.com/nagl1li6kYt9elV9jbfVQw__original/img/Qn6vlBaTUaHNFsqohIUjd0EA4z0=/0x0/filters:format(jpeg)/pic6228507.jpg
+    fallbackThumbnailUrl: https://cf.geekdo-images.com/nagl1li6kYt9elV9jbfVQw__small/img/ykeqdM_Naz4IiqOgyB1arzteOiU=/fit-in/200x150/filters:strip_icc()/pic6228507.jpg
     categories:
     - Medieval
     - Religious
@@ -8294,6 +8508,8 @@ catalog:
     averageWeight: 4.38
     imageUrl: https://cf.geekdo-images.com/DUO2hz9AlLOH8p9ED-lCWg__original/img/PDDH38Vf9NEB_4ODURxcJKNBfVQ=/0x0/filters:format(jpeg)/pic1083380.jpg
     thumbnailUrl: https://cf.geekdo-images.com/DUO2hz9AlLOH8p9ED-lCWg__small/img/0bWDfnjzYebauQZrHmjyHkuUttI=/fit-in/200x150/filters:strip_icc()/pic1083380.jpg
+    fallbackImageUrl: https://cf.geekdo-images.com/DUO2hz9AlLOH8p9ED-lCWg__original/img/PDDH38Vf9NEB_4ODURxcJKNBfVQ=/0x0/filters:format(jpeg)/pic1083380.jpg
+    fallbackThumbnailUrl: https://cf.geekdo-images.com/DUO2hz9AlLOH8p9ED-lCWg__small/img/0bWDfnjzYebauQZrHmjyHkuUttI=/fit-in/200x150/filters:strip_icc()/pic1083380.jpg
     categories:
     - Adventure
     - Exploration
@@ -8352,6 +8568,8 @@ catalog:
     averageWeight: 4.11
     imageUrl: https://cf.geekdo-images.com/jEPmWvvYpqkWrKOzqIHFsg__original/img/rkHKwkUqpQC7PAGG7n2gbrcQiUY=/0x0/filters:format(png)/pic4336469.png
     thumbnailUrl: https://cf.geekdo-images.com/jEPmWvvYpqkWrKOzqIHFsg__small/img/kMLIpeqA6UcUvQg2AdMwwQoEIfU=/fit-in/200x150/filters:strip_icc()/pic4336469.png
+    fallbackImageUrl: https://cf.geekdo-images.com/jEPmWvvYpqkWrKOzqIHFsg__original/img/rkHKwkUqpQC7PAGG7n2gbrcQiUY=/0x0/filters:format(png)/pic4336469.png
+    fallbackThumbnailUrl: https://cf.geekdo-images.com/jEPmWvvYpqkWrKOzqIHFsg__small/img/kMLIpeqA6UcUvQg2AdMwwQoEIfU=/fit-in/200x150/filters:strip_icc()/pic4336469.png
     categories:
     - Economic
     - Environmental
@@ -8420,6 +8638,8 @@ catalog:
     averageWeight: 4.26
     imageUrl: https://cf.geekdo-images.com/DCLgJlrvB-EqL6A3WgQLMQ__original/img/vGpYcxjDBCOVcI0BcWOevspTQMQ=/0x0/filters:format(jpeg)/pic5715770.jpg
     thumbnailUrl: https://cf.geekdo-images.com/DCLgJlrvB-EqL6A3WgQLMQ__small/img/9yp6ANJx6cqdQqQ6hkNr3zA88vw=/fit-in/200x150/filters:strip_icc()/pic5715770.jpg
+    fallbackImageUrl: https://cf.geekdo-images.com/DCLgJlrvB-EqL6A3WgQLMQ__original/img/vGpYcxjDBCOVcI0BcWOevspTQMQ=/0x0/filters:format(jpeg)/pic5715770.jpg
+    fallbackThumbnailUrl: https://cf.geekdo-images.com/DCLgJlrvB-EqL6A3WgQLMQ__small/img/9yp6ANJx6cqdQqQ6hkNr3zA88vw=/fit-in/200x150/filters:strip_icc()/pic5715770.jpg
     categories:
     - Economic
     - Educational
@@ -8468,6 +8688,8 @@ catalog:
     averageWeight: 2.9
     imageUrl: https://cf.geekdo-images.com/l_PRU2lVlX9seScRFcvFlA__original/img/gDL7OZFlzoOFgU0VYlREs8P5hCQ=/0x0/filters:format(jpeg)/pic6500949.jpg
     thumbnailUrl: https://cf.geekdo-images.com/l_PRU2lVlX9seScRFcvFlA__small/img/pULDtVd75QZgGfvSMhr6Rs07vK8=/fit-in/200x150/filters:strip_icc()/pic6500949.jpg
+    fallbackImageUrl: https://cf.geekdo-images.com/l_PRU2lVlX9seScRFcvFlA__original/img/gDL7OZFlzoOFgU0VYlREs8P5hCQ=/0x0/filters:format(jpeg)/pic6500949.jpg
+    fallbackThumbnailUrl: https://cf.geekdo-images.com/l_PRU2lVlX9seScRFcvFlA__small/img/pULDtVd75QZgGfvSMhr6Rs07vK8=/fit-in/200x150/filters:strip_icc()/pic6500949.jpg
     categories:
     - Economic
     - Farming
@@ -8530,6 +8752,8 @@ catalog:
     averageWeight: 1.22
     imageUrl: https://cf.geekdo-images.com/DOwZ7_Q1w68iBhARcDAxig__original/img/0E7UQ_sXErRusbZVixlIiN8MIJQ=/0x0/filters:format(jpeg)/pic8549797.jpg
     thumbnailUrl: https://cf.geekdo-images.com/DOwZ7_Q1w68iBhARcDAxig__small/img/nkY1mEj6fItSXJHctfzFcRIcDT0=/fit-in/200x150/filters:strip_icc()/pic8549797.jpg
+    fallbackImageUrl: https://cf.geekdo-images.com/DOwZ7_Q1w68iBhARcDAxig__original/img/0E7UQ_sXErRusbZVixlIiN8MIJQ=/0x0/filters:format(jpeg)/pic8549797.jpg
+    fallbackThumbnailUrl: https://cf.geekdo-images.com/DOwZ7_Q1w68iBhARcDAxig__small/img/nkY1mEj6fItSXJHctfzFcRIcDT0=/fit-in/200x150/filters:strip_icc()/pic8549797.jpg
     categories:
     - Action / Dexterity
     mechanics:
@@ -8588,6 +8812,8 @@ catalog:
     averageWeight: 2.2
     imageUrl: https://cf.geekdo-images.com/-vOrd4bOspibyohYExLqWg__original/img/iXU8a9WaVlwrkiEiOxWN06y9y5g=/0x0/filters:format(png)/pic6940449.png
     thumbnailUrl: https://cf.geekdo-images.com/-vOrd4bOspibyohYExLqWg__small/img/2GbaKvYOzWIxfgbYTk2R9puiyzo=/fit-in/200x150/filters:strip_icc()/pic6940449.png
+    fallbackImageUrl: https://cf.geekdo-images.com/-vOrd4bOspibyohYExLqWg__original/img/iXU8a9WaVlwrkiEiOxWN06y9y5g=/0x0/filters:format(png)/pic6940449.png
+    fallbackThumbnailUrl: https://cf.geekdo-images.com/-vOrd4bOspibyohYExLqWg__small/img/2GbaKvYOzWIxfgbYTk2R9puiyzo=/fit-in/200x150/filters:strip_icc()/pic6940449.png
     categories:
     - Racing
     - Sports
@@ -8649,6 +8875,8 @@ catalog:
     averageWeight: 4.29
     imageUrl: https://cf.geekdo-images.com/L2Wn-zUqkcHgqvwvY212Ig__original/img/Htra4hvxjBlejtNEIUns_B3CNNc=/0x0/filters:format(jpeg)/pic4924232.jpg
     thumbnailUrl: https://cf.geekdo-images.com/L2Wn-zUqkcHgqvwvY212Ig__small/img/RQunBacBw949DkYBgzoS5YaXgJo=/fit-in/200x150/filters:strip_icc()/pic4924232.jpg
+    fallbackImageUrl: https://cf.geekdo-images.com/L2Wn-zUqkcHgqvwvY212Ig__original/img/Htra4hvxjBlejtNEIUns_B3CNNc=/0x0/filters:format(jpeg)/pic4924232.jpg
+    fallbackThumbnailUrl: https://cf.geekdo-images.com/L2Wn-zUqkcHgqvwvY212Ig__small/img/RQunBacBw949DkYBgzoS5YaXgJo=/fit-in/200x150/filters:strip_icc()/pic4924232.jpg
     categories:
     - Economic
     - Industry / Manufacturing
@@ -8701,6 +8929,8 @@ catalog:
     averageWeight: 2.95
     imageUrl: https://cf.geekdo-images.com/kRvUgYiaOq07kC67ZK5UoQ__original/img/cqng0e4S7Cj6j6Sb49-OCggGi-8=/0x0/filters:format(jpeg)/pic4900321.jpg
     thumbnailUrl: https://cf.geekdo-images.com/kRvUgYiaOq07kC67ZK5UoQ__small/img/SDNWntiB06KhAINl06CDPkoipDc=/fit-in/200x150/filters:strip_icc()/pic4900321.jpg
+    fallbackImageUrl: https://cf.geekdo-images.com/kRvUgYiaOq07kC67ZK5UoQ__original/img/cqng0e4S7Cj6j6Sb49-OCggGi-8=/0x0/filters:format(jpeg)/pic4900321.jpg
+    fallbackThumbnailUrl: https://cf.geekdo-images.com/kRvUgYiaOq07kC67ZK5UoQ__small/img/SDNWntiB06KhAINl06CDPkoipDc=/fit-in/200x150/filters:strip_icc()/pic4900321.jpg
     categories:
     - Card Game
     - Collectible Components
@@ -8750,6 +8980,8 @@ catalog:
     averageWeight: 3.59
     imageUrl: https://cf.geekdo-images.com/PwOwTVHovJAUQgghnGqCOg__original/img/1WL5-4DZi0hX76HEgsLIYRRaIh4=/0x0/filters:format(png)/pic4837710.png
     thumbnailUrl: https://cf.geekdo-images.com/PwOwTVHovJAUQgghnGqCOg__small/img/1gGYiRBx7W4wyLy826EHGTdjsKA=/fit-in/200x150/filters:strip_icc()/pic4837710.png
+    fallbackImageUrl: https://cf.geekdo-images.com/PwOwTVHovJAUQgghnGqCOg__original/img/1WL5-4DZi0hX76HEgsLIYRRaIh4=/0x0/filters:format(png)/pic4837710.png
+    fallbackThumbnailUrl: https://cf.geekdo-images.com/PwOwTVHovJAUQgghnGqCOg__small/img/1gGYiRBx7W4wyLy826EHGTdjsKA=/fit-in/200x150/filters:strip_icc()/pic4837710.png
     categories:
     - Card Game
     - City Building
@@ -8815,6 +9047,8 @@ catalog:
     averageWeight: 4.19
     imageUrl: https://cf.geekdo-images.com/Wtxml94LAXsIWQCxGPS63Q__original/img/9c-MJB6x54vN5eB-1hT4XQaHtP8=/0x0/filters:format(png)/pic2649434.png
     thumbnailUrl: https://cf.geekdo-images.com/Wtxml94LAXsIWQCxGPS63Q__small/img/LKU2KoMev222qUIKyNqaCF_ZLPY=/fit-in/200x150/filters:strip_icc()/pic2649434.png
+    fallbackImageUrl: https://cf.geekdo-images.com/Wtxml94LAXsIWQCxGPS63Q__original/img/9c-MJB6x54vN5eB-1hT4XQaHtP8=/0x0/filters:format(png)/pic2649434.png
+    fallbackThumbnailUrl: https://cf.geekdo-images.com/Wtxml94LAXsIWQCxGPS63Q__small/img/LKU2KoMev222qUIKyNqaCF_ZLPY=/fit-in/200x150/filters:strip_icc()/pic2649434.png
     categories:
     - Economic
     - Industry / Manufacturing
@@ -8867,6 +9101,8 @@ catalog:
     averageWeight: 3.84
     imageUrl: https://cf.geekdo-images.com/oSM_AuKYfGIwOtKbVEsoVg__original/img/7DlaMCmuoJzm9AzelmStYIDgutI=/0x0/filters:format(png)/pic4503733.png
     thumbnailUrl: https://cf.geekdo-images.com/oSM_AuKYfGIwOtKbVEsoVg__small/img/NyoufH5YBFCh1rKy4uy76bR4ITk=/fit-in/200x150/filters:strip_icc()/pic4503733.png
+    fallbackImageUrl: https://cf.geekdo-images.com/oSM_AuKYfGIwOtKbVEsoVg__original/img/7DlaMCmuoJzm9AzelmStYIDgutI=/0x0/filters:format(png)/pic4503733.png
+    fallbackThumbnailUrl: https://cf.geekdo-images.com/oSM_AuKYfGIwOtKbVEsoVg__small/img/NyoufH5YBFCh1rKy4uy76bR4ITk=/fit-in/200x150/filters:strip_icc()/pic4503733.png
     categories:
     - Economic
     - Educational
@@ -8925,6 +9161,8 @@ catalog:
     averageWeight: 2.5
     imageUrl: https://cf.geekdo-images.com/e8D09pfFsUsoX1D81EeoZg__original/img/8_FKwPd8bBL3PFjef8Yjz_sFWSk=/0x0/filters:format(jpeg)/pic4705171.jpg
     thumbnailUrl: https://cf.geekdo-images.com/e8D09pfFsUsoX1D81EeoZg__small/img/j03wBmZg1Kp5QaaIu9p-O8XRqeU=/fit-in/200x150/filters:strip_icc()/pic4705171.jpg
+    fallbackImageUrl: https://cf.geekdo-images.com/e8D09pfFsUsoX1D81EeoZg__original/img/8_FKwPd8bBL3PFjef8Yjz_sFWSk=/0x0/filters:format(jpeg)/pic4705171.jpg
+    fallbackThumbnailUrl: https://cf.geekdo-images.com/e8D09pfFsUsoX1D81EeoZg__small/img/j03wBmZg1Kp5QaaIu9p-O8XRqeU=/fit-in/200x150/filters:strip_icc()/pic4705171.jpg
     categories:
     - Fantasy
     - Fighting
@@ -8985,6 +9223,8 @@ catalog:
     averageWeight: 4.27
     imageUrl: https://cf.geekdo-images.com/D1vrcFEptCEoD8Z6s_iRfw__original/img/1vY0K3wSqlYXq0JEylSI-7agxKs=/0x0/filters:format(jpeg)/pic7430993.jpg
     thumbnailUrl: https://cf.geekdo-images.com/D1vrcFEptCEoD8Z6s_iRfw__small/img/0yBK_DMaSgRVrp2fGuNPgb0Jo7w=/fit-in/200x150/filters:strip_icc()/pic7430993.jpg
+    fallbackImageUrl: https://cf.geekdo-images.com/D1vrcFEptCEoD8Z6s_iRfw__original/img/1vY0K3wSqlYXq0JEylSI-7agxKs=/0x0/filters:format(jpeg)/pic7430993.jpg
+    fallbackThumbnailUrl: https://cf.geekdo-images.com/D1vrcFEptCEoD8Z6s_iRfw__small/img/0yBK_DMaSgRVrp2fGuNPgb0Jo7w=/fit-in/200x150/filters:strip_icc()/pic7430993.jpg
     categories:
     - Civilization
     - Economic
@@ -9053,6 +9293,8 @@ catalog:
     averageWeight: 2.23
     imageUrl: https://cf.geekdo-images.com/DPjV1iI0ygo5Bl3XLNRiIg__original/img/cXqOdM3BLyIeRt0GP3M3V--gF1M=/0x0/filters:format(jpeg)/pic4449526.jpg
     thumbnailUrl: https://cf.geekdo-images.com/DPjV1iI0ygo5Bl3XLNRiIg__small/img/O2WnqJew5gNjQqPUH3gqmTBc1pQ=/fit-in/200x150/filters:strip_icc()/pic4449526.jpg
+    fallbackImageUrl: https://cf.geekdo-images.com/DPjV1iI0ygo5Bl3XLNRiIg__original/img/cXqOdM3BLyIeRt0GP3M3V--gF1M=/0x0/filters:format(jpeg)/pic4449526.jpg
+    fallbackThumbnailUrl: https://cf.geekdo-images.com/DPjV1iI0ygo5Bl3XLNRiIg__small/img/O2WnqJew5gNjQqPUH3gqmTBc1pQ=/fit-in/200x150/filters:strip_icc()/pic4449526.jpg
     categories:
     - Adventure
     - Fantasy
@@ -9114,6 +9356,8 @@ catalog:
     averageWeight: 3.05
     imageUrl: https://cf.geekdo-images.com/qXT1U-nFh9PE8ujfdmI7dA__original/img/jzmifZJ0Sg2Js7hmQjzX7bEHVBY=/0x0/filters:format(jpeg)/pic7754663.jpg
     thumbnailUrl: https://cf.geekdo-images.com/qXT1U-nFh9PE8ujfdmI7dA__small/img/ru1l95gdKNXSsByDglE9Xxgu0kE=/fit-in/200x150/filters:strip_icc()/pic7754663.jpg
+    fallbackImageUrl: https://cf.geekdo-images.com/qXT1U-nFh9PE8ujfdmI7dA__original/img/jzmifZJ0Sg2Js7hmQjzX7bEHVBY=/0x0/filters:format(jpeg)/pic7754663.jpg
+    fallbackThumbnailUrl: https://cf.geekdo-images.com/qXT1U-nFh9PE8ujfdmI7dA__small/img/ru1l95gdKNXSsByDglE9Xxgu0kE=/fit-in/200x150/filters:strip_icc()/pic7754663.jpg
     categories:
     - Dice
     - Economic
@@ -9172,6 +9416,8 @@ catalog:
     averageWeight: 3.71
     imageUrl: https://cf.geekdo-images.com/4nhokcLdYoo6ulbZ1rmGgA__original/img/9ktZDu003VVVTw0RxD-ufLYV1HQ=/0x0/filters:format(png)/pic4462987.png
     thumbnailUrl: https://cf.geekdo-images.com/4nhokcLdYoo6ulbZ1rmGgA__small/img/1gEbke_bKTA6D2jjpPm1HowGGHM=/fit-in/200x150/filters:strip_icc()/pic4462987.png
+    fallbackImageUrl: https://cf.geekdo-images.com/4nhokcLdYoo6ulbZ1rmGgA__original/img/9ktZDu003VVVTw0RxD-ufLYV1HQ=/0x0/filters:format(png)/pic4462987.png
+    fallbackThumbnailUrl: https://cf.geekdo-images.com/4nhokcLdYoo6ulbZ1rmGgA__small/img/1gEbke_bKTA6D2jjpPm1HowGGHM=/fit-in/200x150/filters:strip_icc()/pic4462987.png
     categories:
     - Medieval
     mechanics:
@@ -9222,6 +9468,8 @@ catalog:
     averageWeight: 3.71
     imageUrl: https://cf.geekdo-images.com/y7Rqd3S6J7vyVhicR1bqTQ__original/img/tQFXv1w2R-J-1cjyaKG9LAS2UOs=/0x0/filters:format(jpeg)/pic6091101.jpg
     thumbnailUrl: https://cf.geekdo-images.com/y7Rqd3S6J7vyVhicR1bqTQ__small/img/w1iHoYZCVTDZI6gsPuxOScA7FqU=/fit-in/200x150/filters:strip_icc()/pic6091101.jpg
+    fallbackImageUrl: https://cf.geekdo-images.com/y7Rqd3S6J7vyVhicR1bqTQ__original/img/tQFXv1w2R-J-1cjyaKG9LAS2UOs=/0x0/filters:format(jpeg)/pic6091101.jpg
+    fallbackThumbnailUrl: https://cf.geekdo-images.com/y7Rqd3S6J7vyVhicR1bqTQ__small/img/w1iHoYZCVTDZI6gsPuxOScA7FqU=/fit-in/200x150/filters:strip_icc()/pic6091101.jpg
     categories:
     - City Building
     - Economic
@@ -9287,6 +9535,8 @@ catalog:
     averageWeight: 4.21
     imageUrl: https://cf.geekdo-images.com/ie1GSt1XV04sXQXt-3O1UQ__original/img/59dZRZePEgtcupkRSA2zohZuHpM=/0x0/filters:format(png)/pic2503200.png
     thumbnailUrl: https://cf.geekdo-images.com/ie1GSt1XV04sXQXt-3O1UQ__small/img/O0H84AvXp139U865gRLGiAo9-gA=/fit-in/200x150/filters:strip_icc()/pic2503200.png
+    fallbackImageUrl: https://cf.geekdo-images.com/ie1GSt1XV04sXQXt-3O1UQ__original/img/59dZRZePEgtcupkRSA2zohZuHpM=/0x0/filters:format(png)/pic2503200.png
+    fallbackThumbnailUrl: https://cf.geekdo-images.com/ie1GSt1XV04sXQXt-3O1UQ__small/img/O0H84AvXp139U865gRLGiAo9-gA=/fit-in/200x150/filters:strip_icc()/pic2503200.png
     categories:
     - Economic
     mechanics:
@@ -9345,6 +9595,8 @@ catalog:
     averageWeight: 3.42
     imageUrl: https://cf.geekdo-images.com/2ewHIIG_TRq8bYlqk0jIMw__original/img/cassW39WF2QrPImJF59efADAmM0=/0x0/filters:format(jpeg)/pic3738560.jpg
     thumbnailUrl: https://cf.geekdo-images.com/2ewHIIG_TRq8bYlqk0jIMw__small/img/IJaOyyQ7Y59tW6nbKbjTMTFt-Ls=/fit-in/200x150/filters:strip_icc()/pic3738560.jpg
+    fallbackImageUrl: https://cf.geekdo-images.com/2ewHIIG_TRq8bYlqk0jIMw__original/img/cassW39WF2QrPImJF59efADAmM0=/0x0/filters:format(jpeg)/pic3738560.jpg
+    fallbackThumbnailUrl: https://cf.geekdo-images.com/2ewHIIG_TRq8bYlqk0jIMw__small/img/IJaOyyQ7Y59tW6nbKbjTMTFt-Ls=/fit-in/200x150/filters:strip_icc()/pic3738560.jpg
     categories:
     - Bluffing
     - Card Game
@@ -9401,6 +9653,8 @@ catalog:
     averageWeight: 3.3
     imageUrl: https://cf.geekdo-images.com/pIQ_MXvaoARRp1loCHJuHg__original/img/12Xvbw01hpsAjsO0xrajZt2b5HY=/0x0/filters:format(jpeg)/pic2247647.jpg
     thumbnailUrl: https://cf.geekdo-images.com/pIQ_MXvaoARRp1loCHJuHg__small/img/AD5YvNSUaVvITmtQb1-b01VuBbs=/fit-in/200x150/filters:strip_icc()/pic2247647.jpg
+    fallbackImageUrl: https://cf.geekdo-images.com/pIQ_MXvaoARRp1loCHJuHg__original/img/12Xvbw01hpsAjsO0xrajZt2b5HY=/0x0/filters:format(jpeg)/pic2247647.jpg
+    fallbackThumbnailUrl: https://cf.geekdo-images.com/pIQ_MXvaoARRp1loCHJuHg__small/img/AD5YvNSUaVvITmtQb1-b01VuBbs=/fit-in/200x150/filters:strip_icc()/pic2247647.jpg
     categories:
     - Adventure
     - Exploration
@@ -9460,6 +9714,8 @@ catalog:
     averageWeight: 4.01
     imageUrl: https://cf.geekdo-images.com/X4KaD6ADLW1ohOznNay7xg__original/img/HhxsLMIsz6Te567qXEbRBen4Sm8=/0x0/filters:format(png)/pic7350809.png
     thumbnailUrl: https://cf.geekdo-images.com/X4KaD6ADLW1ohOznNay7xg__small/img/iCWpe4ydO3Rtu6yBjn01eQ97xLc=/fit-in/200x150/filters:strip_icc()/pic7350809.png
+    fallbackImageUrl: https://cf.geekdo-images.com/X4KaD6ADLW1ohOznNay7xg__original/img/HhxsLMIsz6Te567qXEbRBen4Sm8=/0x0/filters:format(png)/pic7350809.png
+    fallbackThumbnailUrl: https://cf.geekdo-images.com/X4KaD6ADLW1ohOznNay7xg__small/img/iCWpe4ydO3Rtu6yBjn01eQ97xLc=/fit-in/200x150/filters:strip_icc()/pic7350809.png
     categories:
     - Animals
     mechanics:
@@ -9503,6 +9759,8 @@ catalog:
     averageWeight: 3.44
     imageUrl: https://cf.geekdo-images.com/YCGWJMFwOI5efji2RJ2mSw__original/img/jC_He46LcIcKWU-kSwkYdr9Z45E=/0x0/filters:format(jpeg)/pic8093340.jpg
     thumbnailUrl: https://cf.geekdo-images.com/YCGWJMFwOI5efji2RJ2mSw__small/img/h_Rp2XYqaNElM2hrYxUSzMxRRgM=/fit-in/200x150/filters:strip_icc()/pic8093340.jpg
+    fallbackImageUrl: https://cf.geekdo-images.com/YCGWJMFwOI5efji2RJ2mSw__original/img/jC_He46LcIcKWU-kSwkYdr9Z45E=/0x0/filters:format(jpeg)/pic8093340.jpg
+    fallbackThumbnailUrl: https://cf.geekdo-images.com/YCGWJMFwOI5efji2RJ2mSw__small/img/h_Rp2XYqaNElM2hrYxUSzMxRRgM=/fit-in/200x150/filters:strip_icc()/pic8093340.jpg
     categories:
     - Animals
     - Economic
@@ -9566,6 +9824,8 @@ catalog:
     averageWeight: 3.92
     imageUrl: https://cf.geekdo-images.com/rMNa0k05zMdKgSEp26Q3Tw__original/img/yhnCcq9UplffqjSCe08mjTFvgOM=/0x0/filters:format(jpeg)/pic4917407.jpg
     thumbnailUrl: https://cf.geekdo-images.com/rMNa0k05zMdKgSEp26Q3Tw__small/img/lVlnhYyxlZb3WuKZJHLoJcFHEjs=/fit-in/200x150/filters:strip_icc()/pic4917407.jpg
+    fallbackImageUrl: https://cf.geekdo-images.com/rMNa0k05zMdKgSEp26Q3Tw__original/img/yhnCcq9UplffqjSCe08mjTFvgOM=/0x0/filters:format(jpeg)/pic4917407.jpg
+    fallbackThumbnailUrl: https://cf.geekdo-images.com/rMNa0k05zMdKgSEp26Q3Tw__small/img/lVlnhYyxlZb3WuKZJHLoJcFHEjs=/fit-in/200x150/filters:strip_icc()/pic4917407.jpg
     categories:
     - Economic
     - Exploration
@@ -9623,6 +9883,8 @@ catalog:
     averageWeight: 2.46
     imageUrl: https://cf.geekdo-images.com/n4J5LebMj0DQD016qW7ABw__original/img/KDP4s1942J-T52OEytY2VpUWZC0=/0x0/filters:format(jpeg)/pic3184103.jpg
     thumbnailUrl: https://cf.geekdo-images.com/n4J5LebMj0DQD016qW7ABw__small/img/Nbu-AYVIop-1yvVfs5zjKowtlEQ=/fit-in/200x150/filters:strip_icc()/pic3184103.jpg
+    fallbackImageUrl: https://cf.geekdo-images.com/n4J5LebMj0DQD016qW7ABw__original/img/KDP4s1942J-T52OEytY2VpUWZC0=/0x0/filters:format(jpeg)/pic3184103.jpg
+    fallbackThumbnailUrl: https://cf.geekdo-images.com/n4J5LebMj0DQD016qW7ABw__small/img/Nbu-AYVIop-1yvVfs5zjKowtlEQ=/fit-in/200x150/filters:strip_icc()/pic3184103.jpg
     categories:
     - Fantasy
     - Fighting
@@ -9685,6 +9947,8 @@ catalog:
     averageWeight: 4.27
     imageUrl: https://cf.geekdo-images.com/LenzJBOHboAGU0cUIqAZPQ__original/img/-dnx4zkvdOn3CMVHpXIfESazj40=/0x0/filters:format(jpeg)/pic2931007.jpg
     thumbnailUrl: https://cf.geekdo-images.com/LenzJBOHboAGU0cUIqAZPQ__small/img/Z3yFJIp9rmSmcGoTiqGeTkKCnQU=/fit-in/200x150/filters:strip_icc()/pic2931007.jpg
+    fallbackImageUrl: https://cf.geekdo-images.com/LenzJBOHboAGU0cUIqAZPQ__original/img/-dnx4zkvdOn3CMVHpXIfESazj40=/0x0/filters:format(jpeg)/pic2931007.jpg
+    fallbackThumbnailUrl: https://cf.geekdo-images.com/LenzJBOHboAGU0cUIqAZPQ__small/img/Z3yFJIp9rmSmcGoTiqGeTkKCnQU=/fit-in/200x150/filters:strip_icc()/pic2931007.jpg
     categories:
     - Adventure
     - Dice
@@ -9738,6 +10002,8 @@ catalog:
     averageWeight: 3.89
     imageUrl: https://cf.geekdo-images.com/-A_ABjMw4PdoAZrH-FjiiA__original/img/GuDlOog3eTRrkxCUzCEgRc17B-g=/0x0/filters:format(png)/pic5726930.png
     thumbnailUrl: https://cf.geekdo-images.com/-A_ABjMw4PdoAZrH-FjiiA__small/img/_rJRtHzqatLg9OQM0x1UaC1cRGY=/fit-in/200x150/filters:strip_icc()/pic5726930.png
+    fallbackImageUrl: https://cf.geekdo-images.com/-A_ABjMw4PdoAZrH-FjiiA__original/img/GuDlOog3eTRrkxCUzCEgRc17B-g=/0x0/filters:format(png)/pic5726930.png
+    fallbackThumbnailUrl: https://cf.geekdo-images.com/-A_ABjMw4PdoAZrH-FjiiA__small/img/_rJRtHzqatLg9OQM0x1UaC1cRGY=/fit-in/200x150/filters:strip_icc()/pic5726930.png
     categories:
     - Exploration
     - Travel
@@ -9806,6 +10072,8 @@ catalog:
     averageWeight: 3.46
     imageUrl: https://cf.geekdo-images.com/V0OZ9QR0pC9G5t5i9MoZTQ__original/img/NxxAoxVxMNkDGEkD3aoobPL14dI=/0x0/filters:format(jpeg)/pic6950224.jpg
     thumbnailUrl: https://cf.geekdo-images.com/V0OZ9QR0pC9G5t5i9MoZTQ__small/img/NPtXuKlsnfPORSn6kpTcf-ZdEF0=/fit-in/200x150/filters:strip_icc()/pic6950224.jpg
+    fallbackImageUrl: https://cf.geekdo-images.com/V0OZ9QR0pC9G5t5i9MoZTQ__original/img/NxxAoxVxMNkDGEkD3aoobPL14dI=/0x0/filters:format(jpeg)/pic6950224.jpg
+    fallbackThumbnailUrl: https://cf.geekdo-images.com/V0OZ9QR0pC9G5t5i9MoZTQ__small/img/NPtXuKlsnfPORSn6kpTcf-ZdEF0=/fit-in/200x150/filters:strip_icc()/pic6950224.jpg
     categories:
     - Civilization
     - Exploration
@@ -9896,6 +10164,8 @@ catalog:
     averageWeight: 2.99
     imageUrl: https://cf.geekdo-images.com/-DOqixs8uwKUvvWPKI4f9w__original/img/Vh-DCkTPa8OU45LaJdUywwhiYqE=/0x0/filters:format(jpeg)/pic5261714.jpg
     thumbnailUrl: https://cf.geekdo-images.com/-DOqixs8uwKUvvWPKI4f9w__small/img/xLs-ldTPwaADbvzkOpF0sgWzwck=/fit-in/200x150/filters:strip_icc()/pic5261714.jpg
+    fallbackImageUrl: https://cf.geekdo-images.com/-DOqixs8uwKUvvWPKI4f9w__original/img/Vh-DCkTPa8OU45LaJdUywwhiYqE=/0x0/filters:format(jpeg)/pic5261714.jpg
+    fallbackThumbnailUrl: https://cf.geekdo-images.com/-DOqixs8uwKUvvWPKI4f9w__small/img/xLs-ldTPwaADbvzkOpF0sgWzwck=/fit-in/200x150/filters:strip_icc()/pic5261714.jpg
     categories:
     - Card Game
     - Civilization
@@ -9963,6 +10233,8 @@ catalog:
     averageWeight: 0
     imageUrl: https://cf.geekdo-images.com/NSNqLPStIevgazzFvDjBXg__original/img/IBBihaLB4Gf7bfMVbyrWiyHFzrQ=/0x0/filters:format(jpeg)/pic6166941.jpg
     thumbnailUrl: https://cf.geekdo-images.com/NSNqLPStIevgazzFvDjBXg__small/img/wGkH7Z1C44mG3xCZ1NyOgpbWge8=/fit-in/200x150/filters:strip_icc()/pic6166941.jpg
+    fallbackImageUrl: https://cf.geekdo-images.com/NSNqLPStIevgazzFvDjBXg__original/img/IBBihaLB4Gf7bfMVbyrWiyHFzrQ=/0x0/filters:format(jpeg)/pic6166941.jpg
+    fallbackThumbnailUrl: https://cf.geekdo-images.com/NSNqLPStIevgazzFvDjBXg__small/img/wGkH7Z1C44mG3xCZ1NyOgpbWge8=/fit-in/200x150/filters:strip_icc()/pic6166941.jpg
     categories:
     - Aviation / Flight
     - Card Game
@@ -9999,6 +10271,8 @@ catalog:
     averageWeight: 2.65
     imageUrl: https://cf.geekdo-images.com/h1dRxq4lNMpuSUSGdgCmfA__original/img/MSX7waTxS81SiyxAmmCJFFWAl1I=/0x0/filters:format(jpeg)/pic7107431.jpg
     thumbnailUrl: https://cf.geekdo-images.com/h1dRxq4lNMpuSUSGdgCmfA__small/img/hPsEFlgh0b_JhtQmsJQv3vmq814=/fit-in/200x150/filters:strip_icc()/pic7107431.jpg
+    fallbackImageUrl: https://cf.geekdo-images.com/h1dRxq4lNMpuSUSGdgCmfA__original/img/MSX7waTxS81SiyxAmmCJFFWAl1I=/0x0/filters:format(jpeg)/pic7107431.jpg
+    fallbackThumbnailUrl: https://cf.geekdo-images.com/h1dRxq4lNMpuSUSGdgCmfA__small/img/hPsEFlgh0b_JhtQmsJQv3vmq814=/fit-in/200x150/filters:strip_icc()/pic7107431.jpg
     categories:
     - Animals
     - Economic
@@ -10056,6 +10330,8 @@ catalog:
     averageWeight: 2.84
     imageUrl: https://cf.geekdo-images.com/dmo-WD6HZHVUPrbVHunaTw__original/img/PS9HXrThM8Pepbd-cuA1tX8KCYU=/0x0/filters:format(jpeg)/pic2055255.jpg
     thumbnailUrl: https://cf.geekdo-images.com/dmo-WD6HZHVUPrbVHunaTw__small/img/I6KVJlQgS1GfWDPSWAFNqce4Cgc=/fit-in/200x150/filters:strip_icc()/pic2055255.jpg
+    fallbackImageUrl: https://cf.geekdo-images.com/dmo-WD6HZHVUPrbVHunaTw__original/img/PS9HXrThM8Pepbd-cuA1tX8KCYU=/0x0/filters:format(jpeg)/pic2055255.jpg
+    fallbackThumbnailUrl: https://cf.geekdo-images.com/dmo-WD6HZHVUPrbVHunaTw__small/img/I6KVJlQgS1GfWDPSWAFNqce4Cgc=/fit-in/200x150/filters:strip_icc()/pic2055255.jpg
     categories:
     - Arabian
     - Fantasy
@@ -10115,6 +10391,8 @@ catalog:
     averageWeight: 2.74
     imageUrl: https://cf.geekdo-images.com/TUtzY-F7gKTIKm9y8e1AQw__original/img/vpBmnZOOyLZA4va7N6S8j9NyGPQ=/0x0/filters:format(jpeg)/pic6520382.jpg
     thumbnailUrl: https://cf.geekdo-images.com/TUtzY-F7gKTIKm9y8e1AQw__small/img/CVgcWusAt0oVteoy0XYmsFmhfQY=/fit-in/200x150/filters:strip_icc()/pic6520382.jpg
+    fallbackImageUrl: https://cf.geekdo-images.com/TUtzY-F7gKTIKm9y8e1AQw__original/img/vpBmnZOOyLZA4va7N6S8j9NyGPQ=/0x0/filters:format(jpeg)/pic6520382.jpg
+    fallbackThumbnailUrl: https://cf.geekdo-images.com/TUtzY-F7gKTIKm9y8e1AQw__small/img/CVgcWusAt0oVteoy0XYmsFmhfQY=/fit-in/200x150/filters:strip_icc()/pic6520382.jpg
     categories:
     - Card Game
     - Fantasy
@@ -10175,6 +10453,8 @@ catalog:
     averageWeight: 3.85
     imageUrl: https://cf.geekdo-images.com/0w8go6cfvlpgJKydHUkDtA__original/img/322N77t8F7uTev-U_WCqX5uqmEE=/0x0/filters:format(png)/pic2225968.png
     thumbnailUrl: https://cf.geekdo-images.com/0w8go6cfvlpgJKydHUkDtA__small/img/0z1o-kU2xYwmVO8oNszdt1V4K54=/fit-in/200x150/filters:strip_icc()/pic2225968.png
+    fallbackImageUrl: https://cf.geekdo-images.com/0w8go6cfvlpgJKydHUkDtA__original/img/322N77t8F7uTev-U_WCqX5uqmEE=/0x0/filters:format(png)/pic2225968.png
+    fallbackThumbnailUrl: https://cf.geekdo-images.com/0w8go6cfvlpgJKydHUkDtA__small/img/0z1o-kU2xYwmVO8oNszdt1V4K54=/fit-in/200x150/filters:strip_icc()/pic2225968.png
     categories:
     - Economic
     - Farming
@@ -10221,6 +10501,8 @@ catalog:
     averageWeight: 3.71
     imageUrl: https://cf.geekdo-images.com/cnFppsVNOSTJ-W3APQFuTg__original/img/AbcjscBi-x3tVrsJsBhXq2RxLbc=/0x0/filters:format(jpeg)/pic1974056.jpg
     thumbnailUrl: https://cf.geekdo-images.com/cnFppsVNOSTJ-W3APQFuTg__small/img/X8XQO2_mRl7HRSzzOEgoKrWulj4=/fit-in/200x150/filters:strip_icc()/pic1974056.jpg
+    fallbackImageUrl: https://cf.geekdo-images.com/cnFppsVNOSTJ-W3APQFuTg__original/img/AbcjscBi-x3tVrsJsBhXq2RxLbc=/0x0/filters:format(jpeg)/pic1974056.jpg
+    fallbackThumbnailUrl: https://cf.geekdo-images.com/cnFppsVNOSTJ-W3APQFuTg__small/img/X8XQO2_mRl7HRSzzOEgoKrWulj4=/fit-in/200x150/filters:strip_icc()/pic1974056.jpg
     categories:
     - Civilization
     - Fighting

@@ -369,17 +369,19 @@ export async function proxy(request: NextRequest) {
   if (isPublicAuthRoute && isAuthenticated) {
     // Check if there's a 'from' parameter to redirect back to
     const fromParam = request.nextUrl.searchParams.get('from');
+    const defaultDest = isAdmin ? '/admin' : '/library';
     const redirectUrl =
       fromParam && PROTECTED_ROUTES.some(route => fromParam.startsWith(route))
         ? new URL(fromParam, request.url)
-        : new URL('/library', request.url);
+        : new URL(defaultDest, request.url);
     const response = NextResponse.redirect(redirectUrl);
     return addSecurityHeaders(response, requestOrigin);
   }
 
   // Redirect authenticated users from homepage to dashboard
   if (isHomePage && isAuthenticated) {
-    const response = NextResponse.redirect(new URL('/library', request.url));
+    const defaultDest = isAdmin ? '/admin' : '/library';
+    const response = NextResponse.redirect(new URL(defaultDest, request.url));
     return addSecurityHeaders(response, requestOrigin);
   }
 

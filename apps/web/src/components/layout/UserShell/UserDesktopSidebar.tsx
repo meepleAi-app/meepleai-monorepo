@@ -11,59 +11,62 @@
  */
 
 import { BookOpen, Dice5, House, MessageCircle } from 'lucide-react';
+import Link from 'next/link';
+import { usePathname, useSearchParams } from 'next/navigation';
 
-import { useNavigation, type NavTab } from '@/hooks/useNavigation';
 import { cn } from '@/lib/utils';
 
 import type { LucideIcon } from 'lucide-react';
 
 interface SidebarTabConfig {
-  id: NavTab;
+  id: string;
   label: string;
-  sectionTitle: string;
+  href: string;
   icon: LucideIcon;
   /** CSS color value for active state */
   colorVar: string;
+  /** Check if tab is active given current pathname and search params */
+  isActive: (pathname: string, searchParams: URLSearchParams) => boolean;
 }
 
 const SIDEBAR_TABS: SidebarTabConfig[] = [
   {
     id: 'home',
     label: 'Home',
-    sectionTitle: 'Home',
+    href: '/library',
     icon: House,
     colorVar: 'hsl(var(--primary))',
+    isActive: (p, sp) => p === '/library' && !sp.has('tab'),
   },
   {
     id: 'library',
     label: 'Libreria',
-    sectionTitle: 'Libreria',
+    href: '/library?tab=collection',
     icon: BookOpen,
     colorVar: 'hsl(var(--color-entity-game))',
+    isActive: (p, sp) => p === '/library' && sp.has('tab'),
   },
   {
     id: 'play',
     label: 'Gioca',
-    sectionTitle: 'Gioca',
+    href: '/sessions',
     icon: Dice5,
     colorVar: 'hsl(var(--color-entity-session))',
+    isActive: p => p.startsWith('/sessions'),
   },
   {
     id: 'chat',
     label: 'Chat',
-    sectionTitle: 'Chat',
+    href: '/chat',
     icon: MessageCircle,
     colorVar: 'hsl(var(--color-entity-chat))',
+    isActive: p => p.startsWith('/chat'),
   },
 ];
 
 export function UserDesktopSidebar() {
-  const { activeTab, setActiveTab, setSectionTitle } = useNavigation();
-
-  const handleTabClick = (tab: SidebarTabConfig) => {
-    setActiveTab(tab.id);
-    setSectionTitle(tab.sectionTitle);
-  };
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
 
   return (
     <aside
@@ -79,14 +82,13 @@ export function UserDesktopSidebar() {
       {/* Main navigation */}
       <nav className="flex-1 flex flex-col gap-1 py-4" aria-label="Desktop navigation">
         {SIDEBAR_TABS.map(tab => {
-          const isActive = activeTab === tab.id;
+          const isActive = tab.isActive(pathname, searchParams);
           const Icon = tab.icon;
 
           return (
-            <button
+            <Link
               key={tab.id}
-              type="button"
-              onClick={() => handleTabClick(tab)}
+              href={tab.href}
               className={cn(
                 'relative flex items-center gap-3 px-4 py-3',
                 'transition-colors duration-200',
@@ -118,7 +120,7 @@ export function UserDesktopSidebar() {
               >
                 {tab.label}
               </span>
-            </button>
+            </Link>
           );
         })}
       </nav>

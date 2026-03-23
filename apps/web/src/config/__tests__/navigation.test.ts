@@ -30,10 +30,8 @@ describe('UNIFIED_NAV_ITEMS', () => {
   it('contains expected items', () => {
     const ids = UNIFIED_NAV_ITEMS.map(item => item.id);
     expect(ids).toContain('welcome');
-    expect(ids).toContain('dashboard');
     expect(ids).toContain('library');
     expect(ids).toContain('chat');
-    expect(ids).toContain('catalog');
     expect(ids).toContain('profile');
     expect(ids).toContain('agents');
     expect(ids).toContain('sessions');
@@ -45,19 +43,14 @@ describe('UNIFIED_NAV_ITEMS', () => {
     expect(library!.children!.length).toBeGreaterThan(0);
   });
 
-  it('catalog has no visibility (visible to all)', () => {
-    const catalog = UNIFIED_NAV_ITEMS.find(item => item.id === 'catalog');
-    expect(catalog?.visibility).toBeUndefined();
-  });
-
   it('welcome is anonOnly', () => {
     const welcome = UNIFIED_NAV_ITEMS.find(item => item.id === 'welcome');
     expect(welcome?.visibility?.anonOnly).toBe(true);
   });
 
-  it('dashboard is authOnly', () => {
-    const dashboard = UNIFIED_NAV_ITEMS.find(item => item.id === 'dashboard');
-    expect(dashboard?.visibility?.authOnly).toBe(true);
+  it('library is authOnly', () => {
+    const library = UNIFIED_NAV_ITEMS.find(item => item.id === 'library');
+    expect(library?.visibility?.authOnly).toBe(true);
   });
 
   it('profile has hideFromMainNav flag', () => {
@@ -81,8 +74,6 @@ describe('filterNavItemsByRole', () => {
 
     const ids = result.map(item => item.id);
     expect(ids).toContain('welcome');
-    expect(ids).toContain('catalog');
-    expect(ids).not.toContain('dashboard');
     expect(ids).not.toContain('library');
     expect(ids).not.toContain('profile');
   });
@@ -95,8 +86,6 @@ describe('filterNavItemsByRole', () => {
 
     const ids = result.map(item => item.id);
     expect(ids).not.toContain('welcome');
-    expect(ids).toContain('dashboard');
-    expect(ids).toContain('catalog');
     expect(ids).toContain('library');
     expect(ids).toContain('profile');
     expect(ids).toContain('agents');
@@ -110,10 +99,9 @@ describe('filterNavItemsByRole', () => {
     });
 
     const ids = result.map(item => item.id);
-    // Only catalog (no auth restrictions)
-    expect(ids).toContain('catalog');
+    // While loading, only items with no visibility restrictions are shown
     expect(ids).not.toContain('welcome');
-    expect(ids).not.toContain('dashboard');
+    expect(ids).not.toContain('library');
   });
 
   it('filters by minRole = Admin', () => {
@@ -121,7 +109,7 @@ describe('filterNavItemsByRole', () => {
       ...UNIFIED_NAV_ITEMS,
       {
         id: 'admin-only',
-        href: '/admin',
+        href: '/admin-test',
         icon: UNIFIED_NAV_ITEMS[0].icon,
         iconName: 'shield',
         label: 'Admin',
@@ -197,13 +185,7 @@ describe('isUnifiedNavItemActive', () => {
   it('matches exact path for welcome', () => {
     const welcome = UNIFIED_NAV_ITEMS.find(item => item.id === 'welcome')!;
     expect(isUnifiedNavItemActive(welcome, '/')).toBe(true);
-    expect(isUnifiedNavItemActive(welcome, '/dashboard')).toBe(false);
-  });
-
-  it('matches exact path for dashboard', () => {
-    const dashboard = UNIFIED_NAV_ITEMS.find(item => item.id === 'dashboard')!;
-    expect(isUnifiedNavItemActive(dashboard, '/dashboard')).toBe(true);
-    expect(isUnifiedNavItemActive(dashboard, '/dashboard/sub')).toBe(false);
+    expect(isUnifiedNavItemActive(welcome, '/library')).toBe(false);
   });
 
   it('matches prefix for library', () => {
@@ -213,21 +195,18 @@ describe('isUnifiedNavItemActive', () => {
     expect(isUnifiedNavItemActive(library, '/library/proposals')).toBe(true);
   });
 
-  it('matches prefix for catalog', () => {
-    const catalog = UNIFIED_NAV_ITEMS.find(item => item.id === 'catalog')!;
-    expect(isUnifiedNavItemActive(catalog, '/games')).toBe(true);
-    expect(isUnifiedNavItemActive(catalog, '/games/123')).toBe(true);
-    expect(isUnifiedNavItemActive(catalog, '/library')).toBe(false);
+  it('matches prefix for chat', () => {
+    const chat = UNIFIED_NAV_ITEMS.find(item => item.id === 'chat')!;
+    expect(isUnifiedNavItemActive(chat, '/chat')).toBe(true);
+    expect(isUnifiedNavItemActive(chat, '/chat/123')).toBe(true);
+    expect(isUnifiedNavItemActive(chat, '/library')).toBe(false);
   });
 });
 
 describe('Legacy NAV_ITEMS', () => {
-  it('contains exactly 3 items for ActionBar', () => {
-    expect(NAV_ITEMS).toHaveLength(3);
+  it('contains library item for ActionBar', () => {
     const ids = NAV_ITEMS.map(item => item.id);
-    expect(ids).toContain('home'); // dashboard mapped to "home"
     expect(ids).toContain('library');
-    expect(ids).toContain('catalog');
   });
 
   it('does not contain chat or profile', () => {
@@ -273,11 +252,11 @@ describe('getOverflowNavItems', () => {
 });
 
 describe('isNavItemActive (legacy)', () => {
-  it('matches exact path for home', () => {
-    const home = NAV_ITEMS.find(item => item.id === 'home');
-    if (home) {
-      expect(isNavItemActive(home, '/dashboard')).toBe(true);
-      expect(isNavItemActive(home, '/dashboard/sub')).toBe(false);
+  it('matches path for library', () => {
+    const library = NAV_ITEMS.find(item => item.id === 'library');
+    if (library) {
+      expect(isNavItemActive(library, '/library')).toBe(true);
+      expect(isNavItemActive(library, '/library/sub')).toBe(true);
     }
   });
 });

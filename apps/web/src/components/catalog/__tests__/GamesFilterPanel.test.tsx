@@ -139,7 +139,7 @@ describe('GamesFilterPanel', () => {
     it('renders "Dashboard" back link', () => {
       render(<GamesFilterPanel isCollapsed={false} />);
       expect(screen.getByText('Dashboard')).toBeInTheDocument();
-      expect(screen.getByText('Dashboard').closest('a')).toHaveAttribute('href', '/dashboard');
+      expect(screen.getByText('Dashboard').closest('a')).toHaveAttribute('href', '/library');
     });
   });
 

@@ -9,12 +9,12 @@
  * - Touch-safe targets (min 44x44)
  * - Glassmorphism styling
  * - Hidden on desktop (lg:hidden)
- * - Updates sectionTitle when tab changes
+ * - Pathname-based active state detection
  */
 
 import { BookOpen, Dice5, House, MessageCircle } from 'lucide-react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useSearchParams } from 'next/navigation';
 
 import { cn } from '@/lib/utils';
 
@@ -27,7 +27,8 @@ interface TabConfig {
   icon: LucideIcon;
   /** HSL value from design-tokens.css (no wrapping hsl()) */
   colorVar: string;
-  activePattern: RegExp;
+  /** Check if tab is active given current pathname and search params */
+  isActive: (pathname: string, searchParams: URLSearchParams) => boolean;
 }
 
 const TABS: TabConfig[] = [
@@ -37,7 +38,7 @@ const TABS: TabConfig[] = [
     href: '/library',
     icon: House,
     colorVar: 'hsl(var(--primary))',
-    activePattern: /^\/library$/,
+    isActive: (p, sp) => p === '/library' && !sp.has('tab'),
   },
   {
     id: 'library',
@@ -45,7 +46,7 @@ const TABS: TabConfig[] = [
     href: '/library?tab=collection',
     icon: BookOpen,
     colorVar: 'hsl(var(--color-entity-game))',
-    activePattern: /^\/library\?/,
+    isActive: (p, sp) => p === '/library' && sp.has('tab'),
   },
   {
     id: 'play',
@@ -53,7 +54,7 @@ const TABS: TabConfig[] = [
     href: '/sessions',
     icon: Dice5,
     colorVar: 'hsl(var(--color-entity-session))',
-    activePattern: /^\/sessions/,
+    isActive: p => p.startsWith('/sessions'),
   },
   {
     id: 'chat',
@@ -61,12 +62,13 @@ const TABS: TabConfig[] = [
     href: '/chat',
     icon: MessageCircle,
     colorVar: 'hsl(var(--color-entity-chat))',
-    activePattern: /^\/chat/,
+    isActive: p => p.startsWith('/chat'),
   },
 ];
 
 export function UserTabBar() {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
 
   return (
     <nav
@@ -83,8 +85,7 @@ export function UserTabBar() {
       aria-label="Main navigation"
     >
       {TABS.map(tab => {
-        const isActive =
-          tab.activePattern.test(pathname) || (tab.id === 'home' && pathname === '/library');
+        const isActive = tab.isActive(pathname, searchParams);
         const Icon = tab.icon;
 
         return (

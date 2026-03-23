@@ -36,6 +36,7 @@ import {
 import { api } from '@/lib/api';
 import type { SeedingGameDto } from '@/lib/api/schemas/seeding.schemas';
 
+import { PipelineIndicator } from './components/pipeline-indicator';
 import { QueueStatusPanel } from './components/queue-status-panel';
 
 // ============================================================================
@@ -521,6 +522,7 @@ export function SeedingPageClient() {
                   <TableHead className="w-24 text-center">Has PDF</TableHead>
                   <TableHead className="w-32">Game Status</TableHead>
                   <TableHead className="w-24 text-center">RAG Ready</TableHead>
+                  <TableHead className="w-24">Pipeline</TableHead>
                   <SortableHeader
                     field="createdAt"
                     label="Created"
@@ -579,6 +581,13 @@ export function SeedingPageClient() {
                       ) : (
                         <span className="text-muted-foreground text-sm">No</span>
                       )}
+                    </TableCell>
+                    <TableCell>
+                      <PipelineIndicator
+                        gameDataStatus={game.gameDataStatus}
+                        hasUploadedPdf={game.hasUploadedPdf}
+                        isRagReady={game.isRagReady}
+                      />
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground">
                       {new Date(game.createdAt).toLocaleDateString()}

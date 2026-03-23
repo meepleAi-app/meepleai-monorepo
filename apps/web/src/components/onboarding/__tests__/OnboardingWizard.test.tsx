@@ -140,7 +140,7 @@ describe('OnboardingWizard', () => {
     await user.click(screen.getByTestId('skip-wizard'));
 
     await waitFor(() => {
-      expect(mockPush).toHaveBeenCalledWith('/dashboard');
+      expect(mockPush).toHaveBeenCalledWith('/library');
     });
   });
 
@@ -241,7 +241,7 @@ describe('OnboardingWizard', () => {
     await user.click(screen.getByTestId('wizard-finish'));
 
     await waitFor(() => {
-      expect(mockPush).toHaveBeenCalledWith('/dashboard');
+      expect(mockPush).toHaveBeenCalledWith('/library');
     });
   });
 });

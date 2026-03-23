@@ -16,14 +16,16 @@ import { describe, it, expect } from 'vitest';
 import { CardCover } from '@/components/ui/data-display/meeple-card/parts/CardCover';
 
 describe('MeepleCard cover overlay slots', () => {
-  it('renders mechanicIcon in bottom-left of cover', () => {
+  it('renders subtypeIcons in bottom-left of cover', () => {
     render(
       <CardCover
         src="/test-image.jpg"
         alt="Test Card"
         variant="grid"
         entity="game"
-        mechanicIcon={<span data-testid="mechanic-icon-content">dice</span>}
+        subtypeIcons={[
+          { icon: <span data-testid="mechanic-icon-content">dice</span>, tooltip: 'Dice' },
+        ]}
       />
     );
 
@@ -57,7 +59,12 @@ describe('MeepleCard cover overlay slots', () => {
         alt="Test Card"
         variant="featured"
         entity="game"
-        mechanicIcon={<span data-testid="mechanic-icon-content">area-control</span>}
+        subtypeIcons={[
+          {
+            icon: <span data-testid="mechanic-icon-content">area-control</span>,
+            tooltip: 'Area Control',
+          },
+        ]}
         stateLabel={{ text: 'Processing', variant: 'warning' }}
       />
     );
@@ -81,7 +88,9 @@ describe('MeepleCard cover overlay slots', () => {
         alt="Test Card"
         variant="compact"
         entity="game"
-        mechanicIcon={<span data-testid="mechanic-icon-content">dice</span>}
+        subtypeIcons={[
+          { icon: <span data-testid="mechanic-icon-content">dice</span>, tooltip: 'Dice' },
+        ]}
         stateLabel={{ text: 'Active', variant: 'info' }}
       />
     );

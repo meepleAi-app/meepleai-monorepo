@@ -69,6 +69,7 @@ const STATUS_FILTER_OPTIONS: { value: StatusFilter; label: string }[] = [
 ];
 
 const POLLING_INTERVAL_MS = 5000;
+const PAGE_SIZE = 25;
 
 // ============================================================================
 // Badge helpers
@@ -138,6 +139,7 @@ export function SeedingPageClient() {
   const [sortField, setSortField] = useState<SortField>('title');
   const [sortDir, setSortDir] = useState<SortDir>('asc');
   const [search, setSearch] = useState('');
+  const [page, setPage] = useState(1);
   const [queueActive, setQueueActive] = useState(false);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const lastSseFetchRef = useRef(0);
@@ -231,6 +233,13 @@ export function SeedingPageClient() {
     });
     return sorted;
   }, [games, statusFilter, search, sortField, sortDir]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredGames.length / PAGE_SIZE));
+  const paginatedGames = filteredGames.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+
+  useEffect(() => {
+    setPage(1);
+  }, [statusFilter, search]);
 
   const handleSort = useCallback(
     (field: SortField) => {
@@ -556,7 +565,7 @@ export function SeedingPageClient() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredGames.map(game => (
+                {paginatedGames.map(game => (
                   <TableRow key={game.id} className="cursor-pointer hover:bg-muted/40">
                     <TableCell className="pl-6">
                       <Checkbox
@@ -638,6 +647,35 @@ export function SeedingPageClient() {
                 ))}
               </TableBody>
             </Table>
+          )}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between px-6 py-3 border-t">
+              <span className="text-sm text-muted-foreground">
+                Showing {(page - 1) * PAGE_SIZE + 1}–
+                {Math.min(page * PAGE_SIZE, filteredGames.length)} of {filteredGames.length}
+              </span>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={page <= 1}
+                  onClick={() => setPage(p => p - 1)}
+                >
+                  Previous
+                </Button>
+                <span className="text-sm text-muted-foreground">
+                  Page {page} of {totalPages}
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={page >= totalPages}
+                  onClick={() => setPage(p => p + 1)}
+                >
+                  Next
+                </Button>
+              </div>
+            </div>
           )}
         </CardContent>
       </Card>

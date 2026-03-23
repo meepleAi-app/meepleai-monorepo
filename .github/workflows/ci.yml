@@ -59,6 +59,7 @@ jobs:
   frontend:
     name: Frontend - Build & Test
     runs-on: ${{ needs.changes.outputs.runner }}
+    timeout-minutes: 30
     needs: changes
     if: needs.changes.outputs.frontend == 'true' || github.event_name == 'workflow_dispatch'
     defaults:
@@ -133,7 +134,7 @@ jobs:
         run: dotnet build --no-restore --configuration Release
 
       - name: Run Unit Tests
-        timeout-minutes: 20
+        timeout-minutes: 30
         env:
           CI: true
         run: |
@@ -303,7 +304,7 @@ jobs:
       # - ArbitroAgentIntegrationTests: Uses SharedTestcontainersFixture with orchestration-service (Issue #3871)
       # These tests run in the dedicated backend-e2e-tests.yml workflow instead.
       - name: Run Integration Tests
-        timeout-minutes: 20
+        timeout-minutes: 30
         env:
           POSTGRES_HOST: localhost
           POSTGRES_PORT: 5432

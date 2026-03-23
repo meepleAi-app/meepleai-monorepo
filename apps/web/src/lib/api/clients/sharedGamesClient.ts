@@ -947,13 +947,12 @@ export function createSharedGamesClient({ httpClient }: CreateSharedGamesClientP
 
     /**
      * Enqueue a batch of BGG IDs for enrichment (ADMIN ONLY)
-     * POST /api/v1/api/v1/admin/bgg-queue/batch
-     * Note: doubled prefix because BggImportQueueEndpoints uses full path in MapGroup
+     * POST /api/v1/admin/bgg-queue/batch
      *
      * @param bggIds - Array of BoardGameGeek IDs to enqueue
      */
     async enqueueBggEnrichment(bggIds: number[]): Promise<void> {
-      await httpClient.post('/api/v1/api/v1/admin/bgg-queue/batch', { bggIds });
+      await httpClient.post('/api/v1/admin/bgg-queue/batch', { bggIds });
     },
 
     /**

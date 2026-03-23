@@ -13,60 +13,60 @@
  */
 
 import { BookOpen, Dice5, House, MessageCircle } from 'lucide-react';
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 
-import { useNavigation, type NavTab } from '@/hooks/useNavigation';
 import { cn } from '@/lib/utils';
 
 import type { LucideIcon } from 'lucide-react';
 
 interface TabConfig {
-  id: NavTab;
+  id: string;
   label: string;
-  sectionTitle: string;
+  href: string;
   icon: LucideIcon;
   /** HSL value from design-tokens.css (no wrapping hsl()) */
   colorVar: string;
+  activePattern: RegExp;
 }
 
 const TABS: TabConfig[] = [
   {
     id: 'home',
     label: 'Home',
-    sectionTitle: 'Home',
+    href: '/library',
     icon: House,
-    // No entity-custom exists; use primary accent
     colorVar: 'hsl(var(--primary))',
+    activePattern: /^\/library$/,
   },
   {
     id: 'library',
     label: 'Libreria',
-    sectionTitle: 'Libreria',
+    href: '/library?tab=collection',
     icon: BookOpen,
     colorVar: 'hsl(var(--color-entity-game))',
+    activePattern: /^\/library\?/,
   },
   {
     id: 'play',
     label: 'Gioca',
-    sectionTitle: 'Gioca',
+    href: '/sessions',
     icon: Dice5,
     colorVar: 'hsl(var(--color-entity-session))',
+    activePattern: /^\/sessions/,
   },
   {
     id: 'chat',
     label: 'Chat',
-    sectionTitle: 'Chat',
+    href: '/chat',
     icon: MessageCircle,
     colorVar: 'hsl(var(--color-entity-chat))',
+    activePattern: /^\/chat/,
   },
 ];
 
 export function UserTabBar() {
-  const { activeTab, setActiveTab, setSectionTitle } = useNavigation();
-
-  const handleTabChange = (tab: TabConfig) => {
-    setActiveTab(tab.id);
-    setSectionTitle(tab.sectionTitle);
-  };
+  const pathname = usePathname();
 
   return (
     <nav
@@ -83,13 +83,14 @@ export function UserTabBar() {
       aria-label="Main navigation"
     >
       {TABS.map(tab => {
-        const isActive = activeTab === tab.id;
+        const isActive =
+          tab.activePattern.test(pathname) || (tab.id === 'home' && pathname === '/library');
         const Icon = tab.icon;
 
         return (
-          <button
+          <Link
             key={tab.id}
-            type="button"
+            href={tab.href}
             role="tab"
             aria-selected={isActive}
             aria-label={tab.label}
@@ -99,7 +100,6 @@ export function UserTabBar() {
               'transition-colors duration-200',
               isActive ? 'text-foreground' : 'text-muted-foreground'
             )}
-            onClick={() => handleTabChange(tab)}
           >
             <Icon
               className={cn('transition-all duration-200', isActive ? 'w-6 h-6' : 'w-5 h-5')}
@@ -116,7 +116,7 @@ export function UserTabBar() {
             >
               {tab.label}
             </span>
-          </button>
+          </Link>
         );
       })}
     </nav>

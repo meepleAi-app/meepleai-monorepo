@@ -253,4 +253,16 @@ internal sealed class RelationshipCaches
     public Dictionary<string, GameMechanicEntity> Mechanics { get; } = new(StringComparer.OrdinalIgnoreCase);
     public Dictionary<string, GameDesignerEntity> Designers { get; } = new(StringComparer.OrdinalIgnoreCase);
     public Dictionary<string, GamePublisherEntity> Publishers { get; } = new(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// Clears all caches. Must be called after ChangeTracker.Clear() to avoid
+    /// identity conflicts from detached entities in subsequent iterations.
+    /// </summary>
+    public void Clear()
+    {
+        Categories.Clear();
+        Mechanics.Clear();
+        Designers.Clear();
+        Publishers.Clear();
+    }
 }

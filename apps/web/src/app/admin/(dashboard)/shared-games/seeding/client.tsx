@@ -302,11 +302,18 @@ export function SeedingPageClient() {
               size="sm"
               onClick={() => void handleEnrich()}
               disabled={enrichableCount === 0 || enriching}
+              title={
+                enrichableCount === 0
+                  ? 'Select Skeleton or Failed games with BGG IDs to enrich'
+                  : undefined
+              }
             >
               <SproutIcon className="h-4 w-4 mr-1.5" />
               {enriching
                 ? 'Queuing…'
-                : `Enrich Selected${enrichableCount > 0 ? ` (${enrichableCount})` : ''}`}
+                : enrichableCount > 0
+                  ? `Enrich Selected (${enrichableCount})`
+                  : 'Enrich Selected'}
             </Button>
 
             {/* Download Excel */}
@@ -392,6 +399,17 @@ export function SeedingPageClient() {
           )}
         </CardContent>
       </Card>
+
+      {/* Next-steps guidance when all games are enriched */}
+      {games.length > 0 && games.every(g => g.gameDataStatus === GAME_DATA_STATUS.Complete) && (
+        <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800 dark:border-emerald-800/40 dark:bg-emerald-900/20 dark:text-emerald-300">
+          All games are enriched. Next step: upload PDFs via{' '}
+          <a href="/admin/knowledge-base/upload" className="underline font-medium">
+            Upload &amp; Process
+          </a>{' '}
+          to enable RAG.
+        </div>
+      )}
     </div>
   );
 }

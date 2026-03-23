@@ -15,7 +15,12 @@ import {
   type KbCardDto,
 } from '../schemas/agent-definitions.schemas';
 import { GameRagReadinessSchema, type GameRagReadiness } from '../schemas/rag-setup.schemas';
-import { SeedingGameListSchema, type SeedingGameList } from '../schemas/seeding.schemas';
+import {
+  SeedingGameListSchema,
+  BggQueueStatusSchema,
+  type SeedingGameList,
+  type BggQueueStatus,
+} from '../schemas/seeding.schemas';
 import {
   SharedGameDetailSchema,
   PagedSharedGamesSchema,
@@ -946,14 +951,31 @@ export function createSharedGamesClient({ httpClient }: CreateSharedGamesClientP
     },
 
     /**
+     * Get BGG import queue status (ADMIN ONLY)
+     * GET /api/v1/admin/bgg-queue/status
+     */
+    async getBggQueueStatus(): Promise<BggQueueStatus> {
+      const result = await httpClient.get('/api/v1/admin/bgg-queue/status', BggQueueStatusSchema);
+      return result ?? { totalQueued: 0, totalProcessing: 0, items: [] };
+    },
+
+    /**
      * Enqueue a batch of BGG IDs for enrichment (ADMIN ONLY)
-     * POST /api/v1/api/v1/admin/bgg-queue/batch
-     * Note: doubled prefix because BggImportQueueEndpoints uses full path in MapGroup
+     * POST /api/v1/admin/bgg-queue/batch
      *
      * @param bggIds - Array of BoardGameGeek IDs to enqueue
      */
     async enqueueBggEnrichment(bggIds: number[]): Promise<void> {
-      await httpClient.post('/api/v1/api/v1/admin/bgg-queue/batch', { bggIds });
+      await httpClient.post('/api/v1/admin/bgg-queue/batch', { bggIds });
+    },
+
+    /**
+     * Re-enqueue failed BGG games for enrichment (ADMIN ONLY)
+     * POST /api/v1/admin/bgg-queue/batch
+     * Reuses batch endpoint — failed games are accepted for re-queue.
+     */
+    async retryBggEnrichment(bggIds: number[]): Promise<void> {
+      await httpClient.post('/api/v1/admin/bgg-queue/batch', { bggIds });
     },
 
     /**

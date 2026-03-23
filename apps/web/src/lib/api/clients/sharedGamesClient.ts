@@ -956,6 +956,15 @@ export function createSharedGamesClient({ httpClient }: CreateSharedGamesClientP
     },
 
     /**
+     * Re-enqueue failed BGG games for enrichment (ADMIN ONLY)
+     * POST /api/v1/admin/bgg-queue/batch
+     * Reuses batch endpoint — failed games are accepted for re-queue.
+     */
+    async retryBggEnrichment(bggIds: number[]): Promise<void> {
+      await httpClient.post('/api/v1/admin/bgg-queue/batch', { bggIds });
+    },
+
+    /**
      * Download the seeding tracking export as an Excel file (ADMIN ONLY)
      * GET /api/v1/admin/shared-games/tracking-export
      *

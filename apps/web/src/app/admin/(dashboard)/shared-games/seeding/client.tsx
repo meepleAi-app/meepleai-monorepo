@@ -191,6 +191,16 @@ export function SeedingPageClient() {
   const enrichableCount = enrichableGames.length;
   const estimatedSeconds = enrichableCount; // 1 req/sec BGG rate limit
 
+  const failedSelectedGames = useMemo(
+    () =>
+      games.filter(
+        g =>
+          selectedIds.has(g.id) && g.bggId !== null && g.gameDataStatus === GAME_DATA_STATUS.Failed
+      ),
+    [games, selectedIds]
+  );
+  const failedSelectedCount = failedSelectedGames.length;
+
   // ---- Actions ----
 
   const handleEnrich = useCallback(async () => {
@@ -211,6 +221,23 @@ export function SeedingPageClient() {
       setEnriching(false);
     }
   }, [enrichableCount, enrichableGames, fetchGames]);
+
+  const handleRetryFailed = useCallback(async () => {
+    if (failedSelectedCount === 0) return;
+    setEnriching(true);
+    setEnrichMessage(null);
+    try {
+      const bggIds = failedSelectedGames.map(g => g.bggId as number);
+      await api.sharedGames.retryBggEnrichment(bggIds);
+      setEnrichMessage(`Re-queued ${bggIds.length} failed game(s) for enrichment.`);
+      setSelectedIds(new Set());
+      await fetchGames();
+    } catch (err) {
+      setEnrichMessage(`Retry failed: ${err instanceof Error ? err.message : 'Unknown error'}`);
+    } finally {
+      setEnriching(false);
+    }
+  }, [failedSelectedCount, failedSelectedGames, fetchGames]);
 
   const handleDownload = useCallback(async () => {
     setDownloading(true);
@@ -316,6 +343,19 @@ export function SeedingPageClient() {
                   : 'Enrich Selected'}
             </Button>
 
+            {/* Retry failed */}
+            {failedSelectedCount > 0 && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => void handleRetryFailed()}
+                disabled={enriching}
+              >
+                <RefreshCwIcon className="h-4 w-4 mr-1.5" />
+                Retry Failed ({failedSelectedCount})
+              </Button>
+            )}
+
             {/* Download Excel */}
             <Button
               variant="outline"
@@ -380,9 +420,19 @@ export function SeedingPageClient() {
                       {game.bggId ?? '—'}
                     </TableCell>
                     <TableCell>
-                      <Badge className={getStatusBadgeClass(game.gameDataStatus)}>
-                        {game.gameDataStatusName}
-                      </Badge>
+                      <div className="flex items-center gap-2">
+                        <Badge className={getStatusBadgeClass(game.gameDataStatus)}>
+                          {game.gameDataStatusName}
+                        </Badge>
+                        {game.gameDataStatus === GAME_DATA_STATUS.Failed && game.errorMessage && (
+                          <span
+                            className="text-xs text-orange-600 truncate max-w-[200px] cursor-help"
+                            title={game.errorMessage}
+                          >
+                            {game.errorMessage}
+                          </span>
+                        )}
+                      </div>
                     </TableCell>
                     <TableCell className="text-center">
                       {game.hasUploadedPdf ? (

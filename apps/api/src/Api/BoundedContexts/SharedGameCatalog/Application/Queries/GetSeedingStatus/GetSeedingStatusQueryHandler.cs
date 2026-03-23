@@ -1,4 +1,5 @@
 using Api.Infrastructure;
+using Api.Infrastructure.Entities;
 using Api.Infrastructure.Entities.SharedGameCatalog;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -63,12 +64,24 @@ internal sealed class GetSeedingStatusQueryHandler
             .ToListAsync(cancellationToken)
             .ConfigureAwait(false);
 
+        // Get error messages for failed games from BggImportQueue
+        var failedErrors = await _context.Set<BggImportQueueEntity>()
+            .AsNoTracking()
+            .Where(q => q.Status == BggImportStatus.Failed && q.ErrorMessage != null && q.BggId != null)
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        var errorByBggId = failedErrors
+            .GroupBy(q => q.BggId!.Value)
+            .ToDictionary(g => g.Key, g => g.OrderByDescending(x => x.CreatedAt).First().ErrorMessage);
+
         return games.Select(g => new SeedingGameDto(
             g.Id, g.BggId, g.Title, g.GameDataStatus,
             DataStatusNames.GetValueOrDefault(g.GameDataStatus, "Unknown"),
             g.Status, GameStatusNames.GetValueOrDefault(g.Status, "Unknown"),
             g.HasUploadedPdf,
             ragReadySet.Contains(g.Id),
+            g.BggId.HasValue && errorByBggId.TryGetValue(g.BggId.Value, out var err) ? err : null,
             g.CreatedAt
         )).ToList();
     }

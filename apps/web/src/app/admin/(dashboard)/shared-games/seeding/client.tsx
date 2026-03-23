@@ -185,6 +185,7 @@ export function SeedingPageClient() {
       if (document.hidden) {
         if (intervalRef.current) clearInterval(intervalRef.current);
       } else {
+        if (intervalRef.current) clearInterval(intervalRef.current);
         void fetchGames();
         intervalRef.current = setInterval(() => {
           void fetchGames();

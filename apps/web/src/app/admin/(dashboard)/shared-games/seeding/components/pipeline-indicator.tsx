@@ -19,7 +19,7 @@ export function PipelineIndicator({
   hasUploadedPdf,
   isRagReady,
 }: PipelineIndicatorProps) {
-  const enrichComplete = gameDataStatus >= COMPLETE_STATUS;
+  const enrichComplete = gameDataStatus === COMPLETE_STATUS;
   const pdfComplete = hasUploadedPdf;
   const ragComplete = isRagReady;
 

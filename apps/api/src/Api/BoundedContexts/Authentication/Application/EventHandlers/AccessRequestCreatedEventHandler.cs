@@ -1,5 +1,6 @@
 using Api.BoundedContexts.Authentication.Domain.Events;
 using Api.Infrastructure;
+using Api.Infrastructure.Security;
 using Api.Services;
 using Api.SharedKernel.Application.EventHandlers;
 using Microsoft.Extensions.Logging;
@@ -44,7 +45,7 @@ internal sealed class AccessRequestCreatedEventHandler : DomainEventHandlerBase<
         // FAIL-OPEN PATTERN: Notification failure must not block access request creation
         catch (Exception ex)
         {
-            Logger.LogWarning(ex, "Failed to send access request notification for {Email}", domainEvent.Email);
+            Logger.LogWarning(ex, "Failed to send access request notification for {Email}", DataMasking.MaskEmail(domainEvent.Email));
         }
 #pragma warning restore CA1031
     }

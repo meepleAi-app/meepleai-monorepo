@@ -4,6 +4,7 @@ using Api.BoundedContexts.KnowledgeBase.Application.Commands;
 using Api.BoundedContexts.KnowledgeBase.Application.DTOs;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries;
 using Api.Extensions;
+using Api.Middleware;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 
@@ -310,7 +311,7 @@ internal static class RagDashboardEndpoints
 
             logger.LogInformation(
                 "Admin {AdminId} running live RAG test for game {GameId}: '{Query}'",
-                session!.User!.Id, gameId, request.Query);
+                session!.User!.Id, gameId, LogValueSanitizer.Sanitize(request.Query));
 
             var streamQuery = new StreamQaQuery(GameId: gameId.Value.ToString(), Query: request.Query);
 

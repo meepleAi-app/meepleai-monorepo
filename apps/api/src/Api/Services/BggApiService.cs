@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Web;
 using System.Xml.Linq;
 using Api.Helpers;
+using Api.Middleware;
 using Api.Models;
 using Microsoft.Extensions.Caching.Hybrid;
 using Microsoft.Extensions.Options;
@@ -57,7 +58,7 @@ internal class BggApiService : IBggApiService
             cacheKey,
             async cancel =>
             {
-                _logger.LogInformation("BGG search cache miss for query: {Query}", query);
+                _logger.LogInformation("BGG search cache miss for query: {Query}", LogValueSanitizer.Sanitize(query));
                 return await FetchSearchResultsAsync(query, exact, cancel).ConfigureAwait(false);
             },
             new HybridCacheEntryOptions
@@ -122,7 +123,7 @@ internal class BggApiService : IBggApiService
             var exactParam = exact ? "&exact=1" : "";
             var url = $"{_config.BaseUrl}/search?query={encodedQuery}&type=boardgame{exactParam}";
 
-            _logger.LogInformation("Fetching BGG search results from: {Url}", url);
+            _logger.LogInformation("Fetching BGG search results from: {Url}", LogValueSanitizer.Sanitize(url));
 
             // CODE-01: Dispose HttpResponseMessage to prevent resource leak (CWE-404)
             using var response = await _httpClient.GetAsync(url, ct).ConfigureAwait(false);
@@ -138,14 +139,14 @@ internal class BggApiService : IBggApiService
                 .Cast<BggSearchResultDto>()
                 .ToList();
 
-            _logger.LogInformation("BGG search returned {Count} results for query: {Query}", results?.Count ?? 0, query);
+            _logger.LogInformation("BGG search returned {Count} results for query: {Query}", results?.Count ?? 0, LogValueSanitizer.Sanitize(query));
             return results;
         }
         catch (HttpRequestException ex)
         {
             // Issue #2755: Return null gracefully for BGG API failures (external service degradation)
             // This prevents 500 errors when BGG is unavailable - user gets empty search results instead
-            _logger.LogWarning(ex, "BGG API unavailable for search query: {Query}. Returning empty results.", query);
+            _logger.LogWarning(ex, "BGG API unavailable for search query: {Query}. Returning empty results.", LogValueSanitizer.Sanitize(query));
             return null;
         }
 #pragma warning disable CA1031 // Do not catch general exception types

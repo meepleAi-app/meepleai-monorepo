@@ -206,7 +206,7 @@ public class AgentSessionTests
     }
 
     [Fact]
-    public void Duration_WhenEnded_ReturnsSessionDuration()
+    public async Task Duration_WhenEnded_ReturnsSessionDuration()
     {
         // Arrange
         var session = new AgentSession(
@@ -218,7 +218,7 @@ public class AgentSessionTests
             Guid.NewGuid(),
             GameState.Initial(Guid.NewGuid()));
 
-        Thread.Sleep(100); // Small delay
+        await Task.Delay(100); // Small delay
         session.End();
 
         // Act

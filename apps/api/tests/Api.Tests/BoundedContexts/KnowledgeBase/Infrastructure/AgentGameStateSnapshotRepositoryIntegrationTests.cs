@@ -386,7 +386,7 @@ public sealed class AgentGameStateSnapshotRepositoryIntegrationTests : IAsyncLif
         // Act - Raw SQL vector similarity
         var results = await _dbContext.AgentGameStateSnapshots
             .FromSqlRaw(@"
-                SELECT id, game_id, agent_session_id, board_state_json, turn_number, created_at, embedding
+                SELECT id, game_id, agent_session_id, board_state_json, turn_number, created_at, embedding, active_player_id
                 FROM agent_game_state_snapshots
                 ORDER BY embedding <=> {0}::vector
                 LIMIT 5",

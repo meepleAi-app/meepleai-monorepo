@@ -192,10 +192,12 @@ public sealed class AgentChatEndpointsIntegrationTests : IAsyncLifetime
             }
         }
 
-        events.Should().ContainSingle();
-        events[0].Type.Should().Be(StreamingEventType.Error);
+        // SSE stream may emit a StateUpdate event before the Error event
+        events.Should().NotBeEmpty();
+        var errorEvent = events.FirstOrDefault(e => e.Type == StreamingEventType.Error);
+        errorEvent.Should().NotBeNull("expected at least one Error event in the SSE stream");
 
-        var error = JsonSerializer.Deserialize<StreamingError>(((JsonElement)events[0].Data!).GetRawText());
+        var error = JsonSerializer.Deserialize<StreamingError>(((JsonElement)errorEvent!.Data!).GetRawText());
         error.Should().NotBeNull();
         error.errorCode.Should().Be("AGENT_NOT_FOUND");
     }

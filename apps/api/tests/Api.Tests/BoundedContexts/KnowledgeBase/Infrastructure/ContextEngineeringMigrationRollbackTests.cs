@@ -656,7 +656,7 @@ public sealed class ContextEngineeringMigrationRollbackTests : IAsyncLifetime
 
         await dbContext.Database.ExecuteSqlRawAsync(
             @"INSERT INTO agent_game_state_snapshots (id, game_id, agent_session_id, board_state_json, turn_number, created_at)
-              VALUES ({0}, {1}, {2}, '{""turn"": 1}'::jsonb, 1, {3})",
+              VALUES ({0}, {1}, {2}, '{{""turn"": 1}}'::jsonb, 1, {3})",
             snapshotId, game.Id, fakeAgentSessionId, DateTime.UtcNow);
 
         await dbContext.Database.ExecuteSqlRawAsync(

@@ -457,17 +457,17 @@ public sealed class StrategyPatternRepositoryIntegrationTests : IAsyncLifetime
             EXPLAIN (FORMAT TEXT)
             SELECT id, pattern_name
             FROM strategy_patterns
-            WHERE game_id = $1 AND applicable_phase = $2
+            WHERE game_id = @p_game_id AND applicable_phase = @p_phase
             ORDER BY evaluation_score DESC;
         ";
 
         var gameIdParam = command.CreateParameter();
-        gameIdParam.ParameterName = "p1";
+        gameIdParam.ParameterName = "p_game_id";
         gameIdParam.Value = _gameId;
         command.Parameters.Add(gameIdParam);
 
         var phaseParam = command.CreateParameter();
-        phaseParam.ParameterName = "p2";
+        phaseParam.ParameterName = "p_phase";
         phaseParam.Value = "opening";
         command.Parameters.Add(phaseParam);
 

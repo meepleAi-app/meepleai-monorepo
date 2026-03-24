@@ -9,6 +9,7 @@ using Api.Models;
 using Api.Routing;
 using Api.Tests.Constants;
 using Api.Tests.Infrastructure;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.EntityFrameworkCore;
@@ -62,16 +63,11 @@ public sealed class BggImportQueueEndpointsIntegrationTests : IAsyncLifetime
                     // Register authorization policies
                     services.AddSharedGameCatalogPolicies();
 
-                    // Bypass ALL authorization for testing — covers DefaultPolicy, FallbackPolicy,
-                    // and inline policies like RequireRole("Admin", "SuperAdmin")
-                    var allowAll = new Microsoft.AspNetCore.Authorization.AuthorizationPolicyBuilder()
-                        .RequireAssertion(_ => true)
-                        .Build();
-                    services.AddAuthorization(options =>
-                    {
-                        options.DefaultPolicy = allowAll;
-                        options.FallbackPolicy = allowAll;
-                    });
+                    // Use TestAuthenticationHandler to provide an Admin user identity,
+                    // satisfying inline RequireRole("SuperAdmin", "Admin") policies
+                    services.AddAuthentication(TestAuthenticationHandler.SchemeName)
+                        .AddScheme<AuthenticationSchemeOptions, TestAuthenticationHandler>(
+                            TestAuthenticationHandler.SchemeName, _ => { });
 
                     // Mock BGG API service to avoid real API calls
                     services.RemoveAll(typeof(Api.Services.IBggApiService));
@@ -102,7 +98,9 @@ public sealed class BggImportQueueEndpointsIntegrationTests : IAsyncLifetime
 
         _client = _factory.CreateClient();
 
-        // Note: Admin authorization is bypassed via RequireAssertion(ctx => true) in testing environment
+        // Set admin auth headers for TestAuthenticationHandler
+        _client.DefaultRequestHeaders.Add(TestAuthenticationHandler.UserIdHeader, TestAdminUserId.ToString());
+        _client.DefaultRequestHeaders.Add(TestAuthenticationHandler.RoleHeader, "Admin");
     }
 
     public async ValueTask DisposeAsync()

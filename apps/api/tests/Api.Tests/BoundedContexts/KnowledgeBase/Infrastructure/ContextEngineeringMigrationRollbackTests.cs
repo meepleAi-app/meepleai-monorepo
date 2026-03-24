@@ -56,12 +56,12 @@ public sealed class ContextEngineeringMigrationRollbackTests : IAsyncLifetime
     /// The migration that creates Context Engineering tables.
     /// All 3 tables are part of the initial schema creation.
     /// </summary>
-    private const string InitialCreateMigration = "20260208111903_InitialCreate";
+    private const string InitialCreateMigration = "20260316055120_Beta0";
 
     /// <summary>
-    /// A migration after InitialCreate, used for partial rollback testing.
+    /// A migration after Beta0, used for partial rollback testing.
     /// </summary>
-    private const string PostInitialMigration = "20260208162522_AddPlayRecords";
+    private const string PostInitialMigration = "20260316105334_AddServiceHealthStates";
 
     public ContextEngineeringMigrationRollbackTests(SharedTestcontainersFixture fixture)
     {
@@ -73,17 +73,7 @@ public sealed class ContextEngineeringMigrationRollbackTests : IAsyncLifetime
         _databaseName = $"test_rollback_{Guid.NewGuid():N}";
         _isolatedDbConnectionString = await _fixture.CreateIsolatedDatabaseAsync(_databaseName);
 
-        var services = new ServiceCollection();
-        services.AddLogging(builder => builder.AddConsole().SetMinimumLevel(LogLevel.Warning));
-        services.AddDbContext<MeepleAiDbContext>(options =>
-        {
-            options.UseNpgsql(_isolatedDbConnectionString, o => o.UseVector());
-            options.ConfigureWarnings(w =>
-                w.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning));
-        });
-        services.AddScoped<IUnitOfWork, EfCoreUnitOfWork>();
-        services.AddScoped<IDomainEventCollector, DomainEventCollector>();
-        services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(Program).Assembly));
+        var services = IntegrationServiceCollectionBuilder.CreateBase(_isolatedDbConnectionString);
 
         _serviceProvider = services.BuildServiceProvider();
     }

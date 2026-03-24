@@ -2,7 +2,16 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
-import { AlertCircleIcon, DownloadIcon, RefreshCwIcon, SproutIcon } from 'lucide-react';
+import {
+  AlertCircleIcon,
+  DownloadIcon,
+  ExternalLinkIcon,
+  RefreshCwIcon,
+  SearchIcon,
+  SproutIcon,
+  UploadIcon,
+} from 'lucide-react';
+import Link from 'next/link';
 
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/data-display/card';
@@ -23,8 +32,13 @@ import {
 } from '@/components/ui/overlays/select';
 import { Button } from '@/components/ui/primitives/button';
 import { Checkbox } from '@/components/ui/primitives/checkbox';
+import { Input } from '@/components/ui/primitives/input';
 import { api } from '@/lib/api';
 import type { SeedingGameDto } from '@/lib/api/schemas/seeding.schemas';
+
+import { PipelineIndicator } from './components/pipeline-indicator';
+import { QueueStatusPanel } from './components/queue-status-panel';
+import { useSseQueue } from './hooks/use-sse-queue';
 
 // ============================================================================
 // Constants
@@ -41,6 +55,8 @@ const GAME_DATA_STATUS = {
 } as const;
 
 type StatusFilter = 'all' | '0' | '1' | '2' | '3' | '5' | '6';
+type SortField = 'title' | 'bggId' | 'gameDataStatus' | 'createdAt';
+type SortDir = 'asc' | 'desc';
 
 const STATUS_FILTER_OPTIONS: { value: StatusFilter; label: string }[] = [
   { value: 'all', label: 'All Statuses' },
@@ -53,6 +69,7 @@ const STATUS_FILTER_OPTIONS: { value: StatusFilter; label: string }[] = [
 ];
 
 const POLLING_INTERVAL_MS = 5000;
+const PAGE_SIZE = 25;
 
 // ============================================================================
 // Badge helpers
@@ -77,6 +94,35 @@ function getStatusBadgeClass(status: number): string {
   }
 }
 
+function SortableHeader({
+  field,
+  label,
+  currentField,
+  currentDir,
+  onSort,
+  className,
+}: {
+  field: SortField;
+  label: string;
+  currentField: SortField;
+  currentDir: SortDir;
+  onSort: (field: SortField) => void;
+  className?: string;
+}) {
+  const isActive = field === currentField;
+  return (
+    <TableHead
+      className={`cursor-pointer select-none hover:bg-muted/50 transition-colors ${className ?? ''}`}
+      onClick={() => onSort(field)}
+    >
+      <span className="flex items-center gap-1">
+        {label}
+        {isActive && <span className="text-xs">{currentDir === 'asc' ? '\u2191' : '\u2193'}</span>}
+      </span>
+    </TableHead>
+  );
+}
+
 // ============================================================================
 // Component
 // ============================================================================
@@ -90,7 +136,13 @@ export function SeedingPageClient() {
   const [enriching, setEnriching] = useState(false);
   const [downloading, setDownloading] = useState(false);
   const [enrichMessage, setEnrichMessage] = useState<string | null>(null);
+  const [sortField, setSortField] = useState<SortField>('title');
+  const [sortDir, setSortDir] = useState<SortDir>('asc');
+  const [search, setSearch] = useState('');
+  const [page, setPage] = useState(1);
+  const [queueActive, setQueueActive] = useState(false);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const lastSseFetchRef = useRef(0);
 
   // ---- Data fetching ----
 
@@ -106,21 +158,38 @@ export function SeedingPageClient() {
     }
   }, []);
 
+  const { isConnected: sseConnected } = useSseQueue({
+    enabled: queueActive,
+    onUpdate: event => {
+      if (event.queued === 0 && event.processing === 0) {
+        setQueueActive(false);
+      }
+      const now = Date.now();
+      if (now - lastSseFetchRef.current > 3000) {
+        lastSseFetchRef.current = now;
+        void fetchGames();
+      }
+    },
+  });
+
+  const pollingInterval = sseConnected ? 15000 : POLLING_INTERVAL_MS;
+
   useEffect(() => {
     void fetchGames();
     intervalRef.current = setInterval(() => {
       void fetchGames();
-    }, POLLING_INTERVAL_MS);
+    }, pollingInterval);
 
     // Pause polling when tab is hidden to reduce backend load
     const handleVisibilityChange = () => {
       if (document.hidden) {
         if (intervalRef.current) clearInterval(intervalRef.current);
       } else {
+        if (intervalRef.current) clearInterval(intervalRef.current);
         void fetchGames();
         intervalRef.current = setInterval(() => {
           void fetchGames();
-        }, POLLING_INTERVAL_MS);
+        }, pollingInterval);
       }
     };
     document.addEventListener('visibilitychange', handleVisibilityChange);
@@ -129,15 +198,61 @@ export function SeedingPageClient() {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
-  }, [fetchGames]);
+  }, [fetchGames, pollingInterval]);
 
   // ---- Filtered games ----
 
   const filteredGames = useMemo<SeedingGameDto[]>(() => {
-    if (statusFilter === 'all') return games;
-    const targetStatus = parseInt(statusFilter, 10);
-    return games.filter(g => g.gameDataStatus === targetStatus);
-  }, [games, statusFilter]);
+    let result = games;
+    if (statusFilter !== 'all') {
+      const targetStatus = parseInt(statusFilter, 10);
+      result = result.filter(g => g.gameDataStatus === targetStatus);
+    }
+    if (search.trim()) {
+      const q = search.toLowerCase().trim();
+      result = result.filter(
+        g => g.title.toLowerCase().includes(q) || (g.bggId?.toString() ?? '').includes(q)
+      );
+    }
+    const sorted = [...result].sort((a, b) => {
+      let cmp = 0;
+      switch (sortField) {
+        case 'title':
+          cmp = a.title.localeCompare(b.title);
+          break;
+        case 'bggId':
+          cmp = (a.bggId ?? 0) - (b.bggId ?? 0);
+          break;
+        case 'gameDataStatus':
+          cmp = a.gameDataStatus - b.gameDataStatus;
+          break;
+        case 'createdAt':
+          cmp = a.createdAt.localeCompare(b.createdAt);
+          break;
+      }
+      return sortDir === 'asc' ? cmp : -cmp;
+    });
+    return sorted;
+  }, [games, statusFilter, search, sortField, sortDir]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredGames.length / PAGE_SIZE));
+  const paginatedGames = filteredGames.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+
+  useEffect(() => {
+    setPage(1);
+  }, [statusFilter, search]);
+
+  const handleSort = useCallback(
+    (field: SortField) => {
+      if (field === sortField) {
+        setSortDir(d => (d === 'asc' ? 'desc' : 'asc'));
+      } else {
+        setSortField(field);
+        setSortDir('asc');
+      }
+    },
+    [sortField]
+  );
 
   // ---- Selection ----
 
@@ -191,6 +306,16 @@ export function SeedingPageClient() {
   const enrichableCount = enrichableGames.length;
   const estimatedSeconds = enrichableCount; // 1 req/sec BGG rate limit
 
+  const failedSelectedGames = useMemo(
+    () =>
+      games.filter(
+        g =>
+          selectedIds.has(g.id) && g.bggId !== null && g.gameDataStatus === GAME_DATA_STATUS.Failed
+      ),
+    [games, selectedIds]
+  );
+  const failedSelectedCount = failedSelectedGames.length;
+
   // ---- Actions ----
 
   const handleEnrich = useCallback(async () => {
@@ -200,6 +325,7 @@ export function SeedingPageClient() {
     try {
       const bggIds = enrichableGames.map(g => g.bggId as number);
       await api.sharedGames.enqueueBggEnrichment(bggIds);
+      setQueueActive(true);
       setEnrichMessage(`Queued ${bggIds.length} game(s) for enrichment.`);
       setSelectedIds(new Set());
       await fetchGames();
@@ -211,6 +337,24 @@ export function SeedingPageClient() {
       setEnriching(false);
     }
   }, [enrichableCount, enrichableGames, fetchGames]);
+
+  const handleRetryFailed = useCallback(async () => {
+    if (failedSelectedCount === 0) return;
+    setEnriching(true);
+    setEnrichMessage(null);
+    try {
+      const bggIds = failedSelectedGames.map(g => g.bggId as number);
+      await api.sharedGames.retryBggEnrichment(bggIds);
+      setQueueActive(true);
+      setEnrichMessage(`Re-queued ${bggIds.length} failed game(s) for enrichment.`);
+      setSelectedIds(new Set());
+      await fetchGames();
+    } catch (err) {
+      setEnrichMessage(`Retry failed: ${err instanceof Error ? err.message : 'Unknown error'}`);
+    } finally {
+      setEnriching(false);
+    }
+  }, [failedSelectedCount, failedSelectedGames, fetchGames]);
 
   const handleDownload = useCallback(async () => {
     setDownloading(true);
@@ -257,6 +401,9 @@ export function SeedingPageClient() {
         </div>
       )}
 
+      {/* Queue status panel — auto-hides when queue is empty */}
+      <QueueStatusPanel />
+
       {/* Card */}
       <Card>
         <CardHeader className="flex flex-row items-center justify-between gap-4 space-y-0 pb-4">
@@ -265,6 +412,17 @@ export function SeedingPageClient() {
           </CardTitle>
 
           <div className="flex items-center gap-2 flex-wrap">
+            {/* Search */}
+            <div className="relative">
+              <SearchIcon className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search games\u2026"
+                value={search}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearch(e.target.value)}
+                className="pl-8 w-[200px] h-9"
+              />
+            </div>
+
             {/* Status filter */}
             <Select
               value={statusFilter}
@@ -302,12 +460,32 @@ export function SeedingPageClient() {
               size="sm"
               onClick={() => void handleEnrich()}
               disabled={enrichableCount === 0 || enriching}
+              title={
+                enrichableCount === 0
+                  ? 'Select Skeleton or Failed games with BGG IDs to enrich'
+                  : undefined
+              }
             >
               <SproutIcon className="h-4 w-4 mr-1.5" />
               {enriching
                 ? 'Queuing…'
-                : `Enrich Selected${enrichableCount > 0 ? ` (${enrichableCount})` : ''}`}
+                : enrichableCount > 0
+                  ? `Enrich Selected (${enrichableCount})`
+                  : 'Enrich Selected'}
             </Button>
+
+            {/* Retry failed */}
+            {failedSelectedCount > 0 && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => void handleRetryFailed()}
+                disabled={enriching}
+              >
+                <RefreshCwIcon className="h-4 w-4 mr-1.5" />
+                Retry Failed ({failedSelectedCount})
+              </Button>
+            )}
 
             {/* Download Excel */}
             <Button
@@ -349,15 +527,46 @@ export function SeedingPageClient() {
                       aria-label="Select all"
                     />
                   </TableHead>
-                  <TableHead>Title</TableHead>
-                  <TableHead className="w-32">BGG ID</TableHead>
-                  <TableHead className="w-44">Data Status</TableHead>
+                  <SortableHeader
+                    field="title"
+                    label="Title"
+                    currentField={sortField}
+                    currentDir={sortDir}
+                    onSort={handleSort}
+                  />
+                  <SortableHeader
+                    field="bggId"
+                    label="BGG ID"
+                    currentField={sortField}
+                    currentDir={sortDir}
+                    onSort={handleSort}
+                    className="w-32"
+                  />
+                  <SortableHeader
+                    field="gameDataStatus"
+                    label="Data Status"
+                    currentField={sortField}
+                    currentDir={sortDir}
+                    onSort={handleSort}
+                    className="w-44"
+                  />
                   <TableHead className="w-24 text-center">Has PDF</TableHead>
-                  <TableHead className="w-40">Created</TableHead>
+                  <TableHead className="w-32">Game Status</TableHead>
+                  <TableHead className="w-24 text-center">RAG Ready</TableHead>
+                  <TableHead className="w-24">Pipeline</TableHead>
+                  <SortableHeader
+                    field="createdAt"
+                    label="Created"
+                    currentField={sortField}
+                    currentDir={sortDir}
+                    onSort={handleSort}
+                    className="w-40"
+                  />
+                  <TableHead className="w-28 text-right pr-6">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredGames.map(game => (
+                {paginatedGames.map(game => (
                   <TableRow key={game.id} className="cursor-pointer hover:bg-muted/40">
                     <TableCell className="pl-6">
                       <Checkbox
@@ -371,9 +580,19 @@ export function SeedingPageClient() {
                       {game.bggId ?? '—'}
                     </TableCell>
                     <TableCell>
-                      <Badge className={getStatusBadgeClass(game.gameDataStatus)}>
-                        {game.gameDataStatusName}
-                      </Badge>
+                      <div className="flex items-center gap-2">
+                        <Badge className={getStatusBadgeClass(game.gameDataStatus)}>
+                          {game.gameDataStatusName}
+                        </Badge>
+                        {game.gameDataStatus === GAME_DATA_STATUS.Failed && game.errorMessage && (
+                          <span
+                            className="text-xs text-orange-600 truncate max-w-[200px] cursor-help"
+                            title={game.errorMessage}
+                          >
+                            {game.errorMessage}
+                          </span>
+                        )}
+                      </div>
                     </TableCell>
                     <TableCell className="text-center">
                       {game.hasUploadedPdf ? (
@@ -382,16 +601,96 @@ export function SeedingPageClient() {
                         <span className="text-muted-foreground text-sm">No</span>
                       )}
                     </TableCell>
+                    <TableCell>
+                      <Badge variant="outline" className="text-xs">
+                        {game.gameStatusName}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-center">
+                      {game.isRagReady ? (
+                        <span className="text-emerald-600 font-semibold text-sm">Yes</span>
+                      ) : (
+                        <span className="text-muted-foreground text-sm">No</span>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <PipelineIndicator
+                        gameDataStatus={game.gameDataStatus}
+                        hasUploadedPdf={game.hasUploadedPdf}
+                        isRagReady={game.isRagReady}
+                      />
+                    </TableCell>
                     <TableCell className="text-sm text-muted-foreground">
                       {new Date(game.createdAt).toLocaleDateString()}
+                    </TableCell>
+                    <TableCell className="text-right pr-6">
+                      <div className="flex items-center justify-end gap-1">
+                        <Link
+                          href={`/admin/shared-games/${game.id}`}
+                          className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                          title="View game details"
+                        >
+                          <ExternalLinkIcon className="h-3.5 w-3.5" />
+                        </Link>
+                        {!game.hasUploadedPdf &&
+                          game.gameDataStatus === GAME_DATA_STATUS.Complete && (
+                            <Link
+                              href={`/admin/knowledge-base/upload?gameId=${game.id}`}
+                              className="inline-flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800 transition-colors"
+                              title="Upload PDF for this game"
+                            >
+                              <UploadIcon className="h-3.5 w-3.5" />
+                            </Link>
+                          )}
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
             </Table>
           )}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between px-6 py-3 border-t">
+              <span className="text-sm text-muted-foreground">
+                Showing {(page - 1) * PAGE_SIZE + 1}–
+                {Math.min(page * PAGE_SIZE, filteredGames.length)} of {filteredGames.length}
+              </span>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={page <= 1}
+                  onClick={() => setPage(p => p - 1)}
+                >
+                  Previous
+                </Button>
+                <span className="text-sm text-muted-foreground">
+                  Page {page} of {totalPages}
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={page >= totalPages}
+                  onClick={() => setPage(p => p + 1)}
+                >
+                  Next
+                </Button>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
+
+      {/* Next-steps guidance when all games are enriched */}
+      {games.length > 0 && games.every(g => g.gameDataStatus === GAME_DATA_STATUS.Complete) && (
+        <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800 dark:border-emerald-800/40 dark:bg-emerald-900/20 dark:text-emerald-300">
+          All games are enriched. Next step: upload PDFs via{' '}
+          <a href="/admin/knowledge-base/upload" className="underline font-medium">
+            Upload &amp; Process
+          </a>{' '}
+          to enable RAG.
+        </div>
+      )}
     </div>
   );
 }

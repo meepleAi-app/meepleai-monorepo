@@ -47,27 +47,13 @@ public sealed class SessionFinalizedEventHandlerIntegrationTests : IAsyncLifetim
         var connectionString = await _fixture.CreateIsolatedDatabaseAsync($"test_finalize_handler_{Guid.NewGuid():N}");
 
         // Setup DI container properly (Issue #3258 pattern from ScoreUpdatedEventHandlerIntegrationTests)
-        var services = new ServiceCollection();
-
-        // Register DbContext with proper DI registration
-        services.AddDbContext<MeepleAiDbContext>(options =>
-            options.UseNpgsql(connectionString, o => o.UseVector())); // Issue #3547
-
-        // Register MediatR (required by DbContext for domain event dispatching)
-        services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(
-            typeof(Api.BoundedContexts.KnowledgeBase.Application.EventHandlers.SessionFinalizedEventHandler).Assembly));
-
-        // Register domain event collector (required by repository and DbContext)
-        services.AddScoped<IDomainEventCollector, DomainEventCollector>();
+        var services = IntegrationServiceCollectionBuilder.CreateBase(connectionString);
 
         // Register repository
         services.AddScoped<IAgentSessionRepository, AgentSessionRepository>();
 
         // HybridCache (required by event handlers) - Issue #2620
         services.AddHybridCache();
-        services.AddScoped(_ => Mock.Of<Api.Services.IHybridCacheService>());
-
-        services.AddLogging(builder => builder.AddConsole());
 
         var serviceProvider = services.BuildServiceProvider();
 

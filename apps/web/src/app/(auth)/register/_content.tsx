@@ -64,7 +64,7 @@ export function RegisterPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const oauthDisabled = searchParams?.get('oauth_disabled') === 'true';
-  const finalDestination = searchParams?.get('from') ?? '/dashboard';
+  const finalDestination = searchParams?.get('from') ?? '/library';
   // Redirect to welcome page first, which will then redirect to final destination
   const redirectTo = `/welcome?redirectTo=${encodeURIComponent(finalDestination)}`;
 

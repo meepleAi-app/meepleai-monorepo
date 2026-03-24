@@ -38,6 +38,8 @@ services:
       - ./secrets/dev/openrouter.secret
       - ./secrets/dev/admin.secret
       - ./secrets/dev/embedding-service.secret
+      - ./secrets/dev/unstructured-service.secret
+      - ./secrets/dev/smoldocling-service.secret
       - ./secrets/dev/storage.secret
       - ./secrets/dev/db-sync.secret
       - ./env/api.env.dev
@@ -58,6 +60,8 @@ services:
       EMBEDDING_FALLBACK_ENABLED: "false"
       Embedding__FallbackEnabled: "false"
       RERANKER_URL: http://reranker-service:8003
+      UNSTRUCTURED_API_URL: http://unstructured-service:8001
+      SMOLDOCLING_API_URL: http://smoldocling-service:8002
     volumes:
       - ./secrets/dev:/app/infra/secrets:ro
 

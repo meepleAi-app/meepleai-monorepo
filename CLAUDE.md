@@ -17,6 +17,21 @@
 | Migration | `dotnet ef migrations add Name` | `apps/api/src/Api/` |
 | API Docs | http://localhost:8080/scalar/v1 | Browser |
 | All Make commands | `make help` | `infra/` |
+| Alpha Mode | `make alpha` | `infra/` |
+
+### Alpha Mode
+
+Set `ALPHA_MODE=true` (backend) and `NEXT_PUBLIC_ALPHA_MODE=true` (frontend, build-time) to run in Alpha Zero mode.
+
+| Aspect | Alpha Scope |
+|--------|------------|
+| **Features** | Auth → Games + BGG → PDF upload → RAG Chat → Library |
+| **Active BCs** | Authentication, GameManagement, DocumentProcessing, KnowledgeBase, UserLibrary |
+| **Admin** | Overview, Users, Content (trimmed) sections only |
+| **Docker** | `cd infra && make alpha` |
+| **Disable** | Set both vars to `false` and rebuild web |
+
+`NEXT_PUBLIC_ALPHA_MODE` is a **build-time** variable — changing it requires rebuild, not just restart.
 
 ## Stack & Features
 

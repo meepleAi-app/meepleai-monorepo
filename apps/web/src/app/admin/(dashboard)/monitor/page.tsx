@@ -130,10 +130,10 @@ export default async function AdminMonitorPage({ searchParams }: AdminMonitorPag
     <div className="space-y-5">
       <div>
         <h1 className="font-quicksand text-xl sm:text-2xl font-bold tracking-tight text-foreground">
-          Monitor
+          Monitoraggio
         </h1>
         <p className="mt-0.5 text-sm text-muted-foreground">
-          System health, alerts, cache management, infrastructure, and operations.
+          Stato del sistema, alert, cache, infrastruttura e operazioni.
         </p>
       </div>
 

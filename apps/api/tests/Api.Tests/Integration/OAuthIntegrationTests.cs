@@ -89,34 +89,13 @@ public class OAuthIntegrationTests : IAsyncLifetime
             CommandTimeout = 30
         };
 
-        var services = new ServiceCollection();
-
-        services.AddLogging(builder => builder.AddConsole().SetMinimumLevel(LogLevel.Information));
-
-        // Register DbContext with PostgreSQL
-        services.AddDbContext<MeepleAiDbContext>(options =>
-        {
-            options.UseNpgsql(enforcedBuilder.ConnectionString, o => o.UseVector()); // Issue #3547: Enable pgvector
-            // Suppress pending model changes warning for integration tests
-            // since we're using migrations to manage schema
-            options.ConfigureWarnings(w =>
-                w.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning));
-        });
+        var services = IntegrationServiceCollectionBuilder.CreateBase(enforcedBuilder.ConnectionString);
 
         // Register repositories
         services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<IOAuthAccountRepository, OAuthAccountRepository>();
         services.AddScoped<ISessionRepository, SessionRepository>();
         services.AddScoped<IApiKeyRepository, ApiKeyRepository>();
-        services.AddScoped<IUnitOfWork, EfCoreUnitOfWork>();
-        services.AddSingleton<TimeProvider>(TimeProvider.System);
-
-        // Register domain event infrastructure
-        services.AddScoped<Api.SharedKernel.Application.Services.IDomainEventCollector, Api.SharedKernel.Application.Services.DomainEventCollector>();
-
-        // Register MediatR with handlers
-        services.AddMediatR(config =>
-            config.RegisterServicesFromAssembly(typeof(HandleOAuthCallbackCommandHandler).Assembly));
 
         _serviceProvider = services.BuildServiceProvider();
 

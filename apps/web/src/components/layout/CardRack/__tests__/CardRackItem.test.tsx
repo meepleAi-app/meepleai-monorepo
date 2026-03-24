@@ -18,19 +18,19 @@ vi.mock('next/navigation', () => ({
 
 describe('CardRackItem', () => {
   it('renders icon with aria-label', () => {
-    render(<CardRackItem href="/dashboard" icon={LayoutDashboard} label="Dashboard" />);
+    render(<CardRackItem href="/library" icon={LayoutDashboard} label="Dashboard" />);
     const link = screen.getByRole('link', { name: 'Dashboard' });
     expect(link).toBeInTheDocument();
-    expect(link).toHaveAttribute('href', '/dashboard');
+    expect(link).toHaveAttribute('href', '/library');
   });
 
   it('shows label when isExpanded is true', () => {
-    render(<CardRackItem href="/dashboard" icon={LayoutDashboard} label="Dashboard" isExpanded />);
+    render(<CardRackItem href="/library" icon={LayoutDashboard} label="Dashboard" isExpanded />);
     expect(screen.getByText('Dashboard')).toBeVisible();
   });
 
   it('applies active styles when isActive', () => {
-    render(<CardRackItem href="/dashboard" icon={LayoutDashboard} label="Dashboard" isActive />);
+    render(<CardRackItem href="/library" icon={LayoutDashboard} label="Dashboard" isActive />);
     const link = screen.getByRole('link', { name: 'Dashboard' });
     expect(link.className).toContain('font-semibold');
   });

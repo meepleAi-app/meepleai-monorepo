@@ -63,7 +63,7 @@ public sealed class ShareLinkIntegrationTests : IAsyncLifetime
             _isolatedDbConnectionString = await _fixture.CreateIsolatedDatabaseAsync(_databaseName);
 
             // Build service provider with all required dependencies
-            var services = new ServiceCollection();
+            var services = IntegrationServiceCollectionBuilder.CreateBase(_isolatedDbConnectionString);
 
             // Configuration
             var configuration = new ConfigurationBuilder()
@@ -75,12 +75,6 @@ public sealed class ShareLinkIntegrationTests : IAsyncLifetime
                 .Build();
             services.AddSingleton<IConfiguration>(configuration);
 
-            // DbContext with EF Core
-            services.AddDbContext<MeepleAiDbContext>(options =>
-                options.UseNpgsql(_isolatedDbConnectionString, o => o.UseVector()) // Issue #3547
-                    .ConfigureWarnings(warnings =>
-                        warnings.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning)));
-
             // Redis distributed cache
             services.AddStackExchangeRedisCache(options =>
             {
@@ -90,12 +84,6 @@ public sealed class ShareLinkIntegrationTests : IAsyncLifetime
 
             // Repositories
             services.AddScoped<IShareLinkRepository, ShareLinkRepository>();
-
-            // MediatR for handlers
-            services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(CreateShareLinkCommandHandler).Assembly));
-
-            services.AddScoped<Api.SharedKernel.Application.Services.IDomainEventCollector,
-                Api.SharedKernel.Application.Services.DomainEventCollector>();
 
             _serviceProvider = services.BuildServiceProvider();
 

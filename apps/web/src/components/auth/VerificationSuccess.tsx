@@ -12,7 +12,7 @@
  * ```tsx
  * <VerificationSuccess
  *   email="user@example.com"
- *   redirectUrl="/dashboard"
+ *   redirectUrl="/library"
  *   autoRedirectSeconds={3}
  *   onRedirect={handleRedirect}
  * />
@@ -47,7 +47,7 @@ export interface VerificationSuccessProps {
 
 export function VerificationSuccess({
   email,
-  redirectUrl = '/dashboard',
+  redirectUrl = '/library',
   autoRedirectSeconds = 3,
   onRedirect,
   'data-testid': testId,
@@ -132,17 +132,13 @@ export function VerificationSuccess({
         <h2 className="text-2xl font-bold text-foreground">
           {t('auth.emailVerification.success.title')}
         </h2>
-        <p className="text-muted-foreground">
-          {t('auth.emailVerification.success.description')}
-        </p>
+        <p className="text-muted-foreground">{t('auth.emailVerification.success.description')}</p>
       </div>
 
       {/* Email Display (optional) */}
       {email && (
         <div className="bg-green-500/5 dark:bg-green-500/10 border border-green-500/20 rounded-lg px-4 py-3 w-full">
-          <p className="text-sm text-green-700 dark:text-green-300">
-            {email}
-          </p>
+          <p className="text-sm text-green-700 dark:text-green-300">{email}</p>
         </div>
       )}
 

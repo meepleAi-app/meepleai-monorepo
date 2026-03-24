@@ -112,7 +112,7 @@ export interface DashboardSection {
 
 // ─── Navigation Definition ───────────────────────────────────────────────────
 
-export const DASHBOARD_SECTIONS: DashboardSection[] = [
+const _ALL_DASHBOARD_SECTIONS: DashboardSection[] = [
   // ── 1. Overview ──────────────────────────────────────────────────────────
   {
     id: 'overview',
@@ -586,6 +586,34 @@ export const DASHBOARD_SECTIONS: DashboardSection[] = [
     ],
   },
 ];
+
+// ─── Alpha Mode Filtering ────────────────────────────────────────────────────
+
+const isAlphaMode = process.env.NEXT_PUBLIC_ALPHA_MODE === 'true';
+
+const ALPHA_SECTION_IDS = new Set(['overview', 'content', 'users']);
+
+const ALPHA_CONTENT_SIDEBAR_LABELS = new Set([
+  'All Games',
+  'Add Game',
+  'KB Overview',
+  'Documents',
+  'Upload & Process',
+]);
+
+/** Dashboard sections — filtered by ALPHA_MODE when active */
+export const DASHBOARD_SECTIONS: DashboardSection[] = isAlphaMode
+  ? _ALL_DASHBOARD_SECTIONS
+      .filter(s => ALPHA_SECTION_IDS.has(s.id))
+      .map(s =>
+        s.id === 'content'
+          ? {
+              ...s,
+              sidebarItems: s.sidebarItems.filter(i => ALPHA_CONTENT_SIDEBAR_LABELS.has(i.label)),
+            }
+          : s
+      )
+  : _ALL_DASHBOARD_SECTIONS;
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 

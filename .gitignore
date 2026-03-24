@@ -224,3 +224,11 @@ infra/seed-dumps/
 .worktrees/
 infra/.env
 apps/api/src/Api/Properties/launchSettings.json
+
+# BGG fetch tool logs
+tools/bgg-fetcher/logs/
+
+# Page catalog (generated screenshots and static site)
+docs/pages/screenshots/
+docs/pages/dist/
+docs/pages/manifest.json

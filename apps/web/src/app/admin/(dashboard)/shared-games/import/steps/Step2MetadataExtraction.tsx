@@ -48,13 +48,13 @@ export function Step2MetadataExtraction({ onComplete }: Step2MetadataExtractionP
   const [formData, setFormData] = useState<ExtractedMetadata>(
     extractedMetadata || {
       title: '',
-      yearPublished: undefined,
+      year: undefined,
       minPlayers: undefined,
       maxPlayers: undefined,
-      playTime: undefined,
+      playingTime: undefined,
       minAge: undefined,
       description: '',
-      confidence: undefined,
+      confidenceScore: undefined,
     }
   );
 
@@ -173,8 +173,8 @@ export function Step2MetadataExtraction({ onComplete }: Step2MetadataExtractionP
             AI has extracted the following game information. You can edit any field manually.
           </p>
         </div>
-        {formData.confidence !== undefined && (
-          <ConfidenceBadge confidence={formData.confidence} size="md" />
+        {formData.confidenceScore !== undefined && (
+          <ConfidenceBadge confidence={Math.round(formData.confidenceScore * 100)} size="md" />
         )}
       </div>
 
@@ -205,12 +205,9 @@ export function Step2MetadataExtraction({ onComplete }: Step2MetadataExtractionP
                 type="number"
                 min="1900"
                 max="2100"
-                value={formData.yearPublished || ''}
+                value={formData.year || ''}
                 onChange={e =>
-                  handleFieldChange(
-                    'yearPublished',
-                    e.target.value ? Number(e.target.value) : undefined
-                  )
+                  handleFieldChange('year', e.target.value ? Number(e.target.value) : undefined)
                 }
                 placeholder="e.g., 2024"
               />
@@ -282,9 +279,12 @@ export function Step2MetadataExtraction({ onComplete }: Step2MetadataExtractionP
               type="number"
               min="1"
               max="9999"
-              value={formData.playTime || ''}
+              value={formData.playingTime || ''}
               onChange={e =>
-                handleFieldChange('playTime', e.target.value ? Number(e.target.value) : undefined)
+                handleFieldChange(
+                  'playingTime',
+                  e.target.value ? Number(e.target.value) : undefined
+                )
               }
               placeholder="e.g., 60"
             />
@@ -320,13 +320,13 @@ export function Step2MetadataExtraction({ onComplete }: Step2MetadataExtractionP
       </Card>
 
       {/* Warning for low confidence */}
-      {formData.confidence !== undefined && formData.confidence < 50 && (
+      {formData.confidenceScore !== undefined && formData.confidenceScore < 0.5 && (
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
           <AlertTitle>Low Confidence Extraction</AlertTitle>
           <AlertDescription className="text-sm">
-            The AI extraction has low confidence ({formData.confidence}%). Please review all fields
-            carefully and make corrections as needed.
+            The AI extraction has low confidence ({Math.round(formData.confidenceScore * 100)}%).
+            Please review all fields carefully and make corrections as needed.
           </AlertDescription>
         </Alert>
       )}

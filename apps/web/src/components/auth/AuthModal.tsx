@@ -55,7 +55,7 @@ export function AuthModal({
   defaultMode = 'login',
   onSuccess,
   sessionExpiredMessage = false,
-  redirectTo = '/library',
+  redirectTo = '/dashboard',
   hideOAuth = false,
 }: AuthModalProps) {
   const router = useRouter();

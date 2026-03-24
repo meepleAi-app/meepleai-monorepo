@@ -73,7 +73,7 @@ beforeEach(() => {
   useGameImportWizardStore.setState({
     currentStep: 3,
     uploadedPdf: { id: 'pdf-123', fileName: 'test.pdf' },
-    extractedMetadata: { title: 'Catan', confidence: 85 },
+    extractedMetadata: { title: 'Catan', confidenceScore: 0.85 },
     selectedBggId: null,
     bggGameData: null,
     enrichedData: null,
@@ -221,7 +221,7 @@ describe('Step3BggMatch', () => {
         const state = useGameImportWizardStore.getState();
         expect(state.selectedBggId).toBe(13);
         expect(state.bggGameData).toMatchObject({
-          id: 13,
+          bggId: 13,
           name: 'Catan',
           yearPublished: 1995,
         });
@@ -241,7 +241,7 @@ describe('Step3BggMatch', () => {
         expect(onComplete).toHaveBeenCalledWith(
           13,
           expect.objectContaining({
-            id: 13,
+            bggId: 13,
             name: 'Catan',
           })
         );
@@ -458,7 +458,7 @@ describe('Step3BggMatch', () => {
         const state = useGameImportWizardStore.getState();
         expect(state.selectedBggId).toBe(777);
         expect(state.bggGameData).toMatchObject({
-          id: 777,
+          bggId: 777,
           name: 'Risk',
         });
       });
@@ -553,7 +553,7 @@ describe('Step3BggMatch', () => {
       useGameImportWizardStore.setState({
         selectedBggId: 13,
         bggGameData: {
-          id: 13,
+          bggId: 13,
           name: 'Catan',
           yearPublished: 1995,
         },

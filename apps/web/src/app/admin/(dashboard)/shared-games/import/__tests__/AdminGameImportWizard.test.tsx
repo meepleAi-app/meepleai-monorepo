@@ -241,7 +241,7 @@ describe('AdminGameImportWizardClient', () => {
           title: 'Test Game',
           minPlayers: 2,
           maxPlayers: 4,
-          playTime: 60,
+          playingTime: 60,
         },
       });
 

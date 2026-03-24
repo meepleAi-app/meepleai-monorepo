@@ -742,11 +742,10 @@ public sealed class SharedTestcontainersFixture : IAsyncLifetime
                 builder.Timeout = 60; // Increase timeout to 60s for long-running integration tests
                 builder.CommandTimeout = 60;
                 // CI: max_connections=100 (can't change in GH Actions service containers).
-                // 33+ test classes accumulate pools faster than xUnit releases them.
-                // MaxPoolSize=1 × 33 = 33 connections max. Local testcontainers: max_connections=500.
+                // MaxPoolSize=2 + ClearAllPools() in teardown prevents accumulation.
                 var isExternalPostgres = !string.IsNullOrWhiteSpace(
                     Environment.GetEnvironmentVariable(TestcontainersConfiguration.EnvPostgresConnectionString));
-                builder.MaxPoolSize = isExternalPostgres ? 1 : 5;
+                builder.MaxPoolSize = isExternalPostgres ? 2 : 5;
                 builder.MinPoolSize = 0;
                 builder.ConnectionIdleLifetime = isExternalPostgres ? 5 : 30;
                 builder.ConnectionPruningInterval = isExternalPostgres ? 3 : 10;
@@ -818,6 +817,10 @@ public sealed class SharedTestcontainersFixture : IAsyncLifetime
                     WHERE datname = '{databaseName}' AND pid <> pg_backend_pid();";
 #pragma warning restore CA2100
                 var terminatedCount = await terminateCmd.ExecuteNonQueryAsync();
+
+                // Clear all Npgsql connection pools to release connections back to PostgreSQL.
+                // Prevents "too many clients" exhaustion in CI (max_connections=100).
+                NpgsqlConnection.ClearAllPools();
 
                 // Issue #2706: Brief delay to allow terminated connections to fully close
                 // This prevents race conditions where drop runs before connections are fully terminated

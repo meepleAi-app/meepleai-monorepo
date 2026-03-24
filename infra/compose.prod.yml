@@ -80,7 +80,7 @@ services:
       EMBEDDING_MODEL: intfloat/multilingual-e5-base
       Embedding__Dimensions: 768
       Authentication__OAuth__CallbackBaseUrl: "https://${PROD_DOMAIN}"
-      FrontendUrl: "https://${PROD_DOMAIN}"
+      Frontend__BaseUrl: "https://${PROD_DOMAIN}"
       Authentication__SessionCookie__Secure: "true"
       Authentication__SessionCookie__SameSite: "Lax"
     labels:

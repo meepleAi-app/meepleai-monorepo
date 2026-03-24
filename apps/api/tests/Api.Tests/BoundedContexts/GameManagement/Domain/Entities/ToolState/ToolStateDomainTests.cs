@@ -82,14 +82,14 @@ public class ToolStateDomainTests
     }
 
     [Fact]
-    public void UpdateState_WithValidJson_UpdatesStateAndTimestamp()
+    public async Task UpdateState_WithValidJson_UpdatesStateAndTimestamp()
     {
         var ts = new Api.BoundedContexts.GameManagement.Domain.Entities.ToolState.ToolState(
             Guid.NewGuid(), _sessionId, _toolkitId, "Dice", ToolType.Dice, "{}");
         var originalTimestamp = ts.LastUpdatedAt;
 
         // Small delay to ensure timestamp differs
-        Thread.Sleep(1);
+        await Task.Delay(50);
 
         ts.UpdateState("{\"lastRoll\":[3,5]}");
 

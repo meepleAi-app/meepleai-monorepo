@@ -1,6 +1,7 @@
 using System.Text.Json;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
+using Api.Middleware;
 using Api.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
@@ -166,7 +167,7 @@ internal class AlertingService : IAlertingService
 
         if (activeAlerts.Count == 0)
         {
-            _logger.LogInformation("No active alerts found for type {AlertType}", alertType);
+            _logger.LogInformation("No active alerts found for type {AlertType}", LogValueSanitizer.Sanitize(alertType));
             return false;
         }
 
@@ -181,7 +182,7 @@ internal class AlertingService : IAlertingService
         _logger.LogInformation(
             "Resolved {Count} alert(s) for type {AlertType}",
             activeAlerts.Count,
-            alertType);
+            LogValueSanitizer.Sanitize(alertType));
 
         return true;
     }

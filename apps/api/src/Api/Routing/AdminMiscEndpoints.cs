@@ -5,6 +5,7 @@ using Api.BoundedContexts.KnowledgeBase.Application.Commands;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries;
 using Api.Extensions;
 using Api.Helpers;
+using Api.Middleware;
 using Api.Models;
 using MediatR;
 
@@ -61,7 +62,7 @@ internal static class AdminMiscEndpoints
             }
             var validatedQuery = q!;
 
-            logger.LogInformation("User {UserId} searching chess knowledge: {Query}", session!.User!.Id, validatedQuery);
+            logger.LogInformation("User {UserId} searching chess knowledge: {Query}", session!.User!.Id, LogValueSanitizer.Sanitize(validatedQuery));
 
             var searchResult = await mediator.Send(new SearchChessKnowledgeQuery { Query = validatedQuery, Limit = limit ?? 5 }, ct).ConfigureAwait(false);
 

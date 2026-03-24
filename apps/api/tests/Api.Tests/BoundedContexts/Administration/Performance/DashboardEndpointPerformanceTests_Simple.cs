@@ -108,13 +108,13 @@ public class DashboardEndpointPerformanceTests_Simple
     /// Validates Stopwatch timing measurement approach.
     /// </summary>
     [Fact]
-    public void PerformanceTest_TimingMeasurement_WorksCorrectly()
+    public async Task PerformanceTest_TimingMeasurement_WorksCorrectly()
     {
         // Arrange
         var stopwatch = Stopwatch.StartNew();
 
         // Act: Simulate operation
-        Thread.Sleep(50); // 50ms delay
+        await Task.Delay(50); // 50ms delay
 
         stopwatch.Stop();
 

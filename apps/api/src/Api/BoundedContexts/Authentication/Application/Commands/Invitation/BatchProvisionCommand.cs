@@ -1,4 +1,5 @@
 using Api.BoundedContexts.Authentication.Application.DTOs;
+using Api.Infrastructure.Security;
 using Api.SharedKernel.Application.Interfaces;
 using MediatR;
 using Microsoft.Extensions.Logging;
@@ -69,7 +70,7 @@ internal sealed class BatchProvisionCommandHandler
 #pragma warning disable CA1031 // Do not catch general exception types
             catch (Exception ex)
             {
-                _logger.LogWarning(ex, "Failed to provision invitation for {Email}", item.Email);
+                _logger.LogWarning(ex, "Failed to provision invitation for {Email}", DataMasking.MaskEmail(item.Email));
                 var userFacingError = ex switch
                 {
                     Middleware.Exceptions.ConflictException => "A pending invitation or user already exists for this email",

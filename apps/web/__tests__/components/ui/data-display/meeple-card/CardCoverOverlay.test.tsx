@@ -1,9 +1,9 @@
 /**
  * CardCoverOverlay Tests
  *
- * Tests for the MtG-inspired cover overlay slots on MeepleCard:
- * - mechanicIcon: bottom-left overlay on cover image (via cover-subtypes)
- * - stateLabel: bottom-right overlay on cover image (via cover-state-label)
+ * Tests for the 4-corner cover overlay system on MeepleCard:
+ * - subtypeIcons: bottom-left overlay on cover image
+ * - stateLabel: bottom-right overlay on cover image
  * - Both together
  * - Absence when props not provided
  */
@@ -24,7 +24,7 @@ describe('MeepleCard cover overlay slots', () => {
         variant="grid"
         entity="game"
         subtypeIcons={[
-          { icon: <span data-testid="mechanic-icon-content">dice</span>, tooltip: 'Dice' },
+          { icon: <span data-testid="subtype-icon-content">dice</span>, tooltip: 'Dice' },
         ]}
       />
     );
@@ -32,7 +32,7 @@ describe('MeepleCard cover overlay slots', () => {
     const slot = screen.getByTestId('cover-subtypes');
     expect(slot).toBeInTheDocument();
 
-    const iconContent = screen.getByTestId('mechanic-icon-content');
+    const iconContent = screen.getByTestId('subtype-icon-content');
     expect(iconContent).toBeInTheDocument();
   });
 
@@ -61,7 +61,7 @@ describe('MeepleCard cover overlay slots', () => {
         entity="game"
         subtypeIcons={[
           {
-            icon: <span data-testid="mechanic-icon-content">area-control</span>,
+            icon: <span data-testid="subtype-icon-content">area-control</span>,
             tooltip: 'Area Control',
           },
         ]}
@@ -89,7 +89,7 @@ describe('MeepleCard cover overlay slots', () => {
         variant="compact"
         entity="game"
         subtypeIcons={[
-          { icon: <span data-testid="mechanic-icon-content">dice</span>, tooltip: 'Dice' },
+          { icon: <span data-testid="subtype-icon-content">dice</span>, tooltip: 'Dice' },
         ]}
         stateLabel={{ text: 'Active', variant: 'info' }}
       />
@@ -148,7 +148,7 @@ describe('MeepleCard cover overlay slots', () => {
     expect(label).toHaveClass('text-white');
   });
 
-  it('renders empty spacer div when only stateLabel is provided (no mechanicIcon)', () => {
+  it('renders empty spacer div when only stateLabel is provided (no subtypeIcons)', () => {
     render(
       <CardCover
         src="/test-image.jpg"
@@ -159,6 +159,7 @@ describe('MeepleCard cover overlay slots', () => {
       />
     );
 
+    // subtypeIcons slot should not be rendered, stateLabel should be
     expect(screen.queryByTestId('cover-subtypes')).not.toBeInTheDocument();
     expect(screen.getByTestId('cover-state-label')).toBeInTheDocument();
   });

@@ -1,4 +1,5 @@
 using System.Net.Sockets;
+using Api.Infrastructure.Security;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 
 namespace Api.Infrastructure.Health.Checks;
@@ -42,23 +43,26 @@ public class EmailSmtpHealthCheck : IHealthCheck
 
             await client.ConnectAsync(smtpServer, smtpPort, cts.Token).ConfigureAwait(false);
 
+            var maskedServer = DataMasking.MaskString(smtpServer);
             return client.Connected
-                ? HealthCheckResult.Healthy($"SMTP server {smtpServer}:{smtpPort} is reachable")
-                : HealthCheckResult.Degraded($"SMTP server {smtpServer}:{smtpPort} unreachable");
+                ? HealthCheckResult.Healthy($"SMTP server {maskedServer}:{smtpPort} is reachable")
+                : HealthCheckResult.Degraded($"SMTP server {maskedServer}:{smtpPort} unreachable");
         }
         catch (OperationCanceledException ex)
         {
-            _logger.LogWarning(ex, "SMTP health check timeout (>5s) for {Server}:{Port}", smtpServer, smtpPort);
-            return HealthCheckResult.Degraded($"Timeout checking SMTP server {smtpServer}:{smtpPort}");
+            var maskedServer = DataMasking.MaskString(smtpServer);
+            _logger.LogWarning(ex, "SMTP health check timeout (>5s) for {Server}:{Port}", maskedServer, smtpPort);
+            return HealthCheckResult.Degraded($"Timeout checking SMTP server {maskedServer}:{smtpPort}");
         }
         catch (SocketException ex)
         {
-            _logger.LogError(ex, "SMTP health check failed - socket error for {Server}:{Port}", smtpServer, smtpPort);
-            return HealthCheckResult.Unhealthy($"SMTP server {smtpServer}:{smtpPort} unavailable", ex);
+            var maskedServer = DataMasking.MaskString(smtpServer);
+            _logger.LogError(ex, "SMTP health check failed - socket error for {Server}:{Port}", maskedServer, smtpPort);
+            return HealthCheckResult.Unhealthy($"SMTP server {maskedServer}:{smtpPort} unavailable", ex);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "SMTP health check failed - unexpected error for {Server}:{Port}", smtpServer, smtpPort);
+            _logger.LogError(ex, "SMTP health check failed - unexpected error");
             return HealthCheckResult.Unhealthy("SMTP connectivity check failed", ex);
         }
     }

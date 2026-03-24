@@ -82,8 +82,6 @@ export function Layout({
       <main
         className={cn(
           'flex-1',
-          // Header spacing
-          'pt-16', // Header height
           // Bottom spacing for navigation elements
           bottomPadding,
           // Content constraints

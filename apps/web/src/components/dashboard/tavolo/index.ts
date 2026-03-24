@@ -1,1 +1,0 @@
-export { TavoloSection } from './TavoloSection';

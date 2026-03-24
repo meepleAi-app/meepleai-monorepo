@@ -241,7 +241,8 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
         }
 
         // Register ITierEnforcementService mock (required by UploadPdfCommandHandler)
-        if (!services.Any(s => s.ServiceType == typeof(ITierEnforcementService)))
+        // Always replace the bare Mock.Of<> from IntegrationServiceCollectionBuilder.CreateBase
+        // which has no setups (CanPerformAsync returns false, GetUsageAsync returns null → NullRef at handler line 97)
         {
             var tierMock = new Mock<ITierEnforcementService>();
             tierMock.Setup(t => t.CanPerformAsync(It.IsAny<Guid>(), It.IsAny<TierAction>(), It.IsAny<CancellationToken>()))

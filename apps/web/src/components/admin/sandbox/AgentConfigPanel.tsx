@@ -9,7 +9,6 @@ import { useSandboxSession } from '@/components/admin/sandbox/contexts/SandboxSe
 import { LlmSettingsForm } from '@/components/admin/sandbox/LlmSettingsForm';
 import { RagStrategyForm } from '@/components/admin/sandbox/RagStrategyForm';
 import { ReprocessConfirmDialog } from '@/components/admin/sandbox/ReprocessConfirmDialog';
-import { Button } from '@/components/ui/button';
 import {
   Accordion,
   AccordionContent,
@@ -17,6 +16,7 @@ import {
   AccordionTrigger,
 } from '@/components/ui/data-display/accordion';
 import { Badge } from '@/components/ui/data-display/badge';
+import { Button } from '@/components/ui/primitives/button';
 
 const CHUNKING_KEYS = ['chunkStrategy', 'chunkSize', 'overlap', 'respectPageBoundaries'] as const;
 

@@ -22,9 +22,9 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 
-import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/feedback/alert';
-import { Label } from '@/components/ui/label';
+import { Button } from '@/components/ui/primitives/button';
+import { Label } from '@/components/ui/primitives/label';
 import { Textarea } from '@/components/ui/primitives/textarea';
 import { api } from '@/lib/api';
 import type { AbTestSessionRevealedDto } from '@/lib/api/schemas/ab-test.schemas';

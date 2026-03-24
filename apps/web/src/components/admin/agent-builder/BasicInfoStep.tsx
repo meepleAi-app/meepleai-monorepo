@@ -5,16 +5,16 @@
 
 'use client';
 
-import { Input } from '@/components/ui/primitives/input';
-import { Label } from '@/components/ui/primitives/label';
-import { Textarea } from '@/components/ui/primitives/textarea';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
+} from '@/components/ui/overlays/select';
+import { Input } from '@/components/ui/primitives/input';
+import { Label } from '@/components/ui/primitives/label';
+import { Textarea } from '@/components/ui/primitives/textarea';
 import { Slider } from '@/components/ui/slider';
 import { AVAILABLE_MODELS } from '@/lib/schemas/agent-definition-schema';
 import type { AgentForm } from '@/lib/schemas/agent-definition-schema';
@@ -39,14 +39,14 @@ export function BasicInfoStep({ agent, onChange }: BasicInfoStepProps) {
         <Input
           id="agent-name"
           value={agent.name}
-          onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleChange('name', e.target.value)}
+          onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+            handleChange('name', e.target.value)
+          }
           placeholder="e.g., Chess Tutor Pro"
           maxLength={100}
           required
         />
-        <p className="text-xs text-muted-foreground">
-          {agent.name.length}/100 characters
-        </p>
+        <p className="text-xs text-muted-foreground">{agent.name.length}/100 characters</p>
       </div>
 
       {/* Description */}
@@ -55,7 +55,9 @@ export function BasicInfoStep({ agent, onChange }: BasicInfoStepProps) {
         <Textarea
           id="agent-description"
           value={agent.description || ''}
-          onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => handleChange('description', e.target.value)}
+          onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
+            handleChange('description', e.target.value)
+          }
           placeholder="Describe your agent's purpose and capabilities..."
           maxLength={1000}
           rows={4}
@@ -70,10 +72,7 @@ export function BasicInfoStep({ agent, onChange }: BasicInfoStepProps) {
         <Label htmlFor="agent-type">
           Agent Type <span className="text-destructive">*</span>
         </Label>
-        <Select
-          value={agent.type}
-          onValueChange={(value) => handleChange('type', value)}
-        >
+        <Select value={agent.type} onValueChange={value => handleChange('type', value)}>
           <SelectTrigger id="agent-type">
             <SelectValue placeholder="Select agent type" />
           </SelectTrigger>
@@ -93,15 +92,12 @@ export function BasicInfoStep({ agent, onChange }: BasicInfoStepProps) {
         <Label htmlFor="agent-model">
           Model <span className="text-destructive">*</span>
         </Label>
-        <Select
-          value={agent.model}
-          onValueChange={(value) => handleChange('model', value)}
-        >
+        <Select value={agent.model} onValueChange={value => handleChange('model', value)}>
           <SelectTrigger id="agent-model">
             <SelectValue placeholder="Select LLM model" />
           </SelectTrigger>
           <SelectContent>
-            {AVAILABLE_MODELS.map((model) => (
+            {AVAILABLE_MODELS.map(model => (
               <SelectItem key={model.value} value={model.value}>
                 {model.label}
               </SelectItem>

@@ -4,7 +4,7 @@ import { useState, useMemo } from 'react';
 
 import { ArrowRightLeft, Database, Loader2, ChevronRight } from 'lucide-react';
 
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/ui/primitives/button';
 import { ScrollArea } from '@/components/ui/primitives/scroll-area';
 
 import { ConfirmationDialog } from './ConfirmationDialog';

@@ -18,7 +18,6 @@ import { useState, useCallback } from 'react';
 
 import { Gamepad2 } from 'lucide-react';
 
-import { Button } from '@/components/ui/button';
 import {
   Dialog,
   DialogContent,
@@ -27,6 +26,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/overlays/dialog';
+import { Button } from '@/components/ui/primitives/button';
 import { useAddGameToLibrary } from '@/hooks/queries/useLibrary';
 import { api } from '@/lib/api';
 

@@ -11,7 +11,7 @@ import React, { useState } from 'react';
 
 import { ShieldCheck } from 'lucide-react';
 
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/ui/primitives/button';
 import type { OwnershipResult } from '@/lib/api/schemas/ownership.schemas';
 
 import { OwnershipConfirmationDialog } from './OwnershipConfirmationDialog';

@@ -1,7 +1,34 @@
+/**
+ * Gaming Hub Dashboard
+ *
+ * Authenticated user dashboard with gaming-focused hub.
+ * Uses DashboardClient with HeroBanner, QuickActionsRow,
+ * and MeepleCard-based game sections.
+ */
+
+import { RequireRole } from '@/components/auth/RequireRole';
+
 import { DashboardClient } from './dashboard-client';
 
-export const metadata = { title: 'Dashboard — MeepleAI' };
+import type { Metadata } from 'next';
 
-export default function DashboardPage() {
-  return <DashboardClient />;
+export const metadata: Metadata = {
+  title: 'Gaming Hub | MeepleAI',
+  description:
+    'Your personal board game hub. Track sessions, manage your collection, and view your gaming statistics.',
+  openGraph: {
+    title: 'Gaming Hub | MeepleAI',
+    description: 'Your personal board game hub.',
+    type: 'website',
+  },
+};
+
+export const dynamic = 'force-dynamic';
+
+export default function GamingHubDashboardPage() {
+  return (
+    <RequireRole allowedRoles={['User', 'Editor', 'Admin']}>
+      <DashboardClient />
+    </RequireRole>
+  );
 }

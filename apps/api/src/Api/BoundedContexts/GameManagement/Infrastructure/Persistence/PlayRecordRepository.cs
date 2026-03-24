@@ -146,18 +146,30 @@ internal class PlayRecordRepository : RepositoryBase, IPlayRecordRepository
 
         var existingPlayerIdSet = new HashSet<Guid>(existingPlayerIds);
 
+        var existingScoreIds = await DbContext.RecordScores
+            .Where(s => s.RecordPlayer!.PlayRecordId == record.Id)
+            .Select(s => s.Id)
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        var existingScoreIdSet = new HashSet<Guid>(existingScoreIds);
+
         // Attach root entity as Modified
         DbContext.PlayRecords.Update(entity);
 
-        // Fix state for child entities: new players should be Added, not Modified
+        // Fix state for child entities: new entities should be Added, not Modified
         foreach (var player in entity.Players)
         {
             if (!existingPlayerIdSet.Contains(player.Id))
             {
-                DbContext.Entry(player).State = Microsoft.EntityFrameworkCore.EntityState.Added;
-                foreach (var score in player.Scores)
+                DbContext.Entry(player).State = EntityState.Added;
+            }
+
+            foreach (var score in player.Scores)
+            {
+                if (!existingScoreIdSet.Contains(score.Id))
                 {
-                    DbContext.Entry(score).State = Microsoft.EntityFrameworkCore.EntityState.Added;
+                    DbContext.Entry(score).State = EntityState.Added;
                 }
             }
         }

@@ -139,6 +139,9 @@ export function createSharedGamesClient({ httpClient }: CreateSharedGamesClientP
      * @returns Game details or null if not found
      */
     async getById(id: string): Promise<SharedGameDetail | null> {
+      if (!id || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) {
+        return null;
+      }
       return httpClient.get(`/api/v1/shared-games/${id}`, SharedGameDetailSchema);
     },
 

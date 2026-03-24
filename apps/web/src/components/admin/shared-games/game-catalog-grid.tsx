@@ -28,6 +28,16 @@ import { toast } from 'sonner';
 import { BulkActionBar } from '@/components/admin/BulkActionBar';
 import { MeepleCard } from '@/components/ui/data-display/meeple-card';
 import { Sheet, SheetContent, SheetTitle } from '@/components/ui/navigation/sheet';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/overlays/alert-dialog-primitives';
 import type { ResolvedNavigationLink } from '@/config/entity-navigation';
 import { sharedGamesKeys } from '@/hooks/queries';
 import { api } from '@/lib/api';
@@ -199,39 +209,73 @@ export function GameCatalogGrid() {
   const handleDelete = useCallback((id: string) => deleteMutation.mutate(id), [deleteMutation]);
   const handleOpenExtraCard = useCallback((id: string) => setSheetGameId(id), []);
 
-  // Bulk action handlers
-  const handleBulkPublish = useCallback(() => {
-    const ids = [...selectedIds];
-    Promise.all(ids.map(id => api.sharedGames.publish(id).catch(() => id))).then(results => {
+  // Confirmation dialog state for destructive bulk actions
+  const [confirmAction, setConfirmAction] = useState<{
+    type: 'publish' | 'archive' | 'delete';
+    ids: string[];
+  } | null>(null);
+
+  // Bulk action mutations (proper lifecycle, isPending, error handling)
+  const bulkPublishMutation = useMutation({
+    mutationFn: (ids: string[]) =>
+      Promise.all(ids.map(id => api.sharedGames.publish(id).catch(() => id))),
+    onSuccess: (results, ids) => {
       const failed = results.filter(r => typeof r === 'string');
       queryClient.invalidateQueries({ queryKey: sharedGamesKeys.lists() });
       setSelectedIds(new Set());
       toast.success(`${ids.length - failed.length} giochi pubblicati`);
       if (failed.length > 0) toast.error(`${failed.length} pubblicazioni fallite`);
-    });
-  }, [selectedIds, queryClient]);
+    },
+    onError: () => toast.error('Errore nella pubblicazione'),
+  });
 
-  const handleBulkArchive = useCallback(() => {
-    const ids = [...selectedIds];
-    Promise.all(ids.map(id => api.sharedGames.archive(id).catch(() => id))).then(results => {
+  const bulkArchiveMutation = useMutation({
+    mutationFn: (ids: string[]) =>
+      Promise.all(ids.map(id => api.sharedGames.archive(id).catch(() => id))),
+    onSuccess: (results, ids) => {
       const failed = results.filter(r => typeof r === 'string');
       queryClient.invalidateQueries({ queryKey: sharedGamesKeys.lists() });
       setSelectedIds(new Set());
       toast.success(`${ids.length - failed.length} giochi archiviati`);
       if (failed.length > 0) toast.error(`${failed.length} archiviazioni fallite`);
-    });
-  }, [selectedIds, queryClient]);
+    },
+    onError: () => toast.error("Errore nell'archiviazione"),
+  });
 
-  const handleBulkDelete = useCallback(() => {
-    const ids = [...selectedIds];
-    Promise.all(ids.map(id => api.sharedGames.delete(id).catch(() => id))).then(results => {
+  const bulkDeleteMutation = useMutation({
+    mutationFn: (ids: string[]) =>
+      Promise.all(ids.map(id => api.sharedGames.delete(id).catch(() => id))),
+    onSuccess: (results, ids) => {
       const failed = results.filter(r => typeof r === 'string');
       queryClient.invalidateQueries({ queryKey: sharedGamesKeys.lists() });
       setSelectedIds(new Set());
       toast.success(`${ids.length - failed.length} giochi eliminati`);
       if (failed.length > 0) toast.error(`${failed.length} eliminazioni fallite`);
-    });
-  }, [selectedIds, queryClient]);
+    },
+    onError: () => toast.error("Errore nell'eliminazione"),
+  });
+
+  const isBulkPending =
+    bulkPublishMutation.isPending || bulkArchiveMutation.isPending || bulkDeleteMutation.isPending;
+
+  const handleBulkPublish = useCallback(() => {
+    bulkPublishMutation.mutate([...selectedIds]);
+  }, [selectedIds, bulkPublishMutation]);
+
+  const handleBulkArchive = useCallback(() => {
+    setConfirmAction({ type: 'archive', ids: [...selectedIds] });
+  }, [selectedIds]);
+
+  const handleBulkDelete = useCallback(() => {
+    setConfirmAction({ type: 'delete', ids: [...selectedIds] });
+  }, [selectedIds]);
+
+  const executeConfirmedAction = () => {
+    if (!confirmAction) return;
+    if (confirmAction.type === 'archive') bulkArchiveMutation.mutate(confirmAction.ids);
+    if (confirmAction.type === 'delete') bulkDeleteMutation.mutate(confirmAction.ids);
+    setConfirmAction(null);
+  };
 
   const published = games.filter(g => g.status === 'Published').length;
   const draft = games.filter(g => g.status === 'Draft').length;
@@ -252,6 +296,7 @@ export function GameCatalogGrid() {
             icon: Share2,
             variant: 'default',
             onClick: handleBulkPublish,
+            disabled: isBulkPending,
           },
           {
             id: 'archive',
@@ -259,6 +304,7 @@ export function GameCatalogGrid() {
             icon: ArchiveRestore,
             variant: 'outline',
             onClick: handleBulkArchive,
+            disabled: isBulkPending,
           },
           {
             id: 'delete',
@@ -266,9 +312,39 @@ export function GameCatalogGrid() {
             icon: Trash2,
             variant: 'destructive',
             onClick: handleBulkDelete,
+            disabled: isBulkPending,
           },
         ]}
       />
+
+      {/* Confirmation Dialog for destructive bulk actions */}
+      <AlertDialog
+        open={!!confirmAction}
+        onOpenChange={open => {
+          if (!open) setConfirmAction(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {confirmAction?.type === 'delete'
+                ? `Eliminare ${confirmAction.ids.length} giochi?`
+                : `Archiviare ${confirmAction?.ids.length} giochi?`}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {confirmAction?.type === 'delete'
+                ? 'Questa azione è irreversibile. I giochi selezionati verranno rimossi permanentemente dal catalogo.'
+                : "I giochi selezionati verranno spostati nell'archivio e non saranno più visibili agli utenti."}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Annulla</AlertDialogCancel>
+            <AlertDialogAction onClick={executeConfirmedAction}>
+              {confirmAction?.type === 'delete' ? 'Elimina' : 'Archivia'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Stats Summary */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

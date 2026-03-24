@@ -53,22 +53,22 @@ export function ProcessingQueueWidget() {
       </div>
 
       <div className="flex items-center gap-3 ml-auto text-xs">
-        {counts!.queued > 0 && (
+        {(counts?.queued ?? 0) > 0 && (
           <span className="flex items-center gap-1 text-muted-foreground">
             <ClockIcon className="h-3.5 w-3.5" />
-            {counts!.queued} in attesa
+            {counts?.queued} in attesa
           </span>
         )}
-        {counts!.processing > 0 && (
+        {(counts?.processing ?? 0) > 0 && (
           <span className="flex items-center gap-1 text-amber-600 dark:text-amber-400">
             <Loader2Icon className="h-3.5 w-3.5 animate-spin" />
-            {counts!.processing} in elaborazione
+            {counts?.processing} in elaborazione
           </span>
         )}
-        {counts!.failed > 0 && (
+        {(counts?.failed ?? 0) > 0 && (
           <span className="flex items-center gap-1 text-red-600 dark:text-red-400">
             <AlertCircleIcon className="h-3.5 w-3.5" />
-            {counts!.failed} falliti
+            {counts?.failed} falliti
           </span>
         )}
       </div>

@@ -75,7 +75,7 @@ export default function AgentsPage() {
     error: metricsError,
     refetch: refetchMetrics,
   } = useQuery({
-    queryKey: ['agentMetrics', startDate, endDate],
+    queryKey: ['admin', 'agents', 'metrics', startDate, endDate],
     queryFn: () => api.admin.getAgentMetrics(startDate, endDate) as Promise<AgentMetrics>,
     staleTime: 60_000,
   });
@@ -85,7 +85,7 @@ export default function AgentsPage() {
     isLoading: topAgentsLoading,
     refetch: refetchTopAgents,
   } = useQuery({
-    queryKey: ['topAgents', sortBy, startDate, endDate],
+    queryKey: ['admin', 'agents', 'top', sortBy, startDate, endDate],
     queryFn: () =>
       api.admin.getTopAgents({ limit: 10, sortBy, startDate, endDate }) as Promise<TopAgent[]>,
     staleTime: 60_000,

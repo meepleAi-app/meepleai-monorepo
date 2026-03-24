@@ -1,23 +1,12 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-
-import { BarChart3, Users, FileText, RefreshCwIcon } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
+import { BarChart3, Users, FileText, AlertTriangleIcon, RefreshCwIcon } from 'lucide-react';
 
 import { ChartsSection } from '@/components/admin/charts/ChartsSection';
 import { Card, CardContent } from '@/components/ui/data-display/card';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/overlays/select';
 import { Button } from '@/components/ui/primitives/button';
 import { api } from '@/lib/api';
-import type { AdminOverviewStats } from '@/lib/api/schemas/admin.schemas';
-
-type DateRange = '7d' | '30d' | '90d';
 
 interface QuickStat {
   label: string;
@@ -26,22 +15,16 @@ interface QuickStat {
 }
 
 export function OverviewTab() {
-  const [dateRange, setDateRange] = useState<DateRange>('30d');
-  const [stats, setStats] = useState<AdminOverviewStats | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  const loadStats = () => {
-    setLoading(true);
-    api.admin
-      .getOverviewStats()
-      .then(data => setStats(data))
-      .catch(() => {})
-      .finally(() => setLoading(false));
-  };
-
-  useEffect(() => {
-    loadStats();
-  }, []);
+  const {
+    data: stats,
+    isLoading,
+    isError,
+    refetch,
+  } = useQuery({
+    queryKey: ['admin', 'analytics', 'overview-stats'],
+    queryFn: () => api.admin.getOverviewStats(),
+    staleTime: 60_000,
+  });
 
   const quickStats: QuickStat[] = stats
     ? [
@@ -79,25 +62,26 @@ export function OverviewTab() {
             Grafici di utilizzo e metriche della piattaforma.
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          <Select value={dateRange} onValueChange={(v: string) => setDateRange(v as DateRange)}>
-            <SelectTrigger className="w-36">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="7d">Ultimi 7 giorni</SelectItem>
-              <SelectItem value="30d">Ultimi 30 giorni</SelectItem>
-              <SelectItem value="90d">Ultimi 90 giorni</SelectItem>
-            </SelectContent>
-          </Select>
-          <Button variant="outline" size="icon" onClick={loadStats}>
-            <RefreshCwIcon className="h-4 w-4" />
-          </Button>
-        </div>
+        <Button variant="outline" size="icon" onClick={() => refetch()}>
+          <RefreshCwIcon className="h-4 w-4" />
+        </Button>
       </div>
 
+      {isError && (
+        <div className="flex items-center gap-3 rounded-xl border border-amber-200 dark:border-amber-800/40 bg-amber-50 dark:bg-amber-950/20 px-4 py-3">
+          <AlertTriangleIcon className="h-5 w-5 text-amber-600 dark:text-amber-400 shrink-0" />
+          <p className="text-sm text-amber-800 dark:text-amber-200 flex-1">
+            Errore nel caricamento delle statistiche.
+          </p>
+          <Button variant="outline" size="sm" onClick={() => refetch()}>
+            <RefreshCwIcon className="h-3.5 w-3.5 mr-1.5" />
+            Riprova
+          </Button>
+        </div>
+      )}
+
       {/* Quick stats row */}
-      {!loading && quickStats.length > 0 && (
+      {!isLoading && quickStats.length > 0 && (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           {quickStats.map(stat => (
             <Card
@@ -116,7 +100,7 @@ export function OverviewTab() {
         </div>
       )}
 
-      {loading && (
+      {isLoading && (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           {[1, 2, 3, 4].map(i => (
             <div key={i} className="h-16 rounded-xl bg-muted/50 animate-pulse" />

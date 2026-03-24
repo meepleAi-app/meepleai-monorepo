@@ -1,9 +1,10 @@
 'use client';
 
+import type { SessionSummaryDto } from '@/lib/api/dashboard-client';
 import { cn } from '@/lib/utils';
 
 interface ActiveSessionsProps {
-  sessions?: any[];
+  sessions?: SessionSummaryDto[];
   loading?: boolean;
   className?: string;
 }

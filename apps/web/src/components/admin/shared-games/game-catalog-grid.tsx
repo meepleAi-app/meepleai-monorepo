@@ -11,14 +11,14 @@
 
 import { useCallback, useState } from 'react';
 
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ArchiveRestore, Clock, Pencil, Share2, Trash2, Upload, Users } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 import { MeepleCard } from '@/components/ui/data-display/meeple-card';
 import { Sheet, SheetContent, SheetTitle } from '@/components/ui/navigation/sheet';
 import type { ResolvedNavigationLink } from '@/config/entity-navigation';
-import { sharedGamesKeys, useSharedGames } from '@/hooks/queries';
+import { sharedGamesKeys } from '@/hooks/queries';
 import { api } from '@/lib/api';
 import type { SharedGame } from '@/lib/api';
 import type { GameStatus } from '@/lib/api/schemas/shared-games.schemas';
@@ -146,7 +146,11 @@ function AdminGameCard({
 
 export function GameCatalogGrid() {
   const queryClient = useQueryClient();
-  const { data, isLoading } = useSharedGames({ pageSize: 50 });
+  const { data, isLoading } = useQuery({
+    queryKey: [...sharedGamesKeys.all, 'admin-list'],
+    queryFn: () => api.sharedGames.getAll({ pageSize: 100 }),
+    staleTime: 2 * 60 * 1000,
+  });
   const games = data?.items ?? [];
 
   // ExtraCard sheet state

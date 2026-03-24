@@ -47,17 +47,16 @@ export function useExtractMetadata(options: UseExtractMetadataOptions = {}) {
       // Call backend API to extract metadata
       const result = await api.admin.extractGameMetadata(documentId);
 
-      // Map backend DTO to store interface
-      // Convert confidence from 0.0-1.0 (backend) to 0-100 (UI)
+      // Map backend DTO to store interface (field names now match)
       const metadata: ExtractedMetadata = {
         title: result.title,
-        yearPublished: result.year,
+        year: result.year,
         minPlayers: result.minPlayers,
         maxPlayers: result.maxPlayers,
-        playTime: result.playingTime,
+        playingTime: result.playingTime,
         minAge: result.minAge,
         description: result.description,
-        confidence: Math.round(result.confidenceScore * 100),
+        confidenceScore: result.confidenceScore,
       };
 
       return metadata;

@@ -45,11 +45,7 @@ import {
 import { Button } from '@/components/ui/primitives/button';
 import { Label } from '@/components/ui/primitives/label';
 import { Textarea } from '@/components/ui/primitives/textarea';
-import { createAdminClient } from '@/lib/api/clients/adminClient';
-import { HttpClient } from '@/lib/api/core/httpClient';
-
-const httpClient = new HttpClient();
-const adminClient = createAdminClient({ httpClient });
+import { api } from '@/lib/api';
 
 const AVAILABLE_ROLES = ['User', 'Editor', 'Admin'];
 
@@ -201,7 +197,7 @@ function ChangeRoleCard({ userId, currentRole }: { userId: string; currentRole: 
 
   const changeRoleMutation = useMutation({
     mutationFn: ({ role, reasonText }: { role: string; reasonText?: string }) =>
-      adminClient.changeUserRole(userId, role, reasonText || undefined),
+      api.admin.changeUserRole(userId, role, reasonText || undefined),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'users', userId] });
       queryClient.invalidateQueries({ queryKey: ['admin', 'users', userId, 'role-history'] });
@@ -302,7 +298,7 @@ function ChangeRoleCard({ userId, currentRole }: { userId: string; currentRole: 
 function RoleHistoryTable({ userId }: { userId: string }) {
   const { data: roleHistory, isLoading } = useQuery({
     queryKey: ['admin', 'users', userId, 'role-history'],
-    queryFn: () => adminClient.getUserRoleHistory(userId),
+    queryFn: () => api.admin.getUserRoleHistory(userId),
   });
 
   if (isLoading) {
@@ -370,8 +366,7 @@ function UserAuditLogTable({ userId }: { userId: string }) {
 
   const { data: auditLog, isLoading } = useQuery({
     queryKey: ['admin', 'users', userId, 'audit-log', { page }],
-    queryFn: () =>
-      adminClient.getUserAuditLog(userId, { limit: pageSize, offset: page * pageSize }),
+    queryFn: () => api.admin.getUserAuditLog(userId, { limit: pageSize, offset: page * pageSize }),
   });
 
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -522,7 +517,7 @@ export default function UserDetailPage() {
     error,
   } = useQuery({
     queryKey: ['admin', 'users', userId],
-    queryFn: () => adminClient.getUserDetail(userId),
+    queryFn: () => api.admin.getUserDetail(userId),
     enabled: !!userId,
   });
 

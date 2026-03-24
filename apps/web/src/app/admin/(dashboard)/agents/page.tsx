@@ -29,6 +29,7 @@ import {
   SelectValue,
 } from '@/components/ui/overlays/select';
 import { Button } from '@/components/ui/primitives/button';
+import { api } from '@/lib/api';
 
 // Types from existing agent metrics
 interface AgentMetrics {
@@ -54,29 +55,6 @@ interface TopAgent {
 
 type DateRange = '7d' | '30d' | '90d';
 
-async function fetchAgentMetrics(startDate: string, endDate: string): Promise<AgentMetrics> {
-  const params = new URLSearchParams({ startDate, endDate });
-  const response = await fetch(`/api/v1/admin/agents/metrics?${params}`, {
-    credentials: 'include',
-  });
-  if (!response.ok) throw new Error('Failed to fetch agent metrics');
-  return response.json();
-}
-
-async function fetchTopAgents(
-  limit: number,
-  sortBy: string,
-  startDate: string,
-  endDate: string
-): Promise<TopAgent[]> {
-  const params = new URLSearchParams({ limit: limit.toString(), sortBy, startDate, endDate });
-  const response = await fetch(`/api/v1/admin/agents/metrics/top?${params}`, {
-    credentials: 'include',
-  });
-  if (!response.ok) throw new Error('Failed to fetch top agents');
-  return response.json();
-}
-
 export default function AgentsPage() {
   const [dateRange, setDateRange] = useState<DateRange>('30d');
   const [sortBy, setSortBy] = useState<'invocations' | 'cost' | 'confidence'>('invocations');
@@ -98,7 +76,7 @@ export default function AgentsPage() {
     refetch: refetchMetrics,
   } = useQuery({
     queryKey: ['agentMetrics', startDate, endDate],
-    queryFn: () => fetchAgentMetrics(startDate, endDate),
+    queryFn: () => api.admin.getAgentMetrics(startDate, endDate) as Promise<AgentMetrics>,
     staleTime: 60_000,
   });
 
@@ -108,7 +86,8 @@ export default function AgentsPage() {
     refetch: refetchTopAgents,
   } = useQuery({
     queryKey: ['topAgents', sortBy, startDate, endDate],
-    queryFn: () => fetchTopAgents(10, sortBy, startDate, endDate),
+    queryFn: () =>
+      api.admin.getTopAgents({ limit: 10, sortBy, startDate, endDate }) as Promise<TopAgent[]>,
     staleTime: 60_000,
   });
 
@@ -123,10 +102,10 @@ export default function AgentsPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="font-quicksand text-2xl font-bold tracking-tight text-foreground">
-            AI Agents
+            Agenti AI
           </h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Monitor agent usage, costs, and performance
+            Monitora utilizzo, costi e performance degli agenti
           </p>
         </div>
 
@@ -172,7 +151,7 @@ export default function AgentsPage() {
       {metricsError && (
         <Card className="border-destructive">
           <CardContent className="py-4">
-            <p className="text-destructive">Failed to load metrics. Please try again.</p>
+            <p className="text-destructive">Errore nel caricamento delle metriche. Riprova.</p>
           </CardContent>
         </Card>
       )}

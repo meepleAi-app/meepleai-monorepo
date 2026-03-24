@@ -37,6 +37,7 @@ public sealed class LinkAgentToSharedGameIntegrationTests : IAsyncLifetime
     private string _databaseName = string.Empty;
     private MeepleAiDbContext? _dbContext;
     private IMediator? _mediator;
+    private ISharedGameRepository? _sharedGameRepository;
     private IServiceProvider? _serviceProvider;
 
     private static CancellationToken TestCancellationToken => TestContext.Current.CancellationToken;
@@ -62,6 +63,7 @@ public sealed class LinkAgentToSharedGameIntegrationTests : IAsyncLifetime
         _serviceProvider = services.BuildServiceProvider();
         _dbContext = _serviceProvider.GetRequiredService<MeepleAiDbContext>();
         _mediator = _serviceProvider.GetRequiredService<IMediator>();
+        _sharedGameRepository = _serviceProvider.GetRequiredService<ISharedGameRepository>();
 
         // Create database schema
         await _dbContext.Database.MigrateAsync(TestCancellationToken);
@@ -114,7 +116,7 @@ public sealed class LinkAgentToSharedGameIntegrationTests : IAsyncLifetime
             GameRules.Create("Test rules", "en"),
             userId);
 
-        _dbContext.Set<SharedGame>().Add(game);
+        await _sharedGameRepository!.AddAsync(game, TestCancellationToken);
         await _dbContext.SaveChangesAsync(TestCancellationToken);
         _dbContext.ChangeTracker.Clear();
 
@@ -123,8 +125,7 @@ public sealed class LinkAgentToSharedGameIntegrationTests : IAsyncLifetime
         await _mediator!.Send(command, TestCancellationToken);
 
         // Assert
-        var updatedGame = await _dbContext.Set<SharedGame>()
-            .FirstOrDefaultAsync(g => g.Id == game.Id, TestCancellationToken);
+        var updatedGame = await _sharedGameRepository.GetByIdAsync(game.Id, TestCancellationToken);
 
         updatedGame.Should().NotBeNull();
         updatedGame!.AgentDefinitionId.Should().Be(agent.Id);
@@ -163,7 +164,7 @@ public sealed class LinkAgentToSharedGameIntegrationTests : IAsyncLifetime
             userId);
 
         game.LinkAgent(agent.Id);
-        _dbContext.Set<SharedGame>().Add(game);
+        await _sharedGameRepository!.AddAsync(game, TestCancellationToken);
         await _dbContext.SaveChangesAsync(TestCancellationToken);
         _dbContext.ChangeTracker.Clear();
 
@@ -172,8 +173,7 @@ public sealed class LinkAgentToSharedGameIntegrationTests : IAsyncLifetime
         await _mediator!.Send(command, TestCancellationToken);
 
         // Assert
-        var updatedGame = await _dbContext.Set<SharedGame>()
-            .FirstOrDefaultAsync(g => g.Id == game.Id, TestCancellationToken);
+        var updatedGame = await _sharedGameRepository.GetByIdAsync(game.Id, TestCancellationToken);
 
         updatedGame.Should().NotBeNull();
         updatedGame!.AgentDefinitionId.Should().BeNull();

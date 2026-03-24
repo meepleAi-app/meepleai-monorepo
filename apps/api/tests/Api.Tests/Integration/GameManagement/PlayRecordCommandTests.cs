@@ -89,7 +89,7 @@ public sealed class PlayRecordCommandTests : IAsyncLifetime
             userId,
             game.Id,
             game.Title.Value,
-            DateTime.UtcNow.AddDays(-1),
+            _timeProvider.UtcNow.AddDays(-1),
             PlayRecordVisibility.Private);
 
         var mediator = ServiceProvider.GetRequiredService<IMediator>();
@@ -122,7 +122,7 @@ public sealed class PlayRecordCommandTests : IAsyncLifetime
             userId,
             null,
             "Poker",
-            DateTime.UtcNow.AddHours(-2),
+            _timeProvider.UtcNow.AddHours(-2),
             PlayRecordVisibility.Private,
             ScoringDimensions: scoringDimensions,
             DimensionUnits: dimensionUnits);
@@ -148,7 +148,7 @@ public sealed class PlayRecordCommandTests : IAsyncLifetime
             Guid.NewGuid(),
             Guid.NewGuid(),
             "NonExistent",
-            DateTime.UtcNow,
+            _timeProvider.UtcNow,
             PlayRecordVisibility.Private);
 
         var mediator = ServiceProvider.GetRequiredService<IMediator>();
@@ -303,7 +303,7 @@ public sealed class PlayRecordCommandTests : IAsyncLifetime
     {
         // Arrange
         var recordId = await CreateTestRecordAsync();
-        var newDate = DateTime.UtcNow.AddDays(-2);
+        var newDate = _timeProvider.UtcNow.AddDays(-2);
         var command = new UpdatePlayRecordCommand(
             recordId,
             SessionDate: newDate,
@@ -352,7 +352,7 @@ public sealed class PlayRecordCommandTests : IAsyncLifetime
             userId,
             game.Id,
             game.Title.Value,
-            DateTime.UtcNow.AddHours(-1),
+            _timeProvider.UtcNow.AddHours(-1),
             PlayRecordVisibility.Private);
 
         var mediator = ServiceProvider.GetRequiredService<IMediator>();

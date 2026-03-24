@@ -2,6 +2,7 @@ using Api.BoundedContexts.KnowledgeBase.Domain.Entities;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Infrastructure.Persistence;
 using Api.Infrastructure;
+using Api.Infrastructure.Entities;
 using Api.Infrastructure.Entities.KnowledgeBase;
 using Api.SharedKernel.Application.Services;
 using Api.Tests.Constants;
@@ -95,6 +96,10 @@ public sealed class AgentGameStateSnapshotRepositoryIntegrationTests : IAsyncLif
     {
         _gameId = Guid.NewGuid();
         _agentSessionId = Guid.NewGuid();
+        var userId = Guid.NewGuid();
+        var agentId = Guid.NewGuid();
+        var gameSessionId = Guid.NewGuid();
+        var typologyId = Guid.NewGuid();
 
         // Seed game (parent entity)
         var game = new Api.Infrastructure.Entities.GameEntity
@@ -104,12 +109,62 @@ public sealed class AgentGameStateSnapshotRepositoryIntegrationTests : IAsyncLif
             CreatedAt = DateTime.UtcNow
         };
         _dbContext!.Games.Add(game);
+
+        // Seed user (FK for agent_sessions)
+        var user = new Api.Infrastructure.Entities.UserEntity
+        {
+            Id = userId,
+            Email = $"test_{Guid.NewGuid():N}@example.com",
+            DisplayName = "Test User",
+            PasswordHash = "hashed_password",
+            Role = "User",
+            CreatedAt = DateTime.UtcNow
+        };
+        _dbContext.Users.Add(user);
+
+        // Seed agent (FK for agent_sessions)
+        var agent = new Api.Infrastructure.Entities.AgentEntity
+        {
+            Id = agentId,
+            Name = "Test Agent",
+            Type = "RagAgent",
+            StrategyName = "HybridSearch",
+            StrategyParametersJson = "{}",
+            IsActive = true,
+            CreatedAt = DateTime.UtcNow
+        };
+        _dbContext.Agents.Add(agent);
+
+        // Seed typology (FK for agent_sessions)
+        var typology = new Api.Infrastructure.Entities.KnowledgeBase.AgentTypologyEntity
+        {
+            Id = typologyId,
+            Name = "Test Typology",
+            Description = "Test typology",
+            BasePrompt = "You are a test agent",
+            DefaultStrategyJson = "{}",
+            Status = 2,
+            CreatedBy = userId,
+            CreatedAt = DateTime.UtcNow,
+            IsDeleted = false
+        };
+        _dbContext.AgentTypologies.Add(typology);
+
+        // Seed game session (FK for agent_sessions)
+        var gameSession = new GameSessionEntity
+        {
+            Id = gameSessionId,
+            GameId = _gameId,
+            Status = "InProgress"
+        };
+        _dbContext.GameSessions.Add(gameSession);
+
         await _dbContext.SaveChangesAsync(TestCancellationToken);
 
-        // Seed minimal agent_session row for FK satisfaction (bypass full entity graph)
+        // Seed agent_session row with all required FK columns
         await _dbContext.Database.ExecuteSqlInterpolatedAsync(
-            $@"INSERT INTO agent_sessions (""Id"", ""GameId"", ""StartedAt"", ""IsActive"", ""CurrentGameStateJson"")
-               VALUES ({_agentSessionId}, {_gameId}, {DateTime.UtcNow}, true, '{{}}')",
+            $@"INSERT INTO agent_sessions (""Id"", ""AgentId"", ""GameSessionId"", ""UserId"", ""GameId"", ""TypologyId"", ""StartedAt"", ""IsActive"", ""CurrentGameStateJson"")
+               VALUES ({_agentSessionId}, {agentId}, {gameSessionId}, {userId}, {_gameId}, {typologyId}, {DateTime.UtcNow}, true, '{{}}')",
             TestCancellationToken);
     }
 

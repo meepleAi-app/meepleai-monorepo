@@ -9,69 +9,66 @@
  * - Touch-safe targets (min 44x44)
  * - Glassmorphism styling
  * - Hidden on desktop (lg:hidden)
- * - Updates sectionTitle when tab changes
+ * - Pathname-based active state detection
  */
 
 import { BookOpen, Dice5, House, MessageCircle } from 'lucide-react';
-import { useRouter } from 'next/navigation';
+import Link from 'next/link';
+import { usePathname, useSearchParams } from 'next/navigation';
 
-import { useNavigation, type NavTab } from '@/hooks/useNavigation';
 import { cn } from '@/lib/utils';
 
 import type { LucideIcon } from 'lucide-react';
 
 interface TabConfig {
-  id: NavTab;
+  id: string;
   label: string;
-  sectionTitle: string;
+  href: string;
   icon: LucideIcon;
   /** HSL value from design-tokens.css (no wrapping hsl()) */
   colorVar: string;
+  /** Check if tab is active given current pathname and search params */
+  isActive: (pathname: string, searchParams: URLSearchParams) => boolean;
 }
 
 const TABS: TabConfig[] = [
   {
     id: 'home',
     label: 'Home',
-    sectionTitle: 'Home',
+    href: '/dashboard',
     icon: House,
-    // No entity-custom exists; use primary accent
     colorVar: 'hsl(var(--primary))',
+    isActive: p => p === '/dashboard',
   },
   {
     id: 'library',
     label: 'Libreria',
-    sectionTitle: 'Libreria',
+    href: '/library?tab=collection',
     icon: BookOpen,
     colorVar: 'hsl(var(--color-entity-game))',
+    isActive: (p, sp) => p === '/library' && sp.has('tab'),
   },
   {
     id: 'play',
     label: 'Gioca',
-    sectionTitle: 'Gioca',
+    href: '/sessions',
     icon: Dice5,
     colorVar: 'hsl(var(--color-entity-session))',
+    isActive: p => p.startsWith('/sessions'),
   },
   {
     id: 'chat',
     label: 'Chat',
-    sectionTitle: 'Chat',
+    href: '/chat',
     icon: MessageCircle,
     colorVar: 'hsl(var(--color-entity-chat))',
+    isActive: p => p.startsWith('/chat'),
   },
 ];
 
 export function UserTabBar() {
-  const router = useRouter();
-  const { activeTab, setActiveTab, setSectionTitle } = useNavigation();
-
-  const handleTabChange = (tab: TabConfig) => {
-    setActiveTab(tab.id);
-    setSectionTitle(tab.sectionTitle);
-    if (tab.id === 'home') {
-      router.push('/dashboard');
-    }
-  };
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
 
   return (
     <nav
@@ -88,13 +85,13 @@ export function UserTabBar() {
       aria-label="Main navigation"
     >
       {TABS.map(tab => {
-        const isActive = activeTab === tab.id;
+        const isActive = tab.isActive(pathname, searchParams);
         const Icon = tab.icon;
 
         return (
-          <button
+          <Link
             key={tab.id}
-            type="button"
+            href={tab.href}
             role="tab"
             aria-selected={isActive}
             aria-label={tab.label}
@@ -104,7 +101,6 @@ export function UserTabBar() {
               'transition-colors duration-200',
               isActive ? 'text-foreground' : 'text-muted-foreground'
             )}
-            onClick={() => handleTabChange(tab)}
           >
             <Icon
               className={cn('transition-all duration-200', isActive ? 'w-6 h-6' : 'w-5 h-5')}
@@ -121,7 +117,7 @@ export function UserTabBar() {
             >
               {tab.label}
             </span>
-          </button>
+          </Link>
         );
       })}
     </nav>

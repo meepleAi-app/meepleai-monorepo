@@ -4,7 +4,7 @@
  * Browse experience for the shared game catalog.
  * Features:
  *   1. Centered search bar
- *   2. Trending section — horizontal ShelfRow with TavoloSection
+ *   2. Trending section — horizontal ShelfRow with SectionBlock
  *   3. All games section — MechanicFilter chips + grid of ShelfCards
  *   4. Load More button for pagination
  *
@@ -18,7 +18,7 @@ import { useState, useMemo, useCallback, useEffect } from 'react';
 
 import { Search, Loader2 } from 'lucide-react';
 
-import { TavoloSection } from '@/components/dashboard/tavolo';
+import { SectionBlock } from '@/components/ui/SectionBlock';
 import { EmptyState } from '@/components/empty-state/EmptyState';
 import { MechanicFilter } from '@/components/library/MechanicFilter';
 import { ShelfCard } from '@/components/library/ShelfCard';
@@ -195,7 +195,7 @@ export function PublicLibraryPage({ className }: PublicLibraryPageProps) {
       {/* ---------------------------------------------------------------- */}
       {/* Trending section                                                  */}
       {/* ---------------------------------------------------------------- */}
-      <TavoloSection icon="🔥" title="Trending questa settimana">
+      <SectionBlock icon="🔥" title="Trending questa settimana">
         {isTrendingLoading ? (
           <div
             className="flex items-center gap-2 text-xs text-muted-foreground py-4"
@@ -227,12 +227,12 @@ export function PublicLibraryPage({ className }: PublicLibraryPageProps) {
             Nessun gioco in tendenza al momento.
           </p>
         )}
-      </TavoloSection>
+      </SectionBlock>
 
       {/* ---------------------------------------------------------------- */}
       {/* All games section                                                 */}
       {/* ---------------------------------------------------------------- */}
-      <TavoloSection icon="📋" title="Tutti i giochi">
+      <SectionBlock icon="📋" title="Tutti i giochi">
         {/* Mechanic filter chips */}
         {availableMechanicSlugs.length > 0 && (
           <div className="mb-4" data-testid="mechanic-filter-row">
@@ -309,7 +309,7 @@ export function PublicLibraryPage({ className }: PublicLibraryPageProps) {
             </button>
           </div>
         )}
-      </TavoloSection>
+      </SectionBlock>
     </div>
   );
 }

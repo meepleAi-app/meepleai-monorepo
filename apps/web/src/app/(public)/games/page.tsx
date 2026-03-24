@@ -26,6 +26,7 @@ import { type GameStatus, type SharedGame } from '@/lib/api';
 import { logger } from '@/lib/logger';
 
 import { AddGameButton } from './components/AddGameButton';
+import { CategoryChips } from './components/CategoryChips';
 import { GameGrid } from './components/GameGrid';
 import { Pagination } from './components/Pagination';
 import { SearchBar } from './components/SearchBar';
@@ -236,13 +237,18 @@ export default async function GamesPage({ searchParams }: { searchParams: Promis
         <AddGameButton />
       </div>
 
-      {/* Toolbar: Search + View Toggle */}
-      <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between mb-6">
-        <div className="w-full sm:w-96">
-          <SearchBar currentSearch={search} />
+      {/* Sticky Search + View Toggle toolbar (sticky on mobile, below TopNav) */}
+      <div className="sticky top-12 z-20 bg-background/95 backdrop-blur-sm py-2 -mx-4 px-4 md:static md:bg-transparent md:backdrop-blur-none md:py-0 md:mx-0 md:px-0 mb-4">
+        <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
+          <div className="w-full sm:w-96">
+            <SearchBar currentSearch={search} />
+          </div>
+          <ViewToggle currentView={view} />
         </div>
-        <ViewToggle currentView={view} />
       </div>
+
+      {/* Category Chips */}
+      <CategoryChips />
 
       {/* Games Grid/List */}
       <GameGrid games={games} variant={view} />

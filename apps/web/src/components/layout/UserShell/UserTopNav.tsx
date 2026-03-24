@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from 'react';
 
+import { Search } from 'lucide-react';
 import Link from 'next/link';
 
 import { SessionNavBar } from '@/components/dashboard/session-nav/SessionNavBar';
@@ -110,6 +111,20 @@ export function UserTopNav({ isAdmin, onMenuToggle, isMenuOpen }: UserTopNavProp
       )}
 
       <div className={`flex items-center gap-2 shrink-0 ${isGameMode ? 'hidden sm:flex' : 'flex'}`}>
+        <button
+          type="button"
+          className="hidden lg:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-muted border border-border text-muted-foreground text-xs hover:bg-muted/80 transition-colors"
+          onClick={() => {
+            document.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', metaKey: true }));
+          }}
+          aria-label="Cerca (⌘K)"
+        >
+          <Search className="w-3.5 h-3.5" />
+          <span>Cerca...</span>
+          <kbd className="text-[10px] bg-background border border-border px-1.5 py-0.5 rounded ml-2">
+            ⌘K
+          </kbd>
+        </button>
         <NotificationBell />
         <UserMenuDropdown />
       </div>

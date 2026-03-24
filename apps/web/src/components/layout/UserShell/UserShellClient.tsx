@@ -6,7 +6,7 @@ import { DashboardEngineProvider } from '@/components/dashboard';
 import { BackToSessionFAB } from '@/components/session/BackToSessionFAB';
 
 import { ContextBar } from '../ContextBar';
-import { UserDesktopSidebar } from './UserDesktopSidebar';
+import { HybridSidebar } from './HybridSidebar';
 import { UserTabBar } from './UserTabBar';
 import { UserTopNav } from './UserTopNav';
 
@@ -20,7 +20,7 @@ export function UserShellClient({ children }: UserShellClientProps) {
       <UserTopNav />
       <ContextBar />
       <Suspense>
-        <UserDesktopSidebar />
+        <HybridSidebar />
       </Suspense>
       <main className="lg:ml-[52px] flex-1 min-w-0 overflow-y-auto pb-16 lg:pb-0">
         <DashboardEngineProvider>{children}</DashboardEngineProvider>

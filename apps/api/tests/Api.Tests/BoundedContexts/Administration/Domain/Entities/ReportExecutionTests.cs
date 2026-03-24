@@ -55,11 +55,11 @@ public sealed class ReportExecutionTests
     #region Complete Tests
 
     [Fact]
-    public void Complete_SetsStatusToCompleted()
+    public async Task Complete_SetsStatusToCompleted()
     {
         // Arrange
         var execution = ReportExecution.Create(Guid.NewGuid());
-        Thread.Sleep(10); // Ensure time passes
+        await Task.Delay(50); // Ensure time passes
 
         // Act
         var completed = execution.Complete("/reports/output.pdf", 1024);
@@ -111,11 +111,11 @@ public sealed class ReportExecutionTests
     #region Fail Tests
 
     [Fact]
-    public void Fail_SetsStatusToFailed()
+    public async Task Fail_SetsStatusToFailed()
     {
         // Arrange
         var execution = ReportExecution.Create(Guid.NewGuid());
-        Thread.Sleep(10);
+        await Task.Delay(50);
 
         // Act
         var failed = execution.Fail("Database connection timeout");
@@ -246,7 +246,7 @@ public sealed class ReportExecutionTests
     #region Complex Workflow Tests
 
     [Fact]
-    public void CompleteWorkflow_CreateToComplete()
+    public async Task CompleteWorkflow_CreateToComplete()
     {
         // Arrange
         var reportId = Guid.NewGuid();
@@ -256,7 +256,7 @@ public sealed class ReportExecutionTests
             .WithMetadata("rowCount", 500)
             .WithMetadata("format", "PDF");
 
-        Thread.Sleep(10);
+        await Task.Delay(50);
 
         var completed = execution.Complete("/reports/2024-01-report.pdf", 102400);
 
@@ -270,7 +270,7 @@ public sealed class ReportExecutionTests
     }
 
     [Fact]
-    public void FailureWorkflow_CreateToFail()
+    public async Task FailureWorkflow_CreateToFail()
     {
         // Arrange
         var reportId = Guid.NewGuid();
@@ -279,7 +279,7 @@ public sealed class ReportExecutionTests
         var execution = ReportExecution.Create(reportId)
             .WithMetadata("attempt", 1);
 
-        Thread.Sleep(10);
+        await Task.Delay(50);
 
         var failed = execution.Fail("Connection refused to database server");
 

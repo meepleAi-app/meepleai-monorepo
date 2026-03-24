@@ -47,3 +47,32 @@ internal sealed class ReleaseEditorLockCommandValidator : AbstractValidator<Rele
             .NotEmpty().WithMessage("User ID is required");
     }
 }
+
+/// <summary>
+/// Validator for UpdateRuleSpecCommand.
+/// Ensures GameId and UserId are non-empty, Atoms list is provided and within bounds.
+/// </summary>
+internal sealed class UpdateRuleSpecCommandValidator : AbstractValidator<UpdateRuleSpecCommand>
+{
+    public UpdateRuleSpecCommandValidator()
+    {
+        RuleFor(x => x.GameId)
+            .NotEmpty().WithMessage("Game ID is required");
+
+        RuleFor(x => x.Version)
+            .MaximumLength(200).WithMessage("Version must not exceed 200 characters")
+            .When(x => x.Version is not null);
+
+        RuleFor(x => x.Atoms)
+            .NotEmpty().WithMessage("At least one rule atom is required")
+            .Must(a => a.Count <= 500).WithMessage("Atoms list must not exceed 500 entries")
+            .When(x => x.Atoms is not null);
+
+        RuleFor(x => x.UserId)
+            .NotEmpty().WithMessage("User ID is required");
+
+        RuleFor(x => x.ExpectedETag)
+            .MaximumLength(200).WithMessage("Expected ETag must not exceed 200 characters")
+            .When(x => x.ExpectedETag is not null);
+    }
+}

@@ -42,7 +42,7 @@ public sealed class CircuitBreakerStateConfigurableThresholdTests
     }
 
     [Fact]
-    public void CustomSuccessThreshold_ClosesAfterConfiguredSuccesses()
+    public async Task CustomSuccessThreshold_ClosesAfterConfiguredSuccesses()
     {
         // Use 1-second open duration so AllowsRequests transitions to HalfOpen after wait
         var state = new CircuitBreakerState(failureThreshold: 1, openDurationSeconds: 1, successThreshold: 2);
@@ -52,7 +52,7 @@ public sealed class CircuitBreakerStateConfigurableThresholdTests
         state.State.Should().Be(CircuitState.Open);
 
         // Wait for open duration to expire, then transition to HalfOpen
-        Thread.Sleep(1100);
+        await Task.Delay(1100);
         state.AllowsRequests().Should().BeTrue();
         state.State.Should().Be(CircuitState.HalfOpen);
 
@@ -84,13 +84,13 @@ public sealed class CircuitBreakerStateConfigurableThresholdTests
     [Theory]
     [InlineData(0)]
     [InlineData(-1)]
-    public void InvalidSuccessThreshold_FallsBackToDefault(int invalidThreshold)
+    public async Task InvalidSuccessThreshold_FallsBackToDefault(int invalidThreshold)
     {
         var state = new CircuitBreakerState(failureThreshold: 1, openDurationSeconds: 1, successThreshold: invalidThreshold);
 
         // Open and transition to HalfOpen
         state.RecordFailure();
-        Thread.Sleep(1100);
+        await Task.Delay(1100);
         state.AllowsRequests();
         state.State.Should().Be(CircuitState.HalfOpen);
 
@@ -104,12 +104,12 @@ public sealed class CircuitBreakerStateConfigurableThresholdTests
     }
 
     [Fact]
-    public void GetStatus_ShowsConfiguredSuccessThreshold()
+    public async Task GetStatus_ShowsConfiguredSuccessThreshold()
     {
         var state = new CircuitBreakerState(failureThreshold: 1, openDurationSeconds: 1, successThreshold: 5);
 
         state.RecordFailure();
-        Thread.Sleep(1100);
+        await Task.Delay(1100);
         state.AllowsRequests(); // HalfOpen
         state.RecordSuccess();
 

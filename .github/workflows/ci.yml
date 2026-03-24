@@ -187,7 +187,7 @@ jobs:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: testpass
           POSTGRES_DB: meepleai_test
-        # Pool fix: MaxPoolSize=5 per test DB → ~100 connections with 4 threads
+        # Pool fix: MaxPoolSize=20 per test DB → ~80 connections with 4 threads
         # --shm-size=256mb for shared memory
         options: >-
           --health-cmd "pg_isready -U postgres"
@@ -293,7 +293,7 @@ jobs:
         run: |
           echo "🔧 Verifying PostgreSQL max_connections..."
           psql -h localhost -U postgres -d meepleai_test -c "SHOW max_connections;"
-          echo "✅ Pool fix: MaxPoolSize=5 per test DB, 4 threads → fits within default 100 connections"
+          echo "✅ Pool fix: MaxPoolSize=20 per test DB, 4 threads → fits within default 100 connections"
 
       - name: Build
         run: dotnet build --no-restore --configuration Release
@@ -311,7 +311,7 @@ jobs:
           POSTGRES_DB: meepleai_test
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: testpass
-          ConnectionStrings__Postgres: Host=localhost;Port=5432;Database=meepleai_test;Username=postgres;Password=testpass
+          ConnectionStrings__Postgres: Host=localhost;Port=5432;Database=meepleai_test;Username=postgres;Password=testpass;MaxPoolSize=20;Timeout=30;Command Timeout=60
           QDRANT_URL: http://localhost:6333
           REDIS_URL: localhost:6379,allowAdmin=true
           OPENROUTER_API_KEY: test-key
@@ -320,7 +320,7 @@ jobs:
           DISABLE_RATE_LIMITING: "true"
           # Issue #CI-Optimization: Pass external service URLs so SharedTestcontainersFixture
           # skips container startup and uses CI service containers directly
-          TEST_POSTGRES_CONNSTRING: Host=localhost;Port=5432;Database=meepleai_test;Username=postgres;Password=testpass
+          TEST_POSTGRES_CONNSTRING: Host=localhost;Port=5432;Database=meepleai_test;Username=postgres;Password=testpass;MaxPoolSize=20;Timeout=30;Command Timeout=60
           TEST_REDIS_CONNSTRING: localhost:6379,allowAdmin=true
         run: |
           echo "🧪 Running integration tests - shard: ${{ matrix.shard.name }} (4 parallel threads)..."

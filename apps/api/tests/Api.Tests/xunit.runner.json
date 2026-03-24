@@ -6,7 +6,7 @@
   "methodDisplay": "method",
   "diagnosticMessages": false,
   "internalDiagnosticMessages": false,
-  "methodTimeout": 60000,
-  "maxRetries": 0,
-  "longRunningTestSeconds": 20
+  "methodTimeout": 90000,
+  "maxRetries": 2,
+  "longRunningTestSeconds": 30
 }

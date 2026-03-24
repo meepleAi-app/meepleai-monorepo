@@ -140,12 +140,12 @@ public class SessionMediaTests
     }
 
     [Fact]
-    public void UpdateCaption_SetsNewCaption()
+    public async Task UpdateCaption_SetsNewCaption()
     {
         // Arrange
         var media = CreateValidMedia(caption: "old");
         var originalUpdatedAt = media.UpdatedAt;
-        Thread.Sleep(10);
+        await Task.Delay(50);
 
         // Act
         media.UpdateCaption("new caption");
@@ -182,12 +182,12 @@ public class SessionMediaTests
     }
 
     [Fact]
-    public void SetThumbnail_ValidId_SetsThumbnailFileId()
+    public async Task SetThumbnail_ValidId_SetsThumbnailFileId()
     {
         // Arrange
         var media = CreateValidMedia();
         var originalUpdatedAt = media.UpdatedAt;
-        Thread.Sleep(10);
+        await Task.Delay(50);
 
         // Act
         media.SetThumbnail("thumb-xyz");
@@ -208,13 +208,13 @@ public class SessionMediaTests
     }
 
     [Fact]
-    public void LinkToSnapshot_ValidId_SetsSnapshotAndTurn()
+    public async Task LinkToSnapshot_ValidId_SetsSnapshotAndTurn()
     {
         // Arrange
         var media = CreateValidMedia();
         var snapshotId = Guid.NewGuid();
         var originalUpdatedAt = media.UpdatedAt;
-        Thread.Sleep(10);
+        await Task.Delay(50);
 
         // Act
         media.LinkToSnapshot(snapshotId, turnNumber: 7);

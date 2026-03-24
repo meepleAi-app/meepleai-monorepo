@@ -55,7 +55,7 @@ public abstract class IntegrationTestBase<TRepository> : IAsyncLifetime
                 KeepAlive = 10,
                 Pooling = true,
                 MinPoolSize = 0,
-                MaxPoolSize = 1, // CI: max_connections=100, 33+ classes accumulate pools
+                MaxPoolSize = 2, // CI: max_connections=100, ClearAllPools() in teardown prevents accumulation
                 ConnectionIdleLifetime = 5,
                 ConnectionPruningInterval = 3,
                 Timeout = 30,
@@ -116,6 +116,10 @@ public abstract class IntegrationTestBase<TRepository> : IAsyncLifetime
         {
             await DbContext.DisposeAsync();
         }
+
+        // Release all pooled connections back to PostgreSQL to prevent
+        // "too many clients" exhaustion across parallel test classes in CI.
+        NpgsqlConnection.ClearAllPools();
 
         if (_postgresContainer != null)
         {

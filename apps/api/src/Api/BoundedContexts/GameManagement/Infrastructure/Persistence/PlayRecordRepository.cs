@@ -230,10 +230,10 @@ internal class PlayRecordRepository : RepositoryBase, IPlayRecordRepository
         SetPrivateProperty(record, nameof(PlayRecord.CreatedAt), entity.CreatedAt);
         SetPrivateProperty(record, nameof(PlayRecord.UpdatedAt), entity.UpdatedAt);
 
-        // Restore players and scores
+        // Restore players and scores with original IDs (no domain events)
         foreach (var playerEntity in entity.Players)
         {
-            record.AddPlayer(playerEntity.UserId, playerEntity.DisplayName);
+            record.RestorePlayer(playerEntity.Id, playerEntity.UserId, playerEntity.DisplayName);
             var player = record.Players[^1];  // Last player added
 
             foreach (var scoreEntity in playerEntity.Scores)

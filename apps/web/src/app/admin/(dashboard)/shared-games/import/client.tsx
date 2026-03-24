@@ -263,7 +263,7 @@ export function AdminGameImportWizardClient() {
                       {extractedMetadata.maxPlayers || '?'}
                     </p>
                     <p className="text-sm">
-                      <strong>Play Time:</strong> {extractedMetadata.playTime || 'N/A'} min
+                      <strong>Play Time:</strong> {extractedMetadata.playingTime || 'N/A'} min
                     </p>
                   </div>
                 ) : (

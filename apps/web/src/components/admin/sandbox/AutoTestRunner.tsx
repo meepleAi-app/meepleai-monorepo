@@ -4,9 +4,9 @@ import { useState, useCallback } from 'react';
 
 import { Play, Loader2, CheckCircle2, XCircle } from 'lucide-react';
 
-import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/data-display/badge';
 import { Progress } from '@/components/ui/feedback/progress';
+import { Button } from '@/components/ui/primitives/button';
 
 import type { AutoTestResult } from './types';
 

@@ -28,7 +28,7 @@ export default function SharedGamesCatalogPage() {
       fallback={
         <div className="min-h-screen bg-background pb-24 md:pb-0 md:pt-16">
           <div className="container mx-auto px-4 py-8 max-w-7xl">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4">
               {Array.from({ length: 6 }).map((_, i) => (
                 <MeepleGameCatalogCardSkeleton key={i} />
               ))}

@@ -36,8 +36,8 @@ import {
 } from 'lucide-react';
 
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/primitives/button';
 import { Progress } from '@/components/ui/progress';
 import type { RulebookAnalysisDto } from '@/lib/api/schemas/shared-games.schemas';
 

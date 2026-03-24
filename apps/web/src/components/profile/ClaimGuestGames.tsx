@@ -14,8 +14,8 @@ import { useState } from 'react';
 import { CheckCircle, Loader2, Search, UserCheck } from 'lucide-react';
 
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/primitives/button';
+import { Input } from '@/components/ui/primitives/input';
 import type { ClaimableGuestDto } from '@/lib/api/clients/agentMemoryClient';
 import { useApiClient } from '@/lib/api/context';
 

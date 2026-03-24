@@ -9,10 +9,10 @@ import { useState } from 'react';
 
 import { Check, Loader2, Play } from 'lucide-react';
 
-import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/data-display/badge';
 import { Separator } from '@/components/ui/navigation/separator';
+import { Button } from '@/components/ui/primitives/button';
 import type { AgentForm } from '@/lib/schemas/agent-definition-schema';
 
 interface ReviewStepProps {
@@ -110,9 +110,7 @@ export function ReviewStep({ agent, onSubmit, onTest, isSubmitting }: ReviewStep
               {agent.strategyParameters && (
                 <div className="flex justify-between">
                   <dt className="text-muted-foreground">Parameters:</dt>
-                  <dd className="font-mono text-xs">
-                    {JSON.stringify(agent.strategyParameters)}
-                  </dd>
+                  <dd className="font-mono text-xs">{JSON.stringify(agent.strategyParameters)}</dd>
                 </div>
               )}
             </dl>
@@ -128,7 +126,7 @@ export function ReviewStep({ agent, onSubmit, onTest, isSubmitting }: ReviewStep
             </p>
             {agent.tools && agent.tools.length > 0 && (
               <div className="mt-2 flex flex-wrap gap-1">
-                {agent.tools.map((tool) => (
+                {agent.tools.map(tool => (
                   <Badge key={tool.name} variant="secondary">
                     {tool.name}
                   </Badge>

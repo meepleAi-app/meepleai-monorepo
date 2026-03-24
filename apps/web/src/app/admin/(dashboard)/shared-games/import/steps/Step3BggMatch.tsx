@@ -39,7 +39,7 @@ export function Step3BggMatch({ onComplete }: Step3BggMatchProps): JSX.Element {
         initialQuery={extractedMetadata?.title}
         onSelect={data => {
           const bggGameData: BggGameData = {
-            id: data.id,
+            bggId: data.id,
             name: data.name,
             yearPublished: data.yearPublished,
             minPlayers: data.minPlayers,

@@ -551,8 +551,7 @@ public sealed class PlaygroundChatCommandHandlerTests
             type: AgentType.Custom("rag", "RAG-based assistant"),
             config: AgentDefinitionConfig.Create("gpt-4", 2048, 0.7f),
             prompts: prompts);
-
-        agent.Activate();
+        agent.Activate(); // Create() defaults to inactive; activate for "active" helper
         return agent;
     }
 

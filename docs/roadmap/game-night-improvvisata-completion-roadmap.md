@@ -45,35 +45,33 @@ La user story "Game Night Improvvisata" è **100% implementata** a livello di co
 
 ## Roadmap: Validation & Quality
 
-### Phase 1: Mock E2E Journey (2-3 giorni) — COMPLETED 2026-03-21
+### Phase 1: Mock E2E Journey (2-3 giorni)
 
 Espandere i test E2E mock-based per coprire il journey completo UI.
 
-| Task | File | Status |
-|------|------|--------|
-| Complete UI journey test | `e2e/game-night-improvvisata-full-journey.spec.ts` (151 lines) | ✅ |
-| ScoreAssistant confidence flows | `e2e/sessions/score-assistant.spec.ts` (147 lines) | ✅ |
-| Arbitro verdict display | `e2e/sessions/rule-arbitration.spec.ts` (66 lines) | ✅ |
-| Resume + recap + photo review | `e2e/sessions/session-resume.spec.ts` (121 lines) | ✅ |
-| SSE notification | `e2e/notifications/in-app-notifications.spec.ts` (113 lines) | ✅ General |
+| Task | File da creare/aggiornare | Effort |
+|------|---------------------------|--------|
+| Complete UI journey test | `e2e/game-night-improvvisata-journey.spec.ts` | 1 giorno |
+| ScoreAssistant confidence flows | `e2e/sessions/score-assistant.spec.ts` | 0.5 giorni |
+| Arbitro verdict display | `e2e/sessions/rule-arbitration.spec.ts` | 0.5 giorni |
+| Resume + recap + photo review | `e2e/sessions/session-resume.spec.ts` | 0.5 giorni |
+| SSE notification mock | `e2e/notifications/pdf-ready.spec.ts` | 0.5 giorni |
 
-**Deliverable**: Copertura UI del journey con mock — ✅ Complete
+**Deliverable**: Copertura UI 100% del journey con mock
 
 ### Phase 2: Backend Integration E2E (3-4 giorni) — COMPLETED 2026-03-21
 
 Test con backend reale, servizi AI reali (OpenRouter, embedding service).
 
-| Task | Scope | Status |
+| Task | Tests | Status |
 |------|-------|--------|
-| Save/Resume with PauseSnapshot | Save → snapshot → resume with recap | ✅ 3 tests |
-| Score parsing (NLP) | Parse → auto-record → confirm → fallback | ✅ 4 tests |
-| Disputes (AI Arbitro + v2) | AI verdict + structured dispute flow | ✅ 6 tests |
-| Data integrity checks | State transitions, score persistence, snapshots, soft-delete, invites | ✅ 6 tests |
-| Concurrent access | Simultaneous scores, proposals, voting, race conditions, concurrency | ✅ 6 tests |
+| Save/Resume with PauseSnapshot | 3 | ✅ |
+| Score parsing (NLP) | 4 | ✅ |
+| Disputes (AI Arbitro + v2) | 6 | ✅ |
+| Data integrity checks | 6 | ✅ |
+| Concurrent access | 6 | ✅ |
 
-**Total**: 25 integration tests across 5 files + shared helper module
-**Spec**: `docs/superpowers/specs/2026-03-21-game-night-improvvisata-phase2-design.md`
-**Plan**: `docs/superpowers/plans/2026-03-21-game-night-improvvisata-phase2.md`
+**Total**: 25 integration tests, 5 files + shared helper module
 **Requires**: API + PostgreSQL + Redis + Embedding Service + OpenRouter
 **Deliverable**: Integrità dati verificata end-to-end
 
@@ -94,26 +92,22 @@ Full analysis: [`docs/testing/game-night-edge-cases-analysis.md`](../testing/gam
 
 **Result**: 7/8 fully handled, 1/8 is a design choice (no max pause duration). **No action required.**
 
-### Phase 4: Documentation Update (0.5 giorni) — COMPLETED 2026-03-21
+### Phase 4: Documentation Update (0.5 giorni)
 
-| Doc | Action | Status |
-|-----|--------|--------|
-| Vertical slice spec | N/A — no separate file exists | ✅ Skip |
-| Roadmap | Phase 2 marked COMPLETED in PR #52 | ✅ Done |
-| API contracts | Clarified scope: scheduled events only, linked Improvvisata docs | ✅ Done |
+| Doc | Action |
+|-----|--------|
+| Vertical slice spec | Add "Implementation Status" section — all items ✅ |
+| Roadmap | Add Game Night Improvvisata to completed section |
+| API contracts | Clarify: `game-night-api-contracts.md` = scheduled events, NOT Improvvisata |
 
-### Phase 5: Full Pipeline Test (5-7 giorni, opzionale) — COMPLETED 2026-03-21
+### Phase 5: Full Pipeline Test (5-7 giorni, opzionale)
 
-Test con stack completo via integration tunnel a staging services.
+Test con stack completo (embedding service, Qdrant) per validare:
+- PDF upload → processing → embedding → vector indexing → agent auto-create
+- RAG query con contenuto reale del PDF
+- Agent recap generation con LLM reale
 
-| Flow | Test | Status |
-|------|------|--------|
-| PDF Pipeline | Upload → dedup/process → agent listing | ✅ |
-| RAG Query | Query KB about uploaded PDF content | ✅ |
-| Session Lifecycle | Create → scores → save → resume → complete | ✅ |
-
-**File**: `apps/web/e2e/integration/phase5-full-pipeline.spec.ts`
-**Richiede**: Integration tunnel (SSH) + `dotnet run --launch-profile Integration`
+**Richiede**: Tutti i servizi attivi (API + PG + Qdrant + Redis + Embedding + LLM)
 
 ---
 
@@ -135,15 +129,16 @@ Funzionalità nel design spec classificate "Should Have" o "Nice to Have", inten
 
 ## Timeline Summary
 
-| Phase | Effort | Status | Deliverable |
-|-------|--------|--------|-------------|
-| Phase 1: Mock E2E | 2-3 giorni | ✅ COMPLETED 2026-03-21 | UI coverage 100% |
-| Phase 2: Integration E2E | 3-4 giorni | ✅ COMPLETED 2026-03-21 | Data integrity verified |
-| Phase 3: Edge cases | 1-2 giorni | ✅ VERIFIED 2026-03-16 | Edge cases hardened |
-| Phase 4: Docs update | 0.5 giorni | ✅ COMPLETED 2026-03-21 | Docs current |
-| Phase 5: Full pipeline | 5-7 giorni | ✅ COMPLETED 2026-03-21 | Complete validation |
+| Phase | Effort | Cumulativo | Deliverable |
+|-------|--------|------------|-------------|
+| Phase 1: Mock E2E | 2-3 giorni | 2-3 giorni | UI coverage 100% |
+| Phase 2: Integration E2E | 3-4 giorni | 5-7 giorni | Data integrity verified |
+| Phase 3: Edge cases | 1-2 giorni | 6-9 giorni | Edge cases hardened |
+| Phase 4: Docs update | 0.5 giorni | 6.5-9.5 giorni | Docs current |
+| Phase 5: Full pipeline | 5-7 giorni | 11.5-16.5 giorni | Complete validation |
 
-**All validation (Phase 1-5)**: ✅ **COMPLETE**
+**MVP validation (Phase 1-4)**: 6.5-9.5 giorni
+**Complete validation (Phase 1-5)**: 11.5-16.5 giorni
 
 ---
 

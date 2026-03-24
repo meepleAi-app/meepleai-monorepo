@@ -77,6 +77,17 @@ restore-local: ## Restore local dev DB from latest snapshot (requires make dev r
 seed-games: ## Seed test games on staging via API (requires SSH access)
 	bash scripts/seed-all-games-staging.sh
 
+# === Alpha Zero ===
+
+alpha: ## Start Alpha Zero with AI services
+	$(COMPOSE) -f compose.dev.yml -f compose.alpha.yml --profile ai up -d
+
+alpha-core: ## Start Alpha Zero core only (no AI services)
+	$(COMPOSE) -f compose.dev.yml -f compose.alpha.yml up -d
+
+alpha-down: ## Stop Alpha Zero environment
+	$(COMPOSE) -f compose.dev.yml -f compose.alpha.yml --profile ai down
+
 # === Utilities ===
 
 logs: ## Tail logs for a service (usage: make logs s=api)
@@ -170,6 +181,7 @@ validate-workflows: ## Validate GitHub Actions workflows — mirrors auto-valida
 
 .PHONY: dev dev-core dev-down tunnel tunnel-stop tunnel-status integration \
         integration-down staging staging-down prod prod-down \
+        alpha alpha-core alpha-down \
         secrets-dev secrets-integration secrets-staging secrets-prod \
         snapshot restore-staging restore-local seed-games \
         logs ps build clean help \

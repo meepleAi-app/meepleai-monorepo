@@ -3,15 +3,12 @@ using System.Net.Http.Json;
 using Api.Infrastructure;
 using Api.Tests.Constants;
 using Api.Tests.Infrastructure;
-using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Moq;
-using StackExchange.Redis;
 using Xunit;
 using FluentAssertions;
 
@@ -50,38 +47,16 @@ public sealed class AgentEndpointsSmokeTests : IAsyncLifetime
     {
         var connectionString = await _fixture.CreateIsolatedDatabaseAsync(_testDbName);
 
-        _factory = new WebApplicationFactory<Program>()
+        _factory = IntegrationWebApplicationFactory.Create(connectionString)
             .WithWebHostBuilder(builder =>
             {
-                builder.UseEnvironment("Testing");
-
-                builder.ConfigureAppConfiguration((context, configBuilder) =>
-                {
-                    configBuilder.AddInMemoryCollection(new Dictionary<string, string?>
-                    {
-                        ["OPENROUTER_API_KEY"] = "test-key",
-                        ["ConnectionStrings:Postgres"] = connectionString
-                    });
-                });
-
                 builder.ConfigureTestServices(services =>
                 {
-                    // Replace DbContext with test database
-                    services.RemoveAll(typeof(DbContextOptions<MeepleAiDbContext>));
-                    services.AddDbContext<MeepleAiDbContext>(options =>
-                        options.UseNpgsql(connectionString, o => o.UseVector())); // Issue #3547
-
-                    // Mock Redis for HybridCache
-                    services.RemoveAll(typeof(IConnectionMultiplexer));
-                    var mockRedis = new Mock<IConnectionMultiplexer>();
-                    services.AddSingleton(mockRedis.Object);
-
-                    // Mock embedding services to avoid external dependencies
+                    // Custom embedding mock with 384-dim dummy embeddings for InvokeAgent test
                     services.RemoveAll(typeof(Api.Services.IEmbeddingService));
 
                     var mockEmbedding = new Mock<Api.Services.IEmbeddingService>();
 
-                    // Setup mock responses for InvokeAgent test
                     var dummyEmbedding = new float[384];
                     var embeddingResult = new Api.Services.EmbeddingResult
                     {
@@ -94,15 +69,6 @@ public sealed class AgentEndpointsSmokeTests : IAsyncLifetime
                         .ReturnsAsync(embeddingResult);
 
                     services.AddScoped<Api.Services.IEmbeddingService>(_ => mockEmbedding.Object);
-
-                    // Mock HybridCache infrastructure (both HybridCache + IHybridCacheService required for event handlers)
-                    services.AddHybridCache();
-                    services.RemoveAll(typeof(Api.Services.IHybridCacheService));
-                    services.AddScoped<Api.Services.IHybridCacheService>(_ => Mock.Of<Api.Services.IHybridCacheService>());
-
-                    // Ensure domain event collector is registered
-                    services.AddScoped<Api.SharedKernel.Application.Services.IDomainEventCollector,
-                        Api.SharedKernel.Application.Services.DomainEventCollector>();
                 });
             });
 

@@ -18,11 +18,11 @@ import { useState, useMemo, useCallback, useEffect } from 'react';
 
 import { Search, Loader2 } from 'lucide-react';
 
-import { SectionBlock } from '@/components/ui/SectionBlock';
 import { EmptyState } from '@/components/empty-state/EmptyState';
 import { MechanicFilter } from '@/components/library/MechanicFilter';
 import { ShelfCard } from '@/components/library/ShelfCard';
 import { ShelfRow } from '@/components/library/ShelfRow';
+import { SectionBlock } from '@/components/ui/SectionBlock';
 import { useCatalogTrending } from '@/hooks/queries/useCatalogTrending';
 import { useAddGameToLibrary, useLibrary } from '@/hooks/queries/useLibrary';
 import { useSharedGames, useGameMechanics } from '@/hooks/queries/useSharedGames';

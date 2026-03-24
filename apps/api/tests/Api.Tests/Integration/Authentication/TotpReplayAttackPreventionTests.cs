@@ -90,18 +90,7 @@ public sealed class TotpReplayAttackPreventionTests : IAsyncLifetime
 
             _output($"Isolated database created: {_databaseName}");
 
-            // Create DbContext with EF Core migrations
-            var services = new ServiceCollection();
-            services.AddDbContext<MeepleAiDbContext>(options =>
-                options.UseNpgsql(_isolatedDbConnectionString, o => o.UseVector()) // Issue #3547
-                    .ConfigureWarnings(warnings =>
-                        warnings.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning)));
-
-            // MediatR (required by MeepleAiDbContext)
-            services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(Program).Assembly));
-
-            // Domain event infrastructure (required by MeepleAiDbContext)
-            services.AddScoped<Api.SharedKernel.Application.Services.IDomainEventCollector, Api.SharedKernel.Application.Services.DomainEventCollector>();
+            var services = IntegrationServiceCollectionBuilder.CreateBase(_isolatedDbConnectionString);
 
             // Register dependencies for TotpService
             services.AddScoped<ITotpService, TotpService>();

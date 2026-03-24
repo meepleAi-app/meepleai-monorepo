@@ -8,7 +8,7 @@
  * status before rendering pages.
  *
  * Protected Routes:
- * - /dashboard - Main dashboard (post-login default)
+ * - /library - Game library (post-login default)
  * - /chat - Main chat interface
  * - /upload - Document upload page
  * - /admin - Administration panel
@@ -42,7 +42,7 @@ import type { NextRequest } from 'next/server';
  * Protected routes that require authentication
  * Unauthenticated users will be redirected to /login
  */
-const PROTECTED_ROUTES = ['/dashboard', '/chat', '/upload', '/admin', '/editor', '/settings'];
+const PROTECTED_ROUTES = ['/library', '/chat', '/upload', '/admin', '/editor', '/settings'];
 
 /**
  * Admin-only routes that require admin role
@@ -369,18 +369,71 @@ export async function proxy(request: NextRequest) {
   if (isPublicAuthRoute && isAuthenticated) {
     // Check if there's a 'from' parameter to redirect back to
     const fromParam = request.nextUrl.searchParams.get('from');
+    const defaultDest = isAdmin ? '/admin' : '/library';
     const redirectUrl =
       fromParam && PROTECTED_ROUTES.some(route => fromParam.startsWith(route))
         ? new URL(fromParam, request.url)
-        : new URL('/dashboard', request.url);
+        : new URL(defaultDest, request.url);
     const response = NextResponse.redirect(redirectUrl);
     return addSecurityHeaders(response, requestOrigin);
   }
 
   // Redirect authenticated users from homepage to dashboard
   if (isHomePage && isAuthenticated) {
-    const response = NextResponse.redirect(new URL('/dashboard', request.url));
+    const defaultDest = isAdmin ? '/admin' : '/library';
+    const response = NextResponse.redirect(new URL(defaultDest, request.url));
     return addSecurityHeaders(response, requestOrigin);
+  }
+
+  // ============================================================================
+  // Alpha Zero Route Guard
+  // ============================================================================
+  // When NEXT_PUBLIC_ALPHA_MODE=true, only alpha-allowed routes are accessible.
+  // Non-alpha routes redirect to /dashboard. This prevents users from reaching
+  // features that are not yet ready for alpha testing.
+  const IS_ALPHA_MODE = process.env.NEXT_PUBLIC_ALPHA_MODE === 'true';
+
+  if (IS_ALPHA_MODE && isAuthenticated) {
+    const ALPHA_ROUTE_PREFIXES = [
+      '/dashboard',
+      '/library',
+      '/chat',
+      '/discover',
+      '/games',
+      '/profile',
+      '/settings',
+      '/admin', // admin root redirects to /admin/overview via page.tsx
+      '/admin/overview',
+      '/admin/shared-games',
+      '/admin/knowledge-base',
+      '/admin/content',
+      '/admin/users',
+      '/onboarding',
+      '/upload',
+      '/setup',
+      '/join',
+    ];
+
+    const isAlphaRoute = ALPHA_ROUTE_PREFIXES.some(prefix => pathname.startsWith(prefix));
+    const isAuthRoute =
+      pathname.startsWith('/login') ||
+      pathname.startsWith('/register') ||
+      pathname.startsWith('/reset-password') ||
+      pathname.startsWith('/verify-email') ||
+      pathname.startsWith('/oauth-callback') ||
+      pathname.startsWith('/setup-account') ||
+      pathname.startsWith('/welcome');
+    const isPublicRoute =
+      pathname === '/' ||
+      pathname.startsWith('/api/') ||
+      pathname.startsWith('/health') ||
+      pathname.startsWith('/offline') ||
+      pathname.startsWith('/_next/');
+
+    if (!isAlphaRoute && !isAuthRoute && !isPublicRoute) {
+      const response = NextResponse.redirect(new URL('/dashboard', request.url));
+      return addSecurityHeaders(response, requestOrigin);
+    }
   }
 
   // Allow the request to continue with security headers

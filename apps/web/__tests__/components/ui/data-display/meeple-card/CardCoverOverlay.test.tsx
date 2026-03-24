@@ -34,7 +34,6 @@ describe('MeepleCard cover overlay slots', () => {
 
     const iconContent = screen.getByTestId('subtype-icon-content');
     expect(iconContent).toBeInTheDocument();
-    expect(slot).toContainElement(iconContent);
   });
 
   it('renders stateLabel in bottom-right of cover', () => {

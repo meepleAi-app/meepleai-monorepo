@@ -22,15 +22,15 @@ import { CardGridSkeletons } from '@/components/ui/data-display/CardGridSkeleton
 import { ListPageHeader, useViewPreference } from '@/components/ui/data-display/ListPageHeader';
 import { MeepleCard, entityColors } from '@/components/ui/data-display/meeple-card';
 import { useCardBrowser, type CardRef } from '@/components/ui/data-display/meeple-card-browser';
-import { Button } from '@/components/ui/primitives/button';
-import { Input } from '@/components/ui/primitives/input';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
+} from '@/components/ui/overlays/select';
+import { Button } from '@/components/ui/primitives/button';
+import { Input } from '@/components/ui/primitives/input';
 import { getNavigationLinks } from '@/config/entity-navigation';
 import { useAgents } from '@/hooks/queries/useAgents';
 import { useAgentSlots } from '@/hooks/queries/useAgentSlots';

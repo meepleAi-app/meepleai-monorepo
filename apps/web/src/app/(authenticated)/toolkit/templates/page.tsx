@@ -6,14 +6,14 @@ import { useQuery } from '@tanstack/react-query';
 import { Layers, Copy, Filter } from 'lucide-react';
 
 import { Badge } from '@/components/ui/data-display/badge';
-import { Button } from '@/components/ui/primitives/button';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
+} from '@/components/ui/overlays/select';
+import { Button } from '@/components/ui/primitives/button';
 import { api } from '@/lib/api';
 import type { GameToolkitTemplateDto } from '@/lib/api/schemas/toolkit.schemas';
 

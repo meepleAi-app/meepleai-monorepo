@@ -4,7 +4,7 @@ import { type ReactNode, useCallback, useEffect, useState } from 'react';
 
 import { AnimatePresence, motion } from 'framer-motion';
 
-import { TavoloSection } from '@/components/dashboard/tavolo';
+import { SectionBlock } from '@/components/ui/SectionBlock';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { cn } from '@/lib/utils';
 
@@ -314,9 +314,9 @@ export function GameTableLayout({
       >
         {/* Left zone: Strumenti */}
         <div className="space-y-4">
-          <TavoloSection icon={ZONE_META.tools.icon} title={ZONE_META.tools.title}>
+          <SectionBlock icon={ZONE_META.tools.icon} title={ZONE_META.tools.title}>
             {toolsZone}
-          </TavoloSection>
+          </SectionBlock>
         </div>
 
         {/* Center: Card */}
@@ -324,17 +324,17 @@ export function GameTableLayout({
 
         {/* Right zone: Conoscenza */}
         <div className="space-y-4">
-          <TavoloSection icon={ZONE_META.knowledge.icon} title={ZONE_META.knowledge.title}>
+          <SectionBlock icon={ZONE_META.knowledge.icon} title={ZONE_META.knowledge.title}>
             {knowledgeZone}
-          </TavoloSection>
+          </SectionBlock>
         </div>
       </div>
 
       {/* Bottom zone: Sessioni */}
       <div className="mt-4">
-        <TavoloSection icon={ZONE_META.sessions.icon} title={ZONE_META.sessions.title}>
+        <SectionBlock icon={ZONE_META.sessions.icon} title={ZONE_META.sessions.title}>
           {sessionsZone}
-        </TavoloSection>
+        </SectionBlock>
       </div>
 
       {/* Drawer */}

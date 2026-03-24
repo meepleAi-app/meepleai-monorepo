@@ -4,7 +4,7 @@ import { useState } from 'react';
 
 import { ArrowRightLeft, Play, Eye, Loader2 } from 'lucide-react';
 
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/ui/primitives/button';
 
 import { ConfirmationDialog } from './ConfirmationDialog';
 import { SqlPreviewModal } from './SqlPreviewModal';

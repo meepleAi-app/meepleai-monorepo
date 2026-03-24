@@ -16,7 +16,7 @@ import { useState } from 'react';
 
 import { ChevronDown, ChevronUp } from 'lucide-react';
 
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/ui/primitives/button';
 import { useLiveSessionStore } from '@/lib/stores/live-session-store';
 
 import { ArbitroVerdictCard } from './ArbitroVerdictCard';

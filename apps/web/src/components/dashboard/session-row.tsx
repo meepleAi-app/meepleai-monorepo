@@ -6,7 +6,7 @@
 import { formatDistanceToNow } from 'date-fns';
 import { it } from 'date-fns/locale';
 
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/ui/primitives/button';
 import type { SessionSummaryDto } from '@/lib/api/dashboard-client';
 
 interface SessionRowProps {

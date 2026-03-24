@@ -8,7 +8,7 @@ import { useSource } from '@/components/admin/sandbox/contexts/SourceContext';
 import type { SharedGameSummary } from '@/components/admin/sandbox/contexts/SourceContext';
 import { DocumentList } from '@/components/admin/sandbox/DocumentList';
 import { GameSearchCombobox } from '@/components/admin/sandbox/GameSearchCombobox';
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/ui/primitives/button';
 import { api } from '@/lib/api';
 
 export function SourcePanel() {

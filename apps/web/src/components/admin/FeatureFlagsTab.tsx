@@ -18,13 +18,13 @@ import { Check, Clock, Crown, Users, Zap } from 'lucide-react';
 
 import { toast } from '@/components/layout/Toast';
 import { Badge } from '@/components/ui/data-display/badge';
+import { Switch } from '@/components/ui/forms/switch';
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-} from '@/components/ui/data-display/tooltip';
-import { Switch } from '@/components/ui/forms/switch';
+} from '@/components/ui/overlays/tooltip';
 import { cn } from '@/lib/utils';
 
 import { BulkActionBar, type BulkAction } from './BulkActionBar';

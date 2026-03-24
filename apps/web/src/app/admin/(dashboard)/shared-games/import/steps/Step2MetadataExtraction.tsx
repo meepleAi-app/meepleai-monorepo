@@ -16,11 +16,11 @@ import type { JSX } from 'react';
 
 import { Loader2, Save, AlertCircle } from 'lucide-react';
 
-import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/data-display/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/feedback/alert';
 import { ConfidenceBadge } from '@/components/ui/feedback/ConfidenceBadge';
 import { Skeleton } from '@/components/ui/feedback/skeleton';
+import { Button } from '@/components/ui/primitives/button';
 import { Input } from '@/components/ui/primitives/input';
 import { Label } from '@/components/ui/primitives/label';
 import { Textarea } from '@/components/ui/primitives/textarea';

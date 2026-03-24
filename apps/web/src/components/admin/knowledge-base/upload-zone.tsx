@@ -21,8 +21,8 @@ import {
   PRIORITY_URGENT,
 } from '@/app/admin/(dashboard)/knowledge-base/queue/lib/queue-api';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/primitives/button';
+import { Input } from '@/components/ui/primitives/input';
 import { useApiClient } from '@/lib/api/context';
 import { useGameSearch } from '@/lib/domain-hooks/useGameSearch';
 

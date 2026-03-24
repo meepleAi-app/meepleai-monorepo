@@ -314,8 +314,8 @@ jobs:
           POSTGRES_DB: meepleai_test
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: testpass
-          # Fix: MaxPoolSize=1 — CI PostgreSQL max_connections=100, 33+ classes accumulate pools
-          ConnectionStrings__Postgres: Host=localhost;Port=5432;Database=meepleai_test;Username=postgres;Password=testpass;MaxPoolSize=1;Timeout=30;Command Timeout=60
+          # MaxPoolSize=2 + ClearAllPools() in teardown prevents accumulation within max_connections=100
+          ConnectionStrings__Postgres: Host=localhost;Port=5432;Database=meepleai_test;Username=postgres;Password=testpass;MaxPoolSize=2;Timeout=30;Command Timeout=60
           QDRANT_URL: http://localhost:6333
           REDIS_URL: localhost:6379,allowAdmin=true
           OPENROUTER_API_KEY: test-key
@@ -324,8 +324,8 @@ jobs:
           DISABLE_RATE_LIMITING: "true"
           # Issue #CI-Optimization: Pass external service URLs so SharedTestcontainersFixture
           # skips container startup and uses CI service containers directly
-          # Fix: MaxPoolSize=1 — matches SharedTestcontainersFixture + IntegrationTestBase
-          TEST_POSTGRES_CONNSTRING: Host=localhost;Port=5432;Database=meepleai_test;Username=postgres;Password=testpass;MaxPoolSize=1;Timeout=30;Command Timeout=60
+          # MaxPoolSize=2 + ClearAllPools() in test teardown — matches fixture code
+          TEST_POSTGRES_CONNSTRING: Host=localhost;Port=5432;Database=meepleai_test;Username=postgres;Password=testpass;MaxPoolSize=2;Timeout=30;Command Timeout=60
           TEST_REDIS_CONNSTRING: localhost:6379,allowAdmin=true
         run: |
           echo "🧪 Running integration tests - shard: ${{ matrix.shard.name }} (4 parallel threads)..."

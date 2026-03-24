@@ -98,6 +98,14 @@ public sealed class BulkUserOperationsE2ETests : IAsyncLifetime
         // Run migrations
         await _dbContext.Database.MigrateAsync(TestCancellationToken);
 
+        // Create user projection views that are normally created at Program.cs startup
+        // but are not part of EF migrations (Issue #3010)
+        await _dbContext.Database.ExecuteSqlRawAsync(@"
+            CREATE OR REPLACE VIEW vw_user_profiles AS SELECT * FROM users;
+            CREATE OR REPLACE VIEW vw_user_budgets AS SELECT * FROM users;
+            CREATE OR REPLACE VIEW vw_user_preferences AS SELECT * FROM users;
+        ", TestCancellationToken);
+
         _output("E2E test infrastructure initialized successfully");
     }
 

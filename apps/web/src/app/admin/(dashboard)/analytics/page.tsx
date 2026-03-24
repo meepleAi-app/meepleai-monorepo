@@ -97,10 +97,10 @@ export default async function AdminAnalyticsPage({ searchParams }: AdminAnalytic
     <div className="space-y-5">
       <div>
         <h1 className="font-quicksand text-xl sm:text-2xl font-bold tracking-tight text-foreground">
-          Analytics
+          Analitiche
         </h1>
         <p className="mt-0.5 text-sm text-muted-foreground">
-          Usage statistics, AI analytics, audit logs, and reports.
+          Statistiche di utilizzo, analitiche AI, log di audit e report.
         </p>
       </div>
 

@@ -13,7 +13,7 @@ using Api.Tests.Infrastructure;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Time.Testing;
 using Npgsql;
 using Pgvector.EntityFrameworkCore; // Issue #3547: Enable pgvector type mapping
@@ -74,37 +74,25 @@ public class AuthenticationFlowsE2ETests : IAsyncLifetime
             CommandTimeout = 30
         };
 
-        var services = new ServiceCollection();
         _timeProvider = new FakeTimeProvider(DateTimeOffset.UtcNow);
 
-        services.AddLogging(builder => builder.AddConsole().SetMinimumLevel(LogLevel.Information));
-        services.AddSingleton<TimeProvider>(_timeProvider);
+        var services = IntegrationServiceCollectionBuilder.CreateBase(enforcedBuilder.ConnectionString);
 
-        services.AddDbContext<MeepleAiDbContext>(options =>
-        {
-            options.UseNpgsql(enforcedBuilder.ConnectionString, o => o.UseVector()); // Issue #3547: Enable pgvector type mapping
-            options.ConfigureWarnings(w =>
-                w.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning));
-        });
+        // Override TimeProvider with FakeTimeProvider
+        services.RemoveAll<TimeProvider>();
+        services.AddSingleton<TimeProvider>(_timeProvider);
 
         // Register repositories
         services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<IOAuthAccountRepository, OAuthAccountRepository>();
         services.AddScoped<ISessionRepository, SessionRepository>();
         services.AddScoped<IApiKeyRepository, ApiKeyRepository>();
-        services.AddScoped<IUnitOfWork, EfCoreUnitOfWork>();
-
-        // Register domain event infrastructure
-        services.AddScoped<Api.SharedKernel.Application.Services.IDomainEventCollector, Api.SharedKernel.Application.Services.DomainEventCollector>();
 
         // Register password hashing
         services.AddSingleton<IPasswordHashingService, PasswordHashingService>();
 
-        // Register MediatR
-        services.AddMediatR(config =>
-            config.RegisterServicesFromAssembly(typeof(HandleOAuthCallbackCommandHandler).Assembly));
-
-        // Register mock services for event handlers
+        // Override IEmailService with NoOpEmailService (has behavior)
+        services.RemoveAll<IEmailService>();
         services.AddSingleton<IEmailService>(new Api.Tests.TestHelpers.NoOpEmailService());
 
         _serviceProvider = services.BuildServiceProvider();

@@ -9,7 +9,7 @@ on:
 
 jobs:
   validate-source-branch:
-    runs-on: ${{ vars.RUNNER || 'ubuntu-latest' }}
+    runs-on: ubuntu-latest
     steps:
       - name: Validate PR source branch
         env:

@@ -28,7 +28,7 @@ public class ClearCacheCommandTests : IAsyncLifetime
 
         await _redis.StartAsync().ConfigureAwait(false);
 
-        _connection = await ConnectionMultiplexer.ConnectAsync(_redis.GetConnectionString())
+        _connection = await ConnectionMultiplexer.ConnectAsync($"{_redis.GetConnectionString()},allowAdmin=true")
             .ConfigureAwait(false);
     }
 
@@ -122,7 +122,7 @@ public class ClearCacheCommandTests : IAsyncLifetime
 
         // Assert
         result.ShouldHaveValidationErrorFor(x => x.Confirmed)
-            .WithErrorMessage("*Confirmation is required*");
+            .WithErrorMessage("Confirmation is required to clear the cache. This action cannot be undone.");
     }
 
     [Fact]

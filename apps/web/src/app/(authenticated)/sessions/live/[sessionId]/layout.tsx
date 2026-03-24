@@ -37,7 +37,7 @@ export default function LiveSessionLayout({ children, params }: LiveSessionLayou
       </ContextBarRegistrar>
       <div className="flex items-center gap-2 px-4 py-2 border-b border-border/40">
         <Link
-          href="/dashboard"
+          href="/library"
           className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
           aria-label="Torna alla dashboard"
         >

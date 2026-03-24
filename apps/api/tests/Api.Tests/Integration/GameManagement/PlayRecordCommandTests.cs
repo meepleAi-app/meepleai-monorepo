@@ -50,25 +50,11 @@ public sealed class PlayRecordCommandTests : IAsyncLifetime
         _databaseName = $"test_playrecord_{Guid.NewGuid():N}";
         _isolatedDbConnectionString = await _fixture.CreateIsolatedDatabaseAsync(_databaseName);
 
-        var services = new ServiceCollection();
-        services.AddLogging(builder => builder.AddConsole().SetMinimumLevel(LogLevel.Warning));
-
-        services.AddDbContext<MeepleAiDbContext>(options =>
-        {
-            options.UseNpgsql(_isolatedDbConnectionString, o => o.UseVector());
-            options.ConfigureWarnings(w =>
-                w.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning));
-        });
+        var services = IntegrationServiceCollectionBuilder.CreateBase(_isolatedDbConnectionString);
 
         services.AddScoped<IPlayRecordRepository, PlayRecordRepository>();
         services.AddScoped<IGameRepository, GameRepository>();
-        services.AddScoped<IUnitOfWork, EfCoreUnitOfWork>();
         services.AddSingleton<TimeProvider>(_timeProvider);
-
-        // Register domain event infrastructure
-        services.AddScoped<Api.SharedKernel.Application.Services.IDomainEventCollector, Api.SharedKernel.Application.Services.DomainEventCollector>();
-
-        services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(Program).Assembly));
 
         _serviceProvider = services.BuildServiceProvider();
         _dbContext = ServiceProvider.GetRequiredService<MeepleAiDbContext>();

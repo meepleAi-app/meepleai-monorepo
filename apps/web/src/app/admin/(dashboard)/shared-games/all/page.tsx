@@ -25,10 +25,10 @@ export default function AllGamesPage() {
       {/* Page Header */}
       <div>
         <h1 className="font-quicksand text-2xl font-bold tracking-tight text-foreground">
-          All Games
+          Tutti i Giochi
         </h1>
         <p className="text-sm text-muted-foreground mt-1">
-          Browse and manage the shared game catalog
+          Sfoglia e gestisci il catalogo dei giochi condivisi
         </p>
       </div>
 

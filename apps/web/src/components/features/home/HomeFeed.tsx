@@ -95,7 +95,7 @@ export function HomeFeed() {
             title="Nessun gioco in libreria"
             description="Aggiungi i tuoi giochi preferiti alla libreria per accedervi rapidamente."
             ctaLabel="Esplora Catalogo"
-            onCtaClick={() => router.push('/discover')}
+            onCtaClick={() => router.push('/games')}
             icon={BookOpen}
             entityColor={entityColors.game.hsl}
           />

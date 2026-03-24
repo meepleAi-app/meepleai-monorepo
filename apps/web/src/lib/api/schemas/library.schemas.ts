@@ -68,6 +68,7 @@ export type UserLibraryEntry = z.infer<typeof UserLibraryEntrySchema>;
 export const UserLibraryStatsSchema = z.object({
   totalGames: z.number().int().nonnegative(),
   favoriteGames: z.number().int().nonnegative(),
+  privatePdfs: z.number().int().nonnegative().default(0),
   oldestAddedAt: z.string().datetime().nullable().optional(),
   newestAddedAt: z.string().datetime().nullable().optional(),
   nuovoCount: z.number().int().nonnegative().default(0),

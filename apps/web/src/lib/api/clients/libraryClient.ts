@@ -224,6 +224,7 @@ export function createLibraryClient({ httpClient }: CreateLibraryClientParams): 
         data ?? {
           totalGames: 0,
           favoriteGames: 0,
+          privatePdfs: 0,
           oldestAddedAt: null,
           newestAddedAt: null,
           nuovoCount: 0,

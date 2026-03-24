@@ -92,7 +92,6 @@ export function RecentGames({ games, loading = false, className }: RecentGamesPr
               rating={game.rating}
               ratingMax={10}
               showInfoButton
-              loading={loading}
             />
           ))
         )}

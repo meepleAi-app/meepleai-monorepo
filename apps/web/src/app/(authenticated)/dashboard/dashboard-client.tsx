@@ -18,6 +18,7 @@ import type { AgentItem } from '@/components/dashboard/v2/YourAgents';
 import { useRecentChatSessions } from '@/hooks/queries/useChatSessions';
 import { useRecentAgents } from '@/hooks/queries/useRecentAgents';
 import type { UserGameDto } from '@/lib/api/dashboard-client';
+import type { AgentDto } from '@/lib/api/schemas/agents.schemas';
 import { useDashboardStore } from '@/lib/stores/dashboard-store';
 
 // ============================================================================
@@ -31,7 +32,7 @@ function mapGameToCard(game: UserGameDto): GameItem {
       : { text: 'Nuovo', variant: 'info' as const };
 
   const linkedEntities: GameItem['linkedEntities'] = [];
-  // Note: UserGameDto doesn't currently expose agent/kb/session/chat counts.
+  // UserGameDto doesn't currently expose agent/kb/session/chat counts.
   // These will be populated when the backend enriches the DTO.
 
   return {
@@ -57,20 +58,23 @@ function mapGameToCard(game: UserGameDto): GameItem {
   };
 }
 
-function mapAgentToCard(agent: Record<string, unknown>): AgentItem {
+// Fix #1: Use typed AgentDto, derive status from isActive/isIdle, use lastInvokedAt
+function mapAgentToCard(agent: AgentDto): AgentItem {
+  const status: AgentItem['status'] = agent.isActive
+    ? 'active'
+    : agent.isIdle
+      ? 'idle'
+      : 'training';
+
   return {
-    id: String(agent.id ?? ''),
-    name: String(agent.name ?? agent.agentName ?? 'Agent'),
-    imageUrl: agent.imageUrl as string | undefined,
-    status: (agent.status as AgentItem['status']) ?? 'idle',
-    stats:
-      agent.invocationCount != null
-        ? {
-            invocationCount: Number(agent.invocationCount),
-            lastExecutedAt: agent.lastExecutedAt as string | undefined,
-          }
-        : undefined,
-    gameTitle: agent.gameName as string | undefined,
+    id: agent.id,
+    name: agent.name,
+    status,
+    stats: {
+      invocationCount: agent.invocationCount,
+      lastExecutedAt: agent.lastInvokedAt ?? undefined,
+    },
+    gameTitle: agent.gameName ?? undefined,
   };
 }
 
@@ -91,11 +95,9 @@ export function DashboardClient() {
     recentSessions,
     isLoadingSessions,
     fetchRecentSessions,
+    updateFilters,
     games,
     isLoadingGames,
-    gamesError,
-    fetchGames,
-    updateFilters,
   } = useDashboardStore();
 
   // React Query — agents, chat sessions
@@ -106,8 +108,8 @@ export function DashboardClient() {
   useEffect(() => {
     fetchStats();
     fetchRecentSessions(5);
+    // Fix #2: updateFilters calls fetchGames() internally — no explicit fetchGames() needed
     updateFilters({ sort: 'playCount', pageSize: 6, page: 1 });
-    fetchGames();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -115,36 +117,29 @@ export function DashboardClient() {
   const gameCards = useMemo(() => games.map(mapGameToCard), [games]);
   const agentCards = useMemo(() => (agentsRaw ?? []).map(mapAgentToCard), [agentsRaw]);
 
+  // Fix #1: Use typed AgentDto fields for sidebar
   const sidebarAgents = useMemo(
     () =>
-      (agentsRaw ?? []).slice(0, 3).map((a: Record<string, unknown>) => ({
-        id: String(a.id ?? ''),
-        name: String(a.name ?? a.agentName ?? 'Agent'),
-        lastUsedAt: String(a.lastExecutedAt ?? a.updatedAt ?? new Date().toISOString()),
-        isReady: a.status === 'active' || a.status === 'idle',
+      (agentsRaw ?? []).slice(0, 3).map((a: AgentDto) => ({
+        id: a.id,
+        name: a.name,
+        lastUsedAt: a.lastInvokedAt ?? new Date().toISOString(),
+        isReady: a.isActive || a.isIdle,
       })),
     [agentsRaw]
   );
 
-  // chatSessionsRaw can be { sessions: [...], totalCount } or an array
-  const chatSessionsList = useMemo(() => {
-    if (!chatSessionsRaw) return [];
-    if (Array.isArray(chatSessionsRaw)) return chatSessionsRaw;
-    if ('sessions' in chatSessionsRaw && Array.isArray(chatSessionsRaw.sessions))
-      return chatSessionsRaw.sessions;
-    return [];
-  }, [chatSessionsRaw]);
-
+  // Fix #3: chatSessionsRaw always returns { sessions, totalCount }
   const sidebarChats = useMemo(
     () =>
-      chatSessionsList.slice(0, 4).map(t => ({
-        id: String(t.id ?? ''),
-        title: String(t.title ?? t.gameTitle ?? 'Chat'),
-        messageCount: Number(t.messageCount ?? 0),
-        agentName: String(t.agentName ?? 'Agent'),
-        lastMessageAt: String(t.lastMessageAt ?? t.createdAt ?? new Date().toISOString()),
+      (chatSessionsRaw?.sessions ?? []).slice(0, 4).map(t => ({
+        id: t.id,
+        title: t.title ?? t.gameTitle ?? 'Chat',
+        messageCount: t.messageCount,
+        agentName: t.agentName ?? 'Agent',
+        lastMessageAt: t.lastMessageAt ?? t.createdAt,
       })),
-    [chatSessionsList]
+    [chatSessionsRaw]
   );
 
   const quickStatsData = stats

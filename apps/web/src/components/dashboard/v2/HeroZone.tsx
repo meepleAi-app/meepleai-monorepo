@@ -1,5 +1,7 @@
 'use client';
 
+import { useEffect, useState } from 'react';
+
 import { useRouter } from 'next/navigation';
 
 import { cn } from '@/lib/utils';
@@ -32,8 +34,16 @@ function getItalianDate(): string {
   });
 }
 
+// Fix #6: Compute date values after mount to avoid SSR/client hydration mismatch
 export function HeroZone({ userName, activeSession, className }: HeroZoneProps) {
   const router = useRouter();
+  const [greeting, setGreeting] = useState('');
+  const [dateStr, setDateStr] = useState('');
+
+  useEffect(() => {
+    setGreeting(getTimeGreeting());
+    setDateStr(getItalianDate());
+  }, []);
 
   if (activeSession) {
     return (
@@ -69,10 +79,11 @@ export function HeroZone({ userName, activeSession, className }: HeroZoneProps) 
       )}
     >
       <p className="font-quicksand font-bold text-2xl text-foreground">
-        {getTimeGreeting()}, {userName} 👋
+        {greeting ? `${greeting}, ` : ''}
+        {userName} 👋
       </p>
       <p data-testid="hero-date" className="text-muted-foreground text-sm mt-1 capitalize">
-        {getItalianDate()}
+        {dateStr}
       </p>
     </div>
   );

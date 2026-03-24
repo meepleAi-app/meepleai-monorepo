@@ -72,18 +72,20 @@ export function YourAgents({ agents, loading, className, onCreateAgent }: YourAg
               />
             ))}
 
-            {/* CTA card */}
-            <div
-              className="flex flex-col items-center justify-center rounded-2xl border-[1.5px] border-dashed border-border bg-[rgba(255,255,255,0.4)] p-6 cursor-pointer hover:bg-[rgba(255,255,255,0.6)] transition-colors min-h-[200px]"
+            {/* CTA card — Fix #4: use button for keyboard a11y */}
+            <button
+              type="button"
+              className="flex flex-col items-center justify-center rounded-2xl border-[1.5px] border-dashed border-border bg-[rgba(255,255,255,0.4)] p-6 cursor-pointer hover:bg-[rgba(255,255,255,0.6)] transition-colors min-h-[200px] w-full"
               onClick={onCreateAgent}
               data-testid="create-agent-cta"
+              aria-label="Crea nuovo agente"
             >
               <span className="text-2xl opacity-40 mb-2">➕</span>
               <span className="font-quicksand font-bold text-sm text-muted-foreground">
                 Crea agente
               </span>
               <span className="text-xs text-muted-foreground">Configura nuovo</span>
-            </div>
+            </button>
           </>
         )}
       </div>

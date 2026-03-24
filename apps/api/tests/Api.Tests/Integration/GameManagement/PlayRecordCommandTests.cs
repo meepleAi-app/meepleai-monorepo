@@ -166,7 +166,7 @@ public sealed class PlayRecordCommandTests : IAsyncLifetime
     {
         // Arrange
         var recordId = await CreateTestRecordAsync();
-        var userId = Guid.NewGuid();
+        var userId = await SeedTestUserAsync(); // FK constraint: record_players.UserId references users
         var command = new AddPlayerToRecordCommand(recordId, userId, "Alice");
 
         // Act
@@ -399,7 +399,8 @@ public sealed class PlayRecordCommandTests : IAsyncLifetime
 
     private async Task<Guid> AddTestPlayerAsync(Guid recordId)
     {
-        var command = new AddPlayerToRecordCommand(recordId, Guid.NewGuid(), "TestPlayer");
+        var playerUserId = await SeedTestUserAsync(); // FK constraint: record_players.UserId references users
+        var command = new AddPlayerToRecordCommand(recordId, playerUserId, "TestPlayer");
         await SendInScopeAsync(command);
 
         using var scope = ServiceProvider.CreateScope();

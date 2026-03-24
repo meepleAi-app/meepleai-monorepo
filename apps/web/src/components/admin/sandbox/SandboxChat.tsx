@@ -7,13 +7,13 @@ import { Send, MessageSquare, Clock, Layers, BarChart3 } from 'lucide-react';
 import { usePipeline } from '@/components/admin/sandbox/contexts/PipelineContext';
 import { useSandboxSession } from '@/components/admin/sandbox/contexts/SandboxSessionContext';
 import { useSource } from '@/components/admin/sandbox/contexts/SourceContext';
-import { Button } from '@/components/ui/button';
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-} from '@/components/ui/data-display/tooltip';
+} from '@/components/ui/overlays/tooltip';
+import { Button } from '@/components/ui/primitives/button';
 import { useDebugChatStream, type DebugEvent } from '@/hooks/useDebugChatStream';
 
 import type { ChatMessage, RetrievedChunk, PipelineTrace, PipelineTraceStep } from './types';

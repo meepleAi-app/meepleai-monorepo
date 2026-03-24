@@ -10,7 +10,6 @@ import { useState, useCallback, useRef, useEffect } from 'react';
 
 import { Camera, Upload, X, AlertCircle, ImageIcon } from 'lucide-react';
 
-import { Button } from '@/components/ui/button';
 import {
   Dialog,
   DialogContent,
@@ -19,6 +18,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/overlays/dialog';
+import { Button } from '@/components/ui/primitives/button';
 import { cn } from '@/lib/utils';
 
 /** Matches backend AttachmentType enum values. */

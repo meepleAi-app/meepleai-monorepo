@@ -13,7 +13,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { Check, Timer, X } from 'lucide-react';
 
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/ui/primitives/button';
 import { api } from '@/lib/api';
 
 // ─── Types ────────────────────────────────────────────────────────────────────

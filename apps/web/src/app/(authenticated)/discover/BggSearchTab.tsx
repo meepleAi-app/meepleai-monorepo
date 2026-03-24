@@ -14,13 +14,13 @@ import { ChevronDown, Loader2, Lock, Search, X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 import { useAddGameWizard } from '@/components/library/add-game-sheet/AddGameWizardProvider';
-import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/navigation/dropdown-menu';
+import { Button } from '@/components/ui/primitives/button';
 import { Input } from '@/components/ui/primitives/input';
 import { useAddPrivateGameFromBgg } from '@/hooks/queries/useLibrary';
 import { api } from '@/lib/api';

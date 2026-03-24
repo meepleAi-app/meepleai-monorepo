@@ -1,6 +1,8 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using Api.BoundedContexts.SharedGameCatalog.Infrastructure.DependencyInjection;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
@@ -37,6 +39,16 @@ public sealed class BggImportQueueEndpointsIntegrationTests : IAsyncLifetime
     private HttpClient _client = null!;
 
     private static readonly Guid TestAdminUserId = Guid.NewGuid();
+
+    /// <summary>
+    /// JSON options matching the API's ConfigureHttpJsonOptions (camelCase + string enums).
+    /// Required because ReadFromJsonAsync uses default (PascalCase, numeric enums) otherwise.
+    /// </summary>
+    private static readonly JsonSerializerOptions ApiJsonOptions = new()
+    {
+        PropertyNameCaseInsensitive = true,
+        Converters = { new JsonStringEnumConverter() }
+    };
 
     public BggImportQueueEndpointsIntegrationTests(SharedTestcontainersFixture fixture)
     {
@@ -130,7 +142,7 @@ public sealed class BggImportQueueEndpointsIntegrationTests : IAsyncLifetime
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.OK);
 
-        var result = await response.Content.ReadFromJsonAsync<BggQueueStatusResponse>();
+        var result = await response.Content.ReadFromJsonAsync<BggQueueStatusResponse>(ApiJsonOptions);
         result.Should().NotBeNull();
         result.TotalQueued.Should().Be(2);
         result.TotalProcessing.Should().Be(1);
@@ -146,7 +158,7 @@ public sealed class BggImportQueueEndpointsIntegrationTests : IAsyncLifetime
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.OK);
 
-        var result = await response.Content.ReadFromJsonAsync<BggQueueStatusResponse>();
+        var result = await response.Content.ReadFromJsonAsync<BggQueueStatusResponse>(ApiJsonOptions);
         result.Should().NotBeNull();
         result.TotalQueued.Should().Be(0);
         result.TotalProcessing.Should().Be(0);
@@ -169,7 +181,7 @@ public sealed class BggImportQueueEndpointsIntegrationTests : IAsyncLifetime
         var response = await _client.GetAsync("/api/v1/admin/bgg-queue/status");
 
         // Assert
-        var result = await response.Content.ReadFromJsonAsync<BggQueueStatusResponse>();
+        var result = await response.Content.ReadFromJsonAsync<BggQueueStatusResponse>(ApiJsonOptions);
         result.Should().NotBeNull();
         result.TotalQueued.Should().Be(1);
         result.Items.Should().NotContain(i => i.Status == BggImportStatus.Completed);
@@ -192,7 +204,7 @@ public sealed class BggImportQueueEndpointsIntegrationTests : IAsyncLifetime
         // In CI, the endpoint group prefix may resolve differently depending on WebApplicationFactory configuration
         if (response.StatusCode == HttpStatusCode.Created)
         {
-            var result = await response.Content.ReadFromJsonAsync<BggImportQueueEntity>();
+            var result = await response.Content.ReadFromJsonAsync<BggImportQueueEntity>(ApiJsonOptions);
             result.Should().NotBeNull();
             result.BggId.Should().Be(174430);
             result.GameName.Should().Be("Gloomhaven");
@@ -229,7 +241,7 @@ public sealed class BggImportQueueEndpointsIntegrationTests : IAsyncLifetime
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.Conflict);
 
-        var problemDetails = await response.Content.ReadFromJsonAsync<Microsoft.AspNetCore.Mvc.ProblemDetails>();
+        var problemDetails = await response.Content.ReadFromJsonAsync<Microsoft.AspNetCore.Mvc.ProblemDetails>(ApiJsonOptions);
         problemDetails.Should().NotBeNull();
         problemDetails.Title.Should().Be("Duplicate BGG ID");
         problemDetails.Detail.Should().Contain("266192");
@@ -264,7 +276,7 @@ public sealed class BggImportQueueEndpointsIntegrationTests : IAsyncLifetime
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.Created);
 
-        var result = await response.Content.ReadFromJsonAsync<List<BggImportQueueEntity>>();
+        var result = await response.Content.ReadFromJsonAsync<List<BggImportQueueEntity>>(ApiJsonOptions);
         result.Should().NotBeNull();
         result.Count.Should().Be(3);
 
@@ -290,7 +302,7 @@ public sealed class BggImportQueueEndpointsIntegrationTests : IAsyncLifetime
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.Created);
 
-        var result = await response.Content.ReadFromJsonAsync<List<BggImportQueueEntity>>();
+        var result = await response.Content.ReadFromJsonAsync<List<BggImportQueueEntity>>(ApiJsonOptions);
         result.Should().NotBeNull();
         result.Count.Should().Be(2); // Only 2 new entries
         result.Should().NotContain(r => r.BggId == 174430);
@@ -308,7 +320,7 @@ public sealed class BggImportQueueEndpointsIntegrationTests : IAsyncLifetime
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.Created);
 
-        var result = await response.Content.ReadFromJsonAsync<List<BggImportQueueEntity>>();
+        var result = await response.Content.ReadFromJsonAsync<List<BggImportQueueEntity>>(ApiJsonOptions);
         result.Should().NotBeNull();
         result.Should().BeEmpty();
     }
@@ -352,7 +364,7 @@ public sealed class BggImportQueueEndpointsIntegrationTests : IAsyncLifetime
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.NotFound);
 
-        var problemDetails = await response.Content.ReadFromJsonAsync<Microsoft.AspNetCore.Mvc.ProblemDetails>();
+        var problemDetails = await response.Content.ReadFromJsonAsync<Microsoft.AspNetCore.Mvc.ProblemDetails>(ApiJsonOptions);
         problemDetails.Should().NotBeNull();
         problemDetails.Detail.Should().Contain("cannot be cancelled");
     }
@@ -409,7 +421,7 @@ public sealed class BggImportQueueEndpointsIntegrationTests : IAsyncLifetime
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.NotFound);
 
-        var problemDetails = await response.Content.ReadFromJsonAsync<Microsoft.AspNetCore.Mvc.ProblemDetails>();
+        var problemDetails = await response.Content.ReadFromJsonAsync<Microsoft.AspNetCore.Mvc.ProblemDetails>(ApiJsonOptions);
         problemDetails.Should().NotBeNull();
         problemDetails.Detail.Should().Contain("cannot be retried");
     }
@@ -442,7 +454,7 @@ public sealed class BggImportQueueEndpointsIntegrationTests : IAsyncLifetime
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.OK);
 
-        var result = await response.Content.ReadFromJsonAsync<BggImportQueueEntity>();
+        var result = await response.Content.ReadFromJsonAsync<BggImportQueueEntity>(ApiJsonOptions);
         result.Should().NotBeNull();
         result.BggId.Should().Be(12345);
     }
@@ -456,7 +468,7 @@ public sealed class BggImportQueueEndpointsIntegrationTests : IAsyncLifetime
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.NotFound);
 
-        var problemDetails = await response.Content.ReadFromJsonAsync<Microsoft.AspNetCore.Mvc.ProblemDetails>();
+        var problemDetails = await response.Content.ReadFromJsonAsync<Microsoft.AspNetCore.Mvc.ProblemDetails>(ApiJsonOptions);
         problemDetails.Should().NotBeNull();
         problemDetails.Detail.Should().Contain("99999");
     }
@@ -504,7 +516,7 @@ public sealed class BggImportQueueEndpointsIntegrationTests : IAsyncLifetime
         dataLine.Should().StartWith("data: ");
 
         var jsonData = dataLine.Substring(6); // Remove "data: " prefix
-        var sseEvent = System.Text.Json.JsonSerializer.Deserialize<SseQueueEvent>(jsonData);
+        var sseEvent = System.Text.Json.JsonSerializer.Deserialize<SseQueueEvent>(jsonData, ApiJsonOptions);
 
         sseEvent.Should().NotBeNull();
         sseEvent.queued.Should().Be(2); // 2 queued items
@@ -577,7 +589,7 @@ public sealed class BggImportQueueEndpointsIntegrationTests : IAsyncLifetime
         dataLine.Should().NotBeNull();
 
         var jsonData = dataLine.Substring(6);
-        var sseEvent = System.Text.Json.JsonSerializer.Deserialize<SseQueueEvent>(jsonData);
+        var sseEvent = System.Text.Json.JsonSerializer.Deserialize<SseQueueEvent>(jsonData, ApiJsonOptions);
 
         // Assert - Should return max 10 items in items array
         sseEvent.Should().NotBeNull();

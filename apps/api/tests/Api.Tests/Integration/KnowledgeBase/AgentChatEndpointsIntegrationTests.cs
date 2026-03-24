@@ -35,6 +35,15 @@ public sealed class AgentChatEndpointsIntegrationTests : IAsyncLifetime
     private HttpClient _client = null!;
     private Guid _testAgentId;
 
+    /// <summary>
+    /// JSON options matching SseJsonOptions.Default (camelCase, numeric enums).
+    /// SSE endpoints serialize with camelCase property names.
+    /// </summary>
+    private static readonly JsonSerializerOptions SseDeserializeOptions = new()
+    {
+        PropertyNameCaseInsensitive = true
+    };
+
     public AgentChatEndpointsIntegrationTests(SharedTestcontainersFixture fixture)
     {
         _fixture = fixture;
@@ -131,7 +140,7 @@ public sealed class AgentChatEndpointsIntegrationTests : IAsyncLifetime
             if (line.StartsWith("data: ", StringComparison.Ordinal))
             {
                 var json = line["data: ".Length..];
-                var @event = JsonSerializer.Deserialize<RagStreamingEvent>(json);
+                var @event = JsonSerializer.Deserialize<RagStreamingEvent>(json, SseDeserializeOptions);
                 (@event).Should().NotBeNull();
                 events.Add(@event);
             }
@@ -186,7 +195,7 @@ public sealed class AgentChatEndpointsIntegrationTests : IAsyncLifetime
             if (line.StartsWith("data: ", StringComparison.Ordinal))
             {
                 var json = line["data: ".Length..];
-                var @event = JsonSerializer.Deserialize<RagStreamingEvent>(json);
+                var @event = JsonSerializer.Deserialize<RagStreamingEvent>(json, SseDeserializeOptions);
                 (@event).Should().NotBeNull();
                 events.Add(@event);
             }
@@ -197,7 +206,7 @@ public sealed class AgentChatEndpointsIntegrationTests : IAsyncLifetime
         var errorEvent = events.FirstOrDefault(e => e.Type == StreamingEventType.Error);
         errorEvent.Should().NotBeNull("expected at least one Error event in the SSE stream");
 
-        var error = JsonSerializer.Deserialize<StreamingError>(((JsonElement)errorEvent!.Data!).GetRawText());
+        var error = JsonSerializer.Deserialize<StreamingError>(((JsonElement)errorEvent!.Data!).GetRawText(), SseDeserializeOptions);
         error.Should().NotBeNull();
         error.errorCode.Should().Be("AGENT_NOT_FOUND");
     }

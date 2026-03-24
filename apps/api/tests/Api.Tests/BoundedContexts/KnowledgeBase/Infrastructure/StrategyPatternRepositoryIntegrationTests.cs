@@ -471,15 +471,25 @@ public sealed class StrategyPatternRepositoryIntegrationTests : IAsyncLifetime
         phaseParam.Value = "opening";
         command.Parameters.Add(phaseParam);
 
-        var plan = await command.ExecuteScalarAsync(TestCancellationToken);
-        var queryPlan = plan?.ToString() ?? "";
+        // Read ALL EXPLAIN output lines (ExecuteScalar only returns the first line,
+        // which may be a Sort node; the Index Scan appears in child nodes)
+        var queryPlanLines = new List<string>();
+        await using (var reader = await command.ExecuteReaderAsync(TestCancellationToken))
+        {
+            while (await reader.ReadAsync(TestCancellationToken))
+            {
+                queryPlanLines.Add(reader.GetString(0));
+            }
+        }
+        var queryPlan = string.Join("\n", queryPlanLines);
 
         // Re-enable seq scan
         var enableSeqScan = connection.CreateCommand();
         enableSeqScan.CommandText = "SET enable_seqscan = on";
         await enableSeqScan.ExecuteNonQueryAsync(TestCancellationToken);
 
-        // Assert - With seq scan disabled, PostgreSQL must use an index if one exists
+        // Assert - With seq scan disabled, PostgreSQL must use an index if one exists.
+        // The full EXPLAIN output includes child nodes where the Index Scan appears.
         queryPlan.Should().Contain("Index",
             "query plan should use an index when sequential scan is disabled");
 

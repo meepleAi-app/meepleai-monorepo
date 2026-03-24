@@ -128,14 +128,39 @@ internal class PlayRecordRepository : RepositoryBase, IPlayRecordRepository
         await DbContext.PlayRecords.AddAsync(entity, cancellationToken).ConfigureAwait(false);
     }
 
-    public Task UpdateAsync(PlayRecord record, CancellationToken cancellationToken = default)
+    public async Task UpdateAsync(PlayRecord record, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(record);
         CollectDomainEvents(record);
 
         var entity = MapToPersistence(record);
+
+        // Load existing entity to determine which child entities are new vs existing.
+        // Using Update(entity) on a detached entity graph marks ALL children as Modified,
+        // causing DbUpdateConcurrencyException for newly added children (0 rows affected).
+        var existingPlayerIds = await DbContext.RecordPlayers
+            .Where(p => p.PlayRecordId == record.Id)
+            .Select(p => p.Id)
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        var existingPlayerIdSet = new HashSet<Guid>(existingPlayerIds);
+
+        // Attach root entity as Modified
         DbContext.PlayRecords.Update(entity);
-        return Task.CompletedTask;
+
+        // Fix state for child entities: new players should be Added, not Modified
+        foreach (var player in entity.Players)
+        {
+            if (!existingPlayerIdSet.Contains(player.Id))
+            {
+                DbContext.Entry(player).State = Microsoft.EntityFrameworkCore.EntityState.Added;
+                foreach (var score in player.Scores)
+                {
+                    DbContext.Entry(score).State = Microsoft.EntityFrameworkCore.EntityState.Added;
+                }
+            }
+        }
     }
 
     public Task DeleteAsync(PlayRecord record, CancellationToken cancellationToken = default)

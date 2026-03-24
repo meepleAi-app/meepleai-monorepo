@@ -741,13 +741,15 @@ public sealed class SharedTestcontainersFixture : IAsyncLifetime
                 builder.Database = databaseName;
                 builder.Timeout = 60; // Increase timeout to 60s for long-running integration tests
                 builder.CommandTimeout = 60;
-                // CI service containers use default max_connections=100 (can't be changed),
-                // while testcontainers set max_connections=500.
-                // MaxPoolSize=2 keeps us within 100: 4 threads × ~10 concurrent classes × 2 pool = 80 connections
+                // CI: max_connections=100 (can't change in GH Actions service containers).
+                // 33+ test classes accumulate pools faster than xUnit releases them.
+                // MaxPoolSize=1 × 33 = 33 connections max. Local testcontainers: max_connections=500.
                 var isExternalPostgres = !string.IsNullOrWhiteSpace(
                     Environment.GetEnvironmentVariable(TestcontainersConfiguration.EnvPostgresConnectionString));
-                builder.MaxPoolSize = isExternalPostgres ? 2 : 5;
-                builder.MinPoolSize = 1;
+                builder.MaxPoolSize = isExternalPostgres ? 1 : 5;
+                builder.MinPoolSize = 0;
+                builder.ConnectionIdleLifetime = isExternalPostgres ? 5 : 30;
+                builder.ConnectionPruningInterval = isExternalPostgres ? 3 : 10;
 
                 // Issue #2577: Log successful database creation with timing
                 var duration = (DateTime.UtcNow - startTime).TotalSeconds;

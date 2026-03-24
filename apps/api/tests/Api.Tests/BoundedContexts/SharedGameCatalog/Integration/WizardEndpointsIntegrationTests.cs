@@ -88,12 +88,14 @@ public sealed class WizardEndpointsIntegrationTests : IAsyncLifetime
 
                     services.AddScoped(_ => mockBggApi.Object);
 
-                    // Mock authorization - allow all for testing
+                    // Mock authorization - allow all for testing (both default and named policies)
+                    var allowAllPolicy = new Microsoft.AspNetCore.Authorization.AuthorizationPolicyBuilder()
+                        .RequireAssertion(_ => true)
+                        .Build();
                     services.AddAuthorization(options =>
                     {
-                        options.DefaultPolicy = new Microsoft.AspNetCore.Authorization.AuthorizationPolicyBuilder()
-                            .RequireAssertion(_ => true)
-                            .Build();
+                        options.DefaultPolicy = allowAllPolicy;
+                        options.AddPolicy("AdminOrEditorPolicy", allowAllPolicy);
                     });
                 });
             });

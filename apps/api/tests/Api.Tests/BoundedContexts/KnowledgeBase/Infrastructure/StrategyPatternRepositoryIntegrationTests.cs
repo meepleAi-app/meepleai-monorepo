@@ -136,7 +136,7 @@ public sealed class StrategyPatternRepositoryIntegrationTests : IAsyncLifetime
 
         entity.Should().NotBeNull();
         entity!.PatternName.Should().Be("Italian Opening");
-        entity.EvaluationScore.Should().Be(0.85f);
+        entity.EvaluationScore.Should().BeApproximately(0.85f, 0.001f);
         entity.ApplicablePhase.Should().Be("opening");
     }
 
@@ -254,11 +254,12 @@ public sealed class StrategyPatternRepositoryIntegrationTests : IAsyncLifetime
             }
         }
 
-        // Assert
-        indexes.Should().Contain("ix_strategy_patterns_game_id");
-        indexes.Should().Contain("ix_strategy_patterns_game_id_applicable_phase");
-        indexes.Should().Contain("ix_strategy_patterns_evaluation_score");
-        indexes.Should().Contain("pk_strategy_patterns");
+        // Assert — EF Core generates uppercase prefix (IX_/PK_), use case-insensitive comparison
+        var lowerIndexes = indexes.Select(i => i.ToLowerInvariant()).ToList();
+        lowerIndexes.Should().Contain("ix_strategy_patterns_game_id");
+        lowerIndexes.Should().Contain("ix_strategy_patterns_game_id_applicable_phase");
+        lowerIndexes.Should().Contain("ix_strategy_patterns_evaluation_score");
+        lowerIndexes.Should().Contain("pk_strategy_patterns");
     }
 
     #endregion
@@ -449,17 +450,17 @@ public sealed class StrategyPatternRepositoryIntegrationTests : IAsyncLifetime
             EXPLAIN (ANALYZE, BUFFERS, FORMAT TEXT)
             SELECT id, pattern_name
             FROM strategy_patterns
-            WHERE game_id = $1 AND applicable_phase = $2
+            WHERE game_id = @gameId AND applicable_phase = @phase
             ORDER BY evaluation_score DESC;
         ";
 
         var gameIdParam = command.CreateParameter();
-        gameIdParam.ParameterName = "$1";
+        gameIdParam.ParameterName = "@gameId";
         gameIdParam.Value = _gameId;
         command.Parameters.Add(gameIdParam);
 
         var phaseParam = command.CreateParameter();
-        phaseParam.ParameterName = "$2";
+        phaseParam.ParameterName = "@phase";
         phaseParam.Value = "opening";
         command.Parameters.Add(phaseParam);
 

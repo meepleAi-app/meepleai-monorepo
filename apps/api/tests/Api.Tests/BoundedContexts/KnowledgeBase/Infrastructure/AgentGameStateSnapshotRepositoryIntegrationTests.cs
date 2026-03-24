@@ -401,7 +401,7 @@ public sealed class AgentGameStateSnapshotRepositoryIntegrationTests : IAsyncLif
 
     private static float[] CreateNormalizedEmbedding(float baseValue)
     {
-        var embedding = new float[1536];
+        var embedding = new float[1024];
         for (int i = 0; i < embedding.Length; i++)
         {
             embedding[i] = baseValue + (i % 10) * 0.01f;
@@ -444,12 +444,13 @@ public sealed class AgentGameStateSnapshotRepositoryIntegrationTests : IAsyncLif
             }
         }
 
-        // Assert
-        indexes.Should().Contain("ix_agent_game_state_snapshots_game_id");
-        indexes.Should().Contain("ix_agent_game_state_snapshots_agent_session_id");
-        indexes.Should().Contain("ix_agent_game_state_snapshots_game_id_turn_number");
-        indexes.Should().Contain("ix_agent_game_state_snapshots_created_at");
-        indexes.Should().Contain("pk_agent_game_state_snapshots");
+        // Assert — EF Core generates uppercase prefix (IX_/PK_), use case-insensitive comparison
+        var lowerIndexes = indexes.Select(i => i.ToLowerInvariant()).ToList();
+        lowerIndexes.Should().Contain("ix_agent_game_state_snapshots_game_id");
+        lowerIndexes.Should().Contain("ix_agent_game_state_snapshots_agent_session_id");
+        lowerIndexes.Should().Contain("ix_agent_game_state_snapshots_game_id_turn_number");
+        lowerIndexes.Should().Contain("ix_agent_game_state_snapshots_created_at");
+        lowerIndexes.Should().Contain("pk_agent_game_state_snapshots");
     }
 
     #endregion

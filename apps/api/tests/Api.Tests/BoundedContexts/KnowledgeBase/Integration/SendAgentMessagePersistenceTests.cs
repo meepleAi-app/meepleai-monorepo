@@ -146,7 +146,7 @@ public sealed class SendAgentMessagePersistenceTests : IAsyncLifetime
         _mockLlmService
             .Setup(s => s.GenerateCompletionStreamAsync(
                 It.IsAny<string>(), It.IsAny<string>(), It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()))
-            .Returns(ToAsyncEnumerable(chunks.Select(c => new StreamChunk(c))));
+            .Returns(() => ToAsyncEnumerable(chunks.Select(c => new StreamChunk(c))));
     }
 
     private static async IAsyncEnumerable<T> ToAsyncEnumerable<T>(IEnumerable<T> items)

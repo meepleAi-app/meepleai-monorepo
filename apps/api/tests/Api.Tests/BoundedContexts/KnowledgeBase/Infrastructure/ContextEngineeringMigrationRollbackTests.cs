@@ -56,12 +56,7 @@ public sealed class ContextEngineeringMigrationRollbackTests : IAsyncLifetime
     /// The migration that creates Context Engineering tables.
     /// All 3 tables are part of the initial schema creation.
     /// </summary>
-    private const string InitialCreateMigration = "20260316055120_Beta0";
-
-    /// <summary>
-    /// A migration after Beta0, used for partial rollback testing.
-    /// </summary>
-    private const string PostInitialMigration = "20260316105334_AddServiceHealthStates";
+    private const string InitialCreateMigration = "20260322121729_InitialCreate";
 
     public ContextEngineeringMigrationRollbackTests(SharedTestcontainersFixture fixture)
     {
@@ -347,26 +342,13 @@ public sealed class ContextEngineeringMigrationRollbackTests : IAsyncLifetime
 
     #region Test Scenario 3: Partial Rollback
 
-    [Fact]
+    [Fact(Skip = "Only one migration exists (InitialCreate) — partial rollback to intermediate point not applicable")]
     public async Task PartialRollback_ToPostInitialMigration_PreservesContextEngineeringTables()
     {
-        // Arrange - Apply all migrations
-        using var scope = _serviceProvider!.CreateScope();
-        using var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
-
-        await dbContext.Database.MigrateAsync(TestCancellationToken);
-
-        var allMigrations = (await dbContext.Database.GetAppliedMigrationsAsync(TestCancellationToken)).ToList();
-        allMigrations.Count.Should().BeGreaterThan(1, "should have multiple migrations applied");
-
-        // Act - Rollback to just after InitialCreate (which contains CE tables)
-        var migrator = dbContext.GetInfrastructure().GetRequiredService<IMigrator>();
-        await migrator.MigrateAsync(PostInitialMigration, TestCancellationToken);
-
-        // Assert - Context Engineering tables should still exist
-        var tables = await GetExistingTablesAsync(dbContext, ContextEngineeringTables);
-        tables.Should().BeEquivalentTo(ContextEngineeringTables,
-            "Context Engineering tables should be preserved when rolling back to a point after InitialCreate");
+        // This test requires multiple migrations to validate partial rollback.
+        // Currently only 20260322121729_InitialCreate exists.
+        // Re-enable when a second migration is added.
+        await Task.CompletedTask;
     }
 
     [Fact]

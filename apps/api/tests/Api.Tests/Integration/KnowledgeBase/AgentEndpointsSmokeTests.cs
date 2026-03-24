@@ -69,6 +69,14 @@ public sealed class AgentEndpointsSmokeTests : IAsyncLifetime
                         .ReturnsAsync(embeddingResult);
 
                     services.AddScoped<Api.Services.IEmbeddingService>(_ => mockEmbedding.Object);
+
+                    // Enable public registration so /auth/register doesn't return 403
+                    services.RemoveAll(typeof(Api.Services.IConfigurationService));
+                    var mockConfig = new Mock<Api.Services.IConfigurationService>();
+                    mockConfig
+                        .Setup(c => c.GetValueAsync<bool?>("Registration:PublicEnabled", It.IsAny<bool?>(), It.IsAny<string?>()))
+                        .ReturnsAsync(true);
+                    services.AddSingleton<Api.Services.IConfigurationService>(mockConfig.Object);
                 });
             });
 

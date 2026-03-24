@@ -5,6 +5,7 @@ using Api.BoundedContexts.GameManagement.Domain.Repositories;
 using Api.BoundedContexts.GameManagement.Domain.ValueObjects;
 using Api.BoundedContexts.GameManagement.Infrastructure.Persistence;
 using Api.Infrastructure;
+using Api.Infrastructure.Entities;
 using Api.Middleware.Exceptions;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Api.Tests.Constants;
@@ -84,7 +85,7 @@ public sealed class PlayRecordCommandTests : IAsyncLifetime
     {
         // Arrange
         var game = await CreateTestGameAsync();
-        var userId = Guid.NewGuid();
+        var userId = await SeedTestUserAsync();
         var command = new CreatePlayRecordCommand(
             userId,
             game.Id,
@@ -110,7 +111,7 @@ public sealed class PlayRecordCommandTests : IAsyncLifetime
     public async Task CreatePlayRecordCommand_FreeForm_CreatesSuccessfully()
     {
         // Arrange
-        var userId = Guid.NewGuid();
+        var userId = await SeedTestUserAsync();
         var scoringDimensions = new List<string> { "points", "ranking" };
         var dimensionUnits = new Dictionary<string, string>
         {
@@ -343,10 +344,28 @@ public sealed class PlayRecordCommandTests : IAsyncLifetime
         return game;
     }
 
+    /// <summary>
+    /// Seeds a UserEntity in the database to satisfy FK constraints on play_records.CreatedByUserId.
+    /// </summary>
+    private async Task<Guid> SeedTestUserAsync(Guid? userId = null)
+    {
+        var id = userId ?? Guid.NewGuid();
+        DbContext.Set<UserEntity>().Add(new UserEntity
+        {
+            Id = id,
+            Email = $"test-{id:N}@meepleai.dev",
+            DisplayName = "Test User",
+            Role = "user",
+            CreatedAt = DateTime.UtcNow
+        });
+        await DbContext.SaveChangesAsync(TestCancellationToken);
+        return id;
+    }
+
     private async Task<Guid> CreateTestRecordAsync()
     {
         var game = await CreateTestGameAsync();
-        var userId = Guid.NewGuid();
+        var userId = await SeedTestUserAsync();
 
         var command = new CreatePlayRecordCommand(
             userId,

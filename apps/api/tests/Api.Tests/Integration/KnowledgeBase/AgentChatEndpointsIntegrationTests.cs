@@ -60,6 +60,14 @@ public sealed class AgentChatEndpointsIntegrationTests : IAsyncLifetime
                             It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()))
                         .Returns(GetMockStreamChunks());
                     services.AddScoped<ILlmService>(_ => mockLlmService.Object);
+
+                    // Enable public registration so /auth/register doesn't return 403
+                    services.RemoveAll(typeof(IConfigurationService));
+                    var mockConfig = new Mock<IConfigurationService>();
+                    mockConfig
+                        .Setup(c => c.GetValueAsync<bool?>("Registration:PublicEnabled", It.IsAny<bool?>(), It.IsAny<string?>()))
+                        .ReturnsAsync(true);
+                    services.AddSingleton<IConfigurationService>(mockConfig.Object);
                 });
             });
 
@@ -101,7 +109,7 @@ public sealed class AgentChatEndpointsIntegrationTests : IAsyncLifetime
     {
         // Arrange
         var sessionToken = await CreateAuthenticatedSessionAsync();
-        _client.DefaultRequestHeaders.Add("X-Session-Token", sessionToken);
+        _client.DefaultRequestHeaders.Add("Cookie", sessionToken);
 
         var request = new { Message = "What are the rules for Catan?" };
 
@@ -156,7 +164,7 @@ public sealed class AgentChatEndpointsIntegrationTests : IAsyncLifetime
     {
         // Arrange
         var sessionToken = await CreateAuthenticatedSessionAsync();
-        _client.DefaultRequestHeaders.Add("X-Session-Token", sessionToken);
+        _client.DefaultRequestHeaders.Add("Cookie", sessionToken);
 
         var nonExistentAgentId = Guid.NewGuid();
         var request = new { Message = "Test question" };
@@ -197,7 +205,7 @@ public sealed class AgentChatEndpointsIntegrationTests : IAsyncLifetime
     {
         // Arrange
         var sessionToken = await CreateAuthenticatedSessionAsync();
-        _client.DefaultRequestHeaders.Add("X-Session-Token", sessionToken);
+        _client.DefaultRequestHeaders.Add("Cookie", sessionToken);
 
         var request = new { Message = "" };
 
@@ -215,7 +223,7 @@ public sealed class AgentChatEndpointsIntegrationTests : IAsyncLifetime
     {
         // Arrange
         var sessionToken = await CreateAuthenticatedSessionAsync();
-        _client.DefaultRequestHeaders.Add("X-Session-Token", sessionToken);
+        _client.DefaultRequestHeaders.Add("Cookie", sessionToken);
 
         var longMessage = new string('x', 2001);
         var request = new { Message = longMessage };
@@ -233,7 +241,7 @@ public sealed class AgentChatEndpointsIntegrationTests : IAsyncLifetime
     {
         // Arrange
         var sessionToken = await CreateAuthenticatedSessionAsync();
-        _client.DefaultRequestHeaders.Add("X-Session-Token", sessionToken);
+        _client.DefaultRequestHeaders.Add("Cookie", sessionToken);
 
         var request = new { Message = "Test question" };
 
@@ -260,19 +268,10 @@ public sealed class AgentChatEndpointsIntegrationTests : IAsyncLifetime
         var registerResponse = await _client.PostAsJsonAsync("/api/v1/auth/register", registerPayload);
         registerResponse.StatusCode.Should().Be(HttpStatusCode.OK);
 
-        // Extract session token from Set-Cookie header
-        var setCookieHeader = registerResponse.Headers.GetValues("Set-Cookie").First();
-        var token = ExtractSessionTokenFromCookie(setCookieHeader);
-        return token;
-    }
-
-    private static string ExtractSessionTokenFromCookie(string setCookieHeader)
-    {
-        // Parse: meepleai_session=TOKEN; Path=/; HttpOnly; SameSite=Lax
-        var parts = setCookieHeader.Split(';');
-        var cookiePart = parts[0];
-        var tokenPart = cookiePart.Split('=')[1];
-        return tokenPart;
+        // Extract cookie value (name=value) from Set-Cookie header for use in Cookie header
+        var setCookieHeader = registerResponse.Headers.GetValues("Set-Cookie")
+            .First(c => c.StartsWith("meepleai_session=", StringComparison.Ordinal));
+        return setCookieHeader.Split(';')[0]; // Return "meepleai_session=TOKEN"
     }
 
     private static async IAsyncEnumerable<StreamChunk> GetMockStreamChunks()

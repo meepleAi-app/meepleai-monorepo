@@ -1,3 +1,6 @@
+using Api.BoundedContexts.GameManagement.Domain.Entities;
+using Api.BoundedContexts.GameManagement.Domain.Repositories;
+using Api.BoundedContexts.GameManagement.Domain.ValueObjects;
 using Api.BoundedContexts.KnowledgeBase.Application.Commands;
 using Api.BoundedContexts.KnowledgeBase.Domain.Entities;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
@@ -13,6 +16,7 @@ using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Moq;
 using Xunit;
 
 namespace Api.Tests.Integration.KnowledgeBase;
@@ -49,6 +53,15 @@ public sealed class ArbitroValidationFeedbackTests : IAsyncLifetime
 
         var services = IntegrationServiceCollectionBuilder.CreateBase(_isolatedDbConnectionString);
         services.AddScoped<IArbitroValidationFeedbackRepository, ArbitroValidationFeedbackRepository>();
+
+        // Override the bare IGameSessionRepository mock from CreateBase() with one that returns a valid GameSession.
+        // SubmitValidationFeedbackCommandHandler calls GetByIdAsync and throws NotFoundException if null.
+        var gameSessionMock = new Mock<IGameSessionRepository>();
+        gameSessionMock
+            .Setup(r => r.GetByIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((Guid id, CancellationToken _) =>
+                new GameSession(id, Guid.NewGuid(), new[] { new SessionPlayer("Player1", 1) }));
+        services.AddScoped<IGameSessionRepository>(_ => gameSessionMock.Object);
 
         _serviceProvider = services.BuildServiceProvider();
         _dbContext = _serviceProvider.GetRequiredService<MeepleAiDbContext>();

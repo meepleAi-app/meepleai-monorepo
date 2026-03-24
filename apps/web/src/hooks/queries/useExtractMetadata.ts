@@ -34,7 +34,7 @@ export type UseExtractMetadataOptions = Omit<
  *   mutate({ documentId: uploadedPdf.id }, {
  *     onSuccess: (metadata) => {
  *       console.log('Extracted:', metadata.title);
- *       console.log('Confidence:', metadata.confidence);
+ *       console.log('Confidence:', metadata.confidenceScore);
  *     },
  *     onError: (error) => console.error('Failed:', error),
  *   });

@@ -291,7 +291,7 @@ export function Step4EnrichAndConfirm({ onComplete }: Step4EnrichAndConfirmProps
     setCustomValues(prev => ({ ...prev, [field]: value }));
 
     // Numeric fields need type coercion
-    const numericFields = ['yearPublished', 'minPlayers', 'maxPlayers', 'playTime', 'minAge'];
+    const numericFields = ['year', 'minPlayers', 'maxPlayers', 'playingTime', 'minAge'];
     const coercedValue: string | number = numericFields.includes(field)
       ? Number(value) || 0
       : value;
@@ -467,10 +467,10 @@ export function Step4EnrichAndConfirm({ onComplete }: Step4EnrichAndConfirmProps
 
           <div className="space-y-3">
             {renderConflictField('title', 'Game Title')}
-            {renderConflictField('yearPublished', 'Year Published')}
+            {renderConflictField('year', 'Year Published')}
             {renderConflictField('minPlayers', 'Min Players')}
             {renderConflictField('maxPlayers', 'Max Players')}
-            {renderConflictField('playTime', 'Play Time (minutes)')}
+            {renderConflictField('playingTime', 'Play Time (minutes)')}
             {renderConflictField('minAge', 'Minimum Age')}
             {renderConflictField('description', 'Description')}
           </div>

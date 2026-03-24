@@ -1,14 +1,14 @@
 /**
- * Gaming Hub Dashboard - Issue #4584
- * Epic #4575: Gaming Hub Dashboard - Phase 2
+ * Gaming Hub Dashboard
  *
  * Authenticated user dashboard with gaming-focused hub.
- * Uses DashboardRenderer (user-dashboard-engine) which fetches
- * data via React Query hooks internally.
+ * Uses DashboardClient with HeroBanner, QuickActionsRow,
+ * and MeepleCard-based game sections.
  */
 
 import { RequireRole } from '@/components/auth/RequireRole';
-import { DashboardRenderer } from '@/components/dashboard';
+
+import { DashboardClient } from './dashboard-client';
 
 import type { Metadata } from 'next';
 
@@ -28,7 +28,7 @@ export const dynamic = 'force-dynamic';
 export default function GamingHubDashboardPage() {
   return (
     <RequireRole allowedRoles={['User', 'Editor', 'Admin']}>
-      <DashboardRenderer />
+      <DashboardClient />
     </RequireRole>
   );
 }

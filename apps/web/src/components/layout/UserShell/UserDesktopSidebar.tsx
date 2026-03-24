@@ -69,6 +69,8 @@ export function UserDesktopSidebar() {
     <aside
       className={cn(
         'hidden lg:flex flex-col',
+        'fixed top-12 left-0 z-30',
+        'h-[calc(100dvh-48px)]',
         'w-14 hover:w-[180px]',
         'transition-[width] duration-300 ease-in-out',
         'border-r border-border/40 bg-background',

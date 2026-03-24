@@ -21,7 +21,7 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
+} from '@/components/ui/overlays/select';
 import { api } from '@/lib/api';
 
 const AVAILABLE_ROLES = ['User', 'Editor', 'Admin'] as const;

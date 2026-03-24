@@ -9,8 +9,8 @@
 
 import { Plus, Loader2, Check } from 'lucide-react';
 
-import { Button } from '@/components/ui/button';
 import { MeepleCard } from '@/components/ui/data-display/meeple-card';
+import { Button } from '@/components/ui/primitives/button';
 import type { BggGameSummary } from '@/lib/api/clients/gameNightBggClient';
 
 // ============================================================================

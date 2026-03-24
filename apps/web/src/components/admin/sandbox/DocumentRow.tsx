@@ -3,7 +3,6 @@
 import { Loader2, RotateCcw, Trash2, FileText } from 'lucide-react';
 
 import type { PdfDocumentSummary } from '@/components/admin/sandbox/contexts/SourceContext';
-import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/data-display/badge';
 import {
   AlertDialog,
@@ -16,6 +15,7 @@ import {
   AlertDialogAction,
   AlertDialogCancel,
 } from '@/components/ui/overlays/alert-dialog-primitives';
+import { Button } from '@/components/ui/primitives/button';
 
 interface DocumentRowProps {
   doc: PdfDocumentSummary;

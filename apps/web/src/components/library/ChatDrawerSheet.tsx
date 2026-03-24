@@ -11,8 +11,8 @@
 import { useQuery } from '@tanstack/react-query';
 import { Loader2, MessageCircle, Plus } from 'lucide-react';
 
-import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/navigation/sheet';
+import { Button } from '@/components/ui/primitives/button';
 import { api } from '@/lib/api';
 import { cn } from '@/lib/utils';
 

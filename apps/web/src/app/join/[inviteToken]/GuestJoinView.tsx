@@ -16,8 +16,8 @@ import { Loader2, Users } from 'lucide-react';
 import { GuestScoreProposal } from '@/components/session/live/GuestScoreProposal';
 import { ScoreBoard } from '@/components/session/live/ScoreBoard';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/primitives/button';
+import { Input } from '@/components/ui/primitives/input';
 import { useLiveSessionStore } from '@/lib/stores/live-session-store';
 
 // ─── Constants ────────────────────────────────────────────────────────────────

@@ -5,7 +5,7 @@ import { useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/ui/primitives/button';
 import { api } from '@/lib/api';
 import type { AuditLogEntry } from '@/lib/api/schemas/admin.schemas';
 

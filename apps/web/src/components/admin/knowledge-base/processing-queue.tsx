@@ -26,7 +26,7 @@ import {
   type ProcessingJobDto,
 } from '@/app/admin/(dashboard)/knowledge-base/queue/lib/queue-api';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/ui/primitives/button';
 
 // ── Status Config ──────────────────────────────────────────────────────
 

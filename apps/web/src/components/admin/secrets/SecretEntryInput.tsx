@@ -4,7 +4,7 @@ import { useState } from 'react';
 
 import { AlertTriangle, Eye, EyeOff } from 'lucide-react';
 
-import { Input } from '@/components/ui/input';
+import { Input } from '@/components/ui/primitives/input';
 import { cn } from '@/lib/utils';
 
 interface SecretEntryInputProps {

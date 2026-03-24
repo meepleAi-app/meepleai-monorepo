@@ -5,6 +5,7 @@ using Api.BoundedContexts.KnowledgeBase.Application.Commands.Decisore;
 using Api.Extensions;
 using Api.Filters;
 using Api.Infrastructure.Serialization;
+using Api.Middleware;
 using Api.Models;
 using MediatR;
 
@@ -46,8 +47,8 @@ internal static class DecisoreAgentEndpoints
             logger.LogInformation(
                 "Decisore SSE analyze request: session={Session}, player={Player}, depth={Depth}",
                 request.GameSessionId,
-                request.PlayerName,
-                request.AnalysisDepth);
+                LogValueSanitizer.Sanitize(request.PlayerName),
+                LogValueSanitizer.Sanitize(request.AnalysisDepth));
 
             var command = new AnalyzeGameStateCommand(
                 GameSessionId: request.GameSessionId,

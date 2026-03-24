@@ -145,13 +145,13 @@ public sealed class AlertConfigurationTests
     #region UpdateValue Tests
 
     [Fact]
-    public void UpdateValue_WithValidValue_UpdatesConfiguration()
+    public async Task UpdateValue_WithValidValue_UpdatesConfiguration()
     {
         // Arrange
         var config = AlertConfiguration.Create(
             "alerts.enabled", "false", ConfigCategory.Global, "admin1");
         var originalUpdatedAt = config.UpdatedAt;
-        Thread.Sleep(10);
+        await Task.Delay(50);
 
         // Act
         config.UpdateValue("true", "admin2");
@@ -214,13 +214,13 @@ public sealed class AlertConfigurationTests
     }
 
     [Fact]
-    public void Encrypt_UpdatesTimestamp()
+    public async Task Encrypt_UpdatesTimestamp()
     {
         // Arrange
         var config = AlertConfiguration.Create(
             "secrets.api_key", "plain-value", ConfigCategory.Global, "admin");
         var originalUpdatedAt = config.UpdatedAt;
-        Thread.Sleep(10);
+        await Task.Delay(50);
 
         // Act
         config.Encrypt("encrypted-value", "security-admin");
@@ -250,14 +250,14 @@ public sealed class AlertConfigurationTests
     }
 
     [Fact]
-    public void Decrypt_UpdatesTimestamp()
+    public async Task Decrypt_UpdatesTimestamp()
     {
         // Arrange
         var config = AlertConfiguration.Create(
             "secrets.api_key", "plain-value", ConfigCategory.Global, "admin");
         config.Encrypt("encrypted-value", "security-admin");
         var originalUpdatedAt = config.UpdatedAt;
-        Thread.Sleep(10);
+        await Task.Delay(50);
 
         // Act
         config.Decrypt("decrypted-value", "security-admin");

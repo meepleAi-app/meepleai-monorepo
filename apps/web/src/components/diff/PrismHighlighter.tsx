@@ -30,7 +30,13 @@ export function PrismHighlighter({
         component: 'PrismHighlighter',
         metadata: { error: error instanceof Error ? error.message : String(error), language },
       });
-      return code; // Fallback to plain text
+      // WEB-03: HTML-escape fallback to prevent XSS when set via dangerouslySetInnerHTML
+      return code
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
     }
   }, [code, language]);
 

@@ -1,5 +1,6 @@
 using Api.BoundedContexts.Authentication.Domain.Enums;
 using Api.BoundedContexts.Authentication.Domain.Repositories;
+using Api.Infrastructure.Security;
 using Api.Middleware.Exceptions;
 using Api.Services;
 using Api.SharedKernel.Application.Interfaces;
@@ -60,7 +61,7 @@ internal class RejectAccessRequestCommandHandler : ICommandHandler<RejectAccessR
 #pragma warning disable CA1031 // Do not catch general exception types
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Failed to send rejection email to {Email}", accessRequest.Email);
+            _logger.LogWarning(ex, "Failed to send rejection email to {Email}", DataMasking.MaskEmail(accessRequest.Email));
         }
 #pragma warning restore CA1031
 

@@ -37,9 +37,10 @@ public sealed class GetAgentDefinitionStatsQueryHandlerTests
             AgentDefinitionEntity.Create("Agent2", "Desc2", AgentType.CitationAgent, AgentDefinitionConfig.Default()),
             AgentDefinitionEntity.Create("Agent3", "Desc3", AgentType.RagAgent, AgentDefinitionConfig.Default())
         };
-        definitions[0].Activate(); // Create() now defaults to inactive
+        // Create() sets IsActive=false; activate the first two so we have 2 active + 1 inactive
+        definitions[0].Activate();
         definitions[1].Activate();
-        // definitions[2] stays inactive (Draft default)
+        // definitions[2] remains inactive (default from Create)
 
         _mockRepository
             .Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
@@ -64,9 +65,9 @@ public sealed class GetAgentDefinitionStatsQueryHandlerTests
     {
         // Arrange
         var activeAgent = AgentDefinitionEntity.Create("Active", "Desc", AgentType.RagAgent, AgentDefinitionConfig.Default());
-        activeAgent.Activate(); // Create() now defaults to inactive
+        activeAgent.Activate(); // Create() defaults to inactive; explicitly activate
         var inactiveAgent = AgentDefinitionEntity.Create("Inactive", "Desc", AgentType.RagAgent, AgentDefinitionConfig.Default());
-        // inactiveAgent stays inactive (Draft default)
+        // inactiveAgent is already inactive from Create() — no need to call Deactivate()
 
         _mockRepository
             .Setup(r => r.GetAllActiveAsync(It.IsAny<CancellationToken>()))

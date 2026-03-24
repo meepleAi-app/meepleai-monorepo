@@ -11,12 +11,11 @@ import React, { useState } from 'react';
 import { format } from 'date-fns';
 import { Calendar as CalendarIcon, X } from 'lucide-react';
 
-import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
-import { Label } from '@/components/ui/label';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Button } from '@/components/ui/primitives/button';
+import { Label } from '@/components/ui/primitives/label';
 import { cn } from '@/lib/utils';
-
 
 import type { DateRangeFilter as DateRangeFilterConfig } from '../../entity-list-view.types';
 import type { DateRange } from 'react-day-picker';
@@ -27,17 +26,11 @@ export interface DateRangeFilterProps<T> {
   onChange: (value: { start: Date; end: Date } | undefined) => void;
 }
 
-export function DateRangeFilter<T>({
-  filter,
-  value,
-  onChange,
-}: DateRangeFilterProps<T>) {
+export function DateRangeFilter<T>({ filter, value, onChange }: DateRangeFilterProps<T>) {
   const [isOpen, setIsOpen] = useState(false);
 
   // Convert to react-day-picker DateRange format
-  const dateRange: DateRange | undefined = value
-    ? { from: value.start, to: value.end }
-    : undefined;
+  const dateRange: DateRange | undefined = value ? { from: value.start, to: value.end } : undefined;
 
   const handleSelect = (range: DateRange | undefined) => {
     if (range?.from && range?.to) {
@@ -71,9 +64,7 @@ export function DateRangeFilter<T>({
         )}
       </div>
 
-      {filter.description && (
-        <p className="text-xs text-muted-foreground">{filter.description}</p>
-      )}
+      {filter.description && <p className="text-xs text-muted-foreground">{filter.description}</p>}
 
       <Popover open={isOpen} onOpenChange={setIsOpen}>
         <PopoverTrigger asChild>

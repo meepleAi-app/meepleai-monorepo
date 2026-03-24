@@ -6,7 +6,7 @@ import { Download } from 'lucide-react';
 
 import { ActivityFilters } from '@/components/admin/users/activity-filters';
 import { ActivityTable, getDateRange } from '@/components/admin/users/activity-table';
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/ui/primitives/button';
 import { api } from '@/lib/api';
 
 export default function UserActivityPage() {

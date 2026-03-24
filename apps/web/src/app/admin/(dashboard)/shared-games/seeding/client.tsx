@@ -5,7 +5,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AlertCircleIcon, DownloadIcon, RefreshCwIcon, SproutIcon } from 'lucide-react';
 
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/data-display/card';
 import {
   Table,
@@ -15,14 +14,15 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/data-display/table';
-import { Checkbox } from '@/components/ui/primitives/checkbox';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
+} from '@/components/ui/overlays/select';
+import { Button } from '@/components/ui/primitives/button';
+import { Checkbox } from '@/components/ui/primitives/checkbox';
 import { api } from '@/lib/api';
 import type { SeedingGameDto } from '@/lib/api/schemas/seeding.schemas';
 

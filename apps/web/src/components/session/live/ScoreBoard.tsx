@@ -12,7 +12,7 @@
 import { CheckCircle, Crown, Minus, Plus, XCircle } from 'lucide-react';
 
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/ui/primitives/button';
 import { useSessionScores } from '@/lib/domain-hooks/useSessionScores';
 import { useSignalRSession } from '@/lib/domain-hooks/useSignalrSession';
 import { logger } from '@/lib/logger';

@@ -20,8 +20,8 @@ import { useRouter, useSearchParams } from 'next/navigation';
 
 import { MeepleResumeSessionCard } from '@/components/session/MeepleResumeSessionCard';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/primitives/button';
+import { Input } from '@/components/ui/primitives/input';
 import { api } from '@/lib/api';
 import type { LiveSessionSummaryDto } from '@/lib/api/schemas/live-sessions.schemas';
 import type { SessionSummaryDto } from '@/lib/api/schemas/session-tracking.schemas';

@@ -24,9 +24,9 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { toast } from 'sonner';
 
-import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/data-display/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/data-display/card';
+import { Button } from '@/components/ui/primitives/button';
 import { api } from '@/lib/api';
 import { type RecentlyProcessedDocument } from '@/lib/api/clients/sharedGamesClient';
 

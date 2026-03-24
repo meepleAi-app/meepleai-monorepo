@@ -13,7 +13,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/ui/primitives/button';
 import { useRulebookUpload } from '@/lib/domain-hooks/use-rulebook-upload';
 
 interface RulebookInfo {

@@ -187,8 +187,11 @@ jobs:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: testpass
           POSTGRES_DB: meepleai_test
-        # Pool fix: MaxPoolSize=20 per test DB → ~80 connections with 4 threads
-        # --shm-size=256mb for shared memory
+        # Fix: Default max_connections=100 causes "too many clients" with 4 parallel test threads.
+        # Each shard runs ~35 test classes, each with its own connection pool.
+        # 200 connections provides headroom for parallel execution.
+        # Note: GitHub Actions service containers pass extra options as Docker args,
+        # but postgres command args must go after the image entrypoint.
         options: >-
           --health-cmd "pg_isready -U postgres"
           --health-interval 5s
@@ -293,7 +296,7 @@ jobs:
         run: |
           echo "🔧 Verifying PostgreSQL max_connections..."
           psql -h localhost -U postgres -d meepleai_test -c "SHOW max_connections;"
-          echo "✅ Pool fix: MaxPoolSize=20 per test DB, 4 threads → fits within default 100 connections"
+          echo "✅ Default max_connections=100 — connection pools limited via MaxPoolSize in conn strings"
 
       - name: Build
         run: dotnet build --no-restore --configuration Release
@@ -311,7 +314,9 @@ jobs:
           POSTGRES_DB: meepleai_test
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: testpass
-          ConnectionStrings__Postgres: Host=localhost;Port=5432;Database=meepleai_test;Username=postgres;Password=testpass;MaxPoolSize=20;Timeout=30;Command Timeout=60
+          # Fix: Reduced MaxPoolSize from 20 to 5 to prevent "too many clients" (default max_connections=100)
+          # 4 threads × ~10 concurrent test classes × 5 pool = 200 potential, but pools don't all max out
+          ConnectionStrings__Postgres: Host=localhost;Port=5432;Database=meepleai_test;Username=postgres;Password=testpass;MaxPoolSize=5;Timeout=30;Command Timeout=60
           QDRANT_URL: http://localhost:6333
           REDIS_URL: localhost:6379,allowAdmin=true
           OPENROUTER_API_KEY: test-key
@@ -320,7 +325,8 @@ jobs:
           DISABLE_RATE_LIMITING: "true"
           # Issue #CI-Optimization: Pass external service URLs so SharedTestcontainersFixture
           # skips container startup and uses CI service containers directly
-          TEST_POSTGRES_CONNSTRING: Host=localhost;Port=5432;Database=meepleai_test;Username=postgres;Password=testpass;MaxPoolSize=20;Timeout=30;Command Timeout=60
+          # Fix: Reduced MaxPoolSize from 20 to 5 — matches SharedTestcontainersFixture.cs:749
+          TEST_POSTGRES_CONNSTRING: Host=localhost;Port=5432;Database=meepleai_test;Username=postgres;Password=testpass;MaxPoolSize=5;Timeout=30;Command Timeout=60
           TEST_REDIS_CONNSTRING: localhost:6379,allowAdmin=true
         run: |
           echo "🧪 Running integration tests - shard: ${{ matrix.shard.name }} (4 parallel threads)..."

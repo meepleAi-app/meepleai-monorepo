@@ -404,29 +404,133 @@ switch ($Environment) {
     }
 
     # -----------------------------------------------------------------------
-    # STAGING: Interactive prompts, generate htpasswd for basic auth
+    # STAGING: Auto-generate secrets + interactive Traefik basic auth
     # -----------------------------------------------------------------------
     "staging" {
-        Write-Host "[INFO] Staging environment requires interactive configuration." -ForegroundColor Cyan
+        Write-Host "[STEP 1] Generating secure values for staging..." -ForegroundColor Yellow
         Write-Host ""
 
-        # Copy examples and prompt for values
+        $generatedValues = @{}
+
+        # JWT Secrets
+        $generatedValues['JWT_SECRET_KEY'] = New-SecureApiKey -ByteLength 64
+        Write-Host "  [OK] JWT_SECRET_KEY:           $(Mask-Secret $generatedValues['JWT_SECRET_KEY'])" -ForegroundColor Green
+
+        # Database Credentials
+        $generatedValues['POSTGRES_PASSWORD'] = New-SecurePassword -Length 20
+        Write-Host "  [OK] POSTGRES_PASSWORD:        $(Mask-Secret $generatedValues['POSTGRES_PASSWORD'])" -ForegroundColor Green
+
+        # Redis Password
+        $generatedValues['REDIS_PASSWORD'] = New-SecurePassword -Length 20
+        Write-Host "  [OK] REDIS_PASSWORD:           $(Mask-Secret $generatedValues['REDIS_PASSWORD'])" -ForegroundColor Green
+
+        # Embedding Service API Key
+        $generatedValues['EMBEDDING_SERVICE_API_KEY'] = New-SecureApiKey -ByteLength 32
+        Write-Host "  [OK] EMBEDDING_SERVICE_API_KEY: $(Mask-Secret $generatedValues['EMBEDDING_SERVICE_API_KEY'])" -ForegroundColor Green
+
+        # Reranker Service API Key
+        $generatedValues['RERANKER_API_KEY'] = New-SecureApiKey -ByteLength 32
+        Write-Host "  [OK] RERANKER_API_KEY:         $(Mask-Secret $generatedValues['RERANKER_API_KEY'])" -ForegroundColor Green
+
+        # SmolDocling Service API Key
+        $generatedValues['SMOLDOCLING_API_KEY'] = New-SecureApiKey -ByteLength 32
+        Write-Host "  [OK] SMOLDOCLING_API_KEY:      $(Mask-Secret $generatedValues['SMOLDOCLING_API_KEY'])" -ForegroundColor Green
+
+        # Unstructured Service API Key
+        $generatedValues['UNSTRUCTURED_API_KEY'] = New-SecureApiKey -ByteLength 32
+        Write-Host "  [OK] UNSTRUCTURED_API_KEY:     $(Mask-Secret $generatedValues['UNSTRUCTURED_API_KEY'])" -ForegroundColor Green
+
+        # Admin Password
+        $generatedValues['ADMIN_PASSWORD'] = New-SecurePassword -Length 16
+        Write-Host "  [OK] ADMIN_PASSWORD:           $(Mask-Secret $generatedValues['ADMIN_PASSWORD'])" -ForegroundColor Green
+
+        # Monitoring Passwords
+        $generatedValues['GRAFANA_ADMIN_PASSWORD'] = New-SecurePassword -Length 16
+        Write-Host "  [OK] GRAFANA_ADMIN_PASSWORD:   $(Mask-Secret $generatedValues['GRAFANA_ADMIN_PASSWORD'])" -ForegroundColor Green
+
+        $generatedValues['PROMETHEUS_PASSWORD'] = New-SecurePassword -Length 16
+        Write-Host "  [OK] PROMETHEUS_PASSWORD:      $(Mask-Secret $generatedValues['PROMETHEUS_PASSWORD'])" -ForegroundColor Green
+
+        Write-Host ""
+
+        # Create and populate secret files
+        Write-Host "[STEP 2] Creating and populating secret files in $Environment/..." -ForegroundColor Yellow
+        Write-Host ""
+
+        $copied = 0
+        $skipped = 0
+        $updated = 0
+
         foreach ($file in $exampleFiles) {
             $targetName = $file.Name -replace '\.example$', ''
             $targetPath = Join-Path $envDir $targetName
 
+            # Skip traefik.secret — handled separately below
+            if ($targetName -eq 'traefik.secret') { continue }
+
             if (Test-Path $targetPath) {
                 Write-Host "  [SKIP] $targetName (already exists)" -ForegroundColor Yellow
-                continue
-            }
+                $skipped++
+            } else {
+                Copy-Item $file.FullName -Destination $targetPath
 
-            # Copy example as starting point
-            Copy-Item $file.FullName -Destination $targetPath
-            Write-Host "  [OK] Created: $targetName" -ForegroundColor Green
+                $content = Get-Content $targetPath -Raw
+                $replacements = 0
+
+                foreach ($key in $generatedValues.Keys) {
+                    $pattern = "$key=change_me[^\r\n]*"
+                    if ($content -match [regex]::Escape($key)) {
+                        $newLine = "$key=" + $generatedValues[$key]
+                        $content = $content -replace $pattern, $newLine
+                        $replacements++
+                    }
+                }
+
+                Set-Content -Path $targetPath -Value $content -NoNewline
+
+                if ($replacements -gt 0) {
+                    Write-Host "  [OK] Created: $targetName ($replacements auto-generated)" -ForegroundColor Green
+                    $updated++
+                } else {
+                    Write-Host "  [OK] Created: $targetName (no auto-generation)" -ForegroundColor Green
+                }
+
+                $copied++
+            }
         }
 
         Write-Host ""
-        Write-Host "[STEP] Configuring Traefik basic auth for staging..." -ForegroundColor Yellow
+
+        # Save generated values backup
+        if ($SaveGenerated -and $generatedValues.Count -gt 0) {
+            $timestamp = Get-Date -Format 'yyyyMMdd-HHmmss'
+            $backupFile = Join-Path $envDir ".generated-values-$timestamp.txt"
+
+            $backupLines = @()
+            $backupLines += "MeepleAI Generated Secrets ($Environment) - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
+            $backupLines += "=" * 75
+            $backupLines += ""
+            $backupLines += "WARNING: This file contains sensitive credentials!"
+            $backupLines += "  - Store securely (password manager, encrypted volume)"
+            $backupLines += "  - Delete after copying to production vault"
+            $backupLines += ""
+            $backupLines += "=" * 75
+            $backupLines += ""
+
+            foreach ($key in ($generatedValues.Keys | Sort-Object)) {
+                $backupLines += "$key=$($generatedValues[$key])"
+            }
+
+            $backupContent = $backupLines -join "`r`n"
+            Set-Content -Path $backupFile -Value $backupContent
+
+            Write-Host "[BACKUP] Saved to: $Environment/$(Split-Path $backupFile -Leaf)" -ForegroundColor Cyan
+            Write-Host "         Keep SECURE and DELETE after copying to vault!" -ForegroundColor Yellow
+            Write-Host ""
+        }
+
+        # Traefik basic auth — interactive (needs htpasswd)
+        Write-Host "[STEP 3] Configuring Traefik basic auth for staging..." -ForegroundColor Yellow
         Write-Host "       This protects /services/* endpoints for integration access." -ForegroundColor Cyan
 
         $traefikSecretPath = Join-Path $envDir "traefik.secret"
@@ -463,12 +567,29 @@ switch ($Environment) {
         Write-Host "  [OK] traefik.secret: INTEGRATION_BASIC_AUTH configured" -ForegroundColor Green
 
         Write-Host ""
-        Write-Host "=======================================" -ForegroundColor Green
-        Write-Host "   Staging Setup Complete!" -ForegroundColor Green
-        Write-Host "=======================================" -ForegroundColor Green
+
+        # Summary
+        Write-Host "=======================================" -ForegroundColor Cyan
+        Write-Host "   Summary ($Environment)" -ForegroundColor Cyan
+        Write-Host "=======================================" -ForegroundColor Cyan
+        Write-Host "  Total files:     $($exampleFiles.Count)" -ForegroundColor White
+        Write-Host "  Created:         $copied files" -ForegroundColor Green
+        Write-Host "  Auto-populated:  $updated files" -ForegroundColor Green
+        Write-Host "  Skipped:         $skipped files (already existed)" -ForegroundColor Yellow
         Write-Host ""
-        Write-Host "Review and edit secrets in: $envDir" -ForegroundColor Cyan
-        Write-Host "Deploy: make staging" -ForegroundColor Cyan
+
+        if ($copied -gt 0) {
+            Write-Host "Files still requiring manual configuration:" -ForegroundColor Yellow
+            Write-Host "  IMPORTANT: bgg.secret, openrouter.secret" -ForegroundColor Yellow
+            Write-Host "  OPTIONAL:  email.secret, oauth.secret, storage.secret" -ForegroundColor Gray
+            Write-Host ""
+        }
+
+        Write-Host "Next steps:" -ForegroundColor Cyan
+        Write-Host "   1. Review auto-generated values in $Environment/*.secret files" -ForegroundColor White
+        Write-Host "   2. Configure external services (BGG, OpenRouter, etc.)" -ForegroundColor White
+        Write-Host "   3. Copy to server: scp $Environment/*.secret deploy@server:/opt/meepleai/secrets/" -ForegroundColor White
+        Write-Host "   4. Deploy: make staging" -ForegroundColor White
         Write-Host ""
     }
 

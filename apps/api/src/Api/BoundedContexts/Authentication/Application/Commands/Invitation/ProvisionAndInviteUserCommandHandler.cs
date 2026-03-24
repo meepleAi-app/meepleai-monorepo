@@ -6,6 +6,7 @@ using Api.BoundedContexts.Authentication.Domain.Enums;
 using Api.BoundedContexts.Authentication.Domain.Repositories;
 using Api.BoundedContexts.Authentication.Domain.ValueObjects;
 using Api.BoundedContexts.Authentication.Infrastructure.Persistence;
+using Api.Infrastructure.Security;
 using Api.Middleware.Exceptions;
 using Api.Services;
 using Api.SharedKernel.Application.Interfaces;
@@ -123,7 +124,7 @@ internal sealed class ProvisionAndInviteUserCommandHandler : ICommandHandler<Pro
 #pragma warning disable CA1031 // Do not catch general exception types
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Failed to send invitation email to {Email}", normalizedEmail);
+            _logger.LogWarning(ex, "Failed to send invitation email to {Email}", DataMasking.MaskEmail(normalizedEmail));
             emailSent = false;
         }
 #pragma warning restore CA1031

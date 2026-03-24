@@ -551,7 +551,7 @@ public sealed class PlaygroundChatCommandHandlerTests
             type: AgentType.Custom("rag", "RAG-based assistant"),
             config: AgentDefinitionConfig.Create("gpt-4", 2048, 0.7f),
             prompts: prompts);
-        agent.Activate(); // Create() now defaults to inactive; activate for "active" helper
+        agent.Activate(); // Create() defaults to inactive; activate for "active" helper
         return agent;
     }
 
@@ -563,6 +563,9 @@ public sealed class PlaygroundChatCommandHandlerTests
             type: AgentType.Custom("rag", "RAG-based assistant"),
             config: AgentDefinitionConfig.Create("gpt-4", 2048, 0.7f));
 
+        // Create() sets IsActive=false by default, so agent is already inactive.
+        // Activate then Deactivate to ensure the domain event fires correctly.
+        agentDef.Activate();
         agentDef.Deactivate();
         return agentDef;
     }

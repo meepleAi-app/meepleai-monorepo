@@ -3,6 +3,7 @@ using Api.BoundedContexts.Authentication.Domain.Entities;
 using Api.SharedKernel.Domain.ValueObjects;
 using Api.BoundedContexts.Authentication.Domain.ValueObjects;
 using Api.BoundedContexts.Authentication.Infrastructure.Persistence;
+using Api.Infrastructure.Security;
 using Api.SharedKernel.Application.Interfaces;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Microsoft.Extensions.Logging;
@@ -66,6 +67,6 @@ internal sealed class SeedTestUserCommandHandler : ICommandHandler<SeedTestUserC
         await _userRepository.AddAsync(testUser, cancellationToken).ConfigureAwait(false);
         await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
-        _logger.LogInformation("Test user seeded successfully: {Email}", TestEmail);
+        _logger.LogInformation("Test user seeded successfully: {Email}", DataMasking.MaskEmail(TestEmail));
     }
 }

@@ -2,6 +2,7 @@ using Api.BoundedContexts.KnowledgeBase.Application.Commands;
 using Api.BoundedContexts.KnowledgeBase.Application.DTOs;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries;
 using Api.Extensions;
+using Api.Middleware;
 using MediatR;
 
 namespace Api.Routing;
@@ -127,7 +128,7 @@ internal static class AgentTypologyEndpoints
                 "User {UserId} ({Role}) proposing agent typology: {TypologyName}",
                 session.User!.Id,
                 session.User.Role,
-                command.Name);
+                LogValueSanitizer.Sanitize(command.Name));
 
             // Override ProposedBy with authenticated user ID (prevent impersonation)
             var validatedCommand = command with { ProposedBy = session.User.Id };

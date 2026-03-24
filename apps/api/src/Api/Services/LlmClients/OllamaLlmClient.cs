@@ -155,6 +155,8 @@ internal class OllamaLlmClient : ILlmClient
         string userPrompt,
         CancellationToken ct)
     {
+        // CodeQL: cs/cleartext-storage-of-sensitive-information — response body is read for
+        // deserialization and error logging (masked via DataMasking.MaskResponseBody). Suppressing as by-design.
         var responseBody = await response.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
 
         if (!response.IsSuccessStatusCode)
@@ -238,6 +240,7 @@ internal class OllamaLlmClient : ILlmClient
 
             if (!response.IsSuccessStatusCode)
             {
+                // CodeQL: cs/cleartext-storage-of-sensitive-information — error body is masked before logging
                 var errorBody = await response.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
                 _logger.LogError("Ollama streaming API error: {Status} - {Body}", response.StatusCode, DataMasking.MaskResponseBody(errorBody));
                 response.Dispose();

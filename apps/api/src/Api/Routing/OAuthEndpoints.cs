@@ -1,5 +1,6 @@
 using Api.Configuration;
 using Api.Extensions;
+using Api.Middleware;
 using Api.Services;
 using MediatR;
 
@@ -43,7 +44,7 @@ internal static class OAuthEndpoints
 
             if (!oauthEnabled)
             {
-                var frontendUrl = context.RequestServices.GetRequiredService<IConfiguration>()["FrontendUrl"] ?? "http://localhost:3000";
+                var frontendUrl = context.RequestServices.GetRequiredService<IConfiguration>()["Frontend:BaseUrl"] ?? "http://localhost:3000";
                 return Results.Redirect($"{frontendUrl}/register?oauth_disabled=true");
             }
 
@@ -117,9 +118,9 @@ Rate limited to 10 requests per minute per IP address.
             {
                 var logger = context.RequestServices.GetRequiredService<ILogger<Program>>();
                 logger.LogWarning("OAuth callback error from {Provider}: {Error} - {Description}",
-                    provider, error ?? "missing_code", error_description ?? "No authorization code received");
+                    LogValueSanitizer.Sanitize(provider), LogValueSanitizer.Sanitize(error ?? "missing_code"), LogValueSanitizer.Sanitize(error_description ?? "No authorization code received"));
 
-                var frontendUrl = config["FrontendUrl"] ?? "http://localhost:3000";
+                var frontendUrl = config["Frontend:BaseUrl"] ?? "http://localhost:3000";
                 var errorParam = Uri.EscapeDataString(error ?? "missing_code");
                 return Results.Redirect($"{frontendUrl}/auth/callback?error={errorParam}");
             }
@@ -136,7 +137,7 @@ Rate limited to 10 requests per minute per IP address.
 
             if (!rateLimitResult.Allowed)
             {
-                var frontendUrl = config["FrontendUrl"] ?? "http://localhost:3000";
+                var frontendUrl = config["Frontend:BaseUrl"] ?? "http://localhost:3000";
                 return Results.Redirect($"{frontendUrl}/auth/callback?error=rate_limit");
             }
 
@@ -161,7 +162,7 @@ Rate limited to 10 requests per minute per IP address.
                 var logger = context.RequestServices.GetRequiredService<ILogger<Program>>();
                 logger.LogWarning("OAuth callback failed: {ErrorMessage}", result.ErrorMessage);
 
-                var frontendUrl = config["FrontendUrl"] ?? "http://localhost:3000";
+                var frontendUrl = config["Frontend:BaseUrl"] ?? "http://localhost:3000";
                 return Results.Redirect($"{frontendUrl}/auth/callback?error=oauth_failed");
             }
 
@@ -171,7 +172,7 @@ Rate limited to 10 requests per minute per IP address.
             writeSessionCookie(context, result.SessionToken ?? string.Empty, expiresAt);
 
             // Redirect to frontend with success
-            var successFrontendUrl = config["FrontendUrl"] ?? "http://localhost:3000";
+            var successFrontendUrl = config["Frontend:BaseUrl"] ?? "http://localhost:3000";
             var redirectUrl = $"{successFrontendUrl}/auth/callback?success=true&new={result.IsNewUser}";
             return Results.Redirect(redirectUrl);
         })
@@ -221,12 +222,12 @@ Rate limited to 10 requests per minute per IP address.
             if (!result.Success)
             {
                 logger.LogWarning("Failed to unlink OAuth account for user {UserId}, provider {Provider}: {ErrorMessage}",
-                    userId, provider, result.ErrorMessage);
+                    userId, LogValueSanitizer.Sanitize(provider), LogValueSanitizer.Sanitize(result.ErrorMessage));
                 return Results.BadRequest(new { error = result.ErrorMessage });
             }
 
             logger.LogInformation("Successfully unlinked OAuth account for user {UserId}, provider {Provider}",
-                userId, provider);
+                userId, LogValueSanitizer.Sanitize(provider));
             return Results.NoContent();
         })
         .WithName("UnlinkOAuthAccount")

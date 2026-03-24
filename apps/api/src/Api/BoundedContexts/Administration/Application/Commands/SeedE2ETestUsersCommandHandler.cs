@@ -6,6 +6,7 @@ using Api.BoundedContexts.Authentication.Infrastructure.Persistence;
 using Api.Infrastructure;
 using Api.SharedKernel.Application.Interfaces;
 using Api.SharedKernel.Infrastructure.Persistence;
+using Api.Infrastructure.Security;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 
@@ -63,7 +64,7 @@ internal sealed class SeedE2ETestUsersCommandHandler : ICommandHandler<SeedE2ETe
 
             if (existingAdmin != null)
             {
-                _logger.LogInformation("E2E admin user already exists: {Email}. Skipping.", adminEmail);
+                _logger.LogInformation("E2E admin user already exists: {Email}. Skipping.", DataMasking.MaskEmail(adminEmail));
             }
             else
             {
@@ -81,7 +82,7 @@ internal sealed class SeedE2ETestUsersCommandHandler : ICommandHandler<SeedE2ETe
 
                 await _userRepository.AddAsync(adminUser, cancellationToken).ConfigureAwait(false);
                 usersCreated++;
-                _logger.LogInformation("E2E admin user created: {Email} with role Admin", adminEmail);
+                _logger.LogInformation("E2E admin user created: {Email} with role Admin", DataMasking.MaskEmail(adminEmail));
             }
         }
         else
@@ -97,7 +98,7 @@ internal sealed class SeedE2ETestUsersCommandHandler : ICommandHandler<SeedE2ETe
 
             if (existingUser != null)
             {
-                _logger.LogInformation("E2E test user already exists: {Email}. Skipping.", emailStr);
+                _logger.LogInformation("E2E test user already exists: {Email}. Skipping.", DataMasking.MaskEmail(emailStr));
                 continue;
             }
 
@@ -111,7 +112,7 @@ internal sealed class SeedE2ETestUsersCommandHandler : ICommandHandler<SeedE2ETe
 
             await _userRepository.AddAsync(user, cancellationToken).ConfigureAwait(false);
             usersCreated++;
-            _logger.LogInformation("E2E test user created: {Email} with role {Role}", emailStr, role);
+            _logger.LogInformation("E2E test user created: {Email} with role {Role}", DataMasking.MaskEmail(emailStr), role);
         }
 
         if (usersCreated > 0)

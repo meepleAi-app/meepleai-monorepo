@@ -28,7 +28,7 @@ internal class SessionAuthenticationMiddleware
     public async Task InvokeAsync(HttpContext context, IMediator mediator)
     {
         _logger.LogDebug("[SessionAuth] InvokeAsync START - Path: {Path}, Method: {Method}",
-            context.Request.Path, context.Request.Method);
+            LogValueSanitizer.SanitizePath(context.Request.Path), LogValueSanitizer.Sanitize(context.Request.Method));
 
         // Process only API routes
         if (context.Request.Path.StartsWithSegments("/api", StringComparison.Ordinal))

@@ -4,6 +4,7 @@ using System.Text.Json;
 using Api.BoundedContexts.UserNotifications.Domain.Aggregates;
 using Api.BoundedContexts.UserNotifications.Domain.Repositories;
 using Api.BoundedContexts.UserNotifications.Domain.ValueObjects;
+using Api.Middleware;
 using MediatR;
 using Microsoft.Extensions.Options;
 using Api.BoundedContexts.WorkflowIntegration.Application.Services;
@@ -68,7 +69,7 @@ internal static class N8nWebhookEndpoints
         var idempotencyKey = context.Request.Headers["X-Idempotency-Key"].FirstOrDefault();
         if (!string.IsNullOrEmpty(idempotencyKey))
         {
-            logger.LogInformation("n8n webhook received with idempotency key: {Key}", idempotencyKey);
+            logger.LogInformation("n8n webhook received with idempotency key: {Key}", LogValueSanitizer.Sanitize(idempotencyKey));
         }
 
         // Parse request

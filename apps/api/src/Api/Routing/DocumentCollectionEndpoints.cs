@@ -5,6 +5,7 @@ using Api.BoundedContexts.DocumentProcessing.Application.Queries;
 using Api.Extensions;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
+using Api.Middleware;
 using Api.Models;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
@@ -60,7 +61,7 @@ internal static class DocumentCollectionEndpoints
 
             logger.LogInformation(
                 "User {UserId} creating document collection '{CollectionName}' for game {GameId}",
-                userId, request.Name, gameId);
+                userId, LogValueSanitizer.Sanitize(request.Name), gameId);
 
             var command = new CreateDocumentCollectionCommand(
                 gameId,
@@ -75,13 +76,13 @@ internal static class DocumentCollectionEndpoints
             {
                 logger.LogWarning(
                     "Failed to create document collection '{CollectionName}' for game {GameId}",
-                    request.Name, gameId);
+                    LogValueSanitizer.Sanitize(request.Name), gameId);
                 return Results.BadRequest(new { error = "Failed to create collection" });
             }
 
             logger.LogInformation(
                 "Document collection '{CollectionName}' created successfully with ID {CollectionId}",
-                request.Name, result.Id);
+                LogValueSanitizer.Sanitize(request.Name), result.Id);
 
             return Results.Created($"/api/v1/games/{gameId}/document-collections/{result.Id}", result);
         })

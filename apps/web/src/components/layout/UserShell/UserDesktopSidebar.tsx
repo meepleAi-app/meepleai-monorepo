@@ -33,10 +33,10 @@ const SIDEBAR_TABS: SidebarTabConfig[] = [
   {
     id: 'home',
     label: 'Home',
-    href: '/library',
+    href: '/dashboard',
     icon: House,
     colorVar: 'hsl(var(--primary))',
-    isActive: (p, sp) => p === '/library' && !sp.has('tab'),
+    isActive: p => p === '/dashboard',
   },
   {
     id: 'library',

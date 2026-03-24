@@ -862,6 +862,28 @@ export function createAdminAiClient(http: HttpClient) {
       const result = await http.post<KBClearCacheResponse>(`/api/v1/admin/kb/cache/clear`, {});
       return result ?? { success: false, message: 'No response', clearedAt: null };
     },
+
+    // ========== Agent Metrics (Dashboard) ==========
+
+    async getAgentMetrics(startDate: string, endDate: string) {
+      const params = new URLSearchParams({ startDate, endDate });
+      return http.get(`/api/v1/admin/agents/metrics?${params}`);
+    },
+
+    async getTopAgents(params: {
+      limit: number;
+      sortBy: string;
+      startDate: string;
+      endDate: string;
+    }) {
+      const qs = new URLSearchParams({
+        limit: params.limit.toString(),
+        sortBy: params.sortBy,
+        startDate: params.startDate,
+        endDate: params.endDate,
+      });
+      return http.get(`/api/v1/admin/agents/metrics/top?${qs}`);
+    },
   };
 }
 

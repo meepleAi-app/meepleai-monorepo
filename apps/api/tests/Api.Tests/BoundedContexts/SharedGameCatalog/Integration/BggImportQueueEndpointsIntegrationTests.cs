@@ -62,12 +62,15 @@ public sealed class BggImportQueueEndpointsIntegrationTests : IAsyncLifetime
                     // Register authorization policies
                     services.AddSharedGameCatalogPolicies();
 
-                    // Bypass authorization for testing - allow all authenticated requests
+                    // Bypass ALL authorization for testing — covers DefaultPolicy, FallbackPolicy,
+                    // and inline policies like RequireRole("Admin", "SuperAdmin")
+                    var allowAll = new Microsoft.AspNetCore.Authorization.AuthorizationPolicyBuilder()
+                        .RequireAssertion(_ => true)
+                        .Build();
                     services.AddAuthorization(options =>
                     {
-                        options.DefaultPolicy = new Microsoft.AspNetCore.Authorization.AuthorizationPolicyBuilder()
-                            .RequireAssertion(_ => true) // Allow all requests in test environment
-                            .Build();
+                        options.DefaultPolicy = allowAll;
+                        options.FallbackPolicy = allowAll;
                     });
 
                     // Mock BGG API service to avoid real API calls

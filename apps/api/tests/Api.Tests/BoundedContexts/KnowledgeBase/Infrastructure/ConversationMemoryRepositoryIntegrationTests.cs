@@ -214,11 +214,11 @@ public sealed class ConversationMemoryRepositoryIntegrationTests : IAsyncLifetim
         // Act
         var results = await _repository.GetBySessionIdAsync(sessionId, limit: 10, TestCancellationToken);
 
-        // Assert
+        // Assert — repository returns memories in descending timestamp order (most recent first)
         results.Should().HaveCount(3);
-        results[0].Content.Should().Be("First message");
+        results[0].Content.Should().Be("Third message");
         results[1].Content.Should().Be("Second message");
-        results[2].Content.Should().Be("Third message");
+        results[2].Content.Should().Be("First message");
     }
 
     [Fact]

@@ -646,15 +646,21 @@ public sealed class ContextEngineeringMigrationRollbackTests : IAsyncLifetime
         // Insert agent_game_state_snapshot via raw SQL with temporarily disabled FK
         // The agent_sessions FK chain is complex (requires Agent, GameSession, User, Game, Typology)
         // We disable the FK check for this single insert to verify rollback cleans up the data
+        // NOTE: Must use separate ExecuteSqlRawAsync calls because Npgsql does not support
+        // parameterized multi-statement queries.
         var snapshotId = Guid.NewGuid();
         var fakeAgentSessionId = Guid.NewGuid();
 
         await dbContext.Database.ExecuteSqlRawAsync(
-            @"ALTER TABLE agent_game_state_snapshots DISABLE TRIGGER ALL;
-              INSERT INTO agent_game_state_snapshots (id, game_id, agent_session_id, board_state_json, turn_number, created_at)
-              VALUES ({0}, {1}, {2}, '{""turn"": 1}'::jsonb, 1, {3});
-              ALTER TABLE agent_game_state_snapshots ENABLE TRIGGER ALL;",
+            "ALTER TABLE agent_game_state_snapshots DISABLE TRIGGER ALL");
+
+        await dbContext.Database.ExecuteSqlRawAsync(
+            @"INSERT INTO agent_game_state_snapshots (id, game_id, agent_session_id, board_state_json, turn_number, created_at)
+              VALUES ({0}, {1}, {2}, '{""turn"": 1}'::jsonb, 1, {3})",
             snapshotId, game.Id, fakeAgentSessionId, DateTime.UtcNow);
+
+        await dbContext.Database.ExecuteSqlRawAsync(
+            "ALTER TABLE agent_game_state_snapshots ENABLE TRIGGER ALL");
     }
 
     #endregion

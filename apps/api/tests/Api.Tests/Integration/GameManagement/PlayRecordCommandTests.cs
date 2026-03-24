@@ -155,8 +155,7 @@ public sealed class PlayRecordCommandTests : IAsyncLifetime
         var mediator = ServiceProvider.GetRequiredService<IMediator>();
 
         // Act & Assert
-        var act = async () => () =>
-            mediator.Send(command, TestCancellationToken);
+        var act = () => mediator.Send(command, TestCancellationToken);
         await act.Should().ThrowAsync<NotFoundException>();
     }
 
@@ -375,7 +374,13 @@ public sealed class PlayRecordCommandTests : IAsyncLifetime
             PlayRecordVisibility.Private);
 
         var mediator = ServiceProvider.GetRequiredService<IMediator>();
-        return await mediator.Send(command, TestCancellationToken);
+        var recordId = await mediator.Send(command, TestCancellationToken);
+
+        // Detach all tracked entities to prevent tracking conflicts in subsequent handler calls
+        foreach (var entry in DbContext.ChangeTracker.Entries().ToList())
+            entry.State = EntityState.Detached;
+
+        return recordId;
     }
 
     private async Task<Guid> AddTestPlayerAsync(Guid recordId)

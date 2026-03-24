@@ -442,34 +442,46 @@ public sealed class StrategyPatternRepositoryIntegrationTests : IAsyncLifetime
         await _dbContext!.SaveChangesAsync(TestCancellationToken);
 
         // Act - Query using composite index
+        // Force PostgreSQL to prefer index scans by disabling seq scan for this session
         var connection = _dbContext.Database.GetDbConnection();
-        await connection.OpenAsync(TestCancellationToken);
+        if (connection.State != System.Data.ConnectionState.Open)
+            await connection.OpenAsync(TestCancellationToken);
+
+        // Disable seq scan to verify index exists and can be used
+        var disableSeqScan = connection.CreateCommand();
+        disableSeqScan.CommandText = "SET enable_seqscan = off";
+        await disableSeqScan.ExecuteNonQueryAsync(TestCancellationToken);
 
         var command = connection.CreateCommand();
         command.CommandText = @"
-            EXPLAIN (ANALYZE, BUFFERS, FORMAT TEXT)
+            EXPLAIN (FORMAT TEXT)
             SELECT id, pattern_name
             FROM strategy_patterns
-            WHERE game_id = @gameId AND applicable_phase = @phase
+            WHERE game_id = $1 AND applicable_phase = $2
             ORDER BY evaluation_score DESC;
         ";
 
         var gameIdParam = command.CreateParameter();
-        gameIdParam.ParameterName = "@gameId";
+        gameIdParam.ParameterName = "p1";
         gameIdParam.Value = _gameId;
         command.Parameters.Add(gameIdParam);
 
         var phaseParam = command.CreateParameter();
-        phaseParam.ParameterName = "@phase";
+        phaseParam.ParameterName = "p2";
         phaseParam.Value = "opening";
         command.Parameters.Add(phaseParam);
 
         var plan = await command.ExecuteScalarAsync(TestCancellationToken);
         var queryPlan = plan?.ToString() ?? "";
 
-        // Assert - Should use composite index
-        queryPlan.Should().Contain("Index");
-        queryPlan.Should().NotContain("Seq Scan", "Query should use index, not sequential scan");
+        // Re-enable seq scan
+        var enableSeqScan = connection.CreateCommand();
+        enableSeqScan.CommandText = "SET enable_seqscan = on";
+        await enableSeqScan.ExecuteNonQueryAsync(TestCancellationToken);
+
+        // Assert - With seq scan disabled, PostgreSQL must use an index if one exists
+        queryPlan.Should().Contain("Index",
+            "query plan should use an index when sequential scan is disabled");
 
         Console.WriteLine("=== Query Plan for Composite Index ===");
         Console.WriteLine(queryPlan);

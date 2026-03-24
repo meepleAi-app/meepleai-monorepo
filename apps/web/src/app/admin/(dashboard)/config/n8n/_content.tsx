@@ -14,8 +14,8 @@ import {
   Loader2,
 } from 'lucide-react';
 
-import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/data-display/badge';
+import { Button } from '@/components/ui/primitives/button';
 import { useToast } from '@/hooks/useToast';
 import { api } from '@/lib/api';
 

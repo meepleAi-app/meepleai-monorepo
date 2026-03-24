@@ -12,7 +12,6 @@ import type { JSX } from 'react';
 
 import { AlertTriangle } from 'lucide-react';
 
-import { Button } from '@/components/ui/button';
 import {
   Dialog,
   DialogContent,
@@ -21,6 +20,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/overlays/dialog';
+import { Button } from '@/components/ui/primitives/button';
 import type { SharedGameDetail } from '@/lib/api/schemas/shared-games.schemas';
 
 export interface DuplicateWarningDialogProps {
@@ -103,9 +103,15 @@ export function DuplicateWarningDialog({
             <strong>What would you like to do?</strong>
           </p>
           <ul className="mt-2 space-y-1 text-xs text-amber-800 dark:text-amber-200">
-            <li>• <strong>Cancel</strong>: Go back and change your selection</li>
-            <li>• <strong>Replace</strong>: Update the existing game with new data</li>
-            <li>• <strong>Create Anyway</strong>: Create as a separate entry (not recommended)</li>
+            <li>
+              • <strong>Cancel</strong>: Go back and change your selection
+            </li>
+            <li>
+              • <strong>Replace</strong>: Update the existing game with new data
+            </li>
+            <li>
+              • <strong>Create Anyway</strong>: Create as a separate entry (not recommended)
+            </li>
           </ul>
         </div>
 

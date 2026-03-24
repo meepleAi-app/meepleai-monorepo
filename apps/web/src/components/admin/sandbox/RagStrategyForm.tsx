@@ -2,14 +2,14 @@
 
 import { useSandboxSession } from '@/components/admin/sandbox/contexts/SandboxSessionContext';
 import { Switch } from '@/components/ui/forms/switch';
-import { Label } from '@/components/ui/label';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
+} from '@/components/ui/overlays/select';
+import { Label } from '@/components/ui/primitives/label';
 import { Slider } from '@/components/ui/slider';
 
 const STRATEGY_OPTIONS = [

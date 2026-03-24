@@ -4,8 +4,8 @@ import { useEffect, useRef, useState } from 'react';
 
 import { CheckCircle, Loader2, Search, X } from 'lucide-react';
 
-import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/navigation/sheet';
+import { Button } from '@/components/ui/primitives/button';
 import { Input } from '@/components/ui/primitives/input';
 import { api } from '@/lib/api';
 import type { BggSearchResult } from '@/lib/api/schemas/games.schemas';

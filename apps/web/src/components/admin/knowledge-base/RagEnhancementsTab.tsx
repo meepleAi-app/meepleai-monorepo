@@ -5,13 +5,13 @@ import { Brain, Crown, GitBranch, RefreshCwIcon, Search, TreePine, Users, Zap } 
 
 import { toast } from '@/components/layout/Toast';
 import { Badge } from '@/components/ui/data-display/badge';
+import { Switch } from '@/components/ui/forms/switch';
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-} from '@/components/ui/data-display/tooltip';
-import { Switch } from '@/components/ui/forms/switch';
+} from '@/components/ui/overlays/tooltip';
 import { Button } from '@/components/ui/primitives/button';
 import { HttpClient } from '@/lib/api/core/httpClient';
 import { cn } from '@/lib/utils';

@@ -5,8 +5,8 @@ import { useState, useCallback } from 'react';
 import { MessageSquare, Trash2 } from 'lucide-react';
 
 import { usePipeline } from '@/components/admin/sandbox/contexts/PipelineContext';
-import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/navigation/separator';
+import { Button } from '@/components/ui/primitives/button';
 
 import { AutoTestRunner } from './AutoTestRunner';
 import { AutoTestSummary } from './AutoTestSummary';

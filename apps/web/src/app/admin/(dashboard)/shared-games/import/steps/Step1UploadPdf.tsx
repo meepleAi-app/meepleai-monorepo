@@ -17,10 +17,10 @@ import type { JSX } from 'react';
 
 import { AlertCircle, Upload, FileText, CheckCircle } from 'lucide-react';
 
-import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/data-display/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/feedback/alert';
 import { Progress } from '@/components/ui/feedback/progress';
+import { Button } from '@/components/ui/primitives/button';
 import { Input } from '@/components/ui/primitives/input';
 import { Label } from '@/components/ui/primitives/label';
 import { useUploadPdf } from '@/hooks/queries/useUploadPdf';

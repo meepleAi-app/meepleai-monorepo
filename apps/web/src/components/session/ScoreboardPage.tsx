@@ -19,7 +19,6 @@ import { useQuery } from '@tanstack/react-query';
 import { ArrowLeft, Trophy, Users } from 'lucide-react';
 import Link from 'next/link';
 
-import { Button } from '@/components/ui/button';
 import {
   Sheet,
   SheetContent,
@@ -27,6 +26,7 @@ import {
   SheetHeader,
   SheetTitle,
 } from '@/components/ui/navigation/sheet';
+import { Button } from '@/components/ui/primitives/button';
 import { api } from '@/lib/api';
 
 interface ScoreboardPageProps {

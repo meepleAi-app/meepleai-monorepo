@@ -65,6 +65,10 @@ internal static class IntegrationServiceCollectionBuilder
             Mock.Of<Api.Services.IEmbeddingService>());
         services.AddScoped(_ =>
             Mock.Of<Api.Services.IEmailService>());
+        services.AddScoped(_ =>
+            Mock.Of<Api.BoundedContexts.UserLibrary.Domain.Repositories.IPrivateGameRepository>());
+        services.AddScoped(_ =>
+            Mock.Of<Api.SharedKernel.Services.ITierEnforcementService>());
 
         // TimeProvider — required by handlers like SubmitValidationFeedbackCommandHandler
         services.AddSingleton(TimeProvider.System);

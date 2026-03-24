@@ -336,6 +336,12 @@ export function createLibraryClient({ httpClient }: CreateLibraryClientParams): 
      * @returns Complete game detail with all metadata and statistics
      */
     async getGameDetail(gameId: string): Promise<GameDetailDto> {
+      if (
+        !gameId ||
+        !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(gameId)
+      ) {
+        throw new Error('Invalid game ID');
+      }
       const data = await httpClient.get<GameDetailDto>(
         `/api/v1/library/games/${gameId}`,
         GameDetailDtoSchema

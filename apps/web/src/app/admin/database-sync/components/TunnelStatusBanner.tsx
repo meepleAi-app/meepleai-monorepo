@@ -2,7 +2,7 @@
 
 import { Wifi, WifiOff, Loader2, AlertCircle } from 'lucide-react';
 
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/ui/primitives/button';
 
 import { useTunnelStatus, useOpenTunnel, useCloseTunnel } from '../hooks/useTunnelStatus';
 

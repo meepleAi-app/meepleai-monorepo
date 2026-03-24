@@ -191,7 +191,6 @@ import { RatingStars } from '@/components/ui/data-display/rating-stars';
 import { StatCard } from '@/components/ui/data-display/stat-card';
 import { StatusCard } from '@/components/ui/data-display/status-card';
 import { Table } from '@/components/ui/data-display/table';
-import { Tooltip as TooltipDataDisplay } from '@/components/ui/data-display/tooltip';
 import { UserRoleBadge } from '@/components/ui/data-display/user-role-badge';
 import { UserStatusIndicator } from '@/components/ui/data-display/user-status-indicator';
 
@@ -244,6 +243,7 @@ import { HoverCard } from '@/components/ui/overlays/hover-card';
 import { Popover } from '@/components/ui/overlays/popover';
 import { Select } from '@/components/ui/overlays/select';
 import { SmartTooltip } from '@/components/ui/overlays/smart-tooltip';
+import { Tooltip as TooltipDataDisplay } from '@/components/ui/overlays/tooltip';
 import { Tooltip } from '@/components/ui/overlays/tooltip';
 import { Button } from '@/components/ui/primitives/button';
 import { Checkbox } from '@/components/ui/primitives/checkbox';

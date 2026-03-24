@@ -19,7 +19,7 @@ import { Clock } from 'lucide-react';
 import Link from 'next/link';
 
 import { AuthLayout } from '@/components/layouts';
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/ui/primitives/button';
 
 export default function InvitationExpiredPage() {
   return (

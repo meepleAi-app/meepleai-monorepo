@@ -34,8 +34,8 @@ import * as React from 'react';
 
 import { X, Eye, Check, AlertCircle } from 'lucide-react';
 
-import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/feedback/progress';
+import { Button } from '@/components/ui/primitives/button';
 import { usePdfProgress } from '@/hooks/usePdfProgress';
 import { cn } from '@/lib/utils';
 

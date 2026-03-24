@@ -3,14 +3,14 @@
  * Category and sort filters for game collection
  */
 
-import { Button } from '@/components/ui/button';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
+} from '@/components/ui/overlays/select';
+import { Button } from '@/components/ui/primitives/button';
 
 interface FilterBarProps {
   categories: string[];

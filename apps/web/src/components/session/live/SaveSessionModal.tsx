@@ -16,8 +16,8 @@ import { useState } from 'react';
 import { Camera, Loader2, Save } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
-import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/overlays/dialog';
+import { Button } from '@/components/ui/primitives/button';
 import { api } from '@/lib/api';
 
 // ─── Types ────────────────────────────────────────────────────────────────────

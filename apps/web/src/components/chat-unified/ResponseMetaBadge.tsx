@@ -1,6 +1,11 @@
 'use client';
 
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/overlays/tooltip';
 import { cn } from '@/lib/utils';
 
 /** Strategy tier badge configuration */

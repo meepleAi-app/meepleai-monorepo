@@ -49,14 +49,14 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/navigation/dropdown-menu';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/navigation/tabs';
-import { Button } from '@/components/ui/primitives/button';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
+} from '@/components/ui/overlays/select';
+import { Button } from '@/components/ui/primitives/button';
 import { api, type SharedGameDocument } from '@/lib/api';
 import { getAgentDefinitions } from '@/lib/api/admin-agent-client';
 

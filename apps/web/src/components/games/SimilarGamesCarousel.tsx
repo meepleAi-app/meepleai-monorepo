@@ -20,13 +20,13 @@ import Link from 'next/link';
 
 import { Badge } from '@/components/ui/data-display/badge';
 import { Card, CardContent } from '@/components/ui/data-display/card';
+import { Skeleton } from '@/components/ui/feedback/skeleton';
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-} from '@/components/ui/data-display/tooltip';
-import { Skeleton } from '@/components/ui/feedback/skeleton';
+} from '@/components/ui/overlays/tooltip';
 import { Button } from '@/components/ui/primitives/button';
 import type { SimilarGameDto } from '@/lib/api/clients/gamesClient';
 import { cn } from '@/lib/utils';
@@ -78,7 +78,7 @@ export function SimilarGamesCarousel({
   isLoading = false,
   sourceGameTitle,
   className,
-  getLinkHref = (gameId) => `/library/games/${gameId}`,
+  getLinkHref = gameId => `/library/games/${gameId}`,
 }: SimilarGamesCarouselProps) {
   const scrollContainerRef = React.useRef<HTMLDivElement>(null);
   const [canScrollLeft, setCanScrollLeft] = React.useState(false);
@@ -90,9 +90,7 @@ export function SimilarGamesCarousel({
     if (!container) return;
 
     setCanScrollLeft(container.scrollLeft > 0);
-    setCanScrollRight(
-      container.scrollLeft < container.scrollWidth - container.clientWidth - 10
-    );
+    setCanScrollRight(container.scrollLeft < container.scrollWidth - container.clientWidth - 10);
   }, []);
 
   React.useEffect(() => {
@@ -126,7 +124,7 @@ export function SimilarGamesCarousel({
           <h3 className="text-lg font-semibold">Giochi Simili</h3>
         </div>
         <div className="flex gap-4 overflow-hidden">
-          {[1, 2, 3, 4].map((i) => (
+          {[1, 2, 3, 4].map(i => (
             <div key={i} className="w-[260px] flex-shrink-0">
               <Skeleton className="h-[200px] w-full rounded-lg" />
               <Skeleton className="mt-2 h-4 w-3/4" />
@@ -206,12 +204,8 @@ export function SimilarGamesCarousel({
             className="flex gap-4 overflow-x-auto pb-4 scrollbar-thin scrollbar-track-transparent scrollbar-thumb-muted"
             style={{ scrollbarWidth: 'thin' }}
           >
-            {games.map((game) => (
-              <SimilarGameCard
-                key={game.id}
-                game={game}
-                href={getLinkHref(game.id)}
-              />
+            {games.map(game => (
+              <SimilarGameCard key={game.id} game={game} href={getLinkHref(game.id)} />
             ))}
           </div>
 
@@ -337,9 +331,7 @@ function SimilarGameCard({ game, href }: SimilarGameCardProps) {
           </div>
 
           {/* Similarity reason */}
-          <p className="mt-2 line-clamp-2 text-xs text-muted-foreground">
-            {game.similarityReason}
-          </p>
+          <p className="mt-2 line-clamp-2 text-xs text-muted-foreground">{game.similarityReason}</p>
         </CardContent>
       </Card>
     </Link>

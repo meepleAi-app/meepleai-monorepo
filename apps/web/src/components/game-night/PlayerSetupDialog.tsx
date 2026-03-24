@@ -4,8 +4,8 @@ import { useState, useCallback } from 'react';
 
 import { Gamepad2, Loader2, Plus, Trash2, Users } from 'lucide-react';
 
-import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/overlays/dialog';
+import { Button } from '@/components/ui/primitives/button';
 import { Input } from '@/components/ui/primitives/input';
 import type { PlayerColor } from '@/lib/api/schemas/live-sessions.schemas';
 

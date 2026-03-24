@@ -17,8 +17,8 @@ import { useState, useCallback } from 'react';
 import { ArrowDown, ArrowUp, Crown, Plus, Trash2, User } from 'lucide-react';
 
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/primitives/button';
+import { Input } from '@/components/ui/primitives/input';
 import { cn } from '@/lib/utils';
 
 // ========== Types ==========

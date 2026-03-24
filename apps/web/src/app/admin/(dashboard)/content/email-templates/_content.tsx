@@ -33,15 +33,15 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/overlays/dialog';
-import { ScrollArea } from '@/components/ui/primitives/scroll-area';
-import { Textarea } from '@/components/ui/primitives/textarea';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
+} from '@/components/ui/overlays/select';
+import { ScrollArea } from '@/components/ui/primitives/scroll-area';
+import { Textarea } from '@/components/ui/primitives/textarea';
 import {
   useCreateEmailTemplate,
   useEmailTemplates,

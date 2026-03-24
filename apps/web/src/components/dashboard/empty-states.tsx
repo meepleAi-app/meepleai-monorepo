@@ -3,8 +3,8 @@
  * Empty state messages for dashboard sections
  */
 
-import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/primitives/button';
 
 type EmptyStateVariant = 'no-games' | 'no-sessions' | 'no-upcoming' | 'no-agents';
 

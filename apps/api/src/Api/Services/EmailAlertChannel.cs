@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Net;
 using System.Net.Mail;
+using Api.Infrastructure.Security;
 using Microsoft.Extensions.Options;
 
 namespace Api.Services;
@@ -79,7 +80,7 @@ internal class EmailAlertChannel : IAlertChannel
 
             _logger.LogInformation(
                 "Email alert sent to {Recipients} for {AlertType}",
-                string.Join(", ", _config.To),
+                string.Join(", ", _config.To.Select(DataMasking.MaskEmail)),
                 alertType);
 
             return true;

@@ -365,13 +365,13 @@ public class BadgeTests
     }
 
     [Fact]
-    public void Deactivate_WhenAlreadyInactive_DoesNotUpdateModifiedAt()
+    public async Task Deactivate_WhenAlreadyInactive_DoesNotUpdateModifiedAt()
     {
         // Arrange
         var badge = CreateTestBadge();
         badge.Deactivate();
         var firstModifiedAt = badge.ModifiedAt;
-        Thread.Sleep(10);
+        await Task.Delay(50);
 
         // Act
         badge.Deactivate();

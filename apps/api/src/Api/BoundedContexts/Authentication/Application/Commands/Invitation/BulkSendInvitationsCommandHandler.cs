@@ -1,5 +1,6 @@
 using System.Text.RegularExpressions;
 using Api.BoundedContexts.Authentication.Application.DTOs;
+using Api.Infrastructure.Security;
 using Api.SharedKernel.Application.Interfaces;
 using FluentValidation;
 using MediatR;
@@ -107,7 +108,7 @@ internal sealed class BulkSendInvitationsCommandHandler
 #pragma warning disable CA1031 // Do not catch general exception types
             catch (Exception ex)
             {
-                _logger.LogWarning(ex, "Failed to provision invitation for {Email}", email);
+                _logger.LogWarning(ex, "Failed to provision invitation for {Email}", DataMasking.MaskEmail(email));
                 var userFacingError = ex switch
                 {
                     Api.Middleware.Exceptions.ConflictException => "A pending invitation or user already exists for this email",

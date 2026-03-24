@@ -9,6 +9,7 @@ using Api.Infrastructure;
 using Api.SharedKernel.Application.Interfaces;
 using Api.SharedKernel.Domain.Exceptions;
 using Api.SharedKernel.Infrastructure.Persistence;
+using Api.Infrastructure.Security;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 
@@ -115,6 +116,6 @@ internal sealed class SeedAdminUserCommandHandler : ICommandHandler<SeedAdminUse
 
         await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
-        _logger.LogInformation("Admin user seeded successfully with AI consent: {Email}", adminEmail);
+        _logger.LogInformation("Admin user seeded successfully with AI consent: {Email}", DataMasking.MaskEmail(adminEmail));
     }
 }

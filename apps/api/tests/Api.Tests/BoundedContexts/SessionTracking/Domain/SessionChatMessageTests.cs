@@ -177,13 +177,13 @@ public class SessionChatMessageTests
     }
 
     [Fact]
-    public void UpdateContent_TextMessage_UpdatesContent()
+    public async Task UpdateContent_TextMessage_UpdatesContent()
     {
         // Arrange
         var msg = SessionChatMessage.CreateTextMessage(_sessionId, _senderId, "original", 1);
 
         // Act
-        Thread.Sleep(10);
+        await Task.Delay(50);
         msg.UpdateContent("updated content");
 
         // Assert

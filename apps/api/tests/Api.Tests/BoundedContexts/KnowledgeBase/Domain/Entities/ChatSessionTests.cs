@@ -189,14 +189,14 @@ public class ChatSessionTests
     }
 
     [Fact]
-    public void AddMessage_UpdatesLastMessageAt()
+    public async Task AddMessage_UpdatesLastMessageAt()
     {
         // Arrange
         var session = new ChatSession(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid());
         var initialTimestamp = session.LastMessageAt;
 
         // Small delay to ensure timestamp difference
-        System.Threading.Thread.Sleep(10);
+        await Task.Delay(50);
 
         // Act
         session.AddUserMessage("Test message");

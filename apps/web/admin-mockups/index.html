@@ -810,7 +810,7 @@
       if (elements.contentIframe.contentWindow) {
         elements.contentIframe.contentWindow.postMessage(
           { type: 'theme-change', theme },
-          '*'
+          window.location.origin
         );
       }
     }
@@ -942,8 +942,13 @@
       // Show loading overlay
       elements.loadingOverlay.classList.remove('hidden');
 
-      // Load page in iframe
-      elements.contentIframe.src = page;
+      // Load page in iframe — only allow relative same-origin URLs
+      if (page.startsWith('/') && !page.startsWith('//') || !page.includes('://')) {
+        elements.contentIframe.src = page;
+      } else {
+        console.warn('[Admin] Blocked non-relative URL:', page);
+        return;
+      }
       elements.contentIframe.onload = () => {
         setTimeout(() => {
           elements.loadingOverlay.classList.add('hidden');
@@ -953,7 +958,7 @@
         const theme = document.documentElement.getAttribute('data-theme');
         elements.contentIframe.contentWindow.postMessage(
           { type: 'theme-change', theme },
-          '*'
+          window.location.origin
         );
       };
     }

@@ -11,6 +11,7 @@ import type { AdminOverviewStats } from '@/lib/api/schemas/admin.schemas';
 import { KPIStatsRow } from './KPIStatsRow';
 import { LibrarySummaryCard } from './LibrarySummaryCard';
 import { PendingRequestsBanner } from './PendingRequestsBanner';
+import { ProcessingQueueWidget } from './ProcessingQueueWidget';
 import { QuickActionsGrid } from './QuickActionsGrid';
 import { TechActionsBar } from './TechActionsBar';
 import { UsersSummaryCard } from './UsersSummaryCard';
@@ -146,13 +147,17 @@ export default function OverviewPage() {
       <KPIStatsRow
         totalGames={data?.stats?.totalGames ?? 0}
         totalUsers={data?.stats?.totalUsers ?? 0}
+        activeUsers={data?.stats?.activeUsers}
         pendingApprovals={data?.stats?.pendingApprovals ?? 0}
+        recentSubmissions={data?.stats?.recentSubmissions}
       />
 
       <PendingRequestsBanner
         requests={data?.pendingRequests.items ?? []}
         totalCount={data?.pendingRequests.totalCount ?? 0}
       />
+
+      <ProcessingQueueWidget />
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <LibrarySummaryCard

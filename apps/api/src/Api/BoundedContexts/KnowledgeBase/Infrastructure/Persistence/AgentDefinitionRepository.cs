@@ -65,12 +65,12 @@ public sealed class AgentDefinitionRepository : RepositoryBase, IAgentDefinition
         if (string.IsNullOrWhiteSpace(searchTerm))
             return await GetAllAsync(cancellationToken).ConfigureAwait(false);
 
-        var term = searchTerm.Trim().ToLowerInvariant();
+        var pattern = $"%{searchTerm.Trim()}%";
 
         return await DbContext.Set<AgentDefinition>()
             .AsNoTracking()
-            .Where(a => a.Name.ToLowerInvariant().Contains(term, StringComparison.OrdinalIgnoreCase) ||
-                        a.Description.ToLowerInvariant().Contains(term, StringComparison.OrdinalIgnoreCase))
+            .Where(a => EF.Functions.ILike(a.Name, pattern) ||
+                        EF.Functions.ILike(a.Description, pattern))
             .OrderBy(a => a.Name)
             .ToListAsync(cancellationToken).ConfigureAwait(false);
     }

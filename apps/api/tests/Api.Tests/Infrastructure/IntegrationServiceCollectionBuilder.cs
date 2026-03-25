@@ -1,6 +1,8 @@
+using Api.BoundedContexts.SystemConfiguration.Domain.ValueObjects;
 using Api.Infrastructure;
 using Api.SharedKernel.Application.Services;
 using Api.SharedKernel.Infrastructure.Persistence;
+using Api.SharedKernel.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -68,7 +70,17 @@ internal static class IntegrationServiceCollectionBuilder
         services.AddScoped(_ =>
             Mock.Of<Api.BoundedContexts.UserLibrary.Domain.Repositories.IPrivateGameRepository>());
         services.AddScoped(_ =>
-            Mock.Of<Api.SharedKernel.Services.ITierEnforcementService>());
+            Mock.Of<Api.BoundedContexts.KnowledgeBase.Domain.Repositories.IAgentDefinitionRepository>());
+        // ITierEnforcementService — must be fully set up to avoid NullRef in UploadPdfCommandHandler.
+        // Bare Mock.Of<>() returns false for CanPerformAsync, null for GetUsageAsync → NullRef at handler line 97.
+        var tierMock = new Mock<ITierEnforcementService>();
+        tierMock.Setup(t => t.CanPerformAsync(It.IsAny<Guid>(), It.IsAny<TierAction>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+        tierMock.Setup(t => t.GetLimitsAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(TierLimits.Unlimited);
+        tierMock.Setup(t => t.GetUsageAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new UsageSnapshot(0, 100, 0, 100, 0, 100, 0, 100, 0, 100, 0, 100, true, 0, 100));
+        services.AddScoped<ITierEnforcementService>(_ => tierMock.Object);
 
         // TimeProvider — required by handlers like SubmitValidationFeedbackCommandHandler
         services.AddSingleton(TimeProvider.System);

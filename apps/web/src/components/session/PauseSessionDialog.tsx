@@ -10,8 +10,8 @@ import { useState, useCallback } from 'react';
 
 import { Camera, SkipForward } from 'lucide-react';
 
-import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/overlays/dialog';
+import { Button } from '@/components/ui/primitives/button';
 
 import { PhotoUploadModal, type SessionAttachmentDto } from './PhotoUploadModal';
 

@@ -21,7 +21,6 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { Loader2, Timer } from 'lucide-react';
 
-import { Button } from '@/components/ui/button';
 import {
   Dialog,
   DialogContent,
@@ -29,6 +28,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/overlays/dialog';
+import { Button } from '@/components/ui/primitives/button';
 import { api } from '@/lib/api';
 import type { RuleDisputeResponse } from '@/lib/api/schemas/improvvisata.schemas';
 import { useLiveSessionStore } from '@/lib/stores/live-session-store';

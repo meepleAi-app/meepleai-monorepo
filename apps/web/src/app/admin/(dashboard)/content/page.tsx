@@ -75,10 +75,10 @@ export default async function AdminContentPage({ searchParams }: AdminContentPag
     <div className="space-y-5">
       <div>
         <h1 className="font-quicksand text-xl sm:text-2xl font-bold tracking-tight text-foreground">
-          Content Management
+          Gestione Contenuti
         </h1>
         <p className="mt-0.5 text-sm text-muted-foreground">
-          Manage games, shared content, and knowledge base.
+          Gestisci giochi, contenuti condivisi e knowledge base.
         </p>
       </div>
 

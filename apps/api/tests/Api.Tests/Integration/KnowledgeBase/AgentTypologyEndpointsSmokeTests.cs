@@ -66,6 +66,14 @@ public sealed class AgentTypologyEndpointsSmokeTests : IAsyncLifetime
                         .ReturnsAsync(embeddingResult);
 
                     services.AddScoped<IEmbeddingService>(_ => mockEmbedding.Object);
+
+                    // Enable public registration so /auth/register doesn't return 403
+                    services.RemoveAll(typeof(IConfigurationService));
+                    var mockConfig = new Mock<IConfigurationService>();
+                    mockConfig
+                        .Setup(c => c.GetValueAsync<bool?>("Registration:PublicEnabled", It.IsAny<bool?>(), It.IsAny<string?>()))
+                        .ReturnsAsync(true);
+                    services.AddSingleton<IConfigurationService>(mockConfig.Object);
                 });
             });
 
@@ -280,8 +288,7 @@ public sealed class AgentTypologyEndpointsSmokeTests : IAsyncLifetime
         // Act
         var response = await _client.SendAsync(request);
 
-        // Assert: Middleware returns 422 UnprocessableEntity when no auth (FluentValidation runs first)
-        // Auth check happens AFTER model binding and validation
-        response.StatusCode.Should().Be(HttpStatusCode.UnprocessableEntity);
+        // Assert: Session validation returns 401 Unauthorized when no auth cookie is present
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 }

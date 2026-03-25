@@ -306,11 +306,11 @@ public sealed class ShareLinkIntegrationTests : IAsyncLifetime
 
         var mediator = _serviceProvider!.GetRequiredService<IMediator>();
 
-        // Create share link with very short expiration (200ms)
+        // Create share link with very short expiration (2 seconds)
         var createCommand = new CreateShareLinkCommand(
             ThreadId: threadId,
             Role: ShareLinkRole.View,
-            ExpiresAt: DateTime.UtcNow.AddMilliseconds(200),
+            ExpiresAt: DateTime.UtcNow.AddSeconds(2),
             Label: "Expiration test link",
             UserId: userId
         );
@@ -324,7 +324,7 @@ public sealed class ShareLinkIntegrationTests : IAsyncLifetime
         validateResult1.IsValid.Should().BeTrue("Token should be valid immediately after creation");
 
         // Wait for token to expire
-        await Task.Delay(300, TestCancellationToken);
+        await Task.Delay(2500, TestCancellationToken);
 
         // Act - validate the expired token
         var validateQuery2 = new ValidateShareLinkQuery(createResult.Token);

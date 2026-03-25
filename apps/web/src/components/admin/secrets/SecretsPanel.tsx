@@ -5,7 +5,7 @@ import { useCallback, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { AlertTriangle, Key, Loader2, RefreshCw, Save, Shield } from 'lucide-react';
 
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/ui/primitives/button';
 import { useToast } from '@/hooks/useToast';
 import { adminSecretsClient, type SecretUpdate } from '@/lib/api/clients/adminSecretsClient';
 import { cn } from '@/lib/utils';

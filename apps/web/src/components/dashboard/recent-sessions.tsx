@@ -3,8 +3,8 @@
  * List of recent gaming sessions
  */
 
-import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { Button } from '@/components/ui/primitives/button';
 import type { SessionSummaryDto } from '@/lib/api/dashboard-client';
 
 import { EmptyState } from './empty-states';

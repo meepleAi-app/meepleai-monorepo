@@ -74,9 +74,7 @@ public class RuleSpecCommentForeignKeyTests : IAsyncLifetime
         var userToDelete = await freshContext.Users.FindAsync(userId);
         freshContext.Users.Remove(userToDelete!);
 
-        var act = async () => () =>
-            freshContext.SaveChangesAsync(TestContext.Current.CancellationToken)
-        ;
+        var act = () => freshContext.SaveChangesAsync(TestContext.Current.CancellationToken);
         var exception = (await act.Should().ThrowAsync<DbUpdateException>()).Which;
 
         exception.Should().NotBeNull();
@@ -210,9 +208,7 @@ public class RuleSpecCommentForeignKeyTests : IAsyncLifetime
         var parentToDelete = await freshContext.RuleSpecComments.FindAsync(parentCommentId);
         freshContext.RuleSpecComments.Remove(parentToDelete!);
 
-        var act = async () => () =>
-            freshContext.SaveChangesAsync(TestContext.Current.CancellationToken)
-        ;
+        var act = () => freshContext.SaveChangesAsync(TestContext.Current.CancellationToken);
         var exception = (await act.Should().ThrowAsync<DbUpdateException>()).Which;
 
         exception.Should().NotBeNull();

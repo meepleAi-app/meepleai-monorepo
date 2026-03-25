@@ -11,6 +11,7 @@ import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Settings, Target, Lock, Link as LinkIcon, Zap, RefreshCw } from 'lucide-react';
 
+import { EmptyFeatureState } from '@/components/admin/EmptyFeatureState';
 import { StrategyBadge } from '@/components/admin/rag/StrategyBadge';
 import { Badge } from '@/components/ui/data-display/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/data-display/card';
@@ -31,6 +32,7 @@ import { Slider } from '@/components/ui/primitives/slider';
 import { useAdminConfig, parseConfigValue } from '@/hooks/useAdminConfig';
 import { useToast } from '@/hooks/useToast';
 import { createAdminClient, type StrategyModelMappingDto } from '@/lib/api/clients/adminClient';
+import { isNotFoundError } from '@/lib/api/core/errors';
 import { HttpClient } from '@/lib/api/core/httpClient';
 
 // ========== Types ==========
@@ -149,10 +151,15 @@ export default function StrategyConfigPage() {
   const {
     data: matrix,
     isLoading: matrixLoading,
+    error: matrixError,
     refetch: refetchMatrix,
   } = useQuery({
     queryKey: ['tierStrategyMatrix'],
     queryFn: () => adminClient.getTierStrategyMatrix(),
+    retry: (failureCount, err) => {
+      if (isNotFoundError(err)) return false;
+      return failureCount < 3;
+    },
   });
 
   const {
@@ -162,6 +169,10 @@ export default function StrategyConfigPage() {
   } = useQuery({
     queryKey: ['strategyModelMappings'],
     queryFn: () => adminClient.getStrategyModelMappings(),
+    retry: (failureCount, err) => {
+      if (isNotFoundError(err)) return false;
+      return failureCount < 3;
+    },
   });
 
   // Mutations
@@ -283,6 +294,14 @@ export default function StrategyConfigPage() {
           <RefreshCw className="h-4 w-4" />
         </Button>
       </div>
+
+      {/* 404 fallback — endpoint not implemented */}
+      {isNotFoundError(matrixError) && (
+        <EmptyFeatureState
+          title="Funzionalità non disponibile"
+          description="Endpoint strategy configuration non ancora implementato nel backend."
+        />
+      )}
 
       {/* Overview Cards */}
       <div className="grid grid-cols-1 gap-4 md:grid-cols-3">

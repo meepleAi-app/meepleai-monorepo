@@ -216,7 +216,7 @@ export function createAdminContentClient(http: HttpClient) {
 
       const query = queryParams.toString();
       const result = await http.get(
-        `/api/v1/prompts/${promptId}/audit-log${query ? `?${query}` : ''}`,
+        `/api/v1/admin/prompts/${promptId}/audit-log${query ? `?${query}` : ''}`,
         PromptAuditLogsResponseSchema
       );
       return result ?? { logs: [], totalPages: 0 };

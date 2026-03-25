@@ -461,25 +461,25 @@ export function createAdminAiClient(http: HttpClient) {
       if (params?.page) queryParams.set('page', params.page.toString());
       if (params?.pageSize) queryParams.set('pageSize', params.pageSize.toString());
 
-      const url = `/admin/agent-typologies${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
+      const url = `/api/v1/admin/agent-typologies${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
       const result = await http.get<AgentTypologyListResponse>(url);
       return result || { typologies: [], total: 0, page: 1, pageSize: 20 };
     },
 
     async getAgentTypologyById(id: string) {
-      return http.get<AgentTypology>(`/admin/agent-typologies/${id}`);
+      return http.get<AgentTypology>(`/api/v1/admin/agent-typologies/${id}`);
     },
 
     async deleteAgentTypology(id: string) {
-      await http.delete(`/admin/agent-typologies/${id}`);
+      await http.delete(`/api/v1/admin/agent-typologies/${id}`);
     },
 
     async approveAgentTypology(id: string) {
-      return http.post<AgentTypology>(`/admin/agent-typologies/${id}/approve`, {});
+      return http.post<AgentTypology>(`/api/v1/admin/agent-typologies/${id}/approve`, {});
     },
 
     async rejectAgentTypology(id: string, reason: string) {
-      return http.post<AgentTypology>(`/admin/agent-typologies/${id}/reject`, {
+      return http.post<AgentTypology>(`/api/v1/admin/agent-typologies/${id}/reject`, {
         reason,
       });
     },

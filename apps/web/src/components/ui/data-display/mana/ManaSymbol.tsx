@@ -77,7 +77,14 @@ export const ManaSymbol = memo(function ManaSymbol({
           aria-hidden="true"
         />
         <span className="relative z-[1] drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)]">
-          {config.symbol}
+          {config.Icon ? (
+            <config.Icon
+              size={size === 'full' ? 28 : size === 'medium' ? 16 : size === 'small' ? 12 : 14}
+              className="text-white"
+            />
+          ) : (
+            config.symbol
+          )}
         </span>
       </span>
       {showLabel && (

@@ -164,12 +164,16 @@ export function createAdminSystemClient(http: HttpClient) {
     // ========== Batch Jobs (Issue #3693) ==========
 
     async createBatchJob(request: CreateBatchJobRequest): Promise<{ id: string }> {
-      return http.post('/api/v1/admin/batch-jobs', request, CreateBatchJobResponseSchema);
+      return http.post(
+        '/api/v1/admin/operations/batch-jobs',
+        request,
+        CreateBatchJobResponseSchema
+      );
     },
 
     async getBatchJob(id: string): Promise<BatchJobDto> {
       const result = await http.get<BatchJobDto>(
-        `/api/v1/admin/batch-jobs/${id}`,
+        `/api/v1/admin/operations/batch-jobs/${id}`,
         BatchJobDtoSchema
       );
       if (!result) throw new Error(`Batch job ${id} not found`);
@@ -188,22 +192,22 @@ export function createAdminSystemClient(http: HttpClient) {
 
       const query = queryParams.toString();
       const result = await http.get<BatchJobList>(
-        `/api/v1/admin/batch-jobs${query ? `?${query}` : ''}`,
+        `/api/v1/admin/operations/batch-jobs${query ? `?${query}` : ''}`,
         BatchJobListSchema
       );
       return result ?? { jobs: [], total: 0, page: 1, pageSize: 20 };
     },
 
     async deleteBatchJob(id: string): Promise<void> {
-      await http.delete(`/api/v1/admin/batch-jobs/${id}`);
+      await http.delete(`/api/v1/admin/operations/batch-jobs/${id}`);
     },
 
     async cancelBatchJob(id: string): Promise<void> {
-      await http.post(`/api/v1/admin/batch-jobs/${id}/cancel`, {});
+      await http.put(`/api/v1/admin/operations/batch-jobs/${id}/cancel`, {});
     },
 
     async retryBatchJob(id: string): Promise<void> {
-      await http.post(`/api/v1/admin/batch-jobs/${id}/retry`, {});
+      await http.put(`/api/v1/admin/operations/batch-jobs/${id}/retry`, {});
     },
 
     // ========== Queue Management (Issue #125) ==========

@@ -109,6 +109,7 @@ public class MeepleAiDbContext : DbContext
     public DbSet<AlertRuleEntity> AlertRules => Set<AlertRuleEntity>(); // ISSUE-921: Dynamic alert rules
     public DbSet<AlertConfigurationEntity> AlertConfigurations => Set<AlertConfigurationEntity>(); // ISSUE-921: Dynamic alert config
     public DbSet<ServiceHealthStateEntity> ServiceHealthStates => Set<ServiceHealthStateEntity>(); // ISSUE-448: Service health monitoring
+    public DbSet<DatabaseMetricsSnapshotEntity> DatabaseMetricsSnapshots => Set<DatabaseMetricsSnapshotEntity>(); // Database growth tracking
     public DbSet<UserBackupCodeEntity> UserBackupCodes => Set<UserBackupCodeEntity>(); // AUTH-07
     public DbSet<TempSessionEntity> TempSessions => Set<TempSessionEntity>(); // AUTH-07
     public DbSet<UsedTotpCodeEntity> UsedTotpCodes => Set<UsedTotpCodeEntity>(); // SEC-07: Issue #1787 TOTP Replay Prevention
@@ -326,6 +327,7 @@ public class MeepleAiDbContext : DbContext
         modelBuilder.Ignore<BoundedContexts.AgentMemory.Domain.Entities.PlayerMemory>(); // AgentMemory: domain aggregate
         modelBuilder.Ignore<BoundedContexts.Administration.Domain.Entities.AdminReport>(); // ISSUE-916
         modelBuilder.Ignore<BoundedContexts.Administration.Domain.Entities.ReportExecution>(); // ISSUE-916
+        modelBuilder.Ignore<BoundedContexts.Administration.Domain.Entities.DatabaseMetricsSnapshot>(); // Database growth tracking
         modelBuilder.Ignore<BoundedContexts.DocumentProcessing.Domain.Entities.DocumentCollection>(); // ISSUE-2051
         modelBuilder.Ignore<BoundedContexts.SharedGameCatalog.Domain.Aggregates.SharedGame>(); // ISSUE-2370
         modelBuilder.Ignore<BoundedContexts.SharedGameCatalog.Domain.Entities.GameCategory>(); // ISSUE-2370

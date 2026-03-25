@@ -1,10 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { Download, Users, ScrollText, Key } from 'lucide-react';
 
-import { Download, Users, ScrollText, Key, Loader2 } from 'lucide-react';
-
-import { toast } from '@/components/layout';
+import { EmptyFeatureState } from '@/components/admin/EmptyFeatureState';
 
 interface ExportCard {
   id: string;
@@ -39,24 +37,10 @@ const EXPORTS: ExportCard[] = [
 ];
 
 export function BulkExportTab() {
-  const [loadingId, setLoadingId] = useState<string | null>(null);
-
-  async function handleExport(card: ExportCard) {
-    setLoadingId(card.id);
-    try {
-      // Backend export endpoints not yet implemented
-      await new Promise(resolve => setTimeout(resolve, 600));
-      toast.info(`${card.title} export: API endpoint not yet connected`);
-    } finally {
-      setLoadingId(null);
-    }
-  }
-
   return (
     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
       {EXPORTS.map(card => {
         const Icon = card.icon;
-        const isLoading = loadingId === card.id;
 
         return (
           <div
@@ -78,21 +62,24 @@ export function BulkExportTab() {
                 {card.format}
               </span>
               <button
-                onClick={() => handleExport(card)}
-                disabled={isLoading}
-                className="inline-flex items-center gap-1.5 rounded-lg bg-amber-100/80 dark:bg-amber-900/30 px-3 py-1.5 text-xs font-semibold text-amber-900 dark:text-amber-300 transition-colors hover:bg-amber-200/80 dark:hover:bg-amber-900/50 disabled:opacity-60"
+                disabled
+                title="Export not yet available"
+                className="inline-flex items-center gap-1.5 rounded-lg bg-amber-100/80 dark:bg-amber-900/30 px-3 py-1.5 text-xs font-semibold text-amber-900 dark:text-amber-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {isLoading ? (
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                ) : (
-                  <Download className="h-3.5 w-3.5" />
-                )}
+                <Download className="h-3.5 w-3.5" />
                 Download
               </button>
             </div>
           </div>
         );
       })}
+
+      <div className="sm:col-span-2 lg:col-span-3">
+        <EmptyFeatureState
+          title="Export Massivo"
+          description="L'export massivo dei dati non è ancora disponibile."
+        />
+      </div>
     </div>
   );
 }

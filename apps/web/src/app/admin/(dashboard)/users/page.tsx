@@ -97,7 +97,7 @@ export default function AdminUsersPage() {
     }
   }
 
-  const users = usersQuery.data?.users ?? [];
+  const users = usersQuery.data?.items ?? [];
   const totalUsers = usersQuery.data?.total ?? 0;
   const totalPages = Math.ceil(totalUsers / PAGE_SIZE);
   const pendingInvitations = pendingInvitationsQuery.data?.items ?? [];

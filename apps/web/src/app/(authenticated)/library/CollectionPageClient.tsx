@@ -66,18 +66,18 @@ export default function CollectionPageClient() {
   const quickFilterValue = useMemo(() => {
     const sf = filters.stateFilter;
     if (!sf || sf.length === 0) return 'all';
-    if (sf.includes('Owned' as GameStateType)) return 'owned';
-    if (sf.includes('Wishlist' as GameStateType)) return 'wishlist';
-    if (sf.includes('InPrestito' as GameStateType)) return 'loaned';
+    if (sf.includes('Owned')) return 'owned';
+    if (sf.includes('Wishlist')) return 'wishlist';
+    if (sf.includes('InPrestito')) return 'loaned';
     return 'all';
   }, [filters.stateFilter]);
 
   const handleQuickFilter = (value: string) => {
     const stateMap: Record<string, GameStateType[]> = {
       all: [],
-      owned: ['Owned' as GameStateType],
-      wishlist: ['Wishlist' as GameStateType],
-      loaned: ['InPrestito' as GameStateType],
+      owned: ['Owned'],
+      wishlist: ['Wishlist'],
+      loaned: ['InPrestito'],
     };
     handleStateFilterChange(stateMap[value] ?? []);
   };

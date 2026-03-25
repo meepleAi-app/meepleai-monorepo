@@ -104,7 +104,6 @@ export const meepleCardVariants = cva(
           'bg-[var(--nh-bg-surface)] border border-[var(--nh-border-default)]',
           'border-l-[3px] [border-left-color:var(--mc-entity-color,transparent)]',
           '[box-shadow:var(--shadow-warm-sm)] hover:[box-shadow:var(--shadow-warm-xl)]',
-          // Neon Holo: 3D tilt + performance containment
           'hover:-translate-y-2',
           '[contain:layout_paint]',
         ],
@@ -117,16 +116,15 @@ export const meepleCardVariants = cva(
         ],
         compact: [
           'flex flex-row items-center gap-2 p-2 rounded-lg',
-          'bg-card/80 border border-border/30',
+          'bg-[var(--nh-bg-surface)] border border-[var(--nh-border-default)]',
           'border-l-[3px] [border-left-color:var(--mc-entity-color,transparent)]',
-          'hover:bg-card',
+          'hover:bg-[var(--nh-bg-elevated)]',
         ],
         featured: [
           'flex flex-col rounded-2xl overflow-hidden',
           'bg-[var(--nh-bg-surface)] border border-[var(--nh-border-default)]',
           'border-l-[3px] [border-left-color:var(--mc-entity-color,transparent)]',
           '[box-shadow:var(--shadow-warm-md)] hover:[box-shadow:var(--shadow-warm-xl)]',
-          // Neon Holo: hover lift + performance containment
           'hover:-translate-y-2',
           '[contain:layout_paint]',
         ],

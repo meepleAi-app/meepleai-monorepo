@@ -11,9 +11,11 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { AlertTriangle, CheckCircle2, Clock, RefreshCw, XCircle } from 'lucide-react';
 
+import { EmptyFeatureState } from '@/components/admin/EmptyFeatureState';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/primitives/button';
 import { createAdminClient } from '@/lib/api/clients/adminClient';
+import { isNotFoundError } from '@/lib/api/core/errors';
 import { HttpClient } from '@/lib/api/core/httpClient';
 import type {
   ModelHealthDto,
@@ -235,7 +237,10 @@ export default function ModelHealthPage() {
     queryKey: ['admin', 'model-health'],
     queryFn: () => adminClient.getModelHealth(),
     refetchInterval: 60_000,
-    retry: 1,
+    retry: (failureCount, err) => {
+      if (isNotFoundError(err)) return false;
+      return failureCount < 1;
+    },
   });
 
   const {
@@ -246,7 +251,10 @@ export default function ModelHealthPage() {
     queryKey: ['admin', 'model-change-history', historyLimit],
     queryFn: () => adminClient.getModelChangeHistory(undefined, historyLimit),
     refetchInterval: 60_000,
-    retry: 1,
+    retry: (failureCount, err) => {
+      if (isNotFoundError(err)) return false;
+      return failureCount < 1;
+    },
   });
 
   // ── Check Now mutation ──
@@ -294,6 +302,14 @@ export default function ModelHealthPage() {
           {checkNow.isPending ? 'Checking...' : 'Check Now'}
         </Button>
       </div>
+
+      {/* 404 fallback — endpoint not implemented */}
+      {isNotFoundError(healthError) && (
+        <EmptyFeatureState
+          title="Funzionalità non disponibile"
+          description="Endpoint model health non ancora implementato nel backend."
+        />
+      )}
 
       {/* Status Summary */}
       {!healthLoading && !healthError && models.length > 0 && (

@@ -51,7 +51,7 @@ export const CoverOverlay = memo(function CoverOverlay({
       {/* Top-Left: Label Stack */}
       {coverLabels && coverLabels.length > 0 && (
         <div
-          className="pointer-events-auto absolute top-2 left-2 flex flex-col gap-1 max-w-[calc(100%-50px)]"
+          className="pointer-events-auto absolute top-2 left-2 flex flex-col gap-1 max-w-[calc(100%-52px)]"
           data-testid="cover-labels"
         >
           {coverLabels.map((label, i) => (
@@ -81,7 +81,7 @@ export const CoverOverlay = memo(function CoverOverlay({
         <div className="pointer-events-auto absolute top-2 right-2" data-testid="cover-entity-type">
           <ManaSymbol
             entity={entity}
-            size="mini"
+            size="small"
             customColor={customColor}
             data-testid={`mana-symbol-${entity}`}
           />
@@ -100,9 +100,9 @@ export const CoverOverlay = memo(function CoverOverlay({
               title={sub.tooltip}
               className={cn(
                 'flex items-center justify-center',
-                'w-6 h-6 rounded-md',
-                'backdrop-blur-[8px] bg-black/45',
-                'border border-white/[0.12]',
+                'w-7 h-7 rounded-md',
+                'backdrop-blur-[8px] bg-[rgba(20,18,14,0.7)]',
+                'border border-[rgba(200,160,100,0.2)]',
                 'text-xs cursor-pointer',
                 'transition-transform duration-150 hover:scale-[1.15] hover:bg-black/60'
               )}

@@ -300,11 +300,44 @@ export function LlmConfigTab() {
             Default values from application configuration. Overridden when database config exists.
           </p>
           <div className="space-y-2 text-xs">
-            <ReadOnlyRow label="Default Failure Threshold" value="5" />
-            <ReadOnlyRow label="Default Open Duration" value="30s" />
-            <ReadOnlyRow label="Default Success Threshold" value="3" />
-            <ReadOnlyRow label="Default Daily Budget" value="$10.00" />
-            <ReadOnlyRow label="Default Monthly Budget" value="$100.00" />
+            <ReadOnlyRow
+              label="Default Failure Threshold"
+              value={
+                config.circuitBreakerFailureThreshold != null
+                  ? String(config.circuitBreakerFailureThreshold)
+                  : '\u2014'
+              }
+            />
+            <ReadOnlyRow
+              label="Default Open Duration"
+              value={
+                config.circuitBreakerOpenDurationSeconds != null
+                  ? `${config.circuitBreakerOpenDurationSeconds}s`
+                  : '\u2014'
+              }
+            />
+            <ReadOnlyRow
+              label="Default Success Threshold"
+              value={
+                config.circuitBreakerSuccessThreshold != null
+                  ? String(config.circuitBreakerSuccessThreshold)
+                  : '\u2014'
+              }
+            />
+            <ReadOnlyRow
+              label="Default Daily Budget"
+              value={
+                config.dailyBudgetUsd != null ? `$${config.dailyBudgetUsd.toFixed(2)}` : '\u2014'
+              }
+            />
+            <ReadOnlyRow
+              label="Default Monthly Budget"
+              value={
+                config.monthlyBudgetUsd != null
+                  ? `$${config.monthlyBudgetUsd.toFixed(2)}`
+                  : '\u2014'
+              }
+            />
           </div>
         </ConfigSection>
 

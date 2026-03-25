@@ -11,6 +11,7 @@ import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { AlertTriangle, RefreshCw } from 'lucide-react';
 
+import { EmptyFeatureState } from '@/components/admin/EmptyFeatureState';
 import { CostBreakdownPanel } from '@/components/admin/usage/CostBreakdownPanel';
 import { FreeQuotaIndicator } from '@/components/admin/usage/FreeQuotaIndicator';
 import { KpiCards } from '@/components/admin/usage/KpiCards';
@@ -22,6 +23,7 @@ import {
 import { RequestTimelineChart } from '@/components/admin/usage/RequestTimelineChart';
 import { Button } from '@/components/ui/primitives/button';
 import { createAdminClient } from '@/lib/api/clients/adminClient';
+import { isNotFoundError } from '@/lib/api/core/errors';
 import { HttpClient } from '@/lib/api/core/httpClient';
 
 // ─── Module-level client (stable reference, avoids re-creation on every render) ─
@@ -54,6 +56,10 @@ export default function UsagePage() {
     queryKey: ['admin', 'openrouter', 'status'],
     queryFn: () => adminClient.getOpenRouterStatus(),
     refetchInterval: 30_000,
+    retry: (failureCount, err) => {
+      if (isNotFoundError(err)) return false;
+      return failureCount < 3;
+    },
   });
 
   const { data: timeline, isLoading: timelineLoading } = useQuery({
@@ -116,8 +122,16 @@ export default function UsagePage() {
         </div>
       </div>
 
+      {/* ── 404 fallback — endpoint not implemented ── */}
+      {isNotFoundError(error) && (
+        <EmptyFeatureState
+          title="Funzionalità non disponibile"
+          description="Endpoint usage & costs non ancora implementato nel backend."
+        />
+      )}
+
       {/* ── Error banner ── */}
-      {isError && (
+      {isError && !isNotFoundError(error) && (
         <div
           role="alert"
           className="flex items-center gap-2 rounded-lg border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive"

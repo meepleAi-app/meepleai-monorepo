@@ -50,7 +50,7 @@ test.describe.skip('Game FAQ Flow - Issue #2193', () => {
   test('should display FAQ list sorted by votes', async ({ page }) => {
     // ✅ REMOVED MOCK: Use real backend to get game with FAQs
     // Navigate to any game detail page (backend determines available games)
-    await page.goto('/games');
+    await page.goto('/library');
 
     // Wait for game list to load
     await page.waitForLoadState('networkidle');
@@ -80,7 +80,7 @@ test.describe.skip('Game FAQ Flow - Issue #2193', () => {
 
   test('should create new FAQ for a game', async ({ page }) => {
     // ✅ REMOVED MOCK: Use real backend POST /api/v1/games/{id}/faqs
-    await page.goto('/games');
+    await page.goto('/library');
     await page.waitForLoadState('networkidle');
 
     const gameCard = page.locator('[data-testid="game-card"]').first();
@@ -124,7 +124,7 @@ test.describe.skip('Game FAQ Flow - Issue #2193', () => {
 
   test('should edit existing FAQ', async ({ page }) => {
     // ✅ REMOVED MOCK: Use real backend PUT /api/v1/faqs/{id}
-    await page.goto('/games');
+    await page.goto('/library');
     await page.waitForLoadState('networkidle');
 
     const gameCard = page.locator('[data-testid="game-card"]').first();
@@ -177,7 +177,7 @@ test.describe.skip('Game FAQ Flow - Issue #2193', () => {
       await dialog.accept();
     });
 
-    await page.goto('/games');
+    await page.goto('/library');
     await page.waitForLoadState('networkidle');
 
     const gameCard = page.locator('[data-testid="game-card"]').first();
@@ -217,7 +217,7 @@ test.describe.skip('Game FAQ Flow - Issue #2193', () => {
 
   test('should upvote FAQ and update vote count', async ({ page }) => {
     // ✅ REMOVED MOCK: Use real backend POST /api/v1/faqs/{id}/upvote
-    await page.goto('/games');
+    await page.goto('/library');
     await page.waitForLoadState('networkidle');
 
     const gameCard = page.locator('[data-testid="game-card"]').first();
@@ -261,7 +261,7 @@ test.describe.skip('Game FAQ Flow - Issue #2193', () => {
 
   test('should show empty state when no FAQs exist', async ({ page }) => {
     // ✅ REMOVED MOCK: Use real backend to check empty state
-    await page.goto('/games');
+    await page.goto('/library');
     await page.waitForLoadState('networkidle');
 
     const gameCard = page.locator('[data-testid="game-card"]').first();

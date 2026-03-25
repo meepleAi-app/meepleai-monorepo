@@ -203,7 +203,6 @@ export const MeepleCardList = React.memo(function MeepleCardList(props: MeepleCa
         {
           '--mc-entity-color': `hsl(${color})`,
           outlineColor: `hsla(${color}, 0.4)`,
-          willChange: 'transform, box-shadow, outline',
           viewTransitionName: entityId ? `meeple-card-${entityId}` : undefined,
         } as React.CSSProperties
       }

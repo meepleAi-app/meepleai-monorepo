@@ -23,18 +23,23 @@ async function setupPlayerCountMocks(page: Page) {
     { id: 'party', title: 'Codenames', minPlayers: 4, maxPlayers: 8 },
   ];
 
-  await page.route(`${API_BASE}/api/v1/auth/me`, async (route) => {
+  await page.route(`${API_BASE}/api/v1/auth/me`, async route => {
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
       body: JSON.stringify({
-        user: { id: 'test-user', email: 'test@example.com', displayName: 'Test User', role: 'User' },
+        user: {
+          id: 'test-user',
+          email: 'test@example.com',
+          displayName: 'Test User',
+          role: 'User',
+        },
         expiresAt: new Date(Date.now() + 3600000).toISOString(),
       }),
     });
   });
 
-  await page.route(`${API_BASE}/api/v1/games**`, async (route) => {
+  await page.route(`${API_BASE}/api/v1/games**`, async route => {
     const url = route.request().url();
     const minMatch = url.match(/minPlayers=(\d+)/);
     const maxMatch = url.match(/maxPlayers=(\d+)/);
@@ -62,22 +67,27 @@ async function setupPlayerCountMocks(page: Page) {
 test.describe('GAME-09: Player Count Filter', () => {
   test('should display player count filter', async ({ page }) => {
     await setupPlayerCountMocks(page);
-    await page.goto('/games');
+    await page.goto('/library');
     await page.waitForLoadState('networkidle');
     await expect(
-      page.getByRole('combobox', { name: /player/i }).or(page.locator('[data-testid="player-filter"]'))
+      page
+        .getByRole('combobox', { name: /player/i })
+        .or(page.locator('[data-testid="player-filter"]'))
     ).toBeVisible({ timeout: 5000 });
   });
 
   test('should filter by player count', async ({ page }) => {
     await setupPlayerCountMocks(page);
-    await page.goto('/games');
+    await page.goto('/library');
     await page.waitForLoadState('networkidle');
 
     const playerFilter = page.getByRole('combobox', { name: /player/i });
     if (await playerFilter.isVisible()) {
       await playerFilter.click();
-      await page.getByText(/2.*player/i).first().click();
+      await page
+        .getByText(/2.*player/i)
+        .first()
+        .click();
       await page.waitForLoadState('networkidle');
       await expect(page.getByText(/chess/i)).toBeVisible();
     }
@@ -85,7 +95,7 @@ test.describe('GAME-09: Player Count Filter', () => {
 
   test('should clear player filter', async ({ page }) => {
     await setupPlayerCountMocks(page);
-    await page.goto('/games?minPlayers=2&maxPlayers=2');
+    await page.goto('/library?minPlayers=2&maxPlayers=2');
     await page.waitForLoadState('networkidle');
 
     const clearButton = page.getByRole('button', { name: /clear|reset/i });

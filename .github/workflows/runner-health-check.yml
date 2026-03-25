@@ -19,7 +19,7 @@ jobs:
   # Job 1: Runs ON the self-hosted runner to verify it's alive
   runner-health:
     name: Self-Hosted Runner Health
-    runs-on: ${{ vars.RUNNER || 'ubuntu-latest' }}
+    runs-on: ${{ vars.RUNNER && fromJSON(vars.RUNNER) || 'ubuntu-latest' }}
     if: vars.RUNNER != ''
     timeout-minutes: 5
     outputs:

@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 
 import { Activity, ChevronDown, AlertTriangle, RotateCcw, X } from 'lucide-react';
 
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/ui/primitives/button';
 import { cn } from '@/lib/utils';
 
 import { usePipeline } from './contexts/PipelineContext';

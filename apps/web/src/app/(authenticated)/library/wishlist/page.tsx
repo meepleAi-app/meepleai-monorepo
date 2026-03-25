@@ -13,8 +13,8 @@
 
 import { Heart, PlusCircle } from 'lucide-react';
 
-import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/feedback/skeleton';
+import { Button } from '@/components/ui/primitives/button';
 import { AddToWishlistDialog } from '@/components/wishlist/AddToWishlistDialog';
 import { MeepleWishlistCard } from '@/components/wishlist/MeepleWishlistCard';
 import { useRemoveFromWishlist, useWishlist } from '@/hooks/queries/useWishlist';

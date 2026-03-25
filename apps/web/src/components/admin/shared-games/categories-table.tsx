@@ -2,7 +2,7 @@
 
 import { PlusIcon } from 'lucide-react';
 
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/ui/primitives/button';
 import { logger } from '@/lib/logger';
 
 import { CategoryRow } from './category-row';

@@ -20,10 +20,10 @@ import { CheckCircle2, AlertCircle, Loader2, Save } from 'lucide-react';
 
 import { DuplicateWarningDialog } from '@/components/admin/games/import/DuplicateWarningDialog';
 import { toast } from '@/components/layout';
-import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/data-display/card';
 import { MeepleCard } from '@/components/ui/data-display/meeple-card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/feedback/alert';
+import { Button } from '@/components/ui/primitives/button';
 import { Input } from '@/components/ui/primitives/input';
 import { Label } from '@/components/ui/primitives/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/primitives/radio-group';

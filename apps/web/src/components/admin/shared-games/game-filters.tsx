@@ -2,15 +2,15 @@
 
 import { useState } from 'react';
 
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
+} from '@/components/ui/overlays/select';
+import { Input } from '@/components/ui/primitives/input';
+import { Label } from '@/components/ui/primitives/label';
 
 export interface GameFiltersProps {
   onSearchChange?: (value: string) => void;
@@ -63,7 +63,7 @@ export function GameFilters({
             type="text"
             placeholder="Search by title, publisher..."
             value={search}
-            onChange={(e) => handleSearchChange(e.target.value)}
+            onChange={e => handleSearchChange(e.target.value)}
             className="bg-white dark:bg-zinc-900"
           />
         </div>

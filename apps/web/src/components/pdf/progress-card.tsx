@@ -26,8 +26,8 @@ import * as React from 'react';
 
 import { ChevronDown, ChevronUp, Clock, FileText, Loader2 } from 'lucide-react';
 
-import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/data-display/badge';
+import { Button } from '@/components/ui/primitives/button';
 import { usePdfProgress } from '@/hooks/usePdfProgress';
 import { cn } from '@/lib/utils';
 import { formatTimeSpan } from '@/lib/utils/formatTimeSpan';
@@ -64,14 +64,14 @@ function getStatusBadgeVariant(state: string): 'default' | 'secondary' | 'destru
 
 function getStatusLabel(state: string): string {
   const labels: Record<string, string> = {
-    'pending': 'Pending',
-    'uploading': 'Uploading',
-    'extracting': 'Extracting',
-    'chunking': 'Chunking',
-    'embedding': 'Embedding',
-    'indexing': 'Indexing',
-    'ready': 'Ready',
-    'failed': 'Failed',
+    pending: 'Pending',
+    uploading: 'Uploading',
+    extracting: 'Extracting',
+    chunking: 'Chunking',
+    embedding: 'Embedding',
+    indexing: 'Indexing',
+    ready: 'Ready',
+    failed: 'Failed',
   };
   return labels[state] || state;
 }
@@ -181,8 +181,8 @@ export function ProgressCard({
             currentState === 'failed'
               ? 'text-destructive'
               : currentState === 'ready'
-              ? 'text-green-500'
-              : 'text-amber-500'
+                ? 'text-green-500'
+                : 'text-amber-500'
           }
         />
 
@@ -197,11 +197,11 @@ export function ProgressCard({
             </div>
 
             {/* Status Badge */}
-            <Badge 
-              variant={getStatusBadgeVariant(currentState)} 
+            <Badge
+              variant={getStatusBadgeVariant(currentState)}
               className={cn(
-                "shrink-0",
-                currentState === 'ready' && "text-green-600 dark:text-green-400 border-green-500/50"
+                'shrink-0',
+                currentState === 'ready' && 'text-green-600 dark:text-green-400 border-green-500/50'
               )}
             >
               {isProcessing && <Loader2 className="mr-1 h-3 w-3 animate-spin" />}
@@ -211,9 +211,7 @@ export function ProgressCard({
 
           {/* Polling Indicator */}
           {isPolling && (
-            <p className="text-xs text-muted-foreground mt-1 font-nunito">
-              ⚠️ Checking status...
-            </p>
+            <p className="text-xs text-muted-foreground mt-1 font-nunito">⚠️ Checking status...</p>
           )}
         </div>
       </div>
@@ -238,8 +236,12 @@ export function ProgressCard({
                 </p>
                 <p className="font-semibold font-quicksand text-amber-600 dark:text-amber-400">
                   {currentState === 'ready'
-                    ? (metrics?.totalDuration ? formatTimeSpan(metrics.totalDuration) : '-')
-                    : (metrics?.estimatedTimeRemaining ? formatTimeSpan(metrics.estimatedTimeRemaining) : 'Calculating...')}
+                    ? metrics?.totalDuration
+                      ? formatTimeSpan(metrics.totalDuration)
+                      : '-'
+                    : metrics?.estimatedTimeRemaining
+                      ? formatTimeSpan(metrics.estimatedTimeRemaining)
+                      : 'Calculating...'}
                 </p>
               </div>
             </div>

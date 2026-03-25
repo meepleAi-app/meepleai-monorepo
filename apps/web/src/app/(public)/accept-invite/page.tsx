@@ -5,10 +5,10 @@ import { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 import { Check, CheckCircle2, Loader2, Lock, X } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 
-import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { Button } from '@/components/ui/primitives/button';
+import { Input } from '@/components/ui/primitives/input';
+import { Label } from '@/components/ui/primitives/label';
 
 type PageState = 'loading' | 'valid' | 'submitting' | 'success';
 

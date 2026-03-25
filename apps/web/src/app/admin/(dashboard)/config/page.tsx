@@ -89,10 +89,10 @@ export default async function AdminConfigPage({ searchParams }: AdminConfigPageP
     <div className="space-y-5">
       <div>
         <h1 className="font-quicksand text-xl sm:text-2xl font-bold tracking-tight text-foreground">
-          Configuration
+          Configurazione
         </h1>
         <p className="mt-0.5 text-sm text-muted-foreground">
-          System settings, feature flags, and rate limits.
+          Impostazioni di sistema, feature flag e limiti di frequenza.
         </p>
       </div>
 

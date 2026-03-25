@@ -8,7 +8,7 @@ import {
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-} from '@/components/ui/data-display/tooltip';
+} from '@/components/ui/overlays/tooltip';
 import { HttpClient } from '@/lib/api/core/httpClient';
 import { cn } from '@/lib/utils';
 

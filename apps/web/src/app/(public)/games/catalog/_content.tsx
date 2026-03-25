@@ -7,7 +7,7 @@
  * Displays community-curated game catalog with advanced filtering.
  */
 
-import { useMemo, useCallback } from 'react';
+import { useMemo, useCallback, useState } from 'react';
 
 import { AlertCircle, Library, Star, Clock } from 'lucide-react';
 import Link from 'next/link';
@@ -20,10 +20,20 @@ import {
   MeepleGameCatalogCardSkeleton,
 } from '@/components/catalog/MeepleGameCatalogCard';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/feedback/alert';
+import { FilterChipsRow } from '@/components/ui/FilterChipsRow';
 import { Button } from '@/components/ui/primitives/button';
 import { useSharedGames, useGameCategories, useGameMechanics } from '@/hooks/queries';
 import { useCatalogSearchParams, type SortByField } from '@/hooks/useCatalogSearchParams';
 import type { SearchSharedGamesParams } from '@/lib/api';
+
+const CATEGORY_CHIPS = [
+  { id: 'all', label: 'Tutti' },
+  { id: 'strategici', label: 'Strategici' },
+  { id: 'party', label: 'Party' },
+  { id: 'cooperativi', label: 'Cooperativi' },
+  { id: 'solo', label: 'Solo' },
+  { id: 'nuove-uscite', label: 'Nuove uscite' },
+];
 
 /**
  * Inner component that uses useSearchParams (requires Suspense boundary)
@@ -34,6 +44,7 @@ interface CatalogContentProps {
 
 export function CatalogContent({ gameDetailBasePath = '/games' }: CatalogContentProps) {
   const router = useRouter();
+  const [activeCategory, setActiveCategory] = useState('all');
 
   // URL-synced filter and pagination state (#2876)
   const { params, setParams, resetParams, setPage } = useCatalogSearchParams();
@@ -155,6 +166,14 @@ export function CatalogContent({ gameDetailBasePath = '/games' }: CatalogContent
           </Link>
         </div>
 
+        {/* Category Chips */}
+        <FilterChipsRow
+          chips={CATEGORY_CHIPS}
+          activeId={activeCategory}
+          onSelect={setActiveCategory}
+          className="mb-6"
+        />
+
         {/* Hero Section: Top Rated + Latest Added */}
         <div className="mb-8 space-y-6">
           {/* Top 5 by BGG Rating */}
@@ -246,7 +265,7 @@ export function CatalogContent({ gameDetailBasePath = '/games' }: CatalogContent
 
             {/* Loading State */}
             {isLoading && (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4">
                 {Array.from({ length: 6 }).map((_, i) => (
                   <MeepleGameCatalogCardSkeleton key={i} />
                 ))}
@@ -270,7 +289,7 @@ export function CatalogContent({ gameDetailBasePath = '/games' }: CatalogContent
             {/* Games Grid */}
             {!isLoading && !error && games.length > 0 && (
               <>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4 mb-6">
                   {games.map(game => (
                     <MeepleGameCatalogCard key={game.id} game={game} onClick={handleGameClick} />
                   ))}

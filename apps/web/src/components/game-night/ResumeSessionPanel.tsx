@@ -12,7 +12,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { Camera, Clock, Play, Trophy, Users } from 'lucide-react';
 
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/ui/primitives/button';
 import { api } from '@/lib/api';
 import type { SessionResumeContext } from '@/lib/api/schemas/save-resume.schemas';
 import { cn } from '@/lib/utils';

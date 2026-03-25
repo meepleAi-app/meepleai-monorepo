@@ -24,11 +24,11 @@ export function DashboardClient() {
   const isMobile = responsive.isMobile;
 
   const {
-    stats,
-    isLoadingStats,
+    stats: _stats,
+    isLoadingStats: _isLoadingStats,
     fetchStats,
     recentSessions,
-    isLoadingSessions,
+    isLoadingSessions: _isLoadingSessions,
     fetchRecentSessions,
     updateFilters,
     games,

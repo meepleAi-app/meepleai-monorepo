@@ -42,7 +42,15 @@ import type { NextRequest } from 'next/server';
  * Protected routes that require authentication
  * Unauthenticated users will be redirected to /login
  */
-const PROTECTED_ROUTES = ['/library', '/chat', '/upload', '/admin', '/editor', '/settings'];
+const PROTECTED_ROUTES = [
+  '/library',
+  '/chat',
+  '/upload',
+  '/admin',
+  '/editor',
+  '/settings',
+  '/games',
+];
 
 /**
  * Admin-only routes that require admin role

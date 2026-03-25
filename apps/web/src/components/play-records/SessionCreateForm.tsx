@@ -18,7 +18,10 @@ import { Calendar, Users, Trophy, ArrowLeft, ArrowRight, Check } from 'lucide-re
 import { useForm } from 'react-hook-form';
 import { toast } from 'sonner';
 
-import { AddPrivateGameWithBgg } from '@/components/library/AddPrivateGameWithBgg';
+import {
+  AddPrivateGameForm,
+  type AddPrivateGameFormData,
+} from '@/components/library/AddPrivateGameForm';
 import {
   Form,
   FormControl,
@@ -70,7 +73,7 @@ export function SessionCreateForm({
 }: SessionCreateFormProps) {
   const { sessionCreation, nextStep, prevStep, resetSessionCreation } = usePlayRecordsStore();
 
-  const [showBggDialog, setShowBggDialog] = useState(false);
+  const [showAddGameDialog, setShowAddGameDialog] = useState(false);
   const [isAddingGame, setIsAddingGame] = useState(false);
 
   const form = useForm<SessionCreateFormData>({
@@ -204,7 +207,7 @@ export function SessionCreateForm({
                             field.onChange(gameId);
                             form.setValue('gameName', gameName);
                           }}
-                          onNotFound={() => setShowBggDialog(true)}
+                          onNotFound={() => setShowAddGameDialog(true)}
                           disabled={isSubmitting}
                           placeholder="Search your library..."
                         />
@@ -463,14 +466,14 @@ export function SessionCreateForm({
         </form>
       </Form>
 
-      {/* BGG Search Dialog - Issue #4274 */}
-      <Dialog open={showBggDialog} onOpenChange={setShowBggDialog}>
+      {/* Add Game Dialog (manual entry) */}
+      <Dialog open={showAddGameDialog} onOpenChange={setShowAddGameDialog}>
         <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Search BoardGameGeek</DialogTitle>
+            <DialogTitle>Add a New Game</DialogTitle>
           </DialogHeader>
-          <AddPrivateGameWithBgg
-            onSubmit={async (gameData, source, bggId) => {
+          <AddPrivateGameForm
+            onSubmit={async (gameData: AddPrivateGameFormData) => {
               setIsAddingGame(true);
               try {
                 // Create private game via API
@@ -479,8 +482,7 @@ export function SessionCreateForm({
                   headers: { 'Content-Type': 'application/json' },
                   body: JSON.stringify({
                     ...gameData,
-                    source,
-                    bggId,
+                    source: 'Manual',
                   }),
                 });
 
@@ -493,7 +495,7 @@ export function SessionCreateForm({
                 form.setValue('gameName', privateGame.title);
 
                 // Close dialog and show success
-                setShowBggDialog(false);
+                setShowAddGameDialog(false);
                 toast.success('Game added to library');
               } catch (err) {
                 logger.error('Add game error:', err);
@@ -502,7 +504,7 @@ export function SessionCreateForm({
                 setIsAddingGame(false);
               }
             }}
-            onCancel={() => setShowBggDialog(false)}
+            onCancel={() => setShowAddGameDialog(false)}
             isSubmitting={isAddingGame}
           />
         </DialogContent>

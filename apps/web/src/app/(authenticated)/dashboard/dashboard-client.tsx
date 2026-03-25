@@ -205,7 +205,7 @@ export function DashboardClient() {
           <h2 className="font-quicksand font-bold text-sm text-foreground flex items-center gap-1.5">
             <span className="text-primary">🔥</span> Popolari questa settimana
           </h2>
-          <Link href="/games" className="text-xs text-primary font-semibold">
+          <Link href="/library" className="text-xs text-primary font-semibold">
             Scopri &rarr;
           </Link>
         </div>

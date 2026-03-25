@@ -36,7 +36,7 @@ export function TrendingGamesRow({ games, className }: TrendingGamesRowProps) {
         <h3 className="flex items-center gap-2 font-quicksand text-base font-bold">
           <span>🔥</span> Popolari questa settimana
         </h3>
-        <Link href="/games" className="text-sm font-semibold text-primary hover:underline">
+        <Link href="/library" className="text-sm font-semibold text-primary hover:underline">
           Vedi tutti →
         </Link>
       </div>
@@ -63,7 +63,7 @@ export function TrendingGamesRow({ games, className }: TrendingGamesRowProps) {
             'flex w-[110px] flex-shrink-0 flex-col overflow-hidden rounded-xl border-l-[3px] border-l-primary bg-card shadow-warm-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-warm-md';
 
           // Real data: link to game detail. Fallback: link to catalog browse.
-          const href = hasRealData ? `/games/${(game as TrendingGame).id}` : '/games';
+          const href = hasRealData ? `/library/games/${(game as TrendingGame).id}` : '/library';
 
           return (
             <Link key={`trending-${i}`} href={href} role="listitem" className={cardClass}>

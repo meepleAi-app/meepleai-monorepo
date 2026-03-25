@@ -2,6 +2,8 @@
 
 import { Download, Users, ScrollText, Key } from 'lucide-react';
 
+import { EmptyFeatureState } from '@/components/admin/EmptyFeatureState';
+
 interface ExportCard {
   id: string;
   title: string;
@@ -68,13 +70,16 @@ export function BulkExportTab() {
                 Download
               </button>
             </div>
-
-            <p className="mt-2 text-[10px] text-muted-foreground italic">
-              Export not yet available — API endpoint coming soon.
-            </p>
           </div>
         );
       })}
+
+      <div className="sm:col-span-2 lg:col-span-3">
+        <EmptyFeatureState
+          title="Export Massivo"
+          description="L'export massivo dei dati non è ancora disponibile."
+        />
+      </div>
     </div>
   );
 }

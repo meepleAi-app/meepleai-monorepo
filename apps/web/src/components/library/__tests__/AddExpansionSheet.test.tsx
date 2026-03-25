@@ -1,6 +1,7 @@
 /**
  * AddExpansionSheet Component Tests
- * Task 5: Add Expansion from BGG
+ * Note: BGG search was removed (restricted to admin only). The component
+ * now searches the shared catalog (api.sharedGames.search).
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
@@ -9,7 +10,7 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 // Mock the api module — must be before any imports that use it
 vi.mock('@/lib/api', () => ({
   api: {
-    bgg: {
+    sharedGames: {
       search: vi.fn(),
     },
     library: {
@@ -22,7 +23,7 @@ vi.mock('@/lib/api', () => ({
 import { api } from '@/lib/api';
 import { AddExpansionSheet } from '../AddExpansionSheet';
 
-const mockBggSearch = vi.mocked(api.bgg.search);
+const mockSearch = vi.mocked(api.sharedGames.search);
 const mockAddPrivateGame = vi.mocked(api.library.addPrivateGame);
 const mockCreateEntityLink = vi.mocked(api.library.createEntityLink);
 
@@ -34,28 +35,29 @@ const defaultProps = {
   baseGameTitle: 'Catan',
 };
 
-const makeBggResult = (overrides = {}) => ({
-  bggId: 12345,
-  name: 'Catan: Seafarers',
+const makeCatalogResult = (overrides = {}) => ({
+  id: 'shared-1',
+  title: 'Catan: Seafarers',
   yearPublished: 1997,
   thumbnailUrl: null,
-  type: 'boardgame',
   ...overrides,
 });
 
-const makeBggResponse = (results = [makeBggResult()]) => ({
-  results,
-  total: results.length,
+const makeCatalogResponse = (items = [makeCatalogResult()]) => ({
+  items,
   page: 1,
   pageSize: 20,
+  totalCount: items.length,
   totalPages: 1,
+  hasNextPage: false,
+  hasPreviousPage: false,
 });
 
 const makePrivateGameDto = (overrides = {}) => ({
   id: 'exp-1',
   ownerId: 'user-1',
-  source: 'BoardGameGeek' as const,
-  bggId: 12345,
+  source: 'Manual' as const,
+  bggId: null,
   title: 'Catan: Seafarers',
   minPlayers: 1,
   maxPlayers: 4,
@@ -107,7 +109,7 @@ describe('AddExpansionSheet', () => {
 
     expect(screen.getByText('Aggiungi espansione')).toBeInTheDocument();
     expect(screen.getByTestId('search-input')).toBeInTheDocument();
-    expect(screen.getByPlaceholderText('Cerca espansione su BGG...')).toBeInTheDocument();
+    expect(screen.getByPlaceholderText('Cerca espansione nel catalogo...')).toBeInTheDocument();
     // Shows the base game title
     expect(screen.getByText('Catan')).toBeInTheDocument();
   });
@@ -119,8 +121,8 @@ describe('AddExpansionSheet', () => {
     expect(input.value).toBe('Wingspan');
   });
 
-  it('searches BGG and shows results after debounce', async () => {
-    mockBggSearch.mockResolvedValue(makeBggResponse());
+  it('searches catalog and shows results after debounce', async () => {
+    mockSearch.mockResolvedValue(makeCatalogResponse());
 
     render(<AddExpansionSheet {...defaultProps} />);
 
@@ -131,7 +133,7 @@ describe('AddExpansionSheet', () => {
     vi.advanceTimersByTime(400);
 
     await waitFor(() => {
-      expect(mockBggSearch).toHaveBeenCalledWith('Seafarers');
+      expect(mockSearch).toHaveBeenCalledWith(expect.objectContaining({ searchTerm: 'Seafarers' }));
     });
 
     await waitFor(() => {
@@ -141,7 +143,7 @@ describe('AddExpansionSheet', () => {
   });
 
   it('shows year when available in results', async () => {
-    mockBggSearch.mockResolvedValue(makeBggResponse([makeBggResult({ yearPublished: 1997 })]));
+    mockSearch.mockResolvedValue(makeCatalogResponse([makeCatalogResult({ yearPublished: 1997 })]));
 
     render(<AddExpansionSheet {...defaultProps} />);
 
@@ -155,7 +157,7 @@ describe('AddExpansionSheet', () => {
   });
 
   it('creates private game + entity link on selection and add', async () => {
-    mockBggSearch.mockResolvedValue(makeBggResponse());
+    mockSearch.mockResolvedValue(makeCatalogResponse());
     mockAddPrivateGame.mockResolvedValue(makePrivateGameDto());
     mockCreateEntityLink.mockResolvedValue(makeEntityLinkDto());
 
@@ -179,8 +181,7 @@ describe('AddExpansionSheet', () => {
 
     await waitFor(() => {
       expect(mockAddPrivateGame).toHaveBeenCalledWith({
-        source: 'BoardGameGeek',
-        bggId: 12345,
+        source: 'Manual',
         title: 'Catan: Seafarers',
         minPlayers: 1,
         maxPlayers: 4,
@@ -200,7 +201,7 @@ describe('AddExpansionSheet', () => {
   });
 
   it('shows success state after adding', async () => {
-    mockBggSearch.mockResolvedValue(makeBggResponse());
+    mockSearch.mockResolvedValue(makeCatalogResponse());
     mockAddPrivateGame.mockResolvedValue(makePrivateGameDto());
     mockCreateEntityLink.mockResolvedValue(makeEntityLinkDto());
 
@@ -226,7 +227,7 @@ describe('AddExpansionSheet', () => {
   });
 
   it('calls onExpansionAdded callback on success', async () => {
-    mockBggSearch.mockResolvedValue(makeBggResponse());
+    mockSearch.mockResolvedValue(makeCatalogResponse());
     mockAddPrivateGame.mockResolvedValue(makePrivateGameDto());
     mockCreateEntityLink.mockResolvedValue(makeEntityLinkDto());
 
@@ -251,7 +252,7 @@ describe('AddExpansionSheet', () => {
   });
 
   it('shows error message when addPrivateGame fails', async () => {
-    mockBggSearch.mockResolvedValue(makeBggResponse());
+    mockSearch.mockResolvedValue(makeCatalogResponse());
     mockAddPrivateGame.mockRejectedValue(new Error('Server error'));
 
     render(<AddExpansionSheet {...defaultProps} />);
@@ -273,15 +274,13 @@ describe('AddExpansionSheet', () => {
     });
   });
 
-  it('does not fire a second BGG search before debounce window expires after new input', async () => {
-    // The initial mount fires one search for baseGameTitle via debouncedTerm.
-    // After typing new input, a second search must NOT fire until 400ms have elapsed.
-    mockBggSearch.mockResolvedValue(makeBggResponse());
+  it('does not fire a second catalog search before debounce window expires after new input', async () => {
+    mockSearch.mockResolvedValue(makeCatalogResponse());
     render(<AddExpansionSheet {...defaultProps} />);
 
     // Let the initial mount search complete
     vi.advanceTimersByTime(400);
-    await waitFor(() => expect(mockBggSearch).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(mockSearch).toHaveBeenCalledTimes(1));
 
     // Now type new input — the debounce timer resets
     const input = screen.getByTestId('search-input');
@@ -289,7 +288,7 @@ describe('AddExpansionSheet', () => {
 
     vi.advanceTimersByTime(200); // Less than 400ms — debounce not yet expired
 
-    expect(mockBggSearch).toHaveBeenCalledTimes(1); // Still only the initial call
+    expect(mockSearch).toHaveBeenCalledTimes(1); // Still only the initial call
   });
 
   it('calls onClose when the close button is clicked', () => {

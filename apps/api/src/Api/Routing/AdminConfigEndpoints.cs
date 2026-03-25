@@ -22,6 +22,58 @@ internal static class AdminConfigEndpoints
             .WithDescription("Retrieves upload limits for Free, Normal, and Premium tiers")
             .Produces<IReadOnlyList<PdfLimitConfigDto>>();
 
+        // GET /api/v1/admin/config/models
+        group.MapGet("/admin/config/models", async (HttpContext context, IMediator mediator, CancellationToken ct) =>
+        {
+            var (authorized, _, error) = context.RequireAdminSession();
+            if (!authorized) return error!;
+            var result = await mediator.Send(new GetAllConfigsQuery(Category: "models", ActiveOnly: false, PageSize: 100), ct).ConfigureAwait(false);
+            return Results.Ok(result.Items);
+        })
+            .WithName("GetConfigModels")
+            .WithTags("Admin", "Configuration")
+            .WithSummary("Get all model configurations")
+            .Produces<IReadOnlyList<ConfigurationDto>>();
+
+        // GET /api/v1/admin/config/strategies
+        group.MapGet("/admin/config/strategies", async (HttpContext context, IMediator mediator, CancellationToken ct) =>
+        {
+            var (authorized, _, error) = context.RequireAdminSession();
+            if (!authorized) return error!;
+            var result = await mediator.Send(new GetAllConfigsQuery(Category: "strategies", ActiveOnly: false, PageSize: 100), ct).ConfigureAwait(false);
+            return Results.Ok(result.Items);
+        })
+            .WithName("GetConfigStrategies")
+            .WithTags("Admin", "Configuration")
+            .WithSummary("Get all strategy configurations")
+            .Produces<IReadOnlyList<ConfigurationDto>>();
+
+        // GET /api/v1/admin/config/rerankers
+        group.MapGet("/admin/config/rerankers", async (HttpContext context, IMediator mediator, CancellationToken ct) =>
+        {
+            var (authorized, _, error) = context.RequireAdminSession();
+            if (!authorized) return error!;
+            var result = await mediator.Send(new GetAllConfigsQuery(Category: "rerankers", ActiveOnly: false, PageSize: 100), ct).ConfigureAwait(false);
+            return Results.Ok(result.Items);
+        })
+            .WithName("GetConfigRerankers")
+            .WithTags("Admin", "Configuration")
+            .WithSummary("Get all reranker configurations")
+            .Produces<IReadOnlyList<ConfigurationDto>>();
+
+        // GET /api/v1/admin/config/rate-limits
+        group.MapGet("/admin/config/rate-limits", async (HttpContext context, IMediator mediator, CancellationToken ct) =>
+        {
+            var (authorized, _, error) = context.RequireAdminSession();
+            if (!authorized) return error!;
+            var result = await mediator.Send(new GetAllConfigsQuery(Category: "rate-limits", ActiveOnly: false, PageSize: 100), ct).ConfigureAwait(false);
+            return Results.Ok(result.Items);
+        })
+            .WithName("GetConfigRateLimits")
+            .WithTags("Admin", "Configuration")
+            .WithSummary("Get all rate-limit configurations")
+            .Produces<IReadOnlyList<ConfigurationDto>>();
+
         // PUT /api/v1/admin/config/pdf-limits/{tier}
         group.MapPut("/admin/config/pdf-limits/{tier}", HandleUpdatePdfLimits)
             .WithName("UpdatePdfLimits")

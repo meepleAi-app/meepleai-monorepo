@@ -128,14 +128,51 @@ internal class PlayRecordRepository : RepositoryBase, IPlayRecordRepository
         await DbContext.PlayRecords.AddAsync(entity, cancellationToken).ConfigureAwait(false);
     }
 
-    public Task UpdateAsync(PlayRecord record, CancellationToken cancellationToken = default)
+    public async Task UpdateAsync(PlayRecord record, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(record);
         CollectDomainEvents(record);
 
         var entity = MapToPersistence(record);
+
+        // Load existing entity to determine which child entities are new vs existing.
+        // Using Update(entity) on a detached entity graph marks ALL children as Modified,
+        // causing DbUpdateConcurrencyException for newly added children (0 rows affected).
+        var existingPlayerIds = await DbContext.RecordPlayers
+            .Where(p => p.PlayRecordId == record.Id)
+            .Select(p => p.Id)
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        var existingPlayerIdSet = new HashSet<Guid>(existingPlayerIds);
+
+        var existingScoreIds = await DbContext.RecordScores
+            .Where(s => s.RecordPlayer!.PlayRecordId == record.Id)
+            .Select(s => s.Id)
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        var existingScoreIdSet = new HashSet<Guid>(existingScoreIds);
+
+        // Attach root entity as Modified
         DbContext.PlayRecords.Update(entity);
-        return Task.CompletedTask;
+
+        // Fix state for child entities: new entities should be Added, not Modified
+        foreach (var player in entity.Players)
+        {
+            if (!existingPlayerIdSet.Contains(player.Id))
+            {
+                DbContext.Entry(player).State = EntityState.Added;
+            }
+
+            foreach (var score in player.Scores)
+            {
+                if (!existingScoreIdSet.Contains(score.Id))
+                {
+                    DbContext.Entry(score).State = EntityState.Added;
+                }
+            }
+        }
     }
 
     public Task DeleteAsync(PlayRecord record, CancellationToken cancellationToken = default)
@@ -205,10 +242,10 @@ internal class PlayRecordRepository : RepositoryBase, IPlayRecordRepository
         SetPrivateProperty(record, nameof(PlayRecord.CreatedAt), entity.CreatedAt);
         SetPrivateProperty(record, nameof(PlayRecord.UpdatedAt), entity.UpdatedAt);
 
-        // Restore players and scores
+        // Restore players and scores with original IDs (no domain events)
         foreach (var playerEntity in entity.Players)
         {
-            record.AddPlayer(playerEntity.UserId, playerEntity.DisplayName);
+            record.RestorePlayer(playerEntity.Id, playerEntity.UserId, playerEntity.DisplayName);
             var player = record.Players[^1];  // Last player added
 
             foreach (var scoreEntity in playerEntity.Scores)

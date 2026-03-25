@@ -160,25 +160,16 @@
     /* ============================================================================
      * HYBRID WARM-MODERN PALETTE
      * Warm-neutral visual identity (spec: 2026-03-25-library-visual-redesign)
+     * Light mode values (default); dark overrides in .dark {} block below
      * ============================================================================ */
-    --nh-bg-base: #14120e;
-    --nh-bg-surface: #1e1b16;
-    --nh-bg-surface-end: #27231c;
-    --nh-bg-elevated: #302b22;
-    --nh-border-default: rgba(200,160,100,0.08);
-    --nh-text-primary: #f0ece4;
-    --nh-text-secondary: #a09080;
-    --nh-text-muted: #6a5d4e;
-
-    /* Light mode values */
-    --nh-bg-base-light: #faf8f5;
-    --nh-bg-surface-light: #fffcf8;
-    --nh-bg-surface-end-light: #f5f0e8;
-    --nh-bg-elevated-light: #fffcf8;
-    --nh-border-default-light: rgba(160,120,60,0.08);
-    --nh-text-primary-light: #1a1a1a;
-    --nh-text-secondary-light: #5a4a35;
-    --nh-text-muted-light: #8a7a65;
+    --nh-bg-base: #faf8f5;
+    --nh-bg-surface: #fffcf8;
+    --nh-bg-surface-end: #f5f0e8;
+    --nh-bg-elevated: #fffcf8;
+    --nh-border-default: rgba(160,120,60,0.08);
+    --nh-text-primary: #1a1a1a;
+    --nh-text-secondary: #5a4a35;
+    --nh-text-muted: #8a7a65;
 
     /* Focus ring */
     --ring-width: 2px;
@@ -475,6 +466,16 @@
 
   /* Dark mode adjustments */
   .dark {
+    /* Hybrid Warm-Modern palette — dark overrides */
+    --nh-bg-base: #14120e;
+    --nh-bg-surface: #1e1b16;
+    --nh-bg-surface-end: #27231c;
+    --nh-bg-elevated: #302b22;
+    --nh-border-default: rgba(200,160,100,0.08);
+    --nh-text-primary: #f0ece4;
+    --nh-text-secondary: #a09080;
+    --nh-text-muted: #6a5d4e;
+
     /* Shadows need to be darker in dark mode */
     --shadow-xs: 0 1px 2px 0 rgb(0 0 0 / 0.3);
     --shadow-sm: 0 1px 3px 0 rgb(0 0 0 / 0.4), 0 1px 2px -1px rgb(0 0 0 / 0.4);

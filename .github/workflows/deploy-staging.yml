@@ -176,8 +176,8 @@ jobs:
     needs: [pre-deploy-check, detect-changes]
     if: always() && (needs.pre-deploy-check.result == 'success' || (github.event_name == 'workflow_dispatch' && inputs.skip_tests == true)) && (needs.detect-changes.outputs.deploy_api == 'true' || needs.detect-changes.outputs.deploy_web == 'true')
     outputs:
-      api_image: ${{ steps.meta-api.outputs.tags }}
-      web_image: ${{ steps.meta-web.outputs.tags }}
+      api_image: ${{ steps.api-tag.outputs.tag }}
+      web_image: ${{ steps.web-tag.outputs.tag }}
       version: ${{ steps.version.outputs.version }}
       api_built: ${{ needs.detect-changes.outputs.deploy_api }}
       web_built: ${{ needs.detect-changes.outputs.deploy_web }}
@@ -226,6 +226,16 @@ jobs:
           tags: |
             type=raw,value=${{ steps.version.outputs.version }}
             type=raw,value=staging-latest
+
+      - name: Extract single API tag
+        if: needs.detect-changes.outputs.deploy_api == 'true'
+        id: api-tag
+        run: echo "tag=$(echo '${{ steps.meta-api.outputs.tags }}' | head -1)" >> $GITHUB_OUTPUT
+
+      - name: Extract single Web tag
+        if: needs.detect-changes.outputs.deploy_web == 'true'
+        id: web-tag
+        run: echo "tag=$(echo '${{ steps.meta-web.outputs.tags }}' | head -1)" >> $GITHUB_OUTPUT
 
       - name: Build and Push API Image
         if: needs.detect-changes.outputs.deploy_api == 'true'

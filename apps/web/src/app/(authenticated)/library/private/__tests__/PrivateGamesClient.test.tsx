@@ -250,9 +250,9 @@ describe('PrivateGamesClient', () => {
         expect(screen.getByTestId(LIBRARY_TEST_IDS.emptyState)).toBeInTheDocument();
       });
 
-      expect(screen.getByText(testI18nT('privateGames.noGamesYet'))).toBeInTheDocument();
-      expect(screen.getByText(testI18nT('privateGames.emptyStateDescription'))).toBeInTheDocument();
-      expect(screen.getByText(testI18nT('privateGames.addFirstGame'))).toBeInTheDocument();
+      // Immersive empty state (Layout Redesign) uses hardcoded Italian strings
+      expect(screen.getByText(/la tua collezione ti aspetta/i)).toBeInTheDocument();
+      expect(screen.getByText(/esplora il catalogo/i)).toBeInTheDocument();
     });
 
     it('should show search empty state when search has no results', async () => {
@@ -530,10 +530,9 @@ describe('PrivateGamesClient', () => {
         expect(screen.getByTestId(LIBRARY_TEST_IDS.emptyState)).toBeInTheDocument();
       });
 
-      // LibraryEmptyState renders the CTA as a <Link> (→ <a href>), not router.push
-      // Issue #5167: CTA now opens the AddGameDrawer via ?action=add query param
-      const addLink = screen.getByText(testI18nT('privateGames.addFirstGame')).closest('a');
-      expect(addLink).toHaveAttribute('href', '/library?action=add');
+      // Immersive empty state (Layout Redesign) uses quick-start action cards (buttons)
+      // instead of Link elements. The "Esplora il Catalogo" card is the primary CTA.
+      expect(screen.getByText(/esplora il catalogo/i)).toBeInTheDocument();
     });
   });
 

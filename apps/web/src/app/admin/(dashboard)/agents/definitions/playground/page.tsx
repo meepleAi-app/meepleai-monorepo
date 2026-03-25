@@ -27,6 +27,7 @@ import {
   TabsTrigger,
   Textarea,
 } from '@/components/ui';
+import { useAdminConfig, parseConfigValue } from '@/hooks/useAdminConfig';
 import { parsePlaygroundSSEChunk } from '@/lib/agent/playground-sse-parser';
 import type { PlaygroundSSEHandlers } from '@/lib/agent/playground-sse-parser';
 import { agentDefinitionsApi } from '@/lib/api/agent-definitions.api';
@@ -35,7 +36,12 @@ import type { PlaygroundTestScenarioDto } from '@/lib/api/schemas/playground-sce
 import { usePlaygroundStore } from '@/stores/playground-store';
 import type { PlaygroundStrategy } from '@/stores/playground-store';
 
-const STRATEGY_OPTIONS: { value: PlaygroundStrategy; label: string; description: string }[] = [
+// Fallback constants used when the API is unreachable
+const FALLBACK_STRATEGY_OPTIONS: {
+  value: PlaygroundStrategy;
+  label: string;
+  description: string;
+}[] = [
   {
     value: 'SingleModel',
     label: 'SingleModel (POC)',
@@ -53,8 +59,10 @@ const STRATEGY_OPTIONS: { value: PlaygroundStrategy; label: string; description:
   },
 ];
 
-// Available models per provider
-const PROVIDER_MODELS: Record<string, { value: string; label: string; description?: string }[]> = {
+const FALLBACK_PROVIDER_MODELS: Record<
+  string,
+  { value: string; label: string; description?: string }[]
+> = {
   OpenRouter: [
     {
       value: 'anthropic/claude-3.5-sonnet',
@@ -126,6 +134,22 @@ export default function AgentPlaygroundPage() {
   } = usePlaygroundStore();
 
   const apiClient = useApiClient();
+
+  // Dynamic config from API, falling back to hardcoded defaults
+  const { data: modelsConfig } = useAdminConfig('models');
+  const { data: strategiesConfig } = useAdminConfig('strategies');
+
+  const PROVIDER_MODELS =
+    parseConfigValue<Record<string, { value: string; label: string; description?: string }[]>>(
+      modelsConfig,
+      'provider_models'
+    ) ?? FALLBACK_PROVIDER_MODELS;
+
+  const STRATEGY_OPTIONS =
+    parseConfigValue<{ value: PlaygroundStrategy; label: string; description: string }[]>(
+      strategiesConfig,
+      'strategy_options'
+    ) ?? FALLBACK_STRATEGY_OPTIONS;
 
   const { data: agents = [] } = useQuery({
     queryKey: ['admin', 'agent-definitions', { activeOnly: true }],

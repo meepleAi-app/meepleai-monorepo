@@ -210,11 +210,8 @@ internal class HybridCacheService : IHybridCacheService
             return 0;
         }
 
-        // Remove each key
-        foreach (var key in keysToRemove)
-        {
-            await RemoveAsync(key, ct).ConfigureAwait(false);
-        }
+        // Remove all keys in parallel for better performance on bulk invalidation
+        await Task.WhenAll(keysToRemove.Select(key => RemoveAsync(key, ct))).ConfigureAwait(false);
 
         _logger.LogInformation("Removed {Count} cache entries for tag: {Tag}", keysToRemove.Count, tag);
         return keysToRemove.Count;
@@ -242,11 +239,8 @@ internal class HybridCacheService : IHybridCacheService
             return 0;
         }
 
-        // Remove each key
-        foreach (var key in keysToRemove)
-        {
-            await RemoveAsync(key, ct).ConfigureAwait(false);
-        }
+        // Remove all keys in parallel for better performance on bulk invalidation
+        await Task.WhenAll(keysToRemove.Select(key => RemoveAsync(key, ct))).ConfigureAwait(false);
 
         _logger.LogInformation(
             "Removed {Count} cache entries for tags: {Tags}",

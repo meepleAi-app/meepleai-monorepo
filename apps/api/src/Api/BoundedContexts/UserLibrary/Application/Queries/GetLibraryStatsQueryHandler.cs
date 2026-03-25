@@ -22,7 +22,9 @@ internal class GetLibraryStatsQueryHandler : IQueryHandler<GetLibraryStatsQuery,
     {
         ArgumentNullException.ThrowIfNull(query);
 
-        // Sequential fetch — DbContext is not thread-safe, cannot use Task.WhenAll
+        // Sequential fetch — all calls share the same IUserLibraryRepository (and its DbContext)
+        // which is scoped per request. DbContext is not thread-safe, so Task.WhenAll would fail.
+        // To parallelize, each call would need its own IServiceScope — not worth the complexity here.
         var totalGames = await _libraryRepository.GetUserLibraryCountAsync(query.UserId, cancellationToken).ConfigureAwait(false);
         var favoriteGames = await _libraryRepository.GetFavoriteCountAsync(query.UserId, cancellationToken).ConfigureAwait(false);
         var privatePdfs = await _libraryRepository.GetPrivatePdfCountAsync(query.UserId, cancellationToken).ConfigureAwait(false);

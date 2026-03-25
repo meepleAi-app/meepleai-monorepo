@@ -131,6 +131,7 @@ export const MeepleCardGrid = React.memo(function MeepleCardGrid(props: MeepleCa
     stateLabel,
     coverLabels,
     subtypeIcons,
+    showHolo = false,
   } = props;
 
   const variant = 'grid' as const;
@@ -251,7 +252,6 @@ export const MeepleCardGrid = React.memo(function MeepleCardGrid(props: MeepleCa
         {
           '--mc-entity-color': `hsl(${color})`,
           outlineColor: `hsla(${color}, 0.4)`,
-          willChange: 'transform, box-shadow, outline',
           viewTransitionName: entityId ? `meeple-card-${entityId}` : undefined,
         } as React.CSSProperties
       }
@@ -273,7 +273,7 @@ export const MeepleCardGrid = React.memo(function MeepleCardGrid(props: MeepleCa
       data-entity={entity}
       data-variant={variant}
     >
-      <HoloOverlay />
+      {showHolo && <HoloOverlay />}
 
       {glowState && <StatusGlow state={glowState} entityColor={entityColors[entity].hsl} />}
 
@@ -498,7 +498,12 @@ export const MeepleCardGrid = React.memo(function MeepleCardGrid(props: MeepleCa
           {metadata.map((item, index) => {
             const chipContent = (
               <>
-                {item.icon && <item.icon className="w-3.5 h-3.5" aria-hidden="true" />}
+                {item.icon && (
+                  <item.icon
+                    className="w-5 h-5 text-[hsl(25,80%,55%)] opacity-[0.85]"
+                    aria-hidden="true"
+                  />
+                )}
                 <span className="font-nunito">{item.label || item.value}</span>
               </>
             );
@@ -507,7 +512,7 @@ export const MeepleCardGrid = React.memo(function MeepleCardGrid(props: MeepleCa
                 <button
                   key={index}
                   type="button"
-                  className="flex items-center gap-1.5 text-[0.7rem] font-semibold text-foreground/65 dark:text-foreground/60 cursor-pointer hover:opacity-80 transition-opacity"
+                  className="flex items-center gap-2 text-[0.78rem] font-semibold text-foreground/70 dark:text-[rgba(200,180,140,0.75)] cursor-pointer hover:opacity-80 transition-opacity"
                   onClick={e => {
                     e.stopPropagation();
                     item.onClick!();
@@ -520,7 +525,7 @@ export const MeepleCardGrid = React.memo(function MeepleCardGrid(props: MeepleCa
             return (
               <span
                 key={index}
-                className="flex items-center gap-1.5 text-[0.7rem] font-semibold text-foreground/65 dark:text-foreground/60"
+                className="flex items-center gap-2 text-[0.78rem] font-semibold text-foreground/70 dark:text-[rgba(200,180,140,0.75)]"
               >
                 {chipContent}
               </span>

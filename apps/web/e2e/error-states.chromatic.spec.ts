@@ -52,7 +52,7 @@ test.describe('Error States - Chromatic Visual Regression', () => {
       });
     });
 
-    await page.goto('/games');
+    await page.goto('/library');
 
     // Wait for error state to render
     await page.waitForTimeout(2000);
@@ -107,7 +107,7 @@ test.describe('Error States - Chromatic Visual Regression', () => {
       await route.abort('timedout');
     });
 
-    await page.goto('/games');
+    await page.goto('/library');
 
     // Wait for timeout error to render
     await page.waitForTimeout(2000);
@@ -141,7 +141,7 @@ test.describe('Error States - Chromatic Visual Regression', () => {
     });
 
     // Start navigation
-    const navigationPromise = page.goto('/games');
+    const navigationPromise = page.goto('/library');
 
     // Wait briefly for loading state to appear (before data loads)
     await page.waitForTimeout(500);

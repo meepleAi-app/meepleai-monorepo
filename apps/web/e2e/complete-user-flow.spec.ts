@@ -215,9 +215,9 @@ test.describe('Complete User Flow: Register → Add Game → Upload PDF → View
   test('should complete full user flow: add game from BGG, upload PDF, and view rulebook', async ({
     page,
   }) => {
-    // Step 1: Navigate to Add Game page
-    await page.goto('/games/add');
-    await expect(page).toHaveURL(/\/games\/add/);
+    // Step 1: Navigate to Library page
+    await page.goto('/library');
+    await expect(page).toHaveURL(/\/library/);
 
     // Step 2: Search for game on BGG
     await page.fill('input[placeholder*="Cerca su BoardGameGeek"]', 'Ticket to Ride');
@@ -231,12 +231,12 @@ test.describe('Complete User Flow: Register → Add Game → Upload PDF → View
     await page.click('button:has-text("Aggiungi")');
 
     // Wait for redirect and success message
-    await expect(page).toHaveURL(/\/games$/);
+    await expect(page).toHaveURL(/\/library$/);
     await expect(page.locator('text=Gioco aggiunto con successo!')).toBeVisible();
 
     // Step 4: Navigate to game detail page
     await page.click('text=Ticket to Ride');
-    await expect(page).toHaveURL(/\/games\/test-game-id-123/);
+    await expect(page).toHaveURL(/\/library\/games\/test-game-id-123/);
 
     // Step 5: Go to Rules tab
     await page.click('button:has-text("Rules")');

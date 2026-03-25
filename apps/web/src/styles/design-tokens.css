@@ -158,27 +158,18 @@
     --texture-parchment: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
 
     /* ============================================================================
-     * NEON HOLO PALETTE
-     * Dark-first visual identity (spec: 2026-03-15-meepleai-neon-holo-visual-redesign)
+     * HYBRID WARM-MODERN PALETTE
+     * Warm-neutral visual identity (spec: 2026-03-25-library-visual-redesign)
+     * Light mode values (default); dark overrides in .dark {} block below
      * ============================================================================ */
-    --nh-bg-base: #0e0c18;
-    --nh-bg-surface: #16131f;
-    --nh-bg-surface-end: #1a1628;
-    --nh-bg-elevated: #1e1a2a;
-    --nh-border-default: rgba(255,255,255,0.06);
-    --nh-text-primary: #f0ece4;
-    --nh-text-secondary: #7a7484;
-    --nh-text-muted: #555555;
-
-    /* Light mode fallback values */
-    --nh-bg-base-light: #faf9f7;
-    --nh-bg-surface-light: #ffffff;
-    --nh-bg-surface-end-light: #f8f7f5;
-    --nh-bg-elevated-light: #ffffff;
-    --nh-border-default-light: rgba(0,0,0,0.08);
-    --nh-text-primary-light: #1a1a1a;
-    --nh-text-secondary-light: #6b6b6b;
-    --nh-text-muted-light: #999999;
+    --nh-bg-base: #faf8f5;
+    --nh-bg-surface: #fffcf8;
+    --nh-bg-surface-end: #f5f0e8;
+    --nh-bg-elevated: #fffcf8;
+    --nh-border-default: rgba(160,120,60,0.08);
+    --nh-text-primary: #1a1a1a;
+    --nh-text-secondary: #5a4a35;
+    --nh-text-muted: #8a7a65;
 
     /* Focus ring */
     --ring-width: 2px;
@@ -475,6 +466,16 @@
 
   /* Dark mode adjustments */
   .dark {
+    /* Hybrid Warm-Modern palette — dark overrides */
+    --nh-bg-base: #14120e;
+    --nh-bg-surface: #1e1b16;
+    --nh-bg-surface-end: #27231c;
+    --nh-bg-elevated: #302b22;
+    --nh-border-default: rgba(200,160,100,0.08);
+    --nh-text-primary: #f0ece4;
+    --nh-text-secondary: #a09080;
+    --nh-text-muted: #6a5d4e;
+
     /* Shadows need to be darker in dark mode */
     --shadow-xs: 0 1px 2px 0 rgb(0 0 0 / 0.3);
     --shadow-sm: 0 1px 3px 0 rgb(0 0 0 / 0.4), 0 1px 2px -1px rgb(0 0 0 / 0.4);

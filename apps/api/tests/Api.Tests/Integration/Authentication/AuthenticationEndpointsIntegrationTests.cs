@@ -2,13 +2,17 @@ using System.Net;
 using System.Net.Http.Json;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
+using Api.Services;
 using Api.Tests.Constants;
 using Api.Tests.Infrastructure;
 using Api.Tests.TestHelpers;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.AspNetCore.TestHost;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using FluentAssertions;
+using Moq;
 using Xunit;
 
 namespace Api.Tests.Integration.Authentication;
@@ -38,7 +42,20 @@ public sealed class AuthenticationEndpointsIntegrationTests : IAsyncLifetime
     {
         var connectionString = await _fixture.CreateIsolatedDatabaseAsync(_testDbName);
 
-        _factory = IntegrationWebApplicationFactory.Create(connectionString);
+        _factory = IntegrationWebApplicationFactory.Create(connectionString)
+            .WithWebHostBuilder(builder =>
+            {
+                builder.ConfigureTestServices(services =>
+                {
+                    // Enable public registration so /auth/register doesn't return 403
+                    services.RemoveAll(typeof(IConfigurationService));
+                    var mockConfig = new Mock<IConfigurationService>();
+                    mockConfig
+                        .Setup(c => c.GetValueAsync<bool?>("Registration:PublicEnabled", It.IsAny<bool?>(), It.IsAny<string?>()))
+                        .ReturnsAsync(true);
+                    services.AddSingleton<IConfigurationService>(mockConfig.Object);
+                });
+            });
 
         // Initialize database with migrations
         using (var scope = _factory.Services.CreateScope())

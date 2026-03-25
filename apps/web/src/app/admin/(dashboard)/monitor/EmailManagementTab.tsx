@@ -15,8 +15,10 @@ import {
   RotateCcw,
 } from 'lucide-react';
 
+import { EmptyFeatureState } from '@/components/admin/EmptyFeatureState';
 import { toast } from '@/components/layout';
 import { createAdminClient, type EmailQueueItem } from '@/lib/api/clients/adminClient';
+import { isNotFoundError } from '@/lib/api/core/errors';
 import { HttpClient } from '@/lib/api/core/httpClient';
 
 const httpClient = new HttpClient();
@@ -86,6 +88,10 @@ export function EmailManagementTab() {
     queryKey: ['admin', 'email-stats'],
     queryFn: () => adminClient.getEmailQueueStats(),
     refetchInterval: 30000, // Auto-refresh every 30s
+    retry: (failureCount, err) => {
+      if (isNotFoundError(err)) return false;
+      return failureCount < 3;
+    },
   });
 
   const deadLetterQuery = useQuery({
@@ -140,6 +146,16 @@ export function EmailManagementTab() {
   const stats = statsQuery.data;
   const deadLetters = deadLetterQuery.data?.items ?? [];
   const history = historyQuery.data?.items ?? [];
+
+  // Show fallback if any primary query returns 404 (endpoint not implemented)
+  if (isNotFoundError(statsQuery.error)) {
+    return (
+      <EmptyFeatureState
+        title="Funzionalità non disponibile"
+        description="Endpoint email management non ancora implementato nel backend."
+      />
+    );
+  }
 
   return (
     <div className="space-y-6">

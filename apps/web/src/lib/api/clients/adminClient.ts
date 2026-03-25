@@ -13,6 +13,7 @@ import {
   createAdminAnalyticsClient,
   createAdminSystemClient,
   createAdminMonitorClient,
+  createAdminConfigClient,
 } from './admin';
 
 import type { HttpClient } from '../core/httpClient';
@@ -72,6 +73,8 @@ export type {
 
 export type { DailyActiveUsers, ActiveAiUsersResult } from './admin/adminAnalyticsClient';
 
+export type { ConfigurationDto } from './admin/adminConfigClient';
+
 export interface CreateAdminClientParams {
   httpClient: HttpClient;
 }
@@ -88,6 +91,7 @@ export function createAdminClient({ httpClient }: CreateAdminClientParams) {
     ...createAdminAnalyticsClient(http),
     ...createAdminSystemClient(http),
     ...createAdminMonitorClient(http),
+    ...createAdminConfigClient(http),
   };
 }
 

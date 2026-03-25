@@ -19,6 +19,7 @@ import { CostBreakdownChart } from '@/components/admin/agents/CostBreakdownChart
 import { MetricsKpiCards } from '@/components/admin/agents/MetricsKpiCards';
 import { TopAgentsTable } from '@/components/admin/agents/TopAgentsTable';
 import { UsageChart } from '@/components/admin/agents/UsageChart';
+import { EmptyFeatureState } from '@/components/admin/EmptyFeatureState';
 import { Badge } from '@/components/ui/data-display/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/data-display/card';
 import { Skeleton } from '@/components/ui/feedback/skeleton';
@@ -48,7 +49,9 @@ async function fetchAgentMetrics(startDate: string, endDate: string): Promise<Ag
   });
 
   if (!response.ok) {
-    throw new Error('Failed to fetch agent metrics');
+    const error = new Error('Failed to fetch agent metrics');
+    (error as Error & { status: number }).status = response.status;
+    throw error;
   }
 
   return response.json();
@@ -71,7 +74,9 @@ async function fetchTopAgents(
   });
 
   if (!response.ok) {
-    throw new Error('Failed to fetch top agents');
+    const error = new Error('Failed to fetch top agents');
+    (error as Error & { status: number }).status = response.status;
+    throw error;
   }
 
   return response.json();
@@ -96,6 +101,12 @@ export default function AgentAnalyticsPage() {
     };
   }, [dateRange]);
 
+  const is404 = (err: unknown): boolean => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const e = err as any;
+    return e?.status === 404 || e?.statusCode === 404;
+  };
+
   // Fetch metrics
   const {
     data: metrics,
@@ -106,6 +117,10 @@ export default function AgentAnalyticsPage() {
     queryKey: ['agentMetrics', startDate, endDate],
     queryFn: () => fetchAgentMetrics(startDate, endDate),
     staleTime: 60_000,
+    retry: (failureCount, err) => {
+      if (is404(err)) return false;
+      return failureCount < 3;
+    },
   });
 
   // Fetch top agents
@@ -118,6 +133,10 @@ export default function AgentAnalyticsPage() {
     queryKey: ['topAgents', sortBy, startDate, endDate],
     queryFn: () => fetchTopAgents(10, sortBy, startDate, endDate),
     staleTime: 60_000,
+    retry: (failureCount, err) => {
+      if (is404(err)) return false;
+      return failureCount < 3;
+    },
   });
 
   const handleRefresh = () => {
@@ -157,8 +176,16 @@ export default function AgentAnalyticsPage() {
         </div>
       </div>
 
+      {/* 404 Fallback — endpoint not implemented */}
+      {is404(metricsError) && (
+        <EmptyFeatureState
+          title="Funzionalità non disponibile"
+          description="Endpoint agent analytics non ancora implementato nel backend."
+        />
+      )}
+
       {/* Error State */}
-      {(metricsError || topAgentsError) && (
+      {!is404(metricsError) && (metricsError || topAgentsError) && (
         <Card className="border-destructive">
           <CardContent className="py-4">
             <p className="text-destructive">Failed to load metrics. Please try again.</p>

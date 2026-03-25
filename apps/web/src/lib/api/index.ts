@@ -169,6 +169,7 @@ export {
   ServerError,
   NetworkError,
   SchemaValidationError,
+  isNotFoundError,
 } from './core/errors';
 export { logger, logApiError } from './core/logger';
 

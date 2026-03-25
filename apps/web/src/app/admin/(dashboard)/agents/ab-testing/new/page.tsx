@@ -17,10 +17,11 @@ import { Button } from '@/components/ui/primitives/button';
 import { Checkbox } from '@/components/ui/primitives/checkbox';
 import { Label } from '@/components/ui/primitives/label';
 import { Textarea } from '@/components/ui/primitives/textarea';
+import { useAdminConfig, parseConfigValue } from '@/hooks/useAdminConfig';
 import { api } from '@/lib/api';
 
-// Available models for A/B testing (OpenRouter format)
-const AVAILABLE_MODELS = [
+// Fallback models for A/B testing when API is unreachable
+const FALLBACK_AVAILABLE_MODELS = [
   { id: 'openai/gpt-4o', provider: 'OpenAI', name: 'GPT-4o' },
   { id: 'openai/gpt-4o-mini', provider: 'OpenAI', name: 'GPT-4o Mini' },
   { id: 'anthropic/claude-3.5-sonnet', provider: 'Anthropic', name: 'Claude 3.5 Sonnet' },
@@ -36,6 +37,15 @@ const MAX_MODELS = 4;
 
 export default function NewAbTestPage() {
   const router = useRouter();
+
+  // Dynamic config from API, falling back to hardcoded defaults
+  const { data: modelsConfig, isLoading: modelsLoading } = useAdminConfig('models');
+  const AVAILABLE_MODELS =
+    parseConfigValue<readonly { id: string; provider: string; name: string }[]>(
+      modelsConfig,
+      'models:ab-testing'
+    ) ?? FALLBACK_AVAILABLE_MODELS;
+
   const [query, setQuery] = useState('');
   const [selectedModels, setSelectedModels] = useState<string[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -133,6 +143,11 @@ export default function NewAbTestPage() {
             </p>
 
             <div className="mt-4 space-y-3">
+              {modelsLoading && (
+                <div className="py-4 text-center text-sm text-muted-foreground">
+                  Loading available models...
+                </div>
+              )}
               {AVAILABLE_MODELS.map(model => {
                 const isSelected = selectedModels.includes(model.id);
                 const isDisabled =

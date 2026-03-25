@@ -6,12 +6,14 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Check, X, Clock, Layers } from 'lucide-react';
 import { toast } from 'sonner';
 
+import { EmptyFeatureState } from '@/components/admin/EmptyFeatureState';
 import { Badge } from '@/components/ui/data-display/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/data-display/card';
 import { Skeleton } from '@/components/ui/feedback/skeleton';
 import { Button } from '@/components/ui/primitives/button';
 import { Textarea } from '@/components/ui/primitives/textarea';
 import { api } from '@/lib/api';
+import { isNotFoundError } from '@/lib/api/core/errors';
 import type { GameToolkitTemplateDto } from '@/lib/api/schemas/toolkit.schemas';
 
 function ReviewCard({
@@ -118,9 +120,17 @@ function ReviewCard({
 export default function AdminTemplateReviewPage() {
   const queryClient = useQueryClient();
 
-  const { data: templates, isLoading } = useQuery({
+  const {
+    data: templates,
+    isLoading,
+    error,
+  } = useQuery({
     queryKey: ['pending-review-templates'],
     queryFn: () => api.gameToolkit.getPendingReviewTemplates(),
+    retry: (failureCount, err) => {
+      if (isNotFoundError(err)) return false;
+      return failureCount < 3;
+    },
   });
 
   const approveMutation = useMutation({
@@ -155,6 +165,13 @@ export default function AdminTemplateReviewPage() {
           Review and approve toolkit templates submitted by users
         </p>
       </div>
+
+      {isNotFoundError(error) && (
+        <EmptyFeatureState
+          title="Funzionalità non disponibile"
+          description="Endpoint template review non ancora implementato nel backend."
+        />
+      )}
 
       {isLoading && (
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">

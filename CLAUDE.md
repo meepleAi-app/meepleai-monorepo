@@ -58,16 +58,21 @@ app.MapPost("/api/v1/auth/register", async (RegisterCommand cmd, IMediator m) =>
 app.MapPost("/api/v1/auth/register", async (RegisterCommand cmd, IAuthService svc) => ...);
 ```
 
-### DDD Bounded Contexts (13)
+### DDD Bounded Contexts (18)
 
 | Context | Responsibility |
 |---------|---------------|
 | Administration | Users, roles, audit, analytics |
+| AgentMemory | House rules, memory notes, guest player claims |
 | Authentication | Auth flows, sessions, OAuth, 2FA |
 | BusinessSimulations | Ledger entries, cost scenarios, resource forecasts |
+| DatabaseSync | DB migrations, tunnel management, sync ops |
 | DocumentProcessing | PDF upload, extraction, chunking |
+| EntityRelationships | Cross-entity links (EntityLink aggregates) |
 | Gamification | Achievements, badges, leaderboards |
 | GameManagement | Catalog, sessions, FAQs, specs |
+| GameToolbox | Card decks, phases, session tool templates |
+| GameToolkit | AI toolkit generation, KB-based suggestions |
 | KnowledgeBase | RAG, AI agents, chat, vector search |
 | SessionTracking | Session notes, scoring, activity tracking |
 | SharedGameCatalog | Community DB w/ soft-delete |

@@ -17,22 +17,25 @@ const API_BASE =
   process.env.PLAYWRIGHT_API_BASE || process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080';
 
 async function setupWishlistMocks(page: Page) {
-  let wishlist = [
-    { id: 'game-1', title: 'Catan', addedAt: new Date().toISOString() },
-  ];
+  let wishlist = [{ id: 'game-1', title: 'Catan', addedAt: new Date().toISOString() }];
 
-  await page.route(`${API_BASE}/api/v1/auth/me`, async (route) => {
+  await page.route(`${API_BASE}/api/v1/auth/me`, async route => {
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
       body: JSON.stringify({
-        user: { id: 'test-user', email: 'test@example.com', displayName: 'Test User', role: 'User' },
+        user: {
+          id: 'test-user',
+          email: 'test@example.com',
+          displayName: 'Test User',
+          role: 'User',
+        },
         expiresAt: new Date(Date.now() + 3600000).toISOString(),
       }),
     });
   });
 
-  await page.route(`${API_BASE}/api/v1/library/wishlist**`, async (route) => {
+  await page.route(`${API_BASE}/api/v1/library/wishlist**`, async route => {
     const method = route.request().method();
     if (method === 'GET') {
       await route.fulfill({
@@ -42,14 +45,21 @@ async function setupWishlistMocks(page: Page) {
       });
     } else if (method === 'POST') {
       const body = await route.request().postDataJSON();
-      wishlist.push({ id: body.gameId, title: body.title || 'New Game', addedAt: new Date().toISOString() });
+      wishlist.push({
+        id: body.gameId,
+        title: body.title || 'New Game',
+        addedAt: new Date().toISOString(),
+      });
       await route.fulfill({
         status: 201,
         contentType: 'application/json',
         body: JSON.stringify({ message: 'Added to wishlist' }),
       });
     } else if (method === 'DELETE') {
-      const gameId = route.request().url().match(/wishlist\/([^/?]+)/)?.[1];
+      const gameId = route
+        .request()
+        .url()
+        .match(/wishlist\/([^/?]+)/)?.[1];
       wishlist = wishlist.filter(g => g.id !== gameId);
       await route.fulfill({
         status: 200,
@@ -59,7 +69,7 @@ async function setupWishlistMocks(page: Page) {
     }
   });
 
-  await page.route(`${API_BASE}/api/v1/games**`, async (route) => {
+  await page.route(`${API_BASE}/api/v1/games**`, async route => {
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
@@ -83,7 +93,7 @@ test.describe('LIB-10: Wishlist', () => {
 
   test('should add game to wishlist', async ({ page }) => {
     await setupWishlistMocks(page);
-    await page.goto('/games');
+    await page.goto('/library');
     await page.waitForLoadState('networkidle');
 
     const wishlistButton = page.getByRole('button', { name: /wishlist|want/i }).first();

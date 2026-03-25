@@ -2117,6 +2117,40 @@ namespace Api.Infrastructure.Migrations
                     b.ToTable("alert_rules", (string)null);
                 });
 
+            modelBuilder.Entity("Api.Infrastructure.Entities.Administration.DatabaseMetricsSnapshotEntity", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<int>("ActiveConnections")
+                        .HasColumnType("integer")
+                        .HasColumnName("active_connections");
+
+                    b.Property<long>("IndexSizeBytes")
+                        .HasColumnType("bigint")
+                        .HasColumnName("index_size_bytes");
+
+                    b.Property<DateTime>("RecordedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("recorded_at");
+
+                    b.Property<int>("TableCount")
+                        .HasColumnType("integer")
+                        .HasColumnName("table_count");
+
+                    b.Property<long>("TotalSizeBytes")
+                        .HasColumnType("bigint")
+                        .HasColumnName("total_size_bytes");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("RecordedAt");
+
+                    b.ToTable("database_metrics_snapshots");
+                });
+
             modelBuilder.Entity("Api.Infrastructure.Entities.Administration.InsightFeedbackEntity", b =>
                 {
                     b.Property<Guid>("Id")
@@ -6435,7 +6469,7 @@ namespace Api.Infrastructure.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
-                    b.PrimitiveCollection<string[]>("Alternatives")
+                    b.Property<string>("Alternatives")
                         .IsRequired()
                         .HasColumnType("jsonb");
 
@@ -6473,7 +6507,7 @@ namespace Api.Infrastructure.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)");
 
-                    b.PrimitiveCollection<string[]>("Strengths")
+                    b.Property<string>("Strengths")
                         .IsRequired()
                         .HasColumnType("jsonb");
 

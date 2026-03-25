@@ -202,7 +202,7 @@ test.describe('BGG Integration Flow - Issue #2193', () => {
   });
 
   test('should search for games on BoardGameGeek', async ({ page }) => {
-    await page.goto('/games/add');
+    await page.goto('/library');
 
     // Find search input
     const searchInput = page
@@ -229,7 +229,7 @@ test.describe('BGG Integration Flow - Issue #2193', () => {
   });
 
   test('should view BGG game details', async ({ page }) => {
-    await page.goto('/games/add');
+    await page.goto('/library');
 
     // Search for game
     const searchInput = page
@@ -257,7 +257,7 @@ test.describe('BGG Integration Flow - Issue #2193', () => {
   });
 
   test('should add new game from BGG search', async ({ page }) => {
-    await page.goto('/games/add');
+    await page.goto('/library');
 
     // Search
     const searchInput = page
@@ -281,12 +281,12 @@ test.describe('BGG Integration Flow - Issue #2193', () => {
       timeout: 10000,
     });
 
-    // Verify redirect to games list
-    await expect(page).toHaveURL(/\/games/);
+    // Verify redirect to library
+    await expect(page).toHaveURL(/\/library/);
   });
 
   test('should link BGG game to existing local game', async ({ page }) => {
-    await page.goto('/games');
+    await page.goto('/library');
 
     // Find a game without BGG link (Chess)
     const chessGame = page
@@ -324,7 +324,7 @@ test.describe('BGG Integration Flow - Issue #2193', () => {
   });
 
   test('should auto-fetch metadata from BGG when linking', async ({ page }) => {
-    await page.goto('/games');
+    await page.goto('/library');
 
     // Find game without BGG link
     const gameCard = page
@@ -359,7 +359,7 @@ test.describe('BGG Integration Flow - Issue #2193', () => {
   });
 
   test('should handle empty BGG search results', async ({ page }) => {
-    await page.goto('/games/add');
+    await page.goto('/library');
 
     const searchInput = page
       .locator('input[placeholder*="BoardGameGeek"]')
@@ -383,7 +383,7 @@ test.describe('BGG Integration Flow - Issue #2193', () => {
       });
     });
 
-    await page.goto('/games/add');
+    await page.goto('/library');
 
     const searchInput = page
       .locator('input[placeholder*="BoardGameGeek"]')
@@ -408,7 +408,7 @@ test.describe('BGG Integration Flow - Issue #2193', () => {
     });
 
     // This test depends on UI allowing manual BGG ID entry
-    await page.goto('/games/add');
+    await page.goto('/library');
 
     const manualBggInput = page.locator('input[name="bggId"], [data-testid="bgg-id-input"]');
     if (await manualBggInput.isVisible({ timeout: 2000 }).catch(() => false)) {
@@ -422,7 +422,7 @@ test.describe('BGG Integration Flow - Issue #2193', () => {
   });
 
   test('should display BGG rating and weight', async ({ page }) => {
-    await page.goto('/games/add');
+    await page.goto('/library');
 
     const searchInput = page
       .locator('input[placeholder*="BoardGameGeek"]')
@@ -444,7 +444,7 @@ test.describe('BGG Integration Flow - Issue #2193', () => {
   });
 
   test('should show BGG categories and mechanics', async ({ page }) => {
-    await page.goto('/games/add');
+    await page.goto('/library');
 
     const searchInput = page
       .locator('input[placeholder*="BoardGameGeek"]')
@@ -465,7 +465,7 @@ test.describe('BGG Integration Flow - Issue #2193', () => {
   });
 
   test('should indicate already linked games in search results', async ({ page }) => {
-    await page.goto('/games/add');
+    await page.goto('/library');
 
     const searchInput = page
       .locator('input[placeholder*="BoardGameGeek"]')
@@ -491,7 +491,7 @@ test.describe('BGG Integration Flow - Issue #2193', () => {
   });
 
   test('should handle search with special characters', async ({ page }) => {
-    await page.goto('/games/add');
+    await page.goto('/library');
 
     const searchInput = page
       .locator('input[placeholder*="BoardGameGeek"]')
@@ -506,7 +506,7 @@ test.describe('BGG Integration Flow - Issue #2193', () => {
   });
 
   test('should require minimum search length', async ({ page }) => {
-    await page.goto('/games/add');
+    await page.goto('/library');
 
     const searchInput = page
       .locator('input[placeholder*="BoardGameGeek"]')

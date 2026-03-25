@@ -218,7 +218,6 @@ export {
 export { useUserFeatures, featureFlagKeys } from './useFeatureFlags';
 
 // Next Session queries (Library Hero Banner)
-export { useNextSession, nextSessionKeys, type NextSessionData } from './useNextSession';
 
 // Re-export from @tanstack/react-query for convenience
 export {

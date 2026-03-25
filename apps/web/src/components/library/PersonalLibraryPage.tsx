@@ -41,7 +41,7 @@ import { UsageWidget } from './UsageWidget';
 const LIBRARY_FILTER_CHIPS = [
   { id: 'all', label: 'Tutti' },
   { id: 'recent', label: 'Recenti' },
-  { id: 'most-played', label: 'Più giocati' },
+  { id: 'most-played', label: 'Meno recenti' },
   { id: 'rating', label: 'Rating \u2193' },
   { id: 'players-2-4', label: '2-4 giocatori' },
   { id: 'under-60', label: '< 60 min' },
@@ -65,22 +65,14 @@ function applyFilter(items: UserLibraryEntry[], filterId: string): UserLibraryEn
     case 'under-60':
       return items.filter(g => g.playingTimeMinutes != null && g.playingTimeMinutes <= 60);
     case 'most-played':
-      // Sort by playCount if available, else by addedAt as proxy
+      // playCount not yet on UserLibraryEntry DTO — sort by addedAt (oldest first = likely most played)
       return [...items].sort(
-        (a, b) =>
-          ((b as UserLibraryEntry & { playCount?: number }).playCount ?? 0) -
-            ((a as UserLibraryEntry & { playCount?: number }).playCount ?? 0) ||
-          new Date(a.addedAt).getTime() - new Date(b.addedAt).getTime()
+        (a, b) => new Date(a.addedAt).getTime() - new Date(b.addedAt).getTime()
       );
     case 'strategy':
-      return items.filter(g => {
-        const entry = g as UserLibraryEntry & { category?: string; mechanics?: string[] };
-        return (
-          entry.category?.toLowerCase() === 'strategy' ||
-          entry.mechanics?.some(m => m.toLowerCase().includes('strateg')) ||
-          false
-        );
-      });
+      // category/mechanics not yet on UserLibraryEntry DTO — requires backend GetUserGamesQuery filter
+      // For now, return all items (chip acts as no-op until backend wired)
+      return items;
     default:
       return items;
   }

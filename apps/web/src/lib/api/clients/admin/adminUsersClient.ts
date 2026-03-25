@@ -144,7 +144,7 @@ export function createAdminUsersClient(http: HttpClient) {
       sortOrder?: 'asc' | 'desc';
       page?: number;
       limit?: number;
-    }): Promise<{ users: AdminUser[]; total: number }> {
+    }): Promise<{ items: AdminUser[]; total: number; page: number; pageSize: number }> {
       const queryParams = new URLSearchParams();
       if (params?.search) queryParams.set('search', params.search);
       if (params?.role) queryParams.set('role', params.role);
@@ -157,12 +157,14 @@ export function createAdminUsersClient(http: HttpClient) {
       const result = await http.get(
         `/api/v1/admin/users${query ? `?${query}` : ''}`,
         z.object({
-          users: z.array(AdminUserSchema),
+          items: z.array(AdminUserSchema),
           total: z.number(),
+          page: z.number(),
+          pageSize: z.number(),
         })
       );
 
-      return result || { users: [], total: 0 };
+      return result || { items: [], total: 0, page: 1, pageSize: 20 };
     },
 
     async getUsers(params?: {

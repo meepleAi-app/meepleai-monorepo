@@ -15,8 +15,8 @@ export default function BggSearchPage() {
     <div className="container mx-auto max-w-6xl px-4 py-8">
       {/* Breadcrumb */}
       <nav className="mb-6 flex items-center gap-2 text-sm text-muted-foreground font-nunito">
-        <Link href="/games" className="hover:text-foreground transition-colors">
-          Games
+        <Link href="/library" className="hover:text-foreground transition-colors">
+          Libreria
         </Link>
         <span>/</span>
         <span className="text-foreground">BGG Search</span>
@@ -26,9 +26,9 @@ export default function BggSearchPage() {
       <div className="mb-8">
         <div className="flex items-center gap-3">
           <Link
-            href="/games"
+            href="/library"
             className="rounded-md p-1.5 hover:bg-muted transition-colors"
-            aria-label="Back to games"
+            aria-label="Back to library"
           >
             <ArrowLeft className="h-5 w-5" />
           </Link>

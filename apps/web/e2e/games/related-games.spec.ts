@@ -64,7 +64,7 @@ async function setupRelatedGamesMocks(page: Page) {
   ];
 
   // Mock auth
-  await page.route(`${API_BASE}/api/v1/auth/me`, async (route) => {
+  await page.route(`${API_BASE}/api/v1/auth/me`, async route => {
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
@@ -81,7 +81,7 @@ async function setupRelatedGamesMocks(page: Page) {
   });
 
   // Mock games list endpoint
-  await page.route(`${API_BASE}/api/v1/games`, async (route) => {
+  await page.route(`${API_BASE}/api/v1/games`, async route => {
     if (route.request().method() === 'GET') {
       await route.fulfill({
         status: 200,
@@ -92,13 +92,13 @@ async function setupRelatedGamesMocks(page: Page) {
   });
 
   // Mock single game endpoint
-  await page.route(`${API_BASE}/api/v1/games/*`, async (route) => {
+  await page.route(`${API_BASE}/api/v1/games/*`, async route => {
     const url = route.request().url();
     const gameIdMatch = url.match(/games\/([^/?]+)/);
     const gameId = gameIdMatch?.[1];
 
     if (gameId && !url.includes('/related')) {
-      const game = games.find((g) => g.id === gameId);
+      const game = games.find(g => g.id === gameId);
       if (game) {
         await route.fulfill({
           status: 200,
@@ -112,14 +112,14 @@ async function setupRelatedGamesMocks(page: Page) {
   });
 
   // Mock related games endpoint
-  await page.route(`${API_BASE}/api/v1/games/*/related`, async (route) => {
+  await page.route(`${API_BASE}/api/v1/games/*/related`, async route => {
     const url = route.request().url();
     const gameIdMatch = url.match(/games\/([^/]+)\/related/);
     const gameId = gameIdMatch?.[1];
 
-    const game = games.find((g) => g.id === gameId);
+    const game = games.find(g => g.id === gameId);
     const relatedIds = game?.relatedGames || [];
-    const relatedGames = games.filter((g) => relatedIds.includes(g.id));
+    const relatedGames = games.filter(g => relatedIds.includes(g.id));
 
     await route.fulfill({
       status: 200,
@@ -133,13 +133,13 @@ async function setupRelatedGamesMocks(page: Page) {
   });
 
   // Mock similar games search
-  await page.route(`${API_BASE}/api/v1/games/similar**`, async (route) => {
+  await page.route(`${API_BASE}/api/v1/games/similar**`, async route => {
     const url = route.request().url();
     const similarTo = url.match(/similarTo=([^&]+)/)?.[1];
 
-    const baseGame = games.find((g) => g.id === similarTo);
+    const baseGame = games.find(g => g.id === similarTo);
     const relatedIds = baseGame?.relatedGames || [];
-    const similarGames = games.filter((g) => relatedIds.includes(g.id));
+    const similarGames = games.filter(g => relatedIds.includes(g.id));
 
     await route.fulfill({
       status: 200,
@@ -159,19 +159,19 @@ test.describe('GAME-06: Related Games', () => {
     test('should display related games section on game page', async ({ page }) => {
       await setupRelatedGamesMocks(page);
 
-      await page.goto('/games/chess');
+      await page.goto('/library/games/chess');
       await page.waitForLoadState('networkidle');
 
       // Should show related games section
-      await expect(
-        page.getByText(/related.*game|similar.*game|you.*might.*like/i)
-      ).toBeVisible({ timeout: 5000 });
+      await expect(page.getByText(/related.*game|similar.*game|you.*might.*like/i)).toBeVisible({
+        timeout: 5000,
+      });
     });
 
     test('should show related game cards', async ({ page }) => {
       await setupRelatedGamesMocks(page);
 
-      await page.goto('/games/chess');
+      await page.goto('/library/games/chess');
       await page.waitForLoadState('networkidle');
 
       // Should show related games (Checkers, Shogi, Go)
@@ -181,13 +181,11 @@ test.describe('GAME-06: Related Games', () => {
     test('should show relationship reason', async ({ page }) => {
       await setupRelatedGamesMocks(page);
 
-      await page.goto('/games/chess');
+      await page.goto('/library/games/chess');
       await page.waitForLoadState('networkidle');
 
       // May show why games are related
-      await expect(
-        page.getByText(/similar|mechanic|player/i)
-      ).toBeVisible();
+      await expect(page.getByText(/similar|mechanic|player/i)).toBeVisible();
     });
   });
 
@@ -195,7 +193,7 @@ test.describe('GAME-06: Related Games', () => {
     test('should recommend games based on mechanics', async ({ page }) => {
       await setupRelatedGamesMocks(page);
 
-      await page.goto('/games/chess');
+      await page.goto('/library/games/chess');
       await page.waitForLoadState('networkidle');
 
       // Chess should recommend other abstract strategy games
@@ -205,7 +203,7 @@ test.describe('GAME-06: Related Games', () => {
     test('should show multiple related games', async ({ page }) => {
       await setupRelatedGamesMocks(page);
 
-      await page.goto('/games/chess');
+      await page.goto('/library/games/chess');
       await page.waitForLoadState('networkidle');
 
       // Should show multiple recommendations
@@ -218,7 +216,7 @@ test.describe('GAME-06: Related Games', () => {
     test('should not show self in related games', async ({ page }) => {
       await setupRelatedGamesMocks(page);
 
-      await page.goto('/games/chess');
+      await page.goto('/library/games/chess');
       await page.waitForLoadState('networkidle');
 
       // Chess should not be in its own related games
@@ -235,7 +233,7 @@ test.describe('GAME-06: Related Games', () => {
     test('should navigate to related game on click', async ({ page }) => {
       await setupRelatedGamesMocks(page);
 
-      await page.goto('/games/chess');
+      await page.goto('/library/games/chess');
       await page.waitForLoadState('networkidle');
 
       // Click on a related game
@@ -251,12 +249,13 @@ test.describe('GAME-06: Related Games', () => {
     test('should show related game preview on hover', async ({ page }) => {
       await setupRelatedGamesMocks(page);
 
-      await page.goto('/games/chess');
+      await page.goto('/library/games/chess');
       await page.waitForLoadState('networkidle');
 
-      const relatedCard = page.locator('[data-testid="related-game"]').first().or(
-        page.getByText(/checkers/i).first()
-      );
+      const relatedCard = page
+        .locator('[data-testid="related-game"]')
+        .first()
+        .or(page.getByText(/checkers/i).first());
 
       if (await relatedCard.isVisible()) {
         await relatedCard.hover();
@@ -272,13 +271,13 @@ test.describe('GAME-06: Related Games', () => {
     test('should filter games by similarity', async ({ page }) => {
       await setupRelatedGamesMocks(page);
 
-      await page.goto('/games');
+      await page.goto('/library');
       await page.waitForLoadState('networkidle');
 
       // Look for "similar to" filter
-      const similarFilter = page.getByRole('combobox', { name: /similar/i }).or(
-        page.locator('[data-testid="similar-filter"]')
-      );
+      const similarFilter = page
+        .getByRole('combobox', { name: /similar/i })
+        .or(page.locator('[data-testid="similar-filter"]'));
 
       if (await similarFilter.isVisible()) {
         await similarFilter.click();
@@ -294,19 +293,17 @@ test.describe('GAME-06: Related Games', () => {
     test('should show "games like X" results', async ({ page }) => {
       await setupRelatedGamesMocks(page);
 
-      await page.goto('/games?similarTo=chess');
+      await page.goto('/library?similarTo=chess');
       await page.waitForLoadState('networkidle');
 
       // Should show similar games header
-      await expect(
-        page.getByText(/similar.*to.*chess|game.*like.*chess/i)
-      ).toBeVisible();
+      await expect(page.getByText(/similar.*to.*chess|game.*like.*chess/i)).toBeVisible();
     });
 
     test('should allow clearing similarity filter', async ({ page }) => {
       await setupRelatedGamesMocks(page);
 
-      await page.goto('/games?similarTo=chess');
+      await page.goto('/library?similarTo=chess');
       await page.waitForLoadState('networkidle');
 
       const clearButton = page.getByRole('button', { name: /clear|reset|all.*game/i });
@@ -326,7 +323,7 @@ test.describe('GAME-06: Related Games', () => {
       await setupRelatedGamesMocks(page);
 
       // Navigate to a game with no related games
-      await page.goto('/games/catan');
+      await page.goto('/library/games/catan');
       await page.waitForLoadState('networkidle');
 
       // May show empty state or hide section

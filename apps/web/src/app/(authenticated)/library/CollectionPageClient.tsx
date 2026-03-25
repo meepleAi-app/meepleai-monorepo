@@ -471,7 +471,7 @@ export default function CollectionPageClient() {
                 Esplora il catalogo per aggiungere giochi alla tua collezione condivisa.
               </p>
               <Button asChild>
-                <Link href="/games/catalog">Esplora Catalogo</Link>
+                <Link href="/library">Esplora Catalogo</Link>
               </Button>
             </CardContent>
           </Card>

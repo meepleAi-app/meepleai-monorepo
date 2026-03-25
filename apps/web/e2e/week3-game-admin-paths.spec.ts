@@ -47,8 +47,8 @@ test.describe('Game Management - Critical Paths', () => {
   });
 
   test('1. Browse games with grid display, pagination, and publisher filter', async ({ page }) => {
-    // Navigate to games page - real backend will return actual games
-    await page.goto('/games');
+    // Navigate to library page - real backend will return actual games
+    await page.goto('/library');
 
     // VERIFY: Grid display renders (will show whatever games exist in DB)
     const gameCards = page.locator('[data-testid="game-card"]');
@@ -106,7 +106,7 @@ test.describe('Game Management - Critical Paths', () => {
   });
 
   test('2. PDF upload journey: select game → upload → processing → success', async ({ page }) => {
-    await page.goto('/games');
+    await page.goto('/library');
 
     // Check if games exist
     const gameCards = page.locator('[data-testid="game-card"]');
@@ -171,8 +171,8 @@ test.describe('Game Management - Critical Paths', () => {
   });
 
   test('3. BGG integration: search → select game → import metadata', async ({ page }) => {
-    // Navigate to add game page
-    await page.goto('/games/add');
+    // Navigate to library page
+    await page.goto('/library');
 
     // SEARCH BGG: Enter search query
     const searchInput = page

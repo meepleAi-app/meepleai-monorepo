@@ -27,7 +27,7 @@ const TECH_ACTIONS: TechActionConfig[] = [
     id: 'reindex-all',
     label: 'Reindex All',
     icon: RefreshCw,
-    href: '/admin/ai/knowledge-base',
+    href: '/admin/knowledge-base/vectors',
   },
   {
     id: 'system-health',

@@ -106,7 +106,9 @@ test.describe('Journey 3: Game State Transitions', () => {
 
     await test.step('Navigate to game detail page', async () => {
       await page.goto(`/games/${MOCK_GAME_OWNED.id}`);
-      await expect(page.locator(`text=${MOCK_GAME_OWNED.title}`).first()).toBeVisible({ timeout: 10000 });
+      await expect(page.locator(`text=${MOCK_GAME_OWNED.title}`).first()).toBeVisible({
+        timeout: 10000,
+      });
     });
 
     await test.step('Initiate loan process', async () => {
@@ -132,7 +134,9 @@ test.describe('Journey 3: Game State Transitions', () => {
 
     await test.step('Fill loan details', async () => {
       // Fill loanee name
-      const loaneeInput = page.locator('input[name="loanedTo"], input[placeholder*="friend"]').first();
+      const loaneeInput = page
+        .locator('input[name="loanedTo"], input[placeholder*="friend"]')
+        .first();
       if (await loaneeInput.isVisible({ timeout: 5000 })) {
         await loaneeInput.fill('John Doe');
       }
@@ -236,7 +240,7 @@ test.describe('Journey 3: Game State Transitions', () => {
     });
 
     await test.step('Navigate to game catalog or search', async () => {
-      await page.goto('/games');
+      await page.goto('/library');
       await page.waitForLoadState('networkidle');
     });
 
@@ -253,7 +257,9 @@ test.describe('Journey 3: Game State Transitions', () => {
       await page.waitForLoadState('networkidle');
 
       // Find "Add to Wishlist" button
-      const wishlistButton = page.getByRole('button', { name: /add to wishlist|wishlist|desideri/i }).first();
+      const wishlistButton = page
+        .getByRole('button', { name: /add to wishlist|wishlist|desideri/i })
+        .first();
       await expect(wishlistButton).toBeVisible({ timeout: 5000 });
       await wishlistButton.click();
 
@@ -313,7 +319,7 @@ test.describe('Journey 3: Game State Transitions', () => {
       const initialState = pageContent1?.includes('Owned') ? 'Owned' : 'Unknown';
 
       // Navigate away and back
-      await page.goto('/games');
+      await page.goto('/library');
       await page.waitForLoadState('networkidle');
       await page.goto(`/games/${MOCK_GAME_OWNED.id}`);
       await page.waitForLoadState('networkidle');

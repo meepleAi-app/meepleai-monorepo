@@ -247,6 +247,22 @@ export class SchemaValidationError extends ApiError {
 }
 
 /**
+ * Checks whether an error represents a 404 Not Found response.
+ * Works with ApiError (statusCode), plain Error with embedded status,
+ * and raw fetch errors with response.status.
+ */
+export function isNotFoundError(error: unknown): boolean {
+  if (!error) return false;
+  if (error instanceof ApiError) return error.statusCode === 404;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const err = error as any;
+  if (err?.statusCode === 404 || err?.status === 404) return true;
+  if (err?.response?.status === 404) return true;
+  if (typeof err?.message === 'string' && err.message.includes('404')) return true;
+  return false;
+}
+
+/**
  * Creates appropriate error instance from HTTP response
  */
 export async function createApiError(endpoint: string, response: Response): Promise<ApiError> {

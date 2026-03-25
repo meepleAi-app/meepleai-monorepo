@@ -14,7 +14,7 @@ import { useState } from 'react';
 import { Crown, UserPlus } from 'lucide-react';
 
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/ui/primitives/button';
 import { useLiveSessionStore, type PlayerInfo } from '@/lib/stores/live-session-store';
 
 import { InviteModal } from './InviteModal';

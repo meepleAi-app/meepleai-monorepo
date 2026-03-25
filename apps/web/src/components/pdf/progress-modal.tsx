@@ -29,7 +29,6 @@ import * as React from 'react';
 
 import { Check, X, Loader2, AlertCircle } from 'lucide-react';
 
-import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/feedback/progress';
 import {
   Dialog,
@@ -38,6 +37,7 @@ import {
   DialogTitle,
   DialogDescription,
 } from '@/components/ui/overlays/dialog';
+import { Button } from '@/components/ui/primitives/button';
 import { usePdfProgress } from '@/hooks/usePdfProgress';
 import { logger } from '@/lib/logger';
 import { cn } from '@/lib/utils';

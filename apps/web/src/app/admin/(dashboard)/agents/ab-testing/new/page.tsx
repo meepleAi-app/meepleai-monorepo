@@ -12,10 +12,10 @@ import { useState, useCallback } from 'react';
 import { FlaskConical, Loader2, Sparkles, AlertCircle } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
-import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/feedback/alert';
-import { Label } from '@/components/ui/label';
+import { Button } from '@/components/ui/primitives/button';
 import { Checkbox } from '@/components/ui/primitives/checkbox';
+import { Label } from '@/components/ui/primitives/label';
 import { Textarea } from '@/components/ui/primitives/textarea';
 import { api } from '@/lib/api';
 

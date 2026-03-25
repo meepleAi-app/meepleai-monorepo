@@ -153,7 +153,7 @@ public sealed class ConversationMemoryRepositoryIntegrationTests : IAsyncLifetim
     {
         // Arrange
         var user = await _dbContext!.Users.FirstAsync(TestCancellationToken);
-        var embedding = new float[1536];
+        var embedding = new float[1024];
         Array.Fill(embedding, 0.1f);
 
         var memory = new ConversationMemory(
@@ -182,7 +182,7 @@ public sealed class ConversationMemoryRepositoryIntegrationTests : IAsyncLifetim
             TestCancellationToken);
 
         reloaded.Embedding.Should().NotBeNull();
-        reloaded.Embedding!.ToArray().Should().HaveCount(1536);
+        reloaded.Embedding!.ToArray().Should().HaveCount(1024);
     }
 
     #endregion
@@ -214,11 +214,11 @@ public sealed class ConversationMemoryRepositoryIntegrationTests : IAsyncLifetim
         // Act
         var results = await _repository.GetBySessionIdAsync(sessionId, limit: 10, TestCancellationToken);
 
-        // Assert
+        // Assert — repository returns memories in descending timestamp order (most recent first)
         results.Should().HaveCount(3);
-        results[0].Content.Should().Be("First message");
+        results[0].Content.Should().Be("Third message");
         results[1].Content.Should().Be("Second message");
-        results[2].Content.Should().Be("Third message");
+        results[2].Content.Should().Be("First message");
     }
 
     [Fact]
@@ -499,7 +499,7 @@ public sealed class ConversationMemoryRepositoryIntegrationTests : IAsyncLifetim
 
     private static float[] CreateNormalizedEmbedding(float baseValue)
     {
-        var embedding = new float[1536];
+        var embedding = new float[1024];
         for (int i = 0; i < embedding.Length; i++)
         {
             embedding[i] = baseValue + (i % 10) * 0.01f;
@@ -543,12 +543,13 @@ public sealed class ConversationMemoryRepositoryIntegrationTests : IAsyncLifetim
             }
         }
 
-        // Assert - Verify required indexes exist
-        indexes.Should().Contain("ix_conversation_memory_session_id");
-        indexes.Should().Contain("ix_conversation_memory_user_id");
-        indexes.Should().Contain("ix_conversation_memory_user_id_game_id");
-        indexes.Should().Contain("ix_conversation_memory_timestamp");
-        indexes.Should().Contain("pk_conversation_memory");
+        // Assert — EF Core generates uppercase prefix (IX_/PK_), use case-insensitive comparison
+        var lowerIndexes = indexes.Select(i => i.ToLowerInvariant()).ToList();
+        lowerIndexes.Should().Contain("ix_conversation_memory_session_id");
+        lowerIndexes.Should().Contain("ix_conversation_memory_user_id");
+        lowerIndexes.Should().Contain("ix_conversation_memory_user_id_game_id");
+        lowerIndexes.Should().Contain("ix_conversation_memory_timestamp");
+        lowerIndexes.Should().Contain("pk_conversation_memory");
     }
 
     #endregion

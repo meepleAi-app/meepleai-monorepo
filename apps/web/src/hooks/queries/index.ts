@@ -217,6 +217,8 @@ export {
 // Feature Flags queries
 export { useUserFeatures, featureFlagKeys } from './useFeatureFlags';
 
+// Next Session queries (Library Hero Banner)
+
 // Re-export from @tanstack/react-query for convenience
 export {
   useQuery,

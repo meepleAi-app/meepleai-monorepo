@@ -4,7 +4,7 @@ import React from 'react';
 
 import { ChevronRight } from 'lucide-react';
 
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/ui/primitives/button';
 import type { PhaseDto } from '@/lib/api/schemas/toolbox.schemas';
 import { cn } from '@/lib/utils';
 

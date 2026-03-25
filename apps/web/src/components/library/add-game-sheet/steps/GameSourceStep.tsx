@@ -10,8 +10,8 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { ExternalLink, Loader2, Plus, Search, X } from 'lucide-react';
 
-import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/data-display/badge';
+import { Button } from '@/components/ui/primitives/button';
 import { Input } from '@/components/ui/primitives/input';
 import { api } from '@/lib/api';
 import { useAddGameWizardStore, type SelectedGameData } from '@/lib/stores/add-game-wizard-store';

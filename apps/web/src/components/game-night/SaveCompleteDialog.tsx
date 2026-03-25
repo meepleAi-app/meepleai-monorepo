@@ -13,8 +13,8 @@ import { useState, useCallback, useRef } from 'react';
 
 import { Bot, Camera, Check, ImagePlus, Loader2, Save } from 'lucide-react';
 
-import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/overlays/dialog';
+import { Button } from '@/components/ui/primitives/button';
 import { Textarea } from '@/components/ui/primitives/textarea';
 import { api } from '@/lib/api';
 import type { SessionSaveResult } from '@/lib/api/schemas/save-resume.schemas';

@@ -15,8 +15,8 @@
 import { useState } from 'react';
 
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/primitives/button';
+import { Input } from '@/components/ui/primitives/input';
 import { useLiveSessionStore, type ScoreProposal } from '@/lib/stores/live-session-store';
 
 const MAX_PENDING = 3;

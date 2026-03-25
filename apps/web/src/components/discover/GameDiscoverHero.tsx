@@ -5,7 +5,7 @@ import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/ui/primitives/button';
 import { useAddGameToLibrary } from '@/hooks/queries';
 import type { SharedGameDetail } from '@/lib/api/schemas/shared-games.schemas';
 

@@ -126,16 +126,20 @@ internal class GameRepository : RepositoryBase, IGameRepository
         var title = new GameTitle(entity.Name);
 
         Publisher? publisher = entity.Publisher != null ? new Publisher(entity.Publisher) : null;
-        YearPublished? yearPublished = entity.YearPublished.HasValue ? new YearPublished(entity.YearPublished.Value) : null;
+        YearPublished? yearPublished = entity.YearPublished.HasValue && entity.YearPublished.Value >= 1000
+            ? new YearPublished(entity.YearPublished.Value)
+            : null;
 
         PlayerCount? playerCount = null;
-        if (entity.MinPlayers.HasValue && entity.MaxPlayers.HasValue)
+        if (entity.MinPlayers.HasValue && entity.MaxPlayers.HasValue
+            && entity.MinPlayers.Value >= 1 && entity.MaxPlayers.Value >= 1)
         {
             playerCount = new PlayerCount(entity.MinPlayers.Value, entity.MaxPlayers.Value);
         }
 
         PlayTime? playTime = null;
-        if (entity.MinPlayTimeMinutes.HasValue && entity.MaxPlayTimeMinutes.HasValue)
+        if (entity.MinPlayTimeMinutes.HasValue && entity.MaxPlayTimeMinutes.HasValue
+            && entity.MinPlayTimeMinutes.Value >= 1 && entity.MaxPlayTimeMinutes.Value >= 1)
         {
             playTime = new PlayTime(entity.MinPlayTimeMinutes.Value, entity.MaxPlayTimeMinutes.Value);
         }

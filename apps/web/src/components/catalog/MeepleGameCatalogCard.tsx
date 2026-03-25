@@ -31,7 +31,7 @@ import dynamic from 'next/dynamic';
 import { useAddGameWizard } from '@/components/library/add-game-sheet/AddGameWizardProvider';
 import { mapToIndexingStatus } from '@/components/library/kb-utils';
 
-// Dynamic imports to avoid DOMMatrix SSR error on statically generated /games/catalog
+// Dynamic imports to avoid DOMMatrix SSR error on statically generated pages
 const KbDrawerSheet = dynamic(
   () => import('@/components/library/KbDrawerSheet').then(m => m.KbDrawerSheet),
   { ssr: false }
@@ -232,7 +232,7 @@ export function MeepleGameCatalogCard({
             {
               entity: 'kb' as MeepleEntityType,
               label: 'Regolamento',
-              href: `/games/${game.id}`,
+              href: `/library/games/${game.id}`,
             },
           ],
     [game.id, inLibrary]
@@ -323,7 +323,7 @@ export function MeepleGameCatalogCard({
         data-testid={`catalog-game-card-${game.id}`}
         entityQuickActions={catalogQuickActions}
         showInfoButton
-        infoHref={`/games/${game.id}`}
+        infoHref={`/library/games/${game.id}`}
         infoTooltip="Vai al dettaglio"
       />
 

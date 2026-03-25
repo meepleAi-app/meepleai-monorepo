@@ -268,6 +268,8 @@ export interface MeepleCardProps extends VariantProps<typeof meepleCardVariants>
   primaryActions?: PrimaryAction[];
   /** Card glow state for status visualization */
   glowState?: GlowState;
+  /** Opt-in holographic overlay effect. Default: false. Use for hero/featured cards. */
+  showHolo?: boolean;
 
   // ========== AGENT ACTION FOOTER (Issue #4777, #4999) ==========
 

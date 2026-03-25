@@ -14,10 +14,6 @@ vi.mock('@/lib/api', () => ({
     sharedGames: {
       search: vi.fn(),
     },
-    bgg: {
-      search: vi.fn(),
-      getGameDetails: vi.fn(),
-    },
     library: {
       addPrivateGame: vi.fn(),
     },
@@ -28,9 +24,6 @@ vi.mock('@/lib/api', () => ({
 import { api } from '@/lib/api';
 
 const mockSearch = vi.mocked(api.sharedGames.search);
-const mockBggSearch = vi.mocked(api.bgg.search);
-const mockBggDetails = vi.mocked(api.bgg.getGameDetails);
-const mockAddPrivateGame = vi.mocked(api.library.addPrivateGame);
 
 describe('GameSourceStep', () => {
   beforeEach(() => {
@@ -103,34 +96,7 @@ describe('GameSourceStep', () => {
     });
 
     await waitFor(() => {
-      expect(mockSearch).toHaveBeenCalledWith(
-        expect.objectContaining({ searchTerm: 'Catan' })
-      );
-    });
-  });
-
-  it('should show BGG button when no catalog results', async () => {
-    mockSearch.mockResolvedValue({
-      items: [],
-      page: 1,
-      pageSize: 10,
-      totalCount: 0,
-      totalPages: 0,
-      hasNextPage: false,
-      hasPreviousPage: false,
-    });
-
-    render(<GameSourceStep />);
-
-    await act(async () => {
-      fireEvent.change(screen.getByPlaceholderText('Cerca un gioco...'), {
-        target: { value: 'ObscureGame' },
-      });
-      vi.advanceTimersByTime(350);
-    });
-
-    await waitFor(() => {
-      expect(screen.getByText('Cerca su BoardGameGeek')).toBeInTheDocument();
+      expect(mockSearch).toHaveBeenCalledWith(expect.objectContaining({ searchTerm: 'Catan' }));
     });
   });
 

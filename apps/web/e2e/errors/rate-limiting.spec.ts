@@ -45,7 +45,7 @@ async function setupRateLimitingMocks(
   } = options;
 
   // Mock auth
-  await page.route(`${API_BASE}/api/v1/auth/me`, async (route) => {
+  await page.route(`${API_BASE}/api/v1/auth/me`, async route => {
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
@@ -62,7 +62,7 @@ async function setupRateLimitingMocks(
   });
 
   // Mock rate limited endpoint
-  await page.route(`${API_BASE}${rateLimitedEndpoint}*`, async (route) => {
+  await page.route(`${API_BASE}${rateLimitedEndpoint}*`, async route => {
     const rateLimitResponse: RateLimitResponse = {
       error: 'Too Many Requests',
       message: `Rate limit exceeded. Please wait ${retryAfterSeconds} seconds before trying again.`,
@@ -86,17 +86,15 @@ async function setupRateLimitingMocks(
   });
 
   // Mock other endpoints normally
-  await page.route(`${API_BASE}/api/v1/games**`, async (route) => {
+  await page.route(`${API_BASE}/api/v1/games**`, async route => {
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
-      body: JSON.stringify([
-        { id: 'game-1', title: 'Chess', description: 'Classic game' },
-      ]),
+      body: JSON.stringify([{ id: 'game-1', title: 'Chess', description: 'Classic game' }]),
     });
   });
 
-  await page.route(`${API_BASE}/api/v1/chat/threads**`, async (route) => {
+  await page.route(`${API_BASE}/api/v1/chat/threads**`, async route => {
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
@@ -119,9 +117,9 @@ test.describe('ERR-06: Rate Limiting (429)', () => {
       await page.waitForLoadState('networkidle');
 
       // Attempt an action that triggers rate limit
-      const messageInput = page.getByPlaceholder(/message|question|ask/i).or(
-        page.locator('textarea, input[type="text"]').first()
-      );
+      const messageInput = page
+        .getByPlaceholder(/message|question|ask/i)
+        .or(page.locator('textarea, input[type="text"]').first());
 
       if (await messageInput.isVisible()) {
         await messageInput.fill('Test question');
@@ -141,9 +139,9 @@ test.describe('ERR-06: Rate Limiting (429)', () => {
       await page.goto('/chat');
       await page.waitForLoadState('networkidle');
 
-      const messageInput = page.getByPlaceholder(/message|question|ask/i).or(
-        page.locator('textarea').first()
-      );
+      const messageInput = page
+        .getByPlaceholder(/message|question|ask/i)
+        .or(page.locator('textarea').first());
 
       if (await messageInput.isVisible()) {
         await messageInput.fill('Test');
@@ -165,9 +163,9 @@ test.describe('ERR-06: Rate Limiting (429)', () => {
       await page.goto('/chat');
       await page.waitForLoadState('networkidle');
 
-      const messageInput = page.getByPlaceholder(/message|question|ask/i).or(
-        page.locator('textarea').first()
-      );
+      const messageInput = page
+        .getByPlaceholder(/message|question|ask/i)
+        .or(page.locator('textarea').first());
 
       if (await messageInput.isVisible()) {
         await messageInput.fill('Test');
@@ -175,9 +173,9 @@ test.describe('ERR-06: Rate Limiting (429)', () => {
 
         // Should show countdown or timer
         await expect(
-          page.getByText(/\d+.*second|\d+s|countdown|wait/i).or(
-            page.locator('[role="timer"], .countdown, .timer')
-          )
+          page
+            .getByText(/\d+.*second|\d+s|countdown|wait/i)
+            .or(page.locator('[role="timer"], .countdown, .timer'))
         ).toBeVisible();
       }
     });
@@ -191,21 +189,27 @@ test.describe('ERR-06: Rate Limiting (429)', () => {
       await page.goto('/chat');
       await page.waitForLoadState('networkidle');
 
-      const messageInput = page.getByPlaceholder(/message|question|ask/i).or(
-        page.locator('textarea').first()
-      );
+      const messageInput = page
+        .getByPlaceholder(/message|question|ask/i)
+        .or(page.locator('textarea').first());
 
       if (await messageInput.isVisible()) {
         await messageInput.fill('Test');
         await page.keyboard.press('Enter');
 
         // Wait and check that countdown decreases
-        const initialText = await page.locator('text=/\\d+ second/').textContent().catch(() => '');
+        const initialText = await page
+          .locator('text=/\\d+ second/')
+          .textContent()
+          .catch(() => '');
 
         if (initialText) {
           // Wait 2 seconds and check countdown decreased
           await page.waitForTimeout(2000);
-          const updatedText = await page.locator('text=/\\d+ second/').textContent().catch(() => '');
+          const updatedText = await page
+            .locator('text=/\\d+ second/')
+            .textContent()
+            .catch(() => '');
 
           // Just verify the rate limit UI is still visible (countdown may have different format)
           await expect(page.getByText(/wait|second|limit/i)).toBeVisible();
@@ -219,7 +223,7 @@ test.describe('ERR-06: Rate Limiting (429)', () => {
       let rateLimited = true;
 
       // Setup dynamic rate limit that clears after cooldown
-      await page.route(`${API_BASE}/api/v1/auth/me`, async (route) => {
+      await page.route(`${API_BASE}/api/v1/auth/me`, async route => {
         await route.fulfill({
           status: 200,
           contentType: 'application/json',
@@ -230,7 +234,7 @@ test.describe('ERR-06: Rate Limiting (429)', () => {
         });
       });
 
-      await page.route(`${API_BASE}/api/v1/chat/messages*`, async (route) => {
+      await page.route(`${API_BASE}/api/v1/chat/messages*`, async route => {
         if (rateLimited) {
           await route.fulfill({
             status: 429,
@@ -254,7 +258,7 @@ test.describe('ERR-06: Rate Limiting (429)', () => {
         }
       });
 
-      await page.route(`${API_BASE}/api/v1/games**`, async (route) => {
+      await page.route(`${API_BASE}/api/v1/games**`, async route => {
         await route.fulfill({
           status: 200,
           contentType: 'application/json',
@@ -262,7 +266,7 @@ test.describe('ERR-06: Rate Limiting (429)', () => {
         });
       });
 
-      await page.route(`${API_BASE}/api/v1/chat/threads**`, async (route) => {
+      await page.route(`${API_BASE}/api/v1/chat/threads**`, async route => {
         await route.fulfill({
           status: 200,
           contentType: 'application/json',
@@ -273,9 +277,9 @@ test.describe('ERR-06: Rate Limiting (429)', () => {
       await page.goto('/chat');
       await page.waitForLoadState('networkidle');
 
-      const messageInput = page.getByPlaceholder(/message|question|ask/i).or(
-        page.locator('textarea').first()
-      );
+      const messageInput = page
+        .getByPlaceholder(/message|question|ask/i)
+        .or(page.locator('textarea').first());
 
       if (await messageInput.isVisible()) {
         // First attempt - should be rate limited
@@ -302,7 +306,7 @@ test.describe('ERR-06: Rate Limiting (429)', () => {
         requestLimit: 1000,
       });
 
-      await page.goto('/games');
+      await page.goto('/library');
       await page.waitForLoadState('networkidle');
 
       // Should show rate limit indication
@@ -335,18 +339,16 @@ test.describe('ERR-06: Rate Limiting (429)', () => {
       await page.goto('/chat');
       await page.waitForLoadState('networkidle');
 
-      const messageInput = page.getByPlaceholder(/message|question|ask/i).or(
-        page.locator('textarea').first()
-      );
+      const messageInput = page
+        .getByPlaceholder(/message|question|ask/i)
+        .or(page.locator('textarea').first());
 
       if (await messageInput.isVisible()) {
         await messageInput.fill('Test');
         await page.keyboard.press('Enter');
 
         // Should show helpful message about what to do
-        await expect(
-          page.getByText(/wait|try.*later|too.*many|limit.*exceeded/i)
-        ).toBeVisible();
+        await expect(page.getByText(/wait|try.*later|too.*many|limit.*exceeded/i)).toBeVisible();
       }
     });
 
@@ -364,7 +366,7 @@ test.describe('ERR-06: Rate Limiting (429)', () => {
 
       // Navigation should still work
       const navLinks = page.getByRole('navigation').getByRole('link');
-      if (await navLinks.count() > 0) {
+      if ((await navLinks.count()) > 0) {
         await expect(navLinks.first()).toBeVisible();
       }
     });

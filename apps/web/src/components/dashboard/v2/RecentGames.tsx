@@ -45,8 +45,8 @@ function EmptyState() {
   return (
     <div className="col-span-full flex flex-col items-center gap-3 py-10 text-center text-muted-foreground">
       <p className="text-sm font-nunito">La tua libreria è vuota</p>
-      <Link href="/games" className="text-xs font-semibold text-primary hover:underline">
-        Esplora il catalogo →
+      <Link href="/library" className="text-xs font-semibold text-primary hover:underline">
+        Esplora la libreria →
       </Link>
     </div>
   );

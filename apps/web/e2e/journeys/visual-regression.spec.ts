@@ -180,7 +180,7 @@ test.describe('Visual Regression: User Journey UIs', () => {
       await test.step(`Capture ${viewport.name} layout`, async () => {
         await page.setViewportSize({ width: viewport.width, height: viewport.height });
 
-        await page.goto('/games');
+        await page.goto('/library');
         await page.waitForLoadState('networkidle');
 
         const waitHelper = new WaitHelper(page);
@@ -203,7 +203,7 @@ test.describe('Visual Regression: Critical Components', () => {
       // This test ensures all modal components render correctly
       // Chromatic fixture will auto-capture screenshots
 
-      await page.goto('/games');
+      await page.goto('/library');
       await page.waitForLoadState('networkidle');
 
       const waitHelper = new WaitHelper(page);
@@ -224,7 +224,7 @@ test.describe('Visual Regression: Critical Components', () => {
         });
       });
 
-      await page.goto('/games');
+      await page.goto('/library');
       await page.waitForLoadState('networkidle');
 
       const waitHelper = new WaitHelper(page);

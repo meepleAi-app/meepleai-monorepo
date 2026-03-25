@@ -758,6 +758,7 @@ if (!isAlphaMode)
     v1Api.MapAdminAuditLogEndpoints();     // Issue #3691: Admin audit log system
     v1Api.MapUserActivityEndpoints();      // Issue #4652: User activity log for Admin Dashboard
     v1Api.MapAdminAgentAnalyticsEndpoints(); // Issue #4653: Agents analytics for Admin Dashboard
+    v1Api.MapAdminAnalyticsEndpoints();      // Admin analytics: overview, chat, PDF, model performance, MAU
     v1Api.MapAdminOperationsEndpoints();   // Issue #3696: Operations - Service Control Panel
     v1Api.MapDatabaseSyncEndpoints();     // Database sync admin panel
     v1Api.MapAdminDockerEndpoints();       // Issue #139: Docker container management (Phase 3)
@@ -773,6 +774,7 @@ if (!isAlphaMode)
     v1Api.MapArbitroAgentEndpoints(); // Issue #3759: Arbitro agent endpoints (Rules Arbitration Engine)
     v1Api.MapDecisoreAgentEndpoints();  // Issue #3773
     v1Api.MapGroup("/agent-typologies").MapAgentTypologyEndpoints(); // Issue #3177, #3178: Agent typology endpoints (AGT-003, AGT-004)
+    v1Api.MapGroup("/admin/agent-typologies").MapAdminAgentTypologyEndpoints(); // Admin-scoped agent typology management
     v1Api.MapAgentSessionEndpoints(); // Issue #3184 (AGT-010): Agent session lifecycle endpoints
     v1Api.MapGroup("/admin/ab-tests").MapAdminAbTestEndpoints(); // Issue #5497: A/B Test backend API endpoints
     v1Api.MapGroup("/admin/test-results").MapAdminTestResultEndpoints(); // Issue #3379: Agent test results history & persistence

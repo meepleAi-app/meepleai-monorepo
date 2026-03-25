@@ -405,6 +405,9 @@ internal static class InfrastructureServiceExtensions
         services.AddHostedService<Infrastructure.BackgroundServices.InvitationCleanupService>();
         services.AddHostedService<Infrastructure.BackgroundServices.GameSuggestionProcessorService>();
 
+        // Issue #3695: Daily database metrics snapshots for growth tracking
+        services.AddHostedService<Infrastructure.BackgroundServices.DatabaseMetricsSnapshotService>();
+
         // Issue #936: Infisical secrets management client (POC)
         services.AddHttpClient("Infisical", client =>
         {

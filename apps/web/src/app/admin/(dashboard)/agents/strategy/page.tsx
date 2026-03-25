@@ -11,6 +11,7 @@ import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Settings, Target, Lock, Link as LinkIcon, Zap, RefreshCw } from 'lucide-react';
 
+import { EmptyFeatureState } from '@/components/admin/EmptyFeatureState';
 import { StrategyBadge } from '@/components/admin/rag/StrategyBadge';
 import { Badge } from '@/components/ui/data-display/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/data-display/card';
@@ -28,8 +29,10 @@ import { Checkbox } from '@/components/ui/primitives/checkbox';
 import { Input } from '@/components/ui/primitives/input';
 import { Label } from '@/components/ui/primitives/label';
 import { Slider } from '@/components/ui/primitives/slider';
+import { useAdminConfig, parseConfigValue } from '@/hooks/useAdminConfig';
 import { useToast } from '@/hooks/useToast';
 import { createAdminClient, type StrategyModelMappingDto } from '@/lib/api/clients/adminClient';
+import { isNotFoundError } from '@/lib/api/core/errors';
 import { HttpClient } from '@/lib/api/core/httpClient';
 
 // ========== Types ==========
@@ -65,9 +68,9 @@ interface ChangedFields {
   modelMappings?: Array<{ strategy: string; data: Partial<StrategyModelMappingDto> }>;
 }
 
-// ========== Provider Model Mappings ==========
+// ========== Fallback Provider Model Mappings ==========
 
-const PROVIDER_MODELS: Record<string, string[]> = {
+const FALLBACK_PROVIDER_MODELS: Record<string, string[]> = {
   OpenRouter: [
     'anthropic/claude-3.5-sonnet',
     'openai/gpt-4o',
@@ -78,9 +81,12 @@ const PROVIDER_MODELS: Record<string, string[]> = {
   Ollama: ['llama3.1:8b', 'llama3.1:70b', 'mistral:7b', 'mixtral:8x7b'],
 };
 
-const RERANKER_MODELS = ['cross-encoder/ms-marco-MiniLM-L-6-v2', 'BAAI/bge-reranker-v2-m3'];
+const FALLBACK_RERANKER_MODELS = [
+  'cross-encoder/ms-marco-MiniLM-L-6-v2',
+  'BAAI/bge-reranker-v2-m3',
+];
 
-const CACHE_TTL_OPTIONS = [
+const FALLBACK_CACHE_TTL_OPTIONS = [
   { value: 15, label: '15 minutes' },
   { value: 30, label: '30 minutes' },
   { value: 60, label: '1 hour' },
@@ -97,6 +103,22 @@ const adminClient = createAdminClient({ httpClient });
 export default function StrategyConfigPage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
+  // Dynamic config from API, falling back to hardcoded defaults
+  const { data: modelsConfig } = useAdminConfig('models');
+  const { data: rerankerConfig } = useAdminConfig('rerankers');
+  const { data: strategiesConfig } = useAdminConfig('strategies');
+
+  const PROVIDER_MODELS =
+    parseConfigValue<Record<string, string[]>>(modelsConfig, 'strategy_provider_models') ??
+    FALLBACK_PROVIDER_MODELS;
+
+  const RERANKER_MODELS =
+    parseConfigValue<string[]>(rerankerConfig, 'reranker_models') ?? FALLBACK_RERANKER_MODELS;
+
+  const CACHE_TTL_OPTIONS =
+    parseConfigValue<{ value: number; label: string }[]>(strategiesConfig, 'cache_ttl_options') ??
+    FALLBACK_CACHE_TTL_OPTIONS;
 
   // State
   const [retrievalConfig, setRetrievalConfig] = useState<RetrievalConfig>({
@@ -129,10 +151,15 @@ export default function StrategyConfigPage() {
   const {
     data: matrix,
     isLoading: matrixLoading,
+    error: matrixError,
     refetch: refetchMatrix,
   } = useQuery({
     queryKey: ['tierStrategyMatrix'],
     queryFn: () => adminClient.getTierStrategyMatrix(),
+    retry: (failureCount, err) => {
+      if (isNotFoundError(err)) return false;
+      return failureCount < 3;
+    },
   });
 
   const {
@@ -142,6 +169,10 @@ export default function StrategyConfigPage() {
   } = useQuery({
     queryKey: ['strategyModelMappings'],
     queryFn: () => adminClient.getStrategyModelMappings(),
+    retry: (failureCount, err) => {
+      if (isNotFoundError(err)) return false;
+      return failureCount < 3;
+    },
   });
 
   // Mutations
@@ -263,6 +294,14 @@ export default function StrategyConfigPage() {
           <RefreshCw className="h-4 w-4" />
         </Button>
       </div>
+
+      {/* 404 fallback — endpoint not implemented */}
+      {isNotFoundError(matrixError) && (
+        <EmptyFeatureState
+          title="Funzionalità non disponibile"
+          description="Endpoint strategy configuration non ancora implementato nel backend."
+        />
+      )}
 
       {/* Overview Cards */}
       <div className="grid grid-cols-1 gap-4 md:grid-cols-3">

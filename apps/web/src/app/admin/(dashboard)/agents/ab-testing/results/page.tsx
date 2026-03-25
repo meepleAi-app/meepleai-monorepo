@@ -28,10 +28,12 @@ import {
   PolarRadiusAxis,
 } from 'recharts';
 
+import { EmptyFeatureState } from '@/components/admin/EmptyFeatureState';
 import { Button } from '@/components/ui/primitives/button';
 import { Input } from '@/components/ui/primitives/input';
 import { Label } from '@/components/ui/primitives/label';
 import { api } from '@/lib/api';
+import { isNotFoundError } from '@/lib/api/core/errors';
 import type { AbTestAnalyticsDto } from '@/lib/api/schemas/ab-test.schemas';
 
 // ────── KPI Card ──────
@@ -233,7 +235,7 @@ export default function AbTestAnalyticsPage() {
 
   const isDateRangeValid = !dateFrom || !dateTo || dateFrom <= dateTo;
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, error } = useQuery({
     queryKey: ['abTestAnalytics', dateFrom, dateTo],
     queryFn: () =>
       api.admin.getAbTestAnalytics({
@@ -242,6 +244,10 @@ export default function AbTestAnalyticsPage() {
       }),
     enabled: isDateRangeValid,
     staleTime: 30_000,
+    retry: (failureCount, err) => {
+      if (isNotFoundError(err)) return false;
+      return failureCount < 3;
+    },
   });
 
   const hasData = data && data.totalTests > 0;
@@ -313,6 +319,14 @@ export default function AbTestAnalyticsPage() {
           <p className="text-xs text-red-500">From date must be before To date</p>
         )}
       </div>
+
+      {/* 404 fallback — endpoint not implemented */}
+      {isNotFoundError(error) && (
+        <EmptyFeatureState
+          title="Funzionalità non disponibile"
+          description="Endpoint A/B test analytics non ancora implementato nel backend."
+        />
+      )}
 
       {/* Loading */}
       {isLoading ? (

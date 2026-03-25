@@ -131,6 +131,7 @@ export const MeepleCardGrid = React.memo(function MeepleCardGrid(props: MeepleCa
     stateLabel,
     coverLabels,
     subtypeIcons,
+    showHolo = false,
   } = props;
 
   const variant = 'grid' as const;
@@ -251,7 +252,6 @@ export const MeepleCardGrid = React.memo(function MeepleCardGrid(props: MeepleCa
         {
           '--mc-entity-color': `hsl(${color})`,
           outlineColor: `hsla(${color}, 0.4)`,
-          willChange: 'transform, box-shadow, outline',
           viewTransitionName: entityId ? `meeple-card-${entityId}` : undefined,
         } as React.CSSProperties
       }
@@ -273,7 +273,7 @@ export const MeepleCardGrid = React.memo(function MeepleCardGrid(props: MeepleCa
       data-entity={entity}
       data-variant={variant}
     >
-      <HoloOverlay />
+      {showHolo && <HoloOverlay />}
 
       {glowState && <StatusGlow state={glowState} entityColor={entityColors[entity].hsl} />}
 

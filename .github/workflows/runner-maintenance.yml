@@ -19,7 +19,7 @@ jobs:
   cleanup:
     name: Runner Disk Cleanup
     # Only run on self-hosted runner (skip if using GitHub-hosted)
-    runs-on: ${{ vars.RUNNER || 'ubuntu-latest' }}
+    runs-on: ${{ vars.RUNNER && fromJSON(vars.RUNNER) || 'ubuntu-latest' }}
     if: ${{ vars.RUNNER != '' }}
     timeout-minutes: 15
 

@@ -1,26 +1,26 @@
 /**
  * PersonalLibraryPage Component
  *
- * Vetrina layout for the user's personal library.
+ * Gaming Immersive library layout with:
+ * - LibraryPageHeader (title + count + CTA)
+ * - LibraryHeroBanner (contextual: next session or discovery)
+ * - Expanded filter chips (7 chips: Tutti, Recenti, Più giocati, Rating, 2-4p, <60min, Strategici)
+ * - MeepleCard grid 4col (desktop) / list variant (mobile)
+ * - Gaming immersive empty state
+ * - Compact UsageWidget sidebar (desktop only)
+ *
  * Splits games into two sections:
  *   1. Shared catalog games (sharedGameId exists / isPrivateGame = false)
  *   2. Private/custom games (privateGameId exists / isPrivateGame = true)
- *
- * Features:
- * - FilterChipsRow for quick filtering (Tutti, Recenti, Più giocati, Rating, players, time)
- * - ViewToggle for grid/list switching (desktop only)
- * - Mobile defaults to list view, desktop to grid
- * - MeepleCard rendering with variant switching
  */
 
 'use client';
 
 import { useMemo, useState } from 'react';
 
-import { BookOpen, Plus } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
-import { EmptyState } from '@/components/empty-state/EmptyState';
 import { useLayoutResponsive } from '@/components/layout/LayoutProvider';
 import { MeepleCard } from '@/components/ui/data-display/meeple-card';
 import { FilterChipsRow } from '@/components/ui/FilterChipsRow';
@@ -30,17 +30,22 @@ import { useLibrary } from '@/hooks/queries/useLibrary';
 import type { UserLibraryEntry } from '@/lib/api/schemas/library.schemas';
 import { cn } from '@/lib/utils';
 
+import { LibraryEmptyState } from './LibraryEmptyState';
+import { LibraryHeroBanner } from './LibraryHeroBanner';
+import { LibraryPageHeader } from './LibraryPageHeader';
 import { LibraryToolbar } from './LibraryToolbar';
+import { UsageWidget } from './UsageWidget';
 
 // ── Filter chip definitions ─────────────────────────────────────────────────
 
 const LIBRARY_FILTER_CHIPS = [
   { id: 'all', label: 'Tutti' },
   { id: 'recent', label: 'Recenti' },
-  { id: 'most-played', label: 'Più giocati' },
+  { id: 'most-played', label: 'Meno recenti' },
   { id: 'rating', label: 'Rating \u2193' },
   { id: 'players-2-4', label: '2-4 giocatori' },
   { id: 'under-60', label: '< 60 min' },
+  { id: 'strategy', label: 'Strategici' },
 ];
 
 // ── Filter logic ────────────────────────────────────────────────────────────
@@ -60,10 +65,14 @@ function applyFilter(items: UserLibraryEntry[], filterId: string): UserLibraryEn
     case 'under-60':
       return items.filter(g => g.playingTimeMinutes != null && g.playingTimeMinutes <= 60);
     case 'most-played':
-      // Sort by addedAt as proxy (no playCount field available)
+      // playCount not yet on UserLibraryEntry DTO — sort by addedAt (oldest first = likely most played)
       return [...items].sort(
         (a, b) => new Date(a.addedAt).getTime() - new Date(b.addedAt).getTime()
       );
+    case 'strategy':
+      // category/mechanics not yet on UserLibraryEntry DTO — requires backend GetUserGamesQuery filter
+      // For now, return all items (chip acts as no-op until backend wired)
+      return items;
     default:
       return items;
   }
@@ -221,92 +230,133 @@ export function PersonalLibraryPage({ className }: PersonalLibraryPageProps) {
 
   const totalCount = data?.totalCount ?? 0;
 
+  const router = useRouter();
+  const isEmpty = totalCount === 0 && !isLoading;
+
+  // Trigger AddGameDrawer via URL param
+  const handleAddGame = () => {
+    const url = new URL(window.location.href);
+    url.searchParams.set('action', 'add');
+    router.push(url.pathname + url.search);
+  };
+
   // Loading state
   if (isLoading) {
     return (
-      <div className={cn('space-y-8', className)} data-testid="personal-library-page">
-        <div className="h-10 w-full max-w-sm rounded-md bg-[#161b22] animate-pulse" />
-        <div className="space-y-3">
-          <div className="h-5 w-40 rounded bg-[#21262d] animate-pulse" />
-          <div className="flex gap-3">
-            {Array.from({ length: 5 }).map((_, i) => (
-              <div key={i} className="w-[140px] h-[160px] rounded-xl bg-[#21262d] animate-pulse" />
-            ))}
+      <div className={cn('space-y-4', className)} data-testid="personal-library-page">
+        {/* PageHeader skeleton */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-baseline gap-3">
+            <div className="h-8 w-48 rounded-md bg-muted animate-pulse" />
+            <div className="h-6 w-20 rounded-full bg-muted animate-pulse" />
           </div>
+          <div className="h-9 w-36 rounded-md bg-muted animate-pulse" />
+        </div>
+        {/* Hero skeleton */}
+        <div className="h-[72px] rounded-[14px] bg-muted animate-pulse" />
+        {/* Filter chips skeleton */}
+        <div className="flex gap-2">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <div key={i} className="h-8 w-20 rounded-full bg-muted animate-pulse" />
+          ))}
+        </div>
+        {/* Card grid skeleton */}
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+          {Array.from({ length: 8 }).map((_, i) => (
+            <div key={i} className="h-[280px] rounded-xl bg-muted animate-pulse" />
+          ))}
         </div>
       </div>
     );
   }
 
-  // Full empty state — no games at all
-  if (totalCount === 0 && !isLoading) {
+  // Full empty state — gaming immersive
+  if (isEmpty) {
     return (
-      <div className={cn('py-8', className)} data-testid="personal-library-page">
-        <EmptyState
-          title="La tua libreria è vuota"
-          description="Aggiungi giochi dalla sezione Catalogo Condiviso o crea giochi personalizzati."
-          icon={BookOpen}
-          variant="noData"
-          data-testid="library-empty-state"
+      <div className={cn('space-y-4', className)} data-testid="personal-library-page">
+        <LibraryPageHeader gameCount={0} onAddGame={handleAddGame} />
+        <LibraryEmptyState
+          onExploreCatalog={() => router.push('/games')}
+          onImportBgg={() => router.push('/library/private/add')}
+          onCreateCustom={() => router.push('/library/private/add')}
         />
       </div>
     );
   }
 
   return (
-    <div className={cn('space-y-6', className)} data-testid="personal-library-page">
-      {/* Toolbar: search + count + view toggle */}
-      <div className="flex items-center gap-3">
-        <div className="flex-1">
+    <div className={cn('space-y-4', className)} data-testid="personal-library-page">
+      {/* PageHeader: title + count + CTA */}
+      <LibraryPageHeader gameCount={totalCount} onAddGame={handleAddGame} />
+
+      {/* Hero Banner: contextual (session or discovery) */}
+      <LibraryHeroBanner />
+
+      {/* Main content + sidebar */}
+      <div className="flex items-start gap-5">
+        {/* Content column */}
+        <div className="min-w-0 flex-1 space-y-4">
+          {/* Toolbar: search */}
           <LibraryToolbar
             totalCount={totalCount}
             searchQuery={searchQuery}
             onSearchChange={setSearchQuery}
           />
-        </div>
-        {/* ViewToggle — desktop only */}
-        {!isMobile && <ViewToggle view={viewMode} onViewChange={setViewMode} />}
-      </div>
 
-      {/* Filter chips row */}
-      <FilterChipsRow
-        chips={LIBRARY_FILTER_CHIPS}
-        activeId={activeFilter}
-        onSelect={setActiveFilter}
-      />
-
-      {/* Section 1: Shared catalog games */}
-      {(filteredCatalog.length > 0 || !query) && (
-        <SectionBlock icon="\ud83d\udcda" title="Dal Catalogo">
-          <GameListContainer
-            items={filteredCatalog}
-            effectiveView={effectiveView}
-            emptyMessage="Nessun gioco del catalogo corrisponde alla ricerca."
-          />
-        </SectionBlock>
-      )}
-
-      {/* Section 2: Private/custom games */}
-      {(filteredCustom.length > 0 || !query) && (
-        <SectionBlock icon="\ud83c\udfae" title="Giochi Personalizzati">
-          {filteredCustom.length === 0 && !query ? (
-            <CreateGameCtaCard />
-          ) : (
-            <>
-              <GameListContainer
-                items={filteredCustom}
-                effectiveView={effectiveView}
-                emptyMessage="Nessun gioco personalizzato corrisponde alla ricerca."
+          {/* Filter chips row + view toggle */}
+          <div className="flex items-center gap-3">
+            <div className="min-w-0 flex-1">
+              <FilterChipsRow
+                chips={LIBRARY_FILTER_CHIPS}
+                activeId={activeFilter}
+                onSelect={setActiveFilter}
               />
-              {filteredCustom.length > 0 && (
-                <div className="mt-3">
-                  <CreateGameCtaCard />
-                </div>
-              )}
-            </>
+            </div>
+            {/* ViewToggle — desktop only */}
+            {!isMobile && <ViewToggle view={viewMode} onViewChange={setViewMode} />}
+          </div>
+
+          {/* Section 1: Shared catalog games */}
+          {(filteredCatalog.length > 0 || !query) && (
+            <SectionBlock icon={'\ud83d\udcda'} title="Dal Catalogo">
+              <GameListContainer
+                items={filteredCatalog}
+                effectiveView={effectiveView}
+                emptyMessage="Nessun gioco del catalogo corrisponde alla ricerca."
+              />
+            </SectionBlock>
           )}
-        </SectionBlock>
-      )}
+
+          {/* Section 2: Private/custom games */}
+          {(filteredCustom.length > 0 || !query) && (
+            <SectionBlock icon={'\ud83c\udfae'} title="Giochi Personalizzati">
+              {filteredCustom.length === 0 && !query ? (
+                <CreateGameCtaCard />
+              ) : (
+                <>
+                  <GameListContainer
+                    items={filteredCustom}
+                    effectiveView={effectiveView}
+                    emptyMessage="Nessun gioco personalizzato corrisponde alla ricerca."
+                  />
+                  {filteredCustom.length > 0 && (
+                    <div className="mt-3">
+                      <CreateGameCtaCard />
+                    </div>
+                  )}
+                </>
+              )}
+            </SectionBlock>
+          )}
+        </div>
+
+        {/* Sidebar: compact quota widget (desktop only) */}
+        <aside className="hidden lg:block w-[200px] flex-shrink-0">
+          <div className="sticky top-[68px]">
+            <UsageWidget variant="compact" />
+          </div>
+        </aside>
+      </div>
     </div>
   );
 }

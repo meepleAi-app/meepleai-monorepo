@@ -38,7 +38,7 @@ export function LibraryHeroBanner({ hide, className }: LibraryHeroBannerProps) {
         </span>
       </div>
       <Button asChild size="sm" variant="default" className="shrink-0">
-        <Link href="/library">
+        <Link href="/library?tab=public">
           Esplora Catalogo <ArrowRight className="ml-1 h-3.5 w-3.5" />
         </Link>
       </Button>

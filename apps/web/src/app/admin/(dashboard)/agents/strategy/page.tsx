@@ -28,6 +28,7 @@ import { Checkbox } from '@/components/ui/primitives/checkbox';
 import { Input } from '@/components/ui/primitives/input';
 import { Label } from '@/components/ui/primitives/label';
 import { Slider } from '@/components/ui/primitives/slider';
+import { useAdminConfig, parseConfigValue } from '@/hooks/useAdminConfig';
 import { useToast } from '@/hooks/useToast';
 import { createAdminClient, type StrategyModelMappingDto } from '@/lib/api/clients/adminClient';
 import { HttpClient } from '@/lib/api/core/httpClient';
@@ -65,9 +66,9 @@ interface ChangedFields {
   modelMappings?: Array<{ strategy: string; data: Partial<StrategyModelMappingDto> }>;
 }
 
-// ========== Provider Model Mappings ==========
+// ========== Fallback Provider Model Mappings ==========
 
-const PROVIDER_MODELS: Record<string, string[]> = {
+const FALLBACK_PROVIDER_MODELS: Record<string, string[]> = {
   OpenRouter: [
     'anthropic/claude-3.5-sonnet',
     'openai/gpt-4o',
@@ -78,9 +79,12 @@ const PROVIDER_MODELS: Record<string, string[]> = {
   Ollama: ['llama3.1:8b', 'llama3.1:70b', 'mistral:7b', 'mixtral:8x7b'],
 };
 
-const RERANKER_MODELS = ['cross-encoder/ms-marco-MiniLM-L-6-v2', 'BAAI/bge-reranker-v2-m3'];
+const FALLBACK_RERANKER_MODELS = [
+  'cross-encoder/ms-marco-MiniLM-L-6-v2',
+  'BAAI/bge-reranker-v2-m3',
+];
 
-const CACHE_TTL_OPTIONS = [
+const FALLBACK_CACHE_TTL_OPTIONS = [
   { value: 15, label: '15 minutes' },
   { value: 30, label: '30 minutes' },
   { value: 60, label: '1 hour' },
@@ -97,6 +101,22 @@ const adminClient = createAdminClient({ httpClient });
 export default function StrategyConfigPage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
+  // Dynamic config from API, falling back to hardcoded defaults
+  const { data: modelsConfig } = useAdminConfig('models');
+  const { data: rerankerConfig } = useAdminConfig('rerankers');
+  const { data: strategiesConfig } = useAdminConfig('strategies');
+
+  const PROVIDER_MODELS =
+    parseConfigValue<Record<string, string[]>>(modelsConfig, 'strategy_provider_models') ??
+    FALLBACK_PROVIDER_MODELS;
+
+  const RERANKER_MODELS =
+    parseConfigValue<string[]>(rerankerConfig, 'reranker_models') ?? FALLBACK_RERANKER_MODELS;
+
+  const CACHE_TTL_OPTIONS =
+    parseConfigValue<{ value: number; label: string }[]>(strategiesConfig, 'cache_ttl_options') ??
+    FALLBACK_CACHE_TTL_OPTIONS;
 
   // State
   const [retrievalConfig, setRetrievalConfig] = useState<RetrievalConfig>({

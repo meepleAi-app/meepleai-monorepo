@@ -1,6 +1,6 @@
 'use client';
 
-import { Shield, MessageSquare, Upload } from 'lucide-react';
+import { type LucideIcon, Shield, MessageSquare, Upload, Loader2 } from 'lucide-react';
 
 import {
   Card,
@@ -9,10 +9,26 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/data-display/card';
+import { useAdminConfig, parseConfigValue } from '@/hooks/useAdminConfig';
 
-const RATE_LIMIT_CATEGORIES = [
+// Icon lookup for dynamic config
+const ICON_MAP: Record<string, LucideIcon> = {
+  Shield,
+  MessageSquare,
+  Upload,
+};
+
+interface RateLimitCategory {
+  icon: string;
+  title: string;
+  description: string;
+  limits: { label: string; value: string }[];
+}
+
+// Fallback constants used when the API is unreachable
+const FALLBACK_RATE_LIMIT_CATEGORIES: RateLimitCategory[] = [
   {
-    icon: Shield,
+    icon: 'Shield',
     title: 'API Rate Limits',
     description: 'Global and per-endpoint request throttling for REST API calls.',
     limits: [
@@ -22,7 +38,7 @@ const RATE_LIMIT_CATEGORIES = [
     ],
   },
   {
-    icon: MessageSquare,
+    icon: 'MessageSquare',
     title: 'Chat Rate Limits',
     description: 'Message throughput limits for AI chat sessions per tier.',
     limits: [
@@ -32,7 +48,7 @@ const RATE_LIMIT_CATEGORIES = [
     ],
   },
   {
-    icon: Upload,
+    icon: 'Upload',
     title: 'Upload Rate Limits',
     description: 'File upload frequency and bandwidth restrictions.',
     limits: [
@@ -41,9 +57,23 @@ const RATE_LIMIT_CATEGORIES = [
       { label: 'Premium Tier', value: '100 uploads/day' },
     ],
   },
-] as const;
+];
 
 export function RateLimitsTab() {
+  const { data: rateLimitsConfig, isLoading } = useAdminConfig('rate-limits');
+
+  const categories =
+    parseConfigValue<RateLimitCategory[]>(rateLimitsConfig, 'rate_limit_categories') ??
+    FALLBACK_RATE_LIMIT_CATEGORIES;
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <div>
@@ -53,8 +83,8 @@ export function RateLimitsTab() {
         </p>
       </div>
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {RATE_LIMIT_CATEGORIES.map(category => {
-          const Icon = category.icon;
+        {categories.map(category => {
+          const Icon = ICON_MAP[category.icon] ?? Shield;
           return (
             <Card
               key={category.title}

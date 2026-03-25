@@ -90,23 +90,30 @@ describe('AdminClient - Issue #2340', () => {
   describe('getAllUsers', () => {
     it('should fetch all users with pagination', async () => {
       const mockResult = {
-        users: [
+        items: [
           { id: '1', email: 'user1@example.com', role: 'Admin' },
           { id: '2', email: 'user2@example.com', role: 'User' },
         ],
         total: 2,
+        page: 1,
+        pageSize: 20,
       };
       vi.mocked(mockHttpClient.get).mockResolvedValue(mockResult);
 
       const client = createAdminClient({ httpClient: mockHttpClient });
       const result = await client.getAllUsers({ page: 1, limit: 20 });
 
-      expect(result.users).toHaveLength(2);
+      expect(result.items).toHaveLength(2);
       expect(result.total).toBe(2);
     });
 
     it('should filter users by search term', async () => {
-      vi.mocked(mockHttpClient.get).mockResolvedValue({ users: [], total: 0 });
+      vi.mocked(mockHttpClient.get).mockResolvedValue({
+        items: [],
+        total: 0,
+        page: 1,
+        pageSize: 20,
+      });
 
       const client = createAdminClient({ httpClient: mockHttpClient });
       await client.getAllUsers({ search: 'john' });
@@ -123,7 +130,7 @@ describe('AdminClient - Issue #2340', () => {
       const client = createAdminClient({ httpClient: mockHttpClient });
       const result = await client.getAllUsers();
 
-      expect(result.users).toEqual([]);
+      expect(result.items).toEqual([]);
       expect(result.total).toBe(0);
     });
   });

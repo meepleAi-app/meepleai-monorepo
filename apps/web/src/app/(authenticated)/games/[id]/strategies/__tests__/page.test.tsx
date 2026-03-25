@@ -43,7 +43,7 @@ describe('GameStrategiesPage', () => {
     renderWithQuery(<GameStrategiesPage />);
     const backLink = screen.getByRole('link', { name: /Back to Game/i });
     expect(backLink).toBeInTheDocument();
-    expect(backLink).toHaveAttribute('href', '/games/game-123');
+    expect(backLink).toHaveAttribute('href', '/library/games/game-123');
   });
 
   it('shows loading skeletons initially', () => {
@@ -57,9 +57,7 @@ describe('GameStrategiesPage', () => {
     mockGetStrategies.mockResolvedValue({ items: [], total: 0 });
     renderWithQuery(<GameStrategiesPage />);
     await waitFor(() => {
-      expect(
-        screen.getByText('No strategies available for this game yet.')
-      ).toBeInTheDocument();
+      expect(screen.getByText('No strategies available for this game yet.')).toBeInTheDocument();
     });
   });
 
@@ -83,7 +81,9 @@ describe('GameStrategiesPage', () => {
     await waitFor(() => {
       expect(screen.getByText('Opening Strategy')).toBeInTheDocument();
     });
-    expect(screen.getByText('Start by placing your first settlement near resources.')).toBeInTheDocument();
+    expect(
+      screen.getByText('Start by placing your first settlement near resources.')
+    ).toBeInTheDocument();
     expect(screen.getByText('ProPlayer')).toBeInTheDocument();
   });
 

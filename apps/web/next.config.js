@@ -251,8 +251,9 @@ const nextConfig = {
       },
       { source: '/games/:id/agents', destination: '/library/:id?tab=agent', permanent: true },
       { source: '/games/:id/chats', destination: '/chat', permanent: true },
-      { source: '/games/catalog', destination: '/discover', permanent: true },
-      { source: '/games/add', destination: '/discover/add', permanent: true },
+      { source: '/games', destination: '/library?tab=public', permanent: true },
+      { source: '/games/catalog', destination: '/library?tab=public', permanent: true },
+      { source: '/games/add', destination: '/library', permanent: true },
 
       // Catch-all for any other /settings sub-paths
       { source: '/settings/:path*', destination: '/profile?tab=settings', permanent: true },

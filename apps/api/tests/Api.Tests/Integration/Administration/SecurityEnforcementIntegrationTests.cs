@@ -162,10 +162,10 @@ public sealed class SecurityEnforcementIntegrationTests : IAsyncLifetime
         retrieved.Action.Should().Be("test_action");
         retrieved.CreatedAt.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromSeconds(5));
 
-        // Verify repository has no Update method (append-only pattern)
-        var repositoryType = typeof(AuditLogRepository);
-        var updateMethod = repositoryType.GetMethod("UpdateAsync") ?? repositoryType.GetMethod("Update");
-        updateMethod.Should().BeNull("Audit logs should be append-only (no update allowed)");
+        // Verify UpdateAsync throws InvalidOperationException (append-only pattern)
+        // The method exists to satisfy the interface but enforces immutability by throwing
+        var updateAct = () => _auditLogRepository!.UpdateAsync(retrieved!, TestCancellationToken);
+        await updateAct.Should().ThrowAsync<InvalidOperationException>("Audit logs should be append-only (update must throw)");
     }
 
     [Fact]

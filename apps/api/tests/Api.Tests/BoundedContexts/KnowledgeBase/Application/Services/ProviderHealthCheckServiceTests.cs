@@ -84,26 +84,14 @@ public class ProviderHealthCheckServiceTests
     [Fact]
     public async Task GetAllProviderHealth_AfterInitialization_ReturnsAllProviders()
     {
-        // Arrange
+        // Arrange — ProviderHealthCheckService uses CheckHealthAsync (not GenerateCompletionAsync)
         var ollamaClient = CreateMockClient("Ollama");
-        ollamaClient.Setup(c => c.GenerateCompletionAsync(
-                It.IsAny<string>(),
-                It.IsAny<string>(),
-                It.IsAny<string>(),
-                It.IsAny<double>(),
-                It.IsAny<int>(),
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync(LlmCompletionResult.CreateSuccess("pong"));
+        ollamaClient.Setup(c => c.CheckHealthAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
 
         var openRouterClient = CreateMockClient("OpenRouter");
-        openRouterClient.Setup(c => c.GenerateCompletionAsync(
-                It.IsAny<string>(),
-                It.IsAny<string>(),
-                It.IsAny<string>(),
-                It.IsAny<double>(),
-                It.IsAny<int>(),
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync(LlmCompletionResult.CreateSuccess("pong"));
+        openRouterClient.Setup(c => c.CheckHealthAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
 
         var serviceScopeFactory = CreateServiceScopeFactory(new List<ILlmClient>
         {
@@ -139,16 +127,10 @@ public class ProviderHealthCheckServiceTests
     [Trait("Category", TestCategories.Integration)]
     public async Task HealthCheck_SuccessfulResponse_UpdatesHealthyStatus()
     {
-        // Arrange
+        // Arrange — ProviderHealthCheckService uses CheckHealthAsync (not GenerateCompletionAsync)
         var ollamaClient = CreateMockClient("Ollama");
-        ollamaClient.Setup(c => c.GenerateCompletionAsync(
-                It.IsAny<string>(),
-                It.IsAny<string>(),
-                It.IsAny<string>(),
-                It.IsAny<double>(),
-                It.IsAny<int>(),
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync(LlmCompletionResult.CreateSuccess("pong"));
+        ollamaClient.Setup(c => c.CheckHealthAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
 
         var serviceScopeFactory = CreateServiceScopeFactory(new List<ILlmClient> { ollamaClient.Object });
         var logger = new Mock<ILogger<ProviderHealthCheckService>>();
@@ -175,16 +157,10 @@ public class ProviderHealthCheckServiceTests
     [Trait("Category", TestCategories.Integration)]
     public async Task HealthCheck_FailedResponse_UpdatesUnhealthyStatus()
     {
-        // Arrange
+        // Arrange — ProviderHealthCheckService uses CheckHealthAsync (not GenerateCompletionAsync)
         var ollamaClient = CreateMockClient("Ollama");
-        ollamaClient.Setup(c => c.GenerateCompletionAsync(
-                It.IsAny<string>(),
-                It.IsAny<string>(),
-                It.IsAny<string>(),
-                It.IsAny<double>(),
-                It.IsAny<int>(),
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync(LlmCompletionResult.CreateFailure("Service unavailable"));
+        ollamaClient.Setup(c => c.CheckHealthAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(false);
 
         var serviceScopeFactory = CreateServiceScopeFactory(new List<ILlmClient> { ollamaClient.Object });
         var logger = new Mock<ILogger<ProviderHealthCheckService>>();
@@ -211,19 +187,13 @@ public class ProviderHealthCheckServiceTests
     [Trait("Category", TestCategories.Integration)]
     public async Task HealthCheck_Timeout_UpdatesUnhealthyStatus()
     {
-        // Arrange
+        // Arrange — ProviderHealthCheckService uses CheckHealthAsync (not GenerateCompletionAsync)
         var ollamaClient = CreateMockClient("Ollama");
-        ollamaClient.Setup(c => c.GenerateCompletionAsync(
-                It.IsAny<string>(),
-                It.IsAny<string>(),
-                It.IsAny<string>(),
-                It.IsAny<double>(),
-                It.IsAny<int>(),
-                It.IsAny<CancellationToken>()))
-            .Returns(async (string m, string s, string u, double t, int max, CancellationToken ct) =>
+        ollamaClient.Setup(c => c.CheckHealthAsync(It.IsAny<CancellationToken>()))
+            .Returns(async (CancellationToken ct) =>
             {
                 await Task.Delay(KnowledgeBaseTestConstants.ProviderHealthCheck.SlowResponseTimeout, ct); // Simulate slow response (will timeout)
-                return LlmCompletionResult.CreateSuccess("pong");
+                return true;
             });
 
         var serviceScopeFactory = CreateServiceScopeFactory(new List<ILlmClient> { ollamaClient.Object });
@@ -250,16 +220,10 @@ public class ProviderHealthCheckServiceTests
     [Fact]
     public async Task StopAsync_CancelsBackgroundTask()
     {
-        // Arrange
+        // Arrange — ProviderHealthCheckService uses CheckHealthAsync (not GenerateCompletionAsync)
         var ollamaClient = CreateMockClient("Ollama");
-        ollamaClient.Setup(c => c.GenerateCompletionAsync(
-                It.IsAny<string>(),
-                It.IsAny<string>(),
-                It.IsAny<string>(),
-                It.IsAny<double>(),
-                It.IsAny<int>(),
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync(LlmCompletionResult.CreateSuccess("pong"));
+        ollamaClient.Setup(c => c.CheckHealthAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
 
         var serviceScopeFactory = CreateServiceScopeFactory(new List<ILlmClient> { ollamaClient.Object });
         var logger = new Mock<ILogger<ProviderHealthCheckService>>();

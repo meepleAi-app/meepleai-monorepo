@@ -18,7 +18,7 @@ internal static class BggImportQueueEndpoints
 {
     internal static IEndpointRouteBuilder MapBggImportQueueEndpoints(this IEndpointRouteBuilder endpoints)
     {
-        var group = endpoints.MapGroup("/api/v1/admin/bgg-queue")
+        var group = endpoints.MapGroup("/admin/bgg-queue")
             .WithTags("BGG Import Queue")
             .RequireAuthorization(policy => policy.RequireRole("SuperAdmin", "Admin")); // Admin-only endpoints
 

@@ -83,6 +83,8 @@ public sealed class DocumentProcessingKnowledgeBaseCrossContextTests : IAsyncLif
         // Register KnowledgeBase dependencies (required by AutoCreateAgentOnPdfReadyHandler picked up by MediatR assembly scan)
         var mockTypologyRepo = new Moq.Mock<Api.BoundedContexts.KnowledgeBase.Domain.Repositories.IAgentTypologyRepository>();
         services.AddScoped(_ => mockTypologyRepo.Object);
+        var mockAgentDefRepo = new Moq.Mock<Api.BoundedContexts.KnowledgeBase.Domain.Repositories.IAgentDefinitionRepository>();
+        services.AddScoped(_ => mockAgentDefRepo.Object);
 
         _serviceProvider = services.BuildServiceProvider();
         _dbContext = _serviceProvider.GetRequiredService<MeepleAiDbContext>();

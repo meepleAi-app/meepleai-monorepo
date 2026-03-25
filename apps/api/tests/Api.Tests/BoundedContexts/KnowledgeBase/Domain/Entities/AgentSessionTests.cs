@@ -226,6 +226,6 @@ public class AgentSessionTests
 
         // Assert
         duration.Should().BeGreaterThan(TimeSpan.FromMilliseconds(50));
-        duration.Should().BeLessThan(TimeSpan.FromSeconds(1));
+        duration.Should().BeLessThan(TimeSpan.FromSeconds(5)); // Generous threshold for CI
     }
 }

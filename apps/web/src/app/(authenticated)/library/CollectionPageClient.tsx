@@ -34,6 +34,13 @@ import { LibraryQuotaBadge } from '@/components/library/LibraryQuotaBadge';
 import { Card, CardContent } from '@/components/ui/data-display/card';
 import { Alert, AlertDescription } from '@/components/ui/feedback/alert';
 import { Skeleton } from '@/components/ui/feedback/skeleton';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/overlays/select';
 import { Button } from '@/components/ui/primitives/button';
 import { useLibrary, useLibraryQuota } from '@/hooks/queries/useLibrary';
 import type { GameStateType, GetUserLibraryParams } from '@/lib/api/schemas/library.schemas';
@@ -54,6 +61,26 @@ export default function CollectionPageClient() {
 
   // View mode state (Issue #2866)
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
+
+  // Quick filter dropdown (replaces ContextBar tab pills)
+  const quickFilterValue = useMemo(() => {
+    const sf = filters.stateFilter;
+    if (!sf || sf.length === 0) return 'all';
+    if (sf.includes('Owned' as GameStateType)) return 'owned';
+    if (sf.includes('Wishlist' as GameStateType)) return 'wishlist';
+    if (sf.includes('InPrestito' as GameStateType)) return 'loaned';
+    return 'all';
+  }, [filters.stateFilter]);
+
+  const handleQuickFilter = (value: string) => {
+    const stateMap: Record<string, GameStateType[]> = {
+      all: [],
+      owned: ['Owned' as GameStateType],
+      wishlist: ['Wishlist' as GameStateType],
+      loaned: ['InPrestito' as GameStateType],
+    };
+    handleStateFilterChange(stateMap[value] ?? []);
+  };
 
   // Modal state
   const [editNotesModal, setEditNotesModal] = useState<{
@@ -322,15 +349,28 @@ export default function CollectionPageClient() {
         {/* Quick stats row — hidden on mobile for vertical space */}
         <LibraryQuickStats className="hidden sm:flex" />
 
-        {/* Toolbar: quota badge + view controls — compact on mobile */}
+        {/* Toolbar: quota badge + quick filter + view controls — compact on mobile */}
         <div className="flex items-center justify-between gap-1.5 sm:gap-2">
-          {quota && (
-            <LibraryQuotaBadge
-              currentCount={quota.currentCount}
-              maxAllowed={quota.maxAllowed}
-              percentageUsed={quota.percentageUsed}
-            />
-          )}
+          <div className="flex items-center gap-1.5 sm:gap-2">
+            {quota && (
+              <LibraryQuotaBadge
+                currentCount={quota.currentCount}
+                maxAllowed={quota.maxAllowed}
+                percentageUsed={quota.percentageUsed}
+              />
+            )}
+            <Select value={quickFilterValue} onValueChange={handleQuickFilter}>
+              <SelectTrigger className="w-[130px] h-8 text-sm">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Tutti</SelectItem>
+                <SelectItem value="owned">Posseduti</SelectItem>
+                <SelectItem value="wishlist">Wishlist</SelectItem>
+                <SelectItem value="loaned">Prestati</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
           <div className="flex items-center gap-1 sm:gap-2">
             {hasGames && <ViewModeToggle viewMode={viewMode} onViewModeChange={setViewMode} />}
             {hasGames && (

@@ -262,7 +262,7 @@ internal class ConfigurationHealthCheck : IHealthCheck
         {
             ["postgres-password"] = new[] { "/run/secrets/postgres-password", "POSTGRES_PASSWORD" },
             ["redis-password"] = new[] { "/run/secrets/redis-password", "REDIS_PASSWORD" },
-            ["jwt-secret"] = new[] { "/run/secrets/jwt-secret", "JWT_SECRET", "Jwt:Secret" }
+            ["jwt-secret"] = new[] { "/run/secrets/jwt-secret", "JWT_SECRET_KEY", "JWT_SECRET", "Jwt:Secret" }
         };
 
         foreach (var (secretName, sources) in requiredSecrets)

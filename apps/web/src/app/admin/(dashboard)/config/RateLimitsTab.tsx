@@ -9,7 +9,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/data-display/card';
-import { useAdminConfig, parseConfigValue } from '@/hooks/useAdminConfig';
+import { useAdminConfig, parseAllConfigs } from '@/hooks/useAdminConfig';
 
 // Icon lookup for dynamic config
 const ICON_MAP: Record<string, LucideIcon> = {
@@ -62,9 +62,9 @@ const FALLBACK_RATE_LIMIT_CATEGORIES: RateLimitCategory[] = [
 export function RateLimitsTab() {
   const { data: rateLimitsConfig, isLoading } = useAdminConfig('rate-limits');
 
+  const parsed = parseAllConfigs<RateLimitCategory>(rateLimitsConfig);
   const categories =
-    parseConfigValue<RateLimitCategory[]>(rateLimitsConfig, 'rate_limit_categories') ??
-    FALLBACK_RATE_LIMIT_CATEGORIES;
+    Object.keys(parsed).length > 0 ? Object.values(parsed) : FALLBACK_RATE_LIMIT_CATEGORIES;
 
   if (isLoading) {
     return (

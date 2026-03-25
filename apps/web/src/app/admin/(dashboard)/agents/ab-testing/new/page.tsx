@@ -43,7 +43,7 @@ export default function NewAbTestPage() {
   const AVAILABLE_MODELS =
     parseConfigValue<readonly { id: string; provider: string; name: string }[]>(
       modelsConfig,
-      'ab_test_models'
+      'models:ab-testing'
     ) ?? FALLBACK_AVAILABLE_MODELS;
 
   const [query, setQuery] = useState('');

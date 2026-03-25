@@ -102,7 +102,7 @@ internal sealed class DatabaseMetricsSnapshotService : BackgroundService
             long indexSizeBytes;
             using (var cmd = connection.CreateCommand())
             {
-                cmd.CommandText = "SELECT pg_indexes_size(c.oid) FROM pg_database c WHERE datname = current_database()";
+                cmd.CommandText = "SELECT COALESCE(SUM(pg_indexes_size(oid)), 0) FROM pg_class WHERE relkind = 'r' AND relnamespace = (SELECT oid FROM pg_namespace WHERE nspname = 'public')";
                 var result = await cmd.ExecuteScalarAsync(ct).ConfigureAwait(false);
                 indexSizeBytes = result != null ? Convert.ToInt64(result, System.Globalization.CultureInfo.InvariantCulture) : 0;
             }

@@ -203,11 +203,11 @@ export function createAdminSystemClient(http: HttpClient) {
     },
 
     async cancelBatchJob(id: string): Promise<void> {
-      await http.post(`/api/v1/admin/operations/batch-jobs/${id}/cancel`, {});
+      await http.put(`/api/v1/admin/operations/batch-jobs/${id}/cancel`, {});
     },
 
     async retryBatchJob(id: string): Promise<void> {
-      await http.post(`/api/v1/admin/operations/batch-jobs/${id}/retry`, {});
+      await http.put(`/api/v1/admin/operations/batch-jobs/${id}/retry`, {});
     },
 
     // ========== Queue Management (Issue #125) ==========

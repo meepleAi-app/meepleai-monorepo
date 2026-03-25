@@ -10,12 +10,14 @@ import type { ManaSize } from './mana-types';
 const SIZE_CLASSES: Record<ManaSize, string> = {
   full: 'w-16 h-16 text-[1.6rem]',
   medium: 'w-7 h-7 text-sm',
-  mini: 'w-5 h-5 text-xs',
+  small: 'w-5 h-5 text-xs',
+  mini: 'w-6 h-6 text-sm',
 };
 
 const LABEL_CLASSES: Record<ManaSize, string> = {
   full: 'text-xs mt-2',
   medium: 'text-[9px] ml-1.5',
+  small: 'text-[8px] ml-1',
   mini: 'text-[8px] ml-1',
 };
 
@@ -64,7 +66,7 @@ export const ManaSymbol = memo(function ManaSymbol({
           {
             '--mana-color': color,
             background: `radial-gradient(circle at 35% 35%, hsl(${color}) 0%, hsl(${color} / 0.65) 100%)`,
-            boxShadow: `0 4px 16px hsl(${color} / 0.35)`,
+            boxShadow: `0 4px 14px hsl(${color} / 0.4)`,
             outline: `2px solid hsl(${color} / 0.35)`,
             outlineOffset: '2px',
           } as React.CSSProperties

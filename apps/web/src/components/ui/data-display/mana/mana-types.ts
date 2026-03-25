@@ -1,6 +1,6 @@
 import type { MeepleEntityType } from '../meeple-card-styles';
 
-export type ManaSize = 'full' | 'medium' | 'mini';
+export type ManaSize = 'full' | 'medium' | 'small' | 'mini';
 
 export interface ManaDisplayConfig {
   key: MeepleEntityType;

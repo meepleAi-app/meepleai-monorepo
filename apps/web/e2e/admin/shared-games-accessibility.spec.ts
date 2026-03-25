@@ -19,7 +19,7 @@ test.describe('SharedGameCatalog Accessibility (WCAG AA)', () => {
   });
 
   test('Public search page should have no WCAG AA violations', async ({ page }) => {
-    await page.goto('/games/add');
+    await page.goto('/library');
 
     // Wait for SharedGameSearch to load
     await expect(page.locator('input[placeholder*="Cerca"]')).toBeVisible();
@@ -54,7 +54,7 @@ test.describe('SharedGameCatalog Accessibility (WCAG AA)', () => {
   });
 
   test('Game detail modal should be accessible', async ({ page }) => {
-    await page.goto('/games/add');
+    await page.goto('/library');
 
     // Search for a game
     await page.fill('input[placeholder*="Cerca"]', 'Catan');

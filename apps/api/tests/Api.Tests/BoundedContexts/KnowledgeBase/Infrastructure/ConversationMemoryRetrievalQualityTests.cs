@@ -138,7 +138,7 @@ public sealed class ConversationMemoryRetrievalQualityTests : IAsyncLifetime
             var messageCount = random.Next(20, 51);
             for (int msg = 0; msg < messageCount; msg++)
             {
-                var embedding = GenerateRandomEmbedding(random, 1536);
+                var embedding = GenerateRandomEmbedding(random, 1024);
                 var memory = new ConversationMemoryEntity
                 {
                     Id = Guid.NewGuid(),

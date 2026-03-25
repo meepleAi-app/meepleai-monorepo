@@ -74,7 +74,7 @@ test.describe('Epic #3: Navbar Restructuring', () => {
    */
   test('Navbar - Anonymous user sees limited content', async ({ page }) => {
     // Navigate as anonymous
-    await page.goto('/games');
+    await page.goto('/library');
 
     // Verify limited catalog message
     const restrictionBanner = page.locator('[data-testid="anonymous-restriction-banner"]');

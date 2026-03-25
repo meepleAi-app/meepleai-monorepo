@@ -70,7 +70,7 @@ test.describe('Mobile Card Browser - MobileTabBar', () => {
   });
 
   test('Dashboard tab navigates to /dashboard', async ({ page }) => {
-    await page.goto('/games');
+    await page.goto('/library');
     await page.waitForLoadState('networkidle');
 
     const tabBar = page.locator('[data-testid="mobile-tab-bar"]');
@@ -88,8 +88,8 @@ test.describe('Mobile Card Browser - MobileTabBar', () => {
     if (!isVisible) test.skip(true, 'Tab bar not visible in this environment');
 
     await page.getByTestId('mobile-tab-discover').click();
-    await page.waitForURL(/\/games/, { timeout: 5000 });
-    expect(page.url()).toContain('/games');
+    await page.waitForURL(/\/library/, { timeout: 5000 });
+    expect(page.url()).toContain('/library');
   });
 
   test('Library tab navigates to /library (authenticated)', async ({ page }) => {

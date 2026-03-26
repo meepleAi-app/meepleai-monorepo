@@ -179,7 +179,7 @@ export function createSharedGamesClient({ httpClient }: CreateSharedGamesClientP
     async search(params: SearchSharedGamesParams = {}): Promise<PagedSharedGames> {
       const queryParams = new URLSearchParams();
 
-      if (params.searchTerm) queryParams.set('searchTerm', params.searchTerm);
+      if (params.searchTerm) queryParams.set('search', params.searchTerm);
       if (params.categoryIds) queryParams.set('categoryIds', params.categoryIds);
       if (params.mechanicIds) queryParams.set('mechanicIds', params.mechanicIds);
       if (params.minPlayers !== undefined)
@@ -189,7 +189,7 @@ export function createSharedGamesClient({ httpClient }: CreateSharedGamesClientP
       if (params.maxPlayingTime !== undefined)
         queryParams.set('maxPlayingTime', params.maxPlayingTime.toString());
       if (params.status !== undefined) queryParams.set('status', params.status.toString());
-      if (params.page !== undefined) queryParams.set('page', params.page.toString());
+      if (params.page !== undefined) queryParams.set('pageNumber', params.page.toString());
       if (params.pageSize !== undefined) queryParams.set('pageSize', params.pageSize.toString());
       if (params.sortBy) queryParams.set('sortBy', params.sortBy);
       if (params.sortDescending !== undefined)

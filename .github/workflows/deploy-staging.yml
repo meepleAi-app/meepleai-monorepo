@@ -192,6 +192,13 @@ jobs:
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "📦 Version: $VERSION"
 
+      - name: Free disk space for build
+        run: |
+          echo "📊 Disk before cleanup: $(df -h / | tail -1 | awk '{print $4}') free"
+          docker builder prune -f --filter 'until=12h' 2>/dev/null || true
+          docker image prune -a -f --filter 'until=24h' 2>/dev/null || true
+          echo "📊 Disk after cleanup: $(df -h / | tail -1 | awk '{print $4}') free"
+
       - name: Setup Docker Buildx
         uses: docker/setup-buildx-action@v4
 

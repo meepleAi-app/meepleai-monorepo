@@ -39,6 +39,10 @@ interface AddToWishlistDialogProps {
   gameId?: string;
   /** Display name for the pre-filled game */
   gameName?: string;
+  /** Controlled open state (when provided, dialog is externally controlled) */
+  open?: boolean;
+  /** Controlled open change handler */
+  onOpenChange?: (open: boolean) => void;
   onSuccess?: () => void;
 }
 
@@ -50,9 +54,14 @@ export function AddToWishlistDialog({
   trigger,
   gameId,
   gameName,
+  open: controlledOpen,
+  onOpenChange: controlledOnOpenChange,
   onSuccess,
 }: AddToWishlistDialogProps) {
-  const [open, setOpen] = useState(false);
+  const [internalOpen, setInternalOpen] = useState(false);
+  const isControlled = controlledOpen !== undefined;
+  const open = isControlled ? controlledOpen : internalOpen;
+  const setOpen = isControlled ? (controlledOnOpenChange ?? (() => {})) : setInternalOpen;
 
   const [formGameId, setFormGameId] = useState(gameId ?? '');
   const [priority, setPriority] = useState<'low' | 'medium' | 'high'>('medium');
@@ -95,13 +104,14 @@ export function AddToWishlistDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      {trigger ? (
-        <DialogTrigger asChild>{trigger}</DialogTrigger>
-      ) : (
-        <DialogTrigger asChild>
-          <Button>Add to Wishlist</Button>
-        </DialogTrigger>
-      )}
+      {!isControlled &&
+        (trigger ? (
+          <DialogTrigger asChild>{trigger}</DialogTrigger>
+        ) : (
+          <DialogTrigger asChild>
+            <Button>Add to Wishlist</Button>
+          </DialogTrigger>
+        ))}
 
       <DialogContent>
         <DialogHeader>

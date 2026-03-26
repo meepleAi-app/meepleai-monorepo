@@ -33,37 +33,43 @@ const mockTiers = [
     id: '00000000-0000-0000-0000-000000000001',
     name: 'free',
     displayName: 'Free',
-    description: 'Piano gratuito',
-    monthlyPriceEur: 0,
-    isActive: true,
-    limits: [
-      { key: 'MaxPrivateGames', value: 3 },
-      { key: 'MaxPdfPerMonth', value: 3 },
-      { key: 'MaxAgents', value: 1 },
-      { key: 'MaxAgentQueriesPerDay', value: 20 },
-      { key: 'MaxSessionQueries', value: 10 },
-      { key: 'MaxPlayersPerSession', value: 6 },
-      { key: 'MaxPhotosPerSession', value: 5 },
-      { key: 'MaxCatalogProposalsPerWeek', value: 2 },
-    ],
+    limits: {
+      maxPrivateGames: 3,
+      maxPdfUploadsPerMonth: 3,
+      maxPdfSizeBytes: 10485760,
+      maxAgents: 1,
+      maxAgentQueriesPerDay: 20,
+      maxSessionQueries: 10,
+      maxSessionPlayers: 6,
+      maxPhotosPerSession: 5,
+      sessionSaveEnabled: true,
+      maxCatalogProposalsPerWeek: 2,
+    },
+    llmModelTier: 'standard',
+    isDefault: true,
+    createdAt: '2026-01-01T00:00:00Z',
+    updatedAt: '2026-01-01T00:00:00Z',
   },
   {
     id: '00000000-0000-0000-0000-000000000002',
     name: 'premium',
     displayName: 'Premium',
-    description: null,
-    monthlyPriceEur: 4.99,
-    isActive: true,
-    limits: [
-      { key: 'MaxPrivateGames', value: 15 },
-      { key: 'MaxPdfPerMonth', value: 15 },
-      { key: 'MaxAgents', value: 10 },
-      { key: 'MaxAgentQueriesPerDay', value: 200 },
-      { key: 'MaxSessionQueries', value: 50 },
-      { key: 'MaxPlayersPerSession', value: 12 },
-      { key: 'MaxPhotosPerSession', value: 20 },
-      { key: 'MaxCatalogProposalsPerWeek', value: 10 },
-    ],
+    limits: {
+      maxPrivateGames: 15,
+      maxPdfUploadsPerMonth: 15,
+      maxPdfSizeBytes: 52428800,
+      maxAgents: 10,
+      maxAgentQueriesPerDay: 200,
+      maxSessionQueries: 50,
+      maxSessionPlayers: 12,
+      maxPhotosPerSession: 20,
+      sessionSaveEnabled: true,
+      maxCatalogProposalsPerWeek: 10,
+    },
+    llmModelTier: 'premium',
+    isDefault: false,
+    createdAt: '2026-01-01T00:00:00Z',
+    updatedAt: '2026-01-01T00:00:00Z',
   },
 ];
 
@@ -133,9 +139,7 @@ describe('AdminTiersPage', () => {
     await user.click(screen.getByTestId('btn-edit-free'));
 
     expect(screen.getByText('Modifica tier: free')).toBeInTheDocument();
-    // Name field should NOT be shown for edits
     expect(screen.queryByTestId('field-name')).not.toBeInTheDocument();
-    // Display name should be prefilled
     const displayField = screen.getByTestId('field-displayName') as HTMLInputElement;
     expect(displayField.value).toBe('Free');
   });
@@ -157,7 +161,7 @@ describe('AdminTiersPage', () => {
         'free',
         expect.objectContaining({
           displayName: 'Free',
-          isActive: true,
+          isDefault: true,
         })
       );
     });

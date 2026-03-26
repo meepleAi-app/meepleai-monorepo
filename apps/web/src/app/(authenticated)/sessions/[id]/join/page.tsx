@@ -60,7 +60,7 @@ export default function JoinSessionPage({ params }: JoinPageProps) {
 
         // Store session token for subsequent API calls
         const targetSessionId = result.sessionId || sessionId;
-        sessionStorage.setItem(`session-token-${targetSessionId}`, result.sessionToken);
+        sessionStorage.setItem(`session-token-${targetSessionId}`, result.connectionToken);
 
         // Redirect to the session page
         router.push(`/sessions/${targetSessionId}`);

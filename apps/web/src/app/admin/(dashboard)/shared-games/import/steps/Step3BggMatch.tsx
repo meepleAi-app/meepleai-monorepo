@@ -29,9 +29,9 @@ export function Step3BggMatch({ onComplete }: Step3BggMatchProps): JSX.Element {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h3 className="text-lg font-semibold">Select BoardGameGeek Game</h3>
+        <h3 className="text-lg font-semibold">Seleziona gioco dal catalogo</h3>
         <p className="text-sm text-muted-foreground">
-          Search for the matching game on BoardGameGeek, or enter a BGG ID manually.
+          Cerca il gioco corrispondente o inserisci un ID manualmente.
         </p>
       </div>
 
@@ -61,7 +61,7 @@ export function Step3BggMatch({ onComplete }: Step3BggMatchProps): JSX.Element {
           <CheckCircle2 className="h-4 w-4 text-green-500" />
           <AlertTitle>Game Selected</AlertTitle>
           <AlertDescription className="text-sm">
-            Selected: <strong>{bggGameData.name}</strong> (BGG #{selectedBggId}). Click
+            Selezionato: <strong>{bggGameData.name}</strong> (ID #{selectedBggId}). Clicca
             &quot;Next&quot; to continue.
           </AlertDescription>
         </Alert>

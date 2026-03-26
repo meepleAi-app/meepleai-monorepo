@@ -293,7 +293,7 @@ export function GameForm({ game, onSubmit, onCancel, isLoading = false }: GameFo
 
             {/* BGG ID */}
             <div>
-              <Label htmlFor="bggId">BoardGameGeek ID</Label>
+              <Label htmlFor="bggId">ID Esterno</Label>
               <div className="flex gap-2">
                 <Input
                   id="bggId"
@@ -427,7 +427,7 @@ export function GameForm({ game, onSubmit, onCancel, isLoading = false }: GameFo
                 disabled={isSubmitting || isLoading}
               />
               <p className="text-sm text-muted-foreground mt-1">
-                Scala BGG: 1 = Leggero, 5 = Pesante
+                Scala complessità: 1 = Leggero, 5 = Pesante
               </p>
               {errors.complexityRating && (
                 <p className="text-sm text-destructive mt-1">{errors.complexityRating.message}</p>

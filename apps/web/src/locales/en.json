@@ -1031,7 +1031,7 @@
     "imageUrlPlaceholder": "https://example.com/image.jpg",
     "adding": "Adding...",
     "addPrivateGame": "Add Private Game",
-    "addFromBgg": "Add from BGG"
+    "addFromBgg": "Add from catalog"
   },
   "collection": {
     "addFromCatalog": "From catalog",

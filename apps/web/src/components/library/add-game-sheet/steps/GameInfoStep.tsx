@@ -40,7 +40,7 @@ export interface GameInfoStepProps {
 
 const SOURCE_LABELS: Record<string, string> = {
   catalog: 'Catalogo',
-  bgg: 'BGG',
+  bgg: 'Importato',
   custom: 'Custom',
 };
 

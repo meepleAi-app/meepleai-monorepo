@@ -244,7 +244,7 @@ internal sealed class PgVectorStoreAdapter : IVectorStoreAdapter
         var npgsqlConnection = (NpgsqlConnection)connection;
 
         var writer = await npgsqlConnection.BeginBinaryImportAsync(
-            $"COPY {TableName} (id, vector_document_id, game_id, text_content, vector, model, chunk_index, page_number, created_at) FROM STDIN (FORMAT BINARY)",
+            $"COPY {TableName} (id, vector_document_id, game_id, text_content, vector, model, chunk_index, page_number, created_at, lang, source_chunk_id, is_translation) FROM STDIN (FORMAT BINARY)",
             cancellationToken).ConfigureAwait(false);
         await using (writer.ConfigureAwait(false))
         {
@@ -269,6 +269,14 @@ internal sealed class PgVectorStoreAdapter : IVectorStoreAdapter
                 await writer.WriteAsync(embedding.ChunkIndex, NpgsqlDbType.Integer, cancellationToken).ConfigureAwait(false);
                 await writer.WriteAsync(embedding.PageNumber, NpgsqlDbType.Integer, cancellationToken).ConfigureAwait(false);
                 await writer.WriteAsync(embedding.CreatedAt, NpgsqlDbType.TimestampTz, cancellationToken).ConfigureAwait(false);
+
+                // Language metadata
+                await writer.WriteAsync(embedding.Language ?? "en", NpgsqlDbType.Varchar, cancellationToken).ConfigureAwait(false);
+                if (embedding.SourceChunkId.HasValue)
+                    await writer.WriteAsync(embedding.SourceChunkId.Value, NpgsqlDbType.Uuid, cancellationToken).ConfigureAwait(false);
+                else
+                    await writer.WriteNullAsync(cancellationToken).ConfigureAwait(false);
+                await writer.WriteAsync(embedding.IsTranslation, NpgsqlDbType.Boolean, cancellationToken).ConfigureAwait(false);
             }
 
             await writer.CompleteAsync(cancellationToken).ConfigureAwait(false);
@@ -363,7 +371,11 @@ internal sealed class PgVectorStoreAdapter : IVectorStoreAdapter
                     model TEXT NOT NULL,
                     chunk_index INTEGER NOT NULL,
                     page_number INTEGER NOT NULL,
-                    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+                    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                    search_vector tsvector GENERATED ALWAYS AS (to_tsvector('english', text_content)) STORED,
+                    lang VARCHAR(5) NOT NULL DEFAULT 'en',
+                    source_chunk_id UUID NULL,
+                    is_translation BOOLEAN NOT NULL DEFAULT false
                 )
                 """;
             await tableCmd.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
@@ -402,6 +414,59 @@ internal sealed class PgVectorStoreAdapter : IVectorStoreAdapter
                 ON {TableName} (vector_document_id)
                 """;
             await docIdxCmd.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
+        }
+
+        // Create GIN index on search_vector for full-text search (hybrid search)
+        var ftsIdxCmd = (NpgsqlCommand)connection.CreateCommand();
+        await using (ftsIdxCmd.ConfigureAwait(false))
+        {
+            ftsIdxCmd.CommandText = $"""
+                CREATE INDEX IF NOT EXISTS idx_{TableName}_search_vector
+                ON {TableName}
+                USING gin (search_vector)
+                """;
+            await ftsIdxCmd.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
+        }
+
+        // Add search_vector column if table was created before this fix
+        var alterCmd = (NpgsqlCommand)connection.CreateCommand();
+        await using (alterCmd.ConfigureAwait(false))
+        {
+            alterCmd.CommandText = $"""
+                DO $$
+                BEGIN
+                    IF NOT EXISTS (
+                        SELECT 1 FROM information_schema.columns
+                        WHERE table_name = '{TableName}' AND column_name = 'search_vector'
+                    ) THEN
+                        ALTER TABLE {TableName}
+                        ADD COLUMN search_vector tsvector
+                        GENERATED ALWAYS AS (to_tsvector('english', text_content)) STORED;
+                    END IF;
+                END $$
+                """;
+            await alterCmd.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
+        }
+
+        // Add language metadata columns if table was created before this fix
+        var langColCmd = (NpgsqlCommand)connection.CreateCommand();
+        await using (langColCmd.ConfigureAwait(false))
+        {
+            langColCmd.CommandText = $"""
+                DO $$
+                BEGIN
+                    IF NOT EXISTS (
+                        SELECT 1 FROM information_schema.columns
+                        WHERE table_name = '{TableName}' AND column_name = 'lang'
+                    ) THEN
+                        ALTER TABLE {TableName}
+                        ADD COLUMN lang VARCHAR(5) NOT NULL DEFAULT 'en',
+                        ADD COLUMN source_chunk_id UUID NULL,
+                        ADD COLUMN is_translation BOOLEAN NOT NULL DEFAULT false;
+                    END IF;
+                END $$
+                """;
+            await langColCmd.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
         }
 
         _logger.LogInformation(

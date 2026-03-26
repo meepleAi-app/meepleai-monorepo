@@ -12,6 +12,9 @@ namespace Api.Logging;
 /// </summary>
 internal partial class SensitiveDataDestructuringPolicy : IDestructuringPolicy
 {
+    private const int MaxDepth = 5;
+    private static readonly AsyncLocal<HashSet<object>?> _visited = new();
+    private static readonly AsyncLocal<int> _currentDepth = new();
     private static readonly string[] SensitivePropertyNames = new[]
     {
         "password",
@@ -115,28 +118,54 @@ internal partial class SensitiveDataDestructuringPolicy : IDestructuringPolicy
             return false;
         }
 
-        // Handle dictionaries BEFORE checking System namespace
-        // (Dictionary is in System.Collections.Generic)
-        if (value is IDictionary dictionary)
+        // Depth guard — prevent stack overflow on deeply nested objects
+        var depth = _currentDepth.Value;
+        if (depth >= MaxDepth)
         {
-            return TryDestructureDictionary(dictionary, propertyValueFactory, out result);
+            result = new ScalarValue($"[Depth limit ({MaxDepth}) reached]");
+            return true;
         }
 
-        // Skip primitive types and simple system types (after handling collections)
-        // Note: We don't skip ALL System types to allow anonymous types and other compiler-generated types
-        if (type.IsPrimitive || type.IsEnum ||
-            type == typeof(DateTime) || type == typeof(DateTimeOffset) ||
-            type == typeof(Guid) || type == typeof(TimeSpan) ||
-            type == typeof(Uri))
+        // Cycle detection — prevent infinite recursion on circular references
+        var visited = _visited.Value ??= new HashSet<object>(ReferenceEqualityComparer.Instance);
+        if (!type.IsValueType && !visited.Add(value))
         {
-            result = null!;
-            return false;
+            result = new ScalarValue("[Circular reference]");
+            return true;
         }
 
-        // Handle complex objects via reflection
-        return TryDestructureComplexObject(value, type, propertyValueFactory, out result);
+        _currentDepth.Value = depth + 1;
+        try
+        {
+            // Handle dictionaries BEFORE checking System namespace
+            // (Dictionary is in System.Collections.Generic)
+            if (value is IDictionary dictionary)
+            {
+                return TryDestructureDictionary(dictionary, propertyValueFactory, out result);
+            }
 
+            // Skip primitive types and simple system types (after handling collections)
+            // Note: We don't skip ALL System types to allow anonymous types and other compiler-generated types
+            if (type.IsPrimitive || type.IsEnum ||
+                type == typeof(DateTime) || type == typeof(DateTimeOffset) ||
+                type == typeof(Guid) || type == typeof(TimeSpan) ||
+                type == typeof(Uri))
+            {
+                result = null!;
+                return false;
+            }
 
+            // Handle complex objects via reflection
+            return TryDestructureComplexObject(value, type, propertyValueFactory, out result);
+        }
+        finally
+        {
+            _currentDepth.Value = depth;
+            if (!type.IsValueType)
+            {
+                visited.Remove(value);
+            }
+        }
     }
 
     private bool TryDestructureDictionary(IDictionary dictionary, ILogEventPropertyValueFactory propertyValueFactory, out LogEventPropertyValue result)

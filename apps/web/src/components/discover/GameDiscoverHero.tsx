@@ -1,6 +1,6 @@
 'use client';
 
-import { BookPlus, Clock, Users, Star, Brain, CalendarDays, ExternalLink } from 'lucide-react';
+import { BookPlus, Clock, Users, Star, Brain, CalendarDays } from 'lucide-react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 
@@ -122,17 +122,6 @@ export function GameDiscoverHero({ game }: GameDiscoverHeroProps) {
             <BookPlus className="h-4 w-4" />
             {addToLibrary.isPending ? 'Aggiunta in corso…' : 'Aggiungi alla Libreria'}
           </Button>
-          {game.bggId && (
-            <a
-              href={`https://boardgamegeek.com/boardgame/${game.bggId}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
-            >
-              <ExternalLink className="h-3.5 w-3.5" />
-              BoardGameGeek
-            </a>
-          )}
         </div>
       </div>
     </div>

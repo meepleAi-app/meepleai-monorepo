@@ -24,7 +24,7 @@ import {
 } from '@/components/ui/overlays/select';
 import { api } from '@/lib/api';
 
-const AVAILABLE_ROLES = ['User', 'Editor', 'Admin'] as const;
+const ASSIGNABLE_ROLES = ['User', 'Editor', 'Admin'] as const;
 
 interface InlineRoleSelectProps {
   userId: string;
@@ -41,6 +41,7 @@ export function InlineRoleSelect({
 }: InlineRoleSelectProps) {
   const queryClient = useQueryClient();
   const [pendingRole, setPendingRole] = useState<string | null>(null);
+  const isSuperAdmin = currentRole === 'SuperAdmin';
 
   const mutation = useMutation({
     mutationFn: (newRole: string) => api.admin.changeUserRole(userId, newRole),
@@ -67,6 +68,14 @@ export function InlineRoleSelect({
     }
   }
 
+  if (isSuperAdmin) {
+    return (
+      <span className="inline-flex items-center gap-1.5 rounded-md bg-amber-100 px-2.5 py-0.5 text-xs font-semibold text-amber-800 dark:bg-amber-900/30 dark:text-amber-300">
+        SuperAdmin
+      </span>
+    );
+  }
+
   return (
     <>
       <Select value={currentRole} onValueChange={handleSelect} disabled={mutation.isPending}>
@@ -74,7 +83,7 @@ export function InlineRoleSelect({
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
-          {AVAILABLE_ROLES.map(role => (
+          {ASSIGNABLE_ROLES.map(role => (
             <SelectItem key={role} value={role}>
               {role}
             </SelectItem>

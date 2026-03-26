@@ -23,10 +23,10 @@ internal static class SharedGameCatalogWizardEndpoints
         // Step 1: Upload PDF for temporary storage (no processing)
         group.MapPost("/admin/shared-games/wizard/upload-pdf", HandleWizardUploadPdf)
             .DisableAntiforgery() // Required for multipart/form-data file uploads
-            .RequireAuthorization("AdminOrEditorPolicy")
+            .RequireAuthorization("AdminOnlyPolicy")
             .RequireRateLimiting("SharedGamesAdmin")
             .WithName("SharedGamesWizardUploadPdf")
-            .WithSummary("Upload PDF for wizard (Admin/Editor)")
+            .WithSummary("Upload PDF for wizard (Admin only)")
             .WithDescription("Uploads PDF to temporary storage for metadata extraction. File path returned for subsequent wizard steps.")
             .Produces<TempPdfUploadResult>(StatusCodes.Status200OK)
             .Produces(StatusCodes.Status400BadRequest)
@@ -35,10 +35,10 @@ internal static class SharedGameCatalogWizardEndpoints
 
         // Step 2: Get PDF preview with extracted metadata and BGG suggestions
         group.MapGet("/admin/shared-games/wizard/pdf/preview", HandleWizardPreview)
-            .RequireAuthorization("AdminOrEditorPolicy")
+            .RequireAuthorization("AdminOnlyPolicy")
             .RequireRateLimiting("SharedGamesAdmin")
             .WithName("WizardGetPdfPreview")
-            .WithSummary("Get PDF preview with metadata (Admin/Editor)")
+            .WithSummary("Get PDF preview with metadata (Admin only)")
             .WithDescription("Extracts game metadata from uploaded PDF, fetches BGG match suggestions (top 5), and checks for duplicate games by title.")
             .Produces<PdfGamePreviewDto>(StatusCodes.Status200OK)
             .Produces(StatusCodes.Status400BadRequest)
@@ -47,10 +47,10 @@ internal static class SharedGameCatalogWizardEndpoints
 
         // Step 3a: Search BGG games by title
         group.MapGet("/admin/shared-games/wizard/bgg/search", HandleWizardBggSearch)
-            .RequireAuthorization("AdminOrEditorPolicy")
+            .RequireAuthorization("AdminOnlyPolicy")
             .RequireRateLimiting("SharedGamesAdmin")
             .WithName("WizardSearchBgg")
-            .WithSummary("Search BGG games (Admin/Editor)")
+            .WithSummary("Search BGG games (Admin only)")
             .WithDescription("Searches BoardGameGeek API for games matching the query. Returns top matching results for manual BGG ID selection.")
             .Produces<List<BggSearchResultDto>>(StatusCodes.Status200OK)
             .Produces(StatusCodes.Status400BadRequest)
@@ -59,10 +59,10 @@ internal static class SharedGameCatalogWizardEndpoints
 
         // Step 3b: Get BGG game details by ID
         group.MapGet("/admin/shared-games/wizard/bgg/{bggId:int}", HandleWizardBggDetails)
-            .RequireAuthorization("AdminOrEditorPolicy")
+            .RequireAuthorization("AdminOnlyPolicy")
             .RequireRateLimiting("SharedGamesAdmin")
             .WithName("WizardGetBggDetails")
-            .WithSummary("Get BGG game details (Admin/Editor)")
+            .WithSummary("Get BGG game details (Admin only)")
             .WithDescription("Fetches detailed game information from BoardGameGeek API for preview and data merge.")
             .Produces<BggGameDetailsDto>(StatusCodes.Status200OK)
             .Produces(StatusCodes.Status400BadRequest)
@@ -71,10 +71,10 @@ internal static class SharedGameCatalogWizardEndpoints
 
         // Step 4: Create SharedGame from PDF metadata (final wizard step)
         group.MapPost("/admin/shared-games/wizard/create", HandleWizardCreateGame)
-            .RequireAuthorization("AdminOrEditorPolicy")
+            .RequireAuthorization("AdminOnlyPolicy")
             .RequireRateLimiting("SharedGamesAdmin")
             .WithName("SharedGameWizardCreateGame")
-            .WithSummary("Create game from PDF wizard (Admin/Editor)")
+            .WithSummary("Create game from PDF wizard (Admin only)")
             .WithDescription("Creates SharedGame from extracted metadata with optional BGG enrichment. Admin users publish immediately, Editor users create draft requiring approval.")
             .Produces<CreateGameFromPdfResult>(StatusCodes.Status201Created)
             .Produces(StatusCodes.Status400BadRequest)
@@ -85,10 +85,10 @@ internal static class SharedGameCatalogWizardEndpoints
         // RAG Wizard: Single upload + process
         group.MapPost("/admin/shared-games/{id:guid}/rag", HandleAddRagToSharedGame)
             .DisableAntiforgery() // Required for multipart/form-data file uploads
-            .RequireAuthorization("AdminOrEditorPolicy")
+            .RequireAuthorization("AdminOnlyPolicy")
             .RequireRateLimiting("SharedGamesAdmin")
             .WithName("AddRagToSharedGame")
-            .WithSummary("Upload PDF and start RAG processing for a shared game (Admin/Editor)")
+            .WithSummary("Upload PDF and start RAG processing for a shared game (Admin only)")
             .WithDescription("Uploads a PDF, links it as a document to the shared game, and enqueues for RAG processing. Admin uploads are auto-approved; Editor uploads require separate approval.")
             .Produces<AddRagToSharedGameResult>(StatusCodes.Status202Accepted)
             .Produces(StatusCodes.Status400BadRequest)
@@ -99,10 +99,10 @@ internal static class SharedGameCatalogWizardEndpoints
         // RAG Wizard: Batch upload + process
         group.MapPost("/admin/shared-games/batch-rag", HandleBatchAddRagToSharedGame)
             .DisableAntiforgery() // Required for multipart/form-data file uploads
-            .RequireAuthorization("AdminOrEditorPolicy")
+            .RequireAuthorization("AdminOnlyPolicy")
             .RequireRateLimiting("SharedGamesAdmin")
             .WithName("BatchAddRagToSharedGame")
-            .WithSummary("Batch upload PDFs and start RAG processing for multiple shared games (Admin/Editor)")
+            .WithSummary("Batch upload PDFs and start RAG processing for multiple shared games (Admin only)")
             .WithDescription("Uploads PDFs for multiple shared games in a single request. Supports partial success — individual failures don't stop the batch.")
             .Produces<BatchAddRagToSharedGameResult>(StatusCodes.Status200OK)
             .Produces(StatusCodes.Status400BadRequest)

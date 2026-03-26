@@ -17,13 +17,13 @@ internal static class AdminGameImportWizardEndpoints
     {
         var group = app.MapGroup("/api/v1/admin/games/wizard")
             .WithTags("Admin - Game Import Wizard")
-            .RequireAuthorization("AdminOrEditorPolicy");
+            .RequireAuthorization("AdminOnlyPolicy");
 
         // Step 1: Upload PDF for temporary storage (no quota checks, no processing)
         group.MapPost("/upload-pdf", HandleUploadPdf)
             .DisableAntiforgery() // Required for multipart/form-data file uploads
             .WithName("WizardUploadPdf")
-            .WithSummary("Step 1: Upload PDF for metadata extraction (Admin/Editor)")
+            .WithSummary("Step 1: Upload PDF for metadata extraction (Admin only)")
             .WithDescription("Uploads PDF to temporary storage without quota checks or background processing. File auto-deletes after 24 hours.")
             .Produces<TempPdfUploadResult>(StatusCodes.Status200OK)
             .Produces(StatusCodes.Status400BadRequest)
@@ -33,7 +33,7 @@ internal static class AdminGameImportWizardEndpoints
         // Step 2: Extract game metadata from uploaded PDF
         group.MapPost("/extract-metadata", HandleExtractMetadata)
             .WithName("WizardExtractMetadata")
-            .WithSummary("Step 2: Extract game metadata from PDF (Admin/Editor)")
+            .WithSummary("Step 2: Extract game metadata from PDF (Admin only)")
             .WithDescription("Uses SmolDocling + AI parsing to extract structured game metadata (title, year, players, etc.) from uploaded PDF.")
             .Produces<GameMetadataDto>(StatusCodes.Status200OK)
             .Produces(StatusCodes.Status400BadRequest)
@@ -43,7 +43,7 @@ internal static class AdminGameImportWizardEndpoints
         // Step 3: Enrich extracted metadata with BGG data
         group.MapPost("/enrich-from-bgg", HandleEnrichFromBgg)
             .WithName("WizardEnrichFromBgg")
-            .WithSummary("Step 3: Enrich metadata with BGG data (Admin/Editor)")
+            .WithSummary("Step 3: Enrich metadata with BGG data (Admin only)")
             .WithDescription("Merges PDF-extracted metadata with BoardGameGeek data, detects conflicts, and returns enriched result.")
             .Produces<EnrichedGameDto>(StatusCodes.Status200OK)
             .Produces(StatusCodes.Status400BadRequest)
@@ -53,7 +53,7 @@ internal static class AdminGameImportWizardEndpoints
         // Step 4: Confirm and import game into catalog (uses existing command)
         group.MapPost("/confirm-import", HandleConfirmImport)
             .WithName("WizardConfirmImport")
-            .WithSummary("Step 4: Confirm and import game (Admin/Editor)")
+            .WithSummary("Step 4: Confirm and import game (Admin only)")
             .WithDescription("Creates SharedGame entity in Draft status from enriched metadata. Final step of wizard workflow.")
             .Produces<Guid>(StatusCodes.Status201Created)
             .Produces(StatusCodes.Status400BadRequest)

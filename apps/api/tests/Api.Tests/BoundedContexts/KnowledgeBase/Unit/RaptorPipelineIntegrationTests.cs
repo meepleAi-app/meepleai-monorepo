@@ -247,6 +247,8 @@ public class RaptorPipelineIntegrationTests : IDisposable
             _blobStorageServiceMock.Object,
             _timeProvider,
             _logger,
+            Mock.Of<ILanguageDetector>(),
+            Mock.Of<IChunkTranslationService>(),
             raptorIndexer: withRaptor ? _raptorIndexerMock.Object : null,
             entityExtractor: null,
             vectorStore: null,

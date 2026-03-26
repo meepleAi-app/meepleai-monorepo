@@ -294,53 +294,34 @@ jobs:
     if: vars.DEPLOY_METHOD == 'ssh'
     steps:
       - name: Run Migrations via SSH
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.STAGING_HOST }}
-          username: ${{ secrets.STAGING_USER }}
-          key: ${{ secrets.STAGING_SSH_KEY }}
-          script: |
-            set -e
-            cd /opt/meepleai/repo/infra
+        env:
+          SSH_HOST: ${{ secrets.STAGING_HOST }}
+          SSH_USER: ${{ secrets.STAGING_USER }}
+          SSH_KEY: ${{ secrets.STAGING_SSH_KEY }}
+          API_IMAGE: ${{ needs.build.outputs.api_image }}
+        run: |
+          # Setup SSH
+          mkdir -p ~/.ssh
+          echo "$SSH_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H "$SSH_HOST" >> ~/.ssh/known_hosts 2>/dev/null
 
-            set -a
-            for f in secrets/*.secret; do source "$f" 2>/dev/null; done
-            set +a
+          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no "$SSH_USER@$SSH_HOST" bash -s "$API_IMAGE" << 'MIGRATION_SCRIPT'
+          set -e
+          API_IMAGE="$1"
+          cd /opt/meepleai/repo/infra
 
-            docker pull ${{ needs.build.outputs.api_image }}
-            export API_IMAGE="${{ needs.build.outputs.api_image }}"
+          set -a
+          for f in secrets/*.secret; do source "$f" 2>/dev/null; done
+          set +a
 
-            mkdir -p /backups
-            BACKUP_FILE="/backups/pre-migration-staging-$(date +%Y%m%d%H%M%S).sql"
-            echo "💾 Creating backup: $BACKUP_FILE"
-            docker compose -f docker-compose.yml -f compose.staging.yml exec -T postgres \
-              pg_dump -U ${POSTGRES_USER:-meeple} ${POSTGRES_DB:-meepleai_staging} > "$BACKUP_FILE" 2>/dev/null || {
-              echo "⚠️ Backup failed (postgres may not be running) — continuing"
-            }
+          echo "📦 Pulling API image: $API_IMAGE"
+          docker pull "$API_IMAGE"
 
-            echo "🔍 Checking EF CLI availability..."
-            HAS_EF=$(docker run --rm "$API_IMAGE" dotnet ef --version 2>/dev/null && echo "yes" || echo "no")
+          echo "ℹ️ Migrations will apply automatically on API startup"
+          MIGRATION_SCRIPT
 
-            if [ "$HAS_EF" = "yes" ]; then
-              # Build connection string from secrets (container may not be running after prune)
-              CONN_STRING="Host=postgres;Port=5432;Database=${POSTGRES_DB:-meepleai_staging};Username=${POSTGRES_USER:-meeple};Password=${POSTGRES_PASSWORD}"
-              if [ -n "$POSTGRES_PASSWORD" ]; then
-                echo "🔄 Applying migrations..."
-                docker run --rm --network meepleai \
-                  -e "ConnectionStrings__DefaultConnection=$CONN_STRING" \
-                  "$API_IMAGE" dotnet ef database update --no-build 2>&1 || {
-                  echo "❌ Migration failed — restoring backup"
-                  docker compose -f docker-compose.yml -f compose.staging.yml exec -T postgres \
-                    psql -U ${POSTGRES_USER:-meeple} ${POSTGRES_DB:-meepleai_staging} < "$BACKUP_FILE"
-                  exit 1
-                }
-                echo "✅ Migrations applied"
-              else
-                echo "ℹ️ No connection string — migrations will apply on API startup"
-              fi
-            else
-              echo "ℹ️ EF CLI not in image — migrations will apply on API startup"
-            fi
+          rm -f ~/.ssh/deploy_key
 
   # Snapshot previous performance baseline before deploy overwrites DEPLOYMENT.json
   snapshot-baseline:
@@ -401,7 +382,7 @@ jobs:
       # Option 1: SSH Deploy (VPS/Dedicated Server)
       - name: Deploy via SSH
         if: vars.DEPLOY_METHOD == 'ssh'
-        uses: appleboy/ssh-action@v1.0.3
+        uses: appleboy/ssh-action@v1.2.2
         with:
           host: ${{ secrets.STAGING_HOST }}
           username: ${{ secrets.STAGING_USER }}
@@ -649,7 +630,7 @@ jobs:
 
       - name: Update Server Baseline
         if: always() && steps.metrics.outputs.json != ''
-        uses: appleboy/ssh-action@v1.0.3
+        uses: appleboy/ssh-action@v1.2.2
         with:
           host: ${{ secrets.STAGING_HOST }}
           username: ${{ secrets.STAGING_USER }}

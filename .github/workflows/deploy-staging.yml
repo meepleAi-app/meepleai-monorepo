@@ -428,7 +428,7 @@ jobs:
             echo "🚀 Deploying services:$SERVICES"
 
             # Deploy only changed services
-            docker compose -f docker-compose.yml -f compose.staging.yml -f compose.staging-traefik.yml \
+            docker compose -f docker-compose.yml -f compose.staging.yml -f compose.traefik.yml \
               --profile minimal up -d --no-deps $SERVICES
 
             # Health check (internal - avoids SSL issues)

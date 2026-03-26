@@ -1,5 +1,5 @@
 /**
- * GameSourceStep - Step 1: Search catalog/BGG or create custom game.
+ * GameSourceStep - Step 1: Search catalog or create custom game.
  * Issue #4819: AddGameSheet Step 1 - Game Source
  * Epic #4817: User Collection Wizard
  */

@@ -1,17 +1,16 @@
 'use client';
 
-import { BookOpen, ExternalLink } from 'lucide-react';
+import { BookOpen } from 'lucide-react';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import type { GameRules } from '@/lib/api/schemas/shared-games.schemas';
 
 interface GameRulesSectionProps {
   rules: GameRules | null;
-  bggId: number | null;
   gameTitle: string;
 }
 
-export function GameRulesSection({ rules, bggId, gameTitle }: GameRulesSectionProps) {
+export function GameRulesSection({ rules, gameTitle }: GameRulesSectionProps) {
   return (
     <Card>
       <CardHeader>
@@ -43,17 +42,6 @@ export function GameRulesSection({ rules, bggId, gameTitle }: GameRulesSectionPr
                 Le regole non sono ancora state caricate nel catalogo.
               </p>
             </div>
-            {bggId && (
-              <a
-                href={`https://boardgamegeek.com/boardgame/${bggId}/files`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 rounded-md border border-input bg-background px-3 py-1.5 text-sm font-medium shadow-sm hover:bg-accent hover:text-accent-foreground transition-colors"
-              >
-                <ExternalLink className="h-3.5 w-3.5" />
-                Cerca su BoardGameGeek
-              </a>
-            )}
           </div>
         )}
       </CardContent>

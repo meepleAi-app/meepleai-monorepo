@@ -214,6 +214,9 @@ export {
   emailTemplateKeys,
 } from './useEmailTemplates';
 
+// Game Memory — house rules & notes (US-53)
+export { useGameMemory, useAddHouseRule, gameMemoryKeys } from './useGameMemory';
+
 // Feature Flags queries
 export { useUserFeatures, featureFlagKeys } from './useFeatureFlags';
 

@@ -175,17 +175,7 @@ export function MeepleInfoCard({
     }
   }, [showKnowledgeBase, fetchDocuments]);
 
-  // Build social links from bggId
-  const socialLinks = bggId
-    ? [
-        {
-          id: 'bgg',
-          name: 'BoardGameGeek',
-          url: `https://boardgamegeek.com/boardgame/${bggId}`,
-          type: 'bgg' as const,
-        },
-      ]
-    : [];
+  const socialLinks: Array<{ id: string; name: string; url: string; type: string }> = [];
 
   return (
     <>
@@ -442,7 +432,7 @@ export function MeepleInfoCard({
                   <p className="mb-4 max-w-xs font-nunito text-sm text-[#6B665C]">
                     {readOnly
                       ? 'Nessun link disponibile per questo gioco.'
-                      : 'Aggiungi link utili come BoardGameGeek, sito ufficiale o forum.'}
+                      : 'Aggiungi link utili come sito ufficiale o forum.'}
                   </p>
                   {!readOnly && (
                     <Button

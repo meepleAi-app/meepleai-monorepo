@@ -35,13 +35,6 @@ const QUICK_START_CARDS = [
     action: 'catalog' as const,
   },
   {
-    icon: '📤',
-    title: 'Importa da BGG',
-    description: 'Importa la tua collezione da BoardGameGeek',
-    borderColor: 'border-t-blue-500',
-    action: 'bgg' as const,
-  },
-  {
     icon: '✏️',
     title: 'Crea Gioco Custom',
     description: 'Aggiungi un gioco non presente nel catalogo',

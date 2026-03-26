@@ -12,6 +12,7 @@ services:
     image: pgvector/pgvector:pg16
     container_name: meepleai-postgres
     restart: unless-stopped
+    env_file: [./secrets/dev/database.secret]  # fallback; overrides replace this
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./init/postgres-init.sql:/docker-entrypoint-initdb.d/init.sql:ro
@@ -36,7 +37,7 @@ services:
     image: redis:7.4.1-alpine3.20
     container_name: meepleai-redis
     restart: unless-stopped
-    # Password comes from env_file in the override; command references it at runtime
+    env_file: [./secrets/dev/redis.secret]  # fallback; overrides replace this
     command: ["sh", "-c", "redis-server /etc/redis/redis.conf --requirepass $$REDIS_PASSWORD"]
     volumes:
       - ./redis/redis.conf:/etc/redis/redis.conf:ro

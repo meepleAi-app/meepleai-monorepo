@@ -18,3 +18,4 @@ export { TypingIndicator } from './TypingIndicator';
 export { SplitViewLayout, type SplitViewLayoutProps } from './SplitViewLayout';
 export { GameHeroSection } from './game-hero-section';
 export { StatsGrid } from './stats-grid';
+export { GameRelationships, type GameRelationshipsProps } from './GameRelationships';

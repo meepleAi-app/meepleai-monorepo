@@ -39,7 +39,7 @@ import { useDebounce } from '@/hooks/useDebounce';
 import { api } from '@/lib/api';
 
 const PAGE_SIZE = 20;
-const ROLE_OPTIONS = ['all', 'User', 'Editor', 'Admin'] as const;
+const ROLE_OPTIONS = ['all', 'User', 'Editor', 'Admin', 'SuperAdmin'] as const;
 
 export default function AdminUsersPage() {
   const queryClient = useQueryClient();

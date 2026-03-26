@@ -213,6 +213,7 @@ const ALPHA_NAV_IDS = new Set([
   'catalog',
   'profile',
   'admin',
+  'play-records',
 ]);
 
 /** Unified navigation items — filtered by ALPHA_MODE when active */

@@ -72,13 +72,13 @@ export function createBggClient({ httpClient }: CreateBggClientParams) {
         );
 
         if (!response) {
-          throw new Error('Failed to search BoardGameGeek');
+          throw new Error('Ricerca giochi fallita');
         }
 
         return response;
       } catch (error) {
         if (error instanceof Error && error.name === 'AbortError') {
-          throw new Error(`BGG search timed out after ${BGG_TIMEOUT_MS / 1000}s. Please try again.`);
+          throw new Error(`Ricerca scaduta dopo ${BGG_TIMEOUT_MS / 1000}s. Riprova.`);
         }
         throw error;
       } finally {
@@ -98,20 +98,20 @@ export function createBggClient({ httpClient }: CreateBggClientParams) {
       const timeoutId = setTimeout(() => controller.abort(), BGG_TIMEOUT_MS);
 
       try {
-        const response = await httpClient.get(
-          `/api/v1/bgg/games/${bggId}`,
-          BggGameDetailsSchema,
-          { signal: controller.signal }
-        );
+        const response = await httpClient.get(`/api/v1/bgg/games/${bggId}`, BggGameDetailsSchema, {
+          signal: controller.signal,
+        });
 
         if (!response) {
-          throw new Error(`Game with BGG ID ${bggId} not found`);
+          throw new Error(`Gioco con ID ${bggId} non trovato`);
         }
 
         return response;
       } catch (error) {
         if (error instanceof Error && error.name === 'AbortError') {
-          throw new Error(`BGG game details request timed out after ${BGG_TIMEOUT_MS / 1000}s. Please try again.`);
+          throw new Error(
+            `Richiesta dettagli gioco scaduta dopo ${BGG_TIMEOUT_MS / 1000}s. Riprova.`
+          );
         }
         throw error;
       } finally {

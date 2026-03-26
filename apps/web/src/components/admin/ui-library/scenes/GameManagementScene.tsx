@@ -58,7 +58,7 @@ export default function GameManagementScene() {
         <div className="grid gap-3 sm:grid-cols-2">
           <PlaceholderCard
             title="GameForm"
-            description="Full game creation/editing form with BGG search integration, image upload, metadata tags, and mechanics."
+            description="Full game creation/editing form with search integration, image upload, metadata tags, and mechanics."
             note="requires useApiClient + react-hook-form"
           />
           <PlaceholderCard
@@ -73,7 +73,7 @@ export default function GameManagementScene() {
           />
           <PlaceholderCard
             title="BggSearchPanel"
-            description="BoardGameGeek integration for importing game metadata, images, and expansion data."
+            description="External catalog integration for importing game metadata, images, and expansion data."
             note="requires useApiClient"
           />
         </div>

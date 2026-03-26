@@ -15,7 +15,7 @@ interface WizardProgressProps {
 const WIZARD_STEPS = [
   { id: '1', label: 'Upload PDF', description: 'Upload and extract' },
   { id: '2', label: 'Preview Data', description: 'Manual fields' },
-  { id: '3', label: 'BGG Match', description: 'Optional' },
+  { id: '3', label: 'Catalogo Match', description: 'Optional' },
   { id: '4', label: 'Confirm', description: 'Review and submit' },
 ];
 

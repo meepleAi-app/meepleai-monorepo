@@ -315,7 +315,7 @@ export function SharedGameDetailModal({
                     className="gap-2"
                   >
                     <ExternalLink className="h-4 w-4" />
-                    Vedi su BGG
+                    Vedi scheda esterna
                   </a>
                 </Button>
               )}

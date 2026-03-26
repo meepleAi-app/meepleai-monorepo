@@ -290,7 +290,7 @@ export function GameDetailClient({ params }: GameDetailClientProps) {
                 rel="noopener noreferrer"
                 className="flex items-center gap-1 hover:text-foreground transition-colors"
               >
-                BGG #{game.bggId}
+                ID #{game.bggId}
                 <ExternalLink className="h-3 w-3" />
               </a>
             )}
@@ -359,7 +359,7 @@ export function GameDetailClient({ params }: GameDetailClientProps) {
 
                     {game.averageRating && (
                       <>
-                        <dt className="text-muted-foreground">BGG Rating</dt>
+                        <dt className="text-muted-foreground">Rating</dt>
                         <dd className="font-medium flex items-center gap-1">
                           <span className="text-amber-500">★</span>
                           {game.averageRating.toFixed(1)}

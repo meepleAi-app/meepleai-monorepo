@@ -215,7 +215,7 @@ export function NewGameClient() {
         {selectedBggId && (
           <div className="mt-2 flex items-center gap-2">
             <span className="inline-flex items-center rounded-full bg-blue-100 px-3 py-1 text-sm font-medium text-blue-800">
-              Linked to BGG #{selectedBggId}
+              Collegato a ID #{selectedBggId}
             </span>
           </div>
         )}

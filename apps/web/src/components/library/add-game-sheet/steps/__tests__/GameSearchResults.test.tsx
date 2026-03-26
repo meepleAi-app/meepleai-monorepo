@@ -53,7 +53,7 @@ describe('GameSearchResults', () => {
   it('should show source badges', () => {
     render(<GameSearchResults results={mockResults} loading={false} onSelect={vi.fn()} />);
     expect(screen.getByText('Catalogo')).toBeInTheDocument();
-    expect(screen.getByText('BGG')).toBeInTheDocument();
+    expect(screen.getByText('Importato')).toBeInTheDocument();
   });
 
   it('should show year and player count for catalog results', () => {
@@ -76,13 +76,15 @@ describe('GameSearchResults', () => {
   });
 
   it('should show equal players text for same min/max', () => {
-    const samePlayerGame: GameSearchResultItem[] = [{
-      id: 'game-2',
-      title: 'Solo Game',
-      source: 'catalog',
-      minPlayers: 1,
-      maxPlayers: 1,
-    }];
+    const samePlayerGame: GameSearchResultItem[] = [
+      {
+        id: 'game-2',
+        title: 'Solo Game',
+        source: 'catalog',
+        minPlayers: 1,
+        maxPlayers: 1,
+      },
+    ];
     render(<GameSearchResults results={samePlayerGame} loading={false} onSelect={vi.fn()} />);
     expect(screen.getByText('1 giocatori')).toBeInTheDocument();
   });

@@ -301,7 +301,7 @@ export function AdminGameImportWizardClient() {
                       {enrichedData.maxPlayers || '?'}
                     </p>
                     <p className="text-sm">
-                      <strong>BGG ID:</strong> {enrichedData.bggId || 'N/A'}
+                      <strong>ID:</strong> {enrichedData.bggId || 'N/A'}
                     </p>
                   </div>
                 ) : (
@@ -330,7 +330,8 @@ export function AdminGameImportWizardClient() {
               <strong>Metadata:</strong> {extractedMetadata ? '✓ Extracted' : '✗ Not extracted'}
             </p>
             <p>
-              <strong>BGG:</strong> {selectedBggId ? `✓ ID ${selectedBggId}` : '✗ Not selected'}
+              <strong>Catalogo:</strong>{' '}
+              {selectedBggId ? `✓ ID ${selectedBggId}` : '✗ Not selected'}
             </p>
             <p>
               <strong>Enriched:</strong> {enrichedData ? '✓ Ready' : '✗ Not ready'}

@@ -10,3 +10,5 @@ export type { GameTableZoneSessionsProps } from './GameTableZoneSessions';
 export { GameStatsPanel } from './GameStatsPanel';
 export type { GameStatsPanelProps } from './GameStatsPanel';
 export { GameTableSkeleton } from './GameTableSkeleton';
+export { HouseRulesSection } from './HouseRulesSection';
+export type { HouseRulesSectionProps } from './HouseRulesSection';

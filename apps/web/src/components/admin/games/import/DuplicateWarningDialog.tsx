@@ -60,7 +60,7 @@ export function DuplicateWarningDialog({
             <div>
               <DialogTitle>Duplicate Game Detected</DialogTitle>
               <DialogDescription>
-                A game with BGG ID {bggId} already exists in the catalog.
+                Un gioco con ID {bggId} esiste già nel catalogo.
               </DialogDescription>
             </div>
           </div>
@@ -92,7 +92,7 @@ export function DuplicateWarningDialog({
             <h4 className="mb-2 text-sm font-semibold text-muted-foreground">New Import</h4>
             <div className="space-y-1">
               <p className="text-sm font-medium">{newGameTitle}</p>
-              <p className="text-xs text-muted-foreground">BGG ID: {bggId}</p>
+              <p className="text-xs text-muted-foreground">ID: {bggId}</p>
             </div>
           </div>
         </div>

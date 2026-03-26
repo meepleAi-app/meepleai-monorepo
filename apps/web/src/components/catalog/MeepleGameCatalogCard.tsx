@@ -258,7 +258,7 @@ export function MeepleGameCatalogCard({
     subtitleParts.push(String(game.yearPublished));
   }
   if (game.bggId) {
-    subtitleParts.push(`BGG: ${game.bggId}`);
+    subtitleParts.push(`ID: ${game.bggId}`);
   }
   const subtitle = subtitleParts.length > 0 ? subtitleParts.join(' · ') : 'N/A';
 

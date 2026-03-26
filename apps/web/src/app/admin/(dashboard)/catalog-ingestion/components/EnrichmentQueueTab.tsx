@@ -51,8 +51,8 @@ export function EnrichmentQueueTab() {
           Enqueue All Skeletons
         </h3>
         <p className="text-sm text-muted-foreground">
-          Queue all skeleton games (status = Skeleton) for BGG enrichment. Games that already have
-          an enrichment job pending will be skipped.
+          Queue all skeleton games (status = Skeleton) for enrichment. Games that already have an
+          enrichment job pending will be skipped.
         </p>
         <Button onClick={() => enqueueAll.mutate()} disabled={anyPending} size="sm">
           {enqueueAll.isPending ? (

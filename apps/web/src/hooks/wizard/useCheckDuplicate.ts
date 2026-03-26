@@ -33,7 +33,7 @@ export function useCheckDuplicate({ bggId, enabled }: UseCheckDuplicateOptions) 
     queryKey: ['bgg', 'check-duplicate', bggId],
     queryFn: () => {
       if (!bggId) {
-        throw new Error('BGG ID is required');
+        throw new Error('ID richiesto');
       }
       return api.sharedGames.checkBggDuplicate(bggId);
     },

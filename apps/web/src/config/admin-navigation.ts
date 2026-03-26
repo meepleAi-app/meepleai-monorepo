@@ -162,7 +162,7 @@ export const ADMIN_NAVIGATION: AdminNavSection[] = [
       },
       {
         href: '/admin/shared-games/add-from-bgg',
-        label: 'Import from BGG',
+        label: 'Importa gioco',
         icon: DownloadIcon,
       },
       {

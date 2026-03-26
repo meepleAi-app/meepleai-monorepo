@@ -378,7 +378,7 @@ export function SeedingPageClient() {
           Seeding &amp; Enrichment
         </h1>
         <p className="text-sm text-muted-foreground mt-1">
-          Manage BGG game enrichment and track seeding progress
+          Gestisci arricchimento giochi e traccia progresso seeding
         </p>
       </div>
 
@@ -387,7 +387,7 @@ export function SeedingPageClient() {
         <div className="flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-800/40 dark:bg-amber-900/20 dark:text-amber-300">
           <AlertCircleIcon className="h-4 w-4 shrink-0" />
           <span>
-            BGG rate limit: 1 req/sec. Enriching <strong>{enrichableCount}</strong>{' '}
+            Rate limit: 1 req/sec. Arricchimento di <strong>{enrichableCount}</strong>{' '}
             {enrichableCount === 1 ? 'game' : 'games'} takes ~{estimatedSeconds}{' '}
             {estimatedSeconds === 1 ? 'second' : 'seconds'}.
           </span>
@@ -462,7 +462,7 @@ export function SeedingPageClient() {
               disabled={enrichableCount === 0 || enriching}
               title={
                 enrichableCount === 0
-                  ? 'Select Skeleton or Failed games with BGG IDs to enrich'
+                  ? 'Seleziona giochi Skeleton o Failed con ID per arricchire'
                   : undefined
               }
             >
@@ -536,7 +536,7 @@ export function SeedingPageClient() {
                   />
                   <SortableHeader
                     field="bggId"
-                    label="BGG ID"
+                    label="ID Ext."
                     currentField={sortField}
                     currentDir={sortDir}
                     onSort={handleSort}

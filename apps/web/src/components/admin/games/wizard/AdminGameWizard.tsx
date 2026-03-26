@@ -25,7 +25,7 @@ import { PdfUploadStep } from './steps/PdfUploadStep';
 type WizardStep = 'bgg-search' | 'game-details' | 'pdf-upload' | 'launch-processing';
 
 const STEP_CONFIG: { id: WizardStep; label: string; number: number }[] = [
-  { id: 'bgg-search', label: 'Search BGG', number: 1 },
+  { id: 'bgg-search', label: 'Cerca gioco', number: 1 },
   { id: 'game-details', label: 'Game Details', number: 2 },
   { id: 'pdf-upload', label: 'Upload PDF', number: 3 },
   { id: 'launch-processing', label: 'Launch', number: 4 },
@@ -89,7 +89,7 @@ export function AdminGameWizard() {
             Add Game
           </h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Import a game from BoardGameGeek, upload its rulebook, and launch processing
+            Importa un gioco, carica il regolamento e avvia il processamento
           </p>
         </div>
       </div>

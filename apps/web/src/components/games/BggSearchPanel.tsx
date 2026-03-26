@@ -143,7 +143,7 @@ export function BggSearchPanel({ onImportSuccess }: BggSearchPanelProps) {
         <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
         <Input
           type="text"
-          placeholder="Search BoardGameGeek..."
+          placeholder="Cerca gioco..."
           value={query}
           onChange={e => setQuery(e.target.value)}
           className="pl-10 font-nunito"

@@ -8,6 +8,7 @@ export const WishlistItemDtoSchema = z.object({
   id: z.string().uuid(),
   userId: z.string().uuid(),
   gameId: z.string().uuid(),
+  gameName: z.string().optional(),
   priority: z.string(),
   targetPrice: z.number().nullable(),
   notes: z.string().nullable(),

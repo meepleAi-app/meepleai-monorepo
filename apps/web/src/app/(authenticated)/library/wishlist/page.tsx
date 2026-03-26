@@ -11,12 +11,15 @@
  * - Remove item action
  */
 
+import { useMemo } from 'react';
+
 import { Heart, PlusCircle } from 'lucide-react';
 
 import { Skeleton } from '@/components/ui/feedback/skeleton';
 import { Button } from '@/components/ui/primitives/button';
 import { AddToWishlistDialog } from '@/components/wishlist/AddToWishlistDialog';
 import { MeepleWishlistCard } from '@/components/wishlist/MeepleWishlistCard';
+import { useLibrary } from '@/hooks/queries/useLibrary';
 import { useRemoveFromWishlist, useWishlist } from '@/hooks/queries/useWishlist';
 
 // ============================================================================
@@ -67,6 +70,18 @@ function WishlistEmpty({ onAdd }: { onAdd: React.ReactNode }) {
 export default function WishlistPage() {
   const { data: items, isLoading, isError } = useWishlist();
   const { mutate: removeItem } = useRemoveFromWishlist();
+  const { data: libraryData } = useLibrary();
+
+  // Build a gameId → gameTitle lookup from the user's library
+  const gameNameMap = useMemo(() => {
+    const map = new Map<string, string>();
+    if (libraryData?.items) {
+      for (const entry of libraryData.items) {
+        map.set(entry.gameId, entry.gameTitle);
+      }
+    }
+    return map;
+  }, [libraryData?.items]);
 
   function handleRemove(id: string) {
     removeItem(id);
@@ -112,7 +127,12 @@ export default function WishlistPage() {
       {!isLoading && !isError && items && items.length > 0 && (
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
           {items.map(item => (
-            <MeepleWishlistCard key={item.id} item={item} onRemove={handleRemove} />
+            <MeepleWishlistCard
+              key={item.id}
+              item={item}
+              gameName={gameNameMap.get(item.gameId)}
+              onRemove={handleRemove}
+            />
           ))}
         </div>
       )}

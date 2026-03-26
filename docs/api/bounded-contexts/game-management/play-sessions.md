@@ -629,9 +629,9 @@ POST /api/v1/game-management/play-sessions/abc-123/complete
 ## Related Documentation
 
 - [GameManagement Bounded Context](./game-management.md)
-- [Permission System](../../05-testing/authorization.md)
-- [CQRS Pattern](../../01-architecture/patterns/cqrs.md)
-- [Domain Events](../../01-architecture/patterns/domain-events.md)
+- [Permission System](../../testing/authorization.md)
+- [CQRS Pattern](../../architecture/patterns/cqrs.md)
+- [Domain Events](../../architecture/patterns/domain-events.md)
 
 ---
 

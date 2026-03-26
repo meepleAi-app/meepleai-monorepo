@@ -35,14 +35,25 @@ export function useGameSearch(query: string, debounceMs = 300) {
         return [];
       }
 
-      const response = await fetch(`/api/v1/games/search?q=${encodeURIComponent(debouncedQuery)}`);
+      const response = await fetch(
+        `/api/v1/games?search=${encodeURIComponent(debouncedQuery)}&pageSize=20`
+      );
 
       if (!response.ok) {
         throw new Error('Failed to search games');
       }
 
       const data = await response.json();
-      return data as GameSearchResult[];
+      // Backend returns { games: [{ id, title, imageUrl, ... }], total, page, ... }
+      const games = data.games ?? data;
+      return (games as Array<{ id: string; title?: string; name?: string; imageUrl?: string }>).map(
+        g => ({
+          id: g.id,
+          name: g.title ?? g.name ?? 'Unknown',
+          source: 'catalog' as const,
+          imageUrl: g.imageUrl ?? undefined,
+        })
+      );
     },
     enabled: debouncedQuery.length >= 2,
     staleTime: 5 * 60 * 1000, // Cache for 5 minutes

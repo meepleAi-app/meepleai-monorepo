@@ -7,7 +7,6 @@
 //
 // Issue #4273: Game Search Autocomplete
 
-using System.Globalization;
 using Api.BoundedContexts.GameManagement.Application.DTOs;
 using Api.Infrastructure;
 using MediatR;
@@ -28,7 +27,7 @@ public class SearchGamesQueryHandler(MeepleAiDbContext context)
         SearchGamesQuery request,
         CancellationToken cancellationToken)
     {
-        var query = request.Query.Trim().ToLower(CultureInfo.InvariantCulture);
+        var query = request.Query.Trim();
 
         if (string.IsNullOrWhiteSpace(query) || query.Length < 2)
         {
@@ -36,6 +35,8 @@ public class SearchGamesQueryHandler(MeepleAiDbContext context)
         }
 
         // Search user's library (both shared and private games)
+        // Use EF.Functions.ILike for case-insensitive search (PostgreSQL)
+        var likePattern = $"%{query}%";
         var libraryGames = await context.UserLibraryEntries
             .Include(e => e.SharedGame)
             .Include(e => e.PrivateGame)
@@ -43,10 +44,10 @@ public class SearchGamesQueryHandler(MeepleAiDbContext context)
             .Where(e =>
                 // Shared game
                 (e.SharedGame != null &&
-                 e.SharedGame.Title.Contains(query, StringComparison.OrdinalIgnoreCase)) ||
+                 EF.Functions.ILike(e.SharedGame.Title, likePattern)) ||
                 // Private game
                 (e.PrivateGame != null &&
-                 e.PrivateGame.Title.Contains(query, StringComparison.OrdinalIgnoreCase))
+                 EF.Functions.ILike(e.PrivateGame.Title, likePattern))
             )
             .Select(e => new GameSearchResultDto
             {
@@ -73,7 +74,7 @@ public class SearchGamesQueryHandler(MeepleAiDbContext context)
         // Search shared catalog (exclude games already in user's library)
         var catalogGames = await context.SharedGames
             .Where(g => !g.IsDeleted &&
-                        g.Title.Contains(query, StringComparison.OrdinalIgnoreCase) &&
+                        EF.Functions.ILike(g.Title, likePattern) &&
                         !libraryGameIds.Contains(g.Id))
             .Select(g => new GameSearchResultDto
             {

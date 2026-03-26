@@ -232,9 +232,9 @@ Once the admin dashboard UI is implemented, this guide will be updated with:
 
 ## Related Documentation
 
-- **Health Check API**: [docs/03-api/health-check-api.md](../03-api/health-check-api.md)
-- **Health Check System**: [docs/04-deployment/health-checks.md](../04-deployment/health-checks.md)
-- **Auto-Configuration**: [docs/04-deployment/auto-configuration-guide.md](../04-deployment/auto-configuration-guide.md)
+- **Health Check API**: [docs/03-api/health-check-api.md](../api/health-check-api.md)
+- **Health Check System**: [docs/04-deployment/health-checks.md](../deployment/health-checks.md)
+- **Auto-Configuration**: [docs/04-deployment/auto-configuration-guide.md](../deployment/auto-configuration-guide.md)
 
 ---
 

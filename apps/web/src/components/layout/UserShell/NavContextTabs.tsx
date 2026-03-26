@@ -22,7 +22,7 @@ export function NavContextTabs() {
         'bg-background/90 backdrop-blur-xl',
         'flex items-end px-4 gap-1 overflow-x-auto'
       )}
-      role="tablist"
+      role="navigation"
       aria-label="Section tabs"
       data-testid="nav-context-tabs"
     >
@@ -32,8 +32,7 @@ export function NavContextTabs() {
           <Link
             key={tab.href}
             href={tab.href}
-            role="tab"
-            aria-selected={isActive}
+            aria-current={isActive ? 'page' : undefined}
             className={cn(
               'px-3 py-1.5 text-xs whitespace-nowrap transition-colors duration-200',
               isActive

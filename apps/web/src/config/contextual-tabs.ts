@@ -24,6 +24,10 @@ export const CONTEXTUAL_TABS: Record<string, ContextualTab[]> = {
     { label: 'Thread', href: '/chat' },
     { label: 'Agenti', href: '/agents' },
   ],
+  '/agents': [
+    { label: 'Thread', href: '/chat' },
+    { label: 'Agenti', href: '/agents' },
+  ],
   '/dashboard': [
     { label: 'Overview', href: '/dashboard' },
     { label: 'Attivita recente', href: '/dashboard?tab=activity' },

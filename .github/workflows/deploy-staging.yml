@@ -306,20 +306,12 @@ jobs:
           chmod 600 ~/.ssh/deploy_key
           ssh-keyscan -H "$SSH_HOST" >> ~/.ssh/known_hosts 2>/dev/null
 
-          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no "$SSH_USER@$SSH_HOST" bash -s "$API_IMAGE" << 'MIGRATION_SCRIPT'
-          set -e
-          API_IMAGE="$1"
-          cd /opt/meepleai/repo/infra
-
-          set -a
-          for f in secrets/*.secret; do source "$f" 2>/dev/null; done
-          set +a
-
-          echo "📦 Pulling API image: $API_IMAGE"
-          docker pull "$API_IMAGE"
-
-          echo "ℹ️ Migrations will apply automatically on API startup"
-          MIGRATION_SCRIPT
+          # Pull new API image on server (migrations auto-apply on startup)
+          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no \
+            "$SSH_USER@$SSH_HOST" \
+            "docker pull $API_IMAGE && echo '✅ API image pulled'" || {
+            echo "⚠️ Image pull failed — deploy will use cached image"
+          }
 
           rm -f ~/.ssh/deploy_key
 

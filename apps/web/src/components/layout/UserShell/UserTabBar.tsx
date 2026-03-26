@@ -12,19 +12,16 @@
  * - Pathname-based active state detection
  */
 
-import { BookOpen, Dice5, House, MessageCircle } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useSearchParams } from 'next/navigation';
 
 import { cn } from '@/lib/utils';
 
-import type { LucideIcon } from 'lucide-react';
-
 interface TabConfig {
   id: string;
   label: string;
   href: string;
-  icon: LucideIcon;
+  icon: string;
   /** HSL value from design-tokens.css (no wrapping hsl()) */
   colorVar: string;
   /** Check if tab is active given current pathname and search params */
@@ -36,7 +33,7 @@ const TABS: TabConfig[] = [
     id: 'home',
     label: 'Home',
     href: '/dashboard',
-    icon: House,
+    icon: '🏠',
     colorVar: 'hsl(var(--primary))',
     isActive: p => p === '/dashboard',
   },
@@ -44,7 +41,7 @@ const TABS: TabConfig[] = [
     id: 'library',
     label: 'Libreria',
     href: '/library?tab=collection',
-    icon: BookOpen,
+    icon: '📚',
     colorVar: 'hsl(var(--color-entity-game))',
     isActive: (p, sp) => p === '/library' && sp.has('tab'),
   },
@@ -52,7 +49,7 @@ const TABS: TabConfig[] = [
     id: 'play',
     label: 'Gioca',
     href: '/sessions',
-    icon: Dice5,
+    icon: '🎲',
     colorVar: 'hsl(var(--color-entity-session))',
     isActive: p => p.startsWith('/sessions'),
   },
@@ -60,7 +57,7 @@ const TABS: TabConfig[] = [
     id: 'chat',
     label: 'Chat',
     href: '/chat',
-    icon: MessageCircle,
+    icon: '✨',
     colorVar: 'hsl(var(--color-entity-chat))',
     isActive: p => p.startsWith('/chat'),
   },
@@ -86,7 +83,6 @@ export function UserTabBar() {
     >
       {TABS.map(tab => {
         const isActive = tab.isActive(pathname, searchParams);
-        const Icon = tab.icon;
 
         return (
           <Link
@@ -102,12 +98,16 @@ export function UserTabBar() {
               isActive ? 'text-foreground' : 'text-muted-foreground'
             )}
           >
-            <Icon
-              className={cn('transition-all duration-200', isActive ? 'w-6 h-6' : 'w-5 h-5')}
-              style={isActive ? { color: tab.colorVar } : undefined}
-              fill={isActive ? 'currentColor' : 'none'}
-              strokeWidth={isActive ? 2 : 1.5}
-            />
+            <span
+              className={cn(
+                'transition-all duration-200 leading-none',
+                isActive ? 'text-2xl scale-110 bg-primary/15 rounded-full p-1.5' : 'text-xl'
+              )}
+              role="img"
+              aria-label={tab.label}
+            >
+              {tab.icon}
+            </span>
             <span
               className={cn(
                 'text-[10px] font-medium leading-tight transition-all duration-200',

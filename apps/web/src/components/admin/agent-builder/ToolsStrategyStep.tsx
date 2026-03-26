@@ -34,7 +34,7 @@ const AVAILABLE_TOOLS = [
   },
   { id: 'vector_search', name: 'Vector Search', description: 'Semantic similarity search' },
   { id: 'rules_lookup', name: 'Rules Lookup', description: 'Look up specific game rules' },
-  { id: 'game_catalog', name: 'Game Catalog', description: 'Access BGG game database' },
+  { id: 'game_catalog', name: 'Game Catalog', description: 'Access game database' },
   { id: 'move_validator', name: 'Move Validator', description: 'Validate game moves (Arbitro)' },
   {
     id: 'strategy_analyzer',

@@ -3019,7 +3019,7 @@ export const COMPONENT_REGISTRY: ComponentEntry[] = [
     category: 'Data Display',
     areas: ['admin'],
     tier: 'interactive',
-    description: 'Search panel for looking up games on BoardGameGeek.',
+    description: 'Search panel for looking up games in the catalog.',
     tags: ['bgg', 'search', 'game'],
   },
   {
@@ -3661,7 +3661,7 @@ export const COMPONENT_REGISTRY: ComponentEntry[] = [
         {
           id: 'ev-2',
           type: 'game',
-          title: 'Nuovo gioco importato da BGG',
+          title: 'Nuovo gioco importato',
           description: '"Wingspan" importato con 2 espansioni',
           timestamp: new Date('2026-03-17T14:05:00Z'),
           severity: 'success',

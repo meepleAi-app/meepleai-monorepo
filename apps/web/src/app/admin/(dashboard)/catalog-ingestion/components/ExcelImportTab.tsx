@@ -34,7 +34,7 @@ export function ExcelImportTab() {
         <h3 className="font-quicksand text-lg font-semibold text-foreground">Upload Excel File</h3>
         <p className="text-sm text-muted-foreground">
           Import skeleton games from an Excel spreadsheet (.xlsx). The file should contain columns
-          for game name, year, and optionally player count, play time, and BGG ID.
+          for game name, year, and optionally player count, play time, and external ID.
         </p>
 
         <div className="flex items-center gap-4">

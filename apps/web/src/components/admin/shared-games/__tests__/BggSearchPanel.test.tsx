@@ -143,14 +143,14 @@ describe('BggSearchPanel', () => {
 
     it('renders manual BGG ID section by default', () => {
       render(<BggSearchPanel onSelect={vi.fn()} />, { wrapper: createWrapper() });
-      expect(screen.getByText('Manual BGG ID Input')).toBeInTheDocument();
+      expect(screen.getByText('Inserimento ID manuale')).toBeInTheDocument();
     });
 
     it('hides manual BGG ID section when showManualIdInput is false', () => {
       render(<BggSearchPanel onSelect={vi.fn()} showManualIdInput={false} />, {
         wrapper: createWrapper(),
       });
-      expect(screen.queryByText('Manual BGG ID Input')).not.toBeInTheDocument();
+      expect(screen.queryByText('Inserimento ID manuale')).not.toBeInTheDocument();
     });
   });
 
@@ -401,7 +401,7 @@ describe('BggSearchPanel', () => {
 
     it('shows error when manual BGG ID not found', async () => {
       (api.bgg.getGameDetails as ReturnType<typeof vi.fn>).mockRejectedValue(
-        new Error('Game with BGG ID 99999 not found')
+        new Error('Gioco con ID 99999 non trovato')
       );
 
       render(<BggSearchPanel onSelect={vi.fn()} />, { wrapper: createWrapper() });
@@ -413,7 +413,7 @@ describe('BggSearchPanel', () => {
       await userEvent.click(fetchBtn);
 
       await waitFor(() => {
-        expect(screen.getByText(/game with bgg id 99999 not found/i)).toBeInTheDocument();
+        expect(screen.getByText(/gioco con id 99999 non trovato/i)).toBeInTheDocument();
       });
     });
 
@@ -431,9 +431,7 @@ describe('BggSearchPanel', () => {
       await userEvent.click(fetchBtn);
 
       await waitFor(() => {
-        expect(
-          screen.getByText('Please enter a valid BGG ID (positive number)')
-        ).toBeInTheDocument();
+        expect(screen.getByText('Inserisci un ID valido (numero positivo)')).toBeInTheDocument();
       });
     });
   });

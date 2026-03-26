@@ -217,7 +217,7 @@ describe('adminClient — EntityLink Methods (Issue #5142)', () => {
       vi.mocked(mockHttpClient.post).mockResolvedValueOnce(null);
 
       await expect(adminClient.importBggExpansions('some-game-uuid')).rejects.toThrow(
-        'Failed to import BGG expansions'
+        'Failed to import expansions'
       );
     });
   });

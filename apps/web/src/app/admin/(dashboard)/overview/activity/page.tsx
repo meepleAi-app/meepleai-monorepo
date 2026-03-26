@@ -88,7 +88,7 @@ const PLACEHOLDER_ENTRIES: ActivityEntry[] = [
   },
   {
     id: '8',
-    action: 'Imported game from BGG',
+    action: 'Imported game',
     target: 'Terraforming Mars',
     category: 'games',
     timestamp: '1 day ago',

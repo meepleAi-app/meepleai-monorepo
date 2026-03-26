@@ -95,15 +95,13 @@ export function createGameNightBggClient({ httpClient }: CreateGameNightBggClien
         );
 
         if (!response) {
-          throw new Error('Failed to search BoardGameGeek');
+          throw new Error('Ricerca giochi fallita');
         }
 
         return response;
       } catch (error) {
         if (error instanceof Error && error.name === 'AbortError') {
-          throw new Error(
-            `BGG search timed out after ${BGG_TIMEOUT_MS / 1000}s. Please try again.`
-          );
+          throw new Error(`Ricerca scaduta dopo ${BGG_TIMEOUT_MS / 1000}s. Riprova.`);
         }
         throw error;
       } finally {
@@ -123,7 +121,7 @@ export function createGameNightBggClient({ httpClient }: CreateGameNightBggClien
       );
 
       if (!response) {
-        throw new Error('Failed to import game from BoardGameGeek');
+        throw new Error('Importazione gioco fallita');
       }
 
       return response;

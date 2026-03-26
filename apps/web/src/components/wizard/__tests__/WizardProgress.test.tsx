@@ -13,7 +13,7 @@ describe('WizardProgress', () => {
 
     expect(screen.getByText('Upload PDF')).toBeInTheDocument();
     expect(screen.getByText('Preview Data')).toBeInTheDocument();
-    expect(screen.getByText('BGG Match')).toBeInTheDocument();
+    expect(screen.getByText('Catalogo Match')).toBeInTheDocument();
     expect(screen.getByText('Confirm')).toBeInTheDocument();
   });
 
@@ -38,7 +38,7 @@ describe('WizardProgress', () => {
     const mockOnStepClick = vi.fn();
     render(<WizardProgress currentStep={1} onStepClick={mockOnStepClick} allowSkip={false} />);
 
-    const step3 = screen.getByLabelText('Step 3: BGG Match');
+    const step3 = screen.getByLabelText('Step 3: Catalogo Match');
     expect(step3).toBeDisabled();
   });
 

@@ -942,11 +942,11 @@
       // Show loading overlay
       elements.loadingOverlay.classList.remove('hidden');
 
-      // Load page in iframe — only allow relative same-origin URLs
-      if (page.startsWith('/') && !page.startsWith('//') || !page.includes('://')) {
+      // Load page in iframe — only allow known .html filenames (no paths, no protocols)
+      if (/^[a-zA-Z0-9_-]+\.html$/.test(page)) {
         elements.contentIframe.src = page;
       } else {
-        console.warn('[Admin] Blocked non-relative URL:', page);
+        console.warn('[Admin] Blocked invalid page name:', page);
         return;
       }
       elements.contentIframe.onload = () => {

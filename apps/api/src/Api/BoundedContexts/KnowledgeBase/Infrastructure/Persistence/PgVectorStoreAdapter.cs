@@ -363,7 +363,8 @@ internal sealed class PgVectorStoreAdapter : IVectorStoreAdapter
                     model TEXT NOT NULL,
                     chunk_index INTEGER NOT NULL,
                     page_number INTEGER NOT NULL,
-                    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+                    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                    search_vector tsvector GENERATED ALWAYS AS (to_tsvector('english', text_content)) STORED
                 )
                 """;
             await tableCmd.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
@@ -402,6 +403,38 @@ internal sealed class PgVectorStoreAdapter : IVectorStoreAdapter
                 ON {TableName} (vector_document_id)
                 """;
             await docIdxCmd.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
+        }
+
+        // Create GIN index on search_vector for full-text search (hybrid search)
+        var ftsIdxCmd = (NpgsqlCommand)connection.CreateCommand();
+        await using (ftsIdxCmd.ConfigureAwait(false))
+        {
+            ftsIdxCmd.CommandText = $"""
+                CREATE INDEX IF NOT EXISTS idx_{TableName}_search_vector
+                ON {TableName}
+                USING gin (search_vector)
+                """;
+            await ftsIdxCmd.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
+        }
+
+        // Add search_vector column if table was created before this fix
+        var alterCmd = (NpgsqlCommand)connection.CreateCommand();
+        await using (alterCmd.ConfigureAwait(false))
+        {
+            alterCmd.CommandText = $"""
+                DO $$
+                BEGIN
+                    IF NOT EXISTS (
+                        SELECT 1 FROM information_schema.columns
+                        WHERE table_name = '{TableName}' AND column_name = 'search_vector'
+                    ) THEN
+                        ALTER TABLE {TableName}
+                        ADD COLUMN search_vector tsvector
+                        GENERATED ALWAYS AS (to_tsvector('english', text_content)) STORED;
+                    END IF;
+                END $$
+                """;
+            await alterCmd.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
         }
 
         _logger.LogInformation(

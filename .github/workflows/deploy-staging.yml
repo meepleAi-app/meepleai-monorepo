@@ -195,7 +195,11 @@ jobs:
       - name: Free disk space for build
         run: |
           echo "📊 Disk before cleanup: $(df -h / | tail -1 | awk '{print $4}') free"
-          docker builder prune -f --filter 'until=12h' 2>/dev/null || true
+          # Remove orphaned buildx builders (each can hold 5-7GB of state)
+          for b in $(docker buildx ls --format '{{.Name}}' 2>/dev/null | grep -v default | grep -v '^$'); do
+            docker buildx rm "$b" 2>/dev/null || true
+          done
+          docker builder prune -f 2>/dev/null || true
           docker image prune -a -f --filter 'until=24h' 2>/dev/null || true
           echo "📊 Disk after cleanup: $(df -h / | tail -1 | awk '{print $4}') free"
 

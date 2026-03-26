@@ -5,9 +5,10 @@ import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { AlertTriangle, Check, Loader2, X } from 'lucide-react';
 import Link from 'next/link';
+import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/primitives/button';
-import { createApiClient } from '@/lib/api';
+import { api } from '@/lib/api';
 
 // ============================================================================
 // Types
@@ -34,12 +35,16 @@ export function PendingRequestsBanner({ requests, totalCount }: PendingRequestsB
   const [processing, setProcessing] = useState<Set<string>>(new Set());
 
   const approveMutation = useMutation({
-    mutationFn: async (id: string) => {
-      const api = createApiClient();
-      await api.accessRequests.approveAccessRequest(id);
-    },
+    mutationFn: (id: string) => api.accessRequests.approveAccessRequest(id),
     onMutate: (id: string) => {
       setProcessing(prev => new Set(prev).add(id));
+    },
+    onSuccess: () => {
+      toast.success('Richiesta di accesso approvata');
+      void queryClient.invalidateQueries({ queryKey: ['admin', 'overview'] });
+    },
+    onError: (err: unknown) => {
+      toast.error(err instanceof Error ? err.message : "Errore durante l'approvazione");
     },
     onSettled: (_data, _error, id: string) => {
       setProcessing(prev => {
@@ -47,17 +52,20 @@ export function PendingRequestsBanner({ requests, totalCount }: PendingRequestsB
         next.delete(id);
         return next;
       });
-      void queryClient.invalidateQueries({ queryKey: ['admin', 'overview'] });
     },
   });
 
   const rejectMutation = useMutation({
-    mutationFn: async (id: string) => {
-      const api = createApiClient();
-      await api.accessRequests.rejectAccessRequest(id);
-    },
+    mutationFn: (id: string) => api.accessRequests.rejectAccessRequest(id),
     onMutate: (id: string) => {
       setProcessing(prev => new Set(prev).add(id));
+    },
+    onSuccess: () => {
+      toast.success('Richiesta di accesso rifiutata');
+      void queryClient.invalidateQueries({ queryKey: ['admin', 'overview'] });
+    },
+    onError: (err: unknown) => {
+      toast.error(err instanceof Error ? err.message : 'Errore durante il rifiuto');
     },
     onSettled: (_data, _error, id: string) => {
       setProcessing(prev => {
@@ -65,7 +73,6 @@ export function PendingRequestsBanner({ requests, totalCount }: PendingRequestsB
         next.delete(id);
         return next;
       });
-      void queryClient.invalidateQueries({ queryKey: ['admin', 'overview'] });
     },
   });
 

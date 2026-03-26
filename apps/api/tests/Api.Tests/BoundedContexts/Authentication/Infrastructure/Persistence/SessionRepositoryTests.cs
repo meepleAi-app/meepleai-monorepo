@@ -8,6 +8,7 @@ using Api.Tests.BoundedContexts.Authentication.TestHelpers;
 using Api.Tests.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using Xunit;
+using FluentAssertions;
 using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.Authentication.Infrastructure.Persistence;
@@ -43,10 +44,10 @@ public class SessionRepositoryTests : SharedDatabaseTestBase<SessionRepository>
         var result = await Repository.GetByTokenHashAsync(session.TokenHash, TestCancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal(session.Id, result.Id);
-        Assert.Equal(session.TokenHash, result.TokenHash);
-        Assert.Equal(userId, result.UserId);
+        result.Should().NotBeNull();
+        result.Id.Should().Be(session.Id);
+        result.TokenHash.Should().Be(session.TokenHash);
+        result.UserId.Should().Be(userId);
     }
 
     [Fact]
@@ -60,7 +61,7 @@ public class SessionRepositoryTests : SharedDatabaseTestBase<SessionRepository>
         var result = await Repository.GetByTokenHashAsync(nonExistentHash, TestCancellationToken);
 
         // Assert
-        Assert.Null(result);
+        result.Should().BeNull();
     }
     [Fact]
     public async Task GetByUserIdAsync_NoSessions_ReturnsEmptyList()
@@ -73,7 +74,7 @@ public class SessionRepositoryTests : SharedDatabaseTestBase<SessionRepository>
         var sessions = await Repository.GetByUserIdAsync(userId, TestCancellationToken);
 
         // Assert
-        Assert.Empty(sessions);
+        sessions.Should().BeEmpty();
     }
 
     [Fact]
@@ -97,10 +98,10 @@ public class SessionRepositoryTests : SharedDatabaseTestBase<SessionRepository>
         var sessions = await Repository.GetByUserIdAsync(userId, TestCancellationToken);
 
         // Assert
-        Assert.Equal(3, sessions.Count);
+        sessions.Count.Should().Be(3);
         // Should be ordered by CreatedAt descending
-        Assert.True(sessions[0].CreatedAt >= sessions[1].CreatedAt);
-        Assert.True(sessions[1].CreatedAt >= sessions[2].CreatedAt);
+        (sessions[0].CreatedAt >= sessions[1].CreatedAt).Should().BeTrue();
+        (sessions[1].CreatedAt >= sessions[2].CreatedAt).Should().BeTrue();
     }
 
     [Fact]
@@ -125,8 +126,8 @@ public class SessionRepositoryTests : SharedDatabaseTestBase<SessionRepository>
         var user2Sessions = await Repository.GetByUserIdAsync(user2Id, TestCancellationToken);
 
         // Assert
-        Assert.Equal(2, user1Sessions.Count);
-        Assert.Single(user2Sessions);
+        user1Sessions.Count.Should().Be(2);
+        user2Sessions.Should().ContainSingle();
     }
     [Fact]
     public async Task GetActiveSessionsByUserIdAsync_OnlyActiveSessions_ReturnsAll()
@@ -145,7 +146,7 @@ public class SessionRepositoryTests : SharedDatabaseTestBase<SessionRepository>
         var activeSessions = await Repository.GetActiveSessionsByUserIdAsync(userId, TestCancellationToken);
 
         // Assert
-        Assert.Equal(2, activeSessions.Count);
+        activeSessions.Count.Should().Be(2);
     }
 
     [Fact]
@@ -165,8 +166,8 @@ public class SessionRepositoryTests : SharedDatabaseTestBase<SessionRepository>
         var activeSessions = await Repository.GetActiveSessionsByUserIdAsync(userId, TestCancellationToken);
 
         // Assert
-        Assert.Single(activeSessions);
-        Assert.Equal(activeSession.Id, activeSessions[0].Id);
+        activeSessions.Should().ContainSingle();
+        activeSessions[0].Id.Should().Be(activeSession.Id);
     }
 
     [Fact]
@@ -187,8 +188,8 @@ public class SessionRepositoryTests : SharedDatabaseTestBase<SessionRepository>
         var activeSessions = await Repository.GetActiveSessionsByUserIdAsync(userId, TestCancellationToken);
 
         // Assert
-        Assert.Single(activeSessions);
-        Assert.Equal(activeSession.Id, activeSessions[0].Id);
+        activeSessions.Should().ContainSingle();
+        activeSessions[0].Id.Should().Be(activeSession.Id);
     }
 
     [Fact]
@@ -213,9 +214,9 @@ public class SessionRepositoryTests : SharedDatabaseTestBase<SessionRepository>
         var activeSessions = await Repository.GetActiveSessionsByUserIdAsync(userId, TestCancellationToken);
 
         // Assert
-        Assert.Equal(2, activeSessions.Count);
-        Assert.Contains(activeSessions, s => s.Id == active1.Id);
-        Assert.Contains(activeSessions, s => s.Id == active2.Id);
+        activeSessions.Count.Should().Be(2);
+        activeSessions.Should().Contain(s => s.Id == active1.Id);
+        activeSessions.Should().Contain(s => s.Id == active2.Id);
     }
     [Fact]
     public async Task AddAsync_NewSession_PersistsSuccessfully()
@@ -231,11 +232,11 @@ public class SessionRepositoryTests : SharedDatabaseTestBase<SessionRepository>
 
         // Assert
         var persisted = await DbContext.UserSessions.FirstOrDefaultAsync(s => s.Id == session.Id, TestCancellationToken);
-        Assert.NotNull(persisted);
-        Assert.Equal(userId, persisted.UserId);
-        Assert.Equal(session.TokenHash, persisted.TokenHash);
-        Assert.Equal("192.168.1.1", persisted.IpAddress);
-        Assert.Equal("TestBrowser/1.0", persisted.UserAgent);
+        persisted.Should().NotBeNull();
+        persisted.UserId.Should().Be(userId);
+        persisted.TokenHash.Should().Be(session.TokenHash);
+        persisted.IpAddress.Should().Be("192.168.1.1");
+        persisted.UserAgent.Should().Be("TestBrowser/1.0");
     }
 
     [Fact]
@@ -256,11 +257,11 @@ public class SessionRepositoryTests : SharedDatabaseTestBase<SessionRepository>
 
         // Assert
         var persisted = await DbContext.UserSessions.FirstOrDefaultAsync(s => s.Id == session.Id, TestCancellationToken);
-        Assert.NotNull(persisted);
-        Assert.Equal("10.0.0.1", persisted.IpAddress);
-        Assert.Equal("Mozilla/5.0", persisted.UserAgent);
-        Assert.NotNull(persisted.CreatedAt);
-        Assert.NotNull(persisted.ExpiresAt);
+        persisted.Should().NotBeNull();
+        persisted.IpAddress.Should().Be("10.0.0.1");
+        persisted.UserAgent.Should().Be("Mozilla/5.0");
+        persisted.CreatedAt.Should().NotBe(default);
+        persisted.ExpiresAt.Should().NotBe(default);
     }
     [Fact]
     public async Task UpdateAsync_LastSeenAt_UpdatesCorrectly()
@@ -281,8 +282,8 @@ public class SessionRepositoryTests : SharedDatabaseTestBase<SessionRepository>
 
         // Assert
         var updated = await DbContext.UserSessions.FirstOrDefaultAsync(s => s.Id == session.Id, TestCancellationToken);
-        Assert.NotNull(updated);
-        Assert.NotNull(updated.LastSeenAt);
+        updated.Should().NotBeNull();
+        updated.LastSeenAt.Should().NotBeNull();
     }
 
     [Fact]
@@ -304,8 +305,8 @@ public class SessionRepositoryTests : SharedDatabaseTestBase<SessionRepository>
 
         // Assert
         var updated = await DbContext.UserSessions.FirstOrDefaultAsync(s => s.Id == session.Id, TestCancellationToken);
-        Assert.NotNull(updated);
-        Assert.NotNull(updated.RevokedAt);
+        updated.Should().NotBeNull();
+        updated.RevokedAt.Should().NotBeNull();
     }
     [Fact]
     public async Task RevokeAllUserSessionsAsync_MultipleSessions_RevokesAll()
@@ -327,8 +328,8 @@ public class SessionRepositoryTests : SharedDatabaseTestBase<SessionRepository>
 
         // Assert
         var allSessions = await DbContext.UserSessions.Where(s => s.UserId == userId).ToListAsync(TestCancellationToken);
-        Assert.Equal(3, allSessions.Count);
-        Assert.All(allSessions, s => Assert.NotNull(s.RevokedAt));
+        allSessions.Count.Should().Be(3);
+        allSessions.Should().AllSatisfy(s => s.RevokedAt.Should().NotBeNull());
     }
 
     [Fact]
@@ -352,13 +353,13 @@ public class SessionRepositoryTests : SharedDatabaseTestBase<SessionRepository>
 
         // Assert
         var allSessions = await DbContext.UserSessions.Where(s => s.UserId == userId).ToListAsync(TestCancellationToken);
-        Assert.Equal(2, allSessions.Count);
+        allSessions.Count.Should().Be(2);
 
         var session1Updated = allSessions.First(s => s.Id == session1.Id);
         var session2Updated = allSessions.First(s => s.Id == session2.Id);
 
-        Assert.NotNull(session1Updated.RevokedAt);
-        Assert.Equal(originalRevokedAt, session2Updated.RevokedAt); // Should not change
+        session1Updated.RevokedAt.Should().NotBeNull();
+        session2Updated.RevokedAt.Should().Be(originalRevokedAt); // Should not change
     }
 
     [Fact]
@@ -385,8 +386,8 @@ public class SessionRepositoryTests : SharedDatabaseTestBase<SessionRepository>
         var user1Sessions = await DbContext.UserSessions.Where(s => s.UserId == user1Id).ToListAsync(TestCancellationToken);
         var user2Sessions = await DbContext.UserSessions.Where(s => s.UserId == user2Id).ToListAsync(TestCancellationToken);
 
-        Assert.All(user1Sessions, s => Assert.NotNull(s.RevokedAt));
-        Assert.All(user2Sessions, s => Assert.Null(s.RevokedAt));
+        user1Sessions.Should().AllSatisfy(s => s.RevokedAt.Should().NotBeNull());
+        user2Sessions.Should().AllSatisfy(s => s.RevokedAt.Should().BeNull());
     }
     [Fact]
     public async Task Mapping_DomainToPersistence_AllFieldsCorrect()
@@ -406,14 +407,14 @@ public class SessionRepositoryTests : SharedDatabaseTestBase<SessionRepository>
 
         // Assert
         var persisted = await DbContext.UserSessions.FirstOrDefaultAsync(s => s.Id == session.Id, TestCancellationToken);
-        Assert.NotNull(persisted);
-        Assert.Equal(session.Id, persisted.Id);
-        Assert.Equal(session.UserId, persisted.UserId);
-        Assert.Equal(session.TokenHash, persisted.TokenHash);
-        Assert.Equal(session.IpAddress, persisted.IpAddress);
-        Assert.Equal(session.UserAgent, persisted.UserAgent);
-        Assert.Equal(session.CreatedAt, persisted.CreatedAt);
-        Assert.Equal(session.ExpiresAt, persisted.ExpiresAt);
+        persisted.Should().NotBeNull();
+        persisted.Id.Should().Be(session.Id);
+        persisted.UserId.Should().Be(session.UserId);
+        persisted.TokenHash.Should().Be(session.TokenHash);
+        persisted.IpAddress.Should().Be(session.IpAddress);
+        persisted.UserAgent.Should().Be(session.UserAgent);
+        persisted.CreatedAt.Should().Be(session.CreatedAt);
+        persisted.ExpiresAt.Should().Be(session.ExpiresAt);
     }
 
     [Fact]
@@ -430,12 +431,12 @@ public class SessionRepositoryTests : SharedDatabaseTestBase<SessionRepository>
         var retrieved = await Repository.GetByTokenHashAsync(session.TokenHash, TestCancellationToken);
 
         // Assert
-        Assert.NotNull(retrieved);
-        Assert.Equal(session.Id, retrieved.Id);
-        Assert.Equal(session.UserId, retrieved.UserId);
-        Assert.Equal(session.TokenHash, retrieved.TokenHash);
-        Assert.Equal(session.IpAddress, retrieved.IpAddress);
-        Assert.Equal(session.UserAgent, retrieved.UserAgent);
+        retrieved.Should().NotBeNull();
+        retrieved.Id.Should().Be(session.Id);
+        retrieved.UserId.Should().Be(session.UserId);
+        retrieved.TokenHash.Should().Be(session.TokenHash);
+        retrieved.IpAddress.Should().Be(session.IpAddress);
+        retrieved.UserAgent.Should().Be(session.UserAgent);
     }
     [Fact]
     public async Task ExpirationQuery_EdgeCase_ExactExpirationTime()
@@ -458,8 +459,8 @@ public class SessionRepositoryTests : SharedDatabaseTestBase<SessionRepository>
         var activeAfter = await Repository.GetActiveSessionsByUserIdAsync(userId, TestCancellationToken);
 
         // Assert
-        Assert.Single(activeNow);
-        Assert.Empty(activeAfter);
+        activeNow.Should().ContainSingle();
+        activeAfter.Should().BeEmpty();
     }
 
     [Fact]
@@ -476,7 +477,7 @@ public class SessionRepositoryTests : SharedDatabaseTestBase<SessionRepository>
         var activeSessions = await Repository.GetActiveSessionsByUserIdAsync(userId, TestCancellationToken);
 
         // Assert
-        Assert.Single(activeSessions);
+        activeSessions.Should().ContainSingle();
     }
     [Fact]
     public async Task ConcurrentTokenLookups_NoConflicts()
@@ -498,10 +499,10 @@ public class SessionRepositoryTests : SharedDatabaseTestBase<SessionRepository>
         var results = await Task.WhenAll(tasks);
 
         // Assert
-        Assert.All(results, result =>
+        results.Should().AllSatisfy(result =>
         {
-            Assert.NotNull(result);
-            Assert.Equal(session.Id, result.Id);
+            result.Should().NotBeNull();
+            result.Id.Should().Be(session.Id);
         });
     }
 
@@ -526,8 +527,8 @@ public class SessionRepositoryTests : SharedDatabaseTestBase<SessionRepository>
 
         // Assert - Use AsNoTracking to fetch fresh data from database (bypass change tracker cache)
         var revokedSession = await DbContext.UserSessions.AsNoTracking().FirstOrDefaultAsync(s => s.Id == session.Id, TestCancellationToken);
-        Assert.NotNull(revokedSession);
-        Assert.NotNull(revokedSession.RevokedAt);
+        revokedSession.Should().NotBeNull();
+        revokedSession.RevokedAt.Should().NotBeNull();
     }
     [Fact]
     public async Task NullableFields_IpAddress_HandledCorrectly()
@@ -543,8 +544,8 @@ public class SessionRepositoryTests : SharedDatabaseTestBase<SessionRepository>
 
         // Assert
         var persisted = await DbContext.UserSessions.FirstOrDefaultAsync(s => s.Id == session.Id, TestCancellationToken);
-        Assert.NotNull(persisted);
-        Assert.Null(persisted.IpAddress);
+        persisted.Should().NotBeNull();
+        persisted.IpAddress.Should().BeNull();
     }
 
     [Fact]
@@ -561,8 +562,8 @@ public class SessionRepositoryTests : SharedDatabaseTestBase<SessionRepository>
 
         // Assert
         var persisted = await DbContext.UserSessions.FirstOrDefaultAsync(s => s.Id == session.Id, TestCancellationToken);
-        Assert.NotNull(persisted);
-        Assert.Null(persisted.UserAgent);
+        persisted.Should().NotBeNull();
+        persisted.UserAgent.Should().BeNull();
     }
 
     [Fact]
@@ -580,9 +581,9 @@ public class SessionRepositoryTests : SharedDatabaseTestBase<SessionRepository>
 
         // Assert - UserAgent is truncated to 256 chars (database column limit)
         var persisted = await DbContext.UserSessions.FirstOrDefaultAsync(s => s.Id == session.Id, TestCancellationToken);
-        Assert.NotNull(persisted);
-        Assert.Equal(256, persisted.UserAgent?.Length);
-        Assert.Equal(longUserAgent.Substring(0, 256), persisted.UserAgent);
+        persisted.Should().NotBeNull();
+        persisted.UserAgent?.Length.Should().Be(256);
+        persisted.UserAgent.Should().Be(longUserAgent.Substring(0, 256));
     }
 
     [Fact]
@@ -606,7 +607,7 @@ public class SessionRepositoryTests : SharedDatabaseTestBase<SessionRepository>
 
         // Assert - Changes should NOT be persisted (AsNoTracking)
         var reloaded = await DbContext.UserSessions.FirstOrDefaultAsync(s => s.Id == session.Id, TestCancellationToken);
-        Assert.Null(reloaded!.LastSeenAt); // Should remain null
+        reloaded!.LastSeenAt.Should().BeNull(); // Should remain null
     }
     private async Task<Guid> CreateTestUserAsync(string email = "test@example.com")
     {
@@ -654,4 +655,3 @@ public class SessionRepositoryTests : SharedDatabaseTestBase<SessionRepository>
         );
     }
 }
-

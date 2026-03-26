@@ -1,9 +1,11 @@
-using Api.BoundedContexts.KnowledgeBase.Application.Handlers;
+using Api.BoundedContexts.KnowledgeBase.Application.Commands;
+using Api.BoundedContexts.KnowledgeBase.Application.Queries;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries;
 using Api.Tests.Constants;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Handlers.RagDashboard;
 
@@ -36,10 +38,10 @@ public class GetRagDashboardOptionsQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.NotNull(result.LlmModels);
-        Assert.NotNull(result.RerankerModels);
-        Assert.NotNull(result.Strategies);
+        result.Should().NotBeNull();
+        result.LlmModels.Should().NotBeNull();
+        result.RerankerModels.Should().NotBeNull();
+        result.Strategies.Should().NotBeNull();
     }
 
     [Fact]
@@ -52,7 +54,7 @@ public class GetRagDashboardOptionsQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotEmpty(result.LlmModels);
+        result.LlmModels.Should().NotBeEmpty();
     }
 
     [Fact]
@@ -65,7 +67,7 @@ public class GetRagDashboardOptionsQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotEmpty(result.RerankerModels);
+        result.RerankerModels.Should().NotBeEmpty();
     }
 
     [Fact]
@@ -78,7 +80,7 @@ public class GetRagDashboardOptionsQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotEmpty(result.Strategies);
+        result.Strategies.Should().NotBeEmpty();
     }
 
     [Theory]
@@ -94,7 +96,7 @@ public class GetRagDashboardOptionsQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.Contains(result.LlmModels, m => m.Id == modelId);
+        result.LlmModels.Should().Contain(m => m.Id == modelId);
     }
 
     [Theory]
@@ -113,7 +115,7 @@ public class GetRagDashboardOptionsQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.Contains(result.Strategies, s => s.Id == strategyId);
+        result.Strategies.Should().Contain(s => s.Id == strategyId);
     }
 
     [Fact]
@@ -128,9 +130,9 @@ public class GetRagDashboardOptionsQueryHandlerTests
         // Assert
         foreach (var model in result.LlmModels)
         {
-            Assert.NotNull(model.Id);
-            Assert.NotNull(model.Name);
-            Assert.NotNull(model.Provider);
+            model.Id.Should().NotBeNull();
+            model.Name.Should().NotBeNull();
+            model.Provider.Should().NotBeNull();
         }
     }
 
@@ -146,9 +148,9 @@ public class GetRagDashboardOptionsQueryHandlerTests
         // Assert
         foreach (var strategy in result.Strategies)
         {
-            Assert.NotNull(strategy.Id);
-            Assert.NotNull(strategy.Name);
-            Assert.NotNull(strategy.Description);
+            strategy.Id.Should().NotBeNull();
+            strategy.Name.Should().NotBeNull();
+            strategy.Description.Should().NotBeNull();
         }
     }
 
@@ -164,8 +166,8 @@ public class GetRagDashboardOptionsQueryHandlerTests
         // Assert
         foreach (var reranker in result.RerankerModels)
         {
-            Assert.NotNull(reranker.Id);
-            Assert.NotNull(reranker.Name);
+            reranker.Id.Should().NotBeNull();
+            reranker.Name.Should().NotBeNull();
         }
     }
 }

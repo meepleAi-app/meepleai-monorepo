@@ -1,5 +1,6 @@
 using Api.BoundedContexts.UserNotifications.Application.Commands;
-using Api.BoundedContexts.UserNotifications.Application.Handlers;
+using Api.BoundedContexts.UserNotifications.Application.Commands;
+using Api.BoundedContexts.UserNotifications.Application.Queries;
 using Api.BoundedContexts.UserNotifications.Domain.Aggregates;
 using Api.BoundedContexts.UserNotifications.Domain.Repositories;
 using Api.SharedKernel.Infrastructure.Persistence;
@@ -7,6 +8,7 @@ using Api.Tests.Constants;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.UserNotifications.Application.Handlers;
 
@@ -46,10 +48,10 @@ public class SubscribePushNotificationsCommandHandlerTests
         await _handler.Handle(command, CancellationToken.None);
 
         // Assert
-        Assert.Equal("https://push.example.com/endpoint", existingPrefs.PushEndpoint);
-        Assert.Equal("p256dhkey123", existingPrefs.PushP256dhKey);
-        Assert.Equal("authkey456", existingPrefs.PushAuthKey);
-        Assert.True(existingPrefs.HasPushSubscription);
+        existingPrefs.PushEndpoint.Should().Be("https://push.example.com/endpoint");
+        existingPrefs.PushP256dhKey.Should().Be("p256dhkey123");
+        existingPrefs.PushAuthKey.Should().Be("authkey456");
+        existingPrefs.HasPushSubscription.Should().BeTrue();
 
         _repositoryMock.Verify(r => r.UpdateAsync(existingPrefs, It.IsAny<CancellationToken>()), Times.Once);
         _unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);

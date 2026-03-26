@@ -51,21 +51,8 @@ public sealed class BatchJobProcessorIntegrationTests : IAsyncLifetime
         _databaseName = $"test_batchjob_{Guid.NewGuid():N}";
         _isolatedDbConnectionString = await _fixture.CreateIsolatedDatabaseAsync(_databaseName);
 
-        var services = new ServiceCollection();
-        services.AddLogging(builder => builder.AddConsole().SetMinimumLevel(LogLevel.Warning));
-        services.AddDbContext<MeepleAiDbContext>(options =>
-        {
-            options.UseNpgsql(_isolatedDbConnectionString, o => o.UseVector()); // Issue #3547: Enable pgvector
-            options.ConfigureWarnings(w =>
-                w.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning));
-        });
-
+        var services = IntegrationServiceCollectionBuilder.CreateBase(_isolatedDbConnectionString);
         services.AddScoped<IBatchJobRepository, BatchJobRepository>();
-        services.AddScoped<IUnitOfWork, EfCoreUnitOfWork>();
-        services.AddScoped<IDomainEventCollector, DomainEventCollector>();
-
-        // MediatR (required by MeepleAiDbContext)
-        services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(Program).Assembly));
 
         _serviceProvider = services.BuildServiceProvider();
         _dbContext = _serviceProvider.GetRequiredService<MeepleAiDbContext>();
@@ -153,10 +140,11 @@ public sealed class BatchJobProcessorIntegrationTests : IAsyncLifetime
         await _unitOfWork.SaveChangesAsync(TestCancellationToken);
 
         // Verify Failed state
+        // Note: BatchJob.Fail() increments RetryCount, so after first failure it's 1
         var failedJob = await _repository.GetByIdAsync(jobId, TestCancellationToken);
         failedJob.Should().NotBeNull();
         failedJob!.Status.Should().Be(JobStatus.Failed);
-        failedJob.RetryCount.Should().Be(0);
+        failedJob.RetryCount.Should().Be(1);
         failedJob.ErrorMessage.Should().Be("Simulated failure");
 
         // Act - Retry job

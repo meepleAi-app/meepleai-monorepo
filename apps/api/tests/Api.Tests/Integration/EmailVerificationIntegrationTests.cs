@@ -11,6 +11,7 @@ using Microsoft.Extensions.Logging;
 using Moq;
 using Npgsql;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.Integration;
 
@@ -149,11 +150,11 @@ public class EmailVerificationIntegrationTests : IAsyncLifetime
 
         // Act 1: Send verification email
         var sendResult = await service.SendVerificationEmailAsync(userId, email, "Flow Test User", TestCancellationToken);
-        Assert.True(sendResult, "Should successfully send verification email");
+        sendResult.Should().BeTrue("Should successfully send verification email");
 
         // Get the token from database (in real flow, this would be in the email)
         var verification = await _dbContext.EmailVerifications.FirstOrDefaultAsync(v => v.UserId == userId, TestCancellationToken);
-        Assert.NotNull(verification);
+        verification.Should().NotBeNull();
 
         // Since we store the hash, we need to create a new test token and store its hash
         var testToken = "test-verification-token-for-flow";
@@ -162,13 +163,13 @@ public class EmailVerificationIntegrationTests : IAsyncLifetime
 
         // Act 2: Verify email
         var verifyResult = await service.VerifyEmailAsync(testToken, TestCancellationToken);
-        Assert.True(verifyResult, "Should successfully verify email");
+        verifyResult.Should().BeTrue("Should successfully verify email");
 
         // Assert: User is now verified
         var updatedUser = await _dbContext.Users.FindAsync([userId], TestCancellationToken);
-        Assert.NotNull(updatedUser);
-        Assert.True(updatedUser.EmailVerified);
-        Assert.NotNull(updatedUser.EmailVerifiedAt);
+        updatedUser.Should().NotBeNull();
+        updatedUser.EmailVerified.Should().BeTrue();
+        updatedUser.EmailVerifiedAt.Should().NotBeNull();
     }
 
     [Fact]
@@ -196,7 +197,7 @@ public class EmailVerificationIntegrationTests : IAsyncLifetime
         await service.SendVerificationEmailAsync(userId, email, "Resend Test User", TestCancellationToken);
 
         var firstToken = await _dbContext.EmailVerifications.FirstOrDefaultAsync(v => v.UserId == userId && v.InvalidatedAt == null && v.VerifiedAt == null, TestCancellationToken);
-        Assert.NotNull(firstToken);
+        firstToken.Should().NotBeNull();
         var firstTokenId = firstToken.Id;
 
         // Act 2: Resend verification email
@@ -204,12 +205,12 @@ public class EmailVerificationIntegrationTests : IAsyncLifetime
 
         // Assert: Old token is invalidated (via InvalidatedAt, not VerifiedAt), new token created
         var oldToken = await _dbContext.EmailVerifications.FindAsync([firstTokenId], TestCancellationToken);
-        Assert.NotNull(oldToken);
-        Assert.NotNull(oldToken.InvalidatedAt); // Old token marked as superseded
-        Assert.Null(oldToken.VerifiedAt); // Not marked as verified (different semantic)
+        oldToken.Should().NotBeNull();
+        oldToken.InvalidatedAt.Should().NotBeNull(); // Old token marked as superseded
+        oldToken.VerifiedAt.Should().BeNull(); // Not marked as verified (different semantic)
 
         var newTokens = await _dbContext.EmailVerifications.Where(v => v.UserId == userId && v.InvalidatedAt == null && v.VerifiedAt == null).ToListAsync(TestCancellationToken);
-        Assert.Single(newTokens); // Should have exactly one active token
+        newTokens.Should().ContainSingle(); // Should have exactly one active token
     }
 
     [Fact]
@@ -249,11 +250,11 @@ public class EmailVerificationIntegrationTests : IAsyncLifetime
         var result = await service.VerifyEmailAsync(expiredToken, TestCancellationToken);
 
         // Assert
-        Assert.False(result, "Should fail with expired token");
+        result.Should().BeFalse("Should fail with expired token");
 
         var updatedUser = await _dbContext.Users.FindAsync([userId], TestCancellationToken);
-        Assert.NotNull(updatedUser);
-        Assert.False(updatedUser.EmailVerified, "User should still be unverified");
+        updatedUser.Should().NotBeNull();
+        updatedUser.EmailVerified.Should().BeFalse("User should still be unverified");
     }
 
     [Fact]
@@ -291,10 +292,10 @@ public class EmailVerificationIntegrationTests : IAsyncLifetime
 
         // Act & Assert
         var unverifiedResult = await service.IsEmailVerifiedAsync(unverifiedUserId, TestCancellationToken);
-        Assert.False(unverifiedResult, "Unverified user should return false");
+        unverifiedResult.Should().BeFalse("Unverified user should return false");
 
         var verifiedResult = await service.IsEmailVerifiedAsync(verifiedUserId, TestCancellationToken);
-        Assert.True(verifiedResult, "Verified user should return true");
+        verifiedResult.Should().BeTrue("Verified user should return true");
     }
 
     [Fact]
@@ -328,7 +329,7 @@ public class EmailVerificationIntegrationTests : IAsyncLifetime
             .Where(v => v.UserId == userId && v.InvalidatedAt == null && v.VerifiedAt == null)
             .ToListAsync(TestCancellationToken);
 
-        Assert.Single(activeTokens);
+        activeTokens.Should().ContainSingle();
 
         // All previous tokens should be invalidated (via InvalidatedAt, not VerifiedAt)
         var allTokens = await _dbContext.EmailVerifications
@@ -336,8 +337,8 @@ public class EmailVerificationIntegrationTests : IAsyncLifetime
             .ToListAsync(TestCancellationToken);
 
         // Should have 3 tokens total, 2 invalidated, 1 active
-        Assert.Equal(3, allTokens.Count);
-        Assert.Equal(2, allTokens.Count(t => t.InvalidatedAt != null));
-        Assert.Equal(0, allTokens.Count(t => t.VerifiedAt != null)); // None verified yet
+        allTokens.Count.Should().Be(3);
+        allTokens.Count(t => t.InvalidatedAt != null).Should().Be(2);
+        allTokens.Count(t => t.VerifiedAt != null).Should().Be(0);
     }
 }

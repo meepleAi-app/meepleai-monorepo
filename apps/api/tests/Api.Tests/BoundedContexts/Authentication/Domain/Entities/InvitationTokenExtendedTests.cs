@@ -4,6 +4,7 @@ using Api.BoundedContexts.Authentication.Domain.ValueObjects;
 using Api.SharedKernel.Domain.ValueObjects;
 using Microsoft.Extensions.Time.Testing;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.Authentication.Domain.Entities;
 
@@ -41,8 +42,8 @@ public sealed class InvitationTokenExtendedTests
 
         // Assert
         var expectedExpiry = new DateTime(2026, 3, 31, 12, 0, 0, DateTimeKind.Utc);
-        Assert.Equal(expectedExpiry, token.ExpiresAt);
-        Assert.Equal(_timeProvider.GetUtcNow().UtcDateTime, token.CreatedAt);
+        token.ExpiresAt.Should().Be(expectedExpiry);
+        token.CreatedAt.Should().Be(_timeProvider.GetUtcNow().UtcDateTime);
     }
 
     [Fact]
@@ -59,7 +60,7 @@ public sealed class InvitationTokenExtendedTests
             TestTokenHash);
 
         // Assert
-        Assert.Equal(TestCustomMessage, token.CustomMessage);
+        token.CustomMessage.Should().Be(TestCustomMessage);
     }
 
     [Fact]
@@ -76,7 +77,7 @@ public sealed class InvitationTokenExtendedTests
             TestTokenHash);
 
         // Assert
-        Assert.Equal(TestPendingUserId, token.PendingUserId);
+        token.PendingUserId.Should().Be(TestPendingUserId);
     }
 
     [Fact]
@@ -93,11 +94,11 @@ public sealed class InvitationTokenExtendedTests
             TestTokenHash);
 
         // Assert
-        Assert.Equal(TestEmail.Value, token.Email);
-        Assert.Equal(TestRole.Value, token.Role);
-        Assert.Equal(TestTokenHash, token.TokenHash);
-        Assert.Equal(InvitationStatus.Pending, token.Status);
-        Assert.NotEqual(Guid.Empty, token.Id);
+        token.Email.Should().Be(TestEmail.Value);
+        token.Role.Should().Be(TestRole.Value);
+        token.TokenHash.Should().Be(TestTokenHash);
+        token.Status.Should().Be(InvitationStatus.Pending);
+        token.Id.Should().NotBe(Guid.Empty);
     }
 
     [Fact]
@@ -114,14 +115,14 @@ public sealed class InvitationTokenExtendedTests
             TestTokenHash);
 
         // Assert
-        Assert.Null(token.CustomMessage);
+        token.CustomMessage.Should().BeNull();
     }
 
     [Fact]
     public void Create_WithTimeProvider_EmptyTokenHash_Throws()
     {
         // Act & Assert
-        Assert.Throws<ArgumentException>(() =>
+        var act = () =>
             InvitationToken.Create(
                 TestEmail,
                 TestRole,
@@ -129,14 +130,15 @@ public sealed class InvitationTokenExtendedTests
                 TestCustomMessage,
                 expiresInDays: 7,
                 _timeProvider,
-                tokenHash: ""));
+                tokenHash: "");
+        act.Should().Throw<ArgumentException>();
     }
 
     [Fact]
     public void Create_WithTimeProvider_EmptyPendingUserId_Throws()
     {
         // Act & Assert
-        Assert.Throws<ArgumentException>(() =>
+        var act = () =>
             InvitationToken.Create(
                 TestEmail,
                 TestRole,
@@ -144,7 +146,8 @@ public sealed class InvitationTokenExtendedTests
                 TestCustomMessage,
                 expiresInDays: 7,
                 _timeProvider,
-                TestTokenHash));
+                TestTokenHash);
+        act.Should().Throw<ArgumentException>();
     }
 
     #endregion
@@ -170,10 +173,10 @@ public sealed class InvitationTokenExtendedTests
         token.AddGameSuggestion(gameId, GameSuggestionType.PreAdded);
 
         // Assert
-        Assert.Single(token.GameSuggestions);
-        Assert.Equal(gameId, token.GameSuggestions[0].GameId);
-        Assert.Equal(GameSuggestionType.PreAdded, token.GameSuggestions[0].Type);
-        Assert.Equal(token.Id, token.GameSuggestions[0].InvitationTokenId);
+        token.GameSuggestions.Should().ContainSingle();
+        token.GameSuggestions[0].GameId.Should().Be(gameId);
+        token.GameSuggestions[0].Type.Should().Be(GameSuggestionType.PreAdded);
+        token.GameSuggestions[0].InvitationTokenId.Should().Be(token.Id);
     }
 
     [Fact]
@@ -197,9 +200,9 @@ public sealed class InvitationTokenExtendedTests
         token.AddGameSuggestion(suggestedGameId, GameSuggestionType.Suggested);
 
         // Assert
-        Assert.Equal(2, token.GameSuggestions.Count);
-        Assert.Contains(token.GameSuggestions, s => s.GameId == preAddedGameId && s.Type == GameSuggestionType.PreAdded);
-        Assert.Contains(token.GameSuggestions, s => s.GameId == suggestedGameId && s.Type == GameSuggestionType.Suggested);
+        token.GameSuggestions.Count.Should().Be(2);
+        token.GameSuggestions.Should().Contain(s => s.GameId == preAddedGameId && s.Type == GameSuggestionType.PreAdded);
+        token.GameSuggestions.Should().Contain(s => s.GameId == suggestedGameId && s.Type == GameSuggestionType.Suggested);
     }
 
     [Fact]
@@ -216,7 +219,7 @@ public sealed class InvitationTokenExtendedTests
             TestTokenHash);
 
         // Assert
-        Assert.Empty(token.GameSuggestions);
+        token.GameSuggestions.Should().BeEmpty();
     }
 
     #endregion
@@ -230,12 +233,12 @@ public sealed class InvitationTokenExtendedTests
         var adminId = Guid.NewGuid();
         var token = InvitationToken.Create("test@example.com", "User", "hash123", adminId);
 
-        Assert.Equal("test@example.com", token.Email);
-        Assert.Equal("User", token.Role);
-        Assert.Equal(InvitationStatus.Pending, token.Status);
-        Assert.Null(token.CustomMessage);
-        Assert.Null(token.PendingUserId);
-        Assert.Empty(token.GameSuggestions);
+        token.Email.Should().Be("test@example.com");
+        token.Role.Should().Be("User");
+        token.Status.Should().Be(InvitationStatus.Pending);
+        token.CustomMessage.Should().BeNull();
+        token.PendingUserId.Should().BeNull();
+        token.GameSuggestions.Should().BeEmpty();
     }
 
     #endregion

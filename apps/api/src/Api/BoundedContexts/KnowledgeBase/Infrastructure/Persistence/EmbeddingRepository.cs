@@ -2,6 +2,8 @@ using Api.BoundedContexts.KnowledgeBase.Domain.Entities;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 using Api.Infrastructure;
+using Api.SharedKernel.Application.Services;
+using Api.SharedKernel.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 
 namespace Api.BoundedContexts.KnowledgeBase.Infrastructure.Persistence;
@@ -11,17 +13,17 @@ namespace Api.BoundedContexts.KnowledgeBase.Infrastructure.Persistence;
 /// Note: Embeddings are stored in Qdrant, not PostgreSQL.
 /// This repository coordinates between domain layer and Qdrant adapter.
 /// </summary>
-internal class EmbeddingRepository : IEmbeddingRepository
+internal class EmbeddingRepository : RepositoryBase, IEmbeddingRepository
 {
-    private readonly MeepleAiDbContext _context;
-    private readonly IQdrantVectorStoreAdapter _qdrantAdapter;
+    private readonly IVectorStoreAdapter _vectorStore;
 
     public EmbeddingRepository(
-        MeepleAiDbContext context,
-        IQdrantVectorStoreAdapter qdrantAdapter)
+        MeepleAiDbContext dbContext,
+        IDomainEventCollector eventCollector,
+        IVectorStoreAdapter vectorStore)
+        : base(dbContext, eventCollector)
     {
-        _context = context ?? throw new ArgumentNullException(nameof(context));
-        _qdrantAdapter = qdrantAdapter ?? throw new ArgumentNullException(nameof(qdrantAdapter));
+        _vectorStore = vectorStore ?? throw new ArgumentNullException(nameof(vectorStore));
     }
 
     public async Task<Embedding?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
@@ -62,7 +64,7 @@ internal class EmbeddingRepository : IEmbeddingRepository
     {
         // Delegate to Qdrant adapter for vector similarity search
         // Issue #2051: Pass documentIds for filtering
-        return await _qdrantAdapter.SearchAsync(
+        return await _vectorStore.SearchAsync(
             gameId,
             queryVector,
             topK,
@@ -76,7 +78,7 @@ internal class EmbeddingRepository : IEmbeddingRepository
         CancellationToken cancellationToken = default)
     {
         // Delegate to Qdrant adapter for batch insertion
-        await _qdrantAdapter.IndexBatchAsync(embeddings, cancellationToken).ConfigureAwait(false);
+        await _vectorStore.IndexBatchAsync(embeddings, cancellationToken).ConfigureAwait(false);
     }
 
     public async Task DeleteByVectorDocumentIdAsync(
@@ -84,7 +86,7 @@ internal class EmbeddingRepository : IEmbeddingRepository
         CancellationToken cancellationToken = default)
     {
         // Delegate to Qdrant adapter for deletion
-        await _qdrantAdapter.DeleteByVectorDocumentIdAsync(vectorDocumentId, cancellationToken).ConfigureAwait(false);
+        await _vectorStore.DeleteByVectorDocumentIdAsync(vectorDocumentId, cancellationToken).ConfigureAwait(false);
     }
 
     public async Task<int> GetCountByGameIdAsync(
@@ -92,7 +94,7 @@ internal class EmbeddingRepository : IEmbeddingRepository
         CancellationToken cancellationToken = default)
     {
         // Query from PostgreSQL VectorDocuments table
-        return await _context.VectorDocuments
+        return await DbContext.VectorDocuments
             .Where(vd => vd.GameId == gameId)
             .SumAsync(vd => vd.ChunkCount, cancellationToken).ConfigureAwait(false);
     }

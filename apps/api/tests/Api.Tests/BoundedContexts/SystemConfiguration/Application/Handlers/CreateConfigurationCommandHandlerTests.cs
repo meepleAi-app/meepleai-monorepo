@@ -1,9 +1,11 @@
 using Api.BoundedContexts.SystemConfiguration.Application.Commands;
-using Api.BoundedContexts.SystemConfiguration.Application.Handlers;
+using Api.BoundedContexts.SystemConfiguration.Application.Commands;
+using Api.BoundedContexts.SystemConfiguration.Application.Queries;
 using Api.BoundedContexts.SystemConfiguration.Domain.Repositories;
 using SystemConfig = Api.BoundedContexts.SystemConfiguration.Domain.Entities.SystemConfiguration;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Moq;
+using FluentAssertions;
 using Xunit;
 using Api.Tests.Constants;
 
@@ -49,14 +51,14 @@ public class CreateConfigurationCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal("max.connections", result.Key);
-        Assert.Equal("100", result.Value);
-        Assert.Equal("int", result.ValueType);
-        Assert.Equal("Database", result.Category);
-        Assert.True(result.RequiresRestart);
-        Assert.True(result.IsActive);
-        Assert.Equal(1, result.Version);
+        result.Should().NotBeNull();
+        result.Key.Should().Be("max.connections");
+        result.Value.Should().Be("100");
+        result.ValueType.Should().Be("int");
+        result.Category.Should().Be("Database");
+        result.RequiresRestart.Should().BeTrue();
+        result.IsActive.Should().BeTrue();
+        result.Version.Should().Be(1);
 
         _mockConfigRepository.Verify(
             r => r.AddAsync(
@@ -88,12 +90,12 @@ public class CreateConfigurationCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal("feature.enabled", result.Key);
-        Assert.Equal("true", result.Value);
-        Assert.Equal("bool", result.ValueType);
-        Assert.Null(result.Description);
-        Assert.Equal("Features", result.Category); // Category was passed explicitly in the command
+        result.Should().NotBeNull();
+        result.Key.Should().Be("feature.enabled");
+        result.Value.Should().Be("true");
+        result.ValueType.Should().Be("bool");
+        result.Description.Should().BeNull();
+        result.Category.Should().Be("Features");
     }
 
     [Fact]
@@ -116,8 +118,8 @@ public class CreateConfigurationCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.Equal("string", result.ValueType);
-        Assert.Equal("https://api.example.com", result.Value);
+        result.ValueType.Should().Be("string");
+        result.Value.Should().Be("https://api.example.com");
     }
 
     [Fact]
@@ -140,8 +142,8 @@ public class CreateConfigurationCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.Equal("Development", result.Environment);
-        Assert.False(result.RequiresRestart);
+        result.Environment.Should().Be("Development");
+        result.RequiresRestart.Should().BeFalse();
     }
 
     [Fact]
@@ -164,10 +166,10 @@ public class CreateConfigurationCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.True(result.IsActive); // Default is active
-        Assert.Equal(1, result.Version); // Initial version is 1
-        Assert.NotEqual(Guid.Empty, result.Id); // ID should be generated
-        Assert.True(result.CreatedAt <= DateTime.UtcNow);
+        result.IsActive.Should().BeTrue();
+        result.Version.Should().Be(1);
+        result.Id.Should().NotBe(Guid.Empty);
+        (result.CreatedAt <= DateTime.UtcNow).Should().BeTrue();
     }
 
     [Fact]

@@ -7,6 +7,7 @@ using Api.BoundedContexts.SharedGameCatalog.Infrastructure.Services;
 using Api.Tests.Constants;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.SharedGameCatalog.Infrastructure.Services;
 
@@ -47,7 +48,7 @@ public class BadgeEvaluatorTests
             TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.True(result);
+        result.Should().BeTrue();
         _shareRequestRepositoryMock.Verify(
             r => r.CountApprovedByUserAsync(userId, It.IsAny<CancellationToken>()),
             Times.Once);
@@ -71,7 +72,7 @@ public class BadgeEvaluatorTests
             TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.False(result);
+        result.Should().BeFalse();
     }
 
     [Fact]
@@ -92,7 +93,7 @@ public class BadgeEvaluatorTests
             TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.False(result); // First contribution is EXACTLY 1, not >= 1
+        result.Should().BeFalse(); // First contribution is EXACTLY 1, not >= 1
     }
 
     [Fact]
@@ -113,7 +114,7 @@ public class BadgeEvaluatorTests
             TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.True(result);
+        result.Should().BeTrue();
     }
 
     [Fact]
@@ -134,7 +135,7 @@ public class BadgeEvaluatorTests
             TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.False(result);
+        result.Should().BeFalse();
     }
 
     [Fact]
@@ -155,7 +156,7 @@ public class BadgeEvaluatorTests
             TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.True(result);
+        result.Should().BeTrue();
     }
 
     [Fact]
@@ -176,7 +177,7 @@ public class BadgeEvaluatorTests
             TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.False(result);
+        result.Should().BeFalse();
     }
 
     // NOTE: QualityStreak tests require ShareRequest objects which are sealed aggregates.
@@ -198,7 +199,7 @@ public class BadgeEvaluatorTests
             TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.False(result); // TopContributor is handled by scheduled job, not real-time evaluation
+        result.Should().BeFalse(); // TopContributor is handled by scheduled job, not real-time evaluation
     }
 
     [Fact]
@@ -224,8 +225,8 @@ public class BadgeEvaluatorTests
             TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.Single(eligibleBadges);
-        Assert.Equal("FIRST_CONTRIBUTION", eligibleBadges[0].Code);
+        eligibleBadges.Should().ContainSingle();
+        eligibleBadges[0].Code.Should().Be("FIRST_CONTRIBUTION");
     }
 
     #region Helper Methods

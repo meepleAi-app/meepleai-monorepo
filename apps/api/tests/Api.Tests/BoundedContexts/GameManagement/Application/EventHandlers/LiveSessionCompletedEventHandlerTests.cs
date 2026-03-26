@@ -9,6 +9,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Time.Testing;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.GameManagement.Application.EventHandlers;
 
@@ -94,8 +95,8 @@ public sealed class LiveSessionCompletedEventHandlerTests
         // Assert - audit log is created by base class
         var auditLog = dbContext.AuditLogs.FirstOrDefault(a =>
             a.Action.Contains("LiveSessionCompletedEvent"));
-        Assert.NotNull(auditLog);
-        Assert.Contains("LiveSessionCompleted_PlayRecordGenerated", auditLog.Details);
+        auditLog.Should().NotBeNull();
+        auditLog.Details.Should().Contain("LiveSessionCompleted_PlayRecordGenerated");
     }
 
     [Fact]
@@ -113,7 +114,7 @@ public sealed class LiveSessionCompletedEventHandlerTests
         // Assert
         var auditLog = dbContext.AuditLogs.FirstOrDefault(a =>
             a.Action.Contains("LiveSessionCompletedEvent"));
-        Assert.NotNull(auditLog);
+        auditLog.Should().NotBeNull();
     }
 
     [Fact]
@@ -132,7 +133,7 @@ public sealed class LiveSessionCompletedEventHandlerTests
             handler.Handle(@event, CancellationToken.None));
 
         // Assert
-        Assert.Null(exception);
+        exception.Should().BeNull();
     }
 
     [Fact]
@@ -157,10 +158,10 @@ public sealed class LiveSessionCompletedEventHandlerTests
         // Assert - audit log details contain expected metadata
         var auditLog = dbContext.AuditLogs.FirstOrDefault(a =>
             a.Action.Contains("LiveSessionCompletedEvent"));
-        Assert.NotNull(auditLog);
-        Assert.Contains(sessionId.ToString(), auditLog.Details);
-        Assert.Contains("\"PlayerCount\":3", auditLog.Details);
-        Assert.Contains("\"TotalTurns\":5", auditLog.Details);
+        auditLog.Should().NotBeNull();
+        auditLog.Details.Should().Contain(sessionId.ToString());
+        auditLog.Details.Should().Contain("\"PlayerCount\":3");
+        auditLog.Details.Should().Contain("\"TotalTurns\":5");
     }
 
     [Fact]
@@ -175,7 +176,7 @@ public sealed class LiveSessionCompletedEventHandlerTests
             handler.Handle(@event, CancellationToken.None));
 
         // Assert
-        Assert.Null(exception);
+        exception.Should().BeNull();
     }
 
     [Fact]
@@ -194,7 +195,7 @@ public sealed class LiveSessionCompletedEventHandlerTests
             handler.Handle(@event, CancellationToken.None));
 
         // Assert
-        Assert.Null(exception);
+        exception.Should().BeNull();
     }
 
     [Fact]
@@ -209,7 +210,7 @@ public sealed class LiveSessionCompletedEventHandlerTests
             handler.Handle(@event, CancellationToken.None));
 
         // Assert
-        Assert.Null(exception);
+        exception.Should().BeNull();
     }
 
     [Fact]
@@ -259,9 +260,10 @@ public sealed class LiveSessionCompletedEventHandlerTests
         var logger = new Mock<ILogger<LiveSessionCompletedEventHandler>>();
 
         // Act & Assert
-        Assert.Throws<ArgumentNullException>(() =>
+        var act = () =>
             new LiveSessionCompletedEventHandler(
-                null!, logger.Object, _timeProvider, _playRecordRepository.Object));
+                null!, logger.Object, _timeProvider, _playRecordRepository.Object);
+        act.Should().Throw<ArgumentNullException>();
     }
 
     [Fact]
@@ -272,9 +274,10 @@ public sealed class LiveSessionCompletedEventHandlerTests
         var logger = new Mock<ILogger<LiveSessionCompletedEventHandler>>();
 
         // Act & Assert
-        Assert.Throws<ArgumentNullException>(() =>
+        var act = () =>
             new LiveSessionCompletedEventHandler(
-                dbContext, logger.Object, null!, _playRecordRepository.Object));
+                dbContext, logger.Object, null!, _playRecordRepository.Object);
+        act.Should().Throw<ArgumentNullException>();
     }
 
     [Fact]
@@ -285,8 +288,9 @@ public sealed class LiveSessionCompletedEventHandlerTests
         var logger = new Mock<ILogger<LiveSessionCompletedEventHandler>>();
 
         // Act & Assert
-        Assert.Throws<ArgumentNullException>(() =>
+        var act = () =>
             new LiveSessionCompletedEventHandler(
-                dbContext, logger.Object, _timeProvider, null!));
+                dbContext, logger.Object, _timeProvider, null!);
+        act.Should().Throw<ArgumentNullException>();
     }
 }

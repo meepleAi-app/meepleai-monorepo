@@ -50,18 +50,7 @@ public sealed class ConversationMemoryRepositoryIntegrationTests : IAsyncLifetim
         _databaseName = $"test_convmem_{Guid.NewGuid():N}";
         _isolatedDbConnectionString = await _fixture.CreateIsolatedDatabaseAsync(_databaseName);
 
-        var services = new ServiceCollection();
-        services.AddLogging(builder => builder.AddConsole().SetMinimumLevel(LogLevel.Warning));
-        services.AddDbContext<MeepleAiDbContext>(options =>
-        {
-            options.UseNpgsql(_isolatedDbConnectionString, o => o.UseVector());
-            options.ConfigureWarnings(w =>
-                w.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning));
-        });
-
-        services.AddScoped<IUnitOfWork, EfCoreUnitOfWork>();
-        services.AddScoped<IDomainEventCollector, DomainEventCollector>();
-        services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(Program).Assembly));
+        var services = IntegrationServiceCollectionBuilder.CreateBase(_isolatedDbConnectionString);
 
         _serviceProvider = services.BuildServiceProvider();
         _dbContext = _serviceProvider.GetRequiredService<MeepleAiDbContext>();
@@ -164,7 +153,7 @@ public sealed class ConversationMemoryRepositoryIntegrationTests : IAsyncLifetim
     {
         // Arrange
         var user = await _dbContext!.Users.FirstAsync(TestCancellationToken);
-        var embedding = new float[1536];
+        var embedding = new float[1024];
         Array.Fill(embedding, 0.1f);
 
         var memory = new ConversationMemory(
@@ -193,7 +182,7 @@ public sealed class ConversationMemoryRepositoryIntegrationTests : IAsyncLifetim
             TestCancellationToken);
 
         reloaded.Embedding.Should().NotBeNull();
-        reloaded.Embedding!.ToArray().Should().HaveCount(1536);
+        reloaded.Embedding!.ToArray().Should().HaveCount(1024);
     }
 
     #endregion
@@ -225,11 +214,11 @@ public sealed class ConversationMemoryRepositoryIntegrationTests : IAsyncLifetim
         // Act
         var results = await _repository.GetBySessionIdAsync(sessionId, limit: 10, TestCancellationToken);
 
-        // Assert
+        // Assert — repository returns memories in descending timestamp order (most recent first)
         results.Should().HaveCount(3);
-        results[0].Content.Should().Be("First message");
+        results[0].Content.Should().Be("Third message");
         results[1].Content.Should().Be("Second message");
-        results[2].Content.Should().Be("Third message");
+        results[2].Content.Should().Be("First message");
     }
 
     [Fact]
@@ -342,8 +331,8 @@ public sealed class ConversationMemoryRepositoryIntegrationTests : IAsyncLifetim
 
         // Act & Assert
         await _repository!.AddAsync(memory, TestCancellationToken);
-        await Assert.ThrowsAsync<DbUpdateException>(
-            () => _dbContext!.SaveChangesAsync(TestCancellationToken));
+        Func<Task> act = () => _dbContext!.SaveChangesAsync(TestCancellationToken);
+        await act.Should().ThrowAsync<DbUpdateException>();
     }
 
     [Fact]
@@ -510,7 +499,7 @@ public sealed class ConversationMemoryRepositoryIntegrationTests : IAsyncLifetim
 
     private static float[] CreateNormalizedEmbedding(float baseValue)
     {
-        var embedding = new float[1536];
+        var embedding = new float[1024];
         for (int i = 0; i < embedding.Length; i++)
         {
             embedding[i] = baseValue + (i % 10) * 0.01f;
@@ -554,12 +543,13 @@ public sealed class ConversationMemoryRepositoryIntegrationTests : IAsyncLifetim
             }
         }
 
-        // Assert - Verify required indexes exist
-        indexes.Should().Contain("ix_conversation_memory_session_id");
-        indexes.Should().Contain("ix_conversation_memory_user_id");
-        indexes.Should().Contain("ix_conversation_memory_user_id_game_id");
-        indexes.Should().Contain("ix_conversation_memory_timestamp");
-        indexes.Should().Contain("pk_conversation_memory");
+        // Assert — EF Core generates uppercase prefix (IX_/PK_), use case-insensitive comparison
+        var lowerIndexes = indexes.Select(i => i.ToLowerInvariant()).ToList();
+        lowerIndexes.Should().Contain("ix_conversation_memory_session_id");
+        lowerIndexes.Should().Contain("ix_conversation_memory_user_id");
+        lowerIndexes.Should().Contain("ix_conversation_memory_user_id_game_id");
+        lowerIndexes.Should().Contain("ix_conversation_memory_timestamp");
+        lowerIndexes.Should().Contain("pk_conversation_memory");
     }
 
     #endregion

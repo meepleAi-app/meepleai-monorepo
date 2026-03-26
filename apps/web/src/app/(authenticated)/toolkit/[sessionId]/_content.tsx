@@ -35,6 +35,8 @@ import {
   WhiteboardTool,
 } from '@/components/session';
 import type { CounterToolConfig, Participant } from '@/components/session/types';
+import { DiceRoller as ToolkitDiceRoller } from '@/components/toolkit/DiceRoller';
+import { Timer as ToolkitTimer } from '@/components/toolkit/Timer';
 import { useCounterTool } from '@/lib/domain-hooks/useCounterTool';
 import { useDiceRoller } from '@/lib/domain-hooks/useDiceRoller';
 import { useGameToolkit } from '@/lib/domain-hooks/useGameToolkit';
@@ -93,7 +95,7 @@ function CounterToolContent({
 
 // ── CustomToolPlaceholder ─────────────────────────────────────────────────────
 
-/** Shown for custom tool types not yet fully implemented (card, timer, dice). */
+/** Shown for custom tool types not yet fully implemented (e.g. card). */
 function CustomToolPlaceholder({ label }: { label: string }) {
   return (
     <div className="flex flex-col items-center justify-center h-full gap-3 text-stone-400 dark:text-stone-500">
@@ -374,7 +376,17 @@ export function ActiveSessionPageContent() {
         }
       }
 
-      // Dice, card, timer — placeholder for now
+      // Custom dice → standalone DiceRoller widget
+      if (activeTool.startsWith('custom-dice-')) {
+        return <ToolkitDiceRoller />;
+      }
+
+      // Custom timer → standalone Timer widget
+      if (activeTool.startsWith('custom-timer-')) {
+        return <ToolkitTimer />;
+      }
+
+      // Card and other unimplemented types — placeholder
       const customTool = customTools.find(t => t.id === activeTool);
       if (customTool) {
         return <CustomToolPlaceholder label={customTool.label} />;

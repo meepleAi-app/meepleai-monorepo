@@ -3,13 +3,15 @@ using Api.BoundedContexts.GameManagement.Domain.Repositories;
 using Api.BoundedContexts.GameManagement.Domain.ValueObjects;
 using Api.BoundedContexts.KnowledgeBase.Application.Commands;
 using Api.BoundedContexts.KnowledgeBase.Application.DTOs;
-using Api.BoundedContexts.KnowledgeBase.Application.Handlers;
+using Api.BoundedContexts.KnowledgeBase.Application.Commands;
+using Api.BoundedContexts.KnowledgeBase.Application.Queries;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services;
 using Api.Middleware.Exceptions;
 using Api.Tests.Constants;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Handlers;
 
@@ -74,9 +76,9 @@ public class ValidateMoveCommandHandlerTests
         var result = await _handler.Handle(command, CancellationToken.None);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal("VALID", result.Decision);
-        Assert.True(result.Confidence > 0.7);
+        result.Should().NotBeNull();
+        result.Decision.Should().Be("VALID");
+        (result.Confidence > 0.7).Should().BeTrue();
 
         _mockArbitroService.Verify(
             s => s.ValidateMoveAsync(
@@ -106,8 +108,8 @@ public class ValidateMoveCommandHandlerTests
         };
 
         // Act & Assert
-        await Assert.ThrowsAsync<NotFoundException>(
-            () => _handler.Handle(command, CancellationToken.None));
+        Func<Task> act = () => _handler.Handle(command, CancellationToken.None);
+        await act.Should().ThrowAsync<NotFoundException>();
     }
 
     [Fact]
@@ -148,7 +150,7 @@ public class ValidateMoveCommandHandlerTests
         var result = await _handler.Handle(command, CancellationToken.None);
 
         // Assert
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
 
         _mockArbitroService.Verify(
             s => s.ValidateMoveAsync(
@@ -165,8 +167,8 @@ public class ValidateMoveCommandHandlerTests
     public async Task Handle_WithNullCommand_ThrowsArgumentNullException()
     {
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentNullException>(
-            () => _handler.Handle(null!, CancellationToken.None));
+        Func<Task> act = () => _handler.Handle(null!, CancellationToken.None);
+        await act.Should().ThrowAsync<ArgumentNullException>();
     }
 
     [Fact]
@@ -204,12 +206,12 @@ public class ValidateMoveCommandHandlerTests
         await _handler.Handle(command, CancellationToken.None);
 
         // Assert
-        Assert.NotNull(capturedMove);
-        Assert.Equal("Diana", capturedMove.PlayerName);
-        Assert.Equal("draw card", capturedMove.Action);
-        Assert.Equal("top of deck", capturedMove.Position);
-        Assert.NotNull(capturedMove.AdditionalContext);
-        Assert.Equal("main", capturedMove.AdditionalContext["deck"]);
+        capturedMove.Should().NotBeNull();
+        capturedMove.PlayerName.Should().Be("Diana");
+        capturedMove.Action.Should().Be("draw card");
+        capturedMove.Position.Should().Be("top of deck");
+        capturedMove.AdditionalContext.Should().NotBeNull();
+        capturedMove.AdditionalContext["deck"].Should().Be("main");
     }
 
     private static GameSession CreateMockGameSession(Guid sessionId, Guid gameId, string playerName)

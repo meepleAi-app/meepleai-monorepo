@@ -28,6 +28,7 @@ public class RagPromptAssemblyEnhancementsTests
     private readonly Mock<IQueryComplexityClassifier> _complexityClassifierMock;
     private readonly Mock<IRetrievalRelevanceEvaluator> _relevanceEvaluatorMock;
     private readonly Mock<IQueryExpander> _queryExpanderMock;
+    private readonly Mock<IGraphRetrievalService> _graphRetrievalMock;
     private readonly Mock<ILogger<RagPromptAssemblyService>> _loggerMock;
 
     private static readonly Guid TestGameId = Guid.NewGuid();
@@ -44,6 +45,7 @@ public class RagPromptAssemblyEnhancementsTests
         _complexityClassifierMock = new Mock<IQueryComplexityClassifier>();
         _relevanceEvaluatorMock = new Mock<IRetrievalRelevanceEvaluator>();
         _queryExpanderMock = new Mock<IQueryExpander>();
+        _graphRetrievalMock = new Mock<IGraphRetrievalService>();
         _loggerMock = new Mock<ILogger<RagPromptAssemblyService>>();
 
         // Default: query expansion returns empty (no expansions)
@@ -82,6 +84,7 @@ public class RagPromptAssemblyEnhancementsTests
             _complexityClassifierMock.Object,
             _relevanceEvaluatorMock.Object,
             _queryExpanderMock.Object,
+            _graphRetrievalMock.Object,
             _loggerMock.Object);
     }
 
@@ -256,6 +259,88 @@ public class RagPromptAssemblyEnhancementsTests
         _embeddingMock.Verify(
             e => e.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()),
             Times.Exactly(3));
+    }
+
+    #endregion
+
+    #region RAPTOR Retrieval
+
+    [Fact]
+    public async Task WhenRaptorRetrieval_AddsSummaryChunksToContext()
+    {
+        // Arrange: RAPTOR retrieval adds hierarchical summary chunks to the pipeline
+        var tier = UserTier.Premium;
+        _ragEnhancementMock
+            .Setup(r => r.GetActiveEnhancementsAsync(tier, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(RagEnhancement.RaptorRetrieval);
+
+        // Use duplicate FTS entries to push RRF scores above the 0.55 threshold
+        var docId = Guid.NewGuid();
+        _textSearchMock
+            .Setup(t => t.FullTextSearchAsync(
+                It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<int>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<TextChunkMatch>
+            {
+                new(docId, "Pawns move forward one square.", 0, 1, 0.90f),
+                new(docId, "Pawns move forward one square.", 0, 1, 0.85f), // duplicate boosts RRF above threshold
+            });
+        SetupRerankerPassthrough();
+
+        var raptorDocId = Guid.NewGuid();
+        _textSearchMock
+            .Setup(t => t.SearchRaptorSummariesAsync(
+                It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<int>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<TextChunkMatch>
+            {
+                new(raptorDocId, "Summary: Movement rules overview for all pieces.", 100, 1, 0.80f),
+                new(raptorDocId, "Summary: Pawn-specific rules including en passant.", 101, 2, 0.75f)
+            });
+
+        var service = CreateService();
+
+        // Act
+        var result = await service.AssemblePromptAsync(
+            "tutor", "Chess", null, "How do pawns move?",
+            TestGameId, null, tier, CancellationToken.None);
+
+        // Assert: RAPTOR search should be called
+        _textSearchMock.Verify(
+            t => t.SearchRaptorSummariesAsync(
+                It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<int>(),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+
+        // Result should contain chunks from both standard and RAPTOR retrieval
+        result.Citations.Should().NotBeEmpty();
+        result.SystemPrompt.Should().Contain("Movement rules overview");
+    }
+
+    [Fact]
+    public async Task WhenRaptorRetrieval_NotActive_DoesNotCallRaptorSearch()
+    {
+        // Arrange: No RAPTOR flag means SearchRaptorSummariesAsync should not be called
+        var tier = UserTier.Free;
+        _ragEnhancementMock
+            .Setup(r => r.GetActiveEnhancementsAsync(tier, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(RagEnhancement.None);
+
+        SetupTextSearchResults(CreateChunk("doc1", 0, 0.90f, "Pawns move forward."));
+        SetupRerankerPassthrough();
+        var service = CreateService();
+
+        // Act
+        await service.AssemblePromptAsync(
+            "tutor", "Chess", null, "How do pawns move?",
+            TestGameId, null, tier, CancellationToken.None);
+
+        // Assert: RAPTOR search should NOT be called
+        _textSearchMock.Verify(
+            t => t.SearchRaptorSummariesAsync(
+                It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<int>(),
+                It.IsAny<CancellationToken>()),
+            Times.Never);
     }
 
     #endregion

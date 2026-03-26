@@ -215,7 +215,13 @@ describe('useMediaQuery', () => {
       const mockQuery1 = createMatchMediaMock(false);
       const mockQuery2 = createMatchMediaMock(true);
 
-      const matchMediaSpy = vi.fn().mockReturnValueOnce(mockQuery1).mockReturnValueOnce(mockQuery2);
+      // useState initializer calls matchMedia once, useEffect calls it again,
+      // then rerender triggers another useState init + useEffect call
+      const matchMediaSpy = vi.fn((query: string) => {
+        if (query === '(min-width: 768px)') return mockQuery1;
+        if (query === '(min-width: 1024px)') return mockQuery2;
+        return mockQuery1;
+      });
 
       Object.defineProperty(window, 'matchMedia', {
         writable: true,
@@ -239,7 +245,11 @@ describe('useMediaQuery', () => {
       const mockQuery1 = createMatchMediaMock(false);
       const mockQuery2 = createMatchMediaMock(true);
 
-      const matchMediaSpy = vi.fn().mockReturnValueOnce(mockQuery1).mockReturnValueOnce(mockQuery2);
+      const matchMediaSpy = vi.fn((query: string) => {
+        if (query === '(min-width: 768px)') return mockQuery1;
+        if (query === '(min-width: 1024px)') return mockQuery2;
+        return mockQuery1;
+      });
 
       Object.defineProperty(window, 'matchMedia', {
         writable: true,

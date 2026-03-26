@@ -12,9 +12,6 @@ import * as React from 'react';
 
 import { Check, Copy, Link2, Link2Off, Share2 } from 'lucide-react';
 
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import {
   Dialog,
   DialogContent,
@@ -22,6 +19,9 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/overlays/dialog';
+import { Button } from '@/components/ui/primitives/button';
+import { Input } from '@/components/ui/primitives/input';
+import { Label } from '@/components/ui/primitives/label';
 import { useSharePlaylist, useRevokePlaylistShare } from '@/hooks/queries/usePlaylists';
 import type { GameNightPlaylistDto } from '@/lib/api/schemas/playlists.schemas';
 

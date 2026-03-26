@@ -26,7 +26,7 @@ import { ChatGameContext } from '../../meeple-card-features/ChatGameContext';
 import { ChatStatsDisplay } from '../../meeple-card-features/ChatStatsDisplay';
 import { ChatStatusBadge } from '../../meeple-card-features/ChatStatusBadge';
 import { ChatUnreadBadge } from '../../meeple-card-features/ChatUnreadBadge';
-import { DocumentStatusBadge } from '../../meeple-card-features/DocumentStatusBadge';
+import { KbStatusBadge } from '../../meeple-card-features/DocumentStatusBadge';
 import { DragHandle } from '../../meeple-card-features/DragHandle';
 import { SessionActionButtons } from '../../meeple-card-features/SessionActionButtons';
 import { SessionStatusBadge } from '../../meeple-card-features/SessionStatusBadge';
@@ -76,10 +76,10 @@ export const MeepleCardList = React.memo(function MeepleCardList(props: MeepleCa
     className,
     'data-testid': testId,
     showWishlist,
-    isWishlisted,
-    onWishlistToggle,
+    isWishlisted: _isWishlisted,
+    onWishlistToggle: _onWishlistToggle,
     quickActions,
-    userRole,
+    userRole: _userRole,
     status,
     showStatusIcon,
     selectable,
@@ -94,7 +94,7 @@ export const MeepleCardList = React.memo(function MeepleCardList(props: MeepleCa
     showInfoButton,
     entityId,
     infoHref,
-    infoTooltip,
+    infoTooltip: _infoTooltip,
     tags,
     maxVisibleTags = 3,
     showTagStrip,
@@ -129,15 +129,14 @@ export const MeepleCardList = React.memo(function MeepleCardList(props: MeepleCa
     firstLinkPreview,
     onLinksClick,
     kbCards,
+    stateLabel,
   } = props;
 
   const variant = 'list' as const;
   const coverSrc = entity === 'player' ? avatarUrl || imageUrl : imageUrl;
-  // eslint-disable-next-line security/detect-object-injection
   const color = customColor || entityColors[entity].hsl;
   const hasQuickActions = !!(quickActions && quickActions.length > 0);
   const showWishlistBtn = !!showWishlist && !hasQuickActions;
-  // eslint-disable-next-line security/detect-object-injection
   const drawerEntityType = DRAWER_ENTITY_TYPE_MAP[entity];
 
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -148,12 +147,17 @@ export const MeepleCardList = React.memo(function MeepleCardList(props: MeepleCa
     showWishlistBtn ||
     !!(showInfoButton && (entityId || infoHref));
 
-  const { isMobile, showMobileActions, setShowMobileActions, handleMobileClick, cardRef } =
-    useMobileInteraction({
-      hasMobileActions,
-      flippable,
-      onClick,
-    });
+  const {
+    isMobile,
+    showMobileActions: _showMobileActions,
+    setShowMobileActions: _setShowMobileActions,
+    handleMobileClick,
+    cardRef,
+  } = useMobileInteraction({
+    hasMobileActions,
+    flippable,
+    onClick,
+  });
 
   const isInteractive = !!onClick;
 
@@ -199,7 +203,6 @@ export const MeepleCardList = React.memo(function MeepleCardList(props: MeepleCa
         {
           '--mc-entity-color': `hsl(${color})`,
           outlineColor: `hsla(${color}, 0.4)`,
-          willChange: 'transform, box-shadow, outline',
           viewTransitionName: entityId ? `meeple-card-${entityId}` : undefined,
         } as React.CSSProperties
       }
@@ -216,7 +219,6 @@ export const MeepleCardList = React.memo(function MeepleCardList(props: MeepleCa
             }
           : undefined
       }
-      // eslint-disable-next-line security/detect-object-injection
       aria-label={`${entityColors[entity].name}: ${title}`}
       data-testid={testId || 'meeple-card'}
       data-entity={entity}
@@ -260,6 +262,8 @@ export const MeepleCardList = React.memo(function MeepleCardList(props: MeepleCa
         variant={variant}
         entity={entity}
         customColor={customColor}
+        showEntityType
+        stateLabel={stateLabel}
       />
 
       {/* Content area */}
@@ -269,21 +273,6 @@ export const MeepleCardList = React.memo(function MeepleCardList(props: MeepleCa
           entity={entity}
           customColor={customColor}
           actions={actions}
-          entityQuickActions={entityQuickActions}
-          quickActions={quickActions}
-          userRole={userRole}
-          showWishlistBtn={showWishlistBtn}
-          isWishlisted={isWishlisted}
-          onWishlistToggle={onWishlistToggle}
-          showInfoButton={showInfoButton}
-          entityId={entityId}
-          infoHref={infoHref}
-          infoTooltip={infoTooltip}
-          drawerEntityType={drawerEntityType}
-          onDrawerOpen={() => setDrawerOpen(true)}
-          testId={testId}
-          unreadCount={unreadCount}
-          hasQuickActions={hasQuickActions}
         />
 
         {/* Title */}
@@ -395,13 +384,13 @@ export const MeepleCardList = React.memo(function MeepleCardList(props: MeepleCa
 
         {entity === 'kb' && documentStatus && (
           <div className="flex items-center gap-1.5 mb-2">
-            <DocumentStatusBadge status={documentStatus} size="sm" />
+            <KbStatusBadge status={documentStatus} size="sm" />
           </div>
         )}
 
         {entity === 'game' && worstKbStatus && (
           <div className="flex items-center gap-1.5 mb-2" data-testid="meeple-card-kb-badge">
-            <DocumentStatusBadge status={worstKbStatus} size="sm" />
+            <KbStatusBadge status={worstKbStatus} size="sm" />
             <span className="text-[10px] text-muted-foreground font-medium">
               {kbCards!.length} KB
             </span>

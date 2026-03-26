@@ -8,6 +8,7 @@ using Api.BoundedContexts.KnowledgeBase.Domain.Services.Enhancements;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services.Reranking;
 using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 using Api.Models;
+using Api.Observability;
 using Api.Services;
 using Api.SharedKernel.Domain.ValueObjects;
 using Microsoft.Extensions.Logging;
@@ -31,6 +32,7 @@ internal sealed class RagPromptAssemblyService : IRagPromptAssemblyService
     private readonly IQueryComplexityClassifier _complexityClassifier;
     private readonly IRetrievalRelevanceEvaluator _relevanceEvaluator;
     private readonly IQueryExpander _queryExpander;
+    private readonly IGraphRetrievalService _graphRetrievalService;
     private readonly ILogger<RagPromptAssemblyService> _logger;
 
     // RAG search parameters
@@ -76,6 +78,7 @@ internal sealed class RagPromptAssemblyService : IRagPromptAssemblyService
         IQueryComplexityClassifier complexityClassifier,
         IRetrievalRelevanceEvaluator relevanceEvaluator,
         IQueryExpander queryExpander,
+        IGraphRetrievalService graphRetrievalService,
         ILogger<RagPromptAssemblyService> logger)
     {
         _embeddingService = embeddingService ?? throw new ArgumentNullException(nameof(embeddingService));
@@ -87,6 +90,7 @@ internal sealed class RagPromptAssemblyService : IRagPromptAssemblyService
         _complexityClassifier = complexityClassifier ?? throw new ArgumentNullException(nameof(complexityClassifier));
         _relevanceEvaluator = relevanceEvaluator ?? throw new ArgumentNullException(nameof(relevanceEvaluator));
         _queryExpander = queryExpander ?? throw new ArgumentNullException(nameof(queryExpander));
+        _graphRetrievalService = graphRetrievalService ?? throw new ArgumentNullException(nameof(graphRetrievalService));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -113,8 +117,9 @@ internal sealed class RagPromptAssemblyService : IRagPromptAssemblyService
         // Step 1: Retrieve RAG context (includes expansion boost), passing pre-resolved expansion IDs
         var (ragContext, citations) = await RetrieveRagContextAsync(userQuestion, gameId, expansionGameIds, userTier, ct, debugCollector).ConfigureAwait(false);
 
-        // Step 2: Build system prompt (persona + RAG chunks + expansion priority)
-        var systemPrompt = BuildSystemPrompt(agentTypology, gameTitle, gameState, ragContext, hasExpansions);
+        // Step 2: Build system prompt (persona + RAG chunks + expansion priority + copyright instruction)
+        var hasProtectedCitations = citations.Any(c => c.CopyrightTier == CopyrightTier.Protected);
+        var systemPrompt = BuildSystemPrompt(agentTypology, gameTitle, gameState, ragContext, hasExpansions, hasProtectedCitations);
 
         // Step 3: Build user prompt (chat history + current question)
         var userPrompt = BuildUserPrompt(userQuestion, chatThread);
@@ -168,11 +173,21 @@ internal sealed class RagPromptAssemblyService : IRagPromptAssemblyService
                     .GetActiveEnhancementsAsync(userTier, ct).ConfigureAwait(false);
             }
 
+            foreach (var flag in activeEnhancements.GetIndividualFlags())
+            {
+                MeepleAiMetrics.RagEnhancementActivations.Add(1,
+                    new KeyValuePair<string, object?>("enhancement", flag.ToString()));
+            }
+
             if (activeEnhancements.HasFlag(RagEnhancement.AdaptiveRouting))
             {
                 var complexity = await _complexityClassifier.ClassifyAsync(userQuestion, ct).ConfigureAwait(false);
                 _logger.LogInformation("Adaptive RAG: {Level} (confidence: {Confidence:F2})",
                     complexity.Level, complexity.Confidence);
+
+                MeepleAiMetrics.RagAdaptiveRoutingDecisions.Add(1,
+                    new KeyValuePair<string, object?>("level", complexity.Level.ToString()),
+                    new KeyValuePair<string, object?>("skipped_retrieval", (!complexity.RequiresRetrieval).ToString()));
 
                 debugCollector?.Add(StreamingEventType.DebugAdaptiveRouting,
                     new DebugAdaptiveRoutingData(
@@ -195,6 +210,7 @@ internal sealed class RagPromptAssemblyService : IRagPromptAssemblyService
                 var fusionStopwatch = System.Diagnostics.Stopwatch.StartNew();
                 queries = await _queryExpander.ExpandAsync(userQuestion, ct).ConfigureAwait(false);
                 fusionStopwatch.Stop();
+                MeepleAiMetrics.RagFusionQueryCount.Record(queries.Count);
                 _logger.LogInformation("RAG-Fusion: expanded to {Count} query variants", queries.Count);
 
                 if (queries.Count > 1)
@@ -240,6 +256,12 @@ internal sealed class RagPromptAssemblyService : IRagPromptAssemblyService
                 .OrderByDescending(r => r.Score)
                 .ToList();
 
+            MeepleAiMetrics.RagRetrievalChunkCount.Record(filteredChunks.Count);
+            if (filteredChunks.Count > 0)
+            {
+                MeepleAiMetrics.RagRetrievalAvgScore.Record(filteredChunks.Average(c => (double)c.Score));
+            }
+
             if (filteredChunks.Count == 0)
             {
                 _logger.LogInformation("No chunks above minScore {MinScore} for game {GameId}", DefaultMinScore, gameId);
@@ -265,6 +287,9 @@ internal sealed class RagPromptAssemblyService : IRagPromptAssemblyService
 
                 var evaluation = await _relevanceEvaluator
                     .EvaluateAsync(userQuestion, scoredChunks, ct).ConfigureAwait(false);
+
+                MeepleAiMetrics.RagCragVerdicts.Add(1,
+                    new KeyValuePair<string, object?>("verdict", evaluation.Verdict.ToString()));
 
                 if (evaluation.ShouldRequery)
                 {
@@ -311,25 +336,69 @@ internal sealed class RagPromptAssemblyService : IRagPromptAssemblyService
                         FinalChunkCount: filteredChunks.Count));
             }
 
+            // === RAPTOR: Multi-granularity retrieval ===
+            if (activeEnhancements.HasFlag(RagEnhancement.RaptorRetrieval))
+            {
+                var raptorChunks = await _textSearch.SearchRaptorSummariesAsync(
+                    gameId, userQuestion, topK: 3, ct).ConfigureAwait(false);
+
+                if (raptorChunks.Count > 0)
+                {
+                    foreach (var rc in raptorChunks)
+                    {
+                        filteredChunks.Add(new SearchResultItem
+                        {
+                            Score = rc.Rank * 1.1f, // Slight boost for RAPTOR summaries
+                            Text = rc.Content,
+                            PdfId = rc.PdfDocumentId.ToString(),
+                            Page = rc.PageNumber ?? 0,
+                            ChunkIndex = rc.ChunkIndex
+                        });
+                    }
+
+                    filteredChunks = filteredChunks
+                        .OrderByDescending(c => c.Score)
+                        .Take(RerankedTopK + 2) // Allow slightly more chunks when RAPTOR active
+                        .ToList();
+
+                    _logger.LogInformation("RAPTOR: added {Count} summary chunks to context", raptorChunks.Count);
+                }
+            }
+
             // Step 4: Sentence window expansion — include adjacent chunks for more context
             filteredChunks = await TrySentenceWindowExpansionAsync(filteredChunks, ct).ConfigureAwait(false);
 
-            // Format chunks and track citations
+            // Format chunks and track citations (with copyright annotation)
             var sb = new StringBuilder();
             foreach (var chunk in filteredChunks)
             {
-                sb.AppendLine(CultureInfo.InvariantCulture, $"[Source: Document {chunk.PdfId}, Page {chunk.Page}, Relevance: {chunk.Score:F2}]");
-                sb.AppendLine(chunk.Text);
-                sb.AppendLine("---");
-
-                citations.Add(new ChunkCitation(
+                var citation = new ChunkCitation(
                     DocumentId: chunk.PdfId,
                     PageNumber: chunk.Page,
                     RelevanceScore: chunk.Score,
-                    SnippetPreview: chunk.Text.Length > 120 ? string.Concat(chunk.Text.AsSpan(0, 117), "...") : chunk.Text));
+                    SnippetPreview: chunk.Text.Length > 120 ? string.Concat(chunk.Text.AsSpan(0, 117), "...") : chunk.Text);
+
+                sb.AppendLine(FormatChunkForPrompt(citation, chunk.Text));
+                citations.Add(citation);
             }
 
-            return (sb.ToString().TrimEnd(), citations);
+            var ragContext = sb.ToString().TrimEnd();
+
+            // === Graph RAG: Inject entity context ===
+            if (activeEnhancements.HasFlag(RagEnhancement.GraphTraversal))
+            {
+                var graphContext = await _graphRetrievalService
+                    .GetEntityContextAsync(gameId, maxRelations: 15, ct).ConfigureAwait(false);
+
+                if (!string.IsNullOrEmpty(graphContext))
+                {
+                    ragContext = string.Concat(ragContext, "\n", graphContext);
+                    _logger.LogInformation("Graph RAG: injected {Length} chars of entity context for game {GameId}",
+                        graphContext.Length, gameId);
+                }
+            }
+
+            return (ragContext, citations);
         }
         catch (Exception ex)
         {
@@ -584,7 +653,7 @@ internal sealed class RagPromptAssemblyService : IRagPromptAssemblyService
 
     private static string BuildSystemPrompt(
         string agentTypology, string gameTitle, GameState? gameState, string ragContext,
-        bool hasExpansions = false)
+        bool hasExpansions = false, bool hasProtectedCitations = false)
     {
         var sb = new StringBuilder();
 
@@ -623,6 +692,14 @@ internal sealed class RagPromptAssemblyService : IRagPromptAssemblyService
         sb.AppendLine("3. Explain how the rule applies to the user's specific situation.");
         sb.AppendLine("4. State your conclusion clearly.");
         sb.AppendLine();
+
+        // Copyright paraphrase instruction (when Protected citations exist)
+        if (hasProtectedCitations)
+        {
+            sb.AppendLine("## Copyright Notice");
+            sb.AppendLine(GetCopyrightInstruction("it"));
+            sb.AppendLine();
+        }
 
         // RAG context
         if (!string.IsNullOrWhiteSpace(ragContext))
@@ -718,6 +795,21 @@ internal sealed class RagPromptAssemblyService : IRagPromptAssemblyService
         sb.AppendLine(userQuestion);
 
         return sb.ToString();
+    }
+
+    /// <summary>Formats a chunk with copyright annotation for the LLM system prompt.</summary>
+    public static string FormatChunkForPrompt(ChunkCitation citation, string chunkText)
+    {
+        var tierLabel = citation.CopyrightTier == CopyrightTier.Full ? "FULL" : "PROTECTED";
+        return $"[Source: Document {citation.DocumentId}, Page {citation.PageNumber}, Relevance: {citation.RelevanceScore:F2}, Copyright: {tierLabel}]\n{chunkText}\n---";
+    }
+
+    /// <summary>Returns the copyright paraphrase instruction localized to agent language.</summary>
+    public static string GetCopyrightInstruction(string language)
+    {
+        return language.StartsWith("it", StringComparison.OrdinalIgnoreCase)
+            ? "Per le fonti marcate PROTECTED, riformula il contenuto con parole tue senza citare verbatim. Usa il marker [ref:documentId:pageNum] prima di ogni riformulazione. Per le fonti FULL, puoi citare direttamente."
+            : "For sources marked PROTECTED, paraphrase in your own words without verbatim citation. Use the marker [ref:documentId:pageNum] before each paraphrase. For FULL sources, you may cite directly.";
     }
 
     private static int EstimateTokens(string text)

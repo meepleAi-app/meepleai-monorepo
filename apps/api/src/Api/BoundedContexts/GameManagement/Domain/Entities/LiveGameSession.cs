@@ -2,6 +2,7 @@ using System.Security.Cryptography;
 using System.Text.Json;
 using Api.BoundedContexts.GameManagement.Domain.Enums;
 using Api.BoundedContexts.GameManagement.Domain.Events;
+using Api.BoundedContexts.GameManagement.Domain.Models;
 using Api.BoundedContexts.GameManagement.Domain.ValueObjects;
 using Api.SharedKernel.Domain.Entities;
 using Api.Middleware.Exceptions;
@@ -28,6 +29,7 @@ internal sealed class LiveGameSession : AggregateRoot<Guid>
     private readonly List<RoundScore> _roundScores = new();
     private readonly List<TurnRecord> _turnRecords = new();
     private readonly List<RuleDisputeEntry> _disputes = new();
+    private SetupChecklistData? _setupChecklist;
 
 #pragma warning disable CS8618
     private LiveGameSession() : base()
@@ -71,6 +73,7 @@ internal sealed class LiveGameSession : AggregateRoot<Guid>
     public IReadOnlyList<RoundScore> RoundScores => _roundScores.AsReadOnly();
     public IReadOnlyList<TurnRecord> TurnRecords => _turnRecords.AsReadOnly();
     public IReadOnlyList<RuleDisputeEntry> Disputes => _disputes.AsReadOnly();
+    public SetupChecklistData? SetupChecklist => _setupChecklist;
 
     // === Computed Properties ===
 
@@ -596,6 +599,24 @@ internal sealed class LiveGameSession : AggregateRoot<Guid>
     {
         ArgumentNullException.ThrowIfNull(dispute);
         _disputes.Add(dispute);
+    }
+
+    // === Setup Checklist ===
+
+    /// <summary>
+    /// Sets the setup checklist for the session (initial assignment).
+    /// </summary>
+    public void SetSetupChecklist(SetupChecklistData checklist)
+    {
+        _setupChecklist = checklist ?? throw new ArgumentNullException(nameof(checklist));
+    }
+
+    /// <summary>
+    /// Updates the setup checklist for the session.
+    /// </summary>
+    public void UpdateSetupChecklist(SetupChecklistData checklist)
+    {
+        _setupChecklist = checklist ?? throw new ArgumentNullException(nameof(checklist));
     }
 
     // === State & Notes ===

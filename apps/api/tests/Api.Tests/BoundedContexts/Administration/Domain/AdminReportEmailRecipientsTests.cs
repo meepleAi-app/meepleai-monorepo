@@ -1,6 +1,7 @@
 using Api.BoundedContexts.Administration.Domain.Entities;
 using Api.BoundedContexts.Administration.Domain.ValueObjects;
 using Xunit;
+using FluentAssertions;
 using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.Administration.Domain;
@@ -27,8 +28,8 @@ public sealed class AdminReportEmailRecipientsTests
             emailRecipients: null);
 
         // Assert
-        Assert.NotNull(report.EmailRecipients);
-        Assert.Empty(report.EmailRecipients);
+        report.EmailRecipients.Should().NotBeNull();
+        report.EmailRecipients.Should().BeEmpty();
     }
 
     [Fact]
@@ -49,9 +50,9 @@ public sealed class AdminReportEmailRecipientsTests
             emailRecipients: recipients);
 
         // Assert
-        Assert.Equal(2, report.EmailRecipients.Count);
-        Assert.Contains("user1@test.com", report.EmailRecipients);
-        Assert.Contains("user2@test.com", report.EmailRecipients);
+        report.EmailRecipients.Count.Should().Be(2);
+        report.EmailRecipients.Should().Contain("user1@test.com");
+        report.EmailRecipients.Should().Contain("user2@test.com");
     }
 
     [Fact]
@@ -61,7 +62,7 @@ public sealed class AdminReportEmailRecipientsTests
         var recipients = new List<string> { "invalid-email" };
 
         // Act & Assert
-        var ex = Assert.Throws<ArgumentException>(() =>
+        var act = () =>
             AdminReport.Create(
                 name: "Test Report",
                 description: "Test Description",
@@ -70,9 +71,10 @@ public sealed class AdminReportEmailRecipientsTests
                 parameters: null,
                 scheduleExpression: "0 0 * * *",
                 createdBy: "admin@test.com",
-                emailRecipients: recipients));
+                emailRecipients: recipients);
+        var ex = act.Should().Throw<ArgumentException>().Which;
 
-        Assert.Contains("Invalid email address", ex.Message);
+        ex.Message.Should().Contain("Invalid email address");
     }
 
     [Fact]
@@ -84,7 +86,7 @@ public sealed class AdminReportEmailRecipientsTests
             .ToList();
 
         // Act & Assert
-        var ex = Assert.Throws<ArgumentException>(() =>
+        var act = () =>
             AdminReport.Create(
                 name: "Test Report",
                 description: "Test Description",
@@ -93,9 +95,10 @@ public sealed class AdminReportEmailRecipientsTests
                 parameters: null,
                 scheduleExpression: "0 0 * * *",
                 createdBy: "admin@test.com",
-                emailRecipients: recipients));
+                emailRecipients: recipients);
+        var ex = act.Should().Throw<ArgumentException>().Which;
 
-        Assert.Contains("Maximum 10 email recipients allowed", ex.Message);
+        ex.Message.Should().Contain("Maximum 10 email recipients allowed");
     }
 
     [Fact]
@@ -122,9 +125,9 @@ public sealed class AdminReportEmailRecipientsTests
             emailRecipients: recipients);
 
         // Assert
-        Assert.Equal(2, report.EmailRecipients.Count);
-        Assert.Contains("user1@test.com", report.EmailRecipients);
-        Assert.Contains("user2@test.com", report.EmailRecipients);
+        report.EmailRecipients.Count.Should().Be(2);
+        report.EmailRecipients.Should().Contain("user1@test.com");
+        report.EmailRecipients.Should().Contain("user2@test.com");
     }
 
     [Fact]
@@ -149,12 +152,12 @@ public sealed class AdminReportEmailRecipientsTests
             emailRecipients: recipients);
 
         // Assert
-        Assert.Equal(2, report.EmailRecipients.Count);
-        Assert.All(report.EmailRecipients, email =>
+        report.EmailRecipients.Count.Should().Be(2);
+        report.EmailRecipients.Should().AllSatisfy(email =>
         {
-            Assert.DoesNotContain(" ", email);
-            Assert.DoesNotContain("\t", email);
-            Assert.DoesNotContain("\n", email);
+            email.Should().NotContain(" ");
+            email.Should().NotContain("\t");
+            email.Should().NotContain("\n");
         });
     }
 
@@ -178,10 +181,10 @@ public sealed class AdminReportEmailRecipientsTests
         var updatedReport = report.WithEmailRecipients(newRecipients);
 
         // Assert
-        Assert.Equal(2, updatedReport.EmailRecipients.Count);
-        Assert.Contains("new1@test.com", updatedReport.EmailRecipients);
-        Assert.Contains("new2@test.com", updatedReport.EmailRecipients);
-        Assert.DoesNotContain("old@test.com", updatedReport.EmailRecipients);
+        updatedReport.EmailRecipients.Count.Should().Be(2);
+        updatedReport.EmailRecipients.Should().Contain("new1@test.com");
+        updatedReport.EmailRecipients.Should().Contain("new2@test.com");
+        updatedReport.EmailRecipients.Should().NotContain("old@test.com");
     }
 
     [Theory]
@@ -203,8 +206,8 @@ public sealed class AdminReportEmailRecipientsTests
             emailRecipients: new List<string> { email });
 
         // Assert
-        Assert.Single(report.EmailRecipients);
-        Assert.Contains(email.ToLowerInvariant(), report.EmailRecipients);
+        report.EmailRecipients.Should().ContainSingle();
+        report.EmailRecipients.Should().Contain(email.ToLowerInvariant());
     }
 
     [Theory]
@@ -231,11 +234,11 @@ public sealed class AdminReportEmailRecipientsTests
                 scheduleExpression: "0 0 * * *",
                 createdBy: "admin@test.com",
                 emailRecipients: recipients);
-            Assert.Empty(report.EmailRecipients);
+            report.EmailRecipients.Should().BeEmpty();
         }
         else
         {
-            Assert.Throws<ArgumentException>(() =>
+            var act = () =>
                 AdminReport.Create(
                     name: "Test Report",
                     description: "Test Description",
@@ -244,7 +247,8 @@ public sealed class AdminReportEmailRecipientsTests
                     parameters: null,
                     scheduleExpression: "0 0 * * *",
                     createdBy: "admin@test.com",
-                    emailRecipients: recipients));
+                    emailRecipients: recipients);
+            act.Should().Throw<ArgumentException>();
         }
     }
 }

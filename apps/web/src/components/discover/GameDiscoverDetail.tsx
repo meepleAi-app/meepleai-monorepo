@@ -26,7 +26,7 @@ export function GameDiscoverDetail({ game }: GameDiscoverDetailProps) {
     <div className="space-y-8">
       <GameDiscoverHero game={game} />
       {analyses.length > 0 && <AnalysisResultsPanel analyses={analyses} />}
-      <GameRulesSection rules={game.rules} bggId={game.bggId} gameTitle={game.title} />
+      <GameRulesSection rules={game.rules} gameTitle={game.title} />
     </div>
   );
 }

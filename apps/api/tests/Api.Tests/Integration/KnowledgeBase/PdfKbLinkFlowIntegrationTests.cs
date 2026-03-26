@@ -55,20 +55,9 @@ public sealed class PdfKbLinkFlowIntegrationTests : IAsyncLifetime
         _databaseName = $"test_pdfkblink_{Guid.NewGuid():N}";
         _isolatedDbConnectionString = await _fixture.CreateIsolatedDatabaseAsync(_databaseName);
 
-        var services = new ServiceCollection();
-        services.AddLogging(builder => builder.AddConsole().SetMinimumLevel(LogLevel.Warning));
-        services.AddDbContext<MeepleAiDbContext>(options =>
-        {
-            options.UseNpgsql(_isolatedDbConnectionString, o => o.UseVector());
-            options.ConfigureWarnings(w =>
-                w.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning));
-        });
-
+        var services = IntegrationServiceCollectionBuilder.CreateBase(_isolatedDbConnectionString);
         services.AddScoped<IChatThreadRepository, ChatThreadRepository>();
         services.AddScoped<IUserRepository, UserRepository>();
-        services.AddScoped<IUnitOfWork, EfCoreUnitOfWork>();
-        services.AddScoped<IDomainEventCollector, DomainEventCollector>();
-        services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(Program).Assembly));
 
         _serviceProvider = services.BuildServiceProvider();
         _dbContext = _serviceProvider.GetRequiredService<MeepleAiDbContext>();
@@ -87,6 +76,22 @@ public sealed class PdfKbLinkFlowIntegrationTests : IAsyncLifetime
                 await Task.Delay(TestConstants.Timing.RetryDelay, TestCancellationToken);
             }
         }
+
+        // Seed required parent entities for FK constraints
+        _dbContext.Users.Add(new Api.Infrastructure.Entities.UserEntity
+        {
+            Id = TestUserId,
+            Email = "test-pdfkb@example.com",
+            PasswordHash = "test-hash",
+            CreatedAt = DateTime.UtcNow
+        });
+        _dbContext.Games.Add(new Api.Infrastructure.Entities.GameEntity
+        {
+            Id = TestGameId,
+            Name = "Test Game for KB Link",
+            CreatedAt = DateTime.UtcNow
+        });
+        await _dbContext.SaveChangesAsync();
     }
 
     public async ValueTask DisposeAsync()

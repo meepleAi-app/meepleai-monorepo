@@ -30,8 +30,8 @@ import {
 import { useRouter } from 'next/navigation';
 
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/primitives/button';
+import { Input } from '@/components/ui/primitives/input';
 import { api } from '@/lib/api';
 import type {
   PlayerColor,

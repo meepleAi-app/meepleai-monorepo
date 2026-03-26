@@ -177,6 +177,47 @@ internal sealed class SecretLoader
     public IReadOnlyDictionary<string, string> GetLoadedValues() => _loadedValues;
 
     /// <summary>
+    /// Get only secret values that are NOT already present in the existing configuration snapshot.
+    /// This prevents file-based secrets from overriding env_file / environment values
+    /// that were already set by Docker Compose or the hosting environment.
+    /// </summary>
+    /// <remarks>
+    /// Only checks the IConfiguration snapshot (captured at CreateBuilder time), NOT live
+    /// Environment.GetEnvironmentVariable(). This is important because ApplyAsEnvironmentVariables()
+    /// may have already set env vars for NEW values — checking live env vars would incorrectly
+    /// skip those values, leaving them absent from IConfiguration.
+    /// </remarks>
+    /// <param name="existingConfiguration">Current IConfiguration snapshot to check against</param>
+    /// <returns>Dictionary of secret values that are new (not already in the configuration snapshot)</returns>
+    public IReadOnlyDictionary<string, string> GetNewValues(IConfiguration existingConfiguration)
+    {
+        var newValues = new Dictionary<string, string>(StringComparer.Ordinal);
+        var skipped = 0;
+
+        foreach (var (key, value) in _loadedValues)
+        {
+            // Only check the IConfiguration snapshot (env vars captured at CreateBuilder time).
+            // This reflects Docker env_file and environment: values — the authoritative source.
+            var existingValue = existingConfiguration[key];
+
+            if (!string.IsNullOrEmpty(existingValue))
+            {
+                _logger.LogDebug("Secret '{Key}' already in configuration snapshot, not overriding", key);
+                skipped++;
+                continue;
+            }
+
+            newValues[key] = value;
+        }
+
+        _logger.LogInformation(
+            "Secret values for IConfiguration: {New} new, {Skipped} skipped (already configured)",
+            newValues.Count, skipped);
+
+        return newValues;
+    }
+
+    /// <summary>
     /// Process a single secret file
     /// </summary>
     private void ProcessSecretFile(string secretName, SecretSpec secretSpec, SecretValidationResult result)

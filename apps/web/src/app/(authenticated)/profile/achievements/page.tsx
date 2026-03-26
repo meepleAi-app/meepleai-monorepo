@@ -34,7 +34,7 @@ type AchievementFilter = 'all' | 'earned' | 'locked' | 'in-progress';
 
 function getStatus(a: AchievementDto): 'earned' | 'locked' | 'in-progress' {
   if (a.isUnlocked) return 'earned';
-  if (a.progress != null && a.progress > 0) return 'in-progress';
+  if (a.progress !== null && a.progress > 0) return 'in-progress';
   return 'locked';
 }
 
@@ -154,7 +154,7 @@ export default function AchievementsPage() {
 
                 {/* Progress bar */}
                 {status === 'in-progress' &&
-                  achievement.progress != null &&
+                  achievement.progress !== null &&
                   achievement.threshold > 0 && (
                     <div className="mb-3">
                       <div className="flex justify-between text-xs mb-1">

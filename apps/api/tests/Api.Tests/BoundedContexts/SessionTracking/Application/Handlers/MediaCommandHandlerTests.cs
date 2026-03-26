@@ -1,5 +1,6 @@
 using Api.BoundedContexts.SessionTracking.Application.Commands;
-using Api.BoundedContexts.SessionTracking.Application.Handlers;
+using Api.BoundedContexts.SessionTracking.Application.Commands;
+using Api.BoundedContexts.SessionTracking.Application.Queries;
 using Api.BoundedContexts.SessionTracking.Domain.Entities;
 using Api.BoundedContexts.SessionTracking.Domain.Repositories;
 using Api.Middleware.Exceptions;
@@ -7,6 +8,7 @@ using Api.Tests.Constants;
 using MediatR;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.SessionTracking.Application.Handlers;
 
@@ -71,7 +73,7 @@ public class UploadSessionMediaCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotEqual(Guid.Empty, result.MediaId);
+        result.MediaId.Should().NotBe(Guid.Empty);
         _mockMediaRepo.Verify(r => r.AddAsync(It.IsAny<SessionMedia>(), It.IsAny<CancellationToken>()), Times.Once);
         _mockMediaRepo.Verify(r => r.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
         _mockMediator.Verify(m => m.Publish(It.IsAny<INotification>(), It.IsAny<CancellationToken>()), Times.Once);
@@ -89,8 +91,8 @@ public class UploadSessionMediaCommandHandlerTests
             sessionId, Guid.NewGuid(), "f", "f.jpg", "image/jpeg", 100, "Photo", null, null, null);
 
         // Act & Assert
-        await Assert.ThrowsAsync<NotFoundException>(
-            () => _handler.Handle(command, TestContext.Current.CancellationToken));
+        var act = () => _handler.Handle(command, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<NotFoundException>();
 
         _mockMediaRepo.Verify(r => r.AddAsync(It.IsAny<SessionMedia>(), It.IsAny<CancellationToken>()), Times.Never);
     }
@@ -111,8 +113,8 @@ public class UploadSessionMediaCommandHandlerTests
             sessionId, participantId, "f", "f.jpg", "image/jpeg", 100, "Photo", null, null, null);
 
         // Act & Assert
-        await Assert.ThrowsAsync<NotFoundException>(
-            () => _handler.Handle(command, TestContext.Current.CancellationToken));
+        var act2 = () => _handler.Handle(command, TestContext.Current.CancellationToken);
+        await act2.Should().ThrowAsync<NotFoundException>();
 
         _mockMediaRepo.Verify(r => r.AddAsync(It.IsAny<SessionMedia>(), It.IsAny<CancellationToken>()), Times.Never);
     }
@@ -148,7 +150,7 @@ public class UpdateMediaCaptionCommandHandlerTests
         await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.Equal("new caption", media.Caption);
+        media.Caption.Should().Be("new caption");
         _mockMediaRepo.Verify(r => r.UpdateAsync(media, It.IsAny<CancellationToken>()), Times.Once);
         _mockMediaRepo.Verify(r => r.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
@@ -162,8 +164,8 @@ public class UpdateMediaCaptionCommandHandlerTests
 
         var command = new UpdateMediaCaptionCommand(mediaId, Guid.NewGuid(), "cap");
 
-        await Assert.ThrowsAsync<NotFoundException>(
-            () => _handler.Handle(command, TestContext.Current.CancellationToken));
+        var act3 = () => _handler.Handle(command, TestContext.Current.CancellationToken);
+        await act3.Should().ThrowAsync<NotFoundException>();
     }
 
     [Fact]
@@ -178,8 +180,8 @@ public class UpdateMediaCaptionCommandHandlerTests
 
         var command = new UpdateMediaCaptionCommand(media.Id, Guid.NewGuid(), "hacked caption");
 
-        await Assert.ThrowsAsync<ForbiddenException>(
-            () => _handler.Handle(command, TestContext.Current.CancellationToken));
+        var act4 = () => _handler.Handle(command, TestContext.Current.CancellationToken);
+        await act4.Should().ThrowAsync<ForbiddenException>();
 
         _mockMediaRepo.Verify(r => r.UpdateAsync(It.IsAny<SessionMedia>(), It.IsAny<CancellationToken>()), Times.Never);
     }
@@ -217,7 +219,7 @@ public class DeleteSessionMediaCommandHandlerTests
         await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.True(media.IsDeleted);
+        media.IsDeleted.Should().BeTrue();
         _mockMediaRepo.Verify(r => r.UpdateAsync(media, It.IsAny<CancellationToken>()), Times.Once);
         _mockMediaRepo.Verify(r => r.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
         _mockMediator.Verify(m => m.Publish(It.IsAny<INotification>(), It.IsAny<CancellationToken>()), Times.Once);
@@ -232,8 +234,8 @@ public class DeleteSessionMediaCommandHandlerTests
 
         var command = new DeleteSessionMediaCommand(mediaId, Guid.NewGuid());
 
-        await Assert.ThrowsAsync<NotFoundException>(
-            () => _handler.Handle(command, TestContext.Current.CancellationToken));
+        var act5 = () => _handler.Handle(command, TestContext.Current.CancellationToken);
+        await act5.Should().ThrowAsync<NotFoundException>();
     }
 
     [Fact]
@@ -248,8 +250,8 @@ public class DeleteSessionMediaCommandHandlerTests
 
         var command = new DeleteSessionMediaCommand(media.Id, Guid.NewGuid());
 
-        await Assert.ThrowsAsync<ForbiddenException>(
-            () => _handler.Handle(command, TestContext.Current.CancellationToken));
+        var act6 = () => _handler.Handle(command, TestContext.Current.CancellationToken);
+        await act6.Should().ThrowAsync<ForbiddenException>();
 
         _mockMediaRepo.Verify(r => r.UpdateAsync(It.IsAny<SessionMedia>(), It.IsAny<CancellationToken>()), Times.Never);
     }

@@ -9,12 +9,12 @@ test.describe('Add Game via BGG', () => {
   });
 
   test('should search and add a game via BGG', async ({ page }) => {
-    // 1. Navigate to Games page
-    await page.goto('/games');
+    // 1. Navigate to Library page
+    await page.goto('/library');
 
     // 2. Click "Aggiungi Gioco"
     await page.click('text=Aggiungi Gioco');
-    await expect(page).toHaveURL(/\/games\/add/);
+    await expect(page).toHaveURL(/\/library/);
 
     // 3. Search for a common game (real BGG API will return results)
     await page.fill('input[placeholder="Cerca su BoardGameGeek..."]', 'Catan');
@@ -34,15 +34,15 @@ test.describe('Add Game via BGG', () => {
       .getByRole('button', { name: /Aggiungi/i })
       .click();
 
-    // 6. Verify redirection to games page and success feedback
-    await expect(page).toHaveURL(/\/(games)$/, { timeout: 10000 });
+    // 6. Verify redirection to library page and success feedback
+    await expect(page).toHaveURL(/\/(library)$/, { timeout: 10000 });
     await expect(page.locator('text=/Gioco aggiunto|successo|added/i')).toBeVisible({
       timeout: 5000,
     });
   });
 
   test('should show empty state when no results found', async ({ page }) => {
-    await page.goto('/games/add');
+    await page.goto('/library');
 
     // Search for non-existent game (real BGG API will return no results)
     await page.fill('input[placeholder="Cerca su BoardGameGeek..."]', 'XYZ123NonExistentGame999');

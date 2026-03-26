@@ -6,6 +6,7 @@ using Api.Infrastructure;
 using Api.Tests.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using Xunit;
+using FluentAssertions;
 using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.Authentication.Infrastructure.Persistence;
@@ -40,10 +41,10 @@ public class UserRepositoryTests : SharedDatabaseTestBase<UserRepository>
         var result = await Repository.GetByIdAsync(user.Id, TestCancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal(user.Id, result.Id);
-        Assert.Equal("test@example.com", result.Email.Value);
-        Assert.Equal(Role.User, result.Role);
+        result.Should().NotBeNull();
+        result.Id.Should().Be(user.Id);
+        result.Email.Value.Should().Be("test@example.com");
+        result.Role.Should().Be(Role.User);
     }
 
     [Fact]
@@ -57,7 +58,7 @@ public class UserRepositoryTests : SharedDatabaseTestBase<UserRepository>
         var result = await Repository.GetByIdAsync(nonExistentId, TestCancellationToken);
 
         // Assert
-        Assert.Null(result);
+        result.Should().BeNull();
     }
     [Fact]
     public async Task GetByEmailAsync_ExistingUser_ReturnsUser()
@@ -74,9 +75,9 @@ public class UserRepositoryTests : SharedDatabaseTestBase<UserRepository>
         var result = await Repository.GetByEmailAsync(email, TestCancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal(user.Id, result.Id);
-        Assert.Equal("user@test.com", result.Email.Value);
+        result.Should().NotBeNull();
+        result.Id.Should().Be(user.Id);
+        result.Email.Value.Should().Be("user@test.com");
     }
 
     [Fact]
@@ -94,8 +95,8 @@ public class UserRepositoryTests : SharedDatabaseTestBase<UserRepository>
         var result = await Repository.GetByEmailAsync(emailLowercase, TestCancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal(user.Id, result.Id);
+        result.Should().NotBeNull();
+        result.Id.Should().Be(user.Id);
     }
 
     [Fact]
@@ -109,7 +110,7 @@ public class UserRepositoryTests : SharedDatabaseTestBase<UserRepository>
         var result = await Repository.GetByEmailAsync(email, TestCancellationToken);
 
         // Assert
-        Assert.Null(result);
+        result.Should().BeNull();
     }
     [Fact]
     public async Task ExistsByEmailAsync_ExistingUser_ReturnsTrue()
@@ -126,7 +127,7 @@ public class UserRepositoryTests : SharedDatabaseTestBase<UserRepository>
         var exists = await Repository.ExistsByEmailAsync(email, TestCancellationToken);
 
         // Assert
-        Assert.True(exists);
+        exists.Should().BeTrue();
     }
 
     [Fact]
@@ -140,7 +141,7 @@ public class UserRepositoryTests : SharedDatabaseTestBase<UserRepository>
         var exists = await Repository.ExistsByEmailAsync(email, TestCancellationToken);
 
         // Assert
-        Assert.False(exists);
+        exists.Should().BeFalse();
     }
     [Fact]
     public async Task HasAnyUsersAsync_EmptyDatabase_ReturnsFalse()
@@ -152,7 +153,7 @@ public class UserRepositoryTests : SharedDatabaseTestBase<UserRepository>
         var hasUsers = await Repository.HasAnyUsersAsync(TestCancellationToken);
 
         // Assert
-        Assert.False(hasUsers);
+        hasUsers.Should().BeFalse();
     }
 
     [Fact]
@@ -168,7 +169,7 @@ public class UserRepositoryTests : SharedDatabaseTestBase<UserRepository>
         var hasUsers = await Repository.HasAnyUsersAsync(TestCancellationToken);
 
         // Assert
-        Assert.True(hasUsers);
+        hasUsers.Should().BeTrue();
     }
     [Fact]
     public async Task CountAdminsAsync_NoAdmins_ReturnsZero()
@@ -185,7 +186,7 @@ public class UserRepositoryTests : SharedDatabaseTestBase<UserRepository>
         var adminCount = await Repository.CountAdminsAsync(TestCancellationToken);
 
         // Assert
-        Assert.Equal(0, adminCount);
+        adminCount.Should().Be(0);
     }
 
     [Fact]
@@ -208,7 +209,7 @@ public class UserRepositoryTests : SharedDatabaseTestBase<UserRepository>
         var adminCount = await Repository.CountAdminsAsync(TestCancellationToken);
 
         // Assert
-        Assert.Equal(2, adminCount);
+        adminCount.Should().Be(2);
     }
     [Fact]
     public async Task GetAllAsync_EmptyDatabase_ReturnsEmptyList()
@@ -220,7 +221,7 @@ public class UserRepositoryTests : SharedDatabaseTestBase<UserRepository>
         var users = await Repository.GetAllAsync(TestCancellationToken);
 
         // Assert
-        Assert.Empty(users);
+        users.Should().BeEmpty();
     }
 
     [Fact]
@@ -241,10 +242,10 @@ public class UserRepositoryTests : SharedDatabaseTestBase<UserRepository>
         var users = await Repository.GetAllAsync(TestCancellationToken);
 
         // Assert
-        Assert.Equal(3, users.Count);
-        Assert.Contains(users, u => u.Email.Value == "user1@example.com");
-        Assert.Contains(users, u => u.Email.Value == "user2@example.com");
-        Assert.Contains(users, u => u.Email.Value == "user3@example.com");
+        users.Count.Should().Be(3);
+        users.Should().Contain(u => u.Email.Value == "user1@example.com");
+        users.Should().Contain(u => u.Email.Value == "user2@example.com");
+        users.Should().Contain(u => u.Email.Value == "user3@example.com");
     }
     [Fact]
     public async Task AddAsync_NewUser_PersistsSuccessfully()
@@ -259,9 +260,9 @@ public class UserRepositoryTests : SharedDatabaseTestBase<UserRepository>
 
         // Assert
         var persisted = await DbContext.Users.FirstOrDefaultAsync(u => u.Id == user.Id, TestContext.Current.CancellationToken);
-        Assert.NotNull(persisted);
-        Assert.Equal("newuser@example.com", persisted.Email);
-        Assert.Equal(Role.User.Value, persisted.Role);
+        persisted.Should().NotBeNull();
+        persisted.Email.Should().Be("newuser@example.com");
+        persisted.Role.Should().Be(Role.User.Value);
     }
 
     [Fact]
@@ -278,10 +279,10 @@ public class UserRepositoryTests : SharedDatabaseTestBase<UserRepository>
 
         // Assert
         var persisted = await DbContext.Users.FirstOrDefaultAsync(u => u.Id == user.Id, TestContext.Current.CancellationToken);
-        Assert.NotNull(persisted);
-        Assert.True(persisted.IsTwoFactorEnabled);
-        Assert.Equal("encrypted_totp_secret_123", persisted.TotpSecretEncrypted);
-        Assert.NotNull(persisted.TwoFactorEnabledAt);
+        persisted.Should().NotBeNull();
+        persisted.IsTwoFactorEnabled.Should().BeTrue();
+        persisted.TotpSecretEncrypted.Should().Be("encrypted_totp_secret_123");
+        persisted.TwoFactorEnabledAt.Should().NotBeNull();
     }
     [Fact]
     public async Task UpdateAsync_ModifiedUser_PersistsChanges()
@@ -304,9 +305,9 @@ public class UserRepositoryTests : SharedDatabaseTestBase<UserRepository>
 
         // Assert
         var updated = await DbContext.Users.FirstOrDefaultAsync(u => u.Id == user.Id, TestContext.Current.CancellationToken);
-        Assert.NotNull(updated);
-        Assert.Equal("Updated Name", updated.DisplayName);
-        Assert.Equal(Role.Admin.Value, updated.Role);
+        updated.Should().NotBeNull();
+        updated.DisplayName.Should().Be("Updated Name");
+        updated.Role.Should().Be(Role.Admin.Value);
     }
 
     [Fact]
@@ -327,9 +328,9 @@ public class UserRepositoryTests : SharedDatabaseTestBase<UserRepository>
 
         // Assert
         var updated = await DbContext.Users.FirstOrDefaultAsync(u => u.Id == user.Id, TestContext.Current.CancellationToken);
-        Assert.NotNull(updated);
-        Assert.True(updated.IsTwoFactorEnabled);
-        Assert.Equal("new_encrypted_secret", updated.TotpSecretEncrypted);
+        updated.Should().NotBeNull();
+        updated.IsTwoFactorEnabled.Should().BeTrue();
+        updated.TotpSecretEncrypted.Should().Be("new_encrypted_secret");
     }
     [Fact]
     public async Task DeleteAsync_ExistingUser_RemovesFromDatabase()
@@ -346,7 +347,7 @@ public class UserRepositoryTests : SharedDatabaseTestBase<UserRepository>
 
         // Assert
         var deleted = await DbContext.Users.FirstOrDefaultAsync(u => u.Id == user.Id, TestContext.Current.CancellationToken);
-        Assert.Null(deleted);
+        deleted.Should().BeNull();
     }
 
     [Fact]
@@ -373,7 +374,7 @@ public class UserRepositoryTests : SharedDatabaseTestBase<UserRepository>
         var exists = await Repository.ExistsAsync(user.Id, TestCancellationToken);
 
         // Assert
-        Assert.True(exists);
+        exists.Should().BeTrue();
     }
 
     [Fact]
@@ -387,7 +388,7 @@ public class UserRepositoryTests : SharedDatabaseTestBase<UserRepository>
         var exists = await Repository.ExistsAsync(nonExistentId, TestCancellationToken);
 
         // Assert
-        Assert.False(exists);
+        exists.Should().BeFalse();
     }
     [Fact]
     public async Task Mapping_DomainToPersistence_AllFieldsCorrect()
@@ -403,13 +404,13 @@ public class UserRepositoryTests : SharedDatabaseTestBase<UserRepository>
 
         // Assert
         var persisted = await DbContext.Users.FirstOrDefaultAsync(u => u.Id == user.Id, TestContext.Current.CancellationToken);
-        Assert.NotNull(persisted);
-        Assert.Equal(user.Id, persisted.Id);
-        Assert.Equal(user.Email.Value, persisted.Email);
-        Assert.Equal(user.DisplayName, persisted.DisplayName);
-        Assert.Equal(user.PasswordHash.Value, persisted.PasswordHash);
-        Assert.Equal(user.Role.Value, persisted.Role);
-        Assert.Equal(user.CreatedAt, persisted.CreatedAt);
+        persisted.Should().NotBeNull();
+        persisted.Id.Should().Be(user.Id);
+        persisted.Email.Should().Be(user.Email.Value);
+        persisted.DisplayName.Should().Be(user.DisplayName);
+        persisted.PasswordHash.Should().Be(user.PasswordHash.Value);
+        persisted.Role.Should().Be(user.Role.Value);
+        persisted.CreatedAt.Should().Be(user.CreatedAt);
     }
 
     [Fact]
@@ -426,12 +427,12 @@ public class UserRepositoryTests : SharedDatabaseTestBase<UserRepository>
         var retrieved = await Repository.GetByIdAsync(user.Id, TestCancellationToken);
 
         // Assert
-        Assert.NotNull(retrieved);
-        Assert.Equal(user.Id, retrieved.Id);
-        Assert.Equal(user.Email.Value, retrieved.Email.Value);
-        Assert.Equal(user.DisplayName, retrieved.DisplayName);
-        Assert.Equal(user.Role.Value, retrieved.Role.Value);
-        Assert.Equal(user.IsTwoFactorEnabled, retrieved.IsTwoFactorEnabled);
+        retrieved.Should().NotBeNull();
+        retrieved.Id.Should().Be(user.Id);
+        retrieved.Email.Value.Should().Be(user.Email.Value);
+        retrieved.DisplayName.Should().Be(user.DisplayName);
+        retrieved.Role.Value.Should().Be(user.Role.Value);
+        retrieved.IsTwoFactorEnabled.Should().Be(user.IsTwoFactorEnabled);
     }
 
     [Fact]
@@ -448,10 +449,10 @@ public class UserRepositoryTests : SharedDatabaseTestBase<UserRepository>
         var retrieved = await Repository.GetByIdAsync(user.Id, TestCancellationToken);
 
         // Assert
-        Assert.NotNull(retrieved);
-        Assert.True(retrieved.IsTwoFactorEnabled);
-        Assert.Equal("secret_123", retrieved.TotpSecret?.EncryptedValue);
-        Assert.NotNull(retrieved.TwoFactorEnabledAt);
+        retrieved.Should().NotBeNull();
+        retrieved.IsTwoFactorEnabled.Should().BeTrue();
+        retrieved.TotpSecret?.EncryptedValue.Should().Be("secret_123");
+        retrieved.TwoFactorEnabledAt.Should().NotBeNull();
     }
     [Fact]
     public async Task ConcurrentReads_NoConflicts()
@@ -472,10 +473,10 @@ public class UserRepositoryTests : SharedDatabaseTestBase<UserRepository>
         var results = await Task.WhenAll(tasks);
 
         // Assert
-        Assert.All(results, result =>
+        results.Should().AllSatisfy(result =>
         {
-            Assert.NotNull(result);
-            Assert.Equal(user.Id, result.Id);
+            result.Should().NotBeNull();
+            result.Id.Should().Be(user.Id);
         });
     }
 
@@ -501,10 +502,10 @@ public class UserRepositoryTests : SharedDatabaseTestBase<UserRepository>
         var results = await Task.WhenAll(tasks);
 
         // Assert
-        Assert.All(results, result =>
+        results.Should().AllSatisfy(result =>
         {
-            Assert.NotNull(result);
-            Assert.Equal(user.Id, result.Id);
+            result.Should().NotBeNull();
+            result.Id.Should().Be(user.Id);
         });
     }
     [Fact]
@@ -520,7 +521,7 @@ public class UserRepositoryTests : SharedDatabaseTestBase<UserRepository>
 
         // Assert
         var notPersisted = await DbContext.Users.FirstOrDefaultAsync(u => u.Id == user.Id, TestContext.Current.CancellationToken);
-        Assert.Null(notPersisted);
+        notPersisted.Should().BeNull();
     }
 
     [Fact]
@@ -538,7 +539,7 @@ public class UserRepositoryTests : SharedDatabaseTestBase<UserRepository>
 
         // Assert
         var count = await DbContext.Users.CountAsync(TestContext.Current.CancellationToken);
-        Assert.Equal(2, count);
+        count.Should().Be(2);
     }
     [Fact]
     public async Task NullableFields_HandledCorrectly()
@@ -554,7 +555,7 @@ public class UserRepositoryTests : SharedDatabaseTestBase<UserRepository>
 
         // Assert
         var retrieved = await Repository.GetByIdAsync(user.Id, TestCancellationToken);
-        Assert.NotNull(retrieved);
+        retrieved.Should().NotBeNull();
     }
 
     [Fact]
@@ -572,8 +573,8 @@ public class UserRepositoryTests : SharedDatabaseTestBase<UserRepository>
         var retrieved = await Repository.GetByEmailAsync(email, TestCancellationToken);
 
         // Assert
-        Assert.NotNull(retrieved);
-        Assert.Equal("user+tag@sub.domain.com", retrieved.Email.Value);
+        retrieved.Should().NotBeNull();
+        retrieved.Email.Value.Should().Be("user+tag@sub.domain.com");
     }
 
     [Fact]
@@ -595,7 +596,7 @@ public class UserRepositoryTests : SharedDatabaseTestBase<UserRepository>
         var allUsers = await Repository.GetAllAsync(TestCancellationToken);
 
         // Assert
-        Assert.Equal(100, allUsers.Count);
+        allUsers.Count.Should().Be(100);
     }
 
     [Fact]
@@ -618,7 +619,7 @@ public class UserRepositoryTests : SharedDatabaseTestBase<UserRepository>
 
         // Assert - Changes should NOT be persisted (AsNoTracking)
         var reloaded = await DbContext.Users.FirstOrDefaultAsync(u => u.Id == user.Id, TestContext.Current.CancellationToken);
-        Assert.NotEqual("Modified", reloaded!.DisplayName);
+        reloaded!.DisplayName.Should().NotBe("Modified");
     }
     private static User CreateTestUser(string email, Role role)
     {
@@ -635,4 +636,3 @@ public class UserRepositoryTests : SharedDatabaseTestBase<UserRepository>
         );
     }
 }
-

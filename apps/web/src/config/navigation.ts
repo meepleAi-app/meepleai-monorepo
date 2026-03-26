@@ -17,7 +17,6 @@ import {
   Brain,
   Calendar,
   Clock,
-  Gamepad2,
   History,
   LayoutDashboard,
   ShieldIcon,
@@ -65,16 +64,13 @@ const LIBRARY_CHILDREN: UnifiedNavSubItem[] = LIBRARY_TABS.map(tab => ({
  * | id        | label     | priority | visibility   | note                     |
  * |-----------|-----------|----------|-------------|--------------------------|
  * | welcome   | Welcome   | 0        | anonOnly    | landing page only        |
- * | dashboard | Dashboard | 1        | authOnly    |                          |
  * | library   | Libreria  | 2        | authOnly    | children: tabs           |
  * | chat      | Chat      | 3        | authOnly    |                          |
- * | toolkit   | Toolkit   | 4        | authOnly    | (removed from header, kept for ActionBar) |
- * | catalog   | Catalogo  | 5        | (none)      | visible to all           |
  * | profile   | Profilo   | 6        | authOnly    |                          |
  * | agents    | Agenti    | 7        | authOnly    |                          |
  * | sessions  | Sessioni  | 8        | authOnly    |                          |
  */
-export const UNIFIED_NAV_ITEMS: UnifiedNavItem[] = [
+const _ALL_NAV_ITEMS: UnifiedNavItem[] = [
   {
     id: 'welcome',
     href: '/',
@@ -86,18 +82,6 @@ export const UNIFIED_NAV_ITEMS: UnifiedNavItem[] = [
     testId: 'nav-welcome',
     activePattern: /^\/$/,
     visibility: { anonOnly: true },
-  },
-  {
-    id: 'dashboard',
-    href: '/dashboard',
-    icon: LayoutDashboard,
-    iconName: 'home',
-    label: 'Dashboard',
-    ariaLabel: 'Navigate to dashboard',
-    priority: 1,
-    testId: 'nav-dashboard',
-    activePattern: /^\/dashboard$/,
-    visibility: { authOnly: true },
   },
   {
     id: 'library',
@@ -123,20 +107,6 @@ export const UNIFIED_NAV_ITEMS: UnifiedNavItem[] = [
     testId: 'nav-chat',
     activePattern: /^\/chat/,
     visibility: { authOnly: true },
-  },
-  {
-    id: 'catalog',
-    // Issue #5039: /games/* consolidated into /discover
-    href: '/discover',
-    icon: Gamepad2,
-    iconName: 'gamepad-2',
-    label: 'Scopri',
-    ariaLabel: 'Navigate to discover page',
-    priority: 5,
-    testId: 'nav-catalog',
-    // Match both /discover and legacy /games (while redirects drain)
-    activePattern: /^\/(discover|games)/,
-    // No visibility — visible to everyone
   },
   {
     id: 'profile',
@@ -231,6 +201,25 @@ export const UNIFIED_NAV_ITEMS: UnifiedNavItem[] = [
   },
 ];
 
+// ─── Alpha Mode Filtering ────────────────────────────────────────────────────
+
+const isAlphaMode = process.env.NEXT_PUBLIC_ALPHA_MODE === 'true';
+
+const ALPHA_NAV_IDS = new Set([
+  'welcome',
+  'dashboard',
+  'library',
+  'chat',
+  'catalog',
+  'profile',
+  'admin',
+]);
+
+/** Unified navigation items — filtered by ALPHA_MODE when active */
+export const UNIFIED_NAV_ITEMS: UnifiedNavItem[] = isAlphaMode
+  ? _ALL_NAV_ITEMS.filter(item => ALPHA_NAV_IDS.has(item.id))
+  : _ALL_NAV_ITEMS;
+
 // ---------------------------------------------------------------------------
 // Helper functions
 // ---------------------------------------------------------------------------
@@ -284,7 +273,6 @@ export function filterNavItemsByRole(
  * Returns items sorted by priority, limited to max for breakpoint.
  */
 export function getNavItemsForBreakpoint(breakpoint: 'mobile' | 'tablet' | 'desktop'): NavItem[] {
-  // eslint-disable-next-line security/detect-object-injection -- breakpoint is typed union, not user input
   const max = MAX_NAV_ITEMS[breakpoint];
   return [...NAV_ITEMS].sort((a, b) => a.priority - b.priority).slice(0, max);
 }
@@ -293,7 +281,6 @@ export function getNavItemsForBreakpoint(breakpoint: 'mobile' | 'tablet' | 'desk
  * Get overflow navigation items for a specific breakpoint.
  */
 export function getOverflowNavItems(breakpoint: 'mobile' | 'tablet' | 'desktop'): NavItem[] {
-  // eslint-disable-next-line security/detect-object-injection -- breakpoint is typed union, not user input
   const max = MAX_NAV_ITEMS[breakpoint];
   return [...NAV_ITEMS].sort((a, b) => a.priority - b.priority).slice(max);
 }
@@ -305,7 +292,7 @@ export function isUnifiedNavItemActive(item: UnifiedNavItem, pathname: string): 
   if (item.activePattern) {
     return item.activePattern.test(pathname);
   }
-  if (item.href === '/' || item.href === '/dashboard') {
+  if (item.href === '/' || item.href === '/library') {
     return pathname === item.href;
   }
   return pathname.startsWith(item.href);
@@ -318,7 +305,7 @@ export function isNavItemActive(item: NavItem, pathname: string): boolean {
   if (item.activePattern) {
     return item.activePattern.test(pathname);
   }
-  if (item.href === '/' || item.href === '/dashboard') {
+  if (item.href === '/' || item.href === '/library') {
     return pathname === item.href;
   }
   return pathname.startsWith(item.href);
@@ -328,7 +315,6 @@ export function isNavItemActive(item: NavItem, pathname: string): boolean {
  * Get context action slots available for a breakpoint.
  */
 export function getContextActionSlots(breakpoint: 'mobile' | 'tablet' | 'desktop'): number {
-  // eslint-disable-next-line security/detect-object-injection -- breakpoint is typed union, not user input
   return TOTAL_SLOTS[breakpoint] - MAX_NAV_ITEMS[breakpoint] - 1;
 }
 

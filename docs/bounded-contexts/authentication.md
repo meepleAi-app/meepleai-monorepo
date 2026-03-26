@@ -431,13 +431,13 @@
 
 ## 🔗 Related Documentation
 
-**ADRs**: [ADR-027 Infrastructure Services](../01-architecture/adr/adr-027-infrastructure-services-policy.md), [ADR-009 Error Handling](../01-architecture/adr/adr-009-centralized-error-handling.md), [ADR-008 CQRS](../01-architecture/adr/adr-008-streaming-cqrs-migration.md)
+**ADRs**: [ADR-027 Infrastructure Services](../architecture/adr/adr-027-infrastructure-services-policy.md), [ADR-009 Error Handling](../architecture/adr/adr-009-centralized-error-handling.md), [ADR-008 CQRS](../architecture/adr/adr-008-streaming-cqrs-migration.md)
 
-**Bounded Contexts**: [Administration](./administration.md), [SessionTracking](../03-api/session-tracking/sse-integration.md), [UserNotifications](./user-notifications.md)
+**Bounded Contexts**: [Administration](./administration.md), [SessionTracking](../api/session-tracking/sse-integration.md), [UserNotifications](./user-notifications.md)
 
-**Security**: [OAuth Testing](../05-testing/backend/oauth-testing.md), [TOTP Analysis](../06-security/totp-vulnerability-analysis.md), [Secrets Management](../04-deployment/secrets-management.md)
+**Security**: [OAuth Testing](../testing/backend/oauth-testing.md), [TOTP Analysis](../security/totp-vulnerability-analysis.md), [Secrets Management](../deployment/secrets-management.md)
 
-**API**: [Scalar Docs](http://localhost:8080/scalar/v1), [Endpoints](../03-api/endpoints/)
+**API**: [Scalar Docs](http://localhost:8080/scalar/v1), [Endpoints](../api/endpoints/)
 
 ---
 

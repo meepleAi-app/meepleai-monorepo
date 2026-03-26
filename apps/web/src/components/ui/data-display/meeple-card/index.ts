@@ -49,7 +49,7 @@ export type { ChatStats } from './types';
 export type { ChatGame } from './types';
 export type { DragData } from './types';
 export type { TagConfig, TagPresetKey } from './types';
-export type { DocumentIndexingStatus } from './types';
+export type { KbIndexingStatus } from './types';
 export type {
   SessionStatus,
   SessionPlayerInfo,

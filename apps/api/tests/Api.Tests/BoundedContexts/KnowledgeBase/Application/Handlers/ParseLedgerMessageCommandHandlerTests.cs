@@ -1,7 +1,8 @@
 using Api.BoundedContexts.GameManagement.Domain.Entities;
 using Api.BoundedContexts.GameManagement.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Application.Commands;
-using Api.BoundedContexts.KnowledgeBase.Application.Handlers;
+using Api.BoundedContexts.KnowledgeBase.Application.Commands;
+using Api.BoundedContexts.KnowledgeBase.Application.Queries;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services;
 using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 using Api.Tests.Constants;
@@ -72,12 +73,12 @@ public class ParseLedgerMessageCommandHandlerTests
         var result = await _handler.Handle(command, TestCancellationToken);
 
         // Assert
-        Assert.Equal("ScoreChange", result.ChangeType);
-        Assert.Equal(message, result.OriginalMessage);
-        Assert.Equal(0.9f, result.Confidence);
-        Assert.Contains("score", result.ExtractedState.Keys);
-        Assert.Equal(5, result.ExtractedState["score"]);
-        Assert.Empty(result.Conflicts);
+        result.ChangeType.Should().Be("ScoreChange");
+        result.OriginalMessage.Should().Be(message);
+        result.Confidence.Should().Be(0.9f);
+        result.ExtractedState.Keys.Should().Contain("score");
+        result.ExtractedState["score"].Should().Be(5);
+        result.Conflicts.Should().BeEmpty();
     }
 
     [Fact]
@@ -120,10 +121,10 @@ public class ParseLedgerMessageCommandHandlerTests
         var result = await _handler.Handle(command, TestCancellationToken);
 
         // Assert
-        Assert.NotEmpty(result.Conflicts);
-        Assert.Single(result.Conflicts);
-        Assert.Equal("score", result.Conflicts[0].PropertyName);
-        Assert.Equal("High", result.Conflicts[0].Severity);
+        result.Conflicts.Should().NotBeEmpty();
+        result.Conflicts.Should().ContainSingle();
+        result.Conflicts[0].PropertyName.Should().Be("score");
+        result.Conflicts[0].Severity.Should().Be("High");
     }
 
     [Fact]
@@ -137,8 +138,8 @@ public class ParseLedgerMessageCommandHandlerTests
         var command = new ParseLedgerMessageCommand(sessionId, "test", Guid.NewGuid());
 
         // Act & Assert
-        await Assert.ThrowsAsync<InvalidOperationException>(
-            async () => await _handler.Handle(command, TestCancellationToken));
+        Func<Task> act = async () => await _handler.Handle(command, TestCancellationToken);
+        await act.Should().ThrowAsync<InvalidOperationException>();
     }
 
     #region Issue #2468 - Extended Test Suite

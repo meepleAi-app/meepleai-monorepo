@@ -1,4 +1,5 @@
-using Api.BoundedContexts.Administration.Application.Handlers;
+using Api.BoundedContexts.Administration.Application.Commands;
+using Api.BoundedContexts.Administration.Application.Queries;
 using Api.BoundedContexts.Administration.Application.Queries;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
@@ -8,6 +9,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Time.Testing;
 using Moq;
 using Xunit;
+using FluentAssertions;
 using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.Administration.Application.Handlers;
@@ -47,9 +49,9 @@ public sealed class GetRecentActivityQueryHandlerTests : IDisposable
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Empty(result.Events);
-        Assert.Equal(0, result.TotalCount);
+        result.Should().NotBeNull();
+        result.Events.Should().BeEmpty();
+        result.TotalCount.Should().Be(0);
     }
 
     [Fact]
@@ -73,11 +75,11 @@ public sealed class GetRecentActivityQueryHandlerTests : IDisposable
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Single(result.Events);
-        Assert.Equal(ActivityEventType.UserRegistered, result.Events[0].EventType);
-        Assert.Contains("john.doe@example.com", result.Events[0].Description);
-        Assert.Equal(ActivitySeverity.Info, result.Events[0].Severity);
+        result.Should().NotBeNull();
+        result.Events.Should().ContainSingle();
+        result.Events[0].EventType.Should().Be(ActivityEventType.UserRegistered);
+        result.Events[0].Description.Should().Contain("john.doe@example.com");
+        result.Events[0].Severity.Should().Be(ActivitySeverity.Info);
     }
 
     [Fact]
@@ -121,12 +123,12 @@ public sealed class GetRecentActivityQueryHandlerTests : IDisposable
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal(2, result.Events.Count); // User + PDF events
+        result.Should().NotBeNull();
+        result.Events.Count.Should().Be(2); // User + PDF events
         var pdfEvent = result.Events.FirstOrDefault(e => e.EventType == ActivityEventType.PdfUploaded);
-        Assert.NotNull(pdfEvent);
-        Assert.Contains("Catan-Rules.pdf", pdfEvent.Description);
-        Assert.Contains("2456789", pdfEvent.Description);
+        pdfEvent.Should().NotBeNull();
+        pdfEvent.Description.Should().Contain("Catan-Rules.pdf");
+        pdfEvent.Description.Should().Contain("2456789");
     }
 
     [Fact]
@@ -151,11 +153,11 @@ public sealed class GetRecentActivityQueryHandlerTests : IDisposable
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Single(result.Events);
-        Assert.Equal(ActivityEventType.AlertCreated, result.Events[0].EventType);
-        Assert.Contains("High error rate", result.Events[0].Description);
-        Assert.Equal(ActivitySeverity.Warning, result.Events[0].Severity);
+        result.Should().NotBeNull();
+        result.Events.Should().ContainSingle();
+        result.Events[0].EventType.Should().Be(ActivityEventType.AlertCreated);
+        result.Events[0].Description.Should().Contain("High error rate");
+        result.Events[0].Severity.Should().Be(ActivitySeverity.Warning);
     }
 
     [Fact]
@@ -181,10 +183,10 @@ public sealed class GetRecentActivityQueryHandlerTests : IDisposable
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Single(result.Events);
-        Assert.Equal(ActivityEventType.AlertResolved, result.Events[0].EventType);
-        Assert.Equal(ActivitySeverity.Critical, result.Events[0].Severity);
+        result.Should().NotBeNull();
+        result.Events.Should().ContainSingle();
+        result.Events[0].EventType.Should().Be(ActivityEventType.AlertResolved);
+        result.Events[0].Severity.Should().Be(ActivitySeverity.Critical);
     }
 
     [Fact]
@@ -213,11 +215,11 @@ public sealed class GetRecentActivityQueryHandlerTests : IDisposable
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Single(result.Events);
-        Assert.Equal(ActivityEventType.ErrorOccurred, result.Events[0].EventType);
-        Assert.Contains("Rate limit exceeded", result.Events[0].Description);
-        Assert.Equal(ActivitySeverity.Error, result.Events[0].Severity);
+        result.Should().NotBeNull();
+        result.Events.Should().ContainSingle();
+        result.Events[0].EventType.Should().Be(ActivityEventType.ErrorOccurred);
+        result.Events[0].Description.Should().Contain("Rate limit exceeded");
+        result.Events[0].Severity.Should().Be(ActivitySeverity.Error);
     }
 
     [Fact]
@@ -243,8 +245,8 @@ public sealed class GetRecentActivityQueryHandlerTests : IDisposable
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal(5, result.Events.Count);
+        result.Should().NotBeNull();
+        result.Events.Count.Should().Be(5);
     }
 
     [Fact]
@@ -277,9 +279,9 @@ public sealed class GetRecentActivityQueryHandlerTests : IDisposable
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Single(result.Events);
-        Assert.Contains("recent@example.com", result.Events[0].Description);
+        result.Should().NotBeNull();
+        result.Events.Should().ContainSingle();
+        result.Events[0].Description.Should().Contain("recent@example.com");
     }
 
     [Fact]
@@ -319,12 +321,12 @@ public sealed class GetRecentActivityQueryHandlerTests : IDisposable
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal(3, result.Events.Count);
+        result.Should().NotBeNull();
+        result.Events.Count.Should().Be(3);
         // Most recent first
-        Assert.Contains("user2@example.com", result.Events[0].Description);
-        Assert.Contains("user3@example.com", result.Events[1].Description);
-        Assert.Contains("user1@example.com", result.Events[2].Description);
+        result.Events[0].Description.Should().Contain("user2@example.com");
+        result.Events[1].Description.Should().Contain("user3@example.com");
+        result.Events[2].Description.Should().Contain("user1@example.com");
     }
 
     [Fact]
@@ -381,11 +383,11 @@ public sealed class GetRecentActivityQueryHandlerTests : IDisposable
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal(3, result.Events.Count);
-        Assert.Contains(result.Events, e => e.EventType == ActivityEventType.UserRegistered);
-        Assert.Contains(result.Events, e => e.EventType == ActivityEventType.PdfUploaded);
-        Assert.Contains(result.Events, e => e.EventType == ActivityEventType.AlertCreated);
+        result.Should().NotBeNull();
+        result.Events.Count.Should().Be(3);
+        result.Events.Should().Contain(e => e.EventType == ActivityEventType.UserRegistered);
+        result.Events.Should().Contain(e => e.EventType == ActivityEventType.PdfUploaded);
+        result.Events.Should().Contain(e => e.EventType == ActivityEventType.AlertCreated);
     }
 
     [Fact]
@@ -440,11 +442,11 @@ public sealed class GetRecentActivityQueryHandlerTests : IDisposable
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.Equal(4, result.Events.Count);
-        Assert.Contains(result.Events, e => e.Severity == ActivitySeverity.Critical);
-        Assert.Contains(result.Events, e => e.Severity == ActivitySeverity.Error);
-        Assert.Contains(result.Events, e => e.Severity == ActivitySeverity.Warning);
-        Assert.Contains(result.Events, e => e.Severity == ActivitySeverity.Info);
+        result.Events.Count.Should().Be(4);
+        result.Events.Should().Contain(e => e.Severity == ActivitySeverity.Critical);
+        result.Events.Should().Contain(e => e.Severity == ActivitySeverity.Error);
+        result.Events.Should().Contain(e => e.Severity == ActivitySeverity.Warning);
+        result.Events.Should().Contain(e => e.Severity == ActivitySeverity.Info);
     }
 
     [Fact]
@@ -475,10 +477,10 @@ public sealed class GetRecentActivityQueryHandlerTests : IDisposable
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         // Should limit errors to limit/2 = 5
         var errorEvents = result.Events.Where(e => e.EventType == ActivityEventType.ErrorOccurred).ToList();
-        Assert.True(errorEvents.Count <= 5);
+        (errorEvents.Count <= 5).Should().BeTrue();
     }
 
     [Fact]
@@ -491,9 +493,9 @@ public sealed class GetRecentActivityQueryHandlerTests : IDisposable
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         // Should be capped at 100 max
-        Assert.True(result.Events.Count <= 100);
+        (result.Events.Count <= 100).Should().BeTrue();
     }
 
     public void Dispose()

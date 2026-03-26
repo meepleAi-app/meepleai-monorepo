@@ -23,8 +23,8 @@ public class ScoreEntryRepositoryTests : SharedDatabaseTestBase<ScoreEntryReposi
 
     protected override ScoreEntryRepository CreateRepository(MeepleAiDbContext dbContext)
     {
-        _sessionRepository = new SessionRepository(dbContext);
-        return new ScoreEntryRepository(dbContext);
+        _sessionRepository = new SessionRepository(dbContext, MockEventCollector.Object);
+        return new ScoreEntryRepository(dbContext, MockEventCollector.Object);
     }
 
     private async Task<Guid> CreateTestUserAsync(string email = "score-test@example.com")
@@ -98,9 +98,9 @@ public class ScoreEntryRepositoryTests : SharedDatabaseTestBase<ScoreEntryReposi
         var (session, participant) = await CreateTestSessionAsync();
 
         var score1 = ScoreEntry.Create(session.Id, participant.Id, 10m, Guid.NewGuid(), roundNumber: 1);
-        Thread.Sleep(10);
+        await Task.Delay(50);
         var score2 = ScoreEntry.Create(session.Id, participant.Id, 20m, Guid.NewGuid(), roundNumber: 2);
-        Thread.Sleep(10);
+        await Task.Delay(50);
         var score3 = ScoreEntry.Create(session.Id, participant.Id, 30m, Guid.NewGuid(), roundNumber: 3);
 
         await Repository.AddAsync(score3, TestContext.Current.CancellationToken); // Add in reverse order

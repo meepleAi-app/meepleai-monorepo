@@ -219,9 +219,9 @@ Result: Most relevant knight movement rules
 
 ### Internal Resources
 - [Complete Research Report](../../claudedocs/research_multiagent_rag_architecture_20260202.md) (70 pages)
-- [MeepleAI Architecture](../../01-architecture/README.md)
-- [API Documentation](../../03-api/README.md)
-- [Testing Guide](../../05-testing/README.md)
+- [MeepleAI Architecture](../../architecture/README.md)
+- [API Documentation](../../api/README.md)
+- [Testing Guide](../../testing/README.md)
 
 ### External References
 - [LangGraph Documentation](https://python.langchain.com/docs/langgraph)
@@ -238,7 +238,7 @@ Result: Most relevant knight movement rules
 
 ### Contributing
 1. Follow [Development Workflow](../workflow.md)
-2. Ensure [Test Coverage](../../05-testing/backend/backend-testing-patterns.md) >90%
+2. Ensure [Test Coverage](../../testing/backend/backend-testing-patterns.md) >90%
 3. Update documentation for architectural changes
 
 ---

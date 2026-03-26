@@ -83,6 +83,7 @@ internal sealed class GetLinkedAgentQueryHandler
                     ?? new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase)
             }).ToList(),
             KbCardIds = agentDef.KbCardIds.ToList(),
+            Status = agentDef.Status,
             IsActive = agentDef.IsActive,
             CreatedAt = agentDef.CreatedAt,
             UpdatedAt = agentDef.UpdatedAt

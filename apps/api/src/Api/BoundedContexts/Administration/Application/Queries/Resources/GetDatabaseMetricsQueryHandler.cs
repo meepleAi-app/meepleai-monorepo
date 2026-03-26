@@ -1,3 +1,4 @@
+using System.Data.Common;
 using Api.Infrastructure;
 using Api.Models;
 using Api.SharedKernel.Application.Interfaces;
@@ -72,11 +73,10 @@ internal class GetDatabaseMetricsQueryHandler : IQueryHandler<GetDatabaseMetrics
                 }
             }
 
-            // For growth trends, we would need historical data
-            // For now, return zeros (can be enhanced later with stored metrics)
-            var growthLast7Days = 0L;
-            var growthLast30Days = 0L;
-            var growthLast90Days = 0L;
+            // Compute growth from daily snapshots stored by DatabaseMetricsSnapshotService
+            var growthLast7Days = await GetGrowthSince(connection, sizeResult, DateTime.UtcNow.AddDays(-7), cancellationToken).ConfigureAwait(false);
+            var growthLast30Days = await GetGrowthSince(connection, sizeResult, DateTime.UtcNow.AddDays(-30), cancellationToken).ConfigureAwait(false);
+            var growthLast90Days = await GetGrowthSince(connection, sizeResult, DateTime.UtcNow.AddDays(-90), cancellationToken).ConfigureAwait(false);
 
             return new DatabaseMetricsDto(
                 SizeBytes: sizeResult,
@@ -99,6 +99,23 @@ internal class GetDatabaseMetricsQueryHandler : IQueryHandler<GetDatabaseMetrics
             }
         }
 
+    }
+
+    private static async Task<long> GetGrowthSince(DbConnection connection, long currentSize, DateTime since, CancellationToken ct)
+    {
+        if (connection.State != System.Data.ConnectionState.Open)
+        {
+            await connection.OpenAsync(ct).ConfigureAwait(false);
+        }
+
+        using var cmd = connection.CreateCommand();
+        cmd.CommandText = "SELECT total_size_bytes FROM database_metrics_snapshots WHERE recorded_at >= @date ORDER BY recorded_at ASC LIMIT 1";
+        var param = cmd.CreateParameter();
+        param.ParameterName = "@date";
+        param.Value = since;
+        cmd.Parameters.Add(param);
+        var result = await cmd.ExecuteScalarAsync(ct).ConfigureAwait(false);
+        return result is long pastSize ? currentSize - pastSize : 0L;
     }
 
     private static string FormatBytes(long bytes)

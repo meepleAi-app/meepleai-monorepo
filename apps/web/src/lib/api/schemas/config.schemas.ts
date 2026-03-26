@@ -20,12 +20,8 @@ export const SystemConfigurationDtoSchema = z.object({
   requiresRestart: z.boolean(),
   environment: z.string().min(1),
   version: z.number().int().positive(),
-  previousValue: z.string().nullable(),
-  createdAt: z.string().datetime(),
-  updatedAt: z.string().datetime(),
-  createdByUserId: z.string().uuid(),
-  updatedByUserId: z.string().uuid().nullable(),
-  lastToggledAt: z.string().datetime().nullable(),
+  createdAt: z.string(),
+  updatedAt: z.string(),
   // Tier-based feature flags (Issue #3079) - optional until backend #3073 completes
   tierFree: z.boolean().optional(),
   tierNormal: z.boolean().optional(),
@@ -166,7 +162,9 @@ export const UpdatePdfTierUploadLimitsRequestSchema = z.object({
   premiumWeeklyLimit: z.number().int().min(1).max(5000),
 });
 
-export type UpdatePdfTierUploadLimitsRequest = z.infer<typeof UpdatePdfTierUploadLimitsRequestSchema>;
+export type UpdatePdfTierUploadLimitsRequest = z.infer<
+  typeof UpdatePdfTierUploadLimitsRequestSchema
+>;
 
 // ========== Chat History Limits (Issue #4918) ==========
 

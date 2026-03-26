@@ -35,10 +35,12 @@ export type ReindexResponse = z.infer<typeof ReindexResponseSchema>;
 
 // ========== Purge / Cleanup ==========
 
-export const MaintenanceResultSchema = z.object({
-  affected: z.number().optional(),
-  message: z.string().optional(),
-}).passthrough();
+export const MaintenanceResultSchema = z
+  .object({
+    affected: z.number().optional(),
+    message: z.string().optional(),
+  })
+  .passthrough();
 
 export type MaintenanceResult = z.infer<typeof MaintenanceResultSchema>;
 
@@ -136,7 +138,7 @@ export const PdfListItemSchema = z.object({
   fileName: z.string(),
   gameTitle: z.string().nullable(),
   gameId: z.string().nullable(),
-  processingStatus: z.string(),
+  processingStatus: z.string().optional(),
   processingState: z.string(),
   progressPercentage: z.number(),
   fileSizeBytes: z.number(),

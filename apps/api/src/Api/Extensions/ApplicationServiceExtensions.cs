@@ -220,6 +220,46 @@ internal static class ApplicationServiceExtensions
         services.AddValidatorsFromAssemblyContaining<BoundedContexts.EntityRelationships.Application.Validators.CreateEntityLinkCommandValidator>(
             includeInternalTypes: true);
 
+        // Register validators from BusinessSimulations bounded context
+        services.AddValidatorsFromAssemblyContaining<BoundedContexts.BusinessSimulations.Application.Commands.CreateManualLedgerEntryCommandValidator>(
+            includeInternalTypes: true);
+
+        // Register validators from DatabaseSync bounded context
+        services.AddValidatorsFromAssemblyContaining<BoundedContexts.DatabaseSync.Application.Commands.ApplyMigrationsCommandValidator>(
+            includeInternalTypes: true);
+
+        // Register validators from WorkflowIntegration bounded context
+        services.AddValidatorsFromAssemblyContaining<BoundedContexts.WorkflowIntegration.Application.Validators.CreateN8NConfigCommandValidator>(
+            includeInternalTypes: true);
+
+        // Register validators from GameManagement bounded context
+        services.AddValidatorsFromAssemblyContaining<BoundedContexts.GameManagement.Application.Validators.GameNights.CreateGameNightCommandValidator>(
+            includeInternalTypes: true);
+
+        // Register validators from SharedGameCatalog bounded context
+        services.AddValidatorsFromAssemblyContaining<BoundedContexts.SharedGameCatalog.Application.Commands.ActivateGameStateTemplateCommandValidator>(
+            includeInternalTypes: true);
+
+        // Register validators from DocumentProcessing bounded context
+        services.AddValidatorsFromAssemblyContaining<BoundedContexts.DocumentProcessing.Application.Commands.BulkDeletePdfsCommandValidator>(
+            includeInternalTypes: true);
+
+        // Register validators from SystemConfiguration bounded context
+        services.AddValidatorsFromAssemblyContaining<BoundedContexts.SystemConfiguration.Application.Commands.CreateUserRateLimitOverride.CreateUserRateLimitOverrideValidator>(
+            includeInternalTypes: true);
+
+        // Register validators from UserNotifications bounded context
+        services.AddValidatorsFromAssemblyContaining<BoundedContexts.UserNotifications.Application.Validators.AdminRetryEmailCommandValidator>(
+            includeInternalTypes: true);
+
+        // Register validators from UserLibrary bounded context
+        services.AddValidatorsFromAssemblyContaining<BoundedContexts.UserLibrary.Application.Commands.LinkAgentToPrivateGameCommandValidator>(
+            includeInternalTypes: true);
+
+        // Register validators from AgentMemory bounded context
+        services.AddValidatorsFromAssemblyContaining<BoundedContexts.AgentMemory.Application.Validators.AddHouseRuleCommandValidator>(
+            includeInternalTypes: true);
+
         return services;
     }
 }

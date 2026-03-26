@@ -1,10 +1,12 @@
 using Api.BoundedContexts.KnowledgeBase.Application.Commands;
-using Api.BoundedContexts.KnowledgeBase.Application.Handlers;
+using Api.BoundedContexts.KnowledgeBase.Application.Commands;
+using Api.BoundedContexts.KnowledgeBase.Application.Queries;
 using Api.BoundedContexts.KnowledgeBase.Infrastructure.Repositories;
 using Api.Tests.Constants;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Handlers.RagDashboard;
 
@@ -43,12 +45,12 @@ public class ResetRagConfigCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.NotNull(result.Generation);
-        Assert.NotNull(result.Retrieval);
-        Assert.NotNull(result.Reranker);
-        Assert.NotNull(result.Models);
-        Assert.NotNull(result.StrategySpecific);
+        result.Should().NotBeNull();
+        result.Generation.Should().NotBeNull();
+        result.Retrieval.Should().NotBeNull();
+        result.Reranker.Should().NotBeNull();
+        result.Models.Should().NotBeNull();
+        result.StrategySpecific.Should().NotBeNull();
     }
 
     [Fact]
@@ -65,7 +67,7 @@ public class ResetRagConfigCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.Equal("Hybrid", result.ActiveStrategy);
+        result.ActiveStrategy.Should().Be("Hybrid");
     }
 
     [Theory]
@@ -87,7 +89,7 @@ public class ResetRagConfigCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.Equal(strategy, result.ActiveStrategy);
+        result.ActiveStrategy.Should().Be(strategy);
     }
 
     [Fact]
@@ -104,10 +106,10 @@ public class ResetRagConfigCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.Equal(0.7, result.Generation.Temperature);
-        Assert.Equal(40, result.Generation.TopK);
-        Assert.Equal(0.9, result.Generation.TopP);
-        Assert.Equal(1000, result.Generation.MaxTokens);
+        result.Generation.Temperature.Should().Be(0.7);
+        result.Generation.TopK.Should().Be(40);
+        result.Generation.TopP.Should().Be(0.9);
+        result.Generation.MaxTokens.Should().Be(1000);
     }
 
     [Fact]
@@ -124,10 +126,10 @@ public class ResetRagConfigCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.Equal(500, result.Retrieval.ChunkSize);
-        Assert.Equal(10, result.Retrieval.ChunkOverlap);
-        Assert.Equal(5, result.Retrieval.TopResults);
-        Assert.Equal(0.7, result.Retrieval.SimilarityThreshold);
+        result.Retrieval.ChunkSize.Should().Be(500);
+        result.Retrieval.ChunkOverlap.Should().Be(10);
+        result.Retrieval.TopResults.Should().Be(5);
+        result.Retrieval.SimilarityThreshold.Should().Be(0.7);
     }
 
     [Fact]
@@ -144,9 +146,9 @@ public class ResetRagConfigCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.True(result.Reranker.Enabled);
-        Assert.Equal("cross-encoder/ms-marco-MiniLM-L-12-v2", result.Reranker.Model);
-        Assert.Equal(10, result.Reranker.TopN);
+        result.Reranker.Enabled.Should().BeTrue();
+        result.Reranker.Model.Should().Be("cross-encoder/ms-marco-MiniLM-L-12-v2");
+        result.Reranker.TopN.Should().Be(10);
     }
 
     [Fact]
@@ -163,9 +165,9 @@ public class ResetRagConfigCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.Equal("gpt-4o-mini", result.Models.PrimaryModel);
-        Assert.Null(result.Models.FallbackModel);
-        Assert.Null(result.Models.EvaluationModel);
+        result.Models.PrimaryModel.Should().Be("gpt-4o-mini");
+        result.Models.FallbackModel.Should().BeNull();
+        result.Models.EvaluationModel.Should().BeNull();
     }
 
     [Fact]
@@ -182,9 +184,9 @@ public class ResetRagConfigCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.Equal(0.5, result.StrategySpecific.HybridAlpha);
-        Assert.Equal(5, result.StrategySpecific.ContextWindow);
-        Assert.Equal(3, result.StrategySpecific.MaxHops);
+        result.StrategySpecific.HybridAlpha.Should().Be(0.5);
+        result.StrategySpecific.ContextWindow.Should().Be(5);
+        result.StrategySpecific.MaxHops.Should().Be(3);
     }
 
     [Fact]

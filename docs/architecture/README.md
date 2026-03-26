@@ -329,7 +329,7 @@ docker compose up -d
 5. Set up log aggregation
 6. Configure backup automation
 
-**Guide**: [Infrastructure Deployment Checklist](../04-deployment/infrastructure-deployment-checklist.md)
+**Guide**: [Infrastructure Deployment Checklist](../deployment/infrastructure-deployment-checklist.md)
 
 ### Scaling
 
@@ -354,16 +354,16 @@ services:
           memory: 4G
 ```
 
-**Guide**: [Scaling Guide](../04-deployment/scaling-guide.md)
+**Guide**: [Scaling Guide](../deployment/scaling-guide.md)
 
 ---
 
 ## Related Documentation
 
-- [Deployment Guide](../04-deployment/README.md)
-- [Secrets Management](../04-deployment/secrets-management.md)
-- [Monitoring Setup](../04-deployment/monitoring-setup-guide.md)
-- [Runbooks](../04-deployment/runbooks/README.md)
+- [Deployment Guide](../deployment/README.md)
+- [Secrets Management](../deployment/secrets-management.md)
+- [Monitoring Setup](../deployment/monitoring-setup-guide.md)
+- [Runbooks](../deployment/runbooks/README.md)
 
 ---
 

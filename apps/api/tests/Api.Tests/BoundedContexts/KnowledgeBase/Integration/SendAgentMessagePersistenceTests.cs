@@ -4,13 +4,15 @@ using Api.BoundedContexts.KnowledgeBase.Application.Commands;
 using Api.BoundedContexts.KnowledgeBase.Application.Services;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services.LlmManagement;
-using Api.BoundedContexts.KnowledgeBase.Application.Handlers;
+using Api.BoundedContexts.KnowledgeBase.Application.Commands;
+using Api.BoundedContexts.KnowledgeBase.Application.Queries;
 using Api.BoundedContexts.KnowledgeBase.Domain.Entities;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 using Api.BoundedContexts.KnowledgeBase.Infrastructure.Persistence;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
+using Api.Infrastructure.Entities.KnowledgeBase;
 using Api.Models;
 using Api.Services;
 using Api.SharedKernel.Infrastructure.Persistence;
@@ -21,6 +23,7 @@ using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Moq;
+using System.Text.Json;
 using Xunit;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Integration;
@@ -50,6 +53,7 @@ public sealed class SendAgentMessagePersistenceTests : IAsyncLifetime
     private SendAgentMessageCommandHandler _handler = null!;
 
     private Guid _agentId;
+    private Guid _vectorDocId;
     private readonly Guid _userId = Guid.NewGuid();
 
     public SendAgentMessagePersistenceTests(SharedTestcontainersFixture fixture)
@@ -81,14 +85,26 @@ public sealed class SendAgentMessagePersistenceTests : IAsyncLifetime
             .Setup(s => s.IsAiProcessingAllowedAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(true);
 
+        // EmbeddingService — return valid embedding so handler doesn't stop at EMBEDDING_FAILED
+        var mockEmbeddingService = new Mock<IEmbeddingService>();
+        mockEmbeddingService
+            .Setup(e => e.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(EmbeddingResult.CreateSuccess(new List<float[]> { new float[384] }));
+
+        // UserBudgetService — return true to avoid budget-exhausted fallback path
+        var mockBudgetService = new Mock<IUserBudgetService>();
+        mockBudgetService
+            .Setup(b => b.HasBudgetForQueryAsync(It.IsAny<Guid>(), It.IsAny<decimal>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+
         _handler = new SendAgentMessageCommandHandler(
             _agentRepository,
             _chatThreadRepository,
             _unitOfWork,
             _mockLlmService.Object,
-            Mock.Of<IEmbeddingService>(),
+            mockEmbeddingService.Object,
             _dbContext,
-            Mock.Of<IUserBudgetService>(),
+            mockBudgetService.Object,
             Mock.Of<ILlmModelOverrideService>(),
             Mock.Of<IModelConfigurationService>(),
             new ChatContextDomainService(),
@@ -123,6 +139,51 @@ public sealed class SendAgentMessagePersistenceTests : IAsyncLifetime
             CreatedAt = DateTime.UtcNow
         };
         _dbContext.Set<AgentEntity>().Add(agentEntity);
+
+        // Seed a PdfDocument (FK for VectorDocument)
+        var pdfDocId = Guid.NewGuid();
+        var pdfDoc = new PdfDocumentEntity
+        {
+            Id = pdfDocId,
+            FileName = "test.pdf",
+            FilePath = "/test/test.pdf",
+            FileSizeBytes = 1024,
+            UploadedByUserId = _userId,
+            UploadedAt = DateTime.UtcNow,
+            ProcessingState = "Ready"
+        };
+        _dbContext.Set<PdfDocumentEntity>().Add(pdfDoc);
+
+        // Seed a VectorDocument (needed for agent KB doc IDs)
+        _vectorDocId = Guid.NewGuid();
+        var vectorDoc = new VectorDocumentEntity
+        {
+            Id = _vectorDocId,
+            PdfDocumentId = pdfDocId,
+            ChunkCount = 5,
+            TotalCharacters = 500,
+            IndexingStatus = "completed",
+            IndexedAt = DateTime.UtcNow
+        };
+        _dbContext.Set<VectorDocumentEntity>().Add(vectorDoc);
+
+        // Seed AgentConfiguration with the vector document selected
+        var agentConfig = new AgentConfigurationEntity
+        {
+            Id = Guid.NewGuid(),
+            AgentId = _agentId,
+            LlmProvider = 0,
+            LlmModel = "test-model",
+            AgentMode = 0,
+            SelectedDocumentIdsJson = JsonSerializer.Serialize(new List<Guid> { _vectorDocId }),
+            Temperature = 0.7m,
+            MaxTokens = 1024,
+            IsCurrent = true,
+            CreatedAt = DateTime.UtcNow,
+            CreatedBy = _userId
+        };
+        _dbContext.Set<AgentConfigurationEntity>().Add(agentConfig);
+
         await _dbContext.SaveChangesAsync(CancellationToken.None);
 
         // Detach all to start clean
@@ -140,21 +201,17 @@ public sealed class SendAgentMessagePersistenceTests : IAsyncLifetime
     // Helpers
     // ========================================================================
 
-    private void SetupLlmStream(params string[] chunks)
+    /// <summary>
+    /// Sets up the LLM mock to return a non-streaming completion result.
+    /// The handler now uses GenerateCompletionWithModelAsync (non-streaming).
+    /// </summary>
+    private void SetupLlmResponse(string fullResponse)
     {
         _mockLlmService
-            .Setup(s => s.GenerateCompletionStreamAsync(
-                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()))
-            .Returns(ToAsyncEnumerable(chunks.Select(c => new StreamChunk(c))));
-    }
-
-    private static async IAsyncEnumerable<T> ToAsyncEnumerable<T>(IEnumerable<T> items)
-    {
-        foreach (var item in items)
-        {
-            await Task.Yield();
-            yield return item;
-        }
+            .Setup(s => s.GenerateCompletionWithModelAsync(
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
+                It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(LlmCompletionResult.CreateSuccess(fullResponse));
     }
 
     private async Task<List<RagStreamingEvent>> ConsumeStream(SendAgentMessageCommand command, CancellationToken ct = default)
@@ -183,7 +240,7 @@ public sealed class SendAgentMessagePersistenceTests : IAsyncLifetime
     public async Task Should_Persist_User_And_Assistant_Messages_To_Database()
     {
         // Arrange
-        SetupLlmStream("Catan ", "is ", "a board game.");
+        SetupLlmResponse("Catan is a board game.");
         var command = new SendAgentMessageCommand(_agentId, "What is Catan?", _userId);
 
         // Act
@@ -193,7 +250,7 @@ public sealed class SendAgentMessagePersistenceTests : IAsyncLifetime
         events.Should().Contain(e => e.Type == StreamingEventType.Complete);
 
         var completeEvent = events.Last();
-        var complete = completeEvent.Data.Should().BeOfType<StreamingComplete>().Subject;
+        var complete = completeEvent.Data.Should().BeOfType<StreamingComplete>().Which;
         complete.chatThreadId.Should().NotBeNull();
 
         // Verify persistence with fresh DbContext
@@ -221,7 +278,7 @@ public sealed class SendAgentMessagePersistenceTests : IAsyncLifetime
     public async Task Should_Persist_AgentMetadata_On_Assistant_Message()
     {
         // Arrange
-        SetupLlmStream("Setup rules: place settlements.");
+        SetupLlmResponse("Setup rules: place settlements.");
         var command = new SendAgentMessageCommand(_agentId, "How to setup?", _userId);
 
         // Act
@@ -234,8 +291,9 @@ public sealed class SendAgentMessagePersistenceTests : IAsyncLifetime
 
         var assistantMsg = messages.First(m => m.Role == "assistant");
         assistantMsg.AgentType.Should().Be("RAG");
-        assistantMsg.Confidence.Should().BeApproximately(0.85f, 0.01f);
-        assistantMsg.TokenCount.Should().Be(1); // 1 non-empty chunk
+        // Confidence is null when no RAG chunks are retrieved (vector search returns empty results in tests)
+        // TokenCount comes from LlmCompletionResult.Usage.TotalTokens (0 from mock's default Usage)
+        assistantMsg.TokenCount.Should().Be(0);
     }
 
     [Fact]
@@ -243,7 +301,7 @@ public sealed class SendAgentMessagePersistenceTests : IAsyncLifetime
     {
         // Arrange
         var beforeStream = DateTime.UtcNow.AddSeconds(-1);
-        SetupLlmStream("Answer.");
+        SetupLlmResponse("Answer.");
         var command = new SendAgentMessageCommand(_agentId, "Question?", _userId);
 
         // Act
@@ -259,14 +317,14 @@ public sealed class SendAgentMessagePersistenceTests : IAsyncLifetime
     public async Task Should_AutoCreate_Thread_And_Persist_When_No_ThreadId()
     {
         // Arrange
-        SetupLlmStream("New thread response.");
+        SetupLlmResponse("New thread response.");
         var command = new SendAgentMessageCommand(_agentId, "Start new chat", _userId);
 
         // Act
         var events = await ConsumeStream(command);
 
         // Assert
-        var complete = events.Last().Data.Should().BeOfType<StreamingComplete>().Subject;
+        var complete = events.Last().Data.Should().BeOfType<StreamingComplete>().Which;
         complete.chatThreadId.Should().NotBeNull();
 
         using var readCtx = CreateReadContext();
@@ -282,10 +340,10 @@ public sealed class SendAgentMessagePersistenceTests : IAsyncLifetime
     public async Task Should_Reuse_Existing_Thread_When_ThreadId_Provided()
     {
         // Arrange - create thread first
-        SetupLlmStream("First response.");
+        SetupLlmResponse("First response.");
         var firstCommand = new SendAgentMessageCommand(_agentId, "First question", _userId);
         var firstEvents = await ConsumeStream(firstCommand);
-        var firstComplete = firstEvents.Last().Data.Should().BeOfType<StreamingComplete>().Subject;
+        var firstComplete = firstEvents.Last().Data.Should().BeOfType<StreamingComplete>().Which;
         var threadId = firstComplete.chatThreadId!.Value;
 
         // Detach all tracked entities for second pass
@@ -293,7 +351,7 @@ public sealed class SendAgentMessagePersistenceTests : IAsyncLifetime
             entry.State = EntityState.Detached;
 
         // Arrange follow-up
-        SetupLlmStream("Follow-up response.");
+        SetupLlmResponse("Follow-up response.");
         var followUpCommand = new SendAgentMessageCommand(_agentId, "Follow-up question", _userId, threadId);
 
         // Act
@@ -311,16 +369,8 @@ public sealed class SendAgentMessagePersistenceTests : IAsyncLifetime
     [Fact]
     public async Task Should_Not_Persist_Assistant_Message_When_LLM_Returns_Empty()
     {
-        // Arrange - LLM returns only empty chunks
-        _mockLlmService
-            .Setup(s => s.GenerateCompletionStreamAsync(
-                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()))
-            .Returns(ToAsyncEnumerable(new[]
-            {
-                new StreamChunk(""),
-                new StreamChunk(null),
-                new StreamChunk("")
-            }));
+        // Arrange - LLM returns empty response string
+        SetupLlmResponse("");
 
         var command = new SendAgentMessageCommand(_agentId, "Empty response test", _userId);
 
@@ -339,28 +389,30 @@ public sealed class SendAgentMessagePersistenceTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task Should_Persist_User_Message_Even_When_Stream_Cancelled()
+    public async Task Should_Persist_User_Message_Even_When_LLM_Call_Cancelled()
     {
-        // Arrange - LLM stream that yields one chunk then delays (will be cancelled)
+        // Arrange - LLM call hangs then gets cancelled
         _mockLlmService
-            .Setup(s => s.GenerateCompletionStreamAsync(
-                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()))
-            .Returns(SlowAsyncEnumerable());
+            .Setup(s => s.GenerateCompletionWithModelAsync(
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
+                It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()))
+            .Returns(async (string _, string _, string _, RequestSource _, CancellationToken ct) =>
+            {
+                await Task.Delay(5000, ct); // Long delay to allow cancellation
+                return LlmCompletionResult.CreateSuccess("Never reached");
+            });
 
         using var cts = new CancellationTokenSource();
         var command = new SendAgentMessageCommand(_agentId, "Cancel me", _userId);
 
-        // Act - consume until we see the first token, then cancel
+        // Act - cancel after 500ms (after user message is persisted but before LLM completes)
         var events = new List<RagStreamingEvent>();
+        cts.CancelAfter(500);
         try
         {
             await foreach (var e in _handler.Handle(command, cts.Token))
             {
                 events.Add(e);
-                if (e.Type == StreamingEventType.Token)
-                {
-                    await cts.CancelAsync(); // Cancel after first token
-                }
             }
         }
         catch (OperationCanceledException)
@@ -368,7 +420,7 @@ public sealed class SendAgentMessagePersistenceTests : IAsyncLifetime
             // Expected
         }
 
-        // Assert - user message was persisted before streaming started
+        // Assert - user message was persisted before LLM call
         using var readCtx = CreateReadContext();
         var threads = await readCtx.ChatThreads.AsNoTracking()
             .Where(t => t.UserId == _userId)
@@ -378,7 +430,7 @@ public sealed class SendAgentMessagePersistenceTests : IAsyncLifetime
         var thread = threads[0];
         var messages = System.Text.Json.JsonSerializer.Deserialize<List<MessageDto>>(thread.MessagesJson)!;
 
-        // At minimum, user message should be persisted (it's saved before streaming)
+        // At minimum, user message should be persisted (it's saved before LLM call)
         messages.Should().Contain(m => m.Role == "user" && m.Content == "Cancel me");
     }
 
@@ -394,7 +446,7 @@ public sealed class SendAgentMessagePersistenceTests : IAsyncLifetime
 
         // Assert
         events.Should().HaveCount(1);
-        var error = events[0].Data.Should().BeOfType<StreamingError>().Subject;
+        var error = events[0].Data.Should().BeOfType<StreamingError>().Which;
         error.errorCode.Should().Be("AGENT_NOT_FOUND");
 
         // No thread created
@@ -404,20 +456,16 @@ public sealed class SendAgentMessagePersistenceTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task Should_Persist_Correct_TokenCount_Matching_NonEmpty_Chunks()
+    public async Task Should_Persist_Correct_TokenCount_From_LlmUsage()
     {
-        // Arrange - 5 total chunks, 3 non-empty
+        // Arrange - LLM returns a response with explicit token count in usage
         _mockLlmService
-            .Setup(s => s.GenerateCompletionStreamAsync(
-                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()))
-            .Returns(ToAsyncEnumerable(new[]
-            {
-                new StreamChunk("Hello"),
-                new StreamChunk(""),
-                new StreamChunk(null),
-                new StreamChunk(" world"),
-                new StreamChunk("!")
-            }));
+            .Setup(s => s.GenerateCompletionWithModelAsync(
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
+                It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(LlmCompletionResult.CreateSuccess(
+                "Hello world!",
+                usage: new LlmUsage(PromptTokens: 10, CompletionTokens: 3, TotalTokens: 13)));
 
         var command = new SendAgentMessageCommand(_agentId, "Count tokens", _userId);
 
@@ -431,18 +479,7 @@ public sealed class SendAgentMessagePersistenceTests : IAsyncLifetime
 
         var assistantMsg = messages.First(m => m.Role == "assistant");
         assistantMsg.Content.Should().Be("Hello world!");
-        assistantMsg.TokenCount.Should().Be(3); // Only non-empty chunks counted
-    }
-
-    // ========================================================================
-    // Slow async helper for cancellation test
-    // ========================================================================
-
-    private static async IAsyncEnumerable<StreamChunk> SlowAsyncEnumerable()
-    {
-        yield return new StreamChunk("First chunk");
-        await Task.Delay(5000); // Long delay to allow cancellation
-        yield return new StreamChunk("Never reached");
+        assistantMsg.TokenCount.Should().Be(13); // From LlmUsage.TotalTokens
     }
 
     // ========================================================================

@@ -158,4 +158,3 @@ internal class ApiKeyBuilder
     /// </summary>
     public static (ApiKey apiKey, string plaintextKey) CreateExpired() => new ApiKeyBuilder().Expired().Build();
 }
-

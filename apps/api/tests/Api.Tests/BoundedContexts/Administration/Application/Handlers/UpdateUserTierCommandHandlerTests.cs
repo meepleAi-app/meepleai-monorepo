@@ -1,5 +1,6 @@
 using Api.BoundedContexts.Administration.Application.Commands;
-using Api.BoundedContexts.Administration.Application.Handlers;
+using Api.BoundedContexts.Administration.Application.Commands;
+using Api.BoundedContexts.Administration.Application.Queries;
 using Api.BoundedContexts.Authentication.Domain.Entities;
 using Api.SharedKernel.Domain.ValueObjects;
 using Api.BoundedContexts.Authentication.Infrastructure.Persistence;
@@ -14,6 +15,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Npgsql;
 using Xunit;
+using FluentAssertions;
 using AuthRole = Api.SharedKernel.Domain.ValueObjects.Role;
 
 namespace Api.Tests.BoundedContexts.Administration.Application.Handlers;
@@ -73,23 +75,10 @@ public class UpdateUserTierCommandHandlerTests : IAsyncLifetime
         _output($"✓ Isolated database created: {_databaseName}");
 
         // Setup dependency injection
-        var services = new ServiceCollection();
-
-        services.AddLogging(builder => builder.AddConsole().SetMinimumLevel(LogLevel.Information));
-
-        // Register DbContext with PostgreSQL
-        services.AddDbContext<MeepleAiDbContext>(options =>
-        {
-            options.UseNpgsql(_isolatedDbConnectionString, o => o.UseVector()); // Issue #3547: Enable pgvector
-            options.ConfigureWarnings(w =>
-                w.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning));
-        });
+        var services = IntegrationServiceCollectionBuilder.CreateBase(_isolatedDbConnectionString);
 
         // Register domain services
         services.AddScoped<IUserRepository, UserRepository>();
-        services.AddScoped<IUnitOfWork, EfCoreUnitOfWork>();
-        services.AddScoped<Api.SharedKernel.Application.Services.IDomainEventCollector, Api.SharedKernel.Application.Services.DomainEventCollector>();
-        services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(UpdateUserTierCommandHandler).Assembly));
 
         _serviceProvider = services.BuildServiceProvider();
         _dbContext = _serviceProvider.GetRequiredService<MeepleAiDbContext>();
@@ -196,17 +185,17 @@ public class UpdateUserTierCommandHandlerTests : IAsyncLifetime
         var result = await handler.Handle(command, TestCancellationToken);
 
         // Assert - verify response
-        Assert.NotNull(result);
-        Assert.Equal(regularUser.Id.ToString(), result.Id);
-        Assert.Equal("user@test.com", result.Email);
+        result.Should().NotBeNull();
+        result.Id.Should().Be(regularUser.Id.ToString());
+        result.Email.Should().Be("user@test.com");
 
         // CRITICAL: Verify the tier was actually persisted to the database
         var persistedUser = await services.DbContext.Users
             .AsNoTracking()
             .FirstOrDefaultAsync(u => u.Id == regularUser.Id, TestCancellationToken);
 
-        Assert.NotNull(persistedUser);
-        Assert.Equal(UserTier.Premium.Value, persistedUser.Tier);
+        persistedUser.Should().NotBeNull();
+        persistedUser.Tier.Should().Be(UserTier.Premium.Value);
     }
 
     [Fact]
@@ -239,8 +228,8 @@ public class UpdateUserTierCommandHandlerTests : IAsyncLifetime
             .AsNoTracking()
             .FirstOrDefaultAsync(u => u.Id == regularUser.Id, TestCancellationToken);
 
-        Assert.NotNull(persistedUser);
-        Assert.Equal(UserTier.Normal.Value, persistedUser.Tier);
+        persistedUser.Should().NotBeNull();
+        persistedUser.Tier.Should().Be(UserTier.Normal.Value);
     }
 
     [Fact]
@@ -273,8 +262,8 @@ public class UpdateUserTierCommandHandlerTests : IAsyncLifetime
             .AsNoTracking()
             .FirstOrDefaultAsync(u => u.Id == premiumUser.Id, TestCancellationToken);
 
-        Assert.NotNull(persistedUser);
-        Assert.Equal(UserTier.Free.Value, persistedUser.Tier);
+        persistedUser.Should().NotBeNull();
+        persistedUser.Tier.Should().Be(UserTier.Free.Value);
     }
     [Fact]
     public async Task Handle_NonAdminRequester_ThrowsDomainException()
@@ -309,19 +298,19 @@ public class UpdateUserTierCommandHandlerTests : IAsyncLifetime
             NewTier: UserTier.Premium.Value);
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<DomainException>(
-            () => handler.Handle(command, TestCancellationToken));
+        var act = () => handler.Handle(command, TestCancellationToken);
+        var exception = (await act.Should().ThrowAsync<DomainException>()).Which;
 
         // NOTE: Testing exact error message intentionally - this is user-facing validation text
-        Assert.Contains("Only administrators can change user tiers", exception.Message);
+        exception.Message.Should().Contain("Only administrators can change user tiers");
 
         // Verify tier was NOT changed
         var persistedUser = await services.DbContext.Users
             .AsNoTracking()
             .FirstOrDefaultAsync(u => u.Id == targetUser.Id, TestCancellationToken);
 
-        Assert.NotNull(persistedUser);
-        Assert.Equal(UserTier.Free.Value, persistedUser.Tier); // Should still be Free
+        persistedUser.Should().NotBeNull();
+        persistedUser.Tier.Should().Be(UserTier.Free.Value); // Should still be Free
     }
     [Fact]
     public async Task Handle_InvalidTierValue_ThrowsDomainException()
@@ -346,12 +335,12 @@ public class UpdateUserTierCommandHandlerTests : IAsyncLifetime
         var command = new UpdateUserTierCommand(targetUser.Id, "invalid-tier", adminUser.Id);
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<DomainException>(
-            () => handler.Handle(command, TestCancellationToken));
+        var act = () => handler.Handle(command, TestCancellationToken);
+        var exception = (await act.Should().ThrowAsync<DomainException>()).Which;
 
         // NOTE: Testing exact error messages intentionally - these are user-facing validation texts
-        Assert.Contains("Invalid tier value", exception.Message);
-        Assert.Contains("free, normal, premium", exception.Message);
+        exception.Message.Should().Contain("Invalid tier value");
+        exception.Message.Should().Contain("free, normal, premium");
     }
 
     [Fact]
@@ -376,11 +365,11 @@ public class UpdateUserTierCommandHandlerTests : IAsyncLifetime
         var command = new UpdateUserTierCommand(nonExistentUserId, UserTier.Premium.Value, adminUser.Id);
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<DomainException>(
-            () => handler.Handle(command, TestCancellationToken));
+        var act = () => handler.Handle(command, TestCancellationToken);
+        var exception = (await act.Should().ThrowAsync<DomainException>()).Which;
 
         // NOTE: Testing exact error message intentionally - this is user-facing validation text
-        Assert.Contains("not found", exception.Message);
+        exception.Message.Should().Contain("not found");
     }
     [Fact]
     public async Task Handle_NonExistentRequester_ThrowsDomainException()
@@ -404,19 +393,19 @@ public class UpdateUserTierCommandHandlerTests : IAsyncLifetime
         var command = new UpdateUserTierCommand(targetUser.Id, UserTier.Premium.Value, nonExistentRequesterId);
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<DomainException>(
-            () => handler.Handle(command, TestCancellationToken));
+        var act = () => handler.Handle(command, TestCancellationToken);
+        var exception = (await act.Should().ThrowAsync<DomainException>()).Which;
 
         // NOTE: Testing exact error message intentionally - this is user-facing validation text
-        Assert.Contains("not found", exception.Message);
+        exception.Message.Should().Contain("not found");
 
         // Verify tier was NOT changed
         var persistedUser = await services.DbContext.Users
             .AsNoTracking()
             .FirstOrDefaultAsync(u => u.Id == targetUser.Id, TestCancellationToken);
 
-        Assert.NotNull(persistedUser);
-        Assert.Equal(UserTier.Free.Value, persistedUser.Tier); // Should still be Free
+        persistedUser.Should().NotBeNull();
+        persistedUser.Tier.Should().Be(UserTier.Free.Value); // Should still be Free
     }
 
     [Fact]
@@ -449,13 +438,13 @@ public class UpdateUserTierCommandHandlerTests : IAsyncLifetime
         var result = await handler.Handle(command, TestCancellationToken);
 
         // Assert - Verify the change was persisted
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         var persistedUser = await services.DbContext.Users
             .AsNoTracking()
             .FirstOrDefaultAsync(u => u.Id == adminUser.Id, TestCancellationToken);
 
-        Assert.NotNull(persistedUser);
-        Assert.Equal(UserTier.Premium.Value, persistedUser.Tier);
+        persistedUser.Should().NotBeNull();
+        persistedUser.Tier.Should().Be(UserTier.Premium.Value);
     }
 
     [Fact]
@@ -485,15 +474,15 @@ public class UpdateUserTierCommandHandlerTests : IAsyncLifetime
         var result = await handler.Handle(command, TestCancellationToken);
 
         // Assert - Verify operation succeeded
-        Assert.NotNull(result);
-        Assert.Equal(premiumUser.Id.ToString(), result.Id);
+        result.Should().NotBeNull();
+        result.Id.Should().Be(premiumUser.Id.ToString());
 
         var persistedUser = await services.DbContext.Users
             .AsNoTracking()
             .FirstOrDefaultAsync(u => u.Id == premiumUser.Id, TestCancellationToken);
 
-        Assert.NotNull(persistedUser);
-        Assert.Equal(UserTier.Premium.Value, persistedUser.Tier); // Still Premium
+        persistedUser.Should().NotBeNull();
+        persistedUser.Tier.Should().Be(UserTier.Premium.Value); // Still Premium
     }
 
     [Fact]
@@ -530,19 +519,19 @@ public class UpdateUserTierCommandHandlerTests : IAsyncLifetime
             NewTier: UserTier.Premium.Value);
 
         // Act & Assert - Editors should NOT be able to change user tiers
-        var exception = await Assert.ThrowsAsync<DomainException>(
-            () => handler.Handle(command, TestCancellationToken));
+        var act = () => handler.Handle(command, TestCancellationToken);
+        var exception = (await act.Should().ThrowAsync<DomainException>()).Which;
 
         // NOTE: Testing exact error message intentionally - this is user-facing validation text
-        Assert.Contains("Only administrators can change user tiers", exception.Message);
+        exception.Message.Should().Contain("Only administrators can change user tiers");
 
         // Verify tier was NOT changed
         var persistedUser = await services.DbContext.Users
             .AsNoTracking()
             .FirstOrDefaultAsync(u => u.Id == targetUser.Id, TestCancellationToken);
 
-        Assert.NotNull(persistedUser);
-        Assert.Equal(UserTier.Free.Value, persistedUser.Tier); // Should still be Free
+        persistedUser.Should().NotBeNull();
+        persistedUser.Tier.Should().Be(UserTier.Free.Value); // Should still be Free
     }
     private static async Task MigrateWithRetry(MeepleAiDbContext context)
     {

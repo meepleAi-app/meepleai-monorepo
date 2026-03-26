@@ -1,5 +1,6 @@
 using Api.BoundedContexts.GameManagement.Application.Commands;
-using Api.BoundedContexts.GameManagement.Application.Handlers;
+using Api.BoundedContexts.GameManagement.Application.Commands;
+using Api.BoundedContexts.GameManagement.Application.Queries;
 using Api.BoundedContexts.GameManagement.Domain.Entities;
 using Api.BoundedContexts.GameManagement.Domain.Repositories;
 using Api.BoundedContexts.GameManagement.Domain.ValueObjects;
@@ -9,6 +10,7 @@ using Api.Tests.Constants;
 using Api.Tests.TestHelpers;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.GameManagement.Application.Handlers;
 
@@ -57,11 +59,11 @@ public class PublishGameCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal(gameId, result.Id);
-        Assert.True(result.IsPublished);
-        Assert.Equal(ApprovalStatus.Approved.ToString(), result.ApprovalStatus);
-        Assert.NotNull(result.PublishedAt);
+        result.Should().NotBeNull();
+        result.Id.Should().Be(gameId);
+        (result.IsPublished).Should().BeTrue();
+        result.ApprovalStatus.Should().Be(ApprovalStatus.Approved.ToString());
+        result.PublishedAt.Should().NotBeNull();
 
         // Verify repository interactions
         _gameRepositoryMock.Verify(
@@ -97,9 +99,9 @@ public class PublishGameCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.False(result.IsPublished);
-        Assert.Equal(ApprovalStatus.PendingReview.ToString(), result.ApprovalStatus);
-        Assert.Null(result.PublishedAt);
+        (result.IsPublished).Should().BeFalse();
+        result.ApprovalStatus.Should().Be(ApprovalStatus.PendingReview.ToString());
+        result.PublishedAt.Should().BeNull();
     }
 
     [Fact]
@@ -124,9 +126,9 @@ public class PublishGameCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.False(result.IsPublished);
-        Assert.Equal(ApprovalStatus.Rejected.ToString(), result.ApprovalStatus);
-        Assert.Null(result.PublishedAt);
+        (result.IsPublished).Should().BeFalse();
+        result.ApprovalStatus.Should().Be(ApprovalStatus.Rejected.ToString());
+        result.PublishedAt.Should().BeNull();
     }
 
     [Fact]
@@ -144,10 +146,11 @@ public class PublishGameCommandHandlerTests
             Status: ApprovalStatus.Approved);
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
-            () => _handler.Handle(command, TestContext.Current.CancellationToken));
+        var act =
+            () => _handler.Handle(command, TestContext.Current.CancellationToken);
+        var exception = (await act.Should().ThrowAsync<InvalidOperationException>()).Which;
 
-        Assert.Contains($"Game with ID {gameId} not found", exception.Message, StringComparison.OrdinalIgnoreCase);
+        exception.Message.Should().ContainEquivalentOf($"Game with ID {gameId} not found");
 
         // Verify update was NOT called
         _gameRepositoryMock.Verify(
@@ -178,10 +181,11 @@ public class PublishGameCommandHandlerTests
             Status: ApprovalStatus.Approved);
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
-            () => _handler.Handle(command, TestContext.Current.CancellationToken));
+        var act =
+            () => _handler.Handle(command, TestContext.Current.CancellationToken);
+        var exception = (await act.Should().ThrowAsync<InvalidOperationException>()).Which;
 
-        Assert.Contains("Cannot approve game without linking to SharedGameCatalog first", exception.Message);
+        exception.Message.Should().Contain("Cannot approve game without linking to SharedGameCatalog first");
 
         // Verify changes were NOT saved
         _unitOfWorkMock.Verify(
@@ -211,9 +215,9 @@ public class PublishGameCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.False(result.IsPublished);
-        Assert.Equal(ApprovalStatus.Draft.ToString(), result.ApprovalStatus);
-        Assert.Null(result.PublishedAt);
+        (result.IsPublished).Should().BeFalse();
+        result.ApprovalStatus.Should().Be(ApprovalStatus.Draft.ToString());
+        result.PublishedAt.Should().BeNull();
     }
 
     [Fact]

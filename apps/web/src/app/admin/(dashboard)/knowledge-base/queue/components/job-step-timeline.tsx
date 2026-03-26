@@ -1,11 +1,6 @@
 'use client';
 
-import {
-  CheckCircle2Icon,
-  LoaderIcon,
-  CircleIcon,
-  XCircleIcon,
-} from 'lucide-react';
+import { CheckCircle2Icon, LoaderIcon, CircleIcon, XCircleIcon } from 'lucide-react';
 
 import type { ProcessingStepDto } from '../lib/queue-api';
 
@@ -28,16 +23,14 @@ function getStepIcon(status: string) {
 }
 
 function formatDuration(ms: number | null): string {
-  if (ms == null) return '-';
+  if (ms === null) return '-';
   if (ms < 1000) return `${Math.round(ms)}ms`;
   return `${(ms / 1000).toFixed(1)}s`;
 }
 
 export function JobStepTimeline({ steps }: JobStepTimelineProps) {
   if (steps.length === 0) {
-    return (
-      <p className="text-sm text-muted-foreground py-4">No steps recorded yet.</p>
-    );
+    return <p className="text-sm text-muted-foreground py-4">No steps recorded yet.</p>;
   }
 
   return (
@@ -49,17 +42,13 @@ export function JobStepTimeline({ steps }: JobStepTimelineProps) {
             {/* Vertical line + icon */}
             <div className="flex flex-col items-center">
               <div className="pt-0.5">{getStepIcon(step.status)}</div>
-              {!isLast && (
-                <div className="w-px flex-1 bg-slate-200 dark:bg-zinc-700 my-1" />
-              )}
+              {!isLast && <div className="w-px flex-1 bg-slate-200 dark:bg-zinc-700 my-1" />}
             </div>
 
             {/* Content */}
             <div className="pb-4">
               <div className="flex items-center gap-2">
-                <span className="text-sm font-medium text-foreground">
-                  {step.stepName}
-                </span>
+                <span className="text-sm font-medium text-foreground">{step.stepName}</span>
                 <span className="text-xs text-muted-foreground">
                   {formatDuration(step.durationMs)}
                 </span>

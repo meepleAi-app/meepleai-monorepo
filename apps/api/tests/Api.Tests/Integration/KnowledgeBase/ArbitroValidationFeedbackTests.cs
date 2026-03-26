@@ -1,8 +1,12 @@
+using Api.BoundedContexts.GameManagement.Domain.Entities;
+using Api.BoundedContexts.GameManagement.Domain.Repositories;
+using Api.BoundedContexts.GameManagement.Domain.ValueObjects;
 using Api.BoundedContexts.KnowledgeBase.Application.Commands;
 using Api.BoundedContexts.KnowledgeBase.Domain.Entities;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Infrastructure.Persistence;
 using Api.Infrastructure;
+using Api.Infrastructure.Entities;
 using Api.Infrastructure.Entities.GameManagement;
 using Api.SharedKernel.Application.Services;
 using Api.SharedKernel.Infrastructure.Persistence;
@@ -13,6 +17,7 @@ using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Moq;
 using Xunit;
 
 namespace Api.Tests.Integration.KnowledgeBase;
@@ -35,6 +40,8 @@ public sealed class ArbitroValidationFeedbackTests : IAsyncLifetime
     private IArbitroValidationFeedbackRepository? _repository;
     private IMediator? _mediator;
     private IServiceProvider? _serviceProvider;
+    private Guid _testGameId;
+    private Guid _testUserId;
 
     public ArbitroValidationFeedbackTests(SharedTestcontainersFixture fixture)
     {
@@ -47,19 +54,17 @@ public sealed class ArbitroValidationFeedbackTests : IAsyncLifetime
         _databaseName = $"test_arbitrofeedback_{Guid.NewGuid():N}";
         _isolatedDbConnectionString = await _fixture.CreateIsolatedDatabaseAsync(_databaseName);
 
-        var services = new ServiceCollection();
-        services.AddLogging(builder => builder.AddConsole().SetMinimumLevel(LogLevel.Warning));
-        services.AddDbContext<MeepleAiDbContext>(options =>
-        {
-            options.UseNpgsql(_isolatedDbConnectionString, o => o.UseVector());
-            options.ConfigureWarnings(w =>
-                w.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning));
-        });
-
+        var services = IntegrationServiceCollectionBuilder.CreateBase(_isolatedDbConnectionString);
         services.AddScoped<IArbitroValidationFeedbackRepository, ArbitroValidationFeedbackRepository>();
-        services.AddScoped<IUnitOfWork, EfCoreUnitOfWork>();
-        services.AddScoped<IDomainEventCollector, DomainEventCollector>();
-        services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(Program).Assembly));
+
+        // Override the bare IGameSessionRepository mock from CreateBase() with one that returns a valid GameSession.
+        // SubmitValidationFeedbackCommandHandler calls GetByIdAsync and throws NotFoundException if null.
+        var gameSessionMock = new Mock<IGameSessionRepository>();
+        gameSessionMock
+            .Setup(r => r.GetByIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((Guid id, CancellationToken _) =>
+                new GameSession(id, Guid.NewGuid(), new[] { new SessionPlayer("Player1", 1) }));
+        services.AddScoped<IGameSessionRepository>(_ => gameSessionMock.Object);
 
         _serviceProvider = services.BuildServiceProvider();
         _dbContext = _serviceProvider.GetRequiredService<MeepleAiDbContext>();
@@ -68,6 +73,42 @@ public sealed class ArbitroValidationFeedbackTests : IAsyncLifetime
 
         // Create database schema
         await _dbContext.Database.MigrateAsync();
+
+        // Seed a test user (FK requirement for feedback)
+        _testUserId = Guid.NewGuid();
+        _dbContext.Users.Add(new UserEntity
+        {
+            Id = _testUserId,
+            Email = "arbitro-test@test.com",
+            Role = "User",
+            CreatedAt = DateTime.UtcNow
+        });
+
+        // Seed a test game (FK requirement for GameSession)
+        _testGameId = Guid.NewGuid();
+        _dbContext.Games.Add(new GameEntity
+        {
+            Id = _testGameId,
+            Name = "Test Game",
+            CreatedAt = DateTime.UtcNow
+        });
+        await _dbContext.SaveChangesAsync();
+    }
+
+    /// <summary>
+    /// Seeds a GameSession entity in the DB for FK constraint satisfaction.
+    /// </summary>
+    private async Task SeedGameSessionAsync(Guid gameSessionId)
+    {
+        _dbContext!.Set<GameSessionEntity>().Add(new GameSessionEntity
+        {
+            Id = gameSessionId,
+            GameId = _testGameId,
+            Status = "InProgress",
+            StartedAt = DateTime.UtcNow,
+            PlayersJson = "[{\"PlayerName\":\"Player1\",\"PlayerOrder\":1}]"
+        });
+        await _dbContext.SaveChangesAsync();
     }
 
     public async ValueTask DisposeAsync()
@@ -98,16 +139,15 @@ public sealed class ArbitroValidationFeedbackTests : IAsyncLifetime
         // Arrange
         var validationId = Guid.NewGuid();
         var gameSessionId = Guid.NewGuid();
-        var userId = Guid.NewGuid();
 
-        // NOTE: For this test, we skip GameSession FK validation
-        // Real FK enforcement will be tested via E2E tests with full seeded data
+        // Seed GameSession in DB for FK constraint
+        await SeedGameSessionAsync(gameSessionId);
 
         var command = new SubmitValidationFeedbackCommand
         {
             ValidationId = validationId,
             GameSessionId = gameSessionId,
-            UserId = userId,
+            UserId = _testUserId,
             Rating = 5,
             Accuracy = "Correct",
             Comment = "Great validation, very accurate!",
@@ -126,7 +166,7 @@ public sealed class ArbitroValidationFeedbackTests : IAsyncLifetime
         savedFeedback.Should().NotBeNull();
         savedFeedback!.ValidationId.Should().Be(validationId);
         savedFeedback.GameSessionId.Should().Be(gameSessionId);
-        savedFeedback.UserId.Should().Be(userId);
+        savedFeedback.UserId.Should().Be(_testUserId);
         savedFeedback.Rating.Should().Be(5);
         savedFeedback.Accuracy.Should().Be(AccuracyAssessment.Correct);
         savedFeedback.Comment.Should().Be("Great validation, very accurate!");
@@ -142,14 +182,16 @@ public sealed class ArbitroValidationFeedbackTests : IAsyncLifetime
         // Arrange
         var validationId = Guid.NewGuid();
         var gameSessionId = Guid.NewGuid();
-        var userId = Guid.NewGuid();
+
+        // Seed GameSession in DB for FK constraint
+        await SeedGameSessionAsync(gameSessionId);
 
         // Submit first feedback
         var command1 = new SubmitValidationFeedbackCommand
         {
             ValidationId = validationId,
             GameSessionId = gameSessionId,
-            UserId = userId,
+            UserId = _testUserId,
             Rating = 4,
             Accuracy = "Correct",
             AiDecision = "VALID",
@@ -163,7 +205,7 @@ public sealed class ArbitroValidationFeedbackTests : IAsyncLifetime
         {
             ValidationId = validationId, // Same validation ID
             GameSessionId = gameSessionId,
-            UserId = userId,
+            UserId = _testUserId,
             Rating = 3,
             Accuracy = "Incorrect",
             AiDecision = "INVALID",
@@ -182,7 +224,9 @@ public sealed class ArbitroValidationFeedbackTests : IAsyncLifetime
     {
         // Arrange
         var gameSessionId = Guid.NewGuid();
-        var userId = Guid.NewGuid();
+
+        // Seed GameSession in DB for FK constraint
+        await SeedGameSessionAsync(gameSessionId);
 
         // Submit 3 feedbacks: 2 Correct, 1 Incorrect
         var feedbacks = new[]
@@ -198,7 +242,7 @@ public sealed class ArbitroValidationFeedbackTests : IAsyncLifetime
             {
                 ValidationId = Guid.NewGuid(),
                 GameSessionId = gameSessionId,
-                UserId = userId,
+                UserId = _testUserId,
                 Rating = fb.Rating,
                 Accuracy = fb.Accuracy,
                 AiDecision = "VALID",
@@ -223,17 +267,19 @@ public sealed class ArbitroValidationFeedbackTests : IAsyncLifetime
     public async Task GetConflictFeedback_OnlyConflictCases_ReturnsFiltered()
     {
         // Arrange
-        var userId = Guid.NewGuid();
-
         // Submit 2 feedbacks: 1 with conflicts, 1 without
         var sessionWithConflict = Guid.NewGuid();
         var sessionNoConflict = Guid.NewGuid();
+
+        // Seed GameSessions in DB for FK constraint
+        await SeedGameSessionAsync(sessionWithConflict);
+        await SeedGameSessionAsync(sessionNoConflict);
 
         await _mediator!.Send(new SubmitValidationFeedbackCommand
         {
             ValidationId = Guid.NewGuid(),
             GameSessionId = sessionWithConflict,
-            UserId = userId,
+            UserId = _testUserId,
             Rating = 3,
             Accuracy = "Uncertain",
             AiDecision = "UNCERTAIN",
@@ -245,7 +291,7 @@ public sealed class ArbitroValidationFeedbackTests : IAsyncLifetime
         {
             ValidationId = Guid.NewGuid(),
             GameSessionId = sessionNoConflict,
-            UserId = userId,
+            UserId = _testUserId,
             Rating = 5,
             Accuracy = "Correct",
             AiDecision = "VALID",

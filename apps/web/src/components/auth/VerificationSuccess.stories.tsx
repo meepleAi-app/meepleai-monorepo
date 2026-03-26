@@ -43,7 +43,7 @@ const meta = {
     },
   },
   args: {
-    redirectUrl: '/dashboard',
+    redirectUrl: '/library',
     autoRedirectSeconds: 3,
     onRedirect: fn(),
   },
@@ -69,7 +69,7 @@ type Story = StoryObj<typeof meta>;
 export const Default: Story = {
   args: {
     email: undefined,
-    redirectUrl: '/dashboard',
+    redirectUrl: '/library',
     autoRedirectSeconds: 3,
   },
 };
@@ -80,7 +80,7 @@ export const Default: Story = {
 export const WithEmail: Story = {
   args: {
     email: 'user@example.com',
-    redirectUrl: '/dashboard',
+    redirectUrl: '/library',
     autoRedirectSeconds: 3,
   },
   parameters: {
@@ -98,7 +98,7 @@ export const WithEmail: Story = {
 export const NoAutoRedirect: Story = {
   args: {
     email: 'user@example.com',
-    redirectUrl: '/dashboard',
+    redirectUrl: '/library',
     autoRedirectSeconds: 0,
   },
   parameters: {
@@ -120,7 +120,7 @@ export const NoAutoRedirect: Story = {
 export const CountdownAt5: Story = {
   args: {
     email: 'user@example.com',
-    redirectUrl: '/dashboard',
+    redirectUrl: '/library',
     autoRedirectSeconds: 5,
   },
 };
@@ -131,7 +131,7 @@ export const CountdownAt5: Story = {
 export const CountdownAt10: Story = {
   args: {
     email: 'user@example.com',
-    redirectUrl: '/dashboard',
+    redirectUrl: '/library',
     autoRedirectSeconds: 10,
   },
 };
@@ -142,7 +142,7 @@ export const CountdownAt10: Story = {
 export const CountdownAt1: Story = {
   args: {
     email: 'user@example.com',
-    redirectUrl: '/dashboard',
+    redirectUrl: '/library',
     autoRedirectSeconds: 1,
   },
   parameters: {
@@ -164,7 +164,7 @@ export const CountdownAt1: Story = {
 export const LongEmail: Story = {
   args: {
     email: 'verylongusername.with.many.parts@longdomainname.example.com',
-    redirectUrl: '/dashboard',
+    redirectUrl: '/library',
     autoRedirectSeconds: 3,
   },
   parameters: {
@@ -182,7 +182,7 @@ export const LongEmail: Story = {
 export const ShortEmail: Story = {
   args: {
     email: 'a@b.io',
-    redirectUrl: '/dashboard',
+    redirectUrl: '/library',
     autoRedirectSeconds: 3,
   },
 };
@@ -197,7 +197,7 @@ export const ShortEmail: Story = {
 export const Mobile: Story = {
   args: {
     email: 'user@example.com',
-    redirectUrl: '/dashboard',
+    redirectUrl: '/library',
     autoRedirectSeconds: 3,
   },
   parameters: {
@@ -216,7 +216,7 @@ export const Mobile: Story = {
 export const MobileNoEmail: Story = {
   args: {
     email: undefined,
-    redirectUrl: '/dashboard',
+    redirectUrl: '/library',
     autoRedirectSeconds: 3,
   },
   parameters: {
@@ -235,7 +235,7 @@ export const MobileNoEmail: Story = {
 export const Tablet: Story = {
   args: {
     email: 'user@example.com',
-    redirectUrl: '/dashboard',
+    redirectUrl: '/library',
     autoRedirectSeconds: 3,
   },
   parameters: {
@@ -254,7 +254,7 @@ export const Tablet: Story = {
 export const DarkMode: Story = {
   args: {
     email: 'user@example.com',
-    redirectUrl: '/dashboard',
+    redirectUrl: '/library',
     autoRedirectSeconds: 3,
   },
   parameters: {
@@ -275,7 +275,7 @@ export const DarkMode: Story = {
 export const DarkModeNoEmail: Story = {
   args: {
     email: undefined,
-    redirectUrl: '/dashboard',
+    redirectUrl: '/library',
     autoRedirectSeconds: 3,
   },
   parameters: {
@@ -296,7 +296,7 @@ export const DarkModeNoEmail: Story = {
 export const DarkModeMobile: Story = {
   args: {
     email: 'user@example.com',
-    redirectUrl: '/dashboard',
+    redirectUrl: '/library',
     autoRedirectSeconds: 3,
   },
   parameters: {
@@ -327,7 +327,7 @@ export const DarkModeMobile: Story = {
 export const OAuthSuccess: Story = {
   args: {
     email: 'user.from.google@gmail.com',
-    redirectUrl: '/dashboard',
+    redirectUrl: '/library',
     autoRedirectSeconds: 3,
   },
   parameters: {
@@ -345,7 +345,7 @@ export const OAuthSuccess: Story = {
 export const CorporateEmail: Story = {
   args: {
     email: 'john.smith@acmecorp.com',
-    redirectUrl: '/dashboard',
+    redirectUrl: '/library',
     autoRedirectSeconds: 5,
   },
   parameters: {

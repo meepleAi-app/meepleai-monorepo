@@ -1,5 +1,6 @@
 using Api.BoundedContexts.Authentication.Application.Commands;
-using Api.BoundedContexts.Authentication.Application.Handlers;
+using Api.BoundedContexts.Authentication.Application.Commands;
+using Api.BoundedContexts.Authentication.Application.Queries;
 using Api.BoundedContexts.Authentication.Domain.Entities;
 using Api.BoundedContexts.Authentication.Infrastructure.Persistence;
 using Api.BoundedContexts.KnowledgeBase.Application.Commands;
@@ -11,6 +12,7 @@ using MediatR;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.Authentication.Application.Handlers;
 
@@ -65,10 +67,10 @@ public class DeleteOwnAccountCommandHandlerTests
         var result = await _handler.Handle(command, CancellationToken.None);
 
         // Assert
-        Assert.Equal(0, result.SessionsRevoked);
-        Assert.Equal(5, result.LlmRequestLogsDeleted);
-        Assert.Equal(3, result.ConversationMemoriesDeleted);
-        Assert.True(result.RedisKeysCleared);
+        result.SessionsRevoked.Should().Be(0);
+        result.LlmRequestLogsDeleted.Should().Be(5);
+        result.ConversationMemoriesDeleted.Should().Be(3);
+        result.RedisKeysCleared.Should().BeTrue();
 
         _mockSessionRepository.Verify(r => r.RevokeAllUserSessionsAsync(userId, It.IsAny<CancellationToken>()), Times.Once);
         _mockUserRepository.Verify(r => r.DeleteAsync(user, It.IsAny<CancellationToken>()), Times.Once);
@@ -87,8 +89,9 @@ public class DeleteOwnAccountCommandHandlerTests
             .ReturnsAsync((User?)null);
 
         // Act & Assert
-        await Assert.ThrowsAsync<NotFoundException>(() =>
-            _handler.Handle(command, CancellationToken.None));
+        var act = () =>
+            _handler.Handle(command, CancellationToken.None);
+        await act.Should().ThrowAsync<NotFoundException>();
 
         _mockUserRepository.Verify(r => r.DeleteAsync(It.IsAny<User>(), It.IsAny<CancellationToken>()), Times.Never);
     }
@@ -110,8 +113,9 @@ public class DeleteOwnAccountCommandHandlerTests
             .ReturnsAsync(1);
 
         // Act & Assert
-        await Assert.ThrowsAsync<ConflictException>(() =>
-            _handler.Handle(command, CancellationToken.None));
+        var act = () =>
+            _handler.Handle(command, CancellationToken.None);
+        await act.Should().ThrowAsync<ConflictException>();
 
         _mockUserRepository.Verify(r => r.DeleteAsync(It.IsAny<User>(), It.IsAny<CancellationToken>()), Times.Never);
     }
@@ -205,7 +209,7 @@ public class DeleteOwnAccountCommandHandlerTests
         var result = await _handler.Handle(command, CancellationToken.None);
 
         // Assert
-        Assert.True(result.DeletedAt >= before);
-        Assert.True(result.DeletedAt <= DateTime.UtcNow);
+        (result.DeletedAt >= before).Should().BeTrue();
+        (result.DeletedAt <= DateTime.UtcNow).Should().BeTrue();
     }
 }

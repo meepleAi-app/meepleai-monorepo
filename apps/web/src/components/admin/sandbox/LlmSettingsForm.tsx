@@ -10,9 +10,6 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from '@/components/ui/data-display/collapsible';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/primitives/textarea';
 import {
   Select,
   SelectContent,
@@ -21,7 +18,10 @@ import {
   SelectLabel,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
+} from '@/components/ui/overlays/select';
+import { Input } from '@/components/ui/primitives/input';
+import { Label } from '@/components/ui/primitives/label';
+import { Textarea } from '@/components/ui/primitives/textarea';
 import { Slider } from '@/components/ui/slider';
 
 const MODEL_GROUPS = [

@@ -1,5 +1,5 @@
 using Api.BoundedContexts.DocumentProcessing.Application.DTOs;
-using Api.BoundedContexts.DocumentProcessing.Application.Handlers.Queue;
+using Api.BoundedContexts.DocumentProcessing.Application.Commands.Queue;
 using Api.BoundedContexts.DocumentProcessing.Application.Queries.Queue;
 using Api.BoundedContexts.DocumentProcessing.Domain.Repositories;
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.Services;

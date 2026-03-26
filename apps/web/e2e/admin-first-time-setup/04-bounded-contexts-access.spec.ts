@@ -56,12 +56,13 @@ test.describe('Bounded Context Access', () => {
     await page.goto('/admin/audit');
 
     // Verify audit log interface
-    const auditContainer = page.locator(
-      'h1:has-text("Audit"), [data-testid="audit-log"], table'
-    );
+    const auditContainer = page.locator('h1:has-text("Audit"), [data-testid="audit-log"], table');
 
     // Audit logs might not exist yet in fresh setup - that's OK
-    const auditExists = await auditContainer.first().isVisible({ timeout: 5000 }).catch(() => false);
+    const auditExists = await auditContainer
+      .first()
+      .isVisible({ timeout: 5000 })
+      .catch(() => false);
 
     if (auditExists) {
       console.log('✅ Audit logs accessible');
@@ -71,13 +72,13 @@ test.describe('Bounded Context Access', () => {
   });
 
   test('should access GameManagement context - Catalog', async ({ page, request }) => {
-    // Navigate to game catalog
-    await page.goto('/games');
+    // Navigate to library (game catalog)
+    await page.goto('/library');
 
     // Verify catalog loaded
-    await expect(
-      page.locator('h1:has-text("Game"), h1:has-text("Catalog")')
-    ).toBeVisible({ timeout: 10000 });
+    await expect(page.locator('h1:has-text("Game"), h1:has-text("Catalog")')).toBeVisible({
+      timeout: 10000,
+    });
 
     // Verify seeded games visible via API
     const gamesResponse = await request.get('/api/v1/shared-games');
@@ -97,7 +98,7 @@ test.describe('Bounded Context Access', () => {
   });
 
   test('should verify game with AI agent is marked correctly', async ({ page, request }) => {
-    await page.goto('/games');
+    await page.goto('/library');
 
     // Check if any game has AI agent badge/indicator
     // This depends on wizard completion in previous tests
@@ -108,7 +109,8 @@ test.describe('Bounded Context Access', () => {
 
     // Look for games with associated documents or agents
     const gamesWithAgents = games.filter(
-      (g: { hasAgent?: boolean; documentCount?: number }) => g.hasAgent || (g.documentCount ?? 0) > 0
+      (g: { hasAgent?: boolean; documentCount?: number }) =>
+        g.hasAgent || (g.documentCount ?? 0) > 0
     );
 
     if (gamesWithAgents.length > 0) {
@@ -119,7 +121,10 @@ test.describe('Bounded Context Access', () => {
         '.badge:has-text("AI"), .badge:has-text("Agent"), [data-testid="ai-badge"]'
       );
 
-      const badgeVisible = await agentBadge.first().isVisible({ timeout: 5000 }).catch(() => false);
+      const badgeVisible = await agentBadge
+        .first()
+        .isVisible({ timeout: 5000 })
+        .catch(() => false);
 
       if (badgeVisible) {
         console.log('   AI Agent badge visible in UI');
@@ -132,19 +137,17 @@ test.describe('Bounded Context Access', () => {
   });
 
   test('should access game details page', async ({ page }) => {
-    await page.goto('/games');
+    await page.goto('/library');
 
     // Click first game card
     const firstGameCard = page.locator('[data-testid*="game-card"], .game-card, article').first();
     await firstGameCard.click();
 
     // Verify game details page loaded
-    await page.waitForURL(/\/games\/[a-zA-Z0-9-]+/, { timeout: 10000 });
+    await page.waitForURL(/\/library\/games\/[a-zA-Z0-9-]+/, { timeout: 10000 });
 
     // Verify game details visible
-    await expect(
-      page.locator('h1, h2, [data-testid="game-title"]')
-    ).toBeVisible({ timeout: 5000 });
+    await expect(page.locator('h1, h2, [data-testid="game-title"]')).toBeVisible({ timeout: 5000 });
 
     console.log('✅ Game details page accessible');
     console.log(`   URL: ${page.url()}`);
@@ -155,9 +158,9 @@ test.describe('Bounded Context Access', () => {
     await page.goto('/chat');
 
     // Verify chat interface loaded
-    await expect(
-      page.locator('h1:has-text("Chat"), [data-testid="chat-interface"]')
-    ).toBeVisible({ timeout: 10000 });
+    await expect(page.locator('h1:has-text("Chat"), [data-testid="chat-interface"]')).toBeVisible({
+      timeout: 10000,
+    });
 
     // Check for existing chat threads via API
     const threadsResponse = await request.get('/api/v1/chat-threads');
@@ -263,7 +266,7 @@ test.describe('Bounded Context Access', () => {
     ];
 
     const results = await Promise.all(
-      contexts.map(async (ctx) => {
+      contexts.map(async ctx => {
         try {
           const response = await request.get(ctx.endpoint);
           return {
@@ -282,16 +285,16 @@ test.describe('Bounded Context Access', () => {
     );
 
     console.log('📊 Bounded Context Health:');
-    results.forEach((result) => {
+    results.forEach(result => {
       const icon = result.healthy ? '✅' : '❌';
       console.log(`   ${icon} ${result.name}: ${result.status}`);
     });
 
     // Verify at least Administration and GameManagement are healthy
-    const criticalContexts = results.filter((r) =>
+    const criticalContexts = results.filter(r =>
       ['Administration', 'GameManagement'].includes(r.name)
     );
-    const allCriticalHealthy = criticalContexts.every((r) => r.healthy);
+    const allCriticalHealthy = criticalContexts.every(r => r.healthy);
 
     expect(allCriticalHealthy).toBe(true);
   });

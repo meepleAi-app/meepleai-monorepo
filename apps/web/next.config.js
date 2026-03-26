@@ -251,8 +251,9 @@ const nextConfig = {
       },
       { source: '/games/:id/agents', destination: '/library/:id?tab=agent', permanent: true },
       { source: '/games/:id/chats', destination: '/chat', permanent: true },
-      { source: '/games/catalog', destination: '/discover', permanent: true },
-      { source: '/games/add', destination: '/discover/add', permanent: true },
+      { source: '/games', destination: '/library?tab=public', permanent: true },
+      { source: '/games/catalog', destination: '/library?tab=public', permanent: true },
+      { source: '/games/add', destination: '/library', permanent: true },
 
       // Catch-all for any other /settings sub-paths
       { source: '/settings/:path*', destination: '/profile?tab=settings', permanent: true },
@@ -515,6 +516,38 @@ const nextConfig = {
       },
 
       // Admin Users hub (/admin/users)
+    ];
+  },
+
+  // SEC-09: Security headers for Next.js responses (static assets bypass API middleware)
+  async headers() {
+    return [
+      {
+        source: '/(.*)',
+        headers: [
+          { key: 'X-Frame-Options', value: 'DENY' },
+          { key: 'X-Content-Type-Options', value: 'nosniff' },
+          { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
+          {
+            key: 'Permissions-Policy',
+            value: 'camera=(), microphone=(), geolocation=(), payment=()',
+          },
+          {
+            key: 'Content-Security-Policy',
+            value: [
+              "default-src 'self'",
+              "script-src 'self' 'unsafe-inline'",
+              "style-src 'self' 'unsafe-inline'",
+              "img-src 'self' data: https:",
+              "font-src 'self' data:",
+              "connect-src 'self' http://localhost:8080",
+              "frame-ancestors 'none'",
+              "base-uri 'self'",
+              "form-action 'self'",
+            ].join('; '),
+          },
+        ],
+      },
     ];
   },
 

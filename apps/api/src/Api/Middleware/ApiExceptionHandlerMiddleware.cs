@@ -62,7 +62,7 @@ internal class ApiExceptionHandlerMiddleware
         _logger.LogError(ex,
             "Unhandled exception in API endpoint. Path: {Path}, Method: {Method}, TraceId: {TraceId}",
             sanitizedPath,
-            context.Request.Method,
+            LogValueSanitizer.Sanitize(context.Request.Method),
             context.TraceIdentifier);
 
         // Special handling for FluentValidation exceptions (Issue #1449)

@@ -1,5 +1,5 @@
 using Api.BoundedContexts.Administration.Application.Commands.AlertRules;
-using Api.BoundedContexts.Administration.Application.Handlers.AlertRules;
+using Api.BoundedContexts.Administration.Application.Commands.AlertRules;
 using Api.BoundedContexts.Administration.Domain.Aggregates.AlertRules;
 using Api.BoundedContexts.Administration.Domain.Repositories;
 using Api.Tests.Constants;
@@ -92,8 +92,9 @@ public class UpdateAlertRuleCommandHandlerTests
             .ReturnsAsync((AlertRule?)null);
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
-            _handler.Handle(command, CancellationToken.None));
+        var act = () =>
+            _handler.Handle(command, CancellationToken.None);
+        var exception = (await act.Should().ThrowAsync<InvalidOperationException>()).Which;
 
         exception.Message.Should().Contain(ruleId.ToString());
         exception.Message.Should().Contain("not found");
@@ -109,8 +110,9 @@ public class UpdateAlertRuleCommandHandlerTests
         UpdateAlertRuleCommand? command = null;
 
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentNullException>(() =>
-            _handler.Handle(command!, CancellationToken.None));
+        var act = () =>
+            _handler.Handle(command!, CancellationToken.None);
+        await act.Should().ThrowAsync<ArgumentNullException>();
 
         _mockRepository.Verify(r => r.GetByIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Never);
     }

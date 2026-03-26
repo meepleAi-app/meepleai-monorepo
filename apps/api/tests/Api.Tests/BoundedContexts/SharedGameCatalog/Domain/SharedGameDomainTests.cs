@@ -4,6 +4,7 @@ using Api.BoundedContexts.SharedGameCatalog.Domain.Events;
 using Api.BoundedContexts.SharedGameCatalog.Domain.ValueObjects;
 using Api.Tests.Constants;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.SharedGameCatalog.Domain;
 
@@ -33,28 +34,28 @@ public class SharedGameDomainTests
             bggId: 13);
 
         // Assert
-        Assert.NotEqual(Guid.Empty, game.Id);
-        Assert.Equal("Catan", game.Title);
-        Assert.Equal(1995, game.YearPublished);
-        Assert.Equal(3, game.MinPlayers);
-        Assert.Equal(4, game.MaxPlayers);
-        Assert.Equal(90, game.PlayingTimeMinutes);
-        Assert.Equal(10, game.MinAge);
-        Assert.Equal(2.5m, game.ComplexityRating);
-        Assert.Equal(7.8m, game.AverageRating);
-        Assert.Equal(13, game.BggId);
-        Assert.Equal(GameStatus.Draft, game.Status);
-        Assert.Equal(TestUserId, game.CreatedBy);
-        Assert.NotNull(game.Rules);
-        Assert.Equal("Game rules content", game.Rules.Content);
-        Assert.Equal("en", game.Rules.Language);
+        game.Id.Should().NotBe(Guid.Empty);
+        game.Title.Should().Be("Catan");
+        game.YearPublished.Should().Be(1995);
+        game.MinPlayers.Should().Be(3);
+        game.MaxPlayers.Should().Be(4);
+        game.PlayingTimeMinutes.Should().Be(90);
+        game.MinAge.Should().Be(10);
+        game.ComplexityRating.Should().Be(2.5m);
+        game.AverageRating.Should().Be(7.8m);
+        game.BggId.Should().Be(13);
+        game.Status.Should().Be(GameStatus.Draft);
+        game.CreatedBy.Should().Be(TestUserId);
+        game.Rules.Should().NotBeNull();
+        game.Rules.Content.Should().Be("Game rules content");
+        game.Rules.Language.Should().Be("en");
 
         // Assert domain event raised
-        Assert.Single(game.DomainEvents);
-        var createdEvent = Assert.IsType<SharedGameCreatedEvent>(game.DomainEvents.First());
-        Assert.Equal(game.Id, createdEvent.GameId);
-        Assert.Equal("Catan", createdEvent.Title);
-        Assert.Equal(TestUserId, createdEvent.CreatedBy);
+        game.DomainEvents.Should().ContainSingle();
+        var createdEvent = game.DomainEvents.First().Should().BeOfType<SharedGameCreatedEvent>().Subject;
+        createdEvent.GameId.Should().Be(game.Id);
+        createdEvent.Title.Should().Be("Catan");
+        createdEvent.CreatedBy.Should().Be(TestUserId);
     }
 
     [Fact]
@@ -81,24 +82,24 @@ public class SharedGameDomainTests
             modifiedBy: modifierId);
 
         // Assert
-        Assert.Equal("Settlers of Catan", game.Title);
-        Assert.Equal(2, game.MinPlayers);
-        Assert.Equal(6, game.MaxPlayers);
-        Assert.Equal(120, game.PlayingTimeMinutes);
-        Assert.Equal(12, game.MinAge);
-        Assert.Equal(3.0m, game.ComplexityRating);
-        Assert.Equal(8.0m, game.AverageRating);
-        Assert.Equal(modifierId, game.ModifiedBy);
-        Assert.NotNull(game.ModifiedAt);
-        Assert.NotNull(game.Rules);
-        Assert.Equal("Updated rules", game.Rules.Content);
-        Assert.Equal("it", game.Rules.Language);
+        game.Title.Should().Be("Settlers of Catan");
+        game.MinPlayers.Should().Be(2);
+        game.MaxPlayers.Should().Be(6);
+        game.PlayingTimeMinutes.Should().Be(120);
+        game.MinAge.Should().Be(12);
+        game.ComplexityRating.Should().Be(3.0m);
+        game.AverageRating.Should().Be(8.0m);
+        game.ModifiedBy.Should().Be(modifierId);
+        game.ModifiedAt.Should().NotBeNull();
+        game.Rules.Should().NotBeNull();
+        game.Rules.Content.Should().Be("Updated rules");
+        game.Rules.Language.Should().Be("it");
 
         // Assert domain event raised (CreatedEvent + UpdatedEvent)
-        Assert.Equal(2, game.DomainEvents.Count);
-        var updatedEvent = Assert.IsType<SharedGameUpdatedEvent>(game.DomainEvents.Last());
-        Assert.Equal(game.Id, updatedEvent.GameId);
-        Assert.Equal(modifierId, updatedEvent.ModifiedBy);
+        game.DomainEvents.Count.Should().Be(2);
+        var updatedEvent = game.DomainEvents.Last().Should().BeOfType<SharedGameUpdatedEvent>().Subject;
+        updatedEvent.GameId.Should().Be(game.Id);
+        updatedEvent.ModifiedBy.Should().Be(modifierId);
     }
 
     [Theory]
@@ -120,7 +121,7 @@ public class SharedGameDomainTests
         int minAge)
     {
         // Act & Assert
-        Assert.Throws<ArgumentException>(() =>
+        var act = () =>
             SharedGame.Create(
                 title,
                 year,
@@ -135,7 +136,8 @@ public class SharedGameDomainTests
                 "https://example.com/thumb.jpg",
                 null,
                 TestUserId,
-                null));
+                null);
+        act.Should().Throw<ArgumentException>();
     }
 
     [Theory]
@@ -144,7 +146,7 @@ public class SharedGameDomainTests
     public void Create_WithInvalidComplexityRating_ThrowsArgumentException(decimal rating)
     {
         // Act & Assert
-        Assert.Throws<ArgumentException>(() =>
+        var act = () =>
             SharedGame.Create(
                 "Catan",
                 1995,
@@ -159,7 +161,8 @@ public class SharedGameDomainTests
                 "https://example.com/thumb.jpg",
                 null,
                 TestUserId,
-                null));
+                null);
+        act.Should().Throw<ArgumentException>();
     }
 
     [Theory]
@@ -168,7 +171,7 @@ public class SharedGameDomainTests
     public void Create_WithInvalidAverageRating_ThrowsArgumentException(decimal rating)
     {
         // Act & Assert
-        Assert.Throws<ArgumentException>(() =>
+        var act = () =>
             SharedGame.Create(
                 "Catan",
                 1995,
@@ -183,7 +186,8 @@ public class SharedGameDomainTests
                 "https://example.com/thumb.jpg",
                 null,
                 TestUserId,
-                null));
+                null);
+        act.Should().Throw<ArgumentException>();
     }
 
     [Theory]
@@ -193,7 +197,7 @@ public class SharedGameDomainTests
     public void Create_WithInvalidImageUrl_ThrowsArgumentException(string url)
     {
         // Act & Assert
-        Assert.Throws<ArgumentException>(() =>
+        var act = () =>
             SharedGame.Create(
                 "Catan",
                 1995,
@@ -208,14 +212,15 @@ public class SharedGameDomainTests
                 "https://example.com/thumb.jpg",
                 null,
                 TestUserId,
-                null));
+                null);
+        act.Should().Throw<ArgumentException>();
     }
 
     [Fact]
     public void Create_WithEmptyCreatedBy_ThrowsArgumentException()
     {
         // Act & Assert
-        Assert.Throws<ArgumentException>(() =>
+        var act = () =>
             SharedGame.Create(
                 "Catan",
                 1995,
@@ -230,7 +235,8 @@ public class SharedGameDomainTests
                 "https://example.com/thumb.jpg",
                 null,
                 Guid.Empty,
-                null));
+                null);
+        act.Should().Throw<ArgumentException>();
     }
 
     #region GameDesigner Tests
@@ -242,9 +248,9 @@ public class SharedGameDomainTests
         var designer = GameDesigner.Create("Reiner Knizia");
 
         // Assert
-        Assert.NotEqual(Guid.Empty, designer.Id);
-        Assert.Equal("Reiner Knizia", designer.Name);
-        Assert.True(designer.CreatedAt <= DateTime.UtcNow);
+        designer.Id.Should().NotBe(Guid.Empty);
+        designer.Name.Should().Be("Reiner Knizia");
+        (designer.CreatedAt <= DateTime.UtcNow).Should().BeTrue();
     }
 
     [Theory]
@@ -254,7 +260,8 @@ public class SharedGameDomainTests
     public void GameDesigner_Create_WithInvalidName_ThrowsArgumentException(string invalidName)
     {
         // Act & Assert
-        Assert.Throws<ArgumentException>(() => GameDesigner.Create(invalidName));
+        var act = () => GameDesigner.Create(invalidName);
+        act.Should().Throw<ArgumentException>();
     }
 
     [Fact]
@@ -264,7 +271,8 @@ public class SharedGameDomainTests
         var longName = new string('A', 201);
 
         // Act & Assert
-        Assert.Throws<ArgumentException>(() => GameDesigner.Create(longName));
+        var act = () => GameDesigner.Create(longName);
+        act.Should().Throw<ArgumentException>();
     }
 
     #endregion
@@ -278,9 +286,9 @@ public class SharedGameDomainTests
         var publisher = GamePublisher.Create("CMON");
 
         // Assert
-        Assert.NotEqual(Guid.Empty, publisher.Id);
-        Assert.Equal("CMON", publisher.Name);
-        Assert.True(publisher.CreatedAt <= DateTime.UtcNow);
+        publisher.Id.Should().NotBe(Guid.Empty);
+        publisher.Name.Should().Be("CMON");
+        (publisher.CreatedAt <= DateTime.UtcNow).Should().BeTrue();
     }
 
     [Theory]
@@ -290,7 +298,8 @@ public class SharedGameDomainTests
     public void GamePublisher_Create_WithInvalidName_ThrowsArgumentException(string invalidName)
     {
         // Act & Assert
-        Assert.Throws<ArgumentException>(() => GamePublisher.Create(invalidName));
+        var act = () => GamePublisher.Create(invalidName);
+        act.Should().Throw<ArgumentException>();
     }
 
     [Fact]
@@ -300,7 +309,8 @@ public class SharedGameDomainTests
         var longName = new string('A', 201);
 
         // Act & Assert
-        Assert.Throws<ArgumentException>(() => GamePublisher.Create(longName));
+        var act = () => GamePublisher.Create(longName);
+        act.Should().Throw<ArgumentException>();
     }
 
     #endregion
@@ -315,21 +325,21 @@ public class SharedGameDomainTests
         // Arrange
         var game = CreateValidGame();
         var submitterId = Guid.NewGuid();
-        Assert.Equal(GameStatus.Draft, game.Status);
+        game.Status.Should().Be(GameStatus.Draft);
 
         // Act
         game.SubmitForApproval(submitterId);
 
         // Assert
-        Assert.Equal(GameStatus.PendingApproval, game.Status);
-        Assert.Equal(submitterId, game.ModifiedBy);
-        Assert.NotNull(game.ModifiedAt);
+        game.Status.Should().Be(GameStatus.PendingApproval);
+        game.ModifiedBy.Should().Be(submitterId);
+        game.ModifiedAt.Should().NotBeNull();
 
         // Assert domain event raised
         var submitEvent = game.DomainEvents.OfType<SharedGameSubmittedForApprovalEvent>().LastOrDefault();
-        Assert.NotNull(submitEvent);
-        Assert.Equal(game.Id, submitEvent.GameId);
-        Assert.Equal(submitterId, submitEvent.SubmittedBy);
+        submitEvent.Should().NotBeNull();
+        submitEvent.GameId.Should().Be(game.Id);
+        submitEvent.SubmittedBy.Should().Be(submitterId);
     }
 
     [Fact]
@@ -341,9 +351,10 @@ public class SharedGameDomainTests
         game.ApprovePublication(TestUserId); // Move to Published
 
         // Act & Assert
-        var exception = Assert.Throws<InvalidOperationException>(() =>
-            game.SubmitForApproval(Guid.NewGuid()));
-        Assert.Contains("Only Draft games can be submitted", exception.Message);
+        var act = () =>
+            game.SubmitForApproval(Guid.NewGuid());
+        var exception = act.Should().Throw<InvalidOperationException>().Which;
+        exception.Message.Should().Contain("Only Draft games can be submitted");
     }
 
     [Fact]
@@ -352,7 +363,7 @@ public class SharedGameDomainTests
         // Arrange
         var game = CreateValidGame();
         game.SubmitForApproval(TestUserId);
-        Assert.Equal(GameStatus.PendingApproval, game.Status);
+        game.Status.Should().Be(GameStatus.PendingApproval);
 
         var approverId = Guid.NewGuid();
 
@@ -360,15 +371,15 @@ public class SharedGameDomainTests
         game.ApprovePublication(approverId);
 
         // Assert
-        Assert.Equal(GameStatus.Published, game.Status);
-        Assert.Equal(approverId, game.ModifiedBy);
-        Assert.NotNull(game.ModifiedAt);
+        game.Status.Should().Be(GameStatus.Published);
+        game.ModifiedBy.Should().Be(approverId);
+        game.ModifiedAt.Should().NotBeNull();
 
         // Assert domain event raised
         var approveEvent = game.DomainEvents.OfType<SharedGamePublicationApprovedEvent>().LastOrDefault();
-        Assert.NotNull(approveEvent);
-        Assert.Equal(game.Id, approveEvent.GameId);
-        Assert.Equal(approverId, approveEvent.ApprovedBy);
+        approveEvent.Should().NotBeNull();
+        approveEvent.GameId.Should().Be(game.Id);
+        approveEvent.ApprovedBy.Should().Be(approverId);
     }
 
     [Fact]
@@ -376,12 +387,13 @@ public class SharedGameDomainTests
     {
         // Arrange
         var game = CreateValidGame();
-        Assert.Equal(GameStatus.Draft, game.Status);
+        game.Status.Should().Be(GameStatus.Draft);
 
         // Act & Assert
-        var exception = Assert.Throws<InvalidOperationException>(() =>
-            game.ApprovePublication(Guid.NewGuid()));
-        Assert.Contains("Only PendingApproval games can be approved", exception.Message);
+        var act = () =>
+            game.ApprovePublication(Guid.NewGuid());
+        var exception = act.Should().Throw<InvalidOperationException>().Which;
+        exception.Message.Should().Contain("Only PendingApproval games can be approved");
     }
 
     [Fact]
@@ -390,7 +402,7 @@ public class SharedGameDomainTests
         // Arrange
         var game = CreateValidGame();
         game.SubmitForApproval(TestUserId);
-        Assert.Equal(GameStatus.PendingApproval, game.Status);
+        game.Status.Should().Be(GameStatus.PendingApproval);
 
         var rejecterId = Guid.NewGuid();
         var reason = "Needs more information about player count";
@@ -399,16 +411,16 @@ public class SharedGameDomainTests
         game.RejectPublication(rejecterId, reason);
 
         // Assert
-        Assert.Equal(GameStatus.Draft, game.Status);
-        Assert.Equal(rejecterId, game.ModifiedBy);
-        Assert.NotNull(game.ModifiedAt);
+        game.Status.Should().Be(GameStatus.Draft);
+        game.ModifiedBy.Should().Be(rejecterId);
+        game.ModifiedAt.Should().NotBeNull();
 
         // Assert domain event raised
         var rejectEvent = game.DomainEvents.OfType<SharedGamePublicationRejectedEvent>().LastOrDefault();
-        Assert.NotNull(rejectEvent);
-        Assert.Equal(game.Id, rejectEvent.GameId);
-        Assert.Equal(rejecterId, rejectEvent.RejectedBy);
-        Assert.Equal(reason, rejectEvent.Reason);
+        rejectEvent.Should().NotBeNull();
+        rejectEvent.GameId.Should().Be(game.Id);
+        rejectEvent.RejectedBy.Should().Be(rejecterId);
+        rejectEvent.Reason.Should().Be(reason);
     }
 
     [Fact]
@@ -416,12 +428,13 @@ public class SharedGameDomainTests
     {
         // Arrange
         var game = CreateValidGame();
-        Assert.Equal(GameStatus.Draft, game.Status);
+        game.Status.Should().Be(GameStatus.Draft);
 
         // Act & Assert
-        var exception = Assert.Throws<InvalidOperationException>(() =>
-            game.RejectPublication(Guid.NewGuid(), "Invalid reason"));
-        Assert.Contains("Only PendingApproval games can be rejected", exception.Message);
+        var act = () =>
+            game.RejectPublication(Guid.NewGuid(), "Invalid reason");
+        var exception = act.Should().Throw<InvalidOperationException>().Which;
+        exception.Message.Should().Contain("Only PendingApproval games can be rejected");
     }
 
     [Fact]
@@ -432,9 +445,10 @@ public class SharedGameDomainTests
         game.SubmitForApproval(TestUserId);
 
         // Act & Assert
-        var exception = Assert.Throws<ArgumentException>(() =>
-            game.RejectPublication(Guid.NewGuid(), ""));
-        Assert.Contains("Rejection reason is required", exception.Message);
+        var act = () =>
+            game.RejectPublication(Guid.NewGuid(), "");
+        var exception = act.Should().Throw<ArgumentException>().Which;
+        exception.Message.Should().Contain("Rejection reason is required");
     }
 
     [Fact]
@@ -446,19 +460,19 @@ public class SharedGameDomainTests
         var approverId = Guid.NewGuid();
 
         // Act & Assert - Complete workflow
-        Assert.Equal(GameStatus.Draft, game.Status);
+        game.Status.Should().Be(GameStatus.Draft);
 
         game.SubmitForApproval(submitterId);
-        Assert.Equal(GameStatus.PendingApproval, game.Status);
+        game.Status.Should().Be(GameStatus.PendingApproval);
 
         game.ApprovePublication(approverId);
-        Assert.Equal(GameStatus.Published, game.Status);
+        game.Status.Should().Be(GameStatus.Published);
 
         // Verify all events were raised in correct order
         var events = game.DomainEvents.ToList();
-        Assert.Contains(events, e => e is SharedGameCreatedEvent);
-        Assert.Contains(events, e => e is SharedGameSubmittedForApprovalEvent);
-        Assert.Contains(events, e => e is SharedGamePublicationApprovedEvent);
+        events.Should().Contain(e => e is SharedGameCreatedEvent);
+        events.Should().Contain(e => e is SharedGameSubmittedForApprovalEvent);
+        events.Should().Contain(e => e is SharedGamePublicationApprovedEvent);
     }
 
     private static SharedGame CreateValidGame()

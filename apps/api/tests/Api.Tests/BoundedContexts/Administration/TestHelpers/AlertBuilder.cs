@@ -72,4 +72,3 @@ internal class AlertBuilder
 
     public static implicit operator Alert(AlertBuilder builder) => builder.Build();
 }
-

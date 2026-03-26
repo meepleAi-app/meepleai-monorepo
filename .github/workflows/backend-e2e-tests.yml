@@ -19,11 +19,12 @@ permissions:
   pull-requests: write
   checks: write
 
+  actions: read
 jobs:
   # Quick path filtering
   changes:
     name: Detect Changes
-    runs-on: ${{ vars.RUNNER || 'ubuntu-latest' }}
+    runs-on: ${{ vars.RUNNER && fromJSON(vars.RUNNER) || 'ubuntu-latest' }}
     outputs:
       e2e-needed: ${{ steps.filter.outputs.e2e }}
     steps:
@@ -41,7 +42,7 @@ jobs:
   # Backend E2E Tests with Testcontainers
   backend-e2e-tests:
     name: Backend E2E Tests
-    runs-on: ${{ vars.RUNNER || 'ubuntu-latest' }}
+    runs-on: ${{ vars.RUNNER && fromJSON(vars.RUNNER) || 'ubuntu-latest' }}
     needs: changes
     if: needs.changes.outputs.e2e-needed == 'true' || github.event_name == 'workflow_dispatch'
     timeout-minutes: 20
@@ -105,7 +106,7 @@ jobs:
   # Quality Gate
   backend-e2e-quality-gate:
     name: Backend E2E Quality Gate
-    runs-on: ${{ vars.RUNNER || 'ubuntu-latest' }}
+    runs-on: ${{ vars.RUNNER && fromJSON(vars.RUNNER) || 'ubuntu-latest' }}
     needs: backend-e2e-tests
     if: always()
     steps:
@@ -151,3 +152,19 @@ jobs:
               repo: context.repo.repo,
               body: body
             });
+
+  notify-end:
+    if: always() && contains(join(needs.*.result, ','), 'failure')
+    needs: [changes, backend-e2e-tests, backend-e2e-quality-gate]
+    uses: ./.github/workflows/notify-slack.yml
+    with:
+      event: failed
+      workflow_name: "Backend E2E Tests"
+      environment: test
+      branch: ${{ github.head_ref || github.ref_name }}
+      actor: ${{ github.actor }}
+      commit_sha: ${{ github.sha }}
+      commit_message: ${{ github.event.head_commit.message || 'Manual trigger' }}
+      run_url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+    secrets:
+      SLACK_GITNOTIFY_WEBHOOK_URL: ${{ secrets.SLACK_GITNOTIFY_WEBHOOK_URL }}

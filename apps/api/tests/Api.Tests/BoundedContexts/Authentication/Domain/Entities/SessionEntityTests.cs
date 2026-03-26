@@ -7,6 +7,7 @@ using Api.Tests.BoundedContexts.Authentication.TestHelpers;
 using Api.Tests.Constants;
 using Microsoft.Extensions.Time.Testing;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.Authentication.Domain.Entities;
 
@@ -32,15 +33,15 @@ public class SessionEntityTests
         var session = new Session(id, userId, token, lifetime, ipAddress, userAgent);
 
         // Assert
-        Assert.Equal(id, session.Id);
-        Assert.Equal(userId, session.UserId);
-        Assert.Equal(token.ComputeHash(), session.TokenHash);
-        Assert.NotNull(session.IpAddress);
-        Assert.Equal(ipAddress, session.IpAddress);
-        Assert.Equal(userAgent, session.UserAgent);
-        Assert.True(session.ExpiresAt > session.CreatedAt);
-        Assert.Null(session.RevokedAt);
-        Assert.Null(session.LastSeenAt);
+        session.Id.Should().Be(id);
+        session.UserId.Should().Be(userId);
+        session.TokenHash.Should().Be(token.ComputeHash());
+        session.IpAddress.Should().NotBeNull();
+        session.IpAddress.Should().Be(ipAddress);
+        session.UserAgent.Should().Be(userAgent);
+        (session.ExpiresAt > session.CreatedAt).Should().BeTrue();
+        session.RevokedAt.Should().BeNull();
+        session.LastSeenAt.Should().BeNull();
     }
 
     [Fact]
@@ -56,8 +57,8 @@ public class SessionEntityTests
 
         // Assert
         var expectedExpiration = session.CreatedAt.Add(Session.DefaultLifetime);
-        Assert.Equal(expectedExpiration, session.ExpiresAt);
-        Assert.Equal(TimeSpan.FromDays(30), Session.DefaultLifetime);
+        session.ExpiresAt.Should().Be(expectedExpiration);
+        Session.DefaultLifetime.Should().Be(TimeSpan.FromDays(30));
     }
 
     [Fact]
@@ -73,7 +74,7 @@ public class SessionEntityTests
         var actualLifetime = session.ExpiresAt - session.CreatedAt;
 
         // Assert
-        Assert.Equal(customLifetime.TotalSeconds, actualLifetime.TotalSeconds, precision: 1);
+        actualLifetime.TotalSeconds.Should().BeApproximately(customLifetime.TotalSeconds, 0.1);
     }
 
     [Fact]
@@ -83,11 +84,11 @@ public class SessionEntityTests
         var session = new SessionBuilder().Build();
 
         // Assert
-        Assert.NotEqual(Guid.Empty, session.Id);
-        Assert.NotEqual(Guid.Empty, session.UserId);
-        Assert.NotNull(session.TokenHash);
-        Assert.Null(session.IpAddress);
-        Assert.Null(session.UserAgent);
+        session.Id.Should().NotBe(Guid.Empty);
+        session.UserId.Should().NotBe(Guid.Empty);
+        session.TokenHash.Should().NotBeNull();
+        session.IpAddress.Should().BeNull();
+        session.UserAgent.Should().BeNull();
     }
     [Fact]
     public void IsValid_WithValidSession_ReturnsTrue()
@@ -102,7 +103,7 @@ public class SessionEntityTests
         var isValid = session.IsValid(timeProvider);
 
         // Assert
-        Assert.True(isValid);
+        isValid.Should().BeTrue();
     }
 
     [Fact]
@@ -120,7 +121,7 @@ public class SessionEntityTests
         var isValid = session.IsValid(timeProvider);
 
         // Assert
-        Assert.False(isValid);
+        isValid.Should().BeFalse();
     }
 
     [Fact]
@@ -136,7 +137,7 @@ public class SessionEntityTests
         var isValid = session.IsValid(timeProvider);
 
         // Assert
-        Assert.False(isValid);
+        isValid.Should().BeFalse();
     }
 
     [Fact]
@@ -153,7 +154,7 @@ public class SessionEntityTests
         var isValid = session.IsValid(timeProvider);
 
         // Assert
-        Assert.False(isValid);
+        isValid.Should().BeFalse();
     }
 
     [Fact]
@@ -170,7 +171,7 @@ public class SessionEntityTests
         var isValid = session.IsValid(timeProvider);
 
         // Assert
-        Assert.True(isValid);
+        isValid.Should().BeTrue();
     }
     [Fact]
     public void IsExpired_WithValidSession_ReturnsFalse()
@@ -185,7 +186,7 @@ public class SessionEntityTests
         var isExpired = session.IsExpired(timeProvider);
 
         // Assert
-        Assert.False(isExpired);
+        isExpired.Should().BeFalse();
     }
 
     [Fact]
@@ -203,7 +204,7 @@ public class SessionEntityTests
         var isExpired = session.IsExpired(timeProvider);
 
         // Assert
-        Assert.True(isExpired);
+        isExpired.Should().BeTrue();
     }
 
     [Fact]
@@ -220,7 +221,7 @@ public class SessionEntityTests
         var isExpired = session.IsExpired(timeProvider);
 
         // Assert
-        Assert.True(isExpired);
+        isExpired.Should().BeTrue();
     }
     [Fact]
     public void IsRevoked_WithActiveSession_ReturnsFalse()
@@ -232,7 +233,7 @@ public class SessionEntityTests
         var isRevoked = session.IsRevoked();
 
         // Assert
-        Assert.False(isRevoked);
+        isRevoked.Should().BeFalse();
     }
 
     [Fact]
@@ -247,7 +248,7 @@ public class SessionEntityTests
         var isRevoked = session.IsRevoked();
 
         // Assert
-        Assert.True(isRevoked);
+        isRevoked.Should().BeTrue();
     }
     [Fact]
     public void UpdateLastSeen_SetsTimestamp()
@@ -260,9 +261,9 @@ public class SessionEntityTests
         session.UpdateLastSeen();
 
         // Assert
-        Assert.NotNull(session.LastSeenAt);
-        Assert.True(session.LastSeenAt >= beforeUpdate);
-        Assert.True(session.LastSeenAt <= DateTime.UtcNow);
+        session.LastSeenAt.Should().NotBeNull();
+        (session.LastSeenAt >= beforeUpdate).Should().BeTrue();
+        (session.LastSeenAt <= DateTime.UtcNow).Should().BeTrue();
     }
 
     [Fact]
@@ -279,8 +280,8 @@ public class SessionEntityTests
         session.UpdateLastSeen();
 
         // Assert
-        Assert.NotNull(session.LastSeenAt);
-        Assert.True(session.LastSeenAt > firstUpdate);
+        session.LastSeenAt.Should().NotBeNull();
+        (session.LastSeenAt > firstUpdate).Should().BeTrue();
     }
     [Fact]
     public void Revoke_WithActiveSession_RevokesSuccessfully()
@@ -293,10 +294,10 @@ public class SessionEntityTests
         session.Revoke();
 
         // Assert
-        Assert.NotNull(session.RevokedAt);
-        Assert.True(session.RevokedAt >= beforeRevoke);
-        Assert.True(session.RevokedAt <= DateTime.UtcNow);
-        Assert.True(session.IsRevoked());
+        session.RevokedAt.Should().NotBeNull();
+        (session.RevokedAt >= beforeRevoke).Should().BeTrue();
+        (session.RevokedAt <= DateTime.UtcNow).Should().BeTrue();
+        session.IsRevoked().Should().BeTrue();
     }
 
     [Fact]
@@ -308,8 +309,9 @@ public class SessionEntityTests
             .Build();
 
         // Act & Assert
-        var exception = Assert.Throws<DomainException>(() => session.Revoke());
-        Assert.Contains("already revoked", exception.Message, StringComparison.OrdinalIgnoreCase);
+        var act = () => session.Revoke();
+        var exception = act.Should().Throw<DomainException>().Which;
+        exception.Message.Should().ContainEquivalentOf("already revoked");
     }
 
     [Fact]
@@ -321,8 +323,9 @@ public class SessionEntityTests
         var firstRevokedAt = session.RevokedAt;
 
         // Act & Assert
-        var exception = Assert.Throws<DomainException>(() => session.Revoke());
-        Assert.Equal(firstRevokedAt, session.RevokedAt); // Timestamp unchanged
+        var act = () => session.Revoke();
+        var exception = act.Should().Throw<DomainException>().Which;
+        session.RevokedAt.Should().Be(firstRevokedAt); // Timestamp unchanged
     }
     [Fact]
     public void Extend_WithValidSession_ExtendsSuccessfully()
@@ -337,8 +340,8 @@ public class SessionEntityTests
         session.Extend(extension, timeProvider);
 
         // Assert
-        Assert.Equal(originalExpiresAt.Add(extension), session.ExpiresAt);
-        Assert.True(session.ExpiresAt > originalExpiresAt);
+        session.ExpiresAt.Should().Be(originalExpiresAt.Add(extension));
+        (session.ExpiresAt > originalExpiresAt).Should().BeTrue();
     }
 
     [Fact]
@@ -351,9 +354,10 @@ public class SessionEntityTests
             .Build();
 
         // Act & Assert
-        var exception = Assert.Throws<DomainException>(() =>
-            session.Extend(TimeSpan.FromDays(7), timeProvider));
-        Assert.Contains("revoked", exception.Message, StringComparison.OrdinalIgnoreCase);
+        var act = () =>
+            session.Extend(TimeSpan.FromDays(7), timeProvider);
+        var exception = act.Should().Throw<DomainException>().Which;
+        exception.Message.Should().ContainEquivalentOf("revoked");
     }
 
     [Fact]
@@ -367,9 +371,10 @@ public class SessionEntityTests
         var timeProvider = new FakeTimeProvider(DateTime.UtcNow.AddDays(1));
 
         // Act & Assert
-        var exception = Assert.Throws<DomainException>(() =>
-            session.Extend(TimeSpan.FromDays(7), timeProvider));
-        Assert.Contains("expired", exception.Message, StringComparison.OrdinalIgnoreCase);
+        var act = () =>
+            session.Extend(TimeSpan.FromDays(7), timeProvider);
+        var exception = act.Should().Throw<DomainException>().Which;
+        exception.Message.Should().ContainEquivalentOf("expired");
     }
 
     [Fact]
@@ -380,9 +385,10 @@ public class SessionEntityTests
         var session = new SessionBuilder().Build();
 
         // Act & Assert
-        var exception = Assert.Throws<DomainException>(() =>
-            session.Extend(TimeSpan.Zero, timeProvider));
-        Assert.Contains("positive", exception.Message, StringComparison.OrdinalIgnoreCase);
+        var act = () =>
+            session.Extend(TimeSpan.Zero, timeProvider);
+        var exception = act.Should().Throw<DomainException>().Which;
+        exception.Message.Should().ContainEquivalentOf("positive");
     }
 
     [Fact]
@@ -393,9 +399,10 @@ public class SessionEntityTests
         var session = new SessionBuilder().Build();
 
         // Act & Assert
-        var exception = Assert.Throws<DomainException>(() =>
-            session.Extend(TimeSpan.FromDays(-1), timeProvider));
-        Assert.Contains("positive", exception.Message, StringComparison.OrdinalIgnoreCase);
+        var act = () =>
+            session.Extend(TimeSpan.FromDays(-1), timeProvider);
+        var exception = act.Should().Throw<DomainException>().Which;
+        exception.Message.Should().ContainEquivalentOf("positive");
     }
     [Fact]
     public void Builder_CreateDefault_ProducesValidSession()
@@ -404,9 +411,9 @@ public class SessionEntityTests
         var session = SessionBuilder.CreateDefault();
 
         // Assert
-        Assert.NotEqual(Guid.Empty, session.Id);
-        Assert.NotNull(session.TokenHash);
-        Assert.False(session.IsRevoked());
+        session.Id.Should().NotBe(Guid.Empty);
+        session.TokenHash.Should().NotBeNull();
+        session.IsRevoked().Should().BeFalse();
     }
 
     [Fact]
@@ -419,6 +426,6 @@ public class SessionEntityTests
         var timeProvider = new FakeTimeProvider(DateTime.UtcNow.AddDays(1));
 
         // Assert
-        Assert.True(session.IsExpired(timeProvider));
+        session.IsExpired(timeProvider).Should().BeTrue();
     }
 }

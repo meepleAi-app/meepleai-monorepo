@@ -105,7 +105,6 @@ export const useGameStateStore = create<GameStateStore>()(
 
       setTemplate: template => set({ template }),
 
-      /* eslint-disable security/detect-object-injection -- Safe: path array is user-controlled state update */
       updateField: (path, value, description = 'Field updated') => {
         const state = get().currentState;
         if (!state) return;
@@ -129,7 +128,6 @@ export const useGameStateStore = create<GameStateStore>()(
 
         get().setState(newState as GameState, description);
       },
-      /* eslint-enable security/detect-object-injection */
 
       undo: () => {
         const { undoStack, currentState } = get();
@@ -246,7 +244,6 @@ export const useGameStateStore = create<GameStateStore>()(
 
       resolveConflict: (conflictIndex, useLocal) => {
         const conflicts = [...get().conflicts];
-        /* eslint-disable-next-line security/detect-object-injection */
         const conflict = conflicts[conflictIndex];
         if (!conflict) return;
 

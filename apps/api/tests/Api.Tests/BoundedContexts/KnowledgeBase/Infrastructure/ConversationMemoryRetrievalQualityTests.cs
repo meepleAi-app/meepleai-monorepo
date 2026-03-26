@@ -61,18 +61,7 @@ public sealed class ConversationMemoryRetrievalQualityTests : IAsyncLifetime
         _databaseName = $"test_retrieval_{Guid.NewGuid():N}";
         _isolatedDbConnectionString = await _fixture.CreateIsolatedDatabaseAsync(_databaseName);
 
-        var services = new ServiceCollection();
-        services.AddLogging(builder => builder.AddConsole().SetMinimumLevel(LogLevel.Warning));
-        services.AddDbContext<MeepleAiDbContext>(options =>
-        {
-            options.UseNpgsql(_isolatedDbConnectionString, o => o.UseVector());
-            options.ConfigureWarnings(w =>
-                w.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning));
-        });
-
-        services.AddScoped<IUnitOfWork, EfCoreUnitOfWork>();
-        services.AddScoped<IDomainEventCollector, DomainEventCollector>();
-        services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(Program).Assembly));
+        var services = IntegrationServiceCollectionBuilder.CreateBase(_isolatedDbConnectionString);
 
         _serviceProvider = services.BuildServiceProvider();
         _dbContext = _serviceProvider.GetRequiredService<MeepleAiDbContext>();
@@ -149,7 +138,7 @@ public sealed class ConversationMemoryRetrievalQualityTests : IAsyncLifetime
             var messageCount = random.Next(20, 51);
             for (int msg = 0; msg < messageCount; msg++)
             {
-                var embedding = GenerateRandomEmbedding(random, 1536);
+                var embedding = GenerateRandomEmbedding(random, 1024);
                 var memory = new ConversationMemoryEntity
                 {
                     Id = Guid.NewGuid(),

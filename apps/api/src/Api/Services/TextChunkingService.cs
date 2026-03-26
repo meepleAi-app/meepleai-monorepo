@@ -49,36 +49,45 @@ internal class TextChunkingService : ITextChunkingService
             var chunkEnd = currentPosition + actualChunkSize;
             if (chunkEnd < textLength && actualChunkSize == chunkSize)
             {
-                // Priority 1: Look for paragraph break (double newline) - strongest semantic boundary
-                var paragraphEnd = FindParagraphBoundary(text, currentPosition, Math.Min(currentPosition + MaxChunkSize, textLength));
-                if (paragraphEnd > currentPosition && paragraphEnd >= currentPosition + MinChunkSize)
+                // Priority 0: Look for section header boundary (numbered sections)
+                var sectionEnd = FindSectionHeaderBoundary(text, currentPosition, Math.Min(currentPosition + MaxChunkSize, textLength));
+                if (sectionEnd > currentPosition)
                 {
-                    chunkEnd = paragraphEnd;
+                    chunkEnd = sectionEnd;
                 }
-                // Priority 2: Look for sentence boundary within chunk
+                // Priority 1: Look for paragraph break (double newline) - strongest semantic boundary
                 else
                 {
-                    var sentenceEnd = FindSentenceBoundary(text, currentPosition, chunkEnd);
-                    if (sentenceEnd > currentPosition)
+                    var paragraphEnd = FindParagraphBoundary(text, currentPosition, Math.Min(currentPosition + MaxChunkSize, textLength));
+                    if (paragraphEnd > currentPosition && paragraphEnd >= currentPosition + MinChunkSize)
                     {
-                        chunkEnd = sentenceEnd;
+                        chunkEnd = paragraphEnd;
                     }
-                    // Priority 3: Extend chunk if we can fit complete sentence within MaxChunkSize
-                    else if (chunkEnd < textLength)
+                    // Priority 2: Look for sentence boundary within chunk
+                    else
                     {
-                        var extendedEnd = Math.Min(currentPosition + MaxChunkSize, textLength);
-                        sentenceEnd = FindSentenceBoundary(text, chunkEnd, extendedEnd);
-                        if (sentenceEnd > chunkEnd)
+                        var sentenceEnd = FindSentenceBoundary(text, currentPosition, chunkEnd);
+                        if (sentenceEnd > currentPosition)
                         {
-                            chunkEnd = sentenceEnd; // Extend to complete the sentence
+                            chunkEnd = sentenceEnd;
                         }
-                        else
+                        // Priority 3: Extend chunk if we can fit complete sentence within MaxChunkSize
+                        else if (chunkEnd < textLength)
                         {
-                            // Priority 4: Fall back to word boundary
-                            var wordEnd = FindWordBoundary(text, currentPosition, chunkEnd);
-                            if (wordEnd > currentPosition)
+                            var extendedEnd = Math.Min(currentPosition + MaxChunkSize, textLength);
+                            sentenceEnd = FindSentenceBoundary(text, chunkEnd, extendedEnd);
+                            if (sentenceEnd > chunkEnd)
                             {
-                                chunkEnd = wordEnd;
+                                chunkEnd = sentenceEnd; // Extend to complete the sentence
+                            }
+                            else
+                            {
+                                // Priority 4: Fall back to word boundary
+                                var wordEnd = FindWordBoundary(text, currentPosition, chunkEnd);
+                                if (wordEnd > currentPosition)
+                                {
+                                    chunkEnd = wordEnd;
+                                }
                             }
                         }
                     }
@@ -111,6 +120,39 @@ internal class TextChunkingService : ITextChunkingService
 
         _logger.LogInformation("Chunked {TextLength} characters into {ChunkCount} chunks", textLength, chunks.Count);
         return chunks;
+    }
+
+    /// <summary>
+    /// Finds a section header boundary — lines starting with "1. ", "2. ", "A. " etc.
+    /// Returns the position of the newline BEFORE the header, or -1 if not found.
+    /// </summary>
+    private static int FindSectionHeaderBoundary(string text, int start, int end)
+    {
+        for (var i = start + MinChunkSize; i < end - 2; i++)
+        {
+            if (text[i] != '\n') continue;
+
+            var nextCharIdx = i + 1;
+            // Skip whitespace after newline
+            while (nextCharIdx < end && (text[nextCharIdx] == ' ' || text[nextCharIdx] == '\t'))
+                nextCharIdx++;
+            if (nextCharIdx >= end - 2) continue;
+
+            // Check for numbered section: "1. ", "2. ", "A. ", "II. "
+            if (char.IsLetterOrDigit(text[nextCharIdx]) && nextCharIdx + 2 < end)
+            {
+                // Single char + dot + space: "1. ", "A. "
+                if (text[nextCharIdx + 1] == '.' && text[nextCharIdx + 2] == ' ')
+                    return i;
+
+                // Two chars + dot + space: "II. ", "10. "
+                if (nextCharIdx + 3 < end &&
+                    char.IsLetterOrDigit(text[nextCharIdx + 1]) &&
+                    text[nextCharIdx + 2] == '.' && text[nextCharIdx + 3] == ' ')
+                    return i;
+            }
+        }
+        return -1;
     }
 
     /// <summary>

@@ -15,6 +15,7 @@ using Microsoft.Extensions.Logging;
 using Moq;
 using Moq.Protected;
 using Xunit;
+using FluentAssertions;
 using Api.Tests.Constants;
 
 namespace Api.Tests.Services.LlmClients;
@@ -111,36 +112,36 @@ public class OpenRouterLlmClientStreamingTests
         }
 
         // Assert
-        Assert.Equal(4, chunks.Count);
+        chunks.Count.Should().Be(4);
 
         // First 3 chunks: content only
-        Assert.Equal("Hello", chunks[0].Content);
-        Assert.Null(chunks[0].Usage);
-        Assert.False(chunks[0].IsFinal);
+        chunks[0].Content.Should().Be("Hello");
+        chunks[0].Usage.Should().BeNull();
+        chunks[0].IsFinal.Should().BeFalse();
 
-        Assert.Equal(" there", chunks[1].Content);
-        Assert.Null(chunks[1].Usage);
+        chunks[1].Content.Should().Be(" there");
+        chunks[1].Usage.Should().BeNull();
 
-        Assert.Equal("!", chunks[2].Content);
-        Assert.Null(chunks[2].Usage);
+        chunks[2].Content.Should().Be("!");
+        chunks[2].Usage.Should().BeNull();
 
         // Final chunk: usage metadata
         var finalChunk = chunks[3];
-        Assert.Null(finalChunk.Content);
-        Assert.True(finalChunk.IsFinal);
-        Assert.NotNull(finalChunk.Usage);
-        Assert.NotNull(finalChunk.Cost);
+        finalChunk.Content.Should().BeNull();
+        finalChunk.IsFinal.Should().BeTrue();
+        finalChunk.Usage.Should().NotBeNull();
+        finalChunk.Cost.Should().NotBeNull();
 
         // Verify usage
-        Assert.Equal(10, finalChunk.Usage!.PromptTokens);
-        Assert.Equal(5, finalChunk.Usage.CompletionTokens);
-        Assert.Equal(15, finalChunk.Usage.TotalTokens);
+        finalChunk.Usage!.PromptTokens.Should().Be(10);
+        finalChunk.Usage.CompletionTokens.Should().Be(5);
+        finalChunk.Usage.TotalTokens.Should().Be(15);
 
         // Verify cost
-        Assert.Equal(0.00015m, finalChunk.Cost!.InputCost);
-        Assert.Equal(0.0006m, finalChunk.Cost.OutputCost);
-        Assert.Equal(model, finalChunk.Cost.ModelId);
-        Assert.Equal("OpenRouter", finalChunk.Cost.Provider);
+        finalChunk.Cost!.InputCost.Should().Be(0.00015m);
+        finalChunk.Cost.OutputCost.Should().Be(0.0006m);
+        finalChunk.Cost.ModelId.Should().Be(model);
+        finalChunk.Cost.Provider.Should().Be("OpenRouter");
     }
 
     [Fact]
@@ -176,9 +177,9 @@ public class OpenRouterLlmClientStreamingTests
         }
 
         // Assert
-        Assert.Single(chunks);
-        Assert.Equal("Test", chunks[0].Content);
-        Assert.Null(chunks[0].Usage);
-        Assert.False(chunks[0].IsFinal);
+        chunks.Should().ContainSingle();
+        chunks[0].Content.Should().Be("Test");
+        chunks[0].Usage.Should().BeNull();
+        chunks[0].IsFinal.Should().BeFalse();
     }
 }

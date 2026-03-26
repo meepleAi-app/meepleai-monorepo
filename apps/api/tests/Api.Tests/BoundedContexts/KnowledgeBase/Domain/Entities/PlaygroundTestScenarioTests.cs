@@ -1,6 +1,7 @@
 using Api.BoundedContexts.KnowledgeBase.Domain.Entities;
 using Api.Tests.Constants;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Domain.Entities;
 
@@ -28,15 +29,15 @@ public class PlaygroundTestScenarioTests
             Guid.NewGuid());
 
         // Assert
-        Assert.NotEqual(Guid.Empty, scenario.Id);
-        Assert.Equal("Test Scenario", scenario.Name);
-        Assert.Equal("A test description", scenario.Description);
-        Assert.Equal(ScenarioCategory.Greeting, scenario.Category);
-        Assert.Single(scenario.Messages);
-        Assert.True(scenario.IsActive);
-        Assert.Null(scenario.ExpectedOutcome);
-        Assert.Null(scenario.AgentDefinitionId);
-        Assert.Empty(scenario.Tags);
+        scenario.Id.Should().NotBe(Guid.Empty);
+        scenario.Name.Should().Be("Test Scenario");
+        scenario.Description.Should().Be("A test description");
+        scenario.Category.Should().Be(ScenarioCategory.Greeting);
+        scenario.Messages.Should().ContainSingle();
+        scenario.IsActive.Should().BeTrue();
+        scenario.ExpectedOutcome.Should().BeNull();
+        scenario.AgentDefinitionId.Should().BeNull();
+        scenario.Tags.Should().BeEmpty();
     }
 
     [Fact]
@@ -56,13 +57,13 @@ public class PlaygroundTestScenarioTests
             agentId,
             tags);
 
-        Assert.Equal("Full Scenario", scenario.Name);
-        Assert.Equal(ScenarioCategory.RulesQuery, scenario.Category);
-        Assert.Equal("Should answer with setup rules", scenario.ExpectedOutcome);
-        Assert.Equal(agentId, scenario.AgentDefinitionId);
-        Assert.Equal(createdBy, scenario.CreatedBy);
-        Assert.Equal(2, scenario.Tags.Count);
-        Assert.Contains("rules", scenario.Tags);
+        scenario.Name.Should().Be("Full Scenario");
+        scenario.Category.Should().Be(ScenarioCategory.RulesQuery);
+        scenario.ExpectedOutcome.Should().Be("Should answer with setup rules");
+        scenario.AgentDefinitionId.Should().Be(agentId);
+        scenario.CreatedBy.Should().Be(createdBy);
+        scenario.Tags.Count.Should().Be(2);
+        scenario.Tags.Should().Contain("rules");
     }
 
     [Fact]
@@ -76,9 +77,9 @@ public class PlaygroundTestScenarioTests
             Guid.NewGuid(),
             "  Trimmed Outcome  ");
 
-        Assert.Equal("Trimmed Name", scenario.Name);
-        Assert.Equal("Trimmed Description", scenario.Description);
-        Assert.Equal("Trimmed Outcome", scenario.ExpectedOutcome);
+        scenario.Name.Should().Be("Trimmed Name");
+        scenario.Description.Should().Be("Trimmed Description");
+        scenario.ExpectedOutcome.Should().Be("Trimmed Outcome");
     }
 
     [Theory]
@@ -87,10 +88,11 @@ public class PlaygroundTestScenarioTests
     [InlineData("   ")]
     public void Create_WithInvalidName_ThrowsArgumentException(string? name)
     {
-        Assert.Throws<ArgumentException>(() =>
+        Action act = () =>
             PlaygroundTestScenario.Create(
                 name!, "desc", ScenarioCategory.Greeting,
-                CreateValidMessages(), Guid.NewGuid()));
+                CreateValidMessages(), Guid.NewGuid());
+        act.Should().Throw<ArgumentException>();
     }
 
     [Theory]
@@ -99,28 +101,31 @@ public class PlaygroundTestScenarioTests
     [InlineData("   ")]
     public void Create_WithInvalidDescription_ThrowsArgumentException(string? description)
     {
-        Assert.Throws<ArgumentException>(() =>
+        Action act = () =>
             PlaygroundTestScenario.Create(
                 "Name", description!, ScenarioCategory.Greeting,
-                CreateValidMessages(), Guid.NewGuid()));
+                CreateValidMessages(), Guid.NewGuid());
+        act.Should().Throw<ArgumentException>();
     }
 
     [Fact]
     public void Create_WithNullMessages_ThrowsArgumentNullException()
     {
-        Assert.Throws<ArgumentNullException>(() =>
+        Action act = () =>
             PlaygroundTestScenario.Create(
                 "Name", "Desc", ScenarioCategory.Greeting,
-                null!, Guid.NewGuid()));
+                null!, Guid.NewGuid());
+        act.Should().Throw<ArgumentNullException>();
     }
 
     [Fact]
     public void Create_WithEmptyMessages_ThrowsArgumentException()
     {
-        Assert.Throws<ArgumentException>(() =>
+        Action act = () =>
             PlaygroundTestScenario.Create(
                 "Name", "Desc", ScenarioCategory.Greeting,
-                new List<ScenarioMessage>(), Guid.NewGuid()));
+                new List<ScenarioMessage>(), Guid.NewGuid());
+        act.Should().Throw<ArgumentException>();
     }
 
     [Fact]
@@ -140,13 +145,13 @@ public class PlaygroundTestScenarioTests
             "Updated", "Updated desc", ScenarioCategory.MultiTurn,
             newMessages, "Expected output", new List<string> { "tag1" });
 
-        Assert.Equal("Updated", scenario.Name);
-        Assert.Equal("Updated desc", scenario.Description);
-        Assert.Equal(ScenarioCategory.MultiTurn, scenario.Category);
-        Assert.Equal(2, scenario.Messages.Count);
-        Assert.Equal("Expected output", scenario.ExpectedOutcome);
-        Assert.Single(scenario.Tags);
-        Assert.NotNull(scenario.UpdatedAt);
+        scenario.Name.Should().Be("Updated");
+        scenario.Description.Should().Be("Updated desc");
+        scenario.Category.Should().Be(ScenarioCategory.MultiTurn);
+        scenario.Messages.Count.Should().Be(2);
+        scenario.ExpectedOutcome.Should().Be("Expected output");
+        scenario.Tags.Should().ContainSingle();
+        scenario.UpdatedAt.Should().NotBeNull();
     }
 
     [Fact]
@@ -156,9 +161,10 @@ public class PlaygroundTestScenarioTests
             "Name", "Desc", ScenarioCategory.Greeting,
             CreateValidMessages(), Guid.NewGuid());
 
-        Assert.Throws<ArgumentException>(() =>
+        Action act = () =>
             scenario.Update("", "Desc", ScenarioCategory.Greeting,
-                CreateValidMessages(), null, null));
+                CreateValidMessages(), null, null);
+        act.Should().Throw<ArgumentException>();
     }
 
     [Fact]
@@ -167,12 +173,12 @@ public class PlaygroundTestScenarioTests
         var scenario = PlaygroundTestScenario.Create(
             "Name", "Desc", ScenarioCategory.Greeting,
             CreateValidMessages(), Guid.NewGuid());
-        Assert.True(scenario.IsActive);
+        scenario.IsActive.Should().BeTrue();
 
         scenario.Deactivate();
 
-        Assert.False(scenario.IsActive);
-        Assert.NotNull(scenario.UpdatedAt);
+        scenario.IsActive.Should().BeFalse();
+        scenario.UpdatedAt.Should().NotBeNull();
     }
 
     [Fact]
@@ -182,11 +188,11 @@ public class PlaygroundTestScenarioTests
             "Name", "Desc", ScenarioCategory.Greeting,
             CreateValidMessages(), Guid.NewGuid());
         scenario.Deactivate();
-        Assert.False(scenario.IsActive);
+        scenario.IsActive.Should().BeFalse();
 
         scenario.Activate();
 
-        Assert.True(scenario.IsActive);
+        scenario.IsActive.Should().BeTrue();
     }
 
     [Fact]
@@ -199,8 +205,8 @@ public class PlaygroundTestScenarioTests
 
         scenario.BindToAgent(agentId);
 
-        Assert.Equal(agentId, scenario.AgentDefinitionId);
-        Assert.NotNull(scenario.UpdatedAt);
+        scenario.AgentDefinitionId.Should().Be(agentId);
+        scenario.UpdatedAt.Should().NotBeNull();
     }
 
     [Fact]
@@ -210,12 +216,12 @@ public class PlaygroundTestScenarioTests
             "Name", "Desc", ScenarioCategory.Greeting,
             CreateValidMessages(), Guid.NewGuid(),
             agentDefinitionId: Guid.NewGuid());
-        Assert.NotNull(scenario.AgentDefinitionId);
+        scenario.AgentDefinitionId.Should().NotBeNull();
 
         scenario.UnbindFromAgent();
 
-        Assert.Null(scenario.AgentDefinitionId);
-        Assert.NotNull(scenario.UpdatedAt);
+        scenario.AgentDefinitionId.Should().BeNull();
+        scenario.UpdatedAt.Should().NotBeNull();
     }
 
     [Fact]
@@ -226,9 +232,9 @@ public class PlaygroundTestScenarioTests
             CreateValidMessages(), Guid.NewGuid());
 
         // The Messages property should return the deserialized list
-        Assert.NotNull(scenario.Messages);
-        Assert.Single(scenario.Messages);
-        Assert.Equal("user", scenario.Messages[0].Role);
+        scenario.Messages.Should().NotBeNull();
+        scenario.Messages.Should().ContainSingle();
+        scenario.Messages[0].Role.Should().Be("user");
     }
 
     [Fact]
@@ -239,20 +245,20 @@ public class PlaygroundTestScenarioTests
             CreateValidMessages(), Guid.NewGuid(),
             tags: null);
 
-        Assert.NotNull(scenario.Tags);
-        Assert.Empty(scenario.Tags);
+        scenario.Tags.Should().NotBeNull();
+        scenario.Tags.Should().BeEmpty();
     }
 
     [Fact]
     public void ScenarioCategory_HasExpectedValues()
     {
-        Assert.Equal(0, (int)ScenarioCategory.Greeting);
-        Assert.Equal(1, (int)ScenarioCategory.RulesQuery);
-        Assert.Equal(2, (int)ScenarioCategory.Recommendation);
-        Assert.Equal(3, (int)ScenarioCategory.MultiTurn);
-        Assert.Equal(4, (int)ScenarioCategory.EdgeCase);
-        Assert.Equal(5, (int)ScenarioCategory.StressTest);
-        Assert.Equal(6, (int)ScenarioCategory.RagValidation);
-        Assert.Equal(7, (int)ScenarioCategory.Custom);
+        ((int)ScenarioCategory.Greeting).Should().Be(0);
+        ((int)ScenarioCategory.RulesQuery).Should().Be(1);
+        ((int)ScenarioCategory.Recommendation).Should().Be(2);
+        ((int)ScenarioCategory.MultiTurn).Should().Be(3);
+        ((int)ScenarioCategory.EdgeCase).Should().Be(4);
+        ((int)ScenarioCategory.StressTest).Should().Be(5);
+        ((int)ScenarioCategory.RagValidation).Should().Be(6);
+        ((int)ScenarioCategory.Custom).Should().Be(7);
     }
 }

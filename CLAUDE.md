@@ -10,17 +10,32 @@
 | Start Dev (core) | `make dev-core` | `infra/` |
 | Start Integration | `make tunnel && make integration` | `infra/` |
 | Deploy Staging | `make staging` | `infra/` (on server) |
-| Setup Secrets | `make secrets-dev` | `infra/` |
+| Setup Secrets | `make secrets-setup` | `infra/` |
 | Start API (no Docker) | `dotnet run` | `apps/api/src/Api/` |
 | Start Web (no Docker) | `pnpm dev` | `apps/web/` |
 | Run Tests | `dotnet test` / `pnpm test` | Root of each app |
 | Migration | `dotnet ef migrations add Name` | `apps/api/src/Api/` |
 | API Docs | http://localhost:8080/scalar/v1 | Browser |
 | All Make commands | `make help` | `infra/` |
+| Alpha Mode | `make alpha` | `infra/` |
+
+### Alpha Mode
+
+Set `ALPHA_MODE=true` (backend) and `NEXT_PUBLIC_ALPHA_MODE=true` (frontend, build-time) to run in Alpha Zero mode.
+
+| Aspect | Alpha Scope |
+|--------|------------|
+| **Features** | Auth → Games + BGG → PDF upload → RAG Chat → Library |
+| **Active BCs** | Authentication, GameManagement, DocumentProcessing, KnowledgeBase, UserLibrary |
+| **Admin** | Overview, Users, Content (trimmed) sections only |
+| **Docker** | `cd infra && make alpha` |
+| **Disable** | Set both vars to `false` and rebuild web |
+
+`NEXT_PUBLIC_ALPHA_MODE` is a **build-time** variable — changing it requires rebuild, not just restart.
 
 ## Stack & Features
 
-**Backend** (.NET 9): ASP.NET Minimal APIs + MediatR | PostgreSQL 16 + EF Core | Qdrant + Redis | FluentValidation | xUnit + Testcontainers
+**Backend** (.NET 9): ASP.NET Minimal APIs + MediatR | PostgreSQL 16 + EF Core (pgvector) + Redis | FluentValidation | xUnit + Testcontainers
 
 **Frontend** (Next.js 16): App Router + React 19 | Tailwind 4 + shadcn/ui | Zustand + React Query | Vitest + Playwright
 
@@ -43,16 +58,21 @@ app.MapPost("/api/v1/auth/register", async (RegisterCommand cmd, IMediator m) =>
 app.MapPost("/api/v1/auth/register", async (RegisterCommand cmd, IAuthService svc) => ...);
 ```
 
-### DDD Bounded Contexts (13)
+### DDD Bounded Contexts (18)
 
 | Context | Responsibility |
 |---------|---------------|
 | Administration | Users, roles, audit, analytics |
+| AgentMemory | House rules, memory notes, guest player claims |
 | Authentication | Auth flows, sessions, OAuth, 2FA |
 | BusinessSimulations | Ledger entries, cost scenarios, resource forecasts |
+| DatabaseSync | DB migrations, tunnel management, sync ops |
 | DocumentProcessing | PDF upload, extraction, chunking |
+| EntityRelationships | Cross-entity links (EntityLink aggregates) |
 | Gamification | Achievements, badges, leaderboards |
 | GameManagement | Catalog, sessions, FAQs, specs |
+| GameToolbox | Card decks, phases, session tool templates |
+| GameToolkit | AI toolkit generation, KB-based suggestions |
 | KnowledgeBase | RAG, AI agents, chat, vector search |
 | SessionTracking | Session notes, scoring, activity tracking |
 | SharedGameCatalog | Community DB w/ soft-delete |
@@ -82,8 +102,8 @@ docker logs meepleai-api | grep pattern
 cd apps/api/src/Api && dotnet restore
 cd ../../../web && pnpm install
 
-# 2. Secrets (auto-gen saves 15-30min)
-cd ../../infra && make secrets-dev
+# 2. Secrets
+cd ../../infra && make secrets-setup && make secrets-sync
 
 # 3. Frontend env
 cd ../apps/web && cp .env.development.example .env.local
@@ -95,31 +115,23 @@ cd ../../infra && make dev            # All services
 
 ### Secret Management
 
-**System**: `.secret` files in per-environment directories (Issue #2570)
+**System**: `.secret` files in `infra/secrets/` — single flat directory for all environments.
 
-```
-secrets/
-├── dev/           # Auto-generated (make secrets-dev)
-├── integration/   # Copies from staging + tunnel config
-├── staging/       # Manual setup (make secrets-staging)
-└── prod/          # Manual + strict validation (make secrets-prod)
-```
+Staging server is the source of truth. All environments use the same secret values.
 
-| Priority | Files | Behavior |
-|----------|-------|----------|
-| 🔴 CRITICAL | database, redis, qdrant, jwt, admin, embedding-service | Blocks startup |
-| 🟡 IMPORTANT | openrouter, unstructured-service, bgg | Warns |
-| 🟢 OPTIONAL | oauth, email, monitoring, n8n, storage, traefik, smoldocling/reranker | Silent |
+| Command | Purpose |
+|---------|---------|
+| `make secrets-setup` | Generate placeholder `.secret` files from `.example` templates |
+| `make secrets-sync` | Pull real secrets from staging server (requires SSH) |
 
 **Workflow**:
 ```bash
-# Setup: cd infra && make secrets-dev          # Dev (auto-generated)
-# Setup: cd infra && make secrets-integration   # Integration (from staging)
-# Setup: cd infra && make secrets-staging       # Staging (interactive)
-# Update: nano infra/secrets/staging/redis.secret && make staging
+cd infra
+make secrets-setup    # First time: creates placeholder files
+make secrets-sync     # Pull real values from staging (requires SSH access to meepleai.app)
 ```
 
-**Rules**: ✅ Run setup script, gitignore `.secret`, rotate 90d | ❌ Commit secrets, use dev in prod
+**Rules**: Do not commit `.secret` files. Templates (`.secret.example`) are committed.
 
 ### S3 Storage Configuration
 
@@ -248,7 +260,7 @@ pnpm typecheck && pnpm lint         # Quality
 **Infra** (from `infra/`):
 ```bash
 make dev                  # Start all local services
-make dev-core             # Start core only (postgres, redis, qdrant, api, web)
+make dev-core             # Start core only (postgres, redis, api, web)
 make dev-down             # Stop dev
 make tunnel               # SSH tunnel for integration env
 make integration          # Local code + remote services
@@ -286,7 +298,7 @@ tests/Api.Tests/          # Backend test suite
 
 | Issue | Solution |
 |-------|----------|
-| Missing secrets | `cd infra/secrets && pwsh setup-secrets.ps1` |
+| Missing secrets | `cd infra && make secrets-setup && make secrets-sync` |
 | DB connection | `docker compose logs postgres && dotnet ef database update` |
 | Build fails (FE) | `rm -rf .next && pnpm build` |
 | Build fails (BE) | `dotnet clean && dotnet build` |
@@ -342,7 +354,7 @@ import { MeepleCard } from '@/components/ui/data-display/meeple-card';
 />
 ```
 
-**Docs**: [docs/frontend/meeple-card-v2-design-tokens.md](./docs/frontend/meeple-card-v2-design-tokens.md)
+**Docs**: [docs/frontend/meeple-card-design-tokens.md](./docs/frontend/meeple-card-design-tokens.md)
 
 ### Recent Learnings (Issues)
 

@@ -1,5 +1,7 @@
 using Api.BoundedContexts.Administration.Domain.Aggregates.RagExecution;
 using Api.Infrastructure;
+using Api.SharedKernel.Application.Services;
+using Api.SharedKernel.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 
 namespace Api.BoundedContexts.Administration.Infrastructure.Persistence;
@@ -8,28 +10,27 @@ namespace Api.BoundedContexts.Administration.Infrastructure.Persistence;
 /// EF Core repository for RagExecution aggregate.
 /// Issue #4459: RAG Query Replay.
 /// </summary>
-internal sealed class RagExecutionRepository : IRagExecutionRepository
+internal sealed class RagExecutionRepository : RepositoryBase, IRagExecutionRepository
 {
-    private readonly MeepleAiDbContext _dbContext;
 
-    public RagExecutionRepository(MeepleAiDbContext dbContext)
+    public RagExecutionRepository(MeepleAiDbContext dbContext, IDomainEventCollector eventCollector)
+        : base(dbContext, eventCollector)
     {
-        _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
     }
 
     public async Task<RagExecution?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        return await _dbContext.Set<RagExecution>()
+        return await DbContext.Set<RagExecution>()
             .FirstOrDefaultAsync(e => e.Id == id, cancellationToken)
             .ConfigureAwait(false);
     }
 
     public async Task<RagExecution> AddAsync(RagExecution execution, CancellationToken cancellationToken = default)
     {
-        await _dbContext.Set<RagExecution>()
+        await DbContext.Set<RagExecution>()
             .AddAsync(execution, cancellationToken)
             .ConfigureAwait(false);
-        await _dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        await DbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
         return execution;
     }
 }

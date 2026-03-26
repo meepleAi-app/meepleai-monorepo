@@ -119,7 +119,7 @@ export default async function LandingPage() {
   // Server-side redirect: authenticated users go straight to dashboard (no flash)
   const user = await getServerUser();
   if (user) {
-    redirect('/dashboard');
+    redirect('/library');
   }
 
   return (

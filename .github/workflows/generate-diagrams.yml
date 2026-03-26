@@ -2,7 +2,7 @@ name: Generate Diagram SVGs
 
 on:
   pull_request:
-    branches: [main, main-staging]
+    branches: [main-dev, main-staging]
     paths:
       - 'docs/09-bounded-contexts/diagrams/**/*.mmd'
   workflow_dispatch: # Allow manual trigger
@@ -10,7 +10,7 @@ on:
 jobs:
   generate-svgs:
     name: Generate SVG Diagrams
-    runs-on: ${{ vars.RUNNER || 'ubuntu-latest' }}
+    runs-on: ubuntu-latest
 
     steps:
       - name: Checkout repository

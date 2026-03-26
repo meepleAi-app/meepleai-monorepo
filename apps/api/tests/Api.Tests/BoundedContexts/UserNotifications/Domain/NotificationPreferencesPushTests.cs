@@ -1,6 +1,7 @@
 using Api.BoundedContexts.UserNotifications.Domain.Aggregates;
 using Api.Tests.Constants;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.UserNotifications.Domain;
 
@@ -14,10 +15,10 @@ public class NotificationPreferencesPushTests
 
         prefs.UpdatePushSubscription("https://push.example.com/endpoint", "p256dh", "auth");
 
-        Assert.Equal("https://push.example.com/endpoint", prefs.PushEndpoint);
-        Assert.Equal("p256dh", prefs.PushP256dhKey);
-        Assert.Equal("auth", prefs.PushAuthKey);
-        Assert.True(prefs.HasPushSubscription);
+        prefs.PushEndpoint.Should().Be("https://push.example.com/endpoint");
+        prefs.PushP256dhKey.Should().Be("p256dh");
+        prefs.PushAuthKey.Should().Be("auth");
+        prefs.HasPushSubscription.Should().BeTrue();
     }
 
     [Fact]
@@ -28,10 +29,10 @@ public class NotificationPreferencesPushTests
 
         prefs.ClearPushSubscription();
 
-        Assert.Null(prefs.PushEndpoint);
-        Assert.Null(prefs.PushP256dhKey);
-        Assert.Null(prefs.PushAuthKey);
-        Assert.False(prefs.HasPushSubscription);
+        prefs.PushEndpoint.Should().BeNull();
+        prefs.PushP256dhKey.Should().BeNull();
+        prefs.PushAuthKey.Should().BeNull();
+        prefs.HasPushSubscription.Should().BeFalse();
     }
 
     [Fact]
@@ -39,7 +40,7 @@ public class NotificationPreferencesPushTests
     {
         var prefs = new NotificationPreferences(Guid.NewGuid());
 
-        Assert.False(prefs.HasPushSubscription);
+        prefs.HasPushSubscription.Should().BeFalse();
     }
 
     [Fact]
@@ -48,7 +49,7 @@ public class NotificationPreferencesPushTests
         var prefs = new NotificationPreferences(Guid.NewGuid());
         prefs.UpdatePushSubscription("", "p256dh", "auth");
 
-        Assert.False(prefs.HasPushSubscription);
+        prefs.HasPushSubscription.Should().BeFalse();
     }
 
     [Fact]
@@ -64,12 +65,12 @@ public class NotificationPreferencesPushTests
             true, true, true,
             "https://push.example.com/endpoint", "p256dh", "auth");
 
-        Assert.Equal(id, prefs.Id);
-        Assert.Equal(userId, prefs.UserId);
-        Assert.Equal("https://push.example.com/endpoint", prefs.PushEndpoint);
-        Assert.Equal("p256dh", prefs.PushP256dhKey);
-        Assert.Equal("auth", prefs.PushAuthKey);
-        Assert.True(prefs.HasPushSubscription);
+        prefs.Id.Should().Be(id);
+        prefs.UserId.Should().Be(userId);
+        prefs.PushEndpoint.Should().Be("https://push.example.com/endpoint");
+        prefs.PushP256dhKey.Should().Be("p256dh");
+        prefs.PushAuthKey.Should().Be("auth");
+        prefs.HasPushSubscription.Should().BeTrue();
     }
 
     [Fact]
@@ -81,9 +82,9 @@ public class NotificationPreferencesPushTests
             true, true, false,
             true, true, true);
 
-        Assert.Null(prefs.PushEndpoint);
-        Assert.Null(prefs.PushP256dhKey);
-        Assert.Null(prefs.PushAuthKey);
-        Assert.False(prefs.HasPushSubscription);
+        prefs.PushEndpoint.Should().BeNull();
+        prefs.PushP256dhKey.Should().BeNull();
+        prefs.PushAuthKey.Should().BeNull();
+        prefs.HasPushSubscription.Should().BeFalse();
     }
 }

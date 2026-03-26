@@ -1,4 +1,5 @@
-using Api.BoundedContexts.DocumentProcessing.Application.Handlers;
+using Api.BoundedContexts.DocumentProcessing.Application.Commands;
+using Api.BoundedContexts.DocumentProcessing.Application.Queries;
 using Api.BoundedContexts.DocumentProcessing.Application.Queries;
 using Api.BoundedContexts.DocumentProcessing.Domain.Entities;
 using Api.BoundedContexts.DocumentProcessing.Domain.Repositories;
@@ -9,6 +10,7 @@ using ProcessingStep = Api.Models.ProcessingStep;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.Unit.DocumentProcessing;
 
@@ -56,7 +58,7 @@ public sealed class StreamPdfProgressQueryHandlerTests
         }
 
         // Assert
-        Assert.Empty(results);
+        results.Should().BeEmpty();
         _mockPdfRepository.Verify(r => r.GetByIdAsync(TestPdfId, It.IsAny<CancellationToken>()), Times.Once);
         _mockProgressService.Verify(s => s.SubscribeToProgress(It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Never);
     }
@@ -79,7 +81,7 @@ public sealed class StreamPdfProgressQueryHandlerTests
         }
 
         // Assert
-        Assert.Empty(results);
+        results.Should().BeEmpty();
         _mockProgressService.Verify(s => s.SubscribeToProgress(It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
@@ -111,10 +113,10 @@ public sealed class StreamPdfProgressQueryHandlerTests
         }
 
         // Assert
-        Assert.Equal(3, results.Count);
-        Assert.Equal(ProcessingStep.Uploading, results[0].Step);
-        Assert.Equal(ProcessingStep.Extracting, results[1].Step);
-        Assert.Equal(ProcessingStep.Completed, results[2].Step);
+        results.Count.Should().Be(3);
+        results[0].Step.Should().Be(ProcessingStep.Uploading);
+        results[1].Step.Should().Be(ProcessingStep.Extracting);
+        results[2].Step.Should().Be(ProcessingStep.Completed);
         _mockProgressService.Verify(s => s.SubscribeToProgress(TestPdfId, It.IsAny<CancellationToken>()), Times.Once);
     }
 
@@ -144,8 +146,8 @@ public sealed class StreamPdfProgressQueryHandlerTests
         }
 
         // Assert
-        Assert.Single(results);
-        Assert.Equal(ProcessingStep.Extracting, results[0].Step);
+        results.Should().ContainSingle();
+        results[0].Step.Should().Be(ProcessingStep.Extracting);
         _mockProgressService.Verify(s => s.SubscribeToProgress(TestPdfId, It.IsAny<CancellationToken>()), Times.Once);
     }
 
@@ -175,9 +177,9 @@ public sealed class StreamPdfProgressQueryHandlerTests
         }
 
         // Assert
-        Assert.Single(results);
-        Assert.Equal(-1, results[0].Percent);
-        Assert.Equal("heartbeat", results[0].Message);
+        results.Should().ContainSingle();
+        results[0].Percent.Should().Be(-1);
+        results[0].Message.Should().Be("heartbeat");
     }
 
     private static PdfDocument CreateTestPdf(Guid ownerId)

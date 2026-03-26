@@ -1,16 +1,14 @@
 /**
  * Authenticated Route Group Layout
- * Carte in Mano — Uses UnifiedShell (card-hand navigation)
+ *
+ * Uses UserShell for all authenticated user pages.
+ * Admin pages use a separate AdminShell via admin/(dashboard)/layout.tsx.
  */
 
 import { type ReactNode } from 'react';
 
-import { UnifiedShell } from '@/components/layout/UnifiedShell';
-import { getServerUser, isAdmin } from '@/lib/auth';
+import { UserShell } from '@/components/layout/UserShell';
 
 export default async function AuthenticatedRouteLayout({ children }: { children: ReactNode }) {
-  const user = await getServerUser();
-  const userIsAdmin = user ? isAdmin(user) : false;
-
-  return <UnifiedShell isAdmin={userIsAdmin}>{children}</UnifiedShell>;
+  return <UserShell>{children}</UserShell>;
 }

@@ -1,10 +1,12 @@
-using Api.BoundedContexts.Administration.Application.Handlers;
+using Api.BoundedContexts.Administration.Application.Commands;
+using Api.BoundedContexts.Administration.Application.Queries;
 using Api.BoundedContexts.Administration.Application.Queries;
 using Api.BoundedContexts.Administration.Domain.Models;
 using Api.BoundedContexts.Administration.Domain.Services;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using FluentAssertions;
 using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.Administration.Application.Handlers;
@@ -41,10 +43,10 @@ public class GetInfrastructureDetailsQueryHandlerTests
         var result = await _handler.Handle(query, CancellationToken.None);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal(expectedDetails.Overall.State, result.Overall.State);
-        Assert.Equal(expectedDetails.Services.Count, result.Services.Count);
-        Assert.Equal(expectedDetails.Metrics.ApiRequestsLast24h, result.Metrics.ApiRequestsLast24h);
+        result.Should().NotBeNull();
+        result.Overall.State.Should().Be(expectedDetails.Overall.State);
+        result.Services.Count.Should().Be(expectedDetails.Services.Count);
+        result.Metrics.ApiRequestsLast24h.Should().Be(expectedDetails.Metrics.ApiRequestsLast24h);
     }
 
     [Fact]
@@ -79,10 +81,10 @@ public class GetInfrastructureDetailsQueryHandlerTests
             .ThrowsAsync(expectedException);
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
-            () => _handler.Handle(query, CancellationToken.None));
+        var act = () => _handler.Handle(query, CancellationToken.None);
+        var exception = (await act.Should().ThrowAsync<InvalidOperationException>()).Which;
 
-        Assert.Equal("Service failure", exception.Message);
+        exception.Message.Should().Be("Service failure");
     }
 
     [Fact]

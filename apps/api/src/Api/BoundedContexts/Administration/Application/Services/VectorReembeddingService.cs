@@ -19,14 +19,14 @@ internal sealed class VectorReembeddingService
 {
     private readonly MeepleAiDbContext _dbContext;
     private readonly IEmbeddingService _embeddingService;
-    private readonly IQdrantVectorStoreAdapter _vectorStore;
+    private readonly IVectorStoreAdapter _vectorStore;
     private readonly IBatchJobRepository _batchJobRepository;
     private readonly ILogger<VectorReembeddingService> _logger;
 
     public VectorReembeddingService(
         MeepleAiDbContext dbContext,
         IEmbeddingService embeddingService,
-        IQdrantVectorStoreAdapter vectorStore,
+        IVectorStoreAdapter vectorStore,
         IBatchJobRepository batchJobRepository,
         ILogger<VectorReembeddingService> logger)
     {

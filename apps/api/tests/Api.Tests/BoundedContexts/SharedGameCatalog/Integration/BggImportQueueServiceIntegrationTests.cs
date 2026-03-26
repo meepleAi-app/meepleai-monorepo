@@ -9,6 +9,7 @@ using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Moq;
+using FluentAssertions;
 using Xunit;
 
 namespace Api.Tests.BoundedContexts.SharedGameCatalog.Integration;
@@ -81,19 +82,19 @@ public sealed class BggImportQueueServiceIntegrationTests : IAsyncLifetime
         var result = await _service.EnqueueAsync(bggId, "Gloomhaven");
 
         // Assert
-        Assert.NotEqual(Guid.Empty, result.Id);
-        Assert.Equal(bggId, result.BggId);
-        Assert.Equal("Gloomhaven", result.GameName);
-        Assert.Equal(BggImportStatus.Queued, result.Status);
-        Assert.Equal(1, result.Position);
-        Assert.Equal(0, result.RetryCount);
-        Assert.Null(result.ErrorMessage);
-        Assert.Null(result.ProcessedAt);
+        result.Id.Should().NotBe(Guid.Empty);
+        result.BggId.Should().Be(bggId);
+        result.GameName.Should().Be("Gloomhaven");
+        result.Status.Should().Be(BggImportStatus.Queued);
+        result.Position.Should().Be(1);
+        result.RetryCount.Should().Be(0);
+        result.ErrorMessage.Should().BeNull();
+        result.ProcessedAt.Should().BeNull();
 
         // Verify database persistence
         var dbEntry = await _dbContext.BggImportQueue.FirstOrDefaultAsync(q => q.BggId == bggId);
-        Assert.NotNull(dbEntry);
-        Assert.Equal("Gloomhaven", dbEntry.GameName);
+        dbEntry.Should().NotBeNull();
+        dbEntry!.GameName.Should().Be("Gloomhaven");
     }
 
     [Fact]
@@ -104,11 +105,11 @@ public sealed class BggImportQueueServiceIntegrationTests : IAsyncLifetime
         await _service.EnqueueAsync(bggId, "Wingspan");
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<ConflictException>(
-            async () => await _service.EnqueueAsync(bggId, "Wingspan Duplicate"));
+        var act = () => _service.EnqueueAsync(bggId, "Wingspan Duplicate");
+        var exception = (await act.Should().ThrowAsync<ConflictException>()).Which;
 
-        Assert.Contains("already queued or imported", exception.Message);
-        Assert.Contains(bggId.ToString(), exception.Message);
+        exception.Message.Should().Contain("already queued or imported");
+        exception.Message.Should().Contain(bggId.ToString());
     }
 
     [Fact]
@@ -124,10 +125,10 @@ public sealed class BggImportQueueServiceIntegrationTests : IAsyncLifetime
         var result = await _service.EnqueueAsync(bggId, "7 Wonders Retry");
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal(bggId, result.BggId);
-        Assert.Equal(BggImportStatus.Queued, result.Status);
-        Assert.Equal(0, result.RetryCount); // Reset retry count
+        result.Should().NotBeNull();
+        result.BggId.Should().Be(bggId);
+        result.Status.Should().Be(BggImportStatus.Queued);
+        result.RetryCount.Should().Be(0); // Reset retry count
     }
 
     [Fact]
@@ -139,9 +140,9 @@ public sealed class BggImportQueueServiceIntegrationTests : IAsyncLifetime
         var entity3 = await _service.EnqueueAsync(3, "Game 3");
 
         // Assert
-        Assert.Equal(1, entity1.Position);
-        Assert.Equal(2, entity2.Position);
-        Assert.Equal(3, entity3.Position);
+        entity1.Position.Should().Be(1);
+        entity2.Position.Should().Be(2);
+        entity3.Position.Should().Be(3);
     }
 
     #endregion
@@ -158,17 +159,17 @@ public sealed class BggImportQueueServiceIntegrationTests : IAsyncLifetime
         var results = await _service.EnqueueBatchAsync(bggIds);
 
         // Assert
-        Assert.Equal(3, results.Count);
-        Assert.All(results, r => Assert.Equal(BggImportStatus.Queued, r.Status));
+        results.Count.Should().Be(3);
+        results.Should().OnlyContain(r => r.Status == BggImportStatus.Queued);
 
         // Verify sequential positions
-        Assert.Equal(1, results[0].Position);
-        Assert.Equal(2, results[1].Position);
-        Assert.Equal(3, results[2].Position);
+        results[0].Position.Should().Be(1);
+        results[1].Position.Should().Be(2);
+        results[2].Position.Should().Be(3);
 
         // Verify database persistence
         var dbCount = await _dbContext.BggImportQueue.CountAsync();
-        Assert.Equal(3, dbCount);
+        dbCount.Should().Be(3);
     }
 
     [Fact]
@@ -181,8 +182,8 @@ public sealed class BggImportQueueServiceIntegrationTests : IAsyncLifetime
         var results = await _service.EnqueueBatchAsync(bggIds);
 
         // Assert - Only unique BGG IDs should be enqueued
-        Assert.Equal(3, results.Count);
-        Assert.Equal(new int?[] { 1, 2, 3 }, results.Select(r => r.BggId).OrderBy(id => id));
+        results.Count.Should().Be(3);
+        results.Select(r => r.BggId).OrderBy(id => id).Should().BeEquivalentTo(new int?[] { 1, 2, 3 });
     }
 
     [Fact]
@@ -197,13 +198,13 @@ public sealed class BggImportQueueServiceIntegrationTests : IAsyncLifetime
         var results = await _service.EnqueueBatchAsync(bggIds);
 
         // Assert - Only 2 new entries should be created
-        Assert.Equal(2, results.Count);
-        Assert.DoesNotContain(results, r => r.BggId == 174430);
-        Assert.Contains(results, r => r.BggId == 266192);
-        Assert.Contains(results, r => r.BggId == 68448);
+        results.Count.Should().Be(2);
+        results.Should().NotContain(r => r.BggId == 174430);
+        results.Should().Contain(r => r.BggId == 266192);
+        results.Should().Contain(r => r.BggId == 68448);
 
         // Verify positions start after existing entry
-        Assert.All(results, r => Assert.True(r.Position > 1));
+        results.Should().OnlyContain(r => r.Position > 1);
     }
 
     [Fact]
@@ -213,15 +214,15 @@ public sealed class BggImportQueueServiceIntegrationTests : IAsyncLifetime
         var results = await _service.EnqueueBatchAsync(new List<int>());
 
         // Assert
-        Assert.Empty(results);
+        results.Should().BeEmpty();
     }
 
     [Fact]
     public async Task EnqueueBatchAsync_WithNullList_ThrowsArgumentNullException()
     {
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentNullException>(
-            async () => await _service.EnqueueBatchAsync(null!));
+        var act = () => _service.EnqueueBatchAsync(null!);
+        await act.Should().ThrowAsync<ArgumentNullException>();
     }
 
     [Fact]
@@ -235,7 +236,7 @@ public sealed class BggImportQueueServiceIntegrationTests : IAsyncLifetime
         var results = await _service.EnqueueBatchAsync(new List<int> { 1, 2 });
 
         // Assert
-        Assert.Empty(results);
+        results.Should().BeEmpty();
     }
 
     #endregion
@@ -254,16 +255,16 @@ public sealed class BggImportQueueServiceIntegrationTests : IAsyncLifetime
         var cancelled = await _service.CancelAsync(entity2.Id);
 
         // Assert
-        Assert.True(cancelled);
+        cancelled.Should().BeTrue();
 
         // Verify removal from database
         var dbEntry = await _dbContext.BggImportQueue.FirstOrDefaultAsync(q => q.Id == entity2.Id);
-        Assert.Null(dbEntry);
+        dbEntry.Should().BeNull();
 
         // Verify position recalculation (entity3 should move from position 3 to 2)
         var entity3Updated = await _dbContext.BggImportQueue.FirstOrDefaultAsync(q => q.Id == entity3.Id);
-        Assert.NotNull(entity3Updated);
-        Assert.Equal(2, entity3Updated.Position);
+        entity3Updated.Should().NotBeNull();
+        entity3Updated.Position.Should().Be(2);
     }
 
     [Fact]
@@ -277,12 +278,12 @@ public sealed class BggImportQueueServiceIntegrationTests : IAsyncLifetime
         var cancelled = await _service.CancelAsync(entity.Id);
 
         // Assert
-        Assert.False(cancelled);
+        cancelled.Should().BeFalse();
 
         // Verify entity still exists
         var dbEntry = await _dbContext.BggImportQueue.FirstOrDefaultAsync(q => q.Id == entity.Id);
-        Assert.NotNull(dbEntry);
-        Assert.Equal(BggImportStatus.Processing, dbEntry.Status);
+        dbEntry.Should().NotBeNull();
+        dbEntry.Status.Should().Be(BggImportStatus.Processing);
     }
 
     [Fact]
@@ -292,7 +293,7 @@ public sealed class BggImportQueueServiceIntegrationTests : IAsyncLifetime
         var cancelled = await _service.CancelAsync(Guid.NewGuid());
 
         // Assert
-        Assert.False(cancelled);
+        cancelled.Should().BeFalse();
     }
 
     #endregion
@@ -311,16 +312,16 @@ public sealed class BggImportQueueServiceIntegrationTests : IAsyncLifetime
         var retried = await _service.RetryFailedAsync(entity.Id);
 
         // Assert
-        Assert.True(retried);
+        retried.Should().BeTrue();
 
         // Verify database state
         var dbEntry = await _dbContext.BggImportQueue.FirstOrDefaultAsync(q => q.Id == entity.Id);
-        Assert.NotNull(dbEntry);
-        Assert.Equal(BggImportStatus.Queued, dbEntry.Status);
-        Assert.Equal(0, dbEntry.RetryCount);
-        Assert.Null(dbEntry.ErrorMessage);
-        Assert.Null(dbEntry.ProcessedAt);
-        Assert.Equal(1, dbEntry.Position); // Should be assigned next position
+        dbEntry.Should().NotBeNull();
+        dbEntry.Status.Should().Be(BggImportStatus.Queued);
+        dbEntry.RetryCount.Should().Be(0);
+        dbEntry.ErrorMessage.Should().BeNull();
+        dbEntry.ProcessedAt.Should().BeNull();
+        dbEntry.Position.Should().Be(1); // Should be assigned next position
     }
 
     [Fact]
@@ -333,12 +334,12 @@ public sealed class BggImportQueueServiceIntegrationTests : IAsyncLifetime
         var retried = await _service.RetryFailedAsync(entity.Id);
 
         // Assert
-        Assert.False(retried);
+        retried.Should().BeFalse();
 
         // Verify no state change
         var dbEntry = await _dbContext.BggImportQueue.FirstOrDefaultAsync(q => q.Id == entity.Id);
-        Assert.NotNull(dbEntry);
-        Assert.Equal(BggImportStatus.Queued, dbEntry.Status);
+        dbEntry.Should().NotBeNull();
+        dbEntry.Status.Should().Be(BggImportStatus.Queued);
     }
 
     [Fact]
@@ -348,7 +349,7 @@ public sealed class BggImportQueueServiceIntegrationTests : IAsyncLifetime
         var retried = await _service.RetryFailedAsync(Guid.NewGuid());
 
         // Assert
-        Assert.False(retried);
+        retried.Should().BeFalse();
     }
 
     [Fact]
@@ -365,8 +366,8 @@ public sealed class BggImportQueueServiceIntegrationTests : IAsyncLifetime
 
         // Assert - Should be positioned after entity1
         var entity2Updated = await _dbContext.BggImportQueue.FirstOrDefaultAsync(q => q.Id == entity2.Id);
-        Assert.NotNull(entity2Updated);
-        Assert.Equal(2, entity2Updated.Position);
+        entity2Updated.Should().NotBeNull();
+        entity2Updated.Position.Should().Be(2);
     }
 
     #endregion
@@ -384,7 +385,7 @@ public sealed class BggImportQueueServiceIntegrationTests : IAsyncLifetime
         // Update ProcessedAt to 40 days ago using TimeProvider mock
         var oldDate = _mockTimeProvider.Object.GetUtcNow().UtcDateTime.AddDays(-40);
         var dbEntry = await _dbContext.BggImportQueue.FirstOrDefaultAsync(q => q.Id == oldEntity.Id);
-        Assert.NotNull(dbEntry);
+        dbEntry.Should().NotBeNull();
         dbEntry.ProcessedAt = oldDate;
         await _dbContext.SaveChangesAsync();
 
@@ -392,11 +393,11 @@ public sealed class BggImportQueueServiceIntegrationTests : IAsyncLifetime
         var deletedCount = await _service.CleanupOldJobsAsync(retentionDays: 30);
 
         // Assert
-        Assert.Equal(1, deletedCount);
+        deletedCount.Should().Be(1);
 
         // Verify removal
         var removed = await _dbContext.BggImportQueue.FirstOrDefaultAsync(q => q.Id == oldEntity.Id);
-        Assert.Null(removed);
+        removed.Should().BeNull();
     }
 
     [Fact]
@@ -410,7 +411,7 @@ public sealed class BggImportQueueServiceIntegrationTests : IAsyncLifetime
         // Update ProcessedAt to 60 days ago using TimeProvider mock
         var oldDate = _mockTimeProvider.Object.GetUtcNow().UtcDateTime.AddDays(-60);
         var dbEntry = await _dbContext.BggImportQueue.FirstOrDefaultAsync(q => q.Id == oldEntity.Id);
-        Assert.NotNull(dbEntry);
+        dbEntry.Should().NotBeNull();
         dbEntry.ProcessedAt = oldDate;
         await _dbContext.SaveChangesAsync();
 
@@ -418,7 +419,7 @@ public sealed class BggImportQueueServiceIntegrationTests : IAsyncLifetime
         var deletedCount = await _service.CleanupOldJobsAsync(retentionDays: 30);
 
         // Assert
-        Assert.Equal(1, deletedCount);
+        deletedCount.Should().Be(1);
     }
 
     [Fact]
@@ -435,11 +436,11 @@ public sealed class BggImportQueueServiceIntegrationTests : IAsyncLifetime
         var deletedCount = await _service.CleanupOldJobsAsync(retentionDays: 30);
 
         // Assert
-        Assert.Equal(0, deletedCount);
+        deletedCount.Should().Be(0);
 
         // Verify still exists
         var exists = await _dbContext.BggImportQueue.FirstOrDefaultAsync(q => q.Id == recentEntity.Id);
-        Assert.NotNull(exists);
+        exists.Should().NotBeNull();
     }
 
     [Fact]
@@ -454,11 +455,11 @@ public sealed class BggImportQueueServiceIntegrationTests : IAsyncLifetime
         var deletedCount = await _service.CleanupOldJobsAsync(retentionDays: 0);
 
         // Assert
-        Assert.Equal(0, deletedCount);
+        deletedCount.Should().Be(0);
 
         // Verify both still exist
-        Assert.NotNull(await _dbContext.BggImportQueue.FirstOrDefaultAsync(q => q.Id == queuedEntity.Id));
-        Assert.NotNull(await _dbContext.BggImportQueue.FirstOrDefaultAsync(q => q.Id == processingEntity.Id));
+        (await _dbContext.BggImportQueue.FirstOrDefaultAsync(q => q.Id == queuedEntity.Id)).Should().NotBeNull();
+        (await _dbContext.BggImportQueue.FirstOrDefaultAsync(q => q.Id == processingEntity.Id)).Should().NotBeNull();
     }
 
     [Fact]
@@ -468,7 +469,7 @@ public sealed class BggImportQueueServiceIntegrationTests : IAsyncLifetime
         var deletedCount = await _service.CleanupOldJobsAsync(retentionDays: 0);
 
         // Assert
-        Assert.Equal(0, deletedCount);
+        deletedCount.Should().Be(0);
     }
 
     [Fact]
@@ -478,7 +479,7 @@ public sealed class BggImportQueueServiceIntegrationTests : IAsyncLifetime
         var deletedCount = await _service.CleanupOldJobsAsync(retentionDays: -5);
 
         // Assert
-        Assert.Equal(0, deletedCount);
+        deletedCount.Should().Be(0);
     }
 
     #endregion
@@ -508,10 +509,10 @@ public sealed class BggImportQueueServiceIntegrationTests : IAsyncLifetime
             .OrderBy(q => q.Position)
             .ToListAsync();
 
-        Assert.Equal(3, allEntries.Count);
-        Assert.Equal(1, allEntries[0].Position);
-        Assert.Equal(2, allEntries[1].Position);
-        Assert.Equal(3, allEntries[2].Position);
+        allEntries.Count.Should().Be(3);
+        allEntries[0].Position.Should().Be(1);
+        allEntries[1].Position.Should().Be(2);
+        allEntries[2].Position.Should().Be(3);
     }
 
     [Fact]
@@ -527,8 +528,8 @@ public sealed class BggImportQueueServiceIntegrationTests : IAsyncLifetime
 
         // Assert - Processing entry position should not change
         var processingUpdated = await _dbContext.BggImportQueue.FirstOrDefaultAsync(q => q.Id == processing.Id);
-        Assert.NotNull(processingUpdated);
-        Assert.Equal(2, processingUpdated.Position); // Original position preserved
+        processingUpdated.Should().NotBeNull();
+        processingUpdated.Position.Should().Be(2); // Original position preserved
     }
 
     [Fact]
@@ -539,7 +540,7 @@ public sealed class BggImportQueueServiceIntegrationTests : IAsyncLifetime
 
         // Assert - Should not throw
         var count = await _dbContext.BggImportQueue.CountAsync();
-        Assert.Equal(0, count);
+        count.Should().Be(0);
     }
 
     #endregion
@@ -557,9 +558,9 @@ public sealed class BggImportQueueServiceIntegrationTests : IAsyncLifetime
 
         // Assert
         var updated = await _dbContext.BggImportQueue.FirstOrDefaultAsync(q => q.Id == entity.Id);
-        Assert.NotNull(updated);
-        Assert.Equal(BggImportStatus.Processing, updated.Status);
-        Assert.NotNull(updated.UpdatedAt);
+        updated.Should().NotBeNull();
+        updated.Status.Should().Be(BggImportStatus.Processing);
+        updated.UpdatedAt.Should().NotBeNull();
     }
 
     [Fact]
@@ -577,16 +578,16 @@ public sealed class BggImportQueueServiceIntegrationTests : IAsyncLifetime
 
         // Assert
         var completed = await _dbContext.BggImportQueue.FirstOrDefaultAsync(q => q.Id == entity1.Id);
-        Assert.NotNull(completed);
-        Assert.Equal(BggImportStatus.Completed, completed.Status);
-        Assert.Equal(createdGameId, completed.CreatedGameId);
-        Assert.NotNull(completed.ProcessedAt);
-        Assert.Null(completed.ErrorMessage);
+        completed.Should().NotBeNull();
+        completed.Status.Should().Be(BggImportStatus.Completed);
+        completed.CreatedGameId.Should().Be(createdGameId);
+        completed.ProcessedAt.Should().NotBeNull();
+        completed.ErrorMessage.Should().BeNull();
 
         // Verify position recalculation (entity2 should now be position 1)
         var entity2Updated = await _dbContext.BggImportQueue.FirstOrDefaultAsync(q => q.Id == entity2.Id);
-        Assert.NotNull(entity2Updated);
-        Assert.Equal(1, entity2Updated.Position);
+        entity2Updated.Should().NotBeNull();
+        entity2Updated.Position.Should().Be(1);
     }
 
     [Fact]
@@ -601,11 +602,11 @@ public sealed class BggImportQueueServiceIntegrationTests : IAsyncLifetime
 
         // Assert
         var updated = await _dbContext.BggImportQueue.FirstOrDefaultAsync(q => q.Id == entity.Id);
-        Assert.NotNull(updated);
-        Assert.Equal(BggImportStatus.Queued, updated.Status); // Back to queued
-        Assert.Equal(1, updated.RetryCount);
-        Assert.Equal("API timeout", updated.ErrorMessage);
-        Assert.Null(updated.ProcessedAt); // Not permanently failed yet
+        updated.Should().NotBeNull();
+        updated.Status.Should().Be(BggImportStatus.Queued); // Back to queued
+        updated.RetryCount.Should().Be(1);
+        updated!.ErrorMessage.Should().Be("API timeout");
+        updated.ProcessedAt.Should().BeNull(); // Not permanently failed yet
     }
 
     [Fact]
@@ -624,11 +625,11 @@ public sealed class BggImportQueueServiceIntegrationTests : IAsyncLifetime
 
         // Assert
         var updated = await _dbContext.BggImportQueue.FirstOrDefaultAsync(q => q.Id == entity.Id);
-        Assert.NotNull(updated);
-        Assert.Equal(BggImportStatus.Failed, updated.Status); // Permanently failed
-        Assert.Equal(3, updated.RetryCount);
-        Assert.Equal("Final failure", updated.ErrorMessage);
-        Assert.NotNull(updated.ProcessedAt);
+        updated.Should().NotBeNull();
+        updated.Status.Should().Be(BggImportStatus.Failed); // Permanently failed
+        updated.RetryCount.Should().Be(3);
+        updated!.ErrorMessage.Should().Be("Final failure");
+        updated.ProcessedAt.Should().NotBeNull();
     }
 
     #endregion
@@ -653,11 +654,11 @@ public sealed class BggImportQueueServiceIntegrationTests : IAsyncLifetime
         var status = await _service.GetQueueStatusAsync();
 
         // Assert
-        Assert.Equal(2, status.Count);
-        Assert.Contains(status, s => s.Id == queued.Id);
-        Assert.Contains(status, s => s.Id == processing.Id);
-        Assert.DoesNotContain(status, s => s.Id == completed.Id);
-        Assert.DoesNotContain(status, s => s.Id == failed.Id);
+        status.Count.Should().Be(2);
+        status.Should().Contain(s => s.Id == queued.Id);
+        status.Should().Contain(s => s.Id == processing.Id);
+        status.Should().NotContain(s => s.Id == completed.Id);
+        status.Should().NotContain(s => s.Id == failed.Id);
     }
 
     [Fact]
@@ -678,11 +679,11 @@ public sealed class BggImportQueueServiceIntegrationTests : IAsyncLifetime
         var allItems = await _service.GetAllQueueItemsAsync();
 
         // Assert
-        Assert.Equal(4, allItems.Count);
-        Assert.Contains(allItems, i => i.Status == BggImportStatus.Queued);
-        Assert.Contains(allItems, i => i.Status == BggImportStatus.Processing);
-        Assert.Contains(allItems, i => i.Status == BggImportStatus.Completed);
-        Assert.Contains(allItems, i => i.Status == BggImportStatus.Failed);
+        allItems.Count.Should().Be(4);
+        allItems.Should().Contain(i => i.Status == BggImportStatus.Queued);
+        allItems.Should().Contain(i => i.Status == BggImportStatus.Processing);
+        allItems.Should().Contain(i => i.Status == BggImportStatus.Completed);
+        allItems.Should().Contain(i => i.Status == BggImportStatus.Failed);
     }
 
     [Fact]
@@ -696,8 +697,8 @@ public sealed class BggImportQueueServiceIntegrationTests : IAsyncLifetime
         var result = await _service.GetByBggIdAsync(bggId);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal(bggId, result.BggId);
+        result.Should().NotBeNull();
+        result.BggId.Should().Be(bggId);
     }
 
     [Fact]
@@ -707,7 +708,7 @@ public sealed class BggImportQueueServiceIntegrationTests : IAsyncLifetime
         var result = await _service.GetByBggIdAsync(12345);
 
         // Assert
-        Assert.Null(result);
+        result.Should().BeNull();
     }
 
     [Fact]
@@ -722,9 +723,9 @@ public sealed class BggImportQueueServiceIntegrationTests : IAsyncLifetime
         var next = await _service.GetNextQueuedItemAsync();
 
         // Assert
-        Assert.NotNull(next);
-        Assert.Equal(entity1.Id, next.Id);
-        Assert.Equal(1, next.Position);
+        next.Should().NotBeNull();
+        next.Id.Should().Be(entity1.Id);
+        next.Position.Should().Be(1);
     }
 
     [Fact]
@@ -734,7 +735,7 @@ public sealed class BggImportQueueServiceIntegrationTests : IAsyncLifetime
         var next = await _service.GetNextQueuedItemAsync();
 
         // Assert
-        Assert.Null(next);
+        next.Should().BeNull();
     }
 
     [Fact]
@@ -750,8 +751,8 @@ public sealed class BggImportQueueServiceIntegrationTests : IAsyncLifetime
         var next = await _service.GetNextQueuedItemAsync();
 
         // Assert
-        Assert.NotNull(next);
-        Assert.Equal(entity2.Id, next.Id);
+        next.Should().NotBeNull();
+        next.Id.Should().Be(entity2.Id);
     }
 
     #endregion

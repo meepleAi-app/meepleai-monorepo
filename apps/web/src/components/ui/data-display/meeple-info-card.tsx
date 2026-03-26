@@ -35,7 +35,6 @@ import {
   formatFileSize,
   documentTypeLabels,
   documentTypeColors,
-  getStatusIndicator,
   isDocumentReady,
 } from '@/components/library/kb-utils';
 import { PdfUploadModal } from '@/components/library/PdfUploadModal';
@@ -54,7 +53,6 @@ import { cn } from '@/lib/utils';
 export interface MeepleInfoCardProps {
   gameId: string;
   gameTitle: string;
-  bggId?: number | null;
   /** true for public pages (hides upload buttons, add link buttons) */
   readOnly?: boolean;
   showKnowledgeBase?: boolean;
@@ -124,7 +122,6 @@ const linkTypeIcons: Record<string, typeof Globe> = {
 export function MeepleInfoCard({
   gameId,
   gameTitle,
-  bggId,
   readOnly = false,
   showKnowledgeBase = true,
   showSocialLinks = true,
@@ -176,17 +173,7 @@ export function MeepleInfoCard({
     }
   }, [showKnowledgeBase, fetchDocuments]);
 
-  // Build social links from bggId
-  const socialLinks = bggId
-    ? [
-        {
-          id: 'bgg',
-          name: 'BoardGameGeek',
-          url: `https://boardgamegeek.com/boardgame/${bggId}`,
-          type: 'bgg' as const,
-        },
-      ]
-    : [];
+  const socialLinks: Array<{ id: string; name: string; url: string; type: string }> = [];
 
   return (
     <>
@@ -205,7 +192,6 @@ export function MeepleInfoCard({
         {/* Tabs */}
         <div className="flex border-b border-[rgba(45,42,38,0.08)]">
           {availableTabs.map(tab => {
-            // eslint-disable-next-line security/detect-object-injection
             const config = tabConfig[tab];
             const Icon = config.icon;
             const isActive = activeTab === tab;
@@ -290,9 +276,6 @@ export function MeepleInfoCard({
               {!docsLoading && !docsError && documents.length > 0 && (
                 <div className="space-y-3">
                   {documents.map(doc => {
-                    const status = getStatusIndicator(
-                      doc.processingState || doc.processingStatus || 'pending'
-                    );
                     const ready = isDocumentReady(doc);
                     return (
                       <div
@@ -447,7 +430,7 @@ export function MeepleInfoCard({
                   <p className="mb-4 max-w-xs font-nunito text-sm text-[#6B665C]">
                     {readOnly
                       ? 'Nessun link disponibile per questo gioco.'
-                      : 'Aggiungi link utili come BoardGameGeek, sito ufficiale o forum.'}
+                      : 'Aggiungi link utili come sito ufficiale o forum.'}
                   </p>
                   {!readOnly && (
                     <Button

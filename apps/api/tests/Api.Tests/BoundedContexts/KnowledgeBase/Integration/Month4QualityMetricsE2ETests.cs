@@ -22,6 +22,7 @@ using Npgsql;
 using Polly;
 using Xunit;
 using System.Diagnostics.Metrics;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Integration;
 
@@ -81,7 +82,7 @@ public sealed class Month4QualityMetricsE2ETests : IAsyncLifetime
         _output($"✓ Isolated database created: {_databaseName}");
 
         // Setup dependency injection
-        var services = new ServiceCollection();
+        var services = IntegrationServiceCollectionBuilder.CreateBase(_isolatedDbConnectionString);
 
         // Configuration
         var configBuilder = new ConfigurationBuilder();
@@ -93,30 +94,7 @@ public sealed class Month4QualityMetricsE2ETests : IAsyncLifetime
         var configuration = configBuilder.Build();
         services.AddSingleton<IConfiguration>(configuration);
 
-        // MediatR
-        services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(Program).Assembly));
-
-        // Domain event infrastructure
-        services.AddScoped<Api.SharedKernel.Application.Services.IDomainEventCollector, Api.SharedKernel.Application.Services.DomainEventCollector>();
         services.AddSingleton<TimeProvider>(TimeProvider.System);
-
-        // DbContext with enforced connection settings
-        var enforcedBuilder = new NpgsqlConnectionStringBuilder(_isolatedDbConnectionString)
-        {
-            SslMode = SslMode.Disable,
-            KeepAlive = 30,
-            Pooling = false,
-            Timeout = 15,
-            CommandTimeout = 30
-        };
-
-        services.AddDbContext<MeepleAiDbContext>(options =>
-            options.UseNpgsql(enforcedBuilder.ConnectionString, o => o.UseVector()) // Issue #3547
-                .ConfigureWarnings(warnings =>
-                    warnings.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning)));
-
-        // Logging
-        services.AddLogging(builder => builder.AddConsole().SetMinimumLevel(LogLevel.Information));
 
         // QualityMetrics (Month 4 - BGAI-043: Prometheus metrics)
         services.AddSingleton<IMeterFactory, TestMeterFactory>();
@@ -264,8 +242,8 @@ public sealed class Month4QualityMetricsE2ETests : IAsyncLifetime
         _output($"  - Overall Confidence: {qualityScores.OverallConfidence:F2}");
         _output($"  - Quality Tier: high (≥0.80)");
 
-        Assert.True(qualityScores.OverallConfidence >= 0.80, "Should be high quality (≥0.80)");
-        Assert.False(qualityScores.IsLowQuality, "Should not be flagged as low quality");
+        (qualityScores.OverallConfidence >= 0.80).Should().BeTrue("Should be high quality (≥0.80)");
+        qualityScores.IsLowQuality.Should().BeFalse("Should not be flagged as low quality");
     }
 
     /// <summary>
@@ -296,8 +274,8 @@ public sealed class Month4QualityMetricsE2ETests : IAsyncLifetime
         _output($"  - Quality Tier: low (<0.60)");
         _output($"  - Low Quality Flag: {lowQualityScores.IsLowQuality}");
 
-        Assert.True(lowQualityScores.OverallConfidence < 0.60, "Should be low quality (<0.60)");
-        Assert.True(lowQualityScores.IsLowQuality, "Should be flagged as low quality");
+        (lowQualityScores.OverallConfidence < 0.60).Should().BeTrue("Should be low quality (<0.60)");
+        lowQualityScores.IsLowQuality.Should().BeTrue("Should be flagged as low quality");
     }
 
     /// <summary>
@@ -321,7 +299,7 @@ public sealed class Month4QualityMetricsE2ETests : IAsyncLifetime
         };
         _qualityMetrics!.RecordQualityScores(highScores, "qa", "answer");
         _output($"✓ High quality: {highScores.OverallConfidence:F2} (≥0.80)");
-        Assert.True(highScores.OverallConfidence >= 0.80);
+        (highScores.OverallConfidence >= 0.80).Should().BeTrue();
 
         // Medium quality (≥0.60 and <0.80)
         var mediumScores = new QualityScores
@@ -334,7 +312,7 @@ public sealed class Month4QualityMetricsE2ETests : IAsyncLifetime
         };
         _qualityMetrics.RecordQualityScores(mediumScores, "qa", "answer");
         _output($"✓ Medium quality: {mediumScores.OverallConfidence:F2} (0.60-0.80)");
-        Assert.True(mediumScores.OverallConfidence >= 0.60 && mediumScores.OverallConfidence < 0.80);
+        (mediumScores.OverallConfidence >= 0.60 && mediumScores.OverallConfidence < 0.80).Should().BeTrue();
 
         // Low quality (<0.60)
         var lowScores = new QualityScores
@@ -347,7 +325,7 @@ public sealed class Month4QualityMetricsE2ETests : IAsyncLifetime
         };
         _qualityMetrics.RecordQualityScores(lowScores, "qa", "answer");
         _output($"✓ Low quality: {lowScores.OverallConfidence:F2} (<0.60)");
-        Assert.True(lowScores.OverallConfidence < 0.60);
+        (lowScores.OverallConfidence < 0.60).Should().BeTrue();
     }
 
     /// <summary>
@@ -384,8 +362,8 @@ public sealed class Month4QualityMetricsE2ETests : IAsyncLifetime
         _output($"  - High Quality Count: {requests.Count(r => r.OverallConfidence >= 0.80)}");
         _output($"  - Medium Quality Count: {requests.Count(r => r.OverallConfidence >= 0.60 && r.OverallConfidence < 0.80)}");
 
-        Assert.Equal(0.755, avgConfidence, 2); // (0.87 + 0.72 + 0.50 + 0.93) / 4
-        Assert.Equal(1, lowQualityCount);
+        avgConfidence.Should().BeApproximately(0.755, 0.01); // (0.87 + 0.72 + 0.50 + 0.93) / 4
+        lowQualityCount.Should().Be(1);
     }
 
     /// <summary>
@@ -421,7 +399,7 @@ public sealed class Month4QualityMetricsE2ETests : IAsyncLifetime
 
         // Note: Actual Prometheus /metrics endpoint verification would require HTTP client test
         // This is deferred to Playwright E2E test (apps/web/e2e/admin-analytics-quality.spec.ts)
-        Assert.True(true, "Metrics format verification passed (structure validated)");
+        true.Should().BeTrue("Metrics format verification passed (structure validated)");
     }
 }
 

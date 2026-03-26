@@ -3,18 +3,15 @@ using System.Net.Http.Json;
 using Api.BoundedContexts.KnowledgeBase.Application.DTOs;
 using Api.Infrastructure;
 using Api.Services;
-using Api.SharedKernel.Application.Services;
 using Api.Tests.Constants;
 using Api.Tests.Infrastructure;
-using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Moq;
-using StackExchange.Redis;
+using FluentAssertions;
 using Xunit;
 
 namespace Api.Tests.Integration.KnowledgeBase;
@@ -47,31 +44,14 @@ public sealed class AgentTypologyEndpointsSmokeTests : IAsyncLifetime
     {
         var connectionString = await _fixture.CreateIsolatedDatabaseAsync(_testDbName);
 
-        _factory = new WebApplicationFactory<Program>()
+        _factory = IntegrationWebApplicationFactory.Create(connectionString)
             .WithWebHostBuilder(builder =>
             {
-                builder.UseEnvironment("Testing");
-
-                builder.ConfigureAppConfiguration((context, configBuilder) =>
-                {
-                    configBuilder.AddInMemoryCollection(new Dictionary<string, string?>
-                    {
-                        ["OPENROUTER_API_KEY"] = "test-key",
-                        ["ConnectionStrings:Postgres"] = connectionString
-                    });
-                });
-
                 builder.ConfigureTestServices(services =>
                 {
-                    services.RemoveAll(typeof(DbContextOptions<MeepleAiDbContext>));
-                    services.AddDbContext<MeepleAiDbContext>(options =>
-                        options.UseNpgsql(connectionString, o => o.UseVector())); // Issue #3547
-
-                    services.RemoveAll(typeof(IConnectionMultiplexer));
-                    var mockRedis = new Mock<IConnectionMultiplexer>();
-                    services.AddSingleton(mockRedis.Object);
-
+                    // Custom embedding mock with 384-dim dummy embeddings
                     services.RemoveAll(typeof(IEmbeddingService));
+
                     var mockEmbedding = new Mock<IEmbeddingService>();
 
                     var dummyEmbedding = new float[384];
@@ -87,13 +67,13 @@ public sealed class AgentTypologyEndpointsSmokeTests : IAsyncLifetime
 
                     services.AddScoped<IEmbeddingService>(_ => mockEmbedding.Object);
 
-                    // Mock HybridCache infrastructure
-                    services.AddHybridCache();
-                    services.RemoveAll(typeof(Api.Services.IHybridCacheService));
-                    services.AddScoped<Api.Services.IHybridCacheService>(_ => Mock.Of<Api.Services.IHybridCacheService>());
-
-                    // Ensure domain event collector is registered
-                    services.AddScoped<IDomainEventCollector, Api.SharedKernel.Application.Services.DomainEventCollector>();
+                    // Enable public registration so /auth/register doesn't return 403
+                    services.RemoveAll(typeof(IConfigurationService));
+                    var mockConfig = new Mock<IConfigurationService>();
+                    mockConfig
+                        .Setup(c => c.GetValueAsync<bool?>("Registration:PublicEnabled", It.IsAny<bool?>(), It.IsAny<string?>()))
+                        .ReturnsAsync(true);
+                    services.AddSingleton<IConfigurationService>(mockConfig.Object);
                 });
             });
 
@@ -127,7 +107,7 @@ public sealed class AgentTypologyEndpointsSmokeTests : IAsyncLifetime
             DisplayName = "Editor User"
         });
 
-        Assert.Equal(HttpStatusCode.OK, registerEditorResponse.StatusCode);
+        registerEditorResponse.StatusCode.Should().Be(HttpStatusCode.OK);
         _editorCookie = registerEditorResponse.Headers.GetValues("Set-Cookie").First();
 
         // Manually set editor role in DB
@@ -150,7 +130,7 @@ public sealed class AgentTypologyEndpointsSmokeTests : IAsyncLifetime
             DisplayName = "Admin User"
         });
 
-        Assert.Equal(HttpStatusCode.OK, registerAdminResponse.StatusCode);
+        registerAdminResponse.StatusCode.Should().Be(HttpStatusCode.OK);
         _adminCookie = registerAdminResponse.Headers.GetValues("Set-Cookie").First();
 
         // Manually set admin role in DB
@@ -196,12 +176,12 @@ public sealed class AgentTypologyEndpointsSmokeTests : IAsyncLifetime
             throw new Exception($"Expected 201 Created but got {response.StatusCode}. Response: {errorBody}");
         }
 
-        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Created);
 
         var result = await response.Content.ReadFromJsonAsync<AgentTypologyDto>();
-        Assert.NotNull(result);
-        Assert.Equal("Test Typology", result.Name);
-        Assert.Equal("Draft", result.Status);
+        result.Should().NotBeNull();
+        result.Name.Should().Be("Test Typology");
+        result.Status.Should().Be("Draft");
         Assert.NotEqual(Guid.Empty, result.CreatedBy); // Endpoint sets ProposedBy from session.User.Id
     }
 
@@ -241,13 +221,13 @@ public sealed class AgentTypologyEndpointsSmokeTests : IAsyncLifetime
         var response = await _client.SendAsync(testRequest);
 
         // Assert
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var responseBody = await response.Content.ReadAsStringAsync();
         var result = System.Text.Json.JsonDocument.Parse(responseBody).RootElement;
 
-        Assert.True(result.GetProperty("success").GetBoolean());
-        Assert.True(result.TryGetProperty("response", out var responseText));
+        (result.GetProperty("success").GetBoolean()).Should().BeTrue();
+        (result.TryGetProperty("response", out var responseText)).Should().BeTrue();
         Assert.NotEqual(string.Empty, responseText.GetString());
     }
 
@@ -284,10 +264,8 @@ public sealed class AgentTypologyEndpointsSmokeTests : IAsyncLifetime
 
         // Assert: Should fail with 422 (validation error - FluentValidation runs before handler sees ownership)
         // Or 400 if handler catches and returns BadRequest
-        Assert.True(
-            response.StatusCode == HttpStatusCode.BadRequest ||
-            response.StatusCode == HttpStatusCode.UnprocessableEntity,
-            $"Expected 400 or 422, got {response.StatusCode}");
+        (response.StatusCode == HttpStatusCode.BadRequest ||
+            response.StatusCode == HttpStatusCode.UnprocessableEntity).Should().BeTrue($"Expected 400 or 422, got {response.StatusCode}");
     }
 
     [Fact]
@@ -310,8 +288,7 @@ public sealed class AgentTypologyEndpointsSmokeTests : IAsyncLifetime
         // Act
         var response = await _client.SendAsync(request);
 
-        // Assert: Middleware returns 422 UnprocessableEntity when no auth (FluentValidation runs first)
-        // Auth check happens AFTER model binding and validation
-        Assert.Equal(HttpStatusCode.UnprocessableEntity, response.StatusCode);
+        // Assert: Session validation returns 401 Unauthorized when no auth cookie is present
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 }

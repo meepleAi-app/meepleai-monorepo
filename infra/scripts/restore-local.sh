@@ -22,7 +22,7 @@ if [ -z "$SNAPSHOT" ] || [ ! -f "$SNAPSHOT" ]; then
 fi
 
 # Read local DB credentials
-DB_SECRET="$SCRIPT_DIR/../secrets/dev/database.secret"
+DB_SECRET="$SCRIPT_DIR/../secrets/database.secret"
 if [ -f "$DB_SECRET" ]; then
   PG_USER=$(grep -oP 'POSTGRES_USER=\K.*' "$DB_SECRET" || echo "meepleai")
   PG_DB=$(grep -oP 'POSTGRES_DB=\K.*' "$DB_SECRET" || echo "meepleai")

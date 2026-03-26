@@ -32,6 +32,7 @@ internal static class AdministrationServiceExtensions
         IConfiguration configuration)
     {
         // Repositories
+        services.AddScoped<IUserProfileRepository, UserProfileRepository>();
         services.AddScoped<IAlertRepository, AlertRepository>();
         services.AddScoped<IAlertConfigurationRepository, AlertConfigurationRepository>();  // Issue #2112: Missing DI registration
         services.AddScoped<IAlertRuleRepository, AlertRuleRepository>();  // Issue #2112: Missing DI registration

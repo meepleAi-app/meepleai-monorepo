@@ -25,23 +25,27 @@ Workflows are organized by category with consistent naming prefixes:
 ├── auto-branch-policy.yml    # Branch protection rules
 ├── auto-dependabot.yml       # Dependabot auto-merge
 ├── auto-validate.yml         # Workflow validation
+│
+├── # Reusable Workflows
+├── notify-slack.yml              # Reusable: centralized Slack notifications
 ```
 
 ## Core CI/CD
 
 ### ci.yml - Main CI Pipeline
-- **Triggers**: Push/PR to main, main-dev, frontend-dev
+- **Triggers**: PR to main, main-dev, main-staging, frontend-dev, backend-dev
 - **Jobs**: Frontend (lint, typecheck, test, build), Backend (build, test), E2E critical paths
-- **Features**: Path-based filtering, parallel execution, Codecov integration
+- **Features**: Path-based filtering, parallel execution, Codecov integration, dynamic runner selection (self-hosted for staging/prod PRs, GitHub-hosted for dev PRs)
 
 ### deploy-staging.yml - Staging Deployment
 - **Triggers**: Push to `main-staging` branch, manual dispatch
 - **Jobs**: Pre-deploy tests, Docker build, SSH/K8s deploy, validation
 - **Features**: Automatic deployment (no approval), health checks
 
-### deploy-production.yml - Production Deployment
+### deploy-production.yml - Production Deployment (DISABLED)
+- **Status**: Disabled (`.yml.disabled`) — no production environment yet
+- **Re-enable**: Rename back to `.yml` when production environment is ready
 - **Triggers**: Push/tag to `main` branch, manual dispatch
-- **Jobs**: Staging verification, tests, Docker build, approval gate, blue-green deploy
 - **Features**: Manual approval required, rollback capability, GitHub Release creation
 
 ## Testing Workflows
@@ -82,9 +86,9 @@ Workflows are organized by category with consistent naming prefixes:
 ## Automation Workflows
 
 ### auto-branch-policy.yml - Branch Protection
-- **Triggers**: PR to main, main-dev
+- **Triggers**: PR to main, main-staging, main-dev
 - **Jobs**: Validate source branch matches policy
-- **Policy**: main ← main-dev only; main-dev ← frontend-dev, feature/*, fix/*, etc.
+- **Policy**: main ← main-staging only; main-staging ← main-dev only; main-dev ← frontend-dev, backend-dev, feature/*, fix/*, etc.
 
 ### auto-dependabot.yml - Dependabot Auto-merge
 - **Triggers**: Dependabot PRs with `automerge` label
@@ -113,15 +117,60 @@ Workflows are organized by category with consistent naming prefixes:
 ### Required Secrets
 - `CODECOV_TOKEN` - Code coverage uploads
 - `LHCI_GITHUB_APP_TOKEN` - Lighthouse CI (optional, falls back to GITHUB_TOKEN)
-- `SLACK_WEBHOOK_URL` - Failure notifications (optional)
+- `SLACK_WEBHOOK_URL` - Generic Slack notifications (existing, optional)
+- `SLACK_GITNOTIFY_WEBHOOK_URL` - GitHub Actions main channel notifications (optional)
+- `SLACK_CRITICAL_WEBHOOK_URL` - Critical failure notifications for deploy/security/runner (optional)
 
 ### Environment Variables
 See individual workflow files for environment-specific configuration.
 
+## Notification Architecture
+
+Slack notifications use a 3-tier system via the centralized `notify-slack.yml` reusable workflow.
+
+### Slack Notification Tiers
+
+| Tier | Workflows | Behavior |
+|------|-----------|----------|
+| **CRITICAL** | deploy-staging, rollback | Start + End (both channels) |
+| **IMPORTANT** | ci (main-staging/main PRs), backend-e2e, security-scan | Failures only |
+| **SILENT** | All others (12 workflows) | GitHub Actions UI only |
+
+**Estimated messages/day:** 2-5 (down from ~150)
+
+**Channels:**
+- Main channel (`SLACK_GITNOTIFY_WEBHOOK_URL`): Failures from Tier 1+2 workflows, start/end from Tier 1
+- Critical channel (`SLACK_CRITICAL_WEBHOOK_URL`): Failures from deploy-staging, rollback, security-scan
+
+### Deploy Preview
+
+PRs targeting `main-staging` receive an automated comment showing:
+- Services affected (API/Web/Infra)
+- CI status
+- Link to staging environment
+
+**Adding notifications to a new workflow:** Follow the pattern in `deploy-staging.yml` (Tier 1) or `security-scan.yml` (Tier 2). Most workflows should stay in Tier 3 (silent).
+
 ## Self-Hosted ARM64 Runner
 
-All workflows use the configuration toggle pattern for runner selection:
+Workflows use a tiered runner selection strategy to balance cost and concurrency:
 
+| Branch target | Runner | Rationale |
+|--------------|--------|-----------|
+| `main-dev`, `frontend-dev`, `backend-dev` | `ubuntu-latest` | High PR concurrency, no queue |
+| `main-staging`, `main` | Self-hosted (ARM64) | Low frequency, saves GH Actions minutes |
+| Deploy workflows | Self-hosted (ARM64) | Always staging/prod, free compute |
+
+**CI (`ci.yml`)** uses dynamic selection via the `changes` job output:
+```yaml
+# In changes job:
+runner: ${{ steps.select-runner.outputs.runner }}
+
+# In downstream jobs:
+runs-on: ${{ needs.changes.outputs.runner }}
+```
+
+**Other workflows** use the static toggle pattern:
 ```yaml
 runs-on: ${{ vars.RUNNER || 'ubuntu-latest' }}
 ```
@@ -225,4 +274,4 @@ act -W .github/workflows/ci.yml --dryrun
 
 ---
 
-**Last Updated**: 2026-03-09
+**Last Updated**: 2026-03-20

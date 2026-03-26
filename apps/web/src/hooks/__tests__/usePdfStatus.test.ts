@@ -7,6 +7,25 @@ import { renderHook, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { usePdfStatus } from '../usePdfStatus';
 
+// Mock logger — source uses logger.error, not console.error directly
+const mockLoggerError = vi.fn();
+vi.mock('@/lib/logger', () => ({
+  logger: {
+    debug: vi.fn(),
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: (...args: unknown[]) => mockLoggerError(...args),
+  },
+  getLogger: () => ({
+    debug: vi.fn(),
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: (...args: unknown[]) => mockLoggerError(...args),
+  }),
+  resetLogger: vi.fn(),
+  LogLevel: { DEBUG: 'debug', INFO: 'info', WARN: 'warn', ERROR: 'error' },
+}));
+
 // Mock API
 vi.mock('@/lib/api', () => ({
   api: {
@@ -119,15 +138,11 @@ describe('usePdfStatus', () => {
     it('creates EventSource with correct URL', () => {
       renderHook(() => usePdfStatus('test-doc-123', { enableSSE: true }));
 
-      expect(global.EventSource).toHaveBeenCalledWith(
-        '/api/v1/pdfs/test-doc-123/status/stream'
-      );
+      expect(global.EventSource).toHaveBeenCalledWith('/api/v1/pdfs/test-doc-123/status/stream');
     });
 
     it('marks connection as connected on SSE open', async () => {
-      const { result } = renderHook(() =>
-        usePdfStatus('doc-1', { enableSSE: true })
-      );
+      const { result } = renderHook(() => usePdfStatus('doc-1', { enableSSE: true }));
 
       expect(result.current.connectionState).toBe('connecting');
 
@@ -141,9 +156,7 @@ describe('usePdfStatus', () => {
     });
 
     it('parses SSE message and updates status', async () => {
-      const { result } = renderHook(() =>
-        usePdfStatus('doc-1', { enableSSE: true })
-      );
+      const { result } = renderHook(() => usePdfStatus('doc-1', { enableSSE: true }));
 
       await act(async () => {
         getLatestES().simulateOpen();
@@ -171,9 +184,7 @@ describe('usePdfStatus', () => {
 
     it('closes connection on terminal state (ready)', async () => {
       const onComplete = vi.fn();
-      const { result } = renderHook(() =>
-        usePdfStatus('doc-1', { enableSSE: true, onComplete })
-      );
+      const { result } = renderHook(() => usePdfStatus('doc-1', { enableSSE: true, onComplete }));
 
       const es = getLatestES();
 
@@ -198,9 +209,7 @@ describe('usePdfStatus', () => {
 
     it('closes connection on terminal state (failed)', async () => {
       const onComplete = vi.fn();
-      renderHook(() =>
-        usePdfStatus('doc-1', { enableSSE: true, onComplete })
-      );
+      renderHook(() => usePdfStatus('doc-1', { enableSSE: true, onComplete }));
 
       const es = getLatestES();
 
@@ -225,9 +234,7 @@ describe('usePdfStatus', () => {
 
     it('calls onStateChange callback when state changes', async () => {
       const onStateChange = vi.fn();
-      renderHook(() =>
-        usePdfStatus('doc-1', { enableSSE: true, onStateChange })
-      );
+      renderHook(() => usePdfStatus('doc-1', { enableSSE: true, onStateChange }));
 
       await act(async () => {
         getLatestES().simulateOpen();
@@ -260,10 +267,8 @@ describe('usePdfStatus', () => {
     });
 
     it('handles malformed SSE JSON gracefully', async () => {
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-      const { result } = renderHook(() =>
-        usePdfStatus('doc-1', { enableSSE: true })
-      );
+      mockLoggerError.mockClear();
+      const { result } = renderHook(() => usePdfStatus('doc-1', { enableSSE: true }));
 
       await act(async () => {
         getLatestES().simulateOpen();
@@ -275,9 +280,8 @@ describe('usePdfStatus', () => {
 
       // Should not crash, status stays null
       expect(result.current.status).toBeNull();
-      expect(consoleSpy).toHaveBeenCalled();
-
-      consoleSpy.mockRestore();
+      // Source uses logger.error, not console.error directly
+      expect(mockLoggerError).toHaveBeenCalled();
     });
   });
 
@@ -405,9 +409,7 @@ describe('usePdfStatus', () => {
       mockGetProgress.mockRejectedValue(new Error('Network error'));
 
       const onError = vi.fn();
-      const { result } = renderHook(() =>
-        usePdfStatus('doc-1', { enableSSE: false, onError })
-      );
+      const { result } = renderHook(() => usePdfStatus('doc-1', { enableSSE: false, onError }));
 
       // Flush microtasks for rejected promise
       await act(async () => {
@@ -426,9 +428,7 @@ describe('usePdfStatus', () => {
 
   describe('Cleanup', () => {
     it('closes EventSource on unmount', async () => {
-      const { unmount } = renderHook(() =>
-        usePdfStatus('doc-1', { enableSSE: true })
-      );
+      const { unmount } = renderHook(() => usePdfStatus('doc-1', { enableSSE: true }));
 
       const es = getLatestES();
 
@@ -474,17 +474,13 @@ describe('usePdfStatus', () => {
 
   describe('Reconnection', () => {
     it('provides manual reconnect function', () => {
-      const { result } = renderHook(() =>
-        usePdfStatus('doc-1', { enableSSE: true })
-      );
+      const { result } = renderHook(() => usePdfStatus('doc-1', { enableSSE: true }));
 
       expect(result.current.reconnect).toBeInstanceOf(Function);
     });
 
     it('reconnects with exponential backoff on SSE error', async () => {
-      renderHook(() =>
-        usePdfStatus('doc-1', { enableSSE: true, maxReconnectAttempts: 3 })
-      );
+      renderHook(() => usePdfStatus('doc-1', { enableSSE: true, maxReconnectAttempts: 3 }));
 
       // Initial EventSource
       expect(mockEventSourceInstances).toHaveLength(1);
@@ -513,9 +509,7 @@ describe('usePdfStatus', () => {
     });
 
     it('manual reconnect resets attempt counter and creates new connection', async () => {
-      const { result } = renderHook(() =>
-        usePdfStatus('doc-1', { enableSSE: true })
-      );
+      const { result } = renderHook(() => usePdfStatus('doc-1', { enableSSE: true }));
 
       const firstES = getLatestES();
 
@@ -584,20 +578,16 @@ describe('usePdfStatus', () => {
 
   describe('Properties (Issue #4211)', () => {
     it('exposes connectionState property', () => {
-      const { result } = renderHook(() =>
-        usePdfStatus('doc-1', { enableSSE: true })
-      );
+      const { result } = renderHook(() => usePdfStatus('doc-1', { enableSSE: true }));
 
       expect(result.current.connectionState).toBeDefined();
-      expect(
-        ['connecting', 'connected', 'reconnecting', 'polling', 'failed']
-      ).toContain(result.current.connectionState);
+      expect(['connecting', 'connected', 'reconnecting', 'polling', 'failed']).toContain(
+        result.current.connectionState
+      );
     });
 
     it('exposes connectionMetrics property', () => {
-      const { result } = renderHook(() =>
-        usePdfStatus('doc-1', { enableSSE: true })
-      );
+      const { result } = renderHook(() => usePdfStatus('doc-1', { enableSSE: true }));
 
       expect(result.current.connectionMetrics).toBeDefined();
       expect(result.current.connectionMetrics).toHaveProperty('reconnectionCount');
@@ -615,9 +605,7 @@ describe('usePdfStatus', () => {
     });
 
     it('updates lastConnectedAt on successful SSE connection', async () => {
-      const { result } = renderHook(() =>
-        usePdfStatus('doc-1', { enableSSE: true })
-      );
+      const { result } = renderHook(() => usePdfStatus('doc-1', { enableSSE: true }));
 
       expect(result.current.connectionMetrics.lastConnectedAt).toBeNull();
 
@@ -636,9 +624,7 @@ describe('usePdfStatus', () => {
         errorMessage: null,
       });
 
-      const { result } = renderHook(() =>
-        usePdfStatus('doc-1', { enableSSE: false })
-      );
+      const { result } = renderHook(() => usePdfStatus('doc-1', { enableSSE: false }));
 
       // Flush microtasks for polling startup
       await act(async () => {

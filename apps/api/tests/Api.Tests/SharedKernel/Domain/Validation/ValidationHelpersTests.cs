@@ -2,6 +2,7 @@ using Api.SharedKernel.Domain.Results;
 using Api.SharedKernel.Domain.Validation;
 using Api.SharedKernel.Domain.Exceptions;
 using Xunit;
+using FluentAssertions;
 using Api.Tests.Constants;
 
 namespace Api.Tests.SharedKernel.Domain.Validation;
@@ -21,7 +22,7 @@ public class ValidationHelpersTests
         var returnedValue = result.ThrowIfFailure();
 
         // Assert
-        Assert.Equal(value, returnedValue);
+        returnedValue.Should().Be(value);
     }
 
     [Fact]
@@ -31,8 +32,8 @@ public class ValidationHelpersTests
         var result = Result<string>.Failure(Error.Validation("Test error"));
 
         // Act & Assert
-        var exception = Assert.Throws<ValidationException>(() => result.ThrowIfFailure());
-        Assert.Contains("Test error", exception.Message);
+        var exception = ((Action)(() => result.ThrowIfFailure())).Should().Throw<ValidationException>().Which;
+        exception.Message.Should().Contain("Test error");
     }
 
     [Fact]
@@ -42,8 +43,8 @@ public class ValidationHelpersTests
         var result = Result<string>.Failure(Error.Validation("Test error"));
 
         // Act & Assert
-        var exception = Assert.Throws<ValidationException>(() => result.ThrowIfFailure("TestField"));
-        Assert.Contains("TestField", exception.Message);
+        var exception = ((Action)(() => result.ThrowIfFailure("TestField"))).Should().Throw<ValidationException>().Which;
+        exception.Message.Should().Contain("TestField");
     }
     [Fact]
     public void CombineResults_WithAllSuccess_ReturnsSuccess()
@@ -57,7 +58,7 @@ public class ValidationHelpersTests
         var combined = ValidationHelpers.CombineResults(result1, result2, result3);
 
         // Assert
-        Assert.True(combined.IsSuccess);
+        combined.IsSuccess.Should().BeTrue();
     }
 
     [Fact]
@@ -72,9 +73,9 @@ public class ValidationHelpersTests
         var combined = ValidationHelpers.CombineResults(result1, result2, result3);
 
         // Assert
-        Assert.True(combined.IsFailure);
-        Assert.NotNull(combined.Error);
-        Assert.Contains("Error 2", combined.Error.Message);
+        combined.IsFailure.Should().BeTrue();
+        combined.Error.Should().NotBeNull();
+        combined.Error.Message.Should().Contain("Error 2");
     }
 
     [Fact]
@@ -89,10 +90,10 @@ public class ValidationHelpersTests
         var combined = ValidationHelpers.CombineResults(result1, result2, result3);
 
         // Assert
-        Assert.True(combined.IsFailure);
-        Assert.NotNull(combined.Error);
-        Assert.Contains("Error 1", combined.Error.Message);
-        Assert.Contains("Error 2", combined.Error.Message);
+        combined.IsFailure.Should().BeTrue();
+        combined.Error.Should().NotBeNull();
+        combined.Error.Message.Should().Contain("Error 1");
+        combined.Error.Message.Should().Contain("Error 2");
     }
     [Fact]
     public void Validate_WithAllValidators_Succeeding_ReturnsSuccess()
@@ -107,8 +108,8 @@ public class ValidationHelpersTests
         var result = ValidationHelpers.Validate(value, validator1, validator2, validator3);
 
         // Assert
-        Assert.True(result.IsSuccess);
-        Assert.Equal(value, result.Value);
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Should().Be(value);
     }
 
     [Fact]
@@ -124,9 +125,9 @@ public class ValidationHelpersTests
         var result = ValidationHelpers.Validate(value, validator1, validator2, validator3);
 
         // Assert
-        Assert.True(result.IsFailure);
-        Assert.NotNull(result.Error);
-        Assert.Contains("at least 5", result.Error.Message);
+        result.IsFailure.Should().BeTrue();
+        result.Error.Should().NotBeNull();
+        result.Error.Message.Should().Contain("at least 5");
     }
     [Fact]
     public void CreateValidator_WithValidPredicate_ReturnsSuccess()
@@ -140,7 +141,7 @@ public class ValidationHelpersTests
         var result = validator("this is a test");
 
         // Assert
-        Assert.True(result.IsSuccess);
+        result.IsSuccess.Should().BeTrue();
     }
 
     [Fact]
@@ -155,9 +156,9 @@ public class ValidationHelpersTests
         var result = validator("no match here");
 
         // Assert
-        Assert.True(result.IsFailure);
-        Assert.NotNull(result.Error);
-        Assert.Contains("Must contain 'test'", result.Error.Message);
+        result.IsFailure.Should().BeTrue();
+        result.Error.Should().NotBeNull();
+        result.Error.Message.Should().Contain("Must contain 'test'");
     }
     [Fact]
     public async Task CreateAsyncValidator_WithValidPredicate_ReturnsSuccess()
@@ -175,7 +176,7 @@ public class ValidationHelpersTests
         var result = await validator("this is a test");
 
         // Assert
-        Assert.True(result.IsSuccess);
+        result.IsSuccess.Should().BeTrue();
     }
 
     [Fact]
@@ -194,9 +195,9 @@ public class ValidationHelpersTests
         var result = await validator("no match here");
 
         // Assert
-        Assert.True(result.IsFailure);
-        Assert.NotNull(result.Error);
-        Assert.Contains("Must contain 'test'", result.Error.Message);
+        result.IsFailure.Should().BeTrue();
+        result.Error.Should().NotBeNull();
+        result.Error.Message.Should().Contain("Must contain 'test'");
     }
 }
 

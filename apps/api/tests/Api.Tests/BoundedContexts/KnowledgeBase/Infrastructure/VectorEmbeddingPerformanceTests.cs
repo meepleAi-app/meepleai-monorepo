@@ -56,18 +56,7 @@ public sealed class VectorEmbeddingPerformanceTests : IAsyncLifetime
         _databaseName = $"test_vector_perf_{Guid.NewGuid():N}";
         _isolatedDbConnectionString = await _fixture.CreateIsolatedDatabaseAsync(_databaseName);
 
-        var services = new ServiceCollection();
-        services.AddLogging(builder => builder.AddConsole().SetMinimumLevel(LogLevel.Warning));
-        services.AddDbContext<MeepleAiDbContext>(options =>
-        {
-            options.UseNpgsql(_isolatedDbConnectionString, o => o.UseVector());
-            options.ConfigureWarnings(w =>
-                w.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning));
-        });
-
-        services.AddScoped<IUnitOfWork, EfCoreUnitOfWork>();
-        services.AddScoped<IDomainEventCollector, DomainEventCollector>();
-        services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(Program).Assembly));
+        var services = IntegrationServiceCollectionBuilder.CreateBase(_isolatedDbConnectionString);
 
         _serviceProvider = services.BuildServiceProvider();
         _dbContext = _serviceProvider.GetRequiredService<MeepleAiDbContext>();
@@ -155,7 +144,7 @@ public sealed class VectorEmbeddingPerformanceTests : IAsyncLifetime
         {
             var memories = Enumerable.Range(1, 1000).Select(i =>
             {
-                var embedding = GenerateRandomEmbedding(random, 1536);
+                var embedding = GenerateRandomEmbedding(random, 1024);
                 return new ConversationMemoryEntity
                 {
                     Id = Guid.NewGuid(),
@@ -183,7 +172,7 @@ public sealed class VectorEmbeddingPerformanceTests : IAsyncLifetime
         {
             var snapshots = Enumerable.Range(1, 1000).Select(i =>
             {
-                var embedding = GenerateRandomEmbedding(random, 1536);
+                var embedding = GenerateRandomEmbedding(random, 1024);
                 return new AgentGameStateSnapshotEntity
                 {
                     Id = Guid.NewGuid(),
@@ -208,7 +197,7 @@ public sealed class VectorEmbeddingPerformanceTests : IAsyncLifetime
 
         var patterns = Enumerable.Range(1, count).Select(i =>
         {
-            var embedding = GenerateRandomEmbedding(random, 1536);
+            var embedding = GenerateRandomEmbedding(random, 1024);
             return new StrategyPatternEntity
             {
                 Id = Guid.NewGuid(),
@@ -253,7 +242,7 @@ public sealed class VectorEmbeddingPerformanceTests : IAsyncLifetime
     {
         // Arrange - Generate query embedding
         var random = new Random(100);
-        var queryEmbedding = new Vector(GenerateRandomEmbedding(random, 1536));
+        var queryEmbedding = new Vector(GenerateRandomEmbedding(random, 1024));
         var latencies = new List<double>();
 
         // Warm up query (exclude from measurement)
@@ -305,7 +294,7 @@ public sealed class VectorEmbeddingPerformanceTests : IAsyncLifetime
     {
         // Arrange - Query with both vector similarity and filters
         var random = new Random(101);
-        var queryEmbedding = new Vector(GenerateRandomEmbedding(random, 1536));
+        var queryEmbedding = new Vector(GenerateRandomEmbedding(random, 1024));
         var targetUserId = _userIds[0];
         var latencies = new List<double>();
 
@@ -360,7 +349,7 @@ public sealed class VectorEmbeddingPerformanceTests : IAsyncLifetime
     {
         // Arrange - Find similar game positions
         var random = new Random(102);
-        var queryEmbedding = new Vector(GenerateRandomEmbedding(random, 1536));
+        var queryEmbedding = new Vector(GenerateRandomEmbedding(random, 1024));
         var latencies = new List<double>();
 
         // Warm up
@@ -412,7 +401,7 @@ public sealed class VectorEmbeddingPerformanceTests : IAsyncLifetime
     {
         // Arrange - Query similar positions for specific game
         var random = new Random(103);
-        var queryEmbedding = new Vector(GenerateRandomEmbedding(random, 1536));
+        var queryEmbedding = new Vector(GenerateRandomEmbedding(random, 1024));
         var targetGameId = _gameIds[0];
         var latencies = new List<double>();
 
@@ -467,7 +456,7 @@ public sealed class VectorEmbeddingPerformanceTests : IAsyncLifetime
     {
         // Arrange - Find similar strategy patterns
         var random = new Random(104);
-        var queryEmbedding = new Vector(GenerateRandomEmbedding(random, 1536));
+        var queryEmbedding = new Vector(GenerateRandomEmbedding(random, 1024));
         var latencies = new List<double>();
 
         // Warm up
@@ -519,7 +508,7 @@ public sealed class VectorEmbeddingPerformanceTests : IAsyncLifetime
     {
         // Arrange - Query opening strategies for specific game
         var random = new Random(105);
-        var queryEmbedding = new Vector(GenerateRandomEmbedding(random, 1536));
+        var queryEmbedding = new Vector(GenerateRandomEmbedding(random, 1024));
         var targetGameId = _gameIds[0];
         const string targetPhase = "opening";
         var latencies = new List<double>();
@@ -580,7 +569,7 @@ public sealed class VectorEmbeddingPerformanceTests : IAsyncLifetime
     {
         // Arrange
         var random = new Random(106);
-        var queryEmbedding = new Vector(GenerateRandomEmbedding(random, 1536));
+        var queryEmbedding = new Vector(GenerateRandomEmbedding(random, 1024));
 
         // Act - Execute EXPLAIN ANALYZE on vector query
         var connection = _dbContext!.Database.GetDbConnection();
@@ -624,7 +613,7 @@ public sealed class VectorEmbeddingPerformanceTests : IAsyncLifetime
         // Arrange - Prepare 10 different query embeddings
         var random = new Random(107);
         var queryEmbeddings = Enumerable.Range(1, 10)
-            .Select(_ => new Vector(GenerateRandomEmbedding(random, 1536)))
+            .Select(_ => new Vector(GenerateRandomEmbedding(random, 1024)))
             .ToList();
 
         var stopwatch = Stopwatch.StartNew();
@@ -681,7 +670,7 @@ public sealed class VectorEmbeddingPerformanceTests : IAsyncLifetime
         await newConnection.OpenAsync(TestCancellationToken);
 
         var random = new Random(108);
-        var queryEmbedding = new Vector(GenerateRandomEmbedding(random, 1536));
+        var queryEmbedding = new Vector(GenerateRandomEmbedding(random, 1024));
 
         // Act - Execute cold query (no prior cache/execution)
         var sw = Stopwatch.StartNew();

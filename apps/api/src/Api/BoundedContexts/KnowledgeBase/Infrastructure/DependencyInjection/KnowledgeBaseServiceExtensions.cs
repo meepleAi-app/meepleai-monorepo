@@ -1,12 +1,15 @@
+using Api.BoundedContexts.KnowledgeBase.Application.Commands;
 using Api.BoundedContexts.KnowledgeBase.Application.Configuration;
-using Api.BoundedContexts.KnowledgeBase.Application.Evaluation.Handlers;
+using Api.BoundedContexts.KnowledgeBase.Application.Evaluation.Commands;
+using Api.BoundedContexts.KnowledgeBase.Application.Evaluation.Queries;
 using Api.BoundedContexts.KnowledgeBase.Application.Evaluation.Services;
-using Api.BoundedContexts.KnowledgeBase.Application.GridSearch.Handlers;
-using Api.BoundedContexts.KnowledgeBase.Application.Handlers;
+using Api.BoundedContexts.KnowledgeBase.Application.GridSearch.Commands;
+using Api.BoundedContexts.KnowledgeBase.Application.Queries;
 using Api.BoundedContexts.KnowledgeBase.Application.Reports.Services;
 using Api.BoundedContexts.KnowledgeBase.Application.Services;
 using Api.BoundedContexts.KnowledgeBase.Application.Services.Chunking;
 using Api.BoundedContexts.KnowledgeBase.Application.Services.Reranking;
+using Api.BoundedContexts.KnowledgeBase.Domain.Projections;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services.AgentModes;
@@ -133,6 +136,9 @@ internal static class KnowledgeBaseServiceExtensions
 
         // RAG Enhancements: Graph RAG entity extractor for knowledge graph construction
         services.AddScoped<IEntityExtractor, EntityExtractor>();
+
+        // RAG Enhancements: Graph RAG retrieval service for entity context injection
+        services.AddScoped<IGraphRetrievalService, GraphRetrievalService>();
 
         // ISSUE-4336: Multi-Agent Router (intelligent routing between Tutor/Arbitro/Decisore)
         services.AddSingleton<Domain.Services.MultiAgentRouter.IntentClassifier>();
@@ -273,6 +279,9 @@ internal static class KnowledgeBaseServiceExtensions
         // Issue #3177: AGT-003 - Required by AgentTypology command handlers
         services.AddScoped<IUnitOfWork, EfCoreUnitOfWork>();
 
+        // RAG Copyright KB Cards: Cross-BC read-only projection for copyright tier resolution
+        services.AddScoped<ICopyrightDataProjection, Projections.CopyrightDataProjection>();
+
         // Infrastructure - Repositories (Scoped - tied to DbContext lifetime)
         services.AddScoped<IVectorDocumentRepository, VectorDocumentRepository>();
         services.AddScoped<IEmbeddingRepository, EmbeddingRepository>();
@@ -302,7 +311,7 @@ internal static class KnowledgeBaseServiceExtensions
         services.AddScoped<IModelCompatibilityRepository, ModelCompatibilityRepository>(); // Issue #5496: Model compatibility matrix + change log
 
         // Infrastructure - Adapters (Scoped - uses MeepleAiDbContext for pgvector operations)
-        services.AddScoped<IQdrantVectorStoreAdapter, PgVectorStoreAdapter>();
+        services.AddScoped<IVectorStoreAdapter, PgVectorStoreAdapter>();
         // Infrastructure - In-Memory Repository (Singleton - shared in-memory store)
         services.AddSingleton<IChunkRepository, InMemoryChunkRepository>();
     }
@@ -344,6 +353,12 @@ internal static class KnowledgeBaseServiceExtensions
 
         // RAG enhancements orchestrator — feature flag integration for advanced RAG features
         services.AddScoped<IRagEnhancementService, RagEnhancementService>();
+
+        // Agent Memory context builder — injects house rules, group preferences into RAG prompts
+        services.AddScoped<IAgentMemoryContextBuilder, AgentMemoryContextBuilder>();
+
+        // RAG Copyright KB Cards: per-chunk copyright tier resolution
+        services.AddScoped<ICopyrightTierResolver, CopyrightTierResolver>();
 
         // E4-3: Session query budget — Redis-backed per-session AI query tracking
         services.AddScoped<ISessionQueryBudgetService, SessionQueryBudgetService>();

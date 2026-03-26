@@ -1,6 +1,7 @@
 using Api.BoundedContexts.KnowledgeBase.Domain.Enums;
 using Api.Tests.Constants;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Unit;
 
@@ -11,7 +12,7 @@ public class RagEnhancementTests
     [Fact]
     public void None_ShouldBeZero()
     {
-        Assert.Equal(0, (int)RagEnhancement.None);
+        ((int)RagEnhancement.None).Should().Be(0);
     }
 
     [Theory]
@@ -22,17 +23,17 @@ public class RagEnhancementTests
     [InlineData(RagEnhancement.GraphTraversal, 16)]
     public void FlagValues_ShouldBePowersOfTwo(RagEnhancement flag, int expectedValue)
     {
-        Assert.Equal(expectedValue, (int)flag);
+        ((int)flag).Should().Be(expectedValue);
     }
 
     [Fact]
     public void Flags_ShouldCombineCorrectly()
     {
         var combined = RagEnhancement.AdaptiveRouting | RagEnhancement.CragEvaluation;
-        Assert.Equal(3, (int)combined);
-        Assert.True(combined.HasFlag(RagEnhancement.AdaptiveRouting));
-        Assert.True(combined.HasFlag(RagEnhancement.CragEvaluation));
-        Assert.False(combined.HasFlag(RagEnhancement.RaptorRetrieval));
+        ((int)combined).Should().Be(3);
+        combined.HasFlag(RagEnhancement.AdaptiveRouting).Should().BeTrue();
+        combined.HasFlag(RagEnhancement.CragEvaluation).Should().BeTrue();
+        combined.HasFlag(RagEnhancement.RaptorRetrieval).Should().BeFalse();
     }
 
     [Theory]
@@ -43,13 +44,14 @@ public class RagEnhancementTests
     [InlineData(RagEnhancement.GraphTraversal, "rag.enhancement.graph-traversal")]
     public void ToFeatureFlagKey_ShouldReturnCorrectKey(RagEnhancement flag, string expectedKey)
     {
-        Assert.Equal(expectedKey, flag.ToFeatureFlagKey());
+        flag.ToFeatureFlagKey().Should().Be(expectedKey);
     }
 
     [Fact]
     public void ToFeatureFlagKey_None_ShouldThrow()
     {
-        Assert.Throws<ArgumentOutOfRangeException>(() => RagEnhancement.None.ToFeatureFlagKey());
+        Action act = () => RagEnhancement.None.ToFeatureFlagKey();
+        act.Should().Throw<ArgumentOutOfRangeException>();
     }
 
     [Theory]
@@ -60,7 +62,7 @@ public class RagEnhancementTests
     [InlineData(RagEnhancement.GraphTraversal, true, 0)]
     public void GetExtraCredits_Balanced_ShouldReturnCorrectCost(RagEnhancement flag, bool useBalanced, int expectedCredits)
     {
-        Assert.Equal(expectedCredits, flag.GetExtraCredits(useBalanced));
+        flag.GetExtraCredits(useBalanced).Should().Be(expectedCredits);
     }
 
     [Theory]
@@ -71,13 +73,13 @@ public class RagEnhancementTests
     [InlineData(RagEnhancement.GraphTraversal)]
     public void GetExtraCredits_Fast_ShouldReturnZero(RagEnhancement flag)
     {
-        Assert.Equal(0, flag.GetExtraCredits(useBalancedForAux: false));
+        flag.GetExtraCredits(useBalancedForAux: false).Should().Be(0);
     }
 
     [Fact]
     public void GetExtraCredits_None_ShouldReturnZero()
     {
-        Assert.Equal(0, RagEnhancement.None.GetExtraCredits(useBalancedForAux: true));
+        RagEnhancement.None.GetExtraCredits(useBalancedForAux: true).Should().Be(0);
     }
 
     [Fact]
@@ -86,25 +88,25 @@ public class RagEnhancementTests
         var combined = RagEnhancement.AdaptiveRouting | RagEnhancement.CragEvaluation | RagEnhancement.GraphTraversal;
         var flags = combined.GetIndividualFlags().ToList();
 
-        Assert.Equal(3, flags.Count);
-        Assert.Contains(RagEnhancement.AdaptiveRouting, flags);
-        Assert.Contains(RagEnhancement.CragEvaluation, flags);
-        Assert.Contains(RagEnhancement.GraphTraversal, flags);
+        flags.Count.Should().Be(3);
+        flags.Should().Contain(RagEnhancement.AdaptiveRouting);
+        flags.Should().Contain(RagEnhancement.CragEvaluation);
+        flags.Should().Contain(RagEnhancement.GraphTraversal);
     }
 
     [Fact]
     public void GetIndividualFlags_None_ShouldReturnEmpty()
     {
         var flags = RagEnhancement.None.GetIndividualFlags().ToList();
-        Assert.Empty(flags);
+        flags.Should().BeEmpty();
     }
 
     [Fact]
     public void GetIndividualFlags_SingleFlag_ShouldReturnOneElement()
     {
         var flags = RagEnhancement.RaptorRetrieval.GetIndividualFlags().ToList();
-        Assert.Single(flags);
-        Assert.Equal(RagEnhancement.RaptorRetrieval, flags[0]);
+        flags.Should().ContainSingle();
+        flags[0].Should().Be(RagEnhancement.RaptorRetrieval);
     }
 
     [Fact]
@@ -114,6 +116,6 @@ public class RagEnhancementTests
                   | RagEnhancement.RaptorRetrieval | RagEnhancement.RagFusionQueries
                   | RagEnhancement.GraphTraversal;
         var flags = all.GetIndividualFlags().ToList();
-        Assert.Equal(5, flags.Count);
+        flags.Count.Should().Be(5);
     }
 }

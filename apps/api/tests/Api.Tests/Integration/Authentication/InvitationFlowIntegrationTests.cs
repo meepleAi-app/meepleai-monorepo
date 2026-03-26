@@ -18,7 +18,7 @@ using FluentAssertions;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Time.Testing;
 using Npgsql;
 using Pgvector.EntityFrameworkCore;
@@ -75,18 +75,13 @@ public sealed class InvitationFlowIntegrationTests : IAsyncLifetime
             CommandTimeout = 30
         };
 
-        var services = new ServiceCollection();
         _timeProvider = new FakeTimeProvider(DateTimeOffset.UtcNow);
 
-        services.AddLogging(builder => builder.AddConsole().SetMinimumLevel(LogLevel.Warning));
-        services.AddSingleton<TimeProvider>(_timeProvider);
+        var services = IntegrationServiceCollectionBuilder.CreateBase(enforcedBuilder.ConnectionString);
 
-        services.AddDbContext<MeepleAiDbContext>(options =>
-        {
-            options.UseNpgsql(enforcedBuilder.ConnectionString, o => o.UseVector());
-            options.ConfigureWarnings(w =>
-                w.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning));
-        });
+        // Override TimeProvider with FakeTimeProvider
+        services.RemoveAll<TimeProvider>();
+        services.AddSingleton<TimeProvider>(_timeProvider);
 
         // Register repositories
         services.AddScoped<IUserRepository, UserRepository>();
@@ -94,19 +89,14 @@ public sealed class InvitationFlowIntegrationTests : IAsyncLifetime
         services.AddScoped<ISessionRepository, SessionRepository>();
         services.AddScoped<IApiKeyRepository, ApiKeyRepository>();
         services.AddScoped<IInvitationTokenRepository, InvitationTokenRepository>();
-        services.AddScoped<IUnitOfWork, EfCoreUnitOfWork>();
-
-        // Register domain event infrastructure
-        services.AddScoped<IDomainEventCollector, DomainEventCollector>();
 
         // Register services needed by handlers
         services.AddSingleton<IPasswordHashingService, PasswordHashingService>();
-        services.AddSingleton<IEmailService>(new Api.Tests.TestHelpers.NoOpEmailService());
         services.AddSingleton<GameSuggestionChannel>();
 
-        // Register MediatR (discovers all handlers in the assembly)
-        services.AddMediatR(config =>
-            config.RegisterServicesFromAssembly(typeof(ProvisionAndInviteUserCommandHandler).Assembly));
+        // Override IEmailService with NoOpEmailService (has behavior)
+        services.RemoveAll<IEmailService>();
+        services.AddSingleton<IEmailService>(new Api.Tests.TestHelpers.NoOpEmailService());
 
         _serviceProvider = services.BuildServiceProvider();
         _dbContext = _serviceProvider.GetRequiredService<MeepleAiDbContext>();

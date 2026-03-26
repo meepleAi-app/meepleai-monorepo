@@ -234,7 +234,7 @@ describe('MyProposalsClient', () => {
     it('shows catalog link for approved proposals', () => {
       render(<MyProposalsClient />);
       const catalogLink = screen.getByText('Vedi nel Catalogo');
-      expect(catalogLink.closest('a')).toHaveAttribute('href', '/games/shared-123');
+      expect(catalogLink.closest('a')).toHaveAttribute('href', '/library/games/shared-123');
     });
 
     it('does not show catalog link for pending proposals', () => {

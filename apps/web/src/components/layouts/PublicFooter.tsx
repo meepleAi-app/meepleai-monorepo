@@ -43,7 +43,7 @@ const ABOUT_LINKS: FooterLink[] = [
 const QUICK_LINKS: FooterLink[] = [
   { label: 'Giochi', href: '/games' },
   { label: 'Chat AI', href: '/chat/new' },
-  { label: 'Dashboard', href: '/dashboard' },
+  { label: 'Dashboard', href: '/library' },
   { label: 'FAQ', href: '/faq' },
 ];
 

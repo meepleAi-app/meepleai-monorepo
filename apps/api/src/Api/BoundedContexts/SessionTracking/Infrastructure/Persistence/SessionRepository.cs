@@ -2,6 +2,8 @@ using Api.BoundedContexts.SessionTracking.Domain.Entities;
 using Api.BoundedContexts.SessionTracking.Domain.Repositories;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities.SessionTracking;
+using Api.SharedKernel.Application.Services;
+using Api.SharedKernel.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 
 namespace Api.BoundedContexts.SessionTracking.Infrastructure.Persistence;
@@ -10,18 +12,16 @@ namespace Api.BoundedContexts.SessionTracking.Infrastructure.Persistence;
 /// Repository implementation for Session aggregate.
 /// Uses MeepleAiDbContext with persistence entities, maps to/from domain entities.
 /// </summary>
-public class SessionRepository : ISessionRepository
+public class SessionRepository : RepositoryBase, ISessionRepository
 {
-    private readonly MeepleAiDbContext _context;
-
-    public SessionRepository(MeepleAiDbContext context)
+    public SessionRepository(MeepleAiDbContext dbContext, IDomainEventCollector eventCollector)
+        : base(dbContext, eventCollector)
     {
-        _context = context ?? throw new ArgumentNullException(nameof(context));
     }
 
     public async Task<Session?> GetByIdAsync(Guid id, CancellationToken ct)
     {
-        var entity = await _context.SessionTrackingSessions
+        var entity = await DbContext.SessionTrackingSessions
             .Include(s => s.Participants)
             .FirstOrDefaultAsync(s => s.Id == id, ct)
             .ConfigureAwait(false);
@@ -35,7 +35,7 @@ public class SessionRepository : ISessionRepository
             throw new ArgumentException("Session code cannot be empty.", nameof(code));
 
         var normalizedCode = code.ToUpperInvariant();
-        var entity = await _context.SessionTrackingSessions
+        var entity = await DbContext.SessionTrackingSessions
             .Include(s => s.Participants)
             .FirstOrDefaultAsync(s => s.SessionCode == normalizedCode, ct)
             .ConfigureAwait(false);
@@ -48,7 +48,7 @@ public class SessionRepository : ISessionRepository
         if (string.IsNullOrWhiteSpace(inviteToken))
             return null;
 
-        var entity = await _context.SessionTrackingSessions
+        var entity = await DbContext.SessionTrackingSessions
             .Include(s => s.Participants)
             .FirstOrDefaultAsync(s => s.InviteToken == inviteToken, ct)
             .ConfigureAwait(false);
@@ -58,7 +58,7 @@ public class SessionRepository : ISessionRepository
 
     public async Task<IEnumerable<Session>> GetActiveByUserIdAsync(Guid userId, CancellationToken ct)
     {
-        var entities = await _context.SessionTrackingSessions
+        var entities = await DbContext.SessionTrackingSessions
             .Include(s => s.Participants)
             .Where(s => s.UserId == userId && s.Status != SessionStatus.Finalized.ToString())
             .OrderByDescending(s => s.SessionDate)
@@ -73,7 +73,7 @@ public class SessionRepository : ISessionRepository
         ArgumentNullException.ThrowIfNull(session);
 
         // Check for session code collision
-        var exists = await _context.SessionTrackingSessions
+        var exists = await DbContext.SessionTrackingSessions
             .AnyAsync(s => s.SessionCode == session.SessionCode, ct)
             .ConfigureAwait(false);
 
@@ -83,7 +83,7 @@ public class SessionRepository : ISessionRepository
         }
 
         var entity = SessionMapper.ToEntity(session);
-        await _context.SessionTrackingSessions.AddAsync(entity, ct).ConfigureAwait(false);
+        await DbContext.SessionTrackingSessions.AddAsync(entity, ct).ConfigureAwait(false);
     }
 
     public async Task UpdateAsync(Session session, CancellationToken ct)
@@ -91,7 +91,7 @@ public class SessionRepository : ISessionRepository
         ArgumentNullException.ThrowIfNull(session);
 
         // Retrieve existing entity to preserve EF Core tracking
-        var existing = await _context.SessionTrackingSessions
+        var existing = await DbContext.SessionTrackingSessions
             .Include(s => s.Participants)
             .FirstOrDefaultAsync(s => s.Id == session.Id, ct)
             .ConfigureAwait(false);

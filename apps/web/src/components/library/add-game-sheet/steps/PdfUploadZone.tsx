@@ -10,7 +10,7 @@ import { useState, useCallback, useRef } from 'react';
 
 import { Upload, FileText, X, AlertCircle } from 'lucide-react';
 
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/ui/primitives/button';
 import { cn } from '@/lib/utils';
 
 export interface PdfUploadZoneProps {

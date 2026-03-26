@@ -125,9 +125,9 @@ public class ShareLinkForeignKeyTests : IAsyncLifetime
 
         // Act & Assert - FK Restrict prevents user deletion with active share links
         // EF Core throws InvalidOperationException immediately on Remove() when FK is severed
-        var exception = Assert.Throws<InvalidOperationException>(() =>
-            _dbContext.Users.Remove(user)
-        );
+        var act = () =>
+            _dbContext.Users.Remove(user);
+        var exception = act.Should().Throw<InvalidOperationException>().Which;
 
         exception.Should().NotBeNull();
         exception.Message.Should().Contain("has been severed");

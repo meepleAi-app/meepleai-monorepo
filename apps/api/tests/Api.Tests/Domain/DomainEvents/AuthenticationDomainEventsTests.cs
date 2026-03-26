@@ -84,7 +84,7 @@ public class AuthenticationDomainEventsTests
         var user = CreateTestUser();
         var oldRole = user.Role;
         var newRole = Role.Editor;
-        var requesterRole = Role.Admin;
+        var requesterRole = Role.SuperAdmin;
 
         // Act
         user.AssignRole(newRole, requesterRole);

@@ -11,10 +11,12 @@ using Api.Tests.Infrastructure;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Npgsql;
 using Xunit;
+using FluentAssertions;
 using Api.Tests.Constants;
 
 namespace Api.Tests.Integration.Authentication;
@@ -69,36 +71,12 @@ public sealed class AdminDisable2FAIntegrationTests : IAsyncLifetime
         _isolatedDbConnectionString = await _fixture.CreateIsolatedDatabaseAsync(_databaseName);
         _output($"Isolated database created: {_databaseName}");
 
-        // Setup dependency injection
-        var enforcedBuilder = new NpgsqlConnectionStringBuilder(_isolatedDbConnectionString)
-        {
-            SslMode = SslMode.Disable,
-            KeepAlive = 30,
-            Pooling = false,
-            Timeout = 15,
-            CommandTimeout = 30
-        };
+        var services = IntegrationServiceCollectionBuilder.CreateBase(_isolatedDbConnectionString);
 
-        var services = new ServiceCollection();
-
-        // DbContext
-        services.AddDbContext<MeepleAiDbContext>(options =>
-            options.UseNpgsql(enforcedBuilder.ConnectionString, o => o.UseVector()) // Issue #3547
-                .ConfigureWarnings(warnings =>
-                    warnings.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning)));
-
-        // MediatR
-        services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(Program).Assembly));
-
-        // Repositories and Unit of Work
         services.AddScoped<IUserRepository, UserRepository>();
-        services.AddScoped<IUnitOfWork, EfCoreUnitOfWork>();
-
-        // Domain event infrastructure
-        services.AddScoped<Api.SharedKernel.Application.Services.IDomainEventCollector, Api.SharedKernel.Application.Services.DomainEventCollector>();
         services.AddSingleton<TimeProvider>(TimeProvider.System);
 
-        // Mock Email Service
+        // Mock Email Service (with .Setup for verification in tests)
         _mockEmailService = new Mock<IEmailService>();
         _mockEmailService
             .Setup(x => x.SendTwoFactorDisabledEmailAsync(
@@ -107,10 +85,8 @@ public sealed class AdminDisable2FAIntegrationTests : IAsyncLifetime
                 It.IsAny<bool>(),
                 It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
+        services.RemoveAll(typeof(IEmailService));
         services.AddSingleton(_mockEmailService.Object);
-
-        // Logging
-        services.AddLogging(builder => builder.AddConsole().SetMinimumLevel(LogLevel.Information));
 
         _serviceProvider = services.BuildServiceProvider();
         _dbContext = _serviceProvider.GetRequiredService<MeepleAiDbContext>();
@@ -167,16 +143,16 @@ public sealed class AdminDisable2FAIntegrationTests : IAsyncLifetime
 
         // Assert
         _output("Verifying results...");
-        Assert.NotNull(result);
-        Assert.True(result.Success, $"Expected Success=true, got: {result.ErrorMessage}");
-        Assert.Null(result.ErrorMessage);
+        result.Should().NotBeNull();
+        result.Success.Should().BeTrue($"Expected Success=true, got: {result.ErrorMessage}");
+        result.ErrorMessage.Should().BeNull();
 
         // Verify 2FA is disabled in database
         var userRepository = _serviceProvider!.GetRequiredService<IUserRepository>();
         var updatedTargetUser = await userRepository.GetByIdAsync(targetUser.Id, TestCancellationToken);
-        Assert.NotNull(updatedTargetUser);
-        Assert.False(updatedTargetUser.IsTwoFactorEnabled, "2FA should be disabled");
-        Assert.Null(updatedTargetUser.TwoFactorEnabledAt);
+        updatedTargetUser.Should().NotBeNull();
+        updatedTargetUser.IsTwoFactorEnabled.Should().BeFalse("2FA should be disabled");
+        updatedTargetUser.TwoFactorEnabledAt.Should().BeNull();
 
         // Verify email notification was triggered
         _mockEmailService!.Verify(
@@ -233,15 +209,15 @@ public sealed class AdminDisable2FAIntegrationTests : IAsyncLifetime
         var result = await _mediator!.Send(command, TestCancellationToken);
 
         // Assert
-        Assert.False(result.Success);
-        Assert.Contains("Unauthorized", result.ErrorMessage);
-        Assert.Contains("Admin role required", result.ErrorMessage);
+        result.Success.Should().BeFalse();
+        result.ErrorMessage.Should().Contain("Unauthorized");
+        result.ErrorMessage.Should().Contain("Admin role required");
 
         // Verify 2FA is still enabled
         var userRepository = _serviceProvider!.GetRequiredService<IUserRepository>();
         var updatedTargetUser = await userRepository.GetByIdAsync(targetUser.Id, TestCancellationToken);
-        Assert.NotNull(updatedTargetUser);
-        Assert.True(updatedTargetUser.IsTwoFactorEnabled, "2FA should remain enabled");
+        updatedTargetUser.Should().NotBeNull();
+        updatedTargetUser.IsTwoFactorEnabled.Should().BeTrue("2FA should remain enabled");
 
         // Verify no email was sent
         _mockEmailService!.Verify(
@@ -273,8 +249,8 @@ public sealed class AdminDisable2FAIntegrationTests : IAsyncLifetime
         var result = await _mediator!.Send(command, TestCancellationToken);
 
         // Assert
-        Assert.False(result.Success);
-        Assert.Equal("Admin user not found", result.ErrorMessage);
+        result.Success.Should().BeFalse();
+        result.ErrorMessage.Should().Be("Admin user not found");
 
         _output("✓ Test passed: Non-existent admin user handled correctly");
     }
@@ -295,8 +271,8 @@ public sealed class AdminDisable2FAIntegrationTests : IAsyncLifetime
         var result = await _mediator!.Send(command, TestCancellationToken);
 
         // Assert
-        Assert.False(result.Success);
-        Assert.Equal("Target user not found", result.ErrorMessage);
+        result.Success.Should().BeFalse();
+        result.ErrorMessage.Should().Be("Target user not found");
 
         _output("✓ Test passed: Non-existent target user handled correctly");
     }
@@ -328,8 +304,8 @@ public sealed class AdminDisable2FAIntegrationTests : IAsyncLifetime
         var result = await _mediator!.Send(command, TestCancellationToken);
 
         // Assert
-        Assert.False(result.Success);
-        Assert.Contains("not enabled", result.ErrorMessage);
+        result.Success.Should().BeFalse();
+        result.ErrorMessage.Should().Contain("not enabled");
 
         _output("✓ Test passed: Attempting to disable non-enabled 2FA handled correctly");
     }
@@ -360,11 +336,11 @@ public sealed class AdminDisable2FAIntegrationTests : IAsyncLifetime
         var result = await _mediator!.Send(command, TestCancellationToken);
 
         // Assert - Admin should be allowed to disable their own 2FA via this endpoint
-        Assert.True(result.Success);
+        result.Success.Should().BeTrue();
 
         var updatedAdmin = await userRepository.GetByIdAsync(adminUser.Id, TestCancellationToken);
-        Assert.NotNull(updatedAdmin);
-        Assert.False(updatedAdmin.IsTwoFactorEnabled);
+        updatedAdmin.Should().NotBeNull();
+        updatedAdmin.IsTwoFactorEnabled.Should().BeFalse();
 
         // Email should be sent to admin
         _mockEmailService!.Verify(

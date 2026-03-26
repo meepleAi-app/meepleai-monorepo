@@ -107,7 +107,6 @@ export function PdfStatusBadge({
   showIcon = true,
   className,
 }: PdfStatusBadgeProps) {
-  // eslint-disable-next-line security/detect-object-injection -- state is from typed PdfState union
   const config = STATE_CONFIG[state];
   const Icon = config.icon;
 
@@ -131,10 +130,7 @@ export function PdfStatusBadge({
     >
       {showIcon && (
         <Icon
-          className={cn(
-            'shrink-0',
-            isCompact ? 'h-3 w-3 mr-1' : 'h-4 w-4 mr-1.5'
-          )}
+          className={cn('shrink-0', isCompact ? 'h-3 w-3 mr-1' : 'h-4 w-4 mr-1.5')}
           aria-hidden="true"
         />
       )}

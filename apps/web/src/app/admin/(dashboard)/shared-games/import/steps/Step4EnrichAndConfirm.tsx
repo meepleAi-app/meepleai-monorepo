@@ -389,7 +389,7 @@ export function Step4EnrichAndConfirm({ onComplete }: Step4EnrichAndConfirmProps
               <RadioGroupItem value="bgg" id={`${field}-bgg`} />
               <Label htmlFor={`${field}-bgg`} className="flex-1 cursor-pointer font-normal">
                 <div className="flex items-center justify-between">
-                  <span className="text-sm">Use BGG:</span>
+                  <span className="text-sm">Usa catalogo:</span>
                   <span className="font-medium">{String(conflict.bgg)}</span>
                 </div>
               </Label>
@@ -437,7 +437,7 @@ export function Step4EnrichAndConfirm({ onComplete }: Step4EnrichAndConfirmProps
         <AlertCircle className="h-4 w-4" />
         <AlertTitle>Missing Data</AlertTitle>
         <AlertDescription>
-          No extracted metadata or BGG data available. Please go back to previous steps.
+          Nessun metadato estratto o dati catalogo disponibili. Tornare ai passi precedenti.
         </AlertDescription>
       </Alert>
     );
@@ -449,8 +449,8 @@ export function Step4EnrichAndConfirm({ onComplete }: Step4EnrichAndConfirmProps
       <div>
         <h3 className="text-lg font-semibold">Review & Confirm</h3>
         <p className="text-sm text-muted-foreground">
-          Resolve any conflicts between PDF and BGG data, then review the final game details before
-          importing.
+          Risolvi eventuali conflitti tra dati PDF e catalogo, poi rivedi i dettagli finali prima di
+          importare.
         </p>
       </div>
 
@@ -460,8 +460,9 @@ export function Step4EnrichAndConfirm({ onComplete }: Step4EnrichAndConfirmProps
           <div>
             <h4 className="text-sm font-semibold">Resolve Conflicts</h4>
             <p className="text-xs text-muted-foreground">
-              {Object.keys(conflicts).length} conflict
-              {Object.keys(conflicts).length !== 1 ? 's' : ''} detected between BGG and PDF data.
+              {Object.keys(conflicts).length}{' '}
+              {Object.keys(conflicts).length !== 1 ? 'conflitti rilevati' : 'conflitto rilevato'}{' '}
+              tra dati catalogo e PDF.
             </p>
           </div>
 
@@ -483,7 +484,7 @@ export function Step4EnrichAndConfirm({ onComplete }: Step4EnrichAndConfirmProps
           <CheckCircle2 className="h-4 w-4 text-green-500" />
           <AlertTitle>No Conflicts</AlertTitle>
           <AlertDescription className="text-sm">
-            BGG and PDF data have been automatically merged with no conflicts detected.
+            I dati catalogo e PDF sono stati uniti automaticamente senza conflitti.
           </AlertDescription>
         </Alert>
       )}

@@ -143,7 +143,7 @@ export function BggSearchPanel({ onImportSuccess }: BggSearchPanelProps) {
         <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
         <Input
           type="text"
-          placeholder="Search BoardGameGeek..."
+          placeholder="Cerca gioco..."
           value={query}
           onChange={e => setQuery(e.target.value)}
           className="pl-10 font-nunito"
@@ -242,10 +242,10 @@ export function BggSearchPanel({ onImportSuccess }: BggSearchPanelProps) {
         >
           <Search className="mb-4 h-12 w-12 text-muted-foreground/50" />
           <h3 className="font-quicksand text-lg font-semibold text-muted-foreground">
-            Search BoardGameGeek
+            Cerca un gioco
           </h3>
           <p className="mt-1 text-sm text-muted-foreground/70 font-nunito">
-            Type a game name to find and add it to your library.
+            Digita il nome di un gioco per trovarlo e aggiungerlo alla tua libreria.
           </p>
         </div>
       )}

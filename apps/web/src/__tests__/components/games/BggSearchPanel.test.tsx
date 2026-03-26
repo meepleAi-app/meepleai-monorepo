@@ -102,14 +102,14 @@ describe('BggSearchPanel', () => {
 
     const input = screen.getByTestId('bgg-search-input');
     expect(input).toBeInTheDocument();
-    expect(input).toHaveAttribute('placeholder', 'Search BoardGameGeek...');
+    expect(input).toHaveAttribute('placeholder', 'Cerca gioco...');
   });
 
   it('shows initial state when no query is entered', () => {
     render(<BggSearchPanel />);
 
     expect(screen.getByTestId('bgg-search-initial')).toBeInTheDocument();
-    expect(screen.getByText('Search BoardGameGeek')).toBeInTheDocument();
+    expect(screen.getByText('Cerca un gioco')).toBeInTheDocument();
   });
 
   it('debounces search and shows results', async () => {

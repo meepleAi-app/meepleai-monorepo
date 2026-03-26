@@ -100,10 +100,10 @@ describe('GamesFilterPanel', () => {
       expect(screen.getByText('Tutti i giochi').closest('a')).toHaveAttribute('href', '/games');
     });
 
-    it('renders "Top BGG" link with sort params', () => {
+    it('renders "Top Rated" link with sort params', () => {
       render(<GamesFilterPanel isCollapsed={false} />);
-      expect(screen.getByText('Top BGG')).toBeInTheDocument();
-      expect(screen.getByText('Top BGG').closest('a')).toHaveAttribute(
+      expect(screen.getByText('Top Rated')).toBeInTheDocument();
+      expect(screen.getByText('Top Rated').closest('a')).toHaveAttribute(
         'href',
         '/games?sortBy=AverageRating&sortDesc=true'
       );
@@ -152,10 +152,10 @@ describe('GamesFilterPanel', () => {
       expect(link?.className).toContain('font-semibold');
     });
 
-    it('highlights "Top BGG" when matching sort params are in URL', () => {
+    it('highlights "Top Rated" when matching sort params are in URL', () => {
       mockSearchParams = new URLSearchParams('sortBy=AverageRating&sortDesc=true');
       render(<GamesFilterPanel isCollapsed={false} />);
-      const link = screen.getByText('Top BGG').closest('a');
+      const link = screen.getByText('Top Rated').closest('a');
       expect(link?.className).toContain('font-semibold');
     });
   });
@@ -253,7 +253,7 @@ describe('GamesFilterPanel', () => {
       render(<GamesFilterPanel isCollapsed={true} />);
       // Text labels should not render (only icons visible)
       expect(screen.queryByText('Tutti i giochi')).not.toBeInTheDocument();
-      expect(screen.queryByText('Top BGG')).not.toBeInTheDocument();
+      expect(screen.queryByText('Top Rated')).not.toBeInTheDocument();
     });
 
     it('hides advanced panel toggle when collapsed', () => {

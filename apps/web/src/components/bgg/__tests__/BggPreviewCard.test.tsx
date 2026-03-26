@@ -64,9 +64,7 @@ describe('BggPreviewCard', () => {
   it('passes game name as title', () => {
     render(<BggPreviewCard game={mockGame} />);
 
-    expect(mockMeepleCard).toHaveBeenCalledWith(
-      expect.objectContaining({ title: 'Catan' })
-    );
+    expect(mockMeepleCard).toHaveBeenCalledWith(expect.objectContaining({ title: 'Catan' }));
   });
 
   it('passes year and minAge as subtitle', () => {
@@ -88,9 +86,7 @@ describe('BggPreviewCard', () => {
   it('passes undefined imageUrl when thumbnail is null', () => {
     render(<BggPreviewCard game={mockGameMinimal} />);
 
-    expect(mockMeepleCard).toHaveBeenCalledWith(
-      expect.objectContaining({ imageUrl: undefined })
-    );
+    expect(mockMeepleCard).toHaveBeenCalledWith(expect.objectContaining({ imageUrl: undefined }));
   });
 
   it('passes rating and ratingMax', () => {
@@ -104,9 +100,7 @@ describe('BggPreviewCard', () => {
   it('passes BGG ID as badge', () => {
     render(<BggPreviewCard game={mockGame} />);
 
-    expect(mockMeepleCard).toHaveBeenCalledWith(
-      expect.objectContaining({ badge: 'BGG #13' })
-    );
+    expect(mockMeepleCard).toHaveBeenCalledWith(expect.objectContaining({ badge: 'ID #13' }));
   });
 
   it('passes metadata with player count, playing time, and rating', () => {
@@ -168,9 +162,7 @@ describe('BggPreviewCard', () => {
   it('disables preview when description is missing', () => {
     render(<BggPreviewCard game={mockGameMinimal} />);
 
-    expect(mockMeepleCard).toHaveBeenCalledWith(
-      expect.objectContaining({ showPreview: false })
-    );
+    expect(mockMeepleCard).toHaveBeenCalledWith(expect.objectContaining({ showPreview: false }));
   });
 
   it('sets correct data-testid', () => {

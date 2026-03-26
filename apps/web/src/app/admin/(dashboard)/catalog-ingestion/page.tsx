@@ -17,7 +17,7 @@ export default function CatalogIngestionPage() {
           Catalog Ingestion
         </h1>
         <p className="text-sm text-muted-foreground mt-1">
-          Import games from Excel, enqueue BGG enrichment, and export the catalog
+          Import games from Excel, enqueue enrichment, and export the catalog
         </p>
       </div>
 

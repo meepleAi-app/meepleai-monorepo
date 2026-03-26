@@ -325,7 +325,7 @@ export function createAdminContentClient(http: HttpClient) {
         {},
         ImportBggExpansionsResponseSchema
       );
-      if (!result) throw new Error('Failed to import BGG expansions');
+      if (!result) throw new Error('Failed to import expansions');
       return result;
     },
 

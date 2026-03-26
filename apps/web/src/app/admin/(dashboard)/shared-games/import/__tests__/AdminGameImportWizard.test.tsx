@@ -123,7 +123,7 @@ describe('AdminGameImportWizardClient', () => {
 
       expect(screen.getByText('1. Upload PDF')).toBeInTheDocument();
       expect(screen.getByText('2. Metadata')).toBeInTheDocument();
-      expect(screen.getByText('3. BGG Match')).toBeInTheDocument();
+      expect(screen.getByText('3. Catalogo Match')).toBeInTheDocument();
       expect(screen.getByText('4. Finalize')).toBeInTheDocument();
     });
 
@@ -262,7 +262,7 @@ describe('AdminGameImportWizardClient', () => {
       renderWithQuery(<AdminGameImportWizardClient />);
 
       // Wizard state summary shows BGG selection status
-      expect(screen.getByText(/BGG:/i)).toBeInTheDocument();
+      expect(screen.getByText(/Catalogo:/i)).toBeInTheDocument();
       expect(screen.getByText(/✓ ID 12345/i)).toBeInTheDocument();
     });
 
@@ -478,7 +478,7 @@ describe('AdminGameImportWizardClient', () => {
         // WizardSteps should render all step labels
         expect(screen.getByText('1. Upload PDF')).toBeInTheDocument();
         expect(screen.getByText('2. Metadata')).toBeInTheDocument();
-        expect(screen.getByText('3. BGG Match')).toBeInTheDocument();
+        expect(screen.getByText('3. Catalogo Match')).toBeInTheDocument();
         expect(screen.getByText('4. Finalize')).toBeInTheDocument();
       });
 

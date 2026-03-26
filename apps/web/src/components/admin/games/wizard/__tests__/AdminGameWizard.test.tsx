@@ -23,11 +23,30 @@ vi.mock('next/link', () => ({
 }));
 
 // Capture callbacks from child step components
-type BggStepProps = { onGameSelected: (game: { bggId: number; name: string; type: 'boardgame'; yearPublished?: number; thumbnailUrl?: null }) => void };
+type BggStepProps = {
+  onGameSelected: (game: {
+    bggId: number;
+    name: string;
+    type: 'boardgame';
+    yearPublished?: number;
+    thumbnailUrl?: null;
+  }) => void;
+};
 type GameDetailsStepProps = {
-  selectedGame: { bggId: number; name: string; type: 'boardgame'; yearPublished?: number; thumbnailUrl?: null };
+  selectedGame: {
+    bggId: number;
+    name: string;
+    type: 'boardgame';
+    yearPublished?: number;
+    thumbnailUrl?: null;
+  };
   onBack: () => void;
-  onGameCreated: (result: { sharedGameId: string; title: string; bggId: number; status: string }) => void;
+  onGameCreated: (result: {
+    sharedGameId: string;
+    title: string;
+    bggId: number;
+    status: string;
+  }) => void;
 };
 type PdfUploadStepProps = {
   gameId: string;
@@ -57,11 +76,7 @@ vi.mock('../steps/BggSearchStep', () => ({
 vi.mock('../steps/GameDetailsStep', () => ({
   GameDetailsStep: (props: GameDetailsStepProps) => {
     capturedGameDetailsStep = props;
-    return (
-      <div data-testid="game-details-step">
-        GameDetailsStep: {props.selectedGame.name}
-      </div>
-    );
+    return <div data-testid="game-details-step">GameDetailsStep: {props.selectedGame.name}</div>;
   },
 }));
 
@@ -75,11 +90,7 @@ vi.mock('../steps/PdfUploadStep', () => ({
 vi.mock('../steps/LaunchProcessingStep', () => ({
   LaunchProcessingStep: (props: LaunchProcessingStepProps) => {
     capturedLaunchStep = props;
-    return (
-      <div data-testid="launch-processing-step">
-        LaunchProcessingStep: {props.gameTitle}
-      </div>
-    );
+    return <div data-testid="launch-processing-step">LaunchProcessingStep: {props.gameTitle}</div>;
   },
 }));
 
@@ -130,7 +141,7 @@ describe('AdminGameWizard', () => {
 
   it('should show all 4 step labels in the stepper', () => {
     render(<AdminGameWizard />, { wrapper: createWrapper() });
-    expect(screen.getByText('Search BGG')).toBeDefined();
+    expect(screen.getByText('Cerca gioco')).toBeDefined();
     expect(screen.getByText('Game Details')).toBeDefined();
     expect(screen.getByText('Upload PDF')).toBeDefined();
     expect(screen.getByText('Launch')).toBeDefined();
@@ -160,8 +171,12 @@ describe('AdminGameWizard', () => {
   it('should transition to step 3 when game is created', () => {
     render(<AdminGameWizard />, { wrapper: createWrapper() });
 
-    act(() => { capturedBggStep?.onGameSelected(mockGame); });
-    act(() => { capturedGameDetailsStep?.onGameCreated(mockCreatedGame); });
+    act(() => {
+      capturedBggStep?.onGameSelected(mockGame);
+    });
+    act(() => {
+      capturedGameDetailsStep?.onGameCreated(mockCreatedGame);
+    });
 
     expect(screen.getByTestId('pdf-upload-step')).toBeDefined();
     expect(screen.getByText('PdfUploadStep: Gloomhaven')).toBeDefined();
@@ -170,8 +185,12 @@ describe('AdminGameWizard', () => {
   it('should pass correct gameId to PdfUploadStep', () => {
     render(<AdminGameWizard />, { wrapper: createWrapper() });
 
-    act(() => { capturedBggStep?.onGameSelected(mockGame); });
-    act(() => { capturedGameDetailsStep?.onGameCreated(mockCreatedGame); });
+    act(() => {
+      capturedBggStep?.onGameSelected(mockGame);
+    });
+    act(() => {
+      capturedGameDetailsStep?.onGameCreated(mockCreatedGame);
+    });
 
     expect(capturedPdfUploadStep?.gameId).toBe('shared-uuid-1');
   });
@@ -179,9 +198,15 @@ describe('AdminGameWizard', () => {
   it('should transition to step 4 when PDF is uploaded', () => {
     render(<AdminGameWizard />, { wrapper: createWrapper() });
 
-    act(() => { capturedBggStep?.onGameSelected(mockGame); });
-    act(() => { capturedGameDetailsStep?.onGameCreated(mockCreatedGame); });
-    act(() => { capturedPdfUploadStep?.onPdfUploaded('pdf-doc-uuid'); });
+    act(() => {
+      capturedBggStep?.onGameSelected(mockGame);
+    });
+    act(() => {
+      capturedGameDetailsStep?.onGameCreated(mockCreatedGame);
+    });
+    act(() => {
+      capturedPdfUploadStep?.onPdfUploaded('pdf-doc-uuid');
+    });
 
     expect(screen.getByTestId('launch-processing-step')).toBeDefined();
   });
@@ -189,9 +214,15 @@ describe('AdminGameWizard', () => {
   it('should pass pdfDocumentId to LaunchProcessingStep', () => {
     render(<AdminGameWizard />, { wrapper: createWrapper() });
 
-    act(() => { capturedBggStep?.onGameSelected(mockGame); });
-    act(() => { capturedGameDetailsStep?.onGameCreated(mockCreatedGame); });
-    act(() => { capturedPdfUploadStep?.onPdfUploaded('pdf-doc-uuid'); });
+    act(() => {
+      capturedBggStep?.onGameSelected(mockGame);
+    });
+    act(() => {
+      capturedGameDetailsStep?.onGameCreated(mockCreatedGame);
+    });
+    act(() => {
+      capturedPdfUploadStep?.onPdfUploaded('pdf-doc-uuid');
+    });
 
     expect(capturedLaunchStep?.pdfDocumentId).toBe('pdf-doc-uuid');
   });
@@ -199,10 +230,18 @@ describe('AdminGameWizard', () => {
   it('should navigate to processing page after launch', () => {
     render(<AdminGameWizard />, { wrapper: createWrapper() });
 
-    act(() => { capturedBggStep?.onGameSelected(mockGame); });
-    act(() => { capturedGameDetailsStep?.onGameCreated(mockCreatedGame); });
-    act(() => { capturedPdfUploadStep?.onPdfUploaded('pdf-doc-uuid'); });
-    act(() => { capturedLaunchStep?.onProcessingLaunched('shared-uuid-1'); });
+    act(() => {
+      capturedBggStep?.onGameSelected(mockGame);
+    });
+    act(() => {
+      capturedGameDetailsStep?.onGameCreated(mockCreatedGame);
+    });
+    act(() => {
+      capturedPdfUploadStep?.onPdfUploaded('pdf-doc-uuid');
+    });
+    act(() => {
+      capturedLaunchStep?.onProcessingLaunched('shared-uuid-1');
+    });
 
     expect(mockRouterPush).toHaveBeenCalledWith(
       expect.stringContaining('/admin/games/shared-uuid-1/processing')
@@ -212,26 +251,38 @@ describe('AdminGameWizard', () => {
   it('should go back from step 2 to step 1 via onBack', () => {
     render(<AdminGameWizard />, { wrapper: createWrapper() });
 
-    act(() => { capturedBggStep?.onGameSelected(mockGame); });
+    act(() => {
+      capturedBggStep?.onGameSelected(mockGame);
+    });
     expect(screen.getByTestId('game-details-step')).toBeDefined();
 
-    act(() => { capturedGameDetailsStep?.onBack(); });
+    act(() => {
+      capturedGameDetailsStep?.onBack();
+    });
     expect(screen.getByTestId('bgg-search-step')).toBeDefined();
   });
 
   it('should go back from step 3 to step 2 via onBack', () => {
     render(<AdminGameWizard />, { wrapper: createWrapper() });
 
-    act(() => { capturedBggStep?.onGameSelected(mockGame); });
-    act(() => { capturedGameDetailsStep?.onGameCreated(mockCreatedGame); });
+    act(() => {
+      capturedBggStep?.onGameSelected(mockGame);
+    });
+    act(() => {
+      capturedGameDetailsStep?.onGameCreated(mockCreatedGame);
+    });
     expect(screen.getByTestId('pdf-upload-step')).toBeDefined();
 
     // PdfUploadStep doesn't have onBack — it's LaunchProcessingStep
     // Go to step 4 first, then test back to step 3
-    act(() => { capturedPdfUploadStep?.onPdfUploaded('pdf-doc-uuid'); });
+    act(() => {
+      capturedPdfUploadStep?.onPdfUploaded('pdf-doc-uuid');
+    });
     expect(screen.getByTestId('launch-processing-step')).toBeDefined();
 
-    act(() => { capturedLaunchStep?.onBack(); });
+    act(() => {
+      capturedLaunchStep?.onBack();
+    });
     expect(screen.getByTestId('pdf-upload-step')).toBeDefined();
   });
 });

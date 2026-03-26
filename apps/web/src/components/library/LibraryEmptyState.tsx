@@ -12,7 +12,6 @@ import { TrendingGamesRow } from './TrendingGamesRow';
 
 interface LibraryEmptyStateProps {
   onExploreCatalog?: () => void;
-  onImportBgg?: () => void;
   onCreateCustom?: () => void;
   className?: string;
 }
@@ -35,13 +34,6 @@ const QUICK_START_CARDS = [
     action: 'catalog' as const,
   },
   {
-    icon: '📤',
-    title: 'Importa da BGG',
-    description: 'Importa la tua collezione da BoardGameGeek',
-    borderColor: 'border-t-blue-500',
-    action: 'bgg' as const,
-  },
-  {
     icon: '✏️',
     title: 'Crea Gioco Custom',
     description: 'Aggiungi un gioco non presente nel catalogo',
@@ -52,13 +44,11 @@ const QUICK_START_CARDS = [
 
 export function LibraryEmptyState({
   onExploreCatalog,
-  onImportBgg,
   onCreateCustom,
   className,
 }: LibraryEmptyStateProps) {
-  const handleAction = (action: 'catalog' | 'bgg' | 'custom') => {
+  const handleAction = (action: 'catalog' | 'custom') => {
     if (action === 'catalog') onExploreCatalog?.();
-    else if (action === 'bgg') onImportBgg?.();
     else onCreateCustom?.();
   };
 

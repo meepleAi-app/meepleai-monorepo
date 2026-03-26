@@ -3,7 +3,7 @@
 /**
  * SearchGameStep — Step 1 of GameNightWizard.
  *
- * Searches shared game catalog first, falls back to BGG.
+ * Searches shared game catalog.
  * Returns game ID and title for subsequent steps.
  *
  * Issue #123 — Game Night Quick Start Wizard
@@ -24,19 +24,14 @@ import { cn } from '@/lib/utils';
 // ============================================================================
 
 interface SearchGameStepProps {
-  onGameFound: (data: {
-    gameId?: string;
-    privateGameId?: string;
-    gameTitle: string;
-    bggId?: number;
-  }) => void;
+  onGameFound: (data: { gameId?: string; privateGameId?: string; gameTitle: string }) => void;
 }
 
 interface GameResult {
   id: string;
   title: string;
   thumbnailUrl?: string;
-  source: 'catalog' | 'bgg';
+  source: 'catalog';
   yearPublished?: number;
 }
 
@@ -72,24 +67,7 @@ export function SearchGameStep({ onGameFound }: SearchGameStepProps) {
         yearPublished: g.yearPublished ?? undefined,
       }));
 
-      // If no catalog results, try BGG
-      let bggResults: GameResult[] = [];
-      if (catalogResults.length === 0) {
-        try {
-          const bggResponse = await api.bgg.search(query.trim(), false, 1, 5);
-          bggResults = (bggResponse.results ?? []).map(g => ({
-            id: String(g.bggId),
-            title: g.name,
-            thumbnailUrl: g.thumbnailUrl ?? undefined,
-            source: 'bgg' as const,
-            yearPublished: g.yearPublished ?? undefined,
-          }));
-        } catch {
-          // BGG search is optional fallback
-        }
-      }
-
-      setResults([...catalogResults, ...bggResults]);
+      setResults(catalogResults);
     } catch {
       setResults([]);
     } finally {
@@ -99,12 +77,7 @@ export function SearchGameStep({ onGameFound }: SearchGameStepProps) {
 
   const handleSelect = useCallback(
     (result: GameResult) => {
-      if (result.source === 'catalog') {
-        onGameFound({ gameId: result.id, gameTitle: result.title });
-      } else {
-        // BGG game — session will use gameName only (no gameId)
-        onGameFound({ gameTitle: result.title, bggId: Number(result.id) });
-      }
+      onGameFound({ gameId: result.id, gameTitle: result.title });
     },
     [onGameFound]
   );
@@ -125,7 +98,7 @@ export function SearchGameStep({ onGameFound }: SearchGameStepProps) {
         <h3 className="font-quicksand font-bold text-lg text-slate-900 dark:text-slate-100">
           Trova il gioco
         </h3>
-        <p className="text-sm text-muted-foreground mt-1">Cerca nel catalogo o su BoardGameGeek.</p>
+        <p className="text-sm text-muted-foreground mt-1">Cerca nel catalogo MeepleAI.</p>
       </div>
 
       <div className="flex gap-2">
@@ -184,7 +157,7 @@ export function SearchGameStep({ onGameFound }: SearchGameStepProps) {
                   <p className="font-medium text-sm truncate">{result.title}</p>
                   <p className="text-xs text-muted-foreground">
                     {result.yearPublished && `${result.yearPublished} · `}
-                    {result.source === 'catalog' ? 'Catalogo MeepleAI' : 'BoardGameGeek'}
+                    Catalogo MeepleAI
                   </p>
                 </div>
               </button>

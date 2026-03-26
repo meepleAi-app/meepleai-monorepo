@@ -36,6 +36,7 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
     private readonly IEntityExtractor? _entityExtractor;
     private readonly IVectorStoreAdapter? _vectorStore;
     private readonly IFeatureFlagService? _featureFlagService;
+    private readonly ILanguageDetector _languageDetector;
 
     public PdfProcessingPipelineService(
         MeepleAiDbContext db,
@@ -46,6 +47,7 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
         IBlobStorageService blobStorageService,
         TimeProvider timeProvider,
         ILogger<PdfProcessingPipelineService> logger,
+        ILanguageDetector languageDetector,
         IRaptorIndexer? raptorIndexer = null,
         IEntityExtractor? entityExtractor = null,
         IVectorStoreAdapter? vectorStore = null,
@@ -59,6 +61,7 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
         _blobStorageService = blobStorageService ?? throw new ArgumentNullException(nameof(blobStorageService));
         _timeProvider = timeProvider ?? throw new ArgumentNullException(nameof(timeProvider));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _languageDetector = languageDetector ?? throw new ArgumentNullException(nameof(languageDetector));
         _raptorIndexer = raptorIndexer;
         _entityExtractor = entityExtractor;
         _vectorStore = vectorStore;
@@ -112,6 +115,14 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
             // Step 2: Extract structured content (tables)
             _logger.LogInformation("[PdfPipeline] Step 2/4: Extracting structured content from {PdfId}", pdfId);
             await ExtractStructuredContentAsync(pdfDoc, filePath, cancellationToken).ConfigureAwait(false);
+
+            // Detect document language (Issue: RAG retrieval quality)
+            var langResult = _languageDetector.Detect(fullText);
+            pdfDoc.Language = langResult.DetectedLanguage;
+            pdfDoc.LanguageConfidence = langResult.Confidence;
+            _logger.LogInformation(
+                "[PdfPipeline] Detected language: {Language} (confidence: {Confidence:F2}) for PDF {PdfId}",
+                langResult.DetectedLanguage, langResult.Confidence, pdfDoc.Id);
 
             // Issue #4215: Transition to Chunking state
             pdfDoc.ProcessingState = "Chunking";

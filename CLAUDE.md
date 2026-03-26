@@ -10,7 +10,7 @@
 | Start Dev (core) | `make dev-core` | `infra/` |
 | Start Integration | `make tunnel && make integration` | `infra/` |
 | Deploy Staging | `make staging` | `infra/` (on server) |
-| Setup Secrets | `make secrets-dev` | `infra/` |
+| Setup Secrets | `make secrets-setup` | `infra/` |
 | Start API (no Docker) | `dotnet run` | `apps/api/src/Api/` |
 | Start Web (no Docker) | `pnpm dev` | `apps/web/` |
 | Run Tests | `dotnet test` / `pnpm test` | Root of each app |
@@ -102,8 +102,8 @@ docker logs meepleai-api | grep pattern
 cd apps/api/src/Api && dotnet restore
 cd ../../../web && pnpm install
 
-# 2. Secrets (auto-gen saves 15-30min)
-cd ../../infra && make secrets-dev
+# 2. Secrets
+cd ../../infra && make secrets-setup && make secrets-sync
 
 # 3. Frontend env
 cd ../apps/web && cp .env.development.example .env.local
@@ -115,31 +115,23 @@ cd ../../infra && make dev            # All services
 
 ### Secret Management
 
-**System**: `.secret` files in per-environment directories (Issue #2570)
+**System**: `.secret` files in `infra/secrets/` — single flat directory for all environments.
 
-```
-secrets/
-├── dev/           # Auto-generated (make secrets-dev)
-├── integration/   # Copies from staging + tunnel config
-├── staging/       # Manual setup (make secrets-staging)
-└── prod/          # Manual + strict validation (make secrets-prod)
-```
+Staging server is the source of truth. All environments use the same secret values.
 
-| Priority | Files | Behavior |
-|----------|-------|----------|
-| 🔴 CRITICAL | database, redis, jwt, admin, embedding-service | Blocks startup |
-| 🟡 IMPORTANT | openrouter, unstructured-service, bgg | Warns |
-| 🟢 OPTIONAL | oauth, email, monitoring, n8n, storage, traefik, smoldocling/reranker | Silent |
+| Command | Purpose |
+|---------|---------|
+| `make secrets-setup` | Generate placeholder `.secret` files from `.example` templates |
+| `make secrets-sync` | Pull real secrets from staging server (requires SSH) |
 
 **Workflow**:
 ```bash
-# Setup: cd infra && make secrets-dev          # Dev (auto-generated)
-# Setup: cd infra && make secrets-integration   # Integration (from staging)
-# Setup: cd infra && make secrets-staging       # Staging (interactive)
-# Update: nano infra/secrets/staging/redis.secret && make staging
+cd infra
+make secrets-setup    # First time: creates placeholder files
+make secrets-sync     # Pull real values from staging (requires SSH access to meepleai.app)
 ```
 
-**Rules**: ✅ Run setup script, gitignore `.secret`, rotate 90d | ❌ Commit secrets, use dev in prod
+**Rules**: Do not commit `.secret` files. Templates (`.secret.example`) are committed.
 
 ### S3 Storage Configuration
 
@@ -306,7 +298,7 @@ tests/Api.Tests/          # Backend test suite
 
 | Issue | Solution |
 |-------|----------|
-| Missing secrets | `cd infra/secrets && pwsh setup-secrets.ps1` |
+| Missing secrets | `cd infra && make secrets-setup && make secrets-sync` |
 | DB connection | `docker compose logs postgres && dotnet ef database update` |
 | Build fails (FE) | `rm -rf .next && pnpm build` |
 | Build fails (BE) | `dotnet clean && dotnet build` |

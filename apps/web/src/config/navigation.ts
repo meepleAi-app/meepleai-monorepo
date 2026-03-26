@@ -14,6 +14,7 @@
 
 import {
   BookOpen,
+  Bot,
   Brain,
   Calendar,
   Clock,
@@ -21,7 +22,6 @@ import {
   LayoutDashboard,
   ShieldIcon,
   User,
-  Users,
   Users2,
 } from 'lucide-react';
 
@@ -124,8 +124,8 @@ const _ALL_NAV_ITEMS: UnifiedNavItem[] = [
   {
     id: 'agents',
     href: '/agents',
-    icon: Users,
-    iconName: 'users',
+    icon: Bot,
+    iconName: 'bot',
     label: 'Agenti',
     ariaLabel: 'Navigate to agents list',
     priority: 7,

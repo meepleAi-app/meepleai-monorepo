@@ -450,7 +450,7 @@ export function Step4EnrichAndConfirm({ onComplete }: Step4EnrichAndConfirmProps
         <h3 className="text-lg font-semibold">Review & Confirm</h3>
         <p className="text-sm text-muted-foreground">
           Risolvi eventuali conflitti tra dati PDF e catalogo, poi rivedi i dettagli finali prima di
-          importing.
+          importare.
         </p>
       </div>
 
@@ -460,8 +460,9 @@ export function Step4EnrichAndConfirm({ onComplete }: Step4EnrichAndConfirmProps
           <div>
             <h4 className="text-sm font-semibold">Resolve Conflicts</h4>
             <p className="text-xs text-muted-foreground">
-              {Object.keys(conflicts).length} conflict
-              {Object.keys(conflicts).length !== 1 ? 's' : ''} rilevati tra dati catalogo e PDF.
+              {Object.keys(conflicts).length}{' '}
+              {Object.keys(conflicts).length !== 1 ? 'conflitti rilevati' : 'conflitto rilevato'}{' '}
+              tra dati catalogo e PDF.
             </p>
           </div>
 

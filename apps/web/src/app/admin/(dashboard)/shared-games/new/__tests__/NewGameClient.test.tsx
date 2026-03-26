@@ -113,7 +113,7 @@ describe('NewGameClient with BGG integration', () => {
     capturedOnSelect?.(bggGameData);
 
     await waitFor(() => {
-      expect(screen.getByText(/Linked to BGG #13/)).toBeInTheDocument();
+      expect(screen.getByText(/Collegato a ID #13/)).toBeInTheDocument();
     });
   });
 

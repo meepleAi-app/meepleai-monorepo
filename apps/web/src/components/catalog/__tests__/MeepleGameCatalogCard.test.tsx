@@ -248,11 +248,11 @@ describe('MeepleGameCatalogCard', () => {
       expect(screen.getByTestId('card-rating')).toHaveTextContent('0');
     });
 
-    it('shows year and BGG in subtitle when available', () => {
+    it('shows year and ID in subtitle when available', () => {
       renderWithProviders(<MeepleGameCatalogCard game={mockGame} />);
       const subtitle = screen.getByTestId('card-subtitle');
       expect(subtitle).toHaveTextContent('1995');
-      expect(subtitle).toHaveTextContent('BGG: 13');
+      expect(subtitle).toHaveTextContent('ID: 13');
     });
   });
 

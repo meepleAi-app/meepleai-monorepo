@@ -62,7 +62,7 @@ export function Step3BggMatch({ onComplete }: Step3BggMatchProps): JSX.Element {
           <AlertTitle>Game Selected</AlertTitle>
           <AlertDescription className="text-sm">
             Selezionato: <strong>{bggGameData.name}</strong> (ID #{selectedBggId}). Clicca
-            &quot;Next&quot; to continue.
+            &quot;Avanti&quot; per continuare.
           </AlertDescription>
         </Alert>
       )}

@@ -127,10 +127,8 @@ describe('Step3BggMatch', () => {
     it('renders heading and description', () => {
       render(<Step3BggMatch />);
 
-      expect(screen.getByText('Select BoardGameGeek Game')).toBeInTheDocument();
-      expect(
-        screen.getByText(/search for the matching game on boardgamegeek/i)
-      ).toBeInTheDocument();
+      expect(screen.getByText('Seleziona gioco dal catalogo')).toBeInTheDocument();
+      expect(screen.getByText(/cerca il gioco corrispondente/i)).toBeInTheDocument();
     });
 
     it('pre-fills search input with extracted title', () => {
@@ -144,7 +142,7 @@ describe('Step3BggMatch', () => {
     it('renders manual BGG ID section', () => {
       render(<Step3BggMatch />);
 
-      expect(screen.getByText('Manual BGG ID Input')).toBeInTheDocument();
+      expect(screen.getByText('Inserimento ID manuale')).toBeInTheDocument();
       expect(screen.getByTestId('manual-bgg-id-input')).toBeInTheDocument();
       expect(screen.getByTestId('fetch-manual-bgg-btn')).toBeInTheDocument();
     });
@@ -160,13 +158,13 @@ describe('Step3BggMatch', () => {
       const result1 = screen.getByTestId('bgg-result-13');
       expect(within(result1).getByText('Catan')).toBeInTheDocument();
       expect(within(result1).getAllByText('1995')).toHaveLength(1);
-      expect(within(result1).getByText('BGG #13')).toBeInTheDocument();
+      expect(within(result1).getByText('ID #13')).toBeInTheDocument();
       expect(within(result1).getByText('100% match')).toBeInTheDocument();
 
       // Check second result
       const result2 = screen.getByTestId('bgg-result-12345');
       expect(within(result2).getByText('Settlers of Catan')).toBeInTheDocument();
-      expect(within(result2).getByText('BGG #12345')).toBeInTheDocument();
+      expect(within(result2).getByText('ID #12345')).toBeInTheDocument();
     });
 
     it('displays thumbnails for results with imageUrl', () => {
@@ -285,10 +283,10 @@ describe('Step3BggMatch', () => {
       await waitFor(() => {
         const alert = screen.getByRole('alert');
         expect(within(alert).getByText('Game Selected')).toBeInTheDocument();
-        // Text content is split: "Selected: " + <strong>Catan</strong> + " (BGG #13)"
+        // Text content is split: "Selected: " + <strong>Catan</strong> + " (ID #13)"
         expect(within(alert).getByText(/selected:/i)).toBeInTheDocument();
         expect(within(alert).getByText('Catan')).toBeInTheDocument();
-        expect(within(alert).getByText(/\(BGG #13\)/i)).toBeInTheDocument();
+        expect(within(alert).getByText(/\(ID #13\)/i)).toBeInTheDocument();
       });
     });
   });
@@ -403,7 +401,7 @@ describe('Step3BggMatch', () => {
       const user = userEvent.setup();
 
       (api.bgg.getGameDetails as ReturnType<typeof vi.fn>).mockRejectedValue(
-        new Error('Game with BGG ID 99999 not found')
+        new Error('Gioco con ID 99999 non trovato')
       );
 
       render(<Step3BggMatch />);
@@ -415,7 +413,7 @@ describe('Step3BggMatch', () => {
       await user.click(fetchBtn);
 
       await waitFor(() => {
-        expect(screen.getByText(/game with bgg id 99999 not found/i)).toBeInTheDocument();
+        expect(screen.getByText(/gioco con id 99999 non trovato/i)).toBeInTheDocument();
       });
     });
 
@@ -506,9 +504,7 @@ describe('Step3BggMatch', () => {
 
       // Wait for error alert to appear
       await waitFor(() => {
-        expect(
-          screen.getByText('Please enter a valid BGG ID (positive number)')
-        ).toBeInTheDocument();
+        expect(screen.getByText('Inserisci un ID valido (numero positivo)')).toBeInTheDocument();
       });
     });
   });
@@ -563,10 +559,10 @@ describe('Step3BggMatch', () => {
 
       const alert = screen.getByRole('alert');
       expect(within(alert).getByText('Game Selected')).toBeInTheDocument();
-      // Text split across elements: "Selected: " + <strong>Catan</strong> + " (BGG #13)"
+      // Text split across elements: "Selected: " + <strong>Catan</strong> + " (ID #13)"
       expect(within(alert).getByText(/selected:/i)).toBeInTheDocument();
       expect(within(alert).getByText('Catan')).toBeInTheDocument();
-      expect(within(alert).getByText(/\(BGG #13\)/i)).toBeInTheDocument();
+      expect(within(alert).getByText(/\(ID #13\)/i)).toBeInTheDocument();
     });
 
     it('does not display summary when no game selected', () => {
@@ -580,7 +576,7 @@ describe('Step3BggMatch', () => {
     it('renders BGG external links for each result', () => {
       render(<Step3BggMatch />);
 
-      const links = screen.getAllByTitle('View on BoardGameGeek');
+      const links = screen.getAllByTitle('Vedi scheda esterna');
       expect(links).toHaveLength(3);
 
       expect(links[0]).toHaveAttribute('href', 'https://boardgamegeek.com/boardgame/13');
@@ -592,7 +588,7 @@ describe('Step3BggMatch', () => {
       const user = userEvent.setup();
       render(<Step3BggMatch />);
 
-      const externalLink = screen.getAllByTitle('View on BoardGameGeek')[0];
+      const externalLink = screen.getAllByTitle('Vedi scheda esterna')[0];
 
       // Click link (stopPropagation should prevent selection)
       // Note: In test env, we can't prevent default navigation, but we can verify selection didn't happen

@@ -51,17 +51,11 @@ prod-down: ## Stop production
 
 # === Secrets ===
 
-secrets-dev: ## Generate dev secrets (auto-generated)
-	pwsh -File secrets/setup-secrets.ps1 -Environment dev -SaveGenerated
+secrets-setup: ## Generate placeholder secrets from .example files
+	pwsh -File secrets/setup-secrets.ps1
 
-secrets-integration: ## Setup integration secrets
-	pwsh -File secrets/setup-secrets.ps1 -Environment integration
-
-secrets-staging: ## Setup staging secrets
-	pwsh -File secrets/setup-secrets.ps1 -Environment staging
-
-secrets-prod: ## Setup production secrets
-	pwsh -File secrets/setup-secrets.ps1 -Environment prod
+secrets-sync: ## Sync secrets from staging server (requires SSH access)
+	bash scripts/sync-secrets.sh
 
 # === Database Seeds ===
 
@@ -182,7 +176,7 @@ validate-workflows: ## Validate GitHub Actions workflows — mirrors auto-valida
 .PHONY: dev dev-core dev-down tunnel tunnel-stop tunnel-status integration \
         integration-down staging staging-down prod prod-down \
         alpha alpha-core alpha-down \
-        secrets-dev secrets-integration secrets-staging secrets-prod \
+        secrets-setup secrets-sync \
         snapshot restore-staging restore-local seed-games \
         logs ps build clean help \
         ci ci-fe ci-be-unit ci-be-integration ci-be-e2e ci-all \

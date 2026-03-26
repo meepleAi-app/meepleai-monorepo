@@ -388,8 +388,8 @@ export function SeedingPageClient() {
           <AlertCircleIcon className="h-4 w-4 shrink-0" />
           <span>
             Rate limit: 1 req/sec. Arricchimento di <strong>{enrichableCount}</strong>{' '}
-            {enrichableCount === 1 ? 'game' : 'games'} takes ~{estimatedSeconds}{' '}
-            {estimatedSeconds === 1 ? 'second' : 'seconds'}.
+            {enrichableCount === 1 ? 'gioco' : 'giochi'} richiede ~{estimatedSeconds}{' '}
+            {estimatedSeconds === 1 ? 'secondo' : 'secondi'}.
           </span>
         </div>
       )}

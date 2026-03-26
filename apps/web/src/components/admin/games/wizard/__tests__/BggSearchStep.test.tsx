@@ -12,7 +12,18 @@ import { BggSearchStep } from '../steps/BggSearchStep';
 
 // ─── Mocks ───────────────────────────────────────────────────────────────────
 
-let mockData: { results: Array<{ bggId: number; name: string; type: 'boardgame'; yearPublished?: number; thumbnailUrl?: null }>; total?: number } | undefined;
+let mockData:
+  | {
+      results: Array<{
+        bggId: number;
+        name: string;
+        type: 'boardgame';
+        yearPublished?: number;
+        thumbnailUrl?: null;
+      }>;
+      total?: number;
+    }
+  | undefined;
 let mockIsLoading = false;
 let mockIsFetching = false;
 let mockError: Error | null = null;
@@ -59,19 +70,19 @@ describe('BggSearchStep', () => {
 
   it('should render the search input', () => {
     render(<BggSearchStep onGameSelected={onGameSelected} />, { wrapper: createWrapper() });
-    expect(screen.getByPlaceholderText(/Search BoardGameGeek/)).toBeDefined();
+    expect(screen.getByPlaceholderText(/Cerca gioco/)).toBeDefined();
   });
 
   it('should show hint text when query is empty', () => {
     render(<BggSearchStep onGameSelected={onGameSelected} />, { wrapper: createWrapper() });
-    expect(screen.getByText(/Type at least 2 characters/)).toBeDefined();
+    expect(screen.getByText(/Digita almeno 2 caratteri/)).toBeDefined();
   });
 
   it('should show hint text when query has 1 character', () => {
     render(<BggSearchStep onGameSelected={onGameSelected} />, { wrapper: createWrapper() });
-    const input = screen.getByPlaceholderText(/Search BoardGameGeek/);
+    const input = screen.getByPlaceholderText(/Cerca gioco/);
     fireEvent.change(input, { target: { value: 'C' } });
-    expect(screen.getByText(/Type at least 2 characters/)).toBeDefined();
+    expect(screen.getByText(/Digita almeno 2 caratteri/)).toBeDefined();
   });
 
   it('should show error state when search fails', () => {
@@ -84,7 +95,13 @@ describe('BggSearchStep', () => {
   it('should show game results when data is returned', () => {
     mockData = {
       results: [
-        { bggId: 174430, name: 'Gloomhaven', type: 'boardgame', yearPublished: 2017, thumbnailUrl: null },
+        {
+          bggId: 174430,
+          name: 'Gloomhaven',
+          type: 'boardgame',
+          yearPublished: 2017,
+          thumbnailUrl: null,
+        },
         { bggId: 13, name: 'Catan', type: 'boardgame', yearPublished: 1995, thumbnailUrl: null },
       ],
       total: 2,
@@ -92,7 +109,7 @@ describe('BggSearchStep', () => {
 
     render(<BggSearchStep onGameSelected={onGameSelected} />, { wrapper: createWrapper() });
 
-    const input = screen.getByPlaceholderText(/Search BoardGameGeek/);
+    const input = screen.getByPlaceholderText(/Cerca gioco/);
     fireEvent.change(input, { target: { value: 'gl' } });
 
     expect(screen.getByText('Gloomhaven')).toBeDefined();
@@ -102,13 +119,19 @@ describe('BggSearchStep', () => {
   it('should call onGameSelected when a result card is clicked', () => {
     mockData = {
       results: [
-        { bggId: 174430, name: 'Gloomhaven', type: 'boardgame', yearPublished: 2017, thumbnailUrl: null },
+        {
+          bggId: 174430,
+          name: 'Gloomhaven',
+          type: 'boardgame',
+          yearPublished: 2017,
+          thumbnailUrl: null,
+        },
       ],
     };
 
     render(<BggSearchStep onGameSelected={onGameSelected} />, { wrapper: createWrapper() });
 
-    const input = screen.getByPlaceholderText(/Search BoardGameGeek/);
+    const input = screen.getByPlaceholderText(/Cerca gioco/);
     fireEvent.change(input, { target: { value: 'gl' } });
 
     fireEvent.click(screen.getByText('Gloomhaven'));
@@ -122,7 +145,7 @@ describe('BggSearchStep', () => {
 
     render(<BggSearchStep onGameSelected={onGameSelected} />, { wrapper: createWrapper() });
 
-    const input = screen.getByPlaceholderText(/Search BoardGameGeek/);
+    const input = screen.getByPlaceholderText(/Cerca gioco/);
     fireEvent.change(input, { target: { value: 'zzz' } });
 
     expect(screen.getByText(/No games found/)).toBeDefined();
@@ -143,7 +166,7 @@ describe('BggSearchStep', () => {
 
     render(<BggSearchStep onGameSelected={onGameSelected} />, { wrapper: createWrapper() });
 
-    const input = screen.getByPlaceholderText(/Search BoardGameGeek/);
+    const input = screen.getByPlaceholderText(/Cerca gioco/);
     fireEvent.change(input, { target: { value: 'Ca' } });
 
     // Loading skeletons are rendered as divs with animate-pulse

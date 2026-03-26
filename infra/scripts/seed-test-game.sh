@@ -4,7 +4,7 @@
 #
 # Prerequisites:
 #   - make dev running (all services healthy)
-#   - Admin password in infra/secrets/dev/admin.secret
+#   - Admin password in infra/secrets/admin.secret
 
 set -euo pipefail
 

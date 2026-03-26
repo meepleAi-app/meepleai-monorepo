@@ -1,17 +1,18 @@
 import * as React from 'react';
 
 import { cva, type VariantProps } from 'class-variance-authority';
-import { Shield, Edit, User } from 'lucide-react';
+import { Crown, Shield, Edit, User } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
 
-export type UserRole = 'Admin' | 'Editor' | 'User';
+export type UserRole = 'SuperAdmin' | 'Admin' | 'Editor' | 'User';
 
 const userRoleBadgeVariants = cva(
   'inline-flex items-center gap-1.5 rounded-md px-2.5 py-0.5 text-xs font-semibold transition-colors',
   {
     variants: {
       role: {
+        SuperAdmin: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300',
         Admin: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300',
         Editor: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300',
         User: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300',
@@ -24,6 +25,7 @@ const userRoleBadgeVariants = cva(
 );
 
 const roleIconMap: Record<UserRole, React.ComponentType<{ className?: string }>> = {
+  SuperAdmin: Crown,
   Admin: Shield,
   Editor: Edit,
   User: User,

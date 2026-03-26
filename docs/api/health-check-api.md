@@ -1,7 +1,7 @@
 # Health Check API Reference
 
 > **Last Updated**: 2026-01-17
-> **Related**: [Health Check System](../04-deployment/health-checks.md)
+> **Related**: [Health Check System](../deployment/health-checks.md)
 > **Issue**: [#2511](https://github.com/meepleAi-app/meepleai-monorepo/issues/2511)
 
 ---
@@ -292,9 +292,9 @@ public async Task HealthEndpoint_ShouldReturnHealthyWithAllServices()
 
 ## Related Documentation
 
-- [Health Check System Overview](../04-deployment/health-checks.md)
-- [Auto-Configuration Guide](../04-deployment/auto-configuration-guide.md)
-- [Deployment Guide](../04-deployment/README.md)
+- [Health Check System Overview](../deployment/health-checks.md)
+- [Auto-Configuration Guide](../deployment/auto-configuration-guide.md)
+- [Deployment Guide](../deployment/README.md)
 
 ---
 

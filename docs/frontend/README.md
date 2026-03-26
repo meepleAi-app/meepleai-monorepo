@@ -325,10 +325,10 @@ try {
 
 ## Related Documentation
 
-- [API Documentation](../03-api/README.md)
-- [Testing Guide](../05-testing/README.md)
+- [API Documentation](../api/README.md)
+- [Testing Guide](../testing/README.md)
 - [User Flows](../11-user-flows/README.md)
-- [Development Guide](../02-development/README.md)
+- [Development Guide](../development/README.md)
 
 ---
 

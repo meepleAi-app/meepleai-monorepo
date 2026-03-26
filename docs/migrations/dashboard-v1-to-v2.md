@@ -1,3 +1,5 @@
+> ⚠️ **DEPRECATED** (2026-03-26): Dashboard v1 components have been fully replaced by the unified layout system. This migration guide is kept for historical reference only. See `docs/superpowers/specs/2026-03-24-layout-redesign-design.md` for current layout architecture.
+
 # Dashboard V1 → V2 Migration Plan
 
 **Issue**: #4577

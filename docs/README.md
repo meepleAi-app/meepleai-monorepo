@@ -156,7 +156,13 @@ docs/
 
 ### Backend - Bounded Contexts
 
-Each context has auto-generated README: `apps/api/src/Api/BoundedContexts/{Context}/README.md`
+Each context has a README: `apps/api/src/Api/BoundedContexts/{Context}/README.md`
+
+**Documented Contexts (18/19)**:
+Administration, AgentMemory, Authentication, BusinessSimulations, DatabaseSync,
+DocumentProcessing, EntityRelationships, GameManagement, GameToolbox, GameToolkit,
+Gamification, KnowledgeBase, SessionTracking, SharedGameCatalog, SystemConfiguration,
+UserLibrary, UserNotifications, WorkflowIntegration
 
 **Template**: [bounded-context-template.md](./templates/bounded-context-template.md)
 
@@ -248,5 +254,5 @@ export async function askQuestion(question: string, gameId: string): Promise<Ans
 
 ---
 
-**Last Updated**: 2026-02-18
+**Last Updated**: 2026-03-26
 **Maintainer**: Documentation Team

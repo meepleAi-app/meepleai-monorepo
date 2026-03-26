@@ -25,34 +25,28 @@ import {
 } from '@/components/ui/overlays/dialog';
 import { Button } from '@/components/ui/primitives/button';
 import { api } from '@/lib/api';
-import type { TierDefinition } from '@/lib/api/schemas/tier.schemas';
+import type { TierDefinition, TierLimits } from '@/lib/api/schemas/tier.schemas';
 
 // ── Limit key labels ─────────────────────────────────────────────────────────
 
-const LIMIT_LABELS: Record<string, string> = {
-  MaxPrivateGames: 'Max Giochi',
-  MaxPdfPerMonth: 'Max PDF/mese',
-  MaxAgents: 'Max Agent',
-  MaxAgentQueriesPerDay: 'Query/giorno',
-  MaxSessionQueries: 'Query sessione',
-  MaxPlayersPerSession: 'Max giocatori',
-  MaxPhotosPerSession: 'Foto sessione',
-  MaxCatalogProposalsPerWeek: 'Proposte/sett',
+type LimitKey = keyof Omit<TierLimits, 'sessionSaveEnabled'>;
+
+const LIMIT_LABELS: Record<LimitKey, string> = {
+  maxPrivateGames: 'Max Giochi',
+  maxPdfUploadsPerMonth: 'Max PDF/mese',
+  maxPdfSizeBytes: 'Max PDF size (bytes)',
+  maxAgents: 'Max Agent',
+  maxAgentQueriesPerDay: 'Query/giorno',
+  maxSessionQueries: 'Query sessione',
+  maxSessionPlayers: 'Max giocatori',
+  maxPhotosPerSession: 'Foto sessione',
+  maxCatalogProposalsPerWeek: 'Proposte/sett',
 };
 
-const LIMIT_KEYS = [
-  'MaxPrivateGames',
-  'MaxPdfPerMonth',
-  'MaxAgents',
-  'MaxAgentQueriesPerDay',
-  'MaxSessionQueries',
-  'MaxPlayersPerSession',
-  'MaxPhotosPerSession',
-  'MaxCatalogProposalsPerWeek',
-];
+const LIMIT_KEYS = Object.keys(LIMIT_LABELS) as LimitKey[];
 
-function getLimitValue(tier: TierDefinition, key: string): number {
-  return tier.limits.find(l => l.key === key)?.value ?? 0;
+function getLimitValue(tier: TierDefinition, key: LimitKey): number {
+  return (tier.limits[key] as number) ?? 0;
 }
 
 function formatLimit(value: number): string {
@@ -65,10 +59,10 @@ function formatLimit(value: number): string {
 interface TierFormState {
   name: string;
   displayName: string;
-  description: string;
-  monthlyPriceEur: number;
-  isActive: boolean;
-  limits: Record<string, number>;
+  llmModelTier: string;
+  isDefault: boolean;
+  sessionSaveEnabled: boolean;
+  limits: Record<LimitKey, number>;
 }
 
 function buildFormState(tier?: TierDefinition): TierFormState {
@@ -76,19 +70,22 @@ function buildFormState(tier?: TierDefinition): TierFormState {
     return {
       name: '',
       displayName: '',
-      description: '',
-      monthlyPriceEur: 0,
-      isActive: true,
-      limits: Object.fromEntries(LIMIT_KEYS.map(k => [k, 0])),
+      llmModelTier: 'standard',
+      isDefault: false,
+      sessionSaveEnabled: true,
+      limits: Object.fromEntries(LIMIT_KEYS.map(k => [k, 0])) as Record<LimitKey, number>,
     };
   }
   return {
     name: tier.name,
     displayName: tier.displayName,
-    description: tier.description ?? '',
-    monthlyPriceEur: tier.monthlyPriceEur,
-    isActive: tier.isActive,
-    limits: Object.fromEntries(LIMIT_KEYS.map(k => [k, getLimitValue(tier, k)])),
+    llmModelTier: tier.llmModelTier,
+    isDefault: tier.isDefault,
+    sessionSaveEnabled: tier.limits.sessionSaveEnabled,
+    limits: Object.fromEntries(LIMIT_KEYS.map(k => [k, getLimitValue(tier, k)])) as Record<
+      LimitKey,
+      number
+    >,
   };
 }
 
@@ -103,7 +100,6 @@ function TierDialog({ open, onOpenChange, tier, onSaved }: TierDialogProps) {
   const isEdit = !!tier;
   const [form, setForm] = useState<TierFormState>(() => buildFormState(tier));
 
-  // Reset form every time the dialog opens (handles both create and edit modes)
   useEffect(() => {
     if (open) {
       setForm(buildFormState(tier));
@@ -114,17 +110,26 @@ function TierDialog({ open, onOpenChange, tier, onSaved }: TierDialogProps) {
 
   const saveMutation = useMutation({
     mutationFn: async () => {
-      const body = {
-        displayName: form.displayName,
-        description: form.description || null,
-        monthlyPriceEur: form.monthlyPriceEur,
-        isActive: form.isActive,
-        limits: LIMIT_KEYS.map(k => ({ key: k, value: form.limits[k] ?? 0 })),
-      };
+      const limits: TierLimits = {
+        ...Object.fromEntries(LIMIT_KEYS.map(k => [k, form.limits[k] ?? 0])),
+        sessionSaveEnabled: form.sessionSaveEnabled,
+      } as TierLimits;
+
       if (isEdit) {
-        await api.tiers.updateTier(tier.name, body);
+        await api.tiers.updateTier(tier.name, {
+          displayName: form.displayName,
+          limits,
+          llmModelTier: form.llmModelTier,
+          isDefault: form.isDefault,
+        });
       } else {
-        await api.tiers.createTier({ name: form.name, ...body });
+        await api.tiers.createTier({
+          name: form.name,
+          displayName: form.displayName,
+          limits,
+          llmModelTier: form.llmModelTier,
+          isDefault: form.isDefault,
+        });
       }
     },
     onSuccess: () => {
@@ -137,7 +142,7 @@ function TierDialog({ open, onOpenChange, tier, onSaved }: TierDialogProps) {
     },
   });
 
-  function setLimit(key: string, value: number) {
+  function setLimit(key: LimitKey, value: number) {
     setForm(prev => ({ ...prev, limits: { ...prev.limits, [key]: value } }));
   }
 
@@ -181,29 +186,14 @@ function TierDialog({ open, onOpenChange, tier, onSaved }: TierDialogProps) {
             </div>
             <div>
               <label className="block text-xs font-medium text-muted-foreground mb-1">
-                Prezzo mensile (€)
-              </label>
-              <input
-                type="number"
-                min={0}
-                step={0.01}
-                className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
-                value={form.monthlyPriceEur}
-                onChange={e =>
-                  setForm(prev => ({ ...prev, monthlyPriceEur: Number(e.target.value) }))
-                }
-                data-testid="field-price"
-              />
-            </div>
-            <div className="col-span-2">
-              <label className="block text-xs font-medium text-muted-foreground mb-1">
-                Descrizione
+                LLM Model Tier
               </label>
               <input
                 className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
-                value={form.description}
-                onChange={e => setForm(prev => ({ ...prev, description: e.target.value }))}
-                data-testid="field-description"
+                value={form.llmModelTier}
+                onChange={e => setForm(prev => ({ ...prev, llmModelTier: e.target.value }))}
+                placeholder="standard, premium…"
+                data-testid="field-llmModelTier"
               />
             </div>
           </div>
@@ -230,16 +220,27 @@ function TierDialog({ open, onOpenChange, tier, onSaved }: TierDialogProps) {
             </div>
           </div>
 
-          {/* Active toggle */}
-          <label className="flex items-center gap-2 cursor-pointer select-none">
-            <input
-              type="checkbox"
-              checked={form.isActive}
-              onChange={e => setForm(prev => ({ ...prev, isActive: e.target.checked }))}
-              data-testid="field-isActive"
-            />
-            <span className="text-sm">Tier attivo</span>
-          </label>
+          {/* Toggles */}
+          <div className="space-y-2">
+            <label className="flex items-center gap-2 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={form.sessionSaveEnabled}
+                onChange={e => setForm(prev => ({ ...prev, sessionSaveEnabled: e.target.checked }))}
+                data-testid="field-sessionSaveEnabled"
+              />
+              <span className="text-sm">Session Save abilitato</span>
+            </label>
+            <label className="flex items-center gap-2 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={form.isDefault}
+                onChange={e => setForm(prev => ({ ...prev, isDefault: e.target.checked }))}
+                data-testid="field-isDefault"
+              />
+              <span className="text-sm">Tier default</span>
+            </label>
+          </div>
         </div>
 
         <DialogFooter>
@@ -326,8 +327,8 @@ export default function AdminTiersPage() {
                 <th className="px-3 py-2 text-left font-medium text-muted-foreground whitespace-nowrap">
                   Display Name
                 </th>
-                <th className="px-3 py-2 text-right font-medium text-muted-foreground whitespace-nowrap">
-                  Prezzo (€)
+                <th className="px-3 py-2 text-left font-medium text-muted-foreground whitespace-nowrap">
+                  LLM Tier
                 </th>
                 {LIMIT_KEYS.map(k => (
                   <th
@@ -350,25 +351,23 @@ export default function AdminTiersPage() {
                 >
                   <td className="px-3 py-2 font-mono text-xs font-medium">{tier.name}</td>
                   <td className="px-3 py-2 font-medium">{tier.displayName}</td>
-                  <td className="px-3 py-2 text-right tabular-nums">
-                    {tier.monthlyPriceEur === 0 ? '—' : `€${tier.monthlyPriceEur.toFixed(2)}`}
-                  </td>
+                  <td className="px-3 py-2 text-xs text-muted-foreground">{tier.llmModelTier}</td>
                   {LIMIT_KEYS.map(k => (
                     <td key={k} className="px-3 py-2 text-right tabular-nums">
                       {formatLimit(getLimitValue(tier, k))}
                     </td>
                   ))}
                   <td className="px-3 py-2 text-center">
-                    {tier.isActive ? (
+                    {tier.isDefault ? (
                       <Badge
                         variant="outline"
                         className="border-green-300 bg-green-50 text-green-800 dark:bg-green-950/30 dark:text-green-300"
                       >
-                        Attivo
+                        Default
                       </Badge>
                     ) : (
                       <Badge variant="outline" className="text-muted-foreground">
-                        Inattivo
+                        Custom
                       </Badge>
                     )}
                   </td>

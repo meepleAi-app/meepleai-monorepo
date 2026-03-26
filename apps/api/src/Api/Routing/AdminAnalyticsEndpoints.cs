@@ -21,7 +21,7 @@ internal static class AdminAnalyticsEndpoints
             var result = await mediator.Send(new GetOverviewAnalyticsQuery(), ct).ConfigureAwait(false);
             return Results.Ok(result);
         })
-        .WithName("GetOverviewAnalytics")
+        .WithName("AdminDashboard_GetOverviewAnalytics")
         .WithTags("Admin", "Analytics")
         .Produces<OverviewAnalyticsDto>(200)
         .ProducesProblem(401)
@@ -36,7 +36,7 @@ internal static class AdminAnalyticsEndpoints
             var result = await mediator.Send(new GetChatAnalyticsQuery(), ct).ConfigureAwait(false);
             return Results.Ok(result);
         })
-        .WithName("GetChatAnalytics")
+        .WithName("AdminDashboard_GetChatAnalytics")
         .WithTags("Admin", "Analytics")
         .Produces<ChatAnalyticsDto>(200)
         .ProducesProblem(401)
@@ -51,7 +51,7 @@ internal static class AdminAnalyticsEndpoints
             var result = await mediator.Send(new GetPdfAnalyticsQuery(), ct).ConfigureAwait(false);
             return Results.Ok(result);
         })
-        .WithName("GetPdfAnalytics")
+        .WithName("AdminDashboard_GetPdfAnalytics")
         .WithTags("Admin", "Analytics")
         .Produces<PdfAnalyticsDto>(200)
         .ProducesProblem(401)
@@ -66,7 +66,7 @@ internal static class AdminAnalyticsEndpoints
             var result = await mediator.Send(new GetModelPerformanceQuery(), ct).ConfigureAwait(false);
             return Results.Ok(result);
         })
-        .WithName("GetModelPerformanceAnalytics")
+        .WithName("AdminDashboard_GetModelPerformance")
         .WithTags("Admin", "Analytics")
         .Produces<ModelPerformanceDto>(200)
         .ProducesProblem(401)
@@ -81,7 +81,7 @@ internal static class AdminAnalyticsEndpoints
             var result = await mediator.Send(new GetMauQuery(), ct).ConfigureAwait(false);
             return Results.Ok(result);
         })
-        .WithName("GetMauAnalytics")
+        .WithName("AdminDashboard_GetMau")
         .WithTags("Admin", "Analytics")
         .Produces<MauDto>(200)
         .ProducesProblem(401)

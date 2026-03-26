@@ -347,7 +347,7 @@ docker compose restart api
 - [Local Secrets Setup](../docs/02-development/local-secrets-setup.md)
 - [OAuth Provider Setup Guide](../docs/02-development/oauth-setup.md) (TODO)
 - [Security Audit Report](./secrets-audit-2026-01-15.md)
-- [Docker Service Endpoints](../../02-development/docker/service-endpoints.md)
+- [Docker Service Endpoints](../../development/docker/service-endpoints.md)
 
 ---
 

@@ -128,17 +128,15 @@ describe('GameDetailsStep', () => {
 
   it('should show error message when creation fails', () => {
     mockIsError = true;
-    mockError = new Error('A game with this BGG ID already exists');
+    mockError = new Error('Un gioco con questo ID esiste già');
     render(<GameDetailsStep {...defaultProps} />, { wrapper: createWrapper() });
-    expect(screen.getByText('A game with this BGG ID already exists')).toBeDefined();
+    expect(screen.getByText('Un gioco con questo ID esiste già')).toBeDefined();
   });
 
   it('should disable Create Game button when isPending', () => {
     mockIsPending = true;
     render(<GameDetailsStep {...defaultProps} />, { wrapper: createWrapper() });
-    const button = screen.getAllByRole('button').find((b) =>
-      b.textContent?.includes('Creating')
-    );
+    const button = screen.getAllByRole('button').find(b => b.textContent?.includes('Creating'));
     expect((button as HTMLButtonElement).disabled).toBe(true);
   });
 
@@ -155,10 +153,9 @@ describe('GameDetailsStep', () => {
     });
 
     const onGameCreated = vi.fn();
-    render(
-      <GameDetailsStep {...defaultProps} onGameCreated={onGameCreated} />,
-      { wrapper: createWrapper() }
-    );
+    render(<GameDetailsStep {...defaultProps} onGameCreated={onGameCreated} />, {
+      wrapper: createWrapper(),
+    });
 
     fireEvent.click(screen.getByText('Create Game'));
     expect(onGameCreated).toHaveBeenCalledWith(createdResult);

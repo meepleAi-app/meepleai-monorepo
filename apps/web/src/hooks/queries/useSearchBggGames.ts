@@ -64,7 +64,7 @@ export function useSearchBggGames({
     retryDelay: attemptIndex => {
       // Exponential backoff: 1s, 2s, 4s (capped at 8s)
       const delay = Math.min(1000 * 2 ** attemptIndex, 8000);
-      toast.info(`BGG search failed. Retrying... (attempt ${attemptIndex + 1}/3)`);
+      toast.info(`Ricerca fallita. Nuovo tentativo... (${attemptIndex + 1}/3)`);
       return delay;
     },
   });

@@ -97,7 +97,7 @@ export function GameCombobox({
                       className="text-primary"
                     >
                       <Search className="mr-1 h-3 w-3" />
-                      Search on BGG
+                      Cerca nel catalogo
                     </Button>
                   )}
                 </div>

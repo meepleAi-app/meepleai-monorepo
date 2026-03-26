@@ -313,7 +313,7 @@ function SimilarGameCard({ game, href }: SimilarGameCardProps) {
                     {game.averageRating.toFixed(1)}
                   </span>
                 </TooltipTrigger>
-                <TooltipContent>Valutazione media BGG</TooltipContent>
+                <TooltipContent>Valutazione media</TooltipContent>
               </Tooltip>
             )}
 

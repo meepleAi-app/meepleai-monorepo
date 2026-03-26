@@ -3,7 +3,7 @@ const steps = [
     num: '1',
     icon: '🎲',
     title: 'Trova il gioco',
-    desc: "Cerca nel catalogo o su BGG. Non c'è? Aggiungilo come gioco privato.",
+    desc: "Cerca nel catalogo condiviso. Non c'è? Aggiungilo come gioco privato.",
   },
   {
     num: '2',

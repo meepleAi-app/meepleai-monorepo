@@ -608,7 +608,7 @@
     "imageUrlPlaceholder": "https://esempio.com/immagine.jpg",
     "adding": "Aggiunta in corso...",
     "addPrivateGame": "Aggiungi Gioco Privato",
-    "addFromBgg": "Aggiungi da BGG"
+    "addFromBgg": "Aggiungi dal catalogo"
   },
   "collection": {
     "addFromCatalog": "Da catalogo",

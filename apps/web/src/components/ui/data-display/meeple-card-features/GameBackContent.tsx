@@ -422,7 +422,7 @@ export const GameBackContent = React.memo(function GameBackContent({
             )}
             {data.bggWeight != null && (
               <span className="text-muted-foreground text-[10px]">
-                BGG {data.bggWeight.toFixed(1)}
+                Peso {data.bggWeight.toFixed(1)}
               </span>
             )}
             {data.bestPlayerCount != null && (

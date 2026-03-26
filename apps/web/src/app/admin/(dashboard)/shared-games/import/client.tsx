@@ -40,7 +40,7 @@ interface StepConfig {
 const STEPS: StepConfig[] = [
   { id: 1, label: '1. Upload PDF', description: 'Carica regolamento', icon: '📄' },
   { id: 2, label: '2. Metadata', description: 'Rivedi dati estratti', icon: '📝' },
-  { id: 3, label: '3. BGG Match', description: 'Seleziona da BGG', icon: '🎲' },
+  { id: 3, label: '3. Catalogo Match', description: 'Seleziona gioco', icon: '🎲' },
   { id: 4, label: '4. Finalize', description: 'Risolvi conflitti', icon: '✅' },
 ];
 
@@ -175,8 +175,7 @@ export function AdminGameImportWizardClient() {
             </Button>
           </div>
           <p className="text-muted-foreground">
-            Import a game from PDF by uploading, reviewing metadata, matching with BGG, and
-            finalizing.
+            Importa un gioco da PDF: upload, revisione metadati, match con catalogo e finalizing.
           </p>
           {/* Cross-link to manual creation (#255) */}
           <p className="text-sm text-muted-foreground mt-2">
@@ -290,7 +289,7 @@ export function AdminGameImportWizardClient() {
               <div className="space-y-4">
                 <h3 className="text-lg font-medium">Resolve Conflicts & Finalize</h3>
                 <p className="text-sm text-muted-foreground">
-                  Review and resolve any conflicts between extracted metadata and BGG data.
+                  Rivedi e risolvi eventuali conflitti tra metadati estratti e dati del catalogo.
                 </p>
                 {enrichedData ? (
                   <div className="rounded-md border bg-background p-4">
@@ -302,7 +301,7 @@ export function AdminGameImportWizardClient() {
                       {enrichedData.maxPlayers || '?'}
                     </p>
                     <p className="text-sm">
-                      <strong>BGG ID:</strong> {enrichedData.bggId || 'N/A'}
+                      <strong>ID:</strong> {enrichedData.bggId || 'N/A'}
                     </p>
                   </div>
                 ) : (
@@ -331,7 +330,8 @@ export function AdminGameImportWizardClient() {
               <strong>Metadata:</strong> {extractedMetadata ? '✓ Extracted' : '✗ Not extracted'}
             </p>
             <p>
-              <strong>BGG:</strong> {selectedBggId ? `✓ ID ${selectedBggId}` : '✗ Not selected'}
+              <strong>Catalogo:</strong>{' '}
+              {selectedBggId ? `✓ ID ${selectedBggId}` : '✗ Not selected'}
             </p>
             <p>
               <strong>Enriched:</strong> {enrichedData ? '✓ Ready' : '✗ Not ready'}

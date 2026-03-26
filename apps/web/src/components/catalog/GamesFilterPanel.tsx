@@ -487,7 +487,7 @@ export function GamesFilterPanel({ isCollapsed }: GamesFilterPanelProps) {
       <FilterLink
         href="/library?sortBy=AverageRating&sortDesc=true"
         icon={Star}
-        label="Top BGG"
+        label="Top Rated"
         isActive={isTopBgg}
         isCollapsed={isCollapsed}
       />

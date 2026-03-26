@@ -233,7 +233,7 @@ export function BggSearchPanel({
     const id = parseInt(manualId);
 
     if (isNaN(id) || id <= 0) {
-      setManualError('Please enter a valid BGG ID (positive number)');
+      setManualError('Inserisci un ID valido (numero positivo)');
       return;
     }
 
@@ -246,7 +246,7 @@ export function BggSearchPanel({
       const fullData = mapDetailsToFullData(details);
       setManualPreview(fullData);
     } catch (err) {
-      setManualError(err instanceof Error ? err.message : `Game with BGG ID ${id} not found`);
+      setManualError(err instanceof Error ? err.message : `Gioco con ID ${id} non trovato`);
     } finally {
       setManualLoading(false);
     }
@@ -282,7 +282,7 @@ export function BggSearchPanel({
       <Card className="p-6">
         <div className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="bgg-search">Search BoardGameGeek</Label>
+            <Label htmlFor="bgg-search">Cerca gioco</Label>
             <div className="relative">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
@@ -309,9 +309,9 @@ export function BggSearchPanel({
           {isThrottled && (
             <Alert>
               <Loader2 className="h-4 w-4 animate-spin" />
-              <AlertTitle>BGG is responding slowly</AlertTitle>
+              <AlertTitle>Risposta lenta</AlertTitle>
               <AlertDescription className="text-sm">
-                The BoardGameGeek API is taking longer than expected. Please wait...
+                La ricerca sta richiedendo più tempo del previsto. Attendere...
               </AlertDescription>
             </Alert>
           )}
@@ -324,7 +324,7 @@ export function BggSearchPanel({
               <AlertDescription className="text-sm">
                 {searchError instanceof Error
                   ? searchError.message
-                  : 'An error occurred during BGG search'}
+                  : 'Si è verificato un errore durante la ricerca'}
               </AlertDescription>
             </Alert>
           )}
@@ -417,7 +417,7 @@ export function BggSearchPanel({
                             {result.matchScore}% match
                           </Badge>
 
-                          <span className="text-xs text-muted-foreground">BGG #{result.bggId}</span>
+                          <span className="text-xs text-muted-foreground">ID #{result.bggId}</span>
                         </div>
                       </div>
 
@@ -428,7 +428,7 @@ export function BggSearchPanel({
                         rel="noopener noreferrer"
                         className="flex-shrink-0 rounded p-1 hover:bg-background"
                         onClick={e => e.stopPropagation()}
-                        title="View on BoardGameGeek"
+                        title="Vedi scheda esterna"
                       >
                         <ExternalLink className="h-4 w-4 text-muted-foreground" />
                       </a>
@@ -447,7 +447,7 @@ export function BggSearchPanel({
               <div className="rounded-md border-2 border-dashed p-8 text-center">
                 <p className="text-sm text-muted-foreground">
                   No games found for &quot;{debouncedQuery}&quot;. Try a different search term
-                  {showManualIdInput ? ' or use manual BGG ID below' : ''}.
+                  {showManualIdInput ? " o usa l'ID manuale qui sotto" : ''}.
                 </p>
               </div>
             )}
@@ -466,16 +466,16 @@ export function BggSearchPanel({
           <Card className="p-6">
             <div className="space-y-4">
               <div>
-                <h4 className="text-sm font-semibold">Manual BGG ID Input</h4>
+                <h4 className="text-sm font-semibold">Inserimento ID manuale</h4>
                 <p className="text-xs text-muted-foreground">
-                  If you know the BoardGameGeek ID, enter it directly.
+                  Se conosci l'ID del gioco, inseriscilo direttamente.
                 </p>
               </div>
 
               <div className="space-y-3">
                 <div className="flex gap-2">
                   <div className="flex-1 space-y-2">
-                    <Label htmlFor="manual-bgg-id">BGG ID</Label>
+                    <Label htmlFor="manual-bgg-id">ID</Label>
                     <Input
                       id="manual-bgg-id"
                       type="number"
@@ -549,7 +549,7 @@ export function BggSearchPanel({
                               {manualPreview.minPlayers}-{manualPreview.maxPlayers} players
                             </span>
                           )}
-                          <span className="text-xs">BGG #{manualPreview.id}</span>
+                          <span className="text-xs">ID #{manualPreview.id}</span>
                         </div>
                         {/* Show metadata preview */}
                         {manualPreview.categories.length > 0 && (

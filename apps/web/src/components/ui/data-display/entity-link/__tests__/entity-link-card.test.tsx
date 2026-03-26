@@ -76,7 +76,7 @@ describe('EntityLinkCard', () => {
 
   it('shows BGG badge when showBggBadge is true', () => {
     render(<EntityLinkCard link={MOCK_LINK} targetName="Wingspan" showBggBadge />);
-    expect(screen.getByText('BGG')).toBeInTheDocument();
+    expect(screen.getByText('Ext')).toBeInTheDocument();
   });
 
   it('has data-testid="entity-link-card" by default', () => {

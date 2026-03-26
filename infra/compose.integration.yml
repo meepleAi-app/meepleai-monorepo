@@ -7,7 +7,7 @@
 # Docker mode is NOT recommended for Windows (host.docker.internal cannot reach
 # SSH tunnels bound to localhost). Use it only on Linux or with extra_hosts workaround.
 #
-# Secrets: infra/secrets/integration/*.secret (synced from staging)
+# Secrets: infra/secrets/*.secret (synced from staging)
 #   Required: database.secret, redis.secret, jwt.secret,
 #             openrouter.secret, admin.secret, services-auth.secret
 
@@ -35,12 +35,12 @@ services:
     ports: ["127.0.0.1:8080:8080"]
     extra_hosts: ["host.docker.internal:host-gateway"]
     env_file:
-      - ./secrets/integration/database.secret
-      - ./secrets/integration/redis.secret
-      - ./secrets/integration/jwt.secret
-      - ./secrets/integration/openrouter.secret
-      - ./secrets/integration/admin.secret
-      - ./secrets/integration/services-auth.secret
+      - ./secrets/database.secret
+      - ./secrets/redis.secret
+      - ./secrets/jwt.secret
+      - ./secrets/openrouter.secret
+      - ./secrets/admin.secret
+      - ./secrets/services-auth.secret
     environment:
       ASPNETCORE_ENVIRONMENT: Integration
       ASPNETCORE_URLS: http://+:8080
@@ -62,7 +62,7 @@ services:
       EMBEDDING_FALLBACK_ENABLED: "false"
       Embedding__FallbackEnabled: "false"
     volumes:
-      - ./secrets/integration:/app/infra/secrets:ro
+      - ./secrets:/app/infra/secrets:ro
 
   web:
     ports: ["127.0.0.1:3000:3000"]

@@ -19,10 +19,10 @@ fi
 
 # Read admin password from secrets
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-ADMIN_SECRET_FILE="$SCRIPT_DIR/../secrets/dev/admin.secret"
+ADMIN_SECRET_FILE="$SCRIPT_DIR/../secrets/admin.secret"
 if [ ! -f "$ADMIN_SECRET_FILE" ]; then
   echo "ERROR: Admin secret not found at $ADMIN_SECRET_FILE"
-  echo "Run: cd infra && make secrets-dev"
+  echo "Run: cd infra && make secrets-setup"
   exit 1
 fi
 ADMIN_PASSWORD=$(sed -n 's/^ADMIN_PASSWORD=//p' "$ADMIN_SECRET_FILE" | head -1)

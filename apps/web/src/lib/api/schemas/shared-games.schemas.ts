@@ -165,22 +165,36 @@ export type GamePublisher = z.infer<typeof GamePublisherSchema>;
  */
 export const SharedGameSchema = z.object({
   id: z.string().uuid(),
-  bggId: z.number().int().positive().nullable(),
+  bggId: z.number().int().nullable().optional(),
   title: z.string().min(1),
-  yearPublished: z.number().int(),
-  description: z.string(),
-  minPlayers: z.number().int().positive(),
-  maxPlayers: z.number().int().positive(),
-  playingTimeMinutes: z.number().int().positive(),
-  minAge: z.number().int().nonnegative(),
+  yearPublished: z.number().int().optional().default(0),
+  description: z.string().optional().default(''),
+  minPlayers: z.number().int().optional().default(0),
+  maxPlayers: z.number().int().optional().default(0),
+  playingTimeMinutes: z.number().int().optional().default(0),
+  minAge: z.number().int().optional().default(0),
   complexityRating: z.number().nullable(),
   averageRating: z.number().nullable(),
-  imageUrl: z.string(),
-  thumbnailUrl: z.string(),
-  status: GameStatusSchema, // Now string enum with JsonStringEnumConverter
-  isRagPublic: z.boolean().default(false), // whether RAG access is public for all owners
-  createdAt: z.string().datetime(),
-  modifiedAt: z.string().datetime().nullable(),
+  imageUrl: z.string().default(''),
+  thumbnailUrl: z.string().default(''),
+  status: z
+    .union([GameStatusSchema, GameStatusNumericSchema])
+    .default('Draft')
+    .transform(v => {
+      if (typeof v === 'number') {
+        const map: Record<number, GameStatus> = {
+          0: 'Draft',
+          1: 'PendingApproval',
+          2: 'Published',
+          3: 'Archived',
+        };
+        return map[v] ?? 'Draft';
+      }
+      return v as GameStatus;
+    }), // Accept both string enum and numeric, normalize to string
+  isRagPublic: z.boolean().optional().default(false),
+  createdAt: z.string().optional().default(''),
+  modifiedAt: z.string().nullable().optional(),
 });
 
 export type SharedGame = z.infer<typeof SharedGameSchema>;

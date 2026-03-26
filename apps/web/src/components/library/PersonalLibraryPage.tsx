@@ -277,7 +277,6 @@ export function PersonalLibraryPage({ className }: PersonalLibraryPageProps) {
         <LibraryPageHeader gameCount={0} onAddGame={handleAddGame} />
         <LibraryEmptyState
           onExploreCatalog={() => router.push('/library?tab=public')}
-          onImportBgg={() => router.push('/library/private/add')}
           onCreateCustom={() => router.push('/library/private/add')}
         />
       </div>

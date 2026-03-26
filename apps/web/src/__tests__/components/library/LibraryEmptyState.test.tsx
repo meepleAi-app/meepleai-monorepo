@@ -14,7 +14,6 @@ vi.mock('next/link', () => ({
 describe('LibraryEmptyState (immersive)', () => {
   const defaultProps = {
     onExploreCatalog: vi.fn(),
-    onImportBgg: vi.fn(),
     onCreateCustom: vi.fn(),
   };
 
@@ -33,10 +32,9 @@ describe('LibraryEmptyState (immersive)', () => {
     expect(screen.getByText(/la tua collezione ti aspetta/i)).toBeInTheDocument();
   });
 
-  it('renders 3 quick-start action cards', () => {
+  it('renders 2 quick-start action cards', () => {
     render(<LibraryEmptyState {...defaultProps} />);
     expect(screen.getByText(/esplora il catalogo/i)).toBeInTheDocument();
-    expect(screen.getByText(/importa da bgg/i)).toBeInTheDocument();
     expect(screen.getByText(/crea gioco custom/i)).toBeInTheDocument();
   });
 
@@ -44,12 +42,6 @@ describe('LibraryEmptyState (immersive)', () => {
     render(<LibraryEmptyState {...defaultProps} />);
     fireEvent.click(screen.getByText(/esplora il catalogo/i));
     expect(defaultProps.onExploreCatalog).toHaveBeenCalledOnce();
-  });
-
-  it('calls onImportBgg when clicking import card', () => {
-    render(<LibraryEmptyState {...defaultProps} />);
-    fireEvent.click(screen.getByText(/importa da bgg/i));
-    expect(defaultProps.onImportBgg).toHaveBeenCalledOnce();
   });
 
   it('calls onCreateCustom when clicking create card', () => {

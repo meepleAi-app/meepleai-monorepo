@@ -18,7 +18,6 @@ export interface GameDetailCompositeProps {
   yearPublished?: number;
   imageUrl?: string;
   averageRating?: number;
-  bggId?: number;
 
   // Metadata for MeepleCard
   metadata?: MeepleCardMetadata[];
@@ -64,7 +63,6 @@ export function GameDetailComposite({
   yearPublished,
   imageUrl,
   averageRating,
-  bggId,
   metadata,
   flipData,
   isAuthenticated,
@@ -96,7 +94,6 @@ export function GameDetailComposite({
       <MeepleInfoCard
         gameId={gameId}
         gameTitle={gameTitle}
-        bggId={bggId}
         readOnly={!isAuthenticated}
         showKnowledgeBase={showKnowledgeBase}
         showSocialLinks={showSocialLinks}

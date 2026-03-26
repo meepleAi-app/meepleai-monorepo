@@ -34,7 +34,6 @@ interface WizardState {
   gameTitle?: string;
   privateGameId?: string;
   pdfId?: string;
-  bggId?: number;
 }
 
 const WIZARD_STEPS = [
@@ -52,7 +51,7 @@ export function GameNightWizard({ onComplete }: GameNightWizardProps) {
   const [state, setState] = useState<WizardState>({});
 
   const handleGameFound = useCallback(
-    (data: { gameId?: string; privateGameId?: string; gameTitle: string; bggId?: number }) => {
+    (data: { gameId?: string; privateGameId?: string; gameTitle: string }) => {
       setState(prev => ({ ...prev, ...data }));
       setStep('upload');
     },

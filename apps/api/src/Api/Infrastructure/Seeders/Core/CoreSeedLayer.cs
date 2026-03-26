@@ -1,15 +1,14 @@
 using Api.BoundedContexts.Administration.Application.Commands;
-using Api.BoundedContexts.KnowledgeBase.Application.Commands;
 using Api.BoundedContexts.SystemConfiguration.Application.Commands;
 using MediatR;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 namespace Api.Infrastructure.Seeders.Core;
 
 /// <summary>
-/// Core seed layer: admin user, AI models.
-/// Test users, E2E users, and agent definitions are Dev-only.
+/// Core seed layer: admin user, AI models, feature flags, rate limits, badges, tier definitions.
 /// Runs in all profiles (Prod, Staging, Dev).
 /// </summary>
 internal sealed class CoreSeedLayer : ISeedLayer
@@ -20,14 +19,52 @@ internal sealed class CoreSeedLayer : ISeedLayer
     public async Task SeedAsync(SeedContext context, CancellationToken cancellationToken = default)
     {
         var mediator = context.Services.GetRequiredService<IMediator>();
+        var db = context.DbContext;
+        var logger = context.Logger;
 
-        context.Logger.LogInformation("[Core] Seeding admin user...");
+        // Fatal: admin user must exist
+        logger.LogInformation("[Core] Seeding admin user...");
         await mediator.Send(new SeedAdminUserCommand(), cancellationToken).ConfigureAwait(false);
 
-        context.Logger.LogInformation("[Core] Seeding AI models...");
-        await mediator.Send(new SeedAiModelsCommand(), cancellationToken).ConfigureAwait(false);
+        // Non-fatal: log + continue on failure
+        await SafeExecute("AI models",
+            () => mediator.Send(new SeedAiModelsCommand(), cancellationToken), logger).ConfigureAwait(false);
 
-        // Test users, E2E users, and agent definitions disabled — only admin + games in dev seed
-        context.Logger.LogInformation("[Core] Skipping test/E2E users and agent definitions (clean seed)");
+        // Resolve admin user ID for FK constraints
+        var adminUserId = await GetAdminUserIdAsync(db, cancellationToken).ConfigureAwait(false);
+
+        await SafeExecute("feature flags",
+            () => FeatureFlagSeeder.SeedFeatureFlagsAsync(db, adminUserId, logger, cancellationToken), logger)
+            .ConfigureAwait(false);
+        await SafeExecute("rate limit configs",
+            () => RateLimitConfigSeeder.SeedRateLimitConfigsAsync(db, logger, cancellationToken), logger)
+            .ConfigureAwait(false);
+        await SafeExecute("badges",
+            () => BadgeSeeder.SeedBadgesAsync(db, logger, cancellationToken), logger)
+            .ConfigureAwait(false);
+        await SafeExecute("tier definitions",
+            () => TierDefinitionSeeder.SeedTierDefinitionsAsync(db, logger, cancellationToken), logger)
+            .ConfigureAwait(false);
+    }
+
+    private static async Task<Guid> GetAdminUserIdAsync(MeepleAiDbContext db, CancellationToken ct)
+    {
+        var adminUser = await db.Users
+            .FirstOrDefaultAsync(u => u.Role == "admin" || u.Role == "superadmin", ct)
+            .ConfigureAwait(false);
+
+        return adminUser?.Id ?? Guid.Empty;
+    }
+
+    private static async Task SafeExecute(string name, Func<Task> action, ILogger logger)
+    {
+        try
+        {
+            await action().ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "[Core] Seeder '{Name}' failed — continuing", name);
+        }
     }
 }

@@ -65,7 +65,7 @@ export type SessionInviteResult = z.infer<typeof SessionInviteResultSchema>;
 export const JoinSessionResultSchema = z.object({
   sessionId: z.string().uuid(),
   participantId: z.string().uuid(),
-  sessionToken: z.string(),
+  connectionToken: z.string(),
   displayName: z.string(),
   role: z.string(),
 });
@@ -74,6 +74,9 @@ export type JoinSessionResult = z.infer<typeof JoinSessionResultSchema>;
 
 export const SessionParticipantDtoSchema = z.object({
   id: z.string().uuid(),
+  sessionId: z.string().uuid(),
+  userId: z.string().uuid().nullable(),
+  guestName: z.string().nullable().optional(),
   displayName: z.string(),
   role: z.string(),
   agentAccessEnabled: z.boolean(),

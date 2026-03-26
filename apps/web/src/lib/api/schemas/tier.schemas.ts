@@ -2,6 +2,7 @@
  * Tier & Usage Schemas (Game Night Improvvisata - E2-4/E2-5)
  *
  * Zod schemas for user usage snapshot and tier definitions.
+ * Matches backend TierDefinitionDto and TierLimitsDto.
  */
 
 import { z } from 'zod';
@@ -31,7 +32,26 @@ export const UsageSnapshotSchema = z.object({
 export type UsageSnapshot = z.infer<typeof UsageSnapshotSchema>;
 
 // ========================================
-// Tier Limit Definition
+// Tier Limits (matches backend TierLimitsDto)
+// ========================================
+
+export const TierLimitsSchema = z.object({
+  maxPrivateGames: z.number().int(),
+  maxPdfUploadsPerMonth: z.number().int(),
+  maxPdfSizeBytes: z.number().int(),
+  maxAgents: z.number().int(),
+  maxAgentQueriesPerDay: z.number().int(),
+  maxSessionQueries: z.number().int(),
+  maxSessionPlayers: z.number().int(),
+  maxPhotosPerSession: z.number().int(),
+  sessionSaveEnabled: z.boolean(),
+  maxCatalogProposalsPerWeek: z.number().int(),
+});
+
+export type TierLimits = z.infer<typeof TierLimitsSchema>;
+
+// ========================================
+// Tier Limit (legacy array format — kept for UI compatibility)
 // ========================================
 
 export const TierLimitSchema = z.object({
@@ -42,17 +62,18 @@ export const TierLimitSchema = z.object({
 export type TierLimit = z.infer<typeof TierLimitSchema>;
 
 // ========================================
-// Tier Definition
+// Tier Definition (matches backend TierDefinitionDto)
 // ========================================
 
 export const TierDefinitionSchema = z.object({
   id: z.string().uuid(),
   name: z.string(),
   displayName: z.string(),
-  description: z.string().nullable().optional(),
-  monthlyPriceEur: z.number(),
-  isActive: z.boolean(),
-  limits: z.array(TierLimitSchema),
+  limits: TierLimitsSchema,
+  llmModelTier: z.string(),
+  isDefault: z.boolean(),
+  createdAt: z.string(),
+  updatedAt: z.string(),
 });
 
 export type TierDefinition = z.infer<typeof TierDefinitionSchema>;

@@ -334,7 +334,7 @@ Recommended limits:
 ## Related Documentation
 
 - [E2E Testing Guide](./e2e-testing.md)
-- [Admin Dashboard Architecture](../01-architecture/admin-dashboard.md)
+- [Admin Dashboard Architecture](../architecture/admin-dashboard.md)
 - [Issue #2916](https://github.com/meepleAi-app/meepleai-monorepo/issues/2916)
 - [Issue #2852 - Chromatic Visual Testing](https://github.com/meepleAi-app/meepleai-monorepo/issues/2852)
 - [Playwright Screenshot API](https://playwright.dev/docs/test-snapshots)

@@ -219,7 +219,15 @@ internal sealed class PgVectorStoreAdapter : IVectorStoreAdapter
         var lookupCmd = (NpgsqlCommand)connection.CreateCommand();
         await using (lookupCmd.ConfigureAwait(false))
         {
-            lookupCmd.CommandText = "SELECT \"Id\", \"GameId\" FROM vector_documents WHERE \"Id\" = ANY(@ids)";
+            // Resolve game_id for embeddings: prefer SharedGameId (for RAG search by shared game),
+            // fall back to GameId. Join with games table to resolve SharedGameId when not set on vector_documents.
+            lookupCmd.CommandText = """
+                SELECT vd."Id",
+                       COALESCE(vd.shared_game_id, g."SharedGameId", vd."GameId") AS resolved_game_id
+                FROM vector_documents vd
+                LEFT JOIN games g ON g."Id" = vd."GameId"
+                WHERE vd."Id" = ANY(@ids)
+                """;
             lookupCmd.Parameters.AddWithValue("@ids", vectorDocumentIds.ToArray());
 
             var reader = await lookupCmd.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);

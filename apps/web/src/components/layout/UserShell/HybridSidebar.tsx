@@ -5,35 +5,21 @@
  *
  * Features:
  * - 52px collapsed (icon-only), expands to 220px on hover/focus-within
- * - Three sections: Navigazione, AI Assistant, Collezioni
+ * - Two sections: Navigazione, AI Assistant
  * - Settings pinned to bottom
  * - Hidden on mobile, visible on desktop (lg:flex)
  * - motion-reduce:transition-none for accessibility
  */
 
-import {
-  BookOpen,
-  Bot,
-  Dice5,
-  FileText,
-  Heart,
-  House,
-  MessageCircle,
-  Settings,
-  Star,
-  Target,
-  Users,
-} from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useSearchParams } from 'next/navigation';
 
+import { useNavbarHeightStore } from '@/lib/stores/navbar-height-store';
 import { cn } from '@/lib/utils';
-
-import type { LucideIcon } from 'lucide-react';
 
 interface NavItem {
   label: string;
-  icon: LucideIcon;
+  icon: string;
   href: string;
   /** Match pathname prefix for active state (defaults to href) */
   activeMatch?: string;
@@ -50,49 +36,41 @@ const NAV_SECTIONS: NavSection[] = [
   {
     title: 'Navigazione',
     items: [
-      { label: 'Dashboard', icon: House, href: '/dashboard' },
+      { label: 'Dashboard', icon: '🏠', href: '/dashboard' },
       {
         label: 'Libreria',
-        icon: BookOpen,
+        icon: '📚',
         href: '/library?tab=collection',
         activeMatch: '/library',
         activeSearchParam: { key: 'tab', value: 'collection' },
       },
       {
         label: 'Wishlist',
-        icon: Heart,
+        icon: '💝',
         href: '/library?tab=wishlist',
         activeMatch: '/library',
         activeSearchParam: { key: 'tab', value: 'wishlist' },
       },
-      { label: 'Sessioni', icon: Dice5, href: '/sessions', activeMatch: '/sessions' },
+      { label: 'Sessioni', icon: '🎲', href: '/sessions', activeMatch: '/sessions' },
     ],
   },
   {
     title: 'AI Assistant',
     items: [
-      { label: 'Chat RAG', icon: MessageCircle, href: '/chat', activeMatch: '/chat' },
+      { label: 'Chat RAG', icon: '✨', href: '/chat', activeMatch: '/chat' },
       {
         label: 'Documenti',
-        icon: FileText,
+        icon: '📜',
         href: '/library?tab=private',
         activeMatch: '/library',
         activeSearchParam: { key: 'tab', value: 'private' },
       },
-      { label: 'Agenti', icon: Bot, href: '/agents', activeMatch: '/agents' },
-    ],
-  },
-  {
-    title: 'Collezioni',
-    items: [
-      { label: 'Preferiti', icon: Star, href: '#' },
-      { label: 'Con amici', icon: Users, href: '#' },
-      { label: 'Strategici', icon: Target, href: '#' },
+      { label: 'Agenti', icon: '🤖', href: '/agents', activeMatch: '/agents' },
     ],
   },
 ];
 
-const BOTTOM_ITEMS: NavItem[] = [{ label: 'Impostazioni', icon: Settings, href: '/settings' }];
+const BOTTOM_ITEMS: NavItem[] = [{ label: 'Impostazioni', icon: '⚙️', href: '/settings' }];
 
 function useIsActive(item: NavItem): boolean {
   const pathname = usePathname();
@@ -117,7 +95,6 @@ function useIsActive(item: NavItem): boolean {
 
 function SidebarLink({ item }: { item: NavItem }) {
   const isActive = useIsActive(item);
-  const Icon = item.icon;
 
   return (
     <Link
@@ -133,7 +110,9 @@ function SidebarLink({ item }: { item: NavItem }) {
       aria-current={isActive ? 'page' : undefined}
     >
       <span className="flex items-center justify-center w-[34px] h-[34px] shrink-0">
-        <Icon className="w-5 h-5" />
+        <span className="text-xl leading-none" role="img" aria-label={item.label}>
+          {item.icon}
+        </span>
       </span>
       <span
         className={cn(
@@ -163,18 +142,20 @@ function SectionLabel({ title }: { title: string }) {
 }
 
 export function HybridSidebar() {
+  const navbarHeight = useNavbarHeightStore(s => s.height);
+
   return (
     <nav
       className={cn(
         'hidden lg:flex flex-col',
-        'fixed top-12 left-0 z-30',
-        'h-[calc(100dvh-48px)]',
+        'fixed left-0 z-30',
         'w-[52px] hover:w-[220px] focus-within:w-[220px]',
         'transition-[width] duration-300 ease-[cubic-bezier(0.4,0,0.2,1)]',
         'motion-reduce:transition-none',
         'border-r border-border/40 bg-background',
         'group overflow-hidden'
       )}
+      style={{ top: navbarHeight, height: `calc(100dvh - ${navbarHeight}px)` }}
       role="navigation"
       aria-label="Navigazione principale"
       data-testid="hybrid-sidebar"

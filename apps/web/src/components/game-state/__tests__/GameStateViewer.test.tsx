@@ -12,9 +12,9 @@ import type { GameState, PlayerState } from '@/types/game-state';
 
 import { GameStateViewer } from '../GameStateViewer';
 
-// Mock PlayerStateCard component
-vi.mock('../PlayerStateCard', () => ({
-  PlayerStateCard: ({
+// Mock MeeplePlayerStateCard component (migrated from PlayerStateCard)
+vi.mock('../MeeplePlayerStateCard', () => ({
+  MeeplePlayerStateCard: ({
     player,
     isCurrentPlayer,
     editable,
@@ -269,9 +269,7 @@ describe('GameStateViewer - Issue #2766', () => {
 
       // PlayerStateCard should not have editable indicator
       const aliceCard = screen.getByTestId('player-card-Alice');
-      expect(
-        aliceCard.querySelector('[data-testid="editable-indicator"]')
-      ).not.toBeInTheDocument();
+      expect(aliceCard.querySelector('[data-testid="editable-indicator"]')).not.toBeInTheDocument();
     });
 
     it('should handle empty players array', () => {

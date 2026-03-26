@@ -16,7 +16,7 @@ export function WelcomeCTA() {
           <Link href="/register">Inizia gratis</Link>
         </Button>
         <Button asChild variant="outline" size="lg">
-          <Link href="/games">Esplora il catalogo</Link>
+          <Link href="/register">Esplora il catalogo</Link>
         </Button>
       </div>
     </section>

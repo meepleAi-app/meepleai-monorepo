@@ -1,6 +1,6 @@
 /**
  * Profile Section Layout
- * Carte in Mano — NavConfig removed, navigation handled by UnifiedShell card system.
+ * Carte in Mano — NavConfig removed, navigation handled by UserShell card system.
  */
 
 import { type ReactNode } from 'react';

@@ -84,15 +84,7 @@ public sealed class UploadPdfMidPhaseCancellationTests : IAsyncLifetime
         // Use SharedTestcontainersFixture Redis (no separate container needed!)
         var redisConnectionString = _fixture.RedisConnectionString;
 
-        var services = new ServiceCollection();
-        services.AddLogging(builder => builder.AddConsole().SetMinimumLevel(LogLevel.Warning));
-
-        services.AddDbContext<MeepleAiDbContext>(options =>
-        {
-            options.UseNpgsql(_isolatedDbConnectionString, o => o.UseVector()); // Issue #3547: Enable pgvector
-            options.ConfigureWarnings(w =>
-                w.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning));
-        });
+        var services = IntegrationServiceCollectionBuilder.CreateBase(_isolatedDbConnectionString);
 
         _redis = await ConnectionMultiplexer.ConnectAsync(redisConnectionString);
         services.AddSingleton<IConnectionMultiplexer>(_redis);
@@ -101,15 +93,9 @@ public sealed class UploadPdfMidPhaseCancellationTests : IAsyncLifetime
         var db = _redis.GetDatabase();
         await db.ExecuteAsync("FLUSHDB");
 
-        // Register repositories and domain services
+        // Register repositories
         services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<IPdfDocumentRepository, PdfDocumentRepository>();
-        services.AddScoped<IUnitOfWork, EfCoreUnitOfWork>();
-        services.AddScoped<IDomainEventCollector, DomainEventCollector>();
-
-        // Register MediatR
-        services.AddMediatR(config =>
-            config.RegisterServicesFromAssembly(typeof(UploadPdfCommandHandler).Assembly));
 
         services.AddScoped<UploadPdfCommandHandler>();
 
@@ -334,15 +320,7 @@ public sealed class UploadPdfMidPhaseCancellationTests : IAsyncLifetime
 
         // Arrange - Override blob storage with mid-write cancellation mock using SharedTestcontainersFixture
 
-        var services = new ServiceCollection();
-        services.AddLogging(builder => builder.AddConsole().SetMinimumLevel(LogLevel.Warning));
-
-        services.AddDbContext<MeepleAiDbContext>(options =>
-        {
-            options.UseNpgsql(_isolatedDbConnectionString, o => o.UseVector()); // Issue #3547: Enable pgvector
-            options.ConfigureWarnings(w =>
-                w.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning));
-        });
+        var services = IntegrationServiceCollectionBuilder.CreateBase(_isolatedDbConnectionString);
 
         // Mock blob storage that delays then throws
         var midWriteBlob = new Mock<IBlobStorageService>();
@@ -356,7 +334,6 @@ public sealed class UploadPdfMidPhaseCancellationTests : IAsyncLifetime
 
         RegisterDefaultMockServices(services);
         services.Configure<PdfProcessingOptions>(options => options.MaxFileSizeBytes = 10485760);
-        services.AddMediatR(config => config.RegisterServicesFromAssembly(typeof(UploadPdfCommandHandler).Assembly));
         services.AddScoped<UploadPdfCommandHandler>();
 
         var midWriteProvider = services.BuildServiceProvider();
@@ -382,8 +359,8 @@ public sealed class UploadPdfMidPhaseCancellationTests : IAsyncLifetime
         using var cts = PdfUploadTestHelpers.CreateDelayedCancellation(100); // Cancel mid-write
 
         // Act & Assert
-        await Assert.ThrowsAsync<TaskCanceledException>(
-            async () => await handler.Handle(command, cts.Token));
+        var act = async () => await handler.Handle(command, cts.Token);
+        await act.Should().ThrowAsync<TaskCanceledException>();
 
         // Verify cleanup
         await PdfUploadTestHelpers.VerifyNoPdfDocumentsAsync(testDbContext);

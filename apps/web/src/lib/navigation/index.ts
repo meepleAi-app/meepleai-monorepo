@@ -15,8 +15,8 @@ export interface NavigationLinks {
 
   // ── Library ───────────────────────────────────────────────────────────────
   library: string;
-  libraryGames: string;       // personal games (default, was libraryPrivate)
-  libraryCollection: string;  // shared catalog games
+  libraryGames: string; // personal games (default, was libraryPrivate)
+  libraryCollection: string; // shared catalog games
   libraryWishlist: string;
   /** @deprecated use libraryGames instead */
   libraryPrivate: string;
@@ -98,21 +98,19 @@ export function getNavigationLinks(): NavigationLinks {
 
     // ── Library ─────────────────────────────────────────────────────────────
     library: '/library',
-    libraryGames: '/library',                     // personal games (default, Issue #5167)
+    libraryGames: '/library', // personal games (default, Issue #5167)
     libraryCollection: '/library?tab=collection', // shared catalog games (Issue #5167)
     libraryWishlist: '/library?tab=wishlist',
-    libraryPrivate: '/library',                   // @deprecated → use libraryGames
-    libraryPrivateAdd: '/library?action=add',     // @deprecated → use ?action=add drawer
+    libraryPrivate: '/library', // @deprecated → use libraryGames
+    libraryPrivateAdd: '/library?action=add', // @deprecated → use ?action=add drawer
     libraryProposals: '/discover?tab=proposals',
     libraryPropose: '/discover/propose',
     libraryGame: (gameId: string) => `/library/${gameId}`,
     libraryGameTab: (gameId: string, tab: LibraryGameTab) =>
-      tab === 'overview'
-        ? `/library/${gameId}`
-        : `/library/${gameId}?tab=${tab}`,
+      tab === 'overview' ? `/library/${gameId}` : `/library/${gameId}?tab=${tab}`,
 
     // ── Discover / Community ────────────────────────────────────────────────
-    discover: '/discover',
+    discover: '/games',
     discoverGame: (gameId: string) => `/discover/${gameId}`,
     discoverAdd: '/discover/add',
     discoverProposals: '/discover?tab=proposals',

@@ -9,40 +9,29 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
+import { Loader2 } from 'lucide-react';
+import dynamic from 'next/dynamic';
 import { useRouter, useParams } from 'next/navigation';
 
-import { TypologyForm } from '@/components/admin/agent-typologies/TypologyForm';
 import { useAuthUser } from '@/components/auth/AuthProvider';
+import { EditorAuthGuard } from '@/components/auth/EditorAuthGuard';
 import { agentTypologiesApi } from '@/lib/api/agent-typologies.api';
 
-/**
- * EditorAuthGuard placeholder
- * TODO: Extract to shared component
- */
-function EditorAuthGuard({ children, loading, user }: {
-  children: React.ReactNode;
-  loading: boolean;
-  user: { role: string; id: string } | null;
-}) {
-  if (loading) {
-    return <div className="container mx-auto p-6">Loading...</div>;
-  }
-
-  if (!user || (user.role !== 'Editor' && user.role !== 'Admin')) {
-    return (
-      <div className="container mx-auto p-6">
-        <div className="text-center p-12">
-          <h2 className="text-2xl font-bold mb-4">Access Denied</h2>
-          <p className="text-muted-foreground">
-            This page is only accessible to Editors and Administrators.
-          </p>
-        </div>
+// Lazy load TypologyForm — contains Monaco editor (~2.5MB)
+const TypologyForm = dynamic(
+  () =>
+    import('@/components/admin/agent-typologies/TypologyForm').then(mod => ({
+      default: mod.TypologyForm,
+    })),
+  {
+    loading: () => (
+      <div className="flex items-center justify-center py-24">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
-    );
+    ),
+    ssr: false,
   }
-
-  return <>{children}</>;
-}
+);
 
 function EditProposalClient() {
   const router = useRouter();
@@ -51,7 +40,11 @@ function EditProposalClient() {
   const typologyId = params?.id as string;
 
   // Fetch typology
-  const { data: typology, isLoading, error } = useQuery({
+  const {
+    data: typology,
+    isLoading,
+    error,
+  } = useQuery({
     queryKey: ['typology', typologyId],
     queryFn: () => agentTypologiesApi.getById(typologyId),
     enabled: !!typologyId,
@@ -81,7 +74,9 @@ function EditProposalClient() {
         <div className="text-center p-12">
           <h2 className="text-2xl font-bold mb-4">Proposal Not Found</h2>
           <p className="text-muted-foreground">
-            {error instanceof Error ? error.message : 'The proposal you are looking for does not exist.'}
+            {error instanceof Error
+              ? error.message
+              : 'The proposal you are looking for does not exist.'}
           </p>
         </div>
       </div>
@@ -94,9 +89,7 @@ function EditProposalClient() {
       <div className="container mx-auto p-6">
         <div className="text-center p-12">
           <h2 className="text-2xl font-bold mb-4">Not Authorized</h2>
-          <p className="text-muted-foreground">
-            You can only edit your own proposals.
-          </p>
+          <p className="text-muted-foreground">You can only edit your own proposals.</p>
         </div>
       </div>
     );

@@ -1,7 +1,7 @@
 using System.Text.Json;
 using Api.BoundedContexts.GameManagement.Application.Commands.SessionSnapshot;
 using Api.BoundedContexts.GameManagement.Application.DTOs.SessionSnapshot;
-using Api.BoundedContexts.GameManagement.Application.Handlers.SessionSnapshot;
+using Api.BoundedContexts.GameManagement.Application.Commands.SessionSnapshot;
 using Api.BoundedContexts.GameManagement.Domain.Entities;
 using Api.BoundedContexts.GameManagement.Domain.Entities.SessionSnapshot;
 using Api.BoundedContexts.GameManagement.Domain.Enums;
@@ -12,6 +12,7 @@ using MediatR;
 using Microsoft.Extensions.Time.Testing;
 using Moq;
 using Xunit;
+using FluentAssertions;
 using DomainSessionSnapshot = Api.BoundedContexts.GameManagement.Domain.Entities.SessionSnapshot.SessionSnapshot;
 
 namespace Api.Tests.BoundedContexts.GameManagement.Application.Handlers.SessionSnapshot;
@@ -103,8 +104,8 @@ public class RestoreSessionSnapshotCommandHandlerTests
         // Verify session was updated
         _sessionRepositoryMock.Verify(r => r.UpdateAsync(session, It.IsAny<CancellationToken>()), Times.Once);
 
-        Assert.NotNull(result);
-        Assert.Equal(preRestoreDto.Id, result.Id);
+        result.Should().NotBeNull();
+        result.Id.Should().Be(preRestoreDto.Id);
     }
 
     [Fact]
@@ -130,10 +131,10 @@ public class RestoreSessionSnapshotCommandHandlerTests
             new RestoreSessionSnapshotCommand(sessionId, 0), TestContext.Current.CancellationToken);
 
         // Verify the game state was restored from the snapshot
-        Assert.NotNull(session.GameState);
+        session.GameState.Should().NotBeNull();
         var restoredJson = session.GameState.RootElement.GetRawText();
-        Assert.Contains("\"restored\"", restoredJson, StringComparison.Ordinal);
-        Assert.Contains("99", restoredJson, StringComparison.Ordinal);
+        restoredJson.Should().Contain("\"restored\"");
+        restoredJson.Should().Contain("99");
     }
 
     [Fact]
@@ -145,10 +146,11 @@ public class RestoreSessionSnapshotCommandHandlerTests
 
         var handler = CreateHandler();
 
-        await Assert.ThrowsAsync<NotFoundException>(() =>
+        var act = () =>
             handler.Handle(
                 new RestoreSessionSnapshotCommand(sessionId, 0),
-                TestContext.Current.CancellationToken));
+                TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<NotFoundException>();
     }
 
     [Fact]
@@ -163,10 +165,11 @@ public class RestoreSessionSnapshotCommandHandlerTests
 
         var handler = CreateHandler();
 
-        await Assert.ThrowsAsync<ConflictException>(() =>
+        var act = () =>
             handler.Handle(
                 new RestoreSessionSnapshotCommand(sessionId, 0),
-                TestContext.Current.CancellationToken));
+                TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<ConflictException>();
     }
 
     [Fact]
@@ -182,10 +185,11 @@ public class RestoreSessionSnapshotCommandHandlerTests
 
         var handler = CreateHandler();
 
-        await Assert.ThrowsAsync<NotFoundException>(() =>
+        var act = () =>
             handler.Handle(
                 new RestoreSessionSnapshotCommand(sessionId, 99),
-                TestContext.Current.CancellationToken));
+                TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<NotFoundException>();
     }
 
     [Fact]
@@ -204,10 +208,11 @@ public class RestoreSessionSnapshotCommandHandlerTests
 
         var handler = CreateHandler();
 
-        await Assert.ThrowsAsync<ConflictException>(() =>
+        var act = () =>
             handler.Handle(
                 new RestoreSessionSnapshotCommand(sessionId, 0),
-                TestContext.Current.CancellationToken));
+                TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<ConflictException>();
     }
 
     [Fact]
@@ -215,8 +220,9 @@ public class RestoreSessionSnapshotCommandHandlerTests
     {
         var handler = CreateHandler();
 
-        await Assert.ThrowsAsync<ArgumentNullException>(() =>
-            handler.Handle(null!, TestContext.Current.CancellationToken));
+        var act = () =>
+            handler.Handle(null!, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<ArgumentNullException>();
     }
 
     [Fact]

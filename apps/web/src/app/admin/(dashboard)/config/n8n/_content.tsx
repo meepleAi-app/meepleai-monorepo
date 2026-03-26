@@ -14,10 +14,12 @@ import {
   Loader2,
 } from 'lucide-react';
 
-import { Button } from '@/components/ui/button';
+import { EmptyFeatureState } from '@/components/admin/EmptyFeatureState';
 import { Badge } from '@/components/ui/data-display/badge';
+import { Button } from '@/components/ui/primitives/button';
 import { useToast } from '@/hooks/useToast';
 import { api } from '@/lib/api';
+import { isNotFoundError } from '@/lib/api/core/errors';
 
 type N8nConfig = {
   id: string;
@@ -43,9 +45,17 @@ export function N8nConfigContent() {
     webhookUrl: '',
   });
 
-  const { data: configs = [], isLoading } = useQuery({
+  const {
+    data: configs = [],
+    isLoading,
+    error,
+  } = useQuery({
     queryKey: ['admin', 'n8n', 'configs'],
     queryFn: () => api.admin.getN8nConfigs(),
+    retry: (failureCount, err) => {
+      if (isNotFoundError(err)) return false;
+      return failureCount < 3;
+    },
   });
 
   const createMutation = useMutation({
@@ -145,6 +155,15 @@ export function N8nConfigContent() {
   };
 
   if (isLoading) return null;
+
+  if (isNotFoundError(error)) {
+    return (
+      <EmptyFeatureState
+        title="Funzionalità non disponibile"
+        description="Endpoint n8n non ancora implementato nel backend."
+      />
+    );
+  }
 
   return (
     <div className="space-y-6">

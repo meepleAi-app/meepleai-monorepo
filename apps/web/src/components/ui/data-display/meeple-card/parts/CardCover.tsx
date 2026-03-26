@@ -1,19 +1,23 @@
 'use client';
 
 /**
- * CardCover - Cover image wrapper with shimmer effect
+ * CardCover - Cover image wrapper with 4-corner overlay system
  *
- * Wraps the existing CoverImage component from meeple-card-parts with
- * variant-specific shimmer animation overlay and aspect ratio logic.
+ * Wraps CoverImage with CoverOverlay for the 4-corner slot layout:
+ *   - top-left: label stack (coverLabels)
+ *   - top-right: entity type mana pip (showEntityType)
+ *   - bottom-left: subtype icons (subtypeIcons)
+ *   - bottom-right: state badge (stateLabel)
  *
  * @module components/ui/data-display/meeple-card/parts/CardCover
  */
 
 import React from 'react';
 
+import { CoverOverlay } from './CoverOverlay';
 import { CoverImage } from '../../meeple-card-parts';
 
-import type { MeepleEntityType, MeepleCardVariant } from '../types';
+import type { CoverLabel, SubtypeIcon, MeepleEntityType, MeepleCardVariant } from '../types';
 
 export interface CardCoverProps {
   /** Image source URL */
@@ -30,17 +34,53 @@ export interface CardCoverProps {
   showShimmer?: boolean;
   /** Additional CSS class */
   className?: string;
+  /** Top-left: label stack */
+  coverLabels?: CoverLabel[];
+  /** Top-right: show entity type mana pip */
+  showEntityType?: boolean;
+  /** Bottom-left: subtype classification icons */
+  subtypeIcons?: SubtypeIcon[];
+  /** Bottom-right: state badge */
+  stateLabel?: {
+    text: string;
+    variant: 'success' | 'warning' | 'error' | 'info';
+  };
+  /** Action strip rendered inside cover's relative wrapper (cover-relative positioning) */
+  actionStrip?: React.ReactNode;
 }
 
 /**
- * Cover image section with shimmer animation overlay.
+ * Cover image section with 4-corner overlay system.
  * Delegates actual image rendering to the existing CoverImage component.
  * Compact variant does not render a cover image.
  */
-export function CardCover({ src, alt, variant, entity, customColor, className }: CardCoverProps) {
+export function CardCover({
+  src,
+  alt,
+  variant,
+  entity,
+  customColor,
+  className: _className,
+  coverLabels,
+  showEntityType,
+  subtypeIcons,
+  stateLabel,
+  actionStrip,
+}: CardCoverProps) {
   if (variant === 'compact') return null;
 
   return (
-    <CoverImage src={src} alt={alt} variant={variant} entity={entity} customColor={customColor} />
+    <div className="relative">
+      <CoverImage src={src} alt={alt} variant={variant} entity={entity} customColor={customColor} />
+      <CoverOverlay
+        entity={entity}
+        customColor={customColor}
+        coverLabels={coverLabels}
+        showEntityType={showEntityType}
+        subtypeIcons={subtypeIcons}
+        stateLabel={stateLabel}
+      />
+      {actionStrip}
+    </div>
   );
 }

@@ -28,7 +28,7 @@ async function setupQuickAddMocks(page: Page) {
   ];
 
   // Mock auth
-  await page.route(`${API_BASE}/api/v1/auth/me`, async (route) => {
+  await page.route(`${API_BASE}/api/v1/auth/me`, async route => {
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
@@ -45,7 +45,7 @@ async function setupQuickAddMocks(page: Page) {
   });
 
   // Mock games endpoint
-  await page.route(`${API_BASE}/api/v1/games**`, async (route) => {
+  await page.route(`${API_BASE}/api/v1/games**`, async route => {
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
@@ -79,7 +79,7 @@ async function setupQuickAddMocks(page: Page) {
   });
 
   // Mock collections endpoint
-  await page.route(`${API_BASE}/api/v1/library/collections**`, async (route) => {
+  await page.route(`${API_BASE}/api/v1/library/collections**`, async route => {
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
@@ -91,7 +91,7 @@ async function setupQuickAddMocks(page: Page) {
   });
 
   // Mock add to library endpoint
-  await page.route(`${API_BASE}/api/v1/library/games`, async (route) => {
+  await page.route(`${API_BASE}/api/v1/library/games`, async route => {
     const body = await route.request().postDataJSON();
 
     if (!body?.gameId) {
@@ -117,7 +117,7 @@ async function setupQuickAddMocks(page: Page) {
   });
 
   // Mock add to collection endpoint
-  await page.route(`${API_BASE}/api/v1/library/collections/*/games`, async (route) => {
+  await page.route(`${API_BASE}/api/v1/library/collections/*/games`, async route => {
     const body = await route.request().postDataJSON();
 
     await route.fulfill({
@@ -138,21 +138,22 @@ test.describe('LIB-08: Quick Add to Library', () => {
     test('should display quick add button on game cards', async ({ page }) => {
       await setupQuickAddMocks(page);
 
-      await page.goto('/games');
+      await page.goto('/library');
       await page.waitForLoadState('networkidle');
 
       // Should show add button on game cards
       await expect(
-        page.getByRole('button', { name: /add|library|\+/i }).first().or(
-          page.locator('[data-testid="quick-add"]').first()
-        )
+        page
+          .getByRole('button', { name: /add|library|\+/i })
+          .first()
+          .or(page.locator('[data-testid="quick-add"]').first())
       ).toBeVisible({ timeout: 5000 });
     });
 
     test('should show tooltip on hover', async ({ page }) => {
       await setupQuickAddMocks(page);
 
-      await page.goto('/games');
+      await page.goto('/library');
       await page.waitForLoadState('networkidle');
 
       const addButton = page.getByRole('button', { name: /add/i }).first();
@@ -169,7 +170,7 @@ test.describe('LIB-08: Quick Add to Library', () => {
     test('should change icon when game is in library', async ({ page }) => {
       await setupQuickAddMocks(page);
 
-      await page.goto('/games');
+      await page.goto('/library');
       await page.waitForLoadState('networkidle');
 
       // Add a game first
@@ -190,7 +191,7 @@ test.describe('LIB-08: Quick Add to Library', () => {
     test('should open modal on quick add click', async ({ page }) => {
       await setupQuickAddMocks(page);
 
-      await page.goto('/games');
+      await page.goto('/library');
       await page.waitForLoadState('networkidle');
 
       const addButton = page.getByRole('button', { name: /add/i }).first();
@@ -211,7 +212,7 @@ test.describe('LIB-08: Quick Add to Library', () => {
     test('should show collection options in modal', async ({ page }) => {
       await setupQuickAddMocks(page);
 
-      await page.goto('/games');
+      await page.goto('/library');
       await page.waitForLoadState('networkidle');
 
       const addButton = page.getByRole('button', { name: /add/i }).first();
@@ -229,7 +230,7 @@ test.describe('LIB-08: Quick Add to Library', () => {
     test('should close modal on cancel', async ({ page }) => {
       await setupQuickAddMocks(page);
 
-      await page.goto('/games');
+      await page.goto('/library');
       await page.waitForLoadState('networkidle');
 
       const addButton = page.getByRole('button', { name: /add/i }).first();
@@ -251,7 +252,7 @@ test.describe('LIB-08: Quick Add to Library', () => {
     test('should allow selecting a collection', async ({ page }) => {
       await setupQuickAddMocks(page);
 
-      await page.goto('/games');
+      await page.goto('/library');
       await page.waitForLoadState('networkidle');
 
       const addButton = page.getByRole('button', { name: /add/i }).first();
@@ -272,7 +273,7 @@ test.describe('LIB-08: Quick Add to Library', () => {
     test('should allow adding to multiple collections', async ({ page }) => {
       await setupQuickAddMocks(page);
 
-      await page.goto('/games');
+      await page.goto('/library');
       await page.waitForLoadState('networkidle');
 
       const addButton = page.getByRole('button', { name: /add/i }).first();
@@ -294,7 +295,7 @@ test.describe('LIB-08: Quick Add to Library', () => {
     test('should show create new collection option', async ({ page }) => {
       await setupQuickAddMocks(page);
 
-      await page.goto('/games');
+      await page.goto('/library');
       await page.waitForLoadState('networkidle');
 
       const addButton = page.getByRole('button', { name: /add/i }).first();
@@ -304,9 +305,9 @@ test.describe('LIB-08: Quick Add to Library', () => {
         const modal = page.getByRole('dialog');
         if (await modal.isVisible()) {
           await expect(
-            page.getByText(/create.*new|new.*collection/i).or(
-              page.getByRole('button', { name: /create/i })
-            )
+            page
+              .getByText(/create.*new|new.*collection/i)
+              .or(page.getByRole('button', { name: /create/i }))
           ).toBeVisible();
         }
       }
@@ -317,7 +318,7 @@ test.describe('LIB-08: Quick Add to Library', () => {
     test('should show success message after adding', async ({ page }) => {
       await setupQuickAddMocks(page);
 
-      await page.goto('/games');
+      await page.goto('/library');
       await page.waitForLoadState('networkidle');
 
       const addButton = page.getByRole('button', { name: /add/i }).first();
@@ -338,7 +339,7 @@ test.describe('LIB-08: Quick Add to Library', () => {
     test('should update UI after adding to library', async ({ page }) => {
       await setupQuickAddMocks(page);
 
-      await page.goto('/games');
+      await page.goto('/library');
       await page.waitForLoadState('networkidle');
 
       const addButton = page.getByRole('button', { name: /add/i }).first();
@@ -361,7 +362,7 @@ test.describe('LIB-08: Quick Add to Library', () => {
     test('should allow undo after adding', async ({ page }) => {
       await setupQuickAddMocks(page);
 
-      await page.goto('/games');
+      await page.goto('/library');
       await page.waitForLoadState('networkidle');
 
       const addButton = page.getByRole('button', { name: /add/i }).first();

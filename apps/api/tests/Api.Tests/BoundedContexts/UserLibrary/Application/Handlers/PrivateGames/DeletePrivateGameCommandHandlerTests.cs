@@ -1,5 +1,5 @@
 using Api.BoundedContexts.UserLibrary.Application.Commands.PrivateGames;
-using Api.BoundedContexts.UserLibrary.Application.Handlers.PrivateGames;
+using Api.BoundedContexts.UserLibrary.Application.Commands.PrivateGames;
 using Api.BoundedContexts.UserLibrary.Domain.Entities;
 using Api.BoundedContexts.UserLibrary.Domain.Repositories;
 using Api.Middleware.Exceptions;
@@ -44,11 +44,12 @@ public sealed class DeletePrivateGameCommandHandlerTests
     public void Constructor_NullRepository_ThrowsArgumentNullException()
     {
         // Act & Assert
-        var exception = Assert.Throws<ArgumentNullException>(() =>
+        var act = () =>
             new DeletePrivateGameCommandHandler(
                 null!,
                 _unitOfWorkMock.Object,
-                _loggerMock.Object));
+                _loggerMock.Object);
+        var exception = act.Should().Throw<ArgumentNullException>().Which;
 
         exception.ParamName.Should().Be("repository");
     }
@@ -57,11 +58,12 @@ public sealed class DeletePrivateGameCommandHandlerTests
     public void Constructor_NullUnitOfWork_ThrowsArgumentNullException()
     {
         // Act & Assert
-        var exception = Assert.Throws<ArgumentNullException>(() =>
+        var act2 = () =>
             new DeletePrivateGameCommandHandler(
                 _repositoryMock.Object,
                 null!,
-                _loggerMock.Object));
+                _loggerMock.Object);
+        var exception = act2.Should().Throw<ArgumentNullException>().Which;
 
         exception.ParamName.Should().Be("unitOfWork");
     }
@@ -70,11 +72,12 @@ public sealed class DeletePrivateGameCommandHandlerTests
     public void Constructor_NullLogger_ThrowsArgumentNullException()
     {
         // Act & Assert
-        var exception = Assert.Throws<ArgumentNullException>(() =>
+        var act3 = () =>
             new DeletePrivateGameCommandHandler(
                 _repositoryMock.Object,
                 _unitOfWorkMock.Object,
-                null!));
+                null!);
+        var exception = act3.Should().Throw<ArgumentNullException>().Which;
 
         exception.ParamName.Should().Be("logger");
     }
@@ -187,8 +190,9 @@ public sealed class DeletePrivateGameCommandHandlerTests
             .ReturnsAsync((PrivateGame?)null);
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<NotFoundException>(() =>
-            _handler.Handle(command, CancellationToken.None));
+        var act4 = () =>
+            _handler.Handle(command, CancellationToken.None);
+        var exception = (await act4.Should().ThrowAsync<NotFoundException>()).Which;
 
         exception.Message.Should().Contain(gameId.ToString());
 
@@ -224,8 +228,9 @@ public sealed class DeletePrivateGameCommandHandlerTests
             .ReturnsAsync(existingGame);
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<ForbiddenException>(() =>
-            _handler.Handle(command, CancellationToken.None));
+        var act5 = () =>
+            _handler.Handle(command, CancellationToken.None);
+        var exception = (await act5.Should().ThrowAsync<ForbiddenException>()).Which;
 
         exception.Message.Should().Contain("only delete your own");
 
@@ -281,8 +286,9 @@ public sealed class DeletePrivateGameCommandHandlerTests
     public async Task Handle_NullCommand_ThrowsArgumentNullException()
     {
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentNullException>(() =>
-            _handler.Handle(null!, CancellationToken.None));
+        var act6 = () =>
+            _handler.Handle(null!, CancellationToken.None);
+        await act6.Should().ThrowAsync<ArgumentNullException>();
     }
 
     #endregion

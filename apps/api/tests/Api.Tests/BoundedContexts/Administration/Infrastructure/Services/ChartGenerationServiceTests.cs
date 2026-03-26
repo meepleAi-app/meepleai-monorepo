@@ -1,6 +1,7 @@
 using Api.BoundedContexts.Administration.Infrastructure.Services;
 using Api.Tests.Constants;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.Administration.Infrastructure.Services;
 
@@ -34,14 +35,14 @@ public sealed class ChartGenerationServiceTests
             "Count");
 
         // Assert
-        Assert.NotNull(result);
-        Assert.NotEmpty(result);
-        Assert.True(result.Length > 100, "PNG should be larger than 100 bytes");
+        result.Should().NotBeNull();
+        result.Should().NotBeEmpty();
+        (result.Length > 100).Should().BeTrue("PNG should be larger than 100 bytes");
         // Verify PNG signature (first 8 bytes)
-        Assert.Equal(0x89, result[0]); // PNG signature starts with 0x89
-        Assert.Equal(0x50, result[1]); // 'P'
-        Assert.Equal(0x4E, result[2]); // 'N'
-        Assert.Equal(0x47, result[3]); // 'G'
+        result[0].Should().Be(0x89); // PNG signature starts with 0x89
+        result[1].Should().Be(0x50); // 'P'
+        result[2].Should().Be(0x4E); // 'N'
+        result[3].Should().Be(0x47); // 'G'
     }
 
     [Fact]
@@ -59,12 +60,12 @@ public sealed class ChartGenerationServiceTests
             "Value");
 
         // Assert
-        Assert.NotNull(result);
-        Assert.NotEmpty(result);
-        Assert.True(result.Length > 100);
+        result.Should().NotBeNull();
+        result.Should().NotBeEmpty();
+        (result.Length > 100).Should().BeTrue();
         // Verify PNG signature
-        Assert.Equal(0x89, result[0]);
-        Assert.Equal(0x50, result[1]);
+        result[0].Should().Be(0x89);
+        result[1].Should().Be(0x50);
     }
 
     [Fact]
@@ -86,10 +87,10 @@ public sealed class ChartGenerationServiceTests
             "Amount (USD)");
 
         // Assert
-        Assert.NotNull(result);
-        Assert.NotEmpty(result);
-        Assert.True(result.Length > 100);
-        Assert.Equal(0x89, result[0]); // PNG signature
+        result.Should().NotBeNull();
+        result.Should().NotBeEmpty();
+        (result.Length > 100).Should().BeTrue();
+        result[0].Should().Be(0x89); // PNG signature
     }
 
     [Fact]
@@ -111,10 +112,10 @@ public sealed class ChartGenerationServiceTests
             "Revenue (USD)");
 
         // Assert
-        Assert.NotNull(result);
-        Assert.NotEmpty(result);
-        Assert.True(result.Length > 100);
-        Assert.Equal(0x89, result[0]); // PNG signature
+        result.Should().NotBeNull();
+        result.Should().NotBeEmpty();
+        (result.Length > 100).Should().BeTrue();
+        result[0].Should().Be(0x89); // PNG signature
     }
 
     [Fact]
@@ -132,9 +133,9 @@ public sealed class ChartGenerationServiceTests
             "Count");
 
         // Assert - Should still generate a valid PNG
-        Assert.NotNull(result);
-        Assert.NotEmpty(result);
-        Assert.Equal(0x89, result[0]);
+        result.Should().NotBeNull();
+        result.Should().NotBeEmpty();
+        result[0].Should().Be(0x89);
     }
 
     [Fact]
@@ -149,8 +150,7 @@ public sealed class ChartGenerationServiceTests
         var largeChart = _sut.GenerateBarChart("Large", categories, values, "Count", 1200, 600);
 
         // Assert
-        Assert.True(largeChart.Length > smallChart.Length,
-            "Larger dimensions should produce larger file");
+        (largeChart.Length > smallChart.Length).Should().BeTrue("Larger dimensions should produce larger file");
     }
 
     [Fact]
@@ -171,7 +171,7 @@ public sealed class ChartGenerationServiceTests
             "Amount");
 
         // Assert
-        Assert.NotNull(result);
-        Assert.NotEmpty(result);
+        result.Should().NotBeNull();
+        result.Should().NotBeEmpty();
     }
 }

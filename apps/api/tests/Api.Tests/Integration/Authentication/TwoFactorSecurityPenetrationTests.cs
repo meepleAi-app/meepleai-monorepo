@@ -15,6 +15,7 @@ using Moq;
 using Npgsql;
 using OtpNet;
 using System.Diagnostics;
+using FluentAssertions;
 using Xunit;
 using Api.Tests.Constants;
 
@@ -92,23 +93,9 @@ public class TwoFactorSecurityPenetrationTests : IAsyncLifetime
             CommandTimeout = 30
         };
 
-        var services = new ServiceCollection();
+        var services = IntegrationServiceCollectionBuilder.CreateBase(enforcedBuilder.ConnectionString);
 
-        // DbContext
-        services.AddDbContext<MeepleAiDbContext>(options =>
-            options.UseNpgsql(enforcedBuilder.ConnectionString, o => o.UseVector()) // Issue #3547
-                .ConfigureWarnings(warnings =>
-                    warnings.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning)));
-
-        // MediatR
-        services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(Program).Assembly));
-
-        // Repositories and Unit of Work
         services.AddScoped<IUserRepository, UserRepository>();
-        services.AddScoped<IUnitOfWork, EfCoreUnitOfWork>();
-
-        // Domain event infrastructure
-        services.AddScoped<Api.SharedKernel.Application.Services.IDomainEventCollector, Api.SharedKernel.Application.Services.DomainEventCollector>();
         services.AddSingleton<TimeProvider>(TimeProvider.System);
 
         // Data Protection (required by EncryptionService)
@@ -271,7 +258,7 @@ public class TwoFactorSecurityPenetrationTests : IAsyncLifetime
         // - Alert should be generated for security team
 
         // CURRENT REALITY:
-        Assert.True(successfulAttempts == 0,
+        (successfulAttempts == 0).Should().BeTrue(
             "❌ VULNERABILITY CONFIRMED: Brute force protection missing. " +
             "Recommendation: Implement rate limiting and account lockout after 5 failed attempts.");
 
@@ -314,7 +301,7 @@ public class TwoFactorSecurityPenetrationTests : IAsyncLifetime
         _output($"Failed backup code attempts: {failedAttempts}");
 
         // CURRENT IMPLEMENTATION: No lockout mechanism
-        Assert.Equal(maxAttempts, failedAttempts);
+        failedAttempts.Should().Be(maxAttempts);
         _output("❌ VULNERABILITY: No account lockout after 50 failed backup code attempts");
         _output("📋 RECOMMENDATION: Lock account after 5 failed backup code attempts");
     }
@@ -352,7 +339,7 @@ public class TwoFactorSecurityPenetrationTests : IAsyncLifetime
 
         // OWASP RECOMMENDATION: Max 5 attempts per 60 seconds
         // CURRENT: Unlimited attempts per second
-        Assert.True(attemptsPerSecond > 10,
+        (attemptsPerSecond > 10).Should().BeTrue(
             "❌ VULNERABILITY: No rate limiting detected. " +
             $"Attacker can perform {attemptsPerSecond:F0} attempts/second");
 
@@ -384,8 +371,7 @@ public class TwoFactorSecurityPenetrationTests : IAsyncLifetime
         // Assert
         // EXPECTED: Even valid code should fail if account is locked
         // SECURITY FIX: Account lockout implemented via IsAccountLockedOutAsync
-        Assert.False(isValidAfterLockout,
-            "Valid code should fail after account lockout (lockout mechanism working)");
+        isValidAfterLockout.Should().BeFalse("Valid code should fail after account lockout (lockout mechanism working)");
 
         _output("📋 RECOMMENDATION: Lock account for 5-15 minutes after 5 failed attempts");
     }
@@ -421,7 +407,7 @@ public class TwoFactorSecurityPenetrationTests : IAsyncLifetime
 
         // EXPECTED: System should detect pattern (100 attempts on same account)
         // CURRENT: No cross-session attack detection
-        Assert.Equal(attackSessions * attemptsPerSession, totalAttempts);
+        totalAttempts.Should().Be(attackSessions * attemptsPerSession);
         _output("❌ VULNERABILITY: No detection of distributed brute force attacks");
         _output("📋 RECOMMENDATION: Track failed attempts per user across all sessions");
     }
@@ -459,7 +445,7 @@ public class TwoFactorSecurityPenetrationTests : IAsyncLifetime
         _output("📋 INFO: Proper validation requires E2E test with Redis Testcontainer");
 
         // Verify the API doesn't crash under repeated failures
-        Assert.True(true, "Brute force attack handled gracefully - alert verification requires E2E test");
+        (true).Should().BeTrue("Brute force attack handled gracefully - alert verification requires E2E test");
     }
     /// <summary>
     /// SECURITY TEST: Valid TOTP code should not be reusable within time window.
@@ -479,12 +465,11 @@ public class TwoFactorSecurityPenetrationTests : IAsyncLifetime
         var secondAttempt = await _totpService!.VerifyCodeAsync(user.Id, validCode, TestCancellationToken);
 
         // Assert
-        Assert.True(firstAttempt, "First attempt with valid code should succeed");
+        (firstAttempt).Should().BeTrue("First attempt with valid code should succeed");
 
         // EXPECTED (OWASP): Second attempt should fail (code already used)
         // SECURITY FIX: Replay prevention implemented via UsedTotpCodes table
-        Assert.False(secondAttempt,
-            "Second attempt should fail - TOTP code already used (replay prevention)");
+        secondAttempt.Should().BeFalse("Second attempt should fail - TOTP code already used (replay prevention)");
 
         _output("✅ PASS: TOTP code correctly prevented from reuse (nonce validation working)");
     }
@@ -512,8 +497,7 @@ public class TwoFactorSecurityPenetrationTests : IAsyncLifetime
         var isValidAfterExpiry = await _totpService!.VerifyCodeAsync(user.Id, expiredCode, TestCancellationToken);
 
         // Assert
-        Assert.False(isValidAfterExpiry,
-            "Expired TOTP code should be rejected after 120 seconds");
+        isValidAfterExpiry.Should().BeFalse("Expired TOTP code should be rejected after 120 seconds");
 
         _output("✅ PASS: TOTP code correctly expired outside time window");
     }
@@ -536,8 +520,8 @@ public class TwoFactorSecurityPenetrationTests : IAsyncLifetime
         var secondAttempt = await _totpService!.VerifyBackupCodeAsync(user.Id, validBackupCode, TestCancellationToken);
 
         // Assert
-        Assert.True(firstAttempt, "First attempt with valid backup code should succeed");
-        Assert.False(secondAttempt, "Second attempt should fail - backup code already used");
+        (firstAttempt).Should().BeTrue("First attempt with valid backup code should succeed");
+        (secondAttempt).Should().BeFalse("Second attempt should fail - backup code already used");
 
         _output("✅ PASS: Backup code correctly marked as single-use (Serializable transaction)");
     }
@@ -590,7 +574,7 @@ public class TwoFactorSecurityPenetrationTests : IAsyncLifetime
 
         // Assert - Only ONE should succeed (Serializable transaction prevents race)
         var successCount = results.Count(r => r);
-        Assert.Equal(1, successCount);
+        successCount.Should().Be(1);
 
         _output($"✅ PASS: Race condition prevented - only 1/2 concurrent attempts succeeded");
     }
@@ -613,7 +597,7 @@ public class TwoFactorSecurityPenetrationTests : IAsyncLifetime
         _output("Current implementation: Time-based expiry only (5 minutes)");
 
         // Assert - Document current behavior
-        Assert.True(true, "Session token replay prevention requires nonce implementation");
+        (true).Should().BeTrue("Session token replay prevention requires nonce implementation");
     }
     /// <summary>
     /// SECURITY TEST: TOTP verification should use constant-time comparison.
@@ -657,8 +641,7 @@ public class TwoFactorSecurityPenetrationTests : IAsyncLifetime
         _output($"Timing difference: {timingDifference:P2}");
 
         // OWASP: Timing variance should be <5% to prevent side-channel attacks
-        Assert.True(timingDifference < TimingVarianceThreshold,
-            $"❌ VULNERABILITY: Timing difference {timingDifference:P2} exceeds threshold {TimingVarianceThreshold:P2}");
+        (timingDifference < TimingVarianceThreshold).Should().BeTrue($"❌ VULNERABILITY: Timing difference {timingDifference:P2} exceeds threshold {TimingVarianceThreshold:P2}");
 
         _output("✅ PASS: Constant-time comparison (TOTP library provides protection)");
     }

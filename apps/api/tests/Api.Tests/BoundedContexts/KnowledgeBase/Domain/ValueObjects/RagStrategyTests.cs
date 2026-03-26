@@ -1,6 +1,7 @@
 using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 using Api.Tests.Constants;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 
@@ -18,11 +19,11 @@ public class RagStrategyTests
     public void RagStrategy_HasCorrectValues()
     {
         // Assert
-        Assert.Equal(0, (int)RagStrategy.None);
-        Assert.Equal(1, (int)RagStrategy.Fast);
-        Assert.Equal(2, (int)RagStrategy.Balanced);
-        Assert.Equal(3, (int)RagStrategy.Precise);
-        Assert.Equal(4, (int)RagStrategy.Custom);
+        ((int)RagStrategy.None).Should().Be(0);
+        ((int)RagStrategy.Fast).Should().Be(1);
+        ((int)RagStrategy.Balanced).Should().Be(2);
+        ((int)RagStrategy.Precise).Should().Be(3);
+        ((int)RagStrategy.Custom).Should().Be(4);
     }
 
     [Fact]
@@ -35,10 +36,10 @@ public class RagStrategyTests
         var actualValues = Enum.GetValues<RagStrategy>();
 
         // Assert
-        Assert.Equal(expectedValues.Length, actualValues.Length);
+        actualValues.Length.Should().Be(expectedValues.Length);
         foreach (var expected in expectedValues)
         {
-            Assert.Contains(expected, actualValues);
+            actualValues.Should().Contain(expected);
         }
     }
 
@@ -58,7 +59,7 @@ public class RagStrategyTests
         var displayName = strategy.GetDisplayName();
 
         // Assert
-        Assert.Equal(expectedName, displayName);
+        displayName.Should().Be(expectedName);
     }
 
     #endregion
@@ -72,7 +73,7 @@ public class RagStrategyTests
         var description = RagStrategy.None.GetDescription();
 
         // Assert
-        Assert.Contains("No RAG strategy", description);
+        description.Should().Contain("No RAG strategy");
     }
 
     [Fact]
@@ -82,7 +83,7 @@ public class RagStrategyTests
         var description = RagStrategy.Fast.GetDescription();
 
         // Assert
-        Assert.Contains("speed", description, StringComparison.OrdinalIgnoreCase);
+        description.Should().ContainEquivalentOf("speed");
     }
 
     [Fact]
@@ -92,7 +93,7 @@ public class RagStrategyTests
         var description = RagStrategy.Balanced.GetDescription();
 
         // Assert
-        Assert.Contains("balancing", description, StringComparison.OrdinalIgnoreCase);
+        description.Should().ContainEquivalentOf("balancing");
     }
 
     [Fact]
@@ -102,7 +103,7 @@ public class RagStrategyTests
         var description = RagStrategy.Precise.GetDescription();
 
         // Assert
-        Assert.Contains("accuracy", description, StringComparison.OrdinalIgnoreCase);
+        description.Should().ContainEquivalentOf("accuracy");
     }
 
     [Fact]
@@ -112,7 +113,7 @@ public class RagStrategyTests
         var description = RagStrategy.Custom.GetDescription();
 
         // Assert
-        Assert.Contains("User-defined", description);
+        description.Should().Contain("User-defined");
     }
 
     #endregion
@@ -131,7 +132,7 @@ public class RagStrategyTests
         var requiresAdmin = strategy.RequiresAdmin();
 
         // Assert
-        Assert.Equal(expectedRequiresAdmin, requiresAdmin);
+        requiresAdmin.Should().Be(expectedRequiresAdmin);
     }
 
     [Fact]
@@ -144,7 +145,7 @@ public class RagStrategyTests
         foreach (var strategy in strategies)
         {
             var requiresAdmin = strategy.RequiresAdmin();
-            Assert.Equal(strategy == RagStrategy.Custom, requiresAdmin);
+            requiresAdmin.Should().Be(strategy == RagStrategy.Custom);
         }
     }
 
@@ -167,7 +168,7 @@ public class RagStrategyTests
         var result = RagStrategyExtensions.ParseOrDefault(input);
 
         // Assert
-        Assert.Equal(expected, result);
+        result.Should().Be(expected);
     }
 
     [Theory]
@@ -182,7 +183,7 @@ public class RagStrategyTests
         var result = RagStrategyExtensions.ParseOrDefault(input);
 
         // Assert
-        Assert.Equal(RagStrategy.None, result);
+        result.Should().Be(RagStrategy.None);
     }
 
     #endregion

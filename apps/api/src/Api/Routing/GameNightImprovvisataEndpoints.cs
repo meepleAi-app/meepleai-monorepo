@@ -21,28 +21,30 @@ internal static class GameNightImprovvisataEndpoints
         var improvvisata = group.MapGroup("/game-night")
             .WithTags("GameNightImprovvisata");
 
-        // E1-1: BGG search for authenticated users
+        // E1-1: BGG search — admin only (BGG commercial use licensing restriction)
         improvvisata.MapGet("/bgg/search", HandleSearchBggGames)
-            .RequireAuthorization()
+            .RequireAdminSession()
             .RequireRateLimiting("BggSearch")
             .Produces<SearchBggGamesForGameNightResult>(200)
             .Produces(400)
             .Produces(401)
+            .Produces(403)
             .WithName("GameNightSearchBggGames")
-            .WithSummary("Search BoardGameGeek for games")
-            .WithDescription("Authenticated search for board games on BoardGameGeek. Used in the Game Night Improvvisata flow for game selection. Rate limited to 20 searches per hour per user.");
+            .WithSummary("Search BoardGameGeek for games (Admin only)")
+            .WithDescription("Admin-only search for board games on BoardGameGeek. Restricted due to BGG commercial use licensing. Rate limited to 20 searches per hour per user.");
 
-        // E1-2: Import BGG game into user's private library
+        // E1-2: Import BGG game — admin only (BGG commercial use licensing restriction)
         improvvisata.MapPost("/import-bgg", HandleImportBggGame)
-            .RequireAuthorization()
+            .RequireAdminSession()
             .Produces<ImportBggGameResult>(201)
             .Produces(400)
             .Produces(401)
+            .Produces(403)
             .Produces(409)
             .Produces(429)
             .WithName("ImportBggGame")
-            .WithSummary("Import a BGG game as a PrivateGame")
-            .WithDescription("Imports a game from BoardGameGeek into the user's private library, subject to tier quotas.");
+            .WithSummary("Import a BGG game as a PrivateGame (Admin only)")
+            .WithDescription("Admin-only import of a game from BoardGameGeek into the user's private library. Restricted due to BGG commercial use licensing.");
 
         // E2-1: Start improvvisata session from a PrivateGame
         improvvisata.MapPost("/start-session", HandleStartImprovvisataSession)

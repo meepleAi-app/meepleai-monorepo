@@ -166,9 +166,9 @@ apps/web/tests/e2e/ (existing patterns)
 
 ## 📌 Links Rapidi
 
-- **Epic #4136:** https://github.com/DegrassiAaron/meepleai-monorepo/issues/4136
-- **Epic #4071:** https://github.com/DegrassiAaron/meepleai-monorepo/issues/4071
-- **Issue #3809:** https://github.com/DegrassiAaron/meepleai-monorepo/issues/3809
+- **Epic #4136:** https://github.com/meepleAi-app/meepleai-monorepo/issues/4136
+- **Epic #4071:** https://github.com/meepleAi-app/meepleai-monorepo/issues/4071
+- **Issue #3809:** https://github.com/meepleAi-app/meepleai-monorepo/issues/3809
 - **Nuove issue:** #4228, #4229, #4230, #4231, #4232
 
 ---

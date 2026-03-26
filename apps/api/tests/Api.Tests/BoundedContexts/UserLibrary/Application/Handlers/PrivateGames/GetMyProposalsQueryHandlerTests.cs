@@ -1,6 +1,6 @@
 using Api.BoundedContexts.SharedGameCatalog.Application.DTOs;
 using Api.BoundedContexts.SharedGameCatalog.Domain.ValueObjects;
-using Api.BoundedContexts.UserLibrary.Application.Handlers.PrivateGames;
+using Api.BoundedContexts.UserLibrary.Application.Commands.PrivateGames;
 using Api.BoundedContexts.UserLibrary.Application.Queries.PrivateGames;
 using Api.BoundedContexts.UserLibrary.Domain.Enums;
 using Api.Infrastructure;

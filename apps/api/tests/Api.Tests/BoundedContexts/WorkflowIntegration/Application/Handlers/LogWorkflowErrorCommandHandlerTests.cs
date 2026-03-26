@@ -1,9 +1,11 @@
 using Api.BoundedContexts.WorkflowIntegration.Application.Commands;
 using WorkflowErrorLogEntity = Api.BoundedContexts.WorkflowIntegration.Domain.Entities.WorkflowErrorLog;
-using Api.BoundedContexts.WorkflowIntegration.Application.Handlers;
+using Api.BoundedContexts.WorkflowIntegration.Application.Commands;
+using Api.BoundedContexts.WorkflowIntegration.Application.Queries;
 using Api.BoundedContexts.WorkflowIntegration.Domain.Repositories;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Moq;
+using FluentAssertions;
 using Xunit;
 using Api.Tests.Constants;
 
@@ -45,13 +47,13 @@ public class LogWorkflowErrorCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal("workflow-123", result.WorkflowId);
-        Assert.Equal("exec-456", result.ExecutionId);
-        Assert.Equal("Database connection failed", result.ErrorMessage);
-        Assert.Equal("DatabaseNode", result.NodeName);
-        Assert.Equal(0, result.RetryCount);
-        Assert.NotEqual(Guid.Empty, result.Id);
+        result.Should().NotBeNull();
+        result.WorkflowId.Should().Be("workflow-123");
+        result.ExecutionId.Should().Be("exec-456");
+        result.ErrorMessage.Should().Be("Database connection failed");
+        result.NodeName.Should().Be("DatabaseNode");
+        result.RetryCount.Should().Be(0);
+        result.Id.Should().NotBe(Guid.Empty);
 
         _mockErrorLogRepository.Verify(
             r => r.AddAsync(
@@ -79,9 +81,9 @@ public class LogWorkflowErrorCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal("API timeout", result.ErrorMessage);
-        Assert.Equal("ApiNode", result.NodeName);
+        result.Should().NotBeNull();
+        result.ErrorMessage.Should().Be("API timeout");
+        result.NodeName.Should().Be("ApiNode");
     }
 
     [Fact]
@@ -100,9 +102,9 @@ public class LogWorkflowErrorCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result.CreatedAt);
-        Assert.True(result.CreatedAt >= beforeLog);
-        Assert.True(result.CreatedAt <= DateTime.UtcNow.AddSeconds(1));
+        result.CreatedAt.Should().NotBe(default);
+        (result.CreatedAt >= beforeLog).Should().BeTrue();
+        (result.CreatedAt <= DateTime.UtcNow.AddSeconds(1)).Should().BeTrue();
     }
 
     [Fact]
@@ -120,7 +122,7 @@ public class LogWorkflowErrorCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.Equal(0, result.RetryCount);
+        result.RetryCount.Should().Be(0);
     }
 
     [Fact]
@@ -139,7 +141,7 @@ public class LogWorkflowErrorCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.Equal(longMessage, result.ErrorMessage);
+        result.ErrorMessage.Should().Be(longMessage);
     }
 
     [Fact]
@@ -164,8 +166,8 @@ public class LogWorkflowErrorCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Contains("WorkflowNode.Execute", complexStackTrace);
+        result.Should().NotBeNull();
+        complexStackTrace.Should().Contain("WorkflowNode.Execute");
     }
 
     [Fact]
@@ -218,7 +220,7 @@ public class LogWorkflowErrorCommandHandlerTests
         var result2 = await _handler.Handle(command2, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotEqual(result1.Id, result2.Id);
+        result2.Id.Should().NotBe(result1.Id);
     }
 }
 

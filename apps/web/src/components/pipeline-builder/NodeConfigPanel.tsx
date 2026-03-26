@@ -75,15 +75,12 @@ interface FieldProps {
 function StringField({ name, schema, value, onChange, error }: FieldProps) {
   if (schema.enum) {
     return (
-      <Select
-        value={String(value || '')}
-        onValueChange={(v) => onChange(name, v)}
-      >
+      <Select value={String(value || '')} onValueChange={v => onChange(name, v)}>
         <SelectTrigger className={cn(error && 'border-destructive')}>
           <SelectValue placeholder={`Select ${schema.title || name}...`} />
         </SelectTrigger>
         <SelectContent>
-          {schema.enum.map((option) => (
+          {schema.enum.map(option => (
             <SelectItem key={String(option)} value={String(option)}>
               {String(option)}
             </SelectItem>
@@ -97,7 +94,7 @@ function StringField({ name, schema, value, onChange, error }: FieldProps) {
     return (
       <Textarea
         value={String(value || '')}
-        onChange={(e) => onChange(name, e.target.value)}
+        onChange={e => onChange(name, e.target.value)}
         placeholder={schema.description}
         className={cn('min-h-[80px]', error && 'border-destructive')}
       />
@@ -108,7 +105,7 @@ function StringField({ name, schema, value, onChange, error }: FieldProps) {
     <Input
       type={schema.format === 'password' ? 'password' : 'text'}
       value={String(value || '')}
-      onChange={(e) => onChange(name, e.target.value)}
+      onChange={e => onChange(name, e.target.value)}
       placeholder={schema.description}
       className={cn(error && 'border-destructive')}
     />
@@ -143,8 +140,11 @@ function NumberField({ name, schema, value, onChange, error }: FieldProps) {
     <Input
       type="number"
       value={numValue}
-      onChange={(e) =>
-        onChange(name, schema.type === 'integer' ? parseInt(e.target.value) : parseFloat(e.target.value))
+      onChange={e =>
+        onChange(
+          name,
+          schema.type === 'integer' ? parseInt(e.target.value) : parseFloat(e.target.value)
+        )
       }
       min={schema.minimum}
       max={schema.maximum}
@@ -155,12 +155,7 @@ function NumberField({ name, schema, value, onChange, error }: FieldProps) {
 }
 
 function BooleanField({ name, value, onChange }: FieldProps) {
-  return (
-    <Switch
-      checked={Boolean(value)}
-      onCheckedChange={(checked) => onChange(name, checked)}
-    />
-  );
+  return <Switch checked={Boolean(value)} onCheckedChange={checked => onChange(name, checked)} />;
 }
 
 function ArrayField({ name, schema, value, onChange, error }: FieldProps) {
@@ -183,7 +178,7 @@ function ArrayField({ name, schema, value, onChange, error }: FieldProps) {
 
     return (
       <div className="flex flex-wrap gap-1.5">
-        {options.map((option) => (
+        {options.map(option => (
           <Badge
             key={option}
             variant={selected.has(option) ? 'default' : 'outline'}
@@ -205,7 +200,7 @@ function ArrayField({ name, schema, value, onChange, error }: FieldProps) {
       </div>
       <Textarea
         value={JSON.stringify(arrayValue, null, 2)}
-        onChange={(e) => {
+        onChange={e => {
           try {
             const parsed = JSON.parse(e.target.value);
             if (Array.isArray(parsed)) {
@@ -230,7 +225,7 @@ function ObjectField({ name, schema, value, onChange, path = '' }: FieldProps) {
     return (
       <Textarea
         value={JSON.stringify(objValue, null, 2)}
-        onChange={(e) => {
+        onChange={e => {
           try {
             onChange(name, JSON.parse(e.target.value));
           } catch {
@@ -258,7 +253,6 @@ function ObjectField({ name, schema, value, onChange, path = '' }: FieldProps) {
       <CollapsibleContent>
         <div className="pl-3 border-l-2 border-muted mt-2 space-y-3">
           {Object.entries(schema.properties).map(([fieldName, fieldSchema]) => {
-            // eslint-disable-next-line security/detect-object-injection -- fieldName from Object.entries
             const fieldValue = (objValue as Record<string, unknown>)[fieldName];
             return (
               <FormField
@@ -366,7 +360,6 @@ export function NodeConfigPanel({ className }: NodeConfigPanelProps) {
     if (properties) {
       Object.entries(properties).forEach(([key, prop]) => {
         if ('default' in prop && prop.default !== undefined) {
-          // eslint-disable-next-line security/detect-object-injection -- key from Object.entries
           defaultConfig[key] = prop.default;
         }
       });
@@ -445,7 +438,6 @@ export function NodeConfigPanel({ className }: NodeConfigPanelProps) {
               exit={{ opacity: 0 }}
               className="p-3 space-y-4"
             >
-              {/* eslint-disable security/detect-object-injection -- name from Object.entries */}
               {Object.entries(properties).map(([name, schema]) => {
                 const configValue = data.config[name];
                 return (
@@ -457,16 +449,14 @@ export function NodeConfigPanel({ className }: NodeConfigPanelProps) {
                     onChange={handleConfigChange}
                     error={
                       required.has(name) &&
-                      (configValue === undefined ||
-                        configValue === null ||
-                        configValue === '')
+                      (configValue === undefined || configValue === null || configValue === '')
                         ? 'This field is required'
                         : undefined
                     }
                   />
                 );
               })}
-              {/* eslint-enable security/detect-object-injection */}
+              {}
               {Object.keys(properties).length === 0 && (
                 <p className="text-sm text-muted-foreground text-center py-4">
                   This plugin has no configurable options
@@ -483,12 +473,7 @@ export function NodeConfigPanel({ className }: NodeConfigPanelProps) {
           <RotateCcw className="h-3.5 w-3.5 mr-1.5" />
           Reset
         </Button>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={handleCopyJson}
-          className="flex-1"
-        >
+        <Button variant="outline" size="sm" onClick={handleCopyJson} className="flex-1">
           {copied ? (
             <Check className="h-3.5 w-3.5 mr-1.5 text-green-500" />
           ) : (

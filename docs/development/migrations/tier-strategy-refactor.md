@@ -300,7 +300,7 @@ If issues are encountered:
 
 ## Related Documentation
 
-- [Admin Configuration Guide](../04-admin/rag-tier-strategy-config.md)
-- [RAG Architecture Overview](../03-api/rag/HOW-IT-WORKS.md)
-- [Layer 1: Routing](../03-api/rag/02-layer1-routing.md)
-- [RAG Flow Diagram](../03-api/rag/diagrams/rag-flow-current.md)
+- [Admin Configuration Guide](../admin/rag-tier-strategy-config.md)
+- [RAG Architecture Overview](../api/rag/HOW-IT-WORKS.md)
+- [Layer 1: Routing](../api/rag/02-layer1-routing.md)
+- [RAG Flow Diagram](../api/rag/diagrams/rag-flow-current.md)

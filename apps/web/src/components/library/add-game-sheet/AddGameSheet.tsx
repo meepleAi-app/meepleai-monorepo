@@ -5,7 +5,6 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronLeft, ChevronRight, X } from 'lucide-react';
 
-import { Button } from '@/components/ui/button';
 import {
   Sheet,
   SheetContent,
@@ -13,6 +12,7 @@ import {
   SheetTitle,
   SheetFooter,
 } from '@/components/ui/navigation/sheet';
+import { Button } from '@/components/ui/primitives/button';
 import {
   useAddGameWizardStore,
   type WizardEntryPoint,

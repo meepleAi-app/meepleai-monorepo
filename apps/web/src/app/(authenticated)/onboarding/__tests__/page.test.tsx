@@ -133,7 +133,7 @@ describe('OnboardingPage', () => {
       expect(mockUpdateProfile).toHaveBeenCalledWith({ displayName: 'Mario Rossi' });
     });
     expect(mockCompleteOnboarding).toHaveBeenCalledWith(false);
-    expect(mockPush).toHaveBeenCalledWith('/');
+    expect(mockPush).toHaveBeenCalledWith('/library');
   });
 
   it('trims whitespace before submitting', async () => {
@@ -169,7 +169,7 @@ describe('OnboardingPage', () => {
     render(<OnboardingPage />);
 
     await waitFor(() => {
-      expect(mockReplace).toHaveBeenCalledWith('/');
+      expect(mockReplace).toHaveBeenCalledWith('/library');
     });
   });
 

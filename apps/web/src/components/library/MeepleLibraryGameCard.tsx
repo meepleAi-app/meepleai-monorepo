@@ -137,7 +137,6 @@ function mapGameStateToStatus(
     InPrestito: 'borrowed',
   };
 
-  // eslint-disable-next-line security/detect-object-injection -- state is validated enum type
   return stateMap[state];
 }
 
@@ -323,7 +322,6 @@ export function MeepleLibraryGameCard({
   if (agentConfigured) {
     metadata.push({
       icon: Bot,
-      // eslint-disable-next-line security/detect-object-injection -- agentModel is validated enum
       value: `Agent: ${modelDisplayName[agentModel]}`,
     });
   }

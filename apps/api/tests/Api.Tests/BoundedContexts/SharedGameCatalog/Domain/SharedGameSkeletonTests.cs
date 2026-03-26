@@ -3,6 +3,7 @@ using Api.BoundedContexts.SharedGameCatalog.Domain.Entities;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Enums;
 using Api.Tests.Constants;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.SharedGameCatalog.Domain;
 
@@ -20,22 +21,22 @@ public class SharedGameSkeletonTests
     {
         var game = SharedGame.CreateSkeleton("Catan", AdminUserId, TimeProvider);
 
-        Assert.Equal("Catan", game.Title);
-        Assert.Equal(GameDataStatus.Skeleton, game.GameDataStatus);
-        Assert.Equal(GameStatus.Draft, game.Status);
-        Assert.Equal(0, game.YearPublished);
-        Assert.Equal(0, game.MinPlayers);
-        Assert.Equal(0, game.MaxPlayers);
-        Assert.Equal(0, game.PlayingTimeMinutes);
-        Assert.Equal(0, game.MinAge);
-        Assert.Null(game.ComplexityRating);
-        Assert.Null(game.AverageRating);
-        Assert.Equal(string.Empty, game.ImageUrl);
-        Assert.Equal(string.Empty, game.ThumbnailUrl);
-        Assert.Null(game.Rules);
-        Assert.False(game.IsDeleted);
-        Assert.False(game.HasUploadedPdf);
-        Assert.NotEqual(Guid.Empty, game.Id);
+        game.Title.Should().Be("Catan");
+        game.GameDataStatus.Should().Be(GameDataStatus.Skeleton);
+        game.Status.Should().Be(GameStatus.Draft);
+        game.YearPublished.Should().Be(0);
+        game.MinPlayers.Should().Be(0);
+        game.MaxPlayers.Should().Be(0);
+        game.PlayingTimeMinutes.Should().Be(0);
+        game.MinAge.Should().Be(0);
+        game.ComplexityRating.Should().BeNull();
+        game.AverageRating.Should().BeNull();
+        game.ImageUrl.Should().Be(string.Empty);
+        game.ThumbnailUrl.Should().Be(string.Empty);
+        game.Rules.Should().BeNull();
+        game.IsDeleted.Should().BeFalse();
+        game.HasUploadedPdf.Should().BeFalse();
+        game.Id.Should().NotBe(Guid.Empty);
     }
 
     [Fact]
@@ -43,35 +44,39 @@ public class SharedGameSkeletonTests
     {
         var game = SharedGame.CreateSkeleton("Catan", AdminUserId, TimeProvider, bggId: 13);
 
-        Assert.Equal(13, game.BggId);
+        game.BggId.Should().Be(13);
     }
 
     [Fact]
     public void CreateSkeleton_WithEmptyTitle_ShouldThrow()
     {
-        Assert.Throws<ArgumentException>(() =>
-            SharedGame.CreateSkeleton("", AdminUserId, TimeProvider));
+        var act = () =>
+            SharedGame.CreateSkeleton("", AdminUserId, TimeProvider);
+        act.Should().Throw<ArgumentException>();
     }
 
     [Fact]
     public void CreateSkeleton_WithWhitespaceTitle_ShouldThrow()
     {
-        Assert.Throws<ArgumentException>(() =>
-            SharedGame.CreateSkeleton("   ", AdminUserId, TimeProvider));
+        var act = () =>
+            SharedGame.CreateSkeleton("   ", AdminUserId, TimeProvider);
+        act.Should().Throw<ArgumentException>();
     }
 
     [Fact]
     public void CreateSkeleton_WithTitleOver500Chars_ShouldThrow()
     {
-        Assert.Throws<ArgumentException>(() =>
-            SharedGame.CreateSkeleton(new string('x', 501), AdminUserId, TimeProvider));
+        var act = () =>
+            SharedGame.CreateSkeleton(new string('x', 501), AdminUserId, TimeProvider);
+        act.Should().Throw<ArgumentException>();
     }
 
     [Fact]
     public void CreateSkeleton_WithEmptyCreatedBy_ShouldThrow()
     {
-        Assert.Throws<ArgumentException>(() =>
-            SharedGame.CreateSkeleton("Catan", Guid.Empty, TimeProvider));
+        var act = () =>
+            SharedGame.CreateSkeleton("Catan", Guid.Empty, TimeProvider);
+        act.Should().Throw<ArgumentException>();
     }
 
     [Fact]
@@ -79,7 +84,7 @@ public class SharedGameSkeletonTests
     {
         var game = SharedGame.CreateSkeleton("  Catan  ", AdminUserId, TimeProvider);
 
-        Assert.Equal("Catan", game.Title);
+        game.Title.Should().Be("Catan");
     }
 
     [Fact]
@@ -89,7 +94,7 @@ public class SharedGameSkeletonTests
         var game = SharedGame.CreateSkeleton("Catan", AdminUserId, TimeProvider);
         var after = DateTime.UtcNow;
 
-        Assert.InRange(game.CreatedAt, before, after);
+        game.CreatedAt.Should().BeOnOrAfter(before).And.BeOnOrBefore(after);
     }
 
     #endregion
@@ -113,7 +118,7 @@ public class SharedGameSkeletonTests
 
         game.TransitionDataStatusTo(to);
 
-        Assert.Equal(to, game.GameDataStatus);
+        game.GameDataStatus.Should().Be(to);
     }
 
     [Theory]
@@ -131,8 +136,9 @@ public class SharedGameSkeletonTests
     {
         var game = CreateGameInStatus(from);
 
-        Assert.Throws<InvalidOperationException>(() =>
-            game.TransitionDataStatusTo(to));
+        var act = () =>
+            game.TransitionDataStatusTo(to);
+        act.Should().Throw<InvalidOperationException>();
     }
 
     #endregion
@@ -154,19 +160,19 @@ public class SharedGameSkeletonTests
             thumbnailUrl: "https://cf.geekdo-images.com/catan_t.jpg",
             rulebookUrl: "https://example.com/catan-rules.pdf");
 
-        Assert.Equal(GameDataStatus.Enriched, game.GameDataStatus);
-        Assert.Equal(1995, game.YearPublished);
-        Assert.Equal("Trade, build, settle", game.Description);
-        Assert.Equal(3, game.MinPlayers);
-        Assert.Equal(4, game.MaxPlayers);
-        Assert.Equal(90, game.PlayingTimeMinutes);
-        Assert.Equal(10, game.MinAge);
-        Assert.Equal(2.3m, game.ComplexityRating);
-        Assert.Equal(7.2m, game.AverageRating);
-        Assert.Equal("https://cf.geekdo-images.com/catan.jpg", game.ImageUrl);
-        Assert.Equal("https://cf.geekdo-images.com/catan_t.jpg", game.ThumbnailUrl);
-        Assert.NotNull(game.Rules);
-        Assert.Equal("https://example.com/catan-rules.pdf", game.Rules!.ExternalUrl);
+        game.GameDataStatus.Should().Be(GameDataStatus.Enriched);
+        game.YearPublished.Should().Be(1995);
+        game.Description.Should().Be("Trade, build, settle");
+        game.MinPlayers.Should().Be(3);
+        game.MaxPlayers.Should().Be(4);
+        game.PlayingTimeMinutes.Should().Be(90);
+        game.MinAge.Should().Be(10);
+        game.ComplexityRating.Should().Be(2.3m);
+        game.AverageRating.Should().Be(7.2m);
+        game.ImageUrl.Should().Be("https://cf.geekdo-images.com/catan.jpg");
+        game.ThumbnailUrl.Should().Be("https://cf.geekdo-images.com/catan_t.jpg");
+        game.Rules.Should().NotBeNull();
+        game.Rules!.ExternalUrl.Should().Be("https://example.com/catan-rules.pdf");
     }
 
     [Fact]
@@ -184,7 +190,7 @@ public class SharedGameSkeletonTests
             thumbnailUrl: "https://example.com/thumb.jpg",
             rulebookUrl: null);
 
-        Assert.Null(game.Rules);
+        game.Rules.Should().BeNull();
     }
 
     [Fact]
@@ -203,7 +209,7 @@ public class SharedGameSkeletonTests
             rulebookUrl: null,
             bggId: 42);
 
-        Assert.Equal(42, game.BggId);
+        game.BggId.Should().Be(42);
     }
 
     [Fact]
@@ -211,7 +217,7 @@ public class SharedGameSkeletonTests
     {
         var game = SharedGame.CreateSkeleton("Catan", AdminUserId, TimeProvider);
 
-        Assert.Throws<InvalidOperationException>(() =>
+        var act = () =>
             game.EnrichFromBgg(
                 description: "desc", yearPublished: 2020,
                 minPlayers: 2, maxPlayers: 4,
@@ -219,7 +225,8 @@ public class SharedGameSkeletonTests
                 complexityRating: null, averageRating: null,
                 imageUrl: "https://example.com/img.jpg",
                 thumbnailUrl: "https://example.com/thumb.jpg",
-                rulebookUrl: null));
+                rulebookUrl: null);
+        act.Should().Throw<InvalidOperationException>();
     }
 
     [Fact]
@@ -228,7 +235,7 @@ public class SharedGameSkeletonTests
         var game = CreateGameInStatus(GameDataStatus.Enriching);
 
         // minPlayers = 0 should fail validation
-        Assert.Throws<ArgumentException>(() =>
+        var act = () =>
             game.EnrichFromBgg(
                 description: "desc", yearPublished: 2020,
                 minPlayers: 0, maxPlayers: 4,
@@ -236,7 +243,8 @@ public class SharedGameSkeletonTests
                 complexityRating: null, averageRating: null,
                 imageUrl: "https://example.com/img.jpg",
                 thumbnailUrl: "https://example.com/thumb.jpg",
-                rulebookUrl: null));
+                rulebookUrl: null);
+        act.Should().Throw<ArgumentException>();
     }
 
     #endregion
@@ -250,7 +258,7 @@ public class SharedGameSkeletonTests
 
         game.MarkDataComplete();
 
-        Assert.Equal(GameDataStatus.Complete, game.GameDataStatus);
+        game.GameDataStatus.Should().Be(GameDataStatus.Complete);
     }
 
     [Fact]
@@ -258,7 +266,8 @@ public class SharedGameSkeletonTests
     {
         var game = SharedGame.CreateSkeleton("Catan", AdminUserId, TimeProvider);
 
-        Assert.Throws<InvalidOperationException>(() => game.MarkDataComplete());
+        var act = () => game.MarkDataComplete();
+        act.Should().Throw<InvalidOperationException>();
     }
 
     #endregion
@@ -270,8 +279,9 @@ public class SharedGameSkeletonTests
     {
         var game = SharedGame.CreateSkeleton("Catan", AdminUserId, TimeProvider);
 
-        Assert.Throws<InvalidOperationException>(() =>
-            game.SubmitForApproval(AdminUserId));
+        var act = () =>
+            game.SubmitForApproval(AdminUserId);
+        act.Should().Throw<InvalidOperationException>();
     }
 
     [Fact]
@@ -281,7 +291,7 @@ public class SharedGameSkeletonTests
 
         game.SubmitForApproval(AdminUserId);
 
-        Assert.Equal(GameStatus.PendingApproval, game.Status);
+        game.Status.Should().Be(GameStatus.PendingApproval);
     }
 
     #endregion
@@ -295,7 +305,7 @@ public class SharedGameSkeletonTests
 
         game.SetHasUploadedPdf();
 
-        Assert.True(game.HasUploadedPdf);
+        game.HasUploadedPdf.Should().BeTrue();
     }
 
     #endregion
@@ -309,7 +319,7 @@ public class SharedGameSkeletonTests
 
         game.TransitionDataStatusTo(GameDataStatus.EnrichmentQueued);
 
-        Assert.Equal(GameDataStatus.EnrichmentQueued, game.GameDataStatus);
+        game.GameDataStatus.Should().Be(GameDataStatus.EnrichmentQueued);
     }
 
     #endregion

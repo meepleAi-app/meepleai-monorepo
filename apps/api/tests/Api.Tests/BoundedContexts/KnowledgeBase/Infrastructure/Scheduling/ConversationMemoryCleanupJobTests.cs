@@ -7,6 +7,7 @@ using Microsoft.Extensions.Options;
 using Moq;
 using Quartz;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Infrastructure.Scheduling;
 
@@ -132,7 +133,7 @@ public class ConversationMemoryCleanupJobTests
 
         // Act & Assert - Should not throw (Quartz background job pattern)
         var exception = await Record.ExceptionAsync(() => job.Execute(_jobContextMock.Object));
-        Assert.Null(exception);
+        exception.Should().BeNull();
     }
 
     [Fact]
@@ -160,7 +161,7 @@ public class ConversationMemoryCleanupJobTests
         // Assert - Cutoff should be ~30 days ago
         var expectedCutoff = DateTime.UtcNow.AddDays(-30);
         var tolerance = TimeSpan.FromMinutes(1);
-        Assert.InRange(capturedCutoff, expectedCutoff.Add(-tolerance), expectedCutoff.Add(tolerance));
+        capturedCutoff.Should().BeOnOrAfter(expectedCutoff.Add(-tolerance)).And.BeOnOrBefore(expectedCutoff.Add(tolerance));
     }
 
     [Fact]
@@ -268,7 +269,7 @@ public class ConversationMemoryCleanupJobTests
         // Assert
         var expectedCutoff = DateTime.UtcNow.AddDays(-days);
         var tolerance = TimeSpan.FromMinutes(1);
-        Assert.InRange(capturedCutoff, expectedCutoff.Add(-tolerance), expectedCutoff.Add(tolerance));
+        capturedCutoff.Should().BeOnOrAfter(expectedCutoff.Add(-tolerance)).And.BeOnOrBefore(expectedCutoff.Add(tolerance));
     }
 
     [Fact]

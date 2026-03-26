@@ -1,5 +1,5 @@
 using Api.BoundedContexts.KnowledgeBase.Application.Commands.AbTest;
-using Api.BoundedContexts.KnowledgeBase.Application.Handlers.AbTest;
+using Api.BoundedContexts.KnowledgeBase.Application.Commands.AbTest;
 using Api.BoundedContexts.KnowledgeBase.Domain.Entities;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services;
@@ -8,6 +8,7 @@ using Api.Tests.Constants;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Handlers.AbTest;
 
@@ -55,12 +56,12 @@ public sealed class CreateAbTestCommandHandlerTests
 
         var result = await sut.Handle(command, CancellationToken.None);
 
-        Assert.NotNull(result);
-        Assert.Equal("What are the rules?", result.Query);
-        Assert.Equal("InProgress", result.Status);
-        Assert.Equal(2, result.Variants.Count);
-        Assert.Equal("A", result.Variants[0].Label);
-        Assert.Equal("B", result.Variants[1].Label);
+        result.Should().NotBeNull();
+        result.Query.Should().Be("What are the rules?");
+        result.Status.Should().Be("InProgress");
+        result.Variants.Count.Should().Be(2);
+        result.Variants[0].Label.Should().Be("A");
+        result.Variants[1].Label.Should().Be("B");
 
         _repoMock.Verify(r => r.AddAsync(It.IsAny<AbTestSession>(), It.IsAny<CancellationToken>()), Times.Once);
     }
@@ -101,8 +102,9 @@ public sealed class CreateAbTestCommandHandlerTests
         var sut = CreateSut();
         var command = new CreateAbTestCommand(UserId, "Test", ["m1", "m2"]);
 
-        await Assert.ThrowsAsync<InvalidOperationException>(() =>
-            sut.Handle(command, CancellationToken.None));
+        Func<Task> act = () =>
+            sut.Handle(command, CancellationToken.None);
+        await act.Should().ThrowAsync<InvalidOperationException>();
     }
 
     [Fact]
@@ -113,8 +115,9 @@ public sealed class CreateAbTestCommandHandlerTests
         var sut = CreateSut();
         var command = new CreateAbTestCommand(UserId, "Test", ["m1", "m2"]);
 
-        await Assert.ThrowsAsync<InvalidOperationException>(() =>
-            sut.Handle(command, CancellationToken.None));
+        Func<Task> act = () =>
+            sut.Handle(command, CancellationToken.None);
+        await act.Should().ThrowAsync<InvalidOperationException>();
     }
 
     [Fact]
@@ -137,8 +140,8 @@ public sealed class CreateAbTestCommandHandlerTests
 
         var result = await sut.Handle(command, CancellationToken.None);
 
-        Assert.False(result.Variants[0].Failed);
-        Assert.True(result.Variants[1].Failed);
+        result.Variants[0].Failed.Should().BeFalse();
+        result.Variants[1].Failed.Should().BeTrue();
     }
 
     [Fact]
@@ -151,10 +154,10 @@ public sealed class CreateAbTestCommandHandlerTests
 
         // AbTestSessionDto (blind) should NOT have Provider/ModelId properties
         // This is enforced by the DTO type itself — AbTestVariantDto has no Provider/ModelId
-        Assert.All(result.Variants, v =>
+        result.Variants.Should().AllSatisfy(v =>
         {
-            Assert.NotNull(v.Label);
-            Assert.NotNull(v.Response);
+            v.Label.Should().NotBeNull();
+            v.Response.Should().NotBeNull();
         });
     }
 
@@ -170,7 +173,7 @@ public sealed class CreateAbTestCommandHandlerTests
 
         var result = await sut.Handle(command, CancellationToken.None);
 
-        Assert.Equal("Cached response", result.Variants[0].Response);
+        result.Variants[0].Response.Should().Be("Cached response");
 
         // m1 should NOT call LLM (used cache), m2 should call LLM
         _llmServiceMock.Verify(l => l.GenerateCompletionWithModelAsync(

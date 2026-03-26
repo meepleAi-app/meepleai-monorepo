@@ -495,8 +495,8 @@ Complete Docker Compose guides for local development:
 - [Local Environment Startup](local-environment-startup-guide.md)
 
 ### Architecture
-- [Architecture Overview](../01-architecture/overview/system-architecture.md)
-- [ADRs](../01-architecture/adr/)
+- [Architecture Overview](../architecture/overview/system-architecture.md)
+- [ADRs](../architecture/adr/)
 - [Bounded Context READMEs](../../apps/api/src/Api/BoundedContexts/)
 
 ### API & Testing

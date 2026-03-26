@@ -18,8 +18,8 @@ import Link from 'next/link';
 import { useAuthUser } from '@/components/auth/AuthProvider';
 import { ErrorBoundary } from '@/components/errors/ErrorBoundary';
 import { Spinner } from '@/components/loading';
-import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/data-display/card';
+import { Button } from '@/components/ui/primitives/button';
 import { WizardSteps } from '@/components/wizard';
 import { useWizardAutoSave, clearDraft } from '@/hooks/wizard/useWizardAutoSave';
 import { logger } from '@/lib/logger';
@@ -263,7 +263,7 @@ export function AdminGameImportWizardClient() {
                       {extractedMetadata.maxPlayers || '?'}
                     </p>
                     <p className="text-sm">
-                      <strong>Play Time:</strong> {extractedMetadata.playTime || 'N/A'} min
+                      <strong>Play Time:</strong> {extractedMetadata.playingTime || 'N/A'} min
                     </p>
                   </div>
                 ) : (

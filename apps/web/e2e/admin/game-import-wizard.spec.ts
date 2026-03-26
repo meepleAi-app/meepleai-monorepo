@@ -17,7 +17,7 @@ import { test, expect } from '@playwright/test';
 
 // Test data paths
 const TEST_PDF_PATH = path.join(__dirname, '..', 'test-data', 'wingspan_rulebook.pdf');
-const WIZARD_URL = '/admin/games/import/wizard';
+const WIZARD_URL = '/admin/shared-games/import';
 
 // Auth credentials (from .env.test, populated by setup-secrets.ps1)
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'admin@meepleai.dev';
@@ -165,7 +165,9 @@ test.describe('Game Import Wizard E2E', () => {
       // NOTE: Questo assume che il game con BGG ID già esista nel DB
       // In un test reale, dovresti seedare il DB con un duplicate game
 
-      const duplicateModal = page.getByRole('dialog').filter({ hasText: /duplicate|already exists/i });
+      const duplicateModal = page
+        .getByRole('dialog')
+        .filter({ hasText: /duplicate|already exists/i });
 
       // Se il modal appare (test condizionale basato su DB state)
       const isModalVisible = await duplicateModal.isVisible().catch(() => false);
@@ -208,12 +210,16 @@ test.describe('Game Import Wizard E2E', () => {
       await page.getByRole('button', { name: /next/i }).click();
 
       // Step 4: If duplicate modal appears
-      const duplicateModal = page.getByRole('dialog').filter({ hasText: /duplicate|already exists/i });
+      const duplicateModal = page
+        .getByRole('dialog')
+        .filter({ hasText: /duplicate|already exists/i });
       const isModalVisible = await duplicateModal.isVisible().catch(() => false);
 
       if (isModalVisible) {
         // Assert: Force create option available (checkbox or button)
-        const forceCheckbox = duplicateModal.getByRole('checkbox', { name: /force|create anyway/i });
+        const forceCheckbox = duplicateModal.getByRole('checkbox', {
+          name: /force|create anyway/i,
+        });
 
         // Enable force create
         await forceCheckbox.check();
@@ -268,7 +274,9 @@ test.describe('Game Import Wizard E2E', () => {
       await page.waitForTimeout(1500);
 
       // Assert: Preview card shows game details
-      const previewCard = page.locator('[data-testid="manual-bgg-preview"]').or(page.getByText(/catan/i));
+      const previewCard = page
+        .locator('[data-testid="manual-bgg-preview"]')
+        .or(page.getByText(/catan/i));
       await expect(previewCard).toBeVisible();
 
       // Click "Select This Game" or confirm button
@@ -314,9 +322,9 @@ test.describe('Game Import Wizard E2E', () => {
       if (hasConflicts) {
         // Example: minPlayers conflict (BGG: 2 vs PDF: 3)
         // Find conflict radios
-        const conflictField = page.locator('[data-testid*="minPlayers"]').or(
-          page.getByText(/min players|minimum players/i).locator('..')
-        );
+        const conflictField = page
+          .locator('[data-testid*="minPlayers"]')
+          .or(page.getByText(/min players|minimum players/i).locator('..'));
 
         // Test variant A: Select BGG value
         const bggRadio = conflictField.getByRole('radio', { name: /bgg|boardgamegeek/i });
@@ -470,7 +478,9 @@ test.describe('Game Import Wizard E2E', () => {
       await expect(page).toHaveScreenshot('wizard-step-4-preview.png');
 
       // Duplicate modal (conditional - only if duplicate exists)
-      const duplicateModal = page.getByRole('dialog').filter({ hasText: /duplicate|already exists/i });
+      const duplicateModal = page
+        .getByRole('dialog')
+        .filter({ hasText: /duplicate|already exists/i });
       const isModalVisible = await duplicateModal.isVisible().catch(() => false);
 
       if (isModalVisible) {

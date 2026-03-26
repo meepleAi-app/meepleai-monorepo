@@ -48,7 +48,6 @@ const DOCUMENT_TYPE_CONFIG: Record<
 };
 
 export function DocumentBadge({ type, className }: DocumentBadgeProps) {
-  // eslint-disable-next-line security/detect-object-injection -- type is validated by TypeScript as DocumentType union
   const config = DOCUMENT_TYPE_CONFIG[type];
 
   return (

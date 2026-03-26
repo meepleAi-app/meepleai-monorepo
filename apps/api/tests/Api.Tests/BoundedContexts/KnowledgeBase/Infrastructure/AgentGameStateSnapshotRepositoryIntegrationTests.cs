@@ -2,15 +2,14 @@ using Api.BoundedContexts.KnowledgeBase.Domain.Entities;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Infrastructure.Persistence;
 using Api.Infrastructure;
+using Api.Infrastructure.Entities;
 using Api.Infrastructure.Entities.KnowledgeBase;
 using Api.SharedKernel.Application.Services;
-using Api.SharedKernel.Infrastructure.Persistence;
 using Api.Tests.Constants;
 using Api.Tests.Infrastructure;
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 using Npgsql;
 using Pgvector;
 using Pgvector.EntityFrameworkCore;
@@ -52,18 +51,7 @@ public sealed class AgentGameStateSnapshotRepositoryIntegrationTests : IAsyncLif
         _databaseName = $"test_snapshot_{Guid.NewGuid():N}";
         _isolatedDbConnectionString = await _fixture.CreateIsolatedDatabaseAsync(_databaseName);
 
-        var services = new ServiceCollection();
-        services.AddLogging(builder => builder.AddConsole().SetMinimumLevel(LogLevel.Warning));
-        services.AddDbContext<MeepleAiDbContext>(options =>
-        {
-            options.UseNpgsql(_isolatedDbConnectionString, o => o.UseVector());
-            options.ConfigureWarnings(w =>
-                w.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning));
-        });
-
-        services.AddScoped<IUnitOfWork, EfCoreUnitOfWork>();
-        services.AddScoped<IDomainEventCollector, DomainEventCollector>();
-        services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(Program).Assembly));
+        var services = IntegrationServiceCollectionBuilder.CreateBase(_isolatedDbConnectionString);
 
         _serviceProvider = services.BuildServiceProvider();
         _dbContext = _serviceProvider.GetRequiredService<MeepleAiDbContext>();
@@ -106,20 +94,78 @@ public sealed class AgentGameStateSnapshotRepositoryIntegrationTests : IAsyncLif
 
     private async Task SeedTestDataAsync()
     {
-        // Create minimal test data
+        _gameId = Guid.NewGuid();
+        _agentSessionId = Guid.NewGuid();
+        var userId = Guid.NewGuid();
+        var agentId = Guid.NewGuid();
+        var gameSessionId = Guid.NewGuid();
+        var typologyId = Guid.NewGuid();
+
+        // Seed game (parent entity)
         var game = new Api.Infrastructure.Entities.GameEntity
         {
-            Id = Guid.NewGuid(),
+            Id = _gameId,
             Name = "Test Game",
             CreatedAt = DateTime.UtcNow
         };
-        _gameId = game.Id;
         _dbContext!.Games.Add(game);
 
-        // Create fake agent session ID (not actually creating AgentSession to simplify)
-        _agentSessionId = Guid.NewGuid();
+        // Seed user (FK for agent_sessions)
+        var user = new Api.Infrastructure.Entities.UserEntity
+        {
+            Id = userId,
+            Email = $"test_{Guid.NewGuid():N}@example.com",
+            DisplayName = "Test User",
+            PasswordHash = "hashed_password",
+            Role = "User",
+            CreatedAt = DateTime.UtcNow
+        };
+        _dbContext.Users.Add(user);
+
+        // Seed agent (FK for agent_sessions)
+        var agent = new Api.Infrastructure.Entities.AgentEntity
+        {
+            Id = agentId,
+            Name = "Test Agent",
+            Type = "RagAgent",
+            StrategyName = "HybridSearch",
+            StrategyParametersJson = "{}",
+            IsActive = true,
+            CreatedAt = DateTime.UtcNow
+        };
+        _dbContext.Agents.Add(agent);
+
+        // Seed typology (FK for agent_sessions)
+        var typology = new Api.Infrastructure.Entities.KnowledgeBase.AgentTypologyEntity
+        {
+            Id = typologyId,
+            Name = "Test Typology",
+            Description = "Test typology",
+            BasePrompt = "You are a test agent",
+            DefaultStrategyJson = "{}",
+            Status = 2,
+            CreatedBy = userId,
+            CreatedAt = DateTime.UtcNow,
+            IsDeleted = false
+        };
+        _dbContext.AgentTypologies.Add(typology);
+
+        // Seed game session (FK for agent_sessions)
+        var gameSession = new GameSessionEntity
+        {
+            Id = gameSessionId,
+            GameId = _gameId,
+            Status = "InProgress"
+        };
+        _dbContext.GameSessions.Add(gameSession);
 
         await _dbContext.SaveChangesAsync(TestCancellationToken);
+
+        // Seed agent_session row with all required FK columns
+        await _dbContext.Database.ExecuteSqlInterpolatedAsync(
+            $@"INSERT INTO agent_sessions (""Id"", ""AgentId"", ""GameSessionId"", ""UserId"", ""GameId"", ""TypologyId"", ""StartedAt"", ""IsActive"", ""CurrentGameStateJson"")
+               VALUES ({_agentSessionId}, {agentId}, {gameSessionId}, {userId}, {_gameId}, {typologyId}, {DateTime.UtcNow}, true, '{{}}')",
+            TestCancellationToken);
     }
 
     #region AddAsync Tests
@@ -340,7 +386,7 @@ public sealed class AgentGameStateSnapshotRepositoryIntegrationTests : IAsyncLif
         // Act - Raw SQL vector similarity
         var results = await _dbContext.AgentGameStateSnapshots
             .FromSqlRaw(@"
-                SELECT id, game_id, agent_session_id, board_state_json, turn_number, created_at, embedding
+                SELECT id, game_id, agent_session_id, board_state_json, turn_number, created_at, embedding, active_player_id
                 FROM agent_game_state_snapshots
                 ORDER BY embedding <=> {0}::vector
                 LIMIT 5",
@@ -355,7 +401,7 @@ public sealed class AgentGameStateSnapshotRepositoryIntegrationTests : IAsyncLif
 
     private static float[] CreateNormalizedEmbedding(float baseValue)
     {
-        var embedding = new float[1536];
+        var embedding = new float[1024];
         for (int i = 0; i < embedding.Length; i++)
         {
             embedding[i] = baseValue + (i % 10) * 0.01f;
@@ -398,12 +444,13 @@ public sealed class AgentGameStateSnapshotRepositoryIntegrationTests : IAsyncLif
             }
         }
 
-        // Assert
-        indexes.Should().Contain("ix_agent_game_state_snapshots_game_id");
-        indexes.Should().Contain("ix_agent_game_state_snapshots_agent_session_id");
-        indexes.Should().Contain("ix_agent_game_state_snapshots_game_id_turn_number");
-        indexes.Should().Contain("ix_agent_game_state_snapshots_created_at");
-        indexes.Should().Contain("pk_agent_game_state_snapshots");
+        // Assert — EF Core generates uppercase prefix (IX_/PK_), use case-insensitive comparison
+        var lowerIndexes = indexes.Select(i => i.ToLowerInvariant()).ToList();
+        lowerIndexes.Should().Contain("ix_agent_game_state_snapshots_game_id");
+        lowerIndexes.Should().Contain("ix_agent_game_state_snapshots_agent_session_id");
+        lowerIndexes.Should().Contain("ix_agent_game_state_snapshots_game_id_turn_number");
+        lowerIndexes.Should().Contain("ix_agent_game_state_snapshots_created_at");
+        lowerIndexes.Should().Contain("pk_agent_game_state_snapshots");
     }
 
     #endregion

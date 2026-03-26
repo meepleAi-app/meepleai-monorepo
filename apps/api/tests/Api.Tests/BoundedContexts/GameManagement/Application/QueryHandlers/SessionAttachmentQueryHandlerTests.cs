@@ -1,5 +1,5 @@
 using Api.BoundedContexts.GameManagement.Application.Queries;
-using Api.BoundedContexts.GameManagement.Application.QueryHandlers;
+using Api.BoundedContexts.GameManagement.Application.Queries;
 using Api.BoundedContexts.GameManagement.Application.Services;
 using Api.BoundedContexts.GameManagement.Domain.Entities;
 using Api.BoundedContexts.GameManagement.Domain.Entities.SessionAttachment;
@@ -9,6 +9,7 @@ using Api.Middleware.Exceptions;
 using Api.Tests.Constants;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.GameManagement.Application.QueryHandlers;
 
@@ -38,7 +39,7 @@ public sealed class SessionAttachmentQueryHandlerTests
         var result = await handler.Handle(
             new GetSessionAttachmentsQuery(sessionId), CancellationToken.None);
 
-        Assert.Equal(2, result.Count);
+        result.Count.Should().Be(2);
     }
 
     [Fact]
@@ -58,8 +59,8 @@ public sealed class SessionAttachmentQueryHandlerTests
         var result = await handler.Handle(
             new GetSessionAttachmentsQuery(sessionId, PlayerId: playerId), CancellationToken.None);
 
-        Assert.Single(result);
-        Assert.Equal(playerId, result[0].PlayerId);
+        result.Should().ContainSingle();
+        result[0].PlayerId.Should().Be(playerId);
     }
 
     [Fact]
@@ -78,8 +79,8 @@ public sealed class SessionAttachmentQueryHandlerTests
         var result = await handler.Handle(
             new GetSessionAttachmentsQuery(sessionId, Type: AttachmentType.BoardState), CancellationToken.None);
 
-        Assert.Single(result);
-        Assert.Equal(AttachmentType.BoardState, result[0].AttachmentType);
+        result.Should().ContainSingle();
+        result[0].AttachmentType.Should().Be(AttachmentType.BoardState);
     }
 
     [Fact]
@@ -97,7 +98,7 @@ public sealed class SessionAttachmentQueryHandlerTests
         var result = await handler.Handle(
             new GetSessionAttachmentsQuery(sessionId, SnapshotIndex: 1), CancellationToken.None);
 
-        Assert.Single(result);
+        result.Should().ContainSingle();
         _repoMock.Verify(x => x.GetBySnapshotAsync(sessionId, 1, It.IsAny<CancellationToken>()), Times.Once);
     }
 
@@ -112,7 +113,7 @@ public sealed class SessionAttachmentQueryHandlerTests
         var result = await handler.Handle(
             new GetSessionAttachmentsQuery(sessionId), CancellationToken.None);
 
-        Assert.Empty(result);
+        result.Should().BeEmpty();
     }
 
     #endregion
@@ -142,9 +143,9 @@ public sealed class SessionAttachmentQueryHandlerTests
         var result = await handler.Handle(
             new GetSessionAttachmentByIdQuery(sessionId, attachment.Id), CancellationToken.None);
 
-        Assert.Equal("https://s3.example.com/download", result.DownloadUrl);
-        Assert.Equal("Alice", result.PlayerDisplayName);
-        Assert.Equal(attachment.Id, result.Id);
+        result.DownloadUrl.Should().Be("https://s3.example.com/download");
+        result.PlayerDisplayName.Should().Be("Alice");
+        result.Id.Should().Be(attachment.Id);
     }
 
     [Fact]
@@ -156,9 +157,10 @@ public sealed class SessionAttachmentQueryHandlerTests
         var handler = new GetSessionAttachmentByIdQueryHandler(
             _repoMock.Object, _serviceMock.Object, _sessionRepoMock.Object);
 
-        await Assert.ThrowsAsync<NotFoundException>(
+        var act =
             () => handler.Handle(
-                new GetSessionAttachmentByIdQuery(Guid.NewGuid(), Guid.NewGuid()), CancellationToken.None));
+                new GetSessionAttachmentByIdQuery(Guid.NewGuid(), Guid.NewGuid()), CancellationToken.None);
+        await act.Should().ThrowAsync<NotFoundException>();
     }
 
     [Fact]
@@ -172,9 +174,10 @@ public sealed class SessionAttachmentQueryHandlerTests
         var handler = new GetSessionAttachmentByIdQueryHandler(
             _repoMock.Object, _serviceMock.Object, _sessionRepoMock.Object);
 
-        await Assert.ThrowsAsync<NotFoundException>(
+        var act =
             () => handler.Handle(
-                new GetSessionAttachmentByIdQuery(Guid.NewGuid(), attachment.Id), CancellationToken.None));
+                new GetSessionAttachmentByIdQuery(Guid.NewGuid(), attachment.Id), CancellationToken.None);
+        await act.Should().ThrowAsync<NotFoundException>();
     }
 
     [Fact]
@@ -195,7 +198,7 @@ public sealed class SessionAttachmentQueryHandlerTests
         var result = await handler.Handle(
             new GetSessionAttachmentByIdQuery(sessionId, attachment.Id), CancellationToken.None);
 
-        Assert.Equal("Unknown Player", result.PlayerDisplayName);
+        result.PlayerDisplayName.Should().Be("Unknown Player");
     }
 
     #endregion
@@ -218,7 +221,7 @@ public sealed class SessionAttachmentQueryHandlerTests
         var result = await handler.Handle(
             new GetSnapshotPhotosQuery(sessionId, 2), CancellationToken.None);
 
-        Assert.Equal(2, result.Count);
+        result.Count.Should().Be(2);
     }
 
     [Fact]
@@ -232,7 +235,7 @@ public sealed class SessionAttachmentQueryHandlerTests
         var result = await handler.Handle(
             new GetSnapshotPhotosQuery(sessionId, 5), CancellationToken.None);
 
-        Assert.Empty(result);
+        result.Should().BeEmpty();
     }
 
     #endregion
@@ -242,29 +245,33 @@ public sealed class SessionAttachmentQueryHandlerTests
     [Fact]
     public void GetSessionAttachmentsHandler_NullRepo_Throws()
     {
-        Assert.Throws<ArgumentNullException>(() =>
-            new GetSessionAttachmentsQueryHandler(null!));
+        var act = () =>
+            new GetSessionAttachmentsQueryHandler(null!);
+        act.Should().Throw<ArgumentNullException>();
     }
 
     [Fact]
     public void GetAttachmentByIdHandler_NullRepo_Throws()
     {
-        Assert.Throws<ArgumentNullException>(() =>
-            new GetSessionAttachmentByIdQueryHandler(null!, _serviceMock.Object, _sessionRepoMock.Object));
+        var act = () =>
+            new GetSessionAttachmentByIdQueryHandler(null!, _serviceMock.Object, _sessionRepoMock.Object);
+        act.Should().Throw<ArgumentNullException>();
     }
 
     [Fact]
     public void GetAttachmentByIdHandler_NullService_Throws()
     {
-        Assert.Throws<ArgumentNullException>(() =>
-            new GetSessionAttachmentByIdQueryHandler(_repoMock.Object, null!, _sessionRepoMock.Object));
+        var act = () =>
+            new GetSessionAttachmentByIdQueryHandler(_repoMock.Object, null!, _sessionRepoMock.Object);
+        act.Should().Throw<ArgumentNullException>();
     }
 
     [Fact]
     public void GetSnapshotPhotosHandler_NullRepo_Throws()
     {
-        Assert.Throws<ArgumentNullException>(() =>
-            new GetSnapshotPhotosQueryHandler(null!));
+        var act = () =>
+            new GetSnapshotPhotosQueryHandler(null!);
+        act.Should().Throw<ArgumentNullException>();
     }
 
     #endregion

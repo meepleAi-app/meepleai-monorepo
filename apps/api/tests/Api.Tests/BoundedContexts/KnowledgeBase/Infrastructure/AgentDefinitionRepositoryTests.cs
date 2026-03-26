@@ -1,9 +1,11 @@
 using Api.BoundedContexts.KnowledgeBase.Domain.Entities;
 using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 using Api.BoundedContexts.KnowledgeBase.Infrastructure.Persistence;
+using Api.SharedKernel.Application.Services;
 using Api.Tests.Constants;
 using Api.Tests.Infrastructure;
 using FluentAssertions;
+using Moq;
 using Xunit;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Infrastructure;
@@ -19,6 +21,7 @@ namespace Api.Tests.BoundedContexts.KnowledgeBase.Infrastructure;
 public sealed class AgentDefinitionRepositoryTests : IClassFixture<SharedTestcontainersFixture>, IAsyncLifetime
 {
     private readonly SharedTestcontainersFixture _fixture;
+    private readonly Mock<IDomainEventCollector> _eventCollectorMock = new();
     private readonly string _databaseName;
     private string? _connectionString;
 
@@ -49,7 +52,7 @@ public sealed class AgentDefinitionRepositoryTests : IClassFixture<SharedTestcon
     {
         // Arrange
         using var dbContext = _fixture.CreateDbContext(_connectionString!);
-        var repository = new AgentDefinitionRepository(dbContext);
+        var repository = new AgentDefinitionRepository(dbContext, _eventCollectorMock.Object);
         var agent = AgentDefinition.Create(
             "TestAgent",
             "Test description",
@@ -71,7 +74,7 @@ public sealed class AgentDefinitionRepositoryTests : IClassFixture<SharedTestcon
     {
         // Arrange
         using var dbContext = _fixture.CreateDbContext(_connectionString!);
-        var repository = new AgentDefinitionRepository(dbContext);
+        var repository = new AgentDefinitionRepository(dbContext, _eventCollectorMock.Object);
         var agent = AgentDefinition.Create("UniqueAgent", "Desc", AgentType.RagAgent, AgentDefinitionConfig.Default());
         await repository.AddAsync(agent);
 
@@ -88,7 +91,7 @@ public sealed class AgentDefinitionRepositoryTests : IClassFixture<SharedTestcon
     {
         // Arrange
         using var dbContext = _fixture.CreateDbContext(_connectionString!);
-        var repository = new AgentDefinitionRepository(dbContext);
+        var repository = new AgentDefinitionRepository(dbContext, _eventCollectorMock.Object);
         await repository.AddAsync(AgentDefinition.Create("Agent1", "Desc1", AgentType.RagAgent, AgentDefinitionConfig.Default()));
         await repository.AddAsync(AgentDefinition.Create("Agent2", "Desc2", AgentType.RagAgent, AgentDefinitionConfig.Default()));
 
@@ -104,10 +107,11 @@ public sealed class AgentDefinitionRepositoryTests : IClassFixture<SharedTestcon
     {
         // Arrange
         using var dbContext = _fixture.CreateDbContext(_connectionString!);
-        var repository = new AgentDefinitionRepository(dbContext);
+        var repository = new AgentDefinitionRepository(dbContext, _eventCollectorMock.Object);
         var activeAgent = AgentDefinition.Create("ActiveAgent", "Desc", AgentType.RagAgent, AgentDefinitionConfig.Default());
+        activeAgent.Activate(); // Create() now defaults to inactive
         var inactiveAgent = AgentDefinition.Create("InactiveAgent", "Desc", AgentType.RagAgent, AgentDefinitionConfig.Default());
-        inactiveAgent.Deactivate();
+        // inactiveAgent stays inactive (Draft default)
 
         await repository.AddAsync(activeAgent);
         await repository.AddAsync(inactiveAgent);
@@ -123,14 +127,18 @@ public sealed class AgentDefinitionRepositoryTests : IClassFixture<SharedTestcon
     [Fact]
     public async Task SearchAsync_WithMatchingName_ShouldReturnMatches()
     {
-        // Arrange
-        using var dbContext = _fixture.CreateDbContext(_connectionString!);
-        var repository = new AgentDefinitionRepository(dbContext);
-        await repository.AddAsync(AgentDefinition.Create("SearchableAgent", "Desc", AgentType.RagAgent, AgentDefinitionConfig.Default()));
-        await repository.AddAsync(AgentDefinition.Create("OtherAgent", "Desc", AgentType.RagAgent, AgentDefinitionConfig.Default()));
+        // Arrange — use separate DbContext scopes to avoid entity tracking conflicts
+        using (var arrangeContext = _fixture.CreateDbContext(_connectionString!))
+        {
+            var arrangeRepo = new AgentDefinitionRepository(arrangeContext, _eventCollectorMock.Object);
+            await arrangeRepo.AddAsync(AgentDefinition.Create("SearchableAgent", "Desc", AgentType.RagAgent, AgentDefinitionConfig.Default()));
+            await arrangeRepo.AddAsync(AgentDefinition.Create("OtherAgent", "Desc", AgentType.RagAgent, AgentDefinitionConfig.Default()));
+        }
 
-        // Act
-        var results = await repository.SearchAsync("searchable");
+        // Act — fresh context avoids tracking conflicts
+        using var actContext = _fixture.CreateDbContext(_connectionString!);
+        var actRepo = new AgentDefinitionRepository(actContext, _eventCollectorMock.Object);
+        var results = await actRepo.SearchAsync("searchable");
 
         // Assert
         results.Should().HaveCount(1);
@@ -142,7 +150,7 @@ public sealed class AgentDefinitionRepositoryTests : IClassFixture<SharedTestcon
     {
         // Arrange
         using var dbContext = _fixture.CreateDbContext(_connectionString!);
-        var repository = new AgentDefinitionRepository(dbContext);
+        var repository = new AgentDefinitionRepository(dbContext, _eventCollectorMock.Object);
         var agent = AgentDefinition.Create("OriginalName", "Desc", AgentType.RagAgent, AgentDefinitionConfig.Default());
         await repository.AddAsync(agent);
 
@@ -159,17 +167,27 @@ public sealed class AgentDefinitionRepositoryTests : IClassFixture<SharedTestcon
     [Fact]
     public async Task DeleteAsync_WithExistingAgent_ShouldRemove()
     {
-        // Arrange
-        using var dbContext = _fixture.CreateDbContext(_connectionString!);
-        var repository = new AgentDefinitionRepository(dbContext);
-        var agent = AgentDefinition.Create("ToDelete", "Desc", AgentType.RagAgent, AgentDefinitionConfig.Default());
-        await repository.AddAsync(agent);
+        // Arrange — use separate DbContext scopes to avoid entity tracking conflicts
+        var agentId = Guid.Empty;
+        using (var arrangeContext = _fixture.CreateDbContext(_connectionString!))
+        {
+            var arrangeRepo = new AgentDefinitionRepository(arrangeContext, _eventCollectorMock.Object);
+            var agent = AgentDefinition.Create("ToDelete", "Desc", AgentType.RagAgent, AgentDefinitionConfig.Default());
+            await arrangeRepo.AddAsync(agent);
+            agentId = agent.Id;
+        }
 
-        // Act
-        await repository.DeleteAsync(agent.Id);
+        // Act — fresh context avoids "already tracked" conflict
+        using (var actContext = _fixture.CreateDbContext(_connectionString!))
+        {
+            var actRepo = new AgentDefinitionRepository(actContext, _eventCollectorMock.Object);
+            await actRepo.DeleteAsync(agentId);
+        }
 
         // Assert
-        var retrieved = await repository.GetByIdAsync(agent.Id);
+        using var assertContext = _fixture.CreateDbContext(_connectionString!);
+        var assertRepo = new AgentDefinitionRepository(assertContext, _eventCollectorMock.Object);
+        var retrieved = await assertRepo.GetByIdAsync(agentId);
         retrieved.Should().BeNull();
     }
 
@@ -178,7 +196,7 @@ public sealed class AgentDefinitionRepositoryTests : IClassFixture<SharedTestcon
     {
         // Arrange
         using var dbContext = _fixture.CreateDbContext(_connectionString!);
-        var repository = new AgentDefinitionRepository(dbContext);
+        var repository = new AgentDefinitionRepository(dbContext, _eventCollectorMock.Object);
         await repository.AddAsync(AgentDefinition.Create("ExistingAgent", "Desc", AgentType.RagAgent, AgentDefinitionConfig.Default()));
 
         // Act
@@ -193,7 +211,7 @@ public sealed class AgentDefinitionRepositoryTests : IClassFixture<SharedTestcon
     {
         // Arrange
         using var dbContext = _fixture.CreateDbContext(_connectionString!);
-        var repository = new AgentDefinitionRepository(dbContext);
+        var repository = new AgentDefinitionRepository(dbContext, _eventCollectorMock.Object);
 
         // Act
         var exists = await repository.ExistsAsync("NonExistentAgent");
@@ -207,7 +225,7 @@ public sealed class AgentDefinitionRepositoryTests : IClassFixture<SharedTestcon
     {
         // Arrange
         using var dbContext = _fixture.CreateDbContext(_connectionString!);
-        var repository = new AgentDefinitionRepository(dbContext);
+        var repository = new AgentDefinitionRepository(dbContext, _eventCollectorMock.Object);
         var prompts = new List<AgentPromptTemplate>
         {
             AgentPromptTemplate.Create("system", "System prompt")

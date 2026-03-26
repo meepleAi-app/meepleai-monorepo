@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useRef, useEffect } from 'react';
 
-import { BookOpen, FileText, ExternalLink, ChevronRight } from 'lucide-react';
+import { BookOpen, FileText, ExternalLink, ChevronRight, Lock } from 'lucide-react';
 
 import {
   Collapsible,
@@ -43,6 +43,11 @@ function formatRelevance(score: number): string {
   return `${Math.round(score * 100)}%`;
 }
 
+/** Resolve copyrightTier with backward-compat default */
+function getTier(citation: Citation): 'full' | 'protected' {
+  return citation.copyrightTier ?? 'full';
+}
+
 // ============================================================================
 // Sub-components
 // ============================================================================
@@ -55,6 +60,9 @@ interface CitationChipProps {
 }
 
 function CitationChip({ citation, isActive, isPowerMode, onClick }: CitationChipProps) {
+  const tier = getTier(citation);
+  const isFull = tier === 'full';
+
   return (
     <button
       type="button"
@@ -66,9 +74,14 @@ function CitationChip({ citation, isActive, isPowerMode, onClick }: CitationChip
         'bg-orange-100 dark:bg-orange-900/40',
         'hover:bg-orange-200 dark:hover:bg-orange-800/50',
         'focus:outline-none focus:ring-2 focus:ring-orange-400/60',
-        isActive && 'ring-1 ring-orange-400 font-medium',
+        isActive && 'ring-1 font-medium',
+        isActive && isFull && 'ring-[hsl(174,60%,40%)]',
+        isActive && !isFull && 'ring-amber-500',
         isPowerMode && 'border-l-2',
-        isPowerMode && getRelevanceColor(citation.relevanceScore)
+        isPowerMode && isFull && 'border-l-[hsl(174,60%,40%)]',
+        isPowerMode && !isFull && 'border-l-amber-500',
+        isPowerMode && !isFull && !isActive && getRelevanceColor(citation.relevanceScore),
+        isPowerMode && isFull && !isActive && getRelevanceColor(citation.relevanceScore)
       )}
     >
       <span>p.{citation.pageNumber}</span>
@@ -86,6 +99,7 @@ function CitationChip({ citation, isActive, isPowerMode, onClick }: CitationChip
 /**
  * Collapsible card showing rule citations from a game's rulebook.
  * Issue #5524: Replaces inline CitationBadge pills with a richer display.
+ * Copyright tier support: full (verbatim) vs protected (paraphrased).
  */
 export function RuleSourceCard({
   citations,
@@ -129,10 +143,16 @@ export function RuleSourceCard({
 
   const activeCitation = citations[activeIndex] ?? citations[0];
   const isSingle = citations.length === 1;
+  const activeTier = getTier(activeCitation);
+  const isFull = activeTier === 'full';
+  const hasAnyProtected = citations.some(c => getTier(c) === 'protected');
 
   const headerLabel = gameTitle
     ? `${citations.length} ${citations.length === 1 ? 'fonte' : 'fonti'} dal regolamento di ${gameTitle}`
     : `${citations.length} ${citations.length === 1 ? 'fonte dal regolamento' : 'fonti dal regolamento'}`;
+
+  // Determine quote content for active citation
+  const quoteContent = isFull ? activeCitation.snippet : activeCitation.paraphrasedSnippet || null;
 
   return (
     <Collapsible open={isOpen} onOpenChange={setIsOpen}>
@@ -168,6 +188,12 @@ export function RuleSourceCard({
             />
             <BookOpen className="h-4 w-4 flex-shrink-0" />
             <span>{headerLabel}</span>
+            {hasAnyProtected && (
+              <Lock
+                className="h-3.5 w-3.5 flex-shrink-0 text-amber-600 dark:text-amber-400"
+                data-testid="copyright-lock-icon"
+              />
+            )}
           </button>
         </CollapsibleTrigger>
 
@@ -200,58 +226,105 @@ export function RuleSourceCard({
             <blockquote
               role="blockquote"
               className={cn(
-                'border-l-2 border-orange-300 dark:border-orange-600',
-                'pl-3 py-1',
-                'text-sm italic font-nunito',
-                'text-stone-700 dark:text-stone-300'
+                'border-l-2 pl-3 py-1',
+                'text-sm font-nunito',
+                'text-stone-700 dark:text-stone-300',
+                isFull ? 'border-l-[hsl(174,60%,40%)] italic' : 'border-l-amber-500'
               )}
               data-testid="citation-quote"
             >
-              {activeCitation.snippet ? (
+              {/* Tier label */}
+              <p
+                className={cn(
+                  'text-[9px] uppercase tracking-wider font-semibold mb-1',
+                  isFull ? 'text-[hsl(174,60%,40%)]' : 'text-amber-600 dark:text-amber-400'
+                )}
+                data-testid="citation-tier-label"
+              >
+                {isFull ? 'Citazione originale' : 'Riformulazione AI'}
+              </p>
+
+              {/* Quote text */}
+              {isFull ? (
+                // Full tier: verbatim snippet
+                activeCitation.snippet ? (
+                  <>
+                    <p>&ldquo;{activeCitation.snippet}&rdquo;</p>
+                    <p className="mt-1 text-xs not-italic text-stone-500 dark:text-stone-400">
+                      — Regolamento, p.{activeCitation.pageNumber}
+                    </p>
+                  </>
+                ) : (
+                  <p className="not-italic text-stone-500 dark:text-stone-400">
+                    Pagina {activeCitation.pageNumber}
+                  </p>
+                )
+              ) : // Protected tier: paraphrase or page-only fallback
+              quoteContent ? (
                 <>
-                  <p>&ldquo;{activeCitation.snippet}&rdquo;</p>
-                  <p className="mt-1 text-xs not-italic text-stone-500 dark:text-stone-400">
+                  <p>{quoteContent}</p>
+                  <p className="mt-1 text-xs text-stone-500 dark:text-stone-400">
                     — Regolamento, p.{activeCitation.pageNumber}
                   </p>
                 </>
               ) : (
-                <p className="not-italic text-stone-500 dark:text-stone-400">
-                  Pagina {activeCitation.pageNumber}
+                <p className="text-stone-500 dark:text-stone-400">
+                  Vedi pagina {activeCitation.pageNumber} del regolamento
                 </p>
               )}
             </blockquote>
 
             {/* Action row */}
-            <div className="flex items-center gap-3">
-              <button
-                type="button"
-                onClick={() => setPdfModalOpen(true)}
-                className={cn(
-                  'inline-flex items-center gap-1 text-xs',
-                  'text-orange-600 dark:text-orange-400',
-                  'hover:underline focus:outline-none focus:ring-1 focus:ring-orange-400 rounded'
+            <div className="flex flex-col gap-2">
+              <div className="flex items-center gap-3">
+                {/* "Vedi nel PDF" only for full tier */}
+                {isFull && (
+                  <button
+                    type="button"
+                    onClick={() => setPdfModalOpen(true)}
+                    className={cn(
+                      'inline-flex items-center gap-1 text-xs',
+                      'text-orange-600 dark:text-orange-400',
+                      'hover:underline focus:outline-none focus:ring-1 focus:ring-orange-400 rounded'
+                    )}
+                    data-testid="view-pdf-btn"
+                  >
+                    <FileText className="h-3.5 w-3.5" />
+                    Vedi nel PDF
+                  </button>
                 )}
-                data-testid="view-pdf-btn"
-              >
-                <FileText className="h-3.5 w-3.5" />
-                Vedi nel PDF
-              </button>
 
-              {publisherUrl && (
-                <a
-                  href={publisherUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className={cn(
-                    'inline-flex items-center gap-1 text-xs',
-                    'text-orange-600 dark:text-orange-400',
-                    'hover:underline focus:outline-none focus:ring-1 focus:ring-orange-400 rounded'
-                  )}
-                  data-testid="publisher-link"
+                {publisherUrl && (
+                  <a
+                    href={publisherUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={cn(
+                      'inline-flex items-center gap-1 text-xs',
+                      'text-orange-600 dark:text-orange-400',
+                      'hover:underline focus:outline-none focus:ring-1 focus:ring-orange-400 rounded'
+                    )}
+                    data-testid="publisher-link"
+                  >
+                    <ExternalLink className="h-3.5 w-3.5" />
+                    Regolamento ufficiale
+                  </a>
+                )}
+              </div>
+
+              {/* Upsell CTA for protected tier */}
+              {!isFull && (
+                <div
+                  className="inline-flex items-center gap-1.5 text-xs text-stone-500"
+                  data-testid="upsell-cta"
                 >
-                  <ExternalLink className="h-3.5 w-3.5" />
-                  Regolamento ufficiale
-                </a>
+                  <Lock className="h-3 w-3 flex-shrink-0" />
+                  <span>
+                    {activeCitation.isPublic
+                      ? 'Dichiara possesso per accesso completo'
+                      : 'Carica il regolamento per la versione completa'}
+                  </span>
+                </div>
               )}
             </div>
           </div>

@@ -25,8 +25,7 @@ import { CardNavigationFooter } from '../../meeple-card-features/CardNavigationF
 import { ChatStatsDisplay } from '../../meeple-card-features/ChatStatsDisplay';
 import { ChatStatusBadge } from '../../meeple-card-features/ChatStatusBadge';
 import { ChatUnreadBadge } from '../../meeple-card-features/ChatUnreadBadge';
-import { DocumentStatusBadge } from '../../meeple-card-features/DocumentStatusBadge';
-import { ManaBadge } from '../../meeple-card-features/ManaBadge';
+import { KbStatusBadge } from '../../meeple-card-features/DocumentStatusBadge';
 import { ManaLinkFooter } from '../../meeple-card-features/ManaLinkFooter';
 import { PrimaryActions } from '../../meeple-card-features/PrimaryActions';
 import { SessionActionButtons } from '../../meeple-card-features/SessionActionButtons';
@@ -44,7 +43,7 @@ import {
   contentVariants,
 } from '../../meeple-card-styles';
 import { useMobileInteraction } from '../hooks/useMobileInteraction';
-import { CardActions } from '../parts/CardActions';
+import { CardActions, CardActionStrip } from '../parts/CardActions';
 import { CardBadges } from '../parts/CardBadges';
 import { CardCover } from '../parts/CardCover';
 import { CardTagStrip } from '../parts/CardTagStrip';
@@ -129,15 +128,17 @@ export const MeepleCardGrid = React.memo(function MeepleCardGrid(props: MeepleCa
     onManaPipClick,
     primaryActions,
     glowState,
+    stateLabel,
+    coverLabels,
+    subtypeIcons,
+    showHolo = false,
   } = props;
 
   const variant = 'grid' as const;
   const coverSrc = entity === 'player' ? avatarUrl || imageUrl : imageUrl;
-  // eslint-disable-next-line security/detect-object-injection
   const color = customColor || entityColors[entity].hsl;
   const hasQuickActions = !!(quickActions && quickActions.length > 0);
   const showWishlistBtn = !!showWishlist && !hasQuickActions;
-  // eslint-disable-next-line security/detect-object-injection
   const drawerEntityType = DRAWER_ENTITY_TYPE_MAP[entity];
 
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -165,12 +166,17 @@ export const MeepleCardGrid = React.memo(function MeepleCardGrid(props: MeepleCa
     showWishlistBtn ||
     !!(showInfoButton && (entityId || infoHref));
 
-  const { isMobile, showMobileActions, setShowMobileActions, handleMobileClick, cardRef } =
-    useMobileInteraction({
-      hasMobileActions,
-      flippable,
-      onClick,
-    });
+  const {
+    isMobile,
+    showMobileActions: _showMobileActions,
+    setShowMobileActions: _setShowMobileActions,
+    handleMobileClick,
+    cardRef,
+  } = useMobileInteraction({
+    hasMobileActions,
+    flippable,
+    onClick,
+  });
 
   const isInteractive = !!onClick && !(actions.length > 0);
 
@@ -203,6 +209,33 @@ export const MeepleCardGrid = React.memo(function MeepleCardGrid(props: MeepleCa
 
   const Component = isInteractive ? 'div' : 'article';
 
+  const hasStripActions =
+    !!entityQuickActions ||
+    !!(showInfoButton && (entityId || infoHref)) ||
+    showWishlistBtn ||
+    hasQuickActions;
+
+  const stripElement = hasStripActions ? (
+    <CardActionStrip
+      entity={entity}
+      customColor={customColor}
+      entityQuickActions={entityQuickActions}
+      quickActions={quickActions}
+      userRole={userRole}
+      showWishlistBtn={showWishlistBtn}
+      isWishlisted={isWishlisted}
+      onWishlistToggle={onWishlistToggle}
+      showInfoButton={showInfoButton}
+      entityId={entityId}
+      infoHref={infoHref}
+      infoTooltip={infoTooltip}
+      drawerEntityType={drawerEntityType}
+      onDrawerOpen={() => setDrawerOpen(true)}
+      testId={testId}
+      hasQuickActions={hasQuickActions}
+    />
+  ) : null;
+
   return (
     <Component
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -219,7 +252,6 @@ export const MeepleCardGrid = React.memo(function MeepleCardGrid(props: MeepleCa
         {
           '--mc-entity-color': `hsl(${color})`,
           outlineColor: `hsla(${color}, 0.4)`,
-          willChange: 'transform, box-shadow, outline',
           viewTransitionName: entityId ? `meeple-card-${entityId}` : undefined,
         } as React.CSSProperties
       }
@@ -236,13 +268,12 @@ export const MeepleCardGrid = React.memo(function MeepleCardGrid(props: MeepleCa
             }
           : undefined
       }
-      // eslint-disable-next-line security/detect-object-injection
       aria-label={`${entityColors[entity].name}: ${title}`}
       data-testid={testId || 'meeple-card'}
       data-entity={entity}
       data-variant={variant}
     >
-      <HoloOverlay />
+      {showHolo && <HoloOverlay />}
 
       {glowState && <StatusGlow state={glowState} entityColor={entityColors[entity].hsl} />}
 
@@ -269,8 +300,6 @@ export const MeepleCardGrid = React.memo(function MeepleCardGrid(props: MeepleCa
           />
         )}
 
-      <ManaBadge entity={entity} className="absolute top-2 left-2.5 z-[2]" />
-
       <CardTagStrip
         variant={variant}
         entity={entity}
@@ -291,6 +320,11 @@ export const MeepleCardGrid = React.memo(function MeepleCardGrid(props: MeepleCa
         variant={variant}
         entity={entity}
         customColor={customColor}
+        coverLabels={coverLabels}
+        showEntityType
+        subtypeIcons={subtypeIcons}
+        stateLabel={stateLabel}
+        actionStrip={stripElement}
       />
 
       {/* Content area */}
@@ -300,29 +334,7 @@ export const MeepleCardGrid = React.memo(function MeepleCardGrid(props: MeepleCa
           entity={entity}
           customColor={customColor}
           actions={actions}
-          entityQuickActions={entityQuickActions}
-          quickActions={quickActions}
-          userRole={userRole}
-          showWishlistBtn={showWishlistBtn}
-          isWishlisted={isWishlisted}
-          onWishlistToggle={onWishlistToggle}
-          showInfoButton={showInfoButton}
-          entityId={entityId}
-          infoHref={infoHref}
-          infoTooltip={infoTooltip}
-          drawerEntityType={drawerEntityType}
-          onDrawerOpen={() => setDrawerOpen(true)}
-          testId={testId}
-          unreadCount={unreadCount}
-          hasQuickActions={hasQuickActions}
         />
-
-        {primaryActions && primaryActions.length > 0 && (
-          <PrimaryActions
-            actions={primaryActions}
-            className="absolute top-10 right-2.5 z-[3] opacity-0 group-hover:opacity-100 transition-opacity"
-          />
-        )}
 
         {/* Title */}
         <h3 className="font-quicksand font-bold leading-tight text-[0.8rem] sm:text-[0.95rem] mb-0.5 text-card-foreground truncate">
@@ -334,6 +346,13 @@ export const MeepleCardGrid = React.memo(function MeepleCardGrid(props: MeepleCa
           <p className="text-muted-foreground text-[0.7rem] sm:text-[0.78rem] mt-px mb-0.5 sm:mb-1 truncate">
             {subtitle}
           </p>
+        )}
+
+        {primaryActions && primaryActions.length > 0 && (
+          <PrimaryActions
+            actions={primaryActions}
+            className="mt-1 opacity-0 group-hover:opacity-100 transition-opacity"
+          />
         )}
 
         {/* Rating */}
@@ -435,14 +454,14 @@ export const MeepleCardGrid = React.memo(function MeepleCardGrid(props: MeepleCa
         {/* Document-specific info */}
         {entity === 'kb' && documentStatus && (
           <div className="flex items-center gap-1.5 mb-2">
-            <DocumentStatusBadge status={documentStatus} size="sm" />
+            <KbStatusBadge status={documentStatus} size="sm" />
           </div>
         )}
 
         {/* KB Cards worst-status badge */}
         {entity === 'game' && worstKbStatus && (
           <div className="flex items-center gap-1.5 mb-2" data-testid="meeple-card-kb-badge">
-            <DocumentStatusBadge status={worstKbStatus} size="sm" />
+            <KbStatusBadge status={worstKbStatus} size="sm" />
             <span className="text-[10px] text-muted-foreground font-medium">
               {kbCards!.length} KB
             </span>
@@ -479,7 +498,12 @@ export const MeepleCardGrid = React.memo(function MeepleCardGrid(props: MeepleCa
           {metadata.map((item, index) => {
             const chipContent = (
               <>
-                {item.icon && <item.icon className="w-3.5 h-3.5" aria-hidden="true" />}
+                {item.icon && (
+                  <item.icon
+                    className="w-5 h-5 text-[hsl(25,80%,55%)] opacity-[0.85]"
+                    aria-hidden="true"
+                  />
+                )}
                 <span className="font-nunito">{item.label || item.value}</span>
               </>
             );
@@ -488,7 +512,7 @@ export const MeepleCardGrid = React.memo(function MeepleCardGrid(props: MeepleCa
                 <button
                   key={index}
                   type="button"
-                  className="flex items-center gap-1.5 text-[0.7rem] font-semibold text-foreground/65 dark:text-foreground/60 cursor-pointer hover:opacity-80 transition-opacity"
+                  className="flex items-center gap-2 text-[0.78rem] font-semibold text-foreground/70 dark:text-[rgba(200,180,140,0.75)] cursor-pointer hover:opacity-80 transition-opacity"
                   onClick={e => {
                     e.stopPropagation();
                     item.onClick!();
@@ -501,7 +525,7 @@ export const MeepleCardGrid = React.memo(function MeepleCardGrid(props: MeepleCa
             return (
               <span
                 key={index}
-                className="flex items-center gap-1.5 text-[0.7rem] font-semibold text-foreground/65 dark:text-foreground/60"
+                className="flex items-center gap-2 text-[0.78rem] font-semibold text-foreground/70 dark:text-[rgba(200,180,140,0.75)]"
               >
                 {chipContent}
               </span>

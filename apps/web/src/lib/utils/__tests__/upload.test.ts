@@ -13,6 +13,24 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
+const mockLoggerError = vi.hoisted(() => vi.fn());
+vi.mock('@/lib/logger', () => ({
+  logger: {
+    debug: vi.fn(),
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: (...args: unknown[]) => mockLoggerError(...args),
+  },
+  getLogger: () => ({
+    debug: vi.fn(),
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: (...args: unknown[]) => mockLoggerError(...args),
+  }),
+  resetLogger: vi.fn(),
+  LogLevel: { DEBUG: 'debug', INFO: 'info', WARN: 'warn', ERROR: 'error' },
+}));
+
 import { uploadChunks } from '../upload';
 
 // Mock fetch globally
@@ -22,7 +40,7 @@ global.fetch = mockFetch as unknown as typeof fetch;
 describe('uploadChunks', () => {
   beforeEach(() => {
     mockFetch.mockReset();
-    vi.spyOn(console, 'error').mockImplementation(() => {});
+    mockLoggerError.mockClear();
   });
 
   afterEach(() => {
@@ -122,7 +140,7 @@ describe('uploadChunks', () => {
     const result = await uploadChunks(mockFile, 'session-retry', mockProgress);
 
     expect(result).toBe('doc-retry');
-    expect(console.error).toHaveBeenCalled();
+    expect(mockLoggerError).toHaveBeenCalled();
   });
 
   it('should throw after max retries', async () => {
@@ -137,9 +155,9 @@ describe('uploadChunks', () => {
       .mockRejectedValueOnce(new Error('Network error 2'))
       .mockRejectedValueOnce(new Error('Network error 3'));
 
-    await expect(
-      uploadChunks(mockFile, 'session-fail', mockProgress)
-    ).rejects.toThrow('Failed to upload chunk 1/1 after 3 attempts');
+    await expect(uploadChunks(mockFile, 'session-fail', mockProgress)).rejects.toThrow(
+      'Failed to upload chunk 1/1 after 3 attempts'
+    );
 
     expect(mockFetch).toHaveBeenCalledTimes(3); // 3 retry attempts
   });
@@ -157,9 +175,9 @@ describe('uploadChunks', () => {
       text: async () => 'Server error',
     });
 
-    await expect(
-      uploadChunks(mockFile, 'session-error', mockProgress)
-    ).rejects.toThrow('Failed to upload chunk 1/1 after 3 attempts');
+    await expect(uploadChunks(mockFile, 'session-error', mockProgress)).rejects.toThrow(
+      'Failed to upload chunk 1/1 after 3 attempts'
+    );
   });
 
   it('should handle finalize failure', async () => {
@@ -181,9 +199,9 @@ describe('uploadChunks', () => {
       text: async () => 'Invalid session',
     });
 
-    await expect(
-      uploadChunks(mockFile, 'session-finalize-fail', mockProgress)
-    ).rejects.toThrow('Failed to finalize upload: HTTP 400');
+    await expect(uploadChunks(mockFile, 'session-finalize-fail', mockProgress)).rejects.toThrow(
+      'Failed to finalize upload: HTTP 400'
+    );
   });
 
   it('should send correct chunk metadata', async () => {
@@ -193,12 +211,10 @@ describe('uploadChunks', () => {
     const mockProgress = vi.fn();
     const mockSessionId = 'session-metadata';
 
-    mockFetch
-      .mockResolvedValueOnce({ ok: true, text: async () => '' })
-      .mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({ documentId: 'doc-123' }),
-      });
+    mockFetch.mockResolvedValueOnce({ ok: true, text: async () => '' }).mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ documentId: 'doc-123' }),
+    });
 
     await uploadChunks(mockFile, mockSessionId, mockProgress);
 
@@ -219,12 +235,10 @@ describe('uploadChunks', () => {
     const mockProgress = vi.fn();
     const mockSessionId = 'session-finalize';
 
-    mockFetch
-      .mockResolvedValueOnce({ ok: true, text: async () => '' })
-      .mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({ documentId: 'doc-finalize' }),
-      });
+    mockFetch.mockResolvedValueOnce({ ok: true, text: async () => '' }).mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ documentId: 'doc-finalize' }),
+    });
 
     await uploadChunks(mockFile, mockSessionId, mockProgress);
 

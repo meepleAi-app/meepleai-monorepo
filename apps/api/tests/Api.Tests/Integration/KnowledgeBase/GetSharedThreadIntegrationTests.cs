@@ -20,9 +20,10 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.StackExchangeRedis;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.Integration.KnowledgeBase;
 
@@ -72,7 +73,7 @@ public sealed class GetSharedThreadIntegrationTests : IAsyncLifetime
             _isolatedDbConnectionString = await _fixture.CreateIsolatedDatabaseAsync(_databaseName);
 
             // Build service provider with all required dependencies
-            var services = new ServiceCollection();
+            var services = IntegrationServiceCollectionBuilder.CreateBase(_isolatedDbConnectionString);
 
             // Configuration
             var configuration = new ConfigurationBuilder()
@@ -84,15 +85,6 @@ public sealed class GetSharedThreadIntegrationTests : IAsyncLifetime
                 .Build();
             services.AddSingleton<IConfiguration>(configuration);
 
-            // Logging
-            services.AddLogging(builder => builder.AddConsole().SetMinimumLevel(LogLevel.Debug));
-
-            // DbContext with EF Core
-            services.AddDbContext<MeepleAiDbContext>(options =>
-                options.UseNpgsql(_isolatedDbConnectionString, o => o.UseVector()) // Issue #3547
-                    .ConfigureWarnings(warnings =>
-                        warnings.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning)));
-
             // Redis distributed cache
             services.AddStackExchangeRedisCache(options =>
             {
@@ -100,7 +92,8 @@ public sealed class GetSharedThreadIntegrationTests : IAsyncLifetime
                 options.InstanceName = $"test_getsharedthread_{Guid.NewGuid():N}:";
             });
 
-            // Domain event collector (required by repositories)
+            // Override domain event collector with mock (has Setup behavior)
+            services.RemoveAll<IDomainEventCollector>();
             var mockEventCollector = new Mock<IDomainEventCollector>();
             mockEventCollector.Setup(x => x.GetAndClearEvents()).Returns(new List<IDomainEvent>().AsReadOnly());
             services.AddScoped<IDomainEventCollector>(_ => mockEventCollector.Object);
@@ -108,9 +101,6 @@ public sealed class GetSharedThreadIntegrationTests : IAsyncLifetime
             // Repositories
             services.AddScoped<IShareLinkRepository, ShareLinkRepository>();
             services.AddScoped<IChatThreadRepository, ChatThreadRepository>();
-
-            // MediatR for handlers
-            services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(GetSharedThreadQueryHandler).Assembly));
 
             _serviceProvider = services.BuildServiceProvider();
 
@@ -182,22 +172,22 @@ public sealed class GetSharedThreadIntegrationTests : IAsyncLifetime
 
         // Verify initial access count is 0
         var shareLinkBefore = await repository.GetByIdAsync(createResult.ShareLinkId, TestCancellationToken);
-        Assert.NotNull(shareLinkBefore);
-        Assert.Equal(0, shareLinkBefore.AccessCount);
+        shareLinkBefore.Should().NotBeNull();
+        shareLinkBefore.AccessCount.Should().Be(0);
 
         // Act - access the shared thread
         var getSharedThreadQuery = new GetSharedThreadQuery(createResult.Token);
         var result = await mediator.Send(getSharedThreadQuery, TestCancellationToken);
 
         // Assert - thread returned successfully
-        Assert.NotNull(result);
-        Assert.Equal(threadId, result.ThreadId);
+        result.Should().NotBeNull();
+        result.ThreadId.Should().Be(threadId);
 
         // Assert - access count incremented (Issue #2150 fix verification)
         var shareLinkAfter = await repository.GetByIdAsync(createResult.ShareLinkId, TestCancellationToken);
-        Assert.NotNull(shareLinkAfter);
-        Assert.Equal(1, shareLinkAfter.AccessCount);
-        Assert.NotNull(shareLinkAfter.LastAccessedAt);
+        shareLinkAfter.Should().NotBeNull();
+        shareLinkAfter.AccessCount.Should().Be(1);
+        shareLinkAfter.LastAccessedAt.Should().NotBeNull();
     }
 
     [Fact]
@@ -234,13 +224,13 @@ public sealed class GetSharedThreadIntegrationTests : IAsyncLifetime
         for (int i = 0; i < 3; i++)
         {
             var result = await mediator.Send(getSharedThreadQuery, TestCancellationToken);
-            Assert.NotNull(result);
+            result.Should().NotBeNull();
         }
 
         // Assert - access count is 3
         var shareLinkAfter = await repository.GetByIdAsync(createResult.ShareLinkId, TestCancellationToken);
-        Assert.NotNull(shareLinkAfter);
-        Assert.Equal(3, shareLinkAfter.AccessCount);
+        shareLinkAfter.Should().NotBeNull();
+        shareLinkAfter.AccessCount.Should().Be(3);
     }
 
     [Fact]
@@ -256,7 +246,7 @@ public sealed class GetSharedThreadIntegrationTests : IAsyncLifetime
         var result = await mediator.Send(getSharedThreadQuery, TestCancellationToken);
 
         // Assert
-        Assert.Null(result);
+        result.Should().BeNull();
     }
 
     [Fact]
@@ -293,30 +283,30 @@ public sealed class GetSharedThreadIntegrationTests : IAsyncLifetime
             UserId: userId
         );
         var revokeResult = await mediator.Send(revokeCommand, TestCancellationToken);
-        Assert.True(revokeResult, "Revoke command should succeed");
+        revokeResult.Should().BeTrue("Revoke command should succeed");
 
         // Verify the share link is marked as revoked in the database
         var shareLinkAfterRevoke = await repository.GetByIdAsync(createResult.ShareLinkId, TestCancellationToken);
-        Assert.NotNull(shareLinkAfterRevoke);
-        Assert.True(shareLinkAfterRevoke.IsRevoked, "Share link should be marked as revoked in database");
+        shareLinkAfterRevoke.Should().NotBeNull();
+        shareLinkAfterRevoke.IsRevoked.Should().BeTrue("Share link should be marked as revoked in database");
 
         // Verify token is marked as invalid via ValidateShareLinkQuery (checks Redis blacklist)
         var validateQuery = new ValidateShareLinkQuery(createResult.Token);
         var validateResult = await mediator.Send(validateQuery, TestCancellationToken);
-        Assert.NotNull(validateResult);
-        Assert.False(validateResult.IsValid, "Token should be marked as invalid after revocation (Redis blacklist)");
+        validateResult.Should().NotBeNull();
+        validateResult.IsValid.Should().BeFalse("Token should be marked as invalid after revocation (Redis blacklist)");
 
         // Act - try to access with revoked token
         var getSharedThreadQuery = new GetSharedThreadQuery(createResult.Token);
         var result = await mediator.Send(getSharedThreadQuery, TestCancellationToken);
 
         // Assert
-        Assert.Null(result);
+        result.Should().BeNull();
 
         // Verify access count is still 0 (no analytics for revoked tokens)
         var shareLinkAfter = await repository.GetByIdAsync(createResult.ShareLinkId, TestCancellationToken);
-        Assert.NotNull(shareLinkAfter);
-        Assert.Equal(0, shareLinkAfter.AccessCount);
+        shareLinkAfter.Should().NotBeNull();
+        shareLinkAfter.AccessCount.Should().Be(0);
     }
 
     #endregion
@@ -355,8 +345,8 @@ public sealed class GetSharedThreadIntegrationTests : IAsyncLifetime
         var result = await mediator.Send(getSharedThreadQuery, TestCancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal(ShareLinkRole.Comment, result.Role);
+        result.Should().NotBeNull();
+        result.Role.Should().Be(ShareLinkRole.Comment);
     }
 
     [Fact]
@@ -391,8 +381,8 @@ public sealed class GetSharedThreadIntegrationTests : IAsyncLifetime
         var result = await mediator.Send(getSharedThreadQuery, TestCancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal(gameId, result.GameId);
+        result.Should().NotBeNull();
+        result.GameId.Should().Be(gameId);
     }
 
     #endregion

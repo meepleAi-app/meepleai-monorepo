@@ -42,30 +42,10 @@ public sealed class Week12SimpleValidationTests : IAsyncLifetime
         _databaseName = $"test_week12simple_{Guid.NewGuid():N}";
         var connectionString = await _fixture.CreateIsolatedDatabaseAsync(_databaseName);
 
-        var options = new DbContextOptionsBuilder<MeepleAiDbContext>()
-            .UseNpgsql(connectionString, o => o.UseVector()) // Issue #3547
-            .EnableSensitiveDataLogging()
-            .Options;
-
-        var services = new ServiceCollection();
-        services.AddMediatR(cfg =>
-            cfg.RegisterServicesFromAssembly(typeof(MeepleAiDbContext).Assembly));
-
-        services.AddSingleton(options);
-        services.AddScoped<IDomainEventCollector, DomainEventCollector>();
-        services.AddScoped<MeepleAiDbContext>(sp =>
-            new MeepleAiDbContext(
-                options,
-                sp.GetRequiredService<IMediator>(),
-                sp.GetRequiredService<IDomainEventCollector>()));
-
-        services.AddLogging(builder => builder.AddConsole().SetMinimumLevel(LogLevel.Debug));
+        var services = IntegrationServiceCollectionBuilder.CreateBase(connectionString);
 
         _serviceProvider = services.BuildServiceProvider();
-        // Fix: Use PostgreSQL DbContext with Testcontainers, not in-memory
-        var mediator = _serviceProvider.GetRequiredService<IMediator>();
-        var eventCollector = _serviceProvider.GetRequiredService<IDomainEventCollector>();
-        _dbContext = new MeepleAiDbContext(options, mediator, eventCollector);
+        _dbContext = _serviceProvider.GetRequiredService<MeepleAiDbContext>();
 
         await _dbContext.Database.MigrateAsync();
     }
@@ -471,7 +451,7 @@ public sealed class Week12SimpleValidationTests : IAsyncLifetime
         await Task.WhenAll(readTasks.Cast<Task>().Concat(writeTasks));
 
         // Assert - No deadlock, all completed
-        Assert.True(true);
+        true.Should().BeTrue();
     }
 
     [Fact]
@@ -693,7 +673,7 @@ public sealed class Week12SimpleValidationTests : IAsyncLifetime
         catch (DbUpdateException)
         {
             // Expected if database has length constraint
-            Assert.True(true);
+            true.Should().BeTrue();
         }
     }
 

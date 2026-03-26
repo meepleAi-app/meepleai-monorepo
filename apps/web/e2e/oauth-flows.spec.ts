@@ -486,7 +486,7 @@ test.describe('OAuth Flows - Complete E2E Coverage', () => {
       await page.waitForURL(/dashboard/, { timeout: 5000 });
 
       // Navigate to another page
-      await page.goto('/games');
+      await page.goto('/library');
 
       // Verify session still valid
       const isAuthenticated = await authHelper.verifyAuthenticated();

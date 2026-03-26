@@ -29,6 +29,10 @@
   --animate-mc-live-pulse: mc-live-pulse 2s ease-in-out infinite;
   --animate-mc-spin-slow: mc-spin-slow 8s linear infinite;
 
+  /* Library Empty State animations (Layout Redesign) */
+  --animate-float: float 4s ease-in-out infinite;
+  --animate-glow-pulse: glow-pulse 3s ease-in-out infinite;
+
   /* Neon Holo animations (spec: 2026-03-15) */
   --animate-holo-slide: holo-slide 4s ease-in-out infinite;
   --animate-holo-rotate: holo-rotate 6s linear infinite;
@@ -123,6 +127,19 @@
 @keyframes mc-spin-slow {
   0% { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }
+}
+
+/* Library Empty State keyframes (Layout Redesign) */
+@keyframes float {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  25% { transform: translateY(-12px) rotate(-3deg); }
+  50% { transform: translateY(-6px) rotate(2deg); }
+  75% { transform: translateY(-14px) rotate(-2deg); }
+}
+
+@keyframes glow-pulse {
+  0%, 100% { box-shadow: 0 0 20px hsla(25, 95%, 60%, 0.1); }
+  50% { box-shadow: 0 0 40px hsla(25, 95%, 60%, 0.25); }
 }
 
 /* Neon Holo keyframes (spec: 2026-03-15) */
@@ -360,26 +377,6 @@
     transform: scale(1.01) !important;
   }
 
-  /* MeepleCard glassmorphism via ::before pseudo (matches mockup) */
-  [data-variant="grid"],
-  [data-variant="featured"] {
-    isolation: isolate; /* Contain ::before z-index:-1 within card */
-  }
-  [data-variant="grid"]::before,
-  [data-variant="featured"]::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: rgba(255, 255, 255, 0.6);
-    backdrop-filter: blur(12px) saturate(180%);
-    z-index: -1;
-    border-radius: inherit;
-    pointer-events: none;
-  }
-  .dark [data-variant="grid"]::before,
-  .dark [data-variant="featured"]::before {
-    background: rgba(30, 25, 20, 0.7);
-  }
 }
 
 /* Accessibility - Reduce Motion Support (Issue #2848, #2905, Mobile UX Epic Issue 8) */
@@ -402,7 +399,9 @@
   .animate-pulse-meeple,
   .animate-pulse-slow,
   .animate-bounce-slow,
-  .animate-voice-pulse {
+  .animate-voice-pulse,
+  .animate-float,
+  .animate-glow-pulse {
     animation: none !important;
   }
 

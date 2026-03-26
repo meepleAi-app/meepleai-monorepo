@@ -39,25 +39,17 @@ export interface BadgeGridProps {
  * />
  * ```
  */
-export function BadgeGrid({
-  badges,
-  showHidden = false,
-  onBadgeClick,
-  className,
-}: BadgeGridProps){
+export function BadgeGrid({ badges, showHidden = false, onBadgeClick, className }: BadgeGridProps) {
   // Filter visible badges
-  const visibleBadges = showHidden ? badges : badges.filter((b) => b.isDisplayed);
+  const visibleBadges = showHidden ? badges : badges.filter(b => b.isDisplayed);
 
   // Group by tier
   const badgesByTier = visibleBadges.reduce<Record<BadgeTier, UserBadgeDto[]>>(
     (acc, badge) => {
       const tier = badge.tier;
-      // eslint-disable-next-line security/detect-object-injection -- Safe: tier is a BadgeTier enum value
       if (!acc[tier]) {
-        // eslint-disable-next-line security/detect-object-injection -- Safe: tier is a BadgeTier enum value
         acc[tier] = [];
       }
-      // eslint-disable-next-line security/detect-object-injection -- Safe: tier is a BadgeTier enum value
       acc[tier].push(badge);
       return acc;
     },
@@ -74,21 +66,24 @@ export function BadgeGrid({
   ];
 
   // Sort tiers by order
-  // eslint-disable-next-line security/detect-object-injection -- Safe: tier is from known BadgeTier enum array
-  const sortedTiers = tierOrder.filter((tier) => badgesByTier[tier]?.length > 0);
+  const sortedTiers = tierOrder.filter(tier => badgesByTier[tier]?.length > 0);
 
   if (visibleBadges.length === 0) {
     return (
-      <div className={cn('flex flex-col items-center justify-center py-12', className)} data-testid="badges-empty">
-        <p className="text-muted-foreground text-sm" data-testid="badges-empty-message">No badges to display</p>
+      <div
+        className={cn('flex flex-col items-center justify-center py-12', className)}
+        data-testid="badges-empty"
+      >
+        <p className="text-muted-foreground text-sm" data-testid="badges-empty-message">
+          No badges to display
+        </p>
       </div>
     );
   }
 
   return (
     <div className={cn('space-y-8', className)}>
-      {sortedTiers.map((tier) => {
-        // eslint-disable-next-line security/detect-object-injection -- Safe: tier is from filtered BadgeTier enum array
+      {sortedTiers.map(tier => {
         const tierBadges = badgesByTier[tier];
         if (!tierBadges?.length) return null;
 
@@ -109,7 +104,7 @@ export function BadgeGrid({
                   // Sort by earned date (most recent first)
                   return new Date(b.earnedAt).getTime() - new Date(a.earnedAt).getTime();
                 })
-                .map((badge) => (
+                .map(badge => (
                   <BadgeItem
                     key={badge.id}
                     badge={badge}
@@ -132,7 +127,7 @@ interface BadgeItemProps {
   onClick?: () => void;
 }
 
-function BadgeItem({ badge, onClick }: BadgeItemProps){
+function BadgeItem({ badge, onClick }: BadgeItemProps) {
   const tierGradient = getTierGradient(badge.tier);
   const tierGlow = getTierGlow(badge.tier);
 
@@ -154,11 +149,7 @@ function BadgeItem({ badge, onClick }: BadgeItemProps){
       <motion.div
         className={cn('relative h-16 w-16 rounded-full p-1', tierGradient)}
         animate={{
-          boxShadow: [
-            `0 0 0px ${tierGlow}`,
-            `0 0 20px ${tierGlow}`,
-            `0 0 0px ${tierGlow}`,
-          ],
+          boxShadow: [`0 0 0px ${tierGlow}`, `0 0 20px ${tierGlow}`, `0 0 0px ${tierGlow}`],
         }}
         transition={{
           duration: 2,
@@ -169,11 +160,7 @@ function BadgeItem({ badge, onClick }: BadgeItemProps){
         <div className="flex h-full w-full items-center justify-center rounded-full bg-background">
           {badge.iconUrl ? (
             /* eslint-disable-next-line @next/next/no-img-element -- External user-provided URL, Next.js Image optimization not applicable */
-            <img
-              src={badge.iconUrl}
-              alt={badge.name}
-              className="h-12 w-12 object-contain"
-            />
+            <img src={badge.iconUrl} alt={badge.name} className="h-12 w-12 object-contain" />
           ) : (
             <span className="text-2xl">{getTierIcon(badge.tier)}</span>
           )}
@@ -200,9 +187,7 @@ function BadgeItem({ badge, onClick }: BadgeItemProps){
       )}
 
       {/* Badge Name */}
-      <p className="text-foreground line-clamp-2 text-xs font-medium">
-        {badge.name}
-      </p>
+      <p className="text-foreground line-clamp-2 text-xs font-medium">{badge.name}</p>
     </motion.button>
   );
 }
@@ -218,7 +203,6 @@ function getTierGradient(tier: BadgeTier): string {
     [BadgeTier.Silver]: 'bg-gradient-to-br from-gray-300 to-gray-400',
     [BadgeTier.Bronze]: 'bg-gradient-to-br from-amber-600 to-amber-800',
   };
-  // eslint-disable-next-line security/detect-object-injection -- Safe: tier is a BadgeTier enum value
   return gradients[tier];
 }
 
@@ -233,7 +217,6 @@ function getTierGlow(tier: BadgeTier): string {
     [BadgeTier.Silver]: 'rgba(209, 213, 219, 0.5)', // gray-300
     [BadgeTier.Bronze]: 'rgba(217, 119, 6, 0.5)', // amber-600
   };
-  // eslint-disable-next-line security/detect-object-injection -- Safe: tier is a BadgeTier enum value
   return glows[tier];
 }
 

@@ -3,6 +3,7 @@ using Api.BoundedContexts.Authentication.Domain.ValueObjects;
 using Api.SharedKernel.Domain.ValueObjects;
 using Api.Tests.Constants;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.Authentication.Domain;
 
@@ -28,11 +29,11 @@ public class UserOnboardingTests
     public void MarkOnboardingWizardSeen_SetsTimestamp()
     {
         var user = CreateTestUser();
-        Assert.Null(user.OnboardingWizardSeenAt);
+        user.OnboardingWizardSeenAt.Should().BeNull();
 
         user.MarkOnboardingWizardSeen();
 
-        Assert.NotNull(user.OnboardingWizardSeenAt);
+        user.OnboardingWizardSeenAt.Should().NotBeNull();
     }
 
     [Fact]
@@ -44,18 +45,18 @@ public class UserOnboardingTests
 
         user.MarkOnboardingWizardSeen();
 
-        Assert.Equal(firstTimestamp, user.OnboardingWizardSeenAt);
+        user.OnboardingWizardSeenAt.Should().Be(firstTimestamp);
     }
 
     [Fact]
     public void DismissOnboarding_SetsTimestamp()
     {
         var user = CreateTestUser();
-        Assert.Null(user.OnboardingDismissedAt);
+        user.OnboardingDismissedAt.Should().BeNull();
 
         user.DismissOnboarding();
 
-        Assert.NotNull(user.OnboardingDismissedAt);
+        user.OnboardingDismissedAt.Should().NotBeNull();
     }
 
     [Fact]
@@ -67,29 +68,29 @@ public class UserOnboardingTests
 
         user.DismissOnboarding();
 
-        Assert.Equal(firstTimestamp, user.OnboardingDismissedAt);
+        user.OnboardingDismissedAt.Should().Be(firstTimestamp);
     }
 
     [Fact]
     public void UpdateAvatarUrl_SetsValue()
     {
         var user = CreateTestUser();
-        Assert.Null(user.AvatarUrl);
+        user.AvatarUrl.Should().BeNull();
 
         user.UpdateAvatarUrl("https://example.com/avatar.png");
 
-        Assert.Equal("https://example.com/avatar.png", user.AvatarUrl);
+        user.AvatarUrl.Should().Be("https://example.com/avatar.png");
     }
 
     [Fact]
     public void UpdateBio_SetsValue()
     {
         var user = CreateTestUser();
-        Assert.Null(user.Bio);
+        user.Bio.Should().BeNull();
 
         user.UpdateBio("Board game enthusiast");
 
-        Assert.Equal("Board game enthusiast", user.Bio);
+        user.Bio.Should().Be("Board game enthusiast");
     }
 
     [Fact]
@@ -98,11 +99,11 @@ public class UserOnboardingTests
         var user = CreateTestUser();
 
         user.MarkOnboardingWizardSeen();
-        Assert.NotNull(user.OnboardingWizardSeenAt);
-        Assert.Null(user.OnboardingDismissedAt);
+        user.OnboardingWizardSeenAt.Should().NotBeNull();
+        user.OnboardingDismissedAt.Should().BeNull();
 
         user.DismissOnboarding();
-        Assert.NotNull(user.OnboardingWizardSeenAt);
-        Assert.NotNull(user.OnboardingDismissedAt);
+        user.OnboardingWizardSeenAt.Should().NotBeNull();
+        user.OnboardingDismissedAt.Should().NotBeNull();
     }
 }

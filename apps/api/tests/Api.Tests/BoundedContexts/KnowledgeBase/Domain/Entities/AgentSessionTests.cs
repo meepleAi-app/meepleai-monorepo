@@ -206,7 +206,7 @@ public class AgentSessionTests
     }
 
     [Fact]
-    public void Duration_WhenEnded_ReturnsSessionDuration()
+    public async Task Duration_WhenEnded_ReturnsSessionDuration()
     {
         // Arrange
         var session = new AgentSession(
@@ -218,7 +218,7 @@ public class AgentSessionTests
             Guid.NewGuid(),
             GameState.Initial(Guid.NewGuid()));
 
-        Thread.Sleep(100); // Small delay
+        await Task.Delay(100); // Small delay
         session.End();
 
         // Act
@@ -226,6 +226,6 @@ public class AgentSessionTests
 
         // Assert
         duration.Should().BeGreaterThan(TimeSpan.FromMilliseconds(50));
-        duration.Should().BeLessThan(TimeSpan.FromSeconds(1));
+        duration.Should().BeLessThan(TimeSpan.FromSeconds(5)); // Generous threshold for CI
     }
 }

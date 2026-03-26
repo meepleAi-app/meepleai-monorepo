@@ -12,6 +12,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.Administration.Application.Behaviors;
 
@@ -57,8 +58,8 @@ public sealed class AuditLoggingBehaviorTests
         var result = await behavior.Handle(command, next, CancellationToken.None);
 
         // Assert
-        Assert.True(nextCalled);
-        Assert.Equal("result", result);
+        nextCalled.Should().BeTrue();
+        result.Should().Be("result");
         _auditServiceMock.Verify(
             x => x.LogAsync(
                 It.IsAny<string?>(),
@@ -86,7 +87,7 @@ public sealed class AuditLoggingBehaviorTests
         var result = await behavior.Handle(command, next, CancellationToken.None);
 
         // Assert
-        Assert.Equal("ok", result);
+        result.Should().Be("ok");
         _auditServiceMock.Verify(
             x => x.LogAsync(
                 It.IsAny<string?>(),
@@ -112,8 +113,9 @@ public sealed class AuditLoggingBehaviorTests
             throw new InvalidOperationException("test failure");
 
         // Act & Assert
-        await Assert.ThrowsAsync<InvalidOperationException>(() =>
-            behavior.Handle(command, next, CancellationToken.None));
+        var act = () =>
+            behavior.Handle(command, next, CancellationToken.None);
+        await act.Should().ThrowAsync<InvalidOperationException>();
 
         _auditServiceMock.Verify(
             x => x.LogAsync(
@@ -155,7 +157,7 @@ public sealed class AuditLoggingBehaviorTests
         var result = await behavior.Handle(command, next, CancellationToken.None);
 
         // Assert
-        Assert.Equal("still works", result);
+        result.Should().Be("still works");
     }
 
     [Fact]
@@ -199,7 +201,7 @@ public sealed class AuditLoggingBehaviorTests
         var result = await behavior.Handle(command, next, CancellationToken.None);
 
         // Assert
-        Assert.Equal("ok", result);
+        result.Should().Be("ok");
     }
 
     private void SetupHttpContext(Guid? userId = null, string? email = null)

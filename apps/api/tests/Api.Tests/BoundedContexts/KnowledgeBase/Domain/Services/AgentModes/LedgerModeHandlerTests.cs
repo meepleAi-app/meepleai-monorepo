@@ -49,8 +49,8 @@ public class LedgerModeHandlerTests
     [Fact]
     public async Task HandleAsync_WithNullContext_ThrowsArgumentNullException()
     {
-        await Assert.ThrowsAsync<ArgumentNullException>(
-            async () => await _handler.HandleAsync(null!, TestCancellationToken));
+        Func<Task> act = async () => await _handler.HandleAsync(null!, TestCancellationToken);
+        await act.Should().ThrowAsync<ArgumentNullException>();
     }
 
     [Fact]

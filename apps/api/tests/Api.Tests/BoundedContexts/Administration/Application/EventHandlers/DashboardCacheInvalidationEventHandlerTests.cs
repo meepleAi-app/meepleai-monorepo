@@ -5,6 +5,7 @@ using Microsoft.Extensions.Caching.Hybrid;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using FluentAssertions;
 using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.Administration.Application.EventHandlers;
@@ -129,7 +130,7 @@ public class DashboardCacheInvalidationEventHandlerTests
         var exception = await Record.ExceptionAsync(() => _handler.Handle(evt, CancellationToken.None));
 
         // Assert
-        Assert.Null(exception); // Should not throw
+        exception.Should().BeNull(); // Should not throw
         _loggerMock.Verify(
             x => x.Log(
                 LogLevel.Error,
@@ -165,15 +166,15 @@ public class DashboardCacheInvalidationEventHandlerTests
 
         // Assert
         // Verify common day ranges are covered
-        Assert.Contains(removedKeys, k => k.Contains("dashboard:stats:7:"));
-        Assert.Contains(removedKeys, k => k.Contains("dashboard:stats:14:"));
-        Assert.Contains(removedKeys, k => k.Contains("dashboard:stats:30:"));
-        Assert.Contains(removedKeys, k => k.Contains("dashboard:stats:90:"));
+        removedKeys.Should().Contain(k => k.Contains("dashboard:stats:7:"));
+        removedKeys.Should().Contain(k => k.Contains("dashboard:stats:14:"));
+        removedKeys.Should().Contain(k => k.Contains("dashboard:stats:30:"));
+        removedKeys.Should().Contain(k => k.Contains("dashboard:stats:90:"));
 
         // Verify common role filters are covered
-        Assert.Contains(removedKeys, k => k.Contains("::"));      // No filters
-        Assert.Contains(removedKeys, k => k.Contains("::admin"));  // Admin filter
-        Assert.Contains(removedKeys, k => k.Contains("::user"));   // User filter
-        Assert.Contains(removedKeys, k => k.Contains("::all"));    // All roles
+        removedKeys.Should().Contain(k => k.Contains("::"));      // No filters
+        removedKeys.Should().Contain(k => k.Contains("::admin"));  // Admin filter
+        removedKeys.Should().Contain(k => k.Contains("::user"));   // User filter
+        removedKeys.Should().Contain(k => k.Contains("::all"));    // All roles
     }
 }

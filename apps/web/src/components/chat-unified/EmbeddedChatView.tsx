@@ -38,7 +38,12 @@ export interface EmbeddedChatViewProps {
 // Component
 // ============================================================================
 
-export function EmbeddedChatView({ threadId, agentId, gameId, gameName }: EmbeddedChatViewProps) {
+export function EmbeddedChatView({
+  threadId,
+  agentId,
+  gameId: _gameId,
+  gameName,
+}: EmbeddedChatViewProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputValue, setInputValue] = useState('');
@@ -49,7 +54,7 @@ export function EmbeddedChatView({ threadId, agentId, gameId, gameName }: Embedd
     sendMessage: sendViaSSE,
     stopStreaming,
   } = useAgentChatStream({
-    onComplete: (answer, metadata) => {
+    onComplete: (answer, _metadata) => {
       const assistantMessage: ChatMessage = {
         id: `assistant-${crypto.randomUUID()}`,
         role: 'assistant',

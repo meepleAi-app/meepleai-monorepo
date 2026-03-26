@@ -26,10 +26,10 @@ export interface CardBackComposerProps {
 // Each block component expects a specific discriminated variant of BlockData,
 // but the record maps all BlockTypes to one component type signature.
 
-const BLOCK_COMPONENTS: Record<
-  BlockType,
-  React.ComponentType<{ title: string; entityColor: string; data: any }>
-> = {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- each block expects a different BlockData variant
+type BlockComponent = React.ComponentType<{ title: string; entityColor: string; data: any }>;
+
+const BLOCK_COMPONENTS: Record<BlockType, BlockComponent> = {
   stats: StatsBlock,
   actions: ActionsBlock,
   timeline: TimelineBlock,
@@ -63,7 +63,6 @@ export const CardBackComposer = memo(function CardBackComposer({
   className,
 }: CardBackComposerProps) {
   const blockConfigs = getBlocksForEntity(entity);
-  // eslint-disable-next-line security/detect-object-injection
   const color = entityColors[entity].hsl;
 
   return (

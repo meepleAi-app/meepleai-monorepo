@@ -2,6 +2,7 @@ using Api.BoundedContexts.GameManagement.Application.Queries;
 using Api.BoundedContexts.KnowledgeBase.Application.Commands;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries;
 using Api.Extensions;
+using Api.Middleware;
 using Api.Services;
 using MediatR;
 
@@ -74,13 +75,13 @@ internal static class CacheEndpoints
                 return Results.BadRequest(new { error = "tag is required" });
             }
 
-            logger.LogInformation("Admin {AdminId} invalidating cache by tag {Tag}", session!.User!.Id, tag);
+            logger.LogInformation("Admin {AdminId} invalidating cache by tag {Tag}", session!.User!.Id, LogValueSanitizer.Sanitize(tag));
 
             // DDD Migration Phase 3.2: Use InvalidateCacheByTagCommand via IMediator
             var command = new InvalidateCacheByTagCommand(Tag: tag);
             await mediator.Send(command, ct).ConfigureAwait(false);
 
-            logger.LogInformation("Successfully invalidated cache by tag {Tag}", tag);
+            logger.LogInformation("Successfully invalidated cache by tag {Tag}", LogValueSanitizer.Sanitize(tag));
             return Results.Json(new { ok = true, message = $"Cache invalidated for tag '{tag}'" });
         })
         .WithName("InvalidateCacheByTag")

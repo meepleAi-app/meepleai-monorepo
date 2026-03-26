@@ -570,6 +570,7 @@
   <script>
     // Listen for theme changes from parent
     window.addEventListener('message', (event) => {
+      if (event.origin !== window.location.origin) return;
       if (event.data.type === 'theme-change') {
         // Theme CSS variables are inherited from parent frame
         console.log('Theme changed to:', event.data.theme);

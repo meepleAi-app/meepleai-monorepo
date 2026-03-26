@@ -26,7 +26,7 @@ import { ChatGameContext } from '../../meeple-card-features/ChatGameContext';
 import { ChatStatsDisplay } from '../../meeple-card-features/ChatStatsDisplay';
 import { ChatStatusBadge } from '../../meeple-card-features/ChatStatusBadge';
 import { ChatUnreadBadge } from '../../meeple-card-features/ChatUnreadBadge';
-import { DocumentStatusBadge } from '../../meeple-card-features/DocumentStatusBadge';
+import { KbStatusBadge } from '../../meeple-card-features/DocumentStatusBadge';
 import { SessionActionButtons } from '../../meeple-card-features/SessionActionButtons';
 import { SessionScoreTable } from '../../meeple-card-features/SessionScoreTable';
 import { SessionStatusBadge } from '../../meeple-card-features/SessionStatusBadge';
@@ -46,7 +46,7 @@ import {
   contentVariants,
 } from '../../meeple-card-styles';
 import { useMobileInteraction } from '../hooks/useMobileInteraction';
-import { CardActions } from '../parts/CardActions';
+import { CardActions, CardActionStrip } from '../parts/CardActions';
 import { CardBadges } from '../parts/CardBadges';
 import { CardCover } from '../parts/CardCover';
 import { CardTagStrip } from '../parts/CardTagStrip';
@@ -129,17 +129,18 @@ export const MeepleCardFeatured = React.memo(function MeepleCardFeatured(
     firstLinkPreview,
     onLinksClick,
     kbCards,
+    stateLabel,
+    coverLabels,
+    subtypeIcons,
   } = props;
 
   const variant = 'featured' as const;
   const coverSrc = entity === 'player' ? avatarUrl || imageUrl : imageUrl;
-  // eslint-disable-next-line security/detect-object-injection
   const color = customColor || entityColors[entity].hsl;
   const hasQuickActions = !!(quickActions && quickActions.length > 0);
   const showWishlistBtn = !!showWishlist && !hasQuickActions;
   const showActionBtns = actions.length > 0;
   const isInteractive = !!onClick && !showActionBtns;
-  // eslint-disable-next-line security/detect-object-injection
   const drawerEntityType = DRAWER_ENTITY_TYPE_MAP[entity];
 
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -150,12 +151,17 @@ export const MeepleCardFeatured = React.memo(function MeepleCardFeatured(
     showWishlistBtn ||
     !!(showInfoButton && (entityId || infoHref));
 
-  const { isMobile, showMobileActions, setShowMobileActions, handleMobileClick, cardRef } =
-    useMobileInteraction({
-      hasMobileActions,
-      flippable,
-      onClick,
-    });
+  const {
+    isMobile,
+    showMobileActions: _showMobileActions,
+    setShowMobileActions: _setShowMobileActions,
+    handleMobileClick,
+    cardRef,
+  } = useMobileInteraction({
+    hasMobileActions,
+    flippable,
+    onClick,
+  });
 
   const handleDesktopClick = () => {
     if (flippable) return;
@@ -185,6 +191,33 @@ export const MeepleCardFeatured = React.memo(function MeepleCardFeatured(
 
   const Component = isInteractive ? 'div' : 'article';
 
+  const hasStripActions =
+    !!entityQuickActions ||
+    !!(showInfoButton && (entityId || infoHref)) ||
+    showWishlistBtn ||
+    hasQuickActions;
+
+  const stripElement = hasStripActions ? (
+    <CardActionStrip
+      entity={entity}
+      customColor={customColor}
+      entityQuickActions={entityQuickActions}
+      quickActions={quickActions}
+      userRole={userRole}
+      showWishlistBtn={showWishlistBtn}
+      isWishlisted={isWishlisted}
+      onWishlistToggle={onWishlistToggle}
+      showInfoButton={showInfoButton}
+      entityId={entityId}
+      infoHref={infoHref}
+      infoTooltip={infoTooltip}
+      drawerEntityType={drawerEntityType}
+      onDrawerOpen={() => setDrawerOpen(true)}
+      testId={testId}
+      hasQuickActions={hasQuickActions}
+    />
+  ) : null;
+
   return (
     <Component
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -201,7 +234,6 @@ export const MeepleCardFeatured = React.memo(function MeepleCardFeatured(
         {
           '--mc-entity-color': `hsl(${color})`,
           outlineColor: `hsla(${color}, 0.4)`,
-          willChange: 'transform, box-shadow, outline',
           viewTransitionName: entityId ? `meeple-card-${entityId}` : undefined,
         } as React.CSSProperties
       }
@@ -218,7 +250,6 @@ export const MeepleCardFeatured = React.memo(function MeepleCardFeatured(
             }
           : undefined
       }
-      // eslint-disable-next-line security/detect-object-injection
       aria-label={`${entityColors[entity].name}: ${title}`}
       data-testid={testId || 'meeple-card'}
       data-entity={entity}
@@ -269,6 +300,11 @@ export const MeepleCardFeatured = React.memo(function MeepleCardFeatured(
         variant={variant}
         entity={entity}
         customColor={customColor}
+        coverLabels={coverLabels}
+        showEntityType
+        subtypeIcons={subtypeIcons}
+        stateLabel={stateLabel}
+        actionStrip={stripElement}
       />
 
       {/* Content area */}
@@ -278,21 +314,6 @@ export const MeepleCardFeatured = React.memo(function MeepleCardFeatured(
           entity={entity}
           customColor={customColor}
           actions={actions}
-          entityQuickActions={entityQuickActions}
-          quickActions={quickActions}
-          userRole={userRole}
-          showWishlistBtn={showWishlistBtn}
-          isWishlisted={isWishlisted}
-          onWishlistToggle={onWishlistToggle}
-          showInfoButton={showInfoButton}
-          entityId={entityId}
-          infoHref={infoHref}
-          infoTooltip={infoTooltip}
-          drawerEntityType={drawerEntityType}
-          onDrawerOpen={() => setDrawerOpen(true)}
-          testId={testId}
-          unreadCount={unreadCount}
-          hasQuickActions={hasQuickActions}
         />
 
         <h3 className="font-quicksand font-bold leading-tight text-xl mb-1 text-card-foreground">
@@ -408,13 +429,13 @@ export const MeepleCardFeatured = React.memo(function MeepleCardFeatured(
 
         {entity === 'kb' && documentStatus && (
           <div className="flex items-center gap-1.5 mb-2">
-            <DocumentStatusBadge status={documentStatus} size="sm" />
+            <KbStatusBadge status={documentStatus} size="sm" />
           </div>
         )}
 
         {entity === 'game' && worstKbStatus && (
           <div className="flex items-center gap-1.5 mb-2" data-testid="meeple-card-kb-badge">
-            <DocumentStatusBadge status={worstKbStatus} size="sm" />
+            <KbStatusBadge status={worstKbStatus} size="sm" />
             <span className="text-[10px] text-muted-foreground font-medium">
               {kbCards!.length} KB
             </span>

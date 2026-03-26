@@ -1,22 +1,23 @@
 using Api.BoundedContexts.GameToolbox.Domain.Entities;
 using Api.BoundedContexts.GameToolbox.Domain.Repositories;
 using Api.Infrastructure;
+using Api.SharedKernel.Application.Services;
+using Api.SharedKernel.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 
 namespace Api.BoundedContexts.GameToolbox.Infrastructure.Persistence;
 
-internal class ToolboxRepository : IToolboxRepository
+internal class ToolboxRepository : RepositoryBase, IToolboxRepository
 {
-    private readonly MeepleAiDbContext _context;
 
-    public ToolboxRepository(MeepleAiDbContext context)
+    public ToolboxRepository(MeepleAiDbContext dbContext, IDomainEventCollector eventCollector)
+        : base(dbContext, eventCollector)
     {
-        _context = context ?? throw new ArgumentNullException(nameof(context));
     }
 
     public async Task<Toolbox?> GetByIdAsync(Guid id, CancellationToken ct = default)
     {
-        return await _context.Set<Toolbox>()
+        return await DbContext.Set<Toolbox>()
             .Include(t => t.Tools)
             .Include(t => t.Phases)
             .FirstOrDefaultAsync(t => t.Id == id, ct)
@@ -25,7 +26,7 @@ internal class ToolboxRepository : IToolboxRepository
 
     public async Task<Toolbox?> GetByGameIdAsync(Guid gameId, CancellationToken ct = default)
     {
-        return await _context.Set<Toolbox>()
+        return await DbContext.Set<Toolbox>()
             .Include(t => t.Tools)
             .Include(t => t.Phases)
             .FirstOrDefaultAsync(t => t.GameId == gameId, ct)
@@ -34,17 +35,17 @@ internal class ToolboxRepository : IToolboxRepository
 
     public async Task AddAsync(Toolbox toolbox, CancellationToken ct = default)
     {
-        await _context.Set<Toolbox>().AddAsync(toolbox, ct).ConfigureAwait(false);
+        await DbContext.Set<Toolbox>().AddAsync(toolbox, ct).ConfigureAwait(false);
     }
 
     public Task UpdateAsync(Toolbox toolbox, CancellationToken ct = default)
     {
-        _context.Set<Toolbox>().Update(toolbox);
+        DbContext.Set<Toolbox>().Update(toolbox);
         return Task.CompletedTask;
     }
 
     public async Task SaveChangesAsync(CancellationToken ct = default)
     {
-        await _context.SaveChangesAsync(ct).ConfigureAwait(false);
+        await DbContext.SaveChangesAsync(ct).ConfigureAwait(false);
     }
 }

@@ -2,6 +2,7 @@ using Api.BoundedContexts.Authentication.Domain.ValueObjects;
 using Api.SharedKernel.Domain.ValueObjects;
 using Api.SharedKernel.Domain.Exceptions;
 using Xunit;
+using FluentAssertions;
 using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.Authentication.Domain.ValueObjects;
@@ -20,7 +21,7 @@ public class RoleTests
         var role = Role.Parse(roleValue);
 
         // Assert
-        Assert.Equal(roleValue.ToLowerInvariant(), role.Value);
+        role.Value.Should().Be(roleValue.ToLowerInvariant());
     }
 
     [Theory]
@@ -34,7 +35,7 @@ public class RoleTests
         var role = Role.Parse(roleValue);
 
         // Assert
-        Assert.Equal(roleValue.ToLowerInvariant(), role.Value);
+        role.Value.Should().Be(roleValue.ToLowerInvariant());
     }
 
     [Theory]
@@ -44,8 +45,9 @@ public class RoleTests
     public void Parse_WithEmptyValue_ThrowsValidationException(string invalidRole)
     {
         // Act & Assert
-        var exception = Assert.Throws<ValidationException>(() => Role.Parse(invalidRole));
-        Assert.Contains("Role cannot be empty", exception.Message);
+        var act = () => Role.Parse(invalidRole);
+        var exception = act.Should().Throw<ValidationException>().Which;
+        exception.Message.Should().Contain("Role cannot be empty");
     }
 
     [Theory]
@@ -55,8 +57,9 @@ public class RoleTests
     public void Parse_WithInvalidRole_ThrowsValidationException(string invalidRole)
     {
         // Act & Assert
-        var exception = Assert.Throws<ValidationException>(() => Role.Parse(invalidRole));
-        Assert.Contains("Invalid role", exception.Message);
+        var act = () => Role.Parse(invalidRole);
+        var exception = act.Should().Throw<ValidationException>().Which;
+        exception.Message.Should().Contain("Invalid role");
     }
 
     [Theory]
@@ -69,9 +72,9 @@ public class RoleTests
         var role = Role.Parse(roleValue);
 
         // Act & Assert
-        Assert.Equal(expectedIsAdmin, role.IsAdmin());
-        Assert.Equal(expectedIsEditor, role.IsEditor());
-        Assert.Equal(expectedIsUser, role.IsUser());
+        role.IsAdmin().Should().Be(expectedIsAdmin);
+        role.IsEditor().Should().Be(expectedIsEditor);
+        role.IsUser().Should().Be(expectedIsUser);
     }
 
     [Theory]
@@ -91,16 +94,16 @@ public class RoleTests
         var permissionRole = Role.Parse(requiredPermission);
 
         // Act & Assert
-        Assert.Equal(expected, role.HasPermission(permissionRole));
+        role.HasPermission(permissionRole).Should().Be(expected);
     }
 
     [Fact]
     public void StaticInstances_AreCorrectlyDefined()
     {
         // Assert
-        Assert.Equal(Role.Admin.Value, Role.Admin.Value);
-        Assert.Equal(Role.Editor.Value, Role.Editor.Value);
-        Assert.Equal(Role.User.Value, Role.User.Value);
+        Role.Admin.Value.Should().Be(Role.Admin.Value);
+        Role.Editor.Value.Should().Be(Role.Editor.Value);
+        Role.User.Value.Should().Be(Role.User.Value);
     }
 
     [Fact]
@@ -112,9 +115,9 @@ public class RoleTests
         var role3 = Role.Admin;
 
         // Act & Assert
-        Assert.Equal(role1, role2);
-        Assert.Equal(role1, role3);
-        Assert.Equal(role2, role3);
+        role2.Should().Be(role1);
+        role3.Should().Be(role1);
+        role3.Should().Be(role2);
     }
 
     [Fact]
@@ -126,9 +129,9 @@ public class RoleTests
         var userRole = Role.User;
 
         // Act & Assert
-        Assert.NotEqual(adminRole, editorRole);
-        Assert.NotEqual(adminRole, userRole);
-        Assert.NotEqual(editorRole, userRole);
+        editorRole.Should().NotBe(adminRole);
+        userRole.Should().NotBe(adminRole);
+        userRole.Should().NotBe(editorRole);
     }
 
     [Theory]
@@ -144,7 +147,7 @@ public class RoleTests
         var result = role.ToString();
 
         // Assert
-        Assert.Equal(roleValue, result);
+        result.Should().Be(roleValue);
     }
 
     [Fact]
@@ -157,6 +160,58 @@ public class RoleTests
         string roleString = role;
 
         // Assert
-        Assert.Equal(Role.Admin.Value, roleString);
+        roleString.Should().Be(Role.Admin.Value);
+    }
+
+    [Fact]
+    public void Parse_WithCreator_ShouldReturnCreatorRole()
+    {
+        var role = Role.Parse("creator");
+        role.Value.Should().Be("creator");
+        role.IsCreator().Should().BeTrue();
+    }
+
+    [Fact]
+    public void Creator_HasPermission_ForCreatorAndUser_Only()
+    {
+        var creator = Role.Creator;
+        creator.HasPermission(Role.Creator).Should().BeTrue();
+        creator.HasPermission(Role.User).Should().BeTrue();
+        creator.HasPermission(Role.Editor).Should().BeFalse();
+        creator.HasPermission(Role.Admin).Should().BeFalse();
+        creator.HasPermission(Role.SuperAdmin).Should().BeFalse();
+    }
+
+    [Fact]
+    public void Editor_HasPermission_ForCreator()
+    {
+        var editor = Role.Editor;
+        editor.HasPermission(Role.Creator).Should().BeTrue();
+        editor.HasPermission(Role.Editor).Should().BeTrue();
+        editor.HasPermission(Role.User).Should().BeTrue();
+        editor.HasPermission(Role.Admin).Should().BeFalse();
+        editor.HasPermission(Role.SuperAdmin).Should().BeFalse();
+    }
+
+    [Fact]
+    public void Admin_HasPermission_ForCreator()
+    {
+        var admin = Role.Admin;
+        admin.HasPermission(Role.Creator).Should().BeTrue();
+        admin.HasPermission(Role.Editor).Should().BeTrue();
+        admin.HasPermission(Role.User).Should().BeTrue();
+        admin.HasPermission(Role.Admin).Should().BeTrue();
+        admin.HasPermission(Role.SuperAdmin).Should().BeFalse();
+    }
+
+    [Fact]
+    public void SuperAdmin_HasPermission_ForAllRoles()
+    {
+        var superAdmin = Role.SuperAdmin;
+        superAdmin.HasPermission(Role.User).Should().BeTrue();
+        superAdmin.HasPermission(Role.Creator).Should().BeTrue();
+        superAdmin.HasPermission(Role.Editor).Should().BeTrue();
+        superAdmin.HasPermission(Role.Admin).Should().BeTrue();
+        superAdmin.HasPermission(Role.SuperAdmin).Should().BeTrue();
     }
 }

@@ -410,9 +410,9 @@ FROM GameSessions WHERE StartedAt > NOW() - INTERVAL '30 days';
 - [Administration BC](./administration.md) - Audit logs
 
 ### ADRs
-- [ADR-018: PostgreSQL FTS](../01-architecture/adr/adr-018-postgresql-fts-for-shared-catalog.md)
-- [ADR-023: Share Request Workflow](../01-architecture/adr/adr-023-share-request-workflow.md)
-- [ADR-008: Streaming CQRS](../01-architecture/adr/adr-008-streaming-cqrs-migration.md)
+- [ADR-018: PostgreSQL FTS](../architecture/adr/adr-018-postgresql-fts-for-shared-catalog.md)
+- [ADR-023: Share Request Workflow](../architecture/adr/adr-023-share-request-workflow.md)
+- [ADR-008: Streaming CQRS](../architecture/adr/adr-008-streaming-cqrs-migration.md)
 
 ---
 

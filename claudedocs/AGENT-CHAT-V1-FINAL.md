@@ -53,7 +53,7 @@ PR Merge:          Squashed & merged ✅
 ```
 Branch:            feature/agent-chat-v1
 PR:                #4280
-Merged By:         DegrassiAaron
+Merged By:         meepleAi-app
 Merged At:         2026-02-13 14:15:41
 Target:            main-dev ✅
 Cleanup:           Complete ✅

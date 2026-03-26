@@ -13,6 +13,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Services;
 
@@ -151,7 +152,7 @@ public sealed class LlmResilienceCombinedFailureTests
         var sut = CreateSut();
         var result = await sut.GenerateCompletionAsync("sys", "user");
 
-        Assert.True(result.Success);
+        result.Success.Should().BeTrue();
 
         // OpenRouter must never be called — proactive rerouting should prevent any attempt
         _openRouterMock.Verify(
@@ -195,7 +196,7 @@ public sealed class LlmResilienceCombinedFailureTests
         var result = await sut.GenerateCompletionAsync("sys", "user");
 
         // Request must succeed via Ollama fallback
-        Assert.True(result.Success);
+        result.Success.Should().BeTrue();
 
         // Circuit breaker registry must have recorded the OpenRouter failure
         _circuitBreakerRegistryMock.Verify(
@@ -221,21 +222,21 @@ public sealed class LlmResilienceCombinedFailureTests
         for (int i = 0; i < 4; i++)
             breaker.RecordFailure();
 
-        Assert.Equal(CircuitState.Closed, breaker.State);
-        Assert.Equal(4, breaker.ConsecutiveFailures);
+        breaker.State.Should().Be(CircuitState.Closed);
+        breaker.ConsecutiveFailures.Should().Be(4);
 
         // 1 success resets the consecutive failure counter to 0
         breaker.RecordSuccess();
-        Assert.Equal(0, breaker.ConsecutiveFailures);
-        Assert.Equal(CircuitState.Closed, breaker.State);
+        breaker.ConsecutiveFailures.Should().Be(0);
+        breaker.State.Should().Be(CircuitState.Closed);
 
         // 4 more failures — total historical failures = 8, but consecutive = 4 (below threshold)
         for (int i = 0; i < 4; i++)
             breaker.RecordFailure();
 
-        Assert.Equal(CircuitState.Closed, breaker.State);
-        Assert.Equal(4, breaker.ConsecutiveFailures);
-        Assert.True(breaker.AllowsRequests());
+        breaker.State.Should().Be(CircuitState.Closed);
+        breaker.ConsecutiveFailures.Should().Be(4);
+        breaker.AllowsRequests().Should().BeTrue();
     }
 
     // ─── Scenario 4: Circuit open bypasses OpenRouter, routes to Ollama ─────────
@@ -280,7 +281,7 @@ public sealed class LlmResilienceCombinedFailureTests
         var sut = CreateSut();
         var result = await sut.GenerateCompletionAsync("sys", "user");
 
-        Assert.True(result.Success);
+        result.Success.Should().BeTrue();
 
         // OpenRouter must never be called — circuit breaker should prevent any attempt
         _openRouterMock.Verify(

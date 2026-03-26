@@ -15,9 +15,9 @@ import Link from 'next/link';
 
 import { GameNightPlanningLayout } from '@/components/game-night/planning/GameNightPlanningLayout';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/feedback/skeleton';
+import { Button } from '@/components/ui/primitives/button';
 import {
   useGameNight,
   useGameNightRsvps,

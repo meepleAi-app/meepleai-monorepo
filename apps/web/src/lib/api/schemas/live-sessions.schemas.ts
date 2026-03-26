@@ -162,6 +162,7 @@ export const SessionSnapshotDtoSchema = z.object({
   phaseIndex: z.number().int().nullable(),
   timestamp: z.string(),
   createdByPlayerId: z.string().uuid().nullable(),
+  attachmentCount: z.number().int().optional(),
 });
 
 export type SessionSnapshotDto = z.infer<typeof SessionSnapshotDtoSchema>;
@@ -208,8 +209,12 @@ export const SessionToolsDtoSchema = z.object({
 export type SessionToolsDto = z.infer<typeof SessionToolsDtoSchema>;
 
 export const TurnPhasesDtoSchema = z.object({
+  currentTurnIndex: z.number().int(),
   currentPhaseIndex: z.number().int(),
+  currentPhaseName: z.string().nullable(),
   phaseNames: z.array(z.string()),
+  totalPhases: z.number().int(),
+  hasPhases: z.boolean(),
 });
 
 export type TurnPhasesDto = z.infer<typeof TurnPhasesDtoSchema>;

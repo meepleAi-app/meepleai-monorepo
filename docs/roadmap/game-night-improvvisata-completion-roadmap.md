@@ -59,17 +59,20 @@ Espandere i test E2E mock-based per coprire il journey completo UI.
 
 **Deliverable**: Copertura UI 100% del journey con mock
 
-### Phase 2: Backend Integration E2E (3-4 giorni)
+### Phase 2: Backend Integration E2E (3-4 giorni) — COMPLETED 2026-03-21
 
-Test con backend reale, servizi ML mockati.
+Test con backend reale, servizi AI reali (OpenRouter, embedding service).
 
-| Task | Scope | Effort |
+| Task | Tests | Status |
 |------|-------|--------|
-| Real session lifecycle | Create → invite → join → score → pause → resume | 2 giorni |
-| Data integrity checks | Verify DB state after each operation | 1 giorno |
-| Concurrent access | Two browser contexts, real SignalR | 1 giorno |
+| Save/Resume with PauseSnapshot | 3 | ✅ |
+| Score parsing (NLP) | 4 | ✅ |
+| Disputes (AI Arbitro + v2) | 6 | ✅ |
+| Data integrity checks | 6 | ✅ |
+| Concurrent access | 6 | ✅ |
 
-**Requires**: API + PostgreSQL + Redis running
+**Total**: 25 integration tests, 5 files + shared helper module
+**Requires**: API + PostgreSQL + Redis + Embedding Service + OpenRouter
 **Deliverable**: Integrità dati verificata end-to-end
 
 ### Phase 3: Edge Case Hardening (1-2 giorni) — VERIFIED 2026-03-16

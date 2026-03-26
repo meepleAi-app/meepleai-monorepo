@@ -12,7 +12,6 @@
 import { use } from 'react';
 
 import { PlayerList } from '@/components/session/live/PlayerList';
-import { useLiveSessionStore } from '@/lib/stores/live-session-store';
 
 interface PlayersPageProps {
   params: Promise<{ sessionId: string }>;
@@ -20,11 +19,6 @@ interface PlayersPageProps {
 
 export default function PlayersPage({ params }: PlayersPageProps) {
   const { sessionId } = use(params);
-
-  // Read invite info from store (set when session starts via startImprovvisata)
-  // The store doesn't hold inviteCode/shareLink directly; we derive the share link
-  // from the current URL pattern. The inviteCode is read from sessionInfo if available.
-  const gameName = useLiveSessionStore(s => s.gameName);
 
   // Build a fallback share link from the current session ID
   const shareLink =

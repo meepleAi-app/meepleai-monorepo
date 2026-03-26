@@ -63,7 +63,7 @@ export const DEFAULT_ACTIONS: BottomNavActionDef[] = [
     label: 'Home',
     icon: Home,
     variant: 'ghost',
-    drawCard: { entity: 'custom', href: '/dashboard' },
+    drawCard: { entity: 'custom', href: '/library' },
   },
   {
     id: 'library',

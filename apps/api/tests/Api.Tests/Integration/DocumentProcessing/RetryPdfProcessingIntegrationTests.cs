@@ -16,6 +16,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.Integration.DocumentProcessing;
 
@@ -46,23 +47,11 @@ public sealed class RetryPdfProcessingIntegrationTests : IAsyncLifetime
         _databaseName = $"test_retry_{Guid.NewGuid():N}";
         _isolatedDbConnectionString = await _fixture.CreateIsolatedDatabaseAsync(_databaseName);
 
-        var services = new ServiceCollection();
-        services.AddLogging(builder => builder.AddConsole().SetMinimumLevel(LogLevel.Warning));
-
-        services.AddDbContext<MeepleAiDbContext>(options =>
-        {
-            options.UseNpgsql(_isolatedDbConnectionString, o => o.UseVector());
-            options.ConfigureWarnings(w =>
-                w.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning));
-        });
+        var services = IntegrationServiceCollectionBuilder.CreateBase(_isolatedDbConnectionString);
 
         // Register repositories
         services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<IPdfDocumentRepository, PdfDocumentRepository>();
-        services.AddScoped<IUnitOfWork, EfCoreUnitOfWork>();
-
-        // Register domain event infrastructure
-        services.AddScoped<IDomainEventCollector, DomainEventCollector>();
 
         // Register IProcessingMetricsService (required by PdfStateChangedMetricsEventHandler picked up by MediatR assembly scan)
         var mockMetricsService = new Moq.Mock<Api.BoundedContexts.DocumentProcessing.Application.Services.IProcessingMetricsService>();
@@ -83,12 +72,6 @@ public sealed class RetryPdfProcessingIntegrationTests : IAsyncLifetime
         // Register KnowledgeBase dependencies (required by AutoCreateAgentOnPdfReadyHandler picked up by MediatR assembly scan)
         var mockTypologyRepo = new Moq.Mock<Api.BoundedContexts.KnowledgeBase.Domain.Repositories.IAgentTypologyRepository>();
         services.AddScoped(_ => mockTypologyRepo.Object);
-
-        // Register MediatR
-        services.AddMediatR(cfg =>
-        {
-            cfg.RegisterServicesFromAssembly(typeof(RetryPdfProcessingCommand).Assembly);
-        });
 
         // Register handler explicitly
         services.AddScoped<RetryPdfProcessingCommandHandler>();
@@ -197,19 +180,18 @@ public sealed class RetryPdfProcessingIntegrationTests : IAsyncLifetime
         var result = await mediator.Send(command, TestCancellationToken);
 
         // Assert
-        Assert.True(result.Success, $"Expected success but got: {result.Message}");
-        Assert.Equal(1, result.RetryCount);
-        Assert.Equal(PdfProcessingState.Extracting.ToString(), result.CurrentState);
+        result.Success.Should().BeTrue($"Expected success but got: {result.Message}");
+        result.RetryCount.Should().Be(1);
+        result.CurrentState.Should().Be(PdfProcessingState.Extracting.ToString());
 
         // Verify database was updated
         var updatedPdf = await _dbContext.PdfDocuments
             .FirstOrDefaultAsync(p => p.Id == pdfId, TestCancellationToken);
 
-        Assert.NotNull(updatedPdf);
-        Assert.Equal(1, updatedPdf.RetryCount);
-        Assert.Equal(PdfProcessingState.Extracting.ToString(), updatedPdf.ProcessingState);
-        Assert.Null(updatedPdf.ProcessingError);
-        Assert.Equal("Uploading", updatedPdf.ProcessingState);
+        updatedPdf.Should().NotBeNull();
+        updatedPdf.RetryCount.Should().Be(1);
+        updatedPdf.ProcessingState.Should().Be(PdfProcessingState.Extracting.ToString());
+        updatedPdf.ProcessingError.Should().BeNull();
     }
 
     [Fact]
@@ -249,18 +231,18 @@ public sealed class RetryPdfProcessingIntegrationTests : IAsyncLifetime
         var result = await mediator.Send(command, TestCancellationToken);
 
         // Assert
-        Assert.False(result.Success);
-        Assert.Contains("Cannot retry", result.Message); // Domain exception message
-        Assert.Contains("MaxRetries=3", result.Message);
-        Assert.Equal(3, result.RetryCount);
+        result.Success.Should().BeFalse();
+        result.Message.Should().Contain("Cannot retry"); // Domain exception message
+        result.Message.Should().Contain("MaxRetries=3");
+        result.RetryCount.Should().Be(3);
 
         // Verify database was NOT modified
         var unchangedPdf = await _dbContext.PdfDocuments
             .FirstOrDefaultAsync(p => p.Id == pdfId, TestCancellationToken);
 
-        Assert.NotNull(unchangedPdf);
-        Assert.Equal(3, unchangedPdf.RetryCount);
-        Assert.Equal(PdfProcessingState.Failed.ToString(), unchangedPdf.ProcessingState);
+        unchangedPdf.Should().NotBeNull();
+        unchangedPdf.RetryCount.Should().Be(3);
+        unchangedPdf.ProcessingState.Should().Be(PdfProcessingState.Failed.ToString());
     }
 
     [Fact]
@@ -297,9 +279,9 @@ public sealed class RetryPdfProcessingIntegrationTests : IAsyncLifetime
         var result = await mediator.Send(command, TestCancellationToken);
 
         // Assert
-        Assert.False(result.Success);
-        Assert.Contains("Cannot retry", result.Message); // Domain exception message
-        Assert.Equal(0, result.RetryCount);
+        result.Success.Should().BeFalse();
+        result.Message.Should().Contain("Cannot retry"); // Domain exception message
+        result.RetryCount.Should().Be(0);
     }
 
     [Fact]
@@ -347,9 +329,9 @@ public sealed class RetryPdfProcessingIntegrationTests : IAsyncLifetime
         // Act & Assert
         var mediator = _serviceProvider!.GetRequiredService<IMediator>();
         var command = new RetryPdfProcessingCommand(pdfId, otherUserId);
-        var ex = await Assert.ThrowsAsync<ForbiddenException>(
-            () => mediator.Send(command, TestCancellationToken));
-        Assert.Contains("not authorized", ex.Message);
+        var act = () => mediator.Send(command, TestCancellationToken);
+        var ex = (await act.Should().ThrowAsync<ForbiddenException>()).Which;
+        ex.Message.Should().Contain("not authorized");
     }
 
     [Fact]
@@ -362,9 +344,9 @@ public sealed class RetryPdfProcessingIntegrationTests : IAsyncLifetime
         // Act & Assert
         var mediator = _serviceProvider!.GetRequiredService<IMediator>();
         var command = new RetryPdfProcessingCommand(pdfId, userId);
-        var ex = await Assert.ThrowsAsync<NotFoundException>(
-            () => mediator.Send(command, TestCancellationToken));
-        Assert.Contains("not found", ex.Message, StringComparison.OrdinalIgnoreCase);
+        var act2 = () => mediator.Send(command, TestCancellationToken);
+        var ex = (await act2.Should().ThrowAsync<NotFoundException>()).Which;
+        ex.Message.Should().ContainEquivalentOf("not found");
     }
 
     [Fact]
@@ -417,15 +399,15 @@ public sealed class RetryPdfProcessingIntegrationTests : IAsyncLifetime
         var result2 = await mediator.Send(command2, TestCancellationToken);
 
         // Assert
-        Assert.True(result1.Success);
-        Assert.Equal(1, result1.RetryCount);
+        result1.Success.Should().BeTrue();
+        result1.RetryCount.Should().Be(1);
 
-        Assert.True(result2.Success);
-        Assert.Equal(2, result2.RetryCount);
+        result2.Success.Should().BeTrue();
+        result2.RetryCount.Should().Be(2);
 
         // Verify final state
         var finalPdf = await _dbContext.PdfDocuments.FindAsync(new object[] { pdfId }, TestCancellationToken);
-        Assert.Equal(2, finalPdf!.RetryCount);
-        Assert.Equal(PdfProcessingState.Chunking.ToString(), finalPdf.ProcessingState);
+        finalPdf!.RetryCount.Should().Be(2);
+        finalPdf.ProcessingState.Should().Be(PdfProcessingState.Chunking.ToString());
     }
 }

@@ -46,18 +46,18 @@ vi.mock('@/hooks/queries/useExtractMetadata', () => ({
 // Test data
 const mockExtractedMetadata: ExtractedMetadata = {
   title: 'Catan',
-  yearPublished: 1995,
+  year: 1995,
   minPlayers: 3,
   maxPlayers: 4,
-  playTime: 60,
+  playingTime: 60,
   minAge: 10,
   description: 'A game about settling an island',
-  confidence: 85, // High confidence (green badge)
+  confidenceScore: 0.85, // High confidence (green badge) — 0.0-1.0 range
 };
 
 const mockLowConfidenceMetadata: ExtractedMetadata = {
   ...mockExtractedMetadata,
-  confidence: 45, // Low confidence (red badge)
+  confidenceScore: 0.45, // Low confidence (red badge) — 0.0-1.0 range
 };
 
 beforeEach(() => {
@@ -161,7 +161,7 @@ describe('Step2MetadataExtraction', () => {
 
   describe('Confidence Badge', () => {
     it('displays high confidence badge (green) for ≥80%', () => {
-      mockWizardStore.extractedMetadata = { ...mockExtractedMetadata, confidence: 85 };
+      mockWizardStore.extractedMetadata = { ...mockExtractedMetadata, confidenceScore: 0.85 };
 
       render(<Step2MetadataExtraction />);
 
@@ -171,7 +171,7 @@ describe('Step2MetadataExtraction', () => {
     });
 
     it('displays medium confidence badge (yellow) for 50-79%', () => {
-      mockWizardStore.extractedMetadata = { ...mockExtractedMetadata, confidence: 65 };
+      mockWizardStore.extractedMetadata = { ...mockExtractedMetadata, confidenceScore: 0.65 };
 
       render(<Step2MetadataExtraction />);
 

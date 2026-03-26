@@ -530,9 +530,9 @@ dotnet run
 ## References
 
 ### Documentation
-- **Deployment Guide**: [docs/04-deployment/auto-configuration-guide.md](../../04-deployment/auto-configuration-guide.md)
-- **Secrets Management**: [docs/04-deployment/secrets-management.md](../../04-deployment/secrets-management.md)
-- **Health Check API**: [docs/03-api/health-check-api.md](../../03-api/health-check-api.md)
+- **Deployment Guide**: [docs/04-deployment/auto-configuration-guide.md](../../deployment/auto-configuration-guide.md)
+- **Secrets Management**: [docs/04-deployment/secrets-management.md](../../deployment/secrets-management.md)
+- **Health Check API**: [docs/03-api/health-check-api.md](../../api/health-check-api.md)
 - **Secrets README**: [infra/secrets/README.md](../../../infra/secrets/README.md)
 
 ### Source Code
@@ -550,5 +550,5 @@ dotnet run
 ---
 
 **Decision Maker**: Engineering Lead
-**Implementation**: Issues [#2511](https://github.com/DegrassiAaron/meepleai-monorepo/issues/2511), [#2522](https://github.com/DegrassiAaron/meepleai-monorepo/issues/2522)
+**Implementation**: Issues [#2511](https://github.com/meepleAi-app/meepleai-monorepo/issues/2511), [#2522](https://github.com/meepleAi-app/meepleai-monorepo/issues/2522)
 **Status**: ✅ Production-ready (as of 2026-01-17)

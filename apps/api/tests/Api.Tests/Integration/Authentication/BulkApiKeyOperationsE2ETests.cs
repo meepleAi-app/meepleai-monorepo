@@ -1,7 +1,8 @@
 using Api.SharedKernel.Domain.ValueObjects;
 using Api.BoundedContexts.Administration.Application.Commands;
 using Api.BoundedContexts.Authentication.Application.Commands.ApiKeys;
-using Api.BoundedContexts.Authentication.Application.Handlers;
+using Api.BoundedContexts.Authentication.Application.Commands;
+using Api.BoundedContexts.Authentication.Application.Queries;
 using Api.BoundedContexts.Authentication.Application.Queries;
 using Api.BoundedContexts.Authentication.Domain.Entities;
 using Api.BoundedContexts.Authentication.Domain.ValueObjects;
@@ -73,35 +74,10 @@ public sealed class BulkApiKeyOperationsE2ETests : IAsyncLifetime
         _isolatedDbConnectionString = await _fixture.CreateIsolatedDatabaseAsync(_databaseName);
         _output($"Isolated database created: {_databaseName}");
 
-        // Setup dependency injection
-        var enforcedBuilder = new NpgsqlConnectionStringBuilder(_isolatedDbConnectionString)
-        {
-            SslMode = SslMode.Disable,
-            KeepAlive = 30,
-            Pooling = false,
-            Timeout = 15,
-            CommandTimeout = 30
-        };
+        var services = IntegrationServiceCollectionBuilder.CreateBase(_isolatedDbConnectionString);
 
-        var services = new ServiceCollection();
-
-        // DbContext
-        services.AddDbContext<MeepleAiDbContext>(options =>
-            options.UseNpgsql(enforcedBuilder.ConnectionString, o => o.UseVector()) // Issue #3547
-                .ConfigureWarnings(warnings =>
-                    warnings.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning)));
-
-        // MediatR
-        services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(Program).Assembly));
-
-        // Repositories and Unit of Work
         services.AddScoped<IApiKeyRepository, ApiKeyRepository>();
         services.AddScoped<IUserRepository, UserRepository>();
-        services.AddScoped<IUnitOfWork, EfCoreUnitOfWork>();
-        services.AddScoped<Api.SharedKernel.Application.Services.IDomainEventCollector, Api.SharedKernel.Application.Services.DomainEventCollector>();
-
-        // Logging
-        services.AddLogging(builder => builder.AddConsole());
 
         var serviceProvider = services.BuildServiceProvider();
         _dbContext = serviceProvider.GetRequiredService<MeepleAiDbContext>();
@@ -380,8 +356,8 @@ public sealed class BulkApiKeyOperationsE2ETests : IAsyncLifetime
         var command = new BulkImportApiKeysCommand(csvContent, adminId);
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<Api.SharedKernel.Domain.Exceptions.DomainException>(
-            () => handler.Handle(command, TestCancellationToken));
+        var act = () => handler.Handle(command, TestCancellationToken);
+        var exception = (await act.Should().ThrowAsync<Api.SharedKernel.Domain.Exceptions.DomainException>()).Which;
 
         exception.Message.Should().Contain("do not exist");
     }
@@ -415,8 +391,8 @@ public sealed class BulkApiKeyOperationsE2ETests : IAsyncLifetime
         var command = new BulkImportApiKeysCommand(csvContent, adminId);
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<Api.SharedKernel.Domain.Exceptions.DomainException>(
-            () => handler.Handle(command, TestCancellationToken));
+        var act2 = () => handler.Handle(command, TestCancellationToken);
+        var exception = (await act2.Should().ThrowAsync<Api.SharedKernel.Domain.Exceptions.DomainException>()).Which;
 
         exception.Message.Should().Contain("already exist");
     }

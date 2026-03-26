@@ -12,9 +12,9 @@ import { useState, useCallback, useEffect, useRef } from 'react';
 import { Search, ChevronLeft, ChevronRight, Gamepad2 } from 'lucide-react';
 import { toast } from 'sonner';
 
-import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/feedback/skeleton';
-import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/primitives/button';
+import { Input } from '@/components/ui/primitives/input';
 import { api } from '@/lib/api';
 import type {
   BggGameSummary,

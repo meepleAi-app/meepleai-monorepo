@@ -45,7 +45,7 @@ export function calculateOptimalPosition(
   tooltipSize: TooltipSize,
   viewportSize: ViewportSize = {
     width: typeof window !== 'undefined' ? window.innerWidth : 1920,
-    height: typeof window !== 'undefined' ? window.innerHeight : 1080
+    height: typeof window !== 'undefined' ? window.innerHeight : 1080,
   }
 ): TooltipPosition {
   // Step 1: Calculate available space in each direction
@@ -110,7 +110,8 @@ export function calculateOptimalPosition(
     );
   }
 
-  return { ...position, placement } as TooltipPosition;
+  const result: TooltipPosition = { ...position, placement };
+  return result;
 }
 
 /**

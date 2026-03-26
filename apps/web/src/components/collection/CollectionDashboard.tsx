@@ -426,7 +426,7 @@ function CollectionToolbar({
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuItem asChild>
-                <Link href="/games/add" className="flex items-center gap-2 cursor-pointer">
+                <Link href="/library" className="flex items-center gap-2 cursor-pointer">
                   <BookOpen className="h-4 w-4" />
                   {t('collection.addFromCatalog')}
                 </Link>
@@ -514,7 +514,7 @@ function EmptyState({ hasFilters }: { hasFilters: boolean }) {
       </p>
       {!hasFilters && (
         <Button asChild size="lg" className="gap-2">
-          <Link href="/games/discover">
+          <Link href="/library">
             <Plus className="h-5 w-5" />
             Aggiungi il tuo primo gioco
           </Link>

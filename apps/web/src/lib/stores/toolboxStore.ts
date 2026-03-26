@@ -87,13 +87,16 @@ export interface ToolboxStore {
 // Initial State
 // ============================================================================
 
-const initialState = {
-  toolbox: null as ToolboxDto | null,
-  currentPhase: null as PhaseDto | null,
+const initialState: Pick<
+  ToolboxStore,
+  'toolbox' | 'currentPhase' | 'isOffline' | 'isLoading' | 'error' | 'cardDecks' | 'expandedTools'
+> = {
+  toolbox: null,
+  currentPhase: null,
   isOffline: false,
   isLoading: false,
-  error: null as string | null,
-  cardDecks: {} as Record<string, DeckState>,
+  error: null,
+  cardDecks: {},
   expandedTools: new Set<string>(),
 };
 

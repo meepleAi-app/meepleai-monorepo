@@ -17,7 +17,7 @@ import { api } from '@/lib/api';
 interface ChatSetupStepProps {
   gameId: string;
   gameName: string;
-  pdfId?: string | null;  // Optional for user wizard (Issue #4)
+  pdfId?: string | null; // Optional for user wizard (Issue #4)
   onComplete: (chatThreadId: string | null) => void;
   onBack: () => void;
 }
@@ -85,10 +85,14 @@ export function ChatSetupStep({ gameId, gameName, pdfId, onComplete, onBack }: C
             break;
         }
       } catch (_err) {
-        // On error, assume completed for demo purposes
-        setProcessingStatus('completed');
-        setProcessingProgress(100);
-        setProcessingMessage('Elaborazione completata!');
+        // On poll error, show failure state instead of silently assuming completion
+        setProcessingStatus('failed');
+        setProcessingProgress(0);
+        setProcessingMessage('Errore durante il controllo dello stato. Riprova.');
+        if (pollingRef.current) {
+          clearInterval(pollingRef.current);
+          pollingRef.current = null;
+        }
       }
     };
 
@@ -174,9 +178,7 @@ export function ChatSetupStep({ gameId, gameName, pdfId, onComplete, onBack }: C
           <Button variant="outline" onClick={onBack}>
             Indietro
           </Button>
-          <Button onClick={() => onComplete(null)}>
-            Salta Agente
-          </Button>
+          <Button onClick={() => onComplete(null)}>Salta Agente</Button>
         </div>
       </div>
     );

@@ -1,6 +1,7 @@
 using Api.BoundedContexts.SharedGameCatalog.Domain.ValueObjects;
 using Api.Tests.Constants;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.SharedGameCatalog.Domain;
 
@@ -13,33 +14,37 @@ public class GameRulesExternalUrlTests
     {
         var rules = GameRules.CreateFromUrl("https://example.com/rules.pdf");
 
-        Assert.Equal("https://example.com/rules.pdf", rules.ExternalUrl);
-        Assert.Equal(string.Empty, rules.Content);
-        Assert.Equal(string.Empty, rules.Language);
+        rules.ExternalUrl.Should().Be("https://example.com/rules.pdf");
+        rules.Content.Should().Be(string.Empty);
+        rules.Language.Should().Be(string.Empty);
     }
 
     [Fact]
     public void CreateFromUrl_WithEmptyUrl_ShouldThrow()
     {
-        Assert.Throws<ArgumentException>(() => GameRules.CreateFromUrl(""));
+        var act = () => GameRules.CreateFromUrl("");
+        act.Should().Throw<ArgumentException>();
     }
 
     [Fact]
     public void CreateFromUrl_WithWhitespaceUrl_ShouldThrow()
     {
-        Assert.Throws<ArgumentException>(() => GameRules.CreateFromUrl("   "));
+        var act = () => GameRules.CreateFromUrl("   ");
+        act.Should().Throw<ArgumentException>();
     }
 
     [Fact]
     public void CreateFromUrl_WithHttpUrl_ShouldThrow()
     {
-        Assert.Throws<ArgumentException>(() => GameRules.CreateFromUrl("http://insecure.com/rules.pdf"));
+        var act = () => GameRules.CreateFromUrl("http://insecure.com/rules.pdf");
+        act.Should().Throw<ArgumentException>();
     }
 
     [Fact]
     public void CreateFromUrl_WithInvalidUrl_ShouldThrow()
     {
-        Assert.Throws<ArgumentException>(() => GameRules.CreateFromUrl("not-a-url"));
+        var act = () => GameRules.CreateFromUrl("not-a-url");
+        act.Should().Throw<ArgumentException>();
     }
 
     [Fact]
@@ -47,9 +52,9 @@ public class GameRulesExternalUrlTests
     {
         var rules = GameRules.Create("content", "en", "https://example.com/rules.pdf");
 
-        Assert.Equal("content", rules.Content);
-        Assert.Equal("en", rules.Language);
-        Assert.Equal("https://example.com/rules.pdf", rules.ExternalUrl);
+        rules.Content.Should().Be("content");
+        rules.Language.Should().Be("en");
+        rules.ExternalUrl.Should().Be("https://example.com/rules.pdf");
     }
 
     [Fact]
@@ -57,15 +62,16 @@ public class GameRulesExternalUrlTests
     {
         var rules = GameRules.Create("content", "en");
 
-        Assert.Equal("content", rules.Content);
-        Assert.Equal("en", rules.Language);
-        Assert.Null(rules.ExternalUrl);
+        rules.Content.Should().Be("content");
+        rules.Language.Should().Be("en");
+        rules.ExternalUrl.Should().BeNull();
     }
 
     [Fact]
     public void Create_WithInvalidExternalUrl_ShouldThrow()
     {
-        Assert.Throws<ArgumentException>(() => GameRules.Create("content", "en", "http://insecure.com"));
+        var act = () => GameRules.Create("content", "en", "http://insecure.com");
+        act.Should().Throw<ArgumentException>();
     }
 
     [Fact]
@@ -74,7 +80,7 @@ public class GameRulesExternalUrlTests
         var rules1 = GameRules.Create("content", "en", "https://example.com/rules.pdf");
         var rules2 = GameRules.Create("content", "en", "https://example.com/rules.pdf");
 
-        Assert.Equal(rules1, rules2);
+        rules2.Should().Be(rules1);
     }
 
     [Fact]
@@ -83,6 +89,6 @@ public class GameRulesExternalUrlTests
         var rules1 = GameRules.Create("content", "en", "https://example.com/rules1.pdf");
         var rules2 = GameRules.Create("content", "en", "https://example.com/rules2.pdf");
 
-        Assert.NotEqual(rules1, rules2);
+        rules2.Should().NotBe(rules1);
     }
 }

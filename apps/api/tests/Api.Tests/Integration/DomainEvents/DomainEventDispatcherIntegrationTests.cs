@@ -52,34 +52,11 @@ public sealed class DomainEventDispatcherIntegrationTests : IAsyncLifetime
         _databaseName = $"test_domain_events_{Guid.NewGuid():N}";
         var connectionString = await _fixture.CreateIsolatedDatabaseAsync(_databaseName);
 
-        // Setup DbContext options
-        var options = new DbContextOptionsBuilder<MeepleAiDbContext>()
-            .UseNpgsql(connectionString, o => o.UseVector()) // Issue #3547
-            .EnableSensitiveDataLogging()
-            .Options;
-
-        // Create service collection with all event handlers
-        var services = new ServiceCollection();
-
-        // Register MediatR with all handlers from API assembly
-        services.AddMediatR(cfg =>
-            cfg.RegisterServicesFromAssembly(typeof(MeepleAiDbContext).Assembly));
-
-        services.AddSingleton(options);
-        services.AddScoped<IDomainEventCollector, DomainEventCollector>();
-        services.AddScoped<MeepleAiDbContext>(sp =>
-            new MeepleAiDbContext(
-                options,
-                sp.GetRequiredService<IMediator>(),
-                sp.GetRequiredService<IDomainEventCollector>()));
-
-        services.AddLogging(builder => builder.AddConsole().SetMinimumLevel(LogLevel.Debug));
+        var services = IntegrationServiceCollectionBuilder.CreateBase(connectionString);
 
         _serviceProvider = services.BuildServiceProvider();
         _eventCollector = _serviceProvider.GetRequiredService<IDomainEventCollector>();
-        // Fix: Use PostgreSQL DbContext with Testcontainers, not in-memory
-        var mediator = _serviceProvider.GetRequiredService<IMediator>();
-        _dbContext = new MeepleAiDbContext(options, mediator, _eventCollector);
+        _dbContext = _serviceProvider.GetRequiredService<MeepleAiDbContext>();
 
         // Apply migrations
         await _dbContext.Database.MigrateAsync();

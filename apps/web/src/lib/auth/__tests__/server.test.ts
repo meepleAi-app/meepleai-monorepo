@@ -14,6 +14,25 @@
 import { getServerUser, isAdmin, isEditor, hasRole, hasAnyRole } from '../server';
 import type { AuthUser } from '@/types/auth';
 
+// Mock logger — source uses logger.error, not console.error directly
+const mockLoggerError = vi.fn();
+vi.mock('@/lib/logger', () => ({
+  logger: {
+    debug: vi.fn(),
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: (...args: unknown[]) => mockLoggerError(...args),
+  },
+  getLogger: () => ({
+    debug: vi.fn(),
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: (...args: unknown[]) => mockLoggerError(...args),
+  }),
+  resetLogger: vi.fn(),
+  LogLevel: { DEBUG: 'debug', INFO: 'info', WARN: 'warn', ERROR: 'error' },
+}));
+
 // Mock next/headers cookies
 const mockCookieGet = vi.fn();
 vi.mock('next/headers', () => ({
@@ -42,8 +61,7 @@ const createMockUser = (overrides?: Partial<AuthUser>): AuthUser => ({
 describe('getServerUser', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    // Suppress console.error for expected errors
-    vi.spyOn(console, 'error').mockImplementation(() => {});
+    mockLoggerError.mockClear();
   });
 
   afterEach(() => {
@@ -117,16 +135,19 @@ describe('getServerUser', () => {
   });
 
   it('returns null when fetch throws network error', async () => {
+    mockLoggerError.mockClear();
     mockCookieGet.mockReturnValue({ value: 'valid-session-token' });
     mockFetch.mockRejectedValue(new Error('Network error'));
 
     const result = await getServerUser();
 
     expect(result).toBeNull();
-    expect(console.error).toHaveBeenCalled();
+    // Source uses logger.error, not console.error directly
+    expect(mockLoggerError).toHaveBeenCalled();
   });
 
   it('returns null when JSON parsing fails', async () => {
+    mockLoggerError.mockClear();
     mockCookieGet.mockReturnValue({ value: 'valid-session-token' });
     mockFetch.mockResolvedValue({
       ok: true,
@@ -136,7 +157,8 @@ describe('getServerUser', () => {
     const result = await getServerUser();
 
     expect(result).toBeNull();
-    expect(console.error).toHaveBeenCalled();
+    // Source uses logger.error, not console.error directly
+    expect(mockLoggerError).toHaveBeenCalled();
   });
 
   it('includes session cookie in request headers', async () => {

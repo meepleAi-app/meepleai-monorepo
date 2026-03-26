@@ -32,7 +32,7 @@ public sealed class Role : ValueObject
 
         var normalized = value.ToLowerInvariant();
         if (!ValidRoles.Contains(normalized))
-            throw new ValidationException(nameof(Role), $"Invalid role: {value}. Valid roles are: user, editor, admin, superadmin");
+            throw new ValidationException(nameof(Role), $"Invalid role: {value}. Valid roles are: user, creator, editor, admin, superadmin");
 
         return new Role(normalized);
     }
@@ -52,11 +52,11 @@ public sealed class Role : ValueObject
         // Admin has all permissions except SuperAdmin
         if (IsAdmin() && !requiredRole.IsSuperAdmin()) return true;
 
-        // Creator has creator + editor + user permissions (Epic #4068)
-        if (IsCreator() && (requiredRole.IsCreator() || requiredRole.IsEditor() || requiredRole.IsUser())) return true;
+        // Creator has creator + user permissions (Epic #4068)
+        if (IsCreator() && (requiredRole.IsCreator() || requiredRole.IsUser())) return true;
 
-        // Editor has editor + user permissions
-        if (IsEditor() && (requiredRole.IsEditor() || requiredRole.IsUser())) return true;
+        // Editor has editor + creator + user permissions
+        if (IsEditor() && (requiredRole.IsEditor() || requiredRole.IsCreator() || requiredRole.IsUser())) return true;
 
         // User has user permissions only
         return string.Equals(Value, requiredRole.Value, StringComparison.Ordinal);

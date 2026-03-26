@@ -5,15 +5,15 @@ import React, { useState, useCallback } from 'react';
 import { Dices, History, RotateCcw } from 'lucide-react';
 
 import { Badge } from '@/components/ui/data-display/badge';
-import { Button } from '@/components/ui/primitives/button';
-import { ScrollArea } from '@/components/ui/primitives/scroll-area';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
+} from '@/components/ui/overlays/select';
+import { Button } from '@/components/ui/primitives/button';
+import { ScrollArea } from '@/components/ui/primitives/scroll-area';
 
 import { WidgetCard } from './WidgetCard';
 

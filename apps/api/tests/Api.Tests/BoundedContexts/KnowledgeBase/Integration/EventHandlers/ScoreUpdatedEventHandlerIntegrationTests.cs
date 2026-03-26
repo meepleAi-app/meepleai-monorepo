@@ -51,14 +51,7 @@ public sealed class ScoreUpdatedEventHandlerIntegrationTests : IAsyncLifetime
         var connectionString = await _fixture.CreateIsolatedDatabaseAsync($"test_score_handler_{Guid.NewGuid():N}");
 
         // Setup DI container with real MediatR pipeline (Issue #3258)
-        var services = new ServiceCollection();
-
-        // Register DbContext first
-        services.AddDbContext<MeepleAiDbContext>(options =>
-            options.UseNpgsql(connectionString, o => o.UseVector())); // Issue #3547
-
-        // Register domain event collector (required by repository)
-        services.AddScoped<IDomainEventCollector, DomainEventCollector>();
+        var services = IntegrationServiceCollectionBuilder.CreateBase(connectionString);
 
         // Register repository
         services.AddScoped<IAgentSessionRepository, AgentSessionRepository>();
@@ -66,14 +59,8 @@ public sealed class ScoreUpdatedEventHandlerIntegrationTests : IAsyncLifetime
         // Register UnitOfWork (required by command handler)
         services.AddScoped<IUnitOfWork, UnitOfWork>();
 
-        // Register MediatR with all handlers from the KnowledgeBase bounded context (Issue #3258 - proper integration test)
-        services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(Api.BoundedContexts.KnowledgeBase.Application.Handlers.UpdateAgentSessionStateCommandHandler).Assembly));
-
         // HybridCache (required by event handlers) - Issue #2620
         services.AddHybridCache();
-        services.AddScoped(_ => Mock.Of<Api.Services.IHybridCacheService>());
-
-        services.AddLogging(builder => builder.AddConsole());
 
         _serviceProvider = services.BuildServiceProvider();
 

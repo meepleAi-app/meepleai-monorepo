@@ -11,6 +11,7 @@ using Api.Tests.Constants;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.SharedGameCatalog.Application.Handlers;
 
@@ -63,9 +64,9 @@ public class BulkRejectShareRequestsCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.Equal(shareRequestIds.Count, result.SuccessCount);
-        Assert.Equal(0, result.FailedCount);
-        Assert.Empty(result.Errors);
+        result.SuccessCount.Should().Be(shareRequestIds.Count);
+        result.FailedCount.Should().Be(0);
+        result.Errors.Should().BeEmpty();
         _mockShareRequestRepository.Verify(
             r => r.Update(It.IsAny<ShareRequest>()),
             Times.Exactly(shareRequestIds.Count));
@@ -135,10 +136,10 @@ public class BulkRejectShareRequestsCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert - All-or-nothing failure
-        Assert.Equal(0, result.SuccessCount);
-        Assert.Equal(shareRequestIds.Count, result.FailedCount);
-        Assert.Single(result.Errors);
-        Assert.Contains("Bulk operation failed", result.Errors[0]);
+        result.SuccessCount.Should().Be(0);
+        result.FailedCount.Should().Be(shareRequestIds.Count);
+        result.Errors.Should().ContainSingle();
+        result.Errors[0].Should().Contain("Bulk operation failed");
         _mockUnitOfWork.Verify(
             u => u.SaveChangesAsync(It.IsAny<CancellationToken>()),
             Times.Never); // No commit on failure
@@ -171,7 +172,7 @@ public class BulkRejectShareRequestsCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert - Only 2 distinct IDs processed
-        Assert.Equal(2, result.SuccessCount);
+        result.SuccessCount.Should().Be(2);
         _mockShareRequestRepository.Verify(
             r => r.GetByIdsForUpdateAsync(
                 It.IsAny<IEnumerable<Guid>>(),
@@ -192,10 +193,10 @@ public class BulkRejectShareRequestsCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert - Handler catches DomainException and returns failure
-        Assert.Equal(0, result.SuccessCount);
-        Assert.Equal(shareRequestIds.Count, result.FailedCount);
-        Assert.Single(result.Errors);
-        Assert.Contains("maximum limit of 20", result.Errors[0]);
+        result.SuccessCount.Should().Be(0);
+        result.FailedCount.Should().Be(shareRequestIds.Count);
+        result.Errors.Should().ContainSingle();
+        result.Errors[0].Should().Contain("maximum limit of 20");
     }
 
     [Fact]
@@ -226,8 +227,8 @@ public class BulkRejectShareRequestsCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert - All-or-nothing failure due to invalid state
-        Assert.Equal(0, result.SuccessCount);
-        Assert.Equal(shareRequestIds.Count, result.FailedCount);
+        result.SuccessCount.Should().Be(0);
+        result.FailedCount.Should().Be(shareRequestIds.Count);
         _mockUnitOfWork.Verify(
             u => u.SaveChangesAsync(It.IsAny<CancellationToken>()),
             Times.Never);

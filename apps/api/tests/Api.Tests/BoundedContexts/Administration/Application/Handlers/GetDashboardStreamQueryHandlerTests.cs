@@ -1,5 +1,6 @@
 using System.Runtime.CompilerServices;
-using Api.BoundedContexts.Administration.Application.Handlers;
+using Api.BoundedContexts.Administration.Application.Commands;
+using Api.BoundedContexts.Administration.Application.Queries;
 using Api.BoundedContexts.Administration.Application.Queries;
 using Api.BoundedContexts.Administration.Domain.Events;
 using Api.BoundedContexts.Administration.Domain.Services;
@@ -98,8 +99,9 @@ public class GetDashboardStreamQueryHandlerTests
     public void Constructor_ThrowsOnNullStreamService()
     {
         // Act & Assert
-        Assert.Throws<ArgumentNullException>(() =>
-            new GetDashboardStreamQueryHandler(null!));
+        var act = () =>
+            new GetDashboardStreamQueryHandler(null!);
+        act.Should().Throw<ArgumentNullException>();
     }
 
     // Helper methods to create async enumerables

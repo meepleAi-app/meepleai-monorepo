@@ -40,7 +40,7 @@ export function trackEvent(eventName: string, properties?: Record<string, unknow
 /**
  * Track page view event
  *
- * @param pagePath - Page path (e.g., '/dashboard')
+ * @param pagePath - Page path (e.g., '/library')
  * @param pageTitle - Optional page title
  */
 export function trackPageView(pagePath: string, pageTitle?: string): void {

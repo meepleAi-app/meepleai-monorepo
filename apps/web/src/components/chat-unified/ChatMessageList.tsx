@@ -141,8 +141,14 @@ export function ChatMessageList({
         <div
           className="flex items-center gap-2 text-xs text-muted-foreground font-nunito"
           data-testid="stream-status"
+          role="status"
+          aria-live="polite"
+          aria-label={streamState.statusMessage || undefined}
         >
-          <div className="h-3 w-3 border-2 border-amber-500/30 border-t-amber-500 rounded-full animate-spin" />
+          <div
+            className="h-3 w-3 border-2 border-amber-500/30 border-t-amber-500 rounded-full animate-spin"
+            aria-hidden="true"
+          />
           {streamState.statusMessage}
         </div>
       )}
@@ -152,6 +158,8 @@ export function ChatMessageList({
         <div
           className="mx-0 mb-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-200"
           data-testid="model-downgrade-banner"
+          role="alert"
+          aria-live="assertive"
         >
           <div className="flex items-center gap-2">
             <svg
@@ -160,6 +168,7 @@ export function ChatMessageList({
               fill="none"
               stroke="currentColor"
               strokeWidth={2}
+              aria-hidden="true"
             >
               <path
                 strokeLinecap="round"
@@ -194,11 +203,16 @@ export function ChatMessageList({
         <div
           className="max-w-[85%] mr-auto rounded-2xl px-4 py-3 bg-white/70 dark:bg-card/70 backdrop-blur-md border border-border/50"
           data-testid="message-streaming"
+          role="status"
+          aria-live="polite"
+          aria-label="Risposta dell'assistente in scrittura"
         >
           <p className="text-sm whitespace-pre-wrap font-nunito">{streamState.currentAnswer}</p>
           <div className="mt-1 flex items-center gap-1">
             <div className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse" />
-            <span className="text-[10px] text-muted-foreground">In scrittura...</span>
+            <span className="text-[10px] text-muted-foreground" aria-hidden="true">
+              In scrittura...
+            </span>
           </div>
         </div>
       )}

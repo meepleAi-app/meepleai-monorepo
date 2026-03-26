@@ -1,6 +1,8 @@
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities.KnowledgeBase;
+using Api.SharedKernel.Application.Services;
+using Api.SharedKernel.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
@@ -10,16 +12,16 @@ namespace Api.BoundedContexts.KnowledgeBase.Infrastructure.Persistence;
 /// Repository for model compatibility matrix and change log entries.
 /// Issue #5496: Part of Epic #5490 - Model Versioning &amp; Availability Monitoring.
 /// </summary>
-internal sealed class ModelCompatibilityRepository : IModelCompatibilityRepository
+internal sealed class ModelCompatibilityRepository : RepositoryBase, IModelCompatibilityRepository
 {
-    private readonly MeepleAiDbContext _dbContext;
     private readonly ILogger<ModelCompatibilityRepository> _logger;
 
     public ModelCompatibilityRepository(
         MeepleAiDbContext dbContext,
+        IDomainEventCollector eventCollector,
         ILogger<ModelCompatibilityRepository> logger)
+        : base(dbContext, eventCollector)
     {
-        _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -28,7 +30,7 @@ internal sealed class ModelCompatibilityRepository : IModelCompatibilityReposito
         string modelId,
         CancellationToken cancellationToken = default)
     {
-        var entity = await _dbContext.Set<ModelCompatibilityEntryEntity>()
+        var entity = await DbContext.Set<ModelCompatibilityEntryEntity>()
             .AsNoTracking()
             .FirstOrDefaultAsync(e => e.ModelId == modelId, cancellationToken)
             .ConfigureAwait(false);
@@ -46,7 +48,7 @@ internal sealed class ModelCompatibilityRepository : IModelCompatibilityReposito
     public async Task<IReadOnlyList<ModelCompatibilityEntry>> GetAllAsync(
         CancellationToken cancellationToken = default)
     {
-        var entries = await _dbContext.Set<ModelCompatibilityEntryEntity>()
+        var entries = await DbContext.Set<ModelCompatibilityEntryEntity>()
             .AsNoTracking()
             .OrderBy(e => e.Provider)
             .ThenBy(e => e.ModelId)
@@ -73,7 +75,7 @@ internal sealed class ModelCompatibilityRepository : IModelCompatibilityReposito
         string provider,
         CancellationToken cancellationToken = default)
     {
-        var entries = await _dbContext.Set<ModelCompatibilityEntryEntity>()
+        var entries = await DbContext.Set<ModelCompatibilityEntryEntity>()
             .AsNoTracking()
             .Where(e => e.Provider == provider && e.IsCurrentlyAvailable && !e.IsDeprecated)
             .OrderBy(e => e.ModelId)
@@ -99,7 +101,7 @@ internal sealed class ModelCompatibilityRepository : IModelCompatibilityReposito
     public async Task<IReadOnlyList<ModelCompatibilityEntry>> GetUnavailableModelsAsync(
         CancellationToken cancellationToken = default)
     {
-        var entries = await _dbContext.Set<ModelCompatibilityEntryEntity>()
+        var entries = await DbContext.Set<ModelCompatibilityEntryEntity>()
             .AsNoTracking()
             .Where(e => !e.IsCurrentlyAvailable || e.IsDeprecated)
             .OrderByDescending(e => e.UpdatedAt)
@@ -128,7 +130,7 @@ internal sealed class ModelCompatibilityRepository : IModelCompatibilityReposito
         bool isDeprecated,
         CancellationToken cancellationToken = default)
     {
-        var entity = await _dbContext.Set<ModelCompatibilityEntryEntity>()
+        var entity = await DbContext.Set<ModelCompatibilityEntryEntity>()
             .FirstOrDefaultAsync(e => e.ModelId == modelId, cancellationToken)
             .ConfigureAwait(false);
 
@@ -143,7 +145,7 @@ internal sealed class ModelCompatibilityRepository : IModelCompatibilityReposito
         entity.LastVerifiedAt = DateTime.UtcNow;
         entity.UpdatedAt = DateTime.UtcNow;
 
-        await _dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        await DbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
         _logger.LogInformation(
             "Updated model {ModelId} availability: available={IsAvailable}, deprecated={IsDeprecated}",
@@ -155,7 +157,7 @@ internal sealed class ModelCompatibilityRepository : IModelCompatibilityReposito
         ModelCompatibilityEntry entry,
         CancellationToken cancellationToken = default)
     {
-        var existing = await _dbContext.Set<ModelCompatibilityEntryEntity>()
+        var existing = await DbContext.Set<ModelCompatibilityEntryEntity>()
             .FirstOrDefaultAsync(e => e.ModelId == entry.ModelId, cancellationToken)
             .ConfigureAwait(false);
 
@@ -186,10 +188,10 @@ internal sealed class ModelCompatibilityRepository : IModelCompatibilityReposito
                 IsDeprecated = entry.IsDeprecated,
                 LastVerifiedAt = entry.LastVerifiedAt,
             };
-            _dbContext.Set<ModelCompatibilityEntryEntity>().Add(entity);
+            DbContext.Set<ModelCompatibilityEntryEntity>().Add(entity);
         }
 
-        await _dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        await DbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
         _logger.LogInformation(
             "Upserted model compatibility entry for {ModelId} ({Action})",
@@ -202,7 +204,7 @@ internal sealed class ModelCompatibilityRepository : IModelCompatibilityReposito
         int limit = 50,
         CancellationToken cancellationToken = default)
     {
-        var query = _dbContext.Set<ModelChangeLogEntity>()
+        var query = DbContext.Set<ModelChangeLogEntity>()
             .AsNoTracking()
             .AsQueryable();
 
@@ -251,8 +253,8 @@ internal sealed class ModelCompatibilityRepository : IModelCompatibilityReposito
             OccurredAt = entry.OccurredAt,
         };
 
-        _dbContext.Set<ModelChangeLogEntity>().Add(entity);
-        await _dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        DbContext.Set<ModelChangeLogEntity>().Add(entity);
+        await DbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
         _logger.LogInformation(
             "Logged model change: {ChangeType} for {ModelId} (strategy: {Strategy})",

@@ -1,10 +1,12 @@
-using Api.BoundedContexts.KnowledgeBase.Application.Handlers;
+using Api.BoundedContexts.KnowledgeBase.Application.Commands;
+using Api.BoundedContexts.KnowledgeBase.Application.Queries;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries;
 using Api.BoundedContexts.KnowledgeBase.Domain.Entities;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.Tests.Constants;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Handlers;
 
@@ -44,11 +46,11 @@ public class GetChatThreadsByGameQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal(2, result.Count);
-        Assert.All(result, t => Assert.Equal(gameId, t.GameId));
-        Assert.Contains(result, t => t.Title == "Thread 1");
-        Assert.Contains(result, t => t.Title == "Thread 2");
+        result.Should().NotBeNull();
+        result.Count.Should().Be(2);
+        result.Should().AllSatisfy(t => t.GameId.Should().Be(gameId));
+        result.Should().Contain(t => t.Title == "Thread 1");
+        result.Should().Contain(t => t.Title == "Thread 2");
 
         _mockRepository.Verify(r => r.FindByUserIdAndGameIdAsync(userId, gameId, It.IsAny<CancellationToken>()), Times.Once);
     }
@@ -69,8 +71,8 @@ public class GetChatThreadsByGameQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Empty(result);
+        result.Should().NotBeNull();
+        result.Should().BeEmpty();
 
         _mockRepository.Verify(r => r.FindByUserIdAndGameIdAsync(userId, gameId, It.IsAny<CancellationToken>()), Times.Once);
     }
@@ -100,12 +102,12 @@ public class GetChatThreadsByGameQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal(4, result.Count);
-        Assert.Contains(result, t => t.Title == "Thread 4");
-        Assert.Contains(result, t => t.Title == "Thread 7");
-        Assert.DoesNotContain(result, t => t.Title == "Thread 1");
-        Assert.DoesNotContain(result, t => t.Title == "Thread 8");
+        result.Should().NotBeNull();
+        result.Count.Should().Be(4);
+        result.Should().Contain(t => t.Title == "Thread 4");
+        result.Should().Contain(t => t.Title == "Thread 7");
+        result.Should().NotContain(t => t.Title == "Thread 1");
+        result.Should().NotContain(t => t.Title == "Thread 8");
 
         _mockRepository.Verify(r => r.FindByUserIdAndGameIdAsync(userId, gameId, It.IsAny<CancellationToken>()), Times.Once);
     }

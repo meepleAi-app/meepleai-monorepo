@@ -1,8 +1,8 @@
 # Auto-Configuration System - Deployment Guide
 
 > **Last Updated**: 2026-01-17
-> **Related ADR**: [ADR-021 - Auto-Configuration System](../01-architecture/adr/adr-021-auto-configuration-system.md)
-> **Related Issues**: [#2511](https://github.com/DegrassiAaron/meepleai-monorepo/issues/2511), [#2522](https://github.com/DegrassiAaron/meepleai-monorepo/issues/2522)
+> **Related ADR**: [ADR-021 - Auto-Configuration System](../architecture/adr/adr-021-auto-configuration-system.md)
+> **Related Issues**: [#2511](https://github.com/meepleAi-app/meepleai-monorepo/issues/2511), [#2522](https://github.com/meepleAi-app/meepleai-monorepo/issues/2522)
 
 ## Overview
 
@@ -64,7 +64,7 @@ node --version
 ### Step 1: Clone Repository
 
 ```bash
-git clone https://github.com/DegrassiAaron/meepleai-monorepo.git
+git clone https://github.com/meepleAi-app/meepleai-monorepo.git
 cd meepleai-monorepo
 ```
 
@@ -748,13 +748,13 @@ dotnet run
 
 ## Related Documentation
 
-- **Architecture Decision**: [ADR-021 - Auto-Configuration System](../01-architecture/adr/adr-021-auto-configuration-system.md)
+- **Architecture Decision**: [ADR-021 - Auto-Configuration System](../architecture/adr/adr-021-auto-configuration-system.md)
 - **Secrets Management**: [docs/04-deployment/secrets-management.md](./secrets-management.md)
 - **Health Check System**: [docs/04-deployment/health-checks.md](./health-checks.md)
-- **Health Check API Reference**: [docs/03-api/health-check-api.md](../03-api/health-check-api.md)
+- **Health Check API Reference**: [docs/03-api/health-check-api.md](../api/health-check-api.md)
 - **Secrets README**: [infra/secrets/README.md](../../infra/secrets/README.md)
 
 ---
 
 **Maintained by**: MeepleAI DevOps Team
-**Questions**: Open an issue on [GitHub](https://github.com/DegrassiAaron/meepleai-monorepo/issues)
+**Questions**: Open an issue on [GitHub](https://github.com/meepleAi-app/meepleai-monorepo/issues)

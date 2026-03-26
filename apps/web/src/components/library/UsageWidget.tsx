@@ -30,12 +30,6 @@ function formatMax(max: number): string {
   return String(max);
 }
 
-function progressColor(percentage: number): string {
-  if (percentage >= 95) return 'bg-red-500';
-  if (percentage >= 80) return 'bg-amber-500';
-  return 'bg-primary';
-}
-
 function labelColor(percentage: number): string {
   if (percentage >= 95) return 'text-red-600 dark:text-red-400';
   if (percentage >= 80) return 'text-amber-600 dark:text-amber-400';
@@ -110,6 +104,11 @@ function UsageWidgetSkeleton() {
 interface UsageWidgetProps {
   /** Inferred tier from the user's profile (passed in to avoid extra fetch) */
   tier?: UserTier;
+  /**
+   * `full` (default) – all quotas + session save indicator.
+   * `compact` – top 3 quotas only, smaller padding/text.
+   */
+  variant?: 'full' | 'compact';
   className?: string;
 }
 
@@ -121,7 +120,7 @@ interface UsageWidgetProps {
  * <UsageWidget tier="free" />
  * ```
  */
-export function UsageWidget({ tier = 'free', className }: UsageWidgetProps) {
+export function UsageWidget({ tier = 'free', variant = 'full', className }: UsageWidgetProps) {
   const {
     data: usage,
     isLoading,
@@ -147,9 +146,10 @@ export function UsageWidget({ tier = 'free', className }: UsageWidgetProps) {
     );
   }
 
+  const isCompact = variant === 'compact';
   const isFree = tier === 'free';
 
-  const quotas: Array<{ label: string; current: number; max: number }> = [
+  const allQuotas: Array<{ label: string; current: number; max: number }> = [
     { label: 'Giochi privati', current: usage.privateGames, max: usage.privateGamesMax },
     { label: 'PDF questo mese', current: usage.pdfThisMonth, max: usage.pdfThisMonthMax },
     { label: 'Query oggi', current: usage.agentQueriesToday, max: usage.agentQueriesTodayMax },
@@ -157,11 +157,15 @@ export function UsageWidget({ tier = 'free', className }: UsageWidgetProps) {
     { label: 'Query sessione', current: usage.sessionQueries, max: usage.sessionQueriesMax },
   ];
 
+  // Compact variant shows only the top 3 quotas
+  const quotas = isCompact ? allQuotas.slice(0, 3) : allQuotas;
+
   return (
     <div
       className={cn(
-        'rounded-xl border bg-white/70 backdrop-blur-md p-4 space-y-3',
+        'rounded-xl border bg-white/70 backdrop-blur-md',
         'dark:bg-zinc-900/70',
+        isCompact ? 'p-3 space-y-2' : 'p-4 space-y-3',
         className
       )}
       data-testid="usage-widget"
@@ -179,18 +183,20 @@ export function UsageWidget({ tier = 'free', className }: UsageWidgetProps) {
         ))}
       </div>
 
-      {/* Session save indicator */}
-      <div className="flex items-center justify-between text-xs border-t pt-2">
-        <span className="text-muted-foreground">Salvataggio sessione</span>
-        <span
-          className={cn(
-            'font-medium',
-            usage.sessionSaveEnabled ? 'text-green-600' : 'text-muted-foreground'
-          )}
-        >
-          {usage.sessionSaveEnabled ? '✓ Abilitato' : '✗ Non disponibile'}
-        </span>
-      </div>
+      {/* Session save indicator (hidden in compact variant) */}
+      {!isCompact && (
+        <div className="flex items-center justify-between text-xs border-t pt-2">
+          <span className="text-muted-foreground">Salvataggio sessione</span>
+          <span
+            className={cn(
+              'font-medium',
+              usage.sessionSaveEnabled ? 'text-green-600' : 'text-muted-foreground'
+            )}
+          >
+            {usage.sessionSaveEnabled ? '✓ Abilitato' : '✗ Non disponibile'}
+          </span>
+        </div>
+      )}
 
       {/* Upgrade CTA */}
       {isFree && (

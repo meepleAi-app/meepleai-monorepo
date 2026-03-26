@@ -49,12 +49,12 @@ test.describe('MobileTabBar - Mobile Navigation', () => {
     await expect(tabBar).toHaveAttribute('aria-label', 'Primary navigation');
   });
 
-  test('should navigate to games catalog when Discover tab clicked', async ({ page }) => {
+  test('should navigate to library when Discover tab clicked', async ({ page }) => {
     const discoverLink = page.getByTestId('mobile-tab-discover');
     await discoverLink.click();
 
-    await page.waitForURL('/games');
-    expect(page.url()).toContain('/games');
+    await page.waitForURL('/library');
+    expect(page.url()).toContain('/library');
   });
 
   test('should navigate to Chat page when Chat tab clicked (authenticated)', async ({ page }) => {
@@ -86,8 +86,8 @@ test.describe('MobileTabBar - Mobile Navigation', () => {
     await expect(dashboardLink).toHaveAttribute('aria-current', 'page');
   });
 
-  test('should mark Discover as active on /games', async ({ page }) => {
-    await page.goto('/games');
+  test('should mark Discover as active on /library', async ({ page }) => {
+    await page.goto('/library');
     await page.waitForLoadState('networkidle');
 
     const discoverLink = page.getByTestId('mobile-tab-discover');
@@ -95,7 +95,7 @@ test.describe('MobileTabBar - Mobile Navigation', () => {
   });
 
   test('should have only one active tab at a time', async ({ page }) => {
-    await page.goto('/games');
+    await page.goto('/library');
     await page.waitForLoadState('networkidle');
 
     const activeLinks = page.locator('[data-testid^="mobile-tab-"][aria-current="page"]');
@@ -166,15 +166,15 @@ test.describe('MobileTabBar - Keyboard Navigation', () => {
     expect(focused).toBeTruthy();
   });
 
-  test('should activate Discover link with Enter key', async ({ page }) => {
+  test('should activate Discover link with Enter key navigates to library', async ({ page }) => {
     await page.goto('/dashboard');
 
     const discoverLink = page.getByTestId('mobile-tab-discover');
     await discoverLink.focus();
     await page.keyboard.press('Enter');
 
-    await page.waitForURL('/games');
-    expect(page.url()).toContain('/games');
+    await page.waitForURL('/library');
+    expect(page.url()).toContain('/library');
   });
 
   test('should show focus ring on keyboard focus', async ({ page }) => {
@@ -203,12 +203,12 @@ test.describe('MobileTabBar - Visual Regression (Chromatic)', () => {
     await expect(tabBar).toHaveScreenshot('mobile-tab-bar-dashboard-active.png');
   });
 
-  test('should match visual snapshot - Discover active', async ({ page }) => {
-    await page.goto('/games');
+  test('should match visual snapshot - Library active', async ({ page }) => {
+    await page.goto('/library');
     await page.waitForLoadState('networkidle');
 
     const tabBar = page.locator('[data-testid="mobile-tab-bar"]');
-    await expect(tabBar).toHaveScreenshot('mobile-tab-bar-discover-active.png');
+    await expect(tabBar).toHaveScreenshot('mobile-tab-bar-library-active.png');
   });
 });
 

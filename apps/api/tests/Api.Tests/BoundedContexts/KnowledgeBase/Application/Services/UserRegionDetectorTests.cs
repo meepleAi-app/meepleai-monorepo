@@ -2,6 +2,7 @@ using Api.BoundedContexts.KnowledgeBase.Application.Services;
 using Api.Tests.Constants;
 using Microsoft.AspNetCore.Http;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Services;
 
@@ -28,7 +29,7 @@ public class UserRegionDetectorTests
         var result = detector.DetectRegion();
 
         // Assert
-        Assert.Equal(expected, result);
+        result.Should().Be(expected);
     }
 
     [Theory]
@@ -44,7 +45,7 @@ public class UserRegionDetectorTests
         var result = detector.DetectRegion();
 
         // Assert
-        Assert.Null(result);
+        result.Should().BeNull();
     }
 
     [Fact]
@@ -58,7 +59,7 @@ public class UserRegionDetectorTests
         var result = detector.DetectRegion();
 
         // Assert
-        Assert.Null(result);
+        result.Should().BeNull();
     }
 
     [Theory]
@@ -75,7 +76,7 @@ public class UserRegionDetectorTests
         var result = detector.DetectRegion();
 
         // Assert
-        Assert.Null(result);
+        result.Should().BeNull();
     }
 
     private static UserRegionDetector CreateDetector(string? acceptLanguage)

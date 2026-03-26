@@ -14,6 +14,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Unit;
 
@@ -32,6 +33,7 @@ public class RaptorPipelineIntegrationTests : IDisposable
     private readonly Mock<IEmbeddingService> _embeddingServiceMock = new();
     private readonly Mock<IBlobStorageService> _blobStorageServiceMock = new();
     private readonly Mock<IRaptorIndexer> _raptorIndexerMock = new();
+    private readonly Mock<IFeatureFlagService> _featureFlagServiceMock = new();
     private readonly TimeProvider _timeProvider = TimeProvider.System;
     private readonly ILogger<PdfProcessingPipelineService> _logger =
         NullLogger<PdfProcessingPipelineService>.Instance;
@@ -48,6 +50,11 @@ public class RaptorPipelineIntegrationTests : IDisposable
             options,
             new Mock<IMediator>().Object,
             new Mock<IDomainEventCollector>().Object);
+
+        // Default: raptor-retrieval feature flag enabled so RAPTOR indexing runs
+        _featureFlagServiceMock
+            .Setup(f => f.IsEnabledAsync("rag.enhancement.raptor-retrieval", null))
+            .ReturnsAsync(true);
     }
 
     public void Dispose()
@@ -97,11 +104,11 @@ public class RaptorPipelineIntegrationTests : IDisposable
 
         // Verify summaries were saved
         var savedSummaries = await _db.RaptorSummaries.ToListAsync();
-        Assert.Equal(2, savedSummaries.Count);
-        Assert.All(savedSummaries, s =>
+        savedSummaries.Count.Should().Be(2);
+        savedSummaries.Should().AllSatisfy(s =>
         {
-            Assert.Equal(_pdfDocumentId, s.PdfDocumentId);
-            Assert.Equal(_gameId, s.GameId);
+            s.PdfDocumentId.Should().Be(_pdfDocumentId);
+            s.GameId.Should().Be(_gameId);
         });
     }
 
@@ -122,11 +129,11 @@ public class RaptorPipelineIntegrationTests : IDisposable
 
         // Assert: PDF should reach Ready state
         var doc = await _db.PdfDocuments.FindAsync(_pdfDocumentId);
-        Assert.Equal("Ready", doc!.ProcessingState);
+        doc!.ProcessingState.Should().Be("Ready");
 
         // No RAPTOR summaries saved
         var summaries = await _db.RaptorSummaries.ToListAsync();
-        Assert.Empty(summaries);
+        summaries.Should().BeEmpty();
     }
 
     [Fact]
@@ -154,7 +161,7 @@ public class RaptorPipelineIntegrationTests : IDisposable
 
         // Assert: PDF should still reach Ready state despite RAPTOR failure
         var doc = await _db.PdfDocuments.FindAsync(_pdfDocumentId);
-        Assert.Equal("Ready", doc!.ProcessingState);
+        doc!.ProcessingState.Should().Be("Ready");
     }
 
     [Fact]
@@ -240,7 +247,12 @@ public class RaptorPipelineIntegrationTests : IDisposable
             _blobStorageServiceMock.Object,
             _timeProvider,
             _logger,
-            withRaptor ? _raptorIndexerMock.Object : null);
+            Mock.Of<ILanguageDetector>(),
+            Mock.Of<IChunkTranslationService>(),
+            raptorIndexer: withRaptor ? _raptorIndexerMock.Object : null,
+            entityExtractor: null,
+            vectorStore: null,
+            featureFlagService: _featureFlagServiceMock.Object);
     }
 
     private PdfDocumentEntity SeedPdfDocument(string state)

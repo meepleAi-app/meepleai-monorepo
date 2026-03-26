@@ -13,6 +13,9 @@ import {
   ActivityIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
+  Gamepad2Icon,
+  MessageSquareIcon,
+  TrophyIcon,
   ChevronsUpDownIcon,
   ClockIcon,
   AlertCircleIcon,
@@ -45,11 +48,7 @@ import {
 import { Button } from '@/components/ui/primitives/button';
 import { Label } from '@/components/ui/primitives/label';
 import { Textarea } from '@/components/ui/primitives/textarea';
-import { createAdminClient } from '@/lib/api/clients/adminClient';
-import { HttpClient } from '@/lib/api/core/httpClient';
-
-const httpClient = new HttpClient();
-const adminClient = createAdminClient({ httpClient });
+import { api } from '@/lib/api';
 
 const AVAILABLE_ROLES = ['User', 'Editor', 'Admin'];
 
@@ -124,8 +123,68 @@ function UserHeader({
 
 // ========== Overview Tab ==========
 
+function LibraryStatsCard({ userId }: { userId: string }) {
+  const { data: libraryStats } = useQuery({
+    queryKey: ['admin', 'users', userId, 'library-stats'],
+    queryFn: () => api.admin.getUserLibraryStats(userId),
+  });
+
+  const { data: badges } = useQuery({
+    queryKey: ['admin', 'users', userId, 'badges'],
+    queryFn: () => api.admin.getUserBadges(userId),
+  });
+
+  return (
+    <Card className="bg-white/70 dark:bg-zinc-800/70 backdrop-blur-md border-slate-200/60 dark:border-zinc-700/40">
+      <CardHeader className="pb-2">
+        <CardTitle className="font-quicksand text-base flex items-center gap-2">
+          <Gamepad2Icon className="h-4 w-4" />
+          Libreria e Attività
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-3 text-sm">
+        <div className="flex justify-between">
+          <span className="text-muted-foreground">Giochi in libreria</span>
+          <span className="font-medium">{libraryStats?.totalGames ?? 0}</span>
+        </div>
+        <div className="flex justify-between">
+          <span className="text-muted-foreground">Sessioni giocate</span>
+          <span className="font-medium">{libraryStats?.sessionsPlayed ?? 0}</span>
+        </div>
+        <div className="flex justify-between">
+          <span className="text-muted-foreground">Durata media sessione</span>
+          <span className="font-medium">
+            {libraryStats?.avgSessionDuration
+              ? `${Math.round(libraryStats.avgSessionDuration)} min`
+              : '—'}
+          </span>
+        </div>
+        <div className="flex justify-between">
+          <span className="text-muted-foreground flex items-center gap-1">
+            <TrophyIcon className="h-3.5 w-3.5" />
+            Badge ottenuti
+          </span>
+          <span className="font-medium">{badges?.length ?? 0}</span>
+        </div>
+
+        {/* Quick links */}
+        <div className="pt-2 border-t border-slate-200/60 dark:border-zinc-700/40 flex gap-2">
+          <Link
+            href={`/admin/agents/chat-history?userId=${userId}`}
+            className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
+          >
+            <MessageSquareIcon className="h-3 w-3" />
+            Chat history
+          </Link>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 function OverviewTab({
   user,
+  userId,
 }: {
   user: {
     createdAt: string;
@@ -135,59 +194,64 @@ function OverviewTab({
     tokenUsage?: number;
     tokenLimit?: number;
   };
+  userId: string;
 }) {
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-      <Card className="bg-white/70 dark:bg-zinc-800/70 backdrop-blur-md border-slate-200/60 dark:border-zinc-700/40">
-        <CardHeader className="pb-2">
-          <CardTitle className="font-quicksand text-base">Account Info</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3 text-sm">
-          <div className="flex justify-between">
-            <span className="text-muted-foreground">Created</span>
-            <span className="font-medium">{format(new Date(user.createdAt), 'PPP')}</span>
-          </div>
-          <div className="flex justify-between">
-            <span className="text-muted-foreground">Last Seen</span>
-            <span className="font-medium">
-              {user.lastSeenAt ? format(new Date(user.lastSeenAt), 'PPP p') : 'Never'}
-            </span>
-          </div>
-          <div className="flex justify-between">
-            <span className="text-muted-foreground">2FA Enabled</span>
-            <span className="font-medium">{user.isTwoFactorEnabled ? 'Yes' : 'No'}</span>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card className="bg-white/70 dark:bg-zinc-800/70 backdrop-blur-md border-slate-200/60 dark:border-zinc-700/40">
-        <CardHeader className="pb-2">
-          <CardTitle className="font-quicksand text-base">Usage</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3 text-sm">
-          <div className="flex justify-between">
-            <span className="text-muted-foreground">Tier</span>
-            <Badge variant="outline">{user.tier ?? 'Free'}</Badge>
-          </div>
-          <div className="flex justify-between">
-            <span className="text-muted-foreground">Token Usage</span>
-            <span className="font-medium">
-              {(user.tokenUsage ?? 0).toLocaleString()} /{' '}
-              {(user.tokenLimit ?? 10_000).toLocaleString()}
-            </span>
-          </div>
-          <div className="mt-2">
-            <div className="h-2 rounded-full bg-slate-200 dark:bg-zinc-700 overflow-hidden">
-              <div
-                className="h-full rounded-full bg-amber-500 dark:bg-amber-400 transition-all"
-                style={{
-                  width: `${Math.min(100, ((user.tokenUsage ?? 0) / (user.tokenLimit ?? 10_000)) * 100)}%`,
-                }}
-              />
+    <div className="space-y-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <Card className="bg-white/70 dark:bg-zinc-800/70 backdrop-blur-md border-slate-200/60 dark:border-zinc-700/40">
+          <CardHeader className="pb-2">
+            <CardTitle className="font-quicksand text-base">Info Account</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3 text-sm">
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Creato il</span>
+              <span className="font-medium">{format(new Date(user.createdAt), 'PPP')}</span>
             </div>
-          </div>
-        </CardContent>
-      </Card>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Ultimo accesso</span>
+              <span className="font-medium">
+                {user.lastSeenAt ? format(new Date(user.lastSeenAt), 'PPP p') : 'Mai'}
+              </span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">2FA Abilitato</span>
+              <span className="font-medium">{user.isTwoFactorEnabled ? 'Sì' : 'No'}</span>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-white/70 dark:bg-zinc-800/70 backdrop-blur-md border-slate-200/60 dark:border-zinc-700/40">
+          <CardHeader className="pb-2">
+            <CardTitle className="font-quicksand text-base">Utilizzo</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3 text-sm">
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Tier</span>
+              <Badge variant="outline">{user.tier ?? 'Free'}</Badge>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Token utilizzati</span>
+              <span className="font-medium">
+                {(user.tokenUsage ?? 0).toLocaleString()} /{' '}
+                {(user.tokenLimit ?? 10_000).toLocaleString()}
+              </span>
+            </div>
+            <div className="mt-2">
+              <div className="h-2 rounded-full bg-slate-200 dark:bg-zinc-700 overflow-hidden">
+                <div
+                  className="h-full rounded-full bg-amber-500 dark:bg-amber-400 transition-all"
+                  style={{
+                    width: `${Math.min(100, ((user.tokenUsage ?? 0) / (user.tokenLimit ?? 10_000)) * 100)}%`,
+                  }}
+                />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      <LibraryStatsCard userId={userId} />
     </div>
   );
 }
@@ -201,7 +265,7 @@ function ChangeRoleCard({ userId, currentRole }: { userId: string; currentRole: 
 
   const changeRoleMutation = useMutation({
     mutationFn: ({ role, reasonText }: { role: string; reasonText?: string }) =>
-      adminClient.changeUserRole(userId, role, reasonText || undefined),
+      api.admin.changeUserRole(userId, role, reasonText || undefined),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'users', userId] });
       queryClient.invalidateQueries({ queryKey: ['admin', 'users', userId, 'role-history'] });
@@ -302,7 +366,7 @@ function ChangeRoleCard({ userId, currentRole }: { userId: string; currentRole: 
 function RoleHistoryTable({ userId }: { userId: string }) {
   const { data: roleHistory, isLoading } = useQuery({
     queryKey: ['admin', 'users', userId, 'role-history'],
-    queryFn: () => adminClient.getUserRoleHistory(userId),
+    queryFn: () => api.admin.getUserRoleHistory(userId),
   });
 
   if (isLoading) {
@@ -370,8 +434,7 @@ function UserAuditLogTable({ userId }: { userId: string }) {
 
   const { data: auditLog, isLoading } = useQuery({
     queryKey: ['admin', 'users', userId, 'audit-log', { page }],
-    queryFn: () =>
-      adminClient.getUserAuditLog(userId, { limit: pageSize, offset: page * pageSize }),
+    queryFn: () => api.admin.getUserAuditLog(userId, { limit: pageSize, offset: page * pageSize }),
   });
 
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -522,7 +585,7 @@ export default function UserDetailPage() {
     error,
   } = useQuery({
     queryKey: ['admin', 'users', userId],
-    queryFn: () => adminClient.getUserDetail(userId),
+    queryFn: () => api.admin.getUserDetail(userId),
     enabled: !!userId,
   });
 
@@ -595,7 +658,7 @@ export default function UserDetailPage() {
         </TabsList>
 
         <TabsContent value="overview">
-          <OverviewTab user={user} />
+          <OverviewTab user={user} userId={userId} />
         </TabsContent>
 
         <TabsContent value="role" className="space-y-6">

@@ -8,12 +8,11 @@ import { useState } from 'react';
 
 import { fn } from 'storybook/test';
 
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/ui/primitives/button';
 
 import { ProgressModal } from './progress-modal';
 
 import type { Meta, StoryObj } from '@storybook/react';
-
 
 // ============================================================================
 // Mock Hook
@@ -22,7 +21,12 @@ import type { Meta, StoryObj } from '@storybook/react';
 const mockUsePdfProgress = (scenario: string) => {
   const scenarios: Record<string, any> = {
     uploading: {
-      status: { state: 'uploading', progress: 15, eta: '8m 30s', timestamp: new Date().toISOString() },
+      status: {
+        state: 'uploading',
+        progress: 15,
+        eta: '8m 30s',
+        timestamp: new Date().toISOString(),
+      },
       metrics: {
         documentId: '123e4567-e89b-12d3-a456-426614174000',
         currentState: 'Uploading',
@@ -43,7 +47,12 @@ const mockUsePdfProgress = (scenario: string) => {
       refreshMetrics: fn(),
     },
     extracting: {
-      status: { state: 'extracting', progress: 25, eta: '6m 15s', timestamp: new Date().toISOString() },
+      status: {
+        state: 'extracting',
+        progress: 25,
+        eta: '6m 15s',
+        timestamp: new Date().toISOString(),
+      },
       metrics: {
         documentId: '123e4567-e89b-12d3-a456-426614174000',
         currentState: 'Extracting',
@@ -64,7 +73,12 @@ const mockUsePdfProgress = (scenario: string) => {
       refreshMetrics: fn(),
     },
     chunking: {
-      status: { state: 'chunking', progress: 50, eta: '4m 20s', timestamp: new Date().toISOString() },
+      status: {
+        state: 'chunking',
+        progress: 50,
+        eta: '4m 20s',
+        timestamp: new Date().toISOString(),
+      },
       metrics: {
         documentId: '123e4567-e89b-12d3-a456-426614174000',
         currentState: 'Chunking',
@@ -85,14 +99,24 @@ const mockUsePdfProgress = (scenario: string) => {
       refreshMetrics: fn(),
     },
     embedding: {
-      status: { state: 'embedding', progress: 75, eta: '2m 10s', timestamp: new Date().toISOString() },
+      status: {
+        state: 'embedding',
+        progress: 75,
+        eta: '2m 10s',
+        timestamp: new Date().toISOString(),
+      },
       metrics: {
         documentId: '123e4567-e89b-12d3-a456-426614174000',
         currentState: 'Embedding',
         progressPercentage: 75,
         totalDuration: '00:06:30',
         estimatedTimeRemaining: '00:02:10',
-        stateDurations: { Uploading: '00:01:30', Extracting: '00:01:15', Chunking: '00:01:30', Embedding: '00:02:15' },
+        stateDurations: {
+          Uploading: '00:01:30',
+          Extracting: '00:01:15',
+          Chunking: '00:01:30',
+          Embedding: '00:02:15',
+        },
         retryCount: 0,
         pageCount: 42,
       },
@@ -113,7 +137,13 @@ const mockUsePdfProgress = (scenario: string) => {
         progressPercentage: 90,
         totalDuration: '00:08:15',
         estimatedTimeRemaining: '00:00:45',
-        stateDurations: { Uploading: '00:01:30', Extracting: '00:01:15', Chunking: '00:01:30', Embedding: '00:02:15', Indexing: '00:01:45' },
+        stateDurations: {
+          Uploading: '00:01:30',
+          Extracting: '00:01:15',
+          Chunking: '00:01:30',
+          Embedding: '00:02:15',
+          Indexing: '00:01:45',
+        },
         retryCount: 0,
         pageCount: 42,
       },
@@ -134,7 +164,13 @@ const mockUsePdfProgress = (scenario: string) => {
         progressPercentage: 100,
         totalDuration: '00:09:00',
         estimatedTimeRemaining: null,
-        stateDurations: { Uploading: '00:01:30', Extracting: '00:01:15', Chunking: '00:01:30', Embedding: '00:02:15', Indexing: '00:02:30' },
+        stateDurations: {
+          Uploading: '00:01:30',
+          Extracting: '00:01:15',
+          Chunking: '00:01:30',
+          Embedding: '00:02:15',
+          Indexing: '00:02:30',
+        },
         retryCount: 0,
         pageCount: 42,
       },
@@ -148,7 +184,13 @@ const mockUsePdfProgress = (scenario: string) => {
       refreshMetrics: fn(),
     },
     failed: {
-      status: { state: 'failed', progress: 35, eta: null, timestamp: new Date().toISOString(), errorMessage: 'PDF extraction failed: Corrupted file format' },
+      status: {
+        state: 'failed',
+        progress: 35,
+        eta: null,
+        timestamp: new Date().toISOString(),
+        errorMessage: 'PDF extraction failed: Corrupted file format',
+      },
       metrics: {
         documentId: '123e4567-e89b-12d3-a456-426614174000',
         currentState: 'Failed',
@@ -169,7 +211,12 @@ const mockUsePdfProgress = (scenario: string) => {
       refreshMetrics: fn(),
     },
     polling: {
-      status: { state: 'chunking', progress: 45, eta: '5m 0s', timestamp: new Date().toISOString() },
+      status: {
+        state: 'chunking',
+        progress: 45,
+        eta: '5m 0s',
+        timestamp: new Date().toISOString(),
+      },
       metrics: {
         documentId: '123e4567-e89b-12d3-a456-426614174000',
         currentState: 'Chunking',
@@ -214,7 +261,8 @@ const meta = {
     layout: 'centered',
     docs: {
       description: {
-        component: 'Full-screen modal for PDF upload progress with real-time SSE updates, step indicators, and metrics display.',
+        component:
+          'Full-screen modal for PDF upload progress with real-time SSE updates, step indicators, and metrics display.',
       },
     },
   },
@@ -269,7 +317,7 @@ function InteractiveWrapper({
         isOpen={isOpen}
         onClose={() => setIsOpen(false)}
         onCancel={async () => {
-          await new Promise((resolve) => setTimeout(resolve, 1000));
+          await new Promise(resolve => setTimeout(resolve, 1000));
           console.log('Processing canceled');
         }}
       />
@@ -286,7 +334,7 @@ function InteractiveWrapper({
  * Initial stage with minimal metrics.
  */
 export const Default: Story = {
-  render: (args) => <InteractiveWrapper scenario="uploading" {...args} />,
+  render: args => <InteractiveWrapper scenario="uploading" {...args} />,
   args: {
     documentId: 'doc-123',
   },
@@ -297,7 +345,7 @@ export const Default: Story = {
  * Shows 42 pages being processed.
  */
 export const Extracting: Story = {
-  render: (args) => <InteractiveWrapper scenario="extracting" {...args} />,
+  render: args => <InteractiveWrapper scenario="extracting" {...args} />,
   args: {
     documentId: 'doc-123',
   },
@@ -308,7 +356,7 @@ export const Extracting: Story = {
  * Halfway through processing with full metrics.
  */
 export const Chunking: Story = {
-  render: (args) => <InteractiveWrapper scenario="chunking" {...args} />,
+  render: args => <InteractiveWrapper scenario="chunking" {...args} />,
   args: {
     documentId: 'doc-123',
   },
@@ -319,7 +367,7 @@ export const Chunking: Story = {
  * Nearly complete with accurate ETA (2m 10s).
  */
 export const Embedding: Story = {
-  render: (args) => <InteractiveWrapper scenario="embedding" {...args} />,
+  render: args => <InteractiveWrapper scenario="embedding" {...args} />,
   args: {
     documentId: 'doc-123',
   },
@@ -330,7 +378,7 @@ export const Embedding: Story = {
  * Final stage before completion.
  */
 export const Indexing: Story = {
-  render: (args) => <InteractiveWrapper scenario="indexing" {...args} />,
+  render: args => <InteractiveWrapper scenario="indexing" {...args} />,
   args: {
     documentId: 'doc-123',
   },
@@ -342,7 +390,7 @@ export const Indexing: Story = {
  * Shows completion checkmark and close button.
  */
 export const Complete: Story = {
-  render: (args) => <InteractiveWrapper scenario="complete" {...args} />,
+  render: args => <InteractiveWrapper scenario="complete" {...args} />,
   args: {
     documentId: 'doc-123',
   },
@@ -354,7 +402,7 @@ export const Complete: Story = {
  * Shows error icon and detailed error message.
  */
 export const Failed: Story = {
-  render: (args) => <InteractiveWrapper scenario="failed" {...args} />,
+  render: args => <InteractiveWrapper scenario="failed" {...args} />,
   args: {
     documentId: 'doc-123',
   },
@@ -365,7 +413,7 @@ export const Failed: Story = {
  * Shows ⚠️ indicator when SSE connection lost and using polling.
  */
 export const PollingFallback: Story = {
-  render: (args) => <InteractiveWrapper scenario="polling" {...args} />,
+  render: args => <InteractiveWrapper scenario="polling" {...args} />,
   args: {
     documentId: 'doc-123',
   },
@@ -376,7 +424,7 @@ export const PollingFallback: Story = {
  * Modal with custom title text.
  */
 export const CustomTitle: Story = {
-  render: (args) => <InteractiveWrapper scenario="chunking" {...args} />,
+  render: args => <InteractiveWrapper scenario="chunking" {...args} />,
   args: {
     documentId: 'doc-123',
     title: 'Analyzing Game Manual',
@@ -388,7 +436,7 @@ export const CustomTitle: Story = {
  * Modal with cancel button hidden.
  */
 export const WithoutCancelButton: Story = {
-  render: (args) => <InteractiveWrapper scenario="embedding" {...args} />,
+  render: args => <InteractiveWrapper scenario="embedding" {...args} />,
   args: {
     documentId: 'doc-123',
     hideCancelButton: true,

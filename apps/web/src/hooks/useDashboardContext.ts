@@ -77,38 +77,35 @@ export function useDashboardContext(deps: {
   const { data: activeSessions, isLoading } = useActiveSessions(1);
   const activeSession = activeSessions?.sessions?.[0] ?? null;
 
-  const lastGame =
-    [...deps.games]
-      .filter(g => g.lastPlayed)
-      .sort((a, b) => new Date(b.lastPlayed!).getTime() - new Date(a.lastPlayed!).getTime())[0] ??
-    null;
-  const lastPlayed = lastGame
-    ? {
-        id: lastGame.id,
-        title: lastGame.title,
-        imageUrl: lastGame.imageUrl,
-        lastPlayedAt: lastGame.lastPlayed!,
-      }
-    : null;
+  const hero = useMemo(() => {
+    const lastGame =
+      [...deps.games]
+        .filter(g => g.lastPlayed)
+        .sort((a, b) => new Date(b.lastPlayed!).getTime() - new Date(a.lastPlayed!).getTime())[0] ??
+      null;
+    const lastPlayed = lastGame
+      ? {
+          id: lastGame.id,
+          title: lastGame.title,
+          imageUrl: lastGame.imageUrl,
+          lastPlayedAt: lastGame.lastPlayed!,
+        }
+      : null;
 
-  const hero = useMemo(
-    () =>
-      computeHeroPriority({
-        activeSession: activeSession
-          ? {
-              id: activeSession.id,
-              gameId: activeSession.gameId,
-              playerCount: activeSession.playerCount,
-              durationMinutes: activeSession.durationMinutes,
-            }
-          : null,
-        upcomingGameNight: deps.upcomingGameNight,
-        incompleteSessions: deps.incompleteSessions,
-        lastPlayed,
-      }),
-
-    [activeSession, deps.upcomingGameNight, deps.incompleteSessions, lastPlayed]
-  );
+    return computeHeroPriority({
+      activeSession: activeSession
+        ? {
+            id: activeSession.id,
+            gameId: activeSession.gameId,
+            playerCount: activeSession.playerCount,
+            durationMinutes: activeSession.durationMinutes,
+          }
+        : null,
+      upcomingGameNight: deps.upcomingGameNight,
+      incompleteSessions: deps.incompleteSessions,
+      lastPlayed,
+    });
+  }, [activeSession, deps.upcomingGameNight, deps.incompleteSessions, deps.games]);
 
   return {
     hero,

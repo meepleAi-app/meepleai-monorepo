@@ -465,7 +465,7 @@ export function GamesFilterPanel({ isCollapsed }: GamesFilterPanelProps) {
     <nav className="flex flex-col gap-0.5 px-2 py-3" aria-label="Games catalog navigation">
       {/* Back to Dashboard */}
       <FilterLink
-        href="/dashboard"
+        href="/library"
         icon={LayoutDashboard}
         label="Dashboard"
         isActive={false}
@@ -475,7 +475,7 @@ export function GamesFilterPanel({ isCollapsed }: GamesFilterPanelProps) {
 
       {/* All games */}
       <FilterLink
-        href="/games"
+        href="/library"
         icon={Gamepad2}
         label="Tutti i giochi"
         isActive={isAllGames}
@@ -485,21 +485,21 @@ export function GamesFilterPanel({ isCollapsed }: GamesFilterPanelProps) {
       {/* Quick Filters */}
       <SectionLabel label="Filtri rapidi" isCollapsed={isCollapsed} />
       <FilterLink
-        href="/games?sortBy=AverageRating&sortDesc=true"
+        href="/library?sortBy=AverageRating&sortDesc=true"
         icon={Star}
         label="Top BGG"
         isActive={isTopBgg}
         isCollapsed={isCollapsed}
       />
       <FilterLink
-        href="/games?minPlayers=2&maxPlayers=2"
+        href="/library?minPlayers=2&maxPlayers=2"
         icon={Users}
         label="2 Giocatori"
         isActive={is2Players}
         isCollapsed={isCollapsed}
       />
       <FilterLink
-        href="/games?minPlayers=3&maxPlayers=6"
+        href="/library?minPlayers=3&maxPlayers=6"
         icon={Users}
         label="3-6 Giocatori"
         isActive={is3to6Players}
@@ -509,7 +509,7 @@ export function GamesFilterPanel({ isCollapsed }: GamesFilterPanelProps) {
       {/* Advanced Section */}
       <SectionLabel label="Avanzato" isCollapsed={isCollapsed} />
       <FilterLink
-        href="/games?sortBy=CreatedAt&sortDesc=true"
+        href="/library?sortBy=CreatedAt&sortDesc=true"
         icon={Clock}
         label="Aggiunti di recente"
         isActive={isRecent}

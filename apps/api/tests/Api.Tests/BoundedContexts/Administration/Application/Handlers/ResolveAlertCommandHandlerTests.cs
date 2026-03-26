@@ -1,8 +1,10 @@
 using Api.BoundedContexts.Administration.Application.Commands;
-using Api.BoundedContexts.Administration.Application.Handlers;
+using Api.BoundedContexts.Administration.Application.Commands;
+using Api.BoundedContexts.Administration.Application.Queries;
 using Api.Services;
 using Moq;
 using Xunit;
+using FluentAssertions;
 using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.Administration.Application.Handlers;
@@ -36,7 +38,7 @@ public class ResolveAlertCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.True(result);
+        result.Should().BeTrue();
         _mockAlertingService.Verify(
             s => s.ResolveAlertAsync("DatabaseError", It.IsAny<CancellationToken>()),
             Times.Once);
@@ -55,7 +57,7 @@ public class ResolveAlertCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.False(result);
+        result.Should().BeFalse();
         _mockAlertingService.Verify(
             s => s.ResolveAlertAsync("NonExistentAlert", It.IsAny<CancellationToken>()),
             Times.Once);
@@ -82,4 +84,3 @@ public class ResolveAlertCommandHandlerTests
             Times.Once);
     }
 }
-

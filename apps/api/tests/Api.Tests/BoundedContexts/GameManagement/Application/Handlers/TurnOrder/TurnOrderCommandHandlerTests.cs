@@ -1,6 +1,6 @@
 using Api.BoundedContexts.GameManagement.Application.Commands.TurnOrder;
 using Api.BoundedContexts.GameManagement.Application.Events;
-using Api.BoundedContexts.GameManagement.Application.Handlers.TurnOrder;
+using Api.BoundedContexts.GameManagement.Application.Commands.TurnOrder;
 using Api.BoundedContexts.GameManagement.Domain.Entities;
 using Api.BoundedContexts.GameManagement.Domain.Entities.TurnOrder;
 using Api.BoundedContexts.GameManagement.Domain.Repositories;
@@ -11,6 +11,7 @@ using Api.Tests.Constants;
 using MediatR;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.GameManagement.Application.Handlers.TurnOrderHandlers;
 
@@ -49,9 +50,10 @@ public class TurnOrderCommandHandlerTests
         var handler = new InitializeTurnOrderCommandHandler(
             _turnOrderRepoMock.Object, _sessionRepoMock.Object, _uowMock.Object);
 
-        await Assert.ThrowsAsync<NotFoundException>(() =>
+        var act = () =>
             handler.Handle(new InitializeTurnOrderCommand(sessionId, new[] { "Alice" }),
-                TestContext.Current.CancellationToken));
+                TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<NotFoundException>();
     }
 
     [Fact]
@@ -69,9 +71,10 @@ public class TurnOrderCommandHandlerTests
         var handler = new InitializeTurnOrderCommandHandler(
             _turnOrderRepoMock.Object, _sessionRepoMock.Object, _uowMock.Object);
 
-        await Assert.ThrowsAsync<ConflictException>(() =>
+        var act = () =>
             handler.Handle(new InitializeTurnOrderCommand(sessionId, new[] { "Alice" }),
-                TestContext.Current.CancellationToken));
+                TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<ConflictException>();
     }
 
     [Fact]
@@ -93,11 +96,11 @@ public class TurnOrderCommandHandlerTests
             new InitializeTurnOrderCommand(sessionId, players),
             TestContext.Current.CancellationToken);
 
-        Assert.Equal(sessionId, result.SessionId);
-        Assert.Equal(players, result.PlayerOrder);
-        Assert.Equal(0, result.CurrentIndex);
-        Assert.Equal(1, result.RoundNumber);
-        Assert.Equal("Alice", result.CurrentPlayer);
+        result.SessionId.Should().Be(sessionId);
+        result.PlayerOrder.Should().Equal(players);
+        result.CurrentIndex.Should().Be(0);
+        result.RoundNumber.Should().Be(1);
+        result.CurrentPlayer.Should().Be("Alice");
 
         _turnOrderRepoMock.Verify(r => r.AddAsync(It.IsAny<TurnOrder>(), It.IsAny<CancellationToken>()), Times.Once);
         _uowMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
@@ -106,22 +109,25 @@ public class TurnOrderCommandHandlerTests
     [Fact]
     public void Initialize_Constructor_WithNullTurnOrderRepo_ThrowsArgumentNullException()
     {
-        Assert.Throws<ArgumentNullException>(() =>
-            new InitializeTurnOrderCommandHandler(null!, _sessionRepoMock.Object, _uowMock.Object));
+        var act = () =>
+            new InitializeTurnOrderCommandHandler(null!, _sessionRepoMock.Object, _uowMock.Object);
+        act.Should().Throw<ArgumentNullException>();
     }
 
     [Fact]
     public void Initialize_Constructor_WithNullSessionRepo_ThrowsArgumentNullException()
     {
-        Assert.Throws<ArgumentNullException>(() =>
-            new InitializeTurnOrderCommandHandler(_turnOrderRepoMock.Object, null!, _uowMock.Object));
+        var act = () =>
+            new InitializeTurnOrderCommandHandler(_turnOrderRepoMock.Object, null!, _uowMock.Object);
+        act.Should().Throw<ArgumentNullException>();
     }
 
     [Fact]
     public void Initialize_Constructor_WithNullUoW_ThrowsArgumentNullException()
     {
-        Assert.Throws<ArgumentNullException>(() =>
-            new InitializeTurnOrderCommandHandler(_turnOrderRepoMock.Object, _sessionRepoMock.Object, null!));
+        var act = () =>
+            new InitializeTurnOrderCommandHandler(_turnOrderRepoMock.Object, _sessionRepoMock.Object, null!);
+        act.Should().Throw<ArgumentNullException>();
     }
 
     // ========================================================================
@@ -138,8 +144,9 @@ public class TurnOrderCommandHandlerTests
         var handler = new AdvanceTurnCommandHandler(
             _turnOrderRepoMock.Object, _broadcastMock.Object, _uowMock.Object);
 
-        await Assert.ThrowsAsync<NotFoundException>(() =>
-            handler.Handle(new AdvanceTurnCommand(sessionId), TestContext.Current.CancellationToken));
+        var act = () =>
+            handler.Handle(new AdvanceTurnCommand(sessionId), TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<NotFoundException>();
     }
 
     [Fact]
@@ -157,8 +164,8 @@ public class TurnOrderCommandHandlerTests
         var result = await handler.Handle(
             new AdvanceTurnCommand(sessionId), TestContext.Current.CancellationToken);
 
-        Assert.Equal("Bob", result.CurrentPlayer);
-        Assert.Equal(1, result.RoundNumber);
+        result.CurrentPlayer.Should().Be("Bob");
+        result.RoundNumber.Should().Be(1);
         _turnOrderRepoMock.Verify(r => r.UpdateAsync(It.IsAny<TurnOrder>(), It.IsAny<CancellationToken>()), Times.Once);
         _uowMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
@@ -202,8 +209,8 @@ public class TurnOrderCommandHandlerTests
         var result = await handler.Handle(
             new AdvanceTurnCommand(sessionId), TestContext.Current.CancellationToken);
 
-        Assert.Equal("Alice", result.CurrentPlayer);
-        Assert.Equal(2, result.RoundNumber);
+        result.CurrentPlayer.Should().Be("Alice");
+        result.RoundNumber.Should().Be(2);
         _broadcastMock.Verify(b => b.PublishAsync(
             sessionId,
             It.Is<TurnAdvancedEvent>(e => e.RoundNumber == 2),
@@ -214,8 +221,9 @@ public class TurnOrderCommandHandlerTests
     [Fact]
     public void Advance_Constructor_WithNullBroadcastService_ThrowsArgumentNullException()
     {
-        Assert.Throws<ArgumentNullException>(() =>
-            new AdvanceTurnCommandHandler(_turnOrderRepoMock.Object, null!, _uowMock.Object));
+        var act = () =>
+            new AdvanceTurnCommandHandler(_turnOrderRepoMock.Object, null!, _uowMock.Object);
+        act.Should().Throw<ArgumentNullException>();
     }
 
     // ========================================================================
@@ -231,10 +239,11 @@ public class TurnOrderCommandHandlerTests
 
         var handler = new ReorderPlayersCommandHandler(_turnOrderRepoMock.Object, _uowMock.Object);
 
-        await Assert.ThrowsAsync<NotFoundException>(() =>
+        var act = () =>
             handler.Handle(
                 new ReorderPlayersCommand(sessionId, new[] { "Bob", "Alice" }),
-                TestContext.Current.CancellationToken));
+                TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<NotFoundException>();
     }
 
     [Fact]
@@ -253,7 +262,7 @@ public class TurnOrderCommandHandlerTests
             new ReorderPlayersCommand(sessionId, newOrder),
             TestContext.Current.CancellationToken);
 
-        Assert.Equal(newOrder, result.PlayerOrder);
+        result.PlayerOrder.Should().Equal(newOrder);
         _turnOrderRepoMock.Verify(r => r.UpdateAsync(It.IsAny<TurnOrder>(), It.IsAny<CancellationToken>()), Times.Once);
         _uowMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
@@ -271,8 +280,9 @@ public class TurnOrderCommandHandlerTests
 
         var handler = new ResetTurnOrderCommandHandler(_turnOrderRepoMock.Object, _uowMock.Object);
 
-        await Assert.ThrowsAsync<NotFoundException>(() =>
-            handler.Handle(new ResetTurnOrderCommand(sessionId), TestContext.Current.CancellationToken));
+        var act = () =>
+            handler.Handle(new ResetTurnOrderCommand(sessionId), TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<NotFoundException>();
     }
 
     [Fact]
@@ -291,9 +301,9 @@ public class TurnOrderCommandHandlerTests
         var result = await handler.Handle(
             new ResetTurnOrderCommand(sessionId), TestContext.Current.CancellationToken);
 
-        Assert.Equal("Alice", result.CurrentPlayer);
-        Assert.Equal(0, result.CurrentIndex);
-        Assert.Equal(1, result.RoundNumber);
+        result.CurrentPlayer.Should().Be("Alice");
+        result.CurrentIndex.Should().Be(0);
+        result.RoundNumber.Should().Be(1);
         _uowMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
 

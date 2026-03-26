@@ -1,5 +1,5 @@
 using Api.BoundedContexts.Administration.Application.Commands.AlertRules;
-using Api.BoundedContexts.Administration.Application.Handlers.AlertRules;
+using Api.BoundedContexts.Administration.Application.Commands.AlertRules;
 using Api.Models;
 using Api.Services;
 using Api.Tests.Constants;
@@ -147,8 +147,9 @@ public class TestAlertCommandHandlerTests
         TestAlertCommand? command = null;
 
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentNullException>(() =>
-            _handler.Handle(command!, CancellationToken.None));
+        var act = () =>
+            _handler.Handle(command!, CancellationToken.None);
+        await act.Should().ThrowAsync<ArgumentNullException>();
 
         _mockAlertingService.Verify(s => s.SendAlertAsync(
             It.IsAny<string>(),

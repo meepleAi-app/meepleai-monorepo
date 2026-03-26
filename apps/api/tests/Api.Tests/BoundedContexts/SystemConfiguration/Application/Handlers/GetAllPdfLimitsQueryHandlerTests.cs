@@ -1,10 +1,12 @@
-using Api.BoundedContexts.SystemConfiguration.Application.Handlers;
+using Api.BoundedContexts.SystemConfiguration.Application.Commands;
+using Api.BoundedContexts.SystemConfiguration.Application.Queries;
 using Api.BoundedContexts.SystemConfiguration.Application.Queries;
 using Api.Models;
 using Api.Services;
 using Api.Tests.Constants;
 using Moq;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests.BoundedContexts.SystemConfiguration.Application.Handlers;
 
@@ -38,13 +40,13 @@ public class GetAllPdfLimitsQueryHandlerTests
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal(3, result.Count);
+        result.Should().NotBeNull();
+        result.Count.Should().Be(3);
 
         var freeLimits = result.First(l => l.Tier == "free");
-        Assert.Equal(5, freeLimits.MaxPerDay);
-        Assert.Equal(20, freeLimits.MaxPerWeek);
-        Assert.Equal(1, freeLimits.MaxPerGame);
+        freeLimits.MaxPerDay.Should().Be(5);
+        freeLimits.MaxPerWeek.Should().Be(20);
+        freeLimits.MaxPerGame.Should().Be(1);
     }
 
     [Fact]
@@ -74,8 +76,8 @@ public class GetAllPdfLimitsQueryHandlerTests
 
         // Assert
         var freeLimits = result.First(l => l.Tier == "free");
-        Assert.Equal(10, freeLimits.MaxPerDay); // Configured
-        Assert.Equal(20, freeLimits.MaxPerWeek); // Default
-        Assert.Equal(1, freeLimits.MaxPerGame); // Default
+        freeLimits.MaxPerDay.Should().Be(10); // Configured
+        freeLimits.MaxPerWeek.Should().Be(20); // Default
+        freeLimits.MaxPerGame.Should().Be(1); // Default
     }
 }

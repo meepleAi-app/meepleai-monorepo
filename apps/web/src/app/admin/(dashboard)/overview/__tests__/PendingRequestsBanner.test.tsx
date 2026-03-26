@@ -11,12 +11,12 @@ const mockApprove = vi.hoisted(() => vi.fn());
 const mockReject = vi.hoisted(() => vi.fn());
 
 vi.mock('@/lib/api', () => ({
-  createApiClient: () => ({
+  api: {
     accessRequests: {
       approveAccessRequest: mockApprove,
       rejectAccessRequest: mockReject,
     },
-  }),
+  },
 }));
 
 import { PendingRequestsBanner } from '../PendingRequestsBanner';

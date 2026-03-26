@@ -557,5 +557,5 @@ Ensure HSL format without `hsl()` wrapper:
 ## Related Documentation
 
 - [Component README](../../../apps/web/src/components/ui/data-display/README.md)
-- [ADR-041: MeepleCard Universal System](../01-architecture/adr/adr-041-meeple-card-universal-system.md)
+- [ADR-041: MeepleCard Universal System](../architecture/adr/adr-041-meeple-card-universal-system.md)
 - [Design System: Cards](../design-system/cards.md)

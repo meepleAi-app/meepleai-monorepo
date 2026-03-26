@@ -52,7 +52,7 @@ Latency <5s Rate:   100%       - ✅ PASS (target: ≥95%)
 
 **E2E** (Playwright):
 - **Target**: 50 critical user flows
-- **Current**: [See E2E Test Guide](../05-testing/e2e/e2-e-test-guide.md)
+- **Current**: [See E2E Test Guide](../testing/e2e/e2-e-test-guide.md)
 - **Issue**: [#3082 - E2E Test Flows](https://github.com/your-org/meepleai-monorepo/issues/3082)
 
 ---
@@ -84,10 +84,10 @@ cd apps/web && pnpm test:e2e
 
 ## Related Documentation
 
-- [Testing Guide](../05-testing/README.md) - Complete testing strategy
-- [Backend Testing](../05-testing/backend/) - xUnit + Testcontainers
-- [Frontend Testing](../05-testing/frontend/) - Vitest patterns
-- [E2E Testing](../05-testing/e2e/) - Playwright guides
+- [Testing Guide](../testing/README.md) - Complete testing strategy
+- [Backend Testing](../testing/backend/) - xUnit + Testcontainers
+- [Frontend Testing](../testing/frontend/) - Vitest patterns
+- [E2E Testing](../testing/e2e/) - Playwright guides
 - [Accessibility Guidelines](./accessibility-guidelines.md) - WCAG 2.1 AA compliance
 
 ---

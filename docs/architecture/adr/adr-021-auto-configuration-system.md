@@ -530,9 +530,9 @@ dotnet run
 ## References
 
 ### Documentation
-- **Deployment Guide**: [docs/04-deployment/auto-configuration-guide.md](../../04-deployment/auto-configuration-guide.md)
-- **Secrets Management**: [docs/04-deployment/secrets-management.md](../../04-deployment/secrets-management.md)
-- **Health Check API**: [docs/03-api/health-check-api.md](../../03-api/health-check-api.md)
+- **Deployment Guide**: [docs/04-deployment/auto-configuration-guide.md](../../deployment/auto-configuration-guide.md)
+- **Secrets Management**: [docs/04-deployment/secrets-management.md](../../deployment/secrets-management.md)
+- **Health Check API**: [docs/03-api/health-check-api.md](../../api/health-check-api.md)
 - **Secrets README**: [infra/secrets/README.md](../../../infra/secrets/README.md)
 
 ### Source Code

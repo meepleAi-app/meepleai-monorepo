@@ -303,10 +303,10 @@ nano scripts/generate-env-from-secrets.sh
 
 ## Related Documentation
 
-- [Docker Compose Configuration](../04-deployment/docker-compose.md)
-- [Security Guidelines](../04-deployment/security.md)
-- [CI/CD Setup](../04-deployment/ci-cd.md)
-- [Production Deployment](../04-deployment/production.md)
+- [Docker Compose Configuration](../deployment/docker-compose.md)
+- [Security Guidelines](../deployment/security.md)
+- [CI/CD Setup](../deployment/ci-cd.md)
+- [Production Deployment](../deployment/production.md)
 
 ---
 

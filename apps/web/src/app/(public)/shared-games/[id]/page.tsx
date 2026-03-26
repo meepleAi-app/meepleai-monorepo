@@ -36,9 +36,10 @@ export default function SharedGamePage({ params }: SharedGamePageProps) {
     const items = [];
 
     if (game.minPlayers && game.maxPlayers) {
-      const players = game.minPlayers === game.maxPlayers
-        ? `${game.minPlayers}`
-        : `${game.minPlayers}-${game.maxPlayers}`;
+      const players =
+        game.minPlayers === game.maxPlayers
+          ? `${game.minPlayers}`
+          : `${game.minPlayers}-${game.maxPlayers}`;
       items.push({ icon: Users, value: players });
     }
 
@@ -89,9 +90,7 @@ export default function SharedGamePage({ params }: SharedGamePageProps) {
           variant="hero"
           title={game.title}
           subtitle={
-            (game.publishers && game.publishers.length > 0
-              ? game.publishers[0].name
-              : '') +
+            (game.publishers && game.publishers.length > 0 ? game.publishers[0].name : '') +
             (game.yearPublished ? ` (${game.yearPublished})` : '')
           }
           imageUrl={game.imageUrl || undefined}
@@ -112,12 +111,7 @@ export default function SharedGamePage({ params }: SharedGamePageProps) {
 
         {/* Info Card - KB & Social (readOnly for public page) */}
         <div className="w-full max-w-[420px] flex-shrink-0 space-y-6">
-          <MeepleInfoCard
-            gameId={id}
-            gameTitle={game.title}
-            bggId={game.bggId}
-            readOnly
-          />
+          <MeepleInfoCard gameId={id} gameTitle={game.title} readOnly />
         </div>
       </section>
 

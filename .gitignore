@@ -54,15 +54,8 @@ infra/traefik/certs/*.*
 infra/secrets/*.secret
 !infra/secrets/*.secret.example
 
-# Per-environment secrets
-infra/secrets/dev/*.secret
-infra/secrets/integration/*.secret
-infra/secrets/staging/*.secret
+# Production secrets (separate management)
 infra/secrets/prod/*.secret
-
-# Staging/Production secrets (Docker secrets format - plain text files)
-infra/secrets/staging/*.txt
-!infra/secrets/staging/*.txt.example
 infra/secrets/prod/*.txt
 infra/secrets/prod/*.pfx
 !infra/secrets/prod/*.txt.example
